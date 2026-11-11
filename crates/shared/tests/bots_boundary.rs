@@ -4,15 +4,15 @@
 
 use std::collections::BTreeSet;
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::PlayerId::{P1, P2};
 use jackioh_engine::validator::CatalogSnapshot;
 use jackioh_engine::{PerPlayer, Rng, WinRateRow, WinRateSource, WinRateTable, deckable};
 use jackioh_shared::bots::boundary::{BotAnswer, BotCall, GameFacts, TicketFacts, apply};
 use jackioh_shared::bots::cosmetics::{CosmeticOwners, Holding, eligible, redraw};
 use jackioh_shared::bots::fallback::{
-    BotMode, bot_match_gap_passed, bot_matches, choose_bot, fallback_due_keyed, fallback_seconds_keyed,
-    holds_deck_size, holds_decks, holds_trio, hour_of, on_schedule,
+    BotMode, bot_match_gap_passed, bot_matches, choose_bot, choose_bot_pair, fallback_due_keyed,
+    fallback_seconds_keyed, holds_deck_size, holds_decks, holds_trio, hour_of, on_schedule,
 };
 use jackioh_shared::bots::pool::{
     BotDeck, BotFacts, BotLadder, draw_decks, draw_new_bot, draw_trio, plan_grind, plan_pool, pool_target,
@@ -541,6 +541,90 @@ fn r1453_the_closest_rated_bot_pairs_and_a_recent_opponent_is_passed_over() {
     assert_eq!(choose(&both, &[]), Some("above".to_string()));
     assert_eq!(choose(&[below, above], &[]), Some("above".to_string()));
     assert_eq!(choose(&both, &["above".to_string()]), Some("below".to_string()));
+}
+
+/// A bot that may play a match between bots (R1705001): Best-of-1 decks of DECK_SIZE cards dealt for
+/// the catalog "v".
+fn decked(id: &str, rating: f64) -> BotFacts {
+    let size = usize::try_from(jackioh_engine::config::DECK_SIZE).expect("a deck size");
+    BotFacts {
+        decks: vec![BotDeck {
+            cards: cards(size),
+            portrait: "portrait".to_string(),
+            slots: None,
+        }],
+        decks_catalog_version: Some("v".to_string()),
+        ..bot(id, rating)
+    }
+}
+
+/// The ids of the two bots `choose_bot_pair` seats, the grinder first, for catalog "v" at NOW's hour.
+fn pair_of(bots: &[BotFacts], recent: &[(&str, &[&str])], busy: &[&str]) -> Option<(String, String)> {
+    let recent: IndexMap<String, Vec<String>> = recent
+        .iter()
+        .map(|(id, faced)| (id.to_string(), faced.iter().map(|id| id.to_string()).collect()))
+        .collect();
+    let busy: IndexSet<String> = busy.iter().map(|id| id.to_string()).collect();
+    choose_bot_pair(bots, &recent, &busy, hour_of(NOW), "v")
+        .map(|(grinder, opponent)| (grinder.profile_id.clone(), opponent.profile_id.clone()))
+}
+
+fn ids(grinder: &str, opponent: &str) -> Option<(String, String)> {
+    Some((grinder.to_string(), opponent.to_string()))
+}
+
+/// R1555000: a match between bots seats a grinder with the ready bot closest to it in rating, above it
+/// or below and wherever it stands among the bots: never the grinder itself, and never a bot it faced
+/// recently while another is ready.
+#[test]
+fn r1555000_a_grinder_meets_the_closest_ready_bot_it_has_not_faced() {
+    let bots = [
+        decked("low", 1000.0),
+        BotFacts {
+            grinding: true,
+            ..decked("grinder", 1500.0)
+        },
+        decked("faced", 1500.0),
+        decked("near", 1450.0),
+        decked("high", 2100.0),
+    ];
+    assert_eq!(
+        pair_of(&bots, &[("grinder", &["faced"])], &[]),
+        ids("grinder", "near")
+    );
+    assert_eq!(pair_of(&bots, &[], &[]), ids("grinder", "faced"));
+}
+
+/// R1555000, R1454, R1705001: a match between bots seats only ready bots: not retired, on their hours,
+/// in no match, not busy, and holding decks for the catalog. Each bot at the grinder's own rating
+/// fails one of these, so the grinder meets the one far below it that fails none.
+#[test]
+fn r1555000_a_match_between_bots_seats_only_ready_bots() {
+    let hour = hour_of(NOW);
+    let bots = [
+        BotFacts {
+            grinding: true,
+            ..decked("grinder", 1500.0)
+        },
+        BotFacts {
+            retired_at: Some(NOW - 1),
+            ..decked("retired", 1500.0)
+        },
+        // On only for the hour after this one.
+        BotFacts {
+            active_from_hour: (hour + 1).rem_euclid(BOT_HOURS_PER_DAY),
+            active_hours: 1,
+            ..decked("off", 1500.0)
+        },
+        BotFacts {
+            in_match_id: Some("m".to_string()),
+            ..decked("playing", 1500.0)
+        },
+        decked("busy", 1500.0),
+        bot("deckless", 1500.0),
+        decked("ready", 1000.0),
+    ];
+    assert_eq!(pair_of(&bots, &[], &["busy"]), ids("grinder", "ready"));
 }
 
 /// R1555000: the matches between two bots are those two or more bots are in, each once, in the

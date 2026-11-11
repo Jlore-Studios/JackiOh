@@ -312,7 +312,10 @@ describe("R3391000 Stinkyscape's scenes", () => {
     // No two recipes place the same parts in the same places.
     const layouts = PASS.map((id) => JSON.stringify(recipe(id).layers));
     expect(new Set(layouts).size).toBe(PASS.length);
-    for (const id of PASS) {
+    // R3394000: an entry of #3394's table draws an alt recipe of its own instead (stinkyscapeAltScenes.test.tsx).
+    const regrown = PASS.filter((id) => !Object.hasOwn(ALT_SCENE_RECIPES, id));
+    expect(regrown).toHaveLength(30);
+    for (const id of regrown) {
       const scene = recipe(id);
       const normal = composeScene(scene, id);
       const seed = artSeedOf(id, "alt");

@@ -373,3 +373,264 @@ pub fn draw_username(rng: &mut Rng, accepts: &mut dyn FnMut(&str) -> Option<Stri
     }
     None
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Draws enough that each share below is read within a few hundredths.
+    const DRAWS: usize = 6_000;
+    /// How far a share read over `DRAWS` draws may sit from the share it should be.
+    const SPREAD: f64 = 0.03;
+
+    fn share(count: usize) -> f64 {
+        count as f64 / DRAWS as f64
+    }
+
+    #[track_caller]
+    fn near(actual: f64, expected: f64, what: &str) {
+        assert!(
+            (actual - expected).abs() <= SPREAD,
+            "{what}: {actual:.4}, not {expected:.4}"
+        );
+    }
+
+    /// R1454: each register fills its shapes from its own lists and draws its own shape table.
+    #[test]
+    fn r1454_each_register_draws_from_its_own_lists_and_shapes() {
+        let registers = [
+            (Register::Plain, (ADJECTIVES, NOUNS), BOT_NAME_SHAPES_PLAIN),
+            (Register::Gamer, (NOUNS, GAMER), BOT_NAME_SHAPES_GAMER),
+            (Register::Luis, (GIVEN, LUIS), BOT_NAME_SHAPES_GIVEN),
+            (
+                Register::ChinesePinyin,
+                (CHINESE_SURNAMES, CHINESE_PINYIN),
+                BOT_NAME_SHAPES_CHINESE_PINYIN,
+            ),
+            (Register::Nonsense, (NONSENSE, NONSENSE), BOT_NAME_SHAPES_NONSENSE),
+            (Register::Edgy, (EDGY, EDGY), BOT_NAME_SHAPES_EDGY),
+            (Register::Anime, (ANIME, ANIME), BOT_NAME_SHAPES_REFERENCE),
+            (Register::OtherRefs, (REFS, REFS), BOT_NAME_SHAPES_REFERENCE),
+            (Register::Crude, (CRUDE, CRUDE), BOT_NAME_SHAPES_CRUDE),
+            (Register::Politics, (POLITICS, POLITICS), BOT_NAME_SHAPES_POLITICS),
+            (Register::Given, (GIVEN, GIVEN), BOT_NAME_SHAPES_GIVEN),
+            (
+                Register::ChineseHan,
+                (CHINESE_HAN, CHINESE_HAN),
+                BOT_NAME_SHAPES_CHINESE_HAN,
+            ),
+        ];
+        for (register, lists, shapes) in registers {
+            assert_eq!(register.lists(), lists, "{register:?}");
+            assert_eq!(register.shapes(), shapes, "{register:?}");
+            assert!(!shapes.is_empty(), "{register:?}");
+        }
+    }
+
+    /// R1454: Luis is BOT_NAME_LUIS_SHARE of every bot, those that keep their `Player#n` included, so
+    /// among the named ones it weighs that share over the named ones' share.
+    #[test]
+    fn r1454_luis_is_its_share_of_every_bot() {
+        let luis = REGISTERS
+            .iter()
+            .find(|(register, _)| *register == Register::Luis)
+            .map(|(_, weight)| *weight)
+            .expect("Luis is a register");
+        assert!((luis * (1.0 - BOT_DEFAULT_USERNAME_SHARE) - BOT_NAME_LUIS_SHARE).abs() < 1e-12);
+    }
+
+    /// R1454: a list's entries are its lines, trimmed, without blank lines or `#` comments.
+    #[test]
+    fn r1454_a_lists_entries_are_its_trimmed_lines_but_blanks_and_comments() {
+        assert_eq!(
+            entries("  # a comment\nfoo\n\n   bar  \n#\nbaz"),
+            ["foo", "bar", "baz"]
+        );
+    }
+
+    /// R1454: a weighted draw takes each item at its weight's share of the total.
+    #[test]
+    fn r1454_a_weighted_draw_takes_each_item_at_its_share() {
+        let table = [(0usize, 1.0), (1, 1.0), (2, 1.0)];
+        let mut rng = Rng::new("r1454-weighted", 0);
+        let mut counts = [0usize; 3];
+        for _ in 0..DRAWS {
+            counts[weighted(&mut rng, &table).expect("a table of weight draws")] += 1;
+        }
+        for (item, count) in counts.into_iter().enumerate() {
+            near(share(count), 1.0 / 3.0, &format!("item {item}"));
+        }
+    }
+
+    /// R1454: the words a name is built of.
+    #[test]
+    fn r1454_a_names_words_are_shaped_as_the_shape_says() {
+        assert_eq!(capitalized("tempo"), "Tempo");
+        assert_eq!(capitalized(""), "");
+        assert_eq!(leet("aEoIx-Banana"), "4301x-B4n4n4");
+        assert_eq!(diminutive("Rosa"), "Rosita");
+        assert_eq!(diminutive("Pedro"), "Pedrito");
+        assert_eq!(diminutive("Luis"), "Luisito");
+    }
+
+    /// R1454: a stretched word is lowercased with its last vowel, or its last letter when it has none,
+    /// held BOT_NAME_STRETCH_MIN to BOT_NAME_STRETCH_MAX more times, the rest of the word kept.
+    #[test]
+    fn r1454_a_stretched_word_holds_its_last_vowel_and_keeps_the_rest() {
+        let mut rng = Rng::new("r1454-stretch", 0);
+        let held = |name: &str, before: &str, ch: char, after: &str| -> i64 {
+            let middle = name
+                .strip_prefix(before)
+                .and_then(|rest| rest.strip_suffix(after))
+                .unwrap_or_else(|| panic!("{name} is not {before}…{after}"));
+            assert!(middle.chars().all(|c| c == ch), "{name}");
+            i64::try_from(middle.chars().count()).expect("a short word") - 1
+        };
+        for _ in 0..50 {
+            for (word, before, ch, after) in [
+                ("Bark", "b", 'a', "rk"),
+                ("Tempo", "temp", 'o', ""),
+                ("Zzz", "zz", 'z', ""),
+            ] {
+                let extra = held(&stretched(&mut rng, word), before, ch, after);
+                assert!(
+                    (BOT_NAME_STRETCH_MIN..=BOT_NAME_STRETCH_MAX).contains(&extra),
+                    "{word}: {extra}"
+                );
+            }
+        }
+    }
+
+    /// Whether `name` is `pairs` onset-vowel syllables and one coda.
+    fn syllable_shaped(name: &str, pairs: i64) -> bool {
+        if pairs == 0 {
+            return CODAS.contains(&name);
+        }
+        ONSETS.iter().any(|onset| {
+            name.strip_prefix(onset).is_some_and(|rest| {
+                VOWELS.iter().any(|vowel| {
+                    rest.strip_prefix(vowel)
+                        .is_some_and(|rest| syllable_shaped(rest, pairs - 1))
+                })
+            })
+        })
+    }
+
+    /// R1454: a nonsense name is BOT_NAME_SYLLABLES_MIN to BOT_NAME_SYLLABLES_MAX onset-vowel pairs
+    /// and one coda.
+    #[test]
+    fn r1454_a_nonsense_name_is_its_syllables_and_a_coda() {
+        let mut rng = Rng::new("r1454-syllables", 0);
+        for _ in 0..200 {
+            let name = syllables(&mut rng);
+            assert!(
+                (BOT_NAME_SYLLABLES_MIN..=BOT_NAME_SYLLABLES_MAX).any(|pairs| syllable_shaped(&name, pairs)),
+                "{name}"
+            );
+        }
+    }
+
+    /// R1454: a name's number is a birth year at BOT_NAME_YEAR_SHARE, a filler at
+    /// BOT_NAME_FILLER_NUMBER_SHARE and two digits for the rest; a Chinese register's, a year at
+    /// BOT_NAME_CHINESE_YEAR_SHARE and one of its own numbers for the rest.
+    #[test]
+    fn r1454_a_names_number_is_a_year_a_filler_or_two_digits_at_their_shares() {
+        let years = BOT_NAME_BIRTH_YEAR_MIN..=BOT_NAME_BIRTH_YEAR_MAX;
+        let two_digits = BOT_NAME_TWO_DIGIT_MIN..=BOT_NAME_TWO_DIGIT_MAX;
+        let mut rng = Rng::new("r1454-number", 0);
+        let (mut year_count, mut filler_count, mut short_count) = (0, 0, 0);
+        for _ in 0..DRAWS {
+            let n: i64 = number(&mut rng, Register::Plain).parse().expect("a number");
+            if years.contains(&n) {
+                assert!(!BOT_NAME_FILLER_NUMBERS.contains(&n), "{n}");
+                year_count += 1;
+            } else if two_digits.contains(&n) {
+                short_count += 1;
+            } else {
+                assert!(BOT_NAME_FILLER_NUMBERS.contains(&n), "{n}");
+                filler_count += 1;
+            }
+        }
+        // A filler that is itself two digits (69) counts as two digits here.
+        let short_fillers = BOT_NAME_FILLER_NUMBERS
+            .iter()
+            .filter(|n| two_digits.contains(*n))
+            .count() as f64;
+        let fillers = BOT_NAME_FILLER_NUMBERS.len() as f64;
+        near(share(year_count), BOT_NAME_YEAR_SHARE, "years");
+        near(
+            share(filler_count),
+            BOT_NAME_FILLER_NUMBER_SHARE * (fillers - short_fillers) / fillers,
+            "fillers",
+        );
+        near(
+            share(short_count),
+            1.0 - BOT_NAME_YEAR_SHARE - BOT_NAME_FILLER_NUMBER_SHARE * (fillers - short_fillers) / fillers,
+            "two digits",
+        );
+
+        let mut chinese_years = 0;
+        for _ in 0..DRAWS {
+            let n: i64 = number(&mut rng, Register::ChineseHan).parse().expect("a number");
+            if years.contains(&n) {
+                chinese_years += 1;
+            } else {
+                assert!(BOT_NAME_CHINESE_NUMBERS.contains(&n), "{n}");
+            }
+        }
+        near(share(chinese_years), BOT_NAME_CHINESE_YEAR_SHARE, "Chinese years");
+    }
+
+    /// R1454: a bare name is one word of its register's list, and a birth year is one of the years.
+    #[test]
+    fn r1454_a_bare_name_is_a_word_of_its_list_and_a_year_is_a_birth_year() {
+        let nouns = entries(NOUNS);
+        let mut rng = Rng::new("r1454-render", 0);
+        for _ in 0..50 {
+            let name = render(&mut rng, Register::Plain, BotNameShape::Bare).expect("a name");
+            assert!(nouns.contains(&name.as_str()), "{name}");
+            assert!((BOT_NAME_BIRTH_YEAR_MIN..=BOT_NAME_BIRTH_YEAR_MAX).contains(&year(&mut rng)));
+        }
+    }
+
+    /// R1454: `never.txt`'s words, those refused anywhere in a name and those refused as a whole token
+    /// (written `=word`), each in its own list.
+    #[test]
+    fn r1454_the_never_list_splits_into_words_refused_anywhere_and_as_a_token() {
+        let (anywhere, token) = never_lists();
+        assert!(!anywhere.is_empty() && !token.is_empty());
+        let lines = entries(NEVER);
+        assert_eq!(anywhere.len() + token.len(), lines.len());
+        for line in lines {
+            match line.strip_prefix('=') {
+                Some(word) => assert!(token.contains(&word), "{word}"),
+                None => assert!(anywhere.contains(&line), "{line}"),
+            }
+        }
+    }
+
+    /// R1454: a drawn username is the name the host's `accepts` gives back for it, and when it refuses
+    /// every draw, BOT_NAME_DRAW_ATTEMPTS of them, the bot keeps its `Player#n`.
+    #[test]
+    fn r1454_a_drawn_username_is_what_the_host_accepts_and_none_after_its_attempts() {
+        for n in 0..20 {
+            let mut rng = Rng::new(&format!("r1454-username-{n}"), 0);
+            let mut asked: Vec<String> = Vec::new();
+            let got = draw_username(&mut rng, &mut |name| {
+                asked.push(name.to_string());
+                Some(format!("{name}!"))
+            });
+            assert_eq!(asked.len(), 1, "{asked:?}");
+            assert!(!asked[0].is_empty());
+            assert_eq!(got, Some(format!("{}!", asked[0])));
+
+            let mut refused = 0;
+            let none = draw_username(&mut rng, &mut |_| {
+                refused += 1;
+                None
+            });
+            assert_eq!(none, None);
+            assert!((1..=BOT_NAME_DRAW_ATTEMPTS).contains(&refused), "{refused}");
+        }
+    }
+}
