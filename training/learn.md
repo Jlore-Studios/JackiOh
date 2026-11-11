@@ -21,22 +21,23 @@ on the local runner (`jackioh-selfplay-local`, `bot/machine/README.md`, The loca
 GitHub's runners, whose hosted jobs CI needs (an export there held 12 of the organization's 20 for
 hours, #1455). That runner takes two jobs at a time, one on each half of the PC (four CPUs each;
 gather's half goes to gather while it plays a new patch), and only while the PC is otherwise idle, so
-the export's shards play two at a time. One six-CPU runner played about 2,500 games an hour, so a
-run's 100,000 games took about 40 hours of an idle PC (both halves play them somewhat faster), and the
-retrain and the screen about one more (run 21's
+the export's shards play two at a time (#3722). A four-CPU half plays about 670 games an hour at the
+AI's budget since #2628, so a run's 100,000 games take about three days of an idle PC, and the
+retrain and the screen about one more hour (run 21's
 took 59 minutes there), the gate another. A run may take several days, and each starts the next as it
 ends (#1976), so the PC is always exporting, retraining or gating while it is idle; a schedule twice a
 day starts the lane again should that chain stop (one run at a time). Each run:
 
 1. **Clears the way.** The lane's pull request (`ai/learn`) with a failed check, or open more than
    48 hours (`LEARN_PR_STALE_HOURS`), it closes, saying why. One whose checks are green or running is a
-   promotion on its way to `main`: it merges while this run exports, about 40 hours, and should it
+   promotion on its way to `main`: it merges while this run exports, about three days, and should it
    still be open when this run's gate passes, the pass waits behind it (step 6).
 2. **Exports** `games` games (100,000 by default) through `selfplay.yml` on a fresh base,
    `learned-<catalog>-<date>-<run>`, never a gate's deals or the dev set's (R1006002), in `shards` jobs
-   (20 by default, about two hours each) played one after another, in five rounds: a round starts
+   (20 by default, about 7.5 hours each) played two at a time, in five rounds: a round starts
    once the one before it has ended, so no shard waits for the runner longer than its round takes
-   (about 8 hours of an idle PC), well under the 24 hours GitHub lets a job wait. The plan and the
+   (about 15 hours of an idle PC), under the 24 hours GitHub lets a job wait. The export's build
+   (`selfplay-jackioh`) is kept 14 days, so every shard of a slow export still finds it. The plan and the
    export's build read `main` as it is when the run starts, not as it was when the run was queued,
    so the export plays the newest patch however long the run waited behind the one before it (A new
    patch ships, below).

@@ -4,8 +4,8 @@
 # export plays the new one, as gather.yml plays each new patch and no micro.
 #
 # Every learn run plays the newest version as it starts (learn.yml, plan: main as it is then), so a
-# micro reaches the next run, at most one run (about two days) on, and stops nothing. Micros ship
-# several times a day and an export takes about 40 hours of the PC, so a lane that started again on
+# micro reaches the next run, at most one run (about three days) on, and stops nothing. Micros ship
+# several times a day and an export takes about three days of the PC, so a lane that started again on
 # each would never finish one. A patch reprints 15 card families or more, or plays 50 cards
 # differently (R2499000), and a set brings a set's cards (v0.5.0: 231 changes): enough that an
 # export on the version before learns stale worths. So a run that has played fewer than

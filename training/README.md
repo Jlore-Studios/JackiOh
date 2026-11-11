@@ -433,9 +433,9 @@ The learned evaluation (#466, `docs/learned-eval.md`) learns from self-play expo
 R1006003). An export is dispatched, never played on the training box, whose two vCPUs the lanes need:
 `gh workflow run selfplay.yml -f games=100000 -f seed=<base> [-f shards=20] [-f
 runner=ubuntu-latest]` plays it in shards on the local runner by default (`bot/machine/README.md`,
-The local runner), two shards at a time while the PC is idle, one on each half (about 40 hours of an
-idle PC for 100,000 at the 2,500 games an hour one six-CPU runner played, somewhat less on both
-halves, in five rounds), or on GitHub's runners when asked (free for this
+The local runner), two shards at a time while the PC is idle, one on each half (about three days of
+an idle PC for 100,000 at the 670 games an hour a four-CPU half plays at the AI's budget since #2628,
+in five rounds), or on GitHub's runners when asked (free for this
 public repository, about 1,500 games an hour each, at most 12 at once: 100,000 games in 20 shards
 take two rounds, about seven hours), and keeps each shard's log file as an artifact for up to 90
 days. The local runner is the default because an export on GitHub's runners holds 12 of the
