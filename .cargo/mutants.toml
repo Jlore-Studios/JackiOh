@@ -116,4 +116,8 @@ exclude_re = [
   # crates/shared (#3513): draw_trio's early None for fewer than TRIO_DECKS decks: validate_trio's L1
   # refuses a trio of any other count, so the trio is None either way.
   'replace < with > in draw_trio',
+  # crates/shared (#3513): a cosmetic pack's card pick (`pick_card`) walks a roll of the engine's Rng
+  # times the weights' total down by each card's weight, as `pick_by` does: `< 0.0` and `<= 0.0` part only
+  # on a roll exactly at a running sum, one draw in 2^32 at a given bound.
+  'cosmetic_pack\.rs:.*replace < with <= in pick_card',
 ]

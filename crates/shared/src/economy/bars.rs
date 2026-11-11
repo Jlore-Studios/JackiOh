@@ -384,7 +384,9 @@ pub fn fill_bar(bar: BarKind, counters: &AccountCounters) -> BarFill {
 mod tests {
     use super::*;
     use crate::config::CosmeticTokenStep::{CosmeticPack, Epic, Legendary, Rare};
-    use crate::config::{CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_SIZE_RARE, COSMETIC_TOKEN_CYCLE};
+    use crate::config::{
+        CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_SIZE_EPIC, COSMETIC_TOKEN_BAR_SIZE_RARE, COSMETIC_TOKEN_CYCLE,
+    };
 
     #[test]
     fn r1305000_settle_bar_pays_once_and_keeps_the_overflow() {
@@ -623,5 +625,51 @@ mod tests {
                 },
             ]
         );
+    }
+
+    /// The cosmetic payouts among `grants`, in order: each item and its key.
+    fn cosmetic_payouts(grants: &[LedgerGrant]) -> Vec<(InventoryItem, String)> {
+        grants
+            .iter()
+            .filter_map(|grant| match grant {
+                LedgerGrant::Inventory {
+                    item: item @ (InventoryItem::CosmeticToken | InventoryItem::CosmeticPack),
+                    key,
+                    ..
+                } => Some((*item, key.clone())),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// R2728000: an opening that fills the cosmetic bar twice pays the cycle's next two steps, the second the
+    /// one after the first, from the stored position.
+    #[test]
+    fn r2728000_an_opening_paying_twice_pays_the_cycles_next_two_steps() {
+        let points = COSMETIC_TOKEN_BAR_SIZE_RARE + COSMETIC_TOKEN_BAR_SIZE_EPIC;
+        let (_, grants) = settle_bars(&AccountCounters::default(), vec![points]);
+        assert_eq!(cosmetic_payouts(&grants), vec![cycle_step(0), cycle_step(1)]);
+    }
+
+    /// R1310003, R2728000: a dev fill of a cosmetic bar already past its step's size pays that step, then
+    /// tops up the next step's size and pays it, the cycle's steps in order, keeping nothing.
+    #[test]
+    fn r1310003_a_fill_past_the_steps_size_pays_it_and_tops_up_the_next_step() {
+        let held = COSMETIC_TOKEN_BAR_SIZE_RARE + 10;
+        let counters = AccountCounters {
+            cosmetic_bar: held,
+            ..AccountCounters::default()
+        };
+        let fill = fill_bar(BarKind::Cosmetic, &counters);
+        assert_eq!((fill.held, fill.remainder, fill.pays), (held, 0, 2));
+        assert_eq!(cosmetic_payouts(&fill.grants), vec![cycle_step(0), cycle_step(1)]);
+    }
+
+    /// R1310003: a fill names its bar `card` or `cosmetic`; any other name is no bar.
+    #[test]
+    fn r1310003_a_fill_names_its_bar_card_or_cosmetic() {
+        assert_eq!(BarKind::named("card"), Some(BarKind::Card));
+        assert_eq!(BarKind::named("cosmetic"), Some(BarKind::Cosmetic));
+        assert_eq!(BarKind::named("chase"), None);
     }
 }
