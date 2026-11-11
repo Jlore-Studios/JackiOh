@@ -15482,7 +15482,9 @@
     },
     "3693": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:6800145555"
+      ],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
@@ -15507,9 +15509,7 @@
       "started_at": "2026-11-11T16:23:04Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6800145555"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "3694": {
