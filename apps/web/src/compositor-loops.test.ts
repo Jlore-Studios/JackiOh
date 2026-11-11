@@ -1,6 +1,7 @@
-// #3608, R3608000: a loop that never ends moves only `transform` and `opacity` (and the individual
-// `translate`, `scale` and `rotate` that compose with them), so the compositor runs it and the browser
-// repaints nothing per frame. A keyframe that sets a paint property (a shadow, a filter, a gradient's
+// #3608, R3608000: a loop that never ends sets none of the paint properties listed in PAINT_PROPS; the
+// loops that did now move only `transform` and `opacity` (and the individual `translate`, `scale` and
+// `rotate` that compose with them), so the compositor runs them. Other properties (outline, border-radius,
+// z-index) are not guarded. A keyframe that sets a paint property (a shadow, a filter, a gradient's
 // position, a dash offset, a clip, a text shadow) makes the browser repaint the element every frame, and
 // a loop never stops doing it. The sheets are read as text, the way motion.test.ts and fx/css.test.ts
 // read them: every stylesheet under src/, every `@keyframes`, every `animation` that repeats forever.
