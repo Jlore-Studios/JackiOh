@@ -15321,10 +15321,12 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "at": "2026-11-11T12:22:48Z",
+        "at": "2026-11-11T15:36:04Z",
         "built_by": "claude-8",
         "by": "`claude` (strong)",
-        "sha": "0780e375906f2818e45264af49c3acef3a5800c9"
+        "carried_from": "0780e375906f2818e45264af49c3acef3a5800c9",
+        "resolved_by": "`claude` (strong)",
+        "sha": "0dc726dd92a3549b84eae5348db8be0aef408e5c"
       },
       "cross_rounds": 1,
       "died": 0,
