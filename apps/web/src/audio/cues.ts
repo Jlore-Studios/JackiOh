@@ -682,6 +682,8 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   predicted: { sfx: "notify", cues: () => [sfx("notify")] },
   // R831003: KY's Papaya's curve sweeps across the board.
   curveDrawn: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
+  // R3554005: the line runs to its tile.
+  lineDrawn: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
   // R1183002: the AI takes the rest of the turn.
   autopilotEngaged: { sfx: "notify", cues: () => [sfx("notify")] },
   // R1839002: a Dormant card awakens.

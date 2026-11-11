@@ -32,6 +32,7 @@ use crate::echo::{
 };
 use crate::enchantments::{EnchantmentKind, has_enchantment};
 use crate::faces::card_type_of;
+use crate::geometry::Half;
 use crate::graveyard_play::{in_own_graveyard, mana_due, spend_plague_tokens, why_graveyard_play_refused};
 use crate::mana::{cost_rules_spent_by, is_x_cost, mana_event, modifier_is_live, play_cost, push_mana_spent};
 use crate::modifiers::remove_modifier;
@@ -98,6 +99,13 @@ fn snapshot(state: &GameState, instance_id: &str) -> Option<CardInstance> {
 fn set_x(state: &mut GameState, instance_id: &str, value: i32) {
     if let Some(card) = find_instance_mut(state, instance_id) {
         card.x = Some(value);
+    }
+}
+
+/// `set_x` for the half a Spell is cast on (R3554004).
+fn set_half(state: &mut GameState, instance_id: &str, value: Half) {
+    if let Some(card) = find_instance_mut(state, instance_id) {
+        card.half = Some(value);
     }
 }
 
@@ -206,6 +214,8 @@ pub enum Awaiting {
     EchoTarget,
     EchoMode,
     CastX,
+    /// R3554004: a Spell's caster is choosing which half of a slashed board to cast on.
+    Half,
 }
 
 /// `PlayRun.source`: E11, R454 — the card is played from its player's graveyard.
@@ -375,6 +385,10 @@ pub struct PlayRun {
     /// R453: the X its caster chose for a cast X card (the `number` prompt's answer), until it is set.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cast_x: Option<i32>,
+    /// R3554004: the half of a slashed board this Spell is cast on (the `mode` prompt's answer),
+    /// until it is stamped on the card. Absent on an unslashed board (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub half: Option<Half>,
     // play pipeline A (E1, E5, Devil's Pact)
     /// B5 E1, R448: the announce has gone out and the card waits in the resolving zone; the step is
     /// re-entered at its window, which a response's question can pause.
@@ -469,6 +483,7 @@ fn blank_run(instance_id: String, def_id: String, player: PlayerId) -> PlayRun {
         fizzled: None,
         mana_before: None,
         cast_x: None,
+        half: None,
         announced: None,
         countered: None,
         replaced: None,
@@ -2023,6 +2038,10 @@ fn resolve_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
     if run.fizzled == Some(true) {
         return;
     }
+    // R3554004: a Spell on a slashed board is cast on one half, chosen here.
+    if !cast_half_chosen(sink, run) {
+        return;
+    }
     for (at, part) in RESOLVE_PARTS.iter().enumerate().skip(run.resolve_at) {
         run.resolve_at = at + 1;
         let Some(card) = still_resolving(sink.state, run) else {
@@ -2205,6 +2224,83 @@ fn cast_x_chosen(
     }
     run.awaiting = None;
     set_x(sink.state, &card.id, most);
+    true
+}
+
+/// R3554004: the half of a slashed board a Spell is cast on, the caster's choice at resolution
+/// (`cast_x_chosen` for X): the run's answer first, then the half of an on-field `Instance` among
+/// its targets, then a random cast's draw — else a `mode` prompt. False while the prompt waits.
+fn cast_half_chosen(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
+    if sink.state.slashed_lane.is_none() {
+        return true;
+    }
+    let Some(card) = still_resolving(sink.state, run) else {
+        return true;
+    };
+    // A permanent lands on its zone's half, and a stamped card keeps it.
+    if is_permanent(sink.state, &card) || card.half.is_some() {
+        return true;
+    }
+    if let Some(half) = run.half {
+        set_half(sink.state, &card.id, half);
+        return true;
+    }
+    // A targeted Spell takes its target's half, unasked.
+    for selection in run.targets.clone() {
+        let Selection::Instance { instance_id } = selection else {
+            continue;
+        };
+        if let Some(target) = find_instance(sink.state, &instance_id)
+            && matches!(target.zone, Zone::Field { .. })
+            && let Some(half) = crate::geometry::half_of_card(sink.state, target)
+        {
+            set_half(sink.state, &card.id, half);
+            return true;
+        }
+    }
+    if run.random == Some(true) || random_cast_of(sink.state, run.player).is_some() {
+        let halves = [Half::Left, Half::Right];
+        let half = sink.rng.pick(&halves).copied().unwrap_or(Half::Left);
+        set_half(sink.state, &card.id, half);
+        return true;
+    }
+    run.awaiting = Some(Awaiting::Half);
+    let name = def_of(Some(&*sink.state), &card.def_id).name.clone();
+    let opened = open_prompt(
+        sink,
+        OpenPromptArgs {
+            player: run.player,
+            kind: PromptKind::Mode,
+            aim: None,
+            prompt: format!("{name}: choose the half to cast on"),
+            options: [Half::Left, Half::Right]
+                .iter()
+                .map(|half| {
+                    let option = half.option().to_string();
+                    PromptOption {
+                        key: format!("mode:{option}"),
+                        label: match half {
+                            Half::Left => "Left half".to_string(),
+                            Half::Right => "Right half".to_string(),
+                        },
+                        selection: Selection::Mode { option },
+                        cost: None,
+                        radiant: None,
+                    }
+                })
+                .collect(),
+            min: None,
+            max: None,
+            budget: None,
+            owner: None,
+            resume: resume_for(run, step_index(PlayStepName::Resolve)),
+        },
+    );
+    if opened.is_some() {
+        return false;
+    }
+    run.awaiting = None;
+    set_half(sink.state, &card.id, Half::Left);
     true
 }
 
@@ -2887,6 +2983,14 @@ fn drive_steps(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
 /// File an answered selection in the bucket the pause was waiting on (§10.5 step 6).
 fn file_selection(run: &mut PlayRun, selection: &[Selection]) {
     let awaiting = run.awaiting.take();
+    // R3554004: the half a Spell's caster chose, filed for `cast_half_chosen` to stamp.
+    if awaiting == Some(Awaiting::Half) {
+        run.half = selection.iter().find_map(|pick| match pick {
+            Selection::Mode { option } => Half::from_option(option),
+            _ => None,
+        });
+        return;
+    }
     if awaiting == Some(Awaiting::CastX) {
         // R453: the X a cast's caster chose, applied to the card as the step goes on (`cast_x_chosen`).
         let picked = selection.iter().find_map(|pick| match pick {

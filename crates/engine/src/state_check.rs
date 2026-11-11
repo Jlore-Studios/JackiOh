@@ -1042,6 +1042,7 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
         if crate::card_on_card::release_held(sink)
             || crate::card_on_card::standing_text(sink)
             || crate::animated::animate_owed(sink)
+            || crate::geometry::swallow_standing(sink)
         {
             continue;
         }

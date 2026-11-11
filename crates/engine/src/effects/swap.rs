@@ -59,7 +59,8 @@ fn mirror_of(slot: &ZoneSlot) -> ZoneSlot {
 /// R88 (after R14): a card whose destination is Locked, or reserved for a dying Reborn unit (R64),
 /// bounces to its controller's hand instead, #87's override of R688.
 fn can_accept(state: &GameState, slot: &ZoneSlot) -> bool {
-    !is_locked(state, slot) && !is_reserved(state, slot)
+    // R3554002: a void destination bounces the card instead of panicking in `place_contents`.
+    !is_locked(state, slot) && !is_reserved(state, slot) && !crate::geometry::is_void(state, *slot)
 }
 
 /// A pile is rebuilt from the bottom up, so the same card is on top, acting for the zone (§3.2).

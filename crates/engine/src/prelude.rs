@@ -25,6 +25,9 @@ pub use crate::config::*;
 pub use crate::cost_rules::*;
 pub use crate::faces::*;
 pub use crate::float::*;
+pub use crate::geometry::{
+    chain_members, half_of_card, half_of_lane, in_hole, is_void, lane_in_half, reaches,
+};
 pub use crate::giga::{enters_giga, is_giga, lanes_of, occupant_at};
 pub use crate::grants::*;
 pub use crate::graveyard_play::*;

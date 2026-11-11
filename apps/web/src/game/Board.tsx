@@ -13,6 +13,7 @@ import type { CardView, CreditView, GameEvent, GameEventType, LibraryView, Playe
 
 import { animTestid } from "./animations.ts";
 import Card, { cx, isLegal, isSelected, legalAttr, type Pops } from "./Card.tsx";
+import { blackHoleCount, laneMarkOf } from "./geometry.ts";
 import { CatalogContext, MatchCardsProvider, type CardLookup } from "./catalog.ts";
 import { RIFFLE_LEAVES } from "./config.ts";
 import {
@@ -742,7 +743,12 @@ export default function Board({
             <CornerProps mat={slots.table} half="yours" draining={draining} />
             <CornerProps mat={theirSlots.table} half="theirs" />
             {LANES.map((lane) => (
-              <div className="lane" key={lane} data-lane={lane}>
+              <div className="lane" key={lane} data-lane={lane} data-lane-mark={laneMarkOf(view, lane) ?? undefined}>
+                {laneMarkOf(view, lane) === "blackHole" && (
+                  <span className="black-hole-count" data-testid={testid.blackHoleCount}>
+                    {blackHoleCount(view)}
+                  </span>
+                )}
                 {FIELD_ROWS.map((slot) => (
                   <Zone
                     key={`${slot.side}-${slot.row}`}

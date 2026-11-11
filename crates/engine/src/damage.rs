@@ -70,6 +70,21 @@ pub struct DamageFlags {
     /// (`afflictions::tick_at_turn_start`) set it too, each to its own keyword.
     #[serde(skip)]
     pub via: Option<KeywordKind>,
+    /// R3554007: the hit is a damage chain's own hit — a split share or a shared echo — so it never
+    /// chains again. Never serialized, so no card can state it (D14).
+    #[serde(skip)]
+    pub chain_hit: bool,
+}
+
+/// R3554007: the flags a split share or a shared echo carries: the hit's own, but never a strike's
+/// (`attacking`), never Trample's, and marked so it chains no further.
+fn chain_flags(flags: Option<&DamageFlags>) -> DamageFlags {
+    let mut chained = flags.cloned().unwrap_or_default();
+    chained.attacking = None;
+    chained.trample = None;
+    chained.trample_onto = None;
+    chained.chain_hit = true;
+    chained
 }
 
 /// R1848001: where a hit's Trample excess goes when it is not §4.4 step 9's hero: onto the Units
@@ -472,6 +487,36 @@ fn land(
         };
     }
 
+    // R3554007, §4.4 step 0b: a hit on a split-chained Unit is divided among every member of its
+    // chain, rounded down, each share landing as its own chain hit through `land_hit`. The target's
+    // share is what this hit dealt.
+    if flags.is_none_or(|flags| !flags.chain_hit)
+        && let Some(live) = unit.as_ref()
+        && let Some(chain) = live.split_chain
+    {
+        let members = crate::geometry::chain_members(sink.state, chain, crate::geometry::ChainKind::Split);
+        if members.len() > 1 {
+            let share = amount_in / members.len() as i32;
+            let chained = chain_flags(flags);
+            let mut dealt = 0;
+            for member in &members {
+                let hit = DamageArgs {
+                    source: source.cloned(),
+                    target: DamageTarget::Unit {
+                        instance: member.clone(),
+                    },
+                    amount: share,
+                    flags: Some(chained),
+                };
+                let got = land_hit(sink, &hit, share, redirects, caught);
+                if member.id == live.id {
+                    dealt = got;
+                }
+            }
+            return Landed { dealt, held: 0 };
+        }
+    }
+
     // Step 1: Divine Shield negates the whole hit and is gone.
     if let Some(live) = &unit {
         let view = crate::layers::unit_view(sink.state, live);
@@ -762,6 +807,30 @@ fn land(
     // R1849003, step 8a: what a reflecting Unit took is dealt again, from it.
     if let Some(live) = &unit {
         reflect_damage(sink, live, source, flags, dealt);
+    }
+
+    // R3554007, §4.4 step 8b: what a shared-chained Unit was dealt is dealt again to each other
+    // member of its chain, as its own chain hit, so no echo echoes again.
+    if dealt > 0
+        && flags.is_none_or(|flags| !flags.chain_hit)
+        && let Some(live) = &unit
+        && let Some(chain) = live.shared_chain
+    {
+        let chained = chain_flags(flags);
+        for member in crate::geometry::chain_members(sink.state, chain, crate::geometry::ChainKind::Shared) {
+            if member.id == live.id {
+                continue;
+            }
+            let hit = DamageArgs {
+                source: source.cloned(),
+                target: DamageTarget::Unit {
+                    instance: member.clone(),
+                },
+                amount: dealt,
+                flags: Some(chained),
+            };
+            land_hit(sink, &hit, dealt, redirects, caught);
+        }
     }
 
     // Step 9: Trample sends the excess on (`send_excess`).

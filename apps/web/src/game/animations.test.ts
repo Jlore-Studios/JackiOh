@@ -118,6 +118,8 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   manaSpent: 150,
   // C+ #62 KY's Papaya, R831003.
   curveDrawn: 700,
+  // Stinkyscape+ E7, R3554005.
+  lineDrawn: 700,
   autopilotEngaged: 600,
   // Stinkyscape's Dormant (R1839002).
   awakened: 400,
@@ -253,6 +255,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
   predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
   curveDrawn: { type: "curveDrawn", player: "p1", cells: [{ player: "p1", row: "backrow", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
+  lineDrawn: { type: "lineDrawn", player: "p1", cells: [{ player: "p1", row: "units", lane: 1 }, { player: "p2", row: "units", lane: 3 }, { player: "p2", row: "backrow", lane: 5 }] },
   autopilotEngaged: { type: "autopilotEngaged", player: "p1", turn: 9 },
   awakened: { type: "awakened", player: "p1", instanceId: "u1", defId: "core-008" },
   evolved: { type: "evolved", player: "p1", instanceId: "u1", defId: "core-008" },
@@ -443,6 +446,17 @@ describe("R831003 KY's Papaya's curve", () => {
     expect(row.fx).toEqual({ recipe: "curve" });
     expect(targetFor(SAMPLES.curveDrawn, fullBoardView())).toBe(testid.board);
     expect(animationsCss).toContain('[data-animating="curveDrawn"]');
+  });
+});
+
+describe("R3554005 the line to an enemy tile", () => {
+  it("R3554005 lineDrawn draws the line across the board", () => {
+    const row = ANIMATIONS.lineDrawn;
+    expect(row.animation).toBe("jk-line-drawn");
+    expect(row.durationMs).toBe(700);
+    expect(row.fx).toEqual({ recipe: "line" });
+    expect(targetFor(SAMPLES.lineDrawn, fullBoardView())).toBe(testid.board);
+    expect(animationsCss).toContain('[data-animating="lineDrawn"]');
   });
 });
 

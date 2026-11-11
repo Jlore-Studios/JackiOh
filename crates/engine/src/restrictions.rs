@@ -175,6 +175,10 @@ pub fn defense_barred(state: &GameState) -> bool {
 /// the one reason `legal_actions`, the reducer and the view all give.
 pub const SLUMBER_REFUSAL: &str = "that card is Dormant";
 
+/// R3554003: why a Unit may not attack across the slash — the one reason `legal_actions`, the
+/// reducer and the view all give.
+pub const SLASH_REFUSAL: &str = "that unit is across the slash";
+
 /// E35: this unit may make no attack, declared or forced ("can't attack or be attacked").
 pub fn cannot_attack(state: &GameState, unit: &CardInstance) -> bool {
     crate::scripts::flags_of(state, unit).cant_attack_or_be_attacked == Some(true)
@@ -221,6 +225,14 @@ pub fn attack_restriction_in(
     let target_inside = matches!(target, DamageTarget::Unit { instance } if in_gauntlet(state, instance));
     if inside != target_inside && gauntlet_acts(state) {
         return Err(EngineError::new("the Gauntlet's Units fight only each other"));
+    }
+    // R3554003: a Unit attacks only Units on its own half of a slashed board — declared or
+    // forced, which both read this, and a Taunt across the slash walls nothing on this half. Heroes
+    // are shared by both halves (health stays shared), so they are attacked from either.
+    if let DamageTarget::Unit { instance } = target
+        && !crate::geometry::reaches(state, Some(attacker), instance)
+    {
+        return Err(EngineError::new(SLASH_REFUSAL));
     }
     // R3550001: a Unit that "can only attack the unit directly across from it" attacks only the
     // enemy Unit across, never a hero — declared or forced, which both read this.

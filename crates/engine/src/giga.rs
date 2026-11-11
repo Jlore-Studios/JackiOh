@@ -34,7 +34,7 @@ pub fn lanes_of(card: &CardInstance) -> Vec<i32> {
     }
 }
 
-fn other_row(row: Row) -> Row {
+pub(crate) fn other_row(row: Row) -> Row {
     if row == Row::Units {
         Row::Backrow
     } else {
@@ -119,8 +119,20 @@ pub fn first_anchor(player: PlayerId, row: Row, room: impl Fn(ZoneSlot) -> bool)
 /// R3546000: where a GIGA with no named lane enters: the leftmost fit a play may take (R64), else
 /// the leftmost a move may (R688).
 pub fn entry_anchor(state: &GameState, player: PlayerId, row: Row) -> Option<ZoneSlot> {
-    first_anchor(player, row, |slot| is_open(state, slot))
-        .or_else(|| first_anchor(player, row, |slot| takes_move(state, slot)))
+    entry_anchor_where(state, player, row, |_| true)
+}
+
+/// `entry_anchor` where the anchor lane must also pass `allow` (R3554003: a summon stays on its
+/// half; R3554000: never the hole's lane).
+pub fn entry_anchor_where(
+    state: &GameState,
+    player: PlayerId,
+    row: Row,
+    allow: impl Fn(i32) -> bool,
+) -> Option<ZoneSlot> {
+    let room = |slot: ZoneSlot| allow(slot.lane) && !crate::geometry::in_hole(state, slot);
+    first_anchor(player, row, |slot| room(slot) && is_open(state, slot))
+        .or_else(|| first_anchor(player, row, |slot| room(slot) && takes_move(state, slot)))
 }
 
 /// R3546001: the zones beside this card in its own row: its side and row at one past either end

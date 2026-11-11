@@ -20,6 +20,7 @@ use crate::config::{
     MAX_COPIES, SETUP_TURN, UNIT_ZONES,
 };
 use crate::effects::tune::{TuneDirection, tune_once};
+use crate::geometry::{BlackHole, Half};
 use crate::resolve::{HookOptions, make_context};
 use crate::rng::Rng;
 use crate::script::EngineSink;
@@ -451,6 +452,21 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub tipsy: Option<TipsyStamp>,
+    /// R3554003: the half of a slashed board this card was cast on (a Spell in the resolving zone)
+    /// or stands on. Taken off by R78's reset with the card leaving the field. Absent on every other
+    /// card, so a game nothing slashes serializes and hashes as before (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub half: Option<Half>,
+    /// R3554007: the shared damage chain this Unit is in (S+ #7 Churnwalker). Taken off by R78's
+    /// reset with the card leaving the field. Absent on every other card (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub shared_chain: Option<u32>,
+    /// R3554007: the split damage chain this Unit is in. As `shared_chain`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub split_chain: Option<u32>,
 }
 
 /// R783004, R1040, R1044: what a card played face-down as a Trap carries until it has revealed — how
@@ -1790,6 +1806,19 @@ pub struct GameState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub warhero_worth: Option<i32>,
+    /// R3554000: the open Black Hole (S+ #77), if any. Absent until one opens (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub black_hole: Option<BlackHole>,
+    /// R3554002: the lane the slash voided (S+ #78), if any. Absent until one slashes (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub slashed_lane: Option<i32>,
+    /// R3554007: how many damage chains have been made (S+ #7 Churnwalker), so the next stamps a
+    /// fresh id. Absent until the first is made (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub chains_made: Option<u32>,
     /// R1956001: each Created card's generator by instance id: the catalog id of the card whose
     /// script minted it, or that card's own generator when it was Created too
     /// (`generators::record_generator`). Presentation only (CLAUDE.md rule 7): no rule reads it,
@@ -2657,6 +2686,9 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         enters_evolved: None,
         giga: None,
         tipsy: None,
+        half: None,
+        shared_chain: None,
+        split_chain: None,
     };
     *next_id += 1;
     // R3548002: minting a Warhero Token starts its worth at 0, wherever the card is minted.
@@ -2784,6 +2816,9 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
         held: None,
         marketplace: None,
         warhero_worth: None,
+        black_hole: None,
+        slashed_lane: None,
+        chains_made: None,
         generators: IndexMap::new(),
         win_rates: None,
         fused_scripts: crate::scripts::FusedScripts::default(),

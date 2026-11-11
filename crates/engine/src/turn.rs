@@ -418,6 +418,8 @@ fn start_of_turn_brittle(sink: &mut EngineSink, player: PlayerId, due_before: u3
     crate::subsystems::quests::hear_back_at_turn_start(sink, player);
     // R3540001: then the Burn and Toxic ticks, settled with the stage.
     crate::afflictions::tick_at_turn_start(sink, player);
+    // R3554001: then the Black Hole draws `player`'s permanents one lane toward it.
+    crate::geometry::pull_at_turn_start(sink, player);
     after_start_stage(sink, player, START_BRITTLE_STEP, due_before);
 }
 

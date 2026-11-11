@@ -70,6 +70,8 @@ fn damage_flags(args: &DamageFlagArgs) -> DamageFlags {
             None
         },
         via: None,
+        // R3554007: an effect's own hit is never a chain's.
+        chain_hit: false,
     }
 }
 

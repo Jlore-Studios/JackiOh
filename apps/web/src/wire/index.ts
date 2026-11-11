@@ -191,6 +191,8 @@ export const GAME_EVENT_TYPES = [
   "predicted",
   // #831's patch (C+ #62 KY's Papaya, R831003).
   "curveDrawn",
+  // Stinkyscape+ E7 (S+ #109 Lancer, #126 Vela, #127 Corvus, R3554005).
+  "lineDrawn",
   // Meditative+ #18 Cognitive Offloading's autopilot (R1183002).
   "autopilotEngaged",
   // Stinkyscape's Dormant: a Dormant card awakened (issue #1839, R1839002).
