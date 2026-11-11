@@ -1904,20 +1904,19 @@ pub fn play_actions_for(state: &GameState, player: PlayerId, card: &CardInstance
     if crate::state::barred_from_play(state, player, card) {
         return Vec::new();
     }
-    // R1223: a card affordable on borrowed mana is listed.
-    let mana = crate::credit::spendable_mana(state, player);
+    // R1223, R3548004: a card affordable on borrowed mana — or on infinite mana — is listed.
     // R1180004: a Spell its player's health price reaches takes no mana, so every price of it is
     // listed, the ones only the health affords included. A face-down play is a Trap's, never priced so.
     let health = crate::mana::health_priced(state, card);
     let mut out = priced_play_actions(state, player, card, |cost| {
-        if health || cost <= mana {
+        if health || crate::credit::can_pay(state, player, cost) {
             vec![PlayPayment::default()]
         } else {
             Vec::new()
         }
     });
     out.extend(face_down_play_actions(state, player, card, |cost| {
-        if cost <= mana {
+        if crate::credit::can_pay(state, player, cost) {
             vec![PlayPayment::default()]
         } else {
             Vec::new()
@@ -1938,13 +1937,13 @@ pub fn hand_play_choices_truncated(state: &GameState, player: PlayerId, card: &C
     {
         return false;
     }
-    let mana = crate::credit::spendable_mana(state, player);
-    // R1180004: a price the health price pays is one the player can pay.
+    // R1180004, R3548004: a price the health price pays — or infinite mana pays — is one the
+    // player can pay.
     let health = crate::mana::health_priced(state, card);
     let cut_prices: Vec<PlayPrice> = play_prices(state, player, card)
         .into_iter()
         .filter(|price| {
-            (health || price.cost <= mana)
+            (health || crate::credit::can_pay(state, player, price.cost))
                 && listed_play_choices(
                     state,
                     player,
@@ -2108,14 +2107,14 @@ pub fn offered_play_costs(state: &GameState, player: PlayerId, card: &CardInstan
 /// then the choices' own costs (R2975000): a card refused at every price is refused whatever the board
 /// holds, then step 1's own order.
 pub fn why_hand_card_unplayable(state: &GameState, player: PlayerId, card: &CardInstance) -> Option<String> {
-    // R1223: borrowed mana pays; R1180004: a Spell its player's health price reaches is refused by no mana.
-    let mana = crate::credit::spendable_mana(state, player);
+    // R1223: borrowed mana pays; R3548004: infinite mana pays; R1180004: a Spell its player's health
+    // price reaches is refused by no mana.
     let health = crate::mana::health_priced(state, card);
     why_unplayable(
         state,
         player,
         card,
-        |cost| health || cost <= mana,
+        |cost| health || crate::credit::can_pay(state, player, cost),
         |cost| {
             crate::credit::why_unaffordable(state, card, cost)
                 .err()

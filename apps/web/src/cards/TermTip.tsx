@@ -19,6 +19,7 @@ import {
 import { createPortal } from "react-dom";
 
 import { TERM_HOVER_DELAY_MS } from "./constants.ts";
+import { useTipsyBlur } from "../game/tipsy.tsx";
 import type { GlossaryEntry } from "../wire/generated/GlossaryEntry.ts";
 import { LONG_PRESS_MS, LONG_PRESS_SLOP_PX } from "./inspect/constants.ts";
 import { placePreview, rectOf, type Rect } from "./inspect/placement.ts";
@@ -249,10 +250,18 @@ function LiveTerm({ entry, mode, children }: { entry: GlossaryEntry; mode: "poin
 /** A glossary term in a card's text: plain everywhere, showing its rule where the surface allows. */
 export function TermTip({ entry, children }: { entry: GlossaryEntry; children: ReactNode }): ReactElement {
   const mode = useTermTipMode();
-  if (mode === "off") return <strong className="cf-term" data-term={entry.id}>{children}</strong>;
+  // R3548001: the keyword the stamp blurs draws blurred.
+  const blur = useTipsyBlur();
+  const body =
+    blur?.kind === "keyword" && blur.keyword === entry.id ? (
+      <span className="tipsy-blur">{children}</span>
+    ) : (
+      children
+    );
+  if (mode === "off") return <strong className="cf-term" data-term={entry.id}>{body}</strong>;
   return (
     <LiveTerm entry={entry} mode={mode}>
-      {children}
+      {body}
     </LiveTerm>
   );
 }

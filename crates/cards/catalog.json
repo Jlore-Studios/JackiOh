@@ -35601,7 +35601,7 @@
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "One of the following random effects:\nAdd {card|random Paperclip card|random Paperclip cards} to your hand, they cost (0), refresh 2 mana.\nAdd {card2|random Evolved Swarm card|random Evolved Swarm cards} to your hand, they cost (0).\nSummon two random Radiant Units, make them GIGA.\nSummon or cast {card3|random Jlockeed card|random Jlockeed cards}.\nAdd {card4|Terminus card|Terminus cards} to your hand, refresh 4 mana.\nAdd the Toxopid to your hand, it costs (0).\nToxic {toxic} and Burn {burn} all enemies.\nFor the rest of the game, when you launch a Starship, cast a random Call to Chaos and summon a random (2) Cost Weapon.\nSummon an Mindustrial Golem and a Swarm Golem.\nCast a random Call to Chaos."
+      "text": "One of the following random effects:\nAdd {card|random Paperclip card|random Paperclip cards} to your hand, they cost (0), replenish 2 mana.\nAdd {card2|random Evolved Swarm card|random Evolved Swarm cards} to your hand, they cost (0).\nSummon two random Radiant Units, make them GIGA.\nSummon or cast {card3|random Jlockeed card|random Jlockeed cards}.\nAdd {card4|Terminus card|Terminus cards} to your hand, replenish 4 mana.\nAdd the Toxopid to your hand, it costs (0).\nToxic {toxic} and Burn {burn} all enemies.\nFor the rest of the game, when you launch a Starship, cast a random Call to Chaos and summon a random (2) Cost Weapon.\nSummon an Mindustrial Golem and a Swarm Golem.\nCast a random Call to Chaos."
     },
     "radiant": {
       "keywords": [],

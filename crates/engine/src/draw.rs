@@ -709,6 +709,8 @@ pub fn complete_draw(
         return DrawOutcome::Cast;
     }
 
+    // R3548001: the stamp a Tipsy counter now up lays on the drawn card, before it reaches the hand.
+    card.tipsy = crate::tipsy::stamp_for(sink.state, player);
     if add_to_hand(sink, &mut card) == AddToHandOutcome::Burned {
         DrawOutcome::Burned
     } else {

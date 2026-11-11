@@ -29,6 +29,7 @@ export type GlossaryTermId =
   | "Can't attack"
   | "Armor"
   | "Lucky"
+  | "Tipsy"
   | "Animated"
   | "Animated on your turn"
   | "Brittle"

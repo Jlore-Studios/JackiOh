@@ -113,7 +113,13 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Discard",
     "Heal X",
     "Mana / gain mana",
-    "Refresh X",
+    "Replenish X",
+    // R3548003: Refresh gives back Activates, never mana.
+    "Refresh",
+    // R3548004: infinite mana spends nothing.
+    "Infinite mana",
+    // R3548002: the game-wide Warhero worth.
+    "Warhero Token's worth",
     "Damage",
     "Lose health",
     "Draw",

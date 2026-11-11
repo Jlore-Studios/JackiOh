@@ -29,6 +29,7 @@ type GameState = {
   marks?: { instanceId: string; mark: string; color: string; delayedId: string }[];  // marks on cards, such as #50's pending steal (R437)
   secrets?: { id: string; owner: PlayerId; choice?: 'greed'|'attack'|'defend'; revealed?: true }[];  // Mind Games' hidden choices, filed at the play and removed at the reward or a winning guess (R860)
   marketplace?: { offers: { defId: string; radiant?: true; base: number; price: number; stock: number; bought: Record<PlayerId, number>; owner?: PlayerId; fixed?: true; buffs?: number; nerfs?: number }[]; quotes?: { defId: string; base: number; radiant: number }[] };  // Stinkyscape's Marketplace, absent until the first Resource or Credits either gains: each player's offers, rolled at the start of their turn (`owner`'s alone), each perhaps Buffed or Nerfed (`buffs`, `nerfs`, [[R3047002]]), and the lots an effect added (`fixed`), each with its price and what was bought of it, and each Resource's sell quote this turn, then each `handSale` card's (R1853000–R1853005, R1861000, R2250002)
+  warheroWorth?: number;        // every Warhero Token's worth in Credits, game-wide; absent until the first Token has been printed (issue #3548, R3548002)
   boardHistory: BoardSnapshot[]; // the field and its Locks at the start of each of the last BOARD_HISTORY_DEPTH turns (C+ #35, R419)
   lastBoards: Record<PlayerId, { defId: string; radiant: boolean }[]>;  // each seat's board as its last game ended, a setup input (C+ #29, R417)
   mulliganed: PlayerId[];       // whose mulligan has resolved, in seat order (2.1)
@@ -54,6 +55,8 @@ type PlayerState = {
   deathWatchCasts?: { turn: number; count: number };  // the Calls to Chaos S #150's death watch cast for this player on the running turn, at most CHAOS_STINKY_DEATH_WATCH_CASTS_PER_TURN; absent until its first (R2176001)
   tradesPerTurn?: number;       // this player's Trades a turn, once an effect sets a figure of theirs; absent = TRADES_PER_TURN (R1838000)
   jade?: number;  // this player's Jade Counter, absent until it first rises (R961, R962)
+  tipsy?: number;  // this player's Tipsy counter, shown to both seats beside its hero; absent at none (issue #3548, R3548000)
+  infiniteMana?: true;  // while a card giving infinite mana acts on this seat's field, its mana is not spent by paying costs; public on both seats, absent otherwise (issue #3548, R3548004)
   marketCredits?: number;       // this player's Credits, public, absent until first gained; not the credit line (R1840005)
   starscape?: { nodes: StarscapeReward[]; at: number; travelledOn: number };  // this player's starscape map, charted at their first travel and absent before it; `at` the node they stand on, 0 the start (R1847000, R1847002)
   gameLog?: { playedByTag: Partial<Record<Tag, number>>; lastFaceUpPlay?: { defId: string; radiant: boolean; chinese?: true; type: CardType } };  // never reset (C+ #64, T-AI-2, T-AI-5, R451)
@@ -113,6 +116,7 @@ type CardInstance = {
   evolved?: true;               // it has evolved, so it evolves no more; R78's reset takes it off (issue #3536, R3536000)
   entersEvolved?: true;         // marked to enter the field evolved; rides every zone until the state check after it enters (issue #3536, R3536002)
   giga?: true;                  // fills four zones, stamped as it enters the field (issue #3546, R3546000)
+  tipsy?: { player: PlayerId; level: number; turn: number };  // the Tipsy counter stamped on this card as it arrived, if one was up; R78's reset takes it off as the card leaves the field; only its owner's view reads it (issue #3548, R3548001)
   slumber?: { turns?: number };  // Dormant: no attack, switch, target or effect reaches it; `turns` the countdown to its awakening, absent for one that wakes only by an effect (R1839000, R1839001)
   starship?: { pieces: { defId: string; radiant?: boolean }[]; name?: string; launched?: number };  // a Starship's memory: the pieces fused into it, oldest first, and once launched its name and launch order; a status, lost on leaving the field (R1852005)
 };
@@ -206,6 +210,8 @@ Patch v0.2.0's cards add to the view, each under the same rules of who may read 
 - **A marked card** carries its mark in both views: #50 K-Pop Fanatic's pending steal on its target, for as long as the delayed steal waits ([[R437]]); TG #15 In a hurry's Rush Tokens wear the `endOfTurn` mark while the destroy at the end of this turn waits on them ([[R2321001]]).
 - **A count kept on a Unit** rides on that Unit as `tallies`, each `{ defId, value, goal }`, the card keeping it by its id: TG #31 Level Up!'s attacks toward its Radiant. It is asked of a card's `tallies` hook, a pure read like `preview`, on every card acting on the field that the viewer may read, so a face-down card's count reaches its controller alone, and it is absent when none counts ([[R2321000]]).
 - **Each seat's Jade Counter** shows beside its hero on both seats once it has risen above 0, and the view carries no key before that ([[R961]]).
+- **Each seat's Tipsy counter** shows as a stein beside its hero on both seats while it is above 0, and the view carries no key at none; a stamped card may blur one of its words on its owner's view alone, the same blur on a reload and a replay, and never on the opponent's view ([[R3548000]], [[R3548001]]).
+- **Infinite mana** shows as infinity in the mana tray on both seats while a card giving it acts on that seat's field, and the view carries no key otherwise ([[R3548004]]).
 - **Burn and Toxic** are public on both seats: a Unit carries them in its `counters` (a Unit standing in the backrow in its `BackrowCounters`), a hero as `burn` and `toxic` beside its `armor`, each absent at none; neither ever rides a face-down card, which carries neither ([[R3540000]], [[R3540005]]).
 - **Resources and Credits.** A Resource is a hand card, in the hand's view like any other ([[R2250000]]); each seat carries its Credits as `marketCredits`, public on both seats, absent until first gained ([[R1840005]]).
 - **Each seat's starscape map** shows on both seats once its player has first traveled, every node with its reward and the node they stand on, and the view carries no key before that ([[R1847000]]).

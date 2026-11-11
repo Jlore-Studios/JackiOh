@@ -2369,6 +2369,23 @@ pub const EMOTE_WINDOW_MAX: usize = 5;
 /// R3540001: what a Burn count drops by after each tick (8 → 5 → 2 → none).
 pub const BURN_DECAY: i32 = 3;
 
+// ---- Stinkyscape+ E5 (issue #3548) ----
+
+/// R3548000: what a Tipsy counter drops by at the start of its owner's turn.
+pub const TIPSY_DECAY: i32 = 1;
+/// R3548001: the chance, in percent, that one Tipsy level blurs a newly stamped card.
+pub const TIPSY_BLUR_CHANCE_PER_STACK: i32 = 10;
+/// R3548001: the most the Tipsy blur chance reaches, in percent, however high the counter climbs.
+pub const TIPSY_BLUR_CHANCE_CAP: i32 = 50;
+/// R3548002: the catalog id of the Warhero Token, the Stinkyscape Resource whose worth is game-wide.
+pub const WARHERO_TOKEN_DEF_ID: &str = "stinkyscapeplus-t-warhero-token";
+/// R3548002: the least a Warhero Token's worth grows by at the end of a turn.
+pub const WARHERO_GROWTH_MIN: i32 = 0;
+/// R3548002: the most a Warhero Token's worth grows by at the end of a turn.
+pub const WARHERO_GROWTH_MAX: i32 = 10;
+/// R3548002: what a Radiant Warhero Token's worth is multiplied by.
+pub const WARHERO_RADIANT_MULTIPLIER: i32 = 2;
+
 #[cfg(test)]
 mod tests {
     use super::*;

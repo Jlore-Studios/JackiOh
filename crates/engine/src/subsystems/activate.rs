@@ -534,8 +534,8 @@ fn why_ability_unusable(
     let side = &state.players[player];
     let cost = decl.cost.unwrap_or_default();
     let mana = mana_price(state, card, cost);
-    // R1223: an Activate's mana cost may be borrowed too.
-    if mana > crate::credit::spendable_mana(state, player) {
+    // R1223, R3548004: an Activate's mana cost may be borrowed too, or paid on infinite mana.
+    if !crate::credit::can_pay(state, player, mana) {
         return Err(EngineError::new(format!(
             "that ability costs {mana}, more than your mana"
         )));

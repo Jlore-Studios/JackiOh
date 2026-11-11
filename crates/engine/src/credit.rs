@@ -66,6 +66,13 @@ pub fn spendable_mana(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].mana.current + credit_available(state, player)
 }
 
+/// R3548004: whether `player` can pay `due` mana now: current mana plus what the credit line still
+/// offers (R1223), or nothing at all with infinite mana. Every refusal and listing reads this, so
+/// `legal_actions` and the reducer agree. The field walk runs only when the mana falls short.
+pub fn can_pay(state: &GameState, player: PlayerId, due: i32) -> bool {
+    due <= spendable_mana(state, player) || crate::mana::has_infinite_mana(state, player)
+}
+
 /// R979000: why this price is one the player cannot pay, in §10.5 step 1's words (`play_steps.rs` owns
 /// the call, this the sentence), so the view's `playReason` and the reducer refuse in one voice. The
 /// seat is the card's holder (as the pay step charges), never a controller a control change moved.
@@ -75,7 +82,7 @@ pub fn why_unaffordable(state: &GameState, card: &CardInstance, cost: i32) -> Re
         crate::wire::Zone::Hand { player } => player,
         _ => card.controller,
     };
-    if crate::mana::mana_due_now(state, card, cost) <= spendable_mana(state, holder) {
+    if can_pay(state, holder, crate::mana::mana_due_now(state, card, cost)) {
         return Ok(());
     }
     Err(EngineError::new(format!(
@@ -110,7 +117,11 @@ fn trim(schedule: Vec<i32>) -> Option<Vec<i32>> {
 /// R1223: pay `amount` mana, borrowing the shortfall past current mana up to the credit limit.
 /// Returns how much was borrowed. Without a line acting this is `spend_mana` (which floors at 0).
 /// A turn's debt stays one debt: the old split is subtracted off the schedule and the new one added.
+/// R3548004: with infinite mana no cost spends any: the payment is 0 and nothing is borrowed.
 pub fn pay_mana(state: &mut GameState, player: PlayerId, amount: i32) -> i32 {
+    if amount > 0 && crate::mana::has_infinite_mana(state, player) {
+        return 0;
+    }
     let current = state.players[player].mana.current;
     if amount <= current {
         crate::mana::spend_mana(&mut state.players[player], amount);

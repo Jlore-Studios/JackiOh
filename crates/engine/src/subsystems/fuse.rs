@@ -1139,6 +1139,7 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 toxic_on_damage: sum_defined(defined.iter().map(|f| f.toxic_on_damage)),
                 damage_burns: flags(|f| f.damage_burns),
                 damage_is_toxic: flags(|f| f.damage_is_toxic),
+                infinite_mana: flags(|f| f.infinite_mana),
             })
         }
     }

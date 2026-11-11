@@ -1232,6 +1232,8 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.giga = None;
     // R1174000: so is Frozen, which a Bounce, a death or an exile takes off with it.
     instance.frozen = None;
+    // R3548001: so is the Tipsy stamp; a card back after leaving the field is stamped again.
+    instance.tipsy = None;
     // R1839000: and so is Dormant; a card printing it starts it again as it next enters the field.
     instance.slumber = None;
     // R1852000: and so is a Starship's memory, which its hull starts again as it next enters the field.
