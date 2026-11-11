@@ -15822,16 +15822,10 @@
     "what": "build #3567 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-11T15:01:22Z",
+    "at": "2026-11-11T15:14:38Z",
     "notes": [
-      "delivered plan #3567 on claude-7 (run 43041402386): planned",
-      "delivered plan #3565 on claude-3 (run 43037355741): planned",
-      "started plan #3569 on claude-3 (run 43044763867)",
-      "started build #3565 on muse (run 43044944531)",
-      "started build #3566 on muse (run 43045112981)",
-      "started build #3567 on muse (run 43045260278)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered build #3566 on muse (run 43045112981): blocked",
+      "runner gate: started 1 of 1 waiting run(s) (queue build 43046780872)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16537,7 +16531,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-11T15:01:22Z",
+  "loop_tick": "2026-11-11T15:14:38Z",
   "machine_disk": {
     "issue": null,
     "reading": {
