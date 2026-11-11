@@ -35151,7 +35151,9 @@
           "provider": "claude-1"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-11T17:19:40Z",
         "every": 5,
+        "findings": 0,
         "head": "48efff4ccf26e0f4f26d3d0b97984a47aa2432a7",
         "issue": 3678,
         "merged_at": "2026-11-11T16:32:44Z",
@@ -35164,12 +35166,13 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:de804922-1794417051",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/43065708993",
         "sha": "d0f7305317b3f0037c3b9b782fe34d0a80b410aa",
         "started_at": "2026-11-11T17:11:22Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: map the code's implicit states and check each behaves as expected",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 210
