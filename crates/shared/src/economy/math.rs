@@ -416,4 +416,34 @@ mod tests {
             );
         }
     }
+
+    /// R1339001: a force takes, from the floored slot on, the first slot below its rarity whose loss takes no
+    /// tracked rarity from the pack (a Common or a Rare, or a rarity another slot also holds), never one an
+    /// earlier force took. A lone Epic is no such slot, nor is one at the forced rarity, and an empty pack
+    /// has none.
+    #[test]
+    fn r1339001_a_force_takes_the_first_spare_slot_below_its_rarity_no_force_took() {
+        let none = [false; PACK_SLOTS];
+        const { assert!(PACK_FLOORED_SLOT == 0 && PACK_SLOTS == 5) };
+        // A lone Epic first: a Legendary's force passes over it to the Common.
+        assert_eq!(
+            forced_slot(&[Epic, Common, Rare, Rare, Rare], &none, Legendary),
+            Some(1)
+        );
+        // A shared Epic first: an Epic's force passes over it, as it is no lower.
+        assert_eq!(
+            forced_slot(&[Epic, Epic, Common, Rare, Rare], &none, Epic),
+            Some(2)
+        );
+        // The floored slot an earlier force took is passed over.
+        assert_eq!(
+            forced_slot(
+                &[Common, Common, Rare, Rare, Rare],
+                &[true, false, false, false, false],
+                Epic
+            ),
+            Some(1)
+        );
+        assert_eq!(forced_slot(&[], &[], Epic), None);
+    }
 }

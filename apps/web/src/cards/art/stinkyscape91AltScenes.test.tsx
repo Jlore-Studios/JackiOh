@@ -37,7 +37,8 @@ import { ART_DETAIL_MAX_BYTES, ART_DETAIL_MIN, artElements } from "./richness.ts
 import { composeScene, SCENE_LAYERS, sceneRecipeOf, sceneUse, type SceneLayer, type SceneRecipe } from "./scene.ts";
 import { SCENE_KIT, type SceneryPartId } from "./sceneKit.ts";
 import { STINKY_ALT_KIT } from "./sceneKitStinkyAlt.ts";
-import { ALT_PICTURE_CHANGE_MIN, ALT_SCENE_RECIPES, SCENE_RECIPES, STINKYSCAPE_91_ALT_RECIPES, STINKYSCAPE_91_RECIPES } from "./sceneRecipes.ts";
+import { STINKY_EARLY_ALT_KIT } from "./sceneKitStinkyEarlyAlt.ts";
+import { ALT_PICTURE_CHANGE_MIN, ALT_SCENE_RECIPES, SCENE_RECIPES, STINKYSCAPE_91_ALT_RECIPES, STINKYSCAPE_91_RECIPES, STINKYSCAPE_ALT_RECIPES } from "./sceneRecipes.ts";
 import { STARSHIP_PIECES, stinkyscapeSvg } from "./stinkyscape.ts";
 import { stinkyscapeArtUri } from "./svg.ts";
 import { compositionFor, themeFor } from "./themes.ts";
@@ -49,7 +50,7 @@ const TABLE: readonly string[] = [
   ...["116", "117", "122", "123", "124", "127", "128", "129", "132", "133", "135", "136", "137", "138", "139", "141", "142", "146"],
   ...["147", "148", "150", "151", "152", "153", "154", "155", "157", "158", "159", "160", "167", "169", "172", "173", "174", "177"],
 ].map((id) => `stinkyscape-${id}`);
-/** The late Stinkyscape card offered Alt art that #3406's table leaves out, whose Alt art stays its painter's re-seeded. */
+/** The late Stinkyscape card offered Alt art that #3406's table leaves out, which #3394's table restages (R3394000). */
 const LEFT_OUT = "stinkyscape-t-dormant-starship";
 /** The cards of the table with no normal scene recipe, whose normal face their own painter draws: the Starship Pieces (R3333001), Jlockeed's three weapons and Dice of Doom (R3338001). */
 const OWN_PAINTER: readonly string[] = [
@@ -143,6 +144,8 @@ const NEW_PARTS: Readonly<Record<keyof typeof STINKY_ALT_KIT, readonly string[]>
   escalator: ["stinkyscape-116"],
   seashell: ["stinkyscape-148"],
 };
+/** R3394000: the pass's parts that #3394's early Starship Pieces reuse for their own (Healing Capsule's flank pod and hull plates, Cannon v4's cannon). */
+const REUSED_BY_3394: readonly string[] = ["hull-plate", "great-cannon", "pod-capsule"];
 /** What a figure both pictures draw may change: what it holds, wears over its outfit's colour, or its hair; never its head, outfit or skin. */
 const LOOK_KEPT: readonly (keyof FigureLook)[] = ["head", "outfit", "skin"];
 /** The rarer than Rare: a scene with a foreground, a middle and a background. */
@@ -264,7 +267,9 @@ describe("R3406000 Stinkyscape's later Alt art restaged", () => {
     expect(TABLE).toHaveLength(54);
     expect(Object.keys(STINKYSCAPE_91_ALT_RECIPES).sort()).toEqual(TABLE);
     for (const id of TABLE) expect(ALT_SCENE_RECIPES[id], id).toBe(alt(id));
-    expect(Object.hasOwn(ALT_SCENE_RECIPES, LEFT_OUT)).toBe(false);
+    // R3394000: #3394's table, not this one, gives it an alt recipe (stinkyscapeAltScenes.test.tsx).
+    expect(Object.hasOwn(STINKYSCAPE_91_ALT_RECIPES, LEFT_OUT)).toBe(false);
+    expect(ALT_SCENE_RECIPES[LEFT_OUT]).toBe(STINKYSCAPE_ALT_RECIPES[LEFT_OUT]);
     expect(ALT_PICTURE_CHANGE_MIN).toBe(0.6);
     // The own painter cards are the table's cards with no normal recipe: the Starship Pieces, Jlockeed's weapons and Dice of Doom.
     expect(TABLE.filter((id) => !Object.hasOwn(STINKYSCAPE_91_RECIPES, id)).sort()).toEqual([...OWN_PAINTER].sort());
@@ -466,16 +471,22 @@ describe("R3406000 Stinkyscape's later Alt art restaged", () => {
   it("R3406000 the pass's new parts are in the kit and placed", () => {
     const added = Object.keys(STINKY_ALT_KIT);
     expect(Object.keys(NEW_PARTS).sort()).toEqual([...added].sort());
-    // They join the kit last, each as itself, so none takes the place of an earlier part (an id spread twice keeps its first place).
-    expect(Object.keys(SCENE_KIT).slice(-added.length)).toEqual(added);
+    // They join the kit last, each as itself, so none takes the place of an earlier part (an id spread twice keeps its first place);
+    // R3394000: but for #3394's parts, which follow them (stinkyscapeAltScenes.test.tsx).
+    const later = Object.keys(STINKY_EARLY_ALT_KIT).length;
+    expect(Object.keys(SCENE_KIT).slice(-added.length - later, -later)).toEqual(added);
     for (const [id, part] of Object.entries(STINKY_ALT_KIT)) {
       expect(SCENE_KIT[id as keyof typeof SCENE_KIT], id).toBe(part);
       expect(Object.hasOwn(FIGURE_KIT, id), `${id} is a figure part`).toBe(false);
     }
     for (const [part, ids] of Object.entries(NEW_PARTS)) {
-      // None is a part of a normal picture or of another set's Alt picture, and each brief that names it places it.
+      // None is a part of a normal picture or of another set's Alt picture, and each brief that names it places it; R3394000: but
+      // #3394's early Starship Pieces reuse three of them (stinkyscapeAltScenes.test.tsx).
       for (const [id, scene] of Object.entries(SCENE_RECIPES)) expect(partsOf(scene).has(part), `${id} ${part}`).toBe(false);
-      for (const [id, scene] of Object.entries(ALT_SCENE_RECIPES)) if (!TABLE.includes(id)) expect(partsOf(scene).has(part), `${id}#alt ${part}`).toBe(false);
+      for (const [id, scene] of Object.entries(ALT_SCENE_RECIPES)) {
+        const reused = Object.hasOwn(STINKYSCAPE_ALT_RECIPES, id) && REUSED_BY_3394.includes(part);
+        if (!TABLE.includes(id) && !reused) expect(partsOf(scene).has(part), `${id}#alt ${part}`).toBe(false);
+      }
       for (const id of ids) expect(partsOf(alt(id)).has(part), `${id} ${part}`).toBe(true);
       expect(TABLE.filter((id) => partsOf(alt(id)).has(part)), part).toEqual(ids);
     }

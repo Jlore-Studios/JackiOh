@@ -659,6 +659,20 @@ fn r2660000_a_bot_far_behind_with_no_unstoppable_lethal_plays_on() {
     }
 }
 
+/// R639000: where a seat stands reads the board as the side whose turn it is swinging next. On a board
+/// where each side holds the same unit, each threatening the other's hero, the seat whose turn it is
+/// stands ahead and the other behind.
+#[test]
+fn r639000_on_a_mirrored_board_the_seat_whose_turn_it_is_stands_ahead() {
+    let side = json!({ "field": ["core-008"] });
+    let state = facing(side.clone(), side);
+    assert_eq!(state.active, PlayerId::P1, "PREMISE: p1's turn");
+    let to_move = standing(&state, PlayerId::P1, "mirror", PlayerId::P1);
+    let waiting = standing(&state, PlayerId::P2, "mirror", PlayerId::P2);
+    assert!(to_move.behind < 0.0, "the seat to move: {to_move:?}");
+    assert!(waiting.behind > 0.0, "the seat waiting: {waiting:?}");
+}
+
 #[test]
 fn r2660001_a_bot_well_behind_offers_a_draw_at_its_turn_start_by_its_own_roll() {
     // A card to play keeps the turn open past the offer, which R82 would otherwise end (R36).

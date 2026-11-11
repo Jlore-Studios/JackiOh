@@ -471,9 +471,12 @@ describe("the workflows", () => {
     expect(WORKFLOW).toContain("          fetch-depth: 0\n          token: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}\n");
   });
 
-  it("hands a failed move to Squishy, and closes it when a move goes through", () => {
+  it("hands a failed move to the night bot, never Squishy, and closes it when a move goes through", () => {
     expect(WORKFLOW).toContain('TITLE: "CI: staging promotion failed"');
-    expect(WORKFLOW).toContain('--add-assignee "$SQUISHY_LOGIN" --add-label "$SQUISHY_QUEUE"');
+    expect(WORKFLOW).toContain("BOT_LOGIN: jgoetzmann-bot");
+    expect(WORKFLOW).toContain('--add-assignee "$BOT_LOGIN" --add-label "$BOT_QUEUE"');
+    // Squishy takes only what a person hands it (#3676).
+    expect(WORKFLOW).not.toMatch(/squishy-squooby|squishy:build/u);
     expect(WORKFLOW).toContain("needs.promote.result == 'failure' || needs.promote.outputs.moved == 'true'");
   });
 
