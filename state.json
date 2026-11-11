@@ -15462,6 +15462,13 @@
     "3693": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-11T19:16:20Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "Rule 1 is the only line that could apply: the change is a monitor check in the engine's testkit, not a rule or the resolution loop, and the scratch run found no drift to fix, so it stays medium."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
