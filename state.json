@@ -18512,6 +18512,23 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "3672": {
+      "action": "plan",
+      "asks": [],
+      "in_lane": true,
+      "kind": "build",
+      "live": "planning",
+      "owner": "claude-8",
+      "owner_since": "2026-11-11T03:01:17Z",
+      "owner_why": "it plans it",
+      "pending_request": false,
+      "provider": "claude-8",
+      "run_id": "pending:34cc2854-1794366053",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-11T03:01:17Z",
+      "stop_requested": false,
+      "taken_asks": []
+    },
     "3674": {
       "action": "plan",
       "asks": [],
@@ -18547,9 +18564,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T03:00:41Z",
+    "at": "2026-11-11T03:01:17Z",
     "url": "",
-    "what": "build #3548 on muse"
+    "what": "plan #3672 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-10T23:02:11Z",
