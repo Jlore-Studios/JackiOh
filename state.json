@@ -16147,6 +16147,8 @@
       }
     },
     "3717": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-11T16:08:18Z",
@@ -16160,8 +16162,11 @@
         "trail": "- Bash: {\"command\": \"ls -a | head -50 && sed -n 1,60p .bot-notes.md | head -100 && git status --short | head\", \"description\": \"Show worktree and bot notes\"}\n- Bash: {\"command\": \"grep -n \\\"^## \\\" .bot-notes.md; cat .bot-journal.md | head -40; grep -n \\\"resultWords\\\\|import \\\\|Team\\\" apps/web/src/duos/DuosBoard.tsx | head -60\", \"description\": \"Check notes, journal\u2026\n- Bash: {\"command\": \"sed -n 120,175p apps/web/src/duos/DuosBoard.tsx; sed -n 235,255p apps/web/src/duos/DuosBoard.tsx; sed -n 400,412p apps/web/src/duos/DuosBoard.tsx; sed -n 30,100p apps/web/src/game/Result\u2026\n- Bash: {\"command\": \"sed -n 1,30p apps/web/src/game/Result.tsx; grep -n \\\"seatOutcome\\\" -r apps/web/src --include=*.ts -l; cat apps/web/src/wire/generated/DuosView.ts | head -30; grep -n \\\"viewer\\\\|result\\\" \u2026\n- Bash: {\"command\": \"grep -n \\\"describe(\\\\|^import\\\\|function duosView\\\\|function renderDuosBoard\\\\|beforeEach\\\\|afterEach\\\\|useFakeTimers\\\" apps/web/src/duos/DuosBoard.test.tsx | head -60; wc -l apps/web/sr\u2026\n- Bash: {\"command\": \"sed -n 100,300p apps/web/src/duos/DuosBoard.test.tsx; sed -n 676,692p apps/web/src/duos/DuosBoard.test.tsx; sed -n 905,946p apps/web/src/duos/DuosBoard.test.tsx; tail -30 apps/web/src/du\u2026\n- Bash: {\"command\": \"grep -n \\\"One of the duels\\\\|The game reached its turn limit\\\\|\\\\\\\"The turn limit was reached\\\\|Both players met a winning\\\\|Both players were voted out together\\\\|Both players escaped t\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='apps/web/src/i18n/zh-CN.json'\\ns=open(p,encoding='utf-8').read()\\nold=' \\\"The game reached its turn limit.\\\": \\\"\\u5bf9\\u5c40\\u8fbe\\u5230\\u4e86\\u56de\\u540\u2026\n- Bash: {\"command\": \"for k in \\\"Your teammate met their winning condition.\\\" \\\"Their opponent met their own winning condition.\\\" \\\"Their opponent was voted out of the game.\\\" \\\"Your teammate was voted out of\u2026\n- said: Now DuosBoard.tsx.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/duos/DuosBoard.tsx'\\ns=open(p,encoding='utf-8').read()\\ns=s.replace('import type { Team } from \\\"../wire/generated/Team.ts\\\";\\\\n','',1)\\ns=s.replace('i\u2026\n- Bash: {\"command\": \"grep -n \\\"no button\\\\.\\\" apps/web/README.md; grep -n \\\"A disconnect never ends a co-op game\\\" spec/13-duos.md\", \"description\": \"Locate README and spec insertion points\"}\n- Bash: {\"command\": \"sed -n 940,952p apps/web/README.md; sed -n 55,76p spec/13-duos.md\", \"description\": \"Read insertion contexts\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/README.md'\\ns=open(p,encoding='utf-8').read()\\nold=''' no button.\\n\\nThe Duos WASM bindings'''\\nassert s.count(old)==1\\nnew=''' no button.\\n- a game a duel\u2026\n- Bash: {\"command\": \"grep -n \\\"export\\\" apps/web/src/i18n/i18n.ts | head -30; sed -n 60,100p apps/web/src/duos/DuosBoard.test.tsx\", \"description\": \"Check i18n exports and ownDuel\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/duos/DuosBoard.test.tsx'\\ns=open(p,encoding='utf-8').read()\\ns=s.replace('import { modifierListTestid } from \\\"../game/ModifierList.tsx\\\";\\\\n','import \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p,encoding='utf-8').read()\\nstate='''## State\\n\\nBuild run (sonnet). Plan below is the issue's plan. Done: zh-CN.json (12 added, 1 dead remov\u2026\n- Bash: {\"command\": \"tail -5 /tmp/wasm.log; pnpm --dir apps/web test src/duos/DuosBoard.test.tsx src/i18n/i18n.test.ts 2>&1 | tail -50\", \"description\": \"Run the web tests\", \"timeout\": 600000}\n- Bash: {\"command\": \"pnpm --dir apps/web typecheck 2>&1 | tail -8; pnpm exec eslint apps/web/src/duos 2>&1 | tail -15; cargo fmt --check && echo fmt-ok; git status --short\", \"description\": \"Typecheck, eslint\u2026\n- Bash: {\"command\": \"cargo run --release -p jackioh-tools -- spec check 2>&1 | tail -8\", \"description\": \"Run cargo jackioh spec check\", \"timeout\": 900000}\n- Bash: {\"command\": \"grep -rn \\\"reached its turn limit\\\\|One of the duels decided\\\" apps e2e crates docs spec --include=* -l 2>/dev/null | grep -v node_modules | head; pnpm --dir apps/web test src/duos 2>&1 \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p,encoding='utf-8').read()\\ni=s.index('## Goal')\\nstate='''## State\\n\\nBuild run (sonnet): everything in the plan is done and checked. Passed\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a co-op game won on one board says which board and how\"} --> When a co-op game ends with the team reason `duelResult`, the result panel now names the board that decided it and how. The Duos web tests, typecheck, eslint, `cargo fmt --check` and `cargo ja\u2026"
       },
       "issue": 3697,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-11T17:23:33Z",
         "from_run": "43055308651",
         "gates": [
           {
@@ -16253,7 +16258,11 @@
         "source": "build",
         "until": "2026-11-11T17:52:19Z"
       },
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-11T17:22:19Z",
+      "run_id": "pending:cde43d1d-1794417783",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16272,6 +16281,9 @@
         "provider": "claude-4",
         "run": "43055308651"
       },
+      "started_at": "2026-11-11T17:23:33Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16285,9 +16297,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T17:11:22Z",
+    "at": "2026-11-11T17:23:33Z",
     "url": "",
-    "what": "spot-check #3688 on claude-3"
+    "what": "review #3717 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-11T17:03:12Z",
