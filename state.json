@@ -16500,15 +16500,9 @@
     "what": "build #3571 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-11T20:12:02Z",
+    "at": "2026-11-11T20:25:09Z",
     "notes": [
-      "delivered plan #3570 on claude-4 (run 43089833258): planned",
-      "delivered plan #3701 on claude-4 (run 43088298562): planned",
-      "delivered plan #3571 on claude-3 (run 43088192609): planned",
-      "started build #3701 on claude-4 (run 43094791590)",
-      "started build #3570 on claude-3 (run 43094894425)",
-      "started build #3571 on claude-7 (run 43095013799)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is idle, but nothing queued is for it; `claude-8` is busy; `claude-1` 5-hour usage is 39%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-12T00:10:00Z; it takes reviews only; it can start a build or a plan again in 2h 52m; `claude-4` is idle, but nothing queued is for it; `claude-6` is busy; `claude-5` is idle, but nothing queued is for it; `muse` it refused a call; its limit resets at 2026-11-16T00:00:00Z; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` is idle, but nothing queued is for it"
+      "could not deliver plan #3519 on claude-8 (run 43093095314), try 1 of 3 (GitHubError: GET /repos/Jlore-Studios/JackiOh/actions/artifacts/13890356719/zip: HTTP 502): it is tried again next tick (2 more)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17212,7 +17206,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-11T20:12:02Z",
+  "loop_tick": "2026-11-11T20:25:09Z",
   "machine_disk": {
     "issue": null,
     "reading": {
