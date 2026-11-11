@@ -18610,9 +18610,28 @@
     "what": "plan #3513 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-10T23:02:11Z",
+    "at": "2026-11-11T02:56:05Z",
     "notes": [
-      "could not start review #3591 on claude-4: POST /repos/Jlore-Studios/JackiOh/actions/workflows/bot-night.yml/dispatches: HTTP 422: Cannot trigger a 'workflow_dispatch' on a disabled workflow"
+      "#3513 needs a plan",
+      "#3672 needs a plan",
+      "#3678 needs a plan",
+      "started review #3591 on claude-4 (run 42949479304)",
+      "started plan #3667 on muse (run 42949538349)",
+      "started plan #3607 on muse (run 42949596029)",
+      "started plan #3586 on claude-3 (run 42949652729)",
+      "started plan #3674 on claude-7 (run 42949710050)",
+      "started plan #3587 on muse (run 42949774185)",
+      "started build #3548 on muse (run 42949853016)",
+      "started plan #3672 on claude-8 (run 42949924668)",
+      "started plan #3678 on claude-1 (run 42949992601)",
+      "started build #3549 on claude-6 (run 42950059955)",
+      "started plan #3666 on claude-3 (run 42950132252)",
+      "started plan #3513 on claude-8 (run 42950203173)",
+      "nothing more to start: nothing is queued",
+      "pruned 25 plan file(s) older than 7 days",
+      "#3672: typed it Task",
+      "#3670: typed it Task",
+      "runner gate: started 3 of 5 waiting run(s) (queue build 42948056556, run 42921942122 on claude/adoring-bardeen-ce8aud, run 42946020235 on claude/upbeat-lamport-pn2n7j); 2 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19318,7 +19337,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-10T23:02:11Z",
+  "loop_tick": "2026-11-11T02:56:05Z",
   "machine_disk": {
     "issue": null,
     "reading": {
