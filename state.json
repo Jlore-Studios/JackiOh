@@ -15640,9 +15640,9 @@
     "what": "revise #3706 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-11T12:21:29Z",
+    "at": "2026-11-11T12:29:19Z",
     "notes": [
-      "delivered review #3691 on claude-8 (run 43017417454): approved"
+      "#3691: approved and green, so its strikes are cleared"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16348,7 +16348,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-11T12:21:29Z",
+  "loop_tick": "2026-11-11T12:29:19Z",
   "machine_disk": {
     "issue": null,
     "reading": {
