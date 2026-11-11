@@ -16542,7 +16542,7 @@
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-11T21:06:25Z",
-      "run_id": "pending:e7514ee8-1794434692",
+      "run_id": "43108745341",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
