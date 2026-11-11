@@ -13,7 +13,9 @@ use jackioh_engine::{
     Phase, PlayerId, Winner, deal_emote_hand, emote_gate, opponent_of,
 };
 use jackioh_server::actor::match_actor::MatchActor;
-use jackioh_server::actor::ws_server::{Socket, WS_CLOSE, WS_PATH, WS_SUBPROTOCOL, bearer_protocol};
+use jackioh_server::actor::ws_server::{
+    CLOSE_GOING_AWAY, CLOSE_NORMAL, Socket, WS_CLOSE, WS_PATH, WS_SUBPROTOCOL, bearer_protocol,
+};
 use jackioh_server::app::{App, router};
 use jackioh_server::config::{
     DISCONNECT_GRACE_SECONDS, MALFORMED_FRAMES_PER_WINDOW, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MINUTES,
@@ -5559,5 +5561,93 @@ mod the_server_cases_of_the_mutation_audit {
         send(&h, &h.p1, "answer", answer_of(&h.p1)).await;
         assert_match(acks(&h.p1).last().expect("an ack"), &json!({ "nonce": "answer" }));
         assert_eq!(last_view(&revived)["pending"], Value::Null);
+    }
+}
+
+/// #3678 (`docs/implicit-states.md`, state 1): a home seat's socket, its queued Hello
+/// (`hello_pending`) and its socket generation, each combination reached through `attach`, a frame,
+/// a dropped transport or `stop`.
+mod seat_states_3678 {
+    use super::*;
+
+    /// S9, S10: `stop` (a restart's drain, the reaper, R776000's let-go) closes the seats' sockets with
+    /// 1001 and leaves the registry; a socket handed to the stopped actor after that is closed the same
+    /// way and never greeted, so its client reconnects to the rebuilt actor (§9.5).
+    #[tokio::test(start_paused = true)]
+    async fn a_socket_handed_to_a_stopped_actor_is_closed_going_away_and_never_greeted() {
+        let h = harness(Options::default()).await;
+        h.actor.stop().await;
+        assert_eq!(h.p1.close_code(), Some(CLOSE_GOING_AWAY));
+        assert_eq!(h.p2.close_code(), Some(CLOSE_GOING_AWAY));
+        let stored = match_row(&h.app, MATCH_ID).await["clocks"].clone();
+        assert!(!stored["turnDeadline"].is_null());
+
+        let late = Client::new();
+        h.actor.attach(P1, late.socket());
+        h.idle().await;
+        assert_eq!(late.close_code(), Some(CLOSE_GOING_AWAY));
+        assert!(!late.is_open());
+        assert!(views(&late).is_empty());
+        // §9.5: the clocks stored on the match are the rebuilt actor's to write, never the stopped one's.
+        assert_eq!(match_row(&h.app, MATCH_ID).await["clocks"], stored);
+    }
+
+    /// S12: a second socket for one home (a second tab, or a reconnect before the old socket closed)
+    /// takes the seat; the first is closed with 1000 and, as the seat was never empty, no grace starts
+    /// (R744, `on_socket_gone`).
+    #[tokio::test(start_paused = true)]
+    async fn a_second_socket_for_one_seat_replaces_the_first_with_a_normal_close_and_starts_no_grace() {
+        let h = harness(Options::default()).await;
+        let second = Client::new();
+        h.actor.attach(P1, second.socket());
+        h.idle().await;
+
+        assert_eq!(h.p1.close_code(), Some(CLOSE_NORMAL));
+        assert!(second.is_open());
+        assert_eq!(views(&second).len(), 1);
+        assert!(h.clocks().await["graceDeadline"]["p1"].is_null());
+        assert!(h.p2.is_open());
+    }
+
+    /// S7: a Hello queued as its socket drops runs on an empty seat: it greets no one and the grace
+    /// still starts (§9.5). The next socket's Hello is a new generation (R835001), so it is answered
+    /// beside the attach's own view.
+    #[tokio::test(start_paused = true)]
+    async fn a_hello_queued_as_its_socket_drops_answers_no_one_and_the_next_socket_is_greeted() {
+        let h = harness(Options::default()).await;
+        h.p1.receive_json(json!({ "type": "hello" }));
+        h.p1.drop_transport();
+        h.idle().await;
+        assert!(!h.clocks().await["graceDeadline"]["p1"].is_null());
+
+        let revived = Client::new();
+        h.actor.attach(P1, revived.socket());
+        revived.receive_json(json!({ "type": "hello" }));
+        h.idle().await;
+        assert_eq!(views(&revived).len(), 2);
+        assert!(h.clocks().await["graceDeadline"]["p1"].is_null());
+        assert!(h.p2.is_open());
+    }
+
+    /// S8: a socket its own outbox overflow closed (R1441, `Socket::send`) stays in the seat until its
+    /// transport reports the close. Presence reads it gone at once (R672 reads `is_open`), and the grace
+    /// starts only on the report (§9.5).
+    #[tokio::test(start_paused = true)]
+    async fn a_socket_its_outbox_closed_holds_the_seat_until_its_transport_reports_the_close() {
+        let h = harness(Options::default()).await;
+        // One frame of room: the attach's greeting (its loadouts, view, clock and portraits) overflows it.
+        let (out, _frames) = tokio::sync::mpsc::channel(1);
+        let narrow = Socket::detached(out);
+        h.actor.attach(P1, narrow.clone());
+        h.idle().await;
+        assert!(!narrow.is_open());
+        assert_eq!(h.p1.close_code(), Some(CLOSE_NORMAL));
+        let presence = h.actor.presence();
+        assert!(!presence[P1] && presence[P2]);
+        assert!(h.clocks().await["graceDeadline"]["p1"].is_null());
+
+        narrow.transport_closed();
+        h.idle().await;
+        assert!(!h.clocks().await["graceDeadline"]["p1"].is_null());
     }
 }

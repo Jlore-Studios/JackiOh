@@ -1645,6 +1645,16 @@ impl MatchActor {
             let mut core = self.lock();
             if core.host.is_voided() {
                 None
+            } else if core.host.is_stopped() {
+                // #3678: a stopped actor (`halt`: a restart's drain, the reaper, R776000's let-go) has let
+                // its sockets go and left the registry, so a socket handed to it now (a held handle, as
+                // `Registry::attach` holds one between finding the actor and this call) would be greeted
+                // by an actor nothing reaches again, and its greeting would write the match's stored
+                // clocks. It is closed as `halt` closed the ones it held, so the client reconnects and the
+                // registry rebuilds the match (§9.5), as `DuosActor::attach` does.
+                drop(core);
+                socket.close(Some(CLOSE_GOING_AWAY), Some("the actor is going away"));
+                return;
             } else {
                 let previous = core.sockets[home].replace(socket.clone());
                 // R744: the account has now been here, so no grace starts for it as another attaches.

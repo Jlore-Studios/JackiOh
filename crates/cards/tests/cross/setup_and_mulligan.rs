@@ -883,3 +883,20 @@ mod r151_r113_a_start_of_game_clause_that_asks_at_2_1_step_4 {
         assert!(turn_at > hit_at);
     }
 }
+
+/// #3678 (`docs/implicit-states.md`, state 2, E5): the two open mulligans (§2.1 step 3, R265) are the
+/// one sealed-bid step beside `pending`, never in it, and nothing is owed behind them.
+mod open_mulligans_3678 {
+    use super::*;
+
+    #[test]
+    fn e5_the_open_mulligans_hold_no_prompt_in_pending_and_owe_nothing() {
+        register_all();
+        let begun = begin_game(&create_game(&game_args("e5-mulligans", catalog_decks()))).state;
+        assert!(begun.mulligan.is_some());
+        assert!(begun.pending.is_none());
+        assert!(begun.result.is_none());
+        assert_eq!((begun.work.len(), begun.work_cursor), (0, 0));
+        assert_eq!(mulligan_owed(&begun), vec![PlayerId::P1, PlayerId::P2]);
+    }
+}
