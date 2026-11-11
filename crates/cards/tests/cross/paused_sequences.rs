@@ -3485,3 +3485,154 @@ mod r122_r113_the_engine_s_answer_called_directly_on_the_prompt_an_echo_repeat_o
         assert!(state.players.p1.graveyard.iter().any(|card| card.id == spell.id));
     }
 }
+
+/// #3678 (`docs/implicit-states.md`, state 2): the engine's paused action, `pending`, `work` and
+/// `work_cursor` read together with `result` and `mulligan`, each combination reached through `reduce`
+/// (`work.rs`'s header; §9.3, §10.3, §10.6, R113). Never a field set by hand.
+mod paused_action_states_3678 {
+    use super::*;
+
+    /// Whether a prompt is open, how many items are owed, and where the next park goes (R113).
+    fn paused_action(s: &Scenario) -> (bool, usize, usize) {
+        let state = s.state();
+        (state.pending.is_some(), state.work.len(), state.work_cursor)
+    }
+
+    /// §10.1: the paused state survives a JSON round trip unchanged, so a checkpoint or replay resumes it.
+    fn survives_json(s: &Scenario) {
+        let text = serde_json::to_value(s.state()).expect("the state serializes");
+        let back: GameState = serde_json::from_value(text).expect("the state deserializes");
+        assert_eq!(back, *s.state());
+    }
+
+    /// The def ids the open Discover offers p1, as its holder sees them (§10.8).
+    fn offered(s: &Scenario) -> Vec<String> {
+        match s.view(P1).pending {
+            Some(PendingView::ForYou(prompt)) => prompt
+                .options
+                .into_iter()
+                .map(|option| option.def_id.expect("a Discover option names its card"))
+                .collect(),
+            other => panic!("no Discover is open for p1: {other:?}"),
+        }
+    }
+
+    /// §2.5, R216: nothing happens after the game is over; `reduce` refuses every action.
+    fn refuses_everything_after(s: &Scenario) {
+        for (body, seat) in [
+            (ActionBody::EndTurn, P1),
+            (ActionBody::EndTurn, P2),
+            (ActionBody::Concede, P1),
+        ] {
+            let after = reduce(s.state(), &Action::new(body, seat, "after-over".to_string()));
+            assert!(after.error.is_some(), "{seat} acted after the game was over");
+        }
+    }
+
+    /// E1, E3: a settled game owes nothing; #7's Cry opens its Discover (§10.5 step 5) and the rest of the
+    /// play is owed behind it, the cursor just past what the cascade parked (R113); the answer drains it.
+    #[test]
+    fn e1_e3_a_cry_that_asks_owes_the_rest_of_its_play_at_the_cursor_and_survives_json() {
+        register_all();
+        let mut s = scenario(json!({
+            "p1": { "hand": ["core-007"], "mana": 4, "library": ["core-020"] },
+            "p2": { "field": ["core-020"] }
+        }));
+        assert_eq!(paused_action(&s), (false, 0, 0));
+
+        s.play("core-007", json!({}));
+        let (asking, owed, cursor) = paused_action(&s);
+        assert!(asking);
+        assert!(owed > 0);
+        assert_eq!(cursor, owed);
+        survives_json(&s);
+
+        let chosen = offered(&s)[0].clone();
+        s.answer(json!(chosen));
+        assert_eq!(paused_action(&s), (false, 0, 0));
+    }
+
+    /// E2: C #81's reduce asks for a card of the hand as the activation resolves (R831009); its answer is
+    /// the prompt's own continuation, so nothing waits in `work` behind it.
+    #[test]
+    fn e2_an_activation_that_asks_as_it_resolves_owes_nothing_behind_its_prompt() {
+        register_all();
+        let mut s = scenario(json!({
+            "p1": {
+                "hand": ["core-010", "core-005"],
+                "backrow": [{ "def": "classic-081" }],
+                "library": ["core-020", "core-020"],
+            },
+            "p2": { "hand": ["core-010"], "library": ["core-020", "core-020"] }
+        }));
+        s.activate("classic-081", json!({ "modes": ["reduce"] }));
+        assert_eq!(paused_action(&s), (true, 0, 0));
+        survives_json(&s);
+
+        let stockpile = s.card("core-005").id.clone();
+        s.answer(json!(stockpile));
+        assert_eq!(paused_action(&s), (false, 0, 0));
+    }
+
+    /// E3, E4: the Radiant Mask asks twice at its controller's start of turn (§8.3). The first question
+    /// parks the rest of the turn start at the cursor (cursor = len); answering it takes that item back
+    /// up and resets the cursor (R113), so the second question is open with the turn start still owed
+    /// ahead of the cursor (cursor < len). The second answer drains it.
+    #[test]
+    fn e3_e4_a_second_question_of_one_start_of_turn_clause_waits_with_the_turn_start_owed_past_the_cursor() {
+        register_all();
+        let mut s = scenario(json!({
+            "p1": { "hand": ["core-020"], "library": ["core-020", "core-020"] },
+            "p2": {
+                "field": [{ "def": "core-065", "radiant": true }],
+                "library": ["core-020", "core-020", "core-020"],
+            }
+        }));
+        s.end_turn();
+        assert_eq!(paused_action(&s), (true, 1, 1));
+
+        s.answer(json!("mode:nothing"));
+        assert_eq!(paused_action(&s), (true, 1, 0));
+        survives_json(&s);
+
+        s.answer(json!("mode:nothing"));
+        assert_eq!(paused_action(&s), (false, 0, 0));
+    }
+
+    /// E6, E7: a concession under an open prompt (R211) ends the game; `end_game` closes the prompt
+    /// (R216), and the rest of the play stays owed in `work` as it stood (testkit invariant I7: a game
+    /// over keeps its debt). Nothing runs after.
+    #[test]
+    fn e6_e7_a_concession_under_an_open_prompt_closes_it_and_leaves_the_rest_of_the_play_owed() {
+        register_all();
+        let mut s = scenario(json!({
+            "p1": { "hand": ["core-007"], "mana": 4, "library": ["core-020"] },
+            "p2": { "field": ["core-020"] }
+        }));
+        s.play("core-007", json!({}));
+        let (_, owed, cursor) = paused_action(&s);
+        assert!(owed > 0);
+
+        s.act(ActionBody::Concede, P2, "p2 concedes under p1's Discover");
+        assert!(s.state().result.is_some());
+        assert!(s.state().mulligan.is_none());
+        assert_eq!(paused_action(&s), (false, owed, cursor));
+        survives_json(&s);
+        refuses_everything_after(&s);
+    }
+
+    /// E6, E7: a Cry that wins the game (§2.5) leaves nothing owed and no prompt open.
+    #[test]
+    fn e6_e7_a_game_won_inside_a_cry_closes_every_prompt() {
+        register_all();
+        let mut s = scenario(json!({ "p1": { "hand": ["core-068"] }, "p2": { "health": 4 } }));
+        s.play(
+            "core-068",
+            json!({ "targets": [{ "pick": "hero", "player": "p2" }] }),
+        );
+        assert!(s.state().result.is_some());
+        assert!(s.state().mulligan.is_none());
+        assert_eq!(paused_action(&s), (false, 0, 0));
+        refuses_everything_after(&s);
+    }
+}

@@ -679,6 +679,23 @@ mod glitchs_void {
         assert!(format!("{refusal:?}").contains("no such match"), "{refusal:?}");
     }
 
+    /// #3678 (`docs/implicit-states.md`, S11): a handle taken before the void (as `Registry::attach`
+    /// holds one between finding the actor and handing it the socket) still reaches the voided actor;
+    /// the socket it hands over hears only the void's close, never a view.
+    #[tokio::test]
+    async fn a_socket_handed_to_the_actor_it_held_across_the_void_hears_only_the_void() {
+        let w = world(void_decks()).await;
+        let held = w.app.matches.get(MATCH_ID).expect("the live actor");
+        play_the_void(&w).await;
+        assert!(!w.app.matches.has(MATCH_ID));
+
+        let late = create_fake_socket();
+        held.attach(PlayerId::P1, late.socket());
+        held.idle().await;
+        assert_eq!(late.close_code(), Some(MATCH_VOIDED_CLOSE_CODE));
+        assert_eq!(late.of_type("view"), Vec::<Value>::new());
+    }
+
     #[tokio::test]
     async fn r679_logs_one_line_naming_the_match_and_both_profiles() {
         let (logs, _recording) = Logs::record();

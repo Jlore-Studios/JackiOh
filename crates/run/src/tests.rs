@@ -1662,6 +1662,95 @@ fn a_pack_shows_its_size_plus_the_relics_and_only_cards_of_its_kind() {
     );
 }
 
+/// #3678 (`docs/implicit-states.md`, state 3, row D2): §15.8's "abandoning at any time ends a run, lost"
+/// before the first step leaves it off the map, HP at the max, scored, and refusing every action; its
+/// one-action log folds back to it.
+#[test]
+fn abandoning_before_the_first_step_ends_the_run_off_the_map() {
+    let content = content();
+    let gone = act(&start(&content), &content, RunAction::Abandon);
+    assert_eq!(gone.row, None);
+    assert_eq!(gone.phase, RunPhase::Dead);
+    assert_eq!(gone.hp, run_max_hp(&gone, &content));
+    assert!(run_node(&gone).is_none());
+    assert!(run_enemy(&gone).is_none());
+    assert_eq!(
+        run_reduce(&gone, &content, &RunAction::Go { col: 0 }),
+        Err("the run is over".to_string())
+    );
+    assert_eq!(
+        run_reduce(&gone, &content, &RunAction::Abandon),
+        Err("the run is over".to_string())
+    );
+    assert!(run_score(&gone, &content) >= 0);
+    let file = RunFile {
+        setup: setup(&content),
+        unlocks: RunUnlocks::default(),
+        log: vec![RunAction::Abandon],
+    };
+    assert_eq!(run_fold(&file, &content), Ok(gone));
+}
+
+/// #3678 (`docs/implicit-states.md`, state 3, row D7): abandoning in a fight ends the run on the node it
+/// stands on, and keeps the HP it held, where a lost fight drops it to zero (§15.6): which of the two
+/// an abandoned fight should leave is unspecified, so this pins what the run does.
+#[test]
+fn abandoning_in_a_fight_ends_the_run_where_it_stands_with_its_hp_left() {
+    let content = content();
+    let fighting = act(&start(&content), &content, RunAction::Go { col: 0 });
+    assert_eq!(fighting.phase, RunPhase::Fight);
+    assert!(run_enemy(&fighting).is_some());
+    let gone = act(&fighting, &content, RunAction::Abandon);
+    assert_eq!((gone.row, gone.col), (Some(0), 0));
+    assert_eq!(gone.phase, RunPhase::Dead);
+    assert_eq!(gone.hp, fighting.hp);
+    assert!(gone.hp > 0);
+    assert!(run_enemy(&gone).is_none());
+    assert_eq!(
+        run_reduce(&gone, &content, &RunAction::Go { col: 0 }),
+        Err("the run is over".to_string())
+    );
+}
+
+/// #3678 (`docs/implicit-states.md`, Not states): versions, not states. A `FightOver` kept before its
+/// report's fields (`serde(default)`) reads as a report of nothing and still folds; a `RunState` written
+/// before `max_hp_bonus` reads with no bonus.
+#[test]
+fn a_fight_over_kept_before_its_report_and_a_state_before_its_max_hp_bonus_still_read() {
+    let content = content();
+    let setup = setup(&content);
+    let (end, log) = play_out(&content, &setup);
+    let file = RunFile {
+        setup,
+        unlocks: RunUnlocks::default(),
+        log,
+    };
+    let mut old = serde_json::to_value(&file).unwrap();
+    let mut stripped = 0;
+    for action in old["log"].as_array_mut().unwrap() {
+        if action["type"] == "fightOver" {
+            let fields = action.as_object_mut().unwrap();
+            for field in ["damageDealt", "healingDone", "cardsDrawn", "turns"] {
+                assert!(fields.remove(field).is_some());
+            }
+            stripped += 1;
+        }
+    }
+    assert_eq!(stripped, end.stats.fights_won);
+    let back: RunFile = serde_json::from_value(old).unwrap();
+    let folded = run_fold(&back, &content).unwrap();
+    assert_eq!(folded.phase, RunPhase::Won);
+    assert_eq!((folded.stats.damage_dealt, folded.stats.cards_drawn), (0, 0));
+    assert_eq!(folded.hp, end.hp);
+
+    let fresh = start(&content);
+    let mut before = serde_json::to_value(&fresh).unwrap();
+    assert!(before.as_object_mut().unwrap().remove("maxHpBonus").is_some());
+    let read: RunState = serde_json::from_value(before).unwrap();
+    assert_eq!(read.max_hp_bonus, 0);
+    assert_eq!(read, fresh);
+}
+
 #[test]
 fn r3586001_no_placeholder_enemy_carries_a_presence_and_a_boss_only_its_own() {
     // R3586001: the Presence artifacts retired with the tiers, and a boss carries only the artifact it
