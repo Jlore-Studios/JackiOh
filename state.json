@@ -15713,7 +15713,7 @@
       "taken_asks": []
     },
     "3558": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 1,
       "forced": false,
@@ -15728,11 +15728,11 @@
       },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "onto": "bot/issue-3596",
-      "owner": "claude-1",
-      "owner_since": "2026-11-11T10:53:35Z",
-      "owner_why": "it plans it",
+      "owner": "muse",
+      "owner_since": "2026-11-11T11:37:34Z",
+      "owner_why": "handed off from `claude-1`: it could not take it",
       "part_of": 3596,
       "pending_request": false,
       "planned_at": "2026-11-11T11:33:34Z",
@@ -15740,13 +15740,13 @@
       "planned_by_id": "claude-1",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-1",
+      "provider": "muse",
       "queued_at": "2026-11-09T23:49:14Z",
       "requested_by": "squishy-squooby",
       "round_tier": "",
-      "run_id": "43011856391",
-      "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-11T11:25:35Z",
+      "run_id": "pending:ebbbf83d-1794397017",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-11T11:37:34Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
@@ -19895,9 +19895,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T11:25:35Z",
+    "at": "2026-11-11T11:37:34Z",
     "url": "",
-    "what": "plan #3558 on claude-1"
+    "what": "build #3558 on muse"
   },
   "last_sweep": {
     "at": "2026-11-11T11:21:05Z",
