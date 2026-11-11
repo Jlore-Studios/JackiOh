@@ -16348,8 +16348,11 @@
       "action": "revise",
       "asks": [],
       "ci_early": true,
-      "ci_fixes": 1,
+      "ci_fixes": 0,
       "ci_on_head": true,
+      "ci_reruns": {
+        "b3c350400d18e68a090741cca7e2ccaeec154ece": 1
+      },
       "ci_run_id": 43087681546,
       "ci_sha": "b3c350400d18e68a090741cca7e2ccaeec154ece",
       "cleared": {
