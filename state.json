@@ -35607,7 +35607,8 @@
     "runs": [
       "2026-11-11T16:41:16Z,43060408773,claude-8,sonnet+opus,revise,3702,medium,built,,0,0,0,0,,8,8,,,0.5,claude-8,none,,0",
       "2026-11-11T16:57:41Z,43055453424,claude-6,sonnet+opus,build,3700,medium,built,,9.7,36,9331,934613,0.3775,23,27,,,23.2,claude-6,fresh,,1",
-      "2026-11-11T16:52:54Z,43055168853,claude-8,sonnet+opus,build,3698,medium,built,,5.4,41,9927,1084434,0.4046,5,8,,,26.8,claude-8,fresh,,1"
+      "2026-11-11T16:52:54Z,43055168853,claude-8,sonnet+opus,build,3698,medium,built,,5.4,41,9927,1084434,0.4046,5,8,,,26.8,claude-8,fresh,,1",
+      "2026-11-11T17:01:06Z,43048353797,claude-7,sonnet+opus,build,3565,hard,part,,91.8,292,161428,39455199,7.1577,0,37,,,1.5,muse,fresh,other,1"
     ]
   },
   "version": 1
