@@ -247,6 +247,7 @@ impl LiveCard {
             power: card.power.clone(),
             vanilla: card.vanilla,
             preview: card.preview.clone(),
+            slumber: card.slumber,
             type_: Some(card.type_),
             tags: card.tags.clone(),
             brittle: card.brittle,
@@ -351,10 +352,8 @@ pub fn live_source(
     in_play.berserk = (unit && card.berserk == Some(true)).then_some(true);
     in_play.frozen = (unit && card.frozen == Some(true)).then_some(true);
     // R1839000, R1839001: a Dormant card, with its countdown.
-    in_play.dormant = card
-        .slumber
-        .filter(|_| unit)
-        .map(|slumber| DormantFace { turns: slumber.turns });
+    // R3556000: a Dormant Field Spell in the backrow too.
+    in_play.dormant = card.slumber.map(|slumber| DormantFace { turns: slumber.turns });
     in_play.frozen_forever = (unit && card.frozen_forever == Some(true)).then_some(true);
     // R1852000, R1852004: a Starship, with the pieces fused into it and the name it launched under.
     // R2249000: and the pieces themselves, which its face lists in place of its text.

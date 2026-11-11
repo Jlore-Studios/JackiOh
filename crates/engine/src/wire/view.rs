@@ -898,6 +898,14 @@ pub struct PublicBackrowView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub unit: Option<UnitView>,
+    /// R1839000, R1839001, R3556000: the card is Dormant (a status, public on the field on both
+    /// seats): it can neither attack, be attacked, be targeted nor be reached by an effect until it
+    /// awakens, and `turns` is how many more of its controller's turns start before it does (absent:
+    /// until an effect awakens it). What the board's Dormant badge and its countdown read. Absent
+    /// otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub slumber: Option<Slumber>,
     /// R3548001: what of this card the owner's Tipsy stamp blurs on their view alone, or nothing.
     /// Never on a face-down card, and never on the opponent's view of it.
     #[serde(default, skip_serializing_if = "Option::is_none")]

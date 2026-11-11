@@ -109,7 +109,11 @@ pub fn cry_place_of(state: &GameState, card: &CardInstance) -> Option<CryPlace> 
     let card_type = crate::faces::card_type_of(state, card);
     // R1873003: a face-up Field Spell on the field runs its Cry as itself (R411). A face-down one reads
     // as the Trap it was set as (`card_type_of`), and out of a graveyard only a Unit's Cry is triggered.
-    if card_type == CardType::FieldSpell && matches!(card.zone, Zone::Field { .. }) {
+    if card_type == CardType::FieldSpell
+        && matches!(card.zone, Zone::Field { .. })
+        // R3556000: no effect re-triggers a Dormant Field Spell's Cry (R1839000).
+        && !crate::slumber::is_slumbering(card)
+    {
         crate::scripts::script_of(state, card).cry.as_ref()?;
         return Some(CryPlace::Field);
     }

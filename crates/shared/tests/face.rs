@@ -845,3 +845,51 @@ fn r3337001_an_anomaly_found_holding_a_board_names_it() {
     );
     assert_eq!(other.anomaly, None);
 }
+
+#[test]
+fn r3556000_a_dormant_field_spell_in_the_backrow_wears_its_countdown() {
+    use jackioh_engine::testkit::scenario;
+    use jackioh_shared::face::live::{LiveCard, view_faces};
+    use jackioh_shared::face::words::Words;
+
+    jackioh_cards::register_all();
+    // p1 plays S+ #62 Overdrive Projector from hand: a Dormant Field Spell in the backrow.
+    let mut built = scenario(json!({
+        "seed": "r3556000-face",
+        "active": "p1",
+        "p1": { "hand": ["stinkyscapeplus-062"], "library": ["core-005", "core-005"] },
+        "p2": { "library": ["core-005", "core-005"] },
+    }));
+    built.play("stinkyscapeplus-062", json!({ "zone": 1 }));
+    let state = built.state().clone();
+    let view = jackioh_engine::view_for(&state, PlayerId::P1);
+    let backrow = view
+        .you
+        .backrow
+        .iter()
+        .flatten()
+        .find_map(|entry| match entry {
+            jackioh_engine::wire::BackrowView::Public(public) => Some(public.clone()),
+            _ => None,
+        })
+        .expect("the Projector stands face-up in lane 1");
+    assert_eq!(backrow.def_id, "stinkyscapeplus-062");
+    let live = LiveCard::from_backrow(&jackioh_engine::wire::BackrowView::Public(backrow))
+        .expect("a face-up backrow card");
+    assert_eq!(
+        live.slumber,
+        Some(jackioh_engine::state::Slumber { turns: Some(1) }),
+        "LiveCard carries the countdown off the backrow view"
+    );
+    let faces = view_faces(Words::new(Locale::En), &view);
+    let face = faces.get(&live.instance_id).expect("a face for the Projector");
+    assert!(
+        face.badges.iter().any(|badge| {
+            serde_json::to_value(badge.kind)
+                .unwrap()
+                .as_str()
+                .is_some_and(|kind| kind == "dormant")
+        }),
+        "its face wears the dormant badge"
+    );
+}

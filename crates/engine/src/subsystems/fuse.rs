@@ -25,10 +25,10 @@ use crate::script::{
     ActivationDecl, AttackMod, AttackModArgs, AttackModHook, AuraEntry, AuraHook, CardScripts,
     ConditionContext, ConditionHook, EchoXHook, Effect, EffectApply, EffectContext, EffectPart, EngineSink,
     FlagOrCount, Hook, HookArgs, ModeAllowedHook, PlagueMultiplierHook, PlayAllowedHook, PreviewHook,
-    QuestBook, Script, SetStat, SetStatHook, SpellDamageAura, StatMod, StaticFlags, TargetCheck,
-    TributeWhenHook, TriggerDef, TriggerExtraHook, TriggerRun, TriggerWhen, TuneMultiplier, WouldCounterHook,
-    attack_mod_hook, aura_hook, condition_hook, hook, mode_allowed_hook, play_allowed_hook, read_hook,
-    target_check, would_counter_hook,
+    QuestBook, Script, SetStat, SetStatHook, SpellDamageAura, SpellEchoAura, StatMod, StaticFlags,
+    TargetCheck, TributeWhenHook, TriggerDef, TriggerExtraHook, TriggerRun, TriggerWhen, TuneMultiplier,
+    WouldCounterHook, attack_mod_hook, aura_hook, condition_hook, hook, mode_allowed_hook, play_allowed_hook,
+    read_hook, target_check, would_counter_hook,
 };
 use crate::state::{CardInstance, GameState, Grant, find_instance, find_instance_mut, new_instance};
 use crate::wire::{
@@ -1018,6 +1018,19 @@ fn summed_spell_damage_aura(
     })
 }
 
+/// R3556001 (Stinkyscape+ #62, #63): a fused card's Spell Echo auras add up, as two standing apart
+/// do, and reach the opponent too when either ingredient's does.
+fn summed_spell_echo_aura(values: impl IntoIterator<Item = Option<SpellEchoAura>>) -> Option<SpellEchoAura> {
+    let defined: Vec<SpellEchoAura> = values.into_iter().flatten().collect();
+    if defined.is_empty() {
+        return None;
+    }
+    Some(SpellEchoAura {
+        amount: defined.iter().map(|aura| aura.amount).sum(),
+        both: defined.iter().any(|aura| aura.both == Some(true)).then_some(true),
+    })
+}
+
 /// R1160 (Meditative #84 Volatility, ME-TUNEMULT): a fused card's tune multipliers multiply — each
 /// direction the product of the ingredients naming it, a direction none names none.
 fn multiplied_tune(values: impl IntoIterator<Item = Option<TuneMultiplier>>) -> Option<TuneMultiplier> {
@@ -1148,6 +1161,7 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 damage_pool: sum_defined(defined.iter().map(|f| f.damage_pool)),
                 counters_ranged: numbers(|f| f.counters_ranged),
                 counters_ranged_all: flags(|f| f.counters_ranged_all),
+                spell_echo_aura: summed_spell_echo_aura(defined.iter().map(|f| f.spell_echo_aura)),
             })
         }
     }

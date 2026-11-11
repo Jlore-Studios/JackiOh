@@ -767,6 +767,11 @@ pub struct StaticFlags {
     /// ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub counters_ranged_all: Option<bool>,
+    /// R3556001 (Stinkyscape+ #62 Overdrive Projector, #63 Overdrive Dome): "Spells gain Echo +N".
+    /// While this card acts on the field, each Spell its side (or, with `both`, either side) plays or
+    /// casts resolves N more times, read through the card's declared number `spellEcho` (R386).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spell_echo_aura: Option<SpellEchoAura>,
 }
 
 /// R1849004 (Stinkyscape #5 Masochism Unmasked): "Redirect all damage you take on your turn to your
@@ -806,6 +811,18 @@ pub struct SlumberText {
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct SpellDamageAura {
+    pub amount: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub both: Option<bool>,
+}
+
+/// R3556001 (Stinkyscape+ #62 Overdrive Projector, #63 Overdrive Dome): the Echo an aura gives —
+/// `amount` more repeats to each Spell its controller plays or casts, and to the opponent's too
+/// when `both`. The amount is the card's declared number `spellEcho` (`params::declared_or`, R386).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct SpellEchoAura {
     pub amount: i32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub both: Option<bool>,
