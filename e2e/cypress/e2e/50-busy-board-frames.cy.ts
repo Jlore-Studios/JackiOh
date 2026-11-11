@@ -42,6 +42,14 @@ const PROBE_JSON = ["1", "true"].includes(String(Cypress.expose("probeJson") ?? 
 /** The sampling promises outlast `defaultCommandTimeout` (idle 5 s, combat 8 s). */
 const PROBE_TIMEOUT_MS = 120_000;
 
+/**
+ * #3712: the client's audio requests, the voice prefetch's above all (it fetches every line's bytes,
+ * apps/web/src/audio/engine.ts `schedulePrefetch`), kept out of the Command Log. Logged, each one
+ * re-renders and scrolls Cypress's reporter on this page's main thread, which the idle window counted
+ * as the board's long tasks. Unlogged, they still reach the server.
+ */
+const AUDIO_REQUESTS = "**/audio/**";
+
 function logReport(report: ProbeReport): void {
   cy.task("log", PROBE_JSON ? JSON.stringify(report) : formatProbeReport(report));
 }
@@ -51,6 +59,10 @@ function expectPass(report: PhaseReport): void {
 }
 
 describe("Spec 50 — busy-board frame probe (issue #3605)", () => {
+  beforeEach(() => {
+    cy.intercept({ url: AUDIO_REQUESTS }, { log: false });
+  });
+
   it("idle: the untouched worst-case board holds its p95 and long-task budgets", () => {
     setupBusyBoard();
     cy.unitIds("p1").then((units) => {

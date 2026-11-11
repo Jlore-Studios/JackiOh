@@ -332,7 +332,8 @@ fn duos_endings_action(
     rng.pick(&conceding).map(|seat| (*seat, DuosActionBody::Concede))
 }
 
-/// What a probe's forged action goes through: `duos_reduce`, or in a test a broken one (#1386).
+/// What a probe's forged action, or a checkpoint's continuation (#3712), goes through: `duos_reduce`,
+/// or in a test a broken (#1386) or slow one.
 type DuosReducer = fn(&DuosState, &DuosAction) -> DuosReduceResult;
 
 /// What a probe's `result` did wrong: it owed a refusal with no events and `state` exactly.
@@ -672,13 +673,26 @@ fn check_duos_run(run: &DuosRun) -> Result<String, String> {
 /// The Duos game survives a serialized restart: fold to the seed-drawn checkpoint step (paused work
 /// preferred), round-trip that state through JSON for the identical hash, apply the rest of the log
 /// and require the live hash and ending. Failures carry the `checkpoint:` prefix. Returns the step,
-/// whether it held paused work, and the cost in milliseconds.
+/// whether it held paused work, and its round trip's cost in milliseconds (#3712).
 fn check_duos_serial_restart(
     options: &DuosCreateOptions,
     log: &[DuosAction],
     live: &DuosState,
     stream: &str,
     paused: &[usize],
+) -> Result<(usize, bool, u128), String> {
+    check_duos_serial_restart_with(options, log, live, stream, paused, duos_reduce)
+}
+
+/// `check_duos_serial_restart`, the rest of the log applied through `continue_with` (`duos_reduce`; a
+/// test plants a slow one, #3712).
+fn check_duos_serial_restart_with(
+    options: &DuosCreateOptions,
+    log: &[DuosAction],
+    live: &DuosState,
+    stream: &str,
+    paused: &[usize],
+    continue_with: DuosReducer,
 ) -> Result<(usize, bool, u128), String> {
     let (step, was_paused) = checkpoint_step(stream, paused, log.len());
     let prefix = duos_fold(&DuosReplayInput {
@@ -695,8 +709,10 @@ fn check_duos_serial_restart(
     let started_at = Instant::now();
     let mut state = verify_round_trip(&prefix.state, duos_hash, round_trip)
         .map_err(|error| format!("checkpoint: {error}"))?;
+    // #3712: the restart's cost ends here; the continuation is the game's own, checked but not timed.
+    let ms = started_at.elapsed().as_millis();
     for action in &log[step..] {
-        let result = duos_reduce(&state, action);
+        let result = continue_with(&state, action);
         if let Some(error) = result.error {
             return Err(format!(
                 "checkpoint: the continuation refused action {:?} of {}: {error}",
@@ -717,10 +733,9 @@ fn check_duos_serial_restart(
     if state.result != live.result {
         return Err("checkpoint: the restored game reached a different ending".to_string());
     }
-    let ms = started_at.elapsed().as_millis();
     if ms > CHECKPOINT_TIME_BOUND_MS {
         return Err(format!(
-            "checkpoint: the restart took {ms}ms, past CHECKPOINT_TIME_BOUND_MS ({CHECKPOINT_TIME_BOUND_MS}ms)"
+            "checkpoint: the restart's round trip took {ms}ms, past CHECKPOINT_TIME_BOUND_MS ({CHECKPOINT_TIME_BOUND_MS}ms)"
         ));
     }
     Ok((step, was_paused, ms))
@@ -735,7 +750,7 @@ struct DuosSeedOutcome {
     heaviest: Heaviest,
     /// Whether the game's checkpoint restarted from paused work (#1387); false when it failed.
     checkpoint_paused: bool,
-    /// What the game's checkpoint cost, in milliseconds (#1387); zero when it failed.
+    /// What the game's checkpoint round trip cost, in milliseconds (#1387, #3712); zero when it failed.
     checkpoint_ms: u128,
 }
 
@@ -1304,6 +1319,24 @@ mod tests {
 
         const STREAM: &str = "jackioh-duos-fuzz-checkpoint-1";
 
+        /// How long the planted continuation sleeps before its first action: far over seed 1's round
+        /// trip, so a clock that still counted the continuation would report at least this much.
+        const PLANTED_CONTINUATION_MS: u64 = 300;
+
+        thread_local! {
+            /// Whether the planted continuation has slept yet on this thread.
+            static PLANTED_SLEPT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+        }
+
+        /// `duos_reduce`, after sleeping `PLANTED_CONTINUATION_MS` before the first action on this
+        /// thread.
+        fn slow_continuation(state: &DuosState, action: &DuosAction) -> DuosReduceResult {
+            if !PLANTED_SLEPT.with(|slept| slept.replace(true)) {
+                std::thread::sleep(std::time::Duration::from_millis(PLANTED_CONTINUATION_MS));
+            }
+            duos_reduce(state, action)
+        }
+
         /// A planted lossy restore: the JSON round trip, then one hero health point added.
         fn lossy(state: &DuosState) -> Result<DuosState, String> {
             let mut restored = round_trip(state)?;
@@ -1326,6 +1359,38 @@ mod tests {
             assert_eq!(outcome.error, None);
             assert_eq!(outcome.checkpoint_paused, paused);
             assert!(outcome.checkpoint_ms <= CHECKPOINT_TIME_BOUND_MS);
+        }
+
+        /// #3712: the bound times the restart, the round trip and its hashes, never the continuation's
+        /// own `duos_reduce`: one planted slow still passes, and the result carries the round trip's
+        /// cost.
+        #[test]
+        fn the_checkpoint_clock_times_the_round_trip_and_not_the_continuation() {
+            let _preview = preview_every_set();
+            let run = play_duos_game_inner(1, duos_reduce, |_, _, _, _| {}).expect("seed 1 plays out");
+            PLANTED_SLEPT.with(|slept| slept.set(false));
+            let (step, _, ms) = check_duos_serial_restart_with(
+                &run.options,
+                &run.log,
+                &run.state,
+                STREAM,
+                &run.paused,
+                slow_continuation,
+            )
+            .expect("seed 1 crosses its checkpoint through the planted continuation");
+            assert!(
+                step < run.log.len(),
+                "seed 1's checkpoint at {step} of {} leaves nothing to continue",
+                run.log.len()
+            );
+            assert!(
+                PLANTED_SLEPT.with(std::cell::Cell::get),
+                "the continuation went through the planted reducer"
+            );
+            assert!(
+                ms < u128::from(PLANTED_CONTINUATION_MS),
+                "the checkpoint's clock counted the continuation: {ms}ms"
+            );
         }
 
         #[test]
