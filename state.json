@@ -15763,6 +15763,32 @@
     "3559": {
       "action": "build",
       "asks": [],
+      "decision": {
+        "asked_at": "2026-11-11T12:00:11Z",
+        "assigned": [
+          "jgoetzmann",
+          "MaxGoetzmann"
+        ],
+        "default": 1,
+        "ends": "2026-11-12T12:00:11Z",
+        "hours": 24,
+        "kind": "build",
+        "model": "muse-spark-1.3-contributor",
+        "options": [
+          {
+            "change": "Wait for #3554 to land on the fullsend branch, then build all nine turrets per the plan",
+            "tradeoff": "The issue waits, but the part stays atomic and targets the final E7 API names"
+          },
+          {
+            "change": "Build the six cards that need only E3/E6 now (Scatter, Duo, Scorch, Meltdown, Tsunami, Swarmer) and leave Arc, Fuse and Lancer as stubs",
+            "tradeoff": "Shows progress sooner, but splits the issue across runs and the damage.rs rider may conflict with E7's reconcile"
+          }
+        ],
+        "problem": "Issue #3559 builds the nine Mindustrial turrets on top of three engine parts: E3 (Flexible), E6 (N attacks a turn only across, Frozen trigger, Freeze on damage) and E7 (chain lightning, line damage, lane-weighted damage from #3554). E3 and E6 are on this branch, but E7 is not. The plan's step 0 precondition checks all fail: spec/rulings/R3554005.md does not exist, crates/engine/src/effects/geometry.rs does not exist, and nothing named chain_lightning, line_damage, LineRules, LINE_STEP, sweep_lane or sweep_adjacent exists anywhere in crates/engine/src. E7's only build pass (e7048523b4) is parked outside this branch awaiting the #3596 reconcile, which the plan warns may rename its API. Three of the nine cards cannot be built without it: #38 Arc needs chain_lightning, #107 Fuse needs the sweep_lane/sweep_adjacent flags, and #109 Lancer needs line_damage_begin/answered plus LineRules. I cannot decide alone whether to leave the issue waiting or to split it, because the plan explicitly orders a stop on this outcome and a partial build would second-guess that call.",
+        "provider": "muse",
+        "question": "E7 (#3554) has not landed, so #3559 cannot be built whole. Wait for E7, or build part of it now?",
+        "why": "the plan gates all work on E7's landing and flags its API as liable to rename in reconcile, so building now risks targeting dead names or duplicating #3554's engine work"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15789,6 +15815,7 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "muse",
+      "question": "E7 (#3554) has not landed, so #3559 cannot be built whole. Wait for E7, or build part of it now?",
       "queued_at": "2026-11-09T23:49:19Z",
       "requested_by": "squishy-squooby",
       "run_id": "43013609117",
