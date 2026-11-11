@@ -15214,7 +15214,7 @@
       "verdict_rounds": 1
     },
     "3688": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "cleared": {
@@ -15239,9 +15239,9 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3678,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "resolving",
+      "live": "reviewing",
       "merge_owner_gave_up": {
         "at": "2026-11-11T11:58:35Z",
         "provider": "claude-1",
@@ -15249,16 +15249,17 @@
       },
       "merged": true,
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "claude-3",
       "question": "",
       "queued_at": "2026-11-11T10:10:13Z",
       "round_tier": "strong",
-      "run_id": "43001671369",
+      "run_id": "pending:de804922-1794417051",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 210,
-      "started_at": "2026-11-11T10:12:32Z",
+      "started_at": "2026-11-11T17:11:22Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -16289,9 +16290,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T17:10:37Z",
+    "at": "2026-11-11T17:11:22Z",
     "url": "",
-    "what": "revise #3702 on claude-8"
+    "what": "spot-check #3688 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-11T16:31:25Z",
@@ -35151,7 +35152,15 @@
         "n": 210,
         "pr": 3688,
         "queued_at": "2026-11-11T16:32:44Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "run_id": "pending:de804922-1794417051",
         "sha": "d0f7305317b3f0037c3b9b782fe34d0a80b410aa",
+        "started_at": "2026-11-11T17:11:22Z",
         "status": "queued",
         "title": "Patch: map the code's implicit states and check each behaves as expected",
         "tries": 0
