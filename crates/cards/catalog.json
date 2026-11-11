@@ -32010,7 +32010,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 52,
     "base": {
       "attack": 4,
       "health": 6,
@@ -33117,7 +33117,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 44,
     "base": {
       "attack": 3,
       "health": 2,
@@ -34727,14 +34727,14 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 35,
     "base": {
       "keywords": [],
-      "text": "start of its owner's turn, add a random (0) or (1) Cost Automa card to your hand."
+      "text": "Start of turn: Add a random (0) or (1) Cost Automa card to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "start of its owner's turn, add a random Radiant (0) or (1) Cost Automa card to your hand."
+      "text": "Start of turn: Add a random Radiant (0) or (1) Cost Automa card to your hand."
     }
   },
   "stinkyscapeplus-129": {
@@ -34750,14 +34750,14 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 32,
     "base": {
       "keywords": [],
-      "text": "start of its owner's turn, add a random (2) Cost Automa card to your hand, it has no Tribute condition."
+      "text": "Start of turn: Add a random (2) Cost Automa card to your hand, it has no Tribute condition."
     },
     "radiant": {
       "keywords": [],
-      "text": "start of its owner's turn, add a random Radiant (2) Cost Automa card to your hand, it has no Tribute condition."
+      "text": "Start of turn: Add a random Radiant (2) Cost Automa card to your hand, it has no Tribute condition."
     }
   },
   "stinkyscapeplus-130": {
@@ -34773,14 +34773,14 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 28,
     "base": {
       "keywords": [],
-      "text": "Tribute 1\nstart of its owner's turn, add a random Automa-δ card to your hand, it has no Tribute condition."
+      "text": "Tribute 1\nStart of turn: Add a random Automa-δ card to your hand, it has no Tribute condition."
     },
     "radiant": {
       "keywords": [],
-      "text": "Tribute 1\nstart of its owner's turn, add a random Radiant Automa-δ card to your hand, it has no Tribute condition."
+      "text": "Tribute 1\nStart of turn: Add a random Radiant Automa-δ card to your hand, it has no Tribute condition."
     }
   },
   "stinkyscapeplus-131": {
@@ -34796,14 +34796,14 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 28,
     "base": {
       "keywords": [],
-      "text": "Tribute 4\nstart of its owner's turn, add a random Automa-Ω card to your hand, it has no Tribute condition."
+      "text": "Tribute 4\nStart of turn: Add a random Automa-Ω card to your hand, it has no Tribute condition."
     },
     "radiant": {
       "keywords": [],
-      "text": "Tribute 4\nstart of its owner's turn, add a random Radiant Automa-Ω card to your hand, it has no Tribute condition."
+      "text": "Tribute 4\nStart of turn: Add a random Radiant Automa-Ω card to your hand, it has no Tribute condition."
     }
   },
   "stinkyscapeplus-132": {
@@ -34821,7 +34821,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 76,
     "base": {
       "keywords": [],
       "text": "Choose one α or β;.\nAdd a Dagger/Flare to your hand. The first time you play each Automa-α/β cost card add the subsequent cost Automa-α/β to your hand."
@@ -34849,7 +34849,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 48,
     "base": {
       "keywords": [],
       "text": "Add a Daglare to your hand. The first time you play each Automa-ζ cost card add the subsequent cost Automa-ζ to your hand."
@@ -34951,7 +34951,7 @@
     "token": true,
     "cost": 1,
     "printedRarity": "Common",
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 5,
       "health": 3,
@@ -35038,7 +35038,7 @@
     "token": true,
     "cost": 2,
     "printedRarity": "Rare",
-    "loc": 6,
+    "loc": 20,
     "base": {
       "attack": 11,
       "health": 6,
@@ -35066,7 +35066,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 1, Immutable, Immune to Spells, Ranged, Pierce, Armor 2, Flying, Can't Defend\nDamage alsoBurns {damage}."
+      "text": "Tribute 1, Immutable, Immune to Spells, Ranged, Pierce, Armor 2, Flying, Can't Defend\nDamage also Burns {burns}."
     },
     "radiant": {
       "attack": 22,
@@ -35098,11 +35098,11 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 1, Immutable, Immune to Spells, Ranged, Pierce, Rush, Armor 4, Flying, Can't Defend\nDamage also Burns {damage}."
+      "text": "Tribute 1, Immutable, Immune to Spells, Ranged, Pierce, Rush, Armor 4, Flying, Can't Defend\nDamage also Burns {burns}."
     },
     "params": [
       {
-        "key": "damage",
+        "key": "burns",
         "base": 3,
         "radiant": 6,
         "better": "up",
@@ -35128,7 +35128,7 @@
     "token": true,
     "cost": 3,
     "printedRarity": "Epic",
-    "loc": 6,
+    "loc": 20,
     "base": {
       "attack": 14,
       "health": 18,
@@ -35224,7 +35224,7 @@
     "token": true,
     "cost": 4,
     "printedRarity": "Legendary",
-    "loc": 6,
+    "loc": 20,
     "base": {
       "attack": 19,
       "health": 23,
@@ -35344,7 +35344,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [],
       "text": "Add {crawlers} Crawlers to your hand."
@@ -35380,7 +35380,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "Fill your board with Crawlers."
@@ -35406,7 +35406,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 30,
     "base": {
       "keywords": [],
       "text": "Activate: {summon}: Summon a Crawler."
@@ -35442,7 +35442,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 28,
     "base": {
       "keywords": [],
       "text": "Add an Automa-δ and its paired Automa-Ω card to your hand. The pairs are Scepter and Reign, Antumbra and Eclipse, Quad and Oct, Sei and Omura, Vela and Corvus."
@@ -35480,7 +35480,7 @@
       "base": 2,
       "embiggen": 4
     },
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Add {automa} Automa-δ cards to your hand.\nEmbiggened (4): They have Tribute 1."
@@ -35516,7 +35516,7 @@
       "base": 2,
       "embiggen": 4
     },
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Add {automa} Automa-Ω cards to your hand.\nEmbiggened (4): They have Tribute 2."
@@ -35549,7 +35549,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 50,
     "base": {
       "keywords": [],
       "text": "Discover an Automa Unit, it gains Starship Piece."
@@ -36559,7 +36559,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 27,
     "base": {
       "attack": 2,
       "health": 2,
@@ -36653,18 +36653,18 @@
     "flavor": "Physical",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 32,
     "base": {
       "attack": 3,
       "health": 13,
       "keywords": [],
-      "text": "Cry: Cast Shadiris Visions twice and add three random Stinkscape Resources to your hand."
+      "text": "Cry: Cast Shadiris Visions twice and add three random Stinkyscape Resources to your hand."
     },
     "radiant": {
       "attack": 6,
       "health": 26,
       "keywords": [],
-      "text": "Cry: Cast Radiant Shadiris Visions twice and add three random Radiant Stinkscape Resources to your hand."
+      "text": "Cry: Cast Radiant Shadiris Visions twice and add three random Radiant Stinkyscape Resources to your hand."
     },
     "refs": [
       "stinkyscapeplus-068",

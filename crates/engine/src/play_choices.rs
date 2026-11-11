@@ -822,15 +822,33 @@ pub fn legal_embiggen_choices(state: &GameState, card: &CardInstance) -> Vec<boo
 
 // #55 Lava Golem "may tribute enemy units", which no other Tribute card may (R101).
 
+/// R3565000: the `memory` key an effect that adds a card to a hand sets its Tribute X in (Stinkyscape
+/// #129's "it has no Tribute condition", #138's "they have Tribute 1"), in place of the printed one.
+pub const TRIBUTE_SET_KEY: &str = "tributeSet";
+
+/// R3565000: the Tribute X an effect set on the card as it added it to a hand, or `None` when none did.
+/// Kept on its `memory` in hand and deck until a graveyard, an exile or the field's reset takes it
+/// (R78, R215), as `float::tribute_lowered` is.
+pub fn tribute_set_on(card: &CardInstance) -> Option<i32> {
+    card.memory
+        .get(TRIBUTE_SET_KEY)
+        .and_then(Value::as_i64)
+        .map(|set| i32::try_from(set).unwrap_or(0).max(0))
+}
+
 /// §6.3 "Tribute X": the number of units playing this card sacrifices, 0 when it asks for none, as a
 /// Nerf or a Buff in a hand or a deck left it (R386), less what its owner's Floats took off (R1841003).
+/// R3565000: an effect that added the card to a hand may have set it in place of the printed one;
+/// the Nerf, the Buff and the Floats still move that.
 pub fn tribute_cost_of(state: &GameState, card: &CardInstance) -> i32 {
     let declared = declared_targets(state, card)
         .into_iter()
         .find(|decl| decl.kind == PromptKind::Tribute)
         .and_then(|decl| decl.amount);
     let flagged = crate::scripts::script_of(state, card).flags();
-    let printed = declared.or(flagged.tribute).unwrap_or(0).max(0);
+    let printed = tribute_set_on(card)
+        .unwrap_or_else(|| declared.or(flagged.tribute).unwrap_or(0))
+        .max(0);
     // R386: a Nerf or a Buff in a hand or a deck moved it (`tuning.x`), never below 1.
     let tuned = crate::tuning::tuned_count(card, crate::numbers::NumberedKey::Tribute.as_str(), printed);
     // R1841003: each of its owner's Floats took one off, never below 0.
