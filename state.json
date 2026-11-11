@@ -12497,9 +12497,9 @@
       "last_findings": [],
       "live": "building",
       "onto": "bot/issue-3596",
-      "owner": "muse",
-      "owner_since": "2026-11-11T15:44:58Z",
-      "owner_why": "a person answered its question, so the lane that asked carries the answer out",
+      "owner": "claude-4",
+      "owner_since": "2026-11-11T15:49:29Z",
+      "owner_why": "handed off from `muse`: it could not take it",
       "part_of": 3596,
       "pending_request": false,
       "planned_at": "2026-11-11T11:36:09Z",
@@ -12507,13 +12507,13 @@
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "muse",
+      "provider": "claude-4",
       "question": "E7 (#3554) has not landed, so #3559 cannot be built whole. Wait for E7, or build part of it now?",
       "queued_at": "2026-11-11T15:44:58Z",
       "requested_by": "squishy-squooby",
-      "run_id": "43013609117",
-      "runs_on": "night-vm-muse",
-      "started_at": "2026-11-11T11:38:21Z",
+      "run_id": "pending:0cbcc688-1794412127",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-11T15:49:29Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15977,9 +15977,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T15:48:32Z",
+    "at": "2026-11-11T15:49:29Z",
     "url": "",
-    "what": "plan #3700 on claude-6"
+    "what": "build #3559 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-11T15:33:27Z",
