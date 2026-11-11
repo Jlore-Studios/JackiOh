@@ -18833,9 +18833,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-4",
-      "owner_since": "2026-11-11T07:54:52Z",
-      "owner_why": "a person answered its question, so the lane that asked carries the answer out",
+      "owner": "claude-5",
+      "owner_since": "2026-11-11T08:02:15Z",
+      "owner_why": "handed off from `claude-4`: `claude-4` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-11T03:53:46Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -19483,12 +19483,12 @@
       ],
       "live": "revising",
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-5",
       "question": "Should this PR land as `Part of #3674`, with the issue left open for a follow-up, or stay open until the spec passes 4/4?",
       "queued_at": "2026-11-11T07:54:52Z",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "42976109021",
+      "run_id": "pending:98c3ffcb-1794384099",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -19509,7 +19509,7 @@
         "run": "42976109021"
       },
       "source": "decision",
-      "started_at": "2026-11-11T06:58:12Z",
+      "started_at": "2026-11-11T08:02:15Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -19815,9 +19815,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T08:01:26Z",
+    "at": "2026-11-11T08:02:15Z",
     "url": "",
-    "what": "revise #3687 on claude-3"
+    "what": "revise #3691 on claude-5"
   },
   "last_sweep": {
     "at": "2026-11-11T07:44:25Z",
