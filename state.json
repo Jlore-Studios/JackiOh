@@ -15441,6 +15441,7 @@
     "3693": {
       "action": "build",
       "asks": [],
+      "died": 1,
       "difficulty_by": {
         "at": "2026-11-11T19:16:20Z",
         "difficulty": "medium",
@@ -15473,7 +15474,7 @@
       "planned_model": "sonnet",
       "planned_tier": "medium",
       "provider": "claude-3",
-      "queued_at": "2026-11-11T15:38:44Z",
+      "queued_at": "2026-11-11T21:06:55Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "",
       "run_id": "43085868165",
