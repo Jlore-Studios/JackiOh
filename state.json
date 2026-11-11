@@ -12614,9 +12614,9 @@
       "question": "How should #3561 proceed while E7 (#3554) is still parked?",
       "queued_at": "2026-11-11T15:45:05Z",
       "requested_by": "squishy-squooby",
-      "run_id": "43013805776",
+      "run_id": "pending:486a732c-1794413954",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-11T11:39:50Z",
+      "started_at": "2026-11-11T16:19:51Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -16039,9 +16039,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T16:19:00Z",
+    "at": "2026-11-11T16:19:51Z",
     "url": "",
-    "what": "plan #3712 on claude-6"
+    "what": "build #3561 on muse"
   },
   "last_sweep": {
     "at": "2026-11-11T16:02:32Z",
