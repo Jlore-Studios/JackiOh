@@ -1,6 +1,6 @@
 //! SPEC §8.12 S+ #4 Profe Yates, a card of the held Stinkyscape+ set (R1420, R3535000).
 //!   Base:    7/7; "Cry: Exile every card with a M, O, U, S, E in its name. Cards in CN are
-//!            immune. Then summon two random Traps. Then choose one of the following Activates:
+//!            immune. Then summon two random Traps. Then choose one of the following Activates.
 //!            Activate 1: Overwhelm: Freeze all Units in this lane and the surrounding lanes.
 //!            Activate 3: Wolf's Maw: Pull a Flying Unit down and deal 4 damage to it. It loses
 //!            Flying. Activate 1: Iron Mandate: Fuse this into a Unit. This does not trigger
@@ -288,7 +288,10 @@ mod tests {
         for player in [P1, P2] {
             assert!(s.hand(player).iter().all(|card| card.def_id != STOCKPILE));
             assert!(
-                s.state().players[player].library.iter().all(|card| card.def_id != STOCKPILE)
+                s.state().players[player]
+                    .library
+                    .iter()
+                    .all(|card| card.def_id != STOCKPILE)
             );
             assert_eq!(
                 s.pile(player, "exile")

@@ -29025,13 +29025,13 @@
       "attack": 7,
       "health": 7,
       "keywords": [],
-      "text": "Cry: Exile every card with a M, O, U, S, E in its name. Cards in CN are immune. Then summon two random Traps. Then choose one of the following Activates:\nActivate: {overwhelm}: Overwhelm: Freeze all Units in this lane and the surrounding lanes.\nActivate: {wolf}: Wolf's Maw: Pull a Flying Unit down and deal {damage} damage to it. It loses Flying.\nActivate: {iron}: Iron Mandate: Fuse this into a Unit. This does not trigger its Cry again."
+      "text": "Cry: Exile every card with a M, O, U, S, E in its name. Cards in CN are immune. Then summon two random Traps. Then choose one of the following Activates.\nActivate: {overwhelm}: Overwhelm: Freeze all Units in this lane and the surrounding lanes.\nActivate: {wolf}: Wolf's Maw: Pull a Flying Unit down and deal {damage} damage to it. It loses Flying.\nActivate: {iron}: Iron Mandate: Fuse this into a Unit. This does not trigger its Cry again."
     },
     "radiant": {
       "attack": 14,
       "health": 14,
       "keywords": [],
-      "text": "Cry: Exile every card with a M, O, U, S, E in its name. Cards in CN are immune. Then summon three random Radiant Traps. Then choose one of the following Activates:\nActivate: {overwhelm}: Overwhelm: Freeze all Units in this lane and the surrounding lanes.\nActivate: {wolf}: Wolf's Maw: Pull a Flying Unit down and deal {damage} damage to it. It loses Flying.\nActivate: {iron}: Iron Mandate: Fuse this into a Unit. This does not trigger its Cry again."
+      "text": "Cry: Exile every card with a M, O, U, S, E in its name. Cards in CN are immune. Then summon three random Radiant Traps. Then choose one of the following Activates.\nActivate: {overwhelm}: Overwhelm: Freeze all Units in this lane and the surrounding lanes.\nActivate: {wolf}: Wolf's Maw: Pull a Flying Unit down and deal {damage} damage to it. It loses Flying.\nActivate: {iron}: Iron Mandate: Fuse this into a Unit. This does not trigger its Cry again."
     },
     "params": [
       {

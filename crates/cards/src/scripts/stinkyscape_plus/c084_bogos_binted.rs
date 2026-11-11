@@ -40,7 +40,6 @@ mod tests {
     use crate::{filler, weapon_board};
 
     const P1: PlayerId = PlayerId::P1;
-    const P2: PlayerId = PlayerId::P2;
 
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     /// Hit Job: Destroy target Unit.

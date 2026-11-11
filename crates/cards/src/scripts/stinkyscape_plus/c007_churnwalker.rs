@@ -108,11 +108,7 @@ mod tests {
             for id in &tough {
                 assert_eq!(s.card(id).damage, 2, "{id} took its share");
             }
-            assert_eq!(
-                s.card(&churnwalker).damage,
-                0,
-                "its Armor absorbs its own share"
-            );
+            assert_eq!(s.card(&churnwalker).damage, 0, "its Armor absorbs its own share");
         }
     }
 

@@ -63,12 +63,10 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jackioh_engine::testkit::*;
 
     use crate::{filler, scenario, weapon_board};
 
     const P1: PlayerId = PlayerId::P1;
-    const P2: PlayerId = PlayerId::P2;
 
     /// A 6/4 Unit whose name holds no M, O, U, S or E.
     const TYLANNT: &str = "stinkyscape-006"; // Tylannt
