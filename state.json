@@ -12569,11 +12569,6 @@
       "owner_since": "2026-11-11T17:36:40Z",
       "owner_why": "handed off from `muse`: it could not take it",
       "part_of": 3596,
-      "paused": {
-        "at": "2026-11-11T16:36:02Z",
-        "interrupt": "usage",
-        "provider": "muse"
-      },
       "pending_request": false,
       "planned_at": "2026-11-11T11:34:30Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
