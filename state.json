@@ -18439,6 +18439,13 @@
     "3666": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-11T03:25:52Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "None of the five hard lines holds: the change is confined to the web's test tooling (one app plus the root vitest config), with no engine, AI, migration or cross-crate contract and well under 40 files."
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
