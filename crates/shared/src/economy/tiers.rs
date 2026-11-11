@@ -48,10 +48,7 @@ pub fn roll_tier<T: Copy + Ord>(set: &[(T, u32)], fallback: T, floor: Option<T>,
             break;
         }
     }
-    Some(match floor {
-        Some(floor) if landed < floor => floor,
-        _ => landed,
-    })
+    Some(floor.map_or(landed, |floor| landed.max(floor)))
 }
 
 /// One roll's draw: an integer below `TIER_WEIGHT_TOTAL`, one draw of `rng`.

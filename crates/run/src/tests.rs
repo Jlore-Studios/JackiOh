@@ -957,6 +957,46 @@ fn the_score_counts_every_row_win_and_report_point_at_its_own_weight() {
     assert_eq!(run_score(&state, &content), expected);
 }
 
+/// DR9: the score's terms are its five weighted sums before the percents, each on its own, and with no
+/// boss beaten and no curse taken they add up to the score.
+#[test]
+fn the_score_terms_are_its_weighted_sums_before_the_percents() {
+    let content = content();
+    let mut state = start(&content);
+    let rows = 5;
+    let (normal, elites, ghosts) = (4, 2, 3);
+    let (dealt, healed, drawn) = (7, 11, 13);
+    state.row = Some(rows - 1);
+    state.stats = RunStats {
+        fights_won: normal + elites + ghosts,
+        elites_won: elites,
+        ghosts_won: ghosts,
+        damage_dealt: dealt,
+        healing_done: healed,
+        cards_drawn: drawn,
+        ..RunStats::default()
+    };
+    let win = |kind: RunNodeKind, n: i32| i64::from(RUN_SCORE_FIGHT.of(kind)) * i64::from(n);
+    let terms = run_score_terms(&state);
+    assert_eq!(
+        terms,
+        RunScoreTerms {
+            rows: RUN_SCORE_ROW * i64::try_from(rows).unwrap(),
+            wins: win(RunNodeKind::Fight, normal)
+                + win(RunNodeKind::Elite, elites)
+                + win(RunNodeKind::Ghost, ghosts),
+            damage: RUN_SCORE_DAMAGE * i64::from(dealt),
+            healing: RUN_SCORE_HEALING * i64::from(healed),
+            drawn: RUN_SCORE_CARD_DRAWN * i64::from(drawn),
+        }
+    );
+    assert_eq!(
+        terms.sum(),
+        terms.rows + terms.wins + terms.damage + terms.healing + terms.drawn
+    );
+    assert_eq!(terms.sum(), run_score(&state, &content));
+}
+
 /// §15.10: beating the final boss counts its win, then multiplies the score by
 /// `RUN_SCORE_FINAL_BOSS_PERCENT`.
 #[test]
@@ -1620,6 +1660,95 @@ fn a_pack_shows_its_size_plus_the_relics_and_only_cards_of_its_kind() {
             .all(|id| enemy.deck.contains(id) && !in_deck(&state, id)),
         "{boss:?}"
     );
+}
+
+/// #3678 (`docs/implicit-states.md`, state 3, row D2): §15.8's "abandoning at any time ends a run, lost"
+/// before the first step leaves it off the map, HP at the max, scored, and refusing every action; its
+/// one-action log folds back to it.
+#[test]
+fn abandoning_before_the_first_step_ends_the_run_off_the_map() {
+    let content = content();
+    let gone = act(&start(&content), &content, RunAction::Abandon);
+    assert_eq!(gone.row, None);
+    assert_eq!(gone.phase, RunPhase::Dead);
+    assert_eq!(gone.hp, run_max_hp(&gone, &content));
+    assert!(run_node(&gone).is_none());
+    assert!(run_enemy(&gone).is_none());
+    assert_eq!(
+        run_reduce(&gone, &content, &RunAction::Go { col: 0 }),
+        Err("the run is over".to_string())
+    );
+    assert_eq!(
+        run_reduce(&gone, &content, &RunAction::Abandon),
+        Err("the run is over".to_string())
+    );
+    assert!(run_score(&gone, &content) >= 0);
+    let file = RunFile {
+        setup: setup(&content),
+        unlocks: RunUnlocks::default(),
+        log: vec![RunAction::Abandon],
+    };
+    assert_eq!(run_fold(&file, &content), Ok(gone));
+}
+
+/// #3678 (`docs/implicit-states.md`, state 3, row D7): abandoning in a fight ends the run on the node it
+/// stands on, and keeps the HP it held, where a lost fight drops it to zero (§15.6): which of the two
+/// an abandoned fight should leave is unspecified, so this pins what the run does.
+#[test]
+fn abandoning_in_a_fight_ends_the_run_where_it_stands_with_its_hp_left() {
+    let content = content();
+    let fighting = act(&start(&content), &content, RunAction::Go { col: 0 });
+    assert_eq!(fighting.phase, RunPhase::Fight);
+    assert!(run_enemy(&fighting).is_some());
+    let gone = act(&fighting, &content, RunAction::Abandon);
+    assert_eq!((gone.row, gone.col), (Some(0), 0));
+    assert_eq!(gone.phase, RunPhase::Dead);
+    assert_eq!(gone.hp, fighting.hp);
+    assert!(gone.hp > 0);
+    assert!(run_enemy(&gone).is_none());
+    assert_eq!(
+        run_reduce(&gone, &content, &RunAction::Go { col: 0 }),
+        Err("the run is over".to_string())
+    );
+}
+
+/// #3678 (`docs/implicit-states.md`, Not states): versions, not states. A `FightOver` kept before its
+/// report's fields (`serde(default)`) reads as a report of nothing and still folds; a `RunState` written
+/// before `max_hp_bonus` reads with no bonus.
+#[test]
+fn a_fight_over_kept_before_its_report_and_a_state_before_its_max_hp_bonus_still_read() {
+    let content = content();
+    let setup = setup(&content);
+    let (end, log) = play_out(&content, &setup);
+    let file = RunFile {
+        setup,
+        unlocks: RunUnlocks::default(),
+        log,
+    };
+    let mut old = serde_json::to_value(&file).unwrap();
+    let mut stripped = 0;
+    for action in old["log"].as_array_mut().unwrap() {
+        if action["type"] == "fightOver" {
+            let fields = action.as_object_mut().unwrap();
+            for field in ["damageDealt", "healingDone", "cardsDrawn", "turns"] {
+                assert!(fields.remove(field).is_some());
+            }
+            stripped += 1;
+        }
+    }
+    assert_eq!(stripped, end.stats.fights_won);
+    let back: RunFile = serde_json::from_value(old).unwrap();
+    let folded = run_fold(&back, &content).unwrap();
+    assert_eq!(folded.phase, RunPhase::Won);
+    assert_eq!((folded.stats.damage_dealt, folded.stats.cards_drawn), (0, 0));
+    assert_eq!(folded.hp, end.hp);
+
+    let fresh = start(&content);
+    let mut before = serde_json::to_value(&fresh).unwrap();
+    assert!(before.as_object_mut().unwrap().remove("maxHpBonus").is_some());
+    let read: RunState = serde_json::from_value(before).unwrap();
+    assert_eq!(read.max_hp_bonus, 0);
+    assert_eq!(read, fresh);
 }
 
 #[test]

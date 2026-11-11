@@ -70,6 +70,7 @@ export const FX_ADAPT_SLOW_FACTOR = 1.4;      // …and slow also means this man
 export const FX_ADAPT_DISPLAY_MAX_MS = 34;    // the slowest interval taken for a display's refresh (30 Hz); slower is load
 export const FX_ADAPT_MIN_INTERVAL_MS = 4;    // shorter raw intervals are not a display's refresh (240 Hz is 4.2 ms)
 export const FX_ADAPT_RECOVER_WINDOWS = 3;    // healthy windows in a row that double a lowered cap back up
+export const FX_ADAPT_MOMENT_WINDOW = 8;      // frames: a run whose mean raw frame passes FX_PHONE_FRAME_BUDGET_MS sheds one stage (R3674000)
 export const FX_DEFAULT_SEED = 0x5eed;
 export const FX_MEMORY_LIMIT = 64;            // entries each FxMemory map keeps (oldest evicted)
 export const FX_MEMORY_RECENT = 16;           // R502: the last events the planner keeps in order (a cast on draw is read off them)

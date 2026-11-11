@@ -52,7 +52,7 @@ const KEEP: Record<string, string[]> = {
   "game/clock.css": ["200ms", "1s", "500ms", "1s", "200ms", "200ms", "200ms", "140ms", "520ms", "90ms", "1.2s", "700ms"],
   "game/countered.css": ["2.6s", "4.1s"], // loops
   "game/drag/drag.css": ["0.7s", "0.8s"], // loops
-  "game/facedown.css": ["9s", "4.8s", "4.8s"], // loops: the veil, the breath and its pale layer
+  "game/facedown.css": ["9s", "4.8s", "4.8s"], // loops: the veil, the breath and its light (#3674), on one beat
   "game/highlights.css": ["1.8s", "1.4s"], // loops
   "game/lanePick.css": ["1.6s"], // loop
   "game/market.css": ["3.2s"], // loop

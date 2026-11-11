@@ -3387,3 +3387,98 @@ mod r2881000_watching_a_coop_game {
         assert!(!held.has(&h.match_id), "reaped once its watcher had the result");
     }
 }
+
+// #3678 (`docs/implicit-states.md`, state 1): a person's seat, its queued Hello and its socket
+// generation, each combination reached through `attach`, a frame, a dropped transport or `stop`
+
+mod seat_states_3678 {
+    use super::*;
+    use crate::support::socket::{FakeSocket, create_fake_socket};
+    use jackioh_server::actor::ws_server::{CLOSE_GOING_AWAY, CLOSE_NORMAL};
+
+    const HELLO: &str = r#"{"type":"hello"}"#;
+
+    /// Lets a fake socket's frames cross to the actor and the actor's queue drain.
+    async fn quiet(actor: &jackioh_server::duos::actor::DuosActor) {
+        settle().await;
+        actor.idle().await;
+        settle().await;
+    }
+
+    fn views(socket: &FakeSocket) -> usize {
+        socket.of_type("view").len()
+    }
+
+    /// S9, S10: a stopped actor closes the sockets it held with 1001, and one handed to it later the same.
+    #[tokio::test(start_paused = true)]
+    async fn a_socket_handed_to_a_stopped_duos_actor_is_closed_going_away() {
+        let h = duos("easy").await;
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        let held = create_fake_socket();
+        actor.attach(DuosSeat::A1, held.socket());
+        quiet(&actor).await;
+        actor.stop().await;
+        assert_eq!(held.close_code(), Some(CLOSE_GOING_AWAY));
+
+        let late = create_fake_socket();
+        actor.attach(DuosSeat::A1, late.socket());
+        quiet(&actor).await;
+        assert_eq!(late.close_code(), Some(CLOSE_GOING_AWAY));
+        assert_eq!(views(&late), 0);
+    }
+
+    /// S12: a second socket for one seat takes it; the first is closed with 1000.
+    #[tokio::test(start_paused = true)]
+    async fn a_second_socket_for_one_duos_seat_replaces_the_first_with_a_normal_close() {
+        let h = duos("easy").await;
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        let first = create_fake_socket();
+        actor.attach(DuosSeat::A1, first.socket());
+        quiet(&actor).await;
+        let second = create_fake_socket();
+        actor.attach(DuosSeat::A1, second.socket());
+        quiet(&actor).await;
+
+        assert_eq!(first.close_code(), Some(CLOSE_NORMAL));
+        assert!(second.is_open());
+        assert_eq!(views(&second), 1);
+        assert_eq!(actor.presence(), [true, false]);
+    }
+
+    /// S7: a Hello queued as its socket drops runs on an empty seat and greets no one; the next
+    /// socket's Hello is a new generation (R835001), answered beside the attach's own view.
+    #[tokio::test(start_paused = true)]
+    async fn a_hello_queued_as_its_duos_socket_drops_answers_no_one_and_the_next_socket_is_greeted() {
+        let h = duos("easy").await;
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        let first = create_fake_socket();
+        actor.attach(DuosSeat::A1, first.socket());
+        quiet(&actor).await;
+        first.receive(HELLO);
+        first.drop();
+        quiet(&actor).await;
+        assert_eq!(actor.presence(), [false, false]);
+
+        let revived = create_fake_socket();
+        actor.attach(DuosSeat::A1, revived.socket());
+        revived.receive(HELLO);
+        quiet(&actor).await;
+        assert_eq!(views(&revived), 2);
+        assert_eq!(actor.presence(), [true, false]);
+    }
+
+    /// S13: an AI seat holds no socket. The routes never name one (`DuosActor::seat_of` answers a1 or
+    /// a2), and a socket handed to one is closed with 1000 and never greeted.
+    #[tokio::test(start_paused = true)]
+    async fn a_socket_handed_to_an_ai_seat_is_closed_and_never_greeted() {
+        let h = duos("easy").await;
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        assert_eq!(actor.seat_of(&h.outsider.id), None);
+        let stray = create_fake_socket();
+        actor.attach(DuosSeat::B1, stray.socket());
+        quiet(&actor).await;
+        assert_eq!(stray.close_code(), Some(CLOSE_NORMAL));
+        assert_eq!(views(&stray), 0);
+        assert_eq!(actor.presence(), [false, false]);
+    }
+}

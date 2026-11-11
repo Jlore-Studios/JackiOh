@@ -90,7 +90,8 @@ pub(crate) fn digest(key: &str, value: &str) -> String {
     hex(&mac.finalize().into_bytes())
 }
 
-fn hex(bytes: &[u8]) -> String {
+/// `bytes` in lowercase hex, two digits a byte.
+pub(crate) fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 

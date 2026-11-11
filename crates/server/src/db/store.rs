@@ -2894,11 +2894,6 @@ impl Tx<'_> {
         dispatch!(self, challenges_accept_room(code, guest, now))
     }
 
-    /// B49: marks every open challenge lapsed by `now` expired; answers them.
-    pub async fn challenges_expire(&mut self, now: i64) -> StoreResult<Vec<ChallengeRow>> {
-        dispatch!(self, challenges_expire(now))
-    }
-
     /// B49: deletes every challenge lapsed by `now` (`expires_at <= now`), open or closed, so none
     /// outlives its `CHALLENGE_TTL_MS`; answers how many went.
     pub async fn challenges_purge(&mut self, now: i64) -> StoreResult<i64> {

@@ -4,22 +4,22 @@
 // card or flies more than a card back (R202); every cue starts inside its entry and is gone within
 // FX_MAX_TAIL_MS of its end, and nothing draws with the effects off (R200).
 
-import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
+import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
 import { animTestid } from "../../../game/animations.ts";
 import { testid } from "../../../game/contract.ts";
 import { FROZEN_MARK, FROZEN_MARK_COLOR } from "../../../stats/config.ts";
 import { fullBoardView } from "../../../test/fixtures.ts";
+import { added, castOf, cuesOf, endOf, envOf, HOLD, played, run, tid } from "../../../test/signatures.ts";
 import { frac } from "../../build.ts";
 import { planCardFx } from "../../cardFx.ts";
-import { FX_BOBS_PLAN_TRAUMA, FX_CENTER, FX_INTENSITY_SCALE, FX_MAX_PARTICLE_LIFE_MS, FX_MAX_TAIL_MS, FX_SLAM_AT } from "../../constants.ts";
+import { FX_BOBS_PLAN_TRAUMA, FX_CENTER, FX_INTENSITY_SCALE, FX_MAX_TAIL_MS, FX_SLAM_AT } from "../../constants.ts";
 import { planFx } from "../../cues.ts";
 import { ENTRANCES } from "../../entrances.ts";
 import { paletteLook } from "../../flavors.ts";
-import { createFxMemory } from "../../memory.ts";
 import { galleryEntry, RECIPE_FIXTURES } from "../../motifs/gallery.ts";
-import type { FxCue, FxPlanEnv } from "../../types.ts";
+import type { FxCue } from "../../types.ts";
 import type { CardRecipeKey } from "../bespoke.ts";
 import { ENTRANCE_TRAUMA, FOOT } from "../recipe.ts";
 import { FX_CARD_TABLE } from "../tables.ts";
@@ -27,58 +27,9 @@ import { FX_CARD_TABLE } from "../tables.ts";
 const BOBS_PLAN = "meditativeplus-001";
 const BOB = "meditativeplus-024";
 const SCRATCH_PAD = "meditativeplus-026";
-const HOLD = 1000;
 
-function envOf(intensity: number = FX_INTENSITY_SCALE.normal): FxPlanEnv {
-  return { intensity, card: () => undefined, memory: createFxMemory() };
-}
-
-/** Where a cue ends, in ms after its entry starts (R200's bound is D + FX_MAX_TAIL_MS). */
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "projectile":
-    case "shot":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
-}
-
+/** Each cue as `<kind>@<delay>`: the shared `beats` names a figure, and Bob's entrance below counts it by kind. */
 const beats = (cues: readonly FxCue[]): string[] => cues.map((cue) => `${cue.kind}@${String(cue.delayMs)}`);
-const tid = (value: string, at?: { x: number; y: number }) => (at === undefined ? { kind: "testid", testid: value } : { kind: "testid", testid: value, at });
-const played = (player: PlayerId, instanceId: string, defId: string): Extract<GameEvent, { type: "cardPlayed" }> => ({ type: "cardPlayed", player, instanceId, defId, costPaid: 1 });
-const added = (player: PlayerId, instanceId: string, defId: string): GameEvent => ({ type: "addedToHand", player, instanceId, defId });
-
-/** The play's own cast, its entry held `hold` (a Mythic's takeover) and lasting D. */
-function castOf(defId: string, D: number, hold = HOLD, player: PlayerId = "p1", view: PlayerView = fullBoardView()): { cues: FxCue[]; row: string | undefined } {
-  const env = envOf();
-  const cast = played(player, "ex", defId);
-  env.memory.remember([cast]);
-  const entry = { ...galleryEntry([cast], view), durationMs: D, ...(hold > 0 ? { setPiece: { key: "takeover", holdMs: hold } } : {}) };
-  const result = planCardFx(cast, { entry, view, env, D });
-  return { cues: result?.cues ?? [], row: result?.row };
-}
-
-/**
- * Plays `defId` as `player` and each of `events` under it, an entry each lasting D, as FxLayer does:
- * remember, then plan through the dispatch (planCardFx). Each entry's cues and its row.
- */
-function run(defId: string, events: readonly GameEvent[], D: number, player: PlayerId = "p1", view: PlayerView = fullBoardView()): { cues: FxCue[]; row: string | undefined }[] {
-  const env = envOf();
-  env.memory.remember([played(player, "ex", defId)]);
-  return events.map((event) => {
-    env.memory.remember([event]);
-    const entry = { ...galleryEntry([event], view), durationMs: D };
-    const result = planCardFx(event, { entry, view, env, D });
-    return { cues: result?.cues ?? [], row: result?.row };
-  });
-}
-
-const cuesOf = (results: readonly { cues: FxCue[] }[]): FxCue[][] => results.map((result) => result.cues);
 
 describe("R3400001 Meditative+'s signatures", () => {
   it("R3400001 the three are signatures, each its own recipe, Bob's tile wearing a flurry", () => {

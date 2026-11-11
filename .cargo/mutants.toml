@@ -38,6 +38,8 @@ cap_lints = true
 # games the golden replay and the tools' fuzz play take on a runner's four cores.
 timeout_multiplier = 3.0
 minimum_test_timeout = 120
+# One that fills memory first, too fast for any timeout, is ended by scripts/mutants.sh's cap on a test
+# binary's memory (TEST_MEMORY), which `cargo mutants` run by hand goes without.
 
 # A mutant whose build never ends is killed by its timeout too: three times the unmutated build's
 # time, which built every dependency as well, so a mutant's own build (its package and its tests,

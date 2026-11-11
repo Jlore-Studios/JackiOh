@@ -19,9 +19,10 @@
 # as one); the cards by set, cards-<set> for each of crates/cards/src/scripts/<set>/ and cards-lib for
 # the rest of the crate, and `cards` itself, whose k picks the set (k mod the sets) and then that
 # set's shard; web-<layer> for each of Game.tsx's layers (animations, effects, audio, cards, drag,
-# settings) and the client's two adapters (wire, wasm); edge for the Worker. Shard k of an area holds
-# its mutants k, k+n, k+2n… (cargo-mutants' sharding; the web's by file the same way), so any one
-# shard samples the whole area and the weeks walk every shard in turn.
+# settings) and the client's two adapters (wire, wasm); edge for the Worker. Shard k of a Rust area
+# holds the k-th of n runs of its mutants in the order cargo-mutants finds them, file after file
+# (its `slice` sharding, the default since 26.0), and of a web area its files k, k+n, k+2n…; the weeks
+# walk every shard in turn.
 #
 # A run writes target/mutants/<area>/: cargo-mutants' mutants.out/ (caught.txt, missed.txt…) or
 # Stryker's mutation.json and mutation.html. The Rust areas need cargo-mutants
@@ -56,6 +57,22 @@ SIZE_WASM=200
 SIZE_WEB_FILES=3
 # cargo-mutants' --jobs: mutants tested at once, each in its own copy of the tree.
 JOBS=${MUTANTS_JOBS:-2}
+# The memory, in bytes, one test binary may take: 4 GiB of data (its heap and its other private
+# writable mappings, its threads' stacks among them), set by prlimit as cargo's runner for the host,
+# so only the tests and never rustc or the linker. A mutant that takes a loop's step away (`at += 1`
+# as `at *= 1` in crates/shared's face/diff.rs, whose loop pushes a token each time round) fills a
+# runner's 16 GB in seconds, long before the test timeout ends it, and the runner goes with it:
+# crates/shared's ninth shard lost two runners so (mutants.yml on main, 2026-11-11). Under the cap the
+# allocation past it fails, the test binary aborts, and the mutant is caught. Without prlimit
+# (macOS), no cap.
+TEST_MEMORY=${MUTANTS_TEST_MEMORY:-4294967296}
+host=
+if command -v prlimit >/dev/null 2>&1; then
+  host=$(rustc -vV 2>/dev/null | sed -n 's/^host: //p' | tr 'a-z-' 'A-Z_')
+fi
+if [ -n "$host" ]; then
+  export "CARGO_TARGET_${host}_RUNNER=prlimit --data=$TEST_MEMORY --"
+fi
 # Survivors listed under a summary's row, so a summary stays readable; the report has them all.
 SURVIVORS_SHOWN=200
 

@@ -380,6 +380,21 @@ later, so Render would stop billing:
   any failure; with one container there is no older instance to keep serving. The Worker's logs
   show the error. CI's `db` job boots the image against Postgres before any merge that changes the
   migrations or the image, so this should be rare. Roll back (above) while fixing it.
+- **Restore the database:** JackiOh-Production, on the Pro plan, is backed up daily, and the last
+  seven backups are kept. Database -> Backups -> Scheduled backups lists them, and Restore on one
+  puts the whole project back to it ([Supabase's guide](https://supabase.com/docs/guides/platform/backups)).
+  Everything written since that backup is lost, players' games, packs and currency included, and the
+  project answers nothing until the restore ends; the bigger the database, the longer that takes.
+  Point-in-time recovery would bring the loss down to minutes, but it is a paid add-on and is off
+  (#3611). After the restore:
+  - **Statistics logins:** a backup keeps no password of a custom role, so `stats_importer` and
+    `stats_reader` can no longer sign in. Actions -> cutover, step `stats-logins`, gives both new
+    passwords, which go into `PRODUCTION_STATS_IMPORT_DATABASE_URL` and `STATS_DATABASE_URL`
+    (section 8). The server signs in as `postgres`, so it is not affected.
+  - **Redeploy:** run promote production with **redeploy**. The server boots against the restored
+    database, and its `release` migrates the database up to the deployed schema.
+  - **What the backup leaves out:** the project's settings (Authentication, SMTP, the URLs) and each
+    Worker's secrets.
 - **A promote run fails with "refusing to allow a GitHub App to create or update workflow":** the
   run had no `BOT_GITHUB_TOKEN`, or the token lost its `workflow` scope or expired. Renew it
   (`bot/README.md`, "Setting it up"), then `/promote` again.

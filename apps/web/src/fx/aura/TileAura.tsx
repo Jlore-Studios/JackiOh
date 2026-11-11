@@ -118,15 +118,16 @@ export function TileAura({
   const tiles = useMemo(() => (spec === null ? 0 : planTileAuras(view).length), [spec, view]);
 
   // R3351000: at shed stage 2 the tile halves its motes with the far auras (it measures no box to
-  // tell near from far by, so it sheds with the far set).
-  const shed = useSyncExternalStore(subscribeShed, shedLevel, () => 0);
+  // tell near from far by, so it sheds with the far set). #3674: it reads only the aura scale, so a
+  // shed to motes or to faces, or a pointer move, re-renders no tile.
+  const auraScale = useSyncExternalStore(subscribeShed, () => shedAuraScale(shedLevel()), () => 1);
 
   const motes = useMemo(() => {
     if (spec === null || still) return [];
     const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1280;
-    const budget = tileMoteBudget(spec.tier, tiles, FX_INTENSITY_SCALE[settings.intensity] * shedAuraScale(shed), viewportWidth);
+    const budget = tileMoteBudget(spec.tier, tiles, FX_INTENSITY_SCALE[settings.intensity] * auraScale, viewportWidth);
     return tileMotes(spec, budget);
-  }, [spec, still, tiles, settings.intensity, shed]);
+  }, [spec, still, tiles, settings.intensity, auraScale]);
 
   if (spec === null) return null;
 
@@ -197,4 +198,3 @@ export function TileAura({
     </div>
   );
 }
-export default TileAura;

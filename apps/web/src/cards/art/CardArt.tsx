@@ -38,6 +38,9 @@
 // moving by its own loop when the face says so and by the card's moving art when given `motion`, or every slice ("all", a
 // board face's), the farthest on the window itself and the rest over it (`.cf-art-slice`); a restyle, Alt art, a Starship,
 // an Anomaly's board, a Legacy card and a Battleship's decks draw as before.
+// #3674 (R3351000): a board face's slice over the farthest whose motion is one chain of loops (dioramas/lift.ts) draws its still
+// picture on layers of its own that artLive.css moves on the compositor (`liftChain`, `data-art-lifted`); every other slice
+// draws as before.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -60,6 +63,8 @@ import { anomalyArtUri, legacyArtUri, particleLayerUri, proceduralArtUri, starsh
 import { isTrainingGroundsArt, LEGACY_PREFIX, snapshotArtOf, yardSubject } from "./traininggrounds.ts";
 import { compositionOf, themeFor, THEME_PALETTES, type ArtThemeId } from "./themes.ts";
 import { dioramaOf, dioramaSliceUri } from "./dioramas/index.ts";
+import { liftedSlice, type SliceLift } from "./dioramas/lift.ts";
+import { fmt } from "./hash.ts";
 
 import "./art.css";
 import "./artLive.css";
@@ -265,6 +270,10 @@ export function CardArt({
     dioramaOf(defId) !== null;
   const sliceIndex = diorama === null || diorama.slice === "all" ? 0 : diorama.slice;
   const overSlices = sliced && diorama?.slice === "all" ? (dioramaOf(defId)?.slices.slice(1) ?? []) : [];
+  // #3674 (R3351000): a board face's slices over the farthest whose motion is one chain of loops run it on their own layers
+  // (lift.ts). The farthest stays the window's own background: it holds the sky beside other roles in every diorama, so it
+  // never lifts (lift.test.ts).
+  const lifts = overSlices.map((_, k) => liftedSlice(defId, radiant, k + 1, diorama?.moving === true, motion));
   // R3340000: a live face's picture is in layers where it has parts to lay: a painter's own, whole, with a motion, no Battleship and no Anomaly's board (one picture).
   const layered =
     !sliced && live && motion !== null && near && starshipArt === null && anomaly === null && coreId === null && restyle === null && split === "whole" && ship === null;
@@ -304,6 +313,7 @@ export function CardArt({
       data-art-moving={uri !== null && starship === null && anomaly === null && coreId === null && motion !== null ? "true" : undefined}
       data-art-live={layered ? "true" : undefined}
       data-art-slice={sliced ? sliceIndex : undefined}
+      data-art-lifted={lifts.some((lift) => lift !== null) ? "true" : undefined}
       data-art-damage={wear !== null && wear.damage > 0 ? wear.damage : undefined}
       data-art-buffed={wear?.buffed === true ? "true" : undefined}
       data-art-frozen={wear?.frozen === true ? "true" : undefined}
@@ -320,15 +330,39 @@ export function CardArt({
           <span className="cf-art-layer cf-art-motes" style={{ backgroundImage: `url("${particleLayerUri(motion, seedId)}")` }} />
         </>
       )}
-      {overSlices.map((_, k) => (
-        <span
-          key={k + 1}
-          className="cf-art-layer cf-art-slice"
-          data-slice={k + 1}
-          style={{ backgroundImage: `url("${dioramaSliceUri(defId, radiant, k + 1, diorama?.moving === true, motion)}")` }}
-        />
-      ))}
+      {overSlices.map((_, k) => {
+        const lift = lifts[k] ?? null;
+        return lift !== null ? (
+          <span key={k + 1} className="cf-art-layer cf-art-slice" data-slice={k + 1}>
+            {liftChain(lift)}
+          </span>
+        ) : (
+          <span
+            key={k + 1}
+            className="cf-art-layer cf-art-slice"
+            data-slice={k + 1}
+            style={{ backgroundImage: `url("${dioramaSliceUri(defId, radiant, k + 1, diorama?.moving === true, motion)}")` }}
+          />
+        );
+      })}
       {wear !== null && <ArtWear damage={wear.damage} buffed={wear.buffed} frozen={wear.frozen} seedId={seedId} />}
+    </span>
+  );
+}
+
+/** #3674: a lift's layers, outermost first, each running one of its loops; the innermost draws the still picture. */
+function liftChain(lift: SliceLift, at = 0): ReactElement | null {
+  const move = lift.moves[at];
+  if (move === undefined) return null;
+  const last = at === lift.moves.length - 1;
+  const style = {
+    "--lift-seconds": `${fmt(move.seconds)}s`,
+    "--lift-origin": move.origin === null ? "50% 50%" : `${fmt(move.origin[0])}% ${fmt(move.origin[1])}%`,
+    ...(last ? { backgroundImage: `url("${lift.uri}")` } : {}),
+  } as CSSProperties;
+  return (
+    <span className="cf-art-lift" data-lift-move={move.move} style={style}>
+      {last ? null : liftChain(lift, at + 1)}
     </span>
   );
 }
