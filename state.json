@@ -19415,6 +19415,7 @@
       "died": 0,
       "difficulty": "hard",
       "feedback_since": "2026-11-11T08:02:15Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-11T09:28:49Z",
         "family": "claude",
@@ -19428,6 +19429,7 @@
       "issue": 3674,
       "last_findings": [],
       "live": "reviewing",
+      "pending_request": false,
       "provider": "claude-5",
       "question": "Please do one of these. (a) Open a follow-up issue for the remainder of #3674's acceptance, then requeue this pull request with a comment like `@jgoetzmann-bot cite #<new issue> as where the rest of #3674's acceptance is tracked`. The next pass names it in the body so the reviewer can approve. (b) Take this pull request over yourself: edit its body from `Closes #3674` to `Part of #3674`, merge it, and reopen #3674 if the harness closes it. The follow-up issue should cover: the Mythic takeover's long React commits (190\u2013355 ms tasks with forced style and layout in fit.ts `flushFits` and the effects director's measure); the Anomaly cast and the Starship launch, both still over 50 / 120 ms at every size in the probe run; the broadside's retry, which never shows `data-animating` on `card-fx-ship` (e2e/cypress/component/fx-phone-living-game.cy.tsx, around line 380: replaying the same attackDeclared over the re-rendered board plays nothing, as #3633 found for the takeover); and the four moments after it (Drone Battleship, Void fold, hand to tile, riffle), which no run has ever reached. Until it lands, the daily super run's `e2e component (chrome)` stays red, as it is on main today.",
       "review_floor": "",
