@@ -18654,6 +18654,8 @@
       "waiting_comment": 6786156189
     },
     "3682": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-11T03:17:08Z",
@@ -18667,8 +18669,11 @@
         "trail": "component (chrome)` failure (`fx-phone-living-game`, phone frame budget) is owned by hard issue #3674 and deliberately untouched here.\n- What changed and why\n- Spec `45-economy-loop` imports `VERSION_FULL_ART_ID` from `apps/web/src/cards/versions.ts`, which reaches `wire/cards.ts` via `art/pictures.ts`, which imports `PATCH_VERSION` from `#jackioh-patch-meta`. Every Vite pipeline resolves that through `patchMeta()` to a virtual module. Cypress e2e specs a\u2026\n- - New `apps/web/patch-meta.browser.ts`: same `PATCH_VERSION`/`PATCH_ADDED` derived from bundled `patches.json`, zero `node:` imports.\n- - `apps/web/package.json`: `#jackioh-patch-meta` is now conditional (`browser` \u2192 browser file, `default` \u2192 disk reader). Vite keeps pre-empting via `patchMeta()` (`enforce: \"pre\"`); Node loading `vite.config.ts` keeps the default.\n- - `apps/web/tsconfig.json`: include the new file so it is typechecked.\n- - `apps/web/patch-meta.ts`, `apps/web/vite.config.ts`: comment updates describing the browser fallback.\n- Component decision: `fx-phone-living-game.cy.tsx` asserts mean frame \u2264 50 ms and worst \u2264 120 ms (`FX_PHONE_FRAME_BUDGET_MS`/`WORST_MS`) under 4x CPU throttling \u2014 an environment-sensitive perf measurement already owned by #3674 (no branch in this worktree). Changing budgets or the spec here would we\u2026\n- How checked (commands run, output seen)\n- - `cargo build --release -p jackioh-server -p jackioh-tools`: green. `pnpm --dir apps/web build:e2e`: green.\n- - Booted per `e2e/README.md` on free ports (`vite preview --port 5193 --strictPort`, `E2E=1 PORT=8793 target/release/jackioh-server`, `CATALOG_VERSION=v0.5.12ak`); `curl` 200 on `http://localhost:5193` and `http://localhost:8793/api/catalog`. Servers stopped by port afterwards.\n- - Resolution proof: default \u2192 `patch-meta.ts`; `--conditions=browser` \u2192 `patch-meta.browser.ts`. Old target imports `node:fs`, `node:path`, `node:url` (exactly the failing schemes); new target's only import is `patches.json`. Via `tsx`, both export `v0.5.12ak`, 154 patches.\n- - `pnpm --dir e2e typecheck`: pass (`45 deck fixture(s) OK`). `pnpm --dir apps/web typecheck`: pass. `eslint` on touched files: clean. `cargo fmt --check`: clean. `vitest run src/cards/art/pictures.test.ts` (29 passed), `src/wire/cards.test.ts` + `src/patches/ribbon.test.tsx` (9 passed).\n- - Headless `cypress run --browser chrome --spec cypress/e2e/45-economy-loop.cy.ts` was attempted but is environmentally blocked: this machine has no Xvfb (`Error: spawn Xvfb ENOENT`, no sudo to install it), so the run never reaches spec bundling. Honest blocker, not a code result. Terminal evidence\u2026\n- Worktree is `M apps/web/package.json, patch-meta.ts, tsconfig.json, vite.config.ts` plus new `apps/web/patch-meta.browser.ts`; no forbidden paths, no unrelated reformatting.\n- <!-- bot: {\"status\": \"done\", \"title\": \"CI: daily super run failed\"} -->\n- Fixes the `e2e (2/8)` job with terminal headless-Cypress evidence. The `e2e component (chrome)` failure (`fx-phone-living-game`, phone frame budget) is owned by hard issue #3674 and deliberately untouched here.\n- What changed and why\n- Spec `45-economy-loop` imports `VERSION_FULL_ART_ID` from `apps/web/src/cards/versions.ts`, which reaches `wire/cards.ts` via `art/pictures.ts`, which imports `PATCH_VERSION` from `#jackioh-patch-meta`. Every Vite pipeline resolves that through `patchMeta()` to a virtual module. Cypress e2e specs a\u2026\n- - New `apps/web/patch-meta.browser.ts`: same `PATCH_VERSION`/`PATCH_ADDED` from bundled `patches.json`, zero `node:` imports.\n- - `apps/web/package.json`: `#jackioh-patch-meta` is now conditional (`browser` \u2192 browser file, `default` \u2192 disk reader). Vite keeps pre-empting via `patchMeta()` (`enforce: \"pre\"`); Node loading `vite.config.ts` keeps the default.\n- - `apps/web/tsconfig.json`: include the new file so it is typechecked.\n- - `apps/web/patch-meta.ts`, `apps/web/vite.config.ts`: comment updates describing the browser fallback.\n- Component decision: `fx-phone-living-game.cy.tsx` asserts mean frame \u2264 50 ms / worst \u2264 120 ms under 4x throttling \u2014 an environment-sensitive perf measurement owned by #3674 (no branch in this worktree). Changing budgets or the spec here would weaken the check and collide with that hard issue.\n- How checked (commands run, output seen)\n- - `cargo build --release -p jackioh-server -p jackioh-tools`: green. `pnpm --dir apps/web build:e2e`: green.\n- - Xvfb bootstrapped without sudo (apt debs + a `/tmp` binary-patched copy for local xkb paths); Cypress 16.1.0 ran headless with system Chrome.\n- - `cypress run --browser chrome --spec cypress/e2e/45-economy-loop.cy.ts` against release server + `build:e2e` preview on standard CI ports: **exit=0, 1 passing / 0 failing, \"All specs passed!\", 00:53** (`/tmp/cy45-standard.log`). A first attempt on off-standard ports compiled clean (webpack error \u2026\n- - Static proof: default resolves to `patch-meta.ts` (imports `node:fs/path/url`); `browser` resolves to `patch-meta.browser.ts` (only import is `patches.json`); both export `v0.5.12ak`, 154 patches.\n- - `pnpm --dir e2e typecheck` (45 fixtures OK), `pnpm --dir apps/web typecheck`, `eslint` on touched files, `cargo fmt --check`: all clean. `vitest`: pictures (29) and cards+ribbon (9) passed.\n- - Component full set was not run here (78 specs, hours of runtime, plus #3674 owns the failing spec); its evidence comes from CI's super.yml daily run after #3674 lands.\n- Worktree: `M apps/web/package.json, patch-meta.ts, tsconfig.json, vite.config.ts` plus new `apps/web/patch-meta.browser.ts`; no forbidden paths, no unrelated reformatting.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-3667 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-3667/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 3667,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-11T04:12:08Z",
         "from_run": "42951729483",
         "gates": [
           {
@@ -18738,8 +18743,15 @@
         "source": "build",
         "until": "2026-11-11T04:41:12Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-11T04:11:12Z",
+      "run_id": "pending:d8c52687-1794370304",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-11T04:12:08Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -18753,9 +18765,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T04:03:23Z",
+    "at": "2026-11-11T04:12:08Z",
     "url": "",
-    "what": "build #3513 on claude-8"
+    "what": "review #3682 on muse"
   },
   "last_sweep": {
     "at": "2026-11-11T04:01:29Z",
