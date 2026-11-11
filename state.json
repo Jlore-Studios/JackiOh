@@ -16506,18 +16506,17 @@
       "action": "plan",
       "asks": [],
       "died": 1,
-      "in_lane": true,
       "kind": "build",
       "live": "planning",
-      "owner": "claude-6",
-      "owner_since": "2026-11-11T20:03:59Z",
-      "owner_why": "it plans it",
+      "owner": "claude-2",
+      "owner_since": "2026-11-11T21:09:10Z",
+      "owner_why": "handed off from `claude-6`: `claude-6` its last run could not work (the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it ); it is left alone until 2026-11-11T21:56:25Z",
       "pending_request": false,
-      "provider": "claude-6",
+      "provider": "claude-2",
       "queued_at": "2026-11-11T21:06:25Z",
-      "run_id": "43092989904",
+      "run_id": "pending:091ba1c6-1794431324",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-11T20:03:59Z",
+      "started_at": "2026-11-11T21:09:10Z",
       "stop_requested": false,
       "strike_log": [
         "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
@@ -16528,9 +16527,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T21:08:31Z",
+    "at": "2026-11-11T21:09:10Z",
     "url": "",
-    "what": "revise #3725 on claude-5"
+    "what": "plan #3727 on claude-2"
   },
   "last_sweep": {
     "at": "2026-11-11T20:57:09Z",
