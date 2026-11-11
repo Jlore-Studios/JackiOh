@@ -19352,6 +19352,36 @@
       "asks": [],
       "audit_tier": "strong",
       "cross_rounds": 1,
+      "decision": {
+        "asked_at": "2026-11-11T07:19:07Z",
+        "assigned": [
+          "jgoetzmann",
+          "MaxGoetzmann"
+        ],
+        "default": 1,
+        "ends": "2026-11-12T07:19:07Z",
+        "hours": 24,
+        "kind": "revise",
+        "model": "opus",
+        "options": [
+          {
+            "change": "Land this PR as `Part of #3674` (not `Closes`), leaving #3674 open. A follow-up takes the rest: the Mythic takeover's React commit cost (fit.ts `flushFits`, the director's measure), the Anomaly cast's and Starship launch's remaining cost at all three sizes, the 8-gun broadside's second play that never animates, and the four moments after it (Drone Battleship arrival, Ceaseless Void fold, hand-to-tile flight, riffle), none of them measured yet.",
+            "tradeoff": "The super run's `e2e component (chrome)` stays red and keeps holding promotions until the follow-up lands. But this PR's gains land now and the follow-up builds on them: the lifted diorama slices, the breath without a filter, sheds that re-render only what they change, and R3674000's shedding within a moment. The branch also stops drifting from main."
+          },
+          {
+            "change": "Keep this PR unmerged and widen it until `fx-phone-living-game.cy.tsx` passes 4/4, then close #3674 with it. That needs a new plan for the same list: the takeover's React commits, the other moments' remaining cost, the broadside's retry and the four later moments.",
+            "tradeoff": "One PR that really closes the issue. But the plan placed this work out of its own reach, nobody knows how many passes it takes, and these gains wait while the branch picks up conflicts."
+          },
+          {
+            "change": "A person decides the 4x-throttled living-game budget cannot hold on these runners and changes how R3351000's spec gates: its bounds, its throttle, or whether its red holds promotions.",
+            "tradeoff": "The super run greens soonest and promotions resume. But it gives up the phone budget the spec guards, which the issue rules out ('no raised budget, no lower throttle'), so only a person can choose it."
+          }
+        ],
+        "problem": "The audit's finding holds. This PR cuts the idle living board's cost, but it does not meet #3674's acceptance, and its body says `Closes #3674`. Merging it would close an urgent issue while `fx-phone-living-game.cy.tsx` stays red and keeps holding main \u2192 staging promotions.\n\nI measured every moment on this head once (Chrome, 4x throttling, a temporary copy of the spec that records each moment instead of stopping at the first miss). Every moment I could measure misses 50 / 120 ms at all three sizes. Best rows: the Anomaly cast 57.1/106, 53.6/143 and 72.8/221; the Mythic takeover 71.6/256, 71.0/198 and 85.7/238; the Starship launch 52.3/112, 55.5/203 and 62.4/221. The 8-gun broadside missed its first play everywhere (60.6\u201368.6 mean), and then its second play never started: the ship never got `data-animating`. So each size stopped there, and the last four moments were never reached.\n\nWhat is left is not the standing scene this PR was planned for. It is the takeover's own React commits (fit.ts `flushFits` forced layout, the director's measure), the cost of the set pieces after it, and a broken retry in the spec. The planner already found that removing every standing animation still leaves the takeover at 65\u201375 ms mean. That is a new plan, not a revision. Whether to land this part now or hold it until the issue is done is a scope call for a person.",
+        "provider": "claude-4",
+        "question": "Should this PR land as `Part of #3674`, with the issue left open for a follow-up, or stay open until the spec passes 4/4?",
+        "why": "it keeps every limit the issue sets and lands measured gains that any fix of the rest builds on. The measurements show the rest is a different cost (the takeover's React commits and the set pieces after it) plus a broken retry in the spec, which needs its own plan. If nobody answers, option 2 becomes that follow-up issue."
+      },
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
@@ -19371,6 +19401,7 @@
       "live": "revising",
       "pending_request": false,
       "provider": "claude-4",
+      "question": "Should this PR land as `Part of #3674`, with the issue left open for a follow-up, or stay open until the spec passes 4/4?",
       "queued_at": "2026-11-11T06:56:24Z",
       "review_floor": "",
       "review_notes": "",
