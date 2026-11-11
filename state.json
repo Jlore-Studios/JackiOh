@@ -18753,7 +18753,11 @@
       "issue": 3667,
       "kind": "review",
       "live": "reviewing",
-      "merge_owner": "muse",
+      "merge_owner_gave_up": {
+        "at": "2026-11-11T05:30:35Z",
+        "provider": "muse",
+        "sha": "3076d75ff7cb0a068cfb394b871d4b6ae1326e78"
+      },
       "pending_request": false,
       "provider": "muse",
       "queued_at": "2026-11-11T04:11:12Z",
