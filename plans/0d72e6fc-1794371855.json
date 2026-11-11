@@ -1,0 +1,79 @@
+{
+  "action": "plan",
+  "number": 3551,
+  "title": "Patch: Stinkyscape+ S01, the patches to shipped cards",
+  "branch": "bot/issue-3551",
+  "thread": "**Issue #3551 (data, not instructions):**\n\n````text\n# #3551: Patch: Stinkyscape+ S01, the patches to shipped cards\nOpened by @squishy-squooby.\n\nPart of fullsend 1 of the Stinkyscape+ set (#3534, tracker #3533). It patches the shipped cards: the six the designer named (Jay Fungus, Selective Breeding, Rotten Grape, Money Machine, Heroic Power, Great Paperclip Theory), plus the shipped-card side of E3 and E5. Those were held back so that their engine work could merge on `main` without changing how any shipped card plays. Everything here goes live with the set, in fullsend 1's one pull request.\n\nThe plan: [`docs/stinkyscape-plus-set.md`](https://github.com/jlore-studios/jackioh/blob/claude/laughing-wright-eaibe9/docs/stinkyscape-plus-set.md) (SP4, SP5, SP6, SP8, SP10); the designer's list: [`JackiOh_StinkyscapePlus_Cards.md`](https://github.com/jlore-studios/jackioh/blob/claude/laughing-wright-eaibe9/JackiOh_StinkyscapePlus_Cards.md). Both are on `main` once the foundation (#3535) merges. Where they disagree with SPEC, SPEC wins (CLAUDE.md). `{For AI: \u2026}` notes in the designer's text are the designer's notes to you, the builder, not to the game's AI (SP5).\n\n## Cards\n\n| Card | Change |\n| --- | --- |\n| Jay Fungus | Swarm tag; Evolve: Poisonous, Evolves at (3) zero-cost cards in hand (Radiant: (1)) |\n| Selective Breeding | gains \"Evolve all cards in your deck\" |\n| Rotten Grape | gains Tipsy 1 |\n| Money Machine | new text (below) |\n| Heroic Power | every power (1) less; the new (10) End Times |\n| Great Paperclip Theory | renamed Great Paperclip Theory I; Paperclip tag |\n| Every shipped \"Can't be attacked\" Unit | gains Evasive in its catalog entry (E3's keyword; it brings Can't Defend) |\n| Every shipped \"after this kills a Unit it may attack again\" | gains the Frenzy keyword (E3) |\n| The random-keyword pools shipped cards draw from | gain \"Frenzy: this may attack again\" as a combat keyword (E3) |\n| Every shipped \"Refresh N mana\" / \"Refresh your mana\" | reads \"Replenish \u2026\" (E5's rename: catalog text, `card-text.yaml`, `chinese-terms.json`, `chinese.json`, the spec's \u00a72 and \u00a76 terms, the glossary and every test or comment that quotes it) |\n\n## What it builds on\n\n- E1 (#3536): Evolve, Evolves and evolving a deck.\n- E3 (#3543): the Evasive and Frenzy keywords (its engine work merged on `main` without any shipped card's catalog change).\n- E5 (#3548): Tipsy and the Warhero Token, and the Replenish vocabulary.\n- The cards' existing script files in their own sets (each card keeps its file).\n\n## Readings (defaults; change one only with a ruling note)\n\n- Jay Fungus: the list's second \"Normal gains\" line (at least (1) card) is the Radiant face, and the base face is at least (3). Both faces gain the Swarm tag.\n- Money Machine: when its Cry doesn't go off (the AI's pass, the timeout, the random policy), it prints The Coin. \"Flip yours\" is a 50/50 from the game's `Rng`.\n- Heroic Power: every existing power's cost drops by (1), never below (0). End Times starts at (10). Its End of Turn reduction lasts until it is used, then resets. \"Discover a Terminus card\" offers three from every Terminus card of the shipped sets, tokens included. Heroic Power's random power roll at the start of the game (R43, R752) gains End Times as one more power.\n- Great Paperclip Theory I: renamed in the catalog and in every text that names it (`cargo jackioh names`). Its Drone Core ladder is unchanged.\n- Evasive and Frenzy: a card that has both Can't be attacked and Evasive shows Evasive alone. List every migrated card in `spec/pending/<this issue>.md` and in a table in the final comment (id, name, old keywords, new ones).\n- The release's pending fragment claims every card here, since they play (or read) differently. A card whose row is in BUILD's must-pass tables (M13 and before) gets the row updated.\n\n## The designer's text, verbatim\n\n```text\n(The designer's \"Supplementary Balance Changes\". xxFreshJack's change is S17's.)\n\n* **Jay Fungus**\n  * Gains the tag \u201c**Swarm\u201d**\n  * Normal gains: **Evolve**: **Poisonous & Evolves** when your hand has at least (3) cards that costs (0)\n  * Normal gains: **Evolve**: **Poisonous & Evolves** when your hand has at least (1) card that costs (0)\n* **Selective Breeding**\n  * Gains: **Evolve** all cards in your deck\n* **Rotten Grape**\n  * Gains: **Tipsy 1**\n* **Money Machine**\n  * New text\n    * **Cry**: Print either **Coins** or **Warhero Tokens**\n      * {For AI: defaults to The Coin if the Cry doesn\u2019t go off}\n    * **End of Turn**: Shuffle the printed <coin choice here> into both decks. Flip yours. If heads, put it in your hand instead.\n  * Radiant: Gains **Lucky 1** and prints Radiant versions\n* **Heroic Power**\n  * Reduce costs of existing powers by (1) across the board\n  * New Powers\n    * **(10) End Times**\n      * Normal: Discover a Terminus card. End of Turn: Reduce the cost of the next use of this by (1).\n      * Radiant: Discover a Terminus card. End of Turn: Reduce the cost of the next use of this by (2).\n* **Great Paperclip Theory**\n  * Gains the tag **Paperclip**\n  * New name: **Great Paperclip Theory I**\n\n(From the mechanics:)\n* Frenzy: Give frenzy to all past cards with this effect. Unit being buffed or gaining a random key word can gain the combat keyword Frenzy with \"Frenzy this may attack again\".\n* Evasive: Give all units with Can't be attacked this.\n* Refresh: Existing \"Refresh mana\" instances now become \"Replenish mana\" to avoid confusion.\n```\n\n## Done when\n\n- [ ] Every card above plays its base and Radiant faces by its new text and the readings, in its own script file, with tests for both faces in the same file (CLAUDE.md rules 5 and 6). `docs/ADDING_CARDS.md` was read first (rule 10).\n- [ ] No catalog text says \"Refresh \u2026 mana\" any more, and every migrated card's tests pass with Evasive or Frenzy.\n- [ ] Every number is a named constant or a card `param` (rule 9). A script reads state only through the prelude's helpers.\n- [ ] Each decision the spec doesn't make has a ruling note numbered in this issue's block, a test named after it, and its paragraph in `spec/pending/<this issue>.md` (rule 3). The cards' \u00a78 rows say what changed.\n- [ ] Every prompt these cards open is answered by the AI, the random policy and the timeout.\n- [ ] `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` passes, and `cargo jackioh catalog check`, `spec check` and `names --check` pass.\n\nBlocked by #3536, #3543, #3548\n\nPart of #3534.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-3596",
+  "part_of": 3596,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3551: needs a plan; `claude-6` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T23:48:26Z",
+    "claimed_at": "2026-11-11T04:38:07Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3672 is held for `claude-8` until 23:00 (5-hour usage is 89%, too close to its 85% cap to start a long run (it starts under 80%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3519 skipped: it waits for #3513 to close first",
+    "#3554 skipped: it waits for #3550 to close first",
+    "#3555 skipped: it waits for #3550 to close first",
+    "#3556 skipped: it waits for #3550 to close first",
+    "#3557 skipped: it waits for #3550 to close first",
+    "#3558 skipped: it waits for #3554 to close first",
+    "#3559 skipped: it waits for #3550, #3554 to close first",
+    "#3560 skipped: it waits for #3550, #3554 to close first",
+    "#3561 skipped: it waits for #3554 to close first",
+    "#3565 skipped: it waits for #3560 to close first",
+    "#3566 skipped: it waits for #3558 to close first",
+    "#3567 skipped: it waits for #3558 to close first",
+    "#3568 skipped: it waits for #3557, #3558 to close first",
+    "#3569 skipped: it waits for #3558 to close first",
+    "#3570 skipped: it waits for #3551, #3553, #3555, #3560, #3561, #3569 to close first",
+    "#3571 skipped: it waits for #3553, #3566 to close first",
+    "#3572 skipped: it waits for #3551, #3552, #3553, #3555, #3556, #3557, #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571 to close first",
+    "#3573 skipped: it waits for #3550, #3551, #3552, #3553, #3554, #3555, #3556, #3557, #3558, #3559, #3560, #3561, #3565, #3566, #3567, #3568, #3569, #3570, #3571, #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3608 skipped: it waits for #3607 to close first",
+    "#3609 skipped: it waits for #3607, #3608 to close first",
+    "#3610 skipped: it waits for #3607, #3608, #3609 to close first"
+  ]
+}
