@@ -193,10 +193,12 @@
   box-shadow: var(--shadow-2);
 }
 
-/* Live badges breathe, scale only, and only when motion is welcome (tutorial.css's pattern). */
+/* Live badges breathe, scale only, and only when motion is welcome. The pulse names
+   motion.css's duration and curve (#2110), so this sheet keeps no motion of its own:
+   1.6s is --motion-slow times 4. */
 @media (prefers-reduced-motion: no-preference) {
   .dungeon-run-map__node[data-live="true"] .dungeon-run-map__badge {
-    animation: map-pulse calc(1.6s * var(--anim-scale, 1)) ease-in-out infinite;
+    animation: map-pulse calc(var(--motion-slow) * 4 * var(--anim-scale, 1)) var(--ease-in-out) infinite;
   }
 
   @keyframes map-pulse {
