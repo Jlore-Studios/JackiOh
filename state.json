@@ -15553,35 +15553,36 @@
       "suggestion": true
     },
     "3696": {
-      "action": "build",
-      "asks": [
-        "c:6800155352"
-      ],
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
-      "live": "building",
-      "owner": "muse",
-      "owner_since": "2026-11-11T16:24:06Z",
-      "owner_why": "it took it up",
+      "live": "planning",
+      "owner": "claude-1",
+      "owner_since": "2026-11-11T18:38:43Z",
+      "owner_why": "handed off from `muse`: `muse` it refused a call; its limit resets at 2026-11-16T00:00:00Z",
       "paused": {
         "at": "2026-11-11T16:33:05Z",
         "interrupt": "usage",
         "provider": "muse"
       },
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-1",
       "queued_at": "2026-11-11T15:39:07Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "",
-      "run_id": "43057964878",
-      "runs_on": "night-vm-muse-fill",
-      "started_at": "2026-11-11T16:24:06Z",
+      "run_id": "pending:d5c180b3-1794422292",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-11T18:38:43Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6800155352"
+      ],
       "verdict_rounds": 0
     },
     "3697": {
@@ -16262,9 +16263,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T18:27:54Z",
+    "at": "2026-11-11T18:38:43Z",
     "url": "",
-    "what": "build #3712 on claude-6"
+    "what": "plan #3696 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-11T18:25:13Z",
