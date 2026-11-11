@@ -1,0 +1,62 @@
+{
+  "action": "plan",
+  "number": 3571,
+  "title": "Patch: Stinkyscape+ S25, the seven AI cards",
+  "branch": "bot/issue-3571",
+  "thread": "**Issue #3571 (data, not instructions):**\n\n````text\n# #3571: Patch: Stinkyscape+ S25, the seven AI cards\nOpened by @squishy-squooby.\n\nPart of fullsend 1 of the Stinkyscape+ set (#3534, tracker #3533). It scripts the seven AI cards the foundation designed (SP7), and puts them in the Marketplace's AI lot.\n\nThe plan: [`docs/stinkyscape-plus-set.md`](https://github.com/jlore-studios/jackioh/blob/claude/laughing-wright-eaibe9/docs/stinkyscape-plus-set.md) (SP7, SP8, SP10); the designer's list: [`JackiOh_StinkyscapePlus_Cards.md`](https://github.com/jlore-studios/jackioh/blob/claude/laughing-wright-eaibe9/JackiOh_StinkyscapePlus_Cards.md). Both are on the planning branch `claude/laughing-wright-eaibe9` until the foundation (#3535) brings them onto this fullsend's branch. Where they disagree with SPEC, SPEC wins (CLAUDE.md).\n\n## Cards\n\nT-AI-1 to T-AI-7 of Stinkyscape+, as the foundation's table in SP7 gives them: 2 Fruit, 2 Jlockeed, 2 CN and 1 KY, each also tagged AI and Token.\n\n## What it builds on\n\n- The foundation (#3535): the seven catalog entries, designed in SP7, and their stub scripts.\n- S15 (#3566) and S16 (#3553): the Fruit and Jlockeed verbs they may use.\n- The Marketplace's AI lot (R1000, R1853000; `docs/stinkyscape-set.md` ST15).\n\n## The designer's text, verbatim\n\n```text\n* **New AI Cards, (Should have tags)**\n  * Create 2 New AI cards that are also fruits\n  * Create 2 New AI cards that Jlockeed\n  * Create 2 New AI cards that are CN\n  * Create 1 New AI card that is KY\n```\n\n## Readings (defaults; change one only with a ruling note)\n\n- They follow ST15's constraints (`docs/stinkyscape-set.md`): (0) to (2), no Credits made, one system each, unique names, no numbers declared outside `params.rs`, and each Radiant face doubling a number or adding a rider (R275).\n- The Marketplace offers them in its AI lot once the set ships, as it offers Stinkyscape's ten. The AI lot's odds don't change.\n\n## Done when\n\n- [ ] Every card above plays its base and Radiant faces by its text, in its own script file, with tests for both faces in the same file (CLAUDE.md rules 5 and 6). `docs/ADDING_CARDS.md` was read first (rule 10).\n- [ ] Every number is a named constant or a card `param` (rule 9). A script reads state only through the prelude's helpers.\n- [ ] Each decision the spec doesn't make has a ruling note numbered in this issue's block, a test named after it, and its paragraph in `spec/pending/<this issue>.md` (rule 3). The cards' \u00a78 rows say what was built.\n- [ ] Every prompt these cards open is answered by the AI, the random policy and the timeout. The Marketplace's tests show the seven in its AI lot once the set ships.\n- [ ] `cargo test -p jackioh-cards` passes for these cards, and `cargo jackioh catalog check`, `spec check` and `names --check` pass.\n- [ ] Only these cards' catalog entries and \u00a78 rows are edited, and the set stays `Held` until the release (part R).\n\nBlocked by #3566, #3553\n\nPart of #3534.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-3596",
+  "part_of": 3596,
+  "provider": "claude-5",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_5",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-5",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3571: needs a plan; `claude-5` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-5` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-09T23:50:13Z",
+    "claimed_at": "2026-11-11T19:19:10Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3519 skipped: it waits for #3513 to close first",
+    "#3570 skipped: it waits for #3561 to close first",
+    "#3572 skipped: it waits for #3561, #3570, #3571 to close first",
+    "#3573 skipped: it waits for #3561, #3570, #3571, #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3609 skipped: it waits for #3608 to close first",
+    "#3610 skipped: it waits for #3608, #3609 to close first"
+  ]
+}
