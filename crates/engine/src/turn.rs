@@ -1,10 +1,10 @@
 //! The turn loop of SPEC §2.2 in R62's order, cleanup, the turn cap and the ways a game ends (§2.5, R79,
 //! R389). Each part belongs to its module: the turn hooks to `triggers::queue_hooks_in_trigger_order` (R68's
 //! order), the end-of-turn trap window to `traps::run_trap_window` (R100), the delayed effects to
-//! `modifiers::due_delayed`, mana to `mana.rs`. A turn starts: refresh → Brittle tick (B3.3), Dormant
-//! countdowns (R1839001), quests' waits (R1854004), Burn and Toxic ticks (R3540001) → animate (B3.1) →
-//! delayed effects, rest-of-game ones among them (B5 E28, R458) → start-of-turn triggers → draw. Animated
-//! cards go home last in cleanup.
+//! `modifiers::due_delayed`, mana to `mana.rs`. A turn starts: refresh → Tipsy decay (R3548000) → Brittle
+//! tick (B3.3), Dormant countdowns (R1839001), quests' waits (R1854004), Burn and Toxic ticks (R3540001) →
+//! animate (B3.1) → delayed effects, rest-of-game ones among them (B5 E28, R458) → start-of-turn triggers →
+//! draw. Animated cards go home last in cleanup, after the Warhero worth's growth (R3548002).
 //!
 //! Any part can pause on a question (§9.3, §10.6), so both boundaries are resumable: a pause parks the
 //! rest of R62's order on `state.work` through `owe`, and `run_owed_start_of_turn` / `run_owed_end_of_turn`
@@ -388,6 +388,8 @@ fn begin_turn(sink: &mut EngineSink, player: PlayerId, extra: bool) {
         });
     }
 
+    // R3548000: the Tipsy decay, after the lost-refresh badge and before the stages below.
+    crate::tipsy::decay_at_turn_start(sink, player);
     // R62: the delayed effects due at this start are the ones that exist as the turn begins, so the
     // mark is taken here and carried through the two stages before them.
     let due_before = sink.state.next_seq;
@@ -630,6 +632,8 @@ fn cleanup(sink: &mut EngineSink, player: PlayerId) {
     crate::modifiers::expire_modifiers(sink, player);
     // R1174000: beside the "this turn" modifiers, `player`'s Frozen Units whose thaw is due thaw.
     crate::freeze::thaw_at_cleanup(sink, player);
+    // R3548002: then the Warhero Tokens' game-wide worth grows, once any has been minted.
+    crate::warhero::grow_at_cleanup(sink);
     let side = &mut sink.state.players[player];
     side.turn_log.unspent_at_end = Some(side.mana.current);
     let handed_over = side.ai_turn;

@@ -98,7 +98,12 @@ pub fn draw_sell_price(rng: &mut Rng, price: ResourcePrice) -> i32 {
 
 /// R1840001, R2250001: what a Resource fetches now: its quote this turn while the Marketplace is open,
 /// with no draw (R1853002); otherwise a draw in its face's sell range. 0, with no draw, for no Resource.
+/// R3548002: a Warhero Token fetches the game-wide worth, doubled on its Radiant face, whatever the
+/// Marketplace holds.
 pub fn sell_price(state: &GameState, rng: &mut Rng, card: &CardInstance) -> i32 {
+    if let Some(worth) = crate::warhero::worth_of(state, card) {
+        return worth;
+    }
     if let Some(quote) = crate::marketplace::sell_quote(state, card) {
         return quote;
     }
@@ -144,8 +149,12 @@ pub fn gain_resource(sink: &mut EngineSink<'_>, player: PlayerId, def_id: &str, 
 }
 
 /// R2250000, R2250001: whether a card is a Resource (its definition carries `resource`).
+/// R3548002: a Warhero Token is one too, though its definition carries no `resource` block: it pays
+/// the game-wide worth instead of a roll, so `resource_def_ids` — the rolls and the requote — never
+/// lists it.
 pub fn is_resource_card(state: &GameState, card: &CardInstance) -> bool {
     find_def(Some(state), &card.def_id).is_some_and(|def| def.resource.is_some())
+        || crate::warhero::is_warhero_token(&card.def_id)
 }
 
 /// R2250001: a Resource `player` played or discarded from their hand pays them its Credits

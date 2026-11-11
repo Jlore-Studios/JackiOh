@@ -610,7 +610,13 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
                 CounterKind::Brittle => "{target} brittle counters: {value}",
                 CounterKind::Burn => "{target} burn counters: {value}",
                 CounterKind::Toxic => "{target} toxic counters: {value}",
+                CounterKind::Tipsy => "{target} Tipsy counter: {value}",
+                CounterKind::Warhero => "Warhero Tokens are worth {value} Credits",
             };
+            // R3548002: the game-wide worth, which names no card.
+            if *counter == CounterKind::Warhero {
+                return Some(s(english, vec![p("value", *value)]));
+            }
             s(
                 english,
                 vec![p("target", target(instance_id)), p("value", *value)],

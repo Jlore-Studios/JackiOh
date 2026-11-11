@@ -49,6 +49,7 @@ import { useFitText } from "./fit.ts";
 import { artMotionOf, boardLookOf, boardNameOf, useCardLook } from "./fullArt.ts";
 import { KEYWORD_MARK } from "./keywordMarks.ts";
 import { Icon } from "./icons.tsx";
+import { TipsyName, useTipsyBlur } from "../game/tipsy.tsx";
 import { DormantSeal, dormantAttr } from "./DormantSeal.tsx";
 import { StarshipHull } from "./StarshipHull.tsx";
 import { KeywordFx } from "./KeywordFx.tsx";
@@ -117,6 +118,8 @@ export function KeywordIcons({
   join: string;
   armor: number;
 }): ReactElement | null {
+  // R3548001: the keyword the stamp blurs draws blurred.
+  const blur = useTipsyBlur();
   if (keywords.length === 0) return null;
   const { shown, folded } = keywordChips(keywords, armor);
   const wordsOf = (keyword: Keyword): string => words[keywords.indexOf(keyword)] ?? keywordKey(keyword);
@@ -131,6 +134,7 @@ export function KeywordIcons({
           data-keyword={keyword.kind}
           data-n={"n" in keyword ? keyword.n : undefined}
           data-chip={shown.includes(keyword) ? undefined : "hidden"}
+          data-tipsy-blur={blur?.kind === "keyword" && blur.keyword === keyword.kind ? "true" : undefined}
           title={wordsOf(keyword)}
         >
           {KEYWORD_MARK[keyword.kind]}
@@ -267,11 +271,11 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
             transparent until hover or focus, in the accessibility tree all the while, so the name is read as it was. */}
         {staticName ? (
           <span className={look === null ? "card-name card-name-compact-translucent" : "card-name"} ref={nameRef}>
-            {face.name}
+            <TipsyName name={face.name} />
           </span>
         ) : (
           <span className="card-name card-name-hover" ref={nameRef}>
-            {face.name}
+            <TipsyName name={face.name} />
           </span>
         )}
 

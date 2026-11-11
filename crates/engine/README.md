@@ -129,6 +129,14 @@ builds reads its own game's hold without the state (R2201001).
 - `giga.rs` is GIGA (§3, §6.1, R3546000–R3546004): the four-zone geometry (`spanned_slots`,
   `covering`, `fits`, `first_anchor`, `entry_anchor`) and the both-lanes reads (`lanes_of`,
   `occupant_at`, `adjacent_slots`, `lanes_meet`, `lands_whole`).
+- `tipsy.rs` is Tipsy X (§6.1, R3548000–R3548001): the counter (`stamp_for`, `add_on_play`,
+  `decay_at_turn_start`), the chance (`blur_chance`) and the owner's-view-only blur (`blur_for`,
+  drawn from a seed stream, never the game's `Rng`); `warhero.rs` is the Warhero Token's game-wide
+  worth (R3548002): `note_minted`, `worth_of` and the cleanup's `grow_at_cleanup`.
+- `effects/activations.rs` is Refresh for Activates (§6.3, R3548003): `refresh_activates`
+  (`refreshActivates`), `refresh_ability` and `is_refresh_ability`; infinite mana (R3548004) is
+  `StaticFlags.infinite_mana`, `mana::has_infinite_mana` and `credit::can_pay`, which every refusal
+  and listing reads.
 - `effects/anomaly.rs` is Stinkyscape's Anomalies and Scanning Probes (R1855000–R1855003):
   `replace_board` exiles what its card reaches of its caster's side, lays a preset as summons into
   their named zones with their riders in memory, then fires each laid Unit's Cry under R452's random

@@ -31,6 +31,24 @@ string_union! {
     }
 }
 
+/// R3548001: what of a Tipsy-stamped card its owner's view blurs: one word of its name, its
+/// cost, its attack, its health, or one keyword kind it carries. The client renders the blur and
+/// never changes a rule (CLAUDE.md rule 7).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum TipsyBlur {
+    Name { word: i32 },
+    Cost,
+    Attack,
+    Health,
+    Keyword { keyword: KeywordKind },
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -227,6 +245,11 @@ pub struct CardView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub fixed_x: Option<i32>,
+    /// R3548001: what of this card the owner's Tipsy stamp blurs on their view alone, or nothing.
+    /// Never on the opponent's view of it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub tipsy_blur: Option<TipsyBlur>,
 }
 
 /// One reward on offer, or one aura held, as `QuestView` lists it: `{ id, text }`.
@@ -701,6 +724,11 @@ pub struct UnitView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub tallies: Option<Vec<TallyView>>,
+    /// R3548001: what of this Unit the owner's Tipsy stamp blurs on their view alone, or nothing.
+    /// Never on the opponent's view of it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub tipsy_blur: Option<TipsyBlur>,
 }
 
 /// A public backrow card's counters: `grade` is #93 Combo-Index's counter, 1..6; `gradeLetter` is the
@@ -865,6 +893,11 @@ pub struct PublicBackrowView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub unit: Option<UnitView>,
+    /// R3548001: what of this card the owner's Tipsy stamp blurs on their view alone, or nothing.
+    /// Never on a face-down card, and never on the opponent's view of it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub tipsy_blur: Option<TipsyBlur>,
 }
 
 /// The face-down member of `BackrowView`: a marker. §10.8 grants the non-controller the fact that
@@ -1253,6 +1286,17 @@ pub struct SideView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub jade: Option<i32>,
+    /// R3548000: this seat's Tipsy counter, shown to both seats beside its hero. Absent at none,
+    /// so a game without one sends the view it always did.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub tipsy: Option<i32>,
+    /// R3548004: while a card giving infinite mana acts on this seat's field, its mana is not spent
+    /// by paying costs, and the tray shows infinity. Public on both seats; absent otherwise. Only
+    /// ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub infinite_mana: Option<bool>,
     /// R1840005: this seat's Credits, shown to both seats. Absent until first gained (D14); named
     /// apart from the credit line's `credit` (R1223).
     #[serde(default, skip_serializing_if = "Option::is_none")]

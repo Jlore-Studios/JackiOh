@@ -295,8 +295,11 @@ fn summon_onto(
 
     let turn = ctx.state.turn;
     let stats_override = at.stats_override;
+    // R3548001: the stamp a Tipsy counter now up lays on the summoned card.
+    let stamp = crate::tipsy::stamp_for(ctx.state, slot.player);
     if let Some(live) = find_instance_mut(ctx.state, &card.id) {
         live.summoned_turn = Some(turn);
+        live.tipsy = stamp;
         if let Some(stats) = stats_override {
             live.stats_override = Some(AttackHealth {
                 attack: stats.attack,

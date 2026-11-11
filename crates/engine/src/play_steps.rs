@@ -1703,6 +1703,15 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     if !cast_on_draw(run) {
         record_play(sink.state, run.player, &card);
     }
+    // R3548001: the stamp a Tipsy counter now up lays on the played card, read off the state before
+    // its own Tipsy counts: the card arrives at the level already there, then raises it.
+    if let Some(stamp) = crate::tipsy::stamp_for(sink.state, run.player)
+        && let Some(live) = crate::state::find_instance_mut(sink.state, &card.id)
+    {
+        live.tipsy = Some(stamp);
+    }
+    // R3548000: playing a card with Tipsy X raises its controller's counter.
+    crate::tipsy::add_on_play(sink, run.player, &card);
 
     played_events(sink, run, &card, former_id);
     // R1870000: a card carrying the win wins as it is played, a cast too (R70); the closing state

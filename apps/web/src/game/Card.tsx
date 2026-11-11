@@ -55,6 +55,7 @@ import AttackOutcome from "./AttackOutcome.tsx";
 import { outcomeFor } from "./attackOutcome.ts";
 import FieldBadges from "./FieldBadges.tsx";
 import { usePhonePortrait } from "./phoneBar.ts";
+import { TipsyBlurProvider } from "./tipsy.tsx";
 import { useCardInfo, useCopiedDef, useFieldPower, useTallies } from "./catalog.ts";
 import { useLiveFace } from "./faces.ts";
 import { printedCost } from "./decks.ts";
@@ -258,6 +259,8 @@ export default function Card(props: CardProps): ReactElement {
 
   // The card in play: the unit's view when it is one, else the card's own. A back has no face at all.
   const shown = unit ?? card;
+  // R3548001: the owner's-view-only Tipsy blur of this card, from the unit's view when it is one.
+  const blur = unit?.tipsyBlur ?? card?.tipsyBlur ?? null;
   // #3478: the face memoized on the view object, the definition, the live facts and the language.
   const model: FaceModel = useLiveFace(info, shown, {
     ...(props.type === undefined ? {} : { type: props.type }),
@@ -486,6 +489,8 @@ export default function Card(props: CardProps): ReactElement {
       data-marks={marks.length > 0 ? marks.map((entry) => entry.mark).join(" ") : undefined}
       data-unrevealed={props.unrevealed === true ? "true" : undefined}
       data-position={position}
+      // R3548001: which of this card blurs on its owner's view alone; never on a back.
+      data-tipsy-blur={blur?.kind}
       // `canAct` is drawn as state, never read as permission: legality is `props.highlight`.
       data-can-act={unit === undefined || unit === null ? undefined : unit.canAct ? "true" : "false"}
       // #258: no exertion left on the acting side's turn (spent.ts), drawn dimmed with a "Zz".
@@ -497,25 +502,27 @@ export default function Card(props: CardProps): ReactElement {
       // with it (R849000) the engine's reason a unit of yours cannot attack now.
       title={settings.hoverPreviews && panelHover ? undefined : cardTitle(face.name, unit, card)}
     >
-      {unit !== undefined && unit !== null ? (
-        <MinionFace face={face} unit={unit} worn={worn} keywordsOffFace={offFace} attacking={animatingEvent === "attackDeclared"} />
-      ) : (
-        // Issue #814: a Summit in play shortens to its header and next Ascent line; the overlays keep it all.
-        // R2098000: its terms show their rule on hover and on a long press (cards/TermTip.tsx); a tap on one still reaches this root.
-        // R2723000: a full-art card in the viewer's own hand draws its art alone; its inspect overlays draw it whole.
-        <TermTips>
-          <CardFace
-            face={face}
-            layout={form === "compact" ? "compact" : "full"}
-            ascentLevel={face.ascent}
-            worn={worn}
-            ownHand={worn && props.inOwnHand === true}
-            onBoard={form === "compact"}
-            gemDrain={gemDrain}
-            tilt="host"
-          />
-        </TermTips>
-      )}
+      <TipsyBlurProvider blur={blur}>
+        {unit !== undefined && unit !== null ? (
+          <MinionFace face={face} unit={unit} worn={worn} keywordsOffFace={offFace} attacking={animatingEvent === "attackDeclared"} />
+        ) : (
+          // Issue #814: a Summit in play shortens to its header and next Ascent line; the overlays keep it all.
+          // R2098000: its terms show their rule on hover and on a long press (cards/TermTip.tsx); a tap on one still reaches this root.
+          // R2723000: a full-art card in the viewer's own hand draws its art alone; its inspect overlays draw it whole.
+          <TermTips>
+            <CardFace
+              face={face}
+              layout={form === "compact" ? "compact" : "full"}
+              ascentLevel={face.ascent}
+              worn={worn}
+              ownHand={worn && props.inOwnHand === true}
+              onBoard={form === "compact"}
+              gemDrain={gemDrain}
+              tilt="host"
+            />
+          </TermTips>
+        )}
+      </TipsyBlurProvider>
 
       {/* Everything below is a sibling of `.cf`, not inside it, so it stays clickable while the
           face has `pointer-events: none`. */}

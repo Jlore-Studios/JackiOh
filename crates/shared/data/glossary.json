@@ -122,6 +122,14 @@
       "row": "Lucky X"
     },
     {
+      "id": "Tipsy",
+      "label": "Tipsy",
+      "rule": "Playing this adds X to your Tipsy counter, which drops by 1 at the start of your turn; while it is up, new cards may blur",
+      "section": "§6.1",
+      "aliases": [],
+      "row": "Tipsy X"
+    },
+    {
       "id": "Animated",
       "label": "Animated",
       "rule": "A Field Spell or Trap with stats that becomes a Unit in an open unit zone when it fires or enters the field, or as it gains stats",

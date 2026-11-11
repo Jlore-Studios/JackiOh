@@ -446,6 +446,11 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub giga: Option<bool>,
+    /// R3548001: the Tipsy counter stamped on this card as it arrived, if one was up. Taken off by
+    /// R78's reset with the card leaving the field; only its owner's view reads it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub tipsy: Option<TipsyStamp>,
 }
 
 /// R783004, R1040, R1044: what a card played face-down as a Trap carries until it has revealed — how
@@ -1288,6 +1293,36 @@ pub struct StarscapeMap {
     pub travelled_on: i32,
 }
 
+/// R3548000: a player's Tipsy counter (`tipsy.rs`): the count, and the turn it first rose on,
+/// which a stamp newer than a clearing reads. Absent at none, so a game without one hashes as before.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct TipsyCounter {
+    pub count: i32,
+    pub since: i32,
+}
+
+/// R3548001: what a card carries of the Tipsy counter that was up as it arrived: whose, how high and
+/// on which turn. Written as the card is drawn, played or summoned while the counter is up; R78's
+/// reset takes it off as the card leaves the field.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct TipsyStamp {
+    pub player: PlayerId,
+    pub level: i32,
+    pub turn: i32,
+}
+
 /// #936 S3: a Duos duel's side — its team's shared pool, the pool's cap, and whether this seat's own
 /// HP is spent (B12–B15, `duos_life.rs`). Present only in a duel a `DuosState` holds, so a 1v1 state
 /// hashes as before (B3).
@@ -1507,6 +1542,11 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub hero_toxic: Option<i32>,
+    /// R3548000: this player's Tipsy counter, public on both seats. Absent at none, so a game
+    /// without one hashes as it did before this field existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub tipsy: Option<TipsyCounter>,
 }
 
 /// R1843000: one player's votes to remove them from the game, on turn `turn` (`PlayerState.votes`).
@@ -1745,6 +1785,11 @@ pub struct GameState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub marketplace: Option<Marketplace>,
+    /// R3548002: every Warhero Token's worth in Credits, game-wide. Absent until the first one is
+    /// minted, so a game without one hashes as it did before this field existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub warhero_worth: Option<i32>,
     /// R1956001: each Created card's generator by instance id: the catalog id of the card whose
     /// script minted it, or that card's own generator when it was Created too
     /// (`generators::record_generator`). Presentation only (CLAUDE.md rule 7): no rule reads it,
@@ -2146,6 +2191,7 @@ pub fn create_player_state() -> PlayerState {
         evolutions: None,
         hero_burn: None,
         hero_toxic: None,
+        tipsy: None,
     }
 }
 
@@ -2527,11 +2573,17 @@ pub fn validate_setup(
 /// bare counter (fuse's scratch numbering, `{ nextId: 0 }` in TS).
 pub trait NextId {
     fn next_id_mut(&mut self) -> &mut u32;
+    /// R3548002: a card of this definition was minted. A scratch counter keeps none of it.
+    fn minted(&mut self, _def_id: &str) {}
 }
 
 impl NextId for GameState {
     fn next_id_mut(&mut self) -> &mut u32 {
         &mut self.next_id
+    }
+
+    fn minted(&mut self, def_id: &str) {
+        crate::warhero::note_minted(self, def_id);
     }
 }
 
@@ -2604,8 +2656,11 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         evolved: None,
         enters_evolved: None,
         giga: None,
+        tipsy: None,
     };
     *next_id += 1;
+    // R3548002: minting a Warhero Token starts its worth at 0, wherever the card is minted.
+    state.minted(def_id);
     instance
 }
 
@@ -2728,6 +2783,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
         sandbox: options.sandbox.filter(|sandbox| *sandbox),
         held: None,
         marketplace: None,
+        warhero_worth: None,
         generators: IndexMap::new(),
         win_rates: None,
         fused_scripts: crate::scripts::FusedScripts::default(),

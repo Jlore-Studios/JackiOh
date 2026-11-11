@@ -727,6 +727,11 @@ pub struct StaticFlags {
     /// R3540002: "Damage also applies Toxic N", as `burns_on_damage`; N is the declared number `toxic`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub toxic_on_damage: Option<i32>,
+    /// R3548004: "When awoken: Gain infinite mana" (Stinkyscape+ #56 Impact Reactor): while this
+    /// card acts on its controller's field, that player's mana is not spent by paying costs, and the
+    /// view shows infinity. It ends when the card leaves the field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub infinite_mana: Option<bool>,
     /// R3540003: "Damage dealt Burns": a hit this card deals, past Armor and the caps, is its target's Burn
     /// instead of damage (`afflictions::converts_to`).
     #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -187,6 +187,7 @@
 .hero-jade,
 .hero-burn,
 .hero-toxic,
+.hero-tipsy,
 .hero-credits,
 .hero-luck {
   display: inline-flex;
@@ -228,6 +229,17 @@
 .hero-toxic {
   border: 1px solid color-mix(in srgb, var(--toxic) 55%, transparent);
   background: color-mix(in srgb, var(--toxic) 70%, var(--pal-black));
+}
+
+/* R3548000: the Tipsy counter, amber ale beside the Credits' gold, with its stein. */
+.hero-tipsy {
+  border: 1px solid color-mix(in srgb, var(--pal-brass-500) 55%, transparent);
+  background: color-mix(in srgb, var(--pal-brass-500) 70%, var(--pal-black));
+}
+
+.hero-tipsy .cf-icon {
+  width: 14px;
+  height: 14px;
 }
 
 /* R1840005: the Credits, gold beside the Jade Counter's green. */
@@ -414,6 +426,7 @@ button.modifier-badge[data-open="true"] {
 .hero-portrait .hero-jade,
 .hero-portrait .hero-burn,
 .hero-portrait .hero-toxic,
+.hero-portrait .hero-tipsy,
 .hero-portrait .hero-credits {
   position: absolute;
   top: -6px;
@@ -435,6 +448,24 @@ button.modifier-badge[data-open="true"] {
 
 .hero-portrait .hero-toxic {
   left: 18px;
+}
+
+/* R3548001: at the portrait's right, below the Credits, as Burn sits below the Jade Counter. */
+.hero-portrait .hero-tipsy {
+  right: -6px;
+  top: 22px;
+}
+
+/* R3548001: the Tipsy blur, on the owner's view alone. The card's root names which of it blurs;
+   a blurred name word or term wears `.tipsy-blur`, the keyword chip marks itself. */
+.tipsy-blur,
+.card[data-tipsy-blur="cost"] .cf-gem,
+.card[data-tipsy-blur="attack"] .stat-attack,
+.card[data-tipsy-blur="attack"] .cf-atk,
+.card[data-tipsy-blur="health"] .stat-health,
+.card[data-tipsy-blur="health"] .cf-hp,
+.keyword-icon[data-tipsy-blur="true"] {
+  filter: blur(3px);
 }
 
 .hero-portrait .hero-credits {

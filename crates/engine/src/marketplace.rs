@@ -323,7 +323,12 @@ pub fn marketplace_turn_start(sink: &mut EngineSink<'_>, player: PlayerId) {
 
 /// R1853002: what this card (a Resource, or a hand card that sells from there, R1861000) fetches at an
 /// open Marketplace this turn, on its own face; `None` while it is closed or quotes no such card.
+/// R3548002: a Warhero Token quotes the game-wide worth whatever the Marketplace holds, so the
+/// hand's braces always show it.
 pub fn sell_quote(state: &GameState, card: &CardInstance) -> Option<i32> {
+    if let Some(worth) = crate::warhero::worth_of(state, card) {
+        return Some(worth);
+    }
     let quote = state
         .marketplace
         .as_ref()?

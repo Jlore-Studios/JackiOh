@@ -67,6 +67,7 @@ pub mod starship_made;
 pub mod stinkyscape_verbs;
 pub mod terminus;
 pub mod tg_spells;
+pub mod tipsy_warhero_refresh;
 pub mod tradable;
 pub mod trigger_multipliers;
 pub mod turn;
