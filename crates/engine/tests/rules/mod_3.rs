@@ -30,6 +30,7 @@ pub mod statecheck;
 pub mod stays;
 pub mod stinkyscape_plus_s18;
 pub mod stinkyscape_plus_s13;
+pub mod stinkyscape_plus_s14;
 pub mod stinkyscape_verbs;
 pub mod tallies;
 pub mod targeting;
