@@ -182,6 +182,33 @@ mod tests {
         assert_eq!(parts("t-7:x", &outer), None);
     }
 
+    /// R179: a fused ingredient's parentheses close where they open, so a `+` after them splits the id again.
+    #[test]
+    fn r3045000_a_spelled_fusion_first_in_an_id_closes_before_the_next_ingredient() {
+        assert_eq!(
+            parts(
+                "t-9:(t-1:stinkyscape-050+core-020)+stinkyscape-063",
+                &held(vec![])
+            ),
+            strings(&["stinkyscape-050", "core-020", "stinkyscape-063"])
+        );
+    }
+
+    /// R3045000: the Dormant Starship itself is no fusion, so it holds no hull: only a fusion of it with something
+    /// is named for it.
+    #[test]
+    fn r3045000_the_dormant_starship_alone_is_no_fusion_holding_its_hull() {
+        jackioh_cards::register_all();
+        let hull = jackioh_cards::CATALOG
+            .get(DORMANT_STARSHIP_ID)
+            .expect("the Dormant Starship");
+        assert!(
+            hull.ingredients.is_none(),
+            "PREMISE: the catalog's Starship fuses nothing"
+        );
+        assert!(!holds_dormant_starship(hull));
+    }
+
     #[test]
     fn r3045000_a_definition_that_lists_itself_ends_the_walk() {
         let looped = held(vec![("t-8:loop", vec!["t-8:loop", "core-020"])]);

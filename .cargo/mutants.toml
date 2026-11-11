@@ -137,8 +137,22 @@ exclude_re = [
   # crates/shared (#3513): reward_for_level's arm for level 10 pays what its arm for every tenth level
   # does, so without it level 10 is paid the same.
   'delete match arm 10 in reward_for_level',
+  # crates/shared (#3513): spelled_ingredients walks one place past a fused id's last character, whose mark is
+  # '\0', neither parenthesis, so a test of `at < chars.len()` before either and one of `at <= chars.len()`
+  # take the same branch.
+  'face/fused\.rs:.*replace < with <= in spelled_ingredients',
+  # crates/shared (#3513): named_face gives its FaceSource the name and the face's type of the definition it also
+  # gives it, and face_in reads a card's name off its definition before the source's, and its type off the face,
+  # then the definition, as named_face worked it out: either field left out draws the same face.
+  'delete field (name|type_) from struct FaceSource expression in named_face',
   # crates/shared (#3513): reader_keyword keeps the longest term a text names. Two terms of one length a
   # text both names would be one id (each is the text or its start before a space), and no id is a
   # candidate twice (the glossary's are only those the keywords lack), so `>` and `>=` keep the same one.
   'face/chinese\.rs:.*replace > with >= in reader_keyword',
+  # crates/run (#3513): `place_fights`' `most_allowed` is `RUN_ROUTE_FIGHTS_MAX.min(rows - RUN_ROUTE_TILES_MIN)`.
+  # A map always holds `RUN_ACTS` acts of `RUN_ACT_ROWS` rows and a boss (24 rows), so `rows - 8` is 16, the
+  # fights' max, and `rows + 8` is 32: the minimum is 16 either way, and no map of another length is dealt.
+  # The name has no way to tell this `-` from the function's others, so the entry holds its column (53),
+  # which no other `-` of `place_fights` has, and not its line, which moves with the code above it.
+  'lib\.rs:\d+:53: replace - with \+ in place_fights',
 ]

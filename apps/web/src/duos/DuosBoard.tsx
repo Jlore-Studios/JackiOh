@@ -31,11 +31,11 @@ import type { DuosActionBody } from "../wire/generated/DuosActionBody.ts";
 import type { DuosResult } from "../wire/generated/DuosResult.ts";
 import type { DuosSeat } from "../wire/generated/DuosSeat.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
-import type { Team } from "../wire/generated/Team.ts";
 import { announceWallet } from "../economy/wallet.ts";
 import XpReveal from "../economy/XpReveal.tsx";
 import type { GameEconomy } from "../economy/xp.ts";
 import Game from "../game/Game.tsx";
+import { outcomeFor, resultReason, type ResultOutcome } from "../game/Result.tsx";
 import { ModifierList } from "../game/ModifierList.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import type { PingKind, PingTarget, ReceivedPing } from "../net/duos.ts";
@@ -133,7 +133,59 @@ function usePingSounds(pings: readonly ReceivedPing[], seat: DuosSeat): void {
   }, [pings, seat]);
 }
 
-function resultWords(result: DuosResult, team: Team): { outcome: "win" | "loss" | "draw"; heading: string; reason: string } {
+type DuelResult = NonNullable<PlayerView["result"]>;
+
+/** The first letter in lower case, so a sentence reads after "On your board:"; a script with no case is unchanged. */
+function lowerFirst(text: string): string {
+  return text.charAt(0).toLowerCase() + text.slice(1);
+}
+
+/**
+ * #3697: how the teammate's duel ended, in the teammate's seat's words ("you" there is the teammate); `outcome` is the
+ * teammate's own (`outcomeFor`, R1843004). Only the endings a duel hands the game by `duelResult` and the issue lists
+ * have words (R850, R1843000, R1843001, R1843002); null for the rest, so the caller keeps its old line.
+ */
+function teammateReason(outcome: ResultOutcome, result: DuelResult): string | null {
+  switch (result.reason) {
+    case "alt-win":
+      if (outcome === "draw") return t("Both players met a winning condition.");
+      return outcome === "win"
+        ? t("Your teammate met their winning condition.")
+        : t("Their opponent met their own winning condition.");
+    case "won-by-effect":
+      return outcome === "win" ? t("Your teammate's card won the game.") : t("Their opponent's card won the game.");
+    case "voted-out":
+      return outcome === "win" ? t("Their opponent was voted out of the game.") : t("Your teammate was voted out of the game.");
+    case "both-voted-out":
+      return t("Both players were voted out together.");
+    case "fled":
+      if (outcome === "win") return t("Your teammate escaped the universe. Their opponent draws.");
+      return result.winner === "draw"
+        ? t("Both players escaped the universe.")
+        : t("Their opponent escaped the universe. Your teammate draws.");
+    case "fled-decisive":
+      return outcome === "win"
+        ? t("Your teammate escaped the universe and left their opponent behind.")
+        : t("Their opponent escaped the universe and left your teammate behind.");
+    default:
+      return null;
+  }
+}
+
+/** #3697: why a `duelResult` ended the game: the board whose duel ended, the seat's own first, and how. */
+function duelReason(view: DuosView): string {
+  const own = view.own.result;
+  if (own !== null) {
+    const why = t(resultReason(outcomeFor(own, view.own.viewer), own.reason, own.winner));
+    return t("On your board: {reason}", { reason: lowerFirst(why) });
+  }
+  const mate = view.teammate.result;
+  const said = mate === null ? null : teammateReason(outcomeFor(mate, view.teammate.viewer), mate);
+  return said === null ? t("One of the duels decided the game.") : t("On your teammate's board: {reason}", { reason: lowerFirst(said) });
+}
+
+function resultWords(result: DuosResult, view: DuosView): { outcome: "win" | "loss" | "draw"; heading: string; reason: string } {
+  const team = teamOf(view.seat);
   const outcome = result.outcome === "draw" ? "draw" : result.winner === team ? "win" : "loss";
   const heading = outcome === "win" ? t("Your team won") : outcome === "loss" ? t("Your team lost") : t("Draw");
   switch (result.reason) {
@@ -151,9 +203,9 @@ function resultWords(result: DuosResult, team: Team): { outcome: "win" | "loss" 
     case "concede":
       return { outcome, heading, reason: outcome === "win" ? t("The enemy team conceded.") : t("Your team conceded.") };
     case "turnCap":
-      return { outcome, heading, reason: t("The game reached its turn limit.") };
+      return { outcome, heading, reason: t("The turn limit was reached.") };
     case "duelResult":
-      return { outcome, heading, reason: t("One of the duels decided the game.") };
+      return { outcome, heading, reason: duelReason(view) };
     case "ceiling":
       return { outcome, heading, reason: t("The game ran out of time.") };
     case "voided":
@@ -242,7 +294,7 @@ function ResultPanel({
     actions.current?.querySelector<HTMLElement>("button, a")?.focus({ preventScroll: true });
   }, []);
   if (view.result === null) return null;
-  const words = resultWords(view.result, teamOf(view.seat));
+  const words = resultWords(view.result, view);
   const line = againLine(playAgain);
   return (
     <div className="duos-result" data-testid={duosTestid.result} data-outcome={words.outcome} role="dialog" aria-label={words.heading}>
@@ -406,7 +458,7 @@ export function DuosBoard({
         {view.round === 0 || over ? null : <> · {ourTurn ? t("Your team's turn") : t("Enemy team's turn")}</>}
         {" · "}
         {t("You are {seat}", { seat: seatLabel(seat) })}
-        {replay && view.result !== null ? <> · {resultWords(view.result, teamOf(seat)).heading}</> : null}
+        {replay && view.result !== null ? <> · {resultWords(view.result, view).heading}</> : null}
       </p>
       <LifeStrip view={view} />
       <TeammateStrip view={view} link={chrome?.teammate ?? null} />

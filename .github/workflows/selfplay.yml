@@ -21,9 +21,10 @@
 # by `selfplay` itself (R1006002). On GitHub's runners each shard keeps well under the 6-hour job
 # limit (about 1,500 games an hour on four vCPUs). On the local runner (`jackioh-selfplay-local`,
 # bot/machine/README.md, The local runner) every job runs there, the plan, the build and the count
-# too, and its shards run two at a time, one on each half of the PC, each for as long as it needs (one
-# six-CPU runner played about 2,500 games an hour), in five rounds, so that no shard waits for the
-# runner longer than its round takes
+# too, and its shards run two at a time, one on each half of the PC, each for as long as it needs (a
+# four-CPU half plays about 670 games an hour at the AI's budget since #2628, so 100,000 games take
+# about three days of an idle PC), in five rounds, so that no shard waits for the runner longer than
+# its round takes
 # (GitHub fails a job no self-hosted runner takes in 24 hours; selfplay-shards.yml). The export is
 # slow on purpose, and ci-duration.yml does not watch it.
 #
@@ -108,6 +109,13 @@ on:
 permissions:
   contents: read
 
+env:
+  # Days the export's build (`selfplay-jackioh`) is kept: every shard downloads it as it starts, and
+  # the learn lane's retrain and import fold and file the export with it (R1676000). An export takes
+  # about three days of an idle PC, so this outlasts one through a busy week. At 3, every shard that
+  # started after the third day failed at once on the missing artifact (#3722).
+  BUILD_RETENTION_DAYS: "14"
+
 jobs:
   plan:
     name: plan the shards
@@ -186,7 +194,7 @@ jobs:
           name: selfplay-jackioh
           path: ${{ runner.temp }}/jackioh.tgz
           if-no-files-found: error
-          retention-days: 3
+          retention-days: ${{ env.BUILD_RETENTION_DAYS }}
 
   # The shards, in rounds (selfplay-shards.yml): one round on GitHub's runners, up to five on the
   # local runner, each started once the round before it has ended, whether or not every shard of it
@@ -301,8 +309,10 @@ jobs:
               text = dict(line.split(": ") for line in open(path).read().split("\n") if ": " in line)
               shards.append((int(text["seconds"]), int(text["cores"])))
           slowest = max((s for s, _ in shards), default=0)
-          # GitHub's runners play the shards side by side; the local runner, one after another.
-          elapsed = slowest if runner == "ubuntu-latest" else sum(s for s, _ in shards)
+          # GitHub's runners play the shards side by side; the local runner two at a time, one on each
+          # half of the PC (selfplay-shards.yml's max-parallel), so about half their sum.
+          halves = max(1, min(2, len(shards)))
+          elapsed = slowest if runner == "ubuntu-latest" else sum(s for s, _ in shards) / halves
           cpu_seconds = sum(s * c for s, c in shards)
           games = counts["games"]
           print(f"## Self-play export `{seed}` on `{runner}`\n")

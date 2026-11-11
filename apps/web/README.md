@@ -945,6 +945,10 @@ snapshot's `watchers`). While any modifier is live on either side, the rail carr
   to play again, the teammate gone (the button hidden), or a refusal in the server's words. An
   answer naming the new match takes both people to `/duos/:matchId`. A replay and `/dev/duos` show
   no button.
+- a game a duel's ending decided (`duelResult`) says which board and how in its result panel (#3697): "On your board: …"
+  in `game/Result.tsx`'s `resultReason` words for the seat, else "On your teammate's board: …" in words written for the
+  teammate's side (`DuosBoard.tsx`'s `teammateReason`), else the old "One of the duels decided the game."; the turn cap
+  reads as the 1v1 one does.
 
 The Duos WASM bindings (`duos_create`, `duos_begin`, `duos_reduce`, `duos_legal_actions`,
 `duos_view_for`, JSON in and out like the 1v1 ones) are reached only through `src/wasm/index.ts`, for

@@ -11,7 +11,7 @@
 #             still early on the version before (learn-set.yml). A lane pull request with a failed check, or open LEARN_PR_STALE_HOURS,
 #             is closed and the run goes on, so a stuck promotion never holds the lane. One whose
 #             checks are green or running is left to merge, and the export goes ahead beside it: by the
-#             time this run gates, about 40 hours on, it has merged (and when it has not, this run's
+#             time this run gates, about three days on, it has merged (and when it has not, this run's
 #             pass waits behind it, as its artifact)
 #   export    selfplay.yml, called: `games` games in `shards` jobs, two at a time on the local
 #             runner's two halves, in five rounds; none with `export_run`, which retrains on an earlier run's
@@ -49,8 +49,9 @@
 # Every job runs on the owner's PC, the local runner (`jackioh-selfplay-local`, bot/machine/README.md,
 # The local runner), and none on GitHub's runners. It takes two jobs at a time, one on each half of the
 # PC (gather's half goes to gather while it plays a new patch), and only while the PC is otherwise
-# idle. A run's 100,000 games took about 40 hours of an idle PC on one six-CPU runner (about 2,500
-# games an hour), somewhat less on both halves, and a run may take several days. A job no runner takes in 24 hours (the PC off,
+# idle. A run's 100,000 games take about three days of an idle PC, two shards at a time (a four-CPU
+# half plays about 670 games an hour at the AI's budget since #2628; #3722), and a run may take
+# longer. A job no runner takes in 24 hours (the PC off,
 # asleep or busy all day) GitHub fails; the lane goes on with what finished, and the next run comes
 # anyway (training/learn.md, Running unattended).
 #
@@ -71,7 +72,7 @@ on:
         required: true
         default: "100000"
       shards:
-        description: "Export jobs (on the local runner, one after another)"
+        description: "Export jobs (on the local runner, two at a time)"
         required: true
         default: "20"
       screen:
@@ -237,8 +238,8 @@ jobs:
           run-id: ${{ inputs.export_run || github.run_id }}
           github-token: ${{ github.token }}
       # The build that played the export folds its logs, so a rules change merged since then drops
-      # none of its games (retrain.sh --positions-bin). It is kept 3 days: a later re-run folds with
-      # main's build instead.
+      # none of its games (retrain.sh --positions-bin). It is kept 14 days (selfplay.yml,
+      # BUILD_RETENTION_DAYS): a later re-run folds with main's build instead.
       - uses: actions/download-artifact@v4
         continue-on-error: true
         with:
@@ -328,7 +329,7 @@ jobs:
             exit 1
           fi
       # A pass while the lane's last promotion is still open (its checks green or running, as the
-      # plan left it, about 40 hours ago) waits behind it: pushing ai/learn again would close it. The
+      # plan left it, about three days ago) waits behind it: pushing ai/learn again would close it. The
       # pass stays this run's artifact (promotion.patch), and the next run gates on main once that
       # promotion has merged.
       - name: a promotion still open, so this one waits
@@ -457,7 +458,8 @@ jobs:
           run-id: ${{ github.run_id }}
           github-token: ${{ github.token }}
       # The build that played the export files it, as it folds the retrain's positions, so a rules
-      # change merged since drops none of its games (R1676000). Kept 3 days; past that, main's build.
+      # change merged since drops none of its games (R1676000). Kept 14 days (selfplay.yml,
+      # BUILD_RETENTION_DAYS); past that, main's build.
       - if: ${{ steps.db.outputs.set == 'true' }}
         uses: actions/download-artifact@v4
         continue-on-error: true

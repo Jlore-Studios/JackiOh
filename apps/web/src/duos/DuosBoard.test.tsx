@@ -14,6 +14,7 @@ import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import { testid } from "../game/contract.ts";
 import { DRAG_THRESHOLD_PX } from "../game/drag/model.ts";
 import { modifierListTestid } from "../game/ModifierList.tsx";
+import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import type { PingKind, PingTarget } from "../net/duos.ts";
 import { __resetSettingsForTests } from "../settings/store.ts";
 import { baseView, card, emptySide, opponentModifiers, unit, withEvents, yourModifiers } from "../test/fixtures.ts";
@@ -1154,5 +1155,96 @@ describe("R2095000 the portal hides while both boards show", () => {
     expect(screen.queryByTestId(ID.both)).toBeNull();
     flipPortal();
     expect(screen.getByTestId(testid.handCard("t1"))).toBeInTheDocument();
+  });
+});
+
+// #3697: a game a duel's ending decided says which board and how
+
+describe("#3697 the result panel names the board whose duel decided a duelResult game", () => {
+  type Ended = NonNullable<PlayerView["result"]>;
+
+  /** A co-op view whose team result is `reason`, with each duel's own result as given. */
+  function decided(own: Ended | null, teammate: Ended | null, reason = "duelResult", winner: "a" | "b" = "a"): DuosView {
+    const base = duosView();
+    return {
+      ...base,
+      own: { ...base.own, result: own },
+      teammate: { ...base.teammate, result: teammate },
+      result: { outcome: "win", winner, reason },
+    };
+  }
+
+  /** The panel's reason line; the board's own 1v1 chip prints sentences too, so the line alone is read. */
+  async function reasonLine(view: DuosView): Promise<string | null> {
+    renderDuosBoard({ view });
+    await act(async () => {}); // the board's MutationObserver reports before the panel mounts
+    return screen.getByTestId("duos-result").querySelector(".duos-result__reason")?.textContent ?? null;
+  }
+
+  it("#3697 your own board's alt-win names your board and your winning condition", async () => {
+    expect(await reasonLine(decided({ winner: "p1", reason: "alt-win" }, null))).toBe("On your board: you met your winning condition.");
+  });
+
+  it("#3697 your own board comes first when both duels have ended", async () => {
+    const view = decided({ winner: "p1", reason: "voted-out" }, { winner: "p2", reason: "alt-win" });
+    expect(await reasonLine(view)).toBe("On your board: your opponent was voted out of the game.");
+  });
+
+  it("#3697 your own board's flight reads as the seat's draw", async () => {
+    expect(await reasonLine(decided({ winner: "p2", reason: "fled" }, null))).toBe(
+      "On your board: your opponent escaped the universe. You draw.",
+    );
+  });
+
+  it("#3697 the teammate's voted-out names their board and who was voted out, from their side", async () => {
+    expect(await reasonLine(decided(null, { winner: "p1", reason: "voted-out" }))).toBe(
+      "On your teammate's board: their opponent was voted out of the game.",
+    );
+    cleanup();
+
+    const line = await reasonLine(decided(null, { winner: "p2", reason: "voted-out" }, "duelResult", "b"));
+    expect(line).toBe("On your teammate's board: your teammate was voted out of the game.");
+    expect(line).not.toContain("You were");
+  });
+
+  const PREFIX = "On your teammate's board: ";
+  it.each<[Ended["reason"], Ended["winner"], string]>([
+    ["alt-win", "p1", "your teammate met their winning condition."],
+    ["alt-win", "p2", "their opponent met their own winning condition."],
+    ["alt-win", "draw", "both players met a winning condition."],
+    ["won-by-effect", "p1", "your teammate's card won the game."],
+    ["won-by-effect", "p2", "their opponent's card won the game."],
+    ["both-voted-out", "draw", "both players were voted out together."],
+    ["fled", "p1", "your teammate escaped the universe. Their opponent draws."],
+    ["fled", "p2", "their opponent escaped the universe. Your teammate draws."],
+    ["fled", "draw", "both players escaped the universe."],
+    ["fled-decisive", "p1", "your teammate escaped the universe and left their opponent behind."],
+    ["fled-decisive", "p2", "their opponent escaped the universe and left your teammate behind."],
+  ])("#3697 every teammate-side ending has its own words: %s, winner %s", async (reason, winner, words) => {
+    expect(await reasonLine(decided(null, { winner, reason }))).toBe(PREFIX + words);
+  });
+
+  it("#3697 with neither duel's result set the old line shows", async () => {
+    expect(await reasonLine(decided(null, null))).toBe("One of the duels decided the game.");
+    cleanup();
+
+    // An ending the teammate's side has no words for keeps the old line too.
+    expect(await reasonLine(decided(null, { winner: "draw", reason: "turn-cap" }))).toBe("One of the duels decided the game.");
+  });
+
+  it("#3697 the co-op turn cap reads as the 1v1 line", async () => {
+    const view: DuosView = { ...duosView(), result: { outcome: "draw", winner: null, reason: "turnCap" } };
+    expect(await reasonLine(view)).toBe("The turn limit was reached.");
+  });
+
+  it("#3697 the line reads in Chinese, the board's label first", async () => {
+    vi.useRealTimers(); // setLocale loads its dictionary with a dynamic import
+    await setLocale("zh-CN");
+    onTestFinished(resetLocaleForTests);
+
+    expect(await reasonLine(decided(null, { winner: "p1", reason: "voted-out" }))).toBe("队友的棋盘上：队友的对手被投票移出了对局。");
+    cleanup();
+
+    expect(await reasonLine(decided({ winner: "p1", reason: "alt-win" }, null))).toBe("你的棋盘上：你达成了胜利条件。");
   });
 });

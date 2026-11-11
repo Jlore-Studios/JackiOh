@@ -5,7 +5,7 @@
 #
 # A card change ships as a new patch (patches-ship.yml), and a changed card's figures start again on
 # it (R1367000). The learn lane's exports file a patch's games too (learn.yml, `import`), but one
-# export takes about 40 hours of the PC, so a patch shipped between two has none until the next. This
+# export takes about three days of the PC, so a patch shipped between two has none until the next. This
 # plays GATHER_GAMES games of a new patch or set (a `patch` or `major` tier, v0.Z.X; never a micro,
 # v0.Z.Xb, docs/issues-and-patches.md, Version numbers) as soon as it ships. A push that ships only
 # micros since the last push run that succeeded plays nothing (the `due` step), so a micro's changed

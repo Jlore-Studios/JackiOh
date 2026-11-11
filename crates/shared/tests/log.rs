@@ -853,6 +853,193 @@ fn a_hit_names_its_source_off_combat_only_and_only_where_the_view_names_it() {
     );
 }
 
+/// The ids of the keywords each line names, in order.
+fn keywords(view: &PlayerView, locale: Locale) -> Vec<Vec<String>> {
+    call(view, locale)
+        .into_iter()
+        .flatten()
+        .map(|line| {
+            line.text
+                .spans
+                .iter()
+                .filter_map(|span| match span {
+                    Span::Keyword { entry, .. } => Some(entry.id.clone()),
+                    _ => None,
+                })
+                .collect()
+        })
+        .collect()
+}
+
+fn absorbed_hit(over: Value) -> Value {
+    let mut event = json!({ "type": "damageAbsorbed", "sourceId": "e1", "targetId": "u1", "absorbed": 3, "combat": false });
+    for (key, value) in over.as_object().expect("an object") {
+        event[key] = value.clone();
+    }
+    event
+}
+
+fn died(over: Value) -> Value {
+    let mut event = json!({ "type": "destroyed", "instanceId": "u1", "defId": "core-032", "owner": "p1", "controller": "p1", "attack": 3, "maxHealth": 4, "killerId": null });
+    for (key, value) in over.as_object().expect("an object") {
+        event[key] = value.clone();
+    }
+    event
+}
+
+fn returned(over: Value) -> Value {
+    let mut event = json!({ "type": "summoned", "player": "p1", "instanceId": "u1", "defId": "core-032", "row": "units", "lane": 1 });
+    for (key, value) in over.as_object().expect("an object") {
+        event[key] = value.clone();
+    }
+    event
+}
+
+fn healed(over: Value) -> Value {
+    let mut event = json!({ "type": "healed", "targetId": "u1", "amount": 3 });
+    for (key, value) in over.as_object().expect("an object") {
+        event[key] = value.clone();
+    }
+    event
+}
+
+#[test]
+fn a_hit_names_the_keyword_behind_it() {
+    let panther = name_of("core-032");
+    let vanilla = name_of("core-008");
+    for via in ["Cleave", "Trample", "First Strike", "Pierce"] {
+        let view = board(json!([
+            hit(json!({ "sourceId": null, "amount": 3, "combat": true, "via": via })),
+            hit(json!({ "sourceId": "e1", "amount": 3, "absorbed": 2, "via": via })),
+            hit(json!({ "sourceId": null, "targetId": "hero-p1", "amount": 2, "combat": true, "via": via })),
+            hit(json!({ "sourceId": null, "amount": 2, "combat": true, "absorbed": 1, "via": via })),
+            absorbed_hit(json!({ "via": via })),
+            absorbed_hit(json!({ "combat": true, "via": via })),
+        ]));
+        assert_eq!(
+            english(&view),
+            [
+                format!("{panther} took 3 damage in combat ({via})"),
+                format!("{vanilla} dealt 3 damage to {panther}, 2 absorbed by Armor ({via})"),
+                format!("Your hero took 2 damage in combat ({via})"),
+                format!("{panther} took 2 damage in combat, 1 absorbed by Armor ({via})"),
+                format!("{panther}'s Armor absorbed 3 damage from {vanilla} ({via})"),
+                format!("{panther}'s Armor absorbed 3 damage in combat ({via})"),
+            ]
+        );
+        assert!(
+            keywords(&view, Locale::En)
+                .iter()
+                .all(|ids| ids == &[via.to_string()]),
+            "{via}"
+        );
+    }
+}
+
+#[test]
+fn a_heal_a_death_and_a_return_name_the_keyword_behind_them() {
+    let panther = name_of("core-032");
+    let view = board(json!([
+        healed(json!({ "via": "Lifesteal" })),
+        died(json!({ "via": "Poisonous" })),
+        died(json!({ "via": "First Strike" })),
+        returned(json!({ "via": "Reborn" })),
+    ]));
+    assert_eq!(
+        english(&view),
+        [
+            format!("{panther} healed 3 (Lifesteal)"),
+            format!("{panther} was destroyed (Poisonous)"),
+            format!("{panther} was destroyed (First Strike)"),
+            format!("{panther} came back in your lane 1 (Reborn)"),
+        ]
+    );
+    assert_eq!(
+        keywords(&view, Locale::En),
+        [["Lifesteal"], ["Poisonous"], ["First Strike"], ["Reborn"]]
+    );
+}
+
+#[test]
+fn r2783001_events_without_via_read_as_they_did() {
+    let panther = name_of("core-032");
+    let vanilla = name_of("core-008");
+    let view = board(json!([
+        hit(json!({ "sourceId": null, "amount": 3, "combat": true })),
+        hit(json!({ "sourceId": "e1", "amount": 3, "absorbed": 2 })),
+        absorbed_hit(json!({ "combat": true })),
+        absorbed_hit(json!({})),
+        healed(json!({})),
+        died(json!({})),
+        returned(json!({})),
+    ]));
+    assert_eq!(
+        english(&view),
+        [
+            format!("{panther} took 3 damage in combat"),
+            format!("{vanilla} dealt 3 damage to {panther}, 2 absorbed by Armor"),
+            format!("{panther}'s Armor absorbed 3 damage in combat"),
+            format!("{panther}'s Armor absorbed 3 damage from {vanilla}"),
+            format!("{panther} healed 3"),
+            format!("{panther} was destroyed"),
+            format!("{panther} entered your lane 1"),
+        ]
+    );
+    assert!(keywords(&view, Locale::En).iter().all(Vec::is_empty));
+}
+
+#[test]
+fn a_reader_of_chinese_reads_the_keyword_and_the_sentence_in_chinese() {
+    let view = board(json!([
+        hit(json!({ "sourceId": null, "amount": 3, "combat": true, "via": "Poisonous" })),
+        returned(json!({ "via": "Reborn" })),
+    ]));
+    let lines = call(&view, Locale::ZhCn);
+    let hit_line = lines[0].as_ref().expect("a line");
+    let word = hit_line
+        .text
+        .spans
+        .iter()
+        .find_map(|span| match span {
+            Span::Keyword { children, .. } => children.iter().find_map(|child| match child {
+                Span::Text { text } => Some(text.clone()),
+                _ => None,
+            }),
+            _ => None,
+        })
+        .expect("a keyword span");
+    assert!(!word.is_ascii(), "{word}");
+    assert!(
+        hit_line.text.full.ends_with(&format!("（{word}）")),
+        "{}",
+        hit_line.text.full
+    );
+    let back = &lines[1].as_ref().expect("a line").text.full;
+    assert!(back.contains("回到了") && back.ends_with('）'), "{back}");
+    assert_eq!(keywords(&view, Locale::ZhCn), [["Poisonous"], ["Reborn"]]);
+}
+
+#[test]
+fn a_hidden_card_or_source_names_no_keyword() {
+    let view = board(json!([
+        died(json!({ "instanceId": "hidden", "defId": "hidden" })),
+        died(json!({ "instanceId": "hidden", "defId": "hidden", "via": "Poisonous" })),
+        returned(json!({ "instanceId": "hidden", "defId": "hidden", "via": "Reborn" })),
+        hit(json!({ "sourceId": "hidden", "amount": 2 })),
+        absorbed_hit(json!({ "sourceId": "hidden" })),
+    ]));
+    assert!(keywords(&view, Locale::En).iter().all(Vec::is_empty));
+    assert!(
+        english(&view)
+            .iter()
+            .all(|line| !["Poisonous", "Reborn", "came back"]
+                .iter()
+                .any(|word| line.contains(word))),
+        "{:?}",
+        english(&view)
+    );
+}
+
 #[test]
 fn each_play_pairs_with_its_own_announce_by_the_event_itself() {
     let spell = name_of(SPELL);

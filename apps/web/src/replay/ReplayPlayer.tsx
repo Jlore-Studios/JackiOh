@@ -41,6 +41,8 @@ export type ReplayPlayerProps = {
   shareOnOpen?: boolean;
   /** #936 B59: more controls under the toolbar: an online match's "Share with a friend". */
   actions?: ReactNode;
+  /** #3698: the other side's name on the board and in the modifier list, already translated: the list's opponent, the AI. Absent, "Opponent". */
+  opponentLabel?: string;
 };
 
 /** The step on the board, and which mount of the board shows it (`Game`'s key). */
@@ -92,6 +94,7 @@ export default function ReplayPlayer({
   start = "first",
   shareOnOpen = false,
   actions,
+  opponentLabel,
 }: ReplayPlayerProps): ReactElement {
   useLocale();
   const cache = useMemo(() => createStepCache(source), [source]);
@@ -271,6 +274,7 @@ export default function ReplayPlayer({
         onAction={IGNORE}
         replay
         replayPrompt
+        enemyLabel={opponentLabel}
         resultForm="chip"
         loadouts={source.loadouts?.() ?? null}
         phoneRailTop
@@ -278,7 +282,7 @@ export default function ReplayPlayer({
           <>
             {back}
             {/* R169: the live modifiers of the step on the board, in full, one tap away. */}
-            <ModifierList view={at.step.view} opponentLabel={t("Opponent")} />
+            <ModifierList view={at.step.view} opponentLabel={opponentLabel ?? t("Opponent")} />
           </>
         }
         boardNotice={

@@ -81,7 +81,7 @@ type Listed<Row> =
  * The replay on screen; `matchId` for an online match's, which can be shared with a friend (#936 B59),
  * and `practice` for a practice game's (R1313000).
  */
-type Open = { key: string; source: ReplaySource; matchId?: string; practice?: true } | { key: string; duos: DuosReplaySteps };
+type Open = { key: string; source: ReplaySource; matchId?: string; practice?: true; opponentLabel?: string } | { key: string; duos: DuosReplaySteps };
 
 const RESULT_WORDS: Readonly<Record<PracticeReplayListing["result"], string>> = {
   win: "Win",
@@ -102,6 +102,11 @@ async function readDevice(host: PracticeHost): Promise<{ lookup: CardLookup; rep
   const replays = await host.request({ type: "replays" });
   if (replays.type !== "replays") throw new Error(replays.type === "failed" ? replays.message : "the practice worker sent no list");
   return { lookup: lookupFromDefs(catalog.defs), replays: replays.replays };
+}
+
+/** #3698: the opponent as the row and its replay both name them: the username, "a deleted account" when it is gone. */
+function opponentName(row: OnlineReplayListing): string {
+  return row.opponent.username === "" ? t("a deleted account") : row.opponent.username;
 }
 
 /** How long the game ran, in turns. */
@@ -270,10 +275,10 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
   };
 
   const openPractice = (row: PracticeReplayListing): void => {
-    if (host.current !== null) setOpen({ key: `practice-${String(row.game)}`, source: practiceReplaySource(host.current, row), practice: true });
+    if (host.current !== null) setOpen({ key: `practice-${String(row.game)}`, source: practiceReplaySource(host.current, row), practice: true, opponentLabel: t("AI") });
   };
   const openOnline = (row: OnlineReplayListing): void => {
-    if (token !== null) setOpen({ key: `online-${row.matchId}`, source: onlineReplaySource(token, row), matchId: row.matchId });
+    if (token !== null) setOpen({ key: `online-${row.matchId}`, source: onlineReplaySource(token, row), matchId: row.matchId, opponentLabel: opponentName(row) });
   };
 
   if (agreeing && consentOwed) {
@@ -304,6 +309,7 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
                   key={open.key}
                   source={open.source}
                   onLeave={() => setOpen(null)}
+                  {...(open.opponentLabel === undefined ? {} : { opponentLabel: open.opponentLabel })}
                   {...(open.matchId === undefined ? {} : { actions: <ShareWithFriend matchId={open.matchId} /> })}
                 />
               )
@@ -448,7 +454,7 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
               <ul className="replays__list">
                 {online.rows.map((row) => {
                   const why = unavailableText(row.unavailable);
-                  const opponent = row.opponent.username === "" ? t("a deleted account") : row.opponent.username;
+                  const opponent = opponentName(row);
                   return (
                     <li key={row.matchId} className="replays__row" data-testid={replaysTestid.online(row.matchId)}>
                       <span className="replays__what">

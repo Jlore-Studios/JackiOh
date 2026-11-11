@@ -1604,7 +1604,7 @@ describe("R768000 a finished match's replay from its result panel", () => {
   const steps = foldedReplaySteps();
 
   /** `GET /api/replays/m-1?from=&count=` answers the folded game's steps; anything else the catalog. */
-  function stubReplayFetch(): string[] {
+  function stubReplayFetch(ranks?: unknown): string[] {
     const asked: string[] = [];
     vi.stubGlobal(
       "fetch",
@@ -1617,11 +1617,13 @@ describe("R768000 a finished match's replay from its result panel", () => {
               const count = Number(address.searchParams.get("count") ?? "1");
               return { matchId: "m-1", from, steps: steps.slice(from, from + count), total: steps.length };
             })()
-          : address.pathname.endsWith("/series")
-            ? { series: null }
-            : address.pathname.endsWith("/rematch")
-              ? { youOffered: null, opponentOffer: null, opponentHere: false, matchId: null }
-              : { version: "v1", defs: {} };
+          : address.pathname.endsWith("/ranks") && ranks !== undefined
+            ? ranks
+            : address.pathname.endsWith("/series")
+              ? { series: null }
+              : address.pathname.endsWith("/rematch")
+                ? { youOffered: null, opponentOffer: null, opponentHere: false, matchId: null }
+                : { version: "v1", defs: {} };
         return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(JSON.stringify(body)) } as unknown as Response);
       }),
     );
@@ -1644,6 +1646,23 @@ describe("R768000 a finished match's replay from its result panel", () => {
     fireEvent.click(screen.getByTestId(replayTestid.back));
     expect(await screen.findByTestId(matchTestid.watchReplay)).toBeInTheDocument();
     expect(screen.queryByTestId(replayTestid.player)).toBeNull();
+  });
+
+  it("#3698 the match's replay names the opponent as the ranks read does", async () => {
+    stubReplayFetch({
+      ranked: false,
+      seats: {
+        p1: { profileId: "id-1", username: "Max#3", rank: { tier: "raisin", placementsPlayed: 2, placementGames: 5 }, you: true },
+        p2: { profileId: "id-2", username: "Bob#12", rank: { tier: "raisin", placementsPlayed: 2, placementGames: 5 }, you: false },
+      },
+    });
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    finish();
+    await screen.findByTestId(matchTestid.ranks);
+
+    fireEvent.click(await screen.findByTestId(matchTestid.watchReplay));
+    await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
+    expect(screen.getByTestId("hero-opponent").querySelector(".hero-seat")).toHaveTextContent("Bob#12");
   });
 
   it("R768000 Share the last turn opens it at its last step with Share as GIF open", async () => {
