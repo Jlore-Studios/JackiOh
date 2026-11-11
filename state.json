@@ -19937,9 +19937,10 @@
     "what": "review #3706 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-11T09:43:59Z",
+    "at": "2026-11-11T09:56:43Z",
     "notes": [
-      "runner gate: started 0 of 2 waiting run(s); 2 wait for room"
+      "delivered review #3691 on claude-5 (run 42996575313): blocked",
+      "delivered build #3555 on muse (run 42983977428): part"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -20645,7 +20646,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-11T09:43:59Z",
+  "loop_tick": "2026-11-11T09:56:43Z",
   "machine_disk": {
     "issue": null,
     "reading": {
