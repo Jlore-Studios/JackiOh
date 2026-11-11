@@ -18935,6 +18935,8 @@
       }
     },
     "3687": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-11T03:31:01Z",
@@ -18948,8 +18950,11 @@
         "trail": "h-tools --test acceptan\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3586; cargo test -p jackioh-tools --bin jackioh fuzz 2>&1 | grep -E \\\"test result|FAILED|panicked\\\" | head; cargo test -p jackioh-tools --test accept\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3586; echo \\\"- spec check, clippy (run/tools/shared), cargo tests run/shared practice/tools fuzz+acceptance all green; run-sim after running (/tmp/ru\u2026\n- Bash: {\"command\": \"cat /tmp/run-sim-after-24.txt | head; cd /tmp && (time /tmp/jackioh-after run-sim --seeds 24) > /tmp/run-sim-after-24.txt 2>&1; echo \\\"exit $?\\\" >> /tmp/run-sim-after-24.txt\", \"descripti\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3586; echo \\\"- web tests (15 files, 191) green; run-sim after 24 seeds killed at 10 min, restarted with 90 min limit\\\" >> .bot-notes.md; timeout 900 \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3586; timeout 900 pnpm --dir apps/web typecheck >/tmp/tc.txt 2>&1; echo \\\"typecheck exit $?\\\"; timeout 900 pnpm exec eslint apps/web/src/dungeon apps\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3586/apps/web; timeout 600 pnpm exec vitest run src/dungeon/map/RunScreen.test.tsx src/dungeon/fight/FightScreen.test.tsx -t \\\"3586\\\" --reporter=verb\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3586; grep -ln \\\"jackioh-run\\\" crates/*/Cargo.toml crates/*/*/Cargo.toml 2>/dev/null; grep -rln \\\"jackioh_run\\\\|RunEnemy\\\\|hero_health\\\" crates/serve\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3586; cargo jackioh catalog check 2>&1 | tail -2; cargo jackioh patches check 2>&1 | tail -2; git fetch -q origin main 2>/dev/null; git rev-parse ori\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3586; /home/runner/work/JackiOh/JackiOh/target/release/jackioh classify --base origin/main --claims; echo \\\"exit $?\\\"\", \"description\": \"Check classif\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3586; cargo test -p jackioh-shared -p jackioh-wasm-core --features jackioh-engine/testkit,jackioh-engine/ts 2>&1 | grep -E \\\"test result|FAILED|panic\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3586; cargo test -p jackioh-shared -p jackioh-wasm-core --features jackioh-engine/testkit,jackioh-engine/ts 2>&1 | grep -E \\\"test result\\\" | grep -v \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3586; grep -rn \\\"each act's\\\\|by act\\\" --include=*.md . 2>/dev/null | grep -v node_modules | grep -iv \\\"^./spec/rulings/R0\\\\|bot-\\\" | head\", \"descrip\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3586; grep -rln \\\"dungeon-run-map\\\\|dungeon-fight\\\\|dungeon-tray\\\" e2e/cypress 2>/dev/null | head; ls e2e/cypress/e2e | grep -i \\\"dungeon\\\\|run\\\" | h\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3586; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p,encoding='utf-8').read()\\na=s[s.index(\\\"- Run 2 (build, opus). Done:\\\"):s.index(\\\"## Log\\\")]\\nb=\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3586; git diff crates/run/src/fight.rs crates/run/src/config.rs\", \"description\": \"Review fight.rs and config.rs diff\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3586; git diff apps/web/src/dungeon/fight/ArtifactTray.test.tsx apps/web/src/dungeon/start/StartScreen.test.tsx apps/web/src/dungeon/test/fixtures.ts\u2026\n- Bash: {\"command\": \"ls -la /tmp/run-sim-after-24.txt; cat /tmp/run-sim-after-24.txt | head -5; ps aux | grep \\\"jackioh-after run-sim\\\" | grep -v grep | awk '{print $10}'\", \"description\": \"Check run-sim prog\u2026\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Monitor: {\"description\": \"run-sim after (24 seeds) finishing\", \"timeout_ms\": 600000, \"command\": \"until grep -q \\\"^exit\\\" /tmp/run-sim-after-24.txt 2>/dev/null; do sleep 5; done; echo \\\"run-sim done: $(tail -1\u2026\n- tool error: This Bash command contains multiple operations. The following parts require approval: grep -q \"^exit\" /tmp/run-sim-after-24.txt, tail -1 /tmp/run-sim-after-24.txt\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/run-sim-after-24.txt; do sleep 10; done; tail -3 /tmp/run-sim-after-24.txt\", \"description\": \"Wait for run-sim after to finish\", \"timeout\": 5400000, \"run_in_b\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3586; git diff crates/run/src/map_tests.rs | head -150\", \"description\": \"Review map_tests diff\"}\n- said: Everything in the plan is built and the checks are green. The only thing still running is the after run of run-sim (24 seeds). Its numbers go in the pull request description, so I'm waiting for it.\n- Bash: {\"command\": \"cat /tmp/run-sim-after-24.txt | head -3; ps aux | grep \\\"jackioh-after run-sim\\\" | grep -v grep | awk '{print $10}'\", \"description\": \"Check run-sim progress again\"}\n- Bash: {\"command\": \"nproc; ps -eLo pid,tid,pcpu,etime,comm | grep jackioh | head; uptime\", \"description\": \"Check CPU usage of run-sim threads\"}\n- said: I'll wait for the run-sim notification.\n- Bash: {\"command\": \"sleep 1; echo waiting\", \"description\": \"Placeholder while waiting\"}\n- Bash: {\"command\": \"timeout 580 bash -c 'until grep -q \\\"^exit\\\" /tmp/run-sim-after-24.txt; do sleep 15; done'; echo \\\"rc $?\\\"; tail -2 /tmp/run-sim-after-24.txt\", \"description\": \"Block up to ten minutes fo\u2026\n- Bash: {\"command\": \"cat /tmp/run-sim-after-24.txt\", \"description\": \"Show run-sim after output\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3586; git status --short; echo \\\"- run-sim after (24 seeds) done, exit 0, 13m25s; tables in /tmp/run-sim-after-24.txt. Next: final report.\\\" >> .bot-\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3586; cargo fmt --check; echo \\\"fmt exit $?\\\"\", \"description\": \"Final rustfmt check\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: dungeon enemies get stronger tier by tier: 15 tiers and an elite table in place of Presence\"} --> ## What changed An enemy's strength now comes from where it stands on the map instead of from the kind of fight. **The tiers (`crates/run`)** - **Tier by r\u2026"
       },
       "issue": 3586,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-11T05:11:21Z",
         "from_run": "42953275874",
         "gates": [
           {
@@ -19041,7 +19046,11 @@
         "source": "build",
         "until": "2026-11-11T05:40:22Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-11T05:10:22Z",
+      "run_id": "pending:fe956c92-1794373854",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -19060,6 +19069,9 @@
         "provider": "claude-3",
         "run": "42953275874"
       },
+      "started_at": "2026-11-11T05:11:21Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -19073,9 +19085,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T04:57:30Z",
+    "at": "2026-11-11T05:11:21Z",
     "url": "",
-    "what": "build #3672 on claude-7"
+    "what": "review #3687 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-11T04:55:07Z",
