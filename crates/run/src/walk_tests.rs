@@ -268,7 +268,10 @@ fn check_fight(state: &RunState, content: &RunContent, engine: bool, tag: &str, 
             RUN_ENEMY_DECK_SIZE,
             "walk {tag} {n}: the enemy's deck"
         );
-        assert!(setup.enemy.hero_health > 0, "walk {tag} {n}: the enemy's health");
+        assert!(
+            setup.enemy_handicap.hero_health.is_some_and(|health| health > 0),
+            "walk {tag} {n}: the enemy's health"
+        );
         return;
     }
     engine_takes(&setup).unwrap_or_else(|e| panic!("walk {tag} {n}: the engine refuses the setup: {e}"));

@@ -12,8 +12,8 @@
 //! `run_fight_report`. Every other choice (a node it may step onto, the artifact, a pack and what to
 //! keep, a shop's buys and upgrades, a campfire, an event, a blessing) follows a seeded policy.
 //!
-//! For each skill it prints, by kind of fight and again by act, how many were played and won, the HP they
-//! cost and their turns, then the max HP entering each boss, the rows reached, the fights on each run's
+//! For each skill it prints, by kind of fight, by act and by tier, the elites apart (R3586001), how many
+//! were played and won, the HP they cost and their turns, then the max HP entering each boss, the rows reached, the fights on each run's
 //! route (R3583001: 12 to 16 on any route to the final boss), the runs won, the score by term
 //! (rows, wins, damage, healing, cards drawn, and what the boss percents and the curse percent add, each
 //! mean and max: only a breakdown shows whether stalling pays), the score and the Embers. The AI plays
@@ -46,12 +46,12 @@ use jackioh_engine::{
     registered_catalog, validate_setup,
 };
 use jackioh_run::config::{
-    RUN_ACTS, RUN_SCORE_CARD_DRAWN, RUN_SCORE_DAMAGE, RUN_SCORE_FIGHT, RUN_SCORE_HEALING, RUN_SCORE_ROW,
-    RUN_SLOT_LADDER, RUN_STARTER_CARDS, RUN_STARTER_SIZE,
+    RUN_ACTS, RUN_ELITE_TIERS, RUN_SCORE_CARD_DRAWN, RUN_SCORE_DAMAGE, RUN_SCORE_FIGHT, RUN_SCORE_HEALING,
+    RUN_SCORE_ROW, RUN_SLOT_LADDER, RUN_STARTER_CARDS, RUN_STARTER_SIZE, RUN_TIERS,
 };
 use jackioh_run::{
     RunAction, RunContent, RunFightSetup, RunFile, RunNodeKind, RunPassiveKind, RunPhase, RunSetup, RunState,
-    RunUnlocks, run_catalog_content, run_check_setup, run_create, run_embers, run_fight_report,
+    RunUnlocks, run_catalog_content, run_check_setup, run_create, run_embers, run_enemy, run_fight_report,
     run_fight_setup, run_fold, run_next_cols, run_node, run_reduce, run_score, run_seed,
 };
 use rayon::prelude::*;
@@ -403,13 +403,16 @@ fn choose(state: &RunState, content: &RunContent, rng: &mut Rng) -> Result<(RunA
     ))
 }
 
-/// One fight of a run: its kind, the HP entering it, the HP leaving it (the refilled max for a
-/// won fight, 0 for a lost one), the report's final HP, whether it was won, and its turns.
+/// One fight of a run: its kind, its act, its enemy's tier, the HP entering it, the HP leaving it (the
+/// refilled max for a won fight, 0 for a lost one), the report's final HP, whether it was won, and its
+/// turns.
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct FightRow {
     kind: RunNodeKind,
     /// 0-based, `act_of`'s.
     act: usize,
+    /// R3586000: its enemy's tier, from 1.
+    tier: usize,
     hp_before: i32,
     hp_after: i32,
     final_hp: i32,
@@ -539,6 +542,7 @@ fn play_run(
                 fights.push(FightRow {
                     kind: run_node(&state).ok_or("the fight stands on no node")?.kind,
                     act: act_of(&state),
+                    tier: run_enemy(&state).map_or(0, |enemy| enemy.tier),
                     hp_before: state.hp,
                     hp_after: next.hp,
                     final_hp,
@@ -583,7 +587,7 @@ fn play_run(
     Ok(outcome)
 }
 
-/// One group of fights' sums over the runs: a kind's or an act's.
+/// One group of fights' sums over the runs: a kind's, an act's or a tier's.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 struct KindTally {
     fights: usize,
@@ -680,6 +684,10 @@ struct Tally {
     kinds: [KindTally; KINDS.len()],
     /// By act, from the first.
     acts: [KindTally; ACTS],
+    /// R3586001: every fight but an elite by its tier, from tier 1 (`RUN_TIERS`' rows).
+    tiers: [KindTally; RUN_TIERS.len()],
+    /// R3586001: the elites by their tier, in `RUN_ELITE_TIERS`' order.
+    elite_tiers: [KindTally; RUN_ELITE_TIERS.len()],
     /// The max HP entering each boss, summed, and how many runs reached it.
     boss_hp: [(i64, usize); BOSSES],
     /// Each run's rows reached.
@@ -706,6 +714,18 @@ fn tally(outcomes: &[RunOutcome], content: &RunContent) -> Tally {
                 out.kinds[at].add(fight);
             }
             if let Some(sums) = out.acts.get_mut(fight.act) {
+                sums.add(fight);
+            }
+            // R3586001: each fight under the row it played, an elite's of its own table.
+            let by_tier = if fight.kind == RunNodeKind::Elite {
+                RUN_ELITE_TIERS
+                    .iter()
+                    .position(|(tier, _)| *tier == fight.tier)
+                    .and_then(|at| out.elite_tiers.get_mut(at))
+            } else {
+                fight.tier.checked_sub(1).and_then(|at| out.tiers.get_mut(at))
+            };
+            if let Some(sums) = by_tier {
                 sums.add(fight);
             }
             if fight.kind.is_boss() {
@@ -776,6 +796,14 @@ impl Tally {
         out.push_str(&table_header("act"));
         for (at, sums) in self.acts.iter().enumerate() {
             out.push_str(&table_line(&(at + 1).to_string(), sums));
+        }
+        out.push('\n');
+        out.push_str(&table_header("tier"));
+        for (at, sums) in self.tiers.iter().enumerate() {
+            out.push_str(&table_line(&format!("tier {}", at + 1), sums));
+        }
+        for ((tier, _), sums) in RUN_ELITE_TIERS.iter().zip(&self.elite_tiers) {
+            out.push_str(&table_line(&format!("elite {tier}"), sums));
         }
         out.push_str("(HP lost is the HP entering a fight minus the fight's final HP, so a won fight's refill is no loss and a lost fight loses all of it.)\n");
         for (at, (hp, reached)) in self.boss_hp.iter().enumerate() {
@@ -874,10 +902,10 @@ pub fn run(args: Args) -> anyhow::Result<()> {
 mod tests {
     use jackioh_engine::DeckMark;
     use jackioh_run::config::{
-        RUN_ACT_ROWS, RUN_ROUTE_FIGHTS_MAX, RUN_ROUTE_FIGHTS_MIN, RUN_STARTER_ARTIFACT_POINTS,
+        RUN_ACT_ROWS, RUN_ACT_TIERS, RUN_ROUTE_FIGHTS_MAX, RUN_ROUTE_FIGHTS_MIN, RUN_STARTER_ARTIFACT_POINTS,
         RUN_STARTER_ARTIFACTS_MAX,
     };
-    use jackioh_run::{RunStats, run_artifact_points, run_curse_points};
+    use jackioh_run::{RunPassiveDef, RunStats, run_artifact_points, run_curse_points};
 
     use super::*;
 
@@ -1103,7 +1131,22 @@ mod tests {
 
     #[test]
     fn check_start_refuses_what_the_content_lacks() {
-        let content = content();
+        let mut content = content();
+        // An enemy's artifact, which no start may take: the placeholder content holds none since the
+        // Presence artifacts retired (R3586001).
+        content.passives.push(RunPassiveDef {
+            id: "test-enemy-banner".into(),
+            name: "Test Enemy Banner".into(),
+            kind: RunPassiveKind::Enemy,
+            text: "An enemy's own.".into(),
+            tier: None,
+            effect: None,
+            fight_effect: None,
+            starter: false,
+            unobtainable: false,
+            god: None,
+        });
+        let content = content;
         let refused = |start: &Start| check_start(start, &content).expect_err("the start is refused");
         let with = |edit: &dyn Fn(&mut Start)| {
             let mut start = Start::default();
@@ -1192,6 +1235,7 @@ mod tests {
         FightRow {
             kind,
             act: 0,
+            tier: 1,
             hp_before,
             hp_after,
             final_hp,
@@ -1332,6 +1376,88 @@ mod tests {
 
     fn in_act(act: usize, row: FightRow) -> FightRow {
         FightRow { act, ..row }
+    }
+
+    fn at_tier(tier: usize, row: FightRow) -> FightRow {
+        FightRow { tier, ..row }
+    }
+
+    #[test]
+    fn r3586001_the_tally_splits_normal_and_elite_fights_by_tier() {
+        // R3586001: every fight but an elite counts under its tier's row, an elite under its own
+        // table's, ghosts and bosses among the first; a tier its table lacks counts under none.
+        let content = content();
+        let (setup, unlocks) = run_setup(0, &Start::default());
+        let start = run_create(&setup, &unlocks, &content).expect("run 0 is created");
+        let boss_tier = RUN_ACT_TIERS + 1;
+        let outcomes = [RunOutcome {
+            file: RunFile {
+                setup,
+                unlocks,
+                log: Vec::new(),
+            },
+            end: RunState {
+                phase: RunPhase::Dead,
+                ..start
+            },
+            fights: vec![
+                at_tier(1, row(RunNodeKind::Fight, 30, 35, 28, true, 8)),
+                at_tier(1, row(RunNodeKind::Ghost, 35, 40, 32, true, 8)),
+                at_tier(1, row(RunNodeKind::Elite, 40, 0, 0, false, 12)),
+                at_tier(boss_tier, row(RunNodeKind::MiniBoss, 40, 45, 30, true, 16)),
+                at_tier(0, row(RunNodeKind::Fight, 30, 35, 28, true, 8)),
+                at_tier(boss_tier, row(RunNodeKind::Elite, 30, 35, 28, true, 8)),
+            ],
+            faults: Vec::new(),
+        }];
+        let sums = tally(&outcomes, &content);
+        let sums_of = |fights, won, hp_lost, turns| KindTally {
+            fights,
+            won,
+            hp_lost,
+            turns,
+        };
+        assert_eq!(sums.tiers[0], sums_of(2, 2, 5, 16));
+        assert_eq!(sums.tiers[boss_tier - 1], sums_of(1, 1, 10, 16));
+        assert_eq!(sums.elite_tiers[0], sums_of(1, 0, 40, 12));
+        let counted = |tally: &[KindTally]| tally.iter().map(|sums| sums.fights).sum::<usize>();
+        assert_eq!(counted(&sums.tiers), 3, "tier 0 counts nowhere");
+        assert_eq!(
+            counted(&sums.elite_tiers),
+            1,
+            "an elite at a boss's tier counts nowhere"
+        );
+
+        let text = sums.render("header");
+        // The tier table's lines, after the kind table's own `elite` line.
+        let table = &text[text.find("\ntier ").expect("the tier table")..];
+        let find = |first: &str, second: &str| {
+            table
+                .lines()
+                .map(|line| line.split_whitespace().collect::<Vec<_>>())
+                .find(|words| words.len() > 1 && words[0] == first && words[1] == second)
+        };
+        let words = |first: &str, second: &str| {
+            find(first, second).unwrap_or_else(|| panic!("no {first} {second} line in:\n{text}"))
+        };
+        assert_eq!(words("tier", "1"), ["tier", "1", "2", "2", "100.0", "2.5", "8.0"]);
+        assert_eq!(
+            words("tier", &boss_tier.to_string()),
+            ["tier", "5", "1", "1", "100.0", "10.0", "16.0"]
+        );
+        assert_eq!(words("tier", "2").last(), Some(&"-"));
+        assert_eq!(words("tier", &RUN_TIERS.len().to_string()).last(), Some(&"-"));
+        assert_eq!(
+            words("elite", "1"),
+            ["elite", "1", "1", "0", "0.0", "40.0", "12.0"]
+        );
+        for (tier, _) in RUN_ELITE_TIERS {
+            assert_eq!(words("elite", &tier.to_string()).len(), 7, "elite {tier}");
+        }
+        assert!(
+            find("elite", &boss_tier.to_string()).is_none(),
+            "an elite never stands on a boss's tier: {text}"
+        );
     }
 
     #[test]

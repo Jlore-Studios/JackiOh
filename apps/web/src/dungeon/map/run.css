@@ -193,12 +193,14 @@
 }
 
 .dungeon-run-map__enemy,
+.dungeon-run-map__tier,
 .dungeon-run-map__relic,
 .dungeon-run-map__current {
   font-size: var(--type-sm);
 }
 
 .dungeon-run-map__enemy,
+.dungeon-run-map__tier,
 .dungeon-run-map__relic {
   color: var(--text-dim);
 }
