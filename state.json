@@ -16949,7 +16949,7 @@
       "started_at": "2026-11-11T07:58:49Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 3
     },
     "3609": {
       "failures": 0,
