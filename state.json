@@ -18527,6 +18527,13 @@
     "3667": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-11T03:15:25Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard line holds: the failures are e2e/component Cypress specs (web client + specs), not engine rules, AI, cross-crate design, a migration, or a 40-file change \u2014 same scope as past fixes #3409/#3456."
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
