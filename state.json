@@ -12746,6 +12746,7 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "onto": "bot/issue-3596",
       "owner": "muse",
