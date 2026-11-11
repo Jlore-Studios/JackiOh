@@ -16312,21 +16312,19 @@
     "what": "plan #3714 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-11T17:03:12Z",
+    "at": "2026-11-11T17:18:24Z",
     "notes": [
-      "#3714 needs a plan",
-      "#3706: its turn came (#3691, which it waited behind, closed)",
-      "delivered revise #3702 on claude-8 (run 43060408773): built",
-      "delivered build #3700 on claude-6 (run 43055453424): built",
-      "delivered build #3698 on claude-8 (run 43055168853): built",
-      "delivered build #3565 on claude-7 (run 43048353797): part",
-      "started review #3715 on claude-6 (run 43065262698)",
-      "started review #3716 on claude-8 (run 43065444219)",
-      "started revise #3702 on claude-8 (run 43065585968)",
-      "started review #3688 on claude-3 (run 43065708993)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is idle, but nothing queued is for it; `claude-7` is busy; `claude-8` is busy; `claude-1` is idle, but nothing queued is for it; `claude-4` is busy; `claude-6` is busy; `claude-5` is idle, but nothing queued is for it; `muse` it refused a call; its limit resets at 2026-11-16T00:00:00Z; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` is idle, but nothing queued is for it",
-      "pruned 1 plan file(s) older than 7 days",
-      "#3691: closed, so `bot:merging` is off",
+      "queued #3674 from an assignment nothing answered",
+      "delivered review #3688 on claude-3 (run 43065708993): reviewed",
+      "delivered review #3716 on claude-8 (run 43065444219): approved",
+      "delivered review #3715 on claude-6 (run 43065262698): approved",
+      "delivered build #3697 on claude-4 (run 43055308651): built",
+      "started review #3717 on claude-4 (run 43067726264)",
+      "started build #3674 on claude-8 (run 43067847851)",
+      "started revise #3706 on claude-3 (run 43067972639)",
+      "started plan #3714 on claude-3 (run 43068098778)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is idle, but nothing queued is for it; `claude-4` is busy; `claude-6` is idle, but nothing queued is for it; `claude-5` is idle, but nothing queued is for it; `muse` it refused a call; its limit resets at 2026-11-16T00:00:00Z; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` is idle, but nothing queued is for it",
+      "pruned 2 plan file(s) older than 7 days",
       "runner gate: started 0 of 2 waiting run(s); 2 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -17033,7 +17031,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-11T17:03:12Z",
+  "loop_tick": "2026-11-11T17:18:24Z",
   "machine_disk": {
     "issue": null,
     "reading": {
