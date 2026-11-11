@@ -16495,6 +16495,7 @@
     "3727": {
       "action": "plan",
       "asks": [],
+      "died": 1,
       "in_lane": true,
       "kind": "build",
       "live": "planning",
@@ -16503,6 +16504,7 @@
       "owner_why": "it plans it",
       "pending_request": false,
       "provider": "claude-6",
+      "queued_at": "2026-11-11T21:06:25Z",
       "run_id": "43092989904",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-11T20:03:59Z",
