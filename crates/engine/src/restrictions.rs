@@ -222,6 +222,19 @@ pub fn attack_restriction_in(
     if inside != target_inside && gauntlet_acts(state) {
         return Err(EngineError::new("the Gauntlet's Units fight only each other"));
     }
+    // R3550001: a Unit that "can only attack the unit directly across from it" attacks only the
+    // enemy Unit across, never a hero — declared or forced, which both read this.
+    if crate::scripts::flags_of(state, attacker).attacks_only_across == Some(true) {
+        let across = match target {
+            DamageTarget::Hero { .. } => false,
+            DamageTarget::Unit { instance } => crate::combat::stands_across(state, attacker, instance),
+        };
+        if !across {
+            return Err(EngineError::new(
+                "this Unit can only attack the Unit directly across from it",
+            ));
+        }
+    }
     let defender = match target {
         DamageTarget::Hero { .. } => return Ok(()),
         DamageTarget::Unit { instance } => instance,

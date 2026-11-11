@@ -24,10 +24,10 @@ use crate::state::{
 };
 use crate::subsystems::lethal::{falls_to_first_strike, is_lethal, projected_damage};
 use crate::wire::{
-    ActionBody, AttackHealth, CardType, GameEvent, KeywordKind, PlayerId, Row, Tag, Zone, has_keyword,
-    opponent_of,
+    ActionBody, AttackHealth, CardType, GameEvent, KeywordKind, PlayerId, Row, Tag, Zone, ZoneName,
+    has_keyword, opponent_of,
 };
-use crate::zones::{OffFieldZone, active_units_of, card_at, slot_of};
+use crate::zones::{OffFieldZone, active_units_of, card_at, slot_of, stands_in_backrow};
 
 /// A hero's block as a card may see it (§10.1), copied so a script cannot write through it. Not the
 /// view's `wire::HeroView`; `lib.rs` resolves the root name to this one.
@@ -449,6 +449,112 @@ pub fn own_turn_redirect_left(state: &GameState, card: &CardInstance) -> Option<
     let redirect = crate::scripts::flags_of(state, card).own_turn_redirect?;
     let cap = crate::params::declared_or(state, card, "cap", redirect.cap).max(0);
     Some((cap - crate::damage::own_turn_redirect_moved(state, card)).max(0))
+}
+
+/// R3550004: how much more `card`'s damage pool (Stinkyscape+ #42 Force Projector) may soak this
+/// turn: its declared `pool` (R386) less what it has soaked on its controller's current turn, at
+/// least 0. `None` for a card with no pool.
+pub fn damage_pool_left(state: &GameState, card: &CardInstance) -> Option<i32> {
+    let pool = crate::scripts::flags_of(state, card).damage_pool?;
+    let cap = crate::params::declared_or(state, card, "pool", pool).max(0);
+    Some((cap - crate::damage::damage_pool_used(state, card)).max(0))
+}
+
+/// R3550000: the enemy Unit this event brings onto the field, or `None`: a summon of a Unit onto
+/// the enemy side (Recruit, a token, a copy, Reborn), or a played one once it resolves — its play's
+/// own placement (§10.5 step 4, which carries `exitsFrom`) waits for that. Copied from Stinkyscape
+/// #23 Warp Disruptor's arrival (R1875003), with the controller as a parameter.
+pub fn enemy_unit_arrival(state: &GameState, controller: PlayerId, event: &GameEvent) -> Option<String> {
+    match event {
+        GameEvent::Summoned {
+            player,
+            row,
+            exits_from,
+            instance_id,
+            ..
+        } => {
+            if *player == controller || exits_from.is_some() {
+                return None;
+            }
+            // R1081000: a Unit summoned standing in a backrow zone is a summoned Unit too.
+            let unit = find_instance(state, instance_id)?;
+            (*row == Row::Units || stands_in_backrow(state, unit)).then(|| instance_id.clone())
+        }
+        GameEvent::CardResolved {
+            permanent,
+            def_id,
+            instance_id,
+            ..
+        } => {
+            if !*permanent || crate::catalog::def_of(Some(state), def_id).type_ != CardType::Unit {
+                return None;
+            }
+            let unit = find_instance(state, instance_id)?;
+            (unit.zone.z() == ZoneName::Field && unit.controller != controller).then(|| instance_id.clone())
+        }
+        _ => None,
+    }
+}
+
+/// R3550009: every enemy permanent — the opponent's acting units, then their backrow, each once
+/// (Stinkyscape+ #25 Snom Bunny's Death). Copied from Classic #40 MC Tech's pick.
+pub fn enemy_permanents(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
+    let enemy = opponent_of(player);
+    let backrow: Vec<CardInstance> = crate::zones::slots_of(enemy, Row::Backrow)
+        .iter()
+        .flat_map(|slot| card_at(state, slot).cloned())
+        .collect();
+    let mut permanents: Vec<CardInstance> = active_units_of(state, enemy).into_iter().cloned().collect();
+    // R1081000: a Unit standing in the backrow is already among the units — one permanent, once.
+    let backrow: Vec<CardInstance> = backrow
+        .into_iter()
+        .filter(|card| !permanents.iter().any(|unit| unit.id == card.id))
+        .collect();
+    permanents.extend(backrow);
+    permanents
+}
+
+/// R3550008: how the opponent's announced play meets the secret pick.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SecretPickHit {
+    Chosen,
+    OtherSeen,
+}
+
+/// R3550008: the opponent's announced play against the card's secret pick — the chosen card, or
+/// another card seen in the pick. `None` for the owner's own plays and cards never seen.
+pub fn secret_pick_hit(card: &CardInstance, event: &GameEvent) -> Option<SecretPickHit> {
+    let GameEvent::CardAnnounced {
+        player, instance_id, ..
+    } = event
+    else {
+        return None;
+    };
+    if *player == card.controller {
+        return None;
+    }
+    let note = card.memory.get(crate::effects::secret_pick::SECRET_PICK_KEY)?;
+    if note.get("chosen").and_then(Value::as_str) == Some(instance_id.as_str()) {
+        return Some(SecretPickHit::Chosen);
+    }
+    let seen = note.get("seen").and_then(Value::as_array)?;
+    seen.iter()
+        .any(|id| id.as_str() == Some(instance_id.as_str()))
+        .then_some(SecretPickHit::OtherSeen)
+}
+
+/// R3550002: whether the event is this Unit being Frozen — a `marked` adding the Frozen mark on
+/// its id. Every freeze that lands answers, a re-freeze included.
+pub fn is_frozen_event(event: &GameEvent, instance_id: &str) -> bool {
+    matches!(
+        event,
+        GameEvent::Marked {
+            instance_id: id,
+            mark,
+            added: true,
+            ..
+        } if id.as_str() == instance_id && mark.as_str() == crate::config::FROZEN_MARK.mark
+    )
 }
 
 // Readers for the Classic #1–#45 cards (card-specific)

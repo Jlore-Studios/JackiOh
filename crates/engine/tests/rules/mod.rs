@@ -48,6 +48,7 @@ pub mod cloaked;
 pub mod combat_forecast;
 pub mod combat_positions;
 pub mod combat_property;
+pub mod combat_reactions;
 pub mod combat_resolution;
 pub mod combat_validation;
 pub mod combo_index;

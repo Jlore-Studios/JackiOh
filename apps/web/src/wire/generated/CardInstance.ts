@@ -13,6 +13,7 @@ import type { SetAs } from "./SetAs";
 import type { Slumber } from "./Slumber";
 import type { StarshipMemory } from "./StarshipMemory";
 import type { Tag } from "./Tag";
+import type { TipsyStamp } from "./TipsyStamp";
 import type { Tuning } from "./Tuning";
 import type { Zone } from "./Zone";
 
@@ -218,4 +219,9 @@ entersEvolved?: true,
 /**
  * R3546000: fills four zones; stamped as it enters the field, fixed there, taken off by R78's reset.
  */
-giga?: true, };
+giga?: true, 
+/**
+ * R3548001: the Tipsy counter stamped on this card as it arrived, if one was up. Taken off by
+ * R78's reset with the card leaving the field; only its owner's view reads it.
+ */
+tipsy?: TipsyStamp, };

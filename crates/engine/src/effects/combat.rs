@@ -16,8 +16,10 @@ use serde::{Deserialize, Serialize};
 use super::destroy::{DestroyArgs, destroy};
 use super::targets::{PlayerSpec, TargetSpec, instance_of, player_of, resolve_target};
 use crate::combat::{
-    AttackAmong, AttackTarget, force_attack_own_hero, force_attacks_on, force_attacks_random, is_enemy_of,
+    AttackAmong, AttackTarget, force_attack, force_attack_own_hero, force_attacks_on, force_attacks_random,
+    is_enemy_of,
 };
+use crate::damage::DamageTarget;
 use crate::prompts::summoned_so_far;
 use crate::restrictions::attack_restriction;
 use crate::script::{Effect, EffectContext};
@@ -469,6 +471,33 @@ pub fn forced_attack_own_hero(args: ForcedAttackOwnHeroArgs) -> Effect {
             return;
         }
         force_attack_own_hero(ctx, &attacker);
+    })
+}
+
+/// `forced_attack`'s arguments (TS's inline object).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct ForcedAttackArgs {
+    pub attacker: TargetSpec,
+    pub target: TargetSpec,
+}
+
+/// R3550000 (Stinkyscape+ #72 Foreshadow, #73 Ripple): when an enemy Unit is summoned, this attacks
+/// it at once — a forced attack (R53), so it spends no exertion, ignores Can't attack and opens no
+/// window. A side that has left the field by then is gone (R174) and the attack does not happen.
+pub fn forced_attack(args: ForcedAttackArgs) -> Effect {
+    Effect::new("forcedAttack", move |ctx| {
+        let Some(attacker) = instance_of(ctx, &args.attacker) else {
+            return;
+        };
+        let Some(target) = instance_of(ctx, &args.target) else {
+            return;
+        };
+        if attacker.zone.z() != ZoneName::Field || target.zone.z() != ZoneName::Field {
+            return;
+        }
+        force_attack(&mut ctx.sink, &attacker, &DamageTarget::Unit { instance: target });
     })
 }
 

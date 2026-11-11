@@ -553,6 +553,17 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     // maxi-tail: dropped whole, so the AI simulates a Rollback as restoring nothing; redact each snapshot's
     // hidden cards instead if the AI should ever plan around one.
     next.board_history = None;
+    // R3550007: a side snapshot on the opponent's cards is theirs alone (§10.8) — what their Bogos
+    // Binted's Cry saw never reaches the seat's simulation.
+    for (player, place) in every_place(&next) {
+        if player != opp {
+            continue;
+        }
+        if let Some(card) = card_at_mut(&mut next, player, place) {
+            card.memory
+                .shift_remove(jackioh_engine::subsystems::board_history::SIDE_SNAPSHOT_KEY);
+        }
+    }
     // R676, R678: the decks the match began with and the boards a Glitch may lay down are no seat's to
     // read; dropped whole, so the AI simulates a Glitch reset as nothing and its boards as empty fields.
     next.opening = None;

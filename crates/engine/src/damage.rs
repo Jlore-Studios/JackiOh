@@ -543,6 +543,27 @@ fn land(
         return Landed::default();
     }
 
+    // R3550004, §4.4 step 3b: the first damage allies would take per turn is nullified — after Armor
+    // ("accounts for armor"), on the controller's Units and hero alike, never spent on an
+    // Indestructible Unit. No event is emitted.
+    if amount > 0 {
+        let indestructible = unit.as_ref().is_some_and(|live| {
+            has_keyword(
+                &crate::layers::unit_view(sink.state, live).keywords,
+                KeywordKind::Indestructible,
+            )
+        });
+        if !indestructible {
+            let side = match target {
+                DamageTarget::Hero { player } => Some(*player),
+                DamageTarget::Unit { .. } => unit.as_ref().map(|live| live.controller),
+            };
+            if let Some(side) = side {
+                amount = damage_pool(sink, side, amount);
+            }
+        }
+    }
+
     // E5, E9: after the caps and before step 5, a hit that alone would bring its hero to 0 or less (R44)
     // meets the lethal-hit replacements, which may send it to the other hero or cancel it (R1704001).
     // #936 B17: in a Duos duel the hit is judged against own HP and the team's pool together.
@@ -712,6 +733,17 @@ fn land(
         card.marked_exiled = Some(true);
     }
 
+    // R3550002, §4.4 step 7: "Freeze any Unit damaged by this" — a Unit dealt 1 or more by this
+    // card's hit is Frozen. A hero is never Frozen, and a Unit gone by now is gone (R174).
+    if let (Some(live), Some(source_card)) = (&unit, source)
+        && dealt >= 1
+        && crate::scripts::flags_of(sink.state, source_card).freezes_damaged == Some(true)
+        && find_instance(sink.state, &live.id)
+            .is_some_and(|card| crate::zones::acts_on_field(sink.state, card))
+    {
+        crate::freeze::freeze_unit(sink, &live.id);
+    }
+
     // R3540002: "Damage also Burns N / applies Toxic N" adds N to a target the hit left standing, after
     // Poisonous and the exile have had their say.
     if let Some(source_card) = source {
@@ -860,6 +892,56 @@ fn adjacent_units_of(
         }
     }
     out
+}
+
+/// R3550004: where a card with a damage pool notes what it has soaked, `{ turns, used }`, where
+/// `turns` is its controller's `turns_started` — the pool refills at the start of its controller's
+/// turn, and a note from an earlier turn is spent nothing.
+const DAMAGE_POOL_KEY: &str = "@damagePool";
+
+/// R3550004: how much `card`'s damage pool has soaked on its controller's current turn; a note from
+/// another turn is 0. What the pool's rest is counted from, here and in its preview
+/// (`query::damage_pool_left`).
+pub(crate) fn damage_pool_used(state: &GameState, card: &CardInstance) -> i32 {
+    card.memory
+        .get(DAMAGE_POOL_KEY)
+        .filter(|record| {
+            record.get("turns").and_then(serde_json::Value::as_i64)
+                == Some(i64::from(state.players[card.controller].turns_started))
+        })
+        .and_then(|record| record.get("used").and_then(serde_json::Value::as_i64))
+        .map_or(0, |used| used as i32)
+}
+
+/// R3550004 (Stinkyscape+ #42 Force Projector), §4.4 step 3b: each card acting for `player` with a
+/// pool, in R68's order, soaks what its declared `pool` (R386) has left of the hit. Returns the rest
+/// of the hit.
+fn damage_pool(sink: &mut DamageSink<'_>, player: PlayerId, amount: i32) -> i32 {
+    let mut rest = amount;
+    for card in acting_texts_of(sink.state, player) {
+        if rest <= 0 {
+            break;
+        }
+        let Some(pool) = crate::scripts::flags_of(sink.state, &card).damage_pool else {
+            continue;
+        };
+        // R386: the card's declared number `pool` where it declares one.
+        let cap = crate::params::declared_or(sink.state, &card, "pool", pool).max(0);
+        let used = damage_pool_used(sink.state, &card);
+        let take = rest.min(cap - used);
+        if take <= 0 {
+            continue;
+        }
+        let turns = sink.state.players[card.controller].turns_started;
+        if let Some(live) = find_instance_mut(sink.state, &card.id) {
+            live.memory.insert(
+                DAMAGE_POOL_KEY.to_string(),
+                serde_json::json!({ "turns": turns, "used": used + take }),
+            );
+        }
+        rest -= take;
+    }
+    rest
 }
 
 /// R1849004: where a card with an own-turn redirect notes how much it has moved this turn,

@@ -218,6 +218,11 @@ held?: Array<HeldCard>,
  */
 marketplace?: Marketplace, 
 /**
+ * R3548002: every Warhero Token's worth in Credits, game-wide. Absent until the first one is
+ * minted, so a game without one hashes as it did before this field existed.
+ */
+warheroWorth?: number, 
+/**
  * R1956001: each Created card's generator by instance id: the catalog id of the card whose
  * script minted it, or that card's own generator when it was Created too
  * (`generators::record_generator`). Presentation only (CLAUDE.md rule 7): no rule reads it,

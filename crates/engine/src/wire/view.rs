@@ -442,6 +442,11 @@ pub struct ActivationView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub reason: Option<String>,
+    /// R3550003: how many of its user's turns the ability still sits out. Absent when it is not
+    /// cooling down.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub cooldown_turns_left: Option<i32>,
     /// R3291000: the fused ingredient whose text prints the ability (a Starship's Weapon piece, an
     /// Equipped Unit's Weapon), whose art the Activate picker's choice card wears. Absent when the
     /// ability is the card's own text or the engine's (the Dormant Starship's launch, a Cloaked card's

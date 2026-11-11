@@ -145,11 +145,35 @@ pub fn attacks_per_turn(state: &GameState, unit: &CardInstance) -> i32 {
 
 /// `attacks_per_turn` read through a sweep's `AuraTable` (#892).
 pub fn attacks_per_turn_in(auras: &AuraTable<'_>, unit: &CardInstance) -> i32 {
-    if auras.unit_has(unit, KeywordKind::Windfury) {
+    let windfury = if auras.unit_has(unit, KeywordKind::Windfury) {
         WINDFURY_ATTACKS
     } else {
         1
-    }
+    };
+    // R3550001: "Can attack N times per turn" gives N attacks, the larger of N and Windfury's two.
+    let printed = crate::scripts::flags_of(auras.state(), unit)
+        .attacks_per_turn
+        .map_or(1, |n| {
+            crate::params::declared_or(auras.state(), unit, "attacks", n)
+        });
+    windfury.max(printed)
+}
+
+/// R3550001 (Stinkyscape+ #37 Scorch): whether two Units stand directly across from each other — in
+/// each other's lane on opposite sides. The test `lane_multiplier_for` reads for "across its lane".
+pub fn stands_across(state: &GameState, a: &CardInstance, b: &CardInstance) -> bool {
+    let Some(a_slot) = crate::zones::slot_of(state, a) else {
+        return false;
+    };
+    let Some(b_slot) = crate::zones::slot_of(state, b) else {
+        return false;
+    };
+    // R1081000: a Unit standing in a backrow zone is in that zone's lane, as one in its unit zone is.
+    // R3546001: a GIGA meets a lane in either of its lanes.
+    crate::zones::in_units_row_or_standing(state, a)
+        && crate::zones::in_units_row_or_standing(state, b)
+        && a_slot.player != b_slot.player
+        && crate::giga::lanes_meet(a, b)
 }
 
 /// §4.1: one exertion per turn, so a unit that attacked cannot switch and one that switched cannot
@@ -1242,6 +1266,8 @@ pub(crate) fn declare_instead(
     let declaration = sink.events[at].clone();
     crate::triggers::mark_dispatched(sink, &[declaration]);
 
+    // R3550005: a counter cancels a declared Ranged attack before the window.
+    crate::countering::counter_declared_attack(sink, &attacker);
     // Step 4's second sentence: the traps answer the declaration, before any damage.
     crate::traps::run_trap_window(sink, &event);
     let since: Vec<GameEvent> = sink

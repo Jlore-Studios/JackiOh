@@ -14,6 +14,7 @@ pub mod card_on_card;
 pub mod catalog;
 pub mod combat;
 pub mod combat_judge;
+pub mod combat_reactions;
 pub mod copied_text;
 pub mod core_patches;
 pub mod craft;

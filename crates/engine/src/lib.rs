@@ -30,6 +30,7 @@ pub mod condition;
 pub mod config;
 pub mod cost_rules;
 pub mod counter_warning;
+pub mod countering;
 pub mod crater;
 pub mod credit;
 pub mod cry_trigger;

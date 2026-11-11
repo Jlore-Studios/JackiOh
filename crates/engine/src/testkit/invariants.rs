@@ -2789,11 +2789,16 @@ impl InvariantMonitor {
                             _ => 1,
                         },
                     };
+                    // R3550001: a Unit that "can attack N times per turn" declares N attacks.
                     let per_turn = if self.windfury.get(declarer) == Some(&current) {
                         WINDFURY_ATTACKS
                     } else {
                         1
                     };
+                    let per_turn = per_turn.max(
+                        find_instance(state, declarer)
+                            .map_or(1, |card| crate::combat::attacks_per_turn(state, card)),
+                    );
                     // R1869002: a kill credit's fresh exertion counts the attacks of a turn again from there.
                     let allowed = per_turn + self.credited_at(declarer).unwrap_or(0);
                     if mark.count > allowed {

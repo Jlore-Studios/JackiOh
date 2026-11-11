@@ -9,12 +9,14 @@
 
 use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::combat::enter_new_side;
 use crate::config::BOARD_HISTORY_DEPTH;
 use crate::effects::move_::bounce_card;
+use crate::effects::radiant::{RadiantTarget, set_radiant};
 use crate::preview::is_face_down;
-use crate::script::{Effect, EngineSink};
+use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{
     BoardSnapshot, CardInstance, GameState, HomeZone, SideSnapshot, find_instance, find_instance_mut,
     side_snapshot_instances,
@@ -27,31 +29,33 @@ use crate::zones::{
 
 const ROWS: [Row; 2] = [Row::Units, Row::Backrow];
 
+/// R419, §2.2: one side of the field as plain data — its piles, backrow, Locks and homes.
+pub(crate) fn side_snapshot_of(state: &GameState, player: PlayerId) -> SideSnapshot {
+    let held = &state.players[player];
+    let homes: Vec<HomeZone> = state
+        .homes
+        .iter()
+        .flatten()
+        .filter(|home| home.zone.player == player)
+        .cloned()
+        .collect();
+    SideSnapshot {
+        units: held.units.clone(),
+        backrow: held.backrow.clone(),
+        locks: held.locks.clone(),
+        backrow_piles: held.backrow_piles.clone(),
+        carried: held.carried.clone(),
+        homes: if homes.is_empty() { None } else { Some(homes) },
+    }
+}
+
 /// R419, §2.2: the field as the turn just begun finds it, before the mana refresh (R62).
 pub fn record_board_snapshot(state: &mut GameState) {
-    let side = |player: PlayerId| -> SideSnapshot {
-        let held = &state.players[player];
-        let homes: Vec<HomeZone> = state
-            .homes
-            .iter()
-            .flatten()
-            .filter(|home| home.zone.player == player)
-            .cloned()
-            .collect();
-        SideSnapshot {
-            units: held.units.clone(),
-            backrow: held.backrow.clone(),
-            locks: held.locks.clone(),
-            backrow_piles: held.backrow_piles.clone(),
-            carried: held.carried.clone(),
-            homes: if homes.is_empty() { None } else { Some(homes) },
-        }
-    };
     let snapshot = BoardSnapshot {
         turn: state.turn,
         sides: PerPlayer {
-            p1: side(PlayerId::P1),
-            p2: side(PlayerId::P2),
+            p1: side_snapshot_of(state, PlayerId::P1),
+            p2: side_snapshot_of(state, PlayerId::P2),
         },
     };
     let mut history = state.board_history.take().unwrap_or_default();
@@ -192,14 +196,20 @@ pub fn restore_board(
         turns_ago: back,
         sides: sides.clone(),
     });
+    rebuild_sides(sink, &snapshot, &sides);
+    Some(back)
+}
 
+/// R419's three steps, each on every restored side before the next: unheld cards to hand (R78,
+/// §2.4, R11, R747), held ones back to their places, the Locks to the snapshot's.
+fn rebuild_sides(sink: &mut EngineSink<'_>, snapshot: &BoardSnapshot, sides: &[PlayerId]) {
     // Step 1.
     let held: IndexSet<String> = sides
         .iter()
         .flat_map(|player| side_snapshot_instances(&snapshot.sides[*player]))
         .map(|card| card.id.clone())
         .collect();
-    for player in &sides {
+    for player in sides {
         let standing: Vec<String> = zones_of(*player)
             .iter()
             .flat_map(|slot| {
@@ -221,7 +231,7 @@ pub fn restore_board(
 
     // Step 2: lift every held card out, then rebuild each zone bottom first.
     let mut placements: Vec<Placement> = Vec::new();
-    for player in &sides {
+    for player in sides {
         for slot in zones_of(*player) {
             for card in snapshot_zone(&snapshot.sides[*player], &slot) {
                 let live = find_instance(sink.state, &card.id).cloned();
@@ -303,12 +313,12 @@ pub fn restore_board(
         .iter()
         .map(|player| sink.state.players[*player].locks.clone())
         .collect();
-    for player in &sides {
+    for player in sides {
         let locks = &mut sink.state.players[*player].locks;
         locks.units = locks.units.iter().map(|_| false).collect();
         locks.backrow = locks.backrow.iter().map(|_| false).collect();
     }
-    for player in &sides {
+    for player in sides {
         for slot in zones_of(*player) {
             let mut zone: Vec<&Placement> = placements
                 .iter()
@@ -403,7 +413,6 @@ pub fn restore_board(
             }
         }
     }
-    Some(back)
 }
 
 /// `roll_back`'s "self" | "enemy" | "both": the sides of the field, seen from the card's controller.
@@ -439,5 +448,133 @@ pub fn roll_back(args: RollBackArgs) -> Effect {
             })
             .collect();
         restore_board(ctx, controller, args.turns_ago, &sides);
+    })
+}
+
+/// R3550007 (Stinkyscape+ #84 Bogos Binted): where a card keeps its Cry's snapshot of its
+/// controller's side, `{ turn, side }`. Instance memory, so it reaches no view and no AI (§10.8).
+pub const SIDE_SNAPSHOT_KEY: &str = "@sideSnapshot";
+
+/// Drop the running card's instance from its side's snapshot: its piles, backrow and homes. An
+/// emptied pile becomes `None`.
+fn side_without(side: &mut SideSnapshot, self_id: &str) {
+    for pile in side.units.iter_mut() {
+        if let Some(cards) = pile {
+            cards.retain(|card| card.id != self_id);
+            if cards.is_empty() {
+                *pile = None;
+            }
+        }
+    }
+    for slot in side.backrow.iter_mut() {
+        if slot.as_ref().is_some_and(|card| card.id == self_id) {
+            *slot = None;
+        }
+    }
+    if let Some(piles) = side.backrow_piles.as_mut() {
+        for pile in piles.iter_mut() {
+            pile.retain(|card| card.id != self_id);
+        }
+    }
+    if let Some(carried) = side.carried.as_mut() {
+        for slot in carried.iter_mut() {
+            if slot.as_ref().is_some_and(|card| card.id == self_id) {
+                *slot = None;
+            }
+        }
+    }
+    if let Some(homes) = side.homes.as_mut() {
+        homes.retain(|home| home.instance_id != self_id);
+    }
+    if side.homes.as_ref().is_some_and(Vec::is_empty) {
+        side.homes = None;
+    }
+}
+
+/// R3550007: "Take a snapshot of all your other permanents" (Stinkyscape+ #84 Bogos Binted's Cry) —
+/// the controller's side without the running card, kept on its memory for its Death.
+pub fn snapshot_side() -> Effect {
+    Effect::new("snapshotSide", move |ctx: &mut EffectContext<'_>| {
+        let controller = ctx.controller;
+        let self_id = ctx.self_.as_ref().map(|card| card.id.clone());
+        let mut side = side_snapshot_of(ctx.state, controller);
+        if let Some(self_id) = &self_id {
+            side_without(&mut side, self_id);
+        }
+        let turn = ctx.sink.state.turn;
+        let record = serde_json::json!({ "turn": turn, "side": side });
+        if let Some(self_id) = self_id
+            && let Some(live) = find_instance_mut(ctx.sink.state, &self_id)
+        {
+            live.memory.insert(SIDE_SNAPSHOT_KEY.to_string(), record);
+        }
+    })
+}
+
+/// `restore_side_snapshot`'s argument.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct RestoreSideArgs {
+    /// The Radiant face rebuilds its side Radiant. Absent: as the snapshot holds them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub radiant: Option<bool>,
+}
+
+/// R3550007: "Reset your board to that state" (Stinkyscape+ #84 Bogos Binted's Death) — R419's
+/// restore on the controller's side alone: extras go to hand, the snapshot's cards return to their
+/// slots, no Cry. The Death hook's snapshot keeps memory, so the Cry's note is still read here.
+/// The Radiant face makes the rebuilt side Radiant.
+pub fn restore_side_snapshot(args: RestoreSideArgs) -> Effect {
+    Effect::new("restoreSideSnapshot", move |ctx: &mut EffectContext<'_>| {
+        let player = ctx.controller;
+        let Some(note) = ctx
+            .self_
+            .as_ref()
+            .and_then(|card| card.memory.get(SIDE_SNAPSHOT_KEY))
+        else {
+            return;
+        };
+        let Some(turn) = note.get("turn").and_then(Value::as_i64) else {
+            return;
+        };
+        let Some(side) = note
+            .get("side")
+            .and_then(|side| serde_json::from_value::<SideSnapshot>(side.clone()).ok())
+        else {
+            return;
+        };
+        let turn = turn as i32;
+        ctx.sink.events.push(GameEvent::RolledBack {
+            player,
+            turns_ago: ctx.sink.state.turn - turn,
+            sides: vec![player],
+        });
+        let mut sides = PerPlayer {
+            p1: side_snapshot_of(ctx.state, PlayerId::P1),
+            p2: side_snapshot_of(ctx.state, PlayerId::P2),
+        };
+        sides[player] = side;
+        let snapshot = BoardSnapshot { turn, sides };
+        rebuild_sides(ctx, &snapshot, &[player]);
+        // The Radiant face's rebuild: every card standing on that side is made Radiant.
+        if args.radiant == Some(true) {
+            let ids: Vec<String> = zones_of(player)
+                .iter()
+                .flat_map(|slot| {
+                    zone_contents(ctx.state, slot)
+                        .iter()
+                        .map(|card| card.id.clone())
+                        .collect::<Vec<String>>()
+                })
+                .collect();
+            for id in ids {
+                (set_radiant(RadiantTarget {
+                    instance_id: Some(id),
+                    target: None,
+                })
+                .apply)(ctx);
+            }
+        }
     })
 }
