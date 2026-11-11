@@ -15589,6 +15589,13 @@
     "3696": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-11T19:40:53Z",
+        "difficulty": "hard",
+        "provider": "claude-1",
+        "tier": "medium",
+        "why": "Rule 2: it changes the AI's search (`shortlist_lines` in `crates/ai/src/decide.rs`) and the opponent model of its reply (`crates/ai/src/reply.rs`)."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
