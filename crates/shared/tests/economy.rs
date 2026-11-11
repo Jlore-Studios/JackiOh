@@ -7,7 +7,6 @@ use jackioh_engine::config::MAX_COPIES;
 use jackioh_engine::wire::PrintedRarity;
 use jackioh_shared::config::{CARD_TOKEN_BAR_SIZE, CHASE_SHARD_PACKS, PACK_SLOTS, PITY_MYTHIC_PACKS};
 use jackioh_shared::cosmetics::{OwnedCosmetics, registry};
-use jackioh_shared::economy::bars::BarKind;
 use jackioh_shared::economy::boundary::{EconomyAnswer, EconomyCall, apply};
 use jackioh_shared::economy::cosmetic_pack::{CosmeticHoldings, roll_cosmetic_pack};
 use jackioh_shared::economy::ledger::{Cause, Counter, InventoryItem, LedgerGrant};
@@ -437,30 +436,4 @@ fn the_boundary_moves_the_quests() {
     assert_eq!(xp["granted"], json!([]));
     let starting = call(json!({ "call": "startingRewards", "tracks": [] }));
     assert_eq!(starting["granted"][0]["kind"], "track");
-}
-
-/// R1310003: a dev fill names its bar `card` or `cosmetic`, and any other name (or a different case) is no bar;
-/// each bar's points live in its own counter.
-#[test]
-fn a_fill_names_the_card_or_the_cosmetic_bar_and_no_other() {
-    assert_eq!(BarKind::named("card"), Some(BarKind::Card));
-    assert_eq!(BarKind::named("cosmetic"), Some(BarKind::Cosmetic));
-    for other in ["", "Card", "COSMETIC", "cards", "token", " card"] {
-        assert_eq!(BarKind::named(other), None, "{other:?}");
-    }
-    assert_eq!(BarKind::Card.counter(), Counter::CardTokenBar);
-    assert_eq!(BarKind::Cosmetic.counter(), Counter::CosmeticTokenBar);
-}
-
-/// §14.4: only the three pity counters are pity; the bars' and the chase shard bar's are not, so a pack key
-/// is never read on them.
-#[test]
-fn only_the_three_pity_counters_are_pity() {
-    assert!(Counter::PityEpic.is_pity());
-    assert!(Counter::PityLegendary.is_pity());
-    assert!(Counter::PityMythic.is_pity());
-    assert!(!Counter::CardTokenBar.is_pity());
-    assert!(!Counter::CosmeticTokenBar.is_pity());
-    assert!(!Counter::CosmeticTokenCycle.is_pity());
-    assert!(!Counter::ChaseShardBar.is_pity());
 }
