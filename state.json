@@ -18605,7 +18605,7 @@
       "verdict_rounds": 1
     },
     "3672": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "handoff": {
         "at": "2026-11-11T04:21:32Z",
@@ -18616,22 +18616,21 @@
         "reason": "planned on opus",
         "trail": "- Bash: {\"command\": \"git log --oneline -1 && ls /tmp/audit | head -30; for l in 855 922 960 978; do sed -n \\\"${l},$((l+14))p\\\" crates/server/src/api/queue.rs | grep -n \\\"match_id\\\\|FailedStart\\\"; echo -----;\u2026\n- Bash: {\"command\": \"git status --short | head; git log --oneline 13bd66f471..HEAD; git diff --stat 13bd66f471..HEAD | tail -3\", \"description\": \"Check how the branch moved since planning started\"}\n- Bash: {\"command\": \"for n in trigger_holders_of WorkKind ENGINE_WORK_HOOKS enchantments_of_kind drop_delayed PROMPT_KINDS trigger_holders_for_event is_owed unpark_work can_afford consume_modifier pick_perso\u2026\n- Bash: {\"command\": \"sed -n 478,492p crates/engine/src/mana.rs; sed -n 198,210p crates/engine/tests/rules/mana.rs; sed -n 255,272p crates/engine/src/modifiers.rs; sed -n 650,665p crates/engine/tests/rules/mo\u2026\n- Bash: {\"command\": \"git grep -n \\\"mana_due_now(\\\" -- crates/engine/src crates/ai/src crates/shared/src | head\", \"description\": \"Find other affordability computations\"}\n- Bash: {\"command\": \"sed -n 60,95p crates/engine/src/credit.rs\", \"description\": \"Read credit.rs affordability check\"}\n- Bash: {\"command\": \"awk 'NR<=200 && /^ *(pub )?mod /{print NR\\\": \\\"$0}' crates/engine/tests/rules/mana.rs | tail -3; grep -n \\\"can_afford\\\\|mana::\\\" crates/engine/tests/rules/mana.rs | head -5; git grep -n \u2026\n- Bash: {\"command\": \"grep -n -i \\\"can_afford\\\\|canAfford\\\\|temporary mana\\\" BUILD.md spec/*.md | head -5; sed -n 186,200p crates/engine/tests/rules/mana.rs\", \"description\": \"Check BUILD.md mentions of afford\u2026\n- Bash: {\"command\": \"sed -n 60,80p crates/shared/src/bots/persona.rs; sed -n 290,306p crates/shared/tests/bots_persona.rs; sed -n 150,170p crates/engine/src/modifiers.rs\", \"description\": \"Read pick_persona a\u2026\n- Bash: {\"command\": \"sed -n 275,290p crates/shared/tests/bots_persona.rs; git grep -n \\\"R645\\\\b\\\\|R0645\\\" -- spec/rulings/R0645.md | head -3; sed -n 1,12p spec/rulings/R0645.md 2>/dev/null; git grep -n \\\"AI_\u2026\n- Bash: {\"command\": \"sed -n 80,135p crates/cards/src/lib.rs; for n in flavour_json chinese_terms_json; do git grep -n -w $n -- crates | grep -v \\\"^crates/cards/src/lib.rs\\\"; done\", \"description\": \"Read cards\u2026\n- Bash: {\"command\": \"git grep -n \\\"challenges_expire\\\" -- crates docs spec | head; grep -n \\\"fn s7_challenges_open_close_accept_and_lapse\\\" crates/server/tests/store/contract.rs\", \"description\": \"Locate chal\u2026\n- Bash: {\"command\": \"sed -n 8335,8372p crates/server/tests/store/contract.rs; sed -n 2890,2902p crates/server/src/db/store.rs; sed -n 4638,4665p crates/server/src/db/fake.rs; sed -n 7558,7585p crates/server/\u2026\n- Bash: {\"command\": \"git grep -n '\\\"challenges.expire\\\"\\\\|challenges\\\\.expire' -- crates | head; grep -n \\\"challenges_expire\\\\|fn challenges_purge\\\" crates/server/src/db/store.rs crates/server/src/db/fake.rs\u2026\n- Bash: {\"command\": \"sed -n 1604,1609p crates/server/src/actor/match_actor.rs; sed -n 1018,1023p crates/server/src/duos/actor.rs; sed -n 198,209p crates/engine/tests/rules/mana.rs; grep -n \\\"match_id,$\\\" cra\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3672/.bot-plan.md\", \"content\": \"## Goal\\n\\nDo the 2026-11-11 code audit (after #3462) as one pull request. It removes 13 items that nothing uses, in f\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; grep -n \\\"sed -n\\\\|crates/run/src/lib.rs\\\" /dev/null; sed -n 1352,1358p crates/run/src/lib.rs\", \"description\": \"Count plan words and check run_score line numbers\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn run_score\\\\b\\\\|pub fn run_score(\\\" crates/run/src/lib.rs\", \"description\": \"Find run_score line\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3672/.bot-plan.md\", \"old_string\": \"exactly as `run_score` does now (:1356-1368)\", \"new_string\": \"exactly as `run_score` does now\u2026\n- said: ## Goal Do the 2026-11-11 code audit (after #3462) as one pull request. It removes 13 items that nothing uses, in five areas: Rust (engine, server), web, admin. It merges nine duplicated pieces of logic (server, web, run/tools, engine, tests). It lists every zombie route, page, WASM export and sock\u2026"
       },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
-      "owner": "",
-      "owner_since": "2026-11-11T04:39:22Z",
-      "owner_why": "released from its hold: `claude-8` has no runner free where it runs",
+      "live": "building",
+      "owner": "claude-7",
+      "owner_since": "2026-11-11T04:57:30Z",
+      "owner_why": "it took it up; released from its hold: `claude-8` has no runner free where it runs",
       "pending_request": false,
       "planned_at": "2026-11-11T04:36:51Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
       "planned_by_id": "claude-8",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-8",
-      "run_id": "42956648122",
+      "provider": "claude-7",
+      "run_id": "pending:fe872273-1794373026",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-11T04:02:46Z",
+      "started_at": "2026-11-11T04:57:30Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 6786357282
@@ -18961,9 +18960,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T04:56:54Z",
+    "at": "2026-11-11T04:57:30Z",
     "url": "",
-    "what": "build #3550 on muse"
+    "what": "build #3672 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-11T04:46:04Z",
