@@ -14315,6 +14315,13 @@
     "3513": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "42950203173",
+        "model": "sonnet",
+        "provider": "claude-8",
+        "since": "2026-11-11T03:25:22Z",
+        "until": "2026-11-11T03:55:22Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
