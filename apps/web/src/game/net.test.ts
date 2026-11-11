@@ -4,7 +4,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ActionBody, CombatForecast, PlayerView } from "@jackioh/shared";
-import { POST_GAME_FRAME_VERSION, SPECTATOR_EMOTE_HAND_SIZE, WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
+import { MATCH_OVER_CLOSE_CODE, POST_GAME_FRAME_VERSION, SPECTATOR_EMOTE_HAND_SIZE, WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
 import { DEFAULT_CARD_COSMETICS, cosmeticsOf, type CardCosmetics, type CosmeticKind } from "../cards/cosmetics.ts";
 import { socketProtocols, tokenFromProtocols } from "../net/socketProtocols.ts";
@@ -854,6 +854,22 @@ describe("reconnect", () => {
     expect(h.client.snapshot().connection).toBe("closed");
     expect(h.client.snapshot().view?.turn).toBe(4);
     expect(h.pending()).toBe(0);
+  });
+
+  it("R3694000 a finished match's close (MATCH_OVER_CLOSE_CODE) is final: no reconnect, no error, the last view kept", () => {
+    const h = connected();
+    h.socket().deliver({ type: "view", view: baseView({ turn: 4, result: { winner: "p1", reason: "hero-death" } }) });
+    h.socket().drop(MATCH_OVER_CLOSE_CODE, "the match is over");
+    expect(h.client.snapshot().connection).toBe("closed");
+    expect(h.client.snapshot().error).toBeNull();
+    expect(h.client.snapshot().view?.turn).toBe(4);
+    expect(h.pending()).toBe(0);
+
+    // A wake long after opens nothing either.
+    h.now(SILENCE_MS + 1);
+    h.wake();
+    h.runTimers();
+    expect(h.sockets).toHaveLength(1);
   });
 
   it("close() stops the reconnect and the socket", () => {

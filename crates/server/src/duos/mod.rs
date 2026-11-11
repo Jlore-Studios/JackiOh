@@ -252,7 +252,7 @@ pub async fn sweep(app: &Arc<App>) -> Result<(), StoreError> {
         tracing::info!(event = "duos.rooms.reaped", count = reaped);
     }
     let held = registry(app);
-    held.reap_finished().await;
+    held.reap_finished(now).await;
     let live = one_tx!(app.db, |t| t.duos_matches_live().await?)?;
     for match_id in live {
         if held.has(&match_id) {

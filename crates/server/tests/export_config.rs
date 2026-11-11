@@ -1,6 +1,6 @@
 //! Exports `crates/server/src/config.rs` constants to `apps/web/src/wire/serverConfig.ts` (SURFACE §5.1, §10.4).
 //! Ensures client reads server constants (CLAUDE.md rule 9).
-//! Tracks: R767, R1432, R1435, R1441, R1442, R757000, R757001, R768, R2101000, R2990001, R2990002, R3207000, R3207001, R3213000.
+//! Tracks: R767, R1432, R1435, R1441, R1442, R757000, R757001, R768, R2101000, R2990001, R2990002, R3207000, R3207001, R3213000, R3694000.
 
 use serde_json::{Value, json};
 
@@ -130,6 +130,7 @@ fn constants() -> Vec<(&'static str, Value)> {
         ),
         ("MATCH_CEILING_MS", json!(c::MATCH_CEILING_MS)),
         ("MATCH_FOUND_NAV_DELAY_MS", json!(c::MATCH_FOUND_NAV_DELAY_MS)),
+        ("MATCH_OVER_CLOSE_CODE", json!(c::MATCH_OVER_CLOSE_CODE)),
         ("MAX_SAVED_DECKS", json!(c::MAX_SAVED_DECKS)),
         ("MAX_SAVED_TRIOS", json!(c::MAX_SAVED_TRIOS)),
         ("MIN_ACCOUNT_AGE_YEARS", json!(c::MIN_ACCOUNT_AGE_YEARS)),
@@ -415,8 +416,9 @@ fn every_name_is_listed_once() {
         // #3212: PACKS_OPEN_ALL_MAX and DECK_SYNC_ITEMS_MAX (R3212000, R3212001).
         // #3213: POST_GAME_FRAME_VERSION (R3213000).
         // #3335: FLEET_TRACK_LEVELS and FLEET_TRACK_XP_DAILY_MAX (R3335001).
+        // #3694: MATCH_OVER_CLOSE_CODE (R3694000).
         listed,
-        87 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6 + 6 + 4 + 7 + 2 + 2 + 2 + 1 + 2,
+        87 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6 + 6 + 4 + 7 + 2 + 2 + 2 + 1 + 2 + 1,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
@@ -441,7 +443,7 @@ fn every_name_is_listed_once() {
          and #3013's PROFICIENCY_LEVEL_PLAYS and PROFICIENCY_LEVELS (R3013000), and #3207's \
          QUEUE_POPULATION_POLL_SECONDS and LIVE_GAME_POLL_SECONDS (R3207000, R3207001), and #3212's \
          PACKS_OPEN_ALL_MAX and DECK_SYNC_ITEMS_MAX (R3212000, R3212001), and #3213's \
-         POST_GAME_FRAME_VERSION (R3213000)"
+         POST_GAME_FRAME_VERSION (R3213000), and #3694's MATCH_OVER_CLOSE_CODE (R3694000)"
     );
 }
 

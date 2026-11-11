@@ -1114,11 +1114,6 @@ mod rematch_presence {
         assert!(app.matches.reap_finished(window_end).await.is_empty());
         assert_eq!(status(&app, &token_a, &finished).await.1["opponentHere"], true);
 
-        // Past it, an open socket still holds the actor, and so the opponent's presence.
-        assert!(app.matches.reap_finished(window_end + 1).await.is_empty());
-        assert_eq!(status(&app, &token_a, &finished).await.1["opponentHere"], true);
-        assert!(p1.is_open() && p2.is_open());
-
         // The sockets close, and the status already reads nobody here with A's offer standing.
         p1.transport_closed();
         p2.transport_closed();
@@ -1147,8 +1142,9 @@ mod rematch_presence {
         assert_ne!(created["matchId"], Value::Null);
     }
 
-    /// The offers' sweep follows the actor's: an offer past its window stays while an open socket
-    /// holds the finished match, and goes with the actor once the sockets close.
+    /// The offers' sweep follows the actor's: an offer past its window stays while the finished match
+    /// is held, and goes with the actor, which the reaper lets go past its window with both sockets
+    /// still open, closing them (R3694000).
     #[tokio::test(start_paused = true)]
     async fn an_offer_outlives_its_window_while_the_finished_match_is_held() {
         let app = test_app().await;
@@ -1187,19 +1183,16 @@ mod rematch_presence {
         offer(&app, &token_a, &finished, STAKE_NORMAL).await;
         let late = window_end + REMATCH_OFFER_TTL_MS;
 
-        // Both sockets open: the actor stays, and so does the offer past its window.
-        assert!(app.matches.reap_finished(late).await.is_empty());
+        // While the actor is held, so is the offer past its window.
         assert_eq!(sweep_rematch_offers(&app, late), 0);
         assert_eq!(
             status(&app, &token_a, &finished).await.1["youOffered"],
             json!(STAKE_NORMAL)
         );
 
-        // The sockets close, the reaper drops the actor, and the offer goes with it.
-        p1.transport_closed();
-        p2.transport_closed();
-        settle().await;
+        // The reaper drops the actor, closing both sockets still open, and the offer goes with it.
         assert_eq!(app.matches.reap_finished(late).await, vec![finished.clone()]);
+        assert!(!p1.is_open() && !p2.is_open());
         assert_eq!(sweep_rematch_offers(&app, late), 1);
         assert_eq!(rematch_offer_count(&app), 0);
     }
