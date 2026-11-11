@@ -913,16 +913,25 @@
 }
 
 /* R3345000: a Mythic's frame in hand carries a quiet mark that it can be held: a slow edge shimmer in its own
-   colours (the rarity's violet, sky and mint), not Radiant's gold. It runs in the motion gate below, still under Reduce motion. */
+   colours (the rarity's violet, sky and mint), not Radiant's gold. It runs in the motion gate below, still under Reduce motion.
+   #3674: each step also casts the glow at 0%, as wide as the widest step: it draws nothing but holds the face's painted
+   extent still. An extent that grows and shrinks makes the browser sort the whole page into its layers again every
+   frame, which a throttled phone could not afford. */
 @keyframes cf-mythic-hand-shimmer {
   0% {
-    box-shadow: 0 0 4px 1px color-mix(in srgb, var(--pal-violet-300) 35%, transparent);
+    box-shadow:
+      0 0 4px 1px color-mix(in srgb, var(--pal-violet-300) 35%, transparent),
+      0 0 6px 2px color-mix(in srgb, var(--pal-sky-300) 0%, transparent);
   }
   50% {
-    box-shadow: 0 0 6px 2px color-mix(in srgb, var(--pal-sky-300) 35%, transparent);
+    box-shadow:
+      0 0 6px 2px color-mix(in srgb, var(--pal-sky-300) 35%, transparent),
+      0 0 6px 2px color-mix(in srgb, var(--pal-sky-300) 0%, transparent);
   }
   100% {
-    box-shadow: 0 0 4px 1px color-mix(in srgb, var(--pal-green-200) 35%, transparent);
+    box-shadow:
+      0 0 4px 1px color-mix(in srgb, var(--pal-green-200) 35%, transparent),
+      0 0 6px 2px color-mix(in srgb, var(--pal-sky-300) 0%, transparent);
   }
 }
 
