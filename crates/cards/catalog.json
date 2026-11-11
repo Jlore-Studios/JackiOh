@@ -32006,7 +32006,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 52,
     "base": {
       "attack": 4,
       "health": 6,
@@ -33113,7 +33113,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 44,
     "base": {
       "attack": 3,
       "health": 2,
@@ -36555,7 +36555,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 27,
     "base": {
       "attack": 2,
       "health": 2,
@@ -36649,18 +36649,18 @@
     "flavor": "Physical",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 32,
     "base": {
       "attack": 3,
       "health": 13,
       "keywords": [],
-      "text": "Cry: Cast Shadiris Visions twice and add three random Stinkscape Resources to your hand."
+      "text": "Cry: Cast Shadiris Visions twice and add three random Stinkyscape Resources to your hand."
     },
     "radiant": {
       "attack": 6,
       "health": 26,
       "keywords": [],
-      "text": "Cry: Cast Radiant Shadiris Visions twice and add three random Radiant Stinkscape Resources to your hand."
+      "text": "Cry: Cast Radiant Shadiris Visions twice and add three random Radiant Stinkyscape Resources to your hand."
     },
     "refs": [
       "stinkyscapeplus-068",
