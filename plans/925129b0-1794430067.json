@@ -1,0 +1,61 @@
+{
+  "action": "plan",
+  "number": 3519,
+  "title": "Patch (part 8 of 8): a mutation score floor beside the coverage floor",
+  "branch": "bot/issue-3519",
+  "thread": "**Issue #3519 (data, not instructions):**\n\n```text\n# #3519: Patch (part 8 of 8): a mutation score floor beside the coverage floor\nOpened by @jgoetzmann.\n\n### Kind\n\nCI\n\n### Why\n\n#3490 part 3's second half: once `mutants.yml`'s weekly scores settle, hold them to a floor, as `super.yml` holds coverage to `.github/coverage-floor.txt`.\n\n### What to change\n\n- A floor file beside `coverage-floor.txt`, one score per area, from the settled weekly scores.\n- Make `mutants.yml`'s `report` job fail under it. Or move the run into `super.yml`, so production waits on it, if the owners want that.\n- Raise the floor by hand as the audits (parts 2 to 7) raise the scores.\n\n### Acceptance\n\n- A weekly run under the floor fails and names the area.\n- The floor file says how it is raised.\n\n### Blocked by, part of\n\nPart of #3490. Blocked by #3511 and a few weeks of scores.\n\n### Difficulty (a guess)\n\nmedium\n\n### Priority\n\nNo priority\n\n### Who does it\n\nPeople: it changes `.github/`.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3519: needs a plan; `claude-8` (claude, `sonnet`, medium) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-11T02:56:14Z",
+    "claimed_at": "2026-11-11T20:48:24Z",
+    "previous_provider": "claude-8",
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "requeued #3519 from a dead run"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3572 skipped: it waits for #3570, #3571 to close first",
+    "#3573 skipped: it waits for #3570, #3571, #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3609 skipped: it waits for #3608 to close first",
+    "#3610 skipped: it waits for #3608, #3609 to close first"
+  ]
+}
