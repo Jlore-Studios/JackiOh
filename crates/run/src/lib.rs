@@ -29,17 +29,17 @@ use jackioh_engine::wire::{CardType, PrintedRarity, SINGLE_PLAYER_SETS, SetName}
 use serde::{Deserialize, Serialize};
 
 use crate::config::{
-    RUN_ACT_ROWS, RUN_ACTS, RUN_ARTIFACT_LEVEL_MAX, RUN_ARTIFACT_PERCENT, RUN_ARTIFACT_PRICE,
+    RUN_ACT_ROWS, RUN_ACT_TIERS, RUN_ACTS, RUN_ARTIFACT_LEVEL_MAX, RUN_ARTIFACT_PERCENT, RUN_ARTIFACT_PRICE,
     RUN_BUFF_TICKETS, RUN_CAMPFIRE_MAX_HP, RUN_CAMPFIRE_REMOVE, RUN_CARD_PRICE, RUN_CHEST_ARTIFACT_PERCENT,
     RUN_CHEST_COINS, RUN_CHEST_TICKETS, RUN_COINS, RUN_DECK_MAX, RUN_ELITE_PERCENT, RUN_ENEMY_DECK_SIZE,
-    RUN_ENEMY_HEALTH, RUN_GHOST_PERCENT, RUN_KEEP, RUN_KEEP_MAX, RUN_LEVEL_EMBERS, RUN_LEVEL_TICKETS,
-    RUN_MAP_COLUMNS, RUN_MAP_PATHS, RUN_MAX_HP, RUN_MINI_BOSS_DROP_TIER, RUN_PACK_SIZE, RUN_PRESET_DECKS,
-    RUN_RADIANT_TICKETS, RUN_REMOVE_PRICE, RUN_ROUTE_FIGHTS_MAX, RUN_ROUTE_FIGHTS_MIN, RUN_ROUTE_TILES_MIN,
-    RUN_SCORE_CARD_DRAWN, RUN_SCORE_CURSE_POINT_PERCENT, RUN_SCORE_DAMAGE, RUN_SCORE_FIGHT,
-    RUN_SCORE_FINAL_BOSS_PERCENT, RUN_SCORE_HEALING, RUN_SCORE_MINI_BOSS_PERCENT, RUN_SCORE_PER_EMBER,
-    RUN_SCORE_ROW, RUN_SEED_LENGTH, RUN_SHOP_ARTIFACTS, RUN_SHOP_CARDS, RUN_SHRINE_OFFERS, RUN_SLOT_LADDER,
-    RUN_STARTER_ARTIFACT_POINTS, RUN_STARTER_ARTIFACTS_MAX, RUN_STARTER_SIZE, RUN_TICKETS, RUN_TIER_POINTS,
-    RUN_TILE_WEIGHTS, RUN_WIN_MAX_HP,
+    RUN_GHOST_PERCENT, RUN_KEEP, RUN_KEEP_MAX, RUN_LEVEL_EMBERS, RUN_LEVEL_TICKETS, RUN_MAP_COLUMNS,
+    RUN_MAP_PATHS, RUN_MAX_HP, RUN_MINI_BOSS_DROP_TIER, RUN_PACK_SIZE, RUN_PRESET_DECKS, RUN_RADIANT_TICKETS,
+    RUN_REMOVE_PRICE, RUN_ROUTE_FIGHTS_MAX, RUN_ROUTE_FIGHTS_MIN, RUN_ROUTE_TILES_MIN, RUN_SCORE_CARD_DRAWN,
+    RUN_SCORE_CURSE_POINT_PERCENT, RUN_SCORE_DAMAGE, RUN_SCORE_FIGHT, RUN_SCORE_FINAL_BOSS_PERCENT,
+    RUN_SCORE_HEALING, RUN_SCORE_MINI_BOSS_PERCENT, RUN_SCORE_PER_EMBER, RUN_SCORE_ROW, RUN_SEED_LENGTH,
+    RUN_SHOP_ARTIFACTS, RUN_SHOP_CARDS, RUN_SHRINE_OFFERS, RUN_SLOT_LADDER, RUN_STARTER_ARTIFACT_POINTS,
+    RUN_STARTER_ARTIFACTS_MAX, RUN_STARTER_SIZE, RUN_TICKETS, RUN_TIER_POINTS, RUN_TILE_WEIGHTS,
+    RUN_WIN_MAX_HP,
 };
 
 // Content: data the caller passes in
@@ -97,7 +97,7 @@ pub struct RunEnemyDef {
     /// Its own cards (a boss's boss cards); the pool deals the rest of `RUN_ENEMY_DECK_SIZE`.
     #[serde(default)]
     pub deck: Vec<String>,
-    /// The artifacts it carries into the fight: Looming or Overwhelming Presence, a boss's own (DR5).
+    /// The artifacts it carries into the fight, a boss's own (DR5); none changes the fight (R3586001).
     #[serde(default)]
     pub artifacts: Vec<String>,
     /// A boss's drop (DR6). The final boss's is its own Unobtainable artifact. A mini-boss without
@@ -153,8 +153,8 @@ pub struct RunPassiveDef {
     /// A player's artifact's tier; none for an enemy's artifact or a blessing.
     #[serde(default)]
     pub tier: Option<RunTier>,
-    /// What it does on the map. A Combat or Enemy artifact has none: Looming and Overwhelming Presence
-    /// act as `run_fight_setup`'s handicaps, and a Combat artifact acts through its `fight_effect`.
+    /// What it does on the map. A Combat or Enemy artifact has none: a Combat artifact acts through its
+    /// `fight_effect`, and an Enemy one changes nothing (R3586001).
     #[serde(default)]
     pub effect: Option<RunEffect>,
     /// R2922001: what a Combat artifact does in a fight, once per level; no other kind's is read.
@@ -456,7 +456,11 @@ pub struct RunNode {
 pub struct RunEnemy {
     pub id: String,
     pub name: String,
-    pub hero_health: i32,
+    /// R3586000: its tier, from 1, set by its row: the row of `RUN_TIERS` (of `RUN_ELITE_TIERS` for
+    /// an elite) its fight plays (R3586001). A fight kept before tiers (R3476000) holds none and reads
+    /// 0, which no table holds; it resumes on its own kept setup.
+    #[serde(default)]
+    pub tier: usize,
     pub deck: Vec<String>,
     pub artifacts: Vec<String>,
 }
@@ -1011,13 +1015,14 @@ fn roll_reward_artifact(
     }
 }
 
-fn fight_node(content: &RunContent, kind: RunNodeKind, held: &[&str], rng: &mut Rng) -> RunNode {
+/// A fight node of `kind` at `tier` (R3586000): its enemy, its deck dealt, and a boss's drop.
+fn fight_node(content: &RunContent, kind: RunNodeKind, tier: usize, held: &[&str], rng: &mut Rng) -> RunNode {
     if kind == RunNodeKind::Ghost {
         // DR5: a ghost is a player's deck from a death near here; until snapshots exist, a random one.
         let enemy = RunEnemy {
             id: "ghost".into(),
             name: "Ghost".into(),
-            hero_health: RUN_ENEMY_HEALTH.of(kind),
+            tier,
             deck: deal_deck(content, &[], rng),
             artifacts: Vec::new(),
         };
@@ -1035,7 +1040,7 @@ fn fight_node(content: &RunContent, kind: RunNodeKind, held: &[&str], rng: &mut 
     let enemy = RunEnemy {
         id: def.id.clone(),
         name: def.name.clone(),
-        hero_health: RUN_ENEMY_HEALTH.of(kind),
+        tier,
         deck: deal_deck(content, &def.deck, rng),
         artifacts: def.artifacts.clone(),
     };
@@ -1081,6 +1086,18 @@ struct Spot {
 /// Whether row `row` of the map is a boss's: the last of each act.
 fn is_boss_row(row: usize) -> bool {
     (row + 1).is_multiple_of(RUN_ACT_ROWS + 1)
+}
+
+/// R3586000: the tier of a fight on map row `row`, from 1: act `a`'s rows spread evenly over its
+/// `RUN_ACT_TIERS` tiers from `a × (RUN_ACT_TIERS + 1) + 1`, and its boss's row one tier above.
+fn row_tier(row: usize) -> usize {
+    let (act, at) = (row / (RUN_ACT_ROWS + 1), row % (RUN_ACT_ROWS + 1));
+    let first = act * (RUN_ACT_TIERS + 1) + 1;
+    if at == RUN_ACT_ROWS {
+        first + RUN_ACT_TIERS
+    } else {
+        first + at * RUN_ACT_TIERS / RUN_ACT_ROWS
+    }
 }
 
 /// Whether two edges between the same two rows cross, each as its column below and its column above.
@@ -1262,8 +1279,8 @@ fn fight_kind(rng: &mut Rng) -> RunNodeKind {
 /// DR4, R3583000: the whole map, dealt at the start: `RUN_ACTS` acts of `RUN_ACT_ROWS` rows from
 /// seeded walks, each act ending at its boss's row of one node, the fights placed so every route holds
 /// the bounds (R3583001), then each node's kind and what it holds: a fight's an Elite at
-/// `RUN_ELITE_PERCENT`, else a Ghost at `RUN_GHOST_PERCENT`, else a Fight, and a tile's by
-/// `RUN_TILE_WEIGHTS`.
+/// `RUN_ELITE_PERCENT`, else a Ghost at `RUN_GHOST_PERCENT`, else a Fight, each enemy at its row's
+/// tier (R3586000, which draws nothing), and a tile's by `RUN_TILE_WEIGHTS`.
 fn deal_map(content: &RunContent, held: &[&str], rng: &mut Rng) -> Vec<Vec<RunNode>> {
     let mut spots = lay_out(rng);
     place_fights(&mut spots, rng);
@@ -1278,9 +1295,9 @@ fn deal_map(content: &RunContent, held: &[&str], rng: &mut Rng) -> Vec<Vec<RunNo
                 } else {
                     RunNodeKind::MiniBoss
                 };
-                fight_node(content, boss, held, rng)
+                fight_node(content, boss, row_tier(r), held, rng)
             } else if spot.fight {
-                fight_node(content, fight_kind(rng), held, rng)
+                fight_node(content, fight_kind(rng), row_tier(r), held, rng)
             } else {
                 tile_node(content, weighted(&RUN_TILE_WEIGHTS, rng), rng)
             };

@@ -2,11 +2,11 @@
 
 use super::*;
 use crate::config::{
-    RUN_CAMPFIRE_MAX_HP, RUN_DECK_MAX, RUN_LOOMING_PRESENCE, RUN_OVERWHELMING_PRESENCE, RUN_STARTER_CARDS,
+    RUN_ACT_TIERS, RUN_CAMPFIRE_MAX_HP, RUN_DECK_MAX, RUN_ELITE_TIERS, RUN_STARTER_CARDS, RUN_TIERS,
     RUN_WIN_MAX_HP,
 };
 use jackioh_engine::catalog::{deckable, registered_catalog};
-use jackioh_engine::config::{AI_DIFFICULTY, HUMAN_HANDICAP, Handicap, LIBRARY_CAP};
+use jackioh_engine::config::{AI_DIFFICULTY, DRAW_EVERY_TURN, HUMAN_HANDICAP, Handicap, LIBRARY_CAP};
 use jackioh_engine::reduce::{begin_game, legal_actions, reduce, seat_to_act};
 use jackioh_engine::replay::ReplayInput;
 use jackioh_engine::state::{CreateGameOptions, SetupKind, create_recorded_game, validate_setup};
@@ -172,52 +172,183 @@ fn b7_a_fights_setup_answers_only_in_a_fight_with_the_runs_hp_deck_and_marks() {
 }
 
 #[test]
-fn b8_the_enemys_handicap_is_its_presences_tier_with_its_deck_and_health() {
-    // B8
+fn b8_r3586001_the_enemys_handicap_and_health_are_its_tiers_row_an_elites_its_own() {
+    // B8, R3586001: the enemy plays its tier's row, hero health included, with its deck's length: an
+    // elite its row of `RUN_ELITE_TIERS`, every other fight (ghosts and bosses too) its row of
+    // `RUN_TIERS`. A boss's own artifact changes nothing.
     let content = catalog_content();
-    let mut state = fight_at(&content, 0);
+    let state = fight_at(&content, 0);
+    let kind = run_node(&state).unwrap().kind;
     let dealt = run_enemy(&state).unwrap().clone();
+    assert_eq!(dealt.tier, 1, "row 0 is tier 1");
+    let row = if kind == RunNodeKind::Elite {
+        RUN_ELITE_TIERS[0].1
+    } else {
+        RUN_TIERS[0]
+    };
     let setup = run_fight_setup(&state, &content).unwrap();
     assert_eq!(setup.enemy_deck.len(), RUN_ENEMY_DECK_SIZE);
     assert_eq!(setup.enemy_deck, dealt.deck);
-    assert_eq!(setup.enemy_handicap.deck_size as usize, RUN_ENEMY_DECK_SIZE);
-    assert_eq!(setup.enemy_handicap.hero_health, Some(dealt.hero_health));
+    assert_eq!(
+        setup.enemy_handicap,
+        Handicap {
+            deck_size: RUN_ENEMY_DECK_SIZE as i32,
+            ..row
+        },
+        "{kind:?}"
+    );
     assert_eq!(setup.enemy, dealt);
 
-    let deck: Vec<String> = content.pool[..7].iter().map(|c| c.id.clone()).collect();
-    let tiers = [
-        (Vec::new(), AI_DIFFICULTY.easy),
-        (vec![RUN_LOOMING_PRESENCE.to_string()], AI_DIFFICULTY.medium),
-        (
-            vec![
-                RUN_OVERWHELMING_PRESENCE.to_string(),
-                "temp-final-relic".to_string(),
-            ],
-            AI_DIFFICULTY.hard,
-        ),
-    ];
-    let (row, col) = (state.row.unwrap(), state.col);
-    for (artifacts, tier) in tiers {
-        let enemy = RunEnemy {
-            id: "test-enemy".into(),
-            name: "Test Enemy".into(),
-            hero_health: 40,
-            deck: deck.clone(),
-            artifacts,
-        };
-        state.map[row][col].enemy = Some(enemy.clone());
-        let setup = run_fight_setup(&state, &content).unwrap();
+    let known = known_fight(&content, &["temp-final-relic"]);
+    let deck = run_enemy(&known).unwrap().deck.clone();
+    for kind in [
+        RunNodeKind::Fight,
+        RunNodeKind::Ghost,
+        RunNodeKind::MiniBoss,
+        RunNodeKind::Boss,
+    ] {
+        for (index, row) in RUN_TIERS.iter().enumerate() {
+            let tier = index + 1;
+            let setup = run_fight_setup(&at_tier(&known, kind, tier), &content).unwrap();
+            assert_eq!(
+                setup.enemy_handicap,
+                Handicap { deck_size: 7, ..*row },
+                "{kind:?} at tier {tier}"
+            );
+            assert_eq!(setup.enemy_deck, deck);
+            assert_eq!(setup.enemy.tier, tier);
+            assert_eq!(engine_takes(&setup), Ok(()), "{kind:?} at tier {tier}");
+        }
+    }
+    for (tier, row) in RUN_ELITE_TIERS {
+        let setup = run_fight_setup(&at_tier(&known, RunNodeKind::Elite, tier), &content).unwrap();
         assert_eq!(
             setup.enemy_handicap,
-            Handicap {
-                deck_size: 7,
-                hero_health: Some(40),
-                ..tier
-            }
+            Handicap { deck_size: 7, ..row },
+            "an elite at tier {tier}"
         );
-        assert_eq!(setup.enemy_deck, deck);
-        assert_eq!(setup.enemy, enemy);
+        assert_eq!(engine_takes(&setup), Ok(()), "an elite at tier {tier}");
     }
+
+    // A tier its table lacks sets up no fight: an elite never stands on a boss's tier, and a fight kept
+    // before tiers (R3476000) reads 0.
+    let boss_tier = RUN_ACT_TIERS + 1;
+    for (kind, tier) in [
+        (RunNodeKind::Elite, boss_tier),
+        (RunNodeKind::Elite, 0),
+        (RunNodeKind::Fight, 0),
+        (RunNodeKind::Fight, RUN_TIERS.len() + 1),
+    ] {
+        assert_eq!(
+            run_fight_setup(&at_tier(&known, kind, tier), &content),
+            None,
+            "{kind:?} at tier {tier}"
+        );
+    }
+}
+
+#[test]
+fn r3586001_tiers_5_10_and_15_are_easys_mediums_and_hards_resources() {
+    // R3586001: each act's boss tier is a practice tier's resources (R180), read from the engine's own
+    // constants, with its own hero health.
+    assert_eq!(RUN_TIERS.len(), 15);
+    assert_eq!(RUN_TIERS.len(), RUN_ACTS * (RUN_ACT_TIERS + 1));
+    let bosses = [
+        (RUN_ACT_TIERS + 1, AI_DIFFICULTY.easy),
+        (2 * (RUN_ACT_TIERS + 1), AI_DIFFICULTY.medium),
+        (3 * (RUN_ACT_TIERS + 1), AI_DIFFICULTY.hard),
+    ];
+    assert_eq!(bosses.map(|(tier, _)| tier), [5, 10, 15]);
+    for (tier, difficulty) in bosses {
+        let row = RUN_TIERS[tier - 1];
+        assert!(row.hero_health.is_some(), "tier {tier} sets its health");
+        assert_eq!(
+            Handicap {
+                hero_health: difficulty.hero_health,
+                ..row
+            },
+            difficulty,
+            "tier {tier}"
+        );
+    }
+    for (index, row) in RUN_TIERS.iter().enumerate() {
+        assert!(
+            row.hero_health.is_some_and(|health| health > 0),
+            "tier {} sets a health",
+            index + 1
+        );
+    }
+}
+
+#[test]
+fn r3586001_every_elite_row_stands_on_a_normal_tier_and_is_stronger() {
+    // R3586001: one elite row for each tier an elite can stand on (every tier but a boss's), rising,
+    // each at least as strong as that tier's normal row in every field and with more health.
+    let tiers: Vec<usize> = RUN_ELITE_TIERS.iter().map(|(tier, _)| *tier).collect();
+    let expected: Vec<usize> = (1..=RUN_TIERS.len())
+        .filter(|tier| !tier.is_multiple_of(RUN_ACT_TIERS + 1))
+        .collect();
+    assert_eq!(tiers, expected);
+    let opening = |h: &Handicap| h.extra_opening_cards - h.fewer_opening_cards.unwrap_or(0);
+    let every = |h: &Handicap| h.draw_every.unwrap_or(DRAW_EVERY_TURN);
+    for (tier, elite) in &RUN_ELITE_TIERS {
+        let normal = &RUN_TIERS[tier - 1];
+        assert!(
+            elite.hero_health.unwrap() > normal.hero_health.unwrap(),
+            "tier {tier}: health"
+        );
+        assert!(elite.mana_cap >= normal.mana_cap, "tier {tier}: mana cap");
+        assert!(elite.mana_bonus >= normal.mana_bonus, "tier {tier}: mana bonus");
+        assert!(opening(elite) >= opening(normal), "tier {tier}: opening");
+        assert!(
+            elite.extra_draws_per_turn >= normal.extra_draws_per_turn,
+            "tier {tier}: extra draws"
+        );
+        assert!(every(elite) <= every(normal), "tier {tier}: draws every");
+    }
+}
+
+#[test]
+fn r3586001_a_curse_strengthens_an_elite_on_top_of_its_tier() {
+    // R3586001, R2922001: an elite's row first, then each curse taken once.
+    let content = catalog_content();
+    let tier = 7;
+    let row = RUN_ELITE_TIERS
+        .iter()
+        .find(|(at, _)| *at == tier)
+        .map(|(_, row)| *row)
+        .unwrap();
+    let state = cursed(
+        &at_tier(&known_fight(&content, &[]), RunNodeKind::Elite, tier),
+        &["temp-curse-1", "temp-curse-2", "temp-curse-3"],
+    );
+    assert_eq!(
+        run_fight_setup(&state, &content).unwrap().enemy_handicap,
+        Handicap {
+            deck_size: 7,
+            hero_health: row.hero_health.map(|health| health + 5),
+            extra_opening_cards: row.extra_opening_cards + 1,
+            mana_bonus: row.mana_bonus + 1,
+            mana_cap: row.mana_cap + 1,
+            ..row
+        }
+    );
+}
+
+#[test]
+fn r3586001_tier_ones_thin_opening_and_skipped_draws_reach_the_enemys_game() {
+    // R3586001, R3582000: tier 1's fewer opening cards and its turn draws every other turn are on the
+    // enemy's seat of the game its setup starts.
+    let content = catalog_content();
+    let setup = run_fight_setup(&known_fight(&content, &[]), &content).unwrap();
+    let row = RUN_TIERS[0];
+    assert!(row.fewer_opening_cards.is_some_and(|fewer| fewer > 0));
+    assert!(row.draw_every.is_some_and(|every| every > DRAW_EVERY_TURN));
+    let game = create_recorded_game(&fight_options(&setup));
+    let enemy = game.players[PlayerId::P2].handicap.expect("the enemy's handicap");
+    assert_eq!(enemy.fewer_opening_cards, row.fewer_opening_cards);
+    assert_eq!(enemy.draw_every, row.draw_every);
+    assert_eq!(Some(game.players[PlayerId::P2].hero.health), row.hero_health);
 }
 
 #[test]
@@ -579,17 +710,29 @@ fn with_deck_of(at: &RunState, deck: &RunState) -> RunState {
     }
 }
 
-/// `fight_at`'s first fight, its enemy one of known health and deck carrying `artifacts`.
+/// `fight_at`'s first fight, a plain fight whose enemy is one at tier 1 with a known deck carrying
+/// `artifacts`.
 fn known_fight(content: &RunContent, artifacts: &[&str]) -> RunState {
     let mut state = fight_at(content, 0);
     let (row, col) = (state.row.unwrap(), state.col);
+    state.map[row][col].kind = RunNodeKind::Fight;
     state.map[row][col].enemy = Some(RunEnemy {
         id: "test-enemy".into(),
         name: "Test Enemy".into(),
-        hero_health: 20,
+        tier: 1,
         deck: content.pool[..7].iter().map(|c| c.id.clone()).collect(),
         artifacts: artifacts.iter().map(|id| (*id).to_string()).collect(),
     });
+    state
+}
+
+/// `state` with the node stood on a `kind` of fight and its enemy at `tier`.
+fn at_tier(state: &RunState, kind: RunNodeKind, tier: usize) -> RunState {
+    let mut state = state.clone();
+    let (row, col) = (state.row.unwrap(), state.col);
+    let node = &mut state.map[row][col];
+    node.kind = kind;
+    node.enemy.as_mut().expect("a fight node has an enemy").tier = tier;
     state
 }
 
@@ -615,12 +758,11 @@ fn cursed(state: &RunState, curses: &[&str]) -> RunState {
     }
 }
 
-/// The plain enemy handicap of `known_fight`, under `tier`.
-fn known_enemy(tier: Handicap) -> Handicap {
+/// The plain enemy handicap of `known_fight`: tier 1's row with its deck's length (R3586001).
+fn known_enemy() -> Handicap {
     Handicap {
         deck_size: 7,
-        hero_health: Some(20),
-        ..tier
+        ..RUN_TIERS[0]
     }
 }
 
@@ -628,7 +770,7 @@ fn known_enemy(tier: Handicap) -> Handicap {
 fn r2922001_a_run_with_no_curse_and_no_combat_artifact_gets_the_setup_it_got_before() {
     // R2922001: with nothing that changes a fight, the setup is the one before curses and Combat
     // artifacts acted, field for field. An Economic artifact, a blessing and an enemy's own artifact
-    // other than Presence change no fight.
+    // change no fight.
     let content = catalog_content();
     let state = known_fight(&content, &[]);
     assert!(state.curses.is_empty() && state.artifacts.is_empty());
@@ -644,7 +786,7 @@ fn r2922001_a_run_with_no_curse_and_no_combat_artifact_gets_the_setup_it_got_bef
         human_deck,
         human_marks: Vec::new(),
         enemy_deck: enemy.deck.clone(),
-        enemy_handicap: known_enemy(AI_DIFFICULTY.easy),
+        enemy_handicap: known_enemy(),
         enemy,
     };
     assert_eq!(run_fight_setup(&state, &content), Some(before.clone()));
@@ -671,26 +813,26 @@ fn r2922001_each_curse_strengthens_the_enemy_by_its_effect_and_all_three_stack()
     let content = catalog_content();
     let state = known_fight(&content, &[]);
     let plain = run_fight_setup(&state, &content).unwrap();
-    let easy = known_enemy(AI_DIFFICULTY.easy);
+    let base = known_enemy();
     let health = Handicap {
-        hero_health: Some(25),
-        ..easy
+        hero_health: base.hero_health.map(|health| health + 5),
+        ..base
     };
     let cards = Handicap {
-        extra_opening_cards: easy.extra_opening_cards + 1,
-        ..easy
+        extra_opening_cards: base.extra_opening_cards + 1,
+        ..base
     };
     let mana = Handicap {
-        mana_bonus: easy.mana_bonus + 1,
-        mana_cap: easy.mana_cap + 1,
-        ..easy
+        mana_bonus: base.mana_bonus + 1,
+        mana_cap: base.mana_cap + 1,
+        ..base
     };
     let all = Handicap {
-        hero_health: Some(25),
-        extra_opening_cards: easy.extra_opening_cards + 1,
-        mana_bonus: easy.mana_bonus + 1,
-        mana_cap: easy.mana_cap + 1,
-        ..easy
+        hero_health: base.hero_health.map(|health| health + 5),
+        extra_opening_cards: base.extra_opening_cards + 1,
+        mana_bonus: base.mana_bonus + 1,
+        mana_cap: base.mana_cap + 1,
+        ..base
     };
     let cases = [
         (vec!["temp-curse-1"], health),
@@ -704,14 +846,15 @@ fn r2922001_each_curse_strengthens_the_enemy_by_its_effect_and_all_three_stack()
         assert_eq!(setup.human_handicap, plain.human_handicap, "{curses:?}");
     }
 
-    // After Presence: the crystal joins the tier's bonus and raises its cap.
-    for (presence, bonus, cap) in [(RUN_LOOMING_PRESENCE, 2, 6), (RUN_OVERWHELMING_PRESENCE, 2, 8)] {
-        let state = cursed(&known_fight(&content, &[presence]), &["temp-curse-3"]);
+    // After a boss's tier's row (R3586001): the crystal joins the row's bonus and raises its cap.
+    for (tier, kind) in [(10, RunNodeKind::MiniBoss), (15, RunNodeKind::Boss)] {
+        let row = RUN_TIERS[tier - 1];
+        let state = cursed(&at_tier(&state, kind, tier), &["temp-curse-3"]);
         let setup = run_fight_setup(&state, &content).unwrap();
         assert_eq!(
             (setup.enemy_handicap.mana_bonus, setup.enemy_handicap.mana_cap),
-            (bonus, cap),
-            "{presence}"
+            (row.mana_bonus + 1, row.mana_cap + 1),
+            "tier {tier}"
         );
     }
 }
@@ -814,7 +957,7 @@ fn r2922001_only_known_curses_and_held_combat_artifacts_count_and_never_below_no
             .unwrap()
             .enemy_handicap
             .hero_health,
-        Some(20)
+        known_enemy().hero_health
     );
 }
 
