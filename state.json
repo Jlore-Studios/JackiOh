@@ -14313,15 +14313,8 @@
       "verdict_rounds": 3
     },
     "3513": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "42950203173",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-11T03:25:22Z",
-        "until": "2026-11-11T03:55:22Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -14333,10 +14326,9 @@
         "reason": "planned on sonnet",
         "trail": "'3513' | head -20; git show --stat cc029ed3a9 | head -30; ls docs | head -50; ls crates/run crates/run/src crate\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; for c in 9f442eedca f6d805bf37 cc029ed3a9 48a8587363; do git merge-base --is-ancestor $c HEAD && echo \\\"$c in HEAD\\\" || echo \\\"$c NOT in HEAD\\\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; grep -rn \\\"3513\\\" --include=*.md -l . 2>/dev/null | grep -v node_modules | head -20; ls reviews | tail -5; ls docs/v0.4.0 | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; git branch -a --contains 9f442eedca; git log --oneline -3 origin/main 2>/dev/null; git log -1 --format=%H main\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; git show --stat 48a8587363 | head -40; git show --stat 317174aa76 | head -30; git show --stat 11274b4844 | head -30; git show --stat ee5f9ebf12\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; git ls-tree -r --name-only origin/_bot-journal | grep -i 3513 | head; git log origin/claude/upbeat-lamport-pn2n7j --oneline -8\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; which cargo-mutants; cargo mutants --version 2>&1 | head -2; ls target 2>/dev/null | head -3; sed -n 120,330p scripts/mutants.sh\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; timeout 60 cargo install cargo-mutants --locked --version 27.1.0 2>&1 | tail -5\", \"timeout\": 90000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; cargo mutants --list -p jackioh-shared --shard 6/21 > /tmp/s7.txt 2>/tmp/err.txt; wc -l /tmp/s7.txt; tail -3 /tmp/err.txt; cut -d: -f1 /tmp/s7.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; nproc; free -g | head -2; head -5 /tmp/s7.txt; grep -n \\\"shared\\\" .github/workflows/mutants.yml | head; ls crates/shared/tests\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; MUTANTS_JOBS=3 nohup sh scripts/mutants.sh shared 6 > /tmp/shard7.log 2>&1 &\\necho started\", \"run_in_background\": true}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; sed -n 330,420p scripts/mutants.sh; ls crates/shared/tests | wc -l; grep -n \\\"^fn \\\\|^pub fn \\\" crates/shared/src/economy/bars.rs | head -40; g\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; sleep 5; cat /tmp/shard7.log | tail -5; pgrep -f cargo-mutants | head -2; ls target/mutants/shared 2>/dev/null\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; grep -rln \\\"3490\\\" --include=*.md --include=*.yml --include=*.toml --include=*.sh . 2>/dev/null | grep -v node_modules | head; grep -n \\\"public\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; cat spec/rulings/R3349000.md | head -60; cat spec/pending/3514.md | head -20\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; grep -n \\\"pub const\\\" crates/run/src/config.rs | wc -l; grep -n \\\"pub const\\\" crates/run/src/config.rs | head -80; grep -n \\\"^pub fn\\\\|^ pub fn\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; grep -c \\\"RUN_DECK_MAX\\\\|RUN_KEEP_MAX\\\\|RUN_SEED_LENGTH\\\\|RUN_REMOVE_PRICE\\\\|RUN_STARTER_ARTIFACTS_MAX\\\\|RUN_ARTIFACT_LEVEL_MAX\\\" crates/run/sr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; ls spec | head -40; grep -c \\\"\\u00a715\\\" crates/run/src/tests.rs; sed -n 1,30p crates/run/src/tests.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; grep -n \\\"RUN_DECK_MAX\\\\|RUN_KEEP_MAX\\\\|RUN_KEEP\\\\b\\\\|RUN_STARTER_ARTIFACTS_MAX\\\\|RUN_ARTIFACT_LEVEL_MAX\\\\|RUN_STARTER_SIZE\\\\|RUN_SEED_LENGTH\\\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; grep -n \\\"RUN_DECK_MAX\\\\|RUN_KEEP_MAX\\\\|RUN_KEEP\\\\b\\\\|RUN_STARTER_ARTIFACTS_MAX\\\\|RUN_ARTIFACT_LEVEL_MAX\\\\|RUN_STARTER_SIZE\\\\|RUN_CAMPFIRE_REMO\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; grep -n \\\"fn .*seed\\\\|fn .*relic\\\\|fn .*artifact\\\" crates/run/src/tests.rs | head -30; tail -c 600 /tmp/shard7.log; wc -l target/mutants/shared\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; sleep 240; tail -c 300 target/mutants/shared/mutants.out/log/*.log 2>/dev/null | tail -5; ls target/mutants/shared/mutants.out/log | wc -l; wc \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; pkill -f cargo-mutants; pkill -f \\\"mutants.sh\\\"; sleep 2; pgrep -f cargo | head -3; git status --short | head; cat /tmp/s7.txt | sed 's/\\\\x1b\\\\\u2026\n- tool error: Exit code 144\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; git status --short | head -3; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/s7.txt | grep -o \\\"in [a-z_A-Z0-9:]*$\\\" | sort | uniq -c | sort -rn | head -40; \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; wc -l crates/shared/tests/economy.rs; grep -n \\\"fn forced_slot\\\\|fn slot_grant\\\\|fn pick_card\\\\|fn apply_pity\\\\|fn fleet_game_xp\\\\|fn fleet_vie\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; grep -n -i \\\"cite\\\\|cited\\\\|proven_in\\\" spec/README.md | head -20; grep -rn \\\"check\\\" crates/tools/README.md | grep -i spec | head -5\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3513; cat > /tmp/noassert.py <<'EOF'\\nimport re,sys\\nfor p in sys.argv[1:]:\\n s=open(p).read()\\n for m in re.finditer(r'#\\\\[test\\\\]\\\\s*\\\\n(?:\\\\s*#\\\\[\u2026\n- tool error: Exit code 1 crates/shared/tests/bots_cosmetics.rs r1834005_each_fitted_non_starter_of_a_kind_is_worn_at_its_share_the_second_as_the_first crates/shared/tests/glicko2.rs r603_the_papers_player_drawing\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3513/.bot-plan.md\", \"content\": \"DRAFT NOTES (planner, 2026-11-11)\\n- main has: run crate audit (#3593), shared shards 1-4 (#3642, #3657, #3665). Shard\u2026\n- said: **Goal.** Continue #3490's mutation audit of `crates/run` and `crates/shared`, which `main` has only partly done. The run crate (#3593) and `crates/shared`'s shards 1\u20134 (#3642, #3657, #3665) are on `main`. This pass takes `crates/shared`'s **shard 7/21** and then as many later shards as time allows\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-11T03:03:46Z",
       "owner_why": "it plans it",
@@ -14349,9 +14341,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-11T02:56:18Z",
       "requested_by": "an assignment",
-      "run_id": "42950203173",
+      "run_id": "pending:ecd2975e-1794367957",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-11T03:03:46Z",
+      "started_at": "2026-11-11T03:33:08Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -18620,9 +18612,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T03:32:25Z",
+    "at": "2026-11-11T03:33:08Z",
     "url": "",
-    "what": "build #3666 on claude-3"
+    "what": "build #3513 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-11T03:14:38Z",
