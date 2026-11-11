@@ -16533,15 +16533,16 @@
         "reason": "`claude-2` stops mid-call: 5-hour usage is 90%, at or over its 90% cap; it resets at 2026-11-12T02:10:00Z",
         "trail": "k/item-3727/apps/web && cat public/robots.txt; grep -n \\\"GATED_PREFIXES\\\\|GATED\\\\b\\\\|const .* = \\\\[\\\" src/net/search-index.test.ts | head; sed -n \\\"$(grep -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3727/crates/engine/src && grep -rn \\\"pub fn with_shipped\\\\|pub fn catalog_for\\\\|thread_local\\\" --include=*.rs . | head -8\", \"description\": \"Locate en\u2026\n- Bash: {\"command\": \"cd crates/server; grep -rn \\\"matches_live\\\\b\\\\|matches_live(\\\" src | grep -v \\\"^src/db/\\\" | head -20; grep -n \\\"ceiling_at\\\" migrations/0004_matches.sql | head -5; grep -rln \\\"status = '\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3727/crates/engine/src && sed -n 360,395p catalog.rs; sed -n 865,895p replay.rs\", \"description\": \"Read with_shipped and catalog_for\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3727/crates/server; sed -n 440,475p src/seats.rs; grep -n \\\"in_match\\\\|current_match\\\" src/seats.rs | head -20\", \"description\": \"Read seat ledger boo\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3727/e2e && ls support support/tasks fixtures fixtures/* scripts | head -80; wc -l README.md cypress/e2e/42-together.cy.ts cypress/e2e/37-rematch.cy.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3727/e2e && ls -la support/tasks; cat -n README.md\", \"description\": \"Read e2e README and tasks dir\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3727/e2e/cypress/e2e/42-together.cy.ts\", \"limit\": 200}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3727/crates && grep -n \\\"pub const MATCH_CEILING_MINUTES\\\\|pub const TURN_CLOCK_SECONDS\\\\|pub const DISCONNECT_GRACE_SECONDS\\\\|pub const SERVER_NONCE\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3727/crates/server; sed -n 630,700p src/api/results.rs; grep -n \\\"fn matches_live\\\" -A 15 src/db/pg.rs | head -25\", \"description\": \"Read reaper of st\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3727/e2e && grep -n \\\"describe(\\\\|it(\\\\\\\"\\\\|before(\\\\|beforeEach(\\\\|after(\\\\|cy.visitAs\\\\|cy.signIn\\\\|freeAccount\\\\|cy.task(\\\\\\\"wsPlayer\\\\\\\"\\\\|cy.tas\u2026\n- said: I read everything below directly; no files were edited. ## 1. Host contract, files, clock and timer **`crates/shared/README.md` (Host contract, lines 21\u201356).** The host machine is one pure state machine, `step(host, event, now) -> (host, outputs)` (lines 254\u2013266). A \"host\" is whatever carries a mat\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3727/e2e/cypress/e2e/42-together.cy.ts\", \"offset\": 205, \"limit\": 260}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3727/crates/server; grep -rn \\\"reap_stale_matches\\\\|live_matches()\\\" src migrations | grep -v \\\"^migrations/00[0-1]\\\" | head; grep -n \\\"pub struct Ma\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3727/e2e/cypress/e2e/42-together.cy.ts\", \"offset\": 497, \"limit\": 70}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3727/e2e && grep -n \\\"accounts\\\\b\\\\|export const accounts\\\\|e2e-p1\\\\|e2e-p2\\\\|token\\\\|export function\\\\|export const\\\" support/config.ts | head -50\",\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3727/e2e && grep -n \\\"Cypress.Commands.add(\\\\\\\"\\\" support/commands.ts | sed -E 's/^([0-9]+):.*add\\\\(\\\"([^\\\"]+)\\\".*/\\\\1 \\\\2/' | tr '\\\\n' ';'; echo; ca\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3727/e2e && grep -n \\\"SMOKE\\\" -A12 scripts/shard-specs.mjs | head -30; grep -rn \\\"e2e-p1\\\\|E2E_FIXTURE\\\\|fixture_accounts\\\\|fn seed_fixture\\\\|reseed\\\u2026\n- Bash: {\"command\": \"sed -n 1,40p crates/server/src/api/e2e.rs; grep -n \\\"e2e-p1\\\\|e2e-token-p1\\\\|fn seed\\\\|fn reseed\\\" crates/server/src/db/fake.rs crates/server/src/auth.rs crates/server/src/config.rs | he\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3727/e2e && sed -n 22,64p support/config.ts; grep -n \\\"action: \\\\\\\"\\\" support/tasks/wsPlayer.ts | head -20; grep -n \\\"TOGETHER_CHALLENGE\\\\b\\\\|TOGETHE\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3727/apps/web/src && grep -rn \\\"function ControlButton\\\\|turnClock\\\" game/Board.tsx | head -5; grep -n \\\"end-turn\\\\|endTurn\\\" game/contract.ts | head\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3727/apps/web/src/game/Board.tsx\", \"offset\": 505, \"limit\": 40}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3727/apps/web/src && grep -n \\\"import.*Clock\\\\|function Clock\\\" routes/SeriesPicker.tsx together/WatchClock.tsx | head; grep -n \\\"WatchClock\\\" togeth\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3727/apps/web/src && grep -n \\\"useSettingsAccountSync\\\" main.tsx settings/accountSync.ts | head; grep -n \\\"export function useSettingsAccountSync\\\" -\u2026\n- said: I read the server code paths behind each question and changed no files. **Two things your design will run into:** - **The reaper.** Every match row has `clocks.ceiling_at = created_at + MATCH_CEILING_MINUTES*60_000` (120 min, `crates/shared/src/config.rs:61`). `reap_stuck_matches` (`api/results.rs:\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3727/apps/web/src && sed -n 440,470p main.tsx | head -30; grep -n \\\"^function Gated\\\\|^export function Gated\\\" main.tsx\", \"description\": \"See where s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3727; cat >> .bot-plan.md <<'EOF'\\n\\n## Store (agent A)\\n- No traits: crates/server/src/db/store.rs Db/Tx enums + dispatch! (L1469); method = Tx::<ar\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3727/apps/web/src && grep -rn \\\"together: \\\\\\\"play-\\\\|replays: \\\\\\\"play-\\\\|export const playTestid\\\" --include=*.ts --include=*.tsx . | grep -v test \u2026\n- Bash: {\"command\": \"grep -rln \\\"cron.schedule\\\\|reap_stale_matches()\\\" crates/server/migrations crates/server/src infra 2>/dev/null | head; grep -n \\\"fn live_matches\\\\|function app.live_matches\\\" -A 12 crat\u2026\n- Bash: {\"command\": \"grep -rn \\\"MatchRow {\\\" crates/server/src crates/server/tests | grep -v \\\"pub struct\\\\|fn \\\\|-> MatchRow\\\\|impl \\\" | wc -l; grep -rn \\\"MatchRow {\\\" crates/server/src crates/server/tests \u2026"
       },
+      "in_lane": true,
       "kind": "build",
       "live": "planning",
-      "owner": "claude-2",
-      "owner_since": "2026-11-11T21:09:10Z",
-      "owner_why": "handed off from `claude-6`: `claude-6` its last run could not work (the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it ); it is left alone until 2026-11-11T21:56:25Z",
+      "owner": "claude-8",
+      "owner_since": "2026-11-11T22:05:16Z",
+      "owner_why": "handed off from `claude-2`: its owner `claude-2` builds only after every other subscription (`build_last`)",
       "pending_request": false,
-      "provider": "claude-2",
+      "provider": "claude-8",
       "queued_at": "2026-11-11T21:06:25Z",
-      "run_id": "43100605985",
+      "run_id": "pending:e7514ee8-1794434692",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
@@ -16560,7 +16561,7 @@
         "provider": "claude-2",
         "run": "43100605985"
       },
-      "started_at": "2026-11-11T21:09:10Z",
+      "started_at": "2026-11-11T22:05:16Z",
       "stop_requested": false,
       "strike_log": [
         "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
@@ -16713,9 +16714,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T22:04:39Z",
+    "at": "2026-11-11T22:05:16Z",
     "url": "",
-    "what": "revise #3706 on claude-3"
+    "what": "plan #3727 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-11T21:44:25Z",
