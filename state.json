@@ -19767,9 +19767,11 @@
         "by": "`muse` (medium)",
         "sha": "f973b610abf117ad8f00bdbd73f3662626a8edc1"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-11T07:10:53Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-11T08:01:43Z",
         "family": "muse",
@@ -19779,6 +19781,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: follow-up to #3682 from the after-merge spot-check\"} -->\n- Repaired the #3499 worker-bloat guard in [first-load.test.ts](apps/web/src/net/first-load.test.ts) so it fails again when a built worker bundles the patch history. The worker test (renamed to name both files) now flags any built script containing either `holds an entry with no version` (`patch-meta\u2026\n- How I tested it (commands I ran and what they printed):\n- - `pnpm --dir apps/web build` \u2014 succeeded (vite built in ~13.7s after the wasm prebuild).\n- - `pnpm --dir apps/web test src/net/first-load.test.ts` \u2014 4 passed, including the renamed worker test, actually run against `dist/` (not skipped).\n- - Negative direction: temporarily dropped `patchMeta()` from the worker `plugins` in `vite.config.ts` (scratch edit, never committed), rebuilt vite-only, and the worker test failed, flagging `practice.worker-*.js` and `raster.worker-*.js`. A grep of those chunks showed the matched probe is exactly \u2026\n- - `eslint src/net/first-load.test.ts` \u2014 clean. `git status` shows only the one test file modified.\n- Decisions the issue did not settle: none of substance \u2014 I followed the plan's title, comment, and filter pattern exactly, including keeping the surrounding lines and the other two `it` blocks untouched (I rejected `holds no patches` as a probe since it occurs in both files, as the plan notes). One \u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-3699 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-3699/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 3699,
       "kind": "review",
       "live": "reviewing",
