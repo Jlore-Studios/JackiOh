@@ -15808,7 +15808,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-11T13:49:33Z",
+      "feedback_since": "2026-11-11T16:38:55Z",
       "forced": false,
       "interruptions": 0,
       "issue": 3513,
@@ -15820,7 +15820,7 @@
       "provider": "claude-8",
       "question": "",
       "queued_at": "2026-11-11T16:38:28Z",
-      "round_tier": "medium",
+      "round_tier": "",
       "run_id": "43060408773",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -15841,11 +15841,11 @@
         "provider": "claude-8",
         "run": "43039645831"
       },
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-11T16:38:55Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 3,
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "claude"
