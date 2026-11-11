@@ -15826,7 +15826,11 @@
       "kind": "revise",
       "last_findings": [],
       "live": "resolving",
-      "merge_owner": "claude-8",
+      "merge_owner_gave_up": {
+        "at": "2026-11-11T19:04:26Z",
+        "provider": "claude-8",
+        "sha": "ee8edd7fdb70bcd396e035cb7eb25dcc505620a4"
+      },
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
