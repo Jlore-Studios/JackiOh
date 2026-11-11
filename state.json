@@ -15967,10 +15967,10 @@
       "audit_tier": "",
       "ci_early": false,
       "ci_fixed_head": "81ce52dce6686b5c65218a1eb4ad819d860f18a4",
-      "ci_fixes": 1,
-      "ci_on_head": true,
-      "ci_run_id": 43009953708,
-      "ci_sha": "8e10ea9d462aa7e75eb7937eaa196924af882b19",
+      "ci_fixes": 2,
+      "ci_on_head": false,
+      "ci_run_id": 43091257576,
+      "ci_sha": "6ad3002b9e390f92a18bd4432c05f113394e972c",
       "cleared": {
         "approver": {
           "family": "claude",
@@ -16000,7 +16000,7 @@
       "pending_request": false,
       "provider": "claude-3",
       "question": "",
-      "queued_at": "2026-11-11T17:03:52Z",
+      "queued_at": "2026-11-11T21:02:20Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
@@ -16025,7 +16025,7 @@
         "provider": "claude-3",
         "run": "43067972639"
       },
-      "source": "",
+      "source": "ci",
       "started_at": "2026-11-11T17:25:03Z",
       "stop_requested": false,
       "taken_asks": [],
