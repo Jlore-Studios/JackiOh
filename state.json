@@ -15494,6 +15494,7 @@
     "3694": {
       "action": "build",
       "asks": [],
+      "died": 1,
       "difficulty_by": {
         "at": "2026-11-11T19:05:56Z",
         "difficulty": "hard",
@@ -15525,7 +15526,7 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-8",
-      "queued_at": "2026-11-11T15:38:20Z",
+      "queued_at": "2026-11-11T21:07:26Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "43084262830",
       "runs_on": "ubuntu-latest",
