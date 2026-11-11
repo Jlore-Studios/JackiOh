@@ -12565,9 +12565,9 @@
       "last_findings": [],
       "live": "building",
       "onto": "bot/issue-3596",
-      "owner": "muse",
-      "owner_since": "2026-11-11T15:45:05Z",
-      "owner_why": "a person answered its question, so the lane that asked carries the answer out",
+      "owner": "claude-4",
+      "owner_since": "2026-11-11T17:36:40Z",
+      "owner_why": "handed off from `muse`: it could not take it",
       "part_of": 3596,
       "paused": {
         "at": "2026-11-11T16:36:02Z",
@@ -12580,14 +12580,14 @@
       "planned_by_id": "claude-7",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "muse",
+      "provider": "claude-4",
       "question": "How should #3561 proceed while E7 (#3554) is still parked?",
       "queued_at": "2026-11-11T15:45:05Z",
       "requested_by": "squishy-squooby",
       "round_tier": "",
-      "run_id": "43057253671",
-      "runs_on": "night-vm-muse",
-      "started_at": "2026-11-11T16:19:51Z",
+      "run_id": "pending:2addcfdf-1794418570",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-11T17:36:40Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0
@@ -16197,9 +16197,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T17:35:55Z",
+    "at": "2026-11-11T17:36:40Z",
     "url": "",
-    "what": "build #3567 on claude-4"
+    "what": "build #3561 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-11T17:18:24Z",
