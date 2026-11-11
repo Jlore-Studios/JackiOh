@@ -16711,11 +16711,9 @@
     "what": "revise #3724 on claude-5"
   },
   "last_sweep": {
-    "at": "2026-11-11T21:35:58Z",
+    "at": "2026-11-11T21:44:25Z",
     "notes": [
-      "delivered review #3738 on claude-5 (run 43103493656): reviewed",
-      "started revise #3724 on claude-5 (run 43104756495)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` its last run could not work (the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it ); it is left alone until 2026-11-11T21:56:55Z; `claude-7` is busy; `claude-8` its last run could not work (the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it ); it is left alone until 2026-11-11T21:57:27Z; `claude-1` 5-hour usage is 70%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-12T00:10:00Z; it can start a build or a plan again in 2h 31m; `claude-4` 5-hour usage is 47%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-12T00:20:00Z; it takes reviews only; it can start a build or a plan again in 1h 41m; `claude-6` its last run could not work (the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it ); it is left alone until 2026-11-11T21:56:25Z; `claude-5` is busy; `muse` it refused a call; its limit resets at 2026-11-16T00:00:00Z; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` 5-hour usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-12T02:10:00Z; it can start a build or a plan again in 55h 21m",
+      "#3728 needs a plan",
       "runner gate: started 0 of 2 waiting run(s); 2 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -17420,7 +17418,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-11T21:35:58Z",
+  "loop_tick": "2026-11-11T21:44:25Z",
   "machine_disk": {
     "issue": null,
     "reading": {
