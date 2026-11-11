@@ -18817,7 +18817,9 @@
       "interruptions": 0,
       "last_findings": [],
       "live": "building",
-      "owner": "",
+      "owner": "claude-8",
+      "owner_since": "2026-11-11T10:44:22Z",
+      "owner_why": "it took it up",
       "planned_at": "2026-11-11T03:53:46Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_by_id": "claude-7",
@@ -19308,10 +19310,8 @@
       "waiting_comment": 6788401160
     },
     "3691": {
-      "action": "review",
-      "asks": [
-        "c:6793581842"
-      ],
+      "action": "revise",
+      "asks": [],
       "audit_tier": "",
       "cross_rounds": 1,
       "died": 0,
@@ -19332,21 +19332,23 @@
       "issue": 3674,
       "kind": "revise",
       "last_findings": [],
-      "live": "reviewing",
+      "live": "revising",
       "pending_request": false,
-      "provider": "claude-5",
+      "provider": "claude-8",
       "question": "Please do one of these. (a) Open a follow-up issue for the remainder of #3674's acceptance, then requeue this pull request with a comment like `@jgoetzmann-bot cite #<new issue> as where the rest of #3674's acceptance is tracked`. The next pass names it in the body so the reviewer can approve. (b) Take this pull request over yourself: edit its body from `Closes #3674` to `Part of #3674`, merge it, and reopen #3674 if the harness closes it. The follow-up issue should cover: the Mythic takeover's long React commits (190\u2013355 ms tasks with forced style and layout in fit.ts `flushFits` and the effects director's measure); the Anomaly cast and the Starship launch, both still over 50 / 120 ms at every size in the probe run; the broadside's retry, which never shows `data-animating` on `card-fx-ship` (e2e/cypress/component/fx-phone-living-game.cy.tsx, around line 380: replaying the same attackDeclared over the re-rendered board plays nothing, as #3633 found for the takeover); and the four moments after it (Drone Battleship, Void fold, hand to tile, riffle), which no run has ever reached. Until it lands, the daily super run's `e2e component (chrome)` stays red, as it is on main today.",
       "queued_at": "2026-11-11T10:38:15Z",
       "requested_by": "jgoetzmann",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "42996575313",
+      "run_id": "pending:17934743-1794393827",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "request",
-      "started_at": "2026-11-11T09:36:11Z",
+      "started_at": "2026-11-11T10:44:22Z",
       "stop_requested": false,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6793581842"
+      ],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -19857,9 +19859,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T10:12:32Z",
+    "at": "2026-11-11T10:44:22Z",
     "url": "",
-    "what": "revise #3688 on claude-1"
+    "what": "revise #3691 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-11T10:34:52Z",
