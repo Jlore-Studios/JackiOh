@@ -19741,6 +19741,14 @@
         "tiers": {}
       },
       "waiting_comment": 6789960143
+    },
+    "3704": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-11T07:10:53Z",
+      "issue": 3699,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
