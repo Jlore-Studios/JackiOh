@@ -19682,6 +19682,7 @@
           }
         ],
         "head": "1884d9666e5ca5d87aec166a2e8335eed958fad0",
+        "interruptions": 0,
         "kind": "build",
         "model": "sonnet",
         "provider": "claude-8",
