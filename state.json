@@ -15502,28 +15502,28 @@
     },
     "3694": {
       "action": "plan",
-      "asks": [
-        "c:6800135416"
-      ],
+      "asks": [],
       "failures": 0,
       "forced": false,
       "in_lane": true,
       "interruptions": 0,
       "kind": "build",
       "live": "planning",
-      "owner": "muse",
-      "owner_since": "2026-11-11T16:21:55Z",
-      "owner_why": "it plans it",
+      "owner": "claude-8",
+      "owner_since": "2026-11-11T18:07:01Z",
+      "owner_why": "handed off from `muse`: `muse` it refused a call; its limit resets at 2026-11-16T00:00:00Z",
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-8",
       "queued_at": "2026-11-11T15:38:20Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43057604516",
-      "runs_on": "night-vm-muse",
-      "started_at": "2026-11-11T16:21:55Z",
+      "run_id": "pending:ac931d77-1794420382",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-11T18:07:01Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6800135416"
+      ]
     },
     "3695": {
       "asks": [
@@ -16231,9 +16231,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T18:02:47Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/43073630740",
-    "what": "build #3566 on claude-6"
+    "at": "2026-11-11T18:07:01Z",
+    "url": "",
+    "what": "plan #3694 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-11T17:59:35Z",
