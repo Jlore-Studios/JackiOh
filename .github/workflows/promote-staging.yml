@@ -1,4 +1,4 @@
-# Moves `staging` to a snapshot of main every two hours (#3275, the owners' call of 2026-11-05):
+# Moves `_staging` to a snapshot of main every two hours (#3275, the owners' call of 2026-11-05):
 # main's newest commit whose push-to-main CI run passed, never backwards, by fast-forward. Its push
 # starts deploy-staging.yml, which deploys staging to https://staging.jackioh.com; once a day super.yml
 # tests staging's commit, and promote-production.yml puts it on jackioh.com when every job passed.
@@ -113,7 +113,7 @@ jobs:
             exit 0
           fi
           body=$(printf '%s\n' \
-            "[promote-staging run]($RUN_URL) failed, so \`staging\` did not move to main's newest green commit (its annotation says why)." \
+            "[promote-staging run]($RUN_URL) failed, so \`_staging\` did not move to main's newest green commit (its annotation says why)." \
             "" \
             "Squishy: staging, and production after it, waits on this, so it is yours and it comes first (\`priority:high\`). Read the failed job's log, find the cause and fix it in a pull request on \`main\`. A failure outside your reach (\`.github/\`, a secret such as BOT_GITHUB_TOKEN, the \`staging\` ruleset, GitHub's settings) is a person's: say exactly what they must do. The next run that moves staging closes this." \
             "" \

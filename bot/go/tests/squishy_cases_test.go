@@ -141,9 +141,9 @@ func (w *squishyCasesWorld) run(r *runner.FakeRunner) (*pyjson.Object, *pyjson.O
 func TestSquishyCases_EverythingIsSquishys(t *testing.T) {
 	squishyCasesModule(t)
 	assertEqual(t, []string{config.LabelBuild, config.Slash, config.StateBranch},
-		[]string{"squishy:build", "/squishy", "squishy-state"})
+		[]string{"squishy:build", "/squishy", "_squishy-state"})
 	assertEqual(t, config.NightWorkflow, "squishy-run.yml")
-	assertEqual(t, journal.Branch, "squishy-journal")
+	assertEqual(t, journal.Branch, "_squishy-journal")
 	assertEqual(t, queue.BranchForIssue(5), "squishy/issue-5")
 	assertEqual(t, queue.WipBranch(5), "squishy/wip/5")
 	assertEqual(t, config.CommitPrefix, "squishy")
