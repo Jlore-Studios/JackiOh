@@ -15653,6 +15653,13 @@
     "3700": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-11T16:03:47Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "medium",
+        "why": "Presentation only in one crate (crates/shared log lines, zh-CN.json, tests); no engine, AI, migration or cross-crate contract change, and far fewer than 40 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
