@@ -331,6 +331,7 @@
   "{whose} {card} quest: {text}, {progress}/{goal}": "{whose}{card}的任务：{text}，{progress}/{goal}",
   "{whose} {card} completed a quest": "{whose}{card}完成了一个任务",
   "{seat} drew a curve across the board": "{seat}在场上画出了一条曲线",
+  "{seat} drew a line across the board": "{seat}在场上画出了一条直线",
   "{seat} drew the curve {equation} across the board": "{seat}在场上画出了曲线 {equation}",
   "The board went back {n} turn": "棋盘回到了{n}个回合之前",
   "The board went back {n} turns": "棋盘回到了{n}个回合之前",

@@ -213,9 +213,11 @@ pub fn card_at(state: &GameState, slot: impl Into<ZoneSlot>) -> Option<&CardInst
 pub fn is_empty(state: &GameState, slot: impl Into<ZoneSlot>) -> bool {
     let slot = slot.into();
     // R3546000: a zone a GIGA covers holds no card, but nothing enters it either.
+    // R3554002: nor does a zone the slash voided.
     card_at(state, slot).is_none()
         && (slot.row == Row::Units || carried_at(state, slot).is_none())
         && crate::giga::covering(state, slot).is_none()
+        && !crate::geometry::is_void(state, slot)
 }
 
 // Backrow piles and carried Units (docs/classic-sets.md B5 E21, R446, R447)
@@ -430,7 +432,7 @@ fn set_carried(side: &mut PlayerState, lane: i32, card: Option<CardInstance>) {
 
 /// Whether a card's own face is a Unit's (§5.2, B2.7), the one kind that stands on a carrier (R446).
 /// An animated card is a Unit in a unit zone (R383) but no Unit face, so it never lands on a carrier.
-fn is_unit_face(state: &GameState, instance: &CardInstance) -> bool {
+pub(crate) fn is_unit_face(state: &GameState, instance: &CardInstance) -> bool {
     // R1040: a Unit set face-down by its Cloaked stands in the backrow as a Field Trap.
     if instance.set_as.is_some() {
         return false;
@@ -443,7 +445,11 @@ fn is_unit_face(state: &GameState, instance: &CardInstance) -> bool {
 /// A zone a play, or a summon with no named zone, may take: empty, unlocked and unreserved (§3.2).
 pub fn is_open(state: &GameState, slot: impl Into<ZoneSlot>) -> bool {
     let slot = slot.into();
-    is_empty(state, slot) && !is_locked(state, slot) && !is_reserved(state, slot)
+    // R3554000: no play enters the hole.
+    is_empty(state, slot)
+        && !is_locked(state, slot)
+        && !is_reserved(state, slot)
+        && !crate::geometry::in_hole(state, slot)
 }
 
 /// R688: a zone a move may enter: empty and unreserved, Locked or not.
@@ -544,11 +550,26 @@ pub fn first_free_zone(state: &GameState, player: PlayerId, row: Row) -> Option<
 /// R64, R688: where a summon, a recruit or a move with no named zone enters: the leftmost open zone,
 /// else the leftmost empty Locked one. Plays and casts keep `first_free_zone`.
 pub fn first_entry_zone(state: &GameState, player: PlayerId, row: Row) -> Option<ZoneSlot> {
-    first_free_zone(state, player, row).or_else(|| {
-        slots_of(player, row)
-            .into_iter()
-            .find(|slot| takes_move(state, slot))
-    })
+    first_entry_zone_where(state, player, row, |_| true)
+}
+
+/// `first_entry_zone` where the zone must also pass `allow` (R3554003: a summon stays on its half).
+pub fn first_entry_zone_where(
+    state: &GameState,
+    player: PlayerId,
+    row: Row,
+    allow: impl Fn(i32) -> bool,
+) -> Option<ZoneSlot> {
+    // R3554000: the hole's lane is no entry zone, open or fallback alike.
+    let hole = |slot: &ZoneSlot| !crate::geometry::in_hole(state, *slot) && allow(slot.lane);
+    open_zones(state, player, row)
+        .into_iter()
+        .find(|slot| hole(slot))
+        .or_else(|| {
+            slots_of(player, row)
+                .into_iter()
+                .find(|slot| takes_move(state, slot) && hole(slot))
+        })
 }
 
 pub fn zone_of(slot: impl Into<ZoneSlot>) -> Zone {
@@ -681,6 +702,10 @@ fn place_with(
     // R688: a Lock refuses plays, never placements — summons, moves, rotations and restores all land.
     // Plays never reach here unvetted (`play_choices` offers and `play_steps` assigns unlocked zones only).
     if is_reserved(state, slot) {
+        return false;
+    }
+    // R3554002: a void zone takes nothing, whatever lands there.
+    if crate::geometry::is_void(state, slot) {
         return false;
     }
     // R3546000: a GIGA's covered zones take nothing, whatever lands there.
@@ -1240,6 +1265,10 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.starship = None;
     // R1040, R1045: a card set face-down as a Trap is its printed card again once it leaves the field.
     instance.set_as = None;
+    // R3554003, R3554007: so are its slash half and its damage chains.
+    instance.half = None;
+    instance.shared_chain = None;
+    instance.split_chain = None;
 }
 
 /// R766 (#473): a card that reaches a graveyard or exile costs its printed cost again (R65), a
@@ -1345,6 +1374,9 @@ fn left_the_field(state: &mut GameState, instance_id: &str) {
 fn end_play_choices(instance: &mut CardInstance) {
     instance.x = None;
     instance.embiggened = None;
+    // R3554003: a Spell leaving the resolving zone drops the half its cast chose, as R78's reset
+    // does for a permanent leaving the field.
+    instance.half = None;
 }
 
 /// What `move_to_zone` did. `Replaced` (B5 E5, R460): a replacement sent a card bound for a graveyard
@@ -1743,7 +1775,7 @@ pub fn acts_on_field(state: &GameState, instance: &CardInstance) -> bool {
 pub fn fill_board_zones(state: &GameState, player: PlayerId) -> Vec<ZoneSlot> {
     slots_of(player, Row::Units)
         .into_iter()
-        .filter(|slot| takes_move(state, slot))
+        .filter(|slot| takes_move(state, slot) && !crate::geometry::in_hole(state, *slot))
         .collect()
 }
 

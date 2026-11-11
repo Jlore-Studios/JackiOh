@@ -134,4 +134,12 @@ tallies?: Array<TallyView>,
  * R3548001: what of this Unit the owner's Tipsy stamp blurs on their view alone, or nothing.
  * Never on the opponent's view of it.
  */
-tipsyBlur?: TipsyBlur, };
+tipsyBlur?: TipsyBlur, 
+/**
+ * R3554007: the shared damage chain this Unit is in, on both seats. Absent otherwise (D14).
+ */
+sharedChain?: number, 
+/**
+ * R3554007: the split damage chain this Unit is in, on both seats. Absent otherwise (D14).
+ */
+splitChain?: number, };

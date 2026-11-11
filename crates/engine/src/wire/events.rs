@@ -1068,6 +1068,15 @@ pub enum GameEvent {
         player: PlayerId,
         cells: Vec<ZoneRef>,
     },
+    /// R3554005 (S+ #109 Lancer, #126 Vela, #127 Corvus): the line was drawn for `player`: the
+    /// source's zone first, then the lattice cells to the tile. Public: board positions only.
+    LineDrawn {
+        player: PlayerId,
+        cells: Vec<ZoneRef>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        laser: Option<bool>,
+    },
     /// R1183002 (Meditative+ #18 Cognitive Offloading): the engine plays the rest of `player`'s
     /// turn `turn` (the autopilot); the actions it takes follow as their own events. Public: a player
     /// and a number.
@@ -1392,6 +1401,7 @@ string_union! {
         SecretRevealed = "secretRevealed",
         Predicted = "predicted",
         CurveDrawn = "curveDrawn",
+        LineDrawn = "lineDrawn",
         AutopilotEngaged = "autopilotEngaged",
         Awakened = "awakened",
         Evolved = "evolved",
@@ -1658,6 +1668,7 @@ impl GameEvent {
             GameEvent::SecretRevealed { .. } => GameEventType::SecretRevealed,
             GameEvent::Predicted { .. } => GameEventType::Predicted,
             GameEvent::CurveDrawn { .. } => GameEventType::CurveDrawn,
+            GameEvent::LineDrawn { .. } => GameEventType::LineDrawn,
             GameEvent::AutopilotEngaged { .. } => GameEventType::AutopilotEngaged,
             GameEvent::Awakened { .. } => GameEventType::Awakened,
             GameEvent::Evolved { .. } => GameEventType::Evolved,
@@ -1766,8 +1777,8 @@ mod tests {
         // `starscapeTravelled` (R1847001); #1850's one, `held` (R1850003); the Marketplace's two,
         // `marketBought` and `marketSold` (R1853003); and #1855's `boardReplaced` (R1855000); and
         // #2652's `rolled` (R2652001); and #2783's `hookResolving` (R2783000); and Stinkyscape+'s
-        // `evolved` (R3536005).
-        assert_eq!(GAME_EVENT_TYPES.len(), 94);
+        // `evolved` (R3536005); and E7's `lineDrawn` (R3554005).
+        assert_eq!(GAME_EVENT_TYPES.len(), 95);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

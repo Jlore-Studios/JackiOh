@@ -518,7 +518,8 @@ export type FxRecipe =
   | "brand"
   | "rewind"
   | "armor"
-  | "curve";
+  | "curve"
+  | "line";
 
 export type FxDescriptor = { readonly recipe: FxRecipe };
 

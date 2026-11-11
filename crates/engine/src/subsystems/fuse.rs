@@ -1101,6 +1101,8 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 stack_base_buffs: numbers(|f| f.stack_base_buffs),
                 tribute_cheap: numbers(|f| f.tribute_cheap),
                 lane_multiplier: numbers(|f| f.lane_multiplier),
+                sweep_lane: numbers(|f| f.sweep_lane),
+                sweep_adjacent: numbers(|f| f.sweep_adjacent),
                 credit_line: numbers(|f| f.credit_line),
                 credit_instalments: numbers(|f| f.credit_instalments),
                 credit_lapses: flags(|f| f.credit_lapses),
@@ -1148,6 +1150,9 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 damage_pool: sum_defined(defined.iter().map(|f| f.damage_pool)),
                 counters_ranged: numbers(|f| f.counters_ranged),
                 counters_ranged_all: flags(|f| f.counters_ranged_all),
+                // Stinkyscape+ S13 (issue #3560).
+                graveyard_price: numbers(|f| f.graveyard_price),
+                ignores_taunt: flags(|f| f.ignores_taunt),
             })
         }
     }

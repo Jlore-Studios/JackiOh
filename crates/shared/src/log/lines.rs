@@ -1027,6 +1027,11 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
                 vec![p("seat", seat(*player)), p("equation", equation)],
             ),
         },
+        // R3554005: the board draws the line; the line names whose it was, positions only.
+        GameEvent::LineDrawn { player, .. } => s(
+            "{seat} drew a line across the board",
+            vec![p("seat", seat(*player))],
+        ),
         GameEvent::RolledBack { turns_ago, .. } => {
             if *turns_ago == 1 {
                 s("The board went back {n} turn", vec![p("n", *turns_ago)])

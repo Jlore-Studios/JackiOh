@@ -5,6 +5,7 @@ import type { Counters } from "./Counters";
 import type { Enchantment } from "./Enchantment";
 import type { Exertion } from "./Exertion";
 import type { Grant } from "./Grant";
+import type { Half } from "./Half";
 import type { Keyword } from "./Keyword";
 import type { KnownAs } from "./KnownAs";
 import type { PlayerId } from "./PlayerId";
@@ -224,4 +225,19 @@ giga?: true,
  * R3548001: the Tipsy counter stamped on this card as it arrived, if one was up. Taken off by
  * R78's reset with the card leaving the field; only its owner's view reads it.
  */
-tipsy?: TipsyStamp, };
+tipsy?: TipsyStamp, 
+/**
+ * R3554003: the half of a slashed board this card was cast on (a Spell in the resolving zone)
+ * or stands on. Taken off by R78's reset with the card leaving the field. Absent on every other
+ * card, so a game nothing slashes serializes and hashes as before (D14).
+ */
+half?: Half, 
+/**
+ * R3554007: the shared damage chain this Unit is in (S+ #7 Churnwalker). Taken off by R78's
+ * reset with the card leaving the field. Absent on every other card (D14).
+ */
+sharedChain?: number, 
+/**
+ * R3554007: the split damage chain this Unit is in. As `shared_chain`.
+ */
+splitChain?: number, };

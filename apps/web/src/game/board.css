@@ -1351,6 +1351,69 @@ button.modifier-badge[data-open="true"] {
   background: transparent;
 }
 
+/* R3554000: the Black Hole lane is a turning dark swirl with its swallowed count; still under
+   `prefers-reduced-motion` (BUILD M5-T6). R3554002: the slashed lane is a deep red edge over a
+   dark sea-blue centre, its zones hidden — the red mark that reveals the endless sea. R3554007:
+   chained Units wear dashed outlines, shared and split each their own color. */
+.lane[data-lane-mark="blackHole"] {
+  --hole-spin: jk-hole-spin 6s linear infinite;
+  background: radial-gradient(ellipse at center, #000 0%, #0b0b1e 55%, transparent 75%);
+  animation: var(--hole-spin);
+}
+
+.lane[data-lane-mark="blackHole"] > .zone {
+  border-style: dashed;
+  border-color: #4b4b8f;
+  background: transparent;
+}
+
+.black-hole-count {
+  align-self: center;
+  color: #cfcfff;
+  font-size: var(--type-sm);
+}
+
+@keyframes jk-hole-spin {
+  from {
+    filter: hue-rotate(0deg);
+  }
+
+  to {
+    filter: hue-rotate(360deg);
+  }
+}
+
+.lane[data-lane-mark="slashed"] {
+  border-left: 3px solid #8f1010;
+  border-right: 3px solid #8f1010;
+  background: linear-gradient(180deg, #0a1a2e 0%, #06121f 50%, #0a1a2e 100%);
+}
+
+.lane[data-lane-mark="slashed"] > .zone {
+  visibility: hidden;
+}
+
+.zone[data-chain="shared"] > .card {
+  outline: 2px dashed #4fc3f7;
+  outline-offset: 2px;
+}
+
+.zone[data-chain="split"] > .card {
+  outline: 2px dashed #ffb74d;
+  outline-offset: 2px;
+}
+
+.zone[data-chain="both"] > .card {
+  outline: 2px dashed #ce93d8;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lane[data-lane-mark="blackHole"] {
+    animation: none;
+  }
+}
+
 .resolving {
   display: inline-flex;
   gap: var(--gap);

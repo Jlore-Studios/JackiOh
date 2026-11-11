@@ -582,6 +582,14 @@ pub struct StaticFlags {
     /// MD-F14, R1283: multiplier for attacks across its lane in combat, read through `multiplier`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lane_multiplier: Option<i32>,
+    /// R3554008 (S+ #107 Fuse): its attack hits every enemy Unit in its lane for `sweepLane` times
+    /// its attack and every enemy Unit in the adjacent lanes for `sweepAdjacent` times, as one damage
+    /// instance each. Read through `sweep_weight`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sweep_lane: Option<i32>,
+    /// R3554008: the adjacent-lane weight, defaulting to 1.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sweep_adjacent: Option<i32>,
     /// R1160 (Meditative #84 Volatility, ME-TUNEMULT): how many times as effective Buffs and
     /// Nerfs are on this card, read off its running face in every zone.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -767,6 +775,13 @@ pub struct StaticFlags {
     /// ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub counters_ranged_all: Option<bool>,
+    /// R3560001 (S+ #120 Crawler): "May be played from your graveyard for (N)": a permission the card gives
+    /// itself in its owner's graveyard, any number of times, priced N there.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub graveyard_price: Option<i32>,
+    /// R3560007 (S+ #121 Toxopid): "Ignores Taunt": no Taunt binds this attacker (§4.2 step 3). Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ignores_taunt: Option<bool>,
 }
 
 /// R1849004 (Stinkyscape #5 Masochism Unmasked): "Redirect all damage you take on your turn to your

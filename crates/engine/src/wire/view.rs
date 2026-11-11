@@ -10,6 +10,7 @@ use indexmap::IndexMap;
 use serde::de::Error as _;
 use serde::{Deserialize, Deserializer, Serialize};
 
+use crate::geometry::BlackHole;
 use crate::state::{DuosLife, Slumber, StarshipMemory};
 use crate::wire::actions::RevealAt;
 use crate::wire::catalog_types::{
@@ -734,6 +735,14 @@ pub struct UnitView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub tipsy_blur: Option<TipsyBlur>,
+    /// R3554007: the shared damage chain this Unit is in, on both seats. Absent otherwise (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub shared_chain: Option<u32>,
+    /// R3554007: the split damage chain this Unit is in, on both seats. Absent otherwise (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub split_chain: Option<u32>,
 }
 
 /// A public backrow card's counters: `grade` is #93 Combo-Index's counter, 1..6; `gradeLetter` is the
@@ -1620,6 +1629,31 @@ pub struct MarketSaleView {
     pub credits: i32,
 }
 
+/// R3554000: the open Black Hole as the view reads it: its lane, what it has swallowed, and its
+/// capacity. Public on both seats.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct BlackHoleView {
+    pub lane: i32,
+    pub swallowed: i32,
+    pub capacity: i32,
+}
+
+impl BlackHoleView {
+    pub fn of(hole: &BlackHole, capacity: i32) -> BlackHoleView {
+        BlackHoleView {
+            lane: hole.lane,
+            swallowed: hole.swallowed_count(),
+            capacity,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -1697,6 +1731,14 @@ pub struct PlayerView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub marketplace: Option<MarketplaceView>,
+    /// R3554000: the open Black Hole, on both seats. Absent while none is open (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub black_hole: Option<BlackHoleView>,
+    /// R3554002: the lane the slash voided, on both seats. Absent on an unslashed board (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub slashed_lane: Option<i32>,
 }
 
 #[cfg(test)]

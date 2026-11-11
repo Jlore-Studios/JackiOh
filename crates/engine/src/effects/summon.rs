@@ -30,9 +30,9 @@ use crate::wire::{
     AttackHealth, CardType, CostRange, GameEvent, Keyword, OneOrMany, PlayerId, Row, Tag, Zone, ZoneName,
 };
 use crate::zones::{
-    PlaceOnFieldOptions, ZoneSlot, fill_board_zones, first_entry_zone, fresh_face_down_id, is_empty,
-    is_reserved, is_unit_token, lands_face_down, open_zones, place_on_field, place_standing_on_field,
-    remove_from_any_zone, row_size, takes_move,
+    PlaceOnFieldOptions, ZoneSlot, fill_board_zones, first_entry_zone, first_entry_zone_where,
+    fresh_face_down_id, is_empty, is_reserved, is_unit_token, lands_face_down, open_zones, place_on_field,
+    place_standing_on_field, remove_from_any_zone, row_size, takes_move,
 };
 
 // R1: no verb placing a card without a play fires a Cry (Transform, Flicker, Reborn, `summon_this`).
@@ -95,6 +95,11 @@ pub struct SummonPlacement {
     /// backrow zone, standing there as a Unit (R1081000), and only with none open the unit row (R64).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub backrow_first: Option<bool>,
+    /// R3554009 (S+ #121 Toxopid's Legs): exile the named lane's pile as this lands on it — a void
+    /// lane stays void, and a pile holding a Dormant card is left alone. `summon_onto` then fires
+    /// Crater on the arrival as ever.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exile_below: Option<bool>,
 }
 
 /// `summon`'s arguments, the placement's keys beside the rest.
@@ -152,6 +157,10 @@ pub struct SummonArgs {
     /// backrow zone, standing there as a Unit (R1081000), and only with none open the unit row (R64).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub backrow_first: Option<bool>,
+    /// R3554009 (S+ #121 Toxopid's Legs): exile the named lane's pile as this lands on it
+    /// (`SummonPlacement.exile_below`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exile_below: Option<bool>,
 }
 
 impl SummonArgs {
@@ -169,6 +178,7 @@ impl SummonArgs {
             chinese: None,
             memory: self.memory.clone(),
             backrow_first: self.backrow_first,
+            exile_below: self.exile_below,
         }
     }
 }
@@ -214,6 +224,12 @@ fn zone_and_stance_for(
     flies: bool,
     giga: bool,
 ) -> Option<(ZoneSlot, bool)> {
+    // R3554003: a summon stays on its summoner's half of a slashed board.
+    let half = ctx
+        .self_
+        .as_ref()
+        .and_then(|source| crate::geometry::half_of_card(ctx.state, source));
+    let allow = |lane: i32| crate::geometry::lane_in_half(ctx.state, lane, half);
     let Some(lane) = at.lane else {
         // R3557003: backrow first, where a Unit stands as it does there (R1081000); else R64's row.
         if at.backrow_first == Some(true)
@@ -223,8 +239,11 @@ fn zone_and_stance_for(
         {
             return Some((slot, true));
         }
-        return entry_zone(ctx.state, player, row, flies, giga);
+        return entry_zone(ctx.state, player, row, flies, giga, &allow);
     };
+    if !allow(lane) {
+        return None;
+    }
     if lane < 1 || lane > row_size(row) {
         return None;
     }
@@ -251,16 +270,17 @@ fn entry_zone(
     row: Row,
     flies: bool,
     giga: bool,
+    allow: &dyn Fn(i32) -> bool,
 ) -> Option<(ZoneSlot, bool)> {
     // R3546000: a GIGA takes the leftmost fit (R64, R688), never standing.
     if giga {
-        return crate::giga::entry_anchor(state, player, row).map(|slot| (slot, false));
+        return crate::giga::entry_anchor_where(state, player, row, allow).map(|slot| (slot, false));
     }
-    if let Some(slot) = first_entry_zone(state, player, row) {
+    if let Some(slot) = first_entry_zone_where(state, player, row, allow) {
         return Some((slot, false));
     }
     if row == Row::Units && flies {
-        return first_entry_zone(state, player, Row::Backrow).map(|slot| (slot, true));
+        return first_entry_zone_where(state, player, Row::Backrow, allow).map(|slot| (slot, true));
     }
     None
 }
@@ -282,6 +302,7 @@ pub(crate) fn summon_lands(state: &GameState, player: PlayerId, card: &CardInsta
             row,
             summon_flies(state, card),
             crate::giga::enters_giga(state, card),
+            &|_| true,
         )
         .is_some()
     })
@@ -361,6 +382,28 @@ fn summon_onto(
     true
 }
 
+/// R3554009: empty the named lane's slot for a summon landing with `exile_below`: a void lane
+/// stays void, and a pile holding a Dormant card is left alone (the summon then fizzles there).
+fn exile_below(ctx: &mut EffectContext<'_>, player: PlayerId, row: Row, at: &SummonPlacement) {
+    if at.exile_below != Some(true) {
+        return;
+    }
+    let Some(lane) = at.lane else {
+        return;
+    };
+    let slot = ZoneSlot { player, row, lane };
+    if crate::geometry::is_void(ctx.state, slot) {
+        return;
+    }
+    if crate::zones::zone_contents(ctx.state, slot)
+        .iter()
+        .any(crate::slumber::is_slumbering)
+    {
+        return;
+    }
+    crate::geometry::exile_zone(ctx, slot);
+}
+
 /// A fresh card of `def_id`, created only once a zone is known so a fizzle creates nothing.
 pub(crate) fn summon_fresh(
     ctx: &mut EffectContext<'_>,
@@ -370,6 +413,8 @@ pub(crate) fn summon_fresh(
 ) -> Option<CardInstance> {
     let probe = face_probe(def_id, player, at.radiant == Some(true));
     let row = row_of(card_type_of(ctx.state, &probe))?;
+    // R3554009: exile the pile below before the zone is read, so the fresh card lands on it.
+    exile_below(ctx, player, row, at);
     let flies = summon_flies(ctx.state, &probe);
     // R3546000: a fresh card printing GIGA takes the leftmost fit, else nothing lands.
     let giga = crate::giga::enters_giga(ctx.state, &probe);
@@ -462,6 +507,8 @@ fn summon_existing(
     }
     let probe = face_probe(&card.def_id, player, card.radiant || at.radiant == Some(true));
     let row = row_of(card_type_of(ctx.state, &probe))?;
+    // R3554009: exile the pile below before the zone is read, so the moving card lands on it.
+    exile_below(ctx, player, row, at);
     // R2248000: the card's Flying as it stands where it is (a hand's, a graveyard's printed one).
     let flies = summon_flies(ctx.state, card);
     // R3546002: the size is read off the card with the summon's riders, as `place_with` reads it.

@@ -553,6 +553,8 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     // maxi-tail: dropped whole, so the AI simulates a Rollback as restoring nothing; redact each snapshot's
     // hidden cards instead if the AI should ever plan around one.
     next.board_history = None;
+    // R3560000: the opponent's once-a-game marks (a hand arrival's among them) are theirs alone.
+    next.players[opp].once_a_game = None;
     // R3550007: a side snapshot on the opponent's cards is theirs alone (§10.8) — what their Bogos
     // Binted's Cry saw never reaches the seat's simulation.
     for (player, place) in every_place(&next) {

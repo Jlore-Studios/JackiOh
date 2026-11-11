@@ -496,7 +496,13 @@ pub fn why_cannot_attack_in(
     }
 
     // Step 3: while any enemy unit this attacker may attack has Taunt, the target must be one of them.
-    let wall = taunt_wall(auras, attacker, enemy);
+    // R3560007: an attacker that Ignores Taunt skips it (S+ #121).
+    let ignores = crate::scripts::flags_of(state, attacker).ignores_taunt == Some(true);
+    let wall = if ignores {
+        Vec::new()
+    } else {
+        taunt_wall(auras, attacker, enemy)
+    };
     let in_wall = match target {
         DamageTarget::Unit { instance } => wall.iter().any(|unit| unit.id == instance.id),
         DamageTarget::Hero { .. } => false,
@@ -607,8 +613,48 @@ pub fn attack_mod_for(state: &GameState, attacker: &CardInstance, defender: &Car
     out
 }
 
+/// R3554008 (S+ #107 Fuse): the weight a sweep of `striker` puts on `struck`: `sweepLane` for
+/// lanes that meet, `sweepAdjacent` (defaulting to 1) for lanes one apart, else none. Only when
+/// the striker sweeps, the two are on opposite sides, and both are in unit rows or standing.
+pub fn sweep_weight(state: &GameState, striker: &CardInstance, struck: &CardInstance) -> Option<i32> {
+    let flags = crate::scripts::flags_of(state, striker);
+    let lane = flags.sweep_lane?;
+    let striker_slot = crate::zones::slot_of(state, striker)?;
+    let struck_slot = crate::zones::slot_of(state, struck)?;
+    if striker_slot.player == struck_slot.player {
+        return None;
+    }
+    if !crate::zones::in_units_row_or_standing(state, striker)
+        || !crate::zones::in_units_row_or_standing(state, struck)
+    {
+        return None;
+    }
+    let striker_lanes = crate::giga::lanes_of(striker);
+    let struck_lanes = crate::giga::lanes_of(struck);
+    if striker_lanes.iter().any(|lane| struck_lanes.contains(lane)) {
+        Some(crate::params::declared_or(state, striker, "sweepLane", lane))
+    } else if striker_lanes
+        .iter()
+        .any(|a| struck_lanes.iter().any(|b| (a - b).abs() == 1))
+    {
+        Some(crate::params::declared_or(
+            state,
+            striker,
+            "sweepAdjacent",
+            flags.sweep_adjacent.unwrap_or(1),
+        ))
+    } else {
+        None
+    }
+}
+
 /// MD-F14, R1283: multiplier for attacks across its lane in combat.
 pub fn lane_multiplier_for(state: &GameState, striker: &CardInstance, struck: &CardInstance) -> i32 {
+    // R3554008: a sweep's weight first, so the projections in `lethal.rs` and `query.rs` agree
+    // with combat.
+    if let Some(weight) = sweep_weight(state, striker, struck) {
+        return weight;
+    }
     let Some(printed) = crate::scripts::flags_of(state, striker).lane_multiplier else {
         return 1;
     };
@@ -704,6 +750,54 @@ fn strike(
     );
     let source = live_or(sink.state, attacker);
     cleave(sink, &source, target, cleave_amount, poisonous);
+    let source = live_or(sink.state, attacker);
+    sweep(sink, &source, target, cleave_amount, poisonous);
+}
+
+/// R3554008: a sweep's other hits: every other enemy Unit with a weight takes `cleave_amount *
+/// weight` as one damage instance each (`attack_flags`). A walk of `active_units_of`, which no
+/// half narrows (R3554003).
+fn sweep(
+    sink: &mut EngineSink<'_>,
+    attacker: &CardInstance,
+    target: &AttackTarget,
+    cleave_amount: i32,
+    poisonous: bool,
+) {
+    if crate::scripts::flags_of(sink.state, attacker)
+        .sweep_lane
+        .is_none()
+    {
+        return;
+    }
+    let enemy = opponent_of(attacker.controller);
+    let struck = match target {
+        DamageTarget::Unit { instance } => Some(instance.id.clone()),
+        DamageTarget::Hero { .. } => None,
+    };
+    let units: Vec<CardInstance> = crate::zones::active_units_of(sink.state, enemy)
+        .into_iter()
+        .cloned()
+        .collect();
+    for unit in &units {
+        if struck.as_deref() == Some(unit.id.as_str()) {
+            continue;
+        }
+        let Some(weight) = sweep_weight(sink.state, attacker, unit) else {
+            continue;
+        };
+        deal_damage(
+            sink,
+            DamageArgs {
+                source: Some(attacker.clone()),
+                target: DamageTarget::Unit {
+                    instance: unit.clone(),
+                },
+                amount: cleave_amount * weight,
+                flags: attack_flags(poisonous),
+            },
+        );
+    }
 }
 
 /// The defender's strike back; `via` as on `strike`.

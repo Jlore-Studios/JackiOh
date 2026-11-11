@@ -102,6 +102,10 @@ pub fn resolve_target(ctx: &EffectContext<'_>, spec: &TargetSpec) -> Option<Dama
             if unaffected_by(ctx, instance) {
                 return None;
             }
+            // R3554003: a pick across the slash is passed by too.
+            if !crate::geometry::reaches(ctx.state, ctx.self_.as_ref(), instance) {
+                return None;
+            }
             Some(DamageTarget::Unit {
                 instance: instance.clone(),
             })
@@ -121,6 +125,10 @@ pub fn instance_on_its_stay(ctx: &EffectContext<'_>, instance_id: &str) -> Optio
     }
     // B5 E35: a Spell's effect passes a unit immune to Spells by, named by id as much as chosen.
     if unaffected_by(ctx, instance) {
+        return None;
+    }
+    // R3554003: and one across the slash.
+    if !crate::geometry::reaches(ctx.state, ctx.self_.as_ref(), instance) {
         return None;
     }
     if left_field_after(ctx.state, stay_mark_of(ctx, &instance.id), &instance.id) {
@@ -274,6 +282,8 @@ pub fn matches_scope_aimed(
                 scope.tags.as_deref(),
                 scope.not_tags.as_deref(),
             ))
+        // R3554003: and a scope from one half never takes a card of the other.
+        && crate::geometry::reaches(ctx.state, ctx.self_.as_ref(), card)
 }
 
 /// Whether one card passes a scope's filters. Zone membership is the caller's business.

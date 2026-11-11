@@ -73,7 +73,8 @@ fn contents_of(state: &GameState, slot: &ZoneSlot) -> Vec<CardInstance> {
 /// nothing, so R688's Lock does not stop it), while one reserved for a dying Reborn unit counts as
 /// occupied for every other card (§3.2, R64).
 fn can_accept(state: &GameState, slot: &ZoneSlot) -> bool {
-    !crate::zones::is_reserved(state, slot)
+    // R3554002: a void destination bounces the card instead of panicking in `place_contents`.
+    !crate::zones::is_reserved(state, slot) && !crate::geometry::is_void(state, *slot)
 }
 
 /// A pile is rebuilt from the bottom up, so the same card stays on top acting for the zone (§3.2).

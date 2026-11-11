@@ -42,7 +42,9 @@ use crate::announce::announced_face_down_to;
 use crate::catalog::{find_def, registered_catalog};
 use crate::combat::{ExertionKind, has_exertion_in, is_asleep, why_cannot_declare_in};
 use crate::condition::condition_active;
-use crate::config::{DRAW_OFFER_BLOCK_TURNS, PROMPT_CARD_OPTION_LIMIT, VIEW_EVENT_LIMIT};
+use crate::config::{
+    BLACK_HOLE_CAPACITY, DRAW_OFFER_BLOCK_TURNS, PROMPT_CARD_OPTION_LIMIT, VIEW_EVENT_LIMIT,
+};
 use crate::cost_rules::{cost_rule_text, enchant_next_spell_label};
 use crate::counter_warning::countered_hand_cards;
 use crate::damage::hero_armor_of;
@@ -71,12 +73,12 @@ use crate::subsystems::pareto::pareto_hint_ids;
 use crate::subsystems::quests::quest_view_of;
 use crate::turn::standing_draw_offer;
 use crate::wire::{
-    AnimatedView, BackrowCounters, BackrowView, CardDef, CardMark, CardType, CardView, CopiedTextView,
-    CreditView, DrawOfferView, FaceDownBackrowView, GameEvent, GameEventType, GameResult, GlitchOutcome,
-    HandView, HeroPowerView, HeroView, Keyword, KeywordKind, LibraryOverflowOutcome, ManaView, ModifierView,
-    MulliganView, PLAYER_IDS, PendingElsewhereView, PendingOption, PendingPromptView, PendingView, PlayerId,
-    PlayerView, PreviewValue, PromptKind, PublicBackrowView, Row, RowFlags, Selection, SideView,
-    TuningChange, UnitView, Zone, ZoneName, opponent_of,
+    AnimatedView, BackrowCounters, BackrowView, BlackHoleView, CardDef, CardMark, CardType, CardView,
+    CopiedTextView, CreditView, DrawOfferView, FaceDownBackrowView, GameEvent, GameEventType, GameResult,
+    GlitchOutcome, HandView, HeroPowerView, HeroView, Keyword, KeywordKind, LibraryOverflowOutcome, ManaView,
+    ModifierView, MulliganView, PLAYER_IDS, PendingElsewhereView, PendingOption, PendingPromptView,
+    PendingView, PlayerId, PlayerView, PreviewValue, PromptKind, PublicBackrowView, Row, RowFlags, Selection,
+    SideView, TuningChange, UnitView, Zone, ZoneName, opponent_of,
 };
 use crate::zones::{
     beneath_at, carried_at, carried_units_of, home_of, is_reserved, is_standing_unit, slot_of, slots_of,
@@ -877,6 +879,9 @@ fn unit_view_of(
         evolved: card.evolved,
         // R3546004: the size it stands in, from the instance; the covered zones read empty.
         giga: top.giga,
+        // R3554007: the damage chains it is in, public on both seats like the unit itself.
+        shared_chain: top.shared_chain,
+        split_chain: top.split_chain,
         // ME-GRANT (MD-D13): the granted Death abilities, as the Unit's lines read them.
         grants: crate::grants::grant_texts(state, top),
         // R849000: summoning sick with neither Rush nor Charge, from public facts on the field.
@@ -1519,10 +1524,7 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
         // R961: public on both seats, and absent until it first rises (D14).
         jade: side.jade.filter(|value| *value > 0),
         // R3548000: public on both seats, and absent at none, as Jade is.
-        tipsy: side
-            .tipsy
-            .map(|counter| counter.count)
-            .filter(|count| *count > 0),
+        tipsy: side.tipsy.map(|counter| counter.count).filter(|count| *count > 0),
         // R3548004: public on both seats, while a card giving it acts on this seat's field.
         infinite_mana: crate::mana::has_infinite_mana(state, player).then_some(true),
         // R1840005: public on both seats, and absent until first gained.
@@ -2446,6 +2448,8 @@ fn redact_event(
         | GameEventType::Predicted
         // R831003: the curve is board positions only.
         | GameEventType::CurveDrawn
+        // R3554005: the line is board positions only.
+        | GameEventType::LineDrawn
         // R1183002: the autopilot names a player and a turn.
         | GameEventType::AutopilotEngaged
         // R1838001: a Trade names its player alone; its `shuffledIn` and `drawn` are judged as any are.
@@ -2910,6 +2914,12 @@ pub fn view_for_with_clock(state: &GameState, player_id: PlayerId, clock_ms: Opt
         trades: trades_view(state, player_id),
         // R1853000, R1853003: the Marketplace as the viewer reads it, once it is open.
         marketplace: crate::marketplace::marketplace_view(state, player_id),
+        // R3554000, R3554002: the hole and the slash, public on both seats.
+        black_hole: state
+            .black_hole
+            .as_ref()
+            .map(|hole| BlackHoleView::of(hole, BLACK_HOLE_CAPACITY)),
+        slashed_lane: state.slashed_lane,
     };
     let defs = match_defs_in(state, &view);
     if !defs.is_empty() {

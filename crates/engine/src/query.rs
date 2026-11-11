@@ -460,6 +460,35 @@ pub fn damage_pool_left(state: &GameState, card: &CardInstance) -> Option<i32> {
     Some((cap - crate::damage::damage_pool_used(state, card)).max(0))
 }
 
+/// R3560000: whether this player has used the once-a-game first `key` (S+ #120, #121).
+pub fn once_a_game_used(state: &GameState, player: PlayerId, key: &str) -> bool {
+    state.players[player]
+        .once_a_game
+        .as_ref()
+        .is_some_and(|used| used.iter().any(|seen| seen == key))
+}
+
+/// R3560005: whether a summon with `exileBelow` (E7) may land on `slot` for `source`: its half of a
+/// slashed board, never a void lane, never a pile holding a Dormant card, never a reserved zone.
+pub fn exiling_summon_lands(state: &GameState, source: &CardInstance, slot: crate::zones::ZoneSlot) -> bool {
+    crate::geometry::lane_in_half(state, slot.lane, crate::geometry::half_of_card(state, source))
+        && !crate::geometry::is_void(state, slot)
+        && !crate::zones::zone_contents(state, slot)
+            .iter()
+            .any(crate::slumber::is_slumbering)
+        && !crate::zones::is_reserved(state, slot)
+}
+
+/// R3560006: whether a card of `def_id` stands on either side's field. A pure read, never
+/// `unit_view`, so `conditional_keywords` may call it.
+pub fn def_on_field(state: &GameState, def_id: &str) -> bool {
+    crate::wire::PLAYER_IDS.iter().any(|player| {
+        crate::zones::active_units_of(state, *player)
+            .iter()
+            .any(|card| card.def_id == def_id)
+    })
+}
+
 /// R3550000: the enemy Unit this event brings onto the field, or `None`: a summon of a Unit onto
 /// the enemy side (Recruit, a token, a copy, Reborn), or a played one once it resolves — its play's
 /// own placement (§10.5 step 4, which carries `exitsFrom`) waits for that. Copied from Stinkyscape

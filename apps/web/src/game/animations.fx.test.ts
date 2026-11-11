@@ -309,6 +309,7 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   predicted: null,
   // #831's patch (R831003): KY's Papaya's curve runs from cell to cell across the board.
   curveDrawn: "curve",
+  lineDrawn: "line",
   autopilotEngaged: "banner",
   // R1839002: a Dormant card awakens with the brand flourish.
   awakened: "brand",
@@ -460,6 +461,7 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   secretRevealed: ["jk-badge-fade", 400, "hero-<side>"],
   predicted: ["jk-badge-fade", 400, "hero-<side>"],
   curveDrawn: ["jk-curve-drawn", 700, "board"],
+  lineDrawn: ["jk-line-drawn", 700, "board"],
   autopilotEngaged: ["jk-banner", 600, "turn-banner"],
   awakened: ["jk-radiant-pulse", 400, "card-<instanceId>"],
   evolved: ["jk-radiant-pulse", 400, "card-<instanceId>"],

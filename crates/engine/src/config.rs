@@ -2389,6 +2389,17 @@ pub const WARHERO_GROWTH_MAX: i32 = 10;
 /// R3548002: what a Radiant Warhero Token's worth is multiplied by.
 pub const WARHERO_RADIANT_MULTIPLIER: i32 = 2;
 
+// ---- Stinkyscape+ E7 (issue #3554) ----
+
+/// R3554000 (S+ #77 Black Hole): the lane the Black Hole occupies, on both sides.
+pub const BLACK_HOLE_LANE: i32 = 3;
+/// R3554000: the permanents the Black Hole swallows before it closes.
+pub const BLACK_HOLE_CAPACITY: i32 = 10;
+/// R3554002 (S+ #78 Slashed Dream Cries in Red): the lane the slash takes by default.
+pub const SLASH_BASE_LANE: i32 = 3;
+/// R3554002: the lanes the Radiant face may slash.
+pub const SLASH_LANES: [i32; 3] = [2, 3, 4];
+
 #[cfg(test)]
 mod tests {
     use super::*;

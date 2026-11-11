@@ -34157,7 +34157,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 0,
-    "loc": 6,
+    "loc": 87,
     "base": {
       "attack": 1,
       "health": 3,
@@ -34206,7 +34206,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 10,
-    "loc": 6,
+    "loc": 156,
     "base": {
       "attack": 10,
       "health": 10,
@@ -34221,7 +34221,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Crater, Immutable, Rush\nThe first time this enters your hand each game, add a Crawler to your hand.\nFloat reduces mana. Friendly Crawlers dying reduces mana cost by (1).\nCry: Summon {legs|Toxopid Leg|Toxopid Legs} anywhere on the field.\nIndestructible while Toxopid Legs are on the field.\nEnd of turn: Give all enemies Toxic {toxic}."
+      "text": "Crater, Immutable, Rush\nThe first time this enters your hand each game, add a Crawler to your hand.\nFloat reduces mana. Friendly Crawlers dying reduces mana cost by (1).\nCry: Summon {legs|Toxopid Leg|Toxopid Legs} anywhere on the field.\nIndestructible while Toxopid Legs are on the field.\nIgnores Taunt.\nEnd of turn: Give all enemies Toxic {toxic}."
     },
     "radiant": {
       "attack": 20,
@@ -34237,7 +34237,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Crater, Immutable, Rush\nThe first this game that this enters your hand, add a Crawler to your hand.\nFloat reduces mana. Friendly Crawlers Dying reduces mana cost by (1).\nCry: Summon {legs|Radiant Toxopid Leg|Radiant Toxopid Legs} on your opponent's field.\nIndestructible while Toxopid Legs are on the field.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
+      "text": "Crater, Immutable, Rush\nThe first time this enters your hand each game, add a Crawler to your hand.\nFloat reduces mana. Friendly Crawlers dying reduces mana cost by (1).\nCry: Summon {legs|Radiant Toxopid Leg|Radiant Toxopid Legs} on your opponent's field.\nIndestructible while Toxopid Legs are on the field.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
     },
     "params": [
       {
@@ -34328,7 +34328,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 45,
     "base": {
       "attack": 3,
       "health": 12,
@@ -34398,7 +34398,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 57,
     "base": {
       "attack": 4,
       "health": 16,
@@ -34413,7 +34413,7 @@
           "kind": "Flying"
         }
       ],
-      "text": "Tribute 3, Can't attack, Can't Defend, Flying\nEnd of turn: Heal all allies {heal}.\nAura: The first {damage} damage allies would take per turn is nullified."
+      "text": "Tribute 3, Can't attack, Can't Defend, Flying\nEnd of turn: Heal all allies {heal}.\nAura: The first {pool} damage allies would take per turn is nullified."
     },
     "radiant": {
       "attack": 8,
@@ -34433,7 +34433,7 @@
           "n": 2
         }
       ],
-      "text": "Tribute 3, Can't attack, Can't Defend, Flying, Armor 2\nEnd of turn: Heal all allies {heal}.\nThe first {damage} damage allies would take per turn is nullified."
+      "text": "Tribute 3, Can't attack, Can't Defend, Flying, Armor 2\nEnd of turn: Heal all allies {heal}.\nThe first {pool} damage allies would take per turn is nullified."
     },
     "params": [
       {
@@ -34445,7 +34445,7 @@
         "min": 1
       },
       {
-        "key": "damage",
+        "key": "pool",
         "base": 5,
         "radiant": 10,
         "better": "up",
@@ -34468,7 +34468,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 56,
     "base": {
       "attack": 5,
       "health": 12,
@@ -34536,7 +34536,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 47,
     "base": {
       "attack": 7,
       "health": 17,
@@ -34552,7 +34552,7 @@
           "n": 8
         }
       ],
-      "text": "Tribute 3, Ranged, Taunt, Armor 8\nActivate: {deal}: Deal {damage} Pierce Trample damage."
+      "text": "Tribute 3, Ranged, Taunt, Armor 8\nActivate: {deal}: Deal {damage} Pierce Trample damage. Has a 3-turn cooldown."
     },
     "radiant": {
       "attack": 14,
@@ -34569,7 +34569,7 @@
           "n": 16
         }
       ],
-      "text": "Tribute 3, Ranged, Taunt, Armor 16\nActivate: {deal}: Deal {damage} Pierce Trample damage."
+      "text": "Tribute 3, Ranged, Taunt, Armor 16\nActivate: {deal}: Deal {damage} Pierce Trample damage. Has a 3-turn cooldown."
     },
     "params": [
       {
@@ -34604,7 +34604,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 39,
     "base": {
       "attack": 0,
       "health": 10,
@@ -34664,7 +34664,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 39,
     "base": {
       "attack": 0,
       "health": 20,

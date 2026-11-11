@@ -26,6 +26,7 @@ import {
   type Side,
 } from "./contract.ts";
 import { listedFace } from "./faces.ts";
+import { chainMarkOf } from "./geometry.ts";
 import { gigaCellOf } from "./giga.ts";
 import { countedTestids, glowAttr } from "./glow.ts";
 import { useHoveredHandCard } from "./hoveredHandCard.tsx";
@@ -100,6 +101,7 @@ export default function Zone(props: ZoneProps): ReactElement {
       data-locked={locked ? "true" : undefined}
       data-reserved={reserved ? "true" : undefined}
       data-giga={gigaCellOf(view, side, row, lane) ?? undefined}
+      data-chain={chainMarkOf(view, side, row, lane) ?? undefined}
       data-legal={legalAttr(legal)}
       data-glow={glowAttr(props.highlight, testId)}
       data-selected={selected ? "true" : undefined}

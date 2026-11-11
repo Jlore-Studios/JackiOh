@@ -1,6 +1,7 @@
 //! Playing cards from the graveyard (docs/classic-sets.md B5 E11, R454): the permissions that allow
 //! it, the plays `legal_actions` offers under them, the refusal §10.5 step 1 gives, and the Plague
-//! Token payment Classic #74 Corpse Plantation adds.
+//! Token payment Classic #74 Corpse Plantation adds. R3560001: a card with `graveyardPrice`
+//! grants itself that play (S+ #120).
 //!
 //! A permission is a card on the field saying so (Classic #28 Second Wind, #74, #90 In Too Deep's
 //! reward L): `Script.graveyard_play`, a pure read asked of the cards acting on the player's own side.
@@ -95,6 +96,12 @@ fn field_admitting(state: &GameState, player: PlayerId, card: &CardInstance) -> 
 fn admitting(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<GraveyardGrant> {
     let mut out = field_admitting(state, player, card);
     if has_flashback(state, card) {
+        out.push(GraveyardGrant {
+            source: card.clone(),
+            permission: GraveyardPlayPermission::default(),
+        });
+    }
+    if crate::scripts::flags_of(state, card).graveyard_price.is_some() {
         out.push(GraveyardGrant {
             source: card.clone(),
             permission: GraveyardPlayPermission::default(),

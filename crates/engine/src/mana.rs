@@ -189,6 +189,12 @@ pub fn printed_cost(state: &GameState, instance: &CardInstance) -> i32 {
     if let Some(cost) = script.cost.as_ref() {
         return cost(CostArgs { state, instance }).max(0);
     }
+    // R3560001: the graveyard price reads in the graveyard (S+ #120 Crawler).
+    if let Some(price) = crate::scripts::flags_of(state, instance).graveyard_price
+        && matches!(instance.zone, Zone::Graveyard { .. })
+    {
+        return price.max(0);
+    }
 
     let cost: CardCost = def_of(Some(state), &instance.def_id).cost;
     match cost {

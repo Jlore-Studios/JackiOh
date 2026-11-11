@@ -254,12 +254,32 @@ fn aura_entries(state: &GameState) -> Vec<AuraEntry<'_>> {
         let Some(aura) = script.aura.as_ref() else {
             continue;
         };
-        entries.extend(aura(HookArgs {
-            state,
-            self_: source,
-            // R1850000: the face of the text that is running, a copier's copied one.
-            radiant: crate::subsystems::unit_text::text_def_of(source).1,
-        }));
+        // R3554003: on a slashed board an aura reaches only its own half; off one the wrap costs a
+        // single `Option` read per entry (perf budget).
+        let slashed = state.slashed_lane.is_some();
+        let from = source.clone();
+        entries.extend(
+            aura(HookArgs {
+                state,
+                self_: source,
+                // R1850000: the face of the text that is running, a copier's copied one.
+                radiant: crate::subsystems::unit_text::text_def_of(source).1,
+            })
+            .into_iter()
+            .map(|entry| {
+                if !slashed {
+                    return entry;
+                }
+                let from = from.clone();
+                let applies = entry.applies;
+                AuraEntry {
+                    applies: Box::new(move |unit: &CardInstance| {
+                        applies(unit) && crate::geometry::reaches(state, Some(&from), unit)
+                    }),
+                    mod_: entry.mod_,
+                }
+            }),
+        );
     }
     entries
 }

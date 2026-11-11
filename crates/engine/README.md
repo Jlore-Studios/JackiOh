@@ -137,6 +137,15 @@ builds reads its own game's hold without the state (R2201001).
   (`refreshActivates`), `refresh_ability` and `is_refresh_ability`; infinite mana (R3548004) is
   `StaticFlags.infinite_mana`, `mana::has_infinite_mana` and `credit::can_pay`, which every refusal
   and listing reads.
+- `geometry.rs` is board geometry (§3, R3554000–R3554004): the hole and slash reads (`in_hole`,
+  `is_void`, `half_of_lane`, `half_of_card`, `lane_in_half`, `reaches`, `chain_members`,
+  `line_cells`) and the turn steps (`exile_zone`, `swallow_standing`, `pull_at_turn_start`); the
+  verbs are `effects/geometry.rs`: `open_black_hole` (`openBlackHole`, R3554000), `slash_board`
+  (`slashBoard`, R3554002) with `ask_slash_lane`/`chosen_slash_lane`, `line_damage_begin` and
+  `line_damage_answered` (`lineTile`/`lineDamage`, R3554005), `chain_lightning` (`chainLightning`,
+  R3554006) and `chain_units` (`chainUnits`, R3554007); the sweep (R3554008) is
+  `StaticFlags.sweep_lane`/`sweep_adjacent` with `combat::sweep_weight` and `combat::sweep`, and the
+  occupied summon (R3554009) is `SummonPlacement.exile_below`.
 - `countering.rs` is counters (§4.2, §6.3, R3550005): `counter_declared_attack` and
   `counter_activation`, read by `combat::declare_instead` and `activate::{activate_ability,
   run_owed_activation}`; `effects/combat.rs` is the forced attack `forced_attack` (`forcedAttack`,

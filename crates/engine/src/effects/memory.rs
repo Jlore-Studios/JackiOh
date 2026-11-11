@@ -51,6 +51,25 @@ pub struct RememberRandomArgs {
     pub options: Vec<Value>,
 }
 
+/// `markOnceAGame`'s argument (R3560000).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct OnceAGameArgs {
+    pub key: String,
+}
+
+pub fn mark_once_a_game(args: OnceAGameArgs) -> Effect {
+    Effect::new("markOnceAGame", move |ctx| {
+        let entry = ctx.sink.state.players[ctx.controller]
+            .once_a_game
+            .get_or_insert_with(Vec::new);
+        if !entry.contains(&args.key) {
+            entry.push(args.key.clone());
+        }
+    })
+}
+
 /// Remember one of `options`, drawn from the match rng so setup replays the same way (R43).
 pub fn remember_random(args: RememberRandomArgs) -> Effect {
     Effect::new("rememberRandom", move |ctx| {

@@ -54,6 +54,7 @@ pub mod redact_last_boards;
 pub mod redact_live_face_down;
 pub mod redact_play_records;
 pub mod redact_revealed_backrow;
+pub mod redact_once_a_game;
 pub mod redact_side_snapshot;
 pub mod redact_twice;
 pub mod redact_view_mirror;
