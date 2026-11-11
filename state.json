@@ -22,95 +22,12 @@
     }
   },
   "items": {
-    "2156": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-28T03:27:17Z",
-      "planned_by": "`claude-squishy` (claude, `opus`, strong)",
-      "planned_by_id": "claude-squishy",
-      "planned_tier": "strong",
-      "pr": 2169,
-      "provider": "claude-squishy",
-      "round_tier": "strong",
-      "run_id": "40614333188",
-      "runs_on": "ubuntu-latest",
-      "started_at": "2026-10-28T01:20:05Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "verdict_rounds": 1
-    },
-    "2157": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-28T03:14:40Z",
-      "planned_by": "`claude-squishy` (claude, `opus`, strong)",
-      "planned_by_id": "claude-squishy",
-      "planned_tier": "strong",
-      "pr": 2167,
-      "provider": "claude-squishy",
-      "round_tier": "strong",
-      "run_id": "40614410213",
-      "runs_on": "ubuntu-latest",
-      "started_at": "2026-10-28T01:20:45Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "verdict_rounds": 1
-    },
-    "2167": {
-      "cleared": {
-        "at": "2026-10-28T03:14:53Z",
-        "by": "`claude` (strong)",
-        "sha": "6d754c2fa47eff36e50edfeda2e620a3b6586259"
-      },
-      "closed_at": "2026-10-28T03:30:27Z",
-      "difficulty": "hard",
-      "failures": 0,
-      "feedback_since": "2026-10-28T01:20:45Z",
-      "issue": 2157,
-      "kind": "revise",
-      "merged": true
-    },
-    "2169": {
-      "cleared": {
-        "at": "2026-10-28T03:27:33Z",
-        "by": "`claude` (strong)",
-        "sha": "b63b38ebd630f2c26ee9fea517f4fedbe9942cc6"
-      },
-      "closed_at": "2026-10-28T03:38:32Z",
-      "difficulty": "hard",
-      "failures": 0,
-      "feedback_since": "2026-10-28T01:20:05Z",
-      "issue": 2156,
-      "kind": "revise",
-      "merged": true
-    },
     "2980": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-11-04T02:56:00Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "rio.json` and `bot/go/internal/providers/testdata/python.json`, which `fakes_test.go:232` and `python_test.go:32` read. Also leave every other file, `CLAUDE.md`, `AGENTS.md` and `.claude/skills/` (this week's agent-instructions issue owns those), `spec/`, `BUILD.md`, `REVIEW.md` and the designer's notes. No spec section or ruling governs this change.\n\n## Steps\n\n1. Delete the two generators: `git rm bot/go/internal/fakes/testdata/scenario.py bot/go/internal/providers/testdata/gen_python.py`.\n2. In `bot/go/internal/fakes/fakes_test.go`, replace lines 1\u20132 with:\n   ```go\n   // The fake against the Python fake it replaced (#2473): TestScenario builds the world the Python\n   // harness's tests/fakes.py built and must dump the same JSON, byte for byte (testdata/scenario.json,\n   // recorded from the Python before #2473 removed it).\n   ```\n3. In `bot/go/internal/providers/python_test.go`, replace line 6 (`// The file is written by running the Python; regenerate it whenever providers.py changes.`) with:\n   ```go\n   // The file was recorded from the Python before #2473 removed it, and is now a fixed record.\n   ```\n   Keep lines 3\u20135. They say what the file holds.\n4. Open the pull request with the deletions table (the two rows above, each with the evidence from **Tests**), and paste the branch checklist from the issue unchanged.\n\n## Tests\n\nNo test is added. The Go tests that read the two JSON files keep passing, and that proves the generators were not needed.\n\n- `cd bot/go && go test ./internal/fakes/ ./internal/providers/` passes (run it with `HARNESS_HOME` and `HARNESS_DRY_RUN` unset).\n- `cd bot/go && go test ./...` and `cd bot && python3 -m unittest discover -s tests -t .` pass. Together they are the bot selftest, the only CI job a `bot/`-only pull request runs.\n- `git grep -n -E \"gen_python|scenario\\.py\"` prints nothing after Step 2.\n\nEvidence that the generators are dead (run on 2026-11-04 at 78ba41a9f):\n- `cd /tmp && python3 -I <repo>/bot/go/internal/fakes/testdata/scenario.py <repo>/bot` printed `ModuleNotFoundError: No module named 'harness'`.\n- `cd /tmp && PYTHONPATH=<repo>/bot python3 <repo>/bot/go/internal/providers/testdata/gen_python.py /tmp/out.json 1 1` printed the same error and wrote nothing.\n- `git ls-files bot/harness bot/tests/fakes.py | wc -l` printed `0`. `git log --diff-filter=D -1 -- bot/harness/providers.py bot/tests/fakes.py` printed `5ffe4ecc9 \u2026 (#2473)`.\n- `git grep -n -E \"gen_python|scenario\\.py\"`, excluding the two files themselves, found only `bot/go/internal/fakes/fakes_test.go:1`. No workflow, script or test glob runs a `.py` under `bot/go`, and `unittest discover -s tests` looks only in `bot/tests/`.\n\nEvidence that nothing outside the forbidden paths is dead (same commit):\n- **Rust.** `cargo check --workspace --all-targets --features jackioh-engine/testkit,jackioh-engine/ts` exited 0. Then `cat target/debug/deps/*.d | tr ' ' '\\n' | sed \"s|^$PWD/||; s|:$||\" | sort -u > /tmp/compiled.txt; git ls-files 'crates/*.rs' | sort | comm -23 - /tmp/compiled.txt` printed only `crates/ai/build.rs`, `crates/cards/build.rs` and `crates/server/build.rs`, which are build scripts. So every one of the 1,911 tracked `.rs` files is compiled. Every `pub const ID` of the 774 card scripts is in `crates/cards/catalog.json`. A scan for modules that nothing but tests names found only test modules and macro-wired ones (`crates/luau/src/api/*.rs`, through `verbs!` in `api/mod.rs`). Items that only their own tests use belong to the code audit (`.github/hygiene/code.md`), not to this issue.\n- **Web, edge and e2e.** I built an import graph by script: relative imports, `@import`, `new URL(\u2026)` workers and `import.meta.glob` patterns. It starts from `apps/web/src/main.tsx`, `vite.config.ts`, `apps/edge/src/index.ts` and `apps/web/scripts/*`. It reaches 742 of the 768 non-test modules under `apps/web/src`. The other 26 are test helpers: `*/fixtures.ts`, `*/testkit.ts`, `audio/test/*`, `src/test/*`, `tutorial/harness.ts`, and `cards/art/convention.ts`, the art-convention check that `ci.yml` and `super.yml` name. Every `e2e/support` file is reachable from the specs, `cypress.config.ts`, `support/e2e.ts`, `support/component.tsx` or the `*-runner.ts` tasks. Every script in `apps/web/scripts` and `e2e/scripts` is named by a workflow, `package.json` or a README.\n- **Assets.** Every one of the 1,660 `apps/web/public/audio/**/*.m4a` files has an entry in `src/audio/voice-manifest.json` or `music-manifest.json`, and every entry has its file. Every Luau fixture stem is named in `crates/luau`. `crates/tools/fuzz-corpus` is read as a directory (`fuzz.rs`). `crates/cards/build.rs` reads `patches/win_rates` and `card_metrics`. Every remaining data file (`crates/*/tests/fixtures`, `golden/`, `bots/names`, `analysis/fixtures`, `cards/art/fixtures`, fonts, brand SVGs) has an `include_str!`, an import or a test that reads it.\n- **Archives.** Every `reviews/*.md` file is cited where a bot cannot edit it, or by a live rule. `2026-10-19-issue-383-muse` is cited by `bot/machine/README.md:212`. `2026-10-22-issue-682-subscriptions` is cited by `.github/workflows/spec-fold.yml:5` and `spec/README.md:58`. `2026-10-27-muse-usage` is cited by `.harness/providers.json`, `bot/go/internal/gh/methods.go:483` and `bot/machine/setup.sh:54`. `2026-10-14-issue-814-first-pass` is cited by `CLAUDE.md:83` (rule 12) and `docs/issues-and-patches.md:313`. Of the docs, `docs/v0.3.0/README.md` is cited by `.github/actions/e2e-shard/action.yml:3` and `ci.yml`. `docs/v0.4.0/*` is cited by `CLAUDE.md:18`, `crates/luau/README.md:10` and `crates/luau/src/reads.rs:847`. Code and test comments cite each `docs/polish/*.md` file (17 to 45 files each) and `docs/learned-eval.md` (15). Every other `docs/*.md` file has at least one non-Markdown citer. `photos/screens/` was added on 2026-11-01 (#2747) to be looked at and reused (`photos/README.md`).\n\n## Done when\n\n- [ ] The two generators are deleted, and the two comments say the JSON is a fixed record from before #2473.\n- [ ] The JSON fixtures are unchanged, and the `go test` runs and the bot selftest above pass.\n- [ ] The pull request body has the deletions table: path, size, evidence.\n- [ ] The branch checklist is left for a person to tick, followed by `/delete-branches`.\n\n## Risks\n\n- If someone later changes the Go fake or `providers` in a way the old Python would have answered differently, the JSON can no longer be re-recorded. That is already true today: the Python is gone, so deleting the generators loses nothing. The tests pin the Go behaviour to the recorded answers. Changing that behaviour means editing the JSON by hand, and the new comments should say so.\n- A `bot/`-only pull request runs only `bot selftest` (`scripts/ci-scope.sh`), so the person should run the two `go test` commands locally before merging.\n- 97 other comments in `bot/go` still cite `bot/harness/*.py` as the source of the parity data. They explain why the data looks the way it does, they do not tell anyone to run code that is gone, and this plan leaves them.\n\n## Open questions\n\n- `e2e/fixtures/decks/08-do-nothing-a.json` is a fixture no spec plays, though `check-fixtures.mjs` still validates it. Its own description keeps it \"as their base\" for `08-reserves-a` and `-b`. The descriptions of `08-reserves-a`, `17-live-a`, `21-marks-a` and `25-hand-full-a` define those decks by how they differ from it. I kept it. A person may delete it and rewrite those four descriptions.\n- `reviews/2026-10-14-issue-814-first-pass.md` is the evidence behind CLAUDE.md rule 12 and the \"A task over every card\" section of `docs/issues-and-patches.md`. No workflow, test or code comment cites it. I kept it, and so did last week's pass (#2169). Deleting it means dropping the citations at `CLAUDE.md:83` and `docs/issues-and-patches.md:313`, and this week's agent-instructions issue also edits `CLAUDE.md`. A person decides.\n- The branches in the issue are for a person: tick them, then comment `/delete-branches`.\n\n# Notes\n\n",
-        "provider": "claude-squishy",
-        "reason": "its plan leaves nothing the bot may do",
-        "trail": "8p docs/issues-and-patches.md; echo; for f in reviews/*.md; do echo \\\"== $f\\\"; git grep -n -F \\\"$(basename $f \u2026\n- Bash: {\"command\": \"git ls-files '*.md' '*.txt' '*.csv' '*.tsv' '*.log' | grep -v -E '^(spec/rulings|spec/pending|\\\\.github|bot/|\\\\.harness|\\\\.squishy|\\\\.claude)' | grep -v -E 'README\\\\.md$' ; git ls-files \u2026\n- Bash: {\"command\": \"git ls-files bot/go | grep -E 'testdata' ; git grep -n \\\"python.json\\\" -- bot/go | grep -v testdata | head -20\", \"description\": \"Check bot Go testdata readers\"}\n- Bash: {\"command\": \"for f in $(git ls-files apps/web/public/fonts | grep woff2) $(git ls-files crates/server/src/bots/names crates/server/src/username analysis/fixtures apps/web/src/cards/art/fixtures crate\u2026\n- Bash: {\"command\": \"git grep -n \\\"e2e/fixtures\\\\|fixtures/decks\\\" -- crates apps scripts .github | cut -c1-200 | head; grep -n '\\\"spec\\\"' e2e/fixtures/decks/*.json | cut -c1-150 | head -50\", \"description\": \u2026\n- Bash: {\"command\": \"python3 -c \\\"\\nimport json\\nfor n in ['08-do-nothing-a','08-do-nothing-b','08-reserves-a']:\\n d=json.load(open(f'e2e/fixtures/decks/{n}.json')); print(n, '::', d['description']); print()\u2026\n- Bash: {\"command\": \"git ls-files '*.py' | grep -v '^bot/'; for m in data export fit models policy_fit quantize; do echo \\\"$m: $(git grep -l -E \\\"(from|import) .*\\\\b$m\\\\b|jackioh_ml\\\\.$m|jackioh_ml/$m|$m\\\\.p\u2026\n- Bash: {\"command\": \"for p in $(git ls-files docs '*.md' | grep -v -E '^(spec/|\\\\.github|bot/|\\\\.harness|\\\\.squishy|\\\\.claude|reviews/|training/history)' | grep -v -E '/README\\\\.md$|^README\\\\.md$|^JackiOh_|^\u2026\n- Bash: {\"command\": \"cat > /tmp/hyg/rsmods3.py <<'EOF'\\nimport re, os\\nallrs=open('/tmp/hyg/rsfiles.txt').read().split()\\nfiles=[f for f in allrs if '/src/' in f and not f.endswith(('lib.rs','main.rs','build\u2026\n- Bash: {\"command\": \"cat > /tmp/hyg/items.py <<'EOF'\\nimport re, os, sys, subprocess\\ncands=[l.split(' <-')[0] for l in open('/tmp/hyg/r3.txt') if l.strip()]\\nallrs=open('/tmp/hyg/rsfiles.txt').read().split(\u2026\n- Bash: {\"command\": \"grep -n \\\"coins\\\\|turn_hooks\\\" crates/luau/src/api/mod.rs | head; head -20 crates/luau/src/api/coins.rs\", \"description\": \"Check how Luau api modules are wired\"}\n- Bash: {\"command\": \"sed -n 1,60p .github/hygiene/code.md; echo ======; sed -n 1,80p .github/hygiene/files.md\", \"description\": \"Read the hygiene code and files instructions\"}\n- Bash: {\"command\": \"git grep -n \\\"docs/v0.4.0\\\" -- . | grep -v -E '^docs/v0.4.0' | cut -c1-180 | head -20\", \"description\": \"Find citations of docs/v0.4.0\"}\n- Bash: {\"command\": \"git grep -n \\\"component-index\\\" -- e2e | head -3; for f in $(git ls-files analysis/fixtures); do b=$(basename $f); echo \\\"$(git grep -l -F \\\"$b\\\" -- analysis | grep -v \\\"^$f$\\\" | tr '\\\\n\u2026\n- Bash: {\"command\": \"git ls-files bot | grep -v '^bot/go/' ; git ls-files bot/go | grep -v '\\\\.go$' | grep -v testdata\", \"description\": \"List bot files outside the Go tree\"}\n- Bash: {\"command\": \"head -12 bot/go/internal/fakes/testdata/scenario.py; echo ----; head -12 bot/go/internal/providers/testdata/gen_python.py; git grep -n \\\"scenario.py\\\\|gen_python.py\\\" -- bot | grep -v -E\u2026\n- Bash: {\"command\": \"git ls-files bot/harness bot/tests/fakes.py | wc -l; git log --oneline -1 --diff-filter=D -- bot/harness/providers.py bot/tests/fakes.py; ls -la bot/go/internal/fakes/testdata/scenario.p\u2026\n- Bash: {\"command\": \"git ls-files bot/go | grep -E '\\\\.(py|sh|mjs|js)$'; git grep -n -E \\\"scenario\\\\.py|gen_python\\\" -- bot/go | grep -v -E 'testdata/(scenario|gen_python)\\\\.py:' | cut -c1-220; git grep -n -\u2026\n- Bash: {\"command\": \"ls bot/go/internal/providers/; sed -n 1,12p bot/go/internal/providers/python_test.go 2>/dev/null; sed -n 1,8p bot/go/internal/fakes/fakes_test.go\", \"description\": \"Read headers of the Go\u2026\n- Bash: {\"command\": \"for f in $(git ls-files .github .harness .squishy); do b=$(basename $f); case \\\"$f\\\" in .github/workflows/*) continue;; esac; n=$(git grep -l -F \\\"$b\\\" -- . ':!'\\\"$f\\\" | wc -l); echo \\\"$\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport json,re,subprocess\\ncat=json.load(open('crates/cards/catalog.json'))\\ndef ids(o):\\n out=set()\\n if isinstance(o,dict):\\n if 'id' in o and isinstance(o['id'],str\u2026\n- Bash: {\"command\": \"git ls-files apps/web/src/fx/cards | grep '/.*/.*/' | head -5; git ls-files apps/web/src/fx/cards | awk -F/ 'NF==6' | wc -l; git ls-files apps/web/src/cards/art | head -20; git grep -n \\\u2026\n- Bash: {\"command\": \"cat >> /tmp/hyg/tsreach.mjs <<'EOF'\\nconst nonTest = src.filter(f => f.startsWith('apps/web/src') && !isTest(f) && !f.startsWith('apps/web/src/wire/'));\\nconsole.error('non-test web src:\u2026\n- Bash: {\"command\": \"for f in $(git ls-files apps/web/src/test | grep -v '\\\\.test\\\\.'); do b=$(basename $f | sed 's/\\\\.[^.]*$//'); n=$(git grep -l -E \\\"test/$b(\\\\.tsx?)?['\\\\\\\"]|test/$b\\\\b\\\" -- apps e2e vites\u2026\n- Bash: {\"command\": \"git grep -n -E \\\"gen_python|scenario\\\\.py\\\" -- . | grep -v -E '^bot/go/internal/(fakes|providers)/testdata/(scenario|gen_python)\\\\.py:' | cut -c1-200; grep -n \\\"^from\\\\|^import\\\\|sys.pat\u2026\n- Bash: {\"command\": \"cd /tmp && python3 -I /home/runner/work/_temp/work/item-2980/bot/go/internal/fakes/testdata/scenario.py /home/runner/work/_temp/work/item-2980/bot 2>&1 | tail -1; cd /tmp && PYTHONPATH=/\u2026\n- Bash: {\"command\": \"git status --porcelain | head\", \"description\": \"Confirm worktree has no tracked changes\"}\n- Bash: {\"command\": \"sed -n 1,4p bot/go/internal/fakes/fakes_test.go; sed -n 1,8p bot/go/internal/providers/python_test.go; git log --format='%h %ad %s' --date=short -3 -- bot/go/internal/fakes/testdata/scen\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2980/.bot-plan.md\", \"content\": \"**Human required:** the only dead files this week are under `bot/`, which no bot may change. A person deletes `bot/go/\u2026\n- said: **Human required:** the only dead files this week are under `bot/`, which no bot may change. A person deletes `bot/go/internal/fakes/testdata/scenario.py` and `bot/go/internal/providers/testdata/gen_python.py`, rewords the two Go test comments that cite them (Steps 1\u20133), and ticks the branches at t\u2026"
-      },
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "live": "building",
       "owner": "claude-squishy",
       "owner_since": "2026-11-04T02:37:04Z",
@@ -121,22 +38,18 @@
       "planned_by_id": "claude-squishy",
       "planned_tier": "strong",
       "provider": "claude-squishy",
-      "question": "the only dead files this week are under `bot/`, which no bot may change. A person deletes `bot/go/internal/fakes/testdata/scenario.py` and `bot/go/internal/providers/testdata/gen_python.py`, rewords the two Go test comments that cite them (Steps 1\u20133), and ticks the branches at the end of the issue. Outside the forbidden paths nothing is dead or archivable, so the bot builds nothing (the evidence is under **Tests**).",
       "run_id": "41761805309",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-04T02:37:04Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "2981": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "live": "building",
       "owner": "claude-squishy",
       "owner_since": "2026-11-04T02:38:02Z",
@@ -148,15 +61,12 @@
       "planned_tier": "strong",
       "pr": 2993,
       "provider": "claude-squishy",
-      "question": "",
       "round_tier": "strong",
       "run_id": "41761924717",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-04T02:38:02Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2993": {
@@ -183,28 +93,7 @@
         "provider": "claude-squishy",
         "sha": "1a2e909f66b01f62a8a66dbece789b46857da03f"
       },
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "built_by": "claude-squishy",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "provider": "claude-squishy",
-            "run": "41761924717",
-            "tier": "strong"
-          }
-        ],
-        "sha": "1a2e909f66b01f62a8a66dbece789b46857da03f",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "3029": {
       "action": "build",
@@ -215,20 +104,9 @@
         "pr": null,
         "why": "in GitHub, turn on **Allow GitHub Actions to create and approve pull requests** for `Jlore-Studios/JackiOh`. Leave the default token permission as it is."
       },
-      "asks": [],
       "died": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-11-04T11:10:21Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "  4. `merge_pr` (the bot token)\n- Today's run pushed `promote/20261104-6435574` at `64355743f1` (#3020), and that branch is still on the remote. `origin/production` is still `2fdf29620e` (#2892, 2026-11-03 05:42 UTC). `merge_pr` deletes the branch when the merge succeeds, so the run stopped between the push and the merge.\n- The bot token's `pr merge --merge` is proven: #2892 merged that way.\n- The new step is `pr create` with the Actions token, added by #2959 on 2026-11-03. No workflow here has ever opened a pull request with `github.token`:\n  - `patches-ship`, `spec-fold` and `winrates-refresh` use `BOT_GITHUB_TOKEN`.\n  - `sweep` and `learn` use `LEARN_LANE_TOKEN`.\n- Nothing in `infra/` or `bot/` turns the setting on, and GitHub leaves it off by default. With it off, GitHub refuses `createPullRequest` to the Actions token whatever the workflow's `permissions:` say.\n- The test still passes because the stand-in `gh` in `apps/web/src/net/promote-production.test.ts` does not model that refusal. The test is \"the daily promotion\" \u2192 \"merges the commit a passing super run on main tested\u2026\".\n- Every promote run since then retries the promotion and fails the same way. A failed run saves no issue state, so `daily=` is unchanged, and every green push-to-main CI run wakes the job again. Only the runs that super wakes are reported.\n\n## Files to touch\n\nNo change to the repository is required; the fix is the setting above. These follow-ups are optional, for the person, or for Squishy once the setting is confirmed and the issue is relabeled:\n\n| File | new/change | What |\n| --- | --- | --- |\n| `docs/deploy-cloudflare.md` | change | **\u00a73, \"What a person sets outside the repo\":** add the row `\\| GitHub setting \\| Settings -> Actions -> General -> \"Allow GitHub Actions to create and approve pull requests\" (and the organization's, if it greys it out) \\| the daily promotion's pull request (\u00a72.1) \\|`.<br>**\u00a75:** add the troubleshooting entry **A promote run fails with \"GitHub Actions is not permitted to create or approve pull requests\":** the setting above is off; turn it on, then re-run the failed jobs. |\n| `infra/github.tf`, `infra/README.md` | change | Optional: hold the setting as code.<br>\u2022 Resource `github_workflow_repository_permissions` \"jackioh\", with `repository = \"JackiOh\"`, `default_workflow_permissions` set to what the API reports today, and `can_approve_pull_request_reviews = true`.<br>\u2022 An `import` block with `id = \"JackiOh\"`.<br>\u2022 First check that this resource exists in the docs of the pinned provider, `integrations/github` 6.13.0.<br>\u2022 Run `plan`, then `apply`, as `infra/README.md` says.<br>\u2022 Add the setting to the README's GitHub row. |\n\nDo not touch:\n- `scripts/promote-production.sh`\n- `.github/workflows/promote-production.yml`\n- `.github/workflows/super.yml`\n- `apps/web/src/net/promote-production.test.ts`\n\nThe design they hold is right; only the setting is missing. The governing docs are `docs/deploy-cloudflare.md` \u00a72.1, \u00a72.2 and \u00a73, and the headers of `promote-production.yml` and `scripts/promote-production.sh`. No ruling applies.\n\n## Steps\n\nThese are for the person.\n\n1. **Confirm the cause.** Open run 41816839370, job *promote production*, step *promote production and keep its issue*, and read its `::error::` annotation.\n   - If it is the `createPullRequest` refusal, go on to step 2.\n   - If it is `Pull request #N could not be merged into production \u2026`, the merge failed instead. Do not change the setting; paste the annotation into #3029.\n   - If it is any other text, paste it into #3029 as well.\n2. **Organization**, only if the repository's checkbox is greyed out. As an org owner: Jlore-Studios \u2192 Settings \u2192 Actions \u2192 General \u2192 Workflow permissions \u2192 tick *Allow GitHub Actions to create and approve pull requests* \u2192 Save. With the API:\n   - `gh api orgs/Jlore-Studios/actions/permissions/workflow` prints both fields.\n   - Then run `gh api -X PUT orgs/Jlore-Studios/actions/permissions/workflow -f default_workflow_permissions=<the value printed> -F can_approve_pull_request_reviews=true`.\n3. **Repository.** Jlore-Studios/JackiOh \u2192 Settings \u2192 Actions \u2192 General \u2192 Workflow permissions \u2192 tick the same box, leave the read/write choice as it is \u2192 Save. With the API:\n   - `gh api repos/Jlore-Studios/JackiOh/actions/permissions/workflow` prints both fields.\n   - Then run `gh api -X PUT repos/Jlore-Studios/JackiOh/actions/permissions/workflow -f default_workflow_permissions=<the value printed> -F can_approve_pull_request_reviews=true`.\n4. **Move production.** Either:\n   - on run 41816839370, click *Re-run failed jobs*: `promote` runs again with the same event, and `deploy` and `report` follow; or\n   - wait for the next green push-to-main CI run, which retries the daily promotion by itself, since its `daily=` was never saved.\n\n   A retry on 2026-11-04 (UTC) reuses `promote/20261104-6435574`. Expected result: the production issue says \"Merged to production in #N, the daily promotion\u2026\", `deploy` passes, and `report` closes #3029.\n5. **Clean up branches.** A retry on a later day, or for a newer passing super run, pushes a new `promote/<date>-<sha>` branch and leaves `promote/20261104-6435574` behind. Delete every `promote/*` branch that has no open pull request, from the Branches page or with `git push origin --delete promote/20261104-6435574`.\n6. Optionally, make the doc and infra edits in the table above.\n\n## Tests\n\nNone to add. The stand-in `gh` cannot model a repository setting, so the proof is step 4: a promote run that merges and a deploy that passes. If `infra/` changes, CI's `terraform fmt -check -recursive`, `terraform init -backend=false` and `terraform validate` must pass.\n\n## Done when\n\n- [ ] The failed run's annotation has been read and is the `createPullRequest` refusal (or it has been pasted into #3029 and handed back).\n- [ ] The setting is on for the repository, and for the organization where needed.\n- [ ] A promote run merges the daily promotion's pull request into `production`, and its `deploy` passes, which closes #3029.\n- [ ] No `promote/*` branch is left without an open pull request.\n\n## Risks\n\n- **What the setting allows.** With it on, any workflow whose `permissions:` grant `pull-requests: write` can open and approve pull requests with the Actions token. `main`'s protection requires no approving review (`infra/github.tf`), so an approval gates nothing today. Recheck this if required reviews are ever added.\n- **The diagnosis is inferred.** Nothing in this session could read the log. Step 1 guards against changing the setting for a different error.\n- **The default token permission.** The PUT must send `default_workflow_permissions` back unchanged. Otherwise every workflow that declares no `permissions:` gains or loses write access.\n- No determinism, replay, hidden-information or crate contract is touched.\n\n## Open questions\n\n- **If the owners would rather not turn the setting on**, there are two code alternatives. Each needs their decision, and each touches what the bot may not edit:\n  - (a) Open the daily pull request with `PROMOTE_TOKEN` by dropping `[ -z \"${TESTED:-}\" ] || opener=gh` in `open_candidate`.\n    - Super then runs a second time on a pull request that is already merged.\n    - If that run goes red, super's `report` opens \"CI: super run failed on a production candidate\" for a pull request that has already merged.\n    - \u00a72.1's \"no second super run\" no longer holds.\n  - (b) The daily path merges without a pull request: `git merge --no-ff`, then a push of `production` with the bot's credentials.\n    - The `production` ruleset allows it, since the push is a fast-forward.\n    - `HEAD^2` stays the main commit, which `deploy` and `technical-log` rely on.\n    - But `promote-production.yml`'s header (\"only by merging a pull request\") is under `.github/`, which only a person may edit.\n  - I recommend the setting.\n- **Should `infra/github.tf` also hold the setting?** Only a person with the admin token can run `plan` and `apply` for it.\n\n# Notes\n\n",
-        "provider": "claude-squishy",
-        "reason": "its plan leaves nothing the bot may do",
-        "trail": "- Bash: {\"command\": \"ls -la && cat .bot-plan.md 2>/dev/null; ls .squishy 2>/dev/null | head; git log --oneline -5\", \"description\": \"List worktree and check for an existing draft\"}\n- Bash: {\"command\": \"ls .github/workflows; wc -l .github/workflows/promote-production.yml; ls /home/runner/work/_temp/work/ ; ls -la /home/runner/work/_temp/work/item-3029/.. \", \"description\": \"List workflow\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3029/.github/workflows/promote-production.yml\"}\n- Bash: {\"command\": \"ls -la /home/runner/work/_temp/work/transcripts; wc -l scripts/promote-production.sh apps/web/src/net/promote-production.test.ts; git log --oneline -15 -- scripts/promote-production.sh .\u2026\n- Bash: {\"command\": \"cat /home/runner/work/_temp/work/transcripts/01-plan.system.md; head -c 3000 /home/runner/work/_temp/work/transcripts/01-plan.raw\", \"description\": \"Look at the transcripts directory cont\u2026\n- said: I have no access to the failed job's log (no GitHub credential), so I'm reading the promotion script and its test to work out what can fail on a `workflow_run` from a passing super run on main.\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3029/scripts/promote-production.sh\"}\n- Bash: {\"command\": \"grep -n \\\"production\\\" infra/github.tf | head -60; ls infra\", \"description\": \"Find production branch settings in the Terraform\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3029/infra/github.tf\"}\n- Grep: {\"pattern\": \"pr create|create and approve|not permitted to create|can_approve_pull_request|createPullRequest\", \"output_mode\": \"content\", \"-n\": true, \"glob\": \"!**/node_modules/**\"}\n- Bash: {\"command\": \"for f in sweep spec-fold learn winrates-refresh patches-ship; do echo \\\"== $f\\\"; grep -n \\\"GH_TOKEN\\\" .github/workflows/$f.yml | head -8; done\", \"description\": \"See which token other wor\u2026\n- Bash: {\"command\": \"git log -3 --format='%h %ad %s' --date=iso -- scripts/promote-production.sh; git log -1 --format='%ad' --date=iso; grep -rn -i \\\"create and approve\\\\|Allow GitHub Actions\\\\|can_approve\\\"\u2026\n- Grep: {\"pattern\": \"allow_merge_commit|AllowMergeCommit|allow_squash|merge_commit_allowed|mergeCommitAllowed|can_approve_pull_request_reviews|default_workflow_permissions\", \"output_mode\": \"content\", \"-n\": t\u2026\n- Bash: {\"command\": \"grep -n \\\"cron\\\\|schedule\\\" .github/workflows/super.yml | head; grep -n \\\"promot\\\\|production\\\" docs/deploy-cloudflare.md | head -80\", \"description\": \"Find super's schedule and the deplo\u2026\n- Bash: {\"command\": \"sed -n 80,95p .github/workflows/patches-ship.yml; echo ----; sed -n 45,56p .github/workflows/spec-fold.yml; echo ----; sed -n 80,90p .github/workflows/winrates-refresh.yml; echo ---; sed\u2026\n- Bash: {\"command\": \"git log --all -i --grep=\\\"not permitted to create\\\\|create or approve\\\\|createPullRequest\\\\|Allow GitHub Actions\\\" --format='%h %ad %s' --date=short | head; grep -rn -i \\\"not permitted\\\\\u2026\n- Bash: {\"command\": \"git branch -a 2>/dev/null | head; git remote -v; git for-each-ref --format='%(refname) %(objectname:short)' | grep -v \\\"refs/heads/squishy\\\" | head -20\", \"description\": \"See which refs e\u2026\n- tool error: Permission to use Bash with command head; git remote -v; git for-each-ref --format='%(refname) %(objectname:short)' has been denied.\n- Bash: {\"command\": \"git branch -a\", \"description\": \"List local and remote branches\"}\n- Bash: {\"command\": \"git log --format='%h %ad %an | %s' --date=iso -5 origin/production; echo; git log -1 --format='%h %ad %an %cn | %s' --date=iso origin/promote/20261104-6435574; echo; git merge-base --is-\u2026\n- Grep: {\"pattern\": \"actions/permissions|workflow_permissions|can_approve|default_workflow\", \"output_mode\": \"content\", \"-n\": true}\n- Bash: {\"command\": \"git show 1b9b410ab4 --stat | head -40; git show 1b9b410ab4 --format='%B' -s | head -80\", \"description\": \"Read the change that introduced the daily promotion\"}\n- Bash: {\"command\": \"sed -n 1,120p .github/workflows/super.yml\", \"description\": \"Read super.yml's header and triggers\"}\n- Bash: {\"command\": \"cat infra/README.md | head -120; cat infra/versions.tf\", \"description\": \"Read how infra Terraform is applied\"}\n- Bash: {\"command\": \"git log -8 --format='%h a=%ad c=%cd %s' --date=iso-strict origin/main | cut -c1-140\", \"description\": \"Show author and commit dates on main's newest commits\"}\n- Bash: {\"command\": \"git log --first-parent --since=2026-11-03T12:00:00Z --format='%h c=%cd %s' --date=iso-strict-local origin/main | TZ=UTC cut -c1-110 | tail -40\", \"description\": \"List main's commits over \u2026\n- Bash: {\"command\": \"sed -n 44,62p docs/deploy-cloudflare.md; echo ....; sed -n 113,140p docs/deploy-cloudflare.md; echo ....; sed -n 300,330p docs/deploy-cloudflare.md\", \"description\": \"Read the runbook's p\u2026\n- Bash: {\"command\": \"grep -n -i \\\"workflow permissions\\\\|Settings -> Actions\\\\|Settings \\u2192 Actions\\\\|Actions -> General\\\\|read and write permissions\\\" bot/README.md docs/*.md infra/README.md README.md CO\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3029/.bot-plan.md\", \"content\": \"**Human required:** in GitHub, turn on **Allow GitHub Actions to create and approve pull requests** for `Jlore-Studios\u2026\n- said: **Human required:** in GitHub, turn on **Allow GitHub Actions to create and approve pull requests** for `Jlore-Studios/JackiOh`. Leave the default token permission as it is. 1. If the repository's checkbox is greyed out, turn it on at the organization first: Jlore-Studios \u2192 Settings \u2192 Actions \u2192 Gen\u2026"
-      },
       "interruptions": 0,
-      "last_findings": [],
       "live": "building",
       "owner": "",
       "pending_request": false,
@@ -237,11 +115,9 @@
       "planned_by_id": "claude-squishy",
       "planned_tier": "strong",
       "provider": "claude-squishy",
-      "question": "in GitHub, turn on **Allow GitHub Actions to create and approve pull requests** for `Jlore-Studios/JackiOh`. Leave the default token permission as it is.",
       "run_id": "41818041745",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-04T11:02:26Z",
-      "taken_asks": []
+      "started_at": "2026-11-04T11:02:26Z"
     }
   },
   "labels_synced": "41199566178619e9",
@@ -353,7 +229,7 @@
     }
   },
   "pruned": {
-    "at": "2026-11-04T02:36:45Z",
+    "at": "2026-11-11T03:22:36Z",
     "dropped": 4,
     "shed": 4
   },
