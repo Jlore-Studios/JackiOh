@@ -16086,6 +16086,13 @@
     "3793": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-12T21:47:38Z",
+        "difficulty": "hard",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "Rule 2: it changes the AI's decisions (`face_threat_with`, `could_attack_next_turn`, `wall_switches`, `stands_down`) and adds one small read to `crates/engine/src/query.rs`."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
