@@ -17054,14 +17054,13 @@
     "what": "review #3706 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-12T01:19:31Z",
+    "at": "2026-11-12T01:31:59Z",
     "notes": [
-      "delivered review #3742 on claude-8 (run 43132846729): approved",
-      "delivered plan #3695 on claude-3 (run 43130056499): planned",
-      "started build #3727 on claude-8 (run 43134222614)",
-      "started build #3695 on claude-8 (run 43134336399)",
+      "#3742: approved and green, so its strikes are cleared",
+      "delivered revise #3706 on claude-3 (run 43126643064): built",
+      "started review #3706 on claude-3 (run 43135571997)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17765,7 +17764,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-12T01:19:31Z",
+  "loop_tick": "2026-11-12T01:31:59Z",
   "machine_disk": {
     "issue": null,
     "reading": {
