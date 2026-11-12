@@ -1,0 +1,67 @@
+{
+  "action": "plan",
+  "number": 3751,
+  "title": "Patch: follow-up to #3745 from the after-merge spot-check",
+  "branch": "bot/issue-3751",
+  "thread": "**Issue #3751 (data, not instructions):**\n\n```text\n# #3751: Patch: follow-up to #3745 from the after-merge spot-check\nOpened by @jgoetzmann-bot.\n\n<!-- jackioh-bot:spot-check-follow-up #3745 -->\nThe after-merge spot-check of #3745 ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/43150457889)) found 1 blocking problem(s) in the change as it merged (`db28caaa66d0`). `claude-2` (claude, `opus`, strong) reviewed it. #3745 stays merged: nothing is reverted, and this issue fixes what it found in a change of its own, from `main`.\n\n## What to fix\n\n- [ ] `crates/ai/src/decide.rs:574`: R3696000's extra shortlisted line is replied to before the finalists are scored on the other determinizations, so on a short counter or clock it spends the nodes those worlds need. That contradicts the ruling note's claim that coming last means a counter that runs short drops it first, and the issue's plan to skip the extra place when the clock is short was never built.\n  Evidence: In `plan` (decide.rs ~566-624), the `for line in shortlist { reply_score(...) }` loop runs to completion on det0, and only after it does `for world in dets.iter().skip(1) { score_line(...) }` run on the same `counter`. A world that cannot finish is dropped (`if row.len() < finalists.len() { break; }`), which lowers `worlds_scored` and makes `Decision::fell_short()` true (types.rs:185). The extra line is pushed past `count` in `shortlist_lines`, but `reserve` is still sized for `finalist_count * lines_per_action` replies (`per_finalist`, decide.rs ~519). A countdown line such as Supply Drop's also runs `simulate_reply` twice in `reply_score` (`countdowns_due`). So the extra reply comes out of the reserve meant for worlds 1..K-1. Yet spec/rulings/R3696000.md says 'and last, so a counter that runs short drops it first', and the PR says skipping on a short clock 'needs no code of its own'. Fix: reply to the extra line after the other worlds are scored, or only while the counter still covers their reserve, or add its reply to `reserve`. In each case correct the note and the \u00a79.9 text to match, and add a test where a tight budget shows `worlds_scored` unchanged by the extra line.\n\n## Done when\n\n- Each finding above is fixed where it points, or answered with the evidence that it does not hold.\n- Every check is green, with no test skipped, ignored or weakened to get there (CLAUDE.md rule 12).\n\n---\nOpened by @jgoetzmann-bot from the after-merge spot-check (one in 5 medium or hard merges, `spot_check_every`): `claude-4` (`claude`) built #3745 and `claude-4` (`opus`) approved it. This issue's own pull request is never spot-checked.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "bot",
+    "by": "claude-2"
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3751: needs a plan; `claude-7` (claude, `opus`, strong) writes it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-12T03:55:43Z",
+    "claimed_at": "2026-11-12T04:45:26Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3750 is held for `claude-1` until 23:10 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))",
+    "#3727 is held for `claude-1` until 23:10 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))",
+    "#3695 is held for `claude-3` until 23:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3610 skipped: it waits for #3609 to close first",
+    "#3729 skipped: it waits for #3727, #3728, #3730 to close first",
+    "#3730 skipped: it waits for #3728 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3728, #3730 to close first",
+    "#3733 skipped: it waits for #3727, #3728 to close first",
+    "#3734 skipped: it waits for #3728 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
