@@ -1865,3 +1865,8 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-12T06:33:08Z,43168572321,claude-8,opus,review,3756,hard,reviewed,,1.2,18,6572,667854,0.8018,0,1,,,0.4,,none,,1
 2026-11-12T06:41:16Z,43160178111,claude-1,opus,revise,3750,hard,built,,33,4,301,179471,4.0063,0,17,,,141.6,claude-1,fresh,,1
 2026-11-12T06:53:14Z,43170151551,claude-1,opus,review,3750,hard,approved,,5.8,82,23918,5472930,3.9537,76,89,,,1.3,claude-1,none,,1
+2026-11-12T07:06:10Z,43161592236,claude-3,opus,build,3695,hard,built,,65.4,132,39595,10723617,6.2539,2,18,,,828.8,claude-3,resumed,,1
+2026-11-12T07:01:58Z,43160290957,claude-1,opus,build,3727,hard,built,,76.2,254,61345,23267829,7.7103,1,61,,,490.1,claude-1,fresh,,1
+2026-11-12T07:13:01Z,43173228662,claude-1,opus,review,3762,hard,interrupted,5-hour cap,0,0,0,0,,100,100,,,1.4,,none,,0
+2026-11-12T07:07:57Z,43163964691,claude-3,sonnet+opus,build,3610,medium,built,,27.5,123,43650,6881457,1.6739,8,15,,,3027.7,claude-3,fresh,,1
+2026-11-12T07:27:14Z,43173327474,claude-3,opus,review,3761,hard,blocked,,14.3,54,21638,2379829,1.9443,18,24,,,3.4,,fresh,,2
