@@ -16641,9 +16641,10 @@
       "started_at": "2026-11-12T05:16:28Z",
       "stop_requested": false,
       "strike_log": [
-        "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
+        "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled",
+        "`claude-8` (claude, opus) rejected it: `crates/server/src/daily/notify.rs:401`: POST /api/daily/push stores any https:// URL as a push endpoint, and the server later POSTs to it with a default reqwest"
       ],
-      "strikes": 1,
+      "strikes": 2,
       "taken_asks": [],
       "verdict_rounds": 0,
       "waiting_comment": 6809364572
