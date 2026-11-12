@@ -15006,6 +15006,13 @@
     "3770": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-12T14:35:16Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "Rule 3, 4 and 5 don't hold: one crate (jackioh-server), no engine, AI or migration, about 14 files with tests."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
