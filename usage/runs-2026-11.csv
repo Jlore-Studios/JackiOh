@@ -1947,3 +1947,7 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-12T20:31:37Z,43287918850,claude-4,sonnet+opus,revise,3783,medium,approved,,17.1,50,9666,2855330,4.7618,16,1,,,0.7,claude-4,resumed,,2
 2026-11-12T20:56:34Z,43304231986,claude-4,opus,plan,3800,hard,planned,,1.8,17,11931,2326445,9.2734,5,6,,,85.6,claude-4,resumed,,1
 2026-11-12T21:02:17Z,43301163399,claude-1,sonnet+opus,build,3802,medium,interrupted,5-hour cap,23,0,0,0,,22,43,,,23.4,claude-1,fresh,,1
+2026-11-12T21:41:41Z,43311114268,claude-3,opus,plan,3791,medium,planned,,2.7,35,22860,1528200,0.7603,72,76,,,2.4,,fresh,,1
+2026-11-12T21:40:26Z,43310799356,claude-8,opus,plan,3792,medium,planned,,1.4,27,11084,752945,0.4037,0,1,,,0.8,,fresh,,1
+2026-11-12T21:41:40Z,43308562100,claude-7,opus,plan,3793,medium,planned,,7.2,79,61772,4936314,1.7692,1,14,,,8.4,,fresh,,1
+2026-11-12T21:34:25Z,43304456134,claude-6,sonnet+opus,build,3803,medium,built,,0.3,8,1882,144468,0.1174,16,17,,,26.1,claude-6,fresh,,1
