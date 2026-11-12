@@ -1662,6 +1662,40 @@ mod reads_and_stops {
         table.feed(DuelEvent::Left { home: me.opponent() });
         table.feed(DuelEvent::Disconnected { home: me.opponent() });
         assert_eq!((table.sent.p1.len(), table.sent.p2.len()), told);
+        // An aim inside the relay interval after the stop is not held for later either.
+        table.feed(DuelEvent::Aim {
+            home: me,
+            aim: Some(Aim {
+                source: AimEnd::Hero { player: me },
+                target: None,
+            }),
+        });
+        assert_eq!(table.timer(TimerKey::Aim { player: me }), None);
+    }
+
+    /// R738: an aim inside the relay interval waits for the interval to end after the last one relayed.
+    #[test]
+    fn r738_a_held_aim_is_due_an_interval_after_the_last_relayed() {
+        let mut table = playing("aim-held-1");
+        table.through_the_mulligans();
+        let me = table.active();
+        let aim = |target: Option<AimEnd>| DuelEvent::Aim {
+            home: me,
+            aim: Some(Aim {
+                source: AimEnd::Hero { player: me },
+                target,
+            }),
+        };
+        let relayed_at = table.now;
+        table.feed(aim(Some(AimEnd::Hero {
+            player: me.opponent(),
+        })));
+        table.sleep(10);
+        table.feed(aim(None));
+        assert_eq!(
+            table.timer(TimerKey::Aim { player: me }),
+            Some(relayed_at + AIM_RELAY_INTERVAL_MS)
+        );
     }
 
     /// R744: until the first attach the stored grace is what the host writes back, never a clock without it.
