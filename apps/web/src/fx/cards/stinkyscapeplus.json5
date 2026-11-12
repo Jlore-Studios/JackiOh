@@ -1,0 +1,224 @@
+// R2784000: the signature animation of every Stinkyscape+ card (docs/polish/9-card-animations.md).
+// One line per catalog card, tokens included, in catalog order, its name in a comment after it
+// (tables.test.ts holds the file to the catalog). An entry is one of:
+//   "none: <reason>"                        the card's event rows alone ("none: pending" until its set's pass);
+//   { bespoke: "<recipe>" }                 its own recipe (fx/cards/bespoke.ts), drawn in fx/cards/<set>/;
+//   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000);
+//   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
+//   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000),
+//                                           or beside a bespoke; a Unit's on its own `tile` (R3400000).
+//   + entrance: "<key>"                     beside any entry but "none", or alone: a Unit's or a Field Spell's entrance (fx/entrances.ts, R3332000);
+//   + takeover: "<look>", signature: true   a Mythic's own takeover look (fx/takeover.ts); a Legendary's or Mythic's signature (R3332000).
+// Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
+// `activate` play from the hook's own `hookResolving` marker (R2797000). `palette` is a flavor's look (the
+// card's own flavor by default); `row` is "replace" (the default: the motif draws the numbers in place of
+// the event's own recipe) or "keep" (it plays over that recipe). Filled at the set's release (issue #3596)
+// from the shipped sets' choices for cards that do the same: shared motifs and looks only, no recipe or
+// set piece of its own, every Legendary and Mythic on signature.test.ts's SIGNATURE_PENDING until its
+// set's signature pass. A Burn or a Toxic is a counter (`counterChanged`), which `tally` reads.
+{
+  "stinkyscapeplus-001": { cast: { motif: "bolt" } }, // Starfruit
+  "stinkyscapeplus-002": "none: its Evolve runs from the state check, which no hookResolving marks; the evolve row draws it", // Lone Drifter
+  "stinkyscapeplus-003": { cry: { motif: "bless", palette: "Beast/swarm" } }, // High Evolutionary
+  "stinkyscapeplus-004": { cry: { motif: "vanish", palette: "Beast/felinor" }, activate: { motif: "hex", palette: "Beast/felinor" } }, // Profe Yates
+  "stinkyscapeplus-005": { cry: { motif: "deal", palette: "Snack" } }, // Dingleberry Droat
+  "stinkyscapeplus-006": { trigger: { motif: "send", palette: "Snack" } }, // Wines McCheese
+  "stinkyscapeplus-006-1": "none: token; its own play is its Tipsy, and its fusing a hand trigger no hookResolving marks", // Fine Fermented Grape
+  "stinkyscapeplus-006-2": { cast: { motif: "conjure", palette: "Beast/swarm" }, aura: { look: "toxic", palette: "Beast/swarm", scope: "zone" } }, // Stinky Cheese
+  "stinkyscapeplus-007": "none: its chain is standing state, which no event reports", // Churnwalker
+  "stinkyscapeplus-008": { activate: { motif: "conjure", palette: "Tech/rocket" } }, // Drone Assembler v3
+  "stinkyscapeplus-009": { activate: { motif: "conjure", palette: "Tech/rocket" } }, // Drone Assembler v4
+  "stinkyscapeplus-010": { activate: { motif: "conjure", palette: "Tech/rocket" } }, // Drone Assembler v5
+  "stinkyscapeplus-011": "none: its Refresh gives back Activate uses, which no event reports", // Energy Booster
+  "stinkyscapeplus-012": "none: vanilla", // Shield Booster
+  "stinkyscapeplus-013": { trigger: { motif: "bless", palette: "Physical/steel" } }, // Shield Repairer
+  "stinkyscapeplus-014": { trigger: { motif: "mend" } }, // Hull Repairer
+  "stinkyscapeplus-015": { trigger: { motif: "mend" } }, // Hull Repairer mk2
+  "stinkyscapeplus-016": "none: vanilla", // Servo Surge
+  "stinkyscapeplus-017": { cast: { motif: "bolt" } }, // Smoothie
+  "stinkyscapeplus-018": { cast: { motif: "bolt" } }, // Large Smoothie
+  "stinkyscapeplus-019": { activate: { motif: "transmute" } }, // Normalization Module
+  "stinkyscapeplus-020": { cast: { motif: "transmute" } }, // B-Patch
+  "stinkyscapeplus-021": { trigger: { motif: "volley", palette: "Tech/rocket" } }, // Jlockeed Shredder-12
+  "stinkyscapeplus-022": { cast: { motif: "hex", palette: "Spirit" } }, // Cryofluid
+  "stinkyscapeplus-023": { cast: { motif: "bless" } }, // GIGA-ify
+  "stinkyscapeplus-024": { cast: { motif: "deal" } }, // Forced Propagation
+  "stinkyscapeplus-025": { death: { motif: "tether", palette: "Dark/curse" } }, // Snom Bunny
+  "stinkyscapeplus-026": { cast: { motif: "seal" } }, // Jlockeed’s Forever War
+  "stinkyscapeplus-026-1": "none: vanilla", // Conscript
+  "stinkyscapeplus-027": "none: its Freeze runs after its attack and its Evolve from the state check, neither of which a hookResolving marks", // Gargantuar
+  "stinkyscapeplus-027-1": "none: vanilla", // Imp
+  "stinkyscapeplus-028": { cast: { motif: "conjure" } }, // Zombie-Box
+  "stinkyscapeplus-029": { activate: { motif: "send", palette: "Hustle/cash" } }, // Grinder Veteran
+  "stinkyscapeplus-030": { cast: { motif: "conjure", palette: "Hustle/cash" }, aura: { look: "holy", palette: "Hustle/cash", scope: "zone" } }, // Yeah I’m a War Hero
+  "stinkyscapeplus-031": { cast: { motif: "tether", palette: "Dark/shadow" } }, // Soul Read
+  "stinkyscapeplus-032": { cast: { motif: "transmute" } }, // Z-Patch
+  "stinkyscapeplus-033": { cry: { motif: "transmute" } }, // True Conservative
+  "stinkyscapeplus-034": { cry: { motif: "send" } }, // Neoconservative
+  "stinkyscapeplus-035": { activate: { motif: "volley" } }, // Scatter
+  "stinkyscapeplus-036": "none: vanilla", // Duo
+  "stinkyscapeplus-037": "none: vanilla", // Scorch
+  "stinkyscapeplus-038": { activate: { motif: "nova" } }, // Arc
+  "stinkyscapeplus-039": { cast: { motif: "send" } }, // Mindustrial Cross-over
+  "stinkyscapeplus-040": { cast: { motif: "conjure" }, trigger: { motif: "mend" }, aura: { look: "bloom", scope: "zone" } }, // Mender
+  "stinkyscapeplus-041": { cast: { motif: "conjure", palette: "Tech/hologram" }, trigger: { motif: "mend", palette: "Tech/hologram" }, aura: { look: "bloom", palette: "Tech/hologram", scope: "board" } }, // Mend Projector
+  "stinkyscapeplus-042": { cast: { motif: "conjure", palette: "Tech/hologram" }, aura: { look: "holy", palette: "Tech/hologram", scope: "side" } }, // Force Projector
+  "stinkyscapeplus-043": { cast: { motif: "negate", palette: "Tech/hologram" }, aura: { look: "frost", palette: "Tech/hologram", scope: "zone" } }, // Segment
+  "stinkyscapeplus-044": { cast: { motif: "bind" } }, // Blast Compound
+  "stinkyscapeplus-045": { cast: { motif: "bless" } }, // Surge Alloy
+  "stinkyscapeplus-046": { cast: { motif: "bless", palette: "Tech/hologram" } }, // Phase Fabric
+  "stinkyscapeplus-047": { cast: { motif: "bless", palette: "Physical/steel" } }, // Plastanium
+  "stinkyscapeplus-048": { cast: { motif: "bless", palette: "Toxic" } }, // Thorium
+  "stinkyscapeplus-049": { cast: { motif: "bless" } }, // Metaglass
+  "stinkyscapeplus-050": { cast: { motif: "bless", palette: "Nerd/ink" } }, // Graphite
+  "stinkyscapeplus-051": { cast: { motif: "curse" } }, // Chains Bind Me
+  "stinkyscapeplus-052": { cast: { motif: "conjure" }, trigger: { motif: "deal", palette: "Hustle/ore" }, aura: { look: "storm", palette: "Hustle/ore", scope: "zone" } }, // Airblast Drill
+  "stinkyscapeplus-053": { cast: { motif: "conjure" }, trigger: { motif: "deal", palette: "Hustle/ore" }, aura: { look: "ember", palette: "Tech/laser", scope: "zone" } }, // Laser Drill
+  "stinkyscapeplus-054": { cast: { motif: "conjure" }, trigger: { motif: "send", palette: "Hustle/ore" }, aura: { look: "timber", palette: "Hustle/ore", scope: "zone" } }, // Pneumatic Drill
+  "stinkyscapeplus-055": { cast: { motif: "conjure" }, trigger: { motif: "mana" }, aura: { look: "toxic", palette: "Toxic", scope: "zone" } }, // Thorium Reactor
+  "stinkyscapeplus-056": { cast: { motif: "seal" }, aura: { look: "ember", palette: "Tech/rocket", scope: "zone" } }, // Impact Reactor
+  "stinkyscapeplus-057": { cast: { motif: "conjure" }, trigger: { motif: "send", palette: "Tech/hologram" }, aura: { look: "arcane", palette: "Tech/hologram", scope: "zone" } }, // Phase Weaver
+  "stinkyscapeplus-058": { trigger: { motif: "send", palette: "Hustle/ore" } }, // Phase Conveyer
+  "stinkyscapeplus-059": { cast: { motif: "conjure" }, activate: { motif: "seal" }, aura: { look: "drift", palette: "Hustle/ore", scope: "zone" } }, // Mass Driver
+  "stinkyscapeplus-060": { cry: { motif: "transmute", palette: "Tech/laser" } }, // Radi
+  "stinkyscapeplus-061": { cry: { motif: "conjure", palette: "Snack" } }, // Jayaad
+  "stinkyscapeplus-061-1": { cast: { motif: "conjure", palette: "Snack" }, trigger: { motif: "curse", palette: "Snack" }, aura: { look: "steam", palette: "Snack", scope: "board" } }, // Shawarma Law
+  "stinkyscapeplus-062": { cast: { motif: "conjure", palette: "Tech/hologram" }, aura: { look: "storm", palette: "Tech/hologram", scope: "board" } }, // Overdrive Projector
+  "stinkyscapeplus-063": { cast: { motif: "conjure", palette: "Tech/hologram" }, aura: { look: "arcane", palette: "Tech/hologram", scope: "board" } }, // Overdrive Dome
+  "stinkyscapeplus-064": { trigger: { motif: "nova" } }, // Surge Wall
+  "stinkyscapeplus-065": "none: vanilla", // Thorium Wall
+  "stinkyscapeplus-066": { trigger: { motif: "bless", palette: "Physical/steel" } }, // Plastanium Wall
+  "stinkyscapeplus-067": "none: vanilla", // Phase Wall
+  "stinkyscapeplus-068": { cast: { motif: "send" } }, // Shadiris Visions
+  "stinkyscapeplus-069": { cast: { motif: "send" } }, // Exotic Jellybean
+  "stinkyscapeplus-069-1": "none: its own play does nothing; the Radiance its hand aura lends is the radiance row's", // Sweet Essence
+  "stinkyscapeplus-070": { cast: { motif: "deal", palette: "Tech/starfield" } }, // Spaceberry
+  "stinkyscapeplus-071": { cast: { motif: "send" } }, // Mindustrial Contract
+  "stinkyscapeplus-072": { trigger: { motif: "lance", palette: "Tech/laser" } }, // Foreshadow
+  "stinkyscapeplus-073": { trigger: { motif: "barrage", palette: "Tech/rocket" } }, // Ripple
+  "stinkyscapeplus-074": { trigger: { motif: "bless", palette: "Tech/starfield" } }, // Galaxia
+  "stinkyscapeplus-075": { trigger: { motif: "deal" } }, // J-lease S-Space EX-plorer
+  "stinkyscapeplus-075-1": { cast: { motif: "deal" } }, // J-lease S-Space EX-plorer Pack
+  "stinkyscapeplus-076": { cast: { motif: "conjure", palette: "Tech/starfield" } }, // Ayys LMAO
+  "stinkyscapeplus-076-1": "none: vanilla", // Ayy
+  "stinkyscapeplus-077": { cast: { motif: "vanish", palette: "Tech/starfield" } }, // Black Hole
+  "stinkyscapeplus-078": { cast: { motif: "lance", palette: "Dark/blood" } }, // Slashed Dream Cries in Red
+  "stinkyscapeplus-079": { cast: { motif: "seal", palette: "Dark/shadow" } }, // A Glimpse into the Endless Sea
+  "stinkyscapeplus-080": { cast: { motif: "wipe", palette: "Tech/starfield" } }, // The Last Voyage
+  "stinkyscapeplus-081": { trigger: { motif: "wipe" } }, // Doomsayer
+  "stinkyscapeplus-082": { cast: { motif: "send", palette: "Tech/starfield" } }, // Endless Expedition
+  "stinkyscapeplus-083": "none: its Evolve runs from the state check, which no hookResolving marks; the evolve row draws it", // Offworld Replicant
+  "stinkyscapeplus-084": { death: { motif: "rise" } }, // Bogos Binted
+  "stinkyscapeplus-085": { cast: { motif: "transmute", palette: "Tech/starfield" } }, // Body Snatch
+  "stinkyscapeplus-086": { trigger: { motif: "tally", palette: "Beast/swarm" } }, // Astrophage
+  "stinkyscapeplus-087": { cast: { motif: "conjure", palette: "Beast/swarm" }, trigger: { motif: "tally", palette: "Beast/swarm" }, aura: { look: "toxic", palette: "Beast/swarm", scope: "zone" } }, // Frontier Flora
+  "stinkyscapeplus-088": { trigger: { motif: "conjure", palette: "Beast/swarm" } }, // Colony Watcher
+  "stinkyscapeplus-089": { cast: { motif: "send", palette: "Dark/shadow" } }, // Animosity
+  "stinkyscapeplus-090": { trigger: { motif: "bless", palette: "Tech/laser" } }, // Meltdown
+  "stinkyscapeplus-091": "none: its Freeze rides each hit, which the mark row draws", // Tsunami
+  "stinkyscapeplus-092": "none: no motif reads jadeChanged", // Crystalline Chiton
+  "stinkyscapeplus-093": { death: { motif: "rise", palette: "Beast/swarm" } }, // Recessive Replicators
+  "stinkyscapeplus-094": { cast: { motif: "hex", palette: "Hustle/cash" } }, // PIP
+  "stinkyscapeplus-095": { cast: { motif: "deal", palette: "Hustle/cash" } }, // JC Backed
+  "stinkyscapeplus-096": { cast: { motif: "deal", palette: "Nerd/chalk" } }, // Open Enrollment
+  "stinkyscapeplus-097": { cast: { motif: "deal", palette: "Nerd/chalk" } }, // Selective Enrollment
+  "stinkyscapeplus-098": { cast: { motif: "deal" } }, // Doomed Ship
+  "stinkyscapeplus-099": { cast: { motif: "flight" } }, // Big Time Recruits
+  "stinkyscapeplus-100": { cast: { motif: "bless" } }, // Plesiosize
+  "stinkyscapeplus-101": { trigger: { motif: "bless", palette: "Beast/swarm" } }, // A Wee Whelp
+  "stinkyscapeplus-102": { cry: { motif: "flight" } }, // Cosmic Bard
+  "stinkyscapeplus-103": { cast: { motif: "transmute" } }, // Transcend
+  "stinkyscapeplus-104": { cast: { motif: "transmute" } }, // Tireless Cultivation
+  "stinkyscapeplus-105": { cry: { motif: "transmute" } }, // Spacersi
+  "stinkyscapeplus-106": "none: vanilla", // Spectre
+  "stinkyscapeplus-107": "none: its sweep is its attack's, which the attack rows draw", // Fuse
+  "stinkyscapeplus-108": "none: vanilla", // Swarmer
+  "stinkyscapeplus-109": { activate: { motif: "lance", palette: "Tech/laser" } }, // Lancer
+  "stinkyscapeplus-110": "none: vanilla", // Dagger
+  "stinkyscapeplus-111": "none: its Burn rides each hit, which the damage rows draw", // Mace
+  "stinkyscapeplus-112": "none: vanilla", // Fortress
+  "stinkyscapeplus-113": "none: vanilla", // Scepter
+  "stinkyscapeplus-114": "none: its Burn rides each hit, which the damage rows draw", // Reign
+  "stinkyscapeplus-115": "none: vanilla", // Flare
+  "stinkyscapeplus-116": "none: vanilla", // Horizon
+  "stinkyscapeplus-117": "none: its Burn rides each hit, which the damage rows draw", // Zenith
+  "stinkyscapeplus-118": "none: its Burn rides each hit, which the damage rows draw", // Antumbra
+  "stinkyscapeplus-119": "none: its Burn rides each hit, which the damage rows draw", // Eclipse
+  "stinkyscapeplus-120": { death: { motif: "bolt", palette: "Toxic" }, trigger: { motif: "send" } }, // Crawler
+  "stinkyscapeplus-121": { cry: { motif: "conjure", palette: "Toxic" }, trigger: { motif: "tally", palette: "Toxic" } }, // Toxopid
+  "stinkyscapeplus-121-1": "none: vanilla", // Toxopid Leg
+  "stinkyscapeplus-122": { trigger: { motif: "mend" } }, // Quad
+  "stinkyscapeplus-123": { trigger: { motif: "mend", palette: "Tech/hologram" } }, // Oct
+  "stinkyscapeplus-124": { activate: { motif: "barrage", palette: "Tech/rocket" } }, // Sei
+  "stinkyscapeplus-125": { activate: { motif: "lance", palette: "Tech/laser" } }, // Omura
+  "stinkyscapeplus-126": { activate: { motif: "lance", palette: "Tech/laser" } }, // Vela
+  "stinkyscapeplus-127": { activate: { motif: "lance", palette: "Tech/laser" } }, // Corvus
+  "stinkyscapeplus-128": { cast: { motif: "conjure" }, trigger: { motif: "send", palette: "Tech/hologram" }, aura: { look: "incense", palette: "Tech/hologram", scope: "zone" } }, // Additive Reconstructor
+  "stinkyscapeplus-129": { cast: { motif: "conjure" }, trigger: { motif: "send", palette: "Tech/hologram" }, aura: { look: "incense", palette: "Tech/hologram", scope: "zone" } }, // Multiplicative Reconstructor
+  "stinkyscapeplus-130": { cast: { motif: "conjure" }, trigger: { motif: "send", palette: "Tech/hologram" }, aura: { look: "incense", palette: "Tech/hologram", scope: "zone" } }, // Exponential Reconstructor
+  "stinkyscapeplus-131": { cast: { motif: "conjure" }, trigger: { motif: "send", palette: "Tech/hologram" }, aura: { look: "incense", palette: "Tech/hologram", scope: "zone" } }, // Tetrative Reconstructor
+  "stinkyscapeplus-132": { cast: { motif: "send", palette: "Physical/steel" } }, // Great Paperclip Theory II
+  "stinkyscapeplus-133": { cast: { motif: "send", palette: "Physical/steel" } }, // Great Paperclip Theory III
+  "stinkyscapeplus-133-1": "none: vanilla", // Daglare
+  "stinkyscapeplus-133-2": "none: its Burn rides each hit, which the damage rows draw", // Macizon
+  "stinkyscapeplus-133-3": "none: its Burn rides each hit, which the damage rows draw", // Fortnith
+  "stinkyscapeplus-133-4": "none: its Burn rides each hit, which the damage rows draw", // Sceptumbra
+  "stinkyscapeplus-133-5": "none: its Burn rides each hit, which the damage rows draw", // Reignclipse
+  "stinkyscapeplus-134": { cast: { motif: "send" } }, // Basket of Crawlers
+  "stinkyscapeplus-135": { cast: { motif: "conjure" } }, // Crawler Swarm
+  "stinkyscapeplus-136": { cast: { motif: "conjure" }, activate: { motif: "conjure" }, aura: { look: "steam", scope: "zone" } }, // Crawler Assembly Line
+  "stinkyscapeplus-137": { cast: { motif: "send" } }, // The Perfect Pair
+  "stinkyscapeplus-138": { cast: { motif: "send" } }, // Delta Definition
+  "stinkyscapeplus-139": { cast: { motif: "send" } }, // Operation Omega
+  "stinkyscapeplus-140": { cast: { motif: "send" } }, // Automa Reintegration Plan
+  "stinkyscapeplus-141": { cry: { motif: "curse" } }, // Stinky 1x Engineer
+  "stinkyscapeplus-142": { cast: { motif: "deal" } }, // Call to Chaos (Mindustrial-Swarm Edition)
+  "stinkyscapeplus-142-1": "none: its summon runs after its attack, which no hookResolving marks", // Mindustrial Golem
+  "stinkyscapeplus-142-2": "none: its summon runs after its attack, which no hookResolving marks", // Swarm Golem
+  "stinkyscapeplus-143": { activate: { motif: "tally", palette: "Fire" } }, // Fire Beam v3
+  "stinkyscapeplus-144": { activate: { motif: "tally", palette: "Fire" } }, // Fire Beam v4
+  "stinkyscapeplus-145": { activate: { motif: "tally", palette: "Fire" } }, // Fire Beam v5
+  "stinkyscapeplus-146": { activate: { motif: "tally", palette: "Toxic" } }, // Scourge Mortar v3
+  "stinkyscapeplus-147": { activate: { motif: "tally", palette: "Toxic" } }, // Scourge Mortar v4
+  "stinkyscapeplus-148": { activate: { motif: "tally", palette: "Toxic" } }, // Scourge Mortar v5
+  "stinkyscapeplus-149": "none: its Burn rides each hit, which the damage rows draw", // Flaming Rounds
+  "stinkyscapeplus-150": "none: its Burn rides each hit, which the damage rows draw", // Scorching Rounds
+  "stinkyscapeplus-151": "none: its Burn rides each hit, which the damage rows draw", // Volcanic Rounds
+  "stinkyscapeplus-152": "none: its Toxic rides each hit, which the damage rows draw", // Venomous Rounds
+  "stinkyscapeplus-153": "none: its Toxic rides each hit, which the damage rows draw", // Noxious Rounds
+  "stinkyscapeplus-154": "none: its one hook, When launched, is the Starship's own moment (#2782's Starship part)", // Chaos Accelerator
+  "stinkyscapeplus-155": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // The Far Vagabond
+  "stinkyscapeplus-156": "none: its one hook, When launched, is the Starship's own moment (#2782's Starship part)", // Horizon Breaker
+  "stinkyscapeplus-157": "none: its fusing and its launch are the Starship's own moments (#2782's Starship part)", // Phantom Shipyard
+  "stinkyscapeplus-158": { cast: { motif: "nova" } }, // Quick Chaos
+  "stinkyscapeplus-159": { cry: { motif: "transmute", palette: "Tech/laser" } }, // Raven
+  "stinkyscapeplus-160": { cry: { motif: "transmute", palette: "Tech/laser" }, activate: { motif: "conjure", palette: "Tech/rocket" } }, // Icarus
+  "stinkyscapeplus-161": { trigger: { motif: "conjure", palette: "Beast/swarm" } }, // Space Invader
+  "stinkyscapeplus-162": { cry: { motif: "bless" } }, // Edwin Van’Spacechief
+  "stinkyscapeplus-163": "none: its Aura is a standing stat bonus, with no moment to draw", // Accelerationist
+  "stinkyscapeplus-164": { cast: { motif: "wipe", palette: "Hustle/cash" } }, // KPIs
+  "stinkyscapeplus-165": { cry: { motif: "send", palette: "Hustle/ore" } }, // Shadiris
+  "stinkyscapeplus-166": { cast: { motif: "seal" } }, // Mindustrial Revolution
+  "stinkyscapeplus-t-tears-of-the-kwzki-tree": { cast: { motif: "radiance" } }, // Tears of the Kwzki Tree
+  "stinkyscapeplus-t-supernova": { cast: { motif: "transmute", palette: "Tech/starfield" } }, // Supernova
+  "stinkyscapeplus-t-alnilam": "none: its Death ends the game, which the game's end draws", // Alnilam
+  "stinkyscapeplus-t-the-enigmata": { cast: { motif: "seal" } }, // The Enigmata
+  "stinkyscapeplus-t-warhero-token": "none: no motif reads marketCreditsChanged", // Warhero Token
+  "stinkyscapeplus-t-terminus-starship-ark-of-ashes": "none: a Terminus Starship's hull; its launch is the Starship's own moment (#2782's Starship part)", // Ark of Ashes
+  "stinkyscapeplus-t-terminus-starship-dying-ember": "none: a Terminus Starship's hull; its launch is the Starship's own moment (#2782's Starship part)", // Dying Ember
+  "stinkyscapeplus-t-terminus-starship-heat-death-pilgrim": "none: a Terminus Starship's hull; its launch is the Starship's own moment (#2782's Starship part)", // Heat Death Pilgrim
+  "stinkyscapeplus-t-terminus-starship-entropys-wake": "none: a Terminus Starship's hull; its launch is the Starship's own moment (#2782's Starship part)", // Entropy's Wake
+  "stinkyscapeplus-t-terminus-starship-red-giant-requiem": "none: a Terminus Starship's hull; its launch is the Starship's own moment (#2782's Starship part)", // Red Giant Requiem
+  "stinkyscapeplus-t-terminus-starship-cold-exodus": "none: a Terminus Starship's hull; its launch is the Starship's own moment (#2782's Starship part)", // Cold Exodus
+  "stinkyscapeplus-t-terminus-starship-omega-drift": "none: a Terminus Starship's hull; its launch is the Starship's own moment (#2782's Starship part)", // Omega Drift
+  "stinkyscapeplus-t-terminus-starship-farthest-shore": "none: a Terminus Starship's hull; its launch is the Starship's own moment (#2782's Starship part)", // Farthest Shore
+  "stinkyscapeplus-t-terminus-starship-nightfall-covenant": "none: a Terminus Starship's hull; its launch is the Starship's own moment (#2782's Starship part)", // Nightfall Covenant
+  "stinkyscapeplus-t-terminus-starship-vacuum-psalm": "none: a Terminus Starship's hull; its launch is the Starship's own moment (#2782's Starship part)", // Vacuum Psalm
+  "stinkyscapeplus-t-ai-01": { cast: { motif: "flight", palette: "Tech/hologram" } }, // Hallucinated Kiwi
+  "stinkyscapeplus-t-ai-02": { cast: { motif: "tally", palette: "Tech/glitch" } }, // Data-Poisoned Plum
+  "stinkyscapeplus-t-ai-03": "none: vanilla", // Jlockeed Loitering Munition
+  "stinkyscapeplus-t-ai-04": "none: vanilla", // Jlockeed Large Language Model
+  "stinkyscapeplus-t-ai-05": { trigger: { motif: "bless", palette: "Tech/hologram" } }, // Lantern Distiller
+  "stinkyscapeplus-t-ai-06": { cast: { motif: "tithe", palette: "Tech/hologram" } }, // Abacus Optimizer
+  "stinkyscapeplus-t-ai-07": { cry: { motif: "lance", palette: "Tech/hologram" } }, // KY's Line Search Bot
+}

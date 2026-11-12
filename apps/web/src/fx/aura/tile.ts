@@ -41,6 +41,15 @@ export const TILE_PATTERN_OF_FAMILY: Readonly<Record<ShowcaseFamily, TilePattern
   "training-grounds": "roots",
 };
 
+/**
+ * R3342000: the cards whose tile steps past its hashed variant by this many, each because it would
+ * otherwise wear an earlier card of its set's fingerprint (colors, variant, pattern, look and motes):
+ * Stinkyscape+'s Icarus, whose crew colors, hue turn and variant are Meltdown's.
+ */
+export const TILE_VARIANT_STEP: Readonly<Record<string, number>> = {
+  "stinkyscapeplus-160": 1,
+};
+
 export const TILE_LOOK_OF_FLAVOR: Readonly<Record<Flavor, AuraLook>> = {
   Physical: "storm",
   Brute: "void",
@@ -226,7 +235,8 @@ export function planTileAura(
   const moteShape = THEME_MOTES[themeFor(def.tags, def.type)];
   const family = showcaseFamilyOf(def.set);
   const pattern = tier === "Mythic" ? (family !== null ? TILE_PATTERN_OF_FAMILY[family] : "runes") : null;
-  const variant = hashId(`${live.defId}:tile`) % TILE_VARIANTS;
+  const step = Object.hasOwn(TILE_VARIANT_STEP, live.defId) ? (TILE_VARIANT_STEP[live.defId] ?? 0) : 0;
+  const variant = (hashId(`${live.defId}:tile`) + step) % TILE_VARIANTS;
   const hue = hueOf(colors[1]);
 
   const dim =
