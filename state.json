@@ -17340,16 +17340,16 @@
     "what": "plan #3610 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-12T05:12:26Z",
+    "at": "2026-11-12T05:23:34Z",
     "notes": [
-      "#3750: `claude-1` can start again, so its hold is lifted",
-      "#3727: `claude-1` can start again, so its hold is lifted",
-      "#3695 is held for `claude-3` until 23:20 (it refused a call)",
-      "delivered review #3752 on claude-2 (run 43158982268): reviewed",
-      "started revise #3750 on claude-1 (run 43160178111)",
-      "started build #3727 on claude-1 (run 43160290957)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-12T05:20:00Z; `claude-7` is busy; `claude-8` is idle, but nothing queued is for it; `claude-1` is busy; `claude-4` is busy; `claude-6` 5-hour usage is 54%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-12T05:40:00Z; it can start a build or a plan again in 22m; `claude-5` 5-hour usage is 40%, too close to its 40% cap to start a long run (it starts under 35%); it resets at 2026-11-12T07:10:00Z; it can start a build or a plan again in 89h 42m; `muse` it refused a call; its limit resets at 2026-11-16T00:00:00Z; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` 7-day usage is 89%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-14T05:00:00Z; it takes reviews only; it can start a build or a plan again in 47h 42m; waiting for their owners: #3695 held for `claude-3` until 23:20 (it refused a call)",
-      "pruned 2 plan file(s) older than 7 days"
+      "#3695: `claude-3` can start again, so its hold is lifted",
+      "delivered plan #3751 on claude-7 (run 43156875345): planned",
+      "delivered plan #3573 on claude-4 (run 43154777053): interrupted",
+      "started build #3751 on claude-7 (run 43161503653)",
+      "started build #3695 on claude-3 (run 43161592236)",
+      "started plan #3573 on claude-4 (run 43161678938)",
+      "started plan #3610 on claude-3 (run 43161766834)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18053,7 +18053,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-12T05:12:26Z",
+  "loop_tick": "2026-11-12T05:23:34Z",
   "machine_disk": {
     "issue": null,
     "reading": {
