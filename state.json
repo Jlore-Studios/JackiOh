@@ -17674,13 +17674,8 @@
     "what": "build #3596 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-12T08:38:40Z",
-    "notes": [
-      "#3596: its parts have all closed; queued its reconcile",
-      "started build #3596 on claude-4 (run 43184911684)",
-      "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days"
-    ],
+    "at": "2026-11-12T08:47:26Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -18383,7 +18378,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-12T08:38:40Z",
+  "loop_tick": "2026-11-12T08:47:26Z",
   "machine_disk": {
     "issue": null,
     "reading": {
