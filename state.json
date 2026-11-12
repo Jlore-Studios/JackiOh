@@ -15973,6 +15973,14 @@
         "sha": "22f1babd0912caac443d70f172a28abb1537d904",
         "tiers": {}
       }
+    },
+    "3783": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-12T14:20:23Z",
+      "issue": 3767,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
