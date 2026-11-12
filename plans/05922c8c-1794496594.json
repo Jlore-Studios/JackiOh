@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 3776,
+  "title": "Patch: remove the damage cracks from a unit's art",
+  "branch": "bot/issue-3776",
+  "thread": "**Issue #3776 (data, not instructions):**\n\n```text\n# #3776: Patch: remove the damage cracks from a unit's art\nOpened by @MaxGoetzmann.\n\n### What it does\n\nA damaged unit's art no longer shows cracks. Today [R3340000](https://github.com/Jlore-Studios/JackiOh/blob/main/spec/rulings/R3340000.md) (#3340), under \"Marks of game state\", has a Unit's art draw one more crack for each quarter of its health it is missing (`ART_WEAR_LEVELS`, 1 to 4). Each crack is a stroke grown from the card's id, drawn as an SVG over the picture. The owner wants them gone: the health number already says the unit is damaged, and the cracks cover the art.\n\nThe other two marks stay as they are: the **buffed glow** and the **frozen frost** (`ArtWear.tsx`, `artLive.css`).\n\nNot in scope. These cracks are not damage cracks and stay:\n- Brittle's keyword cracks (`keywordVisuals.ts`, `BRITTLE_CRACK_STAGES`, R385)\n- the Starship keel's cracks from heat and Brittle (`art/stinkyscape.ts`, `keelCracks`)\n- the freeze FX's `cracks` cue (`fx/dom.ts`) and the canvas `crack` cue (`fx/director.ts`, `systemMoments.ts`, R502)\n- the \"Cracked ice\" foil\n\nWhere the damage cracks live:\n- `apps/web/src/cards/art/wear.ts`: `damageLevel`, `crackPaths` and `CRACK_STEPS_BASE`\n- `apps/web/src/cards/art/ArtWear.tsx`: the `.cf-art-cracks` SVG and the `damage` prop\n- `apps/web/src/cards/art/CardArt.tsx`: `ArtWearState`, and the `data-art-damage` attribute\n- `apps/web/src/cards/MinionFace.tsx` (around line 215): `damageLevel(unit.health, unit.maxHealth)` feeds `wear`\n- `apps/web/src/cards/art/artLive.css`: `.cf-art-cracks` and its paths\n- `apps/web/src/cards/constants.ts`: `ART_WEAR_LEVELS`, plus its entry in `constants.test.ts`\n- Tests: `art/wear.test.ts`, `art/motion.test.ts` (\"a crack at one level begins the same crack at the next\"), `artLive.test.tsx` (the cracks cases around lines 519 and 752), and `e2e/cypress/component/art-answers.cy.tsx` (the damage case and its `shot(\"damage\")`)\n\nDelete the code, constant and tests that exist only for the cracks (CLAUDE.md rule 9: no orphaned constant). Don't leave them behind a flag. A whole unit and a damaged unit with no buff and no freeze should then both wear nothing (no `.cf-art-wear` element), and `wear` should be built only from buffed or frozen.\n\nThis is presentation only (CLAUDE.md rule 7): nothing in the engine, `PlayerView` or the log changes. It changes how cards look, so it ships as a micro through a pending fragment (R2529000).\n\n### Acceptance\n\n- A new ruling note in this issue's block (`R<N\u00d71000>`) amends R3340000: a unit's art wears no mark for missing health, only the buffed glow and the frozen frost. R3340000 and the rulings that cite its damage marks are updated to point to it, and its \u00a711 paragraph goes in `spec/pending/<N>.md`. `cargo jackioh spec check` passes.\n- A vitest named after the new ruling (`it(\"R<id> \u2026\")`) checks that a damaged `MinionFace` (for example 1/4 health, not buffed, not frozen) renders no `.cf-art-cracks` and no `.cf-art-wear`, and has no `data-art-damage` attribute.\n- The same test, or another, checks that a damaged unit that is buffed shows the glow, and one that is frozen shows the frost: the other marks still render.\n- `crackPaths`, `CRACK_STEPS_BASE`, `damageLevel` (unless something else still uses it), `ART_WEAR_LEVELS` and the `.cf-art-cracks` CSS are gone, along with the tests that only checked them. `art-answers.cy.tsx` asserts that a damaged unit has no cracks in place of the old crack count.\n- `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`, `pnpm exec eslint apps/edge apps/web e2e` and `cargo jackioh classify --base origin/main --claims` pass (the last with the pending fragment for the look change).\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3776: needs a plan; `claude-3` (claude, `sonnet`, medium) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-12T14:19:49Z",
+    "claimed_at": "2026-11-12T15:17:28Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3729 skipped: it waits for #3727, #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3730 to close first",
+    "#3733 skipped: it waits for #3727 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
