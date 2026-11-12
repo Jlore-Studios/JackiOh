@@ -24,7 +24,7 @@ use jackioh_shared::host::daily::{
 };
 
 use crate::actor::checkpoint::{self, CheckpointBody};
-use crate::actor::contracts::RecordResultInput;
+use crate::actor::contracts::{RecordResultInput, VoidMatchInput};
 use crate::actor::engine::{self, EngineState, Pinned};
 use crate::actor::match_actor::last_boards_of;
 use crate::actor::protocol::{client_nonce, parse_action_body};
@@ -32,7 +32,7 @@ use crate::actor::registry::{Prepared, dealt_for, panic_text, pinned_for, prepar
 use crate::actor::telemetry::Recorder;
 use crate::api::collection::caller_profile;
 use crate::api::http::{ApiError, ApiResult, Req, bad_request, json as json_response, ok, to_json};
-use crate::api::results::{record_result, seats_of};
+use crate::api::results::{record_result, seats_of, void_match};
 use crate::app::App;
 use crate::bug_reports::{Finding, FoundIn, refused_rows};
 use crate::config::{DAILY_RECENT_FINISHED, DAILY_SETTLE_ATTEMPTS, MATCH_CHECKPOINT_MIN_ACTIONS};
@@ -292,7 +292,17 @@ async fn record(app: &Arc<App>, loaded: &Loaded, now: i64) {
         return;
     };
     if outcome.reason == GameOverReason::Voided {
-        tracing::warn!(event = "daily.voided", matchId = %loaded.match_row.id);
+        // R679, as the live actor's void: the game never happened, so the store forgets its match
+        // row, its log and (0088's `on delete cascade`) its daily game, and no result is written.
+        // A void that fails leaves the match `live`, and the game's next read voids it again.
+        let input = VoidMatchInput {
+            match_id: loaded.match_row.id.clone(),
+            players: loaded.match_row.players.clone(),
+            at: now,
+        };
+        if let Err(error) = void_match(app, input).await {
+            tracing::error!(event = "daily.void.failed", matchId = %loaded.match_row.id, message = %error.message);
+        }
         return;
     }
     // R677: credited by who plays each seat now, as the actor's `credited_seats` does.

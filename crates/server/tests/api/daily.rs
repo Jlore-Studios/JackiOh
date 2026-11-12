@@ -28,7 +28,8 @@ use jackioh_server::db::store::{MatchStatus, PushSubRow};
 use crate::support::deps::{
     TestAppOptions, add_user, call, json_request, send as send_request, test_app_with,
 };
-use crate::support::store::{Account, account, befriend, fake};
+use crate::support::engine::{TEST_GLITCH_VOID, fake_deck, install_test_cards};
+use crate::support::store::{Account, account, befriend, fake, fake_lock};
 
 // Helpers
 
@@ -737,6 +738,90 @@ async fn r3727008_an_account_playing_a_daily_game_is_deleted_only_once_the_game_
         tx.commit().await.expect("commit");
         assert_eq!(row.status, MatchStatus::Finished, "by time {by_time}");
     }
+}
+
+// R679: a game a Glitch voids never happened
+
+/// R679: a daily game a Glitch voids is forgotten as a live one is: no result, no match row, log or
+/// daily game left, out of both lists, and neither account held from deletion by it.
+#[tokio::test]
+async fn r679_a_daily_game_a_glitch_voids_is_forgotten_and_holds_neither_account() {
+    install_test_cards();
+    let (app, ada, bo) = two_friends().await;
+    let match_id = daily_game(&app, &ada, &bo, 1).await;
+    // Before anyone moves, both decks become ones the void opens in (Quickdraw), so whichever seat
+    // takes the first turn holds it; every request folds the game from its row.
+    {
+        let mut data = fake_lock(&app).await;
+        let row = data
+            .tables
+            .matches
+            .iter_mut()
+            .find(|row| row.id == match_id)
+            .expect("the match row");
+        row.decks = (fake_deck(&[TEST_GLITCH_VOID]), fake_deck(&[TEST_GLITCH_VOID]));
+    }
+    past_the_mulligan(&app, [&ada, &bo], &match_id).await;
+    let (on_move, _) = holder(&app, [&ada, &bo], &match_id).await;
+    let game = read(&app, on_move, &match_id).await;
+    let glitch = game["view"]["you"]["hand"]
+        .as_array()
+        .and_then(|hand| hand.iter().find(|card| card["defId"] == TEST_GLITCH_VOID))
+        .and_then(|card| card["instanceId"].as_str())
+        .unwrap_or_else(|| panic!("the void opens in hand: {game}"))
+        .to_string();
+    let seq = game["seq"].as_i64().expect("a seq");
+    let (status, body) = send(
+        &app,
+        on_move,
+        &match_id,
+        seq,
+        "the-void",
+        json!({ "type": "play", "instanceId": glitch }),
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(body["over"], true, "{body}");
+    assert_eq!(
+        body["view"]["result"],
+        json!({ "winner": "draw", "reason": "voided" }),
+        "{body}"
+    );
+
+    {
+        let data = fake_lock(&app).await;
+        let tables = &data.tables;
+        assert!(
+            tables.matches.iter().all(|row| row.id != match_id),
+            "the match row is forgotten"
+        );
+        assert!(
+            tables.match_actions.iter().all(|row| row.match_id != match_id),
+            "and its log"
+        );
+        assert!(
+            tables.daily.games.iter().all(|row| row.match_id != match_id),
+            "and its daily game"
+        );
+        assert!(tables.results.is_empty(), "no result is written");
+    }
+    for who in [&ada, &bo] {
+        let (status, list) = api(&app, "GET", "/api/daily", &who.token, Value::Null).await;
+        assert_eq!(status, 200, "{list}");
+        assert_eq!(list["games"], json!([]), "{list}");
+        let (status, body) = api(
+            &app,
+            "GET",
+            &format!("/api/daily/games/{match_id}"),
+            &who.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 404, "{body}");
+    }
+    let (status, body) = api(&app, "DELETE", "/api/account", &bo.token, Value::Null).await;
+    assert_eq!(status, 204, "{body}");
+    clear_overrides();
 }
 
 // R3727005: a game keeps the catalog it started on
