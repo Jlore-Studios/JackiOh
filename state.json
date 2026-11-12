@@ -14914,17 +14914,8 @@
       }
     },
     "3767": {
-      "action": "plan",
-      "asks": [
-        "c:6825494758"
-      ],
-      "build_next": {
-        "from_run": "43232729035",
-        "model": "sonnet",
-        "provider": "claude-4",
-        "since": "2026-11-12T14:18:20Z",
-        "until": "2026-11-12T14:48:20Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-12T14:18:04Z",
         "difficulty": "medium",
@@ -14943,10 +14934,9 @@
         "reason": "planned on sonnet",
         "trail": "cted\\\\\\\"\\\" zh\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3767; sed -n 1136,1148p apps/web/src/i18n/zh-CN.json; sed -n 2905,2912p apps/web/src/i18n/zh-CN.json; tail -5 apps/web/src/i18n/zh-CN.json; grep -n \\\u2026\n- Bash: {\"command\": \"sed -n 1,60p apps/web/src/writing.test.ts; sed -n 1,40p apps/web/src/wording.test.ts\"}\n- Bash: {\"command\": \"sed -n 60,200p apps/web/src/writing.test.ts; grep -n \\\"^#\\\\|^- \\\\|^| \\\" apps/web/WRITING.md | head -80\"}\n- Bash: {\"command\": \"sed -n 478,530p apps/web/src/routes/match.test.tsx; grep -n \\\"FORBIDDEN_CLOSE\\\" apps/web/src/routes/match.test.tsx | head -3\"}\n- Bash: {\"command\": \"cd apps/web/src/duos; grep -n \\\"describe(\\\\|^ it(\\\\|^function \\\\|class Fake\\\" socket.test.ts | head -80; sed -n 150,230p socket.test.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3767/apps/web/src/duos; sed -n 1,22p socket.test.ts; sed -n 300,330p socket.test.ts; grep -n \\\"describe(\\\\|^ it(\\\\|^function \\\\|class Fake\\\\|reconnec\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3767/apps/web/src/duos; sed -n 1,120p DuosRoute.test.tsx; cat testids.ts | head -50; sed -n 1,80p DuosBoard.tsx | head -100; grep -n \\\"boardNotice\\\\|\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3767; grep -rn \\\"duos-reconnect\\\\|match-reconnect\\\\|duos-gone\\\\|match-gone\\\" e2e apps/web/src --include=*.ts --include=*.tsx -l | head; grep -n \\\"rec\u2026\n- Bash: {\"command\": \"sed -n 56,75p apps/web/src/duos/testids.ts; grep -rn \\\"ConnectionState\\\\|DuosConnection\\\" apps/web/src/together/*.ts* | head; ls docs | head -40; grep -rn \\\"ws/match\\\\|/ws/duos\\\" crates/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3767; grep -n -o \\\".\\\\{120\\\\}4411.\\\\{160\\\\}\\\\|.\\\\{120\\\\}MATCH_VOIDED_CLOSE.\\\\{100\\\\}\\\\|.\\\\{100\\\\}4410.\\\\{120\\\\}\\\" crates/server/README.md apps/web/RE\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3767; grep -n \\\"One socket per player\\\\|replaces\\\\|older socket\\\\|newer socket\\\" crates/server/README.md | cut -c1-120; grep -c \\\"\\\" crates/server/RE\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3767; grep -n -i \\\"reconnecting\\\\|\\\\\\\"refused\\\\\\\"\\\\|connection state\\\" apps/web/README.md docs/v0.3.0/SURFACE.md docs/architecture.md | cut -c1-260 |\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3767; grep -n \\\"wait_closed\\\\|close_code\\\" crates/server/tests/actor/ws_server.rs | head -30; grep -rn \\\"close_code()\\\\|wait_closed\\\" crates/server/t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3767; sed -n 36,62p crates/server/src/actor/match_actor.rs; sed -n 38,60p crates/server/src/duos/actor.rs; grep -n \\\"MATCH_OVER_CLOSE_CODE\\\" crates/s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3767; grep -n \\\"server-only\\\\|SERVER_ONLY\\\\|MATCH_VOIDED_CLOSE_CODE\\\" crates/server/tests/export_config.rs crates/tools/src -r | head; grep -n \\\"pub \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3767; ls crates/tools/src | head -30; grep -rn \\\"fn r\\\\|\\\\\\\"it(\\\\|it(\\\\\\\\\\\\\\\\\\\\\\\"\\\" crates/tools/src/spec*.rs 2>/dev/null | head -10; ls crates/tools\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3767; ls spec/rulings | grep -E \\\"^R(0679|0744|1441|835001|1115000|3694000|2686000|2973000|0148)\\\\.md|^R(835001|1441000|1115000|2686000)\\\"; ls spec/r\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3767; sed -n 1727,1800p apps/web/src/routes/match.test.tsx; grep -n \\\"closed socket\\\\|asks nothing\\\" apps/web/src/routes/match.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3767; grep -rn -i \\\"normal close\\\\|closed with 1000\\\\|with 1000\\\\|close(Some(1000)\\\" crates/server/src | cut -c1-220 | head; grep -n \\\"fn on_socket_g\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3767; sed -n 1,22p docs/implicit-states.md | cut -c1-300; sed -n 140,160p docs/implicit-states.md | cut -c1-300; grep -n \\\"S12\\\" docs/implicit-states\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3767; grep -n \\\"pub fn\\\\|pub async fn\\\" crates/server/tests/support/socket.rs | head -30; grep -n \\\"struct Client\\\\|impl Client\\\" -A12 crates/server/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3767; sed -n 120,175p crates/server/tests/actor/match_actor.rs; grep -n \\\"close_reason\\\" crates/server/tests/actor/match_actor.rs | head -3\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3767; grep -n -i \\\"patch:\\\" docs/issues-and-patches.md | cut -c1-260 | head -20; ls patches 2>/dev/null | head; ls | head -40\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3767; sed -n 108,128p docs/issues-and-patches.md | cut -c1-400; ls spec/pending; grep -rn \\\"pending/\\\" crates/tools/src/patches.rs | head -3; ls patc\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3767; ls apps/web/src/wasm/pkg 2>&1 | head -3; grep -n \\\"\\\\\\\"test\\\\\\\"\\\\|\\\\\\\"typecheck\\\\\\\"\\\" apps/web/package.json; ls target 2>&1 | head -2\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3767; sed -n 137,160p apps/web/src/duos/DuosRoute.test.tsx; sed -n 499,535p apps/web/src/duos/DuosRoute.test.tsx\"}\n- Write: {\"path\": \"/home/runner/work/_temp/work/item-3767/.bot-plan.md\", \"content\": \"# Draft plan for #3767 (planner notes; final message is the full plan)\\n\\nRead and found:\\n- Server replaced-seat closes: `\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3767; grep -n \\\"mod actor\\\\|\\\\[\\\\[test\\\\]\\\\]\\\" crates/server/tests/server.rs crates/server/Cargo.toml | head; sed -n 21,27p crates/server/tests/actor\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3767; sed -n 55,70p crates/server/Cargo.toml; sed -n 60,100p apps/web/src/duos/socket.test.ts | grep -n \\\"view\\\\|function\\\" | head; grep -n \\\"functio\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"No rule 1, 2, 4 or 5 line holds (no engine or AI change, no migration, about 24 files). Rule 3: server and web share one generated constant, `SEAT_TAKEN_CLOSE_CODE`, and no new frame, so the coupling is a call site, as with R3694000's 4411.\"} --> ## Goal A\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-12T14:00:11Z",
       "owner_why": "it plans it",
@@ -14959,12 +14949,14 @@
       "provider": "claude-4",
       "queued_at": "2026-11-12T13:53:41Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43232729035",
+      "run_id": "pending:ce8a8cc8-1794493164",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-12T14:00:11Z",
+      "started_at": "2026-11-12T14:20:23Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6825494758"
+      ]
     },
     "3768": {
       "action": "plan",
@@ -15310,9 +15302,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T14:05:22Z",
+    "at": "2026-11-12T14:20:23Z",
     "url": "",
-    "what": "plan #3773 on claude-3"
+    "what": "build #3767 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-12T13:56:57Z",
