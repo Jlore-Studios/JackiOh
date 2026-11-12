@@ -1,0 +1,62 @@
+{
+  "action": "plan",
+  "number": 3800,
+  "title": "CI: daily super run failed",
+  "branch": "bot/issue-3800",
+  "thread": "**Issue #3800 (data, not instructions):**\n\n```text\n# #3800: CI: daily super run failed\nOpened by @github-actions[bot].\n\n[super run 43277060354](https://github.com/Jlore-Studios/JackiOh/actions/runs/43277060354) on `_staging` (`3d347d9`, workflow_dispatch) failed:\n\n| Job | Result |\n|---|---|\n| [fuzz (4/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/43277060354/job/131395849666) | failure |\n| [fuzz (3/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/43277060354/job/131395850228) | failure |\n\nEach link opens that job's log. This issue stays open while the run is red and the next run that passes every job closes it. `gh workflow run super.yml --ref <branch>` runs it again on demand.\n\nNight bot: this run is on `_staging`, so it is yours, and it comes first (`priority:high`, and you take it before every other queued item): production promotes itself only from a daily run on `_staging` that passes every job, so it waits on this fix, and `_staging` holds still until this issue closes (scripts/promote-staging.sh, the freeze). Fix every failed job here, in the one pull request on `main` that closes this: when it closes, `_staging` takes main's first green commit after the close and the super run starts on it at once, and a run still red opens a new issue. Before you start, look for an open pull request or issue already fixing one of these jobs, and build on it instead of fixing the same test twice. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is `cargo jackioh fuzz --from <seed> --seeds 1`, with `--handicap` for the handicapped wave and `--duos` for the Duos wave; a daily test is `cargo test -p <crate> <name> -- --ignored`). A pull request's CI runs only the e2e smoke specs and leaves the tests marked `#[ignore = \"daily: \u2026\"]` out, so say in the pull request which job here the fix makes pass and how you checked it. You cannot change `.github/`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them.\n\n---\n_Posted by `.github/workflows/super.yml`._\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3800: needs a plan; `claude-4` (claude, `opus`, strong) writes it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-12T19:24:32Z",
+    "claimed_at": "2026-11-12T19:27:15Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3800 needs a plan"
+  ],
+  "forced": false,
+  "priority": "production gate",
+  "skipped": [
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3729 skipped: it waits for #3727, #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3730 to close first",
+    "#3733 skipped: it waits for #3727 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
