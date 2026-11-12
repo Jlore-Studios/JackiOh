@@ -1,0 +1,87 @@
+{
+  "action": "plan",
+  "number": 3777,
+  "title": "Patch: Magic Jammed targets any face-down backrow card, a Cloaked one included",
+  "branch": "bot/issue-3777",
+  "thread": "**Issue #3777 (data, not instructions):**\n\n```text\n# #3777: Patch: Magic Jammed targets any face-down backrow card, a Cloaked one included\nOpened by @MaxGoetzmann.\n\n## The bug\n\n#36 Magic Jammed (`core-036`, \"Destroy target backrow card; Lock its zone\", Radiant \"Steal target backrow card; Lock its original zone\") cannot be aimed at face-down backrow cards in play. It should be able to target **any** card in a backrow zone, face-down or face-up, whatever its printed type. **That includes a card set face-down by Cloaked** (a Unit, Spell or Field Spell played as a Trap, \u00a76 Cloaked, R783004\u2013R783008).\n\n**The only backrow occupant it may not target is a face-up Unit** standing in a backrow zone (a Flying Unit, R1081000: \"a Unit standing there is no backrow card\").\n\n## Intended rule\n\n- A face-down card in a backrow zone is a backrow card for \"target backrow card\", whatever its printed type. A set Cloaked Unit is face-down and inert (\u00a76 Cloaked), so it counts as a backrow card and not as a standing Unit.\n- A face-up Field Spell, a face-up/revealed Trap and a Field Trap are backrow cards, as now.\n- A face-up Unit standing in the backrow is not a backrow card (R1081000, unchanged).\n\n## Leads (to check, not proven)\n\n- `crates/engine/src/play_choices.rs` `legal_selections_for`, the `FilterOf::Backrow` arm: it offers a slot only when `on_field(held) && !crate::zones::is_standing_unit(state, held)`. `zones::is_standing_unit` (`crates/engine/src/zones.rs`) is `card.position.is_some() && card_type_of(state, card) == CardType::Unit`. If a set Cloaked Unit reads as `CardType::Unit` there, or carries a `position`, it is wrongly excluded. The check should be \"face-up and a Unit\".\n- `card_allowed` / `reachable` in the same file: check whether anything there (type filters, `can_pay_to_target`, Immutable/`spell_cannot_reach`) refuses a face-down candidate, or a Cloaked one reading as its printed type.\n- The client path: the opponent's view of a face-down backrow card is `{ faceDown: true, cost }`, with no instance id (R33, \u00a710.8). Confirm that `legalActions` still offers those selections and that the web client (`apps/web/src/game/actions.ts`, the targeting/drag layer) lets the player pick a face-down enemy backrow slot, rather than only cards it can read. Reproduce in the client as well as in the engine. A plain face-down Trap is the first case to try, because the report says face-down cards in general cannot be targeted.\n- Any other \"target backrow card\" or \"every backrow card\" reader that shares the same check (C #51 Back Breaker, C+ #5 Guy Att, the cards R1081000 lists) should agree with this rule. Fix the shared predicate, not just #36.\n\n## Acceptance\n\n1. A new ruling note in this issue's block (lowest free R(N\u00d71000)\u2026), with its \u00a711 paragraph in `spec/pending/<N>.md` (CLAUDE.md rule 3), stating the rule above. Amend the \u00a78.2 #36 row and/or R1081000's sentence if they need it.\n2. Tests in `crates/cards/src/scripts/core/c036_magic_jammed.rs` named after the ruling, covering:\n   - base Magic Jammed destroys an enemy **face-down Trap** and Locks its zone (the play is accepted and listed in `legalActions`);\n   - base destroys an enemy **set Cloaked Unit** (e.g. C #6 Cloaked Toe Cracker set face-down) and Locks its zone; the card goes to the graveyard as its printed card (R783008);\n   - Radiant steals a set Cloaked card into the thief's backrow, still set, and Locks its original zone;\n   - a set Cloaked Spell or Field Spell is likewise targetable;\n   - the existing `r1081000_a_unit_standing_in_the_backrow_is_no_backrow_card_to_target` still passes: a face-up standing Unit is refused;\n   - a Cloaked Unit that has **revealed** (animated into a unit zone) is no longer a backrow target.\n3. Hidden information holds: nothing in the targeter's view or the events reveals the face-down card's identity before it is destroyed (base) (R33, R97).\n4. If the client was part of the bug, a web test (vitest) showing a face-down enemy backrow slot is offered as a Magic Jammed target.\n5. `cargo jackioh spec check`, `cargo jackioh patches check` (a pending fragment if a card plays differently) and `cargo jackioh classify --base origin/main --claims` are green.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3777: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "at": "2026-11-12T14:42:11Z",
+    "draft": "# Draft plan for #3777 (planner notes)\n\n## Findings so far\n- Engine `legal_selections_for` FilterOf::Backrow (crates/engine/src/play_choices.rs:1164) excludes `is_standing_unit`; `is_standing_unit` (zones.rs:1581) = position.is_some() && card_type_of == Unit; `card_type_of` (faces.rs:28) returns set type (Trap) via `alt_play::set_type_of` for a set Cloaked card. So engine likely already OK for face-down Trap and set Cloaked (verify position None on set).\n- Existing c036 radiant test already picks a face-down Sheepish Trap by id: engine accepts.\n- CLIENT BUG (confirmed by reading): face-down enemy backrow renders with no instanceId (Backrow.tsx), click reports `{on:\"zone\"}`; actions.ts `onClickTarget` \"zone\" case calls narrowByTarget with `{pick:\"zone\"}` which no candidate (`{pick:\"instance\", instanceId:<hidden>}`) fixes; `highlightFor` uses `selectionTestid` -> testid.card(hiddenId) which no element has. So a face-down enemy backrow card can never be picked as a play-time target on the board.\n- Precedent: R821000 (prompt options carry player/row/lane for hidden cards; actions.ts hiddenOptionZone, pendingHighlight, answerPlaguePlacement).",
+    "family": "claude",
+    "kind": "draft",
+    "notes": "",
+    "provider": "claude-3",
+    "reason": "RuntimeError: the planner on opus wrote no plan: claude exited 1",
+    "trail": "rs 2>/dev/null | head; grep -rn \\\"\\u00a76.1 Cloaked\\\\|#### Cloaked\\\\|\\\\*\\\\*Cloaked\\\\*\\\\*\\\" spec/06-keywords.md | head -3\", \"d\u2026\n- Bash: {\"command\": \"grep -n \\\"08-catalog\\\" crates/tools/src/spec.rs | head; grep -n \\\"Cloaked\\\" spec/06-keywords.md | head -5 | cut -c1-300\", \"description\": \"See how spec tool reads \\u00a78 and find Cloaked\u2026\n- Bash: {\"command\": \"sed -n 64p spec/06-keywords.md\", \"description\": \"Read full \\u00a76.1 Cloaked row\"}\n- Bash: {\"command\": \"grep -n \\\"mana.unwrap_or\\\\|DEFAULT_MANA\\\\|SCENARIO_MANA\\\\|default mana\\\" crates/engine/src/testkit/scenario.rs | head -5; grep -n \\\"pub fn stand_in_backrow\\\" -B 3 -A 20 crates/cards/src/\u2026\n- Bash: {\"command\": \"sed -n 600,640p crates/engine/src/testkit/scenario.rs; grep -n \\\"fn create_from\\\\|fn build_state\\\\|active\\\" crates/engine/src/testkit/scenario.rs | sed -n 1,30p\", \"description\": \"Read sc\u2026\n- Bash: {\"command\": \"sed -n 1,40p crates/engine/src/testkit/scenario.rs\", \"description\": \"Read scenario header defaults\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3777/crates/engine/tests/rules/cloaked.rs\", \"offset\": 255, \"limit\": 100}\n- Bash: {\"command\": \"sed -n 505,600p apps/web/src/game/Game.test.tsx\", \"description\": \"Read the R821000 Game.test.tsx board-click test\"}\n- Bash: {\"command\": \"grep -ln \\\"playReason\\\\|optionCount\\\\|R821000\\\" crates/engine/README.md apps/web/README.md docs/*.md docs/v0.3.0/*.md 2>/dev/null\", \"description\": \"Check READMEs/docs documenting view fi\u2026\n- Bash: {\"command\": \"grep -n \\\"playReason\\\\|optionCount\\\\|R821000\\\" apps/web/README.md | cut -c1-400\", \"description\": \"Read web README lines on view fields\"}\n- Bash: {\"command\": \"sed -n 10,22p apps/web/README.md | cut -c1-600\", \"description\": \"Read web README contract lines around targeting\"}\n- Bash: {\"command\": \"sed -n 22,28p apps/web/README.md | cut -c1-900\", \"description\": \"Read web README choices paragraph\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn backrow_is_public\\\\|pub fn is_face_down\\\" -A 12 crates/engine/src/preview.rs | head -40; grep -n \\\"pub fn find_instance\\\\b\\\\|pub fn find_instance(\\\" crates/engine/src/*.\u2026\n- Bash: {\"command\": \"sed -n 30,95p crates/engine/src/view_for.rs\", \"description\": \"Read view_for imports block\"}\n- Bash: {\"command\": \"sed -n 100,115p crates/engine/src/view_for.rs; sed -n 1530,1570p crates/engine/src/view_for.rs\", \"description\": \"Read is_face_down_to and R821000 option zone code\"}\n- Bash: {\"command\": \"sed -n 1,50p apps/web/src/game/actions.ts | grep -n \\\"import\\\\|sideOf\\\\|Side\\\\b\\\\|Row\\\" ; grep -n \\\"^import\\\" apps/web/src/game/Prompt.tsx | head -30; grep -n \\\"sideOf\\\" apps/web/src/gam\u2026\n- Bash: {\"command\": \"sed -n 48,72p apps/web/src/game/Prompt.tsx; grep -n \\\"faceDownBackrow\\\" apps/web/src/test/fixtures.ts apps/web/src/game/Game.test.tsx | head -3\", \"description\": \"Read Prompt.tsx actions \u2026\n- Bash: {\"command\": \"grep -n \\\"^### 8\\\\.\\\\|^### 6\\\\.\\\\|^## 6\\\\|^## 8\\\" spec/08-catalog.md spec/06-keywords.md | head -12\", \"description\": \"Verify section headings \\u00a76.1 and \\u00a78.2\"}\n- Bash: {\"command\": \"sed -n 1,20p crates/cards/src/scripts/classic/c051_back_breaker.rs; grep -n \\\"fn r1081000\\\" -A 25 crates/cards/src/scripts/classic/c051_back_breaker.rs | head -40\", \"description\": \"Read \u2026\n- Bash: {\"command\": \"sed -n 40,100p crates/cards/src/scripts/classic/c051_back_breaker.rs\", \"description\": \"Read Back Breaker test helpers\"}\n- Bash: {\"command\": \"sed -n 1,30p apps/web/src/wire/validator.ts | head -30; grep -n \\\"PlayerView\\\\|marketplace\\\\|emotesHeard\\\" apps/web/src/wire/validator.ts | head\", \"description\": \"Check web validator for\u2026\n- Bash: {\"command\": \"grep -n \\\"fn .*hidden\\\\|unreadable\\\\|leak\\\\|face_down_ids\\\\|hidden_ids\\\" crates/engine/src/testkit/invariants.rs | head -20\", \"description\": \"Search fuzz invariants for hidden-id leak ch\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3777/crates/engine/src/testkit/invariants.rs\", \"offset\": 780, \"limit\": 130}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3777/crates/engine/src/testkit/invariants.rs\", \"offset\": 1090, \"limit\": 120}\n- Bash: {\"command\": \"grep -n \\\"fn is_pending_option_instance_id\\\" -A 20 crates/engine/src/testkit/invariants.rs; grep -n \\\"fn walk\\\" -A 30 crates/engine/src/testkit/invariants.rs | head -45\", \"description\": \u2026\n- Bash: {\"command\": \"grep -rn \\\"hidden_information_violations\\\" crates --include=*.rs | grep -v \\\"pub fn\\\" | head\", \"description\": \"Find callers of the hidden-information invariant\"}\n- Bash: {\"command\": \"grep -rn \\\"hidden_information_violations\\\\|fn check_state\\\\|I6\\\" crates/engine/src/testkit/invariants.rs | grep -v \\\"^.*//\\\" | head -20; grep -rn \\\"hidden_information_violations\\\" crates\u2026\n- Bash: {\"command\": \"sed -n 3165,3195p crates/engine/src/testkit/invariants.rs; sed -n 400,450p crates/cards/tests/cross/invariants.rs\", \"description\": \"Read I6 monitor call and cross invariant tests\"}\n- Bash: {\"command\": \"grep -n \\\"invariants::\\\\|Monitor\\\\|hidden(\\\" crates/engine/src/testkit/scenario.rs | head -10; sed -n 1,60p crates/cards/tests/cross/invariants.rs | grep -n \\\"fn board\\\\|struct Board\\\\|h\u2026\n- Bash: {\"command\": \"grep -n \\\"fn board()\\\" -A 40 crates/cards/tests/cross/invariants.rs | head -50\", \"description\": \"Read cross invariants Board fixture\"}\n- Bash: {\"command\": \"sed -n 200,234p crates/cards/tests/cross/invariants.rs; grep -n \\\"const MY_PAWN\\\\|const VANILLA\\\\|const SPECIESIST\\\\|const HIT_JOB\\\\|^mod \\\\|^ mod \\\" crates/cards/tests/cross/invariants.\u2026\n- Bash: {\"command\": \"sed -n 136,160p apps/web/src/game/actions.ts; grep -n \\\"prompt-option-\\\" apps/web/src/game/Prompt.tsx | head -3\", \"description\": \"Check selectionKey format and option testids\"}\n- Bash: {\"command\": \"grep -n \\\"^### \\\\|^## \\\" spec/06-keywords.md | head; grep -n \\\"^| 6 \\\\|^| 51 \\\" spec/08-catalog.md | cut -c1-120\", \"description\": \"Verify \\u00a76 headings and catalog rows\"}\n- Bash: {\"command\": \"sed -n 77,100p apps/web/src/test/fixtures.ts; grep -n \\\"faceDownBackrow\\\\|faceUpBackrow\\\\|from \\\\\\\"../test/fixtures\\\" apps/web/src/game/Game.test.tsx | head -5\", \"description\": \"Read bac\u2026"
+  },
+  "session": {
+    "action": "plan",
+    "artifact": 13954062930,
+    "artifact_bytes": 662408,
+    "artifact_name": "work",
+    "at": "2026-11-12T14:48:11Z",
+    "bytes": 874608,
+    "cwd": "/home/runner/work/_temp/work/item-3777",
+    "ended": "failed: RuntimeError: the planner on opus wrote no plan: claude exited 1",
+    "head": "38671824590327624747d3b73b3f50f0dc6d7f85",
+    "id": "757af8a4-b21c-4edb-b5d5-efa39b14c355",
+    "kind": "plan",
+    "model": "opus",
+    "project": "-home-runner-work--temp-work-item-3777",
+    "provider": "claude-3",
+    "run": "43236783303"
+  },
+  "journal": "# Journal of #3777\n\nEvery night-bot run on #3777, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-11-12 14:48 UTC \u00b7 plan #3777 \u00b7 `claude-3` \u00b7 failed\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/43236783303) on `claude-3` (`opus` (strong)). It ended **failed**: RuntimeError: the planner on opus wrote no plan: claude exited 1\nModel calls: 1, 16.2 model minutes.\nTokens: 285 in / 87021 out / 25604710 cached, $9.02.\nSession: fresh: none was kept for this item. This run's: kept session `757af8a4-b21c-4edb-b5d5-efa39b14c355` of #3777 on claude-3 (874,608 bytes) in run 43236783303's `work` artifact, for its next run there.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 14:26 | start | from `origin/main` |  | at `386718245903` |\n| 2 | 14:26 | plan (`opus`) | plan the item before anyone builds it | 16.2 min, 87306 tok, $9.02 | failed, 151 turns: claude exited 1 |\n\n<details><summary>The planner's draft when it stopped</summary>\n\n````markdown\n# Draft plan for #3777 (planner notes)\n\n## Findings so far\n- Engine `legal_selections_for` FilterOf::Backrow (crates/engine/src/play_choices.rs:1164) excludes `is_standing_unit`; `is_standing_unit` (zones.rs:1581) = position.is_some() && card_type_of == Unit; `card_type_of` (faces.rs:28) returns set type (Trap) via `alt_play::set_type_of` for a set Cloaked card. So engine likely already OK for face-down Trap and set Cloaked (verify position None on set).\n- Existing c036 radiant test already picks a face-down Sheepish Trap by id: engine accepts.\n- CLIENT BUG (confirmed by reading): face-down enemy backrow renders with no instanceId (Backrow.tsx), click reports `{on:\"zone\"}`; actions.ts `onClickTarget` \"zone\" case calls narrowByTarget with `{pick:\"zone\"}` which no candidate (`{pick:\"instance\", instanceId:<hidden>}`) fixes; `highlightFor` uses `selectionTestid` -> testid.card(hiddenId) which no element has. So a face-down enemy backrow card can never be picked as a play-time target on the board.\n- Precedent: R821000 (prompt options carry player/row/lane for hidden cards; actions.ts hiddenOptionZone, pendingHighlight, answerPlaguePlacement).\n````\n\n</details>\n",
+  "usage_facts": {
+    "queued_at": "2026-11-12T14:22:27Z",
+    "claimed_at": "2026-11-12T14:49:43Z",
+    "previous_provider": "claude-3",
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3729 skipped: it waits for #3727, #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3730 to close first",
+    "#3733 skipped: it waits for #3727 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
