@@ -56,7 +56,11 @@ type Asked = (ModeChoiceInput, QueueMode, i32);
 fn asked(body: &Value, timed: bool) -> Result<Result<Asked, ApiResult>, ApiError> {
     let choice = read_mode_choice(body)?;
     let Some(mode) = daily_mode(&choice) else {
-        return Ok(Err(refused(422, "bad_mode", "A daily game is Best of 1 or All Random.")));
+        return Ok(Err(refused(
+            422,
+            "bad_mode",
+            "A daily game is Best of 1 or All Random.",
+        )));
     };
     let days = if timed {
         match time_of(body) {
@@ -173,7 +177,11 @@ pub async fn challenge(app: &Arc<App>, req: Req) -> ApiResult {
     }
     if !tx.daily_invites_create(&row, now).await? {
         tx.commit().await?;
-        return refused(409, "already_challenged", "You've already challenged them to a daily game.");
+        return refused(
+            409,
+            "already_challenged",
+            "You've already challenged them to a daily game.",
+        );
     }
     tx.commit().await?;
     push_social(app, &[&me, &friend_id]).await;

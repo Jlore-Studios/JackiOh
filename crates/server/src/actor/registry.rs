@@ -380,8 +380,11 @@ impl Registry {
 
     async fn rebuild(&self, app: &Arc<App>, match_id: &str) -> Result<MatchActor, RebuildError> {
         let store = |error: crate::db::store::StoreError| RebuildError::Internal(error.to_string());
-        let (match_row, log, mode, bots, saved) = one_tx!(app.db, |t| {
+        let (match_row, log, mode, bots, saved, daily) = one_tx!(app.db, |t| {
             let match_row = t.matches_get(match_id).await?;
+            // §9.13 (#3727): a daily game is played over HTTPS a request at a time (`daily::games`),
+            // never by an actor in memory.
+            let daily = t.daily_games_get(match_id).await?.is_some();
             let log = t.matches_actions(match_id).await?;
             let mode = t.matches_mode_of(match_id).await?;
             // R1452: a restart resumes a bot's seat as it resumes the match.
@@ -394,10 +397,10 @@ impl Registry {
                 Some(_) => t.matches_checkpoint(match_id).await?,
                 None => None,
             };
-            (match_row, log, mode, bots, saved)
+            (match_row, log, mode, bots, saved, daily)
         })
         .map_err(store)?;
-        let Some(match_row) = match_row else {
+        let Some(match_row) = match_row.filter(|_| !daily) else {
             return Err(RebuildError::NotFound);
         };
         if match_row.status == MatchStatus::Finished && log.is_empty() {

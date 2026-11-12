@@ -97,6 +97,9 @@ pub struct App {
     /// SPEC §14.13, R2875000: the news entries this build ships (`news.json`, checked at boot by
     /// `economy::news::parse`), oldest first. A field so a test can post its own.
     pub news: Vec<crate::economy::news::NewsEntry>,
+    /// SPEC §9.13 (#3727): the daily games' mail and push channels, each `None` while its keys are
+    /// unset, and the e2e mode's clock offset (`daily::DailyState`).
+    pub daily: crate::daily::DailyState,
 }
 
 // The clock
@@ -969,6 +972,106 @@ pub static ROUTES: &[Route] = &[
         h!(crate::duos::again::again_status),
     ),
     // end Duos co-op (#946)
+    // daily/ (SPEC §9.13, #3727): daily games over plain HTTPS.
+    (
+        "GET",
+        "/api/daily",
+        AuthLevel::Active,
+        h!(crate::daily::games::list),
+    ),
+    (
+        "POST",
+        "/api/daily/challenges",
+        AuthLevel::Active,
+        h!(crate::daily::invites::challenge),
+    ),
+    (
+        "POST",
+        "/api/daily/challenges/:id/accept",
+        AuthLevel::Active,
+        h!(crate::daily::invites::accept),
+    ),
+    (
+        "POST",
+        "/api/daily/challenges/:id/decline",
+        AuthLevel::Active,
+        h!(crate::daily::invites::decline),
+    ),
+    (
+        "DELETE",
+        "/api/daily/challenges/:id",
+        AuthLevel::Active,
+        h!(crate::daily::invites::cancel),
+    ),
+    (
+        "POST",
+        "/api/daily/seeks",
+        AuthLevel::Active,
+        h!(crate::daily::invites::seek),
+    ),
+    (
+        "DELETE",
+        "/api/daily/seeks/:id",
+        AuthLevel::Active,
+        h!(crate::daily::invites::cancel_seek),
+    ),
+    (
+        "GET",
+        "/api/daily/games/:matchId",
+        AuthLevel::Active,
+        h!(crate::daily::games::read),
+    ),
+    (
+        "POST",
+        "/api/daily/games/:matchId/actions",
+        AuthLevel::Active,
+        h!(crate::daily::games::act),
+    ),
+    (
+        "GET",
+        "/api/daily/settings",
+        AuthLevel::Active,
+        h!(crate::daily::notify::get_settings),
+    ),
+    (
+        "PUT",
+        "/api/daily/settings",
+        AuthLevel::Active,
+        h!(crate::daily::notify::put_settings),
+    ),
+    (
+        "POST",
+        "/api/daily/push",
+        AuthLevel::Active,
+        h!(crate::daily::notify::add_push),
+    ),
+    (
+        "DELETE",
+        "/api/daily/push",
+        AuthLevel::User,
+        h!(crate::daily::notify::remove_push),
+    ),
+    // The email's own link and RFC 8058's one-click POST: the token is the key, no sign-in.
+    (
+        "GET",
+        "/api/daily/unsubscribe",
+        AuthLevel::None,
+        h!(crate::daily::notify::unsubscribe_page),
+    ),
+    (
+        "POST",
+        "/api/daily/unsubscribe",
+        AuthLevel::None,
+        h!(crate::daily::notify::unsubscribe_post),
+    ),
+    // The Worker's hourly cron (apps/edge `DAILY_SWEEP_PATH`): outside `/api` and `/ws`, which the
+    // Worker never forwards from the public, so only it reaches the sweep.
+    (
+        "POST",
+        crate::config::DAILY_SWEEP_PATH,
+        AuthLevel::None,
+        h!(crate::daily::notify::sweep_route),
+    ),
     // api/e2e.rs (R144): the reseed on demand, end-to-end mode only; anywhere else its handler
     // answers as a path nobody serves.
     (
@@ -976,6 +1079,13 @@ pub static ROUTES: &[Route] = &[
         api::e2e::E2E_RESEED_PATH,
         AuthLevel::None,
         h!(api::e2e::post_reseed),
+    ),
+    // #3727: the daily clock's offset, end-to-end mode only, so a spec can watch a move run out.
+    (
+        "POST",
+        api::e2e::E2E_DAILY_CLOCK_PATH,
+        AuthLevel::None,
+        h!(api::e2e::post_daily_clock),
     ),
     // api/health.rs (#861): the Worker reads /healthz's commit, and its daily cron requests /readyz.
     ("GET", "/healthz", AuthLevel::None, h!(api::health::get_healthz)),
@@ -1033,6 +1143,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
     let bug_reports = crate::bug_reports::BugReports::from_env(&env);
     let ci_runs = api::ci_runs::CiRuns::from_env(&env);
     let news = crate::economy::news::shipped().map_err(|error| anyhow!("news.json: {error}"))?;
+    let daily = crate::daily::DailyState::from_env(&env);
     let app = Arc::new(App {
         env,
         db,
@@ -1068,6 +1179,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         practice_settling: Mutex::new(std::collections::BTreeSet::new()),
         spends: crate::economy::spend_slots::SpendSlots::default(),
         news,
+        daily,
     });
 
     if app.env.e2e {
@@ -1268,6 +1380,12 @@ fn spawn_loops(app: &Arc<App>) -> Vec<(&'static str, JoinHandle<()>)> {
             loops::spawn_supervised("duos.sweeper", app.clone(), crate::duos::run_sweeper),
         ),
         // end Duos co-op (#946)
+        // SPEC §9.13 (#3727): the daily games' sweep while the server is awake; the Worker's hourly
+        // cron runs the same sweep through `POST /daily-sweep` while it sleeps.
+        (
+            "daily.sweeper",
+            loops::spawn_supervised("daily.sweeper", app.clone(), crate::daily::notify::run_sweeper),
+        ),
     ];
     // #3208: the store's heartbeat keeps the pool's warm connections open while the server is quiet.
     if let db::store::Db::Pg(pool) = &app.db {

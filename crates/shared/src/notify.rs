@@ -64,7 +64,11 @@ fn due(waiting: &[WaitingGame], last: Option<i64>, now: i64) -> bool {
 /// The plan for one account at `now`.
 pub fn decide_notify(input: &NotifyInput, now: i64) -> NotifyPlan {
     let mut games = input.waiting.clone();
-    games.sort_by(|a, b| a.deadline.cmp(&b.deadline).then_with(|| a.match_id.cmp(&b.match_id)));
+    games.sort_by(|a, b| {
+        a.deadline
+            .cmp(&b.deadline)
+            .then_with(|| a.match_id.cmp(&b.match_id))
+    });
     let gap_kept = input
         .last_email_at
         .is_none_or(|last| now - last >= DAILY_EMAIL_MIN_GAP_HOURS * MS_PER_HOUR);

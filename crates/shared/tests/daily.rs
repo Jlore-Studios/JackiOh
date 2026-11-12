@@ -122,7 +122,10 @@ fn end_turn_gives_the_next_player_a_full_window() {
     let active = state.active;
     let started = NOW + MS_PER_HOUR;
     let clock = clock_over(&state, started);
-    assert_eq!(clock.hold_of(active).map(|hold| hold.deadline), Some(started + window()));
+    assert_eq!(
+        clock.hold_of(active).map(|hold| hold.deadline),
+        Some(started + window())
+    );
 
     // Actions inside the turn keep its window.
     let emote_free = daily_sync(&clock, &state, started + 5 * MS_PER_HOUR);
@@ -135,13 +138,19 @@ fn end_turn_gives_the_next_player_a_full_window() {
     let next = jackioh_engine::opponent_of(active);
     assert_eq!(daily_holders(&ended), vec![next]);
     assert_eq!(clock.holds.len(), 1);
-    assert_eq!((clock.holds[0].since, clock.holds[0].deadline), (sent, sent + window()));
+    assert_eq!(
+        (clock.holds[0].since, clock.holds[0].deadline),
+        (sent, sent + window())
+    );
 
     // And back: a fresh window again, not what was left of the first.
     let back = act(&ended, next, ActionBody::EndTurn);
     let returned = sent + MS_PER_HOUR;
     let clock = daily_sync(&clock, &back, returned);
-    assert_eq!(clock.hold_of(active).map(|hold| hold.deadline), Some(returned + window()));
+    assert_eq!(
+        clock.hold_of(active).map(|hold| hold.deadline),
+        Some(returned + window())
+    );
     assert_eq!(clock.next_deadline(), Some(returned + window()));
 }
 
@@ -175,11 +184,7 @@ fn r3727001_a_prompt_for_the_other_player_hands_over_the_move_with_a_fresh_windo
     // owner's opponent's turn, say). The rule reads only who holds the prompt, so the test hands the
     // other player a prompt that the sequence below opens for the active one.
     let mut asked = competition_cast(&state);
-    asked
-        .pending
-        .as_mut()
-        .expect("a question is open")
-        .player_id = other;
+    asked.pending.as_mut().expect("a question is open").player_id = other;
     let handed = NOW + 3 * MS_PER_HOUR;
     assert_eq!(daily_holders(&asked), vec![other]);
     let clock = daily_sync(&clock, &asked, handed);
@@ -288,7 +293,11 @@ fn r3727006_a_standing_draw_offer_hands_the_move_to_the_other_player() {
     let legal = daily_legal(&offered, active, legal_actions(&offered, active));
     assert_eq!(legal, vec![ActionBody::Concede]);
     // The other player answers it.
-    assert!(daily_allows(&offered, other, &ActionBody::AnswerDraw { accept: false }));
+    assert!(daily_allows(
+        &offered,
+        other,
+        &ActionBody::AnswerDraw { accept: false }
+    ));
 
     // A decline hands the move back to the offerer, whose turn goes on with a fresh window.
     let declined = act(&offered, other, ActionBody::AnswerDraw { accept: false });
@@ -345,7 +354,10 @@ fn account(waiting: Vec<WaitingGame>) -> NotifyInput {
 
 #[test]
 fn notify_emails_a_new_waiting_game() {
-    let plan = decide_notify(&account(vec![waiting("b", NOW + HOUR), waiting("a", NOW)]), NOW + HOUR);
+    let plan = decide_notify(
+        &account(vec![waiting("b", NOW + HOUR), waiting("a", NOW)]),
+        NOW + HOUR,
+    );
     assert!(plan.email);
     assert!(!plan.push, "no device");
     // Every game waiting, the nearest deadline first.

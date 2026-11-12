@@ -156,6 +156,7 @@ on this list during Waves 1–3.
 | uuid | 1.27.0 | v4, serde | server |
 | time | 0.3.55 | serde, formatting, parsing | server |
 | getrandom | 0.4.3 | — | server (invite codes, seeds) |
+| ring | 0.17.14 | — | server (the daily games' Web Push, #3727: RFC 8291's ECDH P-256, HKDF-SHA256 and AES-128-GCM, RFC 8292's ES256 VAPID token; already in the lock through rustls) |
 | tracing | 0.1.44 | — | server |
 | tracing-subscriber | 0.3.23 | json, env-filter | server |
 | anyhow | 1.0.104 | — | server (main and CLIs only), tools |
@@ -917,7 +918,13 @@ db/pg.rs       (part 20) ← src/db/store.ts: one free async fn per store method
 db/fake.rs     (part 20) ← src/api/memory-stores.ts + e2e-store.ts: one free fn per store method over FakeData
 db/migrate.rs  (part 20) ← src/db/migrate.ts
 cli/<x>.rs     (part 20) ← src/db/{seed-catalog,mint-code,seed-accounts,season-start,card-stats,import-dev-records}.ts
+daily/<x>.rs   (#3727, SPEC §9.13) daily games over plain HTTPS, no actor: games (read, act, settle, list), invites (challenges, seeks), notify (sweep, email, settings), webpush (RFC 8291, RFC 8292)
 ```
+
+A daily game's boundary (#3727) is plain HTTPS, so a client with no socket and no engine (a Roblox
+server, later) can play one: the caller's `view_for` and legal actions under the game's catalog, the
+`seq` an action is sent `after`, and the clock as `jackioh_shared::host::daily`'s `DailyHold`s
+(`apps/web/src/wire/generated/DailyHold.ts`). The routes are `crates/server/README.md`'s "Daily games".
 
 ### 11.2 The shared shapes (frozen)
 

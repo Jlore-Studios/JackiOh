@@ -24,6 +24,7 @@ use jackioh_shared::host::daily::{
 };
 
 use crate::actor::checkpoint::{self, CheckpointBody};
+use crate::actor::contracts::RecordResultInput;
 use crate::actor::engine::{self, EngineState, Pinned};
 use crate::actor::match_actor::last_boards_of;
 use crate::actor::protocol::{client_nonce, parse_action_body};
@@ -31,7 +32,7 @@ use crate::actor::registry::{Prepared, dealt_for, panic_text, pinned_for, prepar
 use crate::actor::telemetry::Recorder;
 use crate::api::collection::caller_profile;
 use crate::api::http::{ApiError, ApiResult, Req, bad_request, json as json_response, ok, to_json};
-use crate::api::results::{RecordResultInput, record_result, seats_of};
+use crate::api::results::{record_result, seats_of};
 use crate::app::App;
 use crate::bug_reports::{Finding, FoundIn, refused_rows};
 use crate::config::{DAILY_RECENT_FINISHED, DAILY_SETTLE_ATTEMPTS, MATCH_CHECKPOINT_MIN_ACTIONS};
@@ -93,7 +94,11 @@ fn account_at(daily: &DailyGameRow, seat: PlayerId, swapped: bool) -> &str {
 /// R677: the seat `profile_id` plays in a game whose list row says `board`.
 fn seat_now(daily: &DailyGameRow, profile_id: &str) -> Option<PlayerId> {
     let home = home_of(daily, profile_id)?;
-    Some(if daily.board.seats_swapped { opponent_of(home) } else { home })
+    Some(if daily.board.seats_swapped {
+        opponent_of(home)
+    } else {
+        home
+    })
 }
 
 /// Whether a game was lost on time: a daily game's `disconnect` is only ever its clock's (R3727000).
@@ -294,7 +299,9 @@ async fn record(app: &Arc<App>, loaded: &Loaded, now: i64) {
         final_hash: Some(engine::hash_state(&loaded.state)),
     };
     match record_result(app, input).await {
-        Ok(_) => tracing::info!(event = "daily.recorded", matchId = %loaded.match_row.id, reason = ?outcome.reason),
+        Ok(_) => {
+            tracing::info!(event = "daily.recorded", matchId = %loaded.match_row.id, reason = ?outcome.reason)
+        }
         Err(error) => {
             tracing::error!(event = "daily.record.failed", matchId = %loaded.match_row.id, message = %error.message)
         }
@@ -326,10 +333,14 @@ pub(crate) async fn settle(app: &Arc<App>, mut loaded: Loaded, now: i64) -> Resu
             }
             Applied::Clash => {
                 let id = loaded.match_row.id.clone();
-                loaded = load(app, &id).await?.ok_or_else(|| not_found("no such daily game"))?;
+                loaded = load(app, &id)
+                    .await?
+                    .ok_or_else(|| not_found("no such daily game"))?;
             }
             Applied::Refused(error) => {
-                return Err(ApiError::internal(format!("the engine refused a daily expiry: {error}")));
+                return Err(ApiError::internal(format!(
+                    "the engine refused a daily expiry: {error}"
+                )));
             }
         }
     }
@@ -360,9 +371,7 @@ pub(crate) async fn start_daily(
         stake: None,
         win_rates: None,
     };
-    let Prepared {
-        match_row, state, ..
-    } = prepare_match(app, &input, now).await?;
+    let Prepared { match_row, state, .. } = prepare_match(app, &input, now).await?;
     let clock = daily_sync(&DailyClock::new(per_move_days), &state, now);
     let daily = DailyGameRow {
         match_id: match_id.clone(),
@@ -398,10 +407,14 @@ pub(crate) fn waiting_of(rows: &[DailyGameRow], profile_id: &str) -> Vec<(String
     waiting
 }
 
-/// How many daily games wait on `profile_id`: the `social` frame's `dailyWaiting` (§9.13).
-pub(crate) async fn waiting_count(tx: &mut Tx<'_>, profile_id: &str) -> Result<usize, StoreError> {
+/// How many daily games wait on `profile_id` at `now`: the `social` frame's `dailyWaiting` (§9.13).
+/// A move already past its deadline is lost (R3727000), so it waits on nobody, sweep or no sweep.
+pub(crate) async fn waiting_count(tx: &mut Tx<'_>, profile_id: &str, now: i64) -> Result<usize, StoreError> {
     let rows = tx.daily_games_of(profile_id, 0).await?;
-    Ok(waiting_of(&rows, profile_id).len())
+    Ok(waiting_of(&rows, profile_id)
+        .into_iter()
+        .filter(|(_, _, deadline)| *deadline > now)
+        .count())
 }
 
 /// The caller's read of one game, as `GET /api/daily/games/:matchId` and every action answer it.
@@ -487,14 +500,14 @@ pub async fn act(app: &Arc<App>, req: Req) -> ApiResult {
         .and_then(Value::as_i64)
         .ok_or_else(|| bad_request("\"after\" must be the number of the log's last action"))?;
     let nonce = client_nonce(req.body.get("nonce"))
-        .map_err(|error| bad_request(error.message))?
+        .map_err(|error| bad_request(error.reason))?
         .to_string();
     let body = req
         .body
         .get("action")
         .and_then(Value::as_object)
         .ok_or_else(|| bad_request("\"action\" must be an action"))
-        .and_then(|raw| parse_action_body(raw).map_err(|error| bad_request(error.message)))?;
+        .and_then(|raw| parse_action_body(raw).map_err(|error| bad_request(error.reason)))?;
     let (me, mut loaded, seat) = caller_game(app, &req).await?;
 
     // §9.3: a nonce already logged was applied; its retry answers the game as it stands.
@@ -539,14 +552,23 @@ pub async fn act(app: &Arc<App>, req: Req) -> ApiResult {
 }
 
 /// One game's row in the caller's list.
-fn summary_json(row: &DailyGameRow, match_row: Option<&MatchRow>, me: &str, opponent: Option<PlayerRef>) -> Option<Value> {
+fn summary_json(
+    row: &DailyGameRow,
+    match_row: Option<&MatchRow>,
+    me: &str,
+    opponent: Option<PlayerRef>,
+) -> Option<Value> {
     let seat = seat_now(row, me)?;
     let other = opponent_of(seat);
     let home = home_of(row, me)?;
     let portrait = |at: PlayerId| {
-        match_row
-            .and_then(|m| m.portraits.as_ref())
-            .map(|portraits| if at == PlayerId::P1 { portraits.0 } else { portraits.1 })
+        match_row.and_then(|m| m.portraits.as_ref()).map(|portraits| {
+            if at == PlayerId::P1 {
+                portraits.0
+            } else {
+                portraits.1
+            }
+        })
     };
     let mine = row.clock.hold_of(seat).map(|hold| hold.deadline);
     let theirs = row.clock.hold_of(other).map(|hold| hold.deadline);
@@ -578,7 +600,10 @@ fn summary_json(row: &DailyGameRow, match_row: Option<&MatchRow>, me: &str, oppo
 }
 
 /// One invite as the list shows it.
-fn invite_json(row: &DailyInviteRow, people: &indexmap::IndexMap<String, crate::db::store::Profile>) -> Value {
+fn invite_json(
+    row: &DailyInviteRow,
+    people: &indexmap::IndexMap<String, crate::db::store::Profile>,
+) -> Value {
     let named = |id: &str| people.get(id).map(PlayerRef::of);
     json!({
         "id": row.id,
@@ -638,8 +663,17 @@ pub async fn list(app: &Arc<App>, req: Req) -> ApiResult {
         .iter()
         .filter_map(|row| {
             let home = home_of(row, &me)?;
-            let opponent_id = if home == PlayerId::P1 { &row.players.1 } else { &row.players.0 };
-            summary_json(row, matches.get(&row.match_id), &me, people.get(opponent_id).map(PlayerRef::of))
+            let opponent_id = if home == PlayerId::P1 {
+                &row.players.1
+            } else {
+                &row.players.0
+            };
+            summary_json(
+                row,
+                matches.get(&row.match_id),
+                &me,
+                people.get(opponent_id).map(PlayerRef::of),
+            )
         })
         .collect();
     let challenge = |row: &&DailyInviteRow| row.kind == DailyInviteKind::Challenge;

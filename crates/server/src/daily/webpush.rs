@@ -128,7 +128,8 @@ fn derive(
 
 /// RFC 8188 §2: `plaintext` sealed as the one, last record, under `key` and `nonce`.
 fn seal(key: &[u8; KEY_LEN], nonce: [u8; NONCE_LEN], plaintext: &[u8]) -> Result<Vec<u8>, String> {
-    let unbound = aead::UnboundKey::new(&aead::AES_128_GCM, key).map_err(|_| "AES-128-GCM refused its key")?;
+    let unbound =
+        aead::UnboundKey::new(&aead::AES_128_GCM, key).map_err(|_| "AES-128-GCM refused its key")?;
     let mut record = plaintext.to_vec();
     record.push(LAST_RECORD);
     aead::LessSafeKey::new(unbound)
@@ -271,7 +272,12 @@ mod tests {
     /// A user agent's side of RFC 8291 §3: the header read, the shared secret agreed with its own
     /// private key and the sender's key id, the same keys derived, the record opened and its
     /// delimiter taken off.
-    fn decrypt(body: &[u8], ua_private: agreement::EphemeralPrivateKey, ua_public: &[u8], auth: &[u8]) -> Vec<u8> {
+    fn decrypt(
+        body: &[u8],
+        ua_private: agreement::EphemeralPrivateKey,
+        ua_public: &[u8],
+        auth: &[u8],
+    ) -> Vec<u8> {
         let salt = &body[..SALT_LEN];
         let rs = u32::from_be_bytes(body[SALT_LEN..SALT_LEN + 4].try_into().expect("four bytes"));
         assert_eq!(rs, RECORD_SIZE);
@@ -285,11 +291,14 @@ mod tests {
         })
         .expect("agreed")
         .expect("derived");
-        let opener =
-            aead::LessSafeKey::new(aead::UnboundKey::new(&aead::AES_128_GCM, &key).expect("a key"));
+        let opener = aead::LessSafeKey::new(aead::UnboundKey::new(&aead::AES_128_GCM, &key).expect("a key"));
         let mut in_out = record.to_vec();
         let plain = opener
-            .open_in_place(aead::Nonce::assume_unique_for_key(nonce), aead::Aad::empty(), &mut in_out)
+            .open_in_place(
+                aead::Nonce::assume_unique_for_key(nonce),
+                aead::Aad::empty(),
+                &mut in_out,
+            )
             .expect("the record opens");
         assert_eq!(plain.last(), Some(&LAST_RECORD));
         plain[..plain.len() - 1].to_vec()
@@ -300,7 +309,11 @@ mod tests {
         let rng = SystemRandom::new();
         let ua_private =
             agreement::EphemeralPrivateKey::generate(&agreement::ECDH_P256, &rng).expect("a key");
-        let ua_public = ua_private.compute_public_key().expect("its point").as_ref().to_vec();
+        let ua_public = ua_private
+            .compute_public_key()
+            .expect("its point")
+            .as_ref()
+            .to_vec();
         let mut auth = [0; AUTH_LEN];
         rng.fill(&mut auth).expect("random");
         let (p256dh, auth_text) = (URL_SAFE_NO_PAD.encode(&ua_public), URL_SAFE_NO_PAD.encode(auth));
@@ -327,12 +340,10 @@ mod tests {
     fn webpush_derives_rfc_8291s_example() {
         let ecdh_secret = b64("kyrL1jIIOHEzg3sM2ZWRHDRB62YACZhhSlknJ672kSs");
         let auth = b64("BTBZMqHH6r4Tts7J_aSIgg");
-        let ua_public = b64(
-            "BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4",
-        );
-        let as_public = b64(
-            "BP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A8",
-        );
+        let ua_public =
+            b64("BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4");
+        let as_public =
+            b64("BP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A8");
         let salt = b64("DGv6ra1nlYgDCS1FRnbzlw");
         let (key, nonce) = derive(&ecdh_secret, &auth, &ua_public, &as_public, &salt).expect("derived");
         assert_eq!(key.to_vec(), b64("oIhVW04MRdy2XN9CiKLxTg"));

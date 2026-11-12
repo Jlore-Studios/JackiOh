@@ -29,8 +29,7 @@ use crate::api::http::{ApiError, ApiResult, Req, bad_request, bool as body_bool,
 use crate::api::queue::new_uuid;
 use crate::app::App;
 use crate::config::{
-    DAILY_SWEEP_MINUTES, PLAYER_EMAIL_FROM, PLAYER_EMAIL_TIMEOUT_MS, PUSH_FIELD_MAX_LENGTH,
-    PUSH_MAX_DEVICES,
+    DAILY_SWEEP_MINUTES, PLAYER_EMAIL_FROM, PLAYER_EMAIL_TIMEOUT_MS, PUSH_FIELD_MAX_LENGTH, PUSH_MAX_DEVICES,
 };
 use crate::daily::games::{load, settle, waiting_of};
 use crate::daily::webpush::{self, PushOutcome, Subscription};
@@ -83,7 +82,11 @@ async fn notify_one(app: &Arc<App>, profile_id: &str, now: i64) -> Result<Sent, 
         let people = profiles_by_id(&mut tx, &ids).await?;
         rows.iter()
             .filter_map(|row| {
-                let other = if row.players.0 == profile_id { &row.players.1 } else { &row.players.0 };
+                let other = if row.players.0 == profile_id {
+                    &row.players.1
+                } else {
+                    &row.players.0
+                };
                 Some((row.match_id.clone(), people.get(other)?.username()))
             })
             .collect()
@@ -107,7 +110,15 @@ async fn notify_one(app: &Arc<App>, profile_id: &str, now: i64) -> Result<Sent, 
     let plan = decide_notify(&input, now);
     let mut sent = Sent::default();
     if plan.email {
-        sent.emailed = send_email(app, profile_id, &email, &settings.unsubscribe_token, &plan, &opponents).await;
+        sent.emailed = send_email(
+            app,
+            profile_id,
+            &email,
+            &settings.unsubscribe_token,
+            &plan,
+            &opponents,
+        )
+        .await;
     }
     if plan.push {
         sent.pushed = send_pushes(app, &subscriptions, &plan, now).await;
@@ -200,7 +211,11 @@ async fn send_pushes(app: &App, subscriptions: &[PushSubRow], plan: &NotifyPlan,
     let Some(keys) = &app.daily.push else {
         return false;
     };
-    let first = plan.games.first().map(|game| game.match_id.as_str()).unwrap_or_default();
+    let first = plan
+        .games
+        .first()
+        .map(|game| game.match_id.as_str())
+        .unwrap_or_default();
     let payload = json!({
         "title": subject_of(plan),
         "body": "Open JackiOh to play your move.",
@@ -240,7 +255,10 @@ async fn send_pushes(app: &App, subscriptions: &[PushSubRow], plan: &NotifyPlan,
 pub(crate) async fn after_move(app: &Arc<App>, profiles: &[&str], now: i64) {
     for profile_id in profiles {
         if let Err(error) = notify_one(app, profile_id, now).await {
-            log_warn("daily.notify_failed", json!({ "profileId": profile_id, "message": error.message }));
+            log_warn(
+                "daily.notify_failed",
+                json!({ "profileId": profile_id, "message": error.message }),
+            );
         }
     }
 }
@@ -279,7 +297,10 @@ pub async fn sweep(app: &Arc<App>, now: i64) -> Result<Swept, ApiError> {
         match settled {
             Ok(true) => swept.settled += 1,
             Ok(false) => {}
-            Err(error) => log_warn("daily.settle_failed", json!({ "matchId": match_id, "message": error.message })),
+            Err(error) => log_warn(
+                "daily.settle_failed",
+                json!({ "matchId": match_id, "message": error.message }),
+            ),
         }
     }
     let mut tx = app.db.begin(None).await?;
@@ -299,7 +320,10 @@ pub async fn sweep(app: &Arc<App>, now: i64) -> Result<Swept, ApiError> {
                 swept.emailed += usize::from(sent.emailed);
                 swept.pushed += usize::from(sent.pushed);
             }
-            Err(error) => log_warn("daily.notify_failed", json!({ "profileId": profile_id, "message": error.message })),
+            Err(error) => log_warn(
+                "daily.notify_failed",
+                json!({ "profileId": profile_id, "message": error.message }),
+            ),
         }
     }
     Ok(swept)
@@ -308,8 +332,16 @@ pub async fn sweep(app: &Arc<App>, now: i64) -> Result<Swept, ApiError> {
 /// `POST /daily-sweep`: the Worker's hourly cron. Outside `/api`, so only the Worker reaches it.
 pub async fn sweep_route(app: &Arc<App>, _req: Req) -> ApiResult {
     let swept = sweep(app, app.daily.now()).await?;
-    tracing::info!(event = "daily.swept", expired = swept.expired, settled = swept.settled, emailed = swept.emailed, pushed = swept.pushed);
-    Ok(ok(serde_json::to_value(&swept).map_err(|error| ApiError::internal(error.to_string()))?))
+    tracing::info!(
+        event = "daily.swept",
+        expired = swept.expired,
+        settled = swept.settled,
+        emailed = swept.emailed,
+        pushed = swept.pushed
+    );
+    Ok(ok(
+        serde_json::to_value(&swept).map_err(|error| ApiError::internal(error.to_string()))?
+    ))
 }
 
 /// The sweep every `DAILY_SWEEP_MINUTES` while the server is awake.

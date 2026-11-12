@@ -28,9 +28,9 @@ use crate::app::{App, now_ms};
 use crate::config::{MAX_OPEN_ROOMS_PER_HOST, ROOM_CODE_LENGTH, ROOM_CODE_TTL_SECONDS};
 use crate::db::store::{MatchSeat, QueueMode, Room, SeriesRow, StartMatchInput};
 use crate::loadout::DeckSlots;
-use jackioh_shared::deck::FrozenDeck;
 use crate::seats::Seat;
 use crate::social::live::push_social;
+use jackioh_shared::deck::FrozenDeck;
 
 /// SPEC §11 R149: bounded retries against the codes in use; eight is far more than a 30-bit space
 /// (R104) needs against the codes R110 has not released. Config's, like R79's clocks.

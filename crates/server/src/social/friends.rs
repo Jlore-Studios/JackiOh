@@ -25,7 +25,7 @@ use crate::api::http::{
 use crate::api::queue::new_uuid;
 use crate::app::App;
 use crate::config::MAX_FRIENDS;
-use crate::db::store::{ChallengeState, FriendRequestRow, Profile, StoreError, Tx};
+use crate::db::store::{ChallengeState, DailyInviteState, FriendRequestRow, Profile, StoreError, Tx};
 use crate::social::live::{nudge_friends, push_social};
 use crate::social::presence::{Standing, Status, standings};
 use crate::social::watch::{revoke_between, revoke_blocked};
@@ -310,6 +310,10 @@ pub async fn remove_friend(app: &Arc<App>, req: Req) -> ApiResult {
     for challenge in closed.iter().filter(|challenge| challenge.expires_at > now) {
         release_room(&mut tx, &challenge.room_code).await?;
     }
+    // R3727007: and the open daily challenges either way; a daily game already running goes on.
+    let daily_closed = tx
+        .daily_invites_close_between(&me, &friend_id, DailyInviteState::Cancelled)
+        .await?;
     tx.commit().await?;
     // After the commit, so a hello judged from here on is refused and one judged before is revoked.
     let watchers = revoke_between(app, &me, &friend_id);
@@ -324,6 +328,7 @@ pub async fn remove_friend(app: &Arc<App>, req: Req) -> ApiResult {
                 "profileId": me,
                 "friendProfileId": friend_id,
                 "challengesClosed": closed.len(),
+                "dailyChallengesClosed": daily_closed.len(),
                 "sharesRemoved": shares,
                 "watchersRevoked": watchers,
             }),
@@ -358,6 +363,10 @@ pub async fn post_block(app: &Arc<App>, req: Req) -> ApiResult {
     for challenge in closed.iter().filter(|challenge| challenge.expires_at > now) {
         release_room(&mut tx, &challenge.room_code).await?;
     }
+    // R3727007: and the open daily challenges either way; a daily game already running goes on.
+    let daily_closed = tx
+        .daily_invites_close_between(&me, &target, DailyInviteState::Cancelled)
+        .await?;
     tx.commit().await?;
     // B46, B50: and a watch either way ends at once, a co-op one of the other's teammate's seat too
     // (R2881000).
@@ -367,7 +376,7 @@ pub async fn post_block(app: &Arc<App>, req: Req) -> ApiResult {
     // R3214000: the blocker's list shows the block. The blocked is told only of what it could already
     // see go (a friend, a request, a challenge), so a block of a stranger reaches it not at all.
     nudge_friends(app, &[&me]);
-    if unfriended || requests > 0 || !closed.is_empty() {
+    if unfriended || requests > 0 || !closed.is_empty() || !daily_closed.is_empty() {
         nudge_friends(app, &[&target]);
         push_social(app, &[&me, &target]).await;
     }
@@ -377,6 +386,7 @@ pub async fn post_block(app: &Arc<App>, req: Req) -> ApiResult {
             "profileId": me,
             "blockedProfileId": target,
             "challengesClosed": closed.len(),
+            "dailyChallengesClosed": daily_closed.len(),
             "sharesRemoved": shares,
             "watchersRevoked": watchers,
             "matchesMuted": matches_muted,

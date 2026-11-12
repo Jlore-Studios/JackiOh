@@ -406,6 +406,17 @@ async fn offer_rematch_route(app: &Arc<App>, req: Req) -> ApiResult {
     // R1372, R924000: absent is no lean, so an offer from a client before it is a plain rematch.
     let lean = lean_of(&req.body)?;
     let (match_row, seat) = callers_match(app, &req, &profile).await?;
+    // §9.13 (#3727): a daily game's rematch is a new daily challenge (`POST /api/daily/challenges`),
+    // never a live game started from here.
+    if one_tx!(app.db, |t| t.daily_games_get(&match_row.id).await?)?.is_some() {
+        return Ok(json(
+            409,
+            serde_json::json!({ "error": {
+                "code": "daily",
+                "message": "A daily game's rematch is a new daily challenge.",
+            } }),
+        ));
+    }
     let match_id = offer_as(app, &match_row, seat, stakes, lean).await?;
     let created = RematchOfferBody { match_id };
     Ok(json(
