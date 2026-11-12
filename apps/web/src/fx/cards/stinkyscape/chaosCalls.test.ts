@@ -283,7 +283,7 @@ describe("R3407000 Stinkyscape's Calls to Chaos and their Golem", () => {
       call(STINKY, "p1", [STINKY_GALLERY_EFFECT], [summoned("p1", "g1", GOLEM, "units", 2)]),
       call(SCAPE, "p1", [SCAPE_GALLERY_EFFECT], [summoned("p1", "d1", "stinkyscape-t-drone-corvette", "units", 2)]),
     ];
-    for (const events of runs) expect(planWithOffsets(events, view, envOf(0)).flatMap((planned) => planned.cues)).toEqual([]);
+    for (const events of runs) expect(planWithOffsets(events, view, envOf({ intensity: 0 })).flatMap((planned) => planned.cues)).toEqual([]);
     expect(ENTRANCES.golemCrash({ D: 400, tgt: testid.zone("you", "units", 3), intensity: 0 }).filter((cue) => cue.kind === "shake")).toEqual([]);
   });
 

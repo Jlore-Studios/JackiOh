@@ -105,7 +105,7 @@ describe("R3407000 Wildar's signature", () => {
 
   it("R3407000 Wildar draws nothing with the effects off", () => {
     const view = fullBoardView();
-    expect(planWithOffsets(play("p1", view), view, envOf(0)).flatMap((entry) => entry.cues)).toEqual([]);
+    expect(planWithOffsets(play("p1", view), view, envOf({ intensity: 0 })).flatMap((entry) => entry.cues)).toEqual([]);
   });
 
   it("R3407000 Wildar's every cue starts inside its entry and ends within FX_MAX_TAIL_MS of it, at every D (R200)", () => {

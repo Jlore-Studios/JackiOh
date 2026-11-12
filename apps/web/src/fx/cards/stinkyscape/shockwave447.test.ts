@@ -99,7 +99,7 @@ describe("R3407000 Shockwave447's signature", () => {
       expect(cry.length).toBeGreaterThan(0);
       expectCuesR200(cry, D, "shockwaveLecture");
     }
-    expect(cuesOfRun(planWithOffsets([played("p1"), landing, ...lecture("p1", "p2"), resolved("p1")], view, envOf(FX_INTENSITY_SCALE.off)))).toEqual([]);
+    expect(cuesOfRun(planWithOffsets([played("p1"), landing, ...lecture("p1", "p2"), resolved("p1")], view, envOf({ intensity: FX_INTENSITY_SCALE.off })))).toEqual([]);
   });
 
   it("R3407000 his gallery play, and the first refill after its graveyard, end within a Mythic's ceiling", () => {

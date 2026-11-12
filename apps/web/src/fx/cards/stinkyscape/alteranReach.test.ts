@@ -118,9 +118,9 @@ describe("R3407000 Alteran Reach's and Edge of the Universe's signatures", () =>
       expectCuesR200(reach, D, "starscapeJump");
       expectCuesR200(edge, D, "edgeFlee", SIGNATURE_SPELL_MAX_TRAUMA);
     }
-    const off = envOf(FX_INTENSITY_SCALE.off);
+    const off = envOf({ intensity: FX_INTENSITY_SCALE.off });
     expect(cuesOfRun(planWithOffsets([played("p1"), fled("p1"), resolved("p1")], view, off))).toEqual([]);
-    expect(cuesOfRun(planWithOffsets([...starscapeJumpFixture(view, "reach", "p1"), added("p1")], view, envOf(FX_INTENSITY_SCALE.off)))).toEqual([]);
+    expect(cuesOfRun(planWithOffsets([...starscapeJumpFixture(view, "reach", "p1"), added("p1")], view, envOf({ intensity: FX_INTENSITY_SCALE.off })))).toEqual([]);
   });
 
   it("R3407000 each gallery play, the Edge's card back from its Activate's marker and the fleeing from its own entry end within their Mythic ceilings", () => {

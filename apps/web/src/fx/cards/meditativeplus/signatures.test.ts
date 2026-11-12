@@ -202,7 +202,7 @@ describe("R3400001 Meditative+'s signatures", () => {
     }
     // The whole effects layer off draws nothing.
     for (const [defId, key] of keys) {
-      const env = envOf(FX_INTENSITY_SCALE.off);
+      const env = envOf({ intensity: FX_INTENSITY_SCALE.off });
       const events: GameEvent[] = [played("p1", "ex", defId), ...RECIPE_FIXTURES[key](view, "ex", "p1")];
       const cues = events.flatMap((event) => {
         env.memory.remember([event]);

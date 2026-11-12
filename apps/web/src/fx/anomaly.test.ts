@@ -22,6 +22,7 @@ import {
 import { testid } from "../game/contract.ts";
 import { createPlayTracker } from "../game/runs.ts";
 import { baseView, emptySide, unit } from "../test/fixtures.ts";
+import { endOf } from "../test/signatures.ts";
 import {
   ANOMALY_FLARE_AT,
   ANOMALY_FX,
@@ -33,7 +34,7 @@ import {
   planAnomalyStill,
 } from "./anomaly.ts";
 import { planCardMotif } from "./cardFx.ts";
-import { FX_CENTER, FX_INTENSITY_SCALE, FX_MAX_PARTICLE_LIFE_MS, FX_MAX_TAIL_MS, FX_MOTIF_CENTER_LANE } from "./constants.ts";
+import { FX_CENTER, FX_INTENSITY_SCALE, FX_MAX_TAIL_MS, FX_MOTIF_CENTER_LANE } from "./constants.ts";
 import { planFx } from "./cues.ts";
 import { createFxMemory } from "./memory.ts";
 import { planStage } from "./stage.ts";
@@ -43,19 +44,6 @@ const ANOMALY_FOUND = "stinkyscape-t-anomaly-found";
 const CHAOS_SCAPE = "stinkyscape-151";
 
 const env = (intensity: number = FX_INTENSITY_SCALE.normal): FxPlanEnv => ({ intensity, card: () => undefined, memory: createFxMemory() });
-
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "projectile":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
-}
 
 const exiled = (u: UnitView): GameEvent => ({ type: "exiled", instanceId: u.instanceId, defId: u.defId, owner: u.owner });
 const laid = (instanceId: string, lane: number, player: PlayerId = "p1"): GameEvent => ({ type: "summoned", player, instanceId, defId: "stinkyscape-171", row: "units", lane });

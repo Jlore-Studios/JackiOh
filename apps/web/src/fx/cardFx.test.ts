@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import { animTestid, entranceEntries, planEntries, type AnimationEntry, type EntranceResolver } from "../game/animations.ts";
 import { testid, type Side } from "../game/contract.ts";
 import { fullBoardView, withEvents } from "../test/fixtures.ts";
+import { endOf, envOf } from "../test/signatures.ts";
 import { castOnDrawViews } from "../audio/test/realGame.ts";
 import { CATALOG } from "../wire/cards.ts";
 import { entranceKeyOf, planCardFx, planSignatureZone, signaturePlayOf, sourceIdOf } from "./cardFx.ts";
@@ -25,8 +26,6 @@ import {
   FX_BLOOD_PICK_STRIDE,
   FX_CRACK_HIT_AT,
   FX_CRACK_STAGGER_MS,
-  FX_INTENSITY_SCALE,
-  FX_MAX_PARTICLE_LIFE_MS,
   FX_MAX_TAIL_MS,
   FX_WALLS_HIT_AT,
   FX_WALLS_REACH,
@@ -40,10 +39,6 @@ const HINDER = "core-021";
 const BLOOD = "core-027";
 const WALLS = "classicplus-024";
 
-function envOf(over: Partial<FxPlanEnv> = {}): FxPlanEnv {
-  return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory(), ...over };
-}
-
 /** Plans each entry of `events` in order, as FxLayer does on every `start`: remember, then plan. */
 function planAll(events: readonly GameEvent[], view: PlayerView, env: FxPlanEnv, D?: number): { entry: AnimationEntry; cues: FxCue[] }[] {
   const planned = planEntries(events, withEvents(view, [...events]), false);
@@ -56,20 +51,6 @@ function planAll(events: readonly GameEvent[], view: PlayerView, env: FxPlanEnv,
 
 function cuesFor(results: ReturnType<typeof planAll>, type: GameEvent["type"]): FxCue[] {
   return results.filter((result) => result.entry.events.some((event) => event.type === type)).flatMap((result) => result.cues);
-}
-
-/** Where a cue ends, in ms after its entry starts (R200's bound is D + FX_MAX_TAIL_MS). */
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "projectile":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
 }
 
 const tid = (value: string): FxAnchor => ({ kind: "testid", testid: value });

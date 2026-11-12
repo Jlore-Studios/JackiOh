@@ -914,7 +914,10 @@
 
 /* R3345000: a Mythic's frame in hand carries a quiet mark that it can be held: a slow edge shimmer in its own
    colours (the rarity's violet, sky and mint), not Radiant's gold. It runs in the motion gate below, still under Reduce motion.
-   R3608000: the rim is drawn once, on the hand card's `::after`, and the loop moves its opacity alone. */
+   R3608000: the rim is drawn once, on the hand card's `::after`, and the loop moves its opacity alone. #3674 asked that
+   the shimmer paint to one extent at every step, since an extent that grows and shrinks makes the browser sort the whole
+   page into its layers again every frame, which a throttled phone could not afford: the rim is inset, so it paints inside
+   the card's box and nothing reaches past it, and no step changes a shadow, so the extent holds by construction. */
 @keyframes cf-mythic-hand-shimmer {
   0% {
     opacity: 0.5;

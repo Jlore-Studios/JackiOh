@@ -206,7 +206,10 @@ expected frame times `FRAME_DROPPED_FACTOR`), the `longtask` count and the idle 
 `document.getAnimations()` count. A phase over its p95 or long-task budget fails the run, naming
 the constant. The budgets live in `apps/web/src/perf/frameBudgets.ts` (CLAUDE.md rule 9) with 5×
 headroom for CI's shared runners; judged are only the p95 and the long tasks, so the spec stays
-out of the PR smoke list and runs in the daily super run.
+out of the PR smoke list and runs in the daily super run. The spec keeps the client's audio
+requests out of Cypress's Command Log (`cy.intercept(…, { log: false })`, #3712): the voice
+prefetch fetches every line's bytes, and each logged request re-renders Cypress's reporter on the
+page's own main thread, which the idle window counted as the board's long tasks.
 
 ```
 pnpm --dir e2e probe:frames            # build the e2e client, serve it on :4173, run spec 50

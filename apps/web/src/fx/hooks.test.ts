@@ -8,14 +8,13 @@ import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
 import { fullBoardView } from "../test/fixtures.ts";
+import { envOf } from "../test/signatures.ts";
 import { attributeModifiers, sourceKey, type AuraSources } from "./aura/plan.ts";
 import { planCardMotif } from "./cardFx.ts";
 import type { FxCardEntry, FxHookSpec } from "./cards/tables.ts";
-import { FX_INTENSITY_SCALE } from "./constants.ts";
 import { createFxMemory } from "./memory.ts";
 import { galleryEntry, motifFixture } from "./motifs/gallery.ts";
 import type { FxCardHook } from "./motifs/names.ts";
-import type { FxPlanEnv } from "./types.ts";
 
 type HookKind = Extract<GameEvent, { type: "hookResolving" }>["hook"];
 
@@ -24,10 +23,6 @@ const UNIT = "classic-071";
 /** A Trap. */
 const TRAP = "core-041";
 const SPELL = "core-035";
-
-function envOf(): FxPlanEnv {
-  return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory() };
-}
 
 const marker = (hook: HookKind, sourceId: string, defId: string = UNIT, controller: PlayerId = "p1"): GameEvent => ({ type: "hookResolving", sourceId, defId, controller, hook });
 const played = (player: PlayerId, instanceId: string, defId: string): GameEvent => ({ type: "cardPlayed", player, instanceId, defId, costPaid: 1 });
