@@ -13485,7 +13485,7 @@
       "closeout": true,
       "failures": 0,
       "forced": false,
-      "interruptions": 0,
+      "interruptions": 1,
       "kind": "build",
       "live": "reconciling",
       "owner": "claude-4",
