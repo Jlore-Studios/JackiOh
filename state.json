@@ -15594,11 +15594,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-12T00:46:42Z",
+        "at": "2026-11-12T01:21:58Z",
         "difficulty": "hard",
-        "provider": "claude-7",
-        "tier": "medium",
-        "why": "Rules 1 and 2: it changes how the AI decides (crates/ai/src) and adds a marker and a read to the engine (crates/engine/src) that the two crates must agree on."
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "Rule 2 (the AI): it changes how crates/ai/src scores a passed line, which changes decisions; it also adds an engine read (rule 1)"
       },
       "failures": 0,
       "forced": false,
