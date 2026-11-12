@@ -1058,7 +1058,8 @@ mod r3556001_spells_gain_echo {
         // p1's pinger resolves twice: 2 + 2.
         state = ping(&state, PlayerId::P1);
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 4);
-        // And p2's own pinger echoes too.
+        // And p2's own pinger echoes too, played on p2's turn.
+        state = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         state = ping(&state, PlayerId::P2);
         assert_eq!(state.players.p1.hero.health, HERO_HEALTH - 4);
     }
@@ -1070,10 +1071,12 @@ mod r3556001_spells_gain_echo {
         // p1's pinger resolves twice.
         state = ping(&state, PlayerId::P1);
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 4);
-        // p2's resolves once.
+        // p2's resolves once, played on p2's turn.
+        state = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         state = ping(&state, PlayerId::P2);
         assert_eq!(state.players.p1.hero.health, HERO_HEALTH - 2);
         // A permanent cast beside it resolves once: the aura never reaches one.
+        state = act(&state, json!({ "type": "endTurn", "playerId": "p2" }));
         let mut owned = state.clone();
         let card = hand_card(&mut owned, &cast_unit().id, PlayerId::P1);
         let played = act_result(

@@ -256,8 +256,9 @@ fn r3558003_smoothie_holds_two_fruits_keeps_instance_and_cost_and_asks_both_targ
     s.play(&id, json!({ "targets": [hero_pick(P2), instance_pick(&target)] }));
     assert_eq!(hero_health(s.state(), P2), before - 1);
     assert!(
-        find_instance(s.state(), &target).is_none(),
-        "the unit took the other 1"
+        find_instance(s.state(), &target).is_none_or(|unit| !matches!(unit.zone, Zone::Field { .. })),
+        "the unit took the other 1: {:?}",
+        find_instance(s.state(), &target).map(|unit| (&unit.zone, unit.damage))
     );
 }
 
@@ -474,7 +475,8 @@ fn r3558006_no_bottom_starter_deals_as_before() {
         dealt.sort();
         want.sort();
         assert_eq!(dealt, want, "no card lost or doubled");
-        assert_eq!(done.players[P1].hand.len() as i32, OPENING_DRAW[0]);
+        // The opening draw, then turn 1's draw (§2.1 step 5, R10).
+        assert_eq!(done.players[P1].hand.len() as i32, OPENING_DRAW[0] + 1);
     }
 }
 

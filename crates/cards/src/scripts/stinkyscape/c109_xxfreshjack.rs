@@ -225,7 +225,8 @@ mod tests {
     #[test]
     fn r3538005_a_fold_of_v0_5_13f_runs_the_kept_script_on_its_code_line_list() {
         crate::register_all();
-        let v0_5_13f = crate::shipped_catalog("v0.5.13f").expect("v0.5.13f is carried");
+        // R3631001: v0.5.13f is named v0.5.12af since the v0.5.13 retcon.
+        let v0_5_13f = crate::shipped_catalog("v0.5.12af").expect("v0.5.12af is carried");
         jackioh_engine::catalog::with_shipped(Some(v0_5_13f), || {
             let mut s = board(false, "xxfreshjack-fold");
             let from = s.events().len();

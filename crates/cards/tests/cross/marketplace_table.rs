@@ -9,10 +9,10 @@ use jackioh_engine::config::{
     MARKETPLACE_OFFERS_PER_TURN, MARKETPLACE_PROBE_MK1, MARKETPLACE_PROBE_MK2, MARKETPLACE_TABLE,
     MARKETPLACE_WARP_DISRUPTORS, MARKETPLACE_WEAPONS, MarketPool,
 };
-use jackioh_engine::testkit::{preview_sets, scenario};
+use jackioh_engine::testkit::scenario;
 use jackioh_engine::{
     DORMANT_STARSHIP_DEF_ID, KeywordKind, PlayerId, Rng, SetName, Tag, find_def, has_keyword, made_by_a_rule,
-    market_card_price, registered_catalog, roll_offers, set_is_open, tuned_price,
+    market_card_price, registered_catalog, roll_offers, set_is_open, set_ships, tuned_price,
 };
 use serde_json::json;
 
@@ -226,17 +226,9 @@ fn r3571001_the_ai_lot_offers_stinkyscape_plus_s_seven_only_once_the_set_ships()
         seen
     };
 
-    // While the set is held, the lot is the ten.
-    assert_eq!(pool(lot.pool), ten);
-    assert!(
-        offered("held")
-            .iter()
-            .all(|id| !id.starts_with("stinkyscapeplus-")),
-        "a held set's cards are never offered"
-    );
-
-    // Once the set is open (a preview stands in for its release), the lot is the seventeen.
-    let _preview = preview_sets(&[SetName::StinkyscapePlus]);
+    // Stinkyscape+ ships (#3573's release), so the lot is the seventeen with no preview. The held set's
+    // ten is the engine's fixture test (`rules/marketplace.rs`, `r3571001_an_open_ids_lot_…`).
+    assert!(set_ships(SetName::StinkyscapePlus));
     assert_eq!(pool(lot.pool).len(), 17);
     let seen = offered("open");
     for id in &seven {

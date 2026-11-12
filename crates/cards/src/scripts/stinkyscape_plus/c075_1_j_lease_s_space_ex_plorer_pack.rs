@@ -45,7 +45,7 @@ pub fn script() -> CardScripts {
 }
 
 // S+ #75.1 J-lease S-Space EX-plorer Pack — SPEC §8.12 row 75.1 (R58, R70, R380, R1420).
-// While the set is held the cards a Pack adds are drawn from the held set too: each test opens it with `preview_sets`.
+// The set ships (#3573), so the cards a Pack adds are drawn from it with no preview (R1420).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -94,7 +94,6 @@ mod tests {
 
         #[test]
         fn drawn_it_casts_itself_and_adds_5_radiant_cards() {
-            let _open = preview_sets(&[SetName::StinkyscapePlus]);
             let mut s = scenario(json!({
                 "p1": { "hand": [STOCKPILE, MENACE], "library": [PACK, FILLER, FILLER] },
                 "p2": { "hand": [MENACE] },
@@ -115,7 +114,6 @@ mod tests {
 
         #[test]
         fn over_many_seeds_the_cards_are_of_both_sets_never_a_token() {
-            let _open = preview_sets(&[SetName::StinkyscapePlus]);
             let mut sets: IndexSet<String> = IndexSet::new();
             for i in 0..20 {
                 let mut s = scenario(json!({
@@ -137,7 +135,6 @@ mod tests {
 
         #[test]
         fn a_full_hand_burns_the_rest() {
-            let _open = preview_sets(&[SetName::StinkyscapePlus]);
             let mut hand = vec![json!(PACK)];
             hand.extend(menaces(7));
             let mut s = scenario(json!({ "p1": { "hand": hand }, "p2": { "hand": [MENACE] } }));
@@ -154,7 +151,6 @@ mod tests {
 
         #[test]
         fn the_five_cost_0() {
-            let _open = preview_sets(&[SetName::StinkyscapePlus]);
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": PACK, "radiant": true }, MENACE] },
                 "p2": { "hand": [MENACE] },

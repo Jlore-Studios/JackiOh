@@ -61,7 +61,7 @@ const MEDITATIVE_PREVIEWED: [&str; 2] = ["meditative-008", "meditative-040"];
 /// R2476000: the cards that show what they remember, each proved in its own script file (issue #2476's
 /// pass over the catalog). Palantir's base face Tributes on its first steal, so only its Radiant face
 /// counts; Memory Leak's Radiant face chooses no mode, so only its base face marks one.
-const REMEMBERED: [&str; 36] = [
+const REMEMBERED: [&str; 37] = [
     "core-022",
     "core-039",
     "classic-004",
@@ -94,7 +94,9 @@ const REMEMBERED: [&str; 36] = [
     "stinkyscape-171",
     "stinkyscape-172",
     "stinkyscapeplus-093",
-    // The Stinkyscape+ release (#3573): #123 Oct's damage pool left, and the Warhero Token's worth.
+    // The Stinkyscape+ release (#3573): #42 Force Projector's and #123 Oct's damage pool left (R3550004),
+    // and the Warhero Token's worth.
+    "stinkyscapeplus-042",
     "stinkyscapeplus-123",
     "stinkyscapeplus-t-warhero-token",
     "traininggrounds-025",

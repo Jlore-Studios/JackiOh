@@ -477,16 +477,17 @@ mod tests {
     mod kept {
         use super::*;
 
-        /// The kept script's Machine (Radiant on `radiant`) in the backrow; both sides hold a card and
-        /// have a two-card library, so a turn passes without auto-ending.
-        fn kept_machine(seed: &str, radiant: bool) -> Scenario {
-            crate::under_kept(ID, script_v0_5_13g(), || machine(seed, radiant))
+        /// `body` on the kept script's Machine (Radiant on `radiant`) in the backrow; both sides hold a
+        /// card and have a two-card library, so a turn passes without auto-ending. The whole body runs
+        /// under the kept script: a scenario's steps run under whatever catalog is in force as they run.
+        fn kept_machine(seed: &str, radiant: bool, body: impl FnOnce(Scenario)) {
+            crate::under_kept(ID, script_v0_5_13g(), || body(machine(seed, radiant)))
         }
 
-        /// The kept script's Machine (Radiant on `radiant`) in hand with `others` more cards, played
-        /// bare: the old script declares no modes.
-        fn kept_holding(seed: &str, radiant: bool, others: usize) -> Scenario {
-            crate::under_kept(ID, script_v0_5_13g(), || holding(seed, radiant, others))
+        /// `body` on the kept script's Machine (Radiant on `radiant`) in hand with `others` more cards,
+        /// played bare: the old script declares no modes.
+        fn kept_holding(seed: &str, radiant: bool, others: usize, body: impl FnOnce(Scenario)) {
+            crate::under_kept(ID, script_v0_5_13g(), || body(holding(seed, radiant, others)))
         }
 
         #[test]
@@ -523,108 +524,115 @@ mod tests {
 
         #[test]
         fn at_your_end_of_turn_one_coin_into_the_opponent_s_deck_and_none_into_yours() {
-            let mut s = kept_machine("money-machine", false);
-            s.end_turn();
-            // p2's start of turn drew one of p2's three cards, so look at what is left plus the hand.
-            let theirs = coins_of(&s, P2);
-            assert_eq!(theirs.len(), 1);
-            assert!(!theirs[0].radiant);
-            assert!(shuffled_in(&s, P1).is_empty());
-            // R311: the shuffle is open, so p2's own list names the Coin it was shown going in.
-            let list = s.view(P2).you.own_library.expect("p2 reads its own list");
-            assert_eq!(list.unknown, 0);
-            let in_hand = s.hand(P2).iter().any(|card| card.def_id == THE_COIN);
-            assert!(in_hand || list.cards.iter().any(|entry| entry.def_id == THE_COIN));
+            kept_machine("money-machine", false, |mut s| {
+                s.end_turn();
+                // p2's start of turn drew one of p2's three cards, so look at what is left plus the hand.
+                let theirs = coins_of(&s, P2);
+                assert_eq!(theirs.len(), 1);
+                assert!(!theirs[0].radiant);
+                assert!(shuffled_in(&s, P1).is_empty());
+                // R311: the shuffle is open, so p2's own list names the Coin it was shown going in.
+                let list = s.view(P2).you.own_library.expect("p2 reads its own list");
+                assert_eq!(list.unknown, 0);
+                let in_hand = s.hand(P2).iter().any(|card| card.def_id == THE_COIN);
+                assert!(in_hand || list.cards.iter().any(|entry| entry.def_id == THE_COIN));
+            });
         }
 
         #[test]
         fn r384_activate_shuffles_a_coin_into_your_deck_once_a_turn_and_the_machine_stays() {
-            let mut s = kept_machine("money-machine-activate", false);
-            let mana = s.view(P1).you.mana.current;
-            let machine_id = s.card(ID).id.clone();
-            assert!(listed_for(&s, P1));
-            s.activate(ID, json!({}));
-            let mine = shuffled_in(&s, P1);
-            assert_eq!(mine.len(), 1);
-            assert_eq!(mine[0].def_id, THE_COIN);
-            assert!(!mine[0].radiant);
-            // R311: open, so p1's own list names it.
-            assert_eq!(s.view(P1).you.own_library.map(|list| list.unknown), Some(0));
-            assert_eq!(s.view(P1).you.mana.current, mana);
-            s.expect_in_zone(&machine_id, "field");
-            // R384: "Activate" is once a turn.
-            assert!(!listed_for(&s, P1));
-            let refused =
-                why_cannot_activate_ability(s.state(), P1, &machine_id, None).err().map(|error| error.message);
-            assert_eq!(refused.as_deref(), Some("that ability has already been used this turn"));
+            kept_machine("money-machine-activate", false, |mut s| {
+                let mana = s.view(P1).you.mana.current;
+                let machine_id = s.card(ID).id.clone();
+                assert!(listed_for(&s, P1));
+                s.activate(ID, json!({}));
+                let mine = shuffled_in(&s, P1);
+                assert_eq!(mine.len(), 1);
+                assert_eq!(mine[0].def_id, THE_COIN);
+                assert!(!mine[0].radiant);
+                // R311: open, so p1's own list names it.
+                assert_eq!(s.view(P1).you.own_library.map(|list| list.unknown), Some(0));
+                assert_eq!(s.view(P1).you.mana.current, mana);
+                s.expect_in_zone(&machine_id, "field");
+                // R384: "Activate" is once a turn.
+                assert!(!listed_for(&s, P1));
+                let refused =
+                    why_cannot_activate_ability(s.state(), P1, &machine_id, None).err().map(|error| error.message);
+                assert_eq!(refused.as_deref(), Some("that ability has already been used this turn"));
+            });
         }
 
         #[test]
         fn r1105_r384_only_its_controller_activates_it_the_opponent_is_told_it_is_not_theirs() {
-            let mut s = kept_machine("money-machine-theirs-to-use", false);
-            s.end_turn();
-            assert_eq!(s.state().active, P2);
-            let machine_id = s.card(ID).id.clone();
-            let refused =
-                why_cannot_activate_ability(s.state(), P2, &machine_id, Some("coin")).err().map(|error| error.message);
-            assert_eq!(refused.as_deref(), Some("that card is not yours"));
-            assert!(!listed_for(&s, P2));
-            assert!(activation_views_for(s.state(), P2, s.card(ID)).unwrap_or_default().is_empty());
+            kept_machine("money-machine-theirs-to-use", false, |mut s| {
+                s.end_turn();
+                assert_eq!(s.state().active, P2);
+                let machine_id = s.card(ID).id.clone();
+                let refused =
+                    why_cannot_activate_ability(s.state(), P2, &machine_id, Some("coin")).err().map(|error| error.message);
+                assert_eq!(refused.as_deref(), Some("that card is not yours"));
+                assert!(!listed_for(&s, P2));
+                assert!(activation_views_for(s.state(), P2, s.card(ID)).unwrap_or_default().is_empty());
+            });
         }
 
         #[test]
         fn r1_cry_adds_a_the_coin_to_your_hand_as_it_is_played() {
-            let mut s = kept_holding("money-machine-cry", false, 2);
-            s.play(ID, json!({}));
-            let coins = hand_coins(&s);
-            assert_eq!(coins.len(), 1);
-            assert!(!coins[0].radiant);
-            // The Machine, played, stands; its Coin is in the hand, not the deck.
-            s.expect_in_zone(ID, "field");
-            assert_eq!(s.hand(P1).len(), 3);
-            assert!(coins_of(&s, P1).len() == 1 && shuffled_in(&s, P1).is_empty());
-            // The Cry added a Coin to the hand and shuffled none into the opponent's deck.
-            assert!(coins_of(&s, P2).is_empty());
+            kept_holding("money-machine-cry", false, 2, |mut s| {
+                s.play(ID, json!({}));
+                let coins = hand_coins(&s);
+                assert_eq!(coins.len(), 1);
+                assert!(!coins[0].radiant);
+                // The Machine, played, stands; its Coin is in the hand, not the deck.
+                s.expect_in_zone(ID, "field");
+                assert_eq!(s.hand(P1).len(), 3);
+                assert!(coins_of(&s, P1).len() == 1 && shuffled_in(&s, P1).is_empty());
+                // The Cry added a Coin to the hand and shuffled none into the opponent's deck.
+                assert!(coins_of(&s, P2).is_empty());
+            });
         }
 
         #[test]
         fn r1_a_full_hand_burns_the_cry_s_coin() {
             // Ten cards beside the Machine: the hand is full once it is played, so the Coin burns (§2.4).
-            let mut s = kept_holding("money-machine-cry-full", false, HAND_CAP as usize);
-            s.play(ID, json!({}));
-            assert!(hand_coins(&s).is_empty());
-            assert_eq!(s.hand(P1).len() as i32, HAND_CAP);
-            assert!(s
-                .events()
-                .iter()
-                .any(|event| matches!(event, GameEvent::Burned { def_id, .. } if def_id == THE_COIN)));
-            s.expect_in_zone(ID, "field");
+            kept_holding("money-machine-cry-full", false, HAND_CAP as usize, |mut s| {
+                s.play(ID, json!({}));
+                assert!(hand_coins(&s).is_empty());
+                assert_eq!(s.hand(P1).len() as i32, HAND_CAP);
+                assert!(s
+                    .events()
+                    .iter()
+                    .any(|event| matches!(event, GameEvent::Burned { def_id, .. } if def_id == THE_COIN)));
+                s.expect_in_zone(ID, "field");
+            });
         }
 
         #[test]
         fn r1_cry_adds_a_radiant_the_coin_to_your_hand() {
-            let mut s = kept_holding("money-machine-cry-radiant", true, 2);
-            s.play(ID, json!({}));
-            let coins = hand_coins(&s);
-            assert_eq!(coins.len(), 1);
-            assert!(coins[0].radiant);
+            kept_holding("money-machine-cry-radiant", true, 2, |mut s| {
+                s.play(ID, json!({}));
+                let coins = hand_coins(&s);
+                assert_eq!(coins.len(), 1);
+                assert!(coins[0].radiant);
+            });
         }
 
         #[test]
         fn the_opponent_still_gets_a_base_coin_and_its_activate_shuffles_a_radiant_one_into_yours() {
-            let mut s = kept_machine("money-machine-radiant", true);
-            s.activate(ID, json!({}));
-            let mine = shuffled_in(&s, P1);
-            assert_eq!(mine.len(), 1);
-            assert_eq!(mine[0].def_id, THE_COIN);
-            assert!(mine[0].radiant);
-            assert_eq!(s.view(P1).you.own_library.map(|list| list.unknown), Some(0));
-            s.end_turn();
-            let theirs = coins_of(&s, P2);
-            assert_eq!(theirs.len(), 1);
-            assert!(!theirs[0].radiant);
-            // Only the one the Activate made is in p1's deck.
-            assert_eq!(shuffled_in(&s, P1).len(), 1);
+            kept_machine("money-machine-radiant", true, |mut s| {
+                s.activate(ID, json!({}));
+                let mine = shuffled_in(&s, P1);
+                assert_eq!(mine.len(), 1);
+                assert_eq!(mine[0].def_id, THE_COIN);
+                assert!(mine[0].radiant);
+                assert_eq!(s.view(P1).you.own_library.map(|list| list.unknown), Some(0));
+                s.end_turn();
+                let theirs = coins_of(&s, P2);
+                assert_eq!(theirs.len(), 1);
+                assert!(!theirs[0].radiant);
+                // Only the one the Activate made is in p1's deck.
+                assert_eq!(shuffled_in(&s, P1).len(), 1);
+            });
         }
     }
 }

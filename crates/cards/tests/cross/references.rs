@@ -394,6 +394,8 @@ mod r279_the_reference_map_spec_5_7_10_10 {
         assert_eq!(
             shipped(naming("Terminus card")),
             strings(&[
+                // S01 (R3551002): Core #98 Heroic Power's End Times Discovers a Terminus card.
+                "core-098",
                 "stinkyscape-004",
                 "stinkyscape-154",
                 // The Stinkyscape+ release (#3573): its #81 Doomsayer, #82 Endless Expedition, #89

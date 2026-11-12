@@ -354,8 +354,6 @@ mod tests {
         #[test]
         fn r3569006_a_glimpse_into_the_endless_sea_comes_with_infinite_reserves() {
             assert_eq!(plans_of(GLIMPSE), &[INFINITE_RESERVES]);
-            // The card is of a held set: the pool holds it only while its set is open (R1420).
-            let _preview = preview_sets(&[SetName::StinkyscapePlus]);
             let mut s = casting_for(GLIMPSE, false, 1);
             s.play(ID, json!({}));
             assert!(s.state().pending.is_none(), "one plan: no Discover");
@@ -368,10 +366,12 @@ mod tests {
         }
 
         #[test]
-        fn r3569006_the_held_card_is_in_no_pool_before_its_set_ships() {
+        fn r3569006_the_card_joins_the_pool_once_its_set_ships() {
             crate::register_all();
+            // R1420: Stinkyscape+ ships since #3573's release, so its Wincon card is in the pool.
+            assert!(set_ships(SetName::StinkyscapePlus));
             let pool = crate::query::pool(ID, &json_as(json!({ "tags": ["Wincon"] })));
-            assert!(pool.iter().all(|def| def.id != GLIMPSE), "{} ids", pool.len());
+            assert!(pool.iter().any(|def| def.id == GLIMPSE), "{} ids", pool.len());
         }
 
         /// R767000: the script kept for the replays of v0.5.11 and before adds Alteran Reach alone.
@@ -473,7 +473,6 @@ mod tests {
 
         #[test]
         fn r3569006_a_radiant_glimpse_comes_with_a_radiant_infinite_reserves() {
-            let _preview = preview_sets(&[SetName::StinkyscapePlus]);
             let mut s = casting_for(GLIMPSE, true, 1);
             s.play(ID, json!({}));
             let cards = added(&s);

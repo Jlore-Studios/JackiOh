@@ -115,12 +115,19 @@ mod tests {
             "its Evolve text ran"
         );
         assert!(!wasp.radiant);
-        // Every pick of a few games is a Swarm permanent, never a token or a Spell.
+        // Every pick of a few games is a Swarm permanent, never a token or a Spell. The Golem summons
+        // one, the first; a card it summons may then copy itself by its own Evolve text (S+ #161 Space
+        // Invader: "Evolve: Summon a copy of this"), so every later summon is a copy of that one.
         for n in 0..12 {
             let mut s = board(&format!("{SEED}-pick-{n}"), false, WALL);
             swing(&mut s);
             let made = summoned(&s);
-            assert_eq!(made.len(), 1, "one summon per attack");
+            assert!(!made.is_empty(), "one summon per attack");
+            assert!(
+                made[1..].iter().all(|copy| copy.def_id == made[0].def_id),
+                "one summon per attack, then only its own copies: {:?}",
+                made.iter().map(|card| card.def_id.as_str()).collect::<Vec<_>>()
+            );
             let def = crate::card_def(&made[0].def_id);
             assert!(def.tags.contains(&Tag::Swarm), "{}", def.id);
             assert!(!def.token && def.type_ != CardType::Spell, "{}", def.id);

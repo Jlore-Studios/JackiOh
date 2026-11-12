@@ -1003,6 +1003,8 @@ mod r1444_the_luck_based_pool_meditative_101_gachaholic {
             "classicplus-065",
             "classicplus-066",
             "meditative-036",
+            // S01 (R3551001): #54 Money Machine flips a coin each end of turn, Lucky 1 on its Radiant face.
+            "meditative-054",
             "meditative-086",
         ]);
         pool.extend(landed(&[CATBOY_MAID]));

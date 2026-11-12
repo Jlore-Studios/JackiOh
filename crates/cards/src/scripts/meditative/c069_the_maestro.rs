@@ -230,7 +230,8 @@ mod tests {
             find_instance_mut(s.state_mut(), &power)
                 .expect("the Heroic Power")
                 .memory
-                .insert(jackioh_engine::subsystems::POWER_KEY.to_string(), json!("draw"));
+                // Ranching, a (1) power: Life Tap costs (0) since R3551002, so spends nothing.
+                .insert(jackioh_engine::subsystems::POWER_KEY.to_string(), json!("rush"));
             s.activate(HEROIC_POWER, json!({}));
             assert_eq!(plague(&s, &maestro.id), 1);
         }

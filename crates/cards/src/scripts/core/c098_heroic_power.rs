@@ -646,7 +646,7 @@ mod tests {
                 OnField { p1: Some(json!({ "hand": [SPARE], "mana": 1 })), ..OnField::default() },
             ); // X 2
             assert!(listed(&s, &card).is_empty());
-            s.expect_refused_with(|s| s.activate(&card, json!({})), "costs 3, more than your mana");
+            s.expect_refused_with(|s| s.activate(&card, json!({})), "costs 2, more than your mana");
         }
 
         #[test]
@@ -1513,13 +1513,14 @@ mod tests {
                 .collect()
         }
 
-        /// End Times on the field with mana to use it, both sides able to pass turns.
+        /// End Times on the field with mana to use it, both sides able to pass turns. p1 holds a
+        /// (0) card too, so spending the (10) never auto-ends its turn (§2.5).
         fn end_times_field(radiant_face: bool, seed: &str) -> (Scenario, CardInstance) {
             on_field(
                 "endTimes",
                 OnField {
                     radiant_face,
-                    p1: Some(json!({ "hand": [SPARE], "mana": 10, "library": [JAMMED, JAMMED, JAMMED] })),
+                    p1: Some(json!({ "hand": [SPARE, FREE], "mana": 10, "library": [JAMMED, JAMMED, JAMMED] })),
                     p2: Some(json!({ "hand": [FREE], "library": [JAMMED, JAMMED, JAMMED] })),
                     seed: Some(seed.to_string()),
                 },
@@ -1552,7 +1553,7 @@ mod tests {
                     assert_eq!(price, &Some(10));
                 } else {
                     let kept_price = kept.get(id).copied().flatten();
-                    assert_eq!((*price).map(|price| price - 1), kept_price, "{id}");
+                    assert_eq!(*price, kept_price.map(|kept| (kept - 1).max(0)), "{id}");
                 }
             }
             assert_eq!(now.len(), 14);
@@ -1617,6 +1618,8 @@ mod tests {
             // Back to p1: p2's end of turn takes nothing.
             s.end_turn();
             assert_eq!(panel_price(&s), 8);
+            // MAX_MANA is 4 (§2.3): top p1 up so the (8) is payable.
+            s.state_mut().players.p1.mana.current = 10;
             s.activate(&card, json!({}));
             s.expect_mana(P1, 2);
             s.answer(json!(must(offered_ids(&s).into_iter().next(), "an offered Terminus card")));
@@ -1643,17 +1646,27 @@ mod tests {
         #[test]
         fn r3551002_never_below_0() {
             crate::register_all();
-            let (mut s, _) = end_times_field(false, "hp-endtimes-floor");
+            // Libraries long enough that twelve rounds of draws never fatigue a hero to death.
+            let library = [JAMMED; 14];
+            let (mut s, _) = on_field(
+                "endTimes",
+                OnField {
+                    p1: Some(json!({ "hand": [SPARE, FREE], "mana": 10, "library": library })),
+                    p2: Some(json!({ "hand": [FREE], "library": library })),
+                    seed: Some("hp-endtimes-floor".to_string()),
+                    ..OnField::default()
+                },
+            );
             for _ in 0..12 {
                 s.end_turn();
                 s.end_turn();
             }
             assert_eq!(panel_price(&s), 0);
-            // At 0 it is free, and using it banks nothing: it stays 0 until a tick after a use.
+            // At 0 it is free, and the use takes the cuts back (R3551002): the next costs (10) again.
             let card = must(s.backrow(P1, 1), "the Heroic Power");
             s.activate(&card, json!({}));
             s.answer(json!(must(offered_ids(&s).into_iter().next(), "an offered Terminus card")));
-            assert_eq!(panel_price(&s), 0);
+            assert_eq!(panel_price(&s), 10);
         }
 
         #[test]
@@ -1670,12 +1683,13 @@ mod tests {
         #[test]
         fn r3551002_the_arrival_roll_can_land_on_end_times() {
             crate::register_all();
+            // R752: a power is listed only when its controller can pay for it, so the (10) needs 10.
             let seed = seed_where("hp-endtimes-roll", |seed| {
-                let mut s = scenario(json!({ "seed": seed, "p1": { "hand": [SPARE], "mana": 8 } }));
+                let mut s = scenario(json!({ "seed": seed, "p1": { "hand": [SPARE], "mana": 10 } }));
                 let summoned = summon_heroic(&mut s, false);
                 subsystems::power_of(&summoned).is_some_and(|power| power.name.as_str() == "endTimes")
             });
-            let mut s = scenario(json!({ "seed": seed, "p1": { "hand": [SPARE], "mana": 8 } }));
+            let mut s = scenario(json!({ "seed": seed, "p1": { "hand": [SPARE], "mana": 10 } }));
             let summoned = summon_heroic(&mut s, false);
             assert_eq!(
                 subsystems::power_of(&summoned).map(|power| power.name.as_str()),

@@ -20,7 +20,7 @@ pub const ID: &str = "stinkyscapeplus-165";
 /// S+ #68 Shadiris Visions: the Spell this Cry casts.
 const VISIONS: &str = "stinkyscapeplus-068";
 /// "Cast Shadiris Visions twice".
-const CASTS: usize = 2;
+const CASTS: i32 = 2;
 /// "add three random Stinkyscape Resources".
 const RESOURCES: i32 = 3;
 
@@ -35,8 +35,8 @@ fn shadiris(radiant: bool) -> Script {
                 radiant: None,
                 how: CastHow::default(),
             };
-            // One `castNew` per cast, never one cast of doubled strength: each asks its own targets.
-            let mut effects: Vec<Effect> = (0..CASTS).map(|_| cast_new(visions.clone())).collect();
+            // R3558008: one `castNew` per cast, never one cast of doubled strength: each asks its own targets.
+            let mut effects = cast_new_times(visions, CASTS);
             effects.push(gain_resources(GainResourcesArgs {
                 count: RESOURCES,
                 radiant: radiant.then_some(true),

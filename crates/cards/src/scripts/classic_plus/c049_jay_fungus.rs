@@ -1,6 +1,6 @@
 //! C+ #49 Jay Fungus (SPEC §8.7 row 49). (2) Unit, Rare, 3/6 → 6/12, tag Swarm.
 //!   Base:    "Taunt. End of turn: A random card in your hand costs ({discount}) less. Evolves when
-//!            your hand has at least {zeroes|card|cards} costing (0). Evolve: Gain Poisonous."
+//!            your hand has at least {zeroes|(0) Cost card|(0) Cost cards}. Evolve: Gain Poisonous."
 //!            — discount 2, zeroes 3.
 //!   Radiant: the same text, discount 20, zeroes 1.
 //!   Engine:  "`costMod` −2 (Radiant −20) on a random card in your hand it can make cheaper: current cost
@@ -283,11 +283,11 @@ mod tests {
             s.card(FUNGUS).evolved == Some(true)
         }
 
+        /// How many times P1's cards evolved this game (R3536004). The setup's state check evolves a
+        /// Fungus whose hand already holds its (0)s, and that Evolved event stays in setup, which the
+        /// log does not keep (R3536001), so the count is the controller's, not the log's.
         fn evolved_events(s: &Scenario) -> usize {
-            s.events()
-                .iter()
-                .filter(|event| matches!(event, GameEvent::Evolved { .. }))
-                .count()
+            evolutions_of(s.state(), P1) as usize
         }
 
         fn poisonous(s: &Scenario) -> bool {
@@ -393,7 +393,7 @@ mod tests {
             assert!(def.tags.contains(&Tag::Swarm));
             for face in [&def.base, &def.radiant] {
                 assert!(face.text.contains("Evolve: Gain Poisonous."));
-                assert!(face.text.contains("costing (0)."));
+                assert!(face.text.contains("(0) Cost cards}."));
             }
         }
     }

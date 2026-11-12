@@ -54,7 +54,7 @@ const UNBIASED_IMMIGRATION: &str = "core-059";
 const LIVING_ARMOR_POTION: &str = "meditativeplus-012";
 const LIVING_HEALTH_POTION: &str = "meditativeplus-013";
 
-const ACTIVATE_CARDS: [&str; 95] = [
+const ACTIVATE_CARDS: [&str; 99] = [
     HEROIC_POWER,
     TWINSPELL,
     UNBIASED_IMMIGRATION,
@@ -82,7 +82,6 @@ const ACTIVATE_CARDS: [&str; 95] = [
     UNIVERSITY,
     HEADQUARTERS,
     FENG_SHUI,
-    MONEY_MACHINE,
     GACHAHOLIC,
     ALUNETH,
     YILES_VIRUS,
@@ -137,6 +136,11 @@ const ACTIVATE_CARDS: [&str; 95] = [
     "stinkyscapeplus-011",
     "stinkyscapeplus-019",
     "stinkyscapeplus-029",
+    "stinkyscapeplus-035",
+    "stinkyscapeplus-038",
+    "stinkyscapeplus-055",
+    "stinkyscapeplus-059",
+    "stinkyscapeplus-109",
     "stinkyscapeplus-124",
     "stinkyscapeplus-125",
     "stinkyscapeplus-126",
@@ -270,6 +274,10 @@ fn units(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
 /// (R1852003) and Alteran Reach's travel (`subsystems::starscape_abilities`, R1847001).
 const ENGINE_ACTIVATES: [&str; 2] = ["stinkyscape-t-dormant-starship", "stinkyscape-148"];
 
+/// The cards whose text names an Activate without printing one: S+ #43 Segment counters "the first enemy
+/// Ranged attack or Activate per turn" (SPEC §8.12 row 43), an answer to other cards' abilities.
+const NAMES_AN_ACTIVATE: [&str; 1] = ["stinkyscapeplus-043"];
+
 /// The census: the cards this file covers are exactly the cards whose text has an Activate, which are
 /// exactly the cards whose script declares one, among the sets that ship (a held set's join at its
 /// release, R1857000).
@@ -284,7 +292,9 @@ fn r384_activate_census_every_card_whose_text_has_an_activate_declares_one_and_h
         if !set_ships(def.set) {
             continue;
         }
-        if def.base.text.contains("Activate") || def.radiant.text.contains("Activate") {
+        if (def.base.text.contains("Activate") || def.radiant.text.contains("Activate"))
+            && !NAMES_AN_ACTIVATE.contains(&id.as_str())
+        {
             by_text.push(id.clone());
         }
         if ENGINE_ACTIVATES.contains(&id.as_str())
@@ -409,7 +419,8 @@ mod c_n98_heroic_power {
         activate_listed(&mut s, HEROIC_POWER, any);
         assert_eq!(s.hand(P1).len(), hand + 1);
         assert_eq!(health(&s, P1), life - LIFE_TAP_DAMAGE);
-        s.expect_mana(P1, 2);
+        // R3551002: Life Tap costs (0), so the 3 mana stays.
+        s.expect_mana(P1, 3);
         let id = s.card(HEROIC_POWER).id.clone();
         assert!(listed(&s, &id).is_empty(), "a power is once per turn");
     }
@@ -423,7 +434,8 @@ mod c_n98_heroic_power {
         assert_eq!(s.hand(P1).len(), hand + 2);
         assert_eq!(s.pile(P2, "library").len(), theirs - 1);
         assert_eq!(health(&s, P1), life);
-        s.expect_mana(P1, 2);
+        // R3551002: Life Tap costs (0), so the 3 mana stays.
+        s.expect_mana(P1, 3);
     }
 
     #[test]
@@ -1313,24 +1325,45 @@ mod m_n40_feng_shui {
 mod m_n54_money_machine {
     use super::*;
 
+    /// R3551001, R767000: since S01 the Machine prints its card with its Cry and has no Activate (so the
+    /// census holds it no more); the script kept for the versions before it still lists one, which this
+    /// module drives, folding under that script.
+    fn under_kept<T>(run: impl FnOnce() -> T) -> T {
+        jackioh_cards::register_all();
+        let (_, _, kept) = jackioh_cards::KEPT_SCRIPTS
+            .iter()
+            .rev()
+            .find(|(id, _, _)| *id == MONEY_MACHINE)
+            .expect("Money Machine's Activate script is kept");
+        let shipped: &'static jackioh_engine::ShippedCatalog =
+            Box::leak(Box::new(jackioh_engine::ShippedCatalog::new(
+                "kept",
+                jackioh_cards::CATALOG.clone(),
+                indexmap::IndexMap::from([(MONEY_MACHINE.to_string(), kept())]),
+            )));
+        jackioh_engine::with_shipped(Some(shipped), run)
+    }
+
     fn shuffles_a_coin_in(radiant: bool) {
-        let mut s = scenario(json!({
-            "p1": { "backrow": [on(MONEY_MACHINE, radiant)], "hand": [STOCKPILE], "library": [X, X] },
-            "p2": { "hand": [FILLER] },
-        }));
-        let mana = s.state().players.p1.mana.current;
-        activate_listed(&mut s, MONEY_MACHINE, any);
-        let coins: Vec<CardInstance> = s
-            .pile(P1, "library")
-            .into_iter()
-            .filter(|card| card.def_id == THE_COIN)
-            .collect();
-        assert_eq!(coins.len(), 1);
-        assert_eq!(coins[0].radiant, radiant);
-        assert_eq!(s.state().players.p1.mana.current, mana);
-        s.expect_in_zone(MONEY_MACHINE, "field");
-        let id = s.card(MONEY_MACHINE).id.clone();
-        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+        under_kept(|| {
+            let mut s = scenario(json!({
+                "p1": { "backrow": [on(MONEY_MACHINE, radiant)], "hand": [STOCKPILE], "library": [X, X] },
+                "p2": { "hand": [FILLER] },
+            }));
+            let mana = s.state().players.p1.mana.current;
+            activate_listed(&mut s, MONEY_MACHINE, any);
+            let coins: Vec<CardInstance> = s
+                .pile(P1, "library")
+                .into_iter()
+                .filter(|card| card.def_id == THE_COIN)
+                .collect();
+            assert_eq!(coins.len(), 1);
+            assert_eq!(coins[0].radiant, radiant);
+            assert_eq!(s.state().players.p1.mana.current, mana);
+            s.expect_in_zone(MONEY_MACHINE, "field");
+            let id = s.card(MONEY_MACHINE).id.clone();
+            assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+        })
     }
 
     #[test]
@@ -2200,6 +2233,12 @@ mod stinkyscape {
         const BOOSTER: &str = "stinkyscapeplus-011";
         const NORMALIZER: &str = "stinkyscapeplus-019";
         const VETERAN: &str = "stinkyscapeplus-029";
+        const SCATTER: &str = "stinkyscapeplus-035";
+        const ARC: &str = "stinkyscapeplus-038";
+        const THORIUM: &str = "stinkyscapeplus-048";
+        const REACTOR: &str = "stinkyscapeplus-055";
+        const MASS_DRIVER: &str = "stinkyscapeplus-059";
+        const LANCER: &str = "stinkyscapeplus-109";
         const SEI: &str = "stinkyscapeplus-124";
         const OMURA: &str = "stinkyscapeplus-125";
         const VELA: &str = "stinkyscapeplus-126";
@@ -2225,6 +2264,7 @@ mod stinkyscape {
         const TOUGH: &str = "stand-in (1) 2/30"; // survives every hit and tick below
         const BODY: &str = "stand-in (1) 4/4 R12/12"; // a 4-health Unit: Trample's excess goes past it
         const TEXTED: &str = "stand-in (1) 3/5 Taunt, Rush"; // two keywords for Vanilla to strip
+        const FLIER: &str = "stand-in (1) 2/30 Flying"; // Scatter's `damage2` lands on it
         const ARMORED: &str = "stand-in (0) 40/200 Armor 5"; // Pierce reads off its health
         const ARMORED_HEALTH: i32 = 200;
         const TYLANNT: &str = "stinkyscape-006"; // Tylannt: no M, O, U, S or E in its name, so Yates's exile spares it
@@ -2377,6 +2417,91 @@ mod stinkyscape {
             uses_left(&s, &id, 1);
         });
 
+        // R3559000: every enemy Unit, then the enemy hero, rolls its own amount in the face's range (0~2,
+        // Radiant 1~3; a 0 is no hit), and a Flying Unit takes `damage2` instead; 1 use, Radiant 2.
+        both_faces!(sp_n35_scatter, |radiant: bool| {
+            let mut s = facing(json!([on(SCATTER, radiant)]), json!([TOUGH, FLIER]));
+            let (id, ground, flier) = (s.card(SCATTER).id.clone(), s.unit_at(P2, 1).id, s.unit_at(P2, 2).id);
+            let events = activate_listed(&mut s, SCATTER, any);
+            let range = if radiant { 1..=3 } else { 0..=2 };
+            for target in [ground.as_str(), "hero-p2"] {
+                let hit = hits_on(&events, target);
+                assert!(
+                    hit.len() <= 1 && hit.iter().all(|amount| range.contains(amount)),
+                    "{target}: {hit:?}"
+                );
+                assert!(range.contains(&0) || !hit.is_empty(), "{target}: a roll of at least 1 hits");
+            }
+            assert_eq!(hits_on(&events, &flier), vec![printed(SCATTER, "damage2", radiant)], "the flier");
+            uses_left(&s, &id, if radiant { 2 } else { 1 });
+        });
+
+        // R3559001, R3554006: the Unit named takes `damage2`, then the chain hits each Unit beside a hit one
+        // once; `damage` uses a turn.
+        both_faces!(sp_n38_arc, |radiant: bool| {
+            let mut s = facing(
+                json!([at_lane(ARC, radiant, 5)]),
+                json!([at_lane(TOUGH, false, 1), at_lane(TOUGH, false, 2), at_lane(TOUGH, false, 4)]),
+            );
+            let id = s.card(ARC).id.clone();
+            let lanes = [1, 2, 4].map(|lane| s.unit_at(P2, lane).id);
+            let events = activate_listed(&mut s, ARC, aimed_at(&lanes[0]));
+            let dealt = printed(ARC, "damage2", radiant);
+            assert_eq!(hits_on(&events, &lanes[0]), vec![dealt], "the Unit named");
+            assert_eq!(hits_on(&events, &lanes[1]), vec![dealt], "chained to the Unit beside it");
+            assert!(hits_on(&events, &lanes[2]).is_empty(), "lane 4 is beside no Unit hit");
+            uses_left(&s, &id, printed(ARC, "damage", radiant));
+        });
+
+        // R3556005: the Activate discards a chosen Thorium from hand to skip this turn's blow-up roll; with
+        // no Thorium in hand it is not offered.
+        both_faces!(sp_n55_thorium_reactor, |radiant: bool| {
+            let reactor = |hand: Value| {
+                open(scenario(json!({
+                    "p1": { "backrow": [on(REACTOR, radiant)], "hand": hand, "library": [X, X] },
+                    "p2": { "hand": [FILLER], "library": [X, X] },
+                })))
+            };
+            let bare = reactor(json!([STOCKPILE]));
+            assert!(listed(&bare, &bare.card(REACTOR).id).is_empty(), "no Thorium, no Activate");
+            let mut s = reactor(json!([THORIUM, STOCKPILE]));
+            let (id, thorium) = (s.card(REACTOR).id.clone(), s.card(THORIUM).id.clone());
+            activate_listed(&mut s, REACTOR, any);
+            if s.state().pending.is_some() {
+                s.answer(json!(thorium));
+            }
+            assert!(
+                s.pile(P1, "graveyard").iter().any(|card| card.id == thorium),
+                "the Thorium is discarded"
+            );
+            uses_left(&s, &id, 1);
+        });
+
+        // R3556007: the Activate queues a delivery: at the start of its controller's `count`th own turn, two
+        // Minerals of its face at (0) (and a Resource).
+        both_faces!(sp_n59_mass_driver, |radiant: bool| {
+            let mut s = open(scenario(json!({
+                "p1": { "backrow": [on(MASS_DRIVER, radiant)], "hand": [STOCKPILE], "library": [X, X, X] },
+                "p2": { "hand": [FILLER], "library": [X, X, X] },
+            })));
+            let id = s.card(MASS_DRIVER).id.clone();
+            activate_listed(&mut s, MASS_DRIVER, any);
+            uses_left(&s, &id, 1);
+            for _ in 0..printed(MASS_DRIVER, "count", radiant) {
+                s.end_turn().end_turn();
+            }
+            let minerals: Vec<CardInstance> = s
+                .hand(P1)
+                .into_iter()
+                .filter(|card| jackioh_cards::CATALOG[card.def_id.as_str()].tags.contains(&Tag::Mineral))
+                .collect();
+            assert_eq!(minerals.len(), 2, "two Minerals delivered");
+            for mineral in &minerals {
+                assert_eq!(mineral.radiant, radiant, "of the Driver's face");
+                assert_eq!(effective_cost(s.state(), mineral, Default::default()), 0, "at (0)");
+            }
+        });
+
         // R3560008: Pierce Cleave: the Unit aimed at and each Unit beside it take the hit, Armor and all.
         both_faces!(sp_n124_sei, |radiant: bool| {
             let mut s = facing(json!([on(SEI, radiant)]), json!([TOUGH, ARMORED, TOUGH, TOUGH]));
@@ -2413,9 +2538,9 @@ mod stinkyscape {
             assert_eq!(sits_out, vec![json!(2)], "a 3-turn cooldown sits out two turns");
         });
 
-        /// R3554005: Vela and Corvus ask for an enemy tile and hit every Unit on the line to it with Pierce;
-        /// the Radiant face Cleaves each Unit beside the one hit.
-        fn draws_a_line(def: &str, radiant: bool) {
+        /// R3554005: Vela, Corvus and Lancer ask for an enemy tile and hit every Unit on the line to it with
+        /// Pierce; `cleaves`, each Unit beside the one hit too (Vela's and Corvus's Radiant face). `uses` a turn.
+        fn draws_a_line(def: &str, radiant: bool, cleaves: bool, uses: i32) {
             let mut s = facing(
                 json!([at_lane(def, radiant, 1)]),
                 json!([
@@ -2447,18 +2572,25 @@ mod stinkyscape {
             let dealt = printed(def, "damage", radiant);
             assert_eq!(hits_on(&events, &lanes[0]), vec![dealt], "{def}");
             assert_eq!(s.stats(&lanes[0]).health, ARMORED_HEALTH - dealt, "{def}: Pierce");
-            let beside = if radiant { vec![dealt] } else { vec![] };
+            let beside = if cleaves { vec![dealt] } else { vec![] };
             assert_eq!(
                 hits_on(&events, &lanes[1]),
                 beside,
                 "{def}: Cleave on the Radiant face only"
             );
             assert!(hits_on(&events, &lanes[2]).is_empty(), "{def}: two lanes away");
-            uses_left(&s, &id, 1);
+            uses_left(&s, &id, uses);
         }
 
-        both_faces!(sp_n126_vela, |radiant: bool| draws_a_line(VELA, radiant));
-        both_faces!(sp_n127_corvus, |radiant: bool| draws_a_line(CORVUS, radiant));
+        both_faces!(sp_n126_vela, |radiant: bool| draws_a_line(VELA, radiant, radiant, 1));
+        both_faces!(sp_n127_corvus, |radiant: bool| draws_a_line(CORVUS, radiant, radiant, 1));
+        // R3554005: Lancer's line never Cleaves; 1 use on the base face, 2 on the Radiant one.
+        both_faces!(sp_n109_lancer, |radiant: bool| draws_a_line(
+            LANCER,
+            radiant,
+            false,
+            if radiant { 2 } else { 1 }
+        ));
 
         // R3560000: the Assembly Line, a Field Spell, summons a Crawler of its face into the leftmost zone.
         both_faces!(sp_n136_crawler_assembly_line, |radiant: bool| {

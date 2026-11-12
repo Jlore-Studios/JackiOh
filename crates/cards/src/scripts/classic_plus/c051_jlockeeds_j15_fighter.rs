@@ -112,7 +112,8 @@ mod tests {
             assert!(!found.contains(&"Can't Defend".to_string()));
             // Evasive is "Can't be attacked" as a keyword (R3543002): no attack may name it.
             s.expect_refused_with(|s| s.attack(VANILLA, J15), "cannot be attacked");
-            // ...and implies Can't Defend (R3543002): never in Defense Position.
+            // ...and implies Can't Defend (R3543002): never in Defense Position, asked on p1's own turn.
+            s.end_turn();
             s.expect_refused_with(|s| s.switch_position(J15), "Defense Position");
             assert_eq!(s.card(J15).position, Some(Position::Atk));
         }

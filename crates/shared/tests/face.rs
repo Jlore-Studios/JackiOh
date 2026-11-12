@@ -230,7 +230,8 @@ fn a_heroic_power_prints_only_the_power_it_rolled() {
     );
     assert_eq!(
         face.text.full,
-        "Indestructible\nExpedition Map\nActivate: Spend (3): Recruit a permanent."
+        // R3551002: Expedition Map costs (2) since S01, (1) less than its old (3).
+        "Indestructible\nExpedition Map\nActivate: Spend (2): Recruit a permanent."
     );
     assert!(face.printed.is_some(), "the collection's text is shown beside it");
     let radiant = in_play(

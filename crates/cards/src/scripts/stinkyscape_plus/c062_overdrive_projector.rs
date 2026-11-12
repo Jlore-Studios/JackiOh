@@ -149,10 +149,13 @@ mod tests {
             next_turn_of(&mut s, P1);
             // p1's Zap resolves twice: 4 + 4.
             s.play(ZAP, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
+            // §6.2 Echo: each repeat asks its target afresh.
+            s.answer(json!("hero:p2"));
             s.expect_health(P2, HERO_HEALTH - 8);
             // And p2's own Zap, on p2's turn with the Projector awake, echoes too.
             s.end_turn();
             s.play(ZAP, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
+            s.answer(json!("hero:p1"));
             s.expect_health(P1, HERO_HEALTH - 8);
         }
     }
@@ -182,6 +185,8 @@ mod tests {
             assert!(!has(&s, P2, 1, KeywordKind::Rush), "the enemy's has none");
             // p1's Zap echoes; p2's resolves once.
             s.play(ZAP, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
+            // §6.2 Echo: each repeat asks its target afresh.
+            s.answer(json!("hero:p2"));
             s.expect_health(P2, HERO_HEALTH - 8);
             s.end_turn();
             s.play(ZAP, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));

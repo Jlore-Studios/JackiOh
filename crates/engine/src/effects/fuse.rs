@@ -627,6 +627,8 @@ pub fn equip_pick_step() -> Hook {
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct FuseGeneratedArgs {
+    /// How many picks; `untilCost` ignores it, so it may be left out there (R3558004).
+    #[serde(default)]
     pub count: i32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub query: Option<CatalogQueryArgs>,

@@ -94,7 +94,7 @@
     "x": 10,
     "title": "End Times",
     "radiantTitle": "End Times",
-    "base": "Discover a Terminus card. End of turn: Reduce the cost of the next use of this by ({endTimesCut}).",
-    "radiant": "Discover a Terminus card. End of turn: Reduce the cost of the next use of this by ({endTimesCut})."
+    "base": "Discover a Terminus card. Each end of turn, reduce the cost of the next use of this by ({endTimesCut}).",
+    "radiant": "Discover a Terminus card. Each end of turn, reduce the cost of the next use of this by ({endTimesCut})."
   }
 }

@@ -5,15 +5,15 @@
 //!            Add a random Terminus card to your hand."
 //!   Radiant: "… Add a random Radiant Terminus card to your hand."
 //!
-//! Its Cry is built here: one card drawn from the Terminus pool, every Terminus card of the shipped
-//! sets, tokens included (R3552001, R380), through the generator, so it is never this card (R387) and
-//! R673's Glitch odds apply; the Radiant face adds it Radiant (R3569007).
+//! Its Cry: one card drawn from the Terminus pool, every Terminus card of the shipped sets, tokens
+//! included (R3552001, R380), through the generator, so it is never this card (R387) and R673's Glitch
+//! odds apply; the Radiant face adds it Radiant (R3569007).
 //!
-//! NOT YET BUILT: the bottom-of-deck placement (E8's `StaticFlags.starts_at_bottom`) and the cast from
-//! the deck when the owner's exile reaches `card` cards (E8's `Script.cast_from_deck_when`) belong to
-//! E8 (#3558), which the branch this part was built on does not hold yet. When E8 lands, this card sets
-//! the one flag and the one hook, the threshold being "at least `card`" exiled cards (R3569007), and
-//! gains the tests of both.
+//! The rest is E8's (#3558): `StaticFlags.starts_at_bottom` sinks it below every other card of its
+//! owner's deck after the opening shuffle, several such cards shuffled among themselves there
+//! (R3558006, the owner's call of 2026-11-09); and `cast_from_deck_when` casts it from its owner's
+//! deck, wherever it lies, at the first settled check where their exile holds at least `card` cards
+//! (R3558007, R3569007), its Cry resolving as a cast's, and the card ending in the graveyard.
 
 use jackioh_engine::prelude::*;
 
@@ -21,6 +21,11 @@ pub const ID: &str = "stinkyscapeplus-089";
 
 fn animosity(radiant: bool) -> Script {
     Script {
+        static_flags: Some(json_as(json!({ "startsAtBottom": true }))),
+        cast_from_deck_when: Some(read_hook(|args| {
+            // R3569007: "When your exile has {card} cards": at least that many.
+            zone_count(args.state, args.self_.owner, OffFieldZone::Exile) >= param(&args, "card")
+        })),
         cry: Some(hook(move |_ctx| {
             vec![add_random_from_catalog(json_as(json!({
                 "query": { "tags": ["Terminus"], "withTokens": true },
@@ -114,6 +119,94 @@ mod tests {
                 assert!(pool.contains(&made[0].def_id));
                 assert_ne!(made[0].def_id, ID);
                 assert!(made[0].radiant, "seed {n}");
+            }
+        }
+    }
+
+    /// p1's deck holds Animosity (`radiant` its face) beneath two fillers, with `exiled` cards in their
+    /// exile; p1 ends the turn, whose settled check casts it from the deck once that is at least `card`.
+    fn deck_board(seed: &str, radiant: bool, exiled: usize) -> Scenario {
+        crate::register_all();
+        let exile: Vec<&str> = std::iter::repeat_n(FILLER, exiled).collect();
+        let mut s = scenario(json!({
+            "seed": seed,
+            "p1": {
+                "hand": [FILLER],
+                "library": [FILLER, FILLER, { "def": ID, "radiant": radiant }, FILLER],
+                "exile": exile,
+            },
+            "p2": { "hand": [FILLER], "library": filler(4) },
+        }));
+        s.end_turn();
+        s
+    }
+
+    fn in_library(s: &Scenario) -> bool {
+        s.pile(P1, "library").iter().any(|card| card.def_id == ID)
+    }
+
+    mod from_the_deck {
+        use super::*;
+
+        #[test]
+        fn r3569007_the_fifth_exiled_card_casts_it_from_deep_in_the_deck() {
+            let pool = pool();
+            let four = deck_board("animosity-deck-four", false, 4);
+            assert!(in_library(&four), "four exiled cast nothing");
+            let s = deck_board("animosity-deck", false, 5);
+            assert!(!in_library(&s), "the fifth casts it");
+            assert!(s.pile(P1, "graveyard").iter().any(|card| card.def_id == ID));
+            let made = added(&s);
+            assert_eq!(made.len(), 1, "{made:?}");
+            assert!(pool.contains(&made[0].def_id));
+            assert!(!made[0].radiant);
+        }
+
+        #[test]
+        fn r3569007_more_than_five_exiled_cast_it_too() {
+            let s = deck_board("animosity-deck-six", false, 6);
+            assert!(!in_library(&s), "at least five");
+            assert_eq!(added(&s).len(), 1);
+        }
+
+        #[test]
+        fn r3569007_none_exiled_cast_nothing() {
+            let s = deck_board("animosity-deck-none", false, 0);
+            assert!(in_library(&s));
+            assert!(added(&s).is_empty());
+        }
+
+        #[test]
+        fn r3569007_radiant_cast_from_the_deck_adds_a_radiant_terminus_card() {
+            let s = deck_board("animosity-deck-radiant", true, 5);
+            assert!(!in_library(&s));
+            let made = added(&s);
+            assert_eq!(made.len(), 1, "{made:?}");
+            assert!(made[0].radiant);
+        }
+
+        #[test]
+        fn r3558006_it_starts_on_the_bottom_of_its_owners_deck() {
+            for face in [&script().base, &script().radiant] {
+                assert_eq!(face.flags().starts_at_bottom, Some(true));
+            }
+            crate::register_all();
+            let others = [
+                "core-002", "core-005", "core-006", "core-008", "core-011", "core-012", "core-013", "core-015",
+                "core-016", "core-019", "core-020", "core-025", "core-026", "core-032", "core-036", "core-043",
+                "core-044", "core-053", "core-055", "core-001", "core-003", "core-004", "core-009", "core-010",
+            ];
+            for n in 0..6 {
+                let mut deck: Vec<String> = others.iter().map(|id| id.to_string()).collect();
+                deck.insert(n, ID.to_string());
+                let created = create_game(&CreateGameOptions {
+                    seed: format!("animosity-bottom-{n}"),
+                    decks: (deck.clone(), deck),
+                    ..CreateGameOptions::default()
+                });
+                let state = begin_game(&created).state;
+                let last = state.players.p1.library.last().map(|card| card.def_id.as_str());
+                assert_eq!(last, Some(ID), "seed {n}: it lies at the bottom");
             }
         }
     }

@@ -97,7 +97,11 @@ mod tests {
                 let (s, made) = launched(&format!("r3552001-base-{i}"), false);
                 let (picked, def) = made.first().expect("the launch cast a card");
                 assert!(pool.contains(def), "{def} is no Terminus card");
-                assert!(!s.card(picked.as_str()).radiant);
+                // R3569000: a cast Tears of the Kwzki Tree turns every card Radiant at the next check,
+                // itself included, so only a game it did not make Radiant shows the face it was cast with.
+                if s.state().radiant_world != Some(true) {
+                    assert!(!s.card(picked.as_str()).radiant, "{def}");
+                }
             }
         }
 

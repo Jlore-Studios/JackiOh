@@ -49,8 +49,9 @@ mod tests {
     const LOW: &str = "core-013"; // Jlockeed Shredder-10
     /// A backrow permanent with a low winrate of record.
     const LOW_BACKROW: &str = "core-014"; // Jlockeed's Weapons
-    /// A backrow permanent with a high winrate of record.
-    const HIGH_BACKROW: &str = "classic-004"; // Palantir
+    /// A backrow permanent with a high winrate of record, which answers no play (C #4 Palantir would
+    /// Tribute itself to steal and cast the (2) KPIs).
+    const HIGH_BACKROW: &str = "core-006"; // Mana Well
     /// A stand-in Unit, which counts as 50%.
     const EVEN: &str = "stand-in (3) 9/9";
 

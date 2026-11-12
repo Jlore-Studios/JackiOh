@@ -3767,7 +3767,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nCry: Discover one of 14 powers. Each is an Activate that spends its (X).\n(2) Expedition Map: Recruit a permanent.\n(0) Life Tap: Draw {tapDraw}. Take {tapDamage} damage.\n(0) Steady Shot: Deal {shot} damage to the enemy hero.\n(1) Ranching: Summon a Rush Token.\n(0) Cat Cafe: Summon a Felinor Token.\n(0) Ping: Pierce. Deal {ping} damage.\n(1) Witness Value: Discover a Unit.\n(1) Stitching: Discover two ({stitchCost}) Cost or less Units. Fuse them.\n(0) Armor Up: Your hero gains {armor} Armor until your next turn.\n(1) Die Insect: Deal {insect} damage to a random enemy.\n(1) KY Brainstorm: Add a random KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(1) Pluck: Add a random Fruit to your hand. It costs ({fruitCost}).\n(2) Terminus Tricks: Discover a Trap to summon.\n({endTimes}) End Times: Discover a Terminus card. End of turn: Reduce the cost of the next use of this by ({endTimesCut})."
+      "text": "Indestructible\nCry: Discover one of 14 powers. Each is an Activate that spends its (X).\n(2) Expedition Map: Recruit a permanent.\n(0) Life Tap: Draw {tapDraw}. Take {tapDamage} damage.\n(0) Steady Shot: Deal {shot} damage to the enemy hero.\n(1) Ranching: Summon a Rush Token.\n(0) Cat Cafe: Summon a Felinor Token.\n(0) Ping: Pierce. Deal {ping} damage.\n(1) Witness Value: Discover a Unit.\n(1) Stitching: Discover two ({stitchCost}) Cost or less Units. Fuse them.\n(0) Armor Up: Your hero gains {armor} Armor until your next turn.\n(1) Die Insect: Deal {insect} damage to a random enemy.\n(1) KY Brainstorm: Add a random KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(1) Pluck: Add a random Fruit to your hand. It costs ({fruitCost}).\n(2) Terminus Tricks: Discover a Trap to summon.\n({endTimes}) End Times: Discover a Terminus card. Each end of turn, reduce the cost of the next use of this by ({endTimesCut})."
     },
     "radiant": {
       "keywords": [
@@ -3775,7 +3775,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nCry: Discover one of 14 powers. Each is an Activate that spends its (X).\n(2) Expedition Map: Recruit a permanent. Make it Radiant.\n(0) Life Tap: Draw {tapDraw} from each player's deck.\n(0) Steady Shot: Deal {shot} damage to the enemy hero. This permanently deals 2 more damage.\n(1) Ranching: Summon a Radiant Rush Token.\n(0) Cat Cafe: Summon a random Felinor.\n(0) Ping: Pierce. Deal {ping} damage. If this kills a Unit, summon a Ghoul Token with its stats.\n(1) Witness Value: Discover a Radiant Unit.\n(1) Stitching: Discover two Radiant ({stitchCost}) Cost or less Units. Fuse them.\n(0) Tank Up: Your hero gains {armor} Armor, then this power refreshes.\n(1) Die Insect: Lucky 1. Deal {insect} damage to a random enemy.\n(1) KY Brainstorm: Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(1) Pluck: Add a random Radiant Fruit to your hand. It costs ({fruitCost}).\n(2) Terminus Tricks: Discover a Radiant Trap to summon.\n({endTimes}) End Times: Discover a Terminus card. End of turn: Reduce the cost of the next use of this by ({endTimesCut})."
+      "text": "Indestructible\nCry: Discover one of 14 powers. Each is an Activate that spends its (X).\n(2) Expedition Map: Recruit a permanent. Make it Radiant.\n(0) Life Tap: Draw {tapDraw} from each player's deck.\n(0) Steady Shot: Deal {shot} damage to the enemy hero. This permanently deals 2 more damage.\n(1) Ranching: Summon a Radiant Rush Token.\n(0) Cat Cafe: Summon a random Felinor.\n(0) Ping: Pierce. Deal {ping} damage. If this kills a Unit, summon a Ghoul Token with its stats.\n(1) Witness Value: Discover a Radiant Unit.\n(1) Stitching: Discover two Radiant ({stitchCost}) Cost or less Units. Fuse them.\n(0) Tank Up: Your hero gains {armor} Armor, then this power refreshes.\n(1) Die Insect: Lucky 1. Deal {insect} damage to a random enemy.\n(1) KY Brainstorm: Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(1) Pluck: Add a random Radiant Fruit to your hand. It costs ({fruitCost}).\n(2) Terminus Tricks: Discover a Radiant Trap to summon.\n({endTimes}) End Times: Discover a Terminus card. Each end of turn, reduce the cost of the next use of this by ({endTimesCut})."
     }
   },
   "core-099": {
@@ -9940,7 +9940,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Taunt\nEnd of turn: A random card in your hand costs ({discount}) less.\nEvolves when your hand has at least {zeroes|card|cards} costing (0).\nEvolve: Gain Poisonous."
+      "text": "Taunt\nEnd of turn: A random card in your hand costs ({discount}) less.\nEvolves when your hand has at least {zeroes|(0) Cost card|(0) Cost cards}.\nEvolve: Gain Poisonous."
     },
     "radiant": {
       "attack": 6,
@@ -9950,7 +9950,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Taunt\nEnd of turn: A random card in your hand costs ({discount}) less.\nEvolves when your hand has at least {zeroes|card|cards} costing (0).\nEvolve: Gain Poisonous."
+      "text": "Taunt\nEnd of turn: A random card in your hand costs ({discount}) less.\nEvolves when your hand has at least {zeroes|(0) Cost card|(0) Cost cards}.\nEvolve: Gain Poisonous."
     }
   },
   "classicplus-050": {
@@ -31472,11 +31472,11 @@
     "loc": 66,
     "base": {
       "keywords": [],
-      "text": "End of turn: Every Unit eats a delicious Shawarma causing one of the following effects:\nFirst Shawarma eaten gain +{health} health.\nSecond Shawarma eaten gain Can't attack.\nThird Shawarma eaten gain Can't defend and Brittle {brittle2}.\nSubsequent Shawarma eaten Freeze."
+      "text": "End of turn: Every Unit eats a delicious Shawarma causing one of the following effects.\nFirst Shawarma eaten gain +{health} health.\nSecond Shawarma eaten gain Can't attack.\nThird Shawarma eaten gain Can't defend and Brittle {brittle2}.\nSubsequent Shawarma eaten Freeze."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Every Unit eats a delicious Shawarma causing one of the following effects:\nFirst Shawarma eaten gain +{health} health.\nSecond Shawarma eaten gain Can't attack.\nThird Shawarma eaten gain Can't defend and Brittle {brittle2}.\nSubsequent Shawarma eaten Freeze.\nAlly Units gain discipline and stop at one Shawarma."
+      "text": "End of turn: Every Unit eats a delicious Shawarma causing one of the following effects.\nFirst Shawarma eaten gain +{health} health.\nSecond Shawarma eaten gain Can't attack.\nThird Shawarma eaten gain Can't defend and Brittle {brittle2}.\nSubsequent Shawarma eaten Freeze.\nAlly Units gain discipline and stop at one Shawarma."
     },
     "params": [
       {
@@ -33017,33 +33017,18 @@
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Add a Kwzki and Shockwave{shadiris}, Shadiris and xxFreshJack, or Tylannt and Siva {to} to the left and right most cards of your hand. When they meet both become Radiant."
+      "text": "Add an iKwzki and Shockwave447, Shadiris and xxFreshJack, or Tylannt and Siva 1 to the left and right most cards of your hand. When they meet both become Radiant."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add a Kwzki and Shockwave{shadiris}, Shadiris and xxFreshJack, or Tylannt and Siva {to} to the left and right most cards of your hand. When they meet both become Radiant and cost (0)."
+      "text": "Add an iKwzki and Shockwave447, Shadiris and xxFreshJack, or Tylannt and Siva 1 to the left and right most cards of your hand. When they meet both become Radiant and cost (0)."
     },
-    "params": [
-      {
-        "key": "shadiris",
-        "base": 447,
-        "radiant": 447,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "to",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "refs": [
       "stinkyscape-006",
+      "stinkyscape-087",
       "stinkyscape-109",
+      "stinkyscape-110",
+      "stinkyscape-111",
       "stinkyscapeplus-165"
     ]
   },

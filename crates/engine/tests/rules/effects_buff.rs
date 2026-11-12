@@ -708,7 +708,8 @@ mod r21_random_keywords_m3_t1 {
         );
         let mut b = Bench::new(&state);
 
-        // Drawn dry on a keywordless unit: all fourteen, Taunt among them, never Charge or Indestructible.
+        // Drawn dry on a keywordless unit: all fifteen (R3551004: Frenzy the fifteenth), Taunt among them,
+        // never Charge or Indestructible.
         run(
             &mut b,
             &mut state,
@@ -720,7 +721,7 @@ mod r21_random_keywords_m3_t1 {
         );
 
         let kinds = granted_kinds(&b.events);
-        assert_eq!(kinds.len(), 14);
+        assert_eq!(kinds.len(), 15);
         assert_eq!(kinds.len(), RANDOM_KEYWORD_POOL.len());
         assert_eq!(kinds.iter().collect::<IndexSet<_>>().len(), kinds.len());
         assert!(kinds.contains(&"Taunt".to_string()));

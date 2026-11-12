@@ -653,31 +653,31 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (c047_taotie::ID, "v0.5.11r", c047_taotie::script_v0_5_11o),
     (
         c109_xxfreshjack::ID,
-        "v0.5.13g",
+        "v0.5.12ap",
         c109_xxfreshjack::script_v0_5_13g,
     ),
     // #3551's S01 (R3551000-R3551004): the last scripts before the Stinkyscape+ patch.
     (
         c098_heroic_power::ID,
-        "v0.5.13g",
+        "v0.5.12ap",
         c098_heroic_power::script_v0_5_13g,
     ),
     (
         c054_money_machine::ID,
-        "v0.5.13g",
+        "v0.5.12ap",
         c054_money_machine::script_v0_5_13g,
     ),
-    (c049_jay_fungus::ID, "v0.5.13g", c049_jay_fungus::script_v0_5_13g),
-    (c042_eugenics::ID, "v0.5.13g", c042_eugenics::script_v0_5_13g),
+    (c049_jay_fungus::ID, "v0.5.12ap", c049_jay_fungus::script_v0_5_13g),
+    (c042_eugenics::ID, "v0.5.12ap", c042_eugenics::script_v0_5_13g),
     (
         c051_jlockeeds_j15_fighter::ID,
-        "v0.5.13g",
+        "v0.5.12ap",
         c051_jlockeeds_j15_fighter::script_v0_5_13g,
     ),
-    (c094_tmack_trav::ID, "v0.5.13g", c094_tmack_trav::script_v0_5_13g),
+    (c094_tmack_trav::ID, "v0.5.12ap", c094_tmack_trav::script_v0_5_13g),
     (
         c073_1_classic_golem::ID,
-        "v0.5.13g",
+        "v0.5.12ap",
         c073_1_classic_golem::script_v0_5_13g,
     ),
 ];
