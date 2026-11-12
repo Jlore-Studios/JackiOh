@@ -15534,6 +15534,8 @@
       }
     },
     "3780": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-12T14:22:49Z",
@@ -15547,8 +15549,11 @@
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -30; sed -n 30,125p apps/edge/src/index.ts\"}\n- Bash: {\"command\": \"cat > /tmp/edit.py <<'EOF'\\np='apps/edge/src/index.ts'\\ns=open(p).read()\\ns=s.replace('''const RETIRE_POLL_MS = 500;\\n''','''const RETIRE_POLL_MS = 500;\\n/** The least time between two i\u2026\n- Bash: {\"command\": \"sed -n 60,100p apps/edge/src/index.test.ts\"}\n- Bash: {\"command\": \"cat > /tmp/edit2.py <<'EOF'\\np='apps/edge/src/index.test.ts'\\ns=open(p).read()\\ns=s.replace('import worker, { Server, START_WAIT_MS, type Env }','import worker, { IMAGE_CHECK_RETRY_MS, I\u2026\n- Bash: {\"command\": \"pnpm --dir apps/edge exec tsc --noEmit -p . ; echo tsc=$?; pnpm exec eslint apps/edge; echo eslint=$?; git status --short; printf '\\\\n## State\\\\nDone: index.ts, index.test.ts, README imp\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the Worker asks again after a failed version check, and a failed retire of the old server no longer fails every request\"} --> The Worker now asks again after a failed version check. It bounds the `/healthz` fetch with a timeout and logs a failed retire \u2026"
       },
       "issue": 3771,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-12T15:15:03Z",
         "from_run": "43236578875",
         "gates": [
           {
@@ -15640,7 +15645,11 @@
         "source": "build",
         "until": "2026-11-12T15:41:44Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-12T15:11:44Z",
+      "run_id": "pending:363335c1-1794496447",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15659,6 +15668,9 @@
         "provider": "claude-6",
         "run": "43236578875"
       },
+      "started_at": "2026-11-12T15:15:03Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15672,9 +15684,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T15:13:47Z",
+    "at": "2026-11-12T15:15:03Z",
     "url": "",
-    "what": "review #3779 on claude-3"
+    "what": "review #3780 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-12T14:46:18Z",
