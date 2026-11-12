@@ -16622,6 +16622,11 @@
       "owner": "claude-1",
       "owner_since": "2026-11-12T03:08:00Z",
       "owner_why": "handed off from `claude-5`: `claude-5` 5-hour usage is 40%, too close to its 40% cap to start a long run (it starts under 35%); it resets at 2026-11-12T07:10:00Z",
+      "paused": {
+        "at": "2026-11-12T03:16:47Z",
+        "interrupt": "usage",
+        "provider": "claude-1"
+      },
       "pending_request": false,
       "planned_at": "2026-11-11T22:35:30Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -16630,7 +16635,7 @@
       "planned_tier": "strong",
       "provider": "claude-1",
       "queued_at": "2026-11-11T21:06:25Z",
-      "round_tier": "strong",
+      "round_tier": "",
       "run_id": "43146121928",
       "runs_on": "ubuntu-latest",
       "session": {
