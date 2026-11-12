@@ -36885,11 +36885,5 @@
     "issue": 2890,
     "pinned": true
   },
-  "usage_spool": {
-    "readings": [],
-    "runs": [
-      "2026-11-12T06:20:15Z,43161503653,claude-7,opus,build,3751,hard,built,,40.4,4,3051,147719,3.6149,43,84,,,91.6,claude-7,fresh,,1"
-    ]
-  },
   "version": 1
 }
