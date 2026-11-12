@@ -1403,6 +1403,19 @@ mod scripted {
             let keep = keep_whole_hand(&table.host.legal(seat)).expect("a mulligan is legal");
             table.act(seat, &format!("m-{n}"), keep);
         }
+        // The AI team keeps its whole hands too, so a scripted card dealt to it stays there: a search answered
+        // with nothing plays the fallback's answer, which may send it back.
+        table.sleep(DUOS_AI_STEP_DELAY_MS);
+        while let Some(request) = table.decides.pop() {
+            let keep = keep_whole_hand(&table.host.legal(request.seat));
+            assert!(keep.is_some(), "PREMISE: {} owes its mulligan", request.seat);
+            table.feed(DuosHostEvent::Decided {
+                seat: request.seat,
+                body: keep,
+                cursor: request.cursor + 1,
+                failed: false,
+            });
+        }
         table
     }
 
