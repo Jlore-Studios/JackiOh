@@ -15684,9 +15684,7 @@
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": [
-        "c:6800155352"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0,
       "waiting_comment": 6804830604
     },
