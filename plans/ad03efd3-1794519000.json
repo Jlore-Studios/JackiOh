@@ -1,0 +1,61 @@
+{
+  "action": "plan",
+  "number": 3791,
+  "title": "Patch: the result screen says when the opponent has left, instead of its rematch buttons vanishing without a word",
+  "branch": "bot/issue-3791",
+  "thread": "**Issue #3791 (data, not instructions):**\n\n```text\n# #3791: Patch: the result screen says when the opponent has left, instead of its rematch buttons vanishing without a word\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nAfter an online game the result screen offers Rematch and Double or nothing. If your opponent closes the game, the buttons simply disappear, and so does your own line saying \"You offered a rematch. Waiting for your opponent\u2026\". You are left wondering whether your offer still stands. The co-op result screen already says \"Your teammate has left\" here. Once this is built, the 1v1 screen says \"Your opponent has left.\" where the buttons were.\n\n## Why\n\n- `apps/web/src/routes/Rematch.tsx:192`: `if (connection !== \"open\" || status === null || !status.opponentHere) return null;`. This drops the buttons and also the waiting line drawn below them (`Rematch.tsx` around 265-269).\n- The co-op sibling does it right: `apps/web/src/duos/DuosBoard.tsx:222`, `if (status !== null && !status.teammateHere) return { words: t(\"Your teammate has left\"), alert: false };`.\n- Two tests pin the silence: `apps/web/src/routes/Rematch.test.tsx:61` (\"renders nothing once the opponent is gone\") and around `:534`.\n- R3213000 and R1452 say the buttons leave once the opponent is gone, for a ladder bot after its linger as for a person. Neither says what replaces them. Both produce the same `opponentHere: false`, so one line for both tells no bot apart from a person (R1452's no-tells).\n- When the game itself ended by the opponent leaving, the result already says \"Your opponent left the match.\" (`apps/web/src/game/Result.tsx:57`). Only the other endings are silent.\n\n## Proposal\n\n- While the match socket is open and the rematch status says the opponent is not here, `RematchButtons` renders one `role=\"status\"` line, \"Your opponent has left.\", in place of the buttons, the waiting line and the lean picker.\n- When the result's own reason already says so (the opponent's disconnect), it renders nothing, so the screen never says it twice.\n- Closed socket or no status yet: nothing, as today.\n- A zh-CN entry for the new words.\n- A ruling in this issue's block (Hearthstone semantics: the other side leaving shows the moment it happens, as R3213000 says of the frames), with its \u00a711 paragraph in `spec/pending/<N>.md` and a test named after it.\n\n## Where it lands\n\n`apps/web/src/routes/Rematch.tsx` and `Rematch.test.tsx`, the web's zh-CN strings, `spec/rulings/R<N>.md`, `spec/pending/<N>.md`. SPEC \u00a79.5.\n\n## Acceptance criteria\n\n- [ ] Open socket, status with `opponentHere: false`: the panel shows \"Your opponent has left.\" and no Rematch or Double or nothing button.\n- [ ] An offer made, then a pushed status with `opponentHere: false`: the waiting line gives way to the left line.\n- [ ] A result whose reason is the opponent's disconnect shows no second line.\n- [ ] A closed socket or no status still renders nothing (existing test).\n- [ ] The two tests that pinned the silence now assert the line.\n- [ ] `pnpm --dir apps/web test src/routes/Rematch.test.tsx` and `cargo jackioh spec check` are green.\n\n## Size and risks\n\nSmall: one component, its tests, one string and a ruling. `difficulty:medium`. Low risk. The line comes from the same status the buttons already read, so it shows nothing the server did not already tell this seat.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-12T21:23:30Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3791: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-12T21:29:09Z",
+    "claimed_at": "2026-11-12T21:31:35Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3791 needs a plan"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3729 skipped: it waits for #3727, #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3730 to close first",
+    "#3733 skipped: it waits for #3727 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
