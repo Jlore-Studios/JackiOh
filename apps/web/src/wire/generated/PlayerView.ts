@@ -3,6 +3,7 @@ import type { CardDef } from "./CardDef";
 import type { DrawOfferView } from "./DrawOfferView";
 import type { GameEvent } from "./GameEvent";
 import type { GameResult } from "./GameResult";
+import type { HiddenTargetView } from "./HiddenTargetView";
 import type { MarketplaceView } from "./MarketplaceView";
 import type { MulliganView } from "./MulliganView";
 import type { PendingView } from "./PendingView";
@@ -76,4 +77,12 @@ trades?: TradesView,
  * its prices, which are public, and the viewer's own stock and sales (CLAUDE.md rule 7). Absent
  * while it is closed, so a game without one sends the view it did before.
  */
-marketplace?: MarketplaceView, };
+marketplace?: MarketplaceView, 
+/**
+ * R3777001: each card the viewer may not read that one of their listed actions names as a declared
+ * target (an enemy face-down backrow card, #36's), with the zone its back lies in, so a client can
+ * light and click that zone; the id is the one `legalActions` already sends (R177), and which
+ * targets are offered stays its answer. Only ever the viewer's own (CLAUDE.md rule 7). Absent when
+ * none, so every other view is what it was.
+ */
+hiddenTargets?: Array<HiddenTargetView>, };

@@ -24,7 +24,8 @@
 //!   - R1074000: a Duos pass (B20) takes a hand card out unseen, so in a duel a card in no pile reads to the
 //!     player whose hand the events last show it in, else to all if a token (R11), else nobody.
 //!   - R177: a prompt option offering a face-down card names it by id only (and its zone, R821000); an
-//!     unreadable card's cost, buff amounts and Replace go with its identity.
+//!     unreadable card's cost, buff amounts and Replace go with its identity. R3777001: so does
+//!     `hiddenTargets`, for a face-down card one of the viewer's listed actions declares as a target.
 //!   - R169: the player modifiers (§10.1 `mods`) travel on both seats as `{ id, label }`.
 //!   - R434: once the game is over the opponent's hand travels in full; the rest stays hidden.
 //!   - R437: a mark (#50's pending steal) rides every view of the card in both seats, a back included.
@@ -71,12 +72,13 @@ use crate::subsystems::pareto::pareto_hint_ids;
 use crate::subsystems::quests::quest_view_of;
 use crate::turn::standing_draw_offer;
 use crate::wire::{
-    AnimatedView, BackrowCounters, BackrowView, CardDef, CardMark, CardType, CardView, CopiedTextView,
-    CreditView, DrawOfferView, FaceDownBackrowView, GameEvent, GameEventType, GameResult, GlitchOutcome,
-    HandView, HeroPowerView, HeroView, Keyword, KeywordKind, LibraryOverflowOutcome, ManaView, ModifierView,
-    MulliganView, PLAYER_IDS, PendingElsewhereView, PendingOption, PendingPromptView, PendingView, PlayerId,
-    PlayerView, PreviewValue, PromptKind, PublicBackrowView, Row, RowFlags, Selection, SideView,
-    TuningChange, UnitView, Zone, ZoneName, opponent_of,
+    ActionBody, AnimatedView, BackrowCounters, BackrowView, CardDef, CardMark, CardType, CardView,
+    CopiedTextView, CreditView, DrawOfferView, FaceDownBackrowView, GameEvent, GameEventType, GameResult,
+    GlitchOutcome, HandView, HeroPowerView, HeroView, HiddenTargetView, Keyword, KeywordKind,
+    LibraryOverflowOutcome, ManaView, ModifierView, MulliganView, PLAYER_IDS, PendingElsewhereView,
+    PendingOption, PendingPromptView, PendingView, PlayerId, PlayerView, PreviewValue, PromptKind,
+    PublicBackrowView, Row, RowFlags, Selection, SideView, TuningChange, UnitView, Zone, ZoneName, ZoneRef,
+    opponent_of,
 };
 use crate::zones::{
     beneath_at, carried_at, carried_units_of, home_of, is_reserved, is_standing_unit, slot_of, slots_of,
@@ -714,6 +716,52 @@ fn with_trade_reason(
         view.trade_reason = Some(refusal.message);
     }
     view
+}
+
+/// R3777001: each card the viewer may not read (`is_face_down_to`) that one of their listed plays,
+/// activations or Heroic Powers names as a declared target, by the bare id `legal_actions` already
+/// offers it by (R177, R227), with the zone its back lies in, as a prompt option names one (R821000).
+/// `None` when there is none, and without asking `legal_actions` when no card on the field is face-down
+/// to the viewer.
+fn hidden_targets_of(state: &GameState, viewer: PlayerId) -> Option<Vec<HiddenTargetView>> {
+    let any_face_down = PLAYER_IDS.iter().any(|&side| {
+        slots_of(side, Row::Backrow)
+            .into_iter()
+            .filter_map(|slot| crate::zones::card_at(state, slot))
+            .any(|card| is_face_down_to(state, card, viewer))
+    });
+    if !any_face_down {
+        return None;
+    }
+    let mut out: Vec<HiddenTargetView> = Vec::new();
+    for action in crate::reduce::legal_actions(state, viewer) {
+        let (ActionBody::Play { targets, .. }
+        | ActionBody::Activate { targets, .. }
+        | ActionBody::ActivatePower { targets, .. }) = &action
+        else {
+            continue;
+        };
+        for selection in targets.as_deref().unwrap_or(&[]) {
+            let Selection::Instance { instance_id } = selection else {
+                continue;
+            };
+            if out.iter().any(|entry| entry.instance_id == *instance_id) {
+                continue;
+            }
+            let Some(card) = find_instance(state, instance_id) else {
+                continue;
+            };
+            if let Zone::Field { player, row, lane } = card.zone
+                && is_face_down_to(state, card, viewer)
+            {
+                out.push(HiddenTargetView {
+                    instance_id: instance_id.clone(),
+                    zone: ZoneRef { player, row, lane },
+                });
+            }
+        }
+    }
+    (!out.is_empty()).then_some(out)
 }
 
 /// R2574000: whether the viewer's own hand card may be Traded (`trade::is_tradable`),
@@ -2874,6 +2922,8 @@ pub fn view_for_with_clock(state: &GameState, player_id: PlayerId, clock_ms: Opt
         trades: trades_view(state, player_id),
         // R1853000, R1853003: the Marketplace as the viewer reads it, once it is open.
         marketplace: crate::marketplace::marketplace_view(state, player_id),
+        // R3777001: the zones of the face-down cards the viewer's listed actions target.
+        hidden_targets: hidden_targets_of(state, player_id),
     };
     let defs = match_defs_in(state, &view);
     if !defs.is_empty() {

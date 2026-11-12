@@ -13,7 +13,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use crate::state::{DuosLife, Slumber, StarshipMemory};
 use crate::wire::actions::RevealAt;
 use crate::wire::catalog_types::{
-    CardDef, CardElement, CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row, Tag,
+    CardDef, CardElement, CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row, Tag, ZoneRef,
 };
 use crate::wire::craft::CraftRecipe;
 use crate::wire::events::{GameEvent, GameResult, Position, SecretChoice, StarscapeReward};
@@ -858,6 +858,21 @@ pub struct FaceDownBackrowView {
     pub marks: Option<Vec<CardMark>>,
 }
 
+/// R3777001: a card the viewer may not read (an enemy face-down backrow card) that one of their listed
+/// actions names as a declared target, by the id `legalActions` already carries (R177, R227), with the
+/// zone its back lies in, which is public (R821000's position). Nothing else of the card.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct HiddenTargetView {
+    pub instance_id: String,
+    pub zone: ZoneRef,
+}
+
 /// A backrow zone: a public card or a face-down trap (§3, §10.8); an empty zone is `None` where it is
 /// held. A public card names its `owner` and `controller` like a `UnitView` does, because R33 keys
 /// readability on the controller: after a steal (#36 radiant, #49), a board swap (#87) or a rotation
@@ -1591,6 +1606,14 @@ pub struct PlayerView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub marketplace: Option<MarketplaceView>,
+    /// R3777001: each card the viewer may not read that one of their listed actions names as a declared
+    /// target (an enemy face-down backrow card, #36's), with the zone its back lies in, so a client can
+    /// light and click that zone; the id is the one `legalActions` already sends (R177), and which
+    /// targets are offered stays its answer. Only ever the viewer's own (CLAUDE.md rule 7). Absent when
+    /// none, so every other view is what it was.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hidden_targets: Option<Vec<HiddenTargetView>>,
 }
 
 #[cfg(test)]

@@ -47,6 +47,7 @@ import type {
 
 import {
   IDLE,
+  hiddenTargetZone,
   highlightFor,
   isBuilding,
   isPlaguePlacementPrompt,
@@ -295,7 +296,11 @@ function whereOf(view: PlayerView, instanceId: string): string | null {
     if (side.graveyard.some((card) => card.instanceId === instanceId)) return yours ? t("Your graveyard") : t("Enemy graveyard");
     if (side.exile.some((card) => card.instanceId === instanceId)) return yours ? t("Your exile") : t("Enemy exile");
   }
-  return null;
+  // R3777001: a face-down target the viewer may not read is placed by the zone its back lies in.
+  const hidden = hiddenTargetZone(view, instanceId);
+  if (hidden === null) return null;
+  const lane = String(hidden.lane);
+  return hidden.side === "you" ? t("Your backrow, lane {lane}", { lane }) : t("Enemy backrow, lane {lane}", { lane });
 }
 
 function itemForInstance(view: PlayerView, instanceId: string, fallback: string): PickerItem {
@@ -319,8 +324,14 @@ function rowName(row: string): string {
 
 function selectionLabel(view: PlayerView, selection: Selection): string {
   switch (selection.pick) {
-    case "instance":
-      return cardRefFor(view, selection.instanceId)?.defId ?? selection.instanceId;
+    case "instance": {
+      const defId = cardRefFor(view, selection.instanceId)?.defId;
+      if (defId !== undefined) return defId;
+      // R3777001: a face-down target names no card: it reads as a back, told apart by where it lies
+      // (as `ListOption` joins a card's name and its place).
+      const where = hiddenTargetZone(view, selection.instanceId) === null ? null : whereOf(view, selection.instanceId);
+      return where === null ? selection.instanceId : `${t("Face-down card")} — ${where}`;
+    }
     case "hero":
       return sideOf(view, selection.player) === "you" ? t("Your hero") : t("Enemy hero");
     case "zone": {
