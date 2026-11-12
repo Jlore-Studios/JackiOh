@@ -73,7 +73,7 @@ fn attacks_v0_5_12ap(ctx: &mut EffectContext<'_>) -> Vec<String> {
 }
 
 fn jungle(transfer: bool, rolled: bool) -> Script {
-    let cards: Arc<dyn Fn(&mut EffectContext<'_>) -> Vec<String> + Send + Sync> =
+    let cards: ForEachCardCards =
         if rolled { Arc::new(attacks_v0_5_12ap) } else { Arc::new(attacks) };
     Script {
         end_of_turn: Some(hook(move |_ctx| {
