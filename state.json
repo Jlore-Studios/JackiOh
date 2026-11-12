@@ -17262,20 +17262,19 @@
       "interruptions": 0,
       "issue": 3728,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "On a phone the deck builder's status toast (`.db-deck-status`, the message after each add or removal) is now completely hidden behind the shell's new tab bar.",
-          "evidence": "`.db-deck-status` is `position: fixed; z-index: 30; bottom: max(16px, env(safe-area-inset-bottom))`, and no rule at 600 px or under moves it (its other rules are at 761+ px and, in workshop.css, at 1277+ px). DeckEditor.tsx:582 renders it inline on /decks, which is inside the shell. The new tab bar in shell/menu-shell.css (the `@media (max-width: 600px)` `.menu-shell__nav` rule) is `position: fixed; inset: auto 0 0; z-index: var(--z-banner)` (35, surfaces.css:32) and `height: var(--shell-bottom)`, which is 64 px plus the bottom inset. A toast about 35 px tall, 16 px off the bottom, sits wholly under a bar 64 px tall drawn above it. No spec checks this (46 and 47 measure size and fit, and 09's DECK_STATUS checks read text, not visibility). Fix: inside the shell, lift it by the bar's height, e.g. `bottom: calc(var(--shell-bottom, 0px) + max(16px, env(safe-area-inset-bottom)))`. `--shell-bottom` is inherited, because the toast is not portalled.",
-          "severity": "blocking",
-          "where": "apps/web/src/game/deckbuilder/deckbuilder.css:541"
-        }
-      ],
+      "last_findings": [],
       "live": "revising",
+      "paused": {
+        "at": "2026-11-12T03:17:26Z",
+        "interrupt": "usage",
+        "provider": "claude-1"
+      },
       "pending_request": false,
       "provider": "claude-1",
       "queued_at": "2026-11-12T02:53:53Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "",
       "run_id": "43146013769",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -17300,6 +17299,7 @@
       "started_at": "2026-11-12T03:07:04Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [],
         "builder": "claude",
