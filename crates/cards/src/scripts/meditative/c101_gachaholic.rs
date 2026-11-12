@@ -70,8 +70,9 @@ mod tests {
     /// Keymaster Keenus, R781004, nor Core #42 Selective Breeding, R831014); Stinkyscape's (#1884) #77 Yuma, #112 Job
     /// Application, #145 Fortify Flesh, #153 Stimmycheck, #166 and #167 (the Scanning Probes) and #53, #57
     /// and #61 (the Flaks, whose Radiant faces print Lucky 1, #2521); Training Grounds' #49 Reoccurring
-    /// Dream (#2204), the snapshot of Core #23.
-    const SHIPPED_POOL: [&str; 21] = [
+    /// Dream (#2204), the snapshot of Core #23; and Stinkyscape+'s #20 B-Patch (it flips a coin), #25 Snom
+    /// Bunny and #55 Thorium Reactor (whose Radiant faces print Lucky 1, #3573).
+    const SHIPPED_POOL: [&str; 24] = [
         "core-004",
         "core-023",
         "classic-065",
@@ -93,6 +94,9 @@ mod tests {
         "stinkyscape-166",
         "stinkyscape-167",
         "traininggrounds-049",
+        "stinkyscapeplus-020",
+        "stinkyscapeplus-025",
+        "stinkyscapeplus-055",
     ];
 
     /// p1 holds Gachaholic (Radiant on `radiant`) and `others` fillers.

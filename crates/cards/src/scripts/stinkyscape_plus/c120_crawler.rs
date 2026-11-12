@@ -133,7 +133,6 @@ mod tests {
     const FILLER: &str = "core-005";
     const BODY: &str = "stand-in (1) 1/10";
     const BIG: &str = "stand-in (1) 9/9";
-    const SPELL: &str = "stand-in (0) Spell";
 
     fn hand(radiant: bool, extra_hand: Vec<Value>, p2_extra: Value) -> Scenario {
         let mut hand = vec![json!({ "def": ID, "radiant": radiant })];
@@ -170,10 +169,17 @@ mod tests {
 
         #[test]
         fn r3560000_a_summon_is_an_arrival() {
-            let mut s = hand(false, vec![json!(SPELL), json!(FILLER)], json!({}));
-            let before = toxopids(&s).len();
-            crate::run_as(&mut s, summon(json_as(json!({ "defId": ID }))), P1);
-            assert_eq!(toxopids(&s).len(), before + 1);
+            // S+ #136 Crawler Assembly Line's Activate summons a Crawler: an arrival like a play's, which
+            // `run_as` (an effect with no step after it to dispatch the event) would not show.
+            let mut s = weapon_board(
+                "s120-summon",
+                json!({ "backrow": ["stinkyscapeplus-136"], "library": filler(4) }),
+                json!({ "library": filler(4) }),
+            );
+            assert_eq!(toxopids(&s).len(), 0);
+            s.activate("stinkyscapeplus-136", json!({}));
+            assert_eq!(s.unit_at(P1, 1).def_id, ID, "the Assembly Line summoned one");
+            assert_eq!(toxopids(&s).len(), 1);
         }
 
         #[test]
@@ -199,7 +205,7 @@ mod tests {
                 .collect();
             assert!(offered.contains(&id));
             let mana = s.state().players[P1].mana.current;
-            let action = json!({ "type": "play", "playerId": "p1", "instanceId": id, "zone": 2, "nonce": "s120-grave-1" });
+            let action = json!({ "type": "play", "playerId": "p1", "instanceId": id, "zone": { "row": "units", "lane": 2 }, "nonce": "s120-grave-1" });
             let result = reduce(s.state(), &json_as::<Action>(action));
             assert!(result.error.is_none(), "{:?}", result.error);
             assert_eq!(result.state.players[P1].mana.current, mana - 1);
@@ -247,7 +253,8 @@ mod tests {
             // The big Unit strikes back: the Crawler remembers the striker across turns.
             s.attack(big.as_str(), crawler.as_str());
             s.expect_in_zone(ID, "graveyard");
-            assert_eq!(s.stats(big.as_str()).health, 9 - 2);
+            // The Crawler strikes back for its 1, and its Death hits the Unit it damaged for 2.
+            assert_eq!(s.stats(big.as_str()).health, 9 - 1 - 2);
         }
 
         #[test]

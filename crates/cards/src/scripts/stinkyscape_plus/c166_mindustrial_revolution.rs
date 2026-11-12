@@ -224,7 +224,10 @@ mod tests {
                 .iter()
                 .filter(|event| matches!(event, GameEvent::AddedToHand { player: P1, def_id, .. } if in_pool(def_id)))
                 .count();
-            assert_eq!(added, CARDS as usize);
+            // The revolution adds its one card; a Toxopid among the Mindustrial cards adds a Crawler on
+            // its first arrival in a hand (R3560000), a chain that is no part of the count.
+            assert!(added >= CARDS as usize, "{added} added");
+            assert!(added <= CARDS as usize + 1, "{added} added: one card and at most one chained");
         }
 
         #[test]

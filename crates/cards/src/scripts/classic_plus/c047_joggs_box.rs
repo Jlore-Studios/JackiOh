@@ -73,15 +73,16 @@ mod tests {
     const BOX: &str = "classicplus-047";
     const FILLER: &str = "core-005";
     const VANILLA: &str = "core-008";
-    /// Every Call to Chaos edition (R380): Core #95, C+ #73, M #95, Stinkyscape #150 and #151 (#1884)
-    /// and Training Grounds #39 (#2204, R2200004).
-    const CALLS: [&str; 6] = [
+    /// Every Call to Chaos edition (R380): Core #95, C+ #73, M #95, Stinkyscape #150 and #151 (#1884),
+    /// Training Grounds #39 (#2204, R2200004) and Stinkyscape+ #142 (#3573).
+    const CALLS: [&str; 7] = [
         "core-095",
         "classicplus-073",
         "meditative-095",
         "stinkyscape-150",
         "stinkyscape-151",
         "traininggrounds-039",
+        "stinkyscapeplus-142",
     ];
 
     #[derive(Clone, Debug)]
@@ -311,7 +312,7 @@ mod tests {
             assert!(!seen.contains(BOX));
             assert!(defs.iter().all(|entry| entry.type_ == CardType::Spell && !entry.token));
             let sets: IndexSet<SetName> = defs.iter().map(|entry| entry.set).collect();
-            // Spells of every set that ships, Meditative+ (#1187) among them.
+            // Spells of every set that ships, Meditative+ (#1187) and Stinkyscape+ (#3573) among them.
             assert_eq!(
                 sets,
                 IndexSet::from([
@@ -321,6 +322,7 @@ mod tests {
                     SetName::Meditative,
                     SetName::MeditativePlus,
                     SetName::Stinkyscape,
+                    SetName::StinkyscapePlus,
                     SetName::TrainingGrounds,
                 ])
             );

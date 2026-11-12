@@ -178,20 +178,22 @@ mod tests {
             assert!(checked);
         }
 
+        /// R3563000: the Units of one play are different cards while the pool lasts (R60's repeats no longer
+        /// stand for a card an effect generates), though each is its own `summonRandom`: they share the run's tally.
         #[test]
-        fn r60_repeats_are_allowed_some_seed_summons_the_same_unit_twice() {
+        fn r3563000_no_seed_summons_the_same_unit_twice_while_the_pool_lasts() {
             crate::register_all();
-            let mut twice = false;
-            let mut i = 0;
-            while i < 200 && !twice {
+            let pool =
+                jackioh_engine::catalog::query(&json_as(json!({ "type": "Unit", "cost": 1, "rarity": "Common" })));
+            assert!(pool.len() > 2, "the pool outlasts the two picks");
+            for i in 0..200 {
                 let seed = format!("pear-twice-{i}");
-                i += 1;
                 let mut s = pear(false, Some(&seed), None);
                 s.play(PEAR, json!({}));
                 let defs: Vec<String> = summoned(&s).iter().map(|id| s.card(id).def_id.clone()).collect();
-                twice = defs.len() == 2 && defs[0] == defs[1];
+                assert_eq!(defs.len(), 2, "{seed}");
+                assert_ne!(defs[0], defs[1], "{seed}");
             }
-            assert!(twice);
         }
 
         #[test]

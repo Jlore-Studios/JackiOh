@@ -233,14 +233,15 @@ mod tests {
                 json!({ "hand": [{ "def": ID, "radiant": radiant }], "library": filler(4) }),
                 json!({ "library": filler(4) }),
             );
-            // The opening deal already arrived it once: no second Crawler on replay.
-            let before = crawler_count(&s);
-            assert_eq!(before, 1, "radiant {radiant}: the deal arrived it");
-            crate::run_as(
-                &mut s,
-                jackioh_engine::effects::add_to_hand(json_as(json!({ "defId": ID, "radiant": radiant }))),
-                P1,
-            );
+            // A scenario's hand is set up, not dealt: it arrives nothing, so no Crawler yet.
+            assert_eq!(crawler_count(&s), 0, "radiant {radiant}: a set-up hand is no arrival");
+            let add = || {
+                jackioh_engine::effects::add_to_hand(json_as(json!({ "defId": ID, "radiant": radiant })))
+            };
+            // The first arrival adds the Crawler; a second Toxopid adds none: once per game.
+            crate::run_as(&mut s, add(), P1);
+            assert_eq!(crawler_count(&s), 1, "radiant {radiant}: its first arrival adds one");
+            crate::run_as(&mut s, add(), P1);
             assert_eq!(crawler_count(&s), 1, "radiant {radiant}: once per game");
         }
     }
@@ -270,19 +271,24 @@ mod tests {
             }),
             json!({ "field": [VANILLA], "library": filler(4) }),
         );
+        // The enemy's turn, on which its Unit attacks; the Float is read once it has begun.
+        crate::next_turn_of(&mut s, P2);
+        let in_deck = |s: &Scenario| {
+            s.pile(P1, "library")
+                .into_iter()
+                .find(|card| card.def_id == ID)
+                .expect("in deck")
+        };
         let hand_before = play_cost(s.state(), s.card(ID));
+        // The deck copy has not Floated (only the hand's trigger does), so it costs what it printed.
+        let deck_before = play_cost(s.state(), &in_deck(&s));
         let killer = s.unit_at(P2, 1).id;
         let victim = s.unit_at(P1, 1).id;
         s.attack(killer.as_str(), victim.as_str());
         let hand_after = play_cost(s.state(), s.card(ID));
         assert_eq!(hand_after, (hand_before - 1).max(0));
         // The deck copy cheapened too.
-        let deck = s
-            .pile(P1, "library")
-            .into_iter()
-            .find(|card| card.def_id == ID)
-            .expect("in deck");
-        assert_eq!(play_cost(s.state(), &deck), (hand_before - 1).max(0));
+        assert_eq!(play_cost(s.state(), &in_deck(&s)), (deck_before - 1).max(0));
     }
 
     #[test]
@@ -308,13 +314,14 @@ mod tests {
         );
         s.play(ID, json!({ "zone": 1 }));
         // Three prompts, one per Leg.
-        for (n, lane) in [1, 2, 3].into_iter().enumerate() {
+        // Its own zone (lane 1) is no offer, so the Legs go to lanes 2, 3 and 4.
+        for (n, lane) in [2, 3, 4].into_iter().enumerate() {
             assert!(s.state().pending.is_some(), "prompt {n}");
             s.answer(json!([format!("own-{lane}")]));
         }
         assert!(s.state().pending.is_none());
         // Three Legs stand where chosen.
-        for lane in [1, 2, 3] {
+        for lane in [2, 3, 4] {
             let leg = s.unit(P1, lane).expect("a Leg there");
             assert_eq!(leg.def_id, LEG);
         }
@@ -347,7 +354,12 @@ mod tests {
         );
         s.play(ID, json!({ "zone": 1 }));
         let pending = s.state().pending.clone().expect("a Leg prompt");
-        let offered: Vec<String> = pending.options.iter().map(|option| option.key.clone()).collect();
+        // A mode's key is `mode:<zone>`.
+        let offered: Vec<String> = pending
+            .options
+            .iter()
+            .map(|option| option.key.trim_start_matches("mode:").to_string())
+            .collect();
         assert!(!offered.contains(&"own-1".to_string()), "its own zone");
         assert!(offered.contains(&"own-2".to_string()));
     }
@@ -365,7 +377,7 @@ mod tests {
             pending
                 .options
                 .iter()
-                .all(|option| option.key.starts_with("enemy-")),
+                .all(|option| option.key.trim_start_matches("mode:").starts_with("enemy-")),
             "the opponent's field only"
         );
         for lane in 1..=4 {
@@ -443,7 +455,8 @@ mod tests {
             let mut s = weapon_board(
                 "s121-toxic",
                 json!({ "field": [{ "def": ID, "radiant": radiant }] }),
-                json!({ "field": [VANILLA], "library": filler(4) }),
+                // A sturdy enemy: Toxic 4 ticks at its owner's turn start and would kill a 4/4.
+                json!({ "field": ["stand-in (1) 10/10 R20/20"], "library": filler(4) }),
             );
             s.end_turn();
             let enemy = s.unit_at(P2, 1).id;

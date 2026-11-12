@@ -498,6 +498,13 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         if set_ships(SetName::TrainingGrounds) { n } else { 0 }
     }
 
+    /// R3535000: `n` once the Stinkyscape+ set ships (#3573), and nothing before. The counts are
+    /// its census (`catalog check`, SPEC §8.12), the tags it shares with the earlier sets
+    /// and the nine family tags 0087 admits (R3535002).
+    fn stinkyscape_plus(n: usize) -> usize {
+        if set_ships(SetName::StinkyscapePlus) { n } else { 0 }
+    }
+
     /// The harness's truncate: every table but `public.cards`, including the three that reference it.
     const TRUNCATE: &str = "truncate
   public.series, public.results, public.match_actions, public.tickets, public.matches,
@@ -607,6 +614,16 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
                 "stinkyscape-130",
             ]);
         }
+        // R3535000: the Stinkyscape+ set's four, #21, #26 and the AI cards T-AI-3 and T-AI-4, once it
+        // ships (its ids sort after the Stinkyscape set's).
+        if set_ships(SetName::StinkyscapePlus) {
+            expected.extend([
+                "stinkyscapeplus-021",
+                "stinkyscapeplus-026",
+                "stinkyscapeplus-t-ai-03",
+                "stinkyscapeplus-t-ai-04",
+            ]);
+        }
         // R2204000: the Training Grounds set's two, #45 and #48, the Legacy cards of Core #14 and #13 that
         // carry its tags (R2195003), once it ships.
         if set_ships(SetName::TrainingGrounds) {
@@ -628,24 +645,34 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
         }
         // Classic+ #7 The House is the 18th since #1704, and #39 Book Worm the 19th since #1828;
-        // the Stinkyscape set adds #40 Poison Capsule.
+        // the Stinkyscape set adds #40 Poison Capsule; the Stinkyscape+ set adds none.
         assert_eq!(tagged("Plague"), 19 + meditative(2) + stinkyscape(1));
         // #967: Meditative #49 is a Catalyst and its #49.1 a Prime, beside #45 and #91 and their tokens,
         // and Acclaimed is on #49 and #49.1 alone. Meditative+ adds a Catalyst and a Prime (#16, #16.1) and
-        // no Acclaimed; the Stinkyscape set #147 (a Catalyst), #147.1 (a Prime) and nine Acclaimed.
-        for (tag, theirs, plus, stinky) in [("Catalyst", 3, 1, 1), ("Prime", 3, 1, 1), ("Acclaimed", 2, 0, 9)]
-        {
+        // no Acclaimed; the Stinkyscape set #147 (a Catalyst), #147.1 (a Prime) and nine Acclaimed; the
+        // Stinkyscape+ set one Catalyst and three Acclaimed.
+        for (tag, theirs, plus, stinky, stinky_plus) in [
+            ("Catalyst", 3, 1, 1, 1),
+            ("Prime", 3, 1, 1, 0),
+            ("Acclaimed", 2, 0, 9, 3),
+        ] {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
             assert_eq!(
                 tagged(tag),
-                2 + meditative(theirs) + meditative_plus(plus) + stinkyscape(stinky),
+                2 + meditative(theirs)
+                    + meditative_plus(plus)
+                    + stinkyscape(stinky)
+                    + stinkyscape_plus(stinky_plus),
                 "{tag}"
             );
         }
         // R1411: Wincon, the tag 0030 admits, is on the Meditative set's #8 and #20 and the Stinkyscape
-        // set's #148 and #148.1.
+        // set's #148 and #148.1, and the Stinkyscape+ set's one.
         assert_eq!(rows_tagged("Wincon"), tagged("Wincon"));
-        assert_eq!(tagged("Wincon"), meditative(2) + stinkyscape(2));
+        assert_eq!(
+            tagged("Wincon"),
+            meditative(2) + stinkyscape(2) + stinkyscape_plus(1)
+        );
         // R1178000: Potion, the tag 0043 admits, is on the Meditative+ set's #11, #12 and #13, the
         // Living Potions, alone (a potion #16 or #16.1 crafts is a transient definition made in play,
         // R882, and no catalog entry).
@@ -655,47 +682,88 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         // (Otherworldly), its three tokens (Other-Origins) and Core #26 to #29 (Jelly Bean); and, once each
         // ships, on the Stinkyscape set's #4.1 to #4.6 (Terminus), two Quests (#7, #112), three
         // Otherworldlies (#10 to #12) and their nine spells (Other-Origins), and the Training Grounds set's
-        // #27 and #50, a Legacy card (R2195003).
-        for (tag, count, stinky, grounds) in [
-            ("Terminus", 1, 6, 0),
-            ("Quest", 1, 2, 0),
-            ("Otherworldly", 1, 3, 0),
-            ("Other-Origins", 3, 9, 0),
-            ("Jelly Bean", 4, 0, 2),
+        // #27 and #50, a Legacy card (R2195003), and the Stinkyscape+ set's nine Terminus (#77 to #80
+        // and #89, with the four `#Token`s) and two Jelly Beans.
+        for (tag, count, stinky, grounds, stinky_plus) in [
+            ("Terminus", 1, 6, 0, 9),
+            ("Quest", 1, 2, 0, 0),
+            ("Otherworldly", 1, 3, 0, 0),
+            ("Other-Origins", 3, 9, 0, 0),
+            ("Jelly Bean", 4, 0, 2, 2),
         ] {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
             assert_eq!(
                 tagged(tag),
-                count + stinkyscape(stinky) + training_grounds(grounds),
+                count + stinkyscape(stinky) + training_grounds(grounds) + stinkyscape_plus(stinky_plus),
                 "{tag}"
             );
         }
         // R1857000: the four tags 0065 admits, the Stinkyscape set's alone: #27 to #36 (Drone
         // Core), #50 to #61 and #140 to #143 (Weapon), #137.1 to #137.4 (War Doctrine) and #91 and
         // #92 (Swarm).
-        for (tag, count) in [
-            ("Drone Core", 10),
-            ("Weapon", 16),
-            ("War Doctrine", 4),
-            ("Swarm", 2),
+        // The Stinkyscape+ set adds nine Weapons and fifteen Swarm cards, and no Drone Core or War Doctrine.
+        for (tag, count, stinky_plus) in [
+            ("Drone Core", 10, 0),
+            ("Weapon", 16, 9),
+            ("War Doctrine", 4, 0),
+            ("Swarm", 2, 15),
         ] {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
-            assert_eq!(tagged(tag), stinkyscape(count), "{tag}");
+            assert_eq!(
+                tagged(tag),
+                stinkyscape(count) + stinkyscape_plus(stinky_plus),
+                "{tag}"
+            );
         }
         // R2511000: Legacy, the tag 0069 admits, is on the Training Grounds set's twenty Legacy
         // cards, #41 to #60, alone.
         assert_eq!(rows_tagged("Legacy"), tagged("Legacy"));
         assert_eq!(tagged("Legacy"), training_grounds(20));
         // #2521: the two tags 0070 admits, the Stinkyscape set's alone: its six Resource tokens and its
-        // five Faction cards, #95 and #159 to #162.
-        for (tag, count) in [("Resource", 6), ("Faction", 5)] {
+        // five Faction cards, #95 and #159 to #162; the Stinkyscape+ set adds the Warhero Token, a Resource.
+        for (tag, count, stinky_plus) in [("Resource", 6, 1), ("Faction", 5, 0)] {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
-            assert_eq!(tagged(tag), stinkyscape(count), "{tag}");
+            assert_eq!(
+                tagged(tag),
+                stinkyscape(count) + stinkyscape_plus(stinky_plus),
+                "{tag}"
+            );
         }
         // R3038000: Starship, the tag 0083 admits, is on the Stinkyscape set's one card, its Dormant
-        // Starship, alone.
+        // Starship, and, once it ships, the Stinkyscape+ set's ten Terminus Starships.
         assert_eq!(rows_tagged("Starship"), tagged("Starship"));
-        assert_eq!(tagged("Starship"), stinkyscape(1));
+        assert_eq!(tagged("Starship"), stinkyscape(1) + stinkyscape_plus(10));
+        // R3535002: the nine family tags 0087 admits, the Stinkyscape+ set's alone (counts from
+        // `catalog check`, SPEC §8.12).
+        for (tag, count) in [
+            ("Mindustrial", 78),
+            ("Mineral", 7),
+            ("Automa-α", 5),
+            ("Automa-β", 5),
+            ("Automa-γ", 3),
+            ("Automa-δ", 6),
+            ("Automa-Ω", 6),
+            ("Automa-ζ", 5),
+            ("Paperclip", 2),
+        ] {
+            assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
+            assert_eq!(tagged(tag), stinkyscape_plus(count), "{tag}");
+        }
+        // The shared tags the set adds to: Human 11, Felinor 1, KY 1, CN 2, Fruit 7, Call to Chaos 1,
+        // Quickdraw 2 and AI 7.
+        for (tag, theirs) in [
+            ("Human", 11),
+            ("Felinor", 1),
+            ("KY", 1),
+            ("CN", 2),
+            ("Fruit", 7),
+            ("Call to Chaos", 1),
+            ("Quickdraw", 2),
+            ("AI", 7),
+        ] {
+            assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
+            assert!(tagged(tag) >= stinkyscape_plus(theirs), "{tag}");
+        }
         // Each row's tags are the catalog's, so the check admitted them and nothing rewrote them.
         let by_id: IndexMap<&str, &Vec<String>> = entries
             .iter()

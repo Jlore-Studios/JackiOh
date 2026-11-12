@@ -187,8 +187,6 @@ mod tests {
         ];
         let mut deck: Vec<String> = others.iter().map(|id| id.to_string()).collect();
         deck.push(ID.to_string());
-        // A deck may hold a card of a set that has not shipped only while the set is previewed (R1420).
-        let _preview = preview_sets(&[SetName::StinkyscapePlus]);
         let created = create_game(&CreateGameOptions {
             seed: "s132-quickdraw".to_string(),
             decks: (deck.clone(), deck),

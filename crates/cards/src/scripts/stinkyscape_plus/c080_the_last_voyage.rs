@@ -154,7 +154,6 @@ pub(crate) fn assert_terminus(id: &str, pieces: &[&str], radiant: bool) {
     use jackioh_engine::effects::{StarshipBlueprint, SummonStarshipsArgs, summon_starships};
     use jackioh_engine::testkit::*;
 
-    crate::register_all();
     let mut s = crate::scenario(json!({ "seed": "terminus", "p1": {}, "p2": {} }));
     crate::run_as(
         &mut s,

@@ -141,6 +141,12 @@ mod tests {
         let first = s.unit_at(P2, 1).id;
         let second = s.unit_at(P2, 2).id;
         s.activate(ID, at(&first));
+        // The same turn it is the Activate's one use that refuses the second; the cooldown sits out the
+        // turns after it.
+        s.expect_refused_with(|s| s.activate(ID, at(&second)), "already been used");
+        // A cooldown of 3 sits out two of its user's turns (R3550003): the first two turns after the use
+        // are refused, and the third has it back.
+        next_turn_of(&mut s, P1);
         s.expect_refused_with(|s| s.activate(ID, at(&second)), "cooling down");
         next_turn_of(&mut s, P1);
         s.expect_refused_with(|s| s.activate(ID, at(&second)), "cooling down");

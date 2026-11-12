@@ -150,7 +150,6 @@ mod tests {
 
     #[test]
     fn r23_an_immutable_permanent_is_no_target() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [ID, FILLER], "mana": 10, "library": filler(4) },
             "p2": { "hand": [FILLER], "field": [{ "def": "core-066", "radiant": true }], "library": filler(4) },

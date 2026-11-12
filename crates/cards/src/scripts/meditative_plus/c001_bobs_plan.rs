@@ -177,6 +177,8 @@ mod tests {
     const LEG_DAY: &str = "meditativeplus-001-4";
     const ALTERAN_REACH: &str = "stinkyscape-148";
     const STAR_CHART: &str = "meditativeplus-001-5";
+    /// S+ #79 A Glimpse into the Endless Sea (#3573): a Wincon card `WINCON_PLANS` names no plan for.
+    const GLIMPSE: &str = "stinkyscapeplus-079";
 
     fn casting(seed: &str, radiant: bool, hand_extra: usize) -> Scenario {
         crate::register_all();
@@ -249,11 +251,14 @@ mod tests {
                     Some(SUMMIT) => vec![SUMMIT, BASE_CAMP],
                     Some(AESTHETICIZE) => vec![AESTHETICIZE, SPA_DAY],
                     Some(ALTERAN_REACH) => vec![ALTERAN_REACH, STAR_CHART],
+                    // S+ #79 names no plan, so it is added alone, and the three that have one are still
+                    // the ones this test waits for.
+                    Some(GLIMPSE) => vec![GLIMPSE],
                     other => panic!("seed {n} added {other:?}"),
                 };
                 assert_eq!(def_ids(&cards), expected, "seed {n}");
                 assert!(cards.iter().all(|card| !card.radiant), "seed {n}: the base face adds them base");
-                if !seen.contains(&expected[0].to_string()) {
+                if expected.len() == 2 && !seen.contains(&expected[0].to_string()) {
                     seen.push(expected[0].to_string());
                 }
                 if seen.len() == 3 {
@@ -392,15 +397,23 @@ mod tests {
 
         #[test]
         fn r1185000_r1563003_the_card_and_its_plan_are_both_radiant() {
+            let mut planned = 0;
             for n in 0..6 {
                 let mut s = casting(&format!("bobs-plan-radiant-{n}"), true, 1);
                 s.play(ID, json!({}));
                 answer_plan(&mut s, GARAGE_SALE);
                 let cards = added(&s);
-                assert_eq!(cards.len(), 2, "seed {n}");
-                assert!(plans_of(&cards[0].def_id).contains(&cards[1].def_id.as_str()));
+                // S+ #79 names no plan (#3573): it comes alone, and Radiant all the same.
+                if plans_of(&cards[0].def_id).is_empty() {
+                    assert_eq!(def_ids(&cards), vec![GLIMPSE], "seed {n}");
+                } else {
+                    planned += 1;
+                    assert_eq!(cards.len(), 2, "seed {n}");
+                    assert!(plans_of(&cards[0].def_id).contains(&cards[1].def_id.as_str()));
+                }
                 assert!(cards.iter().all(|card| card.radiant), "seed {n}");
             }
+            assert!(planned > 0, "a Wincon card with a plan came in 6 seeds");
         }
     }
 }

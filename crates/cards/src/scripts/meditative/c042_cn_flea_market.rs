@@ -66,11 +66,13 @@ mod tests {
     const FILLER: &str = "core-005";
 
     /// The AI generated cards of the sets that ship (§7, R1421): C+ T-AI-1 to T-AI-10, M+ #1.1 to
-    /// #1.4 (#1187, #1563) and Stinkyscape's T-AI-1 to T-AI-10 (#1884).
+    /// #1.5 (#1187, #1563, #2521), Stinkyscape's T-AI-1 to T-AI-10 (#1884) and Stinkyscape+'s T-AI-1 to
+    /// T-AI-7 (#3573).
     fn ai_ids() -> Vec<String> {
         let mut ids: Vec<String> = (1..=10).map(|n| format!("classicplus-t-ai-{n:02}")).collect();
-        ids.extend((1..=4).map(|n| format!("meditativeplus-001-{n}")));
+        ids.extend((1..=5).map(|n| format!("meditativeplus-001-{n}")));
         ids.extend((1..=10).map(|n| format!("stinkyscape-t-ai-{n:02}")));
+        ids.extend((1..=7).map(|n| format!("stinkyscapeplus-t-ai-{n:02}")));
         ids
     }
 

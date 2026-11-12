@@ -69,8 +69,9 @@ const METEOR_DAMAGE: i32 = 15;
 /// B32: Star Chart's `nodes`, base and Radiant.
 const STAR_CHART_NODES: i32 = 2;
 const RADIANT_STAR_CHART_NODES: i32 = 4;
-/// B36: the census of the two new tags.
-const RESOURCE_CARDS: usize = 6;
+/// B36: the census of the two new tags: the six Stinkyscape Resources and, since the Stinkyscape+
+/// release (#3573), its Warhero Token.
+const RESOURCE_CARDS: usize = 7;
 const FACTION_CARDS: usize = 5;
 
 // Shared helpers
@@ -1526,13 +1527,15 @@ fn b35_fruit_launcher_casts_nothing_but_a_fruit_of_a_set_that_ships() {
 
 // B36 the Resource and Faction tags
 
-const RESOURCES: [&str; 6] = [
+const RESOURCES: [&str; 7] = [
     "stinkyscape-t-reknite",
     "stinkyscape-t-korrelite",
     "stinkyscape-t-gellium",
     "stinkyscape-t-axnit",
     "stinkyscape-t-narcor",
     "stinkyscape-t-red-narcor",
+    // R3548002: the Stinkyscape+ set's Warhero Token is a Resource (a Spell token, the Credits it pays).
+    "stinkyscapeplus-t-warhero-token",
 ];
 const FACTIONS: [&str; 5] = [
     "stinkyscape-159",
@@ -1586,7 +1589,7 @@ fn b36_the_two_tags_sit_after_swarm_and_before_token_in_that_order() {
 }
 
 #[test]
-fn b36_the_census_counts_six_resources_and_five_factions() {
+fn b36_the_census_counts_seven_resources_and_five_factions() {
     assert_eq!(carrying(Tag::Resource).len(), RESOURCE_CARDS);
     assert_eq!(carrying(Tag::Faction).len(), FACTION_CARDS);
 }
@@ -1596,7 +1599,7 @@ fn b36_no_other_card_carries_either_tag() {
     assert_eq!(
         carrying(Tag::Resource),
         sorted(&RESOURCES),
-        "only the six Resources"
+        "only the seven Resources"
     );
     assert_eq!(
         carrying(Tag::Faction),

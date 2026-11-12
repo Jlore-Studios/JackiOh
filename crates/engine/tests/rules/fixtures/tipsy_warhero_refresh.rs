@@ -33,7 +33,14 @@ pub const REACTOR: &str = "e5-reactor";
 /// A (0) 2/2 Unit giving infinite mana, Dormant for 1 turn.
 pub const SLEEPY_REACTOR: &str = "e5-sleepy-reactor";
 
-fn card(index: u32, id: &str, type_: &str, stats: Option<(i32, i32)>, keywords: Value, cost: Value) -> CardDef {
+fn card(
+    index: u32,
+    id: &str,
+    type_: &str,
+    stats: Option<(i32, i32)>,
+    keywords: Value,
+    cost: Value,
+) -> CardDef {
     let (base, radiant) = match stats {
         Some((attack, health)) => (
             json!({ "attack": attack, "health": health, "keywords": keywords, "text": id }),
@@ -181,14 +188,7 @@ pub fn defs() -> Vec<CardDef> {
         card(35488, COOLDOWN, "Field Spell", None, json!([]), json!(0)),
         card(35489, REFRESHER, "Field Spell", None, json!([]), json!(0)),
         card(35490, REACTOR, "Field Spell", None, json!([]), json!(0)),
-        card(
-            35491,
-            SLEEPY_REACTOR,
-            "Unit",
-            Some((2, 2)),
-            json!([]),
-            json!(0),
-        ),
+        card(35491, SLEEPY_REACTOR, "Unit", Some((2, 2)), json!([]), json!(0)),
     ]
 }
 

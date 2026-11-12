@@ -610,7 +610,7 @@ mod r3550003_cooldown_view {
 
 mod r3550008_a_secret_pick_from_the_opponents_hand {
     use super::*;
-    use crate::rules::fixtures::harness::RandomGame;
+    use crate::rules::fixtures::harness::{RandomGame, hand_ids};
 
     /// Soul Read set with p2 holding PLAIN and RANGER: the pick prompt opens for p1 alone.
     fn reading(seed: &str) -> Scenario {
@@ -635,14 +635,10 @@ mod r3550008_a_secret_pick_from_the_opponents_hand {
         }
     }
 
-    fn hand_ids(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.hand(player).iter().map(|card| card.id.clone()).collect()
-    }
-
     #[test]
     fn r3550008_only_its_owner_sees_the_options_and_legal_actions_answer_each() {
         let s = reading("r3550008-options");
-        let seen = hand_ids(&s, P2);
+        let seen = hand_ids(s.state(), P2);
         assert_eq!(seen.len(), 2);
         // Its owner sees the opponent's hand as the options...
         assert_eq!(option_ids(&s.view(P1)), seen);
@@ -671,8 +667,8 @@ mod r3550008_a_secret_pick_from_the_opponents_hand {
         // The same seed twice: the two states differ only in the pick.
         let mut first = reading("r3550008-hidden");
         let mut second = reading("r3550008-hidden");
-        let plain = hand_ids(&first, P2)[0].clone();
-        let ranger = hand_ids(&second, P2)[1].clone();
+        let plain = hand_ids(first.state(), P2)[0].clone();
+        let ranger = hand_ids(second.state(), P2)[1].clone();
         first.answer(json!([plain]));
         second.answer(json!([ranger]));
         for viewer in [P1, P2] {
@@ -687,7 +683,7 @@ mod r3550008_a_secret_pick_from_the_opponents_hand {
     #[test]
     fn r3550008_the_chosen_card_played_first_is_stolen_into_the_owners_hand() {
         let mut s = reading("r3550008-steal");
-        let plain = hand_ids(&s, P2)[0].clone();
+        let plain = hand_ids(s.state(), P2)[0].clone();
         s.answer(json!([plain.clone()]));
         s.end_turn();
         s.play(plain.as_str(), json!({ "zone": 1 }));
@@ -704,7 +700,7 @@ mod r3550008_a_secret_pick_from_the_opponents_hand {
     fn r3550008_another_seen_card_played_first_tributes_the_base_trap() {
         let mut s = reading("r3550008-tribute");
         let trap = backrow_id(&s, P1, 1);
-        let seen = hand_ids(&s, P2);
+        let seen = hand_ids(s.state(), P2);
         s.answer(json!([seen[0].clone()]));
         s.end_turn();
         // Another seen card played first: the base trap is tributed, the play resolves.

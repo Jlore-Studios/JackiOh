@@ -166,6 +166,7 @@ mod tests {
                     "meditative-045-1",
                     "meditativeplus-020-1",
                     "stinkyscape-004-2",
+                    "stinkyscapeplus-t-ai-07",
                 ]
                 .map(String::from)
             );

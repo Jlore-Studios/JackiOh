@@ -78,9 +78,9 @@ mod tests {
 
     /// The base face's pool, by catalog id: the Cost (1) traps of every set (R380), Core #18, #41,
     /// #60, #71, #96, Classic #63, Meditative #64 and #68, Stinkyscape (#1884) #5, #131, #135, #138
-    /// and #144, and Training Grounds (#2204) #13, #14 and #24. Classic #10 Exile and Classic+ #22
-    /// Blood Moon (#2179) cost (2).
-    const TRAP_POOL: [&str; 17] = [
+    /// and #144, Training Grounds (#2204) #13, #14 and #24, and Stinkyscape+ #31 Soul Read (#3573).
+    /// Classic #10 Exile, Classic+ #22 Blood Moon (#2179) and Stinkyscape+ #43 Segment cost (2).
+    const TRAP_POOL: [&str; 18] = [
         "core-018",
         "core-041",
         "core-060",
@@ -98,6 +98,7 @@ mod tests {
         "traininggrounds-013",
         "traininggrounds-014",
         "traininggrounds-024",
+        "stinkyscapeplus-031",
     ];
 
     fn query_ids(args: Value) -> Vec<String> {
@@ -209,7 +210,8 @@ mod tests {
         #[test]
         fn r60_the_seeded_pick_stays_inside_the_pool_and_reaches_every_member_of_it() {
             let mut seen: IndexSet<String> = IndexSet::new();
-            for seed in 0..80 {
+            // 200 seeds over the pool of 18: a member is missed by all of them about one time in 5,000.
+            for seed in 0..200 {
                 let mut s = board(json!({ "seed": format!("oomen-{seed}"), "p1": { "hand": [OOMEN] } }));
                 s.play(OOMEN, json!({ "zone": LANE }));
                 let trap = s.backrow(P1, LANE);

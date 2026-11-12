@@ -77,8 +77,9 @@ describe("#98 Heroic Power's rolled power, in words (R752)", () => {
 });
 
 describe("Call to Chaos in play", () => {
-  it("conceals exactly the cards that carry the Call to Chaos tag: Core #95, the Classic+ Edition #73, the Meditative Edition #95, the Stinkyscape set's two and the Training-Grounds Edition #39", () => {
-    // R1857000: the Stinkyscape set's two editions (#150, #151, #1884); Training Grounds' #39 (#2204).
+  it("conceals exactly the cards that carry the Call to Chaos tag: Core #95, the Classic+ Edition #73, the Meditative Edition #95, the Stinkyscape set's two, the Training-Grounds Edition #39 and the Stinkyscape+ Mindustrial/Swarm Edition #142", () => {
+    // R1857000: the Stinkyscape set's two editions (#150, #151, #1884); Training Grounds' #39 (#2204);
+    // Stinkyscape+'s #142 (#3573).
     const concealed = Object.values(CATALOG).filter((def) => setShips(def.set) && concealedInPlay(def.tags));
     expect(concealed.map((def) => def.id)).toEqual([
       "core-095",
@@ -87,6 +88,7 @@ describe("Call to Chaos in play", () => {
       "stinkyscape-150",
       "stinkyscape-151",
       "traininggrounds-039",
+      "stinkyscapeplus-142",
     ]);
     expect(CATALOG["core-095"]?.tags).toContain(CONCEALED_TAG);
   });

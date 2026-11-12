@@ -25,6 +25,9 @@ pub const REBORN_GIGA: &str = "giga-reborn";
 pub const GROWER: &str = "giga-grower";
 /// A (0) Trap with GIGA, face-down in the backrow: the FaceDown view branch (R3546004).
 pub const GIGA_TRAP: &str = "giga-trap";
+/// A (1 embiggen 0) 2/2 Unit, GIGA only embiggened: its embiggened price is the cheaper, as a discount
+/// that reaches that price alone leaves it (R363).
+pub const CHEAP_GROWER: &str = "giga-cheap-grower";
 
 fn card(
     index: u32,
@@ -73,6 +76,19 @@ pub fn scripts() -> IndexMap<String, CardScripts> {
         ),
         (
             GROWER,
+            Script {
+                conditional_keywords: Some(read_hook(|a| {
+                    if a.self_.embiggened == Some(true) {
+                        vec![Keyword::Giga]
+                    } else {
+                        vec![]
+                    }
+                })),
+                ..Script::default()
+            },
+        ),
+        (
+            CHEAP_GROWER,
             Script {
                 conditional_keywords: Some(read_hook(|a| {
                     if a.self_.embiggened == Some(true) {
@@ -162,6 +178,14 @@ pub fn defs() -> Vec<CardDef> {
             Some((2, 2)),
             json!([]),
             json!({ "base": 0, "embiggen": 1 }),
+        ),
+        card(
+            35469,
+            CHEAP_GROWER,
+            "Unit",
+            Some((2, 2)),
+            json!([]),
+            json!({ "base": 1, "embiggen": 0 }),
         ),
     ]
 }

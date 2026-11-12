@@ -46,6 +46,7 @@ export const SHOWCASE_FAMILIES: Readonly<Record<string, ShowcaseFamily>> = {
   "Meditative+": "meditative",
   Stinkyscape: "stinkyscape",
   "Training Grounds": "training-grounds",
+  "Stinkyscape+": "stinkyscape",
 };
 
 /** R2943001: the Set showcase look of a card of `set`, or null for a set with none (no set, a boss's). */

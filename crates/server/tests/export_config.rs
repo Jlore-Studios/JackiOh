@@ -480,6 +480,7 @@ fn r3114000_each_shipped_set_s_offset_is_its_catalog_place_in_thousands() {
             "Meditative+": 4000,
             "Stinkyscape": 5000,
             "Training Grounds": 6000,
+            "Stinkyscape+": 7000,
         })
     );
     for set in [SetName::Boss, SetName::BossX] {
@@ -487,17 +488,18 @@ fn r3114000_each_shipped_set_s_offset_is_its_catalog_place_in_thousands() {
     }
 }
 
-// R3535000: the held Stinkyscape+ set keeps its catalog place (offset 7000) for the day it ships,
-// but no deck holds it yet, so the client is not given an offset for it (CLAUDE.md rule 3).
+// R3535000: the Stinkyscape+ set kept its catalog place (offset 7000) while it was held, and since it
+// ships (#3573) a deck holds it, so the client is given its offset with the others' (CLAUDE.md rule 3).
 #[test]
-fn r3535000_the_held_stinkyscape_plus_set_keeps_its_offset_but_is_not_exported() {
+fn r3535000_the_stinkyscape_plus_set_is_exported_at_7000_since_it_shipped() {
     assert_eq!(c::catalog_number_set_offset(SetName::StinkyscapePlus), Some(7000));
-    assert!(
-        !catalog_number_set_offsets()
+    assert_eq!(
+        catalog_number_set_offsets()
             .as_object()
             .expect("offsets are a record")
-            .contains_key("Stinkyscape+"),
-        "a held set is in no deck"
+            .get("Stinkyscape+"),
+        Some(&json!(7000)),
+        "a shipped set is in a deck"
     );
 }
 

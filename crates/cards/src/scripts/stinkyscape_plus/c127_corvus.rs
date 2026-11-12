@@ -137,10 +137,11 @@ mod tests {
     #[test]
     fn r3554005_radiant_cleaves() {
         let mut s = corvus_on(true, 1, json!({ "field": [VANILLA, VANILLA, VANILLA] }));
-        s.activate(ID, json!({ "ability": "line" }));
-        pick_tile(&mut s, 0, 2);
+        // The ids are read before the line: its hits kill the 4/4 Units, which then leave the field.
         let first = s.unit_at(P2, 1).id;
         let second = s.unit_at(P2, 2).id;
+        s.activate(ID, json!({ "ability": "line" }));
+        pick_tile(&mut s, 0, 2);
         let dealt = hits(s.last_events());
         assert!(dealt.contains(&(first, 80)));
         assert!(dealt.contains(&(second, 80)), "the Cleave hit");

@@ -81,6 +81,8 @@ mod tests {
 
     const FODDER: &str = "stand-in (0) 1/1";
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    /// A Unit that outlasts the end of turn's heal and damage (the Radiant face's 6 would kill a 4/4).
+    const SOLID: &str = "stand-in (1) 10/10 R20/20";
 
     fn on_field(radiant: bool, p1_extra: Value, p2_extra: Value) -> Scenario {
         let mut p1 = json!({ "field": [{ "def": ID, "radiant": radiant }] });
@@ -128,8 +130,8 @@ mod tests {
             let (heal, damage) = if radiant { (12, 6) } else { (6, 3) };
             let mut s = on_field(
                 radiant,
-                json!({ "health": 20, "field": [{ "def": ID, "radiant": radiant }, { "def": VANILLA, "lane": 2, "damage": 4 }] }),
-                json!({ "health": 30, "field": [{ "def": VANILLA, "lane": 1, "damage": 0 }] }),
+                json!({ "health": 20, "field": [{ "def": ID, "radiant": radiant }, { "def": SOLID, "lane": 2, "damage": 4 }] }),
+                json!({ "health": 30, "field": [{ "def": SOLID, "lane": 1, "damage": 0 }] }),
             );
             // Quad is in lane 1 with damage 0; the ally in lane 2 has damage 4.
             s.end_turn();
@@ -159,7 +161,9 @@ mod tests {
         let mut s = on_field(false, json!({}), json!({}));
         s.end_turn();
         s.expect_health(P2, 30 - 3);
-        s.expect_health(P1, 30 + 0);
+        // Its own hero is an ally it heals (R1860003), on top of the 30 a hero starts with: a hero's
+        // health has no cap.
+        s.expect_health(P1, 30 + 6);
     }
 
     mod base {

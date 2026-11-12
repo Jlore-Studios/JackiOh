@@ -4,7 +4,8 @@
 //!   Radiant: "Cast a Radiant one of each Call to Chaos."
 //!
 //! Engine: one `cast_new` per Call to Chaos definition, in catalog order (`EDITIONS`): Core #95, C+ #73,
-//! M #95, the set's own two, then Training Grounds #39 from that set's release (issue #2204), each
+//! M #95, the set's own two, Training Grounds #39 from that set's release (issue #2204), then
+//! Stinkyscape+ #142 from that set's (issue #3573), each
 //! named by id, so the pool reaches them whether or not their set ships (R1420). Each is a play for
 //! every rule, its choices its caster's (R70), rolling and naming its own effects to both players
 //! (R436), its nested casts held by `CALL_TO_CHAOS_CHAIN_CAP` (R28) and `RANDOM_CAST_CHAIN_CAP`
@@ -14,13 +15,14 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "stinkyscape-004-6";
 
 /// Every Call to Chaos the catalog holds, in its order.
-pub const EDITIONS: [&str; 6] = [
+pub const EDITIONS: [&str; 7] = [
     "core-095",
     "classicplus-073",
     "meditative-095",
     "stinkyscape-150",
     "stinkyscape-151",
     "traininggrounds-039",
+    "stinkyscapeplus-142",
 ];
 
 fn crunch(radiant: bool) -> Hook {
@@ -150,14 +152,16 @@ mod tests {
         }
 
         // Issue #2204: Training Grounds #39 is a Call to Chaos the catalog holds, so once its set ships
-        // it is the sixth cast, after Stinkyscape's two.
+        // it is the sixth cast, after Stinkyscape's two; issue #3573: Stinkyscape+ #142 is the seventh.
         #[test]
-        fn r1870006_r2200004_casts_the_training_grounds_edition_last() {
+        fn r1870006_r2200004_casts_the_training_grounds_edition_sixth_and_the_stinkyscape_plus_one_last() {
             assert!(set_ships(SetName::TrainingGrounds));
+            assert!(set_ships(SetName::StinkyscapePlus));
             let s = played(&plain_seed("big-crunch-training-grounds", false), false);
             let plays = chaos_plays(&s);
-            assert_eq!(plays.len(), 6);
-            assert_eq!(plays.last().map(String::as_str), Some("traininggrounds-039"));
+            assert_eq!(plays.len(), 7);
+            assert_eq!(plays.get(5).map(String::as_str), Some("traininggrounds-039"));
+            assert_eq!(plays.last().map(String::as_str), Some("stinkyscapeplus-142"));
         }
 
         #[test]

@@ -1,7 +1,8 @@
 //! Random cards are unique within one effect until their pool runs out (R3563000, issue #3563,
 //! Stinkyscape+ E9): every effect that generates random cards draws unique within its run, repeating
-//! only after the whole pool has come once. The rule ships behind `UNIQUE_RANDOM_DRAWS`, off until the
-//! Stinkyscape+ release, so every test but the last switches it on through the testkit's override.
+//! only after the whole pool has come once. The rule ships behind `UNIQUE_RANDOM_DRAWS`, on since the
+//! Stinkyscape+ release (#3573); the tests switch it explicitly through the testkit's override, and the
+//! last runs one call with it off.
 //!
 //! Fixtures: the vanilla catalog plus `ud-` Units and Spells at cost 9, drawn through each verb.
 
@@ -336,36 +337,40 @@ fn r3563000_a_marketplace_roll_offers_no_card_twice() {
 }
 
 #[test]
-fn r3563000_off_until_the_release_draws_as_before() {
-    assert!(!UNIQUE_RANDOM_DRAWS);
-    assert!(!unique_draws());
-    for n in 0..SEEDS {
-        let seed = format!("r3563000-off-{n}");
-        let mut state = game(&seed, 3);
-        let defs = query(&json_as(pool(3)));
-        let mut rng = Rng::new(&state.seed, state.rng_cursor);
-        let mut expected: Vec<String> = Vec::new();
-        for _ in 0..7 {
-            expected.push(
-                pick_generated(&mut rng, &defs, Some(&state))
-                    .map(|def| def.id.clone())
-                    .expect("the pool holds cards"),
+fn r3563000_on_since_the_release_and_off_draws_as_before() {
+    assert!(UNIQUE_RANDOM_DRAWS);
+    assert!(unique_draws());
+    // The switch off plays one call under R60's repeating draws, as every game did before the release.
+    with_unique_draws(false, || {
+        assert!(!unique_draws());
+        for n in 0..SEEDS {
+            let seed = format!("r3563000-off-{n}");
+            let mut state = game(&seed, 3);
+            let defs = query(&json_as(pool(3)));
+            let mut rng = Rng::new(&state.seed, state.rng_cursor);
+            let mut expected: Vec<String> = Vec::new();
+            for _ in 0..7 {
+                expected.push(
+                    pick_generated(&mut rng, &defs, Some(&state))
+                        .map(|def| def.id.clone())
+                        .expect("the pool holds cards"),
+                );
+            }
+            let events = run_as_p1(
+                &mut state,
+                add_random_from_catalog(json_as(json!({ "query": pool(3), "count": 7 }))),
             );
+            assert_eq!(added(&events), expected, "{seed}");
         }
-        let events = run_as_p1(
-            &mut state,
-            add_random_from_catalog(json_as(json!({ "query": pool(3), "count": 7 }))),
-        );
-        assert_eq!(added(&events), expected, "{seed}");
-    }
-    let repeats = (0..SEEDS).any(|n| {
-        let seed = format!("r3563000-off-repeat-{n}");
-        let mut state = game(&seed, 3);
-        let events = run_as_p1(
-            &mut state,
-            add_random_from_catalog(json_as(json!({ "query": pool(3), "count": 2 }))),
-        );
-        !distinct(&added(&events))
+        let repeats = (0..SEEDS).any(|n| {
+            let seed = format!("r3563000-off-repeat-{n}");
+            let mut state = game(&seed, 3);
+            let events = run_as_p1(
+                &mut state,
+                add_random_from_catalog(json_as(json!({ "query": pool(3), "count": 2 }))),
+            );
+            !distinct(&added(&events))
+        });
+        assert!(repeats, "two draws from three repeat on some seed");
     });
-    assert!(repeats, "two draws from three repeat on some seed");
 }

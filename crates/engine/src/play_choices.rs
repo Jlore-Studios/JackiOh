@@ -2227,7 +2227,9 @@ fn why_unplayable(
                 && legal_equip_zones_for(state, player, &cheapest.probe, tributes).is_empty()
         });
         if nowhere {
-            return refuse_zone(state, player, card, None, &[])
+            // R3546002: refused at the price's own size, as the zones above are read, so an
+            // "Embiggen: GIGA" card whose only payable price is its embiggened one says why.
+            return refuse_zone(state, player, &cheapest.probe, None, &[])
                 .err()
                 .map(|error| error.message);
         }
@@ -2612,6 +2614,12 @@ fn refuse_zone(
         // §3.2: playing a permanent from hand requires an open zone in the right row — or, R391, one the
         // play's own Tribute empties.
         if default_zone_for(state, player, card, tributes).is_none() {
+            // R3546000: a GIGA permanent needs two lanes side by side free in both rows.
+            if crate::giga::enters_giga(state, card) {
+                return refuse(format!(
+                    "{name} is GIGA: it needs two lanes side by side free in both rows"
+                ));
+            }
             return refuse(format!("no free {row} zone"));
         }
         return Ok(());

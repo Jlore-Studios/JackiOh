@@ -13,8 +13,8 @@
 //! builders, #1826) are not globbed in: callers name the module (`golden::<item>`). `must` (#2023) comes in
 //! with the glob, the effects library (its verbs share names with engine functions) does not.
 //! `stand_in.rs` (#3486) builds the card a `stand-in …` id spells out; no catalog lists it.
-//! `unique_draws.rs` (R3563000) switches `UNIQUE_RANDOM_DRAWS` on for one call, which is off until the
-//! Stinkyscape+ release.
+//! `unique_draws.rs` (R3563000) switches `UNIQUE_RANDOM_DRAWS` on for one call, which is on since the
+//! Stinkyscape+ release (#3573).
 
 pub mod duos_scenario;
 pub mod glow;

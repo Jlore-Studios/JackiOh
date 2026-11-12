@@ -398,7 +398,7 @@ mod r1178000_the_meditative_plus_set_ships_from_its_release_in_its_place_after_m
         let _preview = preview_sets(&[SetName::Boss]);
         assert_eq!(
             newest_shipped_set(),
-            SetName::TrainingGrounds,
+            SetName::StinkyscapePlus,
             "a preview ships nothing"
         );
     }
@@ -537,7 +537,7 @@ mod r1371_the_newest_shipped_set {
             .position(|set| *set == newest)
             .expect("the newest set is in the catalog order");
         assert!(CATALOG_SETS[at + 1..].iter().all(|set| !set_ships(*set)));
-        assert_eq!(newest, SetName::TrainingGrounds);
+        assert_eq!(newest, SetName::StinkyscapePlus);
         // A preview opens a set's pools on this thread; it ships nothing, so the newest set stays.
         let _preview = preview_sets(&[SetName::Boss]);
         assert_eq!(newest_shipped_set(), newest);
@@ -829,7 +829,7 @@ mod r1857000_the_stinkyscape_set_ships_after_meditative_plus {
         {
             let _preview = preview_sets(&[SetName::Stinkyscape, SetName::Boss]);
             assert!(set_is_open(SetName::Stinkyscape));
-            assert_eq!(newest_shipped_set(), SetName::TrainingGrounds);
+            assert_eq!(newest_shipped_set(), SetName::StinkyscapePlus);
         }
         assert!(set_is_open(SetName::Stinkyscape));
     }
@@ -1021,12 +1021,13 @@ mod issue_2521_resource_and_faction_follow_legacy {
 /// R2194000: the Training Grounds set (issue #2193) was the fourth set R1420's gate held, as R1857000
 /// said of Stinkyscape: seventh in the catalog order, right after Stinkyscape, and in no pool that
 /// names no set, no deck and no lean until its release (#2204) listed it in `SHIPPED_SETS`. Since then
-/// it ships as the newest set (R1371), and its pools reach it like every shipped set's (R2194001).
+/// it ships, the newest set (R1371) until the Stinkyscape+ release (#3573, R3535000), and its pools
+/// reach it like every shipped set's (R2194001).
 mod r2194000_the_training_grounds_set_ships_after_stinkyscape {
     use super::*;
 
     #[test]
-    fn r2194000_training_grounds_follows_stinkyscape_and_ships_as_the_newest_set() {
+    fn r2194000_training_grounds_follows_stinkyscape_and_ships_until_the_next_set_is_the_newest() {
         assert_eq!(SetName::TrainingGrounds.as_str(), "Training Grounds");
         assert_eq!(
             json_as::<SetName>(json!("Training Grounds")),
@@ -1037,25 +1038,26 @@ mod r2194000_the_training_grounds_set_ships_after_stinkyscape {
             at(SetName::TrainingGrounds),
             at(SetName::Stinkyscape).map(|at| at + 1)
         );
-        // A set the catalog orders after it is held, not shipped (R3114000: a set is added as a held
-        // row), so it stays the newest shipped set (R1371).
-        let after = at(SetName::TrainingGrounds).map_or(CATALOG_SETS.len(), |at| at + 1);
-        assert!(CATALOG_SETS[after..].iter().all(|set| !set_ships(*set)));
+        // The set the catalog orders after it ships since #3573 (R3535000), so it is the newest shipped
+        // set (R1371) and Training Grounds is the one before it.
+        assert_eq!(
+            at(SetName::StinkyscapePlus),
+            at(SetName::TrainingGrounds).map(|at| at + 1)
+        );
         assert!(set_ships(SetName::TrainingGrounds));
-        assert_eq!(SHIPPED_SETS.last(), Some(&SetName::TrainingGrounds));
+        assert_eq!(SHIPPED_SETS.iter().rev().nth(1), Some(&SetName::TrainingGrounds));
         assert!(set_is_open(SetName::TrainingGrounds));
-        assert_eq!(newest_shipped_set(), SetName::TrainingGrounds);
+        assert_eq!(newest_shipped_set(), SetName::StinkyscapePlus);
         assert_eq!(
             LeanPick::parse("Training Grounds"),
             Some(LeanPick::Set(SetName::TrainingGrounds))
         );
         assert!(LeanPick::choices().contains(&LeanPick::Set(SetName::TrainingGrounds)));
-        assert_eq!(LeanPick::Newest.resolve(), SetName::TrainingGrounds);
         // A preview of it changes nothing, and a preview of a held set ships nothing.
         {
             let _preview = preview_sets(&[SetName::TrainingGrounds, SetName::Boss]);
             assert!(set_is_open(SetName::TrainingGrounds));
-            assert_eq!(newest_shipped_set(), SetName::TrainingGrounds);
+            assert_eq!(newest_shipped_set(), SetName::StinkyscapePlus);
         }
         assert!(set_is_open(SetName::TrainingGrounds));
     }
@@ -1142,6 +1144,49 @@ mod r2194000_the_training_grounds_set_ships_after_stinkyscape {
             .map(|error| error.message.as_str())
             .collect();
         assert_eq!(l3, Vec::<&str>::new(), "{:?}", result.errors);
+    }
+}
+
+/// R3535000: the Stinkyscape+ set (tracker #3533) was the fifth set R1420's gate held: eighth in the
+/// catalog order, right after Training Grounds, and in no pool that names no set, no deck and no lean
+/// until its release (#3573) listed it in `SHIPPED_SETS`. Since then it ships as the newest set
+/// (R1371), gated for the AI's decks (R1390).
+mod r3535000_the_stinkyscape_plus_set_ships_after_training_grounds {
+    use super::*;
+
+    #[test]
+    fn r3535000_stinkyscape_plus_follows_training_grounds_and_ships_as_the_newest_set() {
+        assert_eq!(SetName::StinkyscapePlus.as_str(), "Stinkyscape+");
+        assert_eq!(
+            json_as::<SetName>(json!("Stinkyscape+")),
+            SetName::StinkyscapePlus
+        );
+        let at = |set: SetName| CATALOG_SETS.iter().position(|each| *each == set);
+        assert_eq!(
+            at(SetName::StinkyscapePlus),
+            at(SetName::TrainingGrounds).map(|at| at + 1)
+        );
+        // A set the catalog orders after it is held, not shipped (R3114000: a set is added as a held
+        // row), so it stays the newest shipped set (R1371).
+        let after = at(SetName::StinkyscapePlus).map_or(CATALOG_SETS.len(), |at| at + 1);
+        assert!(CATALOG_SETS[after..].iter().all(|set| !set_ships(*set)));
+        assert!(set_ships(SetName::StinkyscapePlus));
+        assert_eq!(SHIPPED_SETS.last(), Some(&SetName::StinkyscapePlus));
+        assert!(set_is_open(SetName::StinkyscapePlus));
+        assert_eq!(newest_shipped_set(), SetName::StinkyscapePlus);
+        assert_eq!(
+            LeanPick::parse("Stinkyscape+"),
+            Some(LeanPick::Set(SetName::StinkyscapePlus))
+        );
+        assert!(LeanPick::choices().contains(&LeanPick::Set(SetName::StinkyscapePlus)));
+        assert_eq!(LeanPick::Newest.resolve(), SetName::StinkyscapePlus);
+        // A preview of it changes nothing, and a preview of a held set ships nothing.
+        {
+            let _preview = preview_sets(&[SetName::StinkyscapePlus, SetName::Boss]);
+            assert!(set_is_open(SetName::StinkyscapePlus));
+            assert_eq!(newest_shipped_set(), SetName::StinkyscapePlus);
+        }
+        assert!(set_is_open(SetName::StinkyscapePlus));
     }
 }
 

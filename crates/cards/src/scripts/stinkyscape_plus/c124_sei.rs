@@ -68,11 +68,11 @@ fn sei(uses: i32) -> Script {
             label: "Deal damage to an enemy Unit, with Pierce and Cleave".into(),
             uses: ActivationUses::Count(uses),
             cost: None,
-            targets: vec![TargetDecl::target(
-                1,
-                1,
-                json!({ "side": "enemy", "of": ["unit"] }),
-            )],
+            // R703: the Activate needs its Unit, so it is never offered with no enemy Unit to aim at.
+            targets: vec![TargetDecl {
+                required: Some(true),
+                ..TargetDecl::target(1, 1, json!({ "side": "enemy", "of": ["unit"] }))
+            }],
             modes: vec![],
             can_activate: None,
             has: None,

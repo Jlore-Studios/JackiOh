@@ -264,22 +264,20 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
     }
 
     #[test]
-    fn r60_lets_the_three_summoned_units_repeat_since_they_are_generated_from_the_catalog() {
-        // Over many seeds the three picks are independent draws, so a repeat must be reachable.
-        let repeats: Vec<bool> = ["r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8"]
-            .iter()
-            .map(|seed| {
-                let mut state = game(&format!("chaos-repeat-{seed}"), None);
-                let mut events: Vec<GameEvent> = Vec::new();
-                sink_events(&mut state, &mut events, |sink| {
-                    run(sink, summon_random_three_cost_units(), None, P1);
-                });
-                let ids = field_of(&events, GameEventType::Summoned, "defId");
-                let distinct: IndexSet<String> = ids.iter().map(|id| id.to_string()).collect();
-                distinct.len() < ids.len()
-            })
-            .collect();
-        assert!(repeats.contains(&true));
+    fn r3563000_the_three_summoned_units_are_distinct_while_the_pool_lasts() {
+        // R60's repeats stood until the Stinkyscape+ release (#3573) turned `UNIQUE_RANDOM_DRAWS` on: the
+        // three picks are one run's, so none comes twice while the pool holds three.
+        for seed in ["r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8"] {
+            let mut state = game(&format!("chaos-repeat-{seed}"), None);
+            let mut events: Vec<GameEvent> = Vec::new();
+            sink_events(&mut state, &mut events, |sink| {
+                run(sink, summon_random_three_cost_units(), None, P1);
+            });
+            let ids = field_of(&events, GameEventType::Summoned, "defId");
+            assert_eq!(ids.len(), 3, "{seed}");
+            let distinct: IndexSet<String> = ids.iter().map(|id| id.to_string()).collect();
+            assert_eq!(distinct.len(), ids.len(), "{seed}: {ids:?}");
+        }
     }
 
     #[test]

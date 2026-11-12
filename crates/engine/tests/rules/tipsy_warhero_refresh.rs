@@ -9,9 +9,7 @@ use jackioh_engine::testkit::*;
 use serde_json::json;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{
-    apply_now, play_random_game, round_trip, setup_catalog,
-};
+use crate::rules::fixtures::harness::{apply_now, play_random_game_from, round_trip, setup_catalog};
 use crate::rules::fixtures::tipsy_warhero_refresh::*;
 
 use PlayerId::{P1, P2};
@@ -100,9 +98,9 @@ fn warhero_reports(s: &Scenario) -> Vec<(i32, Option<i32>)> {
 }
 
 fn lists_activate(state: &GameState, instance: &str) -> bool {
-    legal_actions(state, P1).iter().any(
-        |body| matches!(body, ActionBody::Activate { instance_id, .. } if instance_id == instance),
-    )
+    legal_actions(state, P1)
+        .iter()
+        .any(|body| matches!(body, ActionBody::Activate { instance_id, .. } if instance_id == instance))
 }
 
 fn lists_play(state: &GameState, instance: &str) -> bool {
@@ -191,7 +189,8 @@ fn r3548001_a_card_drawn_played_or_summoned_while_tipsy_is_stamped() {
         .find(|card| card.id == stamped_id)
         .expect("the stamped plain on the field");
     assert_eq!(stamped.tipsy, Some(stamp));
-    assert_eq!(tipsy_count(&s, P1), Some(4));
+    // The spell raised the counter to 2 and a plain card adds none.
+    assert_eq!(tipsy_count(&s, P1), Some(2));
     let before: Vec<String> = s.hand(P1).iter().map(|card| card.id.clone()).collect();
     s.end_turn();
     s.end_turn();
@@ -204,14 +203,11 @@ fn r3548001_a_card_drawn_played_or_summoned_while_tipsy_is_stamped() {
         drawn.tipsy,
         Some(TipsyStamp {
             player: P1,
-            level: 3,
+            level: 1,
             turn: turn + 2,
         })
     );
-    apply_now(
-        s.state_mut(),
-        effects::summon(json_as(json!({ "defId": PLAIN }))),
-    );
+    apply_now(s.state_mut(), effects::summon(json_as(json!({ "defId": PLAIN }))));
     let summoned = field_cards(s.state(), P1)
         .into_iter()
         .find(|card| card.def_id == PLAIN && card.id != sober_id && card.id != stamped_id)
@@ -220,18 +216,19 @@ fn r3548001_a_card_drawn_played_or_summoned_while_tipsy_is_stamped() {
         summoned.tipsy,
         Some(TipsyStamp {
             player: P1,
-            level: 3,
+            level: 1,
             turn: turn + 2,
         })
     );
 }
 
-/// The first seed whose played plain blurs on its owner's view: the blur is seed-pinned, so every
-/// other seed-pinned test reuses it.
-fn blurring_seed() -> String {
+/// The first seed whose played plain blurs on its owner's view, for the board a test builds from `hand`:
+/// the blur is seeded by the card's instance, so a test whose hand holds more cards looks for its own
+/// seed. The spell is played first, then the plain.
+fn blurring_seed_for(hand: Value) -> String {
     for index in 0..50 {
         let seed = format!("r3548001-blur-{index}");
-        let mut s = board(&seed, json!({ "hand": [TIPSY_SPELL, PLAIN] }), json!({}));
+        let mut s = board(&seed, json!({ "hand": hand.clone() }), json!({}));
         s.play(TIPSY_SPELL, json!({}));
         s.play(PLAIN, json!({ "zone": 2 }));
         if has_blur(&s) {
@@ -239,6 +236,11 @@ fn blurring_seed() -> String {
         }
     }
     panic!("no seed in range blurs the played plain");
+}
+
+/// `blurring_seed_for` the spell and the plain alone: the seed-pinned tests share it.
+fn blurring_seed() -> String {
+    blurring_seed_for(json!([TIPSY_SPELL, PLAIN]))
 }
 
 /// R3548001: a stamped card blurs on its own player's view alone — the opponent's view of the same
@@ -324,31 +326,53 @@ fn r3548001_a_replay_folds_to_the_same_blur() {
         SLEEPY_REACTOR.to_string(),
     ];
     deck.extend(vanilla_deck(13, 31));
-    let seed = "r3548001-replay".to_string();
-    let live = play_random_game(&seed, Some((deck.clone(), deck)));
+    // The blur is seed-pinned and a finished game is where the counter is down, so the test takes the
+    // first seed whose playout shows a blur at some step, and folds the log up to that step.
+    let live_game = |seed: &str| {
+        // `play_random_game` would replace the registered catalog (`new_game`'s `setup_catalog`), so the
+        // game is created here, with the fixtures registered.
+        let created = create_game(&CreateGameOptions {
+            seed: seed.to_string(),
+            decks: (deck.clone(), deck.clone()),
+            ..CreateGameOptions::default()
+        });
+        (
+            begin_game(&created).state,
+            play_random_game_from(begin_game(&created).state, seed, (deck.clone(), deck.clone())),
+        )
+    };
+    let blurs = |state: &GameState| blurs_of(state).iter().any(|(_, _, blur)| blur.is_some());
+    let found = (0..60).find_map(|index| {
+        let seed = format!("r3548001-replay-{index}");
+        let (mut state, live) = live_game(&seed);
+        for (step, action) in live.log.iter().enumerate() {
+            state = reduce(&state, action).state;
+            if blurs(&state) {
+                return Some((seed, live, step, state));
+            }
+        }
+        None
+    });
+    let (seed, live, step, at_step) = found.expect("a playout that blurs a card at some step");
     setup_catalog();
     register_e5_fixtures();
     let folded = fold(&FoldArgs {
         seed: seed.clone(),
         decks: live.decks.clone(),
-        log: live.log.clone(),
+        log: live.log[..=step].to_vec(),
         ..Default::default()
     });
     assert_eq!(folded.errors.len(), 0);
-    assert_eq!(hash_state(&folded.state), hash_state(&live.state));
-    let live_blurs = blurs_of(&live.state);
-    assert!(
-        live_blurs.iter().any(|(_, _, blur)| blur.is_some()),
-        "the playout blurs a card"
-    );
-    assert_eq!(blurs_of(&folded.state), live_blurs);
+    assert_eq!(hash_state(&folded.state), hash_state(&at_step));
+    assert!(blurs(&at_step), "the live game blurs a card at the step");
+    assert_eq!(blurs_of(&folded.state), blurs_of(&at_step));
 }
 
 /// R3548001: from 2 to 1 the stamped card keeps its blur — only the odds for new cards fall; at 0
 /// every blur clears, and a counter risen again blurs only what arrived since.
 #[test]
 fn r3548001_two_to_one_keeps_the_blur_and_zero_clears_it() {
-    let seed = blurring_seed();
+    let seed = blurring_seed_for(json!([TIPSY_SPELL, TIPSY_SPELL, PLAIN]));
     let mut s = board(
         &seed,
         json!({ "hand": [TIPSY_SPELL, TIPSY_SPELL, PLAIN] }),
@@ -421,10 +445,7 @@ fn r3548002_the_worth_grows_by_zero_to_ten_at_the_end_of_every_turn() {
         s.end_turn();
         let grown = s.state().warhero_worth.expect("the worth once minted");
         assert!((worth..=worth + 10).contains(&grown));
-        assert_eq!(
-            warhero_reports(&s).last(),
-            Some(&(grown, Some(grown - worth)))
-        );
+        assert_eq!(warhero_reports(&s).last(), Some(&(grown, Some(grown - worth))));
     }
 }
 
@@ -440,10 +461,7 @@ fn r3548002_playing_or_discarding_one_pays_its_worth_radiant_double() {
         );
         s.state_mut().warhero_worth = Some(7);
         s.play(WARHERO, json!({}));
-        assert_eq!(
-            market_credits_of(s.state(), P1),
-            if radiant { 14 } else { 7 }
-        );
+        assert_eq!(market_credits_of(s.state(), P1), if radiant { 14 } else { 7 });
     }
     let mut s = board(
         "r3548002-discards",
@@ -458,7 +476,9 @@ fn r3548002_playing_or_discarding_one_pays_its_worth_radiant_double() {
         .expect("the base token");
     apply_now(
         s.state_mut(),
-        effects::discard(json_as(json!({ "target": { "of": "instance", "instanceId": base.id } }))),
+        effects::discard(json_as(
+            json!({ "target": { "of": "instance", "instanceId": base.id } }),
+        )),
     );
     assert_eq!(market_credits_of(s.state(), P1), 7);
     apply_now(
@@ -477,11 +497,12 @@ fn r3548002_the_hand_card_quotes_its_worth_and_joins_no_resource_pool() {
     s.state_mut().warhero_worth = Some(7);
     let card = s.hand(P1).into_iter().next().expect("the token");
     assert_eq!(sell_quote(s.state(), &card), Some(7));
-    let preview =
-        preview_of(s.state(), &card, P1, ConditionZone::Hand).expect("a quoted hand card");
-    assert!(preview
-        .iter()
-        .any(|value| value.label == "Credits" && value.value == 7));
+    let preview = preview_of(s.state(), &card, P1, ConditionZone::Hand).expect("a quoted hand card");
+    assert!(
+        preview
+            .iter()
+            .any(|value| value.label == "Credits" && value.value == 7)
+    );
     assert!(!resource_def_ids().contains(&WARHERO_TOKEN_DEF_ID.to_string()));
 }
 
@@ -524,7 +545,10 @@ fn r3548003_refresh_keeps_cooldowns_and_names_fused_refreshes() {
     assert!(cooldowns.is_some());
     apply_now(s.state_mut(), effects::refresh_activates());
     assert_eq!(s.card(slow.as_str()).memory.get("cooldowns"), cooldowns.as_ref());
-    assert_eq!(ability_uses_this_turn(s.state(), &s.card(slow.as_str()), "slow"), 0);
+    assert_eq!(
+        ability_uses_this_turn(s.state(), &s.card(slow.as_str()), "slow"),
+        0
+    );
     assert!(is_refresh_ability(REFRESH_ABILITY_ID));
     assert!(is_refresh_ability("refresh#2"));
     assert!(!is_refresh_ability("zap"));
@@ -586,7 +610,9 @@ fn r3548004_it_ends_as_the_card_leaves_and_both_seats_see_it() {
     let reactor = field_id(&s, P1, REACTOR);
     apply_now(
         s.state_mut(),
-        effects::bounce(json_as(json!({ "target": { "of": "instance", "instanceId": reactor } }))),
+        effects::bounce(json_as(
+            json!({ "target": { "of": "instance", "instanceId": reactor } }),
+        )),
     );
     assert_eq!(s.view(P1).you.infinite_mana, None);
     assert_eq!(s.view(P2).opponent.infinite_mana, None);
@@ -601,8 +627,5 @@ fn r3548004_x_is_still_chosen_out_of_held_mana() {
         json!({}),
     );
     let spell = s.hand(P1).into_iter().next().expect("the X spell");
-    assert_eq!(
-        legal_x_values(s.state(), P1, &spell),
-        (1..=5).collect::<Vec<_>>()
-    );
+    assert_eq!(legal_x_values(s.state(), P1, &spell), (1..=5).collect::<Vec<_>>());
 }

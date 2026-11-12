@@ -3,7 +3,7 @@
 //!
 //! `catalog check` validates `crates/cards/catalog.json`'s shape and census against SPEC §5, §6.1, §7
 //! and §8 and patch v0.2.0's sets and fields (docs/classic-sets.md B2, B3.4, E36, E40), set by set
-//! (Core to Stinkyscape, R1857000, and the held Training Grounds set, R2194000): every card and token
+//! (Core to Stinkyscape+, R1857000, R2194000, R3535000): every card and token
 //! once, every enum value in the engine's wire unions, stats only on Units and Animated backrow cards
 //! (B3.1, a whole line or none, R2280000), each set's rarities as `jackioh_cards::census` carries them.
 //! It does NOT re-read the §8 cells (`crates/cards/tests/cross/catalog.rs` does); the pending-fragment
@@ -1829,7 +1829,8 @@ mod tests {
             })
             .count();
         assert_eq!(shipped.unshipped_count, held);
-        // Stinkyscape ships, so leaving it out holds no more apart: only Training Grounds is (R2194000).
+        // Stinkyscape ships, so leaving it out holds no more apart: every set the catalog holds ships since
+        // the Stinkyscape+ release (#3573, R3535000), so nothing is held apart.
         assert_eq!(check_catalog(&without_stinkyscape()).unshipped_count, held);
 
         let rarity = |name: &str| {

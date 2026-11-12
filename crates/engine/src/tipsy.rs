@@ -31,9 +31,10 @@ pub fn stamp_for(state: &GameState, player: PlayerId) -> Option<TipsyStamp> {
 /// `counterChanged` of the `tipsy` kind on `hero-<player>` with the X it added, as Jade reports
 /// its rises. A card without Tipsy changes and reports nothing.
 pub fn add_on_play(sink: &mut EngineSink<'_>, player: PlayerId, card: &CardInstance) {
-    let Some(added) =
-        crate::tuning::numbered_sum(&crate::layers::card_keywords(sink.state, card), KeywordKind::Tipsy)
-    else {
+    let Some(added) = crate::tuning::numbered_sum(
+        &crate::layers::card_keywords(sink.state, card),
+        KeywordKind::Tipsy,
+    ) else {
         return;
     };
     if added <= 0 {
@@ -89,9 +90,7 @@ fn blur_targets(state: &GameState, card: &CardInstance) -> Vec<TipsyBlur> {
     let mut targets: Vec<TipsyBlur> = Vec::new();
     let name = crate::catalog::def_of(Some(state), &card.def_id).name.clone();
     for (index, _) in name.split_whitespace().enumerate() {
-        targets.push(TipsyBlur::Name {
-            word: index as i32,
-        });
+        targets.push(TipsyBlur::Name { word: index as i32 });
     }
     targets.push(TipsyBlur::Cost);
     if crate::faces::card_type_of(state, card) == CardType::Unit {

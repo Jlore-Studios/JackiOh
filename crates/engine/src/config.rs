@@ -1637,9 +1637,9 @@ pub const SEED_SEARCH_BOUND: usize = 4000;
 pub const POOL_PROBE_SHIFT: usize = 1;
 
 /// R3563000 (issue #3563, Stinkyscape+ E9): every card an effect generates at random is drawn unique within
-/// its run until its pool runs out (`catalog::pick_unique`). Off until the Stinkyscape+ release turns it on
-/// (docs/stinkyscape-plus-set.md SP8); till then R60's repeats stand. Tests switch it with `with_unique_draws`.
-pub const UNIQUE_RANDOM_DRAWS: bool = false;
+/// its run until its pool runs out (`catalog::pick_unique`). On since the Stinkyscape+ release (#3573,
+/// docs/stinkyscape-plus-set.md SP8), which made R60's repeats unique. Tests switch it with `with_unique_draws`.
+pub const UNIQUE_RANDOM_DRAWS: bool = true;
 
 // ---------------------------------------------------------------------------------------------
 // ME-CRAFT (Meditative #17 True Craft a Card, docs/meditative-set.md M6 #17, R880–R883).

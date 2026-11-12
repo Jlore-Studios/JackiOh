@@ -541,8 +541,10 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
         jackioh_cards::register_all();
         let hard = js(sweep_card(
             "core-029",
+            // Re-pinned for the Stinkyscape+ release (#3573): the bigger pool deals the card to Hard's seven
+            // crystals later, so the sweep reads sixteen games, where eight were enough.
             &SweepOptions {
-                seeds: Some(8),
+                seeds: Some(16),
                 now: None,
                 retime: None,
                 tier: Some(Difficulty::Hard),
@@ -1749,8 +1751,9 @@ mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
 
     #[test]
     fn r732000_the_gate_is_lifted_and_generation_json_counts_the_table() {
-        // Generation 9 lifted R1390's gate on the table (#1884, #1885).
-        assert!(AI_DECK_GATED_SETS.is_empty(), "{AI_DECK_GATED_SETS:?}");
+        // Generation 9 lifted R1390's gate on the table (#1884, #1885); the Stinkyscape+ release (#3573)
+        // gates that set alone until fullsend 2's sweep, which no generation has measured the AI on.
+        assert_eq!(AI_DECK_GATED_SETS, &[SetName::StinkyscapePlus]);
         let record: Value = serde_json::from_str(GENERATION_JSON).expect("generation.json is JSON");
         assert_eq!(record["shadowBan"].as_u64(), Some(SHADOW_BAN.len() as u64));
         assert!(record["generation"].as_i64().unwrap_or_default() >= 9, "{record}");

@@ -2,13 +2,14 @@
 -- Migration 0087: the Stinkyscape+ tags (SPEC §5, issue #3535)
 -- ============================================================================
 -- Serves SPEC.md §5 (tags) and issue #3535 (R3535002), which declares the
--- held Stinkyscape+ set's family tags: Mindustrial, Mineral, Automa-α,
--- Automa-β, Automa-γ, Automa-δ, Automa-Ω, Automa-ζ and Paperclip. No rule
--- reads them yet; the engine parts (SP3 E1–E9) build each one's behavior.
+-- Stinkyscape+ set's family tags (the set ships with issue #3573, R3535000):
+-- Mindustrial, Mineral, Automa-α, Automa-β, Automa-γ, Automa-δ, Automa-Ω,
+-- Automa-ζ and Paperclip. No rule reads them yet; the engine parts (SP3
+-- E1–E9) build each one's behavior.
 --
 -- Why this exists: `seed-catalog` copies every catalog entry of a set that
 -- ships into public.cards in one transaction, and 0083's `cards_tags_check`
--- does not admit the nine, so a held set's entries would fail the whole
+-- does not admit the nine, so the set's entries would fail the whole
 -- catalog once it ships and the release would never boot. This file puts the
 -- same check back with the nine added and nothing else changed, exactly as
 -- 0083 did for Starship. The tag list stays in the same order as the
@@ -62,6 +63,13 @@ comment on constraint cards_tags_check on public.cards is
   and Swarm, 0069 with Legacy, 0070 with Resource and Faction, 0083 with
   Starship, 0087 with Mindustrial, Mineral, Automa-α, Automa-β, Automa-γ,
   Automa-δ, Automa-Ω, Automa-ζ and Paperclip.$$;
+
+comment on column public.cards.set_id is
+  $$SPEC §5 "Set": Core, Classic, Classic+, Meditative, Meditative+,
+  Stinkyscape, Training Grounds and Stinkyscape+ ship (R380; R1420; R1178000;
+  R1857000; R2194000; R3535000); Boss and Boss-X are reserved. A set the
+  catalog holds before it ships is not seeded (R1420). An index repeats
+  across sets (B2.2), so a card is its id, never its card_index alone.$$;
 
 -- ----------------------------------------------------------------------------
 -- Grants: nothing changes. public.cards keeps 0002's grants and policies.

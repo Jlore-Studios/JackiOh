@@ -101,9 +101,9 @@ describe("the Almanac with the Stinkyscape+ set previewed (R3572000)", () => {
 
     render(<FilterBar filter={DEFAULT_FILTER} onFilter={() => {}} sort={DEFAULT_SORT} onSort={() => {}} count={pool.length} />);
     expect(chips("Set")).toEqual([...FILTER_SETS]);
-    // A newer set's chip follows it (#2204), so it is asserted right after Stinkyscape's.
+    // The set's chip follows Training Grounds' since it shipped (#3573).
     expect(chips("Set")).toContain("Stinkyscape+");
-    expect(chips("Set").indexOf("Stinkyscape+")).toBe(chips("Set").indexOf("Stinkyscape") + 1);
+    expect(chips("Set").indexOf("Stinkyscape+")).toBe(chips("Set").indexOf("Training Grounds") + 1);
   });
 
   it("R3572000 the set's eight deckable tags get chips in the deck builder, and Automa-ζ, on tokens alone, in the almanac only", () => {

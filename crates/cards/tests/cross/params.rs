@@ -3,7 +3,7 @@
 
 use indexmap::{IndexMap, IndexSet};
 use jackioh_cards::{CATALOG, card_def};
-use jackioh_engine::{CardDef, FaceKind, ParamBetter, Tag, fill_params, param_placeholders};
+use jackioh_engine::{CardDef, FaceKind, ParamBetter, SetName, Tag, fill_params, param_placeholders};
 use serde_json::{Value, json};
 
 fn entries() -> Vec<&'static CardDef> {
@@ -742,5 +742,26 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         let distinct: IndexSet<&str> = reasons.iter().copied().collect();
         assert_eq!(distinct.len(), reasons.len());
         assert!(FIXED.iter().all(|(_, reason)| distinct.contains(reason)));
+    }
+
+    /// R3535001: the Stinkyscape+ set's fixed numbers are listed, each on a card of the set that prints
+    /// one, with the reason its number is no param.
+    #[test]
+    fn r3535001_the_stinkyscape_plus_numbers_are_listed() {
+        jackioh_cards::register_all();
+        let listed: Vec<&(&str, &str)> = FIXED
+            .iter()
+            .filter(|(id, _)| id.starts_with("stinkyscapeplus-"))
+            .collect();
+        assert!(listed.len() > 20, "{} entries", listed.len());
+        for (id, reason) in listed {
+            let card = card_def(id);
+            assert_eq!(card.set, SetName::StinkyscapePlus, "{id}");
+            let prints = [&card.base.text, &card.radiant.text]
+                .iter()
+                .any(|text| literal(text).bytes().any(|byte| byte.is_ascii_digit()));
+            assert!(prints, "{id} prints no number: drop it from the list");
+            assert!(!reason.is_empty(), "{id}");
+        }
     }
 }

@@ -389,7 +389,17 @@ pub struct RandomGame {
 /// left out, so a game ends by hero death or the turn cap (M1 gate).
 pub fn play_random_game(seed: &str, deck_pair: Option<(Vec<String>, Vec<String>)>) -> RandomGame {
     let decks = deck_pair.unwrap_or_else(|| (vanilla_deck(DECK_SIZE, 1), vanilla_deck(DECK_SIZE, 21)));
-    let mut state = begin_game(&new_game(seed, Some(decks.clone()))).state;
+    let state = begin_game(&new_game(seed, Some(decks.clone()))).state;
+    play_random_game_from(state, seed, decks)
+}
+
+/// `play_random_game` from a game already begun, for a test that registered its own catalog:
+/// `new_game` registers the harness's, which would replace it.
+pub fn play_random_game_from(
+    mut state: GameState,
+    seed: &str,
+    decks: (Vec<String>, Vec<String>),
+) -> RandomGame {
     let mut policy = Rng::new(&format!("policy-{seed}"), 0);
     let mut log: Vec<Action> = Vec::new();
 

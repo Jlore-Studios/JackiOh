@@ -21,10 +21,10 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     #[test]
-    fn the_stub_is_a_card_of_the_held_stinkyscape_plus_set() {
+    fn the_stub_is_a_card_of_the_shipped_stinkyscape_plus_set() {
         crate::register_all();
         let def = catalog::def_of(None, super::ID);
         assert_eq!(def.set, SetName::StinkyscapePlus);
-        assert!(!set_ships(def.set));
+        assert!(set_ships(def.set));
     }
 }

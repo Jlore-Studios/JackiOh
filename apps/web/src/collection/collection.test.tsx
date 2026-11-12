@@ -136,6 +136,8 @@ describe("#1307 setCompletions", () => {
       [0, 0],
       // Training Grounds ships (#2204), so it has a row.
       [0, 0],
+      // So does Stinkyscape+ (#3573).
+      [0, 0],
     ]);
     expect(sets[0]?.cards.map((card) => [card.def.id, card.owned])).toEqual([
       ["core-001", true],

@@ -1094,7 +1094,7 @@ fn test_unique_draws() -> Option<bool> {
 }
 
 /// R3563000: whether random cards draw unique within one run: the testkit's override first, else
-/// `UNIQUE_RANDOM_DRAWS`, off until the Stinkyscape+ release.
+/// `UNIQUE_RANDOM_DRAWS`, on since the Stinkyscape+ release (#3573).
 pub fn unique_draws() -> bool {
     test_unique_draws().unwrap_or(UNIQUE_RANDOM_DRAWS)
 }

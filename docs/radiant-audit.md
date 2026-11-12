@@ -987,3 +987,207 @@ A card added after the sections above has one row here, keyed by its id. A perso
 
 | Id | Card | Verdict | Reasoning |
 | --- | --- | --- | --- |
+| stinkyscapeplus-001 | Starfruit | Meets | Its damage rises 1 → 2 (2×) and it adds Lifesteal to Cleave and Pierce, so the Radiant face is about twice the base one. |
+| stinkyscapeplus-002 | Lone Drifter | Meets | The stats double 2/2 → 4/4 and the Evolve gain rises +4/+4 → +8/+8 (2×), so both halves meet R275. |
+| stinkyscapeplus-003 | High Evolutionary | Designer's word (effect half) | The stats double 7/7 → 14/14, but the Aura only goes twice → thrice (1.5×) and the Cry (evolve a friendly permanent) is the same, short of 2×: the designer's printed number stands. |
+| stinkyscapeplus-004 | Profe Yates | Meets | The stats double 7/7 → 14/14 and the Cry summons three random Radiant Traps instead of two plain Traps. The Activate choices are identical on both faces. |
+| stinkyscapeplus-005 | Dingleberry Droat | Meets | The stats double 2/1 → 4/2 and the Cry fuses Radiant Fruits instead of plain ones into the (5)-cost card, a rider-level raise. |
+| stinkyscapeplus-006 | Wines McCheese | Meets | The stats double 4/5 → 8/10 and the card added each turn is a Radiant one instead of a plain one, a rider-level raise. |
+| stinkyscapeplus-006-1 | Fine Fermented Grape | Meets | Tipsy 2 is unchanged and the End of turn fuses a different Radiant Grape instead of a plain one: a rider-level raise of an effect with no number. |
+| stinkyscapeplus-006-2 | Stinky Cheese | Meets | The Evolve gain rises +5/+5 → +10/+10 (2×); Temporary, Flashback and Animated are the same on both faces. |
+| stinkyscapeplus-007 | Churnwalker | Meets | The stats double 3/15 → 6/30 and Armor rises 4 → 8 (2×); the Cry's two chain modes are the same on both faces. |
+| stinkyscapeplus-008 | Drone Assembler v3 | Meets | 0 attack stays 0 and health doubles 2 → 4. The Activate summons a Radiant Drone Interceptor instead of a plain one, a rider-level raise. |
+| stinkyscapeplus-009 | Drone Assembler v4 | Meets | 0 attack stays 0 and health doubles 3 → 6. The Activate summons a Radiant Drone Interceptor instead of a plain one, a rider-level raise. |
+| stinkyscapeplus-010 | Drone Assembler v5 | Meets | 0 attack stays 0 and health doubles 4 → 8. The Activate summons a Radiant Drone Corvette instead of a plain one, a rider-level raise. |
+| stinkyscapeplus-011 | Energy Booster | Meets | The stats double 1/1 → 2/2 and the Activate's uses per turn rise 1 → 2 (2×), so it can Refresh twice a turn. |
+| stinkyscapeplus-012 | Shield Booster | Designer's word (effect half) | The stats double 1/1 → 2/2, but the text is the same on both faces (Starship Piece, Equip, Divine Shield): no keyword is added or strengthened. |
+| stinkyscapeplus-013 | Shield Repairer | Meets | The stats double 2/2 → 4/4 and the Radiant face also prints Divine Shield, so it has the shield at once and not only after its End of turn: a keyword more. |
+| stinkyscapeplus-014 | Hull Repairer | Meets | 0 attack stays 0, health doubles 2 → 4 and its End-of-turn heal rises 4 → 8 (2×). |
+| stinkyscapeplus-015 | Hull Repairer mk2 | Meets | 0 attack stays 0 and health doubles 4 → 8. Besides healing to full, its End of turn now adds +2 max health: a rider. |
+| stinkyscapeplus-016 | Servo Surge | Designer's word (effect half) | The stats double 2/1 → 4/2, but the keywords are the same on both faces (Starship Piece, Equip, Windfury): none is added or strengthened. |
+| stinkyscapeplus-017 | Smoothie | Meets | Its effect has no number: the two fruits inside the smoothie are Radiant ones instead of plain ones, a rider-level raise. |
+| stinkyscapeplus-018 | Large Smoothie | Meets | Its effect has no number: the three fruits inside the smoothie are Radiant ones instead of plain ones, a rider-level raise. |
+| stinkyscapeplus-019 | Normalization Module | Meets | 0 attack stays 0 and health doubles 2 → 4. The Activate's uses per turn rise 1 → 2 (2×), so it can Vanilla twice a turn. |
+| stinkyscapeplus-020 | B-Patch | Meets | The coin-flip Buff-or-Nerf is unchanged and the Radiant face adds Lucky 1, a second flip that keeps heads (the Buff): a keyword rider on an effect with no number. |
+| stinkyscapeplus-021 | Jlockeed Shredder-12 | Meets | Its End-of-turn damage rises 2 → 5 (2.5×) and the stats double 12/16 → 24/32, so both halves meet R275. |
+| stinkyscapeplus-022 | Cryofluid | Meets | The buff rises +6/+6 → +12/+12 (2×); Deft and the Freeze are unchanged. |
+| stinkyscapeplus-023 | GIGA-ify | Meets | It makes two permanents in your hand GIGA and Indestructible instead of one (2×). |
+| stinkyscapeplus-024 | Forced Propagation | Meets | The copy counts stay 10 (40 when Embiggened), but the Radiant face then buffs every shuffled copy: a rider on an effect whose numbers are identical. |
+| stinkyscapeplus-025 | Snom Bunny | Meets | The stats double 5/5 → 10/10, the Can't Defend drawback is dropped and Lucky 1 is added, which redraws the stolen enemy permanent and keeps the dearer: a lighter drawback and a keyword. |
+| stinkyscapeplus-026 | Jlockeed’s Forever War | Meets | Each start of your turn it summons a Radiant Conscript (2/2 Ranged, Rush, Pierce) instead of a plain Conscript (1/1 Ranged), a rider-level raise. |
+| stinkyscapeplus-026-1 | Conscript | Meets | The stats double 1/1 → 2/2 and it gains Rush and Pierce on top of Ranged: two keywords more. |
+| stinkyscapeplus-027 | Gargantuar | Meets | The stats double 12/12 → 24/24, the freeze after attacking is gone (a lighter drawback) and the Evolve summons a Radiant Imp instead of a plain one. |
+| stinkyscapeplus-027-1 | Imp | Meets | The stats double 1/1 → 2/2 and Pierce is added to Can't Defend and Charge: a keyword more. |
+| stinkyscapeplus-028 | Zombie-Box | Meets | Nerf your hand is the same, but it summons a Radiant Gargantuar (24/24) instead of a Dormant one: a rider-level raise, and the unit is no longer asleep. |
+| stinkyscapeplus-029 | Grinder Veteran | Meets | The stats double 5/5 → 10/10; the Activate still discards a Felinor for 2 Warhero Tokens, but they are Radiant ones: a rider-level raise. |
+| stinkyscapeplus-030 | Yeah I’m a War Hero | Meets | The replacement for your first draw each turn is a Radiant Warhero Token instead of a plain one: a rider-level raise of an effect with no number. |
+| stinkyscapeplus-031 | Soul Read | Meets | The trap now springs when the opponent plays the chosen card at any point, not only before the other cards you saw, and the Tribute drawback is gone: a broader trigger and a lighter drawback. |
+| stinkyscapeplus-032 | Z-Patch | Meets | Both faces Buff every permanent 5 times, but the Radiant face's 5 Nerfs hit only enemy permanents instead of every permanent: a broader effect by sparing your side. |
+| stinkyscapeplus-033 | True Conservative | Meets | The stats double 3/3 → 6/6 and the Cry adds a rider: your own Units become their strongest version instead of just a past one. |
+| stinkyscapeplus-034 | Neoconservative | Meets | The stats double 5/3 → 10/6 and the Cry adds a Radiant Jlockeed card from the past instead of a plain one: a rider-level raise. |
+| stinkyscapeplus-035 | Scatter | Meets | 0 attack stays 0 and health doubles 6 → 12. Uses per turn rise 1 → 2 and the damage 0~2 → 1~3 (average 1 → 2, 2×); the Flying damage rises 8 → 10. |
+| stinkyscapeplus-036 | Duo | Meets | The stats double 2/1 → 4/2 and Pierce is added to Flexible, Can't Defend, Ranged and Windfury: a keyword more. |
+| stinkyscapeplus-037 | Scorch | Meets | The stats double 1/1 → 2/2 and it gains Cloaked on top of Can't Defend, Ranged and Pierce: a keyword more. Its 10 attacks per turn are the same on both faces. |
+| stinkyscapeplus-038 | Arc | Meets | 0 attack stays 0 and health doubles 5 → 10. The Activate's uses per turn rise 2 → 5 (2.5×); each chain still deals 2 damage. |
+| stinkyscapeplus-039 | Mindustrial Cross-over | Meets | It discovers a Radiant Mindustrial Unit instead of a plain one, and the pick costs (1) less: two riders on an effect with no number. |
+| stinkyscapeplus-040 | Mender | Meets | Besides healing the adjacent Units to full at End of turn, the Radiant face gives them Divine Shield: a rider. |
+| stinkyscapeplus-041 | Mend Projector | Meets | Besides healing all Units to full at End of turn, the Radiant face gives them Divine Shield: a rider. |
+| stinkyscapeplus-042 | Force Projector | Meets | The damage nullified per turn rises 5 → 10 (2×) and the Radiant face adds Armor 2. |
+| stinkyscapeplus-043 | Segment | Meets | The base counters only the first enemy Ranged attack or Activate each turn; the Radiant face counters all of them: a broader scope. |
+| stinkyscapeplus-044 | Blast Compound | Meets | The attack given rises +2 → +6 (3×); Cleave and the locked tile are the same on both faces. |
+| stinkyscapeplus-045 | Surge Alloy | Meets | The Unit gets Charge instead of Rush, a stronger keyword, and Windfury as on the base face. |
+| stinkyscapeplus-046 | Phase Fabric | Meets | The Radiant face gives Can't be Attacked on top of Immutable and Immune to Spells: a keyword more. |
+| stinkyscapeplus-047 | Plastanium | Meets | The health given rises +2 → +6 (3×); Divine Shield is the same on both faces. |
+| stinkyscapeplus-048 | Thorium | Meets | The buff rises +5/+5 → +10/+10 (2×); Brittle 1 is the same on both faces. |
+| stinkyscapeplus-049 | Metaglass | Meets | The Radiant face gives +3 attack on top of Ranged, a rider on an effect with no number. |
+| stinkyscapeplus-050 | Graphite | Meets | The Radiant face adds First Strike to Pierce, Deft and the extra attack from Frenzy: a keyword more. |
+| stinkyscapeplus-051 | Chains Bind Me | Meets | The Buff or Nerf applied when the permanent awakens rises 2 → 5 times (2.5×); the Dormant for 2 turns is the same on both faces. |
+| stinkyscapeplus-052 | Airblast Drill | Meets | The hand fills with Radiant Minerals (still costing (0)) and Radiant Resources instead of plain ones; Tribute 1 and GIGA are unchanged: a rider-level raise. |
+| stinkyscapeplus-053 | Laser Drill | Meets | The three cards added each End of turn are Radiant Minerals (costing (0)) or Radiant Resources instead of plain ones: a rider-level raise. |
+| stinkyscapeplus-054 | Pneumatic Drill | Meets | The card added each End of turn is a Radiant Mineral or Radiant Resource instead of a plain one: a rider-level raise. |
+| stinkyscapeplus-055 | Thorium Reactor | Meets | Its numbers are identical (3 mana, 1 card, 15% blow-up for 30), but the Radiant face adds Lucky 1 to its luck-based blow-up chance: a keyword rider. |
+| stinkyscapeplus-056 | Impact Reactor | Meets | The mana lost after the Cry halves, 4 → 2 next turn and 2 → 1 after, while the Dormant for 2 turns and the infinite mana are the same: a lighter drawback is the upgrade. |
+| stinkyscapeplus-057 | Phase Weaver | Meets | The Phase Fabric added at the end of its owner's turn costs (0) on the Radiant face: a cost rider on an effect with no number. |
+| stinkyscapeplus-058 | Phase Conveyer | Meets | 0 attack stays 0 and health doubles 3 → 6. The Start of turn adds a Radiant Mineral and a Radiant Resource instead of plain ones: a rider-level raise. |
+| stinkyscapeplus-059 | Mass Driver | Meets | The Activate still waits 2 turns, but then adds two Radiant Minerals costing (0) and a Radiant Resource instead of plain ones: a rider-level raise. |
+| stinkyscapeplus-060 | Radi | Meets | The stats double 1/1 → 2/2 and the Cry discovers an Epic Weapon instead of a Rare one (still one), a higher-rarity pool: a rider-level raise. |
+| stinkyscapeplus-061 | Jayaad | Meets | The stats double 2/6 → 4/12 and the Cry summons a Radiant Shawarma Law instead of a plain one: a rider-level raise. |
+| stinkyscapeplus-061-1 | Shawarma Law | Meets | Every number is identical (+3 health, Brittle 2), but allied Units stop at one Shawarma, so only the opponent's Units suffer the Can't attack, Brittle and Freeze courses: a rider. |
+| stinkyscapeplus-062 | Overdrive Projector | Meets | Dormant for 1 turn and the Echo +1 are unchanged, but Rush and Windfury go to your Units only instead of all Units, so the opponent no longer shares them: a lighter drawback. |
+| stinkyscapeplus-063 | Overdrive Dome | Meets | Dormant for 2 turns and the Echo +2 are unchanged, but Charge and Windfury go to your Units only instead of all Units, so the opponent no longer shares them: a lighter drawback. |
+| stinkyscapeplus-064 | Surge Wall | Meets | 0 attack stays 0, health doubles 6 → 12, End-of-turn damage rises 1 → 2 (embiggened 2 → 4, 0/24 → 0/48), and Pierce and Armor 2 are added: all 2× or more. |
+| stinkyscapeplus-065 | Thorium Wall | Meets | 0 attack stays 0 and health doubles 8 → 16 (embiggened 0/32 → 0/64). The Radiant face adds Armor 2 to Can't attack and Can't Defend: a keyword more. |
+| stinkyscapeplus-066 | Plastanium Wall | Meets | 0 attack stays 0 and health doubles 4 → 8 (embiggened 0/16 → 0/32). The Radiant face adds Armor 2 to the End-of-turn Divine Shield: a keyword more. |
+| stinkyscapeplus-067 | Phase Wall | Meets | 0 attack stays 0 and health doubles 6 → 12 (embiggened 0/24 → 0/48). The Radiant face adds Armor 2 to Immutable and Immune to Spells: a keyword more. |
+| stinkyscapeplus-068 | Shadiris Visions | Meets | The copy of the discovered Spell is Radiant and costs (1) less instead of being a plain copy: a rider-level raise. |
+| stinkyscapeplus-069 | Exotic Jellybean | Meets | It adds a Radiant Sweet Essence instead of a plain one: a rider-level raise of an effect with no number. |
+| stinkyscapeplus-069-1 | Sweet Essence | Meets | The card to its right is still made Radiant but now also costs (1) less, and the card to its left costs (1) less: two riders. |
+| stinkyscapeplus-070 | Spaceberry | Meets | It still shuffles 3 Cast on draw cards into your deck, but they are Radiant ones instead of plain: a rider-level raise. |
+| stinkyscapeplus-071 | Mindustrial Contract | Meets | It still adds 3 random Mindustrial cards, but they are Radiant ones instead of plain: a rider-level raise. |
+| stinkyscapeplus-072 | Foreshadow | Meets | The stats double 20/20 → 40/40 and the Can't attack drawback is dropped, so it can attack; Tribute 5 and the 1 mana lost are the same: a lighter drawback. |
+| stinkyscapeplus-073 | Ripple | Meets | The stats double 4/16 → 8/32 and the Can't attack drawback is dropped, so it can attack; the summon trigger is the same: a lighter drawback. |
+| stinkyscapeplus-074 | Galaxia | Meets | The stats double 4/6 → 8/12 and the Aura on the first Unit you play each turn rises +3 → +6 Attack (2×). |
+| stinkyscapeplus-075 | J-lease S-Space EX-plorer | Meets | The stats double 5/5 → 10/10 and the Evolve puts a Radiant Pack on top of your deck instead of a plain one: a rider-level raise. |
+| stinkyscapeplus-075-1 | J-lease S-Space EX-plorer Pack | Meets | It still adds 5 random Radiant Stinkyscape or Stinkyscape+ cards on draw, but they now cost (0): a cost rider. |
+| stinkyscapeplus-076 | Ayys LMAO | Meets | It still summons a mix of 3 tokens, but the Ayy tokens are Radiant (4/4 Cloaked, Poisonous) instead of plain 2/2s: a rider-level raise. |
+| stinkyscapeplus-076-1 | Ayy | Meets | The stats double 2/2 → 4/4 and Poisonous is added to Cloaked: a keyword more. |
+| stinkyscapeplus-077 | Black Hole | Meets | The Radiant face draws in only the opponent's permanents, at the start of their turn, instead of both players': it spares your own side, a lighter drawback. |
+| stinkyscapeplus-078 | Slashed Dream Cries in Red | Meets | Both faces slash the board into two, but the Radiant caster picks the lane (2, 3 or 4) instead of the fixed lane 3: a rider on an effect with no number. |
+| stinkyscapeplus-079 | A Glimpse into the Endless Sea | Designer's word (effect half) | Exile your deck is the same and the countdown shortens only 10 → 8 turns (1.25×, a lower number being better), short of 2×: the designer's printed number stands. |
+| stinkyscapeplus-080 | The Last Voyage | Meets | The Radiant face also exiles your opponent's board, a broader scope; the 10 random Terminus Starships and the launches are the same. |
+| stinkyscapeplus-081 | Doomsayer | Meets | 0 attack stays 0 and health doubles 7 → 14. The Start of turn adds a random Radiant Terminus card instead of a plain one: a rider-level raise. |
+| stinkyscapeplus-082 | Endless Expedition | Meets | The 1 mana lost and the (3) cost are the same, but the Terminus card it adds is a Radiant one instead of a plain one: a rider-level raise. |
+| stinkyscapeplus-083 | Offworld Replicant | Designer's word (effect half) | The stats double 6/6 → 12/12, but Stack and the Evolve (add a copy of this to your hand) read the same on both faces, with no scope, rider or keyword added. |
+| stinkyscapeplus-084 | Bogos Binted | Meets | The stats double 5/6 → 10/12 and the Death resets your board to the snapshot with every permanent Radiant: a rider. |
+| stinkyscapeplus-085 | Body Snatch | Meets | Both faces make the Unit an Ayy, but the Radiant one drops the forced Defense Position and keeps the old Unit's stance: a lighter restriction on an effect with no number. |
+| stinkyscapeplus-086 | Astrophage | Meets | 0 attack stays 0 and health doubles 1 → 2. Each Evolve steals 3 stat points from each Unit instead of 1 (3×) and still places a Plague Counter. |
+| stinkyscapeplus-087 | Frontier Flora | Meets | Each Evolve places 4 Plague Counters instead of 2 (2×), and the Aura gives 3X/3X per counter, so its stats grow twice as fast. |
+| stinkyscapeplus-088 | Colony Watcher | Meets | The stats double 2/7 → 4/14 and the Evolve recruits 4 Swarm cards instead of 1 (4×). |
+| stinkyscapeplus-089 | Animosity | Meets | The 5-card exile trigger is the same, but the Terminus card it adds is a Radiant one instead of a plain one: a rider-level raise. |
+| stinkyscapeplus-090 | Meltdown | Meets | Stats 2/12 → 4/28, the attack gained per attack +2 → +4 (2×) with the same 2 damage taken, and the Can't Defend drawback is dropped. |
+| stinkyscapeplus-091 | Tsunami | Meets | The stats double 3/6 → 6/12 and Cleave is added to Flexible, Ranged and Can't Defend: a keyword more. |
+| stinkyscapeplus-092 | Crystalline Chiton | Meets | The stats double 2/4 → 4/8 and each Evolve gains 4 Jade instead of 2 (2×). |
+| stinkyscapeplus-093 | Recessive Replicators | Meets | The stats double 4/4 → 8/8 and the gained Death resummons that Unit Radiant instead of plain: a rider. |
+| stinkyscapeplus-094 | PIP | Meets | The 1-turn deadline is the same, but if the Unit fails the Radiant face also adds 3 The Coins to your hand: a rider on an effect with no number. |
+| stinkyscapeplus-095 | JC Backed | Meets | The Radiant face summons 2 Radiant Jlarna instead of plain ones and drops the 1-mana loss for the rest of the game: a lighter drawback plus Radiant bodies, which meets R275. |
+| stinkyscapeplus-096 | Open Enrollment | Meets | The hand it fills is of Radiant F tier cards (D tier if none) instead of plain ones: every card arrives Radiant, a rider-level raise that meets R275. |
+| stinkyscapeplus-097 | Selective Enrollment | Meets | The base already fills the hand with Radiant S tier cards; the Radiant face adds that they cost (2) less, a discount rider that meets R275. |
+| stinkyscapeplus-098 | Doomed Ship | Meets | It still adds one of its three card pairs to the left and right ends of your hand, which become Radiant when they meet; the Radiant face also makes both cost (0): an added rider that meets R275. |
+| stinkyscapeplus-099 | Big Time Recruits | Meets | It still draws the 3 most expensive permanents and makes them GIGA; the Radiant face makes them Radiant as well: an added rider that meets R275. |
+| stinkyscapeplus-100 | Plesiosize | Meets | The buff rises +6/+6 → +12/+12 (2×) and the Unit is still made GIGA, so it meets R275. |
+| stinkyscapeplus-101 | A Wee Whelp | Meets | Stats double 1/1 → 2/2 and the Evolve sets the stats to 20/20 against 10/10 (2×), so both halves meet R275. |
+| stinkyscapeplus-102 | Cosmic Bard | Meets | Stats double 3/2 → 6/4. The Combo still draws 2 Units, and the Radiant face also sets both their costs to the cheapest drawn: an added rider that meets R275. |
+| stinkyscapeplus-103 | Transcend | Meets | The permanents it transforms cost (2) more instead of (1) more, twice the step, so it meets R275. |
+| stinkyscapeplus-104 | Tireless Cultivation | Meets | The transformed permanent costs (2) more instead of (1) more (2×); Temporary and the return to hand are unchanged, so it meets R275. |
+| stinkyscapeplus-105 | Spacersi | Meets | Stats double 5/8 → 10/16, and the Cry transforms your other Units into ones that cost (2) more instead of (1) more (2×), so both halves meet R275. |
+| stinkyscapeplus-106 | Spectre | Designer's word (effect half) | Stats double 3/12 → 6/24, but the keywords (Flexible, Indestructible, GIGA, Windfury, Ranged, Pierce) are identical on both faces, so the effect half is the designer's printed word. |
+| stinkyscapeplus-107 | Fuse | Designer's word (effect half) | Stats double 2/5 → 4/10 and Armor 5 → 10 (2×), but the lane damage rises only 5x → 7x (1.4×) and the adjacent-lane damage 3x → 4x (1.3×) with no rider, so the effect half is the designer's printed word. |
+| stinkyscapeplus-108 | Swarmer | Meets | Stats double 2/4 → 4/8, and the Radiant face adds Pierce to Armor 1, Can't Defend, Ranged, Cleave and Flexible: one keyword more on a keyword-only unit, which meets R275. |
+| stinkyscapeplus-109 | Lancer | Meets | Stats double 2/4 → 4/8 and Armor 2 → 4 (2×); the Activate may be used 2 times a turn instead of 1 and its Pierce damage rises 5 → 8 (1.6×), about 3× the damage a turn, so it meets R275. |
+| stinkyscapeplus-110 | Dagger | Meets | Stats double 2/1 → 4/2, and the Radiant face adds Rush to Immutable, Immune to Spells and Ranged: one keyword more on a keyword-only unit, which meets R275. |
+| stinkyscapeplus-111 | Mace | Meets | Stats double 2/2 → 4/4, Rush is added and the Burn rises 1 → 2 (2×), so both halves meet R275. |
+| stinkyscapeplus-112 | Fortress | Meets | Stats double 6/3 → 12/6, Armor 2 → 4 (2×) and Rush is added to the kept keywords, so it meets R275. |
+| stinkyscapeplus-113 | Scepter | Meets | Stats double 8/5 → 16/10, and the Radiant face adds Rush to its keyword list (Armor stays 3): one keyword more, which meets R275. |
+| stinkyscapeplus-114 | Reign | Meets | Stats double 12/8 → 24/16, Rush is added and the Burn rises 4 → 8 (2×), so both halves meet R275. |
+| stinkyscapeplus-115 | Flare | Meets | Stats double 1/1 → 2/2, and the Radiant face adds Reborn to Flying, Ranged, Rush and Can't Defend: one keyword more on a keyword-only unit, which meets R275. |
+| stinkyscapeplus-116 | Horizon | Meets | Stats double 3/1 → 6/2, and the Radiant face adds Reborn to Flying, Ranged, Rush and Can't Defend: one keyword more on a keyword-only unit, which meets R275. |
+| stinkyscapeplus-117 | Zenith | Meets | Stats double 5/3 → 10/6, Rush is added and the Burn rises 3 → 6 (2×), so both halves meet R275. |
+| stinkyscapeplus-118 | Antumbra | Meets | Stats double 6/13 → 12/26, Rush is added and the Burn rises 4 → 8 (2×), so both halves meet R275. |
+| stinkyscapeplus-119 | Eclipse | Meets | Stats double 7/15 → 14/30, Rush is added and the Burn rises 5 → 10 (2×), so both halves meet R275. |
+| stinkyscapeplus-120 | Crawler | Meets | Stats double 1/3 → 2/6, the Death damage rises 2 → 4 (2×) and the Toxopid it adds to your hand is Radiant, so both halves meet R275. |
+| stinkyscapeplus-121 | Toxopid | Meets | Stats double 10/10 → 20/20, the end-of-turn Toxic rises 2 → 4 (2×) and the Cry summons 4 Radiant Toxopid Legs against 3 plain ones, now on the opponent's field, so both halves meet R275. |
+| stinkyscapeplus-121-1 | Toxopid Leg | Designer's word (effect half) | Stats double 2/8 → 4/16, but its keywords (Crater, Can't attack, Taunt) are identical on both faces, so the effect half is the designer's printed word. |
+| stinkyscapeplus-122 | Quad | Meets | Stats double 3/12 → 6/24, the end-of-turn heal rises 6 → 12 and the damage 3 → 6 (2×), and Armor 2 is added, so both halves meet R275. |
+| stinkyscapeplus-123 | Oct | Meets | Stats double 4/16 → 8/32, the end-of-turn heal rises 8 → 16 and the damage it nullifies 5 → 10 (2×), and Armor 2 is added, so both halves meet R275. |
+| stinkyscapeplus-124 | Sei | Meets | Stats double 5/12 → 10/24 and Armor 5 → 10 (2×); the Activate may be used 2 times a turn instead of 1 with the same 2 Pierce Cleave damage, twice the output, so it meets R275. |
+| stinkyscapeplus-125 | Omura | Meets | Stats double 7/17 → 14/34, Armor 8 → 16 and the Activate damage 12 → 24 (2×, the 3-turn cooldown kept), so both halves meet R275. |
+| stinkyscapeplus-126 | Vela | Meets | Attack stays 0 and health doubles 10 → 20. The Activate's 8 Pierce damage to the Units in the line now also Cleaves: a broader scope that meets R275. |
+| stinkyscapeplus-127 | Corvus | Meets | Attack stays 0 and health doubles 20 → 40. The Activate's 80 Pierce damage to the Units in the line now also Cleaves: a broader scope that meets R275. |
+| stinkyscapeplus-128 | Additive Reconstructor | Meets | The card it adds each turn is a Radiant (0) or (1) Cost Automa card instead of a plain one: a Radiant rider that meets R275. |
+| stinkyscapeplus-129 | Multiplicative Reconstructor | Meets | The card it adds each turn is a Radiant (2) Cost Automa card (still with no Tribute condition) instead of a plain one: a Radiant rider that meets R275. |
+| stinkyscapeplus-130 | Exponential Reconstructor | Meets | The Automa-δ card it adds each turn is Radiant (still with no Tribute condition) instead of plain: a Radiant rider that meets R275. |
+| stinkyscapeplus-131 | Tetrative Reconstructor | Meets | The Automa-Ω card it adds each turn is Radiant (still with no Tribute condition) instead of plain: a Radiant rider that meets R275. |
+| stinkyscapeplus-132 | Great Paperclip Theory II | Meets | The Dagger or Flare it adds is Radiant, and so is each next-cost Automa-α or β card added when you first play one: a Radiant rider that meets R275. |
+| stinkyscapeplus-133 | Great Paperclip Theory III | Meets | It adds a Radiant Dagger and Flare where the base adds a Daglare, and each follow-up Automa-ζ card is Radiant too: a broader scope and a Radiant rider that meet R275. |
+| stinkyscapeplus-133-1 | Daglare | Meets | Stats double 3/2 → 6/4, and the Radiant face adds Reborn to Immutable, Immune to Spells, Rush, Ranged, Flying and Can't Defend: one keyword more on a keyword-only unit, which meets R275. |
+| stinkyscapeplus-133-2 | Macizon | Meets | Stats double 5/3 → 10/6, Reborn is added and the Burn rises 1 → 2 (2×), so both halves meet R275. |
+| stinkyscapeplus-133-3 | Fortnith | Meets | Stats double 11/6 → 22/12, Armor 2 → 4 and the Burn 3 → 6 (2×), and Rush is added, so both halves meet R275. |
+| stinkyscapeplus-133-4 | Sceptumbra | Meets | Stats double 14/18 → 28/36, Rush is added and the Burn rises 4 → 8 (2×), so both halves meet R275. |
+| stinkyscapeplus-133-5 | Reignclipse | Meets | Stats double 19/23 → 38/46, Rush is added, and the Burn on its damage rises 4 → 8 and on dealing damage 5 → 10 (2×), so both halves meet R275. |
+| stinkyscapeplus-134 | Basket of Crawlers | Meets | It still adds 3 Crawlers to your hand, but they are Radiant Crawlers, with twice the stats and damage: a Radiant rider that meets R275. |
+| stinkyscapeplus-135 | Crawler Swarm | Meets | It still fills your board with Crawlers, but they are Radiant Crawlers, with twice the stats and damage: a Radiant rider that meets R275. |
+| stinkyscapeplus-136 | Crawler Assembly Line | Meets | The Activate still summons 1 Crawler, but a Radiant Crawler instead of a plain one: a Radiant rider that meets R275. |
+| stinkyscapeplus-137 | The Perfect Pair | Meets | The Automa-δ and its paired Automa-Ω card it adds are both Radiant instead of plain: a Radiant rider that meets R275. |
+| stinkyscapeplus-138 | Delta Definition | Meets | It still adds 3 Automa-δ cards (with Tribute 1 when Embiggened), but they are Radiant ones: a Radiant rider that meets R275. |
+| stinkyscapeplus-139 | Operation Omega | Meets | It still adds 2 Automa-Ω cards (with Tribute 2 when Embiggened), but they are Radiant ones: a Radiant rider that meets R275. |
+| stinkyscapeplus-140 | Automa Reintegration Plan | Meets | The Automa Unit it discovers is a Radiant one, which still gains Starship Piece: a Radiant rider that meets R275. |
+| stinkyscapeplus-141 | Stinky 1x Engineer | Meets | Stats double 2/3 → 4/6, and the Cry destroys 3 other random permanents where the base only nerfs them: a stronger effect on the same count, which meets R275. |
+| stinkyscapeplus-142 | Call to Chaos (Mindustrial-Swarm Edition) | Meets | The Radiant face resolves three different random effects in the order listed against one, every number unchanged, as every Call to Chaos does, which meets R275. |
+| stinkyscapeplus-142-1 | Mindustrial Golem | Meets | Stats double 5/5 → 10/10, and the random Mindustrial card it summons after attacking is Radiant instead of plain: a Radiant rider that meets R275. |
+| stinkyscapeplus-142-2 | Swarm Golem | Meets | Stats double 5/5 → 10/10, and the Evolved Swarm card it summons after attacking is Radiant instead of plain: a Radiant rider that meets R275. |
+| stinkyscapeplus-143 | Fire Beam v3 | Meets | Attack stays 0 and health doubles 2 → 4; the Activate's Burn rises 2 → 4 (2×), so it meets R275. |
+| stinkyscapeplus-144 | Fire Beam v4 | Meets | Attack stays 0 and health doubles 3 → 6; the Activate's Burn rises 4 → 8 (2×), so it meets R275. |
+| stinkyscapeplus-145 | Fire Beam v5 | Meets | Attack stays 0 and health doubles 4 → 8; the Activate's Burn rises 4 → 8 (2×), so it meets R275. |
+| stinkyscapeplus-146 | Scourge Mortar v3 | Meets | Attack stays 0 and health doubles 2 → 4; the Toxic is the same 2 but the Activate may be used 2 times a turn instead of 1, twice the effect, so it meets R275. |
+| stinkyscapeplus-147 | Scourge Mortar v4 | Meets | Attack stays 0 and health doubles 3 → 6. The Toxic is the same 4, but the Activate may be used 2 times a turn instead of 1, twice the effect, so it meets R275. |
+| stinkyscapeplus-148 | Scourge Mortar v5 | Meets | Attack stays 0 and health doubles 4 → 8. The Toxic is the same 6, but the Activate may be used 2 times a turn instead of 1, twice the effect, so it meets R275. |
+| stinkyscapeplus-149 | Flaming Rounds | Meets | Stats double 2/1 → 4/2 and the Burn its damage deals rises 2 → 4 (2×), so both halves meet R275. |
+| stinkyscapeplus-150 | Scorching Rounds | Meets | Stats double 3/1 → 6/2 and the Burn its damage adds rises 3 → 6 (2×), so both halves meet R275. |
+| stinkyscapeplus-151 | Volcanic Rounds | Designer's word (effect half) | Stats double 3/1 → 6/2, but its text (Starship Piece, Equip, damage dealt Burns) has no number and is identical on both faces, so the effect half is the designer's printed word. |
+| stinkyscapeplus-152 | Venomous Rounds | Meets | Stats double 2/1 → 4/2 and the Toxic its damage applies rises 2 → 4 (2×), so both halves meet R275. |
+| stinkyscapeplus-153 | Noxious Rounds | Designer's word (effect half) | Stats double 1/1 → 2/2, but its text (Starship Piece, Equip, damage dealt is Toxic) has no number and is identical on both faces, so the effect half is the designer's printed word. |
+| stinkyscapeplus-154 | Chaos Accelerator | Meets | Stats double 3/6 → 6/12, and the Call to Chaos it casts when launched is a random Radiant one instead of a plain one: a Radiant rider that meets R275. |
+| stinkyscapeplus-155 | The Far Vagabond | Meets | The Terminus Starship it summons can be launched for (0) instead of (3): the whole launch price removed, a lighter cost that meets R275. |
+| stinkyscapeplus-156 | Horizon Breaker | Meets | Stats double 3/6 → 6/12, and the Terminus card it casts when launched is a random Radiant one instead of a plain one: a Radiant rider that meets R275. |
+| stinkyscapeplus-157 | Phantom Shipyard | Meets | Attack and health stay 0/0. The shipyard fuses a random Radiant Starship Piece each turn instead of a plain one, a Radiant rider that meets R275; the Activate 3 launch is unchanged. |
+| stinkyscapeplus-158 | Quick Chaos | Meets | The Spell cast on draw is a random Radiant Spell instead of a plain one, still with random targets: a Radiant rider that meets R275. |
+| stinkyscapeplus-159 | Raven | Meets | Stats double 1/1 → 2/2, and the Cry discovers an Epic Weapon instead of a Rare one (the same 1 pick) to equip into it: a higher rarity that meets R275. |
+| stinkyscapeplus-160 | Icarus | Meets | Stats double 2/8 → 4/16; the Activate summons a Radiant Radi, and the Cry discovers a Legendary Weapon instead of an Epic one: two raises that meet R275. |
+| stinkyscapeplus-161 | Space Invader | Meets | Stats double 2/2 → 4/4, and the Radiant face gains Starship Piece (a copy fuses into your Dormant Starship when it dies): one keyword more, which meets R275. Evolve is unchanged. |
+| stinkyscapeplus-162 | Edwin Van’Spacechief | Meets | Stats double 2/2 → 4/4, and the Combo's gain is formula-scaled from +2X/+2X to +4X/+4X (2×), so both halves meet R275. |
+| stinkyscapeplus-163 | Accelerationist | Meets | Stats double 6/6 → 12/12 and the Aura's bonus per card that Evolved this game rises +2/+2 → +4/+4 (2×), so both halves meet R275. |
+| stinkyscapeplus-164 | KPIs | Meets | The destruction spares your own cards and reaches only enemy cards with a lower winrate: a lighter drawback, which counts as the upgrade and meets R275. |
+| stinkyscapeplus-165 | Shadiris | Meets | Stats double 3/13 → 6/26, and the Cry casts Radiant Shadiris Visions twice and adds three Radiant Stinkyscape Resources instead of plain ones: a Radiant rider that meets R275. |
+| stinkyscapeplus-166 | Mindustrial Revolution | Meets | The Mindustrial card it adds each turn is Radiant instead of plain and costs (1) less: a Radiant rider and a discount that meet R275. |
+| stinkyscapeplus-t-tears-of-the-kwzki-tree | Tears of the Kwzki Tree | Meets | Both faces make every card Radiant for the rest of the game and buff all cards at the end of any turn; the Radiant face also gains 4 mana: an added rider that meets R275. |
+| stinkyscapeplus-t-supernova | Supernova | Meets | It still fuses all Units on the board into an Alnilam, but the Alnilam is a Radiant one, with twice the stats and a longer Brittle: a Radiant rider that meets R275. |
+| stinkyscapeplus-t-alnilam | Alnilam | Meets | Stats double 10/10 → 20/20 and Brittle rises 3 → 5, so it lasts longer before its Death loses the game: a lighter drawback plus the stats, which meets R275. |
+| stinkyscapeplus-t-the-enigmata | The Enigmata | Meets | The Radiant face adds a rider: your hero gains Armor 5 before the players take turns casting Jogg's box until the game ends. That is a rider that meets R275. |
+| stinkyscapeplus-t-warhero-token | Warhero Token | Meets | The Credits it gains equal twice the Warhero Tokens' worth instead of once that worth (2×), so it meets R275. |
+| stinkyscapeplus-t-terminus-starship-ark-of-ashes | Ark of Ashes | Meets | Attack and health stay 0/0, and the Starship comes holding Radiant Patcher Nanobots, Radiant Defensive Crystal and Radiant Hull Booster instead of plain pieces: a Radiant rider that meets R275. |
+| stinkyscapeplus-t-terminus-starship-dying-ember | Dying Ember | Meets | Attack and health stay 0/0, and the Starship comes holding Radiant After Burner, Ultralight Chassis, Spacemine and AP Rounds instead of plain pieces: a Radiant rider that meets R275. |
+| stinkyscapeplus-t-terminus-starship-heat-death-pilgrim | Heat Death Pilgrim | Meets | Attack and health stay 0/0, and the Starship comes holding Radiant Trila 3, RR-5000, Healing Capsule and Vamp Rounds instead of plain pieces: a Radiant rider that meets R275. |
+| stinkyscapeplus-t-terminus-starship-entropys-wake | Entropy's Wake | Meets | Attack and health stay 0/0, and the Starship comes holding Radiant Disintegrex, Flak v4, Shield Amplifier and Hull Booster instead of plain pieces: a Radiant rider that meets R275. |
+| stinkyscapeplus-t-terminus-starship-red-giant-requiem | Red Giant Requiem | Meets | Attack and health stay 0/0, and the Starship comes holding Radiant Cannon v5, Trila 3 and Ultra Capacitor instead of plain pieces: a Radiant rider that meets R275. |
+| stinkyscapeplus-t-terminus-starship-cold-exodus | Cold Exodus | Meets | Attack and health stay 0/0, and the Starship comes holding Radiant Frost Module, Reflective Plating, Defensive Crystal and Beam v4 instead of plain pieces: a Radiant rider that meets R275. |
+| stinkyscapeplus-t-terminus-starship-omega-drift | Omega Drift | Meets | Attack and health stay 0/0, and the Starship comes holding Radiant Beam v5, Warpfield Amplifier, Magic Module and RR-5000 instead of plain pieces: a Radiant rider that meets R275. |
+| stinkyscapeplus-t-terminus-starship-farthest-shore | Farthest Shore | Meets | Attack and health stay 0/0, and the Starship comes holding Radiant Repeater v5, After Burner, Patcher Nanobots, Ultra Capacitor and Healing Capsule instead of plain pieces: a Radiant rider that meets R275. |
+| stinkyscapeplus-t-terminus-starship-nightfall-covenant | Nightfall Covenant | Meets | Attack and health stay 0/0, and the Starship comes holding Radiant Flak v5, Cannon v4, Vamp Rounds, Shield Amplifier and Spacemine instead of plain pieces: a Radiant rider that meets R275. |
+| stinkyscapeplus-t-terminus-starship-vacuum-psalm | Vacuum Psalm | Meets | Attack and health stay 0/0, and the Starship comes holding Radiant Cannon v5, Beam v5 and Flak v5 instead of plain pieces: a Radiant rider that meets R275. |
+| stinkyscapeplus-t-ai-01 | Hallucinated Kiwi | Meets | It draws 2 cards against 1 (2×) and drops Tipsy 1, a lighter drawback on top of the draw, so it meets R275. |
+| stinkyscapeplus-t-ai-02 | Data-Poisoned Plum | Meets | The Toxic it gives an enemy Unit rises 1 → 2 (2×), so it meets R275. |
+| stinkyscapeplus-t-ai-03 | Jlockeed Loitering Munition | Meets | Stats double 2/1 → 4/2, and the Radiant face adds Lifesteal to Evasive: one keyword more on a keyword-only unit, which meets R275. |
+| stinkyscapeplus-t-ai-04 | Jlockeed Large Language Model | Meets | Stats double 2/5 → 4/10, and the Radiant face adds Divine Shield to GIGA and Taunt: one keyword more on a keyword-only unit, which meets R275. |
+| stinkyscapeplus-t-ai-05 | Lantern Distiller | Meets | Stats double 1/2 → 2/4 and each Evolve gains +4/+4 instead of +2/+2 (2×), so both halves meet R275. |
+| stinkyscapeplus-t-ai-06 | Abacus Optimizer | Meets | The leftmost and rightmost cards in your hand cost (2) less instead of (1) less (2×), so it meets R275. |
+| stinkyscapeplus-t-ai-07 | KY's Line Search Bot | Meets | Stats double 2/2 → 4/4, and the Cry's damage to every Unit on the line between it and the chosen enemy tile rises 2 → 4 (2×), so both halves meet R275. |

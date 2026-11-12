@@ -199,7 +199,7 @@ string_union! {
     /// Starship, Dormant or launched): a family tag with a rule, a card holding it having Flying and
     /// Ranged through the layers (R3038000), which the server admits from migration 0080.
     /// Issue #3535 adds Mindustrial, Mineral, Automa-α, Automa-β, Automa-γ, Automa-δ, Automa-Ω,
-    /// Automa-ζ and Paperclip (the held Stinkyscape+ set's family tags, R3535002), which the server
+    /// Automa-ζ and Paperclip (the Stinkyscape+ set's family tags, R3535002), which the server
     /// admits from migration 0087.
     pub enum Tag {
         Human = "Human",
@@ -338,8 +338,8 @@ macro_rules! set_table {
         string_union! {
             /// §5: Core, Classic, Classic+ (R380), Meditative (v0.3.5, R1420) and Meditative+ (v0.3.15,
             /// issue #1173, R1178000), Stinkyscape (issue #1836, R1857000; released by #1884) and
-            /// Training Grounds (issue #2193, R2194000; released by #2204) ship; Boss and Boss-X are
-            /// reserved.
+            /// Training Grounds (issue #2193, R2194000; released by #2204) and Stinkyscape+ (issue #3535,
+            /// R3535000; released by #3573) ship; Boss and Boss-X are reserved.
             pub enum SetName { $( $variant = $name ),+ }
         }
 
@@ -467,7 +467,7 @@ set_table![
     TrainingGrounds = "Training Grounds" { stage: Shipped, segment: "traininggrounds", abbreviation: Some("TG"), shadow_ban_share: Some((1, 2)) },
     Boss = "Boss" { stage: SinglePlayer, segment: "boss", abbreviation: None, shadow_ban_share: None },
     BossX = "Boss-X" { stage: SinglePlayer, segment: "bossx", abbreviation: None, shadow_ban_share: None },
-    StinkyscapePlus = "Stinkyscape+" { stage: Held, segment: "stinkyscapeplus", abbreviation: Some("S+"), shadow_ban_share: Some((1, 5)) },
+    StinkyscapePlus = "Stinkyscape+" { stage: Shipped, segment: "stinkyscapeplus", abbreviation: Some("S+"), shadow_ban_share: Some((1, 5)) },
 ];
 
 /// R924000: what "More cards from" picks for a player's dealt Random deck (R1372, R1373): the newest

@@ -138,11 +138,12 @@ mod tests {
     #[test]
     fn r3554005_radiant_cleaves() {
         let mut s = vela_on(true, 1, json!({ "field": [VANILLA, VANILLA, VANILLA] }));
+        // The ids are read before the line: its hits kill the 4/4 Units, which then leave the field.
+        let first = s.unit_at(P2, 1).id;
+        let second = s.unit_at(P2, 2).id;
         s.activate(ID, json!({ "ability": "line" }));
         // At the enemy Units at lane 1: the line hits it, the Cleave its lane-2 neighbour once.
         pick_tile(&mut s, 0, 2);
-        let first = s.unit_at(P2, 1).id;
-        let second = s.unit_at(P2, 2).id;
         let dealt: Vec<(String, i32)> = hits(s.last_events());
         assert!(dealt.contains(&(first.clone(), 8)));
         assert!(dealt.contains(&(second.clone(), 8)), "the Cleave hit");

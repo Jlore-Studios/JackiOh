@@ -21,7 +21,25 @@ const NAMES_A_HELD_CARD: &[&str] = &[
     // YileGPT Prime, a token: "Cry: … summon Claude's Datacenters". A random game reaches it as a
     // Marketplace buy at (0) since #3047 (R3047001).
     "meditative-049-1",
+    // The Stinkyscape+ release (#3573): the two cards of the set that name a held card, as a Faction's
+    // text does, so no pool is drawn.
+    "stinkyscapeplus-120", // Crawler: "add a Toxopid to your hand" (S+ #121, Legendary).
+    "stinkyscapeplus-136", // Crawler Assembly Line: "Summon a Crawler", whose first arrival adds a Toxopid.
+    "stinkyscapeplus-137", // The Perfect Pair: "The pairs are Scepter and Reign, … Quad and Oct, …" (R3565004).
 ];
+/// A held card the text of another card names, so it reaches a game wherever that other card stands, not
+/// only as it is played: Toxopid (S+ #121) comes with each Crawler (#120), which any Mindustrial pool
+/// can generate and which adds it by name on its first arrival, however it arrives.
+const NAMED_BY_A_CARD_IN_PLAY: &[(&str, &str)] = &[("stinkyscapeplus-121", "stinkyscapeplus-120")];
+
+/// Whether `state` holds a card whose text names the held card `id` (`NAMED_BY_A_CARD_IN_PLAY`).
+fn named_by_a_card_in_play(state: &GameState, id: &str) -> bool {
+    let text = serde_json::to_string(state).expect("the state serializes");
+    NAMED_BY_A_CARD_IN_PLAY
+        .iter()
+        .any(|(named, namer)| *named == id && text.contains(&format!("\"defId\":\"{namer}\"")))
+}
+
 const MAX_ACTIONS: usize = 3000;
 
 fn unheld_pool() -> Vec<String> {
@@ -105,6 +123,9 @@ fn sweep(n: i32, hold: bool) -> Vec<(String, usize)> {
         state = result.state;
         steps += 1;
         for id in held_named(&state) {
+            if named_by_a_card_in_play(&state, &id) {
+                continue;
+            }
             if names_one && !seen.iter().any(|(named, _)| *named == id) {
                 named_made.push(id.clone());
             }

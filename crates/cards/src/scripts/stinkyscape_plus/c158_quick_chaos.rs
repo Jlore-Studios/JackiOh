@@ -81,7 +81,9 @@ mod tests {
             let cast = casts(&s);
             assert!(cast.iter().any(|id| id == ID), "{n}: it was cast on draw");
             let others: Vec<&String> = cast.iter().filter(|id| id.as_str() != ID).collect();
-            assert_eq!(others.len(), 1, "{n}: one random Spell");
+            // The one random Spell is the first cast after it; a Spell that casts others (Call to Chaos)
+            // leaves more cards played behind it, which are its own.
+            assert!(!others.is_empty(), "{n}: one random Spell");
             let def = catalog::def_of(None, others[0]);
             assert_eq!(def.type_, CardType::Spell);
             assert!(!def.token);

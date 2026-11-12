@@ -17,6 +17,10 @@
 > mechanic may change a default, and records its choice as a ruling note (CLAUDE.md rule 3).
 > `docs/stinkyscape-set.md` is the model this plan follows (its ST3 to ST15), and Stinkyscape's
 > parts are the precedent for every system named here.
+>
+> The set shipped with its release (#3573, [[R3535000]]): `SHIPPED_SETS` lists it, `AI_DECK_GATED_SETS`
+> holds it, and `UNIQUE_RANDOM_DRAWS` is on (R3563000). Where this brief says "while the set is held",
+> it describes the build before then.
 
 ## Contents
 

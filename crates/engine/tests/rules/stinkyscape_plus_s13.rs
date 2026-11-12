@@ -161,8 +161,7 @@ mod r3560001_graveyard_price_offers_and_prices_the_play {
         let id = grave_id(&s, CRAWLERISH);
         let plain = grave_id(&s, PLAIN);
         assert!(plays_of(&s, &plain).is_empty());
-        let action =
-            json!({ "type": "play", "playerId": "p1", "instanceId": id, "zone": 1, "nonce": "s13-grave-1" });
+        let action = json!({ "type": "play", "playerId": "p1", "instanceId": id, "zone": { "row": "units", "lane": 1 }, "nonce": "s13-grave-1" });
         let result = reduce(s.state(), &json_as::<Action>(action));
         assert!(result.error.is_none(), "{:?}", result.error);
         let after = result.state;

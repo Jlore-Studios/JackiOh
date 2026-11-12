@@ -188,11 +188,11 @@ mod tests {
     }
 
     #[test]
-    fn r3570000_the_card_is_of_the_held_stinkyscape_plus_set() {
+    fn r3570000_the_card_is_of_the_shipped_stinkyscape_plus_set() {
         crate::register_all();
         let def = card_def(ID);
         assert_eq!(def.set, SetName::StinkyscapePlus);
-        assert!(!set_ships(def.set));
+        assert!(set_ships(def.set));
     }
 
     mod base {
@@ -501,12 +501,11 @@ mod tests {
             assert!(!s.unit_at(P1, 1).radiant && !s.unit_at(P1, 2).radiant);
         }
 
-        /// R3570005: the tenth entry's own pick never draws this card, though the pool holds it once the
-        /// set is open; another edition's recursion may. The other editions run nothing here, so a pick
+        /// R3570005: the tenth entry's own pick never draws this card, though the pool holds it since the
+        /// set ships; another edition's recursion may. The other editions run nothing here, so a pick
         /// of this card could only be the tenth entry's.
         #[test]
         fn r3570005_entry_recast_never_casts_this_edition() {
-            let _preview = preview_sets(&[SetName::StinkyscapePlus]);
             crate::register_all();
             let pool: Vec<String> = catalog::query(&json_as(json!({ "tags": ["Call to Chaos"] })))
                 .iter()
@@ -514,7 +513,7 @@ mod tests {
                 .collect();
             assert!(
                 pool.iter().any(|id| id == ID),
-                "the previewed pool holds this edition"
+                "the pool holds this edition"
             );
             assert!(pool.len() > 2, "{pool:?}");
 
@@ -595,7 +594,6 @@ mod tests {
 
         #[test]
         fn r28_many_seeds_end_every_play_within_the_caps() {
-            let _preview = preview_sets(&[SetName::StinkyscapePlus]);
             for n in 0..LOOP_GAMES {
                 let mut s = scenario(json!({
                     "seed": format!("{SEED}-loops-{n}"),

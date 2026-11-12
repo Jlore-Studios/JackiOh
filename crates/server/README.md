@@ -1247,7 +1247,8 @@ re-apply.
 
 Migration 0087 widens the `cards` tag check once more, as 0083 did, with #3535's nine Stinkyscape+ tags
 (R3535002) — Mindustrial, Mineral, Automa-α, Automa-β, Automa-γ, Automa-δ, Automa-Ω, Automa-ζ and
-Paperclip — so `seed-catalog` can write the held set's entries the day it ships.
+Paperclip — so `seed-catalog` can write the set's entries the day it ships (#3573, R3535000), and comments
+`cards.set_id` with the eight sets that ship.
 
 ## Tests
 

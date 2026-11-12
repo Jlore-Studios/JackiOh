@@ -50,9 +50,16 @@ mod tests {
         }))
     }
 
-    /// The `addedToHand` events of p1 in the last step, as `(instanceId, defId)`.
+    /// S+ #121 Toxopid (Mythic), and the Crawler it adds to its owner's hand the first time it enters one
+    /// (R3560000): that card is its own trigger's add, no pick of the Book's.
+    const TOXOPID: &str = "stinkyscapeplus-121";
+    const CRAWLER: &str = "stinkyscapeplus-120";
+
+    /// The `addedToHand` events of p1 in the last step, as `(instanceId, defId)`, the Book's picks: a Toxopid
+    /// among them leaves out the Crawler its arrival adds.
     fn added(s: &Scenario) -> Vec<(String, String)> {
-        s.last_events()
+        let found: Vec<(String, String)> = s
+            .last_events()
             .iter()
             .filter_map(|event| match event {
                 GameEvent::AddedToHand { player: PlayerId::P1, instance_id, def_id, .. } => {
@@ -60,7 +67,9 @@ mod tests {
                 }
                 _ => None,
             })
-            .collect()
+            .collect();
+        let toxopid = found.iter().any(|(_, def_id)| def_id == TOXOPID);
+        found.into_iter().filter(|(_, def_id)| !toxopid || def_id != CRAWLER).collect()
     }
 
     fn added_cards(s: &Scenario) -> Vec<CardInstance> {
@@ -110,7 +119,8 @@ mod tests {
         #[test]
         fn r380_s5_over_many_seeds_every_set_never_a_token_whatever_rarity_it_prints() {
             let mut seen: IndexSet<String> = IndexSet::new();
-            for i in 0..60 {
+            // Three picks a seed over 151 cards, three of them Meditative+'s: this many seeds bring every set up.
+            for i in 0..300 {
                 let mut s = book(false, Some(&format!("greed-{i}")), None);
                 s.play(BOOK, json!({}));
                 for (_, def_id) in added(&s) {
@@ -129,7 +139,7 @@ mod tests {
                 .collect();
             sets.sort();
             // Meditative+ (#1187) by M+ #1, #24, #26; Stinkyscape (#1884); Training Grounds (#2204) by
-            // #37, #38, #39, #40.
+            // #37, #38, #39, #40; Stinkyscape+ (#3573).
             assert_eq!(
                 sets,
                 vec![
@@ -139,6 +149,7 @@ mod tests {
                     "Meditative".to_string(),
                     "Meditative+".to_string(),
                     "Stinkyscape".to_string(),
+                    "Stinkyscape+".to_string(),
                     "Training Grounds".to_string(),
                 ]
             );
@@ -215,24 +226,23 @@ mod tests {
             );
         }
 
+        /// R3563000: the cards of one play are different while the pool lasts (R60's repeats no longer stand
+        /// for a card an effect generates): three picks from 151 are three cards; one seed adds the same ones.
         #[test]
-        fn r60_repeats_are_allowed_and_the_same_seed_adds_the_same_cards() {
+        fn r3563000_the_picks_are_distinct_until_the_pool_runs_out_and_the_same_seed_adds_the_same_cards() {
             let mut a = book(true, Some("same"), None);
             let mut b = book(true, Some("same"), None);
             a.play(BOOK, json!({}));
             b.play(BOOK, json!({}));
             let defs = |s: &Scenario| -> Vec<String> { added(s).into_iter().map(|(_, def_id)| def_id).collect() };
             assert_eq!(defs(&a), defs(&b));
-            let mut repeated = false;
-            let mut i = 0;
-            while i < 200 && !repeated {
+            for i in 0..200 {
                 let mut s = book(true, Some(&format!("rep-{i}")), None);
-                i += 1;
                 s.play(BOOK, json!({}));
                 let ids = defs(&s);
-                repeated = ids.iter().collect::<IndexSet<_>>().len() < ids.len();
+                assert_eq!(ids.len(), 3, "rep-{i}");
+                assert_eq!(ids.iter().collect::<IndexSet<_>>().len(), ids.len(), "rep-{i}: {ids:?}");
             }
-            assert!(repeated);
         }
     }
 }

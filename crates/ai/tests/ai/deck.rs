@@ -702,7 +702,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             (
                 "r1370-pin:human",
                 20,
-                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds"] }),
+                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"] }),
                 21,
                 &[
                     "classicplus-006",
@@ -730,7 +730,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             (
                 "r1370-pin:easy",
                 20,
-                json!({ "manaCap": 4, "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds"] }),
+                json!({ "manaCap": 4, "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"] }),
                 21,
                 &[
                     "core-089",
@@ -758,7 +758,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             (
                 "r1370-pin:hard",
                 30,
-                json!({ "manaCap": 7, "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds"] }),
+                json!({ "manaCap": 7, "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"] }),
                 31,
                 &[
                     "classicplus-006",
@@ -796,7 +796,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             (
                 "r1370-pin:themed",
                 20,
-                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds"], "theme": "Human" }),
+                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"], "theme": "Human" }),
                 20,
                 &[
                     "classic-008",
@@ -1103,9 +1103,10 @@ mod r1390_the_ai_decks_soft_gate {
     /// A card of the Meditative set, which the sweep forces in by name.
     const FORCED_MEDITATIVE: &str = "meditative-002";
 
-    /// The gate the AI's decks were dealt under from #551 until #732 lifted it, named by the tests of
-    /// the gate's mechanics now that `AI_DECK_GATED_SETS` is empty.
-    const GATE: &[SetName] = &[SetName::Meditative];
+    /// A gate the tests of the gate's mechanics deal under: Meditative, which the AI's decks were
+    /// dealt under from #551 until #732 lifted it, and Stinkyscape+, which `AI_DECK_GATED_SETS` holds
+    /// from its release (#3573), so a lean on the first lands on the newest set that is in neither.
+    const GATE: &[SetName] = &[SetName::Meditative, SetName::StinkyscapePlus];
 
     fn gated_in(deck: &[String]) -> Vec<&String> {
         deck.iter()
@@ -1194,7 +1195,8 @@ mod r1390_the_ai_decks_soft_gate {
         register_cards();
         let gate = GATE;
         // The newest set that ships, which this gate leaves, is Training Grounds (#2204; Stinkyscape #1884
-        // and Meditative+ #1187 before it), so a lean on gated Meditative lands on it, not on Classic+.
+        // and Meditative+ #1187 before it; Stinkyscape+ #3573 is gated), so a lean on gated Meditative
+        // lands on it, not on Classic+.
         assert_eq!(
             ungated_lean(Some(SetName::Meditative), gate),
             Some(SetName::TrainingGrounds)
@@ -1215,7 +1217,8 @@ mod r1390_the_ai_decks_soft_gate {
                     SetName::ClassicPlus,
                     SetName::Meditative,
                     SetName::Stinkyscape,
-                    SetName::TrainingGrounds
+                    SetName::TrainingGrounds,
+                    SetName::StinkyscapePlus
                 ]
             ),
             Some(SetName::MeditativePlus)
@@ -1228,7 +1231,8 @@ mod r1390_the_ai_decks_soft_gate {
                     SetName::Meditative,
                     SetName::MeditativePlus,
                     SetName::Stinkyscape,
-                    SetName::TrainingGrounds
+                    SetName::TrainingGrounds,
+                    SetName::StinkyscapePlus
                 ]
             ),
             Some(SetName::Classic)
@@ -1333,8 +1337,9 @@ mod r1390_the_ai_decks_soft_gate {
     fn r1390_the_gate_is_lifted_and_the_ai_decks_are_dealt_meditative_cards() {
         register_cards();
         // Issue #732 measured the AI on the Meditative set and took it off the list (R1390): the AI's
-        // own decks are dealt from it.
-        assert!(AI_DECK_GATED_SETS.is_empty(), "{AI_DECK_GATED_SETS:?}");
+        // own decks are dealt from it. The list holds the Stinkyscape+ set alone since its release
+        // (#3573).
+        assert_eq!(AI_DECK_GATED_SETS, &[SetName::StinkyscapePlus]);
         assert_eq!(
             ungated_lean(Some(SetName::Meditative), AI_DECK_GATED_SETS),
             Some(SetName::Meditative)
@@ -1393,6 +1398,52 @@ mod r1390_the_ai_decks_soft_gate {
             "{leaning:?}"
         );
     }
+
+    /// The gate holds the Stinkyscape+ set from its release (#3573, R3535000) until fullsend 2's sweep
+    /// (#3574) measures the AI on it: no AI deck at any tier holds one of its cards, a lean on it leans
+    /// on Training Grounds, the newest set that ships and is not gated, and a player's random deck from
+    /// the same stream holds some.
+    #[test]
+    fn r1390_the_gate_holds_the_stinkyscape_plus_set_from_its_release() {
+        register_cards();
+        assert_eq!(AI_DECK_GATED_SETS, &[SetName::StinkyscapePlus]);
+        assert!(SHIPPED_SETS.contains(&SetName::StinkyscapePlus));
+        assert_eq!(
+            ungated_lean(Some(SetName::StinkyscapePlus), AI_DECK_GATED_SETS),
+            Some(SetName::TrainingGrounds)
+        );
+        let mut players = 0;
+        for (tier, size, base) in ai_rules() {
+            for n in 1..=GATE_SEEDS {
+                let seed = format!("r1390:plus:{tier}:{n}");
+                let ai = build_ai_deck(&mut create_rng(&seed, 0), size, &options(base.clone()));
+                assert_eq!(ai.len(), size as usize, "{seed}");
+                assert_eq!(of_set(&ai, SetName::StinkyscapePlus), 0, "{seed}: {ai:?}");
+                let mut player = base.clone();
+                player["gatedSets"] = json!([]);
+                let deck = build_ai_deck(&mut create_rng(&seed, 0), size, &options(player));
+                players += of_set(&deck, SetName::StinkyscapePlus);
+            }
+        }
+        assert!(players > 0, "no player's random deck held a Stinkyscape+ card");
+        for n in 1..=GATE_SEEDS {
+            let seed = format!("r1390:plus:lean:{n}");
+            let leaning = build_ai_deck(
+                &mut create_rng(&seed, 0),
+                DECK_SIZE,
+                &options(json!({ "leanSet": "Stinkyscape+" })),
+            );
+            assert_eq!(
+                of_set(&leaning, SetName::StinkyscapePlus),
+                0,
+                "{seed}: {leaning:?}"
+            );
+            assert!(
+                of_set(&leaning, SetName::TrainingGrounds) >= lean_floor(DECK_SIZE),
+                "{seed}: {leaning:?}"
+            );
+        }
+    }
 }
 
 // R750000: a ladder bot's deal leans on the cards that win; R3049002: the table it is handed
@@ -1404,8 +1455,10 @@ mod win_rate_strength {
         WinRateRow, WinRateSource, WinRateTable, clear_overrides, register_win_rates,
     };
 
-    /// The rated cards: the first `RATED` ids of the pool, alternately winners and losers.
-    const RATED: usize = 80;
+    /// The rated cards: the first `RATED` ids of the pool, alternately winners and losers. Re-pinned for
+    /// the Stinkyscape+ release (#3573) with the pool: 100 of its 800 cards, the share (an eighth) 80 of
+    /// 634 were, so the rated cards weigh in a deck as they did.
+    const RATED: usize = 100;
     /// Each rated row's games, well past `AI_WIN_RATE.min_games`.
     const GAMES: i32 = 80;
     /// A winner's and a loser's wins: 90% and 10%.

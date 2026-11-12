@@ -429,6 +429,33 @@ mod r3546002_taken_on_entry {
         assert_eq!(landed.giga, Some(true), "embiggened lands GIGA");
     }
 
+    /// R979000, R3546002: a card whose only payable price is its embiggened one, GIGA, with no two free
+    /// lanes side by side, is listed no play and says why (it was listed none and said nothing, I13).
+    #[test]
+    fn r3546002_r979000_an_embiggened_giga_with_no_room_at_its_only_payable_price_says_why() {
+        let s = board(
+            "r3546002-cheap-grower",
+            json!({
+                "mana": 0,
+                "hand": [CHEAP_GROWER],
+                "field": [field_unit(PLAIN, 2), field_unit(PLAIN, 3), field_unit(PLAIN, 4)],
+            }),
+            json!({}),
+        );
+        let id = s.card(CHEAP_GROWER).id.clone();
+        // The normal price (1) is past the mana, the embiggened (0) has lanes 1 and 5 open and no pair.
+        assert_eq!(zone_pairs(&s, &id), Vec::<(Row, i32)>::new(), "no play is listed");
+        let HandView::Cards(hand) = s.view(P1).you.hand else {
+            panic!("p1 reads its own hand");
+        };
+        let shown = hand
+            .into_iter()
+            .find(|card| card.instance_id == id)
+            .expect("p1's view lists the card");
+        let reason = shown.play_reason.expect("an unplayable card says why");
+        assert!(reason.contains("GIGA"), "{reason}");
+    }
+
     #[test]
     fn r3546002_vanilla_and_a_grant_on_the_field_change_no_size() {
         let mut s = board(

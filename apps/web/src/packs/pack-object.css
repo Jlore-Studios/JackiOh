@@ -91,6 +91,15 @@
   --pack-crimp-b: var(--pal-red-900);
 }
 
+/* Stinkyscape+ (#3573): the Mindustrial set's riveted slate plate and its brass and ember trim. */
+.pack-object[data-pack="Stinkyscape+"] {
+  --pack-foil-a: var(--pal-slate-700);
+  --pack-foil-b: var(--pal-slate-900);
+  --pack-accent: var(--pal-orange-400);
+  --pack-crimp-a: var(--pal-brass-600);
+  --pack-crimp-b: var(--pal-brass-950);
+}
+
 .pack-object[data-pack="global"] {
   --pack-foil-a: #5b3fa0;
   --pack-foil-b: #1d1530;

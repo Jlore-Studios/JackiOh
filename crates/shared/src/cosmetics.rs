@@ -5630,22 +5630,22 @@ mod tests {
         assert!(COSMETICS_JSON.contains(r#""defaultOn": ["Legendary"]"#));
     }
 
-    // R1420, R3535000: a held set's cards get no version offer and join no cosmetic pool
+    // R1420, R3535000: a card of a set that ships gets a version offer and joins the cosmetic pools, so
+    // `shipped_defs` holds the Stinkyscape+ set since its release (#3573), and no card of a held set
     // (CLAUDE.md rule 3).
     #[test]
-    fn r3535000_shipped_defs_holds_no_card_of_a_held_set() {
+    fn r3535000_shipped_defs_holds_the_stinkyscape_plus_set_since_it_shipped() {
         for (card, def) in shipped_defs() {
             assert!(
                 jackioh_engine::set_ships(def.set),
                 "{card} is held but shipped_defs holds it"
             );
         }
-        assert!(
-            shipped_defs()
-                .iter()
-                .all(|(_, def)| def.set != SetName::StinkyscapePlus),
-            "the held Stinkyscape+ set is not in shipped_defs"
-        );
+        let plus = shipped_defs()
+            .iter()
+            .filter(|(_, def)| def.set == SetName::StinkyscapePlus)
+            .count();
+        assert!(plus > 0, "the shipped Stinkyscape+ set is in shipped_defs");
     }
 
     #[test]

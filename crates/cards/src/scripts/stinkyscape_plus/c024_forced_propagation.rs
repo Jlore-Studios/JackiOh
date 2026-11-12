@@ -197,7 +197,6 @@ mod tests {
 
     #[test]
     fn r3557001_a_fused_card_is_copied_into_nothing() {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": SEED,
             "p1": { "hand": [ID, FILLER], "library": filler(3), "mana": 10 },

@@ -61,14 +61,16 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// The Call to Chaos pool of the sets that ship (R380, R1420, R2200004), this edition among them.
-    const SHIPPED_EDITIONS: [&str; 6] = [
+    /// The Call to Chaos pool of the sets that ship (R380, R1420, R2200004), this edition among them,
+    /// Stinkyscape+'s #142 last since its release (#3573).
+    const SHIPPED_EDITIONS: [&str; 7] = [
         "core-095",
         "classicplus-073",
         "meditative-095",
         "stinkyscape-150",
         "stinkyscape-151",
         ID,
+        "stinkyscapeplus-142",
     ];
     const RUSH_TOKEN: &str = "core-t-rush";
     const DESIGN: &str = "traininggrounds-040";
@@ -615,7 +617,7 @@ mod tests {
             panic!("no cursor below {SWEEP} rolls the recast into another edition");
         }
 
-        /// The pool that names no set holds this card, last in catalog order.
+        /// The pool that names no set holds this card, in catalog order, before Stinkyscape+'s #142.
         #[test]
         fn r2200004_once_its_set_ships_the_call_to_chaos_pool_holds_this_card() {
             crate::register_all();
