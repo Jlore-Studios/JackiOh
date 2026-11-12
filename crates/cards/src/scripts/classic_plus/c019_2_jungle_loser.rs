@@ -1,11 +1,11 @@
-//! C+ #19.2 Jungle Loser (SPEC §8.7 row 19.2): Can't attack; end of turn, {chance}% (100 on both faces
-//! since issue #1828): a forced attack on a random enemy Unit; a kill across from your Bot Loser sends it
-//! Berserk (Radiant: credits it the kill, R412).
+//! C+ #19.2 Jungle Loser (SPEC §8.7 row 19.2): Can't attack; end of turn, a forced attack on a random
+//! enemy Unit; a kill across from your Bot Loser sends it Berserk (Radiant: credits it the kill, R412).
 //!
 //! Can't attack is a printed keyword, so its controller never declares an attack with it. The end-of-turn
 //! attack is a forced one, which skips §4.2 steps 1 to 3, Can't attack's included, and keeps only step 2's
-//! target restrictions (R53): it is the card's only attack. The roll stays, a declared number a Nerf
-//! lowers (R386), so it draws one rng number at 100% too.
+//! target restrictions (R53): it is the card's only attack. It is
+//! unconditional: no roll is drawn, only the random target's pick. `script_v0_5_12ap` keeps the older
+//! one, which drew a 100% roll (R386) each end of turn (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -13,7 +13,7 @@ pub const ID: &str = "classicplus-019-2";
 
 const BOT_LOSER: &str = "classicplus-019-5";
 
-/// The declared `chance` is a percentage.
+/// R767000: the declared `chance` of the script kept for v0.5.12ap is a percentage.
 const PERCENT: i32 = 100;
 
 /// §3.1: lane N faces lane N. Each Bot Loser of yours with each enemy Unit across from it. A Unit standing
@@ -36,8 +36,24 @@ fn across_from_bot_losers(state: &GameState, controller: PlayerId) -> Vec<KillCr
         .collect()
 }
 
-/// "{chance}% chance": rolled only when an enemy Unit it may attack stands (R129).
+/// The attack is made whenever an enemy Unit it may attack stands, with no roll (R129).
 fn attacks(ctx: &mut EffectContext<'_>) -> Vec<String> {
+    let me = match ctx.live_self() {
+        Some(me) => me.clone(),
+        None => return Vec::new(),
+    };
+    if me.zone.z() != ZoneName::Field {
+        return Vec::new();
+    }
+    if random_attack_targets(&*ctx.state, &me, AttackAmong::EnemyUnits).is_empty() {
+        return Vec::new();
+    }
+    vec![me.id]
+}
+
+/// R767000: through v0.5.12ap one `rng.chance(chance / 100)` was drawn each end of turn, even at 100%,
+/// and only when an enemy Unit it may attack stood (R129).
+fn attacks_v0_5_12ap(ctx: &mut EffectContext<'_>) -> Vec<String> {
     let me = match ctx.live_self() {
         Some(me) => me.clone(),
         None => return Vec::new(),
@@ -56,11 +72,13 @@ fn attacks(ctx: &mut EffectContext<'_>) -> Vec<String> {
     }
 }
 
-fn jungle(transfer: bool) -> Script {
+fn jungle(transfer: bool, rolled: bool) -> Script {
+    let cards: Arc<dyn Fn(&mut EffectContext<'_>) -> Vec<String> + Send + Sync> =
+        if rolled { Arc::new(attacks_v0_5_12ap) } else { Arc::new(attacks) };
     Script {
         end_of_turn: Some(hook(move |_ctx| {
             vec![for_each_card(ForEachCardArgs {
-                cards: Arc::new(attacks),
+                cards: cards.clone(),
                 each: Arc::new(move |instance_id: &str| {
                     let mut args = WithKillCreditArgs {
                         killer: json_as(json!({ "of": "instance", "instanceId": instance_id })),
@@ -92,8 +110,17 @@ fn jungle(transfer: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: jungle(false),
-        radiant: jungle(true),
+        base: jungle(false, false),
+        radiant: jungle(true, false),
+    }
+}
+
+/// R767000: through v0.5.12ap its end-of-turn attack drew a 100% roll first; `KEPT_SCRIPTS` folds those
+/// replays under it.
+pub fn script_v0_5_12ap() -> CardScripts {
+    CardScripts {
+        base: jungle(false, true),
+        radiant: jungle(true, true),
     }
 }
 
@@ -198,6 +225,36 @@ mod tests {
         assert_eq!(declared, 0);
         let vanilla = unit_or_blank(&s, P2, 4);
         s.expect_refused_with(|s| s.attack(id.as_str(), vanilla.as_str()), "that unit cannot attack");
+    }
+
+    /// On `radiant_face`, across 12 seeds, with one target the Loser attacks it and the end of turn draws
+    /// one number fewer than the roll of `script_v0_5_12ap` did.
+    fn attacks_with_no_roll(radiant_face: bool) {
+        for seed in 1..=12 {
+            let opts = json!({ "field": [{ "def": FELINORS, "lane": 4 }] });
+            let name = format!("jungle-noroll-{seed}");
+            let mut s = jungle(json!([]), radiant_face, opts.clone(), Some(&name));
+            let id = loser(&s).id;
+            let before = s.state().rng_cursor;
+            s.end_turn();
+            assert_eq!(attacks_by(&s, &id).len(), 1, "seed {seed}");
+            let drawn = s.state().rng_cursor - before;
+            // The definition it shipped with declared the `chance` it read.
+            let chance = |def: &mut CardDef| {
+                let declared = json!([{ "key": "chance", "base": 100, "radiant": 100, "better": "up", "step": 10, "min": 1, "max": 100 }]);
+                def.params = serde_json::from_value(declared).ok();
+            };
+            let (old_id, old_drawn) = crate::under_kept_as(ID, script_v0_5_12ap(), chance, || {
+                let mut old = jungle(json!([]), radiant_face, opts, Some(&name));
+                let old_id = loser(&old).id;
+                let old_before = old.state().rng_cursor;
+                old.end_turn();
+                assert_eq!(attacks_by(&old, &old_id).len(), 1, "seed {seed}");
+                (old_id, old.state().rng_cursor - old_before)
+            });
+            assert!(!old_id.is_empty());
+            assert_eq!(old_drawn, drawn + 1, "seed {seed}: the kept script rolls once more");
+        }
     }
 
     fn killer_of(event: Option<&GameEvent>) -> Option<String> {
@@ -383,28 +440,14 @@ mod tests {
             }
 
             #[test]
-            fn r386_the_chance_reads_through_param_a_nerf_tunes_it_to_90_and_no_buff_passes_100() {
-                // Seeds where the Nerfed 90% misses: the outcome must follow the tuned chance.
-                let mut missed = 0;
-                for seed in 1..=40 {
-                    let mut s = jungle(
-                        json!([]),
-                        false,
-                        json!({ "field": [{ "def": FELINORS, "lane": 4 }] }),
-                        Some(&format!("jungle-tuned-{seed}")),
-                    );
-                    let id = loser(&s).id;
-                    assert!(!crate::can_upgrade_number(&s, &id, "chance"));
-                    step_param(loser_mut(&mut s), "chance", -1);
-                    let (seed_text, cursor) = (s.state().seed.clone(), s.state().rng_cursor);
-                    let expected = Rng::new(&seed_text, cursor).chance(0.9);
-                    if !expected {
-                        missed += 1;
-                    }
-                    s.end_turn();
-                    assert_eq!(!attacks_by(&s, &id).is_empty(), expected);
-                }
-                assert!(missed > 0);
+            fn a_unit_it_may_attack_gets_the_attack_with_no_roll_drawn() {
+                attacks_with_no_roll(false);
+            }
+
+            #[test]
+            fn the_card_declares_no_chance_param() {
+                crate::register_all();
+                assert!(crate::card_def(ID).params.is_none());
             }
 
             #[test]
@@ -437,6 +480,11 @@ mod tests {
             #[test]
             fn s4_2_step_1_it_cant_declare_an_attack() {
                 cant_declare(true);
+            }
+
+            #[test]
+            fn a_unit_it_may_attack_gets_the_attack_with_no_roll_drawn() {
+                attacks_with_no_roll(true);
             }
 
             #[test]

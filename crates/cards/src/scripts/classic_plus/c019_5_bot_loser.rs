@@ -278,8 +278,6 @@ mod tests {
                     false,
                     json!({ "field": [{ "def": VANILLA, "lane": 3 }] }),
                 );
-                let jungle = s.unit(P1, 1).unwrap_or_else(|| bot(&s, P1)).id;
-                set_param(s.card_mut(&jungle), "chance", 100);
                 s.end_turn();
                 assert_eq!(bot(&s, P1).berserk, Some(true));
                 assert_eq!(
@@ -320,8 +318,6 @@ mod tests {
                     true,
                     json!({ "field": [{ "def": VANILLA, "lane": 3 }] }),
                 );
-                let jungle = s.unit(P1, 1).unwrap_or_else(|| bot(&s, P1)).id;
-                set_param(s.card_mut(&jungle), "chance", 100);
                 s.end_turn();
                 assert!(s.unit(P2, 3).is_none());
                 assert_eq!(bot(&s, P1).berserk, None);

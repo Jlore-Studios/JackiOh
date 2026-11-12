@@ -26,10 +26,10 @@ use crate::scripts::classic::{
     c088_siphon_squad, c090_in_too_deep,
 };
 use crate::scripts::classic_plus::{
-    c007_the_house, c011_anime_armor, c016_conjure_rush_token, c019_1_top_loser, c023_dropshipping,
-    c030_felinor_fuser, c033_ivory_tower, c040_appropriations, c042_kys_test, c043_ai_slop, c047_joggs_box,
-    c048_jlockeeds_lobbyist, c051_jlockeeds_j15_fighter, c053_book_of_tokens, c062_kys_papaya,
-    c071_book_of_buff, c073_1_classic_golem, c078_claudes_datacenter,
+    c007_the_house, c011_anime_armor, c016_conjure_rush_token, c019_1_top_loser, c019_2_jungle_loser,
+    c023_dropshipping, c030_felinor_fuser, c033_ivory_tower, c040_appropriations, c042_kys_test,
+    c043_ai_slop, c047_joggs_box, c048_jlockeeds_lobbyist, c051_jlockeeds_j15_fighter, c053_book_of_tokens,
+    c062_kys_papaya, c071_book_of_buff, c073_1_classic_golem, c078_claudes_datacenter,
 };
 use crate::scripts::core::{
     c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c032_prem_panther, c042_eugenics,
@@ -77,7 +77,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// (R1748003), #1828 (R1828000, R1828001, R1828002, R1828003), #1851 (R1103, R1851003), #1803, #2020,
 /// #2179 (R1161, R920, R580, R2179003), #2396 (R2396000), #2521 and #2657 (R2657000 with
 /// `never_defense_kept`, R2657001, R2657002, R2657004), and #3000's parts (#3038, #3040, #3041, #3042,
-/// #3044, #3048) and #3128's (#3134, #3135, #3139, #3140, #3142).
+/// #3044, #3048), #3128's (#3134, #3135, #3139, #3140, #3142) and #3802.
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -642,6 +642,11 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c016_conjure_rush_token::script_v0_5_11o,
     ),
     (c047_taotie::ID, "v0.5.11r", c047_taotie::script_v0_5_11o),
+    (
+        c019_2_jungle_loser::ID,
+        "v0.5.12ap",
+        c019_2_jungle_loser::script_v0_5_12ap,
+    ),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
