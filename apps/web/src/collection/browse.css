@@ -1,0 +1,340 @@
+/* The Collection's tabs, its grid, its filters and its deck tiles (issue #3734, R3734000). The screen is the whole window
+   (`app-shell--wide`) and one screen tall (`one-screen`, index.css): the tabs and the toolbar keep their place and the
+   grid scrolls inside what is left, `min-height: 0` all the way down. Written on the tokens alone (spacing.css,
+   palette.css, typescale.css, surfaces.css, motion.css) and the named breakpoints (breakpoints.ts); the deck builder's
+   chip, search and sort classes (deckbuilder.css) draw the filters, so the Cards, Cosmetics and deck builder read as one. */
+
+/* ---- the tabs and the panel under them ------------------------------------------------------- */
+
+.collection-screen {
+  --collection-filters-w: 260px;
+}
+
+.app-shell.collection-screen > .collection-tabs,
+.collection-screen .collection-panels,
+.collection-screen .collection-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+.app-shell.collection-screen > .collection-tabs {
+  gap: var(--space-4);
+}
+
+/* The tab bar keeps its height however tall a tab's body is: it scrolls sideways, so a column left too short would
+   shrink it to nothing. */
+.collection-screen .collection-tablist {
+  flex: none;
+}
+
+.collection-screen .collection-section--fill {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* The Decks and Progress tabs: one column that scrolls inside the screen. */
+.collection-screen .collection-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  gap: var(--space-7);
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ---- Cards and Cosmetics: the filters beside the grid ---------------------------------------- */
+
+/* A window of 1024 px or under: the toolbar, the Filters button beside it, the sets, the grid. */
+.collection-screen .collection-cards {
+  display: grid;
+  flex: 1 1 auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-areas:
+    "bar filters"
+    "sets sets"
+    "grid grid";
+  gap: var(--space-4) var(--space-5);
+  min-height: 0;
+  min-width: 0;
+}
+
+.collection-screen .collection-cards--cosmetics {
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    "bar filters"
+    "grid grid";
+}
+
+.collection-screen .collection-bar {
+  grid-area: bar;
+  min-width: 0;
+}
+
+.collection-screen .collection-filters-open {
+  grid-area: filters;
+  align-self: start;
+}
+
+.collection-screen .collection-sets {
+  grid-area: sets;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.collection-screen .collection-scroll {
+  grid-area: grid;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Over 1024 px (`over("tablet")`): the filters are a sidebar down the left, as a collection's are in Hearthstone. */
+@media (min-width: 1025px) {
+  .collection-screen .collection-cards {
+    grid-template-columns: var(--collection-filters-w) minmax(0, 1fr);
+    grid-template-areas:
+      "filters bar"
+      "filters sets"
+      "filters grid";
+  }
+
+  .collection-screen .collection-cards--cosmetics {
+    grid-template-areas:
+      "filters bar"
+      "filters grid";
+  }
+}
+
+.collection-screen .collection-filters {
+  grid-area: filters;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* In the sheet the filters are the sheet's own body, so they take its width. */
+.collection-filters-sheet .collection-filters {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* The chip rows stack in a column the width of the sidebar, each group on its own. */
+.collection-screen .db-filters--chips .db-filter-chips,
+.collection-filters-sheet .db-filters--chips .db-filter-chips {
+  display: flex;
+}
+
+.collection-screen .db-filters--chips .db-filter-row,
+.collection-filters-sheet .db-filters--chips .db-filter-row {
+  align-items: flex-start;
+}
+
+.collection-screen .db-filters--toolbar {
+  padding: var(--space-4) var(--space-5);
+}
+
+/* ---- what is owned: the count and a bar for each set ----------------------------------------- */
+
+.collection-screen .collection-count {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: var(--type-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.collection-screen .collection-count strong {
+  color: var(--text);
+}
+
+.collection-screen .collection-set-list {
+  display: flex;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.collection-screen .collection-set {
+  display: grid;
+  flex: 1 0 140px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-1) var(--space-4);
+  min-width: 0;
+  font-size: var(--type-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.collection-screen .collection-set__name {
+  overflow: hidden;
+  color: var(--text);
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collection-screen .collection-set__count {
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.collection-screen .collection-set__bar {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: var(--space-3);
+}
+
+/* ---- the grid: virtual, as the deck builder's pool is (CardGrid.tsx) -------------------------- */
+
+.collection-screen .collection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(132px, calc(50% - var(--space-2))), 1fr));
+  align-content: start;
+  gap: var(--space-4);
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+}
+
+.collection-screen .collection-cell {
+  min-width: 0;
+}
+
+/* A virtual grid mounts only the cards near the view, each placed in its grid cell and out of the grid's flow: the
+   grid's rows are all one height (an inline style) and hold the places of the rest. */
+.collection-screen .collection-grid--virtual {
+  position: relative;
+  overflow-anchor: none;
+}
+
+.collection-screen .collection-cell--placed {
+  position: absolute;
+  inset: 0;
+  contain: paint;
+  overflow-clip-margin: var(--space-9);
+}
+
+/* ---- the Decks tab: a tile for each deck ------------------------------------------------------ */
+
+.collection-screen .collection-deck-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.collection-screen .collection-deck-tile {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "portrait name"
+    "portrait count"
+    "portrait status"
+    "modes modes";
+  align-items: center;
+  gap: var(--space-1) var(--space-5);
+  min-height: var(--hit-min);
+  padding: var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.collection-screen a.collection-deck-tile:hover,
+.collection-screen a.collection-deck-tile:focus-visible {
+  border-color: var(--selected);
+}
+
+.collection-screen .collection-deck-tile__portrait {
+  grid-area: portrait;
+  width: var(--space-11);
+  height: var(--space-11);
+}
+
+.collection-screen .collection-deck-tile__name {
+  grid-area: name;
+  overflow: hidden;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collection-screen .collection-deck-tile__count {
+  grid-area: count;
+  color: var(--text-dim);
+  font-size: var(--type-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.collection-screen .collection-deck-tile__status {
+  grid-area: status;
+  justify-self: start;
+  font-size: var(--type-sm);
+}
+
+.collection-screen .collection-deck-tile__modes {
+  grid-area: modes;
+  color: var(--text-dim);
+  font-size: var(--type-sm);
+}
+
+/* New deck: a tile that is a door, so it keeps to its one line, centred. */
+.collection-screen .collection-deck-tile--new {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-style: dashed;
+  min-height: var(--space-11);
+}
+
+.collection-screen .collection-deck-tile--new:disabled {
+  opacity: 0.5;
+}
+
+/* A phone on its side (500 px tall and under) is not one screen (index.css): the page scrolls, and the grid with it, so
+   the grid is no scroller and the cards mounted are those near the window's own view (poolWindow.ts). */
+@media (max-height: 500px) {
+  .collection-screen .collection-scroll,
+  .collection-screen .collection-body {
+    overflow-y: visible;
+  }
+}
+
+/* ---- under a finger ---------------------------------------------------------------------------- */
+
+/* Every control a finger hits is at least --hit-min (R2122000), at any width on a coarse pointer. */
+@media (pointer: coarse), (max-width: 600px) {
+  .collection-screen .db-chip,
+  .collection-screen .db-sort-select,
+  .collection-screen .db-search,
+  .collection-screen .db-filter-clear,
+  .collection-screen .db-sort-dir,
+  .collection-screen .collection-filters-open,
+  .collection-screen .tabs__tab {
+    min-width: var(--hit-min);
+    min-height: var(--hit-min);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collection-screen .collection-cell,
+  .collection-screen .collection-deck-tile {
+    transition: none;
+  }
+}

@@ -35,8 +35,12 @@ export const routes = {
   landing: () => env("landingRoute", "/"),
   /** #1307. */
   collection: () => env("collectionRoute", "/collection"),
-  /** R1579000: the Cards section. */
+  /** R1579000, R3734000: the Cards tab. */
   collectionCards: () => `${env("collectionRoute", "/collection")}?section=cards`,
+  /** Issue #3734, R3734000: the Progress tab: the wallet, the set tracks, the Fleet track and the quests. */
+  collectionProgress: () => `${env("collectionRoute", "/collection")}?section=progress`,
+  /** Issue #3734, R3734000: a Collection tab by its name: cards, decks, cosmetics or progress. */
+  collectionTab: (tab: "cards" | "decks" | "cosmetics" | "progress") => `${env("collectionRoute", "/collection")}?section=${tab}`,
   /** #1577, R1580000: where spec 45 buys, opens and redeems. */
   shop: () => env("shopRoute", "/shop"),
 };
