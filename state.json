@@ -17674,13 +17674,12 @@
     "what": "build #3596 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-12T08:28:46Z",
+    "at": "2026-11-12T08:38:40Z",
     "notes": [
-      "delivered build #3573 on claude-7 (run 43162873781): part",
-      "started build #3764 on claude-6 (run 43183624546)",
+      "#3596: its parts have all closed; queued its reconcile",
+      "started build #3596 on claude-4 (run 43184911684)",
       "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days",
-      "runner gate: started 0 of 1 waiting run(s); 1 wait for room"
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18384,7 +18383,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-12T08:28:46Z",
+  "loop_tick": "2026-11-12T08:38:40Z",
   "machine_disk": {
     "issue": null,
     "reading": {
