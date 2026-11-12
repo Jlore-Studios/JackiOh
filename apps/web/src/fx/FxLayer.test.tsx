@@ -15,6 +15,7 @@ import { setReducedMotion } from "../test/setup.ts";
 import { FX_CALLOUT_MS, FX_STACK_LAND, FX_STARSHIP_STILL_MS, FX_TEXT } from "./constants.ts";
 import FxLayer, { FX_BANNER_MARK, FX_HOLD_MARK, FX_LAYER_MARK, type FxSeams } from "./FxLayer.tsx";
 import { resetFxSettingsForTests, setFxSettings } from "./settings.ts";
+import { resetShedForTests, shedPointer, subscribeShed } from "./shed.ts";
 import { starshipClaim } from "./starship.ts";
 import type { FxSurface } from "./surface.ts";
 import type { FxAnchor, FxBox, FxFrameSource, FxShakeSink, FxVisibility } from "./types.ts";
@@ -1205,5 +1206,72 @@ describe("S9 — the default catalog and the surface seam", () => {
     fx.pump(100);
 
     expect(surface).not.toHaveBeenCalled();
+  });
+});
+
+describe("R3351000 — the shed pointer is followed once an animation frame (#3610)", () => {
+  /** `count` pointermoves on the window inside one `act`, the last at (`x`, `y`) and the ones before it elsewhere. */
+  function sweep(count: number, x: number, y: number): void {
+    act(() => {
+      for (let step = 1; step < count; step += 1) window.dispatchEvent(new MouseEvent("pointermove", { clientX: step, clientY: step * 2 }));
+      window.dispatchEvent(new MouseEvent("pointermove", { clientX: x, clientY: y }));
+    });
+  }
+
+  it("R3351000 ten moves inside one frame set the pointer once, to the last move's place, when the frame runs", () => {
+    resetShedForTests();
+    const fx = fakeSeams();
+    mountLayer(queueWith(fakeSchedule()), fullBoardView(), fx);
+    const heard = vi.fn();
+    const stop = subscribeShed(heard);
+    sweep(10, 640, 360);
+    // The moves are kept, not handled: the shed pointer waits for the frame.
+    expect(shedPointer()).toBeNull();
+    expect(heard).not.toHaveBeenCalled();
+    fx.pump(0);
+    expect(shedPointer()).toEqual({ x: 640, y: 360 });
+    expect(heard).toHaveBeenCalledTimes(1);
+    // The next frame follows the next moves, again once.
+    sweep(10, 20, 30);
+    fx.pump(0);
+    expect(shedPointer()).toEqual({ x: 20, y: 30 });
+    expect(heard).toHaveBeenCalledTimes(2);
+    stop();
+  });
+
+  it("R3351000 unmounting drops the move waiting for its frame, and leaves no pointer", () => {
+    resetShedForTests();
+    const fx = fakeSeams();
+    mountLayer(queueWith(fakeSchedule()), fullBoardView(), fx);
+    sweep(1, 640, 360);
+    cleanup();
+    fx.pump(0);
+    expect(shedPointer()).toBeNull();
+    // Nothing listens after it.
+    sweep(1, 10, 10);
+    fx.pump(0);
+    expect(shedPointer()).toBeNull();
+  });
+
+  it("R200 R3351000 where there is no requestAnimationFrame the pointer is never set, and no timer is asked for", () => {
+    resetShedForTests();
+    const frame = window.requestAnimationFrame;
+    const timer = vi.spyOn(window, "setTimeout");
+    try {
+      Object.defineProperty(window, "requestAnimationFrame", { value: undefined, configurable: true, writable: true });
+      // No frame seam: the layer's own default source, which never fires here.
+      render(
+        <div className="game">
+          <FxLayer queue={queueWith(fakeSchedule())} view={fullBoardView()} seams={{ ...fakeSeams().seams, frames: undefined }} />
+        </div>,
+      );
+      timer.mockClear();
+      sweep(3, 640, 360);
+      expect(shedPointer()).toBeNull();
+      expect(timer).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(window, "requestAnimationFrame", { value: frame, configurable: true, writable: true });
+      timer.mockRestore();
+    }
   });
 });

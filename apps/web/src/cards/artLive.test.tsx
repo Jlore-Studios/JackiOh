@@ -18,6 +18,7 @@ import Zone from "../game/Zone.tsx";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { readSheet, resetVisibility, setReducedMotion, setVisibility } from "../test/setup.ts";
 import { baseView, emptySide, faceUpBackrow, unit } from "../test/fixtures.ts";
+import { manualFrames, type ManualFrames } from "../test/frames.ts";
 import { THEME_PALETTES, type ArtThemeId } from "./art/themes.ts";
 import { PARTICLE_COUNT } from "./art/motion.ts";
 import { CardFace } from "./CardFace.tsx";
@@ -134,10 +135,20 @@ function documentOf(element: Element | null): Document {
   return new DOMParser().parseFromString(decodeURIComponent(uri.slice(DATA_PREFIX.length)), "image/svg+xml");
 }
 
-/** The pointer and focus events a face listens for, on its card's host. */
+let frames: ManualFrames;
+
+/** The pointer and focus events a face listens for, on its card's host; a move gets its frame (#3610) at once. */
 const fire = (target: Element, type: string, init: MouseEventInit = {}): void => {
   act(() => {
     target.dispatchEvent(type.startsWith("focus") ? new FocusEvent(type, { bubbles: true }) : new MouseEvent(type, { bubbles: true, ...init }));
+  });
+  if (type === "pointermove") frames.flush();
+};
+
+/** #3610: a pointermove on `target` left waiting for its frame, which the test runs with `frames.flush()`. */
+const hold = (target: Element, x: number, y: number): void => {
+  act(() => {
+    target.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: x, clientY: y }));
   });
 };
 
@@ -173,6 +184,7 @@ function observerFor(face: HTMLElement): FakeObserver {
 }
 
 beforeEach(() => {
+  frames = manualFrames();
   localStorage.clear();
   resetCosmeticsForTests();
   resetFxSettingsForTests();
@@ -181,6 +193,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  frames.restore();
   cleanup();
   vi.unstubAllGlobals();
   resetVisibility();
@@ -575,6 +588,69 @@ describe("R3340000 cards that answer", () => {
     expect(cf.style.getPropertyValue("--art-aim-x")).toBe("0.500");
     fire(host(cf), "pointerleave");
     expect(cf.getAttribute("data-art-hover")).toBe("false");
+  });
+
+  it("R3340000 ten moves inside one frame read the face's box at most once and write each aim property once, the last move's", () => {
+    const { container } = render(<Board specs={[{ id: COMMON }]} />);
+    const cf = minions(container)[0] as HTMLElement;
+    const read = vi.spyOn(cf, "getBoundingClientRect").mockReturnValue({ left: 0, top: 0, width: 100, height: 200, right: 100, bottom: 200, x: 0, y: 0, toJSON: () => ({}) });
+    const setProperty = vi.spyOn(cf.style, "setProperty");
+    const aimWrites = (property: string): string[] => setProperty.mock.calls.filter(([name]) => name === property).map(([, value]) => String(value));
+    fire(host(cf), "pointerenter");
+    const asked = frames.requested();
+    for (let step = 0; step < 9; step += 1) hold(host(cf), step * 10, step * 20);
+    hold(host(cf), 75, 50);
+    // The moves are kept, not handled: one frame is asked for, and nothing is read or written until it runs.
+    expect(frames.requested() - asked).toBe(1);
+    expect(read).not.toHaveBeenCalled();
+    expect(aimWrites("--art-aim-x")).toEqual([]);
+    frames.flush();
+    expect(read.mock.calls.length).toBeLessThanOrEqual(1);
+    expect(aimWrites("--art-aim-x")).toEqual(["0.500"]);
+    expect(aimWrites("--art-aim-y")).toEqual(["-0.500"]);
+    expect(cf.style.getPropertyValue("--art-aim-x")).toBe("0.500");
+    expect(cf.style.getPropertyValue("--art-aim-y")).toBe("-0.500");
+    // The next frame handles the next move, again once.
+    hold(host(cf), 25, 150);
+    hold(host(cf), 100, 200);
+    frames.flush();
+    expect(aimWrites("--art-aim-x")).toEqual(["0.500", "1.000"]);
+    expect(aimWrites("--art-aim-y")).toEqual(["-0.500", "1.000"]);
+  });
+
+  it("R3340000 leaving the face drops the move waiting for its frame: nothing is written after the pointer has left", () => {
+    const { container } = render(<Board specs={[{ id: COMMON }]} />);
+    const cf = minions(container)[0] as HTMLElement;
+    vi.spyOn(cf, "getBoundingClientRect").mockReturnValue({ left: 0, top: 0, width: 100, height: 200, right: 100, bottom: 200, x: 0, y: 0, toJSON: () => ({}) });
+    fire(host(cf), "pointerenter");
+    hold(host(cf), 75, 50);
+    hold(host(cf), 80, 60);
+    expect(frames.pending()).toBe(1);
+    const dropped = frames.cancelled();
+    fire(host(cf), "pointerleave");
+    expect(frames.cancelled() - dropped).toBe(1);
+    expect(frames.pending()).toBe(0);
+    frames.flush();
+    expect(cf.style.getPropertyValue("--art-aim-x")).toBe("");
+    expect(cf.style.getPropertyValue("--art-aim-y")).toBe("");
+    // A pointer that comes back is followed again.
+    fire(host(cf), "pointerenter");
+    fire(host(cf), "pointermove", { clientX: 75, clientY: 50 });
+    expect(cf.style.getPropertyValue("--art-aim-x")).toBe("0.500");
+  });
+
+  it("R3340000 unmounting the face drops the move waiting for its frame: nothing is written after it is gone", () => {
+    const { container, unmount } = render(<Board specs={[{ id: COMMON }]} />);
+    const cf = minions(container)[0] as HTMLElement;
+    vi.spyOn(cf, "getBoundingClientRect").mockReturnValue({ left: 0, top: 0, width: 100, height: 200, right: 100, bottom: 200, x: 0, y: 0, toJSON: () => ({}) });
+    fire(host(cf), "pointerenter");
+    hold(host(cf), 75, 50);
+    expect(frames.pending()).toBe(1);
+    const setProperty = vi.spyOn(cf.style, "setProperty");
+    unmount();
+    expect(frames.pending()).toBe(0);
+    frames.flush();
+    expect(setProperty).not.toHaveBeenCalled();
   });
 
   it("R3340000 the focus a click or a tap gives a card is the pointer's: once the pointer leaves, the face holds no keyboard pose", () => {

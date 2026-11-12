@@ -13,6 +13,7 @@ import { CATALOG } from "@jackioh/cards";
 import { DeviceTiltSwitch } from "../settings/controls.tsx";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
+import { manualFrames, type ManualFrames } from "../test/frames.ts";
 import { CardDefsProvider } from "./refContext.tsx";
 import { CARD_GLARE_TRAVEL_PCT, CARD_TILT_MAX_DEG, DIORAMA_TURN_MAX_DEG } from "./constants.ts";
 import { CardFace } from "./CardFace.tsx";
@@ -72,6 +73,8 @@ function mount(tilt: TiltMode, id = MYTHIC, anchor?: TiltBox): { cf: HTMLElement
   return { cf, host, unmount };
 }
 
+let frames: ManualFrames;
+
 /** A pointer event of `type`; a `MouseEvent` has no `pointerType`, so one is set only where a test asks for a finger's. */
 function pointer(target: EventTarget, type: string, x: number, y: number, pointerType?: string): MouseEvent {
   const event = new MouseEvent(type, { bubbles: type !== "pointerenter" && type !== "pointerleave", cancelable: true, clientX: x, clientY: y });
@@ -79,7 +82,18 @@ function pointer(target: EventTarget, type: string, x: number, y: number, pointe
   act(() => {
     target.dispatchEvent(event);
   });
+  // #3610: a move is written in its frame, which runs at once here; `held` leaves it waiting.
+  if (type === "pointermove") frames.flush();
   return event;
+}
+
+/** #3610: a pointermove left waiting for its frame, which the test runs with `frames.flush()`. */
+function held(target: EventTarget, x: number, y: number, pointerType?: string): void {
+  const event = new MouseEvent("pointermove", { bubbles: true, cancelable: true, clientX: x, clientY: y });
+  if (pointerType !== undefined) Object.defineProperty(event, "pointerType", { value: pointerType });
+  act(() => {
+    target.dispatchEvent(event);
+  });
 }
 
 function orientation(gamma: number | null, beta: number | null): void {
@@ -91,6 +105,7 @@ function orientation(gamma: number | null, beta: number | null): void {
 }
 
 beforeEach(() => {
+  frames = manualFrames();
   localStorage.clear();
   resetCosmeticsForTests();
   resetTiltForTests();
@@ -104,6 +119,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  frames.restore();
   cleanup();
   vi.unstubAllGlobals();
   resetTiltForTests();
@@ -519,6 +535,109 @@ describe("R3344001 the phone's orientation tilts a face only once the setting is
     fireEvent.click(screen.getByTestId("setting-deviceTilt"));
     expect(readCardSettings().deviceTilt).toBe(true);
     expect(screen.getByTestId<HTMLInputElement>("setting-deviceTilt").checked).toBe(true);
+  });
+});
+
+describe("R3344001 a move is kept and its pose written once an animation frame (#3610)", () => {
+  /** Ten moves, the ninth of them anywhere and the last at (150, 70), whose pose is (0.5, -0.5). */
+  const tenMoves = (target: EventTarget, pointerType?: string): void => {
+    for (let step = 0; step < 9; step += 1) held(target, step * 10, step * 20, pointerType);
+    held(target, 150, 70, pointerType);
+  };
+  /** How many times the face's pose was written: its x property is set once for each. */
+  const poseWrites = (cf: HTMLElement): { count: () => number } => {
+    const setProperty = vi.spyOn(cf.style, "setProperty");
+    return { count: () => setProperty.mock.calls.filter(([name]) => name === "--cf-tilt-x").length };
+  };
+
+  it("R3344001 ten moves over a host inside one frame read its box at most once and write the last move's pose once", () => {
+    const { cf, host } = mount("host");
+    const box = vi.spyOn(host, "getBoundingClientRect");
+    const writes = poseWrites(cf);
+    tenMoves(host);
+    expect(frames.pending()).toBe(1);
+    expectLevel(cf, "before the frame");
+    expect(box).not.toHaveBeenCalled();
+    frames.flush();
+    expect(box.mock.calls.length).toBeLessThanOrEqual(1);
+    expect(writes.count()).toBe(1);
+    expect(read(cf)).toMatchObject({ "--cf-tilt-x": "0.5", "--cf-tilt-y": "-0.5" });
+    expect(cf.getAttribute("data-tilt")).toBe("on");
+  });
+
+  it("R3344001 ten moves of the window's pointer inside one frame read the box at most once and write the last move's pose once", () => {
+    const { cf, host } = mount("window");
+    const box = vi.spyOn(host, "getBoundingClientRect");
+    const writes = poseWrites(cf);
+    tenMoves(window);
+    expect(frames.pending()).toBe(1);
+    expectLevel(cf, "before the frame");
+    expect(box).not.toHaveBeenCalled();
+    frames.flush();
+    expect(box.mock.calls.length).toBeLessThanOrEqual(1);
+    expect(writes.count()).toBe(1);
+    expect(read(cf)).toMatchObject({ "--cf-tilt-x": "0.5", "--cf-tilt-y": "-0.5" });
+    expect(cf.getAttribute("data-tilt")).toBe("on");
+  });
+
+  it("R3344001 ten moves of a touch drag inside one frame write the last move's pose once", () => {
+    const { cf, host } = mount("drag");
+    pointer(host, "pointerdown", 100, 140, "touch");
+    const box = vi.spyOn(host, "getBoundingClientRect");
+    const writes = poseWrites(cf);
+    tenMoves(host, "touch");
+    expect(frames.pending()).toBe(1);
+    expect(box).not.toHaveBeenCalled();
+    frames.flush();
+    expect(box.mock.calls.length).toBeLessThanOrEqual(1);
+    expect(writes.count()).toBe(1);
+    expect(read(cf)).toMatchObject({ "--cf-tilt-x": "0.5", "--cf-tilt-y": "-0.5" });
+  });
+
+  it("R3344001 leaving a host, or unmounting its face, drops the move waiting for its frame", () => {
+    const left = mount("host");
+    held(left.host, 150, 70);
+    expect(frames.pending()).toBe(1);
+    pointer(left.host, "pointerleave", 0, 0);
+    expect(frames.pending()).toBe(0);
+    frames.flush();
+    expectLevel(left.cf, "left");
+    cleanup();
+    const gone = mount("host");
+    held(gone.host, 150, 70);
+    expect(frames.pending()).toBe(1);
+    gone.unmount();
+    expect(frames.pending()).toBe(0);
+    frames.flush();
+    expectLevel(gone.cf, "unmounted");
+  });
+
+  it("R3344001 leaving the document, or unmounting a window face, drops the move waiting for its frame", () => {
+    const left = mount("window");
+    held(window, 150, 70);
+    expect(frames.pending()).toBe(1);
+    pointer(document.documentElement, "pointerleave", 0, 0);
+    expect(frames.pending()).toBe(0);
+    frames.flush();
+    expectLevel(left.cf, "left the document");
+    cleanup();
+    const gone = mount("window");
+    held(window, 150, 70);
+    expect(frames.pending()).toBe(1);
+    gone.unmount();
+    expect(frames.pending()).toBe(0);
+    frames.flush();
+    expectLevel(gone.cf, "unmounted");
+  });
+
+  it("R3344001 a finger lifting from a drag drops the move waiting for its frame", () => {
+    const { cf, host } = mount("drag");
+    pointer(host, "pointerdown", 100, 140, "touch");
+    held(host, 150, 70, "touch");
+    pointer(host, "pointerup", 150, 70, "touch");
+    expect(frames.pending()).toBe(0);
+    frames.flush();
+    expectLevel(cf, "lifted");
   });
 });
 
