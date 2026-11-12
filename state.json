@@ -15352,6 +15352,23 @@
       "round_tier": "",
       "run_id": "43236783303",
       "runs_on": "ubuntu-latest",
+      "session": {
+        "action": "plan",
+        "artifact": 13954062930,
+        "artifact_bytes": 662408,
+        "artifact_name": "work",
+        "at": "2026-11-12T14:48:11Z",
+        "bytes": 874608,
+        "cwd": "/home/runner/work/_temp/work/item-3777",
+        "ended": "failed: RuntimeError: the planner on opus wrote no plan: claude exited 1",
+        "head": "38671824590327624747d3b73b3f50f0dc6d7f85",
+        "id": "757af8a4-b21c-4edb-b5d5-efa39b14c355",
+        "kind": "plan",
+        "model": "opus",
+        "project": "-home-runner-work--temp-work-item-3777",
+        "provider": "claude-3",
+        "run": "43236783303"
+      },
       "started_at": "2026-11-12T14:23:59Z",
       "stop_requested": false,
       "strike_log": [
