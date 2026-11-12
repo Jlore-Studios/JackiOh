@@ -16629,7 +16629,7 @@
       "provider": "claude-1",
       "question": "",
       "queued_at": "2026-11-11T21:06:25Z",
-      "round_tier": "strong",
+      "round_tier": "",
       "run_id": "43160290957",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-12T05:16:28Z",
