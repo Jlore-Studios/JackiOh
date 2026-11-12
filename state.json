@@ -16033,6 +16033,13 @@
     "3792": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-12T21:46:30Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "Only apps/web (one hook, one notice line, tests) plus a ruling note and a pending paragraph: none of the five hard lines (engine, AI, cross-crate design, migration, about 40 files) holds."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
