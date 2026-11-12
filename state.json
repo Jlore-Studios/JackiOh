@@ -15125,17 +15125,8 @@
       "verdict_rounds": 2
     },
     "3772": {
-      "action": "plan",
-      "asks": [
-        "c:6825565002"
-      ],
-      "build_next": {
-        "from_run": "43277397409",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-12T18:38:07Z",
-        "until": "2026-11-12T19:08:07Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-12T18:37:51Z",
         "difficulty": "hard",
@@ -15154,10 +15145,9 @@
         "reason": "planned on opus",
         "trail": "\", \"description\": \"Read the bur\u2026\n- Bash: {\"command\": \"ls -d target 2>/dev/null && du -sh target 2>/dev/null | tail -1; grep -n \\\"pub fn beam_search\\\" -A 7 crates/ai/src/search.rs | head -9; grep -rn \\\"pub fn create_node_counter\\\\|pub const \u2026\n- Bash: {\"command\": \"sed -n 250,256p crates/ai/src/simulate.rs; grep -rn \\\"beam_search(\\\" crates/ai/tests/ai/*.rs | head -3; grep -rn \\\"ActionBody::Play {\\\" crates/ai/tests/ai/*.rs | head -2; grep -n \\\"pub a\u2026\n- Bash: {\"command\": \"grep -rn \\\"pub struct Line\\\" -A 6 crates/ai/src/ | head -8; grep -n \\\"modes\\\" crates/engine/src/action*.rs crates/engine/src/wire/*.rs 2>/dev/null | head -5\", \"description\": \"Check Line'\u2026\n- said: The APIs the tests call all match what the draft uses. One last check: that the engine and cards crates, which the decide tests depend on, are unchanged since the earlier run proved them.\n- Bash: {\"command\": \"git diff --stat 386718245903 HEAD -- crates/ catalog.json | tail -3; echo \\\"exit $?\\\"\", \"description\": \"Confirm no crate changed since the prototype's base\"}\n- Bash: {\"command\": \"git diff --stat 386718245903 HEAD -- crates/ | grep -v \\\"crates/server\\\" \", \"description\": \"List any changed crate outside the server\"}\n- Bash: {\"command\": \"sed -n 159p spec/09-architecture.md | tail -c 200; echo; grep -c \\\"R1563005\\\\]\\\\])\\\\.$\\\" spec/09-architecture.md; grep -c \\\"the AI's \\\\`redact\\\\` dropping the choice (\\\\[\\\\[R185\\\\]\\\\]) a\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3772/.bot-plan.md\", \"limit\": 20}\n- Grep: {\"pattern\": \"line 158\", \"path\": \"/home/runner/work/_temp/work/item-3772/.bot-plan.md\", \"output_mode\": \"content\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3772/.bot-plan.md\", \"old_string\": \"I re-ran the earlier plan in a scratch copy of `HEAD` outside the worktree, with the correcti\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3772/.bot-plan.md\", \"old_string\": \"the \\u00a79.9 **Search** bullet (line 158).\", \"new_string\": \"the \\u00a79.9 **Search** bullet \u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count the draft's words and characters\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3772/.bot-plan.md\", \"offset\": 20, \"limit\": 25}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3772/.bot-plan.md\", \"offset\": 240}\n- Bash: {\"command\": \"grep -n \\\"redact(\\\" crates/ai/src/decide.rs | head -5; grep -rn \\\"zone_variants\\\\|lethal_nodes:\\\" crates/ai/src/config.rs | head -4\", \"description\": \"Confirm decide redacts and the cited\u2026\n- Bash: {\"command\": \"awk 'NR<=422 && /^(pub )?fn /{f=$0; n=NR} END{}; NR==422{print n\\\": \\\"f}' crates/ai/src/decide.rs; sed -n 810,830p crates/ai/src/decide.rs | grep -n \\\"redact\\\\|observe\\\\|fn \\\\|search_det\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3772/.bot-plan.md\", \"old_string\": \"An earlier planning run built this exact change in a scratch copy of `386718245903`; since th\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3772/.bot-plan.md\", \"old_string\": \"## Done when\\n\\n- [ ] Two states that differ only in the seat's own secret choice sign differ\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3772/.bot-plan.md\", \"old_string\": \"The classify run is CLAUDE.md's check before a push. No catalog entry changes, so it should n\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount the draft's words\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3772/.bot-plan.md\", \"offset\": 34, \"limit\": 30}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3772/.bot-plan.md\", \"offset\": 130, \"limit\": 25}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3772/.bot-plan.md\", \"old_string\": \" A cast of Mind Games gives the search three children, one for each choice, that differ only \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3772/.bot-plan.md\", \"old_string\": \"**: the issue found that the three children of a Mind Games cast differ only in the secret it\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount the draft's words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3772/.bot-plan.md\", \"old_string\": \"| `r3772000_the_seats_own_secret_choice_is_signed` | The 3 choices sign pairwise differently,\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3772/.bot-plan.md\", \"old_string\": \" Keep the scenario numbers exactly as written: p1's library at 3, p2's hand at 10, p2's libra\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3772/.bot-plan.md\", \"old_string\": \"An earlier planning run built this exact change in a scratch copy of `386718245903`. Since th\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount the draft's words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3772/.bot-plan.md\", \"old_string\": \"- **Beam crowding.** The three children score alike, so where Mind Games ranks in the top `be\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3772/.bot-plan.md\", \"old_string\": \"- `search.rs`, `lethal.rs`, `unstoppable.rs`, `decide.rs`. They call `search_signature` and p\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount the draft's words\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3772/.bot-plan.md\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3772/.bot-plan.md\", \"old_string\": \"the opponent's unread choice stays unread\", \"new_string\": \"the opponent's unrevealed choice s\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule line 2, the AI: it changes what the search signs (crates/ai/src/simulate.rs) and so what the beam and the lethal solver keep and decide\"} --> ## Goal `search_signature` signs the secrets a Mind Games kept, so the three children of one cast (Greed, Attac\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-12T18:12:18Z",
       "owner_why": "handed off from `claude-3`: its owner `claude-3` cannot take it now",
@@ -15170,12 +15160,14 @@
       "provider": "claude-6",
       "queued_at": "2026-11-12T13:56:40Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43277397409",
+      "run_id": "pending:097db3a9-1794508891",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-12T18:12:18Z",
+      "started_at": "2026-11-12T18:42:22Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6825565002"
+      ],
       "waiting_comment": 6829250435
     },
     "3773": {
@@ -16380,9 +16372,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T18:41:16Z",
+    "at": "2026-11-12T18:42:22Z",
     "url": "",
-    "what": "review #3799 on claude-8"
+    "what": "build #3772 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-12T18:21:57Z",
