@@ -555,6 +555,39 @@ mod the_clocks {
         assert_eq!(table.records.len(), 1);
     }
 
+    /// R1047000: a game folded back to exactly its ceiling runs it out at once, with no ceiling clock armed.
+    #[test]
+    fn r1047000_a_game_folded_back_to_exactly_its_ceiling_runs_it_out_with_no_clock() {
+        let mut edge = setup(opening("duos-ceiling-5"));
+        edge.created_at = EPOCH - MATCH_CEILING_MINUTES * MINUTE;
+        let mut table = Table::new(edge);
+        table.holding_appends = true;
+        table.feed(DuosHostEvent::Arm);
+        assert!(table.notes.iter().any(|note| matches!(
+            note,
+            DuosNote::ClockExpired { kind } if kind == "ceiling"
+        )));
+        assert_eq!(table.timer(TimerKey::DuosCeiling), None);
+    }
+
+    /// B40: a host made for a match already finished arms no ceiling and moves no AI seat.
+    #[test]
+    fn b40_a_host_made_for_a_finished_match_arms_no_ceiling_and_moves_no_ai() {
+        let mut done = setup(opening("duos-finished-1"));
+        done.finished = true;
+        let mut table = Table::new(done);
+        table.feed(DuosHostEvent::Arm);
+        assert_eq!(table.timer(TimerKey::DuosCeiling), None);
+        assert!(
+            table
+                .timers
+                .iter()
+                .all(|(key, _, _)| !matches!(key, TimerKey::DuosAi { .. })),
+            "{:?}",
+            table.timers
+        );
+    }
+
     /// R776000: a ceiling row the log would not take whose answer comes after the host stopped runs the ceiling out
     /// again no more.
     #[test]
@@ -950,6 +983,20 @@ mod the_ai {
             table.timer(TimerKey::DuosAi { seat: stale.seat }),
             Some(table.now + DUOS_AI_STEP_DELAY_MS)
         );
+    }
+
+    /// B36: a search that comes back after the host stopped plays nothing.
+    #[test]
+    fn b36_a_search_answered_after_the_stop_plays_nothing() {
+        let (mut table, request, _) = asked("duos-ai-9");
+        table.feed(DuosHostEvent::Stop);
+        table.feed(DuosHostEvent::Decided {
+            seat: request.seat,
+            body: None,
+            cursor: 1,
+            failed: false,
+        });
+        assert!(table.log.is_empty(), "{:?}", table.nonces());
     }
 
     #[test]
