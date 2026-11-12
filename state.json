@@ -16367,6 +16367,13 @@
     "3803": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-12T20:44:55Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "medium",
+        "why": "No rule line holds: the change is a comment in scripts/ci-shards.toml (the count fix already landed in #3765), one file, no engine, AI, cross-crate or migration work."
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
