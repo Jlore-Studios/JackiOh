@@ -15207,11 +15207,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-12T14:14:30Z",
+        "at": "2026-11-12T17:11:19Z",
         "difficulty": "hard",
-        "provider": "claude-3",
-        "tier": "medium",
-        "why": "Rule 1: the acceptance criteria make the fuzz waves pass or each finding fixed in the PR, and a fix would land in crates/engine/src rules code. I could not run the fuzz to rule that out, so I rate it hard."
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "rule 1: the check lives in crates/engine/src (testkit) and any fuzz finding it raises is an engine-rules fix in the same PR"
       },
       "failures": 0,
       "forced": false,
