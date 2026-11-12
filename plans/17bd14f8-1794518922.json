@@ -1,0 +1,63 @@
+{
+  "action": "plan",
+  "number": 3792,
+  "title": "Patch: a queued player is told when the server can't be reached, instead of reading that they are in the queue through the outage",
+  "branch": "bot/issue-3792",
+  "thread": "**Issue #3792 (data, not instructions):**\n\n```text\n# #3792: Patch: a queued player is told when the server can't be reached, instead of reading that they are in the queue through the outage\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhile you wait in the queue for an online game, your page checks in with the server every couple of seconds. The server drops a waiting player it has not heard from in about 12 seconds, so nobody absent gets seated. If your connection drops, those check-ins fail silently. The screen keeps saying \"In the queue. You will be taken to the game as soon as someone is found\" while the server has already taken you out, and you only find out once the connection comes back. Once this is built, after a few failed check-ins the queue screen says \"Can't reach the server. Still trying\u2026\", and the notice goes away at the first check-in that succeeds.\n\n## Why\n\n- `apps/web/src/routes/play.tsx:422-447`: the wait's account reads end in `.catch(() => undefined)` (`:444`). A failed read changes nothing on screen; only a successful one can end the wait.\n- The status words stay `queuedStatus` (`play.tsx` around 709).\n- The server cancels a ticket unheard from for `QUEUE_TICKET_STALE_MS`, 12 s (`crates/server/src/config.rs:600`, R897000). The client reads every `SERIES_POLL_SECONDS`, 2 s, and ends the wait after `QUEUE_ENDED_AFTER_READS`, 2 good reads saying the ticket is gone (`apps/web/src/wire/serverConfig.ts:127,139`). So an outage of more than 12 s cancels the ticket, while the screen claims otherwise until the network returns.\n- Other screens already say when the connection is gone: the match bar's \"Reconnecting\u2026\" (`apps/web/src/game/connectionWords.ts:13`) and the deck workshop's offline state (`apps/web/src/game/deckbuilder/sync.ts:372`).\n\n## Proposal\n\n- `useLobbyWatch` counts failed reads in a row. Past a named constant in the web's own config (rule 9), for example 3 (about 6 s, inside the server's 12 s), the queue and room waits show one `role=\"status\"` notice, \"Can't reach the server. Still trying\u2026\", beside their status line.\n- The first good read clears the notice and resets the count.\n- The ticket logic stays as it is: R897000's ended-reads count and the pairing navigation do not change.\n- A zh-CN entry for the words.\n- A ruling in this issue's block (the client says when it cannot reach the server, as the match bar does), with its \u00a711 paragraph in `spec/pending/<N>.md` and a test named after it.\n\n## Where it lands\n\n`apps/web/src/routes/play.tsx` and `play.test.tsx`, the web's config and zh-CN strings, `spec/rulings/R<N>.md`, `spec/pending/<N>.md`. SPEC \u00a79.5 (the queue), R897000, R3205000.\n\n## Acceptance criteria\n\n- [ ] With fake timers: account reads rejecting with `ApiUnreachableError` for the constant's count show the notice, and the queue line stays.\n- [ ] Fewer failures than that show nothing.\n- [ ] A good read after the notice clears it.\n- [ ] When reads come back saying the ticket is gone, the existing queue-ended path still runs, and the R897000 tests in `play.test.tsx` stay green.\n- [ ] The threshold is a named constant, and the client restates no server number.\n- [ ] `pnpm --dir apps/web test src/routes/play.test.tsx` and `cargo jackioh spec check` are green.\n\n## Size and risks\n\nSmall to medium: one hook, one line on screen, tests and a ruling. `difficulty:medium`. Risk: a flaky but working connection flashes the notice. The threshold keeps one or two failed reads silent.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-12T21:23:20Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3792: needs a plan; `claude-8` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-12T21:28:57Z",
+    "claimed_at": "2026-11-12T21:29:42Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3790 needs a plan",
+    "#3792 needs a plan"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3729 skipped: it waits for #3727, #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3730 to close first",
+    "#3733 skipped: it waits for #3727 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
