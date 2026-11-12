@@ -70,6 +70,7 @@ pub mod skill;
 pub mod slumber;
 pub mod starship;
 pub mod stinkyscape_plus_s14;
+pub mod stinkyscape_plus_turrets;
 pub mod style;
 pub mod support;
 pub mod surface;

@@ -30441,7 +30441,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 50,
     "base": {
       "attack": 0,
       "health": 6,
@@ -30562,7 +30562,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 1,
       "health": 1,
@@ -30577,7 +30577,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Can't Defend, Ranged, Pierce\nCan attack {times|time|times} per turn.\nCan only attack the Unit directly across from this."
+      "text": "Can't Defend, Ranged, Pierce\nCan attack {attacks|attack|attacks} per turn.\nCan only attack the Unit directly across from this."
     },
     "radiant": {
       "attack": 2,
@@ -30596,11 +30596,11 @@
           "kind": "Cloaked"
         }
       ],
-      "text": "Can't Defend, Ranged, Pierce, Cloaked\nCan attack {times|time|times} per turn.\nCan only attack the Unit directly across from this."
+      "text": "Can't Defend, Ranged, Pierce, Cloaked\nCan attack {attacks|attack|attacks} per turn.\nCan only attack the Unit directly across from this."
     },
     "params": [
       {
-        "key": "times",
+        "key": "attacks",
         "base": 10,
         "radiant": 10,
         "better": "up",
@@ -30622,7 +30622,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 41,
     "base": {
       "attack": 0,
       "health": 5,
@@ -32682,7 +32682,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 29,
     "base": {
       "attack": 2,
       "health": 12,
@@ -32731,7 +32731,7 @@
         "key": "damage",
         "base": 2,
         "radiant": 2,
-        "better": "up",
+        "better": "down",
         "step": 1,
         "min": 1
       }
@@ -32750,7 +32750,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 16,
     "base": {
       "attack": 3,
       "health": 6,
@@ -33333,7 +33333,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 21,
     "base": {
       "attack": 2,
       "health": 5,
@@ -33352,7 +33352,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Armor 5, Can't Defend, Ranged, Pierce\nDeal 5x damage to Units in this lane, deals 3x damage to Units in adjacent lanes."
+      "text": "Armor 5, Can't Defend, Ranged, Pierce\nDeal {sweepLane}x damage to Units in this lane, deals {sweepAdjacent}x damage to Units in adjacent lanes."
     },
     "radiant": {
       "attack": 4,
@@ -33372,8 +33372,26 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Armor 10, Can't Defend, Ranged, Pierce\nDeal 7x damage to Units in this lane, deals 4x damage to Units in adjacent lanes."
-    }
+      "text": "Armor 10, Can't Defend, Ranged, Pierce\nDeal {sweepLane}x damage to Units in this lane, deals {sweepAdjacent}x damage to Units in adjacent lanes."
+    },
+    "params": [
+      {
+        "key": "sweepLane",
+        "base": 5,
+        "radiant": 7,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "sweepAdjacent",
+        "base": 3,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ]
   },
   "stinkyscapeplus-108": {
     "id": "stinkyscapeplus-108",
@@ -33452,7 +33470,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 42,
     "base": {
       "attack": 2,
       "health": 4,
