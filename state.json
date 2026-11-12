@@ -15128,11 +15128,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-12T14:34:13Z",
+        "at": "2026-11-12T18:37:51Z",
         "difficulty": "hard",
-        "provider": "claude-3",
-        "tier": "medium",
-        "why": "Rule 2: it changes the AI's search. `search_signature` in crates/ai/src/simulate.rs decides which lines the beam and the lethal solver keep."
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "Rule line 2, the AI: it changes what the search signs (crates/ai/src/simulate.rs) and so what the beam and the lethal solver keep and decide"
       },
       "failures": 0,
       "forced": false,
