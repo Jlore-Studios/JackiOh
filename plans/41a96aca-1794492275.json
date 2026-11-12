@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 3773,
+  "title": "Patch: the fuzz monitor checks that the state check ran: no dead unit left standing, no live hero at 0, no mana below 0",
+  "branch": "bot/issue-3773",
+  "thread": "**Issue #3773 (data, not instructions):**\n\n```text\n# #3773: Patch: the fuzz monitor checks that the state check ran: no dead unit left standing, no live hero at 0, no mana below 0\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nAfter every action the game is supposed to clean up: units at 0 health die, and a hero at 0 loses. The random-game tester that plays hundreds of games on every change checks many of the game's promises, but not this one. If a rarely played card forgot to trigger the cleanup, a dead unit would stay on the board an action too long, or a beaten hero would play on. The tester wouldn't notice, because the game still ends and still replays the same. After this, it checks after every action that the cleanup happened, that mana never goes below 0, and that a hit of 0 is never reported as damage.\n\n## Why\n- None of the fuzz monitor's sixteen checks (`crates/engine/src/testkit/invariants.rs:18-63`) covers:\n  - a unit at 0 health on the field;\n  - a live hero at 0 that can lose;\n  - mana below 0 (\u00a72.3 says twice that mana never goes below 0, `spec/02-core-systems.md:46-47`);\n  - a damage event of 0 or less (R63: a hit reduced to 0 emits nothing).\n- BUILD's M2 combat gate (`BUILD.md:321`) holds these in `crates/engine/tests/rules/combat_property.rs` (its invariants 1 to 3, `:274-375`). That test calls the state check itself, so it can't see an engine path that forgets to.\n- The state check is called from 33 places in the engine's sources (`draw.rs`, `turn.rs`, `traps.rs`, `combat.rs`, `play_steps.rs`, `setup.rs` and others). A missed call would simply leave a unit dead one action late.\n- The co-op monitor already holds the analogue for its team pool (`invariants.rs:3343-3347`).\n- This checks the state check's outcome (\u00a74.5), not owed work, which I7 already holds.\n\n## Proposal\nAdd I17, under I7's settled condition (a live game with no prompt and no mulligan, `invariants.rs:3109`):\n- No unit on either field at layered health 0 or less, unless it is Indestructible with max health above 0 (R69).\n- No seat that `can_lose` (`crates/engine/src/state.rs:2251`) at hero health 0 or less, in 1v1. Co-op keeps its pool check.\n\nOn every state:\n- Each seat's current and max mana at 0 or more.\n- No card with negative damage.\n\nOn every action's events:\n- Every damage amount above 0 (R63).\n\nThe header list and the fuzz row in `crates/tools/README.md` are updated, along with `crates/engine/README.md`'s stale mention of the I1-I4 monitor.\n\n## Where it lands\n- `crates/engine/src/testkit/invariants.rs` and `crates/cards/tests/cross/invariants.rs`.\n- `crates/tools/README.md` and `crates/engine/README.md`.\n- SPEC \u00a72.3, \u00a74.5, R63, R69.\n\n## Acceptance criteria\n- [ ] A planted unit at 0 health on a settled board reports I17.\n- [ ] The same unit Indestructible with max health above 0 does not, and neither does the same plant with a prompt open.\n- [ ] A live hero at 0 that can lose reports I17; a hero held at a floor does not.\n- [ ] Current mana of -1, a card damage of -1 and a planted damage event of 0 each report I17.\n- [ ] `cargo jackioh fuzz --seeds 200`, its `--handicap` wave and its `--duos` wave pass, or each finding they raise is fixed in the same pull request with a test of its own.\n\n## Size and risks\n- Small to medium: 3 to 4 files, about 100 lines of code and 120 of tests.\n- It may find real engine bugs, which is the point. Each one needs its own fix, and a ruling where the spec doesn't decide.\n- The checks are cheap state scans, far cheaper than I14's.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-12T13:56:39Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3773: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-12T13:57:02Z",
+    "claimed_at": "2026-11-12T14:05:22Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3729 skipped: it waits for #3727, #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3730 to close first",
+    "#3733 skipped: it waits for #3727 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
