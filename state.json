@@ -15522,7 +15522,7 @@
         "provider": "claude-3",
         "round_tier": "strong",
         "rounds_on": 3730,
-        "rounds_used": 0,
+        "rounds_used": 1,
         "since": "2026-11-12T15:02:18Z",
         "source": "build",
         "until": "2026-11-12T16:17:20Z"
