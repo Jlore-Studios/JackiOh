@@ -16942,6 +16942,8 @@
       }
     },
     "3809": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-12T21:51:09Z",
@@ -16955,8 +16957,11 @@
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -40; grep -n \\\"useLobbyWatch\\\\|catch(() => undefined)\\\\|MS_PER_SECOND =\\\\|SECONDS_PER_MINUTE =\\\\|api.ts\\\\|status: \\\\\\\"play-status\\\\\\\"\\\" apps/web/src/routes/play.\u2026\n- Bash: {\"command\": \"cd apps/web/src/routes; sed -n 1,5p play.tsx; sed -n 38,52p play.tsx; sed -n 70,90p play.tsx; sed -n 370,470p play.tsx; sed -n 1040,1060p play.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792/apps/web/src/routes; sed -n 25,38p play.tsx; grep -n \\\"function attempt\\\\|const attempt\\\" -A12 play.tsx ../net/*.ts | head -30; grep -n \\\"class \u2026\n- said: Now the edits.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792/apps/web/src/routes; python3 - <<'EOF'\\np='play.tsx'\\ns=open(p).read()\\ndef rep(a,b):\\n global s\\n assert s.count(a)==1,a\\n s=s.replace(a,b)\\nre\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792/apps/web/src/routes; sed -n 490,502p play.tsx; grep -n \\\"useState\\\" play.tsx | head -3\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792/apps/web/src/routes; python3 - <<'EOF'\\np='play.tsx'\\ns=open(p).read()\\na=\\\"\\\"\\\" }, [token, waiting, queueWait]);\\n}\\n\\n// UI pieces\\\"\\\"\\\"\\nasse\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792/apps/web/src/routes; sed -n 13,45p play.test.tsx; sed -n 50,62p play.test.tsx; sed -n 90,100p play.test.tsx; sed -n 195,214p play.test.tsx; sed \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792/apps/web/src/routes; grep -n \\\"ApiRequestError(\\\" play.test.tsx | head -3; grep -n \\\"createRoom\\\" play.test.tsx | head -8; grep -n \\\"R897000\\\" p\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792/apps/web/src/routes; python3 - <<'EOF'\\np='play.test.tsx'\\ns=open(p).read()\\ns=s.replace(\\\"import {\\\\n ApiRequestError,\\\\n cancelRoom,\\\",\\\"impor\u2026\n- said: Meanwhile, write the spec notes.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792/spec; ls pending | head -3; cat pending/$(ls pending | head -1) | head -c 1500; echo; head -30 rulings/R0897000.md 2>/dev/null || ls rulings | g\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792/spec; cat rulings/R0897000.md | head -30; ls rulings | grep 3207; cat rulings/R3207003.md | head -20\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792/spec; ls rulings | grep -i 897; cat > rulings/R3792000.md <<'EOF'\\n---\\nid: R3792000\\ntitle: \\\"A queued or room-waiting player is told when the \u2026\n- Bash: {\"command\": \"tail -40 /tmp/claude-1001/-home-runner-work--temp-work-item-3792/6f2bf9f0-b92b-445a-9078-886247e84327/tasks/bc4ajn3xp.output\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792; pnpm --dir apps/web typecheck 2>&1 | tail -5; pnpm exec eslint apps/web/src/routes/play.tsx apps/web/src/routes/play.test.tsx 2>&1 | tail; pnpm\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792; pnpm --dir apps/web exec vitest run src/i18n 2>&1 | grep -E \\\"Tests|Test Files|FAIL\\\"; cat /tmp/claude-1001/-home-runner-work--temp-work-item-3\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a queued player is told when the server can't be reached, instead of reading that they are in the queue through the outage\"} --> After 3 failed account reads in a row, a player waiting in the queue or in a room now sees \"Can't reach the server. Still tr\u2026"
       },
       "issue": 3792,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-12T22:56:55Z",
         "from_run": "43314310022",
         "gates": [
           {
@@ -17048,7 +17053,11 @@
         "source": "build",
         "until": "2026-11-12T23:24:58Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-12T22:54:58Z",
+      "run_id": "pending:11ab1398-1794524157",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17067,6 +17076,9 @@
         "provider": "claude-8",
         "run": "43314310022"
       },
+      "started_at": "2026-11-12T22:56:55Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17080,9 +17092,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T22:30:18Z",
+    "at": "2026-11-12T22:56:55Z",
     "url": "",
-    "what": "review #3807 on claude-6"
+    "what": "review #3809 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-12T22:39:58Z",
