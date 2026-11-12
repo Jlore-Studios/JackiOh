@@ -17225,15 +17225,8 @@
       "waiting_comment": 6813387108
     },
     "3751": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43156875345",
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-12T05:25:09Z",
-        "until": "2026-11-12T05:55:09Z"
-      },
       "difficulty_by": {
         "at": "2026-11-12T05:24:53Z",
         "difficulty": "hard",
@@ -17252,10 +17245,9 @@
         "reason": "planned on opus",
         "trail": "n\", \"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-3751/028546cb-4f36-44ba-9f04-e86fd94c8520/tasks/b6m9b860g.output ]; do s\u2026\n- Bash: {\"command\": \"grep -E \\\"test result|FAILED|panicked\\\" /tmp/exp3751-patch/final-test.log\", \"description\": \"Check whether ai_slow finished\"}\n- Monitor: {\"description\": \"Wait for the final run's output file\", \"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-3751/028546cb-4f36-44ba-9f04-e86fd94c8520/tasks/b6m9b860g.output ]; d\u2026\n- Bash: {\"command\": \"grep -E \\\"test result|FAILED|panicked\\\" /tmp/exp3751-patch/final-test.log\", \"description\": \"Check the final test log for ai_slow\"}\n- Monitor: {\"description\": \"Wait for the final test task's completion\", \"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-3751/028546cb-4f36-44ba-9f04-e86fd94c8520/tasks/b6m9b860g.output\u2026\n- Bash: {\"command\": \"grep -E \\\"test result|FAILED|panicked\\\" /tmp/exp3751-patch/final-test.log; tail -c 300 /tmp/exp3751-patch/final-test.log\", \"description\": \"Check the final log tail\"}\n- Monitor: {\"description\": \"Wait for the final test task's completion\", \"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-3751/028546cb-4f36-44ba-9f04-e86fd94c8520/tasks/b6m9b860g.output\u2026\n- Bash: {\"command\": \"grep -E \\\"test result|FAILED|panicked\\\" /tmp/exp3751-patch/final-test.log\", \"description\": \"Check whether ai_slow completed\"}\n- Monitor: {\"description\": \"Wait for the final test task's completion\", \"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-3751/028546cb-4f36-44ba-9f04-e86fd94c8520/tasks/b6m9b860g.output\u2026\n- Bash: {\"command\": \"grep -E \\\"test result|FAILED|panicked\\\" /tmp/exp3751-patch/final-test.log\", \"description\": \"Check whether ai_slow completed\"}\n- Monitor: {\"description\": \"Wait for the final test task's completion\", \"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-3751/028546cb-4f36-44ba-9f04-e86fd94c8520/tasks/b6m9b860g.output\u2026\n- Bash: {\"command\": \"grep -E \\\"test result|FAILED|panicked\\\" /tmp/exp3751-patch/final-test.log\", \"description\": \"Check whether ai_slow completed\"}\n- Monitor: {\"description\": \"Wait for the final test task's completion\", \"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-3751/028546cb-4f36-44ba-9f04-e86fd94c8520/tasks/b6m9b860g.output\u2026\n- Bash: {\"command\": \"grep -E \\\"test result|FAILED|panicked\\\" /tmp/exp3751-patch/final-test.log\", \"description\": \"Check whether ai_slow completed\"}\n- Bash: {\"command\": \"tail -c 600 /tmp/exp3751-patch/final-test.log; grep -c \\\"^test .* ok$\\\" /tmp/exp3751-patch/final-test.log\", \"description\": \"See the last tests ai_slow reported\"}\n- Monitor: {\"description\": \"Wait for the final test task's completion\", \"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-3751/028546cb-4f36-44ba-9f04-e86fd94c8520/tasks/b6m9b860g.output\u2026\n- Bash: {\"command\": \"grep -E \\\"test result|FAILED|panicked\\\" /tmp/exp3751-patch/final-test.log\", \"description\": \"Check whether the run finished\"}\n- Monitor: {\"description\": \"Wait for the final test task's completion\", \"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-3751/028546cb-4f36-44ba-9f04-e86fd94c8520/tasks/b6m9b860g.output\u2026\n- Bash: {\"command\": \"grep -E \\\"test result|FAILED|panicked\\\" /tmp/exp3751-patch/final-test.log\", \"description\": \"Check whether the run finished\"}\n- Monitor: {\"description\": \"Wait for the final test task's completion\", \"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-3751/028546cb-4f36-44ba-9f04-e86fd94c8520/tasks/b6m9b860g.output\u2026\n- Bash: {\"command\": \"grep -E \\\"test result|FAILED|panicked\\\" /tmp/exp3751-patch/final-test.log\", \"description\": \"Check whether the run finished\"}\n- Bash: {\"command\": \"tail -c 400 /tmp/exp3751-patch/final-test.log; echo; grep -c \\\"^test .* ok$\\\" /tmp/exp3751-patch/final-test.log; grep -E \\\"^running\\\" /tmp/exp3751-patch/final-test.log\", \"description\": \"\u2026\n- Monitor: {\"description\": \"Wait for the last ai_slow test\", \"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-3751/028546cb-4f36-44ba-9f04-e86fd94c8520/tasks/b6m9b860g.output ]; do slee\u2026\n- Bash: {\"command\": \"grep -E \\\"test result|FAILED|panicked\\\" /tmp/exp3751-patch/final-test.log\", \"description\": \"Check whether the run finished\"}\n- Monitor: {\"description\": \"Wait for the last ai_slow test\", \"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-3751/028546cb-4f36-44ba-9f04-e86fd94c8520/tasks/b6m9b860g.output ]; do slee\u2026\n- Bash: {\"command\": \"grep -E \\\"test result|FAILED|panicked\\\" /tmp/exp3751-patch/final-test.log\", \"description\": \"Check whether the run finished\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3751/.bot-plan.md\", \"old_string\": \"every step below compiles, `cargo clippy -p jackioh-ai --all-targets -- -D warnings` is clean\u2026\n- Bash: {\"command\": \"grep -E \\\"test result|FAILED|panicked\\\" /tmp/exp3751-patch/final-test.log; wc -w /home/runner/work/_temp/work/item-3751/.bot-plan.md\", \"description\": \"Last check of the run and the plan'\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3751/.bot-plan.md\", \"old_string\": \"The lib and `ai` test binaries pass (36 and 816 tests). `ai_slow` passed on an earlier versio\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3751/.bot-plan.md\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"rule 2, the AI: it changes how plan() in crates/ai/src/decide.rs spends its node reserve and reads the host's wrap-up\"} --> **Goal.** Today the AI search adds one extra line for a payoff that comes later (a countdown, a next-turn reward), under R3696000, and\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"rule 2, the AI: it changes how plan() in crates/ai/src/decide.rs spends its node reserve and reads the host's wrap-up\"} --> **Goal.** Today the AI search adds one extra line for a payoff that comes later (a countdown, a next-turn reward), under R3696000, and\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-12T04:45:26Z",
       "owner_why": "it plans it",
@@ -17268,10 +17260,10 @@
       "provider": "claude-7",
       "queued_at": "2026-11-12T03:55:43Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "43156875345",
+      "run_id": "pending:b1510acc-1794461201",
       "runs_on": "ubuntu-latest",
       "spot_check_of": 3745,
-      "started_at": "2026-11-12T04:45:26Z",
+      "started_at": "2026-11-12T05:27:20Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17339,9 +17331,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T05:16:28Z",
+    "at": "2026-11-12T05:27:20Z",
     "url": "",
-    "what": "build #3727 on claude-1"
+    "what": "build #3751 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-12T05:12:26Z",
