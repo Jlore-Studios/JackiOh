@@ -1,16 +1,18 @@
 // Play room links (SPEC §9.5, R767), co-op room links (R2094000) and private lobby links (R3730006).
 // Every one opens the lobby screen, `/lobby/:code`, which shows a lobby or the classic room under the
 // code; the server validates the mode (R264, CLAUDE.md rule 7).
-// At boot, valid `room` and `mode` leave the URL for per-tab storage (R632), as a signed-out visitor's
-// lobby path does, so the link survives the sign-in; `App` then opens its lobby.
+// At boot, valid `room` and `mode` leave the URL for per-tab storage (R632), as a lobby path's code does,
+// so the link survives the sign-in and the invite page; `useKeptLinkOpensLobby` opens its lobby once the
+// account is active.
 // Sign-in keeps only code and mode (B35); unavailable storage means no link.
 
+import { useEffect } from "react";
 import { canonicalCode } from "@jackioh/shared";
 import { ROOM_CODE_FORMAT } from "@jackioh/server-config";
 import { t } from "../i18n/i18n.ts";
 import { isQueueMode, type QueueMode } from "./api.ts";
-import { currentPath, lobbyCodeOf, paths } from "./navigate.ts";
-import { readSession } from "./session.ts";
+import type { Account } from "./gate.ts";
+import { currentPath, lobbyCodeOf, navigate, paths } from "./navigate.ts";
 import { getStored, removeStored, sessionStorageOrNull, setStored } from "./storage.ts";
 
 const ROOM_PARAM = "room";
@@ -59,14 +61,14 @@ export function roomLinkOf(search: string): RoomLink | null {
 }
 
 /**
- * Before routing, adopt a `/play` link and remove its room parameters without touching others; a
- * signed-out visitor's lobby path is kept the same way, so its code waits through the sign-in (R3730006).
+ * Before routing, adopt a `/play` link and remove its room parameters without touching others; a lobby
+ * path's code is kept the same way, signed in or not, so it waits through the sign-in and the invite
+ * page (R3730006).
  */
 export function adoptRoomLink(): boolean {
   if (typeof window === "undefined") return false;
   const lobby = lobbyCodeOfPath(currentPath());
   if (lobby !== null) {
-    if (readSession() !== null) return false;
     setStored(ROOM_LINK_STORAGE_KEY, JSON.stringify({ code: lobby, mode: null }), sessionStorageOrNull());
     return true;
   }
@@ -164,6 +166,24 @@ export function readCoopLink(): string | null {
 
 export function forgetCoopLink(): void {
   removeStored(COOP_LINK_STORAGE_KEY, sessionStorageOrNull());
+}
+
+/**
+ * R767, R2094000, R3730006: a room, co-op or lobby link kept in this tab opens its lobby once, and only
+ * when the account reading it is active. A signed-out, expired or pending one keeps it: the gate sends
+ * that one to sign in or to the invite page, and the link waits for the first screen it reaches active.
+ * Called by the gate of every gated screen and by the main menu, where a sign-in lands.
+ */
+export function useKeptLinkOpensLobby(account: Account): void {
+  const active = account.kind === "ready" && account.me.profile.status === "active";
+  useEffect(() => {
+    if (!active) return;
+    const code = readRoomLink()?.code ?? readCoopLink();
+    if (code === null) return;
+    forgetRoomLink();
+    forgetCoopLink();
+    if (currentPath() !== paths.lobby(code)) navigate(paths.lobby(code), { replace: true });
+  }, [active]);
 }
 
 /**

@@ -500,6 +500,47 @@ describe("B35 #479 a sign-in lands on the main menu, whichever screen sent the p
     expect(window.sessionStorage.getItem(COOP_LINK_STORAGE_KEY)).toBeNull();
   });
 
+  it.each([
+    ["a room link", `${paths.play}?room=abc234&mode=bo3`],
+    ["a lobby path", "/lobby/abc234"],
+  ])(
+    "R767 R3730006 %s opened by a pending account waits through the invite page, and opens its lobby once the code is redeemed",
+    async (_what, link) => {
+      window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "tok" }));
+      let redeemed = false;
+      stubFetch((url) => {
+        if (url === `${API}/api/auth/me`) return json(200, me(redeemed ? "active" : "pending"));
+        if (url === `${API}/api/codes/status`) {
+          return json(200, { redemptionEnabled: true, retryAfterMs: 0, attemptsRemaining: 6 });
+        }
+        if (url === `${API}/api/codes/redeem`) {
+          redeemed = true;
+          return json(200, { status: "active", needsInviteCode: false });
+        }
+        return "hang";
+      });
+      at(link);
+      render(<App />);
+
+      // The gate sends the pending account to the invite page, and the link still waits.
+      fireEvent.change(await screen.findByTestId(inviteTestid.input, undefined, SLOW), { target: { value: GOOD } });
+      expect(window.location.pathname).toBe(paths.invite);
+      expect(window.sessionStorage.getItem(ROOM_LINK_STORAGE_KEY)).not.toBeNull();
+      const submit = screen.getByTestId(inviteTestid.submit);
+      await waitFor(() => {
+        expect(submit).toBeEnabled();
+      }, SLOW);
+      fireEvent.click(submit);
+      fireEvent.click(await screen.findByTestId(inviteTestid.goToDecks, undefined, SLOW));
+
+      // Active now: the next screen's gate opens the lobby, once.
+      await waitFor(() => {
+        expect(window.location.pathname).toBe(paths.lobby("ABC234"));
+      }, SLOW);
+      expect(window.sessionStorage.getItem(ROOM_LINK_STORAGE_KEY)).toBeNull();
+    },
+  );
+
   it("B35 the gate remembers no destination: a signed-out visit to a gated screen stores none", async () => {
     stubFetch(() => "hang");
     at(paths.decks);

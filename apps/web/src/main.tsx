@@ -66,7 +66,7 @@ import { countLocaleVisit, initLocale, t, useLocale } from "./i18n/i18n.ts";
 import { useAccount, type Account } from "./net/gate.ts";
 import { SITE_NAME, canonicalUrlFor, documentTitleFor } from "./net/head.ts";
 import { useQueueFollow } from "./net/liveGame.ts";
-import { adoptCoopLink, adoptRoomLink, forgetCoopLink, forgetRoomLink, readCoopLink, readRoomLink } from "./net/roomLink.ts";
+import { adoptCoopLink, adoptRoomLink, readRoomLink, useKeptLinkOpensLobby } from "./net/roomLink.ts";
 import { useSettingsAccountSync } from "./settings/accountSync.ts";
 import {
   currentPath,
@@ -470,6 +470,8 @@ export function Gated({ allowPending = false, consentExempt = false, engine = fa
   useCardPicksAccountSync(account);
   // R3013001: and its card proficiency, which only the account holds, and the stamp each card wears.
   useProficiencyAccountSync(account);
+  // R767, R3730006: a link kept through the sign-in opens its lobby once this account is active.
+  useKeptLinkOpensLobby(account);
   const target = redirectFor(account, allowPending);
   // R1435: renders the gate again once the prompt is answered here, since the page-wide set above
   // renders nothing by changing.
@@ -616,16 +618,6 @@ export function App(): ReactElement {
   useState(adoptCoopLink);
   const path = usePathname();
   useDocumentHead(path);
-  // R3730006: a room, co-op or lobby link kept through the sign-in opens its lobby once signed in.
-  const signedInNow = readSession() !== null;
-  useEffect(() => {
-    if (!signedInNow) return;
-    const code = readRoomLink()?.code ?? readCoopLink();
-    if (code === null) return;
-    forgetRoomLink();
-    forgetCoopLink();
-    if (currentPath() !== paths.lobby(code)) navigate(paths.lobby(code), { replace: true });
-  }, [signedInNow, path]);
   // R765: a pairing finds the player on any screen; see THE QUEUE FOLLOWS THE PLAYER above.
   const found = useQueueFollow(path);
   // #936: see FRIENDS FIND THE PLAYER ANYWHERE above. Read at every render, so a sign-in in this page
