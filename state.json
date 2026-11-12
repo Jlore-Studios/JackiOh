@@ -15040,6 +15040,13 @@
     "3773": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-12T14:14:30Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "Rule 1: the acceptance criteria make the fuzz waves pass or each finding fixed in the PR, and a fix would land in crates/engine/src rules code. I could not run the fuzz to rule that out, so I rate it hard."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
