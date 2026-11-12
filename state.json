@@ -15592,7 +15592,9 @@
     },
     "3695": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6800161899"
+      ],
       "difficulty_by": {
         "at": "2026-11-12T01:21:58Z",
         "difficulty": "hard",
@@ -15631,9 +15633,7 @@
       "started_at": "2026-11-12T00:48:58Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6800161899"
-      ],
+      "taken_asks": [],
       "waiting_comment": 6804833062
     },
     "3696": {
