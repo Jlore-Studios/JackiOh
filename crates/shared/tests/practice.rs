@@ -1539,6 +1539,29 @@ fn r1563006_the_window_lapsing_answers_stop_for_the_human_as_its_own_action() {
     assert_eq!(session.log().len(), logged + 1);
 }
 
+/// R1563006, R677: a window that lapses on a question the human no longer holds (a Glitch swap has put it in the
+/// AI's seat) answers nothing for the human.
+#[test]
+fn r1563006_r677_a_window_lapsing_on_a_question_in_the_ais_seat_answers_nothing() {
+    let session = sequence_opened("practice-r1563006-swapped");
+    let (id, at) = sequence_windows(&session)[0];
+    let mut swapped = with_game(&session, |game| game["seatSwaps"] = serde_json::json!(1));
+    assert_eq!(swapped.host.human_seat(), P2, "PREMISE: the human plays p2 now");
+    let logged = swapped.log().len();
+    swapped.now = at;
+    swapped.feed(PracticeEvent::TimerFired {
+        key: TimerKey::Sequence,
+        id,
+    });
+    assert_eq!(swapped.log().len(), logged, "{:?}", swapped.log().last());
+    assert!(
+        swapped.snapshot().error.is_none(),
+        "{:?}",
+        swapped.snapshot().error
+    );
+    assert!(swapped.state().pending.is_some(), "the question is still open");
+}
+
 #[test]
 fn r1563006_a_sequence_the_human_stops_itself_takes_its_window_back() {
     let mut session = sequence_opened("practice-r1563006-stop");
