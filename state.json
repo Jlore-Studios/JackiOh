@@ -16183,15 +16183,8 @@
       }
     },
     "3800": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43304231986",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-12T21:09:29Z",
-        "until": "2026-11-12T21:39:29Z"
-      },
       "failures": 1,
       "handoff": {
         "at": "2026-11-12T20:56:34Z",
@@ -16202,9 +16195,8 @@
         "reason": "planned on opus",
         "trail": "- Bash: {\"command\": \"ls /tmp/trace/target/release/jackioh /tmp/fz 2>&1 | head; git -C /home/runner/work/_temp/work/item-3800 log --oneline -1 | cat; git -C /home/runner/work/_temp/work/item-3800 status --sho\u2026\n- Bash: {\"command\": \"git log --oneline 3d347d9e78..HEAD | cat; git diff --stat 3d347d9e78..HEAD -- crates/engine crates/cards crates/tools spec/pending spec/rulings | tail -15\", \"description\": \"See what main\u2026\n- Bash: {\"command\": \"grep -n \\\"numbered_body\\\\|fn numbered_body\\\" -A 6 crates/engine/tests/rules/fixtures/instance_data.rs | grep -n \\\"cost\\\\|def(\\\" | head -5; grep -n \\\"r3800\\\" -r crates spec | head\", \"desc\u2026\n- Bash: {\"command\": \"sed -n 88,115p crates/engine/tests/rules/fixtures/instance_data.rs; sed -n 19,40p crates/engine/tests/rules/fixtures/instance_data.rs\", \"description\": \"Read the numbered_body fixture def\u2026\n- Bash: {\"command\": \"grep -n \\\"fuzz-corpus\\\" crates/tools/README.md | cut -c1-600 | head -5; ls crates/tools/fuzz-corpus | wc -l; ls -t crates/tools/fuzz-corpus | head -3; git log --oneline -3 -- crates/tool\u2026\n- Bash: {\"command\": \"grep -h \\\"^cards:\\\" spec/rulings/R3*.md | grep -E \\\"S #|Core #|C #\\\" | head -5; cat spec/rulings/R3693000.md | head -7\", \"description\": \"Check the cards field format for rulings\"}\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Status (resumed run)\\n- s3 handicap PASS, s3 Duos PASS. So fuzz (3/4) = plain seeds 6091, 6140; fuzz (4/4) = Duos seed 1628.\\n- Prototype of fixes A, B,\u2026\n- said: ## Goal Get fuzz (3/4) and fuzz (4/4) of the daily super run green again. Both fail on the fuzz monitor's new I16 check, added by #3746. I ran the shards' own commands on a release build of `3d347d9`. Three seeds fail, each through a different engine leak: - **Duos seed 1628 (fuzz 4/4):** C+ #31 Fu\u2026"
       },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-12T19:27:15Z",
       "owner_why": "it plans it",
@@ -16216,9 +16208,9 @@
       "planned_tier": "strong",
       "provider": "claude-4",
       "round_tier": "",
-      "run_id": "43304231986",
+      "run_id": "pending:22f2853d-1794517883",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-12T20:50:10Z",
+      "started_at": "2026-11-12T21:12:17Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
@@ -16402,9 +16394,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T20:51:31Z",
+    "at": "2026-11-12T21:12:17Z",
     "url": "",
-    "what": "build #3803 on claude-6"
+    "what": "build #3800 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-12T20:42:43Z",
