@@ -15988,6 +15988,14 @@
           "claude": "strong"
         }
       }
+    },
+    "3788": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-12T15:36:48Z",
+      "issue": 3776,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
