@@ -17074,6 +17074,7 @@
       "run_id": "43137562981",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 220,
       "started_at": "2026-11-12T01:53:11Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -36320,9 +36321,33 @@
         "title": "Patch: the effects tests share one cue-end helper and one planning setup in place of 59 local copies",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-4"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "a300ec84dfe411ba21126d77eec9e8fcd7634315",
+        "issue": 3696,
+        "merged_at": "2026-11-12T03:42:45Z",
+        "n": 220,
+        "pr": 3745,
+        "queued_at": "2026-11-12T03:42:45Z",
+        "sha": "db28caaa66d03f1fe574396f006d44370ad2c941",
+        "status": "queued",
+        "title": "Patch: the AI's search keeps room for a plan whose payoff lands next turn",
+        "tries": 0
       }
     ],
-    "count": 219
+    "count": 220
   },
   "statistics": {
     "at": "2026-11-12T03:42:31Z"
