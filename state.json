@@ -15354,7 +15354,7 @@
     "3777": {
       "action": "build",
       "asks": [],
-      "failures": 1,
+      "failures": 0,
       "forced": false,
       "handoff": {
         "at": "2026-11-12T16:27:35Z",
@@ -15378,7 +15378,9 @@
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
+      "pr": 3797,
       "provider": "claude-6",
+      "question": "",
       "queued_at": "2026-11-12T14:22:27Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
