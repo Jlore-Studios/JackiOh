@@ -16022,6 +16022,15 @@
       "failures": 0,
       "feedback_since": "2026-11-12T21:13:38Z",
       "forced": false,
+      "handoff": {
+        "at": "2026-11-12T22:12:25Z",
+        "family": "claude",
+        "kind": "work",
+        "notes": "",
+        "provider": "claude-8",
+        "reason": "built and checked; its own review run, on this subscription, reviews it next",
+        "trail": "- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3788; git status --short | head; git log --oneline -3; grep -rn \\\"crackPaths\\\\|damageLevel\\\\|ART_WEAR_LEVELS\\\\|CRACK_STEP\\\" apps e2e --exclude-dir=no\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: remove the damage cracks from a unit's art\"} --> I changed nothing in this run, because the CI failure shown looks like a cancelled run, not a failure of this change. **What the CI log shows:** - `e2e smoke` failed only at its final gate step, because i\u2026"
+      },
       "interruptions": 0,
       "issue": 3776,
       "kind": "revise",
