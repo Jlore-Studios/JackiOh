@@ -16031,17 +16031,8 @@
       "taken_asks": []
     },
     "3792": {
-      "action": "plan",
-      "asks": [
-        "c:6836318364"
-      ],
-      "build_next": {
-        "from_run": "43310799356",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-12T21:46:45Z",
-        "until": "2026-11-12T22:16:45Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-12T21:46:30Z",
         "difficulty": "medium",
@@ -16060,10 +16051,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"ls .bot-plan.md 2>/dev/null; grep -n \\\"useLobbyWatch\\\\|catch(() => undefined)\\\\|queuedStatus\\\\|QUEUE_ENDED_AFTER_READS\\\\|SERIES_POLL_SECONDS\\\\|ApiUnreachableError\\\" apps/web/src/routes/p\u2026\n- Bash: {\"command\": \"sed -n 1,80p apps/web/src/routes/play.tsx; sed -n 360,480p apps/web/src/routes/play.tsx; sed -n 700,740p apps/web/src/routes/play.tsx; sed -n 800,1000p apps/web/src/routes/play.tsx\"}\n- Bash: {\"command\": \"cd apps/web/src; grep -n \\\"statusWords\\\\|playTestid\\\\.\\\\|role=\\\\\\\"status\\\\\\\"\\\" routes/play.tsx | head -40; grep -n \\\"ApiUnreachableError\\\" -r . | head -20; cat net/errors.ts | head -60; \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792; sed -n 1030,1060p apps/web/src/routes/play.tsx; sed -n 1250,1285p apps/web/src/routes/play.tsx; sed -n 80,100p apps/web/src/net/api.ts; find ap\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792; grep -rn \\\"Reconnecting\\\" apps/web/src --include=*.ts --include=*.tsx --include=*.json -l | head; ls apps/web/src/i18n; ls spec/pending | head;\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792; cat spec/rulings/R0897000.md 2>/dev/null || ls spec/rulings | grep 897; cat spec/pending/3744.md | head -30; ls spec/rulings | grep -E \\\"R3792|\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792; cat spec/rulings/R3207003.md; sed -n 1,40p spec/pending/3693.md | cut -c1-400; ls apps/web/src/net | grep -i config; grep -n \\\"R897000\\\" apps/w\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792; grep -n \\\"Adding a ruling\\\" -A30 spec/README.md | head -60; cat spec/rulings/R3744000.md | head -20 | cut -c1-300; sed -n 1150,1230p apps/web/s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792; sed -n 1,140p apps/web/src/routes/play.test.tsx; grep -n \\\"\\u00a79.5\\\" spec/*.md | head -5; grep -n \\\"lobby\\\\|play\\\" apps/web/src/game/config.t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792; grep -rn \\\"const [A-Z_]* = [0-9]\\\" apps/web/src/routes/*.tsx apps/web/src/routes/*.ts apps/web/src/net/*.ts 2>/dev/null | grep -v test | head -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792; cat apps/web/src/test/settle.ts | head -40; sed -n 1480,1530p apps/web/src/routes/play.test.tsx; grep -n \\\"export const [A-Z_]* = \\\" apps/web/s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792; grep -n \\\"STALE\\\\|SERIES_POLL\\\\|QUEUE_ENDED\\\" apps/web/src/wire/serverConfig.ts; grep -n \\\"notice\\\" apps/web/src/routes/lobby.css | head -5; gr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792; sed -n 76,122p apps/web/src/routes/play.tsx; grep -rn \\\"playTestid\\\" e2e/support/testids.ts | head -3; grep -n \\\"searching:\\\" e2e/support/testi\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792; grep -n '^ \\\"Can' apps/web/src/i18n/zh-CN.json | head; grep -n \\\"zh-CN\\\" apps/web/src/i18n/i18n.test.ts | head -8; sed -n 1,25p apps/web/src/i1\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3792; echo \\\"Plan drafted in final message: play.tsx useLobbyWatch returns unreachable boolean; const LOBBY_UNREACHABLE_AFTER_READS=3 in play.tsx; R3\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Only apps/web (one hook, one notice line, tests) plus a ruling note and a pending paragraph: none of the five hard lines (engine, AI, cross-crate design, migration, about 40 files) holds.\"} --> ## Goal A player waiting in the online queue or a room wait is\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-12T21:29:42Z",
       "owner_why": "it plans it",
@@ -16076,12 +16066,14 @@
       "provider": "claude-8",
       "queued_at": "2026-11-12T21:28:57Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43310799356",
+      "run_id": "pending:4329afe8-1794520201",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-12T21:29:42Z",
+      "started_at": "2026-11-12T21:51:09Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6836318364"
+      ]
     },
     "3793": {
       "action": "plan",
@@ -16643,9 +16635,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T21:32:56Z",
+    "at": "2026-11-12T21:51:09Z",
     "url": "",
-    "what": "plan #3806 on claude-3"
+    "what": "build #3792 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-12T21:24:54Z",
