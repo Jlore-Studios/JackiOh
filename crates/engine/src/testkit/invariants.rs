@@ -15,7 +15,7 @@
 //! `chosenExertion` snapshots the chosen attacker's or switcher's identity and layered Deft before
 //! reduction, since combat may take it off the field before its event.
 //!
-//! The fifteen checks (a message leads with its id and cites the SPEC reference, so `signatureOf` groups one
+//! The sixteen checks (a message leads with its id and cites the SPEC reference, so `signatureOf` groups one
 //! bug):
 //!   I1 no sick attack is offered (§4.1, §6.1, R83, R171): not in `attack_targets`, not as the chosen
 //!      `attack`.
@@ -56,6 +56,11 @@
 //!      act, each shown on a unit or backrow top of either side is `usable` exactly when `legal_actions`
 //!      lists an `activate` of it and carries `reason` exactly when not; read off I6's view and listing in
 //!      `hidden`, as I13 is; a carried Unit is not asked.
+//!   I16 every card's own record agrees with the pile that holds it (§3.2, R78, R766): `zone` names the pile
+//!      (a field slot's side, row and lane too), a field card's `controller` is its side, a hand, library,
+//!      graveyard or exile card is owned and controlled by its side (R747, R2618000, R73, R12), a card off
+//!      the field holds none of R78's field-only state, nor a graveyard or exile card R766's price
+//!      (`field_state_held`).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -73,10 +78,10 @@ use crate::reduce::ReduceResult;
 use crate::state::{CardInstance, GameState, PendingChoice, find_instance};
 use crate::subsystems::activate::ActivateAction;
 use crate::wire::{
-    Action, ActionBody, ActivationView, BackrowView, CardType, CardView, DUOS_DUELS, DUOS_SEATS,
-    DuosActionBody, DuosEvent, DuosSeat, DuosView, Enchantment, GameEvent, GameResult, HandView, KeywordKind,
-    PLAYER_IDS, PerPlayer, Phase, PlagueSpend, PlayerId, PlayerView, PromptKind, RedirectWhat, RevealAt, Row,
-    Selection, Team, TuningChange, Zone, ZoneChoice, ZoneName, has_keyword, opponent_of,
+    Action, ActionBody, ActivationView, AttackHealth, BackrowView, CardType, CardView, Counters, DUOS_DUELS,
+    DUOS_SEATS, DuosActionBody, DuosEvent, DuosSeat, DuosView, Enchantment, GameEvent, GameResult, HandView,
+    KeywordKind, PLAYER_IDS, PerPlayer, Phase, PlagueSpend, PlayerId, PlayerView, PromptKind, RedirectWhat,
+    RevealAt, Row, Selection, Team, TuningChange, Zone, ZoneChoice, ZoneName, has_keyword, opponent_of,
 };
 
 /// I6 under the 1,000-seed gate: every this-many-th state, setup's and the last always (the monitor
@@ -468,6 +473,222 @@ fn unit_token_pile_findings(state: &GameState) -> Vec<String> {
                 "I11 unit token in pile: {} ({}) is in held beneath {} on turn {} (§3, §3.2, R11)",
                 card.id, card.def_id, held.holder_id, state.turn
             ));
+        }
+    }
+    found
+}
+
+/// A card in a pile or a field slot (I16): the zone its own record must hold, and what holds it.
+struct Placed<'a> {
+    card: &'a CardInstance,
+    zone: Zone,
+    holder: &'static str,
+}
+
+impl Placed<'_> {
+    /// Where it sits, for a finding: "p1's graveyard", "p2's unit zone 3".
+    fn slot(&self) -> String {
+        match self.zone {
+            Zone::Field { player, lane, .. } => format!("{player}'s {} {lane}", self.holder),
+            _ => format!("{}'s {}", self.zone.player(), self.holder),
+        }
+    }
+}
+
+/// Every card in a pile or a field slot, each with the zone it must record. A card `held` beneath another
+/// is in no pile (`Zone::Gone`, R1850003) and is not walked.
+fn placed_cards(state: &GameState) -> Vec<Placed<'_>> {
+    let mut out = Vec::new();
+    for player in PLAYER_IDS {
+        let side = &state.players[player];
+        for (zone, holder, pile) in [
+            (Zone::Hand { player }, "hand", &side.hand),
+            (Zone::Library { player }, "library", &side.library),
+            (Zone::Graveyard { player }, "graveyard", &side.graveyard),
+            (Zone::Exile { player }, "exile", &side.exile),
+            (Zone::Resolving { player }, "resolving", &side.resolving),
+        ] {
+            out.extend(pile.iter().map(|card| Placed {
+                card,
+                zone: zone.clone(),
+                holder,
+            }));
+        }
+        // Lane N is index N - 1 in each of the four field slots (§3.2).
+        let on_field = |card, row, index: usize, holder| Placed {
+            card,
+            zone: Zone::Field {
+                player,
+                row,
+                lane: index as i32 + 1,
+            },
+            holder,
+        };
+        for (index, pile) in side.units.iter().enumerate() {
+            out.extend(
+                pile.iter()
+                    .flatten()
+                    .map(|card| on_field(card, Row::Units, index, "unit zone")),
+            );
+        }
+        for (index, top) in side.backrow.iter().enumerate() {
+            out.extend(
+                top.iter()
+                    .map(|card| on_field(card, Row::Backrow, index, "backrow zone")),
+            );
+        }
+        for (index, beneath) in side.backrow_piles.iter().flatten().enumerate() {
+            out.extend(
+                beneath
+                    .iter()
+                    .map(|card| on_field(card, Row::Backrow, index, "backrow pile")),
+            );
+        }
+        for (index, carried) in side.carried.iter().flatten().enumerate() {
+            out.extend(
+                carried
+                    .iter()
+                    .map(|card| on_field(card, Row::Backrow, index, "carried unit")),
+            );
+        }
+    }
+    out
+}
+
+/// A zone as a finding spells it.
+fn zone_text(zone: &Zone) -> String {
+    match zone {
+        Zone::Field { player, row, lane } => format!("{player}'s {row} {lane}"),
+        other => format!("{}'s {}", other.player(), other.z()),
+    }
+}
+
+/// The names among `checks` whose test holds.
+fn held_names(checks: &[(bool, &'static str)]) -> Vec<&'static str> {
+    checks
+        .iter()
+        .filter(|(held, _)| *held)
+        .map(|(_, name)| *name)
+        .collect()
+}
+
+/// R78's reset of a card leaving the field, read on a card off it (I16): the field-only state it still
+/// holds, by field name. A hand or a library card may lawfully hold a Buff's and a grant's state, which
+/// rides it onto the field (`effects/buff.rs`, B5 E38) and which R215 takes as it reaches a graveyard or
+/// an exile pile, so `buffs`, `grantedKeywords`, `grants`, `vanilla` and `counters` are read there alone.
+/// Left out because a card off the field may lawfully hold them: `memory` (R1841003's `tributeLowered`
+/// rides a hand or a deck; a graveyard card keeps R429's `@returnPrice`, R766, and R178's
+/// `@exileOnLanding`), and what stays in every zone by R78 and R766: `radiant`, `tuning`, `brittle`,
+/// `temporary`, `enchantments` (R385, R386, R410, R2179001), `grantedTags`, `chinese`, `knownAs`,
+/// `timesPlayed`, `flashbackSpent`, `awakened`, `hiddenNerfs`, `created` (R923, R1300, R311, R429,
+/// R783013, R3039000, R1845000, R943).
+fn field_state_held(card: &CardInstance, in_graveyard_or_exile: bool) -> Vec<&'static str> {
+    let exertion = &card.exertion;
+    let mut held = held_names(&[
+        (card.damage != 0, "damage"),
+        (card.position.is_some(), "position"),
+        (card.summoned_turn.is_some(), "summonedTurn"),
+        (
+            exertion.attacked || exertion.switched || exertion.attacks.is_some(),
+            "exertion",
+        ),
+        (card.taunt_suppressed_turn.is_some(), "tauntSuppressedTurn"),
+        (card.face_up.is_some(), "faceUp"),
+        (card.revealed.is_some(), "revealed"),
+        (card.last_damaged_by.is_some(), "lastDamagedBy"),
+        (card.divine_shield_spent.is_some(), "divineShieldSpent"),
+        (card.marked_destroyed.is_some(), "markedDestroyed"),
+        (card.marked_exiled.is_some(), "markedExiled"),
+        (card.reborn_spent.is_some(), "rebornSpent"),
+        (card.berserk.is_some(), "berserk"),
+        (card.frozen.is_some(), "frozen"),
+        (card.slumber.is_some(), "slumber"),
+        (card.starship.is_some(), "starship"),
+        (card.set_as.is_some(), "setAs"),
+        (card.stats_override.is_some(), "statsOverride"),
+        (card.armor_override.is_some(), "armorOverride"),
+        (card.x.is_some(), "x"),
+        (card.embiggened.is_some(), "embiggened"),
+    ]);
+    if in_graveyard_or_exile {
+        held.extend(held_names(&[
+            (card.buffs != AttackHealth::default(), "buffs"),
+            (!card.granted_keywords.is_empty(), "grantedKeywords"),
+            (card.grants.is_some(), "grants"),
+            (card.vanilla, "vanilla"),
+            (card.counters != Counters::default(), "counters"),
+        ]));
+    }
+    held
+}
+
+/// R766's price on a card in a graveyard or an exile pile (I16), by field name. `@returnPrice`, the climb
+/// R766 keeps for #31's return, lives in `memory`, which no check here reads.
+fn price_held(card: &CardInstance) -> Vec<&'static str> {
+    held_names(&[
+        (card.cost_mod != 0, "costMod"),
+        (card.cost_override.is_some(), "costOverride"),
+        (card.embiggen_cost_override.is_some(), "embiggenCostOverride"),
+        (card.fixed_x.is_some(), "fixedX"),
+    ])
+}
+
+/// I16: each card's own `zone`, `owner` and `controller` agree with the pile or slot that holds it, and a
+/// card off the field holds none of R78's field-only state or, in a graveyard or an exile pile, R766's
+/// price (§3.2). `find_instance` reads the piles and never `zone`, so the two can drift unseen.
+fn card_record_findings(state: &GameState) -> Vec<String> {
+    let mut found = Vec::new();
+    for placed in placed_cards(state) {
+        let Placed { card, zone, .. } = &placed;
+        let (named, slot, turn) = (
+            format!("{} ({})", card.id, card.def_id),
+            placed.slot(),
+            state.turn,
+        );
+        if card.zone != *zone {
+            found.push(format!(
+                "I16 zone drift: {named} says {} but sits in {slot} on turn {turn} (§3.2)",
+                zone_text(&card.zone)
+            ));
+        }
+        match zone {
+            // A card mid-play holds what its play set (`x`, a Buff) and may be a stolen Spell (R12): only
+            // its zone is read.
+            Zone::Resolving { .. } => {}
+            Zone::Field { player, .. } => {
+                if card.controller != *player {
+                    found.push(format!(
+                        "I16 controller drift: {named} is controlled by {} but sits in {slot} on turn {turn} \
+                         (§3.2)",
+                        card.controller
+                    ));
+                }
+            }
+            _ => {
+                let side = zone.player();
+                if card.owner != side || card.controller != side {
+                    found.push(format!(
+                        "I16 owner drift: {named} is owned by {} and controlled by {} but sits in {slot} on \
+                         turn {turn} (§3.2, R747, R2618000)",
+                        card.owner, card.controller
+                    ));
+                }
+                let gone = matches!(zone, Zone::Graveyard { .. } | Zone::Exile { .. });
+                let state_held = field_state_held(card, gone);
+                if !state_held.is_empty() {
+                    found.push(format!(
+                        "I16 field state off the field: {named} in {slot} still holds {} on turn {turn} (R78)",
+                        state_held.join(", ")
+                    ));
+                }
+                let price = if gone { price_held(card) } else { Vec::new() };
+                if !price.is_empty() {
+                    found.push(format!(
+                        "I16 price kept in a pile: {named} in {slot} still holds {} on turn {turn} (R766)",
+                        price.join(", ")
+                    ));
+                }
+            }
         }
     }
     found
@@ -1831,8 +2052,8 @@ fn name_of(card: &CardInstance) -> String {
 
 /// The monitor, made by `create_invariant_monitor`: the shadow of this file's header and the checks
 /// run against it. `before` is I1, I3 and I12's chosen-action snapshot, `after` feeds one action's
-/// events into the shadow and runs I2, I4, I5, I7, I9, I10, I11 and I12, `hidden` is I6, I13 and I15 for both
-/// seats, `unlisted` is I8 and `listed` is I14.
+/// events into the shadow and runs I2, I4, I5, I7, I9, I10, I11, I12 and I16, `hidden` is I6, I13 and I15 for
+/// both seats, `unlisted` is I8 and `listed` is I14.
 #[derive(Clone, Debug)]
 pub struct InvariantMonitor {
     turn: i32,
@@ -2421,7 +2642,7 @@ impl InvariantMonitor {
         found
     }
 
-    /// Feeds one action's events into the shadow, then I2, I4, I5, I7 and I9–I12 against the
+    /// Feeds one action's events into the shadow, then I2, I4, I5, I7, I9–I12 and I16 against the
     /// resulting state.
     pub fn after(&mut self, events: &[GameEvent], state: &GameState) -> Vec<String> {
         let mut found: Vec<String> = Vec::new();
@@ -2936,6 +3157,8 @@ impl InvariantMonitor {
 
         // I11: a definition-level Unit token never reaches an off-field pile (§3, §3.2, R11).
         found.extend(unit_token_pile_findings(state));
+        // I16: every card's own record agrees with the pile that holds it (§3.2, R78, R766).
+        found.extend(card_record_findings(state));
         // A chosen action can confirm at most this one reduction. In Duos, `after` also visits the
         // untouched duel, so no marker may survive to match another duel's later event.
         self.chosen_exertion = None;
@@ -3089,7 +3312,7 @@ impl DuosInvariantMonitor {
             .collect()
     }
 
-    /// Feeds one action's events into the monitors, asserts I2, I4, I5, I7 and I9–I12 against both
+    /// Feeds one action's events into the monitors, asserts I2, I4, I5, I7, I9–I12 and I16 against both
     /// duels, and checks pool bounds (§13.4) for both teams.
     pub fn after(&mut self, events: &[DuosEvent], state: &DuosState) -> Vec<String> {
         let mut found = Vec::new();
