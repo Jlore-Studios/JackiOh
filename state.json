@@ -16684,9 +16684,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-2",
-      "owner_since": "2026-11-12T02:54:00Z",
-      "owner_why": "its final audit of `7a13423ae0f4` asked for changes, and the auditor fixes its own findings",
+      "owner": "claude-1",
+      "owner_since": "2026-11-12T03:07:04Z",
+      "owner_why": "handed off from `claude-2`: its owner `claude-2` builds only after every other subscription (`build_last`)",
       "pending_request": false,
       "planned_at": "2026-11-11T22:34:48Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -17250,7 +17250,7 @@
       }
     },
     "3750": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "strong",
       "cross_rounds": 1,
@@ -17270,13 +17270,13 @@
           "where": "apps/web/src/game/deckbuilder/deckbuilder.css:541"
         }
       ],
-      "live": "reviewing",
+      "live": "revising",
       "pending_request": false,
-      "provider": "claude-2",
+      "provider": "claude-1",
       "queued_at": "2026-11-12T02:53:53Z",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "43143552517",
+      "run_id": "pending:a8e7cd81-1794452785",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17297,7 +17297,7 @@
         "run": "43126719591"
       },
       "source": "cross-review",
-      "started_at": "2026-11-12T02:45:05Z",
+      "started_at": "2026-11-12T03:07:04Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17317,9 +17317,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T02:57:30Z",
+    "at": "2026-11-12T03:07:04Z",
     "url": "",
-    "what": "plan #3609 on claude-4"
+    "what": "revise #3750 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-12T02:52:25Z",
