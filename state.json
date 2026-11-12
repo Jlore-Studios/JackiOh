@@ -22409,12 +22409,8 @@
       }
     },
     "claude-3": {
-      "refused_until": "2026-11-12T05:20:00Z",
+      "refused_until": "2026-11-12T10:30:00Z",
       "spent": [
-        {
-          "at": "2026-11-05T01:39:25Z",
-          "minutes": 24.8
-        },
         {
           "at": "2026-11-05T02:22:37Z",
           "minutes": 35.9
@@ -23210,6 +23206,10 @@
         {
           "at": "2026-11-12T07:39:16Z",
           "minutes": 7.2
+        },
+        {
+          "at": "2026-11-12T08:10:49Z",
+          "minutes": 17.3
         }
       ],
       "tokens_spent": [
@@ -24617,10 +24617,11 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-12T10:30:00Z",
-          "utilization": 0.24
+          "utilization": 1.0
         },
-        "observed_at": "2026-11-12T07:39:16Z",
-        "status": "allowed"
+        "observed_at": "2026-11-12T08:10:49Z",
+        "rejected_resets_at": "2026-11-12T10:30:00Z",
+        "status": "rejected"
       }
     },
     "claude-4": {
@@ -37101,6 +37102,64 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-12T07:53:15Z,claude-3,stream,call,43178128221,25,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T07:54:00Z,claude-3,stream,call,43178128221,26,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T07:54:15Z,claude-3,stream,call,43178128221,28,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T07:54:30Z,claude-3,stream,call,43178128221,30,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T07:54:45Z,claude-3,stream,call,43178128221,32,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T07:55:00Z,claude-3,stream,call,43178128221,34,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T07:55:15Z,claude-3,stream,call,43178128221,35,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T07:55:30Z,claude-3,stream,call,43178128221,36,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T07:55:45Z,claude-3,stream,call,43178128221,38,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T07:56:15Z,claude-3,stream,call,43178128221,40,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T07:56:30Z,claude-3,stream,call,43178128221,41,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T07:56:45Z,claude-3,stream,call,43178128221,43,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T07:57:00Z,claude-3,stream,call,43178128221,44,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T07:57:15Z,claude-3,stream,call,43178128221,46,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T07:57:30Z,claude-3,stream,call,43178128221,47,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T07:57:45Z,claude-3,stream,call,43178128221,49,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T07:58:00Z,claude-3,stream,call,43178128221,51,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T07:58:15Z,claude-3,stream,call,43178128221,52,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T07:58:30Z,claude-3,stream,call,43178128221,53,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T07:58:45Z,claude-3,stream,call,43178128221,55,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T07:59:00Z,claude-3,stream,call,43178128221,57,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T07:59:15Z,claude-3,stream,call,43178128221,59,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T07:59:30Z,claude-3,stream,call,43178128221,61,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T07:59:45Z,claude-3,stream,call,43178128221,62,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T08:00:00Z,claude-3,stream,call,43178128221,64,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T08:00:15Z,claude-3,stream,call,43178128221,66,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T08:00:30Z,claude-3,stream,call,43178128221,67,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T08:00:45Z,claude-3,stream,call,43178128221,69,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T08:01:00Z,claude-3,stream,call,43178128221,70,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T08:01:15Z,claude-3,stream,call,43178128221,72,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T08:01:31Z,claude-3,stream,call,43178128221,74,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T08:01:46Z,claude-3,stream,call,43178128221,75,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T08:02:01Z,claude-3,stream,call,43178128221,76,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T08:02:16Z,claude-3,stream,call,43178128221,78,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T08:02:31Z,claude-3,stream,call,43178128221,79,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T08:02:46Z,claude-3,stream,call,43178128221,80,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T08:03:01Z,claude-3,stream,call,43178128221,81,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T08:03:31Z,claude-3,stream,call,43178128221,82,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T08:03:46Z,claude-3,stream,call,43178128221,83,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T08:04:01Z,claude-3,stream,call,43178128221,84,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T08:04:16Z,claude-3,stream,call,43178128221,85,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T08:04:46Z,claude-3,stream,call,43178128221,86,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T08:05:01Z,claude-3,stream,call,43178128221,87,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T08:05:31Z,claude-3,stream,call,43178128221,89,2026-11-12T10:30:00Z,,,allowed,,,",
+      "2026-11-12T08:06:01Z,claude-3,stream,call,43178128221,90,2026-11-12T10:30:00Z,,,allowed_warning,,,",
+      "2026-11-12T08:06:46Z,claude-3,stream,call,43178128221,93,2026-11-12T10:30:00Z,,,allowed_warning,,,",
+      "2026-11-12T08:07:01Z,claude-3,stream,call,43178128221,94,2026-11-12T10:30:00Z,,,allowed_warning,,,",
+      "2026-11-12T08:07:31Z,claude-3,stream,call,43178128221,95,2026-11-12T10:30:00Z,,,allowed_warning,,,",
+      "2026-11-12T08:07:46Z,claude-3,stream,call,43178128221,96,2026-11-12T10:30:00Z,,,allowed_warning,,,",
+      "2026-11-12T08:08:01Z,claude-3,stream,call,43178128221,97,2026-11-12T10:30:00Z,,,allowed_warning,,,",
+      "2026-11-12T08:08:31Z,claude-3,stream,call,43178128221,98,2026-11-12T10:30:00Z,,,allowed_warning,,,",
+      "2026-11-12T08:08:46Z,claude-3,stream,call,43178128221,99,2026-11-12T10:30:00Z,,,allowed_warning,,,",
+      "2026-11-12T08:09:46Z,claude-3,stream,call,43178128221,100,2026-11-12T10:30:00Z,,,rejected,,,",
+      "2026-11-12T08:10:21Z,claude-3,refusal,call,43178128221,100,2026-11-12T10:30:00Z,,,rejected,,,2026-11-12T10:30:00Z"
+    ]
   },
   "version": 1
 }
