@@ -1,6 +1,7 @@
 // Activate control (B3.2, SPEC §6.2, R384; presentation R510, R1751000).
-// It renders view data only (CLAUDE.md rule 7): `highlight.legal` decides a press, while `usable`
-// and `reason` are displayed only. A press reports `{ on: "activate", instanceId, ability? }`;
+// It renders view data only (CLAUDE.md rule 7): `highlight.legal` decides what a press sends, while `usable`
+// and `reason` are displayed only. A press reports `{ on: "activate", instanceId, ability? }`, a greyed one
+// too (R3768000: the board shows its reason and sends nothing);
 // cards with multiple abilities wear a single button opening an ability picker modal (R1751000).
 // It flashes for its `activated` animation row; reduced motion uses a static ring.
 
@@ -10,7 +11,7 @@ import { fillParams, type ActivationView, type CardView } from "@jackioh/shared"
 
 import { chineseName } from "../cards/chinese.ts";
 import { useCardInfo, type CardInfo } from "./catalog.ts";
-import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
+import { NO_HIGHLIGHT, NOT_NOW, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
 import { glowAttr } from "./glow.ts";
 import { isZhCn, t } from "../i18n/i18n.ts";
 
@@ -19,8 +20,6 @@ import "./activate.css";
 export const ACTIVATED_EVENT = "activated";
 
 export const UNLIMITED_USES = "∞";
-
-export const NOT_NOW = "can't be activated right now";
 
 /** The attribute a drag reads a control's card off (game/drag/targets.ts). */
 export const ACTIVATE_FOR_ATTRIBUTE = "data-activate-for";
@@ -141,7 +140,7 @@ function ActivateButton(props: {
   function press(event: MouseEvent<HTMLButtonElement>): void {
     // The card under the control has its own click (an attack, a target): this one is the control's.
     event.stopPropagation();
-    if (!legal) return;
+    // A greyed press is reported too (R3768000): `onClickTarget` turns it into the view's reason and sends nothing.
     props.onClick?.(target);
   }
 

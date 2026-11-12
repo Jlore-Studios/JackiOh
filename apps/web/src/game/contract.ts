@@ -56,6 +56,9 @@ export function laneIndex(lane: number): number {
   return lane - 1;
 }
 
+/** The words a greyed Activate control gives when the view lists no reason for it (R3768000). */
+export const NOT_NOW = "can't be activated right now";
+
 /** The `data-testid`s BUILD M5-T1 fixes. Every clickable element gets its id from here. */
 export const testid = {
   zone: (side: Side, row: Row, lane: number): string => `zone-${side}-${row}-${lane}`,
