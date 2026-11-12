@@ -171,8 +171,9 @@ import {
   id = "JackiOh"
 }
 
-# The runner gate (bot/go/internal/cigate, bot/README.md "The runner gate"): GitHub's free plan
-# runs 20 hosted jobs at once for the organization, so a pull request's CI and a merge-queue build
+# The runner gate (bot/go/internal/cigate, bot/README.md "The runner gate"): GitHub runs a fixed
+# number of hosted jobs at once for the organization (the Team plan's 60, #3740; the Free plan's 20
+# before), shared with the bots' runs, so a pull request's CI and a merge-queue build
 # wait in this environment, holding no runner, until the night bot's account, its one required
 # reviewer, approves them, which the status loop does once there is room (merge-queue builds first,
 # each run the oldest first). ci.yml's `changes` job names it through the variable below; with the

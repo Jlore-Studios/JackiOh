@@ -655,7 +655,7 @@ func TestDashboard_TheVisuals(t *testing.T) {
 	assertNotIn(t, "subgraph training", body)
 	assertNotIn(t, "machine ~~~ training", body)
 	// GitHub's lanes count claude-1's run; Muse's is in the night box's slots.
-	assertIn(t, "Lanes on GitHub's runners: 1 of 8 in use", body)
+	assertIn(t, "Lanes on GitHub's runners: 1 of 16 in use", body)
 	assertNotIn(t, "pie", body)
 	// Each subscription, with its usage as a bar.
 	assertIn(t, "| `claude-1` |", body)
@@ -682,7 +682,7 @@ func TestDashboard_NothingRunning(t *testing.T) {
 	assertIn(t, "Nothing is running right now.", body)
 	slots := ctx.Cfg.Pool.MachineParallel
 	assertIn(t, fmt.Sprintf("The night box: 0 of %d slots in use", slots), body)
-	assertIn(t, "Lanes on GitHub's runners: 0 of 8 in use", body)
+	assertIn(t, "Lanes on GitHub's runners: 0 of 16 in use", body)
 	assertIn(t, "Nothing is queued.", body)
 }
 
@@ -957,15 +957,15 @@ func TestDashboard_EverySubscriptionsLanesWithTheTotals(t *testing.T) {
 	assertIn(t, "the workflows hand over 9 Claude secrets (`providers.SECRETS`), one an "+
 		"account: 8 the night bot's, 1 Squishy's, so none is free: another account "+
 		"needs a new secret there and in the workflows.", limits[1])
-	assertIn(t, "GitHub's runners take 8 of the bots' runs, planning runs too (4 now: 3 the "+
-		"night bot's, 1 Squishy's), the organization's 20 hosted jobs less the 12 "+
-		"kept for CI (#1455). So the 17 Claude lanes never all run at once: past 8,",
-		limits[2])
+	assertIn(t, "GitHub's runners take 16 of the bots' runs, planning runs too (4 now: 3 the "+
+		"night bot's, 1 Squishy's), of the organization's 60 hosted jobs: the other 44 are "+
+		"CI's, the training lanes' and the bots' own short jobs (#3740). So the 17 Claude "+
+		"lanes never all run at once: past 16,", limits[2])
 	assertIn(t, "runs 6 plans at once beside the accounts' own lanes (1 now)", limits[3])
 	assertIn(t, "6 runs at once (2 now)", limits[4])
 	assertTrue(t, strings.HasSuffix(limits[6],
 		"14 Claude lanes are open on accounts that may start work, and GitHub's runners have "+
-			"4 free, so there is room for 4 more Claude runs."), limits[6])
+			"12 free, so there is room for 12 more Claude runs."), limits[6])
 	// A subscription switched off has no open lane, and the totals say how many are off; with no
 	// Squishy row, its secret is the one free.
 	ctx = testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Night}) // only claude-1's secret, the machine's off
@@ -975,7 +975,7 @@ func TestDashboard_EverySubscriptionsLanesWithTheTotals(t *testing.T) {
 	assertIn(t, "one an account: 8 the night bot's; free: `CLAUDE_CODE_OAUTH_TOKEN_SQUISHY`.",
 		table)
 	assertIn(t, "**Now:** 2 Claude lanes are open on accounts that may start work, and GitHub's "+
-		"runners have 8 free, so there is room for 2 more Claude runs.", table)
+		"runners have 16 free, so there is room for 2 more Claude runs.", table)
 	// Halted, no lane may start work.
 	table = strings.Join(dashboard.LanesTable(ctx, ctx.Store.Load(), pyjson.New(), nil, "HALT is on main"),
 		"\n")
@@ -1425,7 +1425,7 @@ func TestDashboard_EachBusyRunnerSaysWhatItDoesAndWhatFor(t *testing.T) {
 	body := r.section()
 	assertTrue(t, strings.HasPrefix(body, dashboard.RunnersStart+"\n## 🖥️ Every runner"), "its start")
 	assertTrue(t, strings.HasSuffix(body, dashboard.RunnersEnd), "its end")
-	assertIn(t, "🟢 **3 runners busy**: 2 on GitHub's (of the 20 the organization may hold), "+
+	assertIn(t, "🟢 **3 runners busy**: 2 on GitHub's (of the 60 the organization may hold), "+
 		"1 on the Muse box · ⏳ **3 jobs queued** for a runner · read at 22:00", body)
 	// GitHub's runners first, the longest-running first; the night bot's runs name the item they
 	// work on, found by the run's id or the pending claim's reference in its title.
@@ -1453,7 +1453,7 @@ func TestDashboard_TheRunnersAsBoxes(t *testing.T) {
 	r := newDashboardRunners(t)
 	diagram := r.diagram()
 	assertTrue(t, strings.HasPrefix(diagram, dashboard.RunnerWrap+"\nflowchart TB\n"), "its start")
-	assertIn(t, `    subgraph gh["GitHub's runners: 2 busy, of the 20 the organization may `+
+	assertIn(t, `    subgraph gh["GitHub's runners: 2 busy, of the 60 the organization may `+
 		`hold"]`, diagram)
 	assertIn(t, `        gh0["<b>bot-night · work</b><br/>building #37 on claude-1<br/>build, `+
 		`check and review<br/>47m"]:::busy`, diagram)
