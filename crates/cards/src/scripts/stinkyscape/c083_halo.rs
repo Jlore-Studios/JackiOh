@@ -24,7 +24,7 @@ fn arm(rarity: Rarity) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             vec![equip_picks(json_as(json!({
-                "query": { "set": SetName::Stinkyscape, "tags": [Tag::Weapon], "rarity": rarity },
+                "query": crate::query::weapons_of(rarity),
                 "times": param_or(&*ctx, "weapons", PICKS),
             })))]
         })),

@@ -1,9 +1,8 @@
 //! C+ #48 Jlockeed's Lobbyist (SPEC §8.7 row 48). (1) Unit, Jlockeed, Legendary, 0/3 → 0/6.
 //!   Base:    "Can't be in Defense Position. Death: Add a random Jlockeed card to your hand. It costs (0)."
 //!   Radiant: "Death: Add a random Radiant Jlockeed card to your hand. It costs (0)."
-//!   Engine:  "The pool is the non-token cards with the `Jlockeed` tag (#13, #14, C #4, C+ #48, C+ #51,
-//!            C+ #52, M #87, M #97, M+ #4) but this one (R387): #13, #14, C #4, C+ #51, C+ #52, M #87, M #97
-//!            and M+ #4;
+//!   Engine:  "The pool is the non-token cards with the `Jlockeed` tag, of every set that ships (R380),
+//!            but this one (R387), `query::jlockeed_cards` (spec/CARDS.md lists them, #3804);
 //!            `costOverride` 0; the hand
 //!            cap burns it (§2.4). The Defense restriction is a position validator flag (as #65.1's),
 //!            which the Radiant face drops. With 0 attack it never attacks. Tunes: none."
@@ -23,7 +22,7 @@ pub fn script() -> CardScripts {
         // "It costs (0)": the declared number `setCost` (R386), on both faces.
         death: Some(hook(|ctx| {
             vec![add_random_from_catalog(json_as(json!({
-                "query": { "tags": ["Jlockeed"] },
+                "query": crate::query::jlockeed_cards(),
                 "costOverride": param(&*ctx, "setCost"),
             })))]
         })),
@@ -33,7 +32,7 @@ pub fn script() -> CardScripts {
     let radiant = Script {
         death: Some(hook(|ctx| {
             vec![add_random_from_catalog(json_as(json!({
-                "query": { "tags": ["Jlockeed"] },
+                "query": crate::query::jlockeed_cards(),
                 "costOverride": param(&*ctx, "setCost"),
                 "radiant": true,
             })))]
