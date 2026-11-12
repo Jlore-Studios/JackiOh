@@ -16586,6 +16586,14 @@
       "started_at": "2026-11-12T21:32:56Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "3807": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-12T20:51:31Z",
+      "issue": 3803,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
