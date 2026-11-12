@@ -14889,13 +14889,8 @@
     "what": "review #3762 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-12T13:04:05Z",
-    "notes": [
-      "delivered review #3762 on claude-8 (run 43209919870): interrupted",
-      "started review #3762 on claude-6 (run 43224262696)",
-      "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days"
-    ],
+    "at": "2026-11-12T13:14:33Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15598,7 +15593,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-12T13:04:05Z",
+  "loop_tick": "2026-11-12T13:14:33Z",
   "machine_disk": {
     "issue": null,
     "reading": {
