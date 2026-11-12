@@ -16377,13 +16377,15 @@
     "what": "build #3772 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-12T18:21:57Z",
+    "at": "2026-11-12T18:35:49Z",
     "notes": [
-      "delivered build #3778 on claude-7 (run 43249482199): built",
-      "started review #3798 on claude-7 (run 43279828282)",
+      "delivered plan #3772 on claude-6 (run 43277397409): planned",
+      "delivered build #3773 on claude-8 (run 43267641619): built",
+      "started review #3799 on claude-8 (run 43282436288)",
+      "started build #3772 on claude-6 (run 43282625305)",
       "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days",
-      "runner gate: started 0 of 4 waiting run(s); 4 wait for room"
+      "pruned 1 plan file(s) older than 7 days",
+      "runner gate: started 0 of 2 waiting run(s); 2 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17089,7 +17091,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-12T18:21:57Z",
+  "loop_tick": "2026-11-12T18:35:49Z",
   "machine_disk": {
     "issue": null,
     "reading": {
