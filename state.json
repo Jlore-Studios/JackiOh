@@ -16236,9 +16236,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T19:13:13Z",
+    "at": "2026-11-12T19:14:20Z",
     "url": "",
-    "what": "revise #3783 on claude-4"
+    "what": "suggestions on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-12T18:51:16Z",
@@ -35766,11 +35766,11 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-11-12T18:54:24Z",
-    "last_run": "2026-11-12T17:40:02Z",
-    "provider": null,
+    "idle_since": "2026-11-12T19:14:20Z",
+    "last_run": "2026-11-12T19:14:20Z",
+    "provider": "claude-7",
     "requested": false,
-    "run_id": null,
+    "run_id": "pending:834f2777-1794510809",
     "taken_asks": []
   },
   "usage": null,
