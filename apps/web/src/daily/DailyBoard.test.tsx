@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DailyGame } from "../net/daily.ts";
 import { clearReadCache } from "../net/readCache.ts";
+import { resetSettings, writeSettings } from "../settings/store.ts";
 import { baseView } from "../test/fixtures.ts";
 import { at, refusal, signIn, stubServer, type Call, type Reply } from "../test/stubServer.ts";
 import { dailyConstants } from "../wasm/index.ts";
@@ -63,6 +64,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  resetSettings();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   window.localStorage.clear();
@@ -119,6 +121,36 @@ describe("#3727 a daily game's board", () => {
     expect(first?.after).toBe(7);
     expect(second?.after).toBe(8);
     expect(first?.nonce).not.toBe(second?.nonce);
+  });
+
+  it("#3727 End turn automatically waits for the player's move: none is sent while the opponent holds it", async () => {
+    // The setting is off and the engine's is on, so the board's Game wants to send it at once.
+    writeSettings({ autoEndTurn: false });
+    let mine = false;
+    const server = serve(
+      () => (mine ? dailyGame({ seq: 9 }) : dailyGame({ hasMove: false, legal: [CONCEDE], view: baseView({ active: "p2" }), holds: [] })),
+      // The concede below meets a game that moved on: the move is the player's now.
+      (call) => {
+        if (call.method !== "POST" || (call.body as { action: ActionBody }).action.type !== "concede") return undefined;
+        mine = true;
+        return refusal(409, "stale", "The game moved on.");
+      },
+    );
+    render(<DailyBoard matchId="g-1" />);
+    fireEvent.click(await screen.findByTestId("concede", undefined, SLOW));
+    expect(server.to("POST", "/api/daily/games/g-1/actions")).toHaveLength(0);
+    fireEvent.click(await screen.findByTestId("concede-confirm", undefined, SLOW));
+
+    await waitFor(() => {
+      expect(screen.getByTestId(dailyTestid.board)).toHaveAttribute("data-has-move", "true");
+    }, SLOW);
+    await waitFor(() => {
+      expect(server.to("POST", "/api/daily/games/g-1/actions")).toHaveLength(2);
+    }, SLOW);
+    const actions = server.to("POST", "/api/daily/games/g-1/actions").map((call) => call.body as { after: number; action: ActionBody });
+    // Nothing but the concede went out while the opponent held the move; the setting went once it was the player's.
+    expect(actions[0]?.action).toEqual(CONCEDE);
+    expect(actions[1]).toMatchObject({ after: 9, action: { type: "setAutoEndTurn", enabled: false } });
   });
 
   it("#3727 Next game appears once the move has passed on and another game waits, and opens it", async () => {

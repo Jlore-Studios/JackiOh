@@ -3066,6 +3066,9 @@ pub struct DailyGameRow {
     pub clock: DailyClock,
     pub board: DailyBoard,
     pub next_deadline_at: Option<i64>,
+    /// The seq of the log's last row the clock and board are of (0 before the first action), which a
+    /// move's write is conditional on ([`Tx::daily_games_put`]).
+    pub seq: i64,
     pub created_at: i64,
     pub ended_at: Option<i64>,
 }
@@ -3139,12 +3142,15 @@ impl Tx<'_> {
         dispatch!(self, daily_games_of(profile_id, recent_finished))
     }
 
-    /// §9.13: after a move (or the game's end), the running game's clock, board, earliest deadline
-    /// and `ended_at`. Only a running row is written: false, and nothing written, when the game has
-    /// ended already or there is none.
+    /// §9.13: after the move logged at `after + 1` (or the game's end), the running game's clock,
+    /// board, earliest deadline and `ended_at`, and its `seq` moved to `after + 1`. Only a running row
+    /// still at `after` is written: false, and nothing written, when the game has ended already, a
+    /// move was written after `after` (another request read the same seq, and its row stands in the
+    /// log, even under the same nonce), or there is none.
     pub async fn daily_games_put(
         &mut self,
         match_id: &str,
+        after: i64,
         clock: &DailyClock,
         board: &DailyBoard,
         next_deadline_at: Option<i64>,
@@ -3152,7 +3158,7 @@ impl Tx<'_> {
     ) -> StoreResult<bool> {
         dispatch!(
             self,
-            daily_games_put(match_id, clock, board, next_deadline_at, ended_at)
+            daily_games_put(match_id, after, clock, board, next_deadline_at, ended_at)
         )
     }
 

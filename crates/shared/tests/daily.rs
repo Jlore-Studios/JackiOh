@@ -309,6 +309,25 @@ fn r3727006_a_standing_draw_offer_hands_the_move_to_the_other_player() {
 }
 
 #[test]
+fn a_seat_holding_no_move_may_only_concede() {
+    let state = first_turn("daily-no-move", false);
+    let active = state.active;
+    let other = jackioh_engine::opponent_of(active);
+    assert_eq!(daily_holders(&state), vec![active]);
+    // The engine takes `setAutoEndTurn` from either seat at any time; a daily game takes it only from
+    // the holder, so the other player never appends a row that makes the holder's move stale.
+    let auto = ActionBody::SetAutoEndTurn { enabled: true };
+    assert!(daily_allows(&state, active, &auto));
+    assert!(!daily_allows(&state, other, &auto));
+    assert!(!daily_allows(&state, other, &ActionBody::EndTurn));
+    assert!(daily_allows(&state, other, &ActionBody::Concede));
+    assert_eq!(
+        daily_legal(&state, other, legal_actions(&state, other)),
+        vec![ActionBody::Concede]
+    );
+}
+
+#[test]
 fn only_the_four_times_per_move_are_daily_times() {
     for days in DAILY_TIME_PER_MOVE_DAYS {
         assert!(is_daily_time(days));

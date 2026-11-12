@@ -5138,6 +5138,7 @@ pub fn daily_games_of(
 pub fn daily_games_put(
     f: &mut FakeTx<'_>,
     match_id: &str,
+    after: i64,
     clock: &DailyClock,
     board: &DailyBoard,
     next_deadline_at: Option<i64>,
@@ -5149,10 +5150,11 @@ pub fn daily_games_put(
         .daily
         .games
         .iter_mut()
-        .find(|row| row.match_id == match_id && row.ended_at.is_none())
+        .find(|row| row.match_id == match_id && row.ended_at.is_none() && row.seq == after)
     else {
         return Ok(false);
     };
+    row.seq = after + 1;
     row.clock = clock.clone();
     row.board = board.clone();
     row.next_deadline_at = next_deadline_at;

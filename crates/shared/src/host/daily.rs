@@ -161,14 +161,17 @@ pub fn daily_expired(clock: &DailyClock, now: i64) -> Option<PlayerId> {
         .map(|hold| hold.player)
 }
 
-/// R3727006: whether a daily game lets `player` send `action` on top of the engine's own rules. While
-/// their own draw offer stands the move is the other player's, so the offerer may only concede until
-/// it is answered; every other action is the engine's to judge.
+/// §9.13: whether a daily game lets `player` send `action` on top of the engine's own rules. Either
+/// player may concede at any time; any other action is only the move's holder's ([`daily_holders`]),
+/// so a player not holding it can neither append to the log nor make the holder's next move stale
+/// (an `setAutoEndTurn` the engine takes from either seat included). R3727006: while their own draw
+/// offer stands the move is the other player's, so the offerer may only concede until it is
+/// answered. What is left is the engine's to judge.
 pub fn daily_allows(state: &GameState, player: PlayerId, action: &ActionBody) -> bool {
-    if jackioh_engine::standing_draw_offer(state) == Some(player) {
-        return matches!(action, ActionBody::Concede);
+    if matches!(action, ActionBody::Concede) {
+        return true;
     }
-    true
+    jackioh_engine::standing_draw_offer(state) != Some(player) && daily_holders(state).contains(&player)
 }
 
 /// The engine's legal actions for `player` that a daily game lets them send ([`daily_allows`]).

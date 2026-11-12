@@ -15,8 +15,10 @@
 --      holds the move and until when, `jackioh_shared::host::daily`'s
 --      DailyClock) and its board (the turn, both heroes' life and the result,
 --      public, DailyBoard, so a list shows it without a fold), the earliest
---      deadline held (`next_deadline_at`, which the sweep reads), and when it
---      began and ended. A row with no `ended_at` is running.
+--      deadline held (`next_deadline_at`, which the sweep reads), the log's
+--      seq its clock and board are of (`seq`, which a move's write is
+--      conditional on, so two requests reading one seq never both write),
+--      and when it began and ended. A row with no `ended_at` is running.
 --   2. Creates public.daily_invites: a challenge to one friend, or a seek any
 --      other player may take, with the sender's frozen choice (a saved deck or
 --      a deal, `choice`), where it stands, the match it made and when it
@@ -69,8 +71,10 @@ create table if not exists public.daily_games (
   clock            jsonb not null,
   board            jsonb not null,
   next_deadline_at bigint,
+  seq              bigint not null default 0,
   created_at       bigint not null,
   ended_at         bigint,
+  constraint daily_games_seq_check check (seq >= 0),
   constraint daily_games_mode_check check (mode in ('bo1', 'random')),
   constraint daily_games_per_move_days_check check (per_move_days in (1, 3, 7, 14)),
   constraint daily_games_seats_check check (p1_profile_id <> p2_profile_id),
@@ -81,8 +85,9 @@ create table if not exists public.daily_games (
 comment on table public.daily_games is
   $$SPEC §9.13, #3727: a daily game beside its match: the accounts at p1 and p2
   as it began, its mode and days per move, its clock (DailyClock) and its
-  public board (DailyBoard), the earliest deadline held and when it began and
-  ended (epoch ms). Running while ended_at is null. A player reads the games
+  public board (DailyBoard), the earliest deadline held, the log's seq they
+  are of, and when it began and ended (epoch ms). Running while ended_at is
+  null. A player reads the games
   they hold a seat in; the server writes every row.$$;
 
 -- The sweep: the running games whose earliest deadline has passed.

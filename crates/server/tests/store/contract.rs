@@ -12433,6 +12433,7 @@ mod daily {
             clock: clock(DAYS, PlayerId::P1, created_at),
             board: board(1),
             next_deadline_at,
+            seq: 0,
             created_at,
             ended_at: None,
         };
@@ -12573,10 +12574,11 @@ mod daily {
         );
         assert!(q!(harness, t => t.daily_games_of("not-a-uuid", 10)).is_empty());
 
-        // A move: the clock, the board and the deadline are written; an ending writes `ended_at`.
+        // A move: the clock, the board, the deadline and the seq are written; an ending writes
+        // `ended_at`.
         let moved = clock(DAYS, PlayerId::P2, now);
         assert!(
-            q!(harness, t => t.daily_games_put(&first.match_id, &moved, &board(2), Some(now + 9_000), None))
+            q!(harness, t => t.daily_games_put(&first.match_id, 0, &moved, &board(2), Some(now + 9_000), None))
         );
         let read = must(
             q!(harness, t => t.daily_games_get(&first.match_id)),
@@ -12587,9 +12589,28 @@ mod daily {
                 read.clock.clone(),
                 read.board.clone(),
                 read.next_deadline_at,
+                read.seq,
                 read.ended_at
             ),
-            (moved.clone(), board(2), Some(now + 9_000), None),
+            (moved.clone(), board(2), Some(now + 9_000), 1, None),
+            "{}",
+            harness.name
+        );
+        // A second write after the seq the first wrote after (two requests that read one seq) writes
+        // nothing, so the clock stays the logged move's.
+        assert!(
+            !q!(harness, t => t.daily_games_put(&first.match_id, 0, &DailyClock::new(DAYS), &board(7), None, None)),
+            "{}: a write after a seq already moved on",
+            harness.name
+        );
+        assert!(
+            !q!(harness, t => t.daily_games_put(&first.match_id, 5, &DailyClock::new(DAYS), &board(7), None, None)),
+            "{}: a write after a seq not yet reached",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.daily_games_get(&first.match_id)),
+            Some(read),
             "{}",
             harness.name
         );
@@ -12598,14 +12619,18 @@ mod daily {
             result: Some(from(json!({ "winner": "p1", "reason": "concede" }))),
             ..board(4)
         };
-        assert!(q!(harness, t => t.daily_games_put(&second.match_id, &over, &ended, None, Some(now - 500))));
-        assert!(q!(harness, t => t.daily_games_put(&third.match_id, &over, &ended, None, Some(now - 100))));
         assert!(
-            !q!(harness, t => t.daily_games_put(&third.match_id, &moved, &board(9), Some(now), None)),
+            q!(harness, t => t.daily_games_put(&second.match_id, 0, &over, &ended, None, Some(now - 500)))
+        );
+        assert!(
+            q!(harness, t => t.daily_games_put(&third.match_id, 0, &over, &ended, None, Some(now - 100)))
+        );
+        assert!(
+            !q!(harness, t => t.daily_games_put(&third.match_id, 1, &moved, &board(9), Some(now), None)),
             "{}: an ended game is written again",
             harness.name
         );
-        assert!(!q!(harness, t => t.daily_games_put(&id(), &moved, &board(9), None, None)));
+        assert!(!q!(harness, t => t.daily_games_put(&id(), 0, &moved, &board(9), None, None)));
         let third_read = must(
             q!(harness, t => t.daily_games_get(&third.match_id)),
             "the ended game",
@@ -12651,7 +12676,7 @@ mod daily {
         let latest = daily_game(harness, &a.id, &b.id, now - 1_000, Some(now - 30)).await;
         let at_now = daily_game(harness, &b.id, &a.id, now - 500, Some(now)).await;
         assert!(
-            q!(harness, t => t.daily_games_put(&ended.match_id, &DailyClock::new(DAYS), &board(3), Some(now - 20), Some(now - 1)))
+            q!(harness, t => t.daily_games_put(&ended.match_id, 0, &DailyClock::new(DAYS), &board(3), Some(now - 20), Some(now - 1)))
         );
 
         assert_eq!(
@@ -12687,7 +12712,7 @@ mod daily {
         daily_game(harness, &a.id, &b.id, now - 5_000, Some(now + 1_000)).await;
         let ended = daily_game(harness, &b.id, &a.id, now - 4_000, Some(now + 1_000)).await;
         assert!(
-            q!(harness, t => t.daily_games_put(&ended.match_id, &DailyClock::new(DAYS), &board(3), None, Some(now)))
+            q!(harness, t => t.daily_games_put(&ended.match_id, 0, &DailyClock::new(DAYS), &board(3), None, Some(now)))
         );
         assert!(
             q!(harness, t => t.daily_invites_create(&seek(&a.id, QueueMode::Bo1, DAYS, now, now + 60_000), now))
@@ -13159,7 +13184,7 @@ mod daily {
         let stays = daily_game(harness, &b.id, &c.id, now - 1_000, None).await;
         for game in [&gone, &stays] {
             assert!(
-                q!(harness, t => t.daily_games_put(&game.match_id, &DailyClock::new(DAYS), &board(5), None, Some(now)))
+                q!(harness, t => t.daily_games_put(&game.match_id, 0, &DailyClock::new(DAYS), &board(5), None, Some(now)))
             );
             q!(harness, t => t.matches_finish(&game.match_id, now));
         }
@@ -13228,7 +13253,7 @@ mod daily {
         );
 
         assert!(
-            q!(harness, t => t.daily_games_put(&game.match_id, &DailyClock::new(DAYS), &board(5), None, Some(now)))
+            q!(harness, t => t.daily_games_put(&game.match_id, 0, &DailyClock::new(DAYS), &board(5), None, Some(now)))
         );
         q!(harness, t => t.matches_finish(&game.match_id, now));
         assert!(q!(harness, t => t.profiles_remove(&b.id)));

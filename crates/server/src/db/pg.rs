@@ -7975,7 +7975,7 @@ pub async fn shares_by(t: &mut PgTx<'_>, match_id: &str, sharer: &str) -> Result
 /// `public.daily_games`' columns, in `daily_game_of`'s order.
 macro_rules! daily_game_columns {
     () => {
-        "match_id, p1_profile_id, p2_profile_id, mode, per_move_days, clock, board, next_deadline_at, \
+        "match_id, p1_profile_id, p2_profile_id, mode, per_move_days, clock, board, next_deadline_at, seq, \
          created_at, ended_at"
     };
 }
@@ -8010,6 +8010,7 @@ fn daily_game_of(row: &PgRow) -> Result<DailyGameRow, StoreError> {
         clock: json_col(row, "clock")?,
         board: json_col(row, "board")?,
         next_deadline_at: get(row, "next_deadline_at")?,
+        seq: get(row, "seq")?,
         created_at: get(row, "created_at")?,
         ended_at: get(row, "ended_at")?,
     })
@@ -8068,9 +8069,9 @@ pub async fn daily_games_create(t: &mut PgTx<'_>, row: &DailyGameRow) -> Result<
     sqlx::query(
         "insert into public.daily_games
            (match_id, p1_profile_id, p2_profile_id, mode, per_move_days, clock, board, next_deadline_at,
-            created_at, ended_at)
+            seq, created_at, ended_at)
          values ($1::uuid, $2::uuid, $3::uuid, $4::text, $5::integer, $6::jsonb, $7::jsonb, $8::bigint,
-                 $9::bigint, $10::bigint)",
+                 $9::bigint, $10::bigint, $11::bigint)",
     )
     .bind(row.match_id.as_str())
     .bind(row.players.0.as_str())
@@ -8080,6 +8081,7 @@ pub async fn daily_games_create(t: &mut PgTx<'_>, row: &DailyGameRow) -> Result<
     .bind(json(&row.clock)?)
     .bind(json(&row.board)?)
     .bind(row.next_deadline_at)
+    .bind(row.seq)
     .bind(row.created_at)
     .bind(row.ended_at)
     .execute(&mut **t)
@@ -8143,9 +8145,12 @@ pub async fn daily_games_of(
     running.iter().chain(ended.iter()).map(daily_game_of).collect()
 }
 
+/// Conditional on `seq`: a second request that read the same seq waits on the first's row lock, then
+/// finds `seq` moved on and writes nothing (read committed re-checks the row it waited on).
 pub async fn daily_games_put(
     t: &mut PgTx<'_>,
     match_id: &str,
+    after: i64,
     clock: &DailyClock,
     board: &DailyBoard,
     next_deadline_at: Option<i64>,
@@ -8157,14 +8162,16 @@ pub async fn daily_games_put(
     run_as(t, None).await?;
     let done = sqlx::query(
         "update public.daily_games
-            set clock = $2::jsonb, board = $3::jsonb, next_deadline_at = $4::bigint, ended_at = $5::bigint
-          where match_id = $1::uuid and ended_at is null",
+            set clock = $2::jsonb, board = $3::jsonb, next_deadline_at = $4::bigint, ended_at = $5::bigint,
+                seq = $6::bigint + 1
+          where match_id = $1::uuid and ended_at is null and seq = $6::bigint",
     )
     .bind(match_id)
     .bind(json(clock)?)
     .bind(json(board)?)
     .bind(next_deadline_at)
     .bind(ended_at)
+    .bind(after)
     .execute(&mut **t)
     .await
     .map_err(db_error)?;

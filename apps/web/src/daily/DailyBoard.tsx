@@ -5,6 +5,10 @@
 // means it moved on meanwhile (the opponent, or this game in another tab), and `time_up`, `not_your_move`
 // or `illegal` say so in the server's words over the game as it now stands.
 //
+// Only the player holding the move sends anything but a concede (§9.13: the server answers anything else
+// `not_your_move`). "End turn automatically" (R345), which `Game.tsx` sends once whenever the setting and the
+// view differ, whoever's turn it is, is held until the move is the player's and sent then if it still differs.
+//
 // The clock pill (`DailyClockPill.tsx`) says who holds the move and how long it has left. Once the move has
 // passed on and another game waits on the player (`nextGame`), Next game opens it. The board reads again
 // when the social read says the games waiting on the player changed (the opponent moved). Once the game is
@@ -41,6 +45,8 @@ export function onTimeWords(game: DailyGame): string | undefined {
   return outcomeFor(result, viewer) === "win" ? t("Won on time") : t("Lost on time");
 }
 
+type AutoEndTurn = Extract<ActionBody, { type: "setAutoEndTurn" }>;
+
 /** A fresh nonce per action: the server applies an action sent twice under one nonce once. */
 function nonce(): string {
   return crypto.randomUUID();
@@ -58,6 +64,8 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
   const current = useRef<DailyGame | null>(null);
   current.current = game;
   const sending = useRef(false);
+  const [sends, setSends] = useState(0);
+  const heldAutoEndTurn = useRef<AutoEndTurn | null>(null);
   const { dailyWaiting } = useSocialReads();
 
   const reread = useCallback((): void => {
@@ -92,6 +100,10 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
   const send = useCallback(
     (action: ActionBody): void => {
       const shown = current.current;
+      if (action.type === "setAutoEndTurn" && (shown === null || !shown.hasMove || sending.current)) {
+        heldAutoEndTurn.current = action;
+        return;
+      }
       // One action at a time: the next is sent after the answer, which names the seq it follows.
       if (shown === null || sending.current) return;
       sending.current = true;
@@ -109,10 +121,19 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
         )
         .finally(() => {
           sending.current = false;
+          setSends((before) => before + 1);
         });
     },
     [matchId, reread],
   );
+
+  // The held "End turn automatically", once the move is the player's and nothing is in flight.
+  useEffect(() => {
+    const held = heldAutoEndTurn.current;
+    if (held === null || game === null || game.over || !game.hasMove || sending.current) return;
+    heldAutoEndTurn.current = null;
+    if ((game.view.autoEndTurn !== false) !== held.enabled) send(held);
+  }, [game, sends, send]);
 
   if (game === null) {
     if (loadError !== null) {

@@ -207,6 +207,7 @@ pub(crate) async fn apply(
         action,
         at: now,
     };
+    let after = loaded.last_seq();
     let mut tx = app.db.begin(None).await?;
     match tx.matches_append_actions(std::slice::from_ref(&row)).await {
         Ok(()) => {}
@@ -215,10 +216,19 @@ pub(crate) async fn apply(
         Err(error) => return Err(error.into()),
     }
     if !tx
-        .daily_games_put(&row.match_id, &clock, &board, clock.next_deadline(), ended_at)
+        .daily_games_put(
+            &row.match_id,
+            after,
+            &clock,
+            &board,
+            clock.next_deadline(),
+            ended_at,
+        )
         .await?
     {
-        // The game ended under another request between our read and this write.
+        // Another request wrote after the seq we read, or ended the game, between our read and this
+        // write. Its row stands in the log even when it carried our nonce (the append takes a repeated
+        // nonce at the same seq as a retry), so ours, never logged, writes no clock: dropped unwritten.
         return Ok(Applied::Clash);
     }
     tx.commit().await?;
@@ -226,6 +236,7 @@ pub(crate) async fn apply(
     loaded.log.push(row);
     loaded.state = state;
     loaded.daily.next_deadline_at = clock.next_deadline();
+    loaded.daily.seq = after + 1;
     loaded.daily.clock = clock;
     loaded.daily.board = board;
     loaded.daily.ended_at = ended_at;
@@ -381,6 +392,7 @@ pub(crate) async fn start_daily(
         board: daily_board(&state),
         next_deadline_at: clock.next_deadline(),
         clock,
+        seq: 0,
         created_at: now,
         ended_at: None,
     };
@@ -549,17 +561,22 @@ pub async fn act(app: &Arc<App>, req: Req) -> ApiResult {
         let game = game_json(app, &loaded, &me, seat).await?;
         return refused_with(409, "stale", "The game moved on. Here it is now.", game);
     }
-    // R3727006: while their own draw offer stands, the offerer may only concede.
+    // §9.13: a seat holding no move may only concede (R3727006's offerer among them), so nobody but
+    // the holder appends to the log and makes the holder's next move stale.
     if !daily_allows(&loaded.state, seat, &body) {
         let game = game_json(app, &loaded, &me, seat).await?;
         return refused_with(422, "not_your_move", "Your opponent has the move.", game);
     }
     let now = app.daily.now();
-    match apply(app, &mut loaded, Action::new(body, seat, nonce), now).await? {
+    match apply(app, &mut loaded, Action::new(body, seat, nonce.clone()), now).await? {
         Applied::Done => {}
         Applied::Clash => {
             let (me, loaded, seat) = caller_game(app, &req).await?;
             let game = game_json(app, &loaded, &me, seat).await?;
+            // §9.3: a retry sent alongside its first try finds that one logged, as a later retry does.
+            if loaded.log.iter().any(|row| row.action.nonce == nonce) {
+                return Ok(ok(game));
+            }
             return refused_with(409, "stale", "The game moved on. Here it is now.", game);
         }
         Applied::Refused(error) => {

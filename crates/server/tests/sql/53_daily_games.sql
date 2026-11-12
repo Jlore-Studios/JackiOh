@@ -27,7 +27,7 @@ begin
   for r in select * from (values
       ('daily_games', 'match_id uuid NO, p1_profile_id uuid NO, p2_profile_id uuid NO, mode text NO, '
                       'per_move_days integer NO, clock jsonb NO, board jsonb NO, next_deadline_at bigint YES, '
-                      'created_at bigint NO, ended_at bigint YES'),
+                      'seq bigint NO, created_at bigint NO, ended_at bigint YES'),
       ('daily_invites', 'id uuid NO, kind text NO, from_profile uuid NO, to_profile uuid YES, mode text NO, '
                         'per_move_days integer NO, choice jsonb NO, state text NO, match_id uuid YES, '
                         'created_at bigint NO, expires_at bigint NO'),
@@ -170,6 +170,18 @@ begin
         end if;
     end;
   end loop;
+  -- The seq a move's write is conditional on is a log seq, never below the 0 before the first action.
+  begin
+    insert into public.daily_games (match_id, p1_profile_id, p2_profile_id, mode, per_move_days, clock, board, seq, created_at)
+    values (m, p1, p2, 'bo1', 3, '{}', '{}', -1, 1);
+    raise exception 'FAIL (§9.13): the schema took a seq below 0';
+  exception
+    when check_violation then
+      get stacked diagnostics v_con = constraint_name;
+      if v_con is distinct from 'daily_games_seq_check' then
+        raise exception 'FAIL (§9.13): a seq below 0 was refused by %, not daily_games_seq_check', v_con;
+      end if;
+  end;
   for i in 1 .. array_length(invites, 1) loop
     begin
       insert into public.daily_invites (kind, from_profile, to_profile, mode, per_move_days, choice, state, created_at, expires_at)
@@ -188,6 +200,9 @@ begin
   -- The vacuity guard: what the store writes is taken, at each time per move and both modes.
   insert into public.daily_games (match_id, p1_profile_id, p2_profile_id, mode, per_move_days, clock, board, created_at)
   values (m, p1, p2, 'random', 14, '{"perMoveDays": 14, "holds": []}', '{"turn": 1}', 1);
+  if (select seq from public.daily_games where match_id = m) is distinct from 0 then
+    raise exception 'FAIL (§9.13): a new daily game''s seq is not 0';
+  end if;
   begin
     insert into public.daily_games (match_id, p1_profile_id, p2_profile_id, mode, per_move_days, clock, board, created_at)
     values (m, p1, p2, 'bo1', 1, '{}', '{}', 2);

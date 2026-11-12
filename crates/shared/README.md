@@ -377,7 +377,8 @@ server stores a `DailyClock` with each game (`daily_games.clock`) and calls thes
   inside one move and arm no window of their own (R3727003).
 - `daily_expired(clock, now)`: the holder whose deadline has come, the earliest first and a tie in seat
   order; its host logs `disconnectExpired` for it (R3727000).
-- `daily_allows`, `daily_legal`: only R3727006's offerer is held back (to concede); `is_daily_time` checks a
+- `daily_allows`, `daily_legal`: a seat holding no move may only concede, R3727006's offerer among them, so
+  nobody but the holder appends to the log; `is_daily_time` checks a
   time per move against `DAILY_TIME_PER_MOVE_DAYS`; `daily_board` is the public summary a list shows.
 
 `notify::decide_notify(input, now)` is what to send one account: an email and a push when a game started

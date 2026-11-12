@@ -371,6 +371,112 @@ async fn a_stale_action_is_refused() {
     assert!(!legal_has(&theirs, "endTurn"), "{theirs}");
 }
 
+/// §9.13: only the player holding the move sends anything but a concede. The engine takes
+/// `setAutoEndTurn` from either seat at any time; a daily game that took it from the other player
+/// would let them append row after row, each making the holder's next move stale until it lost on
+/// time.
+#[tokio::test]
+async fn a_player_not_holding_the_move_may_only_concede() {
+    let (app, ada, bo) = two_friends().await;
+    let match_id = daily_game(&app, &ada, &bo, 1).await;
+    past_the_mulligan(&app, [&ada, &bo], &match_id).await;
+    let (on_move, waiting) = holder(&app, [&ada, &bo], &match_id).await;
+    let seq = read(&app, on_move, &match_id).await["seq"]
+        .as_i64()
+        .expect("a seq");
+
+    for (n, action) in [
+        json!({ "type": "setAutoEndTurn", "enabled": true }),
+        json!({ "type": "endTurn" }),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let (status, body) = send(&app, waiting, &match_id, seq, &format!("not-mine-{n}"), action).await;
+        assert_eq!((status, code_of(&body)), (422, "not_your_move"), "{body}");
+        assert_eq!(body["game"]["seq"], seq, "nothing was logged: {body}");
+    }
+    let theirs = read(&app, waiting, &match_id).await;
+    let offered: Vec<&Value> = theirs["legal"].as_array().expect("legal").iter().collect();
+    assert_eq!(offered, vec![&json!({ "type": "concede" })], "{theirs}");
+
+    // The holder's move, sent after the seq it read, still applies.
+    let (status, body) = send(
+        &app,
+        on_move,
+        &match_id,
+        seq,
+        "mine",
+        json!({ "type": "endTurn" }),
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(body["seq"], seq + 1, "{body}");
+}
+
+/// Two requests under one nonce with different actions, both read at one seq: the store takes the
+/// second append as a retry of the first, so the second's clock must not be written over the first's
+/// logged move. Here the first (`setAutoEndTurn`, which keeps the move with its holder) commits after
+/// the second (`endTurn`) read the game and before it writes, as a race on Postgres would have it.
+#[tokio::test]
+async fn one_nonce_sent_twice_at_once_with_two_actions_keeps_the_logged_one_s_clock() {
+    use jackioh_engine::{Action, ActionBody, PlayerId};
+    use jackioh_server::db::fake::{CallOutcome, FakeTables};
+    use jackioh_server::db::store::MatchActionRow;
+    use std::sync::atomic::AtomicBool;
+
+    let (app, ada, bo) = two_friends().await;
+    let match_id = daily_game(&app, &ada, &bo, 1).await;
+    past_the_mulligan(&app, [&ada, &bo], &match_id).await;
+    let (on_move, waiting) = holder(&app, [&ada, &bo], &match_id).await;
+    let game = read(&app, on_move, &match_id).await;
+    let seq = game["seq"].as_i64().expect("a seq");
+    let seat: PlayerId = serde_json::from_value(game["seat"].clone()).expect("a seat");
+    let deadline = game["holds"][0]["deadline"].clone();
+
+    let fired = Arc::new(AtomicBool::new(false));
+    let (id, once) = (match_id.clone(), Arc::clone(&fired));
+    fake(&app).lock().await.before_call = Some(Arc::new(move |method: &str, tables: &mut FakeTables| {
+        // The last read of the second request's load, whose transaction commits what this writes.
+        if method == "matches.checkpoint" && !once.swap(true, Ordering::SeqCst) {
+            // The first request's transaction: its row, and its clock's seq.
+            tables.match_actions.push(MatchActionRow {
+                match_id: id.clone(),
+                seq: seq + 1,
+                action: Action::new(ActionBody::SetAutoEndTurn { enabled: true }, seat, "one-nonce"),
+                at: 0,
+            });
+            if let Some(row) = tables.daily.games.iter_mut().find(|row| row.match_id == id) {
+                row.seq = seq + 1;
+            }
+        }
+        CallOutcome::Proceed
+    }));
+    let (status, body) = send(
+        &app,
+        on_move,
+        &match_id,
+        seq,
+        "one-nonce",
+        json!({ "type": "endTurn" }),
+    )
+    .await;
+    fake(&app).lock().await.before_call = None;
+    assert!(fired.load(Ordering::SeqCst), "the race ran");
+    // Answered as a retry: the game as it stands, the first request's move logged.
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(body["seq"], seq + 1, "{body}");
+
+    // The clock is the logged move's: the holder still holds the move, with the same deadline, and the
+    // other player is offered nothing but a concede, so nobody loses on time for a move never logged.
+    let mine = read(&app, on_move, &match_id).await;
+    assert_eq!(mine["hasMove"], true, "{mine}");
+    assert_eq!(mine["holds"][0]["deadline"], deadline, "{mine}");
+    assert!(legal_has(&mine, "endTurn"), "{mine}");
+    let theirs = read(&app, waiting, &match_id).await;
+    assert_eq!(theirs["hasMove"], false, "{theirs}");
+}
+
 // R3727000: an expired move loses for its holder, whether the sweep or a read finds it first
 
 #[tokio::test]
