@@ -223,6 +223,24 @@ fn creation_number(id: &str) -> i64 {
     }
 }
 
+/// `c17`'s place in creation order, oldest first, for walks over a library that must read the
+/// same in every seat's view (§9.1, R223): never library order, which is hidden from both players.
+fn sort_in_creation_order(cards: &mut Vec<&CardInstance>) {
+    // Stable (SURFACE §4.4.1).
+    cards.sort_by(|a, b| {
+        creation_number(&a.id)
+            .cmp(&creation_number(&b.id))
+            .then_with(|| a.id.cmp(&b.id))
+    });
+}
+
+/// The cards of `player`'s library, oldest first (`sort_in_creation_order`).
+pub(crate) fn library_in_creation_order(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
+    let mut cards: Vec<&CardInstance> = state.players[player].library.iter().collect();
+    sort_in_creation_order(&mut cards);
+    cards
+}
+
 /// B5 E26, R464: a library's holders, the cards whose running face declares `deckTriggers`, in creation
 /// order. Never library order: that is hidden from both players (§9.1, R223).
 fn library_holders(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
@@ -231,12 +249,7 @@ fn library_holders(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
         .iter()
         .filter(|card| !crate::scripts::script_of(state, *card).deck_triggers.is_empty())
         .collect();
-    // Stable (SURFACE §4.4.1).
-    cards.sort_by(|a, b| {
-        creation_number(&a.id)
-            .cmp(&creation_number(&b.id))
-            .then_with(|| a.id.cmp(&b.id))
-    });
+    sort_in_creation_order(&mut cards);
     cards
 }
 
@@ -569,6 +582,34 @@ pub fn queue_hook(sink: &mut EngineSink<'_>, holder: &TriggerHolder, hook: HookN
     };
     sink.state.trigger_queue.push(entry.clone());
     entry
+}
+
+/// R3558007: the hook of a queued deck cast (`deck_cast::run_deck_cast`): a card whose
+/// `castFromDeckWhen` holds is cast from its owner's library at the settled point. Hidden (R177),
+/// as a library card is (§9.1).
+pub const DECK_CAST: &str = "@deckCast";
+
+/// R3558007: queue one deck cast of `card`, built like `queue_evolve_run`'s entry: the run answers
+/// for the card's owner (R453).
+pub fn queue_deck_cast(sink: &mut EngineSink<'_>, card: &CardInstance) {
+    let (id, seq) = next_entry_id(sink.state, true, "h");
+    let mut data: IndexMap<String, Value> = IndexMap::new();
+    data.insert("controller".to_string(), player_value(card.owner));
+    let (def_id, radiant) = crate::subsystems::unit_text::text_def_of(card);
+    sink.state.trigger_queue.push(QueuedTrigger {
+        id,
+        seq,
+        instance_id: card.id.clone(),
+        hook: DECK_CAST.to_string(),
+        resume: Resume {
+            def_id: def_id.to_string(),
+            hook: DECK_CAST.to_string(),
+            step: TRIGGER_STEP.to_string(),
+            radiant,
+            instance_id: Some(card.id.clone()),
+            data,
+        },
+    });
 }
 
 /// R3536000, R3536003: queue one more run of an evolved card's Evolve text, built like `queue_hook`'s
@@ -1240,6 +1281,11 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
         run_evolve_entry(sink, entry);
         return;
     }
+    // R3558007: a queued deck cast.
+    if entry.hook == DECK_CAST {
+        crate::deck_cast::run_deck_cast(sink, entry);
+        return;
+    }
     // MD-B22, R946: a lane watcher's answer — the stored resume runs as its owner; R1863000: a play
     // watcher's the same, and R1882004: a death watcher's, as the dead card's controller; R3570004: a
     // launch watcher's, as the launching player.
@@ -1444,6 +1490,9 @@ pub struct Frontier {
     /// R2067000: the cast-on-draw cards this action has cast so far, over every chain of it
     /// (`draw::complete_draw`), held to `CAST_ON_DRAW_ACTION_CAP`.
     pub cast_on_draw_casts: i32,
+    /// R3558007: the deck casts this action has queued so far, over every settled check of it
+    /// (`deck_cast::queue_deck_casts`), held to `DECK_CAST_ACTION_CAP`.
+    pub deck_casts: i32,
     /// R2783001: the keyword behind a Unit's coming death, by its id — a Poisonous hit's mark or a First
     /// Strike's kill, the first one recorded kept — which the state check's `destroyed` takes as its
     /// `via` (`state_check::collect`). A cue for the client, never game state: it dies with the action.

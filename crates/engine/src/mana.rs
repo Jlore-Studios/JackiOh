@@ -382,7 +382,8 @@ fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) ->
     // price plus the premium.
     let mut cost = override_.unwrap_or_else(|| {
         garden_dearer_price(state, instance).unwrap_or_else(|| printed_cost(state, instance))
-    }) + instance.cost_mod;
+    }) + instance.cost_mod
+        + crate::hand_order::hand_aura_cost_delta(state, instance);
     // R65: a player's discounts price a play, and a play takes a card from its hand — or from its
     // graveyard, while a permission lets its player play it from there (E11, R454).
     let for_play = options.as_play == Some(true)

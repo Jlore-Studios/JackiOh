@@ -1840,6 +1840,18 @@ pub struct GameState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub chains_made: Option<u32>,
+    /// R3558002: the pairs of cards of each hand that become Radiant when they meet, in the order
+    /// they were made. Absent until the first pair, so a game without one hashes as it did before
+    /// this field existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hand_meets: Option<Vec<HandMeet>>,
+    /// R3558001: the Radiance each hand card lends its neighbour now, in hand order, so the state
+    /// check can take back what no longer sits beside its lender. Absent while nothing is lent, so
+    /// a game without a lend hashes as it did before this field existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub radiance_lends: Option<Vec<RadianceLend>>,
     /// R1956001: each Created card's generator by instance id: the catalog id of the card whose
     /// script minted it, or that card's own generator when it was Created too
     /// (`generators::record_generator`). Presentation only (CLAUDE.md rule 7): no rule reads it,
@@ -1936,6 +1948,40 @@ pub struct MarkRecord {
     pub mark: String,
     pub color: String,
     pub delayed_id: String,
+}
+
+/// R3558002: two cards of one player's hand that become Radiant together the moment they sit side by
+/// side ("when they meet"), each by its id, with the price they take then (`cost`, absent keeping
+/// theirs).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct HandMeet {
+    pub player: PlayerId,
+    pub left: String,
+    pub right: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub cost: Option<i32>,
+}
+
+/// R3558001: the Radiance a hand card lends its neighbour while the lender sits beside it — the lent
+/// card, and the card lending it — so the state check can take it back when the pair parts.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct RadianceLend {
+    pub player: PlayerId,
+    pub lender: String,
+    pub card: String,
 }
 
 /// R419: one side of the field as a turn began — its zones' cards whole, its Locks, the homes held then.
@@ -2850,6 +2896,8 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
         black_hole: None,
         slashed_lane: None,
         chains_made: None,
+        hand_meets: None,
+        radiance_lends: None,
         generators: IndexMap::new(),
         win_rates: None,
         fused_scripts: crate::scripts::FusedScripts::default(),

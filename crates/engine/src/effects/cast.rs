@@ -280,6 +280,13 @@ pub fn cast_new(args: CastNewArgs) -> Effect {
     })
 }
 
+/// R3558008: cast a new card `times` times (Shadiris's "Cast Shadiris Visions twice"): one
+/// `castNew` effect per cast, so each cast asks its own targets and resolves before the next
+/// begins (R113). No new prompt kind: each effect pauses the list on its own (R113).
+pub fn cast_new_times(args: CastNewArgs, times: i32) -> Vec<Effect> {
+    (0..times.max(0)).map(|_| cast_new(args.clone())).collect()
+}
+
 /// `helpful_cast`'s argument.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]

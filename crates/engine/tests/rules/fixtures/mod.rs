@@ -31,6 +31,7 @@ pub mod freeze;
 pub mod fruit;
 pub mod generation;
 pub mod giga;
+pub mod hand_deck_fuse;
 pub mod harness;
 pub mod hidden_trades;
 pub mod instance_data;

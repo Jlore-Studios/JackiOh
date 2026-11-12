@@ -4,7 +4,7 @@ Each player owns a hand, a library, a graveyard, an exile pile, a hero, 5 unit z
 
 | Zone | Holds | Visible to | Ordering | Engine notes |
 | --- | --- | --- | --- | --- |
-| Hand | Any card | Owner | Index order for triggers ([[R68]]); random picks are uniform | Cap 10 (ruling, [[R4]]). A Resource is a hand card like any other, gained into the hand and burned by a full one ([[R2250000]]) |
+| Hand | Any card | Owner | Index order for triggers ([[R68]]); random picks are uniform | Index 0 is the leftmost card; an added card takes the right end unless its effect names the left end, and no player reorders the hand ([[R3558000]]). Cap 10 (ruling, [[R4]]). A Resource is a hand card like any other, gained into the hand and burned by a full one ([[R2250000]]) |
 | Library | Any card | The order: nobody. The contents: its owner, as a list without order of the cards they were shown going in, so a dealt deck's starting cards stay unknown until they leave it ([[R310]]–[[R312]], [[R433]]); the count is public | Top to bottom | Recruit scans top down; "bottom card" = last |
 | Graveyard (GY) | Cards that were destroyed, discarded or resolved, except unit tokens ([[R11]]) | Both | Chronological | Unit tokens never enter it; spell tokens do. A card arrives as its printed card, at its printed cost ([[R78]], [[R215]], [[R766]]) |
 | Exile | Exiled cards | Both | Chronological | Count feeds Echoes of the Forgotten and Spiteful Stab. A card arrives as in a graveyard ([[R766]]) |

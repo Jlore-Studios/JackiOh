@@ -1095,6 +1095,11 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
             // R3536001, R3536002: the settled board: standing "Evolves when" conditions and cards
             // marked to enter evolved evolve now, queuing their Evolve texts behind the check.
             crate::evolution::evolve_standing(sink);
+            // R3558001, R3558002, R3558007: the settled hand and library: lends sync to the cards
+            // the lenders sit beside, waiting pairs meet, and standing deck casts queue.
+            crate::hand_order::sync_hand_auras(sink);
+            crate::hand_order::meet_pairs(sink);
+            crate::deck_cast::queue_deck_casts(sink);
             // B5 E33, R404: the board has settled, so a quest completed by what happened is noticed now.
             crate::subsystems::quests::notice_quests(sink);
             return;

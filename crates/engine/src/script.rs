@@ -13,6 +13,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::query::HandSide;
 use crate::rng::Rng;
 use crate::state::{CardInstance, CostRule, EventStay, GameState, PlayRecord};
 use crate::wire::{
@@ -347,6 +348,30 @@ pub fn aura_hook(f: impl for<'a> Fn(HookArgs<'a>) -> Vec<AuraEntry<'a>> + Send +
     Arc::new(f)
 }
 
+/// R3558001: what a hand card lends a neighbour — Radiance, a cost change, or both — read on its
+/// lender while the lender sits in the hand (`hand_order::sync_hand_auras`,
+/// `hand_order::hand_aura_cost_delta`). Data, so a fusion carries each ingredient's list (R102).
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
+pub struct HandAura {
+    /// Which neighbour takes it: the card to the left takes a `Right` lend, the card to the right a
+    /// `Left` one.
+    pub to: HandSide,
+    /// The neighbour becomes Radiant while the lender sits beside it.
+    pub radiant: bool,
+    /// What the neighbour's price moves by while the lender sits beside it.
+    pub cost: i32,
+}
+
+/// R3558001: a hand card's aura, read on the card in the hand through `hand_aura_hook`, like
+/// `aura_hook` on the field.
+pub type HandAuraHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> Vec<HandAura> + Send + Sync>;
+
+pub fn hand_aura_hook(
+    f: impl for<'a> Fn(HookArgs<'a>) -> Vec<HandAura> + Send + Sync + 'static,
+) -> HandAuraHook {
+    Arc::new(f)
+}
+
 /// MD-D4, R1120: what one combat-only attack modifier adds to an attacker's strike in the combat it
 /// started against a Unit — attack on top of the layered value, and Poisonous on those hits (§4.4
 /// step 7). Never a layer: the shown attack and §4.2 step 1's "attack above 0" do not see it.
@@ -422,6 +447,10 @@ pub struct StaticFlags {
     /// Starts in the opening hand instead of a draw (§6.2).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub quickdraw: Option<bool>,
+    /// R3558006: always starts at the bottom of its owner's deck, below every card without this flag
+    /// (§2.1, §6.2).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub starts_at_bottom: Option<bool>,
     /// R1861000: sells from its owner's hand at an open Marketplace, as a tray Resource sells.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hand_sale: Option<bool>,
@@ -1256,6 +1285,12 @@ pub struct Script {
     /// R1864004: the Trades a turn this card gives its controller while it acts on their field, read by
     /// `trade::trades_per_turn_of`; several cards do not add, the most holds.
     pub trades_per_turn: Option<TradesPerTurnHook>,
+    // Stinkyscape+ E8 (#3558)
+    /// R3558001: what this card lends its hand neighbours while it sits in a hand (`hand_order`).
+    pub hand_aura: Option<HandAuraHook>,
+    /// R3558007: the standing condition that casts this card from its owner's library whenever it
+    /// holds at a settled state check (`deck_cast`), as `evolves_when` is read on the field.
+    pub cast_from_deck_when: Option<HasHook>,
 }
 
 /// R1850002: one exile aura: the cards on the field it reaches (`scope`, read as an enemy's harm reads

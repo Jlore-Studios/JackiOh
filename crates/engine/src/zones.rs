@@ -1478,10 +1478,12 @@ pub enum LibraryPosition {
     At(i32),
 }
 
-/// `move_to_zone`'s options: where in a library, and `keep_state` to skip R78's reset.
+/// `move_to_zone`'s options: where in a library, `hand_left` to put a card at the left end of a
+/// hand (R3558000), and `keep_state` to skip R78's reset.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct MoveToZoneOptions {
     pub position: Option<LibraryPosition>,
+    pub hand_left: Option<bool>,
     pub keep_state: Option<bool>,
 }
 
@@ -1603,6 +1605,8 @@ pub fn move_to_zone(
             pile.insert(index, placed);
         }
         (OffFieldZone::Library, _) => pile.insert(0, placed),
+        // R3558000: a card its effect sends to the left end goes first, ahead of the hand's order.
+        (OffFieldZone::Hand, _) if options.hand_left == Some(true) => pile.insert(0, placed),
         _ => pile.push(placed),
     }
     MoveResult::Moved

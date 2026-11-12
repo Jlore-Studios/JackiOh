@@ -588,6 +588,14 @@ fn hand_card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> C
     if let Some(keywords) = keywords {
         view.keywords = Some(keywords);
     }
+    // R3558002: a card of a waiting pair wears the meet mark in its owner's view alone — never in
+    // `marks_on`, so R1141's marked-card count leaks nothing of it.
+    if crate::hand_order::meets_partner(state, &card.id).is_some() {
+        view.marks.get_or_insert_with(Vec::new).push(CardMark {
+            mark: crate::hand_order::MEET_MARK.to_string(),
+            color: crate::hand_order::MEET_MARK_COLOR.to_string(),
+        });
+    }
     view
 }
 

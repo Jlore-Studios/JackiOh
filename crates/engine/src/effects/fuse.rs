@@ -378,6 +378,14 @@ pub struct FuseRandomIntoArgs {
     pub radiant: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub keep_cost: Option<bool>,
+    /// R3558003: fuse this many random picks into the kept card at once, as one fusion (a Smoothie
+    /// filled with two Fruits). Default 1.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub count: Option<i32>,
+    /// R3558003: the pool leaves out every card already a fusion, judged by its definition
+    /// (`subsystems::fuse::fused_ingredients`) — a filled Smoothie is never filled again.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unfused_only: Option<bool>,
 }
 
 /// E23 (Classic+ #31 Fusion Lab, #73): for each kept card, the one `into.target` names or every card
@@ -396,6 +404,8 @@ pub fn fuse_random_into(args: FuseRandomIntoArgs) -> Effect {
         if pool.is_empty() {
             return;
         }
+        // R3558003: `count` picks go in as one fusion's ingredients, each drawn in turn (R102).
+        let count = args.count.unwrap_or(1).max(1) as usize;
         for card in kept {
             // A card an earlier fusion of this list has taken off its pile is no longer one to fuse into,
             // and one the Fuse would refuse (R23, R470) draws nothing for it (R129).
@@ -405,20 +415,31 @@ pub fn fuse_random_into(args: FuseRandomIntoArgs) -> Effect {
             if !keepable(ctx.sink.state, &card) {
                 continue;
             }
-            // R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
-            let Some(picked) = pick_unique(ctx.sink.rng, &pool, &mut ctx.draw_tally) else {
-                return;
-            };
-            let picked_id = picked.id.clone();
-            let ingredient = new_instance(
-                &mut *ctx.sink.state,
-                &picked_id,
-                card.owner,
-                Zone::Gone { player: card.owner },
-            );
+            // R3558003: with `unfusedOnly`, a card already a fusion is left alone — a filled
+            // Smoothie is never filled again.
+            if args.unfused_only == Some(true)
+                && crate::subsystems::fuse::fused_ingredients(ctx.sink.state, &card.def_id).is_some()
+            {
+                continue;
+            }
+            let mut ingredients: Vec<CardInstance> = Vec::with_capacity(count);
+            for _ in 0..count {
+                // R3563000: the pick draws through the run's tally, unique while
+                // `UNIQUE_RANDOM_DRAWS` holds.
+                let Some(picked) = pick_unique(ctx.sink.rng, &pool, &mut ctx.draw_tally) else {
+                    return;
+                };
+                let picked_id = picked.id.clone();
+                ingredients.push(new_instance(
+                    &mut *ctx.sink.state,
+                    &picked_id,
+                    card.owner,
+                    Zone::Gone { player: card.owner },
+                ));
+            }
             let on_field = card.zone.z() == ZoneName::Field;
             let radiant_ingredients = if args.radiant == Some(true) {
-                Some(vec![ingredient.id.clone()])
+                Some(ingredients.iter().map(|card| card.id.clone()).collect())
             } else {
                 None
             };
@@ -430,7 +451,7 @@ pub fn fuse_random_into(args: FuseRandomIntoArgs) -> Effect {
             fuse(
                 ctx,
                 FuseArgs {
-                    ingredients: vec![ingredient],
+                    ingredients,
                     target,
                     into,
                     radiant_ingredients,
@@ -515,6 +536,8 @@ pub fn equip_picks(args: EquipPicksArgs) -> Effect {
                         radiant: args.radiant,
                         // R77: the fused cost, as an Equip play's is.
                         keep_cost: Some(false),
+                        count: None,
+                        unfused_only: None,
                     });
                     (random.apply)(ctx);
                 }
@@ -624,6 +647,11 @@ pub struct FuseGeneratedArgs {
     /// place of `handPrice`. A card a full hand burns keeps no price, as R77's free one does not.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_override: Option<i32>,
+    /// R3558004: ignore `count` and `pools` and fuse until the picks' printed costs reach this —
+    /// at least `FUSE_MIN_INGREDIENTS` picks, at most `FUSED_CARDS_CAP`, an empty pool fusing
+    /// nothing (Dingleberry Droat's "until you make one that costs at least (5)").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub until_cost: Option<i32>,
 }
 
 /// E23 (Classic+ #43 AI Slop): `count` independent picks from the pool (they may repeat, R60, unless
@@ -633,9 +661,33 @@ pub struct FuseGeneratedArgs {
 /// (R469). Fewer than two picks or an empty pool draws nothing (R77, R129).
 pub fn fuse_generated(args: FuseGeneratedArgs) -> Effect {
     Effect::new("fuseGenerated", move |ctx| {
+        // R3558004: with `untilCost`, fuse until the picks' printed costs reach it — the uncapped
+        // sum of each pick's `printed_cost`, so a scripted cost (R55) counts as it stands. `count`
+        // and `pools` are ignored; an empty pool fuses nothing (R142).
+        let picked_ids: Vec<String> = if let Some(until_cost) = args.until_cost {
+            let pool = pool_for(ctx, args.query.as_ref());
+            if pool.is_empty() {
+                return;
+            }
+            let player = player_of(ctx, args.to_hand.unwrap_or(PlayerSpec::SelfSide));
+            let mut picked_ids: Vec<String> = Vec::new();
+            let mut sum = 0;
+            while picked_ids.len() < crate::config::FUSED_CARDS_CAP {
+                // R3563000: each pick draws through the run's tally, unique while it holds.
+                let Some(picked) = pick_unique(ctx.sink.rng, &pool, &mut ctx.draw_tally) else {
+                    return;
+                };
+                let phantom = new_instance(&mut *ctx.sink.state, &picked.id, player, Zone::Gone { player });
+                sum += crate::mana::printed_cost(ctx.sink.state, &phantom);
+                picked_ids.push(picked.id.clone());
+                if picked_ids.len() >= FUSE_MIN_INGREDIENTS && sum >= until_cost {
+                    break;
+                }
+            }
+            picked_ids
         // MD-D14: with named pools, one `pool_for` pick from each pool, in order — and if any pool
         // is empty, fuse nothing (R142).
-        let picked_ids: Vec<String> = if let Some(pools) = &args.pools {
+        } else if let Some(pools) = &args.pools {
             let mut picked_ids: Vec<String> = Vec::with_capacity(pools.len());
             for pool in pools {
                 let mut pool = pool_for(ctx, Some(pool));

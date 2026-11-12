@@ -90,6 +90,12 @@ export const DEADLINE_MARK = "deadline";
 /** The engine's `DEADLINE_MARK_COLOR` (`effects/delay.rs`). */
 export const DEADLINE_MARK_COLOR: MarkColor = "crimson";
 
+/** The engine's `MEET_MARK` (`hand_order.rs`): the mark a card of a waiting meeting pair wears in its owner's hand (R3558002). */
+export const MEET_MARK = "meet";
+
+/** The engine's `MEET_MARK_COLOR` (`hand_order.rs`): Duo's gold, for a promised Radiance. */
+export const MEET_MARK_COLOR: MarkColor = "gold";
+
 /** #2270: what a card on the field at its last Brittle count wears: Allure's aura in gray, no badge, no mark. */
 export const BRITTLE_LAST_COLOR: MarkColor = "gray";
 
@@ -118,6 +124,11 @@ export const MARK_WORDS: Readonly<Record<string, MarkWords>> = {
   [DEADLINE_MARK]: {
     name: "Deadline",
     text: "Marked: destroyed at the end of its controller's next turn unless it destroys a Unit first",
+  },
+  // R3558002: Stinkyscape+ #98 Doomed Ship's pair, while the meeting waits.
+  [MEET_MARK]: {
+    name: "Meets",
+    text: "Marked: when it and its partner sit side by side in your hand, both become Radiant",
   },
 };
 

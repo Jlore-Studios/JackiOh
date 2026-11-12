@@ -50,6 +50,7 @@ pub mod redact_announce;
 pub mod redact_backrow_piles;
 pub mod redact_board_history;
 pub mod redact_fusion;
+pub mod redact_hand_order;
 pub mod redact_last_boards;
 pub mod redact_live_face_down;
 pub mod redact_once_a_game;

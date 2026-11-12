@@ -585,6 +585,20 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
             }
         }
     }
+    // R3558001, R3558002: a waiting meet and a lend are their side's hand order made legible — the
+    // seat keeps its own, the opponent's go, and an emptied list goes as `None`.
+    if let Some(meets) = next.hand_meets.as_mut() {
+        meets.retain(|meet| meet.player == seat);
+        if meets.is_empty() {
+            next.hand_meets = None;
+        }
+    }
+    if let Some(lends) = next.radiance_lends.as_mut() {
+        lends.retain(|lend| lend.player == seat);
+        if lends.is_empty() {
+            next.radiance_lends = None;
+        }
+    }
 
     // Step 3: every hidden card becomes a placeholder (R351 face-down backrow cost, SURFACE §14.1 idempotence).
     for (player, place) in every_place(&next) {

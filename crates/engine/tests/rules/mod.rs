@@ -167,6 +167,7 @@ pub mod granted_tags;
 pub mod graveyard_play;
 pub mod graveyard_play_reason;
 pub mod graveyard_reset;
+pub mod hand_deck_fuse;
 pub mod hand_size;
 pub mod handicap;
 pub mod hero_armor;

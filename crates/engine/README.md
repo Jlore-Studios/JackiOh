@@ -155,6 +155,13 @@ builds reads its own game's hold without the state (R2201001).
   `secret_pick` and `keep_secret_pick`; `subsystems/board_history.rs` is the side snapshot and its
   restore (R3550007): `side_snapshot_of`, `snapshot_side` (`snapshotSide`) and
   `restore_side_snapshot` (`restoreSideSnapshot`).
+- `hand_order.rs` is the hand neighbours (R3558001–R3558002): the `handAura` lends
+  (`hand_aura_cost_delta`, `sync_hand_auras`) and the meeting pairs (`add_meet`, `meets_partner`,
+  `meet_pairs`, the `meet` mark); `deck_cast.rs` is the cast from the deck (R3558007):
+  `queue_deck_casts` and `run_deck_cast` behind the hidden `@deckCast` entry; the verbs are
+  `effects/add_to_hand.rs` (`addMeetingPair`, `at`), `effects/fuse.rs` (`count`, `unfusedOnly`,
+  `untilCost`), `effects/cast.rs` (`cast_new_times`), the catalog's `nameContains` and
+  `StaticFlags.starts_at_bottom`.
 - `effects/anomaly.rs` is Stinkyscape's Anomalies and Scanning Probes (R1855000–R1855003):
   `replace_board` exiles what its card reaches of its caster's side, lays a preset as summons into
   their named zones with their riders in memory, then fires each laid Unit's Cry under R452's random
