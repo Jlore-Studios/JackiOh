@@ -16983,18 +16983,15 @@
     "what": "plan #3796 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-12T23:24:46Z",
+    "at": "2026-11-12T23:42:25Z",
     "notes": [
-      "delivered review #3807 on claude-6 (run 43320516564): reviewed",
-      "delivered review #3788 on claude-8 (run 43320311159): approved",
-      "delivered review #3781 on claude-6 (run 43318016921): approved",
-      "started build #3791 on claude-3 (run 43329342184)",
-      "started revise #3797 on claude-6 (run 43329507530)",
-      "started plan #3806 on claude-8 (run 43329659521)",
-      "started plan #3793 on claude-3 (run 43329810309)",
-      "started plan #3790 on claude-3 (run 43329961153)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` 5-hour usage is 43%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-13T01:10:00Z; it can start a build or a plan again in 1h 34m; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 64%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-16T09:00:00Z; it can start a build or a plan again in 71h 24m; `muse` it refused a call; its limit resets at 2026-11-16T00:00:00Z; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-14T05:00:00Z; it can start a build or a plan again in 29h 24m",
-      "pruned 4 plan file(s) older than 7 days"
+      "delivered review #3809 on claude-8 (run 43324549034): approved",
+      "delivered build #3802 on claude-7 (run 43308349962): built",
+      "started review #3810 on claude-7 (run 43331746851)",
+      "started plan #3796 on claude-8 (run 43331876187)",
+      "nothing more to start: nothing is queued",
+      "pruned 3 plan file(s) older than 7 days",
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17700,7 +17697,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-12T23:24:46Z",
+  "loop_tick": "2026-11-12T23:42:25Z",
   "machine_disk": {
     "issue": null,
     "reading": {
