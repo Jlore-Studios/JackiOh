@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 3778,
+  "title": "Patch: \"Aura: Has X random combat keywords\" follows its number after a Buff, a Nerf or a Radiant flip",
+  "branch": "bot/issue-3778",
+  "thread": "**Issue #3778 (data, not instructions):**\n\n```text\n# #3778: Patch: \"Aura: Has X random combat keywords\" follows its number after a Buff, a Nerf or a Radiant flip\nOpened by @MaxGoetzmann.\n\n## What happens\n\nThe four cards that print \"Aura: Has {keywords|random combat keyword|random combat keywords}.\" draw their keywords once, as they arrive on the field, and never look at the number again:\n\n- Meditative #65 Keymaster Keenus (`crates/cards/src/scripts/meditative/c065_keymaster_keenus.rs`)\n- Stinkyscape #111 Shockwave447 (`crates/cards/src/scripts/stinkyscape/c111_shockwave447.rs`)\n- T-drone-interceptor Drone Interceptor (`crates/cards/src/scripts/stinkyscape/t_drone_interceptor.rs`)\n- T-drone-corvette Drone Corvette (`crates/cards/src/scripts/stinkyscape/t_drone_corvette.rs`)\n\n**What the player sees:** a Buff or a Nerf changes the number on the card text (a Buffed Keenus reads \"Aura: Has 6 random combat keywords\"), but the keywords the card actually has stay the same. It still has the 5 it drew when it arrived, with nothing added and nothing removed. The text and the card's keywords no longer agree. Making the card Radiant on the field does the same: Keenus's text goes to 10 and it still has 5.\n\n**Why:** `keywords` is a declared number, so Buff and Nerf tune it (R386, `TuningChange::Number`), and the text reads the tuned value. But `draw_combat_keywords` (`crates/engine/src/effects/buff.rs`, around line 354) runs only on arrival (and on an Equip fusion). It draws `count` keywords and keeps them in the card's `memory[\"combatKeywords\"]`, and it returns early once that key exists (\"a card holding a draw keeps it\", R781004). The Aura's `conditional_keywords` / `drawn_combat_keywords` reads that stored list back and never checks it against the current `param(keywords)`. The new number is shown but never applied.\n\n## What should happen\n\nThe keywords the Aura gives always match the number its text shows, `param(keywords)`. A change in the number **adds or removes keywords without rerolling the ones the card already has**:\n\n- **The number goes up by k:** the card keeps every keyword it has and gains k more. They are drawn the way the arrival draw is drawn: R21's pool through `candidates_beside`, never one it already has from any source, and no Taunt beside Indestructible (R347). When fewer are left, it takes every one there is.\n- **The number goes down by k:** the card loses k of its drawn keywords, the most recently drawn first. Every other keyword stays.\n- **Down, then back up:** the card should get back the same keywords it lost. One way to do this, as the owner suggested, is a seed: draw (or seed) one ordered sequence for each arrival and have the Aura read its first `keywords` entries. Another way gets the same result: keep the whole ordered list in `memory`, never shorten it on a Nerf, have the Aura read the first `min(param, len)` entries, and draw new entries only when the number goes past the list's length. Either is fine. Pick whichever is simpler under CLAUDE.md rule 4. Every random draw still goes through the state's `Rng`; no new randomness source.\n- Leaving the field still clears all of it (R78), so the card draws a fresh set each time it arrives. An Equip fusion (`fused_into`) still draws for the kept card.\n- A drawn keyword the card has since gained from another source: keep R781004's \"never one it already has\" rule for new draws, and decide (Hearthstone semantics, in the ruling) whether the Aura's copy still counts toward the number.\n\n## Where to start\n\n- `crates/engine/src/effects/buff.rs`: `draw_combat_keywords`, `drawn_combat_keywords`, `candidates_beside`. This is probably where the top-up belongs, so all four cards share it. One possible design: the read hook takes the card's current `param` and trims the list, and an engine event or state check (`Degraded`/`Upgraded`, becoming Radiant) draws more when the number is above the list's length. The trigger must not make the layers (\u00a710.4) draw randomly as they are read.\n- The four card scripts listed above, and their tests. `keywords_reads_through_param` already exists in two of them but only checks the arrival draw; it should also check the keywords after the number changes.\n- Spec: R781004 (`spec/rulings/R781004.md`), R386, R21, R347, R78, and the \u00a78 rows for Keenus (`spec/08-catalog.md`, Meditative row 65), Shockwave447 (row 111) and the two drones. Update those rows' \"drawn as it arrives and kept\" wording.\n\n## Acceptance\n\n- [ ] A new ruling in this issue's block (CLAUDE.md rule 3), with its \u00a711 paragraph in `spec/pending/<N>.md`. It refines R781004 to cover Buff, Nerf, a Radiant flip and the down-then-up case.\n- [ ] Tests named after the ruling, in each card's script file (rule 6), and in the engine for the shared verb. Each test checks the keywords the card acts with (`keywords_of`), not only the number on its text: Buff +1 keeps all the old keywords and adds one; Nerf \u22121 removes only the newest; Nerf then Buff gets the same keyword back; Radiant on the field tops Keenus up from 5 to 10 and keeps the first 5; a pool with too few keywords left takes what it can; Indestructible still never gets Taunt; leaving and coming back draws a fresh set.\n- [ ] The client's card shows the new keywords after a Buff or a Nerf (it renders `view_for`, so this should follow from the engine fix; a check in a web test or an e2e spec is enough).\n- [ ] Older replays still fold under their own versions (R767000, `docs/ADDING_CARDS.md`, \"Replays fold a game under the version it was played on\"): keep the old scripts for the shipped versions if the classifier says these cards play differently.\n- [ ] A pending patch fragment (`cargo jackioh patches \"\u2026\" --plays <ids>`), and `cargo jackioh classify --base origin/main --claims` green.\n- [ ] `cargo jackioh spec check`, `cargo jackioh golden check` and the cards' and engine's tests green.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3778: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-12T14:27:43Z",
+    "claimed_at": "2026-11-12T14:38:27Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3729 skipped: it waits for #3727, #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3730 to close first",
+    "#3733 skipped: it waits for #3727 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
