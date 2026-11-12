@@ -15383,9 +15383,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-1",
-      "owner_since": "2026-11-12T15:16:17Z",
-      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
+      "owner": "claude-6",
+      "owner_since": "2026-11-12T16:34:47Z",
+      "owner_why": "handed off from `claude-1`: `claude-1` 5-hour usage is 42%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-12T20:10:00Z; it can start again only in 3h 35m, more than the 120 minutes an item waits for its owner",
       "paused": {
         "at": "2026-11-12T16:30:23Z",
         "interrupt": "usage",
@@ -15397,11 +15397,11 @@
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-1",
+      "provider": "claude-6",
       "queued_at": "2026-11-12T14:22:27Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
-      "run_id": "43245986991",
+      "run_id": "pending:4a27fb9f-1794501233",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -15420,7 +15420,7 @@
         "provider": "claude-1",
         "run": "43245986991"
       },
-      "started_at": "2026-11-12T15:16:17Z",
+      "started_at": "2026-11-12T16:34:47Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
@@ -15979,9 +15979,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T16:33:31Z",
+    "at": "2026-11-12T16:34:47Z",
     "url": "",
-    "what": "revise #3775 on claude-4"
+    "what": "build #3777 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-12T16:10:58Z",
