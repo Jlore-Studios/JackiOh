@@ -14035,9 +14035,10 @@
       "stop_requested": false,
       "strike_log": [
         "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled",
-        "`claude-8` (claude, opus) rejected it: `crates/server/src/daily/notify.rs:401`: POST /api/daily/push stores any https:// URL as a push endpoint, and the server later POSTs to it with a default reqwest"
+        "`claude-8` (claude, opus) rejected it: `crates/server/src/daily/notify.rs:401`: POST /api/daily/push stores any https:// URL as a push endpoint, and the server later POSTs to it with a default reqwest",
+        "`claude-6` (claude, opus) rejected it: `crates/server/src/daily/games.rs:294`: A daily game that ends `Voided` (R679's Glitch Void) never closes: `record()` only logs and returns, so its match row sta"
       ],
-      "strikes": 2,
+      "strikes": 3,
       "taken_asks": [],
       "verdict_rounds": 0,
       "waiting_comment": 6809364572
