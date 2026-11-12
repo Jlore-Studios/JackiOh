@@ -6,6 +6,7 @@ import { DECK_SIZE } from "@jackioh/engine/config";
 import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 
 import type { DecksResponse } from "../../../apps/web/src/net/api.ts";
+import { lobbyTestid } from "../../../apps/web/src/lobby/testids.ts";
 import PlayRoute, { playTestid } from "../../../apps/web/src/routes/play.tsx";
 import { setShips } from "../../../apps/web/src/wire/catalog.ts";
 import { loadWasm } from "../../../apps/web/src/wasm/index.ts";
@@ -74,7 +75,7 @@ function serveFixtures(): void {
       record: { games: 10, wins: 7, losses: 2, draws: 1 },
       badges: [],
     },
-    "/api/rooms": { rooms: [] },
+    "/api/lobbies": { lobbies: [] },
   };
   cy.window({ log: false }).then((win) => {
     const passThrough = win.fetch.bind(win);
@@ -163,7 +164,8 @@ describe("#1578 the Play hub is one screen", () => {
       expectNoPageScroll(viewport);
       expectOnlineFirst();
       expectInView(viewport, [playTestid.queue, playTestid.deckSelect, playTestid.rank]);
-      expectInView(viewport, [...WAYS, playTestid.createRoom, playTestid.joinInput, playTestid.joinSubmit]);
+      // R3730000: "Play a friend" is the private lobby's panel.
+      expectInView(viewport, [...WAYS, lobbyTestid.create, lobbyTestid.joinInput, lobbyTestid.joinSubmit]);
       expectNoHubScroll();
     });
 

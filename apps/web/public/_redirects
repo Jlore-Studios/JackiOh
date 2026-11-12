@@ -54,3 +54,5 @@
 /watch/:id/ / 200
 /duos/:id / 200
 /duos/:id/ / 200
+/lobby/:id / 200
+/lobby/:id/ / 200

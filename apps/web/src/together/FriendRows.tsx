@@ -126,6 +126,8 @@ export type FriendRowProps = {
   onWatch?: () => void;
   /** Why the player cannot challenge anyone now (the server's own sentence); Challenge is then disabled and says it. */
   challengeRefusal?: string | null;
+  /** R3730005: a screen that passes it offers Lobby: a 1v1 lobby made and the friend invited into it. */
+  onLobby?: () => void;
 };
 
 export function FriendRow({
@@ -138,6 +140,7 @@ export function FriendRow({
   onBlock,
   onWatch,
   challengeRefusal = null,
+  onLobby,
 }: FriendRowProps): ReactElement {
   const [asking, setAsking] = useState(false);
   const canChallenge = friend.status === "online";
@@ -185,6 +188,11 @@ export function FriendRow({
               {t("Watch")}
             </button>
           ) : null}
+          {onLobby === undefined || friend.status === "offline" ? null : (
+            <button type="button" data-testid={togetherTestid.lobby} disabled={busy} onClick={onLobby}>
+              {t("Lobby")}
+            </button>
+          )}
           <button type="button" data-testid={togetherTestid.chatOpen} onClick={onChat}>
             {t("Chat")}
             {unread > 0 ? (

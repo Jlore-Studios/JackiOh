@@ -1,16 +1,11 @@
 // The Duos screens' testids (#936 S8), mirrored in `e2e/support/testids.ts`. The first block is S8's
-// frozen list; the rest are this slice's own chrome.
+// frozen list; the rest are this slice's own chrome. The co-op panel's are the lobby's now
+// (`lobby/testids.ts`, R3730000).
 
 import type { DuosSeat } from "../wire/generated/DuosSeat.ts";
 import type { PingKind } from "../net/duos.ts";
 
 export const duosTestid = {
-  // S8: the co-op panel (B60).
-  coopCreate: "coop-create",
-  coopDifficulty: "coop-difficulty",
-  coopCode: "coop-code",
-  coopJoinInput: "coop-join-input",
-  coopJoinSubmit: "coop-join-submit",
   // S8: the board (B61–B64).
   portal: "duos-portal",
   pass: "duos-pass",
@@ -21,21 +16,6 @@ export const duosTestid = {
   ping: (kind: PingKind): string => `duos-ping-${kind}`,
   pingMarker: "duos-ping-marker",
 
-  // The panel's own.
-  coopDeck: "coop-deck",
-  /** R2031000: beside the Random deck only, "More cards from" (R924000), a select. */
-  coopLeanNewest: "coop-lean-newest",
-  coopCancel: "coop-cancel",
-  coopInviteFriend: "coop-invite-friend",
-  coopInvite: "coop-invite",
-  coopLink: "duos-coop-link",
-  coopStatus: "coop-status",
-  coopError: "coop-error",
-  coopRejoin: "coop-rejoin",
-  /** #1568: a failed deck read offers Try again beside the alert. */
-  coopDecksRetry: "coop-decks-retry",
-  /** #1900: a failed read of the live co-op game offers Try again beside the alert. */
-  coopLiveRetry: "coop-live-retry",
   // The board's own.
   board: "duos-board",
   /** R2095000: the rail's Both boards toggle, and each board's own wrapper. */

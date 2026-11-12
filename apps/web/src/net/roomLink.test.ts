@@ -14,6 +14,8 @@ import {
   coopLinkPath,
   coopLinkUrl,
   findRoomLinkInText,
+  lobbyLinkPath,
+  lobbyLinkUrl,
   forgetCoopLink,
   forgetRoomLink,
   readCoopLink,
@@ -258,26 +260,25 @@ describe("R2094000 the co-op room link", () => {
 describe("R2094000 a room link in chat text", () => {
   const origin = window.location.origin;
 
-  it("R2094000 findRoomLinkInText accepts this origin's /play?room= and /together?coop= links and refuses another origin, a malformed code, or no link", () => {
-    // Full URLs and bare paths both count; the code is canonicalized.
-    expect(findRoomLinkInText(`join here: ${origin}/together?coop=abc234`, origin)).toEqual({
-      path: "/together?coop=ABC234",
-    });
-    expect(findRoomLinkInText("join here: /together?coop=ABC234", origin)).toEqual({ path: "/together?coop=ABC234" });
-    expect(findRoomLinkInText(`join here: ${origin}/play?room=abc234&mode=bo1`, origin)).toEqual({
-      path: "/play?room=ABC234&mode=bo1",
-    });
-    // A 1v1 link with no usable mode still joins: the code fills in, the mode stays the last choice.
-    expect(findRoomLinkInText(`join here: ${origin}/play?room=abc234`, origin)).toEqual({ path: "/play?room=ABC234" });
+  it("R2094000 R3730006 findRoomLinkInText reads this origin's /play?room=, /together?coop= and /lobby/ links as their lobby, and refuses another origin, a malformed code, or no link", () => {
+    // Full URLs and bare paths both count; the code is canonicalized, and every link opens the lobby screen.
+    expect(findRoomLinkInText(`join here: ${origin}/together?coop=abc234`, origin)).toEqual({ path: "/lobby/ABC234" });
+    expect(findRoomLinkInText("join here: /together?coop=ABC234", origin)).toEqual({ path: "/lobby/ABC234" });
+    expect(findRoomLinkInText(`join here: ${origin}/play?room=abc234&mode=bo1`, origin)).toEqual({ path: "/lobby/ABC234" });
+    expect(findRoomLinkInText(`join here: ${origin}/play?room=abc234`, origin)).toEqual({ path: "/lobby/ABC234" });
+    expect(findRoomLinkInText(`come in: ${origin}/lobby/k7q2xm`, origin)).toEqual({ path: "/lobby/K7Q2XM" });
+    expect(findRoomLinkInText("come in: /lobby/K7Q2XM/", origin)).toEqual({ path: "/lobby/K7Q2XM" });
     // The invite's own sentence carries the link beside trailing punctuation.
     expect(findRoomLinkInText(`Join my co-op game against the AI here: ${origin}/together?coop=ABC234 (room code ABC234).`, origin)).toEqual({
-      path: "/together?coop=ABC234",
+      path: "/lobby/ABC234",
     });
 
     expect(findRoomLinkInText("join here: https://evil.test/together?coop=ABC234", origin)).toBeNull();
     expect(findRoomLinkInText("join here: https://evil.test/play?room=ABC234&mode=bo1", origin)).toBeNull();
+    expect(findRoomLinkInText("join here: https://evil.test/lobby/ABC234", origin)).toBeNull();
     expect(findRoomLinkInText(`join here: ${origin}/together?coop=abc123`, origin)).toBeNull();
     expect(findRoomLinkInText(`join here: ${origin}/play?room=abc123&mode=bo1`, origin)).toBeNull();
+    expect(findRoomLinkInText(`join here: ${origin}/lobby/abc123`, origin)).toBeNull();
     // A link on the wrong path draws no button.
     expect(findRoomLinkInText(`join here: ${origin}/play?coop=ABC234`, origin)).toBeNull();
     expect(findRoomLinkInText(`join here: ${origin}/together?room=ABC234&mode=bo1`, origin)).toBeNull();
@@ -287,8 +288,26 @@ describe("R2094000 a room link in chat text", () => {
 
   it("R2094000 findRoomLinkInText reads only the first valid link", () => {
     expect(findRoomLinkInText(`nope https://evil.test/together?coop=ABC234 then ${origin}/together?coop=QRSTUV`, origin)).toEqual({
-      path: "/together?coop=QRSTUV",
+      path: "/lobby/QRSTUV",
     });
+  });
+});
+
+describe("R3730006 the lobby link", () => {
+  afterEach(() => {
+    window.sessionStorage.clear();
+  });
+
+  it("R3730006 lobbyLinkUrl is the lobby's path on this origin, and a signed-out visitor's lobby path waits through the sign-in", () => {
+    expect(lobbyLinkPath("K7Q2XM")).toBe("/lobby/K7Q2XM");
+    expect(lobbyLinkUrl("K7Q2XM")).toBe(`${window.location.origin}/lobby/K7Q2XM`);
+    visit("/lobby/k7q2xm");
+    expect(adoptRoomLink()).toBe(true);
+    expect(readRoomLink()).toEqual({ code: "K7Q2XM", mode: null });
+    forgetRoomLink();
+    visit("/lobby/abc123");
+    expect(adoptRoomLink()).toBe(false);
+    expect(readRoomLink()).toBeNull();
   });
 });
 

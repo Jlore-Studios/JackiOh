@@ -31,6 +31,7 @@ pub mod fleet;
 pub mod friends;
 pub mod game_records;
 pub mod health;
+pub mod lobbies;
 pub mod news;
 pub mod packs;
 pub mod practice;

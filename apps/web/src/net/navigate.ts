@@ -278,6 +278,8 @@ export const paths = {
   watch: (matchId: string): string => "/watch/" + matchId,
   /** #936 B61–B64: a Duos co-op match against the AI team. */
   duos: (matchId: string): string => `/duos/${matchId}`,
+  /** R3730000: a private lobby, 1v1 or co-op, by its code. */
+  lobby: (code: string): string => `/lobby/${code}`,
   /** #936 B65: the four-seat Duos hotseat over WASM; production serves a 404 there, as at `hotseat`. */
   duosDev: "/dev/duos",
   /** R2784000: the card-animation motif gallery; production serves a 404 there, as at `hotseat`. */
@@ -304,6 +306,11 @@ export function watchIdOf(path: string): string | null {
 
 export function duosIdOf(path: string): string | null {
   return idUnder(path, "duos");
+}
+
+/** R3730000: the code a lobby path names, as typed (the screen canonicalizes it). */
+export function lobbyCodeOf(path: string): string | null {
+  return idUnder(path, "lobby");
 }
 
 /** R2117000: the board routes, whose moves the animation queue owns (practice's setup shares its game's path). */

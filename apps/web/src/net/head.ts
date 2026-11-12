@@ -3,7 +3,7 @@
 // re-exports them and writes them into the document (`useDocumentHead`).
 
 import { t } from "../i18n/i18n.ts";
-import { duosIdOf, matchIdOf, paths, seriesIdOf, siteOrigin, watchIdOf } from "./navigate.ts";
+import { duosIdOf, lobbyCodeOf, matchIdOf, paths, seriesIdOf, siteOrigin, watchIdOf } from "./navigate.ts";
 
 export const SITE_NAME = "JackiOh";
 
@@ -70,6 +70,7 @@ export function screenNameFor(path: string): string | null {
   if (seriesIdOf(path) !== null) return "Conquest";
   if (watchIdOf(path) !== null) return "Watching";
   if (duosIdOf(path) !== null) return "Duos";
+  if (lobbyCodeOf(path) !== null) return "Private lobby";
   return null;
 }
 

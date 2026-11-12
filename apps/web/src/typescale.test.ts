@@ -105,7 +105,7 @@ const UNSCALED: Record<string, number> = {
   "routes/account.css": 3,
   "routes/game-banner.css": 5,
   "routes/landing.css": 20,
-  "routes/lobby.css": 51,
+  "routes/lobby.css": 43,
   "routes/privacy.css": 3,
   "routes/purchases.css": 2,
   "routes/site-footer.css": 1,

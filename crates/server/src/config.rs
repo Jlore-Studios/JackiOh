@@ -208,6 +208,9 @@ pub const ROOM_CODE_TTL_SECONDS: i64 = 15 * 60;
 /// lingers to expiry. Advisory: the seat compare-and-set is what stops a double seat, not this.
 /// `create` refuses a fourth with 409.
 pub const MAX_OPEN_ROOMS_PER_HOST: i64 = 3;
+/// R3730002: the countdown, in seconds, from a private lobby's Start to its board. The clients count
+/// it down from when each sees the Start; the game itself starts at once, so a restart loses nothing.
+pub const LOBBY_START_COUNTDOWN_SECONDS: i64 = 3;
 
 // ---------------------------------------------------------------------------------------------
 // The code alphabet (§9.4, §9.5).

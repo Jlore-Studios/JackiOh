@@ -576,3 +576,112 @@ mod r3214000_the_connection_limits {
         assert!(held.iter().all(|client| client.close_code().is_none()));
     }
 }
+
+mod r3730000_lobbies {
+    //! A private lobby's changes reach its members alone (R3730000), and an invite the friend alone
+    //! (R3730005), each a word over `/ws/social` with nothing of the lobby in it.
+    use super::*;
+
+    /// `who`'s first `type` frame from index `from` on.
+    async fn next_of(client: &WsClient, from: usize, kind: &str, who: &str) -> Value {
+        client
+            .wait_for(from, PROMPTLY, |frame| frame["type"] == kind)
+            .await
+            .unwrap_or_else(|| panic!("{who}: no {kind} frame: {:?}", client.frames()))
+            .2
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3730000_every_lobby_change_reaches_its_members_alone() {
+        let app = empty_test_app().await;
+        let (ana, bob, cy) = three_friends(&app).await;
+        let served = serve(&app);
+        let (ana_ws, bob_ws, cy_ws) = (
+            connected(&served, &ana).await,
+            connected(&served, &bob).await,
+            connected(&served, &cy).await,
+        );
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/lobbies",
+            &ana.token,
+            json!({ "format": "duel", "mode": "random" }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let code = body["code"].as_str().expect("a lobby code").to_string();
+        let (from_ana, from_bob, from_cy) = (ana_ws.received(), bob_ws.received(), cy_ws.received());
+
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/lobbies/{code}/enter"),
+            &bob.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        let word = json!({ "type": "lobby", "code": code });
+        assert_eq!(next_of(&ana_ws, from_ana, "lobby", "Ana").await, word);
+        assert_eq!(next_of(&bob_ws, from_bob, "lobby", "Bob").await, word);
+        assert_told_nothing(&cy_ws, from_cy, "Cy").await;
+
+        // A guest who leaves is told too, once more, so their screen reads the seat gone.
+        let from_bob = bob_ws.received();
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/lobbies/{code}/leave"),
+            &bob.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+        assert_eq!(next_of(&bob_ws, from_bob, "lobby", "Bob").await, word);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3730005_an_invite_reaches_the_friend_alone() {
+        let app = empty_test_app().await;
+        let (ana, bob, cy) = three_friends(&app).await;
+        let served = serve(&app);
+        let (ana_ws, bob_ws, cy_ws) = (
+            connected(&served, &ana).await,
+            connected(&served, &bob).await,
+            connected(&served, &cy).await,
+        );
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/lobbies",
+            &ana.token,
+            json!({ "format": "coop", "difficulty": "medium" }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let code = body["code"].as_str().expect("a lobby code").to_string();
+        let (from_ana, from_bob, from_cy) = (ana_ws.received(), bob_ws.received(), cy_ws.received());
+
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/lobbies/{code}/invite"),
+            &ana.token,
+            json!({ "profileId": bob.id }),
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+        assert_eq!(
+            next_of(&bob_ws, from_bob, "lobbyInvite", "Bob").await,
+            json!({
+                "type": "lobbyInvite",
+                "code": code,
+                "format": "coop",
+                "from": { "profileId": ana.id, "username": ana.name },
+            })
+        );
+        assert_told_nothing(&ana_ws, from_ana, "Ana").await;
+        assert_told_nothing(&cy_ws, from_cy, "Cy").await;
+    }
+}

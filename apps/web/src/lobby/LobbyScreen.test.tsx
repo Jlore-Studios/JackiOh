@@ -1,0 +1,216 @@
+// The private lobby screen (R3730000 to R3730006): its controls, Ready, the countdown, its reads again,
+// closed and removed, and the classic room's join card, against a stubbed server.
+
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { LOBBY_START_COUNTDOWN_SECONDS } from "@jackioh/server-config";
+
+import { at, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
+import type { LobbyRead, LobbySeat, LobbyView } from "./api.ts";
+import { LOBBY_POLL_MS } from "./config.ts";
+import { LobbyScreen } from "./LobbyScreen.tsx";
+import { lobbyTestid } from "./testids.ts";
+
+const SLOW = { timeout: 4000 };
+const CODE = "K7Q2XM";
+
+const ANA = { profileId: "p-ana", username: "Ana#1", status: "online" as const };
+const BO = { profileId: "p-bo", username: "Bo#2", status: "online" as const };
+
+const DECKS = {
+  catalogVersion: "v1",
+  decks: [{ id: "d-pyre", name: "Pyre Control", cards: [], catalogVersion: "v1", portrait: null, createdAt: 0, updatedAt: 0 }],
+  trios: [],
+  limits: { decks: 20, trios: 10, nameLength: 40 },
+};
+
+function seat(over: Partial<LobbySeat> = {}): LobbySeat {
+  return { role: "host", player: ANA, state: "choosing", deck: null, random: false, ...over };
+}
+
+function lobby(over: Partial<LobbyView> = {}): LobbyView {
+  return {
+    kind: "lobby",
+    code: CODE,
+    settings: { format: "duel", mode: "random" },
+    expiresAt: Date.now() + 900_000,
+    you: "host",
+    yourPick: null,
+    seats: [seat(), seat({ role: "guest", player: BO })],
+    startedAt: null,
+    matchId: null,
+    seriesId: null,
+    ...over,
+  };
+}
+
+/** A server whose lobby reads answer `reads` in turn (the last one again), and every write 204. */
+function serve(reads: readonly (LobbyRead | Reply)[], special?: (call: Call) => Reply | undefined): StubServer {
+  let read = 0;
+  return stubServer((call) => {
+    const answer = special?.(call);
+    if (answer !== undefined) return answer;
+    const { method, path } = call;
+    if (method === "GET" && path === `/api/lobbies/${CODE}`) {
+      const next = reads[Math.min(read, reads.length - 1)];
+      read += 1;
+      if (next !== undefined && "status" in next) return next;
+      return { status: 200, body: next };
+    }
+    if (method === "POST" && path.startsWith(`/api/lobbies/${CODE}/`)) return { status: 204 };
+    if (method === "GET" && path === "/api/decks") return { status: 200, body: DECKS };
+    if (method === "GET" && path === "/api/social") return { status: 200, body: { incoming: [], outgoing: [], unread: {} } };
+    if (method === "GET" && path === "/api/friends") {
+      return { status: 200, body: { friends: [], incoming: [], outgoing: [], blocked: [] } };
+    }
+    return undefined;
+  });
+}
+
+function show(): void {
+  render(<LobbyScreen token="tok-lobby" code={CODE} />);
+}
+
+beforeEach(() => {
+  signIn("tok-lobby");
+  at(`/lobby/${CODE}`);
+});
+
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+  window.sessionStorage.clear();
+});
+
+describe("the lobby screen", () => {
+  it("R3730003 the host's settings are a control, and a guest reads them as text", async () => {
+    const hosting = serve([lobby()]);
+    show();
+    const control = await screen.findByTestId(lobbyTestid.settings, undefined, SLOW);
+    expect(control.tagName).toBe("SELECT");
+    fireEvent.change(control, { target: { value: "bo1" } });
+    await waitFor(() => {
+      expect(hosting.to("POST", `/api/lobbies/${CODE}/settings`)[0]?.body).toEqual({ mode: "bo1" });
+    }, SLOW);
+    cleanup();
+
+    const server = serve([lobby({ you: "guest" })]);
+    show();
+    const text = await screen.findByTestId(lobbyTestid.settings, undefined, SLOW);
+    expect(text.tagName).toBe("OUTPUT");
+    expect(text).toHaveTextContent("All random");
+    expect(screen.queryByTestId(lobbyTestid.start)).toBeNull();
+    expect(server.to("POST", `/api/lobbies/${CODE}/settings`)).toHaveLength(0);
+  });
+
+  it("R3730001 Ready sends the pick shown first when the server holds none, then Ready", async () => {
+    const server = serve([lobby()]);
+    show();
+    fireEvent.click(await screen.findByTestId(lobbyTestid.ready, undefined, SLOW));
+    await waitFor(() => {
+      expect(server.to("POST", `/api/lobbies/${CODE}/ready`)).toHaveLength(1);
+    }, SLOW);
+    const picks = server.to("POST", `/api/lobbies/${CODE}/pick`);
+    expect(picks).toHaveLength(1);
+    expect(picks[0]?.body).toMatchObject({ mode: "random" });
+    expect(server.to("POST", `/api/lobbies/${CODE}/ready`)[0]?.body).toEqual({ ready: true });
+    const order = server.calls.filter((call) => call.method === "POST").map((call) => call.path);
+    expect(order).toEqual([`/api/lobbies/${CODE}/pick`, `/api/lobbies/${CODE}/ready`]);
+  });
+
+  it("R2031000 R3730001 a random deck offers More cards from beside it, and the pick sent carries it", async () => {
+    const server = serve([lobby({ settings: { format: "coop", difficulty: "easy" }, yourPick: { mode: "random" } })]);
+    show();
+    const lean = await screen.findByTestId(lobbyTestid.lean, undefined, SLOW);
+    const pick = [...(lean as HTMLSelectElement).options].map((option) => option.value).find((value) => value === "newest");
+    expect(pick).toBe("newest");
+    fireEvent.change(lean, { target: { value: "newest" } });
+    await waitFor(() => {
+      expect(server.to("POST", `/api/lobbies/${CODE}/pick`)[0]?.body).toEqual({ random: true, leanSet: "newest" });
+    }, SLOW);
+  });
+
+  it("R767 R3730006 Copy link shares the lobby's own link", async () => {
+    serve([lobby()]);
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    show();
+    fireEvent.click(await screen.findByTestId(lobbyTestid.copyLink, undefined, SLOW));
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/lobby/${CODE}`);
+    }, SLOW);
+    Reflect.deleteProperty(navigator, "clipboard");
+  });
+
+  it("R3730002 the Start lights only when every seat is ready, and a started lobby counts down to its board", async () => {
+    serve([lobby({ seats: [seat({ state: "ready" }), seat({ role: "guest", player: BO, state: "chosen" })] })]);
+    show();
+    expect(await screen.findByTestId(lobbyTestid.start, undefined, SLOW)).toBeDisabled();
+    cleanup();
+
+    serve([lobby({ seats: [seat({ state: "ready" }), seat({ role: "guest", player: BO, state: "ready" })] })]);
+    show();
+    await waitFor(() => {
+      expect(screen.getByTestId(lobbyTestid.start)).toBeEnabled();
+    }, SLOW);
+    cleanup();
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const started = lobby({ you: "guest", startedAt: Date.now(), matchId: "m-1", seats: [seat({ state: "ready" }), seat({ role: "guest", player: BO, state: "ready" })] });
+    serve([started]);
+    show();
+    const countdown = await screen.findByTestId(lobbyTestid.countdown, undefined, SLOW);
+    expect(countdown).toHaveTextContent(String(LOBBY_START_COUNTDOWN_SECONDS));
+    expect(window.location.pathname).toBe(`/lobby/${CODE}`);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(LOBBY_START_COUNTDOWN_SECONDS * 1000 + 500);
+    });
+    expect(window.location.pathname).toBe("/match/m-1");
+  });
+
+  it("R3730000 the lobby reads itself again while the social socket is down", async () => {
+    const server = serve([lobby({ seats: [seat(), seat({ role: "guest", player: null })] }), lobby()]);
+    show();
+    expect(await screen.findByTestId(lobbyTestid.invite, undefined, SLOW)).toBeInTheDocument();
+    await waitFor(
+      () => {
+        expect(screen.queryByTestId(lobbyTestid.invite)).toBeNull();
+      },
+      { timeout: LOBBY_POLL_MS * 2 },
+    );
+    expect(server.to("GET", `/api/lobbies/${CODE}`).length).toBeGreaterThanOrEqual(2);
+    const seats = screen.getAllByTestId(lobbyTestid.seat);
+    expect(within(seats[1] ?? document.body).getByText("Bo#2")).toBeInTheDocument();
+  }, LOBBY_POLL_MS * 4);
+
+  it("R3730004 a closed lobby says so, and a member who reads it as a visitor was removed", async () => {
+    serve([{ status: 404, body: { error: { code: "not_found", message: "that lobby is not open" } } }]);
+    show();
+    expect(await screen.findByTestId(lobbyTestid.closed, undefined, SLOW)).toHaveTextContent("This lobby is closed.");
+    cleanup();
+
+    serve([lobby({ you: "guest" }), lobby({ you: null, seats: [seat(), seat({ role: "guest", player: null })] })]);
+    show();
+    fireEvent.click(await screen.findByTestId(lobbyTestid.leave, undefined, SLOW));
+    expect(await screen.findByTestId(lobbyTestid.removed, undefined, SLOW)).toHaveTextContent("You were removed from this lobby.");
+    expect(screen.getByTestId(lobbyTestid.enter)).toBeInTheDocument();
+  });
+
+  it("R3730006 with no lobby under the code, the classic room joins at once", async () => {
+    const server = serve([{ kind: "room", code: CODE, mode: "random", host: { profileId: "p-ana", username: "Ana#1" } }], (call) =>
+      call.method === "POST" && call.path === `/api/rooms/${CODE}/join`
+        ? { status: 200, body: { matchId: "m-7", seriesId: null, code: CODE, seat: "p2", mode: "random" } }
+        : undefined,
+    );
+    show();
+    const card = await screen.findByTestId(lobbyTestid.joinCard, undefined, SLOW);
+    expect(card).toHaveTextContent("Ana#1");
+    fireEvent.click(within(card).getByTestId(lobbyTestid.joinRoom));
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/match/m-7");
+    }, SLOW);
+    expect(server.to("POST", `/api/rooms/${CODE}/join`)[0]?.body).toMatchObject({ mode: "random" });
+  });
+});

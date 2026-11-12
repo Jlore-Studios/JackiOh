@@ -6,7 +6,7 @@
 // last one used (`challengeChoice.ts`); for All random, "More cards from" (R924000) on the device's online
 // pick (R2031000), shown once the engine is in (#778). Accept joins the room by its code, which accepts the
 // challenge (B49), in one press (R1831000). A screen holding unsaved work asks first (R1754000). A
-// refused join is shown in the server's words, with "Open in lobby", as a room link opens `/play` (R767).
+// refused join is shown in the server's words, with "Open in lobby", which opens the room's `/lobby/:code` (R3730006).
 //
 // AN OUTGOING CHALLENGE is followed: a challenge is a room, so the challenger's game starts when the
 // friend joins it, wherever the challenger is. While one is open (`follow.ts`), each read also asks
@@ -28,7 +28,7 @@ import { getDecks, getMe, joinRoom, type ModeChoice, type SavedDeck, type SavedT
 import { withSession } from "../net/gate.ts";
 import { liveGameOf, type LiveGame } from "../net/liveGame.ts";
 import { currentPath, leaveFirst, navigate, paths } from "../net/navigate.ts";
-import { roomLinkPath } from "../net/roomLink.ts";
+import { lobbyLinkPath } from "../net/roomLink.ts";
 import { declineChallenge, type Challenge } from "../net/social.ts";
 import { QueueFound } from "../routes/GameBanner.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
@@ -185,17 +185,11 @@ export function ChallengeToast(): ReactElement {
       });
   };
 
-  /** The way in when the toast cannot join: `/play` with the room's code and mode filled in (R767). */
+  /** The way in when the toast cannot join: the room's lobby screen, which joins it with a pick (R3730006). */
   const openInLobby = (challenge: Challenge): void => {
     setError(null);
     setRefusedId(null);
-    const target = roomLinkPath(challenge.roomCode, challenge.mode);
-    // `/play` reads a room link as it mounts (R767); a lobby already open reads it on a fresh load.
-    if (currentPath() === paths.play) {
-      setAnswered((ids) => including(ids, challenge.challengeId));
-      window.location.assign(target);
-      return;
-    }
+    const target = lobbyLinkPath(challenge.roomCode);
     // R1754000: a page holding unsaved work may hold the move; until the player goes, the toast stays to be accepted again.
     if (navigate(target)) setAnswered((ids) => including(ids, challenge.challengeId));
   };
@@ -308,7 +302,7 @@ export function ChallengeToast(): ReactElement {
                   <button
                     type="button"
                     data-testid={challengeToastTestid.lobby}
-                    data-route={roomLinkPath(challenge.roomCode, challenge.mode)}
+                    data-route={lobbyLinkPath(challenge.roomCode)}
                     disabled={busy}
                     onClick={() => {
                       openInLobby(challenge);
