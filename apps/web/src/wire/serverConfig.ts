@@ -134,6 +134,7 @@ export const REPLAY_LIST_PAGE = 10;
 export const REPLAY_REQUESTS_PER_MINUTE = 60;
 export const ROOM_CODE_FORMAT = {"alphabet":"23456789ABCDEFGHJKLMNPQRSTUVWXYZ","groupSize":6,"length":6,"maxInputLength":64,"separator":"-"};
 export const ROOM_CODE_LENGTH = 6;
+export const SEAT_TAKEN_CLOSE_CODE = 4412;
 export const SERIES_MAX_GAMES = 7;
 export const SERIES_PICK_SECONDS = 60;
 export const SERIES_POLL_SECONDS = 2;

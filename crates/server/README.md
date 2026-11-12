@@ -296,7 +296,9 @@ so no log it folds names a custom card; a practice claim whose deck names a cust
 
 ## WebSocket surface
 
-One socket per player per match, at `/ws/match` on the same port. The token comes from an offered
+One socket per player per match, at `/ws/match` on the same port. A second socket of the same account
+takes the seat and the first is closed with `SEAT_TAKEN_CLOSE_CODE` (4412, R3767000), which no client
+reconnects on; a watcher's replacement stays 1000. The token comes from an offered
 `jackioh.bearer.` subprotocol, its UTF-8 in base64url without padding (R1379000; `?token=` only when
 none is offered, for the previous day's client); only `jackioh.v1` is echoed, and `/ws/duos`,
 `/ws/watch` and `/ws/social` read the token the same way. The message union is `actor/protocol.rs`:

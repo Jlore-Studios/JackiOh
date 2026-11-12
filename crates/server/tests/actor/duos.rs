@@ -3433,6 +3433,7 @@ mod seat_states_3678 {
     use super::*;
     use crate::support::socket::{FakeSocket, create_fake_socket};
     use jackioh_server::actor::ws_server::{CLOSE_GOING_AWAY, CLOSE_NORMAL};
+    use jackioh_server::config::{SEAT_TAKEN_CLOSE_CODE, SEAT_TAKEN_CLOSE_REASON};
 
     const HELLO: &str = r#"{"type":"hello"}"#;
 
@@ -3465,9 +3466,11 @@ mod seat_states_3678 {
         assert_eq!(views(&late), 0);
     }
 
-    /// S12: a second socket for one seat takes it; the first is closed with 1000.
+    /// S12, R3767000: a second socket for one seat takes it; the first is closed with
+    /// `SEAT_TAKEN_CLOSE_CODE`, which its client does not reconnect on, and no grace starts: the seat was
+    /// never empty (R744).
     #[tokio::test(start_paused = true)]
-    async fn a_second_socket_for_one_duos_seat_replaces_the_first_with_a_normal_close() {
+    async fn r3767000_a_second_socket_for_one_duos_seat_replaces_the_first_with_seat_taken() {
         let h = duos("easy").await;
         let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
         let first = create_fake_socket();
@@ -3477,10 +3480,18 @@ mod seat_states_3678 {
         actor.attach(DuosSeat::A1, second.socket());
         quiet(&actor).await;
 
-        assert_eq!(first.close_code(), Some(CLOSE_NORMAL));
+        assert_eq!(first.close_code(), Some(SEAT_TAKEN_CLOSE_CODE));
+        assert_eq!(first.close_reason().as_deref(), Some(SEAT_TAKEN_CLOSE_REASON));
+        assert_eq!(second.close_code(), None);
         assert!(second.is_open());
         assert_eq!(views(&second), 1);
         assert_eq!(actor.presence(), [true, false]);
+        for clock in second.of_type("clock") {
+            assert!(
+                clock["graceDeadlines"]["a1"].is_null(),
+                "no grace starts: {clock}"
+            );
+        }
     }
 
     /// S7: a Hello queued as its socket drops runs on an empty seat and greets no one; the next
