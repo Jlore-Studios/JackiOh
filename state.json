@@ -36824,7 +36824,8 @@
       "2026-11-12T04:58:22Z,claude-6,ping,before,43157928935,54,2026-11-12T05:40:00Z,,,allowed,50,,"
     ],
     "runs": [
-      "2026-11-12T04:46:30Z,43156779926,claude-4,sonnet+opus,review,3752,medium,interrupted,5-hour cap,0,0,0,0,,93,93,,,2.6,,none,,0"
+      "2026-11-12T04:46:30Z,43156779926,claude-4,sonnet+opus,review,3752,medium,interrupted,5-hour cap,0,0,0,0,,93,93,,,2.6,,none,,0",
+      "2026-11-12T04:58:22Z,43157928935,claude-6,opus+sonnet,review,3752,medium,interrupted,5-hour cap,0,0,0,0,,54,54,,,0.3,claude-4,none,,0"
     ]
   },
   "version": 1
