@@ -16320,10 +16320,16 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-12T20:18:21Z",
       "owner_why": "it plans it",
+      "paused": {
+        "at": "2026-11-12T21:10:35Z",
+        "interrupt": "usage",
+        "provider": "claude-1"
+      },
       "pending_request": false,
       "planned_at": "2026-11-12T20:29:19Z",
       "planned_by": "`claude-1` (claude, `sonnet`, medium)",
@@ -16331,11 +16337,13 @@
       "planned_model": "sonnet",
       "planned_tier": "medium",
       "provider": "claude-1",
+      "round_tier": "medium",
       "run_id": "43301163399",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-12T20:31:28Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "3803": {
       "action": "build",
