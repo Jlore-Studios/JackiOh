@@ -36085,7 +36085,9 @@
           "provider": "claude-4"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-12T00:19:54Z",
         "every": 5,
+        "findings": 0,
         "head": "3f9355d1efe2b7ba3192782f71bbb7714dc9be3d",
         "issue": 3701,
         "last_why": "interrupted: `claude-5` stops mid-call: 5-hour usage is 41%, at or over its 40% cap; it resets at 2026-11-12T02:00:00Z",
@@ -36099,12 +36101,13 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "pending:4936271b-1794442351",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/43125630332",
         "sha": "a488aab6e05e58316fd5f8f024db8c0ddcf2aed9",
         "started_at": "2026-11-12T00:12:51Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the effects tests share one cue-end helper and one planning setup in place of 59 local copies",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 217
