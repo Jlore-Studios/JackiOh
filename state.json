@@ -14959,17 +14959,8 @@
       ]
     },
     "3768": {
-      "action": "plan",
-      "asks": [
-        "c:6825503036"
-      ],
-      "build_next": {
-        "from_run": "43232911251",
-        "model": "sonnet",
-        "provider": "claude-6",
-        "since": "2026-11-12T14:17:07Z",
-        "until": "2026-11-12T14:47:07Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-12T14:16:50Z",
         "difficulty": "medium",
@@ -14988,10 +14979,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"cd apps/web/src/game && cat ActivateControl.tsx TradeControl.tsx && sed -n 860,1030p actions.ts && ls /home/runner/work/_temp/work/item-3768/.bot-plan.md\"}\n- tool error: Exit code 2 // Activate control (B3.2, SPEC \u00a76.2, R384; presentation R510, R1751000). // It renders view data only (CLAUDE.md rule 7): `highlight.legal` decides a press, while `usable` // and `reason\u2026\n- Bash: {\"command\": \"cat spec/rulings/R0510.md; sed -n 270,290p spec/10-engine-guide.md; ls spec/pending | head; ls spec/rulings | grep -E 'R37[0-9]{2}' | head; cat spec/pending/*.md 2>/dev/null | head -20\"}\n- Bash: {\"command\": \"cd apps/web/src/game && sed -n 125,260p ActivateControl.tsx; echo ======; cat TradeControl.tsx; echo =====; sed -n 870,905p actions.ts; grep -n \\\"notice\\\" Game.tsx | head -40\"}\n- Bash: {\"command\": \"sed -n 275,285p spec/10-engine-guide.md | cut -c1-1500; ls spec/rulings | grep -E 'R37(6|7)[0-9]' ; ls spec/rulings | grep -E '^R3768'; cat spec/pending/3728.md | head -3 | cut -c1-200; \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3768 && grep -n \\\"Trade\\\" spec/10-engine-guide.md | cut -c1-900 | head; ls spec/rulings | grep -E '^R37[0-9]{2}' ; ls spec/rulings | grep -E '^R376';\u2026\n- Bash: {\"command\": \"grep -n -i -B2 -A25 \\\"Adding a ruling\\\" spec/README.md | head -80; sed -n 130,185p apps/web/src/game/ActivateControl.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3768/apps/web/src && grep -n \\\"activationsOnField\\\\|function activationsFor\\\\|isLaunchedStarship\\\" game/*.ts game/*.tsx | head -20; grep -rn \\\"Activa\u2026\n- Bash: {\"command\": \"sed -n 190,310p game/actions.ts; sed -n 120,200p duos/CardActions.tsx; grep -n \\\"onTrade\\\\|TradeBar\\\" game/Game.tsx | head -20\"}\n- Bash: {\"command\": \"ls game | grep -i -E \\\"trade|Game.*test|actions.test|activate\\\"; grep -rn \\\"trade\\\" --include=*.test.tsx -il . | head; grep -n \\\"attack-reason\\\\|attackReason\\\" game/*.test.tsx | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3768/apps/web/src/game && cat TradeControl.test.tsx | head -150; sed -n 1,110p sick.test.tsx; grep -n \\\"startActivation\\\\|\\\\\\\"activate\\\\\\\"\\\" actions.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3768/apps/web/src && grep -rn \\\"CardActions\\\\b\\\" --include=*.tsx duos | grep -v test | head; grep -n \\\"tradeBar\\\\|onTrade\\\\|notice\\\" duos/*.tsx game/\u2026\n- Bash: {\"command\": \"grep -rn \\\"sr-only\\\\|visually-hidden\\\\|\\\\.vh\\\\b\\\" --include=*.css . | head -5; grep -n \\\"useId\\\" -r game/*.tsx | head -3; cat game/trade.css | head -40; grep -n \\\"Trade\\\" i18n/*.ts | hea\u2026\n- Bash: {\"command\": \"sed -n 40,60p game/trade.css; grep -n \\\"duos-pass\\\" -A8 duos/duos.css | grep -n \\\"disabled\\\" ; sed -n 470,485p duos/duos.css; grep -n \\\"aria-disabled\\\" game/activate.css; grep -n \\\"disab\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3768/apps/web/src/game && sed -n 60,128p ActivateControl.test.tsx; grep -n \\\"<Game\\\" ActivateControl.test.tsx | head -5; grep -n \\\"describe(\\\" action\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3768 && grep -rn \\\"reason\\\" crates/engine/src/view/*.rs 2>/dev/null | grep -i \\\"activ\\\" | head -8; sed -n 162,220p apps/web/src/game/actions.test.ts \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3768 && grep -rn \\\"ActivationView {\\\" -A12 crates/engine/src | head -30; grep -rn \\\"ActivationView {\\\" crates/engine/src | head; grep -n \\\"activate\\\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3768/apps/web/src && grep -rn \\\"NOT_NOW\\\" . | grep -v \\\"^./game/ActivateControl.tsx\\\"; sed -n 1,40p game/actions.ts | grep -n import; grep -n \\\"R1751\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3768/apps/web/src/game && sed -n 160,215p actions.test.ts; sed -n 30,45p actions.ts; grep -n \\\"^import\\\\|NO_HIGHLIGHT\\\" contract.ts | head -5\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3768 && ls spec | head -30; grep -ln \\\"The Trade control (\\\\[\\\\[R1838000\\\" spec/*.md spec/rulings/*.md | head; cat spec/pending/3693.md | head -c 300\u2026\n- Bash: {\"command\": \"grep -rn \\\"testid.trade(\\\\|data-legal.*false\\\" apps/web/src --include=*.test.tsx | grep -i \\\"trade\\\" | head; grep -rln \\\"greyed Activate\\\\|Activate control.*grey\\\\|tooltip.*reason\\\" apps\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3768/apps/web/src && sed -n 198,210p game/activate.test.ts; grep -n \\\"Trade\\\\|tooltip\\\" ../README.md | head -8\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3768/.bot-plan.md\", \"content\": \"Draft (planner): files = ActivateControl.tsx, actions.ts, contract.ts (NOT_NOW), TradeControl.tsx, trade.css, Game.tsx\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Presentation-only change in apps/web (about 10 files, one ruling); it touches no engine, AI, migration or cross-crate contract, so none of the five hard lines holds.\"} --> ## Goal A greyed Activate button (on a unit or face-up backrow card) and a greyed Tr\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-12T14:01:14Z",
       "owner_why": "it plans it",
@@ -15004,12 +14994,14 @@
       "provider": "claude-6",
       "queued_at": "2026-11-12T13:54:00Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43232911251",
+      "run_id": "pending:f7f36240-1794493240",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-12T14:01:14Z",
+      "started_at": "2026-11-12T14:21:35Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6825503036"
+      ]
     },
     "3770": {
       "action": "plan",
@@ -15302,9 +15294,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T14:20:23Z",
+    "at": "2026-11-12T14:21:35Z",
     "url": "",
-    "what": "build #3767 on claude-4"
+    "what": "build #3768 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-12T13:56:57Z",
