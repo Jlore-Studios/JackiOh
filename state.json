@@ -14693,11 +14693,6 @@
       "kind": "revise",
       "last_findings": [],
       "live": "revising",
-      "paused": {
-        "at": "2026-11-12T16:18:37Z",
-        "interrupt": "usage",
-        "provider": "claude-3"
-      },
       "pending_request": false,
       "provider": "claude-3",
       "question": "Should #3761 merge with acceptance item 4 (more casts in the sweep) waived, with the Battleship's dormant layers taken up separately? Or should that second cause be fixed first?",
