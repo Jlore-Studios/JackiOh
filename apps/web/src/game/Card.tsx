@@ -53,6 +53,7 @@ import { BRITTLE_LAST_COLOR, TEMPORARY_LAST_COLOR, marksOf } from "../cards/mark
 import ActivateControls from "./ActivateControl.tsx";
 import { AttackTakenPreview, AttackTargetPreview } from "./AttackOutcome.tsx";
 import { outcomeFor } from "./attackOutcome.ts";
+import { sameHighlightAt } from "./cardHighlight.ts";
 import FieldBadges from "./FieldBadges.tsx";
 import { usePhonePortrait } from "./phoneBar.ts";
 import { useCardInfo, useCopiedDef, useFieldPower, useTallies } from "./catalog.ts";
@@ -677,7 +678,8 @@ function sameElement(a: ReactNode, b: ReactNode): boolean {
  * #3633: whether a card would draw what it drew. Every prop is the same object as before, but for the
  * `animating` map, of which only `cardAnimatingKeys` count, and the inline data and hint row a parent
  * builds anew on every render, which count by what they hold. Without it every queue step drew every
- * card on the board again, the slowest work of a throttled phone's frame (R3351000).
+ * card on the board again, the slowest work of a throttled phone's frame (R3351000). #3609: `highlight`
+ * counts by the card's own slice of it (cardHighlight.ts).
  */
 export function sameCardProps(prev: Readonly<CardProps>, next: Readonly<CardProps>): boolean {
   const keys = new Set([...Object.keys(prev), ...Object.keys(next)] as (keyof CardProps)[]);
@@ -691,6 +693,9 @@ export function sameCardProps(prev: Readonly<CardProps>, next: Readonly<CardProp
         continue;
       case "hintRow":
         if (!sameElement(prev.hintRow, next.hintRow)) return false;
+        continue;
+      case "highlight":
+        if (!sameHighlightAt(prev.highlight, next.highlight, { testId: next.testId, instanceId: (next.unit ?? next.card)?.instanceId })) return false;
         continue;
       case "target":
       case "pops":

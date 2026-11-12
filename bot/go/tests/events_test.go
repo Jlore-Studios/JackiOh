@@ -719,7 +719,7 @@ func TestEvents_WhichSubscriptionsAreRunningNow(t *testing.T) {
 	text := status.Report(ctx)
 	runs := "https://github.com/jgoetzmann/JackiOh/actions/runs"
 	assertIn(t, strings.Join([]string{
-		"- **Running now** (1 of 8 lanes on GitHub's runners, 7 free; 2 of " +
+		"- **Running now** (1 of 16 lanes on GitHub's runners, 15 free; 2 of " +
 			fmt.Sprint(ctx.Cfg.Pool.MachineParallel) + " on the night box):",
 		"  - `claude-1` (claude, `opus`): building #37, for 47m, [run](" + runs + "/101).",
 		"  - `muse` (muse, `muse-spark-1.3-contributor`): revising #49, for 2h 03m, " +
@@ -738,6 +738,6 @@ func TestEvents_WhichSubscriptionsAreRunningNow(t *testing.T) {
 
 func TestEvents_NothingRunning(t *testing.T) {
 	text := status.Report(testsupport.MakeCtx(fakes.NewFakeGitHub(), testsupport.Ctx{At: testsupport.Night}))
-	assertIn(t, "- Running now: nothing (8 of 8 lanes free on GitHub's runners, 6 on the "+
+	assertIn(t, "- Running now: nothing (16 of 16 lanes free on GitHub's runners, 6 on the "+
 		"night box).", text)
 }

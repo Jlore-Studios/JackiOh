@@ -812,8 +812,11 @@ once its secret is in `providers.SecretNames` and the workflow's `HARNESS_SECRET
   moved to the $50 plan (its last reading, from the $15 plan, said 100% of the week).
 
 At the top level, `max_parallel` is how many run at once on GitHub's runners, planning runs
-included (8: the organization runs 20 hosted jobs at once, so CI keeps 12; #1455). It is one pool
-the two bots share, first come first served: Squishy's `providers.json` names the same 8, and each
+included (16, #3740: the organization runs 60 hosted jobs at once on GitHub's Team plan since
+2026-11-11, split as 2 for the status loop and the bots' short jobs, 12 for the training lanes, up
+to 24 for these runs once 16 shows the bot's token keeps its REST calls, and the rest, 22 or more,
+for CI; it was 8 of the Free plan's 20, #1455). It is one pool
+the two bots share, first come first served: Squishy's `providers.json` names the same number, and each
 bot counts the other's live runs against it (`plan.OthersOnGithub`, by the workflow its identity
 names), so a free slot goes to whichever bot asks first. `machine_parallel` how
 many run at once on the bot's machine (6; its two vCPUs run each job's checks; GitHub's runners have
@@ -1289,8 +1292,9 @@ twenty minutes on and mostly spent waiting for runners. The harness does not wai
 
 ### The runner gate
 
-GitHub's free plan runs 20 hosted jobs at once for the whole organization, and the bots' own runs
-hold several of them. Every CI run asks for all of its jobs as soon as it can, so when many go at
+GitHub runs a fixed number of hosted jobs at once for the whole organization (60 on the Team plan
+since 2026-11-11, #3740; the Free plan's 20 before), and the bots' own runs hold many of them.
+Every CI run asks for all of its jobs as soon as it can, so when many go at
 once each waits behind all the others at every stage (its scope, its builds, its tests, its
 summary) and none finishes soon: on 2026-11-05 merge-queue builds took 40 to 137 minutes, nearly all
 of it waiting. So a pull request's CI and a merge-queue build wait before they start, holding no

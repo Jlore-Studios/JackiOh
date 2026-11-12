@@ -892,3 +892,104 @@ fn i9_a_glitch_reset_starts_the_fatigue_count_again() {
     assert_eq!(found.len(), 1, "{found:?}");
     assert!(found[0].starts_with("I9 silent fatigue"), "{}", found[0]);
 }
+
+// I16: a card's own record agrees with the pile that holds it (§3.2, R78, R766)
+fn i16(state: &GameState) -> Vec<String> {
+    invariant("I16", create_invariant_monitor(state).after(&[], state))
+}
+
+/// The one finding, naming `id` and citing each of `cites`.
+fn only(found: &[String], id: &str, cites: &[&str]) {
+    assert_eq!(found.len(), 1, "{found:?}");
+    for want in std::iter::once(id).chain(cites.iter().copied()) {
+        assert!(found[0].contains(want), "{}", found[0]);
+    }
+}
+
+#[test]
+fn i16_a_game_with_cards_in_every_pile_and_on_both_boards_is_clean() {
+    let mut state = playing("i16-clean");
+    put(&mut state, "fx-1", slot(P1, Row::Units, 1), json!({}));
+    put(&mut state, "fx-21", slot(P2, Row::Units, 2), json!({}));
+    let dead = new_instance(&mut state, "fx-2", P1, Zone::Graveyard { player: P1 });
+    state.players[P1].graveyard.push(dead);
+    let gone = new_instance(&mut state, "fx-22", P2, Zone::Exile { player: P2 });
+    state.players[P2].exile.push(gone);
+    assert_eq!(i16(&state), Vec::<String>::new());
+}
+
+#[test]
+fn i16_a_hand_card_whose_zone_says_graveyard_is_one_zone_drift() {
+    let mut state = playing("i16-zone");
+    state.players[P1].hand[0].zone = Zone::Graveyard { player: P1 };
+    let id = state.players[P1].hand[0].id.clone();
+    only(&i16(&state), &id, &["zone drift", "p1's hand", "§3.2"]);
+}
+
+#[test]
+fn i16_a_field_card_controlled_from_the_other_seat_is_one_controller_drift() {
+    let mut state = playing("i16-controller");
+    let unit = put(&mut state, "fx-1", slot(P1, Row::Units, 1), json!({}));
+    find_instance_mut(&mut state, &unit.id)
+        .expect("the unit")
+        .controller = P2;
+    only(&i16(&state), &unit.id, &["controller drift", "§3.2"]);
+}
+
+#[test]
+fn i16_a_graveyard_card_with_two_damage_is_one_field_state_leftover() {
+    let mut state = playing("i16-damage");
+    let mut dead = new_instance(&mut state, "fx-2", P1, Zone::Graveyard { player: P1 });
+    dead.damage = 2;
+    let id = dead.id.clone();
+    state.players[P1].graveyard.push(dead);
+    only(&i16(&state), &id, &["R78", "damage", "p1's graveyard"]);
+}
+
+#[test]
+fn i16_a_graveyard_card_with_a_cost_mod_of_minus_one_is_one_kept_price() {
+    let mut state = playing("i16-price");
+    let mut dead = new_instance(&mut state, "fx-2", P1, Zone::Graveyard { player: P1 });
+    dead.cost_mod = -1;
+    let id = dead.id.clone();
+    state.players[P1].graveyard.push(dead);
+    only(&i16(&state), &id, &["R766", "costMod"]);
+}
+
+#[test]
+fn i16_a_hand_card_holding_buffs_and_a_cost_mod_is_clean_but_not_one_holding_position() {
+    let mut state = playing("i16-hand");
+    // A Buff lands on a hand card and rides it onto the field (B5 E38); a price change stays there (R386).
+    state.players[P1].hand[0].buffs = AttackHealth { attack: 2, health: 1 };
+    state.players[P1].hand[0].cost_mod = -1;
+    assert_eq!(i16(&state), Vec::<String>::new());
+    state.players[P1].hand[1].position = Some(Position::Atk);
+    let id = state.players[P1].hand[1].id.clone();
+    only(&i16(&state), &id, &["R78", "position"]);
+}
+
+#[test]
+fn i16_a_hand_or_library_copy_may_carry_stats_and_armor_overrides_but_a_graveyard_card_may_not() {
+    let mut state = playing("i16-overrides");
+    // A copy carries its source's overrides into a hand or a library (R57, R1242, R2198001).
+    let overrides = |card: &mut CardInstance| {
+        card.stats_override = Some(AttackHealth { attack: 7, health: 7 });
+        card.armor_override = Some(3);
+    };
+    overrides(&mut state.players[P1].hand[0]);
+    overrides(&mut state.players[P2].library[0]);
+    assert_eq!(i16(&state), Vec::<String>::new());
+    let mut dead = new_instance(&mut state, "fx-2", P1, Zone::Graveyard { player: P1 });
+    dead.stats_override = Some(AttackHealth { attack: 7, health: 7 });
+    let id = dead.id.clone();
+    state.players[P1].graveyard.push(dead);
+    only(&i16(&state), &id, &["R78", "statsOverride"]);
+}
+
+#[test]
+fn i16_a_library_card_owned_by_the_other_seat_is_one_owner_drift() {
+    let mut state = playing("i16-owner");
+    state.players[P1].library[0].owner = P2;
+    let id = state.players[P1].library[0].id.clone();
+    only(&i16(&state), &id, &["owner drift", "R747"]);
+}
