@@ -15386,6 +15386,8 @@
       "taken_asks": []
     },
     "3779": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-12T12:48:44Z",
@@ -15399,8 +15401,11 @@
         "trail": "t > /tmp/e2e_preview.log 2>&1\", \"description\": \"Serve the built e2e client on po\u2026\n- Bash: {\"command\": \"for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:8787/api/catalog && curl -sf -o /dev/null http://localhost:5173/ && break; sleep 2; done; curl -s -o /dev/null -w \\\"server\u2026\n- tool error: Permission to use Bash with command for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:8787/api/catalog && curl -sf -o /dev/null http://localhost:5173/ && break; sleep 2; done; curl -s -\u2026\n- Bash: {\"command\": \"tail -3 /tmp/e2e_server.log | cut -c1-250; tail -5 /tmp/e2e_preview.log\", \"description\": \"Read the server and preview logs\"}\n- said: Both are up (server on 8787 in e2e mode, client on 5173). Running the two changed smoke specs first, 06 and 19, plus the new 52.\n- Bash: {\"command\": \"timeout 1700 pnpm exec cypress run --browser chrome --spec cypress/e2e/06-room-code.cy.ts,cypress/e2e/19-queue-modes-and-series.cy.ts,cypress/e2e/52-private-lobby.cy.ts > /tmp/cy_e2e1.lo\u2026\n- said: 06, 19 and 52 pass (7/7). Next: co-op 41 and the menu smoke specs 46, 47 and 51, which measure `/play` and `/together` at every device size.\n- Bash: {\"command\": \"echo \\\"- run 5: e2e 06, 19, 52 green against a local E2E server + build:e2e preview.\\\" >> /home/runner/work/_temp/work/item-3730/.bot-notes.md; timeout 2400 pnpm exec cypress run --brows\u2026\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/cy_e2e2.log | grep -E \\\"Running:|\\u2713|[0-9]+\\\\) |passing|failing\\\" | tail -15\", \"description\": \"Check the e2e run's progress\"}\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/cy_e2e2.log | grep -E \\\"Running:|passing|failing|^\\\\s+[0-9]+\\\\) \\\" | head -20\", \"description\": \"Summarize the e2e specs so far\"}\n- said: 41 (co-op lobby to the board) and 46 (189 menu checks) pass; 47 is running.\n- Bash: {\"command\": \"until grep -q \\\"All specs passed\\\\|failed (\\\" /tmp/cy_e2e2.log; do sleep 10; done; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/cy_e2e2.log | grep -E \\\"\\u2716|\\u2714|AssertionError\\\" | tail -8\", \"de\u2026\n- said: Meanwhile, running the harness's `cargo jackioh` checks (spec, catalog, patches) on the built tools.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3730 && cargo jackioh spec check 2>&1 | tail -3; cargo jackioh catalog check 2>&1 | tail -1; cargo jackioh patches check 2>&1 | tail -1\", \"descriptio\u2026\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/cy_e2e2.log | grep -E \\\"\\u2716|\\u2714|AssertionError|^exit\\\" | tail -8; tail -2 /tmp/claude-1001/-home-runner-work--temp-work-item-3730/5f978abb-375d-471\u2026\n- said: All four pass: 41, 46 (189), 47 (192) and 51 (21), 403 tests in all. The `cargo jackioh` checks are green too. Left: clippy, classify, and confirming the generated wire files are unchanged.\n- Bash: {\"command\": \"echo \\\"- run 5: e2e 41, 46, 47, 51 green (403 tests); spec/catalog/patches check ok. Next: clippy, classify, wire diff.\\\" >> .bot-notes.md; git status --porcelain -- apps/web/src/wire; g\u2026\n- Bash: {\"command\": \"cargo clippy --workspace --all-targets -- -D warnings > /tmp/clippy.log 2>&1; echo \\\"exit $?\\\" >> /tmp/clippy.log; grep -E \\\"^(error|warning)\\\" /tmp/clippy.log | head -10; tail -2 /tmp/c\u2026\n- TaskStop: {\"task_id\": \"bl5yq9de0\"}\n- TaskStop: {\"task_id\": \"bq1g3t1at\"}\n- said: Clippy is running. Meanwhile, re-running the stylesheet ratchet tests for this run's CSS edit, plus the play and lobby tests.\n- Bash: {\"command\": \"pnpm --dir apps/web exec vitest run src/spacing.test.ts src/palette.test.ts src/surfaces.test.ts src/typescale.test.ts src/routes/play.test.tsx src/lobby src/writing.test.ts 2>&1 | grep \u2026\n- Bash: {\"command\": \"grep -n -i \\\"decid\\\\|decision\\\\|departure\\\\|instead of\\\\|rejected\\\" .bot-journal.md | grep -v \\\"^1[0-5][0-9]:\\\\|Rejected:\\\" | head -20\", \"description\": \"Find recorded decisions in the jo\u2026\n- Bash: {\"command\": \"git diff origin/main --stat -- e2e/cypress/e2e/99-online-smoke.cy.ts; git diff origin/main -- e2e/cypress/e2e/99-online-smoke.cy.ts | grep \\\"^[-+]\\\" | grep -v \\\"^+++\\\\|^---\\\" | head -40\"\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('Left (run 5')\\nj=s.index('## Log')\\ns=s[:i]+'''Run 5 (fresh machine) re-verified everything: server suite, SQL suite, d\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\" /tmp/clippy.log; do sleep 10; done; grep -E \\\"^(error|warning)\\\" /tmp/clippy.log | head -10; tail -2 /tmp/clippy.log\", \"description\": \"Wait for clippy and show i\u2026\n- said: Clippy is clean across the workspace. Last: classify with its fragment claims, as CI's `rust (classify)` runs it.\n- Bash: {\"command\": \"cargo jackioh classify --base origin/main --claims > /tmp/classify.log 2>&1; echo \\\"exit $?\\\"; grep -v \\\"Compiling\\\\|Finished\\\\|Running\\\" /tmp/classify.log | tail -12\", \"description\": \"C\u2026\n- Bash: {\"command\": \"grep -n \\\"stylelint\\\" package.json apps/web/package.json | head -3; git status --short | head -20; echo \\\"- run 5: clippy (workspace, -D warnings) clean; classify --claims exit 0 (App). \u2026\n- Bash: {\"command\": \"grep -n \\\"E2E_WINDOW_SIZE\\\\|lobby-screen\\\" e2e/README.md | head\", \"description\": \"See what the e2e README says about the window size and the lobby spec\"}\n- Bash: {\"command\": \"sed -n 104,114p e2e/README.md; sed -n 145,150p e2e/README.md\", \"description\": \"Read the README's window-size and lobby lines\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='e2e/README.md'\\ns=open(p).read()\\nold='''E2E_WINDOW_SIZE=1600,1200 pnpm exec cypress run --browser chrome --spec cypress/e2e/25-overflow-animations.cy.ts --expose s\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='e2e/README.md'\\ns=open(p).read()\\ns=s.replace('''The component block takes the same variable, so the lobby's shots (#3730) come out whole up to 1440x900 and\\n820x11\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a private lobby screen for 1v1 rooms and co-op rooms: seats, invites, each player's deck and Ready, and the host's Start\"} --> ## What changed Friend games now start in one private lobby at `/lobby/:code`, for 1v1 (Best of 1, Conquest, All Random) and c\u2026"
       },
       "issue": 3730,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-12T15:13:47Z",
         "from_run": "43221348817",
         "gates": [
           {
@@ -15492,7 +15497,11 @@
         "source": "build",
         "until": "2026-11-12T15:32:18Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-12T15:02:18Z",
+      "run_id": "pending:b90f72d2-1794496373",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15511,6 +15520,9 @@
         "provider": "claude-3",
         "run": "43221348817"
       },
+      "started_at": "2026-11-12T15:13:47Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15660,9 +15672,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T14:49:43Z",
+    "at": "2026-11-12T15:13:47Z",
     "url": "",
-    "what": "plan #3777 on claude-3"
+    "what": "review #3779 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-12T14:46:18Z",
