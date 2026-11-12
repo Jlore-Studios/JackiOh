@@ -17689,8 +17689,15 @@
     "what": "plan #3734 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-12T08:47:26Z",
-    "notes": [],
+    "at": "2026-11-12T08:54:36Z",
+    "notes": [
+      "#3730 needs a plan",
+      "#3734 needs a plan",
+      "started plan #3730 on claude-8 (run 43187070682)",
+      "started plan #3734 on claude-7 (run 43187178724)",
+      "nothing more to start: nothing is queued",
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for room"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -18393,7 +18400,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-12T08:47:26Z",
+  "loop_tick": "2026-11-12T08:54:36Z",
   "machine_disk": {
     "issue": null,
     "reading": {
