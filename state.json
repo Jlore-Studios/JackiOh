@@ -30915,10 +30915,6 @@
       "refused_until": "2026-11-12T11:30:00Z",
       "spent": [
         {
-          "at": "2026-11-05T05:35:13Z",
-          "minutes": 0.8
-        },
-        {
           "at": "2026-11-05T05:49:47Z",
           "minutes": 3.7
         },
@@ -31713,16 +31709,13 @@
         {
           "at": "2026-11-12T21:46:24Z",
           "minutes": 1.4
+        },
+        {
+          "at": "2026-11-12T22:26:41Z",
+          "minutes": 3.8
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-04T09:24:45Z",
-          "cache": 19578030,
-          "cost": 18.7341,
-          "input": 191,
-          "output": 125848
-        },
         {
           "at": "2026-11-04T09:40:40Z",
           "cache": 2790229,
@@ -33115,14 +33108,21 @@
           "cost": 0.4037,
           "input": 27,
           "output": 11084
+        },
+        {
+          "at": "2026-11-12T22:26:41Z",
+          "cache": 193856,
+          "cost": 0.9438,
+          "input": 4,
+          "output": 1067
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-13T02:30:00Z",
-          "utilization": 0.01
+          "resets_at": "2026-11-12T21:30:00Z",
+          "utilization": 0.86
         },
-        "observed_at": "2026-11-12T21:46:24Z",
+        "observed_at": "2026-11-12T22:26:41Z",
         "status": "allowed"
       }
     },
@@ -36459,7 +36459,9 @@
       "2026-11-12T21:56:37Z,claude-3,stream,call,43273817457,97,2026-11-12T22:50:00Z,,,allowed_warning,,,",
       "2026-11-12T21:57:07Z,claude-3,stream,call,43273817457,98,2026-11-12T22:50:00Z,,,allowed_warning,,,",
       "2026-11-12T21:57:22Z,claude-3,stream,call,43273817457,99,2026-11-12T22:50:00Z,,,allowed_warning,,,",
-      "2026-11-12T21:57:44Z,claude-3,refusal,call,43273817457,100,2026-11-12T22:50:00Z,,,rejected,,,2026-11-12T22:50:00Z"
+      "2026-11-12T21:57:44Z,claude-3,refusal,call,43273817457,100,2026-11-12T22:50:00Z,,,rejected,,,2026-11-12T22:50:00Z",
+      "2026-11-12T21:16:12Z,claude-8,ping,before,43308151761,85,2026-11-12T21:30:00Z,,,allowed,100,,",
+      "2026-11-12T21:20:22Z,claude-8,stream,call,43308151761,86,2026-11-12T21:30:00Z,,,allowed,100,,"
     ],
     "runs": [
       "2026-11-12T22:06:06Z,43314507227,claude-3,opus,plan,3793,hard,interrupted,refusal,0,0,0,0,,100,100,,,44.7,claude-7,fresh,other,1",
