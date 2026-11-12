@@ -281,3 +281,18 @@ fn the_again_calls_are_the_books_functions() {
         call(json!({ "call": "againRelease", "book": seen["book"], "matchId": "m1", "creating": creating }));
     assert_eq!(released["answer"], "againBook");
 }
+
+/// R1398000: a sweep keeps a stale offer whose match a host still runs, and drops one no host holds.
+#[test]
+fn r1398000_a_sweep_keeps_what_a_live_host_holds() {
+    let book = serde_json::to_value(jackioh_shared::host::rematch::RematchBook::default()).expect("book");
+    let offered = call(json!({
+        "call": "offer", "book": book, "matchId": "m1", "finishedAt": NOW, "seat": "p1", "stakes": 1,
+        "lean": Value::Null, "now": NOW + 1, "newMatchId": "g1",
+    }));
+    let later = NOW + 2 * jackioh_shared::config::REMATCH_OFFER_TTL_MS;
+    let kept = call(json!({ "call": "sweep", "book": offered["book"], "now": later, "live": ["m1"] }));
+    assert_eq!(kept["removed"], 0);
+    let dropped = call(json!({ "call": "sweep", "book": offered["book"], "now": later, "live": ["other"] }));
+    assert_eq!(dropped["removed"], 1);
+}

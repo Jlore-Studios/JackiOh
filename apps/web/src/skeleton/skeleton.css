@@ -19,6 +19,7 @@
   min-width: 0;
   max-width: 100%;
   overflow: hidden;
+  isolation: isolate;
 }
 
 .skeleton__status {
@@ -50,6 +51,7 @@
   content: "";
   position: absolute;
   inset: 0;
+  z-index: var(--z-content);
   background: url("/brand/jackioh-mark.svg") center / auto min(96px, 85%) no-repeat;
   opacity: 0.9;
   filter: drop-shadow(0 0 6px var(--pal-wood-950)) drop-shadow(0 0 14px var(--pal-wood-950));
@@ -119,20 +121,28 @@
   width: 60%;
 }
 
+/* The sheen is one band, drawn once on each block's `::after` and slid across it by transform alone
+   (R3608000); the block clips it. The blocks are positioned for that, so the mark above (`.skeleton`
+   isolates its layers) takes a layer of its own to stay over them. */
 @media (prefers-reduced-motion: no-preference) {
   .skeleton[data-motion="full"] .skeleton__block {
-    background: linear-gradient(90deg, var(--skeleton-ink) 25%, var(--skeleton-sheen) 50%, var(--skeleton-ink) 75%);
-    background-size: 200% 100%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .skeleton[data-motion="full"] .skeleton__block::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, var(--skeleton-sheen), transparent);
+    transform: translateX(-100%);
+    pointer-events: none;
     animation: skeleton-shimmer 1.6s ease-in-out infinite;
   }
 }
 
 @keyframes skeleton-shimmer {
-  from {
-    background-position: 100% 0;
-  }
-
   to {
-    background-position: -100% 0;
+    transform: translateX(100%);
   }
 }

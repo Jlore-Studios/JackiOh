@@ -254,11 +254,24 @@
   box-shadow: 0 0 0 1px var(--selected);
 }
 
-/* A ping on the board not showing (B64), and a hand card on its way to the portal (B62). */
+/* A ping on the board not showing (B64), and a hand card on its way to the portal (B62). The flash is the
+   wider ring and halo, drawn once on the button's `::after` and faded in by opacity alone (R3608000); the
+   button's own 2px ring never changes. */
 .duos-portal[data-flash="ping"] {
-  animation: duos-portal-flash calc(600ms * var(--anim-scale)) ease-in-out infinite alternate;
+  position: relative;
   border-color: var(--radiant);
   box-shadow: 0 0 0 2px var(--radiant);
+}
+
+.duos-portal[data-flash="ping"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 4px var(--radiant), 0 0 12px var(--radiant);
+  opacity: 0;
+  pointer-events: none;
+  animation: duos-portal-flash calc(600ms * var(--anim-scale)) ease-in-out infinite alternate;
 }
 
 :root[data-dragging] .duos-board[data-showing="own"] .duos-portal {
@@ -267,12 +280,8 @@
 }
 
 @keyframes duos-portal-flash {
-  from {
-    box-shadow: 0 0 0 1px var(--radiant);
-  }
-
   to {
-    box-shadow: 0 0 0 4px var(--radiant), 0 0 12px var(--radiant);
+    opacity: 1;
   }
 }
 

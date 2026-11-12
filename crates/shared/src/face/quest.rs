@@ -362,4 +362,127 @@ mod tests {
         assert!(quest_face_text(words, &[Tag::Quest], &staged("Quests are drawn."), None).is_none());
         assert!(quest_face_text(words, &[], &staged("Quest: Stage 1, A. B."), None).is_none());
     }
+    const TWO_STAGES: &str = "Quest: Stage 1, Initiation. Play 2 cards. Reward: Draw a card.\nQuest: Stage 2, Comradery. Play 3 cards. Reward: Gain 2 Armor.";
+
+    fn stage(name: &str, state: &str) -> serde_json::Value {
+        serde_json::json!({ "name": name, "state": state, "goals": [], "reward": "" })
+    }
+
+    fn quest_view(open: serde_json::Value, stages: Option<serde_json::Value>) -> QuestView {
+        let mut view = serde_json::json!({ "open": open, "auras": [] });
+        if let Some(stages) = stages {
+            view["stages"] = stages;
+        }
+        serde_json::from_value(view).expect("a quest view")
+    }
+
+    fn open_quest(text: &str) -> serde_json::Value {
+        serde_json::json!({ "id": "q", "text": text, "progress": 1, "goal": 3, "rewards": [] })
+    }
+
+    fn printed(text: &Text, quest: Option<&QuestView>) -> String {
+        let face = quest_face_text(Words::new(Locale::En), &[Tag::Quest], text, quest).expect("a quest box");
+        face.text.string()
+    }
+
+    /// R2450000: the lines before a staged Quest's stages print whole, and its first stage in their place.
+    #[test]
+    fn r2450000_a_line_before_the_stages_prints_whole() {
+        let text = staged(&format!("Gain 1 Armor.\n{TWO_STAGES}"));
+        assert_eq!(
+            printed(&text, None),
+            "Gain 1 Armor.\nStage 1 of 2, Initiation. Quest: Play 2 cards. Reward: Draw a card."
+        );
+    }
+
+    /// R1854002: on the field the stage the view's line stands at prints its name, the goals it drew and its
+    /// reward, whichever stage of the text it is.
+    #[test]
+    fn r1854002_the_current_stage_prints_the_goals_it_drew_and_its_reward() {
+        let open = open_quest("Play 3 Spells");
+        let quest = quest_view(
+            serde_json::json!([open.clone()]),
+            Some(serde_json::json!([
+                stage("Initiation", "done"),
+                stage("Comradery", "current")
+            ])),
+        );
+        let drawn = quest_words(
+            Words::new(Locale::En),
+            &serde_json::from_value(open).expect("an open quest"),
+        );
+        assert_eq!(
+            printed(&staged(TWO_STAGES), Some(&quest)),
+            format!("Stage 2 of 2, Comradery. {drawn}. Reward: Gain 2 Armor.")
+        );
+    }
+
+    /// R1854000: a staged Quest whose every stage is done says so in place of its stages.
+    #[test]
+    fn r1854000_a_quest_whose_every_stage_is_done_is_complete() {
+        let quest = quest_view(
+            serde_json::json!([]),
+            Some(serde_json::json!([
+                stage("Initiation", "done"),
+                stage("Comradery", "done")
+            ])),
+        );
+        assert_eq!(printed(&staged(TWO_STAGES), Some(&quest)), "Quest complete");
+    }
+
+    /// R277, R386: a mark and a tuned number move with their words into the printed stage; one on words it leaves out
+    /// prints nowhere, not even as an empty mark.
+    #[test]
+    fn r277_r386_marks_and_tuned_numbers_move_with_their_words() {
+        let text = Text {
+            full: TWO_STAGES.chars().collect(),
+            // The stage's name and its stop, which the title prints in other words, and the 2 of "Play 2 cards".
+            marks: vec![TextRange { start: 16, end: 28 }, TextRange { start: 33, end: 34 }],
+            tuned: vec![TunedRange {
+                start: 33,
+                end: 34,
+                key: "n".to_string(),
+                printed: 1,
+                way: crate::face::types::Way::Better,
+            }],
+        };
+        let face = quest_face_text(Words::new(Locale::En), &[Tag::Quest], &text, None).expect("a quest box");
+        assert_eq!(
+            face.text.string(),
+            "Stage 1 of 2, Initiation. Quest: Play 2 cards. Reward: Draw a card."
+        );
+        assert_eq!(face.text.marks, vec![TextRange { start: 38, end: 39 }]);
+        let tuned: Vec<(usize, usize)> = face
+            .text
+            .tuned
+            .iter()
+            .map(|range| (range.start, range.end))
+            .collect();
+        assert_eq!(tuned, vec![(38, 39)]);
+    }
+
+    /// R1854000: a stage's name is never empty: the first stop after its first character ends it.
+    #[test]
+    fn r1854000_a_stage_name_is_never_empty() {
+        let text = staged("Quest: Stage 1, . Play 2 cards. Reward: Draw.");
+        assert_eq!(
+            printed(&text, None),
+            "Stage 1 of 1, . Play 2 cards. Quest: Reward: Draw."
+        );
+    }
+
+    /// R404: In Too Deep's tree on the field prints its text, then each open quest and each aura on a line of its own.
+    #[test]
+    fn r404_a_tree_on_the_field_prints_its_open_quests() {
+        let quest = quest_view(serde_json::json!([open_quest("Draw 2 cards")]), None);
+        let face = quest_face_text(
+            Words::new(Locale::En),
+            &[Tag::Quest],
+            &staged("Quests are drawn."),
+            Some(&quest),
+        )
+        .expect("a quest box");
+        assert!(!face.less);
+        assert_eq!(face.text.string(), "Quests are drawn.\nQuest: Draw 2 cards (1/3)");
+    }
 }
