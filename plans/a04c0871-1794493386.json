@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 3777,
+  "title": "Patch: Magic Jammed targets any face-down backrow card, a Cloaked one included",
+  "branch": "bot/issue-3777",
+  "thread": "**Issue #3777 (data, not instructions):**\n\n```text\n# #3777: Patch: Magic Jammed targets any face-down backrow card, a Cloaked one included\nOpened by @MaxGoetzmann.\n\n## The bug\n\n#36 Magic Jammed (`core-036`, \"Destroy target backrow card; Lock its zone\", Radiant \"Steal target backrow card; Lock its original zone\") cannot be aimed at face-down backrow cards in play. It should be able to target **any** card in a backrow zone, face-down or face-up, whatever its printed type. **That includes a card set face-down by Cloaked** (a Unit, Spell or Field Spell played as a Trap, \u00a76 Cloaked, R783004\u2013R783008).\n\n**The only backrow occupant it may not target is a face-up Unit** standing in a backrow zone (a Flying Unit, R1081000: \"a Unit standing there is no backrow card\").\n\n## Intended rule\n\n- A face-down card in a backrow zone is a backrow card for \"target backrow card\", whatever its printed type. A set Cloaked Unit is face-down and inert (\u00a76 Cloaked), so it counts as a backrow card and not as a standing Unit.\n- A face-up Field Spell, a face-up/revealed Trap and a Field Trap are backrow cards, as now.\n- A face-up Unit standing in the backrow is not a backrow card (R1081000, unchanged).\n\n## Leads (to check, not proven)\n\n- `crates/engine/src/play_choices.rs` `legal_selections_for`, the `FilterOf::Backrow` arm: it offers a slot only when `on_field(held) && !crate::zones::is_standing_unit(state, held)`. `zones::is_standing_unit` (`crates/engine/src/zones.rs`) is `card.position.is_some() && card_type_of(state, card) == CardType::Unit`. If a set Cloaked Unit reads as `CardType::Unit` there, or carries a `position`, it is wrongly excluded. The check should be \"face-up and a Unit\".\n- `card_allowed` / `reachable` in the same file: check whether anything there (type filters, `can_pay_to_target`, Immutable/`spell_cannot_reach`) refuses a face-down candidate, or a Cloaked one reading as its printed type.\n- The client path: the opponent's view of a face-down backrow card is `{ faceDown: true, cost }`, with no instance id (R33, \u00a710.8). Confirm that `legalActions` still offers those selections and that the web client (`apps/web/src/game/actions.ts`, the targeting/drag layer) lets the player pick a face-down enemy backrow slot, rather than only cards it can read. Reproduce in the client as well as in the engine. A plain face-down Trap is the first case to try, because the report says face-down cards in general cannot be targeted.\n- Any other \"target backrow card\" or \"every backrow card\" reader that shares the same check (C #51 Back Breaker, C+ #5 Guy Att, the cards R1081000 lists) should agree with this rule. Fix the shared predicate, not just #36.\n\n## Acceptance\n\n1. A new ruling note in this issue's block (lowest free R(N\u00d71000)\u2026), with its \u00a711 paragraph in `spec/pending/<N>.md` (CLAUDE.md rule 3), stating the rule above. Amend the \u00a78.2 #36 row and/or R1081000's sentence if they need it.\n2. Tests in `crates/cards/src/scripts/core/c036_magic_jammed.rs` named after the ruling, covering:\n   - base Magic Jammed destroys an enemy **face-down Trap** and Locks its zone (the play is accepted and listed in `legalActions`);\n   - base destroys an enemy **set Cloaked Unit** (e.g. C #6 Cloaked Toe Cracker set face-down) and Locks its zone; the card goes to the graveyard as its printed card (R783008);\n   - Radiant steals a set Cloaked card into the thief's backrow, still set, and Locks its original zone;\n   - a set Cloaked Spell or Field Spell is likewise targetable;\n   - the existing `r1081000_a_unit_standing_in_the_backrow_is_no_backrow_card_to_target` still passes: a face-up standing Unit is refused;\n   - a Cloaked Unit that has **revealed** (animated into a unit zone) is no longer a backrow target.\n3. Hidden information holds: nothing in the targeter's view or the events reveals the face-down card's identity before it is destroyed (base) (R33, R97).\n4. If the client was part of the bug, a web test (vitest) showing a face-down enemy backrow slot is offered as a Magic Jammed target.\n5. `cargo jackioh spec check`, `cargo jackioh patches check` (a pending fragment if a card plays differently) and `cargo jackioh classify --base origin/main --claims` are green.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3777: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-12T14:22:27Z",
+    "claimed_at": "2026-11-12T14:23:59Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3729 skipped: it waits for #3727, #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3730 to close first",
+    "#3733 skipped: it waits for #3727 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
