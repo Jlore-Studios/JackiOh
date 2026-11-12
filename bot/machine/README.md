@@ -309,20 +309,23 @@ runners are registered, a Muse run the planner puts in gpt's or agy's lane waits
 
 ## The local runner
 
-A person's own machine runs the learn lane, every job of it (`.github/workflows/learn.yml`,
-`training/learn.md`: the self-play export, the retrain, the screen and the gate, the lane's plan and
-watch, the import of each export's games and the start of the next run, one run after another,
-#1976), the gather workflow's job (`.github/workflows/gather.yml`, while `GATHER_ON_PATCH` is `true`),
-and is the default runner of any other self-play export (#1008, `docs/learned-eval.md`
-D1; `.github/workflows/selfplay.yml`, `training/README.md`, Where the exports come from), so an export
-no longer holds 12 of GitHub's 20 hosted runners while CI waits (#1455); a dispatch of `selfplay.yml`
-can still ask for GitHub's. It never touches the training box, which the lanes keep, and it can also
-take some of the night box's own jobs while the box is busy or off.
+A person's own machine can run the training lanes: since #3740 they run on GitHub's runners (the
+organization's Team plan runs 60 hosted jobs at once, 12 of them the training lanes'), and on this
+machine only while the repository variable `TRAINING_ON_PC` is `true`. Then it runs the learn lane,
+every job of it (`.github/workflows/learn.yml`, `training/learn.md`: the self-play export, the retrain,
+the screen and the gate, the lane's plan and watch, the import of each export's games and the start of
+the next run, one run after another, #1976), and the gather lane's runs, one part each
+(`.github/workflows/gather.yml`, while `GATHER_ON_PATCH` is `true`), as it did from #1455 (on the Free
+plan's 20 hosted jobs, an export held 12 of them while CI waited) until #3740. A dispatch of
+`selfplay.yml` can ask for it (`runner: jackioh-selfplay-local`; #1008, `docs/learned-eval.md` D1,
+`training/README.md`, Where the exports come from). It never touches the training box, which the lanes
+keep, and it can also take some of the night box's own jobs while the box is busy or off; with no
+training job queued for it, its standby runner just waits.
 
 | | |
 |---|---|
 | Machine | the owner's laptop (jgoetzmann): Windows 11, Intel i7-11800H (8 cores, 16 threads), 32 GB, Docker Desktop on WSL2 (which `%USERPROFILE%\.wslconfig` caps at 8 GB and 8 processors for every container). The owner looks after it |
-| Label | `jackioh-selfplay-local`: `learn.yml` names it for every job, and `selfplay.yml` when its `runner` input does (its default since #1455). And `jackioh-selfplay-local-gather`, which `gather.yml`'s one job names (#2134): its entry in `config.json` has `ownSlot`, so gather has one of the PC's two halves to itself from the moment its job queues, beside a learn shard on the other half instead of waiting behind it. While gather has no job, which is most of the time since it plays only each new patch or set and never a micro, the learn lane trains on both halves. The halves weigh the same: no runner gets a larger CPU share than another, and every one gives way to the owner's own programs alike (When, below). The supervisor starts gather's runner only when a gather job is queued (no standby) and retires it a minute after it goes idle. Both are registered to this repository alone |
+| Label | `jackioh-selfplay-local`: `learn.yml` names it for every job while `TRAINING_ON_PC` is `true`, and `selfplay.yml` when its `runner` input does (its default from #1455 until #3740). And `jackioh-selfplay-local-gather`, which `gather.yml`'s job names while `TRAINING_ON_PC` is `true` (#2134): its entry in `config.json` has `ownSlot`, so gather has one of the PC's two halves to itself from the moment its job queues, beside a learn shard on the other half instead of waiting behind it. While gather has no job, the learn lane trains on both halves; gather plays without a pause since #3740, so on the PC it keeps its half. The halves weigh the same: no runner gets a larger CPU share than another, and every one gives way to the owner's own programs alike (When, below). The supervisor starts gather's runner only when a gather job is queued (no standby) and retires it a minute after it goes idle. Both are registered to this repository alone |
 | How it runs | `bot/machine/local/supervisor.ps1`, started at logon by a scheduled task (`install-task.ps1`). Each runner is one ephemeral container of the image `local/Dockerfile` builds (`jackioh-pc-runner`): it registers with a single-use JIT config, takes one job and is gone. A `docker` or `gh` call that gives no answer in two minutes (`docker info`, 30 seconds) is killed and counts as failed, so a Docker engine that stops answering reads as Docker not running, not as a supervisor stuck in one call |
 | When | only while the PC is otherwise idle: CPU under 50% and memory under 24 GB in every sample of the last minute, leaving out the runners' own use and that of the `yieldingContainers` (a long-running container of the owner's that a gate of its own holds to the same rule and throttles while a runner works, so the two never read each other as the person's load) (`config.json`). A runner starts only when the PC is also quiet, CPU under 15% (`startCpuPercentBelow`) in every sample of that minute; one already up stays while it is calm. It keeps one runner Idle for the label while it is calm; when the PC gets busy the idle runner is unregistered at once, and a runner in a job is throttled to half a CPU until it is calm again, so no export loses a shard |
 | Limits | two jobs at a time (`maxJobs`), the two halves of WSL2's 8 processors: 4 CPUs and 6 GB a container (`containerCpus`, `containerMemory`), swap off (an entry may set its own `containerCpus` and `containerMemory`; gather's build of `jackioh-server` outgrew 3 GB, #2134). Gather's half is kept for it from the moment its job queues: no new shard starts in it. A gather job that lands while two shards hold both halves takes its 4 CPUs at once, and the two shards play on 2 each until one ends (`Target-Cpus`), so nothing is lost; never a GPU (no `--gpus`, `NVIDIA_VISIBLE_DEVICES=void`); a non-root user with `no-new-privileges`, no host folder and no Docker socket |

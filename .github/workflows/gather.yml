@@ -1,159 +1,145 @@
-# The gather workflow (#1976, R1976000; training/gather.md): development games of each new card patch
-# as it ships, played on the owner's PC and filed as totals only into both projects' card statistics,
-# JackiOh-Staging's and JackiOh-Production's (R1933001, docs/deploy-cloudflare.md section 8), so each
-# site's figures have development games to pad a patch with until it has its live games.
+# The gather lane (#1976, R1976000; training/gather.md): development games of the newest patch,
+# played without a pause on GitHub's runners and filed as totals only into both projects' card
+# statistics, JackiOh-Staging's and JackiOh-Production's (R1933001, docs/deploy-cloudflare.md section
+# 8), so each site's figures always have fresh development games of the version that is live, beside
+# its live games and the learn lane's exports (learn.yml, `import`).
 #
-# A card change ships as a new patch (patches-ship.yml), and a changed card's figures start again on
-# it (R1367000). The learn lane's exports file a patch's games too (learn.yml, `import`), but one
-# export takes about three days of the PC, so a patch shipped between two has none until the next. This
-# plays GATHER_GAMES games of a new patch or set (a `patch` or `major` tier, v0.Z.X; never a micro,
-# v0.Z.Xb, docs/issues-and-patches.md, Version numbers) as soon as it ships. A push that ships only
-# micros since the last push run that succeeded plays nothing (the `due` step), so a micro's changed
-# cards wait for the next patch's games or the next export's. A run plays the commit that started it
-# (a push's, or main's newest when a dispatch was made), so the next run knows exactly what this one
-# played, and a rerun plays the same games byte for byte. `cargo jackioh stats --series
-# gather`, AI against AI on R258's All Random deals at the browser's budget, GATHER_FILE_GAMES at a
-# time (about an hour of the PC's gather half), each batch filed as it finishes with
+# Since #3740 it runs all the time on two of GitHub's runners, the gather lane's two of the training
+# lanes' 12 (the learn lane's export takes the other 10, selfplay-shards.yml) of the organization's 60
+# hosted jobs; whatever the training lanes leave idle, CI and the bots take. A run is two parts side
+# by side, each playing GATHER_HOURS hours of `cargo jackioh stats --series gather` (AI against AI on
+# R258's All Random deals at the browser's budget) on main as it was when the run started,
+# GATHER_FILE_GAMES games at a time (about an hour of a runner), each batch filed as it finishes with
 # `training/file-records.sh`: `jackioh-server stats-import --totals-only` over
 # STATS_IMPORT_DATABASE_URL (staging's) and then PRODUCTION_STATS_IMPORT_DATABASE_URL (no row per
 # game, each batch's file claimed once by its SHA-256 in each database, so a rerun files no batch
-# twice), so a patch's games reach the card statistics an hour at a time, not once all of them have
-# played. Game `n` of run `r` is `gather:<(r - 1) * GATHER_STRIDE + n>`, so no two runs play the same
-# game and no two of its files hold one (R1976000, What it does not catch). The batches' files are
-# kept as the run's artifact, `gather-<run>`, for GATHER_RETENTION_DAYS.
+# twice). So the statistics take the newest version's games an hour at a time. As a run ends it starts
+# the next (`next`), which plays main as it is then: a version shipped meanwhile is played from the
+# next run on, within GATHER_HOURS. A schedule every six hours starts the lane again should that chain
+# stop. Until #3740 the workflow played 5,000 games of each new patch or set once, on the owner's PC.
 #
-# Off until the repository variable GATHER_ON_PATCH is `true` (Settings -> Secrets and variables ->
-# Actions -> Variables). Each patch's development totals take about 3 MB of the database however few
-# its games (#1976). A dispatch (`gh workflow run gather.yml -f games=…`) plays main's newest
-# version, a micro too, whatever the variable says.
+# Game `n` of run `r` is `gather:<(r - 1) * GATHER_STRIDE + n>`, and part k plays from the k-th of the
+# run's equal slices of that stride, so no two runs or parts play the same game and no two files hold
+# one (R1976000, What it does not catch); a rerun of a part plays the same games. The batches' files
+# are kept as the run's artifacts, `gather-<run>-<part>`, for GATHER_RETENTION_DAYS. Each version's
+# development totals take about 3 MB of the database however few its games (#1976), and the lane files
+# every version it plays, micros among them (db-size.yml watches the database's size).
 #
-# Its one job runs on the PC under a label of its own (`jackioh-selfplay-local-gather`,
-# bot/machine/README.md, The local runner; #2134). The supervisor's config.json makes it an
-# `ownSlot` label: gather has one of the PC's two halves (four CPUs) to itself while it has a job,
-# beside the learn lane on the other, and once it has played its games the learn lane trains on
-# both. Both give way to the owner's own programs alike. Without either secret it plays, keeps the
-# file, and files it only where a secret is set.
+# On while the repository variable GATHER_ON_PATCH is `true` (Settings -> Secrets and variables ->
+# Actions -> Variables; named for the per-patch runs it began with). A dispatch (`gh workflow run
+# gather.yml [-f hours=…]`) plays main's newest version whatever the variable says, and starts a next
+# run only while the variable is `true`.
+#
+# With the repository variable TRAINING_ON_PC set to `true`, a run is one part on the PC instead, under
+# a label of its own (`jackioh-selfplay-local-gather`, bot/machine/README.md, The local runner; #2134):
+# the supervisor's config.json makes it an `ownSlot` label, so gather has one of the PC's two halves
+# (four CPUs) to itself while it has a job, and the learn lane the other. Both give way to the owner's
+# own programs alike. Without either secret it plays, keeps the files, and files them only where a
+# secret is set.
 name: gather
 
 on:
-  push:
-    branches: [main]
-    paths: ["crates/cards/patches/patches.json"]
+  # The lane starts its next run itself (`next`); this starts it again should that chain stop.
+  schedule:
+    - cron: "41 */6 * * *"
   workflow_dispatch:
     inputs:
-      games:
-        description: "Games to play of the newest patch (at most GATHER_STRIDE)"
+      hours:
+        description: "Hours each part plays (a whole number, at most GATHER_HOURS)"
         required: false
         default: ""
 
 permissions:
   contents: read
-  # The `due` step reads the last gather run that succeeded.
-  actions: read
 
 env:
-  # Games a run plays of each new patch, on the PC's gather half.
-  GATHER_GAMES: "5000"
-  # Games played and then filed at a time: about an hour of the gather half (run 46 played 5,000
-  # in 6 h 42 min), so the statistics take a patch's games an hour at a time. Each batch is one
-  # file in each database (`game_record_batches`), whose totals are the patch's however many.
-  GATHER_FILE_GAMES: "750"
+  # Hours each part plays: with its build and its last batch, under GitHub's 6-hour job limit.
+  GATHER_HOURS: "5"
+  # Games played and then filed at a time: about an hour of a GitHub runner (about 870 games an hour
+  # on four vCPUs at the AI's budget since #2628, an estimate from the PC's gather half, which played
+  # 5,000 in 6 h 42 min in run 46), so the statistics take a version's games an hour at a time. Each
+  # batch is one file in each database (`game_record_batches`), whose totals are the version's
+  # however many.
+  GATHER_FILE_GAMES: "850"
   # Game numbers each run owns: run r plays from (r - 1) * GATHER_STRIDE + 1.
   GATHER_STRIDE: "100000"
-  # Days the run's record file is kept as its artifact.
+  # Days the run's record files are kept as its artifacts.
   GATHER_RETENTION_DAYS: "30"
+  # A run that took less than this broke early: it starts no next run, and the schedule tries again.
+  GATHER_NEXT_MIN_MINUTES: "60"
 
-# One at a time; a patch shipped while one runs is played next, and of several, the newest.
+# One run at a time: a run started while one plays waits for it.
 concurrency:
   group: gather
   cancel-in-progress: false
 
 jobs:
   gather:
-    name: gather the newest patch
+    name: gather the newest patch, part ${{ matrix.part }}
     if: ${{ github.event_name == 'workflow_dispatch' || vars.GATHER_ON_PATCH == 'true' }}
-    runs-on: jackioh-selfplay-local-gather
-    # The PC's runner slows a job to half a CPU while the PC is busy, so allow a day.
-    timeout-minutes: 1440
+    runs-on: ${{ vars.TRAINING_ON_PC == 'true' && 'jackioh-selfplay-local-gather' || 'ubuntu-latest' }}
+    # GitHub's runners stop a job at 6 hours; the PC's runner slows a job to half a CPU while the PC
+    # is busy, so there allow a day.
+    timeout-minutes: ${{ vars.TRAINING_ON_PC == 'true' && 1440 || 350 }}
+    strategy:
+      fail-fast: false
+      # Two parts side by side, the gather lane's two runners (#3740); one on the PC.
+      matrix:
+        part: ${{ fromJSON(vars.TRAINING_ON_PC == 'true' && '[1]' || '[1, 2]') }}
     steps:
-      # A push plays the commit it pushed, so the `due` step of the next run reads exactly what this
-      # one played; a dispatch plays main's newest commit when it was dispatched. Either way a rerun
-      # plays the same commit, so its batches are byte for byte the ones a database may hold already
-      # (a record names the build that played it, R1367000), and each is folded once.
+      # The commit that started the run (a scheduled or dispatched run's, the lane's own `next`
+      # among them: main as it was then), so a rerun plays the same commit, and its batches are byte
+      # for byte the ones a database may hold already (a record names the build that played it,
+      # R1367000), each folded once.
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      # A new patch or set since the last push run that succeeded, whether it played or found only
-      # micros. A run that failed or was cancelled moves nothing, so the next push plays what it
-      # missed. Of a run waiting behind another, only the newest push waits (`concurrency`), and it
-      # reads every version shipped since the last success, those of the pushes it replaced too.
-      - name: due (a new patch or set, not a micro)
-        id: due
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          EVENT: ${{ github.event_name }}
-        run: |
-          set -euo pipefail
-          if [ "$EVENT" != push ]; then
-            echo "play=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          base=$(gh api "repos/$REPO/actions/workflows/gather.yml/runs?event=push&status=success&per_page=1" \
-            --jq '.workflow_runs[0].head_sha // empty')
-          old='[]'
-          if [ -n "$base" ]; then
-            old=$(gh api -H "Accept: application/vnd.github.raw+json" \
-              "repos/$REPO/contents/crates/cards/patches/patches.json?ref=$base" --jq '[.[].version]')
-          fi
-          new=$(jq -r --argjson old "$old" '[.[] | select(.version | IN($old[]) | not)
-            | select(.tier != "micro") | .version] | join(", ")' crates/cards/patches/patches.json)
-          if [ -n "$new" ]; then
-            echo "play=true" >> "$GITHUB_OUTPUT"
-            echo "new since the last gather: $new" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "play=false" >> "$GITHUB_OUTPUT"
-            echo "only micros since the last gather (${base:0:7}): nothing to play until the next patch" >> "$GITHUB_STEP_SUMMARY"
-          fi
       - uses: ./.github/actions/setup
-        if: ${{ steps.due.outputs.play == 'true' }}
         with:
           node: "false"
       - name: build
-        if: ${{ steps.due.outputs.play == 'true' }}
         run: cargo build --release -q -p jackioh-tools -p jackioh-server
-      # GATHER_FILE_GAMES at a time: each batch is played, then filed into staging's and production's
-      # (R1933001) before the next starts, so the statistics take the games an hour at a time. A
-      # batch a database refuses or cannot take is reported and the games go on; the run then fails
-      # at its end, and a rerun plays the same batches and files only those a database is missing.
+      # GATHER_FILE_GAMES at a time for HOURS hours: each batch is played, then filed into staging's
+      # and production's (R1933001) before the next starts, so the statistics take the games an hour
+      # at a time. A batch starts only while one as long as the last still fits before the part's time
+      # is up (an hour, before the first has been timed). A batch a database refuses or cannot take is
+      # reported and the games go on; the part then fails at its end, and a rerun plays the same
+      # batches and files only those a database is missing.
       - name: play and file, a batch at a time (cargo jackioh stats --series gather, stats-import --totals-only)
         id: play
-        if: ${{ steps.due.outputs.play == 'true' }}
         env:
-          GAMES: ${{ inputs.games || env.GATHER_GAMES }}
+          HOURS: ${{ inputs.hours || env.GATHER_HOURS }}
           RUN: ${{ github.run_number }}
+          PART: ${{ strategy.job-index }}
+          PARTS: ${{ strategy.job-total }}
           STATS_IMPORT_DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
           PRODUCTION_STATS_IMPORT_DATABASE_URL: ${{ secrets.PRODUCTION_STATS_IMPORT_DATABASE_URL }}
         run: |
           set -euo pipefail
-          if ! [[ "$GAMES" =~ ^[1-9][0-9]*$ ]] || [ "$GAMES" -gt "$GATHER_STRIDE" ]; then
-            echo "::error::games must be a whole number from 1 to $GATHER_STRIDE, not $GAMES"
+          if ! [[ "$HOURS" =~ ^[1-9][0-9]*$ ]] || [ "$HOURS" -gt "$GATHER_HOURS" ]; then
+            echo "::error::hours must be a whole number from 1 to $GATHER_HOURS, not $HOURS"
             exit 1
           fi
           patch=$(jq -r '.[-1].version' crates/cards/patches/patches.json)
-          from=$(( (RUN - 1) * GATHER_STRIDE + 1 ))
-          end=$(( from + GAMES ))
-          dir="$RUNNER_TEMP/gather-$patch-$RUN"
+          # This part's slice of the run's game numbers: run r owns (r - 1) * GATHER_STRIDE + 1 on,
+          # and part k (from 0) of PARTS plays from the k-th of PARTS equal slices, never past it.
+          slice=$(( GATHER_STRIDE / PARTS ))
+          from=$(( (RUN - 1) * GATHER_STRIDE + 1 + PART * slice ))
+          end=$(( from + slice ))
+          deadline=$(( $(date +%s) + HOURS * 3600 ))
+          dir="$RUNNER_TEMP/gather-$patch-$RUN-$((PART + 1))"
           mkdir -p "$dir"
           echo "dir=$dir" >> "$GITHUB_OUTPUT"
           [ -n "$STATS_IMPORT_DATABASE_URL" ] || echo "::notice::STATS_IMPORT_DATABASE_URL is not set, so staging's statistics get none of these games"
           [ -n "$PRODUCTION_STATS_IMPORT_DATABASE_URL" ] || echo "::notice::PRODUCTION_STATS_IMPORT_DATABASE_URL is not set, so production's statistics get none of these games"
-          echo "## gather: $patch, games $from to $((end - 1)), filed $GATHER_FILE_GAMES at a time" >> "$GITHUB_STEP_SUMMARY"
+          echo "## gather: $patch, part $((PART + 1)) of $PARTS, $HOURS hours from game $from, filed $GATHER_FILE_GAMES at a time" >> "$GITHUB_STEP_SUMMARY"
           finished=0
           unfiled=0
+          took=3600
           start=$from
-          while [ "$start" -lt "$end" ]; do
+          while [ "$start" -lt "$end" ] && [ $(( $(date +%s) + took )) -le "$deadline" ]; do
+            began=$(date +%s)
             n=$(( end - start < GATHER_FILE_GAMES ? end - start : GATHER_FILE_GAMES ))
             file="$dir/gather-$patch-$RUN-$start.jsonl"
             target/release/jackioh stats --series gather --patch "$patch" --from "$start" --games "$n" \
@@ -162,12 +148,13 @@ jobs:
             finished=$(( finished + got ))
             echo "### Games $start to $(( start + n - 1 )): $got finished" >> "$GITHUB_STEP_SUMMARY"
             if ! sh training/file-records.sh target/release/jackioh-server "$file" | tee -a "$GITHUB_STEP_SUMMARY"; then
-              echo "::warning::games $start to $(( start + n - 1 )) were not filed everywhere; the run fails at its end, and a rerun files them"
+              echo "::warning::games $start to $(( start + n - 1 )) were not filed everywhere; the part fails at its end, and a rerun files them"
               unfiled=$(( unfiled + 1 ))
             fi
+            took=$(( $(date +%s) - began ))
             start=$(( start + n ))
           done
-          echo "$finished of $GAMES games finished." >> "$GITHUB_STEP_SUMMARY"
+          echo "$finished of $(( start - from )) games finished." >> "$GITHUB_STEP_SUMMARY"
           if [ "$unfiled" -gt 0 ]; then
             echo "::error::$unfiled batches were not filed everywhere (above); rerun this job to file them"
             exit 1
@@ -175,7 +162,40 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: ${{ always() && steps.play.outputs.dir != '' }}
         with:
-          name: gather-${{ github.run_number }}
+          name: gather-${{ github.run_number }}-${{ matrix.part }}
           path: ${{ steps.play.outputs.dir }}
           if-no-files-found: ignore
           retention-days: ${{ env.GATHER_RETENTION_DAYS }}
+
+  next:
+    name: start the next run
+    needs: gather
+    # A dispatch while the lane is off plays once.
+    if: ${{ !cancelled() && vars.GATHER_ON_PATCH == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          started=$(gh api "repos/$REPO/actions/runs/$RUN_ID" --jq .run_started_at)
+          minutes=$(( ($(date -u +%s) - $(date -u -d "$started" +%s)) / 60 ))
+          if [ "$minutes" -lt "$GATHER_NEXT_MIN_MINUTES" ]; then
+            echo "::warning::this run took $minutes minutes, under $GATHER_NEXT_MIN_MINUTES: it broke early, so it starts no next run, and the schedule tries again within six hours"
+            exit 0
+          fi
+          # The schedule's run, or a person's dispatch, is already on its way: it follows this one.
+          others=$(gh api "repos/$REPO/actions/workflows/gather.yml/runs?per_page=30" --jq '[.workflow_runs[]
+            | select(.id != '"$RUN_ID"')
+            | select([.status] | inside(["queued", "pending", "waiting", "requested", "in_progress"]))] | length')
+          if [ "$others" != 0 ]; then
+            echo "another gather run is on its way, and follows this one" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          gh workflow run gather.yml -R "$REPO" --ref main
+          echo "started the next run" >> "$GITHUB_STEP_SUMMARY"
