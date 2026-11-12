@@ -15988,6 +15988,13 @@
     "3791": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-12T21:45:25Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "Web client only (one component, a helper, tests, a zh-CN string) plus a spec ruling; no engine, AI, migration, cross-crate contract or ~40 files, so no line of the hard rule holds."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
