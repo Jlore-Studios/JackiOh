@@ -10,8 +10,9 @@ import { KEYWORD_CALLOUT_ICONS } from "../../cards/keywordVisuals.ts";
 import { planEntries, type AnimationEntry } from "../../game/animations.ts";
 import { testid } from "../../game/contract.ts";
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
+import { endOf, envOf } from "../../test/signatures.ts";
 import { must } from "../../test/stubServer.ts";
-import { FX_CALLOUT_MS, FX_CALLOUTS_PER_HIT, FX_INTENSITY_SCALE, FX_MAX_PARTICLE_LIFE_MS, FX_MAX_TAIL_MS } from "../constants.ts";
+import { FX_CALLOUT_MS, FX_CALLOUTS_PER_HIT, FX_INTENSITY_SCALE, FX_MAX_TAIL_MS } from "../constants.ts";
 import { planFx } from "../cues.ts";
 import { createFxMemory } from "../memory.ts";
 import { planStage } from "../stage.ts";
@@ -30,8 +31,6 @@ const MINE_3 = id("you", 2);
 const FOE = id("opponent", 0);
 const FOE_2 = id("opponent", 1);
 const FOE_3 = id("opponent", 2);
-
-const envOf = (over: Partial<FxPlanEnv> = {}): FxPlanEnv => ({ intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory(), ...over });
 
 /** The board with `MINE`'s keywords replaced. */
 function viewWith(keywords: readonly Keyword[]): PlayerView {
@@ -80,21 +79,6 @@ function stream(events: readonly GameEvent[], view: PlayerView = fullBoardView()
 }
 
 const kinds = (cues: readonly FxCue[]): string[] => cues.map((cue) => `${cue.kind}@${String(cue.delayMs)}`);
-
-/** Where a cue ends, in ms after its entry starts (R200's bound is D + FX_MAX_TAIL_MS). */
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "projectile":
-    case "shot":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
-}
 
 /** R200: every cue starts inside the entry, a flight lands inside it and no tail outlives FX_MAX_TAIL_MS. */
 function expectInside(cues: readonly FxCue[], D: number, label: string): void {

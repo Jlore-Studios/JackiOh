@@ -6,9 +6,9 @@ import { describe, expect, it } from "vitest";
 
 import { planEntries } from "../game/animations.ts";
 import { baseView, card, emptySide, unit } from "../test/fixtures.ts";
-import { FX_FOG_HIT_FROM, FX_FOG_HIT_TO, FX_INTENSITY_SCALE } from "./constants.ts";
+import { envOf } from "../test/signatures.ts";
+import { FX_FOG_HIT_FROM, FX_FOG_HIT_TO } from "./constants.ts";
 import { planFx } from "./cues.ts";
-import { createFxMemory } from "./memory.ts";
 import type { FxCue, FxPlanEnv } from "./types.ts";
 
 function pileView(): PlayerView {
@@ -23,10 +23,6 @@ function pileView(): PlayerView {
       units: [unit("p2", { instanceId: "e1" }), unit("p2", { instanceId: "e2" }), null, null, null],
     }),
   });
-}
-
-function envOf(over: Partial<FxPlanEnv> = {}): FxPlanEnv {
-  return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory(), ...over };
 }
 
 function plan(events: readonly GameEvent[], view: PlayerView, env: FxPlanEnv = envOf()): FxCue[] {

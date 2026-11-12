@@ -10,8 +10,9 @@ import { ANOMALY_FOUND_ID } from "../../../cards/anomalies.ts";
 import { animTestid } from "../../../game/animations.ts";
 import { testid } from "../../../game/contract.ts";
 import { fullBoardView } from "../../../test/fixtures.ts";
+import { endOf } from "../../../test/signatures.ts";
 import { planCardFx } from "../../cardFx.ts";
-import { FX_INTENSITY_SCALE, FX_MAX_PARTICLE_LIFE_MS, FX_MAX_TAIL_MS, FX_MOTIF_CENTER_LANE } from "../../constants.ts";
+import { FX_INTENSITY_SCALE, FX_MAX_TAIL_MS, FX_MOTIF_CENTER_LANE } from "../../constants.ts";
 import { createFxMemory } from "../../memory.ts";
 import { galleryEntry, RECIPE_FIXTURES } from "../../motifs/gallery.ts";
 import type { FxCue, FxPlanEnv } from "../../types.ts";
@@ -20,17 +21,6 @@ import { FX_CARD_TABLE } from "../tables.ts";
 const MK1 = "stinkyscape-166";
 const MK2 = "stinkyscape-167";
 const D = 400;
-
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
-}
 
 const played = (player: PlayerId, instanceId: string, defId: string): GameEvent => ({ type: "cardPlayed", player, instanceId, defId, costPaid: 1 });
 const resolved = (player: PlayerId, instanceId: string, defId: string): GameEvent => ({ type: "cardResolved", player, instanceId, defId, permanent: false, costPaid: 1 });

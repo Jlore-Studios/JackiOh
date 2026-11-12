@@ -8,13 +8,13 @@ import { describe, expect, it } from "vitest";
 import { animTestid, planEntries, type AnimationEntry } from "../../game/animations.ts";
 import { testid } from "../../game/contract.ts";
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
+import { endOf, envOf } from "../../test/signatures.ts";
 import { planCardMotif } from "../cardFx.ts";
 import { FX_CARD_TABLE, type FxCardEntry } from "../cards/tables.ts";
-import { FX_INTENSITY_SCALE, FX_MAX_PARTICLE_LIFE_MS, FX_MAX_TAIL_MS, FX_MOTIF_SCALE_MAX, FX_MOTIF_TRAUMA } from "../constants.ts";
+import { FX_INTENSITY_SCALE, FX_MAX_TAIL_MS, FX_MOTIF_SCALE_MAX, FX_MOTIF_TRAUMA } from "../constants.ts";
 import { planFx } from "../cues.ts";
 import { FLAVOR_LOOKS, FLAVOR_SUB_LOOKS, paletteLook, type FxPalette } from "../flavors.ts";
 import { flavorLookOf } from "../flavorSource.ts";
-import { createFxMemory } from "../memory.ts";
 import type { FxBurstCue, FxCue, FxPlanEnv } from "../types.ts";
 import { MOTIF_TUNING, motifScale, timesOf, type MotifSpec } from "./build.ts";
 import { galleryEntry, gallerySource, motifFixture } from "./gallery.ts";
@@ -23,10 +23,6 @@ import { FX_DRAWN_MOTIFS, type DrawnMotif } from "./names.ts";
 
 const SCALE = 1.5;
 const FIRE = FLAVOR_LOOKS.Fire;
-
-function envOf(over: Partial<FxPlanEnv> = {}): FxPlanEnv {
-  return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory(), ...over };
-}
 
 function specOf(motif: DrawnMotif, over: Partial<MotifSpec> = {}): MotifSpec {
   return { motif, look: FIRE, scale: SCALE, row: "replace", ...over };
@@ -43,21 +39,6 @@ function planned(motif: DrawnMotif, D = 400, over: Partial<MotifSpec> = {}): FxC
 }
 
 const beats = (cues: readonly FxCue[]): string[] => cues.map((cue) => `${cue.kind}@${String(cue.delayMs)}`);
-
-/** Where a cue ends, in ms after its entry starts (R200's bound is D + FX_MAX_TAIL_MS). */
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "projectile":
-    case "shot":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
-}
 
 const repeat = (times: number, ...beat: string[]): string[] => Array.from({ length: times }, () => beat).flat();
 

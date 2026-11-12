@@ -34,6 +34,7 @@ import {
   type EntranceResolver,
 } from "../../game/animations.ts";
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
+import { endOf, envOf } from "../../test/signatures.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { planCardFx, planCardMotif, planSignatureSweep, planSignatureZone } from "../cardFx.ts";
 import { entryAura, FX_CARD_TABLE, isSignature } from "./tables.ts";
@@ -41,8 +42,6 @@ import { auraLookSpec } from "../aura/looks.ts";
 import {
   AURA_SIGNATURE_MAX_INTENSITY,
   FX_HOLD_MAX_MS,
-  FX_INTENSITY_SCALE,
-  FX_MAX_PARTICLE_LIFE_MS,
   FX_MAX_TAIL_MS,
   SIGNATURE_LEGENDARY_MAX_MS,
   SIGNATURE_MYTHIC_MAX_MS,
@@ -51,31 +50,11 @@ import {
   SIGNATURE_SPELL_SHARE,
 } from "../constants.ts";
 import { planFx } from "../cues.ts";
-import { createFxMemory } from "../memory.ts";
 import { galleryBoardOf, galleryCardEvents, galleryFieldView, galleryPlayOf } from "../motifs/gallery.ts";
 import { hasSetPiece, SET_PIECE_KEYS, SET_PIECES, planSetPiece, signatureRunOf, wipeClaim } from "../setPieces.ts";
 import { planTerminus } from "../terminus/index.ts";
 import { entranceCues } from "../takeover.ts";
 import type { FxCue, FxPlanEnv } from "../types.ts";
-
-/** A cue's end, as R2800000's own R200 test counts it: bursts burn, shots fly then burst, shakes ride, the rest run out. */
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shot":
-    case "projectile":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
-}
-
-function envOf(): FxPlanEnv {
-  return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory() };
-}
 
 /** As the board resolves an entrance: the card's type and rarity, a token's the one it prints (B2.5). */
 const resolve: EntranceResolver = (defId) => {

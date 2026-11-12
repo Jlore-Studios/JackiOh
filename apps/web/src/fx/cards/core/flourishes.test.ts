@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import { animTestid } from "../../../game/animations.ts";
 import { testid } from "../../../game/contract.ts";
 import { fullBoardView } from "../../../test/fixtures.ts";
+import { endOf, envOf } from "../../../test/signatures.ts";
 import { planCardFx } from "../../cardFx.ts";
 import {
   FX_CENTER,
@@ -16,35 +17,14 @@ import {
   FX_FORGE_REACH,
   FX_FORGE_TRAUMA,
   FX_INTENSITY_SCALE,
-  FX_MAX_PARTICLE_LIFE_MS,
   FX_MAX_TAIL_MS,
   FX_TIDE_TRAUMA,
   FX_WISH_TRAUMA,
 } from "../../constants.ts";
-import { createFxMemory } from "../../memory.ts";
 import { galleryEntry, RECIPE_FIXTURES } from "../../motifs/gallery.ts";
-import type { FxCue, FxPlanEnv } from "../../types.ts";
+import type { FxCue } from "../../types.ts";
 import { CARD_RECIPES, type CardRecipeKey } from "../bespoke.ts";
 import { FX_CARD_TABLE } from "../tables.ts";
-
-function envOf(over: Partial<FxPlanEnv> = {}): FxPlanEnv {
-  return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory(), ...over };
-}
-
-/** Where a cue ends, in ms after its entry starts (R200's bound is D + FX_MAX_TAIL_MS). */
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "projectile":
-    case "shot":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
-}
 
 const beats = (cues: readonly FxCue[]): string[] => cues.map((cue) => `${cue.kind}@${String(cue.delayMs)}`);
 

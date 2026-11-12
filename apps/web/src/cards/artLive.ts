@@ -10,6 +10,8 @@
 
 import { useEffect, useState, type RefObject } from "react";
 
+import { hearHostMove } from "./hostMove.ts";
+
 /** R3340000: the custom properties a face holds the pointer's place in it in, -1 (left, top) to 1 (right, bottom). */
 export const ART_AIM_X_PROPERTY = "--art-aim-x";
 export const ART_AIM_Y_PROPERTY = "--art-aim-y";
@@ -74,9 +76,12 @@ export function useArtLive(ref: RefObject<HTMLElement | null>, enabled: boolean)
       if (!pointerInside) focusAim();
       updateHovered();
     };
-    const move = (event: PointerEvent): void => {
+    // #3674: read with the tilt's read of the same move, written after it (hostMove.ts).
+    const move = (event: PointerEvent): (() => void) => {
       const aim = aimOf(event.clientX, event.clientY, el.getBoundingClientRect());
-      writeAim(aim.x, aim.y);
+      return () => {
+        writeAim(aim.x, aim.y);
+      };
     };
     const press = (): void => {
       pressing = true;
@@ -100,7 +105,7 @@ export function useArtLive(ref: RefObject<HTMLElement | null>, enabled: boolean)
     };
     host.addEventListener("pointerenter", pointerEnter);
     host.addEventListener("focusin", focusIn);
-    host.addEventListener("pointermove", move, { passive: true });
+    const stopMove = hearHostMove(host, move);
     host.addEventListener("pointerdown", press);
     host.addEventListener("pointerup", lift);
     host.addEventListener("pointercancel", lift);
@@ -117,7 +122,7 @@ export function useArtLive(ref: RefObject<HTMLElement | null>, enabled: boolean)
     return () => {
       host.removeEventListener("pointerenter", pointerEnter);
       host.removeEventListener("focusin", focusIn);
-      host.removeEventListener("pointermove", move);
+      stopMove();
       host.removeEventListener("pointerdown", press);
       host.removeEventListener("pointerup", lift);
       host.removeEventListener("pointercancel", lift);

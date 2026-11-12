@@ -1,8 +1,8 @@
 // R3405001: what Meditative's and Meditative+'s signature tests (fx/cards/meditative/signatures*.test.ts,
 // fx/cards/meditativeplus/signatures.test.ts) share: a card's play or hook planned as the board's effects
 // layer plans it, an entry each (remember, then plan through the dispatch, cardFx.ts `planCardFx`); its own
-// cast under a Mythic's takeover hold; its entrance as it lands, after its entry's lead (R3405000); and a
-// cue's end as R200 counts it.
+// cast under a Mythic's takeover hold; its entrance as it lands, after its entry's lead (R3405000); a cue's
+// end as R200 counts it; and, for every effects test (#3701), the one `endOf` and the one `envOf`.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
@@ -18,18 +18,25 @@ import { fullBoardView } from "./fixtures.ts";
 /** A Mythic's takeover hold, the lead its cast and its entrance start after. */
 export const HOLD = TAKEOVER_HOLD_MS;
 
-export function envOf(intensity: number = FX_INTENSITY_SCALE.normal): FxPlanEnv {
-  return { intensity, card: () => undefined, memory: createFxMemory() };
+/** The effects tests' planning setup: normal intensity, no card facts and a memory of its own, `over` replacing any of them (#3701). */
+export function envOf(over: Partial<FxPlanEnv> = {}): FxPlanEnv {
+  return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory(), ...over };
 }
 
-/** Where a cue ends, in ms after its entry starts (R200's bound is D + FX_MAX_TAIL_MS). */
+/** The cues that fly: a `flightMs`, no `durationMs`, and a burst where they land. */
+type FlightCue = Extract<FxCue, { flightMs: number }>;
+
+/** Every `FxCue` kind with a `flightMs`, and no other: a new flying kind fails `typecheck` here until it is listed, so `endOf` counts its flight (#3701). */
+const FLIGHT_KINDS: Record<FlightCue["kind"], true> = { projectile: true, shot: true };
+
+const flies = (cue: FxCue): cue is FlightCue => Object.hasOwn(FLIGHT_KINDS, cue.kind);
+
+/** Where a cue ends, in ms after its entry starts (R200's bound is D + FX_MAX_TAIL_MS): a burst's particles burn out, a flight lands and bursts, a shake rides its delay, the rest run their `durationMs`. */
 export function endOf(cue: FxCue): number {
+  if (flies(cue)) return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
   switch (cue.kind) {
     case "burst":
       return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "projectile":
-    case "shot":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
     case "shake":
       return cue.delayMs;
     default:

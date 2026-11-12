@@ -19,12 +19,12 @@ import {
 import { testid } from "../game/contract.ts";
 import { createPlayTracker } from "../game/runs.ts";
 import { fullBoardView } from "../test/fixtures.ts";
+import { endOf } from "../test/signatures.ts";
 import { entranceKeyOf } from "./cardFx.ts";
 import { FX_CARD_TABLE } from "./cards/tables.ts";
 import {
   FX_HOLD_MAX_MS,
   FX_INTENSITY_SCALE,
-  FX_MAX_PARTICLE_LIFE_MS,
   FX_MAX_TAIL_MS,
   FX_MOTIF_CENTER_LANE,
   FX_TERMINUS_LAMP_AT,
@@ -89,17 +89,6 @@ function wipeEntry(defId: string, units: readonly UnitView[], holdMs?: number, v
 }
 
 const pieceOf = (cues: readonly FxCue[]): FxSetPieceCue | undefined => cues.find((c): c is FxSetPieceCue => c.kind === "setPiece");
-
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
-}
 
 describe("R2800000 a board clear's set piece", () => {
   it("R3338000 the board clears are Nether's, the Void's, the shared vortex and Farewell's", () => {

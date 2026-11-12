@@ -23,7 +23,8 @@ import {
 import { testid } from "../game/contract.ts";
 import { createPlayTracker } from "../game/runs.ts";
 import { baseView, dormantStarship, emptySide, unit } from "../test/fixtures.ts";
-import { FX_INTENSITY_SCALE, FX_LUNGE_CONTACT_AT, FX_MAX_PARTICLE_LIFE_MS, FX_MAX_TAIL_MS, FX_STARSHIP_TAIL_MS } from "./constants.ts";
+import { endOf } from "../test/signatures.ts";
+import { FX_INTENSITY_SCALE, FX_LUNGE_CONTACT_AT, FX_MAX_TAIL_MS, FX_STARSHIP_TAIL_MS } from "./constants.ts";
 import { planFx } from "./cues.ts";
 import { createFxMemory } from "./memory.ts";
 import { planStage } from "./stage.ts";
@@ -65,29 +66,14 @@ const env = (over: Partial<FxPlanEnv> = {}): FxPlanEnv => ({ intensity: FX_INTEN
 const MIX = [BEAM, RUSH, ENGINE, SHIELD, CANNON, FRUIT, DRILL, FLAK] as const;
 const piecesOf = (n: number): string[] => Array.from({ length: n }, (_, k) => MIX[k % MIX.length] ?? BEAM);
 
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "projectile":
-    case "shot":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    case "conceal":
-      // The stage's: the board's next view ends it, FX_HOLD_MAX_MS at the latest (R200); it paints nothing.
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
-}
-
 function expectBounded(cues: readonly FxCue[], D: number, where: string): void {
   expect(cues.length, where).toBeGreaterThan(0);
   for (const cue of cues) {
     expect(cue.delayMs, `${where}: ${cue.kind}`).toBeGreaterThanOrEqual(0);
     expect(cue.delayMs, `${where}: ${cue.kind}`).toBeLessThanOrEqual(D);
-    expect(endOf(cue), `${where}: ${cue.kind}`).toBeLessThanOrEqual(D + FX_MAX_TAIL_MS);
+    // A conceal is the stage's: the board's next view ends it, FX_HOLD_MAX_MS at the latest (R200); it paints nothing.
+    const end = cue.kind === "conceal" ? cue.delayMs : endOf(cue);
+    expect(end, `${where}: ${cue.kind}`).toBeLessThanOrEqual(D + FX_MAX_TAIL_MS);
   }
 }
 
