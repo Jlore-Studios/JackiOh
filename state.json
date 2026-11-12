@@ -15639,7 +15639,9 @@
     },
     "3696": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6800155352"
+      ],
       "build_next": {
         "from_run": "43126873421",
         "model": "opus",
@@ -15692,9 +15694,7 @@
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": [
-        "c:6800155352"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0,
       "waiting_comment": 6804830604
     },
