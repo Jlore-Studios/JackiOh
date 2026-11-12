@@ -3,9 +3,11 @@
 // backdrop, a launched Starship and a hand of ten with one tilted, played at 390x844, 360x780 and
 // 844x390 (a phone on its side) under 4x CPU throttling. Through it play a Mythic takeover, a
 // Starship launch and broadside, a Drone Battleship arrival, a Terminus set piece, a hand-to-tile
-// flight and a riffle, with frame times measured throughout against the one shared budget: the mean
-// frame within FX_PHONE_FRAME_BUDGET_MS and the worst within FX_PHONE_FRAME_WORST_MS. A forced shed
-// sheds motes first and a set piece's beats never.
+// flight and a riffle, each moment's beats mounting, with frame times sampled throughout and logged
+// against the one shared budget: the mean frame within FX_PHONE_FRAME_BUDGET_MS and the worst within
+// FX_PHONE_FRAME_WORST_MS. R3744000: this spec runs React's development build, so it reports those
+// numbers and never fails on them. A forced shed sheds motes first and a set piece's beats never.
+// Each retry plays events of its own (#3633, #3744): the runner plays only events it has not seen.
 // Run: E2E_COMPONENT_PORT=5283 pnpm --dir e2e test:component --spec cypress/component/fx-phone-living-game.cy.tsx
 
 import { CATALOG } from "@jackioh/cards";
@@ -45,7 +47,7 @@ const GAME = '[data-testid="game"]';
 const TILE_AURAS = '.tile-aura, .aura[data-aura-scope="tile"]';
 /** Long enough to cross a set piece's hold, short enough to stay mid-flight. */
 const SAMPLE_MS = 2_000;
-/** How many fresh plays of a moment may be sampled before its budget is called broken (see `holdsLivingBudget`). */
+/** How many fresh plays of a moment may be sampled before a starved window fails it (see `samplesMoment`). */
 const FRAME_ATTEMPTS = 3;
 /** R3344001: a pointer circles over the tilted card, one turn each CIRCLE_TURN_MS, at this share of the card's box from its middle. */
 const CIRCLE_TURN_MS = 2_500;
@@ -90,20 +92,22 @@ function summary(label: string, deltas: readonly number[]): { meanMs: number; wo
 }
 
 /**
- * R3351000: a moment holds the shared budget when its mean frame time is within
- * FX_PHONE_FRAME_BUDGET_MS and its worst single frame within FX_PHONE_FRAME_WORST_MS in any of
- * FRAME_ATTEMPTS plays. `scene` plays the moment and returns a sample of it; a replay first
- * rerenders the plain board, since the runner only plays events it has not seen. A frame time is a
- * measurement a loaded runner inflates and noise only ever adds time, so the lowest of a few
- * windows is the moment's own cost; a moment that really breaks the budget breaks it in every
- * window. A starved window, MIN_FRAMES or fewer (a moment's first play pays its one-time costs, an
- * image's decode among them), is one more such window: it is played again, and the last play must
- * hold every bound. Each sample is logged, as the report cites them.
+ * R3744000 (amending R3351000): a moment's frame times are logged against the shared budget, its
+ * mean frame against FX_PHONE_FRAME_BUDGET_MS and its worst single frame against
+ * FX_PHONE_FRAME_WORST_MS, and never judged. The component server runs React's development build,
+ * whose commits of a new view under 4x throttling take 350–580 ms (#3633), past the worst frame
+ * alone, so the numbers are what #3604's work is measured by, and the spec fails only when a
+ * moment's beats do not mount or its window starves. `scene` plays the moment, its beats mounting,
+ * and returns a sample of it; a replay first rerenders the plain board, since the runner only plays
+ * events it has not seen. A starved window, MIN_FRAMES or fewer (a moment's first play pays its
+ * one-time costs, an image's decode among them), is played again, and the last of FRAME_ATTEMPTS
+ * plays must sample more. Each sample is logged, as the report cites them.
  */
-function holdsLivingBudget(label: string, scene: (attempt: number) => Cypress.Chainable<number[]>, attempt = 1): void {
+function samplesMoment(label: string, scene: (attempt: number) => Cypress.Chainable<number[]>, attempt = 1): void {
   scene(attempt).then((deltas) => {
     const { meanMs, worstMs, frames, line } = summary(label, deltas);
-    const full = `${line} worst ${worstMs.toFixed(0)}ms`;
+    const within = meanMs <= FX_PHONE_FRAME_BUDGET_MS && worstMs <= FX_PHONE_FRAME_WORST_MS;
+    const full = `${line} worst ${worstMs.toFixed(0)}ms, ${within ? "within" : "over"} the ${String(FX_PHONE_FRAME_BUDGET_MS)}/${String(FX_PHONE_FRAME_WORST_MS)}ms budget`;
     cy.log(`${full} (attempt ${String(attempt)})`);
     cy.then(() => {
       Cypress.log({ name: "frame times", message: `${full} (attempt ${String(attempt)})` });
@@ -112,14 +116,11 @@ function holdsLivingBudget(label: string, scene: (attempt: number) => Cypress.Ch
     cy.task("layout:report", { spec: "fx-phone-living-game", sample: full, attempt }, { log: false });
     // Judged after the task has run, so the last play's row is in the log even when it fails (#3633).
     cy.then(() => {
-      const holds = frames > MIN_FRAMES && meanMs <= FX_PHONE_FRAME_BUDGET_MS && worstMs <= FX_PHONE_FRAME_WORST_MS;
-      if (holds || attempt >= FRAME_ATTEMPTS) {
+      if (frames > MIN_FRAMES || attempt >= FRAME_ATTEMPTS) {
         expect(frames, `${label}: frames sampled`).to.be.greaterThan(MIN_FRAMES);
-        expect(meanMs, line).to.be.lessThanOrEqual(FX_PHONE_FRAME_BUDGET_MS);
-        expect(worstMs, `${label}: worst single frame`).to.be.lessThanOrEqual(FX_PHONE_FRAME_WORST_MS);
         return;
       }
-      holdsLivingBudget(label, scene, attempt + 1);
+      samplesMoment(label, scene, attempt + 1);
     });
   });
 }
@@ -131,6 +132,8 @@ const GUNS = ["stinkyscape-050", "stinkyscape-051", "stinkyscape-052", "stinkysc
 const CORE_X = "stinkyscape-036";
 const SHIP_LAYERS = ["stinkyscape-t-meltdown-layer", "stinkyscape-t-propagation-layer", "stinkyscape-t-shield-layer"];
 const ROCK = "stinkyscape-169";
+/** #3744: the hand's Units the flight plays, one an attempt (id, card, its hand cost): a card's flight replayed over the rerendered board mounts no hold. */
+const FLYERS = [["fx-fly", "core-002", 1], ["fx-hand-6", "core-003", 2], ["fx-hand-8", "core-007", 4]] as const;
 /** The tilted hand card: a Mythic, whose Default face has depth (R3344001, R3343001). */
 const TILTED = "hand-card-fx-tilt";
 
@@ -275,7 +278,7 @@ function startTilt(): { stop: () => void } {
   };
 }
 
-describe("R3351000 the living game holds the phone budget", () => {
+describe("R3351000 R3744000 the living game on a phone", () => {
   // A scene that changes the effects settings (the broadside's speed) has them put back after it,
   // a failed one included; throttling is reset too, and the shed stage with it.
   afterEach(() => {
@@ -288,7 +291,7 @@ describe("R3351000 the living game holds the phone budget", () => {
   });
 
   for (const size of SIZES) {
-    it(`R3351000 the living game holds the phone budget at ${size.label} under 4x throttling`, () => {
+    it(`R3744000 R3351000 the living game plays every moment at ${size.label} under 4x throttling, its frame times logged`, () => {
       cy.viewport(size.width, size.height);
       cy.then(() =>
         Cypress.automation("remote:debugger:protocol", { command: "Emulation.setCPUThrottlingRate", params: { rate: THROTTLED } }),
@@ -310,10 +313,10 @@ describe("R3351000 the living game holds the phone budget", () => {
        * Plays the moment's events over `shown` and samples its flight. A retry resets the board
        * first, since the runner only plays events it has not seen: replaying the same events over
        * the same board would sample an idle board and pass for nothing. `events` may name each
-       * attempt's own (the takeover's, below).
+       * attempt's own (the takeover's, the broadside's, the flight's and the riffle's, below).
        */
       const moment = (label: string, shown: PlayerView, events: GameEvent[] | ((attempt: number) => GameEvent[]), flight: () => void): void => {
-        holdsLivingBudget(label, (attempt) => {
+        samplesMoment(label, (attempt) => {
           if (attempt > 1) {
             rerender(shown);
             cy.get("[data-animating]", { timeout: 10_000 }).should("not.exist");
@@ -376,7 +379,8 @@ describe("R3351000 the living game holds the phone budget", () => {
       cy.then(() => {
         setFxSettings({ speed: FX_SPEED_MIN });
       });
-      moment("8-gun broadside", launched, [{ type: "attackDeclared", attackerId: "fx-ship", targetId: "fx-unit-1", forced: false }], () => {
+      // #3744: replaying the same attack over the rerendered board plays nothing (#3674), so each attempt attacks another of the five Units.
+      moment("8-gun broadside", launched, (attempt) => [{ type: "attackDeclared", attackerId: "fx-ship", targetId: `fx-unit-${String(attempt)}`, forced: false }], () => {
         cy.get('[data-testid="card-fx-ship"]', { timeout: 4_000 }).should("have.attr", "data-animating", "attackDeclared");
         cy.get(CANVAS).should("exist");
       });
@@ -408,17 +412,20 @@ describe("R3351000 the living game holds the phone budget", () => {
         cy.get(CANVAS).should("exist");
       });
 
-      moment("Hand-to-tile flight", launched, [
-        { type: "cardPlayed", player: "p1", instanceId: "fx-fly", defId: "core-002", costPaid: 1 },
-        { type: "summoned", player: "p1", instanceId: "fx-fly", defId: "core-002", row: "units", lane: 5 },
-      ], () => {
+      moment("Hand-to-tile flight", launched, (attempt) => {
+        const [instanceId, defId, costPaid] = FLYERS[(attempt - 1) % FLYERS.length] ?? FLYERS[0];
+        return [
+          { type: "cardPlayed", player: "p1", instanceId, defId, costPaid },
+          { type: "summoned", player: "p1", instanceId, defId, row: "units", lane: 5 },
+        ];
+      }, () => {
         cy.get(`${FX_DOM} [data-fx="hold"]`, { timeout: 4_000 }).should("exist");
       });
 
-      moment("Riffle", launched, [
+      moment("Riffle", launched, (attempt) => [
         { type: "traded", player: "p1" },
-        { type: "shuffledIn", player: "p1", instanceId: "s1", defId: "core-070", position: 1 },
-        { type: "drawn", player: "p1", instanceId: "cY", defId: "core-055" },
+        { type: "shuffledIn", player: "p1", instanceId: `s${String(attempt)}`, defId: "core-070", position: 1 },
+        { type: "drawn", player: "p1", instanceId: `cY${String(attempt)}`, defId: "core-055" },
       ], () => {
         cy.get(GAME, { timeout: 4_000 }).should("have.attr", "data-riffle", "you");
       });
