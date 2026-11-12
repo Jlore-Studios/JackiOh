@@ -14142,7 +14142,9 @@
     "3734": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-11-12T10:26:20Z",
         "family": "claude",
@@ -14152,6 +14154,7 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"git log --oneline -1 && git status --short | head -5; cat .bot-plan.md | head -5\", \"description\": \"Check branch state and draft\"}\n- Bash: {\"command\": \"git log --oneline 13d4b9117c..HEAD | head -20; git diff --stat 13d4b9117c..HEAD -- apps/web/src/collection apps/web/src/game/deckbuilder apps/web/src/routes/collection.tsx apps/web/src/b\u2026\n- said: ## Goal The Collection leaves the 960px `panel--auth` frame and fills the window. It becomes four tabs, Cards, Decks, Cosmetics and a new Progress tab, switched by `?section=`, and each tab keeps its filters while you switch. - **Cards** is one virtualised grid of the whole catalog. It has an alway\u2026"
       },
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "live": "building",
