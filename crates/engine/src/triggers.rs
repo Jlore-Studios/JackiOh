@@ -249,8 +249,10 @@ fn holder_sites(state: &GameState, player: PlayerId) -> Vec<(&CardInstance, Trig
     }
     for slot in crate::zones::slots_of(player, Row::Backrow) {
         // R1081000: a Unit standing in the backrow is a holder above, among the active units, once.
+        // R3556000: a Dormant Field Spell's triggers are off (R1839000).
         if let Some(card) = crate::zones::card_at(state, slot)
             && !crate::zones::is_standing_unit(state, card)
+            && !crate::slumber::is_slumbering(card)
         {
             out.push((card, TriggerZone::Backrow));
         }
@@ -327,8 +329,10 @@ pub fn field_holders_where(state: &GameState, keep: impl Fn(&CardInstance) -> bo
             }
         }
         for slot in crate::zones::slots_of(player, Row::Backrow) {
+            // R3556000: a Dormant Field Spell's triggers are off (R1839000).
             if let Some(card) = crate::zones::card_at(state, slot)
                 && !crate::zones::is_standing_unit(state, card)
+                && !crate::slumber::is_slumbering(card)
                 && keep(card)
             {
                 out.push(holder_of(state, card, TriggerZone::Backrow, player));

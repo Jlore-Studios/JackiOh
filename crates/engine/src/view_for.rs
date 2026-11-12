@@ -1055,6 +1055,8 @@ fn backrow_view(
         } else {
             None
         },
+        // R3556000: a Dormant Field Spell in the backrow wears its countdown (R1839000).
+        slumber: card.slumber,
         // R3548001: the backrow card's blur, if its stamp blurs it for this viewer.
         tipsy_blur: view.tipsy_blur,
     }))

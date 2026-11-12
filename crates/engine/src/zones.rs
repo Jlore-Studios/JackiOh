@@ -795,9 +795,10 @@ fn place_with(
     }
     // B3.3 rule 1, R385, R638: a printed Brittle starts as its card enters the field, and a held count starts ticking.
     start_brittle_on_field(state, instance, from_off_field);
-    // R1839000: a Unit printing Dormant enters the field Dormant (a carried Unit included, R446).
+    // R1839000, R3556000: a Unit or a face-up Field Spell printing Dormant enters the field Dormant
+    // (a carried Unit included, R446).
     let as_unit = slot.row == Row::Units || is_unit_face(state, instance);
-    crate::slumber::start_slumber_on_field(state, instance, from_off_field, as_unit);
+    crate::slumber::start_slumber_on_field(state, instance, from_off_field);
     // R1852000: and a Starship's hull starts its memory as it does.
     crate::starship::start_starship_on_field(state, instance, from_off_field, as_unit);
     // R3546000: stamp the size the checks above read, so the stored card carries it.

@@ -30696,7 +30696,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 43,
     "base": {
       "keywords": [
         {
@@ -30727,7 +30727,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 31,
     "base": {
       "keywords": [],
       "text": "End of turn: Heal all Units to full."
@@ -30750,10 +30750,10 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 57,
     "base": {
       "keywords": [],
-      "text": "The first {damage} damage allies would take per turn is nullified."
+      "text": "The first {pool} damage allies would take per turn is nullified."
     },
     "radiant": {
       "keywords": [
@@ -30762,19 +30762,18 @@
           "n": 2
         }
       ],
-      "text": "Armor 2\nThe first {damage} damage allies would take per turn is nullified."
+      "text": "Armor 2\nThe first {pool} damage allies would take per turn is nullified."
     },
     "params": [
       {
-        "key": "damage",
+        "key": "pool",
         "base": 5,
         "radiant": 10,
         "better": "up",
         "step": 1,
         "min": 1
       }
-    ],
-    "dealsDamage": true
+    ]
   },
   "stinkyscapeplus-043": {
     "id": "stinkyscapeplus-043",
@@ -30789,7 +30788,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 24,
     "base": {
       "keywords": [],
       "text": "The first enemy Ranged attack or Activate per turn is countered."
@@ -31171,7 +31170,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 80,
     "base": {
       "keywords": [],
       "text": "Start of turn: Gain {mana} mana and draw {card|card|cards}.\nEnd of turn: {chance}% chance to blow up dealing {damage} damage to your hero.\nActivate: Discard a Thorium to skip the blow up chance this turn."
@@ -31206,7 +31205,7 @@
         "key": "chance",
         "base": 15,
         "radiant": 15,
-        "better": "up",
+        "better": "down",
         "step": 1,
         "min": 1
       },
@@ -31214,7 +31213,7 @@
         "key": "damage",
         "base": 30,
         "radiant": 30,
-        "better": "up",
+        "better": "down",
         "step": 1,
         "min": 1
       }
@@ -31237,14 +31236,14 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 52,
     "base": {
       "keywords": [
         {
           "kind": "GIGA"
         }
       ],
-      "text": "GIGA\nCry: Lose {mana} mana next turn, and {mana2} mana the turn after.\nDormant for {count|turn|turns}.\nWhen awoken: Gain infinite mana."
+      "text": "GIGA\nCry: Lose {mana} mana next turn, and {mana2} mana the turn after.\nDormant for {dormant|turn|turns}.\nWhen awoken: Gain infinite mana."
     },
     "radiant": {
       "keywords": [
@@ -31252,14 +31251,14 @@
           "kind": "GIGA"
         }
       ],
-      "text": "GIGA\nCry: Lose {mana} mana next turn, and {mana2} mana the turn after.\nDormant for {count|turn|turns}.\nWhen awoken: Gain infinite mana."
+      "text": "GIGA\nCry: Lose {mana} mana next turn, and {mana2} mana the turn after.\nDormant for {dormant|turn|turns}.\nWhen awoken: Gain infinite mana."
     },
     "params": [
       {
         "key": "mana",
         "base": 4,
         "radiant": 2,
-        "better": "up",
+        "better": "down",
         "step": 1,
         "min": 1,
         "cry": true
@@ -31268,16 +31267,16 @@
         "key": "mana2",
         "base": 2,
         "radiant": 1,
-        "better": "up",
+        "better": "down",
         "step": 1,
         "min": 1,
         "cry": true
       },
       {
-        "key": "count",
+        "key": "dormant",
         "base": 2,
         "radiant": 2,
-        "better": "up",
+        "better": "down",
         "step": 1,
         "min": 1
       }
@@ -31296,7 +31295,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 21,
     "base": {
       "keywords": [],
       "text": "end of its owner's turn: add a Phase Fabric to your hand."
@@ -31357,14 +31356,16 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 60,
     "base": {
       "keywords": [
         {
           "kind": "Flexible"
         }
       ],
-      "text": "Flexible\nActivate: In {count|turn|turns} add two Minerals that cost (0) and a Resource to your hand."
+      "text": "Flexible\nActivate: In {count|turn|turns} add two Minerals that cost (0) and a Resource to your hand.",
+      "attack": 0,
+      "health": 6
     },
     "radiant": {
       "keywords": [
@@ -31372,14 +31373,16 @@
           "kind": "Flexible"
         }
       ],
-      "text": "Flexible\nActivate: In {count|turn|turns} add two Radiant Minerals that cost (0) and a Radiant Resource to your hand."
+      "text": "Flexible\nActivate: In {count|turn|turns} add two Radiant Minerals that cost (0) and a Radiant Resource to your hand.",
+      "attack": 0,
+      "health": 12
     },
     "params": [
       {
         "key": "count",
         "base": 2,
         "radiant": 2,
-        "better": "up",
+        "better": "down",
         "step": 1,
         "min": 1
       }
@@ -31506,26 +31509,26 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 42,
     "base": {
       "keywords": [],
-      "text": "Dormant for {count|turn|turns}.\nAll Units gain Rush and Windfury and Spells gains Echo +{value}."
+      "text": "Dormant for {dormant|turn|turns}.\nAll Units gain Rush and Windfury and Spells gains Echo +{spellEcho}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Dormant for {count|turn|turns}.\nYour Units gain Rush and Windfury and Spells gains Echo +{value}."
+      "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Rush and Windfury and Spells gains Echo +{spellEcho}."
     },
     "params": [
       {
-        "key": "count",
+        "key": "dormant",
         "base": 1,
         "radiant": 1,
-        "better": "up",
+        "better": "down",
         "step": 1,
         "min": 1
       },
       {
-        "key": "value",
+        "key": "spellEcho",
         "base": 1,
         "radiant": 1,
         "better": "up",
@@ -31547,26 +31550,26 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 42,
     "base": {
       "keywords": [],
-      "text": "Dormant for {count|turn|turns}.\nAll Units gain Charge and Windfury and Spell gains Echo +{value}."
+      "text": "Dormant for {dormant|turn|turns}.\nAll Units gain Charge and Windfury and Spell gains Echo +{spellEcho}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Dormant for {count|turn|turns}.\nYour Units gain Charge and Windfury and Spell gains Echo +{value}."
+      "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Charge and Windfury and Spell gains Echo +{spellEcho}."
     },
     "params": [
       {
-        "key": "count",
+        "key": "dormant",
         "base": 2,
         "radiant": 2,
-        "better": "up",
+        "better": "down",
         "step": 1,
         "min": 1
       },
       {
-        "key": "value",
+        "key": "spellEcho",
         "base": 2,
         "radiant": 2,
         "better": "up",
