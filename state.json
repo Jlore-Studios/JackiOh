@@ -16185,6 +16185,13 @@
     "3800": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "43304231986",
+        "model": "opus",
+        "provider": "claude-4",
+        "since": "2026-11-12T21:09:29Z",
+        "until": "2026-11-12T21:39:29Z"
+      },
       "failures": 1,
       "handoff": {
         "at": "2026-11-12T20:40:35Z",
