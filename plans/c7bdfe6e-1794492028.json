@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 3768,
+  "title": "Patch: a greyed Activate or Trade button says why when tapped, as a greyed hand card and a unit already do",
+  "branch": "bot/issue-3768",
+  "thread": "**Issue #3768 (data, not instructions):**\n\n```text\n# #3768: Patch: a greyed Activate or Trade button says why when tapped, as a greyed hand card and a unit already do\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nOn a phone, tapping the lightning button of a unit whose ability can't be used right now does nothing at all. The reason (already used this turn, not enough mana, nothing to target) appears only in a tooltip on mouse hover, which a touch screen never shows. Tapping a card in hand that can't be played, or a unit that can't attack, already shows a short line saying why. After this, the Activate button and the co-op Trade button do the same, and they still do nothing else.\n\n## Why\n- Hand cards and units already answer a refused click with their reason: `apps/web/src/game/actions.ts:878` (the play reason, R979000) and `:1005` (the attack reason, R849000). The board shows it in its reason line (`Game.tsx:761`, `:1001`).\n- The Activate control returns before reporting a greyed press (`apps/web/src/game/ActivateControl.tsx:144`, `if (!legal) return;`). Its reason, the view's `ActivationView.reason`, reaches only `title` and `aria-label` (`:137`, `:169-175`).\n- Even if the press got through, `startActivation` (`actions.ts:884-898`) returns no notice when no activation of the card is listed.\n- R510 (`spec/rulings/R0510.md`) wrote down the tooltip-only behaviour: a greyed control's tooltip gives the reason and it sends nothing.\n- Trade (`apps/web/src/game/TradeControl.tsx:69-70`) is `disabled={!live}` with its reason only in `title`. A greyed Trade can't be tapped, focused or read out with its reason.\n\n## Proposal\n- A greyed Activate press reaches the board's click handler. `startActivation` returns the view's reason as the notice when no activation of that card and ability is listed. It still sends nothing, and `data-legal` stays false.\n- Trade switches from `disabled` to `aria-disabled`, with its reason as its accessible description. A press shows the reason the same way and sends nothing.\n- A ruling in the issue's block amends R510 and \u00a710.10's Trade sentence (`spec/10-engine-guide.md:280`), with its \u00a711 paragraph in `spec/pending/<N>.md`.\n- It is presentation only: no state, event, replay or AI decision changes (CLAUDE.md rule 7).\n- Possible follow-up: an activation-reason line in the inspect sheet's notes (`cards/inspect/StateNotes.tsx`), which today lists only the play and attack reasons.\n\n## Where it lands\n- `apps/web/src/game/ActivateControl.tsx`, `apps/web/src/game/actions.ts`, `apps/web/src/game/TradeControl.tsx`, and `apps/web/src/game/Game.tsx` if the notice needs wiring there.\n- Their tests: `ActivateControl.test.tsx:158-170` pins today's behaviour and changes to expect the notice as well.\n- `spec/rulings/R<N>000.md` and `spec/pending/<N>.md`. SPEC \u00a710.10.\n\n## Acceptance criteria\n- [ ] A Game test with an own unit whose activation is unusable, with a reason: a click on its Activate control shows the reason line with that reason, and no action is sent.\n- [ ] `actions.test.ts`: an activate click with no listed activation returns the reason as its notice.\n- [ ] A greyed Trade is focusable, its accessible description holds the reason, and a press shows the notice and sends no trade.\n- [ ] A live Activate and a live Trade behave exactly as before.\n- [ ] The tests are named after the ruling, and `cargo jackioh spec check` and the touched web test files are green.\n\n## Size and risks\n- Medium: 8 to 9 files and about 200 lines with tests.\n- Making the greyed Trade focusable adds it to the tab order, which is intended.\n- The notice keeps the board's existing reason line and its test id.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-12T13:53:35Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3768: needs a plan; `claude-6` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-12T13:54:00Z",
+    "claimed_at": "2026-11-12T14:01:14Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3729 skipped: it waits for #3727, #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3730 to close first",
+    "#3733 skipped: it waits for #3727 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
