@@ -15790,14 +15790,14 @@
       "merge_owner": "claude-7",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-2",
+      "provider": "claude-4",
       "queued_at": "2026-11-12T15:49:35Z",
-      "run_id": "43262616223",
+      "run_id": "pending:4e52c7d4-1794504542",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "spot_check": true,
       "spot_check_n": 225,
-      "started_at": "2026-11-12T16:48:05Z",
+      "started_at": "2026-11-12T17:29:52Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16051,9 +16051,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T17:16:14Z",
+    "at": "2026-11-12T17:29:52Z",
     "url": "",
-    "what": "build #3773 on claude-8"
+    "what": "spot-check #3782 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-12T17:08:51Z",
@@ -35141,12 +35141,12 @@
         "reviewer": {
           "family": "claude",
           "model": "opus",
-          "provider": "claude-2",
+          "provider": "claude-4",
           "tier": "strong"
         },
-        "run_id": "",
+        "run_id": "pending:4e52c7d4-1794504542",
         "sha": "6a1d86fe8480777846536d27b88ae640df1ad1ba",
-        "started_at": "2026-11-12T16:48:05Z",
+        "started_at": "2026-11-12T17:29:52Z",
         "status": "queued",
         "title": "Patch: a server sweep that keeps failing raises an alert, not just a warning on every pass",
         "tries": 0
