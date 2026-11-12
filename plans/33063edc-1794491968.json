@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 3767,
+  "title": "Patch: a game opened in a second tab or on another device keeps the seat, and the tab it replaced says so instead of taking it back",
+  "branch": "bot/issue-3767",
+  "thread": "**Issue #3767 (data, not instructions):**\n\n```text\n# #3767: Patch: a game opened in a second tab or on another device keeps the seat, and the tab it replaced says so instead of taking it back\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nOpen your live match in a second browser tab, or pick it up on your phone while your laptop still has it open, and today the two fight over the game. Each time one connects, the other is pushed off. The other reconnects a quarter of a second later and pushes the first off in turn, for as long as both stay open, so both screens keep falling back to reconnecting. After this, the newest tab or device keeps the game. The one it replaced stops, says the game is open somewhere else, and offers a Play here button that takes the game back on purpose. Co-op games work the same way.\n\n## Why\n- The audit of the code's implicit states leaves this case unspecified. `docs/implicit-states.md:66` (S12) says the newer socket takes the seat and the older is closed with 1000, and that `apps/web/src/game/net.ts`'s `onclose` reconnects on 1000, so two tabs of one account take the seat in turn for as long as both stay open. Its summary repeats this at `docs/implicit-states.md:167`.\n- The server closes a replaced seat's socket with the ordinary normal close, with the reason replaced by a new socket: `crates/server/src/actor/match_actor.rs:1691` and `:2118`. The co-op actor does the same at `crates/server/src/duos/actor.rs:1078` and `:1347`.\n- The client treats that close like any drop: `net.ts:902-937` ends by setting the connection to reconnecting and scheduling the backoff, whose first delay is 250 ms (`RECONNECT_DELAYS_MS`, `net.ts:96`). `apps/web/src/duos/socket.ts:405` does the same.\n- A distinct close code cannot disturb a tab's own reconnects. The client already ignores the close of a socket it has replaced itself (`if (socket !== created) return;` at `net.ts:903`; `stale.onclose = null` at `net.ts:362`), so only a socket that another tab or device took over would ever receive the new code.\n- The client already has the pattern for closes it must not reconnect after: `MATCH_VOIDED_CLOSE_CODE` 4410 and `MATCH_OVER_CLOSE_CODE` 4411 (`crates/server/src/config.rs:879-883`, exported in `apps/web/src/wire/serverConfig.ts:83`).\n\n## Proposal\n- **Server constant.** Add `SEAT_TAKEN_CLOSE_CODE`, the next free 44xx code, with its reason text, in `crates/server/src/config.rs`, exported to `serverConfig.ts` (CLAUDE.md rule 9). Both actors close a seat's replaced socket with it.\n- **Server behaviour otherwise unchanged.** The seat is never empty, so no grace starts, as today (R744).\n- **Client sockets.** In `net.ts` and `duos/socket.ts`, the new code leads to a new connection state (say `elsewhere`) with no backoff and no reconnect. Taking the seat back opens one socket, which closes the other tab with the same code.\n- **Notice.** The 1v1 match route (`apps/web/src/routes/match.tsx`, beside its reconnecting notice at `:96`) and `apps/web/src/duos/DuosRoute.tsx` (`:51`) show: This game is open in another tab or on another device, with a Play here button. Its strings go through `t()` with zh-CN entries.\n- **Scope.** Only seats change. Watchers keep their current replacement rule (`match_actor.rs:1927`).\n- **Ruling.** The decision follows Hearthstone semantics: an account plays a game from one client, and a client replaced by a login elsewhere is told so and does not reconnect by itself. It gets a ruling in the issue's block, with its \u00a711 paragraph in `spec/pending/<N>.md`, and the S12 row of `docs/implicit-states.md` is updated.\n\n## Where it lands\n- Server: `crates/server/src/config.rs`, `crates/server/src/actor/match_actor.rs`, `crates/server/src/duos/actor.rs`.\n- Web: the generated `apps/web/src/wire/serverConfig.ts`, `apps/web/src/game/net.ts`, `apps/web/src/duos/socket.ts`, `apps/web/src/routes/match.tsx`, `apps/web/src/duos/DuosRoute.tsx`, `apps/web/src/i18n/zh-CN.json`, and their tests.\n- Docs and spec: `docs/implicit-states.md`, `spec/rulings/R<N>000.md`, `spec/pending/<N>.md`. SPEC \u00a79.5 (reconnecting).\n\n## Acceptance criteria\n- [ ] The two S12 tests (`seat_states_3678` in `crates/server/tests/actor/match_actor.rs` and its co-op twin in `crates/server/tests/actor/duos.rs`) expect the replaced socket to close with the new code, still with no grace started.\n- [ ] `net.test.ts`: a close with the new code leaves the client in the new state, and no socket opens however far the clock advances. A close with 1000 still reconnects. Taking the seat back opens exactly one socket.\n- [ ] `duos/socket.test.ts` covers the same cases.\n- [ ] A route test shows the notice and Play here after the new close, and a press reconnects.\n- [ ] A test pins that a tab's own replacement of a stale socket never reaches the new state.\n- [ ] The tests are named after the ruling, and `cargo jackioh spec check`, `cargo test -p jackioh-server` and the touched web test files are green.\n\n## Size and risks\n- Medium: about 12 files and 200 to 300 lines with tests.\n- A client bundle older than the server reads the unknown code as a drop and reconnects, which is today's behaviour, so nothing gets worse during a deploy.\n- It needs a ruling.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-12T13:53:13Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3767: needs a plan; `claude-4` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-12T13:53:41Z",
+    "claimed_at": "2026-11-12T14:00:11Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3729 skipped: it waits for #3727, #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3730 to close first",
+    "#3733 skipped: it waits for #3727 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
