@@ -16104,9 +16104,7 @@
     },
     "3793": {
       "action": "plan",
-      "asks": [
-        "c:6835851981"
-      ],
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-12T21:47:38Z",
         "difficulty": "hard",
@@ -16125,14 +16123,6 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "- said: You've hit your 5-hour limit \u00b7 resets 10:50pm (UTC)"
       },
-      "hold": {
-        "ends": "2026-11-13T00:13:46Z",
-        "lifted": "2026-11-12T22:53:24Z",
-        "owner": "claude-3",
-        "since": "2026-11-12T22:13:46Z",
-        "until": "2026-11-12T22:50:00Z",
-        "why": "it refused a call"
-      },
       "interruptions": 0,
       "kind": "build",
       "live": "planning",
@@ -16148,7 +16138,7 @@
       "provider": "claude-3",
       "queued_at": "2026-11-12T21:07:39Z",
       "requested_by": "jgoetzmann",
-      "run_id": "43314507227",
+      "run_id": "pending:c2a8e8ec-1794526336",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
@@ -16167,10 +16157,12 @@
         "provider": "claude-3",
         "run": "43314507227"
       },
-      "started_at": "2026-11-12T21:52:23Z",
+      "started_at": "2026-11-12T23:33:05Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6835851981"
+      ],
       "waiting_comment": 6837386099
     },
     "3796": {
@@ -16910,9 +16902,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T23:32:01Z",
+    "at": "2026-11-12T23:33:05Z",
     "url": "",
-    "what": "plan #3806 on claude-8"
+    "what": "plan #3793 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-12T22:39:58Z",
