@@ -520,8 +520,11 @@ fn r2778000_a_first_game_opens_the_row_on_its_ladder() {
 #[test]
 fn r608_the_sides_and_the_bystanders_take_their_new_jlorious_peaks() {
     let mythic = tier_bottom(4);
+    // Each row has reached Mythic Grape this season, so its floor holds it there: the side that loses stays in
+    // Jlorious (R607).
     let at_peak = |id: &str, rating: f64, peak: Option<i32>| {
         let mut row = standing(id, Some(mythic), rating);
+        row.rank.floor = jackioh_shared::ranked::ladder::tier_index_of(mythic);
         row.rank.peak_jlorious = peak;
         row
     };
