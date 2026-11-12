@@ -15204,17 +15204,8 @@
       "waiting_comment": 6829250435
     },
     "3773": {
-      "action": "plan",
-      "asks": [
-        "c:6825575021"
-      ],
-      "build_next": {
-        "from_run": "43259759623",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-12T17:11:35Z",
-        "until": "2026-11-12T17:41:35Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-12T17:11:19Z",
         "difficulty": "hard",
@@ -15233,10 +15224,9 @@
         "reason": "planned on opus",
         "trail": " -rn \\\"TUTORIAL_HUMAN\\\" crates/engine/tests/rules/*.rs | head -3\", \"descript\u2026\n- said: Now let me save the findings to the draft before writing the plan.\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n- Could not run the fuzz with I17: a scratch copy of the repo to /tmp was denied (permission). Fuzz findings remain unknown.\\n- Verified in code: AuraTable::\u2026\n- Bash: {\"command\": \"ls spec/rulings/R2201000.md spec/rulings/R0063.md spec/rulings/R0069.md spec/rulings/R0240.md spec/rulings/R1362.md spec/rulings/R1361.md; ls spec/rulings/R3773* spec/pending/3773.md 2>&\u2026\n- Bash: {\"command\": \"cat rustfmt.toml; awk 'length > 110' crates/engine/src/testkit/invariants.rs | wc -l; awk '{ if (length > m) m = length } END { print m }' crates/engine/src/testkit/invariants.rs\", \"desc\u2026\n- Bash: {\"command\": \"sed -n 110,175p crates/engine/src/lib.rs | grep -n \\\"pub use\\\" ; grep -rn \\\"can_lose(\\\" crates/engine/tests/rules/*.rs | head -3\", \"description\": \"Check what the engine root re-exports\"}\n- Bash: {\"command\": \"sed -n 90,115p crates/engine/tests/rules/hero_floor.rs\", \"description\": \"Read how the hero floor tests set a floor\"}\n- Bash: {\"command\": \"git rev-parse --verify -q origin/main; git log -1 --format=%h origin/main 2>/dev/null\", \"description\": \"Check origin/main is present\"}\n- Bash: {\"command\": \"grep -n \\\"GameEvent::Damage\\\" crates/engine/src/testkit/invariants.rs | head; grep -n \\\"pub prompt:\\\" crates/engine/src/state.rs | head -3\", \"description\": \"Check how the monitor already\u2026\n- Bash: {\"command\": \"grep -rn \\\"I1[0-9]\\\\b\\\\|invariant monitor\\\\|fuzz monitor\\\" spec/*.md | grep -v \\\"11-rulings\\\\|INDEX\\\" | head -10\", \"description\": \"Check whether the spec lists the fuzz invariants\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3773/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule 1: the check lives in crates/engine/src (testkit) and any fuzz fi\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Count the plan's words\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='.bot-plan.md'\\ns=open(p).read()\\n# count words outside code fences\\nout=[];inside=False\\nfor line in s.splitlines():\\n if line.strip().startswith('```'):\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3773/.bot-plan.md\", \"old_string\": \"- **Real engine bugs.** I could not run the fuzz with I17 while planning: a scratch copy of t\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3773/.bot-plan.md\", \"old_string\": \" - For each I17 finding:\\n 1. **Find the root path** in `crates/engine/src`. The message name\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3773/.bot-plan.md\", \"old_string\": \"- [ ] `state_check_findings` exists and `InvariantMonitor::after` calls it. The Duos monitor \u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md; python3 - <<'EOF'\\ns=open('.bot-plan.md').read()\\nout=[];inside=False\\nfor line in s.splitlines():\\n if line.strip().startswith('```'):\\n inside=not inside; contin\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3773/.bot-plan.md\", \"limit\": 30}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3773/.bot-plan.md\", \"old_string\": \"Add invariant **I17** to the fuzz monitor (`InvariantMonitor::after`, `crates/engine/src/test\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3773/.bot-plan.md\", \"old_string\": \" ```\\n //! I17 the state check ran and the numbers are in range (\\u00a72.3, \\u00a74.4, \\u00a7\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3773/.bot-plan.md\", \"old_string\": \" ```\\n //! I17 holds what the state check (\\u00a74.5) leaves: once the state settles, no unit\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3773/.bot-plan.md\", \"offset\": 28, \"limit\": 20}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3773/.bot-plan.md\", \"old_string\": \"/// I17: what \\u00a74.5's state check and \\u00a74.4's pipeline leave (\\u00a72.3, \\u00a74.4, \\\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3773/.bot-plan.md\", \"offset\": 100}\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Recount the plan's words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3773/.bot-plan.md\", \"old_string\": \"- **Real engine bugs.** I could not run the fuzz with I17 while planning (a scratch copy was \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3773/.bot-plan.md\", \"old_string\": \" - Build `crate::testkit::duos_scenario::duos_scenario(\\\"i17-duos\\\", test_decks(), None)` (as\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3773/.bot-plan.md\", \"old_string\": \" - Run:\\n - `cargo jackioh fuzz --seeds 200`\\n - `cargo jackioh fuzz --seeds 200 --handicap`\\\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Recount the plan's words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3773/.bot-plan.md\", \"old_string\": \" - Save `let mana = state.players[P1].mana;`. Then:\\n - `mana.current = -1` gives `only(.., \\\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3773/.bot-plan.md\", \"old_string\": \" - Departures from the earlier plan: the tests moved to the engine, the Duos test gained prem\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md; cat .bot-plan.md\", \"description\": \"Recount and print the final plan\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3773/.bot-plan.md\", \"old_string\": \"plus four comment lines on I17. |\", \"new_string\": \"plus two comment lines on I17. |\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"rule 1: the check lives in crates/engine/src (testkit) and any fuzz finding it raises is an engine-rules fix in the same PR\"} --> ## Goal Add **I17** to the fuzz monitor (`InvariantMonitor::after`). It checks three things: - **On I7's settled state:** no fie\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-12T15:38:04Z",
       "owner_why": "handed off from `claude-3`: its owner `claude-3` cannot take it now",
@@ -15249,12 +15239,14 @@
       "provider": "claude-8",
       "queued_at": "2026-11-12T13:57:02Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43259759623",
+      "run_id": "pending:fb374eba-1794503717",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-12T16:32:16Z",
+      "started_at": "2026-11-12T17:16:14Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6825575021"
+      ],
       "waiting_comment": 6828513544
     },
     "3775": {
@@ -16146,9 +16138,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T17:14:55Z",
+    "at": "2026-11-12T17:16:14Z",
     "url": "",
-    "what": "review #3788 on claude-8"
+    "what": "build #3773 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-12T16:44:44Z",
