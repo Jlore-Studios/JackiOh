@@ -517,3 +517,77 @@ mod r608_jlorious {
         );
     }
 }
+
+mod names {
+    use super::*;
+    use jackioh_shared::ranked::ladder::{GrapeTier, Ladder, RankTier};
+
+    /// R605: each Grape tier's literal, the one the wire and the store hold, and the Grape tier each shown tier
+    /// is, none for Raisin and Jlorious.
+    #[test]
+    fn r605_each_grape_tier_has_its_literal_and_each_shown_tier_its_grape() {
+        let literals: Vec<&str> = GRAPE_TIERS.iter().map(|tier| tier.as_str()).collect();
+        assert_eq!(literals, ["rotten", "normal", "large", "golden", "mythic"]);
+        for &tier in GRAPE_TIERS {
+            assert_eq!(RankTier::from(tier).grape(), Some(tier));
+        }
+        assert_eq!(RankTier::Raisin.grape(), None);
+        assert_eq!(RankTier::Jlorious.grape(), None);
+        assert_eq!(RankTier::Mythic.grape(), Some(GrapeTier::Mythic));
+    }
+
+    /// R2778000: each ladder's literal reads back as that ladder and nothing else does; a read's `?ladder=` is All
+    /// Random for `random`, case and spaces aside, and Constructed for anything else or nothing.
+    #[test]
+    fn r2778000_a_ladders_literal_reads_back_and_a_read_takes_random_or_else_constructed() {
+        assert_eq!(Ladder::Constructed.as_str(), "constructed");
+        assert_eq!(Ladder::Random.as_str(), "random");
+        for ladder in Ladder::ALL {
+            assert_eq!(Ladder::from_literal(ladder.as_str()), Some(ladder));
+        }
+        assert_eq!(Ladder::from_literal("Random"), None);
+        assert_eq!(Ladder::from_literal(""), None);
+        assert_eq!(Ladder::parse(Some(" Random ")), Ladder::Random);
+        assert_eq!(Ladder::parse(Some("random")), Ladder::Random);
+        assert_eq!(Ladder::parse(Some("constructed")), Ladder::Constructed);
+        assert_eq!(Ladder::parse(Some("arena")), Ladder::Constructed);
+        assert_eq!(Ladder::parse(None), Ladder::Constructed);
+    }
+}
+
+/// R605: a position past the top of the ladder is in its top Grape tier, and one below the bottom in its lowest.
+#[test]
+fn r605_a_position_past_either_end_is_in_the_end_tier() {
+    let top = i32::try_from(GRAPE_TIERS.len()).expect("a few tiers") - 1;
+    assert_eq!(tier_index_of(LADDER_TOP), top);
+    assert_eq!(tier_index_of(LADDER_TOP + 10 * PIPS_PER_TIER), top);
+    assert_eq!(tier_index_of(-PIPS_PER_TIER), 0);
+}
+
+/// R606: a rating's percentile counts the ratings below it, not those above.
+#[test]
+fn r606_a_percentile_counts_the_ratings_below() {
+    assert_eq!(
+        percentile_of(1500.0, &[1400.0, 1450.0, 1600.0]),
+        Percentile {
+            numerator: 2 * 2 + 1,
+            denominator: 2 * 4,
+        }
+    );
+}
+
+/// R605: a rated game stamps the season's row with the game's time.
+#[test]
+fn r605_a_rated_game_stamps_the_row_with_its_time() {
+    let rank = placed(tier_bottom(1));
+    let later = AT + 60_000;
+    let after = apply_ranked_game(
+        &rank,
+        &ApplyRankedGameInput {
+            result: GameResult::Win,
+            target: tier_bottom(1),
+            at: later,
+        },
+    );
+    assert_eq!(after.updated_at, later);
+}
