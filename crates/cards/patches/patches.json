@@ -23474,5 +23474,29 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.12ap",
+    "date": "2026-11-12",
+    "title": "Patch: the pointer's art, tilt and effects follow it once a frame",
+    "source": "#3610",
+    "notes": "Issue #3610, part of #3604: a card's live art, its tilt and the effects layer's pointer each keep the newest pointer move and handle it in one animation frame, not on every move, so a sweep across a busy board reads a card's box once a frame, not many times (R3351000, R3340000, R3344001). Under apps/web/src/cards/ the new pointerFrame.ts holds the kept move, hostMove.ts runs the art's and the tilt's read and write in one frame per card, and FxLayer feeds its shed pointer the same way; leaving a card or removing it drops the move still waiting. How cards look and play is unchanged.",
+    "player": {
+      "title": "Smoother cards under the mouse",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Card art, tilt and effects follow the mouse once a frame, so sweeping across a busy board costs less on slower devices."
+      ]
+    },
+    "commits": [
+      "c00af212de01048751d8079563ca280ee163f231"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]
