@@ -15778,8 +15778,11 @@
       "action": "revise",
       "asks": [],
       "ci_early": false,
-      "ci_fixes": 1,
+      "ci_fixes": 0,
       "ci_on_head": true,
+      "ci_reruns": {
+        "0cad0d8b0987b4f78ef5e5a46f9433f581c6cb87": 1
+      },
       "ci_run_id": 43252212288,
       "ci_sha": "0cad0d8b0987b4f78ef5e5a46f9433f581c6cb87",
       "cleared": {
