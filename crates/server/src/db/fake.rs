@@ -1040,6 +1040,7 @@ pub fn profiles_remove(f: &mut FakeTx<'_>, profile_id: &str) -> Result<bool, Sto
     let tables = f.tables();
     if tables.profiles.iter().any(|row| row.id == profile_id) {
         crate::duos::store::refuse_live_seat(&tables.duos, profile_id)?;
+        refuse_running_daily_seat(tables, profile_id)?;
     }
     Ok(remove_profile_rows(tables, profile_id))
 }
@@ -4976,6 +4977,25 @@ pub fn remove_daily_rows(daily: &mut DailyTables, profile_id: &str) {
     });
     keep_only(&mut daily.notify, |row| row.profile_id != profile_id);
     keep_only(&mut daily.push_subs, |row| row.profile_id != profile_id);
+}
+
+/// 0012's `matches_seats_filled_unless_over_check` on a daily game's match (R3727008): a profile seated
+/// in a daily game whose match is not over is not deleted, since its seat would empty mid-game.
+fn refuse_running_daily_seat(tables: &FakeTables, profile_id: &str) -> Result<(), StoreError> {
+    let running = tables.daily.games.iter().find(|row| {
+        (row.players.0 == profile_id || row.players.1 == profile_id)
+            && tables
+                .matches
+                .iter()
+                .any(|game| game.id == row.match_id && game.status != MatchStatus::Finished)
+    });
+    match running {
+        Some(row) => Err(StoreError::from(format!(
+            "matches_seats_filled_unless_over_check: profile {profile_id} holds a seat in running daily game {}",
+            row.match_id
+        ))),
+        None => Ok(()),
+    }
 }
 
 /// Whether a match id is a daily game's, which `matches_live` leaves out as `app.live_matches()` does.

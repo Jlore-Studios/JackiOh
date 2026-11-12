@@ -15,7 +15,9 @@ use ring::rand::{SecureRandom, SystemRandom};
 use ring::{aead, agreement, hkdf, signature};
 use serde_json::{Value, json};
 
-use crate::config::{PUSH_TIMEOUT_MS, PUSH_TTL_SECONDS, VAPID_SUBJECT, VAPID_TOKEN_SECONDS};
+use crate::config::{
+    PUSH_SERVICE_HOSTS, PUSH_TIMEOUT_MS, PUSH_TTL_SECONDS, VAPID_SUBJECT, VAPID_TOKEN_SECONDS,
+};
 
 /// RFC 8188 §2: the record size this server writes, the one RFC 8291 §4 recommends. A "your move"
 /// message fits one record.
@@ -186,6 +188,27 @@ pub fn encrypt(subscription: &Subscription, plaintext: &[u8]) -> Result<Vec<u8>,
     let mut body = header(&salt, &as_public);
     body.extend(seal(&key, nonce, plaintext)?);
     Ok(body)
+}
+
+/// §9.8: whether `endpoint` is at a browser's push service: an https URL on the default port, with no
+/// user name or password, whose host is one of `PUSH_SERVICE_HOSTS` or a subdomain of one. Nothing
+/// else is kept as a subscription, so a player cannot aim the server's pushes at an address, a local
+/// or private host or a name of their own (#3762's review).
+pub fn is_push_service(endpoint: &str) -> bool {
+    let Ok(url) = reqwest::Url::parse(endpoint) else {
+        return false;
+    };
+    let plain = url.scheme() == "https"
+        && url.port().is_none()
+        && url.username().is_empty()
+        && url.password().is_none();
+    // `domain` is `None` for an IP address; the parser has lowercased a name.
+    plain
+        && url.domain().is_some_and(|host| {
+            PUSH_SERVICE_HOSTS.iter().any(|service| {
+                host == *service || host.strip_suffix(service).is_some_and(|sub| sub.ends_with('.'))
+            })
+        })
 }
 
 /// The origin (`scheme://host[:port]`) of `endpoint`, VAPID's audience (RFC 8292 §2).
@@ -402,5 +425,38 @@ mod tests {
         let (_, other) = vapid_pair();
         assert!(PushKeys::from_base64url(&private, &other).is_err());
         assert!(vapid_header(&keys, "not a url", now).is_err());
+    }
+
+    #[test]
+    fn webpush_keeps_only_an_endpoint_at_a_browsers_push_service() {
+        for endpoint in [
+            "https://fcm.googleapis.com/fcm/send/abc:APA91b",
+            "https://android.googleapis.com/gcm/send/abc",
+            "https://updates.push.services.mozilla.com/wpush/v2/gAAAA",
+            "https://web.push.apple.com/QGuQyavXutnMx",
+            "https://wns2-par02p.notify.windows.com/w/?token=BQYAAA",
+            "https://FCM.googleapis.com:443/fcm/send/abc",
+        ] {
+            assert!(is_push_service(endpoint), "{endpoint}");
+        }
+        for endpoint in [
+            "http://fcm.googleapis.com/fcm/send/abc",
+            "https://fcm.googleapis.com:8443/fcm/send/abc",
+            "https://user:pass@fcm.googleapis.com/fcm/send/abc",
+            "https://fcm.googleapis.com@169.254.169.254/latest/meta-data",
+            "https://evilfcm.googleapis.com.example.net/send",
+            "https://notfcm.googleapis.com/send",
+            "https://fcm.googleapis.com.example.net/send",
+            "https://googleapis.com/send",
+            "https://push.example.net/send/abc",
+            "https://localhost/send",
+            "https://127.0.0.1/send",
+            "https://[::1]/send",
+            "https://10.0.0.7/send",
+            "https://2130706433/send",
+            "not a url",
+        ] {
+            assert!(!is_push_service(endpoint), "{endpoint}");
+        }
     }
 }

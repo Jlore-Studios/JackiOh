@@ -1,8 +1,10 @@
 //! Daily games (SPEC §9.13, #3727): a game played a move at a time over plain HTTPS, with nothing in
 //! memory between moves, lost on time (R3727000), holding no seat (R3727004), pinned to the catalog it
-//! started on (R3727005), its open challenges cancelled by a block (R3727007), and "your move" sent by
-//! email and Web Push.
+//! started on (R3727005), its open challenges cancelled by a block (R3727007), holding its accounts
+//! from deletion while it runs (R3727008), and "your move" sent by email and Web Push, to a browser's
+//! push service only.
 
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
 
 use axum::Router;
@@ -21,7 +23,7 @@ use jackioh_server::api::catalog::{LoadCatalogOptions, load_catalog};
 use jackioh_server::api::queue::try_pair;
 use jackioh_server::app::App;
 use jackioh_server::config::{DAILY_MAX_ACTIVE_GAMES, MS_PER_DAY};
-use jackioh_server::db::store::PushSubRow;
+use jackioh_server::db::store::{MatchStatus, PushSubRow};
 
 use crate::support::deps::{
     TestAppOptions, add_user, call, json_request, send as send_request, test_app_with,
@@ -586,6 +588,51 @@ async fn r3727007_a_block_cancels_open_daily_challenges_and_a_running_game_goes_
     assert_eq!(status, 200, "{body}");
 }
 
+// R3727008: a running daily game holds its account from deletion
+
+#[tokio::test]
+async fn r3727008_an_account_playing_a_daily_game_is_deleted_only_once_the_game_ends() {
+    for by_time in [false, true] {
+        let (app, ada, bo) = two_friends().await;
+        let match_id = daily_game(&app, &ada, &bo, 1).await;
+
+        // While the game runs, neither player's account goes, and the game is left as it was.
+        for who in [&ada, &bo] {
+            let (status, body) = api(&app, "DELETE", "/api/account", &who.token, Value::Null).await;
+            assert_eq!((status, code_of(&body)), (409, "conflict"), "{body}");
+        }
+        let game = read(&app, &bo, &match_id).await;
+        assert_eq!(game["over"], false, "{game}");
+
+        if by_time {
+            // Both mulligans ran out: the game holds nothing, since the delete ends it on time first.
+            app.daily.set_offset(MS_PER_DAY);
+        } else {
+            let seq = read(&app, &ada, &match_id).await["seq"].as_i64().expect("a seq");
+            let (status, body) = send(
+                &app,
+                &ada,
+                &match_id,
+                seq,
+                "ada-concedes",
+                json!({ "type": "concede" }),
+            )
+            .await;
+            assert_eq!(status, 200, "{body}");
+        }
+        let (status, body) = api(&app, "DELETE", "/api/account", &ada.token, Value::Null).await;
+        assert_eq!(status, 204, "by time {by_time}: {body}");
+        let mut tx = app.db.begin(None).await.expect("a transaction");
+        let row = tx
+            .matches_get(&match_id)
+            .await
+            .expect("a read")
+            .expect("the match stays");
+        tx.commit().await.expect("commit");
+        assert_eq!(row.status, MatchStatus::Finished, "by time {by_time}");
+    }
+}
+
 // R3727005: a game keeps the catalog it started on
 
 /// The catalog the game below started on, which the next build carries.
@@ -898,6 +945,118 @@ async fn a_push_subscription_answered_410_is_deleted() {
         .collect();
     tx.commit().await.expect("commit");
     assert_eq!(left, vec![format!("{push_api}/push/2/live")]);
+}
+
+/// The endpoints `who` holds push subscriptions for, oldest first.
+async fn push_endpoints(app: &Arc<App>, who: &Account) -> Vec<String> {
+    let mut tx = app.db.begin(None).await.expect("a transaction");
+    let held = tx.push_subs_of(&who.id).await.expect("a read");
+    tx.commit().await.expect("commit");
+    held.into_iter().map(|row| row.endpoint).collect()
+}
+
+/// §9.8: `POST /api/daily/push` keeps an endpoint only at a browser's push service, so a player
+/// cannot aim the server's pushes at an address, a local host or a name of their own.
+#[tokio::test]
+async fn a_push_endpoint_not_at_a_browsers_push_service_is_refused() {
+    let app = app_with(None, TestAppOptions::default()).await;
+    let ada = person(&app, 1, "Ada").await;
+    let (p256dh, auth) = browser_keys();
+    let keys = json!({ "p256dh": p256dh, "auth": auth });
+    for endpoint in [
+        "https://169.254.169.254/latest/meta-data",
+        "https://127.0.0.1:8787/daily-sweep",
+        "https://localhost/daily-sweep",
+        "https://push.example.net/send/abc",
+        "https://fcm.googleapis.com.example.net/send/abc",
+        "http://fcm.googleapis.com/fcm/send/abc",
+    ] {
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/daily/push",
+            &ada.token,
+            json!({ "endpoint": endpoint, "keys": keys }),
+        )
+        .await;
+        assert_eq!(
+            (status, code_of(&body)),
+            (400, "bad_request"),
+            "{endpoint}: {body}"
+        );
+    }
+    assert!(push_endpoints(&app, &ada).await.is_empty());
+
+    let browser = "https://fcm.googleapis.com/fcm/send/abc:APA91b";
+    let (status, body) = api(
+        &app,
+        "POST",
+        "/api/daily/push",
+        &ada.token,
+        json!({ "endpoint": browser, "keys": keys }),
+    )
+    .await;
+    assert_eq!(status, 204, "{body}");
+    assert_eq!(push_endpoints(&app, &ada).await, vec![browser.to_string()]);
+}
+
+/// §9.8: a push follows no redirect, so a push service's answer cannot send it on anywhere else.
+#[tokio::test]
+async fn a_push_follows_no_redirect() {
+    let (elsewhere, seen) = fake_service(StatusCode::GONE).await;
+    let landing = format!("{elsewhere}/landed");
+    let hops = Arc::new(AtomicUsize::new(0));
+    let counted = Arc::clone(&hops);
+    let router = Router::new().route(
+        "/{*rest}",
+        axum::routing::post(move || {
+            counted.fetch_add(1, Ordering::SeqCst);
+            let landing = landing.clone();
+            async move {
+                (
+                    StatusCode::TEMPORARY_REDIRECT,
+                    [(axum::http::header::LOCATION, landing)],
+                )
+            }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("a local port");
+    let hop = format!("http://{}/push/hop", listener.local_addr().expect("its address"));
+    tokio::spawn(async move { axum::serve(listener, router).await });
+
+    let app = app_with(
+        None,
+        TestAppOptions {
+            push_keys: Some(vapid_pair()),
+            ..TestAppOptions::default()
+        },
+    )
+    .await;
+    let ada = person(&app, 1, "Ada").await;
+    let bo = person(&app, 2, "Bo").await;
+    befriend(&app, &ada, &bo).await;
+    let (p256dh, auth) = browser_keys();
+    let mut tx = app.db.begin(None).await.expect("a transaction");
+    tx.push_subs_add(&PushSubRow {
+        id: "sub-hop".to_string(),
+        profile_id: ada.id.clone(),
+        endpoint: hop.clone(),
+        p256dh,
+        auth,
+        created_at: 1,
+    })
+    .await
+    .expect("a subscription");
+    tx.commit().await.expect("commit");
+
+    // The game starts waiting on Ada: her device is pushed, and the redirect it is answered is not
+    // followed. A redirect is no 404 or 410, so the subscription stays.
+    daily_game(&app, &bo, &ada, 1).await;
+    assert_eq!(hops.load(Ordering::SeqCst), 1, "the push service is asked");
+    assert!(seen.lock().expect("the requests").is_empty());
+    assert_eq!(push_endpoints(&app, &ada).await, vec![hop]);
 }
 
 #[tokio::test]

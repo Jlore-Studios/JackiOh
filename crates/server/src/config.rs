@@ -1588,3 +1588,14 @@ pub const PUSH_MAX_DEVICES: usize = 10;
 /// §9.8: the longest push endpoint or key the server keeps, in characters (a push service's
 /// endpoint is a few hundred).
 pub const PUSH_FIELD_MAX_LENGTH: usize = 2048;
+/// §9.8, §9.13: the browsers' push services, the only hosts a push subscription's endpoint may name
+/// (it or a subdomain of it, over https on the default port), so the server's pushes reach nothing
+/// else: Firebase Cloud Messaging under both its names (Chrome and the other Chromium browsers but
+/// Edge), Mozilla's (Firefox), Apple's (Safari) and Windows Push Notification Services (Edge).
+pub const PUSH_SERVICE_HOSTS: [&str; 5] = [
+    "fcm.googleapis.com",
+    "android.googleapis.com",
+    "push.services.mozilla.com",
+    "push.apple.com",
+    "notify.windows.com",
+];

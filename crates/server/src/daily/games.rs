@@ -417,6 +417,29 @@ pub(crate) async fn waiting_count(tx: &mut Tx<'_>, profile_id: &str, now: i64) -
         .count())
 }
 
+/// How many daily games `profile_id` plays at `now`, once every one of them past its deadline is
+/// settled (R3727000): the list's read, and what holds an account from deletion (R3727008).
+pub(crate) async fn running_after_settling(
+    app: &Arc<App>,
+    profile_id: &str,
+    now: i64,
+) -> Result<usize, ApiError> {
+    let mut tx = app.db.begin(Some(profile_id)).await?;
+    let rows = tx.daily_games_of(profile_id, 0).await?;
+    tx.commit().await?;
+    let mut running = 0;
+    for row in rows {
+        if row.next_deadline_at.is_some_and(|at| at <= now)
+            && let Some(loaded) = load(app, &row.match_id).await?
+            && settle(app, loaded, now).await?.over()
+        {
+            continue;
+        }
+        running += 1;
+    }
+    Ok(running)
+}
+
 /// The caller's read of one game, as `GET /api/daily/games/:matchId` and every action answer it.
 async fn game_json(app: &Arc<App>, loaded: &Loaded, me: &str, seat: PlayerId) -> Result<Value, ApiError> {
     let other = opponent_of(seat);
@@ -623,20 +646,7 @@ pub async fn list(app: &Arc<App>, req: Req) -> ApiResult {
     let me = caller_profile(&req)?.id;
     let now = app.daily.now();
     let recent = i64::from(DAILY_RECENT_FINISHED);
-    let overdue: Vec<String> = {
-        let mut tx = app.db.begin(Some(&me)).await?;
-        let rows = tx.daily_games_of(&me, recent).await?;
-        tx.commit().await?;
-        rows.into_iter()
-            .filter(|row| row.ended_at.is_none() && row.next_deadline_at.is_some_and(|at| at <= now))
-            .map(|row| row.match_id)
-            .collect()
-    };
-    for match_id in overdue {
-        if let Some(loaded) = load(app, &match_id).await? {
-            settle(app, loaded, now).await?;
-        }
-    }
+    running_after_settling(app, &me, now).await?;
 
     let mut tx = app.db.begin(Some(&me)).await?;
     let rows = tx.daily_games_of(&me, recent).await?;

@@ -192,7 +192,7 @@ account, its presence to friends, written at most once a `PRESENCE_TOUCH_EVERY_M
 | `GET` | `/api/username/preview?name=…` | active | the exact username a save would give, tag included, or why it is refused (R1432–R1435) |
 | `PUT` | `/api/username` | active | save the previewed username; 409 with a fresh preview when the outcome changed (R1434, R1435) |
 | `POST` | `/api/username/skip` | active | answer the username prompt by keeping `Player#n` (R1435) |
-| `DELETE` | `/api/account` | user | delete the caller's account and every row only it owns; 409 in a live match, series or co-op match |
+| `DELETE` | `/api/account` | user | delete the caller's account and every row only it owns; 409 in a live match, series, co-op match or running daily game (each past its deadline lost on time first, R3727008) |
 | `POST` | `/api/account/consent` | user | `{ termsVersion, birthYear?, birthMonth? }`: the age screen's answer (an account under `MIN_ACCOUNT_AGE_YEARS` is deleted, 403 `under_age`) and agreement to `TERMS_VERSION` (409 `update_required` for any other); stores only that the age check passed, never the birth date (R757000, R757001) |
 | `GET` | `/api/catalog` | none | `{ version, defs }`, the bytes the client ships (R163); `x-deployed-commit` |
 | `GET` | `/api/catalog/:version` | none | the snapshot shipped patch `version` left, in `/api/catalog`'s shape; 404 for a version never shipped (SPEC §9.4, R388) |
@@ -311,7 +311,7 @@ token, no socket, no cookie and no engine in the client, so any client can play 
 | `GET /api/daily/games/:matchId` | Active | `{matchId, seat, view, legal, seq, holds, hasMove, perMoveDays, mode, catalogVersion, olderCatalog, opponent, over, lostOnTime, nextGame}`: the caller's own `view_for` and legal actions only (none while the move is the other player's), under the game's catalog (R3727005); 404 for a game the caller does not play |
 | `POST /api/daily/games/:matchId/actions` | Active | `{after, nonce, action}`, `after` the `seq` it was read at: 200 with the read. A nonce already logged answers 200 and applies nothing; 409 `stale` (the log moved on), `time_up` or `over`; 422 `not_your_move` (R3727006) or `illegal`. Every refusal carries `game`, the read as it stands |
 | `GET /api/daily/settings`, `PUT /api/daily/settings` | Active | `{emailOn, hasEmail, vapidPublicKey, pushDevices}`; the `PUT` takes `{emailOn}` |
-| `POST /api/daily/push` | Active | `{endpoint, keys: {p256dh, auth}}`, this device's subscription (an `https` endpoint; past `PUSH_MAX_DEVICES` the oldest goes): 204 |
+| `POST /api/daily/push` | Active | `{endpoint, keys: {p256dh, auth}}`, this device's subscription (an `https` endpoint at a browser's push service, one of `PUSH_SERVICE_HOSTS` or a subdomain of one, else 400; past `PUSH_MAX_DEVICES` the oldest goes): 204 |
 | `DELETE /api/daily/push` | User | `{endpoint}`: the device's subscription goes, as the web signs out: 204 |
 | `GET /api/daily/unsubscribe?token=`, `POST …` | None | the email's own link: emails off for the token's account, a small page; the `POST` is RFC 8058's one-click (a form body of `List-Unsubscribe=One-Click` is read as empty): 204 |
 | `POST /daily-sweep` | None | the Worker's hourly cron: `{expired, settled, emailed, pushed}`. Outside `/api` and `/ws`, which the Worker never forwards from the public |
@@ -765,9 +765,14 @@ each move decides for both players. An email goes through Resend under `PLAYER_R
 decision, listing every game waiting with a link to its board, with `List-Unsubscribe` and
 `List-Unsubscribe-Post`; Resend's free plan's 100 a day is shared with the alerts and the sign-in mail.
 A push goes to each of the account's subscriptions (`daily::webpush`: RFC 8291's aes128gcm and RFC 8292's
-VAPID, with `ring`), and a subscription its push service answers 404 or 410 is deleted. With a key unset its
+VAPID, with `ring`), and a subscription its push service answers 404 or 410 is deleted. A subscription is
+kept only at a browser's push service (`webpush::is_push_service`, `PUSH_SERVICE_HOSTS`), and the push
+client follows no redirect, so no player can aim the server's requests elsewhere. With a key unset its
 channel is off, and the end-to-end server sends neither. A block or an unfriending cancels the open daily
-challenges between the two (R3727007); a game already running goes on.
+challenges between the two (R3727007); a game already running goes on. `DELETE /api/account` settles the
+caller's overdue daily games and is refused (409 `conflict`) while one still runs, since 0012's
+`matches_seats_filled_unless_over_check` would refuse it in Postgres, and the in-memory store refuses it
+alike (R3727008).
 
 ## Ladder bots (§9.5, §9.12, R1453, R1454, R1451, R1452, R639000, R641000, R747000)
 

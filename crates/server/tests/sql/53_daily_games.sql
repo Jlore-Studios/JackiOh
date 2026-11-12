@@ -518,6 +518,61 @@ begin
 end $$;
 rollback;
 
+\echo '### R3727008, 0012: a profile seated in a running daily game is not deleted, and is once its match is over ###'
+begin;
+insert into auth.users (id, email, email_confirmed_at)
+values ('e3727000-0000-4000-8000-000000000005', 'r3727-player@example.test', now());
+do $$
+declare
+  gone constant uuid := 'e3727000-0000-4000-8000-000000000005';
+  mate constant uuid := '11111111-1111-1111-1111-111111111111';
+  mid  constant uuid := 'e3727000-0000-4000-8000-0000000000f1';
+  seat text;
+  refused_by text;
+begin
+  if not exists (select 1 from public.profiles where id = gone) then
+    raise exception 'FAIL (R3727008): the player has no profile; the refusal below would prove nothing';
+  end if;
+  foreach seat in array array['p1', 'p2'] loop
+    delete from public.matches where id = mid;
+    insert into public.matches (id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
+                                catalog_version, started_at, ceiling_at)
+    values (mid, 'live', 'seed-3727-f1', case when seat = 'p1' then gone else mate end,
+            case when seat = 'p1' then mate else gone end, '[]', '[]', 'core-1', now(), now() + interval '1 hour');
+    insert into public.daily_games (match_id, p1_profile_id, p2_profile_id, mode, per_move_days, clock, board, created_at)
+    values (mid, case when seat = 'p1' then gone else mate end, case when seat = 'p1' then mate else gone end,
+            'bo1', 3, '{}', '{}', 1);
+    begin
+      -- What the store's `profiles_remove` runs.
+      delete from public.profiles where id = gone;
+      raise exception 'FAIL (R3727008): a player in seat % of a running daily game was deleted', seat;
+    exception
+      when check_violation then
+        get stacked diagnostics refused_by = constraint_name;
+        if refused_by is distinct from 'matches_seats_filled_unless_over_check' then
+          raise exception 'FAIL (R3727008): the running daily game (seat %) was refused by "%"', seat, refused_by;
+        end if;
+    end;
+    if not exists (select 1 from public.profiles where id = gone)
+       or not exists (select 1 from public.matches
+                       where id = mid and status = 'live' and p1_profile_id is not null and p2_profile_id is not null)
+       or not exists (select 1 from public.daily_games where match_id = mid and ended_at is null) then
+      raise exception 'FAIL (R3727008): the refused delete (seat %) changed the profile, the match or its daily game', seat;
+    end if;
+  end loop;
+  -- Once the match is over, the same delete goes through: the daily game goes, the match stays.
+  update public.daily_games set ended_at = 2 where match_id = mid;
+  update public.matches set status = 'over', ended_at = now() where id = mid;
+  delete from public.profiles where id = gone;
+  if exists (select 1 from public.profiles where id = gone)
+     or exists (select 1 from public.daily_games where match_id = mid)
+     or not exists (select 1 from public.matches where id = mid and p2_profile_id is null and p1_profile_id = mate) then
+    raise exception 'FAIL (R3727008): a profile on a finished daily game was not deleted as a finished match''s is';
+  end if;
+  raise notice 'OK (R3727008): a running daily game''s seat refuses its profile''s delete (matches_seats_filled_unless_over_check), from either seat, and a finished one''s does not';
+end $$;
+rollback;
+
 \echo '### §9.13: 0088 re-applies over rows of its own and changes none ###'
 begin;
 insert into public.daily_notify (profile_id, email_on) values ('11111111-1111-1111-1111-111111111111', false);

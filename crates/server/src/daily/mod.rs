@@ -42,7 +42,8 @@ pub struct DailyState {
     pub mailer: Option<Mailer>,
     /// `None` without both VAPID keys: no push is sent.
     pub push: Option<webpush::PushKeys>,
-    /// The client the pushes go out on.
+    /// The client the pushes go out on. It follows no redirect: a push goes to the push service its
+    /// subscription names (`webpush::is_push_service`) and nowhere else (§9.8).
     pub http: reqwest::Client,
     /// BUILD M8's e2e mode only (`POST /api/e2e/daily-clock`): how far the daily clock reads ahead of
     /// the server's, so a spec can watch a move run out.
@@ -54,7 +55,11 @@ impl DailyState {
         DailyState {
             mailer,
             push,
-            http: reqwest::Client::new(),
+            // As `reqwest::Client::new()` builds one, which fails only when TLS cannot start.
+            http: reqwest::Client::builder()
+                .redirect(reqwest::redirect::Policy::none())
+                .build()
+                .expect("a client"),
             offset_ms: AtomicI64::new(0),
         }
     }

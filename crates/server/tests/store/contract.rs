@@ -13201,6 +13201,40 @@ mod daily {
         assert!(!q!(harness, t => t.push_subs_delete("https://push.example.test/a", None)));
     }
 
+    /// R3727008: 0012's `matches_seats_filled_unless_over_check` on a daily game's match, and the
+    /// fake's refusal of it: a profile seated in a running daily game is not deleted, from either
+    /// seat, and the game is left as it was; once its match is over the same delete goes through.
+    async fn r3727008_a_profile_seated_in_a_running_daily_game_is_not_deleted(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        let game = daily_game(harness, &a.id, &b.id, now, Some(now + 1_000)).await;
+
+        for seated in [&a, &b] {
+            assert!(
+                call!(harness, t => t.profiles_remove(&seated.id)).is_err(),
+                "{}: a seat of a running daily game",
+                harness.name
+            );
+            assert!(q!(harness, t => t.profiles_get_by_id(&seated.id)).is_some());
+        }
+        assert_eq!(
+            q!(harness, t => t.daily_games_get(&game.match_id)),
+            Some(game.clone())
+        );
+        assert_eq!(
+            match_ids(&q!(harness, t => t.daily_games_running())),
+            vec![game.match_id.clone()]
+        );
+
+        assert!(
+            q!(harness, t => t.daily_games_put(&game.match_id, &DailyClock::new(DAYS), &board(5), None, Some(now)))
+        );
+        q!(harness, t => t.matches_finish(&game.match_id, now));
+        assert!(q!(harness, t => t.profiles_remove(&b.id)));
+        assert_eq!(q!(harness, t => t.profiles_get_by_id(&b.id)), None);
+    }
+
     /// R679's void forgets a live match as if it never was, its daily game with it.
     async fn s913_a_voided_match_takes_its_daily_game(harness: &StoreHarness) {
         let a = active_profile(harness, None).await;
@@ -13226,6 +13260,7 @@ mod daily {
         s913_daily_notify_defaults_settings_and_unsubscribe,
         s913_push_subscriptions_are_one_per_endpoint,
         s913_a_deleted_profile_takes_its_daily_rows,
+        r3727008_a_profile_seated_in_a_running_daily_game_is_not_deleted,
         s913_a_voided_match_takes_its_daily_game,
     );
 }

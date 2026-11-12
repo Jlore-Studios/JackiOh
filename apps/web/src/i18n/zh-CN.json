@@ -2506,6 +2506,8 @@
   "the sign-in service could not be reached": "无法连接登录服务",
   "Finish or concede your match before you delete your account.": "删除账户前，请先打完或认输当前对局。",
   "Finish your Conquest series before you delete your account.": "删除账户前，请先完成你的征服系列赛。",
+  "Finish or concede your daily games before you delete your account.": "删除账户前，请先下完或认输你的每日对局。",
+  "We can't send notifications through this browser's push service. Try another browser.": "我们无法通过此浏览器的推送服务发送通知。请换一个浏览器试试。",
   "sign in first": "请先登录",
   "\"{key}\" must be a string": "“{key}”必须是字符串",
   "Use at most {n} characters.": "最多使用 {n} 个字符。",

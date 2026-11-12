@@ -398,8 +398,11 @@ fn field(value: Option<&Value>, name: &str) -> Result<String, ApiError> {
 pub async fn add_push(app: &Arc<App>, req: Req) -> ApiResult {
     let me = caller_profile(&req)?.id;
     let endpoint = field(req.body.get("endpoint"), "endpoint")?;
-    if !endpoint.starts_with("https://") {
-        return Err(bad_request("a push endpoint is an https URL"));
+    // §9.8: a browser's push service only, so a push reaches nothing the caller picked.
+    if !webpush::is_push_service(&endpoint) {
+        return Err(bad_request(
+            "We can't send notifications through this browser's push service. Try another browser.",
+        ));
     }
     let keys = req.body.get("keys");
     let row = PushSubRow {

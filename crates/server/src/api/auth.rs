@@ -44,6 +44,8 @@ const ACCOUNT_DELETION_IN_MATCH_MESSAGE: &str =
     "Finish or concede your match before you delete your account.";
 const ACCOUNT_DELETION_IN_SERIES_MESSAGE: &str =
     "Finish your Conquest series before you delete your account.";
+const ACCOUNT_DELETION_IN_DAILY_MESSAGE: &str =
+    "Finish or concede your daily games before you delete your account.";
 
 /// A non-empty string field, or a 400 naming it.
 fn required_str(body: &Value, key: &str) -> Result<String, ApiError> {
@@ -204,9 +206,9 @@ pub async fn get_profile(app: &Arc<App>, req: Req) -> ApiResult {
 
 /// `DELETE /api/account` (`AuthLevel::User`): deletes the caller's profile, everything only it owns
 /// and then its sign-in; 204 with no body. `User`, not `Active`, so a pending or banned account can
-/// leave too. A player in a live match or a Conquest series gets 409: the actor and the series rules
-/// own how a game ends. The profile goes first, so a provider that fails leaves only a sign-in, which
-/// the same request, retried, removes.
+/// leave too. A player in a live match, a Conquest series or a running daily game gets 409: the actor,
+/// the series rules and the daily clock own how a game ends (R3727008). The profile goes first, so a
+/// provider that fails leaves only a sign-in, which the same request, retried, removes.
 pub async fn delete_account(app: &Arc<App>, req: Req) -> ApiResult {
     let caller = caller_of(&req)?;
     remove_account(app, caller).await?;
@@ -217,8 +219,8 @@ pub async fn delete_account(app: &Arc<App>, req: Req) -> ApiResult {
 
 /// `DELETE /api/account`'s work, shared with the age screen's refusal (R757000, `consent.rs`),
 /// which deletes an account found to be under the minimum age the same way: the refusals in a live
-/// match or series, then the profile, then the sign-in.
-pub(crate) async fn remove_account(app: &App, caller: &Caller) -> Result<(), ApiError> {
+/// match, a series or a daily game, then the profile, then the sign-in.
+pub(crate) async fn remove_account(app: &Arc<App>, caller: &Caller) -> Result<(), ApiError> {
     let profile = &caller.profile;
     if !app.auth.can_delete_users() {
         return Err(ApiError::new(
@@ -247,6 +249,16 @@ pub(crate) async fn remove_account(app: &App, caller: &Caller) -> Result<(), Api
         return Err(ApiError::new(
             ApiErrorCode::AlreadyInMatch,
             ACCOUNT_DELETION_IN_MATCH_MESSAGE,
+        ));
+    }
+    // R3727008: a running daily game is refused as a live match is, once each past its deadline is
+    // lost on time (R3727000), and 0012's `matches_seats_filled_unless_over_check` refuses the delete
+    // behind this should one start in between, as the in-memory store refuses it too.
+    let running = crate::daily::games::running_after_settling(app, &profile.id, app.daily.now()).await?;
+    if running > 0 {
+        return Err(ApiError::new(
+            ApiErrorCode::Conflict,
+            ACCOUNT_DELETION_IN_DAILY_MESSAGE,
         ));
     }
 
