@@ -198,10 +198,15 @@ fn pick_one<'a, T>(ctx: &mut EffectContext<'_>, items: &'a [T]) -> &'a T {
     }
 }
 
-/// B3.4 rule 3, cost: `costMod` one step toward (4) or toward (0); never an X-cost card (R65), and
-/// never a card on the field, which has paid its price (R1748000). R1160: `times` steps, clamped.
+/// B3.4 rule 3, cost: `costMod` one step toward (4) or toward (0); never an X-cost card (R65), never
+/// a card on the field, which has paid its price (R1748000), and never one in a graveyard or an exile
+/// pile, which is its printed card, its price included (R766, R3596001: S+ Tears of the Kwzki Tree's
+/// Buff reaches those piles). R1160: `times` steps, clamped.
 fn cost_row(state: &GameState, card: &CardInstance, direction: TuneDirection, times: i32) -> Option<MenuRow> {
-    if card.zone.z() == ZoneName::Field {
+    if matches!(
+        card.zone.z(),
+        ZoneName::Field | ZoneName::Graveyard | ZoneName::Exile
+    ) {
         return None;
     }
     let own = own_cost(state, card)?;

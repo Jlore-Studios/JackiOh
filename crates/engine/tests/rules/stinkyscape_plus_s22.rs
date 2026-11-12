@@ -12,6 +12,7 @@ use crate::rules::fixtures::harness::{apply_now, setup_catalog};
 
 const RADIANT_WORLD: &str = "s22-radiant-world";
 const UPGRADE_PILES: &str = "s22-upgrade-piles";
+const DEGRADE_PILES: &str = "s22-degrade-piles";
 const BOARD_FUSE: &str = "s22-board-fuse";
 /// The fresh card the board fuses into: a 10/10 that spells cannot touch, as Alnilam is.
 const KEPT: &str = "s22-kept";
@@ -79,6 +80,7 @@ fn register() {
             json!([{ "kind": "Immune to Spells" }]),
         ),
         card(356907, FILLER, "Unit", Some((1, 1)), json!([])),
+        card(356908, DEGRADE_PILES, "Spell", None, json!([])),
     ] {
         catalog.insert(def.id.clone(), def);
     }
@@ -98,6 +100,15 @@ fn register() {
         }),
     );
     scripts.insert(
+        DEGRADE_PILES.to_string(),
+        spell_script(|| {
+            vec![effects::degrade(json_as(json!({
+                "scope": { "side": "self", "zones": ["graveyard", "exile"] },
+                "times": 1,
+            })))]
+        }),
+    );
+    scripts.insert(
         BOARD_FUSE.to_string(),
         spell_script(|| {
             vec![effects::fuse_board_into(FuseBoardIntoArgs {
@@ -110,8 +121,12 @@ fn register() {
 }
 
 fn board(p1: Value, p2: Value) -> Scenario {
+    board_seeded("s22", p1, p2)
+}
+
+fn board_seeded(seed: &str, p1: Value, p2: Value) -> Scenario {
     register();
-    let mut s = scenario(json!({ "seed": "s22", "p1": p1, "p2": p2 }));
+    let mut s = scenario(json!({ "seed": seed, "p1": p1, "p2": p2 }));
     for player in [P1, P2] {
         s.state_mut().players[player].auto_end_turn = Some(false);
     }
@@ -256,6 +271,46 @@ mod r3569001_card_scope_piles {
             3,
             "one application each, and nothing of the library or the enemy"
         );
+    }
+}
+
+/// R3596001, R766: a card in a graveyard or an exile pile is its printed card, its price included, so a
+/// Buff that reaches those piles (S+ Tears of the Kwzki Tree's, R3569001) never takes the cost step,
+/// though a (0) card's Degrade would have one toward (4) anywhere else.
+mod r3596001_no_price_in_a_pile {
+    use super::*;
+
+    #[test]
+    fn r3596001_a_degrade_of_the_piles_moves_no_price() {
+        let mut changed = 0;
+        for n in 0..24 {
+            let mut s = board_seeded(
+                &format!("r3596001-{n}"),
+                json!({
+                    "hand": [DEGRADE_PILES],
+                    "graveyard": [FILLER, FILLER, FILLER],
+                    "exile": [FILLER],
+                }),
+                json!({}),
+            );
+            s.play(DEGRADE_PILES, json!({}));
+            for event in s.events() {
+                if let GameEvent::Degraded {
+                    instance_id, change, ..
+                } = event
+                {
+                    assert!(
+                        !matches!(change, TuningChange::Cost { .. }),
+                        "seed {n}: {instance_id} took a price in a pile"
+                    );
+                    changed += 1;
+                }
+            }
+            for card in s.pile(P1, "graveyard").into_iter().chain(s.pile(P1, "exile")) {
+                assert_eq!(card.cost_mod, 0, "seed {n}: {} holds a price", card.id);
+            }
+        }
+        assert!(changed >= 24 * 4, "every pile card was Degraded: {changed}");
     }
 }
 
