@@ -35722,11 +35722,11 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": null,
-    "last_run": "2026-11-12T19:14:20Z",
-    "provider": "claude-7",
+    "idle_since": "2026-11-12T18:54:24Z",
+    "last_run": "2026-11-12T17:40:02Z",
+    "provider": null,
     "requested": false,
-    "run_id": "43288103796",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": null,
