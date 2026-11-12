@@ -16746,15 +16746,8 @@
       "waiting_comment": 6808752951
     },
     "3730": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43187070682",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-12T09:29:09Z",
-        "until": "2026-11-12T09:59:09Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -16766,10 +16759,9 @@
         "reason": "planned on opus",
         "trail": "ts/server_store.rs crates/server/tests/store/mod.rs | head; grep -n \\\"^mod\\\\|^pub mod\\\" crates/server/tests/server.rs | head\", \"description\": \"Test bina\u2026\n- said: Now the compact rewrite.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3730/.bot-plan.md\", \"content\": \"## Goal\\n\\n`/lobby/:code` is one private-lobby screen for 1v1 lobbies (Best of 1, Conquest, All Random) and co-op lobb\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Check plan length\"}\n- Bash: {\"command\": \"awk '/^## /{if(s)print s, n; s=$0; n=0; next}{n+=NF}END{print s, n}' .bot-plan.md; grep -c \\\"^|\\\" .bot-plan.md\", \"description\": \"Word count per plan section\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3730/.bot-plan.md\", \"content\": \"## Goal\\n\\n`/lobby/:code` is one private-lobby screen for 1v1 lobbies (Best of 1, Conquest, All Random) and co-op lobb\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md; awk '/^## /{if(s)print s, n; s=$0; n=0; next}{n+=NF}END{print s, n}' .bot-plan.md; sed 's/|//g' .bot-plan.md | wc -w\", \"description\": \"Recheck pla\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\ns=open('.bot-plan.md').read()\\nstart=s.index('## Steps'); end=s.index('## Tests')\\nprint(len(s[start:end].split()))\\nfor m in re.finditer(r'\\\\n(\\\\d+)\\\\. \\\\*\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3730/.bot-plan.md\", \"old_string\": \"1. **Rulings.** Write them in `R1075000.md`'s format, with `proven_in` per Tests, and add one\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3730/.bot-plan.md\", \"old_string\": \"2. **\\u00a79.5 and \\u00a713.9.**\\n - \\u00a79.5 Modes: replace \\\"A room is made in its host's \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3730/.bot-plan.md\", \"old_string\": \" - Add it to `MIGRATIONS`.\\n - Pin it: `cargo test -p jackioh-server --test server_store migr\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3730/.bot-plan.md\", \"old_string\": \" - Methods:\\n - `lobbies_create -> bool` (`on conflict do nothing`).\\n - `lobbies_get`.\\n - `\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3730/.bot-plan.md\", \"old_string\": \" - `room_seats` becomes `game_seats(host_id, host: &FrozenChoice, guest_id, guest: &FrozenCho\u2026\n- said: Now step 10, the largest.\n- Bash: {\"command\": \"python3 - <<'EOF'\\ns=open('.bot-plan.md').read()\\na=s.index('10. **`lobby/mod.rs`**'); b=s.index('11. **`crates/server/README.md`.**')\\nprint(s[a:b])\\nEOF\", \"description\": \"Print step 10\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\ns=open('.bot-plan.md').read()\\na=s.index('10. **`lobby/mod.rs`**'); b=s.index('11. **`crates/server/README.md`.**')\\nnew='''10. **`lobby/mod.rs`**, every route `AuthLe\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\ns=open('.bot-plan.md').read()\\na=s.index('15. **`LobbyScreen.tsx`**'); b=s.index('## Tests')\\nprint(s[a:b])\\nEOF\", \"description\": \"Print steps 15-23 for editing\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\ns=open('.bot-plan.md').read()\\na=s.index('15. **`LobbyScreen.tsx`**'); b=s.index('## Tests')\\nnew='''15. **`LobbyScreen.tsx`** (`{token, code}`): the issue's sketch, w\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\ns=open('.bot-plan.md').read()\\na=s.index('Do not touch'); b=s.index('10. **`lobby/mod.rs`**')\\nprint(s[a:b])\\nEOF\", \"description\": \"Print middle sections for trimming\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\ns=open('.bot-plan.md').read()\\nrep=[\\n(\\\"\\\"\\\"Keep every `/api/rooms*`, `/api/duos/rooms*` and `/api/challenges*` route (rule 13). The governing sections and rulings ar\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\ns=open('/home/runner/work/_temp/work/item-3730/.bot-plan.md').read()\\ng0=s.index('## Goal'); g1=s.index('## Files to touch')\\ngoal='''## Goal\\n\\n`/lobby/:code` is one \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/home/runner/work/_temp/work/item-3730/.bot-plan.md'\\ns=open(p).read()\\nlines=s.split('\\\\n'); out=[]\\nfor l in lines:\\n if l=='Path | | What':\\n out.append('Path | \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/home/runner/work/_temp/work/item-3730/.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"\\\"\\\"## Risks\\n\\n- The `join` refactor: run its suites before and after.\\n- Writes \u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3730/.bot-plan.md\", \"offset\": 90, \"limit\": 60}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/home/runner/work/_temp/work/item-3730/.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"\\\"\\\" - **R3730000, the lobby.** Readers and entering. A block answers as an unknow\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/home/runner/work/_temp/work/item-3730/.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"\\\"\\\"15. **`LobbyScreen.tsx`** (`{token, code}`): the issue's sketch, with `docs/po\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/home/runner/work/_temp/work/item-3730/.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"\\\"\\\"- #3729 is unbuilt, so invites are not kept and the panel stays where \\\"Play a\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/home/runner/work/_temp/work/item-3730/.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"\\\"\\\"- Every change is live over `/ws/social`.\\\"\\\"\\\",\\\"\\\"\\\"- Live over `/ws/social`\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3730/.bot-plan.md\"}\n- Bash: {\"command\": \"ls spec/rulings/R0767.md spec/rulings/R2094000.md spec/rulings/R2031000.md spec/rulings/R1075000.md spec/rulings/R0604.md spec/rulings/R1989000.md 2>&1 | head\", \"description\": \"Verify ci\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/home/runner/work/_temp/work/item-3730/.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"\\\"\\\" - **Writes** set `expires_at = now + ttl` and `rev + 1` through\\\"\\\"\\\",\\n\\\"\\\"\\\u2026\n- said: ## Goal `/lobby/:code` is one private-lobby screen for 1v1 lobbies (Best of 1, Conquest, All Random) and co-op lobbies: - Seats show name, presence, crown and deck state, and an empty seat invites a friend by live toast. - Each player picks a validated deck, trio or random deck and presses Ready. -\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-12T08:56:17Z",
       "owner_why": "it plans it",
@@ -16782,9 +16774,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-11T21:49:36Z",
       "requested_by": "jgoetzmann",
-      "run_id": "43187070682",
+      "run_id": "pending:d0900a32-1794475791",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-12T08:56:17Z",
+      "started_at": "2026-11-12T09:30:26Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17905,9 +17897,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T09:20:33Z",
+    "at": "2026-11-12T09:30:26Z",
     "url": "",
-    "what": "review #3762 on claude-8"
+    "what": "build #3730 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-12T09:15:47Z",
