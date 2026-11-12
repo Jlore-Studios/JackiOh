@@ -490,8 +490,12 @@ function redeemACardToken(loop: Loop): void {
       expect(owned.size, "and nothing else").to.eq(loop.owned.size + 1);
       loop.owned = owned;
     });
-    // The preview and the grid read the unlocked card as owned.
+    // The preview reads the unlocked card as owned. The grid's Missing view has dropped it: Escape closes the
+    // preview, which covers the filters, and All brings the card's tile back.
     cy.get(ts(COLLECTION_PREVIEW)).should("have.attr", "data-owned", "true");
+    cy.get("body").type("{esc}");
+    cy.get(ts(COLLECTION_PREVIEW)).should("not.exist");
+    cy.get(ts(filterOwnershipId("all"))).click();
     cy.get(ts(collectionCardId(picked))).should("have.attr", "data-owned", "true");
   });
 }
