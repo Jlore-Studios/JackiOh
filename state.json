@@ -16597,11 +16597,6 @@
       "owner": "claude-8",
       "owner_since": "2026-11-11T22:05:16Z",
       "owner_why": "handed off from `claude-2`: its owner `claude-2` builds only after every other subscription (`build_last`)",
-      "paused": {
-        "at": "2026-11-11T23:26:49Z",
-        "interrupt": "usage",
-        "provider": "claude-8"
-      },
       "pending_request": false,
       "planned_at": "2026-11-11T22:35:30Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
