@@ -16540,6 +16540,7 @@
         "tier": "medium",
         "why": "One card's script, catalog entry and text in crates/cards plus spec/doc rows and a kept script; no engine, AI, migration or cross-crate design, well under 40 files."
       },
+      "failures": 0,
       "handoff": {
         "at": "2026-11-12T21:02:17Z",
         "family": "claude",
@@ -16562,7 +16563,9 @@
       "planned_by_id": "claude-1",
       "planned_model": "sonnet",
       "planned_tier": "medium",
+      "pr": 3810,
       "provider": "claude-7",
+      "question": "",
       "round_tier": "medium",
       "run_id": "43308349962",
       "runs_on": "ubuntu-latest",
