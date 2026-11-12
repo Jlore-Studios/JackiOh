@@ -14746,12 +14746,16 @@
       "verdict_rounds": 2,
       "votes": {
         "approvals": [],
-        "builder": "claude",
-        "built_by": "claude-8",
-        "rejections": [],
+        "builder": "",
+        "built_by": "",
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
-        "sha": "8148bd6c9758006727c7d28bdcc4e2028d8e0f3a",
-        "tiers": {}
+        "sha": "a5e2632e200fa8761771ba36bffbb8ae48ad3c43",
+        "tiers": {
+          "claude": "strong"
+        }
       },
       "waiting_comment": 6820276835
     },
