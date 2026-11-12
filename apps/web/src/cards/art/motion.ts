@@ -350,6 +350,46 @@ const RARE_CARDS: readonly (readonly [string, Archetype, ParticleKind])[] = [
   ["traininggrounds-037", "spell", "leaf"], // Seance
   ["traininggrounds-038", "unit", "note"], // Tutorial Master
   ["traininggrounds-039", "spell", "ember"], // Call to Chaos (Training-Grounds Edition)
+  ["stinkyscapeplus-003", "unit", "bubble"], // High Evolutionary
+  ["stinkyscapeplus-004", "unit", "note"], // Profe Yates
+  ["stinkyscapeplus-005", "unit", "note"], // Dingleberry Droat
+  ["stinkyscapeplus-007", "unit", "bubble"], // Churnwalker
+  ["stinkyscapeplus-010", "unit", "bubble"], // Drone Assembler v5
+  ["stinkyscapeplus-033", "unit", "note"], // True Conservative
+  ["stinkyscapeplus-045", "spell", "ember"], // Surge Alloy
+  ["stinkyscapeplus-052", "field", "ember"], // Airblast Drill
+  ["stinkyscapeplus-056", "field", "ember"], // Impact Reactor
+  ["stinkyscapeplus-064", "unit", "ember"], // Surge Wall
+  ["stinkyscapeplus-072", "unit", "ember"], // Foreshadow
+  ["stinkyscapeplus-075", "unit", "note"], // J-lease S-Space EX-plorer
+  ["stinkyscapeplus-077", "spell", "bubble"], // Black Hole
+  ["stinkyscapeplus-078", "spell", "bubble"], // Slashed Dream Cries in Red
+  ["stinkyscapeplus-079", "spell", "bubble"], // A Glimpse into the Endless Sea
+  ["stinkyscapeplus-080", "spell", "bubble"], // The Last Voyage
+  ["stinkyscapeplus-081", "unit", "bubble"], // Doomsayer
+  ["stinkyscapeplus-082", "spell", "bubble"], // Endless Expedition
+  ["stinkyscapeplus-084", "unit", "bubble"], // Bogos Binted
+  ["stinkyscapeplus-089", "spell", "bubble"], // Animosity
+  ["stinkyscapeplus-090", "unit", "ember"], // Meltdown
+  ["stinkyscapeplus-095", "spell", "bubble"], // JC Backed
+  ["stinkyscapeplus-098", "spell", "bubble"], // Doomed Ship
+  ["stinkyscapeplus-106", "unit", "ember"], // Spectre
+  ["stinkyscapeplus-114", "unit", "ember"], // Reign
+  ["stinkyscapeplus-119", "unit", "ember"], // Eclipse
+  ["stinkyscapeplus-121", "unit", "ember"], // Toxopid
+  ["stinkyscapeplus-123", "unit", "ember"], // Oct
+  ["stinkyscapeplus-125", "unit", "ember"], // Omura
+  ["stinkyscapeplus-127", "unit", "ember"], // Corvus
+  ["stinkyscapeplus-131", "field", "ember"], // Tetrative Reconstructor
+  ["stinkyscapeplus-132", "spell", "ember"], // Great Paperclip Theory II
+  ["stinkyscapeplus-133", "spell", "ember"], // Great Paperclip Theory III
+  ["stinkyscapeplus-139", "spell", "ember"], // Operation Omega
+  ["stinkyscapeplus-142", "spell", "ember"], // Call to Chaos (Mindustrial-Swarm Edition)
+  ["stinkyscapeplus-145", "unit", "bubble"], // Fire Beam v5
+  ["stinkyscapeplus-148", "unit", "bubble"], // Scourge Mortar v5
+  ["stinkyscapeplus-155", "spell", "bubble"], // The Far Vagabond
+  ["stinkyscapeplus-157", "unit", "bubble"], // Phantom Shipyard
+  ["stinkyscapeplus-160", "unit", "bubble"], // Icarus
 ];
 
 const RARE_ART_MOTION: Readonly<Record<string, ArtMotion>> = Object.fromEntries(

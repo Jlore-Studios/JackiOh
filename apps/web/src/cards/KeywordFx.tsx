@@ -435,6 +435,79 @@ const DRAW: Readonly<Record<Exclude<KeywordKind, "Divine Shield" | "Armor">, () 
     </Part>
   ),
 
+  // R3572000: the Stinkyscape+ kinds. GIGA, Frenzy and Evasive draw on the field; the others are drawn only so
+  // the map stays total (their `onField` is false, so no board minion mounts them).
+  GIGA: () => (
+    <Part className="kw-glyph-art kw-giga" anim fit="contain">
+      <rect x="8" y="8" width="84" height="84" rx="6" fill="none" stroke="#0b0d12" strokeWidth="8" />
+      <rect x="8" y="8" width="84" height="84" rx="6" fill="none" stroke="#f0b24a" strokeWidth="4" />
+      {[
+        [14, 14],
+        [52, 14],
+        [14, 52],
+        [52, 52],
+      ].map(([x = 0, y = 0]) => (
+        <rect key={`${x}-${y}`} x={x} y={y} width="34" height="34" rx="3" fill="#ffd98a" stroke="#0b0d12" strokeWidth="3" />
+      ))}
+    </Part>
+  ),
+
+  Flexible: () => (
+    <Part className="kw-glyph-art kw-flexible" anim fit="contain">
+      <path d="M12 26 H88 M12 74 H88" stroke="#0b0d12" strokeWidth="9" strokeLinecap="round" />
+      <path d="M12 26 H88 M12 74 H88" stroke="#a9c4e8" strokeWidth="4" strokeLinecap="round" />
+      <path d="M50 34 V66 M38 54 L50 68 L62 54 M38 46 L50 32 L62 46" fill="none" stroke="#0b0d12" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M50 34 V66 M38 54 L50 68 L62 54 M38 46 L50 32 L62 46" fill="none" stroke="#e6fdff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+    </Part>
+  ),
+
+  Frenzy: () => (
+    <Part className="kw-glyph-art kw-claws" anim fit="contain">
+      <Inked d="M22 10 L46 90 M44 10 L68 90 M66 10 L90 90" ink="#ff6a5c" width={6} />
+    </Part>
+  ),
+
+  Evasive: () => (
+    <Part className="kw-glyph-art kw-slip" anim fit="contain">
+      <circle cx="40" cy="50" r="28" fill="none" stroke="#0b0d12" strokeWidth="9" />
+      <circle cx="40" cy="50" r="28" fill="none" stroke="#9fb4d0" strokeWidth="4" strokeDasharray="6 5" />
+      <Inked d="M8 78 C34 90 62 78 68 54 C72 38 80 30 92 30 M82 20 L94 30 L82 42" ink="#e6fdff" width={4} />
+    </Part>
+  ),
+
+  Tipsy: () => (
+    <Part className="kw-glyph-art kw-stein" anim fit="contain">
+      <path d="M62 34 H78 C90 34 90 70 74 70 H62" fill="none" stroke="#0b0d12" strokeWidth="9" strokeLinecap="round" />
+      <path d="M62 34 H78 C90 34 90 70 74 70 H62" fill="none" stroke="#d9dde6" strokeWidth="4" strokeLinecap="round" />
+      <path d="M18 30 H64 V86 H18 Z" fill="#e8a93a" stroke="#0b0d12" strokeWidth="3.5" strokeLinejoin="round" />
+      <path d="M14 30 C14 14 28 12 34 20 C40 10 54 12 56 22 C66 18 70 30 66 32 H14 Z" fill="#fff6dc" stroke="#0b0d12" strokeWidth="3" strokeLinejoin="round" />
+      <path d="M30 44 V76 M44 44 V76" stroke="#fbd98c" strokeWidth="3" strokeLinecap="round" />
+    </Part>
+  ),
+
+  Evolve: () => (
+    <Part className="kw-glyph-art kw-helix" anim fit="contain">
+      <Inked d="M30 8 C30 34 70 34 70 50 C70 66 30 66 30 92" ink="#7fe0a0" width={5} />
+      <Inked d="M70 8 C70 34 30 34 30 50 C30 66 70 66 70 92" ink="#b6f4ff" width={5} />
+      <path d="M36 21 H64 M32 50 H68 M36 79 H64" stroke="#f1f5fb" strokeWidth="3" strokeLinecap="round" />
+    </Part>
+  ),
+
+  Burn: () => (
+    <Part className="kw-glyph-art kw-flame" anim fit="contain">
+      <path d="M50 4 C58 24 82 36 82 62 A32 32 0 0 1 18 62 C18 44 30 36 34 22 C40 30 44 34 46 40 C50 30 50 18 50 4 Z" fill="#ff7a2e" stroke="#0b0d12" strokeWidth="3.5" strokeLinejoin="round" />
+      <path d="M50 44 C56 56 66 62 66 72 A16 16 0 0 1 34 72 C34 62 46 58 50 44 Z" fill="#ffd45a" />
+    </Part>
+  ),
+
+  Toxic: () => (
+    <Part className="kw-glyph-art kw-drip" anim fit="contain">
+      <path d="M50 6 C60 30 78 46 78 64 A28 28 0 0 1 22 64 C22 46 40 30 50 6 Z" fill="#7bd93f" stroke="#0b0d12" strokeWidth="3.5" strokeLinejoin="round" />
+      <path d="M36 62 C36 70 42 76 50 76" fill="none" stroke="#e8ffd0" strokeWidth="3.5" strokeLinecap="round" />
+      <path d="M50 88 C54 92 54 96 50 98 C46 96 46 92 50 88 Z" fill="#7bd93f" stroke="#0b0d12" strokeWidth="2" strokeLinejoin="round" />
+    </Part>
+  ),
+
   Lucky: () => (
     <>
       <Part className="kw-glyph-art" fit="contain">

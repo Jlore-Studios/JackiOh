@@ -31,7 +31,7 @@ const POOL: i32 = 5;
 /// "The first 10 damage allies would take per turn".
 const RADIANT_POOL: i32 = 10;
 
-/// What the pool has left this turn (R3550004).
+/// What the pool has left this turn (R3550004), shown as "{left} left" (R3572002).
 fn pool_preview() -> PreviewHook {
     condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
         if ctx.zone != ConditionZone::Field {
@@ -40,10 +40,15 @@ fn pool_preview() -> PreviewHook {
         let Some(left) = damage_pool_left(ctx.state, ctx.self_) else {
             return vec![];
         };
-        vec![count_preview(
+        let counted = count_preview(
             &format!("up to {} each turn", param_or(&ctx, "pool", POOL)),
             left,
-        )]
+        );
+        // R3572002: the text's `{5 left}` reads what the pool has left, not a bare number.
+        vec![PreviewValue {
+            display: Some(format!("{left} left")),
+            ..counted
+        }]
     })
 }
 
@@ -200,6 +205,34 @@ mod tests {
                 "radiant {radiant}"
             );
             s.expect_health(P1, 20 + heal);
+        }
+    }
+
+    /// What the Oct's `{5 left}` reads for its controller on the field.
+    fn left_read(s: &Scenario) -> Vec<PreviewValue> {
+        let oct = s.card(ID).clone();
+        preview_of(s.state(), &oct, P1, ConditionZone::Field).expect("a previewed field card")
+    }
+
+    #[test]
+    fn r3572002_oct_reads_what_its_pool_has_left() {
+        for radiant in [false, true] {
+            let pool = if radiant { 10 } else { 5 };
+            let mut s = on_field(radiant);
+            let oct = s.unit_at(P1, 1).id;
+            let read = left_read(&s);
+            assert_eq!(read.len(), 1, "radiant {radiant}");
+            assert_eq!(read[0].label, format!("up to {pool} each turn"), "radiant {radiant}");
+            assert_eq!(read[0].value, pool, "radiant {radiant}");
+            assert_eq!(read[0].display, Some(format!("{pool} left")), "radiant {radiant}");
+            // A Ranger's 3-attack hit is soaked by the pool, which then has 3 fewer left.
+            crate::next_turn_of(&mut s, P2);
+            let first = s.unit_at(P2, 1).id;
+            s.attack(first.as_str(), oct.as_str());
+            let left = pool - 3;
+            let read = left_read(&s);
+            assert_eq!(read[0].value, left, "radiant {radiant}");
+            assert_eq!(read[0].display, Some(format!("{left} left")), "radiant {radiant}");
         }
     }
 

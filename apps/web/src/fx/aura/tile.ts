@@ -9,6 +9,7 @@ import { motifFor } from "../../cards/art/motifs.ts";
 import { showcaseFamilyOf, type ShowcaseFamily } from "../../cards/art/pictures.ts";
 import { artSpec } from "../../cards/art/procedural.ts";
 import { FAMILY_PAINTS as STINKY_PAINTS, isStinkyscapeArt, stinkySubject } from "../../cards/art/stinkyscape.ts";
+import { isStinkyscapePlusArt, stinkyscapePlusColors } from "../../cards/art/stinkyscapeplus.ts";
 import { compositionFor, themeFor, THEME_MOTES, turnHue, type MoteShape } from "../../cards/art/themes.ts";
 import { FAMILY_PAINTS as YARD_PAINTS, isTrainingGroundsArt, LEGACY_PAINT, snapshotArtOf, yardSubject } from "../../cards/art/traininggrounds.ts";
 import { LANES, laneIndex, sideView, testid, type AnimatingMap, type Highlight, type Side } from "../../game/contract.ts";
@@ -150,6 +151,8 @@ export function pictureColors(
     const subject = stinkySubject(defId, def.name, def.tags, def.type);
     const paint = STINKY_PAINTS[subject.family];
     colors = [paint.light, paint.nebula[0], paint.glow];
+  } else if (isStinkyscapePlusArt(defId)) {
+    colors = stinkyscapePlusColors({ id: defId, name: def.name, tags: def.tags, type: def.type });
   } else if (snapshotArtOf(defId) !== null || isTrainingGroundsArt(defId)) {
     const paint = snapshotArtOf(defId) !== null
       ? LEGACY_PAINT

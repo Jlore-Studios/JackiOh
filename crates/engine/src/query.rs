@@ -460,6 +460,13 @@ pub fn damage_pool_left(state: &GameState, card: &CardInstance) -> Option<i32> {
     Some((cap - crate::damage::damage_pool_used(state, card)).max(0))
 }
 
+/// R3572002: the game-wide worth of a Warhero Token before its face doubles it (R3548002): 0 until
+/// the first Token has been printed, then the game's value. Public: it is one number both seats may
+/// read, so a preview of it hides nothing.
+pub fn warhero_worth(state: &GameState) -> i32 {
+    state.warhero_worth.unwrap_or(0)
+}
+
 /// R3560000: whether this player has used the once-a-game first `key` (S+ #120, #121).
 pub fn once_a_game_used(state: &GameState, player: PlayerId, key: &str) -> bool {
     state.players[player]

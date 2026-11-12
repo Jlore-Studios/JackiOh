@@ -19,6 +19,8 @@
 import type { BackrowView as BackrowSlot } from "./generated/BackrowView.ts";
 import type { CardDef } from "./generated/CardDef.ts";
 import type { GameEventType } from "./generated/GameEventType.ts";
+import type { KeywordKind } from "./generated/KeywordKind.ts";
+import { KEYWORD_KINDS as PRINTED_KINDS, UNPRINTED_KEYWORD_KINDS as UNPRINTED_KINDS } from "./catalog.ts";
 
 // ---------------------------------------------------------------------------------------------
 // generated: catalog-types, actions, events, view
@@ -85,6 +87,7 @@ export type { StarscapeNodeView } from "./generated/StarscapeNodeView.ts";
 export type { StarscapeView } from "./generated/StarscapeView.ts";
 export type { Tag } from "./generated/Tag.ts";
 export type { TallyView } from "./generated/TallyView.ts";
+export type { TipsyBlur } from "./generated/TipsyBlur.ts";
 export type { Tuning } from "./generated/Tuning.ts";
 export type { UnitView } from "./generated/UnitView.ts";
 export type { Zone } from "./generated/Zone.ts";
@@ -235,6 +238,11 @@ type NoneMissing<T extends never> = T;
 
 export type GameEventTypesAreExhaustive = NoneMissing<Exclude<GameEventType, (typeof GAME_EVENT_TYPES)[number]>>;
 
+/** The same guard for the keyword lists: a `KeywordKind` in neither `KEYWORD_KINDS` nor `UNPRINTED_KEYWORD_KINDS` is a compile error. */
+export type KeywordKindsAreExhaustive = NoneMissing<
+  Exclude<KeywordKind, (typeof PRINTED_KINDS)[number] | (typeof UNPRINTED_KINDS)[number]>
+>;
+
 // ---------------------------------------------------------------------------------------------
 // hand-kept helpers
 // ---------------------------------------------------------------------------------------------
@@ -248,6 +256,7 @@ export {
   LEAN_NEWEST,
   PARAM_PLACEHOLDER,
   SHIPPED_SETS,
+  UNPRINTED_KEYWORD_KINDS,
   fillParams,
   hasKeyword,
   isLeanPick,

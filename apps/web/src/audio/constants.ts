@@ -179,9 +179,9 @@ export const MUSIC_BYTES_MAX = 8;
  * Meditative set's 22 come with its release, at the same encoding. Raised again from 28 MiB when the
  * owner's auditions gave each station three to seven in-game tracks (about 40.5 MiB on disk), with
  * room left for the card intros later sets bring, and by R2722000 from 42 MiB for the intros'
- * fanfares, about half as long again.
+ * fanfares, about half as long again, and by R3572000 from 49 MiB for the Stinkyscape+ set's 59.
  */
-export const MUSIC_BUDGET_BYTES = 49 * 1024 * 1024;
+export const MUSIC_BUDGET_BYTES = 51 * 1024 * 1024;
 
 // ---- Patch v0.2.X sound polish (#259, R669): stings, the mix's panning, ducking and reverb ----
 /** A played card's rarity sting starts this long after the card whoosh, so the two read as one. */

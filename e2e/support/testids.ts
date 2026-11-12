@@ -512,9 +512,16 @@ export const RADIANT_MARK = ".cf-mark";
 export const CARD_REF = ".cf-ref";
 export const CARD_VALUE = ".cf-value";
 
+// R3572000: a Greek letter reads as its name, so the Automa-α to Automa-ζ and Automa-Ω chips each get an id.
 export function slugOf(value: string): string {
   return value
     .toLowerCase()
+    .replace(/α/g, "alpha")
+    .replace(/β/g, "beta")
+    .replace(/γ/g, "gamma")
+    .replace(/δ/g, "delta")
+    .replace(/ζ/g, "zeta")
+    .replace(/ω/g, "omega")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }

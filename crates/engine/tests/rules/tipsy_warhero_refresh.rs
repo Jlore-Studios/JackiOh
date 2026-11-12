@@ -391,6 +391,20 @@ fn r3548002_the_worth_starts_at_zero_when_the_first_warhero_is_minted() {
     assert_eq!(s.state().warhero_worth, Some(0));
 }
 
+/// R3572002: a card reads the game-wide worth through `warhero_worth`: 0 until a Warhero Token has
+/// been printed, then the game's value.
+#[test]
+fn r3572002_warhero_worth_is_zero_until_a_token_is_printed_then_the_game_value() {
+    let mut s = board("r3572002-worth", json!({}), json!({}));
+    assert_eq!(s.state().warhero_worth, None);
+    assert_eq!(warhero_worth(s.state()), 0);
+    let card = new_instance(s.state_mut(), WARHERO, P1, Zone::Hand { player: P1 });
+    s.state_mut().players[P1].hand.push(card);
+    assert_eq!(warhero_worth(s.state()), 0, "printed, and still worth 0");
+    s.state_mut().warhero_worth = Some(7);
+    assert_eq!(warhero_worth(s.state()), 7);
+}
+
 /// R3548002: once a Token has been minted the worth grows by 0 to 10 at the end of every turn,
 /// reported with its growth; with none minted it stays absent and draws nothing.
 #[test]

@@ -210,6 +210,14 @@ describe("the filter vocabulary (B31, B34)", () => {
       "Swarm",
       "Legacy",
       "Faction",
+      "Mindustrial",
+      "Mineral",
+      "Automa-α",
+      "Automa-β",
+      "Automa-γ",
+      "Automa-δ",
+      "Automa-Ω",
+      "Paperclip",
     ]);
     // Only the ten AI tokens carry "AI", the Prime tokens "Prime", Otherworldly Removal's three
     // tokens "Other-Origins" (R1837000) and the six Resource tokens "Resource" (#2521), and the pool
@@ -219,6 +227,7 @@ describe("the filter vocabulary (B31, B34)", () => {
     expect(FILTER_TAGS).not.toContain("Other-Origins");
     expect(FILTER_TAGS).not.toContain("War Doctrine");
     expect(FILTER_TAGS).not.toContain("Resource");
+    expect(FILTER_TAGS).not.toContain("Automa-ζ");
     expect([...FILTER_RARITIES]).toEqual(["Common", "Rare", "Epic", "Legendary", "Mythic"]);
     expect(FILTER_TAGS).not.toContain("Token");
     expect(FILTER_RARITIES).not.toContain("Token");
@@ -838,8 +847,8 @@ describe("the almanac's pool (R630)", () => {
     expect(almanacPool(bare, DEFAULT_FILTER, DEFAULT_SORT)).toEqual([]);
   });
 
-  it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI, Other-Origins, War Doctrine, Resource, Starship and Token", () => {
-    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Starship", "Token"]);
+  it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI, Other-Origins, War Doctrine, Resource, Starship, Automa-ζ and Token", () => {
+    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Starship", "Automa-ζ", "Token"]);
     // R1420, R1381: the chips are the tags the cards of the shipped sets carry; a set being built adds
     // its tags when it ships.
     const carried = new Set(SHIPPED.filter((d) => d.id !== GLITCH_DEF_ID).flatMap((d) => d.tags));
@@ -918,6 +927,16 @@ describe("the chips follow what ships (R1380, R1381)", () => {
     expect(ALMANAC_CHIP_TAGS).toContain("Resource");
     expect(filterTagId("Faction")).toBe("db-filter-tag-faction");
     expect(filterTagId("Resource")).toBe("db-filter-tag-resource");
+  });
+
+  it("R3572000 each Automa tag has a chip id of its own", () => {
+    const ids = (["Automa-α", "Automa-β", "Automa-γ", "Automa-δ", "Automa-Ω"] as const).map((tag) => filterTagId(tag));
+    expect(ids).toEqual(["db-filter-tag-automa-alpha", "db-filter-tag-automa-beta", "db-filter-tag-automa-gamma", "db-filter-tag-automa-delta", "db-filter-tag-automa-omega"]);
+    expect(filterTagId("Automa-ζ")).toBe("db-filter-tag-automa-zeta");
+    expect(slugOf("Mindustrial")).toBe("mindustrial");
+    const all = [...ALMANAC_TAGS.filter((tag) => tag.startsWith("Automa-")).map((tag) => filterTagId(tag))];
+    expect(all).toHaveLength(6);
+    expect(new Set(all).size).toBe(6);
   });
 
   it("R3038000 the Starship tag, the Dormant Starship's alone, gets a chip in the almanac's list only", () => {

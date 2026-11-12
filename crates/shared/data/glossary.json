@@ -124,7 +124,7 @@
     {
       "id": "Tipsy",
       "label": "Tipsy",
-      "rule": "Playing this adds X to your Tipsy counter, which drops by 1 at the start of your turn; while it is up, new cards may blur",
+      "rule": "Playing this adds X to your Tipsy counter, which drops by 1 at your Start of turn; while it is up, new cards may blur",
       "section": "§6.1",
       "aliases": [],
       "row": "Tipsy X"
@@ -431,7 +431,8 @@
       "rule": "Once per turn on your turn, click the card to do an effect; \"Activate X\" up to X times per turn, \"Activate ♾️\" any number of times",
       "section": "§6.2",
       "aliases": [
-        "Activated"
+        "Activated",
+        "Activates"
       ],
       "row": "Activate / Activate X / Activate ♾️"
     },
@@ -446,6 +447,13 @@
       "id": "When launched",
       "label": "When launched",
       "rule": "When the Starship this is fused into launches, after its Cries",
+      "section": "§6.2",
+      "aliases": []
+    },
+    {
+      "id": "Evolves when",
+      "label": "Evolves when",
+      "rule": "When the condition after it comes true, this evolves",
       "section": "§6.2",
       "aliases": []
     },
@@ -515,7 +523,8 @@
       "rule": "Zone can't be played into",
       "section": "§6.3",
       "aliases": [
-        "Locked"
+        "Locked",
+        "lock"
       ]
     },
     {
@@ -530,7 +539,9 @@
       "label": "Counter",
       "rule": "Cancel a card being played or cast",
       "section": "§6.3",
-      "aliases": []
+      "aliases": [
+        "countered"
+      ]
     },
     {
       "id": "Steal",
@@ -580,7 +591,9 @@
       "rule": "Strengthen a card: one change per application",
       "section": "§6.3",
       "aliases": [
-        "Buffs"
+        "Buffs",
+        "buff",
+        "buffs"
       ]
     },
     {
@@ -657,7 +670,9 @@
       "label": "Awaken",
       "rule": "A Dormant card awakens now",
       "section": "§6.3",
-      "aliases": []
+      "aliases": [
+        "awakens"
+      ]
     },
     {
       "id": "Launch",
@@ -666,7 +681,8 @@
       "section": "§6.3",
       "aliases": [
         "launch",
-        "launches"
+        "launches",
+        "launched"
       ]
     },
     {
@@ -707,6 +723,43 @@
       ]
     },
     {
+      "id": "Evolve",
+      "label": "Evolve",
+      "rule": "The Unit does what its \"Evolve:\" text says. A card evolves only once",
+      "section": "§6.3",
+      "aliases": [
+        "evolve",
+        "Evolved",
+        "Evolves"
+      ]
+    },
+    {
+      "id": "Burn",
+      "label": "Burn",
+      "rule": "A counter on a Unit or a hero: at the start of its controller's turn it takes that much damage, and the count then drops by 3",
+      "section": "§6.3",
+      "aliases": [
+        "Burns"
+      ]
+    },
+    {
+      "id": "Toxic",
+      "label": "Toxic",
+      "rule": "A counter on a Unit or a hero: at the start of its controller's turn it takes that much piercing damage, every turn",
+      "section": "§6.3",
+      "aliases": []
+    },
+    {
+      "id": "Replenish",
+      "label": "Replenish",
+      "rule": "Give back spent mana, never above your max mana",
+      "section": "§6.3",
+      "aliases": [
+        "replenish"
+      ],
+      "row": "Replenish X"
+    },
+    {
       "id": "Radiant",
       "label": "Radiant",
       "rule": "Raise a card to its Radiant form. In hand or deck: cost unchanged, stats and text swap to the radiant form.",
@@ -715,6 +768,7 @@
     }
   ],
   "plain": [
+    "choose one",
     "your exile",
     "their exile",
     "from exile",

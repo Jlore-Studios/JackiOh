@@ -41,4 +41,12 @@ export const KEYWORD_MARK: Readonly<Record<KeywordKind, string>> = {
   "Starship Piece": "SP",
   Starship: "SS",
   "Can't Defend": "CD",
+  Evolve: "EV",
+  Burn: "BU",
+  Toxic: "TX",
+  GIGA: "GG",
+  Flexible: "FX",
+  Frenzy: "FZ",
+  Evasive: "EA",
+  Tipsy: "TP",
 };

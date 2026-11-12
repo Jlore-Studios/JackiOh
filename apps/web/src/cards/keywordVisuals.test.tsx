@@ -8,10 +8,11 @@ import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
-import { KEYWORD_KINDS, type Keyword, type KeywordKind, type UnitView } from "@jackioh/shared";
+import { KEYWORD_KINDS, UNPRINTED_KEYWORD_KINDS, type Keyword, type KeywordKind, type UnitView } from "@jackioh/shared";
 
 import { unit } from "../test/fixtures.ts";
 import { DRAWN_BY_MINION } from "./KeywordFx.tsx";
+import { KEYWORD_MARK } from "./keywordMarks.ts";
 import {
   AMBIENT_MAX,
   BRITTLE_CRACK_STAGES,
@@ -46,6 +47,9 @@ function keywordOf(kind: KeywordKind, n = 2): Keyword {
     case "Lucky":
     case "Brittle":
     case "Spell Damage":
+    case "Burn":
+    case "Toxic":
+    case "Tipsy":
       return { kind, n };
     default:
       return { kind } as Keyword;
@@ -76,9 +80,12 @@ function fxOf(cf: HTMLElement, kind: KeywordKind): HTMLElement | null {
 
 const EVERY_KEYWORD: Keyword[] = KEYWORD_KINDS.map((kind) => keywordOf(kind));
 
+/** R3572000: every kind the wire has, the three no card prints (R3535002) included: the map is total over them. */
+const ALL_KINDS: KeywordKind[] = [...KEYWORD_KINDS, ...UNPRINTED_KEYWORD_KINDS];
+
 /** R2577000: the kinds a unit on the field draws, and the ones it leaves to its preview. */
-const FIELD_KINDS: KeywordKind[] = KEYWORD_KINDS.filter((kind) => KEYWORD_VISUALS[kind].onField);
-const OFF_FIELD_KINDS: KeywordKind[] = KEYWORD_KINDS.filter((kind) => !KEYWORD_VISUALS[kind].onField);
+const FIELD_KINDS: KeywordKind[] = ALL_KINDS.filter((kind) => KEYWORD_VISUALS[kind].onField);
+const OFF_FIELD_KINDS: KeywordKind[] = ALL_KINDS.filter((kind) => !KEYWORD_VISUALS[kind].onField);
 
 /* ------------------------------------------------------------------------------------------- *
  * keywords.css, parsed
@@ -167,10 +174,10 @@ function animatedProperties(body: string): string[] {
 
 describe("R438 the keyword visuals map", () => {
   it("R438 every KeywordKind has a visual: a total map with a layer, a shape and a unique priority", () => {
-    expect(new Set(Object.keys(KEYWORD_VISUALS))).toEqual(new Set(KEYWORD_KINDS));
-    const priorities = KEYWORD_KINDS.map((kind) => KEYWORD_VISUALS[kind].priority).sort((a, b) => a - b);
-    expect(priorities).toEqual(KEYWORD_KINDS.map((_, index) => index + 1));
-    for (const kind of KEYWORD_KINDS) {
+    expect(new Set(Object.keys(KEYWORD_VISUALS))).toEqual(new Set(ALL_KINDS));
+    const priorities = ALL_KINDS.map((kind) => KEYWORD_VISUALS[kind].priority).sort((a, b) => a - b);
+    expect(priorities).toEqual(ALL_KINDS.map((_, index) => index + 1));
+    for (const kind of ALL_KINDS) {
       const visual = KEYWORD_VISUALS[kind];
       expect(Object.keys(LAYER_CAP), kind).toContain(visual.layer);
       expect(visual.shape.length, kind).toBeGreaterThan(0);
@@ -180,7 +187,7 @@ describe("R438 the keyword visuals map", () => {
   it("R438 every keyword but Taunt, Divine Shield and Armor loops, each on keyframes of its own", () => {
     const still: KeywordKind[] = ["Taunt", "Divine Shield", "Armor"];
     const names = new Set<string>();
-    for (const kind of KEYWORD_KINDS) {
+    for (const kind of ALL_KINDS) {
       const motion = KEYWORD_VISUALS[kind].motion;
       if (still.includes(kind)) {
         expect(motion, kind).toBeNull();
@@ -192,12 +199,12 @@ describe("R438 the keyword visuals map", () => {
       names.add(motion.keyframes);
     }
     // Only the two speed keywords wait on `canAct`.
-    const onCanAct = KEYWORD_KINDS.filter((kind) => KEYWORD_VISUALS[kind].motion?.when === "canAct");
+    const onCanAct = ALL_KINDS.filter((kind) => KEYWORD_VISUALS[kind].motion?.when === "canAct");
     expect(onCanAct.sort()).toEqual(["Charge", "Rush"]);
   });
 
   it("R438 the numbered keywords print their number: Armor, Brittle, Spell Damage and Lucky", () => {
-    const numbered = KEYWORD_KINDS.filter((kind) => KEYWORD_VISUALS[kind].numbered);
+    const numbered = ALL_KINDS.filter((kind) => KEYWORD_VISUALS[kind].numbered);
     expect(numbered.sort()).toEqual(["Armor", "Brittle", "Lucky", "Spell Damage"]);
   });
 
@@ -447,7 +454,7 @@ describe("R438 motion is cheap, capped and stops under reduced motion", () => {
   );
 
   it("R438 each loop's keyframes exist, move only transform and opacity, and run only on data-kw-motion=on", () => {
-    for (const kind of KEYWORD_KINDS) {
+    for (const kind of ALL_KINDS) {
       const motion = KEYWORD_VISUALS[kind].motion;
       if (motion === null) continue;
       const body = css.keyframes.get(motion.keyframes);
@@ -531,9 +538,22 @@ describe("#2437 temporaryLeft: the count a card's Temporary keywords give it", (
 });
 
 describe("R2577000 a unit on the field draws only the keywords that can still act there", () => {
-  it("R2577000 Equip, Tradable, Cloaked, Crater, Flashback, Stack and Temporary are the kinds off the field", () => {
-    expect([...OFF_FIELD_KINDS].sort()).toEqual(["Cloaked", "Crater", "Equip", "Flashback", "Stack", "Temporary", "Tradable"]);
-    for (const kind of ["Starship Piece", "Starship", "Can't Defend", "Charge", "Rush", "Brittle"] as const) expect(KEYWORD_VISUALS[kind].onField, kind).toBe(true);
+  it("R2577000 Equip, Tradable, Cloaked, Crater, Flashback, Stack, Temporary, Flexible, Tipsy, Evolve, Burn and Toxic are the kinds off the field", () => {
+    expect([...OFF_FIELD_KINDS].sort()).toEqual([
+      "Burn",
+      "Cloaked",
+      "Crater",
+      "Equip",
+      "Evolve",
+      "Flashback",
+      "Flexible",
+      "Stack",
+      "Temporary",
+      "Tipsy",
+      "Toxic",
+      "Tradable",
+    ]);
+    for (const kind of ["Starship Piece", "Starship", "Can't Defend", "Charge", "Rush", "Brittle", "GIGA", "Frenzy", "Evasive"] as const) expect(KEYWORD_VISUALS[kind].onField, kind).toBe(true);
   });
 
   for (const kind of OFF_FIELD_KINDS) {
@@ -587,5 +607,36 @@ describe("R2577000 a unit on the field draws only the keywords that can still ac
     expect(chip?.textContent).toBe("CD");
     expect(fxOf(cf, "Can't Defend")?.getAttribute("data-kw-layer")).toBe("glyph");
     expect(fxOf(cf, "Can't Defend")?.querySelector(".kw-split-shield")).not.toBeNull();
+  });
+});
+
+describe("R3572000 the Stinkyscape+ keyword kinds", () => {
+  it("R3572000 the new kinds draw on the field only where they act", () => {
+    // GIGA fills four zones, Frenzy strikes again after a kill, Evasive slips an attack: each acts on the field.
+    for (const kind of ["GIGA", "Frenzy", "Evasive"] as const) {
+      expect(KEYWORD_VISUALS[kind].onField, kind).toBe(true);
+      const cf = renderUnit({ keywords: [keywordOf(kind)] });
+      expect(treatments(cf).map((el) => el.getAttribute("data-keyword-fx")), kind).toEqual([kind]);
+      expect(fxOf(cf, kind)?.getAttribute("data-kw-layer")).toBe("glyph");
+      expect(cf.querySelector(`.keywords > [data-keyword="${kind}"]`)?.hasAttribute("data-chip"), `${kind}'s chip`).toBe(false);
+    }
+    // Flexible and Tipsy act as a card is played; Evolve, Burn and Toxic are no printed keyword (R3535002, R3540000): their
+    // badge stays, hidden, and nothing is drawn or counted in the "+n".
+    for (const kind of ["Flexible", "Tipsy", "Evolve", "Burn", "Toxic"] as const) {
+      expect(KEYWORD_VISUALS[kind].onField, kind).toBe(false);
+      const cf = renderUnit({ keywords: [keywordOf(kind)] });
+      expect(treatments(cf), kind).toHaveLength(0);
+      expect(cf.querySelector(".kw-fx, .kw-glyphs"), kind).toBeNull();
+      expect(cf.querySelector(`.keywords > [data-keyword="${kind}"]`)?.getAttribute("data-chip"), kind).toBe("hidden");
+      expect(cf.querySelector(".cf-kw-more"), kind).toBeNull();
+    }
+    // Beside live keywords the dead ones take no slot, and a plan lists only the three that act.
+    const all = (["GIGA", "Flexible", "Frenzy", "Evasive", "Tipsy", "Evolve", "Burn", "Toxic"] as const).map((kind) => keywordOf(kind));
+    expect(keywordFxPlan({ keywords: all, canAct: true, armor: 0 }).map((entry) => entry.kind)).toEqual(["GIGA", "Frenzy"]);
+    expect(treatedKinds({ keywords: all, canAct: true, armor: 0 })).toEqual(["GIGA", "Frenzy", "Evasive"]);
+    expect(keywordChips(all, 0).shown.map((keyword) => keyword.kind)).toEqual(["GIGA", "Frenzy", "Evasive"]);
+    // The marks: two letters each, unique across the whole wire.
+    const marks = ALL_KINDS.map((kind) => KEYWORD_MARK[kind]);
+    expect(new Set(marks).size).toBe(marks.length);
   });
 });

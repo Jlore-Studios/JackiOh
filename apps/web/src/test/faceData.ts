@@ -49,6 +49,10 @@ export type GlossaryTermId =
   | "Starship Piece"
   | "Starship"
   | "Can't Defend"
+  | "GIGA"
+  | "Flexible"
+  | "Frenzy"
+  | "Evasive"
   | "Can't be attacked"
   | "Only Units in this lane can attack this"
   | "Berserk"
@@ -69,6 +73,7 @@ export type GlossaryTermId =
   | "Activate"
   | "When this awakens"
   | "When launched"
+  | "Evolves when"
   | "Discover"
   | "Tribute"
   | "Embiggened"
@@ -99,6 +104,10 @@ export type GlossaryTermId =
   | "Exile"
   | "Hand size"
   | "Mark in a hand"
+  | "Evolve"
+  | "Burn"
+  | "Toxic"
+  | "Replenish"
   | "Radiant";
 export type GlossaryEntry = {
   readonly id: GlossaryTermId;

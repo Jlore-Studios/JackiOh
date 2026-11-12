@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
-import { KEYWORD_KINDS, fillParams, setShips, type KeywordKind } from "@jackioh/shared";
+import { KEYWORD_KINDS, UNPRINTED_KEYWORD_KINDS, fillParams, setShips, type KeywordKind } from "@jackioh/shared";
 
 import { KEYWORD_MARK } from "./keywordMarks.ts";
 import {
@@ -104,6 +104,8 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "When this attacks",
     "Whenever this attacks",
     "After this attacks",
+    // R3572000: its Frozen is §6.1's status ("Frozen"), which the glossary names; the row is a trigger on it.
+    "When this is Frozen",
   ],
   "§6.3": [
     "Summon",
@@ -113,7 +115,6 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Discard",
     "Heal X",
     "Mana / gain mana",
-    "Replenish X",
     // R3548003: Refresh gives back Activates, never mana.
     "Refresh",
     // R3548004: infinite mana spends nothing.
@@ -171,8 +172,6 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Complete the current stage",
     "Hear back",
     "Steal mana crystals",
-    // R1849001: Stinkyscape's.
-    "Evolve",
     // R1844000, R1844001, R1844002: Stinkyscape's M10.
     "Autopilot aura",
     "Pareto hint",
@@ -233,6 +232,7 @@ const TRIGGERS: readonly TriggerTermId[] = [
   "Activate",
   "When this awakens",
   "When launched",
+  "Evolves when",
 ];
 
 /** R512: §6.1's statuses that are not keyword kinds. */
@@ -276,11 +276,17 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "Exile",
   "Hand size",
   "Mark in a hand",
+  // R3572000: the verbs and counters of #3535 and #3540: Evolve, Burn and Toxic, and Replenish (R364).
+  "Evolve",
+  "Burn",
+  "Toxic",
+  "Replenish",
 ];
 
 /**
  * The marks as Card.tsx drew them, kept unchanged, among them R346's PI, R636's WF, R637's TE, R1220's
- * UT, R1086's MG, #783's RG FL CK CR FB, R1838000's TD, R1852000's SP SS and R2657000's CD.
+ * UT, R1086's MG, #783's RG FL CK CR FB, R1838000's TD, R1852000's SP SS and R2657000's CD; R3572000 adds
+ * the eight of #3535 (GG FX FZ EA TP, and the unprinted EV BU TX).
  */
 const MARKS: Readonly<Record<KeywordKind, string>> = {
   Taunt: "TA",
@@ -319,6 +325,14 @@ const MARKS: Readonly<Record<KeywordKind, string>> = {
   "Starship Piece": "SP",
   Starship: "SS",
   "Can't Defend": "CD",
+  Evolve: "EV",
+  Burn: "BU",
+  Toxic: "TX",
+  GIGA: "GG",
+  Flexible: "FX",
+  Frenzy: "FZ",
+  Evasive: "EA",
+  Tipsy: "TP",
 };
 
 type Term = { text: string; term: GlossaryTermId };
@@ -563,7 +577,7 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
   });
 
   it("B11 R373 one entry per KEYWORD_KINDS kind, under §6.1, each with a rule", () => {
-    for (const kind of KEYWORD_KINDS) {
+    for (const kind of [...KEYWORD_KINDS, ...UNPRINTED_KEYWORD_KINDS]) {
       const entry = GLOSSARY[kind];
       expect(entry, kind).toBeDefined();
       expect(entry.id, kind).toBe(kind);
@@ -577,9 +591,11 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
   });
 
   it("B11 KEYWORD_MARK has a distinct two-letter mark for every keyword kind, patch v0.2.0's included", () => {
-    expect(Object.keys(KEYWORD_MARK).sort()).toEqual([...KEYWORD_KINDS].sort());
-    const marks = KEYWORD_KINDS.map((kind) => KEYWORD_MARK[kind]);
-    for (const [index, mark] of marks.entries()) expect(mark, KEYWORD_KINDS[index]).toMatch(/^[A-Z]{2}$/);
+    // R3572000: the three kinds no card prints (R3535002) have a mark too: a view may carry any `KeywordKind`.
+    const kinds = [...KEYWORD_KINDS, ...UNPRINTED_KEYWORD_KINDS];
+    expect(Object.keys(KEYWORD_MARK).sort()).toEqual([...kinds].sort());
+    const marks = kinds.map((kind) => KEYWORD_MARK[kind]);
+    for (const [index, mark] of marks.entries()) expect(mark, kinds[index]).toMatch(/^[A-Z]{2}$/);
     expect(new Set(marks).size).toBe(marks.length);
   });
 
@@ -685,7 +701,9 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
   });
 
   it("R1320 a plain stat buff stays plain words: matching is case-sensitive, and a word glued on is no term", () => {
-    expect(termsIn("Give a Unit +2/+2, a plain buff")).toEqual([]);
+    expect(termsIn("Give a Unit +2/+2, a plain stat change")).toEqual([]);
+    // R3572000: since #3572 the lower-case verb the Stinkyscape+ faces print ("then buff them") bolds, as "steal" does (R910000).
+    expect(termsIn("Shuffle 3 copies of it into your deck, then buff them")).toEqual(["Buff"]);
     expect(termsIn("Buff it twice. Nerf them")).toEqual(["Buff", "Nerf"]);
     expect(termsIn("Buffed and Nerfed")).toEqual([]);
   });
@@ -725,10 +743,10 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       Tribute: ["Tributes"],
       Fuse: ["fuse", "fused", "fuses"],
       Transform: ["transform", "transforms"],
-      Lock: ["Locked"],
+      Lock: ["Locked", "lock"],
       Steal: ["steal"],
       Nerf: ["Nerfs"],
-      Buff: ["Buffs"],
+      Buff: ["Buffs", "buff", "buffs"],
       Redirect: ["redirected"],
       Exile: ["exile", "exiles", "exiled"],
       // R1174000: Freeze's spellings; Frozen is its own §6.1 status.
@@ -738,9 +756,16 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       // R1857000: the Stinkyscape set's faces print these mid-sentence, and "fuses" and "Floated" above.
       "End the turn": ["end the turn"],
       Allure: ["Allured"],
-      Launch: ["launch", "launches"],
       // #2521: ZolarKeth's "A University can be Activated at most once each turn" (R2521003).
-      Activate: ["Activated"],
+      Activate: ["Activated", "Activates"],
+      // R3572000: the Stinkyscape+ faces print these mid-sentence ("Burns 3", "then buff them", "lock the tile", "is countered",
+      // "when it awakens", "is launched", "Evolved Swarm cards", "replenish 2 mana"); "Evolves" is the trigger's own verb.
+      Awaken: ["awakens"],
+      Counter: ["countered"],
+      Launch: ["launch", "launches", "launched"],
+      Evolve: ["evolve", "Evolved", "Evolves"],
+      Burn: ["Burns"],
+      Replenish: ["replenish"],
     };
     for (const [key, entry] of Object.entries(GLOSSARY)) {
       expect(entry.aliases, key).toEqual(printed[key as GlossaryTermId] ?? []);

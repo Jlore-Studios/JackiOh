@@ -78,15 +78,26 @@ export const FILTER_TAGS: readonly Tag[] = [
   // Issue #2521: the Stinkyscape set's five Faction cards, #95 and #159 to #162, which a deck may
   // hold. "Resource" is left out with "War Doctrine": only the six Resource tokens carry it.
   "Faction",
+  // R3572000: the Stinkyscape+ set's (S26): the Mindustrial, Mineral and Paperclip cards and the five
+  // Automa families a deck may hold. "Automa-ζ" is left out: only its five tokens carry it.
+  "Mindustrial",
+  "Mineral",
+  "Automa-α",
+  "Automa-β",
+  "Automa-γ",
+  "Automa-δ",
+  "Automa-Ω",
+  "Paperclip",
 ];
 
 /**
  * The almanac's tag chips (R630): the deck builder's, then the tags no deckable card carries: "Prime" (R1421),
  * "AI", "Other-Origins" (Classic+ #32.1 to #32.3, R1837000), "War Doctrine" (#137.1 to #137.4, R1883000),
- * "Resource" (issue #2521), "Starship" (the Dormant Starship, which only a rule makes, R3038000) and "Token".
+ * "Resource" (issue #2521), "Starship" (the Dormant Starship, which only a rule makes, R3038000), "Automa-ζ"
+ * (Stinkyscape+'s five Automa-ζ tokens, R3572000) and "Token".
  * Every tag a catalog card carries.
  */
-export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Starship", "Token"];
+export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Starship", "Automa-ζ", "Token"];
 
 /** R1381: the tags of `order` a card of a shipped set carries (R1420), in order; Glitch lends none (R674). */
 export function shippedTags(order: readonly Tag[], cards: readonly CardDef[]): readonly Tag[] {

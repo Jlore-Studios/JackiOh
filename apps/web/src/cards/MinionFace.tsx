@@ -98,7 +98,7 @@ export function drawnAsState(keyword: Keyword, armor: number): boolean {
 
 /** The keywords that get a visible chip, and the ones folded into the "+n" count; a keyword that does nothing on the field (R2577000) is neither. */
 export function keywordChips(keywords: readonly Keyword[], armor: number): { shown: Keyword[]; folded: Keyword[] } {
-  // R3546004: a kind with no visual (GIGA, until S26's chip) draws nothing, not a throw.
+  // R3546004: a kind with no visual draws nothing, not a throw: every `KeywordKind` has one since R3572000, the guard stays.
   const chips = keywords.filter((keyword) => KEYWORD_VISUALS[keyword.kind]?.onField === true && !drawnAsState(keyword, armor));
   const room = chips.length <= KEYWORD_CHIPS_MAX ? chips.length : KEYWORD_CHIPS_MAX - 1;
   return { shown: chips.slice(0, room), folded: chips.slice(room) };

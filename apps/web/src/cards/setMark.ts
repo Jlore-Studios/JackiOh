@@ -1,8 +1,9 @@
 // The set mark on a card's frame (R503), as a printed card carries its expansion symbol: Core a ringed
 // orb, Classic a columned temple (Classic+ with a plus), Meditative an ensō with a red seal (Meditative+
-// with a plus, R2718000), Stinkyscape a green planet with stink lines (R1883000), Training Grounds a
-// straw target over two crossed practice swords (R2202000); any other set (the reserved Boss sets, one
-// this client does not know yet) a plain diamond, so every card shows one.
+// with a plus, R2718000), Stinkyscape a green planet with stink lines (R1883000; Stinkyscape+ the same
+// with a plus, R3572000), Training Grounds a straw target over two crossed practice swords (R2202000);
+// any other set (the reserved Boss sets, one this client does not know yet) a plain diamond, so every
+// card shows one.
 //
 // Presentation only: the set is public catalog data (§5.1) and no rule reads the mark (CLAUDE.md
 // rule 7). Each glyph is an original SVG drawn as an `<img>` of a `data:` URI with no <text> and no
@@ -21,6 +22,7 @@ export type SetMarkKind =
   | "meditative"
   | "meditative-plus"
   | "stinkyscape"
+  | "stinkyscape-plus"
   | "training-grounds"
   | "unknown";
 
@@ -87,6 +89,15 @@ const ENSO =
   `<path d='M15.9 5.25A7.8 7.8 0 1 0 19.33 9.33L18.35 9.12A5.8 5.8 0 1 1 15.8 6.08Z' fill='#17130f' stroke='#17130f' stroke-width='0.7' stroke-linejoin='round'/>` +
   `<rect x='15.6' y='15.6' width='4.2' height='4.2' rx='0.5' fill='#c8322b' stroke='#5a0f0b' stroke-width='0.6'/>`;
 
+/** Stinkyscape's mark (R1883000): a green ringed planet in deep space under stink lines; Stinkyscape+'s is this with the plus (R3572000). */
+const STINKY_PLANET =
+  `<circle cx='12' cy='12' r='10.6' fill='#1c1446' stroke='#08061a' stroke-width='1.2'/>` +
+  `<path d='M7.6 8.6Q6.6 7.4 7.6 6.2T7.6 3.8M10.6 8Q9.6 6.8 10.6 5.6T10.6 3.2M13.6 8.6Q12.6 7.4 13.6 6.2T13.6 3.8' fill='none' stroke='#b6f06a' stroke-width='1.1' stroke-linecap='round'/>` +
+  `<path d='M2.6 14.2A8 2.2 0 0 1 18.6 14.2' transform='rotate(-18 10.6 14.2)' fill='none' stroke='#f1dc6b' stroke-width='1.2'/>` +
+  `<circle cx='10.6' cy='14.2' r='4.6' fill='#7fd23e' stroke='#16300a' stroke-width='1'/>` +
+  `<path d='M18.6 14.2A8 2.2 0 0 1 2.6 14.2' transform='rotate(-18 10.6 14.2)' fill='none' stroke='#f1dc6b' stroke-width='1.2'/>` +
+  `<path d='M18.4 4.6L19.1 6.7L21.2 7.4L19.1 8.1L18.4 10.2L17.7 8.1L15.6 7.4L17.7 6.7Z' fill='#fff6c8'/>`;
+
 /** The plus a "+" set's mark carries, in the top right corner. */
 const PLUS = `<path d='M17.6 0.8H21.2V4.4H23.6V8H21.2V11.6H17.6V8H14.4V4.4H17.6Z' fill='#9dff8a' stroke='#0f2e0a' stroke-width='1.2' stroke-linejoin='round'/>`;
 
@@ -103,13 +114,8 @@ const GLYPHS: Readonly<Record<SetMarkKind, string>> = {
   "classic-plus": plusMark(TEMPLE),
   meditative: ENSO,
   "meditative-plus": plusMark(ENSO),
-  stinkyscape:
-    `<circle cx='12' cy='12' r='10.6' fill='#1c1446' stroke='#08061a' stroke-width='1.2'/>` +
-    `<path d='M7.6 8.6Q6.6 7.4 7.6 6.2T7.6 3.8M10.6 8Q9.6 6.8 10.6 5.6T10.6 3.2M13.6 8.6Q12.6 7.4 13.6 6.2T13.6 3.8' fill='none' stroke='#b6f06a' stroke-width='1.1' stroke-linecap='round'/>` +
-    `<path d='M2.6 14.2A8 2.2 0 0 1 18.6 14.2' transform='rotate(-18 10.6 14.2)' fill='none' stroke='#f1dc6b' stroke-width='1.2'/>` +
-    `<circle cx='10.6' cy='14.2' r='4.6' fill='#7fd23e' stroke='#16300a' stroke-width='1'/>` +
-    `<path d='M18.6 14.2A8 2.2 0 0 1 2.6 14.2' transform='rotate(-18 10.6 14.2)' fill='none' stroke='#f1dc6b' stroke-width='1.2'/>` +
-    `<path d='M18.4 4.6L19.1 6.7L21.2 7.4L19.1 8.1L18.4 10.2L17.7 8.1L15.6 7.4L17.7 6.7Z' fill='#fff6c8'/>`,
+  stinkyscape: STINKY_PLANET,
+  "stinkyscape-plus": plusMark(STINKY_PLANET),
   "training-grounds":
     woodenSword(3, 21, 21.2, 2.8) +
     woodenSword(21, 21, 2.8, 2.8) +
@@ -132,6 +138,7 @@ const SRC: Readonly<Record<SetMarkKind, string>> = {
   meditative: glyphUri(GLYPHS.meditative),
   "meditative-plus": glyphUri(GLYPHS["meditative-plus"]),
   stinkyscape: glyphUri(GLYPHS.stinkyscape),
+  "stinkyscape-plus": glyphUri(GLYPHS["stinkyscape-plus"]),
   "training-grounds": glyphUri(GLYPHS["training-grounds"]),
   unknown: glyphUri(GLYPHS.unknown),
 };
@@ -143,6 +150,7 @@ const KINDS: Readonly<Record<string, WatermarkKind>> = {
   Meditative: "meditative",
   "Meditative+": "meditative-plus",
   Stinkyscape: "stinkyscape",
+  "Stinkyscape+": "stinkyscape-plus",
   "Training Grounds": "training-grounds",
 };
 
@@ -181,6 +189,7 @@ const WATERMARKS: Readonly<Record<WatermarkKind, Watermark>> = {
   meditative: watermark("meditative"),
   "meditative-plus": watermark("meditative-plus"),
   stinkyscape: watermark("stinkyscape"),
+  "stinkyscape-plus": watermark("stinkyscape-plus"),
   "training-grounds": watermark("training-grounds"),
 };
 
