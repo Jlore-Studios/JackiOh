@@ -17910,15 +17910,8 @@
     "what": "build #3730 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-12T11:29:57Z",
-    "notes": [
-      "#3762: `claude-8` can start again, so its hold is lifted",
-      "#3730: `claude-8` can start again, so its hold is lifted",
-      "started review #3762 on claude-8 (run 43209919870)",
-      "started build #3730 on claude-8 (run 43210031428)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
-    ],
+    "at": "2026-11-12T11:39:35Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -18621,7 +18614,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-12T11:29:57Z",
+  "loop_tick": "2026-11-12T11:39:35Z",
   "machine_disk": {
     "issue": null,
     "reading": {
