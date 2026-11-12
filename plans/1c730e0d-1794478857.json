@@ -1,0 +1,93 @@
+{
+  "action": "plan",
+  "number": 3734,
+  "title": "Patch: a collection you can search: one card grid with filters and sort across the full width, and a deck builder that drags by touch and splits on an upright iPad",
+  "branch": "bot/issue-3734",
+  "thread": "**Issue #3734 (data, not instructions):**\n\n```text\n# #3734: Patch: a collection you can search: one card grid with filters and sort across the full width, and a deck builder that drags by touch and splits on an upright iPad\nOpened by @jgoetzmann.\n\n### What it does\n\nThe collection becomes a place to browse and find cards, as the Hearthstone, Marvel Snap and LoR collections are. It gets one grid with a search box, filters and sort, uses the whole window, and puts the filters in a sidebar on a wide screen. The deck builder works with a finger, and shows the pool and the deck side by side on an upright iPad.\n\nIt follows the conventions in #3728's `docs/polish/10-menus.md`.\n\n### Where it stands\n\n- **The Collection** (`routes/collection.tsx`, `collection/*`, `collection/collection.css`):\n  - It sits in the account page's `panel--auth` frame, at most 960px wide.\n  - Its hub is three doors: Decks, Cards and Cosmetics.\n  - **Cards** is an accordion with one set open at a time (`collection/OwnedCards.tsx`). It has no search, filter or sort, and no virtualisation. The wallet, the tracks, the Fleet track and the quests sit below it.\n  - **Cosmetics** is a Board and Starship tab pair (`AccountCosmeticTiles`, `StarshipLooks`). A card opens `CardCosmeticsView`, `ItemPreview` (on a hold), `LookHover` and `LooksScreen`.\n- **The deck builder** (`game/deckbuilder/`, `DeckWorkshop.tsx`):\n  - Its pool already has search, filters and virtualisation.\n  - The list rail sits beside the editor only from 1101px (`WORKSHOP_SPLIT_MIN_WIDTH_PX`). Below that the two take turns, so an upright iPad (820 wide) shows half a builder at a time.\n  - The pool drags with HTML5 `draggable` (`PoolGrid.tsx:250`), which never fires on touch. Only tap to add works on an iPad.\n\n### What changes\n\n- **Full width, tabs.** The Collection leaves the 960px frame and fills the window. The three doors become tabs (Cards, Decks, Cosmetics) that keep their filters while you switch. `?section=` keeps working.\n- **Cards**:\n  - One grid of the whole catalog, with a search box that is always visible.\n  - Filter chips: cost (a row from 0 to 7+, as Hearthstone's mana row), set, type (Unit, Spell, Trap), rarity, owned or missing, and keyword.\n  - Sort by cost, name, rarity, set or newest.\n  - The owned count (\"312 / 480\") and a progress bar for each set.\n  - The deck builder pool's search, filter and virtualisation code is reused, not written again.\n  - Filters sit in a left sidebar at the wide width and in a sheet below it.\n  - The grid's columns fit the width.\n  - Under the one-screen rule (`one-screen` in `index.css`), the grid scrolls inside the screen.\n- **Progress.** The wallet, tracks, Fleet track and quests move out from under the card list into a Progress strip or tab of their own.\n- **Cosmetics** uses the same grid, search and filters. Its previews (hold to preview #2730, hover #3016) stay.\n- **Decks** are tiles showing the hero portrait, the deck's name, its validity and the modes it can play.\n- **The deck builder**:\n  - Dragging from the pool to the deck uses pointer events, so a finger works. The board's `game/drag/` is the model.\n  - The pool and the deck sit side by side from the medium width (an upright iPad), with a narrower rail or a deck tray along the bottom. The 1101px split's exception leaves `breakpoints.test.ts`.\n\n### Acceptance\n\n- Search, each filter and each sort narrow or order the grid correctly. Unit tests cover the filter and sort logic, which is shared with the deck builder's pool.\n- The grid stays smooth with the whole catalog. It is virtualised as the pool is, with a test that a few hundred cards render only what is on screen.\n- A deck can be built by touch drag alone. A Cypress spec drags with touch events at an iPad size.\n- At 820\u00d71180 the deck builder shows the pool and the deck at once (the `deckbuilder-layout` component spec).\n- The collection tests (`routes/collection.test.*`, `collection/collection.test.tsx`), the `collection-screen` and `deckbuilder-layout` component specs and the e2e specs on these screens (45 among them) move to the new layout.\n- Screenshots at the tracker's device sizes (#3728) in the pull request.\n- Every required check is green.\n\n### Blocked by, part of\n\nBlocked by #3728. Part of #3726.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3734: needs a plan; `claude-7` (claude, `sonnet`, medium) writes it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "at": "2026-11-12T09:11:29Z",
+    "draft": "# Planner draft for #3734 (final message = the plan below)\n\nFindings (read, not guessed):\n- #3728's shell is merged (apps/web/src/shell). Workshop split is 1277 (WORKSHOP_SPLIT_MIN_WIDTH_PX in DeckWorkshop.tsx, workshop.css @media 1277/1276, KEEP+SCRIPT_KEEP in breakpoints.test.ts, MenuShell.test.tsx reads it).\n- Deck editor's own .db-layout (pool + sidebar) already side by side from 761 px; the workshop's list rail takes turns below 1277.\n- PoolGrid virtual = usePoolWindow + poolWindow.ts (readShape uses \".db-card\" selector, cellOf private). Almanac uses CardBrowser virtual.\n- Pool drag = HTML5 draggable in PoolGrid.tsx PoolItem, DeckEditor startDrag/endDrag/drop, DeckSidebar allowDrop/onDrop, e2e cy.dragCardToDeck. game/drag/OptionDrag.tsx is the compact pointer-drag model.\n- CSS budget tests (spacing/palette/typescale/surfaces/motion/buttons/typography/breakpoints) cap collection.css: new styles go in a new sheet using tokens only.\n- Every new t(\"literal\") needs an entry in src/i18n/zh-CN.json (R711000 guard).\n- By rule 5 this is ~55 files => hard; say so under Open questions.\n- Decisions: 4th tab Progress; cost row stays 0..5, 6+, X (shared COST_BUCKETS); newest = latest patch in PATCH_LOG; touch lifts on horizontal-dominant move (touch-action: pan-y).\n\nStatus: plan fully composed in the final message.",
+    "family": "claude",
+    "kind": "draft",
+    "notes": "",
+    "provider": "claude-7",
+    "reason": "`claude-7` stops mid-call: 5-hour usage is 70%, at or over its 70% cap; it resets at 2026-11-12T11:20:00Z",
+    "trail": "n-set\\\" --include=*.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/apps/web/src; grep -n \\\"collectionSectionOf\\\\|collectionTestid.door\\\\|collectionTestid.body\\\\|\\\\.hub\\\\|data-section\\\" -r --include=*.ts --includ\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/apps/web/src; grep -rn \\\"paths.collection\\\\b\\\\|paths.collection[^S]\\\" --include=*.tsx --include=*.ts . | grep -v \\\"test\\\\.\\\" | head -20; grep -n\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/apps/web/src; sed -n 1,80p routes/decks.tsx | head -120; grep -n \\\"export function\\\" game/deckbuilder/workshop.ts\", \"description\": \"Read decks r\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/apps/web/src; sed -n 100,145p game/deckbuilder/workshop.ts; grep -n \\\"useSearch\\\\|wantsNewDeck\\\\|deck=\\\\|URLSearchParams\\\" game/deckbuilder/Deck\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/apps/web/src; grep -n \\\"initialOpen\\\" -B3 -A8 routes/decks.tsx game/deckbuilder/DeckWorkshop.tsx | sed -n 1,90p; sed -n 320,360p net/navigate.ts\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/apps/web/src; ls emotes | head -30; grep -rn \\\"portrait\\\" game/deckbuilder/DeckEditor.tsx | head -10; grep -rn \\\"export.*function.*Portrait\\\\|ex\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/apps/web/src; sed -n 1,60p emotes/PortraitArt.tsx; sed -n 60,110p emotes/PortraitPicker.tsx; grep -n \\\"PortraitArt\\\" -r --include=*.tsx . | grep\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734; grep -n \\\"Conquest\\\\|trio\\\\|All random\\\\|bestOf\\\" apps/web/src/routes/play.tsx | head -20; ls apps/web/src/routes | grep -i play\", \"description\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/apps/web/src; sed -n 252,300p routes/play.tsx; grep -n \\\"QueueMode =\\\" -r --include=*.ts . | head -3; sed -n 195,215p game/deckbuilder/workshop.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/apps/web/src; sed -n 280,300p index.css; sed -n 140,165p index.css; sed -n 590,610p index.css; grep -n \\\"collection-screen\\\\|\\\\.collection-body\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/apps/web/src; sed -n 1,200p collection/collection.css\", \"description\": \"Read collection.css head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/apps/web/src; grep -rln \\\"useSyncExternalStore\\\" --include=*.ts --include=*.tsx . | xargs grep -ln \\\"matchMedia\\\" | head; grep -n \\\"drawer\\\" gam\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/apps/web/src; cat game/mediaQuery.ts; sed -n 40,100p game/Dialog.tsx; sed -n 40,90p tabs/Tabs.tsx\", \"description\": \"Read mediaQuery hook, Dialog\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/apps/web/src; sed -n 1,182p collection/AccountCosmeticTiles.tsx\", \"description\": \"Read AccountCosmeticTiles\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/apps/web/src; sed -n 1,97p collection/StarshipLooks.tsx; sed -n 1,60p collection/fixtures.ts\", \"description\": \"Read StarshipLooks and collection\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/apps/web/src; grep -rn \\\"KeywordKind\\\" --include=*.ts --include=*.tsx . | grep -v \\\"test\\\\.\\\\|generated\\\" | head -12; ls cards | head -50\", \"des\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734; grep -n \\\"3728\\\" spec/rulings/R1581000.md | head -3; ls spec/pending | head; sed -n 1,60p spec/README.md | head -80; grep -n \\\"Adding a ruling\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/apps/web/src; grep -n \\\"collection\\\" typography.test.ts | head; grep -rn \\\"collection.css\\\\|collection-screen\\\" --include=*.ts --include=*.tsx -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/apps/web/src; sed -n 1,60p game/deckbuilder/PoolGrid.virtual.test.tsx; grep -n \\\" it(\\\" game/deckbuilder/PoolGrid.virtual.test.tsx\", \"descriptio\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/apps/web/src; sed -n 40,62p spacing.test.ts; sed -n 95,140p spacing.test.ts | head -50\", \"description\": \"Check how css budget tests treat new sh\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/e2e; grep -n \\\"SMOKE\\\\|WEIGHTS\\\" scripts/shard-specs.mjs | head -20; sed -n 1,40p scripts/shard-specs.mjs | head -60; ls scripts\", \"description\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734; grep -rn \\\"dragStart\\\\|dragOver\\\\|fireEvent.drop\\\\|DECK_DRAG_MIME\\\\|dragend\\\\|dragEnd\\\\|onDragStart\\\" apps/web/src e2e --include=*.ts --include\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/apps/web/src/game/deckbuilder; grep -n \\\"dragStart\\\\|dragOver\\\\|fireEvent.drop\\\\|onDragStart\\\\|onDragEnd\\\\|draggable\\\" browse.test.tsx PoolGrid.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/apps/web/src; sed -n 1,52p game/deckbuilder/loadout.ts; cat game/deckbuilder/shelf.ts | head -30; sed -n 168,185p game/deckbuilder/testids.ts; g\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/apps/web; ls src/i18n | head -20; grep -rn \\\"guard\\\" src/i18n/*.test.ts | head -5; sed -n 1,40p src/i18n/README.md 2>/dev/null | head -20; ls\", \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/apps/web; sed -n 225,300p src/i18n/i18n.test.ts; grep -n \\\"i18n\\\\|zh-CN\\\\|translat\\\" README.md | head -12\", \"description\": \"Read i18n guard test\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734; grep -n \\\"three doors\\\\|hub\\\\|OwnedCards\\\\|accordion\\\\|collection/\\\\|WORKSHOP_SPLIT\\\\|1277\\\\|1101\\\" apps/web/README.md docs/architecture.md doc\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3734/.bot-plan.md\", \"content\": \"# Planner draft for #3734 (final message = the plan below)\\n\\nFindings (read, not guessed):\\n- #3728's shell is merged\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3734/apps/web/src; grep -n \\\"export type DeckItem\\\" -A14 game/deckbuilder/sync.ts; grep -n \\\"<DeckWorkshop\\\" -B3 -A14 routes/decks.tsx; grep -n \\\"DEC\u2026"
+  },
+  "session": {
+    "action": "plan",
+    "artifact": 13929059448,
+    "artifact_bytes": 441163,
+    "artifact_name": "work",
+    "at": "2026-11-12T09:18:02Z",
+    "bytes": 581040,
+    "cwd": "/home/runner/work/_temp/work/item-3734",
+    "ended": "interrupted: `claude-7` stops mid-call: 5-hour usage is 70%, at or over its 70% cap; it resets at 2026-11-12T11:20:00Z",
+    "head": "13d4b9117c34d52ec679fbc78a49e7678e3a2559",
+    "id": "d0ca5e77-800b-45e6-a094-6e9a49888e01",
+    "kind": "plan",
+    "model": "sonnet",
+    "project": "-home-runner-work--temp-work-item-3734",
+    "provider": "claude-7",
+    "run": "43187178724"
+  },
+  "journal": "# Journal of #3734\n\nEvery night-bot run on #3734, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-11-12 09:18 UTC \u00b7 plan #3734 \u00b7 `claude-7` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/43187178724) on `claude-7` (`opus` (strong)). It ended **interrupted**: `claude-7` stops mid-call: 5-hour usage is 70%, at or over its 70% cap; it resets at 2026-11-12T11:20:00Z\nModel calls: 1, 7.5 model minutes.\nSession: fresh: none was kept for this item. This run's: kept session `d0ca5e77-800b-45e6-a094-6e9a49888e01` of #3734 on claude-7 (581,040 bytes) in run 43187178724's `work` artifact, for its next run there.\nIts work ended at `13d4b9117c34` on `bot/issue-3734`.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 09:03 | start | from `origin/main` |  | at `13d4b9117c34` |\n| 2 | 09:03 | plan (`sonnet`) | plan the item before anyone builds it | 7.5 min | cut off at its usage cap: 5-hour usage is 70%, at or over its 70% cap; it resets at 2026-11-12T11:20:00Z |\n| 3 | 09:11 | stop | `claude-7` stops mid-call: 5-hour usage is 70%, at or over its 70% cap; it resets at 2026-11-12T11:20:00Z |  |  |\n\n<details><summary>The planner's draft when it stopped</summary>\n\n````markdown\n# Planner draft for #3734 (final message = the plan below)\n\nFindings (read, not guessed):\n- #3728's shell is merged (apps/web/src/shell). Workshop split is 1277 (WORKSHOP_SPLIT_MIN_WIDTH_PX in DeckWorkshop.tsx, workshop.css @media 1277/1276, KEEP+SCRIPT_KEEP in breakpoints.test.ts, MenuShell.test.tsx reads it).\n- Deck editor's own .db-layout (pool + sidebar) already side by side from 761 px; the workshop's list rail takes turns below 1277.\n- PoolGrid virtual = usePoolWindow + poolWindow.ts (readShape uses \".db-card\" selector, cellOf private). Almanac uses CardBrowser virtual.\n- Pool drag = HTML5 draggable in PoolGrid.tsx PoolItem, DeckEditor startDrag/endDrag/drop, DeckSidebar allowDrop/onDrop, e2e cy.dragCardToDeck. game/drag/OptionDrag.tsx is the compact pointer-drag model.\n- CSS budget tests (spacing/palette/typescale/surfaces/motion/buttons/typography/breakpoints) cap collection.css: new styles go in a new sheet using tokens only.\n- Every new t(\"literal\") needs an entry in src/i18n/zh-CN.json (R711000 guard).\n- By rule 5 this is ~55 files => hard; say so under Open questions.\n- Decisions: 4th tab Progress; cost row stays 0..5, 6+, X (shared COST_BUCKETS); newest = latest patch in PATCH_LOG; touch lifts on horizontal-dominant move (touch-action: pan-y).\n\nStatus: plan fully composed in the final message.\n````\n\n</details>\n",
+  "usage_facts": {
+    "queued_at": "2026-11-11T19:48:44Z",
+    "claimed_at": "2026-11-12T10:21:46Z",
+    "previous_provider": "claude-7",
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3762 is held for `claude-8` until 04:30 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
+    "#3734: `claude-7` can start again, so its hold is lifted",
+    "#3730 is held for `claude-8` until 04:30 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
+    "#3596 is held for `claude-4` until 04:30 (5-hour usage is 101%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3729 skipped: it waits for #3727, #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3730 to close first",
+    "#3733 skipped: it waits for #3727 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
