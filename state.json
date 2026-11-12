@@ -16330,6 +16330,13 @@
     "3802": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-12T20:29:13Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "medium",
+        "why": "One card's script, catalog entry and text in crates/cards plus spec/doc rows and a kept script; no engine, AI, migration or cross-crate design, well under 40 files."
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
