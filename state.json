@@ -15182,6 +15182,8 @@
     "3775": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "72a836dc28aed7bdcddfdd3143bc81df33ab0beb",
+      "ci_fixes": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-12T11:23:13Z",
