@@ -35532,6 +35532,9 @@
   "usage_spool": {
     "readings": [
       "2026-11-12T16:39:26Z,claude-5,ping,before,43260430247,15,2026-11-12T20:00:00Z,64,2026-11-16T09:00:00Z,allowed,40,60,"
+    ],
+    "runs": [
+      "2026-11-12T16:39:26Z,43260430247,claude-5,opus,review,3782,medium,interrupted,weekly cap,0,0,0,0,,15,15,64,64,,,none,,0"
     ]
   },
   "version": 1
