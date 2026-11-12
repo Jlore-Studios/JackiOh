@@ -349,11 +349,13 @@
 
 /* --- the challenge toast ----------------------------------------------------------------------- */
 
+/* R3728002: on the toasts' layer, under a dialog, and inside the safe-area insets; the menus' shell moves
+   them clear of its rail and its tab bar (shell/menu-shell.css). */
 .challenge-toasts {
   position: fixed;
-  z-index: 95;
-  left: 16px;
-  bottom: 16px;
+  z-index: var(--z-toast);
+  left: max(var(--space-7), env(safe-area-inset-left));
+  bottom: max(var(--space-7), env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 8px;

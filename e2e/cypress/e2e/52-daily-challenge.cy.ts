@@ -1,4 +1,4 @@
-// 51 — daily games (#3727): seat one challenges seat two to a daily game from the friends list in the
+// 52 — daily games (#3727): seat one challenges seat two to a daily game from the friends list in the
 // browser, seat two accepts and moves over HTTP (`support/daily.ts`), and "Your move" passes between them:
 // on the Daily screen, on the board's clock, and back again once seat two ends its turn. Networked
 // (`E2E=1 cargo run --release -p jackioh-server`); daily only, as every spec outside
@@ -55,7 +55,7 @@ function inSection(section: string, matchId: string): string {
   return `${ts(DAILY_SECTION)}[data-section="${section}"] ${gameRow(matchId)}`;
 }
 
-describe("51 Daily games — a friend's daily challenge, and the move passing between them", () => {
+describe("52 Daily games — a friend's daily challenge, and the move passing between them", () => {
   it("challenges a friend to a daily game in the browser; the friend accepts and moves; Your move passes back and forth", () => {
     const one = accounts.p1();
     const two = accounts.p2();

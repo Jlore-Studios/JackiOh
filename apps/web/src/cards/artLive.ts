@@ -10,7 +10,7 @@
 
 import { useEffect, useState, type RefObject } from "react";
 
-import { hearHostMove } from "./hostMove.ts";
+import { cancelHostMove, hearHostMove } from "./hostMove.ts";
 
 /** R3340000: the custom properties a face holds the pointer's place in it in, -1 (left, top) to 1 (right, bottom). */
 export const ART_AIM_X_PROPERTY = "--art-aim-x";
@@ -76,7 +76,7 @@ export function useArtLive(ref: RefObject<HTMLElement | null>, enabled: boolean)
       if (!pointerInside) focusAim();
       updateHovered();
     };
-    // #3674: read with the tilt's read of the same move, written after it (hostMove.ts).
+    // #3674: read with the tilt's read of the same move, written after it, in the host's frame (hostMove.ts, #3610).
     const move = (event: PointerEvent): (() => void) => {
       const aim = aimOf(event.clientX, event.clientY, el.getBoundingClientRect());
       return () => {
@@ -92,6 +92,8 @@ export function useArtLive(ref: RefObject<HTMLElement | null>, enabled: boolean)
       el.removeAttribute(ART_PRESS_ATTRIBUTE);
     };
     const pointerLeave = (): void => {
+      // #3610: a move still waiting for its frame writes nothing after the pointer has left.
+      cancelHostMove(host);
       lift();
       pointerInside = false;
       if (focusInside) focusAim();

@@ -731,9 +731,16 @@
 
 /* R2122000 on a phone or under a finger: a sortable header's band stops at the first row, its neighbour
    0 px below. A select or a field draws no ::before, so the filters (tabs.css's shared select) and the
-   search are --hit-min tall themselves everywhere, as tall as the page's buttons (R3324003). */
+   search are --hit-min tall themselves everywhere, as tall as the page's buttons (R3324003). A row opens
+   its card's breakdown and a table row takes no band (index.css), so it is --hit-min tall itself: on a
+   phone its cells' text wraps past that, and on an iPad's width (spec 47 at #3728's sizes, R3728000) it
+   was 39 px. */
 @media (pointer: coarse), (max-width: 600px) {
   .stats-th--sortable::before {
     bottom: 0;
+  }
+
+  .stats-tr {
+    height: var(--hit-min);
   }
 }

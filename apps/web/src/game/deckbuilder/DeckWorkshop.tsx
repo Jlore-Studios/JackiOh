@@ -72,8 +72,12 @@ import TrioEditor from "./TrioEditor.tsx";
 import { WorkshopFrame } from "./WorkshopFrame.tsx";
 import { copyName, deckLabel, deckStatus, deckVerdict, nextName, trioLabel, trioVerdict } from "./workshop.ts";
 
-/** Keep this layout breakpoint aligned with workshop.css's `@media (max-width: 1100px)`. */
-export const WORKSHOP_SPLIT_MIN_WIDTH_PX = 1101;
+/**
+ * Keep this layout breakpoint aligned with workshop.css's `@media (max-width: 1276px)`. The rail, the pool
+ * and the sidebar side by side need 1101 px of the screen's column, and the menus' shell's labelled rail
+ * takes 176 px beside it (R3728000, shell/menu-shell.css's `--shell-rail-w`).
+ */
+export const WORKSHOP_SPLIT_MIN_WIDTH_PX = 1277;
 
 /** #2099: Undo's arrow and Redo's, its mirror (24 px, stroked). */
 const UNDO_PATH = "M9 4 4 9l5 5M4 9h10.5a5.5 5.5 0 0 1 0 11H11";

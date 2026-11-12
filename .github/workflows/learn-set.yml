@@ -4,9 +4,9 @@
 # export plays the new one, as gather.yml plays each new patch and no micro.
 #
 # Every learn run plays the newest version as it starts (learn.yml, plan: main as it is then), so a
-# micro reaches the next run, at most one run (about three days) on, and stops nothing. Micros ship
-# several times a day and an export takes about three days of the PC, so a lane that started again on
-# each would never finish one. A patch reprints 15 card families or more, or plays 50 cards
+# micro reaches the next run, at most one run (about half a day, three days on the PC) on, and stops
+# nothing. Micros ship several times a day and an export takes about 12 hours on GitHub's runners
+# (#3740; three days of the PC), so a lane that started again on each would seldom finish one. A patch reprints 15 card families or more, or plays 50 cards
 # differently (R2499000), and a set brings a set's cards (v0.5.0: 231 changes): enough that an
 # export on the version before learns stale worths. So a run that has played fewer than
 # LEARN_SET_KEEP_SHARDS of its export's shards is cancelled (the shards that finished stay its
@@ -17,7 +17,7 @@
 # (`export_run`) and one that planned after the patch shipped. A run waiting to start plans on the
 # new patch when it does.
 #
-# A few API calls, on GitHub's runner: the PC's runner is busy with the export this may stop.
+# A few API calls, on GitHub's runner, whichever runner the export it may stop plays on.
 name: learn set
 
 on:
@@ -29,9 +29,9 @@ permissions:
   contents: read
 
 env:
-  # An export with this many shards finished goes on: half of learn.yml's 20, where playing the rest
+  # An export with this many shards finished goes on: half of learn.yml's 40, where playing the rest
   # costs the lane less than playing it all again.
-  LEARN_SET_KEEP_SHARDS: "10"
+  LEARN_SET_KEEP_SHARDS: "20"
 
 concurrency:
   group: learn-set

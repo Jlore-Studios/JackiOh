@@ -1,14 +1,19 @@
-// 47 — every control on a phone takes a tap across 44x44 px (issue #2122, part of #2036, R2122000).
-// Each test opens one screen at 390x844 and runs `expectHitAreas`; two check the measure itself
+// 47 — every control under a finger takes a tap across 44x44 px (issue #2122, part of #2036, R2122000).
+// Each test opens one screen and runs `expectHitAreas`: the practice board at BUILD M5-T1's phone (390x844),
+// and every menu at each of issue #3728's sizes (`MENU_SIZES`, support/config.ts, R3728000), the menus'
+// shell's navigation among the controls measured. R2122000's bands are drawn on a phone or under a coarse
+// pointer (`(pointer: coarse), (max-width: 600px)`), so over 600 px the browser emulates touch, as an iPad
+// is held (CDP's `Emulation.setTouchEmulationEnabled`, Chrome only). Two tests check the measure itself
 // (index.css's `--hit-min` is `HIT_MIN_PX`, and a probe narrower than the minimum fails).
 // Per pull request: SMOKE holds 47. Networked as 46.
 
 import { consentTestid, inviteTestid, landingTestid, loginTestid, resetTestid, shellTestid } from "../../../apps/web/src/auth/testids.ts";
+import { BREAKPOINT_PX, COARSE_POINTER_QUERY, upTo } from "../../../apps/web/src/breakpoints.ts";
 import { patchTestid } from "../../../apps/web/src/patches/testids.ts";
 import { practiceTestid } from "../../../apps/web/src/practice/testids.ts";
 import { SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED } from "../../../apps/web/src/wire/serverConfig.ts";
 import { allCardIds, cardId } from "../../support/cards.ts";
-import { accounts, constants, routes, seedFor, timeouts, viewports } from "../../support/config.ts";
+import { MENU_SIZES, accounts, constants, routes, seedFor, timeouts, viewports, type MenuSize, type MenuViewport } from "../../support/config.ts";
 import { visitStatsFigures } from "../../support/stats.ts";
 import {
   BOARD,
@@ -58,6 +63,10 @@ const SCREEN = { accountRank: "account-rank", leaderboardSeason: "leaderboard-se
 /** The measure's own probe: this much narrower than the minimum and taller, its ::before no height and this far past each side. */
 const PROBE_PX = 14;
 const PROBE_TESTID = "tap-probe";
+/** R2122000's media, index.css's: where the bands are drawn. */
+const HIT_AREA_MEDIA = `${COARSE_POINTER_QUERY}, ${upTo("phone")}`;
+/** An iPad's `navigator.maxTouchPoints`, for the touch the wider sizes emulate. */
+const TOUCH_POINTS = 5;
 
 type Box = { left: number; top: number; right: number; bottom: number };
 type Control = { el: Element; name: string; own: Box; shown: Box; hit: Box; exempt: boolean };
@@ -161,12 +170,18 @@ function hitAreaProblems(win: Window): string[] {
   return problems;
 }
 
-/** R2122000 at the phone size, retried until the screen has settled. */
-function expectHitAreas(): void {
+/** R2122000 at `size`, under its media, retried until the screen has settled. */
+function expectHitAreas(size: MenuSize | MenuViewport): void {
   cy.window({ timeout: MEASURE_TIMEOUT }).should((win) => {
-    expect([win.innerWidth, win.innerHeight], "the viewport asked for").to.deep.eq([viewports.phone.width, viewports.phone.height]);
+    expect([win.innerWidth, win.innerHeight], "the viewport asked for").to.deep.eq([size.width, size.height]);
+    expect(win.matchMedia(HIT_AREA_MEDIA).matches, `${HIT_AREA_MEDIA} holds`).to.eq(true);
     expect(hitAreaProblems(win), "controls whose hit area falls short or covers another").to.deep.eq([]);
   });
+}
+
+/** A coarse pointer (and no hover) for every page until turned off: the wider sizes are held under a finger. */
+function emulateTouch(enabled: boolean): void {
+  cy.then(() => Cypress.automation("remote:debugger:protocol", { command: "Emulation.setTouchEmulationEnabled", params: { enabled, maxTouchPoints: TOUCH_POINTS } }));
 }
 
 /**
@@ -226,13 +241,15 @@ function seriesPicking(now: number): Record<string, unknown> {
   };
 }
 
-describe(`47 — every control on a phone takes a tap across ${String(HIT_MIN_PX)}x${String(HIT_MIN_PX)} px (issue #2122)`, () => {
-  beforeEach(() => {
-    cy.viewport(viewports.phone.width, viewports.phone.height);
+describe(`47 — every control under a finger takes a tap across ${String(HIT_MIN_PX)}x${String(HIT_MIN_PX)} px (issue #2122)`, () => {
+  after(() => {
+    emulateTouch(false);
   });
 
-  describe("signed out", () => {
+  describe(`the measure and the board, ${viewports.phone.label} ${String(viewports.phone.width)}x${String(viewports.phone.height)}`, () => {
     beforeEach(() => {
+      emulateTouch(false);
+      cy.viewport(viewports.phone.width, viewports.phone.height);
       cy.signOut();
     });
 
@@ -266,200 +283,218 @@ describe(`47 — every control on a phone takes a tap across ${String(HIT_MIN_PX
       cy.get(ts(BOARD), { timeout: BOOT_TIMEOUT }).should("be.visible");
       cy.get(promptOf("mulligan"), { timeout: BOOT_TIMEOUT }).should("be.visible");
       cy.settled();
-      expectHitAreas();
+      expectHitAreas(viewports.phone);
       cy.get(ts(PROMPT_SUBMIT)).click();
       cy.get(promptOf("mulligan"), { timeout: BOOT_TIMEOUT }).should("not.exist");
       cy.settled();
-      expectHitAreas();
-    });
-
-    it("R2122000 /", () => {
-      cy.visit("/");
-      cy.get(ts(landingTestid.root), { timeout: timeouts.view }).should("be.visible");
-      // The fan's cards are dealt in (R704): measured once every one is drawn.
-      cy.get(`${ts(landingTestid.fan)} .landing-fan-card--face`, { timeout: timeouts.view }).should(($cards) => {
-        expect($cards.length, "the fan holds its cards").to.be.greaterThan(0);
-        for (const card of $cards.toArray()) expect(getComputedStyle(card).opacity, "a dealt card").to.eq("1");
-      });
-      expectHitAreas();
-    });
-
-    it("R2122000 /, the settings open", () => {
-      cy.visit("/");
-      cy.get(ts(landingTestid.root), { timeout: timeouts.view }).should("be.visible");
-      cy.get(ts(SETTINGS_OPEN_NAV)).click();
-      cy.get(ts(SETTINGS_PANEL), { timeout: timeouts.view }).should("be.visible");
-      expectHitAreas();
-    });
-
-    it("R2122000 /login", () => {
-      cy.visit(routes.login());
-      cy.get(ts(loginTestid.form), { timeout: timeouts.view }).should("be.visible");
-      expectHitAreas();
-    });
-
-    it("R2122000 /login, creating an account", () => {
-      cy.visit(routes.login());
-      cy.get(ts(loginTestid.mode), { timeout: timeouts.view }).click();
-      cy.get(ts(loginTestid.form)).should("have.attr", "data-mode", "signUp");
-      cy.get(ts(consentTestid.birthYear)).should("be.visible");
-      expectHitAreas();
-    });
-
-    it("R2122000 /reset-password", () => {
-      cy.visit("/reset-password");
-      cy.get(ts(resetTestid.screen), { timeout: timeouts.view }).should("be.visible");
-      expectHitAreas();
-    });
-
-    it("R2122000 /almanac", () => {
-      cy.visit("/almanac");
-      cy.get(ts(SCREEN.almanac), { timeout: timeouts.view }).should("be.visible");
-      cy.get(ts(CARD_POOL), { timeout: CARD_POOL_TIMEOUT }).should("be.visible");
-      expectHitAreas();
-    });
-
-    it("R2122000 /patch-notes", () => {
-      cy.visit("/patch-notes");
-      cy.get(ts(patchTestid.screen), { timeout: timeouts.view }).should("be.visible");
-      expectHitAreas();
-    });
-
-    it("R2122000 R3324000 /stats", () => {
-      // A newest patch still collecting its data is checked too, then the patch before with its figures.
-      visitStatsFigures(expectHitAreas);
-      expectHitAreas();
-    });
-
-    it("R2122000 /practice", () => {
-      cy.visit(routes.practice());
-      cy.get(ts(practiceTestid.setup), { timeout: timeouts.view }).should("be.visible");
-      expectHitAreas();
-    });
-
-    it("R2122000 /play, signed out", () => {
-      cy.visit(routes.play());
-      cy.get(ts(PLAY_SIGN_IN), { timeout: timeouts.view }).should("be.visible");
-      expectHitAreas();
-    });
-
-    it("R2122000 /replays, signed out", () => {
-      cy.visit(routes.replays());
-      cy.get(ts(REPLAYS_ROOT), { timeout: timeouts.view }).should("be.visible");
-      expectHitAreas();
-    });
-
-    it("R2122000 a path nothing is at", () => {
-      cy.visit("/no-such-menu");
-      cy.get(ts(shellTestid.notFound), { timeout: timeouts.view }).should("be.visible");
-      expectHitAreas();
-    });
-
-    it("R2122000 R3127000 the static 404 page's link, its script blocked", () => {
-      cy.intercept({ method: "GET", url: "**/assets/*.js" }, { forceNetworkError: true });
-      cy.visit("/404.html");
-      cy.get(ts(shellTestid.notFoundStatic), { timeout: timeouts.view }).should("be.visible");
-      expectHitAreas();
+      expectHitAreas(viewports.phone);
     });
   });
 
-  describe("signed in", () => {
-    before(() => {
-      cy.freeAccount(SIGNED_IN());
-    });
+  for (const size of MENU_SIZES) {
+    describe(`R3728000 ${size.label}`, () => {
+      beforeEach(() => {
+        emulateTouch(size.width > BREAKPOINT_PX.phone);
+        cy.viewport(size.width, size.height);
+      });
 
-    it("R2122000 /play", () => {
-      cy.visitAs(SIGNED_IN(), routes.play());
-      cy.get(ts(PLAY_QUEUE), { timeout: timeouts.view }).should("be.visible");
-      expectHitAreas();
-    });
+      describe("signed out", () => {
+        beforeEach(() => {
+          cy.signOut();
+        });
 
-    it("R2122000 /decks", () => {
-      cy.visitAs(SIGNED_IN(), routes.deckbuilder());
-      cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("be.visible");
-      expectHitAreas();
-    });
+        it("R2122000 /", () => {
+          cy.visit("/");
+          cy.get(ts(landingTestid.root), { timeout: timeouts.view }).should("be.visible");
+          // The fan's cards are dealt in (R704): measured once every one is drawn.
+          cy.get(`${ts(landingTestid.fan)} .landing-fan-card--face`, { timeout: timeouts.view }).should(($cards) => {
+            expect($cards.length, "the fan holds its cards").to.be.greaterThan(0);
+            for (const card of $cards.toArray()) expect(getComputedStyle(card).opacity, "a dealt card").to.eq("1");
+          });
+          expectHitAreas(size);
+        });
 
-    it("R2122000 /decks, a deck open", () => {
-      // One full deck, whatever earlier specs saved: the open deck's pool is this menu's big list.
-      cy.clearDecks(SIGNED_IN());
-      cy.saveDeck(SIGNED_IN(), { name: "Taps", cards: allCardIds().slice(0, constants.DECK_SIZE) }).then((deckId) => {
-        cy.visitAs(SIGNED_IN(), routes.deckbuilder());
-        cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("be.visible");
-        // A phone shows the list alone until a deck is opened (a desktop opens it already).
-        cy.get(ts(deckRowId(deckId))).click();
-        cy.get(ts(CARD_POOL), { timeout: CARD_POOL_TIMEOUT }).should("be.visible");
-        expectHitAreas();
+        it("R2122000 /, the settings open", () => {
+          cy.visit("/");
+          cy.get(ts(landingTestid.root), { timeout: timeouts.view }).should("be.visible");
+          cy.get(ts(SETTINGS_OPEN_NAV)).click();
+          cy.get(ts(SETTINGS_PANEL), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 /login", () => {
+          cy.visit(routes.login());
+          cy.get(ts(loginTestid.form), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 /login, creating an account", () => {
+          cy.visit(routes.login());
+          cy.get(ts(loginTestid.mode), { timeout: timeouts.view }).click();
+          cy.get(ts(loginTestid.form)).should("have.attr", "data-mode", "signUp");
+          cy.get(ts(consentTestid.birthYear)).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 /reset-password", () => {
+          cy.visit("/reset-password");
+          cy.get(ts(resetTestid.screen), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 /almanac", () => {
+          cy.visit("/almanac");
+          cy.get(ts(SCREEN.almanac), { timeout: timeouts.view }).should("be.visible");
+          cy.get(ts(CARD_POOL), { timeout: CARD_POOL_TIMEOUT }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 /patch-notes", () => {
+          cy.visit("/patch-notes");
+          cy.get(ts(patchTestid.screen), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 R3324000 /stats", () => {
+          // A newest patch still collecting its data is checked too, then the patch before with its figures.
+          visitStatsFigures(() => {
+            expectHitAreas(size);
+          });
+          expectHitAreas(size);
+        });
+
+        it("R2122000 /practice", () => {
+          cy.visit(routes.practice());
+          cy.get(ts(practiceTestid.setup), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 /play, signed out", () => {
+          cy.visit(routes.play());
+          cy.get(ts(PLAY_SIGN_IN), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 /replays, signed out", () => {
+          cy.visit(routes.replays());
+          cy.get(ts(REPLAYS_ROOT), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 a path nothing is at", () => {
+          cy.visit("/no-such-menu");
+          cy.get(ts(shellTestid.notFound), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 R3127000 the static 404 page's link, its script blocked", () => {
+          cy.intercept({ method: "GET", url: "**/assets/*.js" }, { forceNetworkError: true });
+          cy.visit("/404.html");
+          cy.get(ts(shellTestid.notFoundStatic), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+      });
+
+      describe("signed in", () => {
+        before(() => {
+          cy.freeAccount(SIGNED_IN());
+        });
+
+        it("R2122000 /play", () => {
+          cy.visitAs(SIGNED_IN(), routes.play());
+          cy.get(ts(PLAY_QUEUE), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 /decks", () => {
+          cy.visitAs(SIGNED_IN(), routes.deckbuilder());
+          cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 /decks, a deck open", () => {
+          // One full deck, whatever earlier specs saved: the open deck's pool is this menu's big list.
+          cy.clearDecks(SIGNED_IN());
+          cy.saveDeck(SIGNED_IN(), { name: "Taps", cards: allCardIds().slice(0, constants.DECK_SIZE) }).then((deckId) => {
+            cy.visitAs(SIGNED_IN(), routes.deckbuilder());
+            cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("be.visible");
+            // A window narrower than the workshop's split shows the list alone until a deck is opened (a wider
+            // one opens it already).
+            cy.get(ts(deckRowId(deckId))).click();
+            cy.get(ts(CARD_POOL), { timeout: CARD_POOL_TIMEOUT }).should("be.visible");
+            expectHitAreas(size);
+          });
+        });
+
+        it("R2122000 /account", () => {
+          cy.visitAs(SIGNED_IN(), "/account");
+          cy.get(ts(SCREEN.accountRank), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 /leaderboard", () => {
+          cy.visitAs(SIGNED_IN(), "/leaderboard");
+          cy.get(ts(SCREEN.leaderboardSeason), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 /replays", () => {
+          cy.visitAs(SIGNED_IN(), routes.replays());
+          cy.get(ts(REPLAYS_ROOT), { timeout: timeouts.view }).find('[role="status"]').should("not.exist");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 /together", () => {
+          cy.visitAs(SIGNED_IN(), "/together");
+          cy.get(ts(TOGETHER_ROOT), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 /collection", () => {
+          cy.visitAs(SIGNED_IN(), routes.collection());
+          cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 /collection, Cards", () => {
+          cy.visitAs(SIGNED_IN(), routes.collectionCards());
+          cy.get(ts(COLLECTION_JLORE), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 /collection, Cosmetics", () => {
+          cy.visitAs(SIGNED_IN(), `${routes.collection()}?section=cosmetics`);
+          cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 /shop", () => {
+          cy.visitAs(SIGNED_IN(), routes.shop());
+          cy.get(ts(SHOP_PANEL), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 /series, choosing a deck", () => {
+          cy.intercept("GET", `**/api/series/${SERIES_ID}`, { statusCode: 200, body: seriesPicking(Date.now()) });
+          cy.visitAs(SIGNED_IN(), routes.series(SERIES_ID));
+          cy.get(ts(SERIES_SCORE), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 /invite, the code screen", () => {
+          asPending();
+          cy.visitAs(SIGNED_IN(), routes.invite());
+          cy.get(ts(inviteTestid.input), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 /invite, the consent screen", () => {
+          asPending({ ageCheckOwed: true, termsOwed: true });
+          cy.visitAs(SIGNED_IN(), routes.invite());
+          cy.get(ts(consentTestid.birthMonth), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
       });
     });
-
-    it("R2122000 /account", () => {
-      cy.visitAs(SIGNED_IN(), "/account");
-      cy.get(ts(SCREEN.accountRank), { timeout: timeouts.view }).should("be.visible");
-      expectHitAreas();
-    });
-
-    it("R2122000 /leaderboard", () => {
-      cy.visitAs(SIGNED_IN(), "/leaderboard");
-      cy.get(ts(SCREEN.leaderboardSeason), { timeout: timeouts.view }).should("be.visible");
-      expectHitAreas();
-    });
-
-    it("R2122000 /replays", () => {
-      cy.visitAs(SIGNED_IN(), routes.replays());
-      cy.get(ts(REPLAYS_ROOT), { timeout: timeouts.view }).find('[role="status"]').should("not.exist");
-      expectHitAreas();
-    });
-
-    it("R2122000 /together", () => {
-      cy.visitAs(SIGNED_IN(), "/together");
-      cy.get(ts(TOGETHER_ROOT), { timeout: timeouts.view }).should("be.visible");
-      expectHitAreas();
-    });
-
-    it("R2122000 /collection", () => {
-      cy.visitAs(SIGNED_IN(), routes.collection());
-      cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
-      expectHitAreas();
-    });
-
-    it("R2122000 /collection, Cards", () => {
-      cy.visitAs(SIGNED_IN(), routes.collectionCards());
-      cy.get(ts(COLLECTION_JLORE), { timeout: timeouts.view }).should("be.visible");
-      expectHitAreas();
-    });
-
-    it("R2122000 /collection, Cosmetics", () => {
-      cy.visitAs(SIGNED_IN(), `${routes.collection()}?section=cosmetics`);
-      cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
-      expectHitAreas();
-    });
-
-    it("R2122000 /shop", () => {
-      cy.visitAs(SIGNED_IN(), routes.shop());
-      cy.get(ts(SHOP_PANEL), { timeout: timeouts.view }).should("be.visible");
-      expectHitAreas();
-    });
-
-    it("R2122000 /series, choosing a deck", () => {
-      cy.intercept("GET", `**/api/series/${SERIES_ID}`, { statusCode: 200, body: seriesPicking(Date.now()) });
-      cy.visitAs(SIGNED_IN(), routes.series(SERIES_ID));
-      cy.get(ts(SERIES_SCORE), { timeout: timeouts.view }).should("be.visible");
-      expectHitAreas();
-    });
-
-    it("R2122000 /invite, the code screen", () => {
-      asPending();
-      cy.visitAs(SIGNED_IN(), routes.invite());
-      cy.get(ts(inviteTestid.input), { timeout: timeouts.view }).should("be.visible");
-      expectHitAreas();
-    });
-
-    it("R2122000 /invite, the consent screen", () => {
-      asPending({ ageCheckOwed: true, termsOwed: true });
-      cy.visitAs(SIGNED_IN(), routes.invite());
-      cy.get(ts(consentTestid.birthMonth), { timeout: timeouts.view }).should("be.visible");
-      expectHitAreas();
-    });
-  });
+  }
 });

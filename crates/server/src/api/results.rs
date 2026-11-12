@@ -38,6 +38,7 @@ use crate::economy::quests::tally_seat;
 use crate::economy::rewards::{
     GameEconomy, GameMode, GameSummary, game_jlore, is_player_action, pay_game_rewards, utc_day_bounds,
 };
+use crate::loops::FailingStreak;
 use crate::ranked::ladder::Ladder;
 
 /// Wraps an error into an internal ApiError.
@@ -642,11 +643,23 @@ pub fn ceiling_draw_input(match_row: &MatchRow, at: i64) -> RecordResultInput {
     }
 }
 
+/// What one reaper pass did (#3770): the ids it resolved and the ids it could not, which the
+/// loop's `FailingStreak` counts as a failed pass.
+struct ReapReport {
+    resolved: Vec<String>,
+    failed: Vec<String>,
+}
+
 /// Reaps each `live` match past its `clocks.ceiling_at` (§9.5, §2.5, R79). R833000: a log that
 /// already ends (R1437) records its real result; any other is a `match-ceiling` draw with `turns = 0`
 /// and both ratings unchanged (R112). Safe beside a live actor: both go through the same idempotent
 /// write. Answers the ids it resolved.
 pub async fn reap_stuck_matches(app: &Arc<App>) -> Result<Vec<String>, ApiError> {
+    Ok(reap_pass(app).await?.resolved)
+}
+
+/// `reap_stuck_matches`, answering the ids it could not resolve as well.
+async fn reap_pass(app: &Arc<App>) -> Result<ReapReport, ApiError> {
     let now = now_ms();
     let live = {
         let mut tx = app.db.begin(None).await.map_err(failure)?;
@@ -655,6 +668,7 @@ pub async fn reap_stuck_matches(app: &Arc<App>) -> Result<Vec<String>, ApiError>
         live
     };
     let mut resolved: Vec<String> = Vec::new();
+    let mut failed: Vec<String> = Vec::new();
 
     for match_row in live {
         if match_row.clocks.ceiling_at > now {
@@ -683,6 +697,7 @@ pub async fn reap_stuck_matches(app: &Arc<App>) -> Result<Vec<String>, ApiError>
             Err(error) => {
                 // One wedged match must not stop the sweep.
                 tracing::error!(event = "reaper.failed", matchId = %match_row.id, message = %error.message);
+                failed.push(match_row.id.clone());
                 continue;
             }
         };
@@ -698,7 +713,7 @@ pub async fn reap_stuck_matches(app: &Arc<App>) -> Result<Vec<String>, ApiError>
     if !resolved.is_empty() {
         tracing::warn!(event = "reaper.resolved", matches = %json_list(&resolved));
     }
-    Ok(resolved)
+    Ok(ReapReport { resolved, failed })
 }
 
 /// R833000: the result a reap-bound match's log already holds, folded as a rebuild folds it (§9.5).
@@ -817,22 +832,36 @@ pub(crate) fn seats_of(match_row: &MatchRow) -> (MatchSeat, MatchSeat) {
 /// Background loop running reaper sweeps every `MATCH_REAPER_INTERVAL_SECONDS`
 /// (SURFACE §11.2, R1450, R1523000).
 pub async fn run_reaper(app: Arc<App>) {
+    // #3770: a step that fails on every pass for a while is an alert; a pass in which any match
+    // would not reap counts as failed, so one wedged match is reported while the others reap.
+    let mut reaping = FailingStreak::new("matches.reaper");
+    let mut reconciling = FailingStreak::new("seats.reconcile");
     loop {
         tokio::time::sleep(Duration::from_secs(MATCH_REAPER_INTERVAL_SECONDS as u64)).await;
-        match reap_stuck_matches(&app).await {
-            Ok(ids) => {
-                if !ids.is_empty() {
-                    tracing::warn!(event = "matches.reaped", ids = %json_list(&ids));
+        match reap_pass(&app).await {
+            Ok(report) => {
+                if !report.resolved.is_empty() {
+                    tracing::warn!(event = "matches.reaped", ids = %json_list(&report.resolved));
+                }
+                if report.failed.is_empty() {
+                    reaping.ok();
+                } else {
+                    reaping.failed(&format!(
+                        "{} stuck matches would not reap: {}",
+                        report.failed.len(),
+                        json_list(&report.failed)
+                    ));
                 }
             }
             Err(error) => {
                 tracing::warn!(event = "matches.reaper_failed", message = %error.message);
+                reaping.failed(&error.message);
             }
         }
         if let Err(error) = reap_open_matches(&app).await {
             tracing::warn!(event = "matches.open_reaper_failed", message = %error.message);
         }
-        crate::seats::reconcile(&app).await;
+        let _ = reconciling.track(crate::seats::try_reconcile(&app).await);
         app.matches.reap_finished(now_ms()).await;
         sweep_rematch_offers(&app, now_ms());
         sweep_duos_again_offers(&app, now_ms());

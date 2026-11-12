@@ -16,6 +16,8 @@
 //   the toasts: it is the one question on the screen while it is open.
 // - Sheet (R3221000): `sheet` keeps the panel centred on a wide screen and puts it at the foot of an
 //   upright phone and down the right edge of a phone on its side (dialog.css); keys and close are the same.
+// - Drawer (R3728001): `drawer` puts the panel down the right edge at every width, the full height of the
+//   window, beside the menus' screen over 1024 px (its scrim clear) and over it below; keys and close are the same.
 // - `DialogClose` is the ✕ alone, for an overlay that keeps its own body (the inspect overlay's card and
 //   its sheets, hero inspect, the pack scene): the one close glyph every dialog shows.
 
@@ -68,6 +70,8 @@ export type DialogProps = {
   scrimTestid?: string;
   /** R3221000: a sheet, at the foot of an upright phone and down the right edge of one on its side. */
   sheet?: boolean;
+  /** R3728001: the friends drawer, down the right edge of every window: beside the screen on a wide one, over it below. */
+  drawer?: boolean;
   /** What takes the focus on open; otherwise the first answer, otherwise the ✕. */
   focus?: RefObject<HTMLElement | null>;
   /** The panel, for a caller that reads it (its own focus on open). */
@@ -146,6 +150,7 @@ export function Dialog(props: DialogProps): ReactElement {
       className="dialog-scrim"
       data-testid={props.scrimTestid}
       {...(props.sheet === true ? { "data-sheet": "" } : {})}
+      {...(props.drawer === true ? { "data-drawer": "" } : {})}
       // A press that began in the panel and was let go over the scrim (a text selection dragged out of
       // the chat or an input) clicks the scrim, their nearest common ancestor: that one keeps it open.
       onPointerDownCapture={(event) => {

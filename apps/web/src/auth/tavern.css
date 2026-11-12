@@ -12,9 +12,11 @@
    image and no web font: gradients, shadows and the system's serif. */
 
 /* The top bar's three colors (routes/top-bar.css, #3189). BackLink's nav also sits on screens that are not
-   `.tavern` (the replays, the deck screens), where they would be undefined, so the nav carries them. */
+   `.tavern` (the replays, the deck screens), where they would be undefined, so the nav carries them, and so
+   does the menus' shell (shell/menu-shell.css, R3728000), whose rail is drawn in them. */
 .tavern,
-.screen-nav {
+.screen-nav,
+.menu-shell {
   --tavern-brass: #c9953f;
   --tavern-gold: #f3c969;
   --tavern-gold-pale: #fbe7b0;
@@ -53,7 +55,7 @@
   isolation: isolate;
   max-width: none;
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: var(--shell-screen-h, 100dvh);
   margin: 0;
   padding: 14px var(--tavern-gutter) 56px;
   gap: 14px;

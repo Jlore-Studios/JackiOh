@@ -11,7 +11,7 @@
 #                   the many-game sweeps, whose rule a cheaper test holds per pull request
 #   coverage        cargo llvm-cov over engine, cards and ai, failing under .github/coverage-floor.txt
 #                   (90% at the start, raised by hand as it climbs toward #306's 99%)
-#   e2e             all 35 e2e specs on Chrome, in shards, and the component specs (V21)
+#   e2e             all 35 e2e specs on Chrome, in shards, and the component specs in three (V21)
 #   web             the audio, fx and asset unit tests and the two promotion tests, which the pull
 #                   requests leave out, and the tutorial lessons' whole sweeps (JACKIOH_DAILY=1)
 #   db              sql invariants, the store contract and the deploy rehearsal against a real Postgres
@@ -352,13 +352,17 @@ jobs:
   # BUILD M5-T1's "without layout overflow at 1280x720 and 390x844": jsdom has no layout engine, so
   # Cypress component testing mounts the 10-unit/10-backrow fixture board in a real browser. No
   # client build and no server: the component dev server compiles apps/web/src itself, on port 5273,
-  # and only needs the WASM module. All the specs in one job: 16 minutes on 2026-11-07, cut off at 20
-  # on 2026-11-08 (#3439) as the art and animation specs grew, so it gets 60 until it is sharded.
+  # and only needs the WASM module. Three shards by measured time (e2e/scripts/shard-specs.mjs
+  # --component): all 78 specs in one job took 45 of its 60 minutes in run 43123557600 (#3744).
   component:
-    name: e2e component (chrome)
+    name: e2e component (${{ matrix.shard }}/${{ strategy.job-total }})
     needs: wasm
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -371,12 +375,18 @@ jobs:
       - name: unpack the WASM module
         run: tar -xzf "$RUNNER_TEMP/web-build.tgz"
       - name: the fixture board's layout, measured in a browser
-        run: pnpm --dir e2e exec cypress run --component --browser chrome
+        env:
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ strategy.job-total }}
+        run: |
+          specs=$(cd e2e && node scripts/shard-specs.mjs --component "$SHARD" "$SHARDS")
+          echo "component shard $SHARD/$SHARDS: ${specs//,/ }"
+          pnpm --dir e2e exec cypress run --component --browser chrome --spec "$specs"
       - name: keep the evidence when it fails
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: cypress-component
+          name: cypress-component-${{ matrix.shard }}
           path: e2e/artifacts/component/screenshots
           if-no-files-found: warn
 

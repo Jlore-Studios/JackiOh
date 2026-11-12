@@ -72,7 +72,7 @@ var Workflows = map[string]string{
 	"bot-status.yml": "this issue's loop: rewrites it, sweeps, plans and starts night runs, " +
 		"delivers them",
 	"cf-spend.yml":    "daily: an issue once Cloudflare's usage spend is on course past its alert",
-	"ci-duration.yml": "after CI, an issue for any job over seven minutes",
+	"ci-duration.yml": "after CI, an issue for any job over ten minutes",
 	"ci.yml":          "CI: the five required checks on a pull request; everything on a push to main",
 	"claude-wake.yml": "starts each Claude account's 5-hour session every 4 hours from 06:00 " +
 		"Central",
@@ -80,7 +80,7 @@ var Workflows = map[string]string{
 	"cutover.yml":            "by hand: production's sign-in settings, email key, statistics logins and dev statistics",
 	"db-size.yml":            "twice a day: an issue once either Supabase database nears its plan's cap",
 	"deploy-staging.yml":     "deploys the _staging branch to staging.jackioh.com each time it moves",
-	"gather.yml":             "each new patch's dev games on the owner's PC, filed as totals (GATHER_ON_PATCH)",
+	"gather.yml":             "the newest version's dev games without a pause, filed as totals every hour (GATHER_ON_PATCH)",
 	"hygiene-delete.yml":     "deletes the branches a person ticked in the hygiene issue",
 	"hygiene.yml":            "weekly: the hygiene issues for the night bot and Squishy",
 	"learn-set.yml":          "a new patch or set stops a learn export still early on the version before",
@@ -245,8 +245,8 @@ var (
 	PCQuiet = 10 * time.Minute
 )
 
-// GatherWorkflow is GATHER_WORKFLOW: the gather workflow, whose one job runs on the owner's PC
-// (training/gather.md).
+// GatherWorkflow is GATHER_WORKFLOW: the gather workflow (training/gather.md), on two of GitHub's
+// runners without a pause since #3740, and on the owner's PC while TRAINING_ON_PC is `true`.
 var GatherWorkflow = "gather.yml"
 
 // BoxRow and BoxSteps are BOX_ROW and BOX_STEPS: how many boxes a row of the runners diagram

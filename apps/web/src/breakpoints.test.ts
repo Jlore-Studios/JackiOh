@@ -67,8 +67,10 @@ const KEEP: Record<string, string[]> = {
   "game/board.css": ["(max-width: 380px)"],
   // The filters fold under about 860 px tall, where three chip rows left one row of cards.
   "game/deckbuilder/deckbuilder.css": ["(max-height: 860px)"],
-  // Rail, pool and sidebar side by side need 1101 px (DeckWorkshop.tsx's WORKSHOP_SPLIT_MIN_WIDTH_PX).
-  "game/deckbuilder/workshop.css": ["(min-width: 1101px)", "(max-width: 1100px)"],
+  // Rail, pool and sidebar side by side need 1101 px of the screen's column, and the menus' shell's labelled rail
+  // 176 px beside it (R3728000): 1277 (DeckWorkshop.tsx's WORKSHOP_SPLIT_MIN_WIDTH_PX). No device of #3728's list sits
+  // between: 1180 takes turns, 1280 and wider split.
+  "game/deckbuilder/workshop.css": ["(min-width: 1277px)", "(max-width: 1276px)"],
   // A dialog's answers stack on the narrowest phones only (R3220000).
   "game/dialog.css": ["(max-width: 360px)"],
   // 480: 21vh cards two by two suit a phone upright; at 600 a 568x320 phone draws them 67 px wide. 701: 224 px Discover cards.
@@ -97,7 +99,7 @@ const SCRIPT_QUERIES: Record<string, string> = {
   TOUCH_ONLY_QUERY,
 };
 
-/** The scripts that spell a size query of their own: the workshop's split mirrors workshop.css's 1100 px. */
+/** The scripts that spell a size query of their own: the workshop's split mirrors workshop.css's 1276 px. */
 const SCRIPT_KEEP: Record<string, number> = { "game/deckbuilder/DeckWorkshop.tsx": 1 };
 
 describe("#3227 the named breakpoints", () => {
@@ -167,9 +169,9 @@ describe("#3227 the named breakpoints", () => {
       if (count > 0) spelled[script] = count;
     }
     expect(spelled).toEqual(SCRIPT_KEEP);
-    expect(read("game/deckbuilder/DeckWorkshop.tsx")).toContain("WORKSHOP_SPLIT_MIN_WIDTH_PX = 1101;");
+    expect(read("game/deckbuilder/DeckWorkshop.tsx")).toContain("WORKSHOP_SPLIT_MIN_WIDTH_PX = 1277;");
     const workshop = read("game/deckbuilder/workshop.css");
-    expect(workshop).toContain("@media (max-width: 1100px) {");
-    expect(workshop).toContain("@media (min-width: 1101px) {");
+    expect(workshop).toContain("@media (max-width: 1276px) {");
+    expect(workshop).toContain("@media (min-width: 1277px) {");
   });
 });

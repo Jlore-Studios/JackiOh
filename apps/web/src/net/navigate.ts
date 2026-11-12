@@ -315,7 +315,7 @@ export function dailyIdOf(path: string): string | null {
 }
 
 /** R2117000: the board routes, whose moves the animation queue owns (practice's setup shares its game's path). */
-function isBoardPath(path: string): boolean {
+export function isBoardPath(path: string): boolean {
   return (
     matchIdOf(path) !== null ||
     watchIdOf(path) !== null ||

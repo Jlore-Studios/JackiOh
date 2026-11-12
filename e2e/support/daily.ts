@@ -1,4 +1,4 @@
-// #3727: what specs 51 and 52 do over HTTP for daily games: the two fixture accounts made friends with
+// #3727: what specs 52 and 53 do over HTTP for daily games: the two fixture accounts made friends with
 // nothing left between them, a seat's read and its actions (each sent after the read's `seq` under a
 // fresh nonce, as the board sends them), and the E2E server's daily clock and sweep. The shapes are the
 // server's (apps/web/src/net/daily.ts), restated as far as the specs read them, since e2e type-checks alone.

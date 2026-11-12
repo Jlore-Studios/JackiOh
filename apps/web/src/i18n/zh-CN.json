@@ -1354,6 +1354,7 @@
   "Build decks": "构筑卡组",
   "Online play is invite-only for now: you'll need an invite code after signing up.": "目前在线对战仅限受邀玩家：注册后需要输入邀请码。",
   "You're in a game": "你正在对局中",
+  "You're in the queue": "你正在排队",
   "Your online match is still on. If you stay away from it for {seconds} seconds, you lose it.": "你的在线对局仍在进行。如果你离开超过 {seconds} 秒，就会判负。",
   "You're in a Conquest series": "你正在征服系列赛中",
   "Your series is still on, and its next game is waiting for you.": "你的系列赛仍在进行，下一局正等着你。",

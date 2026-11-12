@@ -857,21 +857,41 @@ func TestWorkflows_OnlyAPatchOrSetStopsARunAndOnlyBeforeHalfItsShards(t *testing
 	assertIn(t, `[ "$finished" -ge "$LEARN_SET_KEEP_SHARDS" ]`, text)
 }
 
-// gather.yml plays a new patch or set and never a micro: a push plays only when one shipped since
-// the last push run that succeeded, and every run plays the commit that started it, so the next
-// run reads exactly what it played and a rerun plays the same games.
-func TestWorkflows_GatherPlaysEachNewPatchAndNoMicro(t *testing.T) {
+// gather.yml plays without a pause (#3740): each run plays GATHER_HOURS on the commit that started
+// it, under GitHub's 6-hour job limit, so a rerun plays the same games, and as it ends it starts the
+// next run on main as it is then, with a schedule to start the chain again; no push starts it.
+func TestWorkflows_GatherPlaysTheNewestMainWithoutAPause(t *testing.T) {
 	text := workflowsRead(t, "gather.yml")
+	assertIn(t, "  schedule:\n    - cron: ", text)
+	assertNotIn(t, "  push:", text)
 	job := workflowsJob(t, text, "gather")
 	assertIn(t, "ref: ${{ github.sha }}", job)
-	due := workflowsScript(t, job, "due (a new patch or set, not a micro)")
-	assertIn(t, "runs?event=push&status=success&per_page=1", due)
-	assertIn(t, `select(.tier != "micro")`, due)
-	for _, step := range []string{"uses: ./.github/actions/setup", "name: build",
-		"name: " + workflowsGatherPlay} {
-		assertIn(t, "if: ${{ steps.due.outputs.play == 'true' }}", workflowsStep(t, job, step))
-	}
+	assertIn(t, "timeout-minutes: ${{ vars.TRAINING_ON_PC == 'true' && 1440 || 350 }}", job)
+	hours := regexp.MustCompile(`(?m)^  GATHER_HOURS: "(\d+)"$`).FindStringSubmatch(text)
+	assertTrue(t, hours != nil, "GATHER_HOURS")
+	// Its hours, and half an hour for the build and the last batch's overrun, within the timeout.
+	assertTrue(t, workflowsInt(t, hours[1])*60+30 <= 350, "GATHER_HOURS fits GitHub's job limit")
+	play := workflowsScript(t, job, workflowsGatherPlay)
+	assertIn(t, `deadline=$(( $(date +%s) + HOURS * 3600 ))`, play)
+	assertIn(t, `[ $(( $(date +%s) + took )) -le "$deadline" ]`, play)
+	next := workflowsJob(t, text, "next")
+	assertIn(t, "if: ${{ !cancelled() && vars.GATHER_ON_PATCH == 'true' }}", next)
+	assertIn(t, `[ "$minutes" -lt "$GATHER_NEXT_MIN_MINUTES" ]`, next)
+	assertIn(t, `gh workflow run gather.yml -R "$REPO" --ref main`, next)
 	assertTrue(t, workflowsLinted(t, "gather.yml"))
+}
+
+// #3740: the training lanes hold 12 of the organization's 60 hosted jobs, the learn lane's export
+// 10 shards at a time and the gather lane's two parts, and on the PC two shards and one part.
+func TestWorkflows_TheTrainingLanesHoldTwelveOfGithubsRunners(t *testing.T) {
+	shards := workflowsJob(t, workflowsRead(t, "selfplay-shards.yml"), "shard")
+	assertIn(t, "max-parallel: ${{ inputs.runner == 'ubuntu-latest' && 10 || 2 }}", shards)
+	gather := workflowsJob(t, workflowsRead(t, "gather.yml"), "gather")
+	assertIn(t, `part: ${{ fromJSON(vars.TRAINING_ON_PC == 'true' && '[1]' || '[1, 2]') }}`, gather)
+	learn := workflowsRead(t, "learn.yml")
+	on := "${{ vars.TRAINING_ON_PC == 'true' && 'jackioh-selfplay-local' || 'ubuntu-latest' }}"
+	assertEqual(t, strings.Count(learn, "    runs-on: "+on+"\n"), 5)
+	assertIn(t, "      runner: "+on+"\n", workflowsJob(t, learn, "export"))
 }
 
 // workflowsGatherPlay is the name of gather.yml's step that plays and files the games.

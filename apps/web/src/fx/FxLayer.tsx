@@ -21,6 +21,7 @@ import {
   type AnimationQueue,
   type RunnerSignal,
 } from "../game/animations.ts";
+import { followPointer } from "../cards/pointerFrame.ts";
 import { CatalogContext, type CardLookup } from "../game/catalog.ts";
 import { rootVars, type RootVars } from "../game/rootVars.ts";
 import { boardShakeSink, resolveAnchor } from "./anchors.ts";
@@ -394,14 +395,19 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
   }, []);
   // R3351000: the pointer the shed order measures far auras by (shed.ts). One passive listener for
   // the whole layer; the aura layer reads the same store. There was no layer-wide pointer position
-  // before: tilt tracks each face on its own (cards/tilt.ts, R3344001).
+  // before: tilt tracks each face on its own (cards/tilt.ts, R3344001). #3610: the pointer is handled once a frame, the
+  // newest move's, on the layer's frame source (never a timer: a source that never fires gives no pointer, R200).
   useEffect(() => {
-    const onMove = (event: PointerEvent): void => {
+    const follow = followPointer(live.current.seams?.frames ?? defaultFrames(), (event) => {
       setShedPointer({ x: event.clientX, y: event.clientY });
+    });
+    const onMove = (event: PointerEvent): void => {
+      follow.push(event);
     };
     window.addEventListener("pointermove", onMove, { passive: true });
     return () => {
       window.removeEventListener("pointermove", onMove);
+      follow.cancel();
       setShedPointer(null);
     };
   }, []);

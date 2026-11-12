@@ -3,10 +3,34 @@
 JackiOh is a 1v1 card game: Hearthstone-style mana, combat and keywords on Yu-Gi-Oh-style lanes with a hidden
 trap backrow. This file binds every agent, not only Claude.
 
+## How to work here
+
+- **This codebase is yours.** What JackiOh is for and how it is built are your calls, and you will keep
+  building on what you leave here, so build what you would want to inherit. The spec is where those calls
+  are written down: when one should change, change the spec in the same PR rather than work around it.
+- **Finish the work.** Don't stop while you still owe work the person or the issue asked for. Be
+  persistent: when something fails, find out why and try another way. Stop only when the work is done, when
+  you need a decision, an account or access that only a person can give (say exactly what), or when the
+  usage limit is about to cut you off (below).
+- **Mind the usage limit.** Every session and bot run draws on a subscription's 5-hour and weekly limits
+  (`bot/README.md`, Subscriptions), and either, or a run's time budget, can cut you off mid-task.
+  - Spend on what moves the work. Run the subset that covers your change (Running a subset, below) before
+    any whole-workspace suite, and a slow suite once, at the end. Grep, and read long files by section:
+    `spec/11-rulings.md`, `spec/INDEX.md`, `spec/08-catalog.md`, `BUILD.md` and `bot/README.md` run to
+    hundreds or thousands of lines. Cut long output with `tail` or `grep` before it reaches your context.
+    Start a subagent only for work that needs one.
+  - Keep the work resumable. In a session of your own, commit each step as it goes green, push at
+    checkpoints (a cloud container's unpushed work dies with it) and keep your handoff current (rule 14). A
+    bot run leaves committing and pushing to its harness, which keeps a cut-off run's work and continues it.
+  - When you are told the limit or the time budget is nearly spent, finish the step in hand, push it (in a
+    session of your own) and say exactly where to resume (your handoff, or a bot run's report), rather than
+    start something new.
+
 ## Where things are
 
 - `SPEC.md` points to `spec/`, the only source of rules, cards and engine design; `spec/README.md` maps its
-  notes. Section references (§) point here. If a doc disagrees with the spec, the spec wins and the doc is
+  notes, and §1.1 (`spec/01-overview.md`) is the rules on one page, each line linking its section: start
+  there. Section references (§) point here. If a doc disagrees with the spec, the spec wins and the doc is
   the bug.
 - Each crate's and app's `README.md` (`crates/*`, `apps/admin`, `apps/edge`, `apps/web`, `e2e`) is its contract: read it
   before you change that code. So are `infra/README.md`, for the hosts' dashboard settings as Terraform
@@ -18,21 +42,17 @@ trap backrow. This file binds every agent, not only Claude.
 
 ## Rules of engagement
 
-1. Before a task, read `spec/README.md` and the spec sections and rulings the task touches; re-read them
-   before each change. Never implement a rule from memory of Hearthstone or Yu-Gi-Oh when the spec states it.
-2. Work BUILD.md in order. A task is done when its acceptance items are green tests. Do not open the next
-   milestone until the current gate passes.
-3. Rulings live in SPEC §11, one note per ruling, `spec/rulings/R<nnnn>.md` (zero-padded to four digits at
-   least: R58 is `R0058.md`), its front matter holding `id`, `title`, `cards` and `proven_in`. A decision the
-   spec does not make follows Hearthstone semantics and gets a note in the same PR, numbered with the lowest
-   free in its issue's block (issue N owns R(N×1000) to R(N×1000+999); `docs/issues-and-patches.md`, Ruling
-   numbers). Name the proving test after it: in Rust a `fn` or `mod` whose name has the `_`-delimited token
-   `r58` (`fn r58_…`, `fn r90_r81_…`), in TypeScript an `it(`, `test(` or `describe(` whose title has `R58` as
-   a word. List its file in `proven_in`. Its §11 paragraph (where it came from) goes in `spec/pending/<N>.md`,
-   N its issue's number, never at the end of `spec/11-rulings.md`, and no branch runs `cargo jackioh spec index`:
-   `spec-fold.yml` folds both files on `main` daily, since every ruling's branch conflicted on them. Section and
-   ruling notes are edited in the PR as ever. `cargo jackioh spec check` fails on any mismatch between the
-   notes, their tests and the R-ids cited in `crates/`, `apps/web/src/` or `e2e/`, comments included.
+1. Before a task, read `spec/README.md` and the spec sections and rulings the task touches, and implement
+   what the spec states, not what you remember of Hearthstone or Yu-Gi-Oh.
+2. Work BUILD.md in order. A task is done when its acceptance items are green tests.
+3. Rulings live in SPEC §11, one note per ruling, `spec/rulings/R<nnnn>.md` (R58 is `R0058.md`). A decision
+   the spec does not make follows Hearthstone semantics and gets a note in the same PR, numbered with the
+   lowest free in its issue's block (issue N owns R(N×1000) to R(N×1000+999)), and a proving test named after
+   it (`fn r58_…` in Rust, an `it("R58 …")` in TypeScript); its §11 paragraph goes in `spec/pending/<N>.md`,
+   since `spec-fold.yml` writes `spec/11-rulings.md` and `spec/INDEX.md` on `main` daily and a branch leaves
+   both alone. `spec/README.md`, Adding a ruling, has the details; `cargo jackioh spec check` fails on any
+   mismatch between the notes, their tests and the R-ids cited in `crates/`, `apps/web/src/` or `e2e/`,
+   comments included.
 4. `crates/engine`, `crates/cards`, `crates/ai`, `crates/run` (the dungeon run) and
    `crates/shared` (the logic the server and the client share, #2956; its `README.md` holds the host contract)
    are pure:
@@ -49,8 +69,8 @@ trap backrow. This file binds every agent, not only Claude.
    crate only at compile time
    (`include_str!`, `crates/cards/build.rs`); tooling that needs the disk or a clock goes in `crates/tools`.
 5. Card scripts return `Vec<Effect>` built from the engine's effects module (`jackioh_engine::effects`, in
-   reach through `jackioh_engine::prelude`). Never mutate state in a card file: a hook reads its
-   `EffectContext` and the engine's read helpers and returns effects.
+   reach through `jackioh_engine::prelude`): a hook reads its `EffectContext` and the engine's read helpers
+   and returns effects, and the engine applies them.
 6. Every card has one script file, `crates/cards/src/scripts/<set>/<file>.rs` (its `pub const ID`, its
    header comment and `pub fn script()`), with its tests in the same file (`#[cfg(test)] mod tests`)
    covering base and Radiant behavior per its spec §8 row (BUILD's must-pass tables stop at M13: a later
@@ -68,14 +88,14 @@ trap backrow. This file binds every agent, not only Claude.
 10. Before any card work (adding, changing or removing a card), read `docs/ADDING_CARDS.md`.
 11. An agent that opens an issue gives it one `difficulty:*` label by `docs/issues-and-patches.md` (How hard
     it is): **hard** for engine rules, the AI, design across crates, a migration, or about 40 files or more,
-    **medium** for the rest. Torn between two, take the harder. The bot never changes your label, so a wrong
-    medium is planned, built and approved by a medium model: when you cannot judge it, leave it off and the
-    planner rates it.
+    **medium** for the rest. Torn between two, take the harder. The bots keep your label, so a wrong medium
+    is planned, built and approved by a medium model: when you cannot judge it, leave it off and the planner
+    rates it.
 12. No agent merges a pull request, or reports one green or done, while a required check on its head is red
     or has not run, and none calls a failure pre-existing or environmental without a link to the same check
     failing on `main`. A report names every red check by its name. #825 was merged with its golden replay
     red and closed as "all gates green" (`reviews/2026-10-14-issue-814-first-pass.md`).
-13. Never delete or disable anything called from outside this codebase without asking a person first: a
+13. Ask a person before you delete or disable anything called from outside this codebase: a
     webhook, a scheduled job (a workflow's `schedule:`), an auth callback, an HTTP route that a deploy probes
     or a person or another service calls (`/readyz` is the site Worker's daily wake-up, `/healthz` its
     check of the running image, and the deploy jobs poll `/api/catalog`), or a `cargo jackioh`, server or harness subcommand that a workflow, a deploy or a person
@@ -158,13 +178,13 @@ has the rest, the server's fixture reseed among it.
 Branch protection on `main` requires five checks, all jobs of `ci.yml`: `rust`, `web`, `e2e smoke`, `db` and
 `bot selftest`. A pull request lands through `main`'s merge queue (`infra/github.tf`), which runs them again on
 `main` with every pull request ahead of it and this one on top (`ci.yml`'s `merge_group`): one the queue takes
-out failed there, against the newer `main`, and its fix starts from merging `main`. So never merge `main` into
-a pull request only to bring it up to date: one that merges cleanly needs no update, since the queue tests it on
-the newest `main`, and every push runs its CI again on the organization's shared runners. Merge `main` in when
-GitHub shows a conflict or the queue took it out, and turn auto-merge on once it is ready, so the queue takes it
-as soon as its checks pass. A pull request's CI and a merge-queue build may show "Waiting" before they start:
-the runner gate holds them, with no runner, until GitHub's 60 have room (bot/README.md "The runner gate"),
-while `main`'s and a promotion's never wait. Run
+out failed there, against the newer `main`, and its fix starts from merging `main`. So merge `main` into a pull
+request only when GitHub shows a conflict or the queue took it out: one that merges cleanly needs no update,
+since the queue tests it on the newest `main`, and every push runs its CI again on the organization's shared
+runners. Turn auto-merge on once it is ready, so the queue takes it as soon as its checks pass. A pull
+request's CI and a merge-queue build may show "Waiting" before they start: the runner gate holds them, with no
+runner, until GitHub's 60 have room (bot/README.md "The runner gate"), while `main`'s and a promotion's never
+wait. Run
 `cargo jackioh classify --base origin/main --claims` before pushing: on a pull request `rust` runs it as
 `rust (classify)` (R1370000). A pull request runs only the jobs that read what it changes (`scripts/ci-scope.sh`,
 whose header says what turns each on; #751), so a file a test newly reads from outside its crate goes in the
@@ -174,15 +194,15 @@ push to `main` runs everything. Everything slow or statistical runs daily in `su
 and on every pull request into `_production` (`docs/deploy-cloudflare.md` §2.1). A test moves there
 (`#[ignore = "daily: <why>"]` in Rust, `apps/web/src/test/daily.ts` in the web) only when a cheaper test keeps
 its rule per pull request, which its `daily:` reason names. Each workflow's header says what it does, `ci.yml`'s
-the five-minute budget of every job.
+the eight-minute budget of every job.
 
 ## Architecture
 
 - `crates/engine` does not depend on `crates/cards`; its tests use fixture scripts and the
   `testkit` feature (`scenario()` and its verbs). Read `work.rs`'s header before touching anything that can
   open a prompt.
-- `crates/cards`: a script reads state only through the prelude's read helpers, never `state.players[…]`; a
-  missing verb or board fact goes into the engine (board facts in `src/query.rs`) with its test.
+- `crates/cards`: a script reads state through the prelude's read helpers (not `state.players[…]`); a missing
+  verb or board fact goes into the engine (board facts in `src/query.rs`) with its test.
 - `crates/ai`: hidden cards never change a decision.
 - `crates/server`: `cargo test` runs the store's in-memory fake, so RLS and triggers are checked only by the
   Docker suites, and a store change goes in `tests/store/contract.rs`.
@@ -193,9 +213,9 @@ the five-minute budget of every job.
 
 The night bot (`@jgoetzmann-bot`, `.harness/`) and Squishy (`@squishy-squooby`, `.squishy/`) are one harness,
 `bot/go/`, under two configs; `bot/README.md` says which issues each takes. `human` keeps every bot off an
-issue, and `bot:build` queues one for the night bot, so never add it while retitling or relabeling.
+issue, and `bot:build` queues one for the night bot, so add `bot:build` only when you mean to queue it.
 
-A bot's builder or reviewer must not change `.github/`, `.harness/`, `.squishy/`, `bot/` or `.claude/`, except
+A bot's builder or reviewer leaves `.github/`, `.harness/`, `.squishy/`, `bot/` and `.claude/` alone, except
 that Squishy may change `.claude/skills/` (the full lists are `forbidden_paths` in each bot's `config.json`):
 the harness puts such a change back, and the deliver job refuses to push one. When the task is nothing but
 such a change, or needs a secret, a dashboard or an account, stop with `"human_required": true` (your prompt
@@ -205,6 +225,6 @@ shows the line) and say what a person must do.
 
 `scripts/worktree.sh <name> [base-ref]` creates a git worktree at `../jackioh-wt/<name>` on branch `wt/<name>`
 with the web's dependencies linked; cargo builds each worktree into its own `target/`, so each tests only its
-own changes (the first build there is a full one). It suits isolated work like card scripts. Don't use it for
-shared surfaces (one issue's block of ruling numbers in `spec/rulings/`, `crates/engine/src/wire/events.rs`,
-`script.rs`, `state.rs`, `effects/mod.rs`): parallel edits to those conflict on merge.
+own changes (the first build there is a full one). It suits isolated work like card scripts, not the shared
+surfaces (one issue's block of ruling numbers in `spec/rulings/`, `crates/engine/src/wire/events.rs`,
+`script.rs`, `state.rs`, `effects/mod.rs`), where parallel edits conflict on merge.

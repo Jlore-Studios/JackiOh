@@ -1,4 +1,4 @@
-// 52 — daily games (#3727, R3727000): a move whose time runs out loses the game for the seat that held it.
+// 53 — daily games (#3727, R3727000): a move whose time runs out loses the game for the seat that held it.
 // Seat one challenges seat two from the New daily game dialog in the browser; seat two accepts and both
 // keep their hands over HTTP (`support/daily.ts`), and the move is seat one's. The E2E server's daily clock
 // (`POST /api/e2e/daily-clock`) then moves past the hold's deadline and the sweep settles it: seat one's
@@ -52,7 +52,7 @@ function gameRow(matchId: string): string {
   return `${ts(DAILY_GAME_ROW)}[data-match-id="${matchId}"]`;
 }
 
-describe("52 Daily games — a move whose time runs out", () => {
+describe("53 Daily games — a move whose time runs out", () => {
   beforeEach(() => {
     setDailyClock(0);
   });

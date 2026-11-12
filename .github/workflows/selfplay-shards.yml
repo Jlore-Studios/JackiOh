@@ -13,13 +13,16 @@
 # database folding a file it holds already no second time. Without it, a shard plays its range in one
 # go and files nothing, as a dispatched export does.
 #
-# On GitHub's runners the export is one round, at most 12 shards at once. On the local runner a round
-# holds a fifth of the shards, played two at a time, one on each half of the PC (#3722), and
-# selfplay.yml starts a round only once the one before it has ended: GitHub fails a job no self-hosted
-# runner takes in 24 hours, and does not say whether a shard held back by `max-parallel` is waiting all
-# that time, so no shard is made to wait longer than its own round takes. A shard of 5,000 games takes
-# about 7.5 hours on a half since #2628 doubled the AI's budget, so a round of four, a 100,000-game
-# export's, takes about 15 hours of an idle PC (one at a time, it took about 30).
+# On GitHub's runners (the learn lane's since #3740) the export is one round, at most 10 shards at
+# once. A shard of 2,500 games, a 100,000-game export's fortieth, takes about 3 hours on four vCPUs
+# at the AI's budget since #2628 (about 870 games an hour, estimated from the PC's 670 on a four-CPU
+# half; one of 5,000 would pass GitHub's 6-hour job limit), so the export takes about 12 hours. On
+# the local runner a round holds a fifth of the shards, played two at a time, one on each half of
+# the PC (#3722), and selfplay.yml starts a round only once the one before it has ended: GitHub fails
+# a job no self-hosted runner takes in 24 hours, and does not say whether a shard held back by
+# `max-parallel` is waiting all that time, so no shard is made to wait longer than its own round
+# takes. A shard of 2,500 games takes about 3.7 hours on a half, so a round of eight takes about 15
+# hours of an idle PC, and the export about three days.
 name: selfplay shards
 
 on:
@@ -60,12 +63,14 @@ jobs:
     timeout-minutes: ${{ inputs.runner == 'ubuntu-latest' && 350 || 4320 }}
     strategy:
       fail-fast: false
-      # GitHub's free plan runs 20 hosted jobs at once for the whole organization: an export takes
-      # at most 12 of them, so CI and the bots' pull requests keep 8 while it plays. The local runner
-      # takes two, one on each half of the PC (the supervisor's `maxJobs`, bot/machine/local/config.json;
-      # #3722). A gather job that lands while two shards hold both halves takes one at once, and the
-      # two shards share the other until one ends (bot/machine/README.md, Limits).
-      max-parallel: ${{ inputs.runner == 'ubuntu-latest' && 12 || 2 }}
+      # GitHub's Team plan runs 60 hosted jobs at once for the whole organization, and the training
+      # lanes' share is 12 (#3740): an export takes 10 of them, and gather's shards the other 2,
+      # so CI and the bots' runs keep theirs while it plays. The local runner takes two, one on each
+      # half of the PC (the supervisor's `maxJobs`, bot/machine/local/config.json; #3722). A gather
+      # job that lands while two shards hold both halves takes one at once, and the two shards share
+      # the other until one ends (bot/machine/README.md, Limits). selfplay.yml's summary divides by
+      # the same numbers.
+      max-parallel: ${{ inputs.runner == 'ubuntu-latest' && 10 || 2 }}
       matrix:
         range: ${{ fromJSON(inputs.ranges) }}
     steps:

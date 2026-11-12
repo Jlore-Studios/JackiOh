@@ -34,6 +34,7 @@ use crate::config::{
 use crate::daily::games::{load, settle, waiting_of};
 use crate::daily::webpush::{self, PushOutcome, Subscription};
 use crate::db::store::PushSubRow;
+use crate::loops::FailingStreak;
 use crate::social::live::push_social;
 use crate::social::{no_content, profiles_by_id};
 
@@ -346,9 +347,11 @@ pub async fn sweep_route(app: &Arc<App>, _req: Req) -> ApiResult {
 
 /// The sweep every `DAILY_SWEEP_MINUTES` while the server is awake.
 pub async fn run_sweeper(app: Arc<App>) {
+    // #3770: a sweep that fails on every pass for a while is an alert, not just a warning each time.
+    let mut sweeping = FailingStreak::new("daily.sweeper");
     loop {
         tokio::time::sleep(Duration::from_secs(DAILY_SWEEP_MINUTES * 60)).await;
-        if let Err(error) = sweep(&app, app.daily.now()).await {
+        if let Err(error) = sweeping.track(sweep(&app, app.daily.now()).await) {
             log_warn("daily.sweep_failed", json!({ "message": error.message }));
         }
     }

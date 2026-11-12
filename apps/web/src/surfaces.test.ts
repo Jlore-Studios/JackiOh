@@ -100,7 +100,7 @@ const UNTOKENED_SURFACES: Record<string, number> = {
   "shop/shop.css": 1,
   "skeleton/skeleton.css": 4,
   "stats/tier.css": 1,
-  "together/together.css": 7,
+  "together/together.css": 6,
   "tutorial/path-visibility.css": 2,
   "tutorial/tutorial.css": 42,
   "undo/undo.css": 3,

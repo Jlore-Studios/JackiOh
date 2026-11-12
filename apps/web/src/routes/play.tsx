@@ -54,7 +54,7 @@ import { EmptyState } from "../empty/EmptyState.tsx";
 import { currentCatalog } from "../game/currentCatalog.ts";
 import { pageWake } from "../game/net.ts";
 import { LeanSetPicker, readPlayLean, writePlayLean } from "../game/LeanNewest.tsx";
-import { MATCH_FOUND_STATUS, forgetQueued, liveGameOf, readQueued, rememberQueued, useQueued } from "../net/liveGame.ts";
+import { MATCH_FOUND_STATUS, MODE_LABEL, forgetQueued, liveGameOf, readQueued, rememberQueued, useQueued } from "../net/liveGame.ts";
 import { isFreshAccount } from "../net/gate.ts";
 import { navigate, paths, useSearch } from "../net/navigate.ts";
 import { forgetRoomLink, readRoomLink, roomLinkUrl, sendRoomLink } from "../net/roomLink.ts";
@@ -151,12 +151,8 @@ export function recentGamesWords(games: number): string {
     : t("{count} games played in the last hour", { count: String(games) });
 }
 
-/** R330 calls wire mode `bo3` Conquest. */
-export const MODE_LABEL: Readonly<Record<QueueMode, string>> = {
-  bo1: "Best of 1",
-  bo3: "Conquest",
-  random: "All random",
-};
+/** `net/liveGame.ts` names the modes, for the shell's queue banner too (R3728002); kept here for this file's importers. */
+export { MODE_LABEL };
 
 export const PLAY_CHOICE_KEY = "jackioh.play.choice";
 

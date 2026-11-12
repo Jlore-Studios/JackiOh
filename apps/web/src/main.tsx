@@ -33,6 +33,11 @@
 // The presence heartbeat and the challenge toast (#936, B47, B57) are this file's, so neither waits
 // on a screen's gate nor restarts with it. Ctrl+K opens the command menu (R2118000) on every menu
 // screen, never over a board (`game/boardShown.ts`), keyed by the path so a move closes it.
+//
+// THE MENUS' SHELL (R3728000): every menu screen renders inside `MenuShell` (`shell/MenuShell.tsx`), its
+// navigation, its status row and its friends drawer; a board's path, the series screen and the dev screens
+// do not (`menuShellOn`). The shell stays mounted from one menu to the next, and the screen's boundary,
+// keyed by the path, still remounts inside it.
 
 import {
   Component,
@@ -90,6 +95,7 @@ import { routeChunks, startScreen, watchRouteIntent } from "./routes/chunks.tsx"
 import LandingRoute from "./routes/landing.tsx";
 import { followInApp } from "./routes/nav.tsx";
 import { readSettings } from "./settings/store.ts";
+import { MenuShell, menuShellOn } from "./shell/MenuShell.tsx";
 import { Skeleton, useShownAfterDelay, type SkeletonVariant } from "./skeleton/Skeleton.tsx";
 import { loadWasm, wasmLoaded } from "./wasm/index.ts";
 
@@ -878,11 +884,15 @@ export function App(): ReactElement {
   })();
 
   // Keyed by the path, so moving to another screen clears a failed load's panel.
+  const boundary = (
+    <RouteErrorBoundary key={path}>
+      <Suspense fallback={<Loading what="Loading…" slow skeleton="panel" />}>{route}</Suspense>
+    </RouteErrorBoundary>
+  );
   return (
     <>
-      <RouteErrorBoundary key={path}>
-        <Suspense fallback={<Loading what="Loading…" slow skeleton="panel" />}>{route}</Suspense>
-      </RouteErrorBoundary>
+      {/* R3728000: see THE MENUS' SHELL above. */}
+      {menuShellOn(path) ? <MenuShell path={path}>{boundary}</MenuShell> : boundary}
       <QueueFound game={found} />
       {signedIn ? <ChallengeToast /> : null}
       {/* Keyed by the path, so a move closes it; its own key, as the boundary above holds `path`. */}

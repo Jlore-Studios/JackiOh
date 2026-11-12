@@ -1,4 +1,4 @@
-# `e2e/` — the fifty specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34`, the settings dialog's `35`, the Meditative play-through's `36`, the rematch offers' `37`, the accessibility check's `38`, the replays' `39`, Duos co-op's `41`, Play together's `42`, the preview rings' `43`, watching a friend's `44`, the economy loop's `45`, every menu on one screen's `46`, the phone's tap areas' `47`, the tutorial's final exam's `48`, the dev dashboard's `49` and daily games' `51` and `52`, plus twenty-one component specs
+# `e2e/` — the fifty-one specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34`, the settings dialog's `35`, the Meditative play-through's `36`, the rematch offers' `37`, the accessibility check's `38`, the replays' `39`, Duos co-op's `41`, Play together's `42`, the preview rings' `43`, watching a friend's `44`, the economy loop's `45`, every menu on one screen's `46`, the tap areas' `47`, the tutorial's final exam's `48`, the dev dashboard's `49`, the menus' shell's `51` and daily games' `52` and `53`, plus twenty-one component specs
 
 Cypress runs against `apps/web` in `E2E=1` mode: the `/dev/hotseat` route for the local specs and
 a test server with fixture accounts for the networked ones, the Rust `jackioh-server` started with
@@ -35,7 +35,7 @@ pnpm check:fixtures                       # every deck fixture obeys L2/L3/L6 be
 # 1. the client, in E2E mode
 E2E=1 pnpm --dir apps/web dev                  # must serve http://localhost:5173
 
-# 2. the server, in E2E mode, for the networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39, 41, 42, 44, 45, 46, 47, 49, 51, 52
+# 2. the server, in E2E mode, for the networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39, 41, 42, 44, 45, 46, 47, 49, 51, 52, 53
 E2E=1 cargo run --release -p jackioh-server    # http://localhost:8787 and ws://…/ws/match (WS_PATH)
 
 # 2b. spec 49 only: the dev dashboard's own client (apps/admin/README.md), proxying /api to the server
@@ -55,10 +55,14 @@ compiled into it. It reseeds its fixture accounts and invite codes at every boot
 `POST /api/e2e/reseed` (R144), which spec 10 calls before its first test, so spec 10 re-runs against the
 same server with no restart. CI (`.github/actions/e2e-shard`) boots one release `jackioh-server` and one
 `vite preview` of the `build:e2e` client per shard, waits for `/api/catalog` and the client to answer,
-then runs its shard's specs on Chrome: the smoke list (01, 06, 10, 13, 19, 46, 47,
+then runs its shard's specs on Chrome: the smoke list (01, 06, 10, 13, 19, 46, 47, 51,
 `scripts/shard-specs.mjs`'s `SMOKE`) on every pull request, every spec in the daily super run.
+Specs 46, 47 and 51, and 38's block on the menus' shell, run the menus at each of `MENU_SIZES`
+(`support/config.ts`), issue #3728's device sizes from a 1440x900 desktop to a 390x844 phone (R3728000).
+47 measures the board at BUILD M5-T1's phone alone, and over 600 px emulates touch, as an iPad is held.
 `node scripts/shard-specs.mjs --component <k> <K>` splits the component specs the same way, by measured
-time, for the super run's component jobs.
+time, for the super run's component jobs. All 78 in one job took 45 of its 60 minutes (#3744), so
+super.yml runs them in three shards.
 Electron is no longer run.
 
 Chrome 155 kills its own network service now and then under Cypress 16, whose Chrome runs pause
@@ -101,8 +105,9 @@ screenshotsFolder` does not reach the component block). Stop a server you starte
 (`lsof -tiTCP:<port> -sTCP:LISTEN | xargs kill`), never by a process-name pattern, which also ends
 everyone else's. Headless Chrome's default window crops a capture taller than about 633 px; pass
 `--config viewportHeight=…` (or `cy.viewport`) with a browser launched at a larger `--window-size`
-when a shot must show a full 1280x720, 768x1024 or 390x844 screen. `E2E_WINDOW_SIZE=W,H` does the
-launch (`cypress.config.ts`, Chrome and Electron; unset, nothing changes):
+when a shot must show a full 1280x720, 768x1024 or 390x844 screen, or spec 51's shots of the menus'
+shell at each of `MENU_SIZES`. `E2E_WINDOW_SIZE=W,H` does the launch (`cypress.config.ts`, Chrome and
+Electron; unset, nothing changes):
 
 ```
 E2E_WINDOW_SIZE=1600,1200 pnpm exec cypress run --browser chrome --spec cypress/e2e/25-overflow-animations.cy.ts --expose shots=1
@@ -146,10 +151,10 @@ for contract reasons rather than rules reasons.
    `e2e-pending` (R144) for the other seat, whose Node socket hears the watcher's emote from the
    sideline strip (`sideline-*`, R2990000).
 
-9. **Daily games** (#3727). Spec 51 is a daily challenge between the two fixture friends: seat one sends
+9. **Daily games** (#3727). Spec 52 is a daily challenge between the two fixture friends: seat one sends
    it from the friends list's Challenge (its Daily), seat two accepts and moves over HTTP, and "Your
    move" passes between them on the Daily screen, the board's clock (`daily-clock`) and the Play
-   screen's badge. Spec 52 moves the E2E server's daily clock past the move's deadline
+   screen's badge. Spec 53 moves the E2E server's daily clock past the move's deadline
    (`POST /api/e2e/daily-clock {offsetMs}`, put back to 0 after), asks the sweep to settle it
    (`POST /daily-sweep`), and seat one's board says "Lost on time". Both are networked. A daily game
    has no socket: every move is `POST /api/daily/games/:id/actions`, which `support/daily.ts` sends as
@@ -177,7 +182,7 @@ waiting helpers (`settled`, `expectAnimating`, `waitForPrompt`, `noPrompt`):
 | `savedDecks` / `clearDecks` / `saveDeck` / `saveTrio` | `GET /api/decks`; delete every deck and trio (yields the catalog version); one `PUT /api/decks/:id` or `PUT /api/trios/:id` under a client-minted id (R256), yielding it. |
 | `freeAccount(account)` / `concedeAs(account, matchId)` | The E2E server keeps its state for its whole life, so a networked spec starts by taking both accounts out of any queue ticket, live match or unfinished series (a concede, or a forfeit between games, R261). `concedeAs` connects, concedes and closes in one `wsPlayer` task, because the account's own browser would reclaim the seat between two. |
 | `stayQueued(account, everyMs)` | R897000: the queue cancels a ticket nobody has heard from for `QUEUE_TICKET_STALE_MS`, and a queued client polls `GET /api/auth/me` every `SERIES_POLL_SECONDS`. A seat a spec enqueues over HTTP and leaves waiting (specs 19 and 37; two accounts 320 apart, as one rated game between new players leaves them, pair only after the newer ticket has waited 50 s) polls through the `stayQueued` task, which ends itself once `queued` is no longer `true`; `before:spec` and `after:spec` clear any left. |
-| `support/daily.ts` (functions, not commands) | #3727: a daily game over HTTP for specs 51 and 52: `makeFriends`, `clearDaily` (no running game, challenge or seek left from an earlier run, since a running game counts against the account's cap), `dailyOf`, `dailyGameOf`, `dailyActAs` (after the read's `seq`, a fresh nonce), `dailyKeepHandAs`, `dailyEndTurnAs`, `dailyConcedeAs`, `setDailyClock` and `sweepDaily`. |
+| `support/daily.ts` (functions, not commands) | #3727: a daily game over HTTP for specs 52 and 53: `makeFriends`, `clearDaily` (no running game, challenge or seek left from an earlier run, since a running game counts against the account's cap), `dailyOf`, `dailyGameOf`, `dailyActAs` (after the read's `seq`, a fresh nonce), `dailyKeepHandAs`, `dailyEndTurnAs`, `dailyConcedeAs`, `setDailyClock` and `sweepDaily`. |
 | `dragCardToDeck(cardId)` | A11's whole gesture onto the open deck's `deck-drop` — `dragstart`, `dragover`, `drop`, `dragend`, one `DataTransfer` built in the app's window. |
 | `handIds(player)` / `unitIds(player)` | Which instance ids might I click. Setup only: assertions belong on the DOM, which is `viewFor` (CLAUDE.md rule 7). |
 | `advanceToTurn(turn)` | End turns until `turn`, R82-safe: a turn that ended by itself leaves nothing to press, only a device to hand over. |
@@ -188,7 +193,8 @@ waiting helpers (`settled`, `expectAnimating`, `waitForPrompt`, `noPrompt`):
 | `keepMulligans()` | Both opening mulligans are open at once (R265). On `/dev/hotseat` the device follows the seat that still owes one, so this answers both; networked it answers this client's own, after which the picker gives way to `mulligan-waiting`. |
 | `concede()` | The `concede` control only asks ("Concede this game?"); this confirms in the dialog it opens. A spec that clicks `concede` alone has conceded nothing. |
 | `visitStatsFigures(whileCollecting)` (`support/stats.ts`) | R3324000: `/stats` on a patch that shows its figures. The E2E server's newest patch has too few games, so its Cards tab says its data is still being collected; specs 46 and 47 step to the patch before, after `whileCollecting` checks the collecting page. |
-| `expectNoBlockingViolations(route)` (`support/a11y.ts`) | Spec 38's check (#757): axe-core injected from this package's `node_modules`, WCAG 2.0–2.2 A and AA rules, failing on any serious or critical violation `support/axe-exceptions.ts` does not list for `route` (by rule and a selector each flagged element matches, with its reason), and on a listed one that no longer fires. Spec 38 checks every route at 1280x720 and again at 390x844, whose labels end in ` (phone)` (#1561). |
+| `expectNoBlockingViolations(route)` (`support/a11y.ts`) | Spec 38's check (#757): axe-core injected from this package's `node_modules`, WCAG 2.0–2.2 A and AA rules, failing on any serious or critical violation `support/axe-exceptions.ts` does not list for `route` (by rule and a selector each flagged element matches, with its reason), and on a listed one that no longer fires. Spec 38 checks every route at 1280x720 and again at 390x844, whose labels end in ` (phone)` (#1561), and the menus' shell (Home, Play, Collection and the friends drawer) at each of `MENU_SIZES`, labelled ` (phone)` at 600 px and under (R3728000). |
+| `expectShellNav(signedIn)` (`support/shell.ts`) | R3728000: the menus' shell's Home, Play, Collection, Shop and Friends (the Friends button signed in, the link to Play together signed out) shown inside the window, rail or tab bar; spec 46 calls it on every menu inside the shell. |
 | `wsPlayer` `awaitView` `where: { mulliganOpponentReady, drawOfferBy }` | R266's "the other seat is ready" and R269's standing offer, read off seat 2's own view (`view.mulligan.opponentReady`, `view.drawOffer.by`). |
 | `wsPlayer` `sendFrame` `{ type: "aim" \| "emote" }` | R738, R643: a cosmetic frame the server never answers, sent as it is (no nonce, no ack awaited); spec 42 aims and emotes from seat two with it. |
 

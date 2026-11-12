@@ -324,7 +324,7 @@ pub async fn post_reseed(app: &Arc<App>, _req: Req) -> ApiResult {
 pub const E2E_DAILY_CLOCK_PATH: &str = "/api/e2e/daily-clock";
 
 /// `POST /api/e2e/daily-clock` `{offsetMs}` (`AuthLevel::None`, #3727): the daily games' clock reads
-/// `offsetMs` ahead of the server's from now on (0 puts it back), so spec 52 can watch a move run out
+/// `offsetMs` ahead of the server's from now on (0 puts it back), so spec 53 can watch a move run out
 /// (R3727000). Outside end-to-end mode it answers as a path nobody serves, as the reseed does.
 pub async fn post_daily_clock(app: &Arc<App>, req: Req) -> ApiResult {
     if !app.env.e2e {
