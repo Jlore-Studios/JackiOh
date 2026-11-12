@@ -16866,16 +16866,16 @@
       "merge_owner": "claude-5",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-5",
+      "provider": "claude-1",
       "queued_at": "2026-11-11T21:18:42Z",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "43123064572",
+      "run_id": "pending:4936271b-1794442351",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "spot_check": true,
       "spot_check_n": 215,
-      "started_at": "2026-11-11T23:52:06Z",
+      "started_at": "2026-11-12T00:12:51Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17130,9 +17130,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-11T23:52:06Z",
+    "at": "2026-11-12T00:12:51Z",
     "url": "",
-    "what": "spot-check #3738 on claude-5"
+    "what": "spot-check #3738 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-12T00:03:57Z",
@@ -36113,12 +36113,12 @@
         "reviewer": {
           "family": "claude",
           "model": "opus",
-          "provider": "claude-5",
+          "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "",
+        "run_id": "pending:4936271b-1794442351",
         "sha": "a488aab6e05e58316fd5f8f024db8c0ddcf2aed9",
-        "started_at": "2026-11-11T23:52:06Z",
+        "started_at": "2026-11-12T00:12:51Z",
         "status": "queued",
         "title": "Patch: the effects tests share one cue-end helper and one planning setup in place of 59 local copies",
         "tries": 0
