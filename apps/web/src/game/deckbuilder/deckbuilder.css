@@ -439,6 +439,46 @@
   outline-offset: 3px;
 }
 
+/* Issue #3734 (R3734001): a pool card of the deck editor is dragged with pointer events (DeckDrag.tsx). A
+   finger that moves up or down is the pool's scroll (`pan-y`), one that moves across lifts the card; the press
+   neither selects text nor opens the system's callout, and the card's art is not a native drag. */
+.deckbuilder.app-shell .db-card[data-legal] {
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.deckbuilder.app-shell .db-card img {
+  -webkit-user-drag: none;
+}
+
+/* The ghost follows the pointer while the card is in flight: the card's name on the deck's own badge. */
+.db-drag-ghost {
+  position: fixed;
+  z-index: var(--z-drag);
+  max-width: 60vw;
+  padding: var(--space-1) var(--space-4);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--pal-white) 35%, transparent);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--you) 85%, var(--pal-black));
+  box-shadow: var(--shadow-2);
+  color: var(--pal-white);
+  font-size: var(--type-sm);
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transform: translate(-50%, calc(-100% - var(--space-4)));
+  pointer-events: none;
+}
+
+/* The deck takes the card where it is released. */
+.db-deck[data-drop="over"] {
+  outline: 2px dashed var(--selected);
+  outline-offset: var(--space-2);
+}
+
 .db-held {
   position: absolute;
   z-index: 1;

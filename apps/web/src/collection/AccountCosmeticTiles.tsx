@@ -21,6 +21,7 @@ import GrantReveal, { type GrantItem } from "../economy/GrantReveal.tsx";
 import { t } from "../i18n/i18n.ts";
 import { accountTiles, collectionTestid as T, cosmeticKindWords, earnWords, type AccountTile } from "./collection.ts";
 import { MiniBoard } from "./CosmeticLook.tsx";
+import { browseTiles, type CosmeticsBrowse } from "./cosmeticsBrowse.ts";
 import ItemPreview, { usePreviewHold } from "./ItemPreview.tsx";
 import TokenOffer, { offerTier, useHeldTokens } from "./TokenOffer.tsx";
 
@@ -121,7 +122,14 @@ function TileRow({
  * R1297000, R1655000: the account's picks, which a deck's own pick beats. R1833000: an unowned pick
  * is equipped as its kind's default. R1953001: `token` reads the held tokens a locked tile offers.
  */
-export default function AccountCosmeticTiles({ token = null }: { token?: string | null }): ReactElement {
+export default function AccountCosmeticTiles({
+  token = null,
+  browse,
+}: {
+  token?: string | null;
+  /** Issue #3734: the Cosmetics tab's search, rarity chips, view and sort; every tile, in the registry's order, without it. */
+  browse?: CosmeticsBrowse;
+}): ReactElement {
   const picks = useCosmetics();
   const owns = useOwnsAccountCosmetic();
   const rows = TILE_ROWS.map((row) => ({ ...row, tiles: accountTiles(row.kind, owns) }));
@@ -140,9 +148,13 @@ export default function AccountCosmeticTiles({ token = null }: { token?: string 
   const shownTier = shown === null || shown.owned ? null : offerTier(shown.cosmetic, held);
   return (
     <>
-      {rows.map(({ kind, hint, tiles }) => (
-        <TileRow key={kind} kind={kind} hint={hint} tiles={tiles} equipped={equipped} onPreview={setPreviewing} />
-      ))}
+      {rows.map(({ kind, hint, tiles }) => {
+        // A row the browse leaves empty is not drawn.
+        const shownTiles = browse === undefined ? tiles : browseTiles(tiles, browse);
+        return shownTiles.length === 0 ? null : (
+          <TileRow key={kind} kind={kind} hint={hint} tiles={shownTiles} equipped={equipped} onPreview={setPreviewing} />
+        );
+      })}
       {shown === null ? null : (
         <ItemPreview
           id={shown.cosmetic.id}

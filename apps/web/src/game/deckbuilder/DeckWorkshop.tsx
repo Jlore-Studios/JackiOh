@@ -14,6 +14,8 @@ import "./deckbuilder.css";
 import "./workshop.css";
 import { deckCosmeticPatch, pickedDeckCosmetics } from "../../cards/cosmetics.ts";
 import { EmptyState } from "../../empty/EmptyState.tsx";
+import { queryList } from "../mediaQuery.ts";
+import { upTo } from "../../breakpoints.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import type { DecksResponse } from "../../net/api.ts";
 import { navigate, paths, practiceDeckPath, useSearch, wantsNewDeck } from "../../net/navigate.ts";
@@ -72,24 +74,16 @@ import TrioEditor from "./TrioEditor.tsx";
 import { WorkshopFrame } from "./WorkshopFrame.tsx";
 import { copyName, deckLabel, deckStatus, deckVerdict, nextName, trioLabel, trioVerdict } from "./workshop.ts";
 
-/**
- * Keep this layout breakpoint aligned with workshop.css's `@media (max-width: 1276px)`. The rail, the pool
- * and the sidebar side by side need 1101 px of the screen's column, and the menus' shell's labelled rail
- * takes 176 px beside it (R3728000, shell/menu-shell.css's `--shell-rail-w`).
- */
-export const WORKSHOP_SPLIT_MIN_WIDTH_PX = 1277;
-
 /** #2099: Undo's arrow and Redo's, its mirror (24 px, stroked). */
 const UNDO_PATH = "M9 4 4 9l5 5M4 9h10.5a5.5 5.5 0 0 1 0 11H11";
 const REDO_PATH = "M15 4l5 5-5 5M20 9H9.5a5.5 5.5 0 0 0 0 11H13";
 
-/** Whether changing halves must also move focus. */
+/**
+ * Whether changing halves must also move focus: on a phone (600 px and under, workshop.css's `@media (max-width: 600px)`)
+ * the list and the editor take turns; from 601 px (an upright iPad) they sit side by side (issue #3734, R3734001).
+ */
 function halvesTakeTurns(): boolean {
-  try {
-    return window.matchMedia(`(max-width: ${String(WORKSHOP_SPLIT_MIN_WIDTH_PX - 1)}px)`).matches;
-  } catch {
-    return false;
-  }
+  return queryList(upTo("phone"))?.matches === true;
 }
 
 export type WorkshopOpen =

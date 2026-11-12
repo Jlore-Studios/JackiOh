@@ -7,14 +7,17 @@
    for a <button> is scoped `.deckbuilder.app-shell …`, which outranks index.css's `.app-shell
    button` without touching it.
 
-   THE HALVES. From 1277 px up (the 1101 px they need and the menus' shell's 176 px rail, R3728000)
-   the rail and the open item sit side by side. Below that they take
-   turns (`data-view="list|editor"` on the root): the editor gets the whole width, which the pool
-   and the deck's sidebar need, and "← All decks" goes back. Both halves stay mounted either way. */
+   THE HALVES. From 601 px up (an upright iPad, issue #3734, R3734001) the rail and the open item sit side by side:
+   the rail 208 px wide, 148 px from 601 to 1024 px, where the shell's rail has gone to icons and the editor
+   needs the room. At 600 px and under they take turns (`data-view="list|editor"` on the root): the editor gets
+   the whole width, which the pool and the deck's sidebar need, and "← All decks" goes back. Both halves stay
+   mounted either way. */
 
 /* --- colors of state -------------------------------------------------------------------------- */
 
 .workshop {
+  /* The rail's width: 208 px, and 148 px from 601 to 1024 (widths, below). */
+  --ws-rail-w: 208px;
   --ws-amber: #e0a93b;
   --ws-clash: #ffb45c;
   --ws-panel: linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
@@ -24,7 +27,7 @@
 
 .ws-layout {
   display: grid;
-  grid-template-columns: 232px minmax(0, 1fr);
+  grid-template-columns: var(--ws-rail-w) minmax(0, 1fr);
   gap: 14px;
   align-items: start;
   min-width: 0;
@@ -890,15 +893,18 @@
 
 /* --- widths -------------------------------------------------------------------------------------- */
 
-/* Side by side, the rail and the deck's sidebar each give up some width, so the filters stay on two
-   rows at 1280 px and the pool keeps two whole rows of cards on a 720 px screen. The status toast
-   centers on the pool, between the rail (208 px and a 14 px gap) and the sidebar (300 px and a
-   14 px gap), and the menus' shell's rail beside them (`--shell-start`, deckbuilder.css). */
-@media (min-width: 1277px) {
+/* Issue #3734 (R3734001): side by side from 601 px, the rail and the open item both drawn. From 1025 px the
+   rail and the deck's sidebar each give up some width, so the filters stay on two rows at 1280 px and the pool
+   keeps two whole rows of cards on a 720 px screen. The status toast centers on the pool, between the rail
+   (208 px and a 14 px gap) and the sidebar (300 px and a 14 px gap), and the menus' shell's rail beside them
+   (`--shell-start`, deckbuilder.css). */
+@media (min-width: 601px) {
   .ws-layout {
-    grid-template-columns: 208px minmax(0, 1fr);
+    grid-template-columns: var(--ws-rail-w) minmax(0, 1fr);
   }
+}
 
+@media (min-width: 1025px) {
   .workshop .db-layout {
     grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
   }
@@ -909,8 +915,30 @@
   }
 }
 
-/* One half at a time: the list, or the open item across the whole width. */
-@media (max-width: 1276px) {
+/* An upright iPad (601 to 1024 px): the shell's rail is icons, so the workshop's is 148 px, its buttons stack
+   and a row drops its status chip (the status stays in the row's words, for a reader). The toast centers on the
+   pool between the rail (148 px and a gap of 14) and the sidebar (280 px and a gap of 14). */
+@media (min-width: 601px) and (max-width: 1024px) {
+  .workshop {
+    --ws-rail-w: 148px;
+  }
+
+  .ws-group-actions {
+    flex-direction: column;
+  }
+
+  .ws-rail .ws-chip {
+    display: none;
+  }
+
+  .workshop .db-deck-status {
+    left: calc(50% - 66px);
+    max-width: calc(100vw - var(--shell-start, 0px) - 456px);
+  }
+}
+
+/* A phone: one half at a time, the list, or the open item across the whole width. */
+@media (max-width: 600px) {
   .ws-layout {
     grid-template-columns: minmax(0, 1fr);
   }

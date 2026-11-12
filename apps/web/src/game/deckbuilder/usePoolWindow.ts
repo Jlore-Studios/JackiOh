@@ -28,7 +28,8 @@ function sameView(before: PoolView, after: PoolView): boolean {
   return sameWindow(before, after);
 }
 
-export function usePoolWindow(ref: RefObject<HTMLElement | null>, count: number): PoolView {
+/** `card` is the selector of a card of the grid, which sets a row's height (`readShape`); the pool's by default. */
+export function usePoolWindow(ref: RefObject<HTMLElement | null>, count: number, card?: string): PoolView {
   const [view, setView] = useState<PoolView>(null);
   const counted = useRef(count);
   const shape = useRef<PoolShape | null>(null);
@@ -40,7 +41,7 @@ export function usePoolWindow(ref: RefObject<HTMLElement | null>, count: number)
       const grid = ref.current;
       if (grid === null) return;
       if (reshape) {
-        shape.current = readShape(grid);
+        shape.current = readShape(grid, card);
         boxes.current = clippingBoxes(grid);
       }
       const read = shape.current;
@@ -52,7 +53,7 @@ export function usePoolWindow(ref: RefObject<HTMLElement | null>, count: number)
             : poolWindow(counted.current, read, readBand(grid, boxes.current, read.paddingTop));
       setView((now) => (sameView(now, next) ? now : next));
     },
-    [ref],
+    [ref, card],
   );
 
   useLayoutEffect(() => {
@@ -75,7 +76,15 @@ export function usePoolWindow(ref: RefObject<HTMLElement | null>, count: number)
     };
     document.addEventListener("scroll", onScroll, { capture: true, passive: true });
     window.addEventListener("resize", onResize);
-    const observer = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(onResize);
+    // A box that changes size without the window (a sidebar opening, a scrollbar) is measured outside the observer's
+    // delivery: placing the rows inside it changes the grid's own height, and the observer would answer that in the same
+    // frame with "ResizeObserver loop completed with undelivered notifications".
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? undefined
+        : new ResizeObserver(() => {
+            measure(true);
+          });
     observer?.observe(grid);
     return () => {
       document.removeEventListener("scroll", onScroll, { capture: true });

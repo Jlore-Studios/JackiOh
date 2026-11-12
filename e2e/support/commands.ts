@@ -19,7 +19,6 @@ import {
   CONCEDE,
   CONCEDE_CONFIRM,
   CONCEDE_DIALOG,
-  DECK_DRAG_MIME,
   DECK_DROP,
   END_TURN,
   OFFER_DRAW,
@@ -1016,28 +1015,33 @@ Cypress.Commands.add("stayQueued", (account: E2EAccount, everyMs: number) => {
 });
 
 /**
- * A11: drag a card from the pool into the open deck, the whole multi-event gesture so no spec
- * hand-rolls it. The `DataTransfer` is built in the app's own window so the page can read it.
+ * A11, issue #3734 (R3734001): drag a card from the pool into the open deck, the whole multi-event gesture so no spec
+ * hand-rolls it: `pointerdown` on the card, a short move across it (past the drag threshold, which lifts it), a move to the
+ * middle of the deck and `pointerup` there. `touch` sends them as a finger's, which lifts a card on a move across and
+ * leaves a move down to the pool's scroll; `first: "down"` makes that first move down instead.
  */
-Cypress.Commands.add("dragCardToDeck", (catalogCardId: string) => {
+Cypress.Commands.add("dragCardToDeck", (catalogCardId: string, options: { touch?: boolean; first?: "across" | "down" } = {}) => {
   const source = ts(poolCardId(catalogCardId));
   const target = ts(DECK_DROP);
+  const pointer = options.touch === true ? "touch" : "mouse";
+  const init = { eventConstructor: "PointerEvent", pointerType: pointer, pointerId: 1, isPrimary: true, button: 0, force: true } as const;
+  /** Far enough past `DRAG_THRESHOLD_PX` (8) that no rounding keeps a move below it. */
+  const NUDGE_PX = 24;
   cy.get(source, { timeout: timeouts.view }).should("exist");
   cy.get(target).should("exist");
 
-  cy.window({ log: false }).then((win) => {
-    const dataTransfer = new win.DataTransfer();
-    dataTransfer.setData(DECK_DRAG_MIME, catalogCardId);
-    dataTransfer.setData("text/plain", catalogCardId);
-
-    cy.get(source).trigger("dragstart", { dataTransfer, eventConstructor: "DragEvent" });
-    cy.get(target).trigger("dragover", { dataTransfer, eventConstructor: "DragEvent" });
-    cy.get(target).trigger("drop", { dataTransfer, eventConstructor: "DragEvent" });
-    // The source may be gone or greyed out after a successful drop, so letting go is best-effort.
-    exists(source).then((present) => {
-      if (present) cy.get(source).trigger("dragend", { dataTransfer, eventConstructor: "DragEvent" });
-    });
+  cy.get(source).then(($source) => {
+    const box = $source[0]?.getBoundingClientRect();
+    if (box === undefined) throw new Error(`no box for ${catalogCardId}`);
+    const x = box.left + box.width / 2;
+    const y = box.top + box.height / 2;
+    cy.get(source).trigger("pointerdown", { ...init, clientX: x, clientY: y });
+    const first = options.first === "down" ? { clientX: x, clientY: y + NUDGE_PX } : { clientX: x + NUDGE_PX, clientY: y };
+    cy.get(source).trigger("pointermove", { ...init, ...first });
   });
+  // The deck's centre is the event's own default place.
+  cy.get(target).trigger("pointermove", init);
+  cy.get(target).trigger("pointerup", init);
 });
 
 // replay determinism (spec 01) and the Node WebSocket player (spec 06)
@@ -1144,8 +1148,8 @@ declare global {
       freeAccount(account: E2EAccount): Chainable<void>;
       /** Poll as `account` every `everyMs` while its queue ticket is open, as a client does (R897000). */
       stayQueued(account: E2EAccount, everyMs: number): Chainable<void>;
-      /** Drag a pool card into the open deck in the workshop: the whole gesture, not one event (A11). */
-      dragCardToDeck(catalogCardId: string): Chainable<void>;
+      /** Drag a pool card into the open deck in the workshop by pointer events: the whole gesture, not one event (A11, R3734001). */
+      dragCardToDeck(catalogCardId: string, options?: { touch?: boolean; first?: "across" | "down" }): Chainable<void>;
       jackioh(): Chainable<JackiOhDevHandle>;
       gameState(): Chainable<GameStateLike>;
       dispatchAction(action: ActionInput): Chainable<void>;

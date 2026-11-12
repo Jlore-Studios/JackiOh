@@ -18,6 +18,8 @@ import { visitStatsFigures } from "../../support/stats.ts";
 import {
   BOARD,
   CARD_POOL,
+  COLLECTION_DECKS,
+  COLLECTION_GRID,
   COLLECTION_JLORE,
   COLLECTION_SCREEN,
   PLAY_QUEUE,
@@ -450,21 +452,28 @@ describe(`47 — every control under a finger takes a tap across ${String(HIT_MI
           expectHitAreas(size);
         });
 
-        it("R2122000 /collection", () => {
+        // R3734000: each of the Collection's four tabs, the chips, the search, the sort and the tabs among the controls.
+        it("R2122000 R3734000 /collection, Cards", () => {
           cy.visitAs(SIGNED_IN(), routes.collection());
+          cy.get(ts(COLLECTION_GRID), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 R3734000 /collection, Decks", () => {
+          cy.visitAs(SIGNED_IN(), routes.collectionTab("decks"));
+          cy.get(ts(COLLECTION_DECKS), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        it("R2122000 R3734000 /collection, Cosmetics", () => {
+          cy.visitAs(SIGNED_IN(), routes.collectionTab("cosmetics"));
           cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
 
-        it("R2122000 /collection, Cards", () => {
-          cy.visitAs(SIGNED_IN(), routes.collectionCards());
+        it("R2122000 R3734000 /collection, Progress", () => {
+          cy.visitAs(SIGNED_IN(), routes.collectionProgress());
           cy.get(ts(COLLECTION_JLORE), { timeout: timeouts.view }).should("be.visible");
-          expectHitAreas(size);
-        });
-
-        it("R2122000 /collection, Cosmetics", () => {
-          cy.visitAs(SIGNED_IN(), `${routes.collection()}?section=cosmetics`);
-          cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
 

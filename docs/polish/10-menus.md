@@ -196,12 +196,14 @@ the corner.
 └──────┴────────────────────────────────────────────────────────┘
 ```
 
-**Collection.** A filter sidebar at wide widths (a sheet below them) and a grid that fills the width.
+**Collection.** A filter sidebar at wide widths (a sheet below them) and a grid that fills the width. Four
+tabs, Cards, Decks, Cosmetics and Progress, each keeping its filters while you switch
+([R3734000](../../spec/rulings/R3734000.md)); the search is always on show.
 
 ```
 ┌──────┬────────────────────────────────────────────────────────┐
 │ Home │  Collection                                 ◆ 1,240  ⚙ │
-│ Play │  Decks   ▸Cards   Cosmetics                            │
+│ Play │  ▸Cards   Decks   Cosmetics   Progress                 │
 │▶Coll │ ┌──────────┐ ┌────┐ ┌────┐ ┌────┐ ┌────┐ ┌────┐ ┌────┐ │
 │ Shop │ │ Search   │ │    │ │    │ │    │ │    │ │    │ │    │ │
 │ Frnds│ │ Cost     │ └────┘ └────┘ └────┘ └────┘ └────┘ └────┘ │
@@ -268,8 +270,10 @@ the drawer, screenshots) and 38's axe block over the shell run it.
   watching, co-op, the dev boards). So do the series screen `/series/:id`, which is part of a game's
   flow, and the dev screens.
 - A board that appears on a menu path takes the navigation away.
-- The workshop's three-column split now starts at 1277 px: the labeled rail's 176 px plus the 1101 px
-  it needed before.
+- The workshop's three-column split starts at 601 px, the rail, the pool and the deck all drawn on an
+  upright iPad (issue #3734, [R3734001](../../spec/rulings/R3734001.md)): its rail is 208 px, and 148 px
+  from 601 to 1024 px. At 600 px and under the list and the editor take turns. A card is dragged from
+  the pool to the deck by pointer events, so a finger works.
 - On nested screens the top bar keeps Back top left and the gear top right (R3218000), with the title
   treatment of #3223 (R3223000).
 

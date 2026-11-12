@@ -67,7 +67,7 @@ const UNMIGRATED: Record<string, number> = {
   "cards/marks.css": 5,
   "cards/setmark.css": 5,
   "cards/wheel/wheel.css": 7,
-  "collection/collection.css": 90,
+  "collection/collection.css": 89,
   "duos/duos.css": 13,
   "economy/economy.css": 24,
   "economy/jlore-pill.css": 11,

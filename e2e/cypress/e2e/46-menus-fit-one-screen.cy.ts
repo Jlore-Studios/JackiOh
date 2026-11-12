@@ -17,6 +17,8 @@ import { MENU_SIZES, accounts, constants, routes, timeouts, type MenuSize } from
 import { visitStatsFigures } from "../../support/stats.ts";
 import {
   CARD_POOL,
+  COLLECTION_DECKS,
+  COLLECTION_GRID,
   COLLECTION_JLORE,
   COLLECTION_SCREEN,
   PLAY_QUEUE,
@@ -328,25 +330,35 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 R3218000 /collection", () => {
+        // R3734000: the Collection is four tabs, each one screen tall at every size: the grid, the deck tiles, the
+        // equipped looks and the wallet and quests scroll inside the screen, never the page.
+        it("R1581000 R3218000 R3734000 /collection, Cards", () => {
           cy.visitAs(accounts.p1(), routes.collection());
+          cy.get(ts(COLLECTION_GRID), { timeout: timeouts.view }).should("be.visible");
+          expectBackLinkBarOrder();
+          expectShellNav(true);
+          expectOnScreen(viewport, ONE_SCREEN);
+        });
+
+        it("R1581000 R3218000 R3734000 /collection, Decks", () => {
+          cy.visitAs(accounts.p1(), routes.collectionTab("decks"));
+          cy.get(ts(COLLECTION_DECKS), { timeout: timeouts.view }).should("be.visible");
+          expectBackLinkBarOrder();
+          expectShellNav(true);
+          expectOnScreen(viewport, ONE_SCREEN);
+        });
+
+        it("R1581000 R3218000 R3734000 /collection, Cosmetics", () => {
+          cy.visitAs(accounts.p1(), routes.collectionTab("cosmetics"));
           cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
-        it("R1581000 R3218000 /collection, Cards", () => {
-          cy.visitAs(accounts.p1(), routes.collectionCards());
+        it("R1581000 R3218000 R3734000 /collection, Progress", () => {
+          cy.visitAs(accounts.p1(), routes.collectionProgress());
           cy.get(ts(COLLECTION_JLORE), { timeout: timeouts.view }).should("be.visible");
-          expectBackLinkBarOrder();
-          expectShellNav(true);
-          expectOnScreen(viewport, ONE_SCREEN);
-        });
-
-        it("R1581000 R3218000 /collection, Cosmetics", () => {
-          cy.visitAs(accounts.p1(), `${routes.collection()}?section=cosmetics`);
-          cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);

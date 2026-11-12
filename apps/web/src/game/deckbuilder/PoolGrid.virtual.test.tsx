@@ -154,8 +154,6 @@ describe("#2334 a virtual grid mounts the rows near the view", () => {
         holders={new Map()}
         refusedCardId={null}
         onAdd={noop}
-        onDragStart={noop}
-        onDragEnd={noop}
       />,
     );
     const id = IDS[0] ?? "";

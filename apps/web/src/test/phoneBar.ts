@@ -2,6 +2,7 @@
 // jsdom has no media queries, so `window.matchMedia` is stubbed for the one query the hook reads; the
 // returned function puts the original back, so call it in an `afterEach`.
 
+import { upTo } from "../breakpoints.ts";
 import { PHONE_BAR_QUERY, PHONE_PORTRAIT_QUERY } from "../game/config.ts";
 import { PATCH_LEGEND_PHONE_QUERY } from "../patches/constants.ts";
 
@@ -41,4 +42,9 @@ export function stubPhonePortrait(matches: boolean): () => void {
 /** R3012000: a test's answer to whether the Patch notes legend is collapsed into a drawer (`usePatchLegendCollapsed`). */
 export function stubPatchLegendPhone(matches: boolean): () => void {
   return stubQueries([PATCH_LEGEND_PHONE_QUERY], matches);
+}
+
+/** Issue #3734: a test's answer to whether the window is 1024 px wide or under, where the Collection's filters are a sheet. */
+export function stubTabletNarrow(matches: boolean): () => void {
+  return stubQueries([upTo("tablet")], matches);
 }

@@ -8,6 +8,8 @@ import {
   POOL_OVERSCAN,
   clippingBoxes,
   fitWindow,
+  mountedAt,
+  poolCell,
   poolRowTracks,
   poolWindow,
   readBand,
@@ -148,5 +150,31 @@ describe("#2334 the reads of the page that place the view", () => {
     // Its box is below the page: the view is nothing, at the box's top.
     const band = readBand(grid, [grid], 0);
     expect(band.bottom - band.top).toBe(0);
+  });
+});
+
+describe("issue #3734 the cells and the cards a virtual grid mounts", () => {
+  it("R3734000 poolCell places the card at a position in its row and column", () => {
+    expect(poolCell(5, 4)).toBe("2 / 2 / 3 / 3");
+    expect(poolCell(0, 4)).toBe("1 / 1 / 2 / 2");
+    expect(poolCell(7, 4)).toBe("2 / 4 / 3 / 5");
+    expect(poolCell(8, 4)).toBe("3 / 1 / 4 / 2");
+  });
+
+  const WINDOW = { columns: 4, rowHeight: 100, firstRow: 2, lastRow: 3 };
+
+  it("R3734000 mountedAt mounts the window's cards, the first render's before there is a view and all of them with no layout", () => {
+    expect(mountedAt(WINDOW, COUNT, -1, 48)).toEqual([8, 9, 10, 11, 12, 13, 14, 15]);
+    expect(mountedAt(null, 10, -1, 6)).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(mountedAt(null, 3, -1, 6)).toEqual([0, 1, 2]);
+    expect(mountedAt("all", 7, -1, 3)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    expect(mountedAt(WINDOW, 10, -1, 48)).toEqual([8, 9]);
+  });
+
+  it("R3734000 mountedAt keeps the held card mounted below, inside and above the window, in order", () => {
+    expect(mountedAt(WINDOW, COUNT, 1, 48)).toEqual([1, 8, 9, 10, 11, 12, 13, 14, 15]);
+    expect(mountedAt(WINDOW, COUNT, 12, 48)).toEqual([8, 9, 10, 11, 12, 13, 14, 15]);
+    expect(mountedAt(WINDOW, COUNT, 40, 48)).toEqual([8, 9, 10, 11, 12, 13, 14, 15, 40]);
+    expect(mountedAt("all", 5, 3, 48)).toEqual([0, 1, 2, 3, 4]);
   });
 });

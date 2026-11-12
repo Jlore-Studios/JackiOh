@@ -67,10 +67,6 @@ const KEEP: Record<string, string[]> = {
   "game/board.css": ["(max-width: 380px)"],
   // The filters fold under about 860 px tall, where three chip rows left one row of cards.
   "game/deckbuilder/deckbuilder.css": ["(max-height: 860px)"],
-  // Rail, pool and sidebar side by side need 1101 px of the screen's column, and the menus' shell's labelled rail
-  // 176 px beside it (R3728000): 1277 (DeckWorkshop.tsx's WORKSHOP_SPLIT_MIN_WIDTH_PX). No device of #3728's list sits
-  // between: 1180 takes turns, 1280 and wider split.
-  "game/deckbuilder/workshop.css": ["(min-width: 1277px)", "(max-width: 1276px)"],
   // A dialog's answers stack on the narrowest phones only (R3220000).
   "game/dialog.css": ["(max-width: 360px)"],
   // 480: 21vh cards two by two suit a phone upright; at 600 a 568x320 phone draws them 67 px wide. 701: 224 px Discover cards.
@@ -99,8 +95,9 @@ const SCRIPT_QUERIES: Record<string, string> = {
   TOUCH_ONLY_QUERY,
 };
 
-/** The scripts that spell a size query of their own: the workshop's split mirrors workshop.css's 1276 px. */
-const SCRIPT_KEEP: Record<string, number> = { "game/deckbuilder/DeckWorkshop.tsx": 1 };
+/** The scripts that spell a size query of their own: none. The workshop's split (R3734001) needs no exception: its
+ *  turn-taking is the named phone breakpoint, `upTo("phone")`. */
+const SCRIPT_KEEP: Record<string, number> = {};
 
 describe("#3227 the named breakpoints", () => {
   it("#3227 names five breakpoints, each a max N beside a min N + 1", () => {
@@ -160,7 +157,7 @@ describe("#3227 the named breakpoints", () => {
     }
   });
 
-  it("#3227 no script but breakpoints.ts spells a width or height query, but the workshop's split", () => {
+  it("#3227 no script but breakpoints.ts spells a width or height query", () => {
     expect(SCRIPTS.length).toBeGreaterThan(0);
     const spelled: Record<string, number> = {};
     for (const script of SCRIPTS) {
@@ -169,9 +166,16 @@ describe("#3227 the named breakpoints", () => {
       if (count > 0) spelled[script] = count;
     }
     expect(spelled).toEqual(SCRIPT_KEEP);
-    expect(read("game/deckbuilder/DeckWorkshop.tsx")).toContain("WORKSHOP_SPLIT_MIN_WIDTH_PX = 1277;");
-    const workshop = read("game/deckbuilder/workshop.css");
-    expect(workshop).toContain("@media (max-width: 1276px) {");
-    expect(workshop).toContain("@media (min-width: 1277px) {");
+  });
+
+  it("R3734001 the workshop's halves sit side by side from 601 px and take turns at 600 px and under, on the named phone breakpoint", () => {
+    const script = code("game/deckbuilder/DeckWorkshop.tsx");
+    expect(script).not.toContain("WORKSHOP_SPLIT_MIN_WIDTH_PX");
+    expect(script).toContain('upTo("phone")');
+    const workshop = code("game/deckbuilder/workshop.css");
+    expect(workshop).toContain("@media (min-width: 601px) {");
+    expect(workshop).toContain("@media (max-width: 600px) {");
+    expect(workshop).not.toContain("1277px");
+    expect(workshop).not.toContain("1276px");
   });
 });

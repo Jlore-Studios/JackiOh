@@ -1,40 +1,13 @@
-/* The collection screen (#1307): the account page's tavern frame, widened for a card grid and
-   narrowed to the phone's width. `collection-screen` is on the same element as
-   `.tavern.app-shell`, so it joins the compound. The grid's card sizing copies the deck
-   builder's `.db-card`, whose face the `CardFace` fills. */
+/* The collection screen (#1307): the tavern's tiles, cards and panels. Issue #3734 (R3734000) took the account page's
+   960 px frame, the hub of doors and the set accordion out: the screen fills the window, its tabs, grid, filters and
+   deck tiles are browse.css's, and `collection-screen` is on the same element as `.tavern.app-shell`, so it joins
+   the compound. The grid's card sizing copies the deck builder's `.db-card`, whose face the `CardFace` fills. */
 
-.tavern.app-shell.collection-screen .panel--auth {
-  max-width: 960px;
-}
-
-@media (max-width: 600px) {
-  .tavern.app-shell.collection-screen .panel--auth {
-    padding: 22px 14px 24px;
-  }
-}
-
-.tavern.app-shell .collection-section,
-.tavern.app-shell .collection-set {
+.tavern.app-shell .collection-section {
   display: flex;
   flex-direction: column;
   gap: 8px;
   min-width: 0;
-}
-
-.tavern.app-shell .collection-set__toggle {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  font-variant-numeric: tabular-nums;
-}
-
-.tavern.app-shell .collection-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(132px, calc(50% - 4px)), 1fr));
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }
 
 .tavern.app-shell .collection-card {
@@ -91,60 +64,6 @@
 
 .tavern.app-shell .collection-track[data-unlocked="false"] {
   opacity: 0.75;
-}
-
-/* R1579000: the page never scrolls; the board shrinks and a section's body scrolls inside it. */
-.tavern.app-shell.collection-screen {
-  height: 100vh;
-  height: var(--shell-screen-h, 100dvh);
-  padding-bottom: 14px;
-}
-
-.tavern.app-shell.collection-screen .panel--auth {
-  flex: 0 1 auto;
-  min-height: 0;
-}
-
-.tavern.app-shell .collection-body {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  flex: 0 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-
-.tavern.app-shell .collection-hub {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.tavern.app-shell .collection-door {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 4px;
-  min-height: 96px;
-  padding: 14px 16px;
-  border: 1px solid var(--tavern-brass);
-  border-radius: 12px;
-  background: rgba(239, 224, 191, 0.05);
-  color: var(--tavern-parchment);
-  text-decoration: none;
-}
-
-.tavern.app-shell .collection-door:hover,
-.tavern.app-shell .collection-door:focus-visible {
-  border-color: var(--tavern-gold);
-}
-
-.tavern.app-shell .collection-door__title {
-  font-family: var(--tavern-serif);
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--tavern-gold-pale);
 }
 
 /* ---- R1655000: a card in context (CardCosmeticsView) -------------------------------------------

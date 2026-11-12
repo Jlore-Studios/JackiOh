@@ -6,12 +6,13 @@
 // defaults the key is removed, so nothing a reload restores can hide a card the player did not ask
 // to hide. The almanac (R630) browses without one and starts clean every visit.
 
-import type { CardType, Rarity, SetName, Tag } from "@jackioh/shared";
+import type { CardType, KeywordKind, Rarity, SetName, Tag } from "@jackioh/shared";
 
 import {
   COST_BUCKETS,
   DEFAULT_FILTER,
   DEFAULT_SORT,
+  FILTER_KEYWORDS,
   FILTER_RARITIES,
   FILTER_SETS,
   FILTER_TAGS,
@@ -32,6 +33,7 @@ type Stored = {
   costs: string[];
   types: string[];
   tags: string[];
+  keywords: string[];
   rarities: string[];
   search: string;
   ownedOnly: boolean;
@@ -69,6 +71,7 @@ function parse(raw: string): SavedBrowse {
       costs: pick<CostBucket>(record.costs, COST_BUCKETS),
       types: pick<CardType>(record.types, FILTER_TYPES),
       tags: pick<Tag>(record.tags, FILTER_TAGS),
+      keywords: pick<KeywordKind>(record.keywords, FILTER_KEYWORDS),
       rarities: pick<Rarity>(record.rarities, FILTER_RARITIES),
       search: typeof record.search === "string" ? record.search : DEFAULT_FILTER.search,
       ownedOnly: typeof record.ownedOnly === "boolean" ? record.ownedOnly : DEFAULT_FILTER.ownedOnly,
@@ -84,6 +87,7 @@ export function isDefaultFilter(filter: PoolFilter): boolean {
     filter.costs.size === 0 &&
     filter.types.size === 0 &&
     filter.tags.size === 0 &&
+    filter.keywords.size === 0 &&
     filter.rarities.size === 0 &&
     filter.search === DEFAULT_FILTER.search &&
     filter.ownedOnly === DEFAULT_FILTER.ownedOnly
@@ -119,6 +123,7 @@ export function saveBrowse(storage: StorageLike | null, browse: SavedBrowse): vo
       costs: [...filter.costs],
       types: [...filter.types],
       tags: [...filter.tags],
+      keywords: [...filter.keywords],
       rarities: [...filter.rarities],
       search: filter.search,
       ownedOnly: filter.ownedOnly,

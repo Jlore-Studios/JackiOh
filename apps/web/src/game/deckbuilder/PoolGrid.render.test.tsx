@@ -41,8 +41,6 @@ function deckProps(collection: Collection | null, inDeck: string[], onAdd: (card
     onAdd: (cardId: string) => {
       onAdd(cardId);
     },
-    onDragStart: () => {},
-    onDragEnd: () => {},
   };
 }
 

@@ -158,7 +158,6 @@ describe("R2723000: a full-art card in the viewer's own hand", () => {
     const def = CATALOG[COLLECTED];
     if (def === undefined) throw new Error(`the catalog has no ${COLLECTED}`);
     render(<OwnedCards collection={collectionOwning([COLLECTED])} defs={[def]} />);
-    fireEvent.click(screen.getByTestId(collectionTestid.setToggle("Core")));
     const face = screen.getByTestId(collectionTestid.card(COLLECTED)).querySelector(".cf");
     expect(face?.getAttribute("data-full-art")).toBe("true");
     expect(face?.querySelector(".card-name")?.textContent).toBe("Big D-fender");
