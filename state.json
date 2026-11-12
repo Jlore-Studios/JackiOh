@@ -16184,7 +16184,7 @@
       "pending_request": false,
       "provider": "claude-4",
       "round_tier": "",
-      "run_id": "43290325247",
+      "run_id": "pending:a86d6b15-1794516557",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
@@ -16203,7 +16203,7 @@
         "provider": "claude-4",
         "run": "43290325247"
       },
-      "started_at": "2026-11-12T19:27:15Z",
+      "started_at": "2026-11-12T20:50:10Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
@@ -16369,9 +16369,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T20:32:46Z",
+    "at": "2026-11-12T20:50:10Z",
     "url": "",
-    "what": "plan #3803 on claude-6"
+    "what": "plan #3800 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-12T20:26:56Z",
