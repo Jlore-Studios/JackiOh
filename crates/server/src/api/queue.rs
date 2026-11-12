@@ -37,6 +37,7 @@ use crate::db::store::{
     BotRow, FrozenTrio, MatchSeat, PerMode, Profile, QueueMode, SeriesRow, StartMatchInput, Ticket,
     TicketStatus, ladder_of_mode,
 };
+use crate::loops::FailingStreak;
 use crate::seats::{Lease, Seat};
 use jackioh_shared::bots::fallback::{
     bot_match_gap_passed, bot_match_gap_since, bot_matches, choose_bot, choose_bot_pair, fallback_due_keyed,
@@ -1355,6 +1356,8 @@ pub async fn kick_off_bot_match(app: &Arc<App>, now: i64) -> Result<Option<Strin
 /// `MATCHMAKER_SWEEP_INTERVAL_SECONDS`); `app.rs` spawns it (SURFACE §11.2). Each sweep starts one
 /// interval after the last, on tokio's clock, so a test drives it with `tokio::time::advance`.
 pub async fn run_matchmaker(app: Arc<App>) {
+    // #3770: a sweep that fails on every pass for a while is an alert, not just a warning each time.
+    let mut failing = FailingStreak::new("matchmaker");
     loop {
         tokio::time::sleep(Duration::from_secs(MATCHMAKER_SWEEP_INTERVAL_SECONDS as u64)).await;
         // R1454: a bot (and its player) a cut-off start still holds is let go before the sweep,
@@ -1362,7 +1365,7 @@ pub async fn run_matchmaker(app: Arc<App>) {
         if let Err(error) = crate::bots::pool::release_stale_starts(&app, now_ms()).await {
             tracing::warn!(event = "bots.start.release_failed", message = %error);
         }
-        if let Err(error) = try_pair(&app).await {
+        if let Err(error) = failing.track(try_pair(&app).await) {
             // A failed sweep must not kill the sweeper: the next one may well succeed.
             tracing::warn!(event = "matchmaker.sweep_failed", message = %error.message);
         }

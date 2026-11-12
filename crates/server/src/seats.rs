@@ -494,12 +494,19 @@ pub async fn hydrate(app: &App) -> Result<(), StoreError> {
 /// release is freed and a seat the record holds that the ledger lacks is adopted, each logged as
 /// `seats.drift`; what changed while the record was being read waits for the next tick.
 pub async fn reconcile(app: &App) {
+    // A failed read is logged by `try_reconcile`; callers outside the reaper's loop need no more.
+    let _ = try_reconcile(app).await;
+}
+
+/// `reconcile`, answering the read's failure as well, which the reaper loop feeds to its
+/// `FailingStreak` (#3770).
+pub async fn try_reconcile(app: &App) -> Result<(), StoreError> {
     let reading = app.seats.mark();
     let record = match read_record(app).await {
         Ok(record) => record,
         Err(error) => {
             tracing::warn!(event = "seats.reconcile_failed", message = %error);
-            return;
+            return Err(error);
         }
     };
     for drift in reading.settle(&record) {
@@ -511,6 +518,7 @@ pub async fn reconcile(app: &App) {
             record = ?drift.record,
         );
     }
+    Ok(())
 }
 
 /// A series that is over lets both its sides go.
