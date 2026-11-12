@@ -35536,7 +35536,8 @@
       "2026-11-12T16:04:15Z,claude-4,stream,call,43252758877,5,2026-11-12T20:30:00Z,,,allowed,70,,"
     ],
     "runs": [
-      "2026-11-12T16:03:06Z,43252990261,claude-7,sonnet+opus,review,3782,medium,approved,,4.7,10,5006,368033,0.6518,71,73,,,5.6,,none,,1"
+      "2026-11-12T16:03:06Z,43252990261,claude-7,sonnet+opus,review,3782,medium,approved,,4.7,10,5006,368033,0.6518,71,73,,,5.6,,none,,1",
+      "2026-11-12T16:12:06Z,43252758877,claude-4,sonnet+opus,review,3783,medium,approved,,14.2,59,13877,3009991,1.672,2,5,,,2.8,,none,,1"
     ]
   },
   "version": 1
