@@ -16533,6 +16533,7 @@
     "3802": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-12T20:29:13Z",
         "difficulty": "medium",
@@ -16541,6 +16542,7 @@
         "why": "One card's script, catalog entry and text in crates/cards plus spec/doc rows and a kept script; no engine, AI, migration or cross-crate design, well under 40 files."
       },
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-11-12T21:02:17Z",
         "family": "claude",
