@@ -36033,6 +36033,12 @@
         "number": 3774,
         "title": "Patch: the fuzz's dungeon starts deal the run's own enemy rows: mana caps under 4, smaller opening hands and slow draws",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-12T21:33:10Z",
+        "number": 3794,
+        "title": "Patch: a board row never grows a sixth zone: placing a card past the row is refused, and the fuzz monitor checks every row's size",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
