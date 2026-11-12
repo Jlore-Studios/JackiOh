@@ -4145,6 +4145,7 @@
   "Daily game": "每日对局",
   "A move every few days, on your own time. We'll tell you when it's your move.": "每隔几天走一步，按你自己的节奏来。轮到你时我们会通知你。",
   "New daily game": "新的每日对局",
+  "A new daily challenge to {name}, at the same mode and time per move.": "向{name}发起新的每日挑战，模式与每步时限不变。",
   "Loading your daily games…": "正在加载你的每日对局…",
   "No daily games yet. Start one, and play a move whenever you have a minute.": "还没有每日对局。开一局吧，有空时走一步就好。",
   "No friends yet.": "还没有好友。",

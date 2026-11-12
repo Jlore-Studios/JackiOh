@@ -53,6 +53,8 @@ export const dailyTestid = {
   /** Whoever holds the move, and its time left: `data-holder` (`you|opponent|none`), `data-urgent`. */
   clock: "daily-clock",
   nextGame: "daily-next-game",
+  /** A finished game's Rematch: a new daily challenge to its opponent at its mode and time. */
+  rematch: "daily-rematch",
   olderCatalog: "daily-older-catalog",
   backToList: "daily-back",
 } as const;

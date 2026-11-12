@@ -7,7 +7,8 @@
 //
 // The clock pill (`DailyClockPill.tsx`) says who holds the move and how long it has left. Once the move has
 // passed on and another game waits on the player (`nextGame`), Next game opens it. The board reads again
-// when the social read says the games waiting on the player changed (the opponent moved).
+// when the social read says the games waiting on the player changed (the opponent moved). Once the game is
+// over, Rematch sends its opponent a new daily challenge at the same mode and time per move (§9.13).
 //
 // CLAUDE.md rule 7: who holds the move, its deadline, what is legal and every refusal are the server's.
 
@@ -28,6 +29,7 @@ import { BackLink } from "../routes/nav.tsx";
 import { useCatalogLookup } from "../together/catalog.ts";
 import { useSocialReads } from "../together/socialPoll.ts";
 import { DailyClockPill, useNow } from "./DailyClockPill.tsx";
+import { NewDailyDialog } from "./NewDailyDialog.tsx";
 import { dailyTestid } from "./testids.ts";
 
 import "./daily.css";
@@ -52,6 +54,7 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reads, setReads] = useState(0);
+  const [rematching, setRematching] = useState(false);
   const current = useRef<DailyGame | null>(null);
   current.current = game;
   const sending = useRef(false);
@@ -181,6 +184,15 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
           resultActions={
             <>
               {nextButton}
+              <button
+                type="button"
+                data-testid={dailyTestid.rematch}
+                onClick={() => {
+                  setRematching(true);
+                }}
+              >
+                {t("Rematch")}
+              </button>
               <button type="button" data-testid={dailyTestid.backToList} data-route={paths.daily} onClick={() => navigate(paths.daily)}>
                 {t("Back to daily games")}
               </button>
@@ -188,6 +200,18 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
           }
         />
       </CatalogContext.Provider>
+      {rematching ? (
+        <NewDailyDialog
+          rematch={{ opponent: game.opponent, mode: game.mode, perMoveDays: game.perMoveDays }}
+          onClose={() => {
+            setRematching(false);
+          }}
+          onDone={() => {
+            setRematching(false);
+            navigate(paths.daily);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

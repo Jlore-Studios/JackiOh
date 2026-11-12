@@ -985,10 +985,12 @@ routes (net/navigate.ts paths, public/_redirects, behind the gate as /together i
                          POST sent after the seq it read, under a fresh nonce; End turn says it sends the
                          move; the clock pill in days and hours (daily/DailyClockPill.tsx); Next game to the
                          next game waiting once the move has passed; "Lost on time" and "Won on time"; a
-                         notice when the game plays on an older card version
+                         notice when the game plays on an older card version; once it ends, Rematch (a new
+                         daily challenge to the opponent at its mode and time, NewDailyDialog's rematch)
 net/daily.ts             fetch wrappers for every daily route, typed
 daily/NewDailyDialog.tsx challenge any friend (online or not) or find an opponent, with daily/DailyFields.tsx:
-                         the mode, its deck or lean, and the time per move on the segmented toggle
+                         the mode, its deck or lean, and the time per move on the segmented toggle; as a
+                         rematch, only the deck or lean, to the finished game's opponent
 daily/DailyBadge.tsx     the count of games waiting on the player (the social read's dailyWaiting), on
                          the Play hub's Daily games
 daily/push.ts            this device's push subscription from GET /api/daily/settings's vapidPublicKey,

@@ -1,8 +1,9 @@
 // The service worker of daily games' web push (#3727; apps/web/src/daily/push.ts registers it at the
 // site's root). It caches nothing and serves no request: it shows the push the server sends as a
-// notification, `{title, body, url}` in JSON, and opens or focuses the page at `url` when the
-// notification is clicked. A push it cannot read still shows the site's name, as browsers require a
-// notification for every push. The worker's globals are read off `globalThis` (its `self`).
+// notification, `{title, body, url}` in JSON, and focuses a tab already at `url` when the notification is
+// clicked, else opens one: it never moves another tab of the site, which may be in a live match. A push
+// it cannot read still shows the site's name, as browsers require a notification for every push. The
+// worker's globals are read off `globalThis` (its `self`).
 
 const worker = globalThis;
 
@@ -42,8 +43,6 @@ worker.addEventListener("notificationclick", (event) => {
     worker.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
       const open = windows.find((client) => client.url === target);
       if (open !== undefined) return open.focus();
-      const ours = windows.find((client) => client.url.startsWith(worker.location.origin + "/") && "navigate" in client);
-      if (ours !== undefined) return ours.navigate(target).then((moved) => (moved ? moved.focus() : worker.clients.openWindow(target)));
       return worker.clients.openWindow(target);
     }),
   );

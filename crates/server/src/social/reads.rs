@@ -1,6 +1,6 @@
 //! The social poll's one read (SPEC S7, §9.4, R3210000): `GET /api/social` answers
-//! `{incoming, outgoing, unread, dailyWaiting}`, what `GET /api/challenges` and `GET /api/chat/unread` answer, by the
-//! same reads in one transaction, for the caller alone. A pending or banned account, no token and a
+//! `{incoming, outgoing, unread}`, what `GET /api/challenges` and `GET /api/chat/unread` answer, by the
+//! same reads in one transaction, for the caller alone, and `dailyWaiting` beside them (#3727, below). A pending or banned account, no token and a
 //! blocked pair get what the two routes give them. The two routes stay for older open tabs and other
 //! callers (CLAUDE.md rule 13). `/ws/social` pushes the same body, `social_snapshot` (R3214000).
 //! #3727: `dailyWaiting` is how many daily games wait on the caller's move (§9.13), the Play button's

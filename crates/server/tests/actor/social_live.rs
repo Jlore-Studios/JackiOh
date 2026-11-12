@@ -138,7 +138,7 @@ mod r3214000_signing_in {
         let first = next_social(&client, 0).await;
         assert_eq!(
             first,
-            json!({ "type": "social", "incoming": [], "outgoing": [], "unread": {} })
+            json!({ "type": "social", "incoming": [], "outgoing": [], "unread": {}, "dailyWaiting": 0 })
         );
         assert!(client.close_code().is_none());
         for frame in client.frames() {

@@ -1,9 +1,10 @@
 // #3727: a daily game's board. Each action is one POST sent after the last action read, under a fresh
 // nonce, and the board draws the answer; a stale board reads the game again; Next game appears once the
-// move has passed on; the result says Lost on time or Won on time; an older card version says so.
+// move has passed on; the result says Lost on time or Won on time; an older card version says so; a
+// finished game's Rematch challenges its opponent again at its mode and time per move.
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DailyGame } from "../net/daily.ts";
@@ -191,6 +192,39 @@ describe("#3727 a daily game's board", () => {
     expect(result).toHaveTextContent(words);
     expect(result).not.toHaveTextContent("left the match");
     expect(screen.queryByTestId(dailyTestid.clock)).toBeNull();
+  });
+
+  it("#3727 a finished game's Rematch sends its opponent a daily challenge at the same mode and time", async () => {
+    const over: PlayerView = baseView({ result: { winner: "p1", reason: "concede" } });
+    const server = serve(
+      () => dailyGame({ view: over, over: true, hasMove: false, legal: [], holds: [], mode: "random", perMoveDays: 7 }),
+      (call) => {
+        if (call.method === "GET" && call.path === "/api/decks") return { status: 200, body: { decks: [] } };
+        if (call.method === "POST" && call.path === "/api/daily/challenges") return { status: 201, body: { id: "ch-re" } };
+        return undefined;
+      },
+    );
+    render(<DailyBoard matchId="g-1" />);
+    await screen.findByTestId("result-overlay", undefined, SLOW);
+    fireEvent.click(screen.getByTestId(dailyTestid.rematch));
+    const dialog = await screen.findByTestId(dailyTestid.dialog, undefined, SLOW);
+    expect(dialog).toHaveTextContent("A new daily challenge to Opp#7, at the same mode and time per move.");
+    // The game's mode and time are the rematch's: neither is picked again, and no friend list is read.
+    expect(within(dialog).queryByTestId(dailyTestid.mode)).toBeNull();
+    expect(within(dialog).queryByTestId(dailyTestid.perMove)).toBeNull();
+    expect(within(dialog).queryByTestId(dailyTestid.friend)).toBeNull();
+    await waitFor(() => {
+      expect(within(dialog).getByTestId(dailyTestid.send)).toBeEnabled();
+    }, SLOW);
+    fireEvent.click(within(dialog).getByTestId(dailyTestid.send));
+    await waitFor(() => {
+      expect(server.to("POST", "/api/daily/challenges")).toHaveLength(1);
+    }, SLOW);
+    expect(server.to("POST", "/api/daily/challenges")[0]?.body).toEqual({ friendId: "o-1", mode: "random", perMoveDays: 7 });
+    expect(server.to("GET", "/api/friends")).toHaveLength(0);
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/daily");
+    }, SLOW);
   });
 
   it("#3727 a game on an older card version says so", async () => {

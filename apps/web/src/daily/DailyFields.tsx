@@ -79,13 +79,14 @@ function initialMode(fixed: DailyMode | undefined): DailyMode {
 
 /**
  * `fixed`: the mode is not the player's to choose (an accepted challenge plays the challenge's). `active`
- * false reads no decks and loads no module yet (a challenge dialog open on Live).
+ * false reads no decks and loads no module yet (a challenge dialog open on Live). `initialDays`: the time
+ * per move picked to begin with (a rematch's, its game's).
  */
-export function useDailyPick(fixed?: DailyMode, active = true): DailyPick {
+export function useDailyPick(fixed?: DailyMode, active = true, initialDays: number | null = null): DailyPick {
   const ready = useDailyReady(active);
   const [initial] = useState(readChallengeChoice);
   const [mode, setMode] = useState<DailyMode>(() => initialMode(fixed));
-  const [chosenDays, setPerMoveDays] = useState<number | null>(null);
+  const [chosenDays, setPerMoveDays] = useState<number | null>(initialDays);
   const [deckId, setDeckId] = useState<string | null>(null);
   const [lean, setLeanState] = useState(readPlayLean);
   const [decks, setDecks] = useState<readonly SavedDeck[] | null>(null);

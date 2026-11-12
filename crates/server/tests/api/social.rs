@@ -47,12 +47,15 @@ async fn read(app: &Arc<App>, who: &Account, path: &str) -> Value {
     body
 }
 
-/// `GET /api/challenges` and `GET /api/chat/unread` as one answer, `{incoming, outgoing, unread}`.
+/// `GET /api/challenges` and `GET /api/chat/unread` as one answer, `{incoming, outgoing, unread}`, and
+/// the social read's `dailyWaiting` (#3727), which neither route answers: none of these accounts has a
+/// daily game, so none waits on them.
 fn merged(challenges: &Value, unread: &Value) -> Value {
     json!({
         "incoming": challenges["incoming"],
         "outgoing": challenges["outgoing"],
         "unread": unread["unread"],
+        "dailyWaiting": 0,
     })
 }
 
