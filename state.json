@@ -22055,12 +22055,8 @@
       }
     },
     "claude-3": {
-      "refused_until": "2026-11-12T00:20:00Z",
+      "refused_until": "2026-11-12T05:20:00Z",
       "spent": [
-        {
-          "at": "2026-11-04T23:43:40Z",
-          "minutes": 18.7
-        },
         {
           "at": "2026-11-05T00:08:36Z",
           "minutes": 5.7
@@ -22856,16 +22852,13 @@
         {
           "at": "2026-11-12T02:22:42Z",
           "minutes": 75.9
+        },
+        {
+          "at": "2026-11-12T02:41:09Z",
+          "minutes": 3.3
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-04T01:05:29Z",
-          "cache": 8807278,
-          "cost": 4.6049,
-          "input": 151,
-          "output": 41204
-        },
         {
           "at": "2026-11-04T01:55:21Z",
           "cache": 2771364,
@@ -24258,15 +24251,23 @@
           "cost": 8.3756,
           "input": 277,
           "output": 99594
+        },
+        {
+          "at": "2026-11-12T02:41:09Z",
+          "cache": 2954199,
+          "cost": 1.1084,
+          "input": 55,
+          "output": 23286
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-12T05:20:00Z",
-          "utilization": 0.95
+          "utilization": 1.0
         },
-        "observed_at": "2026-11-12T02:22:42Z",
-        "status": "allowed_warning"
+        "observed_at": "2026-11-12T02:41:09Z",
+        "rejected_resets_at": "2026-11-12T05:20:00Z",
+        "status": "rejected"
       }
     },
     "claude-4": {
@@ -36712,6 +36713,14 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-12T02:34:03Z,claude-3,stream,call,43142066687,97,2026-11-12T05:20:00Z,,,allowed_warning,,,",
+      "2026-11-12T02:34:18Z,claude-3,stream,call,43142066687,98,2026-11-12T05:20:00Z,,,allowed_warning,,,",
+      "2026-11-12T02:35:18Z,claude-3,stream,call,43142066687,99,2026-11-12T05:20:00Z,,,allowed_warning,,,",
+      "2026-11-12T02:37:07Z,claude-3,refusal,call,43142066687,100,2026-11-12T05:20:00Z,,,rejected,,,2026-11-12T05:20:00Z"
+    ]
   },
   "version": 1
 }
