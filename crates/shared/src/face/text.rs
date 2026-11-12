@@ -138,4 +138,40 @@ mod tests {
             "Deal 3 damage"
         );
     }
+
+    #[test]
+    fn a_texts_length_is_its_characters() {
+        assert_eq!(Text::plain("火车站").len(), 3);
+        assert!(Text::plain("").is_empty());
+        assert!(!Text::plain("a").is_empty());
+    }
+
+    /// An empty needle stands wherever the search may start, up to the end; a needle as long as the hay stands at 0.
+    #[test]
+    fn find_from_takes_an_empty_needle_up_to_the_end_and_a_whole_one() {
+        let hay = chars("ab");
+        assert_eq!(find_from(&hay, &[], 2), Some(2));
+        assert_eq!(find_from(&hay, &[], 3), None);
+        assert_eq!(find_from(&hay, &chars("ab"), 0), Some(0));
+    }
+
+    /// B5 E14, R511, R386: the copied text's tuned numbers move with it to where it now stands.
+    #[test]
+    fn r511_a_copied_texts_tuned_numbers_move_with_it() {
+        let own = Text::plain("Echo: copy. Draw a card.");
+        let copied = Text {
+            full: chars("Deal 3 damage"),
+            marks: Vec::new(),
+            tuned: vec![TunedRange {
+                start: 5,
+                end: 6,
+                key: "damage".to_string(),
+                printed: 2,
+                way: crate::face::types::Way::Better,
+            }],
+        };
+        let got = copied_text(&own, &chars("copy."), &copied);
+        let tuned: Vec<(usize, usize)> = got.tuned.iter().map(|range| (range.start, range.end)).collect();
+        assert_eq!(tuned, vec![(11, 12)]);
+    }
 }

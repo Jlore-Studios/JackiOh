@@ -130,8 +130,23 @@ fn worked_answer_action(public: &GameState, seat: PlayerId, rng: &mut Rng) -> Op
     })
 }
 
-/// Lines in order, at most `perAction` for any one first action, `count` in all.
-fn shortlist_lines<'a>(found: &'a [Line], count: usize) -> Vec<&'a Line> {
+/// R3696000: whether `line` hands the turn over (`Passed` or `Yielded`, the lines `reply_score`
+/// replies to) with a delayed entry of `seat`'s own waiting at its end that `root` did not hold: a
+/// payoff still to come (a countdown, a next-turn reward), which the static score that ranks the lines
+/// does not see.
+fn leaves_own_delayed(line: &Line, root: &GameState, seat: PlayerId) -> bool {
+    matches!(line.status, LineStatus::Passed | LineStatus::Yielded)
+        && line
+            .end
+            .delayed
+            .iter()
+            .any(|entry| entry.owner == seat && !root.delayed.iter().any(|held| held.id == entry.id))
+}
+
+/// Lines in order, at most `perAction` for any one first action, `count` in all. R3696000: when none
+/// of them `leaves_own_delayed`, the best line that does is added last, past `count` and the
+/// per-action cap.
+fn shortlist_lines<'a>(found: &'a [Line], count: usize, root: &GameState, seat: PlayerId) -> Vec<&'a Line> {
     let mut taken: IndexMap<&ActionBody, i32> = IndexMap::new();
     let mut out: Vec<&'a Line> = Vec::new();
     for line in found {
@@ -147,6 +162,12 @@ fn shortlist_lines<'a>(found: &'a [Line], count: usize) -> Vec<&'a Line> {
         if out.len() >= count {
             break;
         }
+    }
+    let waits = |line: &&Line| !line.actions.is_empty() && leaves_own_delayed(line, root, seat);
+    if !out.iter().any(waits)
+        && let Some(extra) = found.iter().find(|line| waits(line))
+    {
+        out.push(extra);
     }
     out
 }
@@ -536,10 +557,15 @@ fn plan(
     };
 
     // Only a line's first action is ever played. The best lines (at most AI_SEARCH.linesPerAction
-    // for any one first action) are scored after the opponent's reply on determinization 0; each
-    // first action keeps its best line; the best `finalists` first actions are scored again on every
-    // other determinization, and the best mean wins.
-    let shortlist = shortlist_lines(&found, finalist_count * AI_SEARCH.lines_per_action as usize);
+    // for any one first action, and the best one leaving a payoff still to come, R3696000) are scored
+    // after the opponent's reply on determinization 0; each first action keeps its best line; the best
+    // `finalists` first actions are scored again on every other determinization, and the best mean wins.
+    let shortlist = shortlist_lines(
+        &found,
+        finalist_count * AI_SEARCH.lines_per_action as usize,
+        det0,
+        seat,
+    );
     let hidden0 = hidden_card_ids(det0, seat);
     let mut replied: Vec<Scored<'_>> = Vec::new();
     for line in shortlist {
@@ -815,13 +841,14 @@ pub fn decide_styled(
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::{Scenario, json, scenario};
-    use jackioh_engine::{Row, ZoneChoice};
+    use jackioh_engine::{DelayedAt, DelayedEffect, Phase, Resume, Row, ZoneChoice};
 
     use super::*;
     use crate::config::AI_BUDGET;
     use crate::simulate::{LineStatus, create_node_counter};
 
     const AI: PlayerId = PlayerId::P1;
+    const HUMAN: PlayerId = PlayerId::P2;
     const LOBBYIST: &str = "classic-068"; // C #68: (3)+ Cost cards cost (1) more.
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
@@ -972,5 +999,132 @@ mod tests {
             .filter_map(|entry| entry.line.actions.first().cloned())
             .collect();
         assert_eq!(firsts, vec![play(MENACE, 3), play(MENACE, 1), play(VANILLA, 1)]);
+    }
+
+    /// A delayed entry `id` of `owner`'s, due at the start of its next turn: a payoff still to come.
+    fn waiting(id: &str, owner: PlayerId) -> DelayedEffect {
+        DelayedEffect {
+            id: id.to_string(),
+            seq: 0,
+            owner,
+            at: DelayedAt {
+                phase: Phase::Start,
+                player: owner,
+            },
+            not_before: None,
+            resume: Resume {
+                def_id: MENACE.to_string(),
+                hook: "resume".to_string(),
+                step: "reward".to_string(),
+                radiant: false,
+                instance_id: None,
+                data: IndexMap::new(),
+            },
+            watch: None,
+            hand_watch: None,
+            due_own_turn: None,
+            label: None,
+        }
+    }
+
+    /// One line per `firsts` entry, best first, each a switch of unit `u<first>` then the end of
+    /// turn, scored 10 less its index and ending on `root` with the entry of each `waits` row at its
+    /// index waiting, the row's status its own (else `Passed`).
+    fn lines_of(
+        root: &GameState,
+        firsts: &[u32],
+        waits: &[(usize, &str, PlayerId, LineStatus)],
+    ) -> Vec<Line> {
+        firsts
+            .iter()
+            .enumerate()
+            .map(|(at, first)| {
+                let mut end = root.clone();
+                let mut status = LineStatus::Passed;
+                for (index, id, owner, row_status) in waits {
+                    if *index == at {
+                        end.delayed.push(waiting(id, *owner));
+                        status = *row_status;
+                    }
+                }
+                Line {
+                    actions: vec![
+                        ActionBody::SwitchPosition {
+                            instance_id: format!("u{first}"),
+                        },
+                        ActionBody::EndTurn,
+                    ],
+                    score: 10.0 - at as f64,
+                    status,
+                    end,
+                }
+            })
+            .collect()
+    }
+
+    fn scores(out: &[&Line]) -> Vec<f64> {
+        out.iter().map(|line| line.score).collect()
+    }
+
+    /// Eight lines' first actions: two places for each of the first three, so the plain ranking of
+    /// six places takes the first six lines and cuts lines 6 and 7.
+    const SIX_AND_ONE: [u32; 8] = [1, 1, 2, 2, 3, 3, 4, 5];
+
+    #[test]
+    fn r3696000_the_best_delayed_payoff_line_keeps_a_place_after_the_six_that_outscore_it() {
+        let root = board(false).state().clone();
+        let lines = lines_of(
+            &root,
+            &SIX_AND_ONE,
+            &[
+                (6, "d9", AI, LineStatus::Passed),
+                (7, "d10", AI, LineStatus::Passed),
+            ],
+        );
+        let out = shortlist_lines(&lines, 6, &root, AI);
+        assert_eq!(scores(&out), vec![10.0, 9.0, 8.0, 7.0, 6.0, 5.0, 4.0]);
+    }
+
+    #[test]
+    fn r3696000_no_place_is_held_back_without_a_delayed_payoff_line() {
+        let root = board(false).state().clone();
+        let lines = lines_of(&root, &SIX_AND_ONE, &[]);
+        let out = shortlist_lines(&lines, 6, &root, AI);
+        assert_eq!(scores(&out), vec![10.0, 9.0, 8.0, 7.0, 6.0, 5.0]);
+    }
+
+    #[test]
+    fn r3696000_no_place_is_held_back_when_a_delayed_payoff_line_made_the_cut() {
+        let root = board(false).state().clone();
+        let lines = lines_of(
+            &root,
+            &SIX_AND_ONE,
+            &[
+                (1, "d9", AI, LineStatus::Passed),
+                (6, "d10", AI, LineStatus::Passed),
+            ],
+        );
+        let out = shortlist_lines(&lines, 6, &root, AI);
+        assert_eq!(scores(&out), vec![10.0, 9.0, 8.0, 7.0, 6.0, 5.0]);
+    }
+
+    /// Every line's end holds `d1`, which the root held too; line 6 leaves the other seat's entry and
+    /// line 7, until it yields, is never replied to. None is a payoff of the AI's still to come.
+    #[test]
+    fn r3696000_an_entry_the_root_held_the_other_seat_owns_or_on_a_line_never_replied_to_is_no_payoff() {
+        let mut root = board(false).state().clone();
+        root.delayed.push(waiting("d1", AI));
+        let mut lines = lines_of(
+            &root,
+            &SIX_AND_ONE,
+            &[
+                (6, "d2", HUMAN, LineStatus::Passed),
+                (7, "d3", AI, LineStatus::Over),
+            ],
+        );
+        assert_eq!(shortlist_lines(&lines, 6, &root, AI).len(), 6);
+        lines[7].status = LineStatus::Yielded;
+        let out = shortlist_lines(&lines, 6, &root, AI);
+        assert_eq!(scores(&out), vec![10.0, 9.0, 8.0, 7.0, 6.0, 5.0, 3.0]);
     }
 }

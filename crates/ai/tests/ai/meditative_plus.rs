@@ -366,6 +366,37 @@ fn the_ai_casts_supply_drop_in_combat_mode_against_three_3_health_units() {
     );
 }
 
+/// The board above with two castable Vanillas beside Supply Drop: their plays in each lane outscore
+/// the cast on the static score and fill every place the reply scores, so the countdown, worth only
+/// once the reply weighs it, keeps a place of its own (R3696000).
+#[test]
+fn r3696000_the_ai_still_casts_supply_drop_in_combat_mode_with_two_castable_units_in_hand() {
+    register_cards();
+    let state = scenario(json!({
+        "seed": "ai-supply-drop-combat",
+        "p1": { "hand": [SUPPLY_DROP, VANILLA, VANILLA], "mana": 2, "library": library() },
+        "p2": {
+            "hand": [VANILLA],
+            "field": [
+                { "def": CURVATURE, "lane": 1 },
+                { "def": CURVATURE, "lane": 2 },
+                { "def": CURVATURE, "lane": 3 },
+            ],
+            "library": library(),
+        },
+    }))
+    .state()
+    .clone();
+    let drop = in_hand(&state, SUPPLY_DROP);
+    let decision = decide_at(&state, "ai-supply-drop-combat");
+    assert!(
+        matches!(&decision.action, ActionBody::Play { instance_id, modes: Some(modes), .. }
+            if *instance_id == drop && *modes == ["combat"]),
+        "{:?}",
+        decision.action
+    );
+}
+
 /// The AI's turn after p2 cast Supply Drop in Combat mode (the cast ends p2's turn: nothing is left
 /// to do), the AI's Curvature on its field (`on_field`) or in its hand. `left` is the countdown's
 /// badge count on the AI's turn, the p2 turn starts until it comes due; `None` drops the entry.

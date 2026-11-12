@@ -915,6 +915,10 @@ pub const AI_REPLY: AiReply = AiReply {
     countdown_share: 0.5,
 };
 
+/// R3696001: the stream the reply's one guess against a secret of the seat's is drawn on, beside the
+/// world's seed and the guessing card's id: its own, so the guess moves no other stream.
+pub const AI_GUESS_SEED: &str = "ai:guess";
+
 /// `AI_MULLIGAN`'s shape, and `GREEDY_MULLIGAN`'s (the same one field).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]

@@ -7,7 +7,8 @@
 //!  - `stop` drops the in-memory actor, leaving the log alone: what a crash looks like outside.
 //!
 //! Finished actors remain in memory while rematch presence reads sockets, until `reap_finished`
-//! drops them after the rematch window with no open sockets, or a restart drains them (SURFACE §11.3).
+//! drops them once the window has passed, closing any socket still open (R3694000), or a restart
+//! drains them (SURFACE §11.3).
 
 use std::panic::AssertUnwindSafe;
 use std::sync::{Arc, Mutex};
@@ -615,20 +616,19 @@ impl Registry {
         Ok(())
     }
 
-    /// R672: drops finished actors past rematch window (`REMATCH_OFFER_TTL_MS`) with no open sockets.
-    /// Reaper calls every tick (`api::results::run_reaper`). Rebuilding handles returning sockets (§9.5).
-    /// An open socket keeps its actor; the check and the removal share the map's lock.
+    /// R672, R3694000: drops finished actors past their rematch window (`REMATCH_OFFER_TTL_MS` since
+    /// the actor's `finished_at`) whatever their presence, closing a seat's or watcher's socket still
+    /// open with `MATCH_OVER_CLOSE_CODE`. The reaper calls it every tick (`api::results::run_reaper`);
+    /// the check and the removal share the map's lock.
     pub async fn reap_finished(&self, now: i64) -> Vec<String> {
         let reaped: Vec<(String, MatchActor)> = {
             let mut actors = lock(&self.actors);
             let due: Vec<String> = actors
                 .iter()
                 .filter(|(_, actor)| {
-                    let presence = actor.presence();
                     actor
                         .finished_at()
                         .is_some_and(|finished_at| now - finished_at > REMATCH_OFFER_TTL_MS)
-                        && PLAYER_IDS.into_iter().all(|home| !presence[home])
                 })
                 .map(|(match_id, _)| match_id.clone())
                 .collect();
@@ -638,7 +638,7 @@ impl Registry {
         };
         let mut ids = Vec::with_capacity(reaped.len());
         for (match_id, actor) in reaped {
-            actor.stop().await;
+            actor.stop_match_over().await;
             tracing::info!(event = "match.evicted", matchId = %match_id);
             ids.push(match_id);
         }

@@ -5,13 +5,14 @@
 // The handshake is `/ws/match`'s (S6): the match id in the query string, the token as a subprotocol
 // (R1379000), never in the address. The token is the gate's (`setToken`), so a 4401 is final only for
 // the token it refused (R1115000). Drops and page wakes are handled as in `game/net.ts` (R1441); a
-// refusal or a voided match never reconnects. A ping past the server's limit is not sent (B39: the
-// server would drop it silently), and the seat's own is kept so the board marks it for the sender.
+// refusal, a voided match or a finished one past its window (R3694000) never reconnects. A ping past
+// the server's limit is not sent (B39: the server would drop it silently), and the seat's own is kept
+// so the board marks it for the sender.
 
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 
 import type { CombatForecast, EmojiEmoteId } from "@jackioh/shared";
-import { PING_RATE_LIMIT, PING_RATE_WINDOW_MS, PING_SHOW_MS } from "@jackioh/server-config";
+import { MATCH_OVER_CLOSE_CODE, PING_RATE_LIMIT, PING_RATE_WINDOW_MS, PING_SHOW_MS } from "@jackioh/server-config";
 
 import { economyField, type GameEconomy } from "../economy/xp.ts";
 import { forecastField } from "../game/attackOutcome.ts";
@@ -405,7 +406,8 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
       if (socket !== created) return;
       socket = null;
       wakeProbe.cancel();
-      if (stopped || event.code === VOIDED_CLOSE_CODE) {
+      // R3694000: a finished game past its window is closed for good, as a voided one is (R679).
+      if (stopped || event.code === VOIDED_CLOSE_CODE || event.code === MATCH_OVER_CLOSE_CODE) {
         patch({ connection: "closed" });
         return;
       }

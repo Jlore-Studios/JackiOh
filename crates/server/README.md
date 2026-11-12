@@ -308,7 +308,10 @@ hand, eight of the pool dealt from the match seed (R1341, R1342), and the actor 
 the sender's hand as silently as a rate-limited one, and relays nothing between two accounts either of which blocks the other (R1351000). A frame over `MAX_FRAME_BYTES` closes the socket with 1009.
 A profile opens it onto the match it is in, or onto a finished match it held a seat in until
 `REMATCH_OFFER_TTL_MS` after that match ended; past that it is refused as a stranger is (4403), and a
-finished match whose log the retention purge took is not found (4404, R1285000).
+finished match whose log the retention purge took is not found (4404, R1285000). Sockets still open
+on a finished match once that window has passed, its watchers' included, are closed on the reaper's next
+tick with `MATCH_OVER_CLOSE_CODE` (4411), and its actor goes; the co-op sweep does the same from the
+game's end (R3694000).
 An upgrade whose token verifies counts as one request against its account's `API_REQUESTS_PER_MINUTE`;
 one past it gets the `forbidden` frame and close 4429, which the match and co-op clients retry on their backoff
 (the watch page takes the frame as a refusal; R2478000), and `/ws/duos`, `/ws/watch` and `/ws/social` count
@@ -442,7 +445,8 @@ clock as that seat was shown it, each `SPECTATE_DELAY_MS` late, and nothing else
 `clock` or `teammate` frame, `jloreCapped` or `economy`), and no loadouts; `watchers {count}` to both
 people's `/ws/duos` sockets, and again to one that reattaches; the hello answers, the malformed budget and
 the revokes of an unfriend, a block or a deleted account. A finished game's actor is reaped only once its
-watchers have had the result's view and been closed with 1000.
+watchers have had the result's view and been closed with 1000, or once `REMATCH_OFFER_TTL_MS` has passed
+since its end (R3694000).
 
 A watcher, of a 1v1 match or a co-op game, throws emotes from the sidelines (R2990000). As it attaches, after
 `loadouts` and before any view, it alone is sent `spectatorHand {emotes}`: `SPECTATOR_EMOTE_HAND_SIZE` distinct

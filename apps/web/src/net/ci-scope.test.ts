@@ -199,6 +199,7 @@ describe("scripts/ci-scope.sh", () => {
     ".github/workflows/ci.yml",
     ".github/workflows/super.yml",
     ".github/coverage-floor.txt",
+    ".github/mutants-floor.txt",
     // promote-production.test.ts runs the script and reads the workflow; promote-staging.test.ts too.
     ".github/workflows/promote-production.yml",
     "scripts/promote-production.sh",

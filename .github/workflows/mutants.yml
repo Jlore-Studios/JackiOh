@@ -6,8 +6,11 @@
 # with the survivors under it, and each area's full report stays an artifact for 30 days, which is
 # what an audit pull request sorts (#3490 part 4).
 #
-# It reports and gates nothing: it stays outside super.yml, so production waits on no number nobody
-# has seen yet. Once the scores settle, a floor joins .github/coverage-floor.txt's, raised by hand.
+# The `report` job then holds each area's score to its line of .github/mutants-floor.txt, beside
+# coverage's floor (#3519): a run that scores an area under its floor fails, naming the area, and
+# the floor file's header says how it is raised. A pull request's twenty mutants are a sample, not
+# a score, so its run checks the floor's lines and holds no score to them. The workflow stays
+# outside super.yml: production waits on no five-hour weekly job.
 #
 # The weeks since 1970 pick each area's shard (`sh scripts/mutants.sh <area> <k>` runs shard
 # k mod n), so the weeks walk every shard of every area in turn. Sunday at 03:17 UTC, three Rust and
@@ -199,7 +202,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-          sparse-checkout: scripts
+          # The floor's file, and the card sets its areas are checked against.
+          sparse-checkout: |
+            scripts
+            .github
+            crates/cards/src/scripts
       - uses: actions/download-artifact@v4
         with:
           pattern: mutants-*
@@ -222,3 +229,15 @@ jobs:
             echo
             grep -v '^|' "$RUNNER_TEMP/scores.md" || true
           } | tee -a "$GITHUB_STEP_SUMMARY"
+      # A step of its own, as the scores' pipe into tee would lose its exit code. A pull request's
+      # twenty mutants are a sample, not a score: it checks only the floor's lines, against no score.
+      - name: the floor
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          scores=$RUNNER_TEMP/scores.md
+          if [ "$EVENT" = pull_request ]; then
+            scores=$RUNNER_TEMP/no-scores.md
+            : >"$scores"
+          fi
+          sh scripts/mutants.sh floor "$scores"

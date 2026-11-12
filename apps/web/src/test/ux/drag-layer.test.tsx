@@ -234,6 +234,10 @@ describe("B37 dragging an attacker shows the arrow and attacks where it is relea
 
     expect(el("drag-layer")).toHaveAttribute("data-kind", "attack");
     expect(el("drag-arrow")).toHaveAttribute("data-from", "card-u1");
+    // The marching dots are four copies of one shaft, each shown for a quarter of the loop (drag.css).
+    const pulses = [...el("drag-arrow").querySelectorAll(".drag-arrow-pulse")];
+    expect(pulses.map((pulse) => pulse.getAttribute("data-phase"))).toEqual(["0", "1", "2", "3"]);
+    expect(new Set(pulses.map((pulse) => pulse.getAttribute("d"))).size).toBe(1);
     expect(screen.queryByTestId("drag-ghost")).toBeNull();
     expect(document.documentElement).toHaveAttribute("data-dragging", "attack");
     expect(el("hero-opponent")).toHaveAttribute("data-glow", "ready");

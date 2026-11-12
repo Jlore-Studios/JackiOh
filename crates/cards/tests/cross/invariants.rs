@@ -2801,3 +2801,101 @@ mod r1279000_opponent_held_prompt_off_turn {
         assert!(w.is_clean(), "{:?}", w.found);
     }
 }
+
+mod i16_every_card_s_record_agrees_with_the_pile_that_holds_it {
+    use super::*;
+
+    const KPOP: &str = "core-050"; // K-Pop Fanatic: Cry: Allure an enemy permanent, a steal at its next turn's start
+    const TOWER: &str = "classicplus-033"; // Ivory Tower: a carrier
+    const TICKETED: &str = "stinkyscape-009"; // Ticketed: holds a permanent beneath it
+
+    fn i16(g: &Scenario) -> Vec<String> {
+        create_invariant_monitor(g.state())
+            .after(&[], g.state())
+            .into_iter()
+            .filter(|finding| finding.starts_with("I16"))
+            .collect()
+    }
+
+    /// A board of real cards holding what I16 must not flag: a stolen unit, a backrow pile, a carried unit,
+    /// a held card and a buffed hand card. Also the stolen unit.
+    fn board() -> (Scenario, CardInstance) {
+        let mut g = scenario(json!({
+            "p1": {
+                "hand": [KPOP, TICKETED, VANILLA],
+                "backrow": [
+                    { "def": TOWER, "lane": 2 },
+                    { "def": SHEEPISH, "lane": 3, "faceUp": false },
+                    { "def": SHEEPISH, "lane": 3, "stack": true },
+                ],
+                "library": [VANILLA, VANILLA, VANILLA],
+                "mana": 10,
+            },
+            "p2": {
+                "hand": [VANILLA],
+                "field": [{ "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 2 }],
+                "library": [VANILLA, VANILLA, VANILLA],
+            },
+        }));
+        let stolen = g.unit_at(PlayerId::P2, 1);
+        let held = g.unit_at(PlayerId::P2, 2);
+        g.play(TICKETED, json!({ "zone": 1, "targets": pick::instance(&held) }));
+        g.play(KPOP, json!({ "targets": pick::instance(&stolen) }));
+        g.end_turn();
+        g.end_turn();
+        assert_eq!(g.state().active, PlayerId::P1);
+        assert_eq!(
+            (g.card(&stolen).controller, g.card(&stolen).owner),
+            (PlayerId::P1, PlayerId::P2)
+        );
+        assert_eq!(g.state().held.iter().flatten().count(), 1);
+        let pile = ZoneSlot {
+            player: PlayerId::P1,
+            row: Row::Backrow,
+            lane: 3,
+        };
+        assert_eq!(beneath_at(g.state(), pile).len(), 1);
+        let tower = ZoneSlot {
+            player: PlayerId::P1,
+            row: Row::Backrow,
+            lane: 2,
+        };
+        let mut rider = new_instance(
+            g.state_mut(),
+            VANILLA,
+            PlayerId::P1,
+            Zone::Hand { player: PlayerId::P1 },
+        );
+        assert!(place_on_field(
+            g.state_mut(),
+            &mut rider,
+            tower,
+            PlaceOnFieldOptions::default()
+        ));
+        assert!(carried_at(g.state(), tower).is_some());
+        // B5 E38: a Buff lands on a hand card and rides it onto the field (`effects/buff.rs`).
+        let in_hand = g.card(VANILLA).id.clone();
+        let buffed = g.card_mut(&in_hand);
+        buffed.buffs = AttackHealth { attack: 2, health: 1 };
+        buffed.cost_mod = -1;
+        (g, stolen)
+    }
+
+    #[test]
+    fn i16_is_clean_with_a_stolen_unit_a_backrow_pile_a_carried_unit_a_held_card_and_a_buffed_hand_card() {
+        assert_eq!(i16(&board().0), no_violations());
+    }
+
+    #[test]
+    fn i16_sees_the_stolen_unit_s_controller_drift_back_to_its_owner() {
+        let (mut g, stolen) = board();
+        g.card_mut(&stolen).controller = PlayerId::P2;
+        let found = i16(&g);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].contains(&stolen.id) && found[0].contains("controller drift"),
+            "{}",
+            found[0]
+        );
+    }
+}

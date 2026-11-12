@@ -19,6 +19,8 @@ const BEND_MAX_PX = 80;
 const HEAD_PX = 24;
 const HEAD_HALF_WIDTH_PX = 14;
 const ORIGIN_RADIUS_PX = 9;
+/** The marching dashes are this many copies of the shaft, each one quarter of a dash period on and shown for a quarter of the loop (opponentAim.css; R3608000): a path moves by transform nowhere, so the march is steps of opacity. */
+const PULSE_PHASES = [0, 1, 2, 3] as const;
 
 function centerOf(element: Element | null): Point | null {
   if (element === null) return null;
@@ -106,7 +108,9 @@ function Arrow({ from, to }: { from: Point; to: Point }): ReactElement {
   return (
     <g className="opponent-aim-arrow" data-testid="opponent-aim-arrow">
       <path className="opponent-aim-shaft" d={shaft} />
-      <path className="opponent-aim-pulse" d={shaft} />
+      {PULSE_PHASES.map((phase) => (
+        <path key={phase} className="opponent-aim-pulse" data-phase={phase} d={shaft} />
+      ))}
       <polygon className="opponent-aim-head" points={tip} />
     </g>
   );

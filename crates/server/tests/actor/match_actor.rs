@@ -4877,7 +4877,8 @@ mod the_result_s_views_carry_what_it_paid_each_seat {
 
 // R672 — a finished actor leaves the registry once its rematch window has passed
 
-/// `reap_finished` drops actor `REMATCH_OFFER_TTL_MS` after game end when both sockets close.
+/// `reap_finished` drops actor `REMATCH_OFFER_TTL_MS` after game end when both sockets close (with
+/// them still open, `r3694000_a_finished_match_lets_its_sockets_go_with_its_window`).
 mod a_finished_actor_leaves_the_registry_after_its_rematch_window {
     use super::*;
 
@@ -4896,12 +4897,6 @@ mod a_finished_actor_leaves_the_registry_after_its_rematch_window {
         // The window is still open at its last millisecond.
         assert!(h.app.matches.reap_finished(window_end).await.is_empty());
         assert!(h.app.matches.has(MATCH_ID));
-
-        // Past it, an open socket still keeps the actor: closing it would send the client back to
-        // rebuild the actor it was just parted from.
-        assert!(h.app.matches.reap_finished(window_end + 1).await.is_empty());
-        assert!(h.app.matches.has(MATCH_ID));
-        assert!(h.p1.is_open() && h.p2.is_open());
 
         // With both sockets gone, the window is the only thing left to wait for.
         h.p1.drop_transport();
@@ -4947,6 +4942,62 @@ mod a_finished_actor_leaves_the_registry_after_its_rematch_window {
                 .is_empty()
         );
         assert!(h.app.matches.has(MATCH_ID));
+    }
+}
+
+// R3694000 — a finished match's sockets close once its rematch window ends
+
+/// Past its rematch window a finished match's sockets still open are closed with
+/// `MATCH_OVER_CLOSE_CODE`, and its actor leaves memory with them.
+mod r3694000_a_finished_match_lets_its_sockets_go_with_its_window {
+    use super::*;
+    use jackioh_server::config::MATCH_OVER_CLOSE_CODE;
+
+    #[tokio::test(start_paused = true)]
+    async fn r3694000_a_finished_match_closes_its_sockets_and_leaves_memory_once_its_window_ends() {
+        let h = harness(Options::default()).await;
+        send(&h, &h.p1, "resign", json!({ "type": "concede" })).await;
+        let window_end =
+            h.actor.finished_at().expect("the concede finished the match") + REMATCH_OFFER_TTL_MS;
+
+        // Inside the window both sockets and the actor stay.
+        assert!(h.app.matches.reap_finished(window_end).await.is_empty());
+        assert!(h.app.matches.has(MATCH_ID));
+        assert!(h.p1.is_open() && h.p2.is_open());
+
+        // The test's own handle is the last one but the registry's: let it go, so the reaper drops
+        // the actor's last holder.
+        let weak = h.actor.downgrade();
+        drop(h.actor);
+        settle().await;
+
+        // Past it both sockets, still open, are closed for good and the actor goes with them.
+        assert_eq!(
+            h.app.matches.reap_finished(window_end + 1).await,
+            vec![MATCH_ID.to_string()]
+        );
+        settle().await;
+        for client in [&h.p1, &h.p2] {
+            assert_eq!(client.close_code(), Some(MATCH_OVER_CLOSE_CODE));
+            assert_eq!(client.0.close_reason().as_deref(), Some("the match is over"));
+        }
+        assert!(h.app.matches.live().is_empty());
+        assert!(!weak.is_alive(), "the actor's state is still held");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3694000_a_live_match_keeps_its_sockets_whatever_the_clock() {
+        let h = harness(Options::default()).await;
+        assert_eq!(h.actor.finished_at(), None);
+        assert!(
+            h.app
+                .matches
+                .reap_finished(now() + REMATCH_OFFER_TTL_MS + 1)
+                .await
+                .is_empty()
+        );
+        assert!(h.app.matches.has(MATCH_ID));
+        assert!(h.p1.is_open() && h.p2.is_open());
     }
 }
 
