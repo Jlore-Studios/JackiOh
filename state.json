@@ -17624,21 +17624,14 @@
         "reason": "`claude-8` stops: 5-hour usage is 85%, at or over its 85% cap; it resets at 2026-11-12T11:30:00Z",
         "trail": ""
       },
-      "hold": {
-        "ends": "2026-11-12T11:47:55Z",
-        "lifted": "2026-11-12T10:31:10Z",
-        "owner": "claude-8",
-        "since": "2026-11-12T09:47:55Z",
-        "until": "2026-11-12T10:30:00Z",
-        "why": "5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%)"
-      },
       "interruptions": 0,
       "issue": 3727,
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
       "own_review": {
-        "claimed_at": "2026-11-12T09:20:33Z",
+        "claimed": true,
+        "claimed_at": "2026-11-12T10:31:43Z",
         "from_run": "43177062005",
         "gates": [
           {
@@ -17738,7 +17731,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
-      "run_id": "43190627009",
+      "run_id": "pending:1bf21d4e-1794479442",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17759,7 +17752,7 @@
         "run": "43177062005"
       },
       "source": "",
-      "started_at": "2026-11-12T09:20:33Z",
+      "started_at": "2026-11-12T10:31:43Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -17926,9 +17919,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T10:21:46Z",
+    "at": "2026-11-12T10:31:43Z",
     "url": "",
-    "what": "plan #3734 on claude-7"
+    "what": "review #3762 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-12T10:18:51Z",
