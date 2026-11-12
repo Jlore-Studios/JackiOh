@@ -11,9 +11,11 @@
 # area's score, to a few points under the lowest score the area's shards have reached since. Each
 # week runs one shard of an area, so its score moves with the shard: hold it under the lowest, not
 # the mean. Never lower a line to get a run green; give a survivor its test, or its reason in
-# .cargo/mutants.toml. An area at 0 has no settled score yet; it gets its floor once its shards have one.
+# .cargo/mutants.toml. An area at 0 has no settled score yet: it gets its floor once its shards
+# have scores.
 #
-# Set from the scores of mutants.yml's runs on main up to 2026-11-11 (#3519's pull request lists them).
+# Set from every scored row of mutants.yml's runs up to 2026-11-11, before any weekly run (#3519's
+# pull request lists them). Only run and edge are one shard, the whole area, with a score.
 
 engine 0
 cards-classic 0
@@ -25,7 +27,8 @@ cards-stinkyscape 0
 cards-training_grounds 0
 cards-lib 0
 ai 0
-run 100
+# The whole crate is one shard: 98.1%, 609 killed and 12 survived (mutants.yml, 2026-11-11).
+run 95
 # 13 of its 21 shards scored, 25.9% to 100%, most before their audit; 8 never yet.
 shared 0
 server 0
