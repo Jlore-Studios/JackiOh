@@ -21,7 +21,7 @@ use crate::candidates::action_key;
 use crate::config::{
     AI_EVAL, AI_KY_COMPETITION_EXPECTED_STREAK, AI_KY_COMPETITION_RADIANT_EXPECTED_STREAK, AI_SEARCH,
 };
-use crate::evaluate::{NextSwing, Prices, evaluate_priced};
+use crate::evaluate::{NextSwing, Prices, evaluate_priced, float_credit};
 use crate::learned::{line_score, open_score};
 use crate::types::{NodeCounter, StoppedBy};
 
@@ -721,10 +721,12 @@ fn simulate_answering(
     }
 }
 
-/// A passed turn's value: the line's score (`line_score`), less the crystals the seat left unspent.
+/// A passed turn's value: the line's score (`line_score`), less the crystals the seat left unspent,
+/// plus what that Float brought its Float-discount cards (R3695000).
 fn passed_score(state: &GameState, seat: PlayerId, prices: &Prices) -> f64 {
     let unspent = state.players[seat].turn_log.unspent_at_end.unwrap_or(0);
     line_score(state, seat, NextSwing::Enemy, prices) - AI_EVAL.unspent_mana * f64::from(unspent)
+        + float_credit(state, seat, unspent, &AI_EVAL)
 }
 
 /// `closeLine`'s step: the line's turn ended here, or `None` where the line stays as it stands.

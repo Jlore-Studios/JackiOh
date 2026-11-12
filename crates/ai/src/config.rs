@@ -497,6 +497,10 @@ pub struct EvalWeights {
     pub fatigue_draw: f64,
     /// Per crystal left at the end of the seat's own turn (terminal only).
     pub unspent_mana: f64,
+    /// R3695000: per crystal of a passed line's Float that a "Float reduces cost" card in the seat's own
+    /// hand took toward its crystals (`evaluate::float_credit`), each card up to the cost it still owed
+    /// above them.
+    pub float_discount: f64,
     /// R1224: per mana owed on the coming refreshes (Jlarna's credit line) — a debt is coming
     /// turns' mana spent early.
     pub owed_mana: f64,
@@ -650,6 +654,10 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // (training/improve.md, A screen).
     fatigue_draw: 0.0,
     unspent_mana: 0.8,
+    // R3695000: a crystal Floated toward a Float-discount card still above the crystals counts as one
+    // left unspent does, the least issue #3695 allows: on such a crystal the line nets the card's
+    // `hand_cost_delta` and no more. GATE_NUMBERS_PENDING
+    float_discount: 0.8,
     // R1224: a debt counts as unspent mana does.
     owed_mana: 0.8,
     // #1224: untuned starts: a crystal a coming refresh will or will not give counts as one left
@@ -846,6 +854,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     library_comfort: 10.0,
     fatigue_draw: 0.0,
     unspent_mana: 0.8,
+    float_discount: 0.0,
     owed_mana: 0.0,
     lost_refresh: 0.0,
     next_turn_mana: 0.0,

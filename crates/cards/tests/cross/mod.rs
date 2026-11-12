@@ -158,6 +158,7 @@ pub mod duos;
 pub mod echo_and_exile;
 pub mod embiggen_choices;
 pub mod flavour;
+pub mod float_cuts;
 pub mod forced_attacks;
 pub mod fuse_registry;
 pub mod fused_hooks;

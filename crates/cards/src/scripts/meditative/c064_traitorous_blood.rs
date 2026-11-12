@@ -57,6 +57,7 @@ fn traitorous_blood(copy_destroyed: bool) -> Script {
                 })))]
             }),
             even_if_gone: false,
+            lowers_cost_on_float: false,
         }],
         ..Script::default()
     }
