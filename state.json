@@ -17297,9 +17297,13 @@
     "what": "plan #3609 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-12T02:21:28Z",
+    "at": "2026-11-12T02:30:02Z",
     "notes": [
-      "delivered plan #3744 on claude-3 (run 43131730903): blocked"
+      "#3609 needs a plan",
+      "started plan #3609 on claude-3 (run 43142066687)",
+      "nothing more to start: nothing is queued",
+      "pruned 3 plan file(s) older than 7 days",
+      "runner gate: started 0 of 2 waiting run(s); 2 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18003,7 +18007,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-12T02:21:28Z",
+  "loop_tick": "2026-11-12T02:30:02Z",
   "machine_disk": {
     "issue": null,
     "reading": {
