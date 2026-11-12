@@ -15593,6 +15593,13 @@
     "3695": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-12T00:46:42Z",
+        "difficulty": "hard",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "Rules 1 and 2: it changes how the AI decides (crates/ai/src) and adds a marker and a read to the engine (crates/engine/src) that the two crates must agree on."
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
