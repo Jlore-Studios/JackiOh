@@ -16222,7 +16222,7 @@
       "provider": "claude-6",
       "queued_at": "2026-11-12T21:25:55Z",
       "round_tier": "strong",
-      "run_id": "pending:03b93383-1794526204",
+      "run_id": "43329507530",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
