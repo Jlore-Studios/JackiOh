@@ -1767,3 +1767,117 @@ mod reads_and_stops {
         assert!(table.log.is_empty(), "{:?}", table.nonces());
     }
 }
+
+/// R2739001: a seat's choice hover over a prompt open in the game (#3513, the shared crate's fifteenth and sixteenth
+/// shards).
+mod the_choice_hover {
+    use super::*;
+    use jackioh_engine::testkit::{json, scenario};
+
+    /// p1, to act, holds core-030, whose Cry asks it "Choose one" of two; the Cry is played and its prompt is open.
+    fn asking() -> Table {
+        jackioh_cards::register_all();
+        let built = scenario(json!({
+            "seed": "r2739001",
+            "active": "p1",
+            "p1": { "hand": ["core-030"], "mana": 2, "library": ["core-008", "core-020"] },
+            "p2": { "library": ["core-008"] },
+        }));
+        let card = built.hand(P1)[0].id.clone();
+        let mut table = Table::new(setup(built.state().clone()));
+        table.feed(DuelEvent::Arm);
+        table.connect(P1);
+        table.connect(P2);
+        let play = table
+            .host
+            .legal(P1)
+            .into_iter()
+            .find(|body| matches!(body, ActionBody::Play { instance_id, .. } if *instance_id == card))
+            .expect("core-030 is playable");
+        let answer = table.act(P1, "play-030", play);
+        assert!(matches!(answer, ActionAnswer::Ack { .. }), "{answer:?}");
+        assert!(
+            table
+                .host
+                .game()
+                .pending
+                .as_ref()
+                .is_some_and(|pending| pending.player_id == P1),
+            "PREMISE: the Cry asks p1"
+        );
+        table
+    }
+
+    /// What p2 was told of p1's hover, in order.
+    fn hovers(sent: &[SeatMessage]) -> Vec<Option<i32>> {
+        sent.iter()
+            .filter_map(|message| match message {
+                SeatMessage::ChoiceHover { from: P1, index } => Some(*index),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// §10.6, R2739001: the prompt is pushed to the seat it asks; a hover over it reaches the other seat at once,
+    /// one inside the relay interval waits out the interval after the last relayed, and answering the prompt
+    /// clears the outline.
+    #[test]
+    fn r2739001_a_hover_is_relayed_held_out_its_interval_and_cleared_with_its_prompt() {
+        let mut table = asking();
+        assert!(
+            table
+                .sent
+                .p1
+                .iter()
+                .any(|message| matches!(message, SeatMessage::PromptForYou { player: P1, .. }))
+        );
+        let relayed_at = table.now;
+        table.feed(DuelEvent::Hover {
+            home: P1,
+            index: Some(0),
+        });
+        assert_eq!(hovers(&table.sent.p2), vec![Some(0)]);
+        table.sleep(10);
+        table.feed(DuelEvent::Hover {
+            home: P1,
+            index: Some(1),
+        });
+        assert_eq!(hovers(&table.sent.p2), vec![Some(0)]);
+        assert_eq!(
+            table.timer(TimerKey::Hover { player: P1 }),
+            Some(relayed_at + AIM_RELAY_INTERVAL_MS)
+        );
+        table.sleep(AIM_RELAY_INTERVAL_MS);
+        assert_eq!(hovers(&table.sent.p2), vec![Some(0), Some(1)]);
+        let answer = table
+            .host
+            .legal(P1)
+            .into_iter()
+            .find(|body| matches!(body, ActionBody::Answer { .. }))
+            .expect("the prompt has an answer");
+        table.act(P1, "answer-030", answer);
+        assert!(
+            table.host.game().pending.is_none(),
+            "PREMISE: the prompt is answered"
+        );
+        assert_eq!(hovers(&table.sent.p2), vec![Some(0), Some(1), None]);
+    }
+
+    /// R2739001: after the stop, a hover inside the relay interval is not held for later.
+    #[test]
+    fn r2739001_a_hover_after_the_stop_is_not_held() {
+        let mut table = asking();
+        table.feed(DuelEvent::Hover {
+            home: P1,
+            index: Some(0),
+        });
+        table.sleep(5);
+        table.feed(DuelEvent::Stop);
+        table.sleep(5);
+        table.feed(DuelEvent::Hover {
+            home: P1,
+            index: Some(1),
+        });
+        assert_eq!(table.timer(TimerKey::Hover { player: P1 }), None);
+    }
+}
