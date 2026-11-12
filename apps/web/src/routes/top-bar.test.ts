@@ -74,9 +74,9 @@ describe("#3189 the top bar's one skin", () => {
     expect(sheet("buttons.css").match(/\.link-button:where\(:not\(\.top-bar-button\)\)/g)).toHaveLength(3);
   });
 
-  it("#3189 the nav carries the brass colors, so a screen that is not .tavern draws them", () => {
+  it("#3189 R3728000 the nav and the menus' shell carry the brass colors, so a screen that is not .tavern draws them", () => {
     const tavern = sheet("auth/tavern.css");
-    const carried = /^\.tavern,\s*\.screen-nav\s*\{([^}]*)\}/m.exec(tavern)?.[1] ?? "";
+    const carried = /^\.tavern,\s*\.screen-nav,\s*\.menu-shell\s*\{([^}]*)\}/m.exec(tavern)?.[1] ?? "";
     for (const token of ["--tavern-brass", "--tavern-gold", "--tavern-gold-pale"]) {
       expect(carried, token).toContain(`${token}:`);
       expect(tavern.match(new RegExp(`${token}:`, "g")), token).toHaveLength(1);
@@ -116,10 +116,14 @@ describe("R3218000 the top bar's one layout", () => {
     }
   });
 
-  it("R3218000 the bar has fixed slots: the line takes the room, the end group is pushed to the edge, a phone moves the line under", () => {
+  it("R3218000 R3728002 the bar has fixed slots: the line takes the room, the end group is pushed to the edge, the status row is last, a phone moves the line under", () => {
     const css = sheet("routes/top-bar.css");
     expect(block(css, ".screen-nav__line")).toContain("flex: 1 1 0;");
     expect(block(css, ".screen-nav__end")).toContain("margin-left: auto;");
+    // R3728002: the shell's status row comes last, on a row of its own, and takes no room when empty.
+    expect(block(css, ".screen-nav__status")).toContain("order: 2;");
+    expect(block(css, ".screen-nav__status")).toContain("flex: 1 1 100%;");
+    expect(block(css, ".screen-nav__status:empty")).toContain("display: none;");
     const phone = css.slice(css.indexOf("@media (max-width: 600px)"));
     expect(block(phone, ".screen-nav__line")).toContain("order: 1;");
     expect(block(phone, ".screen-nav__line")).toContain("flex: 1 1 100%;");

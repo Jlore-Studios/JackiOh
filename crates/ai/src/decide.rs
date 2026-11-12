@@ -10,7 +10,8 @@
 //!    passes over it (R1452).
 //! 6. the beam on determinization 0, its best lines scored after the opponent's reply and its best first
 //!    actions re-scored on the other determinizations; the best mean wins. A host's wrap-up stops the
-//!    beam alone, so that a clock still leaves the reply and the other determinizations (R3498000).
+//!    beam and skips R3696000's payoff line, so that a clock still leaves the reply to the shortlist and
+//!    the other determinizations (R3498000).
 //! 7. a fallback when nothing could be scored.
 //!
 //! The chosen action is tried on the true state first (`submitted`, #1575). Only it is played, so the AI
@@ -19,7 +20,7 @@
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::subsystems::ky_competition::worked_answer;
 use jackioh_engine::{
     ANSWER_STOP_KEY, Action, ActionBody, CardInstance, GameState, PLAYER_IDS, PlayerId, PromptKind,
@@ -143,10 +144,15 @@ fn leaves_own_delayed(line: &Line, root: &GameState, seat: PlayerId) -> bool {
             .any(|entry| entry.owner == seat && !root.delayed.iter().any(|held| held.id == entry.id))
 }
 
-/// Lines in order, at most `perAction` for any one first action, `count` in all. R3696000: when none
-/// of them `leaves_own_delayed`, the best line that does is added last, past `count` and the
-/// per-action cap.
-fn shortlist_lines<'a>(found: &'a [Line], count: usize, root: &GameState, seat: PlayerId) -> Vec<&'a Line> {
+/// Lines in order, at most `perAction` for any one first action, `count` in all, and beside them the
+/// payoff line (R3696000): when none of them `leaves_own_delayed`, the best line that does, past `count`
+/// and the per-action cap, which `payoff_score` replies to last.
+fn shortlist_lines<'a>(
+    found: &'a [Line],
+    count: usize,
+    root: &GameState,
+    seat: PlayerId,
+) -> (Vec<&'a Line>, Option<&'a Line>) {
     let mut taken: IndexMap<&ActionBody, i32> = IndexMap::new();
     let mut out: Vec<&'a Line> = Vec::new();
     for line in found {
@@ -164,12 +170,34 @@ fn shortlist_lines<'a>(found: &'a [Line], count: usize, root: &GameState, seat: 
         }
     }
     let waits = |line: &&Line| !line.actions.is_empty() && leaves_own_delayed(line, root, seat);
-    if !out.iter().any(waits)
-        && let Some(extra) = found.iter().find(|line| waits(line))
-    {
-        out.push(extra);
-    }
-    out
+    let payoff = if out.iter().any(waits) {
+        None
+    } else {
+        found.iter().find(|line| waits(line))
+    };
+    (out, payoff)
+}
+
+/// R3696000: the payoff line's score after the opponent's reply, drawn only on the nodes `counter` holds
+/// past `keep` (what the finalists' scores on every other determinization keep back), so it never takes
+/// one of theirs; `None` when those run out first.
+fn payoff_score(
+    line: &Line,
+    seat: PlayerId,
+    root_turn: i32,
+    counter: &dyn NodeCounter,
+    keep: usize,
+    hidden: &IndexSet<String>,
+    prices: &Prices,
+) -> Option<f64> {
+    let spare = create_sub_counter(
+        counter,
+        counter
+            .limit()
+            .saturating_sub(counter.used())
+            .saturating_sub(keep),
+    );
+    reply_score(&line.end, seat, root_turn, &spare, hidden, prices)
 }
 
 /// One line and the score it was given.
@@ -518,8 +546,9 @@ fn plan(
     let root_turn = det0.turn;
     let remaining = budget.nodes.saturating_sub(counter.used());
     let finalist_count = budget.finalists.max(1);
-    let per_finalist = (AI_SEARCH.lines_per_action * AI_REPLY.reserve_steps) as usize
-        + (k - 1) * (budget.max_depth + 1 + AI_REPLY.reserve_steps as usize);
+    // What one finalist's scores on every other determinization keep back (R3696000's `keep`, below).
+    let other_worlds = (k - 1) * (budget.max_depth + 1 + AI_REPLY.reserve_steps as usize);
+    let per_finalist = (AI_SEARCH.lines_per_action * AI_REPLY.reserve_steps) as usize + other_worlds;
     let reserve = (remaining / 2).min(finalist_count * per_finalist);
     // The beam's own slice of the counter. Its stop reason is read as the beam ends: nothing takes a
     // node through the slice afterwards. R3498000: the host's wrap-up stops this slice alone, so that the
@@ -557,10 +586,11 @@ fn plan(
     };
 
     // Only a line's first action is ever played. The best lines (at most AI_SEARCH.linesPerAction
-    // for any one first action, and the best one leaving a payoff still to come, R3696000) are scored
-    // after the opponent's reply on determinization 0; each first action keeps its best line; the best
-    // `finalists` first actions are scored again on every other determinization, and the best mean wins.
-    let shortlist = shortlist_lines(
+    // for any one first action, then the best one leaving a payoff still to come, R3696000, on the nodes
+    // the other determinizations do not keep back) are scored after the opponent's reply on
+    // determinization 0; each first action keeps its best line; the best `finalists` first actions are
+    // scored again on every other determinization, and the best mean wins.
+    let (shortlist, payoff) = shortlist_lines(
         &found,
         finalist_count * AI_SEARCH.lines_per_action as usize,
         det0,
@@ -568,11 +598,35 @@ fn plan(
     );
     let hidden0 = hidden_card_ids(det0, seat);
     let mut replied: Vec<Scored<'_>> = Vec::new();
-    for line in shortlist {
+    for &line in &shortlist {
         let Some(score) = reply_score(&line.end, seat, root_turn, counter, &hidden0, &prices) else {
             break;
         };
         replied.push(Scored { line, score });
+    }
+    // R3696000: the payoff line last, once every shortlisted line is replied to: skipped once the host's
+    // clock has passed its wrap-up (R3498000), else replied to on the nodes past what the other worlds
+    // keep back. Either stop, when it comes, is the decision's own.
+    let mut payoff_stop: Option<StoppedBy> = None;
+    if let Some(line) = payoff
+        && replied.len() == shortlist.len()
+    {
+        if wrap_up.is_some_and(|wrapped| wrapped()) {
+            payoff_stop = Some(StoppedBy::Clock);
+        } else {
+            match payoff_score(
+                line,
+                seat,
+                root_turn,
+                counter,
+                finalist_count * other_worlds,
+                &hidden0,
+                &prices,
+            ) {
+                Some(score) => replied.push(Scored { line, score }),
+                None => payoff_stop = Some(StoppedBy::Budget),
+            }
+        }
     }
     // R3498000: only a passed or yielded line is replied to; `reply_score` scores any other statically.
     scratch.replied = replied
@@ -646,7 +700,7 @@ fn plan(
     let stopped_by = if counter.stopped_by() != StoppedBy::Exhausted {
         counter.stopped_by()
     } else {
-        beam_stopped_by
+        payoff_stop.unwrap_or(beam_stopped_by)
     };
     let reason = if public
         .pending
@@ -845,7 +899,7 @@ mod tests {
 
     use super::*;
     use crate::config::AI_BUDGET;
-    use crate::simulate::{LineStatus, create_node_counter};
+    use crate::simulate::{LineStatus, create_node_counter, simulate};
 
     const AI: PlayerId = PlayerId::P1;
     const HUMAN: PlayerId = PlayerId::P2;
@@ -1062,8 +1116,13 @@ mod tests {
             .collect()
     }
 
-    fn scores(out: &[&Line]) -> Vec<f64> {
-        out.iter().map(|line| line.score).collect()
+    /// The shortlist's scores, the payoff line's last.
+    fn scores((out, payoff): &(Vec<&Line>, Option<&Line>)) -> Vec<f64> {
+        out.iter()
+            .copied()
+            .chain(*payoff)
+            .map(|line| line.score)
+            .collect()
     }
 
     /// Eight lines' first actions: two places for each of the first three, so the plain ranking of
@@ -1122,9 +1181,59 @@ mod tests {
                 (7, "d3", AI, LineStatus::Over),
             ],
         );
-        assert_eq!(shortlist_lines(&lines, 6, &root, AI).len(), 6);
+        assert_eq!(scores(&shortlist_lines(&lines, 6, &root, AI)).len(), 6);
         lines[7].status = LineStatus::Yielded;
         let out = shortlist_lines(&lines, 6, &root, AI);
         assert_eq!(scores(&out), vec![10.0, 9.0, 8.0, 7.0, 6.0, 5.0, 3.0]);
+    }
+
+    /// R3696000: `payoff_score` with exactly `keep` nodes left takes none of them and leaves the counter
+    /// running for the other worlds; with more left it is the line's `reply_score`.
+    #[test]
+    fn r3696000_the_payoff_line_is_replied_to_on_no_node_the_other_worlds_keep() {
+        let root = board(true).state().clone();
+        let Some(Ok(end)) = simulate(
+            &root,
+            AI,
+            &ActionBody::EndTurn,
+            &create_node_counter(AI_BUDGET.nodes, None),
+            Prices::NONE,
+        ) else {
+            panic!("the AI ends its turn");
+        };
+        let line = Line {
+            actions: vec![ActionBody::EndTurn],
+            score: 0.0,
+            status: LineStatus::Passed,
+            end,
+        };
+        let hidden = hidden_card_ids(&root, AI);
+        let keep = 40;
+        let tight = create_node_counter(AI_BUDGET.nodes, None);
+        while tight.limit() - tight.used() > keep {
+            assert!(tight.take());
+        }
+        assert_eq!(
+            payoff_score(&line, AI, root.turn, &tight, keep, &hidden, Prices::NONE),
+            None
+        );
+        assert_eq!(tight.used(), AI_BUDGET.nodes - keep);
+        assert_eq!(tight.stopped_by(), StoppedBy::Exhausted);
+        assert!(tight.take(), "the kept nodes are still the other worlds'");
+        let plain = reply_score(
+            &line.end,
+            AI,
+            root.turn,
+            &create_node_counter(AI_BUDGET.nodes, None),
+            &hidden,
+            Prices::NONE,
+        );
+        assert!(plain.is_some(), "PREMISE: the reply scores the line");
+        let ample = create_node_counter(AI_BUDGET.nodes, None);
+        assert_eq!(
+            payoff_score(&line, AI, root.turn, &ample, keep, &hidden, Prices::NONE),
+            plain
+        );
+        assert!(ample.used() > 0);
     }
 }

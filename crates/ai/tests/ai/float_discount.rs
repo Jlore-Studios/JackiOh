@@ -2,7 +2,9 @@
 //! each crystal it took toward a "Float reduces cost" card in the seat's own hand that still cost more
 //! than the seat's crystals (`float_credit`, read through the engine's `float_cuts_in_hand`). Before it,
 //! each crystal so Floated scored `hand_cost_delta − unspent_mana`, −0.3, and the AI never saved mana to
-//! bring Drone Core IX or X (S #35, #36) within its four crystals (§2.3, §6.2, R1563000).
+//! bring Drone Core IX or X (S #35, #36) within its four crystals (§2.3, §6.2, R1563000). R3695001: once X
+//! is within them, each Drone Battleship layer beneath the pile's top counts `AI_EVAL.dormant_share` of
+//! its worth, so Hard casts it over a vanilla body (§3.2, R1842000).
 //!
 //! Every board is a `scenario()` with the AI as p1 and libraries of uncastable 9-cost stand-ins. p2
 //! holds a 1-cost Unit (or a Unit on the field), so its turn has a play and the line's turn log lasts
@@ -263,6 +265,108 @@ fn r3695000_decide_casts_drone_core_x_in_reach_with_a_free_zone_at_easy_and_hard
             assert!(
                 plays(std::slice::from_ref(&decision.action), &x),
                 "hard {hard}, cursor {cursor}: {:?}",
+                decision.action
+            );
+        }
+    }
+}
+
+// R3695001: the sweep's second cause. The Drone Battleship enters as one Stack pile (R1842000), so
+// before it only its top, a Shield Layer that cannot attack, counted; the two layers beneath it count
+// `dormant_share` of their worth.
+
+/// S #36's three layers, bottom first, as `summon_pile` stacks them (§8.10).
+const BATTLESHIP: [&str; 3] = [
+    "stinkyscape-t-meltdown-layer",
+    "stinkyscape-t-propagation-layer",
+    "stinkyscape-t-shield-layer",
+];
+/// Classic #86 Genn, a (4) 14/14 with no text.
+const GENN: &str = "classic-086";
+/// Meditative #100 Greaser, a (2) 7/7 with no text.
+const GREASER: &str = "meditative-100";
+/// Core #8 Mr. Vanilla, a (1) 4/4 with no text.
+const VANILLA: &str = "core-008";
+
+#[test]
+fn r3695001_each_battleship_layer_beneath_its_top_counts_dormant_share_of_its_worth() {
+    jackioh_cards::register_all();
+    let field = json!([
+        BATTLESHIP[0],
+        { "def": BATTLESHIP[1], "stack": true },
+        { "def": BATTLESHIP[2], "stack": true },
+    ]);
+    let pile = scenario(json!({ "p1": { "field": field }, "p2": { "field": [VANILLA] } }))
+        .state()
+        .clone();
+    let cards = pile.players[AI].units[0].clone().unwrap_or_default();
+    assert_eq!(
+        cards.len(),
+        3,
+        "setup: the Battleship stands as one pile in lane 1"
+    );
+    let mut top = pile.clone();
+    if let Some(cards) = top.players[AI].units[0].as_mut() {
+        cards.truncate(1);
+    }
+    let beneath: f64 = cards[1..]
+        .iter()
+        .map(|card| unit_worth(&pile, card, &AI_EVAL, Prices::NONE))
+        .sum();
+    close(
+        evaluate(&pile, AI, NextSwing::Enemy, &AI_EVAL) - evaluate(&top, AI, NextSwing::Enemy, &AI_EVAL),
+        AI_EVAL.dormant_share * beneath,
+    );
+    // The layers beneath count.
+    const { assert!(AI_EVAL.dormant_share > 0.0) };
+    assert_eq!(
+        GREEDY_EVAL.dormant_share, 0.0,
+        "the greedy baseline keeps them at 0"
+    );
+}
+
+/// Hard (7 crystals) with Drone Core X brought down to them, beside `others`, against `enemy`.
+fn hard_on_seven(others: &[&str], enemy: Value) -> GameState {
+    jackioh_cards::register_all();
+    let mut hand = vec![DC_X];
+    hand.extend_from_slice(others);
+    let mut s = scenario(json!({
+        "seed": "ai-float-discount",
+        "active": "p1",
+        "turn": 11,
+        "p1": { "hand": hand, "mana": 7, "library": [INERT, INERT, INERT, INERT] },
+        "p2": { "hand": [ONE], "field": enemy, "library": [INERT, INERT, INERT, INERT] },
+    }))
+    .state()
+    .clone();
+    s.players[AI].handicap = Some(AI_DIFFICULTY.hard);
+    s.players[AI].mana.max = 7;
+    s.players[AI].hand[0].cost_mod = -1;
+    s
+}
+
+/// The sweep's 3 affordable turns at Hard and no cast: on 7 crystals the AI took a vanilla body over
+/// Drone Core X while the layers beneath the Shield Layer counted nothing. X costs all 7, so it is cast
+/// first or not that turn.
+#[test]
+fn r3695001_hard_on_seven_crystals_casts_drone_core_x_over_genn_or_greaser() {
+    for (others, enemy) in [
+        (&[GENN][..], json!([])),
+        (&[GENN][..], json!([VANILLA])),
+        (&[GREASER][..], json!([])),
+    ] {
+        let s = hard_on_seven(others, enemy.clone());
+        let x = s.players[AI].hand[0].id.clone();
+        assert_eq!(
+            effective_cost(&s, &s.players[AI].hand[0], CostOptions::default()),
+            7
+        );
+        for cursor in 0..3 {
+            let decision =
+                decide(&s, AI, &mut AiOptions::new(create_rng("ai-float-x", cursor))).expect("a decision");
+            assert!(
+                plays(std::slice::from_ref(&decision.action), &x),
+                "{others:?} against {enemy}, cursor {cursor}: {:?}",
                 decision.action
             );
         }

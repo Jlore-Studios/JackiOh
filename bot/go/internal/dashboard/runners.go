@@ -41,8 +41,9 @@ var (
 var Explained = "<!-- jackioh-bot:runners-explained -->"
 
 // HostedRunners is HOSTED_RUNNERS: GitHub's runners the organization may hold at once, its every
-// repository's jobs together (the Free plan's 20: selfplay.yml's header, #1455).
-var HostedRunners = 20
+// repository's jobs together (the Team plan's 60 since 2026-11-11, #3740; the Free plan's 20
+// before, #1455).
+var HostedRunners = 60
 
 // RunnerRuns is RUNNER_RUNS: the runs going or queued whose jobs the section reads, the oldest
 // first: a call each, which costs no rate limit while the run's jobs are as they were at the last
@@ -79,7 +80,7 @@ var Workflows = map[string]string{
 	"cutover.yml":            "by hand: production's sign-in settings, email key, statistics logins and dev statistics",
 	"db-size.yml":            "twice a day: an issue once either Supabase database nears its plan's cap",
 	"deploy-staging.yml":     "deploys the _staging branch to staging.jackioh.com each time it moves",
-	"gather.yml":             "each new patch's dev games on the owner's PC, filed as totals (GATHER_ON_PATCH)",
+	"gather.yml":             "the newest version's dev games without a pause, filed as totals every hour (GATHER_ON_PATCH)",
 	"hygiene-delete.yml":     "deletes the branches a person ticked in the hygiene issue",
 	"hygiene.yml":            "weekly: the hygiene issues for the night bot and Squishy",
 	"learn-set.yml":          "a new patch or set stops a learn export still early on the version before",
@@ -244,8 +245,8 @@ var (
 	PCQuiet = 10 * time.Minute
 )
 
-// GatherWorkflow is GATHER_WORKFLOW: the gather workflow, whose one job runs on the owner's PC
-// (training/gather.md).
+// GatherWorkflow is GATHER_WORKFLOW: the gather workflow (training/gather.md), on two of GitHub's
+// runners without a pause since #3740, and on the owner's PC while TRAINING_ON_PC is `true`.
 var GatherWorkflow = "gather.yml"
 
 // BoxRow and BoxSteps are BOX_ROW and BOX_STEPS: how many boxes a row of the runners diagram

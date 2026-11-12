@@ -494,7 +494,7 @@ func TestUsage_ATickCountsTheLanesTheQueueAndTheHoldsForEachSubscription(t *test
 		five.StartHeadroom5h.String(), five.Util5h.String(), five.Util7d.String(), five.ReadingAgeMin.String(),
 		usage.ISO(five.RefusedUntil)}, []string{"40", "60", "90", "5", "38", "55", "90", "2026-11-02T13:00:00Z"})
 	assertEqual(t, usage.Encode(pool)[1:], []string{"2", "0", "1", "0", "0", "1", "1", "0", "0", "0", "1", "0", "0",
-		"0", "0", "30", "8", "6", "0", "3", "1"})
+		"0", "0", "30", "16", "6", "0", "3", "1"})
 }
 
 // The loop's flush pushes at most every 30 minutes; a push that fails is logged, the loop goes

@@ -1,5 +1,7 @@
 // Landing's front door (B37-B39): a fan of real cards and one call to action; CSS stays scoped to
-// `.landing` so it cannot affect the board layout. R765 shows an active online game.
+// `.landing` so it cannot affect the board layout. R765 shows an active online game: inside the menus'
+// shell, Home, it draws the shell's status row under its corner (R3728002), and Friends is the shell's
+// navigation's (R3728000).
 
 import { Suspense, lazy, useCallback, useEffect, useId, useRef, useState, type CSSProperties, type ReactElement, type RefObject } from "react";
 
@@ -19,13 +21,12 @@ import LanguageButton from "../i18n/LanguageButton.tsx";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import { useAccount, type Account } from "../net/gate.ts";
 import { BackLayer } from "../net/backLayers.ts";
-import { useLiveGame } from "../net/liveGame.ts";
 import { useSettingsAccountSync } from "../settings/accountSync.ts";
 import { paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
 import { useEngineReady } from "../wasm/useEngineReady.ts";
 import { SettingsButton } from "../settings/index.ts";
-import { FriendsButton } from "../together/FriendsButton.tsx";
+import { useMenuShell } from "../shell/context.ts";
 import { useSetting } from "../settings/store.ts";
 import { ROTATION_INTERVAL_MS, ROTATION_MIN_GAMES, ROTATION_SWAP_MS } from "../stats/config.ts";
 import { PlayerStatsCard } from "../stats/PlayerStatsCard.tsx";
@@ -42,7 +43,6 @@ import {
   type RandomSource,
 } from "./landingFan.ts";
 import { DevButton } from "./DevButton.tsx";
-import { LiveGameBanner } from "./GameBanner.tsx";
 import { NewsList, useNews } from "./NewsPanel.tsx";
 import { QuestsView, useQuests } from "./QuestsPanel.tsx";
 import { followInApp } from "./nav.tsx";
@@ -590,7 +590,7 @@ export default function LandingRoute({ random = Math.random, economyLive = ECONO
   const account = useAccount();
   // R634: the first screen most visits see keeps an active account's settings level with this device's.
   useSettingsAccountSync(account);
-  const liveGame = useLiveGame(account);
+  const shell = useMenuShell();
   const motion = useMotion();
   // R2035000, R2875002: GET /api/quests and GET /api/news answer an active account alone.
   const economyToken =
@@ -662,17 +662,13 @@ export default function LandingRoute({ random = Math.random, economyLive = ECONO
             <DevButton account={account} />
             <Corner account={account} />
             <JlorePill />
-            <FriendsButton placement="nav" />
             <LanguageButton placement="nav" />
             <SettingsButton placement="nav" />
           </div>
         </header>
 
-        {liveGame === null ? null : (
-          <div className="landing-banners">
-            <LiveGameBanner game={liveGame} />
-          </div>
-        )}
+        {/* R3728002: the shell's status row, the live game or the queue search. */}
+        {shell === null ? null : <div className="landing-banners">{shell.status}</div>}
 
         <div className="landing-hero-inner">
           <div className="landing-title-block">

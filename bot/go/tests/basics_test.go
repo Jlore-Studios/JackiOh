@@ -52,7 +52,7 @@ func TestBasics_CommittedConfigLoads(t *testing.T) {
 	assertEqual(t, firstCaps.Limits.Stops(), pyjson.New("five_hour", 1.0)) // no weekly cap
 	assertEqual(t, cfg.MaxSelfCheckRounds, 3)
 	assertIn(t, "plan", cfg.MaxTurns)
-	assertEqual(t, [2]int{cfg.Pool.MaxParallel, cfg.Pool.MachineParallel}, [2]int{8, 6})
+	assertEqual(t, [2]int{cfg.Pool.MaxParallel, cfg.Pool.MachineParallel}, [2]int{16, 6})
 	assertIn(t, ".github/", cfg.ForbiddenPaths)
 	assertIn(t, "bot/", cfg.ForbiddenPaths)
 	assertIn(t, ".harness/", cfg.ForbiddenPaths)

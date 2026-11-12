@@ -89,7 +89,8 @@ attacker's excess on the hero and a Lifesteal attacker's heal, #1820), and once 
 evaluation prefers) on every determinization, and plays the first action of the best mean. When none
 of the lines `shortlist_lines` takes for the reply hands the turn over with an effect of the seat's own
 waiting that the root did not hold (a countdown, a next-turn reward), the best line that does is replied
-to as well, last (R3696000). In the reply, a known card guessing an unrevealed secret of the seat's (a
+to as well, last, on a slice of the counter that leaves the other determinizations' share of the
+reserve alone, and not once the host's wrap-up has fired (`payoff_score`, R3696000). In the reply, a known card guessing an unrevealed secret of the seat's (a
 Fortify Mind) is tried with one guess, drawn on its own stream (`one_guess_per_card`, `AI_GUESS_SEED`)
 before anything is weighed, and while a known card would be discarded by the opponent's cleanup,
 `known_play` judges each play and standing still after its turn ends (R3696001). A line
@@ -146,6 +147,9 @@ A passed line's Float counts toward the seat's own "Float reduces cost" cards (R
 `float_cuts_in_hand` reads what the Float took off each of them, and `float_credit` pays
 `AI_EVAL.float_discount` for each crystal that went toward one still above the seat's crystals (its
 `mana.max`, never the handicap's), in `passed_score` and `replied_score` alike; `GREEDY_EVAL` keeps 0.
+A card beneath one of the seat's own Stack piles counts `AI_EVAL.dormant_share`, a half, of its
+`unit_worth` (`dormant_worth`, R3695001), so the Drone Battleship counts its two lower layers; the
+enemy's count `dormant_card` each, and `GREEDY_EVAL` keeps 0.
 A card in either graveyard that its owner may still play from there (`playable_from_graveyard`: its own
 Flashback, R783012, Sanctum's lent one, R1869003, or a field permission such as Second Wind's, R454)
 counts `AI_EVAL.graveyard_playable` of its hand price, the enemy's too, since a graveyard is public; a
@@ -267,7 +271,7 @@ same budget, so both measure the AI that ships. The same state, seed and budget 
 same `Decision`. The browser's wall-clock cap arrives as `should_stop` (the WASM binding's deadline),
 which ends the search early with the best line found. R3498000: every host with a clock also passes
 `wrap_up`, fired at `AI_WRAP_UP_SHARE` of its limit (`wrap_up_after_ms`), which stops the beam's slice
-of the counter alone: the beam's open lines end their turn and the reply and the other determinizations
+of the counter and skips the payoff line R3696000 adds: the beam's open lines end their turn and the reply and the other determinizations
 run on until `should_stop`. `SearchStats.replied` and `worldsScored` say how far they got, and
 `Decision::fell_short` names a decision that left its finalists unscored on a sampled world. With no
 clock, or a wrap-up that never fires, a decision is node for node what it was.

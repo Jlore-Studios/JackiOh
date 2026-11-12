@@ -1,4 +1,5 @@
-// #1831: the Friends button at the top right of every signed-in screen, and its panel. The server is a
+// #1831: the Friends button on every signed-in screen (R3728000: the menus' shell's navigation; the top bar
+// off the shell; a board's control bar), and its panel (R3728001: the shell's drawer). The server is a
 // stubbed `fetch` (`test/stubServer.ts`), as `ChallengeToast.test.tsx`'s is, and the shell's toast is
 // rendered beside the button, as `main.tsx` mounts it: it is the one poll the badge reads (`socialPoll.ts`).
 
@@ -20,6 +21,7 @@ import { expectEmptyState } from "../test/empty.ts";
 import { pressBack } from "../test/history.ts";
 import { settle } from "../test/settle.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
+import { menuShellTestid } from "../shell/testids.ts";
 import { stopFollowingChallenge } from "./follow.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
 import { friendsTestid, togetherTestid } from "./testids.ts";
@@ -135,24 +137,42 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
-describe("#1831 where the Friends button sits", () => {
+describe("#1831 R3728000 where the Friends button sits", () => {
   it(
-    "#1831 every signed-in screen has the button just before its language button, sign-in and a password reset none",
+    "R3728000 every signed-in menu screen has Friends in the shell's navigation and none in its top bar; practice, a board and sign-in keep theirs",
     async () => {
       signIn("tok-friends");
       serve(world());
 
-      for (const path of ["/", "/play", "/decks", "/collection", "/account", "/replays", "/together", "/practice"]) {
+      for (const path of ["/", "/play", "/decks", "/collection", "/account", "/replays", "/together"]) {
         at(path);
         render(<App />);
         const found = await button();
-        expect(found.nextElementSibling, path).toHaveAttribute("data-testid", "language-nav");
-        // #3189: the top bar's three buttons wear its one skin, routes/top-bar.css.
-        expect(found, path).toHaveClass("top-bar-button", "top-bar-button--round");
-        expect(found.nextElementSibling, path).toHaveClass("top-bar-button");
-        expect(screen.getByTestId("settings-open-nav"), path).toHaveClass("top-bar-button", "top-bar-button--round");
+        // The screen's own top bar is drawn (the shell's navigation does not wait for the screen's gate).
+        const gear = await screen.findByTestId("settings-open-nav", undefined, SLOW);
+        // The last of the shell's five destinations, after Shop, wearing the item's look (shell/menu-shell.css).
+        expect(screen.getByTestId(menuShellTestid.nav), path).toContainElement(found);
+        expect(found.previousElementSibling, path).toHaveAttribute("data-testid", menuShellTestid.shop);
+        expect(found, path).toHaveClass("friends-button--rail", "menu-shell__item");
+        expect(found, path).not.toHaveClass("top-bar-button");
+        expect(found, path).toHaveTextContent("Friends");
+        // One Friends on the screen: the top bar (and Home's corner) no longer draws its own.
+        expect(screen.getAllByTestId(friendsTestid.button), path).toHaveLength(1);
+        for (const bar of document.querySelectorAll(".screen-nav, .landing-corner")) expect(bar, path).not.toContainElement(found);
+        // #3189: the top bar's gear still wears its one skin, routes/top-bar.css.
+        expect(gear, path).toHaveClass("top-bar-button", "top-bar-button--round");
         cleanup();
       }
+
+      // Practice is a board's path, outside the shell: its top bar keeps the button just before its language button.
+      at("/practice");
+      render(<App />);
+      const inBar = await button();
+      expect(screen.queryByTestId(menuShellTestid.root)).toBeNull();
+      expect(inBar.nextElementSibling).toHaveAttribute("data-testid", "language-nav");
+      expect(inBar).toHaveClass("top-bar-button", "top-bar-button--round");
+      expect(inBar.nextElementSibling).toHaveClass("top-bar-button");
+      cleanup();
 
       // A board's control bar, which every match, Duos, replay and watch screen draws.
       render(<><ChallengeToast /><Board view={baseView()} highlight={NO_HIGHLIGHT} /></>);
@@ -175,6 +195,65 @@ describe("#1831 where the Friends button sits", () => {
       expect(screen.queryByTestId(friendsTestid.button)).toBeNull();
     },
     60_000,
+  );
+
+  it(
+    "R3728000 signed out, the shell's Friends is a link to Play together",
+    async () => {
+      serve(world());
+      at("/almanac");
+      render(<App />);
+      const link = await screen.findByTestId(menuShellTestid.friends, undefined, SLOW);
+      expect(link.tagName).toBe("A");
+      expect(link).toHaveAttribute("href", "/together");
+      expect(screen.getByTestId(menuShellTestid.nav)).toContainElement(link);
+      expect(screen.queryByTestId(friendsTestid.button)).toBeNull();
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R3728001 the rail's Friends opens the drawer in place and Escape, Back and the scrim close it",
+    async () => {
+      signIn("tok-drawer");
+      serve(world());
+      at("/decks");
+      render(<App />);
+      const opener = await button();
+      const open = async (): Promise<HTMLElement> => {
+        fireEvent.click(opener);
+        const panel = await screen.findByTestId(friendsTestid.panel, undefined, SLOW);
+        const scrim = must(panel.parentElement, "the scrim");
+        // The Dialog's drawer, not its sheet, and the screen under it is the one it opened on.
+        expect(scrim).toHaveClass("dialog-scrim");
+        expect(scrim).toHaveAttribute("data-drawer");
+        expect(scrim).not.toHaveAttribute("data-sheet");
+        expect(window.location.pathname).toBe("/decks");
+        expect(screen.getByTestId(menuShellTestid.root)).toBeInTheDocument();
+        return panel;
+      };
+      const closed = (): void => {
+        expect(screen.queryByTestId(friendsTestid.panel)).toBeNull();
+        expect(window.location.pathname).toBe("/decks");
+        expect(opener).toHaveAttribute("aria-expanded", "false");
+      };
+
+      await open();
+      fireEvent.keyDown(document.body, { key: "Escape" });
+      closed();
+
+      await open();
+      await pressBack();
+      await waitFor(closed, SLOW);
+
+      const panel = await open();
+      fireEvent.click(panel);
+      expect(screen.getByTestId(friendsTestid.panel)).toBeInTheDocument();
+      fireEvent.click(must(document.querySelector<HTMLElement>(".dialog-scrim[data-drawer]"), "the scrim"));
+      closed();
+      expect(opener).toHaveFocus();
+    },
+    TEST_MS,
   );
 });
 

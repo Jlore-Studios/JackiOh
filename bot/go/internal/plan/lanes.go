@@ -165,7 +165,7 @@ func (x *Lanes) OnMachine(pool *providers.Pool) int {
 }
 
 // Free is the lanes free on GitHub's runners. A planning run there takes one too (#1455): the
-// organization runs 20 hosted jobs at once, CI among them, so `max_parallel` caps every
+// organization runs 60 hosted jobs at once (#3740), CI among them, so `max_parallel` caps every
 // model job the bots run on them, not only builds, and the other bots' runs take theirs
 // out of the same pool (`shared`).
 func (x *Lanes) Free() int {

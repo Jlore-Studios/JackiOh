@@ -439,8 +439,8 @@ pub struct EvalWeights {
     /// lent one, R1869003, or a field permission such as Second Wind's), either side's, since a
     /// graveyard is public. At 0 nothing is read.
     pub graveyard_playable: f64,
-    /// §3.2, R13: the share of its `unit_worth` a card dormant under one of the seat's own unit piles
-    /// counts. It resumes when the cards above it leave.
+    /// §3.2, R13, R3695001: the share of its `unit_worth` a card dormant under one of the seat's own
+    /// unit piles counts. It resumes when the cards above it leave.
     pub dormant_share: f64,
     /// §3.2, R447: per card dormant under a pile the seat counts but does not read card by card: the
     /// enemy's unit piles, and every backrow pile, its own and the enemy's.
@@ -616,9 +616,11 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // one more play, once, and only while its permission lasts. At 0.5 its screen read 202-198, edge 0.01
     // (-0.021 to 0.041), against the control (training/improve.md, A screen).
     graveyard_playable: 0.5,
-    // #1506: off. At 0.5 and 1.0 its screen read 200-200, edge 0.0 (-0.024 to 0.024), which keeps
-    // nothing (training/improve.md, A screen).
-    dormant_share: 0.0,
+    // R3695001: half, as a turn's wait is for R2380000's shares: a card beneath an own Stack pile acts
+    // again only once the cards above it leave. #1506 had it off (at 0.5 and 1.0 its screen read
+    // 200-200, edge 0.0, -0.024 to 0.024), so casting Drone Core X gained only its Shield Layer and
+    // Hard on 7 crystals cast Genn or Greaser over it. GATE_AND_SCREEN_PENDING
+    dormant_share: 0.5,
     dormant_card: 0.0,
     // R2380000: untuned starts for the training lanes, as #1886's are. A turn's wait at half, so
     // "Dormant for 2 turns" counts a quarter of the unit it wakes as; an effect's wake at half too.

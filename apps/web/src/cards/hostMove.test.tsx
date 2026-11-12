@@ -7,16 +7,21 @@ import { useRef, type ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useArtLive } from "./artLive.ts";
+import { manualFrames, type ManualFrames } from "../test/frames.ts";
 import { hearHostMove } from "./hostMove.ts";
 import { resetTiltForTests, useCardTilt } from "./tilt.ts";
 
 /** A box 200 by 280 at the page's origin, which jsdom's layout does not give. */
 const BOX = { left: 0, top: 0, width: 200, height: 280, right: 200, bottom: 280, x: 0, y: 0, toJSON: () => ({}) };
 
+let frames: ManualFrames;
+
+/** A move, and the frame the host handles it in (#3610). */
 function move(target: EventTarget, x: number, y: number): void {
   act(() => {
     target.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: x, clientY: y }));
   });
+  frames.flush();
 }
 
 /** A face that both follows the pointer with its art and tilts toward it, on one host: a hand card's, on the board. */
@@ -32,10 +37,12 @@ function LiveTiltFace(): ReactElement {
 }
 
 beforeEach(() => {
+  frames = manualFrames();
   resetTiltForTests();
 });
 
 afterEach(() => {
+  frames.restore();
   cleanup();
   vi.restoreAllMocks();
 });

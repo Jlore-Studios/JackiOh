@@ -15,14 +15,16 @@
 // One face tilts at a time (`claim`): a face that starts to tilt takes the slot, and one that asks for it with a lower
 // priority than its holder's does not get it. None tilts while the animation queue drains (`useTiltHold`, Game.tsx),
 // and none under reduced motion, which draws the face with no depth at all (CardFace). A listener reads the event and
-// the host's box and writes six properties; it reads no view (CLAUDE.md rule 7). Presentation only: nothing here
-// reaches the engine, an action, `PlayerView` or the log.
+// the host's box and writes six properties; it reads no view (CLAUDE.md rule 7). #3610: a pointer move is kept and its
+// pose written once an animation frame, the newest move's (pointerFrame.ts); a leave or a lift puts the face level
+// and drops the move still waiting. Presentation only: nothing here reaches the engine, an action, `PlayerView` or the log.
 
 import { useEffect, useLayoutEffect, useRef, useSyncExternalStore, type RefObject } from "react";
 
 import { CARD_GLARE_TRAVEL_PCT, CARD_TILT_MAX_DEG } from "./constants.ts";
-import { hearHostMove } from "./hostMove.ts";
+import { cancelHostMove, hearHostMove } from "./hostMove.ts";
 import { tiltShift, unitClamp, type ImmersiveShift } from "./immersive.ts";
+import { followPointer, pointerFrames } from "./pointerFrame.ts";
 import { useCardSettings } from "./settings.ts";
 
 /** R3344001: where a face listens for what tilts it: not at all, its parent, the window, or the window and a touch drag on it. */
@@ -204,6 +206,9 @@ function attach(
 
   // Level again: the device keeps its listener in the window's and the drag's modes, which hold it from their start.
   function level(): void {
+    // #3610: a move still waiting for its frame writes nothing after the face is level.
+    follow.cancel();
+    if (mode === "host") cancelHostMove(host);
     pressed = false;
     if (mode === "host") stopDevice();
     for (const property of TILT_PROPERTIES) face.style.removeProperty(property);
@@ -228,6 +233,11 @@ function attach(
   // (placePreview): so the window mode reads the anchor's box when it has one, and every other mode its host's.
   const boxOf = (): TiltBox => (mode === "window" ? anchor.current : undefined) ?? host.getBoundingClientRect();
   const poseAt = (event: MouseEvent): TiltPose => pointerPose(event.clientX, event.clientY, boxOf());
+  // #3610: the window's and the drag's moves, the newest one's pose written once a frame (the host's go through
+  // hostMove.ts's frame, shared with the face's live art).
+  const follow = followPointer(pointerFrames(), (event) => {
+    write(poseAt(event));
+  });
 
   const onDevice = (event: DeviceOrientationEvent): void => {
     const pose = devicePose(event.gamma, event.beta);
@@ -272,10 +282,10 @@ function attach(
     if (touches(event)) level();
   };
   const onWindowMove = (event: PointerEvent): void => {
-    if (!touches(event)) write(poseAt(event));
+    if (!touches(event)) follow.push(event);
   };
   const onDragMove = (event: PointerEvent): void => {
-    if (touches(event) && pressed) write(poseAt(event));
+    if (touches(event) && pressed) follow.push(event);
   };
   // A drag on the face: the sheet's own swipe never starts on it (useSheetSwipe), nor does the browser scroll it.
   const onDragDown = (event: PointerEvent): void => {

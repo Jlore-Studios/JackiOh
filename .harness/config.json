@@ -41,7 +41,7 @@
   "suggestions": {
     "enabled": true,
     "max_open": 10,
-    "spare_lanes": 3,
+    "spare_lanes": 1,
     "idle_minutes": 0,
     "priorities": {
       "fuzz": "low",

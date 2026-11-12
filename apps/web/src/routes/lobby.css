@@ -682,7 +682,7 @@
 
 .tavern.play-screen.play-hub {
   height: 100vh;
-  height: 100dvh;
+  height: var(--shell-screen-h, 100dvh);
   min-height: 0;
   padding-bottom: 14px;
   overflow: hidden;

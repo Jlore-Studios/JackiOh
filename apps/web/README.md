@@ -69,16 +69,35 @@ The spacing is one scale (#3225): `src/spacing.css`, imported by `index.css` aft
 
 The breakpoints are one named set (#3227), `src/breakpoints.ts`'s `BREAKPOINT_PX`. Each is the widest (or tallest) window of the smaller layout: `(max-width: N)` holds up to N and the layout above starts at `(min-width: N+1)`. They are `phone` 600 px (a phone held upright), `narrow` 760 px (a small tablet upright), `medium` 899 px (a tablet upright), `tablet` 1024 px (the desktop starts at 1025) and, for height, `short` 500 px (a phone on its side). Touch is `(pointer: coarse)`. A sheet spells the number out (CSS reads no custom property in `@media`), and a script builds its query with `upTo()`, `over()` and `PHONE_SHEET_QUERY`. `src/breakpoints.test.ts` holds both, its `KEEP` listing each other value with its reason.
 
-Every menu is one screen (R1581000): at 1280x720 and 390x844 the page is no taller or wider than the
-window, and what a menu holds past its room scrolls in its one region, never in the page, with its
+Every menu is one screen (R1581000): at every size of `MENU_SIZES` (`e2e/support/config.ts`, R3728000:
+desktop 1440x900 and 1280x720, iPad 1180x820, 1366x1024, 820x1180 and 744x1133, phone 390x844) the page is
+no taller or wider than the window, and what a menu holds past its room scrolls in its one region, never in the page, with its
 top (Back, the gear, the title) staying put. A menu's root takes `one-screen` (`index.css`, which
 makes the shell the window's height); its region takes `one-screen__body`; a box between the two
 that must shrink (a tavern panel) takes `one-screen__frame`, and a wrapper that stacks its children
-as the shell does takes `one-screen__stack`. Under 501 px tall (a phone on its side) the page
+as the shell does takes `one-screen__stack`. Inside the menus' shell "the window's height" is
+`--shell-screen-h` (`shell/menu-shell.css`): the window less the top inset and a phone's tab bar, read with
+`100dvh` as its fallback by every one-screen menu's sheet. Under 501 px tall (a phone on its side) the page
 scrolls as it did. The deck builder and the almanac do the same on a phone (`deckbuilder.css`,
 `workshop.css`, `almanac.css`), as they already did on a desktop. No type shrinks to make it fit.
-The tavern home alone may be two screens tall (#1576). e2e spec `46` visits every menu at both
-sizes and fails when the page is taller or wider than its allowance.
+The tavern home alone may be two screens tall (#1576). e2e spec `46` visits every menu at every
+size and fails when the page is taller or wider than its allowance.
+
+Every menu screen renders inside one shell (#3728, R3728000–R3728002, `shell/MenuShell.tsx`,
+`docs/polish/10-menus.md`): `main.tsx` wraps each route that `menuShellOn` says is a menu, every path but a
+board's (`isBoardPath`), the series screen and the dev screens. The shell draws the screen's column, then its
+navigation, Home, Play, Collection, Shop and Friends, in one place on every menu: a rail with labels at 1025
+px and wider, the same rail with icons alone from 601 to 1024 px, a tab bar at the foot of the window at 600
+px and under (`menu-shell.css`, on `phone` and `tablet`), inside the safe-area insets. A toast fixed at the
+column's foot reads the room the navigation takes, `--shell-start` (the rail's width) and `--shell-bottom` (a
+phone's tab bar and the bottom inset), each 0px outside the shell, to center on the column and sit above the
+tab bar, as the deck builder's status toast and the undo toast do. A board drawn on a menu
+path (`game/boardShown.ts`) takes the navigation away and keeps the screen mounted. Friends is the friends
+panel's button (`FriendsButton`'s `rail`), which opens the panel as the Dialog's drawer down the right edge,
+and the top bar no longer draws it inside the shell. The shell hands the screens a status row
+(`shell/context.ts`'s `useMenuShell`): the live game to go back to, else this tab's queue search with Leave
+the queue, which BackLink draws as its last slot and Home under its corner. e2e spec `51` clicks through the
+five destinations and closes the drawer each way at every size, and spec `38` runs axe over the shell.
 
 On a phone every control takes a tap across `--hit-min` (44 px) each way (R2122000). Under
 `(pointer: coarse), (max-width: 600px)`, `index.css` gives each button, link, `role="button"` and
@@ -160,8 +179,9 @@ it: no `"Escape"` comparison outside the shared hooks and its named exceptions, 
 the inline confirms' safe choice first.
 
 The top bar is also one layout (#3218, R3218000), the same sheet's. BackLink's slots run Back, the line
-(`title`, then its children as the extras), a flexible spacer, then the end group: the Jlore pill, Friends,
-language, the gear, so Back is the leftmost control and the gear the rightmost. On a phone (600 px, the touch
+(`title`, then its children as the extras), a flexible spacer, then the end group: the Jlore pill, Friends
+(off the menus' shell alone, R3728000), language, the gear, so Back is the leftmost control and the gear the
+rightmost; inside the shell a fifth slot, the status row, takes a row of its own under the rest (R3728002). On a phone (600 px, the touch
 rule's) the line takes a row under Back and the end group. Only `routes/top-bar.css` places those controls:
 a screen passes its title and extras to BackLink and never wraps the bar in a flex header or sets a margin on
 a bar control, and the replay player's Back is BackLink's too (`onPress`, `testId`). e2e spec `46` measures it.
@@ -690,7 +710,8 @@ net/liveGame.ts         R765: the player's online game, read off /api/auth/me: t
                         queue is forgotten after QUEUE_ENDED_AFTER_READS reads (R897000)
 routes/GameBanner.tsx   R765: the one banner atop a menu while there is a game to go back to: a saved
                         practice game (Resume, on /practice) and the live online or co-op game (Rejoin,
-                        on / and /practice); game-banner.css draws it as the tavern's notice
+                        in the menus' shell's status row on every menu but the game's own, R3728002, and
+                        on /practice); game-banner.css draws it as the tavern's notice
 routes/series.tsx       /series/:id: a Conquest series (R330–R336): score, both sides' won (locked) decks,
                         the history, forfeit between games, the result
 routes/SeriesPicker.tsx the deck-selection phase before each game, laid out as the mulligan (R331–R333,
@@ -885,8 +906,9 @@ together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open an
 net/roomLink.ts          R767's room link (/play?room=…&mode=…) and R2094000's co-op link
                          (/together?coop=…): built for the share sheet or the clipboard, read once off
                          the address bar into this tab, through a sign-in, for the lobby or the co-op panel
-together/FriendsButton.tsx  the Friends button at the top right of every signed-in screen (the nav, the
-                         landing and a board's controls) with its badge (incoming requests, challenges
+together/FriendsButton.tsx  the Friends button on every signed-in screen (the menus' shell's navigation,
+                         R3728000, which opens its panel as a drawer, R3728001; the top bar off the shell;
+                         a board's controls) with its badge (incoming requests, challenges
                          and unread chats), and its panel: the player's name#tag, the add form, the
                          requests in, the friends online first with Challenge, Watch and Chat (the rows
                          of FriendRows.tsx, shared with /together) and a link to /together; the friends

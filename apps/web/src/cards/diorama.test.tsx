@@ -19,6 +19,7 @@ import { CATALOG } from "@jackioh/cards";
 import { resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { unit } from "../test/fixtures.ts";
+import { manualFrames, type ManualFrames } from "../test/frames.ts";
 import { facePicture, wholePicture } from "../test/artPicture.ts";
 import { setReducedMotion } from "../test/setup.ts";
 import { DIORAMAS, dioramaOf, dioramaSliceUri } from "./art/dioramas/index.ts";
@@ -133,13 +134,18 @@ function boardMythic(attacking = false): HTMLElement {
   return cf;
 }
 
+let frames: ManualFrames;
+
 function pointer(target: EventTarget, type: string, x: number, y: number): void {
   act(() => {
     target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y }));
   });
+  // #3610: a move is written in its frame, which runs at once here.
+  if (type === "pointermove") frames.flush();
 }
 
 beforeEach(() => {
+  frames = manualFrames();
   localStorage.clear();
   resetCosmeticsForTests();
   resetMotionSlotsForTests();
@@ -148,6 +154,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  frames.restore();
   cleanup();
   setReducedMotion(false);
   resetFxSettingsForTests();
