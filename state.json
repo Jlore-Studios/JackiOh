@@ -16601,6 +16601,7 @@
       "action": "build",
       "asks": [],
       "died": 1,
+      "failures": 0,
       "handoff": {
         "at": "2026-11-12T02:38:41Z",
         "family": "claude",
@@ -16623,9 +16624,11 @@
       "planned_by_id": "claude-8",
       "planned_model": "opus",
       "planned_tier": "strong",
+      "pr": 3762,
       "provider": "claude-1",
+      "question": "",
       "queued_at": "2026-11-11T21:06:25Z",
-      "round_tier": "",
+      "round_tier": "strong",
       "run_id": "43160290957",
       "runs_on": "ubuntu-latest",
       "session": {
