@@ -15873,6 +15873,7 @@
       "run_id": "43252990261",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 225,
       "started_at": "2026-11-12T15:55:10Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -35043,9 +35044,33 @@
         "title": "Patch: the AI's search keeps room for a plan whose payoff lands next turn",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-7"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "22f1babd0912caac443d70f172a28abb1537d904",
+        "issue": 3770,
+        "merged_at": "2026-11-12T16:34:53Z",
+        "n": 225,
+        "pr": 3782,
+        "queued_at": "2026-11-12T16:34:53Z",
+        "sha": "6a1d86fe8480777846536d27b88ae640df1ad1ba",
+        "status": "queued",
+        "title": "Patch: a server sweep that keeps failing raises an alert, not just a warning on every pass",
+        "tries": 0
       }
     ],
-    "count": 224
+    "count": 225
   },
   "statistics": {
     "at": "2026-11-12T16:28:28Z"
