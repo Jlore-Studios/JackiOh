@@ -67,7 +67,10 @@
      3. the flexible spacer: the line's `flex: 1 1 0`, and the end group's `margin-left: auto` when the
         screen has no line;
      4. the end group, `.screen-nav__end`: the Jlore pill, Friends, the language button, the gear, in
-        this order, a missing one dropping out (R1651000, R1916000), the gear always last.
+        this order, a missing one dropping out (R1651000, R1916000), the gear always last; inside the
+        menus' shell Friends is the shell's navigation's (R3728000);
+     5. the status row, `.screen-nav__status`, inside the menus' shell alone (R3728002): the live game
+        or the queue search, on a row of its own under everything else, and nothing when there is none.
    A phone (the same 600 px as index.css's touch rule) puts the line on a row of its own under Back and
    the end group, so Back stays top left and the gear top right. */
 .screen-nav__line {
@@ -95,6 +98,16 @@
   align-items: center;
   gap: 18px;
   margin-left: auto;
+}
+
+.screen-nav__status {
+  order: 2;
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.screen-nav__status:empty {
+  display: none;
 }
 
 /* A phone, 320 to 600 px: the line takes a row of its own. A fifth control in the bar left no room for

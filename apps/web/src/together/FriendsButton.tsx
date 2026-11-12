@@ -1,12 +1,13 @@
 // The Friends button (#1831): on every screen a signed-in account has, a match included
-// (`placement`: `routes/nav.tsx`'s top bar, a board's control bar, a phone's match menu, #2645), so
-// friends are one press away. Its badge reads what the shell's one poll published (`socialPoll.ts`),
-// so the button adds no request of its own.
+// (`placement`: the menus' shell's navigation, R3728000; `routes/nav.tsx`'s top bar off the shell; a
+// board's control bar; a phone's match menu, #2645), so friends are one press away. Its badge reads
+// what the shell's one poll published (`socialPoll.ts`), so the button adds no request of its own.
 //
 // The panel it opens reads the friends list only while it is open, every `FRIENDS_POLL_MS`, and again
 // when the tab's social socket says it changed (R3214000). Chat and Challenge close it and open their
 // own modal over the screen, which is left as it was. R3221000: it is the one Dialog's, a sheet: the
-// focus stays inside and returns to this button.
+// focus stays inside and returns to this button. R3728001: opened from the shell's navigation it is the
+// Dialog's drawer instead, down the right edge, and the screen stays where it is.
 //
 // CLAUDE.md rule 7: nothing here is a rule. Which friend can be challenged or watched is the server's
 // status; Challenge is off while the player is in a game only to say what the server would, and the
@@ -76,12 +77,15 @@ function readAccount(): Promise<MeResponse> {
 
 function FriendsPanel({
   id,
+  drawer,
   unread,
   onClose,
   onChat,
   onChallenge,
 }: {
   id: string;
+  /** R3728001: down the right edge, opened from the shell's navigation; a sheet otherwise. */
+  drawer: boolean;
   unread: Readonly<Record<string, number>>;
   onClose: () => void;
   onChat: (friend: PlayerRef) => void;
@@ -144,7 +148,8 @@ function FriendsPanel({
   return (
     <Dialog
       role="dialog"
-      sheet
+      sheet={!drawer}
+      drawer={drawer}
       id={id}
       title={t("Friends")}
       onClose={onClose}
@@ -243,7 +248,7 @@ function FriendsPanel({
 }
 
 /** Two figures, side by side, on a 24-unit square, filled in `currentColor` so every skin's button color applies. */
-function FriendsIcon(): ReactElement {
+export function FriendsIcon(): ReactElement {
   return (
     <svg viewBox="0 0 24 24" width="20" height="20" focusable="false">
       <circle cx="9" cy="8" r="3.2" fill="currentColor" />
@@ -254,7 +259,14 @@ function FriendsIcon(): ReactElement {
   );
 }
 
-export function FriendsButton({ placement }: { placement: "game" | "nav" | "menu" }): ReactElement | null {
+export type FriendsButtonProps = {
+  /** Where it sits: a board's control bar, the top bar, a phone's match menu, the menus' shell (R3728000). */
+  placement: "game" | "nav" | "menu" | "rail";
+  /** What stands in its place while it has no friends to show (the shell's link to Play together). */
+  fallback?: ReactElement | null;
+};
+
+export function FriendsButton({ placement, fallback = null }: FriendsButtonProps): ReactElement | null {
   useLocale();
   const reads = useSocialReads();
   const panelId = useId();
@@ -297,11 +309,13 @@ export function FriendsButton({ placement }: { placement: "game" | "nav" | "menu
   }, [refocus]);
 
   // Signed out, an account the server refuses, or no read of the challenges yet: no friends to show.
-  if (readSession() === null || reads.challengeReads === 0 || reads.refused) return null;
+  if (readSession() === null || reads.challengeReads === 0 || reads.refused) return fallback;
 
   const count = friendsBadgeCount(reads);
-  // The top bar's round control (routes/top-bar.css); the board's control bar and the match menu draw their own.
-  const bar = placement === "nav" ? " top-bar-button top-bar-button--round" : "";
+  // The top bar's round control (routes/top-bar.css), the shell's item (shell/menu-shell.css); the board's
+  // control bar and the match menu draw their own.
+  const bar = placement === "nav" ? " top-bar-button top-bar-button--round" : placement === "rail" ? " menu-shell__item" : "";
+  const rail = placement === "rail";
 
   return (
     <>
@@ -319,10 +333,11 @@ export function FriendsButton({ placement }: { placement: "game" | "nav" | "menu
           setOpen(true);
         }}
       >
-        <span aria-hidden="true" className="friends-button__icon">
+        <span aria-hidden="true" className={rail ? "friends-button__icon menu-shell__icon" : "friends-button__icon"}>
           <FriendsIcon />
         </span>
         {placement === "menu" ? <span className="friends-button__label">{t("Friends")}</span> : null}
+        {rail ? <span className="menu-shell__label">{t("Friends")}</span> : null}
         {count > 0 ? (
           <span className="together-badge friends-button__badge" data-testid={friendsTestid.badge} aria-hidden="true">
             {count}
@@ -335,6 +350,7 @@ export function FriendsButton({ placement }: { placement: "game" | "nav" | "menu
               {open ? (
                 <FriendsPanel
                   id={panelId}
+                  drawer={rail}
                   unread={reads.unread}
                   onClose={closePanel}
                   onChat={(friend) => {

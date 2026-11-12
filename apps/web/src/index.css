@@ -150,7 +150,7 @@ button:disabled {
    content) scrolls with it instead of reaching below the window and making the page scroll. Under
    501 px tall (a phone on its side) the page scrolls as before. */
 @media (min-height: 501px) {
-  .app-shell.one-screen { height: 100vh; height: 100dvh; min-height: 0; }
+  .app-shell.one-screen { height: 100vh; height: var(--shell-screen-h, 100dvh); min-height: 0; }
   .app-shell.one-screen > * { flex-shrink: 0; }
   .app-shell.one-screen .one-screen__frame { flex: 0 1 auto; min-height: 0; }
   .app-shell.one-screen .one-screen__body {

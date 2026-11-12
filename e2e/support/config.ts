@@ -123,12 +123,29 @@ export const timeouts = {
   axe: 30_000,
 };
 
-/** BUILD M5-T1's two sizes; spec 46 holds every menu to one screen at both (R1581000). */
+/** BUILD M5-T1's two sizes; spec 47 measures the board at the phone's. The menus run at `MENU_SIZES`. */
 export const viewports = {
   desktop: { label: "desktop", width: 1280, height: 720 },
   phone: { label: "phone", width: 390, height: 844 },
 } as const;
 export type MenuViewport = (typeof viewports)[keyof typeof viewports];
+
+/**
+ * Issue #3728's device sizes (R3728000), the one list every menu layout spec runs: spec 46 holds each
+ * menu to one screen at every one (R1581000), spec 47 measures its tap areas (R2122000), spec 51 follows
+ * the menus' shell and spec 38 runs axe on it: two desktops, iPads held either way, an iPad mini upright
+ * and BUILD M5-T1's phone.
+ */
+export const MENU_SIZES = [
+  { label: "desktop-1440x900", width: 1440, height: 900 },
+  { label: "desktop-1280x720", width: 1280, height: 720 },
+  { label: "ipad-landscape-1180x820", width: 1180, height: 820 },
+  { label: "ipad-landscape-1366x1024", width: 1366, height: 1024 },
+  { label: "ipad-portrait-820x1180", width: 820, height: 1180 },
+  { label: "ipad-mini-portrait-744x1133", width: 744, height: 1133 },
+  { label: "phone-390x844", width: 390, height: 844 },
+] as const;
+export type MenuSize = (typeof MENU_SIZES)[number];
 
 /** SPEC §2 / BUILD §2 constants so specs do not hard-code them. */
 export const constants = {

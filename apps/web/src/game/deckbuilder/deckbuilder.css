@@ -28,7 +28,7 @@
    against: tavern.css's padding and its 1120 px reading column are for a form, not a pool. */
 .deckbuilder.app-shell {
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: var(--shell-screen-h, 100dvh);
 }
 
 .tavern.deckbuilder.app-shell {
@@ -537,13 +537,17 @@
 
 /* The status toast: what the last add or removal did, at the foot of the screen, gone after a
    moment (Deckbuilder.tsx). Fixed so a phone deep in the pool still sees it, and blind to the
-   pointer so it can never cover a card. */
+   pointer so it can never cover a card. Inside the menus' shell (R3728000, shell/menu-shell.css) it
+   sits above a phone's tab bar, which is drawn over its layer (`--shell-bottom`, the bar and the
+   bottom inset), and centers on the screen's column beside the rail (`--shell-start`, the rail's
+   width): every `left` here is the column's middle without the rail, which `translate` moves by
+   half the rail, and every `max-width` leaves the rail out. */
 .db-deck-status {
   position: fixed;
   z-index: 30;
   left: 50%;
-  bottom: max(16px, env(safe-area-inset-bottom));
-  max-width: calc(100vw - 32px);
+  bottom: max(16px, env(safe-area-inset-bottom), calc(var(--shell-bottom, 0px) + 16px));
+  max-width: calc(100vw - var(--shell-start, 0px) - 32px);
   margin: 0;
   padding: 8px 14px;
   border: 1px solid color-mix(in srgb, var(--legal) 60%, var(--line-bright));
@@ -557,7 +561,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  translate: -50% 0;
+  translate: calc(var(--shell-start, 0px) / 2 - 50%) 0;
   pointer-events: none;
   transition: opacity 160ms ease;
 }
@@ -567,14 +571,14 @@
 @media (min-width: 761px) {
   .db-deck-status {
     left: calc(50% - 177px);
-    max-width: calc(100vw - 420px);
+    max-width: calc(100vw - var(--shell-start, 0px) - 420px);
   }
 }
 
 @media (min-width: 761px) and (max-width: 1024px) {
   .db-deck-status {
     left: calc(50% - 147px);
-    max-width: calc(100vw - 340px);
+    max-width: calc(100vw - var(--shell-start, 0px) - 340px);
   }
 }
 
@@ -1107,7 +1111,7 @@
   .deckbuilder.app-shell {
     box-sizing: border-box;
     height: 100vh;
-    height: 100dvh;
+    height: var(--shell-screen-h, 100dvh);
   }
 
   .db-layout {
@@ -1168,7 +1172,7 @@
 @media (max-width: 760px) and (min-height: 501px) {
   .deckbuilder.app-shell {
     height: 100vh;
-    height: 100dvh;
+    height: var(--shell-screen-h, 100dvh);
   }
 }
 

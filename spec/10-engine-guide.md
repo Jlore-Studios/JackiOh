@@ -297,6 +297,8 @@ A dialog is one component ([[R3220000]]): a `dialog` closes by its ✕ at its to
 
 The menus' dialogs draw through it too ([[R3221000]]), and a panel that slides in is its sheet: centred on a wide screen, at the foot of an upright phone and down the right edge of a phone on its side. Escape and Tab go to the top layer alone, so a dialog opened over another closes first, one per Escape as one per Back.
 
+Every menu screen renders inside one shell ([[R3728000]]), all but a board's path, the series screen and the dev screens. Its navigation is Home, Play, Collection, Shop and Friends, in one place on every menu: a rail with labels at 1025 px and wider, the same rail with icons alone from 601 to 1024 px, and a tab bar at the foot of the window at 600 px and under, the width deciding and never the device. A board drawn on a menu path takes the navigation away while it is up, and the screen stays as it was. The shell keeps inside the safe-area insets, and a menu that is one screen tall fills the room it leaves. Friends opens the friends panel as a drawer down the right edge ([[R3728001]]), beside the screen on a wide window and over it below, closed by Escape, Back and a tap outside it. Under every menu's top bar, and Home's corner, a status row shows the live game to go back to, else this tab's queue search with Leave the queue ([[R3728002]]). Presentation only (CLAUDE.md rule 7).
+
 ### 10.11 Audio
 
 The client plays sound from the same event stream it animates ([[§10.10]]), and none of it is a rule.

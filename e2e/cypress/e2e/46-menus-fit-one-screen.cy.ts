@@ -1,16 +1,19 @@
 // 46 — every menu fits one screen (issue #1581, part of #1576, R1581000): each test opens one menu at
-// BUILD M5-T1's two sizes (`viewports`, support/config.ts) and asserts, by a retried assertion, that
-// the document scrolls neither way, but for the tavern home (`LANDING_SCREENS`). A big list of cards
-// and a menu's own region scroll inside the menu, never the page. Not asked: the boards, and the
-// static legal pages (spec 38 holds those to axe). Per pull request: SMOKE in scripts/shard-specs.mjs
-// holds 46. Networked: the signed-in menus need `E2E=1 cargo run --release -p jackioh-server`.
+// each of issue #3728's sizes (`MENU_SIZES`, support/config.ts, R3728000) and asserts, by a retried
+// assertion, that the document scrolls neither way, but for the tavern home (`LANDING_SCREENS`). A big
+// list of cards and a menu's own region scroll inside the menu, never the page. A menu inside the menus'
+// shell draws its navigation inside the window (`expectShellNav`, support/shell.ts); practice's setup and
+// a series are outside the shell. Not asked: the boards, and the static legal pages (spec 38 holds those
+// to axe). Per pull request: SMOKE in scripts/shard-specs.mjs holds 46. Networked: the signed-in menus
+// need `E2E=1 cargo run --release -p jackioh-server`.
 
 import { consentTestid, inviteTestid, landingTestid, loginTestid, resetTestid, shellTestid } from "../../../apps/web/src/auth/testids.ts";
 import { patchTestid } from "../../../apps/web/src/patches/testids.ts";
 import { practiceTestid } from "../../../apps/web/src/practice/testids.ts";
+import { menuShellTestid } from "../../../apps/web/src/shell/testids.ts";
 import { SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED } from "../../../apps/web/src/wire/serverConfig.ts";
 import { allCardIds, cardId } from "../../support/cards.ts";
-import { accounts, constants, routes, timeouts, viewports, type MenuViewport } from "../../support/config.ts";
+import { MENU_SIZES, accounts, constants, routes, timeouts, type MenuSize } from "../../support/config.ts";
 import { visitStatsFigures } from "../../support/stats.ts";
 import {
   CARD_POOL,
@@ -26,6 +29,7 @@ import {
   deckRowId,
   ts,
 } from "../../support/testids.ts";
+import { expectShellNav } from "../../support/shell.ts";
 import { expectBackLinkBarOrder, expectLandingCornerOrder } from "../../support/topBar.ts";
 import { SETTINGS_OPEN_NAV, SETTINGS_PANEL } from "../../support/ux.ts";
 
@@ -53,7 +57,7 @@ const SCREEN = {
 } as const;
 
 /** R1581000: the page is no taller than `screens` windows and no wider than one. */
-function expectOnScreen(viewport: MenuViewport, screens: number): void {
+function expectOnScreen(viewport: MenuSize, screens: number): void {
   cy.window().should((win) => {
     const where = `${String(viewport.width)}x${String(viewport.height)}`;
     expect(win.innerWidth, "the viewport asked for").to.eq(viewport.width);
@@ -125,8 +129,8 @@ function seriesPicking(now: number): Record<string, unknown> {
 }
 
 describe("46 — every menu fits one screen (issue #1581)", () => {
-  for (const viewport of [viewports.desktop, viewports.phone]) {
-    describe(`${viewport.label}, ${String(viewport.width)}x${String(viewport.height)}`, () => {
+  for (const viewport of MENU_SIZES) {
+    describe(`R3728000 ${viewport.label}`, () => {
       beforeEach(() => {
         cy.viewport(viewport.width, viewport.height);
       });
@@ -145,6 +149,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
             for (const card of $cards.toArray()) expect(getComputedStyle(card).opacity, "a dealt card").to.eq("1");
           });
           expectLandingCornerOrder();
+          expectShellNav(false);
           expectOnScreen(viewport, LANDING_SCREENS);
         });
 
@@ -166,6 +171,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visit(routes.login());
           cy.get(ts(loginTestid.form), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(false);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -175,6 +181,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.get(ts(loginTestid.form)).should("have.attr", "data-mode", "signUp");
           cy.get(ts(consentTestid.birthYear)).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(false);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -182,6 +189,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visit("/reset-password");
           cy.get(ts(resetTestid.screen), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(false);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -190,6 +198,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.get(ts(SCREEN.almanac), { timeout: timeouts.view }).should("be.visible");
           cy.get(ts(CARD_POOL), { timeout: CARD_POOL_TIMEOUT }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(false);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -197,12 +206,14 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visit("/patch-notes");
           cy.get(ts(patchTestid.screen), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(false);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
         it("R1581000 R3218000 R3324000 /stats", () => {
           visitStatsFigures();
           expectBackLinkBarOrder();
+          expectShellNav(false);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -210,6 +221,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visit(routes.practice());
           cy.get(ts(practiceTestid.setup), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          cy.get(ts(menuShellTestid.root)).should("not.exist");
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -217,6 +229,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visit(routes.play());
           cy.get(ts(PLAY_SIGN_IN), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(false);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -224,12 +237,14 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visit(routes.replays());
           cy.get(ts(REPLAYS_ROOT), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(false);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
         it("R1581000 a path nothing is at", () => {
           cy.visit("/no-such-menu");
           cy.get(ts(shellTestid.notFound), { timeout: timeouts.view }).should("be.visible");
+          expectShellNav(false);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -252,6 +267,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visitAs(accounts.p1(), routes.play());
           cy.get(ts(PLAY_QUEUE), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -259,6 +275,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visitAs(accounts.p1(), routes.deckbuilder());
           cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -269,10 +286,12 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.saveDeck(accounts.p1(), { name: "Fits", cards: allCardIds().slice(0, constants.DECK_SIZE) }).then((deckId) => {
             cy.visitAs(accounts.p1(), routes.deckbuilder());
             cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("be.visible");
-            // A phone shows the list alone until a deck is opened (a desktop opens it already).
+            // A window narrower than the workshop's split shows the list alone until a deck is opened (a
+            // wider one opens it already).
             cy.get(ts(deckRowId(deckId))).click();
             cy.get(ts(CARD_POOL), { timeout: CARD_POOL_TIMEOUT }).should("be.visible");
             expectBackLinkBarOrder();
+            expectShellNav(true);
             expectOnScreen(viewport, ONE_SCREEN);
           });
         });
@@ -281,6 +300,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visitAs(accounts.p1(), "/account");
           cy.get(ts(SCREEN.accountRank), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -288,6 +308,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visitAs(accounts.p1(), "/leaderboard");
           cy.get(ts(SCREEN.leaderboardSeason), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -295,6 +316,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visitAs(accounts.p1(), routes.replays());
           cy.get(ts(REPLAYS_ROOT), { timeout: timeouts.view }).find('[role="status"]').should("not.exist");
           expectBackLinkBarOrder();
+          expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -302,6 +324,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visitAs(accounts.p1(), "/together");
           cy.get(ts(TOGETHER_ROOT), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -309,6 +332,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visitAs(accounts.p1(), routes.collection());
           cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -316,6 +340,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visitAs(accounts.p1(), routes.collectionCards());
           cy.get(ts(COLLECTION_JLORE), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -323,6 +348,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visitAs(accounts.p1(), `${routes.collection()}?section=cosmetics`);
           cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -330,6 +356,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visitAs(accounts.p1(), routes.shop());
           cy.get(ts(SHOP_PANEL), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -338,6 +365,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visitAs(accounts.p1(), routes.series(SERIES_ID));
           cy.get(ts(SERIES_SCORE), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          cy.get(ts(menuShellTestid.root)).should("not.exist");
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
@@ -346,6 +374,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.visitAs(accounts.p1(), routes.invite());
           cy.get(ts(inviteTestid.input), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
+          expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
         });
 
