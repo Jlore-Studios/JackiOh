@@ -24,7 +24,7 @@ use crate::prelude::json_as;
 use crate::prompts::run_start_of_game;
 use crate::resolve::lazy_part;
 use crate::script::{Effect, EffectContext, EffectPart};
-use crate::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
+use crate::state::{CardInstance, GameState, Slumber, find_instance, find_instance_mut, new_instance};
 use crate::stays::exit_mark;
 use crate::wire::{
     AttackHealth, CardType, CostRange, GameEvent, Keyword, OneOrMany, PlayerId, Row, Tag, Zone, ZoneName,
@@ -108,6 +108,11 @@ pub struct SummonPlacement {
     /// enter evolved (R3536002), when its text prints an Evolve hook. Fresh summons only.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub enters_evolved: Option<bool>,
+    /// S+ #28 Zombie-Box (R3541002): the fresh summon enters Dormant for this many of its controller's
+    /// turns though its text prints no Dormant ("Summon a Dormant 1 Gargantuar"); absent or 0 enters
+    /// awake. Fresh summons only, and never a card that has awakened before (R3039000).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dormant_turns: Option<i32>,
 }
 
 /// `summon`'s arguments, the placement's keys beside the rest.
@@ -169,6 +174,9 @@ pub struct SummonArgs {
     /// (`SummonPlacement.exile_below`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exile_below: Option<bool>,
+    /// R3541002: the fresh card enters Dormant for this many turns (`SummonPlacement.dormant_turns`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dormant_turns: Option<i32>,
 }
 
 impl SummonArgs {
@@ -189,6 +197,7 @@ impl SummonArgs {
             exile_below: self.exile_below,
             giga: None,
             enters_evolved: None,
+            dormant_turns: self.dormant_turns,
         }
     }
 }
@@ -489,6 +498,13 @@ fn summon_fresh_into(
     // R3570001: marked only when its text prints an Evolve hook (R3536002), a card with none staying as it is.
     if at.enters_evolved == Some(true) && crate::evolution::can_evolve(&*ctx.state, &card) {
         card.enters_evolved = Some(true);
+    }
+    // R3541002: asleep before it lands, as a card printing Dormant is (`slumber::start_slumber_on_field`
+    // then finds it Dormant already and leaves its countdown as it is). A fresh card has never awakened.
+    if at.dormant_turns.is_some_and(|turns| turns > 0) {
+        card.slumber = Some(Slumber {
+            turns: at.dormant_turns,
+        });
     }
     crate::generators::record_generator(ctx, &card);
     if summon_onto(ctx, &mut card, slot, at, None, stands) {

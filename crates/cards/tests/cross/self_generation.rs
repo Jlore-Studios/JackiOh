@@ -67,6 +67,10 @@ const NAMES_ITS_OWN_POOL: &[(&str, &str)] = &[
         "stinkyscapeplus-120",
         "Crawler adds a Toxopid whose first arrival in a hand adds a Crawler (R3560000): the two texts name the loop (rule 3)",
     ),
+    (
+        "stinkyscapeplus-083",
+        "Offworld Replicant's Evolve adds a copy of this to your hand (rule 4: a copy of \"this\" is not generation, R3541001)",
+    ),
 ];
 
 const SEEDS: &[&str] = &["self-gen-a", "self-gen-b", "self-gen-c", "self-gen-d"];

@@ -28951,7 +28951,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 35,
     "base": {
       "attack": 2,
       "health": 2,
@@ -30092,7 +30092,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 35,
     "base": {
       "attack": 12,
       "health": 12,
@@ -30166,7 +30166,7 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 0,
-    "loc": 6,
+    "loc": 30,
     "base": {
       "keywords": [],
       "text": "Nerf your hand. Summon a Dormant Gargantuar."
@@ -32388,7 +32388,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "attack": 6,
       "health": 6,
@@ -32472,7 +32472,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 0,
-    "loc": 6,
+    "loc": 76,
     "base": {
       "attack": 0,
       "health": 1,
@@ -32551,7 +32551,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 45,
     "base": {
       "attack": 2,
       "health": 7,
@@ -32740,7 +32740,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 32,
     "base": {
       "attack": 2,
       "health": 4,
@@ -33071,7 +33071,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 42,
     "base": {
       "attack": 1,
       "health": 1,
@@ -36501,7 +36501,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 14,
     "base": {
       "attack": 2,
       "health": 2,
