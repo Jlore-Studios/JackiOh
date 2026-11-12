@@ -16008,10 +16008,8 @@
       "suggestion": true
     },
     "3791": {
-      "action": "plan",
-      "asks": [
-        "c:6836321948"
-      ],
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-12T21:45:25Z",
         "difficulty": "medium",
@@ -16030,17 +16028,9 @@
         "reason": "planned on sonnet",
         "trail": "- said: I'll start by reading the component and its tests.\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3791/apps/web/src/routes/Rematch.tsx\"}\n- Bash: {\"command\": \"ls .bot-plan.md 2>&1; wc -l apps/web/src/routes/Rematch.test.tsx; ls spec/pending | head -30; ls spec/rulings | grep -E 'R(3791|3213|1452)' \"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3791/apps/web/src/routes/Rematch.test.tsx\"}\n- Bash: {\"command\": \"cat spec/rulings/R3213000.md; echo ------; cat spec/rulings/R1452.md; echo -----; ls spec/pending; cat spec/pending/3728.md | head -30\"}\n- Bash: {\"command\": \"grep -n -i -A40 'Adding a ruling' spec/README.md | head -120; ls spec/rulings | grep -E 'R37[0-9]{2}' | head -30\"}\n- Bash: {\"command\": \"git log --oneline -5; git log --all --oneline | grep -i 3791 | head; cat spec/pending/3744.md | head -20\"}\n- Bash: {\"command\": \"sed -n 30,90p apps/web/src/game/Result.tsx; echo ------; sed -n 205,235p apps/web/src/duos/DuosBoard.tsx; grep -rn \\\"Your teammate has left\\\" apps/web/src | head; grep -rn \\\"Your opponen\u2026\n- Bash: {\"command\": \"grep -rn \\\"RematchButtons\\\" apps/web/src --include=*.tsx --include=*.ts -l; grep -rn \\\"RematchButtons\\\" apps/web/src --include=*.tsx | grep -v test | grep -v \\\"routes/Rematch.tsx\\\"\"}\n- Bash: {\"command\": \"sed -n 440,540p apps/web/src/routes/match.tsx\"}\n- Bash: {\"command\": \"sed -n 1,30p apps/web/src/i18n/zh-CN.json; ls apps/web/src/i18n; grep -rn \\\"zh-CN\\\" apps/web/src/i18n/*.test.ts | head\"}\n- Bash: {\"command\": \"sed -n 1,30p apps/web/src/game/Result.tsx; grep -n \\\"seatOutcome\\\" -r apps/web/src --include=*.ts --include=*.tsx | head; grep -n \\\"result\\\" apps/web/src/routes/match.tsx | head -40\"}\n- Bash: {\"command\": \"grep -n \\\"9.5\\\" spec/09-*.md | head -20; ls spec | head -50\"}\n- Bash: {\"command\": \"sed -n 60,70p spec/09-architecture.md | cut -c1-200; grep -n \\\"rematch\\\" spec/09-architecture.md | cut -c1-260 | head -20; cat apps/web/src/game/outcome.ts\"}\n- Bash: {\"command\": \"cat spec/rulings/R3728000.md | head -20; cat spec/rulings/R3744000.md | head -20; sed -n 1,60p apps/web/src/i18n/i18n.test.ts | head -5; sed -n 70,110p apps/web/src/i18n/i18n.test.ts\"}\n- Bash: {\"command\": \"sed -n 36,70p apps/web/src/i18n/i18n.test.ts; grep -n \\\"untranslated(\\\" apps/web/src/i18n/i18n.test.ts; sed -n 1285,1305p apps/web/src/i18n/zh-CN.json; grep -n \\\"Rematch\\\\|Waiting for yo\u2026\n- Bash: {\"command\": \"cd apps/web/src/routes; grep -n \\\"rematch\\\\|Rematch\\\" match.test.tsx | head -40; grep -rn \\\"opponentHere\\\" /home/runner/work/_temp/work/item-3791/apps/web/src /home/runner/work/_temp/wor\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3791; grep -n \\\"opponentHere\\\" apps/web/src/routes/match.test.tsx e2e/cypress/e2e/37-rematch.cy.ts e2e/cypress/component/rematch-buttons.cy.tsx apps/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3791; grep -n \\\"rematch\\\" apps/web/src/game/net.test.ts | head; grep -n \\\"Rematch\\\\|\\\\.rematch\\\" apps/web/src/game/reveal.css apps/web/src/game/anima\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3791; sed -n 120,185p apps/web/src/game/reveal.css; sed -n 1640,1700p apps/web/src/routes/match.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3791; sed -n 400,460p e2e/cypress/e2e/37-rematch.cy.ts; sed -n 1,60p e2e/cypress/component/rematch-buttons.cy.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3791; grep -n 'ByRole(\\\"status\\\"' apps/web/src/routes/match.test.tsx apps/web/src/game/*.test.tsx | head; grep -n \\\"role=\\\\\\\"status\\\\\\\"\\\" apps/web/sr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3791; grep -n \\\"result-overlay__actions\\\\|data-reason\\\\|resultReason\\\" apps/web/src/game/Result.tsx | head -20; grep -n \\\"R3213000\\\\|R1452\\\\|\\u00a79.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3791; sed -n 1370,1500p apps/web/src/routes/match.test.tsx; sed -n 1328,1345p apps/web/src/i18n/zh-CN.json\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3791; grep -n \\\"const FINISHED\\\\|function pushView\\\\|function attach\\\\|const PERIOD\\\\|function live\\\\|^describe(\\\" apps/web/src/routes/match.test.tsx\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3791; ls spec/rulings | grep -E '^R(0672|3694000|3207002|0639000|3205000)\\\\.md'; git log --oneline -3 -- spec/pending/3696.md; git show --stat --form\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3791; grep -n \\\"web-only\\\\|no fragment\\\\|kind\\\" docs/issues-and-patches.md | head -20; sed -n 170,200p apps/web/src/game/Result.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3791; grep -rn -i \\\"rematch\\\" apps/web/README.md docs/architecture.md docs/v0.3.0/SURFACE.md e2e/README.md 2>/dev/null | cut -c1-220 | head -12; grep\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3791; grep -n \\\"result-overlay__actions\\\" apps/web/src/buttons.css | cut -c1-260\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3791; grep -n \\\"game/Result\\\\|from \\\\\\\"../game/\\\" apps/web/src/routes/match.tsx | head -20; ls apps/web/src/game/Result*.test.* 2>/dev/null\"}\n- tool error: Exit code 2 19:import Clock, { turnKeyOf, useFrameFor } from \"../game/Clock.tsx\"; 20:import ConfirmLeaveMatch from \"../game/ConfirmLeaveMatch.tsx\"; 21:import { connectionWords } from \"../game/connect\u2026\n- said: Now I'll write the draft file, then the plan.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3791/.bot-plan.md\", \"content\": \"# Draft plan #3791 (planner notes)\\n\\nRating: medium (web client + spec only; no engine, AI, migration, cross-crate).\\\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Web client only (one component, a helper, tests, a zh-CN string) plus a spec ruling; no engine, AI, migration, cross-crate contract or ~40 files, so no line of the hard rule holds.\"} --> ## Goal When the match socket is open and the rematch status says `op\u2026"
       },
-      "hold": {
-        "ends": "2026-11-13T00:13:22Z",
-        "lifted": "2026-11-12T22:53:00Z",
-        "owner": "claude-3",
-        "since": "2026-11-12T22:13:22Z",
-        "until": "2026-11-12T22:50:00Z",
-        "why": "it refused a call"
-      },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-12T21:31:35Z",
       "owner_why": "it plans it",
@@ -16053,12 +16043,14 @@
       "provider": "claude-3",
       "queued_at": "2026-11-12T21:29:09Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43311114268",
+      "run_id": "pending:39f28876-1794526144",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-12T21:31:35Z",
+      "started_at": "2026-11-12T23:29:49Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6836321948"
+      ],
       "waiting_comment": 6837378045
     },
     "3792": {
@@ -16933,9 +16925,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T22:58:09Z",
+    "at": "2026-11-12T23:29:49Z",
     "url": "",
-    "what": "review #3779 on claude-3"
+    "what": "build #3791 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-12T22:39:58Z",
