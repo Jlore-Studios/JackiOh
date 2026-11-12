@@ -14642,39 +14642,6 @@
       "action": "revise",
       "asks": [],
       "audit_tier": "",
-      "decision": {
-        "answer": "2",
-        "answer_url": "https://github.com/Jlore-Studios/JackiOh/pull/3761#issuecomment-6825443337",
-        "answered_at": "2026-11-12T13:57:51Z",
-        "answered_by": "MaxGoetzmann",
-        "asked_at": "2026-11-12T07:30:13Z",
-        "assigned": [
-          "jgoetzmann",
-          "MaxGoetzmann"
-        ],
-        "default": 1,
-        "hours": 24,
-        "kind": "revise",
-        "model": "opus",
-        "options": [
-          {
-            "change": "Accept the PR as it stands, with item 4 waived. Open a follow-up issue on whether a Stack pile's dormant layers should count in the evaluation (`dormant_share`, #1506). That is what blocks Drone Core X at Hard.",
-            "tradeoff": "It ships a narrow AI change that is tested but doesn't yet raise the sweep's cast count. The visible payoff (the AI dropping its giant) waits for the follow-up."
-          },
-          {
-            "change": "Widen this PR: give a Stack pile's dormant layers a nonzero share (only for Stack piles, or through `dormant_share` itself), re-screen it through the gate, and run the sweep again.",
-            "tradeoff": "It goes beyond the issue's medium size and its 'report it if not small' terms. It reverses #1506's screen and moves the score of every Stack pile, so the gate and the daily runs must judge it again. The sweep could still fail to move."
-          },
-          {
-            "change": "Close #3761 without merging.",
-            "tradeoff": "It throws away the engine read, the weight and their tests, which work and which a later Stack-pile fix would need anyway."
-          }
-        ],
-        "problem": "The reviewer's one blocking finding is correct. Issue #3695's fourth acceptance item asks that `cargo jackioh sweep stinkyscape-033 stinkyscape-034 stinkyscape-035 stinkyscape-036` show more casts than the 2026-10-29 report. The branch's own numbers don't. The four Drone Cores were cast 13 times before the change and 13 times after. Drone Core X goes from 1 cast to 2 at Easy in pass 1, from 1 to 0 at Easy in pass 2, and stays at 0 at Hard in pass 2. The report of record had X cast once at Easy and once at Hard. I checked these figures against R3695000's Numbers paragraph, the build log in the branch notes and `training/history/sweep-2026-10-29-4.md:248-249`. They agree.\n\nThe Float credit itself works. Its tests fail without it, and with it the AI does Float toward Drone Core X and cast it. What holds the sweep down is a second cause. The Drone Battleship enters as one Stack pile (R1842000), and the score counts only its top layer, a 12/12 that can't attack. Its two dormant layers count `AI_EVAL.dormant_share`, which has been 0 since #1506's screen. So even when Hard has X in reach, casting it gains only about +14.4, and it picks other cards. The gain is +32.9 at a share of 0.5 and +51.5 at 1.0.\n\nRaising `dormant_share` changes the score of every Stack pile and undoes a screened decision. That is beyond what this issue allows: it says to fix the second cause here if it is small and to report it if not. So the issue's own terms say report it. But only a person can waive an acceptance item or reopen #1506, and I can't make the sweep move honestly any other way. A weight of 2.4 was already tried and did no better.",
-        "provider": "claude-3",
-        "question": "Should #3761 merge with acceptance item 4 (more casts in the sweep) waived, with the Battleship's dormant layers taken up separately? Or should that second cause be fixed first?",
-        "why": "the issue itself says a second cause that is not small gets reported in the pull request rather than fixed, and that is what happened. The change is correct, gated (19/16/20 of 20, the same as main) and tested, and the remaining fix belongs to #1506's weight, which needs its own screen."
-      },
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
