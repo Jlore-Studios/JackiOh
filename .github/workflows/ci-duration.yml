@@ -5,7 +5,7 @@
 # exempt: a build legitimately runs for hours.
 #
 # Never the daily super run (super.yml): CI is what every pull request waits on, so its jobs are held
-# under five minutes (docs/v0.3.0/README.md §7, V24), while the super run carries what is slow on
+# under eight minutes (docs/v0.3.0/README.md §7, V24), while the super run carries what is slow on
 # purpose (10,000 fuzz seeds, the full AI gates, coverage, every e2e spec) and waits on nobody. It is
 # left off the list below by design; do not add it. Nor the deploys (promote-production.yml,
 # deploy-staging.yml), whose jobs build the server's image from nothing every time and wait on
@@ -47,10 +47,12 @@ on:
     types: [completed]
 
 env:
-  # What a fix or a new split aims for: every job finishes under this.
-  TARGET_MINUTES: "5"
+  # What a fix or a new split aims for: every job finishes under this. It was 5, and the alert 7,
+  # until CI's runners grew (#3785): a job that boots its own toolchain, server or client takes
+  # 7 to 10 minutes, and reporting each one only queued splits that bought nothing.
+  TARGET_MINUTES: "8"
   # What gets reported: a job that ran longer than this.
-  ALERT_MINUTES: "7"
+  ALERT_MINUTES: "10"
   # Who fixes it: the night bot (.harness/config.json's bot_login).
   BOT_LOGIN: jgoetzmann-bot
 

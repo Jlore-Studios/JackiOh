@@ -133,7 +133,7 @@ with BUILD.md's). Parts cite them; part 37's coverage check lists any V that no 
 | V21 | All 35 e2e specs pass on Chrome | daily super run |
 | V22 | The Docker image boots on Render's command with the env contract of `docs/architecture.md` | `test:deploy` |
 | V23 | No test reads prose from a Markdown file | part 28's grep |
-| V24 | Per-PR CI's slowest job finishes under 5 minutes | `ci-duration.yml` |
+| V24 | Per-PR CI's slowest job finishes under 8 minutes (5 until #3785) | `ci-duration.yml` |
 | V25 | The daily super run opens or updates one issue on failure and closes it on success | its workflow |
 | V26 | `cargo jackioh promote` promotes exactly by §8's table, and writes `generation.json` and the history line | `crates/tools` tests |
 | V27 | A training lane runs forever, survives a reboot, and logs one `GameRecord` per game it plays | part 39's check on the box |

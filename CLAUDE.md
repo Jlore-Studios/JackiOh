@@ -194,7 +194,7 @@ push to `main` runs everything. Everything slow or statistical runs daily in `su
 and on every pull request into `_production` (`docs/deploy-cloudflare.md` §2.1). A test moves there
 (`#[ignore = "daily: <why>"]` in Rust, `apps/web/src/test/daily.ts` in the web) only when a cheaper test keeps
 its rule per pull request, which its `daily:` reason names. Each workflow's header says what it does, `ci.yml`'s
-the five-minute budget of every job.
+the eight-minute budget of every job.
 
 ## Architecture
 

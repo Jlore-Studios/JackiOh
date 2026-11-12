@@ -1,12 +1,12 @@
 # CI for JackiOh after v0.3.0 (#306, docs/v0.3.0/README.md §7): the essential checks on every pull
-# request, each job under five minutes; everything slow or statistical runs once a day in super.yml.
+# request, each job under eight minutes; everything slow or statistical runs once a day in super.yml.
 #
 # Branch protection and the bots' `required_checks` (.harness/config.json, .squishy/config.json)
 # wait on five names, all here: `rust`, `web`, `e2e smoke`, `db` and `bot selftest`.
 # Each of the first four is a summary job that needs its pieces and fails unless every piece passed. A
 # summary job runs `if: !cancelled()`, never on plain `needs`: a required check SKIPPED because a
 # piece failed would count as passing. The pieces run side by side and each aims to finish under
-# five minutes (ci-duration.yml opens an issue past seven, #73); a piece that grows is split further
+# eight minutes (ci-duration.yml opens an issue past ten, #73, #3785); a piece that grows is split further
 # (a higher count in scripts/ci-shards.toml, a new test binary, or a group of its own in
 # .github/ci/rust-test.toml, #3072), never folded back into one long job.
 #
