@@ -14717,7 +14717,7 @@
       "provider": "claude-3",
       "question": "Should #3761 merge with acceptance item 4 (more casts in the sweep) waived, with the Battleship's dormant layers taken up separately? Or should that second cause be fixed first?",
       "queued_at": "2026-11-12T13:57:51Z",
-      "run_id": "pending:2400fe1f-1794491909",
+      "run_id": "43232565702",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
