@@ -17320,6 +17320,24 @@
         }
       },
       "waiting_comment": 6813387108
+    },
+    "3751": {
+      "difficulty_by": {
+        "at": "2026-11-12T03:55:43Z",
+        "difficulty": "hard",
+        "provider": "claude-2",
+        "tier": "strong",
+        "why": "the after-merge spot-check's follow-up of #3745, a hard change"
+      },
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-11-12T03:55:43Z",
+      "requested_by": "jgoetzmann-bot",
+      "spot_check_of": 3745,
+      "stop_requested": false
     }
   },
   "labels_synced": "fce3910f5abefcbe",
