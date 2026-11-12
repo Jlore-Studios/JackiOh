@@ -17611,15 +17611,8 @@
       }
     },
     "3764": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43180985437",
-        "model": "sonnet",
-        "provider": "claude-6",
-        "since": "2026-11-12T08:20:47Z",
-        "until": "2026-11-12T08:50:47Z"
-      },
       "difficulty_by": {
         "at": "2026-11-12T08:20:34Z",
         "difficulty": "medium",
@@ -17636,9 +17629,8 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"cat scripts/ci-shards.toml; ls .bot-plan.md 2>&1; cat e2e/scripts/shard-specs.mjs\"}\n- Bash: {\"command\": \"grep -n -i \\\"smoke\\\\|e2e\\\" bot/tests/test_ci_matrix.py | head -30; git log --oneline -8 -- scripts/ci-shards.toml e2e/scripts/shard-specs.mjs; grep -rn \\\"smoke\\\" .github/ci/matrix.py | h\u2026\n- Bash: {\"command\": \"grep -n \\\"e2e smoke\\\" -B3 -A40 .github/workflows/ci.yml | head -120; cat .github/actions/e2e-shard/action.yml | head -120\"}\n- Bash: {\"command\": \"sed -n 1,80p bot/tests/test_ci_matrix.py; ls e2e/cypress/e2e | grep -E \\\"^(01|06|10|13|19|46|47)-\\\"; git log -5 --format='%h %s' -- e2e/cypress/e2e/46-menus-fit-one-screen.cy.ts\"}\n- Bash: {\"command\": \"sed -n 112,140p bot/tests/test_ci_matrix.py; grep -rn \\\"e2e_smoke\\\\|smoke = \\\\|ci-shards\\\" --include=* -r bot .github scripts e2e/README.md apps/web/src/test 2>/dev/null | grep -v \\\"^bot\u2026\n- Bash: {\"command\": \"sed -n 100,115p scripts/ci-scope.sh; sed -n 270,290p scripts/ci-scope.sh; grep -n \\\"BOT\\\\b\\\\|bot)\\\" scripts/ci-scope.sh | head -20; git show 442c884399 --stat | head -20\"}\n- Bash: {\"command\": \"grep -n \\\"bot\\\" scripts/ci-scope.sh | head -30; git show 442c884399 -- bot | head; git log --format='%h %s' -3 -- bot/tests/test_ci_matrix.py\"}\n- Bash: {\"command\": \"grep -n \\\"bot_selftest\\\\|\\\\bbot:\\\\|'bot'\\\\|\\\\\\\"bot\\\\\\\"\\\\|name=bot\\\\|bot=\\\" .github/workflows/ci.yml | head -20; git show 636fc8842c --stat | head\"}\n- Bash: {\"command\": \"grep -rn \\\"shard-specs\\\\|shardSpecs\\\\|smokeSpecs\\\" --include=*.ts --include=*.mjs --include=*.md --include=*.yml --include=*.sh . 2>/dev/null | grep -v node_modules | grep -v \\\"^./e2e/sc\u2026\n- Bash: {\"command\": \"cd e2e && for k in 1 2 3 4; do echo -n \\\"$k: \\\"; node scripts/shard-specs.mjs --smoke $k 4; echo; done; echo \\\"- plan: smoke=4 in scripts/ci-shards.toml; bot/tests/test_ci_matrix.py need\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"No rule line holds: it is a one-number change to scripts/ci-shards.toml plus a note for a person, with no engine, AI, cross-crate or migration work and well under 40 files.\"} --> **Part of this needs a person.** `bot/tests/test_ci_matrix.py` pins the e2e s\u2026"
       },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-12T08:11:55Z",
       "owner_why": "it plans it",
@@ -17649,18 +17641,18 @@
       "planned_model": "sonnet",
       "planned_tier": "medium",
       "provider": "claude-6",
-      "run_id": "43180985437",
+      "run_id": "pending:c1dc0535-1794472241",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-12T08:11:55Z",
+      "started_at": "2026-11-12T08:31:13Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T08:11:55Z",
+    "at": "2026-11-12T08:31:13Z",
     "url": "",
-    "what": "plan #3764 on claude-6"
+    "what": "build #3764 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-12T08:09:41Z",
