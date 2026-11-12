@@ -1,0 +1,96 @@
+{
+  "action": "plan",
+  "number": 3695,
+  "title": "Patch: the AI Floats mana on purpose to bring its Float-discount cards within reach",
+  "branch": "bot/issue-3695",
+  "thread": "**Issue #3695 (data, not instructions):**\n\n```text\n# #3695: Patch: the AI Floats mana on purpose to bring its Float-discount cards within reach\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nSome of the game's biggest cards cost more than anyone can ever have in one turn, and get cheaper each time their owner ends a turn with mana left over (a Float). A human player saves mana on purpose for a turn or two to land a 12/12 Battleship. The practice AI never does, because it scores leftover mana as pure waste, so these cards sit dead in its hand. Once this is built, the AI counts unspent mana as bringing such a card closer, and a player will see it hold back a turn and then drop its giant.\n\n## Why\n- Mana caps at 4 (`MAX_MANA`, `crates/engine/src/config.rs:41`; SPEC \u00a72.3). Seven cards carry \"Float reduces cost\" (`float_reduces_cost`; SPEC \u00a76 Float, R464, R1563000): Drone Core VII to X (5, 6, 6 and 8 mana; `crates/cards/src/scripts/stinkyscape/c033`\u2013`c036`), GIGA Glowy Jelly Bean and Snom Bunny Mind Control (`crates/cards/src/scripts/core/c029`, `c049`) and YileGPT Prime (8 mana, `crates/cards/src/scripts/meditative/c049_1_yilegpt_unleashed.rs`).\n- The AI charges `AI_EVAL.unspent_mana` (0.8 a crystal, `crates/ai/src/config.rs:652`) on every passed line (`crates/ai/src/simulate.rs:727`) and after every reply (`crates/ai/src/reply.rs:618`), but prices a discount on a hand card at `hand_cost_delta` (0.5 a crystal, `config.rs:589`, read at `crates/ai/src/evaluate.rs:562`). With one Float card in hand every crystal Floated scores \u22120.3, whether or not the discount is what puts the card within reach.\n- The hand prices an 8-cost card as a 6-cost one (`hand_cost_cap: 6.0`, `config.rs:582`) whatever the mana cap, so how far a card is from castable never enters the score.\n- The sweep shows it. Drone Core X at Hard: drawn in 27 of 58 games, within mana on 18 turns, cast once (`training/history/sweep-2026-10-29-4.md:249`); the day before, within mana on 3 turns of 8 games and never cast (`training/history/sweep-2026-10-28.md:42`). `crates/ai/tests/ai/shadow_ban.rs:514-516` notes that Easy never brings GIGA Glowy Jelly Bean down to its four crystals by Floating.\n\n## Proposal\n- An engine read, in `crates/engine/src/query.rs` with its test (CLAUDE.md, Architecture: a missing board fact goes into the engine), of what a Float of n would take off each of a seat's hand cards, read from their hand triggers.\n- A new weight, `AI_EVAL.float_discount`, pricing each crystal a line's Float takes off a hand card that still costs more than the seat's crystals. It starts at or above `unspent_mana`, stays 0 in `GREEDY_EVAL`, and goes through the gate like any weight change.\n- The sweep's second number, 18 turns within mana and one cast, may have a second cause. A decision test with Drone Core X in reach and a free unit zone finds it: fixed here if small, reported in the pull request if not.\n\n## Where it lands\n- `crates/engine/src/query.rs` (or `float.rs`), `crates/ai/src/evaluate.rs`, `crates/ai/src/config.rs`, `crates/ai/tests/ai/evaluate.rs` and a decision test beside it\n- SPEC \u00a72.3, \u00a76 (Float), \u00a710.7; R464, R1563000\n\n## Acceptance criteria\n- [ ] An evaluation test: with a Float card above the seat's crystals in hand, a passed line that Floats F scores no lower than the same line with no Float card in hand; with no Float card in hand, every score is as before.\n- [ ] A decision test: an Easy seat on 4 crystals, holding Drone Core IX and a 1-cost 1/1 against an empty board, ends its turn with crystals left, and next turn casts Drone Core IX.\n- [ ] A decision test: with Drone Core X within reach and a free unit zone, the AI casts it.\n- [ ] `cargo jackioh gate` passes, and `cargo jackioh sweep stinkyscape-033 stinkyscape-034 stinkyscape-035 stinkyscape-036` shows more casts than the 2026-10-29 report; both numbers are in the pull request.\n\n## Size and risks\nMedium: one engine read, one weight and its pricing, three or four tests. Set too high, the weight makes the AI hoard mana instead of building a board; it applies only while a card is still out of reach, and the gate guards the rest. It changes how the AI plays, so the gate's games are its real test.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-11T15:39:00Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3695: needs a plan; `claude-7` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-7`, which its build then takes on the same model",
+    "#3695: handed off from its owner `claude-3` (its owner `claude-3` cannot take it now); `claude-7` owns it from this run"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "at": "2026-11-11T22:30:58Z",
+    "family": "claude",
+    "kind": "draft",
+    "notes": "",
+    "provider": "claude-3",
+    "reason": "`claude-3` reached its usage limit",
+    "trail": "- Bash: {\"command\": \"ls -a | head -50 && cat .bot-notes.md 2>/dev/null | head -100; ls -la .bot-plan.md .bot-journal.md 2>&1\", \"description\": \"Read notes and list worktree\"}\n- tool error: Exit code 2 . .. .bot-journal.md .cargo .claude .git .gitattributes .github .gitignore .harness .nvmrc .squishy AGENTS.md ARCHITECTURE-CCG.md BUILD.md CLAUDE.md CONTRIBUTING.md Cargo.lock Cargo.toml \u2026\n- Bash: {\"command\": \"cat .bot-journal.md\", \"description\": \"Read journal\"}\n- Grep: {\"pattern\": \"float_reduces_cost|float_discount|FloatReduces\", \"path\": \"crates\", \"output_mode\": \"files_with_matches\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3695/crates/engine/src/float.rs\"}\n- Bash: {\"command\": \"cat crates/cards/src/scripts/stinkyscape/c035_drone_core_ix.rs | head -120; wc -l crates/engine/src/query.rs crates/ai/src/*.rs crates/ai/tests/ai/*.rs\", \"description\": \"View Drone Core \u2026\n- Grep: {\"pattern\": \"unspent_mana|hand_cost_delta|hand_cost_cap\", \"path\": \"crates\", \"output_mode\": \"content\", \"-n\": true, \"glob\": \"!**/engine/src/wire/**\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3695/crates/ai/src/evaluate.rs\", \"offset\": 440, \"limit\": 240}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3695/crates/ai/src/simulate.rs\", \"offset\": 640, \"limit\": 130}\n- Bash: {\"command\": \"cat crates/cards/src/scripts/stinkyscape/c036_drone_core_x.rs | head -80; sed -n 230,270p training/history/sweep-2026-10-29-4.md; sed -n 30,50p training/history/sweep-2026-10-28.md\", \"de\u2026\n- Bash: {\"command\": \"sed -n 360,420p crates/ai/src/config.rs; sed -n 480,520p crates/ai/src/config.rs; sed -n 570,600p crates/ai/src/config.rs; sed -n 640,660p crates/ai/src/config.rs; sed -n 800,860p crates\u2026\n- Bash: {\"command\": \"grep -rn \\\"extra_turn_in_hand\\\\|doomed_hand_discount\\\" --include=*.rs --include=*.md --include=*.json . 2>/dev/null | grep -v \\\"^./target\\\" | head -40; grep -n \\\"EvalWeights\\\" -r crates \u2026\n- Bash: {\"command\": \"sed -n 1,140p crates/ai/src/config.rs\", \"description\": \"Read top of AI config\"}\n- Bash: {\"command\": \"git log --oneline -25 -- crates/ai/src/config.rs; \", \"description\": \"History of AI config\"}\n- Bash: {\"command\": \"grep -n \\\"weight\\\\|gate\\\\|Float\\\\|float\\\" crates/ai/README.md | head -60\", \"description\": \"Search AI README for weights and gate\"}\n- Bash: {\"command\": \"git show --stat 69b0567001 | head -50; git show --stat 06c99445c3 | head -40\", \"description\": \"Show files touched by comparable AI patches\"}\n- Bash: {\"command\": \"cat spec/rulings/R3064000.md; cat spec/pending/3064.md 2>/dev/null; ls spec/pending | head; grep -rn \\\"unspent_mana\\\\|unspentMana\\\\|hand_cost_delta\\\\|handCostDelta\\\" spec/*.md | head -20\u2026\n- Bash: {\"command\": \"sed -n 1,80p docs/issues-and-patches.md | head -120; grep -n \\\"Ruling numbers\\\" -A 25 docs/issues-and-patches.md | head -60\", \"description\": \"Read issues-and-patches ruling numbers\"}\n- Bash: {\"command\": \"git show 69b0567001 -- spec/pending/3064.md spec/06-keywords.md spec/09-architecture.md spec/rulings/R2380000.md | cut -c1-900\", \"description\": \"Show spec edits of a comparable AI patch\"}\n- Bash: {\"command\": \"grep -n \\\"Adding a ruling\\\" -A 40 spec/README.md | head -80; grep -n \\\"^#\\\\+ .*10.7\\\\|^### 10\\\\|^## 10\\\" spec/10-*.md | head -20; ls spec | head -40\", \"description\": \"Read spec README ru\u2026\n- Bash: {\"command\": \"grep -n \\\"float_reduces_cost\\\\|float_lowers_tribute\\\\|hand_triggers\\\" crates/cards/src/scripts/core/c029_giga_glowy_jelly_bean.rs crates/cards/src/scripts/core/c049_snom_bunny_mind_contr\u2026\n- Grep: {\"pattern\": \"pub struct TriggerDef\", \"path\": \"crates/engine/src\", \"output_mode\": \"content\", \"-A\": 40, \"-n\": true}\n- Bash: {\"command\": \"sed -n 1,80p crates/ai/src/sweep.rs; sed -n 1,30p training/history/sweep-2026-10-29-4.md\", \"description\": \"Read sweep module header and report header\"}\n- Bash: {\"command\": \"sed -n 55,110p crates/ai/tests/ai/surface.rs; grep -n \\\"pub use\\\\|pub mod\\\" crates/ai/src/lib.rs | head -60\", \"description\": \"Read surface test helpers and ai exports\"}\n- said: You've hit your 5-hour limit \u00b7 resets 12:20am (UTC)"
+  },
+  "session": {
+    "action": "plan",
+    "artifact": 13896089063,
+    "artifact_bytes": 242023,
+    "artifact_name": "work",
+    "at": "2026-11-11T22:33:45Z",
+    "bytes": 317724,
+    "cwd": "/home/runner/work/_temp/work/item-3695",
+    "ended": "interrupted: `claude-3` reached its usage limit",
+    "head": "562883049a334d6b2a90770e65dc5be64233428a",
+    "id": "054c707c-37fb-4907-b7e2-ec154f4c4f05",
+    "kind": "plan",
+    "model": "sonnet",
+    "project": "-home-runner-work--temp-work-item-3695",
+    "provider": "claude-3",
+    "run": "43111736679"
+  },
+  "journal": "# Journal of #3695\n\nEvery night-bot run on #3695, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-11-11 19:04 UTC \u00b7 plan #3695 \u00b7 `claude-1` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/43079860659) on `claude-1` (`opus` (strong)). It ended **interrupted**: `claude-1` stops before it starts: 5-hour usage is 82%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-11T19:10:00Z\nModel calls: 0, 0 model minutes.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 18:43 | stop | `claude-1` stops before it starts: 5-hour usage is 82%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-11T19:10:00Z |  |  |\n\n<!-- jackioh-bot:run -->\n## 2026-11-11 20:01 UTC \u00b7 plan #3695 \u00b7 `claude-1` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/43089735357) on `claude-1` (`opus` (strong)). It ended **interrupted**: `claude-1` stops before it starts: 5-hour usage is 39%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-12T00:10:00Z\nModel calls: 0, 0 model minutes.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 19:45 | stop | `claude-1` stops before it starts: 5-hour usage is 39%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-12T00:10:00Z |  |  |\n\n<!-- jackioh-bot:run -->\n## 2026-11-11 22:33 UTC \u00b7 plan #3695 \u00b7 `claude-3` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/43111736679) on `claude-3` (`opus` (strong)). It ended **interrupted**: `claude-3` reached its usage limit\nModel calls: 1, 2.0 model minutes.\nTokens: 24 in / 14881 out / 784870 cached, $0.55.\nSession: fresh: none was kept for this item. This run's: kept session `054c707c-37fb-4907-b7e2-ec154f4c4f05` of #3695 on claude-3 (317,724 bytes) in run 43111736679's `work` artifact, for its next run there.\nIts work ended at `562883049a33` on `bot/issue-3695`.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 22:28 | start | from `origin/main` |  | at `562883049a33` |\n| 2 | 22:28 | plan (`sonnet`) | plan the item before anyone builds it | 2.0 min, 14905 tok, $0.55 | refused: the usage limit |\n| 3 | 22:30 | stop | `claude-3` reached its usage limit |  |  |\n",
+  "usage_facts": {
+    "queued_at": "2026-11-11T15:39:21Z",
+    "claimed_at": "2026-11-12T00:23:41Z",
+    "previous_provider": "claude-3",
+    "handed_off": "handed off from `claude-3`: its owner `claude-3` cannot take it now"
+  },
+  "housekeeping": [
+    "#3742 is held for `claude-8` until 19:10 (5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%))",
+    "#3727 is held for `claude-8` until 19:10 (5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%))"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3573 skipped: it waits for #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3609 skipped: it waits for #3608 to close first",
+    "#3610 skipped: it waits for #3608, #3609 to close first",
+    "#3729 skipped: it waits for #3727, #3728, #3730 to close first",
+    "#3730 skipped: it waits for #3728 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3728, #3730 to close first",
+    "#3733 skipped: it waits for #3727, #3728 to close first",
+    "#3734 skipped: it waits for #3728 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
