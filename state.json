@@ -14801,7 +14801,7 @@
         "provider": "claude-8",
         "round_tier": "strong",
         "rounds_on": 3762,
-        "rounds_used": 1,
+        "rounds_used": 2,
         "since": "2026-11-12T09:19:02Z",
         "source": "cross-review",
         "until": "2026-11-12T13:05:29Z"
