@@ -17260,7 +17260,7 @@
       "provider": "claude-7",
       "queued_at": "2026-11-12T03:55:43Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "pending:b1510acc-1794461201",
+      "run_id": "43161503653",
       "runs_on": "ubuntu-latest",
       "spot_check_of": 3745,
       "started_at": "2026-11-12T05:27:20Z",
