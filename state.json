@@ -16594,9 +16594,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-8",
-      "owner_since": "2026-11-11T22:05:16Z",
-      "owner_why": "handed off from `claude-2`: its owner `claude-2` builds only after every other subscription (`build_last`)",
+      "owner": "claude-5",
+      "owner_since": "2026-11-12T02:12:46Z",
+      "owner_why": "handed off from `claude-8`: `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-12T06:10:00Z; it can start again only in 2h 57m, more than the 120 minutes an item waits for its owner",
       "paused": {
         "at": "2026-11-12T02:09:05Z",
         "interrupt": "usage",
@@ -16608,10 +16608,10 @@
       "planned_by_id": "claude-8",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-8",
+      "provider": "claude-5",
       "queued_at": "2026-11-11T21:06:25Z",
       "round_tier": "strong",
-      "run_id": "43134222614",
+      "run_id": "pending:dfd4caa6-1794449525",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -16630,7 +16630,7 @@
         "provider": "claude-8",
         "run": "43134222614"
       },
-      "started_at": "2026-11-12T01:23:43Z",
+      "started_at": "2026-11-12T02:12:46Z",
       "stop_requested": false,
       "strike_log": [
         "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
@@ -17277,9 +17277,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T02:11:48Z",
+    "at": "2026-11-12T02:12:46Z",
     "url": "",
-    "what": "review #3746 on claude-7"
+    "what": "build #3727 on claude-5"
   },
   "last_sweep": {
     "at": "2026-11-12T01:42:39Z",
