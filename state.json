@@ -37214,7 +37214,8 @@
       "2026-11-12T08:16:45Z,claude-6,stream,call,43180985437,1,2026-11-12T13:10:00Z,,,allowed,50,,"
     ],
     "runs": [
-      "2026-11-12T08:10:21Z,43178128221,claude-3,opus,suggest,,,interrupted,refusal,17.3,0,0,0,34.9759,25,100,,,,,none,,1"
+      "2026-11-12T08:10:21Z,43178128221,claude-3,opus,suggest,,,interrupted,refusal,17.3,0,0,0,34.9759,25,100,,,,,none,,1",
+      "2026-11-12T08:17:23Z,43180985437,claude-6,opus,plan,3764,medium,planned,,1.1,19,7771,458658,0.2877,0,1,,,6.4,,fresh,,1"
     ]
   },
   "version": 1
