@@ -969,6 +969,24 @@ fn i16_a_hand_card_holding_buffs_and_a_cost_mod_is_clean_but_not_one_holding_pos
 }
 
 #[test]
+fn i16_a_hand_or_library_copy_may_carry_stats_and_armor_overrides_but_a_graveyard_card_may_not() {
+    let mut state = playing("i16-overrides");
+    // A copy carries its source's overrides into a hand or a library (R57, R1242, R2198001).
+    let overrides = |card: &mut CardInstance| {
+        card.stats_override = Some(AttackHealth { attack: 7, health: 7 });
+        card.armor_override = Some(3);
+    };
+    overrides(&mut state.players[P1].hand[0]);
+    overrides(&mut state.players[P2].library[0]);
+    assert_eq!(i16(&state), Vec::<String>::new());
+    let mut dead = new_instance(&mut state, "fx-2", P1, Zone::Graveyard { player: P1 });
+    dead.stats_override = Some(AttackHealth { attack: 7, health: 7 });
+    let id = dead.id.clone();
+    state.players[P1].graveyard.push(dead);
+    only(&i16(&state), &id, &["R78", "statsOverride"]);
+}
+
+#[test]
 fn i16_a_library_card_owned_by_the_other_seat_is_one_owner_drift() {
     let mut state = playing("i16-owner");
     state.players[P1].library[0].owner = P2;

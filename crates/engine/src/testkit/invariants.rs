@@ -576,6 +576,9 @@ fn held_names(checks: &[(bool, &'static str)]) -> Vec<&'static str> {
 /// holds, by field name. A hand or a library card may lawfully hold a Buff's and a grant's state, which
 /// rides it onto the field (`effects/buff.rs`, B5 E38) and which R215 takes as it reaches a graveyard or
 /// an exile pile, so `buffs`, `grantedKeywords`, `grants`, `vanilla` and `counters` are read there alone.
+/// A copy carries its source's `statsOverride` and `armorOverride` into a hand or a library (R57, R1242,
+/// R2198001; `add_to_hand.rs`'s `copy_riders`, `library_copies.rs`), and R175 reads them before R78's reset
+/// takes them as it reaches a graveyard or an exile pile, so those two are read there alone as well.
 /// Left out because a card off the field may lawfully hold them: `memory` (R1841003's `tributeLowered`
 /// rides a hand or a deck; a graveyard card keeps R429's `@returnPrice`, R766, and R178's
 /// `@exileOnLanding`), and what stays in every zone by R78 and R766: `radiant`, `tuning`, `brittle`,
@@ -605,8 +608,6 @@ fn field_state_held(card: &CardInstance, in_graveyard_or_exile: bool) -> Vec<&'s
         (card.slumber.is_some(), "slumber"),
         (card.starship.is_some(), "starship"),
         (card.set_as.is_some(), "setAs"),
-        (card.stats_override.is_some(), "statsOverride"),
-        (card.armor_override.is_some(), "armorOverride"),
         (card.x.is_some(), "x"),
         (card.embiggened.is_some(), "embiggened"),
     ]);
@@ -617,6 +618,8 @@ fn field_state_held(card: &CardInstance, in_graveyard_or_exile: bool) -> Vec<&'s
             (card.grants.is_some(), "grants"),
             (card.vanilla, "vanilla"),
             (card.counters != Counters::default(), "counters"),
+            (card.stats_override.is_some(), "statsOverride"),
+            (card.armor_override.is_some(), "armorOverride"),
         ]));
     }
     held
