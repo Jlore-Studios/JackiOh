@@ -1,0 +1,47 @@
+# The mutation score floor (#3519), beside .github/coverage-floor.txt: one `<area> <percent>` line per
+# area of scripts/mutants.sh (`sh scripts/mutants.sh areas` lists them; the weekly `cards` job
+# reports as its week's set, cards-<set>). mutants.yml's `report` job runs
+# `sh scripts/mutants.sh floor`, which holds each area's score in the run's table (killed over
+# killed and survived, in percent) to its line: a run that scores an area under it fails, and the
+# error names the area. An area with no score that run, a `–` score (no mutant judged) or a floor of
+# 0 is not held; a line naming no area fails the run, so a mistyped area never goes ungated unseen.
+# A pull request's run checks these lines and holds no score to them.
+#
+# How it is raised: by hand, in the pull request of an audit (#3490 parts 2 to 7) that raises an
+# area's score, to a few points under the lowest score the area's shards have reached since. Each
+# week runs one shard of an area, so its score moves with the shard: hold it under the lowest, not
+# the mean. Never lower a line to get a run green; give a survivor its test, or its reason in
+# .cargo/mutants.toml. An area at 0 has no settled score yet: it gets its floor once its shards
+# have scores.
+#
+# Set from every scored row of mutants.yml's runs up to 2026-11-11, before any weekly run (#3519's
+# pull request lists them). Only run and edge are one shard, the whole area, with a score.
+
+engine 0
+cards-classic 0
+cards-classic_plus 0
+cards-core 0
+cards-meditative 0
+cards-meditative_plus 0
+cards-stinkyscape 0
+cards-training_grounds 0
+cards-lib 0
+ai 0
+# The whole crate is one shard: 98.1%, 609 killed and 12 survived (mutants.yml, 2026-11-11).
+run 95
+# 13 of its 21 shards scored, 25.9% to 100%, most before their audit; 8 never yet.
+shared 0
+server 0
+tools 0
+wasm 0
+web-animations 0
+web-effects 0
+web-audio 0
+web-cards 0
+web-drag 0
+web-settings 0
+web-wire 0
+web-wasm 0
+# The whole Worker is one shard (two files): 100.0%, 96 killed and none survived, in every run
+# since 2026-11-10.
+edge 90
