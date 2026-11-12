@@ -15339,6 +15339,7 @@
       "provider": "claude-3",
       "queued_at": "2026-11-12T14:22:27Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "",
       "run_id": "43236783303",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-12T14:23:59Z",
@@ -15347,7 +15348,8 @@
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
       ],
       "strikes": 1,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "3778": {
       "action": "plan",
