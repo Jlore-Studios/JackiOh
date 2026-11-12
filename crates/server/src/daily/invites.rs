@@ -25,7 +25,7 @@ use crate::api::http::{ApiError, ApiResult, Req, account_key, now_ms, rate_limit
 use crate::api::queue::{new_seed, new_uuid, seat_coin_p1_first};
 use crate::app::App;
 use crate::config::{DAILY_CHALLENGE_TTL_DAYS, DAILY_MAX_ACTIVE_GAMES, DAILY_SEEK_TTL_DAYS, MS_PER_DAY};
-use crate::daily::games::start_daily;
+use crate::daily::games::{NewDaily, prepare_daily};
 use crate::db::store::{DailyInviteKind, DailyInviteRow, DailyInviteState, QueueMode};
 use crate::social::friends::are_friends;
 use crate::social::live::push_social;
@@ -102,14 +102,15 @@ fn stored_choice(row: &DailyInviteRow) -> Result<FrozenChoice, ApiError> {
 }
 
 /// Seats the sender of `invite` (who froze its choice) and `joiner_id` (who froze `joiner`) by the
-/// seed's coin (R1989000), and starts the game.
-async fn start_between(
+/// seed's coin (R1989000), and prepares their game, starting at `now`, for the caller to write.
+async fn prepare_between(
     app: &Arc<App>,
     invite: &DailyInviteRow,
     match_id: String,
     joiner_id: &str,
     joiner: &FrozenChoice,
-) -> Result<String, ApiError> {
+    now: i64,
+) -> Result<NewDaily, ApiError> {
     let host_choice = stored_choice(invite)?;
     let host = HostSide::of_choice(&invite.from_profile, &host_choice)
         .ok_or_else(|| ApiError::internal(format!("daily invite {} froze a trio", invite.id)))?;
@@ -122,7 +123,33 @@ async fn start_between(
     } else {
         (joiner_seat, host_seat)
     };
-    start_daily(app, match_id, seed, seats, invite.mode, invite.per_move_days).await
+    prepare_daily(app, match_id, seed, seats, invite.mode, invite.per_move_days, now).await
+}
+
+/// A claimed seek whose game failed to start goes back to the queue where it stood (its own
+/// `created_at`), under a new id: the claim committed on its own, and a failure after it must not
+/// lose the other player's seek without a word. Logged, never the caller's failure.
+async fn reopen_seek(app: &Arc<App>, claimed: &DailyInviteRow, now: i64) {
+    let row = DailyInviteRow {
+        id: new_uuid(),
+        state: DailyInviteState::Open,
+        match_id: None,
+        ..claimed.clone()
+    };
+    let reopened = async {
+        let mut tx = app.db.begin(Some(&row.from_profile)).await?;
+        let opened = tx.daily_invites_create(&row, now).await?;
+        tx.commit().await?;
+        Ok::<bool, ApiError>(opened)
+    }
+    .await;
+    match reopened {
+        Ok(true) => push_social(app, &[&row.from_profile]).await,
+        Ok(false) => tracing::warn!(event = "daily.seek.not_reopened", seekId = %claimed.id),
+        Err(error) => {
+            tracing::error!(event = "daily.seek.reopen_failed", seekId = %claimed.id, message = %error.message)
+        }
+    }
 }
 
 /// `POST /api/daily/challenges`: `201 {id}`.
@@ -228,7 +255,9 @@ pub async fn accept(app: &Arc<App>, req: Req) -> ApiResult {
         return full();
     }
     let frozen = freeze_choice(app, &me, &choice).await?;
-    let match_id = new_uuid();
+    // The game is prepared first and written in the accept's own transaction, so a start that fails
+    // leaves the challenge open, and an accepted challenge always names a game that exists.
+    let game = prepare_between(app, &invite, new_uuid(), &me, &frozen, now).await?;
     let mut tx = app.db.begin(Some(&me)).await?;
     // R1689000: still friends as it starts.
     if !are_friends(&mut tx, &me, &invite.from_profile).await? {
@@ -237,13 +266,16 @@ pub async fn accept(app: &Arc<App>, req: Req) -> ApiResult {
     }
     // One accept wins: a cancel, a decline or a second accept meanwhile finds it closed.
     let closed = tx
-        .daily_invites_close(&invite.id, DailyInviteState::Accepted, Some(&match_id))
+        .daily_invites_close(&invite.id, DailyInviteState::Accepted, Some(game.match_id()))
         .await?;
-    tx.commit().await?;
     if closed.is_none() {
+        tx.commit().await?;
         return Err(not_found("no such daily challenge"));
     }
-    let match_id = start_between(app, &invite, match_id, &me, &frozen).await?;
+    game.create(&mut tx).await?;
+    tx.commit().await?;
+    game.started();
+    let match_id = game.match_id().to_string();
     push_social(app, &[&me, &invite.from_profile]).await;
     crate::daily::notify::after_move(app, &[&me, &invite.from_profile], now).await;
     Ok(created(json!({ "matchId": match_id })))
@@ -312,7 +344,23 @@ pub async fn seek(app: &Arc<App>, req: Req) -> ApiResult {
     let claimed = tx.daily_seek_claim(mode, days, &me, &match_id, now).await?;
     tx.commit().await?;
     if let Some(other) = claimed {
-        let match_id = start_between(app, &other, match_id, &me, &frozen).await?;
+        // The claim names the game written next; a start that fails puts the other's seek back.
+        let started = async {
+            let game = prepare_between(app, &other, match_id, &me, &frozen, now).await?;
+            let mut tx = app.db.begin(None).await?;
+            game.create(&mut tx).await?;
+            tx.commit().await?;
+            game.started();
+            Ok::<String, ApiError>(game.match_id().to_string())
+        }
+        .await;
+        let match_id = match started {
+            Ok(match_id) => match_id,
+            Err(error) => {
+                reopen_seek(app, &other, now).await;
+                return Err(error);
+            }
+        };
         push_social(app, &[&me, &other.from_profile]).await;
         crate::daily::notify::after_move(app, &[&me, &other.from_profile], now).await;
         return Ok(created(json!({ "matchId": match_id })));

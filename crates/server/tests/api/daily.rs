@@ -29,7 +29,7 @@ use crate::support::deps::{
     TestAppOptions, add_user, call, json_request, send as send_request, test_app_with,
 };
 use crate::support::engine::{TEST_GLITCH_VOID, fake_deck, install_test_cards};
-use crate::support::store::{Account, account, befriend, fake, fake_lock};
+use crate::support::store::{Account, account, befriend, fail_on, fake, fake_lock, stop_failing};
 
 // Helpers
 
@@ -740,6 +740,123 @@ async fn r3727008_an_account_playing_a_daily_game_is_deleted_only_once_the_game_
     }
 }
 
+// One sweep at a time
+
+/// §9.13: a sweep while another runs (the Worker's cron landing beside the awake server's own loop)
+/// does nothing, so no notice goes twice, and the next sweep does the work.
+#[tokio::test]
+async fn a_sweep_while_another_runs_does_nothing() {
+    let (app, ada, bo) = two_friends().await;
+    let match_id = daily_game(&app, &ada, &bo, 1).await;
+    app.daily.set_offset(MS_PER_DAY);
+    let running = app.daily.begin_sweep().expect("no sweep runs yet");
+    let (status, _headers, swept) = call(&app, "POST", "/daily-sweep", None, Value::Null).await;
+    assert_eq!(status, 200, "{swept}");
+    assert_eq!(swept["settled"], 0, "{swept}");
+    assert_eq!(match_status(&app, &match_id).await, MatchStatus::Live);
+    drop(running);
+    let (_, _, swept) = call(&app, "POST", "/daily-sweep", None, Value::Null).await;
+    assert_eq!(swept["settled"], 1, "{swept}");
+    assert_eq!(match_status(&app, &match_id).await, MatchStatus::Finished);
+}
+
+// A game that fails to start
+
+/// §9.13: an accept and its game are written in one transaction, so an accept whose game fails to
+/// start leaves the challenge open to accept again; and a seek that a failed start claimed goes back
+/// to the queue, so the other player's seek is never lost without a word.
+#[tokio::test]
+async fn a_daily_game_that_fails_to_start_leaves_its_challenge_or_seek_open() {
+    let (app, ada, bo) = two_friends().await;
+    let (status, body) = api(
+        &app,
+        "POST",
+        "/api/daily/challenges",
+        &ada.token,
+        random_challenge(&bo, 1),
+    )
+    .await;
+    assert_eq!(status, 201, "{body}");
+    let id = body["id"].as_str().expect("a challenge id").to_string();
+    let accept = format!("/api/daily/challenges/{id}/accept");
+    fail_on(&app, "dailyGames.create", "the store cannot answer").await;
+    let (status, body) = api(&app, "POST", &accept, &bo.token, json!({ "mode": "random" })).await;
+    stop_failing(&app).await;
+    assert_eq!(status, 500, "{body}");
+    let (_, list) = api(&app, "GET", "/api/daily", &bo.token, Value::Null).await;
+    assert_eq!(list["games"], json!([]), "{list}");
+    assert_eq!(
+        list["challenges"]["incoming"].as_array().map(Vec::len),
+        Some(1),
+        "the challenge is still open: {list}"
+    );
+    let (status, body) = api(&app, "POST", &accept, &bo.token, json!({ "mode": "random" })).await;
+    assert_eq!(status, 201, "{body}");
+
+    // The queue: Ada's seek waits, Bo's claims it and fails to start, and Ada's goes back.
+    let seek = json!({ "mode": "random", "perMoveDays": 3 });
+    let (status, body) = api(&app, "POST", "/api/daily/seeks", &ada.token, seek.clone()).await;
+    assert_eq!(status, 201, "{body}");
+    assert!(body["seekId"].is_string(), "{body}");
+    fail_on(&app, "dailyGames.create", "the store cannot answer").await;
+    let (status, body) = api(&app, "POST", "/api/daily/seeks", &bo.token, seek.clone()).await;
+    stop_failing(&app).await;
+    assert_eq!(status, 500, "{body}");
+    let (_, list) = api(&app, "GET", "/api/daily", &ada.token, Value::Null).await;
+    assert_eq!(
+        list["seeks"].as_array().map(Vec::len),
+        Some(1),
+        "Ada's seek is back: {list}"
+    );
+    let (status, body) = api(&app, "POST", "/api/daily/seeks", &bo.token, seek).await;
+    assert_eq!(status, 201, "{body}");
+    assert!(body["matchId"].is_string(), "it pairs with Ada's seek: {body}");
+}
+
+// A result whose write failed
+
+/// The match row's status now.
+async fn match_status(app: &Arc<App>, match_id: &str) -> MatchStatus {
+    let mut tx = app.db.begin(None).await.expect("a transaction");
+    let row = tx
+        .matches_get(match_id)
+        .await
+        .expect("a read")
+        .expect("the match row");
+    tx.commit().await.expect("commit");
+    row.status
+}
+
+/// §9.13: a game over whose result's write failed is written by the next sweep, so its match is
+/// never left `live` with no result, which nothing else would read again.
+#[tokio::test]
+async fn a_daily_result_whose_write_failed_is_written_by_the_next_sweep() {
+    let (app, ada, bo) = two_friends().await;
+    let match_id = daily_game(&app, &ada, &bo, 1).await;
+    let seq = read(&app, &ada, &match_id).await["seq"].as_i64().expect("a seq");
+    fail_on(&app, "results.insert", "the store cannot answer").await;
+    let (status, body) = send(
+        &app,
+        &ada,
+        &match_id,
+        seq,
+        "ada-concedes",
+        json!({ "type": "concede" }),
+    )
+    .await;
+    stop_failing(&app).await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(body["over"], true, "{body}");
+    assert_eq!(match_status(&app, &match_id).await, MatchStatus::Live);
+
+    let (status, _headers, swept) = call(&app, "POST", "/daily-sweep", None, Value::Null).await;
+    assert_eq!(status, 200, "{swept}");
+    assert_eq!(swept["settled"], 1, "{swept}");
+    assert_eq!(match_status(&app, &match_id).await, MatchStatus::Finished);
+    let (_, _, again) = call(&app, "POST", "/daily-sweep", None, Value::Null).await;
+    assert_eq!(again["settled"], 0, "nothing is left to write: {again}");
+}
+
 // R679: a game a Glitch voids never happened
 
 /// R679: a daily game a Glitch voids is forgotten as a live one is: no result, no match row, log or
@@ -1024,12 +1141,26 @@ async fn the_sweep_emails_once_per_account_and_none_when_off_or_without_email() 
     let (_, _, again) = call(&app, "POST", "/daily-sweep", None, Value::Null).await;
     assert_eq!(again["emailed"], 0, "{again}");
 
-    // RFC 8058's one-click unsubscribe, form-encoded, turns Ada's off.
+    // Opening the link changes nothing (RFC 8058 §1: a mail scanner follows every link): its page's
+    // button posts the one-click.
     let token = to_ada["headers"]["List-Unsubscribe"]
         .as_str()
         .and_then(|value| value.split("token=").nth(1))
         .map(|token| token.trim_end_matches('>').to_string())
         .expect("a token");
+    let link = format!("/api/daily/unsubscribe?token={token}");
+    let (status, _headers, page) = call(&app, "GET", &link, None, Value::Null).await;
+    assert_eq!(status, 200, "{page}");
+    assert!(
+        page.as_str().is_some_and(|page| page.contains("method=\"post\"")
+            && page.contains("name=\"List-Unsubscribe\" value=\"One-Click\"")),
+        "{page}"
+    );
+    let ada_token = sign_in_again(&app, &ada);
+    let (_, settings) = api(&app, "GET", "/api/daily/settings", &ada_token, Value::Null).await;
+    assert_eq!(settings["emailOn"], true, "{settings}");
+
+    // RFC 8058's one-click unsubscribe, form-encoded, turns Ada's off.
     let mut one_click = json_request(
         "POST",
         &format!("/api/daily/unsubscribe?token={token}"),
@@ -1043,8 +1174,30 @@ async fn the_sweep_emails_once_per_account_and_none_when_off_or_without_email() 
     );
     *one_click.body_mut() = axum::body::Body::from("List-Unsubscribe=One-Click");
     let (status, _headers, body) = send_request(&app, one_click).await;
-    assert_eq!(status, 204, "{body}");
-    let ada_token = sign_in_again(&app, &ada);
+    assert_eq!(status, 200, "{body}");
+    let (_, settings) = api(&app, "GET", "/api/daily/settings", &ada_token, Value::Null).await;
+    assert_eq!(settings["emailOn"], false, "{settings}");
+
+    // And as §3.1 asks, `multipart/form-data`.
+    let (status, settings) = api(
+        &app,
+        "PUT",
+        "/api/daily/settings",
+        &ada_token,
+        json!({ "emailOn": true }),
+    )
+    .await;
+    assert_eq!((status, &settings["emailOn"]), (200, &json!(true)), "{settings}");
+    let mut multipart = json_request("POST", &link, &Value::Null, None, None);
+    multipart.headers_mut().insert(
+        "content-type",
+        axum::http::HeaderValue::from_static("multipart/form-data; boundary=jackioh"),
+    );
+    *multipart.body_mut() = axum::body::Body::from(
+        "--jackioh\r\nContent-Disposition: form-data; name=\"List-Unsubscribe\"\r\n\r\nOne-Click\r\n--jackioh--\r\n",
+    );
+    let (status, _headers, body) = send_request(&app, multipart).await;
+    assert_eq!(status, 200, "{body}");
     let (_, settings) = api(&app, "GET", "/api/daily/settings", &ada_token, Value::Null).await;
     assert_eq!(settings["emailOn"], false, "{settings}");
 }

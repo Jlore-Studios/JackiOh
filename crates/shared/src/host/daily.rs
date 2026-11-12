@@ -13,9 +13,10 @@
 //!  - otherwise the active player, for the whole of their turn.
 //!
 //! A holder keeps its hold, deadline and all, while it holds the same move: the same seat under the same
-//! [`move_key`] (the mulligan window, or one player's turn). A question sequence (R1563006, Meditative+
-//! #20 KY's Competition) is a run of prompts for one player in one turn, so it has no window of its own:
-//! the move's deadline is its window (R3727003). Every duration is `crate::config`'s.
+//! [`move_key`] (the mulligan window, or one player's turn, between two of R677's seat swaps). A
+//! question sequence (R1563006, Meditative+ #20 KY's Competition) is a run of prompts for one player in
+//! one turn, so it has no window of its own: the move's deadline is its window (R3727003). Every
+//! duration is `crate::config`'s.
 
 use serde::{Deserialize, Serialize};
 
@@ -94,12 +95,17 @@ const MULLIGAN_KEY: &str = "mulligan";
 
 /// The move a game waits on, as a hold's key: the mulligan window, or the turn of its active player
 /// (both halves, as the live turn clock's key, R79). A prompt inside a turn is a part of that turn's
-/// move; its holder is who tells it apart.
+/// move; its holder is who tells it apart. R677: a Glitch's seat swap hands each seat to the other
+/// account mid-move, so the swaps so far are part of the key, and the account a swap hands the move
+/// to gets a whole window of its own, never what is left of the other's (R3727001).
 pub fn move_key(state: &GameState) -> String {
     if !mulligan_window(&snapshot(state)).is_empty() {
         return MULLIGAN_KEY.to_string();
     }
-    format!("{}:{}", state.turn, state.active.as_str())
+    match state.seat_swaps.unwrap_or(0) {
+        0 => format!("{}:{}", state.turn, state.active.as_str()),
+        swaps => format!("{}:{}:{swaps}", state.turn, state.active.as_str()),
+    }
 }
 
 /// Who holds the move, in seat order; nobody once the game is over.

@@ -8182,9 +8182,11 @@ pub async fn daily_games_put(
 pub async fn daily_games_due(t: &mut PgTx<'_>, now: i64) -> Result<Vec<String>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(
-        "select match_id from public.daily_games
-          where ended_at is null and next_deadline_at <= $1::bigint
-          order by next_deadline_at, match_id",
+        "select d.match_id from public.daily_games d
+          where (d.ended_at is null and d.next_deadline_at <= $1::bigint)
+             or (d.ended_at <= $1::bigint
+                 and exists (select 1 from public.matches m where m.id = d.match_id and m.status = 'live'))
+          order by case when d.ended_at is null then d.next_deadline_at else d.ended_at end, d.match_id",
     )
     .bind(now)
     .fetch_all(&mut **t)

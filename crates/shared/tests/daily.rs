@@ -154,6 +154,37 @@ fn end_turn_gives_the_next_player_a_full_window() {
     assert_eq!(clock.next_deadline(), Some(returned + window()));
 }
 
+/// R677: a Glitch's swap hands the seat holding the move to the other account mid-turn. That account
+/// gets a whole window from the swap, not what was left of the one who swapped.
+#[test]
+fn r3727001_a_seat_swap_hands_the_move_to_the_other_account_with_a_fresh_window() {
+    let state = first_turn("daily-swap", false);
+    let active = state.active;
+    let clock = clock_over(&state, NOW);
+    let late = NOW + window() - MS_PER_HOUR;
+    assert_eq!(daily_sync(&clock, &state, late), clock, "no swap, the same hold");
+
+    let mut swapped = state.clone();
+    swapped.seat_swaps = Some(1);
+    let clock = daily_sync(&clock, &swapped, late);
+    assert_eq!(daily_holders(&swapped), vec![active]);
+    assert_eq!(
+        clock.hold_of(active).map(|hold| (hold.since, hold.deadline)),
+        Some((late, late + window()))
+    );
+    assert_eq!(daily_expired(&clock, NOW + window()), None);
+
+    // And a swap back hands it on again, fresh.
+    let mut back = swapped.clone();
+    back.seat_swaps = Some(2);
+    let again = late + MS_PER_HOUR;
+    let clock = daily_sync(&clock, &back, again);
+    assert_eq!(
+        clock.hold_of(active).map(|hold| hold.deadline),
+        Some(again + window())
+    );
+}
+
 #[test]
 fn r3727000_an_expired_move_loses_for_its_holder() {
     let state = first_turn("daily-r3727000", false);

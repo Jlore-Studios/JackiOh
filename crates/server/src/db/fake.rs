@@ -5164,16 +5164,26 @@ pub fn daily_games_put(
 
 pub fn daily_games_due(f: &mut FakeTx<'_>, now: i64) -> Result<Vec<String>, StoreError> {
     call(f, "dailyGames.due")?;
-    let mut due: Vec<(i64, String)> = f
-        .tables()
+    let tables = f.tables();
+    // A game over whose match is still `live`: its result's write failed, and the sweep writes it.
+    let live: IndexSet<&str> = tables
+        .matches
+        .iter()
+        .filter(|row| row.status == MatchStatus::Live)
+        .map(|row| row.id.as_str())
+        .collect();
+    let mut due: Vec<(i64, String)> = tables
         .daily
         .games
         .iter()
-        .filter(|row| row.ended_at.is_none())
-        .filter_map(|row| {
-            row.next_deadline_at
+        .filter_map(|row| match row.ended_at {
+            None => row
+                .next_deadline_at
                 .filter(|deadline| *deadline <= now)
-                .map(|deadline| (deadline, row.match_id.clone()))
+                .map(|deadline| (deadline, row.match_id.clone())),
+            Some(ended) => {
+                (ended <= now && live.contains(row.match_id.as_str())).then(|| (ended, row.match_id.clone()))
+            }
         })
         .collect();
     due.sort();

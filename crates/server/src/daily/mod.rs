@@ -14,7 +14,7 @@ pub mod invites;
 pub mod notify;
 pub mod webpush;
 
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 
 use crate::app::now_ms;
 use crate::config::PLAYER_EMAIL_API_URL;
@@ -48,6 +48,17 @@ pub struct DailyState {
     /// BUILD M8's e2e mode only (`POST /api/e2e/daily-clock`): how far the daily clock reads ahead of
     /// the server's, so a spec can watch a move run out.
     offset_ms: AtomicI64,
+    /// Whether a sweep runs now ([`DailyState::begin_sweep`]).
+    sweeping: AtomicBool,
+}
+
+/// A running sweep's hold ([`DailyState::begin_sweep`]), let go when it ends, failed or not.
+pub struct SweepHold<'a>(&'a AtomicBool);
+
+impl Drop for SweepHold<'_> {
+    fn drop(&mut self) {
+        self.0.store(false, Ordering::SeqCst);
+    }
 }
 
 impl DailyState {
@@ -61,7 +72,18 @@ impl DailyState {
                 .build()
                 .expect("a client"),
             offset_ms: AtomicI64::new(0),
+            sweeping: AtomicBool::new(false),
         }
+    }
+
+    /// §9.13: one sweep at a time. The Worker's hourly cron and the loop of a server that stays awake
+    /// can land together, and two sweeps would each read the same "last sent" and send each notice
+    /// twice. `None` while another runs, whose hold this is not.
+    pub fn begin_sweep(&self) -> Option<SweepHold<'_>> {
+        self.sweeping
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .ok()
+            .map(|_| SweepHold(&self.sweeping))
     }
 
     /// The channels `env` gives keys for. A pair of VAPID keys that is no pair is logged and leaves

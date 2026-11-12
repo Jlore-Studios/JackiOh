@@ -12661,8 +12661,9 @@ mod daily {
         );
     }
 
-    /// §9.13: the sweep reads the running games whose earliest deadline has passed, earliest first,
-    /// and `matches_live` (the reaper's and a restart's read) leaves every daily match out.
+    /// §9.13: the sweep reads the running games whose earliest deadline has passed, and the games
+    /// over whose match is still `live` (a result whose write failed), earliest first; `matches_live`
+    /// (the reaper's and a restart's read) leaves every daily match out.
     async fn s913_daily_games_due_by_deadline_and_left_out_of_the_live_matches(harness: &StoreHarness) {
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
@@ -12675,15 +12676,22 @@ mod daily {
         let unheld = daily_game(harness, &b.id, &a.id, now - 2_000, None).await;
         let latest = daily_game(harness, &a.id, &b.id, now - 1_000, Some(now - 30)).await;
         let at_now = daily_game(harness, &b.id, &a.id, now - 500, Some(now)).await;
+        let finished = daily_game(harness, &a.id, &b.id, now - 400, Some(now - 40)).await;
         assert!(
             q!(harness, t => t.daily_games_put(&ended.match_id, 0, &DailyClock::new(DAYS), &board(3), Some(now - 20), Some(now - 1)))
         );
+        assert!(
+            q!(harness, t => t.daily_games_put(&finished.match_id, 0, &DailyClock::new(DAYS), &board(3), None, Some(now - 2)))
+        );
+        // Its result landed: the match is over, and nothing is left to write.
+        q!(harness, t => t.matches_finish(&finished.match_id, now));
 
         assert_eq!(
             q!(harness, t => t.daily_games_due(now)),
             vec![
                 latest.match_id.clone(),
                 late.match_id.clone(),
+                ended.match_id.clone(),
                 at_now.match_id.clone()
             ],
             "{}",

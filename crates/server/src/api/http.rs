@@ -580,15 +580,21 @@ async fn read_body_text(headers: &HeaderMap, body: Body) -> Result<String, ApiEr
     })
 }
 
-/// RFC 8058's one-click unsubscribe, which a mail client posts form-encoded to the email's
-/// `List-Unsubscribe` address (`POST /api/daily/unsubscribe`, #3727): read as an empty body, since
-/// its token rides the query. Any other form body is still refused as not JSON.
+/// RFC 8058's one-click unsubscribe, which a mail client posts to the email's `List-Unsubscribe`
+/// address (`POST /api/daily/unsubscribe`, #3727), form-encoded or, as §3.1 asks, `multipart/form-data`
+/// with one part `List-Unsubscribe` holding `One-Click`: read as an empty body, since its token rides
+/// the query. Any other form body is still refused as not JSON.
 fn is_one_click_unsubscribe(headers: &HeaderMap, text: &str) -> bool {
-    let form = headers
+    let content_type = headers
         .get(axum::http::header::CONTENT_TYPE)
         .and_then(|value| value.to_str().ok())
-        .is_some_and(|value| value.starts_with("application/x-www-form-urlencoded"));
-    form && text.trim() == "List-Unsubscribe=One-Click"
+        .unwrap_or_default();
+    if content_type.starts_with("application/x-www-form-urlencoded") {
+        return text.trim() == "List-Unsubscribe=One-Click";
+    }
+    content_type.starts_with("multipart/form-data")
+        && text.contains("name=\"List-Unsubscribe\"")
+        && text.lines().any(|line| line.trim() == "One-Click")
 }
 
 async fn read_body(method: &Method, headers: &HeaderMap, body: Body) -> Result<Value, ApiError> {

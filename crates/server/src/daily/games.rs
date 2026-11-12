@@ -207,7 +207,10 @@ pub(crate) async fn apply(
         action,
         at: now,
     };
-    let after = loaded.last_seq();
+    // The clock's own seq, not the log's: `load` reads the two in turn, so a move committed between
+    // the reads leaves a log one row ahead of its clock, and a write after the log's seq would store
+    // a clock (a deadline, a holder) older than the log. After the clock's, it clashes and reads again.
+    let after = loaded.daily.seq;
     let mut tx = app.db.begin(None).await?;
     match tx.matches_append_actions(std::slice::from_ref(&row)).await {
         Ok(()) => {}
@@ -368,18 +371,48 @@ pub(crate) async fn settle(app: &Arc<App>, mut loaded: Loaded, now: i64) -> Resu
     Ok(loaded)
 }
 
-/// Starts a daily game between `seats` (seat order) in `mode` at `per_move_days`, with no actor, no
-/// seat of the ledger and no in-match flag (R3727004): its `matches` row and its `daily_games` row in
-/// one transaction. Answers its match id.
-pub(crate) async fn start_daily(
+/// A daily game ready to start, written by nothing yet: its `matches` row and its `daily_games` row.
+/// [`NewDaily::create`] writes both in the transaction that closes the challenge or claims the seek
+/// starting it, so an accepted challenge never names a game that was never written.
+pub(crate) struct NewDaily {
+    match_row: MatchRow,
+    daily: DailyGameRow,
+}
+
+impl NewDaily {
+    pub(crate) fn match_id(&self) -> &str {
+        &self.match_row.id
+    }
+
+    /// Writes both rows in `tx`; the caller commits them with whatever starts the game.
+    pub(crate) async fn create(&self, tx: &mut Tx<'_>) -> Result<(), ApiError> {
+        tx.matches_create(&self.match_row).await?;
+        tx.daily_games_create(&self.daily).await?;
+        Ok(())
+    }
+
+    /// The log line, once the caller's transaction committed.
+    pub(crate) fn started(&self) {
+        tracing::info!(
+            event = "daily.started",
+            matchId = %self.match_row.id,
+            mode = ?self.daily.mode,
+            perMoveDays = self.daily.per_move_days
+        );
+    }
+}
+
+/// Prepares a daily game between `seats` (seat order) in `mode` at `per_move_days`, starting at `now`,
+/// with no actor, no seat of the ledger and no in-match flag (R3727004), writing nothing.
+pub(crate) async fn prepare_daily(
     app: &Arc<App>,
     match_id: String,
     seed: String,
     seats: (crate::db::store::MatchSeat, crate::db::store::MatchSeat),
     mode: QueueMode,
     per_move_days: i32,
-) -> Result<String, ApiError> {
-    let now = app.daily.now();
+    now: i64,
+) -> Result<NewDaily, ApiError> {
     let input = StartMatchInput {
         match_id: match_id.clone(),
         seed,
@@ -395,7 +428,7 @@ pub(crate) async fn start_daily(
     let Prepared { match_row, state, .. } = prepare_match(app, &input, now).await?;
     let clock = daily_sync(&DailyClock::new(per_move_days), &state, now);
     let daily = DailyGameRow {
-        match_id: match_id.clone(),
+        match_id,
         players: match_row.players.clone(),
         mode,
         per_move_days,
@@ -406,12 +439,7 @@ pub(crate) async fn start_daily(
         created_at: now,
         ended_at: None,
     };
-    let mut tx = app.db.begin(None).await?;
-    tx.matches_create(&match_row).await?;
-    tx.daily_games_create(&daily).await?;
-    tx.commit().await?;
-    tracing::info!(event = "daily.started", matchId = %match_id, mode = ?mode, perMoveDays = per_move_days);
-    Ok(match_id)
+    Ok(NewDaily { match_row, daily })
 }
 
 /// The games waiting on `profile_id` (running, the move theirs), the least time left first, as
@@ -598,6 +626,9 @@ pub async fn act(app: &Arc<App>, req: Req) -> ApiResult {
     let (a, b) = (loaded.daily.players.0.clone(), loaded.daily.players.1.clone());
     push_social(app, &[&a, &b]).await;
     crate::daily::notify::after_move(app, &[&a, &b], now).await;
+    // R677, CLAUDE.md rule 7: the seat the caller plays after the action, which a Glitch's swap
+    // changes, so the answer is never the view of the seat the opponent now plays.
+    let seat = loaded.seat_of(&me).unwrap_or(seat);
     Ok(ok(game_json(app, &loaded, &me, seat).await?))
 }
 

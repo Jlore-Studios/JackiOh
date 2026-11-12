@@ -3162,8 +3162,9 @@ impl Tx<'_> {
         )
     }
 
-    /// §9.13, the sweep: the running games whose earliest deadline is at or before `now`, by that
-    /// deadline (the match id breaking a tie).
+    /// §9.13, the sweep: the running games whose earliest deadline is at or before `now`, and the
+    /// games that ended by `now` whose match is still `live` (their result's write failed, so the
+    /// sweep writes it again), by that deadline or end (the match id breaking a tie).
     pub async fn daily_games_due(&mut self, now: i64) -> StoreResult<Vec<String>> {
         dispatch!(self, daily_games_due(now))
     }

@@ -58,8 +58,10 @@ struct Sent {
 async fn notify_one(app: &Arc<App>, profile_id: &str, now: i64) -> Result<Sent, ApiError> {
     let mut tx = app.db.begin(None).await?;
     let rows = tx.daily_games_of(profile_id, 0).await?;
+    // R3727000: a move past its deadline is lost, settled or not yet, so it waits on nobody.
     let waiting: Vec<WaitingGame> = waiting_of(&rows, profile_id)
         .into_iter()
+        .filter(|(_, _, deadline)| *deadline > now)
         .map(|(match_id, since, deadline)| WaitingGame {
             match_id,
             since,
@@ -273,9 +275,13 @@ pub struct Swept {
     pub pushed: usize,
 }
 
-/// §9.13: one sweep at `now`.
+/// §9.13: one sweep at `now`; nothing while another sweep runs, which does this one's work.
 pub async fn sweep(app: &Arc<App>, now: i64) -> Result<Swept, ApiError> {
     let mut swept = Swept::default();
+    let Some(_running) = app.daily.begin_sweep() else {
+        tracing::info!(event = "daily.sweep.skipped");
+        return Ok(swept);
+    };
     let mut tx = app.db.begin(None).await?;
     let lapsed = tx.daily_invites_expire(now).await?;
     let due = tx.daily_games_due(now).await?;
@@ -446,16 +452,14 @@ async fn unsubscribe(app: &App, req: &Req) -> Result<bool, ApiError> {
     Ok(done)
 }
 
-/// `GET /api/daily/unsubscribe?token=`: the email's own link, a page saying it is done.
-pub async fn unsubscribe_page(app: &Arc<App>, req: Req) -> ApiResult {
-    let done = unsubscribe(app, &req).await?;
-    let said = if done {
-        "You won't get emails about your daily games any more. You can turn them back on from the Daily screen."
-    } else {
-        "That link is not one of ours any more. You can turn daily game emails off from the Daily screen."
-    };
+/// What a token's link says when the token is none of ours.
+const NOT_OURS: &str =
+    "That link is not one of ours any more. You can turn daily game emails off from the Daily screen.";
+
+/// A small page holding `body`.
+fn html_page(body: &str) -> ApiResult {
     let page = format!(
-        "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>JackiOh</title></head><body><p>{said}</p></body></html>"
+        "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>JackiOh</title></head><body>{body}</body></html>"
     );
     Response::builder()
         .status(StatusCode::OK)
@@ -464,8 +468,31 @@ pub async fn unsubscribe_page(app: &Arc<App>, req: Req) -> ApiResult {
         .map_err(|error| ApiError::internal(error.to_string()))
 }
 
-/// `POST /api/daily/unsubscribe?token=`: RFC 8058's one-click unsubscribe. 204.
+/// `GET /api/daily/unsubscribe?token=`: the email's own link, a page whose button turns the emails off.
+/// Opening it changes nothing (RFC 8058 §1): a mail scanner that follows every link in an email turns
+/// nobody's emails off. The button posts what a mail client's one-click posts. A token is a uuid, and
+/// only its parsed form reaches the page.
+pub async fn unsubscribe_page(_app: &Arc<App>, req: Req) -> ApiResult {
+    let token = req.query.get("token").map(String::as_str).unwrap_or_default();
+    let Ok(token) = uuid::Uuid::parse_str(token) else {
+        return html_page(&format!("<p>{NOT_OURS}</p>"));
+    };
+    html_page(&format!(
+        "<p>Stop the emails about your daily games?</p>\
+         <form method=\"post\" action=\"/api/daily/unsubscribe?token={token}\">\
+         <input type=\"hidden\" name=\"List-Unsubscribe\" value=\"One-Click\">\
+         <button type=\"submit\">Turn off daily game emails</button></form>"
+    ))
+}
+
+/// `POST /api/daily/unsubscribe?token=`: RFC 8058's one-click unsubscribe, and the page's button: a
+/// page saying what came of it.
 pub async fn unsubscribe_post(app: &Arc<App>, req: Req) -> ApiResult {
-    unsubscribe(app, &req).await?;
-    Ok(no_content())
+    if unsubscribe(app, &req).await? {
+        html_page(
+            "<p>You won't get emails about your daily games any more. You can turn them back on from the Daily screen.</p>",
+        )
+    } else {
+        html_page(&format!("<p>{NOT_OURS}</p>"))
+    }
 }

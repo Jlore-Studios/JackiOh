@@ -313,7 +313,7 @@ token, no socket, no cookie and no engine in the client, so any client can play 
 | `GET /api/daily/settings`, `PUT /api/daily/settings` | Active | `{emailOn, hasEmail, vapidPublicKey, pushDevices}`; the `PUT` takes `{emailOn}` |
 | `POST /api/daily/push` | Active | `{endpoint, keys: {p256dh, auth}}`, this device's subscription (an `https` endpoint at a browser's push service, one of `PUSH_SERVICE_HOSTS` or a subdomain of one, else 400; past `PUSH_MAX_DEVICES` the oldest goes): 204 |
 | `DELETE /api/daily/push` | User | `{endpoint}`: the device's subscription goes, as the web signs out: 204 |
-| `GET /api/daily/unsubscribe?token=`, `POST …` | None | the email's own link: emails off for the token's account, a small page; the `POST` is RFC 8058's one-click (a form body of `List-Unsubscribe=One-Click` is read as empty): 204 |
+| `GET /api/daily/unsubscribe?token=`, `POST …` | None | the email's own link: a small page whose button posts the `POST`, so opening it (a mail scanner following every link) changes nothing; the `POST` is RFC 8058's one-click, emails off for the token's account (a form-encoded or `multipart/form-data` body of `List-Unsubscribe=One-Click` is read as empty): a small page saying so |
 | `POST /daily-sweep` | None | the Worker's hourly cron: `{expired, settled, emailed, pushed}`. Outside `/api` and `/ws`, which the Worker never forwards from the public |
 | `POST /api/e2e/daily-clock` | None | `{offsetMs}`, end-to-end mode only (404 elsewhere): the daily clock reads that far ahead, for spec 53 |
 
@@ -771,7 +771,11 @@ the other player while a draw offer stands (R3727006). A move past its deadline 
 (R3727000): `daily::games::settle` logs the server's own `disconnectExpired` under the nonce
 `srv-daily-<seq>` and records the result. Every read settles a game first, and the sweep settles every game
 due: `daily::notify::sweep`, every `DAILY_SWEEP_MINUTES` while the server is awake (`daily.sweeper`) and
-on the Worker's hourly cron (`POST /daily-sweep`) while it sleeps.
+on the Worker's hourly cron (`POST /daily-sweep`) while it sleeps, one at a time (`DailyState::begin_sweep`:
+one that lands while another runs does nothing). A game over whose result's write failed (its match still
+`live`) is due too, so the sweep writes it; a Glitch's void (R679) goes through `results::void_match`. A
+game is written in the transaction that accepts its challenge, so a start that fails leaves the challenge
+open; a seek's claim commits first, and a start that fails puts the claimed seek back where it stood.
 
 **Telling a player.** What to send is `jackioh_shared::notify::decide_notify`'s (a game newly waiting, and
 once `DAILY_REMINDER_HOURS` before a deadline; an email at most every `DAILY_EMAIL_MIN_GAP_HOURS`, and none
