@@ -17372,10 +17372,14 @@
         "approvals": [],
         "builder": "claude",
         "built_by": "claude-3",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
         "sha": "7a13423ae0f4d10d19b46535bfd3554eb352afa4",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       }
     }
   },
