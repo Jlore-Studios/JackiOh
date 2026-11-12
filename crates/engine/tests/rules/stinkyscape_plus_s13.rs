@@ -170,6 +170,7 @@ mod r3560001_graveyard_price_offers_and_prices_the_play {
             .units
             .iter()
             .flatten()
+            .flatten()
             .find(|card| card.def_id == CRAWLERISH)
             .expect("played from the graveyard")
             .clone();

@@ -105,7 +105,7 @@ mod tests {
 
     const FODDER: &str = "stand-in (0) 1/1";
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
-    const RANGER: &str = "stinkyscape-068"; // a 3-attack Ranged Unit
+    const RANGER: &str = "stinkyscape-068"; // Stratos: a 3-attack Ranged Unit
 
     fn on_field(radiant: bool) -> Scenario {
         weapon_board(
@@ -225,11 +225,12 @@ mod tests {
             assert_eq!(read[0].label, format!("up to {pool} each turn"), "radiant {radiant}");
             assert_eq!(read[0].value, pool, "radiant {radiant}");
             assert_eq!(read[0].display, Some(format!("{pool} left")), "radiant {radiant}");
-            // A Ranger's 3-attack hit is soaked by the pool, which then has 3 fewer left.
+            // A Ranger's 3-attack hit is soaked by the pool, after armor, which then has that much less left.
             crate::next_turn_of(&mut s, P2);
             let first = s.unit_at(P2, 1).id;
             s.attack(first.as_str(), oct.as_str());
-            let left = pool - 3;
+            // The Radiant face's 2 armor takes 2 of the 3 first, so the pool soaks only the 1 left.
+            let left = pool - if radiant { 1 } else { 3 };
             let read = left_read(&s);
             assert_eq!(read[0].value, left, "radiant {radiant}");
             assert_eq!(read[0].display, Some(format!("{left} left")), "radiant {radiant}");

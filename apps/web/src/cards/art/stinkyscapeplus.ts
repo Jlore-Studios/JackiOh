@@ -292,6 +292,10 @@ function shipSvg(look: ShipLook, radiant: boolean, motion: ArtMotion | null, see
 // An Automa-ζ
 
 /** An Automa-ζ drawn about (0, 0), facing right: a ground machine's legs and gun under an air machine's wings and jets. */
+/** The rivets along a fusion's seam and its panel lines. */
+const ZETA_RIVETS = 7;
+const ZETA_PANELS = 5;
+
 function zetaMachine(look: ZetaLook, p: HullPaint): string {
   const out: string[] = [];
   const inkedStroke = { stroke: p.line, "stroke-width": 0.6 };
@@ -322,6 +326,9 @@ function zetaMachine(look: ZetaLook, p: HullPaint): string {
     out.push(rect(x, -20.6, 3.4, 4.6, p.hull, inkedStroke));
     out.push(circle(x + 1.7, -21.2, 1.1, p.accent));
   }
+  // Rivets along the hull's seam and four panel lines, so even the barest fusion holds a picture's detail.
+  for (let r = 0; r < ZETA_RIVETS; r += 1) out.push(circle(-7.5 + r * (15 / (ZETA_RIVETS - 1)), -1.2, 0.5, p.line));
+  for (let l = 0; l < ZETA_PANELS; l += 1) out.push(line(-8 + l * 4.6, -12.5 + (l % 2), -8 + l * 4.6, 1, p.line, 0.3));
   if (look.crest) {
     out.push(poly([[-4, -16], [-3, -23], [-1, -17], [1, -24], [3, -17], [5, -23], [6, -16]], p.accent, p.line));
   }

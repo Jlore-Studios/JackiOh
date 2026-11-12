@@ -377,6 +377,8 @@ export default function Card(props: CardProps): ReactElement {
     "data-animating": animatingEvent,
     "data-lost": keywordLost ? "true" : undefined,
     "data-awakening": awakening ? "true" : undefined,
+    // R3536005: an Evolved unit is marked on its card, as its face is (MinionFace.tsx).
+    "data-evolved": unit?.evolved === true ? "true" : undefined,
     "data-glow": glowAttr(props.highlight, testId),
     "aria-disabled": clickable && !legal ? ("true" as const) : undefined,
     onClick: clickable ? fire : undefined,

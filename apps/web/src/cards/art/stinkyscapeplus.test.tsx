@@ -98,7 +98,7 @@ describe("R3572001: the Stinkyscape+ set draws its own art", () => {
     expect(new Set(looks).size).toBe(10);
     expect(new Set(Object.values(TERMINUS_SHIPS).map((ship) => ship.hull)).size).toBe(10);
     const rungs = ZETAS.map((card) => AUTOMA_ZETA[card.id]).sort((a, b) => (a?.scale ?? 0) - (b?.scale ?? 0));
-    const byCost = [...ZETAS].sort((a, b) => a.cost - b.cost).map((card) => AUTOMA_ZETA[card.id]);
+    const byCost = [...ZETAS].sort((a, b) => Number(a.cost) - Number(b.cost)).map((card) => AUTOMA_ZETA[card.id]);
     expect(rungs).toEqual(byCost);
     for (const [k, look] of byCost.entries()) {
       if (look === undefined) throw new Error("no look");

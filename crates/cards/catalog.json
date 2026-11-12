@@ -34373,7 +34373,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 57,
+    "loc": 61,
     "base": {
       "attack": 4,
       "health": 16,
@@ -36830,7 +36830,7 @@
     "flavor": "Hustle",
     "token": true,
     "cost": 0,
-    "loc": 6,
+    "loc": 19,
     "printedRarity": "Rare",
     "base": {
       "keywords": [],

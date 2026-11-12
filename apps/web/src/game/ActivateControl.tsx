@@ -177,7 +177,7 @@ function ActivateButton(props: {
       data-uses={activation.usesLeft ?? "unlimited"}
       data-flash={props.flashing ? ACTIVATED_EVENT : undefined}
       aria-disabled={legal ? undefined : "true"}
-      aria-label={`${t("Activate {name}: {ability} {uses}", { name: props.name, ability: sentence(props.label), uses: sentence(capitalised(uses)) })}${why === null ? "" : ` ${sentence(why)}`}`}
+      aria-label={`${t("Activate {name}: {ability} {uses}", { name: props.name, ability: sentence(props.label), uses: sentence(cooling !== undefined ? uses : capitalised(uses)) })}${why === null ? "" : ` ${sentence(why)}`}`}
       title={
         // R3550003: a cooling-down ability's title names its turns left, greyed or not.
         why === null || cooling !== undefined

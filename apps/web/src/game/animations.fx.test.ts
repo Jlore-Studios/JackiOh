@@ -380,6 +380,7 @@ const FX_RECIPES = [
   "rewind",
   "armor",
   "curve",
+  "line",
 ];
 
 /** Each row's `animation`, `durationMs` and `testid`, which S4 keeps byte for byte. */
@@ -483,10 +484,10 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 66 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002), the awakening (R1839002), the evolution (R3536005), the Trade (R1838001), the launch (R1852003), #1843's two endings (R1843000, R1843002) and #2652's rolls (R2652001) carry fx with the listed recipe and the other 28 carry none", () => {
+  it("B1 exactly the 67 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002), the awakening (R1839002), the evolution (R3536005), the Trade (R1838001), the launch (R1852003), #1843's two endings (R1843000, R1843002) and #2652's rolls (R2652001) and the drawn line (R3554005) carry fx with the listed recipe and the other 28 carry none", () => {
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, ANIMATIONS[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
-    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(66);
+    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(67);
   });
 
   it("B1 an fx descriptor is data only: one recipe field and nothing else", () => {

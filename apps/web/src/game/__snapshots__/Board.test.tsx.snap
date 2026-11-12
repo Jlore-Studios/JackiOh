@@ -142,9 +142,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       <span
         class="mana-text"
       >
-        0
-        /
-        3
+        0/3
       </span>
     </span>
     <span
@@ -2508,13 +2506,65 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                   CD
                 </span>
                 <span
-                  aria-label="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Pierce, Indestructible, Immutable, Can't attack, Lucky 3, Animated, Animated on your turn, Brittle 2, Spell Damage 1, Immune to Spells, Windfury, Deft, Untributable, Ranged, Flying, Starship Piece, Starship, Can't Defend"
+                  aria-label="GIGA"
+                  class="keyword keyword-icon"
+                  data-chip="hidden"
+                  data-keyword="GIGA"
+                  role="img"
+                  title="GIGA"
+                >
+                  GG
+                </span>
+                <span
+                  aria-label="Flexible"
+                  class="keyword keyword-icon"
+                  data-chip="hidden"
+                  data-keyword="Flexible"
+                  role="img"
+                  title="Flexible"
+                >
+                  FX
+                </span>
+                <span
+                  aria-label="Frenzy"
+                  class="keyword keyword-icon"
+                  data-chip="hidden"
+                  data-keyword="Frenzy"
+                  role="img"
+                  title="Frenzy"
+                >
+                  FZ
+                </span>
+                <span
+                  aria-label="Evasive"
+                  class="keyword keyword-icon"
+                  data-chip="hidden"
+                  data-keyword="Evasive"
+                  role="img"
+                  title="Evasive"
+                >
+                  EA
+                </span>
+                <span
+                  aria-label="Tipsy 2"
+                  class="keyword keyword-icon"
+                  data-chip="hidden"
+                  data-keyword="Tipsy"
+                  data-n="2"
+                  role="img"
+                  title="Tipsy 2"
+                >
+                  TP
+                   2
+                </span>
+                <span
+                  aria-label="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Pierce, Indestructible, Immutable, Can't attack, Lucky 3, Animated, Animated on your turn, Brittle 2, Spell Damage 1, Immune to Spells, Windfury, Deft, Untributable, Ranged, Flying, Starship Piece, Starship, Can't Defend, GIGA, Frenzy, Evasive"
                   class="cf-kw-more"
                   role="img"
-                  title="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Pierce, Indestructible, Immutable, Can't attack, Lucky 3, Animated, Animated on your turn, Brittle 2, Spell Damage 1, Immune to Spells, Windfury, Deft, Untributable, Ranged, Flying, Starship Piece, Starship, Can't Defend"
+                  title="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Pierce, Indestructible, Immutable, Can't attack, Lucky 3, Animated, Animated on your turn, Brittle 2, Spell Damage 1, Immune to Spells, Windfury, Deft, Untributable, Ranged, Flying, Starship Piece, Starship, Can't Defend, GIGA, Frenzy, Evasive"
                 >
                   +
-                  24
+                  27
                 </span>
               </span>
               <span
@@ -4317,9 +4367,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
       <span
         class="mana-text"
       >
-        2
-        /
-        4
+        2/4
       </span>
     </span>
     <span

@@ -71,19 +71,10 @@ mod tests {
 
     /// What the Token's own hook answers in `zone` (the hook runs as the card does, R280).
     fn read(s: &Scenario, card: &CardInstance, zone: ConditionZone) -> Vec<PreviewValue> {
-        let script = running_script_of(s.state(), card);
-        let hook = script.preview.as_ref().expect("a preview");
-        hook(ConditionContext {
-            state: s.state(),
-            self_: card,
-            controller: PlayerId::P1,
-            radiant: card.radiant,
-            zone,
-            your_turn: true,
-        })
+        preview_of(s.state(), card, PlayerId::P1, zone).expect("a previewed card")
     }
 
-    /// R3572002: the Token reads its worth where it is, in hand or on the field: the game-wide value
+    /// R3572002: the Token reads its worth in the hand: the game-wide value
     /// on its base face under "the Warhero Tokens' worth", twice it on its Radiant face under
     /// "twice the Warhero Tokens' worth", and 0 before any Token has been printed.
     #[test]
@@ -92,24 +83,21 @@ mod tests {
             let label = if radiant { RADIANT_WORTH_LABEL } else { WORTH_LABEL };
             let mut s = setup(radiant);
             let card = s.card(ID).clone();
-            for zone in [ConditionZone::Hand, ConditionZone::Field] {
-                s.state_mut().warhero_worth = None;
-                assert_eq!(
-                    read(&s, &card, zone),
-                    vec![count_preview(label, 0)],
-                    "{zone:?} radiant {radiant}"
-                );
-                s.state_mut().warhero_worth = Some(7);
-                assert_eq!(
-                    read(&s, &card, zone),
-                    vec![count_preview(label, if radiant { 14 } else { 7 })],
-                    "{zone:?} radiant {radiant}"
-                );
-            }
-            // The hand card's view carries it too (R280).
-            let hand = preview_of(s.state(), &card, PlayerId::P1, ConditionZone::Hand)
-                .expect("a previewed hand card");
-            assert_eq!(hand, vec![count_preview(label, if radiant { 14 } else { 7 })]);
+            // A Spell is read in the hand alone: its hook answers whichever zone it is asked in.
+            let zone = ConditionZone::Hand;
+            // The hand card also quotes its sell price, after the worth (R3548002).
+            s.state_mut().warhero_worth = None;
+            assert_eq!(
+                read(&s, &card, zone).first(),
+                Some(&count_preview(label, 0)),
+                "radiant {radiant}"
+            );
+            s.state_mut().warhero_worth = Some(7);
+            assert_eq!(
+                read(&s, &card, zone).first(),
+                Some(&count_preview(label, if radiant { 14 } else { 7 })),
+                "radiant {radiant}"
+            );
         }
     }
 }

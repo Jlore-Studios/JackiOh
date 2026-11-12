@@ -293,7 +293,7 @@ fn blurs_of(state: &GameState) -> Vec<(PlayerId, String, Option<TipsyBlur>)> {
         for hand in [&view.you.hand, &view.opponent.hand] {
             if let HandView::Cards(cards) = hand {
                 for card in cards {
-                    out.push((viewer, card.id.clone(), card.tipsy_blur.clone()));
+                    out.push((viewer, card.instance_id.clone(), card.tipsy_blur.clone()));
                 }
             }
         }

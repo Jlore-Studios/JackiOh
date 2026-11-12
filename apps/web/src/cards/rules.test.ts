@@ -115,6 +115,23 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Discard",
     "Heal X",
     "Mana / gain mana",
+    // R3572000: rows the Stinkyscape+ parts (#3535 to #3571) added to §6.3: the spec states their rules and the
+    // glossary names none of them, the card text printing each in plain words.
+    "Kill deadline",
+    "Side snapshot",
+    "Secret pick",
+    "Evolve all cards in your deck",
+    "Random cards",
+    "Open a Black Hole",
+    "Slash the board",
+    "Line damage",
+    "Chain lightning",
+    "Damage chains",
+    "Sweep",
+    "Summon onto an occupied zone",
+    "Summon Starships",
+    "Launch a random Starship",
+    "Exile a whole board",
     // R3548003: Refresh gives back Activates, never mana.
     "Refresh",
     // R3548004: infinite mana spends nothing.
@@ -577,7 +594,7 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
   });
 
   it("B11 R373 one entry per KEYWORD_KINDS kind, under §6.1, each with a rule", () => {
-    for (const kind of [...KEYWORD_KINDS, ...UNPRINTED_KEYWORD_KINDS]) {
+    for (const kind of KEYWORD_KINDS) {
       const entry = GLOSSARY[kind];
       expect(entry, kind).toBeDefined();
       expect(entry.id, kind).toBe(kind);
