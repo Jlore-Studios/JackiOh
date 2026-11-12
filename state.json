@@ -17228,11 +17228,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-12T03:55:43Z",
+        "at": "2026-11-12T05:24:53Z",
         "difficulty": "hard",
-        "provider": "claude-2",
+        "provider": "claude-7",
         "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #3745, a hard change"
+        "why": "rule 2, the AI: it changes how plan() in crates/ai/src/decide.rs spends its node reserve and reads the host's wrap-up"
       },
       "failures": 0,
       "forced": false,
