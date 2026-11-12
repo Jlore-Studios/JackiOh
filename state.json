@@ -16251,7 +16251,8 @@
       "started_at": "2026-11-12T21:52:23Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [],
+      "waiting_comment": 6837386099
     },
     "3796": {
       "asks": [
