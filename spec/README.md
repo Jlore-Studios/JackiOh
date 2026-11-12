@@ -8,7 +8,7 @@ This directory is the specification, the only source of rules, cards and engine 
 
 One note per top-level section, its subsections inside:
 
-- [[§1]] [01-overview.md](01-overview.md): the game in one page, the design pillars, how to read the spec, its sources.
+- [[§1]] [01-overview.md](01-overview.md): the game in one page, the design pillars, how to read the spec, its sources, and the rules at a glance ([[§1.1]]), each line linking the section that holds it: read it first.
 - [[§2]] [02-core-systems.md](02-core-systems.md): setup, the turn loop, mana, drawing and fatigue, ending the game, deckbuilding.
 - [[§3]] [03-zones.md](03-zones.md): lanes and adjacency, the zones and their rules.
 - [[§4]] [04-combat.md](04-combat.md): positions and exertion, declaring an attack, combat, one damage instance, deaths and the state check.

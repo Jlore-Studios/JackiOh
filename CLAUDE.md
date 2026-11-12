@@ -29,7 +29,8 @@ trap backrow. This file binds every agent, not only Claude.
 ## Where things are
 
 - `SPEC.md` points to `spec/`, the only source of rules, cards and engine design; `spec/README.md` maps its
-  notes. Section references (§) point here. If a doc disagrees with the spec, the spec wins and the doc is
+  notes, and §1.1 (`spec/01-overview.md`) is the rules on one page, each line linking its section: start
+  there. Section references (§) point here. If a doc disagrees with the spec, the spec wins and the doc is
   the bug.
 - Each crate's and app's `README.md` (`crates/*`, `apps/admin`, `apps/edge`, `apps/web`, `e2e`) is its contract: read it
   before you change that code. So are `infra/README.md`, for the hosts' dashboard settings as Terraform
