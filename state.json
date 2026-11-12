@@ -17642,7 +17642,7 @@
         "kind": "build",
         "model": "opus",
         "provider": "claude-1",
-        "round_tier": "strong",
+        "round_tier": "",
         "rounds_on": 3727,
         "rounds_used": 0,
         "since": "2026-11-12T07:08:24Z",
