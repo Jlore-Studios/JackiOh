@@ -16650,24 +16650,17 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "esolving\\\" | head -10; grep -rln \\\"ownCast\\\" apps/web/src | head -5\", \"description\": \"Find take\u2026\n- Bash: {\"command\": \"grep -n \\\"export function entranceCues\\\\|export function ownCast\\\" -A 30 apps/web/src/fx/takeover.ts | head -80\", \"description\": \"Read entranceCues trigger logic\"}\n- Bash: {\"command\": \"sed -n 590,625p crates/engine/src/testkit/invariants.rs; grep -n \\\"revealing\\\\|is_dormant\\\\|face_up\\\" crates/engine/src/testkit/invariants.rs | head\", \"description\": \"Check testkit invar\u2026\n- Bash: {\"command\": \"grep -n \\\"tuning\\\\|Cloaked\\\\|fn \\\" crates/engine/tests/rules/balance_2727.rs | head -40\", \"description\": \"Check balance_2727 Buff Cloaked setup\"}\n- Bash: {\"command\": \"sed -n 150,240p crates/engine/tests/rules/balance_2727.rs; grep -rn \\\"pub struct Tuning\\\\b\\\\|pub struct Tuning {\\\" -A 25 crates/engine/src/state.rs | grep -n \\\"pub \\\\|///\\\" | head -30\", \u2026\n- Bash: {\"command\": \"grep -rn \\\"pub add_keywords\\\" -B 30 crates/engine/src/*.rs | grep -n \\\"pub struct\\\\|derive\\\\|pub add_keywords\\\" | head; grep -rn \\\"pub tuning:\\\" crates/engine/src/state.rs\", \"description\u2026\n- Bash: {\"command\": \"grep -rn \\\"add_keywords\\\" crates/engine/src --include=*.rs | head -5; grep -rn \\\"pub struct Tuning\\\" -B 6 -A 30 crates/engine/src | head -60\", \"description\": \"Find Tuning struct fields\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn acting_on\\\\|pub enum StandingAt\\\" -A 6 crates/engine/src/zones.rs | head -20; grep -n \\\"pub fn lasting_text_off\\\" -A 5 crates/engine/src/preview.rs; sed -n 325,337p crat\u2026\n- Bash: {\"command\": \"git log --diff-filter=A --format='%h' -5 -- 'crates/cards/patches/pending/*.json' | head -3; git show $(git log --diff-filter=A --format='%h' -1 -- 'crates/cards/patches/pending/*.json')\u2026\n- Bash: {\"command\": \"for c in $(git log --diff-filter=A --format='%h' -40 -- 'crates/cards/patches/pending/*.json'); do f=$(git show --name-only --format= $c -- 'crates/cards/patches/pending/*.json' | head -\u2026\n- Bash: {\"command\": \"grep -n \\\"MAX_TEXT\\\\|text.len()\\\\|chars().count()\\\\|too long\\\" crates/tools/src/catalog.rs crates/cards/tests/cross/*.rs apps/web/src/cards/*.test.ts* 2>/dev/null | head -10\", \"descripti\u2026\n- Bash: {\"command\": \"sed -n 40,70p crates/cards/src/scripts/meditative/c005_death_by_1000_cuts.rs; sed -n 345,370p crates/cards/src/scripts/meditative/c005_death_by_1000_cuts.rs\", \"description\": \"Read kept s\u2026\n- Bash: {\"command\": \"grep -n \\\"pub fn candidate_actions\\\" -A 40 crates/ai/src/candidates.rs | head -60\", \"description\": \"Read candidate_actions\"}\n- Bash: {\"command\": \"grep -n \\\"Cloaked\\\" spec/06-keywords.md | head -10; grep -n \\\"^| Cry\\\\|\\\\*\\\\*Cry\\\\*\\\\*\\\\|Cry (\\\" spec/06-keywords.md spec/05-card-types.md | head -10\", \"description\": \"Find Cloaked and C\u2026\n- Bash: {\"command\": \"grep -rn \\\"reveal_echo\\\\|revealEcho\\\" spec/ docs/ crates/engine/README.md crates/cards/README.md | head; grep -rn \\\"echo_keeps_targets\\\\|echoKeepsTargets\\\" spec/ docs/ crates/engine/READ\u2026\n- Bash: {\"command\": \"grep -n \\\"Cloaked\\\\|alt_play\\\\|reveal\\\" crates/engine/README.md crates/cards/README.md crates/ai/README.md crates/tools/README.md | head -10; grep -n \\\"catalog check\\\" crates/tools/READM\u2026\n- Bash: {\"command\": \"sed -n 1751,1810p crates/tools/src/catalog.rs; sed -n 2101,2152p crates/tools/src/catalog.rs\", \"description\": \"Read catalog test helpers and example\"}\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport json\\nc=json.load(open('crates/cards/catalog.json'))\\nfor k in ['core-041','classic-005','core-035','core-044','core-063','core-016','stinkyscape-156','core-005'\u2026\n- Bash: {\"command\": \"sed -n 1,70p crates/cards/src/scripts/core/c024_efficiency_dividend.rs | grep -v \\\"^$\\\" | head -60\", \"description\": \"Read Efficiency Dividend script\"}\n- Bash: {\"command\": \"sed -n 400,560p crates/engine/tests/rules/fixtures/keywords_783.rs\", \"description\": \"Read fixture scripts for cloaked cards\"}\n- Bash: {\"command\": \"grep -rn \\\"\\\\b787[0-9]\\\\b\\\" crates/engine/tests/rules/fixtures/ | head; sed -n 560,701p crates/engine/tests/rules/fixtures/keywords_783.rs | grep -n \\\"board_783\\\\|fn \\\\|put(\\\" | head -20\u2026\n- Bash: {\"command\": \"sed -n 680,701p crates/engine/tests/rules/fixtures/keywords_783.rs; sed -n 545,605p crates/engine/tests/rules/cloaked.rs\", \"description\": \"Read board_783 and r783007 test\"}\n- Bash: {\"command\": \"grep -n \\\"HookResolving\\\" -A 14 crates/engine/src/view_for.rs | head -40; sed -n 20,60p crates/engine/src/hook_marks.rs\", \"description\": \"Check hookResolving view redaction and hook_mark\u2026\n- Bash: {\"command\": \"sed -n 130,150p crates/cards/src/scripts/core/c039_recycling_initiative.rs; grep -n \\\"pub fn exile(\\\" -A 30 crates/engine/src/effects/move_.rs | head -45\", \"description\": \"Check exile ve\u2026\n- Bash: {\"command\": \"grep -rn \\\"setRepeat\\\\|@extraCry\\\" docs/ spec/ crates/*/README.md apps/web/src --include=*.md --include=*.ts | head\", \"description\": \"Check docs listing engine work hooks\"}\n- Bash: {\"command\": \"sed -n 41,50p crates/cards/src/history.rs; grep -n \\\"fn under_kept\\\" -A 12 crates/cards/src/lib.rs\", \"description\": \"Check history imports and under_kept helper\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3806/.bot-plan.md\", \"content\": \"# Draft plan #3806 (planner notes) \\u2014 design settled, writing final plan\\n\\n## Found\\n- Set path: play_steps::vali\u2026\n- Bash: {\"command\": \"grep -n \\\"pub fn run_hook_resumable\\\" -B 6 -A 3 crates/engine/src/prompts.rs; grep -n \\\"pub fn printed_echo\\\" -A 2 crates/engine/src/echo.rs; grep -n \\\"pub const AI\\\\b\\\\|pub const HUMAN\\\u2026\n- Bash: {\"command\": \"grep -n \\\"pub use\\\\|pub fn scenario\\\\|scenario\\\" crates/ai/tests/ai/support.rs | head -10; grep -n \\\"pub fn expect_refused\\\\|pub fn answer\\\\b\\\\|pub fn answer(\\\" -A 3 crates/engine/src/te\u2026\n- Bash: {\"command\": \"sed -n 1,15p spec/rulings/R0082.md | cut -c1-600\", \"description\": \"Read R82 auto end turn rule\"}\n- Bash: {\"command\": \"sed -n 136,192p crates/engine/src/subsystems/activate.rs; sed -n 1125,1140p crates/engine/src/subsystems/activate.rs\", \"description\": \"Check activate.rs set-card handling\"}\n- said: You've hit your 5-hour limit \u00b7 resets 10:50pm (UTC)"
       },
-      "hold": {
-        "ends": "2026-11-13T00:13:37Z",
-        "lifted": "2026-11-12T22:53:18Z",
-        "owner": "claude-3",
-        "since": "2026-11-12T22:13:37Z",
-        "until": "2026-11-12T22:50:00Z",
-        "why": "it refused a call"
-      },
+      "in_lane": true,
       "kind": "build",
       "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-12T21:32:56Z",
-      "owner_why": "it plans it",
+      "owner": "claude-8",
+      "owner_since": "2026-11-12T23:32:01Z",
+      "owner_why": "handed off from `claude-3`: its owner `claude-3` cannot take it now",
       "pending_at": "2026-11-12T21:38:36Z",
       "pending_by": "MaxGoetzmann",
-      "pending_request": true,
-      "provider": "claude-3",
-      "run_id": "43311338223",
+      "pending_request": false,
+      "provider": "claude-8",
+      "run_id": "pending:c0c8980e-1794526272",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
@@ -16686,7 +16679,7 @@
         "provider": "claude-3",
         "run": "43311338223"
       },
-      "started_at": "2026-11-12T21:32:56Z",
+      "started_at": "2026-11-12T23:32:01Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 6837383127
@@ -16917,9 +16910,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T23:30:56Z",
+    "at": "2026-11-12T23:32:01Z",
     "url": "",
-    "what": "revise #3797 on claude-6"
+    "what": "plan #3806 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-12T22:39:58Z",
