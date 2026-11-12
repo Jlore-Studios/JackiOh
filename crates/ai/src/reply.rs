@@ -2,7 +2,8 @@
 //! the turn is worth what remains after the opponent answers, scored one turn deeper.
 //!
 //! Rule order:
-//! 1. Play handed cards (e.g. bounced units).
+//! 1. Play handed cards (e.g. bounced units); one drawn guess at a secret of the seat's, and every play
+//!    judged after the turn's end while a handed card would be discarded there (R3696001).
 //! 2. Face-up activations (up to AI_REPLY.visible_activations).
 //! 3. Static trades: best value attack (lethal, kill, trade up, face; Deft trials R49).
 //! 4. Defense switches up to AI_REPLY.defense_switches (#1696).
@@ -16,12 +17,13 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use indexmap::IndexSet;
 use jackioh_engine::{
     Action, ActionBody, AttackTarget, CardInstance, DelayedAt, GameState, KeywordKind, Phase, PlayerId,
-    Position, Selection, effective_life, find_instance, has_countdown, has_keyword, legal_actions, pierces,
-    reduce_unpiloted, subsystems, takes_strike_back, unit_view,
+    Position, Rng, SECRET_KEY, Selection, card_keywords, effective_life, find_instance, has_countdown,
+    has_keyword, legal_actions, pierces, reduce_unpiloted, secret_of, subsystems, takes_strike_back,
+    temporary_number, unit_view,
 };
 
 use crate::candidates::{Side, blow, candidate_actions_in, cleaved_neighbours, exchange, side_of};
-use crate::config::{AI_EVAL, AI_REPLY};
+use crate::config::{AI_EVAL, AI_GUESS_SEED, AI_REPLY};
 use crate::evaluate::{
     NextSwing, Prices, coming_mana, evaluate_priced, heal_converted, heal_worth, kill_worth, unit_worth,
 };
@@ -259,7 +261,59 @@ pub(crate) enum Known {
     Played(Box<GameState>),
 }
 
-/// Step 1: best play of a known hand card not in `hidden` if beating standing still.
+/// R3696001: whether `opp` holds a hand card the seat can see (not in `hidden`) that this turn's
+/// cleanup discards: Temporary with a count of 1 left (R637, R2179001).
+fn doomed_known_card(state: &GameState, opp: PlayerId, hidden: &IndexSet<String>) -> bool {
+    state.players[opp].hand.iter().any(|card| {
+        !hidden.contains(&card.id)
+            && temporary_number(&card_keywords(state, card)).is_some_and(|left| left <= 1)
+    })
+}
+
+/// R3696001: whether a play of `instance_id` guesses a secret of `seat`'s it may not read: the card's
+/// link names a secret `seat` owns that is not revealed (R862, R860).
+fn guesses_secret(state: &GameState, seat: PlayerId, instance_id: &str) -> bool {
+    find_instance(state, instance_id)
+        .and_then(|card| card.memory.get(SECRET_KEY))
+        .and_then(|link| link.as_str())
+        .and_then(|id| secret_of(state, id))
+        .is_some_and(|secret| secret.owner == seat && secret.revealed != Some(true))
+}
+
+/// R3696001: `plays` with each `guesses_secret` card's plays cut to one, in the first one's place,
+/// drawn on `AI_GUESS_SEED`'s stream before any evaluation, so it never reads the secret (R185, R860).
+fn one_guess_per_card(state: &GameState, seat: PlayerId, plays: Vec<ActionBody>) -> Vec<ActionBody> {
+    let guessed = |play: &ActionBody| match play {
+        ActionBody::Play { instance_id, .. } if guesses_secret(state, seat, instance_id) => {
+            Some(instance_id.clone())
+        }
+        _ => None,
+    };
+    let mut settled: IndexSet<String> = IndexSet::new();
+    let mut out: Vec<ActionBody> = Vec::with_capacity(plays.len());
+    for play in &plays {
+        let Some(card) = guessed(play) else {
+            out.push(play.clone());
+            continue;
+        };
+        if !settled.insert(card.clone()) {
+            continue;
+        }
+        let guesses: Vec<&ActionBody> = plays
+            .iter()
+            .filter(|other| guessed(other).as_deref() == Some(card.as_str()))
+            .collect();
+        let stream = format!("{AI_GUESS_SEED}:{}:{card}", state.seed);
+        let picked = Rng::new(&stream, 0).pick(&guesses).copied().unwrap_or(play);
+        out.push(picked.clone());
+    }
+    out
+}
+
+/// Step 1: best play of a known hand card not in `hidden` if beating standing still. R3696001: a card
+/// guessing an unrevealed secret of the seat's is tried with one guess (`one_guess_per_card`), and while
+/// a known card would be discarded at the end of `opp`'s turn (`doomed_known_card`), every play and
+/// standing still are compared after that end.
 fn known_play(
     state: &GameState,
     seat: PlayerId,
@@ -274,17 +328,52 @@ fn known_play(
         .filter(
             |action| matches!(action, ActionBody::Play { instance_id, .. } if !hidden.contains(instance_id)),
         )
+        .collect();
+    let plays: Vec<ActionBody> = one_guess_per_card(state, seat, plays)
+        .into_iter()
         .take(AI_REPLY.known_plays.max(0) as usize)
         .collect();
-    best_try(state, opp, &plays, counter, prices)
+    best_try(
+        state,
+        opp,
+        &plays,
+        doomed_known_card(state, opp, hidden),
+        counter,
+        prices,
+    )
+}
+
+/// `opp`'s own evaluation of `state`, or with `at_close` of the position once it ends its turn there
+/// (R3696001), `state`'s own when the end of turn is refused. `None` when the counter refused a node.
+fn judged(
+    state: &GameState,
+    opp: PlayerId,
+    at_close: bool,
+    counter: &dyn NodeCounter,
+    prices: &Prices,
+) -> Option<f64> {
+    let closed = if at_close {
+        simulate(state, opp, &ActionBody::EndTurn, counter, prices)?.ok()
+    } else {
+        None
+    };
+    Some(evaluate_priced(
+        closed.as_ref().unwrap_or(state),
+        opp,
+        NextSwing::Enemy,
+        &AI_EVAL,
+        prices,
+    ))
 }
 
 /// The best of `tries` for `opp` by its own evaluation: one that wins the game at once, else the one
-/// whose result beats standing still by the most (ties keep the list's order).
+/// whose result beats standing still by the most (ties keep the list's order). With `at_close`, each
+/// try and standing still are judged after `opp` ends its turn there (`judged`, R3696001).
 fn best_try(
     state: &GameState,
     opp: PlayerId,
     tries: &[ActionBody],
+    at_close: bool,
     counter: &dyn NodeCounter,
     prices: &Prices,
 ) -> Known {
@@ -292,7 +381,9 @@ fn best_try(
         return Known::Nothing;
     }
     let mut best: Option<GameState> = None;
-    let mut best_value = evaluate_priced(state, opp, NextSwing::Enemy, &AI_EVAL, prices);
+    let Some(mut best_value) = judged(state, opp, at_close, counter, prices) else {
+        return Known::Cut;
+    };
     for action in tries {
         let next = match simulate(state, opp, action, counter, prices) {
             None => return Known::Cut,
@@ -305,7 +396,9 @@ fn best_try(
         {
             return Known::Played(Box::new(next));
         }
-        let value = evaluate_priced(&next, opp, NextSwing::Enemy, &AI_EVAL, prices);
+        let Some(value) = judged(&next, opp, at_close, counter, prices) else {
+            return Known::Cut;
+        };
         // Strictly greater, so ties keep move order.
         if value > best_value {
             best_value = value;
@@ -381,7 +474,7 @@ pub(crate) fn visible_activation(
     // Stable, so each aim keeps legal_actions order.
     tries.sort_by_key(|action| aim_of(state, seat, action));
     tries.truncate(AI_REPLY.visible_activations.max(0) as usize);
-    best_try(state, seat.opponent(), &tries, counter, prices)
+    best_try(state, seat.opponent(), &tries, false, counter, prices)
 }
 
 /// Step 3, R49: the opponent's Deft units in Defense Position may switch to Attack and still attack.
@@ -440,7 +533,7 @@ fn defense_switch(
         .take(AI_REPLY.defense_switches.max(0) as usize)
         .cloned()
         .collect();
-    best_try(state, seat.opponent(), &tries, counter, prices)
+    best_try(state, seat.opponent(), &tries, false, counter, prices)
 }
 
 /// The ids of the cards the opponent holds unseen: its hand and its library, as sampled.
@@ -654,6 +747,7 @@ mod tests {
     use jackioh_engine::{ModifierExpiry, ModifierKind, PlayerModifier};
 
     use super::*;
+    use crate::simulate::create_node_counter;
 
     /// C+ #13 Mommy Barker, whose Radiant face is a 4/4 Reborn.
     const BARKER: &str = "classicplus-013";
@@ -670,6 +764,15 @@ mod tests {
     const LIFE_MAGE: &str = "meditativeplus-007";
     /// C+ #22 Blood Moon, whose Radiant face is a face-up Field Trap converting enemy heals.
     const MOON: &str = "classicplus-022";
+    /// M #22 Mind Games: a choice kept secret, its reward at the caster's next turn start, a Fortify
+    /// Mind handed to the other side.
+    const MIND_GAMES: &str = "meditative-022";
+    /// M #22.1 Fortify Mind: Temporary, a guess at the Mind Games; discarded, all three penalties.
+    const FORTIFY: &str = "meditative-022-1";
+    /// #5 Stockpile, left in p1's hand so that its turn does not end by itself after the cast.
+    const STOCKPILE: &str = "core-005";
+    /// Mind Games' three choices, Fortify Mind's three guesses.
+    const GUESSES: [&str; 3] = ["greed", "attack", "defend"];
 
     /// p1's `attacker` facing p2's Radiant Mommy Barker.
     fn facing_barker(attacker: Value) -> Scenario {
@@ -934,5 +1037,148 @@ mod tests {
                 target_id: "hero-p1".to_owned(),
             }
         );
+    }
+
+    /// p2's turn after p1 cast Mind Games keeping `kept` secret and ended its turn, the Fortify Mind it
+    /// handed p2 in p2's hand; with the ids p2 held unseen before the cast (`hidden`, so the Fortify
+    /// Mind, which the AI watched arrive, is known).
+    fn mind_games_cast(kept: &str) -> (Scenario, IndexSet<String>) {
+        jackioh_cards::register_all();
+        let mut s = scenario(json!({
+            "seed": "reply-fortify",
+            "p1": { "hand": [MIND_GAMES, STOCKPILE], "library": [VANILLA, VANILLA, VANILLA], "mana": 10 },
+            "p2": { "hand": [VANILLA], "library": [VANILLA, VANILLA, VANILLA], "mana": 10 },
+        }));
+        let hidden = hidden_card_ids(s.state(), PlayerId::P1);
+        s.play(MIND_GAMES, json!({ "modes": [kept] })).end_turn();
+        assert_eq!(s.state().active, PlayerId::P2, "{kept}: p2's turn");
+        (s, hidden)
+    }
+
+    /// p2's candidate plays of its Fortify Mind, one per guess.
+    fn fortify_plays(s: &Scenario) -> Vec<ActionBody> {
+        let fortify = &s.card(FORTIFY).id;
+        candidate_actions_in(
+            s.state(),
+            PlayerId::P2,
+            legal_actions(s.state(), PlayerId::P2),
+            Prices::NONE,
+        )
+        .into_iter()
+        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if instance_id == fortify))
+        .collect()
+    }
+
+    /// Whether p1's Mind Games reward still waits.
+    fn holds_reward(state: &GameState) -> bool {
+        state
+            .delayed
+            .iter()
+            .any(|entry| entry.owner == PlayerId::P1 && entry.resume.def_id == MIND_GAMES)
+    }
+
+    /// Before R3696001 the reply compared each guess with the position now, where no guess pays, and
+    /// kept the card into cleanup's three penalties; judged after its turn ends, it plays it.
+    #[test]
+    fn r3696001_the_opponent_plays_the_fortify_mind_it_would_otherwise_discard() {
+        for kept in GUESSES {
+            let (s, hidden) = mind_games_cast(kept);
+            let state = s.state();
+            let guess = one_guess_per_card(state, PlayerId::P1, fortify_plays(&s));
+            let now = best_try(
+                state,
+                PlayerId::P2,
+                &guess,
+                false,
+                &create_node_counter(200, None),
+                Prices::NONE,
+            );
+            assert!(
+                matches!(now, Known::Nothing),
+                "{kept}: judged now, the card is kept"
+            );
+            let legal = legal_actions(state, PlayerId::P2);
+            let Known::Played(next) = known_play(
+                state,
+                PlayerId::P1,
+                &legal,
+                &hidden,
+                &create_node_counter(200, None),
+                Prices::NONE,
+            ) else {
+                panic!("{kept}: the Fortify Mind is played");
+            };
+            assert_eq!(next.active, PlayerId::P2, "{kept}");
+            let fortify = &s.card(FORTIFY).id;
+            assert!(
+                next.players[PlayerId::P2]
+                    .hand
+                    .iter()
+                    .all(|card| card.id != *fortify),
+                "{kept}: the Fortify Mind left p2's hand"
+            );
+        }
+    }
+
+    /// The one guess tried is drawn before anything is weighed, so it is the same whichever choice
+    /// the AI kept: it wins against exactly one of them (R864), and only there is the reward gone.
+    #[test]
+    fn r3696001_the_guess_is_the_same_whichever_choice_the_ai_kept_secret() {
+        let mut drawn: Vec<ActionBody> = Vec::new();
+        let mut cancelled = 0;
+        for kept in GUESSES {
+            let (s, hidden) = mind_games_cast(kept);
+            let state = s.state();
+            let plays = fortify_plays(&s);
+            assert_eq!(plays.len(), 3, "{kept}: one play per guess");
+            assert!(holds_reward(state), "{kept}: the reward waits");
+            let one = one_guess_per_card(state, PlayerId::P1, plays);
+            assert_eq!(one.len(), 1, "{kept}: one guess is tried");
+            drawn.push(one[0].clone());
+            let legal = legal_actions(state, PlayerId::P2);
+            let Known::Played(next) = known_play(
+                state,
+                PlayerId::P1,
+                &legal,
+                &hidden,
+                &create_node_counter(200, None),
+                Prices::NONE,
+            ) else {
+                panic!("{kept}: the Fortify Mind is played");
+            };
+            if !holds_reward(&next) {
+                cancelled += 1;
+            }
+        }
+        assert!(drawn.iter().all(|play| *play == drawn[0]), "{drawn:?}");
+        assert_eq!(cancelled, 1, "the one guess wins against one choice");
+    }
+
+    /// A revealed secret is no guess, so every play of the card is tried; and the guess is the
+    /// world's: other seeds draw other guesses.
+    #[test]
+    fn r3696001_a_revealed_secret_keeps_every_guess_and_other_worlds_draw_other_guesses() {
+        let (mut s, _) = mind_games_cast("greed");
+        let plays = fortify_plays(&s);
+        let mut revealed = s.state().clone();
+        for secret in revealed.secrets.iter_mut().flatten() {
+            secret.revealed = Some(true);
+        }
+        assert_eq!(one_guess_per_card(&revealed, PlayerId::P1, plays.clone()), plays);
+        let mut guesses: IndexSet<String> = IndexSet::new();
+        for world in 0..30 {
+            s.state_mut().seed = format!("w{world}");
+            let one = one_guess_per_card(s.state(), PlayerId::P1, plays.clone());
+            let [
+                ActionBody::Play {
+                    modes: Some(modes), ..
+                },
+            ] = one.as_slice()
+            else {
+                panic!("one guess with its mode: {one:?}");
+            };
+            guesses.insert(modes.join(","));
+        }
+        assert!(guesses.len() > 1, "{guesses:?}");
     }
 }
