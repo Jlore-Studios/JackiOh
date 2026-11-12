@@ -14660,7 +14660,7 @@
       "stop_requested": false
     },
     "3761": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "decision": {
         "answer": "2",
@@ -14712,12 +14712,12 @@
       "interruptions": 0,
       "issue": 3695,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "revising",
       "pending_request": false,
       "provider": "claude-3",
       "question": "Should #3761 merge with acceptance item 4 (more casts in the sweep) waived, with the Battleship's dormant layers taken up separately? Or should that second cause be fixed first?",
       "queued_at": "2026-11-12T13:57:51Z",
-      "run_id": "43173327474",
+      "run_id": "pending:2400fe1f-1794491909",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -14738,7 +14738,7 @@
         "run": "43173327474"
       },
       "source": "decision",
-      "started_at": "2026-11-12T07:10:32Z",
+      "started_at": "2026-11-12T13:59:11Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -15157,9 +15157,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T13:49:44Z",
+    "at": "2026-11-12T13:59:11Z",
     "url": "",
-    "what": "review #3775 on claude-7"
+    "what": "revise #3761 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-12T13:46:32Z",
