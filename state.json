@@ -11435,6 +11435,11 @@
         "bot/issue-3569",
         "bot/issue-3571"
       ],
+      "paused": {
+        "at": "2026-11-12T16:19:39Z",
+        "interrupt": "budget",
+        "provider": "claude-4"
+      },
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-11-12T08:39:31Z",
