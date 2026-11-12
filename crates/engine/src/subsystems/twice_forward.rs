@@ -84,11 +84,16 @@ fn still_there<'s>(state: &'s GameState, play: &Resolved) -> Option<&'s CardInst
 }
 
 /// R687: turn the card face-up and start the printed Brittle its face-down arrival never started, so no
-/// Brittle ever sits on an unrevealed card.
+/// Brittle ever sits on an unrevealed card. A card an earlier trigger of the same firing has taken off the
+/// field (a fused ingredient's attack that killed it, an exile) has no face to turn up: R78 reset it as
+/// it left, so nothing is written to it there.
 fn reveal_self(state: &mut GameState, self_id: &str) {
     let Some(live) = find_instance_mut(state, self_id) else {
         return;
     };
+    if live.zone.z() != ZoneName::Field {
+        return;
+    }
     live.face_up = Some(true);
     let mut card = live.clone();
     // Started on a copy of the face-up card, the count is written back by id.
