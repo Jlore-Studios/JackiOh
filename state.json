@@ -17680,6 +17680,15 @@
     },
     "3764": {
       "action": "build",
+      "archived": {
+        "at": "2026-11-12T09:17:04Z",
+        "branch": "bot/issue-3764",
+        "head": "a77887ce1b7ab6b11371a3e67fe7c27ff015c535",
+        "issue": 3764,
+        "item": 3765,
+        "pr": 3765,
+        "why": "A person must put the three test edits below on this branch (bot/tests/test_ci_matrix.py) before the pull request is approved or merged. 1. In test_the_committed_files_give_todays_jobs, change `self.assertEqual(out[\"e2e_smoke_shards\"], [1, 2])` to `[1, 2, 3, 4]`. 2. In test_the_web_and_e2e_counts_come_from_the_file, change `self.repo.edit(matrix.COUNTS, \"smoke = 2\", \"smoke = 3\")` to `\"smoke = 4\", \"smoke = 5\"`, and change the expected `[1, 2, 3]` to `[1, 2, 3, 4, 5]`. 3. In test_it_refuses_what_could_hide_a_job_or_flood_the_runners, change the case `(\"[e2e]\\nsmoke = 2\", \"[e2e]\", \"has no `smoke`\")` to `(\"[e2e]\\nsmoke = 4\", \"[e2e]\", \"has no `smoke`\")`. Optional: `.github/workflows/ci.yml` line 28 is stale. It names specs 01, 06, 10, 13 and 19 in two shards, but SMOKE also holds 46 and 47 and there are now four shards. After CI runs, if `e2e smoke (1/4)` (spec 19 alone) is still over 5 minutes, decide between moving spec 19 to the daily super.yml and trimming its rating-window wait."
+      },
       "asks": [],
       "died": 0,
       "difficulty_by": {
@@ -17689,8 +17698,6 @@
         "tier": "medium",
         "why": "No rule line holds: it is a one-number change to scripts/ci-shards.toml plus a note for a person, with no engine, AI, cross-crate or migration work and well under 40 files."
       },
-      "failures": 0,
-      "forced": false,
       "handoff": {
         "at": "2026-11-12T09:03:06Z",
         "family": "claude",
@@ -17701,13 +17708,9 @@
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -30; grep -n -B8 -A3 'smoke' scripts/ci-shards.toml\"}\n- Bash: {\"command\": \"python3 - <<'E'\\np='scripts/ci-shards.toml'\\ns=open(p).read()\\nold=\\\"\\\"\\\"# `e2e smoke (k/K)`: the smoke specs (e2e/scripts/shard-specs.mjs SMOKE) by their WEIGHTS. A\\n# dispatch with `e2\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"CI: split e2e smoke into four shards\"} --> I raised `[e2e] smoke` in `scripts/ci-shards.toml` from 2 to 4 and rewrote the comment above it. `bot selftest` will go red until a person edits `bot/tests/test_ci_matrix.py`, which the bot may not touch. The change f\u2026"
       },
       "interruptions": 0,
-      "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-6",
-      "owner_since": "2026-11-12T08:11:55Z",
-      "owner_why": "it plans it",
-      "pending_request": false,
+      "owner": "",
       "planned_at": "2026-11-12T08:20:38Z",
       "planned_by": "`claude-6` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-6",
@@ -17716,19 +17719,23 @@
       "pr": 3765,
       "provider": "claude-6",
       "question": "",
-      "round_tier": "medium",
       "run_id": "43183624546",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-12T08:31:13Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 0
+      "taken_asks": []
     },
     "3765": {
       "action": "review",
+      "archived": {
+        "at": "2026-11-12T09:17:04Z",
+        "branch": "bot/issue-3764",
+        "head": "a77887ce1b7ab6b11371a3e67fe7c27ff015c535",
+        "issue": 3764,
+        "pr": 3765,
+        "why": "A person must put the three test edits below on this branch (bot/tests/test_ci_matrix.py) before the pull request is approved or merged. 1. In test_the_committed_files_give_todays_jobs, change `self.assertEqual(out[\"e2e_smoke_shards\"], [1, 2])` to `[1, 2, 3, 4]`. 2. In test_the_web_and_e2e_counts_come_from_the_file, change `self.repo.edit(matrix.COUNTS, \"smoke = 2\", \"smoke = 3\")` to `\"smoke = 4\", \"smoke = 5\"`, and change the expected `[1, 2, 3]` to `[1, 2, 3, 4, 5]`. 3. In test_it_refuses_what_could_hide_a_job_or_flood_the_runners, change the case `(\"[e2e]\\nsmoke = 2\", \"[e2e]\", \"has no `smoke`\")` to `(\"[e2e]\\nsmoke = 4\", \"[e2e]\", \"has no `smoke`\")`. Optional: `.github/workflows/ci.yml` line 28 is stale. It names specs 01, 06, 10, 13 and 19 in two shards, but SMOKE also holds 46 and 47 and there are now four shards. After CI runs, if `e2e smoke (1/4)` (spec 19 alone) is still over 5 minutes, decide between moving spec 19 to the daily super.yml and trimming its rating-window wait."
+      },
       "asks": [],
       "difficulty": "medium",
-      "failures": 0,
       "feedback_since": "2026-11-12T08:31:13Z",
       "handoff": {
         "at": "2026-11-12T09:03:06Z",
@@ -17740,33 +17747,13 @@
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -30; grep -n -B8 -A3 'smoke' scripts/ci-shards.toml\"}\n- Bash: {\"command\": \"python3 - <<'E'\\np='scripts/ci-shards.toml'\\ns=open(p).read()\\nold=\\\"\\\"\\\"# `e2e smoke (k/K)`: the smoke specs (e2e/scripts/shard-specs.mjs SMOKE) by their WEIGHTS. A\\n# dispatch with `e2\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"CI: split e2e smoke into four shards\"} --> I raised `[e2e] smoke` in `scripts/ci-shards.toml` from 2 to 4 and rewrote the comment above it. `bot selftest` will go red until a person edits `bot/tests/test_ci_matrix.py`, which the bot may not touch. The change f\u2026"
       },
       "issue": 3764,
-      "kind": "review",
       "live": "reviewing",
-      "pending_request": false,
       "provider": "claude-6",
-      "queued_at": "2026-11-12T09:06:25Z",
+      "question": "A person must put the three test edits below on this branch (bot/tests/test_ci_matrix.py) before the pull request is approved or merged. 1. In test_the_committed_files_give_todays_jobs, change `self.assertEqual(out[\"e2e_smoke_shards\"], [1, 2])` to `[1, 2, 3, 4]`. 2. In test_the_web_and_e2e_counts_come_from_the_file, change `self.repo.edit(matrix.COUNTS, \"smoke = 2\", \"smoke = 3\")` to `\"smoke = 4\", \"smoke = 5\"`, and change the expected `[1, 2, 3]` to `[1, 2, 3, 4, 5]`. 3. In test_it_refuses_what_could_hide_a_job_or_flood_the_runners, change the case `(\"[e2e]\\nsmoke = 2\", \"[e2e]\", \"has no `smoke`\")` to `(\"[e2e]\\nsmoke = 4\", \"[e2e]\", \"has no `smoke`\")`. Optional: `.github/workflows/ci.yml` line 28 is stale. It names specs 01, 06, 10, 13 and 19 in two shards, but SMOKE also holds 46 and 47 and there are now four shards. After CI runs, if `e2e smoke (1/4)` (spec 19 alone) is still over 5 minutes, decide between moving spec 19 to the daily super.yml and trimming its rating-window wait.",
       "run_id": "43188718988",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "session": {
-        "action": "build",
-        "artifact": 13929536638,
-        "artifact_bytes": 90375,
-        "artifact_name": "work",
-        "at": "2026-11-12T09:06:41Z",
-        "bytes": 107440,
-        "cwd": "/home/runner/work/_temp/work/item-3764",
-        "ended": "built: built and checked; its own review run, on this subscription, reviews it next",
-        "head": "a77887ce1b7ab6b11371a3e67fe7c27ff015c535",
-        "id": "981ee06f-b719-4527-8c29-d0c958bd9a43",
-        "kind": "build",
-        "model": "sonnet",
-        "project": "-home-runner-work--temp-work-item-3764",
-        "provider": "claude-6",
-        "run": "43183624546"
-      },
       "started_at": "2026-11-12T09:07:47Z",
-      "stop_requested": false,
       "taken_asks": [],
       "votes": {
         "approvals": [],
