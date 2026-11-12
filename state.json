@@ -16057,12 +16057,10 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "at": "2026-11-11T18:37:33Z",
+        "at": "2026-11-12T02:07:08Z",
         "built_by": "claude-3",
-        "by": "`muse` (medium)",
-        "carried_from": "81ce52dce6686b5c65218a1eb4ad819d860f18a4",
-        "resolved_by": "`claude` (strong)",
-        "sha": "6ad3002b9e390f92a18bd4432c05f113394e972c"
+        "by": "`claude` (strong)",
+        "sha": "37936828cab0c5b6b49e0a0c7a762f1131a3954f"
       },
       "cross_rounds": 0,
       "died": 0,
