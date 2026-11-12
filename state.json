@@ -15968,16 +15968,18 @@
     "what": "revise #3761 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-12T17:35:19Z",
+    "at": "2026-11-12T17:48:13Z",
     "notes": [
       "#3779 is held for `claude-3` until 11:50 (it refused a call)",
       "#3761 is held for `claude-3` until 11:50 (it refused a call)",
       "#3772 is held for `claude-3` until 11:50 (it refused a call)",
-      "delivered review #3782 on claude-4 (run 43270057121): reviewed",
-      "delivered review #3788 on claude-8 (run 43267398555): approved",
-      "started suggest on claude-8 (run 43271853261)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-12T17:50:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` 5-hour usage is 42%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-12T20:10:00Z; it can start a build or a plan again in 2h 28m; `claude-4` is idle, but nothing queued is for it; `claude-6` is idle, but nothing queued is for it; `claude-5` 7-day usage is 64%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-16T09:00:00Z; it can start a build or a plan again in 77h 18m; `muse` it refused a call; its limit resets at 2026-11-16T00:00:00Z; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-14T05:00:00Z; it can start a build or a plan again in 35h 18m; waiting for their owners: #3761 held for `claude-3` until 11:50 (it refused a call); #3772 held for `claude-3` until 11:50 (it refused a call); #3779 held for `claude-3` until 11:50 (it refused a call)",
-      "runner gate: started 0 of 3 waiting run(s); 3 wait for room"
+      "night_run: could not finish (GitHubError: GET /repos/Jlore-Studios/JackiOh/contents/state.json?ref=_bot-state: HTTP 403: API rate limit exceeded for user ID 324324626. If you reach out to GitHub Support for help, please include the request ID)",
+      "issue_types: could not finish (GitHubError: GET /repos/Jlore-Studios/JackiOh/issues?state=open&per_page=100&page=1: HTTP 403: API rate limit exceeded for user ID 324324626. If you reach out to GitHub Support for help, please include the request)",
+      "difficulty_labels: could not finish (GitHubError: GET /repos/Jlore-Studios/JackiOh/issues?state=open&per_page=100&page=1: HTTP 403: API rate limit exceeded for user ID 324324626. If you reach out to GitHub Support for help, please include the request)",
+      "merging: could not finish (GitHubError: GET /repos/Jlore-Studios/JackiOh/issues?state=all&labels=bot%3Amerging&per_page=100&page=1: HTTP 403: API rate limit exceeded for user ID 324324626. If you reach out to GitHub Support for help, please)",
+      "tracking: could not finish (GitHubError: GET /repos/Jlore-Studios/JackiOh/issues?state=open&labels=production+merge&per_page=100&page=1: HTTP 403: API rate limit exceeded for user ID 324324626. If you reach out to GitHub Support for help, pl)",
+      "queue_evac: could not finish (GitHubError: GET /repos/Jlore-Studios/JackiOh/actions/workflows/ci.yml/runs?per_page=100&page=1: HTTP 403: API rate limit exceeded for user ID 324324626. If you reach out to GitHub Support for help, please include)",
+      "runner gate: could not read the runs waiting (GET /repos/Jlore-Studios/JackiOh/actions/workflows/ci.yml/runs?per_page=100&status=waiting&page=1: HTTP 403: API rate limit exceeded for user ID 324324626. If you reach out to GitHub Support for help,)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16683,7 +16685,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-12T17:35:19Z",
+  "loop_tick": "2026-11-12T17:48:13Z",
   "machine_disk": {
     "issue": null,
     "reading": {
