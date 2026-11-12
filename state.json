@@ -16748,6 +16748,13 @@
     "3730": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "43187070682",
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-12T09:29:09Z",
+        "until": "2026-11-12T09:59:09Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
