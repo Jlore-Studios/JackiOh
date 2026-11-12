@@ -1,7 +1,7 @@
 # The AI training lanes
 
 **Since 2026-10-25 the AI improves itself through the `learn` lane alone**, with no LLM in the loop
-([`learn.md`](learn.md)). On the owner's PC, one run after another, a script plays the AI on `main`
+([`learn.md`](learn.md)). On GitHub's runners (the owner's PC until #3740), one run after another, a script plays the AI on `main`
 against itself, retrains the learned evaluation on those games, and gates the result against the AI
 on `main`. A pass opens its own pull request with auto-merge on, and every run's games go into the
 card statistics as development records (#1976). #682's audit
@@ -310,22 +310,26 @@ catalog it was played on, finished and clean, as a development record `dev:<patc
 and counts the rest (R1676000). Since #1976 `learn.yml` does it after every export (its `import` job,
 `learn.md` step 7) and loads the file with `jackioh-server stats-import --totals-only` (R1976000): the
 records' counts go into the totals and no row is kept per game, so each project's database (both file
-the development lanes' games, R1933001) grows with the patches and not the games. Runs follow one another, so an export comes about every two days; a
-patch shipped between two has none until the next. `.github/workflows/gather.yml` plays `GATHER_GAMES`
-(5,000) games of each new patch or set as it ships (a `patch` or `major` tier, never a micro), on the
-PC's gather half while the learn lane trains on the other, and files them the same way, but only
-while the repository variable `GATHER_ON_PATCH` is `true`: each patch's development totals take about
-3 MB of the database however few its games. A push that ships only micros plays nothing, so a micro's
-changed cards wait for the next patch's games or the next export's.
+the development lanes' games, R1933001) grows with the patches and not the games. Runs follow one another, so an export comes about every half
+day on GitHub's runners. Beside them, `.github/workflows/gather.yml` plays without a pause since #3740
+(it played 5,000 games of each new patch or set, once, on the PC's gather half, before): two of
+GitHub's runners each play `GATHER_HOURS` (5) hours of the newest version on `main`, `GATHER_FILE_GAMES`
+(850, about an hour) at a time, and file each batch the same way as it finishes, so the card statistics
+take fresh games of the version that is live every hour. As a run ends it starts the next on `main` as
+it is then, so a version shipped meanwhile is played from the next run on, within five hours, and a
+schedule every six hours starts the lane again should that chain stop. It runs only while the
+repository variable `GATHER_ON_PATCH` is `true`: each version's development totals take about 3 MB of
+the database however few its games, and the lane files every version it plays, micros among them.
 
-5,000 games are still too few for the card win rates (#2888). A card's rate counts only the games
+5,000 games were too few for the card win rates (#2888). A card's rate counts only the games
 where exactly one seat holds it (R1284000), about 375 of the 5,000 for a typical card (150 of 2,000,
 the number before), so its 95% interval is about ±5 points. `cargo jackioh stats sample-size` prints the games a run needs at
 this build's deal pool, and the number grows with the catalog: 29000 at 633 cards when it landed.
 `--explain` shows the working, `--sigma` and `--rho` set its two guesses, and
-`crates/tools/README.md` has the formula. Pointing `gather.yml` at it, with the dispatch's
-`games` input kept as an override, is a person's change, since the bots never edit `.github/`;
-so is growing `GATHER_STRIDE` (100,000), which N passes at about 2,000 cards.
+`crates/tools/README.md` has the formula. The lane playing without a pause reaches it for a version
+that stays the newest about a day (two runners at about 870 games an hour), and the learn lane's
+exports add theirs. A change to `gather.yml` is a person's, since the bots never edit `.github/`;
+so is growing `GATHER_STRIDE` (100,000), which a run's games pass only past about 50,000 a part.
 
 To file an export by hand: `gh run download <run> --pattern 'selfplay-<base>-*'`,
 `cargo jackioh stats from-selfplay <shards>… --out <file>`, then `jackioh-server stats-import
@@ -431,17 +435,19 @@ The live games' records are what the gather lane's figures sit beside, and they 
 The learned evaluation (#466, `docs/learned-eval.md`) learns from self-play exports: game logs
 `cargo jackioh selfplay` plays, which `cargo jackioh positions` folds into training rows (R1006001,
 R1006003). An export is dispatched, never played on the training box, whose two vCPUs the lanes need:
-`gh workflow run selfplay.yml -f games=100000 -f seed=<base> [-f shards=20] [-f
-runner=ubuntu-latest]` plays it in shards on the local runner by default (`bot/machine/README.md`,
-The local runner), two shards at a time while the PC is idle, one on each half (about three days of
-an idle PC for 100,000 at the 670 games an hour a four-CPU half plays at the AI's budget since #2628,
-in five rounds), or on GitHub's runners when asked (free for this
-public repository, about 1,500 games an hour each, at most 12 at once: 100,000 games in 20 shards
-take two rounds, about seven hours), and keeps each shard's log file as an artifact for up to 90
-days. The local runner is the default because an export on GitHub's runners holds 12 of the
-organization's 20 hosted jobs for hours, and CI waits behind it: 70 to 110 minutes a run on
-2026-10-20, against 10 to 16 without one (#1455). The learn lane's own exports play on the local
-runner alone, as every job of the lane does ([`learn.md`](learn.md), How it runs). Its last job runs
+`gh workflow run selfplay.yml -f games=100000 -f seed=<base> [-f shards=40] [-f
+runner=jackioh-selfplay-local]` plays it in shards on GitHub's runners by default (free for this
+public repository; about 870 games an hour each at the AI's budget since #2628, an estimate, 10 at
+once: 100,000 games in 40 shards of 2,500, each about 3 hours and under GitHub's 6-hour job limit,
+take about 12 hours), or on the local runner when asked (`bot/machine/README.md`, The local runner:
+two shards at a time while the PC is idle, one on each half, about three days of an idle PC for
+100,000 at the 670 games an hour a four-CPU half plays, in five rounds), and keeps each shard's log
+file as an artifact for up to 90 days. GitHub's runners are the default again since the
+organization's Team plan runs 60 hosted jobs at once (#3740), of which the training lanes take 12,
+the export's 10 and gather's 2; whatever they leave idle, CI and the bots take. On the Free plan's
+20 an export held 12, and CI waited behind it, 70 to 110 minutes a run on 2026-10-20 against 10 to
+16 without one, so from #1455 until #3740 the local runner was the default. The learn lane's own
+exports play where every job of the lane does ([`learn.md`](learn.md), How it runs). Its last job runs
 `positions` over the whole export and writes the counts (games, positions, games that no longer
 replay) and the games an hour to the run's summary. The same base and game numbers always play the
 same games, so an export can be played again on any runner, and a base never names a gate's

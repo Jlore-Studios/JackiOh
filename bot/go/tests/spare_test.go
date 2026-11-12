@@ -105,19 +105,22 @@ func TestSpare_AFillInsLanesCountOnceAndTheBoxesTakeMediumWork(t *testing.T) {
 	assertEqual(t, spareOf(spareNight(0, 3, "muse"), pyjson.New()), []string{"muse 3"})
 }
 
-// A survey waits for `suggestions.spare_lanes` (3) spare lanes, no longer for a lane idle 30
-// minutes: with claude-1's two alone it never starts, however long they stand; with every account's
-// it starts once a tick has seen them (`suggestions.idle_minutes` is 0).
-func TestSpare_ASurveyWaitsForThreeSpareLanes(t *testing.T) {
+// A survey starts at `suggestions.spare_lanes` (1) spare lane, whatever the excess compute (#3740;
+// it waited for 3 from #3659), until `suggestions.max_open` (10) are open: with claude-1's two alone
+// it starts once a tick has seen them (`suggestions.idle_minutes` is 0), and with none spare never.
+func TestSpare_ASurveyStartsAtOneSpareLane(t *testing.T) {
 	cfg := testsupport.MakeConfig()
 	assertEqual(t, []int{cfg.SuggestionsSpareLanes, cfg.SuggestionsIdleMinutes, cfg.SuggestionsMaxOpen},
-		[]int{3, 0, 10})
+		[]int{1, 0, 10})
 	one := testsupport.MakeCtx(fakes.NewFakeGitHub(), testsupport.Ctx{At: testsupport.Night})
-	testsupport.IdleFor(one, 120)
 	look := plan.Peek_(one, false, nil, "auto")
-	assertEqual(t, []any{look.Work, look.Idle, look.Spare}, []any{false, false, 2})
-	assertEqual(t, plan.SuggestionsDue(one, one.Store.Load(), false, 2), 0)
-	assertEqual(t, plan.SuggestionsDue(one, one.Store.Load(), false, 3), 10)
+	assertEqual(t, []any{look.Work, look.Idle, look.Spare}, []any{false, true, 2})
+	testsupport.IdleFor(one, 0)
+	look = plan.Peek_(one, false, nil, "auto")
+	assertTrue(t, look.Work)
+	assertIn(t, "a suggestion survey is due", look.Reason)
+	assertEqual(t, plan.SuggestionsDue(one, one.Store.Load(), false, 0), 0)
+	assertEqual(t, plan.SuggestionsDue(one, one.Store.Load(), false, 1), 10)
 	// Asked for (`/harness suggest`), it runs whatever is spare.
 	assertEqual(t, plan.SuggestionsDue(one, one.Store.Load(), true, 0), 10)
 	every := spareNight(8, 6)
@@ -196,7 +199,7 @@ func TestSpare_TheStatusIssueOpensWithTheExcessCompute(t *testing.T) {
 	assertIn(t, "a runner where it runs has room for it (GitHub's runners have 5 free, the AWS boxes "+
 		"5, once the planner has handed out every queued item it can start)", section)
 	assertIn(t, "(`start_headroom`, 5% under it as `.harness/providers.json` sets it)", section)
-	assertIn(t, "With 3 or more spare, the bot runs a suggestion survey (`suggestions.spare_lanes`), "+
+	assertIn(t, "With 1 or more spare, the bot runs a suggestion survey (`suggestions.spare_lanes`), "+
 		"up to 10 open suggestions (`bot:suggestion`: 1 open now).", section)
 
 	// By day the accounts are outside their hours, and with the box off nothing may start.
