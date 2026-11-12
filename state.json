@@ -14641,6 +14641,7 @@
     "3761": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "decision": {
         "answer": "2",
         "answer_url": "https://github.com/Jlore-Studios/JackiOh/pull/3761#issuecomment-6825443337",
@@ -14677,7 +14678,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-12T05:28:10Z",
+      "feedback_since": "2026-11-12T17:52:34Z",
       "forced": false,
       "handoff": {
         "at": "2026-11-12T15:50:14Z",
@@ -14695,7 +14696,7 @@
       "live": "revising",
       "pending_request": false,
       "provider": "claude-3",
-      "question": "Should #3761 merge with acceptance item 4 (more casts in the sweep) waived, with the Battleship's dormant layers taken up separately? Or should that second cause be fixed first?",
+      "question": "",
       "queued_at": "2026-11-12T13:57:51Z",
       "round_tier": "strong",
       "run_id": "43274007827",
@@ -14718,7 +14719,7 @@
         "provider": "claude-3",
         "run": "43232565702"
       },
-      "source": "decision",
+      "source": "",
       "started_at": "2026-11-12T17:52:34Z",
       "stop_requested": false,
       "taken_asks": [],
