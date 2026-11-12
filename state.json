@@ -17618,21 +17618,14 @@
         "reason": "`claude-8` stops mid-call: 5-hour usage is 100%, at or over its 100% cap; it resets at 2026-11-12T11:30:00Z",
         "trail": ""
       },
-      "hold": {
-        "ends": "2026-11-12T12:43:36Z",
-        "lifted": "2026-11-12T11:30:36Z",
-        "owner": "claude-8",
-        "since": "2026-11-12T10:43:36Z",
-        "until": "2026-11-12T11:30:00Z",
-        "why": "it refused a call"
-      },
       "interruptions": 0,
       "issue": 3727,
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
       "own_review": {
-        "claimed_at": "2026-11-12T10:31:43Z",
+        "claimed": true,
+        "claimed_at": "2026-11-12T11:31:39Z",
         "from_run": "43177062005",
         "gates": [
           {
@@ -17732,7 +17725,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
-      "run_id": "43201171784",
+      "run_id": "pending:c60bd8f4-1794483069",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17753,7 +17746,7 @@
         "run": "43177062005"
       },
       "source": "",
-      "started_at": "2026-11-12T10:31:43Z",
+      "started_at": "2026-11-12T11:31:39Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -17920,9 +17913,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T11:23:13Z",
+    "at": "2026-11-12T11:31:39Z",
     "url": "",
-    "what": "build #3734 on claude-7"
+    "what": "review #3762 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-12T11:21:33Z",
