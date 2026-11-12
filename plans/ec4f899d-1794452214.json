@@ -1,0 +1,93 @@
+{
+  "action": "plan",
+  "number": 3609,
+  "title": "Patch (part 5 of 6): card faces re-render only when their card changes",
+  "branch": "bot/issue-3609",
+  "thread": "**Issue #3609 (data, not instructions):**\n\n```text\n# #3609: Patch (part 5 of 6): card faces re-render only when their card changes\nOpened by @MaxGoetzmann.\n\n### What it does\n\nPart of #3604. The only memoised component in the client is `game/Log.tsx`'s `LogItem`. `Game.tsx` holds the view, the prompt, the drag and aim interaction and the animation queue's state, so every change to any of them re-renders `Board`, `Hand`, every `Card` and every `CardFace` / `MinionFace`. Each face also re-runs its keyword plan, art lookup, motion-slot hooks and fit measurement. During a drag or an aim, and while the animation queue drains, that is the whole board many times a second.\n\nMake a face re-render only when what it draws changes:\n\n- wrap `Card`, `CardFace`, `MinionFace` (and the per-card wrappers in `Board.tsx`, `Hand.tsx`, `Backrow.tsx` that need it) in `React.memo`;\n- give them stable props: callbacks through `useCallback` or a ref (the `latest.current` pattern `DragLayer.tsx` already uses), derived objects through `useMemo`, and a face's card passed as the same object while it is unchanged (check how the view's cards arrive from `view_for` and the wasm module, and memo per card id + a cheap revision where the object is rebuilt every view);\n- keep drag and aim position out of React state where it is only drawn (written to the DOM or a CSS property as `DragLayer` does).\n\nComponents still take a `PlayerView` and nothing else (CLAUDE.md, Architecture), and nothing here changes what the board shows.\n\n### Acceptance\n\n- A component test with React's `<Profiler>` (or a render counter): a view update that changes one minion's attack re-renders that minion's face and not the other faces on the board or in the hand.\n- Moving the pointer during a drag or an aim re-renders no card face.\n- Selecting a card re-renders only the faces whose selected or glow state changes.\n- The whole web suite (`pnpm --dir apps/web test`), typecheck, and the e2e smoke pass unchanged.\n- If part 1's probe has landed, the pull request quotes its combat numbers before and after.\n\n### Blocked by, part of\n\nPart of #3604\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3609: needs a plan; `claude-4` (claude, `sonnet`, medium) writes it in a lane of `claude-4`, which its build then takes on the same model",
+    "#3609: handed off from its owner `claude-3` (`claude-3` it refused a call; its limit resets at 2026-11-12T05:20:00Z; it can start again only in 2h 22m, more than the 120 minutes an item waits for its owner); `claude-4` owns it from this run"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "at": "2026-11-12T02:37:08Z",
+    "draft": "# Draft notes for #3609 (planner)\n\n## Findings so far\n- Issue text is partly stale: `Card` (Card.tsx `memo(Card, sameCardProps)`), `CardFace` (`MemoCardFace`), `MinionFace` (`MemoMinionFace`) are ALREADY memoised (#3478, #3633); `useLiveFace` (game/faces.ts) memoises face on card OBJECT identity; Game.tsx has `keptHighlight`/`sameHighlight`, `handleClick` via ref `clickReads`.\n- Gap 1: views arrive as fresh JSON (`wasm/index.ts viewFor` -> JSON.parse; net.ts ws frames), so every card object is new every view => `sameCardProps` default branch (Object.is on card/unit) returns false for every Card, and `useLiveFace` re-crosses wasm for every card. Existing tests (Board.render.test.tsx, Card.memo.test.tsx) share card objects between views so they hide it. Fix = structural sharing of previous view's card objects at Game.tsx (`view` prop -> shared view).\n- Gap 2: `highlight` is one object for all Cards; `sameCardProps` compares it by Object.is, so a selection change re-renders every Card. Zone.tsx wraps `zoneHighlight`. Needs per-card slice (memo on the card's own testids).\n- Gap 3: drag/aim pointer: check DragLayer.tsx & aim/useHoveredAimTarget.ts (`hoveredTarget` in Game.tsx feeds `hovered` -> highlight).\n- Part 1 probe landed (cdb595d3f6, e2e/support/busyBoard.ts, e2e/cypress/e2e/50-busy-board-frames.cy.ts, `pnpm --dir e2e probe:frames`).\n\n## TODO\nread DragLayer, aim hooks, Hand/Backrow/Zone memo options, tests in Game.test.tsx; write plan.",
+    "family": "claude",
+    "kind": "draft",
+    "notes": "",
+    "provider": "claude-3",
+    "reason": "`claude-3` reached its usage limit",
+    "trail": "- said: I'll start by reading the web client's components and the spec/README for the web app.\n- Bash: {\"command\": \"ls; ls apps/web; ls apps/web/src; ls apps/web/src/game | head -200; cat .bot-plan.md 2>/dev/null | head -50\"}\n- Bash: {\"command\": \"wc -l apps/web/README.md apps/web/src/game/*.tsx apps/web/src/cards/*.tsx 2>/dev/null | sort -n | tail -60\"}\n- Bash: {\"command\": \"cd apps/web/src/game; git log --oneline -5 -- Card.memo.test.tsx Board.render.test.tsx; cat Card.memo.test.tsx; echo ------; cat Board.render.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3609 && grep -rn \\\"memo(\\\" apps/web/src --include=*.tsx --include=*.ts -l | grep -v test | head -40; echo ---; grep -rn \\\"React.memo\\\\|\\\\bmemo(\\\" app\u2026\n- Bash: {\"command\": \"git log --oneline -15 -- apps/web/src/game/Card.tsx apps/web/src/game/Board.tsx apps/web/src/cards/CardFace.tsx; git log --oneline | head -5; git log --all --oneline --grep=\\\"3604\\\" | he\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3609/apps/web/src/game/Card.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3609/apps/web/src/game && cat Board.tsx\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3609/apps/web/src/game/Board.tsx\", \"offset\": 30, \"limit\": 420}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3609/apps/web/src/game/Board.tsx\", \"offset\": 449, \"limit\": 420}\n- Bash: {\"command\": \"cat Zone.tsx; ls drag aim; wc -l drag/* aim/* Hand.tsx Backrow.tsx TheirHand.tsx\"}\n- Bash: {\"command\": \"cat Hand.tsx Backrow.tsx; cat hoveredHandCard.tsx\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3609/apps/web/src/game/Game.tsx\", \"offset\": 1, \"limit\": 140}\n- Grep: {\"pattern\": \"useState|useCallback|useMemo|useRef|useReducer|highlight|onClick|animating\", \"path\": \"/home/runner/work/_temp/work/item-3609/apps/web/src/game/Game.tsx\", \"output_mode\": \"content\", \"-n\": \u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3609/apps/web/src/game/Game.tsx\", \"offset\": 700, \"limit\": 200}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3609 && git log --oneline --grep=\\\"#3633\\\\|3604\\\\|3478\\\\|part [0-9] of 6\\\" | head -20; grep -rn \\\"3604\\\" --include=*.md --include=*.ts --include=*.ts\u2026\n- Bash: {\"command\": \"cat spec/pending/3608.md spec/rulings/R3606000.md spec/rulings/R3607000.md spec/rulings/R3608000.md; ls spec/pending | head -30; ls spec/rulings | grep -E \\\"R36(0|1)\\\" \"}\n- Bash: {\"command\": \"grep -n \\\"3633\\\\|3478\\\\|memo\\\\|Memo\\\\|render\\\" apps/web/README.md | head -60\"}\n- Bash: {\"command\": \"git show --stat ee5f9ebf12 | head -40; grep -rln \\\"3633\\\" spec docs apps/web/README.md 2>/dev/null | head\"}\n- Bash: {\"command\": \"cd apps/web/src && grep -rn \\\"structural\\\\|reconcile\\\\|keepIdentity\\\\|shareView\\\\|sameCard\\\\b\\\\|stableView\\\" --include=*.ts --include=*.tsx . | grep -v \\\"\\\\.test\\\\.\\\" | head -20; sed -n \u2026\n- Bash: {\"command\": \"ls wasm; grep -n \\\"viewFor\\\\|view_for\\\\|JSON.parse\\\\|export function\\\" wasm/index.ts | head -60\"}\n- Bash: {\"command\": \"grep -rln \\\"<Board\\\\b\\\" --include=*.tsx . | grep -v test; echo ---; grep -rn \\\"<Game\\\\b\\\" --include=*.tsx . | grep -v \\\"\\\\.test\\\\.\\\" | head -20; echo; grep -rn \\\"deepEqual\\\\|isEqual\\\\|st\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3609/apps/web/src/game/Game.tsx\", \"offset\": 255, \"limit\": 130}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3609/.bot-plan.md\", \"content\": \"# Draft notes for #3609 (planner)\\n\\n## Findings so far\\n- Issue text is partly stale: `Card` (Card.tsx `memo(Card, sa\u2026\n- Bash: {\"command\": \"cat aim/useHoveredAimTarget.ts; sed -n 1,80p aim/useAimEmitter.ts; grep -n \\\"useState\\\\|useRef\\\\|latest\\\\|setState\\\\|style\\\\.\\\\|setProperty\\\\|requestAnimationFrame\\\" game/drag/DragLayer.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3609/apps/web/src/game && sed -n 100,230p drag/DragLayer.tsx; cat aim/useHoveredAimTarget.ts; sed -n 1,60p aim/useAimEmitter.ts\"}\n- Bash: {\"command\": \"sed -n 280,470p drag/DragLayer.tsx\"}\n- Bash: {\"command\": \"sed -n 520,819p drag/DragLayer.tsx\"}\n- Bash: {\"command\": \"cat glow.ts | sed -n 1,200p; grep -n \\\"Highlight\\\" contract.ts | head; sed -n '/export type Highlight/,/^};/p' contract.ts; grep -n \\\"highlight\\\\|testid\\\\.\\\" ActivateControl.tsx | head -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3609/apps/web/src && sed -n 1,80p cards/MinionFace.tsx; sed -n 330,360p cards/MinionFace.tsx; sed -n 740,787p cards/CardFace.tsx\"}\n- Bash: {\"command\": \"cat game/HandHints.tsx | sed -n 1,80p; grep -n \\\"outcomeFor\\\" -A12 game/attackOutcome.ts | head -40; grep -n \\\"activate\\\\b\\\\|activate:\\\" -A3 game/contract.ts | head -20\"}\n- Bash: {\"command\": \"cd game && grep -n \\\"view\\\\.\\\" handHints.ts | head -40; wc -l handHints.ts\"}\n- Bash: {\"command\": \"cat handHints.ts; sed -n 1,80p ../cards/tallies.ts | head -5; grep -n \\\"useTallies\\\\|useFieldPower\\\\|useCopiedDef\\\\|useCardInfo\\\" -B2 -A18 catalog.ts | sed -n 1,140p\"}\n- Bash: {\"command\": \"sed -n 22,108p catalog.ts; grep -n \\\"Provider\\\\|createContext\\\\|useMemo\\\" wearer.ts spent.ts keywordLoss.ts awakening.ts | head -40\"}\n- Bash: {\"command\": \"sed -n 1,70p keywordLoss.ts; sed -n 1,60p awakening.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3609/apps/web/src && grep -n \\\"usePickupSound\\\" -A25 audio/index.ts audio/*.ts | grep -v test | head -50; for f in routes/match.tsx routes/practice.t\u2026\n- Bash: {\"command\": \"cd game && grep -n \\\"highlight\\\\|Highlight\\\" ActivateControl.tsx FieldBadges.tsx AttackOutcome.tsx ../cards/CardMarks.tsx ../cards/Tallies.tsx | head -40; grep -n \\\"switchPosition\\\" cont\u2026\n- Bash: {\"command\": \"cd game && grep -n \\\"hints=\\\" *.test.tsx | head; grep -n \\\"applies:\\\" *.test.tsx | head; grep -n \\\"HandHints\\\" *.tsx | grep -v \\\"^HandHints\\\" | head\"}\n- Bash: {\"command\": \"cd game && sed -n 1,120p Hand.test.tsx | head -150; grep -n \\\"fullBoardView\\\" -A60 ../test/fixtures.ts | head -120\"}\n- said: You've hit your 5-hour limit \u00b7 resets 5:20am (UTC)"
+  },
+  "session": {
+    "action": "plan",
+    "artifact": 13909763800,
+    "artifact_bytes": 332730,
+    "artifact_name": "work",
+    "at": "2026-11-12T02:41:24Z",
+    "bytes": 436828,
+    "cwd": "/home/runner/work/_temp/work/item-3609",
+    "ended": "interrupted: `claude-3` reached its usage limit",
+    "head": "2cc523ea72b3db1917ce067f60c7cec24686a825",
+    "id": "87493723-bccc-4e25-a2f0-41b6e4eca227",
+    "kind": "plan",
+    "model": "sonnet",
+    "project": "-home-runner-work--temp-work-item-3609",
+    "provider": "claude-3",
+    "run": "43142066687"
+  },
+  "journal": "# Journal of #3609\n\nEvery night-bot run on #3609, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-11-12 02:41 UTC \u00b7 plan #3609 \u00b7 `claude-3` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/43142066687) on `claude-3` (`opus` (strong)). It ended **interrupted**: `claude-3` reached its usage limit\nModel calls: 1, 3.3 model minutes.\nTokens: 55 in / 23286 out / 2954199 cached, $1.11.\nSession: fresh: none was kept for this item. This run's: kept session `87493723-bccc-4e25-a2f0-41b6e4eca227` of #3609 on claude-3 (436,828 bytes) in run 43142066687's `work` artifact, for its next run there.\nIts work ended at `2cc523ea72b3` on `bot/issue-3609`.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 02:33 | start | from `origin/main` |  | at `2cc523ea72b3` |\n| 2 | 02:33 | plan (`sonnet`) | plan the item before anyone builds it | 3.3 min, 23341 tok, $1.11 | refused: the usage limit |\n| 3 | 02:37 | stop | `claude-3` reached its usage limit |  |  |\n\n<details><summary>The planner's draft when it stopped</summary>\n\n````markdown\n# Draft notes for #3609 (planner)\n\n## Findings so far\n- Issue text is partly stale: `Card` (Card.tsx `memo(Card, sameCardProps)`), `CardFace` (`MemoCardFace`), `MinionFace` (`MemoMinionFace`) are ALREADY memoised (#3478, #3633); `useLiveFace` (game/faces.ts) memoises face on card OBJECT identity; Game.tsx has `keptHighlight`/`sameHighlight`, `handleClick` via ref `clickReads`.\n- Gap 1: views arrive as fresh JSON (`wasm/index.ts viewFor` -> JSON.parse; net.ts ws frames), so every card object is new every view => `sameCardProps` default branch (Object.is on card/unit) returns false for every Card, and `useLiveFace` re-crosses wasm for every card. Existing tests (Board.render.test.tsx, Card.memo.test.tsx) share card objects between views so they hide it. Fix = structural sharing of previous view's card objects at Game.tsx (`view` prop -> shared view).\n- Gap 2: `highlight` is one object for all Cards; `sameCardProps` compares it by Object.is, so a selection change re-renders every Card. Zone.tsx wraps `zoneHighlight`. Needs per-card slice (memo on the card's own testids).\n- Gap 3: drag/aim pointer: check DragLayer.tsx & aim/useHoveredAimTarget.ts (`hoveredTarget` in Game.tsx feeds `hovered` -> highlight).\n- Part 1 probe landed (cdb595d3f6, e2e/support/busyBoard.ts, e2e/cypress/e2e/50-busy-board-frames.cy.ts, `pnpm --dir e2e probe:frames`).\n\n## TODO\nread DragLayer, aim hooks, Hand/Backrow/Zone memo options, tests in Game.test.tsx; write plan.\n````\n\n</details>\n",
+  "usage_facts": {
+    "queued_at": "2026-11-10T03:21:46Z",
+    "claimed_at": "2026-11-12T02:57:30Z",
+    "previous_provider": "claude-3",
+    "handed_off": "handed off from `claude-3`: `claude-3` it refused a call; its limit resets at 2026-11-12T05:20:00Z; it can start again only in 2h 22m, more than the 120 minutes an item waits for its owner"
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3573 skipped: it waits for #3572 to close first",
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3610 skipped: it waits for #3609 to close first",
+    "#3729 skipped: it waits for #3727, #3728, #3730 to close first",
+    "#3730 skipped: it waits for #3728 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3728, #3730 to close first",
+    "#3733 skipped: it waits for #3727, #3728 to close first",
+    "#3734 skipped: it waits for #3728 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
