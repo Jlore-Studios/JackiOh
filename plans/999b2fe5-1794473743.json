@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 3730,
+  "title": "Patch: a private lobby screen for 1v1 rooms and co-op rooms: seats, invites, each player's deck and Ready, and the host's Start",
+  "branch": "bot/issue-3730",
+  "thread": "**Issue #3730 (data, not instructions):**\n\n````text\n# #3730: Patch: a private lobby screen for 1v1 rooms and co-op rooms: seats, invites, each player's deck and Ready, and the host's Start\nOpened by @jgoetzmann.\n\n### What it does\n\nPlaying with friends gets a real lobby, like the party screens of Fortnite, Valorant, Overwatch or a LoR friend challenge. You make it, see who is in, invite friends into the empty seats, let everyone pick a deck and press Ready, and the host presses Start. 1v1 rooms and co-op rooms share the one screen. The 2v2 issue (two people against two people, blocked by this one) adds its format to it.\n\nIt follows the conventions in #3728's `docs/polish/10-menus.md`.\n\n### Where it stands\n\n- **A 1v1 room** (\u00a79.5, `crates/server/src/actor/rooms.rs`, the \"Play a friend\" panel on `/play`) is a code of 6 characters, kept for `ROOM_CODE_TTL_SECONDS` (15 min). A host holds at most `MAX_OPEN_ROOMS_PER_HOST` (3). The game starts the moment the guest joins, so the host never sees who joined or which deck they took, and nobody gets a \"ready?\" moment.\n- **A co-op room** (\u00a713.9, `duos/CoopPanel.tsx`, on `/together`):\n  - It is plain `<select>` controls for the difficulty and the deck, Create, the code, \"Waiting for your teammate\u2026\", an invite picker that sends the link by chat, Copy link, Close the room and Join by code.\n  - There is no seat for the teammate and no ready state. It lapses after `DUOS_ROOM_TTL_MS` (10 minutes).\n- **Links.** Rooms are shared as links (`net/roomLink.ts`: `/play?room=`, `/together?coop=`). Chat turns a room link into a Join button (#2094). A friend's challenge opens a room (R264, R1831000).\n\n### The lobby\n\n`/lobby/:code`, one screen for every format:\n\n```\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502 \u2039 Private lobby                    Code  K7Q2XM  Copy \u00b7 Link  \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502  \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510  \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\u2502  Format   1v1 \u00b7 Best of 1    \u25be \u2502\n\u2502  \u2502 (portrait)\u2502  \u2502  + Invite \u2502\u2502\u2502  Cards    More cards from \u2026  \u25be \u2502\n\u2502  \u2502 Ana#1234 \u265b\u2502  \u2502  a friend \u2502\u2502\u2502                                \u2502\n\u2502  \u2502 Deck: Pyre\u2502  \u2502           \u2502\u2502\u2502  Your deck  [ Pyre Control \u25be ] \u2502\n\u2502  \u2502  \u2713 Ready  \u2502  \u2502           \u2502\u2502\u2502                                \u2502\n\u2502  \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518  \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\u2502\u2502  Invite                        \u2502\n\u2502                              \u2502\u2502   Bo   online      Invite      \u2502\n\u2502                              \u2502\u2502   Cy   in a game   Invite      \u2502\n\u2502   [ Leave ]        [ Start ] \u2502\u2502   Di   offline     (daily)     \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n```\n\n- **Creating one.** Create a lobby from Play's \"With friends\" (#3729) or from a friend's row, and pick the format:\n  - **1v1**: Best of 1, Conquest or All Random, with the set lean. These are the room modes of \u00a79.5.\n  - **Co-op**: two players against the AI team, with its difficulty (\u00a713.7, \u00a713.9).\n- **Seats.** Two seats for 1v1, and four in two teams for co-op, team B shown as the AI.\n  - Each seat shows the player's portrait, `name#tag`, presence, a crown for the host, and the deck state: \"Choosing a deck\u2026\", the deck's name, or \u2713 Ready.\n  - An empty seat is an **Invite** button that opens the friends list, online friends first. Invite sends a live invite, which arrives as a toast and lands in the inbox (#3729).\n  - The code is shown large beside Copy and Copy link.\n- **Settings.** Only the host changes them, and everyone sees them. A change takes everyone's Ready back off, which is the usual convention.\n- **Decks.** Each player picks their own deck or trio, with the validator's verdict, and presses Ready.\n- **Start.** The host's Start lights up once every human seat is filled and ready. A 3-second countdown (`LOBBY_START_COUNTDOWN_SECONDS`) then opens the board.\n- **Leaving.**\n  - Any player can Leave. The host can remove a guest.\n  - When the host leaves, the lobby closes. This is a ruling, and it matches how a room closes today (R110, R1075000).\n  - An idle lobby closes after the existing TTLs. A reload brings you back to your lobby (R1075000's \"the lobby finds it again\").\n- **Live updates.** The lobby updates live for everyone in it over `/ws/social` (`crates/server/src/social/live.rs`), and joins, leaves, deck picks and Ready show at once.\n- **Old links still work.** `/play?room=` and `/together?coop=` links, and a challenge's room, open the lobby. Chat's Join buttons do too.\n\n### Under the hood\n\n- **A pre-game stage.** A room gains a stage before its match: its members, seats, ready flags and settings. It likely needs a migration and its RLS (`crates/server/tests/sql/run.sh`) and the store contract (`tests/store/contract.rs`).\n- **The existing rules hold**:\n  - the room caps (`MAX_OPEN_ROOMS_PER_HOST`, R890000, R1047002);\n  - blocks (R1397000, R1499000);\n  - a friend's challenge being the friend's alone (R1689000);\n  - the seat ledger's one game per profile (`crates/server/src/seats.rs`, R1523000).\n\n  The planner decides whether a lobby member holds a pending seat.\n- **Spec.** \u00a79.5's rooms and \u00a713.9's co-op rooms are rewritten to describe the lobby, with a ruling for each new decision: Ready, Start, a settings change clearing Ready, and the host leaving.\n\n### Acceptance\n\n- Spec edits and rulings with their tests (CLAUDE.md rule 3), and `cargo jackioh spec check` passes.\n- Server tests:\n  - Two members ready up and the host starts a 1v1 game.\n  - Start is refused while a seat is empty or unready.\n  - A settings change clears Ready.\n  - The host leaving closes the lobby.\n  - A blocked player can't join.\n  - The room cap still holds.\n  - An old `/play?room=` code still joins.\n- Web: unit tests for the lobby's seat states. e2e: a 1v1 lobby from creation to the board with two players, and a co-op lobby to its board (beside e2e 41). The lobby is the first component spec for anything on `/together`.\n- `duos/CoopPanel.tsx`'s controls and the \"Play a friend\" panel are gone, folded into the lobby.\n- Screenshots at the tracker's device sizes (#3728) in the pull request.\n- Every required check is green.\n\n### Blocked by, part of\n\nBlocked by #3728. Part of #3726.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3730: needs a plan; `claude-8` (claude, `opus`, strong) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-11T21:49:36Z",
+    "claimed_at": "2026-11-12T08:56:17Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3729 skipped: it waits for #3727, #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3730 to close first",
+    "#3733 skipped: it waits for #3727 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
