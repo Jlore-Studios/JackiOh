@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import type { ActionBody, Aim, CombatForecast, EmojiEmoteId, EmoteId, PlayerId, PlayerView, PortraitId, PromptKind } from "@jackioh/shared";
 import { isEmoteId, isPortraitId, parseAim } from "@jackioh/shared";
-import { POST_GAME_FRAME_VERSION, WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
+import { MATCH_OVER_CLOSE_CODE, POST_GAME_FRAME_VERSION, WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
 import type { CardCosmetics } from "../cards/cosmetics.ts";
 import { createLoadoutsHolder, parseCardLoadouts, parseSeatPicks, type CardLoadouts, type SeatLoadouts } from "../cards/loadouts.ts";
@@ -587,7 +587,7 @@ export type ConnectionState =
   | "reconnecting"
   /** The server refused this socket (4401/4403/4404); no reconnect will be attempted, but a 4401 is final only for the token it refused (R1115000). */
   | "refused"
-  /** `close()` was called, or the server closed the socket with VOIDED_CLOSE_CODE (R679): the match is gone, and nothing reopens it until `connect()`. */
+  /** `close()` was called, or the server closed the socket with VOIDED_CLOSE_CODE (R679) or MATCH_OVER_CLOSE_CODE (R3694000): the match is gone, and nothing reopens it until `connect()`. */
   | "closed";
 
 /** `"none"` leaves the board read-only until a server view provides legal actions. */
@@ -912,7 +912,9 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
         patch({ connection: "closed" });
         return;
       }
-      if (event.code === VOIDED_CLOSE_CODE) {
+      // R679: a voided match is gone. R3694000: so is a finished one past its rematch window, whose
+      // last view stays up; neither is reconnected to.
+      if (event.code === VOIDED_CLOSE_CODE || event.code === MATCH_OVER_CLOSE_CODE) {
         patch({ connection: "closed" });
         return;
       }

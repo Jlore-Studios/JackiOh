@@ -9,7 +9,7 @@ import type { ReactElement } from "react";
 import { registeredCatalog } from "@jackioh/engine";
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 
-import { DISCONNECT_GRACE_SECONDS, MULLIGAN_CLOCK_MS, POST_GAME_FRAME_VERSION, RANK_STREAK_FLAME_LENGTH as N, SERIES_MAX_GAMES, SERIES_POLL_SECONDS, SERIES_WINS_NEEDED, TURN_CLOCK_MS } from "@jackioh/server-config";
+import { DISCONNECT_GRACE_SECONDS, MATCH_OVER_CLOSE_CODE, MULLIGAN_CLOCK_MS, POST_GAME_FRAME_VERSION, RANK_STREAK_FLAME_LENGTH as N, SERIES_MAX_GAMES, SERIES_POLL_SECONDS, SERIES_WINS_NEEDED, TURN_CLOCK_MS } from "@jackioh/server-config";
 
 import { MATCH_RANKS_READ_ATTEMPTS, MATCH_RANKS_RETRY_MS } from "../game/config.ts";
 
@@ -1464,6 +1464,35 @@ describe("R3213000 the post-game frames on the board", () => {
     expect(reads.series()).toBe(mounted + 1);
     await settle({ advance: PERIOD });
     expect(reads.series()).toBe(mounted + 2);
+  });
+
+  it("R3694000 a finished match's socket closed with MATCH_OVER_CLOSE_CODE keeps the result panel, shows no error line, offers no rematch and reads its status once", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const reads = stubPostGameFetch(null);
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    deliver({ type: "rematch", v: POST_GAME_FRAME_VERSION, youOffered: null, opponentOffer: null, opponentHere: true, matchId: null, mode: "bo1" });
+    pushView(FINISHED);
+    await settle({ advance: 0 });
+    expect(screen.getByTestId("rematch-offer")).toBeInTheDocument();
+
+    // The rematch window is over: the server closes the socket for good.
+    act(() => {
+      live().onclose?.({ code: MATCH_OVER_CLOSE_CODE, reason: "the match is over", wasClean: true });
+    });
+    await settle({ advance: 0 });
+
+    expect(screen.getByTestId("match-status")).toHaveAttribute("data-connection", "closed");
+    expect(screen.getByTestId("result-overlay")).toBeInTheDocument();
+    expect(screen.getByTestId("result-back")).toBeInTheDocument();
+    for (const absent of ["action-error", "match-gone", "rematch-offer", "rematch-double", "rematch-incoming"]) {
+      expect(screen.queryByTestId(absent), absent).toBeNull();
+    }
+    // Nothing reconnects, and the status is read once (a rematch made in the window's last moment).
+    expect(sockets).toHaveLength(1);
+    expect(reads.rematch()).toBe(1);
+    await settle({ advance: 3 * PERIOD });
+    expect(reads.rematch()).toBe(1);
   });
 });
 

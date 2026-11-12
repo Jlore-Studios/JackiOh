@@ -7,7 +7,9 @@
 //!
 //! A friend's watch of a person's seat (R2881000) is handed to the actor as a 1v1 watch is
 //! (`actor::registry::Registry::attach_watcher`), once `social::watch` has judged it may; a finished
-//! actor is reaped only once its watchers have had the result's view (R1107000).
+//! actor is reaped only once its watchers have had the result's view (R1107000), and, whatever is
+//! attached, once `REMATCH_OFFER_TTL_MS` has passed since the end, closing its sockets with
+//! `MATCH_OVER_CLOSE_CODE` (R3694000).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::{Arc, LazyLock, Mutex, Weak};
@@ -303,24 +305,39 @@ impl DuosRegistry {
     }
 
     /// Drops finished actors with no open socket and no watcher still owed the result's view
-    /// (R2881000, R1107000). Sockets returning within `REMATCH_OFFER_TTL_MS` fold it again (R1398000).
-    pub async fn reap_finished(&self) -> Vec<String> {
-        let reaped: Vec<(String, DuosActor)> = {
+    /// (R2881000, R1107000), and, whatever is attached, once `REMATCH_OFFER_TTL_MS` has passed since
+    /// the end (the actor's `finished_at`), closing its sockets with `MATCH_OVER_CLOSE_CODE`
+    /// (R3694000). Sockets returning within `REMATCH_OFFER_TTL_MS` fold it again (R1398000), so one
+    /// let go inside the window, a socket that attached as it went included, is closed with 1001.
+    pub async fn reap_finished(&self, now: i64) -> Vec<String> {
+        let reaped: Vec<(String, DuosActor, bool)> = {
             let mut actors = lock(&self.actors);
-            let due: Vec<String> = actors
+            let due: Vec<(String, bool)> = actors
                 .iter()
-                .filter(|(_, actor)| {
-                    actor.is_finished() && !actor.has_open_socket() && actor.watcher_count() == 0
+                .filter(|(_, actor)| actor.is_finished())
+                .filter_map(|(match_id, actor)| {
+                    let over = actor
+                        .finished_at()
+                        .is_some_and(|finished_at| now - finished_at > REMATCH_OFFER_TTL_MS);
+                    let alone = !actor.has_open_socket() && actor.watcher_count() == 0;
+                    (over || alone).then(|| (match_id.clone(), over))
                 })
-                .map(|(match_id, _)| match_id.clone())
                 .collect();
             due.into_iter()
-                .filter_map(|match_id| actors.shift_remove(&match_id).map(|actor| (match_id, actor)))
+                .filter_map(|(match_id, over)| {
+                    actors
+                        .shift_remove(&match_id)
+                        .map(|actor| (match_id, actor, over))
+                })
                 .collect()
         };
         let mut ids = Vec::with_capacity(reaped.len());
-        for (match_id, actor) in reaped {
-            actor.stop().await;
+        for (match_id, actor, over) in reaped {
+            if over {
+                actor.stop_match_over().await;
+            } else {
+                actor.stop().await;
+            }
             tracing::info!(event = "duos.evicted", matchId = %match_id);
             ids.push(match_id);
         }

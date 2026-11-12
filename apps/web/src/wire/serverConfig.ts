@@ -80,6 +80,7 @@ export const MATCHMAKER_SWEEP_INTERVAL_SECONDS = 3;
 export const MATCH_ACTION_RETENTION_DAYS = 90;
 export const MATCH_CEILING_MS = 7200000;
 export const MATCH_FOUND_NAV_DELAY_MS = 1200;
+export const MATCH_OVER_CLOSE_CODE = 4411;
 export const MAX_FRIENDS = 200;
 export const MAX_SAVED_DECKS = 10;
 export const MAX_SAVED_TRIOS = 5;
