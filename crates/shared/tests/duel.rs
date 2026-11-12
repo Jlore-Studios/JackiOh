@@ -2126,3 +2126,50 @@ mod scripted {
         assert_eq!(after, relayed, "an aim was relayed after the draw");
     }
 }
+
+mod the_sequence {
+    use super::*;
+    use jackioh_engine::testkit::{json, scenario};
+
+    const COMPETITION: &str = "meditativeplus-020";
+
+    /// R1563006: the sequence clock's expiry answers Stop for the player whose question is open, and nothing for
+    /// the other.
+    #[test]
+    fn r1563006_a_sequence_expiry_answers_stop_for_the_question_holder_only() {
+        jackioh_cards::register_all();
+        let built = scenario(json!({
+            "seed": "r1563006-duel",
+            "active": "p1",
+            "p1": { "hand": [COMPETITION], "mana": 10, "library": ["core-008", "core-020"] },
+            "p2": { "library": ["core-008"] },
+        }));
+        let card = built.hand(P1)[0].id.clone();
+        let mut table = Table::new(setup(built.state().clone()));
+        table.feed(DuelEvent::Arm);
+        table.connect(P1);
+        table.connect(P2);
+        let play = table
+            .host
+            .legal(P1)
+            .into_iter()
+            .find(|body| matches!(body, ActionBody::Play { instance_id, .. } if *instance_id == card))
+            .expect("KY's Competition is playable");
+        let answer = table.act(P1, "play-competition", play);
+        assert!(matches!(answer, ActionAnswer::Ack { .. }), "{answer:?}");
+        let stop =
+            jackioh_engine::prompts::stop_answer(table.host.game()).expect("PREMISE: a question is open");
+        assert_eq!(
+            table
+                .host
+                .server_actions_for(ClockExpiry::Sequence { player: P1 }),
+            vec![(P1, stop)]
+        );
+        assert!(
+            table
+                .host
+                .server_actions_for(ClockExpiry::Sequence { player: P2 })
+                .is_empty()
+        );
+    }
+}
