@@ -1325,7 +1325,7 @@ button.modifier-badge[data-open="true"] {
    which the span reaches into; the span grows toward its side's other row (down for your units
    and the enemy backrow, up for the other two). */
 .lane:has(> .zone[data-giga="anchor"]) {
-  z-index: calc(var(--z-content) + 1);
+  z-index: var(--z-raised);
 }
 
 .zone[data-side="you"][data-row="units"][data-giga="anchor"] > .card,
@@ -1357,42 +1357,47 @@ button.modifier-badge[data-open="true"] {
   background: transparent;
 }
 
-/* R3554000: the Black Hole lane is a turning dark swirl with its swallowed count; still under
-   `prefers-reduced-motion` (BUILD M5-T6). R3554002: the slashed lane is a deep red edge over a
+/* R3554000: the Black Hole lane is a dark well that breathes, with its swallowed count; still under
+   `prefers-reduced-motion` (BUILD M5-T6). The well is a layer of its own whose opacity loops, so the
+   loop composites (#3706). R3554002: the slashed lane is a deep red edge over a
    dark sea-blue centre, its zones hidden — the red mark that reveals the endless sea. R3554007:
    chained Units wear dashed outlines, shared and split each their own color. */
-.lane[data-lane-mark="blackHole"] {
-  --hole-spin: jk-hole-spin 6s linear infinite;
-  background: radial-gradient(ellipse at center, #000 0%, #0b0b1e 55%, transparent 75%);
-  animation: var(--hole-spin);
+.lane[data-lane-mark="blackHole"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-below);
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, var(--pal-black) 0%, var(--pal-slate-900) 55%, transparent 75%);
+  animation: jk-hole-breath 6s linear infinite alternate;
 }
 
 .lane[data-lane-mark="blackHole"] > .zone {
   border-style: dashed;
-  border-color: #4b4b8f;
+  border-color: var(--pal-slate-700);
   background: transparent;
 }
 
 .black-hole-count {
   align-self: center;
-  color: #cfcfff;
+  color: var(--pal-violet-300);
   font-size: var(--type-sm);
 }
 
-@keyframes jk-hole-spin {
+@keyframes jk-hole-breath {
   from {
-    filter: hue-rotate(0deg);
+    opacity: 0.7;
   }
 
   to {
-    filter: hue-rotate(360deg);
+    opacity: 1;
   }
 }
 
 .lane[data-lane-mark="slashed"] {
-  border-left: 3px solid #8f1010;
-  border-right: 3px solid #8f1010;
-  background: linear-gradient(180deg, #0a1a2e 0%, #06121f 50%, #0a1a2e 100%);
+  border-left: 3px solid var(--pal-red-900);
+  border-right: 3px solid var(--pal-red-900);
+  background: color-mix(in srgb, var(--pal-blue-900) 40%, var(--pal-black));
 }
 
 .lane[data-lane-mark="slashed"] > .zone {
@@ -1400,22 +1405,22 @@ button.modifier-badge[data-open="true"] {
 }
 
 .zone[data-chain="shared"] > .card {
-  outline: 2px dashed #4fc3f7;
+  outline: 2px dashed var(--pal-sky-400);
   outline-offset: 2px;
 }
 
 .zone[data-chain="split"] > .card {
-  outline: 2px dashed #ffb74d;
+  outline: 2px dashed var(--pal-orange-400);
   outline-offset: 2px;
 }
 
 .zone[data-chain="both"] > .card {
-  outline: 2px dashed #ce93d8;
+  outline: 2px dashed var(--pal-purple-400);
   outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lane[data-lane-mark="blackHole"] {
+  .lane[data-lane-mark="blackHole"]::before {
     animation: none;
   }
 }

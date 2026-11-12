@@ -701,17 +701,18 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         // R1857000: the four tags 0065 admits, the Stinkyscape set's alone: #27 to #36 (Drone
         // Core), #50 to #61 and #140 to #143 (Weapon), #137.1 to #137.4 (War Doctrine) and #91 and
         // #92 (Swarm).
-        // The Stinkyscape+ set adds nine Weapons and fifteen Swarm cards, and no Drone Core or War Doctrine.
-        for (tag, count, stinky_plus) in [
-            ("Drone Core", 10, 0),
-            ("Weapon", 16, 9),
-            ("War Doctrine", 4, 0),
-            ("Swarm", 2, 15),
+        // The Stinkyscape+ set adds nine Weapons and fifteen Swarm cards, and no Drone Core or War Doctrine;
+        // its patch to shipped cards (S01, #3551) makes Classic+ #49 Jay Fungus a Swarm card too.
+        for (tag, other, count, stinky_plus) in [
+            ("Drone Core", 0, 10, 0),
+            ("Weapon", 0, 16, 9),
+            ("War Doctrine", 0, 4, 0),
+            ("Swarm", 1, 2, 15),
         ] {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
             assert_eq!(
                 tagged(tag),
-                stinkyscape(count) + stinkyscape_plus(stinky_plus),
+                other + stinkyscape(count) + stinkyscape_plus(stinky_plus),
                 "{tag}"
             );
         }
@@ -733,21 +734,25 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         // Starship, and, once it ships, the Stinkyscape+ set's ten Terminus Starships.
         assert_eq!(rows_tagged("Starship"), tagged("Starship"));
         assert_eq!(tagged("Starship"), stinkyscape(1) + stinkyscape_plus(10));
-        // R3535002: the nine family tags 0088 admits, the Stinkyscape+ set's alone (counts from
-        // `catalog check`, SPEC §8.12).
-        for (tag, count) in [
-            ("Mindustrial", 78),
-            ("Mineral", 7),
-            ("Automa-α", 5),
-            ("Automa-β", 5),
-            ("Automa-γ", 3),
-            ("Automa-δ", 6),
-            ("Automa-Ω", 6),
-            ("Automa-ζ", 5),
-            ("Paperclip", 2),
+        // R3535002: the nine family tags 0088 admits, the Stinkyscape+ set's (counts from `catalog check`,
+        // SPEC §8.12), and Paperclip on Stinkyscape #44 too, Great Paperclip Theory I since S01 (#3551).
+        for (tag, stinky, count) in [
+            ("Mindustrial", 0, 78),
+            ("Mineral", 0, 7),
+            ("Automa-α", 0, 5),
+            ("Automa-β", 0, 5),
+            ("Automa-γ", 0, 3),
+            ("Automa-δ", 0, 6),
+            ("Automa-Ω", 0, 6),
+            ("Automa-ζ", 0, 5),
+            ("Paperclip", 1, 2),
         ] {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
-            assert_eq!(tagged(tag), stinkyscape_plus(count), "{tag}");
+            assert_eq!(
+                tagged(tag),
+                stinkyscape(stinky) + stinkyscape_plus(count),
+                "{tag}"
+            );
         }
         // The shared tags the set adds to: Human 11, Felinor 1, KY 1, CN 2, Fruit 7, Call to Chaos 1,
         // Quickdraw 2 and AI 7.

@@ -7962,7 +7962,7 @@ stinkyscapeplus-098: # Doomed Ship
 stinkyscapeplus-099: # Big Time Recruits
   flavour: Signed this morning, enormous by lunch.
   voice:
-    cast: Fresh faces. Huge faces. Oversized faces!
+    cast: Fresh faces. Huge faces!
   zh:
     name: 大牌新兵
     base: 抽{draw}张法力值消耗最高的永久物，并使它们变为巨型。
@@ -8006,7 +8006,7 @@ stinkyscapeplus-103: # Transcend
 stinkyscapeplus-104: # Tireless Cultivation
   flavour: Day nine hundred of sitting very still, and the rock remains unimpressed.
   voice:
-    cast: Again! Again! Again! Breathe!
+    cast: Again! Again! Breathe!
   zh:
     name: 不懈修炼
     base: "临时\n将一个永久物变形成为一个永久物。其法力值消耗多(1)点。\n回合结束时：将这张牌移回手牌。"
@@ -8362,7 +8362,7 @@ stinkyscapeplus-134: # Basket of Crawlers
 stinkyscapeplus-135: # Crawler Swarm
   flavour: You asked for a wall. Here is a whole row of tiny, eager ones.
   voice:
-    cast: Skitter! Skitter! Skitter! Everywhere!
+    cast: Skitter! Skitter! Everywhere!
   zh:
     name: 爬行者大军
     base: 用爬行者填满你的单位区。
