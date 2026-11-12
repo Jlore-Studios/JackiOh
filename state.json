@@ -17616,6 +17616,13 @@
     "3764": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-12T08:20:34Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "medium",
+        "why": "No rule line holds: it is a one-number change to scripts/ci-shards.toml plus a note for a person, with no engine, AI, cross-crate or migration work and well under 40 files."
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
