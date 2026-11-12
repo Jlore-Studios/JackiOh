@@ -15365,9 +15365,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-3",
-      "owner_since": "2026-11-12T21:28:25Z",
-      "owner_why": "handed off from `claude-6`: `claude-6` is busy: its lanes are all taken",
+      "owner": "claude-6",
+      "owner_since": "2026-11-12T23:30:56Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-12T14:59:52Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -16207,14 +16207,6 @@
       "failures": 0,
       "feedback_since": "2026-11-12T16:34:47Z",
       "forced": false,
-      "hold": {
-        "ends": "2026-11-13T00:43:46Z",
-        "lifted": "2026-11-12T22:53:12Z",
-        "owner": "claude-3",
-        "since": "2026-11-12T22:43:46Z",
-        "until": "2026-11-12T22:50:00Z",
-        "why": "it refused a call"
-      },
       "interruptions": 0,
       "issue": 3777,
       "kind": "revise",
@@ -16227,10 +16219,10 @@
         "provider": "claude-3"
       },
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-6",
       "queued_at": "2026-11-12T21:25:55Z",
       "round_tier": "strong",
-      "run_id": "43310598655",
+      "run_id": "pending:03b93383-1794526204",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16251,7 +16243,7 @@
         "run": "43260222744"
       },
       "source": "conflict",
-      "started_at": "2026-11-12T21:28:25Z",
+      "started_at": "2026-11-12T23:30:56Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -16925,9 +16917,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T23:29:49Z",
+    "at": "2026-11-12T23:30:56Z",
     "url": "",
-    "what": "build #3791 on claude-3"
+    "what": "revise #3797 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-12T22:39:58Z",
