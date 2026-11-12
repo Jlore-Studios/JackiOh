@@ -28,7 +28,7 @@
    against: tavern.css's padding and its 1120 px reading column are for a form, not a pool. */
 .deckbuilder.app-shell {
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: var(--shell-screen-h, 100dvh);
 }
 
 .tavern.deckbuilder.app-shell {
@@ -1107,7 +1107,7 @@
   .deckbuilder.app-shell {
     box-sizing: border-box;
     height: 100vh;
-    height: 100dvh;
+    height: var(--shell-screen-h, 100dvh);
   }
 
   .db-layout {
@@ -1168,7 +1168,7 @@
 @media (max-width: 760px) and (min-height: 501px) {
   .deckbuilder.app-shell {
     height: 100vh;
-    height: 100dvh;
+    height: var(--shell-screen-h, 100dvh);
   }
 }
 

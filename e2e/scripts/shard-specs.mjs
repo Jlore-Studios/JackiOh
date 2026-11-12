@@ -21,26 +21,29 @@ const COMPONENT_DIR = "cypress/component";
  * The per-pull-request smoke list (docs/v0.3.0/README.md §7), one spec per user-facing flow: 01 a
  * hotseat game and its replay hash, 06 a networked match, 10 the invite gate, 13 practice against the
  * AI, 19 the queue modes and a series, 46 every menu on one screen (R1581000), 47 every
- * control's tap area on a phone (R2122000). Spec number prefixes, as WEIGHTS keys them.
+ * control's tap area under a finger (R2122000), 51 the menus' shell (R3728000). Spec number prefixes,
+ * as WEIGHTS keys them.
  */
-export const SMOKE = ["01", "06", "10", "13", "19", "46", "47"];
+export const SMOKE = ["01", "06", "10", "13", "19", "46", "47", "51"];
 
 /**
  * Seconds per spec on ubuntu-latest, Chrome and Electron's slower: CI run 36973335249 (main at
- * e762937, the TypeScript server). Specs 01, 06, 19 and 46 are #2181's: the smoke shards run on a
+ * e762937, the TypeScript server). Specs 01, 06 and 19 are #2181's: the smoke shards run on a
  * 4-core runner against the release jackioh-server, Chrome for Testing 154 (main at 17d45db), each
  * spec's Cypress "Duration"; 19's All random test alone waits about 50 s for the rating window to
  * widen after the rated game before it. Specs 29-36 are estimates (29-32 from the turns
  * they play, spec 03's length per turn; 36 from its play-through of the Meditative set, about six
- * minutes in Chromium on a loaded machine); 47 from a local run, 30 tests in about 30 s; 50 from
+ * minutes in Chromium on a loaded machine); 50 from
  * its sampling windows (5 s idle + 8 s combat) plus its setup turns, until it has run (#3605);
+ * 46 and 47 are #3728's estimates for its seven sizes (`MENU_SIZES`), scaled from 46's 52 s at two
+ * sizes (#2181) and 47's 35 s at one, and 51 an estimate, until each is measured;
  * once they have run, replace them with measured times (#79).
  */
 const WEIGHTS = {
   "01": 82, "02": 124, "03": 30, "04": 46, "05": 20, "06": 17, "07": 38, "08": 170, "09": 32,
   "10": 4, "11": 26, "12": 43, "13": 49, "14": 22, "15": 17, "16": 28, "17": 55, "18": 51,
   "19": 99, "20": 28, "21": 20, "22": 28, "23": 11, "24": 26, "25": 36, "26": 11, "27": 4, "50": 90,
-  "28": 25, "29": 40, "30": 25, "31": 25, "32": 15, "33": 15, "34": 20, "35": 20, "36": 360, "46": 52, "47": 35, "99": 1,
+  "28": 25, "29": 40, "30": 25, "31": 25, "32": 15, "33": 15, "34": 20, "35": 20, "36": 360, "46": 180, "47": 200, "51": 90, "99": 1,
 };
 const DEFAULT_WEIGHT = 30;
 

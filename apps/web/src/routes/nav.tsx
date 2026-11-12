@@ -7,6 +7,7 @@ import LanguageButton from "../i18n/LanguageButton.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { SettingsButton } from "../settings/index.ts";
+import { useMenuShell } from "../shell/context.ts";
 import { FriendsButton } from "../together/FriendsButton.tsx";
 import { ArrowIcon } from "./ArrowIcon.tsx";
 import { PageTitle } from "./PageTitle.tsx";
@@ -39,7 +40,8 @@ export type BackLinkProps = {
 /**
  * The top bar's one layout (R3218000, routes/top-bar.css): Back, the title and the extras, a flexible
  * spacer, then the end group (the Jlore pill, Friends, language, the gear), the gear always last.
- * Uses `navigate`, not history, so direct links stay in the app.
+ * Inside the menus' shell (R3728000, R3728002) Friends is the shell's navigation's, and the bar ends with
+ * the shell's status row, under the rest. Uses `navigate`, not history, so direct links stay in the app.
  */
 export function BackLink({
   to = paths.landing,
@@ -53,6 +55,7 @@ export function BackLink({
   showWallet = true,
 }: BackLinkProps): ReactElement {
   useLocale();
+  const shell = useMenuShell();
   return (
     <nav className="row screen-nav">
       <button
@@ -81,12 +84,15 @@ export function BackLink({
       {showSettings ? (
         <div className="screen-nav__end">
           {showWallet && onPress === undefined ? <JlorePill /> : null}
-          {/* #1831: friends are one press away on every signed-in screen, as the pill and settings are. */}
-          {showWallet ? <FriendsButton placement="nav" /> : null}
+          {/* #1831: friends are one press away on every signed-in screen, as the pill and settings are;
+              inside the shell, in its navigation (R3728000). */}
+          {showWallet && shell === null ? <FriendsButton placement="nav" /> : null}
           <LanguageButton placement="nav" />
           <SettingsButton placement="nav" />
         </div>
       ) : null}
+      {/* R3728002: the live game, or the queue search, on a row of its own under the bar. */}
+      {shell === null ? null : <div className="screen-nav__status">{shell.status}</div>}
     </nav>
   );
 }

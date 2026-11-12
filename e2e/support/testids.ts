@@ -797,6 +797,8 @@ export const CHAT_JOIN = "chat-join";
 export const FRIENDS_BUTTON = "friends-button";
 export const FRIENDS_BADGE = "friends-badge";
 export const FRIENDS_PANEL = "friends-panel";
+/** The panel's ✕. */
+export const FRIENDS_CLOSE = "friends-close";
 
 /** One per incoming challenge: `data-challenge-id`, `data-room-code`, `data-mode`. */
 export const CHALLENGE_TOAST = "challenge-toast";

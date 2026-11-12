@@ -5,6 +5,8 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import type { ReactElement } from "react";
+
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -21,6 +23,7 @@ import { PLAYER_STATS_KEY, PLAYER_STATS_VERSION, ROTATION_INTERVAL_MS, ROTATION_
 import { dropPlayerStatsCache } from "../stats/store.ts";
 import { at, jsonResponse, signIn } from "../test/stubServer.ts";
 import { gameBannerTestid } from "./GameBanner.tsx";
+import { MenuShell } from "../shell/MenuShell.tsx";
 import LandingRoute from "./landing.tsx";
 import {
   EVEN,
@@ -740,7 +743,8 @@ describe("R639 your table", () => {
 
     const sheet = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "landing.css"), "utf8");
     expect(sheet).toContain(".landing .landing-floor:has(> .landing-stats) {");
-    expect(sheet).toContain("height: 100dvh");
+    // R3728000: one screen inside the menus' shell is the window less its tab bar and insets.
+    expect(sheet).toContain("height: var(--shell-screen-h, 100dvh);");
   });
 });
 
@@ -773,10 +777,19 @@ describe("R765 the main menu's live-game banner", () => {
     );
   }
 
+  /** R3728002: Home draws the menus' shell's status row, as main.tsx mounts it. */
+  function Home(): ReactElement {
+    return (
+      <MenuShell path={paths.landing}>
+        <LandingRoute />
+      </MenuShell>
+    );
+  }
+
   it("R765 a signed-in player whose match is live sees the banner on top, and Rejoin is a link to the board", async () => {
     signIn();
     serveInGame("m-3");
-    render(<LandingRoute />);
+    render(<Home />);
 
     const banner = await screen.findByTestId(gameBannerTestid.live, undefined, SLOW);
     expect(banner).toHaveAttribute("data-kind", "match");
@@ -790,7 +803,7 @@ describe("R765 the main menu's live-game banner", () => {
   it("R765 between the games of a Conquest series it rejoins the series screen", async () => {
     signIn();
     serveInGame(null, "s-3");
-    render(<LandingRoute />);
+    render(<Home />);
     const rejoin = await screen.findByTestId(gameBannerTestid.rejoin, undefined, SLOW);
     expect(rejoin).toHaveAttribute("href", paths.series("s-3"));
   });
@@ -798,7 +811,7 @@ describe("R765 the main menu's live-game banner", () => {
   it("R1566000 a player whose co-op game is live sees the banner, and Rejoin leads to /duos/<id>", async () => {
     signIn();
     serveInGame(null, null, "d-3");
-    render(<LandingRoute />);
+    render(<Home />);
 
     const banner = await screen.findByTestId(gameBannerTestid.live, undefined, SLOW);
     expect(banner).toHaveAttribute("data-kind", "duos");
@@ -808,14 +821,14 @@ describe("R765 the main menu's live-game banner", () => {
   it("R765 no live game, or no account, shows no banner", async () => {
     signIn();
     serveInGame(null);
-    render(<LandingRoute />);
+    render(<Home />);
     await screen.findByTestId(landingTestid.account, undefined, SLOW);
     expect(screen.queryByTestId(gameBannerTestid.live)).toBeNull();
     cleanup();
 
     window.localStorage.clear();
     serveInGame("m-3");
-    render(<LandingRoute />);
+    render(<Home />);
     await screen.findByTestId(landingTestid.signIn, undefined, SLOW);
     expect(screen.queryByTestId(gameBannerTestid.live)).toBeNull();
   });

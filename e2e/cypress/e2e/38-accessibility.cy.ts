@@ -2,22 +2,28 @@
 // `expectNoBlockingViolations` (support/a11y.ts) fails on a serious or critical violation not listed with its
 // reason in support/axe-exceptions.ts, and on a listed one that no longer fires. Drag to play has no keyboard
 // path and click-click must, so one test plays a card by keyboard alone. Every route runs again at the phone
-// size (#1561), whose labels end in " (phone)" so an exception holds at one width only. Daily only: a pull
-// request's `e2e smoke` plays only SMOKE in scripts/shard-specs.mjs, which does not hold 38. Networked: the
-// signed-in routes need `E2E=1 cargo run --release -p jackioh-server`.
+// size (#1561), whose labels end in " (phone)" so an exception holds at one width only. The menus' shell
+// (R3728000) is checked at each of issue #3728's sizes (`MENU_SIZES`, support/config.ts), on Home, Play and
+// Collection and with the friends drawer open, labelled the same way: " (phone)" at 600 px and under. Daily
+// only: a pull request's `e2e smoke` plays only SMOKE in scripts/shard-specs.mjs, which does not hold 38.
+// Networked: the signed-in routes need `E2E=1 cargo run --release -p jackioh-server`.
 
 import { consentTestid, inviteTestid, landingTestid, loginTestid, resetTestid } from "../../../apps/web/src/auth/testids.ts";
+import { BREAKPOINT_PX } from "../../../apps/web/src/breakpoints.ts";
 import { patchTestid } from "../../../apps/web/src/patches/testids.ts";
 import { practiceTestid } from "../../../apps/web/src/practice/testids.ts";
+import { menuShellTestid } from "../../../apps/web/src/shell/testids.ts";
 import { statsTestid } from "../../../apps/web/src/stats/testids.ts";
 import { expectNoBlockingViolations } from "../../support/a11y.ts";
 import { allCardIds } from "../../support/cards.ts";
-import { accounts, constants, routes, seedFor, timeouts } from "../../support/config.ts";
+import { MENU_SIZES, accounts, constants, routes, seedFor, timeouts } from "../../support/config.ts";
 import {
   BOARD,
   CARD_POOL,
   COLLECTION_SCREEN,
   DEALING,
+  FRIENDS_BUTTON,
+  FRIENDS_PANEL,
   GAME,
   PLAY_QUEUE,
   PRACTICE_HUD,
@@ -31,6 +37,7 @@ import {
   ts,
   zoneId,
 } from "../../support/testids.ts";
+import { expectShellNav } from "../../support/shell.ts";
 import type { ActionBody, Lane } from "../../support/types.ts";
 
 /** The practice worker loads the engine, the card scripts and the AI before its first answer. */
@@ -64,6 +71,17 @@ function practiceUrl(seed: string): string {
 /** The opening deal flies the hand over the deck pile after `cy.settled()`: axe then measures the cards, not the pile. */
 function dealt(): void {
   cy.get(DEALING, { timeout: timeouts.animation, log: false }).should("not.exist");
+}
+
+/** R3728000's block signs in as p2, so the page loads at seven sizes do not share R109's minute with p1's block. */
+const SHELL_ACCOUNT = accounts.p2;
+
+/** The landing's fan is dealt in (R704): checked once every card is drawn, so the check sees them. */
+function fanDealt(): void {
+  cy.get(`${ts(landingTestid.fan)} .landing-fan-card--face`, { timeout: timeouts.view }).should(($cards) => {
+    expect($cards.length, "the fan holds its cards").to.be.greaterThan(0);
+    for (const card of $cards.toArray()) expect(getComputedStyle(card).opacity, "a dealt card").to.eq("1");
+  });
 }
 
 /**
@@ -126,11 +144,7 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
         it("/", () => {
           cy.visit("/");
           cy.get(ts(landingTestid.root), { timeout: timeouts.view }).should("be.visible");
-          // The fan's cards are dealt in (R704): checked once every one is drawn, so the check sees them.
-          cy.get(`${ts(landingTestid.fan)} .landing-fan-card--face`, { timeout: timeouts.view }).should(($cards) => {
-            expect($cards.length, "the fan holds its cards").to.be.greaterThan(0);
-            for (const card of $cards.toArray()) expect(getComputedStyle(card).opacity, "a dealt card").to.eq("1");
-          });
+          fanDealt();
           expectNoBlockingViolations(at("/"));
         });
 
@@ -277,6 +291,57 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
       });
     });
   }
+
+  describe("R3728000 the menus' shell at every size", () => {
+    // p2, not the signed-in block's p1: seven sizes of page loads in a minute or two would pass R109's
+    // requests a minute for one account on top of that block's. Nothing here queues or plays, so it is
+    // freed once.
+    before(() => {
+      cy.freeAccount(SHELL_ACCOUNT());
+    });
+
+    for (const size of MENU_SIZES) {
+      /** The label `route` has in axe-exceptions.ts at this width. */
+      const at = (route: string): string => (size.width <= BREAKPOINT_PX.phone ? `${route} (phone)` : route);
+
+      describe(size.label, () => {
+        beforeEach(() => {
+          cy.viewport(size.width, size.height);
+        });
+
+        it("/", () => {
+          cy.visitAs(SHELL_ACCOUNT(), routes.landing());
+          cy.get(ts(landingTestid.root), { timeout: timeouts.view }).should("be.visible");
+          fanDealt();
+          expectShellNav(true);
+          expectNoBlockingViolations(at("/"));
+        });
+
+        it("/play", () => {
+          cy.visitAs(SHELL_ACCOUNT(), routes.play());
+          cy.get(ts(PLAY_QUEUE), { timeout: timeouts.view }).should("be.visible");
+          expectShellNav(true);
+          expectNoBlockingViolations(at("/play"));
+        });
+
+        it("/collection", () => {
+          cy.visitAs(SHELL_ACCOUNT(), routes.collection());
+          cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
+          expectShellNav(true);
+          expectNoBlockingViolations(at("/collection"));
+        });
+
+        it("/play, the friends drawer open (R3728001)", () => {
+          cy.visitAs(SHELL_ACCOUNT(), routes.play());
+          cy.get(ts(PLAY_QUEUE), { timeout: timeouts.view }).should("be.visible");
+          cy.get(ts(menuShellTestid.nav)).find(ts(FRIENDS_BUTTON), { timeout: timeouts.view }).click();
+          // Checked with the friends list read, never against the skeleton that comes first.
+          cy.get(ts(FRIENDS_PANEL), { timeout: timeouts.view }).should("be.visible").find('[role="status"]').should("not.exist");
+          expectNoBlockingViolations(at("/play friends drawer"));
+        });
+      });
+    }
+  });
 
   describe("keyboard alone", () => {
     it("Enter on a legal hand card and then on a legal zone plays the card there", () => {
