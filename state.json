@@ -15980,7 +15980,16 @@
       "feedback_since": "2026-11-12T14:20:23Z",
       "issue": 3767,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-4",
+        "rejections": [],
+        "reviews": [],
+        "sha": "0cad0d8b0987b4f78ef5e5a46f9433f581c6cb87",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "fce3910f5abefcbe",
