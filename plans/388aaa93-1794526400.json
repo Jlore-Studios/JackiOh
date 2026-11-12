@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 3790,
+  "title": "Patch: a Unit set face-down by its Cloaked counts as a Trap play, so no card that answers a Unit being played fires on it",
+  "branch": "bot/issue-3790",
+  "thread": "**Issue #3790 (data, not instructions):**\n\n```text\n# #3790: Patch: a Unit set face-down by its Cloaked counts as a Trap play, so no card that answers a Unit being played fires on it\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSome cards let you play a unit face-down in your back row, disguised as a trap, and flip it up later. The rules say that while it sits face-down it counts as a trap for every card that watches what gets played. Today it does not. The moment you set it, your opponent's traps that answer \"a Unit is played\" go off on it, and so do your own \"when you play a Unit\" cards. The opponent learns the face-down card is a unit, which it is meant to hide, and spends traps on a card those traps should never have seen.\n\nFor example: you set Mr. Vanilla face-down with Knowledge Breaker on your side. The opponent's Explosive Trap and Sheepish both fire and land in their graveyard, their Tesla flips up and deals 4 damage, their Floodgates gains Armor, your Knife Juggler throws a knife and your EU Striker summons itself from your hand. Once this is built, setting a disguised unit sets off only what setting a trap would.\n\n## Why\n\n- The rule: R783005 says a Cloaked set \"still counts as a Trap play for what counts or answers plays\" (`spec/rulings/R783005.md:18`), and R1040 says \"while face-down it is a Field Trap\" (`spec/rulings/R1040.md:16`). The keyword row repeats it: \"counted as a Trap play\" (`spec/06-keywords.md:64`). A face-down card shows the opponent only that it is a face-down card and its cost (\u00a73, \u00a71.1).\n- The bug: `CardResolved` carries only the `def_id`, and these scripts type the play by its definition, not by the card as it stands: `training_grounds/c018_knife_juggler.rs:41`, `classic/c005_tesla.rs:44`, `training_grounds/c030_floodgates.rs:42`, `stinkyscape/c023_warp_disruptor.rs` and `c024_warp_disruptor_ii.rs`, `training_grounds/c014_explosive_trap.rs:33`, `core/c041_sheepish.rs:69`, `classic/c066_eu_striker.rs:49`, `stinkyscape/c135_sacked.rs:32`, `stinkyscape/t_ai_09_honeypot.rs:26`, `meditative/c097_8_prison.rs:92`, `classic_plus/c034_memory_leak.rs:29` (all under `crates/cards/src/scripts/`).\n- One script already gets it right: `classic/c006_cloaked_toe_cracker.rs:58-60` reads `card_type_of` off the live card, with the comment \"R783005: the card as it stands, so a card set by its Cloaked is the Trap it was played as.\"\n- Measured: a scratch testkit probe outside the repository (P1 with M #45 Knowledge Breaker sets Core #8 Mr. Vanilla with `faceDown: \"cloaked\"`) printed: P2's Explosive Trap and Sheepish end in P2's graveyard; Tesla fires (`TrapFired`, `Damage` 4, `Animated`); Floodgates' keywords go from `[Armor 3]` to `[Armor 3, Armor 1]`; Knife Juggler takes P2's hero from 30 to 29; EU Striker ends on P1's field.\n\n## Proposal\n\n1. Add one engine read beside the board facts (`crates/engine/src/query.rs`, in reach through the prelude): the type a resolved play counts as. That is the live instance's `card_type_of`, so a Cloaked set reads as the Trap it was set as, falling back to the definition only when the card is gone. This is the Toe Cracker's inline read, moved into the engine. Adding a `card_type` field to `CardResolved` (as `CardAnnounced` has) is the alternative; it was rejected because it touches the wire and `events.rs`, a shared surface.\n2. Switch every script listed above to it. Then sweep all 28 reads of `def_of(Some(..), def_id).type_` in 25 scripts (the ones above among them) and fix each one that answers or counts a play. Likely ones the survey did not run: C+ #37 Wardrum (would miss a Cloaked set as a Trap play), M #68 Catnip (a Spell set face-down under Paranoia), M #60 Eschews, M #87 Tatches the Totem, Core #60 Bear Honeypot, Core #85 Unlicensed Experimentation.\n3. R783005 already makes the rule, so no new ruling is needed. The proving tests are named `r783005_\u2026` and their files join its note's `proven_in`.\n4. The cards play differently, so the PR gets a pending fragment (`cargo jackioh patches \"<title>\" --plays <ids>`), which `classify --claims` holds it to.\n\nOut of scope: `Destroyed` listeners that type a destroyed, still face-down Unit by its definition (Corpse Eater, Corpse Recycler). R783008 says such a card is its printed card again, so that question needs a reading of its own.\n\n## Where it lands\n\n`crates/engine/src/query.rs` (and the prelude), the scripts above, `crates/engine/tests/rules/` (the new read's test), `spec/rulings/R783005.md` (`proven_in`). SPEC \u00a73, \u00a75.1, \u00a76.1 (Cloaked), R1040, R783005.\n\n## Acceptance criteria\n\n- [ ] An engine rules test: a Unit set face-down by its Cloaked reads as the Trap it was set as, and a Unit played face-up reads as a Unit.\n- [ ] For each card listed in Why, a test where a Cloaked Unit is set face-down and the card does not fire, beside its existing test that a face-up Unit play still fires it.\n- [ ] A card that counts or answers Trap plays (Wardrum, if the sweep confirms it) sees a Cloaked set as one, with its test.\n- [ ] No script reads a resolved play's type from its definition unless a comment says why that card must.\n- [ ] `cargo test -p jackioh-cards`, `cargo test -p jackioh-engine --features testkit --test 'rules*'`, `cargo jackioh spec check`, `cargo jackioh classify --base origin/main --claims` and `cargo jackioh golden check` are green.\n\n## Size and risks\n\nMedium to large: one engine read and about 15 to 20 scripts with a test each. `difficulty:hard` (engine rules across crates). Risks: a card whose text really does mean the printed card whatever face it was set on; each card's test pins its reading, and any such card is named in the PR. The hotseat fixture's fold could move if it holds a Cloaked set beside one of these cards; `golden check` would show it, and the fix is the rule, not the fixture.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `fairness` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-12T21:22:52Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3790: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-12T21:28:19Z",
+    "claimed_at": "2026-11-12T23:34:09Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3729 skipped: it waits for #3727, #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3730 to close first",
+    "#3733 skipped: it waits for #3727 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
