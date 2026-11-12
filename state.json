@@ -12936,7 +12936,7 @@
       "provider": "claude-4",
       "queued_at": "2026-11-09T23:50:31Z",
       "requested_by": "squishy-squooby",
-      "run_id": "43154777053",
+      "run_id": "pending:b069f7a4-1794461306",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
@@ -12955,7 +12955,7 @@
         "provider": "claude-4",
         "run": "43154777053"
       },
-      "started_at": "2026-11-12T04:26:03Z",
+      "started_at": "2026-11-12T05:29:01Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17323,9 +17323,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T05:28:10Z",
+    "at": "2026-11-12T05:29:01Z",
     "url": "",
-    "what": "build #3695 on claude-3"
+    "what": "plan #3573 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-12T05:12:26Z",
