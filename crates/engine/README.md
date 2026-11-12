@@ -80,7 +80,8 @@ mutable static. Two things hold it:
 Every random draw goes through `Rng` (`rng.rs`, seeded, its cursor in the state), in the same order
 on every run. Every player choice is a `PendingChoice` in the state. The only statics are the
 catalog and the script registry, each a `OnceLock` set once by `jackioh_cards::register_all()`
-(with where the older shipped catalogs are found, `register_shipped`, R767000, and the card metrics
+(with where the older shipped catalogs are found, `register_shipped`, R767000, where a card's past
+versions are found, `register_past_versions`, R3538002, and the card metrics
 compiled beside the catalog, `register_card_metrics`, R1846000, the extra-turn cards the AI prices
 among them, #3116); under the `testkit`
 feature a thread-local override lets a test install fixture cards, the one allowed `RefCell`. One

@@ -119,6 +119,7 @@ fn main() {
     let catalog_ids = read_catalog_ids(&catalog_path);
     let version = read_catalog_version(&patches_path);
     println!("cargo:rustc-env=JACKIOH_CATALOG_VERSION={version}");
+    println!("cargo:rustc-env=JACKIOH_PAST_FROM={BROWSER_CARRIED_FROM}");
 
     let mut problems: Vec<String> = Vec::new();
     let files = find_card_files(&scripts_dir, &mut problems);

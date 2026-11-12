@@ -19,15 +19,15 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use crate::config::{
-    DORMANT_STARSHIP_DEF_ID, GLITCH_DEF_ID, GLITCH_ODDS_DENOMINATOR, GLITCH_ODDS_PER_SYSTEM_PLAY, GRAPE_ODDS,
-    POOL_TOKEN_TAGS, RollOdds, UNIQUE_RANDOM_DRAWS,
+    CRAFT_ID_PREFIX, DORMANT_STARSHIP_DEF_ID, GLITCH_DEF_ID, GLITCH_ODDS_DENOMINATOR,
+    GLITCH_ODDS_PER_SYSTEM_PLAY, GRAPE_ODDS, POOL_TOKEN_TAGS, RollOdds, UNIQUE_RANDOM_DRAWS,
 };
 use crate::rng::Rng;
 use crate::script::CardScripts;
 use crate::state::GameState;
 use crate::wire::{
-    AttackHealth, CATALOG_SETS, CardCost, CardDef, CardDefs, CardType, CatalogQuery, CostRange,
-    FusedIngredient, KeywordKind, OneOrMany, Rarity, SetName, Tag, has_keyword, set_ships,
+    AttackHealth, CATALOG_SETS, CardCost, CardDef, CardDefs, CardTier, CardType, CatalogQuery, CostRange,
+    FusedIngredient, KeywordKind, OneOrMany, Rarity, SetName, Tag, has_keyword, set_ships, string_union,
 };
 
 /// A hasher for the registries' card ids: short strings looked up thousands of times a turn, where
@@ -224,9 +224,12 @@ fn stand_in(_def_id: &str) -> Option<&'static CardDef> {
     None
 }
 
-/// `find_def`'s catalog lookup: the shipped catalog a replay folds under, a test's override or the
-/// registered catalog.
+/// `find_def`'s catalog lookup: a past id's own definition (R3538002), the shipped catalog a
+/// replay folds under, a test's override or the registered catalog.
 fn catalog_def(def_id: &str) -> Option<&'static CardDef> {
+    if split_past_id(def_id).is_some() {
+        return past_def(def_id);
+    }
     if let Some(shipped) = folding() {
         return shipped.find(def_id);
     }
@@ -339,6 +342,105 @@ static SHIPPED: OnceLock<fn(&str) -> Option<&'static ShippedCatalog>> = OnceLock
 /// R767000: set where the shipped catalogs are found, once per process like `register_catalog`.
 pub fn register_shipped(find: fn(&str) -> Option<&'static ShippedCatalog>) {
     let _ = SHIPPED.set(find);
+}
+
+// R3538002: a card's past versions (`<card>@<version>`).
+
+/// R3538002: the mark a past version's id carries: `<card>@<version>`.
+pub const PAST_ID_MARK: char = '@';
+
+/// R3538000, R3538002: where the winrate of record and the past versions come from: the frozen
+/// per-version tables and snapshots the cards crate compiles in. Set once by
+/// `jackioh_cards::register_all()`, beside `register_shipped`.
+#[derive(Clone, Copy)]
+pub struct PastVersions {
+    /// Past ids before `version`, oldest first.
+    pub ids: fn(card: &str, version: &str) -> Vec<String>,
+    /// A past id's definition, its `id` the past id.
+    pub def: fn(past_id: &str) -> Option<&'static CardDef>,
+    /// The script kept for a past id's game version, R767000's covering rule applied.
+    pub kept: fn(past_id: &str) -> Option<&'static CardScripts>,
+    /// The winrate row for `card` at or before `version`: `(wins, games)`.
+    pub record: fn(card: &str, version: &str) -> Option<(i32, i32)>,
+}
+
+static PAST_VERSIONS: OnceLock<PastVersions> = OnceLock::new();
+
+/// R3538002: hands the past-versions provider to the engine (`jackioh_cards::register_all`). Set
+/// once per process, as `register_catalog` is: a second call is ignored.
+pub fn register_past_versions(versions: PastVersions) {
+    let _ = PAST_VERSIONS.set(versions);
+}
+
+/// R3538002: split a past id (`<card>@<version>`) into its card and version. `None` for any other
+/// id: a fused id, a crafted id, or a plain catalog id.
+pub fn split_past_id(def_id: &str) -> Option<(&str, &str)> {
+    if fused_head_len(def_id).is_some() || def_id.starts_with(CRAFT_ID_PREFIX) {
+        return None;
+    }
+    def_id.split_once(PAST_ID_MARK)
+}
+
+/// R3538002: the card a (possibly past) id belongs to: the part before `@`, or the id itself.
+pub fn past_card_of(def_id: &str) -> &str {
+    match split_past_id(def_id) {
+        Some((card, _)) => card,
+        None => def_id,
+    }
+}
+
+/// R3538002: the past ids of the card `def_id` names, oldest first. A past `def_id` lists only the
+/// versions before its own. Reads the testkit's override first, then the provider.
+pub fn past_ids_of(def_id: &str) -> Vec<String> {
+    let (card, version) = match split_past_id(def_id) {
+        Some((card, version)) => (card, version),
+        None => (def_id, catalog_version()),
+    };
+    #[cfg(feature = "testkit")]
+    if let Some(defs) = crate::testkit::scenario::past_defs_override() {
+        let mut ids: Vec<String> = Vec::new();
+        for def in defs {
+            if past_card_of(&def.id) != card {
+                continue;
+            }
+            if def.id == def_id {
+                break;
+            }
+            ids.push(def.id.clone());
+        }
+        return ids;
+    }
+    match PAST_VERSIONS.get() {
+        Some(versions) => (versions.ids)(card, version),
+        None => Vec::new(),
+    }
+}
+
+/// R3538002: a past id's definition: the testkit's override first, then the provider.
+pub fn past_def(def_id: &str) -> Option<&'static CardDef> {
+    #[cfg(feature = "testkit")]
+    if let Some(defs) = crate::testkit::scenario::past_defs_override() {
+        return defs.iter().find(|def| def.id == def_id);
+    }
+    PAST_VERSIONS.get().and_then(|versions| (versions.def)(def_id))
+}
+
+/// R3538002: the script kept for a past id's game version. None under the testkit's override, whose
+/// defs run the override registry's scripts like any fixture card.
+pub(crate) fn past_scripts(def_id: &str) -> Option<&'static CardScripts> {
+    #[cfg(feature = "testkit")]
+    if crate::testkit::scenario::past_defs_override().is_some() {
+        return None;
+    }
+    PAST_VERSIONS.get().and_then(|versions| (versions.kept)(def_id))
+}
+
+/// R3538000: the winrate row the record reads for `card` at or before `version`: none before a
+/// provider is registered.
+pub(crate) fn past_record(card: &str, version: &str) -> Option<(i32, i32)> {
+    PAST_VERSIONS
+        .get()
+        .and_then(|versions| (versions.record)(card, version))
 }
 
 /// R767000: the testkit's thread-local shipped catalogs, when the calling thread's test set some.
@@ -526,6 +628,22 @@ pub struct CatalogQueryArgs {
     /// Start of turn or an End of turn effect". Read off the registered script, as `tribute` is.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub turn_hook: Option<TurnHookFilter>,
+    /// R3538001: only cards whose tier of record (`win_rates::tier_of_record`) is one of these. A
+    /// card with no record has no tier and never matches.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tier: Option<OneOrMany<CardTier>>,
+    /// R3538002: `also` draws the catalog's cards and their past versions; `only` draws past
+    /// versions alone.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub past: Option<PastPool>,
+}
+
+string_union! {
+    /// R3538002: which past versions a pool draws beside the catalog's own cards.
+    pub enum PastPool {
+        Also = "also",
+        Only = "only",
+    }
 }
 
 /// R3134001: which turn hook `CatalogQueryArgs.turn_hook` asks a card for.
@@ -595,6 +713,8 @@ impl From<CatalogQuery> for CatalogQueryArgs {
             deals_damage: None,
             keywords: None,
             turn_hook: None,
+            tier: None,
+            past: None,
         }
     }
 }
@@ -709,13 +829,33 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
         return false;
     }
 
+    // R3538002: a `defId` entry that is a card id names that card and its past ids; one that is a
+    // past id names only itself.
     let def_ids = as_list(&args.def_id);
-    if !def_ids.is_empty() && !def_ids.contains(&def.id) {
+    if !def_ids.is_empty()
+        && !def_ids.iter().any(|entry| {
+            entry == &def.id || (split_past_id(entry).is_none() && past_card_of(&def.id) == entry)
+        })
+    {
         return false;
     }
-    // R387, §5.1: a random pool never offers the card that generated it, named by its id.
-    if as_list(&args.exclude_def_id).contains(&def.id) {
+    // R387, §5.1: a random pool never offers the card that generated it, named by its id. A card id
+    // keeps its past ids out too (R3538002), so xxFreshJack's pool holds none of its own versions.
+    if as_list(&args.exclude_def_id)
+        .iter()
+        .any(|entry| entry == &def.id || (split_past_id(entry).is_none() && past_card_of(&def.id) == entry))
+    {
         return false;
+    }
+    // R3538001: the tier of record must be one of the tiers asked; a card with no record has no
+    // tier and never matches.
+    if !as_list(&args.tier).is_empty() {
+        let Some(tier) = crate::win_rates::tier_of_record(&def.id) else {
+            return false;
+        };
+        if !as_list(&args.tier).contains(&tier) {
+            return false;
+        }
     }
 
     if let Some(tags) = &args.tags
@@ -988,10 +1128,31 @@ pub fn pair_key(def: &CardDef) -> &str {
 /// `pool-probe` each pool comes back rotated (`testkit/pool_probe.rs`, #3117).
 pub fn query(args: &CatalogQueryArgs) -> Vec<&'static CardDef> {
     let tokens_allowed = asks_for_tokens(args);
-    let mut pool: Vec<&'static CardDef> = registered()
-        .values()
-        .filter(|def| matches_query(def, args, tokens_allowed))
-        .collect();
+    let mut pool: Vec<&'static CardDef> = if args.past == Some(PastPool::Only) {
+        Vec::new()
+    } else {
+        registered()
+            .values()
+            .filter(|def| matches_query(def, args, tokens_allowed))
+            .collect()
+    };
+    // R3538002: past versions join the pool when asked. With `defId` naming cards, only the cards
+    // those entries belong to are expanded.
+    if args.past.is_some() {
+        let def_ids = as_list(&args.def_id);
+        for def in registered().values() {
+            if !def_ids.is_empty() && !def_ids.iter().any(|entry| past_card_of(entry) == def.id) {
+                continue;
+            }
+            for past_id in past_ids_of(&def.id) {
+                if let Some(past) = past_def(&past_id)
+                    && matches_query(past, args, tokens_allowed)
+                {
+                    pool.push(past);
+                }
+            }
+        }
+    }
     pool.sort_by(|a, b| {
         let set_a = set_rank(a.set);
         let set_b = set_rank(b.set);

@@ -2625,7 +2625,7 @@ pub fn validate_setup(
 /// bare counter (fuse's scratch numbering, `{ nextId: 0 }` in TS).
 pub trait NextId {
     fn next_id_mut(&mut self) -> &mut u32;
-    /// R3548002: a card of this definition was minted. A scratch counter keeps none of it.
+    /// R3548002, R3538002: a card of this definition was minted. A scratch counter keeps none of it.
     fn minted(&mut self, _def_id: &str) {}
 }
 
@@ -2636,6 +2636,13 @@ impl NextId for GameState {
 
     fn minted(&mut self, def_id: &str) {
         crate::warhero::note_minted(self, def_id);
+        // R3538002: a past version's definition rides along in `transient_defs`, so the view ships
+        // it (R243). Nothing for any other id.
+        if crate::catalog::split_past_id(def_id).is_some() && !self.transient_defs.contains_key(def_id) {
+            if let Some(def) = crate::catalog::find_def(None, def_id) {
+                self.transient_defs.insert(def_id.to_string(), def.clone());
+            }
+        }
     }
 }
 
@@ -2714,7 +2721,8 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         split_chain: None,
     };
     *next_id += 1;
-    // R3548002: minting a Warhero Token starts its worth at 0, wherever the card is minted.
+    // R3548002: minting a Warhero Token starts its worth at 0, wherever the card is minted; R3538002:
+    // a past version's definition rides along.
     state.minted(def_id);
     instance
 }

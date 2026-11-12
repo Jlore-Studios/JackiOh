@@ -89,6 +89,35 @@ pub fn next_turn_mana(args: NextTurnManaArgs) -> Effect {
     })
 }
 
+/// `changeMaxMana`'s arguments.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct ChangeMaxManaArgs {
+    pub amount: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+}
+
+/// R3538006 (S+ #95 JC Backed): "lose N mana for the rest of the game" lowers max mana: `amount`
+/// onto the seat's persistent modifier, max mana recomputed, and a loss comes off current mana too,
+/// never below 0, as `move_mana_crystals` takes it. A change that moves nothing announces nothing.
+pub fn change_max_mana(args: ChangeMaxManaArgs) -> Effect {
+    Effect::new("changeMaxMana", move |ctx| {
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        let side = &mut ctx.sink.state.players[player];
+        let before = (side.mana.max, side.mana.current);
+        side.mana.perm_mod += args.amount;
+        side.mana.max = crate::mana::max_mana_for(side);
+        let lost = (before.0 - side.mana.max).max(0);
+        side.mana.current = (side.mana.current - lost).max(0);
+        if (side.mana.max, side.mana.current) != before {
+            let event = crate::mana::mana_event(player, side);
+            ctx.sink.events.push(event);
+        }
+    })
+}
+
 /// R1854003: "Steal your enemy's mana crystals" (Stinkyscape #7 The Greatest Heist's last reward),
 /// by `mana::move_mana_crystals`. Each side whose mana changed is announced; a steal from a player
 /// with no maximum mana announces nothing.

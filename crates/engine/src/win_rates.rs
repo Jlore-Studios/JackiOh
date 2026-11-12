@@ -23,11 +23,12 @@ use std::cmp::Ordering;
 use serde::{Deserialize, Serialize};
 
 use crate::config::{
-    CN_TECH_MIN_GAMES, WIN_RATE_BOUND_SCALE, WIN_RATE_BOUND_Z_DEN, WIN_RATE_BOUND_Z_NUM,
-    WIN_RATE_SNAPSHOT_ENDS,
+    ADJUSTED_WIN_RATE_CENTER, CN_TECH_MIN_GAMES, NO_RECORD_WIN_RATE, TIER_A_FROM, TIER_BAND_HIGH,
+    TIER_BAND_LOW, TIER_C_FROM, WIN_RATE_BOUND_SCALE, WIN_RATE_BOUND_Z_DEN, WIN_RATE_BOUND_Z_NUM,
+    WIN_RATE_RECORD_MIN_GAMES, WIN_RATE_SNAPSHOT_ENDS,
 };
 use crate::state::GameState;
-use crate::wire::stats::{GameSource, WindowedReport};
+use crate::wire::stats::{CardTier, GameSource, WindowedReport};
 use crate::wire::string_union;
 
 string_union! {
@@ -174,6 +175,79 @@ pub fn kept_for_game(table: &WinRateTable) -> WinRateTable {
         patch: table.patch.clone(),
         source: table.source,
         cards,
+    }
+}
+
+/// R3538000: a card's winrate of record: the newest per-version table row at or before the version
+/// the id names, past patches included. Under the testkit, while a table override is set, it is that
+/// table's row for the id itself. A row under `WIN_RATE_RECORD_MIN_GAMES` games is no record, and
+/// neither is a missing row: both read as the 50% default (`rate_of`), never here.
+pub fn win_rate_of_record(def_id: &str) -> Option<(i32, i32)> {
+    #[cfg(feature = "testkit")]
+    if let Some(table) = crate::testkit::scenario::win_rates_override() {
+        return table
+            .cards
+            .iter()
+            .find(|row| row.id == def_id)
+            .filter(|row| row.games >= WIN_RATE_RECORD_MIN_GAMES)
+            .map(|row| (row.wins, row.games));
+    }
+    let (card, version) = match crate::catalog::split_past_id(def_id) {
+        Some((card, version)) => (card, version),
+        None => (def_id, crate::catalog::catalog_version()),
+    };
+    crate::catalog::past_record(card, version).filter(|(_, games)| *games >= WIN_RATE_RECORD_MIN_GAMES)
+}
+
+/// R3538000: a threshold in millionths (`WIN_RATE_BOUND_SCALE`), rounded, so every comparison below
+/// stays in integers as R3049001's do.
+fn scaled(threshold: f64) -> u128 {
+    (threshold * WIN_RATE_BOUND_SCALE as f64).round() as u128
+}
+
+/// R3538000: a card's rate as an exact `(numerator, denominator)`: its record, else the 50%
+/// default in millionths (`NO_RECORD_WIN_RATE`), which KPIs itself reads when it has none. Both
+/// sides stay unscaled records or the scaled default, so a crosswise comparison reads the true
+/// order either way.
+fn rate_of(def_id: &str) -> (u128, u128) {
+    match win_rate_of_record(def_id) {
+        Some((wins, games)) => (
+            u128::from(wins.unsigned_abs()),
+            u128::from(games.unsigned_abs()),
+        ),
+        None => (scaled(NO_RECORD_WIN_RATE), WIN_RATE_BOUND_SCALE),
+    }
+}
+
+/// R3538007: whether `a`'s rate is strictly lower than `b`'s, compared crosswise in integers; a card
+/// with no record counts as 50% (R3538000), and so does `b` with none.
+pub fn lower_win_rate(a: &str, b: &str) -> bool {
+    let (a_num, a_den) = rate_of(a);
+    let (b_num, b_den) = rate_of(b);
+    a_num * b_den < b_num * a_den
+}
+
+/// R3538001: a card's tier of record: R3022000's tier (`wire::stats::tier_of`) read off the record —
+/// the exact rate against the band and the quarter floors, the S/F certainty against the Wilson
+/// bounds, all in integers. `None` with no record.
+pub fn tier_of_record(def_id: &str) -> Option<CardTier> {
+    let (wins, games) = win_rate_of_record(def_id)?;
+    let (w, g) = (u128::from(wins.unsigned_abs()), u128::from(games.unsigned_abs()));
+    let (low, high) = wilson_bounds(wins, games)?;
+    let rate = w * WIN_RATE_BOUND_SCALE;
+    let center = scaled(ADJUSTED_WIN_RATE_CENTER);
+    if rate > scaled(TIER_BAND_HIGH) * g && low > center {
+        Some(CardTier::S)
+    } else if rate < scaled(TIER_BAND_LOW) * g && high < center {
+        Some(CardTier::F)
+    } else if rate >= scaled(TIER_A_FROM) * g {
+        Some(CardTier::A)
+    } else if rate >= center * g {
+        Some(CardTier::B)
+    } else if rate >= scaled(TIER_C_FROM) * g {
+        Some(CardTier::C)
+    } else {
+        Some(CardTier::D)
     }
 }
 
