@@ -14116,11 +14116,6 @@
       "owner": "claude-3",
       "owner_since": "2026-11-12T12:48:44Z",
       "owner_why": "handed off from `claude-8`: `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-12T16:30:00Z; it can start again only in 2h 41m, more than the 120 minutes an item waits for its owner",
-      "paused": {
-        "at": "2026-11-12T12:43:32Z",
-        "interrupt": "usage",
-        "provider": "claude-8"
-      },
       "pending_request": false,
       "planned_at": "2026-11-12T09:28:57Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
