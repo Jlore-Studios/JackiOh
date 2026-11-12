@@ -12910,7 +12910,7 @@
       "verdict_rounds": 0
     },
     "3573": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -12925,11 +12925,11 @@
       },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "onto": "bot/issue-3596",
-      "owner": "claude-4",
-      "owner_since": "2026-11-12T04:26:03Z",
-      "owner_why": "handed off from `claude-6`: it could not take it",
+      "owner": "claude-7",
+      "owner_since": "2026-11-12T05:39:44Z",
+      "owner_why": "handed off from `claude-4`: it could not take it",
       "part_of": 3596,
       "pending_request": false,
       "planned_at": "2026-11-12T05:38:10Z",
@@ -12937,12 +12937,12 @@
       "planned_by_id": "claude-4",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-4",
+      "provider": "claude-7",
       "queued_at": "2026-11-09T23:50:31Z",
       "requested_by": "squishy-squooby",
-      "run_id": "43161678938",
+      "run_id": "pending:61b12684-1794461947",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-12T05:29:01Z",
+      "started_at": "2026-11-12T05:39:44Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17322,9 +17322,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T05:29:53Z",
+    "at": "2026-11-12T05:39:44Z",
     "url": "",
-    "what": "plan #3610 on claude-3"
+    "what": "build #3573 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-12T05:23:34Z",
