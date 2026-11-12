@@ -34540,6 +34540,12 @@
         "number": 3480,
         "title": "Patch: ladder-bot calibration says why each unfinished game stopped, and counts the moves it had to replace",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-12T13:54:11Z",
+        "number": 3769,
+        "title": "Patch: dungeon enemies are dealt decks they can cast at their tier's mana",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
