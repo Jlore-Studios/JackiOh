@@ -88,7 +88,10 @@ Every menu screen renders inside one shell (#3728, R3728000–R3728002, `shell/M
 board's (`isBoardPath`), the series screen and the dev screens. The shell draws the screen's column, then its
 navigation, Home, Play, Collection, Shop and Friends, in one place on every menu: a rail with labels at 1025
 px and wider, the same rail with icons alone from 601 to 1024 px, a tab bar at the foot of the window at 600
-px and under (`menu-shell.css`, on `phone` and `tablet`), inside the safe-area insets. A board drawn on a menu
+px and under (`menu-shell.css`, on `phone` and `tablet`), inside the safe-area insets. A toast fixed at the
+column's foot reads the room the navigation takes, `--shell-start` (the rail's width) and `--shell-bottom` (a
+phone's tab bar and the bottom inset), each 0px outside the shell, to center on the column and sit above the
+tab bar, as the deck builder's status toast and the undo toast do. A board drawn on a menu
 path (`game/boardShown.ts`) takes the navigation away and keeps the screen mounted. Friends is the friends
 panel's button (`FriendsButton`'s `rail`), which opens the panel as the Dialog's drawer down the right edge,
 and the top bar no longer draws it inside the shell. The shell hands the screens a status row

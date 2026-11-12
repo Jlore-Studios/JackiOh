@@ -12,6 +12,10 @@
    `--shell-screen-h` is the height a menu fills, the window less the top inset and a phone's tab bar: the
    menus that are one screen tall (R1581000: index.css's `.one-screen`, the tavern, the hub, the collection,
    the shop, the deck screens, the landing) read it with `100dvh` as its fallback outside the shell.
+   `--shell-start` (the rail's width) and `--shell-bottom` (a phone's tab bar and the bottom inset under it)
+   are the room the navigation takes beside and under the column: a toast fixed at the column's foot reads
+   them, with 0px as their fallback outside the shell, to center on the column and sit above the tab bar
+   (the deck builder's status toast, deckbuilder.css; the undo toast, undo/undo.css).
 
    The look is the top bar's (routes/top-bar.css): the tavern's wood, its brass edge and gold ink, on the
    tokens. Nothing here is a skin for a button: the items are links, and the Friends button
@@ -28,6 +32,7 @@
 
 .menu-shell {
   --shell-top: 0px;
+  --shell-start: 0px;
   --shell-bottom: 0px;
   --shell-screen-h: calc(100dvh - var(--shell-top) - var(--shell-bottom));
 }
@@ -122,6 +127,7 @@
 
 @media (min-width: 601px) {
   .menu-shell:not([data-board]) {
+    --shell-start: var(--shell-rail-w);
     display: grid;
     grid-template-columns: var(--shell-rail-w) minmax(0, 1fr);
   }
@@ -159,6 +165,7 @@
 
 @media (min-width: 601px) and (max-width: 1024px) {
   .menu-shell:not([data-board]) {
+    --shell-start: var(--shell-rail-icons-w);
     grid-template-columns: var(--shell-rail-icons-w) minmax(0, 1fr);
   }
 
@@ -257,8 +264,9 @@
     right: auto;
   }
 
-  /* R3728002: the challenge toasts sit above the tab bar. */
+  /* R3728002: the challenge toasts sit above the tab bar, a gap clear of it over the bottom inset too.
+     They are drawn beside the shell, not in it, so they cannot read its `--shell-bottom`. */
   body:has(.menu-shell:not([data-board])) .challenge-toasts {
-    bottom: calc(var(--shell-tabbar-h) + max(var(--space-7), env(safe-area-inset-bottom)));
+    bottom: calc(var(--shell-tabbar-h) + env(safe-area-inset-bottom, 0px) + var(--space-7));
   }
 }

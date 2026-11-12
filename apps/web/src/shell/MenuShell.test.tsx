@@ -243,6 +243,33 @@ describe("R3728000 the shell's widths and insets", () => {
     const drawer = block(dialog, ".dialog-scrim[data-drawer] > .dialog");
     for (const side of ["top", "right", "bottom"]) expect(drawer, side).toContain(`env(safe-area-inset-${side})`);
   });
+
+  it("R3728000 a toast fixed at the column's foot sits above a phone's tab bar and centers on the column beside the rail", () => {
+    // The room the navigation takes beside the column: none outside the shell or under a board, else the rail's width.
+    expect(block(css, ".menu-shell")).toContain("--shell-start: 0px;");
+    expect(block(css, ".menu-shell:not([data-board])", css.indexOf(`@media ${over("phone")} {`))).toContain("--shell-start: var(--shell-rail-w);");
+    expect(block(css, ".menu-shell:not([data-board])", css.indexOf(`@media ${over("phone")} and ${upTo("tablet")} {`))).toContain(
+      "--shell-start: var(--shell-rail-icons-w);",
+    );
+    // Above the bar (`--shell-bottom`, 0px off a phone), and still above the bottom inset when there is no bar.
+    const aboveTheBar = "bottom: max(16px, env(safe-area-inset-bottom), calc(var(--shell-bottom, 0px) + 16px));";
+
+    // The deck builder's status toast is under the bar's layer, so the bar hid it outright.
+    const deckbuilder = sheet("game/deckbuilder/deckbuilder.css");
+    const status = block(deckbuilder, ".db-deck-status");
+    expect(Number(/z-index:\s*(\d+);/.exec(status)?.[1])).toBeLessThan(Number(/--z-banner:\s*(\d+);/.exec(sheet("surfaces.css"))?.[1]));
+    expect(status).toContain(aboveTheBar);
+    expect(status).toContain("translate: calc(var(--shell-start, 0px) / 2 - 50%) 0;");
+    // Each width it takes, in the editor and the workshop, leaves the rail out, so it never lies over the rail or the sidebar.
+    const widths = [deckbuilder, sheet("game/deckbuilder/workshop.css")].flatMap((code) =>
+      [...code.matchAll(/\.db-deck-status\s*\{([^}]*)\}/g)].flatMap((rule) => [...(rule[1] ?? "").matchAll(/max-width:\s*([^;]+);/g)]),
+    );
+    expect(widths).toHaveLength(4);
+    for (const width of widths) expect(width[1]).toMatch(/^calc\(100vw - var\(--shell-start, 0px\) - \d+px\)$/);
+
+    // The undo toast (R2119000, on the workshop and Play together) is over the bar's layer, so it took the middle tabs' taps.
+    expect(block(sheet("undo/undo.css"), ".undo-toast-region")).toContain(aboveTheBar);
+  });
 });
 
 describe("R3728002 the status row", () => {
@@ -315,7 +342,10 @@ describe("R3728002 the status row", () => {
     expect(block(css, shelled, css.indexOf(`@media ${over("phone")} and ${upTo("tablet")} {`))).toContain(
       "left: calc(var(--shell-rail-icons-w) +",
     );
-    expect(block(css, shelled, css.indexOf(`@media ${upTo("phone")} {`))).toContain("bottom: calc(var(--shell-tabbar-h) +");
+    // Above the bar and the bottom inset under it, a gap clear of both.
+    expect(block(css, shelled, css.indexOf(`@media ${upTo("phone")} {`))).toContain(
+      "bottom: calc(var(--shell-tabbar-h) + env(safe-area-inset-bottom, 0px) + var(--space-7));",
+    );
   });
 });
 

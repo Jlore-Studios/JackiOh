@@ -98,7 +98,9 @@ cleaner.
    `draggable`.
 9. **Safe areas everywhere.** The rail, the tab bar, the top bar, the status row, toasts and drawers
    all keep inside `env(safe-area-inset-*)`. The challenge toasts sit on the `--z-toast` layer token,
-   inside the insets, clear of the rail and the tab bar.
+   inside the insets, clear of the rail and the tab bar. A toast fixed at the foot of a screen's column
+   (the deck builder's status, the undo toast) reads the shell's `--shell-start` and `--shell-bottom` to
+   center on the column and sit above the tab bar.
 10. **The game's look stays.** The shell is structure, not a new skin. It keeps the tavern
     (`apps/web/src/auth/tavern.css`), the palette, the type, surface and motion tokens, and the voice
     in `apps/web/WRITING.md`.

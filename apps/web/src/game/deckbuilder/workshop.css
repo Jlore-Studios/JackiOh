@@ -893,7 +893,7 @@
 /* Side by side, the rail and the deck's sidebar each give up some width, so the filters stay on two
    rows at 1280 px and the pool keeps two whole rows of cards on a 720 px screen. The status toast
    centers on the pool, between the rail (208 px and a 14 px gap) and the sidebar (300 px and a
-   14 px gap). */
+   14 px gap), and the menus' shell's rail beside them (`--shell-start`, deckbuilder.css). */
 @media (min-width: 1277px) {
   .ws-layout {
     grid-template-columns: 208px minmax(0, 1fr);
@@ -905,7 +905,7 @@
 
   .db-deck-status {
     left: calc(50% - 47px);
-    max-width: calc(100vw - 600px);
+    max-width: calc(100vw - var(--shell-start, 0px) - 600px);
   }
 }
 
