@@ -17069,13 +17069,14 @@
       "merge_owner": "claude-4",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-2",
       "queued_at": "2026-11-12T01:51:35Z",
-      "run_id": "43137562981",
+      "run_id": "pending:61415bae-1794455170",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 220,
-      "started_at": "2026-11-12T01:53:11Z",
+      "started_at": "2026-11-12T03:46:45Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17323,9 +17324,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T03:22:00Z",
+    "at": "2026-11-12T03:46:45Z",
     "url": "",
-    "what": "plan #3573 on claude-6"
+    "what": "spot-check #3745 on claude-2"
   },
   "last_sweep": {
     "at": "2026-11-12T03:36:31Z",
@@ -36344,7 +36345,15 @@
         "n": 220,
         "pr": 3745,
         "queued_at": "2026-11-12T03:42:45Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-2",
+          "tier": "strong"
+        },
+        "run_id": "pending:61415bae-1794455170",
         "sha": "db28caaa66d03f1fe574396f006d44370ad2c941",
+        "started_at": "2026-11-12T03:46:45Z",
         "status": "queued",
         "title": "Patch: the AI's search keeps room for a plan whose payoff lands next turn",
         "tries": 0
