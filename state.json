@@ -17655,14 +17655,12 @@
     "what": "build #3764 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-12T08:09:41Z",
+    "at": "2026-11-12T08:28:46Z",
     "notes": [
-      "#3764 needs a plan",
-      "#3750: approved and green, so its strikes are cleared",
-      "delivered suggest on claude-3 (run 43178128221): interrupted",
-      "started plan #3764 on claude-6 (run 43180985437)",
+      "delivered build #3573 on claude-7 (run 43162873781): part",
+      "started build #3764 on claude-6 (run 43183624546)",
       "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days",
+      "pruned 2 plan file(s) older than 7 days",
       "runner gate: started 0 of 1 waiting run(s); 1 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -18367,7 +18365,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-12T08:09:41Z",
+  "loop_tick": "2026-11-12T08:28:46Z",
   "machine_disk": {
     "issue": null,
     "reading": {
