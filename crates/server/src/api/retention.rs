@@ -32,6 +32,7 @@ use crate::config::{
     PLAY_TELEMETRY_RETENTION_DAYS, RETENTION_PURGE_INTERVAL_SECONDS,
 };
 use crate::db::store::{RetentionPurgeInput, RetentionPurgeResult, StoreError};
+use crate::loops::FailingStreak;
 
 /// The epoch: a range's start every match ended after.
 const EPOCH_MS: i64 = 0;
@@ -84,10 +85,18 @@ pub async fn refile_unfiled(app: &App) -> Result<usize, StoreError> {
 /// stops after ten idle minutes, apps/edge), then every `RETENTION_PURGE_INTERVAL_SECONDS`; a failure
 /// is logged and the next run tries again.
 pub async fn run_purge(app: Arc<App>) {
+    // #3770: a step that fails on every pass for a while is an alert, not just a warning each time.
+    let mut folding = FailingStreak::new("game_records.fold");
+    let mut refiling = FailingStreak::new("game_records.refile");
+    let mut purging = FailingStreak::new("retention.purge");
+    let mut chatting = FailingStreak::new("chat.purge");
+    let mut logging = FailingStreak::new("duos.logs.purge");
+    let mut expiring = FailingStreak::new("idempotency.sweep");
+    let mut settling = FailingStreak::new("practice.sweep");
     loop {
         // R1044000: the records written before the totals are folded first, in transactions of their
         // own, so their detail can go on the purge's cutoff like any other's.
-        match fold_pending(&app.db).await {
+        match folding.track(fold_pending(&app.db).await) {
             Ok(done) if done.folded == 0 => {}
             Ok(done) => log_info("game_records.folded", json!({ "records": done.folded })),
             Err(error) => log_warn(
@@ -96,7 +105,7 @@ pub async fn run_purge(app: Arc<App>) {
             ),
         }
         // R1596000: a record whose filing failed is filed again before the purge below can take its log.
-        match refile_unfiled(&app).await {
+        match refiling.track(refile_unfiled(&app).await) {
             Ok(0) => {}
             Ok(filed) => log_info("game_records.refiled", json!({ "records": filed })),
             Err(error) => log_warn(
@@ -104,7 +113,7 @@ pub async fn run_purge(app: Arc<App>) {
                 json!({ "message": error.to_string() }),
             ),
         }
-        match purge_expired(&app).await {
+        match purging.track(purge_expired(&app).await) {
             Ok(purged) => {
                 if purged.code_attempts + purged.match_actions + purged.play_telemetry + purged.game_records
                     > 0
@@ -123,19 +132,19 @@ pub async fn run_purge(app: Arc<App>) {
             Err(error) => log_warn("retention.purge_failed", json!({ "message": error.to_string() })),
         }
         // Play together (#941): B53's chat retention, apart, so one failure never holds the other.
-        match crate::social::chat::purge(&app).await {
+        match chatting.track(crate::social::chat::purge(&app).await) {
             Ok(0) => {}
             Ok(purged) => log_info("chat.purged", json!({ "messages": purged })),
             Err(error) => log_warn("chat.purge_failed", json!({ "message": error.to_string() })),
         }
         // Duos co-op (#936): the co-op logs, apart too.
-        match crate::duos::purge_expired_logs(&app).await {
+        match logging.track(crate::duos::purge_expired_logs(&app).await) {
             Ok(0) => {}
             Ok(purged) => log_info("duos.logs.purged", json!({ "actions": purged })),
             Err(error) => log_warn("duos.logs.purge_failed", json!({ "message": error.to_string() })),
         }
         // R2124000: the spends' idempotency keys past their time, apart too.
-        match crate::economy::idempotency::sweep_expired(&app).await {
+        match expiring.track(crate::economy::idempotency::sweep_expired(&app).await) {
             Ok(0) => {}
             Ok(swept) => log_info("idempotency.swept", json!({ "keys": swept })),
             Err(error) => log_warn(
@@ -144,7 +153,7 @@ pub async fn run_purge(app: Arc<App>) {
             ),
         }
         // R2422000, last: each claim it settles re-runs its check, the slowest step of the pass.
-        match crate::api::practice::sweep_unsettled(&app).await {
+        match settling.track(crate::api::practice::sweep_unsettled(&app).await) {
             Ok(swept) if swept == Swept::default() => {}
             Ok(swept) => log_info(
                 "practice.swept",

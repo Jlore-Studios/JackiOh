@@ -48,16 +48,18 @@ const WEIGHTS = {
 const DEFAULT_WEIGHT = 30;
 
 /**
- * Seconds per component spec over 30 s, by file name: each spec's Cypress "Duration" in a run of all 59 on a 4-core
- * machine (Chrome 156, main at 41a9e93, #3439); a spec not listed counts DEFAULT_COMPONENT_WEIGHT.
+ * Seconds per component spec over 30 s, by file name: each spec's Cypress "Duration" in the daily super run
+ * 43123557600 (all 78 on CI's 4-core runner, Chrome 156, `_staging` at 6cbaca4, #3744). fx-phone-living-game's
+ * 120 is an estimate of its every moment played once at three sizes (R3744000), which that run never reached.
+ * A spec not listed counts DEFAULT_COMPONENT_WEIGHT.
  */
 const COMPONENT_WEIGHTS = {
-  "anomaly-moments.cy.tsx": 88, "arena-corners.cy.tsx": 81, "board-layout.cy.tsx": 35, "card-faces.cy.tsx": 233,
-  "deck-cosmetics.cy.tsx": 77, "deckbuilder-layout.cy.tsx": 126, "emotes-layout.cy.tsx": 55,
-  "fx-gallery-captures.cy.tsx": 91, "fx-layer.cy.tsx": 36, "fx-phone-frame.cy.tsx": 64,
-  "fx-signature-classic.cy.tsx": 51, "fx-signature-stinkyscape.cy.tsx": 67, "fx-signature.cy.tsx": 30,
-  "fx-terminus.cy.tsx": 103, "meditative-faces.cy.tsx": 50, "mobile-ux.cy.tsx": 56, "practice-table.cy.tsx": 59,
-  "starship-moments.cy.tsx": 191,
+  "anomaly-moments.cy.tsx": 67, "arena-corners.cy.tsx": 59, "board-layout.cy.tsx": 33, "card-diorama.cy.tsx": 251,
+  "card-faces.cy.tsx": 420, "deck-cosmetics.cy.tsx": 65, "deckbuilder-layout.cy.tsx": 124, "emotes-layout.cy.tsx": 31,
+  "fx-gallery-captures.cy.tsx": 69, "fx-phone-frame.cy.tsx": 78, "fx-phone-living-game.cy.tsx": 120,
+  "fx-signature-classic.cy.tsx": 43, "fx-signature-stinkyscape-1.cy.tsx": 120, "fx-signature-stinkyscape.cy.tsx": 48,
+  "fx-signature.cy.tsx": 299, "fx-terminus.cy.tsx": 99, "meditative-faces.cy.tsx": 55, "mobile-ux.cy.tsx": 34,
+  "practice-table.cy.tsx": 47, "starship-moments.cy.tsx": 179, "stinkyscape-scenes.cy.tsx": 58,
 };
 const DEFAULT_COMPONENT_WEIGHT = 10;
 

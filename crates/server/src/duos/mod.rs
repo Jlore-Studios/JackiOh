@@ -38,6 +38,7 @@ use crate::economy::quests::GameTally;
 use crate::economy::rewards::{
     GameEconomy, GameMode, GameSummary, game_jlore, is_player_action, pay_game_rewards, utc_day_bounds,
 };
+use crate::loops::FailingStreak;
 
 pub use registry::{DuosRegistry, registry};
 
@@ -270,12 +271,14 @@ pub async fn sweep(app: &Arc<App>) -> Result<(), StoreError> {
 /// `app::serve` through `loops::spawn_supervised`. A failed sweep is logged and tried again on the
 /// next tick.
 pub async fn run_sweeper(app: Arc<App>) {
+    // #3770: a sweep that fails on every pass for a while is an alert, not just a warning each time.
+    let mut sweeping = FailingStreak::new("duos.sweeper");
     loop {
         tokio::time::sleep(Duration::from_secs(
             u64::try_from(MATCH_REAPER_INTERVAL_SECONDS).unwrap_or(0),
         ))
         .await;
-        if let Err(error) = sweep(&app).await {
+        if let Err(error) = sweeping.track(sweep(&app).await) {
             tracing::warn!(event = "duos.sweep_failed", message = %error);
         }
     }
