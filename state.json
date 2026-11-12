@@ -26645,10 +26645,10 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-12T05:20:00Z",
-          "utilization": 0.43
+          "utilization": 0.93
         },
-        "observed_at": "2026-11-12T04:41:30Z",
-        "status": "allowed"
+        "observed_at": "2026-11-12T04:53:44Z",
+        "status": "allowed_warning"
       }
     },
     "claude-5": {
@@ -36915,6 +36915,11 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-12T04:46:30Z,claude-4,ping,before,43156779926,93,2026-11-12T05:20:00Z,,,allowed_warning,50,,"
+    ]
   },
   "version": 1
 }
