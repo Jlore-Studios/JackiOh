@@ -13775,7 +13775,7 @@
       "question": "",
       "queued_at": "2026-11-10T03:21:46Z",
       "requested_by": "MaxGoetzmann",
-      "round_tier": "medium",
+      "round_tier": "",
       "run_id": "43147624649",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-12T03:21:07Z",
