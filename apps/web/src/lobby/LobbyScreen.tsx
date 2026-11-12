@@ -297,7 +297,7 @@ function Lobby({ token, view, removed, reload }: { token: string; view: LobbyVie
             type="button"
             className="button-secondary"
             data-testid={lobbyTestid.leave}
-            disabled={busy}
+            disabled={busy || started}
             onClick={() => {
               run(async () => {
                 await leaveLobby(view.code);

@@ -180,6 +180,16 @@ describe("the lobby screen", () => {
     expect(window.history.length).toBe(entries);
   });
 
+  it("R3730004 neither member can Leave a started lobby while it counts down", async () => {
+    for (const you of ["host", "guest"] as const) {
+      serve([lobby({ you, startedAt: Date.now(), matchId: "m-1", seats: [seat({ state: "ready" }), seat({ role: "guest", player: BO, state: "ready" })] })]);
+      show();
+      await screen.findByTestId(lobbyTestid.countdown, undefined, SLOW);
+      expect(screen.getByTestId(lobbyTestid.leave)).toBeDisabled();
+      cleanup();
+    }
+  });
+
   it("R3730000 the lobby reads itself again while the social socket is down", async () => {
     const server = serve([lobby({ seats: [seat(), seat({ role: "guest", player: null })] }), lobby()]);
     show();

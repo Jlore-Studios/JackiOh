@@ -499,13 +499,11 @@ pub async fn enter(app: &Arc<App>, req: Req) -> ApiResult {
 }
 
 /// `POST /api/lobbies/:code/leave` (R3730004): a guest frees the seat; the host leaving closes the
-/// lobby (R110, R1075000), `204`.
+/// lobby (R110, R1075000), `204`. A started lobby is left to its TTL: it is what takes each member
+/// to the board, so a Leave during the countdown would strand the other (`409 started`).
 pub async fn leave(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
-    let lobby = load_member(app, &req, &profile.id).await?;
-    if lobby.started_at.is_some() && lobby.match_id.is_none() && lobby.series_id.is_none() {
-        return Err(conflict("started", "The game is starting."));
-    }
+    let lobby = load_open(app, &req, &profile.id).await?;
     if lobby.host == profile.id {
         let deleted = one_tx!(app.db, |t| t.lobbies_delete(&lobby.code).await?)?;
         if deleted {

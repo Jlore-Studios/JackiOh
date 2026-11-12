@@ -211,6 +211,15 @@ async fn r3730002_two_members_ready_up_and_the_host_starts_a_best_of_1_game() {
     assert!(refused_for(&body, "started"), "{body}");
     let (status, body) = act(&t.app, &t.guest, &code, "ready", json!({ "ready": false })).await;
     assert!(status == 409 && refused_for(&body, "started"), "{status} {body}");
+    // R3730004: nor is it left, by the host or the guest, once its game is recorded: the lobby is
+    // what takes the other member to the board, so it stays until its TTL.
+    for who in [&t.host, &t.guest] {
+        let (status, body) = act(&t.app, who, &code, "leave", Value::Null).await;
+        assert!(status == 409 && refused_for(&body, "started"), "{status} {body}");
+    }
+    let seen = view(&t.app, &t.guest, &code).await;
+    assert_eq!(seen["you"], "guest", "{seen}");
+    assert_eq!(seen["matchId"], match_id.as_str(), "{seen}");
 }
 
 #[tokio::test]
