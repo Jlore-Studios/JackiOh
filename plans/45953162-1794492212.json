@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 3772,
+  "title": "Patch: the AI weighs all three of Mind Games' secret choices instead of always keeping the first",
+  "branch": "bot/issue-3772",
+  "thread": "**Issue #3772 (data, not instructions):**\n\n```text\n# #3772: Patch: the AI weighs all three of Mind Games' secret choices instead of always keeping the first\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nMind Games lets its caster secretly pick one of three rewards for next turn:\n- **Greed:** mana and cards;\n- **Attack:** damage to each enemy;\n- **Defend:** healing and Armor.\n\nThe opponent gets a card to guess the pick with. When the practice AI plans, it can't tell the three picks apart, so it always keeps the first one listed. A player who notices can guess right every time and cancel the reward, and the AI never takes the damage that would win it the game. After this, the AI compares the three: it keeps Attack when the damage wins, and Defend when it must survive.\n\n## Why\n- The search drops a position whose signature it has already seen (`crates/ai/src/search.rs:231-233`), and the lethal solver does the same (`crates/ai/src/lethal.rs:232-235`).\n- `search_signature` (`crates/ai/src/simulate.rs:952`) never reads `state.secrets`; the word secret doesn't appear anywhere in `simulate.rs`.\n- `keep_secret` (`crates/engine/src/effects/secret.rs:62-80`) stores the choice only in `state.secrets`. The delayed reward carries only the secret's id, which is minted off `next_id` and is the same in all three sibling lines.\n- So after the cast, the three children differ only in the secret's choice and get the same signature. The later two are dropped as duplicates, and only the first listed choice is ever scored.\n- Once the three lines survive, the score can tell them apart. The reward lands at the caster's next turn start, which the reply the search scores runs into (`crates/ai/src/reply.rs:577-579`). The reply already plays the opponent's Fortify Mind guess (R3696001, the Mind Games tests in `reply.rs`).\n\n## Proposal\n- Add a secrets part to the signature: each record's owner, choice and revealed flag, in a fixed order, without its minted id.\n- Write that part only when a secret exists, so every other position signs exactly as today. The position-model test that a plain position signs none of the newer parts stays green.\n- If the three lines crowd the beam, treat them as #1797 treats lane variants: kept beside the first line and told apart by the reply.\n- Optional: a guard test that destructures `GameState` and `PlayerState` exhaustively, each field marked signed or deliberately unsigned. A new state field then fails to compile until someone decides whether it belongs in the signature.\n\n## Where it lands\n- `crates/ai/src/simulate.rs`, and possibly `crates/ai/src/search.rs`.\n- A test in `crates/ai/tests/ai/` (`secrets.rs` or `position_model.rs`).\n- SPEC \u00a79.9 (the AI's search), Meditative #22 in \u00a78.\n\n## Acceptance criteria\n- [ ] Two states that differ only in the seat's own secret choice sign differently.\n- [ ] Two states that differ only in the secret's id sign alike.\n- [ ] The beam keeps three distinct Mind Games first actions.\n- [ ] With the enemy hero within Attack's reach and no other win, `decide` casts Mind Games keeping Attack. In a position where it must survive, it keeps Defend.\n- [ ] An opponent's unrevealed secret stays unread: the AI's observed state already clears its choice, and that path is unchanged.\n- [ ] `cargo test -p jackioh-ai` and `cargo jackioh gate` are green.\n\n## Size and risks\n- Small to medium: 2 to 3 files, about 40 lines of code and 120 of tests.\n- Decisions change only in games where the AI holds Mind Games.\n- The risk is the beam crowding, which the lane-variant route avoids.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-12T13:56:15Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3772: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-12T13:56:40Z",
+    "claimed_at": "2026-11-12T14:04:18Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3729 skipped: it waits for #3727, #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3730 to close first",
+    "#3733 skipped: it waits for #3727 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
