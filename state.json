@@ -13773,15 +13773,8 @@
       "verdict_rounds": 0
     },
     "3610": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43161766834",
-        "model": "sonnet",
-        "provider": "claude-3",
-        "since": "2026-11-12T05:48:18Z",
-        "until": "2026-11-12T06:18:18Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -13793,10 +13786,9 @@
         "reason": "planned on sonnet",
         "trail": "\\|cite\\\" | head -30; ls crates/tools/src | head -50\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610; grep -n \\\"proven_in\\\\|not listed\\\\|unlisted\\\" crates/tools/src/spec.rs | head -40\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610; grep -ln \\\"fx/FxLayer.test.tsx\\\" spec/rulings/*.md | head; sed -n 100,200p apps/web/src/fx/FxLayer.test.tsx; grep -n \\\"^describe\\\\|^ it(\\\" apps\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610; sed -n 200,236p apps/web/src/fx/FxLayer.test.tsx; sed -n 512,553p apps/web/src/fx/FxLayer.test.tsx; sed -n 1,60p apps/web/src/fx/FxLayer.test.t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610; grep -rln \\\"pointermove\\\\|pointerMove\\\" apps/web/src --include=*.test.ts --include=*.test.tsx | head -40; grep -rn \\\"pointermove\\\" e2e/cypress \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610/apps/web/src; for f in cards/diorama.test.tsx cards/versionLooks5.test.tsx cards/fullscreen.test.tsx cards/inspect/inspect.test.tsx cards/inspec\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610/apps/web/src; grep -rn \\\"cf-host\\\" --include=*.css . | head -20; grep -rn \\\"className=.*cf-host\\\\|\\\\\\\"cf-host\\\\\\\"\\\" --include=*.tsx . | grep -v \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610/apps/web/src; grep -rn \\\"\\\\.card:hover\\\\|\\\\.card\\\\[data-.*\\\\]:hover\\\\|\\\\.hand .card\\\" --include=*.css game | head -15; sed -n 39,60p cards/cards\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610/apps/web/src; grep -rn \\\"defaultFrames\\\" . | head; grep -rn \\\"from \\\\\\\"\\\\.\\\\./cards\\\" fx/*.ts fx/*.tsx | grep -v test | head -5; grep -rn \\\"from\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610/apps/web/src; grep -rn \\\":hover\\\" --include=*.css game/*.css cards/cards.css | grep -i \\\"card\\\\|hand\\\" | head -12; grep -rn \\\"ResizeObserver\\\" -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610/apps/web/src; sed -n 2885,2915p game/board.css\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610; f=$(ls node_modules/.pnpm | grep -E \\\"^vitest@\\\" | head -1); echo $f; grep -rn \\\"global.window = global\\\\|\\\\.window = global\\\\|bindFunctions\\\" \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610; ls node_modules 2>&1 | head -5; ls apps/web/node_modules 2>&1 | head -5; ls -d ../*/node_modules 2>/dev/null | head; grep -rn \\\"window.requestA\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610/apps/web/src; grep -rln \\\"requestAnimationFrame\\\" --include=*.test.tsx --include=*.test.ts . | head -20; grep -rn \\\"requestAnimationFrame\\\" econ\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610/apps/web/src; grep -rn \\\"requestAnimationFrame\\\\|queueMicrotask\\\\|setTimeout\\\" cards/fit.ts cards/CardFace.tsx cards/MinionFace.tsx cards/depth.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610/apps/web/src; sed -n 150,195p cards/fullscreen.test.tsx; sed -n 255,305p cards/diorama.test.tsx; grep -n \\\"function pointer\\\\|const pointer\\\\|im\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610/apps/web/src; grep -rln \\\"cf-tilt\\\\|art-aim\\\\|data-tilt\\\\|cf-glare\\\\|TILT_X_PROPERTY\\\\|ART_AIM\\\" --include=*.test.ts --include=*.test.tsx . ; ec\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610/apps/web/src; grep -n \\\"cf-tilt\\\\|art-aim\\\\|data-tilt\\\\|cf-glare\\\\|pointermove\\\\|pointerMove\\\" cards/cosmetics.test.tsx cards/depth.test.tsx | h\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610/e2e/cypress/component; grep -n \\\"pointermove\\\" -A4 art-answers.cy.tsx | head -40; grep -n \\\"pointermove\\\" -A4 card-depth.cy.tsx | head -30\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610; grep -n \\\"hostMove\\\\|pointermove\\\\|setShedPointer\\\\|shed pointer\\\\|pointer the shed\\\" apps/web/README.md docs/*.md spec/*.md 2>/dev/null | head\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610; sed -n 1,40p docs/issues-and-patches.md | head -60; grep -n \\\"web\\\\b.*patch\\\\|fragment\\\\|apps/web\\\" docs/issues-and-patches.md | head -20\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610; sed -n 150,182p docs/issues-and-patches.md; sed -n 1,25p spec/rulings/R2529000.md | cut -c1-900\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610; git show --stat --format=%s 2cc523ea72 | grep -i \\\"patch\\\\|spec/\\\" ; git log --oneline -6 --diff-filter=A -- 'crates/cards/patches/pending/*' |\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610; git show --stat --format=%s 2cc523ea72 -- crates/cards/patches | cat; git show 2cc523ea72 -- crates/cards/patches | head -60; git show --stat -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610; sed -n 1,40p apps/web/src/wording.test.ts | cut -c1-300; grep -n \\\"patches \\\\\\\"<title>\\\\\\\"\\\\|--visual\\\\|--sources\\\\|--notes\\\" crates/tools/READ\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610/apps/web/src/test; sed -n 1,30p shardWeights.ts | cut -c1-240; grep -n \\\"hostMove\\\\|handShimmer\\\\|artLive\\\" shardWeights.ts | head; grep -n \\\"sh\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610/apps/web/src; grep -n \\\"afterEach\\\\|beforeEach\\\\|resetShed\\\" fx/FxLayer.test.tsx | head; sed -n 136,152p cards/diorama.test.tsx; sed -n 48,64p c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3610; grep -n \\\"\\\\\\\"vitest\\\\\\\"\\\\|\\\\\\\"jsdom\\\\\\\"\\\\|\\\\\\\"@testing-library/react\\\\\\\"\\\\|\\\\\\\"react\\\\\\\"\\\" package.json apps/web/package.json; grep -rn \\\"adva\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3610/.bot-plan.md\", \"content\": \"# Draft plan #3610 (planner notes)\\n\\nRead: cards/artLive.ts, cards/tilt.ts, cards/hostMove.ts (#3674: one pointermove\u2026\n- said: ## Goal Each of the three pointer followers handles the newest `pointermove` in one animation frame, not once per event: - **`artLive.ts` (art aim):** reads its box and writes `--art-aim-x` and `--art-aim-y` once a frame. - **`tilt.ts` (host, window and drag modes):** the same, for its pose. - **`F\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-12T05:29:53Z",
       "owner_why": "it plans it",
@@ -13809,9 +13801,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-10T03:22:00Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43161766834",
+      "run_id": "pending:3175b6e6-1794462545",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-12T05:29:53Z",
+      "started_at": "2026-11-12T05:49:43Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17343,9 +17335,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T05:39:44Z",
+    "at": "2026-11-12T05:49:43Z",
     "url": "",
-    "what": "build #3573 on claude-7"
+    "what": "build #3610 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-12T05:36:58Z",
