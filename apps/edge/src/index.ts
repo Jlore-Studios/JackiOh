@@ -115,6 +115,12 @@ export class Server extends Container<Env> {
         { signal: AbortSignal.timeout(IMAGE_CHECK_TIMEOUT_MS) },
         SERVER_PORT,
       );
+      // `containerFetch` turns a failed or aborted fetch into a 500 (or 503, 429) answer rather than rejecting, and
+      // such an answer names no commit: it is a failed check, not a server on an older image.
+      if (!health.ok) {
+        console.warn("server.image_check_failed", health.status);
+        return false;
+      }
       running = health.headers.get("x-deployed-commit");
     } catch (error) {
       // A server that cannot answer is left to the request that follows, which reports it; a later one asks again.
