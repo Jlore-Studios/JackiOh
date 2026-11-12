@@ -16244,22 +16244,13 @@
     "what": "review #3798 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-12T18:06:07Z",
+    "at": "2026-11-12T18:21:57Z",
     "notes": [
-      "delivered suggest on claude-8 (run 43271853261): suggested",
-      "delivered build #3777 on claude-6 (run 43260222744): built",
-      "started review #3797 on claude-6 (run 43277183962)",
-      "started plan #3772 on claude-6 (run 43277397409)",
+      "delivered build #3778 on claude-7 (run 43249482199): built",
+      "started review #3798 on claude-7 (run 43279828282)",
       "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days",
-      "#3796: typed it Feature",
-      "#3795: typed it Task",
-      "#3794: typed it Task",
-      "#3793: typed it Task",
-      "#3792: typed it Task",
-      "#3791: typed it Feature",
-      "#3790: typed it Task",
-      "runner gate: started 0 of 2 waiting run(s); 2 wait for room"
+      "pruned 4 plan file(s) older than 7 days",
+      "runner gate: started 0 of 4 waiting run(s); 4 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16965,7 +16956,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-12T18:06:07Z",
+  "loop_tick": "2026-11-12T18:21:57Z",
   "machine_disk": {
     "issue": null,
     "reading": {
