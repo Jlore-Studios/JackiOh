@@ -1508,12 +1508,14 @@ mod scripted {
             !acting_round_seat(table.host.game(), A1),
             "PREMISE: outside a1's round"
         );
-        assert_eq!(
-            table.timer(TimerKey::DuosPrompt { seat: A1 }),
-            Some(table.now + DUOS_PROMPT_CLOCK_MS)
-        );
+        let lapses = table.now + DUOS_PROMPT_CLOCK_MS;
+        assert_eq!(table.timer(TimerKey::DuosPrompt { seat: A1 }), Some(lapses));
+        // A later sync of the clocks keeps the one already armed for the same prompt.
+        table.sleep(SECOND);
+        table.feed(DuosHostEvent::Arm);
+        assert_eq!(table.timer(TimerKey::DuosPrompt { seat: A1 }), Some(lapses));
         let rows = table.log.len();
-        table.sleep(DUOS_PROMPT_CLOCK_MS - 1);
+        table.sleep(lapses - table.now - 1);
         table.answer_searches();
         assert!(table.log[rows..].iter().all(|(_, action)| action.seat != A1));
         table.sleep(1);
@@ -1545,6 +1547,8 @@ mod scripted {
             held_prompt(table.host.game(), A1).is_some(),
             "PREMISE: a1 holds its own prompt"
         );
+        // Inside a1's own round the round clock covers the prompt: no prompt clock of its own.
+        assert_eq!(table.timer(TimerKey::DuosPrompt { seat: A1 }), None);
         let due = table.timer(TimerKey::DuosRound).expect("the round clock runs");
         let rows = table.log.len();
         table.sleep(due - table.now);
