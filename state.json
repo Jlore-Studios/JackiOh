@@ -16077,9 +16077,7 @@
     },
     "3793": {
       "action": "plan",
-      "asks": [
-        "c:6835851981"
-      ],
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-12T21:47:38Z",
         "difficulty": "hard",
@@ -16098,28 +16096,29 @@
         "reason": "planned on sonnet",
         "trail": "}\\\\|.\\\\{200\\\\}Gauntlet.\\\\{300\\\\}\\\" | head -8; grep -n \\\"face damage\\\\|could \u2026\n- Bash: {\"command\": \"sed -n 95,125p crates/ai/README.md\", \"description\": \"Read AI README on evaluation flags\"}\n- Bash: {\"command\": \"grep -n -o \\\"R1849005\\\\|R1174000\\\\|R2021000\\\\|R3287[0-9]*\\\" spec/09-architecture.md | head; sed -n 161p spec/09-architecture.md | wc -c; sed -n 161p spec/09-architecture.md | grep -o \\\".\u2026\n- Bash: {\"command\": \"grep -n \\\"R2976000\\\\|R1759000\\\\|R2021000\\\\|wall_switches\\\\|stands_down\\\" crates/ai/README.md spec/09-architecture.md | cut -c1-300\", \"description\": \"Find where wall switches are document\u2026\n- Bash: {\"command\": \"sed -n 1,30p crates/ai/tests/ai/mod.rs; grep -n \\\"gauntlet\\\\|freeze\\\\|brittle\\\" crates/ai/tests/ai/mod.rs; sed -n 161p spec/09-architecture.md | cut -c1-1800; cat crates/ai/tests/ai/supp\u2026\n- Bash: {\"command\": \"sed -n 1100,1140p crates/engine/src/testkit/scenario.rs; grep -n \\\"\\\\\\\"turn\\\\\\\"\\\\|\\\\\\\"active\\\\\\\"\\\\|brittle\\\\|\\\\\\\"extraTurns\\\\\\\"\\\\|extra_turns\\\\|statsOverride\\\" crates/engine/src/testkit/\u2026\n- Bash: {\"command\": \"sed -n 1,60p crates/engine/src/testkit/README.md 2>/dev/null | head -5; grep -rn \\\"brittle\\\" crates/engine/src/testkit/*.rs | head -20; sed -n 140,200p crates/ai/tests/ai/evaluate_v020.r\u2026\n- Bash: {\"command\": \"grep -n \\\"brittle\\\\|pub use query\\\\|pub mod query\\\\|pub mod brittle\\\\|frozen_next_turn\\\\|pub use freeze\\\" crates/engine/src/lib.rs | head; sed -n 155,185p crates/engine/src/query.rs; sed\u2026\n- Bash: {\"command\": \"sed -n 1,80p crates/engine/tests/rules/brittle.rs; grep -n \\\"^fn \\\\|^ fn \\\" crates/engine/tests/rules/brittle.rs | head -50; grep -n \\\"brittle\\\" crates/engine/tests/rules/main.rs crates/\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3793/crates/engine/tests/rules/brittle.rs\", \"offset\": 78, \"limit\": 30}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3793/crates/engine/tests/rules/brittle.rs\", \"offset\": 166, \"limit\": 40}\n- Bash: {\"command\": \"sed -n 1,40p crates/ai/tests/ai/learned.rs; grep -n \\\"BRITTLE_TICK\\\" crates/engine/src/config.rs; grep -n \\\"pub use\\\\|pub mod\\\" crates/ai/src/lib.rs | head -60\", \"description\": \"Learned \u2026\n- Bash: {\"command\": \"sed -n 760,800p crates/ai/src/config.rs; sed -n 530,545p crates/ai/src/config.rs; grep -n \\\"pub struct EvalWeights\\\" crates/ai/src/config.rs\", \"description\": \"GREEDY_EVAL and AI_EVAL nea\u2026\n- Bash: {\"command\": \"grep -rn \\\"deft_defense_attacks\\\\|deftDefenseAttacks\\\" --include=*.rs --include=*.ts --include=*.json --include=*.md --include=*.py . 2>/dev/null | grep -v \\\"^./target\\\\|node_modules\\\" |\u2026\n- Bash: {\"command\": \"cat spec/rulings/R2021000.md; ls spec/rulings | grep -E \\\"R3793\\\"; cat spec/pending/3728.md | head -5 | cut -c1-600; grep -n \\\"stand-down\\\\|stands_down\\\" crates/ai/README.md | head -3; s\u2026\n- Bash: {\"command\": \"sed -n 1,40p crates/ai/src/candidates.rs; sed -n 100,135p crates/ai/src/search.rs; grep -n \\\"candidate_actions\\\\|search::\\\" crates/ai/src/baselines.rs | head\", \"description\": \"candidates\u2026\n- Bash: {\"command\": \"sed -n 1,35p crates/ai/tests/ai/observe_instance_data.rs; grep -n \\\"pub use\\\" crates/engine/src/testkit/mod.rs | head -20; sed -n 1,30p crates/ai/tests/ai/support.rs; grep -n \\\"DEFAULT_T\u2026\n- Bash: {\"command\": \"grep -rn \\\"ndestructible\\\" crates/ai/tests/ai/*.rs | head -10; grep -n \\\"\\\\\\\"grants\\\\\\\"\\\\|\\\\\\\"keywords\\\\\\\"\\\\|granted\\\" crates/engine/src/testkit/scenario.rs | head -10; grep -n \\\"indestr\u2026\n- Bash: {\"command\": \"sed -n 155,200p crates/ai/tests/ai/support.rs; grep -rn \\\"ActionBody::EndTurn\\\" crates/ai/tests/ai/*.rs | head -5; grep -n \\\"fn kills_and_survives\\\" -B6 -A30 crates/ai/src/candidates.rs \u2026\n- Bash: {\"command\": \"grep -c \\\"and the enemy's face-down cards. A Dormant card on the board\\\" spec/09-architecture.md; grep -n \\\"R3787\\\\|R3785\\\\|issue #37[0-9][0-9]\\\" spec/pending/*.md | cut -c1-120 | head -\u2026\n- Bash: {\"command\": \"git show --stat --format=%s 2d349c1740 | head -30\", \"description\": \"Files changed by the previous AI flag change\"}\n- Bash: {\"command\": \"c=$(git log --format=%h -n1 --diff-filter=A -- spec/rulings/R2976000.md); git show --stat --format=%s $c | head -30; git log --format=%h -n1 --diff-filter=A -- spec/pending/3728.md >/dev\u2026\n- Bash: {\"command\": \"grep -rIl \\\"gauntletBarsFaceAttacks\\\\|gauntlet_bars_face_attacks\\\" . --exclude-dir=target --exclude-dir=node_modules --exclude-dir=.git 2>/dev/null | head; grep -n \\\"AI_EVAL\\\\b\\\" crates/\u2026\n- Bash: {\"command\": \"sed -n 322,332p crates/ai/src/config.rs; grep -rn \\\"EvalWeights\\\" crates --include=*.rs -l | head; grep -rn \\\"AI_EVAL\\\" crates/tools/src crates/wasm 2>/dev/null | head -5\", \"description\"\u2026\n- Bash: {\"command\": \"grep -rn \\\"EvalWeights\\\" crates/tools training analysis 2>/dev/null | head; grep -rIn \\\"gauntletBars\\\\|deftDefenseAttacks\\\\|defenseOwnTauntKept\\\" . --exclude-dir=target --exclude-dir=nod\u2026\n- Bash: {\"command\": \"ls spec/rulings | grep -E \\\"^R0846|^R0847|^R1174000|^R2976000|^R2021000|^R0046|^R0385|^R0638|^R2179000\\\"; grep -n \\\"R846\\\" spec/pending/*.md | head -2; cd /home/runner/work/_temp/work/it\u2026\n- Bash: {\"command\": \"sed -n 120,156p crates/ai/tests/ai/support.rs; grep -n \\\"extra_turns\\\" crates/ai/src/*.rs | head -3\", \"description\": \"Read unit and in_graveyard test helpers\"}\n- Bash: {\"command\": \"grep -rn \\\"start_brittle_on_field\\\" crates/engine/src --include=*.rs | grep -v \\\"^crates/engine/src/brittle\\\" | head; grep -n \\\"fn place_side\\\" -A5 crates/engine/src/testkit/scenario.rs \u2026\n- Bash: {\"command\": \"sed -n 40,110p crates/ai/tests/ai/duos.rs\", \"description\": \"Check how duos tests use Corpse Eater\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3793/.bot-plan.md\", \"content\": \"# Draft plan, issue #3793 (planner notes)\\n\\nRating: hard (rule 2, the AI's decisions).\\n\\n## Findings (read, not gues\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule 2: it changes the AI's decisions (`face_threat_with`, `could_attack_next_turn`, `wall_switches`, `stands_down`) and adds one small read to `crates/engine/src/query.rs`.\"} --> ## Goal An enemy or own unit whose Brittle tick destroys it at the start of it\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
       "live": "planning",
-      "owner": "claude-7",
-      "owner_since": "2026-11-12T21:16:03Z",
-      "owner_why": "it plans it",
+      "owner": "claude-3",
+      "owner_since": "2026-11-12T21:52:23Z",
+      "owner_why": "handed off from `claude-7`: `claude-7` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-12T21:47:44Z",
       "planned_by": "`claude-7` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-7",
       "planned_model": "sonnet",
       "planned_tier": "medium",
-      "provider": "claude-7",
+      "provider": "claude-3",
       "queued_at": "2026-11-12T21:07:39Z",
       "requested_by": "jgoetzmann",
-      "run_id": "43308562100",
+      "run_id": "pending:24deccd3-1794520286",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-12T21:16:03Z",
+      "started_at": "2026-11-12T21:52:23Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6835851981"
+      ]
     },
     "3796": {
       "asks": [
@@ -16635,9 +16634,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T21:51:09Z",
+    "at": "2026-11-12T21:52:23Z",
     "url": "",
-    "what": "build #3792 on claude-8"
+    "what": "plan #3793 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-12T21:24:54Z",
