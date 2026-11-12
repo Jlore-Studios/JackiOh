@@ -1261,6 +1261,35 @@ mod bots {
         assert!(!table.host.presence(table.now).p2);
     }
 
+    /// R3213000: a bot's reply landing inside its linger is no change in who is here, nor is one landing past it
+    /// after the host stopped.
+    #[test]
+    fn r3213000_a_reply_inside_the_linger_or_after_the_stop_changes_no_presence() {
+        let seed = seed_where(|plan| plan.accepts && plan.reply_ms < plan.linger_ms);
+        let plan = rematch_plan(&seed, P2, &BOT_REMATCH_FIT);
+        let mut table = conceded_to_the_bot(&seed);
+        table.feed(DuelEvent::RematchOffered {
+            from: P1,
+            stakes: STAKE_NORMAL,
+        });
+        table.sleep(plan.reply_ms);
+        assert_eq!(table.offers.last(), Some(&(P2, STAKE_NORMAL, true)));
+        table.feed(DuelEvent::RematchSent { home: P2 });
+        assert_eq!(table.presence_changes, 0);
+
+        let seed = seed_where(|plan| plan.accepts);
+        let plan = rematch_plan(&seed, P2, &BOT_REMATCH_FIT);
+        let mut table = conceded_to_the_bot(&seed);
+        table.feed(DuelEvent::RematchOffered {
+            from: P1,
+            stakes: STAKE_NORMAL,
+        });
+        table.sleep(plan.linger_ms.max(plan.reply_ms));
+        table.feed(DuelEvent::Stop);
+        table.feed(DuelEvent::RematchSent { home: P2 });
+        assert_eq!(table.presence_changes, 0);
+    }
+
     #[test]
     fn r3103000_r639000_a_bot_that_does_not_pass_for_a_person_stays_for_no_rematch() {
         let seed = seed_where(|plan| plan.offers && plan.accepts);
@@ -1583,5 +1612,124 @@ mod the_forecast {
             forecast.as_ref(),
             Some(&jackioh_engine::combat_forecast(table.host.game(), active))
         );
+    }
+}
+
+/// The host's reads and its guards once it is stopped (#3513, the shared crate's fifteenth shard).
+mod reads_and_stops {
+    use super::*;
+
+    /// Both seats here, the game begun.
+    fn playing(seed: &str) -> Table {
+        let mut table = Table::new(setup(opening(seed)));
+        table.connect(P1);
+        table.connect(P2);
+        table.feed(DuelEvent::Arm);
+        table
+    }
+
+    /// The host's reads for its own sends and its checkpoint: the match's id, the newest nonce in the log, and
+    /// whether the match is finished, voided or stopped.
+    #[test]
+    fn the_hosts_reads_name_its_match_its_newest_nonce_and_its_state() {
+        let mut table = playing("reads-1");
+        assert_eq!(table.host.match_id(), "match-1");
+        assert_eq!(table.host.last_nonce(), None);
+        assert!(!table.host.is_finished() && !table.host.is_voided() && !table.host.is_stopped());
+        table.through_the_mulligans();
+        assert_eq!(table.host.last_nonce(), Some("m-1"));
+    }
+
+    /// R738, §9.5: once the host has stopped, a seat leaving takes no arrow back from the other seat, and a dropped
+    /// socket tells the other seat of no grace.
+    #[test]
+    fn s9_5_a_seat_leaving_or_dropping_after_the_stop_tells_the_other_seat_nothing() {
+        let mut table = playing("stopped-1");
+        table.through_the_mulligans();
+        let me = table.active();
+        table.feed(DuelEvent::Aim {
+            home: me,
+            aim: Some(Aim {
+                source: AimEnd::Hero { player: me },
+                target: Some(AimEnd::Hero {
+                    player: me.opponent(),
+                }),
+            }),
+        });
+        table.feed(DuelEvent::Stop);
+        let told = (table.sent.p1.len(), table.sent.p2.len());
+        table.feed(DuelEvent::Left { home: me });
+        table.feed(DuelEvent::Left { home: me.opponent() });
+        table.feed(DuelEvent::Disconnected { home: me.opponent() });
+        assert_eq!((table.sent.p1.len(), table.sent.p2.len()), told);
+    }
+
+    /// R744: until the first attach the stored grace is what the host writes back, never a clock without it.
+    #[test]
+    fn r744_the_stored_grace_is_written_back_until_the_first_attach() {
+        let mut stored = initial_clocks(EPOCH);
+        stored.grace_deadline.p2 = Some(EPOCH + 10 * SECOND);
+        let mut rebuilt = setup(opening("here-6"));
+        rebuilt.clocks = stored;
+        let mut table = Table::new(rebuilt);
+        table.feed(DuelEvent::Arm);
+        assert!(
+            table
+                .persisted
+                .iter()
+                .all(|clocks| clocks.grace_deadline.p2 == Some(EPOCH + 10 * SECOND)),
+            "{:?}",
+            table.persisted
+        );
+    }
+
+    /// R645: a seat's legal emote is played, logged under a server nonce.
+    #[test]
+    fn r645_a_seats_legal_emote_is_logged() {
+        let mut table = playing("emote-1");
+        table.through_the_mulligans();
+        let me = table.active();
+        let emote = table
+            .host
+            .legal(me)
+            .into_iter()
+            .find_map(|body| match body {
+                ActionBody::Emote { emote } => Some(emote),
+                _ => None,
+            })
+            .expect("an emote is legal");
+        table.feed(DuelEvent::Emote { home: me, emote });
+        assert!(
+            table
+                .log
+                .iter()
+                .any(|(_, action)| action.body == ActionBody::Emote { emote })
+        );
+    }
+
+    /// R265, R266: once the mulligan window closes, neither seat is told the other still owes one.
+    #[test]
+    fn r265_the_window_closing_tells_no_seat_the_other_owes() {
+        let mut table = playing("window-1");
+        let keep = table.keep_hand(P1);
+        table.act(P1, "m-0", keep);
+        let told = (table.sent.p1.len(), table.sent.p2.len());
+        let keep = table.keep_hand(P2);
+        table.act(P2, "m-1", keep);
+        let owes = |sent: &[SeatMessage]| {
+            sent.iter()
+                .any(|message| matches!(message, SeatMessage::PromptForOpponent { .. }))
+        };
+        assert!(!(owes(&table.sent.p1[told.0..]) && owes(&table.sent.p2[told.1..])));
+    }
+
+    /// R79, R268: a host made for a match already finished logs nothing when its clocks run out.
+    #[test]
+    fn r79_a_finished_matchs_clocks_running_out_log_nothing() {
+        let mut finished = setup(opening("finished-1"));
+        finished.finished = true;
+        let mut table = Table::new(finished);
+        table.sleep(MATCH_CEILING_MINUTES * MINUTE);
+        assert!(table.log.is_empty(), "{:?}", table.nonces());
     }
 }

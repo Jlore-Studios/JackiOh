@@ -303,8 +303,9 @@ impl MatchClock {
     fn arm_sequence_in(&mut self, player: PlayerId, ms: i64, now: i64, fx: &mut Fx) {
         self.sequence.cancel(TimerKey::Sequence, fx);
         self.sequence_player = Some(player);
-        self.sequence.deadline = Some(now + ms);
-        self.sequence.timer = Some(fx.set(TimerKey::Sequence, now + ms));
+        let at = now + ms;
+        self.sequence.deadline = Some(at);
+        self.sequence.timer = Some(fx.set(TimerKey::Sequence, at));
     }
 
     /// R1563006: a sequence's first question (streak 0, a prompt id this clock has not started on) arms
