@@ -114,6 +114,8 @@
   "Terminus Tricks": "终点诡计",
   "Discover a Trap to summon.": "发现一张陷阱牌并召唤它。",
   "Discover a Radiant Trap to summon.": "发现一张光辉陷阱牌并召唤它。",
+  "End Times": "末日时刻",
+  "Discover a Terminus card. End of turn: Reduce the cost of the next use of this by ({endTimesCut}).": "发现一张终点牌。回合结束时：下一次使用此能力的法力值消耗减少({endTimesCut})点。",
   "none": "无",
   "a card": "一张牌",
   "Spells": "法术",

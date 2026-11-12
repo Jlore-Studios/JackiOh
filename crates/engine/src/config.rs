@@ -302,6 +302,7 @@ pub const RANDOM_ATTACK_TARGET: &str = "random";
 /// took Armor 1 and Spell Damage +1 out again, and issue #1615 (R1615000) Charge and Indestructible,
 /// as too swingy a random grant, leaving fourteen entries in the same relative order.
 /// Temporary (R637) stays out, since a card on the field is never in a hand to be discarded.
+/// S01 (R3551004) appends Frenzy, the pool's fifteenth entry.
 /// (Keyword keys, as `keyword_key` writes them.)
 pub const RANDOM_KEYWORD_POOL: &[&str] = &[
     "Taunt",
@@ -318,6 +319,7 @@ pub const RANDOM_KEYWORD_POOL: &[&str] = &[
     "Lifesteal",
     "Pierce",
     "Trample",
+    "Frenzy",
 ];
 
 /// R349: a Unit that prints no Radiant form (the Ghoul Token) is, made Radiant, its base face with
@@ -1135,7 +1137,7 @@ pub const CHAOS_SCAPE_LOT_PRICE: i32 = 20;
 // table's numbers, as printed. The through-v0.5.11r numbers are in each doc (R3135000).
 /// §8.11 row 39 entry 1: "Summon 3 Rush Tokens", base faces.
 pub const CHAOS_TG_RUSH_TOKENS: i32 = 3;
-/// §8.11 row 39 entry 2: "refresh 3 mana" (§6.3 Refresh, R364; 4 through v0.5.11r).
+/// §8.11 row 39 entry 2: "replenish 3 mana" (§6.3 Replenish, R364; 4 through v0.5.11r).
 pub const CHAOS_TG_REFRESH: i32 = 3;
 /// §8.11 row 39 entry 3: "add 4 random Training Grounds cards to your hand" (R2200000).
 pub const CHAOS_TG_CARDS: i32 = 4;
@@ -1308,6 +1310,14 @@ pub const PLUCK_COST: i32 = 0;
 /// R352: Stitching's "Discover two (2) Cost or less Units".
 pub const STITCHING_INGREDIENTS: i32 = 2;
 pub const STITCHING_MAX_COST: i32 = 2;
+/// R3551002: Heroic Power's Stinkyscape+ edition (S01): every one of the thirteen powers costs (1)
+/// less than the kept v0.5.13g script's, and the new fourteenth power, End Times, costs (10), its
+/// End of Turn cut (1) on the base face and (2) on the Radiant face.
+pub const HERO_POWER_DISCOUNT: i32 = 1;
+pub const POWERS_THROUGH_V0_5_13G: usize = 13;
+pub const END_TIMES_COST: i32 = 10;
+pub const END_TIMES_CUT: i32 = 1;
+pub const END_TIMES_RADIANT_CUT: i32 = 2;
 
 /// A playout covers one turn, so this ceiling is far above any reachable turn; it exists only so a
 /// card that keeps refilling the hand cannot spin forever (BUILD M3-T7) (`subsystems::ai_policy`).

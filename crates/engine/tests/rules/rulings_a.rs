@@ -1451,7 +1451,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
     }
 
     #[test]
-    fn r21_r781005_r1025000_r1615000_draws_random_keywords_from_the_fourteen_entry_pool_and_never_repeats_one_on_a_unit()
+    fn r21_r781005_r1025000_r1615000_r3551004_draws_random_keywords_from_the_fifteen_entry_pool_and_never_repeats_one_on_a_unit()
      {
         assert_eq!(
             RANDOM_KEYWORD_POOL.to_vec(),
@@ -1470,6 +1470,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
                 "Lifesteal",
                 "Pierce",
                 "Trample",
+                "Frenzy",
             ]
         );
 

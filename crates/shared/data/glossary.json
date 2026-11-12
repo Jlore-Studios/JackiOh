@@ -331,7 +331,7 @@
     {
       "id": "Combat keyword",
       "label": "Combat keyword",
-      "rule": "One of the keywords Units fight with: Taunt, Rush, First Strike, Flying, Ranged, Poisonous, Reborn, Divine Shield, Windfury, Cleave, Deft, Lifesteal, Pierce, Trample",
+      "rule": "One of the keywords Units fight with: Taunt, Rush, First Strike, Flying, Ranged, Poisonous, Reborn, Divine Shield, Windfury, Cleave, Deft, Lifesteal, Pierce, Trample, Frenzy",
       "section": "§6.1",
       "aliases": [
         "combat keywords",

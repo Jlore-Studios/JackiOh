@@ -1,5 +1,5 @@
 // The words a face in play prints where play and print part ways (SPEC §10.10), worked out by jackioh-shared's
-// face model (`face/power.rs`). `POWER_WORDS` is the crate's data file of §8 #98's thirteen powers, keyed by the
+// face model (`face/power.rs`). `POWER_WORDS` is the crate's data file of §8 #98's fourteen powers, keyed by the
 // view's power name (R243). The engine holds the same clauses, so this test keeps the two tables one.
 
 import { describe, expect, it } from "vitest";
@@ -45,16 +45,16 @@ describe("#98 Heroic Power's rolled power, in words (R752)", () => {
 
   it("prints the keyword line, then the one power's name and its Activate, and nothing of the other twelve", () => {
     const text = powerFace("recruit", false);
-    expect(text).toBe("Indestructible\nExpedition Map\nActivate: Spend (3): Recruit a permanent.");
+    expect(text).toBe("Indestructible\nExpedition Map\nActivate: Spend (2): Recruit a permanent.");
     for (const other of ["Life Tap", "Deal 1 damage", "Rush Token", "Felinor Token", "Discover a Unit"]) {
       expect(text).not.toContain(other);
     }
   });
 
   it("prints the Radiant words and name on a radiant face, filling the card's numbers", () => {
-    expect(powerFace("discover", true)).toMatch(/Witness Value\nActivate: Spend \(2\): Discover a Radiant Unit\.$/u);
-    expect(powerFace("armor", true, { armor: 4 })).toMatch(/Tank Up\nActivate: Spend \(1\): Your hero gains 4 Armor, then this power refreshes\.$/u);
-    expect(powerFace("burn", false, { shot: 6 })).toMatch(/Steady Shot\nActivate: Spend \(1\): Deal 6 damage to the enemy hero\.$/u);
+    expect(powerFace("discover", true)).toMatch(/Witness Value\nActivate: Spend \(1\): Discover a Radiant Unit\.$/u);
+    expect(powerFace("armor", true, { armor: 4 })).toMatch(/Tank Up\nActivate: Spend \(0\): Your hero gains 4 Armor, then this power refreshes\.$/u);
+    expect(powerFace("burn", false, { shot: 6 })).toMatch(/Steady Shot\nActivate: Spend \(0\): Deal 6 damage to the enemy hero\.$/u);
     expect(POWER_WORDS["armor"]?.title).toBe("Armor Up");
   });
 

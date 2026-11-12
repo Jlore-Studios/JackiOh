@@ -1429,11 +1429,11 @@
     "loc": 12,
     "base": {
       "keywords": [],
-      "text": "Exile all cards in your deck that cost (2) or less. Each card left in your deck has a {chance}% chance to become Radiant."
+      "text": "Exile all cards in your deck that cost (2) or less. Each card left in your deck has a {chance}% chance to become Radiant. Evolve all cards in your deck."
     },
     "radiant": {
       "keywords": [],
-      "text": "Exile all cards in your deck that cost (2) or less. Each card left in your deck becomes Radiant."
+      "text": "Exile all cards in your deck that cost (2) or less. Each card left in your deck becomes Radiant. Evolve all cards in your deck."
     }
   },
   "core-043": {
@@ -2889,11 +2889,11 @@
     "loc": 32,
     "base": {
       "keywords": [],
-      "text": "Refresh {refresh} mana. Your cards cost ({discount}) less this turn.\nEnd of turn: Exile your hand."
+      "text": "Replenish {refresh} mana. Your cards cost ({discount}) less this turn.\nEnd of turn: Exile your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Refresh {refresh} mana. Your cards cost ({discount}) less and gain \"Combo: Draw {comboDraw}\" this turn.\nEnd of turn: Exile your hand."
+      "text": "Replenish {refresh} mana. Your cards cost ({discount}) less and gain \"Combo: Draw {comboDraw}\" this turn.\nEnd of turn: Exile your hand."
     }
   },
   "core-079": {
@@ -3739,6 +3739,24 @@
         "step": 1,
         "min": 0,
         "power": "pluck"
+      },
+      {
+        "key": "endTimes",
+        "base": 10,
+        "radiant": 10,
+        "better": "down",
+        "step": 1,
+        "min": 0,
+        "power": "endTimes"
+      },
+      {
+        "key": "endTimesCut",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "power": "endTimes"
       }
     ],
     "dealsDamage": true,
@@ -3749,7 +3767,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nCry: Discover one of 13 powers. Each is an Activate that spends its (X).\n(3) Expedition Map: Recruit a permanent.\n(1) Life Tap: Draw {tapDraw}. Take {tapDamage} damage.\n(1) Steady Shot: Deal {shot} damage to the enemy hero.\n(2) Ranching: Summon a Rush Token.\n(1) Cat Cafe: Summon a Felinor Token.\n(1) Ping: Pierce. Deal {ping} damage.\n(2) Witness Value: Discover a Unit.\n(2) Stitching: Discover two ({stitchCost}) Cost or less Units. Fuse them.\n(1) Armor Up: Your hero gains {armor} Armor until your next turn.\n(2) Die Insect: Deal {insect} damage to a random enemy.\n(2) KY Brainstorm: Add a random KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(2) Pluck: Add a random Fruit to your hand. It costs ({fruitCost}).\n(3) Terminus Tricks: Discover a Trap to summon."
+      "text": "Indestructible\nCry: Discover one of 14 powers. Each is an Activate that spends its (X).\n(2) Expedition Map: Recruit a permanent.\n(0) Life Tap: Draw {tapDraw}. Take {tapDamage} damage.\n(0) Steady Shot: Deal {shot} damage to the enemy hero.\n(1) Ranching: Summon a Rush Token.\n(0) Cat Cafe: Summon a Felinor Token.\n(0) Ping: Pierce. Deal {ping} damage.\n(1) Witness Value: Discover a Unit.\n(1) Stitching: Discover two ({stitchCost}) Cost or less Units. Fuse them.\n(0) Armor Up: Your hero gains {armor} Armor until your next turn.\n(1) Die Insect: Deal {insect} damage to a random enemy.\n(1) KY Brainstorm: Add a random KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(1) Pluck: Add a random Fruit to your hand. It costs ({fruitCost}).\n(2) Terminus Tricks: Discover a Trap to summon.\n({endTimes}) End Times: Discover a Terminus card. End of turn: Reduce the cost of the next use of this by ({endTimesCut})."
     },
     "radiant": {
       "keywords": [
@@ -3757,7 +3775,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nCry: Discover one of 13 powers. Each is an Activate that spends its (X).\n(3) Expedition Map: Recruit a permanent. Make it Radiant.\n(1) Life Tap: Draw {tapDraw} from each player's deck.\n(1) Steady Shot: Deal {shot} damage to the enemy hero. This permanently deals 2 more damage.\n(2) Ranching: Summon a Radiant Rush Token.\n(1) Cat Cafe: Summon a random Felinor.\n(1) Ping: Pierce. Deal {ping} damage. If this kills a Unit, summon a Ghoul Token with its stats.\n(2) Witness Value: Discover a Radiant Unit.\n(2) Stitching: Discover two Radiant ({stitchCost}) Cost or less Units. Fuse them.\n(1) Tank Up: Your hero gains {armor} Armor, then this power refreshes.\n(2) Die Insect: Lucky 1. Deal {insect} damage to a random enemy.\n(2) KY Brainstorm: Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(2) Pluck: Add a random Radiant Fruit to your hand. It costs ({fruitCost}).\n(3) Terminus Tricks: Discover a Radiant Trap to summon."
+      "text": "Indestructible\nCry: Discover one of 14 powers. Each is an Activate that spends its (X).\n(2) Expedition Map: Recruit a permanent. Make it Radiant.\n(0) Life Tap: Draw {tapDraw} from each player's deck.\n(0) Steady Shot: Deal {shot} damage to the enemy hero. This permanently deals 2 more damage.\n(1) Ranching: Summon a Radiant Rush Token.\n(0) Cat Cafe: Summon a random Felinor.\n(0) Ping: Pierce. Deal {ping} damage. If this kills a Unit, summon a Ghoul Token with its stats.\n(1) Witness Value: Discover a Radiant Unit.\n(1) Stitching: Discover two Radiant ({stitchCost}) Cost or less Units. Fuse them.\n(0) Tank Up: Your hero gains {armor} Armor, then this power refreshes.\n(1) Die Insect: Lucky 1. Deal {insect} damage to a random enemy.\n(1) KY Brainstorm: Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(1) Pluck: Add a random Radiant Fruit to your hand. It costs ({fruitCost}).\n(2) Terminus Tricks: Discover a Radiant Trap to summon.\n({endTimes}) End Times: Discover a Terminus card. End of turn: Reduce the cost of the next use of this by ({endTimesCut})."
     }
   },
   "core-099": {
@@ -8924,11 +8942,11 @@
     "loc": 9,
     "base": {
       "keywords": [],
-      "text": "Replace your hand with the perfect hand. Refresh your mana."
+      "text": "Replace your hand with the perfect hand. Replenish your mana."
     },
     "radiant": {
       "keywords": [],
-      "text": "Replace your hand with the perfect Radiant hand. Refresh your mana."
+      "text": "Replace your hand with the perfect Radiant hand. Replenish your mana."
     }
   },
   "classicplus-028": {
@@ -9888,7 +9906,9 @@
     "name": "Jay Fungus",
     "set": "Classic+",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Swarm"
+    ],
     "rarity": "Rare",
     "flavor": "Nature",
     "token": false,
@@ -9899,6 +9919,14 @@
         "base": 2,
         "radiant": 20,
         "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "zeroes",
+        "base": 3,
+        "radiant": 1,
+        "better": "down",
         "step": 1,
         "min": 1
       }
@@ -9912,7 +9940,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Taunt\nEnd of turn: A random card in your hand costs ({discount}) less."
+      "text": "Taunt\nEnd of turn: A random card in your hand costs ({discount}) less.\nEvolves when your hand has at least {zeroes|card|cards} costing (0).\nEvolve: Gain Poisonous."
     },
     "radiant": {
       "attack": 6,
@@ -9922,7 +9950,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Taunt\nEnd of turn: A random card in your hand costs ({discount}) less."
+      "text": "Taunt\nEnd of turn: A random card in your hand costs ({discount}) less.\nEvolves when your hand has at least {zeroes|card|cards} costing (0).\nEvolve: Gain Poisonous."
     }
   },
   "classicplus-050": {
@@ -9992,10 +10020,10 @@
           "kind": "Rush"
         },
         {
-          "kind": "Can't Defend"
+          "kind": "Evasive"
         }
       ],
-      "text": "Ranged, Flying, Rush, Can't Defend\nCan't be attacked."
+      "text": "Ranged, Flying, Rush, Evasive"
     },
     "radiant": {
       "attack": 14,
@@ -10014,10 +10042,10 @@
           "kind": "Divine Shield"
         },
         {
-          "kind": "Can't Defend"
+          "kind": "Evasive"
         }
       ],
-      "text": "Ranged, Flying, Rush, Divine Shield, Can't Defend\nCan't be attacked."
+      "text": "Ranged, Flying, Rush, Divine Shield, Evasive"
     }
   },
   "classicplus-052": {
@@ -10569,12 +10597,22 @@
     ],
     "loc": 5,
     "base": {
-      "keywords": [],
-      "text": "Lose {loss} health."
+      "keywords": [
+        {
+          "kind": "Tipsy",
+          "n": 1
+        }
+      ],
+      "text": "Tipsy 1\nLose {loss} health."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Lose {loss} health."
+      "keywords": [
+        {
+          "kind": "Tipsy",
+          "n": 1
+        }
+      ],
+      "text": "Tipsy 1\nLose {loss} health."
     }
   },
   "classicplus-065-2": {
@@ -11046,9 +11084,12 @@
         },
         {
           "kind": "Trample"
+        },
+        {
+          "kind": "Frenzy"
         }
       ],
-      "text": "Rush, First Strike, Trample\nWhen this attacks a Unit, that Unit transforms into a random Radiant Classic or Classic+ Unit. If it dies, this may attack again."
+      "text": "Rush, First Strike, Trample, Frenzy\nWhen this attacks a Unit, that Unit transforms into a random Radiant Classic or Classic+ Unit."
     },
     "radiant": {
       "attack": 20,
@@ -11062,9 +11103,12 @@
         },
         {
           "kind": "Divine Shield"
+        },
+        {
+          "kind": "Frenzy"
         }
       ],
-      "text": "Rush, Trample, Divine Shield\nWhen this attacks a Unit, that Unit transforms into a random Classic or Classic+ Unit. If it dies, this may attack again."
+      "text": "Rush, Trample, Divine Shield, Frenzy\nWhen this attacks a Unit, that Unit transforms into a random Classic or Classic+ Unit."
     }
   },
   "classicplus-074": {
@@ -14268,16 +14312,22 @@
     "token": false,
     "cost": 1,
     "refs": [
-      "core-t-coin"
+      "core-t-coin",
+      "stinkyscapeplus-t-warhero-token"
     ],
     "loc": 52,
     "base": {
       "keywords": [],
-      "text": "Cry: Add a The Coin to your hand.\nEnd of turn: Shuffle a The Coin into your opponent's deck.\nActivate: Shuffle a The Coin into your deck."
+      "text": "Cry: Print either The Coin or Warhero Tokens.\nEnd of turn: Shuffle the printed card into both decks. Flip a coin for yours: on heads, put it in your hand instead."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Cry: Add a Radiant The Coin to your hand.\nEnd of turn: Shuffle a The Coin into your opponent's deck.\nActivate: Shuffle a Radiant The Coin into your deck."
+      "keywords": [
+        {
+          "kind": "Lucky",
+          "n": 1
+        }
+      ],
+      "text": "Lucky 1\nCry: Print either Radiant The Coin or Radiant Warhero Tokens.\nEnd of turn: Shuffle the printed card into both decks. Flip a coin for yours: on heads, put it in your hand instead."
     }
   },
   "meditative-055": {
@@ -18535,11 +18585,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Refresh {refresh} mana."
+      "text": "Replenish {refresh} mana."
     },
     "radiant": {
       "keywords": [],
-      "text": "Refresh {refresh} mana."
+      "text": "Replenish {refresh} mana."
     }
   },
   "stinkyscape-009": {
@@ -20213,11 +20263,12 @@
   "stinkyscape-044": {
     "id": "stinkyscape-044",
     "index": "44",
-    "name": "Great Paperclip Theory",
+    "name": "Great Paperclip Theory I",
     "set": "Stinkyscape",
     "type": "Spell",
     "tags": [
-      "Quickdraw"
+      "Quickdraw",
+      "Paperclip"
     ],
     "rarity": "Mythic",
     "flavor": "Nerd",
@@ -22307,9 +22358,12 @@
       "keywords": [
         {
           "kind": "Rush"
+        },
+        {
+          "kind": "Frenzy"
         }
       ],
-      "text": "Rush\nAfter this destroys a Unit, it may attack again."
+      "text": "Rush, Frenzy"
     },
     "radiant": {
       "attack": 16,
@@ -22320,9 +22374,12 @@
         },
         {
           "kind": "Pierce"
+        },
+        {
+          "kind": "Frenzy"
         }
       ],
-      "text": "Rush, Pierce\nAfter this destroys a Unit, it may attack again."
+      "text": "Rush, Pierce, Frenzy"
     }
   },
   "stinkyscape-095": {
@@ -24704,11 +24761,11 @@
     "loc": 22,
     "base": {
       "keywords": [],
-      "text": "One random effect: Add a Radiant Faction: ETHICS and a Radiant Faction: Vanguard Coalition to your hand; add A Very Dandy Lad and an Arctic Citadel to your hand, which cost (0); summon 3 random Quest or Wincon Field Spells into your backrow; add a random Acclaimed Stinkyscape Unit to your hand and refresh as much mana as it costs; switch every enemy Unit to Attack Position and Freeze them; fill your board with random Human Stinkyscape Units; Allure every enemy Unit; for the rest of the game, whenever an Acclaimed card dies, its controller casts a random Call to Chaos; summon a Stinkyscape Golem; cast a random Call to Chaos."
+      "text": "One random effect: Add a Radiant Faction: ETHICS and a Radiant Faction: Vanguard Coalition to your hand; add A Very Dandy Lad and an Arctic Citadel to your hand, which cost (0); summon 3 random Quest or Wincon Field Spells into your backrow; add a random Acclaimed Stinkyscape Unit to your hand and replenish as much mana as it costs; switch every enemy Unit to Attack Position and Freeze them; fill your board with random Human Stinkyscape Units; Allure every enemy Unit; for the rest of the game, whenever an Acclaimed card dies, its controller casts a random Call to Chaos; summon a Stinkyscape Golem; cast a random Call to Chaos."
     },
     "radiant": {
       "keywords": [],
-      "text": "Three different random effects, resolved in the order listed: Add a Radiant Faction: ETHICS and a Radiant Faction: Vanguard Coalition to your hand; add A Very Dandy Lad and an Arctic Citadel to your hand, which cost (0); summon 3 random Quest or Wincon Field Spells into your backrow; add a random Acclaimed Stinkyscape Unit to your hand and refresh as much mana as it costs; switch every enemy Unit to Attack Position and Freeze them; fill your board with random Human Stinkyscape Units; Allure every enemy Unit; for the rest of the game, whenever an Acclaimed card dies, its controller casts a random Call to Chaos; summon a Stinkyscape Golem; cast a random Call to Chaos."
+      "text": "Three different random effects, resolved in the order listed: Add a Radiant Faction: ETHICS and a Radiant Faction: Vanguard Coalition to your hand; add A Very Dandy Lad and an Arctic Citadel to your hand, which cost (0); summon 3 random Quest or Wincon Field Spells into your backrow; add a random Acclaimed Stinkyscape Unit to your hand and replenish as much mana as it costs; switch every enemy Unit to Attack Position and Freeze them; fill your board with random Human Stinkyscape Units; Allure every enemy Unit; for the rest of the game, whenever an Acclaimed card dies, its controller casts a random Call to Chaos; summon a Stinkyscape Golem; cast a random Call to Chaos."
     }
   },
   "stinkyscape-150-1": {
@@ -28135,11 +28192,11 @@
     "loc": 22,
     "base": {
       "keywords": [],
-      "text": "One random effect: Summon 3 Rush Tokens, then give your Units on the field, in your hand and in your deck Taunt and Divine Shield; fill your hand with Goetzmann Game Designs and refresh 3 mana; add 4 random Training Grounds cards to your hand, which cost (1), and gain 2 mana; gain 6 mana and draw 2 cards; summon 5 random Training Grounds permanents; add 2 random Radiant Training Grounds cards to your hand, which cost (1), and gain 1 mana; summon 3 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce; summon a Training-Grounds Golem; at the start of every turn of yours for the rest of the game, add a random Call to Chaos to your hand; cast a random Call to Chaos."
+      "text": "One random effect: Summon 3 Rush Tokens, then give your Units on the field, in your hand and in your deck Taunt and Divine Shield; fill your hand with Goetzmann Game Designs and replenish 3 mana; add 4 random Training Grounds cards to your hand, which cost (1), and gain 2 mana; gain 6 mana and draw 2 cards; summon 5 random Training Grounds permanents; add 2 random Radiant Training Grounds cards to your hand, which cost (1), and gain 1 mana; summon 3 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce; summon a Training-Grounds Golem; at the start of every turn of yours for the rest of the game, add a random Call to Chaos to your hand; cast a random Call to Chaos."
     },
     "radiant": {
       "keywords": [],
-      "text": "Three different random effects, resolved in the order listed: Summon 3 Rush Tokens, then give your Units on the field, in your hand and in your deck Taunt and Divine Shield; fill your hand with Goetzmann Game Designs and refresh 3 mana; add 4 random Training Grounds cards to your hand, which cost (1), and gain 2 mana; gain 6 mana and draw 2 cards; summon 5 random Training Grounds permanents; add 2 random Radiant Training Grounds cards to your hand, which cost (1), and gain 1 mana; summon 3 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce; summon a Training-Grounds Golem; at the start of every turn of yours for the rest of the game, add a random Call to Chaos to your hand; cast a random Call to Chaos."
+      "text": "Three different random effects, resolved in the order listed: Summon 3 Rush Tokens, then give your Units on the field, in your hand and in your deck Taunt and Divine Shield; fill your hand with Goetzmann Game Designs and replenish 3 mana; add 4 random Training Grounds cards to your hand, which cost (1), and gain 2 mana; gain 6 mana and draw 2 cards; summon 5 random Training Grounds permanents; add 2 random Radiant Training Grounds cards to your hand, which cost (1), and gain 1 mana; summon 3 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce; summon a Training-Grounds Golem; at the start of every turn of yours for the rest of the game, add a random Call to Chaos to your hand; cast a random Call to Chaos."
     }
   },
   "traininggrounds-039-1": {
@@ -35781,7 +35838,7 @@
       ],
       "text": "Starship Piece, Equip\nActivate: Burn {burn} an enemy Unit, Cleave."
     },
-        "params": [
+    "params": [
       {
         "key": "burn",
         "base": 2,
@@ -35832,7 +35889,7 @@
       ],
       "text": "Starship Piece, Equip\nActivate: Burn {burn} an enemy Unit, Cleave."
     },
-        "params": [
+    "params": [
       {
         "key": "burn",
         "base": 4,
@@ -35883,7 +35940,7 @@
       ],
       "text": "Starship Piece, Equip\nActivate 2: Burn {burn} an enemy Unit, Cleave."
     },
-        "params": [
+    "params": [
       {
         "key": "burn",
         "base": 4,
@@ -35934,7 +35991,7 @@
       ],
       "text": "Starship Piece, Equip\nActivate 2: Toxic {toxic} an enemy Unit."
     },
-        "params": [
+    "params": [
       {
         "key": "toxic",
         "base": 2,
@@ -35985,7 +36042,7 @@
       ],
       "text": "Starship Piece, Equip\nActivate 2: Toxic {toxic} an enemy Unit."
     },
-        "params": [
+    "params": [
       {
         "key": "toxic",
         "base": 4,
@@ -36036,7 +36093,7 @@
       ],
       "text": "Starship Piece, Equip\nActivate 2: Toxic {toxic} an enemy Unit."
     },
-        "params": [
+    "params": [
       {
         "key": "toxic",
         "base": 6,

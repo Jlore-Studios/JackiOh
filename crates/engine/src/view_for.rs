@@ -66,7 +66,7 @@ use crate::state::{
 use crate::subsystems::activate::activation_views_for;
 use crate::subsystems::combo_index::grade_name;
 use crate::subsystems::copied_text::{copied_text_of, text_face_of};
-use crate::subsystems::hero_power::{power_of, power_title_of, used_this_turn};
+use crate::subsystems::hero_power::{power_of, power_price, power_title_of, used_this_turn};
 use crate::subsystems::pareto::pareto_hint_ids;
 use crate::subsystems::quests::quest_view_of;
 use crate::turn::standing_draw_offer;
@@ -1100,7 +1100,7 @@ fn hero_powers_of(state: &GameState, player: PlayerId) -> Vec<HeroPowerView> {
                 def_id: card.def_id.clone(),
                 name: power.name.to_string(),
                 title: power_title_of(power, card.radiant).to_string(),
-                x: power.x,
+                x: power_price(state, card).unwrap_or(power.x),
                 used_this_turn: used_this_turn(state, card),
             });
         }

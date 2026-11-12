@@ -362,7 +362,10 @@ fn activation_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, pri
 /// (`script_of`: a Vanilla or Dormant card has none).
 fn has_attack_hook(state: &GameState, card: &CardInstance) -> bool {
     let script = script_of(state, card);
-    script.when_attacks.is_some() || script.after_attack.is_some()
+    // R3551004: Frenzy answers a kill as an `afterAttack` hook does, as `combat::combatant_hooks` runs it.
+    script.when_attacks.is_some()
+        || script.after_attack.is_some()
+        || unit_has(state, card, KeywordKind::Frenzy)
 }
 
 /// R2688000: what `unit`'s next attack gives its controller through its attack hooks, by `prices`,

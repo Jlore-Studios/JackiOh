@@ -3,7 +3,7 @@
 //! its release (#2204). (4) Spell, Call to Chaos, Legendary.
 //!   Base:    "One random effect: Summon 3 Rush Tokens, then give your Units on the field, in your hand
 //!            and in your deck Taunt and Divine Shield; fill your hand with Goetzmann Game Designs and
-//!            refresh 3 mana; add 4 random Training Grounds cards to your hand, which cost (1), and gain
+//!            replenish 3 mana; add 4 random Training Grounds cards to your hand, which cost (1), and gain
 //!            2 mana; gain 6 mana and draw 2 cards; summon 5 random Training Grounds permanents; add 2
 //!            random Radiant Training Grounds cards to your hand, which cost (1), and gain 1 mana; summon
 //!            3 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce; summon
@@ -11,7 +11,7 @@
 //!            a random Call to Chaos to your hand; cast a random Call to Chaos."
 //!   Radiant: "Three different random effects, resolved in the order listed: …" (the same ten).
 //!
-//! Through v0.5.11r the refresh was 4, the cards cost (0) with no mana, the mana 8, the permanents 6, the
+//! Through v0.5.11r the replenish was 4, the cards cost (0) with no mana, the mana 8, the permanents 6, the
 //! army 5 tokens, and entry 9 added a Call at (0) at once and at the start of every second turn; the
 //! numbers are the engine's (`config.rs`), so this file keeps no old script (R3135000, R767000).
 //!
@@ -203,7 +203,7 @@ mod tests {
             labels,
             vec![
                 "Summon 3 Rush Tokens, then give your Units on the field, in your hand and in your deck Taunt and Divine Shield",
-                "Fill your hand with Goetzmann Game Designs and refresh 3 mana",
+                "Fill your hand with Goetzmann Game Designs and replenish 3 mana",
                 "Add 4 random Training Grounds cards to your hand, which cost (1), and gain 2 mana",
                 "Gain 6 mana and draw 2 cards",
                 "Summon 5 random Training Grounds permanents",
@@ -292,7 +292,7 @@ mod tests {
         }
 
         #[test]
-        fn r2200001_r3135000_entry_designs_fills_the_hand_then_refreshes_up_to_three() {
+        fn r2200001_r3135000_entry_designs_fills_the_hand_then_replenishes_up_to_three() {
             let mut p1 = side(false, json!([]));
             p1["mana"] = json!(CALL_PRICE);
             let s = chaos("designs", p1, json!({ "hand": [VANILLA] }));
@@ -300,17 +300,17 @@ mod tests {
             let hand = s.hand(P1);
             assert_eq!(hand.len() as i32, cap);
             assert_eq!(hand.iter().filter(|card| card.def_id == DESIGN).count() as i32, cap - 1);
-            // All of it spent on this card, then Refresh 3 gives back up to 3, never past max.
+            // All of it spent on this card, then Replenish 3 gives back up to 3, never past max.
             let mana = &s.state().players.p1.mana;
             assert_eq!(CHAOS_TG_REFRESH, 3);
             assert_eq!(mana.current, 3.min(mana.max));
         }
 
         #[test]
-        fn r2200001_entry_designs_refresh_gives_nothing_at_or_above_max() {
+        fn r2200001_entry_designs_replenish_gives_nothing_at_or_above_max() {
             let s = chaos("designs", side(false, json!([])), json!({ "hand": [VANILLA] }));
             let mana = &s.state().players.p1.mana;
-            // 10 less this card's 4 is still above max: Refresh is no gain (R364).
+            // 10 less this card's 4 is still above max: Replenish is no gain (R364).
             assert!(mana.current >= mana.max);
             assert_eq!(mana.current, 10 - 4);
         }

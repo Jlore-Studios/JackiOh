@@ -120,8 +120,8 @@ fn build_quests() -> Effect {
     })
 }
 
-/// 4. R1882002: one pick (R60) of the set's Acclaimed Units into its caster's hand, then a Refresh by
-///    its printed cost (§6.3, R364); a card a full hand burns refreshes nothing.
+/// 4. R1882002: one pick (R60) of the set's Acclaimed Units into its caster's hand, then a Replenish by
+///    its printed cost (§6.3, R364); a card a full hand burns replenishes nothing.
 fn build_acclaimed() -> Effect {
     entry("acclaimed", |_ctx| {
         vec![Effect::new("callToChaosStinky:addAcclaimed", |ctx| {
@@ -283,7 +283,7 @@ pub const CHAOS_STINKY_EFFECTS: &[ChaosEffectDef] = &[
     },
     ChaosEffectDef {
         name: "acclaimed",
-        label: "Add a random Acclaimed Stinkyscape Unit to your hand and refresh as much mana as it costs",
+        label: "Add a random Acclaimed Stinkyscape Unit to your hand and replenish as much mana as it costs",
         build: build_acclaimed,
     },
     ChaosEffectDef {

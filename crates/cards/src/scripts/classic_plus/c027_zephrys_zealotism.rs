@@ -6,15 +6,15 @@
 //! hand goes to their graveyard (not a discard; a unit-token card ceases to exist, R11) and the top N
 //! distinct cards arrive in rank order, N being how many there were (R416).
 //!
-//! "Refresh your mana" is §6.3 Refresh (R364): current mana rises toward max and never past it.
+//! "Replenish your mana" is §6.3 Replenish (R364): current mana rises toward max and never past it.
 
 use jackioh_engine::effects::{refresh_mana, replace_hand_with_perfect};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-027";
 
-/// "Refresh your mana": every spent crystal, capped at max mana (R364), whatever the player's max is
-/// (§9.9's handicaps). Half of `i32::MAX`, as the Refresh adds this to current mana before capping
+/// "Replenish your mana": every spent crystal, capped at max mana (R364), whatever the player's max is
+/// (§9.9's handicaps). Half of `i32::MAX`, as the Replenish adds this to current mana before capping
 /// (`mana::refresh_some_mana`) and the sum must stay in range.
 const ALL_MANA: i32 = i32::MAX / 2;
 
@@ -266,7 +266,7 @@ mod tests {
             }
 
             #[test]
-            fn r416_with_only_this_card_in_hand_nothing_arrives_and_the_refresh_still_happens() {
+            fn r416_with_only_this_card_in_hand_nothing_arrives_and_the_replenish_still_happens() {
                 crate::register_all();
                 let mut s = play(&json!({ "p1": { "hand": [] } }), false);
                 assert_eq!(s.hand(P1).len(), 0);
@@ -286,10 +286,10 @@ mod tests {
             }
 
             #[test]
-            fn r364_the_refresh_gives_back_up_to_max_mana_this_card_s_4_included() {
+            fn r364_the_replenish_gives_back_up_to_max_mana_this_card_s_4_included() {
                 crate::register_all();
                 play(&json!({ "p1": { "hand": [STOCKPILE] } }), false).expect_mana(P1, 4);
-                // 6 current of 4 max: 2 left after paying, the Refresh gives back 2 more, up to max.
+                // 6 current of 4 max: 2 left after paying, the Replenish gives back 2 more, up to max.
                 play(&json!({ "p1": { "hand": [STOCKPILE], "mana": 6 } }), false).expect_mana(P1, 4);
             }
 

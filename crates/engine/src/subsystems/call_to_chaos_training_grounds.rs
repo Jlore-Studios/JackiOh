@@ -178,7 +178,7 @@ fn build_fortify() -> Effect {
 }
 
 /// 2. R2200001: Goetzmann Game Designs (#40) until the hand is full (S #88 Siva 2's fill), then §6.3
-///    Refresh 3 (R364, R3135000).
+///    Replenish 3 (R364, R3135000).
 fn build_designs() -> Effect {
     entry("designs", |ctx| {
         let room = room_in(ctx.state, ctx.controller, OffFieldZone::Hand);
@@ -289,7 +289,7 @@ pub const CHAOS_TG_EFFECTS: &[ChaosEffectDef] = &[
     },
     ChaosEffectDef {
         name: "designs",
-        label: "Fill your hand with Goetzmann Game Designs and refresh 3 mana",
+        label: "Fill your hand with Goetzmann Game Designs and replenish 3 mana",
         build: build_designs,
     },
     ChaosEffectDef {

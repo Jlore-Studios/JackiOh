@@ -519,13 +519,13 @@ describe("17 — cards in play show what they are now (SPEC §10.10)", () => {
     });
 
     // R3134002: in the hand it holds no power yet (its Cry Discovers one when it is played), so it prints
-    // as it is printed, the Cry first; R752: once it holds one, the card shows that power, not all thirteen.
+    // as it is printed, the Cry first; R752: once it holds one, the card shows that power, not all fourteen.
     cy.get(`${inHand("core-098")} .cost-gem`).should("have.text", "0");
-    cy.get(`${inHand("core-098")} .card-text`).should("contain.text", "Cry: Discover one of 13 powers");
+    cy.get(`${inHand("core-098")} .card-text`).should("contain.text", "Cry: Discover one of 14 powers");
     cy.get(inHand("core-098")).trigger("pointerover", { pointerType: "mouse" });
     cy.get(ts(INSPECT_HOVER), { timeout: timeouts.view })
       .should("be.visible")
-      .and("contain.text", "Discover one of 13 powers");
+      .and("contain.text", "Discover one of 14 powers");
     cy.get(inHand("core-098")).trigger("pointerout", { pointerType: "mouse" });
     cy.get(ts(INSPECT_HOVER)).should("not.exist");
 

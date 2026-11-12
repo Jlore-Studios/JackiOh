@@ -375,7 +375,8 @@ pub fn tag_count(tag: Tag) -> usize {
         Tag::DroneCore => stinkyscape(10),
         Tag::Weapon => stinkyscape(16) + stinkyscape_plus(9),
         Tag::WarDoctrine => stinkyscape(4),
-        Tag::Swarm => stinkyscape(2) + stinkyscape_plus(15),
+        // S01: C+ #49 Jay Fungus gains the tag, beside the Stinkyscape set's two.
+        Tag::Swarm => 1 + stinkyscape(2) + stinkyscape_plus(15),
         // R2511000: Training Grounds #41 to #60, its twenty Legacy cards.
         Tag::Legacy => training_grounds(20),
         // #2521: the Stinkyscape set's six Resources, T-reknite, T-korrelite, T-gellium, T-axnit,
@@ -395,7 +396,8 @@ pub fn tag_count(tag: Tag) -> usize {
         Tag::AutomaDelta => stinkyscape_plus(6),
         Tag::AutomaOmega => stinkyscape_plus(6),
         Tag::AutomaZeta => stinkyscape_plus(5),
-        Tag::Paperclip => stinkyscape_plus(2),
+        // S01: S #44 Great Paperclip Theory I gains the tag.
+        Tag::Paperclip => stinkyscape(1) + stinkyscape_plus(2),
         // Every token of the sets that ship carries it, so its count is their tokens' sum (R1420).
         Tag::Token => CENSUS
             .iter()
