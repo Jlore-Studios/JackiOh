@@ -13487,6 +13487,7 @@
       "forced": false,
       "interruptions": 1,
       "kind": "build",
+      "last_findings": [],
       "live": "reconciling",
       "owner": "claude-4",
       "owner_since": "2026-11-12T08:40:36Z",
@@ -13504,10 +13505,16 @@
         "bot/issue-3569",
         "bot/issue-3571"
       ],
+      "paused": {
+        "at": "2026-11-12T09:05:27Z",
+        "interrupt": "usage",
+        "provider": "claude-4"
+      },
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-11-12T08:39:31Z",
       "requested_by": "jgoetzmann-bot",
+      "round_tier": "strong",
       "run_id": "43184911684",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-12T08:40:36Z",
@@ -13557,7 +13564,8 @@
         ],
         "mode": "fullsend",
         "onto": "bot/issue-3596"
-      }
+      },
+      "verdict_rounds": 0
     },
     "3600": {
       "action": "build",
