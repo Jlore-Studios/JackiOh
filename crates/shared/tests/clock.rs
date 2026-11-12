@@ -860,9 +860,102 @@ mod r1563006_the_question_sequence_clock {
         );
     }
 
+    /// R1563006: a sync that repeats the first question keeps its window; a new sequence's first question, met with
+    /// no question-less sync between the two, opens a fresh one.
+    #[test]
+    fn r1563006_the_same_first_question_keeps_its_window_and_a_new_one_opens_another() {
+        let mut h = Sim::new(0);
+        h.sync(&asking(0, "q1"));
+        h.sleep(20 * SECOND);
+        h.sync(&asking(0, "q1"));
+        h.sleep(sequence_ms() - 20 * SECOND);
+        assert_eq!(h.expiries, vec![ClockExpiry::Sequence { player: P1 }]);
+
+        // The second window ends 10 seconds after the first would have, inside the turn clock.
+        let mut h = Sim::new(0);
+        h.sync(&asking(0, "q1"));
+        h.sleep(10 * SECOND);
+        h.sync(&asking(0, "q9"));
+        h.sleep(sequence_ms() - 10 * SECOND);
+        assert_eq!(h.expiries, vec![]);
+        h.sleep(10 * SECOND);
+        assert_eq!(h.expiries, vec![ClockExpiry::Sequence { player: P1 }]);
+        assert!(
+            h.now < EPOCH + h.turn_ms,
+            "PREMISE: the turn clock has not run out"
+        );
+    }
+
+    /// R776000, R1563006: a retry re-arms a sequence's window only while one is open.
+    #[test]
+    fn r776000_a_sequence_retry_re_arms_only_an_open_window() {
+        let mut h = Sim::new(0);
+        h.sync(&asking(0, "q1"));
+        h.sync(&view());
+        h.retry(
+            ClockExpiry::Sequence { player: P1 },
+            int(MATCH_SERVER_ACTION_RETRY_MS),
+        );
+        assert!(h.timers.iter().all(|(key, _, _)| *key != TimerKey::Sequence));
+    }
+
     #[test]
     fn r1563006_the_expiry_is_named_sequence() {
         assert_eq!(ClockExpiry::Sequence { player: P2 }.kind(), "sequence");
         assert_eq!(KY_COMPETITION_SECONDS, 60);
+    }
+}
+
+/// R776000: a retry re-arms only the clock that ran out, for the seat it ran out for.
+mod r776000_retries {
+    use super::*;
+
+    fn retry_ms() -> i64 {
+        int(MATCH_SERVER_ACTION_RETRY_MS)
+    }
+
+    /// A retry for the seat whose turn or prompt it is not, or for a mulligan window that has closed, re-arms
+    /// nothing.
+    #[test]
+    fn r776000_a_retry_for_another_seat_or_a_closed_window_re_arms_nothing() {
+        let mut turn = Sim::new(0);
+        turn.sync(&view());
+        turn.sleep(turn.turn_ms);
+        turn.retry(ClockExpiry::Turn { player: P2 }, retry_ms());
+        assert_eq!(turn.deadline("turnDeadline"), None);
+
+        let mut prompt = Sim::new(0);
+        prompt.sync(&ClockView {
+            pending_for: Some(P2),
+            ..view()
+        });
+        prompt.sleep(prompt.prompt_ms);
+        prompt.retry(ClockExpiry::Prompt { player: P1 }, retry_ms());
+        assert_eq!(prompt.deadline("promptDeadline"), None);
+
+        let mut window = Sim::new(0);
+        window.sync(&mulligan_window(&[P1, P2]));
+        window.sleep(window.mulligan_ms);
+        window.sync(&view());
+        window.retry(ClockExpiry::Mulligan, retry_ms());
+        assert!(window.timers.iter().all(|(key, _, _)| *key != TimerKey::Mulligan));
+    }
+
+    /// R268: a retry runs an expired mulligan window out again, its deadline the retry's.
+    #[test]
+    fn r268_a_mulligan_retry_sets_the_windows_deadline() {
+        let mut window = Sim::new(0);
+        window.sync(&mulligan_window(&[P1, P2]));
+        window.sleep(window.mulligan_ms);
+        window.retry(ClockExpiry::Mulligan, retry_ms());
+        assert_eq!(window.deadline("promptDeadline"), Some(window.now + retry_ms()));
+    }
+
+    /// The clock owns its own timers and none of the host's others.
+    #[test]
+    fn the_clock_owns_its_own_timers_only() {
+        assert!(MatchClock::owns(TimerKey::Turn));
+        assert!(MatchClock::owns(TimerKey::Grace { player: P1 }));
+        assert!(!MatchClock::owns(TimerKey::BotRetry));
     }
 }
