@@ -707,6 +707,8 @@ fn apply_row(
             if let Some(card) = find_instance_mut(ctx.state, card_id) {
                 step_param(card, &key, steps);
             }
+            // R3778000: an Aura that follows the number draws what a higher one asks.
+            crate::effects::buff::follow_combat_keywords(ctx, card_id);
             TuningChange::Number { key, delta }
         }
         MenuApply::Plague { amount } => {
@@ -973,6 +975,8 @@ fn write_number(ctx: &mut EffectContext<'_>, card_id: &str, number: &NumberRef, 
             if let Some(live) = find_instance_mut(ctx.state, card_id) {
                 set_param(live, key, value);
             }
+            // R3778000: an Aura that follows the number draws what a higher one asks.
+            crate::effects::buff::follow_combat_keywords(ctx, card_id);
         }
         // R2657006: the count left (R2179001), never below 1, so the card stays Temporary.
         NumberRef::Temporary => {

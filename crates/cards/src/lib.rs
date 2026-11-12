@@ -614,6 +614,44 @@ pub(crate) fn degrade_number(s: &mut jackioh_engine::testkit::Scenario, card: &s
     tune_number(s, card, key, jackioh_engine::effects::TuneDirection::Degrade)
 }
 
+/// C+ #71 Book of Buff: "Buff a permanent {times} times".
+#[cfg(test)]
+pub(crate) const BOOK_OF_BUFF: &str = "classicplus-071";
+
+/// R3778000: Book of Buff, its `times` set to 1, played by p1 on the card `build(seed)` names, with the
+/// Book in p1's hand, on the first seed `<prefix>-n` whose one Buff draws the Number row of `key` (B3.4
+/// rule 3): the seed, the scenario after the cast, and the card.
+#[cfg(test)]
+pub(crate) fn buff_number_once(
+    prefix: &str,
+    key: &str,
+    build: impl Fn(&str) -> (jackioh_engine::testkit::Scenario, String),
+) -> (String, jackioh_engine::testkit::Scenario, String) {
+    use jackioh_engine::prelude::{ParamValueOptions, param_value, set_param};
+    let cast = |seed: &str| {
+        let (mut s, target) = build(seed);
+        let number = |s: &jackioh_engine::testkit::Scenario| {
+            param_value(
+                s.state(),
+                Some(s.card(target.as_str())),
+                key,
+                ParamValueOptions::default(),
+            )
+        };
+        let before = number(&s);
+        set_param(s.card_mut(BOOK_OF_BUFF), "times", 1);
+        s.play(
+            BOOK_OF_BUFF,
+            serde_json::json!({ "targets": [{ "pick": "instance", "instanceId": target }] }),
+        );
+        let raised = number(&s) == before + 1;
+        (s, target, raised)
+    };
+    let seed = jackioh_engine::testkit::seed_where(prefix, |seed| cast(seed).2);
+    let (s, target, _) = cast(&seed);
+    (seed, s, target)
+}
+
 /// The unit's instance id, or blank for an empty lane.
 #[cfg(test)]
 pub(crate) fn unit_or_blank(

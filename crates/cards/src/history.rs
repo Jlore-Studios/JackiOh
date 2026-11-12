@@ -43,8 +43,8 @@ use crate::scripts::meditative::{
     c018_expedition12, c019_expedition123, c021_api_key_fishing, c030_fickle_e_kitten,
     c032_spiritually_zhongguo, c037_cn_in_a_bottle, c038_h1b_printer, c040_feng_shui, c045_knowledge_breaker,
     c047_taotie, c048_tranquility, c049_1_yilegpt_unleashed, c049_3_ai_girlfriend, c049_yilegpt_tamed,
-    c053_prestige, c054_money_machine, c063_skull_of_jnari, c074_montana_giant, c080_aluneth,
-    c081_deadmans_hand, c085_playtester, c090_spell_basket, c093_1_growing_felinor_sr,
+    c053_prestige, c054_money_machine, c063_skull_of_jnari, c065_keymaster_keenus, c074_montana_giant,
+    c080_aluneth, c081_deadmans_hand, c085_playtester, c090_spell_basket, c093_1_growing_felinor_sr,
     c093_2_growing_felinor_sr_sr, c093_3_growing_felinor_super_senior, c093_growing_felinor,
     c094_shrinking_felinor, c095_1_cn_golem, c097_2_wishing_well, c097_8_prison, c102_catboy_maid_ssr,
 };
@@ -56,10 +56,11 @@ use crate::scripts::stinkyscape::{
     c034_drone_core_viii, c035_drone_core_ix, c036_drone_core_x, c045_drone_commander, c050_beam_v3,
     c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4, c055_repeater_v4, c056_cannon_v4,
     c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5, c061_flak_v5, c074_paragon_x,
-    c086_prototype_x2, c094_tmack_trav, c115_scornboi, c116_megabase, c129_jlockeeds_missile_pod,
-    c140_rush_token_launcher, c143_book_launcher, c149_wildar, c153_stimmycheck, c163_swear_loyalities,
-    c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid,
-    c173_abandoned_spice_tower, t_narcor, t_red_narcor,
+    c086_prototype_x2, c094_tmack_trav, c111_shockwave447, c115_scornboi, c116_megabase,
+    c129_jlockeeds_missile_pod, c140_rush_token_launcher, c143_book_launcher, c149_wildar, c153_stimmycheck,
+    c163_swear_loyalities, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid,
+    c172_huge_asteroid, c173_abandoned_spice_tower, t_drone_corvette, t_drone_interceptor, t_narcor,
+    t_red_narcor,
 };
 use crate::scripts::training_grounds::{
     c036_training_dummy, c038_tutorial_master, c045_jlockeeds_weapons,
@@ -77,7 +78,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// (R1748003), #1828 (R1828000, R1828001, R1828002, R1828003), #1851 (R1103, R1851003), #1803, #2020,
 /// #2179 (R1161, R920, R580, R2179003), #2396 (R2396000), #2521 and #2657 (R2657000 with
 /// `never_defense_kept`, R2657001, R2657002, R2657004), and #3000's parts (#3038, #3040, #3041, #3042,
-/// #3044, #3048) and #3128's (#3134, #3135, #3139, #3140, #3142).
+/// #3044, #3048), #3128's (#3134, #3135, #3139, #3140, #3142) and #3778 (R3778000).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -642,6 +643,26 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c016_conjure_rush_token::script_v0_5_11o,
     ),
     (c047_taotie::ID, "v0.5.11r", c047_taotie::script_v0_5_11o),
+    (
+        c065_keymaster_keenus::ID,
+        "v0.5.12ap",
+        c065_keymaster_keenus::script_v0_5_12ap,
+    ),
+    (
+        c111_shockwave447::ID,
+        "v0.5.12ap",
+        c111_shockwave447::script_v0_5_12ap,
+    ),
+    (
+        t_drone_interceptor::ID,
+        "v0.5.12ap",
+        t_drone_interceptor::script_v0_5_12ap,
+    ),
+    (
+        t_drone_corvette::ID,
+        "v0.5.12ap",
+        t_drone_corvette::script_v0_5_12ap,
+    ),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

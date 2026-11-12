@@ -75,6 +75,8 @@ pub(crate) fn make_radiant(ctx: &mut EffectContext<'_>, card: &CardInstance) -> 
         live.radiant = true;
     }
     gain_printed_shield(ctx, &card);
+    // R3778000: an Aura that follows its number draws what the Radiant face's asks beyond its list.
+    crate::effects::buff::follow_combat_keywords(ctx, &card.id);
     ctx.events.push(GameEvent::RadiantSet {
         instance_id: card.id.clone(),
         def_id: card.def_id.clone(),
