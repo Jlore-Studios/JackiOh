@@ -51,7 +51,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Random-policy games as `fuzz.test.ts` deals them, I1–I4 each step, replay hash checked (part 22).
+    /// Random-policy games as `fuzz.test.ts` deals them, I1–I17 each step, replay hash checked (part 22).
     Fuzz(fuzz::Args),
     /// Each triggered card's text fused onto each fusable Unit and played until the board settles; a daily sample, or one pair (#2381).
     FusedPairs(fused_pairs::Args),

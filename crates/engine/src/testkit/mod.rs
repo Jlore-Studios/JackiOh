@@ -1,5 +1,5 @@
 //! `jackioh_engine::testkit` (feature `testkit`, SURFACE §8): `scenario` (the harness), `invariants` (the
-//! I1–I4 monitor `cargo jackioh fuzz` runs) and `glow`, plus the whole engine (`pub use crate::*`).
+//! I1–I17 monitor `cargo jackioh fuzz` runs) and `glow`, plus the whole engine (`pub use crate::*`).
 //!
 //! `register_scripts` and `register_catalog` (`scenario.rs`) set the thread-local override that
 //! `catalog::registered_catalog()` and `scripts::script_of()` consult first under this feature, so they win
