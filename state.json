@@ -17565,36 +17565,25 @@
     "3762": {
       "action": "revise",
       "asks": [],
-      "audit_tier": "strong",
+      "audit_tier": "",
       "cross_rounds": 1,
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-12T05:16:28Z",
+      "feedback_since": "2026-11-12T07:40:56Z",
       "forced": false,
       "interruptions": 0,
       "issue": 3727,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "POST /api/daily/push stores any https:// URL as a push endpoint, and the server later POSTs to it with a default reqwest::Client that follows redirects: a server-side request forgery any signed-in player can trigger and probe.",
-          "evidence": "add_push checks only `endpoint.starts_with(\"https://\")`. webpush::send does `client.post(subscription.endpoint)...send()` with `app.daily.http`, which is `reqwest::Client::new()` (daily/mod.rs DailyState::new), and reqwest follows up to 10 redirects by default, so the request can reach http:// or internal addresses. The caller decides when it fires: any move that hands them a daily game sends a push. They can read the outcome: a 404 or 410 deletes the row (notify.rs send_pushes, PushOutcome::Gone), and `pushDevices` in GET /api/daily/settings shows it. Fix: refuse IP literals, localhost and private or link-local hosts (or allowlist the browsers' push services), build the push client with `redirect::Policy::none()`, and add a test that a bad endpoint is refused with 400.",
-          "severity": "blocking",
-          "where": "crates/server/src/daily/notify.rs:401"
-        },
-        {
-          "claim": "Deleting an account while it plays a running daily game fails with a 500 on Postgres, while the fake store lets it through, so no test sees it.",
-          "evidence": "A daily game's match stays `status = 'live'` and sets no in-match flag (R3727004). remove_account refuses only on `profile.in_match_id`, an active series or a live co-op match, so it reaches `tx.profiles_remove`. 0012's FK `matches.p1/p2_profile_id ... on delete set null` then hits `matches_seats_filled_unless_over_check` (`status = 'over' or (p1_profile_id is not null and ...)`, 0012_account_deletion.sql:161-163), and the store error surfaces as a 500. fake::profiles_remove instead drops the running daily row (remove_daily_rows). The contract test s913_a_deleted_profile_takes_its_daily_rows and 53_daily_games.sql use only matches that are already over. consent.rs's age refusal reuses remove_account and has the same problem. Fix: in remove_account, either refuse with a 409 (and make the fake refuse alike) or end the caller's running daily games first, with a store-contract and SQL test on a live daily match.",
-          "severity": "blocking",
-          "where": "crates/server/src/api/auth.rs:229"
-        }
-      ],
+      "last_findings": [],
       "live": "revising",
       "pending_request": false,
       "provider": "claude-8",
+      "question": "",
       "queued_at": "2026-11-12T07:38:39Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "strong",
       "run_id": "43177062005",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -17615,10 +17604,11 @@
         "provider": "claude-1",
         "run": "43160290957"
       },
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-11-12T07:40:56Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [],
         "builder": "claude",
