@@ -16745,7 +16745,8 @@
       },
       "started_at": "2026-11-12T21:32:56Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "waiting_comment": 6837383127
     },
     "3807": {
       "difficulty": "medium",
