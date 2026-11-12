@@ -253,6 +253,7 @@ impl Table {
 
 mod the_clocks {
     use super::*;
+    use jackioh_shared::host::duos::acting_round_seat;
 
     #[test]
     fn b2_r744_arming_starts_the_one_mulligan_clock_and_the_ceiling_and_the_seats_that_never_came_start_their_grace()
@@ -298,6 +299,16 @@ mod the_clocks {
             note,
             DuosNote::ClockExpired { kind } if kind == "mulligan"
         )));
+        // KeepHand needs no search: after its pause each person's seat keeps its hand at once.
+        table.sleep(DUOS_AI_STEP_DELAY_MS);
+        assert!(
+            table
+                .decides
+                .iter()
+                .all(|request| request.seat != A1 && request.seat != A2),
+            "{:?}",
+            table.decides
+        );
         // The expiry hands the seats to the AI, which acts after its pause: each person keeps the hand.
         table.play_on(30 * SECOND, |table| table.round() >= 1);
         assert!(table.round() >= 1);
@@ -347,12 +358,48 @@ mod the_clocks {
                 note,
                 DuosNote::ClockExpired { kind } if kind == "round"
             )));
+            // FinishRound with nothing to answer needs no search: after its pause each person's round seat ends
+            // its turn at once.
+            table.sleep(DUOS_AI_STEP_DELAY_MS);
+            assert!(
+                table
+                    .decides
+                    .iter()
+                    .all(|request| request.seat != A1 && request.seat != A2),
+                "{:?}",
+                table.decides
+            );
             table.play_on(60 * SECOND, |table| table.round() != round);
             assert_ne!(table.round(), round, "{:?}", &table.nonces()[rows..]);
             assert!(
                 table.nonces()[rows..]
                     .iter()
                     .any(|nonce| nonce.starts_with("srv-ai-"))
+            );
+            // The lapse held its own round only: the next round a person acts in waits for them again.
+            let person_acts = |table: &Table| {
+                [A1, A2]
+                    .into_iter()
+                    .any(|seat| acting_round_seat(table.host.game(), seat))
+            };
+            table.play_on(120 * SECOND, |table| {
+                table.round() > round + 1 && person_acts(table)
+            });
+            assert!(
+                person_acts(&table),
+                "round {} nonces {:?}",
+                table.round(),
+                table.nonces()
+            );
+            let later = table.log.len();
+            table.sleep(3 * DUOS_AI_STEP_DELAY_MS);
+            table.answer_searches();
+            assert!(
+                table.log[later..]
+                    .iter()
+                    .all(|(_, action)| action.seat != A1 && action.seat != A2),
+                "{:?}",
+                &table.nonces()[later..]
             );
         } else {
             // Team B's round: no person to wait for, no round clock.
@@ -766,6 +813,120 @@ mod the_ai {
         assert_eq!(table.let_go, vec![DuosLetGo::MatchGone]);
     }
 
+    fn end_turn() -> DuosActionBody {
+        DuosActionBody::Duel {
+            body: ActionBody::EndTurn,
+        }
+    }
+
+    /// Both people here and the game armed, past the AI team's first pause: its two searches are out, asked on
+    /// one state.
+    fn asked(seed: &str) -> (Table, DuosDecide, DuosDecide) {
+        let mut table = Table::new(setup(opening(seed)));
+        table.connect(A1);
+        table.connect(A2);
+        table.feed(DuosHostEvent::Arm);
+        table.sleep(DUOS_AI_STEP_DELAY_MS);
+        let (first, second) = (table.decides[0].clone(), table.decides[1].clone());
+        assert_eq!(first.version, second.version, "PREMISE: both asked on one state");
+        (table, first, second)
+    }
+
+    /// B36: a search that threw plays nothing and, on the state it was asked on, asks for nothing more; once
+    /// another seat's move changes the state, the seat pauses again, counted from the change.
+    #[test]
+    fn b36_a_search_that_threw_waits_for_a_newer_state_and_its_pause_runs_from_the_change() {
+        let (mut table, threw, other) = asked("duos-ai-6");
+        table.feed(DuosHostEvent::Decided {
+            seat: threw.seat,
+            body: None,
+            cursor: 0,
+            failed: true,
+        });
+        assert!(table.log.is_empty());
+        assert_eq!(table.timer(TimerKey::DuosAi { seat: threw.seat }), None);
+        table.feed(DuosHostEvent::Decided {
+            seat: other.seat,
+            body: None,
+            cursor: 1,
+            failed: false,
+        });
+        assert_eq!(table.log.len(), 1);
+        assert_eq!(
+            table.timer(TimerKey::DuosAi { seat: threw.seat }),
+            Some(table.now + DUOS_AI_STEP_DELAY_MS)
+        );
+    }
+
+    /// R1452: once the write retry pace has passed, the seat whose move the log would not take pauses and
+    /// decides again.
+    #[test]
+    fn r1452_once_the_write_retry_pace_passes_the_seat_decides_again() {
+        let (mut table, request, _) = asked("duos-ai-4");
+        table.decides.retain(|held| held.seat != request.seat);
+        table.failing_appends = 1;
+        table.feed(DuosHostEvent::Decided {
+            seat: request.seat,
+            body: None,
+            cursor: 1,
+            failed: false,
+        });
+        table.feed(DuosHostEvent::RowChecked { exists: true });
+        assert!(table.decides.iter().all(|held| held.seat != request.seat));
+        table.sleep(BOT_WRITE_RETRY_MS + DUOS_AI_STEP_DELAY_MS);
+        assert!(
+            table.decides.iter().any(|again| again.seat == request.seat),
+            "{:?}",
+            table.decides
+        );
+    }
+
+    /// R1452: a move decided on the state as it still stands that is refused is played once more as the
+    /// seat's answer without search, under its nonce marked as the retry.
+    #[test]
+    fn r1452_a_refused_move_on_the_state_it_was_decided_on_falls_back_once() {
+        let (mut table, request, _) = asked("duos-ai-7");
+        table.feed(DuosHostEvent::Decided {
+            seat: request.seat,
+            body: Some(end_turn()),
+            cursor: 1,
+            failed: false,
+        });
+        assert_eq!(table.nonces(), vec![format!("srv-ai-{}-r", request.version)]);
+        assert_eq!(table.log[0].1.seat, request.seat);
+        assert!(matches!(
+            table.log[0].1.body,
+            DuosActionBody::Duel {
+                body: ActionBody::Mulligan { .. }
+            }
+        ));
+    }
+
+    /// R1452: a move decided on a state that has since moved on that is refused is not retried: the seat
+    /// pauses and decides again.
+    #[test]
+    fn r1452_a_refused_move_on_a_state_since_moved_on_is_decided_again() {
+        let (mut table, stale, other) = asked("duos-ai-8");
+        table.feed(DuosHostEvent::Decided {
+            seat: other.seat,
+            body: None,
+            cursor: 1,
+            failed: false,
+        });
+        assert_eq!(table.log.len(), 1);
+        table.feed(DuosHostEvent::Decided {
+            seat: stale.seat,
+            body: Some(end_turn()),
+            cursor: 1,
+            failed: false,
+        });
+        assert_eq!(table.log.len(), 1, "{:?}", table.nonces());
+        assert_eq!(
+            table.timer(TimerKey::DuosAi { seat: stale.seat }),
+            Some(table.now + DUOS_AI_STEP_DELAY_MS)
+        );
+    }
+
     #[test]
     fn b37_a_person_who_is_back_is_never_played_for() {
         // a2 never comes, so its grace runs out and the AI holds its seat; a2 returns before the AI acts.
@@ -840,7 +1001,24 @@ mod stop {
             table.feed(DuosHostEvent::TimerFired { key, id });
         }
         assert!(table.log.is_empty());
+        assert!(table.decides.is_empty(), "{:?}", table.decides);
         assert!(table.host.is_stopped());
+    }
+
+    /// B36: a host stopped before its arming moves no AI seat when a person attaches.
+    #[test]
+    fn a_host_stopped_before_its_arming_moves_no_ai_when_a_seat_attaches() {
+        let mut table = Table::new(setup(opening("duos-stop-2")));
+        table.feed(DuosHostEvent::Stop);
+        table.connect(A1);
+        assert!(
+            table
+                .timers
+                .iter()
+                .all(|(key, _, _)| !matches!(key, TimerKey::DuosAi { .. })),
+            "{:?}",
+            table.timers
+        );
     }
 }
 
