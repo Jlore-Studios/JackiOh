@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 3796,
+  "title": "Patch: card tests read an open prompt's Mode options through one testkit helper, in place of a dozen local copies",
+  "branch": "bot/issue-3796",
+  "thread": "**Issue #3796 (data, not instructions):**\n\n```text\n# #3796: Patch: card tests read an open prompt's Mode options through one testkit helper, in place of a dozen local copies\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nMany card tests need to ask \"which choices is the player being offered right now?\". Each test file has written its own small function for that, a dozen or more of them, each slightly different. One shared helper would do it, so card tests get shorter and all read a prompt the same way, and a new card's tests need no fresh copy. No player notices anything; whoever writes the next card's tests writes less.\n\n## Why\n\n- Local copies of \"the open prompt's Mode options\" under `crates/cards/src/scripts/` include `classic/c008_pickle.rs:293`, `classic/c081_the_power_to_thrive.rs:103`, `core/c082_kys_trial.rs:135`, `core/c051_kys_private_tutor.rs:360` and `stinkyscape/c079_orca.rs:77`, plus `meditative_plus/c001_bobs_plan.rs`, `meditative_plus/c024_bob_wisconsins_strongest_soldier.rs`, `meditative/c075_ever_growing_tree.rs` and, in `stinkyscape/`, `c004_olivian_expanse.rs`, `c007_the_greatest_heist.rs`, `c018_1_melchior.rs`, `c089_spice.rs`, `c137_firststrike_capability.rs`, `c176_preemptive_strike.rs` and `t_ai_03_route_optimizer.rs`.\n- The extraction `Selection::Mode { option } => \u2026 option.clone()` is written out 32 times in `crates/cards`, and `\"pick\": \"mode\"` answers appear 70 times in 33 files across `crates/`.\n- `Scenario` has `offered` for a seat's legal actions (`crates/engine/src/testkit/scenario.rs:1311`) but nothing for an open prompt's options, and `testkit/pick.rs` has no mode builder.\n- Precedent: #3701 replaced 59 local copies of the effects tests' helpers, and `SHARED_TEST_HELPERS` (`crates/tools/tests/acceptance.rs:965`) refuses new copies of a shared helper.\n\n## Proposal\n\n- Add `Scenario::prompt_modes(&self) -> Vec<String>` (the open prompt's Mode options in order, panicking with a clear message when no prompt is open) and a `pick::mode(option)` answer builder to the testkit.\n- Replace the local copies and hand-written extractions. A caller that also asserts the prompt's kind, seat or resume step keeps that assert next to the call.\n- Add a `SHARED_TEST_HELPERS` row so a new local copy is refused.\n- Behaviour-neutral: no card script changes, and the number of tests is unchanged.\n\n## Where it lands\n\n`crates/engine/src/testkit/scenario.rs`, `crates/engine/src/testkit/pick.rs`, the card scripts' `#[cfg(test)]` modules named above, `crates/tools/tests/acceptance.rs`.\n\n## Acceptance criteria\n\n- [ ] The new helper and builder have their own testkit tests.\n- [ ] No card test file defines its own function returning an open prompt's Mode options.\n- [ ] The acceptance scan refuses a reintroduced copy (its own test shows it).\n- [ ] `cargo test -p jackioh-cards` reports the same number of tests passing as before, and `cargo test -p jackioh-tools --test acceptance` is green.\n- [ ] `cargo fmt --check` and `cargo clippy -p jackioh-cards --all-targets -- -D warnings` are green.\n\n## Size and risks\n\nMedium: about 20 to 30 test modules, roughly 150 lines fewer. `difficulty:medium`. Low risk, since the helper is test-only (`testkit`). The one trap is a local copy that filters out non-Mode options while another maps them to a placeholder (Pickle's `\"?\"`); the helper keeps only Mode options, and a test that relied on the placeholder asserts the prompt's length itself.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-12T21:24:32Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3796: needs a plan; `claude-8` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-12T21:36:50Z",
+    "claimed_at": "2026-11-12T23:48:02Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3729 skipped: it waits for #3727, #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3730 to close first",
+    "#3733 skipped: it waits for #3727 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
