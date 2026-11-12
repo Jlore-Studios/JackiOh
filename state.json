@@ -15577,7 +15577,7 @@
       "question": "",
       "queued_at": "2026-11-11T21:07:26Z",
       "requested_by": "MaxGoetzmann",
-      "round_tier": "",
+      "round_tier": "strong",
       "run_id": "43108838968",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-11T22:05:54Z",
@@ -15588,7 +15588,7 @@
       "strikes": 1,
       "suggestion": true,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "3695": {
       "action": "plan",
