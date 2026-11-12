@@ -13745,17 +13745,18 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "- said: I'll start by reading the web client's components and the spec/README for the web app.\n- Bash: {\"command\": \"ls; ls apps/web; ls apps/web/src; ls apps/web/src/game | head -200; cat .bot-plan.md 2>/dev/null | head -50\"}\n- Bash: {\"command\": \"wc -l apps/web/README.md apps/web/src/game/*.tsx apps/web/src/cards/*.tsx 2>/dev/null | sort -n | tail -60\"}\n- Bash: {\"command\": \"cd apps/web/src/game; git log --oneline -5 -- Card.memo.test.tsx Board.render.test.tsx; cat Card.memo.test.tsx; echo ------; cat Board.render.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3609 && grep -rn \\\"memo(\\\" apps/web/src --include=*.tsx --include=*.ts -l | grep -v test | head -40; echo ---; grep -rn \\\"React.memo\\\\|\\\\bmemo(\\\" app\u2026\n- Bash: {\"command\": \"git log --oneline -15 -- apps/web/src/game/Card.tsx apps/web/src/game/Board.tsx apps/web/src/cards/CardFace.tsx; git log --oneline | head -5; git log --all --oneline --grep=\\\"3604\\\" | he\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3609/apps/web/src/game/Card.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3609/apps/web/src/game && cat Board.tsx\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3609/apps/web/src/game/Board.tsx\", \"offset\": 30, \"limit\": 420}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3609/apps/web/src/game/Board.tsx\", \"offset\": 449, \"limit\": 420}\n- Bash: {\"command\": \"cat Zone.tsx; ls drag aim; wc -l drag/* aim/* Hand.tsx Backrow.tsx TheirHand.tsx\"}\n- Bash: {\"command\": \"cat Hand.tsx Backrow.tsx; cat hoveredHandCard.tsx\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3609/apps/web/src/game/Game.tsx\", \"offset\": 1, \"limit\": 140}\n- Grep: {\"pattern\": \"useState|useCallback|useMemo|useRef|useReducer|highlight|onClick|animating\", \"path\": \"/home/runner/work/_temp/work/item-3609/apps/web/src/game/Game.tsx\", \"output_mode\": \"content\", \"-n\": \u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3609/apps/web/src/game/Game.tsx\", \"offset\": 700, \"limit\": 200}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3609 && git log --oneline --grep=\\\"#3633\\\\|3604\\\\|3478\\\\|part [0-9] of 6\\\" | head -20; grep -rn \\\"3604\\\" --include=*.md --include=*.ts --include=*.ts\u2026\n- Bash: {\"command\": \"cat spec/pending/3608.md spec/rulings/R3606000.md spec/rulings/R3607000.md spec/rulings/R3608000.md; ls spec/pending | head -30; ls spec/rulings | grep -E \\\"R36(0|1)\\\" \"}\n- Bash: {\"command\": \"grep -n \\\"3633\\\\|3478\\\\|memo\\\\|Memo\\\\|render\\\" apps/web/README.md | head -60\"}\n- Bash: {\"command\": \"git show --stat ee5f9ebf12 | head -40; grep -rln \\\"3633\\\" spec docs apps/web/README.md 2>/dev/null | head\"}\n- Bash: {\"command\": \"cd apps/web/src && grep -rn \\\"structural\\\\|reconcile\\\\|keepIdentity\\\\|shareView\\\\|sameCard\\\\b\\\\|stableView\\\" --include=*.ts --include=*.tsx . | grep -v \\\"\\\\.test\\\\.\\\" | head -20; sed -n \u2026\n- Bash: {\"command\": \"ls wasm; grep -n \\\"viewFor\\\\|view_for\\\\|JSON.parse\\\\|export function\\\" wasm/index.ts | head -60\"}\n- Bash: {\"command\": \"grep -rln \\\"<Board\\\\b\\\" --include=*.tsx . | grep -v test; echo ---; grep -rn \\\"<Game\\\\b\\\" --include=*.tsx . | grep -v \\\"\\\\.test\\\\.\\\" | head -20; echo; grep -rn \\\"deepEqual\\\\|isEqual\\\\|st\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3609/apps/web/src/game/Game.tsx\", \"offset\": 255, \"limit\": 130}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3609/.bot-plan.md\", \"content\": \"# Draft notes for #3609 (planner)\\n\\n## Findings so far\\n- Issue text is partly stale: `Card` (Card.tsx `memo(Card, sa\u2026\n- Bash: {\"command\": \"cat aim/useHoveredAimTarget.ts; sed -n 1,80p aim/useAimEmitter.ts; grep -n \\\"useState\\\\|useRef\\\\|latest\\\\|setState\\\\|style\\\\.\\\\|setProperty\\\\|requestAnimationFrame\\\" game/drag/DragLayer.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3609/apps/web/src/game && sed -n 100,230p drag/DragLayer.tsx; cat aim/useHoveredAimTarget.ts; sed -n 1,60p aim/useAimEmitter.ts\"}\n- Bash: {\"command\": \"sed -n 280,470p drag/DragLayer.tsx\"}\n- Bash: {\"command\": \"sed -n 520,819p drag/DragLayer.tsx\"}\n- Bash: {\"command\": \"cat glow.ts | sed -n 1,200p; grep -n \\\"Highlight\\\" contract.ts | head; sed -n '/export type Highlight/,/^};/p' contract.ts; grep -n \\\"highlight\\\\|testid\\\\.\\\" ActivateControl.tsx | head -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3609/apps/web/src && sed -n 1,80p cards/MinionFace.tsx; sed -n 330,360p cards/MinionFace.tsx; sed -n 740,787p cards/CardFace.tsx\"}\n- Bash: {\"command\": \"cat game/HandHints.tsx | sed -n 1,80p; grep -n \\\"outcomeFor\\\" -A12 game/attackOutcome.ts | head -40; grep -n \\\"activate\\\\b\\\\|activate:\\\" -A3 game/contract.ts | head -20\"}\n- Bash: {\"command\": \"cd game && grep -n \\\"view\\\\.\\\" handHints.ts | head -40; wc -l handHints.ts\"}\n- Bash: {\"command\": \"cat handHints.ts; sed -n 1,80p ../cards/tallies.ts | head -5; grep -n \\\"useTallies\\\\|useFieldPower\\\\|useCopiedDef\\\\|useCardInfo\\\" -B2 -A18 catalog.ts | sed -n 1,140p\"}\n- Bash: {\"command\": \"sed -n 22,108p catalog.ts; grep -n \\\"Provider\\\\|createContext\\\\|useMemo\\\" wearer.ts spent.ts keywordLoss.ts awakening.ts | head -40\"}\n- Bash: {\"command\": \"sed -n 1,70p keywordLoss.ts; sed -n 1,60p awakening.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3609/apps/web/src && grep -n \\\"usePickupSound\\\" -A25 audio/index.ts audio/*.ts | grep -v test | head -50; for f in routes/match.tsx routes/practice.t\u2026\n- Bash: {\"command\": \"cd game && grep -n \\\"highlight\\\\|Highlight\\\" ActivateControl.tsx FieldBadges.tsx AttackOutcome.tsx ../cards/CardMarks.tsx ../cards/Tallies.tsx | head -40; grep -n \\\"switchPosition\\\" cont\u2026\n- Bash: {\"command\": \"cd game && grep -n \\\"hints=\\\" *.test.tsx | head; grep -n \\\"applies:\\\" *.test.tsx | head; grep -n \\\"HandHints\\\" *.tsx | grep -v \\\"^HandHints\\\" | head\"}\n- Bash: {\"command\": \"cd game && sed -n 1,120p Hand.test.tsx | head -150; grep -n \\\"fullBoardView\\\" -A60 ../test/fixtures.ts | head -120\"}\n- said: You've hit your 5-hour limit \u00b7 resets 5:20am (UTC)"
       },
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
       "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-12T02:31:53Z",
-      "owner_why": "it plans it",
+      "owner": "claude-4",
+      "owner_since": "2026-11-12T02:57:30Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` it refused a call; its limit resets at 2026-11-12T05:20:00Z; it can start again only in 2h 22m, more than the 120 minutes an item waits for its owner",
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-4",
       "queued_at": "2026-11-10T03:21:46Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43142066687",
+      "run_id": "pending:ec4f899d-1794452214",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
@@ -13774,7 +13775,7 @@
         "provider": "claude-3",
         "run": "43142066687"
       },
-      "started_at": "2026-11-12T02:31:53Z",
+      "started_at": "2026-11-12T02:57:30Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17318,9 +17319,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T02:45:05Z",
+    "at": "2026-11-12T02:57:30Z",
     "url": "",
-    "what": "review #3750 on claude-2"
+    "what": "plan #3609 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-12T02:40:01Z",
