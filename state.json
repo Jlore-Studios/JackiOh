@@ -35122,7 +35122,9 @@
           "provider": "claude-7"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-12T17:37:17Z",
         "every": 5,
+        "findings": 0,
         "head": "22f1babd0912caac443d70f172a28abb1537d904",
         "issue": 3770,
         "last_why": "interrupted: `claude-2` stops before it starts: 7-day usage is 90%, at or over its 90% cap; it resets at 2026-11-14T05:00:00Z",
@@ -35136,12 +35138,13 @@
           "provider": "claude-4",
           "tier": "strong"
         },
-        "run_id": "pending:4e52c7d4-1794504542",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/43270057121",
         "sha": "6a1d86fe8480777846536d27b88ae640df1ad1ba",
         "started_at": "2026-11-12T17:29:52Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: a server sweep that keeps failing raises an alert, not just a warning on every pass",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 225
