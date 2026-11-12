@@ -2421,7 +2421,11 @@ mod stinkyscape {
         // Radiant 1~3; a 0 is no hit), and a Flying Unit takes `damage2` instead; 1 use, Radiant 2.
         both_faces!(sp_n35_scatter, |radiant: bool| {
             let mut s = facing(json!([on(SCATTER, radiant)]), json!([TOUGH, FLIER]));
-            let (id, ground, flier) = (s.card(SCATTER).id.clone(), s.unit_at(P2, 1).id, s.unit_at(P2, 2).id);
+            let (id, ground, flier) = (
+                s.card(SCATTER).id.clone(),
+                s.unit_at(P2, 1).id,
+                s.unit_at(P2, 2).id,
+            );
             let events = activate_listed(&mut s, SCATTER, any);
             let range = if radiant { 1..=3 } else { 0..=2 };
             for target in [ground.as_str(), "hero-p2"] {
@@ -2430,9 +2434,16 @@ mod stinkyscape {
                     hit.len() <= 1 && hit.iter().all(|amount| range.contains(amount)),
                     "{target}: {hit:?}"
                 );
-                assert!(range.contains(&0) || !hit.is_empty(), "{target}: a roll of at least 1 hits");
+                assert!(
+                    range.contains(&0) || !hit.is_empty(),
+                    "{target}: a roll of at least 1 hits"
+                );
             }
-            assert_eq!(hits_on(&events, &flier), vec![printed(SCATTER, "damage2", radiant)], "the flier");
+            assert_eq!(
+                hits_on(&events, &flier),
+                vec![printed(SCATTER, "damage2", radiant)],
+                "the flier"
+            );
             uses_left(&s, &id, if radiant { 2 } else { 1 });
         });
 
@@ -2441,15 +2452,26 @@ mod stinkyscape {
         both_faces!(sp_n38_arc, |radiant: bool| {
             let mut s = facing(
                 json!([at_lane(ARC, radiant, 5)]),
-                json!([at_lane(TOUGH, false, 1), at_lane(TOUGH, false, 2), at_lane(TOUGH, false, 4)]),
+                json!([
+                    at_lane(TOUGH, false, 1),
+                    at_lane(TOUGH, false, 2),
+                    at_lane(TOUGH, false, 4)
+                ]),
             );
             let id = s.card(ARC).id.clone();
             let lanes = [1, 2, 4].map(|lane| s.unit_at(P2, lane).id);
             let events = activate_listed(&mut s, ARC, aimed_at(&lanes[0]));
             let dealt = printed(ARC, "damage2", radiant);
             assert_eq!(hits_on(&events, &lanes[0]), vec![dealt], "the Unit named");
-            assert_eq!(hits_on(&events, &lanes[1]), vec![dealt], "chained to the Unit beside it");
-            assert!(hits_on(&events, &lanes[2]).is_empty(), "lane 4 is beside no Unit hit");
+            assert_eq!(
+                hits_on(&events, &lanes[1]),
+                vec![dealt],
+                "chained to the Unit beside it"
+            );
+            assert!(
+                hits_on(&events, &lanes[2]).is_empty(),
+                "lane 4 is beside no Unit hit"
+            );
             uses_left(&s, &id, printed(ARC, "damage", radiant));
         });
 
@@ -2463,7 +2485,10 @@ mod stinkyscape {
                 })))
             };
             let bare = reactor(json!([STOCKPILE]));
-            assert!(listed(&bare, &bare.card(REACTOR).id).is_empty(), "no Thorium, no Activate");
+            assert!(
+                listed(&bare, &bare.card(REACTOR).id).is_empty(),
+                "no Thorium, no Activate"
+            );
             let mut s = reactor(json!([THORIUM, STOCKPILE]));
             let (id, thorium) = (s.card(REACTOR).id.clone(), s.card(THORIUM).id.clone());
             activate_listed(&mut s, REACTOR, any);
@@ -2493,12 +2518,20 @@ mod stinkyscape {
             let minerals: Vec<CardInstance> = s
                 .hand(P1)
                 .into_iter()
-                .filter(|card| jackioh_cards::CATALOG[card.def_id.as_str()].tags.contains(&Tag::Mineral))
+                .filter(|card| {
+                    jackioh_cards::CATALOG[card.def_id.as_str()]
+                        .tags
+                        .contains(&Tag::Mineral)
+                })
                 .collect();
             assert_eq!(minerals.len(), 2, "two Minerals delivered");
             for mineral in &minerals {
                 assert_eq!(mineral.radiant, radiant, "of the Driver's face");
-                assert_eq!(effective_cost(s.state(), mineral, Default::default()), 0, "at (0)");
+                assert_eq!(
+                    effective_cost(s.state(), mineral, Default::default()),
+                    0,
+                    "at (0)"
+                );
             }
         });
 
@@ -2582,8 +2615,12 @@ mod stinkyscape {
             uses_left(&s, &id, uses);
         }
 
-        both_faces!(sp_n126_vela, |radiant: bool| draws_a_line(VELA, radiant, radiant, 1));
-        both_faces!(sp_n127_corvus, |radiant: bool| draws_a_line(CORVUS, radiant, radiant, 1));
+        both_faces!(sp_n126_vela, |radiant: bool| draws_a_line(
+            VELA, radiant, radiant, 1
+        ));
+        both_faces!(sp_n127_corvus, |radiant: bool| draws_a_line(
+            CORVUS, radiant, radiant, 1
+        ));
         // R3554005: Lancer's line never Cleaves; 1 use on the base face, 2 on the Radiant one.
         both_faces!(sp_n109_lancer, |radiant: bool| draws_a_line(
             LANCER,

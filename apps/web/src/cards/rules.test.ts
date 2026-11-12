@@ -106,6 +106,12 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "After this attacks",
     // R3572000: its Frozen is §6.1's status ("Frozen"), which the glossary names; the row is a trigger on it.
     "When this is Frozen",
+    // R3558001, R3558002, R3558006, R3558007: Stinkyscape+'s hand and deck rows; the cards print each in their own
+    // words ("The card to the right of this …", "When your exile has 5 cards cast this").
+    "Hand aura",
+    "When they meet",
+    "Always starts on the bottom of your deck",
+    "Cast from the deck",
   ],
   "§6.3": [
     "Summon",
@@ -861,7 +867,9 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
   });
 
   it("R512 each new status, and the v0.2.0 keyword kinds, are found where a card prints them", () => {
-    expect(termsIn(played("classicplus-051"))).toContain("Can't be attacked");
+    // R3551003: Jlockeed's J15 Fighter, the one card that printed Can't be attacked, prints Evasive in its place.
+    expect(termsIn(played("classicplus-051"))).toContain("Evasive");
+    expect(termsIn(played("classicplus-051"))).not.toContain("Can't be attacked");
     expect(termsIn(played("classicplus-019-1"))).toContain("Only Units in this lane can attack this");
     expect(termsIn(played("classicplus-019-1", "radiant"))).toContain("Immune to Spells");
     expect(termsOf(played("classicplus-019-5"))).toContainEqual({ text: "Berserk:", term: "Berserk" });
@@ -888,9 +896,10 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
   });
 
   it("R512 every new term has at least one catalog text that prints it", () => {
-    // No status is left unprinted: the Stinkyscape set's faces (#1884) print Frozen and Dormant
-    // (R1839000), where M+ #24 Bob (#1185) prints only the verb, Freeze.
-    const unprinted: readonly GlossaryTermId[] = [];
+    // The Stinkyscape set's faces (#1884) print Frozen and Dormant (R1839000), where M+ #24 Bob (#1185)
+    // prints only the verb, Freeze. R3551003: Can't be attacked is printed by no card since Jlockeed's J15
+    // Fighter took Evasive in its place (§6.1's row: "None yet").
+    const unprinted: readonly GlossaryTermId[] = ["Can't be attacked"];
     const fresh: readonly GlossaryTermId[] = [
       ...STATUSES.filter((id) => !unprinted.includes(id)),
       "Activate",
@@ -942,9 +951,12 @@ describe("R2657000: Can't Defend, the keyword that took over from the status Can
     );
     expect(termsIn(played("classicplus-019-1", "radiant"))).toEqual(expect.arrayContaining(["Immune to Spells", "Can't Defend"]));
     expect(termsIn(played("core-065-1"))).toEqual(expect.arrayContaining(["Can't Defend", "Aura"]));
-    // Jlockeed's J15 Fighter prints it again on both faces since #3042 (part 5 of #3000).
-    expect(termsIn(played("classicplus-051"))).toContain("Can't Defend");
-    expect(termsIn(played("classicplus-051", "radiant"))).toContain("Can't Defend");
+    // Jlockeed's J15 Fighter printed it again on both faces from #3042 (part 5 of #3000) until R3551003 gave it
+    // Evasive, which implies Can't Defend (R3543002), alone.
+    for (const face of ["base", "radiant"] as const) {
+      expect(termsIn(played("classicplus-051", face))).toContain("Evasive");
+      expect(termsIn(played("classicplus-051", face))).not.toContain("Can't Defend");
+    }
   });
 
   it("R2657000 the status's spellings are plain words now, and Warp Disruptor's aura stays plain words", () => {

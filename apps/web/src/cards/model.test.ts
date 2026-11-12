@@ -256,7 +256,8 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
     // Classic #28 drop words too, as do Meditative #89 Jlarna's (R1225), #22.1 Fortify Mind's (R862)
     // and #48 Tranquility's (R1021), Classic #29 Book of Vital Kill's, Meditative+ #11, #12 and #13's
     // Living Potions, the Stinkyscape set's #9 Ticketed and Core #79 Twinspell, whose Radiant face drops
-    // "Then this goes to the graveyard." (R3044000) (radiantDiff.test.ts names all fourteen;
+    // "Then this goes to the graveyard." (R3044000), and Stinkyscape+ #31, #72, #73 and #85 (§8.12)
+    // (radiantDiff.test.ts names all eighteen;
     // #149 Wildar's Radiant face adds "It costs (0)." (#2657), a mark, no deletion).
     const pureDeletions = new Set([
       "core-055",
@@ -273,6 +274,10 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
       "meditativeplus-012",
       "meditativeplus-013",
       "stinkyscape-009",
+      "stinkyscapeplus-031",
+      "stinkyscapeplus-072",
+      "stinkyscapeplus-073",
+      "stinkyscapeplus-085",
     ]);
     for (const card of DEFS) {
       const f = face(card.id, true);
@@ -495,7 +500,8 @@ describe("a face in play is the card as the view says it stands; the collection'
 
   it("R752 a Heroic Power in play prints only the power it rolled, and its (0) on the gem", () => {
     const f = face("core-098", false, { liveCost: 0, inPlay: { power: { name: "recruit" } } });
-    expect(legacyText(f.text)).toEqual({ full: "Indestructible\nExpedition Map\nActivate: Spend (3): Recruit a permanent.", marks: [] });
+    // R3551002: each power costs (1) less than through v0.5.13g.
+    expect(legacyText(f.text)).toEqual({ full: "Indestructible\nExpedition Map\nActivate: Spend (2): Recruit a permanent.", marks: [] });
     expect(f.cost).toEqual({ text: "0", value: "0", tone: "base", alt: null });
     for (const other of ["one of 14 powers", "Felinor Token", "Discover a Unit", "Life Tap"]) {
       expect(f.text.full).not.toContain(other);
@@ -506,7 +512,7 @@ describe("a face in play is the card as the view says it stands; the collection'
 
   it("R752 a radiant Heroic Power prints its rolled power's Radiant words and name, marked against the base", () => {
     const f = face("core-098", true, { liveCost: 0, inPlay: { power: { name: "armor" } } });
-    expect(f.text.full).toBe("Indestructible\nTank Up\nActivate: Spend (1): Your hero gains 4 Armor, then this power refreshes.");
+    expect(f.text.full).toBe("Indestructible\nTank Up\nActivate: Spend (0): Your hero gains 4 Armor, then this power refreshes."); // R3551002
     // R277: the rolled power is marked against the same power's base words.
     expect(markedText(f.text.full, legacyText(f.text).marks).length).toBeGreaterThan(0);
     expect(f.printed?.full).toBe(fillParams(def("core-098"), "radiant"));
@@ -523,7 +529,7 @@ describe("a face in play is the card as the view says it stands; the collection'
 
   it("R754 Steady Shot's {shot} prints the card's number as the view gives it", () => {
     const f = face("core-098", true, { liveCost: 0, inPlay: { power: { name: "burn" }, params: { shot: 8 } } });
-    expect(f.text.full).toContain("Activate: Spend (1): Deal 8 damage to the enemy hero.");
+    expect(f.text.full).toContain("Activate: Spend (0): Deal 8 damage to the enemy hero."); // R3551002
     expect(face("core-098", false, { liveCost: 0, inPlay: { power: { name: "burn" } } }).text.full).toContain("Deal 2 damage");
   });
 

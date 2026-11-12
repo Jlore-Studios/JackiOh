@@ -270,7 +270,7 @@ describe("R752 a Heroic Power in play prints the one power it rolled", () => {
       baseView({ you: emptySide("p1", { hand: [card({ instanceId: "h1", defId: "core-098", cost: 0, power: "recruit" })] }) }),
     );
     const root = screen.getByTestId(testid.handCard("h1"));
-    expect(text(root, ".card-text")).toBe("Indestructible\nExpedition Map\nActivate: Spend (3): Recruit a permanent.");
+    expect(text(root, ".card-text")).toBe("Indestructible\nExpedition Map\nActivate: Spend (2): Recruit a permanent."); // R3551002: each power costs (1) less
     expect(text(root, ".card-text")).not.toContain("one of 14 powers");
     expect(text(root, ".cost-gem")).toBe("0");
   });
@@ -288,7 +288,7 @@ describe("R752 a Heroic Power in play prints the one power it rolled", () => {
       }),
     );
     const preview = hover(screen.getByTestId(testid.card("b1")));
-    expect(text(preview, ".card-text")).toBe("Indestructible\nPing\nActivate: Spend (1): Pierce. Deal 1 damage.");
+    expect(text(preview, ".card-text")).toBe("Indestructible\nPing\nActivate: Spend (0): Pierce. Deal 1 damage."); // R3551002
     expect(text(preview, `[data-testid="${INSPECT_PRINTED}"]`)).toContain("Discover one of 14 powers");
   });
 

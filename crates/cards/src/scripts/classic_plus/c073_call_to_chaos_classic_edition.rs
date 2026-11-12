@@ -215,7 +215,9 @@ mod tests {
             let added = added_to(&s);
             assert_eq!(added.len(), 5);
             for card in &added {
-                assert!(crate::card_def(&card.def_id).tags.contains(&Tag::Fruit));
+                // R3566001: a Smoothie arrives fused, its definition the state's.
+                let def = jackioh_engine::catalog::def_of(Some(s.state()), &card.def_id);
+                assert!(def.tags.contains(&Tag::Fruit));
                 assert_eq!(card.cost_override, Some(0));
                 assert_eq!(jackioh_engine::mana::effective_cost(s.state(), card, Default::default()), 0);
             }

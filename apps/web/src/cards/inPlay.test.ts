@@ -70,7 +70,10 @@ describe("#98 Heroic Power's rolled power, in words (R752)", () => {
     const params = CATALOG[HEROIC_POWER_ID]?.params ?? [];
     for (const [name, words] of Object.entries(POWER_WORDS)) {
       const written = [...`${words.base} ${words.radiant}`.matchAll(/\{(\w+)\}/g)].map((match) => match[1] ?? "");
-      const own = params.filter((param) => param.power === name).map((param) => param.key);
+      // R3551002: End Times' price is its own declared number (the engine's END_TIMES_PRICE_PARAM), which
+      // prints as its (X), not in its words.
+      const price = name === "endTimes" ? "endTimes" : undefined;
+      const own = params.filter((param) => param.power === name && param.key !== price).map((param) => param.key);
       expect([...new Set(written)].sort(), name).toEqual([...own].sort());
     }
   });

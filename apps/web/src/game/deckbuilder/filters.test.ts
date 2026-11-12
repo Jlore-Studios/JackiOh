@@ -969,7 +969,8 @@ describe("the chips follow what ships (R1380, R1381)", () => {
         ].map((name) => `stinkyscapeplus-t-terminus-starship-${name}`),
       ].sort(),
     );
-    expect(starships.every((d) => d.token)).toBe(true);
+    // The Dormant Starship is printed as no token (only R1857001 keeps it out of a deck); the ten are.
+    expect(starships.filter((d) => d.id.startsWith("stinkyscapeplus-")).every((d) => d.token)).toBe(true);
     expect(FILTER_TAGS).not.toContain("Starship");
     expect(DECK_CHIP_TAGS).not.toContain("Starship");
     expect(ALMANAC_CHIP_TAGS).toContain("Starship");

@@ -436,6 +436,11 @@ export function mindustrialOverlay(seedId: string, radiant: boolean): string {
 
 // The picture
 
+/** Whether `defId` draws Stinkyscape's painter under the Mindustrial overlay: a card of the set no ship's or fusion's subject draws. */
+export function paintsUnderOverlay(defId: string): boolean {
+  return isStinkyscapePlusArt(defId) && !Object.hasOwn(TERMINUS_SHIPS, defId) && !Object.hasOwn(AUTOMA_ZETA, defId);
+}
+
 /**
  * The SVG document a Stinkyscape+ face draws, unencoded; moving as `motion` says, its backdrop and the rest grown from
  * `seedId` (the card's id by default) and `part` leaving its subject out or drawing it alone. A Terminus Starship

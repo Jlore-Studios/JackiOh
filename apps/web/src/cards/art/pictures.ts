@@ -119,7 +119,7 @@ export function artPlaneUri(defId: string, plane: ArtPlane | "whole", radiant: b
     return stinkyscapeArtUri(defId, name, tags, type, radiant, motion, defId, null, plane);
   }
   if (isStinkyscapePlusArt(defId)) {
-    return stinkyscapePlusArtUri(defId, name, tags, type, radiant, null, defId, null, plane);
+    return stinkyscapePlusArtUri(defId, name, tags, type, radiant, motion, defId, null, plane);
   }
   if (isTrainingGroundsArt(defId)) {
     return trainingGroundsArtUri(defId, name, tags, type, radiant, motion, defId, null, plane);

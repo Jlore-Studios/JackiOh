@@ -50,6 +50,14 @@
   --kw-period-plate: 3.2s;
   --kw-period-launch: 1.6s;
   --kw-period-split: 2.8s;
+  --kw-period-giga: 2.8s;
+  --kw-period-flexible: 2s;
+  --kw-period-frenzy: 1.2s;
+  --kw-period-evasive: 2.4s;
+  --kw-period-tipsy: 2.4s;
+  --kw-period-evolve: 3.6s;
+  --kw-period-burn: 1.2s;
+  --kw-period-toxic: 2.4s;
 
   /* The glyph disc: legible on a phone's minion, and larger on a big one. */
   --kw-glyph: max(12px, 20cqmin);
@@ -476,35 +484,35 @@
 /* R3572000: the Stinkyscape+ kinds. GIGA's four zones breathe, Frenzy's claws flicker, Evasive's arrow slips round its ring; the
    rest are off the field (keywordVisuals.ts `onField`) and keep their loops for the day a card draws them. */
 .cf .kw-fx[data-keyword-fx="GIGA"][data-kw-motion="on"] .kw-anim {
-  animation: kw-giga-pulse calc(var(--motion-slow) * 7) var(--ease-in-out) infinite alternate;
+  animation: kw-giga-pulse var(--kw-period-giga) var(--ease-in-out) infinite alternate;
 }
 
 .cf .kw-fx[data-keyword-fx="Flexible"][data-kw-motion="on"] .kw-anim {
-  animation: kw-flexible-slide calc(var(--motion-slow) * 5) var(--ease-in-out) infinite alternate;
+  animation: kw-flexible-slide var(--kw-period-flexible) var(--ease-in-out) infinite alternate;
 }
 
 .cf .kw-fx[data-keyword-fx="Frenzy"][data-kw-motion="on"] .kw-anim {
-  animation: kw-frenzy-slash calc(var(--motion-slow) * 3) var(--ease-in-out) infinite;
+  animation: kw-frenzy-slash var(--kw-period-frenzy) var(--ease-in-out) infinite;
 }
 
 .cf .kw-fx[data-keyword-fx="Evasive"][data-kw-motion="on"] .kw-anim {
-  animation: kw-evasive-slip calc(var(--motion-slow) * 6) var(--ease-in-out) infinite alternate;
+  animation: kw-evasive-slip var(--kw-period-evasive) var(--ease-in-out) infinite alternate;
 }
 
 .cf .kw-fx[data-keyword-fx="Tipsy"][data-kw-motion="on"] .kw-anim {
-  animation: kw-tipsy-sway calc(var(--motion-slow) * 6) var(--ease-in-out) infinite alternate;
+  animation: kw-tipsy-sway var(--kw-period-tipsy) var(--ease-in-out) infinite alternate;
 }
 
 .cf .kw-fx[data-keyword-fx="Evolve"][data-kw-motion="on"] .kw-anim {
-  animation: kw-evolve-twist calc(var(--motion-slow) * 9) var(--ease-in-out) infinite alternate;
+  animation: kw-evolve-twist var(--kw-period-evolve) var(--ease-in-out) infinite alternate;
 }
 
 .cf .kw-fx[data-keyword-fx="Burn"][data-kw-motion="on"] .kw-anim {
-  animation: kw-burn-flicker calc(var(--motion-slow) * 3) var(--ease-in-out) infinite alternate;
+  animation: kw-burn-flicker var(--kw-period-burn) var(--ease-in-out) infinite alternate;
 }
 
 .cf .kw-fx[data-keyword-fx="Toxic"][data-kw-motion="on"] .kw-anim {
-  animation: kw-toxic-drip calc(var(--motion-slow) * 6) var(--ease-in) infinite;
+  animation: kw-toxic-drip var(--kw-period-toxic) var(--ease-in) infinite;
 }
 
 .cf .kw-fx[data-keyword-fx="Spell Damage"][data-kw-motion="on"] .kw-anim {

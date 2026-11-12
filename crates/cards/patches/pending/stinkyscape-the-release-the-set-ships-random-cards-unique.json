@@ -1,26 +1,49 @@
 {
   "title": "Stinkyscape+, the release: the set ships, random cards unique",
-  "sources": "Issue #3573 (R), fullsend 1 #3534, tracker #3533",
-  "notes": "The Stinkyscape+ set ships (R1420), gated for the AI's decks (R1390); every random card an effect makes is unique until its pool runs out (R3563000); xxFreshJack and Shockwave447 read lists the set grows (R2173001); Transmogulate and Bob's Plan draw through the tally",
+  "sources": "Issues #3596 (the reconcile), #3573 (R) and #3551 (S01), fullsend 1, tracker #3533",
+  "notes": "The Stinkyscape+ set ships (R1420), gated for the AI's decks (R1390); every random card an effect makes is unique until its pool runs out (R3563000); xxFreshJack and Shockwave447 read lists the set grows (R2173001); Transmogulate and Bob's Plan draw through the tally; S01 patches twelve shipped cards (Jay Fungus, Money Machine, Heroic Power and End Times, Evasive on J15 Fighter, Frenzy on Tmack Trav and Classic Golem, Replenish wording, Great Paperclip Theory I), Rotten Grape gains Tipsy 1 and Selective Breeding Evolves the deck",
   "player": {
     "title": "Stinkyscape+, a new set",
     "new": [
       "Stinkyscape+ joins the game: 166 cards and 38 tokens, with the Mindustrial machines, the Swarm, the Terminus Starships and the Weapons to build decks with.",
       "New keywords come with it: Tipsy, Flexible and GIGA, and new families: Mindustrial, Mineral, Paperclip and six Automa tags."
     ],
-    "balance": [],
+    "balance": [
+      "Heroic Power's powers each cost (1) less, and it has a fourteenth: End Times (10), which Discovers a Terminus card and costs less each end of your turn until you use it.",
+      "Jay Fungus is a Swarm card now, and Evolves into Poisonous while your hand holds (0) Cost cards: 3 of them, 1 on its Radiant face.",
+      "Money Machine prints The Coin or Warhero Tokens as you play it, and at the end of your turn shuffles that card into both decks, flipping a coin to put yours in your hand instead.",
+      "Rotten Grape is Tipsy 1.",
+      "Selective Breeding also Evolves every card left in your deck."
+    ],
     "changes": [
       "Every random card an effect makes is now different from the others that effect makes, until its pool runs out and it draws from the whole pool again.",
       "Random cards, Discover and Call to Chaos draw from the new set too, and Call to Chaos has a seventh edition."
     ],
-    "text": [],
+    "text": [
+      "Jlockeed's J15 Fighter prints Evasive for \"Can't Defend; can't be attacked\".",
+      "Tmack Trav and Classic Golem print Frenzy for \"may attack again\", and Frenzy is among the random keywords.",
+      "Refresh mana now reads Replenish mana on /fullsend, Zephrys Zealotism and Rosemary Triscuit.",
+      "Great Paperclip Theory is Great Paperclip Theory I, a Paperclip card."
+    ],
     "fixes": []
   },
   "cards": [
+    "core-042",
+    "core-078",
     "core-095",
+    "core-098",
+    "classicplus-027",
+    "classicplus-049",
+    "classicplus-051",
+    "classicplus-065-1",
     "classicplus-073",
+    "classicplus-073-1",
+    "meditative-054",
     "meditative-095",
     "stinkyscape-004-6",
+    "stinkyscape-008-1",
+    "stinkyscape-044",
+    "stinkyscape-094",
     "stinkyscape-149",
     "stinkyscape-150",
     "stinkyscape-151",

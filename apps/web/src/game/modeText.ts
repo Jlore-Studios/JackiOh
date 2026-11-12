@@ -231,6 +231,22 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
     "gain Brittle": { label: "More Brittle", detail: "This gains more Brittle." },
     "Tribute this": { label: "Tribute this", detail: "Tribute this card." },
   },
+  // S+ #4 Profe Yates: the one Activate it keeps while it stays.
+  "stinkyscapeplus-004": {
+    overwhelm: { label: "Overwhelm", detail: "Activate: Freeze all Units in this lane and the surrounding lanes." },
+    wolfsMaw: { label: "Wolf's Maw", detail: "Activate: Pull a Flying Unit down and deal damage to it. It loses Flying." },
+    ironMandate: { label: "Iron Mandate", detail: "Activate: Fuse this into a Unit. This does not trigger its Cry again." },
+  },
+  // S+ #7 Churnwalker.
+  "stinkyscapeplus-007": {
+    enemy: { label: "Chain enemy Units", detail: "When one takes damage, all other chained Units also take the damage." },
+    friendly: { label: "Chain friendly Units", detail: "When one takes damage, it is split between all allies, rounded down." },
+  },
+  // S+ #132 Great Paperclip Theory II.
+  "stinkyscapeplus-132": {
+    α: { label: "α", detail: "Add a Dagger to your hand. The first time you play each Automa-α cost card, add the next cost one to your hand." },
+    β: { label: "β", detail: "Add a Flare to your hand. The first time you play each Automa-β cost card, add the next cost one to your hand." },
+  },
 };
 
 /** Showdown's five lanes, `lane-1` to `lane-5`, each named by where it sits on the board. */
@@ -353,6 +369,11 @@ export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, 
   "stinkyscape-026": {
     university: { label: "Radiant University", detail: "Summon a Radiant University." },
     piece: { label: "Radiant Starship Piece", detail: "This gains “End of turn: Summon a random Radiant Starship Piece.”" },
+  },
+  // S+ #132 Great Paperclip Theory II, radiant: every card it adds is Radiant.
+  "stinkyscapeplus-132": {
+    α: { label: "α", detail: "Add a Radiant Dagger to your hand. The first time you play each Automa-α cost card, add the next cost Radiant one to your hand." },
+    β: { label: "β", detail: "Add a Radiant Flare to your hand. The first time you play each Automa-β cost card, add the next cost Radiant one to your hand." },
   },
   // S #121 System Schematic, radiant: "The one chosen Radiant".
   "stinkyscape-121": {

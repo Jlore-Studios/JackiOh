@@ -29147,7 +29147,7 @@
     "flavor": "Clout",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 23,
     "base": {
       "attack": 2,
       "health": 1,
@@ -29208,7 +29208,7 @@
     "token": true,
     "cost": 1,
     "printedRarity": "Epic",
-    "loc": 6,
+    "loc": 29,
     "base": {
       "keywords": [
         {
@@ -29772,7 +29772,7 @@
     "flavor": "Snack",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 29,
     "base": {
       "keywords": [],
       "text": "There is X and Y inside the smoothie. When added to your hand, select two random fruits for it."
@@ -29795,7 +29795,7 @@
     "flavor": "Snack",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 8,
     "base": {
       "keywords": [],
       "text": "There is X, Y and Z inside the smoothie. When added to your hand, select three random fruits for it."
@@ -31866,7 +31866,7 @@
     "token": true,
     "cost": 0,
     "printedRarity": "Epic",
-    "loc": 6,
+    "loc": 31,
     "base": {
       "keywords": [],
       "text": "If this is the left most card in your hand, the card to the right of this is Radiant."
@@ -32650,7 +32650,7 @@
     "flavor": "Dark",
     "token": false,
     "cost": 2,
-    "loc": 18,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "Always starts on the bottom of your deck. If several cards do, their order is random.\nWhen your exile has {card|card|cards}, cast this, wherever in your deck it is.\nAdd a random Terminus card to your hand."
@@ -33014,7 +33014,7 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 30,
     "base": {
       "keywords": [],
       "text": "Add an iKwzki and Shockwave447, Shadiris and xxFreshJack, or Tylannt and Siva 1 to the left and right most cards of your hand. When they meet both become Radiant."
@@ -33456,7 +33456,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 42,
+    "loc": 43,
     "base": {
       "attack": 2,
       "health": 4,

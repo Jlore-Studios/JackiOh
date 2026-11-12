@@ -53,7 +53,9 @@ describe("R3546004 a GIGA permanent drawn across its four zones", () => {
     expect(gigaOf(board, "opponent", "units", 3)).toBeNull();
   });
 
-  it("R3546004 a unit holding the GIGA keyword renders with no chip for it", () => {
+  // R3572000 (#3572) since gave GIGA a glyph and a treatment, drawn on the field where it acts,
+  // so the unit now wears its chip where this test once pinned none.
+  it("R3546004 a unit holding the GIGA keyword renders, wearing GIGA's chip and treatment", () => {
     const board = renderBoard(
       baseView({
         you: {
@@ -62,8 +64,8 @@ describe("R3546004 a GIGA permanent drawn across its four zones", () => {
         },
       }),
     );
-    // No throw above: a kind with no visual draws nothing. No visible chip and no treatment.
-    expect(board.querySelector('.keywords > [data-keyword="GIGA"]:not([data-chip="hidden"])')).toBeNull();
-    expect(board.querySelector('[data-keyword-fx="GIGA"]')).toBeNull();
+    // No throw above, and the kind draws as R3572000's keyword visuals say: a visible chip and its treatment.
+    expect(board.querySelector('.keywords > [data-keyword="GIGA"]:not([data-chip="hidden"])')).not.toBeNull();
+    expect(board.querySelector('[data-keyword-fx="GIGA"]')).not.toBeNull();
   });
 });
