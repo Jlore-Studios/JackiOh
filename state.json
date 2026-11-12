@@ -15537,7 +15537,7 @@
         "provider": "claude-3",
         "round_tier": "strong",
         "rounds_on": 3730,
-        "rounds_used": 1,
+        "rounds_used": 5,
         "since": "2026-11-12T15:02:18Z",
         "source": "build",
         "until": "2026-11-12T22:11:39Z"
