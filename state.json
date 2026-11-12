@@ -16825,15 +16825,8 @@
       "stop_requested": false
     },
     "3734": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43199695621",
-        "model": "sonnet",
-        "provider": "claude-7",
-        "since": "2026-11-12T10:29:55Z",
-        "until": "2026-11-12T10:59:55Z"
-      },
       "handoff": {
         "at": "2026-11-12T10:26:20Z",
         "family": "claude",
@@ -16843,17 +16836,8 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"git log --oneline -1 && git status --short | head -5; cat .bot-plan.md | head -5\", \"description\": \"Check branch state and draft\"}\n- Bash: {\"command\": \"git log --oneline 13d4b9117c..HEAD | head -20; git diff --stat 13d4b9117c..HEAD -- apps/web/src/collection apps/web/src/game/deckbuilder apps/web/src/routes/collection.tsx apps/web/src/b\u2026\n- said: ## Goal The Collection leaves the 960px `panel--auth` frame and fills the window. It becomes four tabs, Cards, Decks, Cosmetics and a new Progress tab, switched by `?section=`, and each tab keeps its filters while you switch. - **Cards** is one virtualised grid of the whole catalog. It has an alway\u2026"
       },
-      "hold": {
-        "ends": "2026-11-12T12:31:14Z",
-        "lifted": "2026-11-12T11:22:12Z",
-        "owner": "claude-7",
-        "since": "2026-11-12T10:31:14Z",
-        "until": "2026-11-12T11:20:00Z",
-        "why": "5-hour usage is 72%, too close to its 70% cap to start a long run (it starts under 65%)"
-      },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-12T08:57:04Z",
       "owner_why": "it plans it",
@@ -16864,9 +16848,9 @@
       "planned_model": "sonnet",
       "planned_tier": "medium",
       "provider": "claude-7",
-      "run_id": "43199695621",
+      "run_id": "pending:f19705ee-1794482563",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-12T10:21:46Z",
+      "started_at": "2026-11-12T11:23:13Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 6819710196
@@ -17934,9 +17918,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T10:33:37Z",
+    "at": "2026-11-12T11:23:13Z",
     "url": "",
-    "what": "build #3596 on claude-4"
+    "what": "build #3734 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-12T11:13:51Z",
