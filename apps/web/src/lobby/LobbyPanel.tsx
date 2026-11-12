@@ -39,7 +39,10 @@ export function LobbyPanel({ format, mode }: LobbyPanelProps): ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [mine, setMine] = useState<readonly MyLobby[]>([]);
+  const liveErrorId = useId();
   const [live, setLive] = useState<string | null>(null);
+  const [liveError, setLiveError] = useState<string | null>(null);
+  const [liveRound, setLiveRound] = useState(0);
 
   useEffect(() => {
     let canceled = false;
@@ -49,19 +52,27 @@ export function LobbyPanel({ format, mode }: LobbyPanelProps): ReactElement {
       },
       () => undefined,
     );
-    // B42: a co-op screen offers the way back to the live co-op game.
-    if (format === "coop") {
-      attempt(getDuosLive).then(
-        (answer) => {
-          if (!canceled) setLive(answer.matchId);
-        },
-        () => undefined,
-      );
-    }
     return () => {
       canceled = true;
     };
-  }, [format]);
+  }, []);
+
+  // B42: a co-op screen offers the way back to the live co-op game; #1900: a failed read says why, with Try again.
+  useEffect(() => {
+    if (format !== "coop") return undefined;
+    let canceled = false;
+    attempt(getDuosLive).then(
+      (answer) => {
+        if (!canceled) setLive(answer.matchId);
+      },
+      (cause: unknown) => {
+        if (!canceled) setLiveError(messageOf(cause));
+      },
+    );
+    return () => {
+      canceled = true;
+    };
+  }, [format, liveRound]);
 
   const create = (): void => {
     setBusy(true);
@@ -95,9 +106,28 @@ export function LobbyPanel({ format, mode }: LobbyPanelProps): ReactElement {
         {format === "duel" ? t("Play a friend") : t("Co-op with a friend")}
       </h2>
       {live === null ? null : (
-        <a className="button-secondary" href={paths.duos(live)} onClick={followInApp(paths.duos(live))}>
+        <a className="button-secondary" data-testid={lobbyTestid.rejoin} href={paths.duos(live)} onClick={followInApp(paths.duos(live))}>
           {t("Back to your co-op game")}
         </a>
+      )}
+      {liveError === null ? null : (
+        <div className="lobby__failed">
+          <p id={liveErrorId} className="lobby__error" role="alert">
+            {t("Your live co-op game could not be checked: {message}", { message: t(liveError) })}
+          </p>
+          <button
+            type="button"
+            className="button-secondary"
+            data-testid={lobbyTestid.liveRetry}
+            aria-describedby={liveErrorId}
+            onClick={() => {
+              setLiveError(null);
+              setLiveRound((before) => before + 1);
+            }}
+          >
+            {t("Try again")}
+          </button>
+        </div>
       )}
       <p className="lobby-note">
         {format === "duel"

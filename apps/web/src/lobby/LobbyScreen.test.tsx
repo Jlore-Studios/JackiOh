@@ -6,7 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LOBBY_START_COUNTDOWN_SECONDS } from "@jackioh/server-config";
 
-import { at, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
+import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
+import { at, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import type { LobbyRead, LobbySeat, LobbyView } from "./api.ts";
 import { LOBBY_POLL_MS } from "./config.ts";
 import { LobbyScreen } from "./LobbyScreen.tsx";
@@ -79,6 +80,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  resetLocaleForTests();
   vi.useRealTimers();
   vi.unstubAllGlobals();
   window.sessionStorage.clear();
@@ -212,5 +214,68 @@ describe("the lobby screen", () => {
       expect(window.location.pathname).toBe("/match/m-7");
     }, SLOW);
     expect(server.to("POST", `/api/rooms/${CODE}/join`)[0]?.body).toMatchObject({ mode: "random" });
+  });
+
+  it("R3730000 a seat's presence is in the player's words, as the friends list says it", async () => {
+    await setLocale("zh-CN");
+    serve([lobby({ seats: [seat(), seat({ role: "guest", player: { ...BO, status: "inMatch" } })] })]);
+    show();
+    const seats = await screen.findAllByTestId(lobbyTestid.seat, undefined, SLOW);
+    expect(seats[0]).toHaveTextContent("在线");
+    expect(seats[1]).toHaveTextContent("对局中");
+  });
+});
+
+describe("#1568 decks that could not be read", () => {
+  const FAILED = "Your decks could not be loaded: The decks are out of reach.";
+
+  /** A server whose first read of the decks is refused, counting the reads. */
+  function serveFailingDecks(reads: readonly (LobbyRead | Reply)[], count: { decks: number }, special?: (call: Call) => Reply | undefined): StubServer {
+    return serve(reads, (call) => {
+      if (call.method === "GET" && call.path === "/api/decks") {
+        count.decks += 1;
+        if (count.decks === 1) return refusal(500, "internal", "The decks are out of reach.");
+      }
+      return special?.(call);
+    });
+  }
+
+  it("#1568 the lobby's deck says why, with Try again, which reads the decks again and offers them", async () => {
+    const count = { decks: 0 };
+    serveFailingDecks([lobby({ settings: { format: "duel", mode: "bo1" } })], count);
+    show();
+    expect(await screen.findByRole("alert", undefined, SLOW)).toHaveTextContent(FAILED);
+    expect(screen.getByTestId(lobbyTestid.decksRetry)).toHaveAccessibleDescription(FAILED);
+    fireEvent.click(screen.getByTestId(lobbyTestid.decksRetry));
+    await waitFor(() => {
+      const picker = screen.getByTestId<HTMLSelectElement>(lobbyTestid.deckSelect);
+      expect([...picker.options].map((option) => option.textContent)).toEqual(["Pyre Control"]);
+    }, SLOW);
+    expect(count.decks).toBe(2);
+    expect(screen.queryByTestId(lobbyTestid.decksRetry)).toBeNull();
+  });
+
+  it("#1568 a classic room's join card says why too, and Try again offers the decks", async () => {
+    const count = { decks: 0 };
+    serveFailingDecks([{ kind: "room", code: CODE, mode: "bo1", host: { profileId: "p-ana", username: "Ana#1" } }], count);
+    show();
+    expect(await screen.findByRole("alert", undefined, SLOW)).toHaveTextContent(FAILED);
+    fireEvent.click(screen.getByTestId(lobbyTestid.decksRetry));
+    await waitFor(() => {
+      const picker = screen.getByTestId<HTMLSelectElement>(lobbyTestid.deckSelect);
+      expect([...picker.options].map((option) => option.textContent)).toEqual(["Pyre Control"]);
+    }, SLOW);
+    expect(count.decks).toBe(2);
+  });
+
+  it("#1568 an All Random lobby needs no deck, so a failed read asks nothing of it", async () => {
+    const count = { decks: 0 };
+    serveFailingDecks([lobby()], count);
+    show();
+    expect(await screen.findByTestId(lobbyTestid.ready, undefined, SLOW)).toBeEnabled();
+    await waitFor(() => {
+      expect(count.decks).toBe(1);
+    }, SLOW);
+    expect(screen.queryByTestId(lobbyTestid.decksRetry)).toBeNull();
   });
 });

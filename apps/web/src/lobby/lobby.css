@@ -83,7 +83,6 @@
   justify-content: center;
   border-style: dashed;
   font: inherit;
-  cursor: pointer;
 }
 
 .lobby-seat--ai {
@@ -168,6 +167,13 @@
 
 .lobby__error {
   margin: 0;
+}
+
+.lobby__failed {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
 }
 
 .lobby-panel {

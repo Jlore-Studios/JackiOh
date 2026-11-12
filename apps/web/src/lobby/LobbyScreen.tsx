@@ -25,7 +25,9 @@ import { getFriends, type Friend } from "../net/social.ts";
 import { attempt, messageOf } from "../net/errors.ts";
 import { QUEUE_MODES, Verdict, choiceFor, defaultDeck, defaultTrio, useLobbyData, verdictFor, type LobbyData } from "../routes/play.tsx";
 import { BackLink, followInApp } from "../routes/nav.tsx";
+import { PAGE_TITLE_ID } from "../routes/PageTitle.tsx";
 import { onFriendsPush, onLobbyPush, useSocialPoll } from "../together/socialPoll.ts";
+import { STATUS_WORDS } from "../together/words.tsx";
 import {
   enterLobby,
   getLobby,
@@ -55,12 +57,6 @@ const MS_PER_SECOND = 1000;
 const RANDOM = "random";
 
 export const DIFFICULTY_LABEL: Readonly<Record<Difficulty, string>> = { easy: "Easy", medium: "Medium", hard: "Hard" };
-
-const STATUS_WORDS: Readonly<Record<"offline" | "online" | "inMatch", string>> = {
-  offline: "offline",
-  online: "online",
-  inMatch: "in a game",
-};
 
 /** The board a started lobby opens: a series for Conquest, a co-op board, or a match (R3730002). */
 export function boardOf(view: LobbyView): string | null {
@@ -169,7 +165,7 @@ export function LobbyScreen({ token, code }: LobbyScreenProps): ReactElement {
   }
   return (
     <div className="lobby-screen" data-testid={lobbyTestid.screen}>
-      <BackLink />
+      <BackLink title={t("Private lobby")} />
       {body}
     </div>
   );
@@ -177,7 +173,6 @@ export function LobbyScreen({ token, code }: LobbyScreenProps): ReactElement {
 
 /** The lobby itself: its code, its seats, its settings, the member's deck, invites and the actions. */
 function Lobby({ token, view, removed, reload }: { token: string; view: LobbyView; removed: boolean; reload: () => void }): ReactElement {
-  const headingId = useId();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<"code" | "shared" | "copied" | null>(null);
@@ -206,11 +201,8 @@ function Lobby({ token, view, removed, reload }: { token: string; view: LobbyVie
   const started = view.startedAt !== null;
 
   return (
-    <section className="lobby-card lobby" aria-labelledby={headingId} data-format={view.settings.format}>
+    <section className="lobby-card lobby" aria-labelledby={PAGE_TITLE_ID} data-format={view.settings.format}>
       <header className="lobby__head">
-        <h1 id={headingId} className="lobby__title">
-          {t("Private lobby")}
-        </h1>
         <div className="lobby__code">
           <span className="lobby__code-label">{t("Code")}</span>
           <code data-testid={lobbyTestid.code}>{view.code}</code>
@@ -532,7 +524,7 @@ function YourDeck({
   run: (work: () => Promise<unknown>) => void;
 }): ReactElement {
   const id = useId();
-  const [load] = useLobbyData(token);
+  const [load, retryLoad] = useLobbyData(token);
   const data = load.kind === "ready" ? load.data : null;
   const [pick, setPick] = useState<LocalPick>(() => startingPick(view, data));
   // The defaults settle once the decks arrive, and again when the host's change takes the pick off.
@@ -612,6 +604,7 @@ function YourDeck({
           }}
         />
       ) : null}
+      {load.kind === "failed" && duelMode !== "random" ? <DecksFailed message={load.message} retry={retryLoad} /> : null}
       <Verdict result={verdict} />
       <button
         type="button"
@@ -634,6 +627,21 @@ function YourDeck({
         }}
       >
         {ready ? t("Not ready") : t("Ready")}
+      </button>
+    </div>
+  );
+}
+
+/** #1568: decks that could not be read say why, with Try again, which the alert describes. */
+function DecksFailed({ message, retry }: { message: string; retry: () => void }): ReactElement {
+  const id = useId();
+  return (
+    <div className="lobby__failed">
+      <p id={id} className="lobby__error" role="alert">
+        {t("Your decks could not be loaded: {message}", { message: t(message) })}
+      </p>
+      <button type="button" className="button-secondary" data-testid={lobbyTestid.decksRetry} aria-describedby={id} onClick={retry}>
+        {t("Try again")}
       </button>
     </div>
   );
@@ -735,7 +743,7 @@ function Countdown({ view }: { view: LobbyView }): ReactElement {
 /** R3730006: the classic room under the code, joined at once with a pick for its mode. */
 function RoomJoinCard({ token, room }: { token: string; room: RoomView | CoopRoomView }): ReactElement {
   const id = useId();
-  const [load] = useLobbyData(token);
+  const [load, retryLoad] = useLobbyData(token);
   const data = load.kind === "ready" ? load.data : null;
   const [deckId, setDeckId] = useState<string | null>(null);
   const [trioId, setTrioId] = useState<string | null>(null);
@@ -773,11 +781,11 @@ function RoomJoinCard({ token, room }: { token: string; room: RoomView | CoopRoo
 
   return (
     <form className="lobby-card lobby-join-card" data-testid={lobbyTestid.joinCard} onSubmit={join}>
-      <h1 className="lobby__title">
+      <h2 className="lobby__title">
         {room.kind === "room"
           ? t("{name}'s room · {mode}", { name: room.host.username, mode: t(MODE_LABEL[mode]) })
           : t("{name}'s co-op room · {difficulty}", { name: room.host.username, difficulty: t(DIFFICULTY_LABEL[room.difficulty]) })}
-      </h1>
+      </h2>
       <p className="lobby-note">{t("This room starts the moment you join it.")}</p>
       {room.kind === "room" && mode === "bo3" ? (
         <>
@@ -807,6 +815,7 @@ function RoomJoinCard({ token, room }: { token: string; room: RoomView | CoopRoo
           </select>
         </>
       )}
+      {load.kind === "failed" && !(room.kind === "room" && mode === "random") ? <DecksFailed message={load.message} retry={retryLoad} /> : null}
       {random ? <LeanSetPicker testid={lobbyTestid.lean} value={lean} disabled={busy} onChange={(pick) => {
         setLean(pick);
         writePlayLean(pick);
