@@ -171,6 +171,29 @@ exclude_re = [
   # The name has no way to tell this `-` from the function's others, so the entry holds its column (53),
   # which no other `-` of `place_fights` has, and not its line, which moves with the code above it.
   'lib\.rs:\d+:53: replace - with \+ in place_fights',
+  # crates/shared (#3513): duos.rs's end_as_ceiling_draw is reached only from begin_apply's panic branch, which a
+  # finished host never reaches (it answers MatchOver first), and only for a server action, which a stopped host never
+  # makes (on_ai_move and reach_ceiling return once stopped, and an AI move's retry runs in the step its first try
+  # ran in). So its `finished || stopped` guard never holds, and `&&` decides the same.
+  'host/duos\.rs:.*replace \|\| with && in DuosHost::end_as_ceiling_draw',
+  # crates/shared (#3513): resolve's AI arm is never answered MatchOver: on_ai_move plays nothing once the host is
+  # finished, and a result finishes the host in the step that wrote it (after_change, on_terminal), so begin_apply's
+  # MatchOver never meets an AI move, and that arm and the catch-all after it are never told apart.
+  'host/duos\.rs:.*delete match arm ActionAnswer::MatchOver in DuosHost::resolve',
+  # crates/shared (#3513): resolve's ceiling arm runs the ceiling out again on `is_internal() && !stopped &&
+  # !finished`. The engine refuses the ceiling only once the game has a result (duos/reduce.rs), and a written
+  # ceiling ends the game, which finishes the host before resolve (on_logged runs after_change first): so a ceiling
+  # answer that is not internal comes only to a finished host, and `is_internal() || (!stopped && !finished)` decides
+  # the same. The column (41) holds this entry to the line's first `&&`, where no other `&&` of resolve stands.
+  'host/duos\.rs:\d+:41: replace && with \|\| in DuosHost::resolve',
+  # crates/shared (#3513): ai_mode's guards on a forced KeepHand and a forced AnswerPrompt ask whether the seat still
+  # owes the mulligan or still holds that prompt, which `owes` asks again of the same mode before drive_ai pauses a
+  # seat. A guard of `true` differs only at the end of a pause whose person answered meanwhile: start_job hands
+  # on_ai_move the stale mode, which plays nothing and drives no seat, where None drives every seat again. The
+  # person's answer drove every idle seat already (after_change), so that drive reaches only a seat gone idle since,
+  # after a lost write or a search that threw, and has it decide again before its retry or a newer state, which no
+  # rule asks for.
+  'host/duos\.rs:.*replace match guard (owes_mulligan\(&self\.game, seat\)|held_prompt\(&self\.game, seat\)\.as_deref\(\) == Some\(choice\.as_str\(\)\)) with true in DuosHost::ai_mode',
   # crates/shared (#3513): curve.rs's `fraction` reduces by `gcd(num, den) * den.signum()`, and a signum is 1 or -1,
   # which a number is multiplied or divided by alike; at 0 (two cells of one column, a Lagrange denominator of 0)
   # both divide by 0.
