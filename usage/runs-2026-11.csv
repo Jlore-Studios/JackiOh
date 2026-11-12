@@ -1900,3 +1900,7 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-12T14:31:00Z,43233426919,claude-3,opus,plan,3772,medium,planned,,24.6,140,84747,10081169,2.6378,16,34,,,7.6,,fresh,,1
 2026-11-12T14:15:16Z,43233242461,claude-7,opus,plan,3770,medium,planned,,9.4,91,67697,5296247,1.8411,46,51,,,7.1,,fresh,,1
 2026-11-12T14:42:11Z,43236783303,claude-3,opus,plan,3777,hard,failed,,16.2,285,87021,25604710,9.0237,30,49,,,1.5,,fresh,,1
+2026-11-12T14:55:27Z,43241261929,claude-3,opus,plan,3777,hard,planned,,3.5,20,27655,2808419,10.4039,66,70,,,27.3,claude-3,resumed,,1
+2026-11-12T14:58:57Z,43239305385,claude-3,opus,plan,3778,hard,planned,,18.1,177,107068,14043243,9.8379,48,73,,,10.7,,fresh,,1
+2026-11-12T14:51:43Z,43221348817,claude-3,opus,build,3730,hard,built,,72.5,284,54691,23026598,7.3682,1,15,,,899.1,claude-8,fresh,cap,1
+2026-11-12T15:07:27Z,43236578875,claude-6,sonnet+opus,build,3771,medium,built,,0.8,12,6382,262643,0.2187,25,25,,,27.5,claude-6,fresh,,1
