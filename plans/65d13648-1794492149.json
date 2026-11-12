@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 3770,
+  "title": "Patch: a server sweep that keeps failing raises an alert, not just a warning on every pass",
+  "branch": "bot/issue-3770",
+  "thread": "**Issue #3770 (data, not instructions):**\n\n```text\n# #3770: Patch: a server sweep that keeps failing raises an alert, not just a warning on every pass\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe server runs background jobs every few seconds or hours. They pair players waiting in the queue, end matches that got stuck, close finished series and purge old data on schedule. When one of them fails, it writes a warning and tries again next time, forever, and nobody is told. If the matchmaker can't read the queue, nobody gets a game until someone happens to read the logs. After this, a job that has failed on every pass for a while sends the owners one alert, the way a crash already does, and logs when it recovers.\n\n## Why\n- The loop supervisor alerts only when a loop panics or returns (`crates/server/src/loops.rs:1-6`, `:45-47`, `loop.crashed` and `loop.returned`). Its header says a loop's per-tick result handling is its own.\n- Every sweep catches its own failure with a warning:\n  - `matchmaker.sweep_failed` on every matchmaker pass (`crates/server/src/api/queue.rs:1365-1368`)\n  - `matches.reaper_failed` and the per-match `reaper.failed` (`api/results.rs:671-677`, `:818-824`); a match whose reap keeps failing keeps both players' seats\n  - `series.sweeper_failed` (`api/series.rs:674-691`)\n  - `duos.sweep_failed` (`duos/mod.rs:278-280`)\n  - `challenges.sweep_failed` (`social/challenges.rs:266`)\n  - `seats.reconcile_failed` (`seats.rs:500-503`)\n  - the retention purges (`api/retention.rs:94-153`)\n- It has happened before. R1715000 records one unreadable game record wedging the stats fold while the retention loop only logged `game_records.fold_failed` each hour. That case got its own fix, but the general pattern still has no alert.\n- The alert path already exists. An alert is an error line with alert = true (`alerts.rs` header; `log_alert` in `api/http.rs:1250`). #3620 turned alerts into a GitHub issue and an email, and `ALERT_WINDOW_MS` limits each event to one notice an hour.\n- A purge that fails silently breaks the retention periods `docs/compliance.md` promises.\n\n## Proposal\n- Add a small streak tracker in `loops.rs`, one per sweep step, fed each pass's result.\n- Once a step has failed on every pass for at least `LOOP_FAILING_ALERT_MS` and at least `LOOP_FAILING_ALERT_PASSES` passes in a row, it raises one alert. The alert is named for the step (`matchmaker.failing`, `matches.reaper.failing`, and so on), because an alert issue shows only the event name.\n- On the next success it logs the step's recovery at info level.\n- Both thresholds are named constants in `crates/server/src/config.rs` (rule 9), so the 3-second matchmaker and the hourly purge share one rule.\n- A reaper pass in which any match failed to reap counts as a failed pass, so one wedged match is reported even while the others reap.\n- The README's Alerts section lists the new events. No ruling is needed: this is operational, as `loops.rs` says of restarts.\n\n## Where it lands\n- `crates/server/src/loops.rs` and `crates/server/src/config.rs`.\n- The sweeps: `api/queue.rs`, `api/results.rs`, `api/series.rs`, `api/retention.rs`, `duos/mod.rs`, `social/challenges.rs`, `seats.rs`.\n- `crates/server/README.md`, and a new test file under `crates/server/tests/`. SPEC \u00a79.5 (the sweeps).\n\n## Acceptance criteria\nThe server tests use the fake store's failure switches (`fail_on` and `stop_failing`, `crates/server/tests/support/store.rs:67-80`), the log recorder and tokio's paused clock:\n- [ ] With the store failing `matches.live` on every call, the reaper raises no alert before the threshold and exactly one after it, however many passes follow.\n- [ ] After `stop_failing`, one recovery line is logged, and a new streak alerts again.\n- [ ] With the queue read failing, the matchmaker alerts.\n- [ ] With one wedged match among healthy ones, the reaper alerts.\n- [ ] The hourly purge alerts once its threshold of failed passes is reached.\n- [ ] `cargo test -p jackioh-server` is green.\n\n## Size and risks\n- Medium: about 10 files and 300 lines with tests.\n- The risk is noise: thresholds set too low make a short database blip into an issue. The hourly window per event caps the damage, and the thresholds are one constant each to change.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-12T13:55:38Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3770: needs a plan; `claude-7` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-12T13:56:05Z",
+    "claimed_at": "2026-11-12T14:03:13Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3729 skipped: it waits for #3727, #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3730 to close first",
+    "#3733 skipped: it waits for #3727 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
