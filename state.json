@@ -14991,6 +14991,13 @@
     "3771": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-12T14:15:35Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "medium",
+        "why": "No rule line holds: the change is one Durable Object class in apps/edge (3 files, ~80 lines plus tests), with no engine, AI, cross-crate or migration work."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
