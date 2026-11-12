@@ -2448,7 +2448,7 @@ mod stinkyscape {
         });
 
         // R3559001, R3554006: the Unit named takes `damage2`, then the chain hits each Unit beside a hit one
-        // once; `damage` uses a turn.
+        // once; its label's uses a turn, "Activate 2:" and on the Radiant face "Activate 5:" (R482).
         both_faces!(sp_n38_arc, |radiant: bool| {
             let mut s = facing(
                 json!([at_lane(ARC, radiant, 5)]),
@@ -2472,7 +2472,7 @@ mod stinkyscape {
                 hits_on(&events, &lanes[2]).is_empty(),
                 "lane 4 is beside no Unit hit"
             );
-            uses_left(&s, &id, printed(ARC, "damage", radiant));
+            uses_left(&s, &id, if radiant { 5 } else { 2 });
         });
 
         // R3556005: the Activate discards a chosen Thorium from hand to skip this turn's blow-up roll; with

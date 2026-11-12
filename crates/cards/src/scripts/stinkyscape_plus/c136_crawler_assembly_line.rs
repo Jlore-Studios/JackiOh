@@ -83,16 +83,15 @@ mod tests {
             .collect()
     }
 
+    /// R482: its one use a turn is the label `Activate:`, no param, on both faces.
     #[test]
-    fn declared_summon_matches_uses() {
-        let s = assembling(false, json!([]));
-        assert_eq!(param_value(s.state(), Some(s.card(ID)), "summon", ParamValueOptions::default()), USES);
-        for radiant in [false, true] {
-            let def = crate::card_def(ID);
-            let param = def.params.as_ref().and_then(|params| params.first()).expect("a declared number");
-            assert_eq!(param.key, "summon");
-            assert_eq!(if radiant { param.radiant } else { param.base }, USES);
+    fn r482_the_one_use_is_its_label_and_no_param() {
+        let def = crate::card_def(ID);
+        assert!(def.params.is_none());
+        for face in [&def.base, &def.radiant] {
+            assert!(face.text.starts_with("Activate: Summon a "), "{}", face.text);
         }
+        assert_eq!(USES, 1);
     }
 
     mod base {

@@ -232,12 +232,16 @@ mod b3_4_params_the_numbers_a_card_declares {
         for card in entries() {
             for face in [&card.base, &card.radiant] {
                 for line in face.text.lines() {
-                    let after = line.strip_prefix("Activate").map(str::trim_start);
-                    assert!(
-                        !after.is_some_and(|rest| rest.trim_start_matches(':').trim_start().starts_with('{')),
-                        "{}: {line}",
-                        card.id
-                    );
+                    // `Activate: {key}:` or `Activate {key}:`: a param standing as the label. A param in the
+                    // effect after the label (Meditative #97.2's "Activate: {chance}% chance…") is the
+                    // effect's own number.
+                    let label = line
+                        .strip_prefix("Activate")
+                        .map(|rest| rest.trim_start().trim_start_matches(':').trim_start())
+                        .filter(|rest| rest.starts_with('{'))
+                        .and_then(|rest| rest.split_once('}'))
+                        .is_some_and(|(_, after)| after.trim_start().starts_with(':'));
+                    assert!(!label, "{}: {line}", card.id);
                 }
             }
         }

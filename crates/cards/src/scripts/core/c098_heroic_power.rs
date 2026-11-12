@@ -870,7 +870,8 @@ mod tests {
             let (mut s, card) = on_field("pluck", OnField::default());
             s.activate(&card, json!({}));
             let fruit = must(s.hand(P1).last().cloned(), "the Fruit");
-            assert!(tags_of(&fruit.def_id).contains(&json!("Fruit")));
+            // Read through the game: a Smoothie (S+ #17, #18) arrives fused (R3558003), an id the catalog lacks.
+            assert!(def_of(Some(s.state()), &fruit.def_id).tags.contains(&Tag::Fruit));
             assert_eq!(effective(&s, &fruit), 0);
             assert!(!fruit.radiant);
         }
@@ -1259,7 +1260,8 @@ mod tests {
             assert_eq!(tuned(&mut s, "fruitCost", false), 1);
             s.activate(&card, json!({}));
             let fruit = must(s.hand(P1).last().cloned(), "the Fruit");
-            assert!(tags_of(&fruit.def_id).contains(&json!("Fruit")));
+            // Read through the game: a Smoothie (S+ #17, #18) arrives fused (R3558003), an id the catalog lacks.
+            assert!(def_of(Some(s.state()), &fruit.def_id).tags.contains(&Tag::Fruit));
             assert_eq!(effective(&s, &fruit), 1);
         }
     }
