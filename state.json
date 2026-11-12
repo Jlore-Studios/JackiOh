@@ -16090,18 +16090,22 @@
     "what": "plan #3772 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-12T17:48:13Z",
+    "at": "2026-11-12T18:06:07Z",
     "notes": [
-      "#3779 is held for `claude-3` until 11:50 (it refused a call)",
-      "#3761 is held for `claude-3` until 11:50 (it refused a call)",
-      "#3772 is held for `claude-3` until 11:50 (it refused a call)",
-      "night_run: could not finish (GitHubError: GET /repos/Jlore-Studios/JackiOh/contents/state.json?ref=_bot-state: HTTP 403: API rate limit exceeded for user ID 324324626. If you reach out to GitHub Support for help, please include the request ID)",
-      "issue_types: could not finish (GitHubError: GET /repos/Jlore-Studios/JackiOh/issues?state=open&per_page=100&page=1: HTTP 403: API rate limit exceeded for user ID 324324626. If you reach out to GitHub Support for help, please include the request)",
-      "difficulty_labels: could not finish (GitHubError: GET /repos/Jlore-Studios/JackiOh/issues?state=open&per_page=100&page=1: HTTP 403: API rate limit exceeded for user ID 324324626. If you reach out to GitHub Support for help, please include the request)",
-      "merging: could not finish (GitHubError: GET /repos/Jlore-Studios/JackiOh/issues?state=all&labels=bot%3Amerging&per_page=100&page=1: HTTP 403: API rate limit exceeded for user ID 324324626. If you reach out to GitHub Support for help, please)",
-      "tracking: could not finish (GitHubError: GET /repos/Jlore-Studios/JackiOh/issues?state=open&labels=production+merge&per_page=100&page=1: HTTP 403: API rate limit exceeded for user ID 324324626. If you reach out to GitHub Support for help, pl)",
-      "queue_evac: could not finish (GitHubError: GET /repos/Jlore-Studios/JackiOh/actions/workflows/ci.yml/runs?per_page=100&page=1: HTTP 403: API rate limit exceeded for user ID 324324626. If you reach out to GitHub Support for help, please include)",
-      "runner gate: could not read the runs waiting (GET /repos/Jlore-Studios/JackiOh/actions/workflows/ci.yml/runs?per_page=100&status=waiting&page=1: HTTP 403: API rate limit exceeded for user ID 324324626. If you reach out to GitHub Support for help,)"
+      "delivered suggest on claude-8 (run 43271853261): suggested",
+      "delivered build #3777 on claude-6 (run 43260222744): built",
+      "started review #3797 on claude-6 (run 43277183962)",
+      "started plan #3772 on claude-6 (run 43277397409)",
+      "nothing more to start: nothing is queued",
+      "pruned 3 plan file(s) older than 7 days",
+      "#3796: typed it Feature",
+      "#3795: typed it Task",
+      "#3794: typed it Task",
+      "#3793: typed it Task",
+      "#3792: typed it Task",
+      "#3791: typed it Feature",
+      "#3790: typed it Task",
+      "runner gate: started 0 of 2 waiting run(s); 2 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16807,7 +16811,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-12T17:48:13Z",
+  "loop_tick": "2026-11-12T18:06:07Z",
   "machine_disk": {
     "issue": null,
     "reading": {
