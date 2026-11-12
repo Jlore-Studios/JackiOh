@@ -17725,6 +17725,8 @@
       "verdict_rounds": 0
     },
     "3765": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-12T08:31:13Z",
@@ -17738,8 +17740,11 @@
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -30; grep -n -B8 -A3 'smoke' scripts/ci-shards.toml\"}\n- Bash: {\"command\": \"python3 - <<'E'\\np='scripts/ci-shards.toml'\\ns=open(p).read()\\nold=\\\"\\\"\\\"# `e2e smoke (k/K)`: the smoke specs (e2e/scripts/shard-specs.mjs SMOKE) by their WEIGHTS. A\\n# dispatch with `e2\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"CI: split e2e smoke into four shards\"} --> I raised `[e2e] smoke` in `scripts/ci-shards.toml` from 2 to 4 and rewrote the comment above it. `bot selftest` will go red until a person edits `bot/tests/test_ci_matrix.py`, which the bot may not touch. The change f\u2026"
       },
       "issue": 3764,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-12T09:07:47Z",
         "from_run": "43183624546",
         "gates": [
           {
@@ -17831,7 +17836,11 @@
         "source": "build",
         "until": "2026-11-12T09:36:25Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-12T09:06:25Z",
+      "run_id": "pending:8b0eaf95-1794474430",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17850,6 +17859,9 @@
         "provider": "claude-6",
         "run": "43183624546"
       },
+      "started_at": "2026-11-12T09:07:47Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17863,9 +17875,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T08:57:04Z",
+    "at": "2026-11-12T09:07:47Z",
     "url": "",
-    "what": "plan #3734 on claude-7"
+    "what": "review #3765 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-12T08:54:36Z",
