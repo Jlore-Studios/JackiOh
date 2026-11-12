@@ -257,7 +257,7 @@ impl Table {
 
 mod the_clocks {
     use super::*;
-    use jackioh_shared::host::duos::acting_round_seat;
+    use jackioh_shared::host::duos::{acting_round_seat, keep_whole_hand};
 
     #[test]
     fn b2_r744_arming_starts_the_one_mulligan_clock_and_the_ceiling_and_the_seats_that_never_came_start_their_grace()
@@ -268,6 +268,18 @@ mod the_clocks {
             table.timer(TimerKey::DuosMulligan),
             Some(EPOCH + DUOS_MULLIGAN_CLOCK_MS)
         );
+        // B38: the round clock waits for round 1, though the opening's round seats are the people's.
+        assert!(
+            table
+                .host
+                .game()
+                .round_seats
+                .iter()
+                .any(|seat| *seat == A1 || *seat == A2),
+            "PREMISE: {:?}",
+            table.host.game().round_seats
+        );
+        assert_eq!(table.timer(TimerKey::DuosRound), None);
         assert_eq!(
             table.timer(TimerKey::DuosCeiling),
             Some(EPOCH + MATCH_CEILING_MINUTES * MINUTE)
@@ -287,6 +299,24 @@ mod the_clocks {
         assert!(table.timer(TimerKey::DuosAi { seat: DuosSeat::B1 }).is_some());
         assert!(table.timer(TimerKey::DuosAi { seat: DuosSeat::B2 }).is_some());
         assert!(table.timer(TimerKey::DuosAi { seat: A1 }).is_none());
+    }
+
+    /// B2: the one mulligan clock is armed once: a hand kept on it leaves its deadline where the arm put it.
+    #[test]
+    fn b2_a_hand_kept_on_the_mulligan_clock_leaves_its_deadline() {
+        let mut table = Table::new(setup(opening("duos-open-3")));
+        table.connect(A1);
+        table.connect(A2);
+        table.feed(DuosHostEvent::Arm);
+        table.sleep(SECOND);
+        let keep = keep_whole_hand(&table.host.legal(A1)).expect("a mulligan is legal");
+        let answer = table.act(A1, "m-0", keep);
+        assert!(matches!(answer, ActionAnswer::Ack { .. }), "{answer:?}");
+        assert_eq!(table.round(), 0, "PREMISE: a2 still owes its mulligan");
+        assert_eq!(
+            table.timer(TimerKey::DuosMulligan),
+            Some(EPOCH + DUOS_MULLIGAN_CLOCK_MS)
+        );
     }
 
     #[test]
@@ -409,6 +439,72 @@ mod the_clocks {
             // Team B's round: no person to wait for, no round clock.
             assert!(table.timer(TimerKey::DuosRound).is_none(), "round {round}");
         }
+    }
+
+    /// B38, R79, B35: a round with a person runs one round clock, armed once: a later sync leaves its deadline, every
+    /// seat's view counts down to it, no mulligan clock runs past the opening, and a seat saying hello is sent its
+    /// view, its clock and its teammate.
+    #[test]
+    fn b38_the_round_clock_is_armed_once_a_round_and_every_seat_counts_down_to_it() {
+        let mut table = Table::new(setup(opening("duos-round-2")));
+        table.connect(A1);
+        table.connect(A2);
+        table.feed(DuosHostEvent::Arm);
+        table.through_the_mulligans();
+        let person_acts = |table: &Table| {
+            [A1, A2]
+                .into_iter()
+                .any(|seat| acting_round_seat(table.host.game(), seat))
+        };
+        table.play_on(120 * SECOND, person_acts);
+        assert!(
+            person_acts(&table),
+            "PREMISE: round {} {:?}",
+            table.round(),
+            table.nonces()
+        );
+        let round = table.round();
+        let due = table.timer(TimerKey::DuosRound).expect("the round clock runs");
+        assert_eq!(table.timer(TimerKey::DuosMulligan), None);
+        for seat in [A1, A2] {
+            let left = i32::try_from(due - table.now).expect("a round's countdown");
+            assert_eq!(
+                table.host.view_for(seat, table.now).own.clock_ms,
+                Some(left),
+                "{seat}"
+            );
+        }
+        // A later sync of the clocks keeps the one already armed for the round.
+        table.sleep(SECOND);
+        table.feed(DuosHostEvent::Arm);
+        assert_eq!(table.round(), round, "PREMISE: the round goes on");
+        assert_eq!(table.timer(TimerKey::DuosRound), Some(due));
+        let told = table.sent[0].len();
+        table.feed(DuosHostEvent::Hello { seat: A1 });
+        let hello = &table.sent[0][told..];
+        assert!(
+            hello
+                .iter()
+                .any(|message| matches!(message, DuosSeatMessage::View { .. })),
+            "{hello:?}"
+        );
+        assert!(
+            hello.iter().any(|message| matches!(
+                message,
+                DuosSeatMessage::Clock { round_deadline: Some(at), .. } if *at == due
+            )),
+            "{hello:?}"
+        );
+        assert!(
+            hello.iter().any(|message| matches!(
+                message,
+                DuosSeatMessage::Teammate {
+                    connected: true,
+                    ai_playing: false
+                }
+            )),
+            "{hello:?}"
+        );
     }
 
     #[test]
@@ -570,7 +666,8 @@ mod the_clocks {
         assert_eq!(table.timer(TimerKey::DuosCeiling), None);
     }
 
-    /// B40: a host made for a match already finished arms no ceiling and moves no AI seat.
+    /// B40: a host made for a match already finished arms no ceiling, no other clock and no grace, and moves no AI
+    /// seat.
     #[test]
     fn b40_a_host_made_for_a_finished_match_arms_no_ceiling_and_moves_no_ai() {
         let mut done = setup(opening("duos-finished-1"));
@@ -578,14 +675,8 @@ mod the_clocks {
         let mut table = Table::new(done);
         table.feed(DuosHostEvent::Arm);
         assert_eq!(table.timer(TimerKey::DuosCeiling), None);
-        assert!(
-            table
-                .timers
-                .iter()
-                .all(|(key, _, _)| !matches!(key, TimerKey::DuosAi { .. })),
-            "{:?}",
-            table.timers
-        );
+        // Nor a mulligan clock, nor a grace for the seats nobody opened: nothing is left to count down to.
+        assert!(table.timers.is_empty(), "{:?}", table.timers);
     }
 
     /// R776000: a ceiling row the log would not take whose answer comes after the host stopped runs the ceiling out
@@ -1077,6 +1168,42 @@ mod stop {
         assert!(table.host.is_stopped());
     }
 
+    /// A row the log writes after the stop is applied, but arms no clock: the host that stopped counts nothing down.
+    #[test]
+    fn a_row_written_after_the_stop_arms_no_clock() {
+        let mut table = Table::new(setup(opening("duos-stop-3")));
+        table.connect(A1);
+        table.connect(A2);
+        table.feed(DuosHostEvent::Arm);
+        table.holding_appends = true;
+        let keep =
+            jackioh_shared::host::duos::keep_whole_hand(&table.host.legal(A1)).expect("a mulligan is legal");
+        table.feed(DuosHostEvent::Action {
+            seat: A1,
+            nonce: "m-0".to_string(),
+            body: keep,
+        });
+        table.feed(DuosHostEvent::Stop);
+        assert_eq!(
+            table.timer(TimerKey::DuosMulligan),
+            None,
+            "PREMISE: the stop took it back"
+        );
+        table.feed(DuosHostEvent::Logged {
+            outcome: LogOutcome::Written,
+        });
+        assert!(matches!(table.answer("m-0"), ActionAnswer::Ack { .. }));
+        assert_eq!(table.round(), 0);
+        assert!(
+            table.timers.iter().all(|(key, _, _)| !matches!(
+                key,
+                TimerKey::DuosMulligan | TimerKey::DuosRound | TimerKey::DuosPrompt { .. }
+            )),
+            "{:?}",
+            table.timers
+        );
+    }
+
     /// B36: a host stopped before its arming moves no AI seat when a person attaches.
     #[test]
     fn a_host_stopped_before_its_arming_moves_no_ai_when_a_seat_attaches() {
@@ -1241,6 +1368,32 @@ mod owings {
             fallback(&legal)
         );
         assert!(fallback(&legal).is_some());
+    }
+
+    /// B38: in FinishRound with nothing to answer the AI ends its turn and makes no other move: with no end of turn
+    /// among the moves it has, it makes none.
+    #[test]
+    fn b38_finish_round_with_nothing_to_answer_ends_the_turn_or_makes_no_move() {
+        let mut table = playing("owings-3");
+        table.through_the_mulligans();
+        let state = table.host.game().clone();
+        assert!(!owes_answer(&state, A1), "PREMISE");
+        let end = DuosActionBody::Duel {
+            body: ActionBody::EndTurn,
+        };
+        let pass = DuosActionBody::Pass {
+            instance_id: "c1".to_string(),
+        };
+        let finish = DuosAiMode::FinishRound;
+        assert_eq!(
+            without_search(&finish, &state, A1, &[pass.clone(), end.clone()]),
+            Some(end)
+        );
+        assert_eq!(
+            without_search(&finish, &state, A1, std::slice::from_ref(&pass)),
+            None
+        );
+        assert_eq!(fallback(std::slice::from_ref(&pass)), Some(pass), "PREMISE");
     }
 
     /// The AI's fallback: its end of turn where legal, else an answer, else anything allowed.
@@ -1569,6 +1722,53 @@ mod scripted {
             "{played:?}"
         );
         assert_ne!(played[0].body, end_turn(), "the answer comes first: {played:?}");
+    }
+
+    /// R1253000, B40: a match ended as a ceiling draw counts no seat down: a person coming back after it is shown no
+    /// deadline, though the draw left the round clock it came in held.
+    #[test]
+    fn r1253000_a_seat_back_after_a_ceiling_draw_is_shown_no_deadline() {
+        let mut table = scripted_table("duos-panics-a1", Some(PANICS), None);
+        let play = until_it_can_play(&mut table, A1, PANICS);
+        // a1 goes; once its grace runs out the AI plays its seat, inside its own round.
+        table.feed(DuosHostEvent::Left { seat: A1 });
+        table.feed(DuosHostEvent::Disconnected { seat: A1 });
+        table.sleep(grace_ms());
+        assert!(table.host.ai_playing(A1), "PREMISE: the AI plays a1's seat");
+        let request = search_of(&mut table, A1);
+        let due = table
+            .timer(TimerKey::DuosRound)
+            .expect("PREMISE: a1's round clock runs");
+        assert!(due > table.now, "PREMISE: inside a1's round");
+        table.feed(DuosHostEvent::Decided {
+            seat: A1,
+            body: Some(play),
+            cursor: request.cursor + 1,
+            failed: false,
+        });
+        assert_eq!(table.ceiling_draws, 1);
+        assert!(table.host.is_finished());
+        assert_eq!(
+            table.timer(TimerKey::DuosRound),
+            Some(due),
+            "PREMISE: the draw left it"
+        );
+        table.connect(A1);
+        assert_eq!(table.host.view_for(A1, table.now).own.clock_ms, None);
+        let last_clock = table.sent[0]
+            .iter()
+            .rev()
+            .find(|message| matches!(message, DuosSeatMessage::Clock { .. }));
+        assert!(
+            matches!(
+                last_clock,
+                Some(DuosSeatMessage::Clock {
+                    round_deadline: None,
+                    ..
+                })
+            ),
+            "{last_clock:?}"
+        );
     }
 
     /// R1253000, R1047001, B40: an AI move whose `reduce` panics ends the match as a ceiling draw. The match takes no

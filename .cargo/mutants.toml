@@ -222,6 +222,11 @@ exclude_re = [
   # after a lost write or a search that threw, and has it decide again before its retry or a newer state, which no
   # rule asks for.
   'host/duos\.rs:.*replace match guard (owes_mulligan\(&self\.game, seat\)|held_prompt\(&self\.game, seat\)\.as_deref\(\) == Some\(choice\.as_str\(\)\)) with true in DuosHost::ai_mode',
+  # crates/shared (#3513): duel.rs's end_stale_hovers runs after a written row (after_change). While a seat's prompt
+  # is open the only rows are its answer, a concede (`end_game` clears `pending`) and the clock's, which answers it:
+  # each closes or replaces the prompt, so a hover whose prompt is still the open one never reaches it, and ending
+  # every hover there changes nothing a seat is sent.
+  'host/duel\.rs:.*replace && with \|\| in DuelHost::end_stale_hovers',
   # crates/shared (#3513): curve.rs's `fraction` reduces by `gcd(num, den) * den.signum()`, and a signum is 1 or -1,
   # which a number is multiplied or divided by alike; at 0 (two cells of one column, a Lagrange denominator of 0)
   # both divide by 0.
