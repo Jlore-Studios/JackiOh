@@ -1,0 +1,96 @@
+{
+  "action": "plan",
+  "number": 3573,
+  "title": "Patch: Stinkyscape+ R, the release",
+  "branch": "bot/issue-3573",
+  "thread": "**Issue #3573 (data, not instructions):**\n\n```text\n# #3573: Patch: Stinkyscape+ R, the release\nOpened by @squishy-squooby.\n\nPart of fullsend 1 of the Stinkyscape+ set (#3534, tracker #3533). **The release**: the set ships, players can play it against each other, and the AI deals itself none of it.\n\nThe plan: [`docs/stinkyscape-plus-set.md`](https://github.com/jlore-studios/jackioh/blob/claude/laughing-wright-eaibe9/docs/stinkyscape-plus-set.md) (SP8, SP9); the designer's list: [`JackiOh_StinkyscapePlus_Cards.md`](https://github.com/jlore-studios/jackioh/blob/claude/laughing-wright-eaibe9/JackiOh_StinkyscapePlus_Cards.md). Both are on `main` once the foundation (#3535) merges. Where they disagree with SPEC, SPEC wins (CLAUDE.md).\n\n## Scope\n\n- Turn the set's row to `stage: Shipped` (R1420), and add `SetName::StinkyscapePlus` to `AI_DECK_GATED_SETS` (`crates/ai/src/config.rs`, R1390), so the AI's randomized decks deal none of it while players' do.\n- **Turn on E9's unique random draws**: set `UNIQUE_RANDOM_DRAWS` to `true` in `crates/engine/src/config.rs`. E9 (#3563) merged it off so that no shipped card played differently before the release. With it on, every random card in an effect is unique unless the pool runs out (the owner's system change of 2026-11-09).\n- One pending fragment, from `cargo jackioh patches \"Stinkyscape+\" \u2026`, claims every new entry and every shipped card that plays or reads differently: S01's patched cards (the Evasive and Frenzy migration and the Replenish wording among them), xxFreshJack (S17), and the unique draws as a rule (`--rule`). `cargo jackioh classify --base origin/main --claims` holds it to them (R1370000). `patches ship` names the version after the merge (v0.6.0: a set that ships is a major).\n- The server's migration seeds the set. The golden traces are re-blessed once, and the seed-pinned tests are re-pinned for the bigger pools and the unique draws. Every stated total moves (card counts in docs, the spec, READMEs, the census in `catalog check`).\n- Every new prompt and card is answered by the AI, the random policy and the timeout (the fuzz gate). The AI may still face the set: a player's deck holds it, and the AI must answer every card.\n- Each card's \u00a78 row says what was built.\n\n## Done when\n\n- [ ] Stinkyscape+ is in `SHIPPED_SETS` and in `AI_DECK_GATED_SETS`, and `UNIQUE_RANDOM_DRAWS` is on.\n- [ ] `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`, `cargo jackioh catalog check`, `patches check`, `spec check`, `names --check`, `golden check`, `fuzz --seeds 200`, `gate` and `classify --base origin/main --claims` pass on this branch, as do `pnpm --dir apps/web typecheck`, `test` and `pnpm exec eslint apps/edge apps/web e2e`.\n- [ ] A hotseat game in the browser can deck and play Stinkyscape+ cards on both sides (a screenshot in a comment on this issue).\n\nBlocked by #3535, #3536, #3540, #3543, #3546, #3548, #3550, #3554, #3558, #3563, #3551, #3541, #3542, #3552, #3544, #3537, #3559, #3555, #3547, #3556, #3549, #3545, #3560, #3565, #3566, #3553, #3538, #3557, #3567, #3568, #3561, #3569, #3539, #3570, #3571, #3572\n\nPart of #3534.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-3596",
+  "part_of": 3596,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3573: needs a plan; `claude-4` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "at": "2026-11-12T03:31:10Z",
+    "draft": "# Draft plan for #3573 (Stinkyscape+ R, the release)\n\n## Found so far\n- Set row: crates/engine/src/wire/catalog_types.rs:470 `StinkyscapePlus ... stage: Held` -> Shipped.\n- crates/ai/src/config.rs:981 `AI_DECK_GATED_SETS = &[]` -> `&[SetName::StinkyscapePlus]` (+ doc comment as f5c99a2273 did).\n- crates/engine/src/config.rs:1642 `UNIQUE_RANDOM_DRAWS = false` -> true.\n- Tests asserting the old values: crates/ai/tests/ai/shadow_ban.rs:1753 (r732000_the_gate_is_lifted_...),\n  crates/ai/tests/ai/deck.rs:1337 (r1390_the_gate_is_lifted_..._meditative_cards),\n  crates/engine/tests/rules/unique_draws.rs:340 (r3563000_off_until_the_release_draws_as_before).\n- Precedent: Stinkyscape release commit f5c99a2273 (#2178), Training Grounds release 8445f1fcc1 (#2320).\n- BIG: integration branch is bot/issue-3596 (= HEAD). 11 parts are PARKED (not on this branch):\n  3538 S17 (xxFreshJack), 3541 S02, 3542 S03, 3551 S01 (patched shipped cards), 3554 E7, 3556 S10,\n  3558 E8, 3559 S07, 3566 S15, 3569 S22, 3571 S25. Branches origin/bot/issue-<n>. The reconcile merges them.\n- 69 stub scripts remain in crates/cards/src/scripts/stinkyscape_plus (header \"STUB (#3535)\"), each with\n  test `the_stub_is_a_card_of_the_held_stinkyscape_plus_set` asserting `!set_ships` -> fails on ship.\n  Parked branches rewrite those files: do NOT touch them (avoid merge conflicts); report as expected red.\n- c142 (built, on branch) asserts `!set_ships` at line 195 -> flip.\n- Script headers \"a card of the held ... set\": Training Grounds kept them; leave them.\n- Experiment: /tmp/exp is HEAD with the three flips; `cargo test --workspace ...` running, log /tmp/exp-test.log.\n  (CARGO_TARGET_DIR is shared: /home/runner/work/JackiOh/JackiOh/target)\n\n## TODO\n- agents: patches/classify, server migration, web pins, totals/\u00a78.",
+    "family": "claude",
+    "kind": "draft",
+    "notes": "",
+    "provider": "claude-6",
+    "reason": "`claude-6` stops mid-call: 5-hour usage is 50%, at or over its 50% cap outside its hours; it resets at 2026-11-12T05:40:00Z",
+    "trail": "25\", \"description\": \"Read deck-code offset logic\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3573; grep -n -i \\\"stinkyscape+\\\\|stinkyscapeplus\\\\|held\\\" apps/web/src/cards/art/ART.md | head; echo ---; git grep -n -i -E \\\"\\\\bheld\\\\b|not shipped\u2026\n- Bash: {\"command\": \"grep -rn \\\"CATALOG_NUMBER_SET_OFFSETS\\\" --include=*.rs --include=*.ts crates apps | grep -v test | head -5; grep -rn -A14 \\\"pub const CATALOG_NUMBER_SET_OFFSETS\\\\|CATALOG_NUMBER_SET_OFFS\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3573; git grep -n -E \\\"setShips\\\\(\\\\\\\"Stinkyscape\\\\+\\\\\\\"\\\\)|newestShippedSet|SHIPPED_SETS\\\\)?\\\\.toEqual|SHIPPED_SETS.length|toHaveLength\\\\(7\\\\)|\\\\\\\"T\u2026\n- Bash: {\"command\": \"sed -n 880,930p crates/server/src/config.rs\", \"description\": \"Read server catalog number offsets\"}\n- Bash: {\"command\": \"grep -n \\\"Stinkyscape\\\\|7000\\\\|6000\\\" apps/web/src/wire/serverConfig.ts | head; grep -rn \\\"serverConfig.ts\\\" crates/server/tests/export_config.rs | head -3\", \"description\": \"Check genera\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3573; grep -n \\\"a catalog id\\\" e2e/cypress/e2e/19-queue-modes-and-series.cy.ts; grep -n \\\"const CATALOG_ID\\\" -B1 e2e/support/playthrough.ts; git grep\u2026\n- Bash: {\"command\": \"ls spec/rulings | grep -E \\\"^R3535\\\"; for f in spec/rulings/R3535000.md; do echo \\\"#### $f\\\"; cat $f | cut -c1-3000; done\", \"description\": \"Read R3535000 ruling\"}\n- Bash: {\"command\": \"sed -n 495,560p docs/stinkyscape-plus-set.md\", \"description\": \"Read Stinkyscape+ brief release section\"}\n- Bash: {\"command\": \"grep -rln \\\"R3535000\\\\]\\\\] \\\\|\\\\*\\\\*\\\\[\\\\[R3535000\\\" spec | head; ls spec/pending | head -50; grep -rn \\\"R3535000\\\" spec/11-rulings.md | cut -c1-200 | head -3\", \"description\": \"Find wher\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3573; git grep -n -E \\\"meditativeplus\\\\|stinkyscape\\\\|traininggrounds|stinkyscape\\\\|traininggrounds\\\" -- apps/web e2e | cut -c1-260\", \"description\": \u2026\n- Bash: {\"command\": \"git show --stat --format=\\\"%s\\\" 8445f1fcc1 | grep -v \\\"voice/\\\\|\\\\.m4a\\\" | head -120\", \"description\": \"List Training Grounds release files\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn fnv1a32_utf16\\\" -A 14 crates/engine/src/replay.rs 2>/dev/null || grep -rn \\\"pub fn fnv1a32_utf16\\\" -A 14 crates/engine/src | head -20; grep -n \\\"preserve_order\\\" Cargo.t\u2026\n- Bash: {\"command\": \"grep -rn \\\"R3535000\\\" --include=*.md . 2>/dev/null | grep -v \\\"^./docs/polish\\\" | cut -c1-260 | head -20\", \"description\": \"Grep R3535000 references across markdown\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3573; git grep -n -E \\\"7000|7001|Stinkyscape\\\\+|stinkyscapeplus|eightSets|sevenSets\\\" -- apps/web/src/game/deckbuilder/deckCode.test.ts apps/web/src/\u2026\n- Bash: {\"command\": \"grep -rln \\\"R3535000\\\" . --exclude-dir=node_modules --exclude-dir=target --exclude-dir=.git 2>/dev/null | head; grep -rn \\\"R353500[0-9]\\\" spec docs | cut -c1-200 | head\", \"description\": \u2026\n- Bash: {\"command\": \"grep -rln \\\"stinkyscapeplus-\\\" crates apps/web/src e2e --include=*.rs --include=*.ts --include=*.tsx | grep -v \\\"scripts/stinkyscape_plus/\\\" | head -30\", \"description\": \"Find tests namin\u2026\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport sys\\nt=open('/home/runner/work/_temp/work/item-3573/crates/server/migrations/0087_stinkyscape_plus_tags.sql',encoding='utf-8').read()\\nb=t.encode('utf-16-le'); h\u2026\n- Bash: {\"command\": \"git log --oneline --all -i --grep=\\\"3535\\\" | head -10; git log --oneline -5 -- spec/rulings/R3535000.md; grep -rn \\\"R3535\\\" spec/INDEX.md spec/11-rulings.md | head -3\", \"description\": \"C\u2026\n- Bash: {\"command\": \"grep -n \\\"held\\\\|ship\\\\|preview\\\" apps/web/src/routes/almanac-preview-stinkyscapeplus.test.tsx | head -20; grep -rn \\\"StinkyscapePlus\\\\|Stinkyscape+\\\" apps/web/src --include=*.test.ts --\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3573/crates/tools/src/patches.rs\", \"offset\": 1836, \"limit\": 28}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3573; grep -n \\\"data-pack=\\\" apps/web/src/packs/pack-object.css; git grep -n \\\"data-pack\\\\b\\\\|dataset.pack\\\\|data-pack=\\\" -- 'apps/web/src/packs/*.ts\u2026\n- Bash: {\"command\": \"grep -a -c Compiling /tmp/exp-test.log; tail -c 300 /tmp/exp-test.log\", \"description\": \"Check experiment compile progress\"}\n- Bash: {\"command\": \"git show --stat --format='%H %s' 5979dc4194 | grep -E \\\"spec|docs|census|catalog_types\\\" | head -20; git branch -a --contains 5979dc4194 2>/dev/null | head -3; git merge-base --is-ancest\u2026\n- Grep: {\"pattern\": \"StinkyscapePlus|stinkyscapeplus|Stinkyscape\\\\+\", \"path\": \"/home/runner/work/_temp/work/item-3573/crates/server\", \"output_mode\": \"content\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3573; sed -n 45,60p apps/web/src/packs/PackObject.test.tsx; sed -n 140,165p apps/web/src/packs/PackObject.test.tsx; sed -n 74,94p apps/web/src/packs/\u2026\n- Bash: {\"command\": \"git log --all --format='%h %s' --diff-filter=A -- crates/cards/patches/pending/stinkyscape.json 'crates/cards/patches/pending/stinkyscape-the-release*' 'crates/cards/patches/pending/stin\u2026\n- Bash: {\"command\": \"git show --stat=200 --format='%H %s' 5979dc4194 | grep -E \\\"spec/|\\\\.md\\\" | head -20; grep -rn \\\"R3535\\\\|3535\\\" spec/pending/*.md | cut -c1-200 | head\", \"description\": \"List spec/markdow\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -a -q -E \\\"Running|error\\\\[\\\" /tmp/exp-test.log; do sleep 10; done'; grep -a -E \\\"Running|error\\\\[\\\" /tmp/exp-test.log | head -3; grep -a -c Compiling /tm\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3573; git grep -n \\\"export function shopPacks\\\" -A10 -- apps/web/src | head -15\", \"description\": \"Find shopPacks definition\"}\n- Bash: {\"command\": \"grep -rn \\\"#3535\\\\|3535000\\\\|R3535\\\" spec docs/*.md crates/*/README.md BUILD.md | cut -c1-260 | head -20\", \"description\": \"Grep #3535 references in spec and docs\"}\n- Grep: {\"pattern\": \"function shopPacks\", \"path\": \"/home/runner/work/_temp/work/item-3573/apps/web/src\", \"output_mode\": \"content\", \"-A\": 8}\n- tool error: Exit code 137\n- tool error: Exit code 137"
+  },
+  "session": {
+    "action": "plan",
+    "artifact": 13912193495,
+    "artifact_bytes": 362474,
+    "artifact_name": "work",
+    "at": "2026-11-12T03:37:57Z",
+    "bytes": 475612,
+    "cwd": "/home/runner/work/_temp/work/item-3573",
+    "ended": "interrupted: `claude-6` stops mid-call: 5-hour usage is 50%, at or over its 50% cap outside its hours; it resets at 2026-11-12T05:40:00Z",
+    "head": "c999176ff2e439a54a8ac5fc90fbb286f406b16d",
+    "id": "4d61c310-71e0-434c-bb8c-e0918d29c216",
+    "kind": "plan",
+    "model": "opus",
+    "project": "-home-runner-work--temp-work-item-3573",
+    "provider": "claude-6",
+    "run": "43147724162"
+  },
+  "journal": "# Journal of #3573\n\nEvery night-bot run on #3573, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-11-12 03:38 UTC \u00b7 plan #3573 \u00b7 `claude-6` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/43147724162) on `claude-6` (`opus` (strong)). It ended **interrupted**: `claude-6` stops mid-call: 5-hour usage is 50%, at or over its 50% cap outside its hours; it resets at 2026-11-12T05:40:00Z\nModel calls: 1, 6.3 model minutes.\nSession: fresh: none was kept for this item. This run's: kept session `4d61c310-71e0-434c-bb8c-e0918d29c216` of #3573 on claude-6 (475,612 bytes) in run 43147724162's `work` artifact, for its next run there.\nIts work ended at `c999176ff2e4` on `bot/issue-3573`.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 03:24 | start | from `origin/bot/issue-3596` |  | at `c999176ff2e4` |\n| 2 | 03:24 | plan (`opus`) | plan the item before anyone builds it | 6.3 min | cut off at its usage cap: 5-hour usage is 50%, at or over its 50% cap outside its hours; it resets at 2026-11-12T05:40:00Z |\n| 3 | 03:31 | stop | `claude-6` stops mid-call: 5-hour usage is 50%, at or over its 50% cap outside its hours; it resets at 2026-11-12T05:40:00Z |  |  |\n\n<details><summary>The planner's draft when it stopped</summary>\n\n````markdown\n# Draft plan for #3573 (Stinkyscape+ R, the release)\n\n## Found so far\n- Set row: crates/engine/src/wire/catalog_types.rs:470 `StinkyscapePlus ... stage: Held` -> Shipped.\n- crates/ai/src/config.rs:981 `AI_DECK_GATED_SETS = &[]` -> `&[SetName::StinkyscapePlus]` (+ doc comment as f5c99a2273 did).\n- crates/engine/src/config.rs:1642 `UNIQUE_RANDOM_DRAWS = false` -> true.\n- Tests asserting the old values: crates/ai/tests/ai/shadow_ban.rs:1753 (r732000_the_gate_is_lifted_...),\n  crates/ai/tests/ai/deck.rs:1337 (r1390_the_gate_is_lifted_..._meditative_cards),\n  crates/engine/tests/rules/unique_draws.rs:340 (r3563000_off_until_the_release_draws_as_before).\n- Precedent: Stinkyscape release commit f5c99a2273 (#2178), Training Grounds release 8445f1fcc1 (#2320).\n- BIG: integration branch is bot/issue-3596 (= HEAD). 11 parts are PARKED (not on this branch):\n  3538 S17 (xxFreshJack), 3541 S02, 3542 S03, 3551 S01 (patched shipped cards), 3554 E7, 3556 S10,\n  3558 E8, 3559 S07, 3566 S15, 3569 S22, 3571 S25. Branches origin/bot/issue-<n>. The reconcile merges them.\n- 69 stub scripts remain in crates/cards/src/scripts/stinkyscape_plus (header \"STUB (#3535)\"), each with\n  test `the_stub_is_a_card_of_the_held_stinkyscape_plus_set` asserting `!set_ships` -> fails on ship.\n  Parked branches rewrite those files: do NOT touch them (avoid merge conflicts); report as expected red.\n- c142 (built, on branch) asserts `!set_ships` at line 195 -> flip.\n- Script headers \"a card of the held ... set\": Training Grounds kept them; leave them.\n- Experiment: /tmp/exp is HEAD with the three flips; `cargo test --workspace ...` running, log /tmp/exp-test.log.\n  (CARGO_TARGET_DIR is shared: /home/runner/work/JackiOh/JackiOh/target)\n\n## TODO\n- agents: patches/classify, server migration, web pins, totals/\u00a78.\n````\n\n</details>\n",
+  "usage_facts": {
+    "queued_at": "2026-11-09T23:50:31Z",
+    "claimed_at": "2026-11-12T04:26:03Z",
+    "previous_provider": "claude-6",
+    "handed_off": "handed off from `claude-6`: it could not take it"
+  },
+  "housekeeping": [
+    "#3750 is held for `claude-1` until 23:10 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))",
+    "#3727 is held for `claude-1` until 23:10 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))",
+    "#3695 is held for `claude-3` until 23:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3610 skipped: it waits for #3609 to close first",
+    "#3729 skipped: it waits for #3727, #3728, #3730 to close first",
+    "#3730 skipped: it waits for #3728 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3728, #3730 to close first",
+    "#3733 skipped: it waits for #3727, #3728 to close first",
+    "#3734 skipped: it waits for #3728 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
