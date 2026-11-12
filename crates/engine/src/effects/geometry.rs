@@ -116,7 +116,7 @@ pub fn chosen_slash_lane(ctx: &EffectContext<'_>) -> Option<i32> {
 /// R3554005 (#109 Lancer, #126 Vela, #127 Corvus): the rules a line runs under.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct LineRules {
-    /// The damage each Unit on the line takes, piercing Armor.
+    /// The damage each Unit on the line takes.
     pub amount: i32,
     /// How many enemy tiles are offered (`None`: every one; Lancer Discovers from
     /// `DISCOVER_OPTIONS`).
@@ -125,6 +125,8 @@ pub struct LineRules {
     pub cleave: bool,
     /// Corvus draws the line as a laser.
     pub laser: bool,
+    /// Whether each hit pierces Armor: Lancer, Vela and Corvus print Pierce; KY's Line Search Bot (S+ T-AI-7) does not (R3571000).
+    pub pierce: bool,
 }
 
 /// R3554005: the resume step the tile answer re-enters.
@@ -196,7 +198,8 @@ fn is_line_unit(state: &crate::state::GameState, card: &CardInstance) -> bool {
 }
 
 /// R3554005: the answer: the line between the source and the tile, drawn as KY's papaya draws it,
-/// hitting every Unit on it — friend or foe — piercing Armor, and with `cleave` each neighbour too.
+/// hitting every Unit on it — friend or foe — piercing Armor when `pierce`, and with `cleave` each
+/// neighbour too.
 pub fn line_damage_answered(rules: LineRules, ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let Some(source) = ctx.live_self().cloned() else {
         return Vec::new();
@@ -249,6 +252,7 @@ pub fn line_damage_answered(rules: LineRules, ctx: &mut EffectContext<'_>) -> Ve
     }
     let amount = rules.amount;
     let cleave = rules.cleave;
+    let pierce = rules.pierce;
     effects.push(Effect::new("lineDamage", move |ctx| {
         let Some(source) = ctx.live_self().cloned().or(ctx.self_.clone()) else {
             return;
@@ -270,7 +274,7 @@ pub fn line_damage_answered(rules: LineRules, ctx: &mut EffectContext<'_>) -> Ve
                     },
                     amount,
                     flags: Some(DamageFlags {
-                        ignore_armor: Some(true),
+                        ignore_armor: pierce.then_some(true),
                         ..DamageFlags::default()
                     }),
                 },
@@ -301,7 +305,7 @@ pub fn line_damage_answered(rules: LineRules, ctx: &mut EffectContext<'_>) -> Ve
                         },
                         amount,
                         flags: Some(DamageFlags {
-                            ignore_armor: Some(true),
+                            ignore_armor: pierce.then_some(true),
                             via: Some(KeywordKind::Cleave),
                             ..DamageFlags::default()
                         }),

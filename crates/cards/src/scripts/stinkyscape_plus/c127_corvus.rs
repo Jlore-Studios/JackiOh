@@ -26,6 +26,9 @@ const USES: i32 = 1;
 /// Corvus draws the line as a laser.
 const LASER: bool = true;
 
+/// "Pierce": its hits ignore Armor (R3554005).
+const PIERCE: bool = true;
+
 /// R3554005: the line's rules now.
 fn rules(ctx: &EffectContext<'_>) -> LineRules {
     LineRules {
@@ -33,6 +36,7 @@ fn rules(ctx: &EffectContext<'_>) -> LineRules {
         offers: None,
         cleave: ctx.radiant,
         laser: LASER,
+        pierce: PIERCE,
     }
 }
 

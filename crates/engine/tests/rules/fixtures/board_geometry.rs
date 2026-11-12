@@ -57,6 +57,7 @@ pub const LANCER_RULES: effects::LineRules = effects::LineRules {
     offers: Some(DISCOVER_OPTIONS),
     cleave: false,
     laser: false,
+    pierce: true,
 };
 
 /// Vela's line: 3 damage, every enemy tile offered, Cleave, laser.
@@ -65,6 +66,7 @@ pub const VELA_RULES: effects::LineRules = effects::LineRules {
     offers: None,
     cleave: true,
     laser: true,
+    pierce: true,
 };
 
 fn card(index: u32, id: &str, type_: &str, stats: Option<(i32, i32)>, keywords: Value) -> CardDef {

@@ -34666,7 +34666,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 39,
+    "loc": 41,
     "base": {
       "attack": 0,
       "health": 10,
@@ -34726,7 +34726,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 39,
+    "loc": 41,
     "base": {
       "attack": 0,
       "health": 20,
@@ -37432,7 +37432,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 0,
-    "loc": 6,
+    "loc": 20,
     "base": {
       "keywords": [
         {
@@ -37462,7 +37462,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 1,
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Give an enemy Unit Toxic 1."
@@ -37573,7 +37573,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 1,
-    "loc": 6,
+    "loc": 24,
     "base": {
       "keywords": [],
       "text": "Evolves at the start of its owner's turn.\nEvolve: Gain +2/+2.",
@@ -37602,7 +37602,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 1,
-    "loc": 6,
+    "loc": 37,
     "base": {
       "keywords": [],
       "text": "The leftmost and rightmost cards in your hand cost (1) less."
@@ -37627,7 +37627,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 2,
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Cry: Choose an enemy tile. Deal 2 damage to every Unit on the line between this and it.",
