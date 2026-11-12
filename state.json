@@ -15413,7 +15413,7 @@
       "started_at": "2026-11-12T15:35:34Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "3779": {
       "action": "review",
