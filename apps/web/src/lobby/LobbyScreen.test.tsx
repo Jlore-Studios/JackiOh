@@ -10,6 +10,7 @@ import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import { at, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import type { LobbyRead, LobbySeat, LobbyView } from "./api.ts";
 import { LOBBY_POLL_MS } from "./config.ts";
+import { COOP_DECK_KEY } from "./coopDeck.ts";
 import { LobbyScreen } from "./LobbyScreen.tsx";
 import { lobbyTestid } from "./testids.ts";
 
@@ -84,6 +85,7 @@ afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
   window.sessionStorage.clear();
+  window.localStorage.removeItem(COOP_DECK_KEY);
 });
 
 describe("the lobby screen", () => {
@@ -166,10 +168,13 @@ describe("the lobby screen", () => {
     const countdown = await screen.findByTestId(lobbyTestid.countdown, undefined, SLOW);
     expect(countdown).toHaveTextContent(String(LOBBY_START_COUNTDOWN_SECONDS));
     expect(window.location.pathname).toBe(`/lobby/${CODE}`);
+    const entries = window.history.length;
     await act(async () => {
       await vi.advanceTimersByTimeAsync(LOBBY_START_COUNTDOWN_SECONDS * 1000 + 500);
     });
     expect(window.location.pathname).toBe("/match/m-1");
+    // The board replaces the lobby's entry, so Back does not land on a lobby that counts down again.
+    expect(window.history.length).toBe(entries);
   });
 
   it("R3730000 the lobby reads itself again while the social socket is down", async () => {
@@ -185,6 +190,23 @@ describe("the lobby screen", () => {
     expect(server.to("GET", `/api/lobbies/${CODE}`).length).toBeGreaterThanOrEqual(2);
     const seats = screen.getAllByTestId(lobbyTestid.seat);
     expect(within(seats[1] ?? document.body).getByText("Bo#2")).toBeInTheDocument();
+  }, LOBBY_POLL_MS * 4);
+
+  it("R3205000 R3730002 the lobby's own reads keep running while the tab is hidden", async () => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    try {
+      const server = serve([lobby()]);
+      show();
+      expect(await screen.findByTestId(lobbyTestid.leave, undefined, SLOW)).toBeInTheDocument();
+      await waitFor(
+        () => {
+          expect(server.to("GET", `/api/lobbies/${CODE}`).length).toBeGreaterThanOrEqual(2);
+        },
+        { timeout: LOBBY_POLL_MS * 2 },
+      );
+    } finally {
+      Reflect.deleteProperty(document, "visibilityState");
+    }
   }, LOBBY_POLL_MS * 4);
 
   it("R3730004 a closed lobby says so, and a member who reads it as a visitor was removed", async () => {
@@ -214,6 +236,52 @@ describe("the lobby screen", () => {
       expect(window.location.pathname).toBe("/match/m-7");
     }, SLOW);
     expect(server.to("POST", `/api/rooms/${CODE}/join`)[0]?.body).toMatchObject({ mode: "random" });
+  });
+
+  it("R2094000 R3730006 a co-op lobby starts on the device's last co-op pick, and a pick made is remembered", async () => {
+    window.localStorage.setItem(COOP_DECK_KEY, "random");
+    const server = serve([lobby({ settings: { format: "coop", difficulty: "easy" } })]);
+    show();
+    const picker = await screen.findByTestId<HTMLSelectElement>(lobbyTestid.deckSelect, undefined, SLOW);
+    await waitFor(() => {
+      expect(picker).toBeEnabled();
+    }, SLOW);
+    expect(picker.value).toBe("random");
+    fireEvent.change(picker, { target: { value: "d-pyre" } });
+    await waitFor(() => {
+      expect(server.to("POST", `/api/lobbies/${CODE}/pick`)[0]?.body).toEqual({ deckId: "d-pyre" });
+    }, SLOW);
+    expect(window.localStorage.getItem(COOP_DECK_KEY)).toBe("d-pyre");
+    cleanup();
+
+    // A remembered deck the account no longer has falls back to the first saved deck.
+    window.localStorage.setItem(COOP_DECK_KEY, "d-gone");
+    serve([lobby({ settings: { format: "coop", difficulty: "easy" } })]);
+    show();
+    await waitFor(() => {
+      expect(screen.getByTestId<HTMLSelectElement>(lobbyTestid.deckSelect).value).toBe("d-pyre");
+    }, SLOW);
+  });
+
+  it("R2094000 R3730006 a classic co-op room's join card starts on the remembered deck, and remembers the pick it joins with", async () => {
+    window.localStorage.setItem(COOP_DECK_KEY, "d-pyre");
+    const server = serve([{ kind: "coopRoom", code: CODE, difficulty: "easy", host: { profileId: "p-ana", username: "Ana#1" } }], (call) =>
+      call.method === "POST" && call.path === `/api/duos/rooms/${CODE}/join` ? { status: 200, body: { matchId: "m-9" } } : undefined,
+    );
+    show();
+    const card = await screen.findByTestId(lobbyTestid.joinCard, undefined, SLOW);
+    const picker = within(card).getByTestId<HTMLSelectElement>(lobbyTestid.deckSelect);
+    await waitFor(() => {
+      expect(picker.value).toBe("d-pyre");
+    }, SLOW);
+    fireEvent.change(picker, { target: { value: "random" } });
+    expect(picker.value).toBe("random");
+    fireEvent.click(within(card).getByTestId(lobbyTestid.joinRoom));
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/duos/m-9");
+    }, SLOW);
+    expect(server.to("POST", `/api/duos/rooms/${CODE}/join`)[0]?.body).toMatchObject({ random: true });
+    expect(window.localStorage.getItem(COOP_DECK_KEY)).toBe("random");
   });
 
   it("R3730000 a seat's presence is in the player's words, as the friends list says it", async () => {

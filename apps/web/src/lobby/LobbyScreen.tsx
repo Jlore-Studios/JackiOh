@@ -48,6 +48,7 @@ import {
 import { LOBBY_COUNTDOWN_TICK_MS, LOBBY_POLL_MS } from "./config.ts";
 import { canStart, deckWords, seatsOf, type SeatShown } from "./seats.ts";
 import { lobbyTestid } from "./testids.ts";
+import { coopStartingDeck, rememberCoopPick } from "./coopDeck.ts";
 import "./lobby.css";
 
 /** Unit conversion, not configuration. */
@@ -102,7 +103,8 @@ function useLobbyRead(code: string): [Read, () => void] {
   }, [code, round]);
   // R3730000: a push names the lobby that changed.
   useEffect(() => onLobbyPush((pushed) => pushed === code && reload()), [code, reload]);
-  // While the socket is down, the lobby reads itself at its own pace.
+  // While the socket is down, the lobby reads itself at its own pace, hidden tab or not (R3205000): a
+  // Start begins the game at once (R3730002), and this read takes the member to its board.
   useEffect(() => {
     if (social.live) return undefined;
     const timer = window.setInterval(reload, LOBBY_POLL_MS);
@@ -481,11 +483,16 @@ function Settings({
 /** What the member has picked here: a deck, a trio, or a random deck with its lean. */
 type LocalPick = { deckId: string | null; trioId: string | null; random: boolean; lean: LeanPick | null };
 
-/** The pick the screen starts on: the server's when the member made one, else the defaults. */
+/**
+ * The pick the screen starts on: the server's when the member made one, else the defaults, which in
+ * co-op start on the device's last co-op pick (R2094000 as R3730006 amends it).
+ */
 function startingPick(view: LobbyView, data: LobbyData | null): LocalPick {
   const sent = view.yourPick;
+  const decks = data?.decks ?? [];
   const lean = sent?.mode === "random" ? (sent.leanSet ?? null) : readPlayLean();
-  const deckId = sent?.mode === "bo1" ? sent.deckId : (defaultDeck(data?.decks ?? [], null)?.id ?? null);
+  const fallback = view.settings.format === "coop" && sent === null ? coopStartingDeck(decks) : defaultDeck(decks, null);
+  const deckId = sent?.mode === "bo1" ? sent.deckId : (fallback?.id ?? null);
   const trioId = sent?.mode === "bo3" ? sent.trioId : (defaultTrio(data?.trios ?? [], null)?.id ?? null);
   const random = view.settings.format === "coop" ? sent?.mode === "random" || (sent === null && deckId === null) : view.settings.mode === "random";
   return { deckId, trioId, random, lean };
@@ -500,6 +507,11 @@ function pickBody(view: LobbyView, pick: LocalPick, data: LobbyData | null): Mod
   const deck = data?.decks.find((each) => each.id === pick.deckId) ?? null;
   const trio = data?.trios.find((each) => each.id === pick.trioId) ?? null;
   return choiceFor(view.settings.mode, deck, trio, pick.lean);
+}
+
+/** A co-op pick is remembered on the device (R2094000); a duel's is not. */
+function remember(body: ModeChoice | CoopPick): void {
+  if (!("mode" in body)) rememberCoopPick(body);
 }
 
 /** Whether `body` is what the server already holds as the member's pick. */
@@ -548,7 +560,9 @@ function YourDeck({
   const send = (next: LocalPick): void => {
     setPick(next);
     const nextBody = pickBody(view, next, data);
-    if (nextBody !== null) run(() => pickLobby(view.code, nextBody));
+    if (nextBody === null) return;
+    remember(nextBody);
+    run(() => pickLobby(view.code, nextBody));
   };
 
   return (
@@ -620,6 +634,7 @@ function YourDeck({
               return;
             }
             if (body === null) return;
+            remember(body);
             // A pick shown here that the server does not hold yet is sent first (R3730001).
             if (!samePick(view, body)) await pickLobby(view.code, body);
             await readyLobby(view.code, true);
@@ -730,8 +745,10 @@ function Countdown({ view }: { view: LobbyView }): ReactElement {
       window.clearInterval(timer);
     };
   }, []);
+  // Replaced, not pushed: a started lobby stays readable to its members, so Back from the board to it
+  // would count down and open the board again.
   useEffect(() => {
-    if (left === 0 && board !== null) navigate(board, { force: true });
+    if (left === 0 && board !== null) navigate(board, { replace: true, force: true });
   }, [left, board]);
   return (
     <p className="lobby__countdown" role="status" data-testid={lobbyTestid.countdown}>
@@ -751,7 +768,10 @@ function RoomJoinCard({ token, room }: { token: string; room: RoomView | CoopRoo
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mode: QueueMode = room.kind === "room" ? room.mode : "bo1";
-  const deck = data?.decks.find((each) => each.id === deckId) ?? (room.kind === "room" ? defaultDeck(data?.decks ?? [], null) : null);
+  // `deckId` is the select's value once touched (RANDOM for a random deal); untouched, the default.
+  const decks = data?.decks ?? [];
+  const deck =
+    deckId === RANDOM ? null : (decks.find((each) => each.id === deckId) ?? (room.kind === "room" ? defaultDeck(decks, null) : coopStartingDeck(decks)));
   const trio = data?.trios.find((each) => each.id === trioId) ?? defaultTrio(data?.trios ?? [], null);
   const random = room.kind === "coopRoom" ? deck === null : mode === "random";
 
@@ -761,7 +781,9 @@ function RoomJoinCard({ token, room }: { token: string; room: RoomView | CoopRoo
     setError(null);
     attempt(async () => {
       if (room.kind === "coopRoom") {
-        const joined = await joinDuosRoom(room.code, deck === null ? { random: true, ...(lean === null ? {} : { leanSet: lean }) } : { deckId: deck.id });
+        const pick: CoopPick = deck === null ? { random: true, ...(lean === null ? {} : { leanSet: lean }) } : { deckId: deck.id };
+        rememberCoopPick(pick);
+        const joined = await joinDuosRoom(room.code, pick);
         navigate(paths.duos(joined.matchId), { force: true });
         return;
       }
@@ -804,7 +826,7 @@ function RoomJoinCard({ token, room }: { token: string; room: RoomView | CoopRoo
         <>
           <label htmlFor={id}>{t("Your deck")}</label>
           <select id={id} className="lobby-select" data-testid={lobbyTestid.deckSelect} value={deck?.id ?? RANDOM} disabled={busy} onChange={(event) => {
-            setDeckId(event.currentTarget.value === RANDOM ? null : event.currentTarget.value);
+            setDeckId(event.currentTarget.value);
           }}>
             {room.kind === "coopRoom" ? <option value={RANDOM}>{t("A random deck")}</option> : null}
             {(data?.decks ?? []).map((saved) => (
