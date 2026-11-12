@@ -16230,6 +16230,8 @@
       }
     },
     "3799": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-12T17:16:14Z",
@@ -16243,8 +16245,11 @@
         "trail": "done; 41 rules invariants tests + 4 lib Duos tests green. Next: step 8 fuzz waves (release build first).\\nEOF\\ncargo build --relea\u2026\n- Bash: {\"command\": \"( time cargo jackioh fuzz --seeds 200 ) > /tmp/fuzz-1v1.txt 2>&1; tail -40 /tmp/fuzz-1v1.txt | cut -c1-600\", \"description\": \"Run the 200-seed fuzz wave with timing\", \"timeout\": 600000}\n- said: The 200-seed wave passes with no violations (32 s). Running `--handicap`, `--duos` and `--regress`.\n- Bash: {\"command\": \"( time cargo jackioh fuzz --seeds 200 --handicap ) > /tmp/fuzz-hc.txt 2>&1; grep -E 'seeds|invariant|failed|FAIL|real' /tmp/fuzz-hc.txt | head -20 | cut -c1-400\", \"description\": \"Run the\u2026\n- Bash: {\"command\": \"( time cargo jackioh fuzz --duos --seeds 200 ) > /tmp/fuzz-duos.txt 2>&1; grep -E 'seeds|invariant|failed|FAIL|real|violation' /tmp/fuzz-duos.txt | head -20 | cut -c1-400; ( time cargo j\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- Build pass 1: fuzz 200 (32 s), --handicap 200 (31 s), --duos 200 (84 s), --regress (16 records): all 0 violations. Running seeds 201-1000 of 1v1 + handica\u2026\n- said: Meanwhile, rustfmt.\n- Bash: {\"command\": \"cargo fmt && cargo fmt --check && echo FMT-OK; git status --short; git diff --stat\", \"description\": \"Run rustfmt and show the diff stat\"}\n- Bash: {\"command\": \"git diff crates/engine/src/testkit/invariants.rs | head -80\", \"description\": \"Show what rustfmt changed in invariants.rs\"}\n- said: The header line grew past 110 characters with \"seventeen\"; rewrapping it.\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3773/crates/engine/src/testkit/invariants.rs\", \"offset\": 18, \"limit\": 2}\n- Bash: {\"command\": \"cat rustfmt.toml 2>/dev/null; git diff -U0 | grep '^+' | grep -v '^+++' | awk '{ if (length($0)-1 > 110) print length($0)-1\\\": \\\"$0 }' | cut -c1-160\", \"description\": \"Check rustfmt confi\u2026\n- Bash: {\"command\": \"git diff -U0 -- '*.rs' | python3 -c \\\"\\nimport sys\\nfor l in sys.stdin:\\n if l.startswith('+') and not l.startswith('+++') and len(l.rstrip('\\\\n'))-1>110: print(len(l.rstrip('\\\\n'))-1, l\u2026\n- said: Four of my lines run 111\u2013112 characters; rewrapping them.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/engine/src/testkit/invariants.rs'\\ns=open(p).read()\\nreps=[\\n(\\\"//! The seventeen checks (a message leads with its id and cites the SPEC reference, so `signa\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3773/crates/engine/tests/rules/invariants.rs\", \"old_string\": \" json_as(\\n json!({ \\\"type\\\": \\\"damage\\\", \\\"sourceId\\\": null, \\\"ta\u2026\n- Bash: {\"command\": \"cargo fmt && cargo fmt --check && echo FMT-OK; git diff -U0 -- '*.rs' | python3 -c \\\"\\nimport sys\\nfor l in sys.stdin:\\n if l.startswith('+') and not l.startswith('+++') and len(l.rstrip\u2026\n- said: rustfmt is clean. Clippy next, while the extra fuzz seeds run.\n- Bash: {\"command\": \"cargo clippy -p jackioh-engine -p jackioh-cards -p jackioh-tools --all-targets --features jackioh-engine/testkit -- -D warnings 2>&1 | grep -E '^(warning|error)|Finished' | head -20\", \"d\u2026\n- Bash: {\"command\": \"cat /tmp/fuzz-1k.done 2>/dev/null; grep -E 'seeds|violation|failed' /tmp/fuzz-1v1-1k.txt /tmp/fuzz-hc-1k.txt 2>/dev/null | cut -c1-300\", \"description\": \"Check the extra fuzz seeds' progr\u2026\n- said: Seeds 201\u20131000 of the 1v1 wave pass too. Now the engine's full rules suite.\n- Bash: {\"command\": \"echo \\\"- Build pass 1: fmt + clippy (engine, cards, tools) green; 1v1 seeds 201-1000 clean. Running engine rules*, cards, tools tests.\\\" >> .bot-notes.md; cargo test -p jackioh-engine --\u2026\n- Bash: {\"command\": \"grep -E 'seeds [0-9]|violation|failed' /tmp/fuzz-hc-1k.txt | cut -c1-300\", \"description\": \"Read the handicap 201-1000 result\"}\n- said: Both 1,000-seed waves are clean and the engine rules suite is green (2583 + 649 + 685 tests). Now the cards and tools suites, which call the monitor too.\n- Bash: {\"command\": \"cargo test -p jackioh-cards -p jackioh-tools 2>&1 | grep -E '^test result|FAILED|panicked|^error' | sort | uniq -c | head -30\", \"description\": \"Run the cards and tools test suites\", \"tim\u2026\n- said: Cards and tools pass (the ignored tests are existing daily ones). Now `spec check`, `patches check`, `catalog check` and classify.\n- Bash: {\"command\": \"cargo jackioh spec check 2>&1 | tail -3; cargo jackioh patches check 2>&1 | tail -2; cargo jackioh catalog check 2>&1 | tail -2; git fetch -q origin main 2>/dev/null; git log -1 --format\u2026\n- said: classify says `Internal`, so no patch fragment is needed. Checking for other live docs that still count sixteen checks.\n- Bash: {\"command\": \"git grep -n 'I1\\u2013I16\\\\|I1-I16\\\\|sixteen checks\\\\|I15 and I16\\\\|and I16\\\\b' -- ':!BUILD.md' ':!docs/v0.3.0' ':!docs/polish' ':!reviews' | cut -c1-220 | head -20\", \"description\": \"Sear\u2026\n- Bash: {\"command\": \"git grep -n 'I16' -- ':!BUILD.md' ':!docs/v0.3.0' ':!docs/polish' ':!reviews' ':!crates/engine/src/testkit/invariants.rs' ':!crates/engine/tests/rules/invariants.rs' | cut -c1-220 | head\u2026\n- Bash: {\"command\": \"git grep -I -n '\\\\bI16\\\\b' -- ':!BUILD.md' ':!docs/v0.3.0' ':!docs/polish' ':!reviews' ':!crates/engine/src/testkit/invariants.rs' ':!crates/engine/tests/rules/invariants.rs' | cut -c1-2\u2026\n- said: Every check passes. Reviewing the full diff once before writing up.\n- Bash: {\"command\": \"git diff -- crates/tools crates/engine/README.md crates/engine/src/testkit/mod.rs | grep '^[-+]' | cut -c1-260\", \"description\": \"Show the doc diffs\"}\n- said: All checks are green and the diff matches the plan. Updating the notes' State before the report.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold=\\\"- Build pass 1 (2026-11-12, opus): earlier runs only planned. Nothing built yet; starting at step 1.\\\\n\\\"\\nnew=\\\"\\\"\\\"- Build\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the fuzz monitor checks that the state check ran: no dead unit left standing, no live hero at 0, no mana below 0\"} --> ## What changed The fuzz monitor now has a 17th check, **I17**, which checks what the state check (\u00a74.5) should have left behind. With\u2026"
       },
       "issue": 3773,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-12T18:41:16Z",
         "from_run": "43267641619",
         "gates": [
           {
@@ -16336,7 +16341,11 @@
         "source": "build",
         "until": "2026-11-12T19:09:26Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-12T18:39:26Z",
+      "run_id": "pending:4dd1ccea-1794508826",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16355,6 +16364,9 @@
         "provider": "claude-8",
         "run": "43267641619"
       },
+      "started_at": "2026-11-12T18:41:16Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16368,9 +16380,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T18:26:16Z",
+    "at": "2026-11-12T18:41:16Z",
     "url": "",
-    "what": "review #3798 on claude-7"
+    "what": "review #3799 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-12T18:21:57Z",
