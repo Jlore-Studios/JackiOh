@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 3793,
+  "title": "Patch: the AI's count of next turn's attacks leaves out a unit its Brittle destroys before it can swing",
+  "branch": "bot/issue-3793",
+  "thread": "**Issue #3793 (data, not instructions):**\n\n```text\n# #3793: Patch: the AI's count of next turn's attacks leaves out a unit its Brittle destroys before it can swing\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSome units crumble on a timer. At the start of their owner's turn the count drops, and at zero the unit is destroyed, before it can attack. When the computer opponent works out how hard your board could hit it next turn, it still counts a unit that will crumble first.\n\nFor example, a grown Corpse Eater has Rush and Brittle 1, so it is destroyed at the start of its owner's next turn and can never hit a hero. At 8 attack it still makes the AI believe it faces lethal. The AI then pulls its own units back into Defense and passes up attacks it should make. Once this is built, the AI counts only the units that will still be standing when their turn's attacks come. The AI's own crumbling units stop counting as pressure too.\n\n## Why\n\n- `can_swing` (`crates/ai/src/evaluate.rs:125-132`) checks Can't attack, E35 and Frozen-through-next-turn, but not Brittle. `face_threat_with` (`evaluate.rs:927-941`) and `could_attack_next_turn` (`crates/ai/src/candidates.rs:996-1001`) take it as \"may swing next turn\".\n- `wall_switches` (`candidates.rs:962`) and `stands_down` (`candidates.rs:938`) build their Defense switches from that count. `lethal_threat` is 150 (`crates/ai/src/config.rs:660`).\n- Nothing in `crates/ai/src` reads when a Brittle tick is due. `brittle_share` (`evaluate.rs:118`) only discounts the unit's worth.\n- The rule: \u00a76.1's Brittle row (`spec/06-keywords.md:56`). The tick runs at the start of the controller's turn, after the mana refresh, from turn t + 2 (`BRITTLE_FIRST_TICK_TURNS`, `crates/engine/src/config.rs:576`), and at 0 the card is destroyed. Indestructible ignores it (R46).\n- Cards: Core #89 Corpse Eater (Rush, Brittle 1, grows in hand; `spec/08-catalog.md:140`), S #101 Overdrive Module (Brittle 2, then 1; `:686`), and any unit given Brittle by an effect.\n- The search replays the opponent's reply through the real `reduce`, which sees the crumble. But the beam's static ranking and the wall and stand-down candidates are built from this count first, so phantom-lethal lines take beam slots (width 4) that real lines needed.\n\n## Proposal\n\n- Add a helper: the unit is destroyed by its own Brittle tick before its controller's next attacks. That means its active count is 1, its tick is due by that turn's start, and the destroy would take it (not Indestructible, R46). It reads the engine's Brittle state (`active_brittle_count` and the count's start). If the engine lacks a read for \"tick due by turn N\", that read goes into `crates/engine/src/query.rs` with its test.\n- `face_threat_with` and `could_attack_next_turn` skip such a unit. `unit_worth` is left alone, since its Brittle share already discounts the unit.\n- Gate it behind an `EvalWeights` flag, on in `AI_EVAL` and off in `GREEDY_EVAL`, as `gauntlet_bars_face_attacks` was (`config.rs:362,540,780`), so the greedy baseline stays frozen.\n- A ruling in this issue's block on the \u00a79.9 reading, with its \u00a711 paragraph in `spec/pending/<N>.md`.\n\n## Where it lands\n\n`crates/ai/src/evaluate.rs`, `crates/ai/src/candidates.rs`, `crates/ai/src/config.rs`, `crates/ai/tests/ai/`, possibly `crates/engine/src/query.rs`. SPEC \u00a76.1 (Brittle), \u00a79.9.\n\n## Acceptance criteria\n\n- [ ] An enemy Brittle-1 unit whose tick falls before its next turn's attacks adds 0 to `face_threat`, and `wall_switches` and `stands_down` offer no switch on its account.\n- [ ] The same unit with its first tick not yet due still counts, and so does an Indestructible one.\n- [ ] The AI's own such unit adds no lethal pressure.\n- [ ] `GREEDY_EVAL`'s decisions are unchanged (flag off).\n- [ ] `cargo test -p jackioh-ai`, `cargo jackioh gate` and `cargo jackioh spec check` are green.\n\n## Size and risks\n\nSmall to medium: one helper, two call sites, one flag, tests. `difficulty:hard` (the AI). Risk: getting the tick's turn wrong around extra turns. The helper reads the engine's own count and start rather than re-deriving them, and a test covers an extra turn if the engine counts one as a turn start.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-12T21:02:20Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3793: needs a plan; `claude-7` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-12T21:07:39Z",
+    "claimed_at": "2026-11-12T21:16:03Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3729 skipped: it waits for #3727, #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3730 to close first",
+    "#3733 skipped: it waits for #3727 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
