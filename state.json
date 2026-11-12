@@ -15996,6 +15996,8 @@
       }
     },
     "3788": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-12T15:36:48Z",
@@ -16009,8 +16011,11 @@
         "trail": " .bot-notes.md | head -30; grep -rn \\\"crackPaths\\\\|damageLevel\\\\|ART_WEAR_LEVELS\\\\|cf-art-cracks\\\\|data-art-damage\\\\|CRACK_STEP\\\\|art/wear\\\" apps e2e --include=* -r --exclude-dir=node\u2026\n- said: Start with the source files.\n- Bash: {\"command\": \"cd apps/web/src/cards; cat art/ArtWear.tsx; grep -n \\\"crack\\\\|damage\\\\|seedId\\\\|defId\\\\|ArtWear\\\\|wear\\\" art/CardArt.tsx; grep -n \\\"damage\\\\|wear\\\\|crack\\\" MinionFace.tsx; grep -n \\\"crac\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3776/apps/web/src/cards; sed -n 60,90p art/artLive.css; sed -n 210,222p MinionFace.tsx; sed -n 305,316p constants.ts; sed -n 45,50p art/CardArt.tsx\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\ndef sub(path, pairs):\\n s=open(path).read()\\n for a,b in pairs:\\n assert a in s,(path,a)\\n s=s.replace(a,b)\\n open(path,'w').write(s)\\n\\nsub('art/CardArt.ts\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3776/apps/web/src/cards; python3 - <<'EOF'\\ns=open('art/motion.test.ts').read()\\ns=s.replace('import { ART_WEAR_LEVELS } from \\\"../constants.ts\\\";\\\\n\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3776/apps/web/src/cards; python3 - <<'EOF'\\ns=open('art/motion.test.ts').read().replace(\\\" });\\\\n\\\\n});\\\\n\\\",\\\" });\\\\n});\\\\n\\\")\\nopen('art/motion.tes\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3776/apps/web/src/cards; python3 - <<'EOF'\\ns=open('artLive.test.tsx').read()\\ndef r(a,b):\\n global s\\n assert a in s,a\\n s=s.replace(a,b)\\nr(\\\"a uni\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3776; python3 - <<'EOF'\\np='e2e/cypress/component/art-answers.cy.tsx'\\ns=open(p).read()\\ndef r(a,b):\\n global s\\n assert a in s,a\\n s=s.replace(a,b)\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3776; python3 - <<'EOF'\\np='e2e/cypress/component/art-answers.cy.tsx'\\ns=open(p).read()\\ndef r(a,b):\\n global s\\n assert a in s,a\\n s=s.replace(a,b)\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3776; git show c00af212de:crates/cards/patches/pending/the-pointer-s-art-tilt-and-effects-follow-it-once-a-frame.json; sed -n 1540p spec/11-rulings.m\u2026\n- said: Now spec edits and the fragment.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3776; python3 - <<'EOF'\\ndef edit(p,pairs):\\n s=open(p).read()\\n for a,b in pairs:\\n assert a in s,(p,a)\\n s=s.replace(a,b,1)\\n open(p,'w').write(s)\\\u2026\n- TaskStop: {\"task_id\": \"bjql0zpgk\"}\n- said: I'll rerun the same script with the phrase fixed (\"shows them all the same\").\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3776; git status --short | head -30; python3 - <<'EOF'\\ndef edit(p,pairs):\\n s=open(p).read()\\n for a,b in pairs:\\n assert a in s,(p,a)\\n s=s.replace\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3776; (pnpm --dir apps/web test src/cards/artLive.test.tsx src/cards/art/motion.test.ts src/cards/constants.test.ts 2>&1 | tail -15; pnpm --dir apps/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3776; (cargo jackioh spec check; cargo jackioh patches check) 2>&1 | tail -8\", \"timeout\": 600000, \"run_in_background\": true}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3776; python3 - <<'EOF'\\np='apps/web/src/cards/artLive.test.tsx'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\" const damaged: Partial<UnitView>[] = [\\n { hea\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3776; cat /tmp/claude-1001/-home-runner-work--temp-work-item-3776/a50775a5-2779-46a6-8b38-089f394a2c37/tasks/by4r2sfrn.output; pnpm --dir apps/web ty\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3776; pnpm --dir apps/web test 2>&1 | grep -E \\\"Test Files|Tests |FAIL|error\\\" | head\", \"timeout\": 900000}\n- Monitor: {\"query\": \"select:Monitor\", \"max_results\": \"1\"}\n- tool error: <tool_use_error>InputValidationError: Monitor failed due to the following issue: The required parameter `description` is missing This tool's schema was not sent to the API \u2014 it was not in the discove\u2026\n- said: Running in the background; I'll wait for its notification.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3776; cat > .bot-notes.md.new <<'EOF'\\n## State\\n\\nPlan in issue #3776 followed. Done: all code, test, CSS, ART.md, spec (R3776000, R3340000 edits, 1\u2026\n- Bash: {\"command\": \"sleep 400; tail -c 600 /tmp/claude-1001/-home-runner-work--temp-work-item-3776/a50775a5-2779-46a6-8b38-089f394a2c37/tasks/b5fm0jaza.output\", \"timeout\": 450000}\n- tool error: <tool_use_error>Blocked: sleep 400 followed by: tail -c 600 /tmp/claude-1001/-home-runner-work--temp-work-item-3776/a50775a5-2779-46a6-8b38-089f394a2c37/tasks/b5fm0jaza.output. To wait for a conditio\u2026\n- Bash: {\"command\": \"sleep 280; ls -la /tmp/claude-1001/-home-runner-work--temp-work-item-3776/a50775a5-2779-46a6-8b38-089f394a2c37/tasks/b5fm0jaza.output; pgrep -f vitest | head -2\", \"timeout\": 300000}\n- tool error: <tool_use_error>Blocked: sleep 280 followed by: ls -la /tmp/claude-1001/-home-runner-work--temp-work-item-3776/a50775a5-2779-46a6-8b38-089f394a2c37/tasks/b5fm0jaza.output pgrep -f vitest head -2. To \u2026\n- Bash: {\"command\": \"until ! pgrep -f \\\"vitest\\\" >/dev/null; do sleep 5; done; cat /tmp/claude-1001/-home-runner-work--temp-work-item-3776/a50775a5-2779-46a6-8b38-089f394a2c37/tasks/b5fm0jaza.output | tail -\u2026\n- TaskStop: {\"task_id\": \"bdkxr4dmb\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3776; pkill -f vitest; timeout 500 pnpm --dir apps/web test src/cards 2>&1 | grep -E \\\"Test Files|Tests |FAIL|::error\\\" | head\", \"timeout\": 560000}\n- tool error: Exit code 144\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3776; timeout 500 pnpm --dir apps/web test src/cards 2>&1 | grep -E \\\"Test Files|Tests |FAIL|::error\\\" | head\", \"timeout\": 560000}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: remove the damage cracks from a unit's art\"} --> A damaged unit's art no longer draws cracks. The buffed glow and the frozen frost stay. I did not get a result from the whole `pnpm --dir apps/web test` run, so that is unverified; `classify --claims` pri\u2026"
       },
       "issue": 3776,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-12T17:14:55Z",
         "from_run": "43249703248",
         "gates": [
           {
@@ -16102,7 +16107,11 @@
         "source": "build",
         "until": "2026-11-12T17:42:58Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-12T17:12:58Z",
+      "run_id": "pending:e0603ff0-1794503638",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16121,6 +16130,9 @@
         "provider": "claude-8",
         "run": "43249703248"
       },
+      "started_at": "2026-11-12T17:14:55Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16134,9 +16146,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T16:48:05Z",
+    "at": "2026-11-12T17:14:55Z",
     "url": "",
-    "what": "spot-check #3782 on claude-2"
+    "what": "review #3788 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-12T16:44:44Z",
