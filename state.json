@@ -36825,19 +36825,5 @@
     "issue": 2890,
     "pinned": true
   },
-  "usage_spool": {
-    "readings": [
-      "2026-11-12T04:46:30Z,claude-4,ping,before,43156779926,93,2026-11-12T05:20:00Z,,,allowed_warning,50,,",
-      "2026-11-12T04:58:22Z,claude-6,ping,before,43157928935,54,2026-11-12T05:40:00Z,,,allowed,50,,",
-      "2026-11-12T05:07:36Z,claude-2,ping,before,43158982268,16,2026-11-12T07:40:00Z,88,2026-11-14T05:00:00Z,allowed_warning,90,90,",
-      "2026-11-12T05:07:53Z,claude-2,stream,call,43158982268,17,2026-11-12T07:40:00Z,89,2026-11-14T05:00:00Z,allowed_warning,90,90,",
-      "2026-11-12T05:08:08Z,claude-2,stream,call,43158982268,18,2026-11-12T07:40:00Z,89,2026-11-14T05:00:00Z,allowed_warning,90,90,"
-    ],
-    "runs": [
-      "2026-11-12T04:46:30Z,43156779926,claude-4,sonnet+opus,review,3752,medium,interrupted,5-hour cap,0,0,0,0,,93,93,,,2.6,,none,,0",
-      "2026-11-12T04:58:22Z,43157928935,claude-6,opus+sonnet,review,3752,medium,interrupted,5-hour cap,0,0,0,0,,54,54,,,0.3,claude-4,none,,0",
-      "2026-11-12T05:08:34Z,43158982268,claude-2,opus+sonnet,review,3752,medium,reviewed,,0.9,14,6677,551142,0.423,16,18,88,89,10,claude-6,none,,1"
-    ]
-  },
   "version": 1
 }
