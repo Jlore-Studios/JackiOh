@@ -28998,7 +28998,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 34,
     "base": {
       "attack": 7,
       "health": 7,
@@ -32056,7 +32056,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 31,
     "base": {
       "attack": 5,
       "health": 5,
@@ -32096,7 +32096,7 @@
     "token": true,
     "cost": 2,
     "printedRarity": "Legendary",
-    "loc": 6,
+    "loc": 28,
     "base": {
       "keywords": [],
       "text": "Cast on draw: Add {draw} random Radiant Stinkyscape or Stinkyscape+ cards to your hand."
@@ -32510,7 +32510,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 38,
     "base": {
       "keywords": [
         {
@@ -32780,18 +32780,18 @@
     "flavor": "Beast",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 97,
     "base": {
       "attack": 4,
       "health": 4,
       "keywords": [],
-      "text": "Evolve: When a friendly Unit dies.\nEvolve: Gain “Death: Resummon that Unit.”"
+      "text": "Evolves when a friendly Unit dies.\nEvolve: Gain “Death: Resummon that Unit.”"
     },
     "radiant": {
       "attack": 8,
       "health": 8,
       "keywords": [],
-      "text": "Evolve: When a friendly Unit dies.\nEvolve: Gain “Death: Resummon that Unit. Make it Radiant.”"
+      "text": "Evolves when a friendly Unit dies.\nEvolve: Gain “Death: Resummon that Unit. Make it Radiant.”"
     }
   },
   "stinkyscapeplus-094": {
@@ -36560,7 +36560,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 28,
     "base": {
       "attack": 6,
       "health": 6,
