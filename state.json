@@ -12889,12 +12889,18 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "onto": "bot/issue-3596",
       "owner": "claude-1",
       "owner_since": "2026-11-12T00:22:20Z",
       "owner_why": "handed off from `claude-4`: it could not take it",
       "part_of": 3596,
+      "paused": {
+        "at": "2026-11-12T00:38:46Z",
+        "interrupt": "usage",
+        "provider": "claude-1"
+      },
       "pending_request": false,
       "planned_at": "2026-11-12T00:05:10Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -12904,11 +12910,13 @@
       "provider": "claude-1",
       "queued_at": "2026-11-09T23:50:20Z",
       "requested_by": "squishy-squooby",
+      "round_tier": "",
       "run_id": "43126797752",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-12T00:22:20Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "3573": {
       "failures": 0,
