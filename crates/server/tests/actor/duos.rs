@@ -2298,6 +2298,44 @@ mod r1398000_the_end_screen_window {
     }
 }
 
+// R3694000 — a finished co-op match's sockets close once its window ends
+
+/// Past `REMATCH_OFFER_TTL_MS` from its end a finished co-op game's sockets still open are closed
+/// with `MATCH_OVER_CLOSE_CODE`, and its actor leaves memory with them.
+mod r3694000_a_finished_coop_match_lets_its_sockets_go_with_its_window {
+    use super::*;
+    use jackioh_server::config::MATCH_OVER_CLOSE_CODE;
+
+    #[tokio::test(start_paused = true)]
+    async fn r3694000_a_finished_coop_match_closes_its_sockets_and_leaves_memory_once_its_window_ends() {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        h.concede_both(&a1, &a2).await;
+        let held = registry(&h.app);
+        let ended = held
+            .get(&h.match_id)
+            .and_then(|actor| actor.finished_at())
+            .expect("the concedes finished the game");
+
+        // Inside the window, both people's sockets and the actor stay.
+        assert!(held.reap_finished(ended + REMATCH_OFFER_TTL_MS).await.is_empty());
+        assert!(held.has(&h.match_id));
+        settle().await;
+        assert_eq!((a1.close_code(), a2.close_code()), (None, None));
+
+        // Past it, both are closed for good and the actor goes with them.
+        assert_eq!(
+            held.reap_finished(ended + REMATCH_OFFER_TTL_MS + 1).await,
+            vec![h.match_id.clone()]
+        );
+        for client in [&a1, &a2] {
+            assert_eq!(client.wait_closed(PROMPTLY).await, Some(MATCH_OVER_CLOSE_CODE));
+        }
+        assert!(!held.has(&h.match_id));
+    }
+}
+
 // R1047000 — the hard ceiling (§9.5)
 
 mod r1047000_the_ceiling {

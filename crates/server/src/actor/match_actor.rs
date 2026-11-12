@@ -53,8 +53,8 @@ use crate::api::rematch::{RematchStakes, offer_for_bot, rematch_seen};
 use crate::app::now_ms;
 use crate::bug_reports::{Finding, FoundIn, RefusedRow};
 use crate::config::{
-    MATCH_CHECKPOINT_MIN_ACTIONS, MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS,
-    MATCH_VOIDED_CLOSE_CODE, POST_GAME_FRAME_VERSION,
+    MATCH_CHECKPOINT_MIN_ACTIONS, MATCH_OVER_CLOSE_CODE, MATCH_RECORD_RESULT_ATTEMPTS,
+    MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_VOIDED_CLOSE_CODE, POST_GAME_FRAME_VERSION,
 };
 use crate::db::store::{
     BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus, PlayTelemetry, QueueMode,
@@ -1818,8 +1818,20 @@ impl MatchActor {
         self.idle().await;
     }
 
+    /// R3694000: `stop` for a finished match past its rematch window: its seats' and watchers' sockets
+    /// close with `MATCH_OVER_CLOSE_CODE`.
+    pub async fn stop_match_over(&self) {
+        self.halt_with(MATCH_OVER_CLOSE_CODE, MATCH_OVER_CLOSE_REASON);
+        self.idle().await;
+    }
+
     /// `stop` without waiting for the queue to drain, so a task on the queue can call it.
     fn halt(&self) {
+        self.halt_with(CLOSE_GOING_AWAY, "the actor is going away");
+    }
+
+    /// `halt`, its sockets closed with `code` and `reason`.
+    fn halt_with(&self, code: u16, reason: &str) {
         let sockets = {
             let mut core = self.lock();
             // The machine stops its clocks and relays, and takes their timers back.
@@ -1829,11 +1841,11 @@ impl MatchActor {
         };
         for socket in sockets.into_iter().flatten() {
             if socket.is_open() {
-                socket.close(Some(1001), Some("the actor is going away"));
+                socket.close(Some(code), Some(reason));
             }
         }
         // Social (#939): and so do its watchers.
-        self.spectate_close(CLOSE_GOING_AWAY, "the actor is going away");
+        self.spectate_close(code, reason);
     }
 
     /// R672: seats with an open socket, read by the registry's `presence_of`. R1452: bot seats are
@@ -1913,7 +1925,8 @@ pub use jackioh_shared::host::relay::{aim_is_public, hover_is_shown};
 
 use crate::actor::protocol::{spectator_emote_message, spectator_hand_message, watchers_frame};
 // A watcher's socket closes with `CLOSE_NORMAL` when a newer socket of its account replaces it or
-// after a finished match's last view (R1107000), and with `CLOSE_GOING_AWAY` when the actor goes.
+// after a finished match's last view (R1107000), and with `CLOSE_GOING_AWAY` when the actor goes, or
+// `MATCH_OVER_CLOSE_CODE` when the reaper lets a finished match go past its window (R3694000).
 use crate::actor::ws_server::{CLOSE_GOING_AWAY, CLOSE_NORMAL, WS_CLOSE};
 use crate::config::{SPECTATE_DELAY_MS, SPECTATORS_PER_MATCH};
 use crate::social::watch::{

@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { CombatForecast } from "@jackioh/shared";
-import { SPECTATOR_EMOTE_HAND_SIZE, WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
+import { MATCH_OVER_CLOSE_CODE, SPECTATOR_EMOTE_HAND_SIZE, WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
 import {
@@ -312,6 +312,16 @@ describe("the co-op socket's reconnect", () => {
     h.socket().deliver(view(4));
     h.socket().drop(4410, "voided");
     expect(h.client.snapshot().connection).toBe("closed");
+    expect(roundOf(h)).toBe(4);
+    expect(h.pending()).toBe(0);
+  });
+
+  it("R3694000 a finished co-op match's close (MATCH_OVER_CLOSE_CODE) is final: no reconnect, no error, the last view kept", () => {
+    const h = connected();
+    h.socket().deliver(view(4));
+    h.socket().drop(MATCH_OVER_CLOSE_CODE, "the match is over");
+    expect(h.client.snapshot().connection).toBe("closed");
+    expect(h.client.snapshot().error).toBeNull();
     expect(roundOf(h)).toBe(4);
     expect(h.pending()).toBe(0);
   });
