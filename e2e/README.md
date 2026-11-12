@@ -110,7 +110,11 @@ Electron; unset, nothing changes):
 
 ```
 E2E_WINDOW_SIZE=1600,1200 pnpm exec cypress run --browser chrome --spec cypress/e2e/25-overflow-animations.cy.ts --expose shots=1
+E2E_WINDOW_SIZE=1600,1300 pnpm exec cypress run --component --browser chrome --spec cypress/component/lobby-screen.cy.tsx
 ```
+
+The component block takes the same variable, so the lobby's shots (#3730) come out whole at every one of
+`MENU_SIZES`, into `artifacts/component/screenshots`.
 
 A shot of something in motion also wants `cy.screenshot(name, { disableTimersAndAnimations: false })`:
 by default Cypress jumps every CSS animation to its end for the capture, and a card that burns or

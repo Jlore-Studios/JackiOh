@@ -3,13 +3,15 @@
 // reads served from fixtures: a 1v1 lobby as its host and as its guest, and a co-op lobby, each with no
 // sideways scroll and every control at least `--hit-min` (44 px), and a screenshot of each for the pull request.
 
-import { CATALOG_VERSION } from "@jackioh/cards";
+import { CATALOG, CATALOG_VERSION } from "@jackioh/cards";
+import { DECK_SIZE } from "@jackioh/engine/config";
 import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 
 import type { LobbyView } from "../../../apps/web/src/lobby/api.ts";
 import { LobbyScreen } from "../../../apps/web/src/lobby/LobbyScreen.tsx";
 import { lobbyTestid } from "../../../apps/web/src/lobby/testids.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../../../apps/web/src/net/session.ts";
+import { setShips } from "../../../apps/web/src/wire/catalog.ts";
 import { loadWasm } from "../../../apps/web/src/wasm/index.ts";
 import { MENU_SIZES, type MenuSize } from "../../support/config.ts";
 
@@ -18,6 +20,9 @@ const HIT_MIN_PX = 44;
 
 /** Subpixel rounding. */
 const EDGE_SLACK_PX = 1;
+
+/** Validator L3's deckable cards, as play-screen.cy.tsx's: the fixture deck is legal, so the shots show a pick as it is. */
+const DECKABLE = Object.values(CATALOG).filter((def) => !def.token && !def.tags.includes("Token") && setShips(def.set));
 
 const CODE = "K7Q2XM";
 const ANA = { profileId: "p-ana", username: "Ana#1234", status: "online" as const };
@@ -72,11 +77,21 @@ function serveFixtures(lobby: LobbyView): void {
     [`/api/lobbies/${CODE}`]: lobby,
     "/api/decks": {
       catalogVersion: CATALOG_VERSION,
-      decks: [{ id: "d-1", name: "Pyre Control", cards: [], portrait: null, catalogVersion: CATALOG_VERSION, createdAt: 0, updatedAt: 0 }],
+      decks: [
+        {
+          id: "d-1",
+          name: "Pyre Control",
+          cards: DECKABLE.slice(0, DECK_SIZE).map((def) => def.id),
+          portrait: null,
+          catalogVersion: CATALOG_VERSION,
+          createdAt: 0,
+          updatedAt: 0,
+        },
+      ],
       trios: [],
       limits: { decks: MAX_SAVED_DECKS, trios: MAX_SAVED_TRIOS, nameLength: DECK_NAME_MAX_LENGTH },
     },
-    "/api/collection": { catalogVersion: CATALOG_VERSION, entries: [] },
+    "/api/collection": { catalogVersion: CATALOG_VERSION, entries: DECKABLE.map((def) => ({ cardId: def.id, quantity: 1 })) },
     "/api/social": { incoming: [], outgoing: [], unread: {} },
     "/api/friends": {
       friends: [
@@ -101,7 +116,11 @@ function serveFixtures(lobby: LobbyView): void {
   });
 }
 
-/** Nothing on the page is wider than the window, and every enabled control is at least `HIT_MIN_PX` each way. */
+/**
+ * Nothing on the page is wider than the window, and every control drawn is at least `HIT_MIN_PX` each way. A
+ * control the layout does not draw at this size (`display: none`, as the top bar's language button on a phone,
+ * routes/top-bar.css) has no box and is no target, as spec 47 reads it.
+ */
 function expectFitAndTargets(size: MenuSize): void {
   cy.window({ log: false }).should((win) => {
     const where = `${String(size.width)}x${String(size.height)}`;
@@ -111,6 +130,7 @@ function expectFitAndTargets(size: MenuSize): void {
     );
     expect(controls.length, "the screen has controls").to.be.greaterThan(0);
     for (const control of controls) {
+      if (control.getClientRects().length === 0) continue;
       const box = control.getBoundingClientRect();
       const name = control.dataset.testid ?? control.textContent ?? control.tagName;
       expect(box.right, `${name} ends inside ${where}`).to.be.at.most(win.innerWidth + EDGE_SLACK_PX);

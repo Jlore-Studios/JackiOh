@@ -14,12 +14,12 @@ import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { AccountError } from "../auth/AccountError.tsx";
 import Username from "../auth/Username.tsx";
 import { EmptyState } from "../empty/EmptyState.tsx";
-import { createLobby, inviteToLobby } from "../lobby/api.ts";
-import { navigate, paths } from "../net/navigate.ts";
-import { LobbyPanel } from "../lobby/LobbyPanel.tsx";
 import { CatalogContext } from "../game/catalog.ts";
 import { formatDateTime, t, useLocale } from "../i18n/i18n.ts";
+import { createLobby, inviteToLobby } from "../lobby/api.ts";
+import { LobbyPanel } from "../lobby/LobbyPanel.tsx";
 import { withSession } from "../net/gate.ts";
+import { navigate, paths } from "../net/navigate.ts";
 import {
   acceptFriendRequest,
   blockPlayer,
@@ -56,7 +56,6 @@ import { attempt, messageOf } from "../net/errors.ts";
 import "../auth/tavern.css";
 import "../routes/lobby.css";
 import "./together.css";
-
 
 function when(iso: string): string {
   const at = Date.parse(iso);

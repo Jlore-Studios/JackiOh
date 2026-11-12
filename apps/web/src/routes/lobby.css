@@ -728,8 +728,8 @@
 
 /* A phone (390x844 and up): everything fits whole, with no scroll inside the hub. The brand and the
    panels' step headings go to screen readers only, the three modes stand side by side, the four ways
-   are one row. The hero holds the brand alone, so it leaves the flow
-   with it: an empty box would still spend the board's gap twice (#3381). A screen shorter than that
+   are one row and the friend panel's explanation goes. The hero holds the brand alone, so it leaves the
+   flow with it: an empty box would still spend the board's gap twice (#3381). A screen shorter than that
    scrolls `.play-layout`, the one scroller, never the setup panel inside it. */
 @media (max-width: 600px) {
   .tavern.play-screen.play-hub {
@@ -738,6 +738,7 @@
 
   .tavern.play-screen.play-hub .play-hero,
   .tavern.play-screen.play-hub .play-panel--queue .play-panel__heading,
+  .tavern.play-screen.play-hub .lobby-panel .play-panel__heading,
   .tavern.play-screen.play-hub .play-panel__heading--sub,
   .tavern.play-screen.play-hub .play-online__heading {
     position: absolute;
@@ -781,6 +782,12 @@
     padding: 10px 12px 12px;
   }
 
+  /* R3730000: "Play a friend", the private lobby's panel, as compact as the other panels. */
+  .tavern.play-screen.play-hub .lobby-panel {
+    gap: var(--space-4);
+    padding: var(--space-5) var(--space-6) var(--space-6);
+  }
+
   .tavern.play-screen.play-hub .lobby-modes {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
@@ -807,7 +814,8 @@
   }
 
   .tavern.play-screen.play-hub .play-mode-tile .lobby-mode__hint,
-  .tavern.play-screen.play-hub .play-mode-tile__waiting {
+  .tavern.play-screen.play-hub .play-mode-tile__waiting,
+  .tavern.play-screen.play-hub .lobby-panel .lobby-note {
     display: none;
   }
 

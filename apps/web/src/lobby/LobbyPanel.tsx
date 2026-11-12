@@ -6,7 +6,7 @@
 import { useEffect, useId, useState, type FormEvent, type ReactElement } from "react";
 
 import { canonicalCode } from "@jackioh/shared";
-import { ROOM_CODE_FORMAT } from "@jackioh/server-config";
+import { ROOM_CODE_FORMAT, ROOM_CODE_LENGTH } from "@jackioh/server-config";
 
 import { t, useLocale } from "../i18n/i18n.ts";
 import type { QueueMode } from "../net/api.ts";
@@ -82,7 +82,7 @@ export function LobbyPanel({ format, mode }: LobbyPanelProps): ReactElement {
     event.preventDefault();
     const canonical = canonicalCode(code, ROOM_CODE_FORMAT);
     if (canonical === null) {
-      setError(t("A code is 6 letters and digits."));
+      setError(t("A code is {length} letters and digits.", { length: String(ROOM_CODE_LENGTH) }));
       return;
     }
     navigate(paths.lobby(canonical));

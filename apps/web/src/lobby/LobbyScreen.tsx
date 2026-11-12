@@ -149,7 +149,7 @@ export function LobbyScreen({ token, code }: LobbyScreenProps): ReactElement {
       <section className="lobby-card lobby-closed" data-testid={lobbyTestid.closed}>
         <p>{t("This lobby is closed.")}</p>
         <a className="button-primary" href={paths.play} onClick={followInApp(paths.play)}>
-          {t("Back to Play")}
+          {t("Back to the lobby")}
         </a>
       </section>
     );
