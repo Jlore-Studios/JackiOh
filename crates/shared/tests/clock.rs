@@ -871,14 +871,19 @@ mod r1563006_the_question_sequence_clock {
         h.sleep(sequence_ms() - 20 * SECOND);
         assert_eq!(h.expiries, vec![ClockExpiry::Sequence { player: P1 }]);
 
+        // The second window ends 10 seconds after the first would have, inside the turn clock.
         let mut h = Sim::new(0);
         h.sync(&asking(0, "q1"));
-        h.sleep(20 * SECOND);
+        h.sleep(10 * SECOND);
         h.sync(&asking(0, "q9"));
-        h.sleep(sequence_ms() - 20 * SECOND);
+        h.sleep(sequence_ms() - 10 * SECOND);
         assert_eq!(h.expiries, vec![]);
-        h.sleep(20 * SECOND);
+        h.sleep(10 * SECOND);
         assert_eq!(h.expiries, vec![ClockExpiry::Sequence { player: P1 }]);
+        assert!(
+            h.now < EPOCH + h.turn_ms,
+            "PREMISE: the turn clock has not run out"
+        );
     }
 
     /// R776000, R1563006: a retry re-arms a sequence's window only while one is open.
