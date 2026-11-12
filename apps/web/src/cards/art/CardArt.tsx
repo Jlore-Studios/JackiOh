@@ -31,7 +31,7 @@
 // R3340000: a board face given `live` draws its moving picture in three layers, the backdrop on the window itself and the
 // subject (`.cf-art-subject`) and the motes (`.cf-art-motes`) over it (`data-art-live`), which artLive.css turns toward the
 // pointer, presses and swings; where the picture has no parts (a delivered file, a restyle, a Starship's, a Legacy card's, a
-// Battleship's) it is one image. Given `wear`, its cracks, glow and frost sit over the picture whatever draws it (ArtWear.tsx).
+// Battleship's) it is one image. Given `wear`, its glow and frost sit over the picture whatever draws it (ArtWear.tsx).
 // R3337001: an Anomaly Found! in play holding a board (`FaceModel.anomaly`) wears that board's picture
 // (`data-art-anomaly`), one picture as a Starship's is; a code that is none of the ten draws the card's own.
 // R3350000: given `diorama`, a Mythic's normal picture with a diorama (dioramas/) draws one slice of it (`data-art-slice`),
@@ -102,7 +102,7 @@ export type CardArtProps = {
   ship?: ShipArt | null;
   /** R3340000: a board face whose art moves answers the player: its picture is drawn in layers (backdrop, subject, motes) that artLive.css moves. */
   live?: boolean;
-  /** R3340000: what the unit's art wears: its damage level (wear.ts), buffed and frozen. Null or absent: nothing. */
+  /** R3340000: what the unit's art wears: whether it is buffed or frozen. Null or absent: nothing. */
   wear?: ArtWearState | null;
   /** R3335000: the Starship look a launched Starship wears (cosmetics.ts `useStarshipLook`); null draws it in none. */
   look?: StarshipLook | null;
@@ -113,8 +113,8 @@ export type CardArtProps = {
   diorama?: { slice: number | "all"; moving: boolean } | null;
 };
 
-/** R3340000: the marks a unit's art wears (`ArtWear`). */
-export type ArtWearState = { damage: number; buffed: boolean; frozen: boolean };
+/** R3340000: the marks a unit's art wears (`ArtWear`): a glow and frost. */
+export type ArtWearState = { buffed: boolean; frozen: boolean };
 
 /**
  * R2943001: whether a window draws a card's picture in parts (`ArtPart`): its painter's own, which a Starship in play
@@ -220,7 +220,6 @@ export function CardArt({
         data-art="real"
         data-art-theme={theme}
         data-art-variant={variant}
-        data-art-damage={wear !== null && wear.damage > 0 ? wear.damage : undefined}
         data-art-buffed={wear?.buffed === true ? "true" : undefined}
         data-art-frozen={wear?.frozen === true ? "true" : undefined}
         aria-hidden="true"
@@ -236,7 +235,7 @@ export function CardArt({
           onError={() => setFailedSrc(src)}
         />
         {real.tint ? <span className="cf-art-tint" /> : null}
-        {wear !== null && <ArtWear damage={wear.damage} buffed={wear.buffed} frozen={wear.frozen} seedId={defId} />}
+        {wear !== null && <ArtWear buffed={wear.buffed} frozen={wear.frozen} />}
       </span>
     );
   }
@@ -314,7 +313,6 @@ export function CardArt({
       data-art-live={layered ? "true" : undefined}
       data-art-slice={sliced ? sliceIndex : undefined}
       data-art-lifted={lifts.some((lift) => lift !== null) ? "true" : undefined}
-      data-art-damage={wear !== null && wear.damage > 0 ? wear.damage : undefined}
       data-art-buffed={wear?.buffed === true ? "true" : undefined}
       data-art-frozen={wear?.frozen === true ? "true" : undefined}
       aria-hidden="true"
@@ -345,7 +343,7 @@ export function CardArt({
           />
         );
       })}
-      {wear !== null && <ArtWear damage={wear.damage} buffed={wear.buffed} frozen={wear.frozen} seedId={seedId} />}
+      {wear !== null && <ArtWear buffed={wear.buffed} frozen={wear.frozen} />}
     </span>
   );
 }
