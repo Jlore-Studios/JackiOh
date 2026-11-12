@@ -14941,6 +14941,13 @@
     "3768": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-12T14:16:50Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "medium",
+        "why": "Presentation-only change in apps/web (about 10 files, one ruling); it touches no engine, AI, migration or cross-crate contract, so none of the five hard lines holds."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
