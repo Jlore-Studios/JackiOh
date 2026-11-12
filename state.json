@@ -13598,7 +13598,8 @@
         "mode": "fullsend",
         "onto": "bot/issue-3596"
       },
-      "verdict_rounds": 0
+      "verdict_rounds": 0,
+      "waiting_comment": 6820974572
     },
     "3600": {
       "action": "build",
