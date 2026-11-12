@@ -15972,11 +15972,17 @@
     "what": "review #3782 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-12T16:15:51Z",
+    "at": "2026-11-12T16:10:58Z",
     "notes": [
       "#3773 is held for `claude-8` until 10:30 (5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%))",
-      "#3783 no longer waits its turn",
-      "started a night run, as a lane was free: #3783 (medium) is queued to revise, for `claude-4`: build on `claude-4` (claude, `sonnet`, medium); review on `claude-4` (claude, `opus`, strong)"
+      "delivered review #3782 on claude-7 (run 43252990261): approved",
+      "delivered review #3783 on claude-4 (run 43252758877): approved",
+      "delivered review #3780 on claude-6 (run 43245764235): approved",
+      "delivered review #3779 on claude-3 (run 43245531797): interrupted",
+      "delivered revise #3761 on claude-3 (run 43232565702): interrupted",
+      "delivered build #3596 on claude-4 (run 43201450824): interrupted",
+      "another planner holds the planning lock: the next tick plans",
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16682,7 +16688,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-12T15:45:59Z",
+  "loop_tick": "2026-11-12T16:10:58Z",
   "machine_disk": {
     "issue": null,
     "reading": {
