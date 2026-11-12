@@ -15445,19 +15445,12 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md 2>/dev/null | head -40; grep -n \\\"disabled=\\\\|started\\\" apps/web/src/lobby/LobbyScreen.tsx | head -60\", \"description\": \"Read notes and find disabled/started in LobbyScr\u2026\n- Bash: {\"command\": \"grep -n \\\"async fn leave\\\" -A40 crates/server/src/lobby/mod.rs\", \"description\": \"Show the server's leave handler\"}\n- Bash: {\"command\": \"cat spec/rulings/R3730004.md spec/rulings/R3730002.md; grep -n \\\"started\\\" crates/server/src/lobby/mod.rs | head -40\", \"description\": \"Read rulings R3730004/R3730002 and started handling\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3779/apps/web/src/lobby/LobbyScreen.tsx\", \"offset\": 200, \"limit\": 125}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3779/apps/web/src/lobby/LobbyScreen.tsx\", \"offset\": 735, \"limit\": 40}\n- Bash: {\"command\": \"sed -n 785,810p crates/server/src/lobby/mod.rs; grep -n \\\"leave\\\" crates/server/tests/api/lobbies.rs crates/server/tests/actor/social_live.rs apps/web/src/lobby/LobbyScreen.test.tsx e2e/\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3779/crates/server/tests/api/lobbies.rs\", \"offset\": 360, \"limit\": 70}\n- Bash: {\"command\": \"sed -n 180,215p crates/server/src/lobby/mod.rs\", \"description\": \"Read load_member and load_open\"}\n- Bash: {\"command\": \"sed -n 495,503p crates/server/src/lobby/mod.rs; grep -rn \\\"game is starting\\\" crates apps/web/src e2e spec | grep -v node_modules\", \"description\": \"Read leave doc comment and find messag\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3779/crates/server/src/lobby/mod.rs\", \"old_string\": \"/// lobby (R110, R1075000), `204`.\\npub async fn leave(app: &Arc<App>, req:\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3779/apps/web/src/lobby/LobbyScreen.tsx\", \"old_string\": \" data-testid={lobbyTestid.leave}\\n disabled={busy}\", \"new_string\": \" da\u2026\n- said: Now the tests. First, find the server test that starts a 1v1 game.\n- Bash: {\"command\": \"grep -n \\\"async fn r37300\\\\|\\\\\\\"start\\\\\\\"\\\" crates/server/tests/api/lobbies.rs | head -30\", \"description\": \"List lobby tests and start calls\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3779/crates/server/tests/api/lobbies.rs\", \"offset\": 150, \"limit\": 70}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3779/crates/server/tests/api/lobbies.rs\", \"old_string\": \" let (status, body) = act(&t.app, &t.guest, &code, \\\"ready\\\", json!({ \\\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3779/spec/rulings/R3730004.md\", \"old_string\": \"- The host leaving closes the lobby for everyone, as a room's host cancelling it \u2026\n- Bash: {\"command\": \"sed -i 's/^cards: \\\"\\u00a79.5, \\u00a713.9, R110, R890000, R1047002, R1075000, R3730000\\\"$/cards: \\\"\\u00a79.5, \\u00a713.9, R110, R890000, R1047002, R1075000, R3730000, R3730002\\\"/' spec/r\u2026\n- Bash: {\"command\": \"sed -i '9s/; a lobby closes after its format/; nobody leaves a lobby once its Start has landed, since it takes each member to the board; a lobby closes after its format/' spec/pending/37\u2026\n- said: Server side and spec are done. Next is the web test: look at how `LobbyScreen.test.tsx` builds a started view.\n- Bash: {\"command\": \"grep -n \\\"it(\\\\|startedAt\\\\|function \\\\|const .* = (\\\" apps/web/src/lobby/LobbyScreen.test.tsx | head -60\", \"description\": \"List web lobby tests and started fixtures\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3779/apps/web/src/lobby/LobbyScreen.test.tsx\", \"offset\": 150, \"limit\": 35}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3779/apps/web/src/lobby/LobbyScreen.test.tsx\", \"old_string\": \" expect(window.history.length).toBe(entries);\\n });\\n\", \"new_strin\u2026\n- Bash: {\"command\": \"echo \\\"- pass 5: finding (Leave during countdown) holds; server leave uses load_open (409 started), Leave disabled once started, tests added (lobbies.rs r3730002 bo1, LobbyScreen R373000\u2026\n- said: Server lobby tests pass, 13 of 13. Now the rest: social_live, fmt, clippy, spec check, and the web lobby test file.\n- Bash: {\"command\": \"cargo test -p jackioh-server --test server social_live 2>&1 | grep \\\"test result\\\"; cargo fmt --check && echo FMT_OK; cargo clippy -p jackioh-server --all-targets -- -D warnings 2>&1 | t\u2026\n- Bash: {\"command\": \"pnpm --dir apps/web exec vitest run src/lobby 2>&1 | tail -8; pnpm exec eslint apps/web/src/lobby 2>&1 | tail -3; pnpm --dir apps/web typecheck 2>&1 | tail -3\", \"description\": \"Run lobby\u2026\n- Bash: {\"command\": \"pnpm --dir apps/web exec vitest run src/lobby 2>&1 | grep -E \\\"Test Files|Tests |FAIL|\\u2717|\\u00d7\\\" | head\", \"description\": \"Show lobby web test summary\", \"timeout\": 900000}\n- said: All 28 web lobby tests pass. Now check that the new web test fails without the fix.\n- Bash: {\"command\": \"sed -i 's/disabled={busy || started}$/disabled={busy}/' apps/web/src/lobby/LobbyScreen.tsx; git diff --stat apps/web/src/lobby/LobbyScreen.tsx; pnpm --dir apps/web exec vitest run src/lo\u2026\n- said: The test fails without the fix and passes with it. Checking that the revert-and-restore left only the intended change:\n- Bash: {\"command\": \"git diff --stat; git diff apps/web/src/lobby/LobbyScreen.tsx\", \"description\": \"Show the working tree diff\"}\n- Bash: {\"command\": \"grep -n \\\"lobbies/:code/leave\\\\|/leave\\\" crates/server/README.md apps/web/README.md | head; grep -rn \\\"lobbyTestid.leave\\\\|lobby-leave\\\" e2e/cypress | head\", \"description\": \"Find docs an\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='.bot-notes.md'\\ns=open(p).read()\\nstate=\\\"\\\"\\\"## State\\nPass 5 answered the one finding (Leave pressable during the countdown; the host's Leave deleted a\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a private lobby screen for 1v1 rooms and co-op rooms: seats, invites, each player's deck and Ready, and the host's Start\"} --> Closes #3730 ## What changed Friend games now start in one private lobby at `/lobby/:code`, for 1v1 (Best of 1, Conquest, All \u2026"
       },
-      "hold": {
-        "ends": "2026-11-13T00:13:31Z",
-        "lifted": "2026-11-12T22:53:06Z",
-        "owner": "claude-3",
-        "since": "2026-11-12T22:13:31Z",
-        "until": "2026-11-12T22:50:00Z",
-        "why": "it refused a call"
-      },
       "issue": 3730,
       "kind": "review",
       "live": "reviewing",
       "own_review": {
-        "claimed_at": "2026-11-12T17:51:26Z",
+        "claimed": true,
+        "claimed_at": "2026-11-12T22:58:09Z",
         "from_run": "43221348817",
         "gates": [
           {
@@ -15553,7 +15546,7 @@
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-11-12T15:02:18Z",
-      "run_id": "43273817457",
+      "run_id": "pending:2ef73902-1794524234",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -15573,7 +15566,7 @@
         "provider": "claude-3",
         "run": "43273817457"
       },
-      "started_at": "2026-11-12T17:51:26Z",
+      "started_at": "2026-11-12T22:58:09Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17092,9 +17085,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T22:56:55Z",
+    "at": "2026-11-12T22:58:09Z",
     "url": "",
-    "what": "review #3809 on claude-8"
+    "what": "review #3779 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-12T22:39:58Z",
