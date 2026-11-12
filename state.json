@@ -16964,22 +16964,25 @@
     },
     "3744": {
       "action": "plan",
+      "archived": {
+        "at": "2026-11-12T02:23:04Z",
+        "branch": "",
+        "head": "",
+        "pr": null,
+        "why": "two things only a person can do. (1) Decide how R3351000's living-board frame budget gates the daily super run (Part B). The product misses it by 2\u20137\u00d7 on worst frames after three performance rounds (#3633, #3674's #3691 and #3725), and no change of one pull request's size closes that gap. (2) Shard `super.yml`'s `component` job (Part A has the YAML): the suite takes 53 of its 60 minutes before the living game plays its later moments. Then take `human required` off, say which Part B option you chose in a comment and queue `bot:build`; the bot builds Part C (and Part B's steps if you choose B2)."
+      },
       "asks": [],
-      "kind": "build",
       "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-12T01:02:54Z",
-      "owner_why": "it plans it",
-      "pending_request": false,
+      "owner": "",
       "planned_at": "2026-11-12T02:22:51Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
       "provider": "claude-3",
+      "question": "two things only a person can do. (1) Decide how R3351000's living-board frame budget gates the daily super run (Part B). The product misses it by 2\u20137\u00d7 on worst frames after three performance rounds (#3633, #3674's #3691 and #3725), and no change of one pull request's size closes that gap. (2) Shard `super.yml`'s `component` job (Part A has the YAML): the suite takes 53 of its 60 minutes before the living game plays its later moments. Then take `human required` off, say which Part B option you chose in a comment and queue `bot:build`; the bot builds Part C (and Part B's steps if you choose B2).",
       "run_id": "43131730903",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-12T01:02:54Z",
-      "stop_requested": false,
       "taken_asks": []
     },
     "3745": {
