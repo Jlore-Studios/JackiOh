@@ -17400,8 +17400,14 @@
     "what": "review #3756 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-12T06:18:58Z",
-    "notes": [],
+    "at": "2026-11-12T06:26:31Z",
+    "notes": [
+      "delivered build #3751 on claude-7 (run 43161503653): built",
+      "started review #3756 on claude-8 (run 43168572321)",
+      "nothing more to start: nothing is queued",
+      "pruned 4 plan file(s) older than 7 days",
+      "runner gate: started 1 of 2 waiting run(s) (run 43168322630 on bot/issue-3751); 1 wait for room"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -18104,7 +18110,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-12T06:18:58Z",
+  "loop_tick": "2026-11-12T06:26:31Z",
   "machine_disk": {
     "issue": null,
     "reading": {
