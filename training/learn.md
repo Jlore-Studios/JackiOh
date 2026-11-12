@@ -16,33 +16,42 @@ improves the AI the network corrects, and the next run retrains on it.
 
 ## How it runs
 
-`.github/workflows/learn.yml`, one run after another and by dispatch, on the owner's PC alone: every job of it runs
-on the local runner (`jackioh-selfplay-local`, `bot/machine/README.md`, The local runner), none on
-GitHub's runners, whose hosted jobs CI needs (an export there held 12 of the organization's 20 for
-hours, #1455). That runner takes two jobs at a time, one on each half of the PC (four CPUs each;
-gather's half goes to gather while it plays a new patch), and only while the PC is otherwise idle, so
-the export's shards play two at a time (#3722). A four-CPU half plays about 670 games an hour at the
-AI's budget since #2628, so a run's 100,000 games take about three days of an idle PC, and the
-retrain and the screen about one more hour (run 21's
-took 59 minutes there), the gate another. A run may take several days, and each starts the next as it
-ends (#1976), so the PC is always exporting, retraining or gating while it is idle; a schedule twice a
-day starts the lane again should that chain stop (one run at a time). Each run:
+`.github/workflows/learn.yml`, one run after another and by dispatch, on GitHub's runners since #3740:
+the organization's Team plan runs 60 hosted jobs at once, and the training lanes take 12 of them, the
+export's shards 10 at a time and the gather lane's two parts (`training/README.md`, The gather lane);
+whatever they leave idle, between exports and while a run retrains and gates on one runner, CI and the
+bots take. A GitHub runner plays about 870 games an hour at the AI's budget since #2628 (an estimate
+from the PC's 670 on a four-CPU half), so a run's 100,000 games take about 12 hours, and the retrain,
+the screen and the gate a few more, each job under GitHub's 6-hour limit. Each run starts the next as
+it ends (#1976), so the lane is always exporting, retraining or gating; a schedule twice a day starts
+it again should that chain stop (one run at a time).
+
+With the repository variable `TRAINING_ON_PC` set to `true`, every job runs on the owner's PC instead,
+the local runner (`jackioh-selfplay-local`, `bot/machine/README.md`, The local runner), as from #1455
+(on the Free plan's 20 hosted jobs an export held 12, and CI waited behind it) until #3740. That
+runner takes two jobs at a time, one on each half of the PC (four CPUs each; gather's half goes to
+gather while it plays), and only while the PC is otherwise idle, so the export's shards play two at a
+time (#3722) and a run's 100,000 games take about three days of an idle PC, the retrain and the screen
+about one more hour (run 21's took 59 minutes there) and the gate another. Each run:
 
 1. **Clears the way.** The lane's pull request (`ai/learn`) with a failed check, or open more than
    48 hours (`LEARN_PR_STALE_HOURS`), it closes, saying why. One whose checks are green or running is a
-   promotion on its way to `main`: it merges while this run exports, about three days, and should it
+   promotion on its way to `main`: it merges while this run exports, about half a day (three days on
+   the PC), and should it
    still be open when this run's gate passes, the pass waits behind it (step 6).
 2. **Exports** `games` games (100,000 by default) through `selfplay.yml` on a fresh base,
    `learned-<catalog>-<date>-<run>`, never a gate's deals or the dev set's (R1006002), in `shards` jobs
-   (20 by default, about 7.5 hours each) played two at a time, in five rounds: a round starts
-   once the one before it has ended, so no shard waits for the runner longer than its round takes
-   (about 15 hours of an idle PC), under the 24 hours GitHub lets a job wait. The export's build
+   (40 by default, 2,500 games each). On GitHub's runners they play 10 at a time, about 3 hours each,
+   under GitHub's 6-hour job limit (a 5,000-game shard would not be). On the PC they play two at a
+   time in five rounds, about 3.7 hours each: a round starts once the one before it has ended, so no
+   shard waits for the runner longer than its round takes (about 15 hours of an idle PC), under the 24
+   hours GitHub lets a job wait for a self-hosted runner. The export's build
    (`selfplay-jackioh`) is kept 14 days, so every shard of a slow export still finds it. The plan and the
    export's build read `main` as it is when the run starts, not as it was when the run was queued,
    so the export plays the newest patch however long the run waited behind the one before it (A new
    patch ships, below).
-3. **Retrains** with `training/ml/retrain.sh` on `main`, over the shards that finished (a shard the PC
-   lost costs the export its games, not the run; with none finished the run stops): the positions
+3. **Retrains** with `training/ml/retrain.sh` on `main`, over the shards that finished (a shard lost
+   costs the export its games, not the run; with none finished the run stops): the positions
    (R1006003, R1006004), folded by the export's own build while its features are `main`'s (`--positions-bin`), so a rules change merged
    since the export drops none of its games (run 5 lost 10,707 of 100,000 to #1199 and #1200), the fit
    and its report (`training/ml/README.md`), the integer network that ships (D7, R1011000) into
@@ -61,7 +70,7 @@ day starts the lane again should that chain stop (one run at a time). Each run:
    sequential test: it plays deals 100 at a time, each twice with the seats swapped, and stops as soon
    as the evidence is clear, a pass when the candidate looks a 53% AI (an edge of +0.06, about +21 Elo)
    and a fail when it looks no stronger than its parent, each wrong about 5% of the time; a test still
-   undecided at 1,000 deals fails. It plays about 800 games, 2,000 at most: under an hour on the PC.
+   undecided at 1,000 deals fails. It plays about 800 games, 2,000 at most: about an hour.
    A gate that does not pass ends the run.
 6. **Delivers** a pass as `AI gen <N> (learn): the learned evaluation, retrained on <games> games`: the
    weights, the switch, `crates/ai/generation.json`, a line of `training/history/learn.jsonl` and the
@@ -72,7 +81,8 @@ day starts the lane again should that chain stop (one run at a time). Each run:
    the next run gates on `main` once the open one has merged.
 7. **Files the export's games** into both projects' card statistics, JackiOh-Staging's and then
    JackiOh-Production's (R1933001, docs/deploy-cloudflare.md section 8), as the export plays them: each
-   shard plays its range 1,250 games at a time (`file_every`, about an hour of one half of the PC), and
+   shard plays its range 1,250 games at a time (`file_every`, about an hour and a half of a GitHub
+   runner, two hours of one half of the PC), and
    after each piece `cargo jackioh stats from-selfplay` with the build that played it (R1676000) and
    `training/file-records.sh`, which runs `jackioh-server stats-import --totals-only` (R1976000): it adds
    their counts to the totals and keeps no row per game, so the database grows with the patches, not the
@@ -102,21 +112,23 @@ mends what would otherwise stop it. What can go wrong, and what it does:
 |---|---|
 | `main` moves during the run. It does, about once an hour, in the AI, the engine and the cards: CI's training gate replays the gate against `main` as it is when the pull request opens, and the fixture's game is played on the merge | The gate plays on `main` as fetched just before it (step 5), not on the `main` the run began on. When `main` moved in what the gate depends on during the gate (`learn-promote.sh`'s `play_paths`), the network goes onto the newer `main` and is gated again, up to three times (`LEARN_GATE_TRIES`). Only a pass is ever gated again, so no pass is picked out of several. When `main` moved through all three, the run starts another on the same export (`export_run`), at most two in a row (`LEARN_CHAIN_MAX`) |
 | A patch or a micro ships (A new patch ships, below) | Nothing stops: the next run plays it, since each run plans on `main` as it is when it starts |
-| A set ships, a `major` patch (A new patch ships, below) | `learn-set.yml` cancels a run still in its export with fewer than 10 of its 20 shards played, and starts one on the new set when no other run is on its way. A run further on finishes, and the run after it exports the new set. The status issue shows a stopped run as canceled |
+| A set ships, a `major` patch (A new patch ships, below) | `learn-set.yml` cancels a run still in its export with fewer than 20 of its 40 shards played, and starts one on the new set when no other run is on its way. A run further on finishes, and the run after it exports the new set. The status issue shows a stopped run as canceled |
 | CI fails on the lane's pull request | `watch` (the same workflow, on CI's completion for `ai/learn`) runs the failed jobs once more, for a flaky test. Red again, it closes the pull request, naming the failed jobs, and starts a run on the same export on `main` as it is by then, at most two in a row |
 | A promotion stays open: its checks failed and nothing closed it, auto-merge could not merge it, or a check never reported | The next run closes it, saying why, and goes on (step 1). After 48 hours it closes one whatever its checks say |
 | Something merged to `main` that pins the AI's own play outside `crates/ai` (as R1303002's fixture did, #1480) | The lane can't fix that: it may change nothing outside its files. CI fails, `watch` closes the promotion and tries the export again, and the lane stays stuck until a person fixes the test. The status issue shows it as a run whose promotion closed |
-| The screen or the gate does not pass | Nothing: that is the lane working. A run's network passes the screen about 70% of the time and the gate about 30%, so with runs one after another (about three a week) expect a promotion about once a week. Each run's export is new self-play by the AI on `main`, so each is a new candidate |
+| The screen or the gate does not pass | Nothing: that is the lane working. A run's network passes the screen about 70% of the time and the gate about 30%, so with runs one after another (about ten a week on GitHub's runners, three on the PC) expect a promotion every two days or so (once a week on the PC). Each run's export is new self-play by the AI on `main`, so each is a new candidate |
 | `LEARN_LANE_TOKEN` is missing or has expired | A passing run fails in red at its deliver step and keeps the promotion as its artifact (`promotion.patch`). A person renews the token (Setting it up) |
 | A run ends | It starts the next (step 8). A run that broke within the hour starts none, and the schedule (06:23 and 18:23 UTC) starts the lane again |
 | GitHub skips or delays the schedule | It matters only once the chain has stopped: the next one, 12 hours on, or `gh workflow run learn.yml`, picks it up. Nothing is lost. A scheduled run queued behind a running one waits; the next schedule's replaces it (the `learn` concurrency group holds one waiting), and the status issue leaves out a run canceled that way |
 | `STATS_IMPORT_DATABASE_URL` or `PRODUCTION_STATS_IMPORT_DATABASE_URL` is missing, or the import fails | The export's games are not filed where it is missing or failed: a shard warns and goes on playing, and `import` files what the shards could not (rerunning it files only what a database is missing, each claiming a file once); the retrain, the gate and the next run go on as before. The shards stay the run's artifacts for 30 days, so a person can file them by hand (`training/README.md`, The gather lane) |
-| The PC is in use | The runner works only while the PC is idle: a job waiting is not started, and one in the middle of its work is slowed to half a CPU until the PC is idle again. Nothing is lost; the run takes longer (its timeouts allow days) |
-| The PC is off, asleep or busy for 24 hours | GitHub fails a job no runner takes in 24 hours. A lost shard costs the export its games and the retrain goes on with the rest; a lost plan or retrain ends the run, and the next run comes anyway. A shard in the middle of its work when the PC sleeps or restarts is lost the same way. The status issue shows a run the PC never took as "⏸️ the PC's runner took none of it in 24 hours" |
-| The PC's supervisor is not running (nobody logged in since a restart) | The same as the PC off: its scheduled task starts it at logon (`bot/machine/README.md`, The local runner) |
+| A shard reaches GitHub's 6-hour job limit | GitHub stops it at 350 minutes (`timeout-minutes`), and it costs the export its games, as a lost shard does. A 2,500-game shard takes about 3 hours there, so only a runner far slower than usual reaches it |
+| On the PC (`TRAINING_ON_PC`), the PC is in use | The runner works only while the PC is idle: a job waiting is not started, and one in the middle of its work is slowed to half a CPU until the PC is idle again. Nothing is lost; the run takes longer (its timeouts allow days) |
+| On the PC, the PC is off, asleep or busy for 24 hours | GitHub fails a job no runner takes in 24 hours. A lost shard costs the export its games and the retrain goes on with the rest; a lost plan or retrain ends the run, and the next run comes anyway. A shard in the middle of its work when the PC sleeps or restarts is lost the same way. The status issue shows a run the PC never took as "⏸️ the PC's runner took none of it in 24 hours" |
+| On the PC, the PC's supervisor is not running (nobody logged in since a restart) | The same as the PC off: its scheduled task starts it at logon (`bot/machine/README.md`, The local runner) |
 
 What needs a person, then: a test outside `crates/ai` that pins the AI's play, an expired token, a PC
-that stays off, or a change to the exporter, the features, the trainer or the gate.
+that stays off while the lane runs there, or a change to the exporter, the features, the trainer or
+the gate.
 
 ### A new patch ships
 
@@ -156,11 +168,12 @@ a feature change bumps `FEATURES_VERSION` and refits from stored logs with no ne
 
 ## Setting it up
 
-The runner: the local runner set up on the PC as `bot/machine/README.md` (The local runner) says,
+The runners: GitHub's, which need nothing set up. To run the lane on the PC instead, set the repository
+variable `TRAINING_ON_PC` to `true`, with the local runner set up on the PC as `bot/machine/README.md` (The local runner) says,
 from an image built with `gh` (`docker build -t jackioh-pc-runner:latest bot/machine/local` again
 after a change to its Dockerfile), and its supervisor serving `learn.yml` (`config.json`). The PC
 should not sleep while it is plugged in, or a shard in the middle of its work is lost each time it
-does. Without the runner no run starts at all: its jobs wait 24 hours and fail.
+does. Without the runner, a run there starts nothing: its jobs wait 24 hours and fail.
 
 The stats database: a person does this once, for step 7: create a login on staging's database (the
 JackiOh-Staging project, which was production's until 2026-11) that

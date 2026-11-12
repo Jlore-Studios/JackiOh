@@ -368,9 +368,10 @@ func TestQuiet_AForcedItemSkipsTheQuietCheck(t *testing.T) {
 
 func TestQuiet_ASurveyWhenIdle(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
-	// claude-1 alone has a secret: its two lanes are spare, under the three a survey waits for.
+	// claude-1 alone has a secret: its two lanes are spare, more than the one a survey waits for
+	// (#3740), but no tick has seen them spare yet.
 	look := plan.Peek_(testsupport.MakeCtx(gh), false, nil, "auto")
-	assertEqual(t, []any{look.Work, look.Idle, look.Spare}, []any{false, false, 2})
+	assertEqual(t, []any{look.Work, look.Idle, look.Spare}, []any{false, true, 2})
 	every := testsupport.Ctx{Cfg: testsupport.MakeConfig(testsupport.Config{Env: crossAll})}
 	assertFalse(t, plan.Peek_(testsupport.MakeCtx(gh, every), false, nil, "auto").Work) // no tick saw them spare yet
 	assertTrue(t, plan.Peek_(testsupport.MakeCtx(gh, every), false, nil, "auto").Idle)
