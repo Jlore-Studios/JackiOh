@@ -66,6 +66,10 @@ const NUMBERED_KEYWORDS: &[&str] = &[
     "Tipsy",
 ];
 
+/// R3566004: the keywords that may print a number but need none (Stinkyscape+ #6.2 Stinky Cheese's
+/// "Temporary 2"; the engine's `Keyword::Temporary { n }`, R2179001, counts a bare one as 1).
+const OPTIONALLY_NUMBERED_KEYWORDS: &[&str] = &["Temporary"];
+
 /* expectations */
 
 /// The id segment of each set the catalog holds (B2.2: `classicplus` holds no hyphen).
@@ -405,7 +409,15 @@ fn validate_face(
                 &format!("{kind_text} must carry an integer `n` (got {})", describe(n)),
             );
         }
-        if !numbered && n.is_some() {
+        let optional = OPTIONALLY_NUMBERED_KEYWORDS.contains(&kind_text);
+        if optional && n.is_some() && !is_int(n) {
+            fail(
+                failures,
+                &kw_at,
+                &format!("{kind_text} must carry an integer `n` (got {})", describe(n)),
+            );
+        }
+        if !numbered && !optional && n.is_some() {
             fail(
                 failures,
                 &kw_at,
@@ -2142,6 +2154,53 @@ mod tests {
             assert!(failures.contains(&expected), "{expected} in {failures:#?}");
         }
         assert_eq!(failures.len(), 3, "{failures:#?}");
+    }
+
+    /// The base face's keywords of the shipped Temporary token Meditative #22.1, replaced by `keywords`.
+    fn failures_with_keywords(id: &str, keywords: &str) -> Vec<String> {
+        let mut catalog = shipped_catalog();
+        let mut entry = catalog[id].as_object().expect(id).clone();
+        if let Some(Json::Object(base)) = entry.get_mut("base") {
+            base.insert(
+                "keywords".to_string(),
+                js::parse(keywords).expect("keywords JSON"),
+            );
+        }
+        catalog.insert(id.to_string(), Json::Object(entry));
+        check_catalog(&catalog).failures
+    }
+
+    #[test]
+    fn r3566004_a_temporary_may_print_its_count() {
+        let id = "meditative-022-1";
+        assert_eq!(
+            failures_with_keywords(id, r#"[{"kind":"Temporary","n":2}]"#),
+            Vec::<String>::new()
+        );
+        assert_eq!(
+            failures_with_keywords(id, r#"[{"kind":"Temporary"}]"#),
+            Vec::<String>::new()
+        );
+        let wrong = failures_with_keywords(id, r#"[{"kind":"Temporary","n":"2"}]"#);
+        assert!(
+            wrong
+                .iter()
+                .any(|failure| failure.contains("Temporary must carry an integer `n`")),
+            "{wrong:#?}"
+        );
+        let brittle = failures_with_keywords(id, r#"[{"kind":"Brittle"}]"#);
+        assert!(
+            brittle
+                .iter()
+                .any(|failure| failure.contains("Brittle must carry an integer `n`")),
+            "{brittle:#?}"
+        );
+        let rush = failures_with_keywords(id, r#"[{"kind":"Rush","n":1}]"#);
+        assert!(
+            rush.iter()
+                .any(|failure| failure.contains("Rush must not carry `n`")),
+            "{rush:#?}"
+        );
     }
 
     #[test]

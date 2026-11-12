@@ -28957,7 +28957,7 @@
     "flavor": "Snack",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 40,
     "base": {
       "keywords": [
         {
@@ -29174,7 +29174,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 24,
     "base": {
       "attack": 4,
       "health": 5,
@@ -29243,14 +29243,15 @@
     "token": true,
     "cost": 1,
     "printedRarity": "Epic",
-    "loc": 6,
+    "loc": 47,
     "base": {
       "keywords": [
         {
-          "kind": "Temporary"
+          "kind": "Temporary",
+          "n": 2
         }
       ],
-      "text": "Temporary\nEvolves when this is discarded to Temporary.\nEvolve: Gain Flashback, Animated, and +{buff}/+{buff}."
+      "text": "Temporary 2\nEvolves when this is discarded to Temporary.\nEvolve: Gain Flashback, Animated, and +{buff}/+{buff}."
     },
     "radiant": {
       "keywords": [
@@ -31437,7 +31438,7 @@
     "flavor": "Clout",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "attack": 2,
       "health": 6,
@@ -31468,7 +31469,7 @@
     "token": true,
     "cost": 2,
     "printedRarity": "Epic",
-    "loc": 6,
+    "loc": 66,
     "base": {
       "keywords": [],
       "text": "End of turn: Every Unit eats a delicious Shawarma causing one of the following effects:\nFirst Shawarma eaten gain +{health} health.\nSecond Shawarma eaten gain Can't attack.\nThird Shawarma eaten gain Can't defend and Brittle {brittle2}.\nSubsequent Shawarma eaten Freeze."
@@ -31837,7 +31838,7 @@
     "flavor": "Snack",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [],
       "text": "Add a Sweet Essence to your hand."
@@ -31888,7 +31889,7 @@
     "flavor": "Snack",
     "token": false,
     "cost": 1,
-    "loc": 6,
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Cast on draw: Shuffle {draw} Cast on draw into your deck."
