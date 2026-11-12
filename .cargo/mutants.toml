@@ -122,6 +122,10 @@ exclude_re = [
   # deals as `None` does (deck.rs). A card shadow-banned or a set gated makes the first two killable, and then they
   # leave this line.
   'delete field (banned|gated_sets|strength) from struct AiDeckOptions expression in next_seats',
+  # crates/shared (#3513): practice/deal.rs's human_deck deals a player's random deck the same way, spelling out
+  # `banned` and `gated_sets` as no card and no set, which their defaults also are while nothing is shadow-banned or
+  # gated (as above).
+  'delete field (banned|gated_sets) from struct AiDeckOptions expression in human_deck',
   # crates/shared (#3513): draw_trio's early None for fewer than TRIO_DECKS decks: validate_trio's L1
   # refuses a trio of any other count, so the trio is None either way.
   'replace < with > in draw_trio',
@@ -171,6 +175,17 @@ exclude_re = [
   # The name has no way to tell this `-` from the function's others, so the entry holds its column (53),
   # which no other `-` of `place_fights` has, and not its line, which moves with the code above it.
   'lib\.rs:\d+:53: replace - with \+ in place_fights',
+  # crates/shared (#3513): season.rs's spread is only given its values' own mean as `center` (soft_reset's two
+  # reports), and about the mean (v + c)(v - c) = v^2 - c^2 averages to E[v^2] - c^2, the same variance (v - c)^2
+  # averages to: either `-` as `+` reports the same spread. The columns hold the entry to those two `-`.
+  'ranked/season\.rs:\d+:(29|48): replace - with \+ in spread',
+  # crates/shared (#3513): ladder.rs's target_ladder takes the last tier on `last` or on the percentile being under
+  # the tiers' running share, and clamps the pips into a tier at `PIPS_PER_TIER - 1`. The shares sum to PERCENT (the
+  # compile-time check after percent_of) and a percentile is under 1 (its numerator, 2 x below + level + 1, is under
+  # its denominator, 2 x (others + 1)), so the running share's test already holds at the last tier, and the pips into
+  # a tier stay under PIPS_PER_TIER: neither `last`'s `len() - 1` nor the clamp's `- 1` decides anything. The columns
+  # hold the entry to those two `-`, apart from the function's others.
+  'ranked/ladder\.rs:\d+:(52|67): replace - with (\+|/) in target_ladder',
   # crates/shared (#3513): duos.rs's end_as_ceiling_draw is reached only from begin_apply's panic branch, which a
   # finished host never reaches (it answers MatchOver first), and only for a server action, which a stopped host never
   # makes (on_ai_move and reach_ceiling return once stopped, and an AI move's retry runs in the step its first try
