@@ -1746,6 +1746,47 @@ fn fused_would_counter(scripts: &[&Script]) -> Option<WouldCounterHook> {
     }))
 }
 
+/// R3800000: a non-Spell ingredient's end-of-turn text (a Unit's, a Field Spell's, a Trap's) runs where that
+/// text runs, on the field or in the backrow. Run off the field (a fused Spell's graveyard return, R153,
+/// R155, and wherever that return moved it on to), it makes no effect.
+fn field_end_of_turn(text: Hook) -> Hook {
+    hook(move |ctx| {
+        if crate::effects::targets::ran_off_the_field(ctx) {
+            return Vec::new();
+        }
+        text(ctx)
+    })
+}
+
+/// R3800000: whether a Spell's own text among `def_id`'s, on `radiant`'s form, has an end-of-turn hook,
+/// the end-of-turn return R155 flags: an unfused Spell's own; a fused Spell's when one of its Spell
+/// ingredients' does, each on the form it went in on (R469), a fused ingredient's read the same way.
+pub fn spell_text_ends_turn(state: &GameState, def_id: &str, radiant: bool) -> bool {
+    spell_text_ends_turn_in(state, def_id, radiant, &mut IndexSet::new())
+}
+
+fn spell_text_ends_turn_in(
+    state: &GameState,
+    def_id: &str,
+    radiant: bool,
+    seen: &mut IndexSet<String>,
+) -> bool {
+    if crate::faces::card_type_of_face(state, def_id, radiant) != CardType::Spell {
+        return false;
+    }
+    let Some(specs) = fused_specs(state, def_id) else {
+        return crate::scripts::face_ref(state, def_id, radiant)
+            .end_of_turn
+            .is_some();
+    };
+    if !seen.insert(def_id.to_string()) {
+        return false;
+    }
+    specs
+        .iter()
+        .any(|spec| spell_text_ends_turn_in(state, &spec.def_id, radiant || spec.radiant == Some(true), seen))
+}
+
 /// One form's script of a fusion: each ingredient's script on that form — or on its Radiant form
 /// whichever form this is, for an ingredient that went in on it (R469) — combined member by member.
 fn fused_script(
@@ -1769,7 +1810,14 @@ fn fused_script(
     let records: Vec<Script> = faces
         .iter()
         .enumerate()
-        .map(|(index, face)| script_record(&face.script, &face.def_id, face.radiant, index))
+        .map(|(index, face)| {
+            let mut record = script_record(&face.script, &face.def_id, face.radiant, index);
+            // R3800000: a non-Spell ingredient's end-of-turn text is a field text.
+            if crate::faces::card_type_of_face(state, &face.def_id, face.radiant) != CardType::Spell {
+                record.end_of_turn = record.end_of_turn.map(field_end_of_turn);
+            }
+            record
+        })
         .collect();
     let mut combined = combine_objects(&records);
     combined.tribute_when = fused_tribute_when(&scripts);

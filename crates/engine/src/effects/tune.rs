@@ -1059,6 +1059,11 @@ pub fn set_number(args: SetNumberArgs) -> Effect {
         let Some(number) = ref_for(ctx, &card, &args.which, value) else {
             return;
         };
+        // R3800002: a card in a graveyard or an exile pile costs its printed cost (R766), so a cost set on one an
+        // earlier effect of the same resolution moved there changes nothing and reports nothing.
+        if number == NumberRef::Cost && matches!(card.zone.z(), ZoneName::Graveyard | ZoneName::Exile) {
+            return;
+        }
         let hidden_from = unreadable_by(ctx.state, &card);
         write_number(ctx, &card.id, &number, value);
         let card = find_instance(ctx.state, &card.id).cloned().unwrap_or(card);

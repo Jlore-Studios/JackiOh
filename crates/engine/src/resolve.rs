@@ -204,7 +204,8 @@ pub fn cast_card(sink: &mut EngineSink<'_>, instance: &CardInstance, options: Ca
 /// `returnToHandAtEndOfTurn` when played and return from the graveyard at the end of that turn".
 /// Written at §10.5 step 7, as the Spell lands, on three conditions in order: a Spell (a Unit with an
 /// `endOfTurn` hook, #13, must not return, R153); an `endOfTurn` hook on its resolving face (#23, #24,
-/// #31); and in the **graveyard** (#39 exiles itself on play). `turn.cleanup` clears it that turn (R153).
+/// #31), a fused Spell only when a Spell ingredient's text carries the hook (R3800000); and in the
+/// **graveyard** (#39 exiles itself on play). `turn.cleanup` clears it that turn (R153).
 pub fn flag_return_to_hand_at_end_of_turn(state: &mut GameState, instance_id: &str) {
     let Some(card) = find_instance(state, instance_id) else {
         return;
@@ -216,6 +217,11 @@ pub fn flag_return_to_hand_at_end_of_turn(state: &mut GameState, instance_id: &s
         return;
     }
     if crate::scripts::script_of(state, card).end_of_turn.is_none() {
+        return;
+    }
+    // R3800000: a fused Spell returns on a Spell ingredient's end-of-turn text alone.
+    let (def_id, radiant) = crate::subsystems::unit_text::text_def_of(card);
+    if !crate::subsystems::fuse::spell_text_ends_turn(state, def_id, radiant) {
         return;
     }
     if let Some(card) = find_instance_mut(state, instance_id) {

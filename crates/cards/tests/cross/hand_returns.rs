@@ -10,6 +10,8 @@
 //!  - R215, §10.3: radiant #52's "costing 0" is announced with a `costChanged` once the card has landed.
 //!  - R766, R429: a return Spell played at a price comes back at its printed cost (#23), and so does
 //!    #31, except for the climb its own returns gave it, which comes back too.
+//!  - R3800000: a fused Spell returns on a Spell ingredient's end-of-turn text alone, and another
+//!    ingredient's end-of-turn text (a Field Spell's) runs on the field only, never from its graveyard.
 
 use jackioh_engine::PlayerId::{P1, P2};
 use jackioh_engine::effects::bounce;
@@ -32,7 +34,7 @@ const CRAFT: &str = "core-099";
 const MENACE: &str = "core-019";
 const CHAOS: &str = "core-095";
 
-use super::{fixture, scenario};
+use super::{craft_fused, fixture, scenario};
 
 /// Whether a base #95's single roll at `cursor` is `effect`, the pick 095's own tests use (R28).
 fn rolls(seed: &str, cursor: u32, effect: &str) -> bool {
@@ -470,5 +472,57 @@ mod r766_r429_only_kys_math_equations_own_return_gives_back_a_price_its_climb {
             returned_at_a_price_of_2(KY_MATH, json!({ "targets": at_p2() })),
             (1, 2)
         );
+    }
+}
+
+mod r3800000_a_fused_spell_returns_on_its_spell_texts_end_of_turn_alone {
+    use super::*;
+
+    const TWO_GRAPES: &str = "classicplus-065";
+    const ROD_OF_AGES: &str = "stinkyscape-016";
+
+    fn board() -> Scenario {
+        scenario(json!({
+            "p1": { "field": [TIMMY], "mana": 10, "library": [VANILLA, VANILLA, VANILLA, VANILLA] },
+            "p2": { "field": [TIMMY], "library": [VANILLA, VANILLA, VANILLA, VANILLA] },
+        }))
+    }
+
+    #[test]
+    fn r3800000_r153_r155_a_spell_fused_with_a_field_spell_s_end_of_turn_text_is_not_flagged_and_gains_no_keyword_in_its_graveyard()
+     {
+        // Duos seed 1628: C+ #31 Fusion Lab fused S #16 Rod of Ages into C+ #65 Two Grapes, a Spell, and
+        // Rod's "End of turn: gain random keywords" ran from the graveyard (§5.1's return is a Spell's).
+        let mut g = board();
+        let fused = craft_fused(&mut g, P1, &[TWO_GRAPES, ROD_OF_AGES]);
+        assert_eq!(def_of(Some(g.state()), &fused.def_id).type_, CardType::Spell);
+
+        g.play(&fused.id, json!({}));
+        g.expect_in_zone(&fused.id, "graveyard");
+        assert_eq!(g.card(&fused.id).return_to_hand_at_end_of_turn, None);
+
+        g.end_turn();
+
+        g.expect_in_zone(&fused.id, "graveyard");
+        assert!(g.card(&fused.id).granted_keywords.is_empty());
+    }
+
+    #[test]
+    fn r3800000_r155_a_return_spell_fused_with_a_field_spell_s_end_of_turn_text_returns_with_no_keyword_from_it()
+     {
+        // #23's own text returns it (R155); Rod's, a Field Spell's, runs only on the field, so not from the
+        // graveyard nor from the hand the return moved it to.
+        let mut g = board();
+        let fused = craft_fused(&mut g, P1, &[DREAM, ROD_OF_AGES]);
+        assert_eq!(def_of(Some(g.state()), &fused.def_id).type_, CardType::Spell);
+
+        g.play(&fused.id, json!({}));
+        g.expect_in_zone(&fused.id, "graveyard");
+        assert_eq!(g.card(&fused.id).return_to_hand_at_end_of_turn, Some(true));
+
+        g.end_turn();
+
+        g.expect_in_zone(&fused.id, "hand");
+        assert!(g.card(&fused.id).granted_keywords.is_empty());
     }
 }

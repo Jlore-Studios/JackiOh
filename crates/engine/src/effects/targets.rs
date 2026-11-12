@@ -144,6 +144,16 @@ pub fn self_on_its_stay(ctx: &EffectContext<'_>) -> Option<CardInstance> {
     }
 }
 
+/// R3800000: whether the running card stood off the field when the running script began and has not left
+/// the field since: a fused Spell's end-of-turn return run from its graveyard (R153, R155), and wherever
+/// that return moved it on to, never a card an earlier effect of the same run took off the field (R174).
+pub fn ran_off_the_field(ctx: &EffectContext<'_>) -> bool {
+    let Some(this) = ctx.live_self() else {
+        return false;
+    };
+    this.zone.z() != ZoneName::Field && !left_field_since(ctx, &this.id)
+}
+
 /// R174: whether a card stands on the stay it had when the running script began (`stay_mark_of`): on
 /// the field now and never taken off it since, so one an earlier effect bounced is not, even once back.
 pub fn stands_since_script_began(ctx: &EffectContext<'_>, instance_id: &str) -> bool {

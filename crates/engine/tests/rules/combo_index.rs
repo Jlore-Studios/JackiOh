@@ -773,3 +773,38 @@ mod r86_what_a_pool_of_cards_played_this_turn_holds {
         );
     }
 }
+
+mod r3800001_a_grade_is_written_only_on_the_field {
+    use super::*;
+
+    #[test]
+    fn r3800001_start_and_raise_grade_write_nothing_on_a_combo_index_already_exiled() {
+        // Seed 6091: a fused Cry exiled its card (C #44's "Exile this"), and #93's Cry part after it wrote
+        // `counters.grade` on the exiled card, field state R78 had reset.
+        let mut state = game("r3800001");
+        let index = on_field(&mut state, None);
+        sink_events(&mut state, &mut Vec::new(), |sink| {
+            run(
+                sink,
+                &index,
+                vec![effects::exile(json_as(json!({ "target": { "of": "self" } })))],
+            );
+        });
+        assert_eq!(card(&state, &index.id).zone, Zone::Exile { player: P1 });
+
+        let mut events = Vec::new();
+        sink_events(&mut state, &mut events, |sink| {
+            run(
+                sink,
+                &index,
+                vec![
+                    start_grade(StartGradeArgs::default()),
+                    raise_grade(RaiseGradeArgs::default()),
+                ],
+            );
+        });
+
+        assert_eq!(grade_now(&state, &index.id), None);
+        assert!(events_of_type(&events, "counterChanged").is_empty());
+    }
+}
