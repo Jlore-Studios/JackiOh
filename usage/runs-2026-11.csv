@@ -1940,3 +1940,8 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-12T20:06:50Z,43295134721,claude-6,opus,review,3801,hard,approved,,7.5,12,4689,395305,0.5878,13,14,,,2,,none,,1
 2026-11-12T19:54:12Z,43292615075,claude-8,opus,suggest,,,interrupted,5-hour cap,3,39,7778,1226971,4.8592,73,85,,,,,none,,1
 2026-11-12T20:03:13Z,43274007827,claude-3,opus,revise,3761,hard,built,,90.7,170,46794,10978486,4.3252,1,37,,,234.7,claude-3,fresh,,1
+2026-11-12T20:23:44Z,43298992995,claude-1,opus,plan,3802,medium,planned,,1.5,29,11119,868480,0.4351,8,11,,,10.3,,fresh,,1
+2026-11-12T20:42:04Z,43301377963,claude-6,opus,plan,3803,medium,planned,,0.6,10,4678,190809,0.1699,16,16,,,7.4,,fresh,,1
+2026-11-12T20:32:38Z,43298758014,claude-3,opus,review,3761,hard,approved,,10,61,17849,3298473,1.9147,55,58,,,1.9,claude-3,none,,1
+2026-11-12T20:40:35Z,43290325247,claude-4,opus,plan,3800,hard,failed,,66.4,286,85572,23291632,8.4531,17,5,,,2.7,,fresh,,1
+2026-11-12T20:31:37Z,43287918850,claude-4,sonnet+opus,revise,3783,medium,approved,,17.1,50,9666,2855330,4.7618,16,1,,,0.7,claude-4,resumed,,2
