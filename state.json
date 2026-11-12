@@ -12938,6 +12938,23 @@
       "requested_by": "squishy-squooby",
       "run_id": "43147724162",
       "runs_on": "ubuntu-latest",
+      "session": {
+        "action": "plan",
+        "artifact": 13912193495,
+        "artifact_bytes": 362474,
+        "artifact_name": "work",
+        "at": "2026-11-12T03:37:57Z",
+        "bytes": 475612,
+        "cwd": "/home/runner/work/_temp/work/item-3573",
+        "ended": "interrupted: `claude-6` stops mid-call: 5-hour usage is 50%, at or over its 50% cap outside its hours; it resets at 2026-11-12T05:40:00Z",
+        "head": "c999176ff2e439a54a8ac5fc90fbb286f406b16d",
+        "id": "4d61c310-71e0-434c-bb8c-e0918d29c216",
+        "kind": "plan",
+        "model": "opus",
+        "project": "-home-runner-work--temp-work-item-3573",
+        "provider": "claude-6",
+        "run": "43147724162"
+      },
       "started_at": "2026-11-12T03:22:00Z",
       "stop_requested": false,
       "taken_asks": []
