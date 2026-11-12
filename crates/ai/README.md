@@ -93,7 +93,9 @@ to as well, last, on a slice of the counter that leaves the other determinizatio
 reserve alone, and not once the host's wrap-up has fired (`payoff_score`, R3696000). In the reply, a known card guessing an unrevealed secret of the seat's (a
 Fortify Mind) is tried with one guess, drawn on its own stream (`one_guess_per_card`, `AI_GUESS_SEED`)
 before anything is weighed, and while a known card would be discarded by the opponent's cleanup,
-`known_play` judges each play and standing still after its turn ends (R3696001). A line
+`known_play` judges each play and standing still after its turn ends (R3696001). A kept secret is
+part of a position's signature (its owner, choice and revealed flag, never its minted id), so the
+three choices of one Mind Games are three lines the beam weighs (R3772000). A line
 leaving a countdown waiting (an effect "in N turns" with its public badge, R1181000) is replied to again
 on a copy whose countdowns come due at the seat's next turn start, and the scores are blended at
 `AI_REPLY.countdown_share` per turn the farthest still waits past its owner's next turn start (#1995);
