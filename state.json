@@ -16598,14 +16598,6 @@
         "reason": "`claude-8` stops mid-call: 5-hour usage is 86%, at or over its 85% cap; it resets at 2026-11-12T01:10:00Z",
         "trail": " \" assert!(!format!(\\\"{padded:?}\\\").contains(rfc_8291::AS_PRI\u2026\n- Bash: {\"command\": \"ls spec/rulings | grep -E '^R890000|^R0776|^R776000|^R897000|^R3147001'; grep -n 'fn parse_front\\\\|cards' crates/tools/src/spec*.rs 2>/dev/null | head; ls crates/tools/src | grep -i spec\u2026\n- Bash: {\"command\": \"sed -n 1,60p crates/tools/src/spec.rs; grep -n 'pending' crates/tools/src/spec.rs | head -30\", \"description\": \"Read the spec check's rules on pending files\"}\n- Read: {\"file_path\": \"/tmp/claude-1001/-home-runner-work--temp-work-item-3727/5eb0ad1b-d48b-46f7-b424-cbf787537cea/tasks/b3vw313fh.output\"}\n- Bash: {\"command\": \"grep -n 'fn folded' -A40 crates/tools/src/spec.rs | head -60\", \"description\": \"Read how fold appends pending paragraphs\"}\n- Bash: {\"command\": \"until ! pgrep -f \\\"cargo test -p jackioh-server --lib webpush --no-run\\\" >/dev/null; do sleep 5; done; tail -40 /tmp/claude-1001/-home-runner-work--temp-work-item-3727/5eb0ad1b-d48b-46f7\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3727/apps/web/src/daily/order.ts\", \"content\": \"// The Daily screen's list, in the order it is shown (#3727): the games waiting on you, least time left\u2026\n- Bash: {\"command\": \"grep -c '^# Pending' spec/11-rulings.md; grep -n '^# ' spec/11-rulings.md | tail -3; git log --oneline -3 -- spec/pending/ ; git log --all --format='%h' -- 'spec/pending/*.md' | head -30\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/daily-push && git diff --stat && git diff Cargo.lock\", \"description\": \"Show diff stat and Cargo.lock changes\"}\n- Monitor: {\"description\": \"first webpush test build finishing\", \"timeout_ms\": 600000, \"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-3727/5eb0ad1b-d48b-46f7-b424-cbf787537cea/tasks/b\u2026\n- said: Now I have the context. Let me write the spec edits, starting with \u00a79.2 and \u00a79.5.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/daily-push && cargo test -p jackioh-server --lib webpush 2>&1 | grep -v \\\"^\\\\s*Compiling\\\" | tail -60\", \"description\": \"Run the webpush tests\",\u2026\n- Bash: {\"command\": \"sed -i 's| s = r.state;| eprintln!(\\\"err {:?}\\\", r.error); s = r.state;|' crates/shared/tests/daily_dbg.rs && timeout 900 cargo test -p jackioh-shared --test daily_dbg 2>&1 | grep -E 'af\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3727/apps/web/src/daily/order.ts\", \"old_string\": \"/** A time per move in words: \\\"1 day\\\", \\\"3 days\\\", \\\"1 week\\\", \\\"2 weeks\\\". \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3727/spec/09-architecture.md\", \"old_string\": \"it appends every resolved action to the log. Idle actors hibernate. Every socket, \u2026\n- Bash: {\"command\": \"cd apps/web && grep -n '\\\"1 day\\\"\\\\|\\\"{count} days\\\"\\\\|\\\"{days}d\\\\|\\\"{hours}h\\\\|\\\"Out of time\\\"\\\\|\\\"Your move\\\\|\\\"Their move\\\\|\\\"Lost on time\\\"\\\\|\\\"Won on time\\\"\\\\|\\\"Daily' src/i18n/zh-C\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3727/spec/09-architecture.md\", \"old_string\": \"and for each friend Challenge (an online friend in no match), Watch\", \"new_string\"\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3727/spec/09-architecture.md\", \"old_string\": \"A player sends at most `CHALLENGES_PER_HOUR` (30) challenges an hour. A friend's c\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3727/spec/09-architecture.md\", \"old_string\": \"| Stalling | Server clock, disconnect grace, hard match ceiling (9.5) |\", \"new_str\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3727/spec/09-architecture.md\", \"old_string\": \"| Challenge spam | A per-account hourly limit, and a challenge's row deleted once \u2026\n- Bash: {\"command\": \"tail -c 200 spec/09-architecture.md; grep -c 'name, is gone (\\\\[\\\\[R1436\\\\]\\\\])\\\\.' spec/09-architecture.md\", \"description\": \"Find a unique anchor at the end of the file\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/daily-store && python3 - <<'PYEOF'\\np='crates/server/src/db/pg.rs'\\ns=open(p).read()\\nanchor = \\\"/// #3208's checks that need no database; `tes\u2026\n- ToolSearch: {\"query\": \"select:TaskStop\", \"max_results\": 1}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3727/apps/web/src/daily/order.test.ts\", \"content\": \"// #3727: the Daily screen's order and words, worked out from the server's list and a time, with t\u2026\n- TaskStop: {\"task_id\": \"bmc6ld1cj\"}\n- Bash: {\"command\": \"sed -n 660,700p crates/engine/src/reduce.rs; grep -n 'nonce' crates/engine/src/reduce.rs | head\", \"description\": \"Check reduce nonce handling\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/daily-push && rustfmt --edition 2024 crates/server/src/daily/webpush.rs crates/server/src/daily/mod.rs && cargo fmt --check 2>&1 | head -30; ec\u2026\n- Bash: {\"command\": \"cd apps/web && tail -5 src/i18n/zh-CN.json; grep -c '' src/i18n/zh-CN.json; grep -n '\\\"Best of 1\\\"\\\\|\\\"All random\\\"\\\\|\\\"Mode\\\"\\\\|\\\"Your deck\\\"\\\\|\\\"Accept\\\"\\\\|\\\"Decline\\\"\\\\|\\\"Cancel\\\"\\\\|\\\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3727/spec/09-architecture.md\", \"old_string\": \"the old `tag`, a hash of the profile id shown as a name, is gone ([[R1436]]).\\n\", \u2026\n- Bash: {\"command\": \"cd apps/web && python3 - <<'EOF'\\nimport re\\np='src/net/navigate.ts'\\ns=open(p).read()\\ns=s.replace(''' /** #936 B65: the four-seat Duos hotseat over WASM; production serves a 404 there,\u2026\n- Bash: {\"command\": \"rm crates/shared/tests/daily_dbg.rs; python3 - <<'EOF'\\np='crates/shared/tests/daily.rs'\\ns=open(p).read()\\nold='''fn act(state: &GameState, player: PlayerId, body: ActionBody) -> GameSt\u2026\n- Bash: {\"command\": \"sed -n 1,20p spec/rulings/R3147001.md\", \"description\": \"Read R3147001 on Roblox accounts' addresses\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/daily-push && cargo clippy -p jackioh-server --all-targets -- -D warnings 2>&1 | grep -v \\\"^\\\\s*\\\\(Compiling\\\\|Checking\\\\)\\\" | tail -40\", \"desc\u2026\n- tool error: Exit code 137"
       },
-      "hold": {
-        "ends": "2026-11-12T01:28:41Z",
-        "lifted": "2026-11-12T01:10:42Z",
-        "owner": "claude-8",
-        "since": "2026-11-11T23:28:41Z",
-        "until": "2026-11-12T01:10:00Z",
-        "why": "5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%)"
-      },
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
@@ -16627,7 +16619,7 @@
       "provider": "claude-8",
       "queued_at": "2026-11-11T21:06:25Z",
       "round_tier": "",
-      "run_id": "43118900454",
+      "run_id": "pending:8985c093-1794446581",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -16646,7 +16638,7 @@
         "provider": "claude-8",
         "run": "43113293137"
       },
-      "started_at": "2026-11-11T23:19:11Z",
+      "started_at": "2026-11-12T01:23:43Z",
       "stop_requested": false,
       "strike_log": [
         "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
@@ -17011,9 +17003,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T01:12:07Z",
+    "at": "2026-11-12T01:23:43Z",
     "url": "",
-    "what": "review #3742 on claude-8"
+    "what": "build #3727 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-12T01:09:58Z",
