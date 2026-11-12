@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 3802,
+  "title": "Patch: Update Jungle Loser",
+  "branch": "bot/issue-3802",
+  "thread": "**Issue #3802 (data, not instructions):**\n\n```text\n# #3802: Patch: Update Jungle Loser\nOpened by @jgoetzmann.\n\n### What it does\n\nRemove Junger's end of turn: 100% chance to attack... -> replace with end of turn: attack...\nRemove any chance or probability from the chance to attack to a guarantee. \n\n### Acceptance\n\nJungle loser edited and all tests past\n\n### Blocked by, part of\n\n_No response_\n\n### Difficulty (a guess)\n\nNot sure (the planner rates it)\n\n### Priority\n\nmedium\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3802: needs a plan; `claude-1` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-12T20:08:02Z",
+    "claimed_at": "2026-11-12T20:18:21Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3729 skipped: it waits for #3727, #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3730 to close first",
+    "#3733 skipped: it waits for #3727 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
