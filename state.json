@@ -16624,14 +16624,6 @@
         "reason": "`claude-5` stops mid-call: 5-hour usage is 40%, at or over its 40% cap; it resets at 2026-11-12T07:10:00Z",
         "trail": "h: {\"command\": \"grep -n \\\"live_matches\\\\|daily_games d\\\" crates/server/migrations/0088_daily_games.sql | head; grep -n \\\"fn matches_live\\\" -A 12 crates/server/src/db/fake.rs | grep -n daily; tail -5 /tm\u2026\n- Bash: {\"command\": \"grep -n \\\"^## \\\\|^### \\\" docs/v0.3.0/SURFACE.md | head -40; grep -n \\\"reqwest\\\\|rustls\\\\|jsonwebtoken\\\\|base64\\\" docs/v0.3.0/SURFACE.md | head -10\", \"description\": \"Look at SURFACE struc\u2026\n- Bash: {\"command\": \"sed -n 140,190p docs/v0.3.0/SURFACE.md; sed -n 897,922p docs/v0.3.0/SURFACE.md; git diff origin/main -- Cargo.toml crates/server/Cargo.toml\", \"description\": \"Read SURFACE stack table and\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='docs/v0.3.0/SURFACE.md'\\ns=open(p).read()\\nold=\\\"\\\"\\\"| getrandom | 0.4.3 | \\u2014 | server (invite codes, seeds) |\\\"\\\"\\\"\\nnew=\\\"\\\"\\\"| getrandom | 0.4.3 | \\u2014 | s\u2026\n- Bash: {\"command\": \"sed -n 117,171p docs/architecture.md; sed -n 514,580p docs/architecture.md\", \"description\": \"Read RLS matrix and env-var contract\"}\n- Bash: {\"command\": \"grep -n \\\"create policy\\\\|using (\\\" -A 2 crates/server/migrations/0088_daily_games.sql | head -30\", \"description\": \"Read the 0088 policies\"}\n- Bash: {\"command\": \"sed -n 1,60p crates/server/migrations/0088_daily_games.sql; sed -n 180,226p crates/server/migrations/0088_daily_games.sql\", \"description\": \"Read 0088 header and grants\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='docs/architecture.md'\\ns=open(p).read()\\nold=\\\"\\\"\\\"| `duos_match_actions` | **none** | no policy | none \\u2014 the co-op log, which with the seed is every hidden ca\u2026\n- Bash: {\"command\": \"sed -n 181,202p docs/deploy-cloudflare.md; sed -n 236,255p docs/deploy-cloudflare.md; sed -n 370,385p docs/deploy-cloudflare.md; grep -n \\\"cron\\\\|23 14\\\" docs/deploy-cloudflare.md | head\u2026\n- Bash: {\"command\": \"sed -n 20,30p docs/deploy-cloudflare.md; grep -n \\\"sleep\\\\|wake\\\" docs/deploy-cloudflare.md | head; sed -n 415,437p docs/deploy-cloudflare.md\", \"description\": \"Read deploy doc target sta\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='docs/deploy-cloudflare.md'\\ns=open(p).read()\\nold=\\\"\\\"\\\"it again. A daily cron wakes it.\\\"\\\"\\\"\\nnew=\\\"\\\"\\\"it again. A daily cron wakes it, and an hourly one wakes i\u2026\n- Bash: {\"command\": \"grep -n \\\"SLEEP_AFTER\\\\|sleepAfter\\\" apps/edge/src/index.ts | head -3; grep -n \\\"^## \\\\|^### \\\" apps/edge/README.md | head; grep -n \\\"cron\\\\|scheduled\\\\|ALERT_EMAILS\\\" apps/edge/README.m\u2026\n- Bash: {\"command\": \"sed -n 38,68p apps/edge/README.md\", \"description\": \"Read the edge README behaviour and settings\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/edge/README.md'\\ns=open(p).read()\\nold=\\\"\\\"\\\" loops run, and the Supabase project sees a query, so a quiet week does not pause a free project.\\n\\\"\\\"\\\"\\nnew=\\\"\\\u2026\n- Bash: {\"command\": \"sed -n 1,80p crates/shared/README.md\", \"description\": \"Read shared README head\"}\n- Bash: {\"command\": \"sed -n 80,102p crates/shared/README.md; sed -n 254,270p crates/shared/README.md; sed -n 330,364p crates/shared/README.md\", \"description\": \"Read shared README config list and host section\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/shared/README.md'\\ns=open(p).read()\\nold=\\\"\\\"\\\"`PRACTICE_REPLAYS_KEPT` (R768). The server re-exports\\\"\\\"\\\"\\nnew=\\\"\\\"\\\"`PRACTICE_REPLAYS_KEPT` (R768). The dai\u2026\n- Bash: {\"command\": \"grep -n \\\"^## \\\\|^### \\\" apps/web/README.md | sed -n 1,200p | awk -F: '$1>800' | head -30; grep -n \\\"/play\\\\b\\\\|/together\\\\b\\\\|/friends\\\" apps/web/README.md | head -10; tail -3 /tmp/serv\u2026\n- Bash: {\"command\": \"sed -n 832,966p apps/web/README.md\", \"description\": \"Read Play together section of web README\"}\n- Bash: {\"command\": \"for f in apps/web/src/daily/*.ts apps/web/src/daily/*.tsx apps/web/src/net/daily.ts apps/web/public/sw.js; do echo \\\"== $f\\\"; head -8 $f | grep -E \\\"^//|^ \\\\*|^/\\\\*\\\\*\\\" | head -6; done \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/README.md'\\ns=open(p).read()\\nold=\\\"\\\"\\\"## Practice\\n\\\"\\\"\\\"\\nnew=\\\"\\\"\\\"## Daily games\\n\\nDaily games (SPEC \\u00a79.13, #3727) are a 1v1 game played a move \u2026\n- Bash: {\"command\": \"echo \\\"- 07:55 docs done (server/web/edge/shared README, SURFACE, architecture, deploy-cloudflare). Next: fmt, spec check, clippy\\\" >> .bot-notes.md; cargo fmt --check 2>&1 | grep \\\"^Dif\u2026\n- Bash: {\"command\": \"cargo fmt --check 2>&1 | grep \\\"^Diff in\\\" | sed 's/:[0-9]*:$//' | sort -u\", \"description\": \"List files needing formatting\"}\n- Bash: {\"command\": \"cargo fmt --check 2>&1 | grep -A 12 \\\"rooms.rs:28\\\" | head -20; cargo fmt && cargo fmt --check && echo FMT_OK; git diff --stat | tail -3\", \"description\": \"Inspect rooms.rs diff then form\u2026\n- Bash: {\"command\": \"sleep 60; tail -5 /tmp/server_all.log | cut -c1-200\", \"description\": \"Check server suite progress\"}\n- tool error: <tool_use_error>Blocked: sleep 60 followed by: tail -5 /tmp/server_all.log cut -c1-200. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To wait for a\u2026\n- Bash: {\"command\": \"tail -5 /tmp/server_all.log | cut -c1-200; ps aux | grep -c \\\"[r]ustc\\\"\", \"description\": \"Check server suite progress\"}\n- Bash: {\"command\": \"timeout 2400 cargo jackioh spec check > /tmp/spec_check.log 2>&1; echo \\\"exit $?\\\" >> /tmp/spec_check.log; tail -30 /tmp/spec_check.log\", \"description\": \"Run spec check\", \"timeout\": 2500\u2026\n- Bash: {\"command\": \"grep -E \\\"test result|FAILED|panicked|^exit\\\" /tmp/server_all.log | head -30\", \"description\": \"Check full server suite results\"}\n- Bash: {\"command\": \"sed -n 130,150p crates/server/tests/actor/social_live.rs; sed -n 140,190p crates/server/tests/api/social.rs; sed -n 900,920p crates/server/tests/actor/ws_server.rs\", \"description\": \"Read\u2026\n- Bash: {\"command\": \"grep -n \\\"async fn two_reads\\\" -A 25 crates/server/tests/api/social.rs; sed -n 920,935p crates/server/tests/actor/ws_server.rs; grep -n '\\\"unread\\\": {}' crates/server/tests/actor/social_\u2026\n- Bash: {\"command\": \"grep -n \\\"fn merged\\\" -A 12 crates/server/tests/api/social.rs; grep -n '\\\"unread\\\"' crates/server/tests/actor/social_live.rs | head\", \"description\": \"Read merged helper and social_live u\u2026"
       },
-      "hold": {
-        "ends": "2026-11-12T05:20:44Z",
-        "lifted": "2026-11-12T05:13:09Z",
-        "owner": "claude-1",
-        "since": "2026-11-12T03:20:44Z",
-        "until": "2026-11-12T05:10:00Z",
-        "why": "5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%)"
-      },
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
@@ -16653,7 +16645,7 @@
       "provider": "claude-1",
       "queued_at": "2026-11-11T21:06:25Z",
       "round_tier": "",
-      "run_id": "43146121928",
+      "run_id": "pending:6d701b46-1794460546",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -16672,7 +16664,7 @@
         "provider": "claude-5",
         "run": "43139818642"
       },
-      "started_at": "2026-11-12T03:08:00Z",
+      "started_at": "2026-11-12T05:16:28Z",
       "stop_requested": false,
       "strike_log": [
         "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
@@ -17337,9 +17329,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T05:15:29Z",
+    "at": "2026-11-12T05:16:28Z",
     "url": "",
-    "what": "revise #3750 on claude-1"
+    "what": "build #3727 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-12T05:02:28Z",
