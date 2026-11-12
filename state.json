@@ -15644,7 +15644,7 @@
         "tier": "strong",
         "why": "Rule 2, the AI: it changes the search's shortlist (decide.rs) and the opponent's reply (reply.rs) in crates/ai/src/"
       },
-      "failures": 1,
+      "failures": 0,
       "forced": false,
       "handoff": {
         "at": "2026-11-12T00:41:52Z",
@@ -15668,10 +15668,12 @@
       "planned_by_id": "claude-4",
       "planned_model": "opus",
       "planned_tier": "strong",
+      "pr": 3745,
       "provider": "claude-4",
+      "question": "",
       "queued_at": "2026-11-11T15:39:07Z",
       "requested_by": "MaxGoetzmann",
-      "round_tier": "",
+      "round_tier": "strong",
       "run_id": "43129987572",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-12T00:48:24Z",
