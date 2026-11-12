@@ -15579,9 +15579,11 @@
         "by": "`claude` (strong)",
         "sha": "8fa25ed66f6b14167f7dbebd7e08d9fd4c348847"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-12T14:22:49Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-12T15:07:27Z",
         "family": "claude",
@@ -15591,6 +15593,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -30; sed -n 30,125p apps/edge/src/index.ts\"}\n- Bash: {\"command\": \"cat > /tmp/edit.py <<'EOF'\\np='apps/edge/src/index.ts'\\ns=open(p).read()\\ns=s.replace('''const RETIRE_POLL_MS = 500;\\n''','''const RETIRE_POLL_MS = 500;\\n/** The least time between two i\u2026\n- Bash: {\"command\": \"sed -n 60,100p apps/edge/src/index.test.ts\"}\n- Bash: {\"command\": \"cat > /tmp/edit2.py <<'EOF'\\np='apps/edge/src/index.test.ts'\\ns=open(p).read()\\ns=s.replace('import worker, { Server, START_WAIT_MS, type Env }','import worker, { IMAGE_CHECK_RETRY_MS, I\u2026\n- Bash: {\"command\": \"pnpm --dir apps/edge exec tsc --noEmit -p . ; echo tsc=$?; pnpm exec eslint apps/edge; echo eslint=$?; git status --short; printf '\\\\n## State\\\\nDone: index.ts, index.test.ts, README imp\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the Worker asks again after a failed version check, and a failed retire of the old server no longer fails every request\"} --> The Worker now asks again after a failed version check. It bounds the `/healthz` fetch with a timeout and logs a failed retire \u2026"
       },
+      "interruptions": 0,
       "issue": 3771,
       "kind": "review",
       "live": "reviewing",
