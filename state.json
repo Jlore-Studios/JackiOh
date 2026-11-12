@@ -37432,7 +37432,8 @@
       "2026-11-12T10:36:58Z,claude-8,refusal,call,43201299916,100,2026-11-12T11:30:00Z,,,rejected,100,,2026-11-12T11:30:00Z"
     ],
     "runs": [
-      "2026-11-12T10:26:20Z,43199695621,claude-7,opus,plan,3734,medium,planned,,2,6,18471,753310,3.4276,70,72,,,873,claude-7,resumed,,1"
+      "2026-11-12T10:26:20Z,43199695621,claude-7,opus,plan,3734,medium,planned,,2,6,18471,753310,3.4276,70,72,,,873,claude-7,resumed,,1",
+      "2026-11-12T10:36:58Z,43201299916,claude-8,opus,build,3730,hard,interrupted,refusal,2.1,49,10322,1892932,1.4047,86,100,,,763,claude-8,fresh,,1"
     ]
   },
   "version": 1
