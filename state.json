@@ -15027,6 +15027,10 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-12T14:21:35Z",
       "stop_requested": false,
+      "strike_log": [
+        "CI still failed after 1 fix(es)"
+      ],
+      "strikes": 1,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 3
