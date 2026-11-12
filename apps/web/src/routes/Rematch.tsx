@@ -110,26 +110,43 @@ function joinRematchStatus(token: string, matchId: string, listener: Listener): 
   };
 }
 
+/** R3694000: the socket closed for good, the window over: one read (a rematch made in its last moment), no poll. */
+function readRematchOnce(token: string, matchId: string, listener: Listener): () => void {
+  let left = false;
+  rematchStatus(token, matchId).then(
+    (answer) => {
+      if (!left) listener(answer);
+    },
+    () => undefined,
+  );
+  return () => {
+    left = true;
+  };
+}
+
 /**
  * One status poll per match serves buttons and watcher (R3207002), so their navigation cannot drift apart.
  * R3213000: while the match socket holds a pushed status, that is the answer and nothing is read; once it
- * goes back to null (the socket dropped) the poll starts again, one read at once.
+ * goes back to null (the socket dropped) the poll starts again, one read at once. R3694000: once `over`
+ * (the socket closed for good on a finished match) it is read once and polled no longer.
  */
 function useRematchStatus(
   token: string,
   matchId: string,
   pushed: RematchStatusResponse | null,
   onStatus: (answer: RematchStatusResponse) => void,
+  over = false,
 ): void {
   const latest = useRef(onStatus);
   latest.current = onStatus;
   const live = pushed !== null;
   useEffect(() => {
     if (live) return;
-    return joinRematchStatus(token, matchId, (answer) => {
+    const hear = (answer: RematchStatusResponse): void => {
       latest.current(answer);
-    });
-  }, [token, matchId, live]);
+    };
+    return over ? readRematchOnce(token, matchId, hear) : joinRematchStatus(token, matchId, hear);
+  }, [token, matchId, live, over]);
   useEffect(() => {
     if (pushed !== null) latest.current(pushed);
   }, [pushed]);
@@ -140,15 +157,24 @@ export function RematchWatcher({
   token,
   matchId,
   pushed = null,
+  over = false,
 }: {
   token: string;
   matchId: string;
   /** R3213000: as `RematchButtonsProps.pushed`. */
   pushed?: RematchStatusResponse | null;
+  /** R3694000: the finished match's socket closed for good: its status is read once, not polled. */
+  over?: boolean;
 }): ReactElement | null {
-  useRematchStatus(token, matchId, pushed, (answer) => {
-    if (answer.matchId !== null) navigate(paths.match(answer.matchId));
-  });
+  useRematchStatus(
+    token,
+    matchId,
+    pushed,
+    (answer) => {
+      if (answer.matchId !== null) navigate(paths.match(answer.matchId));
+    },
+    over,
+  );
   return null;
 }
 

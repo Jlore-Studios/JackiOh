@@ -877,6 +877,10 @@ pub const GLITCH_BOARDS_SAMPLED: usize = 2;
 /// HTTP's 410 Gone: the match no longer exists. The last `view` the clients got already shows the
 /// game over with reason `voided`.
 pub const MATCH_VOIDED_CLOSE_CODE: u16 = 4410;
+/// R3694000: what the reaper closes a finished match's sockets still open with (seats' and watchers',
+/// 1v1 and co-op) once `REMATCH_OFFER_TTL_MS` has passed since its end, beside "the match is over".
+/// In the 4000–4999 range beside `MATCH_VOIDED_CLOSE_CODE`, and as final: no client reconnects on it.
+pub const MATCH_OVER_CLOSE_CODE: u16 = 4411;
 
 // ---------------------------------------------------------------------------------------------
 // Saved decks and trios (SPEC §9.4, R250–R256). PUBLIC: the deck builder imports these too.
