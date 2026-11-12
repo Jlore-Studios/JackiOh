@@ -17347,9 +17347,8 @@
     "what": "spot-check #3745 on claude-2"
   },
   "last_sweep": {
-    "at": "2026-11-12T04:02:24Z",
+    "at": "2026-11-12T04:09:37Z",
     "notes": [
-      "#3751 needs a plan",
       "#3750 is held for `claude-1` until 23:10 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))",
       "#3727 is held for `claude-1` until 23:10 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))",
       "#3695 is held for `claude-3` until 23:20 (it refused a call)"
@@ -18056,7 +18055,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-12T04:02:24Z",
+  "loop_tick": "2026-11-12T04:09:37Z",
   "machine_disk": {
     "issue": null,
     "reading": {
