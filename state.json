@@ -13733,6 +13733,13 @@
     "3609": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "43144921542",
+        "model": "sonnet",
+        "provider": "claude-4",
+        "since": "2026-11-12T03:18:15Z",
+        "until": "2026-11-12T03:48:15Z"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
