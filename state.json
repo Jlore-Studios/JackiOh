@@ -16366,17 +16366,16 @@
     "what": "build #3803 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-12T20:26:56Z",
+    "at": "2026-11-12T20:42:43Z",
     "notes": [
-      "#3803 needs a plan",
-      "#3797: approved and green, so its strikes are cleared",
-      "delivered plan #3802 on claude-1 (run 43298992995): planned",
-      "started build #3802 on claude-1 (run 43301163399)",
-      "started plan #3803 on claude-6 (run 43301377963)",
+      "delivered plan #3803 on claude-6 (run 43301377963): planned",
+      "delivered review #3761 on claude-3 (run 43298758014): approved",
+      "delivered plan #3800 on claude-4 (run 43290325247): failed",
+      "delivered revise #3783 on claude-4 (run 43287918850): approved",
+      "started plan #3800 on claude-4 (run 43304231986)",
+      "started build #3803 on claude-6 (run 43304456134)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days",
-      "#3803: typed it Task",
-      "runner gate: started 0 of 2 waiting run(s); 2 wait for room"
+      "runner gate: started 0 of 3 waiting run(s); 2 wait for room; run 43299739687 on bot/issue-3734: it waits on nothing this account may approve"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17082,7 +17081,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-12T20:26:56Z",
+  "loop_tick": "2026-11-12T20:42:43Z",
   "machine_disk": {
     "issue": null,
     "reading": {
