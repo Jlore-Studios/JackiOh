@@ -16388,6 +16388,13 @@
       "failures": 0,
       "feedback_since": "2026-11-12T16:34:47Z",
       "forced": false,
+      "hold": {
+        "ends": "2026-11-13T00:43:46Z",
+        "owner": "claude-3",
+        "since": "2026-11-12T22:43:46Z",
+        "until": "2026-11-12T22:50:00Z",
+        "why": "it refused a call"
+      },
       "interruptions": 0,
       "issue": 3777,
       "kind": "revise",
