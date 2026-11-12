@@ -13480,11 +13480,17 @@
       "verdict_rounds": 1
     },
     "3596": {
+      "action": "build",
+      "asks": [],
       "closeout": true,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
+      "live": "reconciling",
+      "owner": "claude-4",
+      "owner_since": "2026-11-12T08:40:36Z",
+      "owner_why": "it took it up",
       "parked": [
         "bot/issue-3538",
         "bot/issue-3541",
@@ -13499,9 +13505,14 @@
         "bot/issue-3571"
       ],
       "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-12T08:39:31Z",
       "requested_by": "jgoetzmann-bot",
+      "run_id": "pending:04c1c0e2-1794472798",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-12T08:40:36Z",
       "stop_requested": false,
+      "taken_asks": [],
       "tree": {
         "adopted": true,
         "at": "2026-11-10T02:56:37Z",
@@ -17658,9 +17669,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T08:31:13Z",
+    "at": "2026-11-12T08:40:36Z",
     "url": "",
-    "what": "build #3764 on claude-6"
+    "what": "build #3596 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-12T08:28:46Z",
