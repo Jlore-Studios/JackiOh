@@ -41,8 +41,9 @@ var (
 var Explained = "<!-- jackioh-bot:runners-explained -->"
 
 // HostedRunners is HOSTED_RUNNERS: GitHub's runners the organization may hold at once, its every
-// repository's jobs together (the Free plan's 20: selfplay.yml's header, #1455).
-var HostedRunners = 20
+// repository's jobs together (the Team plan's 60 since 2026-11-11, #3740; the Free plan's 20
+// before, #1455).
+var HostedRunners = 60
 
 // RunnerRuns is RUNNER_RUNS: the runs going or queued whose jobs the section reads, the oldest
 // first: a call each, which costs no rate limit while the run's jobs are as they were at the last
