@@ -15228,8 +15228,12 @@
     "3775": {
       "action": "review",
       "asks": [],
+      "ci_early": false,
       "ci_fixed_head": "72a836dc28aed7bdcddfdd3143bc81df33ab0beb",
-      "ci_fixes": 1,
+      "ci_fixes": 2,
+      "ci_on_head": true,
+      "ci_run_id": 43248833147,
+      "ci_sha": "72a836dc28aed7bdcddfdd3143bc81df33ab0beb",
       "cleared": {
         "approver": {
           "family": "claude",
@@ -15249,12 +15253,13 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3734,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner": "claude-7",
       "pending_request": false,
       "provider": "claude-7",
-      "queued_at": "2026-11-12T13:48:09Z",
+      "queued_at": "2026-11-12T16:00:08Z",
+      "requested_by": "jgoetzmann-bot",
       "run_id": "43231044993",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -15275,6 +15280,7 @@
         "provider": "claude-7",
         "run": "43231044993"
       },
+      "source": "ci",
       "started_at": "2026-11-12T13:49:44Z",
       "stop_requested": false,
       "taken_asks": [],
