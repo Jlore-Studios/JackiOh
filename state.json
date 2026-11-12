@@ -15621,7 +15621,7 @@
       "planned_at": "2026-11-12T01:22:03Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
-      "planned_model": "sonnet",
+      "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-3",
       "queued_at": "2026-11-11T15:39:21Z",
