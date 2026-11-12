@@ -16535,6 +16535,7 @@
     "3803": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-12T20:44:55Z",
         "difficulty": "medium",
@@ -16543,6 +16544,7 @@
         "why": "No rule line holds: the change is a comment in scripts/ci-shards.toml (the count fix already landed in #3765), one file, no engine, AI, cross-crate or migration work."
       },
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-11-12T20:42:04Z",
         "family": "claude",
@@ -16552,6 +16554,7 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"cat scripts/ci-shards.toml; cat e2e/scripts/shard-specs.mjs; ls e2e/cypress/e2e | head -100\"}\n- Bash: {\"command\": \"git log --oneline -8 -- scripts/ci-shards.toml e2e/scripts/shard-specs.mjs; git show eef28c3240 --stat | head -30; cd e2e; for k in 1 2 3 4 5 6; do echo \\\"K6 $k: $(node scripts/shard-spe\u2026\n- Bash: {\"command\": \"cd ..; grep -n -i \\\"smoke\\\\|shard\\\" bot/tests/test_ci_matrix.py | head -40; git log -3 --format='%h %ad %s' --date=iso; grep -rn \\\"e2e smoke\\\" .github/workflows/ci-duration.yml | head\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3803/.bot-plan.md\", \"content\": \"Draft: #3803 is stale. ci-shards.toml already has e2e smoke = 4 (#3765, eef28c3), run in issue was 2 shards. bot/tests\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"No rule line holds: the change is a comment in scripts/ci-shards.toml (the count fix already landed in #3765), one file, no engine, AI, cross-crate or migration work.\"} --> ## Goal Issue #3803 reports `e2e smoke (1/2)` at 8m 13s and `(2/2)` at 7m 32s. Thos\u2026"
       },
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "live": "building",
