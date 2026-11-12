@@ -147,7 +147,7 @@ describe("audio constants", () => {
   });
 
   it("pins the voice budget R501 caps and the per-hook word caps", () => {
-    expect(VOICE_BUDGET_BYTES).toBe(16 * 1024 * 1024);
+    expect(VOICE_BUDGET_BYTES).toBe(24 * 1024 * 1024);
     expect(VOICE_FILE_MAX_MS).toBe(4000);
     expect(VOICE_MAX_WORDS).toEqual({ play: 8, attack: 4, death: 6, cast: 8, trigger: 8 });
   });
