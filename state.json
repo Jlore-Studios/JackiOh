@@ -35063,6 +35063,7 @@
         "every": 5,
         "head": "22f1babd0912caac443d70f172a28abb1537d904",
         "issue": 3770,
+        "last_why": "interrupted: `claude-5` stops before it starts: 7-day usage is 64%, at or over its 60% cap; it resets at 2026-11-16T09:00:00Z",
         "merged_at": "2026-11-12T16:34:53Z",
         "n": 225,
         "pr": 3782,
@@ -35073,7 +35074,7 @@
           "provider": "claude-5",
           "tier": "strong"
         },
-        "run_id": "pending:76f5056c-1794501304",
+        "run_id": "",
         "sha": "6a1d86fe8480777846536d27b88ae640df1ad1ba",
         "started_at": "2026-11-12T16:35:55Z",
         "status": "queued",
