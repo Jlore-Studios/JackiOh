@@ -29,8 +29,13 @@ const SOURCE = join(SRC, "patches/source.ts");
  * a card's picture reads at once. `vite build --mode development`, as CI builds it, measured 980,369
  * bytes on `main` at 62b8ed2e3d and 987,635 with #3394 merged in (7,266 more). The budget is now
  * 123 × 8192 (1,007,616), about 20 KB (2.0%) over that: putting `patches.json` back would still cross it.
+ *
+ * The Stinkyscape+ release (#3596) crossed it: the set's 204 entries reach the first load in the catalog,
+ * their words and Chinese, their art and their effects table. CI's build of the pull request merged into
+ * `main` (b237155b5) measured 1,055,996 bytes. The budget is now 132 × 8192 (1,081,344), about 25 KB (2.4%)
+ * over that: putting `patches.json` back would still cross it.
  */
-export const FIRST_LOAD_GZIP_BUDGET_BYTES = 1_007_616;
+export const FIRST_LOAD_GZIP_BUDGET_BYTES = 1_081_344;
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
