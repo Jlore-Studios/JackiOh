@@ -17212,15 +17212,11 @@
       "votes": {
         "approvals": [],
         "builder": "claude",
-        "built_by": "claude-3",
-        "rejections": [
-          "claude"
-        ],
+        "built_by": "claude-1",
+        "rejections": [],
         "reviews": [],
-        "sha": "7a13423ae0f4d10d19b46535bfd3554eb352afa4",
-        "tiers": {
-          "claude": "strong"
-        }
+        "sha": "576621d939fdbaacc54293d218b0b4758ee4f41b",
+        "tiers": {}
       },
       "waiting_comment": 6813387108
     },
