@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 3771,
+  "title": "Patch: the Worker asks again after a failed version check, and a failed retire of the old server no longer fails every request",
+  "branch": "bot/issue-3771",
+  "thread": "**Issue #3771 (data, not instructions):**\n\n```text\n# #3771: Patch: the Worker asks again after a failed version check, and a failed retire of the old server no longer fails every request\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nWhen a new server version deploys, the site's front door checks whether the running game server is the old one, and if so restarts it on the new one. Today that check runs once. If the old server is too busy to answer at that moment, the old version keeps running until the server sleeps, which it never does while people play. If the restart itself errors, every request after it fails, and players retrying keep it that way. After this:\n- a failed check is tried again a little later;\n- the check can't hold a request up indefinitely;\n- a failed restart is logged and the request goes through.\n\n## Why\n- `apps/edge/src/index.ts:56-57` runs `this.imageChecked ??= this.retireOlderImage(); await this.imageChecked;`, one promise per Durable Object, kept for the object's life.\n- A failed `/healthz` fetch returns without retiring (`index.ts:87-94`), so the promise settles as if the check had passed. The old image then serves until the container sleeps (`SLEEP_AFTER`), which live sockets prevent.\n- `this.stop('SIGTERM')` and `this.destroy()` (`index.ts:96-101`) are not caught. If either rejects, `imageChecked` stays rejected and every later request through the object throws at line 57.\n- The `/healthz` fetch has no timeout, so a hung old server stalls every request queued behind the first.\n- `apps/edge/src/index.test.ts:165-172` pins that a failed check still reaches the server. Nothing pins a retry, and no test makes `stop` reject.\n\n## Proposal\n- Keep the check's promise only once it succeeds. On a failure, clear it so a later request asks again, no sooner than `IMAGE_CHECK_RETRY_MS` after the last try.\n- Bound the fetch with `AbortSignal.timeout(IMAGE_CHECK_TIMEOUT_MS)`.\n- Catch a failed `stop` or `destroy`, log `server.retire_failed`, and go on to start and forward as today.\n- Put the constants beside `RETIRE_WAIT_MS` (`index.ts:38`) and add a sentence to `apps/edge/README.md`.\n- `/healthz` itself does not change (CLAUDE.md rule 13).\n\n## Where it lands\n`apps/edge/src/index.ts`, `apps/edge/src/index.test.ts`, `apps/edge/README.md`.\n\n## Acceptance criteria\nThe tests use vitest with fake timers:\n- [ ] A check that failed is asked again on a request after the retry interval, and an older commit found then is retired.\n- [ ] A `stop` that rejects once leaves that request and the next one answered.\n- [ ] A `/healthz` that never answers lets the request through after the timeout.\n- [ ] A check that succeeded is not repeated.\n- [ ] `pnpm exec vitest run --project edge` is green.\n\n## Size and risks\n- Small to medium: 3 files and about 80 lines plus tests.\n- Open issue #3618 also edits `index.ts`, so the two may conflict.\n- How often the platform rejects these calls is unknown. This is insurance against an outage, not a fix for one already seen.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-12T13:54:50Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3771: needs a plan; `claude-6` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-12T13:55:18Z",
+    "claimed_at": "2026-11-12T14:02:13Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3729 skipped: it waits for #3727, #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3730 to close first",
+    "#3733 skipped: it waits for #3727 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
