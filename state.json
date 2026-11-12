@@ -17132,7 +17132,16 @@
       "feedback_since": "2026-11-12T00:24:21Z",
       "issue": 3693,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-7",
+        "rejections": [],
+        "reviews": [],
+        "sha": "ba30e4abf57695da8e60641bec5d551169371846",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "fce3910f5abefcbe",
