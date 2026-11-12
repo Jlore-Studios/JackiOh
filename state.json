@@ -13705,15 +13705,8 @@
       "verdict_rounds": 3
     },
     "3609": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43144921542",
-        "model": "sonnet",
-        "provider": "claude-4",
-        "since": "2026-11-12T03:18:15Z",
-        "until": "2026-11-12T03:48:15Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -13725,10 +13718,9 @@
         "reason": "planned on sonnet",
         "trail": "edAimTarget.ts | head -80; sed -n 1,140p aim/useAimEmitter.ts\", \"description\": \"Aim hooks\"}\n- Bash: {\"command\": \"grep -n \\\"useState\\\\|setState\\\\|setInteraction\\\\|onInteraction\\\\|onLift\\\\|style\\\\.\\\\|setProperty\\\\|latest\\\\.\\\\|pointermove\\\\|onMove\\\\|requestAnimationFrame\\\" drag/DragLayer.tsx | head -8\u2026\n- Bash: {\"command\": \"sed -n 120,215p drag/DragLayer.tsx; sed -n 395,500p drag/DragLayer.tsx\", \"description\": \"DragLayer pointer code\"}\n- Bash: {\"command\": \"sed -n 280,395p drag/DragLayer.tsx\", \"description\": \"DragLayer onPointerMove\"}\n- Bash: {\"command\": \"sed -n 520,700p drag/DragLayer.tsx\", \"description\": \"DragLayer render\"}\n- Bash: {\"command\": \"grep -n \\\"export function useLiveFace\\\" -B14 -A40 faces.ts; grep -n \\\"export function liveFace\\\" -A25 faces.ts\", \"description\": \"faces.ts useLiveFace\"}\n- Bash: {\"command\": \"cd ..; grep -rln \\\"pointermove\\\\|onPointerMove\\\" --include=*.ts --include=*.tsx . | grep -v \\\"\\\\.test\\\\.\\\" ; echo ---; grep -n \\\"MatchCardsProvider\\\" -A25 game/catalog.ts | sed -n 1,50p\"\u2026\n- Bash: {\"command\": \"grep -n \\\"pointermove\\\\|onPointerMove\\\\|useState\\\\|setState\\\\|set[A-Z][a-zA-Z]*(\\\" cards/tilt.ts cards/inspect/useInspectTrigger.tsx cards/hostMove.ts fx/FxLayer.tsx | head -40\", \"descri\u2026\n- Bash: {\"command\": \"cd game; ls drag aim | head -40; grep -ln \\\"drag-ghost\\\" *.test.tsx drag/*.test.tsx 2>/dev/null; sed -n 1,80p drag/DragLayer.test.tsx 2>/dev/null | head -120\", \"description\": \"Existing d\u2026\n- Bash: {\"command\": \"cd ../test/ux; sed -n 1,140p drag-layer.test.tsx; ls | head -60\", \"description\": \"Drag layer test through Game\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3609/.bot-plan.md\", \"content\": \"# Draft notes for #3609 (planner, run 2)\\n\\n## Verified findings (all checked against code in run 2)\\n- `Card` (Card.t\u2026\n- Bash: {\"command\": \"cd ../../game; sed -n 255,320p Game.tsx; sed -n 630,712p Game.tsx\", \"description\": \"Game props and view effects\"}\n- Bash: {\"command\": \"grep -rn \\\"export function newEventsSince\\\" -B6 -A30 --include=*.ts . ../ 2>/dev/null | head -70\", \"description\": \"newEventsSince implementation\"}\n- Bash: {\"command\": \"cd ../../..; grep -rn \\\"export type PlayerView\\\" -A60 wire/generated/PlayerView.ts 2>/dev/null | head -90; ls wire/generated | grep -i \\\"PlayerView\\\\|SideView\\\"\", \"description\": \"PlayerV\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3609/apps/web/src; ls wire/generated | grep -i \\\"PlayerView\\\\|SideView\\\\|^CardView\\\\|UnitView\\\"; cat wire/generated/PlayerView.ts | sed -n 1,80p\", \"d\u2026\n- Bash: {\"command\": \"grep -rnE \\\"(!==|===) *(prev|previous|before|old|last)[A-Za-z]*(\\\\.(you|opponent)\\\\b|Unit|Card)\\\" --include=*.ts --include=*.tsx . | grep -v \\\"\\\\.test\\\\.\\\" | head -20; grep -rn \\\"WeakMap\u2026\n- Bash: {\"command\": \"cd game; grep -rn \\\"sameCardProps\\\\|cardAnimatingKeys\\\\|sameHighlight\\\" --include=*.ts --include=*.tsx .. | grep -v \\\"^../game/Card.tsx\\\" | head; grep -n \\\"hintRow\\\\|view=\\\" Board.tsx | \u2026\n- Bash: {\"command\": \"sed -n 484,512p Board.tsx; sed -n 700,730p Board.tsx\", \"description\": \"Seat Card and Board hands\"}\n- Bash: {\"command\": \"grep -n \\\"liveFace\\\\|useLiveFace\\\\|faces.ts\\\" drag/DragLayer.tsx; grep -rn \\\"liveFace(\\\" --include=*.tsx . | grep -v \\\"\\\\.test\\\\.\\\" | head; cd ../; grep -n \\\"\\\\\\\"test\\\\\\\"\\\\|vitest\\\" ../p\u2026\n- Bash: {\"command\": \"cd game; grep -n \\\"CatalogContext\\\" Game.tsx | head -3; sed -n 1,40p ../test/board.tsx; grep -n \\\"export function fullBoardView\\\" -B3 -A70 ../test/fixtures.ts | head -130; sed -n 1,60p G\u2026\n- Bash: {\"command\": \"grep -n \\\"marksOf\\\" Card.tsx | head; grep -n \\\"export function resetIds\\\" -A8 ../test/fixtures.ts; grep -n \\\"function card(\\\\|function unit(\\\" -A12 ../test/fixtures.ts | head -50\", \"desc\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3609; git show --stat 2cc523ea72 | head -40; grep -n \\\"memo\\\\|3633\\\\|3478\\\" apps/web/README.md | head -20\", \"description\": \"Part 4 commit file list a\u2026\n- Bash: {\"command\": \"git show --stat=200 2cc523ea72 | grep json; f=$(git show --name-only --format= 2cc523ea72 | grep \\\"\\\\.json$\\\" | head -1); echo $f; git show 2cc523ea72:$f; ls patches 2>/dev/null | head; \u2026\n- Bash: {\"command\": \"ls crates/cards/patches/pending | head -20; grep -n \\\"visual\\\\|fragment\\\" docs/issues-and-patches.md | head -30\", \"description\": \"Pending fragments and doc rules\"}\n- Bash: {\"command\": \"sed -n 120,180p docs/issues-and-patches.md; sed -n 312,330p docs/issues-and-patches.md; git log --oneline -6 --format=\\\"%h %s\\\" -- crates/cards/patches/pending apps/web/src | head\", \"des\u2026\n- Bash: {\"command\": \"cd apps/web/src; grep -n \\\"memo(\\\" cards/CardFace.tsx cards/MinionFace.tsx cards/*.tsx | head; grep -n \\\"hintsFor\\\\|HandHint\\\\b\\\" --include=*.ts --include=*.tsx -r . | grep -v \\\"handHint\u2026\n- Bash: {\"command\": \"cd game; grep -n \\\"Context\\\\|Provider\\\\|useContext\\\\|export function\\\" keywordLoss.ts awakening.ts spent.ts wearer.ts | head -50; sed -n 686,700p Board.tsx; grep -n \\\"Provider\\\" Board.ts\u2026\n- Bash: {\"command\": \"sed -n 15,60p keywordLoss.ts; sed -n 10,45p awakening.ts; sed -n 36,60p wearer.ts\", \"description\": \"keywordLossesFrom, awakeningsFrom, WearerProvider values\"}\n- Bash: {\"command\": \"cd ../..; grep -n \\\"keywordLoss\\\\|handHints\\\\|faces.ts\\\\|glow.ts\\\\|hoveredHandCard\\\" README.md | head; grep -n \\\"Hand hints\\\\|#3633\\\\|sameCardProps\\\" README.md ../../docs/*.md 2>/dev/nul\u2026\n- Bash: {\"command\": \"sed -n 495,512p README.md; grep -n \\\"^#\\\\+ \\\" README.md | sed -n 1,60p | grep -in \\\"board\\\\|game\\\\|render\\\\|perf\\\\|frame\\\" \", \"description\": \"README hand hints and relevant headings\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3609/.bot-plan.md\", \"old_string\": \"## TODO\\nread Game.tsx props/view uses (lines ~255-320, ~637-705) & Board.tsx Card use; then \u2026\n- said: ## Goal A fresh view from the wasm module or the socket redraws only the cards whose own data changed. Selecting a card redraws only the cards whose selected, legal or glow state changes. Moving the pointer during a drag or an aim redraws no card, and costs no wasm face call. Nothing the board show\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-12T02:57:30Z",
       "owner_why": "handed off from `claude-3`: `claude-3` it refused a call; its limit resets at 2026-11-12T05:20:00Z; it can start again only in 2h 22m, more than the 120 minutes an item waits for its owner",
@@ -13741,9 +13733,9 @@
       "provider": "claude-4",
       "queued_at": "2026-11-10T03:21:46Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43144921542",
+      "run_id": "pending:0fef30ed-1794453606",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-12T02:57:30Z",
+      "started_at": "2026-11-12T03:21:07Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17307,9 +17299,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T03:08:00Z",
+    "at": "2026-11-12T03:21:07Z",
     "url": "",
-    "what": "build #3727 on claude-1"
+    "what": "build #3609 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-12T03:05:01Z",
