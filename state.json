@@ -15200,10 +15200,23 @@
     "what": "plan #3773 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-12T13:46:32Z",
+    "at": "2026-11-12T13:56:57Z",
     "notes": [
-      "delivered build #3734 on claude-7 (run 43208715702): built",
-      "started review #3775 on claude-7 (run 43231044993)",
+      "#3775: `web (unit 3/8)` red in CI run 43230745515; its other early jobs have until 2026-11-12T13:59:17Z to report",
+      "#3767 needs a plan",
+      "#3768 needs a plan",
+      "#3770 needs a plan",
+      "#3771 needs a plan",
+      "#3772 needs a plan",
+      "#3773 needs a plan",
+      "#3761: @MaxGoetzmann answered its question, so it is queued again with the answer",
+      "started revise #3761 on claude-3 (run 43232565702)",
+      "started plan #3767 on claude-4 (run 43232729035)",
+      "started plan #3768 on claude-6 (run 43232911251)",
+      "started plan #3771 on claude-6 (run 43233078250)",
+      "started plan #3770 on claude-7 (run 43233242461)",
+      "started plan #3772 on claude-3 (run 43233426919)",
+      "started plan #3773 on claude-3 (run 43233607466)",
       "nothing more to start: nothing is queued",
       "pruned 1 plan file(s) older than 7 days"
     ],
@@ -15909,7 +15922,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-12T13:46:32Z",
+  "loop_tick": "2026-11-12T13:56:57Z",
   "machine_disk": {
     "issue": null,
     "reading": {
