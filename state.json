@@ -14163,10 +14163,17 @@
     },
     "3734": {
       "action": "build",
+      "archived": {
+        "at": "2026-11-12T17:26:46Z",
+        "branch": "bot/issue-3734",
+        "head": "72a836dc28aed7bdcddfdd3143bc81df33ab0beb",
+        "issue": 3734,
+        "item": 3775,
+        "pr": 3775,
+        "why": "A person must give the smoke list more capacity, in one of two ways. (1) Recommended: set `[e2e] smoke = 3` in `scripts/ci-shards.toml`. In `bot/tests/test_ci_matrix.py`, change the assertion at line 75 to `[1, 2, 3]` and make the edit at line 120 turn \"smoke = 3\" into \"smoke = 4\". With three shards each one holds about 430 s of specs even with the current weights, so nothing else changes. (2) Or raise `timeout-minutes: 10` on the `e2e-smoke-shard` job in `.github/workflows/ci.yml` to about 15. Either can go in its own pull request to `main`. Then re-run CI on this branch. The branch needs no change for it."
+      },
       "asks": [],
       "died": 0,
-      "failures": 0,
-      "forced": false,
       "handoff": {
         "at": "2026-11-12T13:38:21Z",
         "family": "claude",
@@ -14177,13 +14184,9 @@
         "trail": "h -c 'until grep -qE \\\"passing|Run Finished\\\" /tmp/cy-layout-base.log; do sleep 5; done'; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/cy-layout-base.log | grep -E \\\"passing|failing|\\\u2026\n- Bash: {\"command\": \"git worktree remove --force /home/runner/work/_temp/work/jackioh-wt/base 2>&1 | tail -2; git branch -D wt/base 2>&1 | tail -1; git worktree list; cd e2e && timeout 900 pnpm exec cypress \u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3734/e2e/artifacts/component/screenshots/zz-shots.cy.tsx/collection-cards-1280.png\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3734/e2e/artifacts/component/screenshots/zz-shots.cy.tsx/collection-cards-820.png\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3734/e2e/artifacts/component/screenshots/zz-shots.cy.tsx/collection-cards-390.png\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/collection/browse.css'\\ns=open(p).read()\\nold='''.app-shell.collection-screen > .collection-tabs {\\n gap: var(--space-4);\\n}'''\\nassert old in s\\ns=s.r\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3734/e2e/artifacts/component/screenshots/zz-shots.cy.tsx/collection-decks-820.png\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3734/e2e/artifacts/component/screenshots/zz-shots.cy.tsx/collection-cosmetics-1280.png\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3734/e2e/artifacts/component/screenshots/zz-shots.cy.tsx/workshop-820.png\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3734/e2e/artifacts/component/screenshots/zz-shots.cy.tsx/workshop-700.png\"}\n- Bash: {\"command\": \"cd e2e && timeout 900 pnpm exec cypress run --component --spec cypress/component/zz-shots.cy.tsx,cypress/component/collection-screen.cy.tsx > /tmp/cy-shots2.log 2>&1; cd /home/runner/wor\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3734/e2e/artifacts/component/screenshots/zz-shots.cy.tsx/collection-cards-1280.png\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3734/e2e/artifacts/component/screenshots/zz-shots.cy.tsx/collection-progress-1280.png\"}\n- Bash: {\"command\": \"grep -rn \\\"\\\\-\\\\-tavern-content\\\" apps/web/src/auth/tavern.css | head -3; rm -f e2e/cypress/component/zz-shots.cy.tsx; rm -rf e2e/artifacts; git status --short | grep -v \\\"^ M\\\\|^??\\\" | \u2026\n- Bash: {\"command\": \"(timeout 1500 pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts' > /tmp/vitest-\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\na=s.index('TODO next:')\\nb=s.index('Note: never `cd`')\\ns=s[:a]+'''Done since: FilterBar chips part has no DB_FILTERS testid; tab \u2026\n- Bash: {\"command\": \"timeout 900 bash -c 'until grep -qE \\\"Test Files\\\" /tmp/vitest-changed.log; do sleep 5; done'; grep -E \\\"FAIL|\\u00d7|Test Files|Tests |Error\\\" /tmp/vitest-changed.log | grep -v \\\"^::erro\u2026\n- Bash: {\"command\": \"sleep 240; grep -E \\\"Test Files|Tests \\\" /tmp/vitest-changed.log | head; grep -c \\\"\\u2713\\\\|FAIL\\\" /tmp/vitest-changed.log; tail -3 /tmp/vitest-changed.log | cut -c1-160\", \"description\":\u2026\n- tool error: <tool_use_error>Blocked: sleep 240 followed by: grep -E \"Test Files|Tests \" /tmp/vitest-changed.log head grep -c \"\u2713\\|FAIL\" /tmp/vitest-changed.log tail -3 /tmp/vitest-changed.log cut -c1-160. To wait\u2026\n- Read: {\"file_path\": \"/tmp/claude-1001/-home-runner-work--temp-work-item-3734/91acb308-afaf-42e7-af4b-6de26e443b44/tasks/bcs51ed2y.output\"}\n- Bash: {\"command\": \"timeout 540 bash -c 'until grep -qE \\\"Test Files\\\" /tmp/vitest-changed.log; do sleep 5; done'; grep -E \\\"FAIL|\\u00d7|Test Files|Tests \\\" /tmp/vitest-changed.log | grep -v \\\"^::error\\\" | \u2026\n- Bash: {\"command\": \"grep -n \\\"landing \\u2192 /collection \\u2192 landing\\\" -B3 -A50 apps/web/src/routes/navigation-reads.test.tsx | head -120; grep -B2 -A25 \\\"FAIL.*navigation-reads\\\" /tmp/vitest-changed.log\u2026\n- Bash: {\"command\": \"sed -n 1,100p apps/web/src/routes/navigation-reads.test.tsx\", \"description\": \"Read the navigation-reads test setup\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/routes/navigation-reads.test.tsx'\\ns=open(p).read()\\nold='''const { App } = await import(\\\"../main.tsx\\\");'''\\nnew='''// The Collection opens on its Ca\u2026\n- Bash: {\"command\": \"pnpm exec eslint apps/web e2e 2>&1 | tail -15; echo \\\"eslint exit: ${PIPESTATUS[0]}\\\"; pnpm --dir apps/web typecheck 2>&1 | tail -3; (cd e2e && timeout 300 pnpm exec tsc -p cypress/compo\u2026\n- Bash: {\"command\": \"sed -i 's|it(`R3734000 Cosmetics fits one screen at ${size}`|it(`R1579000 R3734000 Cosmetics fits one screen at ${size}`|' e2e/cypress/component/collection-screen.cy.tsx; grep -n \\\"R1579\u2026\n- Bash: {\"command\": \"git status --short | grep -v \\\"^ M\\\"; git diff --stat | tail -1; ls ../jackioh-wt 2>/dev/null | head -2; git worktree list\", \"description\": \"Final status: untracked files and worktrees\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nR='/home/runner/work/_temp/work/item-3734/'\\np=R+'apps/web/src/game/deckbuilder/FilterBar.tsx'\\ns=open(p).read()\\ns=s.replace(''' /** Issue #3734: the keyword chips, i\u2026\n- Bash: {\"command\": \"grep -n \\\"SORT_KEYS\\\" apps/web/src/game/deckbuilder/FilterBar.tsx; sed -i 's|{SORT_KEYS.map((key) => (|{sorts.map((key) => (|' apps/web/src/game/deckbuilder/FilterBar.tsx; grep -n \\\"SORT\u2026\n- Bash: {\"command\": \"pnpm exec eslint apps/web e2e 2>&1 | tail -5; echo \\\"eslint: ${PIPESTATUS[0]}\\\"; pnpm --dir apps/web exec vitest run src/game/deckbuilder src/collection src/routes/collection.test.tsx sr\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\na=s.index('TODO next:')\\nb=s.index('Note: never `cd`')\\ns=s[:a]+'''FINISHED (this pass). Last changes: navigation-reads.test.tsx m\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a collection you can search: one card grid with filters and sort across the full width, and a deck builder that drags by touch and splits on an upright iPad\"} --> ## What changed **The Collection** (`R3734000`, amends `R1579000`). `/collection` now fill\u2026"
       },
       "interruptions": 0,
-      "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-4",
-      "owner_since": "2026-11-12T16:33:31Z",
-      "owner_why": "handed off from `claude-7`: `claude-7` is busy: its lanes are all taken",
-      "pending_request": false,
+      "owner": "",
       "planned_at": "2026-11-12T10:29:46Z",
       "planned_by": "`claude-7` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-7",
@@ -14192,18 +14195,14 @@
       "pr": 3775,
       "provider": "claude-7",
       "question": "",
-      "round_tier": "medium",
       "run_id": "43208715702",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-12T11:23:13Z",
-      "stop_requested": false,
       "strike_log": [
         "CI still failed after 1 fix(es)"
       ],
       "strikes": 1,
-      "taken_asks": [],
-      "verdict_rounds": 3,
-      "waiting_comment": 6819710196
+      "taken_asks": []
     },
     "3736": {
       "action": "build",
@@ -15251,13 +15250,15 @@
     },
     "3775": {
       "action": "revise",
+      "archived": {
+        "at": "2026-11-12T17:26:46Z",
+        "branch": "bot/issue-3734",
+        "head": "72a836dc28aed7bdcddfdd3143bc81df33ab0beb",
+        "issue": 3734,
+        "pr": 3775,
+        "why": "A person must give the smoke list more capacity, in one of two ways. (1) Recommended: set `[e2e] smoke = 3` in `scripts/ci-shards.toml`. In `bot/tests/test_ci_matrix.py`, change the assertion at line 75 to `[1, 2, 3]` and make the edit at line 120 turn \"smoke = 3\" into \"smoke = 4\". With three shards each one holds about 430 s of specs even with the current weights, so nothing else changes. (2) Or raise `timeout-minutes: 10` on the `e2e-smoke-shard` job in `.github/workflows/ci.yml` to about 15. Either can go in its own pull request to `main`. Then re-run CI on this branch. The branch needs no change for it."
+      },
       "asks": [],
-      "ci_early": false,
-      "ci_fixed_head": "72a836dc28aed7bdcddfdd3143bc81df33ab0beb",
-      "ci_fixes": 2,
-      "ci_on_head": true,
-      "ci_run_id": 43248833147,
-      "ci_sha": "72a836dc28aed7bdcddfdd3143bc81df33ab0beb",
       "cleared": {
         "approver": {
           "family": "claude",
@@ -15272,41 +15273,16 @@
       },
       "died": 0,
       "difficulty": "medium",
-      "failures": 0,
       "feedback_since": "2026-11-12T11:23:13Z",
-      "forced": false,
       "interruptions": 0,
       "issue": 3734,
-      "kind": "revise",
       "live": "fixing-ci",
-      "merge_owner": "claude-7",
-      "pending_request": false,
       "provider": "claude-4",
-      "queued_at": "2026-11-12T16:00:08Z",
-      "requested_by": "jgoetzmann-bot",
+      "question": "A person must give the smoke list more capacity, in one of two ways. (1) Recommended: set `[e2e] smoke = 3` in `scripts/ci-shards.toml`. In `bot/tests/test_ci_matrix.py`, change the assertion at line 75 to `[1, 2, 3]` and make the edit at line 120 turn \"smoke = 3\" into \"smoke = 4\". With three shards each one holds about 430 s of specs even with the current weights, so nothing else changes. (2) Or raise `timeout-minutes: 10` on the `e2e-smoke-shard` job in `.github/workflows/ci.yml` to about 15. Either can go in its own pull request to `main`. Then re-run CI on this branch. The branch needs no change for it.",
       "run_id": "43259999755",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "session": {
-        "action": "review",
-        "artifact": 13957565918,
-        "artifact_bytes": 155156,
-        "artifact_name": "work",
-        "at": "2026-11-12T15:32:41Z",
-        "bytes": 171292,
-        "cwd": "/home/runner/work/_temp/work/item-3775",
-        "ended": "approved: the reviewer approved and every check passed",
-        "head": "72a836dc28aed7bdcddfdd3143bc81df33ab0beb",
-        "id": "ed23ae79-f672-456d-8bfe-c599a4a07593",
-        "kind": "build",
-        "model": "sonnet",
-        "project": "-home-runner-work--temp-work-item-3775",
-        "provider": "claude-7",
-        "run": "43231044993"
-      },
-      "source": "ci",
       "started_at": "2026-11-12T16:33:31Z",
-      "stop_requested": false,
       "taken_asks": [],
       "votes": {
         "approvals": [
