@@ -14682,7 +14682,7 @@
         "reason": "the builder needs a person to decide something",
         "trail": "- Bash: {\"command\": \"git status --short | head; cat .bot-notes.md 2>/dev/null | head -60; grep -n \\\"Numbers\\\\|not met\\\" spec/rulings/R3695000.md | head; grep -n \\\"stinkyscape-036\\\\|Drone Core X\\\" training/hi\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"## State\\\\n\\\",\\\"## State\\\\n\\\\nPass 2 (review round 1, claude-3): the only blocking finding (sweep criterion 4 not me\u2026\n- said: <!-- bot: {\"status\": \"blocked\", \"problem\": \"The reviewer's one blocking finding is correct. Issue #3695's fourth acceptance item asks that `cargo jackioh sweep stinkyscape-033 stinkyscape-034 stinkyscape-035 stinkyscape-036` show more casts than the 2026-10-29 report. The branch's own numbers don't\u2026"
       },
-      "interruptions": 0,
+      "interruptions": 1,
       "issue": 3695,
       "kind": "revise",
       "live": "revising",
