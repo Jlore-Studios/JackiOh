@@ -1393,7 +1393,7 @@ fn r1301_a_hidden_definition_is_a_hidden_card_whatever_its_instance() {
 fn a_transformed_or_deradianted_cards_line_opens_that_card() {
     let view = board(json!([
         { "type": "transformed", "instanceId": "u1", "fromDefId": "core-032", "toDefId": "core-020", "newInstanceId": "t1" },
-        { "type": "deradianted", "instanceId": "u1", "defId": "core-032", "zone": "field" },
+        { "type": "deradianted", "instanceId": "u1", "defId": "core-032", "zone": { "z": "field", "player": "p1", "row": "units", "lane": 1 } },
     ]));
     assert_eq!(
         cards(&view),
