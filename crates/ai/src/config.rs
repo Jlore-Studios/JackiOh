@@ -619,7 +619,9 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // R3695001: half, as a turn's wait is for R2380000's shares: a card beneath an own Stack pile acts
     // again only once the cards above it leave. #1506 had it off (at 0.5 and 1.0 its screen read
     // 200-200, edge 0.0, -0.024 to 0.024), so casting Drone Core X gained only its Shield Layer and
-    // Hard on 7 crystals cast Genn or Greaser over it. GATE_AND_SCREEN_PENDING
+    // Hard on 7 crystals cast Genn or Greaser over it. At 0.5 the smoke gate read 19, 16 and 20 of 20,
+    // as at 0, its screen against 0 read 200-200, edge 0.0 (0.0 to 0.0), and the sweep of the four Drone
+    // Cores cast X once in Hard's 3 affordable pass-2 turns, where 0 cast it in none (R3695001).
     dormant_share: 0.5,
     dormant_card: 0.0,
     // R2380000: untuned starts for the training lanes, as #1886's are. A turn's wait at half, so
