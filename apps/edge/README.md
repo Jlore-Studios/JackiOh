@@ -37,7 +37,10 @@ custom domains and Access are `infra/cloudflare.tf`'s.
   first request after a deploy asks the running server's `/healthz` for its `x-deployed-commit`; if
   that is not the Worker's `DEPLOYED_COMMIT`, it stops the old server (giving it `RETIRE_WAIT_MS` to
   drain) and the request starts the new one. Live matches rebuild from their seed and log when
-  their sockets return (SPEC §9.5).
+  their sockets return (SPEC §9.5). A check that fails (the old server does not answer `/healthz`
+  within `IMAGE_CHECK_TIMEOUT_MS`, or the stop errors) is logged (`server.image_check_failed`,
+  `server.retire_failed`), the request goes through, and a later request asks again, no sooner than
+  `IMAGE_CHECK_RETRY_MS` after the last try.
 - **Once a day** (`triggers.crons`) the Worker requests `/readyz`, which wakes the server: its hourly
   loops run, and the Supabase project sees a query, so a quiet week does not pause a free project.
 - **The caller's address.** The Worker replaces `X-Forwarded-For` with the address Cloudflare saw
