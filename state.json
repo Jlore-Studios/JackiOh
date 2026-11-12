@@ -37393,7 +37393,8 @@
       "2026-11-12T08:33:24Z,claude-6,ping,before,43183624546,1,2026-11-12T13:10:00Z,,,allowed,50,,"
     ],
     "runs": [
-      "2026-11-12T08:56:49Z,43184911684,claude-4,opus,build,3596,hard,interrupted,5-hour cap,11.8,0,0,0,,4,51,,,1.1,,fresh,,1"
+      "2026-11-12T08:56:49Z,43184911684,claude-4,opus,build,3596,hard,interrupted,5-hour cap,11.8,0,0,0,,4,51,,,1.1,,fresh,,1",
+      "2026-11-12T09:03:06Z,43183624546,claude-6,sonnet+opus,build,3764,medium,built,,0.3,6,2262,106014,0.1146,1,1,,,25.7,claude-6,fresh,,1"
     ]
   },
   "version": 1
