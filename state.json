@@ -17342,11 +17342,13 @@
     "what": "plan #3573 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-12T03:29:04Z",
+    "at": "2026-11-12T03:36:31Z",
     "notes": [
       "#3750 is held for `claude-1` until 23:10 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))",
       "#3727 is held for `claude-1` until 23:10 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))",
-      "#3695 is held for `claude-3` until 23:20 (it refused a call)"
+      "#3695 is held for `claude-3` until 23:20 (it refused a call)",
+      "delivered plan #3573 on claude-6 (run 43147724162): interrupted",
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18050,7 +18052,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-12T03:29:04Z",
+  "loop_tick": "2026-11-12T03:36:31Z",
   "machine_disk": {
     "issue": null,
     "reading": {
