@@ -13,6 +13,10 @@
 // R3221000: an alertdialog on the one Dialog, as the board's confirms are (R3220000): Cancel first,
 // holding the focus, and Send last; the focus stays inside, Escape and Back close it, and the caller
 // gives the focus back to the button that opened it.
+//
+// #3727: Live or Daily. Live is the room above, for a friend online and free while the player is free
+// too (`liveRefusal` says why not, and the dialog opens on Daily then); Daily challenges any friend to a
+// daily game (`daily/DailyFields.tsx`, `POST /api/daily/challenges`), which waits on the Daily screen.
 
 import { useEffect, useState, type ReactElement } from "react";
 
@@ -34,22 +38,32 @@ import {
   rememberChallengeChoice,
 } from "./challengeChoice.ts";
 import { followChallenge } from "./follow.ts";
-import { challengeModeTestid, togetherTestid } from "./testids.ts";
+import { challengeKindTestid, challengeModeTestid, togetherTestid } from "./testids.ts";
 import { CHALLENGE_MODES, MODE_WORDS, Named } from "./words.tsx";
 import { attempt, messageOf } from "../net/errors.ts";
+import { DailyFields, dailyChoiceOf, useDailyPick } from "../daily/DailyFields.tsx";
+import { createDailyChallenge } from "../net/daily.ts";
+import { Segmented } from "../tabs/index.ts";
 
 type Saved = { decks: readonly SavedDeck[]; trios: readonly SavedTrio[] };
+
+export type ChallengeKind = "live" | "daily";
 
 export function ChallengeDialog({
   friend,
   onClose,
   onSent,
+  liveRefusal = null,
 }: {
   friend: PlayerRef;
   onClose: () => void;
   onSent: () => void;
+  /** #3727: why a live game can't be played now, in a player's words (untranslated); null, it can. */
+  liveRefusal?: string | null;
 }): ReactElement {
   useLocale();
+  const [kind, setKind] = useState<ChallengeKind>(liveRefusal === null ? "live" : "daily");
+  const daily = useDailyPick(undefined, kind === "daily");
   const [initial] = useState(readChallengeChoice);
   const [mode, setMode] = useState<QueueMode>(initial.mode);
   const [saved, setSaved] = useState<Saved | null>(null);
@@ -80,17 +94,27 @@ export function ChallengeDialog({
   }, [deckReads, initial]);
 
   const choice = choiceOf(mode, deckId, trioId, lean);
+  const dailyChoice = dailyChoiceOf(daily);
+  const ready = kind === "live" ? choice !== null && liveRefusal === null : dailyChoice !== null;
 
   const send = (): void => {
-    if (choice === null || sending) return;
+    if (!ready || sending) return;
     setSending(true);
     setError(null);
-    attempt(() => createChallenge({ ...choice, friendId: friend.profileId }))
+    const sent =
+      kind === "daily" && dailyChoice !== null
+        ? // A daily challenge waits on the Daily screen: no room to follow.
+          attempt(() => createDailyChallenge(friend.profileId, dailyChoice)).then(() => undefined)
+        : choice === null
+          ? Promise.resolve()
+          : attempt(() => createChallenge({ ...choice, friendId: friend.profileId })).then(() => {
+              rememberChallengeChoice(choice, true);
+              // The shell takes the challenger to the game once the friend joins (`follow.ts`).
+              followChallenge();
+            });
+    sent
       .then(
         () => {
-          rememberChallengeChoice(choice, true);
-          // The shell takes the challenger to the game once the friend joins (`follow.ts`).
-          followChallenge();
           onSent();
         },
         (cause: unknown) => {
@@ -114,35 +138,66 @@ export function ChallengeDialog({
           kind: "primary",
           onClick: send,
           testid: togetherTestid.challengeSend,
-          disabled: choice === null || sending,
+          disabled: !ready || sending,
           busy: sending,
         },
       ]}
       testid={togetherTestid.challengeForm}
       className="together-dialog"
+      data={{ "data-kind": kind }}
     >
-      <fieldset className="lobby-modes">
-        <legend className="lobby-modes__legend">{t("Mode")}</legend>
-        {CHALLENGE_MODES.map((option) => (
-          <label key={option} className="lobby-mode" data-selected={option === mode ? "true" : "false"}>
-            <input
-              type="radio"
-              name="together-challenge-mode"
-              value={option}
-              checked={option === mode}
-              data-testid={challengeModeTestid(option)}
-              onChange={() => {
-                setMode(option);
-              }}
-            />
-            <span className="lobby-mode__text">
-              <span className="lobby-mode__name">{t(MODE_WORDS[option])}</span>
-            </span>
-          </label>
-        ))}
-      </fieldset>
+      <Segmented
+        label={t("How to play")}
+        testId={togetherTestid.challengeKind}
+        value={kind}
+        disabled={sending}
+        onChange={setKind}
+        options={[
+          {
+            value: "live",
+            label: t("Live"),
+            testId: challengeKindTestid("live"),
+            disabled: liveRefusal !== null,
+            ...(liveRefusal === null ? {} : { title: t(liveRefusal) }),
+          },
+          { value: "daily", label: t("Daily"), testId: challengeKindTestid("daily") },
+        ]}
+      />
+      {liveRefusal === null ? null : (
+        <p className="lobby-note" data-testid={togetherTestid.challengeLiveRefusal}>
+          {t(liveRefusal)}
+        </p>
+      )}
+      {kind === "daily" ? (
+        <>
+          <p className="lobby-note">{t("A move every few days, on your own time. We'll tell you when it's your move.")}</p>
+          <DailyFields pick={daily} disabled={sending} />
+        </>
+      ) : null}
+      {kind === "daily" ? null : (
+        <fieldset className="lobby-modes">
+          <legend className="lobby-modes__legend">{t("Mode")}</legend>
+          {CHALLENGE_MODES.map((option) => (
+            <label key={option} className="lobby-mode" data-selected={option === mode ? "true" : "false"}>
+              <input
+                type="radio"
+                name="together-challenge-mode"
+                value={option}
+                checked={option === mode}
+                data-testid={challengeModeTestid(option)}
+                onChange={() => {
+                  setMode(option);
+                }}
+              />
+              <span className="lobby-mode__text">
+                <span className="lobby-mode__name">{t(MODE_WORDS[option])}</span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+      )}
 
-      {mode === "random" ? (
+      {kind === "live" && mode === "random" ? (
         <>
           <p className="lobby-note">{t("No deck needed: the server deals both of you one when the game starts.")}</p>
           <LeanSetPickerLazy
@@ -156,10 +211,10 @@ export function ChallengeDialog({
           />
         </>
       ) : null}
-      {mode !== "random" && saved === null && loadError === null ? (
+      {kind === "live" && mode !== "random" && saved === null && loadError === null ? (
         <Skeleton variant="panel" label={t("Loading your decks…")} />
       ) : null}
-      {mode !== "random" && loadError !== null ? (
+      {kind === "live" && mode !== "random" && loadError !== null ? (
         <>
           <p className="notice" role="alert">
             {t("Your decks could not be loaded: {message}", { message: t(loadError) })}
@@ -178,7 +233,7 @@ export function ChallengeDialog({
           </div>
         </>
       ) : null}
-      {mode === "bo1" && saved !== null ? (
+      {kind === "live" && mode === "bo1" && saved !== null ? (
         saved.decks.length === 0 ? (
           <p className="lobby-note">
             <a href={paths.decks} onClick={followInApp(paths.decks)}>
@@ -207,7 +262,7 @@ export function ChallengeDialog({
           </>
         )
       ) : null}
-      {mode === "bo3" && saved !== null ? (
+      {kind === "live" && mode === "bo3" && saved !== null ? (
         saved.trios.length === 0 ? (
           <p className="lobby-note">
             <a href={paths.decks} onClick={followInApp(paths.decks)}>

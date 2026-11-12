@@ -39,6 +39,9 @@ export const routes = {
   collectionCards: () => `${env("collectionRoute", "/collection")}?section=cards`,
   /** #1577, R1580000: where spec 45 buys, opens and redeems. */
   shop: () => env("shopRoute", "/shop"),
+  /** #3727: the Daily screen, and one daily game's board. */
+  daily: () => env("dailyRoute", "/daily"),
+  dailyGame: (matchId: string) => `${env("dailyRoute", "/daily")}/${matchId}`,
 };
 
 /** A6: `WS_PATH` is `/ws/match`; support type-checks without `apps/*`. */

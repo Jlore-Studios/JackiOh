@@ -26,6 +26,7 @@ import {
   type OwnUsername,
   type ProfileResponse,
 } from "../net/api.ts";
+import { forgetPushOnSignOut } from "../daily/push.ts";
 import { revokeSignedOutSession, sessionNearExpiry } from "../net/auth.ts";
 import { announceAccountChange } from "../net/gate.ts";
 import { t } from "../i18n/i18n.ts";
@@ -127,6 +128,8 @@ export function signOut(): void {
   // second press would load the page at once and cut off the revocation. It joins the first instead.
   if (signingOut) return;
   const session = readSession();
+  // #3727: the server forgets this device's daily push subscription while the token still works.
+  if (session !== null) forgetPushOnSignOut(session.accessToken);
   clearSession();
   // Whatever sign-up or reset this browser was waiting on ends with it (R193): an address left
   // armed here would accept the next person's link, or one planted by someone else.

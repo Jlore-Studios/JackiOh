@@ -111,6 +111,17 @@ pub struct Env {
     /// not an address is left out with a warning that never prints it. Empty when unset. Private:
     /// kept in a Worker secret, since the repository is public.
     pub alert_emails: Vec<String>,
+    /// #3727: `PLAYER_RESEND_API_KEY`, a Resend key that may send from jackioh.com, with which the
+    /// daily games' "your move" emails go (`daily::notify`), apart from the operators' alert key.
+    /// Unset, no player is emailed. Secret.
+    pub player_email_key: Option<String>,
+    /// #3727: `VAPID_PRIVATE_KEY`, the server's RFC 8292 signing key (the raw P-256 scalar,
+    /// base64url), for the daily games' Web Push (`daily::webpush`). Unset, no push is sent. Secret.
+    pub vapid_private_key: Option<String>,
+    /// #3727: `VAPID_PUBLIC_KEY`, its public half (the raw uncompressed point, base64url), which
+    /// `GET /api/daily/settings` gives the browser to subscribe with. Public in nature, but kept with
+    /// the private key so the two always match. Unset, no push is sent.
+    pub vapid_public_key: Option<String>,
 }
 
 impl std::fmt::Debug for Env {
@@ -148,6 +159,15 @@ impl std::fmt::Debug for Env {
             )
             // A person's address: only how many are listed.
             .field("alert_emails", &self.alert_emails.len())
+            .field(
+                "player_email_key",
+                &self.player_email_key.as_ref().map(|_| REDACTED),
+            )
+            .field(
+                "vapid_private_key",
+                &self.vapid_private_key.as_ref().map(|_| REDACTED),
+            )
+            .field("vapid_public_key", &self.vapid_public_key)
             .finish()
     }
 }
@@ -218,6 +238,9 @@ pub const SERVER_ONLY_ENV_VARS: &[&str] = &[
     DEV_STRICT,
     "ALERT_RESEND_API_KEY",
     "ALERT_EMAILS",
+    "PLAYER_RESEND_API_KEY",
+    "VAPID_PRIVATE_KEY",
+    "VAPID_PUBLIC_KEY",
 ];
 
 const MIN_CODE_PEPPER_LENGTH: usize = 32;
@@ -615,6 +638,10 @@ pub fn load_env(source: &IndexMap<String, String>) -> Result<Env, EnvError> {
     // so a boot refused over an alert setting would take the site down between two puts.
     let alert_email_key = parse_optional_secret(read("ALERT_RESEND_API_KEY"));
     let alert_emails = parse_alert_emails(read("ALERT_EMAILS"));
+    // #3727: optional too, for the same reason: with any unset, its channel is off.
+    let player_email_key = parse_optional_secret(read("PLAYER_RESEND_API_KEY"));
+    let vapid_private_key = parse_optional_secret(read("VAPID_PRIVATE_KEY"));
+    let vapid_public_key = parse_optional_secret(read("VAPID_PUBLIC_KEY"));
 
     if e2e && node_env == NodeEnv::Production {
         problems.push(
@@ -659,6 +686,9 @@ pub fn load_env(source: &IndexMap<String, String>) -> Result<Env, EnvError> {
         dev_strict,
         alert_email_key,
         alert_emails,
+        player_email_key,
+        vapid_private_key,
+        vapid_public_key,
     })
 }
 

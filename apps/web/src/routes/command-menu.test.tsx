@@ -87,14 +87,14 @@ describe("R2118000 the command menu", () => {
   });
 
   it("R2118000 is not mounted on a board route", () => {
-    for (const path of [paths.match("m1"), paths.series("s1"), paths.watch("m1"), paths.duos("m1"), paths.hotseat, paths.duosDev]) {
+    for (const path of [paths.match("m1"), paths.series("s1"), paths.watch("m1"), paths.duos("m1"), paths.dailyGame("m1"), paths.hotseat, paths.duosDev]) {
       expect(commandMenuOn(path), path).toBe(false);
       render(<CommandMenu path={path} />);
       fireEvent.keyDown(window, { key: "k", ctrlKey: true });
       expect(screen.queryByTestId(commandMenuTestid.dialog), path).toBeNull();
       cleanup();
     }
-    for (const path of ["/", "/practice", "/replays", "/almanac", "/nowhere"]) {
+    for (const path of ["/", "/practice", "/replays", "/almanac", "/daily", "/nowhere"]) {
       expect(commandMenuOn(path), path).toBe(true);
     }
   });
@@ -152,6 +152,7 @@ describe("R2118000 the command menu", () => {
         "page-leaderboard",
         "page-replays",
         "page-together",
+        "page-daily",
         "page-account",
         "page-privacy",
         "page-terms",

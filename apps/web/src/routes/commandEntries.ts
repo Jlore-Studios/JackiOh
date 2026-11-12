@@ -9,6 +9,7 @@ import { readerName } from "../cards/chinese.ts";
 import { almanacShelf } from "../game/deckbuilder/shelf.ts";
 import { t } from "../i18n/i18n.ts";
 import {
+  dailyIdOf,
   duosIdOf,
   matchIdOf,
   newDeckPath,
@@ -39,6 +40,7 @@ export function commandMenuOn(path: string): boolean {
   if (path === paths.hotseat || path === paths.duosDev) return false;
   if (matchIdOf(path) !== null || seriesIdOf(path) !== null) return false;
   if (watchIdOf(path) !== null || duosIdOf(path) !== null) return false;
+  if (dailyIdOf(path) !== null) return false;
   return true;
 }
 
@@ -69,6 +71,7 @@ export function commandPages(): CommandEntry[] {
     { id: "page-leaderboard", kind: "page", label: t("Leaderboard"), path: paths.leaderboard },
     { id: "page-replays", kind: "page", label: t("Replays"), path: paths.replays },
     { id: "page-together", kind: "page", label: t("Play together"), path: paths.together },
+    { id: "page-daily", kind: "page", label: t("Daily games"), path: paths.daily },
     { id: "page-account", kind: "page", label: t("Account"), path: paths.account },
     { id: "page-privacy", kind: "page", label: t("Privacy policy"), path: paths.privacy },
     { id: "page-terms", kind: "page", label: t("Terms of service"), path: paths.terms },

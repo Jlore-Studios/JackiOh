@@ -45,7 +45,7 @@ import { useCatalogLookup } from "./catalog.ts";
 import { ChallengeDialog } from "./ChallengeDialog.tsx";
 import { ChatPanel } from "./ChatPanel.tsx";
 import { FRIENDS_POLL_MS } from "./config.ts";
-import { AddFriend, FriendRow, RequestRow } from "./FriendRows.tsx";
+import { AddFriend, FriendRow, RequestRow, liveRefusalOf, type Challenging } from "./FriendRows.tsx";
 import { usePolled } from "./session.ts";
 import { noteFriends, onFriendsPush, reloadSocial, useSocialPoll } from "./socialPoll.ts";
 import { togetherTestid } from "./testids.ts";
@@ -88,7 +88,7 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chatWith, setChatWith] = useState<PlayerRef | null>(null);
-  const [challenging, setChallenging] = useState<PlayerRef | null>(null);
+  const [challenging, setChallenging] = useState<Challenging | null>(null);
   const [watching, setWatching] = useState<SharedReplay | null>(null);
   const challengeOpener = useRef<HTMLElement | null>(null);
 
@@ -219,7 +219,7 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
                   busy={busy}
                   onChallenge={(opener) => {
                     challengeOpener.current = opener;
-                    setChallenging({ profileId: friend.profileId, username: friend.username });
+                    setChallenging({ profileId: friend.profileId, username: friend.username, liveRefusal: liveRefusalOf(friend, null) });
                   }}
                   onChat={() => {
                     setChatWith({ profileId: friend.profileId, username: friend.username });
@@ -456,6 +456,7 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
       {challenging === null ? null : (
         <ChallengeDialog
           friend={challenging}
+          liveRefusal={challenging.liveRefusal}
           onClose={closeChallenge}
           onSent={() => {
             closeChallenge();

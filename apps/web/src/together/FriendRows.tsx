@@ -8,7 +8,7 @@ import { useId, useState, type FormEvent, type ReactElement } from "react";
 import Username from "../auth/Username.tsx";
 import { t } from "../i18n/i18n.ts";
 import { navigate } from "../net/navigate.ts";
-import { sendFriendRequest, type Friend, type FriendRequest } from "../net/social.ts";
+import { sendFriendRequest, type Friend, type FriendRequest, type PlayerRef } from "../net/social.ts";
 import { togetherTestid } from "./testids.ts";
 import { watchLink } from "./watchLink.ts";
 import { Named, STATUS_WORDS } from "./words.tsx";
@@ -112,6 +112,18 @@ function BlockQuestion({
   );
 }
 
+/** #3727: a live game needs the friend online and free; a daily game is any friend's (untranslated). */
+export const LIVE_NEEDS_ONLINE = "A live game needs your friend online and free. A daily game can wait for them.";
+
+/** Why a live game can't be played with `friend` now (the player's own refusal first), or null. */
+export function liveRefusalOf(friend: Friend, challengeRefusal: string | null): string | null {
+  if (challengeRefusal !== null) return challengeRefusal;
+  return friend.status === "online" ? null : LIVE_NEEDS_ONLINE;
+}
+
+/** The friend a challenge dialog is open for, and why Live is out (`liveRefusalOf`). */
+export type Challenging = PlayerRef & { liveRefusal: string | null };
+
 export type FriendRowProps = {
   friend: Friend;
   unread: number;
@@ -124,7 +136,10 @@ export type FriendRowProps = {
   onBlock?: () => void;
   /** Runs before Watch takes the player to the game (the friends panel closes). */
   onWatch?: () => void;
-  /** Why the player cannot challenge anyone now (the server's own sentence); Challenge is then disabled and says it. */
+  /**
+   * Why the player cannot play anyone live now (the server's own sentence). #3727: Challenge stays, for a
+   * daily game, and its dialog says it of Live.
+   */
   challengeRefusal?: string | null;
 };
 
@@ -140,7 +155,8 @@ export function FriendRow({
   challengeRefusal = null,
 }: FriendRowProps): ReactElement {
   const [asking, setAsking] = useState(false);
-  const canChallenge = friend.status === "online";
+  // #3727: any friend can be challenged to a daily game; a live one needs them online and both free.
+  const live = liveRefusalOf(friend, challengeRefusal) === null;
   const canWatch = friend.watchable && friend.matchId !== null;
   return (
     <li
@@ -157,20 +173,18 @@ export function FriendRow({
       </span>
       {!asking ? (
         <span className="together-row__actions">
-          {canChallenge ? (
-            <button
-              type="button"
-              className="button-primary"
-              data-testid={togetherTestid.challenge}
-              disabled={busy || challengeRefusal !== null}
-              title={challengeRefusal === null ? undefined : t(challengeRefusal)}
-              onClick={(event) => {
-                onChallenge(event.currentTarget);
-              }}
-            >
-              {t("Challenge")}
-            </button>
-          ) : null}
+          <button
+            type="button"
+            className={live ? "button-primary" : undefined}
+            data-testid={togetherTestid.challenge}
+            data-live={live ? "true" : "false"}
+            disabled={busy}
+            onClick={(event) => {
+              onChallenge(event.currentTarget);
+            }}
+          >
+            {t("Challenge")}
+          </button>
           {canWatch && friend.matchId !== null ? (
             <button
               type="button"

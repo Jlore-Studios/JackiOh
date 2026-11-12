@@ -16,7 +16,7 @@ import { UNDO_TOAST, UNDO_TOAST_UNDO } from "../undo/UndoToast.tsx";
 import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { FRIENDS_POLL_MS } from "./config.ts";
 import { stopFollowingChallenge } from "./follow.ts";
-import { togetherTestid } from "./testids.ts";
+import { challengeKindTestid, togetherTestid } from "./testids.ts";
 import { TogetherRoute } from "./TogetherRoute.tsx";
 
 const { App, resetUsernamePromptForTests } = await import("../main.tsx");
@@ -594,15 +594,25 @@ describe("B56 each friend row's controls", () => {
     expect(offers(rowOf(ANN), TESTID.challenge)).toBe(true);
   });
 
-  it("B56 an offline friend is not offered Challenge", async () => {
+  it("B56 #3727 an offline friend is offered Challenge to a daily game, never a live one", async () => {
     await renderPage();
-    expect(offers(rowOf(CY), TESTID.challenge)).toBe(false);
+    expect(offers(rowOf(ANN), TESTID.challenge)).toBe(true);
+    expect(within(rowOf(ANN)).getByTestId(TESTID.challenge)).toHaveAttribute("data-live", "true");
+    expect(offers(rowOf(CY), TESTID.challenge)).toBe(true);
+    expect(within(rowOf(CY)).getByTestId(TESTID.challenge)).toHaveAttribute("data-live", "false");
+    fireEvent.click(within(rowOf(CY)).getByTestId(TESTID.challenge));
+    const form = await screen.findByTestId(TESTID.challengeForm, undefined, SLOW);
+    expect(form).toHaveAttribute("data-kind", "daily");
+    expect(screen.getByTestId(challengeKindTestid("live"))).toBeDisabled();
+    expect(screen.queryByTestId(TESTID.challengeModeBo1)).toBeNull();
   });
 
-  it("B56 a friend in a match is not offered Challenge", async () => {
+  it("B56 #3727 a friend in a match is offered Challenge to a daily game, never a live one", async () => {
     await renderPage();
-    expect(offers(rowOf(BOB), TESTID.challenge)).toBe(false);
-    expect(offers(rowOf(DEE), TESTID.challenge)).toBe(false);
+    for (const friend of [BOB, DEE]) {
+      expect(offers(rowOf(friend), TESTID.challenge)).toBe(true);
+      expect(within(rowOf(friend)).getByTestId(TESTID.challenge)).toHaveAttribute("data-live", "false");
+    }
   });
 
   it("B56 a watchable friend is offered Watch", async () => {
@@ -898,15 +908,22 @@ describe("the challenge dialog's focus (#1569)", () => {
     const deck = screen.getByTestId(TESTID.challengeDeck);
     const send = screen.getByTestId(TESTID.challengeSend);
     const cancel = screen.getByTestId(TESTID.challengeClose);
+    // #3727: Live or Daily comes first, a button each.
+    const live = screen.getByTestId(challengeKindTestid("live"));
+    const daily = screen.getByTestId(challengeKindTestid("daily"));
 
-    // R3221000: it opens on Cancel, before Send at the end, so the walk starts there: Send, then round to the
-    // mode and the deck.
+    // R3221000: it opens on Cancel, before Send at the end, so the walk starts there: Send, then round to
+    // Live and Daily, the mode and the deck.
     await waitFor(() => {
       expect(send).toBeEnabled();
     }, SLOW);
     expect(cancel).toHaveFocus();
     press("Tab");
     expect(send).toHaveFocus();
+    press("Tab");
+    expect(live).toHaveFocus();
+    press("Tab");
+    expect(daily).toHaveFocus();
     press("Tab");
     expect(mode).toHaveFocus();
     press("Tab");
@@ -921,7 +938,7 @@ describe("the challenge dialog's focus (#1569)", () => {
     const behind = screen.getByTestId(TESTID.addInput);
     behind.focus();
     press("Tab");
-    expect(mode).toHaveFocus();
+    expect(live).toHaveFocus();
     behind.focus();
     press("Tab", { shiftKey: true });
     expect(send).toHaveFocus();

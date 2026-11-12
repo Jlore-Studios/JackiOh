@@ -1041,8 +1041,9 @@ pub enum ModeChoiceInput {
     },
 }
 
-/// What a ticket or a room freezes (§9.4: "Decks are frozen into the queue ticket").
-#[derive(serde::Serialize, Clone)]
+/// What a ticket or a room freezes (§9.4: "Decks are frozen into the queue ticket"); a daily invite
+/// stores it and reads it back when it is answered (§9.13).
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 #[serde(tag = "mode", rename_all = "camelCase")]
 pub enum FrozenChoice {
     Bo1 {

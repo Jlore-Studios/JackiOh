@@ -1,0 +1,195 @@
+/* Daily games (#3727): the Daily screen, its dialogs, the Play screen's badge and the board's clock pill.
+
+   SCOPED ON PURPOSE, as together.css is: every rule sits under one of this slice's own classes and
+   nothing is added to :root, so the board's layout is untouched. The screen wears the lobby's tavern
+   look (`.tavern`, `.lobby-card`, lobby.css); its lengths are the spacing, type and surface scales'. */
+
+/* --- the badge ------------------------------------------------------------------------------- */
+
+.daily-badge {
+  display: inline-block;
+  min-width: 1.6em;
+  margin-inline-start: var(--space-3);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--opponent);
+  color: var(--text);
+  font-size: var(--type-xs);
+  font-weight: 700;
+  line-height: 1.6;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- the screen ------------------------------------------------------------------------------ */
+
+.tavern.daily-screen {
+  gap: var(--space-7);
+}
+
+.tavern.daily-screen .daily-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.tavern.daily-screen .daily-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: var(--space-7);
+  align-items: start;
+}
+
+@media (max-width: 899px) {
+  .tavern.daily-screen .daily-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.tavern.daily-screen .daily-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: none;
+  min-width: 0;
+}
+
+.tavern.daily-screen .daily-panel__heading {
+  margin: 0;
+  font-size: var(--type-xl);
+}
+
+.tavern.daily-screen .daily-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.daily-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+}
+
+.daily-row__open {
+  display: flex;
+  flex: 1 1 18em;
+  align-items: center;
+  gap: var(--space-5);
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.daily-row__open:hover .daily-row__name {
+  text-decoration: underline;
+}
+
+.daily-row__portrait {
+  flex: 0 0 auto;
+  width: 2.75em;
+  height: 2.75em;
+  overflow: hidden;
+  border-radius: var(--radius-round);
+}
+
+.daily-row__portrait .portrait-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.daily-row__who {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.daily-row__name {
+  font-weight: 700;
+}
+
+.daily-row__meta,
+.daily-row__life {
+  color: var(--text-dim);
+  font-size: var(--type-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.daily-row__state {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.daily-row__state[data-urgent="true"],
+.daily-clock[data-urgent="true"] {
+  color: var(--tavern-danger-text, var(--opponent));
+}
+
+.daily-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.tavern.daily-screen .daily-settings {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.daily-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+/* --- the dialogs ----------------------------------------------------------------------------- */
+
+.daily-dialog .daily-fields,
+.together-dialog .daily-fields {
+  display: grid;
+  gap: var(--space-5);
+  margin-block-start: var(--space-5);
+}
+
+.daily-field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.daily-field__label {
+  font-weight: 700;
+}
+
+/* --- the board ------------------------------------------------------------------------------- */
+
+.daily-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--bg-sunken);
+  color: var(--text);
+  font-size: var(--type-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.daily-board-notice {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: var(--type-sm);
+}
