@@ -15895,7 +15895,7 @@
       }
     },
     "3783": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_early": false,
       "ci_fixes": 1,
@@ -15922,13 +15922,13 @@
       "interruptions": 0,
       "issue": 3767,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "fixing-ci",
       "merge_owner": "claude-4",
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-11-12T16:16:25Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "43252758877",
+      "run_id": "43257009121",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -15949,7 +15949,7 @@
         "run": "43236161233"
       },
       "source": "ci",
-      "started_at": "2026-11-12T15:53:52Z",
+      "started_at": "2026-11-12T16:21:29Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -15976,9 +15976,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T15:55:10Z",
-    "url": "",
-    "what": "review #3782 on claude-7"
+    "at": "2026-11-12T16:21:29Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/43257009121",
+    "what": "revise #3783 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-12T16:10:58Z",
