@@ -986,6 +986,24 @@ fn i16_a_hand_or_library_copy_may_carry_stats_and_armor_overrides_but_a_graveyar
     only(&i16(&state), &id, &["R78", "statsOverride"]);
 }
 
+/// R3566004: a card that evolved in its graveyard keeps its Evolve's buff, keywords and stat line there,
+/// for its Flashback play; damage it could only have brought from the field is still a leftover (R78).
+#[test]
+fn r3566004_i16_a_card_evolved_in_its_graveyard_keeps_what_its_evolve_gave() {
+    let mut state = playing("i16-evolved");
+    let mut cheese = new_instance(&mut state, "fx-2", P1, Zone::Graveyard { player: P1 });
+    cheese.evolved = Some(true);
+    cheese.buffs = AttackHealth { attack: 5, health: 5 };
+    cheese.granted_keywords = vec![json_as(json!({ "kind": "Flashback" }))];
+    cheese.stats_override = Some(AttackHealth { attack: 0, health: 0 });
+    let id = cheese.id.clone();
+    state.players[P1].graveyard.push(cheese);
+    assert_eq!(i16(&state), Vec::<String>::new());
+    let held = state.players[P1].graveyard.last_mut().expect("the card");
+    held.damage = 2;
+    only(&i16(&state), &id, &["R78", "damage"]);
+}
+
 #[test]
 fn i16_a_library_card_owned_by_the_other_seat_is_one_owner_drift() {
     let mut state = playing("i16-owner");

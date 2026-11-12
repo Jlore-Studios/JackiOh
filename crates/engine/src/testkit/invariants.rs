@@ -612,13 +612,20 @@ fn field_state_held(card: &CardInstance, in_graveyard_or_exile: bool) -> Vec<&'s
         (card.embiggened.is_some(), "embiggened"),
     ]);
     if in_graveyard_or_exile {
+        // R3566004: a card evolved in its graveyard (leaving the field clears `evolved`, R3536000, so one
+        // that holds it there evolved there) keeps what its Evolve gave it, its buff, keywords and stat
+        // line, for the Flashback play that brings it back (S+ #6.2 Stinky Cheese).
+        let evolved_here = card.evolved == Some(true);
         held.extend(held_names(&[
-            (card.buffs != AttackHealth::default(), "buffs"),
-            (!card.granted_keywords.is_empty(), "grantedKeywords"),
+            (card.buffs != AttackHealth::default() && !evolved_here, "buffs"),
+            (
+                !card.granted_keywords.is_empty() && !evolved_here,
+                "grantedKeywords",
+            ),
             (card.grants.is_some(), "grants"),
             (card.vanilla, "vanilla"),
             (card.counters != Counters::default(), "counters"),
-            (card.stats_override.is_some(), "statsOverride"),
+            (card.stats_override.is_some() && !evolved_here, "statsOverride"),
             (card.armor_override.is_some(), "armorOverride"),
         ]));
     }
