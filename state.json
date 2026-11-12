@@ -13494,14 +13494,6 @@
         "reason": "`claude-4` stops mid-call: 5-hour usage is 101%, at or over its 100% cap; it resets at 2026-11-12T10:30:00Z",
         "trail": ": \"See how spec check reads the catalog section\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/cards7/spec/rulings && ls R3548000.md R0925.md R0470.md R0469.md R0102.md R0062.md R1748003.md R0077.md R0070.md R0386.md 2>&1 | head -12\", \"de\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/cards7/spec && python3 -I - <<'EOF'\\np='08-catalog.md'\\nlines=open(p).read().split('\\\\n')\\ndef find(prefix):\\n idx=[i for i,l in enumerate(line\u2026\n- Bash: {\"command\": \"tail -5 /tmp/claude-1001/-home-runner-work--temp-work-item-3596/4de7a55c-0cad-4d97-bba8-c08925d57bc8/tasks/bi2dztlvp.output; ls /home/runner/work/_temp/work/jackioh-wt/target-cards7/debu\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/cards7/crates && grep -rn \\\"fn loc\\\\|fn count_loc\\\\|fn lines_of_code\\\\|fn code_lines\\\" tools/src cards/build.rs | head\", \"description\": \"Find t\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/jackioh-wt/cards7/crates/tools/src/catalog.rs\", \"offset\": 1495, \"limit\": 130}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/cards7/crates/cards/src/scripts/stinkyscape_plus && grep -n \\\"as i32\\\\|card()\\\" c089_animosity.rs\", \"description\": \"Find type mismatches in Ani\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/cards7/crates/cards/src/scripts/stinkyscape_plus && sed -i 's/s.pile(P1, \\\"exile\\\").len() as i32, card()/s.pile(P1, \\\"exile\\\").len(), card()/' \u2026\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"mkdir -p /tmp/cards7-scripts && cat > /tmp/cards7-scripts/loc.py <<'EOF'\\nimport sys, re\\ndef code_lines(src):\\n out=[]; block=0; quote=False\\n for line in src.split('\\\\n'):\\n code=''; i\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/cards7 && export CARGO_TARGET_DIR=/home/runner/work/_temp/work/jackioh-wt/target-cards7 && cargo fmt -p jackioh-cards 2>&1 | tail -5; git statu\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/cards7 && git status --short | grep \\\"^.[MD?]\\\\|^??\\\" ; cd crates/cards/src/scripts/stinkyscape_plus && python3 -I /tmp/cards7-scripts/loc.py c\u2026\n- Monitor: {\"description\": \"cards test build finished\", \"timeout_ms\": 600000, \"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-3596/4de7a55c-0cad-4d97-bba8-c08925d57bc8/tasks/bi2dztlvp.\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/jackioh-wt/cards7/crates/cards/src/scripts/stinkyscape_plus/c089_animosity.rs\", \"offset\": 130, \"limit\": 200}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/cards7/crates/cards/src/scripts/core && sed -n 1,40p c044_true_strike.rs | grep -v \\\"^//\\\"\", \"description\": \"Check True Strike's targets\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/cards7/crates/engine/src/testkit && grep -n '\\\"mana\\\"\\\\|mana:' scenario.rs | head -20\", \"description\": \"Check scenario mana setup semantics\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/jackioh-wt/cards7/crates/engine/src/testkit/scenario.rs\", \"offset\": 1170, \"limit\": 30}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/jackioh-wt/cards7/crates/engine/src/testkit/scenario.rs\", \"offset\": 1140, \"limit\": 32}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/cards7/crates/engine/src && grep -n \\\"const DEFAULT_TURN\\\" -r . ; grep -n \\\"pub fn refresh_mana\\\" -A 15 mana.rs | head -25\", \"description\": \"Ch\u2026\n- Bash: {\"command\": \"ls /home/runner/work/_temp/work/jackioh-wt/target-cards7/debug/deps | wc -l; ps aux | grep \\\"[r]ustc\\\" | grep -o \\\"crate-name [a-z_0-9]*\\\" | head\", \"description\": \"Check which crates are\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-3596/4de7a55c-0cad-4d97-bba8-c08925d57bc8/tasks/bi2dztlvp.output\", \"description\": \"Read build output\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/cards7 && export CARGO_TARGET_DIR=/home/runner/work/_temp/work/jackioh-wt/target-cards7 && timeout 3000 cargo test -p jackioh-cards --lib -- st\u2026\n- TaskUpdate: {\"taskId\": \"1\", \"status\": \"completed\", \"description\": \"Decided: no send-backs (shortfalls trace to parked E7/E8).\"}\n- TaskUpdate: {\"taskId\": \"2\", \"status\": \"completed\"}\n- TaskUpdate: {\"taskId\": \"3\", \"status\": \"completed\"}\n- TaskUpdate: {\"taskId\": \"5\", \"status\": \"in_progress\"}\n- Bash: {\"command\": \"timeout 580 bash -c 'until [ \\\"$(grep -c \\\"^test result\\\" .fullsend/test1.txt)\\\" -gt 5 ] || grep -q \\\"error: could not compile\\\" .fullsend/test1.txt; do sleep 10; done'; grep -c \\\"^test \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/cards7 && export CARGO_TARGET_DIR=/home/runner/work/_temp/work/jackioh-wt/target-cards7 && cargo test -p jackioh-cards --lib -- stinkyscape_plu\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/cards7 && export CARGO_TARGET_DIR=/home/runner/work/_temp/work/jackioh-wt/target-cards7 && cargo test -p jackioh-cards --lib -- stinkyscape_plu\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/jackioh-wt/cards7/crates/cards/src/scripts/stinkyscape_plus/c006_1_fine_fermented_grape.rs\", \"offset\": 88, \"limit\": 20}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/jackioh-wt/cards7/crates/cards/src/scripts/stinkyscape_plus/c006_1_fine_fermented_grape.rs\", \"old_string\": \" /// The Grapes fused int\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/cards7 && export CARGO_TARGET_DIR=/home/runner/work/_temp/work/jackioh-wt/target-cards7 && cargo test -p jackioh-cards --lib -- stinkyscape_plu\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"brz80cco3\\\" /dev/null || [ -n \\\"$(tail -c 2000 .fullsend/test1.txt | grep -E \\\"^error: [0-9]+ targets? failed|test result\\\" | tail -1)\\\" ] && ! pgrep\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/cards7 && export CARGO_TARGET_DIR=/home/runner/work/_temp/work/jackioh-wt/target-cards7 && cargo fmt -p jackioh-cards && git status --short cra\u2026\n- said: You've hit your 5-hour limit \u00b7 resets 10:30am (UTC)\n- tool error: Exit code 137"
       },
-      "hold": {
-        "ends": "2026-11-12T12:21:27Z",
-        "lifted": "2026-11-12T10:31:26Z",
-        "owner": "claude-4",
-        "since": "2026-11-12T10:21:27Z",
-        "until": "2026-11-12T10:30:00Z",
-        "why": "5-hour usage is 101%, too close to its 70% cap to start a long run (it starts under 65%)"
-      },
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
@@ -13532,7 +13524,7 @@
       "queued_at": "2026-11-12T08:39:31Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "43188854920",
+      "run_id": "pending:dcebc11d-1794479572",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -13551,7 +13543,7 @@
         "provider": "claude-4",
         "run": "43188854920"
       },
-      "started_at": "2026-11-12T09:08:42Z",
+      "started_at": "2026-11-12T10:33:37Z",
       "stop_requested": false,
       "taken_asks": [],
       "tree": {
@@ -17911,9 +17903,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T10:32:36Z",
+    "at": "2026-11-12T10:33:37Z",
     "url": "",
-    "what": "build #3730 on claude-8"
+    "what": "build #3596 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-12T10:18:51Z",
