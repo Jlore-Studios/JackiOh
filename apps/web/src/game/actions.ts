@@ -915,7 +915,9 @@ function startActivation(
     return { interaction: IDLE };
   }
   const candidates = activationsFor(legal, target.instanceId, target.ability);
-  if (candidates.length === 0) {
+  // `highlightFor` greys every activation control while an attack is picked: that press is refused too, and
+  // `activationReason` is then the view's reason or `NOT_NOW` (R3768000).
+  if (candidates.length === 0 || interaction.stage === "attacking") {
     const reason = activationReason(view, target);
     return reason === undefined ? { interaction } : { interaction, notice: reason };
   }

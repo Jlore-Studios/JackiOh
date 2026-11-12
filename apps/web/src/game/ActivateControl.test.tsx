@@ -196,6 +196,16 @@ describe("R510 the Activate control on the card", () => {
     expect(onAction).not.toHaveBeenCalled();
   });
 
+  it("R3768000 while an attack is picked every Activate control is greyed: its press shows a reason and sends no activation", () => {
+    const { onAction } = renderGame([{ type: "attack", attackerId: "u1", targetId: "e1" }, { type: "attack", attackerId: "u1", targetId: "e2" }, DISCARD]);
+
+    fireEvent.click(el(testid.card("u1")));
+    expect(el(testid.activate("fs2"))).toHaveAttribute("data-legal", "false");
+    fireEvent.click(el(testid.activate("fs2")));
+    expect(screen.getByTestId("attack-reason")).toBeInTheDocument();
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
   it("R510 cards that list no ability wear no control, and a press on a live one reports the activation, not the card", () => {
     const { onClick } = renderActivate([PING_E1, { type: "attack", attackerId: "act1", targetId: "e1" }]);
 

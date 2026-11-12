@@ -1243,4 +1243,13 @@ describe("R3768000 a greyed Activate press returns the view's reason", () => {
     expect(onClickTarget(viewWith(), [], IDLE, ACTIVATE)).toEqual({ interaction: IDLE });
     expect(onClickTarget(viewWith([ping()]), [], IDLE, ACTIVATE).notice).toBe(NOT_NOW);
   });
+
+  it("R3768000 an Activate press while an attack is picked is greyed too: a notice, no activation, the attack kept", () => {
+    const view = viewWith([{ ...ping(), usable: true, usesLeft: 1 }]);
+    const activate: ActionBody = { type: "activate", instanceId: "u1", ability: "ping" };
+    const attacking: Interaction = { stage: "attacking", attackerId: "u2", candidates: [] };
+    const result = onClickTarget(view, [activate], attacking, ACTIVATE);
+    expect(result).toEqual({ interaction: attacking, notice: NOT_NOW });
+    expect(result.action).toBeUndefined();
+  });
 });
