@@ -142,6 +142,11 @@ func TestSpare_TheStatusIssueOpensWithTheExcessCompute(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	cfg := testsupport.MakeConfig(testsupport.Config{Env: providersSecrets(providers.SecretNames...),
 		Machine: []string{"muse"}})
+	// A pool of 8 on GitHub's runners (the Free plan's, #1455), fewer than the accounts' lanes, so
+	// some accounts are past GitHub's room; the committed pool is larger since #3740.
+	pool := *cfg.Pool
+	pool.MaxParallel = 8
+	cfg.Pool = &pool
 	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Night, Cfg: cfg})
 	for _, r := range []struct {
 		number   int

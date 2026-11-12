@@ -3,6 +3,8 @@
 //! `legal_actions` lists every play they allow and the search tries each through `reduce`. Supply
 //! Drop's countdown is a payoff and a threat past the opponent's reply (#1995).
 
+use std::cell::Cell;
+
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
@@ -366,13 +368,10 @@ fn the_ai_casts_supply_drop_in_combat_mode_against_three_3_health_units() {
     );
 }
 
-/// The board above with two castable Vanillas beside Supply Drop: their plays in each lane outscore
-/// the cast on the static score and fill every place the reply scores, so the countdown, worth only
-/// once the reply weighs it, keeps a place of its own (R3696000).
-#[test]
-fn r3696000_the_ai_still_casts_supply_drop_in_combat_mode_with_two_castable_units_in_hand() {
+/// R3696000: Supply Drop beside two castable Vanillas, against three Curvatures.
+fn supply_drop_beside_two_vanillas() -> GameState {
     register_cards();
-    let state = scenario(json!({
+    scenario(json!({
         "seed": "ai-supply-drop-combat",
         "p1": { "hand": [SUPPLY_DROP, VANILLA, VANILLA], "mana": 2, "library": library() },
         "p2": {
@@ -386,7 +385,15 @@ fn r3696000_the_ai_still_casts_supply_drop_in_combat_mode_with_two_castable_unit
         },
     }))
     .state()
-    .clone();
+    .clone()
+}
+
+/// The board above with two castable Vanillas beside Supply Drop: their plays in each lane outscore
+/// the cast on the static score and fill every place the reply scores, so the countdown, worth only
+/// once the reply weighs it, keeps a place of its own (R3696000).
+#[test]
+fn r3696000_the_ai_still_casts_supply_drop_in_combat_mode_with_two_castable_units_in_hand() {
+    let state = supply_drop_beside_two_vanillas();
     let drop = in_hand(&state, SUPPLY_DROP);
     let decision = decide_at(&state, "ai-supply-drop-combat");
     assert!(
@@ -395,6 +402,99 @@ fn r3696000_the_ai_still_casts_supply_drop_in_combat_mode_with_two_castable_unit
         "{:?}",
         decision.action
     );
+}
+
+/// The lines `shortlist_lines` takes at the browser's budget, before the payoff line (R3696000).
+const SHORTLIST: usize = AI_BUDGET.finalists * AI_SEARCH.lines_per_action as usize;
+
+/// R3696000: on every budget from one too tight to reply to the Supply Drop line to one that spares it,
+/// a decision that replies to it still scores its finalists on every sampled world: its reply draws only
+/// on the nodes the other worlds do not keep back.
+#[test]
+fn r3696000_on_a_tight_budget_the_supply_drop_line_costs_no_world_its_score() {
+    let state = supply_drop_beside_two_vanillas();
+    let decisions: Vec<Decision> = (60..=200)
+        .step_by(5)
+        .map(|nodes| {
+            decide(
+                &state,
+                AI,
+                &mut AiOptions::with_budget(
+                    create_rng("ai-supply-drop-combat", 0),
+                    SearchBudget { nodes, ..AI_BUDGET },
+                ),
+            )
+            .expect("the AI acts")
+        })
+        .collect();
+    for decision in &decisions {
+        assert!(
+            decision.stats.replied <= SHORTLIST || decision.stats.worlds_scored == AI_BUDGET.determinizations,
+            "{:?}",
+            decision.stats
+        );
+    }
+    assert!(
+        decisions
+            .iter()
+            .any(|decision| decision.stats.replied > SHORTLIST),
+        "PREMISE: some budget replies to the Supply Drop line"
+    );
+    assert!(
+        decisions.iter().any(|decision| {
+            decision.stats.replied == SHORTLIST
+                && decision.stats.worlds_scored == AI_BUDGET.determinizations
+                && decision.stats.stopped_by == StoppedBy::Budget
+        }),
+        "PREMISE: some budget scores every world only by leaving the Supply Drop line out"
+    );
+}
+
+/// R3696000, R3498000: past the host's wrap-up the Supply Drop line is not replied to, while the
+/// shortlist and every other world still are. The beam never reaches its own poll (its floor is the root's
+/// `root_branching` and endTurn), so the one poll is the search's, before that line.
+#[test]
+fn r3696000_past_the_wrap_up_the_supply_drop_line_is_not_replied_to() {
+    let state = supply_drop_beside_two_vanillas();
+    let budget = SearchBudget {
+        root_branching: AI_BUDGET.nodes,
+        ..AI_BUDGET
+    };
+    let plain = decide(
+        &state,
+        AI,
+        &mut AiOptions::with_budget(create_rng("ai-supply-drop-combat", 0), budget),
+    )
+    .expect("the AI acts");
+    assert_eq!(
+        plain.stats.replied,
+        SHORTLIST + 1,
+        "PREMISE: with no clock the Supply Drop line is replied to: {:?}",
+        plain.stats
+    );
+    assert_eq!(plain.stats.stopped_by, StoppedBy::Exhausted);
+
+    let polls = Cell::new(0usize);
+    let fired = || {
+        polls.set(polls.get() + 1);
+        true
+    };
+    let wrapped = decide(
+        &state,
+        AI,
+        &mut AiOptions {
+            rng: create_rng("ai-supply-drop-combat", 0),
+            budget,
+            should_stop: None,
+            wrap_up: Some(&fired),
+        },
+    )
+    .expect("the AI acts");
+    assert_eq!(polls.get(), 1);
+    assert_eq!(wrapped.stats.lines, plain.stats.lines, "one beam");
+    assert_eq!(wrapped.stats.replied, SHORTLIST, "{:?}", wrapped.stats);
+    assert_eq!(wrapped.stats.worlds_scored, AI_BUDGET.determinizations);
+    assert_eq!(wrapped.stats.stopped_by, StoppedBy::Clock);
 }
 
 /// The AI's turn after p2 cast Supply Drop in Combat mode (the cast ends p2's turn: nothing is left

@@ -669,7 +669,8 @@ export function decide(state: GameState, seat: PlayerId, options: AiOptions): De
 6. `beamSearch(dets[0], …)`, on the nodes left after reserving enough to score the finalists after
    the reply. The best `finalists × AI_SEARCH.linesPerAction` lines (at most `linesPerAction` per
    first action, and, when none of them hands the turn over with an effect of the seat's own waiting
-   that `dets[0]` did not hold, the best line that does, last: `shortlist_lines`, R3696000) are
+   that `dets[0]` did not hold, the best line that does, last, on the nodes past the other worlds'
+   share of the reserve and never past the wrap-up: `shortlist_lines`, `payoff_score`, R3696000) are
    scored after the opponent's reply on `dets[0]` (`replyScore`), each first
    action keeps its best line, and the best `finalists` first actions are re-scored the same way
    with `scoreLine(…, reply: true)` on `dets[1..K-1]`; a line's answer that a world does not offer

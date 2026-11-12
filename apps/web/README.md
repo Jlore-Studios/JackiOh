@@ -500,7 +500,8 @@ the unit's picture (#3341: its art runs up to the frame) and the backrow's outli
 under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root
 (`Card.tsx` `hintRow`); `game/handHints.css` styles it. The hints are one list, `HAND_HINTS`
 in `game/handHints.ts`. Each is `{ id, icon, applies(card, view, face) }`, reads only the
-`CardView`, the `PlayerView` and the card's face the way `Card.tsx` reads it, and returns null
+`CardView`, the part of the view `HintView` names (the viewer's `trades`; `Hand.tsx` hands it
+one object while they are one, #3609) and the card's face the way `Card.tsx` reads it, and returns null
 or `{ n?, dimmed?, label }`, its label through `t()`.
 No row when no hint applies. No pointer event. Never on the opponent's backs, the revealed
 hand, the board or the menus. Adding a hint is one entry plus its icon (`cards/icons.tsx`).
@@ -508,6 +509,18 @@ The list ships the Tradable hint (#2269): a small swap-mark pip on each of the v
 hand cards with the Tradable keyword, dimmed once the turn's Trade is spent. It also ships
 `tribute` (#2268, R2268000): the Tributes a play of the card asks now, the view's `tribute`,
 which the engine sets on the viewer's own hand cards only and never at 0.
+
+**Card redraws** (#3609). A card is drawn again only when what it draws changes. A view arrives as
+fresh JSON (the wasm module's `viewFor`, a socket frame), so `Game` shares the cards a view holds
+unchanged with the view before it (`game/shareView.ts`: the two seats and the viewer's `trades`,
+never `events`, which the animations and the sound director match by identity, and nothing across a
+change of viewer), and `Card`'s `sameCardProps` and `useLiveFace` then see the same card object. A
+selection or a hover builds a new `Highlight` for every card, so `sameCardProps` counts only a
+card's own slice of it (`game/cardHighlight.ts`: its testids, its Activate controls, the hovered
+attack where it is the target or the attacker); a new read of the highlight in a card's tree is
+counted there too. The drag ghost memoises its face (`useLiveFace`), and the pointer's position stays
+in the drag layer's own state and the aim's hover only changes when the target does, so a pointer in
+motion draws no card. `game/Game.render.test.tsx` pins each, through `<Game>`.
 
 ## Commands
 

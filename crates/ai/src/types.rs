@@ -51,8 +51,9 @@ pub struct AiOptions<'a> {
     /// Wall-clock safety cap, polled before every node; true = stop and answer with the best so far.
     /// The browser's clock (SURFACE §10.1): this crate never reads one.
     pub should_stop: Option<&'a dyn Fn() -> bool>,
-    /// R3498000: polled only by the beam, before each of its nodes; true = explore no further, while the
-    /// reply and the other determinizations run on until `should_stop`. A host with a clock fires it at
+    /// R3498000: polled by the beam, before each of its nodes, and once before the reply to R3696000's
+    /// payoff line, which it then skips; true = explore no further, while the reply to the shortlist and the
+    /// other determinizations run on until `should_stop`. A host with a clock fires it at
     /// `AI_WRAP_UP_SHARE` of its limit (`wrap_up_after_ms`).
     pub wrap_up: Option<&'a dyn Fn() -> bool>,
 }

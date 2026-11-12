@@ -67,6 +67,7 @@ import { cardMotionLevel } from "./cardMotion.ts";
 import { aimDeal, clearDeal, planOpening, type OpeningPlan } from "./opening.ts";
 import { damageFeel, damageTier, SLAM_LAND_AT, UNIT_SLAM, type DamageTier } from "./damageFeel.ts";
 import { slamSand } from "./SandSurface.tsx";
+import { useSharedView } from "./shareView.ts";
 import { createEntranceResolver, createSlamResolver } from "./slamResolver.ts";
 import TakeoverStill from "./TakeoverStill.tsx";
 import { GameResult, theirHandOf, type ResultForm } from "./Result.tsx";
@@ -281,7 +282,7 @@ const NOTHING_LEGAL: readonly ActionBody[] = [];
 const ONCE_PER_VIEW: ReadonlySet<ActionBody["type"]> = new Set(["endTurn", "answer", "mulligan"]);
 
 export default function Game({
-  view,
+  view: incoming,
   legal: offered,
   onAction,
   error,
@@ -322,6 +323,9 @@ export default function Game({
   concedeBody,
 }: GameProps): ReactElement {
   useLocale();
+  // #3609: a view is fresh JSON, so the cards it holds unchanged are made the objects the last one held
+  // (shareView.ts); every card below keys its drawing on its object.
+  const view = useSharedView(incoming);
   // R2118000: no command menu over a board.
   useMarkBoardShown();
   const [interaction, setInteraction] = useState<Interaction>(IDLE);
