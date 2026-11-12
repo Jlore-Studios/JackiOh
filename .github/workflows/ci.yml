@@ -25,8 +25,9 @@
 #              the web's and the Worker's unit tests in quarters, without the audio, fx and asset
 #              tests; and promote-production.test.ts in a job of its own, only when what it tests
 #              changed. None of these jobs runs Cypress, so none downloads its binary.
-#   e2e smoke  Chrome only, specs 01, 06, 10, 13 and 19 (e2e/scripts/shard-specs.mjs SMOKE) against
-#              the release jackioh-server, in two shards that each boot their own server.
+#   e2e smoke  Chrome only, specs 01, 06, 10, 13, 19, 46 and 47 (e2e/scripts/shard-specs.mjs SMOKE)
+#              against the release jackioh-server, in shards (scripts/ci-shards.toml's [e2e] smoke,
+#              four since #3764) that each boot their own server.
 #   db         sql, the store contract and the deploy rehearsal against a real Postgres, each
 #              only when the pull request touches what it tests (scripts/ci-scope.sh's `db_sql`,
 #              `db_store` and `db_deploy`); a skip passes.
@@ -263,6 +264,9 @@ jobs:
             for file in $files; do
               case "$file" in
                 bot/* | .harness/* | .squishy/* | .github/* | .claude/* | scripts/*.sh) bot=true ;;
+                # Its counts are pinned by bot/tests/test_ci_matrix.py, so a count it changes is
+                # held there on the pull request, not first on main (#3585, #3764).
+                scripts/ci-shards.toml) bot=true ;;
                 training/loop.sh | training/file-records.sh | training/*.md | docs/issues-and-patches.md) bot=true ;;
                 rust-toolchain.toml | .cargo/*) bot=true ;;
               esac
