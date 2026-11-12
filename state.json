@@ -14916,6 +14916,13 @@
     "3767": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-12T14:18:04Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "medium",
+        "why": "No rule 1, 2, 4 or 5 line holds (no engine or AI change, no migration, about 24 files). Rule 3: server and web share one generated constant, `SEAT_TAKEN_CLOSE_CODE`, and no new frame, so the coupling is a call site, as with R3694000's 4411."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
