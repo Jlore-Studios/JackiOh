@@ -17385,7 +17385,7 @@
         "kind": "build",
         "model": "sonnet",
         "provider": "claude-4",
-        "round_tier": "medium",
+        "round_tier": "",
         "rounds_on": 3609,
         "rounds_used": 0,
         "since": "2026-11-12T04:41:56Z",
