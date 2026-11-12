@@ -32,6 +32,7 @@ use crate::db::store::{
     MatchSeat, ProfileKind, RatedGameKind, RatedReason, SeriesRow, SeriesSeat, SeriesStatus, StartMatchInput,
     StoreError, Tx,
 };
+use crate::loops::FailingStreak;
 use crate::ranked::ladder::Ladder;
 use crate::seats::Seat;
 use jackioh_shared::bots::pick::{bot_pick, pick_is_due};
@@ -684,9 +685,11 @@ pub async fn sweep_series(app: &Arc<App>) -> Result<SeriesSweep, StoreError> {
 pub async fn run_sweeper(app: Arc<App>) {
     let interval =
         Duration::from_millis(u64::try_from(SERIES_SWEEP_INTERVAL_SECONDS * MS_PER_SECOND).unwrap_or(0));
+    // #3770: a sweep that fails on every pass for a while is an alert, not just a warning each time.
+    let mut sweeping = FailingStreak::new("series.sweeper");
     loop {
         tokio::time::sleep(interval).await;
-        if let Err(error) = sweep_series(&app).await {
+        if let Err(error) = sweeping.track(sweep_series(&app).await) {
             tracing::warn!(event = "series.sweeper_failed", message = %error);
         }
     }
