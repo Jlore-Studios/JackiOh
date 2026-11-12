@@ -128,8 +128,26 @@
   stroke-linecap: round;
 }
 
-/* The viewer's own pill breathes a red glow once a second, and each new second pops in. */
-.clock[data-motion="full"][data-clock-side="you"] .clock-line[data-urgency="final"] {
+/* The viewer's own pill breathes a red glow once a second, and each new second pops in. The glow is
+   drawn once, on the pill's `::after`, and the loop moves its opacity alone (R3608000); the pill's own
+   shadow above never changes. */
+.clock[data-motion="full"][data-clock-side="you"] .clock-line[data-urgency="final"],
+.clock[data-motion="full"][data-clock-side="you"] .clock-line[data-urgency="last10"] {
+  position: relative;
+}
+
+.clock[data-motion="full"][data-clock-side="you"] .clock-line[data-urgency="final"]::after,
+.clock[data-motion="full"][data-clock-side="you"] .clock-line[data-urgency="last10"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 18px 3px color-mix(in srgb, var(--pal-red-500) 70%, transparent);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.clock[data-motion="full"][data-clock-side="you"] .clock-line[data-urgency="final"]::after {
   animation: clock-pill-pulse 1s var(--ease-in-out) infinite;
 }
 
@@ -138,7 +156,7 @@
 }
 
 /* The last 10: a sharper tick, a harder pulse, and the hourglass shivers. */
-.clock[data-motion="full"][data-clock-side="you"] .clock-line[data-urgency="last10"] {
+.clock[data-motion="full"][data-clock-side="you"] .clock-line[data-urgency="last10"]::after {
   animation: clock-pill-pulse 500ms var(--ease-in-out) infinite;
 }
 
@@ -166,11 +184,11 @@
 @keyframes clock-pill-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--pal-black) 35%, transparent), 0 0 8px color-mix(in srgb, var(--pal-red-500) 35%, transparent);
+    opacity: 0;
   }
 
   50% {
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--pal-black) 35%, transparent), 0 0 18px 3px color-mix(in srgb, var(--pal-red-500) 70%, transparent);
+    opacity: 1;
   }
 }
 

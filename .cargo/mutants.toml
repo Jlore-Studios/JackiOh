@@ -145,6 +145,15 @@ exclude_re = [
   # gives it, and face_in reads a card's name off its definition before the source's, and its type off the face,
   # then the definition, as named_face worked it out: either field left out draws the same face.
   'delete field (name|type_) from struct FaceSource expression in named_face',
+  # crates/shared (#3513): tuning.rs's way_of and signed are only given a change that is not 0: face_tuning skips a
+  # stat or a count that did not move and a number at its printed value, and change_words only words face_tuning's
+  # changes. So `delta > 0` and `delta >= 0` part only on a 0 neither is given.
+  'face/tuning\.rs:.*replace > with >= in (way_of|signed)',
+  # crates/shared (#3513): spans.rs's Builder::draw guards a run of plain words before a wrap (`wrap_start > at`)
+  # and after the last (`at < end`). At equality the run is empty, so it prints nothing, and the values owed at
+  # its edge were printed after the wrap before it (values_at prints each once), or are owed nowhere at a run's
+  # start (a value follows its label's words).
+  'face/spans\.rs:.*replace (> with >=|< with <=) in Builder<.*>::draw',
   # crates/shared (#3513): reader_keyword keeps the longest term a text names. Two terms of one length a
   # text both names would be one id (each is the text or its start before a space), and no id is a
   # candidate twice (the glossary's are only those the keywords lack), so `>` and `>=` keep the same one.

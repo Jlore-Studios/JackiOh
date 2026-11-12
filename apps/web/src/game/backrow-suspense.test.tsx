@@ -31,10 +31,10 @@ const keyframes = (css: string, name: string): string =>
   new RegExp(String.raw`@keyframes ${name} \{((?: ?[^{}]*\{[^{}]*\})*) ?\}`).exec(css)?.[1] ?? "";
 const stop = (body: string, pct: number): string => new RegExp(String.raw`(?:^| )${String(pct)}% \{([^{}]*)\}`).exec(body)?.[1]?.trim() ?? "";
 
-/** The one rule that breathes: every face-down card, and nothing about a card in its selector. */
-const BREATHES = '.card.card-facedown, .card[data-unrevealed="true"]:not([data-animating]):not([data-glow])';
-/** #3674: the breath's light, the same cards' overlay. */
-const GLOWS = '.card.card-facedown::before, .card[data-unrevealed="true"]:not([data-animating]):not([data-glow])::before';
+/** The one rule that breathes: every face-down card, and nothing about a card in its selector. A card glowing ready plays its glow instead. */
+const BREATHES = '.card.card-facedown:not([data-glow]), .card[data-unrevealed="true"]:not([data-animating]):not([data-glow])';
+/** #3674: the breath's light, the same cards' overlay, so the loop moves `scale` and `opacity` only (R3608000). A card mid-animation keeps its own `::before`. */
+const GLOWS = '.card.card-facedown:not([data-glow]):not([data-animating])::before, .card[data-unrevealed="true"]:not([data-animating]):not([data-glow])::before';
 
 /** Two of your own face-down traps under their veils, and four of the opponent's backs, each different. */
 function waitingView(): PlayerView {
@@ -140,9 +140,8 @@ describe("R2111000 the flip", () => {
 describe("R2111000 reduced motion", () => {
   it("R2111000 reduced motion turns all three off", () => {
     expect(FACEDOWN).toContain(`@media (prefers-reduced-motion: reduce) { ${BREATHES}, ${GLOWS} { animation: none; } }`);
-    expect(FACEDOWN).toContain(
-      ':root[data-reduce-motion="true"] .card.card-facedown, :root[data-reduce-motion="true"] .card[data-unrevealed="true"]:not([data-animating]):not([data-glow]), :root[data-reduce-motion="true"] .card.card-facedown::before, :root[data-reduce-motion="true"] .card[data-unrevealed="true"]:not([data-animating]):not([data-glow])::before { animation: none; }',
-    );
+    const switched = [...BREATHES.split(", "), ...GLOWS.split(", ")].map((selector) => `:root[data-reduce-motion="true"] ${selector}`);
+    expect(FACEDOWN).toContain(`${switched.join(", ")} { animation: none; }`);
     for (const type of ["cardPlayed", "summoned", "trapFired"] as const) expect(durationFor(type, true), type).toBe(0);
     expect(ANIM).toContain(
       '[data-animating="trapFired"] { animation-name: jk-trap-flip; animation-duration: calc(700ms * var(--anim-scale) * var(--anim-squeeze, 1));',

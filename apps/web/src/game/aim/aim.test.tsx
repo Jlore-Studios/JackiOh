@@ -139,6 +139,10 @@ describe("R738 the opponent's arrow", () => {
     const { rerender } = render(<Game view={aimView()} legal={LEGAL} onAction={vi.fn()} aim={{ emit: vi.fn(), opponent: theirs }} />);
     expect(screen.getByTestId("opponent-aim")).toHaveAttribute("data-targeting", "true");
     expect(screen.getByTestId("opponent-aim-arrow")).toBeInTheDocument();
+    // The marching dashes are four copies of one shaft, each shown for a quarter of the loop (opponentAim.css).
+    const pulses = [...screen.getByTestId("opponent-aim-arrow").querySelectorAll(".opponent-aim-pulse")];
+    expect(pulses.map((pulse) => pulse.getAttribute("data-phase"))).toEqual(["0", "1", "2", "3"]);
+    expect(new Set(pulses.map((pulse) => pulse.getAttribute("d"))).size).toBe(1);
 
     rerender(<Game view={aimView()} legal={LEGAL} onAction={vi.fn()} aim={{ emit: vi.fn(), opponent: { ...theirs, target: null } }} />);
     expect(screen.getByTestId("opponent-aim")).toHaveAttribute("data-targeting", "false");

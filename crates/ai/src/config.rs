@@ -656,7 +656,9 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     unspent_mana: 0.8,
     // R3695000: a crystal Floated toward a Float-discount card still above the crystals counts as one
     // left unspent does, the least issue #3695 allows: on such a crystal the line nets the card's
-    // `hand_cost_delta` and no more. GATE_NUMBERS_PENDING
+    // `hand_cost_delta` and no more. The smoke gate read 19, 16 and 20 of 20 at 0.8 as at 0, and Drone
+    // Core X's pass-1 sweep 2 casts at Easy where 0 had 1; at 2.4 it read none at Hard in 4 affordable
+    // turns (R3695000).
     float_discount: 0.8,
     // R1224: a debt counts as unspent mana does.
     owed_mana: 0.8,
@@ -923,6 +925,10 @@ pub const AI_REPLY: AiReply = AiReply {
     // #1995: untuned; the training lanes may move it.
     countdown_share: 0.5,
 };
+
+/// R3696001: the stream the reply's one guess against a secret of the seat's is drawn on, beside the
+/// world's seed and the guessing card's id: its own, so the guess moves no other stream.
+pub const AI_GUESS_SEED: &str = "ai:guess";
 
 /// `AI_MULLIGAN`'s shape, and `GREEDY_MULLIGAN`'s (the same one field).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]

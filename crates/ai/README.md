@@ -86,7 +86,13 @@ lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watch
 it can see on the field, then its attacks, a kill priced at what it removes (a unit with Reborn unspent
 less the body it comes back as, #1796, and less what its Death leaves behind, R2424000; plus a Trample
 attacker's excess on the hero and a Lifesteal attacker's heal, #1820), and once none is worth making the switches to Defense Position its own
-evaluation prefers) on every determinization, and plays the first action of the best mean. A line
+evaluation prefers) on every determinization, and plays the first action of the best mean. When none
+of the lines `shortlist_lines` takes for the reply hands the turn over with an effect of the seat's own
+waiting that the root did not hold (a countdown, a next-turn reward), the best line that does is replied
+to as well, last (R3696000). In the reply, a known card guessing an unrevealed secret of the seat's (a
+Fortify Mind) is tried with one guess, drawn on its own stream (`one_guess_per_card`, `AI_GUESS_SEED`)
+before anything is weighed, and while a known card would be discarded by the opponent's cleanup,
+`known_play` judges each play and standing still after its turn ends (R3696001). A line
 leaving a countdown waiting (an effect "in N turns" with its public badge, R1181000) is replied to again
 on a copy whose countdowns come due at the seat's next turn start, and the scores are blended at
 `AI_REPLY.countdown_share` per turn the farthest still waits past its owner's next turn start (#1995);

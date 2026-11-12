@@ -12,7 +12,7 @@ use crate::rules::fixtures::harness::{
 };
 use crate::rules::fixtures::twice_forward::{
     CRIER_DAMAGE, TURNER_DAMAGE, TWICE_FORWARD_SCRIPTS, caster, crier, forward, self_exiler, spell, trap,
-    turner, twice_forward_catalog,
+    turner, twice_forward_catalog, twin,
 };
 
 struct OpponentsTurn {
@@ -491,6 +491,30 @@ mod c_plus_c74s_field_trap_r425 {
                     .any(|card| card.id == second.card.id)
             );
         }
+    }
+
+    #[test]
+    fn r3693000_a_trap_taken_off_the_field_by_an_earlier_trigger_is_not_revealed_by_a_later_one() {
+        let OpponentsTurn { mut state, .. } = opponents_turn("twin", false);
+        let twin_trap = put(
+            &mut state,
+            &twin().id,
+            slot(PlayerId::P1, Row::Backrow, 3),
+            json!({}),
+        );
+        trap_of_mut(&mut state, &twin_trap.id).face_up = Some(false);
+        let second = play(
+            play(state, PlayerId::P2, &spell().id, None).state,
+            PlayerId::P2,
+            &spell().id,
+            None,
+        );
+        // Its first trigger exiled it.
+        let gone = trap_of(&second.state, &twin_trap.id);
+        assert_eq!(gone.zone.z(), ZoneName::Exile);
+        // R78: the card in the exile pile holds no face-up state, which its later trigger wrote to it.
+        assert_eq!(gone.face_up, None);
+        assert_eq!(gone.position, None);
     }
 
     #[test]

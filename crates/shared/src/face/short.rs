@@ -205,4 +205,38 @@ mod tests {
         assert_eq!(short_form_of("classic-023", false), Some(ShortForm::Clamp));
         assert_eq!(short_form_of("core-001", false), None);
     }
+
+    /// #814: the ellipsis takes a last stop's place only: a cut ending in a word keeps it, one ending in spaces loses
+    /// them first, and one of nothing but spaces is the ellipsis alone.
+    #[test]
+    fn the_ellipsis_replaces_only_a_last_stop_after_the_spaces_go() {
+        assert_eq!(
+            string(cut_text(&chars("One\nTwo\nThree"), ShortForm::Lines(2))),
+            Some("One\nTwo…".to_string())
+        );
+        assert_eq!(
+            string(cut_text(&chars("One.\nTwo. \nThree."), ShortForm::Lines(2))),
+            Some("One.\nTwo…".to_string())
+        );
+        assert_eq!(
+            string(cut_text(&chars(" \nTwo."), ShortForm::Lines(1))),
+            Some("…".to_string())
+        );
+    }
+
+    /// R280: an Ascent line is "Ascent N:", its colon the line's last character or not; a line that names a level
+    /// with no colon after it is the header's.
+    #[test]
+    fn r280_an_ascent_line_is_its_number_and_its_colon() {
+        let bare = chars("Header.\nAscent 1:\nAscent 2: Two.");
+        assert_eq!(
+            string(summit_short_text(SUMMIT_DEF_ID, &bare, Some(1))),
+            Some("Header.\nAscent 1:".to_string())
+        );
+        let named = chars("Header.\nAscent 2 is near.\nAscent 1: One.\nAscent 2: Two.");
+        assert_eq!(
+            string(summit_short_text(SUMMIT_DEF_ID, &named, Some(2))),
+            Some("Header.\nAscent 2 is near.\nAscent 2: Two.".to_string())
+        );
+    }
 }

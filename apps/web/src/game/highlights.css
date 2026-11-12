@@ -58,43 +58,50 @@
   border-color: color-mix(in srgb, var(--glow-ready) 60%, transparent);
 }
 
-/* A glowing card breathes, so a playable hand is noticed without being stared at. The pulse is
-   the halo's size only; the first layer, the 2px ring the component spec reads, is the same in
-   every frame. An animated box-shadow outranks every plain declaration, so each color has its own
-   keyframes and the green ones never run on a card whose condition is met. */
-.card[data-glow="ready"]:not([data-selected="true"]):not([data-condition-active="true"]) {
+/* A glowing card breathes, so a playable hand is noticed without being stared at. The breath moves
+   opacity alone (R3608000): the card's own box-shadow, the 2px ring the component spec reads and the
+   halo after it, is the same in every frame, and the inner rim that swells is drawn once on the card's
+   `::before`, which a loop fades between a third and full. `.card` clips its children, so the rim sits
+   inside the border, not outside it. Each color has its own keyframes' name and its own rim, so the
+   green rim never runs on a card whose condition is met. `:not([data-animating])` leaves the burn
+   front's `::before` (animations.css) to a card that is being destroyed. */
+.card[data-glow="ready"]:not([data-selected="true"]):not([data-animating])::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-raised);
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.card[data-glow="ready"]:not([data-selected="true"]):not([data-animating]):not([data-condition-active="true"])::before {
+  box-shadow: inset 0 0 12px 2px color-mix(in srgb, var(--glow-ready) 60%, transparent);
   animation: glow-breathe-ready calc(1.8s * var(--anim-scale, 1)) var(--ease-in-out) infinite alternate;
 }
 
-.card[data-glow="ready"][data-condition-active="true"]:not([data-selected="true"]) {
+.card[data-glow="ready"][data-condition-active="true"]:not([data-selected="true"]):not([data-animating])::before {
+  box-shadow: inset 0 0 14px 3px color-mix(in srgb, var(--glow-condition) 65%, transparent);
   animation: glow-breathe-condition calc(1.4s * var(--anim-scale, 1)) var(--ease-in-out) infinite alternate;
 }
 
 @keyframes glow-breathe-ready {
   from {
-    box-shadow:
-      0 0 0 2px var(--glow-ready),
-      0 0 6px 1px color-mix(in srgb, var(--glow-ready) 45%, transparent);
+    opacity: 0.35;
   }
 
   to {
-    box-shadow:
-      0 0 0 2px var(--glow-ready),
-      0 0 14px 3px color-mix(in srgb, var(--glow-ready) 60%, transparent);
+    opacity: 1;
   }
 }
 
 @keyframes glow-breathe-condition {
   from {
-    box-shadow:
-      0 0 0 2px var(--glow-condition),
-      0 0 8px 2px color-mix(in srgb, var(--glow-condition) 50%, transparent);
+    opacity: 0.35;
   }
 
   to {
-    box-shadow:
-      0 0 0 2px var(--glow-condition),
-      0 0 18px 5px color-mix(in srgb, var(--glow-condition) 65%, transparent);
+    opacity: 1;
   }
 }
 
