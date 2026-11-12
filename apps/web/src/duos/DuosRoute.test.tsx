@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactElement } from "react";
 
 import type { PlayerView } from "@jackioh/shared";
-import { DISCONNECT_GRACE_SECONDS, SERIES_POLL_SECONDS } from "@jackioh/server-config";
+import { DISCONNECT_GRACE_SECONDS, SEAT_TAKEN_CLOSE_CODE, SERIES_POLL_SECONDS } from "@jackioh/server-config";
 
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
 import { leaveMatchTestid } from "../game/ConfirmLeaveMatch.tsx";
@@ -114,6 +114,63 @@ describe("the co-op route before its first view", () => {
     expect(screen.queryByTestId(duosTestid.reconnect)).toBeNull();
     expect(screen.getByRole("link", { name: "Back to Play together" })).toHaveAttribute("href", "/together");
     expect(sockets).toHaveLength(1);
+  });
+});
+
+describe("R3767000 a co-op game another tab or device took the seat of", () => {
+  function open(): void {
+    act(() => {
+      latest().readyState = 1;
+      latest().onopen?.({});
+    });
+  }
+  function push(view: DuosView): void {
+    act(() => {
+      latest().onmessage?.({ data: JSON.stringify({ type: "view", view, legal: [] }) });
+    });
+  }
+  function seatTaken(): void {
+    act(() => {
+      latest().onclose?.({ code: SEAT_TAKEN_CLOSE_CODE, reason: "", wasClean: true });
+    });
+  }
+
+  it("R3767000 before the first view the replaced tab says the game is open elsewhere with Play here, not Joining; a press opens one socket", () => {
+    render(<DuosRoute matchId="dm-1" token="tok-duos" />);
+    seatTaken();
+    expect(screen.getByTestId(duosTestid.elsewhere)).toHaveTextContent(
+      "This game is open in another tab or on another device.",
+    );
+    expect(screen.getByTestId(duosTestid.connecting)).not.toHaveTextContent("Joining the co-op match…");
+    expect(screen.queryByTestId("gate-loading")).toBeNull();
+    expect(screen.queryByTestId(duosTestid.reconnect)).toBeNull();
+    expect(screen.queryByTestId(duosTestid.gone)).toBeNull();
+    expect(sockets).toHaveLength(1);
+
+    fireEvent.click(screen.getByTestId(duosTestid.playHere));
+    expect(sockets).toHaveLength(2);
+    expect(screen.getByTestId(duosTestid.connection)).toHaveAttribute("data-connection", "connecting");
+
+    open();
+    expect(screen.getByTestId(duosTestid.connection)).toHaveAttribute("data-connection", "open");
+    expect(screen.queryByTestId(duosTestid.elsewhere)).toBeNull();
+  });
+
+  it("R3767000 on a live board the connection line says so and offers Play here, never Reconnect now", () => {
+    render(<DuosRoute matchId="dm-1" token="tok-duos" />);
+    open();
+    push(duosView(1));
+    seatTaken();
+
+    const line = screen.getByTestId(duosTestid.connection);
+    expect(line).toHaveAttribute("data-connection", "elsewhere");
+    expect(line).toHaveTextContent("This game is open in another tab or on another device");
+    expect(screen.getByTestId(duosTestid.playHere)).toHaveTextContent("Play here");
+    expect(screen.queryByTestId(duosTestid.reconnect)).toBeNull();
+    expect(sockets).toHaveLength(1);
+
+    fireEvent.click(screen.getByTestId(duosTestid.playHere));
+    expect(sockets).toHaveLength(2);
   });
 });
 

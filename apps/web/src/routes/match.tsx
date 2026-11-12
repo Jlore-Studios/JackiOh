@@ -75,6 +75,10 @@ export const matchTestid = {
   gone: "match-gone",
   /** The button that retries at once while the connection line says Reconnecting…. */
   reconnect: "match-reconnect",
+  /** R3767000: the sentence for a game another tab or device took the seat of, before any view. */
+  elsewhere: "match-elsewhere",
+  /** R3767000: the button that takes the seat back, there and in the connection line. */
+  playHere: "match-play-here",
   /** Both seats' visible ranks and whether this game moves them (R604, R612). */
   ranks: "match-ranks",
   /** R2388000: one seat's rank before → after in a ranked match's result panel (`data-seat`). */
@@ -98,6 +102,14 @@ function ConnectionLine({ state, onReconnect }: { state: ConnectionState; onReco
           {" "}
           <button type="button" className="link-button" data-testid={matchTestid.reconnect} onClick={onReconnect}>
             {t("Reconnect now")}
+          </button>
+        </>
+      ) : null}
+      {state === "elsewhere" ? (
+        <>
+          {" "}
+          <button type="button" className="link-button" data-testid={matchTestid.playHere} onClick={onReconnect}>
+            {t("Play here")}
           </button>
         </>
       ) : null}
@@ -379,6 +391,22 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
             <a className="button-primary" href={paths.play} onClick={followInApp(paths.play)}>
               {t("Back to the lobby")}
             </a>
+          </div>
+        </ShellPanel>
+      );
+    }
+    // R3767000: another tab or device took the seat before the first view; nothing is loading, and a press
+    // takes the seat back.
+    if (match.connection === "elsewhere") {
+      return (
+        <ShellPanel testId={matchTestid.connecting}>
+          <p className="notice" data-testid={matchTestid.elsewhere} role="alert">
+            {t("This game is open in another tab or on another device.")}
+          </p>
+          <div className="row">
+            <button type="button" className="button-primary" data-testid={matchTestid.playHere} onClick={match.connect}>
+              {t("Play here")}
+            </button>
           </div>
         </ShellPanel>
       );

@@ -47,7 +47,8 @@ use crate::app::{App, now_ms};
 use crate::bug_reports::{Finding, FoundIn, RefusedRow};
 use crate::config::{
     BOT_DECISION_DEADLINE_MS, DUOS_AI_BUDGET, MATCH_OVER_CLOSE_CODE, MATCH_RECORD_RESULT_ATTEMPTS,
-    MATCH_RECORD_RESULT_BACKOFF_MS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS,
+    MATCH_RECORD_RESULT_BACKOFF_MS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS, SEAT_TAKEN_CLOSE_CODE,
+    SEAT_TAKEN_CLOSE_REASON,
 };
 use crate::db::store::StoreError;
 use crate::duos::engine::{self, Pinned};
@@ -1075,7 +1076,8 @@ impl DuosActor {
         if let Some(previous) = previous
             && previous != socket
         {
-            previous.close(Some(CLOSE_NORMAL), Some("replaced by a new socket"));
+            // R3767000: as the 1v1 actor's `attach`: the replaced seat socket gets `SEAT_TAKEN_CLOSE_CODE`.
+            previous.close(Some(SEAT_TAKEN_CLOSE_CODE), Some(SEAT_TAKEN_CLOSE_REASON));
         }
         tracing::info!(event = "duos.socket.attached", matchId = %self.match_id_str(), seat = %seat);
         self.enqueue(Task::Attach { seat });
