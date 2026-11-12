@@ -175,6 +175,19 @@ exclude_re = [
   # The name has no way to tell this `-` from the function's others, so the entry holds its column (53),
   # which no other `-` of `place_fights` has, and not its line, which moves with the code above it.
   'lib\.rs:\d+:53: replace - with \+ in place_fights',
+  # crates/shared (#3513): glicko2.rs's next_volatility (Glickman's step 5). Its bracket search below a never steps:
+  # f(a - kτ) is 1/τ plus e^x(Δ² - φ² - v - e^x) / (2(φ² + v + e^x)²), which is above -e^x / (2(φ² + v + e^x)) > -1/2,
+  # and every caller passes GLICKO_TAU, 0.5, so f(a - τ) > 3/2 and `f < 0` never holds: as `<= 0` (column 27) or
+  # `== 0` it never holds either, and `k += 1` as `-=` or `*=` (column 15) never runs. Its two loops' caps, `k <` and
+  # `step <` GLICKO_MAX_ITERATIONS, are never reached (the bracket at once, the Illinois loop in a few steps), so `<=`
+  # and `step += 1` as `*=` (column 14) stop at the same place. Its `>`s part from `>=` only on Δ² exactly φ² + v and
+  # on |B - A| exactly GLICKO_CONVERGENCE. `f_c * f_b <= 0` as `f_c / f_b` (column 16) has the same sign, f_b never 0.
+  'ranked/glicko2\.rs:.*replace > with >= in next_volatility',
+  'ranked/glicko2\.rs:.*replace < with <= in next_volatility',
+  'ranked/glicko2\.rs:\d+:27: replace < with == in next_volatility',
+  'ranked/glicko2\.rs:\d+:15: replace \+= with (-=|\*=) in next_volatility',
+  'ranked/glicko2\.rs:\d+:14: replace \+= with \*= in next_volatility',
+  'ranked/glicko2\.rs:\d+:16: replace \* with / in next_volatility',
   # crates/shared (#3513): season.rs's spread is only given its values' own mean as `center` (soft_reset's two
   # reports), and about the mean (v + c)(v - c) = v^2 - c^2 averages to E[v^2] - c^2, the same variance (v - c)^2
   # averages to: either `-` as `+` reports the same spread. The columns hold the entry to those two `-`.
