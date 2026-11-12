@@ -16210,13 +16210,13 @@
     "what": "revise #3781 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-12T19:22:56Z",
+    "at": "2026-11-12T19:36:55Z",
     "notes": [
-      "delivered review #3797 on claude-6 (run 43277183962): approved",
-      "started plan #3800 on claude-4 (run 43290325247)",
+      "#3781: `e2e smoke` red in CI run 43269685515; its other early jobs have until 2026-11-12T19:39:08Z to report",
+      "delivered suggest on claude-7 (run 43288103796): interrupted",
+      "started suggest on claude-8 (run 43292615075)",
+      "started revise #3781 on claude-6 (run 43292840264)",
       "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days",
-      "#3800: typed it Bug",
       "runner gate: started 0 of 1 waiting run(s); 1 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -16923,7 +16923,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-12T19:22:56Z",
+  "loop_tick": "2026-11-12T19:36:55Z",
   "machine_disk": {
     "issue": null,
     "reading": {
