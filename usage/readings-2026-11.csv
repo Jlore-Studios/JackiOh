@@ -17302,3 +17302,8 @@ observed_at,subscription,source,during,run_id,util_5h,resets_5h,util_7d,resets_7
 2026-11-12T04:29:51Z,claude-7,stream,call,43139707229,22,2026-11-12T06:20:00Z,,,allowed,50,,
 2026-11-12T04:30:21Z,claude-7,stream,call,43139707229,23,2026-11-12T06:20:00Z,,,allowed,50,,
 2026-11-12T04:31:21Z,claude-7,stream,call,43139707229,24,2026-11-12T06:20:00Z,,,allowed,50,,
+2026-11-12T04:46:30Z,claude-4,ping,before,43156779926,93,2026-11-12T05:20:00Z,,,allowed_warning,50,,
+2026-11-12T04:58:22Z,claude-6,ping,before,43157928935,54,2026-11-12T05:40:00Z,,,allowed,50,,
+2026-11-12T05:07:36Z,claude-2,ping,before,43158982268,16,2026-11-12T07:40:00Z,88,2026-11-14T05:00:00Z,allowed_warning,90,90,
+2026-11-12T05:07:53Z,claude-2,stream,call,43158982268,17,2026-11-12T07:40:00Z,89,2026-11-14T05:00:00Z,allowed_warning,90,90,
+2026-11-12T05:08:08Z,claude-2,stream,call,43158982268,18,2026-11-12T07:40:00Z,89,2026-11-14T05:00:00Z,allowed_warning,90,90,
