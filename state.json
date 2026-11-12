@@ -36261,7 +36261,8 @@
       "2026-11-12T21:58:29Z,claude-3,refusal,call,43311338223,100,2026-11-12T22:50:00Z,,,rejected,,,2026-11-12T22:50:00Z"
     ],
     "runs": [
-      "2026-11-12T22:06:06Z,43314507227,claude-3,opus,plan,3793,hard,interrupted,refusal,0,0,0,0,,100,100,,,44.7,claude-7,fresh,other,1"
+      "2026-11-12T22:06:06Z,43314507227,claude-3,opus,plan,3793,hard,interrupted,refusal,0,0,0,0,,100,100,,,44.7,claude-7,fresh,other,1",
+      "2026-11-12T21:58:30Z,43311338223,claude-3,opus,plan,3806,hard,interrupted,refusal,18.9,260,104314,27936043,10.3423,73,100,,,6.1,,fresh,,1"
     ]
   },
   "version": 1
