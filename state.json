@@ -12936,7 +12936,7 @@
       "provider": "claude-4",
       "queued_at": "2026-11-09T23:50:31Z",
       "requested_by": "squishy-squooby",
-      "run_id": "pending:b069f7a4-1794461306",
+      "run_id": "43161678938",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
