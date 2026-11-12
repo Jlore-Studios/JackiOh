@@ -15,7 +15,9 @@
 # The weeks since 1970 pick each area's shard (`sh scripts/mutants.sh <area> <k>` runs shard
 # k mod n), so the weeks walk every shard of every area in turn. Sunday at 03:17 UTC, three Rust and
 # three web jobs at a time so CI keeps runners, and on demand: `gh workflow run mutants.yml` (every
-# area, this week's shards), `-f area=<area>` for one, `-f shard=<k>` for another week's. A pull
+# area, this week's shards), `-f area=<area>` for one, `-f shard=<k>` for another week's, and
+# `-f shards=<list>` (`0-11`, `3,5,40-47`) for many of an area's shards in one run, `-f parallel=<n>`
+# of them at once (3 unless given): an audit walks a whole area so (#3490). A pull
 # request that changes the tooling runs twenty mutants of the run crate and of a card set (whose
 # scripts only scripts/mutants.sh's copy of the tree lets cargo-mutants find) and the Worker's, so a
 # broken setting shows before it merges.
@@ -32,6 +34,14 @@ on:
         default: ""
       shard:
         description: "The shard k to run (k mod each area's shard count); empty: this week's"
+        type: string
+        default: ""
+      shards:
+        description: "Many shards in one run, as ranges and numbers (0-11, 3,5,40-47); empty: the shard above"
+        type: string
+        default: ""
+      parallel:
+        description: "Shards run at once, of the Rust areas and of the web's each; empty: 3"
         type: string
         default: ""
   pull_request:
@@ -62,7 +72,8 @@ jobs:
     outputs:
       rust: ${{ steps.plan.outputs.rust }}
       web: ${{ steps.plan.outputs.web }}
-      shard: ${{ steps.plan.outputs.shard }}
+      shards: ${{ steps.plan.outputs.shards }}
+      parallel: ${{ steps.plan.outputs.parallel }}
       size: ${{ steps.plan.outputs.size }}
     steps:
       - name: the areas and the shard
@@ -71,14 +82,29 @@ jobs:
           EVENT: ${{ github.event_name }}
           INPUT_AREA: ${{ inputs.area }}
           INPUT_SHARD: ${{ inputs.shard }}
+          INPUT_SHARDS: ${{ inputs.shards }}
+          INPUT_PARALLEL: ${{ inputs.parallel }}
         run: |
           rust='["engine","cards","ai","run","shared","server","tools","wasm"]'
           web='["web-animations","web-effects","web-audio","web-cards","web-drag","web-settings","web-wire","web-wasm","edge"]'
           case "$INPUT_AREA$INPUT_SHARD" in *[!a-z0-9_-]*) echo "area and shard are names and numbers" >&2; exit 1 ;; esac
+          case "$INPUT_SHARDS" in *[!0-9,-]*) echo "shards are numbers and ranges (0-11, 3,5)" >&2; exit 1 ;; esac
+          case "$INPUT_PARALLEL" in *[!0-9]*) echo "parallel is a number" >&2; exit 1 ;; esac
           shard=${INPUT_SHARD:-$(($(date -u +%s) / 604800))}
+          # The shards, as a JSON list: each range a-b is a, a+1… b.
+          shards=$(echo "${INPUT_SHARDS:-$shard}" | tr ',' '\n' | while read -r part; do
+            case "$part" in
+              "") ;;
+              *-*) seq "${part%-*}" "${part#*-}" ;;
+              *) echo "$part" ;;
+            esac
+          done | sort -nu | paste -sd, -)
+          [ -n "$shards" ] || { echo "no shard to run" >&2; exit 1; }
+          parallel=${INPUT_PARALLEL:-3}
+          [ "$parallel" -ge 1 ] || { echo "parallel is at least 1" >&2; exit 1; }
           size=
           if [ "$EVENT" = pull_request ]; then
-            rust='["run","cards"]' web='["edge"]' shard=0 size=20
+            rust='["run","cards"]' web='["edge"]' shards=0 parallel=3 size=20
           elif [ -n "$INPUT_AREA" ]; then
             case "$INPUT_AREA" in
               web-* | edge) rust='[]' web="[\"$INPUT_AREA\"]" ;;
@@ -88,7 +114,8 @@ jobs:
           {
             echo "rust=$rust"
             echo "web=$web"
-            echo "shard=$shard"
+            echo "shards=[$shards]"
+            echo "parallel=$parallel"
             echo "size=$size"
           } | tee -a "$GITHUB_OUTPUT"
 
@@ -117,16 +144,17 @@ jobs:
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
   rust:
-    name: cargo-mutants (${{ matrix.area }})
+    name: cargo-mutants (${{ matrix.area }} ${{ matrix.shard }})
     needs: plan
     if: needs.plan.outputs.rust != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 330
     strategy:
       fail-fast: false
-      max-parallel: 3
+      max-parallel: ${{ fromJSON(needs.plan.outputs.parallel) }}
       matrix:
         area: ${{ fromJSON(needs.plan.outputs.rust) }}
+        shard: ${{ fromJSON(needs.plan.outputs.shards) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -143,28 +171,29 @@ jobs:
         timeout-minutes: 300
         env:
           AREA: ${{ matrix.area }}
-          SHARD: ${{ needs.plan.outputs.shard }}
+          SHARD: ${{ matrix.shard }}
           MUTANTS_SHARD_SIZE: ${{ needs.plan.outputs.size }}
         run: sh scripts/mutants.sh "$AREA" "$SHARD"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: mutants-${{ matrix.area }}
+          name: mutants-${{ matrix.area }}-${{ matrix.shard }}
           path: target/mutants/
           if-no-files-found: ignore
           retention-days: 30
 
   web:
-    name: stryker (${{ matrix.area }})
+    name: stryker (${{ matrix.area }} ${{ matrix.shard }})
     needs: plan
     if: needs.plan.outputs.web != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 330
     strategy:
       fail-fast: false
-      max-parallel: 3
+      max-parallel: ${{ fromJSON(needs.plan.outputs.parallel) }}
       matrix:
         area: ${{ fromJSON(needs.plan.outputs.web) }}
+        shard: ${{ fromJSON(needs.plan.outputs.shards) }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -181,13 +210,13 @@ jobs:
         timeout-minutes: 300
         env:
           AREA: ${{ matrix.area }}
-          SHARD: ${{ needs.plan.outputs.shard }}
+          SHARD: ${{ matrix.shard }}
           MUTANTS_SHARD_SIZE: ${{ needs.plan.outputs.size }}
         run: sh scripts/mutants.sh "$AREA" "$SHARD"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: mutants-${{ matrix.area }}
+          name: mutants-${{ matrix.area }}-${{ matrix.shard }}
           path: target/mutants/
           if-no-files-found: ignore
           retention-days: 30
@@ -207,16 +236,21 @@ jobs:
             scripts
             .github
             crates/cards/src/scripts
+      # Each shard's artifact in a directory of its own (mutants-<area>-<k>/<area>/), since two shards of an
+      # area write the same names.
       - uses: actions/download-artifact@v4
         with:
           pattern: mutants-*
-          path: target/mutants
-          merge-multiple: true
+          path: target/shards
       - name: the scores
         run: |
-          mkdir -p target/mutants
-          for dir in target/mutants/*/; do
-            if [ -d "$dir" ]; then sh scripts/mutants.sh score "$(basename "$dir")"; fi
+          mkdir -p target/shards target/mutants
+          for dir in target/shards/*/*/; do
+            [ -d "$dir" ] || continue
+            area=$(basename "$dir")
+            rm -rf "target/mutants/$area"
+            cp -R "$dir" "target/mutants/$area"
+            sh scripts/mutants.sh score "$area"
           done >"$RUNNER_TEMP/scores.md"
           {
             echo "## Mutation scores"
