@@ -435,7 +435,7 @@ mod tests {
             "stand-in (1) 4/4+stand-in (0) Spell",
             "stand-in (1) 4/4*",
             "stand-in (1) 4/4 #1",
-            "stand-in (1) 4/4@v0.5.13",
+            "stand-in (1) 4/4@v0.5.12aa",
             "stand-in (1) 4/4: the big one",
             "stand-in (99999999999) 4/4",
         ] {

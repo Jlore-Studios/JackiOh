@@ -28,6 +28,12 @@ export const PACK_RAYS_MS = 1200;
 export const PACK_TILT_DEG = 8;
 /** The pack object's name for the cosmetic pack; a card pack is a shipped set's name or `GLOBAL_PACK_NAME`. */
 export const COSMETIC_PACK = "cosmetic";
+/** The dungeon run's reward packs (#3588): the beaten enemy's deck, with a boss look on a boss node. */
+export const DUNGEON_ENEMY_PACK = "dungeon-enemy";
+export const DUNGEON_BOSS_PACK = "dungeon-boss";
+/** The dungeon run's random pack and its type, tag or rarity pack. */
+export const DUNGEON_RANDOM_PACK = "dungeon-random";
+export const DUNGEON_FILTER_PACK = "dungeon-filter";
 export const PACK_ODDS_DECIMALS = 1;
 
 /** Rarities lowest first. */
@@ -113,6 +119,10 @@ export function holdsToFlip(rarity: PrintedRarity): boolean {
 export function packName(pack: string): string {
   if (pack === GLOBAL_PACK_NAME) return t("Global pack");
   if (pack === COSMETIC_PACK) return t("Cosmetic pack");
+  if (pack === DUNGEON_ENEMY_PACK) return t("Enemy pack");
+  if (pack === DUNGEON_BOSS_PACK) return t("Boss pack");
+  if (pack === DUNGEON_RANDOM_PACK) return t("Random pack");
+  if (pack === DUNGEON_FILTER_PACK) return t("Card pack");
   return t("{set} pack", { set: t(pack) });
 }
 

@@ -11,7 +11,9 @@ const library = vi.hoisted(() => ({
   fetch: vi.fn<(request: Request) => Promise<Response>>(),
   getState: vi.fn<() => Promise<{ status: string }>>(),
   startAndWaitForPorts: vi.fn<(options: unknown) => Promise<void>>(),
-  containerFetch: vi.fn<() => Promise<Response>>(),
+  containerFetch: vi.fn<(...args: unknown[]) => Promise<Response>>(),
+  stop: vi.fn<(...args: unknown[]) => Promise<void>>(),
+  destroy: vi.fn<() => Promise<void>>(),
 }));
 
 vi.mock("@cloudflare/containers", () => ({
@@ -31,8 +33,14 @@ vi.mock("@cloudflare/containers", () => ({
     startAndWaitForPorts(options: unknown): Promise<void> {
       return library.startAndWaitForPorts(options);
     }
-    containerFetch(): Promise<Response> {
-      return library.containerFetch();
+    containerFetch(...args: unknown[]): Promise<Response> {
+      return library.containerFetch(...args);
+    }
+    stop(...args: unknown[]): Promise<void> {
+      return library.stop(...args);
+    }
+    destroy(): Promise<void> {
+      return library.destroy();
     }
   },
 }));
@@ -44,6 +52,24 @@ function serverWith(running: boolean): Server {
   const ctx = { container: { running } };
   const env = { DEPLOYED_COMMIT: COMMIT };
   return new Server(ctx as unknown as ConstructorParameters<typeof Server>[0], env as unknown as ConstructorParameters<typeof Server>[1]);
+}
+
+/** A server whose `ctx` and `env` the test sets by hand. */
+function serverWithCtx(ctx: unknown, env: unknown): Server {
+  return new Server(
+    ctx as unknown as ConstructorParameters<typeof Server>[0],
+    env as unknown as ConstructorParameters<typeof Server>[1],
+  );
+}
+
+function resetLibrary(): void {
+  vi.clearAllMocks();
+  library.fetch.mockResolvedValue(LISTENING);
+  library.getState.mockResolvedValue({ status: "healthy" });
+  library.startAndWaitForPorts.mockResolvedValue();
+  library.stop.mockResolvedValue();
+  library.destroy.mockResolvedValue();
+  library.containerFetch.mockResolvedValue(new Response(null, { headers: { "x-deployed-commit": COMMIT } }));
 }
 
 function request(): Request {
@@ -100,6 +126,149 @@ describe("a request and a sleeping server", () => {
 
   it("answers before the client gives up on the request", () => {
     expect(START_WAIT_MS).toBeLessThan(API_REQUEST_TIMEOUT_SECONDS * 1000);
+  });
+});
+
+describe("the image check on the first request", () => {
+  beforeEach(() => {
+    resetLibrary();
+  });
+
+  it("asks the running server for its commit at /healthz on the server's port", async () => {
+    await serverWith(true).fetch(request());
+
+    expect(library.containerFetch).toHaveBeenCalledOnce();
+    expect(library.containerFetch).toHaveBeenCalledWith("http://container/healthz", {}, SERVER_PORT);
+  });
+
+  it("leaves a server that is not running unchecked", async () => {
+    await serverWith(false).fetch(request());
+
+    expect(library.containerFetch).not.toHaveBeenCalled();
+    expect(library.fetch).toHaveBeenCalledOnce();
+  });
+
+  it("leaves a server on the deployed commit running", async () => {
+    await serverWith(true).fetch(request());
+
+    expect(library.stop).not.toHaveBeenCalled();
+    expect(library.destroy).not.toHaveBeenCalled();
+  });
+
+  it("starts a server whose context names no container", async () => {
+    const answer = await serverWithCtx({}, { DEPLOYED_COMMIT: COMMIT }).fetch(request());
+
+    expect(library.startAndWaitForPorts).toHaveBeenCalledOnce();
+    expect(answer).toBe(LISTENING);
+  });
+
+  it("reports a server it cannot ask, and still reaches it", async () => {
+    library.containerFetch.mockRejectedValue(new Error("no answer"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    expect(await serverWith(true).fetch(request())).toBe(LISTENING);
+    expect(warn).toHaveBeenCalledWith("server.image_check_failed", expect.any(Error));
+    expect(library.stop).not.toHaveBeenCalled();
+  });
+
+  it("stops a server on an older image with SIGTERM, and leaves it once it stops", async () => {
+    const container = { running: true };
+    library.containerFetch.mockResolvedValue(new Response(null, { headers: { "x-deployed-commit": "older" } }));
+    library.stop.mockImplementation(() => {
+      container.running = false;
+      return Promise.resolve();
+    });
+
+    await serverWithCtx({ container }, { DEPLOYED_COMMIT: COMMIT }).fetch(request());
+
+    expect(library.stop).toHaveBeenCalledWith("SIGTERM");
+    expect(library.destroy).not.toHaveBeenCalled();
+  });
+
+  it("waits out a server on an older image that stays up, then destroys it", async () => {
+    vi.useFakeTimers();
+    try {
+      resetLibrary();
+      library.containerFetch.mockResolvedValue(new Response(null, { headers: { "x-deployed-commit": "older" } }));
+
+      const fetching = serverWithCtx({ container: { running: true } }, { DEPLOYED_COMMIT: COMMIT }).fetch(request());
+      // Still draining: the destroy has to wait for the full wait, not a skipped or shortened one.
+      await vi.advanceTimersByTimeAsync(29_000);
+      expect(library.stop).toHaveBeenCalledWith("SIGTERM");
+      expect(library.destroy).not.toHaveBeenCalled();
+      // Past the wait: the server is still up, so it is destroyed.
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(library.destroy).toHaveBeenCalledOnce();
+      await fetching;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("the Worker's routes", () => {
+  beforeEach(() => {
+    resetLibrary();
+  });
+
+  function routedEnv(fetch: (request: Request) => Promise<Response>): Env {
+    return {
+      ASSETS: { fetch: vi.fn() },
+      SERVER: { idFromName: vi.fn((name: string) => name), get: vi.fn((_id: string) => ({ fetch })) },
+    } as unknown as Env;
+  }
+
+  it("answers anything that is neither the server's nor the module's with 404", async () => {
+    const env = routedEnv(() => Promise.resolve(new Response("unreached")));
+    const answer = await worker.fetch(new Request("https://jackioh.com/login"), env);
+
+    expect(answer.status).toBe(404);
+    expect(await answer.text()).toBe("Not found");
+    expect(env.SERVER.get).not.toHaveBeenCalled();
+  });
+
+  it("forwards the server's paths through the one instance, without the caller's address", async () => {
+    const fetch = vi.fn((_request: Request) => Promise.resolve(new Response("from the server")));
+    const env = routedEnv(fetch);
+    const answer = await worker.fetch(
+      new Request("https://jackioh.com/api/catalog", { headers: { "X-Forwarded-For": "spoofed" } }),
+      env,
+    );
+
+    expect(env.SERVER.idFromName).toHaveBeenCalledWith("main");
+    expect(env.SERVER.get).toHaveBeenCalledWith("main", { locationHint: "enam" });
+    expect(fetch).toHaveBeenCalledOnce();
+    const forwarded = fetch.mock.calls[0]?.[0] as Request;
+    expect(forwarded.headers.has("X-Forwarded-For")).toBe(false);
+    expect(await answer.text()).toBe("from the server");
+  });
+});
+
+describe("the daily wake-up", () => {
+  function scheduledEnv(status: number): { env: Env; fetch: ReturnType<typeof vi.fn> } {
+    const fetch = vi.fn(() => Promise.resolve(new Response(status === 200 ? "ready" : "not ready", { status })));
+    const env = {
+      SERVER: { idFromName: vi.fn((name: string) => name), get: vi.fn((_id: string) => ({ fetch })) },
+    } as unknown as Env;
+    return { env, fetch };
+  }
+
+  it("asks the server for readiness", async () => {
+    const { env, fetch } = scheduledEnv(200);
+
+    await worker.scheduled({} as Parameters<typeof worker.scheduled>[0], env);
+
+    expect(env.SERVER.idFromName).toHaveBeenCalledWith("main");
+    expect(fetch).toHaveBeenCalledOnce();
+    expect((fetch.mock.calls[0]?.[0] as Request).url).toBe("http://container/readyz");
+  });
+
+  it("fails naming the path and the status when the server is not ready", async () => {
+    const { env } = scheduledEnv(500);
+
+    await expect(worker.scheduled({} as Parameters<typeof worker.scheduled>[0], env)).rejects.toThrow(
+      "the server's /readyz answered 500",
+    );
   });
 });
 

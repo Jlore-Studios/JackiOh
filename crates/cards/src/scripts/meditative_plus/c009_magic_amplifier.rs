@@ -298,4 +298,21 @@ mod tests {
             assert!(added(&s).is_empty());
         });
     }
+
+    /// R767000: the script kept for v0.5.2 still gives both players its Spell Damage.
+    #[test]
+    fn r767000_r1180000_a_game_on_v0_5_2_keeps_the_aura_for_both_players() {
+        for (radiant, amount) in [(false, 2), (true, 4)] {
+            crate::under_kept(ID, super::script_v0_5_2(), || {
+                let mut s = game(
+                    "m+009-kept-aura",
+                    json!({ "hand": [{ "def": ID, "radiant": radiant }, FILLER] }),
+                    json!({}),
+                );
+                s.play(ID, json!({}));
+                assert_eq!(spell_damage_of(s.state(), P1), amount, "radiant {radiant}");
+                assert_eq!(spell_damage_of(s.state(), P2), amount, "radiant {radiant}");
+            });
+        }
+    }
 }

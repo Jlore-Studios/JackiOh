@@ -10,9 +10,9 @@
 
 use jackioh_engine::game_over::{SeatOutcome, seat_outcome};
 use jackioh_engine::wire::{
-    CounterKind, FengShuiOutcome, GameEvent, GameOverReason, GlitchOutcome, LibraryOverflowOutcome, PlayerId,
-    PlayerView, PredictOutcome, PromptKind, RedirectWhat, RotationDirection, Row, SecretChoice, Winner,
-    ZoneName,
+    CounterKind, FengShuiOutcome, GameEvent, GameOverReason, GlitchOutcome, KeywordKind,
+    LibraryOverflowOutcome, PlayerId, PlayerView, PredictOutcome, PromptKind, RedirectWhat,
+    RotationDirection, Row, SecretChoice, Winner, ZoneName,
 };
 
 use crate::face::chinese::{list_separator, reader_keyword};
@@ -324,6 +324,17 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
     let s = |english: &str, parts: Vec<(&'static str, Part)>| sentence(w, english, &parts);
     let cap = capitalised_spans;
     let hidden = |id: &str| id == HIDDEN_CARD;
+    // R2783001: the line ends with the keyword behind its event, where the event names one.
+    let by = |text: Vec<Span>, via: Option<KeywordKind>| match via {
+        Some(kind) => s(
+            "{sentence} ({keyword})",
+            vec![
+                p("sentence", text),
+                p("keyword", keyword_span(names, kind.as_str())),
+            ],
+        ),
+        None => text,
+    };
     let seat = |player: PlayerId| names.seat(player);
     let whose = |player: PlayerId| names.whose(player);
     // "Your hero", "A unit": the target as the line opens.
@@ -359,6 +370,7 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
             def_id,
             row,
             lane,
+            via,
             ..
         } => {
             // R370: a card set face down is a trap the viewer may not read; the line says so, with the
@@ -377,7 +389,14 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
                 }));
             }
             parts.push(p("card", names.card(instance_id, def_id)));
-            cap(s("{card} entered {whose} {zone}", parts))
+            // A hidden card's keyword is not the viewer's to read, though the view drops it already (R97).
+            let via = via.filter(|_| !hidden(def_id));
+            let text = if via == Some(KeywordKind::Reborn) {
+                s("{card} came back in {whose} {zone}", parts)
+            } else {
+                s("{card} entered {whose} {zone}", parts)
+            };
+            cap(by(text, via))
         }
         GameEvent::Damage {
             source_id,
@@ -385,6 +404,7 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
             amount,
             combat,
             absorbed,
+            via,
             ..
         } => {
             // A hit off combat names what dealt it where the viewer may name it; a hidden or null source
@@ -394,7 +414,7 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
             } else {
                 source_id.as_deref().and_then(|id| names.known(id))
             };
-            if let Some(source) = source {
+            let text = if let Some(source) = source {
                 let dealt = vec![
                     p("source", capitalised(&source)),
                     p("target", names.instance(target_id, None)),
@@ -425,13 +445,15 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
                     (false, true) => s("{target} took {amount} damage in combat", hit),
                     (false, false) => s("{target} took {amount} damage", hit),
                 }
-            }
+            };
+            by(text, *via)
         }
         GameEvent::DamageAbsorbed {
             source_id,
             target_id,
             absorbed,
             combat,
+            via,
             ..
         } => {
             // R1361: the Armor took the whole hit, so nothing was dealt.
@@ -441,7 +463,7 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
             } else {
                 source_id.as_deref().and_then(|id| names.known(id))
             };
-            match source {
+            let text = match source {
                 Some(source) => {
                     let mut hit = hit;
                     hit.push(p("source", source));
@@ -449,7 +471,8 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
                 }
                 None if *combat => s("{target}'s Armor absorbed {absorbed} damage in combat", hit),
                 None => s("{target}'s Armor absorbed {absorbed} damage", hit),
-            }
+            };
+            by(text, *via)
         }
         // R860: the line names only that a secret is held, never the choice.
         GameEvent::SecretChosen { player, .. } => s("{seat} kept a secret", vec![p("seat", seat(*player))]),
@@ -479,20 +502,31 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
             vec![p("seat", seat(*player)), p("amount", *amount)],
         ),
         GameEvent::Healed {
-            target_id, amount, ..
-        } => s(
-            "{target} healed {amount}",
-            vec![p("target", target(target_id)), p("amount", *amount)],
+            target_id,
+            amount,
+            via,
+        } => by(
+            s(
+                "{target} healed {amount}",
+                vec![p("target", target(target_id)), p("amount", *amount)],
+            ),
+            *via,
         ),
         GameEvent::DivineShieldLost { instance_id } => s(
             "{target} lost its Divine Shield",
             vec![p("target", target(instance_id))],
         ),
         GameEvent::Destroyed {
-            instance_id, def_id, ..
-        } => cap(s(
-            "{card} was destroyed",
-            vec![p("card", names.card(instance_id, def_id))],
+            instance_id,
+            def_id,
+            via,
+            ..
+        } => cap(by(
+            s(
+                "{card} was destroyed",
+                vec![p("card", names.card(instance_id, def_id))],
+            ),
+            via.filter(|_| !hidden(def_id)),
         )),
         GameEvent::CardResolved { .. } => return None,
         GameEvent::EnteredGraveyard {

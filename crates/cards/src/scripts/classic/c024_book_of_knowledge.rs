@@ -79,10 +79,6 @@ mod tests {
     const F: &str = "core-045";
     const G: &str = "core-032";
 
-    fn count(s: &Scenario, kind: GameEventType) -> usize {
-        s.events().iter().filter(|event| event.event_type() == kind).count()
-    }
-
     /// Both ends of the Book in hand set to `n`, so it draws `n` with no roll.
     fn fixed(s: &mut Scenario, n: i32) {
         set_param(s.card_mut(BOOK), "least", n);
@@ -124,7 +120,7 @@ mod tests {
 
                 assert_eq!(def_ids(&s.hand(P1)), vec![A, B, C]);
                 assert_eq!(def_ids(&s.pile(P1, "library")), vec![D]);
-                assert_eq!(count(&s, GameEventType::Drawn), 3);
+                assert_eq!(s.count(GameEventType::Drawn), 3);
             }
 
             #[test]
@@ -147,7 +143,7 @@ mod tests {
                 s.play(BOOK, json!({}));
 
                 assert_eq!(def_ids(&s.hand(P1)), vec![A]);
-                assert_eq!(count(&s, GameEventType::Fatigue), 2);
+                assert_eq!(s.count(GameEventType::Fatigue), 2);
                 s.expect_health(P1, 27);
             }
 
@@ -166,7 +162,7 @@ mod tests {
 
                 assert_eq!(s.hand(P1).len(), 10);
                 assert_eq!(def_ids(&s.hand(P1)).last().map(String::as_str), Some(A));
-                assert_eq!(count(&s, GameEventType::Burned), 2);
+                assert_eq!(s.count(GameEventType::Burned), 2);
                 let graveyard = def_ids(&s.pile(P1, "graveyard"));
                 assert!(graveyard.contains(&B.to_string()) && graveyard.contains(&C.to_string()));
                 let theirs = serde_json::to_string(&s.view(P2)).unwrap();

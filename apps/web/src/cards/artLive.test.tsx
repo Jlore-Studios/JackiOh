@@ -647,7 +647,10 @@ describe("R3340000 cards that answer", () => {
   it("R3340000 a held procedural, Stinkyscape and Training Grounds face draws its picture as a backdrop, a subject and motes", () => {
     writeCardLevel(GARY, VERSION_ANIMATED_ID);
     writeCardLevel("traininggrounds-016", VERSION_ANIMATED_ID);
-    for (const id of [GARY, "stinkyscape-006", "traininggrounds-016"]) {
+    // R3350000: a Mythic's moving picture draws its diorama's slices instead (diorama.test.tsx), so the Stinkyscape face is
+    // a Legendary's, ZolarKeth's, at its animated level.
+    writeCardLevel("stinkyscape-026", VERSION_ANIMATED_ID);
+    for (const id of [GARY, "stinkyscape-026", "traininggrounds-016"]) {
       const { container } = render(<Board specs={[{ id }]} />);
       const art = container.querySelector<HTMLElement>(".cf-art");
       expect(art?.getAttribute("data-art-live"), id).toBe("true");

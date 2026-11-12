@@ -86,6 +86,7 @@ mod tests {
         json!({ "targets": [{ "pick": "instance", "instanceId": card.id }], "zone": 1 })
     }
 
+    // Differs from Scenario::offered: one card's play targets, per play, not the seat's whole legal list.
     fn offered(s: &Scenario) -> Vec<Vec<Selection>> {
         let trav = s.hand(P1).into_iter().find(|card| card.def_id == ID).expect("Tnack Trav in hand");
         legal_actions(s.state(), P1)

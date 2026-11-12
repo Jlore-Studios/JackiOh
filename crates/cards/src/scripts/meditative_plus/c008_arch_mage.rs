@@ -20,6 +20,7 @@ pub fn script() -> CardScripts {
 // M+ #8 Arch Mage — SPEC §8.9 row 8, BUILD M11 row M+ 8 (§6.1).
 #[cfg(test)]
 mod tests {
+    use jackioh_engine::damage::spell_damage_of;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -51,6 +52,7 @@ mod tests {
             "p1": { "hand": [FILLER], "field": [MAGE], "backrow": [ECHOES], "exile": [FILLER, FILLER], "library": [FILLER, FILLER] },
             "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
         }));
+        assert_eq!(spell_damage_of(s.state(), P1), 3, "the Mage's Spell Damage +3 is there");
         s.end_turn();
         s.end_turn(); // p1's start of turn: Echoes deals 2.
         s.expect_health(P2, HERO_HEALTH - 2);
@@ -87,6 +89,7 @@ mod tests {
             "p1": { "hand": [FILLER], "field": [MAGE], "backrow": [{ "def": TRAP, "faceUp": true }] },
             "p2": { "hand": [FILLER] },
         }));
+        assert_eq!(spell_damage_of(s.state(), P1), 3, "the Mage's Spell Damage +3 is there");
         trap_hits_enemy_hero(&mut s, 2);
         s.expect_health(P2, HERO_HEALTH - 2);
     }
@@ -101,6 +104,7 @@ mod tests {
             },
             "p2": { "hand": [FILLER] },
         }));
+        assert_eq!(spell_damage_of(s.state(), P1), 6, "the Radiant Mage's Spell Damage +6 is there");
         trap_hits_enemy_hero(&mut s, 2);
         s.expect_health(P2, HERO_HEALTH - 2);
     }
@@ -112,6 +116,8 @@ mod tests {
             "p1": { "hand": [FILLER], "field": [MAGE] },
             "p2": { "hand": [LUNAR_ECLIPSE, FILLER] },
         }));
+        assert_eq!(spell_damage_of(s.state(), P1), 3, "the Mage's Spell Damage +3 is there");
+        assert_eq!(spell_damage_of(s.state(), P2), 0, "and is its controller's alone");
         s.play(LUNAR_ECLIPSE, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
         s.expect_health(P1, HERO_HEALTH - 3);
     }
@@ -124,8 +130,10 @@ mod tests {
         }));
         let mage = s.card(MAGE).id.clone();
         s.card_mut(&mage).damage = 1;
+        assert_eq!(spell_damage_of(s.state(), P1), 3, "the Mage's Spell Damage +3 is there");
         s.play(TRUE_STRIKE, json!({ "targets": [{ "pick": "instance", "instanceId": mage }] }));
         s.expect_in_zone(MAGE, "graveyard");
+        assert_eq!(spell_damage_of(s.state(), P1), 0, "and goes with it");
         s.play(LUNAR_ECLIPSE, at_hero());
         s.expect_health(P2, HERO_HEALTH - 3);
     }

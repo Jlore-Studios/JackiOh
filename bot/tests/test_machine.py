@@ -46,6 +46,16 @@ class StarterTests(unittest.TestCase):
         self.assertEqual(found, [{"run": 7, "job": "work", "label": "night-vm-gpt"}])
         self.assertTrue(all(c.startswith("/repositories/123/") for c in calls))
 
+    def test_a_queued_job_in_a_pending_run_wakes_it(self):
+        """GitHub listed a gather run as `pending` for hours while its one job sat `queued` for
+        the PC's runner (2026-11-09); a run with no job yet is `pending` too and wakes nothing."""
+        get, calls = fake_api({"pending": [{"id": 7}, {"id": 8}]}, {
+            7: [job("work", "queued", ["night-vm-gpt"])],
+            8: []})
+        found = starter.waiting_jobs("123", ["bot-night.yml"], get, NOW)
+        self.assertEqual(found, [{"run": 7, "job": "work", "label": "night-vm-gpt"}])
+        self.assertTrue(any("status=pending" in c for c in calls))
+
     def test_nothing_else_wakes_it(self):
         get, _ = fake_api({"in_progress": [{"id": 7}], "queued": [{"id": 7}, {"id": 8}]}, {
             7: [job("work", "in_progress", ["night-vm-gpt"]),        # already running there

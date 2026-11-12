@@ -433,7 +433,7 @@ mod tests {
         fn r3551001_radiant_prints_radiant_into_both_decks_with_lucky_1() {
             crate::register_all();
             let def = crate::card_def(ID);
-            let kinds: Vec<Value> = def.radiant.keywords.iter().map(|keyword| crate::js(keyword)).collect();
+            let kinds: Vec<Value> = def.radiant.keywords.iter().map(crate::js).collect();
             assert!(kinds.iter().any(|keyword| keyword["kind"] == "Lucky" && keyword["n"] == 1));
             assert!(def.base.keywords.is_empty());
             let s = printed("money-machine-radiant", true, "warhero");
@@ -447,7 +447,7 @@ mod tests {
 
         #[test]
         fn r3551001_a_printed_warhero_starts_the_worth() {
-            assert_eq!(printed("money-machine-worth-warhero", false, "warhero").state().warhero_worth.is_some(), true);
+            assert!(printed("money-machine-worth-warhero", false, "warhero").state().warhero_worth.is_some());
             assert_eq!(printed("money-machine-worth-coin", false, "coin").state().warhero_worth, None);
         }
 

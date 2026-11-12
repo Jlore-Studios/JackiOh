@@ -10,20 +10,20 @@ use serde::Serialize;
 use serde_json::{Value, json};
 
 use crate::catalog::find_def;
-use crate::config::{COIN_DEF_ID, MULLIGAN_ORDER, OPENING_COINS, OPENING_DRAW};
+use crate::config::{COIN_DEF_ID, MIN_OPENING_HAND, MULLIGAN_ORDER, OPENING_COINS, OPENING_DRAW};
 use crate::draw::{add_to_hand, cast_dealt_card, casts_on_draw, draw};
 use crate::own_library::show_to_owner;
 use crate::prompts::run_start_of_game;
 use crate::script::EngineSink;
 use crate::scripts::flags_of;
 use crate::state::{
-    CardInstance, EngineError, GameState, MulliganSeat, PendingChoice, PromptOption, Resume, WorkItem,
-    find_instance, find_instance_mut, handicap_of, new_instance,
+    CardInstance, EngineError, GameState, MulliganSeat, PendingChoice, PromptOption, WorkItem, find_instance,
+    find_instance_mut, handicap_of, new_instance,
 };
 use crate::state_check::state_check;
 use crate::turn::{clear_return_flags, start_turn};
 use crate::wire::{GameEvent, PLAYER_IDS, PerPlayer, Phase, PlayerId, PromptKind, Selection, Zone};
-use crate::work::{owe, paused};
+use crate::work::{engine_resume, owe, paused};
 use crate::zones::{LibraryPosition, MoveToZoneOptions, OffFieldZone, move_to_zone};
 
 fn seat_of(player: PlayerId) -> usize {
@@ -39,10 +39,14 @@ pub fn opening_draw_for(player: PlayerId) -> i32 {
         .unwrap_or_default()
 }
 
-/// §2.1, R182: the seat's opening-draw table entry plus its handicap's extra cards. Quickdraw cards
-/// replace draws out of this total, so it is the size of the hand the mulligan sees.
+/// §2.1, R182: the seat's opening-draw table entry plus its handicap's extra cards; R3582000: less its
+/// `fewerOpeningCards`, never below MIN_OPENING_HAND. Quickdraw cards replace draws out of this total,
+/// so it is the size of the hand the mulligan sees.
 pub fn opening_hand_size(state: &GameState, player: PlayerId) -> i32 {
-    opening_draw_for(player) + handicap_of(&state.players[player]).extra_opening_cards
+    let handicap = handicap_of(&state.players[player]);
+    (opening_draw_for(player) + handicap.extra_opening_cards)
+        .saturating_sub(handicap.fewer_opening_cards.unwrap_or(0))
+        .max(MIN_OPENING_HAND)
 }
 
 fn mulligan_prompt(sink: &EngineSink, player: PlayerId) -> PendingChoice {
@@ -72,14 +76,7 @@ fn mulligan_prompt(sink: &EngineSink, player: PlayerId) -> PendingChoice {
         craft_mode: None,
         craft_offer: None,
         streak: None,
-        resume: Resume {
-            def_id: String::new(),
-            hook: "mulligan".to_string(),
-            step: "mulligan".to_string(),
-            radiant: false,
-            instance_id: None,
-            data,
-        },
+        resume: engine_resume("mulligan", "mulligan", data),
     }
 }
 
@@ -529,17 +526,7 @@ fn owe_setup(sink: &mut EngineSink, owed: Value) {
         .to_string();
     let mut data = indexmap::IndexMap::new();
     data.insert("owed".to_string(), owed);
-    owe(
-        sink,
-        Resume {
-            def_id: String::new(),
-            hook: SETUP_WORK.to_string(),
-            step,
-            radiant: false,
-            instance_id: None,
-            data,
-        },
-    );
+    owe(sink, engine_resume(SETUP_WORK, &step, data));
 }
 
 /// `work.rs`'s handler for `SETUP_WORK`: setup, continued where a question stopped it (R113, R122).

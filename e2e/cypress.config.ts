@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "cypress";
+import { patchMeta } from "../apps/web/patch-meta.ts";
 import { jackiohAliases } from "../apps/web/vite.config.ts";
 import { pinChrome } from "./support/chrome-pin.ts";
 import { registerTasks } from "./support/tasks/index.ts";
@@ -106,9 +107,9 @@ export default defineConfig({
       framework: "react",
       bundler: "vite",
       viteConfig: {
-        // The one plugin apps/web/vite.config.ts uses, so a spec compiles the client the way the
+        // The plugins apps/web/vite.config.ts uses, so a spec compiles the client the way the
         // client is built rather than through a second, nearly-identical pipeline.
-        plugins: [react()],
+        plugins: [react(), patchMeta()],
         // ONE React in the page. `cypress/react` resolves `react` and `react-dom/client` from
         // e2e/node_modules; apps/web/src resolves them from apps/web/node_modules. Two copies of
         // the same version are still two dispatchers, and the first `useState` in `Game.tsx`

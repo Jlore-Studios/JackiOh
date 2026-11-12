@@ -104,6 +104,13 @@ pub struct Env {
     /// `off`: every `/api/admin/*` route then needs the two-step code (`aal2`), and a hand-set
     /// rating is off the public ladder until it is reset (R3074001). Production leaves it unset.
     pub dev_strict: bool,
+    /// #3595: `ALERT_RESEND_API_KEY`, a Resend key that may send from jackioh.com, with which an
+    /// alert is emailed to `alert_emails` (`alerts.rs`). Unset, alerts are emailed to nobody. Secret.
+    pub alert_email_key: Option<String>,
+    /// #3595: `ALERT_EMAILS`, the addresses an alert is emailed to, comma-separated. An entry that is
+    /// not an address is left out with a warning that never prints it. Empty when unset. Private:
+    /// kept in a Worker secret, since the repository is public.
+    pub alert_emails: Vec<String>,
 }
 
 impl std::fmt::Debug for Env {
@@ -135,6 +142,12 @@ impl std::fmt::Debug for Env {
             // A dev account's id is its account secret ID (R1300000): only how many are listed.
             .field("dev_profile_ids", &self.dev_profile_ids.len())
             .field("dev_strict", &self.dev_strict)
+            .field(
+                "alert_email_key",
+                &self.alert_email_key.as_ref().map(|_| REDACTED),
+            )
+            // A person's address: only how many are listed.
+            .field("alert_emails", &self.alert_emails.len())
             .finish()
     }
 }
@@ -203,6 +216,8 @@ pub const SERVER_ONLY_ENV_VARS: &[&str] = &[
     "GITHUB_ISSUES_REPO",
     DEV_PROFILE_IDS,
     DEV_STRICT,
+    "ALERT_RESEND_API_KEY",
+    "ALERT_EMAILS",
 ];
 
 const MIN_CODE_PEPPER_LENGTH: usize = 32;
@@ -379,11 +394,44 @@ fn parse_dev_strict(value: Option<&str>, problems: &mut Vec<String>) -> bool {
     }
 }
 
-/// Optional: unset or blank files no report.
-fn parse_github_issues_token(value: Option<&str>) -> Option<String> {
+/// Optional: unset or blank is none. `CREATE_ISSUES_TOKEN` (unset files no report) and
+/// `ALERT_RESEND_API_KEY` (unset emails no alert).
+fn parse_optional_secret(value: Option<&str>) -> Option<String> {
     value
         .filter(|text| is_non_empty(Some(text)))
         .map(|raw| js_trim(raw).to_string())
+}
+
+/// #3595: `ALERT_EMAILS`, comma-separated. An entry with no `@` between two non-empty parts, or with
+/// a space in it, is left out, and the warning counts them without printing one.
+fn parse_alert_emails(value: Option<&str>) -> Vec<String> {
+    let Some(raw) = value.filter(|text| is_non_empty(Some(text))) else {
+        return Vec::new();
+    };
+    let entries: Vec<&str> = raw
+        .split(',')
+        .map(js_trim)
+        .filter(|entry| !entry.is_empty())
+        .collect();
+    let is_address = |entry: &str| {
+        !entry.chars().any(char::is_whitespace)
+            && entry.split_once('@').is_some_and(|(name, domain)| {
+                !name.is_empty() && domain.contains('.') && !domain.contains('@')
+            })
+    };
+    let addresses: Vec<String> = entries
+        .iter()
+        .filter(|entry| is_address(entry))
+        .map(|entry| entry.to_string())
+        .collect();
+    if addresses.len() < entries.len() {
+        eprintln!(
+            "ALERT_EMAILS: {} of its {} entries are not email addresses and were left out",
+            entries.len() - addresses.len(),
+            entries.len()
+        );
+    }
+    addresses
 }
 
 fn parse_github_issues_repo(value: Option<&str>, problems: &mut Vec<String>) -> String {
@@ -556,13 +604,17 @@ pub fn load_env(source: &IndexMap<String, String>) -> Result<Env, EnvError> {
     let public_origins = parse_public_origins(read("PUBLIC_ORIGINS"), &mut problems);
     let trusted_proxy_hops = parse_trusted_proxy_hops(read("TRUSTED_PROXY_HOPS"), &mut problems);
     let ladder_bots = parse_ladder_bots(read("LADDER_BOTS"), &mut problems);
-    let github_issues_token = parse_github_issues_token(read("CREATE_ISSUES_TOKEN"));
+    let github_issues_token = parse_optional_secret(read("CREATE_ISSUES_TOKEN"));
     let github_issues_repo = parse_github_issues_repo(read("GITHUB_ISSUES_REPO"), &mut problems);
     let dev_profile_ids = parse_dev_profile_ids(read(DEV_PROFILE_IDS)).unwrap_or_else(|problem| {
         problems.push(problem);
         Vec::new()
     });
     let dev_strict = parse_dev_strict(read(DEV_STRICT), &mut problems);
+    // #3595: optional, and never a problem: a secret put by hand restarts the Worker's container,
+    // so a boot refused over an alert setting would take the site down between two puts.
+    let alert_email_key = parse_optional_secret(read("ALERT_RESEND_API_KEY"));
+    let alert_emails = parse_alert_emails(read("ALERT_EMAILS"));
 
     if e2e && node_env == NodeEnv::Production {
         problems.push(
@@ -605,6 +657,8 @@ pub fn load_env(source: &IndexMap<String, String>) -> Result<Env, EnvError> {
         github_issues_repo,
         dev_profile_ids,
         dev_strict,
+        alert_email_key,
+        alert_emails,
     })
 }
 

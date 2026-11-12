@@ -153,6 +153,8 @@ placeholders (`app::load_server_env`).
 | `CREATE_ISSUES_TOKEN` | no | a token that may open issues in `GITHUB_ISSUES_REPO`, with which the server files a match its own log does not reproduce ([below](#a-match-its-log-does-not-reproduce)); unset, such a match is only logged. Secret |
 | `GITHUB_ISSUES_REPO` | no | the `owner/name` those issues go to; default `Jlore-Studios/JackiOh` (`BUG_REPORT_REPO_DEFAULT`) |
 | `DEV_PROFILE_IDS` | no | the dev accounts (§14.10, R1300000): comma-separated profile ids, each the account secret ID `/account` shows; unset, none. A malformed id refuses the boot, naming it. Only the boot reads it: no catalog stamp grants anyone (R1310001), so `seed-catalog` does not. The boot logs how many, never which |
+| `ALERT_RESEND_API_KEY` | no | a Resend API key with Sending access for jackioh.com, with which an alert is emailed to `ALERT_EMAILS` ([Alerts](#alerts), #3595); unset, no alert is emailed. Secret |
+| `ALERT_EMAILS` | no | the addresses an alert is emailed to, comma-separated; an entry that is not an address is left out with a warning that never prints it, and nothing here refuses the boot. A Worker secret, since the repository is public; the boot logs how many, never which |
 | `DEV_STRICT` | no | the dev dashboard's strict mode (§14.10, R3074000): `on` (the default when unset) makes every `/api/admin/*` route need the two-step code (`aal2`) and keeps a hand-set rating off the public ladder until it is reset (R3074001); `off` skips both. wrangler.jsonc sets `on` for production and `off` for staging, and end-to-end mode defaults it to `off`. Any other value refuses the boot |
 
 `mint-code`, `moderate` and `seed-accounts` read the same environment (`seed-accounts` also
@@ -232,7 +234,7 @@ account, its presence to friends, written at most once a `PRESENCE_TOUCH_EVERY_M
 | `GET`, `POST` | `/api/decks/:id/versions`, `/api/decks/:id/versions/:versionId/restore` | active | the caller's deck's earlier versions, newest first, `{ versions }`, each `{ id, name, cards, savedAt }`, which every save keeps (R2100000); a restore, `{ catalogVersion }`, saves one's name and cards as the deck's, checked as a `PUT` is, and as a new version, answering `{ deck, versions }`; another account's deck is 404 `not_found`, as a missing one |
 | `PUT`, `DELETE` | `/api/trios/:id` | active | trios (R252) |
 | `POST` | `/api/trios/import` | active | a trio code's decks and trio in one transaction (R340, R341) |
-| `POST`, `DELETE` | `/api/queue` | active | enqueue `{ mode: "bo1", deckId }`, `{ mode: "bo3", trioId }` or `{ mode: "random" }` (R257, R253), or leave; a ticket unheard from for `QUEUE_TICKET_STALE_MS` is canceled before it can pair (R897000); 409 `already_in_match` in a live match, a series or a co-op match (R264, R1065000); a pair's start fails, through its failed-start cleanup, for a seat the ledger finds taken, and a sweep on an older epoch claims no pair, leaving both tickets open (R1523000) |
+| `POST`, `DELETE` | `/api/queue` | active | enqueue `{ mode: "bo1", deckId }`, `{ mode: "bo3", trioId }` or `{ mode: "random" }` (R257, R253), or leave; a ticket unheard from for `QUEUE_TICKET_STALE_MS` is canceled before it can pair (R897000); 409 `already_in_match` in a live match, a series or a co-op match (R264, R1065000); 409 `already_queued` for a caller already queued, its open ticket's id as `details.ticketId`; a pair's start fails, through its failed-start cleanup, for a seat the ledger finds taken, and a sweep on an older epoch claims no pair, leaving both tickets open (R1523000) |
 | `GET` | `/api/queue/population` | user | the queue readout: each mode's expected wait and the last hour's games (R640002), counted at most once per `QUEUE_READOUT_CACHE_TTL_SECONDS` and kept for every caller (R1996000) |
 | `GET`, `POST`, `DELETE` | `/api/rooms`, `/api/rooms/:code`, `/api/rooms/:code/join` | active | a room code in a mode, and its atomic claim (R264); 409 `already_in_match` for a caller in a match, a series or a co-op match, `conflict` for a host in one (R264, R1065000), the ledger's answer to a join racing another door (R1523000); 503 `unavailable` while a newer server holds the seats (R1523000); the caller's open rooms, newest first, never a challenge's; the host's cancel of a room nobody has joined, `200 {cancelled}`, idempotent, 404 for another's room and 409 for a challenge's (R1075000) |
 | `GET`, `POST` | `/api/series/:id`, `/pick`, `/forfeit` | active | a Conquest series as its player may see it, a sealed pick, a forfeit (R330–R336) |
@@ -306,7 +308,10 @@ hand, eight of the pool dealt from the match seed (R1341, R1342), and the actor 
 the sender's hand as silently as a rate-limited one, and relays nothing between two accounts either of which blocks the other (R1351000). A frame over `MAX_FRAME_BYTES` closes the socket with 1009.
 A profile opens it onto the match it is in, or onto a finished match it held a seat in until
 `REMATCH_OFFER_TTL_MS` after that match ended; past that it is refused as a stranger is (4403), and a
-finished match whose log the retention purge took is not found (4404, R1285000).
+finished match whose log the retention purge took is not found (4404, R1285000). Sockets still open
+on a finished match once that window has passed, its watchers' included, are closed on the reaper's next
+tick with `MATCH_OVER_CLOSE_CODE` (4411), and its actor goes; the co-op sweep does the same from the
+game's end (R3694000).
 An upgrade whose token verifies counts as one request against its account's `API_REQUESTS_PER_MINUTE`;
 one past it gets the `forbidden` frame and close 4429, which the match and co-op clients retry on their backoff
 (the watch page takes the frame as a refusal; R2478000), and `/ws/duos`, `/ws/watch` and `/ws/social` count
@@ -440,7 +445,8 @@ clock as that seat was shown it, each `SPECTATE_DELAY_MS` late, and nothing else
 `clock` or `teammate` frame, `jloreCapped` or `economy`), and no loadouts; `watchers {count}` to both
 people's `/ws/duos` sockets, and again to one that reattaches; the hello answers, the malformed budget and
 the revokes of an unfriend, a block or a deleted account. A finished game's actor is reaped only once its
-watchers have had the result's view and been closed with 1000.
+watchers have had the result's view and been closed with 1000, or once `REMATCH_OFFER_TTL_MS` has passed
+since its end (R3694000).
 
 A watcher, of a 1v1 match or a co-op game, throws emotes from the sidelines (R2990000). As it attaches, after
 `loadouts` and before any view, it alone is sent `spectatorHand {emotes}`: `SPECTATOR_EMOTE_HAND_SIZE` distinct
@@ -676,6 +682,32 @@ select jsonb_build_object(
   'log', (select jsonb_agg(a.action order by a.seq) from public.duos_match_actions a where a.match_id = m.id))::text
 from public.duos_matches m where m.id = '<match id>';
 ```
+
+## Alerts
+
+An alert is an error log line marked `alert = true`: `api::http::log_alert`'s (`api.rejections.unusual`,
+`match.rejections.unusual`, `ranked.profile_missing`, `game_records.fold_poison`, `bug.found`,
+`bug.reports.refused`) and `loops.rs`'s (`loop.crashed`, `loop.returned`). `alerts.rs` (#3595) tells people
+of each, from a tracing layer beside the JSON log, at most once an hour per event in a process
+(`ALERT_WINDOW_MS`; the rest are logged as `alert.held`, and the next notice says how many):
+
+- **A GitHub issue**, with `CREATE_ISSUES_TOKEN`, titled `Patch: alert <event> on <site>` (the site being the
+  first of `PUBLIC_ORIGINS`) and labelled `ALERT_ISSUE_LABELS` (`architecture`, `human`: triage assigns both
+  people). The repository is public, so it names the event, the site, the build and the time, never the
+  alert's data: a profile id is an account secret ID and a rate limit's key a player's address. While the
+  event's issue is open, its next notice comments there; close it once handled, and the next opens another.
+  `bug.found` gets none, since its report has its own ([above](#a-match-its-log-does-not-reproduce)).
+- **An email** through Resend to `ALERT_EMAILS`, with `ALERT_RESEND_API_KEY`, holding every field of the
+  line. It goes with each new issue, and with each notice no issue carries (no token, GitHub failing,
+  `bug.found`); a comment on an open issue sends none. Resend's free plan sends 100 a day, the sign-in
+  mail's included (docs/deploy-cloudflare.md section 8), so a process sends at most `ALERT_EMAILS_PER_DAY` a
+  day, and each email carries an `Idempotency-Key` (`alerts::email_key`) that Resend keeps a day: one email
+  per new issue, or else one per event and site a day, however often the container restarts.
+
+Either alone works. The boot logs `alerts.ready` (`issues`, and how many addresses) or `alerts.off`; a notice
+that fails logs `alert.issue.failed` or `alert.email.failed`, never another alert. The end-to-end server tells
+nobody. A server that cannot boot cannot tell anyone, nor can one the Worker cannot reach: those are #3595's
+next steps, in the Worker.
 
 ## Ladder bots (§9.5, §9.12, R1453, R1454, R1451, R1452, R639000, R641000, R747000)
 
@@ -1245,7 +1277,7 @@ match from before it, which folds against its version's frozen table (R1266000).
 holds it to a jsonb object. `tests/sql/50_match_win_rates.sql` checks the column, the shapes refused and the
 re-apply.
 
-Migration 0087 widens the `cards` tag check once more, as 0083 did, with #3535's nine Stinkyscape+ tags
+Migration 0088 widens the `cards` tag check once more, as 0083 did, with #3535's nine Stinkyscape+ tags
 (R3535002) — Mindustrial, Mineral, Automa-α, Automa-β, Automa-γ, Automa-δ, Automa-Ω, Automa-ζ and
 Paperclip — so `seed-catalog` can write the set's entries the day it ships (#3573, R3535000), and comments
 `cards.set_id` with the eight sets that ship.

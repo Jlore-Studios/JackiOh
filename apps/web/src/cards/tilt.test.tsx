@@ -14,7 +14,7 @@ import { DeviceTiltSwitch } from "../settings/controls.tsx";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
 import { CardDefsProvider } from "./refContext.tsx";
-import { CARD_GLARE_TRAVEL_PCT, CARD_TILT_MAX_DEG } from "./constants.ts";
+import { CARD_GLARE_TRAVEL_PCT, CARD_TILT_MAX_DEG, DIORAMA_TURN_MAX_DEG } from "./constants.ts";
 import { CardFace } from "./CardFace.tsx";
 import { resetCosmeticsForTests, writeCardLevel } from "./cosmetics.ts";
 import { HoverPreview } from "./inspect/HoverPreview.tsx";
@@ -98,6 +98,9 @@ beforeEach(() => {
   // R3343001: a Legendary's Default draws Extended art, which draws no planes and so never tilts (R3344000); the
   // Legendary under test wears Alt art, the painter's own picture in the normal frame.
   writeCardLevel(LEGENDARY, VERSION_ALT_ART_ID);
+  // R3350000: a Mythic's normal picture draws its diorama, which turns to DIORAMA_TURN_MAX_DEG in the preview and inspect
+  // (diorama.test.tsx); the Mythic under test wears Alt art, which draws its planes, so it tilts as every other face does.
+  writeCardLevel(MYTHIC, VERSION_ALT_ART_ID);
 });
 
 afterEach(() => {
@@ -142,6 +145,22 @@ describe("R3344001 the pose, the angles and the glare", () => {
       }
     }
     expect(CARD_TILT_MAX_DEG).toBe(12);
+  });
+
+  it("R3350000 tiltDegrees holds a pose to the cap it is given", () => {
+    expect(tiltDegrees({ x: 1, y: 0 }, DIORAMA_TURN_MAX_DEG).ry).toBe(DIORAMA_TURN_MAX_DEG);
+    expect(tiltDegrees({ x: -1, y: 1 }, DIORAMA_TURN_MAX_DEG)).toEqual({ rx: -DIORAMA_TURN_MAX_DEG, ry: -DIORAMA_TURN_MAX_DEG });
+    expect(tiltDegrees({ x: 0.5, y: -0.5 }, DIORAMA_TURN_MAX_DEG)).toEqual({ rx: DIORAMA_TURN_MAX_DEG / 2, ry: DIORAMA_TURN_MAX_DEG / 2 });
+    for (const x of [-1e9, -1, -0.3, 0, 0.4, 1, 1e9]) {
+      for (const y of [-1e9, -1, 0, 0.9, 1, 1e9]) {
+        const { rx, ry } = tiltDegrees(pointerPose(x, y, BOX), DIORAMA_TURN_MAX_DEG);
+        expect(Math.abs(rx), `${String(x)},${String(y)}`).toBeLessThanOrEqual(DIORAMA_TURN_MAX_DEG);
+        expect(Math.abs(ry), `${String(x)},${String(y)}`).toBeLessThanOrEqual(DIORAMA_TURN_MAX_DEG);
+      }
+    }
+    // With no cap given, the face's own.
+    expect(tiltDegrees({ x: 1, y: 0 })).toEqual(tiltDegrees({ x: 1, y: 0 }, CARD_TILT_MAX_DEG));
+    expect(DIORAMA_TURN_MAX_DEG).toBe(25);
   });
 
   it("R3344001 the glare lies opposite the tilt", () => {
@@ -244,7 +263,7 @@ describe("R3344001 the window's pointer tilts a face in the hover preview", () =
     expect(read(cf)).toMatchObject({ "--cf-tilt-x": "0.5", "--cf-tilt-y": "-0.5", "--cf-tilt-ry": "6deg", "--cf-tilt-rx": "6deg" });
   });
 
-  it("R3344001 the hover preview gives its face the anchor it is placed by", () => {
+  it("R3344001 R3350000 the hover preview gives its face the anchor it is placed by, a Mythic's diorama turning to DIORAMA_TURN_MAX_DEG", () => {
     render(
       <CardDefsProvider defs={CATALOG}>
         <HoverPreview face={modelOf(MYTHIC)} anchor={{ left: 600, top: 400, width: 100, height: 140 }} />
@@ -260,9 +279,11 @@ describe("R3344001 the window's pointer tilts a face in the hover preview", () =
     pointer(window, "pointermove", 650, 470);
     expect(cf.getAttribute("data-tilt")).toBe("on");
     expect(read(cf)).toMatchObject({ "--cf-tilt-x": "0", "--cf-tilt-y": "0" });
-    // The anchor's right edge: the cap along x alone.
+    // The anchor's right edge: the cap along x alone. R3350000: the preview's Mythic draws its diorama (its look is no one's
+    // pick here), which turns to DIORAMA_TURN_MAX_DEG.
+    expect(cf.getAttribute("data-diorama")).toBe("true");
     pointer(window, "pointermove", 700, 470);
-    expect(read(cf)).toMatchObject({ "--cf-tilt-ry": "12deg", "--cf-tilt-rx": "0deg" });
+    expect(read(cf)).toMatchObject({ "--cf-tilt-ry": `${DIORAMA_TURN_MAX_DEG}deg`, "--cf-tilt-rx": "0deg" });
   });
 
   it("R3344001 the face springs back: leaving the document, losing focus and unmounting each remove every property", () => {

@@ -7,7 +7,16 @@ import { useRef, type CSSProperties, type PointerEvent, type ReactElement, type 
 
 import { glyphUri, setMarkOf } from "../cards/setMark.ts";
 import { useReducedMotion } from "../economy/FillBar.tsx";
-import { COSMETIC_PACK, PACK_TEAR_MS, PACK_TILT_DEG, packName } from "./packs.ts";
+import {
+  COSMETIC_PACK,
+  DUNGEON_BOSS_PACK,
+  DUNGEON_ENEMY_PACK,
+  DUNGEON_FILTER_PACK,
+  DUNGEON_RANDOM_PACK,
+  PACK_TEAR_MS,
+  PACK_TILT_DEG,
+  packName,
+} from "./packs.ts";
 import "./pack-object.css";
 
 export type PackObjectState = "idle" | "pressed" | "tearing" | "open";
@@ -33,6 +42,33 @@ const OWN_EMBLEMS: Readonly<Record<string, string>> = {
   ),
   [COSMETIC_PACK]: glyphUri(
     `<path d='M12 1.4L14.6 9.4L22.6 12L14.6 14.6L12 22.6L9.4 14.6L1.4 12L9.4 9.4Z' fill='#ff8ad0' stroke='#2a0f21' stroke-width='1.4' stroke-linejoin='round'/>`,
+  ),
+  /** The dungeon run's reward packs (#3588): crossed swords for the beaten enemy's deck. */
+  [DUNGEON_ENEMY_PACK]: glyphUri(
+    `<path d='M6 18L18 6M18 18L6 6' stroke='${INK}' stroke-width='3.4' stroke-linecap='round'/>` +
+      `<path d='M6 18L18 6M18 18L6 6' stroke='#dfe6f2' stroke-width='1.7' stroke-linecap='round'/>` +
+      `<path d='M3.4 16.6L8.6 18.4M15.4 18.4L20.6 16.6' stroke='${INK}' stroke-width='1.6' stroke-linecap='round'/>` +
+      `<circle cx='6' cy='20' r='1.6' fill='#e6b35c' stroke='${INK}' stroke-width='1.1'/>` +
+      `<circle cx='18' cy='20' r='1.6' fill='#e6b35c' stroke='${INK}' stroke-width='1.1'/>`,
+  ),
+  /** A horned crown for the boss's deck. */
+  [DUNGEON_BOSS_PACK]: glyphUri(
+    `<path d='M5 12C3 9.5 3 6.5 4.5 4C5.5 6.5 7 8.5 9 9.5L5 12Z' fill='#f2f4fa' stroke='${INK}' stroke-width='1.2' stroke-linejoin='round'/>` +
+      `<path d='M19 12C21 9.5 21 6.5 19.5 4C18.5 6.5 17 8.5 15 9.5L19 12Z' fill='#f2f4fa' stroke='${INK}' stroke-width='1.2' stroke-linejoin='round'/>` +
+      `<path d='M5 20V12L8.5 15.5L12 8.5L15.5 15.5L19 12V20Z' fill='#e6b35c' stroke='${INK}' stroke-width='1.4' stroke-linejoin='round'/>` +
+      `<circle cx='12' cy='16.3' r='1.6' fill='#c8322b' stroke='${INK}' stroke-width='1'/>`,
+  ),
+  /** A die showing three for the random pack. */
+  [DUNGEON_RANDOM_PACK]: glyphUri(
+    `<rect x='4.5' y='4.5' width='15' height='15' rx='3' fill='#f2f4fa' stroke='${INK}' stroke-width='1.6'/>` +
+      `<circle cx='9' cy='9' r='1.9' fill='${INK}'/>` +
+      `<circle cx='12' cy='12' r='1.9' fill='#c8322b'/>` +
+      `<circle cx='15' cy='15' r='1.9' fill='${INK}'/>`,
+  ),
+  /** A tag for the type, tag or rarity pack. */
+  [DUNGEON_FILTER_PACK]: glyphUri(
+    `<path d='M4 4H12.5L20 11.5L11.5 20L4 12.5Z' fill='#9fb4e8' stroke='${INK}' stroke-width='1.4' stroke-linejoin='round'/>` +
+      `<circle cx='8.5' cy='8.5' r='1.8' fill='#f2f4fa' stroke='${INK}' stroke-width='1.2'/>`,
   ),
 };
 

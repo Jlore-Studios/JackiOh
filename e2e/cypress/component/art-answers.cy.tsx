@@ -1,10 +1,13 @@
 // R3340000: a board card's art answers the player, in a real browser. apps/web's vitest suite proves which faces move and
 // in which slots, the marks a unit's view draws and the rules artLive.css declares (cards/artLive.test.tsx,
 // cards/art/wear.test.ts); what only a style engine can say is measured here, on a procedural card (Gary the Gambler), a
-// Stinkyscape card (Tylannt) and a Training Grounds card (Celestial Caller): a pointer over it leans the subject toward it and
+// Stinkyscape card (ZolarKeth) and a Training Grounds card (Celestial Caller): a pointer over it leans the subject toward it and
 // scatters the motes, a press flinches it and a lift springs it back, an attack swings it and fires the motes, and a
 // damaged, a buffed and a frozen unit's art wears its cracks, its glow and its frost. Each state is captured at a desktop
 // viewport and at 390x844.
+// R3350000: a Mythic whose normal picture has a diorama (Tylannt) draws its slices on the board in place of the live layers:
+// its window swells on a hover and presses in on a press, and on an attack its slices over the farthest swing toward the
+// target as a subject does (artLive.css), the farthest staying behind.
 // Run: E2E_COMPONENT_PORT=5283 pnpm --dir e2e test:component --spec cypress/component/art-answers.cy.tsx
 
 import { CATALOG } from "@jackioh/cards";
@@ -22,9 +25,13 @@ type CardDef = (typeof CATALOG)[string];
 /** The three painters' cards: a procedural one, a Stinkyscape one and a Training Grounds one. */
 const CARDS = [
   { id: "core-004", family: "procedural" },
-  { id: "stinkyscape-006", family: "stinkyscape" },
+  // R3350000: a Legendary, since a Mythic's moving picture on the board draws its diorama's slices instead (below).
+  { id: "stinkyscape-026", family: "stinkyscape" },
   { id: "traininggrounds-016", family: "traininggrounds" },
 ] as const;
+
+/** R3350000: a Mythic with a diorama, Tylannt, drawn by the Stinkyscape painter itself. */
+const DIORAMA_MYTHIC = "stinkyscape-006";
 
 /** The desktop viewport (the config's) and a phone's, each with the box one face stands in. */
 const VIEWPORTS = [
@@ -52,7 +59,7 @@ function defOf(id: string): CardDef {
 }
 
 function clearPicks(): void {
-  for (const { id } of CARDS) for (const kind of CARD_SLOT_KINDS) writeCardPick(id, kind, null);
+  for (const id of [...CARDS.map((card) => card.id), DIORAMA_MYTHIC]) for (const kind of CARD_SLOT_KINDS) writeCardPick(id, kind, null);
 }
 
 /** A Unit on the board in a `.card.cf-host` as Card.tsx sets it (a bare box), worn as the viewer's own. */
@@ -127,9 +134,8 @@ for (const viewport of VIEWPORTS) {
       it(`R3340000 ${card.family}: hover leans the subject and scatters the motes, a press flinches it and a lift springs it back`, () => {
         cy.mount(<Stage id={card.id} box={viewport.box} />);
         cy.get(FACE).should("have.attr", "data-art-hover", "false");
-        // A Mythic's art moves at rest, in layers; any other card's holds still until the pointer comes.
-        if (defOf(card.id).rarity === "Mythic") cy.get(ART).should("have.attr", "data-art-live", "true");
-        else cy.get(ART).should("not.have.attr", "data-art-live");
+        // Its art holds still until the pointer comes (a Mythic's moves at rest, as its diorama: R3350000, below).
+        cy.get(ART).should("not.have.attr", "data-art-live");
         // The pointer comes in at the card's upper right.
         cy.get(STAGE).then(($stage) => {
           const rect = $stage[0]?.getBoundingClientRect();
@@ -230,4 +236,72 @@ for (const viewport of VIEWPORTS) {
       });
     });
   }
+}
+
+for (const viewport of VIEWPORTS) {
+  describe(`R3350000 a board Mythic's diorama answers the player at ${viewport.label} size`, () => {
+    const shot = (state: string): void => capture(`art-answers-diorama-${state}-${viewport.label}`);
+    const SLICE = `${ART} > .cf-art-slice`;
+
+    beforeEach(() => {
+      cy.viewport(viewport.width, viewport.height);
+    });
+
+    it("R3350000 its window swells on a hover and presses in on a press, its slices drawn in place of the live layers", () => {
+      cy.mount(<Stage id={DIORAMA_MYTHIC} box={viewport.box} />);
+      // A Mythic's art moves at rest: its window draws the farthest slice and the rest stand over it, no live layers.
+      cy.get(FACE).should("have.attr", "data-art-motion", "animated");
+      cy.get(ART).should("have.attr", "data-art-slice", "0").and("not.have.attr", "data-art-live");
+      cy.get(SLICE).should("have.length.greaterThan", 0);
+      cy.get(`${ART} > .cf-art-subject, ${ART} > .cf-art-motes`).should("not.exist");
+      cy.get(STAGE).then(($stage) => {
+        const rect = $stage[0]?.getBoundingClientRect();
+        if (rect === undefined) throw new Error("no stage");
+        cy.wrap($stage).trigger("pointerenter", { bubbles: false, force: true });
+        cy.wrap($stage).trigger("pointermove", { clientX: rect.right - 4, clientY: rect.top + 4, force: true });
+      });
+      cy.get(FACE).should("have.attr", "data-art-hover", "true");
+      cy.get(ART).should(($art) => {
+        expect(number(computed($art[0] as HTMLElement).scale, 1), "the window swells").to.be.greaterThan(1);
+      });
+      shot("hover");
+      cy.get(STAGE).trigger("pointerdown", { force: true });
+      cy.get(FACE).should("have.attr", "data-art-press", "true");
+      cy.get(ART).should(($art) => {
+        expect(number(computed($art[0] as HTMLElement).scale, 1), "and presses in").to.be.lessThan(1);
+      });
+      shot("press");
+      cy.get(STAGE).trigger("pointerup", { force: true });
+      cy.get(STAGE).trigger("pointerleave", { bubbles: false, force: true });
+      cy.get(FACE).should("have.attr", "data-art-hover", "false");
+    });
+
+    it("R3350000 an attack swings its slices over the farthest toward the target, the farthest staying behind", () => {
+      cy.mount(<Stage id={DIORAMA_MYTHIC} box={viewport.box} attacking />);
+      cy.get(FACE).should("have.attr", "data-art-attacking", "true").and("have.attr", "data-art-motion", "animated");
+      cy.get(ART).should("have.attr", "data-art-slice", "0").and(($art) => {
+        expect(computed($art[0] as HTMLElement).animationName, "the farthest slice holds still").not.to.eq("cf-art-swing");
+      });
+      cy.get(SLICE).should(($slices) => {
+        expect($slices.length, "slices over the farthest").to.be.greaterThan(0);
+        for (const slice of $slices.toArray()) {
+          expect(computed(slice).animationName, "each slice swings").to.eq("cf-art-swing");
+        }
+        const first = $slices[0] as HTMLElement;
+        const swing = first.getAnimations().find((animation) => (animation as CSSAnimation).animationName === "cf-art-swing");
+        expect(swing, "the slice's swing animation").not.to.equal(undefined);
+        const duration = swing?.effect?.getTiming().duration;
+        expect(duration, "the swing's duration").to.be.a("number");
+        if (swing === undefined || typeof duration !== "number") return;
+        swing.pause();
+        swing.currentTime = duration * ATTACK_PEAK_PROGRESS;
+        const peak = computed(first);
+        const toward = translation(peak.translate);
+        expect(toward.x, "the slices move right toward the target").to.be.greaterThan(0);
+        expect(toward.y, "the slices move up toward the target").to.be.lessThan(0);
+        expect(number(peak.scale, 1), "and grow into the swing").to.be.greaterThan(1);
+      });
+      shot("attack");
+    });
+  });
 }

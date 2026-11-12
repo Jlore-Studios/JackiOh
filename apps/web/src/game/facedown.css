@@ -30,25 +30,29 @@
 /* The veil: a diagonal hatch over the face, under the badges. It dims the art a little and leaves
    the name and the cost readable, since you are the one reading them. */
 .card[data-unrevealed="true"]::after {
+  /* One hatch tile wide; the layer starts a tile left of the card and slides one tile right, which
+     is the hatch moving by a whole tile, by transform alone (R3608000). The card clips what spills. */
+  --jk-veil-tile: 28px;
+
   content: "";
   position: absolute;
-  inset: 0;
+  inset: 0 0 0 calc(var(--jk-veil-tile) * -1);
   z-index: var(--z-raised);
-  border-radius: inherit;
+  border-radius: 0;
   background:
     repeating-linear-gradient(135deg, color-mix(in srgb, var(--pal-wood-900) 42%, transparent) 0 5px, color-mix(in srgb, var(--pal-wood-900) 10%, transparent) 5px 10px),
     linear-gradient(180deg, color-mix(in srgb, var(--pal-wood-900) 10%, transparent), color-mix(in srgb, var(--pal-wood-900) 35%, transparent));
-  background-size: 28px 28px, 100% 100%;
+  background-size: var(--jk-veil-tile) var(--jk-veil-tile), 100% 100%;
   pointer-events: none;
   animation: jk-veil-drift calc(9s * var(--anim-scale, 1)) linear infinite;
 }
 
 @keyframes jk-veil-drift {
   from {
-    background-position: 0 0, 0 0;
+    transform: translateX(0);
   }
   to {
-    background-position: 28px 0, 0 0;
+    transform: translateX(var(--jk-veil-tile));
   }
 }
 
@@ -139,33 +143,64 @@
 /* One slow breath for every face-down card on the board, a back on either seat's and your own trap
    under its veil, from one rule keyed on nothing but being face-down, so it says nothing of the card
    (every back looks alike, R1297000). `scale`, never `transform`, and only below 1, so it composes
-   and never leaves its zone; a card mid-animation or glowing ready plays that instead. */
+   and never leaves its zone; a card mid-animation or glowing ready plays that instead. The brightening
+   that rode with it is a pale layer on the card's `::before` whose opacity rises and falls in the same
+   breath, so the loop moves `scale` and `opacity` alone (R3608000). The layer waits out a card that
+   is mid-animation, so a back being destroyed keeps the burn front's `::before` (animations.css). */
 @keyframes jk-facedown-breathe {
   0%,
   100% {
     scale: 1;
-    filter: brightness(1);
   }
 
   50% {
     scale: 0.985;
-    filter: brightness(1.08);
   }
 }
 
-.card.card-facedown,
+.card.card-facedown:not([data-glow]),
 .card[data-unrevealed="true"]:not([data-animating]):not([data-glow]) {
   animation: jk-facedown-breathe calc(4.8s * var(--anim-scale, 1)) var(--ease-in-out) infinite;
 }
 
+/* #3674: the breath's light, a white wash over the card that fades in and out on the breath's own beat. A `filter` on the
+   breath itself cost every back a raster each frame on a throttled phone; an opacity alone is the compositor's. */
+@keyframes jk-facedown-glow {
+  0%,
+  100% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+.card.card-facedown:not([data-glow]):not([data-animating])::before,
+.card[data-unrevealed="true"]:not([data-animating]):not([data-glow])::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-raised);
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--pal-white) 8%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  animation: jk-facedown-glow calc(4.8s * var(--anim-scale, 1)) var(--ease-in-out) infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .card.card-facedown,
-  .card[data-unrevealed="true"]:not([data-animating]):not([data-glow]) {
+  .card.card-facedown:not([data-glow]),
+  .card[data-unrevealed="true"]:not([data-animating]):not([data-glow]),
+  .card.card-facedown:not([data-glow]):not([data-animating])::before,
+  .card[data-unrevealed="true"]:not([data-animating]):not([data-glow])::before {
     animation: none;
   }
 }
 
-:root[data-reduce-motion="true"] .card.card-facedown,
-:root[data-reduce-motion="true"] .card[data-unrevealed="true"]:not([data-animating]):not([data-glow]) {
+:root[data-reduce-motion="true"] .card.card-facedown:not([data-glow]),
+:root[data-reduce-motion="true"] .card[data-unrevealed="true"]:not([data-animating]):not([data-glow]),
+:root[data-reduce-motion="true"] .card.card-facedown:not([data-glow]):not([data-animating])::before,
+:root[data-reduce-motion="true"] .card[data-unrevealed="true"]:not([data-animating]):not([data-glow])::before {
   animation: none;
 }

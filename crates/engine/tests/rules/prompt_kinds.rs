@@ -685,6 +685,27 @@ mod e18_the_reward_kind_classic_90 {
         assert!(healed != hit);
     }
 
+    /// R79 (#3514): the active player's turn clock stops once the turn it ends has passed, so the reward
+    /// In Too Deep asks of p1 when p2 draws at the start of the next turn stays open, on its own clock.
+    #[test]
+    fn r79_e18_the_turn_clock_stops_once_its_turn_has_passed_leaving_the_next_turns_prompt_open() {
+        let mut state = board("quest-clock");
+        let plain_id = plain.id.clone();
+        put(&mut state, &quest().id, slot(P1, Row::Backrow, 1), json!({}));
+        set_library(&mut state, P2, &[plain_id.as_str(), plain_id.as_str()]);
+        assert!(state.pending.is_none());
+        let turn = state.turn;
+
+        state = act(&state, input(json!({ "type": "timeout", "playerId": "p1" })));
+        assert_eq!(state.turn, turn + 1);
+        assert_eq!(state.active, P2);
+        // p2's start-of-turn draw asked it, so p2's turn waits in its Start phase (§2.2) on p1's answer.
+        assert_eq!(state.phase, Phase::Start);
+        open_as(&state, PromptKind::Reward, P1);
+        assert_eq!(state.players.p1.hero.health, HERO_HEALTH);
+        assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
+    }
+
     #[test]
     fn e18_a_quest_game_its_reward_asked_on_the_other_players_turn_replays_from_its_log() {
         let qd = quickdraw_of(&quest()).id;

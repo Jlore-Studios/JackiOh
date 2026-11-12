@@ -86,7 +86,14 @@ lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watch
 it can see on the field, then its attacks, a kill priced at what it removes (a unit with Reborn unspent
 less the body it comes back as, #1796, and less what its Death leaves behind, R2424000; plus a Trample
 attacker's excess on the hero and a Lifesteal attacker's heal, #1820), and once none is worth making the switches to Defense Position its own
-evaluation prefers) on every determinization, and plays the first action of the best mean. A line
+evaluation prefers) on every determinization, and plays the first action of the best mean. When none
+of the lines `shortlist_lines` takes for the reply hands the turn over with an effect of the seat's own
+waiting that the root did not hold (a countdown, a next-turn reward), the best line that does is replied
+to as well, last, on a slice of the counter that leaves the other determinizations' share of the
+reserve alone, and not once the host's wrap-up has fired (`payoff_score`, R3696000). In the reply, a known card guessing an unrevealed secret of the seat's (a
+Fortify Mind) is tried with one guess, drawn on its own stream (`one_guess_per_card`, `AI_GUESS_SEED`)
+before anything is weighed, and while a known card would be discarded by the opponent's cleanup,
+`known_play` judges each play and standing still after its turn ends (R3696001). A line
 leaving a countdown waiting (an effect "in N turns" with its public badge, R1181000) is replied to again
 on a copy whose countdowns come due at the seat's next turn start, and the scores are blended at
 `AI_REPLY.countdown_share` per turn the farthest still waits past its owner's next turn start (#1995);
@@ -257,7 +264,7 @@ same budget, so both measure the AI that ships. The same state, seed and budget 
 same `Decision`. The browser's wall-clock cap arrives as `should_stop` (the WASM binding's deadline),
 which ends the search early with the best line found. R3498000: every host with a clock also passes
 `wrap_up`, fired at `AI_WRAP_UP_SHARE` of its limit (`wrap_up_after_ms`), which stops the beam's slice
-of the counter alone: the beam's open lines end their turn and the reply and the other determinizations
+of the counter and skips the payoff line R3696000 adds: the beam's open lines end their turn and the reply and the other determinizations
 run on until `should_stop`. `SearchStats.replied` and `worldsScored` say how far they got, and
 `Decision::fell_short` names a decision that left its finalists unscored on a sampled world. With no
 clock, or a wrap-up that never fires, a decision is node for node what it was.

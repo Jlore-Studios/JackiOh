@@ -838,6 +838,23 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert_eq!(events_json(sink.events, GameEventType::Burned).len(), 1);
     }
 
+    /// §2.4, R4 (#3514): one short of `HAND_CAP` the hand still has room, so the draw keeps its card.
+    #[test]
+    fn r4_a_hand_one_short_of_hand_cap_draws_and_keeps_the_card() {
+        let mut state = game("r4-short");
+        in_hand(&mut state, BODY, P1, HAND_CAP - 1);
+        let drawn = must(
+            set_library(&mut state, P1, &[OTHER_BODY]).into_iter().next(),
+            "drawn card",
+        );
+        let mut sink = sink_for(&mut state);
+
+        assert_eq!(draw::draw(&mut sink, P1, 1), vec![DrawOutcome::Drawn]);
+        assert_eq!(sink.state.players.p1.hand.len(), HAND_CAP as usize);
+        assert!(ids(&sink.state.players.p1.hand).contains(&drawn.id));
+        assert!(events_json(sink.events, GameEventType::Burned).is_empty());
+    }
+
     #[test]
     fn r5_does_not_restrict_attacks_by_lane_any_unit_may_attack_any_enemy_unit_or_the_hero() {
         const { assert!(!LANE_RESTRICTED_ATTACKS) };

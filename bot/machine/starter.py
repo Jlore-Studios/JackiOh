@@ -61,7 +61,9 @@ def waiting_jobs(repo_id: str, workflows: list[str], get: Get, now: datetime,
     found = []
     seen: set[int] = set()
     for workflow in workflows:
-        for status in ("queued", "in_progress"):
+        # GitHub can list a run as `pending` while its job is `queued` for a runner, so the
+        # `pending` runs are read too.
+        for status in ("queued", "pending", "in_progress"):
             runs = get(f"/repositories/{repo_id}/actions/workflows/{workflow}/runs"
                        f"?status={status}&per_page=30").get("workflow_runs") or []
             for run in runs:

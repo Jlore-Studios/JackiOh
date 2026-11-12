@@ -16,8 +16,8 @@ import type { DuosReplaySteps } from "./DuosReplay.tsx";
 import { DUOS_SEATS } from "./seats.ts";
 
 export const DUOS_REPLAY_JSON_FORMAT = "jackioh-duos-replay";
-/** R2532000: 3 since the v0.5 retcon (#2532), its versions named by `VERSIONS_SCHEME`. */
-export const DUOS_REPLAY_JSON_VERSION = 3;
+/** R2532000: 3 since the v0.5 retcon (#2532), its versions named by `VERSIONS_SCHEME`; R3631001: 4 since the v0.5.13 retcon (#3631). */
+export const DUOS_REPLAY_JSON_VERSION = 4;
 /** R1371000: the version a file written before the version retcon carries; its catalog is an old name. */
 export const DUOS_REPLAY_JSON_UNMARKED_VERSION = 1;
 

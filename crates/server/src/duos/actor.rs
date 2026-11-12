@@ -46,8 +46,8 @@ use crate::actor::ws_server::{CLOSE_GOING_AWAY, CLOSE_NORMAL, Socket};
 use crate::app::{App, now_ms};
 use crate::bug_reports::{Finding, FoundIn, RefusedRow};
 use crate::config::{
-    BOT_DECISION_DEADLINE_MS, DUOS_AI_BUDGET, MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS,
-    PING_RATE_LIMIT, PING_RATE_WINDOW_MS,
+    BOT_DECISION_DEADLINE_MS, DUOS_AI_BUDGET, MATCH_OVER_CLOSE_CODE, MATCH_RECORD_RESULT_ATTEMPTS,
+    MATCH_RECORD_RESULT_BACKOFF_MS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS,
 };
 use crate::db::store::StoreError;
 use crate::duos::engine::{self, Pinned};
@@ -1017,10 +1017,6 @@ impl DuosActor {
         );
     }
 
-    pub fn match_id(&self) -> &str {
-        &self.shared.row.id
-    }
-
     /// The match's row as the actor was built with it.
     pub fn row(&self) -> &DuosMatch {
         &self.shared.row
@@ -1162,8 +1158,20 @@ impl DuosActor {
         self.idle().await;
     }
 
+    /// R3694000: `stop` for a finished game past its window: its people's and watchers' sockets close
+    /// with `MATCH_OVER_CLOSE_CODE`.
+    pub async fn stop_match_over(&self) {
+        self.halt_with(MATCH_OVER_CLOSE_CODE, MATCH_OVER_CLOSE_REASON);
+        self.idle().await;
+    }
+
     /// `stop` without waiting for the queue, so a task on it can call it.
     fn halt(&self) {
+        self.halt_with(CLOSE_GOING_AWAY, "the actor is going away");
+    }
+
+    /// `halt`, its sockets closed with `code` and `reason`.
+    fn halt_with(&self, code: u16, reason: &str) {
         let sockets = {
             let mut core = self.lock();
             // The machine stops its clocks and takes their timers back.
@@ -1173,11 +1181,11 @@ impl DuosActor {
         };
         for socket in sockets.into_iter().flatten() {
             if socket.is_open() {
-                socket.close(Some(CLOSE_GOING_AWAY), Some("the actor is going away"));
+                socket.close(Some(code), Some(reason));
             }
         }
         // R2881000: and so do its watchers.
-        self.spectate_close(CLOSE_GOING_AWAY, "the actor is going away");
+        self.spectate_close(code, reason);
     }
 }
 

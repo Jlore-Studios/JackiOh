@@ -10,10 +10,8 @@
 
 import { useId, useMemo, useState, type KeyboardEvent, type ReactElement } from "react";
 
-import { CATALOG } from "@jackioh/cards";
-import type { RunPoolCard, RunSetup, RunTier } from "@jackioh/run";
+import type { RunSetup, RunTier } from "@jackioh/run";
 
-import { CardFace, faceModel } from "../../cards/index.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import { paths } from "../../net/navigate.ts";
 import { BackLink } from "../../routes/nav.tsx";
@@ -23,7 +21,10 @@ import { DUNGEON_FIRST_LEVEL, DUNGEON_LEVEL_STEP } from "../config.ts";
 import { isTypedSeed, randomSeed, seedLength, todayDate } from "../seed.ts";
 import { cursePointsOf, dailyRunNumber, runFinished, type Dungeon } from "../store.ts";
 import { dungeonTestid } from "../testids.ts";
+import "../../game/deckbuilder/deckbuilder.css";
 import "../dungeon.css";
+import { DeckBuilder, SLOT_IDS, slotName } from "./DeckBuilder.tsx";
+import { PresetDecks } from "./PresetDecks.tsx";
 
 export type StartScreenProps = {
   dungeon: Dungeon;
@@ -33,40 +34,8 @@ export type StartScreenProps = {
 
 type SeedChoice = "daily" | "random" | "typed";
 
-/** DR3: the slots' ids, from the lowest, which are `RUN_SLOT_LADDER`'s columns. */
-const SLOT_IDS = ["Common", "Rare", "Epic", "Legendary", "Mythic", "Anything"] as const;
-
-/** DR3: a slot's name as the player reads it. */
-function slotName(column: number): string {
-  switch (column) {
-    case 0:
-      return t("Common");
-    case 1:
-      return t("Rare");
-    case 2:
-      return t("Epic");
-    case 3:
-      return t("Legendary");
-    case 4:
-      return t("Mythic");
-    default:
-      return t("Anything");
-  }
-}
-
 function toggled(held: readonly string[], id: string): string[] {
   return held.includes(id) ? held.filter((one) => one !== id) : [...held, id];
-}
-
-/** One pool card drawn as the deck builder draws it, from the catalog; a card with none, by its name and type. */
-function PoolFace({ card }: { card: RunPoolCard }): ReactElement {
-  const def = CATALOG[card.id];
-  return (
-    <CardFace
-      face={faceModel({ defId: card.id, ...(def === undefined ? { name: card.name, type: card.cardType } : { def }), radiant: false })}
-      layout="full"
-    />
-  );
 }
 
 function Progress({ dungeon }: { dungeon: Dungeon }): ReactElement {
@@ -251,6 +220,105 @@ function Setup({ dungeon, onEnter }: StartScreenProps): ReactElement {
       </section>
 
       <section className="dungeon-block">
+        <h2>{t("Starting deck")}</h2>
+        <ul className="dungeon-slots">
+          {slots.map((count, column) =>
+            count === 0 ? null : (
+              <li key={column} data-testid={dungeonTestid.slot(SLOT_IDS[column] ?? String(column))}>
+                {t("{slot} × {count}", { slot: slotName(column), count: String(count) })}
+              </li>
+            ),
+          )}
+        </ul>
+        <PresetDecks
+          presets={constants.presets}
+          offered={offered}
+          picked={cards}
+          onPick={(ids) => {
+            pick(() => {
+              setPickedCards(ids.filter((id) => offered.some((card) => card.id === id)));
+            });
+          }}
+        />
+        <DeckBuilder
+          offered={offered}
+          picked={cards}
+          onToggle={(id) => {
+            pick(() => {
+              setPickedCards(toggled(cards, id));
+            });
+          }}
+          slots={slots}
+          starterSize={constants.starterSize}
+        />
+      </section>
+
+      <section className="dungeon-block">
+        <h2>{t("Relics")}</h2>
+        <p data-testid={dungeonTestid.relicCount}>
+          {t("Relics: {chosen} of {max}", { chosen: String(taken.length), max: String(constants.starterArtifactsMax) })}
+        </p>
+        <p data-testid={dungeonTestid.relicPoints}>
+          {t("Relic points: {points} of {max}", { points: String(relicPoints), max: String(constants.starterArtifactPoints) })}
+        </p>
+        <ul className="dungeon-relics">
+          {relics.map((relic) => {
+            const chosen = taken.includes(relic.id);
+            return (
+              <li key={relic.id}>
+                <button
+                  type="button"
+                  className="dungeon-relic"
+                  aria-pressed={chosen}
+                  disabled={!chosen && taken.length >= constants.starterArtifactsMax}
+                  data-testid={dungeonTestid.relic(relic.id)}
+                  data-tier={relic.tier ?? "none"}
+                  onClick={() => {
+                    pick(() => {
+                      setPickedRelics(toggled(taken, relic.id));
+                    });
+                  }}
+                >
+                  <span className="dungeon-relic__name">{relic.name}</span>
+                  <span className="dungeon-relic__text">{relic.text}</span>
+                  <span className="dungeon-relic__points">{t("Points: {points}", { points: String(pointsOf(relic.tier)) })}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      <section className="dungeon-block">
+        <h2>{t("Curses")}</h2>
+        <p data-testid={dungeonTestid.cursePoints}>{t("Curse points: {points}", { points: String(cursePoints) })}</p>
+        <ul className="dungeon-relics">
+          {content.curses.map((curse) => {
+            const chosen = curses.includes(curse.id);
+            return (
+              <li key={curse.id}>
+                <button
+                  type="button"
+                  className="dungeon-relic"
+                  aria-pressed={chosen}
+                  data-testid={dungeonTestid.curse(curse.id)}
+                  onClick={() => {
+                    pick(() => {
+                      setPickedCurses(toggled(curses, curse.id));
+                    });
+                  }}
+                >
+                  <span className="dungeon-relic__name">{curse.name}</span>
+                  <span className="dungeon-relic__text">{curse.text}</span>
+                  <span className="dungeon-relic__points">{t("Points: {points}", { points: String(curse.points) })}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      <section className="dungeon-block">
         <h2>{t("Choose a seed")}</h2>
         <div className="dungeon-choices">
           <label className="dungeon-choice" data-selected={seedChoice === "daily" ? "true" : "false"}>
@@ -325,111 +393,6 @@ function Setup({ dungeon, onEnter }: StartScreenProps): ReactElement {
         {seedUsable ? <p data-testid={dungeonTestid.seedValue}>{t("Seed: {seed}", { seed })}</p> : null}
       </section>
 
-      <section className="dungeon-block">
-        <h2>{t("Starting deck")}</h2>
-        <ul className="dungeon-slots">
-          {slots.map((count, column) =>
-            count === 0 ? null : (
-              <li key={column} data-testid={dungeonTestid.slot(SLOT_IDS[column] ?? String(column))}>
-                {t("{slot} × {count}", { slot: slotName(column), count: String(count) })}
-              </li>
-            ),
-          )}
-        </ul>
-        <p data-testid={dungeonTestid.chosenCount}>
-          {t("Cards: {chosen} of {size}", { chosen: String(cards.length), size: String(constants.starterSize) })}
-        </p>
-        <ul className="dungeon-cards" data-testid={dungeonTestid.cards}>
-          {offered.map((card) => {
-            const chosen = cards.includes(card.id);
-            return (
-              <li key={card.id}>
-                <button
-                  type="button"
-                  className="dungeon-card"
-                  aria-pressed={chosen}
-                  aria-label={card.name}
-                  disabled={!chosen && cards.length >= constants.starterSize}
-                  data-testid={dungeonTestid.card(card.id)}
-                  onClick={() => {
-                    pick(() => {
-                      setPickedCards(toggled(cards, card.id));
-                    });
-                  }}
-                >
-                  <PoolFace card={card} />
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-
-      <section className="dungeon-block">
-        <h2>{t("Relics")}</h2>
-        <p data-testid={dungeonTestid.relicCount}>
-          {t("Relics: {chosen} of {max}", { chosen: String(taken.length), max: String(constants.starterArtifactsMax) })}
-        </p>
-        <p data-testid={dungeonTestid.relicPoints}>
-          {t("Relic points: {points} of {max}", { points: String(relicPoints), max: String(constants.starterArtifactPoints) })}
-        </p>
-        <ul className="dungeon-relics">
-          {relics.map((relic) => {
-            const chosen = taken.includes(relic.id);
-            return (
-              <li key={relic.id}>
-                <button
-                  type="button"
-                  className="dungeon-relic"
-                  aria-pressed={chosen}
-                  disabled={!chosen && taken.length >= constants.starterArtifactsMax}
-                  data-testid={dungeonTestid.relic(relic.id)}
-                  data-tier={relic.tier ?? "none"}
-                  onClick={() => {
-                    pick(() => {
-                      setPickedRelics(toggled(taken, relic.id));
-                    });
-                  }}
-                >
-                  <span className="dungeon-relic__name">{relic.name}</span>
-                  <span className="dungeon-relic__text">{relic.text}</span>
-                  <span className="dungeon-relic__points">{t("Points: {points}", { points: String(pointsOf(relic.tier)) })}</span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-
-      <section className="dungeon-block">
-        <h2>{t("Curses")}</h2>
-        <p data-testid={dungeonTestid.cursePoints}>{t("Curse points: {points}", { points: String(cursePoints) })}</p>
-        <ul className="dungeon-relics">
-          {content.curses.map((curse) => {
-            const chosen = curses.includes(curse.id);
-            return (
-              <li key={curse.id}>
-                <button
-                  type="button"
-                  className="dungeon-relic"
-                  aria-pressed={chosen}
-                  data-testid={dungeonTestid.curse(curse.id)}
-                  onClick={() => {
-                    pick(() => {
-                      setPickedCurses(toggled(curses, curse.id));
-                    });
-                  }}
-                >
-                  <span className="dungeon-relic__name">{curse.name}</span>
-                  <span className="dungeon-relic__text">{curse.text}</span>
-                  <span className="dungeon-relic__points">{t("Points: {points}", { points: String(curse.points) })}</span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-
       {shownRefusal === null ? null : (
         <p className="notice" role="alert" data-testid={dungeonTestid.setupRefusal}>
           {shownRefusal}
@@ -460,6 +423,11 @@ export function StartScreen({ dungeon, onEnter }: StartScreenProps): ReactElemen
       <BackLink to={paths.play} title={t("Dungeon run")} />
       <section className="panel panel--auth dungeon-panel">
         <Wordmark />
+        {dungeon.notice === null ? null : (
+          <p className="notice" role="status" data-testid={dungeonTestid.notice}>
+            {dungeon.notice}
+          </p>
+        )}
         <Progress dungeon={dungeon} />
         {unfinished ? <SavedRun dungeon={dungeon} onEnter={onEnter} /> : <Setup dungeon={dungeon} onEnter={onEnter} />}
       </section>

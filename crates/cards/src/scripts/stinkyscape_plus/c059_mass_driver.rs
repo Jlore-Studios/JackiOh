@@ -98,7 +98,6 @@ mod tests {
     use crate::{filler, next_turn_of, weapon_board};
 
     const P1: PlayerId = PlayerId::P1;
-    const P2: PlayerId = PlayerId::P2;
 
     const FILLER: &str = "core-005";
 

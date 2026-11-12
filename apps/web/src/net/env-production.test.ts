@@ -136,18 +136,28 @@ const WORKFLOWS = join(ROOT, ".github/workflows");
 const workflowText = (file: string): string => readFileSync(join(WORKFLOWS, file), "utf8");
 const workflowFiles = readdirSync(WORKFLOWS).filter((file) => file.endsWith(".yml"));
 
+/** training/file-records.sh: every development filing, gather's, the learn lane's shards' and its import's. */
+const FILING = join(ROOT, "training/file-records.sh");
+const runsFiling = (text: string): boolean => /\bsh "?\S*training\/file-records\.sh"? /u.test(text);
+
 describe("R1933001 the development lanes file into both projects' card statistics", () => {
   it("files development records only from the development lanes, through staging's and production's import logins", () => {
-    const importers = workflowFiles.filter((file) => workflowText(file).includes("jackioh-server stats-import"));
-    expect(importers.sort()).toEqual(["gather.yml", "learn.yml"]);
+    const importers = workflowFiles.filter((file) => workflowText(file).includes("jackioh-server stats-import") || runsFiling(workflowText(file)));
+    expect(importers.sort()).toEqual(["gather.yml", "learn.yml", "selfplay-shards.yml"]);
     for (const file of importers) {
       const secrets = [...workflowText(file).matchAll(/DATABASE_URL: \$\{\{ secrets\.([A-Z_]+) \}\}/gu)].map((match) => match[1]);
       expect(new Set(secrets), file).toEqual(new Set(["STATS_IMPORT_DATABASE_URL", "PRODUCTION_STATS_IMPORT_DATABASE_URL"]));
-      // Each import names both, staging's first: a run files into each database it has a login for.
-      const filing = workflowText(file).slice(workflowText(file).lastIndexOf("for where in"));
-      expect(filing.startsWith("for where in staging production;"), file).toBe(true);
-      expect(filing, file).toMatch(/DATABASE_URL=\$url target\/release\/jackioh-server stats-import --totals-only/u);
+      // Each files through the one script, and none around it.
+      expect(runsFiling(workflowText(file)), file).toBe(true);
+      expect(workflowText(file), file).not.toMatch(/DATABASE_URL=\S+ \S*jackioh-server stats-import/u);
     }
+    // The script names both, staging's first: a run files into each database it has a login for.
+    const script = readFileSync(FILING, "utf8");
+    const filing = script.slice(script.lastIndexOf("for where in"));
+    expect(filing.startsWith("for where in staging production;")).toBe(true);
+    expect(filing).toMatch(/staging\) url=\$\{STATS_IMPORT_DATABASE_URL:-\} ;;/u);
+    expect(filing).toMatch(/production\) url=\$\{PRODUCTION_STATS_IMPORT_DATABASE_URL:-\} ;;/u);
+    expect(filing).toMatch(/DATABASE_URL=\$url "\$server" stats-import --totals-only "\$file"/u);
   });
 });
 

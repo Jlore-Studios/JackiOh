@@ -14,14 +14,19 @@
 #   sh scripts/mutants.sh areas                    every area: its mutants, those left out, its shards
 #   sh scripts/mutants.sh score <area>             the finished run's row of the summary table, its
 #                                                  survivors and its counts by file (an audit's rows)
+#   sh scripts/mutants.sh floor <scores> [file]    each area's score in <scores> (what `score` printed
+#                                                  for each area) held to its line of the floor,
+#                                                  .github/mutants-floor.txt; fails naming each
+#                                                  area under its floor
 #
 # The areas: engine, ai, run, shared, server, tools and wasm (each crate, the three WebAssembly ones
 # as one); the cards by set, cards-<set> for each of crates/cards/src/scripts/<set>/ and cards-lib for
 # the rest of the crate, and `cards` itself, whose k picks the set (k mod the sets) and then that
 # set's shard; web-<layer> for each of Game.tsx's layers (animations, effects, audio, cards, drag,
-# settings) and the client's two adapters (wire, wasm); edge for the Worker. Shard k of an area holds
-# its mutants k, k+n, k+2n… (cargo-mutants' sharding; the web's by file the same way), so any one
-# shard samples the whole area and the weeks walk every shard in turn.
+# settings) and the client's two adapters (wire, wasm); edge for the Worker. Shard k of a Rust area
+# holds the k-th of n runs of its mutants in the order cargo-mutants finds them, file after file
+# (its `slice` sharding, the default since 26.0), and of a web area its files k, k+n, k+2n…; the weeks
+# walk every shard in turn.
 #
 # A run writes target/mutants/<area>/: cargo-mutants' mutants.out/ (caught.txt, missed.txt…) or
 # Stryker's mutation.json and mutation.html. The Rust areas need cargo-mutants
@@ -49,10 +54,29 @@ SIZE_SHARED=250
 SIZE_SERVER=80
 SIZE_TOOLS=120
 SIZE_WASM=200
-# Source files per Stryker shard: Stryker runs each mutant against only the tests that cover it.
-SIZE_WEB_FILES=40
+# Source files per Stryker shard. Stryker runs each mutant against only the tests that cover it, but a
+# layer the board imports relates most of the web's tests: on #3512's branch the drag's 8 files took 11.5
+# minutes for the first test run, then about 10 s a mutant (586 of their 1,729 in 1 h 34 min), so about
+# 4.5 hours in all. Stryker writes its report only at the end, so a shard must finish inside the step.
+SIZE_WEB_FILES=3
 # cargo-mutants' --jobs: mutants tested at once, each in its own copy of the tree.
 JOBS=${MUTANTS_JOBS:-2}
+# The memory, in bytes, one test binary may take: 4 GiB of data (its heap and its other private
+# writable mappings, its threads' stacks among them), set by prlimit as cargo's runner for the host,
+# so only the tests and never rustc or the linker. A mutant that takes a loop's step away (`at += 1`
+# as `at *= 1` in crates/shared's face/diff.rs, whose loop pushes a token each time round) fills a
+# runner's 16 GB in seconds, long before the test timeout ends it, and the runner goes with it:
+# crates/shared's ninth shard lost two runners so (mutants.yml on main, 2026-11-11). Under the cap the
+# allocation past it fails, the test binary aborts, and the mutant is caught. Without prlimit
+# (macOS), no cap.
+TEST_MEMORY=${MUTANTS_TEST_MEMORY:-4294967296}
+host=
+if command -v prlimit >/dev/null 2>&1; then
+  host=$(rustc -vV 2>/dev/null | sed -n 's/^host: //p' | tr 'a-z-' 'A-Z_')
+fi
+if [ -n "$host" ]; then
+  export "CARGO_TARGET_${host}_RUNNER=prlimit --data=$TEST_MEMORY --"
+fi
 # Survivors listed under a summary's row, so a summary stays readable; the report has them all.
 SURVIVORS_SHOWN=200
 
@@ -159,8 +183,11 @@ run_rust() {
     shard="--shard $((k % n))/$n"
     label="$((k % n + 1))/$n"
   fi
-  mine=$(cargo mutants --list $FILTER $shard | count_lines)
   mkdir -p "$out"
+  # The shard's mutants by name, as the outcome files name them, so `score` can name any it never
+  # finished.
+  cargo mutants --list $FILTER $shard >"$out/list.txt"
+  mine=$(count_lines <"$out/list.txt")
   printf 'shard=%s\nmutants=%s\nexcluded=%s\n' "$label" "$mine" "$((all - total))" >"$out/area.env"
   echo "mutants: $area shard $label, $mine of the area's $total mutants ($((all - total)) left out)"
   code=0
@@ -242,21 +269,83 @@ in_diff() {
   cargo mutants $dir --in-diff "$out/diff.patch" --jobs "$JOBS" --output "$out" "$@"
 }
 
+# Every area, one per line, as a run's summary table names it (`cards` reports as its week's set).
+known_areas() {
+  echo engine
+  card_areas
+  for area in ai run shared server tools wasm; do echo "$area"; done
+  for layer in animations effects audio cards drag settings wire wasm; do echo "web-$layer"; done
+  echo edge
+}
+
 list_areas() {
   echo "| area | mutants | left out | shards |"
   echo "|---|---:|---:|---:|"
-  for area in engine $(card_areas) ai run shared server tools wasm; do
-    rust_area "$area"
-    total=$(cargo mutants --list $FILTER | count_lines)
-    all=$(cargo mutants --list --no-config $FILTER | count_lines)
-    echo "| $area | $total | $((all - total)) | $(shards "$total" "$SIZE") |"
+  for area in $(known_areas); do
+    case "$area" in
+      edge) total=$(edge_files | count_lines) ;;
+      web-*) total=$(web_files "${area#web-}" | count_lines) ;;
+      *)
+        rust_area "$area"
+        total=$(cargo mutants --list $FILTER | count_lines)
+        all=$(cargo mutants --list --no-config $FILTER | count_lines)
+        echo "| $area | $total | $((all - total)) | $(shards "$total" "$SIZE") |"
+        continue
+        ;;
+    esac
+    echo "| $area | $total files | | $(shards "$total" "$SIZE_WEB_FILES") |"
   done
-  for layer in animations effects audio cards drag settings wire wasm; do
-    total=$(web_files "$layer" | count_lines)
-    echo "| web-$layer | $total files | | $(shards "$total" "$SIZE_WEB_FILES") |"
-  done
-  total=$(edge_files | count_lines)
-  echo "| edge | $total files | | $(shards "$total" "$SIZE_WEB_FILES") |"
+}
+
+# The floor: each `<area> <percent>` line of the floor file holds that area's score in a finished
+# run's table (the rows `score` printed, gathered in one file) to at least its percent. An area the
+# run did not score, whose score is `–` (no mutant judged), or that has no line is not held. A line
+# that names no area fails, so a mistyped area never goes ungated unseen. Each area under its floor
+# is an error naming it, and the floor fails once every line is read.
+floor() {
+  scores=$1 file=${2:-.github/mutants-floor.txt}
+  [ -f "$scores" ] || die "no scores file $scores"
+  [ -f "$file" ] || die "no floor file $file"
+  known=$(known_areas)
+  fail=0
+  while read -r area min rest; do
+    case "$area" in "" | "#"*) continue ;; esac
+    if ! echo "$known" | grep -qx "$area"; then
+      echo "::error title=mutation floor::$file names no area $area (sh scripts/mutants.sh areas lists them)"
+      fail=1
+      continue
+    fi
+    case "$min" in
+      "" | *[!0-9.]* | *.*.*)
+        echo "::error title=mutation floor::$file: $area's floor is a percent, not \"$min\""
+        fail=1
+        continue
+        ;;
+    esac
+    [ -z "$rest" ] || {
+      echo "::error title=mutation floor::$file: $area's line holds more than its floor: $rest"
+      fail=1
+      continue
+    }
+    # A row's cells, split at its pipes: $2 the area, $9 the score.
+    score=$(awk -F'|' -v area="$area" '{ a = $2; gsub(/ /, "", a) }
+      /^\|/ && a == area { s = $9; gsub(/[ %]/, "", s); print "=" s; exit }' "$scores")
+    case "$score" in
+      "") continue ;;
+      = | *[!=0-9.]*)
+        echo "mutants: $area has no score this run, not held to its $min%"
+        continue
+        ;;
+    esac
+    score=${score#=}
+    if awk -v s="$score" -v f="$min" 'BEGIN { exit !(s + 0 < f + 0) }'; then
+      echo "::error title=mutation floor::$area scored $score%, under its floor of $min% ($file)"
+      fail=1
+    else
+      echo "mutants: $area scored $score%, at or over its floor of $min%"
+    fi
+  done <"$file"
+  return "$fail"
 }
 
 # A row of mutants.yml's summary table and the survivors under it. Killed counts the mutants that
@@ -319,6 +408,20 @@ EOF
     [ "$missed" -le "$SURVIVORS_SHOWN" ] || echo "…"
     printf '```\n</details>\n\n'
   fi
+  # The mutants the shard never finished (a build or a test that outlived the step), named when
+  # their count is the shortfall's, so the next audit can see which held the job.
+  if [ "$done" != "$mutants" ] && [ -f "$out/list.txt" ]; then
+    for outcome in caught missed timeout unviable; do
+      if [ -f "$dir/$outcome.txt" ]; then cat "$dir/$outcome.txt"; fi
+    done | LC_ALL=C sort >"$out/finished.txt"
+    LC_ALL=C sort "$out/list.txt" | LC_ALL=C comm -23 - "$out/finished.txt" >"$out/unfinished.txt"
+    unfinished=$(count_lines <"$out/unfinished.txt")
+    if [ "$unfinished" -gt 0 ] && [ "$unfinished" -eq $((mutants - done)) ]; then
+      printf '<details><summary>%s: %s not finished</summary>\n\n```\n' "$area" "$unfinished"
+      head -n "$SURVIVORS_SHOWN" "$out/unfinished.txt"
+      printf '```\n</details>\n\n'
+    fi
+  fi
   # By file, an audit's rows (no leading pipe, so the report's summary table takes none of them).
   [ "$done" -gt 0 ] || return 0
   printf '<details><summary>%s by file</summary>\n\nfile | killed | survived | unviable\n--- | ---: | ---: | ---:\n' "$area"
@@ -340,6 +443,11 @@ case "${1:-}" in
   score)
     [ $# -eq 2 ] || die "usage: sh scripts/mutants.sh score <area>"
     score "$2"
+    ;;
+  floor)
+    [ $# -ge 2 ] && [ $# -le 3 ] || die "usage: sh scripts/mutants.sh floor <scores> [file]"
+    shift
+    floor "$@"
     ;;
   "" | -h | --help) sed -n '2,/^set -euf/p' "$0" | sed '$d' | sed 's/^# \{0,1\}//' ;;
   *) run_area "$@" ;;

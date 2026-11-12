@@ -241,9 +241,10 @@ func TestCigate_ItApprovesOnlyItsOwnEnvironmentForTheGatedEvents(t *testing.T) {
 	assertEqual(t, squishy.approved(), []string{})
 }
 
-// `--gate-every 30`, as bot-status runs it: the gate ticks every 30 seconds between the rewrites,
-// the runners keep their two minutes, and a failed tick is only a warning.
-func TestCigate_TheStatusLoopTicksTheGateBetweenRewrites(t *testing.T) {
+// `--gate-every 30`, as bot-status runs it: the gate ticks every 30 seconds on a clock of its own
+// (#3675), a rewrite's moment among them, the runners keep their two minutes, and a failed tick is
+// only a warning.
+func TestCigate_TheStatusLoopTicksTheGateOnAClockOfItsOwn(t *testing.T) {
 	now := 0.0
 	var ticks []string
 	update := func(*hctx.Context, []string, bool, func() []string, bool, cardsets.Fetch) string {
@@ -267,10 +268,11 @@ func TestCigate_TheStatusLoopTicksTheGateBetweenRewrites(t *testing.T) {
 	dashboardOffline(t, nil)
 	patch(t, &cli.Monotonic, func() float64 { return now })
 	patch(t, &cli.Sleep, func(s float64) { now += s })
+	patch(t, &cli.Background, inPlace)
 	out, _ := capture(t, &cli.Stdout)
 	cli.CmdDashboard(testsupport.MakeConfig(), &cli.Args{Every: 300, RunnersEvery: 120, GateEvery: 30, ForSeconds: 300})
 	assertEqual(t, ticks, []string{"rewrite 0", "gate 30", "gate 60", "gate 90", "gate 120", "runners 120",
-		"gate 150", "gate 180", "gate 210", "gate 240", "runners 240", "gate 270", "rewrite 300"})
+		"gate 150", "gate 180", "gate 210", "gate 240", "runners 240", "gate 270", "gate 300", "rewrite 300"})
 	assertIn(t, "::warning::the runner gate did not tick: network down", out.String())
 	assertIn(t, "runner gate: started 1 of 1 waiting run(s)", out.String())
 }
@@ -287,7 +289,7 @@ func TestCigate_EverySweepTicksTheGate(t *testing.T) {
 
 // ci.yml's `changes` job, which every other job of the run needs, waits in the environment the
 // repository variable names, for a pull request into `main` and a merge-queue build only: never a
-// push to `main`, a promotion's pull request (into `production`) or a dispatch, and nothing waits
+// push to `main`, a promotion's pull request (into `_production`) or a dispatch, and nothing waits
 // with the variable unset. The status loop ticks the gate every 30 seconds.
 func TestWorkflows_OnlyAPullRequestIntoMainAndAMergeQueueBuildWaitForTheRunnerGate(t *testing.T) {
 	text := workflowsRead(t, "ci.yml")

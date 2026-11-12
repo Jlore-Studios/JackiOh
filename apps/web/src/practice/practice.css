@@ -1511,9 +1511,11 @@
    content spilled 46px over the chip, and at 390x664 the cards were already at their 44px floor, so the
    control bar sat under the chip. The result dialog the chip's Result button reopens carries the same
    line (practice-result-earning), so the board's own copy steps aside. Phones held upright only: a
-   tablet and a phone on its side fit with it. */
+   tablet and a phone on its side fit with it. The practice board's result is always its chip
+   (`resultForm="chip"`), so Game's `data-game-over` says it is up (#3633: a `.game:has()` restyled the
+   whole board on every change under it). */
 @media (max-width: 600px) {
-  .practice-table > .game:has(> [data-testid="result-overlay"][data-form="chip"]) .board-notices:has(> .practice-unearned) {
+  .practice-table > .game[data-game-over] .board-notices:has(> .practice-unearned) {
     display: none;
   }
 }

@@ -7,13 +7,19 @@ import type { RunStats } from "./RunStats";
 
 export type RunState = { seed: string, rngCursor: number, 
 /**
- * Rows of nodes; any node of the next row may be chosen.
+ * Rows of nodes, the first the bottom; `Go` steps onto a node the one stood on leads to, or any of
+ * the first row before the first step (R3583000).
  */
 map: Array<Array<RunNode>>, 
 /**
  * The row stood on; none before the first step.
  */
-row: number | null, col: number, hp: number, deck: Array<RunCard>, artifacts: Array<RunArtifact>, blessings: Array<string>, curses: Array<string>, coins: number, tickets: number, 
+row: number | null, col: number, hp: number, 
+/**
+ * The run's own permanent max-HP changes: each won fight's `RUN_WIN_MAX_HP`, each campfire's
+ * `RUN_CAMPFIRE_MAX_HP` and each event option's `max_hp`, so `run_fold` replays them.
+ */
+maxHpBonus: number, deck: Array<RunCard>, artifacts: Array<RunArtifact>, blessings: Array<string>, curses: Array<string>, coins: number, tickets: number, 
 /**
  * What this run extracted, for the caller to add to the unlocks.
  */

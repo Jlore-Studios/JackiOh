@@ -20,6 +20,7 @@ use crate::wire::{
     CardType, Enchantment, GameEvent, LibraryOverflowOutcome, PLAYER_IDS, PlayerId, Row, SetName, Zone,
     opponent_of,
 };
+use crate::work::engine_resume;
 
 /// R151: a start-of-game hook also runs when its card ARRIVES in a hand or a library, not only at §2.1
 /// step 4, as R43 states the roll as an invariant: a copy arriving later (#72 Reminisce, a bounce, a
@@ -630,14 +631,7 @@ fn owe_chain(sink: &mut EngineSink, player: PlayerId, link: &ChainLink) {
         Value::from(sink.state.cast_chain.unwrap_or(link.chain)),
     );
     data.insert("owns".to_string(), Value::Bool(link.owns));
-    let resume = Resume {
-        def_id: String::new(),
-        hook: DRAW_CHAIN_WORK.to_string(),
-        step: DRAW_CHAIN_STEP.to_string(),
-        radiant: false,
-        instance_id: None,
-        data,
-    };
+    let resume = engine_resume(DRAW_CHAIN_WORK, DRAW_CHAIN_STEP, data);
     crate::work::owe(sink, resume);
 }
 
@@ -658,14 +652,7 @@ fn owe_draws(sink: &mut EngineSink, player: PlayerId, count: i32) {
     let mut data: IndexMap<String, Value> = IndexMap::new();
     data.insert("player".to_string(), Value::String(player.as_str().to_string()));
     data.insert("count".to_string(), Value::from(count));
-    let resume = Resume {
-        def_id: String::new(),
-        hook: DRAW_COUNT_WORK.to_string(),
-        step: DRAW_COUNT_STEP.to_string(),
-        radiant: false,
-        instance_id: None,
-        data,
-    };
+    let resume = engine_resume(DRAW_COUNT_WORK, DRAW_COUNT_STEP, data);
     crate::work::owe(sink, resume);
 }
 

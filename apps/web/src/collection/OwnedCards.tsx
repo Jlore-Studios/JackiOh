@@ -84,7 +84,8 @@ function CollectionCardTile({
       }}
     >
       <span className="collection-card__face">
-        <CardFace face={faceModel({ defId: def.id, def, radiant: false })} layout="full" lazyArt worn={owned} tilt="host" />
+        {/* R3350000: the player turns a card here to look at it, so a Mythic's diorama turns as far as it does in inspect. */}
+        <CardFace face={faceModel({ defId: def.id, def, radiant: false })} layout="full" lazyArt worn={owned} tilt="host" turn />
       </span>
       {isNew ? (
         <span className="collection-card__new" data-testid={collectionTestid.newMark(def.id)}>

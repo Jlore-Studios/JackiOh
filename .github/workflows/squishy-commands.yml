@@ -65,7 +65,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: write        # the state file on the squishy-state branch
+      contents: write        # the state file on the _squishy-state branch
       issues: write
       pull-requests: write
       actions: write         # start a forced run; the sweep stops a Squishy pull request's red CI

@@ -132,6 +132,7 @@ mod tests {
         s
     }
 
+    // Differs from Scenario::count: it builds the board and ends p2's turn, counting nothing.
     fn fired(seed: &str, radiant: bool) -> Scenario {
         let mut s = board(seed, "p2", radiant);
         s.end_turn();

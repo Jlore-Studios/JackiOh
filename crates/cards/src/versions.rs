@@ -25,7 +25,8 @@ pub use crate::history::{current_version_name, version_alias, version_alias_from
 /// The key a marked file's object carries, holding `VERSIONS_SCHEME`.
 pub const VERSIONS_KEY: &str = "versions";
 
-/// End of an isolated version string (`v<digits>.<digits>.<digits>[<letter>]`) starting at `at`.
+/// End of an isolated version string (`v<digits>.<digits>.<digits>[<letters>]`, a micro's letters
+/// running past `z` to `aa`, R3631000) starting at `at`.
 fn version_at(bytes: &[u8], at: usize) -> Option<usize> {
     if bytes.get(at) != Some(&b'v') {
         return None;
@@ -54,8 +55,8 @@ fn version_at(bytes: &[u8], at: usize) -> Option<usize> {
         !next.is_some_and(u8::is_ascii_alphanumeric)
             && !(next == Some(&b'.') && bytes.get(end + 1).is_some_and(u8::is_ascii_digit))
     };
-    if bytes.get(end).is_some_and(u8::is_ascii_lowercase) && alone(end + 1) {
-        return Some(end + 1);
+    while bytes.get(end).is_some_and(u8::is_ascii_lowercase) {
+        end += 1;
     }
     alone(end).then_some(end)
 }
@@ -178,6 +179,57 @@ mod tests {
             versions_now_in(1, "selfplay-learned-v0.3.17-1.jsonl"),
             "selfplay-learned-v0.4.0c-1.jsonl"
         );
+    }
+
+    // R3631000: a version whose letters ran past `z` stands alone whole, so a name is renamed only
+    // where it stands alone, never as the start of a longer one.
+    #[test]
+    fn r3631000_a_version_with_two_letters_stands_alone_whole() {
+        let map = |name: &str| match name {
+            "v0.5.13aa" => Some("NEW"),
+            "v0.5.13a" | "v0.5.13" => Some("WRONG"),
+            _ => None,
+        };
+        assert_eq!(
+            rename_versions_with("dev:v0.5.13aa:learned-v0.5.13aa-1.jsonl", map),
+            "dev:NEW:learned-NEW-1.jsonl"
+        );
+        assert_eq!(
+            rename_versions_with("v0.5.13aab v0.5.13aa.1 xv0.5.13aa", map),
+            "v0.5.13aab v0.5.13aa.1 xv0.5.13aa"
+        );
+        assert_eq!(rename_versions_with("(v0.5.13aa)", map), "(NEW)");
+    }
+
+    // R3631001: a record marked 3 names the micros after v0.5.12z as the v0.5.13 line did before the
+    // v0.5.13 retcon, and is read through `aliases.json`'s `marked`; one marked 4 is today's, where
+    // v0.5.13 is the next patch's name.
+    #[test]
+    fn r3631001_a_record_marked_3_names_the_v0_5_13_line_as_it_was() {
+        let three = line(
+            "dev:v0.5.13b:learned-v0.5.13-20261110-1:2",
+            "v0.5.13b",
+            r#","versions":3"#,
+        );
+        let four = line("dev:v0.5.13:gather:1", "v0.5.13", r#","versions":4"#);
+        let records = read_game_record_lines(&format!("{three}\n{four}\n")).expect("the records");
+        assert_eq!(
+            records[0].patch, "v0.5.12ab",
+            "the old v0.5.13b is the new v0.5.12ab"
+        );
+        assert_eq!(records[0].id, "dev:v0.5.12ab:learned-v0.5.12aa-20261110-1:2");
+        assert_eq!(
+            records[1].patch, "v0.5.13",
+            "a record marked 4 names today's v0.5.13"
+        );
+        assert_eq!(version_name_from(3, "v0.5.13h"), "v0.5.12ah");
+        assert_eq!(version_name_from(3, "v0.5.12z"), "v0.5.12z");
+        assert_eq!(
+            version_name_from(2, "v0.5.11"),
+            "v0.5.7",
+            "scheme 2's map still reads"
+        );
+        assert_eq!(version_name_from(VERSIONS_SCHEME, "v0.5.13"), "v0.5.13");
     }
 
     // R2532000: a record marked 2 names the v0.5 line as it was before the v0.5 retcon, and is read

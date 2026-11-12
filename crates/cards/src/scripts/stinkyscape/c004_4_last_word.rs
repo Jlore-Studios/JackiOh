@@ -140,13 +140,6 @@ mod tests {
         s
     }
 
-    fn fired(s: &Scenario) -> usize {
-        s.events()
-            .iter()
-            .filter(|event| event.event_type() == GameEventType::TrapFired)
-            .count()
-    }
-
     fn last_word_in(s: &mut Scenario, zone: &str) {
         let card = s
             .state()
@@ -175,7 +168,7 @@ mod tests {
         #[test]
         fn r1870004_lethal_attack_on_opponents_turn_prevented_and_ends_it() {
             let mut s = lethal_attack(4, false);
-            assert_eq!(fired(&s), 1);
+            assert_eq!(s.count(GameEventType::TrapFired), 1);
             s.expect_health(P1, 4);
             assert!(
                 s.events().iter().all(|event| event.event_type() != GameEventType::Damage),
@@ -192,7 +185,7 @@ mod tests {
             let mut s = board("p1", 3, false);
             let turn = s.state().turn;
             s.play(LUNAR, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
-            assert_eq!(fired(&s), 1);
+            assert_eq!(s.count(GameEventType::TrapFired), 1);
             s.expect_health(P1, 3);
             assert_eq!(s.state().active, P1, "the turn ended into an extra one of p1's");
             assert_eq!(s.state().turn, turn + 1);
@@ -229,7 +222,7 @@ mod tests {
             let mut s = board("p2", 4, false);
             s.state_mut().players.p2.extra_turns = Some(1);
             s.attack(VANILLA, "hero");
-            assert_eq!(fired(&s), 1);
+            assert_eq!(s.count(GameEventType::TrapFired), 1);
             assert_eq!(s.state().active, P2, "p2's owed extra turn first (R846)");
             assert!(s.state().result.is_none());
             s.end_turn();
@@ -244,7 +237,7 @@ mod tests {
         #[test]
         fn r1870004_non_lethal_hit_leaves_it_set() {
             let mut s = lethal_attack(5, false);
-            assert_eq!(fired(&s), 0);
+            assert_eq!(s.count(GameEventType::TrapFired), 0);
             s.expect_health(P1, 1);
             last_word_in(&mut s, "field");
             assert_eq!(s.state().active, P2, "p2's turn goes on");

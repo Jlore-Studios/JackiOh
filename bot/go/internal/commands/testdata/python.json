@@ -4295,11 +4295,11 @@ false
 ],
 [
 "suggest",
-"**`suggest`** (level 2, maintainer; also written `suggestions`)\n\nAsk for a suggestion survey the next time a lane has nothing to start, without waiting out the 30 idle minutes a survey otherwise waits for.\n\nFor example: `@jgoetzmann-bot suggest`. `/harness help` (or `@jgoetzmann-bot help`) lists the commands."
+"**`suggest`** (level 2, maintainer; also written `suggestions`)\n\nAsk for a suggestion survey the next time a lane has nothing to start, without waiting for the three spare lanes a survey otherwise waits for.\n\nFor example: `@jgoetzmann-bot suggest`. `/harness help` (or `@jgoetzmann-bot help`) lists the commands."
 ],
 [
 "suggestions",
-"**`suggest`** (level 2, maintainer; also written `suggestions`)\n\nAsk for a suggestion survey the next time a lane has nothing to start, without waiting out the 30 idle minutes a survey otherwise waits for.\n\nFor example: `@jgoetzmann-bot suggest`. `/harness help` (or `@jgoetzmann-bot help`) lists the commands."
+"**`suggest`** (level 2, maintainer; also written `suggestions`)\n\nAsk for a suggestion survey the next time a lane has nothing to start, without waiting for the three spare lanes a survey otherwise waits for.\n\nFor example: `@jgoetzmann-bot suggest`. `/harness help` (or `@jgoetzmann-bot help`) lists the commands."
 ],
 [
 "halt",

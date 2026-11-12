@@ -276,6 +276,36 @@ mod r783005_cloaked_price {
             Some(RevealAt::Cloaked)
         );
     }
+
+    /// R783005 (#3514): a next-Trap discount that names Traps and Field Traps is neither used nor spent
+    /// by a Cloaked set: the Unit, the Spell and the Field Spell each pay their own price, and the
+    /// discount is still there for the next Trap.
+    #[test]
+    fn r783005_cloaking_neither_uses_nor_spends_the_next_trap_discount() {
+        let mut state = playing("r783005-discount");
+        state.players.p1.mana.current = 10;
+        state.players.p1.mana.max = 10;
+        cast_now(&mut state, &trap_discount().id, P1, false);
+        let mods = state.players.p1.mods.len();
+        for (def, lane, price) in [
+            (cloaked_unit(), 2, 3),
+            (cloaked_bolt(), 3, 1),
+            (cloaked_field(), 4, 2),
+        ] {
+            let card = in_hand(&mut state, &def.id, P1);
+            let mana = state.players.p1.mana.current;
+            cloak(&mut state, &card.id, lane);
+            assert_eq!(mana - state.players.p1.mana.current, price, "{}", def.id);
+            assert_eq!(state.players.p1.mods.len(), mods, "{} left the discount", def.id);
+        }
+
+        // The next Trap still meets it: its (1) less 2, floored at 0.
+        let trap = in_hand(&mut state, &cloaked_trap().id, P1);
+        assert_eq!(
+            jackioh_engine::mana::effective_cost(&state, &trap, Default::default()),
+            0
+        );
+    }
 }
 
 mod r783006_cloaked_reveal {
@@ -380,6 +410,32 @@ mod r783006_cloaked_reveal {
             "the revealed Unit in unit lane 1",
         );
         assert_eq!(revealed.id, set.id);
+    }
+
+    /// R783006, R64, R688 (#3514): a Unit revealed while its own lane's unit zone is Locked does not take
+    /// that zone though it is empty: it comes out into the leftmost open one, as a summon with no named
+    /// zone prefers an unlocked zone.
+    #[test]
+    fn r783006_a_unit_whose_own_lane_is_locked_comes_out_in_the_leftmost_open_zone() {
+        let mut state = playing("r783006-locked");
+        let unit = in_hand(&mut state, &cloaked_unit().id, P1);
+        let set = cloak(&mut state, &unit.id, 3);
+        assert!(state.players.p1.units.iter().all(Option::is_none));
+        state.players.p1.locks.units[2] = true;
+
+        assert!(reveal_offered(&state, &set.id, P1));
+        state = act(&state, reveal_body(&set.id, "p1"));
+        assert_eq!(answer_keys(&mut state, &["hero:p2"]).error, None);
+        let revealed = must(
+            state.players.p1.units[0]
+                .as_ref()
+                .and_then(|pile| pile.first())
+                .cloned(),
+            "the revealed Unit in unit lane 1",
+        );
+        assert_eq!(revealed.id, set.id);
+        assert!(state.players.p1.units[2].is_none(), "its own Locked lane");
+        assert!(state.players.p1.backrow[2].is_none());
     }
 
     #[test]
@@ -660,84 +716,5 @@ mod r783008_leaving_unrevealed {
             settle(&mut sink, SettleOptions::default());
         }
         state.rng_cursor = rng.cursor();
-    }
-}
-
-mod zz_scratch_probe {
-    use super::*;
-
-    #[test]
-    fn zz_locked_zones_reveal() {
-        let mut state = playing("zz-locked");
-        let unit = in_hand(&mut state, &cloaked_unit().id, P1);
-        let set = cloak(&mut state, &unit.id, 3);
-        for lane in 1..=5 {
-            state.players.p1.locks.units[(lane - 1) as usize] = true;
-        }
-        let offered = reveal_offered(&state, &set.id, P1);
-        eprintln!("ZZ all unit zones empty+locked: reveal offered = {offered}");
-        if offered {
-            state = act(&state, reveal_body(&set.id, "p1"));
-            let _ = answer_keys(&mut state, &["hero:p2"]);
-            eprintln!(
-                "ZZ units after reveal: {:?} locks {:?} pending {:?}",
-                state
-                    .players
-                    .p1
-                    .units
-                    .iter()
-                    .map(|z| z.as_ref().map(|p| p[0].id.clone()))
-                    .collect::<Vec<_>>(),
-                state.players.p1.locks.units,
-                state.pending.is_some()
-            );
-        }
-    }
-
-    #[test]
-    fn zz_discount_kept() {
-        let mut state = playing("zz-discount");
-        state.players.p1.mana.current = 10;
-        state.players.p1.mana.max = 10;
-        cast_now(&mut state, &trap_discount().id, P1, false);
-        let mods_before = state.players.p1.mods.len();
-        let unit = in_hand(&mut state, &cloaked_unit().id, P1);
-        let spell = in_hand(&mut state, &cloaked_bolt().id, P1);
-        let field = in_hand(&mut state, &cloaked_field().id, P1);
-        let m = state.players.p1.mana.current;
-        cloak(&mut state, &unit.id, 2);
-        cloak(&mut state, &spell.id, 3);
-        eprintln!(
-            "ZZ mods before {mods_before} after unit+spell {} mana spent {}",
-            state.players.p1.mods.len(),
-            m - state.players.p1.mana.current
-        );
-        let m = state.players.p1.mana.current;
-        cloak(&mut state, &field.id, 4);
-        eprintln!(
-            "ZZ field mana spent {} mods after {}",
-            m - state.players.p1.mana.current,
-            state.players.p1.mods.len()
-        );
-        let trap = in_hand(&mut state, &cloaked_trap().id, P1);
-        eprintln!(
-            "ZZ trap cost now {}",
-            jackioh_engine::mana::effective_cost(&state, &trap, Default::default())
-        );
-    }
-
-    #[test]
-    fn zz_opponent_view_json() {
-        let mut state = playing("zz-view");
-        let unit = in_hand(&mut state, &cloaked_unit().id, P1);
-        let _set = cloak(&mut state, &unit.id, 2);
-        let v = serde_json::to_string(&view_for(&state, P2)).unwrap();
-        eprintln!(
-            "ZZ p2 view mentions cloaked: {} reveal-ability: {}",
-            v.contains("cloaked") || v.contains("Cloaked"),
-            v.contains("\"reveal\"")
-        );
-        let acts = legal_actions(&state, P2);
-        eprintln!("ZZ p2 legal actions count {}", acts.len());
     }
 }

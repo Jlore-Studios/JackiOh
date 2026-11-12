@@ -17,7 +17,7 @@ import { closeInspect } from "../cards/index.ts";
 import Board from "./Board.tsx";
 import { IDLE, highlightFor, type Interaction } from "./actions.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
-import Prompt from "./Prompt.tsx";
+import Prompt, { PROMPT_CELL_MARK } from "./Prompt.tsx";
 import { baseView, card, emptySide, faceDownBackrow, pendingFor, unit } from "../test/fixtures.ts";
 
 afterEach(() => {
@@ -338,9 +338,24 @@ describe("cell (C+ #62)", () => {
     expect(onAction).not.toHaveBeenCalled();
   });
 
+  it("#3633 an open cell pick marks its game, where prompt.css crosses the zones, and takes the mark off as it closes", () => {
+    const view = cellView();
+    const tree = (shown: PlayerView) => (
+      <CatalogContext.Provider value={lookup}>
+        <div className="game" data-testid="game-root">
+          <Prompt view={shown} legal={[]} onAction={vi.fn()} />
+        </div>
+      </CatalogContext.Provider>
+    );
+    const { rerender } = render(tree(view));
+    expect(screen.getByTestId("game-root")).toHaveAttribute(PROMPT_CELL_MARK, "true");
+    rerender(tree({ ...view, pending: null }));
+    expect(screen.getByTestId("game-root")).not.toHaveAttribute(PROMPT_CELL_MARK);
+  });
+
   it("R514 prompt.css marks the glowing zones with a crosshair while a cell prompt is open", () => {
     const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "prompt.css"), "utf8");
-    expect(css).toContain('.game:has([data-prompt-kind="cell"]) .zone[data-glow="ready"]::after');
+    expect(css).toContain('.game[data-prompt-cell] .zone[data-glow="ready"]::after');
   });
 });
 

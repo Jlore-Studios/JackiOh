@@ -893,3 +893,254 @@ fn r3556000_a_dormant_field_spell_in_the_backrow_wears_its_countdown() {
         "its face wears the dormant badge"
     );
 }
+
+// ---- The view's cards and the face's facts (#3513, the shared crate's eleventh shard) -------------------------
+
+/// A card the view lists in a pile, from its JSON.
+fn pile_card(value: Value) -> jackioh_engine::wire::CardView {
+    serde_json::from_value(value).expect("a card view")
+}
+
+fn named(
+    def_id: &str,
+    radiant: bool,
+    instance_id: Option<&str>,
+    cost: Option<i32>,
+) -> jackioh_shared::face::NamedCard {
+    jackioh_shared::face::NamedCard {
+        def_id: def_id.to_string(),
+        radiant,
+        instance_id: instance_id.map(str::to_string),
+        cost,
+    }
+}
+
+fn named_face(view: &jackioh_engine::wire::PlayerView, named: jackioh_shared::face::NamedCard) -> FaceModel {
+    face_of(apply(&FaceCall::Named {
+        view: Box::new(view.clone()),
+        named,
+        locale: Locale::En,
+    }))
+}
+
+fn view_faces(view: jackioh_engine::wire::PlayerView) -> indexmap::IndexMap<String, FaceModel> {
+    let FaceAnswer::Faces { faces } = apply(&FaceCall::View {
+        view: Box::new(view),
+        locale: Locale::En,
+    }) else {
+        panic!("faces")
+    };
+    faces
+}
+
+/// R243: a card an event names that the view still lists is drawn as it stands there, at the view's cost whatever
+/// the event's; one the view lists nowhere is its definition, on the face and at the cost the event names.
+#[test]
+fn r243_a_named_card_the_view_lists_is_drawn_as_it_stands() {
+    let view = a_view();
+    let jackioh_engine::wire::HandView::Cards(hand) = &view.you.hand else {
+        panic!("the viewer sees their own hand")
+    };
+    // A card of a fixed cost, whose gem prints its number (an X card's prints X).
+    let card = hand
+        .iter()
+        .find(|card| {
+            matches!(
+                catalog_def(&card.def_id).cost,
+                jackioh_engine::wire::CardCost::Fixed(_)
+            )
+        })
+        .expect("a hand card of a fixed cost");
+    let listed = named_face(
+        &view,
+        named(&card.def_id, false, Some(&card.instance_id), Some(99)),
+    );
+    assert_eq!(listed.cost.text, card.cost.to_string());
+    let unlisted = named_face(&view, named("core-020", true, None, Some(5)));
+    assert_eq!(
+        (
+            unlisted.def_id.as_str(),
+            unlisted.radiant,
+            unlisted.in_play,
+            unlisted.cost.text.as_str()
+        ),
+        ("core-020", true, true, "5")
+    );
+}
+
+/// R3045000, R243: a fused Dormant Starship an event names, which the view lists nowhere but whose definition it
+/// carries, is named for its hull.
+#[test]
+fn r3045000_a_named_fused_starship_the_view_only_defines_is_named_for_its_hull() {
+    let mut view = a_view();
+    let ship = fused(31, &[&catalog_def(HULL), &catalog_def(MINER)]);
+    view.defs = Some([(ship.id.clone(), ship.clone())].into_iter().collect());
+    assert_eq!(
+        named_face(&view, named(&ship.id, false, None, None)).name,
+        "Dormant Starship"
+    );
+}
+
+/// #2437, R2179001: a Temporary card the view lists outside a hand carries no count, though the viewer holds cards.
+#[test]
+fn r2179001_a_temporary_card_outside_a_hand_shows_no_count() {
+    let mut view = a_view();
+    view.you.graveyard.push(pile_card(json!({
+        "instanceId": "g1",
+        "defId": "meditative-022-1",
+        "radiant": false,
+        "cost": 1,
+        "keywords": [{ "kind": "Temporary", "n": 2 }],
+    })));
+    assert_eq!(
+        named_face(&view, named("meditative-022-1", false, Some("g1"), None)).temporary,
+        None
+    );
+    assert_eq!(view_faces(view)["g1"].temporary, None);
+}
+
+/// #2437, R2179001: in its owner's hand a Temporary card shows its count, a plain Temporary's 1.
+#[test]
+fn r2179001_a_temporary_card_in_hand_shows_its_count() {
+    let face = in_play(
+        "meditative-022-1",
+        false,
+        Locale::En,
+        json!({ "inPlay": { "inHand": true } }),
+    );
+    assert_eq!(face.temporary, Some(1));
+}
+
+/// R97: a card the view lists under the hidden sentinel, or under no id, has no face.
+#[test]
+fn r97_a_listed_card_under_the_sentinel_or_no_id_has_no_face() {
+    let mut view = a_view();
+    for (instance, def) in [("r1", "hidden"), ("r2", "")] {
+        view.opponent.resolving.push(pile_card(json!({
+            "instanceId": instance,
+            "defId": def,
+            "radiant": false,
+            "cost": 0,
+        })));
+    }
+    let faces = view_faces(view);
+    assert!(!faces.contains_key("r1") && !faces.contains_key("r2"));
+}
+
+/// R43, R243: a Heroic Power the view lists in a pile, with no power on the card, prints the power its hero's list
+/// rolled for that instance.
+#[test]
+fn r43_a_heroic_power_off_the_field_reads_its_rolled_power_off_the_heros_list() {
+    let mut view = a_view();
+    view.you.graveyard.push(pile_card(json!({
+        "instanceId": "h98",
+        "defId": "core-098",
+        "radiant": false,
+        "cost": 3,
+    })));
+    let unrolled = view_faces(view.clone())["h98"].text.full.clone();
+    view.you.hero.powers.push(
+        serde_json::from_value(json!({
+            "instanceId": "h98",
+            "defId": "core-098",
+            "name": "recruit",
+            "title": "Recruit",
+            "x": 3,
+            "usedThisTurn": false,
+        }))
+        .expect("a hero's power"),
+    );
+    let rolled = view_faces(view)["h98"].text.full.clone();
+    assert!(rolled.contains("Recruit a permanent"), "{rolled}");
+    assert_ne!(rolled, unrolled);
+}
+
+/// R280, R1301: a Chinese card's preview labels in play are its template's Chinese.
+#[test]
+fn r1301_a_chinese_cards_preview_labels_are_its_templates_chinese() {
+    let face = in_play(
+        "core-022",
+        false,
+        Locale::En,
+        json!({ "chinese": true, "inPlay": { "preview": [{ "label": "remember it", "value": 2 }] } }),
+    );
+    let labels: Vec<&str> = face.values.iter().map(|value| value.label.as_str()).collect();
+    assert_eq!(labels, vec!["记住它"]);
+}
+
+/// Issue #170: Glitch's gem prints its glyphs, never a number.
+#[test]
+fn glitchs_gem_prints_its_glyphs() {
+    let face = printed("classic-t-glitch", false, Locale::En);
+    assert_eq!(face.cost.text, jackioh_shared::face::glitch::glitch_words().cost);
+}
+
+/// MD-B15, R923: in play a card's tags are the view's where it gives them (a granted tag), not its definition's.
+#[test]
+fn r923_in_play_the_views_tags_are_the_cards() {
+    assert!(
+        printed("core-022", false, Locale::En).tags.is_empty(),
+        "PREMISE: the catalog's Carnivorous Cube has no tag"
+    );
+    let face = in_play("core-022", false, Locale::En, json!({ "tags": ["Human"] }));
+    assert_eq!(face.tags, vec![jackioh_engine::wire::Tag::Human]);
+}
+
+/// R279: a face mentions each card its text names other than itself, once.
+#[test]
+fn r279_a_text_mentions_the_cards_it_names() {
+    let face = printed("core-015", false, Locale::En);
+    let mentioned: Vec<&str> = face
+        .mentions
+        .iter()
+        .map(|mention| mention.def_id.as_str())
+        .collect();
+    assert_eq!(mentioned, vec!["core-t-rush"]);
+}
+
+/// R243: a card in play the view gives no keywords of its own (no live stats, none in hand) gains none, its text
+/// gone or not.
+#[test]
+fn r243_a_card_in_play_with_no_keywords_of_its_own_gains_none() {
+    let face = in_play(
+        "core-020",
+        false,
+        Locale::En,
+        json!({ "inPlay": { "vanilla": true } }),
+    );
+    assert!(face.gained.is_empty(), "{:?}", face.gained);
+}
+
+/// R1848000: a unit Frozen forever says so; one the view does not say it of does not.
+#[test]
+fn r1848000_a_unit_frozen_forever_says_so() {
+    assert!(
+        in_play(
+            "core-008",
+            false,
+            Locale::En,
+            json!({ "inPlay": { "frozenForever": true } })
+        )
+        .frozen_forever
+    );
+    assert!(!in_play("core-008", false, Locale::En, json!({})).frozen_forever);
+}
+
+/// A face shortens only the text it prints: in play with other words (its text gone) it has no short form; and
+/// only a clamped form clamps.
+#[test]
+fn a_short_form_is_the_printed_texts_and_only_a_clamped_one_clamps() {
+    assert!(
+        printed("core-093", false, Locale::En).has_short_form,
+        "PREMISE: core-093's base face has a short form"
+    );
+    let vanilla = in_play(
+        "core-093",
+        false,
+        Locale::En,
+        json!({ "inPlay": { "vanilla": true } }),
+    );
+    assert!(!vanilla.has_short_form);
+    assert!(printed("core-065", false, Locale::En).clamp);
+    assert!(!printed("core-020", false, Locale::En).clamp);
+}

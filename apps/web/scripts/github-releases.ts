@@ -7,6 +7,11 @@
 // `--production` is the patches.json production holds: a version it lacks is a pre-release, on
 // staging. Without it every version reads as on production. The hosts are the web's own:
 // production's from .env.production, staging's `SITE_ORIGIN`.
+//
+// Needs the WebAssembly module `scripts/build-wasm.sh` writes into src/wasm/pkg: a changed card's
+// words are diffed by its face model (#3161, cards/model.ts's `wordDiff`), so the module is loaded
+// from its bytes before anything runs, as src/test/setup.ts loads it for the unit tests. Without it
+// every release run failed from 2026-11-06 to #3601.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -18,9 +23,12 @@ import { loadEnv } from "vite";
 import { SITE_ORIGIN, originOf, paths } from "../src/net/navigate.ts";
 import { githubReleases, type ShippedRecord } from "../src/patches/github.ts";
 import type { Patch, Snapshot, TechnicalEntry } from "../src/patches/source.ts";
+import { loadWasmSync } from "../src/wasm/index.ts";
 
 const WEB = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PATCHES = join(WEB, "../../crates/cards/patches");
+
+loadWasmSync(readFileSync(join(WEB, "src/wasm/pkg/jackioh_wasm_bg.wasm")));
 
 function read<T>(path: string): T {
   return JSON.parse(readFileSync(path, "utf8")) as T;

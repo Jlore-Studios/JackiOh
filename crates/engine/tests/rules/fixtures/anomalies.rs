@@ -326,6 +326,9 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
                 entry(&spell, "units", 3, json!({})),
                 entry(&grunt, "units", 6, json!({})),
                 entry(&grunt, "units", 0, json!({})),
+                // R1879001 (#3514): a lane off the backrow lays nothing, a Flying Unit standing there too.
+                entry(&flier, "backrow", 6, json!({})),
+                entry(&flier, "backrow", 0, json!({})),
             ])),
         ),
         (

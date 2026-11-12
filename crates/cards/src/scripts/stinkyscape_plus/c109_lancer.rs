@@ -34,6 +34,8 @@ fn rules(amount: i32) -> LineRules {
         offers: Some(DISCOVER_OPTIONS),
         cleave: false,
         laser: false,
+        // R3571000: Lancer prints Pierce on its line.
+        pierce: true,
     }
 }
 

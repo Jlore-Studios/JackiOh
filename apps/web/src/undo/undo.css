@@ -1,12 +1,15 @@
 /* R2119000: the undo toast (UndoToast.tsx), at the foot of the screen inside the safe-area insets.
-   It slides up as it appears, and only appears under Reduce motion. */
+   It slides up as it appears, and only appears under Reduce motion. Inside the menus' shell (the deck
+   workshop, Play together; R3728000, shell/menu-shell.css) it sits above a phone's tab bar
+   (`--shell-bottom`, the bar and the bottom inset), where its window would otherwise lie over the
+   middle tabs and take their taps. */
 
 .undo-toast-region {
   position: fixed;
   z-index: 94;
   left: max(16px, env(safe-area-inset-left));
   right: max(16px, env(safe-area-inset-right));
-  bottom: max(16px, env(safe-area-inset-bottom));
+  bottom: max(16px, env(safe-area-inset-bottom), calc(var(--shell-bottom, 0px) + 16px));
   display: flex;
   justify-content: center;
   pointer-events: none;

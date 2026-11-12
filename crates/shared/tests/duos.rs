@@ -922,3 +922,101 @@ mod the_forecast {
         }
     }
 }
+
+/// The seats' owings and the AI's fallbacks, which the host's clocks and its AI read (#3513, the shared crate's
+/// sixteenth shard).
+mod owings {
+    use super::*;
+    use jackioh_shared::host::duos::{
+        acting_round_seat, fallback, held_prompt, keep_whole_hand, owes, owes_answer, owes_mulligan,
+        without_search,
+    };
+
+    const SEATS: [DuosSeat; 4] = [A1, A2, DuosSeat::B1, DuosSeat::B2];
+
+    fn playing(seed: &str) -> Table {
+        let mut table = Table::new(setup(opening(seed)));
+        table.connect(A1);
+        table.connect(A2);
+        table.feed(DuosHostEvent::Arm);
+        table
+    }
+
+    /// B2, B4: at the opening every seat owes its mulligan and holds no prompt, and none acts; once round 1
+    /// begins no person owes a mulligan, and a duel has one acting round seat at most.
+    #[test]
+    fn b2_b4_the_opening_owes_mulligans_and_a_round_has_one_acting_seat_a_duel() {
+        let game = opening("owings-1");
+        let prompt = DuosAiMode::AnswerPrompt {
+            choice: "x".to_string(),
+        };
+        for seat in SEATS {
+            assert_eq!(held_prompt(&game, seat), None);
+            assert!(owes_mulligan(&game, seat) && owes_answer(&game, seat));
+            assert!(!acting_round_seat(&game, seat));
+            assert!(!owes(&game, seat, &prompt));
+        }
+        let mut table = playing("owings-1");
+        table.through_the_mulligans();
+        let state = table.host.game().clone();
+        for seat in [A1, A2] {
+            assert!(!owes_mulligan(&state, seat));
+            assert!(!owes(&state, seat, &DuosAiMode::KeepHand));
+        }
+        let acting: Vec<DuosSeat> = SEATS
+            .into_iter()
+            .filter(|seat| acting_round_seat(&state, *seat))
+            .collect();
+        for seat in &acting {
+            assert_eq!(
+                acting.iter().filter(|other| other.duel() == seat.duel()).count(),
+                1,
+                "{acting:?}"
+            );
+        }
+    }
+
+    /// R268, B38: without its search the AI keeps a whole hand in KeepHand mode, and in FinishRound it answers what
+    /// it owes before anything else.
+    #[test]
+    fn r268_without_search_the_ai_keeps_a_whole_hand_and_answers_first() {
+        let table = playing("owings-2");
+        let game = table.host.game().clone();
+        let legal = table.host.legal(A1);
+        let keep = keep_whole_hand(&legal);
+        assert!(keep.is_some());
+        assert_eq!(without_search(&DuosAiMode::KeepHand, &game, A1, &legal), keep);
+        assert_eq!(
+            without_search(&DuosAiMode::FinishRound, &game, A1, &legal),
+            fallback(&legal)
+        );
+        assert!(fallback(&legal).is_some());
+    }
+
+    /// The AI's fallback: its end of turn where legal, else an answer, else anything allowed.
+    #[test]
+    fn the_ai_falls_back_to_its_end_of_turn_then_an_answer_then_anything_allowed() {
+        let end = DuosActionBody::Duel {
+            body: ActionBody::EndTurn,
+        };
+        let answer = DuosActionBody::Duel {
+            body: ActionBody::Mulligan { keep: Vec::new() },
+        };
+        let pass = DuosActionBody::Pass {
+            instance_id: "c1".to_string(),
+        };
+        assert_eq!(fallback(&[pass.clone(), answer.clone(), end.clone()]), Some(end));
+        assert_eq!(fallback(&[pass.clone(), answer.clone()]), Some(answer));
+        assert_eq!(fallback(std::slice::from_ref(&pass)), Some(pass));
+    }
+
+    /// The host's reads: its match, the log's next seq, and whether it stopped.
+    #[test]
+    fn the_hosts_reads_name_its_match_its_next_seq_and_whether_it_stopped() {
+        let mut table = playing("reads-duos");
+        assert_eq!(table.host.match_id(), "duos-1");
+        assert!(!table.host.is_stopped());
+        table.through_the_mulligans();
+        assert!(table.host.next_seq() > 2, "{}", table.host.next_seq());
+    }
+}

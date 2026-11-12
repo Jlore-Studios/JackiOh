@@ -397,10 +397,7 @@ mod r3555002_named_draw_keywords_rider {
         let drawn = find_instance(&state, &first).expect("the drawn card");
         assert_eq!(drawn.zone.z(), ZoneName::Hand);
         assert!(
-            drawn
-                .granted_keywords
-                .iter()
-                .any(|keyword| *keyword == Keyword::Giga),
+            drawn.granted_keywords.contains(&Keyword::Giga),
             "the drawn card is given GIGA in the hand"
         );
         let burned = find_instance(&state, &second).expect("the burned card");

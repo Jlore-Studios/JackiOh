@@ -76,13 +76,26 @@ function takeoverStage(doc: Document, card: FxTakeoverStage): HTMLElement {
 
   const planes = doc.createElement("div");
   planes.className = "fx-takeover-planes";
-  ART_PLANES.forEach((plane, i) => {
-    const p = doc.createElement("div");
-    p.className = "fx-takeover-plane";
-    p.setAttribute("data-plane", plane);
-    p.style.backgroundImage = card.planes[i] ?? "";
-    planes.appendChild(p);
-  });
+  if (card.slices !== undefined) {
+    // R3350000: a Mythic's diorama: the camera flies through its slices, each toward it by its depth (fx.css).
+    card.slices.forEach((slice, i) => {
+      const p = doc.createElement("div");
+      p.className = "fx-takeover-plane";
+      p.setAttribute("data-plane", slice.plane);
+      p.setAttribute("data-slice", String(i));
+      p.style.setProperty("--fx-slice-depth", String(slice.depth));
+      p.style.backgroundImage = slice.image;
+      planes.appendChild(p);
+    });
+  } else {
+    ART_PLANES.forEach((plane, i) => {
+      const p = doc.createElement("div");
+      p.className = "fx-takeover-plane";
+      p.setAttribute("data-plane", plane);
+      p.style.backgroundImage = card.planes[i] ?? "";
+      planes.appendChild(p);
+    });
+  }
   stage.appendChild(planes);
 
   const signatureFace = card.face;

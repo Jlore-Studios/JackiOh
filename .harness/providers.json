@@ -1,5 +1,5 @@
 {
-  "max_parallel": 8,
+  "max_parallel": 16,
   "machine_parallel": 6,
   "plan_lanes": 6,
   "lanes_by_cap": { "cli": "claude", "line": 0.5, "low": 1, "high": 2, "note": "The Claude accounts' lanes (#2748), decided when a run starts from the 5-hour cap in force at that moment: above 50% up to 2, at 50% or under 1, and 2 with no 5-hour cap or in a session's last hour while last_hour lifts the cap. A run already going is never stopped when the count drops; the account starts nothing more until its runs fit the lanes in force. Each run takes its own reading before it starts and watches it during every call, so two runs pass a cap by at most one reading's worth. No Claude account names its own lanes." },

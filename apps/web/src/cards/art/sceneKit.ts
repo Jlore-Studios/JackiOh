@@ -14,6 +14,8 @@
 // R3391000: a pointing part (a beam, a light stream, a light cone, a meteor, a smoke trail, a comet streak) also
 // turns by its placement's `rotate` about its anchor, extending along +x unturned; every other part ignores it.
 // R3352000: Classic's scenes added theirs in a module of their own (sceneKitClassic.ts), spread in last.
+// R3388000: Classic's Alt art pass added a frog and a shark (sceneKitClassicAlt.ts), spread in after Classic's own,
+// before the Stinkyscape Alt art pass's, which stay last.
 
 import { fmt } from "./hash.ts";
 import {
@@ -47,6 +49,7 @@ import {
 } from "./kitDraw.ts";
 import type { KitPart, KitShape, PaletteName, PartPlace, Rng } from "./scene.ts";
 import { CLASSIC_KIT } from "./sceneKitClassic.ts";
+import { CLASSIC_ALT_KIT } from "./sceneKitClassicAlt.ts";
 import { COSMOS_KIT } from "./sceneKitCosmos.ts";
 import { CRAFT_KIT } from "./sceneKitCraft.ts";
 import { GEAR_KIT } from "./sceneKitGear.ts";
@@ -64,6 +67,7 @@ import { PLACES_KIT } from "./sceneKitPlaces.ts";
 import { MOUNTAIN_KIT } from "./sceneKitMountain.ts";
 import { SPACE_KIT } from "./sceneKitSpace.ts";
 import { STINKY_ALT_KIT } from "./sceneKitStinkyAlt.ts";
+import { STINKY_EARLY_ALT_KIT } from "./sceneKitStinkyEarlyAlt.ts";
 import { TOUCHES_KIT } from "./sceneKitTouches.ts";
 import { YARD_KIT } from "./sceneKitYard.ts";
 
@@ -7048,8 +7052,12 @@ export const SCENE_KIT = {
   ...COSMOS_KIT,
   // R3352000: the parts Classic's scenes added.
   ...CLASSIC_KIT,
+  // R3388000: the parts Classic's Alt art pass added.
+  ...CLASSIC_ALT_KIT,
   // R3406000: the parts the Stinkyscape Alt art pass added.
   ...STINKY_ALT_KIT,
+  // R3394000: the parts the early Stinkyscape Alt art pass added.
+  ...STINKY_EARLY_ALT_KIT,
 } as const satisfies Readonly<Record<string, KitPart>>;
 
 export type SceneryPartId = keyof typeof SCENE_KIT;

@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
+import { daily } from "../test/daily.ts";
 import type { CardDef } from "@jackioh/shared";
 
 import {
@@ -56,6 +57,13 @@ async function real(version: string): Promise<Snapshot> {
   if (snapshot === null) throw new Error(`no snapshot ${version}`);
   return snapshot;
 }
+
+/** The history's first six versions, as the brief checked them. */
+const BRIEF_VERSIONS = ["v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0"];
+/** How many of the newest snapshots each pull request loads through the real source (#3418). */
+const NEWEST_SNAPSHOTS = 3;
+/** The time a walk over every shipped snapshot gets. */
+const EVERY_SNAPSHOT_MS = 180_000;
 
 function defIn(snapshot: Snapshot, id: string): CardDef {
   const def = snapshot[id];
@@ -292,7 +300,12 @@ describe("R388 the real history's changes", () => {
     expectRecorded({ id: korrelite.id, name: korrelite.name, kind: "changed", fields: ["resource"] }, delta, korrelite.id);
   });
 
-  it("R388 every card every patch records diffs to what the record says: its kind and exactly its fields", async () => {
+  // daily: it loads every shipped snapshot, so it slows with each `patches ship` and ran minutes on
+  // `web (unit 2/8)` (#3629). Per pull request the case below holds the record on the history's first
+  // six patches and newest three, and crates/tools' patches.rs test
+  // `r388_derives_each_patchs_card_by_card_changes_and_the_per_card_index_from_the_snapshots_alone`
+  // reads every snapshot and holds each patch's changes and the index to them.
+  daily("R388 every card every patch records diffs to what the record says: its kind and exactly its fields", async () => {
     const patches = await realPatchSource.patches();
     expect(patches.length).toBeGreaterThan(0);
     for (const patch of patches) {
@@ -303,8 +316,21 @@ describe("R388 the real history's changes", () => {
         expectRecorded(record, diffCard(before[record.id], after[record.id]), `${patch.version} ${record.id}`);
       }
     }
-    // It loads every shipped snapshot, so it slows with each `patches ship`: 27 s of the 30 s it once had on
-    // main's CI on 2026-11-07, and over it on a busy runner. The same as the walk over every snapshot in
-    // placeholders.test.tsx.
-  }, 180_000);
+  }, EVERY_SNAPSHOT_MS);
+
+  it("R388 the first six patches and the newest three record diffs to what the record says: its kind and exactly its fields", async () => {
+    const patches = await realPatchSource.patches();
+    // A bounded set of snapshots, so the case does not slow as the history grows (#3629): its start and
+    // its newest end, where a promotion appends. The daily case above loads every one.
+    const read = patches.filter((patch, at) => at < BRIEF_VERSIONS.length || at >= patches.length - NEWEST_SNAPSHOTS);
+    expect(read.length).toBe(BRIEF_VERSIONS.length + NEWEST_SNAPSHOTS);
+    for (const patch of read) {
+      const after = await real(patch.version);
+      const previous = versionBefore(patches, patch.version);
+      const before = previous === null ? {} : await real(previous);
+      for (const record of patch.changes) {
+        expectRecorded(record, diffCard(before[record.id], after[record.id]), `${patch.version} ${record.id}`);
+      }
+    }
+  }, 60_000);
 });

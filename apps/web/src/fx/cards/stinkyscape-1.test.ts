@@ -15,16 +15,15 @@ import { describe, expect, it } from "vitest";
 import { HIDDEN_ID, planEntries } from "../../game/animations.ts";
 import { galleryCards } from "../../routes/dev/fx.tsx";
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
+import { envOf } from "../../test/signatures.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { planCardFx, planCardMotif } from "../cardFx.ts";
-import { FX_INTENSITY_SCALE, FX_SET_PASS_FLOOR } from "../constants.ts";
+import { FX_SET_PASS_FLOOR } from "../constants.ts";
 import { planFx } from "../cues.ts";
-import { createFxMemory } from "../memory.ts";
 import { motifScale } from "../motifs/build.ts";
 import { galleryCardEvents, galleryFieldView, galleryPlayOf, type GalleryCardPlay } from "../motifs/gallery.ts";
 import { FX_CARD_HOOKS, isDrawnMotif } from "../motifs/names.ts";
 import { hasSetPiece, signatureRunOf } from "../setPieces.ts";
-import type { FxPlanEnv } from "../types.ts";
 import rawTable from "./stinkyscape-1.md?raw";
 import { entryAura, FX_CARD_FILES, parseFxCardTable, type FxAuraSpec, type FxCardEntry } from "./tables.ts";
 
@@ -76,10 +75,6 @@ function describeEntry(entry: FxCardEntry): string {
     ...(entry.takeover === undefined ? [] : [`takeover ${entry.takeover}`]),
   ];
   return [...frame, ...describeBody(entry)].join("; ");
-}
-
-function envOf(): FxPlanEnv {
-  return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory() };
 }
 
 /**

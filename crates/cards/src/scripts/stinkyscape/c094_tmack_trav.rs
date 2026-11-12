@@ -84,7 +84,7 @@ mod frenzy_r3551004 {
     #[test]
     fn r3551004_frenzy_on_both_faces() {
         crate::register_all();
-        let def = crate::card_def(TRAV);
+        let def = crate::card_def(ID);
         assert_eq!(
             crate::js(&def.base.keywords),
             json!([{ "kind": "Rush" }, { "kind": "Frenzy" }]),
@@ -103,14 +103,22 @@ mod frenzy_r3551004 {
 
     #[test]
     fn r3551004_kept_script_still_attacks_again() {
-        crate::under_kept(TRAV, script_v0_5_13g(), || {
-            let mut s = trav(json!({}), json!({ "field": [VANILLA, VANILLA] }), "kept-attacks-again");
-            let (trav_id, first, second) = engaged(&s);
-            s.attack(&trav_id, &first);
-            assert_eq!(hits(s.last_events())[0], (first, TRAV_ATTACK));
+        use jackioh_engine::testkit::PlayerId::{P1, P2};
+        use jackioh_engine::testkit::*;
+        // Big D-fender dies to Tmack's 8 and strikes back for nothing; Stockpile keeps a turn from ending.
+        const GRUNT: &str = "core-001";
+        const FILLER: &str = "core-005";
+        crate::under_kept(ID, script_v0_5_13g(), || {
+            let mut s = crate::scenario(json!({
+                "p1": { "hand": [FILLER], "field": [ID], "library": crate::filler(4) },
+                "p2": { "hand": [FILLER], "field": [GRUNT, GRUNT], "library": crate::filler(4) },
+            }));
+            let tmack = s.unit_at(P1, 1);
+            s.attack(&tmack, s.unit_at(P2, 1));
+            assert!(s.unit(P2, 1).is_none(), "the first Big D-fender died");
             // The kept `after_attack` re-exerts it (B5 E35): it may attack again.
-            s.attack(&trav_id, &second);
-            assert_eq!(hits(s.last_events())[0], (second, TRAV_ATTACK));
+            s.attack(&tmack, s.unit_at(P2, 2));
+            assert!(s.unit(P2, 2).is_none(), "the second Big D-fender died");
         });
     }
 }

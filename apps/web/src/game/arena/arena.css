@@ -267,12 +267,9 @@
 @media (max-width: 600px) and (min-height: 840px) {
   .board .field {
     padding-block: calc(var(--hit-min) + var(--space-2));
-  }
-
-  /* A row's floor is its card's height (board.css), which the strips' share would push the page past:
-     the floor gives that share up, and the rows, a card there still width-bound, keep its shape. */
-  .board .lane {
-    grid-template-rows: repeat(4, minmax(calc(var(--card-h) * 0.9), 1fr));
+    /* A row's floor is its card's height (board.css), which the strips' share would push the page past:
+       the floor gives that share up, and the rows, a card there still width-bound, keep its shape. */
+    --lane-row-min: calc(var(--card-h) * 0.9);
   }
 }
 

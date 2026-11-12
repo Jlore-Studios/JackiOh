@@ -11,6 +11,7 @@ import type { PlayerId } from "./PlayerId";
 import type { PreviewValue } from "./PreviewValue";
 import type { QuestView } from "./QuestView";
 import type { RevealAt } from "./RevealAt";
+import type { Slumber } from "./Slumber";
 import type { Tag } from "./Tag";
 import type { TipsyBlur } from "./TipsyBlur";
 import type { Tuning } from "./Tuning";
@@ -85,6 +86,14 @@ buried?: number,
  * public in any zone, so this carries no hidden information; absent for every other backrow card.
  */
 unit?: UnitView, 
+/**
+ * R1839000, R1839001, R3556000: the card is Dormant (a status, public on the field on both
+ * seats): it can neither attack, be attacked, be targeted nor be reached by an effect until it
+ * awakens, and `turns` is how many more of its controller's turns start before it does (absent:
+ * until an effect awakens it). What the board's Dormant badge and its countdown read. Absent
+ * otherwise.
+ */
+slumber?: Slumber, 
 /**
  * R3548001: what of this card the owner's Tipsy stamp blurs on their view alone, or nothing.
  * Never on a face-down card, and never on the opponent's view of it.

@@ -1014,7 +1014,7 @@ fn run_config(seed: &str) -> PracticeConfig {
         enemy: jackioh_run::RunEnemy {
             id: "enemy".to_string(),
             name: "Enemy".to_string(),
-            hero_health: 15,
+            tier: 1,
             deck: Vec::new(),
             artifacts: Vec::new(),
         },

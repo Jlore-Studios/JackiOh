@@ -388,6 +388,7 @@ func Parse(raw *pyjson.Object, root string, env map[string]string, pool *provide
 	c.SuggestionsEnabled = pyjson.Truthy(suggestions.GetOr("enabled", true))
 	c.SuggestionsMaxOpen = py.MustInt(suggestions.GetOr("max_open", 4))
 	c.SuggestionsIdleMinutes = py.MustInt(suggestions.GetOr("idle_minutes", 30))
+	c.SuggestionsSpareLanes = py.MustInt(suggestions.GetOr("spare_lanes", 3))
 	c.SuggestionPriorities = priorities(suggestions.GetOr("priorities", pyjson.New()))
 	c.Quiet = quiet(raw.Get("quiet"))
 	c.ForbiddenPaths = mustStrs(raw.Get("forbidden_paths"))

@@ -81,6 +81,7 @@ mod tests {
         scenario(json!({ "active": "p2", "p1": side1, "p2": side2 }))
     }
 
+    // Differs from Scenario::count: whether a Blood Moon fired (a bool), filtered by def id.
     fn fired(s: &Scenario) -> bool {
         s.events()
             .iter()

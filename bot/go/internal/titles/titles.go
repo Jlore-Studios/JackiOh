@@ -38,9 +38,10 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
 
-// prefix is a title's prefix, old or new, and the `(part n of m)` right after it.
+// prefix is a title's prefix, old or new, and the `(part n of m)` right after it. A version's
+// letters may be more than one, a micro past `z` taking `aa` (R3631000).
 var prefix = regexp.MustCompile(
-	`(?s)^(?:Patch(?: v\p{Nd}+\.\p{Nd}+\.(?:\p{Nd}+[a-z]?|X|Y)[a-z]?)?|v\p{Nd}+\.\p{Nd}+\.0|Night bot|CI|Architecture)` +
+	`(?s)^(?:Patch(?: v\p{Nd}+\.\p{Nd}+\.(?:\p{Nd}+[a-z]*|X|Y)[a-z]?)?|v\p{Nd}+\.\p{Nd}+\.0|Night bot|CI|Architecture)` +
 		`(?P<part> \(part \p{Nd}+ of \p{Nd}+\))?: (?P<rest>.*)$`)
 
 // closes is "Closes #12", "Fixes #12, #14": the issues a pull request's body says it closes.

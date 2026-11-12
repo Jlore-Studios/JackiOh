@@ -13,7 +13,8 @@
   position: relative;
   width: 100%;
   min-height: 100vh;
-  min-height: 100dvh;
+  /* R3728000: inside the menus' shell, the window less its tab bar and insets. */
+  min-height: var(--shell-screen-h, 100dvh);
   overflow-x: hidden;
   overflow-x: clip;
   background: var(--tavern-night);
@@ -44,7 +45,7 @@
   isolation: isolate;
   padding: 12px var(--tavern-gutter) 44px;
   min-height: min(100vh, 900px);
-  min-height: min(100dvh, 900px);
+  min-height: min(var(--shell-screen-h, 100dvh), 900px);
 }
 
 .landing .landing-backdrop {
@@ -168,6 +169,11 @@
   gap: 10px;
   max-width: var(--tavern-content);
   margin: 8px auto 0;
+}
+
+/* R3728002: no live game and no queue search, no row. */
+.landing .landing-banners:empty {
+  display: none;
 }
 
 .landing .landing-hero-inner {
@@ -482,6 +488,17 @@
 
 .landing a.landing-dev-link:hover {
   color: var(--tavern-gold-pale);
+}
+
+/* R2122000 under a finger: the dev build's hotseat link is --hit-min tall itself. On a short desktop
+   (1280x720, R3728000's sizes) the doors above it sit closer than half its shortfall, and its band took
+   their taps. */
+@media (pointer: coarse) {
+  .landing a.landing-dev-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--hit-min);
+  }
 }
 
 .landing a:focus-visible {
@@ -972,6 +989,11 @@
   border-top: 1px solid rgba(201, 149, 63, 0.55);
   background: linear-gradient(180deg, var(--tavern-night), #1a0e07 60%, var(--tavern-night));
   text-align: center;
+  /* R1584000: clip the showcase's painting at the gold rule, so its fixed `.fx-layer`
+     and the card's keyframes paint nothing over the hero above (clip-path, unlike
+     overflow, also clips fixed-position descendants). R2035000: the quests'/news'
+     parchment belongs to the hero, so it still hangs over. */
+  clip-path: inset(0);
 }
 
 .landing .landing-stats-record {
@@ -986,7 +1008,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  height: 100dvh;
+  height: var(--shell-screen-h, 100dvh);
 }
 
 .landing .landing-floor:has(> .landing-stats) > .landing-stats {

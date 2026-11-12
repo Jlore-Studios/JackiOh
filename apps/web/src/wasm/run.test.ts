@@ -53,8 +53,8 @@ describe("B12 the run bindings", () => {
     if ("error" in created) throw new Error(created.error);
     expect(runCheckSetup({ ...setup, seed: "bad" }, unlocks, content)).not.toBeNull();
 
-    const illegal = runReduce(created.state, content, { type: "heal" });
-    if (!("error" in illegal)) throw new Error("a heal on the map is refused");
+    const illegal = runReduce(created.state, content, { type: "gainMaxHp" });
+    if (!("error" in illegal)) throw new Error("a campfire rest on the map is refused");
     expect(illegal.error.length).toBeGreaterThan(0);
 
     const go: RunAction = { type: "go", col: 0 };
@@ -66,6 +66,8 @@ describe("B12 the run bindings", () => {
     if (fight === null) throw new Error("a go onto the first row starts a fight");
     expect(fight.seed).toBe(`${setup.seed}-0-0`);
     expect(fight.humanDeck).toHaveLength(starter.length);
+    // R3586000: the first row's fight is tier 1.
+    expect(fight.enemy.tier).toBe(1);
 
     const game: ReplayInput = {
       seed: fight.seed,

@@ -23,6 +23,13 @@ const MS_PER_SECOND = 1000;
 /** What a screen says the moment a pairing lands, before it takes the player there. */
 export const MATCH_FOUND_STATUS = "Match found! Taking you to your game…";
 
+/** R330 calls wire mode `bo3` Conquest. `/play` names its modes by it, and the shell's queue banner (R3728002). */
+export const MODE_LABEL: Readonly<Record<QueueMode, string>> = {
+  bo1: "Best of 1",
+  bo3: "Conquest",
+  random: "All random",
+};
+
 /** A running match, a Conquest series between games, or a live co-op game (R1566000). */
 export type LiveGame = { kind: "match" | "series" | "duos"; id: string; path: string };
 

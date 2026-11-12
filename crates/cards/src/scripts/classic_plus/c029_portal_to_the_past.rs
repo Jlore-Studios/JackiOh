@@ -96,6 +96,7 @@ mod tests {
         }))
     }
 
+    // Differs from Scenario::offered: a state's open prompt's modes, not the seat's legal actions.
     fn offered(state: &GameState) -> Vec<String> {
         state
             .pending

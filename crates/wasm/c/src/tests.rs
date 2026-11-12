@@ -607,6 +607,12 @@ fn run_exports_answer_what_the_core_bodies_answer() {
         call!(run_fold; file, content;),
         expect(wasm_core::run_fold(&file, &content))
     );
+    // R3496000: this build's own version answers its content, like `run_content`.
+    let version = serde_json::to_string(&ok(call!(catalog_version;;))).expect("JSON");
+    assert_eq!(
+        call!(run_content_at; version;),
+        expect(wasm_core::run_content_at(&version))
+    );
     let fight = call!(run_fight_setup; after, content;);
     assert_eq!(fight, expect(wasm_core::run_fight_setup(&after, &content)));
     assert_ne!(ok(fight), "null", "the first move meets a fight");
@@ -633,6 +639,37 @@ fn run_exports_answer_what_the_core_bodies_answer() {
         call!(run_level_cost; "1";),
         expect(wasm_core::run_level_cost("1"))
     );
+}
+
+#[test]
+fn r3496000_run_content_at_answers_the_carried_and_current_versions_and_null_for_unknown() {
+    // R3496000: a run folds under the catalog version it started on, from the versions this build
+    // carries; one it does not carry answers `null`.
+    init();
+    let version = ok(call!(catalog_version;;));
+    let quoted = serde_json::to_string(&version).expect("JSON");
+    let at_current = call!(run_content_at; quoted;);
+    assert_eq!(at_current, expect(wasm_core::run_content_at(&quoted)));
+    assert_eq!(at_current, expect(wasm_core::run_content()));
+    assert_eq!(at_current.status, STATUS_OK);
+    assert_ne!(ok(at_current), "null");
+
+    let carried: Vec<String> = serde_json::from_str(&ok(call!(carried_versions;;))).expect("JSON");
+    let oldest = carried.first().expect("a carried version");
+    let quoted = serde_json::to_string(oldest).expect("JSON");
+    let at_carried = call!(run_content_at; quoted;);
+    assert_eq!(at_carried, expect(wasm_core::run_content_at(&quoted)));
+    assert_eq!(at_carried.status, STATUS_OK);
+    let content: Value = serde_json::from_str(&ok(at_carried)).expect("JSON");
+    assert!(
+        content["pool"].as_array().is_some_and(|pool| !pool.is_empty()),
+        "{oldest} carries a pool"
+    );
+
+    let unknown = call!(run_content_at; "\"v0.0.0-unknown\"";);
+    assert_eq!(unknown, expect(wasm_core::run_content_at("\"v0.0.0-unknown\"")));
+    assert_eq!(unknown.status, STATUS_OK);
+    assert_eq!(unknown.text, "null");
 }
 
 #[test]

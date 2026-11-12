@@ -488,14 +488,6 @@ pub fn mana_due_now(state: &GameState, instance: &CardInstance, cost: i32) -> i3
     if health_priced(state, instance) { 0 } else { cost }
 }
 
-pub fn can_afford(state: &GameState, instance: &CardInstance) -> bool {
-    // R1223, R3548004: affordability reads the one function — current mana plus the credit line's
-    // offer, or nothing at all with infinite mana. R1180004: a play its health price reaches takes
-    // no mana.
-    let cost = effective_cost(state, instance, CostOptions::default());
-    crate::credit::can_pay(state, instance.controller, mana_due_now(state, instance, cost))
-}
-
 /// R3548004: whether `player`'s mana is infinite now: a card giving it acts on their field (a
 /// Dormant one sleeps through it, a face-down one's text with it, as every flag read this way).
 pub fn has_infinite_mana(state: &GameState, player: PlayerId) -> bool {

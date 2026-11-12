@@ -13,11 +13,11 @@ import { describe, expect, it } from "vitest";
 
 import { planEntries, type AnimationEntry } from "../../game/animations.ts";
 import { fullBoardView, withEvents } from "../../test/fixtures.ts";
+import { endOf, envOf } from "../../test/signatures.ts";
 import { CATALOG } from "../../wire/cards.ts";
 import { entranceKeyOf, planCardMotif } from "../cardFx.ts";
-import { FX_INTENSITY_SCALE, FX_MAX_PARTICLE_LIFE_MS, FX_MAX_TAIL_MS, FX_SET_PASS_FLOOR } from "../constants.ts";
+import { FX_MAX_TAIL_MS, FX_SET_PASS_FLOOR } from "../constants.ts";
 import { planFx } from "../cues.ts";
-import { createFxMemory } from "../memory.ts";
 import { motifScale } from "../motifs/build.ts";
 import { galleryEntry, motifFixture, RECIPE_FIXTURES } from "../motifs/gallery.ts";
 import { FX_CARD_HOOKS, isDrawnMotif, type DrawnMotif } from "../motifs/names.ts";
@@ -78,10 +78,6 @@ function describeEntry(entry: FxCardEntry): string {
   }
 }
 
-function envOf(over: Partial<FxPlanEnv> = {}): FxPlanEnv {
-  return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory(), ...over };
-}
-
 /** Plans each entry of `events` in order, as FxLayer does on every `start`: remember, then plan. */
 function planAll(events: readonly GameEvent[], view: PlayerView, env: FxPlanEnv = envOf()): { entry: AnimationEntry; cues: FxCue[] }[] {
   const planned = planEntries(events, withEvents(view, [...events]), false);
@@ -100,21 +96,6 @@ const resolved = (player: PlayerId, instanceId: string, defId: string): GameEven
   permanent: false,
   costPaid: 1,
 });
-
-/** Where a cue ends, in ms after its entry starts (R200's bound is D + FX_MAX_TAIL_MS). */
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "projectile":
-    case "shot":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
-}
 
 /** The cues of every entry but the play's own `cardPlayed` and `cardResolved`. */
 function fixtureCues(planned: readonly { entry: AnimationEntry; cues: FxCue[] }[]): FxCue[] {

@@ -1,5 +1,6 @@
-// Package cigate is the runner gate (bot/README.md "The runner gate"): GitHub's free plan runs 20
-// hosted jobs at once for the whole organization, and every CI run asks for all of its jobs as soon
+// Package cigate is the runner gate (bot/README.md "The runner gate"): GitHub runs a fixed number of
+// hosted jobs at once for the whole organization (the Team plan's 60, #3740; the Free plan's 20
+// before), and every CI run asks for all of its jobs as soon
 // as it can, so when many runs go at once each of them waits behind all the others at every stage
 // and none finishes soon. So a pull request's CI and a merge-queue build wait before they start, in
 // the `ci-runners` environment, whose one required reviewer is the night bot's account: ci.yml's
@@ -7,7 +8,7 @@
 // CI_GATE_ENVIRONMENT, which infra/github.tf sets). A job waiting for a reviewer holds no runner.
 // This package is that reviewer: it approves a waiting run once GitHub's runners have room for it.
 //
-// `main`'s own CI, a promotion's (a pull request into `production`) and a dispatch never wait:
+// `main`'s own CI, a promotion's (a pull request into `_production`) and a dispatch never wait:
 // ci.yml names the environment only for a pull request into `main` and a merge-queue build.
 //
 // The order: merge-queue builds first, the oldest first (the queue lands them in that order, and

@@ -26,7 +26,7 @@ fn dearest_permanents(at: &mut EffectContext<'_>) -> Vec<String> {
         })
         .collect();
     // Stable, dearest first.
-    permanents.sort_by(|a, b| b.1.cmp(&a.1));
+    permanents.sort_by_key(|entry| std::cmp::Reverse(entry.1));
     let n = param(&*at, "draw").max(0) as usize;
     if n == 0 || permanents.is_empty() {
         return Vec::new();

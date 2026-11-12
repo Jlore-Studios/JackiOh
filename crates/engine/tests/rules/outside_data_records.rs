@@ -181,13 +181,25 @@ fn r3538006_change_max_mana_lasts_past_the_refresh_and_takes_current_mana_down()
     assert_eq!(state.players[P1].mana.current, before);
     run_effect(&mut state, change_max_mana(json_as(json!({ "amount": -1 }))), P1);
     assert_eq!(state.players[P1].mana.max, before - 1);
-    assert_eq!(state.players[P1].mana.current, before - 1, "a loss comes off current too");
+    assert_eq!(
+        state.players[P1].mana.current,
+        before - 1,
+        "a loss comes off current too"
+    );
     jackioh_engine::mana::refresh_mana(&mut state.players[P1]);
-    assert_eq!(state.players[P1].mana.max, before - 1, "still lowered past the refresh");
+    assert_eq!(
+        state.players[P1].mana.max,
+        before - 1,
+        "still lowered past the refresh"
+    );
     assert_eq!(state.players[P1].mana.current, before - 1);
     run_effect(&mut state, change_max_mana(json_as(json!({ "amount": 2 }))), P1);
     assert_eq!(state.players[P1].mana.max, before + 1);
-    assert_eq!(state.players[P1].mana.current, before - 1, "a gain adds no current mana");
+    assert_eq!(
+        state.players[P1].mana.current,
+        before - 1,
+        "a gain adds no current mana"
+    );
 }
 
 #[test]
@@ -209,7 +221,11 @@ fn r3538007_win_rate_below_keeps_only_strictly_lower_cards() {
     let marked =
         |state: &GameState, id: &str| find_instance(state, id).and_then(|card| card.marked_destroyed);
     assert_eq!(marked(&state, &low.id), Some(true));
-    assert_eq!(marked(&state, &even.id), None, "half is not strictly lower than half");
+    assert_eq!(
+        marked(&state, &even.id),
+        None,
+        "half is not strictly lower than half"
+    );
     assert_eq!(marked(&state, &high.id), None);
 
     // Against a record bar both directions read true: 20% and half go below 80%, and 80% stays.
@@ -219,10 +235,16 @@ fn r3538007_win_rate_below_keeps_only_strictly_lower_cards() {
     let high = put(&mut state, "fx-1", slot(P2, Row::Units, 1), json!({}));
     run_effect(
         &mut state,
-        destroy_all(json_as(json!({ "side": "any", "rows": ["units"], "winRateBelow": "fx-1" }))),
+        destroy_all(json_as(
+            json!({ "side": "any", "rows": ["units"], "winRateBelow": "fx-1" }),
+        )),
         P1,
     );
     assert_eq!(marked(&state, &low.id), Some(true));
-    assert_eq!(marked(&state, &even.id), Some(true), "half is strictly lower than 80%");
+    assert_eq!(
+        marked(&state, &even.id),
+        Some(true),
+        "half is strictly lower than 80%"
+    );
     assert_eq!(marked(&state, &high.id), None);
 }

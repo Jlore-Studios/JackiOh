@@ -1,7 +1,20 @@
 // Where the hover preview goes (B27). Pure but for `rectOf`, which measures an anchor for it; the
 // caller measures the viewport.
 
-import { PREVIEW_GAP_PX, PREVIEW_HEIGHT_PX, PREVIEW_HEIGHT_SHARE, PREVIEW_MARGIN_PX, PREVIEW_MAX_VIEWPORT_SHARE } from "./constants.ts";
+import {
+  PREVIEW_EXTENDED_STACKED_MAX_PX,
+  PREVIEW_EXTENDED_WIDTH_PX,
+  PREVIEW_GAP_PX,
+  PREVIEW_GLOSSARY_GAP_PX,
+  PREVIEW_GLOSSARY_WIDTH_PX,
+  PREVIEW_HEIGHT_PX,
+  PREVIEW_HEIGHT_SHARE,
+  PREVIEW_MARGIN_PX,
+  PREVIEW_MAX_VIEWPORT_SHARE,
+  PREVIEW_PHONE_WIDTH_PX,
+  PREVIEW_REFS_WIDTH_PX,
+} from "./constants.ts";
+import { FACE_ASPECT } from "../constants.ts";
 
 export type Rect = { left: number; top: number; width: number; height: number };
 
@@ -16,6 +29,52 @@ export function rectOf(element: Element): Rect {
  */
 export function previewHeight(viewportHeight: number): number {
   return Math.min(Math.max(PREVIEW_HEIGHT_PX, viewportHeight * PREVIEW_HEIGHT_SHARE), viewportHeight * PREVIEW_MAX_VIEWPORT_SHARE);
+}
+
+/** #3602: viewports this wide or narrower draw the phone hover-preview layout (PREVIEW_PHONE_WIDTH_PX). */
+export function isPhoneViewport(viewportWidth: number): boolean {
+  return viewportWidth <= PREVIEW_PHONE_WIDTH_PX;
+}
+
+/**
+ * #3602: the hover preview card's height on this viewport, with or without the full-text panel. Off
+ * a phone it is `previewHeight`, unchanged; on a phone it also fits the width, and with the text it
+ * leaves room for one gap and the stacked panel, so card and text fit the height together.
+ */
+export function previewCardHeight(viewport: { width: number; height: number }, withExtended: boolean): number {
+  const height = previewHeight(viewport.height);
+  if (!isPhoneViewport(viewport.width)) return height;
+  const fitWidth = (viewport.width - 2 * PREVIEW_MARGIN_PX) / FACE_ASPECT;
+  if (!withExtended) return Math.max(0, Math.min(height, fitWidth));
+  const fitStacked = viewport.height - 2 * PREVIEW_MARGIN_PX - PREVIEW_GLOSSARY_GAP_PX - PREVIEW_EXTENDED_STACKED_MAX_PX;
+  return Math.max(0, Math.min(height, fitWidth, fitStacked));
+}
+
+/** Which panels a hover preview draws beside or around its card. */
+export type PreviewPanels = { withGlossary: boolean; withRefs: boolean; withExtended: boolean };
+
+/**
+ * #3602: the preview's size before it has been laid out, from the same numbers inspect.css uses. Off
+ * a phone the card stands with its panels beside it; on a phone the side panels hide and the full
+ * text stacks across the card's width, so the estimate counts the card alone, or the card with one
+ * gap and the stacked panel.
+ */
+export function estimatedPreviewSize(
+  viewport: { width: number; height: number },
+  panels: PreviewPanels,
+): { width: number; height: number } {
+  const cardHeight = previewCardHeight(viewport, panels.withExtended);
+  const cardWidth = cardHeight * FACE_ASPECT;
+  if (isPhoneViewport(viewport.width)) {
+    return {
+      width: cardWidth,
+      height: cardHeight + (panels.withExtended ? PREVIEW_GLOSSARY_GAP_PX + PREVIEW_EXTENDED_STACKED_MAX_PX : 0),
+    };
+  }
+  const glossary = panels.withGlossary ? PREVIEW_GLOSSARY_GAP_PX + PREVIEW_GLOSSARY_WIDTH_PX : 0;
+  const refs = panels.withRefs ? PREVIEW_GLOSSARY_GAP_PX + PREVIEW_REFS_WIDTH_PX : 0;
+  const extended = panels.withExtended ? PREVIEW_GLOSSARY_GAP_PX + PREVIEW_EXTENDED_WIDTH_PX : 0;
+  return { width: cardWidth + glossary + refs + extended, height: cardHeight };
 }
 
 type PreviewSide = "right" | "left" | "above" | "below";

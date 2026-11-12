@@ -281,6 +281,16 @@ mod tests {
         }
 
         #[test]
+        fn r1181000_the_supplies_badge_counts_one_card() {
+            let mut s = game("m+004-badge-supplies", false, json!({}), json!({}));
+            cast(&mut s, SUPPLIES, false);
+            assert_eq!(
+                p1_badges(&s, P2),
+                vec!["Jlockeed's Supply Drop: 1 Radiant Jlockeed card in 3 turns".to_string()]
+            );
+        }
+
+        #[test]
         fn r1181000_an_extra_turn_counts() {
             let mut s = game("m+004-extra", false, json!({}), json!({}));
             cast(&mut s, COMBAT, false);
@@ -442,6 +452,16 @@ mod tests {
             let added = supplies(&s);
             assert_eq!(added.len(), 2);
             assert_supplies(&added, 0);
+        }
+
+        #[test]
+        fn r1181000_the_supplies_badge_counts_two_cards() {
+            let mut s = game("m+004-radiant-badge-supplies", true, json!({}), json!({}));
+            cast(&mut s, SUPPLIES, false);
+            assert_eq!(
+                p1_badges(&s, P2),
+                vec!["Jlockeed's Supply Drop: 2 Radiant Jlockeed cards in 3 turns".to_string()]
+            );
         }
 
         #[test]

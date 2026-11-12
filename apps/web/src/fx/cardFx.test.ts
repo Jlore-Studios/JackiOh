@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import { animTestid, entranceEntries, planEntries, type AnimationEntry, type EntranceResolver } from "../game/animations.ts";
 import { testid, type Side } from "../game/contract.ts";
 import { fullBoardView, withEvents } from "../test/fixtures.ts";
+import { endOf, envOf } from "../test/signatures.ts";
 import { castOnDrawViews } from "../audio/test/realGame.ts";
 import { CATALOG } from "../wire/cards.ts";
 import { entranceKeyOf, planCardFx, planSignatureZone, signaturePlayOf, sourceIdOf } from "./cardFx.ts";
@@ -25,8 +26,6 @@ import {
   FX_BLOOD_PICK_STRIDE,
   FX_CRACK_HIT_AT,
   FX_CRACK_STAGGER_MS,
-  FX_INTENSITY_SCALE,
-  FX_MAX_PARTICLE_LIFE_MS,
   FX_MAX_TAIL_MS,
   FX_WALLS_HIT_AT,
   FX_WALLS_REACH,
@@ -40,10 +39,6 @@ const HINDER = "core-021";
 const BLOOD = "core-027";
 const WALLS = "classicplus-024";
 
-function envOf(over: Partial<FxPlanEnv> = {}): FxPlanEnv {
-  return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory(), ...over };
-}
-
 /** Plans each entry of `events` in order, as FxLayer does on every `start`: remember, then plan. */
 function planAll(events: readonly GameEvent[], view: PlayerView, env: FxPlanEnv, D?: number): { entry: AnimationEntry; cues: FxCue[] }[] {
   const planned = planEntries(events, withEvents(view, [...events]), false);
@@ -56,20 +51,6 @@ function planAll(events: readonly GameEvent[], view: PlayerView, env: FxPlanEnv,
 
 function cuesFor(results: ReturnType<typeof planAll>, type: GameEvent["type"]): FxCue[] {
   return results.filter((result) => result.entry.events.some((event) => event.type === type)).flatMap((result) => result.cues);
-}
-
-/** Where a cue ends, in ms after its entry starts (R200's bound is D + FX_MAX_TAIL_MS). */
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "projectile":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
 }
 
 const tid = (value: string): FxAnchor => ({ kind: "testid", testid: value });
@@ -326,12 +307,14 @@ describe("R502 the per-card table", () => {
 
   it("R3332000 a Field Spell's own entrance plays as it lands face up and the shared Legendary entrance yields", () => {
     // Classic+ #78 Claude's Datacenter, a Legendary Field Spell, given an entrance of its own beside its hooks
-    // and aura (R3402000: Combo-Index, the first example, has its own in the shipped table now, as R3389001
-    // Classic's do; R3405001: and so does Meditative #40 Feng Shui).
+    // and aura. The shipped table gives it one now (`obeliskRise`), as it does every other Legendary, so the
+    // shared Legendary entrance is checked against a copy of the table without it.
     const FIELD = "classicplus-078";
     const table = parseFxCardTable("test.json5", `{ "${FIELD}": { cast: { motif: "conjure" }, aura: { look: "storm", scope: "zone" }, entrance: "titanBloom" } }`);
     expect(entranceKeyOf(FIELD, table)).toBe("titanBloom");
-    expect(entranceKeyOf(FIELD)).toBeUndefined();
+    const bare = new Map(FX_CARD_TABLE);
+    bare.delete(FIELD);
+    expect(entranceKeyOf(FIELD, bare)).toBeUndefined();
     const resolve: EntranceResolver = (defId) => {
       const def = CATALOG[defId];
       return def === undefined ? null : { type: def.type, rarity: def.printedRarity ?? def.rarity };
@@ -350,7 +333,7 @@ describe("R502 the per-card table", () => {
     expect(own).toEqual({ cues: ENTRANCES.titanBloom({ D, tgt, intensity: env.intensity }), row: "replace" });
     // The shared rays, gold burst, rings and shake yield to it; with no entrance of its own they play.
     expect(entranceCues(entry, env, D, table)).toEqual([]);
-    expect(entranceCues(entry, env, D).map((cue) => cue.kind).sort()).toEqual(["burst", "rays", "ring", "ring", "shake"]);
+    expect(entranceCues(entry, env, D, bare).map((cue) => cue.kind).sort()).toEqual(["burst", "rays", "ring", "ring", "shake"]);
     // Set face down (its fresh id's `formerId`, R227), it lands with no entrance, and the shared one stays.
     const set: GameEvent = { ...landing, instanceId: "f2", formerId: "f1" };
     expect(planCardFx(set, { entry: { ...entry, events: [set] }, view, env, D }, table)).toBeNull();

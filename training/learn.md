@@ -21,22 +21,23 @@ on the local runner (`jackioh-selfplay-local`, `bot/machine/README.md`, The loca
 GitHub's runners, whose hosted jobs CI needs (an export there held 12 of the organization's 20 for
 hours, #1455). That runner takes two jobs at a time, one on each half of the PC (four CPUs each;
 gather's half goes to gather while it plays a new patch), and only while the PC is otherwise idle, so
-the export's shards play two at a time. One six-CPU runner played about 2,500 games an hour, so a
-run's 100,000 games took about 40 hours of an idle PC (both halves play them somewhat faster), and the
-retrain and the screen about one more (run 21's
+the export's shards play two at a time (#3722). A four-CPU half plays about 670 games an hour at the
+AI's budget since #2628, so a run's 100,000 games take about three days of an idle PC, and the
+retrain and the screen about one more hour (run 21's
 took 59 minutes there), the gate another. A run may take several days, and each starts the next as it
 ends (#1976), so the PC is always exporting, retraining or gating while it is idle; a schedule twice a
 day starts the lane again should that chain stop (one run at a time). Each run:
 
 1. **Clears the way.** The lane's pull request (`ai/learn`) with a failed check, or open more than
    48 hours (`LEARN_PR_STALE_HOURS`), it closes, saying why. One whose checks are green or running is a
-   promotion on its way to `main`: it merges while this run exports, about 40 hours, and should it
+   promotion on its way to `main`: it merges while this run exports, about three days, and should it
    still be open when this run's gate passes, the pass waits behind it (step 6).
 2. **Exports** `games` games (100,000 by default) through `selfplay.yml` on a fresh base,
    `learned-<catalog>-<date>-<run>`, never a gate's deals or the dev set's (R1006002), in `shards` jobs
-   (20 by default, about two hours each) played one after another, in five rounds: a round starts
+   (20 by default, about 7.5 hours each) played two at a time, in five rounds: a round starts
    once the one before it has ended, so no shard waits for the runner longer than its round takes
-   (about 8 hours of an idle PC), well under the 24 hours GitHub lets a job wait. The plan and the
+   (about 15 hours of an idle PC), under the 24 hours GitHub lets a job wait. The export's build
+   (`selfplay-jackioh`) is kept 14 days, so every shard of a slow export still finds it. The plan and the
    export's build read `main` as it is when the run starts, not as it was when the run was queued,
    so the export plays the newest patch however long the run waited behind the one before it (A new
    patch ships, below).
@@ -70,11 +71,16 @@ day starts the lane again should that chain stop (one run at a time). Each run:
    `ai/learn` again would close that one, so this one stays the run's artifact (`promotion.patch`) and
    the next run gates on `main` once the open one has merged.
 7. **Files the export's games** into both projects' card statistics, JackiOh-Staging's and then
-   JackiOh-Production's (R1933001, docs/deploy-cloudflare.md section 8) (`import`, once the retrain has ended,
-   however it ended): `cargo jackioh stats from-selfplay` over the shards that finished, with the build
-   that played them (R1676000), then `jackioh-server stats-import --totals-only` (R1976000), which adds
+   JackiOh-Production's (R1933001, docs/deploy-cloudflare.md section 8), as the export plays them: each
+   shard plays its range 1,250 games at a time (`file_every`, about an hour of one half of the PC), and
+   after each piece `cargo jackioh stats from-selfplay` with the build that played it (R1676000) and
+   `training/file-records.sh`, which runs `jackioh-server stats-import --totals-only` (R1976000): it adds
    their counts to the totals and keeps no row per game, so the database grows with the patches, not the
-   games. It files into each database it has a secret for, `STATS_IMPORT_DATABASE_URL` and
+   games. So a piece's games reach the statistics about an hour after they were played, a stopped run's
+   too. Then `import`, once the retrain has ended however it ended, files every shard's records files
+   again, which a database that holds one folds no second time, and makes records of any log a shard
+   made none for (a piece it could not convert or file is a warning in that shard, not a failure). It
+   files into each database it has a secret for, `STATS_IMPORT_DATABASE_URL` and
    `PRODUCTION_STATS_IMPORT_DATABASE_URL` (Setting it up); with neither, nothing is filed. A run on an
    earlier run's export (`export_run`) files nothing new.
 8. **Starts the next run** (`next`), unless one is already on its way (a run on the same export, or the
@@ -104,7 +110,7 @@ mends what would otherwise stop it. What can go wrong, and what it does:
 | `LEARN_LANE_TOKEN` is missing or has expired | A passing run fails in red at its deliver step and keeps the promotion as its artifact (`promotion.patch`). A person renews the token (Setting it up) |
 | A run ends | It starts the next (step 8). A run that broke within the hour starts none, and the schedule (06:23 and 18:23 UTC) starts the lane again |
 | GitHub skips or delays the schedule | It matters only once the chain has stopped: the next one, 12 hours on, or `gh workflow run learn.yml`, picks it up. Nothing is lost. A scheduled run queued behind a running one waits; the next schedule's replaces it (the `learn` concurrency group holds one waiting), and the status issue leaves out a run canceled that way |
-| `STATS_IMPORT_DATABASE_URL` or `PRODUCTION_STATS_IMPORT_DATABASE_URL` is missing, or the import fails | The export's games are not filed where it is missing or failed (rerunning the job files them only there, each database claiming the file once); the retrain, the gate and the next run go on as before. The shards stay the run's artifacts for 30 days, so a person can file them by hand (`training/README.md`, The gather lane) |
+| `STATS_IMPORT_DATABASE_URL` or `PRODUCTION_STATS_IMPORT_DATABASE_URL` is missing, or the import fails | The export's games are not filed where it is missing or failed: a shard warns and goes on playing, and `import` files what the shards could not (rerunning it files only what a database is missing, each claiming a file once); the retrain, the gate and the next run go on as before. The shards stay the run's artifacts for 30 days, so a person can file them by hand (`training/README.md`, The gather lane) |
 | The PC is in use | The runner works only while the PC is idle: a job waiting is not started, and one in the middle of its work is slowed to half a CPU until the PC is idle again. Nothing is lost; the run takes longer (its timeouts allow days) |
 | The PC is off, asleep or busy for 24 hours | GitHub fails a job no runner takes in 24 hours. A lost shard costs the export its games and the retrain goes on with the rest; a lost plan or retrain ends the run, and the next run comes anyway. A shard in the middle of its work when the PC sleeps or restarts is lost the same way. The status issue shows a run the PC never took as "⏸️ the PC's runner took none of it in 24 hours" |
 | The PC's supervisor is not running (nobody logged in since a restart) | The same as the PC off: its scheduled task starts it at logon (`bot/machine/README.md`, The local runner) |
@@ -135,8 +141,8 @@ no other is on its way (one waiting behind the stopped run starts by itself, on 
 half on, finishing the export costs the lane less than playing it again, so that run goes on, as does
 a run past its export, one on an earlier run's export and one that planned after the patch shipped;
 the run after it exports the new patch. A stopped run's finished
-shards stay its artifacts for 30 days, and their games are not filed (step 7): a person can file
-them by hand (`training/README.md`, The gather lane).
+shards stay its artifacts for 30 days, and their games are filed already, piece by piece as they
+were played (step 7).
 
 ## What it may change
 

@@ -354,6 +354,11 @@ export function runContent(): RunContent {
   return call("runContent", () => parsed<RunContent>(normal.run_content()));
 }
 
+/** R3496000: `RunContent` for a catalog version: the build's own, a carried version's, or null. */
+export function runContentAt(version: string): RunContent | null {
+  return call("runContentAt", () => parsed<RunContent | null>(normal.run_content_at(json(version))));
+}
+
 /** Whether the setup may start a run: null, or the reason. */
 export function runCheckSetup(setup: RunSetup, unlocks: RunUnlocks, content: RunContent): string | null {
   return call("runCheckSetup", () =>

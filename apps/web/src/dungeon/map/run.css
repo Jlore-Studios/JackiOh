@@ -102,52 +102,113 @@
   min-height: var(--hit-min);
 }
 
-/* The map: one row per map row, nodes across. */
+/* The map (#3587): one tall climbing path read bottom to top, scrolling under the legend. */
 .dungeon-run-map {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.dungeon-run-map__row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.dungeon-run-map__scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 70vh;
 }
 
+.dungeon-run-map__graph {
+  position: relative;
+  margin: 0 auto;
+  /* The first row's captions hang below its badges, clear of the legend: 96px composed
+     from the spacing scale (2 × --space-11 + --space-7). */
+  padding-bottom: calc(var(--space-11) * 2 + var(--space-7));
+}
+
+/* One SVG line per edge of the run's map, under the badges. */
+.dungeon-run-map__lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+}
+
+.dungeon-run-map__lines line {
+  stroke: var(--text-dim);
+  stroke-width: 1;
+}
+
+.dungeon-run-map__lines line[data-dim="true"] {
+  opacity: 0.35;
+}
+
+.dungeon-run-map__lines line[data-live="true"] {
+  stroke: var(--pal-gold-300);
+  stroke-width: 2;
+}
+
+/* The walked path draws solid and bold (MAP_WALKED_W in MapGraph.tsx). */
+.dungeon-run-map__lines line[data-walked="true"] {
+  stroke: var(--text);
+  stroke-width: 3;
+}
+
+/* Each node is a badge with its captions, centered on its grid column. */
 .dungeon-run-map__node {
+  position: absolute;
+  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  min-width: 96px;
+  min-width: var(--hit-min);
   min-height: var(--hit-min);
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--bg-raised);
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--text);
+  text-align: center;
 }
 
-.dungeon-run-map__node:disabled {
+.dungeon-run-map__node[data-dim="true"] {
   opacity: 0.55;
 }
 
-.dungeon-run-map__node[data-live="true"] {
+/* The badge is a round button in the node's kind color (#3229), boss emblems larger. */
+.dungeon-run-map__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-round);
+  background: var(--bg-raised);
+  color: var(--node-color, var(--text));
+  line-height: 0;
+}
+
+.dungeon-run-map__node[data-live="true"] .dungeon-run-map__badge {
+  border-color: var(--pal-gold-300);
   border-width: 2px;
 }
 
-.dungeon-run-map__node[data-current="true"] {
+.dungeon-run-map__node[data-current="true"] .dungeon-run-map__badge {
   box-shadow: var(--shadow-2);
 }
 
-/* The icon is an SVG in currentColor (NodeIcon.tsx), colored by node kind (#3229). */
-.dungeon-run-map__icon {
-  display: inline-flex;
-  line-height: 0;
-  color: var(--node-color, var(--text));
+/* Live badges breathe, scale only, and only when motion is welcome. The pulse names
+   motion.css's duration and curve (#2110), so this sheet keeps no motion of its own:
+   1.6s is --motion-slow times 4. */
+@media (prefers-reduced-motion: no-preference) {
+  .dungeon-run-map__node[data-live="true"] .dungeon-run-map__badge {
+    animation: map-pulse calc(var(--motion-slow) * 4 * var(--anim-scale, 1)) var(--ease-in-out) infinite;
+  }
+
+  @keyframes map-pulse {
+    50% {
+      transform: scale(1.1);
+    }
+  }
 }
 
+/* The badge's glyph draws in `currentColor` (NodeIcon.tsx), colored by node kind (#3229). */
 .dungeon-run-map__node[data-kind="fight"] {
   --node-color: var(--pal-red-400);
 }
@@ -192,19 +253,72 @@
   font-weight: 700;
 }
 
+.dungeon-run-map__label,
+.dungeon-run-map__enemy,
+.dungeon-run-map__tier,
+.dungeon-run-map__relic,
+.dungeon-run-map__visited,
+.dungeon-run-map__current {
+  max-width: 76px;
+}
+
 .dungeon-run-map__enemy,
 .dungeon-run-map__relic,
-.dungeon-run-map__current {
+.dungeon-run-map__current,
+.dungeon-run-map__visited {
   font-size: var(--type-sm);
 }
 
 .dungeon-run-map__enemy,
-.dungeon-run-map__relic {
+.dungeon-run-map__tier,
+.dungeon-run-map__relic,
+.dungeon-run-map__visited {
   color: var(--text-dim);
 }
 
 .dungeon-run-map__current {
   font-weight: 700;
+}
+
+/* A node's details, on hover, focus and tap. */
+.dungeon-run-map__tip {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-content);
+  max-width: 180px;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  font-size: var(--type-sm);
+}
+
+.dungeon-run-map__node:hover .dungeon-run-map__tip,
+.dungeon-run-map__node:focus-visible .dungeon-run-map__tip,
+.dungeon-run-map__node[data-open="true"] .dungeon-run-map__tip {
+  display: block;
+}
+
+/* The legend naming the node kinds, under the scroll. */
+.dungeon-run-map__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  padding: var(--space-4) var(--space-6);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+}
+
+.dungeon-run-map__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--type-sm);
+  color: var(--text-dim);
 }
 
 /* Card and choice grids: faces keep their aspect in a responsive grid. */
@@ -272,6 +386,85 @@ button.dungeon-run-card:disabled {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* The four reward packs (#3588): tearable shop-style packs side by side, wrapping on a phone. */
+.dungeon-run-packs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dungeon-run-pack-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  color: inherit;
+  transition: transform var(--motion-fast) var(--ease-out);
+}
+
+.dungeon-run-pack-pick:hover,
+.dungeon-run-pack-pick:focus-visible {
+  transform: translateY(-4px);
+}
+
+.dungeon-run-pack-pick__label {
+  font-weight: 700;
+}
+
+.dungeon-run-pack-pick__enemy,
+.dungeon-run-pack-pick__boss {
+  font-size: var(--type-sm);
+}
+
+.dungeon-run-pack-pick__enemy {
+  overflow-wrap: anywhere;
+}
+
+.dungeon-run-pack-pick__boss {
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+/* The sealed pack before its keep: a pack to press and tear. */
+.dungeon-run-pack-tear {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+}
+
+.dungeon-run-pack-tear__enemy,
+.dungeon-run-pack-tear__boss {
+  font-size: var(--type-sm);
+}
+
+.dungeon-run-pack-tear__enemy {
+  overflow-wrap: anywhere;
+}
+
+.dungeon-run-pack-tear__boss {
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.dungeon-run-pack-counter {
+  margin: 0;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
 }
 
 .dungeon-run-choice {
@@ -386,16 +579,20 @@ button.dungeon-run-card:disabled {
   margin: 0;
 }
 
-/* A narrow screen stacks the map's nodes and narrows the card grid; the body keeps the page's
+/* A narrow screen narrows the map's captions and the card grid; the body keeps the page's
    only scrollbar. */
 @media (max-width: 600px) {
   .dungeon-run-screen {
     padding: 8px;
   }
 
-  .dungeon-run-map__node {
-    min-width: 0;
-    flex: 1 1 40%;
+  /* The 322 px graph fits a 360 px screen; captions stay narrow so neighbors keep apart. */
+  .dungeon-run-map__label,
+  .dungeon-run-map__enemy,
+  .dungeon-run-map__relic,
+  .dungeon-run-map__visited,
+  .dungeon-run-map__current {
+    max-width: 60px;
   }
 
   .dungeon-run-cards {

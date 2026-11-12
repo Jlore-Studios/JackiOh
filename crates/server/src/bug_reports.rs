@@ -521,29 +521,18 @@ impl Filing {
             &[("q", query.as_str()), ("per_page", "1")],
         )
         .map_err(|error| error.to_string())?;
-        let found: Value = request(self.http.get(search))
-            .send()
-            .await
-            .and_then(reqwest::Response::error_for_status)
-            .map_err(|error| error.to_string())?
-            .json()
-            .await
-            .map_err(|error| error.to_string())?;
+        let found = github_answer(request(self.http.get(search))).await?;
         if found["total_count"].as_u64().unwrap_or(0) > 0 {
             return Ok(None);
         }
-        let created: Value = request(
-            self.http
-                .post(format!("{BUG_REPORT_API_URL}/repos/{}/issues", self.repo)),
+        let created = github_answer(
+            request(
+                self.http
+                    .post(format!("{BUG_REPORT_API_URL}/repos/{}/issues", self.repo)),
+            )
+            .json(&json!({ "title": report.title, "body": report.body, "labels": report.labels })),
         )
-        .json(&json!({ "title": report.title, "body": report.body, "labels": report.labels }))
-        .send()
-        .await
-        .and_then(reqwest::Response::error_for_status)
-        .map_err(|error| error.to_string())?
-        .json()
-        .await
-        .map_err(|error| error.to_string())?;
+        .await?;
         let number = created["number"]
             .as_u64()
             .ok_or_else(|| "GitHub answered no issue number".to_string())?;
@@ -663,14 +652,27 @@ pub fn report_of(signature: &Signature, findings: &[Finding]) -> BugReport {
     }
 }
 
-/// A request to GitHub's REST API with the token and the headers it asks for.
-fn github(builder: reqwest::RequestBuilder, token: &str) -> reqwest::RequestBuilder {
+/// A request to GitHub's REST API with the token and the headers it asks for: the bug reports' and
+/// the alerts' (`alerts.rs`).
+pub(crate) fn github(builder: reqwest::RequestBuilder, token: &str) -> reqwest::RequestBuilder {
     builder
         .bearer_auth(token)
         .header("accept", "application/vnd.github+json")
         .header("user-agent", "jackioh-server")
         .header("x-github-api-version", "2022-11-28")
         .timeout(Duration::from_millis(BUG_REPORT_TIMEOUT_MS))
+}
+
+/// A GitHub request's JSON answer, or why there is none: the bug reports', the alerts' and the CI runs'.
+pub(crate) async fn github_answer(request: reqwest::RequestBuilder) -> Result<Value, String> {
+    request
+        .send()
+        .await
+        .and_then(reqwest::Response::error_for_status)
+        .map_err(|error| error.to_string())?
+        .json()
+        .await
+        .map_err(|error| error.to_string())
 }
 
 #[cfg(test)]

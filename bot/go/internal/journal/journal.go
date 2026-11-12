@@ -1,6 +1,6 @@
 // Package journal is bot/harness/journal.py.
 //
-// An item's journal: every run on it, in order, on the unprotected `bot-journal` branch (#342).
+// An item's journal: every run on it, in order, on the unprotected `_bot-journal` branch (#342).
 //
 // A run that does not finish its item hands the next one its notes and the end of its session
 // (`work.Worker._handoff`), but that handoff is one slot in the state file: the next run overwrites

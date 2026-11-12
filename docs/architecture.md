@@ -231,7 +231,7 @@ What "operating a server" costs us, and the mitigation each cost already has in 
 ### 4.2 The deployment config
 
 `wrangler.jsonc` deploys both halves §3's table describes, the client and the server, as one
-Cloudflare Worker per environment: `jackioh` at jackioh.com (production, from the `production`
+Cloudflare Worker per environment: `jackioh` at jackioh.com (production, from the `_production`
 branch) and `jackioh-staging` at staging.jackioh.com (staging, from main, behind Cloudflare Access).
 `docs/deploy-cloudflare.md` is the runbook and `apps/edge/README.md` the Worker's contract. Four
 things in it are not obvious:
@@ -371,7 +371,7 @@ Notes that matter:
 | One socket drops | start the grace timer, write `grace_deadline_at`, push the countdown to the other player; **the clock keeps running** (SPEC §9.5) |
 | Reconnect inside grace | fresh `viewFor`, never a replay (SPEC §9.5); cancel the grace timer |
 | Grace expires | submit `disconnectExpired` → a loss (R79) |
-| Terminal state | `api::results::record_result` (`crates/server/src/api/results.rs`) writes one `results` row, applies the rating move when the match is ranked (R604), clears both `profiles.current_match_id` and any queued ticket — all in one transaction. The actor stays in the map, where a rematch's presence reads its sockets (R672), until a reaper tick finds `REMATCH_OFFER_TTL_MS` passed since the end and no seat's socket open, and drops it (`Registry::reap_finished`). An actor rebuilt on a finished match counts that window from the rebuild |
+| Terminal state | `api::results::record_result` (`crates/server/src/api/results.rs`) writes one `results` row, applies the rating move when the match is ranked (R604), clears both `profiles.current_match_id` and any queued ticket — all in one transaction. The actor stays in the map, where a rematch's presence reads its sockets (R672), until a reaper tick finds `REMATCH_OFFER_TTL_MS` passed since the end and drops it (`Registry::reap_finished`), closing any socket still open with `MATCH_OVER_CLOSE_CODE` (R3694000). An actor rebuilt on a finished match counts that window from the rebuild |
 | The result's write fails | tried again, `MATCH_RECORD_RESULT_ATTEMPTS` tries in all with a doubling wait from `MATCH_RECORD_RESULT_BACKOFF_MS`; if none lands, the match row stays `live` with both players in it, the actor is dropped from the map and both sockets close (1001), and the next socket rebuilds the actor, which writes the result as it arms (R1437) |
 | A clock's action can't be written | its clock runs out again `MATCH_SERVER_ACTION_RETRY_MS` later until the row lands, the match ends or the actor stops; a new turn, an answered prompt, a closed mulligan window or a reconnect cancels it (R776000) |
 | The log already holds the actor's next seq | `StoreError::SeqClash`: the actor is dropped from the map, both sockets close (1001), and the next socket rebuilds it from the log (R776000) |

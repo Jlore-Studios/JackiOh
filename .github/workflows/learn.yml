@@ -11,7 +11,7 @@
 #             still early on the version before (learn-set.yml). A lane pull request with a failed check, or open LEARN_PR_STALE_HOURS,
 #             is closed and the run goes on, so a stuck promotion never holds the lane. One whose
 #             checks are green or running is left to merge, and the export goes ahead beside it: by the
-#             time this run gates, about 40 hours on, it has merged (and when it has not, this run's
+#             time this run gates, about three days on, it has merged (and when it has not, this run's
 #             pass waits behind it, as its artifact)
 #   export    selfplay.yml, called: `games` games in `shards` jobs, two at a time on the local
 #             runner's two halves, in five rounds; none with `export_run`, which retrains on an earlier run's
@@ -29,12 +29,15 @@
 #             every lane. When main kept moving through every try, the run starts another on the same
 #             export (at most LEARN_CHAIN_MAX in a row). Each stage's report is kept as the run's
 #             `learn-<run>` artifact and in its summary, whether or not it passed.
-#   import    once the retrain has ended, however it ended: the export's games filed as development
-#             records (`cargo jackioh stats from-selfplay`, R1676000, folded by the export's own build
-#             as the retrain's positions are) and imported into both projects' card statistics
-#             (R1933001) as totals only (`jackioh-server stats-import --totals-only`, R1976000), over
-#             STATS_IMPORT_DATABASE_URL (staging's) and PRODUCTION_STATS_IMPORT_DATABASE_URL; each
-#             only where its secret is set
+#   import    the export's games filed as development records (`cargo jackioh stats from-selfplay`,
+#             R1676000, folded by the export's own build as the retrain's positions are) and imported
+#             into both projects' card statistics (R1933001) as totals only (`jackioh-server
+#             stats-import --totals-only`, R1976000), over STATS_IMPORT_DATABASE_URL (staging's) and
+#             PRODUCTION_STATS_IMPORT_DATABASE_URL, each only where its secret is set. Each shard files
+#             its own games as it plays them, 1,250 at a time (`file_every`, selfplay-shards.yml), so
+#             they reach the statistics about an hour after they are played, a stopped run's too; this
+#             job, once the retrain has ended however it ended, files every shard's records files
+#             again (a database folds a file it holds no second time) and the logs a shard made none for
 #   next      the next run, started as this one ends, unless another is already on its way (a chain
 #             on this export, or the schedule's) or this one took under LEARN_NEXT_MIN_MINUTES (it
 #             broke early: the schedule tries again within 12 hours), so the PC is always
@@ -46,8 +49,9 @@
 # Every job runs on the owner's PC, the local runner (`jackioh-selfplay-local`, bot/machine/README.md,
 # The local runner), and none on GitHub's runners. It takes two jobs at a time, one on each half of the
 # PC (gather's half goes to gather while it plays a new patch), and only while the PC is otherwise
-# idle. A run's 100,000 games took about 40 hours of an idle PC on one six-CPU runner (about 2,500
-# games an hour), somewhat less on both halves, and a run may take several days. A job no runner takes in 24 hours (the PC off,
+# idle. A run's 100,000 games take about three days of an idle PC, two shards at a time (a four-CPU
+# half plays about 670 games an hour at the AI's budget since #2628; #3722), and a run may take
+# longer. A job no runner takes in 24 hours (the PC off,
 # asleep or busy all day) GitHub fails; the lane goes on with what finished, and the next run comes
 # anyway (training/learn.md, Running unattended).
 #
@@ -68,7 +72,7 @@ on:
         required: true
         default: "100000"
       shards:
-        description: "Export jobs (on the local runner, one after another)"
+        description: "Export jobs (on the local runner, two at a time)"
         required: true
         default: "20"
       screen:
@@ -188,6 +192,13 @@ jobs:
       runner: jackioh-selfplay-local
       retention: "30"
       count: false
+      # Each shard files its games into the card statistics this many at a time as it plays them
+      # (selfplay-shards.yml): about an hour of one half of the PC (one six-CPU runner played about
+      # 2,500 games an hour, selfplay.yml), and a quarter of a 100,000-game export's 5,000-game shard.
+      file_every: "1250"
+    secrets:
+      STATS_IMPORT_DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
+      PRODUCTION_STATS_IMPORT_DATABASE_URL: ${{ secrets.PRODUCTION_STATS_IMPORT_DATABASE_URL }}
 
   retrain:
     name: retrain, screen, gate
@@ -227,8 +238,8 @@ jobs:
           run-id: ${{ inputs.export_run || github.run_id }}
           github-token: ${{ github.token }}
       # The build that played the export folds its logs, so a rules change merged since then drops
-      # none of its games (retrain.sh --positions-bin). It is kept 3 days: a later re-run folds with
-      # main's build instead.
+      # none of its games (retrain.sh --positions-bin). It is kept 14 days (selfplay.yml,
+      # BUILD_RETENTION_DAYS): a later re-run folds with main's build instead.
       - uses: actions/download-artifact@v4
         continue-on-error: true
         with:
@@ -318,7 +329,7 @@ jobs:
             exit 1
           fi
       # A pass while the lane's last promotion is still open (its checks green or running, as the
-      # plan left it, about 40 hours ago) waits behind it: pushing ai/learn again would close it. The
+      # plan left it, about three days ago) waits behind it: pushing ai/learn again would close it. The
       # pass stays this run's artifact (promotion.patch), and the next run gates on main once that
       # promotion has merged.
       - name: a promotion still open, so this one waits
@@ -447,7 +458,8 @@ jobs:
           run-id: ${{ github.run_id }}
           github-token: ${{ github.token }}
       # The build that played the export files it, as it folds the retrain's positions, so a rules
-      # change merged since drops none of its games (R1676000). Kept 3 days; past that, main's build.
+      # change merged since drops none of its games (R1676000). Kept 14 days (selfplay.yml,
+      # BUILD_RETENTION_DAYS); past that, main's build.
       - if: ${{ steps.db.outputs.set == 'true' }}
         uses: actions/download-artifact@v4
         continue-on-error: true
@@ -467,21 +479,38 @@ jobs:
             echo "filed=0" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          bin="$RUNNER_TEMP/exporter/target/release/jackioh"
-          if ! tar -xzf "$RUNNER_TEMP/exporter/jackioh.tgz" -C "$RUNNER_TEMP/exporter" 2> /dev/null \
-            || ! "$bin" stats from-selfplay --help > /dev/null 2>&1; then
-            cargo build --release -q -p jackioh-tools
-            bin=target/release/jackioh
+          # Each shard made records-<base>-<first>-<last>.jsonl beside each piece's log it filed
+          # (selfplay-shards.yml): those are filed again byte for byte, so a database folds each once,
+          # whichever of the shard and this job reached it first. Only a log with none is made
+          # records here, as every log was before the shards filed.
+          mapfile -t files < <(find "$RUNNER_TEMP/export" -name 'records-*.jsonl' | sort -V)
+          left=()
+          for log in "${logs[@]}"; do
+            name=$(basename "$log")
+            [ -f "$(dirname "$log")/records-${name#selfplay-}" ] || left+=("$log")
+          done
+          made=${#files[@]}
+          if [ "${#left[@]}" -gt 0 ]; then
+            bin="$RUNNER_TEMP/exporter/target/release/jackioh"
+            if ! tar -xzf "$RUNNER_TEMP/exporter/jackioh.tgz" -C "$RUNNER_TEMP/exporter" 2> /dev/null \
+              || ! "$bin" stats from-selfplay --help > /dev/null 2>&1; then
+              cargo build --release -q -p jackioh-tools
+              bin=target/release/jackioh
+            fi
+            "$bin" stats from-selfplay "${left[@]}" --out "$RUNNER_TEMP/records.jsonl" > "$RUNNER_TEMP/filed.txt"
+            cat "$RUNNER_TEMP/filed.txt"
+            files+=("$RUNNER_TEMP/records.jsonl")
           fi
-          "$bin" stats from-selfplay "${logs[@]}" --out "$RUNNER_TEMP/records.jsonl" > "$RUNNER_TEMP/filed.txt"
-          cat "$RUNNER_TEMP/filed.txt"
           {
-            echo "## The export's games, filed (${#logs[@]} shards)"
-            echo '```'
-            tail -n 20 "$RUNNER_TEMP/filed.txt"
-            echo '```'
+            echo "## The export's games, filed (${#logs[@]} logs: $made made records by their shards, ${#left[@]} here)"
+            if [ -f "$RUNNER_TEMP/filed.txt" ]; then
+              echo '```'
+              tail -n 20 "$RUNNER_TEMP/filed.txt"
+              echo '```'
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
-          echo "filed=$(grep -c . "$RUNNER_TEMP/records.jsonl" || true)" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "${files[@]}" > "$RUNNER_TEMP/record-files.txt"
+          echo "filed=$(cat "${files[@]}" | grep -c . || true)" >> "$GITHUB_OUTPUT"
       - name: import them (jackioh-server stats-import --totals-only), into staging's and production's
         if: ${{ steps.db.outputs.set == 'true' && steps.file.outputs.filed != '0' }}
         env:
@@ -490,20 +519,13 @@ jobs:
         run: |
           set -euo pipefail
           cargo build --release -q -p jackioh-server
-          # R1933001: staging's first, then production's. Each database claims the file by its SHA-256,
-          # so after a failure the rerun files only where it is missing.
-          for where in staging production; do
-            case "$where" in
-              staging) url=$STATS_IMPORT_DATABASE_URL secret=STATS_IMPORT_DATABASE_URL ;;
-              production) url=$PRODUCTION_STATS_IMPORT_DATABASE_URL secret=PRODUCTION_STATS_IMPORT_DATABASE_URL ;;
-            esac
-            if [ -z "$url" ]; then
-              echo "::notice::$secret is not set, so $where's statistics get none of the export's games"
-              continue
-            fi
-            echo "### Filed into $where's" >> "$GITHUB_STEP_SUMMARY"
-            DATABASE_URL=$url target/release/jackioh-server stats-import --totals-only "$RUNNER_TEMP/records.jsonl" | tee -a "$GITHUB_STEP_SUMMARY"
-          done
+          [ -n "$STATS_IMPORT_DATABASE_URL" ] || echo "::notice::STATS_IMPORT_DATABASE_URL is not set, so staging's statistics get none of the export's games"
+          [ -n "$PRODUCTION_STATS_IMPORT_DATABASE_URL" ] || echo "::notice::PRODUCTION_STATS_IMPORT_DATABASE_URL is not set, so production's statistics get none of the export's games"
+          # R1933001: staging's first, then production's. Each database claims a file by its SHA-256,
+          # so the shards' files it holds already, and after a failure the rerun, file only what is missing.
+          mapfile -t files < "$RUNNER_TEMP/record-files.txt"
+          echo "### Filed" >> "$GITHUB_STEP_SUMMARY"
+          sh training/file-records.sh target/release/jackioh-server "${files[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
 
   next:
     name: start the next run

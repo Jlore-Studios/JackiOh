@@ -2044,7 +2044,30 @@ export function stinkyscapeSvg(
   part: ArtPart = "whole",
   ship: ShipArt | null = null,
 ): string {
-  if (STARSHIP_MODULE_IDS[defId] !== undefined) return pieceCardSvg(starshipModuleOf(defId), radiant, motion, seedId, part);
+  const parts = stinkyParts(defId, name, tags, type, radiant, seedId, ship);
+  if (parts === null) return pieceCardSvg(starshipModuleOf(defId), radiant, motion, seedId, part);
+  return stinkyDocument(parts.defs, parts.sky, group(parts.transform, parts.subject), radiant, parts.seed, motion, seedId, part);
+}
+
+/**
+ * R3350000: the parts a Stinkyscape face's still picture is printed from (`stinkyDocument`), each as markup: its
+ * definitions, its sky, its rays (a Radiant face's, else none), its subject's markup and the transform that places it, and
+ * its vignette, with the seed its rays grow from. A Mythic's diorama (dioramas/) cuts its slices from these. Null for a
+ * Starship Piece's card, which draws its module in its bay instead.
+ */
+export type StinkyParts = { defs: string[]; sky: string; rays: string; transform: string; subject: string; vignette: string; seed: number };
+
+/** R3350000: `stinkyscapeSvg`'s picture in its parts (`StinkyParts`), drawn as it draws them; null for a Starship Piece's card. */
+export function stinkyParts(
+  defId: string,
+  name: string | undefined,
+  tags: readonly Tag[],
+  type: CardType,
+  radiant: boolean,
+  seedId: string = defId,
+  ship: ShipArt | null = null,
+): StinkyParts | null {
+  if (STARSHIP_MODULE_IDS[defId] !== undefined) return null;
   const subject = stinkySubject(defId, name, tags, type);
   const lower = (name ?? "").toLowerCase();
   const seed = hashId(seedId);
@@ -2059,8 +2082,15 @@ export function stinkyscapeSvg(
   const planet = subject.family !== "terminus" && !(subject.family === "space" && subject.kind !== "reticle");
   const sky = backdrop(behind, p, subject.family, planet, defs);
   const drawn = subjectMarkup(ahead, p, subject, lower, name, radiant, ship);
-  const placed = group(at(SUBJECT_X + (SUBJECT_SHIFTS[subject.family] ?? 0), SUBJECT_Y, tilt, scale), drawn);
-  return stinkyDocument(defs, sky, placed, radiant, seed, motion, seedId, part);
+  return {
+    defs,
+    sky,
+    rays: radiant ? rays(seed) : "",
+    transform: at(SUBJECT_X + (SUBJECT_SHIFTS[subject.family] ?? 0), SUBJECT_Y, tilt, scale),
+    subject: drawn,
+    vignette: rect(0, 0, BOX, BOX, "url(#v)"),
+    seed,
+  };
 }
 
 // R3333001: a Starship Piece's own card, its module drawn large on a cutaway of a hull, in its group's bay

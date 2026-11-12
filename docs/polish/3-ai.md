@@ -668,7 +668,10 @@ export function decide(state: GameState, seat: PlayerId, options: AiOptions): De
 5. `findLethal(dets, seat, counter, budget.lethalNodes)` → reason `"lethal"`.
 6. `beamSearch(dets[0], …)`, on the nodes left after reserving enough to score the finalists after
    the reply. The best `finalists × AI_SEARCH.linesPerAction` lines (at most `linesPerAction` per
-   first action) are scored after the opponent's reply on `dets[0]` (`replyScore`), each first
+   first action, and, when none of them hands the turn over with an effect of the seat's own waiting
+   that `dets[0]` did not hold, the best line that does, last, on the nodes past the other worlds'
+   share of the reserve and never past the wrap-up: `shortlist_lines`, `payoff_score`, R3696000) are
+   scored after the opponent's reply on `dets[0]` (`replyScore`), each first
    action keeps its best line, and the best `finalists` first actions are re-scored the same way
    with `scoreLine(…, reply: true)` on `dets[1..K-1]`; a line's answer that a world does not offer
    (each world draws its own Discover) gives way to that world's best answer (#1636), so every
@@ -707,7 +710,11 @@ The rule, one step at a time, each step one `reduce` (one node):
    and library when the decision began) got there during the line: a Pocket Chaos the line handed
    over, the units a Flood bounced. The seat watched it arrive, so it is information, not a guess.
    The opponent tries up to `AI_REPLY.knownPlays` plays of such cards and takes the one its own
-   `evaluate` likes best, if that beats standing still.
+   `evaluate` likes best, if that beats standing still. A card guessing a secret of the seat's that
+   is not revealed (a Fortify Mind) is tried with one guess, drawn before anything is weighed on a
+   stream of its own (`one_guess_per_card`, `AI_GUESS_SEED`), so it never reads the secret; and
+   while a known card would be discarded by the opponent's own cleanup (Temporary, on its last
+   turn), each play and standing still are judged after it ends its turn (`known_play`, R3696001).
 2. **Visible activations.** An Activate of a card face-up on the field that is not in `hidden` (The
    Power to Punish, a Heroic Power's rolled Ping) is information too. The opponent tries up to
    `AI_REPLY.visibleActivations` of them, those aimed at the seat's hero first, then at a card the

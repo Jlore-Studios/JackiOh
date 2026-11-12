@@ -455,18 +455,12 @@
   {
    "id": "temp-elite-1",
    "name": "Temp Elite 1",
-   "tier": "elite",
-   "artifacts": [
-    "looming-presence"
-   ]
+   "tier": "elite"
   },
   {
    "id": "temp-elite-2",
    "name": "Temp Elite 2",
-   "tier": "elite",
-   "artifacts": [
-    "looming-presence"
-   ]
+   "tier": "elite"
   },
   {
    "id": "temp-mini-boss-1",
@@ -475,9 +469,6 @@
    "deck": [
     "pseudo-boss-1",
     "pseudo-boss-2"
-   ],
-   "artifacts": [
-    "looming-presence"
    ]
   },
   {
@@ -487,9 +478,6 @@
    "deck": [
     "pseudo-boss-1",
     "pseudo-boss-3"
-   ],
-   "artifacts": [
-    "looming-presence"
    ]
   },
   {
@@ -502,7 +490,6 @@
     "pseudo-boss-4"
    ],
    "artifacts": [
-    "overwhelming-presence",
     "temp-final-relic"
    ],
    "drop": "temp-final-relic"
@@ -649,18 +636,6 @@
    "text": "Draw 2 more cards in your opening hand for each level. Temp Final Boss's own: nothing else gives it, and it cannot be extracted."
   },
   {
-   "id": "looming-presence",
-   "name": "Looming Presence",
-   "kind": "enemy",
-   "text": "Its bearer has the Medium AI's resources: +1 mana and +1 card in the opening hand."
-  },
-  {
-   "id": "overwhelming-presence",
-   "name": "Overwhelming Presence",
-   "kind": "enemy",
-   "text": "Its bearer has the Hard AI's resources: +1 mana up to 7, +1 card in the opening hand, and 2 draws a turn."
-  },
-  {
    "id": "temp-blessing-vitality",
    "name": "Temp Blessing of Vitality",
    "kind": "blessing",
@@ -705,8 +680,8 @@
      "card": true
     },
     {
-     "text": "Lose 5 HP for 50 Coins",
-     "hp": -5,
+     "text": "Lose 5 max HP for 50 Coins",
+     "maxHp": -5,
      "coins": 50
     },
     {
@@ -719,8 +694,8 @@
    "text": "A dusty altar hums. (Placeholder story.)",
    "options": [
     {
-     "text": "Bleed on it (8 HP) for an artifact",
-     "hp": -8,
+     "text": "Bleed on it (8 max HP) for an artifact",
+     "maxHp": -8,
      "artifact": true
     },
     {

@@ -96,7 +96,7 @@
 /* R1579000: the page never scrolls; the board shrinks and a section's body scrolls inside it. */
 .tavern.app-shell.collection-screen {
   height: 100vh;
-  height: 100dvh;
+  height: var(--shell-screen-h, 100dvh);
   padding-bottom: 14px;
 }
 

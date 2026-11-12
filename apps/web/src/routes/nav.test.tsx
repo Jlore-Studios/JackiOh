@@ -1,11 +1,17 @@
 // R3218000: BackLink's DOM is the top bar's one layout, in the order routes/top-bar.css draws it: Back, the
-// line (the screen's title, then its extras), the end group (the Jlore pill, Friends, language, the gear). jsdom
+// line (the screen's title, then its extras), the end group (the Jlore pill, Friends, language, the gear), and
+// inside the menus' shell its status row (R3728002), Friends being the shell's navigation's (R3728000). jsdom
 // ignores the cascade, so top-bar.test.ts proves the sheet and e2e spec 46 the drawn geometry.
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { MenuShellContext } from "../shell/context.ts";
 import { expectOnePageTitle } from "../test/pageTitle.ts";
+import { settle } from "../test/settle.ts";
+import { must, signIn, stubServer } from "../test/stubServer.ts";
+import { ChallengeToast } from "../together/ChallengeToast.tsx";
+import { friendsTestid } from "../together/testids.ts";
 import { BackLink, navTestid } from "./nav.tsx";
 
 beforeEach(() => {
@@ -91,5 +97,59 @@ describe("R3218000 BackLink's slots", () => {
     const custom = screen.getByTestId(navTestid.back);
     expect(custom.textContent).toBe("Back to Play together");
     expect(custom.querySelector("svg.arrow-icon--back[aria-hidden='true']")).not.toBeNull();
+  });
+});
+
+describe("R3728002 the bar inside the menus' shell", () => {
+  it("R3728002 inside the shell the bar ends with the status row and has no Friends", async () => {
+    signIn("tok-nav");
+    stubServer((call) =>
+      call.path === "/api/social" ? { status: 200, body: { incoming: [], outgoing: [], unread: {} } } : undefined,
+    );
+    // Off the shell, a signed-in bar holds Friends in its end group, before the language button.
+    render(
+      <>
+        <ChallengeToast />
+        <BackLink title="Screen" />
+      </>,
+    );
+    const friends = await screen.findByTestId(friendsTestid.button, undefined, { timeout: 5_000 });
+    expect(friends.closest(".screen-nav__end")).not.toBeNull();
+    expect(screen.getByRole("navigation").querySelector(".screen-nav__status")).toBeNull();
+    cleanup();
+
+    const { rerender } = render(
+      <>
+        <ChallengeToast />
+        <MenuShellContext.Provider value={{ status: <p data-testid="status">Status</p> }}>
+          <BackLink title="Screen" />
+        </MenuShellContext.Provider>
+      </>,
+    );
+    await settle({ macrotasks: 5 });
+    const bar = screen.getByRole("navigation");
+    const slots = Array.from(bar.children);
+    expect(slots.map((node) => node.className.split(" ").pop())).toEqual([
+      "top-bar-button--text",
+      "screen-nav__line",
+      "screen-nav__end",
+      "screen-nav__status",
+    ]);
+    expect(slots[3]).toContainElement(screen.getByTestId("status"));
+    expect(screen.queryByTestId(friendsTestid.button)).toBeNull();
+    expect(
+      Array.from((slots[2] as HTMLElement).querySelectorAll("[data-testid]")).map((node) => node.getAttribute("data-testid")),
+    ).toEqual(["language-nav", "settings-open-nav"]);
+
+    // Nothing to show: the row is empty (top-bar.css hides it).
+    rerender(
+      <>
+        <ChallengeToast />
+        <MenuShellContext.Provider value={{ status: null }}>
+          <BackLink title="Screen" />
+        </MenuShellContext.Provider>
+      </>,
+    );
+    expect(must(bar.querySelector(".screen-nav__status"), "the status row")).toBeEmptyDOMElement();
   });
 });

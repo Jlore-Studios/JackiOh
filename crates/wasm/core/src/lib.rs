@@ -188,6 +188,20 @@ pub fn run_content() -> Result<String, String> {
     to_json(&jackioh_run::run_catalog_content(engine::registered_catalog()))
 }
 
+/// R3496000: `RunContent` for a catalog version: the build's own answers `run_content()`; a
+/// carried version answers `run_catalog_content` over its carried shipped catalog; any other
+/// version answers `null`, which the store settles as lost.
+pub fn run_content_at(version_json: &str) -> Result<String, String> {
+    let version: String = parse("runContentAt: the version", version_json)?;
+    if version == jackioh_cards::catalog_version() {
+        return run_content();
+    }
+    match jackioh_cards::shipped_catalog(&version) {
+        Some(shipped) => to_json(&jackioh_run::run_catalog_content(shipped.defs())),
+        None => Ok("null".to_owned()),
+    }
+}
+
 /// `null` when the setup may start a run, else the reason.
 pub fn run_check_setup(setup_json: &str, unlocks_json: &str, content_json: &str) -> Result<String, String> {
     let setup: RunSetup = parse("runCheckSetup: the setup", setup_json)?;
@@ -1165,7 +1179,7 @@ mod run_body_tests {
         );
     }
 
-    // B12: a `go` from the initial Map answers `{ state }`, a `heal` answers `{ error }`.
+    // B12: a `go` from the initial Map answers `{ state }`, a `gainMaxHp` answers `{ error }`.
     #[test]
     fn run_reduce_body_serializes_state_and_refusal() {
         let content = content();
@@ -1178,16 +1192,21 @@ mod run_body_tests {
             jackioh_run::run_reduce(&state, &content, &go).unwrap()
         );
         assert!(answer.error.is_none());
-        let text = run_reduce(&json_of(&state), &json_of(&content), &json_of(&RunAction::Heal)).unwrap();
+        let text = run_reduce(
+            &json_of(&state),
+            &json_of(&content),
+            &json_of(&RunAction::GainMaxHp),
+        )
+        .unwrap();
         let answer: StateAnswer = serde_json::from_str(&text).unwrap();
         assert!(answer.state.is_none());
         assert_eq!(
             answer.error.unwrap(),
-            jackioh_run::run_reduce(&state, &content, &RunAction::Heal).unwrap_err()
+            jackioh_run::run_reduce(&state, &content, &RunAction::GainMaxHp).unwrap_err()
         );
     }
 
-    // B12: folding one `go` answers `{ state }`, folding a `heal` names the refused step.
+    // B12: folding one `go` answers `{ state }`, folding a `gainMaxHp` names the refused step.
     #[test]
     fn run_fold_body_serializes_state_and_refusal() {
         let content = content();
@@ -1208,7 +1227,7 @@ mod run_body_tests {
         let bad = jackioh_run::RunFile {
             setup,
             unlocks,
-            log: vec![RunAction::Heal],
+            log: vec![RunAction::GainMaxHp],
         };
         let text = run_fold(&json_of(&bad), &json_of(&content)).unwrap();
         let answer: StateAnswer = serde_json::from_str(&text).unwrap();

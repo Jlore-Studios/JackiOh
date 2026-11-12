@@ -42,7 +42,7 @@ fn skipped_this_turn(ctx: &EffectContext<'_>) -> bool {
     recalled(ctx, SKIPPED).and_then(|value| value.as_i64()) == Some(i64::from(ctx.state.turn))
 }
 
-fn reactor(radiant: bool) -> Script {
+fn reactor() -> Script {
     let label = "Discard a Thorium: skip this turn's blow up chance";
     Script {
         start_of_turn: Some(hook(|ctx| {
@@ -108,8 +108,8 @@ fn reactor(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: reactor(false),
-        radiant: reactor(true),
+        base: reactor(),
+        radiant: reactor(),
     }
 }
 

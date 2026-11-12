@@ -74,6 +74,10 @@ const ALL_ENEMIES: &str = "rb-all-enemies";
 const MODE_SPELL: &str = "rb-mode-spell";
 const DISCOVER_SPELL: &str = "rb-discover-spell";
 const RECYCLER: &str = "rb-recycler";
+/// R79, `TIMEOUT_ANSWER_CAP`: a Spell whose every answer asks its controller again, forever.
+const NAGGER: &str = "rb-nagger";
+/// R79: a Spell that asks its controller three times in a row, then stops.
+const NAG_THRICE: &str = "rb-nag-thrice";
 const LOG_CARD: &str = "rb-log";
 const HEROIC: &str = "rb-heroic";
 const WINDOW_TRAP: &str = "rb-window-trap";
@@ -235,6 +239,8 @@ fn defs() -> Vec<CardDef> {
         card_def_of(n, "window-trap", "Field Trap", no()),
         card_def_of(n, "bread-trap", "Field Trap", no()),
         card_def_of(n, "empty-trap", "Trap", no()),
+        card_def_of(n, "nagger", "Spell", no()),
+        card_def_of(n, "nag-thrice", "Spell", no()),
     ]
 }
 
@@ -326,6 +332,35 @@ fn rb_steps(state: &GameState) -> Vec<String> {
                 .collect()
         })
         .unwrap_or_default()
+}
+
+/// §10.6: a prompt for the card's own controller with one answer, resuming at `step` (R79's fixtures).
+fn rb_ask(step: &'static str) -> Effect {
+    Effect::new("rb:ask", move |ctx| {
+        let resume = resume_self(ctx, step, Default::default());
+        let player = ctx.controller;
+        open_prompt(
+            ctx,
+            OpenPromptArgs {
+                player,
+                kind: PromptKind::Target,
+                aim: None,
+                prompt: "the fixture asks its owner".to_string(),
+                options: vec![PromptOption {
+                    key: "none".to_string(),
+                    label: "nothing".to_string(),
+                    selection: Selection::None,
+                    cost: None,
+                    radiant: None,
+                }],
+                min: None,
+                max: None,
+                budget: None,
+                owner: None,
+                resume,
+            },
+        );
+    })
 }
 
 // Fixture scripts.
@@ -533,6 +568,27 @@ fn scripts() -> IndexMap<String, CardScripts> {
                     None => vec![],
                 }),
             )]),
+            ..Script::default()
+        }),
+    );
+    // R79: one asks again at every answer; the other asks three times.
+    scripts.insert(
+        NAGGER.into(),
+        both(Script {
+            cry: Some(hook(|_ctx| vec![rb_ask("nag")])),
+            resume: IndexMap::from([("nag", hook(|_ctx| vec![rb_ask("nag")]))]),
+            ..Script::default()
+        }),
+    );
+    scripts.insert(
+        NAG_THRICE.into(),
+        both(Script {
+            cry: Some(hook(|_ctx| vec![rb_ask("nag1")])),
+            resume: IndexMap::from([
+                ("nag1", hook(|_ctx| vec![rb_ask("nag2")])),
+                ("nag2", hook(|_ctx| vec![rb_ask("nag3")])),
+                ("nag3", hook(|_ctx| vec![])),
+            ]),
             ..Script::default()
         }),
     );
@@ -1324,6 +1380,27 @@ mod spec_11_rulings_r43_r84_m3_gate {
         set_library(many_sink.state, P1, &[PLAIN, SMALL, NOOP]);
         draw::draw(&mut many_sink, P1, 3);
         assert_eq!(events_json(many_sink.events, GameEventType::Drawn).len(), 3);
+    }
+
+    /// §2.4, R58 (#3514): past `CAST_ON_DRAW_CHAIN_CAP` the next cast-on-draw card goes to the hand
+    /// uncast, so into a full hand it is burned, and the chain ends there.
+    #[test]
+    fn r58_the_card_past_the_chain_cap_into_a_full_hand_is_burned() {
+        let mut state = game("r58-past-full");
+        let mut sink = sink_for(&mut state);
+        sink.state.players.p1.hand = vec![];
+        in_hand(sink.state, NOOP, P1, HAND_CAP);
+        let casters = vec![CASTER; (CAST_ON_DRAW_CHAIN_CAP + 1) as usize];
+        set_library(sink.state, P1, &casters);
+
+        draw::draw_one(&mut sink, P1, Some(ChainLinkOrCount::from(0)));
+        assert_eq!(
+            events_json(sink.events, GameEventType::CardPlayed).len(),
+            CAST_ON_DRAW_CHAIN_CAP as usize
+        );
+        assert_eq!(sink.state.players.p1.hand.len(), HAND_CAP as usize);
+        assert_eq!(events_json(sink.events, GameEventType::Burned).len(), 1);
+        assert!(sink.state.players.p1.library.is_empty());
     }
 
     #[test]
@@ -2379,6 +2456,95 @@ mod spec_11_rulings_r43_r84_m3_gate {
         assert_eq!(view_for(&clean, P1).clock_ms, None);
         // R79: the server owns the clock, grace, ceiling, room-code and ranked ladder (R603–R612) numbers, in
         // `crates/server/src/config.rs` (BUILD §2, M6/M7).
+    }
+
+    /// R79, `TIMEOUT_ANSWER_CAP` (#3514): a card that keeps asking has its first `TIMEOUT_ANSWER_CAP`
+    /// prompts answered by one timeout, which then stops with the turn still running; the next expiry
+    /// answers as many more.
+    #[test]
+    fn r79_one_timeout_answers_at_most_timeout_answer_cap_prompts_and_the_next_carries_on() {
+        let mut state = playing("r79-cap");
+        let nagger = hand_card(&mut state, NAGGER, P1);
+        state = act(
+            &state,
+            json!({ "type": "play", "instanceId": nagger.id, "playerId": "p1" }),
+        );
+        assert_eq!(state.pending.as_ref().map(|pending| pending.player_id), Some(P1));
+        let (turn, active) = (state.turn, state.active);
+        for _expiry in 0..2 {
+            let timed_out = act_result(&state, json!({ "type": "timeout", "playerId": "p1" }));
+            assert_eq!(timed_out.error, None);
+            assert_eq!(
+                events_json(&timed_out.events, GameEventType::PromptAnswered).len(),
+                TIMEOUT_ANSWER_CAP
+            );
+            assert_eq!(
+                timed_out.state.pending.as_ref().map(|pending| pending.player_id),
+                Some(P1)
+            );
+            assert_eq!((timed_out.state.turn, timed_out.state.active), (turn, active));
+            assert_eq!(timed_out.state.result, None);
+            state = timed_out.state;
+        }
+    }
+
+    /// R79 (#3514): below the cap, the turn clock answers each prompt the answers open in turn, here
+    /// three, then ends the turn.
+    #[test]
+    fn r79_a_timeout_answers_each_prompt_of_the_active_player_then_ends_the_turn() {
+        let mut state = playing("r79-thrice");
+        let nag = hand_card(&mut state, NAG_THRICE, P1);
+        state = act(
+            &state,
+            json!({ "type": "play", "instanceId": nag.id, "playerId": "p1" }),
+        );
+        let turn = state.turn;
+        let timed_out = act_result(&state, json!({ "type": "timeout", "playerId": "p1" }));
+        assert_eq!(timed_out.error, None);
+        assert_eq!(
+            events_json(&timed_out.events, GameEventType::PromptAnswered).len(),
+            3
+        );
+        assert!(timed_out.state.pending.is_none());
+        assert_eq!(timed_out.state.active, P2);
+        assert_eq!(timed_out.state.turn, turn + 1);
+    }
+
+    /// R79, §2.1 (#3514): setup is no player's turn, so a timeout of the seat named active before the
+    /// game has begun answers nothing and ends no turn; and the non-active player's clock with no prompt
+    /// of theirs open ends nothing either.
+    #[test]
+    fn r79_a_timeout_before_the_game_begins_answers_nothing_and_ends_no_turn() {
+        let created = game("r79-setup");
+        assert_eq!(created.phase, Phase::Setup);
+        assert!(created.mulligan.is_none());
+        assert!(created.pending.is_none());
+        let timed_out = act_result(&created, json!({ "type": "timeout", "playerId": created.active }));
+        assert_eq!(timed_out.error, None);
+        assert!(timed_out.events.is_empty());
+        assert_eq!(
+            (
+                timed_out.state.turn,
+                timed_out.state.active,
+                timed_out.state.phase
+            ),
+            (created.turn, created.active, created.phase)
+        );
+
+        let state = playing("r79-other");
+        assert!(state.pending.is_none());
+        let other = opponent_of(state.active);
+        let timed_out = act_result(&state, json!({ "type": "timeout", "playerId": other }));
+        assert_eq!(timed_out.error, None);
+        assert!(timed_out.events.is_empty());
+        assert_eq!(
+            (
+                timed_out.state.turn,
+                timed_out.state.active,
+                timed_out.state.phase
+            ),
+            (state.turn, state.active, Phase::Main)
+        );
     }
 
     #[test]

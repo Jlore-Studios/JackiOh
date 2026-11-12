@@ -7,7 +7,7 @@
 //! into `public.cards`, where every migration's constraints apply. `cards_tags_check` (0002) admits each
 //! later tag from the migration that adds it, 'Jlockeed' (R278, #13 and #14) from 0010, Book, Pancake
 //! and AI (B2.4) from 0015, #3038's Starship (R3038000) from 0083 and #3535's nine Stinkyscape+ tags
-//! (R3535002) from 0087 among them. The seed runs in one
+//! (R3535002) from 0088 among them. The seed runs in one
 //! transaction, so one such row fails the whole catalog. The first half compares the tags with the
 //! migrations' text; the second checks that the database accepts them. Both count the catalog of the
 //! sets that ship (`SHIPPED_SETS`), so they hold before and after the patches that ship the Meditative,
@@ -287,8 +287,8 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             .expect("the real catalog is read");
         let (file, tags) = admitted_tags();
         assert_eq!(
-            file, "0087_stinkyscape_plus_tags.sql",
-            "0087 re-adds the check with #3535's nine Stinkyscape+ tags (R3535002), after 0083's Starship"
+            file, "0088_stinkyscape_plus_tags.sql",
+            "0088 re-adds the check with #3535's nine Stinkyscape+ tags (R3535002), after 0083's Starship"
         );
         let mut carried: Vec<String> = entries
             .iter()
@@ -352,7 +352,7 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
     async fn r1411_the_tag_check_admits_exactly_the_engine_s_tags_so_every_set_the_catalog_holds_seeds_the_day_it_ships()
      {
         let (file, tags) = admitted_tags();
-        assert_eq!(file, "0087_stinkyscape_plus_tags.sql");
+        assert_eq!(file, "0088_stinkyscape_plus_tags.sql");
         for tag in [
             "Wincon",
             "Potion",
@@ -443,7 +443,7 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
     #[tokio::test]
     async fn r3535002_the_latest_check_admits_the_stinkyscape_plus_tags() {
         let (file, tags) = admitted_tags();
-        assert_eq!(file, "0087_stinkyscape_plus_tags.sql");
+        assert_eq!(file, "0088_stinkyscape_plus_tags.sql");
         for tag in [
             "Mindustrial",
             "Mineral",
@@ -500,7 +500,7 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
 
     /// R3535000: `n` once the Stinkyscape+ set ships (#3573), and nothing before. The counts are
     /// its census (`catalog check`, SPEC §8.12), the tags it shares with the earlier sets
-    /// and the nine family tags 0087 admits (R3535002).
+    /// and the nine family tags 0088 admits (R3535002).
     fn stinkyscape_plus(n: usize) -> usize {
         if set_ships(SetName::StinkyscapePlus) { n } else { 0 }
     }
@@ -733,7 +733,7 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         // Starship, and, once it ships, the Stinkyscape+ set's ten Terminus Starships.
         assert_eq!(rows_tagged("Starship"), tagged("Starship"));
         assert_eq!(tagged("Starship"), stinkyscape(1) + stinkyscape_plus(10));
-        // R3535002: the nine family tags 0087 admits, the Stinkyscape+ set's alone (counts from
+        // R3535002: the nine family tags 0088 admits, the Stinkyscape+ set's alone (counts from
         // `catalog check`, SPEC §8.12).
         for (tag, count) in [
             ("Mindustrial", 78),

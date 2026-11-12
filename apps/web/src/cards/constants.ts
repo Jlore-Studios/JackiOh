@@ -185,6 +185,64 @@ export const CARD_GLARE_TRAVEL_PCT = 60;
 export const CARD_GLARE_SIZE_PCT = 55;
 
 /**
+ * R3350000: how far a Mythic's diorama turns toward the pointer, the device or a drag at its far edge, in degrees, each way,
+ * where the player turns it to look at it (inspect, the hover preview, the Collection and the full-screen view); a diorama in
+ * hand keeps CARD_TILT_MAX_DEG.
+ */
+export const DIORAMA_TURN_MAX_DEG = 25;
+
+/** R3350000: the fewest depth slices a diorama is cut in. */
+export const DIORAMA_SLICES_MIN = 5;
+
+/** R3350000: the most depth slices a diorama is cut in. */
+export const DIORAMA_SLICES_MAX = 8;
+
+/** R3350000: the fewest of a diorama's slices that run an idle loop of their own. */
+export const DIORAMA_LOOP_SLICES_MIN = 2;
+
+/** R3350000: how many parallax steps (`--cf-plane`, CARD_DEPTH_STEP_PX each) a diorama's slice at depth 1, its nearest, shifts. */
+export const DIORAMA_DEPTH_STEPS = 4;
+
+/** R3350000: the most a diorama's slice is bent about one axis to read as a curved surface, in degrees, either way. */
+export const DIORAMA_BEND_MAX_DEG = 20;
+
+/**
+ * R3350000: the perspective a bent slice turns under, in px. Mirrored in depth.css's and fullscreen.css's `perspective` on a
+ * bent slice (diorama.test.tsx holds them equal).
+ */
+export const DIORAMA_BEND_PERSPECTIVE_PX = 400;
+
+/** R3350000: how far the full-screen view shifts a diorama's farthest slice (depth 0) at full tilt, in px: against the turn. */
+export const FULLSCREEN_SLICE_SHIFT_FAR_PX = -12;
+
+/** R3350000: how far the full-screen view shifts a diorama's nearest slice (depth 1) at full tilt, in px: with the turn. */
+export const FULLSCREEN_SLICE_SHIFT_NEAR_PX = 20;
+
+/**
+ * R3345000: how far the full-screen view's planes run past the viewport on each side, in percent of its width and height.
+ * Mirrored in fullscreen.css's `inset` on `.fullscreen-art-planes` (fullscreen.test.tsx holds them equal).
+ */
+export const FULLSCREEN_BLEED_PCT = 8;
+
+/**
+ * R3350000: the full-screen view's perspective while it turns a diorama, in multiples of the viewport's longer side (vmax),
+ * so its geometry is the same on every screen and no turn up to DIORAMA_TURN_MAX_DEG brings a corner near the eye.
+ */
+export const FULLSCREEN_DIORAMA_PERSPECTIVE_VMAX = 2;
+
+/**
+ * R3350000: the most the full-screen view scales a turning diorama up to keep the viewport covered (`fullscreenCoverScale`):
+ * the corner pose, DIORAMA_TURN_MAX_DEG about both axes, needs about 1.8 on the widest screens it is held to.
+ */
+export const FULLSCREEN_COVER_SCALE_MAX = 2;
+
+/** R3350000: how many halvings `fullscreenCoverScale` searches its scale in, from 1 to FULLSCREEN_COVER_SCALE_MAX. */
+export const FULLSCREEN_COVER_STEPS = 20;
+
+/** R3350000: the digits the full-screen view's cover scale (`--fs-cover`) is written with, rounded up. */
+export const FULLSCREEN_COVER_DIGITS = 3;
+
+/**
  * R1295000: the Radiant gold, as a window in HSL that holds every color cards.css's Radiant face
  * declares. No border's colors may fall inside it (cosmetics.test.tsx), so no border passes for
  * a Radiant trim.

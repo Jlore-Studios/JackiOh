@@ -191,6 +191,50 @@ mod r2201000_a_seat_that_cannot_lose {
         assert_eq!(health(&state, FLOORED), 17);
     }
 
+    /// R2201000, §4.4 step 3 (#3514): the floor caps a hit at what the hero has above it, so a hit one
+    /// short of that leaves 1 above it, a hit of exactly that and a hit one past it both stop at it.
+    #[test]
+    fn r2201000_a_hit_of_exactly_what_is_above_the_floor_and_one_more_both_stop_at_it() {
+        let mut state = floored("r2201000-at-the-floor");
+        let above = 5 - TUTORIAL_HERO_FLOOR;
+        for (amount, left, dealt) in [
+            (above - 1, TUTORIAL_HERO_FLOOR + 1, above - 1),
+            (above, TUTORIAL_HERO_FLOOR, above),
+            (above + 1, TUTORIAL_HERO_FLOOR, above),
+        ] {
+            state.players[FLOORED].hero.health = 5;
+            let events = run_settled(&mut state, &[hit("enemyHero", amount)], OTHER);
+            assert_eq!(health(&state, FLOORED), left, "a hit of {amount}");
+            let landed: Vec<i32> = events
+                .iter()
+                .filter_map(|event| match event {
+                    GameEvent::Damage {
+                        target_id, amount, ..
+                    } if target_id == "hero-p2" => Some(*amount),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(landed, vec![dealt], "a hit of {amount}");
+            assert!(state.result.is_none());
+        }
+    }
+
+    /// R2201000, §2.5, §4.5 (#3514): the hero check never counts a floored seat dead, even with its hero
+    /// read at 0, so alone it ends nothing, and beside its opponent's dead hero it wins instead of drawing.
+    #[test]
+    fn r2201000_a_floored_hero_read_at_0_does_not_lose() {
+        let mut state = floored("r2201000-read-at-0");
+        state.players[FLOORED].hero.health = 0;
+        run_settled(&mut state, &[], OTHER);
+        assert!(state.result.is_none(), "a floored seat at 0 has not lost");
+
+        state.players[OTHER].hero.health = 0;
+        run_settled(&mut state, &[], OTHER);
+        let result = state.result.expect("the opponent's dead hero ends the game");
+        assert_eq!(result.winner, Winner::from(FLOORED), "not a draw");
+        assert_eq!(result.reason, GameOverReason::HeroDeath);
+    }
+
     #[test]
     fn r2201000_no_win_of_the_opponents_ends_the_game_against_a_floored_seat() {
         let mut state = floored("r2201000-win-by-effect");

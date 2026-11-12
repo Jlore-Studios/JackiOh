@@ -1,4 +1,4 @@
-<!-- version: 2 -->
+<!-- version: 3 -->
 # After-merge spot-check of #$number
 
 You are spot-checking a change the night bot made to `$repo` that has already merged into `main`.
@@ -63,6 +63,12 @@ $diff
    without the change.
 5. **Honesty.** A check weakened, skipped or silenced; a test deleted or emptied; an error
    swallowed; anything under `.github/`, `.harness/` or `bot/` touched; a secret read or written.
+6. **Security** (#3595), on any change to the server, the Worker, the client or a migration: a route,
+   socket frame or admin action that does not check who is calling and that they may touch what
+   they name; SQL built from text instead of bound parameters; a player's text rendered as HTML
+   unescaped; a limit dropped without its reason; a secret, a token, a profile id or a player's
+   address reaching a log line, an error, a GitHub issue or a client; a policy, grant or
+   `SECURITY DEFINER` function in a migration.
 
 Severity: `blocking` means it should be fixed in a follow-up; `note` is worth a person's attention
 and opens nothing. Do not report style preferences, and do not report what you cannot point at.

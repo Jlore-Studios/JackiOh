@@ -399,7 +399,14 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     );
   }
 
+  // R3694000: a finished match whose socket closed for good (its window over, or a void, R679) keeps its
+  // result, offers no rematch and reads its status once.
+  const over = match.connection === "closed" && view.result !== null;
+
   if (watching !== null && view.result !== null) {
+    // #3698: the replay names the other side as the ranks read does, when it has come and holds a name.
+    const opponentSeat = ranks === null ? undefined : [ranks.seats.p1, ranks.seats.p2].find((seat) => !seat.you);
+    const opponentName = opponentSeat === undefined || opponentSeat.username === "" ? undefined : opponentSeat.username;
     return (
       <CatalogContext.Provider value={lookup}>
         <OpenedReplay
@@ -407,6 +414,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           load={() => openOnlineMatchReplay(token, matchId)}
           start={watching.share ? "last" : "first"}
           shareOnOpen={watching.share}
+          {...(opponentName === undefined ? {} : { opponentLabel: opponentName })}
           // #936 B59: the finished match's replay, shared with a friend.
           actions={<ShareWithFriend matchId={matchId} />}
           onLeave={() => {
@@ -419,7 +427,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           that offered and opened the replay would never be taken to the game the offers created.
           Same series gate: series games offer no rematch.
         */}
-        {series === null ? <RematchWatcher token={token} matchId={matchId} pushed={match.rematch} /> : null}
+        {series === null ? <RematchWatcher token={token} matchId={matchId} pushed={match.rematch} over={over} /> : null}
       </CatalogContext.Provider>
     );
   }
@@ -437,11 +445,12 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     you: clock === null ? null : remainingMs(clock.clocks.graceDeadline[view.viewer], clock),
     opponent: clock === null ? null : remainingMs(clock.clocks.graceDeadline[opponent], clock),
   };
-  // #1899: a socket closed for good once the board is up (a voided match; `close()` runs only as this
-  // route unmounts) has nothing to reconnect to.
-  const gone = match.connection === "closed";
   // R679: the server keeps no record of a voided match, so its result offers no replay to watch or share.
   const voided = view.result?.reason === "voided";
+  // #1899: a socket closed for good once the board is up (a voided match; `close()` runs only as this
+  // route unmounts) has nothing to reconnect to. R3694000: a finished match closed past its rematch
+  // window keeps its result, so it says nothing of the kind.
+  const gone = match.connection === "closed" && (view.result === null || voided);
 
   // R2388000: each seat's recorded move, both ends present, for the result panel.
   const moves =
@@ -459,6 +468,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       view={view}
       legal={match.legal}
       onAction={match.send}
+      drainWhenHidden
       // R3477000: the forecast the seat's own view frame carried; a watcher's carries none.
       forecast={match.forecast ?? undefined}
       emotes={emotes}
@@ -479,7 +489,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
         // A rematch, never for a series game (the server refuses those, `series_game`, and the
         // Conquest continue flow owns what comes next), then the series' next game, then the lobby.
         <>
-          {series === null ? (
+          {series === null && !over ? (
             <RematchButtons
               token={token}
               matchId={matchId}
@@ -559,7 +569,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
             folded the panel would never be taken to the game the offers created (Rematch.tsx).
             Same series gate as the buttons: series games offer no rematch.
           */}
-          {view.result !== null && series === null ? <RematchWatcher token={token} matchId={matchId} pushed={match.rematch} /> : null}
+          {view.result !== null && series === null ? <RematchWatcher token={token} matchId={matchId} pushed={match.rematch} over={over} /> : null}
           {ranks !== null ? (
             <p className="match-ranks" data-testid={matchTestid.ranks}>
               <span className="match-ranks__full">

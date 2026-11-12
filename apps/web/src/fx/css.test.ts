@@ -201,8 +201,8 @@ const DOM_KINDS = {
   figure: "fx-figure-in",
 } as const;
 
-const POP_GATE = normSelector('.game:has(> .fx-layer[data-fx="on"])');
-const COCOON = '.game:has(> .fx-layer[data-fx="on"]) [data-testid^="card-"]:has([data-keyword="Divine Shield"])::after';
+const POP_GATE = normSelector('.game[data-fx-layer][data-fx-layer="on"]');
+const COCOON = '.game[data-fx-layer][data-fx-layer="on"] [data-testid^="card-"]:has([data-keyword="Divine Shield"])::after';
 
 /** Every `@keyframes name { … }` body in a sheet's comment-free text. */
 function keyframeBodies(sheet: Sheet): Map<string, string> {
@@ -422,12 +422,12 @@ describe("B40 — fx.css", () => {
     for (const rule of cocoonRules) {
       for (const selector of rule.selectors) expect(normSelector(selector).startsWith(POP_GATE), selector).toBe(true);
     }
-    const pop = declsFor(fx, '.game:has(> .fx-layer[data-fx="on"]) [data-testid^="card-"][data-animating="divineShieldLost"]:has([data-keyword="Divine Shield"])::after');
+    const pop = declsFor(fx, '.game[data-fx-layer][data-fx-layer="on"] [data-testid^="card-"][data-animating="divineShieldLost"]:has([data-keyword="Divine Shield"])::after');
     expect(pop.get("animation")).toContain("fx-shield-pop");
   });
 
   it("B40 the cocoon reads at a glance: a bright rim inside the card and a shell outside it that leaves a focus ring alone", () => {
-    const shell = declsFor(fx, '.game:has(> .fx-layer[data-fx="on"]) [data-testid^="card-"]:has([data-keyword="Divine Shield"]):not(:focus-visible)');
+    const shell = declsFor(fx, '.game[data-fx-layer][data-fx-layer="on"] [data-testid^="card-"]:has([data-keyword="Divine Shield"]):not(:focus-visible)');
     expect(shell.get("outline")).toMatch(/^2px solid/);
     expect(normValue(shell.get("outline-offset") ?? "")).toBe("2px");
     const bubble = declsFor(fx, COCOON);
@@ -435,7 +435,7 @@ describe("B40 — fx.css", () => {
   });
 
   it("B40 while a layer banner is up, the classic turn status steps aside (hidden, still in the DOM)", () => {
-    const rule = declsFor(fx, '.game:has(> .fx-layer [data-fx="banner"]) > .turn-banner');
+    const rule = declsFor(fx, '.game[data-fx-layer][data-fx-banner] > .turn-banner');
     expect(rule.get("visibility")).toBe("hidden");
     expect(rule.has("display")).toBe(false);
   });
@@ -521,7 +521,7 @@ describe("B40 — animations.css follows the squeeze and loses nothing", () => {
     expect(layerOf(overlay.get("z-index"))).toBe("39");
     expect(normValue(overlay.get("max-width") ?? "")).toBe("calc(100vw - 32px)");
     expect(overlay.get("animation-name")).toBe("jk-result-overlay");
-    const banner = declsFor(anim, '.game:has(> [data-testid="result-overlay"]) > [data-testid="turn-banner"]');
+    const banner = declsFor(anim, '.game[data-game-over] > [data-testid="turn-banner"]');
     expect(banner.get("visibility")).toBe("hidden");
   });
 
@@ -549,7 +549,7 @@ describe("B45 — a summon lands a silhouette, a dying card burns away", () => {
   });
 
   it("B46 with the layer on, the silhouette steps aside for the stand-in, so the card is never in two places", () => {
-    const hidden = declsFor(anim, '.game:has(> .fx-layer[data-fx="on"]) .zone[data-animating="summoned"]::after');
+    const hidden = declsFor(anim, '.game[data-fx-layer][data-fx-layer="on"] .zone[data-animating="summoned"]::after');
     expect(hidden.get("content")).toBe("none");
   });
 
@@ -562,7 +562,7 @@ describe("B45 — a summon lands a silhouette, a dying card burns away", () => {
   });
 
   it("B45 played from a hand, the silhouette waits for the card to leave it", () => {
-    const delayed = declsFor(anim, '.game:has([data-animating="cardPlayed"]) .zone[data-animating="summoned"]::after');
+    const delayed = declsFor(anim, '.game[data-card-played] .zone[data-animating="summoned"]::after');
     expect(normValue(delayed.get("animation-delay") ?? "")).toContain("var(--anim-squeeze,1)");
   });
 

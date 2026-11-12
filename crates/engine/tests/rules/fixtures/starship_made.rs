@@ -17,17 +17,17 @@ use jackioh_engine::testkit::*;
 use super::harness::both;
 use super::starship::{booster, gunner, register_starship_fixtures};
 
+/// `kind` is the card's set and type.
 fn def(
     id: &str,
     index: u32,
-    set: &str,
-    type_: &str,
+    kind: (&str, &str),
     cost: i32,
     stats: (i32, i32),
     keywords: Value,
     tags: Value,
-    token: bool,
 ) -> CardDef {
+    let (set, type_) = kind;
     let (attack, health) = stats;
     let (face, radiant) = if type_ == "Unit" {
         (
@@ -48,7 +48,7 @@ fn def(
         "type": type_,
         "tags": tags,
         "rarity": "Common",
-        "token": token,
+        "token": false,
         "cost": cost,
         "base": face,
         "radiant": radiant,
@@ -56,11 +56,11 @@ fn def(
 }
 
 fn unit(id: &str, index: u32, stats: (i32, i32), keywords: Value, tags: Value) -> CardDef {
-    def(id, index, "Core", "Unit", 0, stats, keywords, tags, false)
+    def(id, index, ("Core", "Unit"), 0, stats, keywords, tags)
 }
 
 fn spell(id: &str, index: u32) -> CardDef {
-    def(id, index, "Core", "Spell", 0, (0, 0), json!([]), json!([]), false)
+    def(id, index, ("Core", "Spell"), 0, (0, 0), json!([]), json!([]))
 }
 
 /// A sealed hull: "Dormant until launched. It can't be launched by hand." (R3539000).
@@ -82,13 +82,11 @@ pub static cell_a: LazyLock<CardDef> = LazyLock::new(|| {
     def(
         "sm-cell-a",
         35392,
-        "Stinkyscape",
-        "Unit",
+        ("Stinkyscape", "Unit"),
         1,
         (1, 2),
         json!([{ "kind": "Starship Piece" }]),
         json!([]),
-        false,
     )
 });
 /// A Stinkyscape Starship Piece, (2, 1).
@@ -96,13 +94,11 @@ pub static cell_b: LazyLock<CardDef> = LazyLock::new(|| {
     def(
         "sm-cell-b",
         35393,
-        "Stinkyscape",
-        "Unit",
+        ("Stinkyscape", "Unit"),
         1,
         (2, 1),
         json!([{ "kind": "Starship Piece" }]),
         json!([]),
-        false,
     )
 });
 /// "Summon 2 sealed Starships, each holding a booster and a gunner." (R3539001).

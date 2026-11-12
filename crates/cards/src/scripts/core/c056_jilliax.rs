@@ -214,6 +214,7 @@ mod tests {
         }
 
         /// Every `play` of Jilliax `legalActions` lists, as (embiggen, equip).
+        // Differs from Scenario::offered: one card's embiggen/equip flags, not the seat's whole legal list.
         fn offered(s: &Scenario) -> Vec<(Option<bool>, Option<bool>)> {
             let id = s.card(JILLIAX).id.clone();
             legal_actions(s.state(), PlayerId::P1)

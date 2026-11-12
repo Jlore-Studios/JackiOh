@@ -31,12 +31,16 @@
 // glow in its card's colours when buffed and frost when frozen (`wear`, art/ArtWear.tsx), from the view's numbers and keywords alone.
 // R3335000: a launched Starship's art wears its seat's Starship look, as CardFace's does.
 // R3334000: a Dormant Starship with pieces idles in its shipyard over its picture (ShipyardIdle.tsx).
+// R3350000: while it moves, a Mythic's normal picture with a diorama (art/dioramas/) draws every slice of it, each on its
+// loop, stacked in its window (CardArt's `diorama` "all") in place of its live layers: the window answers a hover and a
+// press as one image does (R3340000), and on an attack its slices over the farthest swing as a subject does (artLive.css).
 
-import { useRef, type ReactElement } from "react";
+import { memo, useRef, type ReactElement } from "react";
 
 import { hasKeyword, keywordKey, type Keyword, type UnitView } from "@jackioh/shared";
 
 import { CardArt } from "./art/index.ts";
+import { dioramaOf } from "./art/dioramas/index.ts";
 import { damageLevel } from "./art/wear.ts";
 import { shipArtOf } from "./art/stinkyscape.ts";
 import { CardStates } from "./CardStates.tsx";
@@ -53,7 +57,7 @@ import { TipsyName, useTipsyBlur } from "../game/tipsy.tsx";
 import { DormantSeal, dormantAttr } from "./DormantSeal.tsx";
 import { StarshipHull } from "./StarshipHull.tsx";
 import { KeywordFx } from "./KeywordFx.tsx";
-import { KEYWORD_VISUALS, keywordFxAttributes, keywordFxPlan, type KeywordFxPlan } from "./keywordVisuals.ts";
+import { KEYWORD_VISUALS, keywordFxAttributes, keywordFxPlan, planWantsMotion, type KeywordFxPlan } from "./keywordVisuals.ts";
 import { foilFor, frameRarity } from "./frame.ts";
 import type { FaceModel, StateBadgeKind } from "./model.ts";
 import { ProficiencyStamp } from "./ProficiencyStamp.tsx";
@@ -161,13 +165,13 @@ function fxAttributesOf(plan: readonly KeywordFxPlan[], kind: Keyword["kind"]): 
   return entry === undefined ? {} : keywordFxAttributes(entry);
 }
 
-export function MinionFace({ face, unit, className, worn = false, keywordsOffFace = false, attacking = false }: MinionFaceProps): ReactElement {
+function MinionFace({ face, unit, className, worn = false, keywordsOffFace = false, attacking = false }: MinionFaceProps): ReactElement {
   useLocale();
   const settings = useCardSettings();
   const stamp = useCardStamp(face, worn);
   // R3335000: a launched Starship wears the viewer's own Starship picks, or its seat's below a `TheirCopy`.
   const starshipLook = useStarshipLook(worn);
-  const plan = keywordFxPlan(unit);
+  const rawPlan = keywordFxPlan(unit);
   // R3046000, R3339000: the look a full-art unit wears, still (null: the art up to the frame).
   const cardLook = useCardLook(face.defId, worn);
   const look = boardLookOf(face, cardLook);
@@ -191,12 +195,28 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
   // R3334000, R3340000: the shipyard idle is another use of this face's one ranked, visible motion decision, not a
   // second unranked claim of its own. A populated Dormant Starship is Legendary, so it remains eligible at Fx Low.
   const shipyardIdle = face.starship !== null && !face.starship.launched && face.starship.list.length > 0;
-  const faceMotion = useArtMotion(
-    (artMoves || engaged || shipyardIdle || cosmeticAppearance.animates) && settings.animatedFoil && live.onScreen,
-    { hovered: engaged, rarity: slotRarityOf(rarity) },
-  );
-  const motion = faceMotion.moving && (artMoves || engaged) ? artMotionOf(face.defId) : null;
-  const cosmetics = cosmeticAttributes(cosmeticAppearance, faceMotion.moving);
+  const artWanted =
+    (artMoves || engaged || shipyardIdle || cosmeticAppearance.animates) && settings.animatedFoil && live.onScreen;
+  // R3607000: a face whose plan loops wants a slot for its keyword loops too, stilling foils alone (`animatedFoil`
+  // off) never stills a keyword mark; `useArtMotion` stills the claim under every motion setting, a hidden tab and
+  // the shed ladder, and a face past the budget shows every looping treatment's still frame.
+  const kwWanted = planWantsMotion(rawPlan) && live.onScreen;
+  const faceMotion = useArtMotion(artWanted || kwWanted, { hovered: engaged, rarity: slotRarityOf(rarity) });
+  const plan = faceMotion.moving
+    ? rawPlan
+    : rawPlan.map((entry) => (entry.motion === "on" ? { ...entry, motion: "off" as const } : entry));
+  // R3607000: the slot is shared, the outputs are not: art, foil, the diorama, the pointer response and the
+  // shipyard idle still move only when the face wanted them for art (`artWanted`, which carries the
+  // `animatedFoil` gate), while the keyword plan above moves on the shared `faceMotion.moving` alone.
+  const artActive = faceMotion.moving && artWanted;
+  const artEnabled = faceMotion.enabled && artWanted;
+  const motion = artActive && (artMoves || engaged) ? artMotionOf(face.defId) : null;
+  const picture = look !== null ? artPictureOf(look.version, face.set) : artFirst ? artPictureOf(cardLook.version, face.set) : "normal";
+  const ship = shipArtOf(face.defId, unit);
+  // R3350000: a moving Mythic with a diorama draws its slices, each on its own loop (and its art's motion where it has one, a
+  // token printed Mythic having none), in place of its live layers.
+  const diorama = artActive && (artMoves || engaged) && picture === "normal" && ship === null && dioramaOf(face.defId) !== null;
+  const cosmetics = cosmeticAttributes(cosmeticAppearance, artActive);
   // R3340000: what its art wears: cracks for the health it is missing, a glow when buffed, frost when frozen (the view's own).
   const damage = damageLevel(unit.health, unit.maxHealth);
   const buffed = attackTone === "buffed" || healthTone === "buffed";
@@ -215,9 +235,9 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
       data-full-art={look === null ? undefined : "true"}
       data-art-first={artFirst ? "true" : undefined}
       data-version={look?.version ?? undefined}
-      data-art-motion={artMoves || engaged ? (faceMotion.moving ? "animated" : "static") : undefined}
+      data-art-motion={artMoves || engaged ? (artActive ? "animated" : "static") : undefined}
       data-art-hover={live.hovered ? "true" : "false"}
-      data-art-response={faceMotion.enabled ? "true" : undefined}
+      data-art-response={artEnabled ? "true" : undefined}
       data-art-attacking={attacking ? "true" : undefined}
       data-taunt={hasKeyword(unit.keywords, "Taunt") ? "true" : undefined}
       data-flying={hasKeyword(unit.keywords, "Flying") && unit.position !== "DEF" ? "true" : undefined}
@@ -239,14 +259,15 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
             shape={artFirst || look !== null ? "full" : "frame"}
             starship={face.starship}
             look={starshipLook}
-            ship={shipArtOf(face.defId, unit)}
-            picture={look !== null ? artPictureOf(look.version, face.set) : artFirst ? artPictureOf(cardLook.version, face.set) : "normal"}
+            ship={ship}
+            picture={picture}
             motion={motion}
-            live={motion !== null}
+            live={motion !== null && !diorama}
+            diorama={diorama ? { slice: "all", moving: true } : null}
             wear={wear}
           />
           {/* R3334000, R3340000: the Dormant Starship's shipyard uses this face's one ranked, on-screen motion slot. */}
-          {face.starship != null && !face.starship.launched ? <ShipyardIdle list={face.starship.list} moving={faceMotion.moving} /> : null}
+          {face.starship != null && !face.starship.launched ? <ShipyardIdle list={face.starship.list} moving={artActive} /> : null}
         </span>
 
         <KeywordFx plan={plan} />
@@ -337,3 +358,10 @@ export function MinionFace({ face, unit, className, worn = false, keywordsOffFac
     </span>
   );
 }
+
+/**
+ * #3633: a card drawn again with the face it had (its hint row, its highlight or a queue step changed
+ * around it) does not draw the face again: the art, the text and the marks are most of a card's work.
+ */
+const MemoMinionFace = memo(MinionFace);
+export { MemoMinionFace as MinionFace };

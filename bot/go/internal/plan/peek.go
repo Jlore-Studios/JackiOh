@@ -27,9 +27,13 @@ type Peek struct {
 	Held          int    // default: 0
 	// Queued items passed over because of `human` (#96), one line each.
 	Skipped []string // default: field(default_factory=list)
-	// A lane is free and the queue holds nothing it can start (#797): the sweep keeps the clock
-	// a survey waits on from this (`note_idle`).
+	// The queue holds nothing a free lane can start, and the excess compute stands at
+	// `suggestions.spare_lanes` or more (#797, #3659): the sweep keeps the clock a survey waits on
+	// from this (`note_idle`).
 	Idle bool // default: False
+	// Spare is the excess compute then, in lanes (`SpareTotal`): 0 while the queue holds work a
+	// free lane can start.
+	Spare int // default: 0
 }
 
 // Peek_ is plan.peek: whether a run would find work, why, and with which subscription. Changes
@@ -38,15 +42,21 @@ type Peek struct {
 // The gate asks this before it spends anything on reading the subscription's usage.
 func Peek_(ctx *hctx.Context, force bool /* = False */, item *int /* = None */, mode string /* = "auto" */) *Peek {
 	skipped := []string{}
-	seen := map[string]bool{}
+	seen := &peekSeen{}
 	look := peek(ctx, force, item, mode, &skipped, seen)
 	look.Skipped = skipped
-	look.Idle = seen["idle"]
+	look.Idle, look.Spare = seen.idle, seen.spare
 	return look
 }
 
+// peekSeen is what `peek` saw on its way, for `Peek`'s `Idle` and `Spare`.
+type peekSeen struct {
+	idle  bool
+	spare int
+}
+
 // peek is plan._peek.
-func peek(ctx *hctx.Context, force bool, item *int, mode string, skipped *[]string, seen map[string]bool) *Peek {
+func peek(ctx *hctx.Context, force bool, item *int, mode string, skipped *[]string, seen *peekSeen) *Peek {
 	if !slices.Contains(Modes, mode) {
 		return &Peek{Work: false, Reason: "unknown mode " + py.Repr(mode)}
 	}
@@ -85,12 +95,19 @@ func peek(ctx *hctx.Context, force bool, item *int, mode string, skipped *[]stri
 			found = &work{top[0].Candidate, top[0].Assignment.Provider, force || top[0].Candidate.Forced}
 		}
 	}
-	seen["idle"] = found == nil && item == nil && mode == "auto"
-	// A survey once a free lane has had nothing to start for `suggestions.idle_minutes` (#797),
-	// or when one is asked for: queued work that waits for another subscription, or for an issue
-	// it depends on, no longer keeps an idle one from surveying.
+	spare := 0
+	if found == nil && item == nil {
+		spare = SpareTotal(Spare(ctx, state, lanes, force))
+		if mode == "auto" {
+			seen.idle, seen.spare = spare >= ctx.Cfg.SuggestionsSpareLanes, spare
+		}
+	}
+	// A survey once the excess compute has stood at `suggestions.spare_lanes` for
+	// `suggestions.idle_minutes` (#797, #3659), or when one is asked for: queued work that waits
+	// for another subscription, or for an issue it depends on, no longer keeps a spare lane from
+	// surveying.
 	if found == nil && item == nil && (mode == "suggest" || mode == "auto") &&
-		SuggestionsDue(ctx, state, mode == "suggest") != 0 {
+		SuggestionsDue(ctx, state, mode == "suggest", spare) != 0 {
 		if provider := SurveyProvider(ctx, state, lanes, force, AnyQuiet); provider != nil {
 			found = &work{nil, provider, force}
 		}

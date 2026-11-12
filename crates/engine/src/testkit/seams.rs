@@ -133,7 +133,7 @@ mod tests {
     use crate::state::{GameState, Resume};
     use crate::testkit::scenario::{Scenario, catalog_override, register_catalog, scenario};
     use crate::wire::{CardDefs, GameEvent};
-    use crate::work::{can_resume, drain_work, push_work};
+    use crate::work::{can_resume, drain_work, engine_resume, push_work};
 
     const HOOK: &str = "__seam";
 
@@ -153,14 +153,7 @@ mod tests {
     }
 
     fn seam_resume() -> Resume {
-        Resume {
-            def_id: String::new(),
-            hook: HOOK.to_string(),
-            step: "seam".to_string(),
-            radiant: false,
-            instance_id: None,
-            data: Default::default(),
-        }
+        engine_resume(HOOK, "seam", Default::default())
     }
 
     /// A test sequence's step: one point off its owner's hero, so the run shows on the board.

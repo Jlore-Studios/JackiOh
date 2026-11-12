@@ -594,3 +594,70 @@ pub fn draw_trio(
         decks: (first, second, third),
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use jackioh_engine::wire::FirstSeen;
+
+    use super::*;
+
+    /// A Best-of-1 list people took into `games` games and won `wins` of, of `size` cards of its own.
+    fn list(name: &str, size: usize, wins: i64, games: i64) -> ListTotal {
+        let deck: Vec<String> = (0..size).map(|card| format!("{name}-{card:02}")).collect();
+        ListTotal {
+            key: deck.clone(),
+            deck,
+            games,
+            wins,
+            first: FirstSeen {
+                record: name.to_string(),
+                seat: 0,
+            },
+        }
+    }
+
+    /// R750000, R1705001: lists of at least CARD_STATS_MIN_SAMPLE games are ranked, the best win rate
+    /// first, in whatever order they come; the rest are unranked; a list not of DECK_SIZE cards is
+    /// neither.
+    #[test]
+    fn r750000_lists_with_their_games_rank_by_win_rate_and_the_rest_stay_unranked() {
+        let size = usize::try_from(DECK_SIZE).expect("a deck size");
+        let games = CARD_STATS_MIN_SAMPLE * 2;
+        let worse = list("worse", size, games / 4, games);
+        let better = list("better", size, games * 3 / 4, games);
+        let thin = list("thin", size, CARD_STATS_MIN_SAMPLE - 1, CARD_STATS_MIN_SAMPLE - 1);
+        let short = list("short", size - 1, games, games);
+        for lists in [
+            [worse.clone(), better.clone(), thin.clone(), short.clone()],
+            [better.clone(), worse.clone(), short.clone(), thin.clone()],
+        ] {
+            assert_eq!(
+                ranked_human_bo1_decklists(&lists),
+                (
+                    vec![better.deck.clone(), worse.deck.clone()],
+                    vec![thin.deck.clone()]
+                )
+            );
+        }
+    }
+
+    /// R750000: ranked lists are tried nearest the bot's strength first, the strongest bot from the best
+    /// list and the weakest from the worst, a tie going to the better list.
+    #[test]
+    fn r750000_ranked_lists_are_tried_nearest_the_bots_strength_first() {
+        let ranked: Vec<Vec<String>> = (0..5).map(|place| vec![format!("list-{place}")]).collect();
+        let order = |strength: f64| -> Vec<String> {
+            by_strength(ranked.clone(), strength)
+                .into_iter()
+                .flatten()
+                .collect()
+        };
+        let lists = |places: [usize; 5]| -> Vec<String> {
+            places.iter().map(|place| format!("list-{place}")).collect()
+        };
+        assert_eq!(order(1.0), lists([0, 1, 2, 3, 4]));
+        assert_eq!(order(0.0), lists([4, 3, 2, 1, 0]));
+        assert_eq!(order(0.5), lists([2, 1, 3, 0, 4]));
+        assert_eq!(order(0.75), lists([1, 0, 2, 3, 4]));
+    }
+}

@@ -69,16 +69,35 @@ The spacing is one scale (#3225): `src/spacing.css`, imported by `index.css` aft
 
 The breakpoints are one named set (#3227), `src/breakpoints.ts`'s `BREAKPOINT_PX`. Each is the widest (or tallest) window of the smaller layout: `(max-width: N)` holds up to N and the layout above starts at `(min-width: N+1)`. They are `phone` 600 px (a phone held upright), `narrow` 760 px (a small tablet upright), `medium` 899 px (a tablet upright), `tablet` 1024 px (the desktop starts at 1025) and, for height, `short` 500 px (a phone on its side). Touch is `(pointer: coarse)`. A sheet spells the number out (CSS reads no custom property in `@media`), and a script builds its query with `upTo()`, `over()` and `PHONE_SHEET_QUERY`. `src/breakpoints.test.ts` holds both, its `KEEP` listing each other value with its reason.
 
-Every menu is one screen (R1581000): at 1280x720 and 390x844 the page is no taller or wider than the
-window, and what a menu holds past its room scrolls in its one region, never in the page, with its
+Every menu is one screen (R1581000): at every size of `MENU_SIZES` (`e2e/support/config.ts`, R3728000:
+desktop 1440x900 and 1280x720, iPad 1180x820, 1366x1024, 820x1180 and 744x1133, phone 390x844) the page is
+no taller or wider than the window, and what a menu holds past its room scrolls in its one region, never in the page, with its
 top (Back, the gear, the title) staying put. A menu's root takes `one-screen` (`index.css`, which
 makes the shell the window's height); its region takes `one-screen__body`; a box between the two
 that must shrink (a tavern panel) takes `one-screen__frame`, and a wrapper that stacks its children
-as the shell does takes `one-screen__stack`. Under 501 px tall (a phone on its side) the page
+as the shell does takes `one-screen__stack`. Inside the menus' shell "the window's height" is
+`--shell-screen-h` (`shell/menu-shell.css`): the window less the top inset and a phone's tab bar, read with
+`100dvh` as its fallback by every one-screen menu's sheet. Under 501 px tall (a phone on its side) the page
 scrolls as it did. The deck builder and the almanac do the same on a phone (`deckbuilder.css`,
 `workshop.css`, `almanac.css`), as they already did on a desktop. No type shrinks to make it fit.
-The tavern home alone may be two screens tall (#1576). e2e spec `46` visits every menu at both
-sizes and fails when the page is taller or wider than its allowance.
+The tavern home alone may be two screens tall (#1576). e2e spec `46` visits every menu at every
+size and fails when the page is taller or wider than its allowance.
+
+Every menu screen renders inside one shell (#3728, R3728000–R3728002, `shell/MenuShell.tsx`,
+`docs/polish/10-menus.md`): `main.tsx` wraps each route that `menuShellOn` says is a menu, every path but a
+board's (`isBoardPath`), the series screen and the dev screens. The shell draws the screen's column, then its
+navigation, Home, Play, Collection, Shop and Friends, in one place on every menu: a rail with labels at 1025
+px and wider, the same rail with icons alone from 601 to 1024 px, a tab bar at the foot of the window at 600
+px and under (`menu-shell.css`, on `phone` and `tablet`), inside the safe-area insets. A toast fixed at the
+column's foot reads the room the navigation takes, `--shell-start` (the rail's width) and `--shell-bottom` (a
+phone's tab bar and the bottom inset), each 0px outside the shell, to center on the column and sit above the
+tab bar, as the deck builder's status toast and the undo toast do. A board drawn on a menu
+path (`game/boardShown.ts`) takes the navigation away and keeps the screen mounted. Friends is the friends
+panel's button (`FriendsButton`'s `rail`), which opens the panel as the Dialog's drawer down the right edge,
+and the top bar no longer draws it inside the shell. The shell hands the screens a status row
+(`shell/context.ts`'s `useMenuShell`): the live game to go back to, else this tab's queue search with Leave
+the queue, which BackLink draws as its last slot and Home under its corner. e2e spec `51` clicks through the
+five destinations and closes the drawer each way at every size, and spec `38` runs axe over the shell.
 
 On a phone every control takes a tap across `--hit-min` (44 px) each way (R2122000). Under
 `(pointer: coarse), (max-width: 600px)`, `index.css` gives each button, link, `role="button"` and
@@ -160,8 +179,9 @@ it: no `"Escape"` comparison outside the shared hooks and its named exceptions, 
 the inline confirms' safe choice first.
 
 The top bar is also one layout (#3218, R3218000), the same sheet's. BackLink's slots run Back, the line
-(`title`, then its children as the extras), a flexible spacer, then the end group: the Jlore pill, Friends,
-language, the gear, so Back is the leftmost control and the gear the rightmost. On a phone (600 px, the touch
+(`title`, then its children as the extras), a flexible spacer, then the end group: the Jlore pill, Friends
+(off the menus' shell alone, R3728000), language, the gear, so Back is the leftmost control and the gear the
+rightmost; inside the shell a fifth slot, the status row, takes a row of its own under the rest (R3728002). On a phone (600 px, the touch
 rule's) the line takes a row under Back and the end group. Only `routes/top-bar.css` places those controls:
 a screen passes its title and extras to BackLink and never wraps the bar in a flex header or sets a margin on
 a bar control, and the replay player's Back is BackLink's too (`onPress`, `testId`). e2e spec `46` measures it.
@@ -301,6 +321,20 @@ sheet's own swipe does not start on it); the card views also tilt with the phone
 on (`deviceTilt`, a device-only card setting; iOS asks leave once, inside the switch's tap). One face tilts at a time and
 none while the animation queue drains (`useTiltHold`, `game/Game.tsx`). The face's rotation is the one 3D thing: `.cf` is
 an isolated group, which draws what it holds flat, so the planes move by `translate`. Presentation only (rule 7).
+
+**Dioramas** (R3350000): a Mythic's normal picture, and a token printed Mythic's, draws a diorama of its own in place of the
+planes, one file per card in `cards/art/dioramas/<set>/` (`DIORAMA`: five to eight slices, back to front, each a pick of
+the painter's still picture's pieces, `dioramas/pieces.ts`, at a depth and in a plane, some bent, two or more on a loop
+written for the card). Each slice is a picture of its own (`dioramaSliceUri`, from the card's id and face alone); the face
+draws the farthest in its window and the rest as `.cf-plane[data-slice]`s over it (`data-diorama`), their loops running
+only in a motion slot (`data-diorama-motion`); at an animated level, and on the board, each slice also moves its pieces as
+the card's moving picture does (its roles' layers, the particles in the nearest), so the level keeps its motion. It turns up to `DIORAMA_TURN_MAX_DEG` in inspect, the hover preview and the
+Collection (`CardFace`'s `turn`), `CARD_TILT_MAX_DEG` in hand, and never breaks the frame; a board Mythic stacks every slice
+in its window while it moves (`CardArt`'s `diorama` "all"), in place of the live layers, its window swelling on a hover and
+its slices over the farthest swinging on an attack (`artLive.css`); the full-screen view draws the slices, scaled as it turns
+as little as keeps the screen covered (`fullscreenCoverScale`), and the takeover flies through them (`fx/takeover.ts`,
+`fx-takeover-fly`). Alt art, a restyle and every flat face draw none. `dioramas.test.ts` lists any
+Mythic without one (`PENDING`, empty) and holds every slice to its picture's colours, no text and `ART_DETAIL_MAX_BYTES`.
 
 ## Three flows at the table
 
@@ -486,7 +520,8 @@ the unit's picture (#3341: its art runs up to the frame) and the backrow's outli
 under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root
 (`Card.tsx` `hintRow`); `game/handHints.css` styles it. The hints are one list, `HAND_HINTS`
 in `game/handHints.ts`. Each is `{ id, icon, applies(card, view, face) }`, reads only the
-`CardView`, the `PlayerView` and the card's face the way `Card.tsx` reads it, and returns null
+`CardView`, the part of the view `HintView` names (the viewer's `trades`; `Hand.tsx` hands it
+one object while they are one, #3609) and the card's face the way `Card.tsx` reads it, and returns null
 or `{ n?, dimmed?, label }`, its label through `t()`.
 No row when no hint applies. No pointer event. Never on the opponent's backs, the revealed
 hand, the board or the menus. Adding a hint is one entry plus its icon (`cards/icons.tsx`).
@@ -494,6 +529,18 @@ The list ships the Tradable hint (#2269): a small swap-mark pip on each of the v
 hand cards with the Tradable keyword, dimmed once the turn's Trade is spent. It also ships
 `tribute` (#2268, R2268000): the Tributes a play of the card asks now, the view's `tribute`,
 which the engine sets on the viewer's own hand cards only and never at 0.
+
+**Card redraws** (#3609). A card is drawn again only when what it draws changes. A view arrives as
+fresh JSON (the wasm module's `viewFor`, a socket frame), so `Game` shares the cards a view holds
+unchanged with the view before it (`game/shareView.ts`: the two seats and the viewer's `trades`,
+never `events`, which the animations and the sound director match by identity, and nothing across a
+change of viewer), and `Card`'s `sameCardProps` and `useLiveFace` then see the same card object. A
+selection or a hover builds a new `Highlight` for every card, so `sameCardProps` counts only a
+card's own slice of it (`game/cardHighlight.ts`: its testids, its Activate controls, the hovered
+attack where it is the target or the attacker); a new read of the highlight in a card's tree is
+counted there too. The drag ghost memoises its face (`useLiveFace`), and the pointer's position stays
+in the drag layer's own state and the aim's hover only changes when the target does, so a pointer in
+motion draws no card. `game/Game.render.test.tsx` pins each, through `<Game>`.
 
 ## Commands
 
@@ -509,6 +556,11 @@ pnpm --dir apps/web test           # vitest (jsdom)
 `dev`, `build`, `build:staging`, `build:e2e` and `test` first run `scripts/build-wasm.sh` (their `pre`
 scripts), which needs the Rust toolchain `rust-toolchain.toml` pins; `typecheck` reads the module's
 generated `.d.ts`, so run one of them (or the script) once first.
+
+`src/perf/` owns the busy-board frame probe's numbers and statistics (issue #3605):
+`frameBudgets.ts` names every budget and duration (CLAUDE.md rule 9), `frameStats.ts` the pure
+summarize-and-judge the e2e spec shares. The probe itself runs as e2e spec 50
+(`pnpm --dir e2e probe:frames`).
 
 Both deployed builds are `production` mode, so neither serves the dev-only routes; `build:staging`
 puts `.env.staging` in the build's environment (`node --env-file`), where Vite never overwrites a
@@ -533,7 +585,9 @@ defines its own `settle`, `withCatalog`, `renderBoard` or `ensurePointerEvent` (
 
 `scripts/github-releases.ts` prints every shipped version's GitHub release as JSON (`src/patches/github.ts`:
 the Patch notes page as Markdown, a pre-release while only staging has the version), which
-`.github/workflows/releases.yml` publishes. It needs no WebAssembly; to read the newest one's notes:
+`.github/workflows/releases.yml` publishes. It loads the WebAssembly module from `src/wasm/pkg` (a card's
+words are diffed by the face model, #3161), so run `sh scripts/build-wasm.sh` first, as the workflow does
+(#3601); `src/patches/github.test.ts` runs it in a process of its own. To read the newest one's notes:
 `pnpm --dir apps/web exec tsx scripts/github-releases.ts | jq -r '.releases[-1].body'`.
 
 The dev hotseat route is `/dev/hotseat?seed=42&a=first20&b=first20`. It runs `reduce` in the
@@ -656,7 +710,8 @@ net/liveGame.ts         R765: the player's online game, read off /api/auth/me: t
                         queue is forgotten after QUEUE_ENDED_AFTER_READS reads (R897000)
 routes/GameBanner.tsx   R765: the one banner atop a menu while there is a game to go back to: a saved
                         practice game (Resume, on /practice) and the live online or co-op game (Rejoin,
-                        on / and /practice); game-banner.css draws it as the tavern's notice
+                        in the menus' shell's status row on every menu but the game's own, R3728002, and
+                        on /practice); game-banner.css draws it as the tavern's notice
 routes/series.tsx       /series/:id: a Conquest series (R330–R336): score, both sides' won (locked) decks,
                         the history, forfeit between games, the result
 routes/SeriesPicker.tsx the deck-selection phase before each game, laid out as the mulligan (R331–R333,
@@ -851,8 +906,9 @@ together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open an
 net/roomLink.ts          R767's room link (/play?room=…&mode=…) and R2094000's co-op link
                          (/together?coop=…): built for the share sheet or the clipboard, read once off
                          the address bar into this tab, through a sign-in, for the lobby or the co-op panel
-together/FriendsButton.tsx  the Friends button at the top right of every signed-in screen (the nav, the
-                         landing and a board's controls) with its badge (incoming requests, challenges
+together/FriendsButton.tsx  the Friends button on every signed-in screen (the menus' shell's navigation,
+                         R3728000, which opens its panel as a drawer, R3728001; the top bar off the shell;
+                         a board's controls) with its badge (incoming requests, challenges
                          and unread chats), and its panel: the player's name#tag, the add form, the
                          requests in, the friends online first with Challenge, Watch and Chat (the rows
                          of FriendRows.tsx, shared with /together) and a link to /together; the friends
@@ -924,6 +980,10 @@ snapshot's `watchers`). While any modifier is live on either side, the rail carr
   to play again, the teammate gone (the button hidden), or a refusal in the server's words. An
   answer naming the new match takes both people to `/duos/:matchId`. A replay and `/dev/duos` show
   no button.
+- a game a duel's ending decided (`duelResult`) says which board and how in its result panel (#3697): "On your board: …"
+  in `game/Result.tsx`'s `resultReason` words for the seat, else "On your teammate's board: …" in words written for the
+  teammate's side (`DuosBoard.tsx`'s `teammateReason`), else the old "One of the duels decided the game."; the turn cap
+  reads as the 1v1 one does.
 
 The Duos WASM bindings (`duos_create`, `duos_begin`, `duos_reduce`, `duos_legal_actions`,
 `duos_view_for`, JSON in and out like the 1v1 ones) are reached only through `src/wasm/index.ts`, for

@@ -8,7 +8,7 @@
 // about a card is a button that opens that card, the face of which the face model works out (`faces.ts`), and
 // the history that joins each view's window to the last (R745, useLogHistory.ts) keeps the lines it was shown.
 
-import { Fragment, memo, useContext, useLayoutEffect, useMemo, useRef, type MouseEvent, type ReactElement } from "react";
+import { Fragment, memo, useContext, useDeferredValue, useLayoutEffect, useMemo, useRef, type MouseEvent, type ReactElement } from "react";
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
@@ -94,7 +94,10 @@ const LogItem = memo(function LogItem({ line }: { line: Line }): ReactElement {
   );
 });
 
-export default function Log({ view, revealed = false }: LogProps): ReactElement {
+function Log({ view: newest, revealed = false }: LogProps): ReactElement {
+  // #3633: the log follows the board a render behind, at low priority, so the frame a view lands in is
+  // not also the one that reads its whole window into lines (R3351000's phone budget).
+  const view = useDeferredValue(newest);
   const locale = useLocale();
   // R243: a match-made card is named from the definition the view carries for it.
   const catalog = useContext(CatalogContext);
@@ -133,3 +136,6 @@ export default function Log({ view, revealed = false }: LogProps): ReactElement 
     </ol>
   );
 }
+
+/** #3633: a queue step re-renders the board but leaves the shown view, so the log draws nothing new and is skipped. */
+export default memo(Log);

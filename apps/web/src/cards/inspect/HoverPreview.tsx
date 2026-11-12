@@ -14,18 +14,11 @@ import { useLayoutEffect, useRef } from "react";
 import type { ReactElement } from "react";
 import { createPortal } from "react-dom";
 import { CardFace, faceText } from "../CardFace.tsx";
-import { FACE_ASPECT } from "../constants.ts";
 import { useFullArt, useOwnCopy } from "../fullArt.ts";
 import type { FaceModel } from "../model.ts";
-import {
-  PREVIEW_EXTENDED_WIDTH_PX,
-  PREVIEW_GLOSSARY_GAP_PX,
-  PREVIEW_GLOSSARY_WIDTH_PX,
-  PREVIEW_REFS_WIDTH_PX,
-} from "./constants.ts";
 import { Extended } from "./Extended.tsx";
 import { Glossary } from "./Glossary.tsx";
-import { placePreview, previewHeight, type PreviewPrefer, type Rect } from "./placement.ts";
+import { estimatedPreviewSize, placePreview, previewCardHeight, type PreviewPrefer, type Rect } from "./placement.ts";
 import { Flavour, showsEasterEgg } from "./Flavour.tsx";
 import { flavourFor } from "../flavour.ts";
 import { InspectNote } from "./InspectNote.tsx";
@@ -46,16 +39,6 @@ function viewportSize(): { width: number; height: number } {
   return { width: window.innerWidth, height: window.innerHeight };
 }
 
-/** The preview's size before it has been laid out, from the same numbers inspect.css uses. */
-function estimatedSize(withGlossary: boolean, withRefs: boolean, withExtended: boolean): { width: number; height: number } {
-  const height = previewHeight(window.innerHeight);
-  const cardWidth = height * FACE_ASPECT;
-  const glossary = withGlossary ? PREVIEW_GLOSSARY_GAP_PX + PREVIEW_GLOSSARY_WIDTH_PX : 0;
-  const refs = withRefs ? PREVIEW_GLOSSARY_GAP_PX + PREVIEW_REFS_WIDTH_PX : 0;
-  const extended = withExtended ? PREVIEW_GLOSSARY_GAP_PX + PREVIEW_EXTENDED_WIDTH_PX : 0;
-  return { width: cardWidth + glossary + refs + extended, height };
-}
-
 export function HoverPreview({ face, anchor, prefer = "beside", note, keyHint }: HoverPreviewProps): ReactElement {
   const ref = useRef<HTMLDivElement>(null);
   const entries = face.glossary;
@@ -69,23 +52,41 @@ export function HoverPreview({ face, anchor, prefer = "beside", note, keyHint }:
   const side = notes || face.printed !== null || flavoured;
   const ascentLevel = face.ascent;
   const extended = faceText(face, ascentLevel, fullArtOn).less;
-  const placed = placePreview(anchor, viewportSize(), estimatedSize(entries.length > 0 || side, named > 0, extended), prefer);
+  // #3602: on a phone the full text stacks across the card's width, so the estimate and the face
+  // use the stacked geometry inspect.css draws there; off a phone both match what was there before.
+  const viewport = viewportSize();
+  const cardHeight = previewCardHeight(viewport, extended);
+  const placed = placePreview(
+    anchor,
+    viewport,
+    estimatedPreviewSize(viewport, { withGlossary: entries.length > 0 || side, withRefs: named > 0, withExtended: extended }),
+    prefer,
+  );
 
   // Once laid out, place it again by its real size. jsdom has no layout and keeps the estimate.
   useLayoutEffect(() => {
     const element = ref.current;
     if (element === null) return;
-    const width = element.offsetWidth;
-    const height = element.offsetHeight;
-    if (width === 0 || height === 0) return;
-    const measured = placePreview(anchor, viewportSize(), { width, height }, prefer);
-    element.style.left = `${measured.left}px`;
-    element.style.top = `${measured.top}px`;
-    element.dataset.side = measured.side;
+    const place = (): void => {
+      const width = element.offsetWidth;
+      const height = element.offsetHeight;
+      if (width === 0 || height === 0) return;
+      const measured = placePreview(anchor, viewportSize(), { width, height }, prefer);
+      element.style.left = `${measured.left}px`;
+      element.style.top = `${measured.top}px`;
+      element.dataset.side = measured.side;
+    };
+    place();
+    // #3602: images (Extended's watermark) load after the first layout and grow the preview; place
+    // it again when they do, so it stays inside the viewport on a phone.
+    element.addEventListener("load", place, true);
+    return () => {
+      element.removeEventListener("load", place, true);
+    };
   });
 
   const faceBox = (
-    <div className="inspect-face" data-testid={INSPECT_FACE} style={{ height: previewHeight(window.innerHeight) }}>
+    <div className="inspect-face" data-testid={INSPECT_FACE} style={{ height: cardHeight }}>
       {/* R3344001: the pose is read against the anchor, where the pointer is, never over the face. */}
       <CardFace face={face} layout="full" ascentLevel={ascentLevel} worn={own} tilt="window" tiltAnchor={anchor} />
       <InspectNote note={note} />

@@ -101,6 +101,7 @@ mod tests {
             .collect()
     }
 
+    // Differs from Scenario::offered: the open Discover's cards, not the seat's legal actions.
     fn offered(s: &Scenario) -> Vec<String> {
         let pending = s.state().pending.as_ref().expect("the Discover is open");
         assert_eq!(pending.player_id, P1, "shown to its caster");

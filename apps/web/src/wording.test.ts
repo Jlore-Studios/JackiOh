@@ -57,8 +57,9 @@ const {
 } = ts;
 
 /**
- * The whole client's parse, which the first scan to run pays and the rest read from `WORDS`: 2.6 to 5.7 s on CI's
- * loaded unit shards (#3449), past vitest's default 5 s, and it grows with the client.
+ * The whole client's parse, which the `beforeAll` below pays once and every scan reads from `WORDS`: 2.6 to 5.7 s on
+ * CI's loaded unit shards (#3449), past vitest's default 5 s for a test, and it grows with the client toward the
+ * default 10 s for a hook (#3564). The hook and each scan take it.
  */
 const SCAN_TIMEOUT_MS = 30_000;
 
@@ -96,7 +97,7 @@ function wordsIn(path: string): { at: string; text: string }[] {
 // runner does not spend the first guard's own budget on it (#3439: R373's, the first, overran its 5 s in CI).
 beforeAll(() => {
   for (const path of sources(SRC)) wordsIn(path);
-});
+}, SCAN_TIMEOUT_MS);
 
 /**
  * The strings of `files` a guard can flag, `piece` a part of every string it flags. A string's text is its

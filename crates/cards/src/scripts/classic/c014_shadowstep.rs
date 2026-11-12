@@ -176,10 +176,6 @@ mod tests {
         }))
     }
 
-    fn fired(s: &Scenario) -> usize {
-        s.events().iter().filter(|event| event.event_type() == GameEventType::TrapFired).count()
-    }
-
     fn mine_on_field(s: &Scenario) -> Vec<Option<String>> {
         (1..=5).map(|lane| s.unit(P1, lane).map(|card| card.def_id)).collect()
     }
@@ -239,7 +235,7 @@ mod tests {
             let mut s = wipe(false, json!([VANILLA, MENACE, TIMMY]), json!({}));
             let cards = [s.card(VANILLA).clone(), s.card(MENACE).clone(), s.card(TIMMY).clone()];
             s.play(BIG_FELINOR, json!({}));
-            assert_eq!(fired(&s), 1);
+            assert_eq!(s.count(GameEventType::TrapFired), 1);
             for card in &cards {
                 s.expect_in_zone(card, "hand");
             }
@@ -260,7 +256,7 @@ mod tests {
         fn enemy_deaths_don_t_fire_it() {
             let mut s = wipe(false, json!([FELINORS]), json!({ "theirs": [VANILLA, MENACE] }));
             s.play(BIG_FELINOR, json!({}));
-            assert_eq!(fired(&s), 0);
+            assert_eq!(s.count(GameEventType::TrapFired), 0);
             assert_eq!(backrow_def(&s, P1, 1), Some(SHADOWSTEP.to_string()));
             s.expect_in_zone(FELINORS, "field");
         }
@@ -297,7 +293,7 @@ mod tests {
             let mut s = wipe(false, json!([STATE_OF_GAME]), json!({}));
             s.play(BIG_FELINOR, json!({}));
             s.expect_in_zone(STATE_OF_GAME, "field");
-            assert_eq!(fired(&s), 0);
+            assert_eq!(s.count(GameEventType::TrapFired), 0);
         }
 
         #[test]
@@ -313,7 +309,7 @@ mod tests {
             }));
             let state = s.card(STATE_OF_GAME).clone();
             s.play(SUPPRESSIVE_AURA, json!({ "zone": 1 }));
-            assert_eq!(fired(&s), 1);
+            assert_eq!(s.count(GameEventType::TrapFired), 1);
             s.expect_in_zone(&state, "hand");
             assert_eq!(s.card(&state).cost_override, Some(0));
             s.expect_in_zone(VANILLA, "field");
@@ -338,7 +334,7 @@ mod tests {
             assert_eq!(s.card(&menace).controller, P2);
             s.end_turn();
             s.play(BIG_FELINOR, json!({}));
-            assert_eq!(fired(&s), 0);
+            assert_eq!(s.count(GameEventType::TrapFired), 0);
             s.expect_in_zone(&menace, "graveyard");
             assert_eq!(backrow_def(&s, P1, 1), Some(SHADOWSTEP.to_string()));
         }
@@ -386,7 +382,7 @@ mod tests {
             assert_eq!(s.card(&menace).controller, P1);
             s.end_turn();
             s.play(BIG_FELINOR, json!({}));
-            assert_eq!(fired(&s), 1);
+            assert_eq!(s.count(GameEventType::TrapFired), 1);
             s.expect_in_zone(&menace, "hand");
             assert!(s.hand(P1).iter().any(|card| card.id == menace.id));
             assert!(!s.hand(P2).iter().any(|card| card.id == menace.id));
@@ -415,7 +411,7 @@ mod tests {
             let vanilla = s.card(VANILLA).clone();
             let menace = s.card(MENACE).clone();
             s.play(BIG_FELINOR, json!({}));
-            assert_eq!(fired(&s), 1);
+            assert_eq!(s.count(GameEventType::TrapFired), 1);
             assert_eq!(s.unit(P1, 1).map(|card| card.id), Some(vanilla.id.clone()));
             assert_eq!(s.unit(P1, 2).map(|card| card.id), Some(menace.id.clone()));
             assert!(!s
@@ -514,7 +510,7 @@ mod tests {
             let mut s = wipe(true, json!([FELINORS]), json!({ "theirs": [VANILLA] }));
             s.play(BIG_FELINOR, json!({}));
             s.expect_in_zone(VANILLA, "graveyard");
-            assert_eq!(fired(&s), 0);
+            assert_eq!(s.count(GameEventType::TrapFired), 0);
             assert_eq!(backrow_def(&s, P1, 1), Some(SHADOWSTEP.to_string()));
         }
 
@@ -559,7 +555,7 @@ mod tests {
         let vanilla = s.card(VANILLA).id.clone();
         crate::stand_in_backrow(&mut s, &vanilla, 2);
         s.play(BIG_FELINOR, json!({}));
-        assert_eq!(fired(&s), 1);
+        assert_eq!(s.count(GameEventType::TrapFired), 1);
         assert_eq!(s.backrow(P1, 2).map(|card| card.id), Some(vanilla.clone()));
         assert!(stands_in_backrow(s.state(), s.card(vanilla.as_str())));
     }

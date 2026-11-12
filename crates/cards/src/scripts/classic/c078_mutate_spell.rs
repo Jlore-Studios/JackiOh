@@ -126,6 +126,7 @@ mod tests {
             .collect()
     }
 
+    // Differs from Scenario::offered: Mutate's activation targets, deduped, not the seat's whole legal list.
     fn offered(s: &Scenario) -> Vec<String> {
         let mutate = s.card(MUTATE).id.clone();
         let ids: Vec<String> = legal_actions(s.state(), P1)

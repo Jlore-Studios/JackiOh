@@ -21,7 +21,11 @@
 "cards lib" = 1
 "cards" = 1
 "server" = 1
-"server api" = 1
+# `server api` ran 7m 24s (#3580): about 1,200 tests (every tests/api module but
+# practice, plus the lib's api:: tests). 4 shards of about 300 tests each, so each
+# shard should finish under five minutes with headroom; each shard recompiles the
+# group's binaries again, as above.
+"server api" = 4
 # `server practice` and `server practice rulings` stay at 1 (#3314). Both ran over seven minutes
 # because three tests in each waited about 150 s for the slowest game of `honest_win`'s batch
 # (crates/server/tests/api/practice.rs), which #3305 fixed: each group's tests now run in about
@@ -37,6 +41,10 @@
 
 # `web (unit k/K)`: Vitest's `--shard=k/K` over the web's and the Worker's unit tests.
 # 4 shards ran one past seven minutes (web (unit 1/4), 8m 52s, #3258); 8 is the most a count may be (matrix.py's MAX_SHARDS).
+# At 8 one shard ran 9m 41s (web (unit 7/8), #3666): Vitest's own `--shard` deals the files by count, so heavy files
+# clustered. The root vitest.config.ts now deals them by measured time, longest first, by the table in
+# apps/web/src/test/shardWeights.ts (every file still in exactly one shard). When a shard drifts, refresh that table
+# (its header says how); the count is already at its cap.
 [web]
 unit = 8
 

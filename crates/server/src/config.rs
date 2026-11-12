@@ -836,6 +836,36 @@ pub const BUG_REPORT_LISTED_ACTIONS: usize = 10;
 pub const BUG_REPORT_LISTED_MATCHES: usize = 20;
 
 // ---------------------------------------------------------------------------------------------
+// Alerts (`alerts.rs`, #3595): an alert told to people, as a GitHub issue and an email. Not in
+// SPEC, and no R-row: operational, as the bug reports are.
+// ---------------------------------------------------------------------------------------------
+
+/// An event makes at most one notice in this long per process: an hour. The rest are counted, and
+/// the next notice says how many.
+pub const ALERT_WINDOW_MS: i64 = 60 * 60 * 1000;
+/// How many alerts wait for the notifier's task before a new one is dropped (its log line stays).
+pub const ALERT_QUEUE: usize = 64;
+/// The labels an alert's issue carries: the repository's type and people's (`human`, which triage
+/// assigns to both of them and which keeps the bots off it).
+pub const ALERT_ISSUE_LABELS: &[&str] = &["architecture", "human"];
+/// Events whose own issue is filed elsewhere, which an alert's issue would only repeat: `bug.found`
+/// (`bug_reports.rs`). They are still emailed.
+pub const ALERTS_FILED_ELSEWHERE: &[&str] = &["bug.found"];
+/// Resend's API, which an alert's email is sent through.
+pub const ALERT_EMAIL_API_URL: &str = "https://api.resend.com/emails";
+/// Who an alert's email is from: an address on the domain Resend sends jackioh.com's mail for
+/// (infra/cloudflare.tf), as the sign-in mail is (docs/deploy-cloudflare.md section 8).
+pub const ALERT_EMAIL_FROM: &str = "JackiOh alerts <no-reply@jackioh.com>";
+/// How many alert emails one process sends in `ALERT_EMAIL_DAY_MS`. Resend's free plan sends 100 a
+/// day, the sign-in mail's included, so alerts keep well under it.
+pub const ALERT_EMAILS_PER_DAY: usize = 10;
+/// The day `ALERT_EMAILS_PER_DAY` counts in.
+pub const ALERT_EMAIL_DAY_MS: i64 = 24 * 60 * 60 * 1000;
+/// How long the request to Resend may take before the email is given up (logged). GitHub's take
+/// `BUG_REPORT_TIMEOUT_MS`, through the bug reports' own request builder.
+pub const ALERT_TIMEOUT_MS: u64 = 10_000;
+
+// ---------------------------------------------------------------------------------------------
 // Glitch (issue #170; SPEC §7, R678, R679).
 // ---------------------------------------------------------------------------------------------
 
@@ -847,6 +877,10 @@ pub const GLITCH_BOARDS_SAMPLED: usize = 2;
 /// HTTP's 410 Gone: the match no longer exists. The last `view` the clients got already shows the
 /// game over with reason `voided`.
 pub const MATCH_VOIDED_CLOSE_CODE: u16 = 4410;
+/// R3694000: what the reaper closes a finished match's sockets still open with (seats' and watchers',
+/// 1v1 and co-op) once `REMATCH_OFFER_TTL_MS` has passed since its end, beside "the match is over".
+/// In the 4000–4999 range beside `MATCH_VOIDED_CLOSE_CODE`, and as final: no client reconnects on it.
+pub const MATCH_OVER_CLOSE_CODE: u16 = 4411;
 
 // ---------------------------------------------------------------------------------------------
 // Saved decks and trios (SPEC §9.4, R250–R256). PUBLIC: the deck builder imports these too.

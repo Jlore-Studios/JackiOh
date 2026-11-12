@@ -48,10 +48,7 @@ pub fn roll_tier<T: Copy + Ord>(set: &[(T, u32)], fallback: T, floor: Option<T>,
             break;
         }
     }
-    Some(match floor {
-        Some(floor) if landed < floor => floor,
-        _ => landed,
-    })
+    Some(floor.map_or(landed, |floor| landed.max(floor)))
 }
 
 /// One roll's draw: an integer below `TIER_WEIGHT_TOTAL`, one draw of `rng`.
@@ -352,5 +349,16 @@ mod tests {
             roll_tier(&card_set(CARD_TIER_WEIGHTS), Common, None, TIER_WEIGHT_TOTAL),
             None
         );
+    }
+
+    /// R1339000: a draw lands on the first tier whose running sum of weights passes it, so a draw at a tier's
+    /// edge is the next tier's, and one at the last edge the fallback's.
+    #[test]
+    fn r1339000_a_draw_at_a_tiers_edge_lands_on_the_next_tier() {
+        let set = [(Mythic, 10), (Legendary, 30)];
+        assert_eq!(roll_tier(&set, Common, None, 9), Some(Mythic));
+        assert_eq!(roll_tier(&set, Common, None, 10), Some(Legendary));
+        assert_eq!(roll_tier(&set, Common, None, 39), Some(Legendary));
+        assert_eq!(roll_tier(&set, Common, None, 40), Some(Common));
     }
 }

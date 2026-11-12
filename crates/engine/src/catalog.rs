@@ -636,14 +636,6 @@ pub struct CatalogQueryArgs {
     /// versions alone.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub past: Option<PastPool>,
-}
-
-string_union! {
-    /// R3538002: which past versions a pool draws beside the catalog's own cards.
-    pub enum PastPool {
-        Also = "also",
-        Only = "only",
-    }
     /// R3558005: only cards whose English name holds this, case-insensitively (a Grape is a card
     /// whose name holds "Grape"). An ASCII match, as card names are.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -652,6 +644,14 @@ string_union! {
     /// forbids them; read off the registered script, as `tribute` is (Stinkyscape+ #70 Spaceberry).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cast_on_draw: Option<bool>,
+}
+
+string_union! {
+    /// R3538002: which past versions a pool draws beside the catalog's own cards.
+    pub enum PastPool {
+        Also = "also",
+        Only = "only",
+    }
 }
 
 /// R3134001: which turn hook `CatalogQueryArgs.turn_hook` asks a card for.

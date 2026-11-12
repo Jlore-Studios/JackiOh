@@ -188,6 +188,7 @@ mod tests {
         }
     }
 
+    // Differs from Scenario::offered: a prompt's modes, not the seat's legal actions.
     fn offered(pending: &PendingChoice) -> Vec<String> {
         pending
             .options

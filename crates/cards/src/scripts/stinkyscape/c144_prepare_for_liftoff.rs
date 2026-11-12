@@ -141,6 +141,7 @@ mod tests {
         );
     }
 
+    // Differs from Scenario::offered: whether that card can be played, not the seat's whole legal list.
     fn offered(s: &Scenario) -> bool {
         let trap = s.card(ID).id.clone();
         legal_actions(s.state(), P1)

@@ -137,7 +137,7 @@ mod tests {
             swing(&mut s);
             let made = summoned(&s);
             let Some(card) = made.first() else { continue };
-            let can = jackioh_engine::evolution::can_evolve(s.state(), &card);
+            let can = jackioh_engine::evolution::can_evolve(s.state(), card);
             if !can && card.evolved != Some(true) {
                 assert_ne!(card.enters_evolved, Some(true), "{}", card.def_id);
                 checked += 1;

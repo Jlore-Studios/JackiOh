@@ -487,8 +487,9 @@ func tierRank(tier string) int {
 // Pool is providers.Pool.
 type Pool struct {
 	// MaxParallel is how many runs may go at once on GitHub's runners (the Claude accounts'),
-	// planning runs included (#1455): the organization runs 20 hosted jobs at once, so this is
-	// the share the bots' model jobs may hold while CI keeps the rest. Both bots name the same
+	// planning runs included (#1455): the organization runs 60 hosted jobs at once (#3740), so this
+	// is the share the bots' model jobs may hold while CI, the training lanes and the bots' own
+	// short jobs keep the rest. Both bots name the same
 	// pool and count each other's runs against it, first come first served
 	// (`plan.others_on_github`).
 	MaxParallel int

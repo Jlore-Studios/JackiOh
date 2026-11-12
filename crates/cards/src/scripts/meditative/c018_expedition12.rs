@@ -154,6 +154,7 @@ mod tests {
     }
 
     /// The hand cards `legalActions` offers as the expedition's pick.
+    // Differs from Scenario::offered: one card's play targets as ids, not the seat's whole legal list.
     fn offered(s: &Scenario) -> Vec<String> {
         let expedition_id = s.card(EXPEDITION).id.clone();
         legal_actions(s.state(), P1)

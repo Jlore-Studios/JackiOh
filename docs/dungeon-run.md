@@ -31,9 +31,10 @@ Goetzmann, with Maximoose Goetzmann)
 A single-player run in the style of Slay the Spire, played against the AI.
 
 1. You pick a starting deck of 10 cards and up to 8 points of artifacts.
-2. You climb a seeded map of three acts, about 16 fights: normal enemies, elites, ghosts, two mini-bosses
-   and the final boss, with shops, campfires, events, chests and shrines between them.
-3. Your HP carries from fight to fight, and one lost fight ends the run.
+2. You climb a seeded map of three acts along a path you choose, 12 to 16 fights on any route: normal
+   enemies, elites, ghosts, two mini-bosses and the final boss, with shops, campfires, events, chests and
+   shrines between them.
+3. Every fight starts at full health: each win adds 5 max HP and refills it, and one lost fight ends the run.
 4. After every fight you open one of four packs and keep 3 of its cards, so the deck grows. Shops,
    events, campfires and artifacts thin it.
 5. Beating a mini-boss lets you extract a card, and beating the final boss lets you extract an artifact.
@@ -108,18 +109,23 @@ A few artifacts start unlocked. Final bosses unlock the rest, one extraction at 
 
 ## DR4. The map
 
-- Three acts. Act 1 ends at mini-boss 1, act 2 at mini-boss 2 and act 3 at the final boss, about 16 fights
-  in all.
-- A branching map: you pick your path row by row and see the whole act ahead, elites included.
+- Three acts. Act 1 ends at mini-boss 1, act 2 at mini-boss 2 and act 3 at the final boss.
+- A path map: seeded paths go up each act, splitting and merging, each step to a node the one you stand
+  on leads to, so each step closes off the paths it does not lead to. You see the whole map, elites
+  included.
+- The bosses are choke points: every path of an act meets at its boss, and after each mini-boss the map
+  fans out again.
+- Every route from a start to the final boss holds 12 to 16 fights, the bosses counted, and at least 8
+  tiles: fewer fights is the fast way, more the slow way.
 - The node kinds: Fight, Elite, Ghost, Mini-boss, Final boss, Shop, Campfire, Event, Chest and Shrine.
-- A campfire always stands on the row before each boss.
 
 ## DR5. The fights
 
 - Each fight is a practice game against the AI. Your HP carries in, and one lost fight ends the run.
-- **An enemy's strength is an artifact it carries.** _Looming Presence_ gives the Medium AI's resources
-  (+1 mana, +1 opening card) and _Overwhelming Presence_ the Hard AI's (+1 mana up to 7, 2 draws a turn),
-  both through the handicaps practice already uses (R180). Elites and bosses carry them.
+- **An enemy's strength is its tier**, 1 to 15, set by its row (R3586000): each act climbs four tiers
+  and its boss stands one higher (5, 10, 15). Each tier is a row of the handicaps practice already uses
+  (R180), hero health included; elites read a stronger table of their own; tiers 5, 10 and 15 are the
+  Easy, Medium and Hard AI's resources; curses add to it (R2922001). The map and the fight show the tier.
 - **Enemy decks** are random for now.
 - **Ghosts** are the decks of real players who died around the same point of a run, plausibly what a
   player would bring and never boss cards. They come from friends' runs, and a seed can pre-seed some.
@@ -129,7 +135,8 @@ A few artifacts start unlocked. Final bosses unlock the rest, one extraction at 
 - **The final boss** drops its own preseeded artifact, Unobtainable: nothing else gives it, and it cannot
   be extracted.
 
-Strawman enemy hero health: normal 20, elite 30, mini-boss 40, final boss 50.
+The tiers' numbers are strawmen in `crates/run/src/config.rs` (`RUN_TIERS`, `RUN_ELITE_TIERS`), tuned
+with run-sim's table by tier (R3586001).
 
 ## DR6. After a fight
 
@@ -145,9 +152,9 @@ Strawman enemy hero health: normal 20, elite 30, mini-boss 40, final boss 50.
 ## DR7. The tiles
 
 - **Shop:** cards and artifacts for Coins; upgrades for Tickets; removing a card.
-- **Campfire:** one of: heal, make a card Radiant, remove 2 cards, or buff a card (the Buff keyword; a
+- **Campfire:** one of: +5 max HP, make a card Radiant, remove 2 cards, or buff a card (the Buff keyword; a
   shop buffs one for Tickets too).
-- **Event:** a short story with choices. Placeholders for now.
+- **Event:** a short story with choices that trade max HP, Coins and Tickets. Placeholders for now.
 - **Chest:** Coins, Tickets, sometimes an artifact.
 - **Shrine** (a monastery or a statue): a god offers a blessing for the rest of the run.
 
@@ -213,7 +220,7 @@ Each line is one issue; the first playable run is M1 to M3, in the Sandbox.
 | # | Issue | After |
 | --- | --- | --- |
 | M1 | The run's core, offline: seeds, the map, the states, the packs, extraction, the slots, artifact points, curse tiers, the score and the stats, on placeholder content. **Built:** `crates/run` | — |
-| M2 | Run fights: the carried HP, Looming and Overwhelming Presence, Radiant and buffed run cards in a game's setup | M1 |
+| M2 | Run fights: the carried HP, the enemy's strength, Radiant and buffed run cards in a game's setup | M1 |
 | M3 | The Sandbox screen: the map, the tiles, the packs, the artifact tray, the timer, local leaderboards | M1, M2 |
 | M4 | Artifacts in fights (Combat) and on the map (Economic). **Built:** Combat artifacts and curses in `run_fight_setup` (#2922) | M2, M3 |
 | M5 | The tiles in full: shop, campfire, events, chests, shrines | M3 |
@@ -269,8 +276,8 @@ pub struct RunFightSetup {
     pub human_handicap: Handicap,   // HUMAN_HANDICAP, deck_size = the deck's length, hero_health = the run's HP
     pub human_marks: Vec<DeckMark>, // each Radiant run card, and each card's buffs as upgrades
     pub enemy_deck: Vec<String>,
-    pub enemy_handicap: Handicap,   // Easy's; Medium's with Looming Presence; Hard's with Overwhelming Presence;
-                                    // deck_size = the deck's length, hero_health = the enemy's
+    pub enemy_handicap: Handicap,   // its tier's row: RUN_ELITE_TIERS' for an elite, else RUN_TIERS' (R3586001);
+                                    // deck_size = the deck's length
     pub enemy: RunEnemy,
 }
 pub fn run_fight_setup(state: &RunState, content: &RunContent) -> Option<RunFightSetup>; // None outside RunPhase::Fight
@@ -377,8 +384,8 @@ Each is proved by a test that names it in a comment (`// B7`).
 - **B6** `RUN_STARTER_CARDS` holds 20 Training Grounds Commons and Rares, each in the catalog.
 - **B7** `run_fight_setup` answers only in a fight; the human's handicap holds the run's HP and the deck's
   length; the marks hold each Radiant card and each card's buffs.
-- **B8** The enemy's handicap is Easy's, Medium's with Looming Presence or Hard's with Overwhelming
-  Presence, with its deck's length and its hero health.
+- **B8** The enemy's handicap and hero health are its tier's row (`RUN_ELITE_TIERS` for an elite,
+  `RUN_TIERS` otherwise), with its deck's length.
 - **B9** A fight's seed is the run's seed, row and column, so one run meets one deal.
 - **B10** `run_fight_report` folds the finished game and answers `FightOver`: the winner, the human's final
   health, the damage dealt to the enemy's hero and units (`damage` events), the healing done on the
@@ -407,8 +414,8 @@ Each is proved by a test that names it in a comment (`// B7`).
 - **B24** A timer shows the run's time played on screen (R3502000).
 - **B25** When the game ends, the page asks the worker for `runReport` and sends its `FightOver` to the run.
 - **B26** A lost fight ends the run, and the run-over screen follows.
-- **B27** The map shows the whole current act, each node's kind, each boss's preseeded artifact and where
-  the player stands; only the next row's nodes can be chosen.
+- **B27** The map shows the whole map, each node's kind, each boss's preseeded artifact and where the
+  player stands; only the nodes the one stood on leads to can be chosen.
 - **B28** The reward screen offers the artifact (take or leave) before the four packs; the pack screen
   keeps exactly `keep` cards, or none with a Skip passive.
 - **B29** Extraction: a card after a mini-boss, an artifact after the final boss, the boss's own refused.

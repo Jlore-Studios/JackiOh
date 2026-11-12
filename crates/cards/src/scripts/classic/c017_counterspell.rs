@@ -108,10 +108,6 @@ mod tests {
         }))
     }
 
-    fn count(events: &[GameEvent], kind: GameEventType) -> usize {
-        events.iter().filter(|event| event.event_type() == kind).count()
-    }
-
     /// Every key of `expected` is equal in `actual`, objects compared key by key.
     fn assert_subset(actual: &Value, expected: &Value) {
         match (actual, expected) {
@@ -164,9 +160,9 @@ mod tests {
             assert_eq!(s.hand(P2).len(), hand_before - 1);
             s.expect_health(P2, 20);
             s.expect_events(json!(["cardAnnounced", "trapFired", "countered"]));
-            assert_eq!(count(s.last_events(), GameEventType::CardPlayed), 0);
-            assert_eq!(count(s.last_events(), GameEventType::CardResolved), 0);
-            assert_eq!(count(s.last_events(), GameEventType::Drawn), 0);
+            assert_eq!(s.last_count(GameEventType::CardPlayed), 0);
+            assert_eq!(s.last_count(GameEventType::CardResolved), 0);
+            assert_eq!(s.last_count(GameEventType::Drawn), 0);
         }
 
         #[test]
@@ -203,7 +199,7 @@ mod tests {
 
             // Rapid Replenish's Combo 3 needs three earlier plays; the Vanilla alone was played.
             assert_eq!(s.state().players.p2.turn_log.cards_played, 2);
-            assert_eq!(count(s.last_events(), GameEventType::Drawn), 0);
+            assert_eq!(s.last_count(GameEventType::Drawn), 0);
         }
 
         #[test]
@@ -213,8 +209,8 @@ mod tests {
 
             s.play(STOCKPILE, json!({}));
 
-            assert_eq!(count(s.last_events(), GameEventType::Drawn), 0);
-            assert_eq!(count(s.last_events(), GameEventType::CardResolved), 0);
+            assert_eq!(s.last_count(GameEventType::Drawn), 0);
+            assert_eq!(s.last_count(GameEventType::CardResolved), 0);
             s.expect_health(P2, 20);
         }
 
@@ -232,8 +228,8 @@ mod tests {
 
             assert_eq!(s.state().active, P2);
             s.expect_in_zone(&hinder, "graveyard");
-            assert_eq!(count(s.events(), GameEventType::Countered), 1);
-            assert_eq!(count(s.events(), GameEventType::CardResolved), 0);
+            assert_eq!(s.count(GameEventType::Countered), 1);
+            assert_eq!(s.count(GameEventType::CardResolved), 0);
             // Hinder never resolved, so p1's next refresh is not lowered.
             assert_eq!(s.state().players.p1.mana.next_turn_mod, 0);
         }
@@ -245,7 +241,7 @@ mod tests {
             s.play(BEAR, json!({ "zone": 3 }));
             s.play(VANILLA, json!({ "zone": 1 }));
 
-            assert_eq!(count(s.events(), GameEventType::Countered), 0);
+            assert_eq!(s.count(GameEventType::Countered), 0);
             assert_eq!(s.backrow(P1, 2).and_then(|card| card.face_up), Some(false));
             s.expect_in_zone(TWINSPELL, "field");
             s.expect_in_zone(VANILLA, "field");
@@ -260,9 +256,9 @@ mod tests {
 
             s.play(STOCKPILE, json!({}));
 
-            assert_eq!(count(s.events(), GameEventType::Countered), 0);
+            assert_eq!(s.count(GameEventType::Countered), 0);
             assert_eq!(s.backrow(P1, 2).and_then(|card| card.face_up), Some(false));
-            assert_eq!(count(s.events(), GameEventType::Drawn), 2);
+            assert_eq!(s.count(GameEventType::Drawn), 2);
         }
 
         #[test]
@@ -271,8 +267,8 @@ mod tests {
 
             s.play(STOCKPILE, json!({}));
 
-            assert_eq!(count(s.events(), GameEventType::Countered), 1);
-            assert_eq!(count(s.events(), GameEventType::TrapFired), 1);
+            assert_eq!(s.count(GameEventType::Countered), 1);
+            assert_eq!(s.count(GameEventType::TrapFired), 1);
             let left: Vec<CardInstance> = [s.backrow(P1, 1), s.backrow(P1, 2)].into_iter().flatten().collect();
             assert_eq!(left.len(), 1);
             assert_eq!(left.first().and_then(|card| card.face_up), Some(false));
@@ -363,7 +359,7 @@ mod tests {
 
             assert_eq!(s.hand(P1).len(), 10);
             assert!(s.pile(P1, "graveyard").iter().any(|card| card.def_id == STOCKPILE));
-            assert_eq!(count(s.events(), GameEventType::Burned), 1);
+            assert_eq!(s.count(GameEventType::Burned), 1);
         }
 
         #[test]
@@ -398,7 +394,7 @@ mod tests {
 
             s.play(VANILLA, json!({ "zone": 1 }));
 
-            assert_eq!(count(s.events(), GameEventType::Countered), 0);
+            assert_eq!(s.count(GameEventType::Countered), 0);
             assert_eq!(s.backrow(P1, 2).and_then(|card| card.face_up), Some(false));
         }
     }

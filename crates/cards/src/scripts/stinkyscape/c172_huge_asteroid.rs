@@ -81,93 +81,35 @@ pub fn script_v0_5_9f() -> CardScripts {
 // S 172 Huge Asteroid — SPEC §8.10 row 172, BUILD M12 row S 172.
 #[cfg(test)]
 mod tests {
-    use jackioh_engine::testkit::*;
+    use super::ID;
+    use crate::stinkyscape_family as fam;
 
-    use super::{ID, MINE};
-    use crate::{filler, scenario};
-
-    const P1: PlayerId = PlayerId::P1;
-    const P2: PlayerId = PlayerId::P2;
-    const FILLER: &str = "core-005";
-    const BODY: &str = "core-019"; // Midrange Menace
-    const ROCK: &str = "core-066"; // The Rock: Indestructible
-    const NETHER: &str = "core-088"; // Twisting Nether: destroy all permanents
     const SELF_DAMAGE: i32 = 5;
     const RESOURCES: usize = 5;
 
-    fn node(radiant: bool) -> Scenario {
-        scenario(json!({
-            "p1": {
-                "hand": [NETHER, FILLER],
-                "library": filler(4),
-                "field": [{ "def": ID, "radiant": radiant }],
-            },
-            "p2": { "hand": [FILLER], "library": filler(4), "field": [BODY] },
-        }))
-    }
-
-    fn mined(s: &mut Scenario) {
-        s.activate(ID, json!({ "ability": MINE }));
-    }
-
     #[test]
     fn r1840006_activate_damages_then_tributes_and_pays() {
-        let mut s = node(false);
-        mined(&mut s);
-        s.expect_health(P1, 30 - SELF_DAMAGE);
-        s.expect_in_zone(ID, "graveyard");
-        let in_hand = crate::resources_in_hand(&s, P1);
-        assert_eq!(in_hand.len(), RESOURCES);
-        assert!(in_hand.iter().all(|card| !card.radiant));
+        fam::asteroid_activate_pays(ID, SELF_DAMAGE, RESOURCES);
     }
 
     #[test]
     fn destroyed_in_combat_or_by_twisting_nether_it_pays() {
-        let mut s = node(false);
-        s.play(NETHER, json!({}));
-        assert_eq!(crate::resources_in_hand(&s, P1).len(), RESOURCES, "Twisting Nether");
-
-        let mut s = scenario(json!({
-            "active": "p2",
-            "p1": { "hand": [FILLER], "library": filler(4), "field": [ID] },
-            "p2": { "hand": [FILLER], "library": filler(4), "field": [ROCK] },
-        }));
-        let attacker = s.unit_at(P2, 1);
-        let node = s.unit_at(P1, 1);
-        s.attack(&attacker, &node);
-        s.expect_in_zone(&node, "graveyard");
-        assert_eq!(crate::resources_in_hand(&s, P1).len(), RESOURCES, "in combat");
-        assert!(crate::resources_in_hand(&s, P2).is_empty());
+        fam::asteroid_death_pays(ID, RESOURCES);
     }
 
     #[test]
     fn never_attacks_or_switches() {
-        let mut s = node(false);
-        s.expect_refused(|s| s.attack(ID, "hero"));
-        s.expect_refused(|s| s.switch_position(ID));
-        let target = s.unit_at(P2, 1);
-        s.expect_refused(|s| s.attack(ID, &target));
+        fam::asteroid_never_attacks(ID);
     }
 
     #[test]
     fn resources_and_self_damage_read_through_param() {
-        let mut s = node(false);
-        set_param(s.card_mut(ID), "resources", 3);
-        set_param(s.card_mut(ID), "selfDamage", 1);
-        mined(&mut s);
-        s.expect_health(P1, 29);
-        assert_eq!(crate::resources_in_hand(&s, P1).len(), 3);
+        fam::asteroid_params(ID);
     }
 
     #[test]
     fn radiant_no_damage_radiant_resources() {
-        let mut s = node(true);
-        mined(&mut s);
-        s.expect_health(P1, 30);
-        s.expect_in_zone(ID, "graveyard");
-        let in_hand = crate::resources_in_hand(&s, P1);
-        assert_eq!(in_hand.len(), RESOURCES);
-        assert!(in_hand.iter().all(|card| card.radiant));
+        fam::asteroid_radiant(ID, RESOURCES);
     }
 
     /// R2476000, R1855002: with no rider it previews nothing; with an Anomaly board's rider it names the
@@ -175,20 +117,6 @@ mod tests {
     /// both seats, and its Death's Resources come from that pool alone.
     #[test]
     fn r2476000_it_names_the_resource_pool_its_rider_holds() {
-        for radiant in [false, true] {
-            let mut s = node(radiant);
-            let rock = s.unit_at(P1, 1).id;
-            assert!(crate::preview_seen(&s, P1, &rock).is_empty(), "radiant {radiant}: no rider");
-            let pool = ["stinkyscape-t-narcor", "stinkyscape-t-red-narcor"];
-            s.card_mut(&rock).memory.insert(jackioh_engine::effects::RESOURCE_POOL_KEY.to_string(), json!(pool));
-            let label = if radiant { "random Radiant Stinkyscape Resource" } else { "random Stinkyscape Resource" };
-            let named = vec![(label.to_string(), 2, Some("Narcor or Red Narcor".to_string()))];
-            assert_eq!(crate::preview_seen(&s, P1, &rock), named, "radiant {radiant}");
-            assert_eq!(crate::preview_seen(&s, P2, &rock), named, "radiant {radiant}");
-            mined(&mut s);
-            let gained = crate::resources_in_hand(&s, P1);
-            assert!(!gained.is_empty(), "radiant {radiant}");
-            assert!(gained.iter().all(|card| pool.contains(&card.def_id.as_str())), "radiant {radiant}");
-        }
+        fam::asteroid_rider_pool(ID);
     }
 }

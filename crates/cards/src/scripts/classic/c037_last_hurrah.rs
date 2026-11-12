@@ -100,10 +100,6 @@ mod tests {
         )
     }
 
-    fn count(events: &[GameEvent], type_: &str) -> usize {
-        events.iter().map(js).filter(|event| event["type"] == type_).count()
-    }
-
     /// The instance ids p1 discarded, in order, over the events so far.
     fn discarded(s: &Scenario) -> Vec<String> {
         s.last_events()
@@ -164,8 +160,8 @@ mod tests {
                 let mut want = vec!["core-010"];
                 want.extend(DECK);
                 assert_eq!(hand, want);
-                assert_eq!(count(s.last_events(), "drawn"), DECK.len());
-                assert_eq!(count(s.last_events(), "fatigue"), 0);
+                assert_eq!(s.last_count("drawn"), DECK.len());
+                assert_eq!(s.last_count("fatigue"), 0);
             }
 
             #[test]
@@ -180,7 +176,7 @@ mod tests {
 
                 assert_eq!(s.hand(PlayerId::P1).len(), HAND_CAP as usize);
                 assert_eq!(s.pile(PlayerId::P1, "library").len(), 0);
-                assert_eq!(count(s.last_events(), "burned"), DECK.len() - 1);
+                assert_eq!(s.last_count("burned"), DECK.len() - 1);
                 let grave = def_ids(&s.pile(PlayerId::P1, "graveyard"));
                 let burnt_ones: Vec<String> = [MENACE, POINTMASTER, FELINORS].iter().map(|id| id.to_string()).collect();
                 assert!(contains_all(&grave, &burnt_ones));
@@ -209,10 +205,10 @@ mod tests {
 
                 s.play(HURRAH, json!({}));
 
-                assert_eq!(count(s.last_events(), "drawn"), 1);
+                assert_eq!(s.last_count("drawn"), 1);
                 assert_eq!(s.pile(PlayerId::P1, "library").len(), DECK.len() - 1);
-                assert_eq!(count(s.last_events(), "fatigue"), 0);
-                assert!(count(s.last_events(), "drawLimited") > 0);
+                assert_eq!(s.last_count("fatigue"), 0);
+                assert!(s.last_count("drawLimited") > 0);
             }
 
             #[test]
@@ -221,8 +217,8 @@ mod tests {
 
                 s.play(HURRAH, json!({}));
 
-                assert_eq!(count(s.last_events(), "drawn"), 0);
-                assert_eq!(count(s.last_events(), "fatigue"), 0);
+                assert_eq!(s.last_count("drawn"), 0);
+                assert_eq!(s.last_count("fatigue"), 0);
                 s.expect_health(PlayerId::P1, 30);
             }
 
@@ -265,7 +261,7 @@ mod tests {
                 assert!(ended >= 0);
                 assert!(first_discard > ended);
                 assert!(first_discard < started);
-                assert_eq!(count(s.last_events(), "promptOpened"), 0);
+                assert_eq!(s.last_count("promptOpened"), 0);
             }
 
             #[test]
@@ -276,7 +272,7 @@ mod tests {
                 s.end_turn();
 
                 assert_eq!(discarded(&s).len(), 6);
-                assert_eq!(count(s.last_events(), "discarded"), 6);
+                assert_eq!(s.last_count("discarded"), 6);
             }
 
             #[test]
@@ -292,7 +288,7 @@ mod tests {
                 s.end_turn();
 
                 assert_eq!(discarded(&s).len(), 6);
-                assert_eq!(count(s.last_events(), "fatigue"), 6);
+                assert_eq!(s.last_count("fatigue"), 6);
             }
 
             #[test]

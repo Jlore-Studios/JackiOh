@@ -58,7 +58,7 @@ pub fn script_v0_5_9f() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
-    use crate::{filler, scenario};
+    use crate::stinkyscape_family as fam;
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -70,23 +70,7 @@ mod tests {
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
 
-    fn price_of(s: &Scenario, id: &str) -> i32 {
-        effective_cost(s.state(), s.card(id), CostOptions::default())
-    }
-
-    fn floating(mana: i32, radiant: bool) -> (Scenario, String, String) {
-        let s = scenario(json!({
-            "p1": {
-                "hand": [{ "def": CORE, "radiant": radiant }, FILLER],
-                "library": [{ "def": CORE, "radiant": radiant }, FILLER, FILLER],
-                "mana": mana,
-            },
-            "p2": { "hand": [FILLER], "library": filler(2) },
-        }));
-        let hand = s.hand(P1).into_iter().find(|card| card.def_id == CORE).map(|card| card.id).unwrap_or_default();
-        let deck = s.pile(P1, "library").into_iter().find(|card| card.def_id == CORE).map(|card| card.id).unwrap_or_default();
-        (s, hand, deck)
-    }
+    use crate::{filler, scenario};
 
     fn setup(radiant: bool, hand: Value, field: Value) -> Scenario {
         let mut cards = vec![json!({ "def": CORE, "radiant": radiant })];
@@ -99,12 +83,19 @@ mod tests {
     }
 
     fn pile(s: &Scenario, lane: i32) -> Vec<(String, bool)> {
-        pile_at(s.state(), ZoneSlot { player: P1, row: Row::Units, lane })
-            .cloned()
-            .unwrap_or_default()
-            .into_iter()
-            .map(|card| (card.def_id, card.radiant))
-            .collect()
+        pile_at(
+            s.state(),
+            ZoneSlot {
+                player: P1,
+                row: Row::Units,
+                lane,
+            },
+        )
+        .cloned()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|card| (card.def_id, card.radiant))
+        .collect()
     }
 
     fn layers(radiant: bool) -> Vec<(String, bool)> {
@@ -125,35 +116,31 @@ mod tests {
     }
 
     fn hit(s: &mut Scenario, id: &str) {
-        s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": id }] }));
+        s.play(
+            HIT_JOB,
+            json!({ "targets": [{ "pick": "instance", "instanceId": id }] }),
+        );
     }
 
     #[test]
     fn r1563000_r2657002_a_float_of_2_makes_it_cost_two_less_in_hand_never_in_the_deck() {
-        for radiant in [false, true] {
-            let (mut s, hand, deck) = floating(2, radiant);
-            s.end_turn();
-            assert_eq!(s.card(hand.as_str()).cost_mod, -2, "radiant {radiant}");
-            assert_eq!(s.card(deck.as_str()).cost_mod, 0, "radiant {radiant}");
-            assert_eq!(price_of(&s, &hand), 6, "radiant {radiant}");
-        }
+        fam::drone_float_two_less(CORE, 8);
     }
 
     #[test]
     fn r1563000_the_opponents_float_lowers_nothing() {
-        let (mut s, hand, _) = floating(0, false);
-        s.end_turn();
-        s.state_mut().players.p2.mana.current = 4;
-        s.end_turn();
-        assert_eq!(s.card(hand.as_str()).cost_mod, 0);
-        assert_eq!(price_of(&s, &hand), 8);
+        fam::drone_float_opponent(CORE, 8);
     }
 
     #[test]
     fn r1842000_the_three_layers_share_one_zone_shield_on_top() {
         let mut s = setup(false, json!([]), json!([{ "def": VANILLA, "lane": 1 }]));
         s.play(CORE, json!({}));
-        assert_eq!(pile(&s, 2), layers(false), "one pile in the leftmost open zone, the Shield on top");
+        assert_eq!(
+            pile(&s, 2),
+            layers(false),
+            "one pile in the leftmost open zone, the Shield on top"
+        );
         assert_eq!(summoned(&s), vec![MELTDOWN, PROPAGATION, SHIELD], "bottom first");
         assert!(s.unit(P1, 3).is_none());
         assert_eq!(s.unit(P1, 2).expect("the pile's top").def_id, SHIELD);
@@ -175,10 +162,18 @@ mod tests {
         s.play(CORE, json!({}));
         let top = s.unit(P1, 1).expect("the Shield Layer").id;
         hit(&mut s, &top);
-        assert_eq!(pile(&s, 1), layers(false)[1..].to_vec(), "the Propagation Layer resumes");
+        assert_eq!(
+            pile(&s, 1),
+            layers(false)[1..].to_vec(),
+            "the Propagation Layer resumes"
+        );
         let top = s.unit(P1, 1).expect("the Propagation Layer").id;
         hit(&mut s, &top);
-        assert_eq!(pile(&s, 1), layers(false)[2..].to_vec(), "the Meltdown Layer last");
+        assert_eq!(
+            pile(&s, 1),
+            layers(false)[2..].to_vec(),
+            "the Meltdown Layer last"
+        );
         let top = s.unit(P1, 1).expect("the Meltdown Layer").id;
         hit(&mut s, &top);
         assert!(pile(&s, 1).is_empty());

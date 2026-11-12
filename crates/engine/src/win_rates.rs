@@ -211,10 +211,7 @@ fn scaled(threshold: f64) -> u128 {
 /// order either way.
 fn rate_of(def_id: &str) -> (u128, u128) {
     match win_rate_of_record(def_id) {
-        Some((wins, games)) => (
-            u128::from(wins.unsigned_abs()),
-            u128::from(games.unsigned_abs()),
-        ),
+        Some((wins, games)) => (u128::from(wins.unsigned_abs()), u128::from(games.unsigned_abs())),
         None => (scaled(NO_RECORD_WIN_RATE), WIN_RATE_BOUND_SCALE),
     }
 }

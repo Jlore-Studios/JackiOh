@@ -992,6 +992,31 @@ mod r3048002_a_card_that_keeps_its_targets_asks_none_for_its_echo_repeats {
         let body = find_instance(&played.state, &pawn.id).expect("Reborn brought it back");
         assert!(matches!(body.zone, Zone::Field { .. }), "{:?}", body.zone);
     }
+    #[test]
+    fn r3048002_a_cast_keeps_its_pick_too() {
+        let mut state = playing("r3048002-cast");
+        let wall = put(
+            &mut state,
+            &wall().id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
+        pending_echo(&mut state, PlayerId::P1, 2);
+        let card = hand_card(&mut state, &keeps().id, PlayerId::P1);
+        let mut bench = Bench::new(&state);
+        cast_card(
+            &mut bench.sink(&mut state),
+            &card,
+            CastOptions {
+                random: Some(true),
+                ..Default::default()
+            },
+        );
+        settle(&mut bench.sink(&mut state), Default::default());
+        // A random cast picked once, at random, and every repeat hit that pick.
+        assert_eq!(state.pending, None);
+        assert_eq!(find_instance(&state, &wall.id).map(|unit| unit.damage), Some(3));
+    }
 }
 
 mod r3556001_spells_gain_echo {
@@ -1062,32 +1087,5 @@ mod r3556001_spells_gain_echo {
         );
         assert_eq!(played.error, None);
         assert_eq!(played.state.players.p2.hero.health, HERO_HEALTH - 6);
-    }
-}
-
-    #[test]
-    fn r3048002_a_cast_keeps_its_pick_too() {
-        let mut state = playing("r3048002-cast");
-        let wall = put(
-            &mut state,
-            &wall().id,
-            slot(PlayerId::P2, Row::Units, 1),
-            json!({}),
-        );
-        pending_echo(&mut state, PlayerId::P1, 2);
-        let card = hand_card(&mut state, &keeps().id, PlayerId::P1);
-        let mut bench = Bench::new(&state);
-        cast_card(
-            &mut bench.sink(&mut state),
-            &card,
-            CastOptions {
-                random: Some(true),
-                ..Default::default()
-            },
-        );
-        settle(&mut bench.sink(&mut state), Default::default());
-        // A random cast picked once, at random, and every repeat hit that pick.
-        assert_eq!(state.pending, None);
-        assert_eq!(find_instance(&state, &wall.id).map(|unit| unit.damage), Some(3));
     }
 }

@@ -54,6 +54,7 @@ func repoMetaLabel(t *testing.T, name string) (string, string) {
 var repoMetaAutomated = []string{
 	"patches ship: v0.3.1", // patches-ship.yml
 	"patches ship: v0.2.16b, v0.2.17",
+	"patches ship: v0.5.13z, v0.5.13aa",                      // R3631000: a micro past `z` takes `aa`
 	"patches log: 6d44be2..c9ca419",                          // promote-production.yml's technical log
 	"Promote main to production: 28 commit(s) up to 6d44be2", // scripts/promote-production.sh
 	"Promote main to production: 1 commit(s) up to c9ca419",
@@ -68,6 +69,7 @@ var repoMetaConventional = []string{
 	"Patch: Activate abilities work again",
 	"Patch v0.3.18: Activate abilities work again",
 	"Patch v0.4.0c: one more fix",
+	"Patch v0.5.13aa: one more fix", // R3631000
 	"Patch (part 2 of 8): fragments without a version",
 	"Patch: patch numbers (part 2 of 8): fragments without a version",
 	`Revert "Patch: Activate abilities work again"`,

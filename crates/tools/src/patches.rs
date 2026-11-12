@@ -1257,19 +1257,17 @@ pub mod patches_io {
     }
 
     /// The name a fragment ships under (R646): the name its tier gives (R1366000), unless that name
-    /// already shipped, in which case the next revision letter — the first revision of v0.2.0 is
-    /// "v0.2.0b", then "v0.2.0c". A shipped version never reopens.
+    /// already shipped, in which case the next revision letters — the first revision of v0.2.0 is
+    /// "v0.2.0b", then "v0.2.0c", and after "v0.2.0z" "v0.2.0aa" (R3631000). A shipped version
+    /// never reopens, and the letters never run out.
     pub fn next_ship_name(taken: &IndexSet<String>, version: &str) -> anyhow::Result<String> {
-        if !taken.contains(version) {
-            return Ok(version.to_string());
+        let mut letters = String::new();
+        let mut name = version.to_string();
+        while taken.contains(&name) {
+            letters = super::versions::next_letters(&letters);
+            name = format!("{version}{letters}");
         }
-        for letter in 'b'..='z' {
-            let revision = format!("{version}{letter}");
-            if !taken.contains(&revision) {
-                return Ok(revision);
-            }
-        }
-        bail!("no free revision letter for \"{version}\" (b through z are all shipped)")
+        Ok(name)
     }
 
     /// The ids whose entry is not the same bytes in both catalogs (added, removed, or any field moved,
@@ -1432,9 +1430,10 @@ pub mod patches_io {
 /// - a **patch** (`PATCH_MIN_REPRINTS` or more families reprinted, `PATCH_MIN_CARDS` or more that play
 ///   differently, or a rule every game meets, R2455000, R2499000) is `v0.Z.(X+1)`: after v0.3.17 or
 ///   v0.3.17c it is v0.3.18;
-/// - a **micro** (anything smaller) is the newest version with the next letter: after v0.3.17 it is
-///   v0.3.17b, after v0.3.17b v0.3.17c. After a version ending in `z` it opens the next line instead
-///   (R3471000): after v0.3.17z it is v0.3.18, wearing a patch-form name with a micro tier.
+/// - a **micro** (anything smaller) is the newest version with the next letters: after v0.3.17 it is
+///   v0.3.17b, after v0.3.17b v0.3.17c. After `z` the letters go on as a spreadsheet's columns do
+///   (R3631000, superseding R3471000's rollover): after v0.3.17z it is v0.3.17aa, after v0.3.17az
+///   v0.3.17ba, after v0.3.17zz v0.3.17aaa, so a line never runs out and only a patch moves its X.
 ///
 /// No title, flag or label names a tier (R1365000). This is the one place a version string is read,
 /// when a patch ships; R105 holds everywhere else, and later readers read the `tier` recorded beside it.
@@ -1452,17 +1451,35 @@ pub mod versions {
         (is_digits(a) && is_digits(b)).then_some((a, b, tail))
     }
 
-    /// `SHIPPED = /^v(\d+)\.(\d+)\.(\d+)([a-z]?)$/`: the newest version: `vA.B.C`, optionally
-    /// followed by one letter (b … z). Its A, B, C and the letter (`""` for none).
+    /// `SHIPPED = /^v(\d+)\.(\d+)\.(\d+)([a-z]*)$/`: the newest version: `vA.B.C`, optionally
+    /// followed by its letters (b … z, then aa … zz, aaa …, R3631000). Its A, B, C and the letters
+    /// (`""` for none).
     fn shipped_parts(text: &str) -> Option<(&str, &str, &str, &str)> {
         let (a, b, tail) = split_version(text)?;
-        let cut = if tail.as_bytes().last().is_some_and(u8::is_ascii_lowercase) {
-            tail.len() - 1
-        } else {
-            tail.len()
-        };
-        let (c, letter) = tail.split_at(cut);
-        is_digits(c).then_some((a, b, c, letter))
+        let cut = tail.trim_end_matches(|c: char| c.is_ascii_lowercase()).len();
+        let (c, letters) = tail.split_at(cut);
+        is_digits(c).then_some((a, b, c, letters))
+    }
+
+    /// R3631000: the letters a micro takes after `letters`, counted as a spreadsheet counts its
+    /// columns, the line's own name standing for `a`: `""` is followed by `b`, `y` by `z`, `z` by
+    /// `aa`, `az` by `ba` and `zz` by `aaa`. Never runs out.
+    pub(crate) fn next_letters(letters: &str) -> String {
+        if letters.is_empty() {
+            return "b".to_string();
+        }
+        let mut bytes = letters.as_bytes().to_vec();
+        match bytes.iter().rposition(|&byte| byte != b'z') {
+            Some(at) => {
+                bytes[at] += 1;
+                bytes[at + 1..].fill(b'a');
+            }
+            None => {
+                bytes.fill(b'a');
+                bytes.push(b'a');
+            }
+        }
+        bytes.into_iter().map(char::from).collect()
     }
 
     fn bump(number: &str) -> anyhow::Result<u64> {
@@ -1472,19 +1489,16 @@ pub mod versions {
 
     /// R1366000: the version a patch of `tier` ships as after `newest`, the newest shipped version.
     pub fn name_by_tier(tier: Tier, newest: &str) -> anyhow::Result<String> {
-        let Some((a, b, c, letter)) = shipped_parts(newest) else {
+        let Some((a, b, c, letters)) = shipped_parts(newest) else {
             bail!("the newest version ({newest}) has no vA.B.C form to follow");
         };
         Ok(match tier {
             Tier::Major => format!("v{a}.{}.0", bump(b)?),
             Tier::Patch => format!("v{a}.{b}.{}", bump(c)?),
-            Tier::Micro => match letter.as_bytes().first() {
-                // R3471000: a micro after `z` opens the next line, the patch's rollover, wearing a
-                // patch-form name with a micro tier (R105 reads the tier, never the name).
-                None => format!("v{a}.{b}.{c}b"),
-                Some(b'z') => format!("v{a}.{b}.{}", bump(c)?),
-                Some(byte) => format!("v{a}.{b}.{c}{}", char::from(byte + 1)),
-            },
+            // R3631000: past `z` the letters go on (`aa`, `ab`, …), so a micro never wears a
+            // patch-form name again (R3471000's v0.5.13 keeps its own, a shipped version never
+            // reopening).
+            Tier::Micro => format!("v{a}.{b}.{c}{}", next_letters(letters)),
         })
     }
 }
@@ -2589,13 +2603,28 @@ mod tests {
                 assert_eq!(name_by_tier(Tier::Patch, "v0.2.5z").unwrap(), "v0.2.6");
             }
 
-            // R3471000: a micro after `z` opens the next line, the patch's rollover, and the next
-            // micro after that takes the line's first letter again.
+            // R3631000: past `z` a micro's letters go on as a spreadsheet's columns do, so a line
+            // never runs out, and a patch or a major after any letters moves the number.
             #[test]
-            fn r3471000_a_micro_after_z_opens_the_next_line() {
-                assert_eq!(name_by_tier(Tier::Micro, "v0.5.12z").unwrap(), "v0.5.13");
-                assert_eq!(name_by_tier(Tier::Micro, "v0.2.5z").unwrap(), "v0.2.6");
-                assert_eq!(name_by_tier(Tier::Micro, "v0.5.13").unwrap(), "v0.5.13b");
+            fn r3631000_a_micro_after_z_takes_two_letters() {
+                assert_eq!(name_by_tier(Tier::Micro, "v0.5.13y").unwrap(), "v0.5.13z");
+                assert_eq!(name_by_tier(Tier::Micro, "v0.5.13z").unwrap(), "v0.5.13aa");
+                assert_eq!(name_by_tier(Tier::Micro, "v0.5.13aa").unwrap(), "v0.5.13ab");
+                assert_eq!(name_by_tier(Tier::Micro, "v0.5.13ay").unwrap(), "v0.5.13az");
+                assert_eq!(name_by_tier(Tier::Micro, "v0.5.13az").unwrap(), "v0.5.13ba");
+                assert_eq!(name_by_tier(Tier::Micro, "v0.5.13zz").unwrap(), "v0.5.13aaa");
+                assert_eq!(name_by_tier(Tier::Patch, "v0.5.13az").unwrap(), "v0.5.14");
+                assert_eq!(name_by_tier(Tier::Major, "v0.5.13az").unwrap(), "v0.6.0");
+                assert!(refused(Tier::Micro, "v0.5.zz").contains("no vA.B.C form"));
+                // Every name a line takes is new: 25 letters, then 26 × 26 pairs, none repeated.
+                let mut names = indexmap::IndexSet::new();
+                let mut newest = "v0.5.13".to_string();
+                for _ in 0..25 + 26 * 26 {
+                    newest = name_by_tier(Tier::Micro, &newest).unwrap();
+                    assert!(names.insert(newest.clone()), "{newest} came twice");
+                }
+                assert_eq!(newest, "v0.5.13zz");
+                assert_eq!(name_by_tier(Tier::Micro, &newest).unwrap(), "v0.5.13aaa");
             }
         }
     }
@@ -2832,6 +2861,14 @@ mod tests {
                     "v0.2.0c"
                 );
                 assert_eq!(next_ship_name(&set(&["v0.2.5"]), "v0.2.0").unwrap(), "v0.2.0");
+            }
+
+            #[test]
+            fn r3631000_r646_a_taken_name_with_b_through_z_shipped_takes_aa() {
+                let taken: IndexSet<String> = std::iter::once("v0.2.0".to_string())
+                    .chain(('b'..='z').map(|letter| format!("v0.2.0{letter}")))
+                    .collect();
+                assert_eq!(next_ship_name(&taken, "v0.2.0").unwrap(), "v0.2.0aa");
             }
 
             #[test]
@@ -3635,11 +3672,10 @@ mod tests {
                 assert_eq!(versions, strings(&["v0.1.1", "v0.1.1b", "v0.1.1c"]));
             }
 
-            // R3471000: the line has one letter left for two honest micros, as the v0.5.12 line
-            // did. The first takes `z`; the second opens the next line, wearing a patch-form name
-            // with a micro tier.
+            // R3631000: the line has one letter left for two honest micros, as the v0.5.12 line
+            // did (R3471000). The first takes `z`; the second takes `aa`, keeping the line.
             #[test]
-            fn r3471000_ships_two_micros_past_z_opening_the_next_line() {
+            fn r3631000_ships_two_micros_past_z_as_z_then_aa() {
                 let temp = TempDir::new("jackioh-ship-micro-rollover-");
                 let root = temp.path();
                 let dir = root.join("crates/cards/patches");
@@ -3684,11 +3720,11 @@ mod tests {
                 write_fragment(root, &visual("Patch: looks two")).unwrap();
                 commit_at(root, "looks two", "2026-10-02T12:00:00+00:00");
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
-                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1z", "v0.1.2"]));
+                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1z", "v0.1.1aa"]));
                 let patches = read_patches(&dir.join("patches.json")).unwrap();
                 let versions: Vec<&str> = patches.iter().map(|patch| patch.version.as_str()).collect();
-                assert_eq!(versions, ["v0.1.1y", "v0.1.1z", "v0.1.2"]);
-                for version in ["v0.1.1z", "v0.1.2"] {
+                assert_eq!(versions, ["v0.1.1y", "v0.1.1z", "v0.1.1aa"]);
+                for version in ["v0.1.1z", "v0.1.1aa"] {
                     let patch = patches
                         .iter()
                         .find(|patch| patch.version == version)
@@ -3698,8 +3734,8 @@ mod tests {
                         (Some(Tier::Micro), Some(Vec::new()))
                     );
                 }
-                assert_eq!(read_snapshot("v0.1.2", &dir).unwrap(), base);
-                assert!(read(&root.join("crates/server/.env.example")).contains("CATALOG_VERSION=v0.1.2"));
+                assert_eq!(read_snapshot("v0.1.1aa", &dir).unwrap(), base);
+                assert!(read(&root.join("crates/server/.env.example")).contains("CATALOG_VERSION=v0.1.1aa"));
             }
 
             #[test]
@@ -5467,6 +5503,41 @@ mod tests {
                         .and_then(|versions| versions.first())
                         .map(String::as_str),
                     Some("v0.2.3e")
+                );
+            }
+        }
+
+        // R3471000, superseded by R3631000: the micro it named past `z`, v0.5.13, and the seven after
+        // it took R3631000's letters in the v0.5.13 retcon (R3631001): v0.5.12z is followed by
+        // v0.5.12aa … v0.5.12ah, all micros. The next patch takes v0.5.13 again (scheme 4).
+        mod r3471000_r3631001_the_shipped_history {
+            use super::*;
+            use crate::classify::Tier;
+
+            #[test]
+            fn r3471000_r3631001_the_micros_after_v0_5_12z_take_two_letters() {
+                let patches = patches();
+                let at = patches
+                    .iter()
+                    .position(|patch| patch.version == "v0.5.12z")
+                    .expect("v0.5.12z shipped");
+                let next: Vec<(&str, Option<Tier>)> = patches[at + 1..at + 9]
+                    .iter()
+                    .map(|patch| (patch.version.as_str(), patch.tier))
+                    .collect();
+                let micro = Some(Tier::Micro);
+                assert_eq!(
+                    next,
+                    [
+                        ("v0.5.12aa", micro),
+                        ("v0.5.12ab", micro),
+                        ("v0.5.12ac", micro),
+                        ("v0.5.12ad", micro),
+                        ("v0.5.12ae", micro),
+                        ("v0.5.12af", micro),
+                        ("v0.5.12ag", micro),
+                        ("v0.5.12ah", micro),
+                    ]
                 );
             }
         }

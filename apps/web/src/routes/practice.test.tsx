@@ -2640,6 +2640,8 @@ describe("R768000 a kept game's replay from the result dialog", () => {
     await waitFor(() => expect(player).toHaveAttribute("data-step", "0"));
     expect(screen.queryByTestId(T.result)).toBeNull();
     expect(host.requests.filter((body) => body.type === "replay")[0]).toMatchObject({ type: "replay", game: 3, from: 0 });
+    // #3698: the replay's opponent seat reads as the live board's did.
+    expect(screen.getByTestId("hero-opponent").querySelector(".hero-seat")).toHaveTextContent("AI · Easy");
 
     fireEvent.click(screen.getByTestId(replayTestid.back));
     expect(await screen.findByTestId(T.result)).toBeInTheDocument();

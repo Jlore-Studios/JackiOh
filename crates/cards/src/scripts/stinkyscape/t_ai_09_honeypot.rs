@@ -84,6 +84,7 @@ mod tests {
             .collect()
     }
 
+    // Differs from Scenario::count: whether any trap fired (a bool), not how many.
     fn fired(s: &Scenario) -> bool {
         s.events().iter().any(|event| matches!(event, GameEvent::TrapFired { .. }))
     }

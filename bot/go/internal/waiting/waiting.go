@@ -134,6 +134,10 @@ type Explained struct {
 	// Each subscription now, by id: a *Now for each, in the pool's order.
 	Now    *pyjson.Object
 	Halted string // default: ""
+	// After is the lanes once the planner has handed out every queued item it can start (the
+	// lanes now while halted): what is left free on them is the excess compute (`plan.Spare`,
+	// #3659). nil: not worked out.
+	After *plan.Lanes // default: None
 }
 
 // The models of `tier`, short: "Opus", or "Muse, agy (Gemini), Sonnet".
@@ -441,7 +445,7 @@ func Explain(ctx *hctx.Context, s *pyjson.Object, live *pyjson.Object, issues []
 		rows = append(rows, row)
 	}
 	rows = append(rows, HeldRows(heldBack, issues)...)
-	return &Explained{Rows: rows, Now: now, Halted: halted}
+	return &Explained{Rows: rows, Now: now, Halted: halted, After: after}
 }
 
 // lessByPlanner is the key `(c.number not in starts, not c.forced, c.kind != "review",

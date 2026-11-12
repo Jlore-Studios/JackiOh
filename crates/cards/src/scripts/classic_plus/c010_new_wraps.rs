@@ -70,10 +70,6 @@ mod tests {
         s.stats(id).keywords.iter().filter(|k| k.kind() == KeywordKind::Reborn).count()
     }
 
-    fn count(s: &Scenario, type_: &str) -> usize {
-        s.events().iter().filter(|event| event.event_type().as_str() == type_).count()
-    }
-
     #[test]
     fn is_a_0_spell_targeting_a_unit_on_either_side_on_both_faces() {
         crate::register_all();
@@ -225,7 +221,7 @@ mod tests {
             s.expect_stats(&unit, json!({ "attack": 2 + 3, "maxHealth": 2 + 3 }));
             assert_eq!(reborn_count(&s, &unit.id), 1);
             s.expect_events(json!(["keywordGranted", "radiantSet"]));
-            assert_eq!(count(&s, "summoned"), 0);
+            assert_eq!(s.count("summoned"), 0);
         }
 
         #[test]

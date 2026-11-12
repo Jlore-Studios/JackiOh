@@ -62,8 +62,7 @@ pub fn script_v0_5_11o() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
-    use super::script_v0_5_11o;
-    use crate::{filler, scenario, under_kept_as};
+    use crate::stinkyscape_family as fam;
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -73,6 +72,9 @@ mod tests {
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
 
+    use super::script_v0_5_11o;
+    use crate::{filler, scenario, under_kept_as};
+
     fn setup(radiant: bool, field: Value) -> Scenario {
         scenario(json!({
             "seed": "drone-core-vii",
@@ -81,23 +83,8 @@ mod tests {
         }))
     }
 
-    fn price_of(s: &Scenario, id: &str) -> i32 {
-        effective_cost(s.state(), s.card(id), CostOptions::default())
-    }
-
-    /// p1 holds one Drone Core VII in hand and one in the deck, `mana` unspent as its turn ends.
-    fn floating(mana: i32, radiant: bool) -> (Scenario, String, String) {
-        let s = scenario(json!({
-            "p1": {
-                "hand": [{ "def": CORE, "radiant": radiant }, FILLER],
-                "library": [{ "def": CORE, "radiant": radiant }, FILLER, FILLER],
-                "mana": mana,
-            },
-            "p2": { "hand": [FILLER], "library": filler(2) },
-        }));
-        let hand = s.hand(P1).into_iter().find(|card| card.def_id == CORE).map(|card| card.id).unwrap_or_default();
-        let deck = s.pile(P1, "library").into_iter().find(|card| card.def_id == CORE).map(|card| card.id).unwrap_or_default();
-        (s, hand, deck)
+    fn of(def_id: &str, radiant: bool) -> Option<(String, bool)> {
+        fam::drone_cell(def_id, radiant)
     }
 
     /// #3142: it costs (5), past `MAX_MANA` (4), on both faces, where it cost (4): with no Float it is not
@@ -105,70 +92,51 @@ mod tests {
     #[test]
     fn it_costs_5_and_is_played_only_after_a_float() {
         for radiant in [false, true] {
-            let (mut s, hand, _) = floating(4, radiant);
-            assert_eq!(price_of(&s, &hand), 5, "radiant {radiant}");
+            let (mut s, hand, _) = fam::drone_floating(CORE, 4, radiant);
+            assert_eq!(fam::drone_price_of(&s, &hand), 5, "radiant {radiant}");
             crate::expect_costs(&mut s, CORE, 5, json!({}));
 
             // A Float of 2: its price is (3) from then on, so the next turn's mana plays it.
-            let (mut s, hand, _) = floating(2, radiant);
+            let (mut s, hand, _) = fam::drone_floating(CORE, 2, radiant);
             s.end_turn();
-            assert_eq!(price_of(&s, &hand), 3, "radiant {radiant}");
+            assert_eq!(fam::drone_price_of(&s, &hand), 3, "radiant {radiant}");
             s.end_turn();
             assert_eq!(s.state().active, P1);
             s.play(CORE, json!({}));
             s.expect_in_zone(&hand, "graveyard");
-            assert_eq!(s.unit(P1, 1).expect("the Corvette").def_id, CORVETTE, "radiant {radiant}");
+            assert_eq!(
+                s.unit(P1, 1).expect("the Corvette").def_id,
+                CORVETTE,
+                "radiant {radiant}"
+            );
         }
     }
 
     /// #3142, R1563000, R2657002: a Float lowers it by that much in its owner's hand, never in the deck.
     #[test]
     fn r1563000_r2657002_a_float_of_2_makes_it_cost_two_less_in_hand_never_in_the_deck() {
-        for radiant in [false, true] {
-            let (mut s, hand, deck) = floating(2, radiant);
-            s.end_turn();
-            assert_eq!(s.card(hand.as_str()).cost_mod, -2, "radiant {radiant}");
-            assert_eq!(s.card(deck.as_str()).cost_mod, 0, "radiant {radiant}");
-            assert_eq!(price_of(&s, &hand), 3, "radiant {radiant}");
-        }
+        fam::drone_float_two_less(CORE, 5);
     }
 
     #[test]
     fn r1563000_the_opponents_float_lowers_nothing() {
-        let (mut s, hand, _) = floating(0, false);
-        s.end_turn();
-        assert_eq!(s.card(hand.as_str()).cost_mod, 0);
-        s.state_mut().players.p2.mana.current = 4;
-        s.end_turn();
-        assert_eq!(s.card(hand.as_str()).cost_mod, 0);
-        assert_eq!(price_of(&s, &hand), 5);
+        fam::drone_float_opponent(CORE, 5);
     }
 
     /// R767000: through v0.5.11r it cost (4) and a Float lowered nothing.
     #[test]
     fn r767000_the_kept_script_has_no_float_trigger() {
-        under_kept_as(CORE, script_v0_5_11o(), |def| def.cost = json_as(json!(4)), || {
-            let (mut s, hand, _) = floating(2, false);
-            s.end_turn();
-            assert_eq!(s.card(hand.as_str()).cost_mod, 0);
-            assert_eq!(price_of(&s, &hand), 4);
-        });
-    }
-
-    fn row(s: &Scenario) -> Vec<Option<(String, bool)>> {
-        (1..=5)
-            .map(|lane| s.unit(P1, lane).map(|unit| (unit.def_id, unit.radiant)))
-            .collect()
-    }
-
-    fn backrow(s: &Scenario) -> Vec<Option<(String, bool)>> {
-        (1..=5)
-            .map(|lane| s.backrow(P1, lane).map(|card| (card.def_id, card.radiant)))
-            .collect()
-    }
-
-    fn of(def_id: &str, radiant: bool) -> Option<(String, bool)> {
-        Some((def_id.to_string(), radiant))
+        under_kept_as(
+            CORE,
+            script_v0_5_11o(),
+            |def| def.cost = json_as(json!(4)),
+            || {
+                let (mut s, hand, _) = fam::drone_floating(CORE, 2, false);
+                s.end_turn();
+                assert_eq!(s.card(hand.as_str()).cost_mod, 0);
+                assert_eq!(fam::drone_price_of(&s, &hand), 4);
+            },
+        );
     }
 
     #[test]
@@ -176,7 +144,7 @@ mod tests {
         let mut s = setup(false, json!([{ "def": VANILLA, "lane": 1 }]));
         s.play(CORE, json!({}));
         assert_eq!(
-            row(&s),
+            fam::drone_unit_row(&s),
             vec![
                 of(VANILLA, false),
                 of(CORVETTE, false),
@@ -191,9 +159,9 @@ mod tests {
     fn r64_r2248000_with_one_open_zone_the_corvette_takes_it_and_the_interceptors_fly_into_the_backrow() {
         let mut s = setup(false, json!(vec![VANILLA; 4]));
         s.play(CORE, json!({}));
-        assert_eq!(row(&s)[4], of(CORVETTE, false));
+        assert_eq!(fam::drone_unit_row(&s)[4], of(CORVETTE, false));
         assert_eq!(
-            backrow(&s),
+            fam::drone_backrow_row(&s),
             vec![of(INTERCEPTOR, false), of(INTERCEPTOR, false), None, None, None]
         );
     }
@@ -204,7 +172,7 @@ mod tests {
         set_param(s.card_mut(CORE), "interceptors", 3);
         s.play(CORE, json!({}));
         assert_eq!(
-            row(&s),
+            fam::drone_unit_row(&s),
             vec![
                 of(CORVETTE, false),
                 of(INTERCEPTOR, false),
@@ -220,7 +188,7 @@ mod tests {
         let mut s = setup(true, json!([]));
         s.play(CORE, json!({}));
         assert_eq!(
-            row(&s),
+            fam::drone_unit_row(&s),
             vec![
                 of(CORVETTE, true),
                 of(INTERCEPTOR, true),

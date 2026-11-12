@@ -419,6 +419,7 @@ pub fn chain_units(args: ChainUnitsArgs) -> Effect {
             tags: None,
             not_tags: None,
             exclude_self: None,
+            win_rate_below: None,
         };
         let ids: Vec<String> = cards_in_scope(ctx, &scope)
             .iter()

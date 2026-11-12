@@ -35,7 +35,7 @@ const SETUP: RunFightSetup = {
   humanMarks: MARKS,
   enemyDeck: ENEMY_DECK,
   enemyHandicap: { ...AI_DIFFICULTY.easy, deckSize: ENEMY_DECK.length, heroHealth: 20 },
-  enemy: { id: "cave-troll", name: "Cave Troll", heroHealth: 20, deck: ENEMY_DECK, artifacts: [] },
+  enemy: { id: "cave-troll", name: "Cave Troll", tier: 1, deck: ENEMY_DECK, artifacts: [] },
 };
 
 /** A fight whose config says otherwise everywhere the setup decides: the seed, the tier, the deck, a last board. */

@@ -604,3 +604,259 @@ pub fn named_face(words: Words, view: &PlayerView, named: &NamedCard) -> Option<
     };
     Some(face_model(words, &source, &Lookup { defs: &defs }))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::{Value, json};
+
+    fn from_json<T: serde::de::DeserializeOwned>(value: Value) -> T {
+        serde_json::from_value(value).expect("a view's JSON")
+    }
+
+    /// A card as every view gives one, each field a conversion copies set to something other than its default.
+    fn shared_fields() -> Value {
+        json!({
+            "instanceId": "c1",
+            "defId": "core-008",
+            "radiant": true,
+            "chinese": true,
+            "created": true,
+            "createdBy": "core-020",
+            "cost": 4,
+            "attack": 3,
+            "health": 5,
+            "keywords": [{ "kind": "Taunt" }],
+            "power": "Fireblast",
+            "preview": [{ "label": "damage", "value": 7 }],
+            "type": "Unit",
+            "tags": ["Human"],
+            "brittle": 2,
+            "element": "水",
+            "params": { "x": 4 },
+            "tuning": { "attack": 1 },
+            "enchantments": [{ "kind": "castOnDraw" }],
+            "marks": [{ "mark": "m", "color": "purple" }],
+            "quest": { "open": [], "auras": [] },
+            "copies": { "defId": "core-020", "radiant": false },
+        })
+    }
+
+    const SHARED_KEYS: [&str; 22] = [
+        "instanceId",
+        "defId",
+        "radiant",
+        "chinese",
+        "created",
+        "createdBy",
+        "cost",
+        "attack",
+        "health",
+        "keywords",
+        "power",
+        "preview",
+        "type",
+        "tags",
+        "brittle",
+        "element",
+        "params",
+        "tuning",
+        "enchantments",
+        "marks",
+        "quest",
+        "copies",
+    ];
+
+    /// `shared_fields()` with `more` laid over it.
+    fn view_json(more: Value) -> Value {
+        let mut out = shared_fields();
+        for (key, value) in more.as_object().expect("an object") {
+            out[key] = value.clone();
+        }
+        out
+    }
+
+    /// R243: the face reads `keys` as the view gave them: each the view sets reaches its `LiveCard` unchanged.
+    fn carries(view: &impl Serialize, live: &LiveCard, keys: &[&str]) {
+        let view = serde_json::to_value(view).expect("a view");
+        let live = serde_json::to_value(live).expect("a live card");
+        for key in keys {
+            assert!(view.get(*key).is_some(), "PREMISE: the view sets {key}");
+            assert_eq!(live.get(*key), view.get(*key), "{key}");
+        }
+    }
+
+    /// R243: a card the view lists as a `CardView` (a hand's, a pile's) stands as the view gave it.
+    #[test]
+    fn r243_a_card_view_reaches_its_face_as_the_view_gave_it() {
+        let card: CardView = from_json(view_json(json!({
+            "embiggenCost": 6,
+            "fixedX": 2,
+            "label": "FO",
+            "playReason": "no mana",
+        })));
+        let keys = [
+            &SHARED_KEYS[..],
+            &["embiggenCost", "fixedX", "label", "playReason"][..],
+        ]
+        .concat();
+        carries(&card, &LiveCard::from(&card), &keys);
+    }
+
+    /// R243: a unit on the field stands as its `UnitView` gives it, its statuses with it.
+    #[test]
+    fn r243_a_unit_view_reaches_its_face_as_the_view_gave_it() {
+        let unit: UnitView = from_json(view_json(json!({
+            "owner": "p1",
+            "controller": "p1",
+            "maxHealth": 6,
+            "armor": 0,
+            "position": "ATK",
+            "counters": {},
+            "buried": 0,
+            "canAct": true,
+            "vanilla": true,
+            "animated": { "home": 1 },
+            "berserk": true,
+            "frozen": true,
+            "slumber": { "turns": 2 },
+            "frozenForever": true,
+            "starship": { "pieces": [] },
+            "grants": ["g"],
+            "attackReason": "why",
+            "tallies": [{ "defId": "trainingground-031", "value": 1, "goal": 3 }],
+        })));
+        let unit_keys = [
+            "maxHealth",
+            "vanilla",
+            "animated",
+            "berserk",
+            "frozen",
+            "slumber",
+            "frozenForever",
+            "starship",
+            "grants",
+            "attackReason",
+            "tallies",
+        ];
+        carries(
+            &unit,
+            &LiveCard::from(&unit),
+            &[&SHARED_KEYS[..], &unit_keys[..]].concat(),
+        );
+    }
+
+    /// R243: a face-up backrow card stands as its `BackrowView` gives it; a face-down one has no face.
+    #[test]
+    fn r243_a_face_up_backrow_card_reaches_its_face_and_a_face_down_one_has_none() {
+        let backrow: BackrowView = from_json(view_json(json!({
+            "faceDown": false,
+            "counters": {},
+            "owner": "p1",
+            "controller": "p1",
+            "vanilla": true,
+        })));
+        let live = LiveCard::from_backrow(&backrow).expect("a face-up card has a face");
+        carries(&backrow, &live, &[&SHARED_KEYS[..], &["vanilla"][..]].concat());
+        let face_down: BackrowView = from_json(json!({ "faceDown": true }));
+        assert_eq!(LiveCard::from_backrow(&face_down), None);
+    }
+
+    /// R243: a unit on the field (one the view gives a max health and keywords) wears its field statuses, the pieces
+    /// of its Starship and its grants, and none of a hand card's facts: no hand stats or keywords, no Temporary
+    /// count, no reason it cannot be played. Empty lists are no lists.
+    #[test]
+    fn r243_a_unit_wears_its_field_statuses_and_no_hand_cards_facts() {
+        let unit = LiveCard {
+            attack: Some(3),
+            health: Some(5),
+            max_health: Some(6),
+            keywords: Some(vec![Keyword::Taunt]),
+            berserk: Some(true),
+            frozen: Some(true),
+            frozen_forever: Some(true),
+            starship: Some(from_json(json!({
+                "pieces": [{ "defId": "a", "radiant": true }, { "defId": "b" }],
+            }))),
+            grants: Some(vec!["g".to_string()]),
+            play_reason: Some("no mana".to_string()),
+            preview: Some(Vec::new()),
+            enchantments: Some(Vec::new()),
+            marks: Some(Vec::new()),
+            ..LiveCard::default()
+        };
+        let facts = LiveFacts {
+            in_hand: Some(true),
+            tallies: Some(Vec::new()),
+            ..LiveFacts::default()
+        };
+        let source = live_source(&unit, None, None, &facts);
+        assert_eq!(source.chinese, Some(false));
+        let in_play = source.in_play.expect("in play");
+        assert!(in_play.hand_stats.is_none() && in_play.hand_keywords.is_none());
+        assert!(in_play.in_hand.is_none() && in_play.play_reason.is_none());
+        assert_eq!(
+            (in_play.berserk, in_play.frozen, in_play.frozen_forever),
+            (Some(true), Some(true), Some(true))
+        );
+        let pieces = in_play
+            .starship
+            .and_then(|ship| ship.list)
+            .expect("the Starship's pieces");
+        assert_eq!(
+            pieces.iter().map(|piece| piece.radiant).collect::<Vec<_>>(),
+            vec![true, false]
+        );
+        assert_eq!(in_play.grants, Some(vec!["g".to_string()]));
+        assert!(in_play.preview.is_none() && in_play.enchantments.is_none());
+        assert!(in_play.marks.is_none() && in_play.tallies.is_none());
+    }
+
+    /// R243, #2437, R979000: a card off the field (keywords but no max health) wears a hand card's facts, its stats
+    /// and keywords, its Temporary count where it lies in a hand and the reason it cannot be played, and none of a
+    /// unit's statuses.
+    #[test]
+    fn r243_a_card_off_the_field_wears_its_hand_facts_and_no_field_statuses() {
+        let card = LiveCard {
+            attack: Some(3),
+            health: Some(5),
+            keywords: Some(vec![Keyword::Taunt]),
+            vanilla: Some(true),
+            chinese: Some(true),
+            preview: Some(from_json(json!([{ "label": "damage", "value": 7 }]))),
+            enchantments: Some(vec![Enchantment::CastOnDraw]),
+            marks: Some(from_json(json!([{ "mark": "m", "color": "purple" }]))),
+            berserk: Some(true),
+            frozen: Some(true),
+            frozen_forever: Some(true),
+            grants: Some(vec!["g".to_string()]),
+            play_reason: Some("no mana".to_string()),
+            ..LiveCard::default()
+        };
+        let tally = NamedTally {
+            name: "Level Up!".to_string(),
+            value: 1,
+            goal: 3,
+        };
+        let facts = LiveFacts {
+            in_hand: Some(true),
+            tallies: Some(vec![tally]),
+            ..LiveFacts::default()
+        };
+        let source = live_source(&card, None, None, &facts);
+        assert_eq!(source.chinese, Some(true));
+        let in_play = source.in_play.expect("in play");
+        let stats = in_play.hand_stats.expect("hand stats");
+        assert_eq!((stats.attack, stats.health), (3, 5));
+        assert_eq!(in_play.hand_keywords, Some(vec![Keyword::Taunt]));
+        assert_eq!((in_play.vanilla, in_play.in_hand), (Some(true), Some(true)));
+        assert_eq!(in_play.play_reason.as_deref(), Some("no mana"));
+        assert!(in_play.preview.is_some() && in_play.enchantments.is_some());
+        assert!(in_play.marks.is_some() && in_play.tallies.is_some());
+        assert!(in_play.berserk.is_none() && in_play.frozen.is_none());
+        assert!(in_play.frozen_forever.is_none() && in_play.grants.is_none());
+        // Where it lies outside a hand, it carries no Temporary count.
+        let elsewhere = live_source(&card, None, None, &LiveFacts::default());
+        assert!(elsewhere.in_play.expect("in play").in_hand.is_none());
+    }
+}

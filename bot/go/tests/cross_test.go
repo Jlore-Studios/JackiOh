@@ -600,7 +600,7 @@ func TestCross_DeliverKeepsASealedLoginAndRefusesAnythingElse(t *testing.T) {
 	}
 	writeText(t, filepath.Join(out, "vault.enc"), sealed)
 	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
-	text, _ := h.gh.GetFile("vault/muse.enc", "bot-state")
+	text, _ := h.gh.GetFile("vault/muse.enc", "_bot-state")
 	assertEqual(t, strings.TrimSpace(text), sealed)
 	// The next plan hands it to the model job, which alone can open it.
 	planned = plan.Make(h.ctx, false, nil, "auto", nil)

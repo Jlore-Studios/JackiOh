@@ -154,9 +154,9 @@ export function ShopScreen({ run, content, phase, send }: TileProps & { phase: S
   );
 }
 
-/** The campfire: heal, make a card Radiant, buff a card, or remove cards. */
+/** The campfire: more max HP, make a card Radiant, buff a card, or remove cards. */
 export function CampfireScreen({ run, content, send }: TileProps): ReactElement {
-  const { campfireRemove } = useMemo(() => runConstants(), []);
+  const { campfireMaxHp, campfireRemove } = useMemo(() => runConstants(), []);
   const [removing, setRemoving] = useState<readonly number[]>([]);
   // A picked card is put back; another is taken only while fewer than `campfireRemove` are.
   const toggleRemove = (index: number): void => {
@@ -172,12 +172,12 @@ export function CampfireScreen({ run, content, send }: TileProps): ReactElement 
         <button
           type="button"
           className="button-primary"
-          data-testid={dungeonMapTestid.campfireHeal}
+          data-testid={dungeonMapTestid.campfireMaxHp}
           onClick={() => {
-            send({ type: "heal" });
+            send({ type: "gainMaxHp" });
           }}
         >
-          {t("Heal")}
+          {t("Gain {n} max HP", { n: String(campfireMaxHp) })}
         </button>
       </div>
       <TileSection title={t("Make a card Radiant")}>

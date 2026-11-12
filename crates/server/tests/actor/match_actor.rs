@@ -13,7 +13,9 @@ use jackioh_engine::{
     Phase, PlayerId, Winner, deal_emote_hand, emote_gate, opponent_of,
 };
 use jackioh_server::actor::match_actor::MatchActor;
-use jackioh_server::actor::ws_server::{Socket, WS_CLOSE, WS_PATH, WS_SUBPROTOCOL, bearer_protocol};
+use jackioh_server::actor::ws_server::{
+    CLOSE_GOING_AWAY, CLOSE_NORMAL, Socket, WS_CLOSE, WS_PATH, WS_SUBPROTOCOL, bearer_protocol,
+};
 use jackioh_server::app::{App, router};
 use jackioh_server::config::{
     DISCONNECT_GRACE_SECONDS, MALFORMED_FRAMES_PER_WINDOW, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MINUTES,
@@ -4875,7 +4877,8 @@ mod the_result_s_views_carry_what_it_paid_each_seat {
 
 // R672 — a finished actor leaves the registry once its rematch window has passed
 
-/// `reap_finished` drops actor `REMATCH_OFFER_TTL_MS` after game end when both sockets close.
+/// `reap_finished` drops actor `REMATCH_OFFER_TTL_MS` after game end when both sockets close (with
+/// them still open, `r3694000_a_finished_match_lets_its_sockets_go_with_its_window`).
 mod a_finished_actor_leaves_the_registry_after_its_rematch_window {
     use super::*;
 
@@ -4894,12 +4897,6 @@ mod a_finished_actor_leaves_the_registry_after_its_rematch_window {
         // The window is still open at its last millisecond.
         assert!(h.app.matches.reap_finished(window_end).await.is_empty());
         assert!(h.app.matches.has(MATCH_ID));
-
-        // Past it, an open socket still keeps the actor: closing it would send the client back to
-        // rebuild the actor it was just parted from.
-        assert!(h.app.matches.reap_finished(window_end + 1).await.is_empty());
-        assert!(h.app.matches.has(MATCH_ID));
-        assert!(h.p1.is_open() && h.p2.is_open());
 
         // With both sockets gone, the window is the only thing left to wait for.
         h.p1.drop_transport();
@@ -4945,6 +4942,62 @@ mod a_finished_actor_leaves_the_registry_after_its_rematch_window {
                 .is_empty()
         );
         assert!(h.app.matches.has(MATCH_ID));
+    }
+}
+
+// R3694000 — a finished match's sockets close once its rematch window ends
+
+/// Past its rematch window a finished match's sockets still open are closed with
+/// `MATCH_OVER_CLOSE_CODE`, and its actor leaves memory with them.
+mod r3694000_a_finished_match_lets_its_sockets_go_with_its_window {
+    use super::*;
+    use jackioh_server::config::MATCH_OVER_CLOSE_CODE;
+
+    #[tokio::test(start_paused = true)]
+    async fn r3694000_a_finished_match_closes_its_sockets_and_leaves_memory_once_its_window_ends() {
+        let h = harness(Options::default()).await;
+        send(&h, &h.p1, "resign", json!({ "type": "concede" })).await;
+        let window_end =
+            h.actor.finished_at().expect("the concede finished the match") + REMATCH_OFFER_TTL_MS;
+
+        // Inside the window both sockets and the actor stay.
+        assert!(h.app.matches.reap_finished(window_end).await.is_empty());
+        assert!(h.app.matches.has(MATCH_ID));
+        assert!(h.p1.is_open() && h.p2.is_open());
+
+        // The test's own handle is the last one but the registry's: let it go, so the reaper drops
+        // the actor's last holder.
+        let weak = h.actor.downgrade();
+        drop(h.actor);
+        settle().await;
+
+        // Past it both sockets, still open, are closed for good and the actor goes with them.
+        assert_eq!(
+            h.app.matches.reap_finished(window_end + 1).await,
+            vec![MATCH_ID.to_string()]
+        );
+        settle().await;
+        for client in [&h.p1, &h.p2] {
+            assert_eq!(client.close_code(), Some(MATCH_OVER_CLOSE_CODE));
+            assert_eq!(client.0.close_reason().as_deref(), Some("the match is over"));
+        }
+        assert!(h.app.matches.live().is_empty());
+        assert!(!weak.is_alive(), "the actor's state is still held");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r3694000_a_live_match_keeps_its_sockets_whatever_the_clock() {
+        let h = harness(Options::default()).await;
+        assert_eq!(h.actor.finished_at(), None);
+        assert!(
+            h.app
+                .matches
+                .reap_finished(now() + REMATCH_OFFER_TTL_MS + 1)
+                .await
+                .is_empty()
+        );
+        assert!(h.app.matches.has(MATCH_ID));
+        assert!(h.p1.is_open() && h.p2.is_open());
     }
 }
 
@@ -5395,5 +5448,257 @@ mod r3013002_card_proficiency_through_the_actor {
             "{:?}",
             h.p2.of_type("cardLoadouts")
         );
+    }
+}
+
+// #3490's server cases (#3516): an intent out of order, a nonce the parser refuses, a duplicate
+// request and a reconnect in the middle of a prompt, each through the actor's own sockets.
+
+mod the_server_cases_of_the_mutation_audit {
+    use super::*;
+
+    use jackioh_server::actor::protocol::MAX_NONCE_LENGTH;
+
+    /// p1 plays `test-prompt-self`, which opens a prompt for p1.
+    async fn play_the_prompt(h: &Harness, nonce: &str) {
+        send(
+            h,
+            &h.p1,
+            nonce,
+            json!({ "type": "play", "instanceId": in_hand(&h.p1, "test-prompt-self") }),
+        )
+        .await;
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn an_answer_to_a_prompt_already_answered_is_illegal_and_applies_nothing() {
+        let h = harness(Options::default()).await;
+        play_the_prompt(&h, "play").await;
+        let answer = answer_of(&h.p1);
+        send(&h, &h.p1, "answer", answer.clone()).await;
+        assert_eq!(last_view(&h.p1)["pending"], Value::Null);
+
+        // §9.3: the same answer under a new nonce is the reducer's to judge, and the prompt is gone.
+        send(&h, &h.p1, "late", answer).await;
+        assert_match(
+            errors(&h.p1).last().expect("an error"),
+            &json!({ "code": "illegal_action", "nonce": "late" }),
+        );
+        assert_eq!(h.rows().await.len(), 2);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn an_answer_from_the_seat_that_does_not_hold_the_prompt_is_illegal_and_the_prompt_stays_open() {
+        let h = harness(Options::default()).await;
+        play_the_prompt(&h, "play").await;
+        let choice = open_choice(&h.p1);
+
+        // The actor stamps p2's seat on p2's frame, so its answer to p1's prompt is p2's own.
+        send(&h, &h.p2, "not-mine", answer_of(&h.p1)).await;
+        assert_match(
+            errors(&h.p2).last().expect("an error"),
+            &json!({ "code": "illegal_action", "nonce": "not-mine" }),
+        );
+        assert_eq!(open_choice(&h.p1), choice);
+        assert_eq!(h.rows().await.len(), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_nonce_missing_empty_or_too_long_is_malformed_and_one_at_the_limit_is_applied() {
+        let h = harness(Options::default()).await;
+        h.p1.clear();
+        let end_turn = json!({ "type": "endTurn" });
+        let with_nonce = |nonce: &str| {
+            let mut action = end_turn.clone();
+            action["nonce"] = json!(nonce);
+            json!({ "type": "action", "action": action })
+        };
+        h.p1.receive_json(json!({ "type": "action", "action": end_turn.clone() }));
+        h.p1.receive_json(with_nonce(""));
+        h.p1.receive_json(with_nonce(&"n".repeat(MAX_NONCE_LENGTH + 1)));
+        h.idle().await;
+
+        let missing = "every action carries a client nonce (SPEC §9.3)";
+        let reasons: Vec<(Value, Value)> = errors(&h.p1)
+            .iter()
+            .map(|error| (error["code"].clone(), error["message"].clone()))
+            .collect();
+        assert_eq!(
+            reasons,
+            vec![
+                (json!("malformed"), json!(missing)),
+                (json!("malformed"), json!(missing)),
+                (json!("malformed"), json!("that nonce is too long")),
+            ]
+        );
+        assert_eq!(h.rows().await.len(), 0);
+
+        let longest = "n".repeat(MAX_NONCE_LENGTH);
+        h.p1.receive_json(with_nonce(&longest));
+        h.idle().await;
+        assert_match(acks(&h.p1).last().expect("an ack"), &json!({ "nonce": longest }));
+        assert_eq!(errors(&h.p1).len(), 3);
+        assert_eq!(h.rows().await.len(), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_reused_nonce_with_another_body_replays_the_first_ack_and_applies_nothing() {
+        let h = harness(Options::default()).await;
+        let play = json!({ "type": "play", "instanceId": in_hand(&h.p1, "test-prompt-self") });
+        h.p1.clear();
+        send(&h, &h.p1, "same", play).await;
+        let first_ack = acks(&h.p1).last().cloned().expect("an ack");
+        let choice = open_choice(&h.p1);
+
+        // §9.3: the nonce is the request's identity, so a resend with another body is the same
+        // request: the first ack comes back, and the answer is never applied.
+        send(&h, &h.p1, "same", answer_of(&h.p1)).await;
+        assert_eq!(acks(&h.p1), vec![first_ack.clone(), first_ack]);
+        assert_eq!(errors(&h.p1), Vec::<Value>::new());
+        assert_eq!(h.rows().await.len(), 1);
+        assert_eq!(open_choice(&h.p1), choice);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_seat_that_reconnects_mid_prompt_gets_the_same_prompt_and_answers_it() {
+        let h = harness(Options::default()).await;
+        play_the_prompt(&h, "play").await;
+        let choice = open_choice(&h.p1);
+        let answer = answer_of(&h.p1);
+
+        h.p1.drop_transport();
+        h.idle().await;
+        let revived = Client::new();
+        h.actor.attach(P1, revived.socket());
+        h.idle().await;
+
+        // §9.5: the fresh full view holds the prompt still open, and the same answer to it.
+        assert_eq!(views(&revived).len(), 1);
+        assert_eq!(open_choice(&revived), choice);
+        assert_eq!(answer_of(&revived), answer);
+
+        send(&h, &revived, "answer", answer).await;
+        assert_match(
+            acks(&revived).last().expect("an ack"),
+            &json!({ "nonce": "answer" }),
+        );
+        assert_eq!(errors(&revived), Vec::<Value>::new());
+        assert_eq!(last_view(&revived)["pending"], Value::Null);
+        assert_eq!(h.rows().await.len(), 2);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn the_seat_without_the_prompt_reconnects_to_see_only_that_it_is_open() {
+        let h = harness(Options::default()).await;
+        play_the_prompt(&h, "play").await;
+        let choice = open_choice(&h.p1);
+
+        h.p2.drop_transport();
+        h.idle().await;
+        let revived = Client::new();
+        h.actor.attach(P2, revived.socket());
+        h.idle().await;
+
+        // §10.6, §10.8: the opponent learns only that p1 has a prompt open.
+        assert_match(
+            &last_view(&revived)["pending"],
+            &json!({ "forYou": false, "pendingFor": "p1" }),
+        );
+        assert_eq!(legal_of(&revived), vec![json!({ "type": "concede" })]);
+        // CLAUDE.md rule 7: no frame the revived socket got names the choice. A choice id is a short
+        // `q<n>`, so the scan compares whole strings rather than looking for a substring.
+        assert_eq!(scan(&revived.sent(), &[choice]).0, Vec::<String>::new());
+
+        send(&h, &h.p1, "answer", answer_of(&h.p1)).await;
+        assert_match(acks(&h.p1).last().expect("an ack"), &json!({ "nonce": "answer" }));
+        assert_eq!(last_view(&revived)["pending"], Value::Null);
+    }
+}
+
+/// #3678 (`docs/implicit-states.md`, state 1): a home seat's socket, its queued Hello
+/// (`hello_pending`) and its socket generation, each combination reached through `attach`, a frame,
+/// a dropped transport or `stop`.
+mod seat_states_3678 {
+    use super::*;
+
+    /// S9, S10: `stop` (a restart's drain, the reaper, R776000's let-go) closes the seats' sockets with
+    /// 1001 and leaves the registry; a socket handed to the stopped actor after that is closed the same
+    /// way and never greeted, so its client reconnects to the rebuilt actor (§9.5).
+    #[tokio::test(start_paused = true)]
+    async fn a_socket_handed_to_a_stopped_actor_is_closed_going_away_and_never_greeted() {
+        let h = harness(Options::default()).await;
+        h.actor.stop().await;
+        assert_eq!(h.p1.close_code(), Some(CLOSE_GOING_AWAY));
+        assert_eq!(h.p2.close_code(), Some(CLOSE_GOING_AWAY));
+        let stored = match_row(&h.app, MATCH_ID).await["clocks"].clone();
+        assert!(!stored["turnDeadline"].is_null());
+
+        let late = Client::new();
+        h.actor.attach(P1, late.socket());
+        h.idle().await;
+        assert_eq!(late.close_code(), Some(CLOSE_GOING_AWAY));
+        assert!(!late.is_open());
+        assert!(views(&late).is_empty());
+        // §9.5: the clocks stored on the match are the rebuilt actor's to write, never the stopped one's.
+        assert_eq!(match_row(&h.app, MATCH_ID).await["clocks"], stored);
+    }
+
+    /// S12: a second socket for one home (a second tab, or a reconnect before the old socket closed)
+    /// takes the seat; the first is closed with 1000 and, as the seat was never empty, no grace starts
+    /// (R744, `on_socket_gone`).
+    #[tokio::test(start_paused = true)]
+    async fn a_second_socket_for_one_seat_replaces_the_first_with_a_normal_close_and_starts_no_grace() {
+        let h = harness(Options::default()).await;
+        let second = Client::new();
+        h.actor.attach(P1, second.socket());
+        h.idle().await;
+
+        assert_eq!(h.p1.close_code(), Some(CLOSE_NORMAL));
+        assert!(second.is_open());
+        assert_eq!(views(&second).len(), 1);
+        assert!(h.clocks().await["graceDeadline"]["p1"].is_null());
+        assert!(h.p2.is_open());
+    }
+
+    /// S7: a Hello queued as its socket drops runs on an empty seat: it greets no one and the grace
+    /// still starts (§9.5). The next socket's Hello is a new generation (R835001), so it is answered
+    /// beside the attach's own view.
+    #[tokio::test(start_paused = true)]
+    async fn a_hello_queued_as_its_socket_drops_answers_no_one_and_the_next_socket_is_greeted() {
+        let h = harness(Options::default()).await;
+        h.p1.receive_json(json!({ "type": "hello" }));
+        h.p1.drop_transport();
+        h.idle().await;
+        assert!(!h.clocks().await["graceDeadline"]["p1"].is_null());
+
+        let revived = Client::new();
+        h.actor.attach(P1, revived.socket());
+        revived.receive_json(json!({ "type": "hello" }));
+        h.idle().await;
+        assert_eq!(views(&revived).len(), 2);
+        assert!(h.clocks().await["graceDeadline"]["p1"].is_null());
+        assert!(h.p2.is_open());
+    }
+
+    /// S8: a socket its own outbox overflow closed (R1441, `Socket::send`) stays in the seat until its
+    /// transport reports the close. Presence reads it gone at once (R672 reads `is_open`), and the grace
+    /// starts only on the report (§9.5).
+    #[tokio::test(start_paused = true)]
+    async fn a_socket_its_outbox_closed_holds_the_seat_until_its_transport_reports_the_close() {
+        let h = harness(Options::default()).await;
+        // One frame of room: the attach's greeting (its loadouts, view, clock and portraits) overflows it.
+        let (out, _frames) = tokio::sync::mpsc::channel(1);
+        let narrow = Socket::detached(out);
+        h.actor.attach(P1, narrow.clone());
+        h.idle().await;
+        assert!(!narrow.is_open());
+        assert_eq!(h.p1.close_code(), Some(CLOSE_NORMAL));
+        let presence = h.actor.presence();
+        assert!(!presence[P1] && presence[P2]);
+        assert!(h.clocks().await["graceDeadline"]["p1"].is_null());
+
+        narrow.transport_closed();
+        h.idle().await;
+        assert!(!h.clocks().await["graceDeadline"]["p1"].is_null());
     }
 }

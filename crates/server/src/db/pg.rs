@@ -7560,23 +7560,6 @@ pub async fn challenges_accept_room(
     Ok(done.rows_affected() > 0)
 }
 
-pub async fn challenges_expire(t: &mut PgTx<'_>, now: i64) -> Result<Vec<ChallengeRow>, StoreError> {
-    run_as(t, None).await?;
-    let rows = sqlx::query(concat!(
-        "update public.challenges set state = 'expired'
-          where state = 'open' and expires_at <= ",
-        ts!("$1"),
-        "
-          returning ",
-        challenge_columns!()
-    ))
-    .bind(now)
-    .fetch_all(&mut **t)
-    .await
-    .map_err(db_error)?;
-    challenges_of(&rows)
-}
-
 pub async fn challenges_purge(t: &mut PgTx<'_>, now: i64) -> Result<i64, StoreError> {
     run_as(t, None).await?;
     let done = sqlx::query(concat!(

@@ -38,3 +38,23 @@ use jackioh_engine::Rng;
 pub fn int_in(rng: &mut Rng, low: i64, high: i64) -> i64 {
     low + i64::from(rng.int(i32::try_from(high - low + 1).unwrap_or(1)))
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeSet;
+
+    use jackioh_engine::Rng;
+
+    use super::int_in;
+
+    /// R1454: a bot's drawn numbers (its active hours and account age, its name's year, digits and
+    /// syllables) are whole numbers from the least to the most, both ends included and none outside.
+    #[test]
+    fn r1454_int_in_draws_every_whole_number_from_low_to_high_and_none_outside() {
+        for (low, high) in [(3, 5), (-2, 2), (7, 7)] {
+            let mut rng = Rng::new("r1454-int-in", 0);
+            let drawn: BTreeSet<i64> = (0..200).map(|_| int_in(&mut rng, low, high)).collect();
+            assert_eq!(drawn, (low..=high).collect::<BTreeSet<i64>>(), "{low}..={high}");
+        }
+    }
+}

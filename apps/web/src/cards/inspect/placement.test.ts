@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 
 import { PREVIEW_MARGIN_PX } from "./constants.ts";
-import { placePreview, type Rect } from "./index.ts";
+import { estimatedPreviewSize, isPhoneViewport, placePreview, type Rect } from "./index.ts";
 import { rectOf } from "./placement.ts";
 
 type Size = { width: number; height: number };
@@ -191,5 +191,53 @@ describe("placePreview: a card in a row prefers above", () => {
     const anchor: Rect = { left: 92, top: 477, width: 55, height: 76 };
     expect(placePreview(anchor, DESKTOP, PREVIEW).side).toBe("right");
     expect(placePreview(anchor, DESKTOP, PREVIEW, "beside").side).toBe("right");
+  });
+});
+
+describe("#3602 the phone preview's stacked estimate fits and its placed box stays inside", () => {
+  const VIEWPORTS: Size[] = [
+    { width: 390, height: 844 },
+    { width: 430, height: 932 },
+  ];
+  const WITH_TEXT = { withGlossary: false, withRefs: false, withExtended: true };
+  const ANCHORS = [
+    { anchor: { left: 145, top: 120, width: 100, height: 140 }, prefer: "above" as const },
+    { anchor: { left: 145, top: 350, width: 100, height: 140 }, prefer: "beside" as const },
+  ];
+
+  it("#3602 viewports 600px wide or narrower draw the phone layout, wider ones do not", () => {
+    expect(isPhoneViewport(390)).toBe(true);
+    expect(isPhoneViewport(600)).toBe(true);
+    expect(isPhoneViewport(601)).toBe(false);
+    expect(isPhoneViewport(1280)).toBe(false);
+  });
+
+  for (const viewport of VIEWPORTS) {
+    it(`#3602 at ${String(viewport.width)}x${String(viewport.height)} the stacked estimate fits the width`, () => {
+      const size = estimatedPreviewSize(viewport, WITH_TEXT);
+      expect(size.width, "estimate against the viewport less its margins").toBeLessThanOrEqual(
+        viewport.width - 2 * PREVIEW_MARGIN_PX,
+      );
+    });
+
+    for (const c of ANCHORS) {
+      it(`#3602 at ${String(viewport.width)}x${String(viewport.height)} a ${c.prefer} preview with the full text lands inside`, () => {
+        const size = estimatedPreviewSize(viewport, WITH_TEXT);
+        expectInside(placePreview(c.anchor, viewport, size, c.prefer), size, viewport);
+      });
+    }
+  }
+
+  it("#3602 at 390x844 a preview without the full text fits and lands inside", () => {
+    const viewport: Size = { width: 390, height: 844 };
+    const size = estimatedPreviewSize(viewport, { withGlossary: false, withRefs: false, withExtended: false });
+    expect(size.width, "estimate against the viewport less its margins").toBeLessThanOrEqual(
+      viewport.width - 2 * PREVIEW_MARGIN_PX,
+    );
+    expectInside(
+      placePreview({ left: 145, top: 120, width: 100, height: 140 }, viewport, size, "above"),
+      size,
+      viewport,
+    );
   });
 });

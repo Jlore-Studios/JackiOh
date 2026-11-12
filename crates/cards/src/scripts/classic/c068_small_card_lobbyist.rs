@@ -96,6 +96,7 @@ mod tests {
             .and_then(|card| card["cost"].as_i64())
     }
 
+    // Differs from Scenario::offered: whether that card can be played, not the seat's whole legal list.
     fn offered(s: &Scenario, player: PlayerId, def_id: &str) -> bool {
         let id = s.card(def_id).id.clone();
         legal_actions(s.state(), player)

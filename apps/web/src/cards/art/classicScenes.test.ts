@@ -23,7 +23,7 @@ import { ART_DETAIL_MAX_BYTES, ART_DETAIL_MIN, ART_DETAIL_SHORT, artElements } f
 import { composeScene, SCENE_LAYERS, sceneRecipeOf, sceneUse, type SceneLayer, type SceneRecipe } from "./scene.ts";
 import { SCENE_KIT } from "./sceneKit.ts";
 import { CLASSIC_KIT } from "./sceneKitClassic.ts";
-import { SCENE_RECIPES } from "./sceneRecipes.ts";
+import { ALT_SCENE_RECIPES, SCENE_RECIPES } from "./sceneRecipes.ts";
 import { CLASSIC_RECIPES_1 } from "./sceneRecipesClassic1.ts";
 import { CLASSIC_RECIPES_2 } from "./sceneRecipesClassic2.ts";
 import { CLASSIC_RECIPES_3 } from "./sceneRecipesClassic3.ts";
@@ -250,12 +250,19 @@ describe("R3352000 Classic's scenes", () => {
       for (const picture of ["alt", "night"] as const) {
         const seed = artSeedOf(card.id, picture);
         expect(seed, card.id).not.toBe(card.id);
+        // R3388000: a Classic card offered Alt art draws an alt recipe of its own under its seed (classicAltScenes.test.tsx).
+        if (picture === "alt" && Object.hasOwn(ALT_SCENE_RECIPES, card.id)) {
+          expect(sceneRecipeOf(seed), card.id).toBe(ALT_SCENE_RECIPES[card.id]);
+          continue;
+        }
         expect(sceneRecipeOf(seed), card.id).toBe(scene);
         const own = composeScene(scene, seed);
         expect(new Set(own.map((shape) => shape.part)), `${card.id} ${picture}`).toEqual(new Set(normal.map((shape) => shape.part)));
         expect(sceneUse(own), `${card.id} ${picture}`).toEqual(sceneUse(normal));
       }
     }
+    // Every Classic card offered Alt art but Corpse Plantation, whose normal scene is #3331's proof.
+    expect(CLASSIC.filter((card) => Object.hasOwn(ALT_SCENE_RECIPES, card.id))).toHaveLength(49);
   });
 
   it("R3352000 every part this pass added joins the kits beside the old ones and is drawn by a Classic scene", () => {

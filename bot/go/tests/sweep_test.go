@@ -385,29 +385,35 @@ func TestSweep_AReviewBodyCommandNobodyAnswered(t *testing.T) {
 // GitHub drops scheduled `bot-night` runs; the sweep starts one when work waits and none is
 // going, so a dropped hour costs ten minutes.
 
+// everyAccount sets every account's secret, so their lanes are spare at night: enough for a
+// suggestion survey (`suggestions.spare_lanes`, #3659).
+func (w *sweepBase) everyAccount() {
+	w.ctx.Cfg = testsupport.MakeConfig(testsupport.Config{Env: crossAll})
+}
+
 func (w *sweepBase) atNight() {
 	testsupport.ClockOf(w.ctx).At = testsupport.Night
 	eventsUpdateState(w.ctx, "last_sweep", pyjson.New("since", clock.ISO(testsupport.Night.Add(-24*time.Hour))))
 }
 
 func TestSweep_ADueSurveyCountsAsWorkToo(t *testing.T) {
-	// #797: the first tick with a free lane and nothing to start starts the clock; once it has
-	// run 30 minutes, the survey is work and a run starts for it.
+	// #797, #3659: the first tick that finds lanes spare (`suggestions.spare_lanes`) with nothing
+	// to start starts the clock; at the next (`suggestions.idle_minutes` is 0), the survey is work
+	// and a run starts for it.
 	w := newSweepBase(t)
+	w.everyAccount()
 	w.atNight()
 	sweep.Sweep(w.ctx)
 	assertEqual(t, dig(t, w.ctx.Store.Load(), "suggest", "idle_since"), clock.ISO(testsupport.Night))
 	assertEqual(t, len(w.gh.Dispatches), 0)
-	testsupport.ClockOf(w.ctx).At = testsupport.Night.Add(29 * time.Minute)
-	sweep.Sweep(w.ctx)
-	assertEqual(t, len(w.gh.Dispatches), 0)
-	testsupport.ClockOf(w.ctx).At = testsupport.Night.Add(30 * time.Minute)
+	testsupport.ClockOf(w.ctx).At = testsupport.Night.Add(5 * time.Minute)
 	sweep.Sweep(w.ctx)
 	assertEqual(t, len(w.gh.Dispatches), 1)
 }
 
 func TestSweep_QueuedWorkForAFreeLaneStopsTheSurveyClock(t *testing.T) {
 	w := newSweepBase(t)
+	w.everyAccount()
 	w.atNight()
 	sweep.Sweep(w.ctx)
 	w.gh.AddIssue(3, fakes.Issue{Labels: []string{config.LabelBuild}})

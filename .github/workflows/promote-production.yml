@@ -1,23 +1,23 @@
 # Moves production once a day by itself, and sooner on request, never past a red super run (#2750;
-# daily since 2026-11-03, the owners' call), taking its commits from the `staging` branch (#3275, the
-# owners' call of 2026-11-05). promote-staging.yml moves `staging` every two hours to main's newest
-# green commit. The daily promotion: when super.yml's daily run on `staging` passes every job, the
+# daily since 2026-11-03, the owners' call), taking its commits from the `_staging` branch (#3275, the
+# owners' call of 2026-11-05). promote-staging.yml moves `_staging` every two hours to main's newest
+# green commit. The daily promotion: when super.yml's daily run on `_staging` passes every job, the
 # script merges the commit it tested into production (through a pull request super does not run on
 # again) and deploys it to jackioh.com, the site and its game server together. A red run on
-# `staging` is the night bot's to fix, before everything else it has queued (super.yml's `report`),
+# `_staging` is the night bot's to fix, before everything else it has queued (super.yml's `report`),
 # and production waits for the next run that passes. Sooner: someone comments `/promote` on the open
 # issue labeled `production merge` (or runs this from the Actions tab); the script opens a pull
 # request of staging's commit into production, super runs on it, and it merges once every one of that
-# run's jobs passed. A promotion or a deploy that fails is Squishy's (`report` below).
+# run's jobs passed. A promotion or a deploy that fails is the night bot's (`report` below).
 # docs/deploy-cloudflare.md is the plan; scripts/promote-production.sh is the logic (read its header
 # first) and apps/web/src/net/promote-production.test.ts holds it. Staging's site is
-# deploy-staging.yml's, which deploys each move of `staging`.
+# deploy-staging.yml's, which deploys each move of `_staging`.
 #
-# The `jackioh` Worker serves what the `production` branch holds, and nothing else. This workflow is
+# The `jackioh` Worker serves what the `_production` branch holds, and nothing else. This workflow is
 # the only thing that moves it, and only by merging a pull request whose head is a commit of staging
 # (and so of main) whose push-to-main CI run passed and whose super run passed every job, or, the
 # emergency way, one a person merged with a written reason (`/skip-super <reason>`, or the
-# `skip_super_reason` input), which the issue records. It never force-pushes: a `production` that carries anything main does not fails
+# `skip_super_reason` input), which the issue records. It never force-pushes: a `_production` that carries anything main does not fails
 # the run, loudly, for a human to look at.
 #
 # Three ways in:
@@ -77,7 +77,7 @@ on:
   workflow_run:
     workflows: [CI, super]
     types: [completed]
-    branches: [main, staging, "promote/**"]
+    branches: [main, _staging, "promote/**"]
   workflow_dispatch:
     inputs:
       sha:
@@ -126,7 +126,7 @@ jobs:
           || (github.event.workflow_run.name == 'super' && github.event.workflow_run.event == 'pull_request'
             && startsWith(github.event.workflow_run.head_branch, 'promote/'))
           || (github.event.workflow_run.name == 'super' && github.event.workflow_run.event != 'pull_request'
-            && github.event.workflow_run.head_branch == 'staging' && github.event.workflow_run.conclusion == 'success')))
+            && github.event.workflow_run.head_branch == '_staging' && github.event.workflow_run.conclusion == 'success')))
       || (github.event_name == 'issue_comment' && !github.event.issue.pull_request
         && contains(github.event.issue.labels.*.name, 'production merge')
         && github.event.comment.user.type != 'Bot'
@@ -189,7 +189,7 @@ jobs:
         name: the commits that went live
         run: |
           set -euo pipefail
-          git fetch -q origin production
+          git fetch -q origin _production
           tip=$(git rev-parse FETCH_HEAD)
           new=$(git rev-parse --verify -q "$tip^2" || git rev-parse "$tip")
           old=$(git merge-base "$tip^1" "$new" || true)
@@ -283,7 +283,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: production
+          ref: _production
           # Its second parent, the promoted commit of main, names the CI run whose image it may use.
           fetch-depth: 2
 
@@ -427,11 +427,10 @@ jobs:
           echo "### production is live at $SITE, its server on \`${SHA:0:12}\`" >> "$GITHUB_STEP_SUMMARY"
 
   # A promotion that failed after a super run (the daily promotion, or a merge once a promotion's run
-  # passed) or a deploy that failed: production waits on it, so it is handed to Squishy (bot/README.md,
-  # Squishy) as `priority:high`, as super.yml hands a red run to the night bot; one bot an issue, so the
-  # two never build the same fix. One issue, PROMOTION_TITLE, opened or commented on; a deploy that
-  # passes closes it. A command or a manual run that fails is the asker's to read, and is not reported.
-  # It never checks out or runs code.
+  # passed) or a deploy that failed: production waits on it, so it is handed to the night bot as
+  # `priority:high`, as super.yml hands it a red run. Squishy takes only what a person hands it (#3676).
+  # One issue, PROMOTION_TITLE, opened or commented on; a deploy that passes closes it. A command or a
+  # manual run that fails is the asker's to read, and is not reported. It never checks out or runs code.
   report:
     name: report
     needs: [promote, deploy]
@@ -450,9 +449,9 @@ jobs:
           PROMOTE: ${{ needs.promote.result }}
           DEPLOY: ${{ needs.deploy.result }}
           PROMOTION_TITLE: "CI: production promotion failed"
-          # Who fixes it: Squishy (.squishy/config.json's bot_login) and its queue label.
-          SQUISHY_LOGIN: squishy-squooby
-          SQUISHY_QUEUE: "squishy:build"
+          # Who fixes it: the night bot (.harness/config.json's bot_login) and its queue label.
+          BOT_LOGIN: jgoetzmann-bot
+          BOT_QUEUE: "bot:build"
         run: |
           set -euo pipefail
           export TITLE=$PROMOTION_TITLE
@@ -470,7 +469,7 @@ jobs:
           body=$(printf '%s\n' \
             "[promote-production run]($RUN_URL): $what failed (promote: $PROMOTE, deploy: $DEPLOY), so production did not move to what the super run passed." \
             "" \
-            "Squishy: production waits on this, so it is yours and it comes first (\`priority:high\`). Read the failed job's log, find the cause and fix it in a pull request on \`main\`. A failure outside your reach (\`.github/\`, a secret, Cloudflare's or GitHub's settings) is a person's: say exactly what they must do. Once it is fixed, the next daily promotion, a \`/promote\` on the production issue, or *promote production* run with \`redeploy\` moves production; a deploy that passes closes this." \
+            "Night bot: production waits on this, so it is yours and it comes first (\`priority:high\`). Read the failed job's log, find the cause and fix it in a pull request on \`main\`. A failure outside your reach (\`.github/\`, a secret, Cloudflare's or GitHub's settings) is a person's: say exactly what they must do. Once it is fixed, the next daily promotion, a \`/promote\` on the production issue, or *promote production* run with \`redeploy\` moves production; a deploy that passes closes this." \
             "" \
             "---" \
             "_Posted by \`.github/workflows/promote-production.yml\`._")
@@ -484,7 +483,7 @@ jobs:
             echo "opened $url"
             number=${url##*/}
           fi
-          gh issue edit "$number" --repo "$REPO" --add-assignee "$SQUISHY_LOGIN" --add-label "$SQUISHY_QUEUE" \
+          gh issue edit "$number" --repo "$REPO" --add-assignee "$BOT_LOGIN" --add-label "$BOT_QUEUE" \
             --add-label "priority:high" --add-label "difficulty:hard" \
-            && echo "handed #$number to @$SQUISHY_LOGIN, high priority" \
-            || echo "::warning::could not hand #$number to @$SQUISHY_LOGIN"
+            && echo "handed #$number to @$BOT_LOGIN, high priority" \
+            || echo "::warning::could not hand #$number to @$BOT_LOGIN"

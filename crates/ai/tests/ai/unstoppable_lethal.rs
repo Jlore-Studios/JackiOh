@@ -6,6 +6,8 @@
 //! face. The scenarios' libraries are empty unless a test fills the bot's, so p2's next draw is a
 //! fatigue point of its own.
 
+use std::cell::Cell;
+
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
@@ -27,6 +29,9 @@ fn seven(extra: Value) -> Value {
     }
     p2
 }
+
+/// A 1/1 that can't switch to Defense Position, so it never walls p2's lethal (a stand-in, #3486).
+const SMALL: &str = "stand-in (1) 1/1 Can't Defend";
 
 /// The bot, p1 on its own turn, as `p1`, facing `seven(p2)`.
 fn facing(p1: Value, p2: Value) -> GameState {
@@ -105,6 +110,25 @@ fn r2660000_a_search_the_clock_stops_proves_nothing() {
     assert!(!unstoppable_lethal(&state, AI, Some(&stopped)));
     let running = || false;
     assert!(unstoppable_lethal(&state, AI, Some(&running)));
+}
+
+/// R2660000: the check walks every line where a decision's search walks a beam, so its budget is
+/// twice a decision's: a doomed board whose walk spends more than `AI_BUDGET.nodes` is still proven
+#[test]
+fn r2660000_a_doomed_board_wider_than_one_decisions_budget_is_still_proven() {
+    let state = board(
+        "unstoppable",
+        AI,
+        json!({ "health": 6, "field": [SMALL, SMALL, SMALL, SMALL] }),
+        json!({ "field": ["stand-in (1) 7/30"] }),
+    );
+    let polls = Cell::new(0_usize);
+    let count = || {
+        polls.set(polls.get() + 1);
+        false
+    };
+    assert!(unstoppable_lethal(&state, AI, Some(&count)));
+    assert!(polls.get() > AI_BUDGET.nodes, "{} nodes", polls.get());
 }
 
 /// R2660000: on p2's turn the bot has no turn to play, whatever p2's board would deal

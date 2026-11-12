@@ -60,8 +60,20 @@ export const dungeonMapTestid = {
   mapNode: (row: number, col: number): string => `dungeon-run-map-node-${String(row)}-${String(col)}`,
   /** B27: where the player stands, inside the current node. */
   mapCurrent: "dungeon-run-map-current",
+  /** #3587: the climbing-path graph holding every line and badge. */
+  mapGraph: "dungeon-run-map-graph",
+  /** #3587: one line joining a node to one of the next row's it leads to, by row, column and next-row index. */
+  mapEdge: (row: number, col: number, to: number): string => `dungeon-run-map-edge-${String(row)}-${String(col)}-${String(to)}`,
+  /** #3587: a node's details tip, by its row and column. */
+  mapTip: (row: number, col: number): string => `dungeon-run-map-tip-${String(row)}-${String(col)}`,
+  /** #3587: the legend naming the node kinds. */
+  mapLegend: "dungeon-run-map-legend",
+  /** #3587: one legend entry, by node kind. */
+  mapLegendItem: (kind: string): string => `dungeon-run-map-legend-${kind}`,
   /** B27: a boss's preseeded relic, by its node's absolute row and column. */
   mapArtifact: (row: number, col: number): string => `dungeon-run-map-artifact-${String(row)}-${String(col)}`,
+  /** #3586: a fight node's enemy tier, by its node's absolute row and column. */
+  mapTier: (row: number, col: number): string => `dungeon-run-map-tier-${String(row)}-${String(col)}`,
   /** B28: the reward screen. */
   reward: "dungeon-run-reward",
   /** B28: the artifact the fight dropped. */
@@ -74,6 +86,14 @@ export const dungeonMapTestid = {
   packs: "dungeon-run-packs",
   /** B28: one pack, by its place in the reward's list. */
   pack: (index: number): string => `dungeon-run-pack-${String(index)}`,
+  /** #3588: the pack object drawn on one pack's button, by its place in the reward's list. */
+  packObject: (index: number): string => `dungeon-run-pack-object-${String(index)}`,
+  /** #3588: the sealed pack tearing open before its keep. */
+  packTear: "dungeon-run-pack-tear",
+  /** #3588: the pack object the sealed tear wears: the chosen pack's look. */
+  packTearObject: "dungeon-run-pack-tear-object",
+  /** #3588: the kept count, like "2 of 3 kept". */
+  packCounter: "dungeon-run-pack-counter",
   /** B28: the opened pack's cards. */
   packScreen: "dungeon-run-pack",
   /** B28: one of the pack's cards, by its catalog id. */
@@ -112,8 +132,8 @@ export const dungeonMapTestid = {
   shopLeave: "dungeon-run-shop-leave",
   /** B30: the campfire. */
   campfire: "dungeon-run-campfire",
-  /** B30: heal at the campfire. */
-  campfireHeal: "dungeon-run-campfire-heal",
+  /** B30: gain max HP at the campfire. */
+  campfireMaxHp: "dungeon-run-campfire-max-hp",
   /** B30: make one of the deck's cards Radiant, by its place in the deck. */
   campfireRadiant: (index: number): string => `dungeon-run-campfire-radiant-${String(index)}`,
   /** B30: buff one of the deck's cards, by its place in the deck. */

@@ -20,11 +20,10 @@ import {
   type EntranceResolver,
 } from "../../../game/animations.ts";
 import { fullBoardView, withEvents } from "../../../test/fixtures.ts";
+import { endOf, envOf } from "../../../test/signatures.ts";
 import { CATALOG } from "../../../wire/cards.ts";
 import { planCardFx } from "../../cardFx.ts";
 import {
-  FX_INTENSITY_SCALE,
-  FX_MAX_PARTICLE_LIFE_MS,
   FX_MAX_TAIL_MS,
   SIGNATURE_LEGENDARY_MAX_MS,
   SIGNATURE_MYTHIC_MAX_MS,
@@ -33,12 +32,11 @@ import {
   SIGNATURE_SPELL_SHARE,
 } from "../../constants.ts";
 import { planFx } from "../../cues.ts";
-import { createFxMemory } from "../../memory.ts";
 import { PHONE_HEAVIEST_SIGNATURES, RECIPE_FIXTURES, galleryBoardOf, galleryCardEvents, galleryFieldView, galleryPlayId, galleryPlayOf } from "../../motifs/gallery.ts";
 import type { FxCardHook } from "../../motifs/names.ts";
 import { hasSetPiece, wipeClaim } from "../../setPieces.ts";
 import { entranceCues } from "../../takeover.ts";
-import type { FxCue, FxPlanEnv, FxPlay } from "../../types.ts";
+import type { FxCue, FxPlay } from "../../types.ts";
 import { CARD_RECIPES } from "../bespoke.ts";
 import { FX_CARD_TABLE, isSignature, type FxCardEntry } from "../tables.ts";
 
@@ -85,25 +83,6 @@ const resolve: EntranceResolver = (defId) => {
   const def = CATALOG[defId];
   return def === undefined ? null : { type: def.type, rarity: def.printedRarity ?? def.rarity };
 };
-
-/** A cue's end, as tiers.test.ts counts it: bursts burn, shots fly then burst, shakes ride, the rest run out. */
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shot":
-    case "projectile":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
-}
-
-function envOf(): FxPlanEnv {
-  return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory() };
-}
 
 /** One entry of a gallery play: its own cues (entrance and takeover, recipe), each event's recipe answer, and the play resolving. */
 type Beat = { entry: AnimationEntry; entrance: FxCue[]; recipe: { event: GameEvent; cues: FxCue[] }[]; play: FxPlay | undefined; all: FxCue[] };

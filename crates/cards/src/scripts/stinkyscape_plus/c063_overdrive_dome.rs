@@ -74,7 +74,6 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const FILLER: &str = "core-005";
     /// A durable body to read keywords on.
     const BODY: &str = "stand-in (1) 4/4 R12/12";
     /// True Strike (Core #44): a (1) Spell dealing 4 damage.

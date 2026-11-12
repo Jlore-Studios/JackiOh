@@ -193,7 +193,7 @@ jobs:
       group: bot-night-plan
       cancel-in-progress: false
     permissions:
-      contents: write        # the state file on the bot-state branch
+      contents: write        # the state file on the _bot-state branch
       issues: write
       pull-requests: write
       actions: write         # whether a run that holds an item is alive; start one more run

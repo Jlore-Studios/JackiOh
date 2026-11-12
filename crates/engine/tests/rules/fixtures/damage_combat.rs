@@ -390,6 +390,9 @@ pub static reborn_gone_killer: LazyLock<CardDef> = LazyLock::new(|| {
         json!([{ "kind": "Reborn" }]),
     )
 });
+/// Every attack hook, each ending on a question, so nothing of the hook follows its prompt: the
+/// sequence owes only the hook's state check behind the answer.
+pub static last_asker: LazyLock<CardDef> = LazyLock::new(|| plain_unit("last-asker", 4758, 2, 6));
 
 pub static DC_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     vec![
@@ -453,6 +456,7 @@ pub static DC_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         even_asker.clone(),
         gone_killer.clone(),
         reborn_gone_killer.clone(),
+        last_asker.clone(),
     ]
 });
 
@@ -1012,6 +1016,28 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
         ),
         (gone_killer.id.clone(), both(gone_kill_noter())),
         (reborn_gone_killer.id.clone(), both(gone_kill_noter())),
+        (
+            last_asker.id.clone(),
+            both(Script {
+                when_attacks: Some(hook(|_ctx| vec![note("when:ask"), ask_controller("when")])),
+                after_attack: Some(hook(|_ctx| vec![note("after:ask"), ask_controller("after")])),
+                after_attacked: Some(hook(|_ctx| {
+                    vec![note("attacked:ask"), ask_controller("attacked")]
+                })),
+                ally_attacked: Some(hook(|_ctx| {
+                    vec![note("ally-attacked:ask"), ask_controller("ally-attacked")]
+                })),
+                ally_attack: Some(hook(|_ctx| vec![note("ally:ask"), ask_controller("ally")])),
+                resume: IndexMap::from([
+                    ("when", hook(|_ctx| vec![note("when:answered")])),
+                    ("after", hook(|_ctx| vec![note("after:answered")])),
+                    ("attacked", hook(|_ctx| vec![note("attacked:answered")])),
+                    ("ally-attacked", hook(|_ctx| vec![note("ally-attacked:answered")])),
+                    ("ally", hook(|_ctx| vec![note("ally:answered")])),
+                ]),
+                ..Script::default()
+            }),
+        ),
         (
             turncoat.id.clone(),
             both(Script {

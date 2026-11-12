@@ -338,7 +338,7 @@ fn r3563000_a_marketplace_roll_offers_no_card_twice() {
 
 #[test]
 fn r3563000_on_since_the_release_and_off_draws_as_before() {
-    assert!(UNIQUE_RANDOM_DRAWS);
+    const { assert!(UNIQUE_RANDOM_DRAWS) };
     assert!(unique_draws());
     // The switch off plays one call under R60's repeating draws, as every game did before the release.
     with_unique_draws(false, || {

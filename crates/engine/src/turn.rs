@@ -21,9 +21,10 @@ use crate::resolve::HookName;
 use crate::script::EngineSink;
 use crate::state::{
     DelayedEffect, Exertion, GameState, ModifierKind, Resume, TurnLog, WorkItem, find_instance_mut,
-    handicap_of,
+    handicap_of, takes_turn_draws,
 };
 use crate::wire::{GameEvent, GameOverReason, PLAYER_IDS, Phase, PlayerId, Winner, opponent_of};
+use crate::work::engine_resume;
 
 /// R846 (Meditative #19.1): the id owed extra turns travel under, one badge per player: `modifierChanged`
 /// names it as turns are owed and the last is taken, and the view lists it while any is owed (R169).
@@ -293,14 +294,7 @@ fn boundary_resume(hook: &str, player: PlayerId, step: &str, due_before: Option<
         };
         data.insert("dueBefore".to_string(), mark);
     }
-    Resume {
-        def_id: String::new(),
-        hook: hook.to_string(),
-        step: step.to_string(),
-        radiant: false,
-        instance_id: None,
-        data,
-    }
+    engine_resume(hook, step, data)
 }
 
 /// The mark a parked delayed stage began at; a record without one owes every entry due (R68).
@@ -521,9 +515,16 @@ fn start_of_turn_triggers(sink: &mut EngineSink, player: PlayerId) {
 /// answers `cardResolved`); `reduce` settles only at the end of an action. R183: the draw is one "draw N"
 /// (DRAWS_PER_TURN plus the seat's handicap `extraDrawsPerTurn`), each draw with its cast-on-draw chain
 /// (R58), fatigue (R3) and R158's pause handling, so a prompt in the first parks the rest ahead of the `main`
-/// step parked below (R113).
+/// step parked below (R113). R3582000: a turn the seat's handicap `drawEvery` skips draws none.
 fn start_of_turn_draw(sink: &mut EngineSink, player: PlayerId) {
-    let count = DRAWS_PER_TURN + handicap_of(&sink.state.players[player]).extra_draws_per_turn;
+    // R3582000: a skipped turn draws nothing here: no card, no fatigue step (R3), no cast on draw
+    // (R58). The state check and the settle below run as on any turn.
+    let side = &sink.state.players[player];
+    let count = if takes_turn_draws(side) {
+        DRAWS_PER_TURN + handicap_of(side).extra_draws_per_turn
+    } else {
+        0
+    };
     let _ = crate::draw::draw(sink, player, count);
     // R59: after the draw as a whole. A cast-on-draw card whose cast is asking something is not
     // whole yet: the chain it owes runs the check once the answer has finished the cast (§2.4, R158).

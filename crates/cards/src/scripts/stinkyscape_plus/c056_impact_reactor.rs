@@ -134,7 +134,7 @@ mod tests {
             // Next refresh loses 4.
             next_turn_of(&mut s, P2);
             let (current, max) = mana(&s, P2);
-            assert_eq!((current, max), (max - 0, max), "p2 untouched");
+            assert_eq!((current, max), (max, max), "p2 untouched");
             next_turn_of(&mut s, P1);
             let (current, max) = mana(&s, P1);
             assert_eq!(current, max - 4, "4 lost next turn");

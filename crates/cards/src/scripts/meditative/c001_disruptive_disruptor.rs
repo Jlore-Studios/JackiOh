@@ -72,6 +72,7 @@ mod tests {
         json!({ "def": def, "radiant": radiant, "faceUp": true, "lane": 1 })
     }
 
+    // Differs from Scenario::count: it counts any event list, and one call passes a list no scenario holds.
     fn count(events: &[GameEvent], event_type: &str) -> usize {
         events.iter().filter(|event| event.event_type().as_str() == event_type).count()
     }

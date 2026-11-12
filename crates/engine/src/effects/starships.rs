@@ -81,7 +81,7 @@ pub fn summon_starships(args: SummonStarshipsArgs) -> Effect {
         }
         let mut order: Vec<usize> = Vec::new();
         for _ in 0..args.count.max(0) {
-            let Some(slot) = crate::starship::open_starship_zone(&ctx.sink.state, player) else {
+            let Some(slot) = crate::starship::open_starship_zone(ctx.sink.state, player) else {
                 break;
             };
             if order.is_empty() {
@@ -93,10 +93,10 @@ pub fn summon_starships(args: SummonStarshipsArgs) -> Effect {
             else {
                 continue;
             };
-            if let Some(live) = find_instance_mut(ctx.sink.state, &id) {
-                if let Some(memory) = live.starship.as_mut() {
-                    memory.price = args.price;
-                }
+            if let Some(live) = find_instance_mut(ctx.sink.state, &id)
+                && let Some(memory) = live.starship.as_mut()
+            {
+                memory.price = args.price;
             }
             for piece in &blueprint.pieces {
                 crate::starship::fuse_fresh_piece_into(&mut ctx.sink, &id, piece, radiant == Some(true));
@@ -122,12 +122,12 @@ pub struct LaunchRandomStarshipArgs {
 pub fn launch_random_starship(args: LaunchRandomStarshipArgs) -> Effect {
     Effect::new("launchRandomStarship", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
-        let ids: Vec<String> = crate::starship::dormant_starships_of(&ctx.sink.state, player)
+        let ids: Vec<String> = crate::starship::dormant_starships_of(ctx.sink.state, player)
             .into_iter()
-            .filter(|card| !crate::zones::is_buried(&ctx.sink.state, card))
+            .filter(|card| !crate::zones::is_buried(ctx.sink.state, card))
             .filter(|card| {
                 args.hulls
-                    .contains(&crate::starship::hull_def_of(&ctx.sink.state, &card.def_id))
+                    .contains(&crate::starship::hull_def_of(ctx.sink.state, &card.def_id))
             })
             .map(|card| card.id.clone())
             .collect();
@@ -161,10 +161,10 @@ pub fn launch_as_starship() -> Effect {
         let source_id = ctx.self_.as_ref().map(|me| me.id.clone());
         let left = ZoneSlot { player, row, lane };
         exile_to_pile(ctx, this);
-        let slot = if is_open(&ctx.sink.state, left) {
+        let slot = if is_open(ctx.sink.state, left) {
             Some(left)
         } else {
-            crate::starship::open_starship_zone(&ctx.sink.state, player)
+            crate::starship::open_starship_zone(ctx.sink.state, player)
         };
         let Some(slot) = slot else {
             return;

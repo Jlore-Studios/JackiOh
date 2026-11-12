@@ -10,7 +10,7 @@
 
 import { forwards } from "./routes.ts";
 
-export { FORWARDED, forwards } from "./routes.ts";
+export { forwards } from "./routes.ts";
 
 export interface Env {
   /** The site's Worker in this environment (wrangler.jsonc `services`). */

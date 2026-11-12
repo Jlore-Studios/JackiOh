@@ -105,10 +105,6 @@ mod tests {
         s.hand(P1).iter().map(|card| cost_now(s.state(), card)).collect()
     }
 
-    fn fired(s: &Scenario) -> usize {
-        s.events().iter().filter(|e| matches!(e, GameEvent::TrapFired { .. })).count()
-    }
-
     #[test]
     fn r33_it_is_set_face_down() {
         let s = setup(false, json!([]));
@@ -124,7 +120,7 @@ mod tests {
             let mut s = setup(false, json!([BIG_FELINOR]));
             s.play(BIG_FELINOR, json!({ "zone": 1 }));
 
-            assert_eq!(fired(&s), 1);
+            assert_eq!(s.count(GameEventType::TrapFired), 1);
             let trap = s.backrow(P1, 1).expect("a Field Trap stays");
             assert_eq!(trap.def_id, GOLIATH);
             assert_ne!(trap.face_up, Some(false));
@@ -154,7 +150,7 @@ mod tests {
 
             // A (5) Unit fires it a second time: the (4) costs (0) now, the (5)s do not.
             s.play(BIG_FELINOR, json!({ "zone": 2 }));
-            assert_eq!(fired(&s), 2);
+            assert_eq!(s.count(GameEventType::TrapFired), 2);
             assert_eq!(costs(&s), vec![0, 0, 5, 5]);
         }
 
@@ -162,11 +158,11 @@ mod tests {
         fn r61_a_spell_or_a_summon_fires_nothing() {
             let mut s = setup(false, json!([TRUE_STRIKE, TOKEN_MAKER]));
             s.play(TRUE_STRIKE, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
-            assert_eq!(fired(&s), 0);
+            assert_eq!(s.count(GameEventType::TrapFired), 0);
 
             // The (1) Unit is played and fires it; the Rush Token its Cry summons is no play.
             s.play(TOKEN_MAKER, json!({ "zone": 1 }));
-            assert_eq!(fired(&s), 1);
+            assert_eq!(s.count(GameEventType::TrapFired), 1);
         }
 
         #[test]
@@ -179,7 +175,7 @@ mod tests {
             }));
             s.play(BIG_FELINOR, json!({ "zone": 1 }));
 
-            assert_eq!(fired(&s), 0);
+            assert_eq!(s.count(GameEventType::TrapFired), 0);
             assert_eq!(s.backrow(P1, 1).unwrap().face_up, Some(false));
         }
 
@@ -232,11 +228,11 @@ mod tests {
         fn r2199005_a_1_unit_leaves_it_set_a_2_unit_fires_it() {
             let mut s = setup(true, json!([VANILLA, SPECIESIST]));
             s.play(VANILLA, json!({ "zone": 1 }));
-            assert_eq!(fired(&s), 0);
+            assert_eq!(s.count(GameEventType::TrapFired), 0);
             assert_eq!(s.backrow(P1, 1).unwrap().face_up, Some(false));
 
             s.play(SPECIESIST, json!({ "zone": 2 }));
-            assert_eq!(fired(&s), 1);
+            assert_eq!(s.count(GameEventType::TrapFired), 1);
         }
 
         #[test]
@@ -253,7 +249,7 @@ mod tests {
             assert_eq!(upgrade_number(&mut s, GOLIATH, "minCost"), 1);
             s.play(VANILLA, json!({ "zone": 1 }));
 
-            assert_eq!(fired(&s), 1);
+            assert_eq!(s.count(GameEventType::TrapFired), 1);
             assert_eq!(costs(&s), vec![0, 2, 3, 4, 5]);
         }
     }

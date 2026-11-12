@@ -46,11 +46,22 @@ pub(crate) fn jwks_body_b() -> Value {
 
 /// An ES256 token over `claims` for `user_id`, with §9.2's issuer, audience and a far-future
 /// expiry, signed by the test-only key under `kid`.
-pub(crate) fn sign_with_kid(kid: &str, issuer: &str, user_id: &str, mut claims: Value) -> String {
+pub(crate) fn sign_with_kid(kid: &str, issuer: &str, user_id: &str, claims: Value) -> String {
+    sign_with_kid_at(kid, issuer, user_id, claims, super::auth::FAR_FUTURE)
+}
+
+/// `sign_with_kid`, expiring at `exp` (epoch seconds).
+pub(crate) fn sign_with_kid_at(
+    kid: &str,
+    issuer: &str,
+    user_id: &str,
+    mut claims: Value,
+    exp: i64,
+) -> String {
     claims["sub"] = json!(user_id);
     claims["iss"] = json!(issuer);
     claims["aud"] = json!("authenticated");
-    claims["exp"] = json!(super::auth::FAR_FUTURE);
+    claims["exp"] = json!(exp);
     let mut header = Header::new(Algorithm::ES256);
     header.kid = Some(kid.to_string());
     let key = EncodingKey::from_ec_pem(TEST_ONLY_ES256_PRIVATE_PEM.as_bytes())

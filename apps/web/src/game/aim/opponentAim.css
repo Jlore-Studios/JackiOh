@@ -27,7 +27,30 @@
   stroke-width: 2.5;
   stroke-linecap: round;
   stroke-dasharray: 10 18;
-  animation: opponent-aim-run 700ms linear infinite;
+  opacity: 0;
+  animation: opponent-aim-run 700ms steps(1, end) infinite;
+}
+
+/* R3608000: the dashes march by four copies of the shaft, one quarter of the 28-unit dash period apart, each
+   shown for a quarter of the loop (OpponentAim.tsx's PULSE_PHASES); a dash offset is a paint property, opacity
+   is not. Under reduced motion the first copy stays, the still dashed line. */
+.opponent-aim-pulse[data-phase="0"] {
+  opacity: 1;
+}
+
+.opponent-aim-pulse[data-phase="1"] {
+  stroke-dashoffset: -7;
+  animation-delay: -525ms;
+}
+
+.opponent-aim-pulse[data-phase="2"] {
+  stroke-dashoffset: -14;
+  animation-delay: -350ms;
+}
+
+.opponent-aim-pulse[data-phase="3"] {
+  stroke-dashoffset: -21;
+  animation-delay: -175ms;
 }
 
 .opponent-aim-head {
@@ -47,8 +70,13 @@
 }
 
 @keyframes opponent-aim-run {
-  to {
-    stroke-dashoffset: -28;
+  0% {
+    opacity: 1;
+  }
+
+  25%,
+  100% {
+    opacity: 0;
   }
 }
 

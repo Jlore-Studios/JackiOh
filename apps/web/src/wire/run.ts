@@ -26,6 +26,7 @@ export type { RunPassiveDef } from "./generated/RunPassiveDef.ts";
 export type { RunPassiveKind } from "./generated/RunPassiveKind.ts";
 export type { RunPhase } from "./generated/RunPhase.ts";
 export type { RunPoolCard } from "./generated/RunPoolCard.ts";
+export type { RunPresetDeck } from "./generated/RunPresetDeck.ts";
 export type { RunSetup } from "./generated/RunSetup.ts";
 export type { RunShopGood } from "./generated/RunShopGood.ts";
 export type { RunShopItem } from "./generated/RunShopItem.ts";

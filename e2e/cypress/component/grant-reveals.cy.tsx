@@ -6,6 +6,8 @@
 // pulled from a pack tears into the same takeover with its own art.
 // Run: E2E_COMPONENT_PORT=5282 pnpm --dir e2e test:component --spec cypress/component/grant-reveals.cy.tsx
 
+import { useState, type ReactElement } from "react";
+
 import GrantReveal, { grantTestid, type GrantItem } from "../../../apps/web/src/economy/GrantReveal.tsx";
 import { resetFxSettingsForTests, setFxSettings } from "../../../apps/web/src/fx/settings.ts";
 import { openedPack } from "../../../apps/web/src/packs/fixtures.ts";
@@ -30,8 +32,23 @@ function ts(testid: string): string {
   return `[data-testid="${testid}"]`;
 }
 
+/** The scene as every caller holds it (PackOpening, CosmeticPacks, the Collection's views): dropped once it calls `onDone`. */
+function GrantOwner({ items, onDone }: { items: readonly GrantItem[]; onDone: () => void }): ReactElement | null {
+  const [open, setOpen] = useState(true);
+  if (!open) return null;
+  return (
+    <GrantReveal
+      items={items}
+      onDone={() => {
+        setOpen(false);
+        onDone();
+      }}
+    />
+  );
+}
+
 function mountGrants(items: readonly GrantItem[], onDone: () => void): void {
-  cy.mount(<GrantReveal items={items} onDone={onDone} />);
+  cy.mount(<GrantOwner items={items} onDone={onDone} />);
 }
 
 describe("R3349000 grant reveals", () => {
@@ -110,11 +127,13 @@ describe("R3349000 grant reveals", () => {
           onClose={() => undefined}
         />,
       );
+      // The tear's timer starts once the answered scene is drawn, so the clock moves only after it.
+      cy.get(ts(packTestid.pack)).should("have.attr", "data-state", "tearing");
       cy.tick(PACK_TEAR_MS);
       // Slot 0 is the fixture's Mythic pull: the pack tears open into its takeover with its own art.
       cy.get(ts(packTestid.takeover)).should("have.attr", "data-card", "core-096");
       cy.get('[data-testid="fullscreen-art"]').should("be.visible");
-      cy.get(ts(packTestid.takeover)).click();
+      cy.get(`${ts(packTestid.takeover)} [data-testid="fullscreen-art"]`).click();
       cy.get(".pack-slot").should("have.length", 5);
       cy.get(ts(packTestid.slot(0))).should("have.attr", "data-revealed", "false");
     });

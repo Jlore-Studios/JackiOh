@@ -106,6 +106,7 @@ mod tests {
             .expect("the card is in the hand")
     }
 
+    // Differs from Scenario::offered: one card's face-up embiggen flags, not the seat's whole legal list.
     fn offered(s: &Scenario, id: &str) -> Vec<Option<bool>> {
         let mut flags: Vec<Option<bool>> = legal_actions(s.state(), P1)
             .into_iter()
@@ -489,6 +490,36 @@ mod tests {
                     s.play(ID, json!({ "zone": 1 }));
                     s.expect_in_zone(ID, "field");
                     assert!(added(&s).is_empty(), "radiant {radiant}");
+                });
+            }
+        }
+
+        /// R767000: the script kept for v0.5.11o still has the Aura: Going Long plays Embiggened at (2),
+        /// or Radiant and Embiggened at its dearer price.
+        #[test]
+        fn r767000_r1181002_a_game_on_v0_5_11o_keeps_the_aura() {
+            for (radiant, dearer) in [(false, 4), (true, 3)] {
+                crate::under_kept(ID, script_v0_5_11o(), || {
+                    let setup = || {
+                        game(
+                            "m+022-kept-aura",
+                            json!({ "hand": [GOING_LONG, FILLER], "backrow": [garden_at(1, radiant)] }),
+                            json!({}),
+                        )
+                    };
+                    let mut s = setup();
+                    let long = in_hand(&s, GOING_LONG);
+                    assert_eq!(offered(&s, &long), vec![Some(false), Some(true)], "radiant {radiant}");
+                    s.play(long.as_str(), json!({ "zone": 2 }));
+                    assert_eq!(paid(&s), 2, "radiant {radiant}");
+                    assert_eq!(s.card(long.as_str()).embiggened, Some(true), "radiant {radiant}");
+
+                    let mut s = setup();
+                    let long = in_hand(&s, GOING_LONG);
+                    s.play(long.as_str(), json!({ "zone": 2, "embiggen": true }));
+                    assert_eq!(paid(&s), dearer, "radiant {radiant}");
+                    assert!(s.card(long.as_str()).radiant, "radiant {radiant}");
+                    assert_eq!(s.card(long.as_str()).embiggened, Some(true), "radiant {radiant}");
                 });
             }
         }

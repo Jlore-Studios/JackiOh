@@ -10,4 +10,12 @@ event: string | null,
 /**
  * A boss's preseeded drop, shown on the map (DR6).
  */
-artifact: string | null, };
+artifact: string | null, 
+/**
+ * R3583000: its column of the map's grid, for drawing; `Go`'s `col` is its index in its row.
+ */
+column: number, 
+/**
+ * R3583000: the indices of the next row's nodes it leads to, ascending; none for the final boss.
+ */
+next: Array<number>, };

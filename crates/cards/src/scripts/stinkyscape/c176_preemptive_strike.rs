@@ -81,6 +81,7 @@ mod tests {
     const COST: i32 = 2;
 
     /// The def ids the open Discover offers.
+    // Differs from Scenario::offered: the open Discover's options, not the seat's legal actions.
     fn offered(s: &Scenario) -> Vec<String> {
         s.state()
             .pending

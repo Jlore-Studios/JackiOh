@@ -18,6 +18,8 @@
     "test:component:chrome": "cypress run --component --browser chrome",
     "open": "cypress open",
     "open:component": "cypress open --component",
+    "// probe:frames": "Issue #3605: the busy-board frame probe (spec 50). Builds the e2e client, serves it with vite preview and runs the spec; --json prints the JSON report.",
+    "probe:frames": "sh scripts/frame-probe.sh",
     "verify": "cypress verify"
   },
   "devDependencies": {

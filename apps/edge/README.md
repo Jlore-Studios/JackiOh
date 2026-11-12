@@ -6,7 +6,7 @@ One Cloudflare Worker per environment serves the whole site at one origin (`wran
 | --- | --- | --- |
 | Worker | `jackioh` (the config's top level) | `jackioh-staging` (`env.staging`) |
 | Address | https://jackioh.com, and `jackioh.<account>.workers.dev` | https://staging.jackioh.com, behind Cloudflare Access; no workers.dev or preview address |
-| Deployed by | `promote-production.yml`, from `production` | `deploy-staging.yml`, from `main` once its CI passes |
+| Deployed by | `promote-production.yml`, from `_production` | `deploy-staging.yml`, from `main` once its CI passes |
 | Container | `jackioh-server` | `jackioh-staging-server` |
 
 Every path but `/api/*`, `/ws/*` and the engine's module is a static file from `apps/web/dist`, served by
@@ -58,7 +58,10 @@ pnpm exec wrangler secret put DATABASE_URL --config ../../wrangler.jsonc --env="
 pnpm exec wrangler secret put CODE_PEPPER --config ../../wrangler.jsonc --env=""
 ```
 
-and the same three with `--env staging`. `CREATE_ISSUES_TOKEN` and `DEV_PROFILE_IDS` are optional.
+and the same three with `--env staging`. `CREATE_ISSUES_TOKEN`, `DEV_PROFILE_IDS`, `ALERT_RESEND_API_KEY`
+and `ALERT_EMAILS` are optional. The last two email the server's alerts (#3595, `crates/server/README.md`,
+Alerts): a Resend API key with Sending access for jackioh.com, and the addresses, comma-separated, kept a
+secret since the repository is public.
 `DATABASE_URL` is Supabase's pooler URI (Connect -> Session pooler), which works over IPv4; the
 direct database host is IPv6 only. A container reads its settings when it starts, so after changing
 one, deploy again (or wait for the next sleep).

@@ -4,7 +4,7 @@
 
 use jackioh_engine::catalog::{deckable, registered_catalog};
 use jackioh_engine::combat::attack_target_of;
-use jackioh_engine::config::{AI_DIFFICULTY, HUMAN_HANDICAP, Handicap};
+use jackioh_engine::config::{HUMAN_HANDICAP, Handicap};
 use jackioh_engine::damage::DamageTarget;
 use jackioh_engine::reduce::{begin_game, reduce};
 use jackioh_engine::replay::ReplayInput;
@@ -14,10 +14,10 @@ use jackioh_engine::state::{
 use jackioh_engine::wire::{CardDefs, DeckMark, GameEvent, PlayerId, Winner};
 use serde::{Deserialize, Serialize};
 
-use crate::config::{RUN_LOOMING_PRESENCE, RUN_OVERWHELMING_PRESENCE, RUN_STARTER_CARDS};
+use crate::config::{RUN_ELITE_TIERS, RUN_STARTER_CARDS, RUN_TIERS};
 use crate::{
-    RunAction, RunContent, RunEnemy, RunFightEffect, RunPassiveKind, RunPoolCard, RunState, passive_def,
-    run_enemy, run_placeholder_content,
+    RunAction, RunContent, RunEnemy, RunFightEffect, RunNodeKind, RunPassiveKind, RunPoolCard, RunState,
+    passive_def, run_enemy, run_node, run_placeholder_content,
 };
 
 /// What the caller hands `createGame` for the fight being played: the human is P1, the enemy P2.
@@ -39,9 +39,8 @@ pub struct RunFightSetup {
     /// Each Radiant card of the run deck, and each buffed one with its buffs as upgrades.
     pub human_marks: Vec<DeckMark>,
     pub enemy_deck: Vec<String>,
-    /// Easy's handicap, Medium's with Looming Presence, Hard's with Overwhelming Presence (DR5, R180),
-    /// its `deck_size` the enemy deck's length and its `hero_health` the enemy's, then each curse taken
-    /// (R2922001).
+    /// R3586001: its tier's row of `RUN_TIERS`, an elite's of `RUN_ELITE_TIERS`, hero health included,
+    /// its `deck_size` the enemy deck's length, then each curse taken (R2922001).
     pub enemy_handicap: Handicap,
     pub enemy: RunEnemy,
 }
@@ -112,43 +111,67 @@ fn apply_fight_effect(effect: RunFightEffect, times: i32, human: &mut Handicap, 
     }
 }
 
-/// DR5, DR14: the setup of the fight being played, `None` outside `RunPhase::Fight`. R2922001: after
-/// Presence sets the enemy's tier, each curse taken strengthens the enemy once and each Combat artifact
-/// held helps the human once per level.
+/// R3586001: the enemy's handicap and hero health at `tier` on a node of `kind`: an elite's row of
+/// `RUN_ELITE_TIERS`, every other fight's of `RUN_TIERS`; none for a tier its table lacks.
+fn tier_handicap(kind: RunNodeKind, tier: usize) -> Option<Handicap> {
+    if kind == RunNodeKind::Elite {
+        RUN_ELITE_TIERS
+            .iter()
+            .find(|(at, _)| *at == tier)
+            .map(|(_, row)| *row)
+    } else {
+        tier.checked_sub(1)
+            .and_then(|index| RUN_TIERS.get(index))
+            .copied()
+    }
+}
+
+/// DR5, DR14: the setup of the fight being played, `None` outside `RunPhase::Fight` or at a tier no
+/// table holds. R3586001: the enemy plays its tier's row. R2922001: then each curse taken strengthens
+/// the enemy once and each Combat artifact held helps the human once per level.
 pub fn run_fight_setup(state: &RunState, content: &RunContent) -> Option<RunFightSetup> {
     let enemy = run_enemy(state)?;
     let row = state.row?;
-    let human_deck: Vec<String> = state.deck.iter().map(|card| card.id.clone()).collect();
-    let human_marks = state
+    let tier = tier_handicap(run_node(state)?.kind, enemy.tier)?;
+    // R3496000: a fight's game is built under the current catalog, as a fight started today is: a
+    // card the run holds that the catalog no longer knows is left out of the fight's deck, and stays
+    // in the run.
+    let catalog = registered_catalog();
+    let kept: Vec<usize> = state
         .deck
         .iter()
         .enumerate()
-        .filter(|(_, card)| card.radiant || card.buffs > 0)
-        .map(|(index, card)| DeckMark {
+        .filter(|(_, card)| catalog.contains_key(&card.id))
+        .map(|(index, _)| index)
+        .collect();
+    let human_deck: Vec<String> = kept.iter().map(|&index| state.deck[index].id.clone()).collect();
+    let human_marks: Vec<DeckMark> = kept
+        .iter()
+        .enumerate()
+        .filter(|&(_, &index)| state.deck[index].radiant || state.deck[index].buffs > 0)
+        .map(|(index, &at)| DeckMark {
             index,
-            radiant: card.radiant,
-            upgrades: card.buffs,
+            radiant: state.deck[at].radiant,
+            upgrades: state.deck[at].buffs,
         })
         .collect();
-    let carries = |id: &str| enemy.artifacts.iter().any(|a| a == id);
-    let tier = if carries(RUN_OVERWHELMING_PRESENCE) {
-        AI_DIFFICULTY.hard
-    } else if carries(RUN_LOOMING_PRESENCE) {
-        AI_DIFFICULTY.medium
-    } else {
-        AI_DIFFICULTY.easy
-    };
+    let enemy_deck: Vec<String> = enemy
+        .deck
+        .iter()
+        .filter(|id| catalog.contains_key(*id))
+        .cloned()
+        .collect();
     let mut human_handicap = Handicap {
         deck_size: deck_size(&human_deck),
         hero_health: Some(state.hp),
         ..HUMAN_HANDICAP
     };
     let mut enemy_handicap = Handicap {
-        deck_size: deck_size(&enemy.deck),
-        hero_health: Some(enemy.hero_health),
+        deck_size: deck_size(&enemy_deck),
         ..tier
     };
-    // R2922001: after Presence, each curse taken once and each Combat artifact held once per level.
+    // R2922001: after the tier's row, each curse taken once and each Combat artifact held once per
+    // level.
     let curses = state
         .curses
         .iter()
@@ -168,7 +191,7 @@ pub fn run_fight_setup(state: &RunState, content: &RunContent) -> Option<RunFigh
         human_handicap,
         human_deck,
         human_marks,
-        enemy_deck: enemy.deck.clone(),
+        enemy_deck,
         enemy_handicap,
         enemy: enemy.clone(),
     })

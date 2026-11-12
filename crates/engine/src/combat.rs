@@ -11,19 +11,20 @@
 //! `work.rs` calls the `run_owed_*` handlers and `traps.rs` `declared_attack_stands` directly (SURFACE §6.6).
 
 use indexmap::IndexMap;
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::config::{LANE_RESTRICTED_ATTACKS, WINDFURY_ATTACKS};
 use crate::damage::{DamageArgs, DamageFlags, DamageTarget, deal_damage};
 use crate::layers::AuraTable;
-use crate::script::{AttackMod, AttackModArgs, EngineSink, TargetedWhat};
+use crate::script::{AttackMod, AttackModArgs, EngineSink, Hook, TargetedWhat};
 use crate::state::{
     CardInstance, DeclaredAttack, EngineError, Exertion, GameState, Position, Resume, WorkItem,
     find_instance, find_instance_mut,
 };
 use crate::wire::{GameEvent, Keyword, KeywordKind, PLAYER_IDS, PlayerId, has_keyword, opponent_of};
-use crate::work::{PausedStep, WorkPlan, owe, paused as is_paused, paused_of};
+use crate::work::{PausedStep, WorkPlan, engine_resume, owe, paused as is_paused, paused_of};
 use crate::zones::live_or;
 
 /// What an attack can be declared on (§4.2 step 2), the damage pipeline's own target type.
@@ -120,15 +121,62 @@ fn note_first_strike_kill(sink: &mut EngineSink<'_>, id: &str) {
     }
 }
 
-fn engine_resume(hook: &str, step: &str, data: IndexMap<String, Value>) -> Resume {
-    Resume {
-        def_id: String::new(),
-        hook: hook.to_string(),
-        step: step.to_string(),
-        radiant: false,
-        instance_id: None,
-        data,
+/// The state one of the five attack hooks owes while it waits (R113), saved as JSON under `KEY` in a
+/// `WORK` item whose step is `"hook"`: `work.rs` hands that item back to the hook's `run_owed_*`.
+trait OwedHook: Serialize + DeserializeOwned {
+    const WORK: &'static str;
+    const KEY: &'static str;
+}
+
+/// The `WORK` item holding `owed`: what a pause owes, and the plan a question in the hook parks under.
+fn hook_resume<T: OwedHook>(owed: &T) -> Resume {
+    let mut data = IndexMap::new();
+    data.insert(T::KEY.to_string(), to_json(owed));
+    engine_resume(T::WORK, "hook", data)
+}
+
+/// Owes `owed` to `state.work` (R113).
+fn owe_engine_hook<T: OwedHook>(sink: &mut EngineSink<'_>, owed: &T) {
+    owe(sink, hook_resume(owed));
+}
+
+/// The state an owed item of `T` holds, or `None` where it holds none of `T`'s shape.
+fn owed_of<T: OwedHook>(data: &IndexMap<String, Value>) -> Option<T> {
+    serde_json::from_value(data.get(T::KEY)?.clone()).ok()
+}
+
+/// R113: `card`'s attack hook, run as `controller` with `facts` as its `ctx.data`; a question parks the
+/// rest beside `owed`. A split hook (`paused`) gets back only `exits_from` and `summoned`, as the five
+/// runners always did; `prompts::run_resume` restores more, which is left as it was (#3503).
+fn run_engine_hook<T: OwedHook>(
+    sink: &mut EngineSink<'_>,
+    hook: Hook,
+    card: &CardInstance,
+    controller: PlayerId,
+    owed: &T,
+    facts: IndexMap<String, Value>,
+    paused: Option<PausedStep>,
+) -> crate::prompts::ListStatus {
+    let plan = WorkPlan::new(hook_resume(owed), card.controller);
+    let mut ctx = crate::resolve::make_context(
+        sink,
+        Some(card),
+        crate::resolve::HookOptions {
+            controller: Some(controller),
+            data: Some(facts),
+            ..crate::resolve::HookOptions::default()
+        },
+    );
+    if let Some(paused) = &paused {
+        if let Some(exits_from) = paused.exits_from {
+            ctx.exits_from = Some(exits_from);
+        }
+        if let Some(summoned) = &paused.summoned {
+            ctx.summoned = Some(summoned.clone());
+        }
     }
+    let effects = hook(&mut ctx);
+    crate::prompts::run_resumable_list(&mut ctx, &plan, effects, paused)
 }
 
 /// R49: a unit with Deft has two exertions, one attack and one switch, where every other unit has one,
@@ -1914,14 +1962,13 @@ const WHEN_ATTACKS_KEY: &str = "whenAttacks";
 const CHECK_STAGE: &str = "check";
 const ATTACK_STAGE: &str = "attack";
 
-fn has_when_attacks(state: &GameState, card: &CardInstance) -> bool {
-    crate::scripts::script_of(state, card).when_attacks.is_some()
+impl OwedHook for OwedWhenAttacks {
+    const WORK: &'static str = WHEN_ATTACKS_WORK;
+    const KEY: &'static str = WHEN_ATTACKS_KEY;
 }
 
-fn owe_when_attacks(sink: &mut EngineSink<'_>, owed: &OwedWhenAttacks) {
-    let mut data = IndexMap::new();
-    data.insert(WHEN_ATTACKS_KEY.to_string(), to_json(owed));
-    owe(sink, engine_resume(WHEN_ATTACKS_WORK, "hook", data));
+fn has_when_attacks(state: &GameState, card: &CardInstance) -> bool {
+    crate::scripts::script_of(state, card).when_attacks.is_some()
 }
 
 /// R2285000: the attacker's hook, from `paused` when a question split it, then its state check (R59).
@@ -1954,50 +2001,14 @@ fn answer_when_attacks(
     let mut data: IndexMap<String, Value> = IndexMap::new();
     data.insert("targetId".to_string(), json!(owed.target_id));
     data.insert("forced".to_string(), json!(owed.declared.is_none()));
-    let mut plan_data = IndexMap::new();
-    plan_data.insert(WHEN_ATTACKS_KEY.to_string(), to_json(owed));
-    let plan = WorkPlan {
-        def_id: String::new(),
-        hook: WHEN_ATTACKS_WORK.to_string(),
-        step: "hook".to_string(),
-        radiant: false,
-        instance_id: None,
-        data: plan_data,
-        owner: card.controller,
-    };
-    let status = {
-        let mut ctx = crate::resolve::make_context(
-            sink,
-            Some(&card),
-            crate::resolve::HookOptions {
-                controller: Some(card.controller),
-                data: Some(data),
-                ..crate::resolve::HookOptions::default()
-            },
-        );
-        if let Some(paused) = &paused {
-            if let Some(exits_from) = paused.exits_from {
-                ctx.exits_from = Some(exits_from);
-            }
-            if let Some(summoned) = &paused.summoned {
-                ctx.summoned = Some(summoned.clone());
-            }
-        }
-        let effects = hook(&mut ctx);
-        crate::prompts::run_resumable_list(&mut ctx, &plan, effects, paused)
-    };
-    let followed = retargeted(owed, &followed_target(sink, &owed.target_id, from));
+    let status = run_engine_hook(sink, hook, &card, card.controller, owed, data, paused);
+    let mut followed = retargeted(owed, &followed_target(sink, &owed.target_id, from));
     match status {
         crate::prompts::ListStatus::Done => check_after_when_attacks(sink, &followed),
         // The hook's last effect asked: the hook is done, and its check waits for the answer.
         crate::prompts::ListStatus::Asked => {
-            owe_when_attacks(
-                sink,
-                &OwedWhenAttacks {
-                    stage: Some(CHECK_STAGE.to_string()),
-                    ..followed
-                },
-            );
+            followed.stage = Some(CHECK_STAGE.to_string());
+            owe_engine_hook(sink, &followed);
             None
         }
         // Parked: the hook's rest is on `state.work`, and takes the target the hook already transformed.
@@ -2016,13 +2027,9 @@ fn check_after_when_attacks(sink: &mut EngineSink<'_>, owed: &OwedWhenAttacks) -
     crate::state_check::state_check(sink);
     if is_paused(sink) {
         if sink.state.result.is_none() {
-            owe_when_attacks(
-                sink,
-                &OwedWhenAttacks {
-                    stage: Some(ATTACK_STAGE.to_string()),
-                    ..owed.clone()
-                },
-            );
+            let mut rest = owed.clone();
+            rest.stage = Some(ATTACK_STAGE.to_string());
+            owe_engine_hook(sink, &rest);
         }
         return None;
     }
@@ -2061,7 +2068,7 @@ fn retargeted(owed: &OwedWhenAttacks, target_id: &str) -> OwedWhenAttacks {
 fn repark_retargeted(sink: &mut EngineSink<'_>, was: &OwedWhenAttacks, now: &OwedWhenAttacks) {
     let parked = sink.state.work.iter_mut().find(|item| {
         item.resume.hook == WHEN_ATTACKS_WORK
-            && owed_when_attacks_of(&item.resume.data).is_some_and(|owed| owed == *was)
+            && owed_of::<OwedWhenAttacks>(&item.resume.data).is_some_and(|owed| owed == *was)
     });
     if let Some(item) = parked {
         item.resume
@@ -2070,19 +2077,10 @@ fn repark_retargeted(sink: &mut EngineSink<'_>, was: &OwedWhenAttacks, now: &Owe
     }
 }
 
-fn owed_when_attacks_of(data: &IndexMap<String, Value>) -> Option<OwedWhenAttacks> {
-    let raw = data.get(WHEN_ATTACKS_KEY)?;
-    let owed = raw.as_object()?;
-    owed.get("attackerId")?.as_str()?;
-    owed.get("targetId")?.as_str()?;
-    owed.get("since")?.as_u64()?;
-    serde_json::from_value::<OwedWhenAttacks>(raw.clone()).ok()
-}
-
 /// `work.rs`'s handler: the hook (or its rest, or its check) where the pause left it, then the rest
 /// of the attack — a declared one's defenders and combat, a forced one's combat (R113).
 pub fn run_owed_when_attacks(sink: &mut EngineSink<'_>, item: &WorkItem) {
-    let Some(owed) = owed_when_attacks_of(&item.resume.data) else {
+    let Some(owed) = owed_of::<OwedWhenAttacks>(&item.resume.data) else {
         return;
     };
     let Some(owed) = answer_when_attacks(sink, &owed, paused_of(&item.resume.data)) else {
@@ -2163,6 +2161,11 @@ struct OwedAfterAttack {
 }
 
 const AFTER_ATTACK_KEY: &str = "attack";
+
+impl OwedHook for OwedAfterAttack {
+    const WORK: &'static str = AFTER_ATTACK_WORK;
+    const KEY: &'static str = AFTER_ATTACK_KEY;
+}
 
 /// R113: the `resume.hook` of a combat's owed Radiant copies (MD-D20, R1123) — the fresh copies a
 /// Death hook's question stopped before they were summoned.
@@ -2317,7 +2320,7 @@ fn close_combat(
     combatant_hooks(sink, snapshot, defender_snapshot, target, forced, since, from);
     if !allies.holders.is_empty() && sink.state.result.is_none() {
         if is_paused(sink) {
-            owe_ally_attack(sink, &allies);
+            owe_engine_hook(sink, &allies);
         } else {
             answer_ally_attack(sink, allies, None);
         }
@@ -2363,7 +2366,7 @@ fn combatant_hooks(
             check_only: None,
         };
         if is_paused(sink) {
-            owe_after_attack(sink, &owed);
+            owe_engine_hook(sink, &owed);
             // A Frenzy-only attacker still lets the defender's `afterAttacked` be owed after it.
             if hooked {
                 return;
@@ -2389,17 +2392,11 @@ fn combatant_hooks(
             check_only: None,
         };
         if is_paused(sink) {
-            owe_after_attacked(sink, &owed);
+            owe_engine_hook(sink, &owed);
             return;
         }
         run_after_attacked(sink, &owed, None);
     }
-}
-
-fn owe_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack) {
-    let mut data = IndexMap::new();
-    data.insert(AFTER_ATTACK_KEY.to_string(), to_json(owed));
-    owe(sink, engine_resume(AFTER_ATTACK_WORK, "hook", data));
 }
 
 /// The attacker's hook, from `paused` when a question split it, then the check that follows it.
@@ -2435,7 +2432,7 @@ fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: O
         _ if script.after_attack_even_if_gone => owed.snapshot.clone(),
         _ => return,
     };
-    let judged = OwedAfterAttack {
+    let mut judged = OwedAfterAttack {
         survived: Some(survived),
         frenzy: Some(frenzy),
         ..owed.clone()
@@ -2449,38 +2446,11 @@ fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: O
     if !survived {
         data.insert(crate::prompts::SELF_KEY.to_string(), to_json(&owed.snapshot));
     }
-    let mut plan_data = IndexMap::new();
-    plan_data.insert(AFTER_ATTACK_KEY.to_string(), to_json(&judged));
-    let plan = WorkPlan {
-        def_id: String::new(),
-        hook: AFTER_ATTACK_WORK.to_string(),
-        step: "hook".to_string(),
-        radiant: false,
-        instance_id: None,
-        data: plan_data,
-        owner: self_card.controller,
-    };
-    let status = {
-        let mut ctx = crate::resolve::make_context(
-            sink,
-            Some(&self_card),
-            crate::resolve::HookOptions {
-                // R426: its controller in that combat, though a Death in the check took it since.
-                controller: Some(owed.snapshot.controller),
-                data: Some(data),
-                ..crate::resolve::HookOptions::default()
-            },
-        );
-        if let Some(paused) = &paused {
-            if let Some(exits_from) = paused.exits_from {
-                ctx.exits_from = Some(exits_from);
-            }
-            if let Some(summoned) = &paused.summoned {
-                ctx.summoned = Some(summoned.clone());
-            }
-        }
-        // R3543003: Frenzy's "this may attack again" runs first in the step, before the card's own
-        // "After this attacks".
+    // R426: its controller in that combat, though a Death in the check took it since.
+    let controller = owed.snapshot.controller;
+    // R3543003: Frenzy's "this may attack again" runs first in the step, before the card's own
+    // "After this attacks".
+    let hook: Hook = std::sync::Arc::new(move |ctx: &mut crate::script::EffectContext<'_>| {
         let mut effects = Vec::new();
         if frenzy {
             effects.push(crate::effects::may_attack_again(
@@ -2492,39 +2462,25 @@ fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: O
             ));
         }
         if let Some(hook) = &hook {
-            effects.extend(hook(&mut ctx));
+            effects.extend(hook(ctx));
         }
-        crate::prompts::run_resumable_list(&mut ctx, &plan, effects, paused)
-    };
+        effects
+    });
+    let status = run_engine_hook(sink, hook, &self_card, controller, &judged, data, paused);
     match status {
         crate::prompts::ListStatus::Done => crate::state_check::state_check(sink),
         // The hook's last effect asked: the hook is done, and the check after it waits for the answer.
-        crate::prompts::ListStatus::Asked => owe_after_attack(
-            sink,
-            &OwedAfterAttack {
-                check_only: Some(true),
-                ..judged
-            },
-        ),
+        crate::prompts::ListStatus::Asked => {
+            judged.check_only = Some(true);
+            owe_engine_hook(sink, &judged);
+        }
         _ => {}
     }
 }
 
-fn owed_after_attack_of(data: &IndexMap<String, Value>) -> Option<OwedAfterAttack> {
-    let raw = data.get(AFTER_ATTACK_KEY)?;
-    let owed = raw.as_object()?;
-    owed.get("attackerId")?.as_str()?;
-    owed.get("targetId")?.as_str()?;
-    owed.get("since")?.as_u64()?;
-    owed.get("snapshot")?;
-    owed.get("destroyedIds")?.as_array()?;
-    owed.get("forced")?.as_bool()?;
-    serde_json::from_value::<OwedAfterAttack>(raw.clone()).ok()
-}
-
 /// `work.rs`'s handler: the hook (or its rest), then the check, where the pause left them (R113).
 pub fn run_owed_after_attack(sink: &mut EngineSink<'_>, item: &WorkItem) {
-    let Some(owed) = owed_after_attack_of(&item.resume.data) else {
+    let Some(owed) = owed_of::<OwedAfterAttack>(&item.resume.data) else {
         return;
     };
     if owed.check_only == Some(true) {
@@ -2588,6 +2544,11 @@ struct OwedAfterAttacked {
 
 const AFTER_ATTACKED_KEY: &str = "attacked";
 
+impl OwedHook for OwedAfterAttacked {
+    const WORK: &'static str = AFTER_ATTACKED_WORK;
+    const KEY: &'static str = AFTER_ATTACKED_KEY;
+}
+
 /// Whether this card is still on the field on the stay it fought from: live, acting, and not left
 /// since the check's mark — the same judgement `run_after_attack` makes for its attacker.
 fn fought_on(state: &GameState, since: u32, id: &str) -> bool {
@@ -2614,7 +2575,7 @@ fn run_after_attacked(sink: &mut EngineSink<'_>, owed: &OwedAfterAttacked, pause
     let attacker_survived = owed
         .attacker_survived
         .unwrap_or_else(|| fought_on(sink.state, owed.since, &owed.attacker_id));
-    let judged = OwedAfterAttacked {
+    let mut judged = OwedAfterAttacked {
         defender_survived: Some(defender_survived),
         attacker_survived: Some(attacker_survived),
         ..owed.clone()
@@ -2633,73 +2594,23 @@ fn run_after_attacked(sink: &mut EngineSink<'_>, owed: &OwedAfterAttacked, pause
     if !defender_survived {
         data.insert(crate::prompts::SELF_KEY.to_string(), to_json(&owed.snapshot));
     }
-    let mut plan_data = IndexMap::new();
-    plan_data.insert(AFTER_ATTACKED_KEY.to_string(), to_json(&judged));
-    let plan = WorkPlan {
-        def_id: String::new(),
-        hook: AFTER_ATTACKED_WORK.to_string(),
-        step: "hook".to_string(),
-        radiant: false,
-        instance_id: None,
-        data: plan_data,
-        owner: self_card.controller,
-    };
-    let status = {
-        let mut ctx = crate::resolve::make_context(
-            sink,
-            Some(&self_card),
-            crate::resolve::HookOptions {
-                // MD-C26: its controller in that combat, though a Death in the check took it since.
-                controller: Some(owed.snapshot.controller),
-                data: Some(data),
-                ..crate::resolve::HookOptions::default()
-            },
-        );
-        if let Some(paused) = &paused {
-            if let Some(exits_from) = paused.exits_from {
-                ctx.exits_from = Some(exits_from);
-            }
-            if let Some(summoned) = &paused.summoned {
-                ctx.summoned = Some(summoned.clone());
-            }
-        }
-        let effects = hook(&mut ctx);
-        crate::prompts::run_resumable_list(&mut ctx, &plan, effects, paused)
-    };
+    // MD-C26: its controller in that combat, though a Death in the check took it since.
+    let controller = owed.snapshot.controller;
+    let status = run_engine_hook(sink, hook, &self_card, controller, &judged, data, paused);
     match status {
         crate::prompts::ListStatus::Done => crate::state_check::state_check(sink),
         // The hook's last effect asked: the hook is done, and the check after it waits for the answer.
-        crate::prompts::ListStatus::Asked => owe_after_attacked(
-            sink,
-            &OwedAfterAttacked {
-                check_only: Some(true),
-                ..judged
-            },
-        ),
+        crate::prompts::ListStatus::Asked => {
+            judged.check_only = Some(true);
+            owe_engine_hook(sink, &judged);
+        }
         _ => {}
     }
 }
 
-fn owe_after_attacked(sink: &mut EngineSink<'_>, owed: &OwedAfterAttacked) {
-    let mut data = IndexMap::new();
-    data.insert(AFTER_ATTACKED_KEY.to_string(), to_json(owed));
-    owe(sink, engine_resume(AFTER_ATTACKED_WORK, "hook", data));
-}
-
-fn owed_after_attacked_of(data: &IndexMap<String, Value>) -> Option<OwedAfterAttacked> {
-    let raw = data.get(AFTER_ATTACKED_KEY)?;
-    let owed = raw.as_object()?;
-    owed.get("defenderId")?.as_str()?;
-    owed.get("attackerId")?.as_str()?;
-    owed.get("since")?.as_u64()?;
-    owed.get("snapshot")?;
-    owed.get("forced")?.as_bool()?;
-    serde_json::from_value::<OwedAfterAttacked>(raw.clone()).ok()
-}
-
 /// `work.rs`'s handler: the hook (or its rest), then the check, where the pause left them (R113).
 pub fn run_owed_after_attacked(sink: &mut EngineSink<'_>, item: &WorkItem) {
-    let Some(owed) = owed_after_attacked_of(&item.resume.data) else {
+    let Some(owed) = owed_of::<OwedAfterAttacked>(&item.resume.data) else {
         return;
     };
     if owed.check_only == Some(true) {
@@ -2749,6 +2660,11 @@ struct OwedAllyAttacked {
 
 const ALLY_ATTACKED_KEY: &str = "allyAttacked";
 
+impl OwedHook for OwedAllyAttacked {
+    const WORK: &'static str = ALLY_ATTACKED_WORK;
+    const KEY: &'static str = ALLY_ATTACKED_KEY;
+}
+
 /// R1849008: the cards that answer this declaration, every card acting on the attacked Unit's side
 /// with an `allyAttacked` hook (the Unit included) in R68's order; none for an attack on a hero.
 fn ally_attacked_holders(state: &GameState, open: &DeclaredAttack) -> Vec<String> {
@@ -2760,12 +2676,6 @@ fn ally_attacked_holders(state: &GameState, open: &DeclaredAttack) -> Vec<String
         .filter(|card| crate::scripts::script_of(state, card).ally_attacked.is_some())
         .map(|card| card.id)
         .collect()
-}
-
-fn owe_ally_attacked(sink: &mut EngineSink<'_>, owed: &OwedAllyAttacked) {
-    let mut data = IndexMap::new();
-    data.insert(ALLY_ATTACKED_KEY.to_string(), to_json(owed));
-    owe(sink, engine_resume(ALLY_ATTACKED_WORK, "hook", data));
 }
 
 /// R1849008: the holders' hooks in turn, each a whole effect followed by its state check (R59), from
@@ -2782,7 +2692,7 @@ fn answer_ally_attacked(
         crate::state_check::state_check(sink);
         if is_paused(sink) {
             if sink.state.result.is_none() {
-                owe_ally_attacked(sink, &owed);
+                owe_engine_hook(sink, &owed);
             }
             return false;
         }
@@ -2810,58 +2720,22 @@ fn answer_ally_attacked(
         let mut data: IndexMap<String, Value> = IndexMap::new();
         data.insert("attackerId".to_string(), json!(owed.declared.attacker_id));
         data.insert("defenderId".to_string(), json!(owed.declared.target_id));
-        let mut plan_data = IndexMap::new();
-        plan_data.insert(ALLY_ATTACKED_KEY.to_string(), to_json(&owed));
-        let plan = WorkPlan {
-            def_id: String::new(),
-            hook: ALLY_ATTACKED_WORK.to_string(),
-            step: "hook".to_string(),
-            radiant: false,
-            instance_id: None,
-            data: plan_data,
-            owner: card.controller,
-        };
-        let status = {
-            let mut ctx = crate::resolve::make_context(
-                sink,
-                Some(&card),
-                crate::resolve::HookOptions {
-                    controller: Some(card.controller),
-                    data: Some(data),
-                    ..crate::resolve::HookOptions::default()
-                },
-            );
-            if let Some(resumed) = &resumed {
-                if let Some(exits_from) = resumed.exits_from {
-                    ctx.exits_from = Some(exits_from);
-                }
-                if let Some(summoned) = &resumed.summoned {
-                    ctx.summoned = Some(summoned.clone());
-                }
-            }
-            let effects = hook(&mut ctx);
-            crate::prompts::run_resumable_list(&mut ctx, &plan, effects, resumed)
-        };
+        let status = run_engine_hook(sink, hook, &card, card.controller, &owed, data, resumed);
         match status {
             crate::prompts::ListStatus::Done => {
                 owed.holders.remove(0);
                 crate::state_check::state_check(sink);
                 if is_paused(sink) {
                     if sink.state.result.is_none() {
-                        owe_ally_attacked(sink, &owed);
+                        owe_engine_hook(sink, &owed);
                     }
                     return false;
                 }
             }
             // The hook's last effect asked: the hook is done, and its check waits for the answer.
             crate::prompts::ListStatus::Asked => {
-                owe_ally_attacked(
-                    sink,
-                    &OwedAllyAttacked {
-                        check_only: Some(true),
-                        ..owed
-                    },
-                );
+                owed.check_only = Some(true);
+                owe_engine_hook(sink, &owed);
                 return false;
             }
             // Parked: the rest of the hook went to `state.work` as this sequence's own item.
@@ -2871,17 +2745,9 @@ fn answer_ally_attacked(
     true
 }
 
-fn owed_ally_attacked_of(data: &IndexMap<String, Value>) -> Option<OwedAllyAttacked> {
-    let raw = data.get(ALLY_ATTACKED_KEY)?;
-    let owed = raw.as_object()?;
-    owed.get("declared")?.as_object()?;
-    owed.get("holders")?.as_array()?;
-    serde_json::from_value::<OwedAllyAttacked>(raw.clone()).ok()
-}
-
 /// `work.rs`'s handler: the hooks still owed, where the pause left them, then the combat (R113).
 pub fn run_owed_ally_attacked(sink: &mut EngineSink<'_>, item: &WorkItem) {
-    let Some(owed) = owed_ally_attacked_of(&item.resume.data) else {
+    let Some(owed) = owed_of::<OwedAllyAttacked>(&item.resume.data) else {
         return;
     };
     let declared = owed.declared.clone();
@@ -2944,6 +2810,11 @@ struct OwedAllyAttack {
 
 const ALLY_ATTACK_KEY: &str = "allyAttack";
 
+impl OwedHook for OwedAllyAttack {
+    const WORK: &'static str = ALLY_ATTACK_WORK;
+    const KEY: &'static str = ALLY_ATTACK_KEY;
+}
+
 /// R2199000: the cards that answer a combat of `player`'s attacker — every card acting on that
 /// player's side with an `allyAttack` hook, the attacker itself included, in R68's order.
 fn ally_attack_holders(state: &GameState, player: PlayerId) -> Vec<String> {
@@ -2952,12 +2823,6 @@ fn ally_attack_holders(state: &GameState, player: PlayerId) -> Vec<String> {
         .filter(|card| crate::scripts::script_of(state, card).ally_attack.is_some())
         .map(|card| card.id)
         .collect()
-}
-
-fn owe_ally_attack(sink: &mut EngineSink<'_>, owed: &OwedAllyAttack) {
-    let mut data = IndexMap::new();
-    data.insert(ALLY_ATTACK_KEY.to_string(), to_json(owed));
-    owe(sink, engine_resume(ALLY_ATTACK_WORK, "hook", data));
 }
 
 /// R2199000: the holders' hooks in turn, each a whole effect followed by its state check (R59), from
@@ -2969,7 +2834,7 @@ fn answer_ally_attack(sink: &mut EngineSink<'_>, mut owed: OwedAllyAttack, mut p
         crate::state_check::state_check(sink);
         if is_paused(sink) {
             if sink.state.result.is_none() {
-                owe_ally_attack(sink, &owed);
+                owe_engine_hook(sink, &owed);
             }
             return;
         }
@@ -3001,38 +2866,7 @@ fn answer_ally_attack(sink: &mut EngineSink<'_>, mut owed: OwedAllyAttack, mut p
         data.insert("targetId".to_string(), json!(owed.target_id));
         data.insert("forced".to_string(), json!(owed.forced));
         data.insert("survived".to_string(), json!(survived));
-        let mut plan_data = IndexMap::new();
-        plan_data.insert(ALLY_ATTACK_KEY.to_string(), to_json(&owed));
-        let plan = WorkPlan {
-            def_id: String::new(),
-            hook: ALLY_ATTACK_WORK.to_string(),
-            step: "hook".to_string(),
-            radiant: false,
-            instance_id: None,
-            data: plan_data,
-            owner: card.controller,
-        };
-        let status = {
-            let mut ctx = crate::resolve::make_context(
-                sink,
-                Some(&card),
-                crate::resolve::HookOptions {
-                    controller: Some(card.controller),
-                    data: Some(data),
-                    ..crate::resolve::HookOptions::default()
-                },
-            );
-            if let Some(resumed) = &resumed {
-                if let Some(exits_from) = resumed.exits_from {
-                    ctx.exits_from = Some(exits_from);
-                }
-                if let Some(summoned) = &resumed.summoned {
-                    ctx.summoned = Some(summoned.clone());
-                }
-            }
-            let effects = hook(&mut ctx);
-            crate::prompts::run_resumable_list(&mut ctx, &plan, effects, resumed)
-        };
+        let status = run_engine_hook(sink, hook, &card, card.controller, &owed, data, resumed);
         match status {
             crate::prompts::ListStatus::Done => {
                 owed.holders.remove(0);
@@ -3040,20 +2874,15 @@ fn answer_ally_attack(sink: &mut EngineSink<'_>, mut owed: OwedAllyAttack, mut p
                 crate::state_check::state_check(sink);
                 if is_paused(sink) {
                     if sink.state.result.is_none() {
-                        owe_ally_attack(sink, &owed);
+                        owe_engine_hook(sink, &owed);
                     }
                     return;
                 }
             }
             // The hook's last effect asked: the hook is done, and its check waits for the answer.
             crate::prompts::ListStatus::Asked => {
-                owe_ally_attack(
-                    sink,
-                    &OwedAllyAttack {
-                        check_only: Some(true),
-                        ..owed
-                    },
-                );
+                owed.check_only = Some(true);
+                owe_engine_hook(sink, &owed);
                 return;
             }
             // Parked: the rest of the hook went to `state.work` as this sequence's own item.
@@ -3062,17 +2891,9 @@ fn answer_ally_attack(sink: &mut EngineSink<'_>, mut owed: OwedAllyAttack, mut p
     }
 }
 
-fn owed_ally_attack_of(data: &IndexMap<String, Value>) -> Option<OwedAllyAttack> {
-    let raw = data.get(ALLY_ATTACK_KEY)?;
-    let owed = raw.as_object()?;
-    owed.get("attackerId")?.as_str()?;
-    owed.get("holders")?.as_array()?;
-    serde_json::from_value::<OwedAllyAttack>(raw.clone()).ok()
-}
-
 /// `work.rs`'s handler: the hooks still owed, where the pause left them (R113).
 pub fn run_owed_ally_attack(sink: &mut EngineSink<'_>, item: &WorkItem) {
-    let Some(owed) = owed_ally_attack_of(&item.resume.data) else {
+    let Some(owed) = owed_of::<OwedAllyAttack>(&item.resume.data) else {
         return;
     };
     answer_ally_attack(sink, owed, paused_of(&item.resume.data));

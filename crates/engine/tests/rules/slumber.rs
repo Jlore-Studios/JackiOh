@@ -812,7 +812,7 @@ mod r3556000_a_dormant_field_spell {
     use super::*;
 
     /// p1's dozer in hand, a plain body on each side to read the aura on.
-    fn dozer_board(seed: &str) -> Scenario {
+    fn dozer_board() -> Scenario {
         board(
             "p1",
             json!([dozer.id]),
@@ -838,7 +838,7 @@ mod r3556000_a_dormant_field_spell {
 
     #[test]
     fn r3556000_a_field_spell_printing_dormant_is_dormant_played_from_hand_and_both_views_show_it() {
-        let mut s = dozer_board("r3556000-played");
+        let mut s = dozer_board();
         s.play(dozer.id.as_str(), json!({ "zone": 1 }));
         let id = s.card(dozer.id.as_str()).id.clone();
         assert_eq!(slumber_of(&s, &id), dormant_for(2));
@@ -850,7 +850,7 @@ mod r3556000_a_dormant_field_spell {
 
     #[test]
     fn r3556000_its_trigger_and_aura_are_off_until_it_awakens_on_its_controllers_second_turn() {
-        let mut s = dozer_board("r3556000-acts");
+        let mut s = dozer_board();
         s.play(dozer.id.as_str(), json!({ "zone": 1 }));
         let id = s.card(dozer.id.as_str()).id.clone();
         // Its controller's end of turn: the trigger is off and the aura is off.

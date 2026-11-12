@@ -16,8 +16,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::config::{
-    BACKROW_ZONES, DECK_SIZE, EARLIER_DECK_SIZE, HERO_HEALTH, HUMAN_HANDICAP, Handicap, LIBRARY_CAP,
-    MAX_COPIES, SETUP_TURN, UNIT_ZONES,
+    BACKROW_ZONES, DECK_SIZE, DRAW_EVERY_TURN, EARLIER_DECK_SIZE, HERO_HEALTH, HUMAN_HANDICAP, Handicap,
+    LIBRARY_CAP, MAX_COPIES, SETUP_TURN, UNIT_ZONES,
 };
 use crate::effects::tune::{TuneDirection, tune_once};
 use crate::geometry::{BlackHole, Half};
@@ -2408,11 +2408,25 @@ fn is_human_handicap(handicap: &Handicap, standard: i32) -> bool {
         && handicap.tutorial_cards_only != Some(true)
         && handicap.deck_copies.is_none_or(|copies| copies == MAX_COPIES)
         && handicap.hero_armor.is_none_or(|armor| armor == 0)
+        && handicap.fewer_opening_cards.is_none_or(|fewer| fewer == 0)
+        && handicap.draw_every.is_none_or(|every| every == DRAW_EVERY_TURN)
 }
 
 /// R2201000: the least health `player`'s hero can fall to, when its handicap sets a floor.
 pub fn hero_floor_of(state: &GameState, player: PlayerId) -> Option<i32> {
     state.players[player].handicap.and_then(|h| h.hero_floor)
+}
+
+/// R3582000: whether the turn `side` started last is one on which it takes its start-of-turn draws
+/// (R183): every turn unless its handicap's `drawEvery` is above DRAW_EVERY_TURN, else only a turn
+/// whose `turns_started` (extra turns included, R845) is a multiple of it.
+pub fn takes_turn_draws(side: &PlayerState) -> bool {
+    // The floor keeps a state written past `validate_handicap` from dividing by zero.
+    let every = handicap_of(side)
+        .draw_every
+        .unwrap_or(DRAW_EVERY_TURN)
+        .max(DRAW_EVERY_TURN);
+    side.turns_started % every == 0
 }
 
 /// R2201000: whether `player` can lose the game. A seat whose handicap sets a floor cannot: its hero
@@ -2499,6 +2513,22 @@ pub fn validate_handicap(handicap: &Handicap, label: &str) -> Result<(), EngineE
     {
         return Err(EngineError::new(format!(
             "{label}: handicap heroArmor must be a non-negative integer (R2922000), got {armor}"
+        )));
+    }
+    // R3582000: optional, and when given a count of cards, never a negative one.
+    if let Some(fewer) = handicap.fewer_opening_cards
+        && fewer < 0
+    {
+        return Err(EngineError::new(format!(
+            "{label}: handicap fewerOpeningCards must be a non-negative integer (R3582000), got {fewer}"
+        )));
+    }
+    // R3582000: optional, and when given a seat that still draws on some of its turns.
+    if let Some(every) = handicap.draw_every
+        && every < DRAW_EVERY_TURN
+    {
+        return Err(EngineError::new(format!(
+            "{label}: handicap drawEvery must be a positive integer (R3582000), got {every}"
         )));
     }
     // R2201000: optional, and when given a floor the hero starts at or above.
@@ -2689,10 +2719,11 @@ impl NextId for GameState {
         crate::warhero::note_minted(self, def_id);
         // R3538002: a past version's definition rides along in `transient_defs`, so the view ships
         // it (R243). Nothing for any other id.
-        if crate::catalog::split_past_id(def_id).is_some() && !self.transient_defs.contains_key(def_id) {
-            if let Some(def) = crate::catalog::find_def(None, def_id) {
-                self.transient_defs.insert(def_id.to_string(), def.clone());
-            }
+        if crate::catalog::split_past_id(def_id).is_some()
+            && !self.transient_defs.contains_key(def_id)
+            && let Some(def) = crate::catalog::find_def(None, def_id)
+        {
+            self.transient_defs.insert(def_id.to_string(), def.clone());
         }
     }
 }
@@ -2969,6 +3000,10 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
                 deck_copies: handicap.deck_copies.filter(|copies| *copies != MAX_COPIES),
                 // R2922000: joins only above 0, so no other game stores it.
                 hero_armor: handicap.hero_armor.filter(|armor| *armor > 0),
+                // R3582000: each joins only when it changes the seat's draws, so no other game stores
+                // either.
+                fewer_opening_cards: handicap.fewer_opening_cards.filter(|fewer| *fewer > 0),
+                draw_every: handicap.draw_every.filter(|every| *every > DRAW_EVERY_TURN),
             });
             side.hero.health = hero_health;
             // R2922000: the hero's own Armor, as any it gains later.

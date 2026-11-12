@@ -1,10 +1,10 @@
 //! Test-only definitions and scripts for `subsystems::twice_forward` (C+ #74 Twice Forward One Step
 //! Backwards, R425), as the engine does not depend on `crates/cards`.
 
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock};
 
 use jackioh_engine::effects;
-use jackioh_engine::subsystems::twice_forward::twice_forward_trigger;
+use jackioh_engine::subsystems::twice_forward::{twice_forward_plays, twice_forward_trigger};
 use jackioh_engine::testkit::*;
 
 use super::catalog::{spell_def, unit_def};
@@ -81,6 +81,16 @@ pub fn caster() -> CardDef {
     )
 }
 
+/// A twin of #74's stand-in whose first trigger exiles the card itself once it has counted 2 plays, so its
+/// fuse trigger runs after the card has left the field (R3693000).
+pub fn twin() -> CardDef {
+    let mut def = forward();
+    def.id = "fx-tf-twin".to_string();
+    def.name = "Fixture Self-Exiling Twice Forward".to_string();
+    def.index = "967".to_string();
+    def
+}
+
 pub const TURNER_DAMAGE: i32 = 1;
 pub const CRIER_DAMAGE: i32 = 5;
 
@@ -94,6 +104,7 @@ pub fn twice_forward_catalog(base: CardDefs) -> CardDefs {
         turner(),
         crier(),
         caster(),
+        twin(),
     ] {
         defs.insert(def.id.clone(), def);
     }
@@ -129,6 +140,27 @@ pub static TWICE_FORWARD_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = Lazy
                 ..Script::default()
             },
         },
+    );
+    table.insert(
+        twin().id,
+        same(|| Script {
+            triggers: vec![
+                TriggerDef {
+                    id: "exile-self".to_string(),
+                    on: vec![GameEventType::CardResolved],
+                    when: Some(Arc::new(|ctx: &mut EffectContext<'_>, event: &GameEvent| {
+                        matches!(event, GameEvent::CardResolved { player, .. } if *player != ctx.controller)
+                            && ctx.live_self().is_some_and(|card| twice_forward_plays(card) >= 2)
+                    })),
+                    run: Arc::new(|_ctx, _event| {
+                        vec![effects::exile(json_as(json!({ "target": { "of": "self" } })))]
+                    }),
+                    even_if_gone: false,
+                },
+                twice_forward_trigger(json_as(json!({ "radiantCopy": false }))),
+            ],
+            ..Script::default()
+        }),
     );
     table.insert(
         self_exiler().id,

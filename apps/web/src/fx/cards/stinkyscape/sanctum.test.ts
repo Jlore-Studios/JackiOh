@@ -123,7 +123,7 @@ describe("R3407000 Sanctum", () => {
   });
 
   it("R3407000 nothing draws with the effects off", () => {
-    expect(cuesOfRun(galleryRun(SANCTUM, envOf(FX_INTENSITY_SCALE.off)).run)).toEqual([]);
+    expect(cuesOfRun(galleryRun(SANCTUM, envOf({ intensity: FX_INTENSITY_SCALE.off })).run)).toEqual([]);
   });
 
   it("R3407000 R200 its entrance and each recipe beat start inside their entry and are gone within FX_MAX_TAIL_MS at D 120, 200, 400, 732 and 1400", () => {

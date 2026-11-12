@@ -28,6 +28,7 @@ import { isStinkyscapeArt } from "../cards/art/stinkyscape.ts";
 import { stinkyscapeArtUri } from "../cards/art/svg.ts";
 import { HIDDEN_ID, leadMs, type AnimationEntry } from "../game/animations.ts";
 import { ART_PLANES, artPlaneBackground } from "../cards/art/pictures.ts";
+import { dioramaOf, dioramaSliceBackground } from "../cards/art/dioramas/index.ts";
 import { signatureFaceOf } from "../cards/signatureFaces.ts";
 import { sideOf, testid } from "../game/contract.ts";
 import { CATALOG } from "../wire/cards.ts";
@@ -36,7 +37,22 @@ import { entranceKeyOf } from "./cardFx.ts";
 import { FX_CARD_TABLE, isSignature, type FxCardEntry } from "./cards/tables.ts";
 import { FX_CENTER, FX_LEGENDARY_TRAUMA, FX_SIGNATURE_TAKEOVER_TAIL_MS, FX_SLAM_AT, FX_TAKEOVER_TAIL_MS, FX_TAKEOVER_TRAUMA } from "./constants.ts";
 import { entranceEvent } from "./entrances.ts";
-import type { FxAnchor, FxCue, FxPlanEnv, FxTakeoverCue, FxTint, TakeoverLook } from "./types.ts";
+import type { FxAnchor, FxCue, FxPlanEnv, FxTakeoverCue, FxTakeoverStage, FxTint, TakeoverLook } from "./types.ts";
+
+/**
+ * R3345000: the card's picture on a takeover's stage: its depth planes, its name and its hand. R3350000: a Mythic with a
+ * diorama flies through its slices instead, each still (the takeover is the motion), its planes none.
+ */
+function takeoverStageOf(defId: string, radiant: boolean, name: string): FxTakeoverStage {
+  const diorama = dioramaOf(defId);
+  if (diorama === null) return { planes: ART_PLANES.map((plane) => artPlaneBackground(defId, plane, radiant)), name, face: signatureFaceOf(defId) };
+  return {
+    planes: [],
+    name,
+    face: signatureFaceOf(defId),
+    slices: diorama.slices.map((slice, index) => ({ image: dioramaSliceBackground(defId, radiant, index), plane: slice.plane, depth: slice.depth })),
+  };
+}
 
 /**
  * R670, R2722001, R3332000: a Mythic's takeover look: its table entry's `takeover` (#100 Ceaseless Void's
@@ -211,7 +227,7 @@ export function entranceCues(entry: AnimationEntry, env: Pick<FxPlanEnv, "intens
   const art = takeoverArtOf(entrance.defId, table);
   const takeover: FxTakeoverCue = {
     kind: "takeover",
-    stage: entry.setPiece === undefined ? null : { planes: ART_PLANES.map((plane) => artPlaneBackground(defId, plane, radiant)), name, face: signatureFaceOf(defId) },
+    stage: entry.setPiece === undefined ? null : takeoverStageOf(defId, radiant, name),
     look,
     tint: TAKEOVER_TINTS[look],
     at: own ? CENTER : (field ?? at),

@@ -9,6 +9,13 @@
  * and under `:root:not([data-reduce-motion="true"])`, as cards.css gates its own, and take their times and curves from
  * motion.css. The marks of state (cracks, glow, frost: ArtWear.tsx) are still drawings outside the gate, so a face under
  * reduced motion shows them all the same; only the glow's fade is gated.
+ *
+ * R3350000 (#3350): a board Mythic whose art moves draws its diorama's slices in place of the live layers; its window swells
+ * and presses in as one image's does, and its slices over the farthest swing on an attack as a subject does.
+ *
+ * #3674 (R3351000): a slice whose motion is one chain of loops (dioramas/lift.ts) draws its still picture on lift layers
+ * (`.cf-art-lift`, CardArt `liftChain`), one a loop, outermost first, each moved here in transform and opacity alone, so a
+ * frame restyles none of the picture's groups and the compositor moves it.
  */
 
 .cf-art-layer {
@@ -26,6 +33,35 @@
   display: block;
   overflow: hidden;
   pointer-events: none;
+}
+
+/* #3674: a lifted slice's layers. Each is the picture as `cover` draws it, a square of the window's longer side about its
+   middle (the window is their size container), so a picture unit is a percent of a layer and every loop moves it as the
+   picture's own style did (`--lift-seconds`, and `--lift-origin`, the point its rule names). The innermost draws the still
+   picture. */
+.cf-art[data-art-lifted="true"] {
+  container-type: size;
+}
+
+.cf-art-lift {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100cqmax;
+  height: 100cqmax;
+  margin: -50cqmax 0 0 -50cqmax;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  transform-origin: var(--lift-origin, 50% 50%);
+  pointer-events: none;
+}
+
+.cf-art-lift > .cf-art-lift {
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
 }
 
 /* Damage: cracks grown from the art's edge, white with a dark underline so they read on any picture; one more for each
@@ -104,6 +140,12 @@
     animation: cf-art-fire var(--motion-base) var(--ease-out) 1;
   }
 
+  /* R3350000: a board Mythic's diorama (CardArt's `diorama` "all") draws no live layers: the slices over its farthest
+     (`.cf-art-slice`) are its subject, so they swing as one toward the target, the farthest staying behind as a backdrop. */
+  :root:not([data-reduce-motion="true"]) .cf[data-art-response="true"][data-art-attacking="true"] .cf-art-slice {
+    animation: cf-art-swing var(--motion-base) var(--ease-out) 1;
+  }
+
   /* Art that is one image (a delivered file, a restyle, a Starship's, a Legacy card's, a face holding no slot) answers a
      hover and a press as a whole. */
   :root:not([data-reduce-motion="true"]) .cf[data-art-response="true"][data-art-hover] .cf-art:not([data-art-live]) {
@@ -151,6 +193,165 @@
     40% {
       scale: 1.5;
       opacity: 0.4;
+    }
+  }
+
+  /* #3674: a lift's loops, each a move of motion.ts's `ART_MOVES` with its picture units as percents, in the transform
+     properties this sheet moves (a scale before a translation scales the translation), on its timing: linear, or the
+     picture's ease-in-out as motion.css names it (#2110). */
+  :root:not([data-reduce-motion="true"]) .cf-art-lift[data-lift-move="bob"] {
+    animation: cf-lift-bob var(--lift-seconds) var(--ease-in-out) infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf-art-lift[data-lift-move="breathe"] {
+    animation: cf-lift-breathe var(--lift-seconds) var(--ease-in-out) infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf-art-lift[data-lift-move="sway"] {
+    animation: cf-lift-sway var(--lift-seconds) var(--ease-in-out) infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf-art-lift[data-lift-move="hop"] {
+    animation: cf-lift-hop var(--lift-seconds) var(--ease-in-out) infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf-art-lift[data-lift-move="drift"] {
+    animation: cf-lift-drift var(--lift-seconds) var(--ease-in-out) infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf-art-lift[data-lift-move="swell"] {
+    animation: cf-lift-swell var(--lift-seconds) var(--ease-in-out) infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf-art-lift[data-lift-move="pulse"] {
+    animation: cf-lift-pulse var(--lift-seconds) var(--ease-in-out) infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf-art-lift[data-lift-move="float"] {
+    animation: cf-lift-float var(--lift-seconds) var(--ease-in-out) infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf-art-lift[data-lift-move="rise"] {
+    animation: cf-lift-rise var(--lift-seconds) linear infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf-art-lift[data-lift-move="fall"] {
+    animation: cf-lift-fall var(--lift-seconds) linear infinite;
+  }
+
+  @keyframes cf-lift-bob {
+    0%,
+    100% {
+      translate: 0 0;
+    }
+    50% {
+      translate: 0 -1.5%;
+    }
+  }
+
+  @keyframes cf-lift-breathe {
+    0%,
+    100% {
+      scale: 1;
+    }
+    50% {
+      scale: 1.03;
+    }
+  }
+
+  @keyframes cf-lift-sway {
+    0%,
+    100% {
+      rotate: -1.5deg;
+    }
+    50% {
+      rotate: 1.5deg;
+    }
+  }
+
+  @keyframes cf-lift-hop {
+    0%,
+    50%,
+    100% {
+      translate: 0 0;
+    }
+    25% {
+      translate: 0 -2.5%;
+    }
+  }
+
+  @keyframes cf-lift-drift {
+    0%,
+    100% {
+      translate: -1.59% 0;
+      scale: 1.06;
+    }
+    50% {
+      translate: 1.59% 0;
+      scale: 1.06;
+    }
+  }
+
+  @keyframes cf-lift-swell {
+    0%,
+    100% {
+      translate: 0 -1.06%;
+      scale: 1.06;
+    }
+    50% {
+      translate: 0 1.06%;
+      scale: 1.06;
+    }
+  }
+
+  @keyframes cf-lift-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
+  }
+
+  @keyframes cf-lift-float {
+    0%,
+    100% {
+      translate: 0 0;
+    }
+    50% {
+      translate: 0 -2%;
+    }
+  }
+
+  @keyframes cf-lift-rise {
+    0% {
+      translate: 0 4%;
+      opacity: 0;
+    }
+    20% {
+      opacity: 1;
+    }
+    100% {
+      translate: 0 -12%;
+      opacity: 0;
+    }
+  }
+
+  @keyframes cf-lift-fall {
+    0% {
+      translate: 0 -8%;
+      opacity: 0;
+    }
+    20% {
+      opacity: 1;
+    }
+    80% {
+      opacity: 1;
+    }
+    100% {
+      translate: 0 10%;
+      opacity: 0;
     }
   }
 }

@@ -573,7 +573,8 @@ func TestDashboard_AClosedIssueIsReplacedAndAFullPinListIsSaid(t *testing.T) {
 }
 
 // The status issue is a tracker (#2748): one opened before `tracking` gets it at its next rewrite,
-// with nothing else about it changed, and keeps it; no queue path takes it.
+// with nothing else about it changed, and keeps it; no queue path takes it. A rewrite that would
+// change nothing writes nothing (#3675), and the label stays.
 func TestDashboard_AStatusIssueOpenedBeforeGetsTracking(t *testing.T) {
 	gh, ctx := dashboardSetUp()
 	gh.AddIssue(148, fakes.Issue{Title: dashboard.Title, Body: dashboard.Marker, Labels: []string{"night bot"},
@@ -581,7 +582,7 @@ func TestDashboard_AStatusIssueOpenedBeforeGetsTracking(t *testing.T) {
 	assertEqual(t, dashboardUpdate(ctx), "rewrote #148")
 	assertEqual(t, gh.LabelNames(148), setOf("night bot", config.LabelTracking))
 	assertEqual(t, dashboardOpened(gh), []int{148})
-	assertEqual(t, dashboardUpdate(ctx), "rewrote #148")
+	assertEqual(t, dashboardUpdate(ctx), "#148 is as it was, so it was not rewritten")
 	assertEqual(t, gh.LabelNames(148), setOf("night bot", config.LabelTracking))
 	assertTrue(t, queue.IsHuman(gh.LabelNames(148)))
 }
@@ -625,7 +626,7 @@ func TestDashboard_TheVisuals(t *testing.T) {
 		dashboard.ProgressStart+"\n```mermaid\n"), "the body's start")
 	assertIn(t, "<sub>The owner's PC: no heartbeat set up (JACKIOH_PC_GIST).</sub>", body)
 	assertIn(t, dashboard.ProgressEnd+"\n\n# 🤖 ", body)
-	assertIn(t, "`bot-status` rewrites this issue every 5 minutes", body)
+	assertIn(t, "`bot-status` rewrites this issue every 2 minutes", body)
 	// A timeline of the runs going now: GitHub's runners, then the machine.
 	assertIn(t, "```mermaid\n"+dashboard.TimelineStyle+"\ngantt\n    title Runs going now, "+
 		"as of 22:00 (Central time)", body)
@@ -654,7 +655,7 @@ func TestDashboard_TheVisuals(t *testing.T) {
 	assertNotIn(t, "subgraph training", body)
 	assertNotIn(t, "machine ~~~ training", body)
 	// GitHub's lanes count claude-1's run; Muse's is in the night box's slots.
-	assertIn(t, "Lanes on GitHub's runners: 1 of 8 in use", body)
+	assertIn(t, "Lanes on GitHub's runners: 1 of 16 in use", body)
 	assertNotIn(t, "pie", body)
 	// Each subscription, with its usage as a bar.
 	assertIn(t, "| `claude-1` |", body)
@@ -681,12 +682,16 @@ func TestDashboard_NothingRunning(t *testing.T) {
 	assertIn(t, "Nothing is running right now.", body)
 	slots := ctx.Cfg.Pool.MachineParallel
 	assertIn(t, fmt.Sprintf("The night box: 0 of %d slots in use", slots), body)
-	assertIn(t, "Lanes on GitHub's runners: 0 of 8 in use", body)
+	assertIn(t, "Lanes on GitHub's runners: 0 of 16 in use", body)
 	assertIn(t, "Nothing is queued.", body)
 }
 
 // `harness dashboard --every 600 --for 1200`, as bot-status runs it (with other figures): a
 // rewrite now and every `--every` until the time is up, and a tick that fails is only a warning.
+// inPlace runs the status loop's background work (its sweep, count and runner gate,
+// `cli.Background`) in place, so a test on a fake clock sees it in the clock's order (#3675).
+func inPlace(f func()) { f() }
+
 func TestDashboard_TheLoopRewritesItEveryTenMinutesAndOutlivesABadTick(t *testing.T) {
 	now := 1000.0
 	var ticks []float64
@@ -703,6 +708,7 @@ func TestDashboard_TheLoopRewritesItEveryTenMinutesAndOutlivesABadTick(t *testin
 	dashboardOffline(t, nil)
 	patch(t, &cli.Monotonic, func() float64 { return now })
 	patch(t, &cli.Sleep, func(seconds float64) { now += seconds })
+	patch(t, &cli.Background, inPlace)
 	out, _ := capture(t, &cli.Stdout)
 	code := cli.CmdDashboard(testsupport.MakeConfig(), &cli.Args{Every: 600, ForSeconds: 1200})
 	assertEqual(t, code, 0)
@@ -740,6 +746,7 @@ func TestDashboard_TheLoopSweepsBeforeEachRewrite(t *testing.T) {
 	patch[dashboardUpdateFunc](t, &dashboard.Update, update)
 	patch(t, &cli.Monotonic, func() float64 { return now })
 	patch(t, &cli.Sleep, func(s float64) { now += s })
+	patch(t, &cli.Background, inPlace)
 	out, _ := capture(t, &cli.Stdout)
 	cli.CmdDashboard(testsupport.MakeConfig(), &cli.Args{Every: 600, ForSeconds: 600, Sweep: true})
 	assertEqual(t, order, []step{{"sweep", 0.0}, {"rewrite", 0.0}, {"sweep", 600.0}, {"rewrite", 600.0}})
@@ -950,15 +957,15 @@ func TestDashboard_EverySubscriptionsLanesWithTheTotals(t *testing.T) {
 	assertIn(t, "the workflows hand over 9 Claude secrets (`providers.SECRETS`), one an "+
 		"account: 8 the night bot's, 1 Squishy's, so none is free: another account "+
 		"needs a new secret there and in the workflows.", limits[1])
-	assertIn(t, "GitHub's runners take 8 of the bots' runs, planning runs too (4 now: 3 the "+
-		"night bot's, 1 Squishy's), the organization's 20 hosted jobs less the 12 "+
-		"kept for CI (#1455). So the 17 Claude lanes never all run at once: past 8,",
-		limits[2])
+	assertIn(t, "GitHub's runners take 16 of the bots' runs, planning runs too (4 now: 3 the "+
+		"night bot's, 1 Squishy's), of the organization's 60 hosted jobs: the other 44 are "+
+		"CI's, the training lanes' and the bots' own short jobs (#3740). So the 17 Claude "+
+		"lanes never all run at once: past 16,", limits[2])
 	assertIn(t, "runs 6 plans at once beside the accounts' own lanes (1 now)", limits[3])
 	assertIn(t, "6 runs at once (2 now)", limits[4])
 	assertTrue(t, strings.HasSuffix(limits[6],
 		"14 Claude lanes are open on accounts that may start work, and GitHub's runners have "+
-			"4 free, so there is room for 4 more Claude runs."), limits[6])
+			"12 free, so there is room for 12 more Claude runs."), limits[6])
 	// A subscription switched off has no open lane, and the totals say how many are off; with no
 	// Squishy row, its secret is the one free.
 	ctx = testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Night}) // only claude-1's secret, the machine's off
@@ -968,7 +975,7 @@ func TestDashboard_EverySubscriptionsLanesWithTheTotals(t *testing.T) {
 	assertIn(t, "one an account: 8 the night bot's; free: `CLAUDE_CODE_OAUTH_TOKEN_SQUISHY`.",
 		table)
 	assertIn(t, "**Now:** 2 Claude lanes are open on accounts that may start work, and GitHub's "+
-		"runners have 8 free, so there is room for 2 more Claude runs.", table)
+		"runners have 16 free, so there is room for 2 more Claude runs.", table)
 	// Halted, no lane may start work.
 	table = strings.Join(dashboard.LanesTable(ctx, ctx.Store.Load(), pyjson.New(), nil, "HALT is on main"),
 		"\n")
@@ -1021,7 +1028,7 @@ func TestDashboard_AFailureNeverFailsTheSweep(t *testing.T) {
 // ============================================================================ StatisticsTests
 
 // The statistics live in the status issue (#148; they had an issue of their own, #190): counted
-// afresh every 30 minutes, kept as they are between counts, and cut to fit GitHub's limit on an
+// afresh every 10 minutes, kept as they are between counts, and cut to fit GitHub's limit on an
 // issue's body.
 
 // dashboardNoCount is mock.patch.object(stats, "collect", side_effect=AssertionError("counted")),
@@ -1032,7 +1039,7 @@ func dashboardNoCount(t *testing.T) (restore func()) {
 	})
 }
 
-func TestDashboard_CountedEvery30MinutesAndKeptBetween(t *testing.T) {
+func TestDashboard_CountedEvery10MinutesAndKeptBetween(t *testing.T) {
 	gh, ctx := statsWorld()
 	note := dashboardUpdateStats(ctx, false)
 	issues := dashboardOpened(gh)
@@ -1050,14 +1057,14 @@ func TestDashboard_CountedEvery30MinutesAndKeptBetween(t *testing.T) {
 	assertLess(t, strIndex(t, body, stats.BlockEnd), strIndex(t, body, dashboard.Marker))
 	assertTrue(t, pyjson.Equal(ctx.Store.Load().Get("statistics"),
 		pyjson.New("at", clock.ISO(testsupport.Day))), "state's statistics")
-	// Twenty minutes on, nothing is counted: the block the issue holds is kept as it is.
-	soon := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day.Add(20 * time.Minute)})
+	// Five minutes on, nothing is counted: the block the issue holds is kept as it is.
+	soon := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day.Add(5 * time.Minute)})
 	restore := dashboardNoCount(t)
 	assertEqual(t, dashboardUpdateStats(soon, false), fmt.Sprintf("rewrote #%d", number))
 	restore()
 	assertEqual(t, stats.Kept(bodyOf()), block)
-	assertIn(t, "Last updated at 2026-09-29 12:20 CDT", bodyOf())
-	// Forced, or once 30 minutes have passed, they are counted afresh.
+	assertIn(t, "Last updated at 2026-09-29 12:05 CDT", bodyOf())
+	// Forced, or once 10 minutes have passed, they are counted afresh.
 	assertTrue(t, strings.HasSuffix(dashboardUpdateStats(soon, true), "afresh"))
 	later := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day.Add(51 * time.Minute)})
 	assertTrue(t, strings.HasSuffix(dashboardUpdateStats(later, false), "afresh"))
@@ -1071,7 +1078,8 @@ func TestDashboard_CountedEvery30MinutesAndKeptBetween(t *testing.T) {
 	// block the issue holds is kept rather than wiped until the loop's next tick.
 	held := stats.Kept(bodyOf())
 	restore = dashboardNoCount(t)
-	assertEqual(t, dashboardUpdate(later), fmt.Sprintf("rewrote #%d", number))
+	// The same moment as the count, so nothing else changed either: nothing is written (#3675).
+	assertEqual(t, dashboardUpdate(later), fmt.Sprintf("#%d is as it was, so it was not rewritten", number))
 	restore()
 	assertEqual(t, stats.Kept(bodyOf()), held)
 	// An issue that holds none carries none.
@@ -1099,7 +1107,7 @@ func TestDashboard_MoreRunnersBusyAreCutToTheRoomBeforeACount(t *testing.T) {
 		gh.Jobs[id] = []*pyjson.Object{pyjson.New("name", fmt.Sprintf("shard %d", n), "status", "in_progress",
 			"labels", []any{"ubuntu-latest"}, "runner_name", fmt.Sprintf("GitHub Actions %d", n))}
 	}
-	soon := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day.Add(20 * time.Minute)})
+	soon := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day.Add(5 * time.Minute)})
 	kept := stats.Kept(gh.Threads.Get(number).Str("body"))
 	full := dashboard.Render(soon, nil, kept, nil, true)
 	restoreCount, restoreMax := dashboardNoCount(t), patch(t, &dashboard.MaxBody, py.Len(full)-1)
@@ -1198,6 +1206,7 @@ func dashboardLoop(t *testing.T, gh *fakes.FakeGitHub, cfg *config.Config, ticks
 	defer dashboardOffline(t, gh)()
 	defer patch(t, &cli.Monotonic, func() float64 { return now })()
 	defer patch(t, &cli.Sleep, func(s float64) { now += s })()
+	defer patch(t, &cli.Background, inPlace)()
 	out, restore := capture(t, &cli.Stdout)
 	defer restore()
 	cli.CmdDashboard(cfg, &cli.Args{Every: 600, ForSeconds: 600 * (ticks - 1)})
@@ -1416,7 +1425,7 @@ func TestDashboard_EachBusyRunnerSaysWhatItDoesAndWhatFor(t *testing.T) {
 	body := r.section()
 	assertTrue(t, strings.HasPrefix(body, dashboard.RunnersStart+"\n## 🖥️ Every runner"), "its start")
 	assertTrue(t, strings.HasSuffix(body, dashboard.RunnersEnd), "its end")
-	assertIn(t, "🟢 **3 runners busy**: 2 on GitHub's (of the 20 the organization may hold), "+
+	assertIn(t, "🟢 **3 runners busy**: 2 on GitHub's (of the 60 the organization may hold), "+
 		"1 on the Muse box · ⏳ **3 jobs queued** for a runner · read at 22:00", body)
 	// GitHub's runners first, the longest-running first; the night bot's runs name the item they
 	// work on, found by the run's id or the pending claim's reference in its title.
@@ -1444,7 +1453,7 @@ func TestDashboard_TheRunnersAsBoxes(t *testing.T) {
 	r := newDashboardRunners(t)
 	diagram := r.diagram()
 	assertTrue(t, strings.HasPrefix(diagram, dashboard.RunnerWrap+"\nflowchart TB\n"), "its start")
-	assertIn(t, `    subgraph gh["GitHub's runners: 2 busy, of the 20 the organization may `+
+	assertIn(t, `    subgraph gh["GitHub's runners: 2 busy, of the 60 the organization may `+
 		`hold"]`, diagram)
 	assertIn(t, `        gh0["<b>bot-night · work</b><br/>building #37 on claude-1<br/>build, `+
 		`check and review<br/>47m"]:::busy`, diagram)
@@ -2013,7 +2022,7 @@ func TestDashboard_TheIssueCarriesItLowAfterEverythingTheBotsDraw(t *testing.T) 
 	assertLess(t, strIndex(t, body, "## 📊 stats"), strIndex(t, body, dashboard.RunnersStart))
 	assertLess(t, strIndex(t, body, "## 🫧 Squishy"), strIndex(t, body, dashboard.RunnersStart))
 	assertLess(t, strIndex(t, body, dashboard.RunnersEnd), strIndex(t, body, "<details><summary>The full status</summary>"))
-	assertIn(t, "`bot-status` rewrites this issue every 5 minutes, and its runners every 2",
+	assertIn(t, "`bot-status` rewrites this issue every 2 minutes, and its runners every minute",
 		body)
 }
 
@@ -2077,6 +2086,7 @@ func TestDashboard_TheLoopRedrawsTheRunnersBetweenRewrites(t *testing.T) {
 	dashboardOffline(t, nil)
 	patch(t, &cli.Monotonic, func() float64 { return now })
 	patch(t, &cli.Sleep, func(s float64) { now += s })
+	patch(t, &cli.Background, inPlace)
 	out, _ := capture(t, &cli.Stdout)
 	cli.CmdDashboard(testsupport.MakeConfig(), &cli.Args{Every: 300, RunnersEvery: 120, ForSeconds: 600})
 	assertEqual(t, ticks, []tick{{"rewrite", 0.0}, {"runners", 120.0}, {"runners", 240.0},

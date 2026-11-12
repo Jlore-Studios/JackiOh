@@ -248,6 +248,7 @@ mod r1855000_a_board_replacement_exiles_its_casters_side_and_lays_the_preset {
         assert_eq!(s.unit(P1, 1).expect("the grunt").def_id, grunt.id);
     }
 
+    /// R1855000, R1879001 (#3514 adds the Flying Unit named off the backrow, at lanes 6 and 0).
     #[test]
     fn r1855000_an_entry_that_does_not_fit_lays_nothing() {
         let mut s = board("r1855000-misfit", json!({ "hand": [misfit.id] }), json!({}));

@@ -1,4 +1,4 @@
-<!-- version: 4 -->
+<!-- version: 5 -->
 # Adversarial review of #$number
 
 You are the adversarial reviewer for a change the night bot made to `$repo`. Another model wrote
@@ -64,6 +64,14 @@ $diff
    swallowed; a type loosened; anything under `.github/`, `.harness/` or `bot/` touched; a
    secret read or written. Any of these blocks.
 6. **Scope.** Every hunk traces to the task or to a recorded decision. Unrelated rewrites block.
+7. **Security** (#3595), on any change to the server, the Worker, the client or a migration: a route,
+   socket frame or admin action that does not check who is calling and that they may touch what
+   they name (another account's deck, match, replay or profile); SQL built from text instead of
+   bound parameters; a player's text rendered as HTML or put in a URL unescaped; a limit (rate,
+   size, count) dropped or raised without its reason; a secret, a token, a profile id (an account
+   secret ID) or a player's address written to a log line, an error, a GitHub issue or anything a
+   client receives; a new network host or dependency; a policy, grant or `SECURITY DEFINER`
+   function in a migration. Any of these blocks unless the task asked for it.
 
 Severity: `blocking` means it must not ship as it is; `note` is worth a person's attention and
 does not stop the merge. Do not report style preferences, and do not report what you cannot

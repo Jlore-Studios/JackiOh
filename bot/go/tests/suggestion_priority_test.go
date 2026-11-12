@@ -59,7 +59,7 @@ func suggestionPriorityWith(priorities any) *pyjson.Object {
 // ---------------------------------------------------------------------------- DeliveryTests
 
 func TestSuggestionPriority_EachClassOpensWithItsPriority(t *testing.T) {
-	h := newFlowHarness(t)
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll}) // every account's lanes spare
 	testsupport.IdleFor(h.ctx)
 	r := suggestionPrioritySurvey(suggestionPriorityIdea("Fuzz", "fuzz"), suggestionPriorityIdea("Security", "security"),
 		suggestionPriorityIdea("Data", "data"), suggestionPriorityIdea("Feature", "feature"),
@@ -93,7 +93,7 @@ func TestSuggestionPriority_EachClassOpensWithItsPriority(t *testing.T) {
 }
 
 func TestSuggestionPriority_TheConfigAloneSetsThePriority(t *testing.T) {
-	h := newFlowHarness(t, flowHarnessOpts{Overrides: pyjson.New("suggestions",
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Overrides: pyjson.New("suggestions",
 		suggestionPriorityWith(pyjson.New("fuzz", "high")))})
 	testsupport.IdleFor(h.ctx)
 	h.night(suggestionPrioritySurvey(suggestionPriorityIdea("Fuzz", "fuzz"), suggestionPriorityIdea("Data", "data")))

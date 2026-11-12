@@ -45,6 +45,18 @@ export const PREVIEW_GLOSSARY_GAP_PX = 10;
  * REF_PANEL_FACE_HEIGHT_PX, with the panel's padding. Mirrors `.inspect-hover .inspect-refs`.
  */
 export const PREVIEW_REFS_WIDTH_PX = 170;
+/**
+ * #3602: viewports this wide or narrower draw the phone hover-preview layout, with the full-text
+ * panel stacked across the card's width instead of beside it. Mirrors inspect.css's
+ * `@media (max-width: 600px)` hover block.
+ */
+export const PREVIEW_PHONE_WIDTH_PX = 600;
+/**
+ * #3602: the stacked full-text panel's max height on a phone. Longer words scroll inside it; the
+ * estimate counts it whole. 200 keeps card, one gap and panel inside 390x844 (500 + 10 + 200 = 710)
+ * and 430x932. Mirrors `.inspect-hover .inspect-extended`'s `max-height` in inspect.css's phone block.
+ */
+export const PREVIEW_EXTENDED_STACKED_MAX_PX = 200;
 
 /** A pile's hover preview (CardList.tsx) shows at most this many faces, newest first; the sheet shows them all. */
 export const LIST_PREVIEW_MAX = 8;

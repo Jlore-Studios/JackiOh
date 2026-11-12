@@ -21,6 +21,18 @@
   background: color-mix(in srgb, var(--selected) 10%, transparent);
   box-shadow: 0 0 10px 2px color-mix(in srgb, var(--selected) 45%, transparent);
   transition: background-color var(--motion-fast) var(--ease-standard);
+}
+
+/* The breath is the wider halo, drawn once on the oblong's `::after` (a ring's width outside its
+   border box, since the oblong's own box is the border's) and faded in by opacity alone (R3608000);
+   the oblong's own shadow never changes. */
+.lane-pick-oblong::after {
+  content: "";
+  position: absolute;
+  inset: calc(var(--lane-pick-ring) * -1);
+  border-radius: inherit;
+  box-shadow: 0 0 16px 4px color-mix(in srgb, var(--selected) 65%, transparent);
+  opacity: 0;
   animation: lane-pick-breathe 1.6s var(--ease-in-out) infinite alternate;
 }
 
@@ -29,12 +41,15 @@
   border-width: var(--lane-pick-ring-lit);
   background: color-mix(in srgb, var(--selected) 24%, transparent);
   box-shadow: 0 0 16px 4px color-mix(in srgb, var(--selected) 70%, transparent);
+}
+
+.lane-pick-oblong[data-active="true"]::after {
   animation: none;
 }
 
 @keyframes lane-pick-breathe {
   to {
-    box-shadow: 0 0 16px 4px color-mix(in srgb, var(--selected) 65%, transparent);
+    opacity: 1;
   }
 }
 
@@ -67,12 +82,12 @@
 
 /* Reduce Motion: a still oblong. */
 @media (prefers-reduced-motion: reduce) {
-  .lane-pick-oblong {
+  .lane-pick-oblong::after {
     animation: none;
   }
 }
 
-:root[data-reduce-motion="true"] .lane-pick-oblong,
-.game[data-reduced-motion="true"] .lane-pick-oblong {
+:root[data-reduce-motion="true"] .lane-pick-oblong::after,
+.game[data-reduced-motion="true"] .lane-pick-oblong::after {
   animation: none;
 }

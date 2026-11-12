@@ -11,6 +11,7 @@ import { ANIMATIONS, MIN_ENTRY_MS, planEntries, type AnimationEntry } from "../g
 import { testid, type Side } from "../game/contract.ts";
 import { damageFeel } from "../game/damageFeel.ts";
 import { baseView, emptySide, fullBoardView, withEvents } from "../test/fixtures.ts";
+import { envOf } from "../test/signatures.ts";
 import { must } from "../test/stubServer.ts";
 import {
   FX_ARROWS_TAIL_MS,
@@ -199,10 +200,6 @@ function shakesOf(cues: readonly FxCue[]): number[] {
 }
 
 /* Planning helpers */
-
-function envOf(over: Partial<FxPlanEnv> = {}): FxPlanEnv {
-  return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory(), ...over };
-}
 
 function catalog(facts: Record<string, FxCardFacts>): FxPlanEnv["card"] {
   return (defId) => facts[defId];

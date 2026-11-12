@@ -122,7 +122,8 @@
 #    engine's, the cards', the AI's, the shared crate's tests (its source and data run it: the shared crate's
 #    quest pool, quests.json, has titles the quests panel's test holds to zh-CN, #3104) and the WASM crate's tests (except the engine's tests/fixtures/,
 #    which two web tests read), the C module's tests (crates/wasm/c/src/tests.rs; its other sources run
-#    `web`, since `web (wasm c module)` builds them, #3097), docs/, training/, reviews/, analysis/, infra/ and the top-level
+#    `web`, since `web (wasm c module)` builds them, #3097), docs/, training/ (but training/file-records.sh,
+#    which env-production.test.ts holds to R1933001), reviews/, analysis/, infra/ and the top-level
 #    Markdown. The Worker in front of the server, apps/edge/, and wrangler.jsonc are among what it
 #    runs for: the job lints, typechecks and tests the Worker, and cloudflare-config.test.ts reads
 #    the file.
@@ -292,6 +293,7 @@ for file in $files; do
     crates/server/* | crates/tools/* | crates/*/README.md) ;;
     crates/engine/tests/* | crates/cards/tests/* | crates/ai/tests/* | crates/wasm/tests/* | crates/shared/tests/*) ;;
     crates/wasm/c/src/tests.rs) ;;
+    training/file-records.sh) on web ;;
     docs/* | training/* | reviews/* | analysis/* | infra/*) ;;
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
     *) on web ;;

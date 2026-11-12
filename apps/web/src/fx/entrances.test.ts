@@ -13,12 +13,12 @@ import { describe, expect, it } from "vitest";
 import { ANIMATIONS, planEntries } from "../game/animations.ts";
 import { testid } from "../game/contract.ts";
 import { fullBoardView, withEvents } from "../test/fixtures.ts";
+import { endOf, envOf } from "../test/signatures.ts";
 import { entranceKeyOf } from "./cardFx.ts";
 import { FX_CARD_TABLE } from "./cards/tables.ts";
-import { FX_INTENSITY_SCALE, FX_MAX_PARTICLE_LIFE_MS, FX_MAX_TAIL_MS, FX_SLAM_AT } from "./constants.ts";
+import { FX_INTENSITY_SCALE, FX_MAX_TAIL_MS, FX_SLAM_AT } from "./constants.ts";
 import { planFx } from "./cues.ts";
 import { ENTRANCES, ENTRANCE_TRAUMA, type EntranceKey } from "./entrances.ts";
-import { createFxMemory } from "./memory.ts";
 import type { FxCardFacts, FxCue, FxPlanEnv } from "./types.ts";
 
 type CatalogEntry = { name: string; type: string; rarity: string; printedRarity?: string };
@@ -36,9 +36,8 @@ const FIELDS = ENTERING.filter(([defId]) => CATALOG[defId]?.type === "Field Spel
 
 const LEGENDARY_FACTS: FxCardFacts = { rarity: "Legendary", attack: 6, health: 6 };
 
-function envOf(over: Partial<FxPlanEnv> = {}): FxPlanEnv {
-  return { intensity: FX_INTENSITY_SCALE.normal, card: () => LEGENDARY_FACTS, memory: createFxMemory(), ...over };
-}
+/** The shared planning setup, every card read as LEGENDARY_FACTS. */
+const legendaryEnv = (over: Partial<FxPlanEnv> = {}): FxPlanEnv => envOf({ card: () => LEGENDARY_FACTS, ...over });
 
 const summoned = (player: "p1" | "p2", instanceId: string, defId: string, row: "units" | "backrow" = "units", lane = 3): GameEvent => ({
   type: "summoned",
@@ -50,7 +49,7 @@ const summoned = (player: "p1" | "p2", instanceId: string, defId: string, row: "
 });
 const played = (player: "p1" | "p2", instanceId: string, defId: string): GameEvent => ({ type: "cardPlayed", player, instanceId, defId, costPaid: 7 });
 
-function planAll(events: readonly GameEvent[], env: FxPlanEnv = envOf(), D?: number, view: PlayerView = fullBoardView()): FxCue[] {
+function planAll(events: readonly GameEvent[], env: FxPlanEnv = legendaryEnv(), D?: number, view: PlayerView = fullBoardView()): FxCue[] {
   return planEntries(events, withEvents(view, [...events]), false).flatMap((original) => {
     const entry = D === undefined ? original : { ...original, durationMs: D };
     env.memory.remember(entry.events);
@@ -64,19 +63,6 @@ function emptyLane(side: "you" | "opponent", row: "units" | "backrow", lane: num
   if (row === "units") view[side].units[lane - 1] = null;
   else view[side].backrow[lane - 1] = null;
   return view;
-}
-
-function endOf(cue: FxCue): number {
-  switch (cue.kind) {
-    case "burst":
-      return cue.delayMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "projectile":
-      return cue.delayMs + cue.flightMs + FX_MAX_PARTICLE_LIFE_MS;
-    case "shake":
-      return cue.delayMs;
-    default:
-      return cue.delayMs + ("durationMs" in cue ? cue.durationMs : 0);
-  }
 }
 
 describe("R670 marquee Legendary and Mythic entrances", () => {
@@ -104,7 +90,7 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
   it("R670 a marquee summoned into a unit zone plans its own entrance in place of the rarity's rays and gold", () => {
     for (const [defId, key] of MARQUEE) {
       const landing = summoned("p1", "m1", defId);
-      const cues = planAll([landing], envOf(), undefined, emptyLane("you", "units", 3));
+      const cues = planAll([landing], legendaryEnv(), undefined, emptyLane("you", "units", 3));
       const D = ANIMATIONS.summoned.durationMs;
       // R3332001, R3400001: an entrance that reads the board and its landing (its side, its lane) is given both;
       // R3389000: and when in the entry its card lands.
@@ -125,8 +111,11 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
   });
 
   it("R670 a plain Legendary still gets the rarity entrance", () => {
-    // Classic+ #13 Mommy Barker, a Legendary Unit with no entrance of its own (Core's and Classic's have theirs).
-    const cues = planAll([summoned("p1", "m1", "classicplus-013")]);
+    // The rarity's shared entrance (cues.ts `summon`) plays for a Legendary the table has no entrance for: no
+    // shipped card is one now, so the defId is a stand-in the table does not hold.
+    const NO_ENTRANCE = "legendary-with-no-entrance";
+    expect(FX_CARD_TABLE.has(NO_ENTRANCE)).toBe(false);
+    const cues = planAll([summoned("p1", "m1", NO_ENTRANCE)]);
     expect(cues.some((cue) => cue.kind === "rays" && cue.tone === "legendary")).toBe(true);
     expect(cues.some((cue) => cue.kind === "burst" && cue.preset === "gold" && cue.spread === "area")).toBe(true);
   });
@@ -138,12 +127,12 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
     const D = planEntries(pair, withEvents(fullBoardView(), pair), false)[0]?.durationMs ?? 0;
     const landMs = Math.round(FX_SLAM_AT * D);
     const mineView = emptyLane("you", "units", 3);
-    const mine = planAll(pair, envOf(), undefined, mineView);
+    const mine = planAll(pair, legendaryEnv(), undefined, mineView);
     const own = pair[1]?.type === "summoned" ? pair[1] : undefined;
     expect(mine).toEqual(ENTRANCES[key]({ D, tgt: testid.zone("you", "units", 3), intensity: FX_INTENSITY_SCALE.normal, view: mineView, landing: own, landMs }));
     const theirLanding = summoned("p2", "m2", defId, "units", 2);
     const theirView = emptyLane("opponent", "units", 2);
-    const theirs = planAll([played("p2", "m2", defId), theirLanding], envOf(), undefined, theirView);
+    const theirs = planAll([played("p2", "m2", defId), theirLanding], legendaryEnv(), undefined, theirView);
     const other = theirLanding.type === "summoned" ? theirLanding : undefined;
     expect(theirs).toEqual(ENTRANCES[key]({ D, tgt: testid.zone("opponent", "units", 2), intensity: FX_INTENSITY_SCALE.normal, view: theirView, landing: other, landMs }));
     // R202: no cue carries a definition or a name.
@@ -156,7 +145,7 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
     const hidden = planAll([summoned("p2", "hidden", "hidden")]);
     expect(hidden.some((cue) => cue.kind === "rays" || cue.kind === "crack" || cue.kind === "shake")).toBe(false);
     for (const [defId] of MARQUEE) {
-      const set = planAll([summoned("p1", "m1", defId, "backrow")], envOf(), undefined, emptyLane("you", "backrow", 3));
+      const set = planAll([summoned("p1", "m1", defId, "backrow")], legendaryEnv(), undefined, emptyLane("you", "backrow", 3));
       expect(set.map((cue) => cue.kind), defId).toEqual(["burst"]);
     }
   });
@@ -173,7 +162,7 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
   it("R200 every entrance cue starts inside its entry and ends within FX_MAX_TAIL_MS of its end, for short and long entries", () => {
     for (const D of [120, 250, 400, 732, 1400]) {
       for (const [defId] of MARQUEE) {
-        const cues = planAll([summoned("p1", "m1", defId)], envOf(), D);
+        const cues = planAll([summoned("p1", "m1", defId)], legendaryEnv(), D);
         expect(cues.length).toBeGreaterThan(3);
         for (const cue of cues) {
           const label = `${defId} ${cue.kind} at D=${String(D)}`;
@@ -187,8 +176,8 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
   });
 
   it("R200 intensity 0 (the effects off, or reduced motion) plans none of it", () => {
-    for (const [defId] of MARQUEE) expect(planAll([summoned("p1", "m1", defId)], envOf({ intensity: 0 }))).toEqual([]);
-    for (const [defId] of FIELDS) expect(planAll([summoned("p1", "m1", defId, "backrow", 1)], envOf({ intensity: 0 }), undefined, emptyLane("you", "backrow", 1))).toEqual([]);
+    for (const [defId] of MARQUEE) expect(planAll([summoned("p1", "m1", defId)], legendaryEnv({ intensity: 0 }))).toEqual([]);
+    for (const [defId] of FIELDS) expect(planAll([summoned("p1", "m1", defId, "backrow", 1)], legendaryEnv({ intensity: 0 }), undefined, emptyLane("you", "backrow", 1))).toEqual([]);
   });
 
   it("R3405000 a signature Field Spell's entrance plays as it lands face up, never set face down", () => {
@@ -198,13 +187,13 @@ describe("R670 marquee Legendary and Mythic entrances", () => {
     for (const [defId, key] of FIELDS) {
       const board = emptyLane("you", "backrow", 1);
       const landing: Extract<GameEvent, { type: "summoned" }> = { type: "summoned", player: "p1", instanceId: "f1", defId, row: "backrow", lane: 1 };
-      const cues = planAll([landing], envOf(), undefined, board);
+      const cues = planAll([landing], legendaryEnv(), undefined, board);
       const view = withEvents(board, [landing]);
       expect(cues, defId).toEqual(ENTRANCES[key]({ D, tgt: testid.zone("you", "backrow", 1), intensity: FX_INTENSITY_SCALE.normal, view, landing, leadMs: 0 }));
       expect(cues.filter((cue) => cue.kind === "shake"), defId).toEqual([{ kind: "shake", trauma: ENTRANCE_TRAUMA[key], delayMs: Math.round(FX_SLAM_AT * D) }]);
       // Set face down (its fresh id's `formerId`, R227) or hidden from this seat, it lands with no entrance of its own.
       for (const set of [{ ...landing, formerId: "f0" }, { ...landing, instanceId: "hidden", defId: "hidden" }]) {
-        const drawn = planAll([set], envOf(), undefined, emptyLane("you", "backrow", 1));
+        const drawn = planAll([set], legendaryEnv(), undefined, emptyLane("you", "backrow", 1));
         expect(drawn.some((cue) => cue.kind === "shake" || cue.kind === "figure"), `${defId} set`).toBe(false);
       }
     }

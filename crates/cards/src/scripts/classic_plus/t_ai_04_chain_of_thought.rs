@@ -81,10 +81,6 @@ mod tests {
             .count()
     }
 
-    fn count(s: &Scenario, kind: &str) -> usize {
-        s.events().iter().filter(|event| js(*event)["type"] == kind).count()
-    }
-
     mod t_ai_4_chain_of_thought {
         use super::*;
 
@@ -161,7 +157,7 @@ mod tests {
                 let mut s = chain(json!([TIMMY, TIMMY, TIMMY]), false, Some(spare));
                 s.play(CHAIN, json!({}));
                 // 9 left in hand after the play: the first Timmy fits, the second burns, and the chain ends.
-                assert_eq!(count(&s, "burned"), 1);
+                assert_eq!(s.count("burned"), 1);
                 assert_eq!(s.pile(P1, "library").len(), 1);
             }
 
@@ -169,7 +165,7 @@ mod tests {
             fn s2_4_a_fatigue_draw_ends_the_chain_after_one_hit() {
                 let mut s = chain(json!([]), false, None);
                 s.play(CHAIN, json!({}));
-                assert_eq!(count(&s, "fatigue"), 1);
+                assert_eq!(s.count("fatigue"), 1);
                 s.expect_health(P1, 29);
             }
 
@@ -182,7 +178,7 @@ mod tests {
                 }));
                 s.play(CHAIN, json!({}));
                 assert_eq!(drawn(&s), 1);
-                assert_eq!(count(&s, "drawLimited"), 1);
+                assert_eq!(s.count("drawLimited"), 1);
                 assert_eq!(s.pile(P1, "library").len(), 2);
             }
 

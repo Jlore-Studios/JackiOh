@@ -309,7 +309,7 @@ mod tests {
             assert_eq!(evolved_events(&s), 1);
             assert!(s.stats(FUNGUS).keywords.contains(&Keyword::Taunt));
             // R65: at their cost now: the discount it dealt this end of turn counts (still (0)s).
-            assert_eq!(effective_cost(s.state(), &s.card(FREE), Default::default()), 0);
+            assert_eq!(effective_cost(s.state(), s.card(FREE), Default::default()), 0);
         }
 
         #[test]

@@ -121,6 +121,7 @@ mod tests {
     }
 
     /// The hand cards `legal_actions` offers as the Constant's pick.
+    // Differs from Scenario::offered: one card's play targets as def ids, not the seat's whole legal list.
     fn offered(s: &Scenario) -> Vec<String> {
         let constant_id = s.card(CONSTANT).id.clone();
         legal_actions(s.state(), P1)

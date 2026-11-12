@@ -173,6 +173,34 @@ describe("R768000 /replays", () => {
     expect(getReplaySteps).toHaveBeenCalledWith(TOKEN, "m-1", 0, REPLAY_PAGE_STEPS);
   });
 
+  it("#3698 an online row's replay names its opponent, a deleted account when the name is gone", async () => {
+    signIn();
+    serveSteps();
+    const gone = listing({ matchId: "m-2", opponent: { profileId: "", username: "" }, mode: null, result: "loss" });
+    vi.mocked(getReplays).mockResolvedValue({ replays: [listing(), gone], nextOffset: null });
+    renderRoute(memorySaveStore());
+
+    for (const [matchId, name] of [
+      ["m-1", "rival"],
+      ["m-2", "a deleted account"],
+    ] as const) {
+      const row = await screen.findByTestId(replaysTestid.online(matchId));
+      fireEvent.click(within(row).getByRole("button", { name: "Watch" }));
+      await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
+      expect(screen.getByTestId("hero-opponent").querySelector(".hero-seat")).toHaveTextContent(name);
+      expect(screen.getByTestId("hero-you").querySelector(".hero-seat")).toHaveTextContent("You");
+      fireEvent.click(screen.getByTestId(replayTestid.back));
+    }
+  });
+
+  it("#3698 a practice row's replay labels the opponent AI", async () => {
+    renderRoute(await storeWithGame());
+    const row = await screen.findByTestId(replaysTestid.practice(1));
+    fireEvent.click(within(row).getByRole("button", { name: "Watch" }));
+    await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
+    expect(screen.getByTestId("hero-opponent").querySelector(".hero-seat")).toHaveTextContent("AI");
+  });
+
   it("R768000 shows older online games a page at a time", async () => {
     signIn();
     vi.mocked(getReplays)

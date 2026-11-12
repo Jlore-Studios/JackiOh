@@ -1363,7 +1363,10 @@ mod tests {
             .expect("Pickle's kept row covers v0.4.0b");
         assert_eq!(KEPT_SCRIPTS[at].0, c008_pickle::ID);
         assert_eq!(KEPT_SCRIPTS[at].1, "v0.4.0b");
-        assert!(KEPT_SCRIPTS[at].2 == c008_pickle::script_v0_3_16);
+        assert!(std::ptr::fn_addr_eq(
+            KEPT_SCRIPTS[at].2,
+            c008_pickle::script_v0_3_16 as fn() -> CardScripts
+        ));
         assert!(past_scripts("classic-008@v0.4.0b").is_some());
         // Core #13 has no kept row: its past versions run the card's own script.
         for id in past_ids("core-013", crate::CATALOG_VERSION) {

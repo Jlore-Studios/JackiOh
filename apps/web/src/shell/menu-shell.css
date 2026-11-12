@@ -1,0 +1,272 @@
+/* The menus' shell (#3728, R3728000, shell/MenuShell.tsx; docs/polish/10-menus.md): the screen's column and
+   the one navigation, Home, Play, Collection, Shop and Friends, in the same place on every menu. The width
+   decides, never the device (an iPad's window can be any width):
+     - over `tablet` (1025 px and wider): a rail down the left, an icon and a label per item;
+     - from 601 to 1024 px (an upright iPad, a narrow window): the same rail, icons alone, each item a
+       `--hit-min` square, its label still its name;
+     - a phone (600 px and under): a tab bar at the foot of the window, over the screen's scroll.
+   Every part keeps inside the safe-area insets (`env(safe-area-inset-*)`): the screen's column under the
+   top inset, the rail beside the left one, the tab bar above the bottom one. A board drawn on a menu path
+   (`data-board`, a replay or a dungeon fight) takes the navigation away and none of this applies.
+
+   `--shell-screen-h` is the height a menu fills, the window less the top inset and a phone's tab bar: the
+   menus that are one screen tall (R1581000: index.css's `.one-screen`, the tavern, the hub, the collection,
+   the shop, the deck screens, the landing) read it with `100dvh` as its fallback outside the shell.
+   `--shell-start` (the rail's width) and `--shell-bottom` (a phone's tab bar and the bottom inset under it)
+   are the room the navigation takes beside and under the column: a toast fixed at the column's foot reads
+   them, with 0px as their fallback outside the shell, to center on the column and sit above the tab bar
+   (the deck builder's status toast, deckbuilder.css; the undo toast, undo/undo.css).
+
+   The look is the top bar's (routes/top-bar.css): the tavern's wood, its brass edge and gold ink, on the
+   tokens. Nothing here is a skin for a button: the items are links, and the Friends button
+   (together/FriendsButton.tsx's `rail`) takes the item's look as one of them. */
+
+:root {
+  /* The labelled rail; the workshop's split (DeckWorkshop.tsx) is this and its own 1101 px. */
+  --shell-rail-w: 176px;
+  --shell-rail-icons-w: 80px;
+  --shell-tabbar-h: 64px;
+  /* R3728001: the friends drawer (game/dialog.css), beside the screen over 1024 px. */
+  --shell-drawer-w: 360px;
+}
+
+.menu-shell {
+  --shell-top: 0px;
+  --shell-start: 0px;
+  --shell-bottom: 0px;
+  --shell-screen-h: calc(100dvh - var(--shell-top) - var(--shell-bottom));
+}
+
+.menu-shell:not([data-board]) {
+  --shell-top: env(safe-area-inset-top, 0px);
+}
+
+.menu-shell__main {
+  min-width: 0;
+}
+
+.menu-shell:not([data-board]) > .menu-shell__main {
+  padding-top: var(--shell-top);
+}
+
+.menu-shell__nav {
+  box-sizing: border-box;
+  background: var(--pal-wood-900);
+}
+
+.menu-shell .menu-shell__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-5);
+  box-sizing: border-box;
+  min-width: var(--hit-min);
+  min-height: var(--hit-min);
+  margin: 0;
+  padding: var(--space-3) var(--space-5);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--tavern-gold-pale);
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  text-align: start;
+  text-decoration: none;
+  cursor: var(--cursor-glove-point, pointer);
+  transition: background-color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard);
+}
+
+/* A hover is a bonus (an iPad with a trackpad, a desktop); without one, nothing is lost. */
+.menu-shell .menu-shell__item:hover {
+  border-color: var(--tavern-gold);
+  background: color-mix(in srgb, var(--pal-wood-700) 55%, transparent);
+}
+
+.menu-shell .menu-shell__item[aria-current="page"] {
+  border-color: var(--tavern-brass);
+  background: color-mix(in srgb, var(--pal-wood-700) 75%, transparent);
+  color: var(--tavern-gold);
+}
+
+.menu-shell .menu-shell__item:focus-visible {
+  outline: 2px solid var(--selected);
+  outline-offset: 2px;
+}
+
+.menu-shell .menu-shell__icon {
+  display: block;
+  flex: none;
+  width: 24px;
+  height: 24px;
+}
+
+.menu-shell .menu-shell__icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.menu-shell .menu-shell__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The Friends button's count of what waits on the player (R3728000: a badge only for what needs you). */
+.menu-shell .menu-shell__item .friends-button__badge {
+  top: var(--space-1);
+  left: calc(var(--space-5) + 14px);
+  right: auto;
+}
+
+/* ---- a rail: over 600 px ------------------------------------------------------------------- */
+
+@media (min-width: 601px) {
+  .menu-shell:not([data-board]) {
+    --shell-start: var(--shell-rail-w);
+    display: grid;
+    grid-template-columns: var(--shell-rail-w) minmax(0, 1fr);
+  }
+
+  .menu-shell:not([data-board]) > .menu-shell__main {
+    grid-row: 1;
+    grid-column: 2;
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  .menu-shell__nav {
+    position: sticky;
+    top: 0;
+    grid-row: 1;
+    grid-column: 1;
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    height: 100vh;
+    height: 100dvh;
+    padding: max(var(--space-6), env(safe-area-inset-top)) var(--space-4) max(var(--space-6), env(safe-area-inset-bottom))
+      max(var(--space-4), env(safe-area-inset-left));
+    overflow-y: auto;
+    border-right: 1px solid var(--tavern-brass);
+  }
+
+  /* R3728002: the challenge toasts clear the rail. */
+  body:has(.menu-shell:not([data-board])) .challenge-toasts {
+    left: calc(var(--shell-rail-w) + max(var(--space-7), env(safe-area-inset-left)));
+  }
+}
+
+/* ---- the icon rail: 601 to 1024 px ------------------------------------------------------- */
+
+@media (min-width: 601px) and (max-width: 1024px) {
+  .menu-shell:not([data-board]) {
+    --shell-start: var(--shell-rail-icons-w);
+    grid-template-columns: var(--shell-rail-icons-w) minmax(0, 1fr);
+  }
+
+  .menu-shell__nav {
+    align-items: center;
+    padding-right: var(--space-3);
+    padding-left: max(var(--space-3), env(safe-area-inset-left));
+  }
+
+  .menu-shell .menu-shell__item {
+    justify-content: center;
+    width: var(--hit-min);
+    height: var(--hit-min);
+    padding: 0;
+  }
+
+  /* The label stays the item's name for a screen reader and its tooltip is `title`. */
+  .menu-shell .menu-shell__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .menu-shell .menu-shell__item .friends-button__badge {
+    top: calc(var(--space-2) * -1);
+    left: auto;
+    right: calc(var(--space-2) * -1);
+  }
+
+  body:has(.menu-shell:not([data-board])) .challenge-toasts {
+    left: calc(var(--shell-rail-icons-w) + max(var(--space-7), env(safe-area-inset-left)));
+  }
+}
+
+/* ---- the labelled rail: 1025 px and wider ------------------------------------------------ */
+
+/* R3728001: the friends drawer sits beside the screen, which narrows to make room. */
+@media (min-width: 1025px) {
+  body:has(.dialog-scrim[data-drawer]) .menu-shell:not([data-board]) > .menu-shell__main {
+    margin-right: var(--shell-drawer-w);
+  }
+}
+
+/* ---- a phone's tab bar: 600 px and under ------------------------------------------------- */
+
+@media (max-width: 600px) {
+  .menu-shell:not([data-board]) {
+    --shell-bottom: calc(var(--shell-tabbar-h) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .menu-shell:not([data-board]) > .menu-shell__main {
+    padding-right: env(safe-area-inset-right, 0px);
+    padding-bottom: var(--shell-bottom);
+    padding-left: env(safe-area-inset-left, 0px);
+  }
+
+  .menu-shell__nav {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: var(--z-banner);
+    display: flex;
+    align-items: stretch;
+    height: var(--shell-bottom);
+    padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    border-top: 1px solid var(--tavern-brass);
+  }
+
+  .menu-shell .menu-shell__item {
+    flex: 1 1 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--space-1);
+    min-width: 0;
+    padding: var(--space-2) var(--space-1);
+    border-width: 2px 0 0;
+    border-radius: 0;
+    font-size: var(--type-xs);
+    text-align: center;
+  }
+
+  /* The current tab: a gold edge along its top, where the bar meets the screen. */
+  .menu-shell .menu-shell__item[aria-current="page"] {
+    border-color: var(--tavern-gold);
+  }
+
+  .menu-shell .menu-shell__label {
+    max-width: 100%;
+  }
+
+  .menu-shell .menu-shell__item .friends-button__badge {
+    top: var(--space-1);
+    left: calc(50% + var(--space-3));
+    right: auto;
+  }
+
+  /* R3728002: the challenge toasts sit above the tab bar, a gap clear of it over the bottom inset too.
+     They are drawn beside the shell, not in it, so they cannot read its `--shell-bottom`. */
+  body:has(.menu-shell:not([data-board])) .challenge-toasts {
+    bottom: calc(var(--shell-tabbar-h) + env(safe-area-inset-bottom, 0px) + var(--space-7));
+  }
+}

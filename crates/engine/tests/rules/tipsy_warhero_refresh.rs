@@ -519,13 +519,13 @@ fn r3548003_refresh_gives_back_every_used_activate_but_refreshes() {
     let refresh = field_id(&s, P1, REFRESHER);
     s.activate(zap.as_str(), json!({}));
     s.activate(zap.as_str(), json!({}));
-    assert_eq!(ability_uses_this_turn(s.state(), &s.card(zap.as_str()), "zap"), 2);
+    assert_eq!(ability_uses_this_turn(s.state(), s.card(zap.as_str()), "zap"), 2);
     assert!(!lists_activate(s.state(), &zap));
     s.activate(refresh.as_str(), json!({}));
-    assert_eq!(ability_uses_this_turn(s.state(), &s.card(zap.as_str()), "zap"), 0);
+    assert_eq!(ability_uses_this_turn(s.state(), s.card(zap.as_str()), "zap"), 0);
     assert!(lists_activate(s.state(), &zap));
     assert_eq!(
-        ability_uses_this_turn(s.state(), &s.card(refresh.as_str()), REFRESH_ABILITY_ID),
+        ability_uses_this_turn(s.state(), s.card(refresh.as_str()), REFRESH_ABILITY_ID),
         1
     );
     assert!(!lists_activate(s.state(), &refresh));
@@ -546,7 +546,7 @@ fn r3548003_refresh_keeps_cooldowns_and_names_fused_refreshes() {
     apply_now(s.state_mut(), effects::refresh_activates());
     assert_eq!(s.card(slow.as_str()).memory.get("cooldowns"), cooldowns.as_ref());
     assert_eq!(
-        ability_uses_this_turn(s.state(), &s.card(slow.as_str()), "slow"),
+        ability_uses_this_turn(s.state(), s.card(slow.as_str()), "slow"),
         0
     );
     assert!(is_refresh_ability(REFRESH_ABILITY_ID));

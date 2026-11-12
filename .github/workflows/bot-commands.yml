@@ -83,7 +83,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: write        # the state file on the bot-state branch
+      contents: write        # the state file on the _bot-state branch
       issues: write
       pull-requests: write
       actions: write         # start a forced run; the sweep stops a bot pull request's red CI

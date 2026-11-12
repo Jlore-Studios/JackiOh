@@ -6,9 +6,7 @@ use axum::body::Body;
 use axum::http::{HeaderMap, Request};
 use indexmap::IndexMap;
 use serde::Serialize;
-use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
-use tokio::sync::Mutex;
 use tower::ServiceExt;
 
 use jackioh_server::api::codes::DEFAULT_INVITE_CODE_MAX_USES;
@@ -17,11 +15,9 @@ use jackioh_server::config::{
     API_MAX_BODY_BYTES, CODE_INPUT_MAX_LENGTH, INVITE_CODE_FORMAT, INVITE_CODE_GROUP_SIZE,
     INVITE_CODE_SEPARATOR, REDEMPTION_IDENTICAL_ERROR, REDEMPTION_RESPONSE_FLOOR_MS,
 };
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::Db;
 
-use crate::support::deps;
-use crate::support::store::hmac_sha256_hex;
+use crate::support::deps::{self, from_json};
+use crate::support::store::{fake, hmac_sha256_hex};
 
 /// The table's base code: every malformed row is a mangled spelling of it.
 const BASE_CODE: &str = "ABCDEFGHJKMNPQRS";
@@ -92,7 +88,7 @@ impl Reply {
 async fn fresh_server() -> Server {
     let env = app::load_server_env(&test_env()).expect("the test environment loads");
     let app = app::build(env).await.expect("the test app builds");
-    store_of(&app).lock().await.reset();
+    fake(&app).lock().await.reset();
     Server {
         router: app::router(app.clone()),
         app,
@@ -120,17 +116,6 @@ impl Server {
     }
 }
 
-fn store_of(app: &App) -> Arc<Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => data.clone(),
-        Db::Pg(_) => panic!("E2E=1 builds the in-memory store"),
-    }
-}
-
-fn from_json<T: DeserializeOwned>(value: Value) -> T {
-    serde_json::from_value(value).expect("the literal has the port's JSON shape")
-}
-
 fn json_rows<T: Serialize>(rows: &[T]) -> Vec<Value> {
     rows.iter()
         .map(|row| serde_json::to_value(row).expect("a row serializes"))
@@ -138,11 +123,11 @@ fn json_rows<T: Serialize>(rows: &[T]) -> Vec<Value> {
 }
 
 async fn attempts(server: &Server) -> Vec<Value> {
-    json_rows(&store_of(&server.app).lock().await.tables.attempts)
+    json_rows(&fake(&server.app).lock().await.tables.attempts)
 }
 
 async fn codes(server: &Server) -> Vec<Value> {
-    json_rows(&store_of(&server.app).lock().await.tables.codes)
+    json_rows(&fake(&server.app).lock().await.tables.codes)
 }
 
 /// The server's clock (`app::now_ms`): what it stamps rows with and counts its windows on, not the
@@ -189,7 +174,7 @@ struct Seeded {
 async fn seed_caller(server: &Server, id: &str, status: &str) -> Seeded {
     let user_id = format!("user-{id}");
     let token = deps::add_user(&server.app, &user_id, &format!("{id}@example.test"), true);
-    let _ = store_of(&server.app)
+    let _ = fake(&server.app)
         .lock()
         .await
         .seed_profile(json!({ "id": id, "userId": user_id, "status": status }));
@@ -217,7 +202,7 @@ async fn redeem(server: &Server, token: &str, code: &str, ip: &str) -> Reply {
 }
 
 async fn status_of(server: &Server, profile_id: &str) -> Value {
-    json_rows(&store_of(&server.app).lock().await.tables.profiles)
+    json_rows(&fake(&server.app).lock().await.tables.profiles)
         .into_iter()
         .find(|row| row["id"] == json!(profile_id))
         .map(|row| row["status"].clone())

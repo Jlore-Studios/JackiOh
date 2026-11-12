@@ -13,6 +13,7 @@ import type { EchoItem } from "./EchoItem";
 import type { FieldExits } from "./FieldExits";
 import type { GameCounters } from "./GameCounters";
 import type { GameResult } from "./GameResult";
+import type { HandMeet } from "./HandMeet";
 import type { HeldCard } from "./HeldCard";
 import type { HomeZone } from "./HomeZone";
 import type { LastBoardEntry } from "./LastBoardEntry";
@@ -29,6 +30,7 @@ import type { PlayRecord } from "./PlayRecord";
 import type { PlayerId } from "./PlayerId";
 import type { PlayerState } from "./PlayerState";
 import type { QueuedTrigger } from "./QueuedTrigger";
+import type { RadianceLend } from "./RadianceLend";
 import type { SecretRecord } from "./SecretRecord";
 import type { WinRateTable } from "./WinRateTable";
 import type { WorkItem } from "./WorkItem";
@@ -236,6 +238,18 @@ slashedLane?: number,
  * fresh id. Absent until the first is made (D14).
  */
 chainsMade?: number, 
+/**
+ * R3558002: the pairs of cards of each hand that become Radiant when they meet, in the order
+ * they were made. Absent until the first pair, so a game without one hashes as it did before
+ * this field existed.
+ */
+handMeets?: Array<HandMeet>, 
+/**
+ * R3558001: the Radiance each hand card lends its neighbour now, in hand order, so the state
+ * check can take back what no longer sits beside its lender. Absent while nothing is lent, so
+ * a game without a lend hashes as it did before this field existed.
+ */
+radianceLends?: Array<RadianceLend>, 
 /**
  * R3569000: Tears of the Kwzki Tree resolved: every card is Radiant for the rest of the game, a
  * card made later at the next settled check. Absent until then (D14).
