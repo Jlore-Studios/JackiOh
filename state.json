@@ -28266,10 +28266,6 @@
       "refused_until": "2026-11-08T13:00:00Z",
       "spent": [
         {
-          "at": "2026-10-31T21:26:17Z",
-          "minutes": 9.8
-        },
-        {
           "at": "2026-11-01T02:25:36Z",
           "minutes": 13.8
         },
@@ -29064,16 +29060,13 @@
         {
           "at": "2026-11-12T18:23:54Z",
           "minutes": 129.0
+        },
+        {
+          "at": "2026-11-12T18:53:07Z",
+          "minutes": 14.5
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-10-29T20:36:36Z",
-          "cache": 855308,
-          "cost": 0.8446,
-          "input": 26,
-          "output": 8284
-        },
         {
           "at": "2026-10-29T22:39:07Z",
           "cache": 3158436,
@@ -30466,14 +30459,21 @@
           "cost": 16.9294,
           "input": 19,
           "output": 5502
+        },
+        {
+          "at": "2026-11-12T18:53:07Z",
+          "cache": 146626,
+          "cost": 2.4803,
+          "input": 4,
+          "output": 2268
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-12T21:20:00Z",
-          "utilization": 0.17
+          "utilization": 0.22
         },
-        "observed_at": "2026-11-12T18:23:54Z",
+        "observed_at": "2026-11-12T18:53:07Z",
         "status": "allowed"
       }
     },
@@ -35913,6 +35913,16 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-12T18:32:04Z,claude-7,ping,before,43279828282,18,2026-11-12T21:20:00Z,,,allowed,50,,",
+      "2026-11-12T18:32:26Z,claude-7,stream,call,43279828282,19,2026-11-12T21:20:00Z,,,allowed,50,,",
+      "2026-11-12T18:33:26Z,claude-7,stream,call,43279828282,20,2026-11-12T21:20:00Z,,,allowed,50,,",
+      "2026-11-12T18:35:12Z,claude-7,stream,call,43279828282,21,2026-11-12T21:20:00Z,,,allowed,50,,",
+      "2026-11-12T18:35:57Z,claude-7,stream,call,43279828282,22,2026-11-12T21:20:00Z,,,allowed,50,,",
+      "2026-11-12T18:46:42Z,claude-7,stream,call,43279828282,22,2026-11-12T21:20:00Z,,,allowed,50,,"
+    ]
   },
   "version": 1
 }
