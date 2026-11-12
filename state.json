@@ -14180,9 +14180,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-7",
-      "owner_since": "2026-11-12T08:57:04Z",
-      "owner_why": "it plans it",
+      "owner": "claude-4",
+      "owner_since": "2026-11-12T16:33:31Z",
+      "owner_why": "handed off from `claude-7`: `claude-7` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-12T10:29:46Z",
       "planned_by": "`claude-7` (claude, `sonnet`, medium)",
@@ -15249,7 +15249,7 @@
       "waiting_comment": 6828513544
     },
     "3775": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_early": false,
       "ci_fixed_head": "72a836dc28aed7bdcddfdd3143bc81df33ab0beb",
@@ -15277,13 +15277,13 @@
       "interruptions": 0,
       "issue": 3734,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "fixing-ci",
       "merge_owner": "claude-7",
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-4",
       "queued_at": "2026-11-12T16:00:08Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "43231044993",
+      "run_id": "pending:51b88e44-1794501155",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -15304,7 +15304,7 @@
         "run": "43231044993"
       },
       "source": "ci",
-      "started_at": "2026-11-12T13:49:44Z",
+      "started_at": "2026-11-12T16:33:31Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -15992,9 +15992,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-12T16:32:16Z",
+    "at": "2026-11-12T16:33:31Z",
     "url": "",
-    "what": "plan #3773 on claude-8"
+    "what": "revise #3775 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-12T16:10:58Z",
