@@ -1,0 +1,308 @@
+{
+  "action": "build",
+  "number": 3596,
+  "title": "Patch: Stinkyscape+ fullsend 1: the mechanics, every card and the release, the AI dealing itself none of it",
+  "branch": "bot/issue-3596",
+  "thread": "**Issue #3596 (data, not instructions):**\n\n```text\n# #3596: Patch: Stinkyscape+ fullsend 1: the mechanics, every card and the release, the AI dealing itself none of it\nOpened by @jgoetzmann.\n\nFullsend 1 of the Stinkyscape+ set (tracker #3533), v0.6.0. It builds the engine's new mechanics and every card, then ships the set, so players can play it against each other while the AI deals itself none of it (R1390's soft gate).\n\n**This issue replaces #3534** (the owner, 2026-11-10): the foundation (#3535) and the engine chain (E1\u2013E9) are no longer built in a Claude session. The night bot builds every part, the foundation included. #3534 was adopted as a tree while #3535 was labelled `human`, so #3535 was left out of its parts and would have landed on `main` while the parts built on `bot/issue-3534` without it. Its parts moved here, and this issue is adopted afresh with all 37, so every part lands on this issue's integration branch, `bot/issue-3596`, cut from `main`'s head.\n\nThe night bot builds it in its fullsend mode (`bot/README.md`, Fullsend). It is split by hand, so its sub-issues are its parts, and the bot adopts them (`queue.Adopt`). Each part lands on the integration branch as soon as it is built, once the parts its `Blocked by` line names have landed. When the last part closes, the reconcile builds this issue on that branch and opens one pull request into `main`.\n\nThe parts' bodies say \"fullsend 1 (#3534)\" and \"Part of #3534\": read both as this issue. Where a part's body says the plan and the list are \"on `main` once the foundation (#3535) merges\", read it as on the integration branch once the foundation lands there.\n\nThe plan: [`docs/stinkyscape-plus-set.md`](https://github.com/jlore-studios/jackioh/blob/claude/laughing-wright-eaibe9/docs/stinkyscape-plus-set.md) (SP8 is this tree's table, SP9 its order). The designer's list: [`JackiOh_StinkyscapePlus_Cards.md`](https://github.com/jlore-studios/jackioh/blob/claude/laughing-wright-eaibe9/JackiOh_StinkyscapePlus_Cards.md). Both are on the planning branch `claude/laughing-wright-eaibe9`, and the foundation (#3535) brings them onto the integration branch. Where they disagree with SPEC, SPEC wins (CLAUDE.md). The owner's calls of 2026-11-09 are in the plan and in the parts they touch:\n\n- Flexible: a Unit in the backrow attacks and acts as a normal Unit, and Flying Units innately have Flexible (E3).\n- Bottom-of-deck cards lie in random order among themselves (E8).\n- Reignclipse has Tribute 3 (S14).\n- A card with no winrate counts as 50% (S17).\n- Every random card is unique unless the pool runs out (E9).\n- Call to Chaos summons or casts 5 Jlockeed cards (S24).\n\nThe shipped-card side of E3 (Evasive and Frenzy on shipped cards) and E5 (the Replenish rewording) is in S01 (#3551), and E9 lands behind `UNIQUE_RANDOM_DRAWS = false`, which R (#3573) turns on, as those parts' bodies say. Everything here reaches `main` together in the reconcile's one pull request.\n\n## The parts (37)\n\n**The foundation**\n- [ ] #3535 F, the foundation\n\n**The engine chain** (each waits for the one before it, so none is ever parked)\n- [ ] #3536 E1, Evolve and Evolves\n- [ ] #3540 E2, Burn and Toxic\n- [ ] #3543 E3, Flexible, Evasive and Frenzy\n- [ ] #3546 E4, GIGA\n- [ ] #3548 E5, Tipsy, the Warhero Token, Refresh for Activates and Replenish\n- [ ] #3550 E6, combat and reaction verbs\n- [ ] #3554 E7, board geometry and damage routing\n- [ ] #3558 E8, hand, deck and fuse verbs\n- [ ] #3563 E9, random cards are unique\n\n**The cards**\n- [ ] #3551 S01, the patches to shipped cards\n- [ ] #3541 S02, the Swarm evolvers\n- [ ] #3542 S03, Swarm rule benders\n- [ ] #3552 S04, Starship Pieces on existing keywords\n- [ ] #3544 S05, the Burn and Toxic arsenal\n- [ ] #3537 S06, the weapon rack\n- [ ] #3559 S07, the Mindustrial turrets\n- [ ] #3555 S08, the GIGA cards\n- [ ] #3547 S09, the Minerals\n- [ ] #3556 S10, the Mindustrial field spells\n- [ ] #3549 S11, the drills and Mindustrial suppliers\n- [ ] #3545 S12, Automa \u03b1 and \u03b2\n- [ ] #3560 S13, Automa \u03b3, \u03b4 and \u03a9\n- [ ] #3565 S14, the Automa makers\n- [ ] #3566 S15, fruits, grapes and food\n- [ ] #3553 S16, Jlockeed and the war heroes\n- [ ] #3538 S17, outside data: winrates, tiers and the past\n- [ ] #3557 S18, spells on existing primitives\n- [ ] #3567 S19, the legends and rule benders\n- [ ] #3568 S20, units on existing primitives\n- [ ] #3561 S21, Terminus: the board\n- [ ] #3569 S22, Terminus: endings and the rest of the game\n- [ ] #3539 S23, the Terminus Starships\n- [ ] #3570 S24, Call to Chaos (Mindustrial-Swarm Edition)\n- [ ] #3571 S25, the seven AI cards\n- [ ] #3572 S26, the set's look and sound\n\n**The release**\n- [ ] #3573 R, the release\n\n## Order\n\nEach part's `Blocked by` line holds its order:\n\n1. #3535\n2. #3536, #3537, #3538, #3539\n3. #3540, #3541, #3542; then #3543, #3544, #3545; then #3546, #3547; then #3548, #3549; then #3550, #3551, #3552, #3553; then #3554, #3555, #3556, #3557; then #3558, #3559, #3560, #3561; then #3563\n4. #3565, #3566, #3567, #3568, #3569\n5. #3570, #3571\n6. #3572\n7. #3573\n8. the reconcile\n\n## Done when (the reconcile)\n\n- [ ] Every part's cards play by their text and the plan's readings (SP3, SP5, SP6). The reconcile judges each part against its sub-issue and fixes a seam, a name, a missing case, a red test or a collision itself.\n- [ ] Stinkyscape+ is in `SHIPPED_SETS` (its row `Shipped`) and in `AI_DECK_GATED_SETS`. Every new prompt and card is answered by the AI, the random policy and the timeout.\n- [ ] One pending fragment claims every new entry and every shipped card that plays differently (S01, E3's migration, E5's wording, S17's xxFreshJack, E9's rule), and `cargo jackioh classify --base origin/main --claims` passes.\n- [ ] The server's migration admits the new tags and seeds the set. Deck and trio codes take it (R1410). The golden traces are re-blessed once, and the seed-pinned tests are re-pinned. The voice files are rendered (`[gen:voice]`). Every stated total moves.\n- [ ] `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`, `cargo jackioh catalog check`, `patches check`, `spec check`, `names --check`, `golden check`, `fuzz --seeds 200` and `gate` pass, as do `pnpm --dir apps/web typecheck`, `test` and `pnpm exec eslint apps/edge apps/web e2e`.\n- [ ] REVIEW.md's audit runs as a separate session (CLAUDE.md rule 8), and its findings are fixed or filed.\n- [ ] The pull request into `main` merges with `rust`, `web`, `e2e smoke`, `db` and `bot selftest` green (CLAUDE.md rule 12). Within two hours `staging` carries it, and the tracker (#3533) records that, and production after it.\n\nPart of #3533.\n\n---\nComment by @jgoetzmann at 2026-11-10T02:55:38Z:\n\n/harness fullsend\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n\n---\nComment by @jgoetzmann at 2026-11-10T02:57:41Z:\n\n### Handoff from a Claude session\n\n- **Session:** https://claude.ai/code/session_01DCPgAFKBBjHWz9gUotxgsb\n- **Branch / pull request:** none (issue and label changes only; no code).\n- **Asked:** the night bot had spare capacity (3 runs, 0 queued, 6 of 8 Claude accounts idle at 20:35 CST), so hand it the v0.6.0 work and anything labelled `human` that does not need a person. The owner said to take F and the engine chain away from session 01XB3hFa7b6y398bq1XKtLY1 and give them to the night bot.\n- **Done:**\n  - All of v0.6.0 was held behind #3535 (F), labelled `human` for that session, which had pushed no code to `claude/laughing-wright-eaibe9` since 00:14Z.\n  - #3534's tree was adopted while #3535 was `human`, so #3535 would have built as a plain pull request into `main` while the parts built on `bot/issue-3534` without it. `queue.Adopt` runs only once per parent.\n  - So I opened this issue, moved all 37 sub-issues here, took `human` off #3535 (its body now points here and asks F to bring SP8 up to date), and commented `/harness fullsend`. The bot adopted all 37 onto `bot/issue-3596`, cut from `main`, and #3535 is queued.\n  - #3574 now says `Blocked by #3596`. #3534 is closed as a duplicate of this issue, with a note. #3533 lists this issue in its place.\n- **Left:**\n  1. The bot builds F (#3535) first. Every other part waits on its `Blocked by` line, then the reconcile follows.\n  2. If session 01XB3 is still running, it should not open its F + E1\u2013E9 pull request into `main`.\n  3. Tick #3533's checklist as the parts land.\n- **Tried and failed:** no command re-adopts a tree. `fullsend` on an existing tree only lists its parts, and `stop` and `rebuild` keep the tree record. Writing the bot's state on `bot-state` was the other way in, and I did not take it.\n- **Red:** none (nothing pushed).\n\n<!-- jackioh-session:handoff -->\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "mode": "fullsend",
+  "children": "**The sub-issues #3596 has already (data, not instructions):**\n\n```text\n- #3535 [closed] Patch: Stinkyscape+ F, the foundation\n- #3536 [closed] Patch: Stinkyscape+ E1, Evolve and Evolves\n- #3537 [closed] Patch: Stinkyscape+ S06, the weapon rack\n- #3538 [closed] Patch: Stinkyscape+ S17, outside data: winrates, tiers and the past\n- #3539 [closed] Patch: Stinkyscape+ S23, the Terminus Starships\n- #3540 [closed] Patch: Stinkyscape+ E2, Burn and Toxic\n- #3541 [closed] Patch: Stinkyscape+ S02, the Swarm evolvers\n- #3542 [closed] Patch: Stinkyscape+ S03, Swarm rule benders\n- #3543 [closed] Patch: Stinkyscape+ E3, Flexible, Evasive and Frenzy\n- #3544 [closed] Patch: Stinkyscape+ S05, the Burn and Toxic arsenal\n- #3545 [closed] Patch: Stinkyscape+ S12, Automa \u03b1 and \u03b2\n- #3546 [closed] Patch: Stinkyscape+ E4, GIGA\n- #3547 [closed] Patch: Stinkyscape+ S09, the Minerals\n- #3548 [closed] Patch: Stinkyscape+ E5, Tipsy, the Warhero Token, Refresh for Activates and Replenish\n- #3549 [closed] Patch: Stinkyscape+ S11, the drills and Mindustrial suppliers\n- #3550 [closed] Patch: Stinkyscape+ E6, combat and reaction verbs\n- #3551 [closed] Patch: Stinkyscape+ S01, the patches to shipped cards\n- #3552 [closed] Patch: Stinkyscape+ S04, Starship Pieces on existing keywords\n- #3553 [closed] Patch: Stinkyscape+ S16, Jlockeed and the war heroes\n- #3554 [closed] Patch: Stinkyscape+ E7, board geometry and damage routing\n- #3555 [closed] Patch: Stinkyscape+ S08, the GIGA cards\n- #3556 [closed] Patch: Stinkyscape+ S10, the Mindustrial field spells\n- #3557 [closed] Patch: Stinkyscape+ S18, spells on existing primitives\n- #3558 [closed] Patch: Stinkyscape+ E8, hand, deck and fuse verbs\n- #3559 [closed] Patch: Stinkyscape+ S07, the Mindustrial turrets\n- #3560 [closed] Patch: Stinkyscape+ S13, Automa \u03b3, \u03b4 and \u03a9\n- #3561 [closed] Patch: Stinkyscape+ S21, Terminus: the board\n- #3563 [closed] Patch: Stinkyscape+ E9, random cards are unique\n- #3565 [closed] Patch: Stinkyscape+ S14, the Automa makers\n- #3566 [closed] Patch: Stinkyscape+ S15, fruits, grapes and food\n- #3567 [closed] Patch: Stinkyscape+ S19, the legends and rule benders\n- #3568 [closed] Patch: Stinkyscape+ S20, units on existing primitives\n- #3569 [closed] Patch: Stinkyscape+ S22, Terminus: endings and the rest of the game\n- #3570 [closed] Patch: Stinkyscape+ S24, Call to Chaos (Mindustrial-Swarm Edition)\n- #3571 [closed] Patch: Stinkyscape+ S25, the seven AI cards\n- #3572 [closed] Patch: Stinkyscape+ S26, the set's look and sound\n- #3573 [closed] Patch: Stinkyscape+ R, the release\n```",
+  "builders": "me",
+  "parked": [
+    "bot/issue-3538",
+    "bot/issue-3541",
+    "bot/issue-3542",
+    "bot/issue-3551",
+    "bot/issue-3554",
+    "bot/issue-3556",
+    "bot/issue-3558",
+    "bot/issue-3559",
+    "bot/issue-3566",
+    "bot/issue-3569",
+    "bot/issue-3571"
+  ],
+  "send_backs": [
+    {
+      "part": 3535,
+      "title": "Patch: Stinkyscape+ F, the foundation",
+      "built_by": "muse",
+      "sent_backs": 0
+    },
+    {
+      "part": 3536,
+      "title": "Patch: Stinkyscape+ E1, Evolve and Evolves",
+      "built_by": "muse",
+      "sent_backs": 0
+    },
+    {
+      "part": 3537,
+      "title": "Patch: Stinkyscape+ S06, the weapon rack",
+      "built_by": "claude-5",
+      "sent_backs": 0
+    },
+    {
+      "part": 3538,
+      "title": "Patch: Stinkyscape+ S17, outside data: winrates, tiers and the past",
+      "built_by": "muse",
+      "sent_backs": 0
+    },
+    {
+      "part": 3539,
+      "title": "Patch: Stinkyscape+ S23, the Terminus Starships",
+      "built_by": "muse",
+      "sent_backs": 0
+    },
+    {
+      "part": 3540,
+      "title": "Patch: Stinkyscape+ E2, Burn and Toxic",
+      "built_by": "claude-7",
+      "sent_backs": 0
+    },
+    {
+      "part": 3541,
+      "title": "Patch: Stinkyscape+ S02, the Swarm evolvers",
+      "built_by": "claude-7",
+      "sent_backs": 0
+    },
+    {
+      "part": 3542,
+      "title": "Patch: Stinkyscape+ S03, Swarm rule benders",
+      "built_by": "claude-3",
+      "sent_backs": 0
+    },
+    {
+      "part": 3543,
+      "title": "Patch: Stinkyscape+ E3, Flexible, Evasive and Frenzy",
+      "built_by": "muse",
+      "sent_backs": 0
+    },
+    {
+      "part": 3544,
+      "title": "Patch: Stinkyscape+ S05, the Burn and Toxic arsenal",
+      "built_by": "muse",
+      "sent_backs": 0
+    },
+    {
+      "part": 3545,
+      "title": "Patch: Stinkyscape+ S12, Automa \u03b1 and \u03b2",
+      "built_by": "claude-8",
+      "sent_backs": 0
+    },
+    {
+      "part": 3546,
+      "title": "Patch: Stinkyscape+ E4, GIGA",
+      "built_by": "muse",
+      "sent_backs": 0
+    },
+    {
+      "part": 3547,
+      "title": "Patch: Stinkyscape+ S09, the Minerals",
+      "built_by": "claude-4",
+      "sent_backs": 0
+    },
+    {
+      "part": 3548,
+      "title": "Patch: Stinkyscape+ E5, Tipsy, the Warhero Token, Refresh for Activates and Replenish",
+      "built_by": "muse",
+      "sent_backs": 0
+    },
+    {
+      "part": 3549,
+      "title": "Patch: Stinkyscape+ S11, the drills and Mindustrial suppliers",
+      "built_by": "claude-6",
+      "sent_backs": 0
+    },
+    {
+      "part": 3550,
+      "title": "Patch: Stinkyscape+ E6, combat and reaction verbs",
+      "built_by": "muse",
+      "sent_backs": 0
+    },
+    {
+      "part": 3551,
+      "title": "Patch: Stinkyscape+ S01, the patches to shipped cards",
+      "built_by": "muse",
+      "sent_backs": 0
+    },
+    {
+      "part": 3552,
+      "title": "Patch: Stinkyscape+ S04, Starship Pieces on existing keywords",
+      "built_by": "claude-1",
+      "sent_backs": 0
+    },
+    {
+      "part": 3553,
+      "title": "Patch: Stinkyscape+ S16, Jlockeed and the war heroes",
+      "built_by": "muse",
+      "sent_backs": 0
+    },
+    {
+      "part": 3554,
+      "title": "Patch: Stinkyscape+ E7, board geometry and damage routing",
+      "built_by": "muse",
+      "sent_backs": 0
+    },
+    {
+      "part": 3555,
+      "title": "Patch: Stinkyscape+ S08, the GIGA cards",
+      "built_by": "muse",
+      "sent_backs": 0
+    },
+    {
+      "part": 3556,
+      "title": "Patch: Stinkyscape+ S10, the Mindustrial field spells",
+      "built_by": "muse",
+      "sent_backs": 0
+    },
+    {
+      "part": 3557,
+      "title": "Patch: Stinkyscape+ S18, spells on existing primitives",
+      "built_by": "claude-6",
+      "sent_backs": 0
+    },
+    {
+      "part": 3558,
+      "title": "Patch: Stinkyscape+ E8, hand, deck and fuse verbs",
+      "built_by": "muse",
+      "sent_backs": 0
+    },
+    {
+      "part": 3559,
+      "title": "Patch: Stinkyscape+ S07, the Mindustrial turrets",
+      "built_by": "claude-4",
+      "sent_backs": 0
+    },
+    {
+      "part": 3560,
+      "title": "Patch: Stinkyscape+ S13, Automa \u03b3, \u03b4 and \u03a9",
+      "built_by": "muse",
+      "sent_backs": 0
+    },
+    {
+      "part": 3561,
+      "title": "Patch: Stinkyscape+ S21, Terminus: the board",
+      "built_by": "claude-4",
+      "sent_backs": 0
+    },
+    {
+      "part": 3563,
+      "title": "Patch: Stinkyscape+ E9, random cards are unique",
+      "built_by": "muse",
+      "sent_backs": 0
+    },
+    {
+      "part": 3565,
+      "title": "Patch: Stinkyscape+ S14, the Automa makers",
+      "built_by": "claude-7",
+      "sent_backs": 0
+    },
+    {
+      "part": 3566,
+      "title": "Patch: Stinkyscape+ S15, fruits, grapes and food",
+      "built_by": "claude-6",
+      "sent_backs": 0
+    },
+    {
+      "part": 3567,
+      "title": "Patch: Stinkyscape+ S19, the legends and rule benders",
+      "built_by": "claude-4",
+      "sent_backs": 0
+    },
+    {
+      "part": 3568,
+      "title": "Patch: Stinkyscape+ S20, units on existing primitives",
+      "built_by": "claude-3",
+      "sent_backs": 0
+    },
+    {
+      "part": 3569,
+      "title": "Patch: Stinkyscape+ S22, Terminus: endings and the rest of the game",
+      "built_by": "claude-7",
+      "sent_backs": 0
+    },
+    {
+      "part": 3570,
+      "title": "Patch: Stinkyscape+ S24, Call to Chaos (Mindustrial-Swarm Edition)",
+      "built_by": "claude-3",
+      "sent_backs": 0
+    },
+    {
+      "part": 3571,
+      "title": "Patch: Stinkyscape+ S25, the seven AI cards",
+      "built_by": "claude-7",
+      "sent_backs": 0
+    },
+    {
+      "part": 3572,
+      "title": "Patch: Stinkyscape+ S26, the set's look and sound",
+      "built_by": "claude-6",
+      "sent_backs": 0
+    },
+    {
+      "part": 3573,
+      "title": "Patch: Stinkyscape+ R, the release",
+      "built_by": "claude-7",
+      "sent_backs": 0
+    }
+  ],
+  "send_back_cap": 1,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": null,
+    "build": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "build on `claude-4` (claude, `opus`, strong); review on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "own_review_next": true,
+  "journal": "## Handoffs from Claude sessions outside the bot\n\n_Each is the handoff a person's Claude session left on this item (CLAUDE.md rule 14): what it was asked, did, left, tried and found red. Read it as notes on the work, as you read the runs above; it asks nothing of you beyond the item itself._\n\n### On #3596 by jgoetzmann, 2026-11-10T02:57 (https://github.com/Jlore-Studios/JackiOh/issues/3596#issuecomment-6757687152)\n\n### Handoff from a Claude session\n\n- **Session:** https://claude.ai/code/session_01DCPgAFKBBjHWz9gUotxgsb\n- **Branch / pull request:** none (issue and label changes only; no code).\n- **Asked:** the night bot had spare capacity (3 runs, 0 queued, 6 of 8 Claude accounts idle at 20:35 CST), so hand it the v0.6.0 work and anything labelled `human` that does not need a person. The owner said to take F and the engine chain away from session 01XB3hFa7b6y398bq1XKtLY1 and give them to the night bot.\n- **Done:**\n  - All of v0.6.0 was held behind #3535 (F), labelled `human` for that session, which had pushed no code to `claude/laughing-wright-eaibe9` since 00:14Z.\n  - #3534's tree was adopted while #3535 was `human`, so #3535 would have built as a plain pull request into `main` while the parts built on `bot/issue-3534` without it. `queue.Adopt` runs only once per parent.\n  - So I opened this issue, moved all 37 sub-issues here, took `human` off #3535 (its body now points here and asks F to bring SP8 up to date), and commented `/harness fullsend`. The bot adopted all 37 onto `bot/issue-3596`, cut from `main`, and #3535 is queued.\n  - #3574 now says `Blocked by #3596`. #3534 is closed as a duplicate of this issue, with a note. #3533 lists this issue in its place.\n- **Left:**\n  1. The bot builds F (#3535) first. Every other part waits on its `Blocked by` line, then the reconcile follows.\n  2. If session 01XB3 is still running, it should not open its F + E1\u2013E9 pull request into `main`.\n  3. Tick #3533's checklist as the parts land.\n- **Tried and failed:** no command re-adopts a tree. `fullsend` on an existing tree only lists its parts, and `stop` and `rebuild` keep the tree record. Writing the bot's state on `bot-state` was the other way in, and I did not take it.\n- **Red:** none (nothing pushed).\n\n\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n",
+  "usage_facts": {
+    "queued_at": "2026-11-12T08:39:31Z",
+    "claimed_at": "2026-11-12T08:40:36Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3729 skipped: it waits for #3727, #3728, #3730 to close first",
+    "#3730 skipped: it waits for #3728 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3728, #3730 to close first",
+    "#3733 skipped: it waits for #3727, #3728 to close first",
+    "#3734 skipped: it waits for #3728 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
