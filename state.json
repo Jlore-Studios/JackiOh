@@ -16896,9 +16896,11 @@
         "sha": "b5d01529d839aabe3323dc5f41d929be86c810d9"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-12T20:51:31Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-12T21:34:25Z",
         "family": "claude",
@@ -16908,6 +16910,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -30; grep -n -B12 -A3 '^\\\\[e2e\\\\]' scripts/ci-shards.toml; git log --oneline -3 -- scripts/ci-shards.toml\"}\n- Bash: {\"command\": \"cd e2e && for k in 1 2 3 4; do echo \\\"shard $k:\\\"; node scripts/shard-specs.mjs --smoke $k 4; echo; done; grep -n \\\"SMOKE\\\\|WEIGHTS\\\" scripts/shard-specs.mjs | head -20\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3803 && python3 - <<'EOF'\\np='scripts/ci-shards.toml'\\ns=open(p).read()\\na=s.index(\\\"# With 2 shards they ran 8m 7s\\\")\\nb=s.index(\\\"[e2e]\\\")\\nnew='''\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3803 && printf '\\\\n## State\\\\nDone: ci-shards.toml [e2e] comment corrected; test_ci_matrix passes. Nothing left.\\\\n' >> .bot-notes.md; git status --s\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"CI: a job ran over 7 minutes\"} --> I only corrected a stale comment in `scripts/ci-shards.toml`. The fix for #3803 is already on `main`, and I can't tell from here whether it brings every shard under 5 minutes. The slow run in the issue (`bot/issue-3777`, 2 sh\u2026"
       },
+      "interruptions": 0,
       "issue": 3803,
       "kind": "review",
       "live": "reviewing",
