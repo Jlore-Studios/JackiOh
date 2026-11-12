@@ -1717,27 +1717,38 @@ mod reads_and_stops {
         );
     }
 
-    /// R645: a seat's legal emote is played, logged under a server nonce.
+    /// MD-D29, R1127: while an acting card of the other seat hears emotes (p2's Radiant Pareto Optimality), a
+    /// seat's emote is also an engine action, played and logged under a server nonce.
     #[test]
-    fn r645_a_seats_legal_emote_is_logged() {
-        let mut table = playing("emote-1");
-        table.through_the_mulligans();
-        let me = table.active();
+    fn r1127_an_emote_a_card_hears_is_played_and_logged() {
+        jackioh_cards::register_all();
+        let built = jackioh_engine::testkit::scenario(jackioh_engine::testkit::json!({
+            "seed": "r1127",
+            "active": "p1",
+            "p1": { "hand": ["core-008"], "library": ["core-008", "core-020"] },
+            "p2": { "field": [{ "def": "meditative-071", "radiant": true }], "library": ["core-008"] },
+        }));
+        let mut table = Table::new(setup(built.state().clone()));
+        table.feed(DuelEvent::Arm);
+        table.connect(P1);
+        table.connect(P2);
         let emote = table
             .host
-            .legal(me)
+            .legal(P1)
             .into_iter()
             .find_map(|body| match body {
                 ActionBody::Emote { emote } => Some(emote),
                 _ => None,
             })
-            .expect("an emote is legal");
-        table.feed(DuelEvent::Emote { home: me, emote });
+            .expect("PREMISE: p2's Radiant Pareto Optimality hears p1's emotes");
+        table.feed(DuelEvent::Emote { home: P1, emote });
         assert!(
             table
                 .log
                 .iter()
-                .any(|(_, action)| action.body == ActionBody::Emote { emote })
+                .any(|(_, action)| action.body == ActionBody::Emote { emote }),
+            "{:?}",
+            table.log
         );
     }
 
@@ -1774,13 +1785,14 @@ mod the_choice_hover {
     use super::*;
     use jackioh_engine::testkit::{json, scenario};
 
-    /// p1, to act, holds core-030, whose Cry asks it "Choose one" of two; the Cry is played and its prompt is open.
+    /// p1, to act, holds core-007, whose Discover asks it to pick one of the cards it offers (§10.6); the card is
+    /// played and its prompt is open.
     fn asking() -> Table {
         jackioh_cards::register_all();
         let built = scenario(json!({
             "seed": "r2739001",
             "active": "p1",
-            "p1": { "hand": ["core-030"], "mana": 2, "library": ["core-008", "core-020"] },
+            "p1": { "hand": ["core-007"], "mana": 1, "library": ["core-008", "core-020"] },
             "p2": { "library": ["core-008"] },
         }));
         let card = built.hand(P1)[0].id.clone();
@@ -1793,8 +1805,8 @@ mod the_choice_hover {
             .legal(P1)
             .into_iter()
             .find(|body| matches!(body, ActionBody::Play { instance_id, .. } if *instance_id == card))
-            .expect("core-030 is playable");
-        let answer = table.act(P1, "play-030", play);
+            .expect("core-007 is playable");
+        let answer = table.act(P1, "play-007", play);
         assert!(matches!(answer, ActionAnswer::Ack { .. }), "{answer:?}");
         assert!(
             table
@@ -1803,7 +1815,7 @@ mod the_choice_hover {
                 .pending
                 .as_ref()
                 .is_some_and(|pending| pending.player_id == P1),
-            "PREMISE: the Cry asks p1"
+            "PREMISE: the Discover asks p1"
         );
         table
     }
@@ -1855,7 +1867,7 @@ mod the_choice_hover {
             .into_iter()
             .find(|body| matches!(body, ActionBody::Answer { .. }))
             .expect("the prompt has an answer");
-        table.act(P1, "answer-030", answer);
+        table.act(P1, "answer-007", answer);
         assert!(
             table.host.game().pending.is_none(),
             "PREMISE: the prompt is answered"
