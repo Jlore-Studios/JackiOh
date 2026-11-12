@@ -26964,11 +26964,6 @@
       }
     },
     "claude-6": {
-      "infra": {
-        "at": "2026-11-11T21:06:25Z",
-        "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled",
-        "streak": 1
-      },
       "spent": [
         {
           "at": "2026-10-31T20:25:56Z",
