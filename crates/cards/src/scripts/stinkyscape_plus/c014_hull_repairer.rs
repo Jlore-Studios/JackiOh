@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #14 Hull Repairer (Unit 0/2 → 0/4, Starship Piece, Equip, cost 1, Common), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #14 Hull Repairer (Unit 0/2 → 0/4, Starship Piece, Equip, cost 1, Common), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Starship Piece, Equip
 //!            End of turn: Heal this {health} health" — health 4
 //!   Radiant: "Starship Piece, Equip

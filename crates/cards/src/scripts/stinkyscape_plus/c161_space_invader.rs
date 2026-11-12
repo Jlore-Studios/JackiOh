@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #161 Space Invader (Unit, Swarm 2/2 → 4/4, cost 1, Common), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #161 Space Invader (Unit, Swarm 2/2 → 4/4, cost 1, Common), a card of the Stinkyscape+ set (R1420, R3535000).
 //! The list's second #74, renumbered by SP5.
 //!   Base:    "Start of turn: Evolve.
 //!            Evolve: Summon a copy of this."

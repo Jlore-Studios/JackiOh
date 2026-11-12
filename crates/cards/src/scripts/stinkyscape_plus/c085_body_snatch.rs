@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #85 Body Snatch, a card of the held Stinkyscape+ set (R1420, R3535000). (2) Spell, Rare.
+//! SPEC §8.12 S+ #85 Body Snatch, a card of the Stinkyscape+ set (R1420, R3535000). (2) Spell, Rare.
 //!   Base:    "Transform a Unit into an Ayy in Defense Position."
 //!   Radiant: "Transform a Unit into an Ayy."
 //!

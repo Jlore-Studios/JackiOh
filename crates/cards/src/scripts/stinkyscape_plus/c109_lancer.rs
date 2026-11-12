@@ -1,9 +1,9 @@
-//! SPEC §8.12 S+ #109 Lancer (Unit 2/4 → 4/8, Mindustrial, Rare, cost 2), a card of the held Stinkyscape+ set (R1420).
+//! SPEC §8.12 S+ #109 Lancer (Unit 2/4 → 4/8, Mindustrial, Rare, cost 2), a card of the Stinkyscape+ set (R1420).
 //!   Base:    "Armor 2, Can't attack, Can't Defend, Flexible
-//!            Activate {discover}: Discover an enemy tile, then deal {damage} Pierce damage to every Unit between
-//!            that tile and this." — discover 1, damage 5
+//!            Activate: Discover an enemy tile, then deal {damage} Pierce damage to every Unit between
+//!            that tile and this." — damage 5
 //!   Radiant: "Armor 4, Can't attack, Can't Defend, Flexible
-//!            Activate {discover}: …the same…" — discover 2, damage 8
+//!            Activate 2: …the same…" — damage 8
 //!
 //! Engine: Flexible is a catalog keyword (R3543000): played into the backrow Lancer is a Unit there and still
 //! activates, drawing its line from there. The Activate is `discover` uses a turn (R384, R1857003: 1 on the
@@ -19,7 +19,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-109";
 
-/// "Activate": 1 use a turn on the base face; the catalog's `discover` (R384, R1857003).
+/// "Activate": 1 use a turn on the base face, a label and no param (R384, R482, R1857003).
 const USES: i32 = 1;
 /// "Activate 2": 2 uses a turn on the Radiant face.
 const RADIANT_USES: i32 = 2;

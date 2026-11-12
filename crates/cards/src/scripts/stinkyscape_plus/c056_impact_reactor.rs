@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #56 Impact Reactor (R3546000, R3556000, R3556006; R62, R1420):
-//! (3) Field Spell, Mindustrial, Legendary, a card of the held Stinkyscape+ set.
+//! (3) Field Spell, Mindustrial, Legendary, a card of the Stinkyscape+ set.
 //!   Base:    "GIGA
 //!            Cry: Lose {mana} mana next turn, and {mana2} mana the turn after.
 //!            Dormant for {dormant|turn|turns}.

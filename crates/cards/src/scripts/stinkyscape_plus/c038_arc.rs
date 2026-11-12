@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #38 Arc (Unit 0/5 → 0/10, Mindustrial, Common, cost 2), a card of the held Stinkyscape+ set (R1420).
+//! SPEC §8.12 S+ #38 Arc (Unit 0/5 → 0/10, Mindustrial, Common, cost 2), a card of the Stinkyscape+ set (R1420).
 //!   Base:    "Can't Defend
 //!            Activate {damage}: Deal {damage2} damage to a Unit. This randomly chains to an adjacent Unit. It
 //!            repeats until no valid targets remain. It cannot chain to the same Unit twice in one Activate." —
@@ -18,7 +18,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-038";
 
-/// "Activate 2": 2 uses a turn on the base face; the catalog's `damage` (R384, R1857003).
+/// "Activate 2": 2 uses a turn on the base face, a label and no param (R384, R482, R1857003).
 const USES: i32 = 2;
 /// "Activate 5": 5 uses a turn on the Radiant face.
 const RADIANT_USES: i32 = 5;

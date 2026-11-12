@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #27.1 Imp (Unit token, Swarm 1/1 → 2/2, cost 1, printed Common), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #27.1 Imp (Unit token, Swarm 1/1 → 2/2, cost 1, printed Common), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Can't Defend, Charge"
 //!   Radiant: "Can't Defend, Charge, Pierce"
 //!

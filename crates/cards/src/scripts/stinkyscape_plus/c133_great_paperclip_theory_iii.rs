@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #133 Great Paperclip Theory III (§6.3 Fuse; R169, R275, R1420, R1863000, R3535000, R3565002):
-//! (4) Spell, Mindustrial, Paperclip, Mythic, a card of the held Stinkyscape+ set.
+//! (4) Spell, Mindustrial, Paperclip, Mythic, a card of the Stinkyscape+ set.
 //!   Base:    "Add a Daglare to your hand. The first time you play each Automa-ζ cost card, add the
 //!            subsequent cost Automa-ζ to your hand."
 //!   Radiant: "Add a Radiant Dagger and Flare to your hand. The first time you play each Radiant Automa-ζ

@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #84 Bogos Binted, a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #84 Bogos Binted, a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    5/6; "Cry: Take a snapshot of all your other permanents. Death: Reset your board
 //!            to that state."
 //!   Radiant: 10/12; "Cry:" the same; "Death: Reset your board to that state but they're Radiant."

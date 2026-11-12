@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #70 Spaceberry, a card of the held Stinkyscape+ set (R1420, R3535000). (1) Spell, Fruit, Epic.
+//! SPEC §8.12 S+ #70 Spaceberry, a card of the Stinkyscape+ set (R1420, R3535000). (1) Spell, Fruit, Epic.
 //!   Base:    "Cast on draw: Shuffle {draw} Cast on draw into your deck."
 //!   Radiant: "Cast on draw: Shuffle {draw} Radiant Cast on draw into your deck."
 //!

@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #28 Zombie-Box (Spell, cost 0, Rare), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #28 Zombie-Box (Spell, cost 0, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Nerf your hand. Summon a Dormant 1 Gargantuar."
 //!   Radiant: "Nerf your hand. Summon a Radiant Gargantuar."
 //!

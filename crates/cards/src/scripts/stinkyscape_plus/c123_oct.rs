@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #123 Oct, a card of the held Stinkyscape+ set (R1420, R3535000). Built by S13 (#3560).
+//! SPEC §8.12 S+ #123 Oct, a card of the Stinkyscape+ set (R1420, R3535000). Built by S13 (#3560).
 //! 4/16
 //! **Tribute 3**
 //! **Can’t attack**

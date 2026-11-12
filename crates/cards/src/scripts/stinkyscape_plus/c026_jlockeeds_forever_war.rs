@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #26 Jlockeed's Forever War, a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #26 Jlockeed's Forever War, a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    (1) Spell: "For the rest of the game, at the start of its owner's turn summon a Conscript."
 //!   Radiant: "… summon a Radiant conscript."
 //!

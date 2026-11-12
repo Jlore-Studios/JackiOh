@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #156 Horizon Breaker (Unit 3/6 → 6/12, Starship Piece, cost 4, Epic), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #156 Horizon Breaker (Unit 3/6 → 6/12, Starship Piece, cost 4, Epic), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Starship Piece
 //!            When launched, cast a random Terminus Card"
 //!   Radiant: "Starship Piece

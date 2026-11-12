@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #7 Churnwalker, a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #7 Churnwalker, a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    3/15, Armor 4; "Cry: Choose one — Chain all enemy Units together, when one takes
 //!            damage all other chained Units also take the damage; Chain all friendly Units
 //!            together, when one takes damage it is split between all allies (rounded down)."

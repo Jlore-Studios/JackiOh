@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #121.1 Toxopid Leg, a card of the held Stinkyscape+ set (R1420, R3535000). Built by S13 (#3560).
+//! SPEC §8.12 S+ #121.1 Toxopid Leg, a card of the Stinkyscape+ set (R1420, R3535000). Built by S13 (#3560).
 //! 2/8
 //! **Crater**
 //! **Can’t attack**

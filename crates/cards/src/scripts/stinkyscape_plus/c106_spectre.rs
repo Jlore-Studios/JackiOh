@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #106 Spectre, a card of the held Stinkyscape+ set (R1420, R3535000). Built by S08 (#3555).
+//! SPEC §8.12 S+ #106 Spectre, a card of the Stinkyscape+ set (R1420, R3535000). Built by S08 (#3555).
 //! 3/12  
 //! **Flexible**  
 //! **Indestructible**  

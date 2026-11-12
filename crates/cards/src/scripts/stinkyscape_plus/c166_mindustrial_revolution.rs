@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #166 Mindustrial Revolution (§10.1 player effects; R62, R65, R127, R458, R1420, R3535000,
-//! R3549004): (2) Spell, Mindustrial, Rare, a card of the held Stinkyscape+ set.
+//! R3549004): (2) Spell, Mindustrial, Rare, a card of the Stinkyscape+ set.
 //!   Base:    "For the rest of the game at the start of its owner's turn add a random Mindustrial card to
 //!            your hand."
 //!   Radiant: "… add a random Radiant Mindustrial card to your hand, it costs (1) less."

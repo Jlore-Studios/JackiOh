@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #138 Delta Definition (§2.4, §5.1, §6.3 Add to hand; R60, R65, R78, R215, R382, R1181003, R1420, R3535000,
-//! R3563000, R3565000, R3565001): (2 embiggen 4) Spell, Mindustrial, Epic, a card of the held Stinkyscape+ set.
+//! R3563000, R3565000, R3565001): (2 embiggen 4) Spell, Mindustrial, Epic, a card of the Stinkyscape+ set.
 //!   Base:    "Add 3 Automa-δ cards to your hand.
 //!            Embiggened (4): They have Tribute 1."
 //!   Radiant: "Add 3 Radiant Automa-δ cards to your hand.

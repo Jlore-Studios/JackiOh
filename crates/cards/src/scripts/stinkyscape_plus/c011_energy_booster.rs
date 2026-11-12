@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #11 Energy Booster (Unit 1/1 → 2/2, Starship Piece, Equip, cost 3, Epic), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #11 Energy Booster (Unit 1/1 → 2/2, Starship Piece, Equip, cost 3, Epic), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Starship Piece, Equip
 //!            Activate 1: Refresh"
 //!   Radiant: "Starship Piece, Equip
@@ -16,10 +16,10 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-011";
 
-/// "Activate 1": 1 use a turn on the base face (R384, R1857003); the catalog's `refresh` 1.
+/// "Activate": 1 use a turn on the base face, a label and no param (R384, R482, R1857003).
 const USES: i32 = 1;
 
-/// "Activate 2": 2 uses a turn on the Radiant face; the catalog's `refresh` 2.
+/// "Activate 2": 2 uses a turn on the Radiant face.
 const RADIANT_USES: i32 = 2;
 
 /// R3548003: the engine's Refresh Activate with `uses` uses a turn.

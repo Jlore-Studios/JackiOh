@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #32 Z-Patch, a card of the held Stinkyscape+ set (R1420, R3535000). (3) Spell, Epic.
+//! SPEC §8.12 S+ #32 Z-Patch, a card of the Stinkyscape+ set (R1420, R3535000). (3) Spell, Epic.
 //!   Base:    "Tradable. Buff every permanent {times} times. Then Nerf every permanent {times2} times."
 //!   Radiant: the same, "Then Nerf every enemy permanent {times2} times."
 //!

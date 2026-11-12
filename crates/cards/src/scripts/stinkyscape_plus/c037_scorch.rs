@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #37 Scorch (Unit 1/1 → 2/2, Mindustrial, Common, cost 1), a card of the held Stinkyscape+ set (R1420).
+//! SPEC §8.12 S+ #37 Scorch (Unit 1/1 → 2/2, Mindustrial, Common, cost 1), a card of the Stinkyscape+ set (R1420).
 //!   Base:    "Can't Defend, Ranged, Pierce
 //!            Can attack {attacks} times per turn.
 //!            Can only attack the Unit directly across from this." — attacks 10

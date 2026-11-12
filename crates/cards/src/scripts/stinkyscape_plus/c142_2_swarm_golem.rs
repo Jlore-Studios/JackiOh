@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #142.2 Swarm Golem (R1420, R3535000, R3570001, R3570006): (4) Unit, Token (printed
-//! Legendary), Mindustrial, 5/5 → 10/10, of the held Stinkyscape+ set. Rush.
+//! Legendary), Mindustrial, 5/5 → 10/10, of the Stinkyscape+ set. Rush.
 //!   Base:    "After this attacks summon a Swarm card that is Evolved."
 //!   Radiant: "After this attacks summon a Radiant Swarm card that is Evolved."
 //! Engine: Rush is a catalog keyword. `after_attack` (R1849001: once the state check closing each of its

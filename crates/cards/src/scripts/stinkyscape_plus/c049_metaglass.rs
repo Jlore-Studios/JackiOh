@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #49 Metaglass (§4.3, §6.1 Ranged; §6.3 Buff; R81, R783000, R1420, R2261001,
-//! R3535000, R3547000): (1) Spell, Rare, Mindustrial, Mineral, a card of the held Stinkyscape+ set.
+//! R3535000, R3547000): (1) Spell, Rare, Mindustrial, Mineral, a card of the Stinkyscape+ set.
 //!   Base:    "Give a Unit Ranged." Declares no numbers.
 //!   Radiant: "Give a Unit Ranged and +{attack} attack." — 3.
 //!

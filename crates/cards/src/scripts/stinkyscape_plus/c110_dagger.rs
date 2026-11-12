@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #110 Dagger, a card of the held Stinkyscape+ set (R1420, R3535000). Built by S12 (#3545).
+//! SPEC §8.12 S+ #110 Dagger, a card of the Stinkyscape+ set (R1420, R3535000). Built by S12 (#3545).
 //! 2/1  
 //! **Immutable**  
 //! **Immune to spells**  

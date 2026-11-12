@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #20 B-Patch, a card of the held Stinkyscape+ set (R1420, R3535000). (1) Spell, Epic.
+//! SPEC §8.12 S+ #20 B-Patch, a card of the Stinkyscape+ set (R1420, R3535000). (1) Spell, Epic.
 //!   Base:    "Cast on draw: Flip a coin for the whole effect. Randomly either Buff or Nerf every card on
 //!            the field and in both hands."
 //!   Radiant: "Lucky 1" and the same.

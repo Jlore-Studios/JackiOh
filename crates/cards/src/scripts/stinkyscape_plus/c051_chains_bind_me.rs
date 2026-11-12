@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #51 Chains Bind Me, a card of the held Stinkyscape+ set (R1420, R3535000). (2) Spell,
+//! SPEC §8.12 S+ #51 Chains Bind Me, a card of the Stinkyscape+ set (R1420, R3535000). (2) Spell,
 //! Common.
 //!   Base:    "Dormant a permanent for {count} turns. When it awakens, Buff it {times} times if it's yours
 //!            or Nerf it {times2} times if it's an enemy's." (2; 2, 2)

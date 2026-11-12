@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #114 Reign, a card of the held Stinkyscape+ set (R1420, R3535000). Built by S12 (#3545).
+//! SPEC §8.12 S+ #114 Reign, a card of the Stinkyscape+ set (R1420, R3535000). Built by S12 (#3545).
 //! 12/8  
 //! **Tribute 3**  
 //! **Immutable**  

@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #47 Plastanium (§6.1 Divine Shield; §6.3 Buff; R81, R1420, R3535000, R3547000): (1)
-//! Spell, Epic, Mindustrial, Mineral, a card of the held Stinkyscape+ set.
+//! Spell, Epic, Mindustrial, Mineral, a card of the Stinkyscape+ set.
 //!   Base:    "Give a Unit +{health} health and Divine Shield." — 2.
 //!   Radiant: "Give a Unit +{health} health and Divine Shield." — 6.
 //!

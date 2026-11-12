@@ -7045,8 +7045,8 @@ stinkyscapeplus-004: # Profe Yates
     death: I'll never see the Northern Lights.
   zh:
     name: 耶茨教授
-    base: "战吼：放逐每张名字中含有M、O、U、S、E的牌。中国牌免疫。然后召唤两张随机陷阱。然后选择以下一项激活。\n激活：{overwhelm}：压制：冻结此纵列及相邻纵列的所有单位。\n激活：{wolf}：狼吻：将一个飞行单位拉下来，并对其造成{damage}点伤害。它失去飞行。\n激活：{iron}：铁之诏令：将此牌融合进一个单位。这不会再次触发其战吼。"
-    radiant: "战吼：放逐每张名字中含有M、O、U、S、E的牌。中国牌免疫。然后召唤三张随机光辉陷阱。然后选择以下一项激活。\n激活：{overwhelm}：压制：冻结此纵列及相邻纵列的所有单位。\n激活：{wolf}：狼吻：将一个飞行单位拉下来，并对其造成{damage}点伤害。它失去飞行。\n激活：{iron}：铁之诏令：将此牌融合进一个单位。这不会再次触发其战吼。"
+    base: "战吼：放逐每张名字中含有M、O、U、S、E的牌。中国牌免疫。然后召唤两张随机陷阱。然后选择以下一项激活。\n激活：压制：冻结此纵列及相邻纵列的所有单位。\n激活3：狼吻：将一个飞行单位拉下来，并对其造成{damage}点伤害。它失去飞行。\n激活：铁之诏令：将此牌融合进一个单位。这不会再次触发其战吼。"
+    radiant: "战吼：放逐每张名字中含有M、O、U、S、E的牌。中国牌免疫。然后召唤三张随机光辉陷阱。然后选择以下一项激活。\n激活：压制：冻结此纵列及相邻纵列的所有单位。\n激活3：狼吻：将一个飞行单位拉下来，并对其造成{damage}点伤害。它失去飞行。\n激活：铁之诏令：将此牌融合进一个单位。这不会再次触发其战吼。"
 stinkyscapeplus-005: # Dingleberry Droat
   flavour: He blends the whole fruit stand into one very expensive snack and calls it a business plan.
   voice:
@@ -7101,8 +7101,8 @@ stinkyscapeplus-008: # Drone Assembler v3
     death: Line stopped.
   zh:
     name: 无人机组装器v3
-    base: "星舰部件，装备\n激活：{target}：指定一个敌人，召唤一个无人截击机攻击它。"
-    radiant: "星舰部件，装备\n激活：{target}：指定一个敌人，召唤一个光辉无人截击机攻击它。"
+    base: "星舰部件，装备\n激活：指定一个敌人，召唤一个无人截击机攻击它。"
+    radiant: "星舰部件，装备\n激活：指定一个敌人，召唤一个光辉无人截击机攻击它。"
 stinkyscapeplus-009: # Drone Assembler v4
   flavour: Version four fixed the bugs. Version five will fix the fix.
   voice:
@@ -7111,8 +7111,8 @@ stinkyscapeplus-009: # Drone Assembler v4
     death: Rolling back to version three.
   zh:
     name: 无人机组装器v4
-    base: "星舰部件，装备\n激活：{target}：指定一个敌人，召唤一个无人截击机攻击它。"
-    radiant: "星舰部件，装备\n激活：{target}：指定一个敌人，召唤一个光辉无人截击机攻击它。"
+    base: "星舰部件，装备\n激活2：指定一个敌人，召唤一个无人截击机攻击它。"
+    radiant: "星舰部件，装备\n激活2：指定一个敌人，召唤一个光辉无人截击机攻击它。"
 stinkyscapeplus-010: # Drone Assembler v5
   flavour: By version five the drones had a union, a mascot and a retirement plan.
   voice:
@@ -7121,8 +7121,8 @@ stinkyscapeplus-010: # Drone Assembler v5
     death: Reverting. Please wait.
   zh:
     name: 无人机组装器v5
-    base: "星舰部件，装备\n激活：{target}：指定一个敌人，召唤一个无人护卫舰攻击它。"
-    radiant: "星舰部件，装备\n激活：{target}：指定一个敌人，召唤一个光辉无人护卫舰攻击它。"
+    base: "星舰部件，装备\n激活：指定一个敌人，召唤一个无人护卫舰攻击它。"
+    radiant: "星舰部件，装备\n激活：指定一个敌人，召唤一个光辉无人护卫舰攻击它。"
 stinkyscapeplus-011: # Energy Booster
   flavour: It runs on pure enthusiasm and one suspicious extension cord.
   voice:
@@ -7131,8 +7131,8 @@ stinkyscapeplus-011: # Energy Booster
     death: Battery low.
   zh:
     name: 能量增强器
-    base: "星舰部件，装备\n激活：{refresh}：刷新。"
-    radiant: "星舰部件，装备\n激活：{refresh}：刷新。"
+    base: "星舰部件，装备\n激活：刷新。"
+    radiant: "星舰部件，装备\n激活2：刷新。"
 stinkyscapeplus-012: # Shield Booster
   flavour: A bubble with confidence issues. It pops once, politely.
   voice:
@@ -7208,7 +7208,7 @@ stinkyscapeplus-019: # Normalization Module
   zh:
     name: 标准化模块
     base: "星舰部件，装备\n激活：白板化一个单位。"
-    radiant: "星舰部件，装备\n激活：{vanilla}：白板化一个单位。"
+    radiant: "星舰部件，装备\n激活2：白板化一个单位。"
 stinkyscapeplus-020: # B-Patch
   flavour: "Patch notes say: various fixes. They did not say whose."
   voice:
@@ -7369,8 +7369,8 @@ stinkyscapeplus-035: # Scatter
     death: Out of scrap.
   zh:
     name: 散射炮
-    base: "灵活，无法攻击，无法守备\n激活：{damage}：对所有敌人造成0~2点伤害，如果该单位具有飞行，则改为造成{damage2}点伤害。"
-    radiant: "灵活，无法攻击，无法守备\n激活：{damage}：对所有敌人造成1~3点伤害，如果该单位具有飞行，则改为造成{damage2}点伤害。"
+    base: "灵活，无法攻击，无法守备\n激活：对所有敌人造成0~2点伤害，如果该单位具有飞行，则改为造成{damage2}点伤害。"
+    radiant: "灵活，无法攻击，无法守备\n激活2：对所有敌人造成1~3点伤害，如果该单位具有飞行，则改为造成{damage2}点伤害。"
 stinkyscapeplus-036: # Duo
   flavour: One barrel is good, two is better, and the third is somebody else's problem.
   voice:
@@ -7399,8 +7399,8 @@ stinkyscapeplus-038: # Arc
     death: Short circuit.
   zh:
     name: 电弧炮
-    base: "无法守备\n激活：{damage}：对一个单位造成{damage2}点伤害。此伤害会随机连锁到相邻的单位，并不断重复，直到没有有效目标。在一次激活中，它不能两次连锁到同一个单位。"
-    radiant: "无法守备\n激活：{damage}：对一个单位造成{damage2}点伤害。此伤害会随机连锁到相邻的单位，并不断重复，直到没有有效目标。在一次激活中，它不能两次连锁到同一个单位。"
+    base: "无法守备\n激活2：对一个单位造成{damage2}点伤害。此伤害会随机连锁到相邻的单位，并不断重复，直到没有有效目标。在一次激活中，它不能两次连锁到同一个单位。"
+    radiant: "无法守备\n激活5：对一个单位造成{damage2}点伤害。此伤害会随机连锁到相邻的单位，并不断重复，直到没有有效目标。在一次激活中，它不能两次连锁到同一个单位。"
 stinkyscapeplus-039: # Mindustrial Cross-over
   flavour: The factory floor meets the starship deck. Neither of them read the memo.
   voice:
@@ -8059,8 +8059,8 @@ stinkyscapeplus-109: # Lancer
     death: Lens cracked.
   zh:
     name: 长枪炮
-    base: "护甲2，无法攻击，无法守备，灵活\n激活{discover}：发现一个敌方区域，然后对该区域与此单位之间的每个单位造成{damage}点穿透伤害。"
-    radiant: "护甲4，无法攻击，无法守备，灵活\n激活{discover}：发现一个敌方区域，然后对该区域与此单位之间的每个单位造成{damage}点穿透伤害。"
+    base: "护甲2，无法攻击，无法守备，灵活\n激活：发现一个敌方区域，然后对该区域与此单位之间的每个单位造成{damage}点穿透伤害。"
+    radiant: "护甲4，无法攻击，无法守备，灵活\n激活2：发现一个敌方区域，然后对该区域与此单位之间的每个单位造成{damage}点穿透伤害。"
 stinkyscapeplus-110: # Dagger
   flavour: The first model off the line. Every improvement is his own fault.
   voice:
@@ -8221,8 +8221,8 @@ stinkyscapeplus-124: # Sei
     death: Sinking slowly.
   zh:
     name: 赛伊
-    base: "献祭2，远程，嘲讽，护甲5\n激活{deal}：造成{damage}点穿透顺劈伤害。"
-    radiant: "献祭2，远程，嘲讽，护甲10\n激活{deal}：造成{damage}点穿透顺劈伤害。"
+    base: "献祭2，远程，嘲讽，护甲5\n激活：造成{damage}点穿透顺劈伤害。"
+    radiant: "献祭2，远程，嘲讽，护甲10\n激活2：造成{damage}点穿透顺劈伤害。"
 stinkyscapeplus-125: # Omura
   flavour: Takes three turns to reload and one second to ruin your day.
   voice:
@@ -8231,8 +8231,8 @@ stinkyscapeplus-125: # Omura
     death: Down to the depths.
   zh:
     name: 大村
-    base: "献祭3，远程，嘲讽，护甲8\n激活{deal}：造成{damage}点穿透践踏伤害。冷却3回合。"
-    radiant: "献祭3，远程，嘲讽，护甲16\n激活{deal}：造成{damage}点穿透践踏伤害。冷却3回合。"
+    base: "献祭3，远程，嘲讽，护甲8\n激活：造成{damage}点穿透践踏伤害。冷却3回合。"
+    radiant: "献祭3，远程，嘲讽，护甲16\n激活：造成{damage}点穿透践踏伤害。冷却3回合。"
 stinkyscapeplus-126: # Vela
   flavour: Draws a straight line through everyone and apologises to none.
   voice:
@@ -8241,8 +8241,8 @@ stinkyscapeplus-126: # Vela
     death: Sails torn.
   zh:
     name: 船帆
-    base: "献祭2，无法攻击，无法守备\n激活{choose}：选择一个敌方区域，对该区域与此单位之间的所有单位造成{damage}点穿透伤害。"
-    radiant: "献祭2，无法攻击，无法守备\n激活{choose}：选择一个敌方区域，对该区域与此单位之间的所有单位造成{damage}点顺劈穿透伤害。"
+    base: "献祭2，无法攻击，无法守备\n激活：选择一个敌方区域，对该区域与此单位之间的所有单位造成{damage}点穿透伤害。"
+    radiant: "献祭2，无法攻击，无法守备\n激活：选择一个敌方区域，对该区域与此单位之间的所有单位造成{damage}点顺劈穿透伤害。"
 stinkyscapeplus-127: # Corvus
   flavour: A big black bird with a ruler and no gift for telling friends apart.
   voice:
@@ -8251,8 +8251,8 @@ stinkyscapeplus-127: # Corvus
     death: Wings down.
   zh:
     name: 乌鸦
-    base: "献祭3，无法攻击，无法守备\n激活{choose}：选择一个敌方区域，对该区域与此单位之间的所有单位造成{damage}点穿透伤害。"
-    radiant: "献祭3，无法攻击，无法守备\n激活{choose}：选择一个敌方区域，对该区域与此单位之间的所有单位造成{damage}点顺劈穿透伤害。"
+    base: "献祭3，无法攻击，无法守备\n激活：选择一个敌方区域，对该区域与此单位之间的所有单位造成{damage}点穿透伤害。"
+    radiant: "献祭3，无法攻击，无法守备\n激活：选择一个敌方区域，对该区域与此单位之间的所有单位造成{damage}点顺劈穿透伤害。"
 stinkyscapeplus-128: # Additive Reconstructor
   flavour: Adds a little something every morning, like a dull and polite vending machine.
   voice:
@@ -8373,8 +8373,8 @@ stinkyscapeplus-136: # Crawler Assembly Line
     cast: Another crawler off the line!
   zh:
     name: 爬行者流水线
-    base: 激活{summon}：召唤一个爬行者。
-    radiant: 激活{summon}：召唤一个光辉爬行者。
+    base: 激活：召唤一个爬行者。
+    radiant: 激活：召唤一个光辉爬行者。
 stinkyscapeplus-137: # The Perfect Pair
   flavour: A matched set, delivered in one box and already arguing about the lid.
   voice:
@@ -8619,8 +8619,8 @@ stinkyscapeplus-160: # Icarus
     death: Should have read the notes.
   zh:
     name: 伊卡洛斯
-    base: "献祭3\n激活：{summon}：召唤一个拉迪。它会触发其战吼。\n战吼：发现一张史诗武器牌；将其装备进此单位。"
-    radiant: "献祭3\n激活：{summon}：召唤一个光辉拉迪。它会触发其战吼。\n战吼：发现一张传说武器牌；将其装备进此单位。"
+    base: "献祭3\n激活：召唤一个拉迪。它会触发其战吼。\n战吼：发现一张史诗武器牌；将其装备进此单位。"
+    radiant: "献祭3\n激活：召唤一个光辉拉迪。它会触发其战吼。\n战吼：发现一张传说武器牌；将其装备进此单位。"
 stinkyscapeplus-161: # Space Invader
   flavour: Each one is a slightly worse copy of the last, and they keep arriving.
   voice:

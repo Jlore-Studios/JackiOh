@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #119 Eclipse, a card of the held Stinkyscape+ set (R1420, R3535000). Built by S12 (#3545).
+//! SPEC §8.12 S+ #119 Eclipse, a card of the Stinkyscape+ set (R1420, R3535000). Built by S12 (#3545).
 //! 7/15  
 //! **Tribute 3**  
 //! **Flying**  

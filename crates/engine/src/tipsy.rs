@@ -7,7 +7,7 @@
 //! of the game's seed and the card's instance, never from the game's `Rng`, so a reload or a
 //! replay shows the same blur and `rng_cursor` never moves for one (R3548001).
 
-use crate::config::{TIPSY_BLUR_CHANCE_CAP, TIPSY_BLUR_CHANCE_PER_STACK, TIPSY_DECAY};
+use crate::config::{PERCENT, TIPSY_BLUR_CHANCE_CAP, TIPSY_BLUR_CHANCE_PER_STACK, TIPSY_DECAY};
 use crate::script::EngineSink;
 use crate::state::{CardInstance, GameState, TipsyCounter, TipsyStamp};
 use crate::wire::{CardType, CounterKind, GameEvent, KeywordKind, PlayerId, TipsyBlur, Zone};
@@ -131,7 +131,7 @@ pub fn blur_for(state: &GameState, card: &CardInstance, viewer: PlayerId) -> Opt
         &format!("{}{TIPSY_BLUR_STREAM}{}:{}", state.seed, card.id, stamp.turn),
         0,
     );
-    if rng.int(100) >= blur_chance(stamp.level) {
+    if rng.int(PERCENT) >= blur_chance(stamp.level) {
         return None;
     }
     let targets = blur_targets(state, card);

@@ -226,6 +226,21 @@ mod b3_4_params_the_numbers_a_card_declares {
                 assert!(!named_like_a_keyword, "{} {}", card.id, param.key);
             }
         }
+        // An Activate's use count is its label, `Activate:` or `Activate N:`, which Upgrade and Degrade move
+        // through the "Activate" tuning key: a `{param}` there would be a number a Buff moves while the uses
+        // stay, so no face prints one (Stinkyscape+ #8–#11, #35, #38 and #109 among others, #3596).
+        for card in entries() {
+            for face in [&card.base, &card.radiant] {
+                for line in face.text.lines() {
+                    let after = line.strip_prefix("Activate").map(str::trim_start);
+                    assert!(
+                        !after.is_some_and(|rest| rest.trim_start_matches(':').trim_start().starts_with('{')),
+                        "{}: {line}",
+                        card.id
+                    );
+                }
+            }
+        }
     }
 
     #[test]

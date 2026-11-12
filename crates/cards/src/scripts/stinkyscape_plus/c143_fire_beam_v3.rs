@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #143 Fire Beam v3 (Unit 0/2 → 0/4, Weapon, cost 2, Rare), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #143 Fire Beam v3 (Unit 0/2 → 0/4, Weapon, cost 2, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Burn {burn} an enemy Unit, Cleave" — burn 2
 //!   Radiant: the same text — burn 4

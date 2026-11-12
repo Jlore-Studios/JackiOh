@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #T-AI-2 Data-Poisoned Plum, a card of the held Stinkyscape+ set (R1420, R3535000). Built by S25 (#3571).
+//! SPEC §8.12 S+ #T-AI-2 Data-Poisoned Plum, a card of the Stinkyscape+ set (R1420, R3535000). Built by S25 (#3571).
 //!   Base:    "Give an enemy Unit Toxic 1."
 //!   Radiant: "Give an enemy Unit Toxic 2."
 //! Engine: a (1) Spell, Fruit, AI, Token (no printed rarity, R482). The enemy Unit is a declared target (R81),

@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #53 Laser Drill (§2.4, §5.1, §6.1 GIGA, R62, R1420, R1840002, R3535000, R3546000, R3549001):
-//! (4) Field Spell, Mindustrial, Epic, a card of the held Stinkyscape+ set.
+//! (4) Field Spell, Mindustrial, Epic, a card of the Stinkyscape+ set.
 //!   Base:    "GIGA
 //!            End of turn: Add three random Minerals (that cost (0)) or Resources to your hand."
 //!   Radiant: "GIGA

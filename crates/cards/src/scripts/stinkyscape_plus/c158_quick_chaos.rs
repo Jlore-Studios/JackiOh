@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #158 Quick Chaos, a card of the held Stinkyscape+ set (R1420, R3535000). (1) Spell, Rare.
+//! SPEC §8.12 S+ #158 Quick Chaos, a card of the Stinkyscape+ set (R1420, R3535000). (1) Spell, Rare.
 //!   Base:    "Cast on draw: Cast a random Spell with random targets."
 //!   Radiant: "Cast on draw: Cast a random Radiant Spell with random targets."
 //!

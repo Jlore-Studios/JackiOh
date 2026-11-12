@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #21 Jlockeed Shredder-12, a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #21 Jlockeed Shredder-12, a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    12/16, Tribute 1, Pierce; "End of turn: Deal {damage} damage to all enemies, twice."
 //!   Radiant: 24/32, Tribute 1, Pierce; the same.
 //!

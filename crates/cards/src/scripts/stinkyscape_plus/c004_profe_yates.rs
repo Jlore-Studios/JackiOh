@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #4 Profe Yates, a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #4 Profe Yates, a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    7/7; "Cry: Exile every card with a M, O, U, S, E in its name. Cards in CN are
 //!            immune. Then summon two random Traps. Then choose one of the following Activates.
 //!            Activate 1: Overwhelm: Freeze all Units in this lane and the surrounding lanes.

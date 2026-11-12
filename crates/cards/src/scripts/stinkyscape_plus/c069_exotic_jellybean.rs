@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #69 Exotic Jellybean, a card of the held Stinkyscape+ set (R1420, R3535000). (2) Spell, Jelly Bean, Epic.
+//! SPEC §8.12 S+ #69 Exotic Jellybean, a card of the Stinkyscape+ set (R1420, R3535000). (2) Spell, Jelly Bean, Epic.
 //!   Base:    "Add a Sweet Essence to your hand."
 //!   Radiant: "Add a Radiant Sweet Essence to your hand."
 //!

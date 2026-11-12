@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #26.1 Conscript, a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #26.1 Conscript, a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    1/1, Ranged.
 //!   Radiant: 2/2, Ranged, Rush, Pierce.
 //!

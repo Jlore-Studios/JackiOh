@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #162 Edwin Van’Spacechief (§6.2 Combo, §10.4; R1420): (1) Unit, Human, Rare, a
-//! card of the held Stinkyscape+ set. Built by S20 (#3568).
+//! card of the Stinkyscape+ set. Built by S20 (#3568).
 //!   Base:    "Combo X: Gain +2X/2X."  (2/2)
 //!   Radiant: "Combo X: Gain +4X/4X."  (4/4)
 //!

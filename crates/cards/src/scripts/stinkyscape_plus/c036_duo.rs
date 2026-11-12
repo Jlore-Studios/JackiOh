@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #36 Duo (Unit 2/1 → 4/2, Mindustrial, Common, cost 1), a card of the held Stinkyscape+ set (R1420).
+//! SPEC §8.12 S+ #36 Duo (Unit 2/1 → 4/2, Mindustrial, Common, cost 1), a card of the Stinkyscape+ set (R1420).
 //!   Base:    "Flexible, Can't Defend, Ranged, Windfury"
 //!   Radiant: "Flexible, Can't Defend, Ranged, Windfury, Pierce"
 //!

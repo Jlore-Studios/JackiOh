@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #99 Big Time Recruits, a card of the held Stinkyscape+ set (R1420, R3535000). Built by S08 (#3555).
+//! SPEC §8.12 S+ #99 Big Time Recruits, a card of the Stinkyscape+ set (R1420, R3535000). Built by S08 (#3555).
 //! Draw the 3 most expensive permanents and make them GIGA.  
 //! \~\~\~  
 //! Draw the 3 most expensive permanents and make them GIGA and Radiant.

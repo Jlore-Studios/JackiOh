@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #68 Shadiris Visions, a card of the held Stinkyscape+ set (R1420, R3535000). (1) Spell,
+//! SPEC §8.12 S+ #68 Shadiris Visions, a card of the Stinkyscape+ set (R1420, R3535000). (1) Spell,
 //! Rare.
 //!   Base:    "Discover a Spell in your deck; add a copy of it to your hand."
 //!   Radiant: "Discover a Spell in your deck; add a Radiant copy of it to your hand, it costs (1) less."

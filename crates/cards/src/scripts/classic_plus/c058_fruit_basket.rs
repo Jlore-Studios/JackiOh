@@ -72,18 +72,8 @@ mod tests {
             .collect()
     }
 
-    /// The other Fruit-tagged tokens (#3573): S+ #6.1 Fine Fermented Grape and the Fruit ones of S+'s AI
-    /// generated cards, T-AI-1 Hallucinated Kiwi and T-AI-2 Data-Poisoned Plum. A Fruit pool takes every
-    /// token that carries the tag (R382, `POOL_TOKEN_TAGS`), and no roll turns these into another card.
-    const OTHER_FRUIT_TOKENS: [&str; 3] = ["stinkyscapeplus-006-1", "stinkyscapeplus-t-ai-01", "stinkyscapeplus-t-ai-02"];
-
     fn is_grape(id: &str) -> bool {
         GRAPES.contains(&id)
-    }
-
-    /// A token the Fruit pool holds: one of the five Grapes or one of `OTHER_FRUIT_TOKENS`.
-    fn is_fruit_token(id: &str) -> bool {
-        is_grape(id) || OTHER_FRUIT_TOKENS.contains(&id)
     }
 
     mod base {
@@ -120,7 +110,9 @@ mod tests {
             assert!(seen.iter().any(|id| is_grape(id)));
             assert!(seen.iter().any(|id| !is_grape(id)));
             let tokens: Vec<&String> = seen.iter().filter(|id| def_of(Some(fresh.state()), id).token).collect();
-            assert!(tokens.iter().all(|id| is_fruit_token(id)), "{tokens:?}");
+            // R382: the five Grapes are the Fruit pool's only tokens; Stinkyscape+ #6.1 Fine Fermented
+            // Grape and the AI generated T-AI-1 and T-AI-2 carry the tag and stay out.
+            assert!(tokens.iter().all(|id| is_grape(id)), "{tokens:?}");
         }
 
         #[test]

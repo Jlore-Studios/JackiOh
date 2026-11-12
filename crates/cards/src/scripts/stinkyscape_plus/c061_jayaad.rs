@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #61 Jayaad, a card of the held Stinkyscape+ set (R1420, R3535000). (2) Unit, Acclaimed, Epic.
+//! SPEC §8.12 S+ #61 Jayaad, a card of the Stinkyscape+ set (R1420, R3535000). (2) Unit, Acclaimed, Epic.
 //!   Base:    2/6. "Cry: Summon Shawarma Law."
 //!   Radiant: 4/12. "Cry: Summon Radiant Shawarma Law."
 //!

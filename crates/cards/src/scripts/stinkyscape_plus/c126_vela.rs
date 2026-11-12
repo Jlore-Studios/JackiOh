@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #126 Vela, a card of the held Stinkyscape+ set (R1420, R3535000). Built by S13 (#3560).
+//! SPEC §8.12 S+ #126 Vela, a card of the Stinkyscape+ set (R1420, R3535000). Built by S13 (#3560).
 //! 0/10
 //! **Can’t attack, Can’t defend**
 //! **Tribute 2**

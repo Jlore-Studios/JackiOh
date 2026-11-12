@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #59 Mass Driver (R3556007; R62, R1181000, R1420, R1840002, R3543001, R3549001):
-//! (2) Field Spell, Mindustrial, Epic, a card of the held Stinkyscape+ set.
+//! (2) Field Spell, Mindustrial, Epic, a card of the Stinkyscape+ set.
 //!   Base:    "Flexible
 //!            0/6
 //!            Activate: In {count|turn|turns} add two Minerals that cost (0) and a Resource to your hand."

@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #137 The Perfect Pair (§2.4, §6.3 Add to hand; R60, R1420, R3535000, R3565004): (1) Spell,
-//! Mindustrial, Rare, a card of the held Stinkyscape+ set.
+//! Mindustrial, Rare, a card of the Stinkyscape+ set.
 //!   Base:    "Add an Automa-δ and its paired Automa-Ω card to your hand.
 //!            The pairs are Scepter and Reign, Antumbra and Eclipse, Quad and Oct, Sei and Omura, Vela and
 //!            Corvus."

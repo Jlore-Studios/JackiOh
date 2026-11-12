@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #29 Grinder Veteran, a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #29 Grinder Veteran, a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    5/5, Deft; "Activate: Discard a Felinor to add {summons|Warhero Token|Warhero Tokens}
 //!            to your hand."
 //!   Radiant: 10/10, Deft; "… add {summons|Radiant Warhero Token|Radiant Warhero Tokens} …"

@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #91 Tsunami (Unit 3/6 → 6/12, Mindustrial, Rare, cost 2), a card of the held Stinkyscape+ set (R1420).
+//! SPEC §8.12 S+ #91 Tsunami (Unit 3/6 → 6/12, Mindustrial, Rare, cost 2), a card of the Stinkyscape+ set (R1420).
 //!   Base:    "Flexible, Ranged, Can't Defend
 //!            Freeze any Unit damaged by this."
 //!   Radiant: "Flexible, Ranged, Can't Defend, Cleave

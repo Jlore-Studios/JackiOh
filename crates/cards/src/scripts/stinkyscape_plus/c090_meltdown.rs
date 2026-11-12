@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #90 Meltdown (Unit 2/12 → 4/28, Mindustrial, Legendary, cost 3), a card of the held Stinkyscape+ set (R1420).
+//! SPEC §8.12 S+ #90 Meltdown (Unit 2/12 → 4/28, Mindustrial, Legendary, cost 3), a card of the Stinkyscape+ set (R1420).
 //!   Base:    "Flexible, Ranged, Can't Defend, Windfury
 //!            When this attacks, gain +{attack} attack and take {damage} damage.
 //!            When this is Frozen, fully heal it." — attack 2, damage 2

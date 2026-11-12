@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #25 Snom Bunny, a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #25 Snom Bunny, a card of the Stinkyscape+ set (R1420, R3535000).
 //! A new card, not the shipped Snom Bunny Mind Control.
 //!   Base:    5/5, "Can't be in defense position"; "Death: A random enemy Permanent comes under
 //!            your control."

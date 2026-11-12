@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #35 Scatter (Unit 0/6 → 0/12, Mindustrial, Common, cost 2), a card of the held Stinkyscape+ set (R1420).
+//! SPEC §8.12 S+ #35 Scatter (Unit 0/6 → 0/12, Mindustrial, Common, cost 2), a card of the Stinkyscape+ set (R1420).
 //!   Base:    "Flexible, Can't attack, Can't Defend
 //!            Activate 1: Deal 0~2 damage to all enemies, if the Unit is Flying deal {damage2} damage instead" — damage2 8
 //!   Radiant: "Flexible, Can't attack, Can't Defend
@@ -6,7 +6,7 @@
 //!
 //! Engine: Flexible is a catalog keyword (R3543000): played into the backrow Scatter is a Unit there and still
 //! takes its Activate. The Activate is 1 use a turn on the base face and 2 on the Radiant face (R384,
-//! R1857003; the catalog's `damage`). R3559000: "all enemies" is every enemy Unit, then the enemy hero, as S #13
+//! R1857003; the `Activate:` and `Activate 2:` labels, no param, R482). R3559000: "all enemies" is every enemy Unit, then the enemy hero, as S #13
 //! and S #40 read it (`damage_all`, R59); each target rolls its own uniform amount just before its hit, as
 //! Flak's targets do (R2521001), Lucky and Luck applying (R987); a Unit that has Flying when its hit comes
 //! takes `damage2` instead and rolls nothing (`keywordInstead`); a hero is never Flying, and a 0 is no hit
@@ -17,7 +17,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-035";
 
-/// "Activate 1": 1 use a turn on the base face; the catalog's `damage` (R384, R1857003).
+/// "Activate": 1 use a turn on the base face, a label and no param (R384, R482, R1857003).
 const USES: i32 = 1;
 /// "Activate 2": 2 uses a turn on the Radiant face.
 const RADIANT_USES: i32 = 2;

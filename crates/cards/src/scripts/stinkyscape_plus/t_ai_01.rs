@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #T-AI-1 Hallucinated Kiwi, a card of the held Stinkyscape+ set (R1420, R3535000). Built by S25 (#3571).
+//! SPEC §8.12 S+ #T-AI-1 Hallucinated Kiwi, a card of the Stinkyscape+ set (R1420, R3535000). Built by S25 (#3571).
 //!   Base:    "Tipsy 1
 //!            Draw a card."
 //!   Radiant: "Draw 2 cards."

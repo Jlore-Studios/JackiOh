@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #120 Crawler, a card of the held Stinkyscape+ set (R1420, R3535000). Built by S13 (#3560).
+//! SPEC §8.12 S+ #120 Crawler, a card of the Stinkyscape+ set (R1420, R3535000). Built by S13 (#3560).
 //! The first time this game that this enters your board, add a **Toxopid** to your hand.
 //! May be played from your GY for (1)
 //! 1/3

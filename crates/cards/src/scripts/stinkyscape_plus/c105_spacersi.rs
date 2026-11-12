@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #105 Spacersi, a card of the held Stinkyscape+ set (R1420, R3535000). (3) Unit,
+//! SPEC §8.12 S+ #105 Spacersi, a card of the Stinkyscape+ set (R1420, R3535000). (3) Unit,
 //! Common, 5/8 → 10/16.
 //!   Base:    "Cry: Transform your other Units into ones that cost (1) more."
 //!   Radiant: "Cry: Transform your other Units into ones that cost (2) more."

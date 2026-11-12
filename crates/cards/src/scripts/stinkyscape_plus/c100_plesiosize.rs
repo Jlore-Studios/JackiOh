@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #100 Plesiosize, a card of the held Stinkyscape+ set (R1420, R3535000). Built by S08 (#3555).
+//! SPEC §8.12 S+ #100 Plesiosize, a card of the Stinkyscape+ set (R1420, R3535000). Built by S08 (#3555).
 //! Give a unit in your hand \+6/+6 and make it GIGA.  
 //! \~\~\~  
 //! Give a unit in your hand \+12/+12 and make it GIGA.

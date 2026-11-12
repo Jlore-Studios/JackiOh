@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #147 Scourge Mortar v4 (Unit 0/3 → 0/6, Weapon, cost 3, Epic), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #147 Scourge Mortar v4 (Unit 0/3 → 0/6, Weapon, cost 3, Epic), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Toxic {toxic} an enemy Unit" — toxic 4
 //!   Radiant: "Starship Piece, Equip

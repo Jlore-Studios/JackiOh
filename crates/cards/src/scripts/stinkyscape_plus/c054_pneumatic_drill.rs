@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #54 Pneumatic Drill (§2.4, §5.1, R62, R1420, R1840002, R3535000, R3549001): (2) Field Spell,
-//! Mindustrial, Rare, a card of the held Stinkyscape+ set.
+//! Mindustrial, Rare, a card of the Stinkyscape+ set.
 //!   Base:    "End of turn: Add a random Minerals or Resources to your hand."
 //!   Radiant: "End of turn: Add a random Radiant Minerals or Radiant Resources to your hand."
 //!

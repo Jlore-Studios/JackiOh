@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #134 Basket of Crawlers (§2.4, §6.3 Add to hand; R386, R1420, R3535000): (2) Spell,
-//! Mindustrial, Common, a card of the held Stinkyscape+ set.
+//! Mindustrial, Common, a card of the Stinkyscape+ set.
 //!   Base:    "Add 3 Crawlers to your hand."
 //!   Radiant: "Add 3 Radiant Crawlers to your hand."
 //!

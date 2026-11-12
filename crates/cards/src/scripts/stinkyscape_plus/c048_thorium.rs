@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #48 Thorium (§6.1 Brittle X, R385, R441; §6.3 Buff, Give Brittle; R81, R1420,
-//! R3535000, R3547000): (1) Spell, Epic, Mindustrial, Mineral, a card of the held Stinkyscape+ set.
+//! R3535000, R3547000): (1) Spell, Epic, Mindustrial, Mineral, a card of the Stinkyscape+ set.
 //!   Base:    "Give a Unit +{buff}/+{buff} and Brittle {brittle2}." — 5, 1.
 //!   Radiant: "Give a Unit +{buff2}/+{buff2} and Brittle {brittle2}." — 10, 1.
 //!

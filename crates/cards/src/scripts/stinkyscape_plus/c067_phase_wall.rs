@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #67 Phase Wall, a card of the held Stinkyscape+ set (R1420, R3535000). Built by S08 (#3555).
+//! SPEC §8.12 S+ #67 Phase Wall, a card of the Stinkyscape+ set (R1420, R3535000). Built by S08 (#3555).
 //! 0/6 embiggen 0/24  
 //! **Can’t attack**  
 //! **Can’t defend**  

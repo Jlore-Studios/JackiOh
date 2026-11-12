@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #88 Colony Watcher (Unit, Swarm 2/7 → 4/14, cost 2, Common), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #88 Colony Watcher (Unit, Swarm 2/7 → 4/14, cost 2, Common), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Evolve: When this moves from Defense Position to attack position.
 //!            Evolve: Recruit a Swarm card."
 //!   Radiant: "Evolve: When this moves from Defense Position to attack position.

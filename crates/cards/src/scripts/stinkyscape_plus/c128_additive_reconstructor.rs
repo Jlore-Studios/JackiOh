@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #128 Additive Reconstructor (§2.4, §5.1; R62, R65, R382, R1420, R3535000, R3563000,
-//! R3565001): (1) Field Spell, Mindustrial, Rare, a card of the held Stinkyscape+ set.
+//! R3565001): (1) Field Spell, Mindustrial, Rare, a card of the Stinkyscape+ set.
 //!   Base:    "Start of turn: Add a random (0) or (1) cost Automa card to your hand."
 //!   Radiant: "Start of turn: Add a random Radiant (0) or (1) cost Automa card to your hand."
 //!

@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #13 Shield Repairer (Unit 2/2 → 4/4, Starship Piece, Equip, cost 2, Rare), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #13 Shield Repairer (Unit 2/2 → 4/4, Starship Piece, Equip, cost 2, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Starship Piece, Equip
 //!            End of turn: gain Divine Shield"
 //!   Radiant: "Starship Piece, Equip, Divine Shield

@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #71 Mindustrial Contract (§5.1, §6.3 Add to hand; R65, R387, R1420, R3535000, R3549003):
-//! (1) Spell, Rare, a card of the held Stinkyscape+ set.
+//! (1) Spell, Rare, a card of the Stinkyscape+ set.
 //!   Base:    "Add {card|random Mindustrial card|random Mindustrial cards} to your hand." — card 3.
 //!   Radiant: "Add {card|random Radiant Mindustrial card|random Radiant Mindustrial cards} to your hand."
 //!

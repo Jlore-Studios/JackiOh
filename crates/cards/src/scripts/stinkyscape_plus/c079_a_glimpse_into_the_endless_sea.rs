@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #79 A Glimpse into the Endless Sea (4) Spell, Wincon, Terminus, Mythic, a card of
-//! the held Stinkyscape+ set (R1420, R3535000; R3569005, R3569006).
+//! the Stinkyscape+ set (R1420, R3535000; R3569005, R3569006).
 //!   Base:    "Exile your deck. Start a {count} turn countdown. When it ends, win the game." (10)
 //!   Radiant: "Exile your deck. Start an {count} turn countdown. When it ends, win the game." (8)
 //!

@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #6.2 Stinky Cheese, a card of the held Stinkyscape+ set (R1420, R3535000). (1) Field Spell,
+//! SPEC §8.12 S+ #6.2 Stinky Cheese, a card of the Stinkyscape+ set (R1420, R3535000). (1) Field Spell,
 //! Swarm, Token (printed Epic).
 //!   Base:    "Temporary 2. Evolves when this is discarded to Temporary. Evolve: Gain Flashback, Animated, and
 //!            +{buff}/+{buff}." — 5.

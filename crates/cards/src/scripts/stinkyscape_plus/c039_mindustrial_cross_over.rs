@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #39 Mindustrial Cross-over (§5.1, §6.1 Equip and Starship Piece, §6.3 Discover; R65, R387,
-//! R1420, R1878003, R3535000, R3549000): (1) Spell, Rare, a card of the held Stinkyscape+ set.
+//! R1420, R1878003, R3535000, R3549000): (1) Spell, Rare, a card of the Stinkyscape+ set.
 //!   Base:    "Discover a random Mindustrial Unit, give it Starpiece and Equip."
 //!   Radiant: "Discover a random Radiant Mindustrial Unit, give it Starpiece and Equip, it costs (1) less."
 //!

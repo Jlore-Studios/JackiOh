@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #55 Thorium Reactor (R3556005; R62, R1420):
-//! (2) Field Spell, Mindustrial, Epic, a card of the held Stinkyscape+ set.
+//! (2) Field Spell, Mindustrial, Epic, a card of the Stinkyscape+ set.
 //!   Base:    "Start of turn: Gain {mana} mana & draw {card|card|cards}.
 //!            End of turn: {chance}% chance to blow up dealing {damage} damage to your hero.
 //!            Activate: Discard a Thorium to skip the blow up chance this turn."

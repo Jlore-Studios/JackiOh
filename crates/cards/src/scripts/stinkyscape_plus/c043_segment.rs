@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #43 Segment (R3550005; R121, R1420):
-//! (2) Field Trap, Mindustrial, Rare, a card of the held Stinkyscape+ set.
+//! (2) Field Trap, Mindustrial, Rare, a card of the Stinkyscape+ set.
 //!   Base:    "The first enemy Ranged attack or Activate per turn is countered."
 //!   Radiant: "All enemy Ranged attack or Activate are countered."
 //!

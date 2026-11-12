@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #93 Recessive Replicators (Unit 4/4 → 8/8, cost 2, Rare), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #93 Recessive Replicators (Unit 4/4 → 8/8, cost 2, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Evolves when a friendly Unit dies. / Evolve: Gain “Death: Resummon that Unit.”"
 //!   Radiant: "Evolves when a friendly Unit dies. / Evolve: Gain “Death: Resummon that Unit. Make it Radiant.”"
 //!

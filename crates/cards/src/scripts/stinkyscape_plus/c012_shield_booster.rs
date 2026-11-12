@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #12 Shield Booster (Unit 1/1 → 2/2, Starship Piece, Equip, Divine Shield, cost 1, Common), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #12 Shield Booster (Unit 1/1 → 2/2, Starship Piece, Equip, Divine Shield, cost 1, Common), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base and Radiant: "Starship Piece, Equip, Divine Shield"
 //!
 //! Every word is a catalog keyword the engine plays, so there is nothing to run. Played onto one of your

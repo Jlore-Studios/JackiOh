@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #42 Force Projector (R3550004, R3556004; R1420):
-//! (3) Field Spell, Mindustrial, Rare, a card of the held Stinkyscape+ set.
+//! (3) Field Spell, Mindustrial, Rare, a card of the Stinkyscape+ set.
 //!   Base:    "The first {pool} damage allies would take per turn is nullified."
 //!   Radiant: "Armor 2
 //!            The first {pool} damage allies would take per turn is nullified."

@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #10 Drone Assembler v5 (Unit 0/4 → 0/8, Weapon, cost 4, Legendary), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #10 Drone Assembler v5 (Unit 0/4 → 0/8, Weapon, cost 4, Legendary), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Starship Piece, Equip
 //!            Activate 1: Target an enemy, summon a Drone Corvette to attack it"
 //!   Radiant: "Starship Piece, Equip

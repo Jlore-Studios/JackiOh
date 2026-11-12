@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #83 Offworld Replicant (Unit, Swarm 6/6 → 12/12, cost 2, Common), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #83 Offworld Replicant (Unit, Swarm 6/6 → 12/12, cost 2, Common), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Stack
 //!            Evolves when this is Stacked on something.
 //!            Evolve: Add a copy of this to your hand."

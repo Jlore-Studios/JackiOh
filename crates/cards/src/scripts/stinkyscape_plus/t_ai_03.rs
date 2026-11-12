@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #T-AI-3 Jlockeed Loitering Munition, a card of the held Stinkyscape+ set (R1420, R3535000). Built by S25 (#3571).
+//! SPEC §8.12 S+ #T-AI-3 Jlockeed Loitering Munition, a card of the Stinkyscape+ set (R1420, R3535000). Built by S25 (#3571).
 //!   Base:    "Evasive"
 //!   Radiant: "Evasive, Lifesteal"
 //! Engine: a (1) Unit 2/1 → 4/2, Jlockeed, AI, Token (no printed rarity, R482). Every word is a catalog keyword

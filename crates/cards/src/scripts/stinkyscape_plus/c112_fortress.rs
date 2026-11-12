@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #112 Fortress, a card of the held Stinkyscape+ set (R1420, R3535000). Built by S12 (#3545).
+//! SPEC §8.12 S+ #112 Fortress, a card of the Stinkyscape+ set (R1420, R3535000). Built by S12 (#3545).
 //! 6/3  
 //! **Tribute 1**  
 //! **Immutable**  

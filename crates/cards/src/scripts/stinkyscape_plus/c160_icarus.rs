@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #160 Icarus (Unit 2/8 → 4/16, cost 4, Legendary), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #160 Icarus (Unit 2/8 → 4/16, cost 4, Legendary), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Tribute 3
 //!            Activate 1: Summon a Radi. It triggers its Cry.
 //!            Cry: Discover an Epic Weapon; Equip it into this."

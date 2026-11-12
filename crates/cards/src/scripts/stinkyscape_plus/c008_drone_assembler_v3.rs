@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #8 Drone Assembler v3 (Unit 0/2 → 0/4, Weapon, cost 2, Rare), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #8 Drone Assembler v3 (Unit 0/2 → 0/4, Weapon, cost 2, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Starship Piece, Equip
 //!            Activate 1: Target an enemy, summon a Drone Interceptor to attack it"
 //!   Radiant: "Starship Piece, Equip

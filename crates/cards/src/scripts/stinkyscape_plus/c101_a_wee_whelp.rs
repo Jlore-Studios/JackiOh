@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #101 A Wee Whelp (Unit, Swarm 1/1 → 2/2, cost 1, Common), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #101 A Wee Whelp (Unit, Swarm 1/1 → 2/2, cost 1, Common), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Evolves after this destroys a Unit.
 //!            Evolve: Set stats to 10/10."
 //!   Radiant: "Evolves after this destroys a Unit.

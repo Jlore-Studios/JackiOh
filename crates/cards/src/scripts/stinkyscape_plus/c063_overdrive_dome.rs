@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #63 Overdrive Dome (R3556000, R3556001, R3556008; R62, R1420):
-//! (2) Field Spell, Mindustrial, Epic, a card of the held Stinkyscape+ set.
+//! (2) Field Spell, Mindustrial, Epic, a card of the Stinkyscape+ set.
 //!   Base:    "Dormant for {dormant|turn|turns}.
 //!            All Units gain Charge and Windfury and Spell gains Echo +{spellEcho}."
 //!   Radiant: "Dormant for {dormant|turn|turns}.

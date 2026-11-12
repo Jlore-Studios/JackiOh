@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #44 Blast Compound (§3.2 Lock, §6.1 Cleave, §6.3 Buff, Lock; R81, R1420, R3535000,
-//! R3547000, R3547001): (1) Spell, Rare, Mindustrial, Mineral, a card of the held Stinkyscape+ set.
+//! R3547000, R3547001): (1) Spell, Rare, Mindustrial, Mineral, a card of the Stinkyscape+ set.
 //!   Base:    "Give a Unit +{attack} attack and Cleave, lock the tile it is on." — 2.
 //!   Radiant: "Give a Unit +{attack} attack and Cleave, lock the tile it is on." — 6.
 //!

@@ -29008,7 +29008,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 1,
-    "loc": 35,
+    "loc": 32,
     "base": {
       "attack": 2,
       "health": 2,
@@ -29090,43 +29090,19 @@
       "attack": 7,
       "health": 7,
       "keywords": [],
-      "text": "Cry: Exile every card with a M, O, U, S, E in its name. Cards in CN are immune. Then summon two random Traps. Then choose one of the following Activates.\nActivate: {overwhelm}: Overwhelm: Freeze all Units in this lane and the surrounding lanes.\nActivate: {wolf}: Wolf's Maw: Pull a Flying Unit down and deal {damage} damage to it. It loses Flying.\nActivate: {iron}: Iron Mandate: Fuse this into a Unit. This does not trigger its Cry again."
+      "text": "Cry: Exile every card with a M, O, U, S, E in its name. Cards in CN are immune. Then summon two random Traps. Then choose one of the following Activates.\nActivate: Overwhelm: Freeze all Units in this lane and the surrounding lanes.\nActivate 3: Wolf's Maw: Pull a Flying Unit down and deal {damage} damage to it. It loses Flying.\nActivate: Iron Mandate: Fuse this into a Unit. This does not trigger its Cry again."
     },
     "radiant": {
       "attack": 14,
       "health": 14,
       "keywords": [],
-      "text": "Cry: Exile every card with a M, O, U, S, E in its name. Cards in CN are immune. Then summon three random Radiant Traps. Then choose one of the following Activates.\nActivate: {overwhelm}: Overwhelm: Freeze all Units in this lane and the surrounding lanes.\nActivate: {wolf}: Wolf's Maw: Pull a Flying Unit down and deal {damage} damage to it. It loses Flying.\nActivate: {iron}: Iron Mandate: Fuse this into a Unit. This does not trigger its Cry again."
+      "text": "Cry: Exile every card with a M, O, U, S, E in its name. Cards in CN are immune. Then summon three random Radiant Traps. Then choose one of the following Activates.\nActivate: Overwhelm: Freeze all Units in this lane and the surrounding lanes.\nActivate 3: Wolf's Maw: Pull a Flying Unit down and deal {damage} damage to it. It loses Flying.\nActivate: Iron Mandate: Fuse this into a Unit. This does not trigger its Cry again."
     },
     "params": [
-      {
-        "key": "overwhelm",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "wolf",
-        "base": 3,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
       {
         "key": "damage",
         "base": 4,
         "radiant": 4,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "iron",
-        "base": 1,
-        "radiant": 1,
         "better": "up",
         "step": 1,
         "min": 1
@@ -29342,7 +29318,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: {target}: Target an enemy, summon a Drone Interceptor to attack it."
+      "text": "Starship Piece, Equip\nActivate: Target an enemy, summon a Drone Interceptor to attack it."
     },
     "radiant": {
       "attack": 0,
@@ -29355,18 +29331,8 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: {target}: Target an enemy, summon a Radiant Drone Interceptor to attack it."
+      "text": "Starship Piece, Equip\nActivate: Target an enemy, summon a Radiant Drone Interceptor to attack it."
     },
-    "params": [
-      {
-        "key": "target",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ]
@@ -29396,7 +29362,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: {target}: Target an enemy, summon a Drone Interceptor to attack it."
+      "text": "Starship Piece, Equip\nActivate 2: Target an enemy, summon a Drone Interceptor to attack it."
     },
     "radiant": {
       "attack": 0,
@@ -29409,18 +29375,8 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: {target}: Target an enemy, summon a Radiant Drone Interceptor to attack it."
+      "text": "Starship Piece, Equip\nActivate 2: Target an enemy, summon a Radiant Drone Interceptor to attack it."
     },
-    "params": [
-      {
-        "key": "target",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "refs": [
       "stinkyscape-t-drone-interceptor"
     ]
@@ -29450,7 +29406,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: {target}: Target an enemy, summon a Drone Corvette to attack it."
+      "text": "Starship Piece, Equip\nActivate: Target an enemy, summon a Drone Corvette to attack it."
     },
     "radiant": {
       "attack": 0,
@@ -29463,18 +29419,8 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: {target}: Target an enemy, summon a Radiant Drone Corvette to attack it."
+      "text": "Starship Piece, Equip\nActivate: Target an enemy, summon a Radiant Drone Corvette to attack it."
     },
-    "params": [
-      {
-        "key": "target",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "refs": [
       "stinkyscape-t-drone-corvette"
     ]
@@ -29502,7 +29448,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: {refresh}: Refresh."
+      "text": "Starship Piece, Equip\nActivate: Refresh."
     },
     "radiant": {
       "attack": 2,
@@ -29515,18 +29461,8 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: {refresh}: Refresh."
-    },
-    "params": [
-      {
-        "key": "refresh",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ]
+      "text": "Starship Piece, Equip\nActivate 2: Refresh."
+    }
   },
   "stinkyscapeplus-012": {
     "id": "stinkyscapeplus-012",
@@ -29841,19 +29777,8 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: {vanilla}: Vanilla a Unit."
-    },
-    "params": [
-      {
-        "key": "vanilla",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ]
+      "text": "Starship Piece, Equip\nActivate 2: Vanilla a Unit."
+    }
   },
   "stinkyscapeplus-020": {
     "id": "stinkyscapeplus-020",
@@ -30457,7 +30382,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Flexible, Can't attack, Can't Defend\nActivate: {damage}: Deal 0~2 damage to all enemies, if the Unit is Flying deal {damage2} damage instead."
+      "text": "Flexible, Can't attack, Can't Defend\nActivate: Deal 0~2 damage to all enemies, if the Unit is Flying deal {damage2} damage instead."
     },
     "radiant": {
       "attack": 0,
@@ -30473,17 +30398,9 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Flexible, Can't attack, Can't Defend\nActivate: {damage}: Deal 1~3 damage to all enemies, if the Unit is Flying deal {damage2} damage instead."
+      "text": "Flexible, Can't attack, Can't Defend\nActivate 2: Deal 1~3 damage to all enemies, if the Unit is Flying deal {damage2} damage instead."
     },
     "params": [
-      {
-        "key": "damage",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
       {
         "key": "damage2",
         "base": 8,
@@ -30632,7 +30549,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Can't Defend\nActivate: {damage}: Deal {damage2} damage to a Unit. This randomly chains to an adjacent Unit. It repeats until no valid targets remain. It cannot chain to the same Unit twice in one Activate."
+      "text": "Can't Defend\nActivate 2: Deal {damage2} damage to a Unit. This randomly chains to an adjacent Unit. It repeats until no valid targets remain. It cannot chain to the same Unit twice in one Activate."
     },
     "radiant": {
       "attack": 0,
@@ -30642,17 +30559,9 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Can't Defend\nActivate: {damage}: Deal {damage2} damage to a Unit. This randomly chains to an adjacent Unit. It repeats until no valid targets remain. It cannot chain to the same Unit twice in one Activate."
+      "text": "Can't Defend\nActivate 5: Deal {damage2} damage to a Unit. This randomly chains to an adjacent Unit. It repeats until no valid targets remain. It cannot chain to the same Unit twice in one Activate."
     },
     "params": [
-      {
-        "key": "damage",
-        "base": 2,
-        "radiant": 5,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
       {
         "key": "damage2",
         "base": 2,
@@ -33475,7 +33384,7 @@
           "kind": "Flexible"
         }
       ],
-      "text": "Armor 2, Can't attack, Can't Defend, Flexible\nActivate: {discover}: Discover an enemy tile, then deal {damage} Pierce damage to every Unit between that tile and this."
+      "text": "Armor 2, Can't attack, Can't Defend, Flexible\nActivate: Discover an enemy tile, then deal {damage} Pierce damage to every Unit between that tile and this."
     },
     "radiant": {
       "attack": 4,
@@ -33495,17 +33404,9 @@
           "kind": "Flexible"
         }
       ],
-      "text": "Armor 4, Can't attack, Can't Defend, Flexible\nActivate: {discover}: Discover an enemy tile, then deal {damage} Pierce damage to every Unit between that tile and this."
+      "text": "Armor 4, Can't attack, Can't Defend, Flexible\nActivate 2: Discover an enemy tile, then deal {damage} Pierce damage to every Unit between that tile and this."
     },
     "params": [
-      {
-        "key": "discover",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
       {
         "key": "damage",
         "base": 5,
@@ -34531,7 +34432,7 @@
           "n": 5
         }
       ],
-      "text": "Tribute 2, Ranged, Taunt, Armor 5\nActivate: {deal}: Deal {damage} Pierce Cleave damage."
+      "text": "Tribute 2, Ranged, Taunt, Armor 5\nActivate: Deal {damage} Pierce Cleave damage."
     },
     "radiant": {
       "attack": 10,
@@ -34548,17 +34449,9 @@
           "n": 10
         }
       ],
-      "text": "Tribute 2, Ranged, Taunt, Armor 10\nActivate: {deal}: Deal {damage} Pierce Cleave damage."
+      "text": "Tribute 2, Ranged, Taunt, Armor 10\nActivate 2: Deal {damage} Pierce Cleave damage."
     },
     "params": [
-      {
-        "key": "deal",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
       {
         "key": "damage",
         "base": 2,
@@ -34599,7 +34492,7 @@
           "n": 8
         }
       ],
-      "text": "Tribute 3, Ranged, Taunt, Armor 8\nActivate: {deal}: Deal {damage} Pierce Trample damage. Has a 3-turn cooldown."
+      "text": "Tribute 3, Ranged, Taunt, Armor 8\nActivate: Deal {damage} Pierce Trample damage. Has a 3-turn cooldown."
     },
     "radiant": {
       "attack": 14,
@@ -34616,17 +34509,9 @@
           "n": 16
         }
       ],
-      "text": "Tribute 3, Ranged, Taunt, Armor 16\nActivate: {deal}: Deal {damage} Pierce Trample damage. Has a 3-turn cooldown."
+      "text": "Tribute 3, Ranged, Taunt, Armor 16\nActivate: Deal {damage} Pierce Trample damage. Has a 3-turn cooldown."
     },
     "params": [
-      {
-        "key": "deal",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
       {
         "key": "damage",
         "base": 12,
@@ -34663,7 +34548,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 2, Can't attack, Can't Defend\nActivate: {choose}: Choose an enemy tile deal {damage} Pierce deal damage to all Units between that row and this."
+      "text": "Tribute 2, Can't attack, Can't Defend\nActivate: Choose an enemy tile deal {damage} Pierce deal damage to all Units between that row and this."
     },
     "radiant": {
       "attack": 0,
@@ -34676,17 +34561,9 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 2, Can't attack, Can't Defend\nActivate: {choose}: Choose an enemy tile deal {damage} Cleave Pierce deal damage to all Units between that row and this."
+      "text": "Tribute 2, Can't attack, Can't Defend\nActivate: Choose an enemy tile deal {damage} Cleave Pierce deal damage to all Units between that row and this."
     },
     "params": [
-      {
-        "key": "choose",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
       {
         "key": "damage",
         "base": 8,
@@ -34723,7 +34600,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 3, Can't attack, Can't Defend\nActivate: {choose}: Choose an enemy tile deal {damage} Pierce deal damage to all Units between that row and this."
+      "text": "Tribute 3, Can't attack, Can't Defend\nActivate: Choose an enemy tile deal {damage} Pierce deal damage to all Units between that row and this."
     },
     "radiant": {
       "attack": 0,
@@ -34736,17 +34613,9 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 3, Can't attack, Can't Defend\nActivate: {choose}: Choose an enemy tile deal {damage} Cleave Pierce deal damage to all Units between that row and this."
+      "text": "Tribute 3, Can't attack, Can't Defend\nActivate: Choose an enemy tile deal {damage} Cleave Pierce deal damage to all Units between that row and this."
     },
     "params": [
-      {
-        "key": "choose",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
       {
         "key": "damage",
         "base": 80,
@@ -35452,22 +35321,12 @@
     "loc": 30,
     "base": {
       "keywords": [],
-      "text": "Activate: {summon}: Summon a Crawler."
+      "text": "Activate: Summon a Crawler."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activate: {summon}: Summon a Radiant Crawler."
+      "text": "Activate: Summon a Radiant Crawler."
     },
-    "params": [
-      {
-        "key": "summon",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "refs": [
       "stinkyscapeplus-120"
     ]
@@ -36530,24 +36389,14 @@
       "attack": 2,
       "health": 8,
       "keywords": [],
-      "text": "Tribute 3\nActivate: {summon}: Summon a Radi. It triggers its Cry.\nCry: Discover an Epic Weapon; Equip it into this."
+      "text": "Tribute 3\nActivate: Summon a Radi. It triggers its Cry.\nCry: Discover an Epic Weapon; Equip it into this."
     },
     "radiant": {
       "attack": 4,
       "health": 16,
       "keywords": [],
-      "text": "Tribute 3\nActivate: {summon}: Summon a Radiant Radi. It triggers its Cry.\nCry: Discover a Legendary Weapon; Equip it into this."
+      "text": "Tribute 3\nActivate: Summon a Radiant Radi. It triggers its Cry.\nCry: Discover a Legendary Weapon; Equip it into this."
     },
-    "params": [
-      {
-        "key": "summon",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "refs": [
       "stinkyscapeplus-060"
     ]

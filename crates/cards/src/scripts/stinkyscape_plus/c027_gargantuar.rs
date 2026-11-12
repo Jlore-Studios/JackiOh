@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #27 Gargantuar (Unit, Swarm 12/12 → 24/24, cost 3, Rare), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #27 Gargantuar (Unit, Swarm 12/12 → 24/24, cost 3, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "After this attacks, Freeze it.
 //!            Evolves when this falls below half health.
 //!            Evolve: Summon an Imp."

@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #52 Airblast Drill (§2.4, §5.1, §6.1 GIGA, §6.3 Tribute; R62, R101, R1420, R1840002, R3535000,
-//! R3546000, R3549001): (4) Field Spell, Mindustrial, Legendary, a card of the held Stinkyscape+ set.
+//! R3546000, R3549001): (4) Field Spell, Mindustrial, Legendary, a card of the Stinkyscape+ set.
 //!   Base:    "Tribute 1, GIGA
 //!            End of turn: Fill your hand with random Minerals (that cost (0)) and Resources."
 //!   Radiant: "Tribute 1, GIGA

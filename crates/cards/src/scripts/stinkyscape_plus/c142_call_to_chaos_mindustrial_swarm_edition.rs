@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #142 Call to Chaos (Mindustrial-Swarm Edition) (R28, R87, R423, R436, R3570000–R3570005),
-//! a card of the held Stinkyscape+ set (R1420, R3535000). (4) Spell, Call to Chaos, Legendary.
+//! a card of the Stinkyscape+ set (R1420, R3535000). (4) Spell, Call to Chaos, Legendary.
 //!   Base:    "One of the following random effects: add 3 random Paperclip cards to your hand, they cost
 //!            (0), replenish 2 mana; add 3 random Evolved Swarm cards to your hand, they cost (0); summon
 //!            two random Radiant Units, make them GIGA; summon or cast 5 random Jlockeed cards; add 3

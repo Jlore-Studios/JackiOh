@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #127 Corvus, a card of the held Stinkyscape+ set (R1420, R3535000). Built by S13 (#3560).
+//! SPEC §8.12 S+ #127 Corvus, a card of the Stinkyscape+ set (R1420, R3535000). Built by S13 (#3560).
 //! 0/20
 //! **Can’t attack, Can’t defend**
 //! **Tribute 3**

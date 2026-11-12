@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #107 Fuse (Unit 2/5 → 4/10, Mindustrial, Epic, cost 2), a card of the held Stinkyscape+ set (R1420).
+//! SPEC §8.12 S+ #107 Fuse (Unit 2/5 → 4/10, Mindustrial, Epic, cost 2), a card of the Stinkyscape+ set (R1420).
 //!   Base:    "Armor 5, Can't Defend, Ranged, Pierce
 //!            Deal {sweepLane}x damage to Units in this lane, deals {sweepAdjacent}x damage to Units in
 //!            adjacent lanes." — sweepLane 5, sweepAdjacent 3

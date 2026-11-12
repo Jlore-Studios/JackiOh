@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #T-tears-of-the-kwzki-tree Tears of the Kwzki Tree (4) Spell, Terminus, Mythic, a
-//! Terminus token of the held Stinkyscape+ set (R1420, R3535000; R3569000, R3569001).
+//! Terminus token of the Stinkyscape+ set (R1420, R3535000; R3569000, R3569001).
 //!   Base:    "All cards for the rest of the game are Radiant, at the end of any turn buff all cards."
 //!   Radiant: "… Gain {mana} mana."
 //!

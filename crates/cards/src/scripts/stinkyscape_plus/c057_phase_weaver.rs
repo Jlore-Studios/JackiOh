@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #57 Phase Weaver (R62, R1420):
-//! (1) Field Spell, Mindustrial, Epic, a card of the held Stinkyscape+ set.
+//! (1) Field Spell, Mindustrial, Epic, a card of the Stinkyscape+ set.
 //!   Base:    "End of your turn: add a Phase Fabric to your hand."
 //!   Radiant: "End of your turn: add a Phase Fabric to your hand, it costs (0)."
 //!

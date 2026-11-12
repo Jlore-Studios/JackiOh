@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #30 Yeah I'm a War Hero, a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #30 Yeah I'm a War Hero, a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    (1) Field Spell: "The first card you draw each turn is replaced with a Warhero Token."
 //!   Radiant: "… replaced with a Radiant Warhero Token."
 //!

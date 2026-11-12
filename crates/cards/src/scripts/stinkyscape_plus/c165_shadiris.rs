@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #165 Shadiris (§6.3 Cast, R70, R113, R129, R1420, R1840002): (3) Unit, Epic, 3/13 → 6/26, a
-//! card of the held Stinkyscape+ set. Built by S20 (#3568).
+//! card of the Stinkyscape+ set. Built by S20 (#3568).
 //!   Base:    "Cry: Cast Shadiris Visions twice and add three random Stinkyscape Resources to your hand."
 //!   Radiant: "Cry: Cast Radiant Shadiris Visions twice and add three random Radiant Stinkyscape Resources
 //!            to your hand."

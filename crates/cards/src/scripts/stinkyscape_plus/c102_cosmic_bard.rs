@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #102 Cosmic Bard (§2.4, §6.2 Combo, §6.3 Draw and Cost; R65, R129, R801, R1420,
-//! R3568001): (1) Unit, Rare, 3/2 → 6/4, a card of the held Stinkyscape+ set. Built by S20 (#3568).
+//! R3568001): (1) Unit, Rare, 3/2 → 6/4, a card of the Stinkyscape+ set. Built by S20 (#3568).
 //!   Base:    "Combo: Draw {summons} Units."  (summons 2)
 //!   Radiant: "Combo: Draw {summons} Units and set both their costs to the cheapest drawn."
 //!

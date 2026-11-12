@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #19 Normalization Module (Unit 0/2 → 0/4, Starship Piece, Equip, cost 2, Rare), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #19 Normalization Module (Unit 0/2 → 0/4, Starship Piece, Equip, cost 2, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Vanilla a Unit"
 //!   Radiant: "Starship Piece, Equip
@@ -19,7 +19,7 @@ pub const ID: &str = "stinkyscapeplus-019";
 /// "Activate": 1 use a turn on the base face (R384, R1857003).
 const USES: i32 = 1;
 
-/// "Activate 2": 2 uses a turn on the Radiant face; the catalog's `vanilla` 2.
+/// "Activate 2": 2 uses a turn on the Radiant face, a label and no param (R482).
 const RADIANT_USES: i32 = 2;
 
 /// R3552002: "Vanilla a Unit" on the chosen Unit, on either side.

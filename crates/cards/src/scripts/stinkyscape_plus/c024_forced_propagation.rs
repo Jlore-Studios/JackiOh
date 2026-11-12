@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #24 Forced Propagation, a card of the held Stinkyscape+ set (R1420, R3535000). (1)
+//! SPEC §8.12 S+ #24 Forced Propagation, a card of the Stinkyscape+ set (R1420, R3535000). (1)
 //! Spell, Epic, Embiggened (3).
 //!   Base:    "Choose a non-fused card in your hand or field. Shuffle {copy} copies of it into your deck.
 //!            It keeps no cost changes or buffs. Embiggened (3): Shuffle {copy2} copies of it instead."

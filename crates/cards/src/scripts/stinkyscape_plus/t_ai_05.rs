@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #T-AI-5 Lantern Distiller, a card of the held Stinkyscape+ set (R1420, R3535000). Built by S25 (#3571).
+//! SPEC §8.12 S+ #T-AI-5 Lantern Distiller, a card of the Stinkyscape+ set (R1420, R3535000). Built by S25 (#3571).
 //!   Base:    "Evolves at the start of its owner's turn.
 //!            Evolve: Gain +2/+2."
 //!   Radiant: "Evolves at the start of its owner's turn.

@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #76.1 Ayy, a token of the held Stinkyscape+ set (R1420, R3535000). (1) Unit, Token,
+//! SPEC §8.12 S+ #76.1 Ayy, a token of the Stinkyscape+ set (R1420, R3535000). (1) Unit, Token,
 //! Common, summoned by #76 Ayys LMAO and #85 Body Snatch.
 //!   Base:    "2/2, Cloaked"
 //!   Radiant: "4/4, Cloaked, Poisonous"

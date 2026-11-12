@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #153 Noxious Rounds (Unit 1/1 → 2/2, cost 4, Epic), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #153 Noxious Rounds (Unit 1/1 → 2/2, cost 4, Epic), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base and Radiant: "Starship Piece, Equip
 //!            Damage dealt is Toxic."
 //!

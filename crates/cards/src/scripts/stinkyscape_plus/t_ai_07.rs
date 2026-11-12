@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #T-AI-7 KY's Line Search Bot, a card of the held Stinkyscape+ set (R1420, R3535000). Built by S25 (#3571).
+//! SPEC §8.12 S+ #T-AI-7 KY's Line Search Bot, a card of the Stinkyscape+ set (R1420, R3535000). Built by S25 (#3571).
 //!   Base:    "Cry: Choose an enemy tile. Deal 2 damage to every Unit on the line between this and it."
 //!   Radiant: "Cry: Choose an enemy tile. Deal 4 damage to every Unit on the line between this and it."
 //! Engine: a (2) Unit 2/2 → 4/4, KY, AI, Token (no printed rarity, R482). The Cry is E7's line (R3554005): a

@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #104 Tireless Cultivation, a card of the held Stinkyscape+ set (R1420, R3535000). (1)
+//! SPEC §8.12 S+ #104 Tireless Cultivation, a card of the Stinkyscape+ set (R1420, R3535000). (1)
 //! Spell, Rare, Temporary.
 //!   Base:    "Temporary. Transform a permanent into one. It costs (1) more. End of turn: Return this to
 //!            your hand."

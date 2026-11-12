@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #40 Mender (R3556002; R62, R1420, R3543001):
-//! (1) Field Spell, Mindustrial, Common, a card of the held Stinkyscape+ set.
+//! (1) Field Spell, Mindustrial, Common, a card of the Stinkyscape+ set.
 //!   Base:    "Flexible
 //!            End of turn: Heal adjacent units to full."
 //!   Radiant: "Flexible

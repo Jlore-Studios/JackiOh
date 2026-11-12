@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #152 Venomous Rounds (Unit 2/1 → 4/2, cost 2, Rare), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #152 Venomous Rounds (Unit 2/1 → 4/2, cost 2, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Starship Piece, Equip
 //!            Damage also applies Toxic {toxic}." — toxic 2
 //!   Radiant: the same text — toxic 4

@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #76 Ayys LMAO, a card of the held Stinkyscape+ set (R1420, R3535000). (2) Spell,
+//! SPEC §8.12 S+ #76 Ayys LMAO, a card of the Stinkyscape+ set (R1420, R3535000). (2) Spell,
 //! Common.
 //!   Base:    "Summon a mix of {summons} Cloaked Ayy tokens or Cloaked Tiny Asteroids."
 //!   Radiant: "Summon a mix of {summons} Radiant Cloaked Ayy tokens or Cloaked Tiny Asteroids."

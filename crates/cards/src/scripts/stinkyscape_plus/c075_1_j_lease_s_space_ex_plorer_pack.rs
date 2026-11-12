@@ -1,9 +1,9 @@
-//! SPEC §8.12 S+ #75.1 J-lease S-Space EX-plorer Pack (Spell, Token printed Legendary, cost 2), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #75.1 J-lease S-Space EX-plorer Pack (Spell, Token printed Legendary, cost 2), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Cast on Draw: Add {draw} random Radiant Stinkyscape or Stinkyscape+ cards to your hand."
 //!   Radiant: "… They cost (0)."
 //!
 //! "Cast on draw" (§6.2, R58): the cards come from both sets' collectible cards (the text names them, R380:
-//! tokens never, repeats allowed, R60), each made Radiant before it reaches the hand (R74); the hand cap burns
+//! tokens never; no repeat until the pool runs out, R3563000), each made Radiant before it reaches the hand (R74); the hand cap burns
 //! what does not fit (§2.4). The Radiant face sets `costOverride` to (0), a price the text names
 //! (`tests/cross/params.rs`: no Buff or Nerf moves it), and it lands only on a card that reached the hand
 //! (R4). A spell token, so it goes to the graveyard after it resolves (§7).

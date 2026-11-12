@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #86 Astrophage (Unit, Swarm 0/1 → 0/2, cost 0, Common), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #86 Astrophage (Unit, Swarm 0/1 → 0/2, cost 0, Common), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Evolve: When your opponent plays a Unit.
 //!            Evolve: Place a Plague Counter on and steal a stat point from each Unit."
 //!   Radiant: "Evolve: When your opponent plays a Unit.

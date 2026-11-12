@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #132 Great Paperclip Theory II (§6.3 Choose one; R81, R169, R275, R640, R1420, R1863000,
-//! R3535000, R3565002): (2) Spell, Quickdraw, Mindustrial, Paperclip, Mythic, a card of the held Stinkyscape+ set.
+//! R3535000, R3565002): (2) Spell, Quickdraw, Mindustrial, Paperclip, Mythic, a card of the Stinkyscape+ set.
 //!   Base:    "Choose one α or β;
 //!            Add a Dagger/Flare to your hand. The first time you play each Automa-α/β cost card, add the
 //!            subsequent cost Automa-α/β to your hand."

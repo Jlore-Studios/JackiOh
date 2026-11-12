@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #103 Transcend, a card of the held Stinkyscape+ set (R1420, R3535000). (1) Spell, Common.
+//! SPEC §8.12 S+ #103 Transcend, a card of the Stinkyscape+ set (R1420, R3535000). (1) Spell, Common.
 //!   Base:    "Transform your permanents into ones that cost (1) more."
 //!   Radiant: "Transform your permanents into ones that cost (2) more."
 //!

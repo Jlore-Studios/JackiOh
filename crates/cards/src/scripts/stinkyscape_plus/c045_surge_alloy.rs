@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #45 Surge Alloy (§6.1 Rush, Charge, Windfury; §6.3 Give; R81, R83, R1420, R3535000,
-//! R3547000): (1) Spell, Legendary, Mindustrial, Mineral, a card of the held Stinkyscape+ set.
+//! R3547000): (1) Spell, Legendary, Mindustrial, Mineral, a card of the Stinkyscape+ set.
 //!   Base:    "Give a Unit Rush attack and Windfury."
 //!   Radiant: "Give a Unit Charge attack and Windfury."
 //!

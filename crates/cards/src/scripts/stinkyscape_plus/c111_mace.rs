@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #111 Mace, a card of the held Stinkyscape+ set (R1420, R3535000). Built by S12 (#3545).
+//! SPEC §8.12 S+ #111 Mace, a card of the Stinkyscape+ set (R1420, R3535000). Built by S12 (#3545).
 //! 2/2  
 //! **Immutable**  
 //! **Immune to spells**  

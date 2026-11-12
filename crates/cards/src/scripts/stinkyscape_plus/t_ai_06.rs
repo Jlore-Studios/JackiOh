@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #T-AI-6 Abacus Optimizer, a card of the held Stinkyscape+ set (R1420, R3535000). Built by S25 (#3571).
+//! SPEC §8.12 S+ #T-AI-6 Abacus Optimizer, a card of the Stinkyscape+ set (R1420, R3535000). Built by S25 (#3571).
 //!   Base:    "The leftmost and rightmost cards in your hand cost (1) less."
 //!   Radiant: "The leftmost and rightmost cards in your hand cost (2) less."
 //! Engine: a (1) Spell, CN, AI, Token (no printed rarity, R482). R3571002: the first and last cards of its

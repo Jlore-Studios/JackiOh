@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #6 Wines McCheese, a card of the held Stinkyscape+ set (R1420, R3535000). (2) Unit, Human, Epic.
+//! SPEC §8.12 S+ #6 Wines McCheese, a card of the Stinkyscape+ set (R1420, R3535000). (2) Unit, Human, Epic.
 //!   Base:    4/5. "Start of turn: Add a Fine Fermented Grape, Stinky Cheese, or The Coin to your hand at random."
 //!   Radiant: 8/10. The same, each of the three Radiant.
 //!

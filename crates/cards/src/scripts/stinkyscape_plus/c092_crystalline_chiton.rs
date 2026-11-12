@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #92 Crystalline Chiton (Unit, Swarm 2/4 → 4/8, cost 1, Common), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #92 Crystalline Chiton (Unit, Swarm 2/4 → 4/8, cost 1, Common), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Evolves when this survives damage.
 //!            Evolve: Gain {jade} Jade." (jade 2)
 //!   Radiant: "Evolves when this survives damage.

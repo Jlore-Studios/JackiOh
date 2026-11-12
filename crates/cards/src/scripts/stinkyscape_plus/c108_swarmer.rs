@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #108 Swarmer (Unit 2/4 → 4/8, Mindustrial, Rare, cost 2), a card of the held Stinkyscape+ set (R1420).
+//! SPEC §8.12 S+ #108 Swarmer (Unit 2/4 → 4/8, Mindustrial, Rare, cost 2), a card of the Stinkyscape+ set (R1420).
 //!   Base:    "Armor 1, Can't Defend, Ranged, Cleave, Flexible"
 //!   Radiant: "Armor 1, Can't Defend, Ranged, Cleave, Flexible, Pierce"
 //!

@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #31 Soul Read, a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #31 Soul Read, a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    (1) Trap; "Cry: Look at your opponent's hand and choose a card secretly. Reveals
 //!            if your opponent plays the chosen card before any of the other cards you saw.
 //!            Take control of that card instead. Otherwise, Tribute this Trap."

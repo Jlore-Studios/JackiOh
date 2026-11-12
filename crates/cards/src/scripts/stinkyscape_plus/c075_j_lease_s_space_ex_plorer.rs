@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #75 J-lease S-Space EX-plorer (Unit 5/5 → 10/10, cost 3, Legendary), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #75 J-lease S-Space EX-plorer (Unit 5/5 → 10/10, cost 3, Legendary), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Cloaked / Evolves when you launch a Starship. / Evolve: Put a J-lease S-Space EX-plorer Pack on
 //!            top of your deck."
 //!   Radiant: "Cloaked / Evolves when you launch a Starship. / Evolve: Put a Radiant J-lease S-Space EX-plorer

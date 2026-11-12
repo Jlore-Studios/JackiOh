@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #22 Cryofluid (§6.1 Deft, Frozen; §6.3 Buff, Freeze; R81, R1174000, R1420, R3535000, R3547000): (1)
-//! Spell, Rare, Mindustrial, a card of the held Stinkyscape+ set.
+//! Spell, Rare, Mindustrial, a card of the Stinkyscape+ set.
 //!   Base:    "Give a Unit +{buff}/+{buff}, Deft, and Freeze it." — 6.
 //!   Radiant: "Give a Unit +{buff2}/+{buff2}, Deft, and Freeze it." — 12.
 //!

@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #61.1 Shawarma Law, a card of the held Stinkyscape+ set (R1420, R3535000). (2) Field Spell,
+//! SPEC §8.12 S+ #61.1 Shawarma Law, a card of the Stinkyscape+ set (R1420, R3535000). (2) Field Spell,
 //! Token (printed Epic).
 //!   Base:    "End of turn: Every Unit eats a delicious Shawarma. First: +{health} health. Second: Can't attack.
 //!            Third: Can't defend and Brittle {brittle2}. Subsequent: Freeze."

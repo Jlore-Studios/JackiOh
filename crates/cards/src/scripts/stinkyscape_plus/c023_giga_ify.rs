@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #23 GIGA-ify, a card of the held Stinkyscape+ set (R1420, R3535000). Built by S08 (#3555).
+//! SPEC §8.12 S+ #23 GIGA-ify, a card of the Stinkyscape+ set (R1420, R3535000). Built by S08 (#3555).
 //! Make a permanent in your hand **GIGA** and **Indestructible.**  
 //! \~\~  
 //! Make two permanents in your hand **GIGA** and **Indestructible**

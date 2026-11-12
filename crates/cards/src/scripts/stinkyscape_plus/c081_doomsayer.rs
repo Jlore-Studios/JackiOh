@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #81 Doomsayer (2) Unit 0/7 → 0/14, Mythic, a card of the held Stinkyscape+ set
+//! SPEC §8.12 S+ #81 Doomsayer (2) Unit 0/7 → 0/14, Mythic, a card of the Stinkyscape+ set
 //! (R1420, R3535000; R3569007).
 //!   Base:    "Start of turn: Exile your entire board and add a random Terminus card to your hand."
 //!   Radiant: "Start of turn: Exile your entire board and add a random Radiant Terminus card to your hand."

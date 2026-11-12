@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #74 Galaxia (§6.2, §10.5 step 7; R119, R1420, R2179002, R3568000): (2) Unit, Epic,
-//! 4/6 → 8/12, a card of the held Stinkyscape+ set. Built by S20 (#3568).
+//! 4/6 → 8/12, a card of the Stinkyscape+ set. Built by S20 (#3568).
 //!   Base:    "Aura: The first Unit you play each turn gets +{attack} Attack." (attack 3)
 //!   Radiant: the same at +6 attack.
 //! The designer's note binds: the first Unit played after Galaxia on the turn she is summoned counts as that

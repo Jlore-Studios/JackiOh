@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #150 Scorching Rounds (Unit 3/1 → 6/2, cost 2, Rare), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #150 Scorching Rounds (Unit 3/1 → 6/2, cost 2, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Starship Piece, Equip
 //!            Damage also Burns {burns}." — burns 3
 //!   Radiant: the same text — burns 6

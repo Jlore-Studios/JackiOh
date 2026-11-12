@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #142.1 Mindustrial Golem (R1420, R3535000, R3570006): (4) Unit, Token (printed Legendary),
-//! Mindustrial, 5/5 → 10/10, of the held Stinkyscape+ set. Rush, Ranged.
+//! Mindustrial, 5/5 → 10/10, of the Stinkyscape+ set. Rush, Ranged.
 //!   Base:    "After this attacks summon a random Mindustrial card that can't attack."
 //!   Radiant: "After this attacks summon a random Radiant Mindustrial card that can't attack."
 //! Engine: Rush and Ranged are catalog keywords. `after_attack` (R1849001: once the state check closing

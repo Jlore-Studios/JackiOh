@@ -1,12 +1,13 @@
-//! SPEC §8.12 S+ #2 Lone Drifter (Unit, Swarm 2/2 → 4/4, cost 1, Common), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #2 Lone Drifter (Unit, Swarm 2/2 → 4/4, cost 1, Common), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Evolves when all your Unit zones are full.
 //!            Evolve: Gain +4/+4."
 //!   Radiant: "Evolves when all your Unit zones are full.
 //!            Evolve: Gain +8/+8."
 //!
 //! "Evolves when" is a standing condition, read at the state check once the board has settled
-//! (`evolves_when`, R3536001): every one of the controller's unit zones holds a card (a pile counts
-//! once, a Dormant card fills its zone, R1839000). The Evolve text runs once (R3536000): a permanent
+//! (`evolves_when`, R3536001): no zone of the controller's unit row is empty (a pile counts once, a
+//! Dormant card fills its zone, R1839000; a zone a GIGA covers or the slash voided is no room, so it is
+//! full, R3546000, R3554002). The Evolve text runs once (R3536000): a permanent
 //! `buff` of its own, the declared `buff` on the base face and `buff2` on the Radiant (the faces print
 //! different numbers, so each reads its own key).
 
@@ -14,15 +15,14 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-002";
 
-/// R3536001: every unit zone of the controller's side holds a card.
+/// R3536001: no unit zone of the controller's side is empty, by the board's own reading (`is_empty`): a
+/// zone a GIGA covers (R3546000) or the slash voided (R3554002) is no room for a card, so it counts as
+/// full, as it does for every play and summon.
 fn zones_full() -> HasHook {
     read_hook(|a| {
-        a.state.players[a.self_.controller]
-            .units
-            .iter()
-            .filter(|pile| pile.as_ref().is_some_and(|pile| !pile.is_empty()))
-            .count()
-            == UNIT_ZONES as usize
+        slots_of(a.self_.controller, Row::Units)
+            .into_iter()
+            .all(|slot| !is_empty(&*a.state, slot))
     })
 }
 
@@ -98,6 +98,27 @@ mod tests {
             s.expect_stats(&drifter, json!({ "attack": 6, "health": 6 }));
             assert_eq!(evolved_events(&s), 1);
             assert!(s.state().pending.is_none(), "it opens no prompt");
+        }
+
+        /// R3536001, R3546000: a GIGA Unit in lanes 4 and 5 leaves no zone of the row empty, so the row is
+        /// full though only four piles hold a card.
+        #[test]
+        fn r3536001_a_giga_covering_the_last_zone_fills_the_row() {
+            const GIGA: &str = "stinkyscapeplus-t-ai-04"; // Jlockeed Large Language Model: GIGA, Taunt
+            let mut s = scenario(json!({
+                "p1": {
+                    "hand": [GIGA],
+                    "field": [{ "def": ID }, VANILLA, VANILLA],
+                    "mana": 10,
+                    "library": crate::filler(4),
+                },
+                "p2": { "library": crate::filler(4) },
+            }));
+            let drifter = s.unit_at(P1, 1);
+            assert_ne!(s.card(&drifter).evolved, Some(true), "two zones hold nothing");
+            s.play(GIGA, json!({ "zone": 4 }));
+            assert_eq!(s.card(&drifter).evolved, Some(true));
+            s.expect_stats(&drifter, json!({ "attack": 6, "health": 6 }));
         }
 
         #[test]

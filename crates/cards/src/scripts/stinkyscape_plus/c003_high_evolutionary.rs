@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #3 High Evolutionary (Unit 7/7 → 14/14, cost 3, Legendary), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #3 High Evolutionary (Unit 7/7 → 14/14, cost 3, Legendary), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Cry: Evolve a friendly permanent. / Aura: Your evolutions trigger twice."
 //!   Radiant: "Cry: Evolve a friendly permanent. / Aura: Your evolutions trigger thrice."
 //!

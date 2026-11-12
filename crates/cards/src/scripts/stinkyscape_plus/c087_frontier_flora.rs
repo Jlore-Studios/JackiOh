@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #87 Frontier Flora (Field Spell, cost 1, Common), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #87 Frontier Flora (Field Spell, cost 1, Common), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Animated / Evolves when a Starship is launched. / Evolve: Place {counters} Plague Counters on this. /
 //!            Aura: Has 3X/3X stats for each Plague Counter." (2 counters)
 //!   Radiant: the same, 4 counters.

@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #141 Stinky 1x Engineer, a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #141 Stinky 1x Engineer, a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    2/3, "Cry: Nerf {nerf} other random permanents."
 //!   Radiant: 4/6, "Cry: Destroy {nerf} other random permanents."
 //!

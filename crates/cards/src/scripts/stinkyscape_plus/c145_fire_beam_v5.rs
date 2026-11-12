@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #145 Fire Beam v5 (Unit 0/4 → 0/8, Weapon, cost 4, Legendary), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #145 Fire Beam v5 (Unit 0/4 → 0/8, Weapon, cost 4, Legendary), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Starship Piece, Equip
 //!            Activate 2: Burn {burn} an enemy Unit, Cleave" — burn 4
 //!   Radiant: the same text — burn 8

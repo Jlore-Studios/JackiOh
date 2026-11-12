@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #122 Quad, a card of the held Stinkyscape+ set (R1420, R3535000). Built by S13 (#3560).
+//! SPEC §8.12 S+ #122 Quad, a card of the Stinkyscape+ set (R1420, R3535000). Built by S13 (#3560).
 //! 3/12
 //! **Tribute 2**
 //! **Can’t attack**

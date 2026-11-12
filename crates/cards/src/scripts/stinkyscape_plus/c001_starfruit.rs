@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #1 Starfruit, a card of the held Stinkyscape+ set (R1420, R3535000). (1) Spell, Fruit, Common.
+//! SPEC §8.12 S+ #1 Starfruit, a card of the Stinkyscape+ set (R1420, R3535000). (1) Spell, Fruit, Common.
 //!   Base:    "Cleave, Pierce. Deal {damage} damage to a Unit." — 1.
 //!   Radiant: "Cleave, Pierce, Lifesteal. Deal {damage} damage to a Unit." — 2.
 //!

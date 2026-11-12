@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #58 Phase Conveyer (§2.4, §5.1, §6.1 Flexible; R62, R1420, R1840002, R3535000, R3543000,
-//! R3549002): (1) Unit, Mindustrial, Epic, 0/3 → 0/6, a card of the held Stinkyscape+ set.
+//! R3549002): (1) Unit, Mindustrial, Epic, 0/3 → 0/6, a card of the Stinkyscape+ set.
 //!   Base:    "Flexible
 //!            Start of turn: Add a Mineral and Resource to your hand."
 //!   Radiant: "Flexible

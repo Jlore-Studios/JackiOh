@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #159 Raven (Unit 1/1 → 2/2, cost 0, Rare), a card of the held Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #159 Raven (Unit 1/1 → 2/2, cost 0, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Tribute 1
 //!            Cry: Discover 1 Rare Weapon; Equip it into this."
 //!   Radiant: "Tribute 1
