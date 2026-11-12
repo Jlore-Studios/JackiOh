@@ -454,8 +454,15 @@ async fn r3730000_a_blocked_player_can_neither_read_nor_enter() {
     assert_eq!(read(&t.app, &t.guest, &code).await.0, 404);
     // Anyone else still may enter.
     ok_act(&t.app, &t.third, &code, "enter", Value::Null).await;
-    // Full, a lobby is as gone as an unknown code to anyone not in it.
-    assert_eq!(read(&t.app, &t.guest, &code).await.0, 404);
+    // Full, a lobby is as gone as an unknown code to anyone not in it, with no block between them.
+    store!(t.app, tx => tx.blocks_remove(&t.guest.id, &t.host.id).await.expect("blocks.remove"));
+    let (status, body) = read(&t.app, &t.guest, &code).await;
+    assert_eq!(
+        (status, &body),
+        (404, &unknown),
+        "a full lobby reads as an unknown code"
+    );
+    assert_eq!(view(&t.app, &t.third, &code).await["you"], "guest");
 }
 
 #[tokio::test]

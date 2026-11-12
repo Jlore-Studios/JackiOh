@@ -7,7 +7,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LOBBY_START_COUNTDOWN_SECONDS } from "@jackioh/server-config";
 
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
-import { at, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
+import { fakeSockets } from "../test/fakeSocket.ts";
+import { settle } from "../test/settle.ts";
+import { at, must, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
+import { setSocialSocketFactory } from "../together/socialSocket.ts";
 import type { LobbyRead, LobbySeat, LobbyView } from "./api.ts";
 import { LOBBY_POLL_MS } from "./config.ts";
 import { COOP_DECK_KEY } from "./coopDeck.ts";
@@ -191,6 +194,33 @@ describe("the lobby screen", () => {
     const seats = screen.getAllByTestId(lobbyTestid.seat);
     expect(within(seats[1] ?? document.body).getByText("Bo#2")).toBeInTheDocument();
   }, LOBBY_POLL_MS * 4);
+
+  it("R3730000 the lobby reads once when the social socket comes up, for what changed before it held one", async () => {
+    const fake = fakeSockets();
+    setSocialSocketFactory(fake.factory);
+    try {
+      vi.useFakeTimers();
+      const server = serve([lobby({ seats: [seat(), seat({ role: "guest", player: null })] }), lobby()]);
+      const reads = (): number => server.to("GET", `/api/lobbies/${CODE}`).length;
+      show();
+      await settle({ advance: 0 });
+      expect(screen.getByTestId(lobbyTestid.invite)).toBeInTheDocument();
+      expect(reads()).toBe(1);
+      // The guest entered while the tab held no socket: the server pushed it to nobody.
+      const socket = must(fake.sockets.at(-1), "the tab's social socket");
+      socket.open();
+      socket.deliver({ type: "social", incoming: [], outgoing: [], unread: {} });
+      await settle({ advance: 0 });
+      expect(reads(), "the socket came up: one read, with no push and no poll").toBe(2);
+      expect(screen.queryByTestId(lobbyTestid.invite)).toBeNull();
+      const seats = screen.getAllByTestId(lobbyTestid.seat);
+      expect(within(seats[1] ?? document.body).getByText("Bo#2")).toBeInTheDocument();
+      await settle({ advance: LOBBY_POLL_MS * 2 });
+      expect(reads(), "live, the lobby sends no poll").toBe(2);
+    } finally {
+      setSocialSocketFactory(null);
+    }
+  });
 
   it("R3205000 R3730002 the lobby's own reads keep running while the tab is hidden", async () => {
     Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });

@@ -103,6 +103,13 @@ function useLobbyRead(code: string): [Read, () => void] {
   }, [code, round]);
   // R3730000: a push names the lobby that changed.
   useEffect(() => onLobbyPush((pushed) => pushed === code && reload()), [code, reload]);
+  // R3730000: the server pushes only to a socket it holds when it writes, so whenever the socket comes up
+  // (or drops) the lobby reads once for what changed meanwhile, as the open chat does (R3214000).
+  const lastLive = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (lastLive.current !== null && lastLive.current !== social.live) reload();
+    lastLive.current = social.live;
+  }, [social.live, reload]);
   // While the socket is down, the lobby reads itself at its own pace, hidden tab or not (R3205000): a
   // Start begins the game at once (R3730002), and this read takes the member to its board.
   useEffect(() => {
