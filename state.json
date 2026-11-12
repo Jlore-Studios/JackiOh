@@ -14685,11 +14685,18 @@
       "interruptions": 1,
       "issue": 3695,
       "kind": "revise",
+      "last_findings": [],
       "live": "revising",
+      "paused": {
+        "at": "2026-11-12T16:18:37Z",
+        "interrupt": "usage",
+        "provider": "claude-3"
+      },
       "pending_request": false,
       "provider": "claude-3",
       "question": "Should #3761 merge with acceptance item 4 (more casts in the sweep) waived, with the Battleship's dormant layers taken up separately? Or should that second cause be fixed first?",
       "queued_at": "2026-11-12T13:57:51Z",
+      "round_tier": "strong",
       "run_id": "43232565702",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -14714,6 +14721,7 @@
       "started_at": "2026-11-12T13:59:11Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [],
         "builder": "claude",
