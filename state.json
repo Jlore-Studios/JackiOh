@@ -16817,6 +16817,13 @@
     "3734": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "43199695621",
+        "model": "sonnet",
+        "provider": "claude-7",
+        "since": "2026-11-12T10:29:55Z",
+        "until": "2026-11-12T10:59:55Z"
+      },
       "handoff": {
         "at": "2026-11-12T09:11:29Z",
         "draft": "# Planner draft for #3734 (final message = the plan below)\n\nFindings (read, not guessed):\n- #3728's shell is merged (apps/web/src/shell). Workshop split is 1277 (WORKSHOP_SPLIT_MIN_WIDTH_PX in DeckWorkshop.tsx, workshop.css @media 1277/1276, KEEP+SCRIPT_KEEP in breakpoints.test.ts, MenuShell.test.tsx reads it).\n- Deck editor's own .db-layout (pool + sidebar) already side by side from 761 px; the workshop's list rail takes turns below 1277.\n- PoolGrid virtual = usePoolWindow + poolWindow.ts (readShape uses \".db-card\" selector, cellOf private). Almanac uses CardBrowser virtual.\n- Pool drag = HTML5 draggable in PoolGrid.tsx PoolItem, DeckEditor startDrag/endDrag/drop, DeckSidebar allowDrop/onDrop, e2e cy.dragCardToDeck. game/drag/OptionDrag.tsx is the compact pointer-drag model.\n- CSS budget tests (spacing/palette/typescale/surfaces/motion/buttons/typography/breakpoints) cap collection.css: new styles go in a new sheet using tokens only.\n- Every new t(\"literal\") needs an entry in src/i18n/zh-CN.json (R711000 guard).\n- By rule 5 this is ~55 files => hard; say so under Open questions.\n- Decisions: 4th tab Progress; cost row stays 0..5, 6+, X (shared COST_BUCKETS); newest = latest patch in PATCH_LOG; touch lifts on horizontal-dominant move (touch-action: pan-y).\n\nStatus: plan fully composed in the final message.",
