@@ -34637,6 +34637,12 @@
         "number": 3769,
         "title": "Patch: dungeon enemies are dealt decks they can cast at their tier's mana",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-12T13:57:26Z",
+        "number": 3774,
+        "title": "Patch: the fuzz's dungeon starts deal the run's own enemy rows: mana caps under 4, smaller opening hands and slow draws",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
