@@ -15,7 +15,7 @@ import { IDLE, isBuilding, type Interaction } from "../actions.ts";
 import { currentCardMotion } from "../cardMotion.ts";
 import { MatchCardsProvider, useCardInfo, useCopiedDef } from "../catalog.ts";
 import { byTestid, testid, type ClickTarget } from "../contract.ts";
-import { liveFace } from "../faces.ts";
+import { useLiveFace } from "../faces.ts";
 import BlockedMark, { type Blocked } from "./BlockedMark.tsx";
 import { dragCue } from "./cues.ts";
 import { setLanding } from "./landing.ts";
@@ -638,7 +638,10 @@ function DragGhost(props: {
 }): ReactElement {
   const info = useCardInfo(props.card?.defId ?? "", props.card?.radiant ?? false);
   const copied = useCopiedDef(props.card);
-  const face = props.card === null ? null : liveFace(info, props.card, copied === undefined ? {} : { copied });
+  // #3609: the face memoized on the card's object, so a pointer move, which draws the ghost anew, crosses
+  // into the engine for none (faces.ts, `useLiveFace`).
+  const model = useLiveFace(info, props.card, copied === undefined ? {} : { copied });
+  const face = props.card === null ? null : model;
   const text = face === null ? info.text : face.text.full;
   const stats = face === null ? (info.attack === undefined || info.health === undefined ? null : { attack: info.attack, health: info.health }) : face.stats;
   const style: CSSProperties & Record<`--${string}`, string> = { left: props.at.x, top: props.at.y };
