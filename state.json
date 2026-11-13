@@ -16240,6 +16240,8 @@
       }
     },
     "3878": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-13T16:34:01Z",
@@ -16253,8 +16255,11 @@
         "trail": "- Bash: {\"command\": \"sed -n 1,60p .bot-notes.md | head -80; git status --short; tail -40 .bot-journal.md\"}\n- Bash: {\"command\": \"cd crates/shared; sed -n 1,45p src/log/say.rs; sed -n 595,622p src/log/lines.rs; grep -n \\\"^use\\\" src/log/lines.rs; sed -n 262,268p data/zh-CN.json; sed -n 1,150p tests/log.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3865 && python3 - <<'EOF'\\nimport re\\np='crates/shared/src/log/say.rs'\\nt=open(p).read()\\nt=t.replace(\\\"use crate::face::types::{RichText, Span};\\\",\\\u2026\n- tool error: Exit code 2 crates/shared/data/zh-CN.json | 1 + crates/shared/src/log/lines.rs | 14 ++++++++++++-- crates/shared/src/log/say.rs | 10 ++++++++++ 3 files changed, 23 insertions(+), 2 deletions(-) crate\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3865 && sed -n 1495,1510p crates/engine/src/testkit/scenario.rs; sed -n 1770,1800p crates/engine/src/testkit/scenario.rs; grep -n \\\"fn secure_board\\\"\u2026\n- Bash: {\"command\": \"sed -n 1,69p crates/cards/src/scripts/stinkyscape/c118_secure_system.rs; sed -n 85,125p crates/cards/src/scripts/stinkyscape/c118_secure_system.rs; sed -n 10,30p crates/shared/Cargo.toml\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/shared/tests/log.rs'\\nt=open(p).read()\\nmarker=\\\"\\\"\\\" assert!(!lines.join(\\\"\\\\\\\\n\\\").contains(\\\"+0/+0\\\"));\\n}\\n\\\"\\\"\\\"\\nassert marker in t\\nnew = marker + '''\u2026\n- Bash: {\"command\": \"grep -n \\\"testkit\\\\|\\\\[dev-dep\\\\|\\\\[\\\\[test\\\\]\\\\]\\\" -B1 -A3 crates/shared/Cargo.toml | head -40; grep -n \\\"required-features\\\" -r crates/shared/Cargo.toml\"}\n- Bash: {\"command\": \"grep -n \\\"testkit\\\" crates/shared/tests/*.rs crates/shared/src -r | head; grep -n \\\"testkit\\\" Cargo.toml crates/*/Cargo.toml | head -20\"}\n- Bash: {\"command\": \"cargo test -p jackioh-shared --test face --no-run 2>&1 | tail -5; sed -n 1,12p crates/shared/tests/face.rs | head -5; sed -n 845,856p crates/shared/tests/face.rs\", \"timeout\": 600000}\n- Bash: {\"command\": \"cargo test -p jackioh-shared --features jackioh-engine/testkit --test log 2>&1 | tail -30\", \"timeout\": 900000}\n- Bash: {\"command\": \"cargo test -p jackioh-shared --features jackioh-engine/testkit 2>&1 | grep -E \\\"test result|FAILED|failed\\\" | head; cargo clippy -p jackioh-shared --all-targets --features jackioh-engine\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-shared --features jackioh-engine/testkit 2>&1 | grep -cE \\\"FAILED\\\"; pnpm --dir apps/web exec vitest run src/game/Log.test.tsx 2>&1 | grep -E \\\"Tests|Test Files\\\"; \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the game log says a unit got \u22125/+0 when a card lowers its stats, instead of \\\"gained +-5/+0\\\"\"} --> When a `buffed` event lowers a unit's Attack or Health, the log now reads `{name} got \u22125/+0`. The sign is a real U+2212 and a number of 0 or more gets a \u2026"
       },
       "issue": 3865,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-13T17:37:28Z",
         "from_run": "43464007352",
         "gates": [
           {
@@ -16346,7 +16351,11 @@
         "source": "build",
         "until": "2026-11-13T18:04:39Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-13T17:34:39Z",
+      "run_id": "pending:e04385cc-1794591401",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16365,6 +16374,9 @@
         "provider": "claude-6",
         "run": "43464007352"
       },
+      "started_at": "2026-11-13T17:37:28Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16378,9 +16390,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T17:23:25Z",
+    "at": "2026-11-13T17:37:28Z",
     "url": "",
-    "what": "plan #3857 on claude-6"
+    "what": "review #3878 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-13T17:18:41Z",
