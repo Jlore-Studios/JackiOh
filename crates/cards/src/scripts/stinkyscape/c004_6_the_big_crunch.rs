@@ -1,12 +1,14 @@
 //! S #4.6 The Big Crunch (SPEC §8.10 row S 4.6, SPEC §7; §6.3 Cast, R28, R70, R87, R423, R436, R452,
-//! R1420, R1857002, R1870006): (4) Spell, Terminus, Token (printed Mythic), one of Olivian Expanse's picks.
+//! R1420, R1857002, R1870006, R3869001): (4) Spell, Terminus, Token (printed Mythic), one of Olivian
+//! Expanse's picks.
 //!   Base:    "Cast one of each Call to Chaos."
 //!   Radiant: "Cast a Radiant one of each Call to Chaos."
 //!
-//! Engine: one `cast_new` per Call to Chaos definition, in catalog order (`EDITIONS`): Core #95, C+ #73,
-//! M #95, the set's own two, Training Grounds #39 from that set's release (issue #2204), then
-//! Stinkyscape+ #142 from that set's (issue #3573), each
-//! named by id, so the pool reaches them whether or not their set ships (R1420). Each is a play for
+//! Engine: one `cast_new` per Call to Chaos edition, in catalog order: the Call to Chaos pool
+//! (`query::call_to_chaos_editions`, R3869001), every card tagged Call to Chaos of the sets that ship:
+//! Core #95, C+ #73, M #95, the set's own two, Training Grounds #39 and Stinkyscape+ #142 today, the
+//! seven it named by id through v0.6.0g, in the same order, so no game plays differently, and an edition
+//! a later set prints joins it. Each is a play for
 //! every rule, its choices its caster's (R70), rolling and naming its own effects to both players
 //! (R436), its nested casts held by `CALL_TO_CHAOS_CHAIN_CAP` (R28) and `RANDOM_CAST_CHAIN_CAP`
 
@@ -14,25 +16,14 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-004-6";
 
-/// Every Call to Chaos the catalog holds, in its order.
-pub const EDITIONS: [&str; 7] = [
-    "core-095",
-    "classicplus-073",
-    "meditative-095",
-    "stinkyscape-150",
-    "stinkyscape-151",
-    "traininggrounds-039",
-    "stinkyscapeplus-142",
-];
-
 fn crunch(radiant: bool) -> Hook {
     hook(move |_ctx| {
-        EDITIONS
-            .iter()
+        crate::query::pool_ids(&crate::query::call_to_chaos_editions())
+            .into_iter()
             .map(|def_id| {
                 cast_new(CastNewArgs {
                     def: CastNewDef::Def(CastDef {
-                        def_id: (*def_id).to_string(),
+                        def_id,
                         radiant: Some(radiant),
                     }),
                     radiant: None,
@@ -59,12 +50,30 @@ pub fn script() -> CardScripts {
 // S #4.6 The Big Crunch — SPEC §8.10 row S 4.6, BUILD M12 row S 4.6 (#2204, #39, R1870006).
 #[cfg(test)]
 mod tests {
-    use super::EDITIONS;
     use jackioh_engine::config::CALL_TO_CHAOS_CHAIN_CAP;
     use jackioh_engine::testkit::*;
 
     use crate::js;
     use crate::scenario;
+
+    /// R3869001: the editions the pool holds today, pinned so a change to it is deliberate: the seven
+    /// this card named by id through v0.6.0g, in its order.
+    const EDITIONS: [&str; 7] = [
+        "core-095",
+        "classicplus-073",
+        "meditative-095",
+        "stinkyscape-150",
+        "stinkyscape-151",
+        "traininggrounds-039",
+        "stinkyscapeplus-142",
+    ];
+
+    #[test]
+    fn r3869001_the_call_to_chaos_pool_is_the_seven_it_named_in_the_same_order() {
+        crate::register_all();
+        let pool = crate::query::pool_ids(&crate::query::call_to_chaos_editions());
+        assert_eq!(pool, EDITIONS.map(str::to_string).to_vec());
+    }
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;

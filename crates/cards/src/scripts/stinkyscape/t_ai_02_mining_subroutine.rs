@@ -1,8 +1,10 @@
-//! S T-AI-2 Mining Subroutine (SPEC §7, §8.10 row T-AI-2; R482, R1840002, R1881000, R2250000): (0) Spell,
+//! S T-AI-2 Mining Subroutine (SPEC §7, §8.10 row T-AI-2; R482, R1840002, R1881000, R2250000, R3869001):
+//! (0) Spell,
 //! AI, Token (no printed rarity), an AI generated token of the Stinkyscape set, built by S21.
 //!   Base:    "Gain a random Common or Rare Stinkyscape Resource."
 //!   Radiant: "Gain a random Radiant Common or Rare Stinkyscape Resource."
-//! Engine: `gain_resources` (R1840002) from a pool of the Common and Rare Resources named by id: the
+//! Engine: `gain_resources` (R1840002) from a pool of the Common and Rare Stinkyscape Resources, read
+//!   off the catalog (`query::resources_of`, R3869001; through v0.6.0g named by id, the same three): the
 //!   rarity roll over the two rarities the pool holds (55 against 25), then one of the rolled rarity, into
 //!   the hand, which a full hand burns (R2250000). It never gains Axnit,
 //!   Narcor or Red Narcor, so a bought copy never pays for itself in Credits (R1881000). Radiant: a
@@ -11,13 +13,6 @@
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-t-ai-02";
-
-/// R1881000: the Common and Rare Resources (§8.10 T-reknite, T-korrelite, T-gellium).
-const POOL: [&str; 3] = [
-    "stinkyscape-t-reknite",
-    "stinkyscape-t-korrelite",
-    "stinkyscape-t-gellium",
-];
 
 /// "a random … Resource": one.
 const GAINED: i32 = 1;
@@ -29,7 +24,8 @@ fn face(radiant: bool) -> Script {
                 count: GAINED,
                 player: None,
                 radiant: radiant.then_some(true),
-                pool: Some(POOL.iter().map(|id| (*id).to_string()).collect()),
+                // R3869001: the Common and Rare Stinkyscape Resources, read off the catalog.
+                pool: Some(crate::query::resources_of(SetName::Stinkyscape, &crate::query::COMMON_OR_RARE)),
                 fill: None,
             })]
         })),
@@ -47,7 +43,22 @@ pub fn script() -> CardScripts {
 // S T-AI-2 Mining Subroutine — SPEC §8.10 row T-AI-2, BUILD M12 row S T-AI-2 (R1881000, R2250000).
 #[cfg(test)]
 mod tests {
-    use super::POOL;
+    /// R1881000: the Common and Rare Stinkyscape Resources (§8.10 T-reknite, T-korrelite, T-gellium),
+    /// pinned so a change to the pool is deliberate (R3869001).
+    const POOL: [&str; 3] = [
+        "stinkyscape-t-reknite",
+        "stinkyscape-t-korrelite",
+        "stinkyscape-t-gellium",
+    ];
+
+    #[test]
+    fn r3869001_the_pool_read_off_the_catalog_is_the_three_it_named() {
+        crate::register_all();
+        let mut named: Vec<String> = POOL.map(str::to_string).to_vec();
+        named.sort();
+        let read = crate::query::resources_of(SetName::Stinkyscape, &crate::query::COMMON_OR_RARE);
+        assert_eq!(read, named, "the same three, sorted as the roll reads them");
+    }
     use jackioh_engine::testkit::*;
 
     use crate::{filler, scenario};

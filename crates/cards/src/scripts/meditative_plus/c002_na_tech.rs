@@ -1,4 +1,4 @@
-//! M+ #2 NA Tech (SPEC §8.9 row 2; R1100, R1183000, R1183001, R2521007): (0) Spell ((1) until issue #3138), Epic.
+//! M+ #2 NA Tech (SPEC §8.9 row 2; R1100, R1183000, R1183001, R2521007, R3869005): (0) Spell ((1) until issue #3138), Epic.
 //!
 //! Base:    "Fuse the card with the lowest win rate and the card with the highest win rate, and add
 //!          it to your hand. It costs ({setCost})."
@@ -13,41 +13,40 @@
 //! setCost (R1183001). The Radiant face fuses both ingredients on their Radiant faces (R469). Tunes:
 //! setCost 2 ↓ (Radiant 0).
 //!
-//! The fallback (#2521, R2521007): an end the table cannot name is a named card, no random one —
-//! `FALLBACK_TRAILER`, Core #75 Infinite Reserves (7/43), for the lowest, and `FALLBACK_LEADER`, Core
-//! #35 Lunar Eclipse (33/48), for the highest: the two ends of the table every version since v0.4.0
-//! has shipped (v0.4.0's provisional run). Only when the other end the table names is that very card
-//! does the missing end stay a random non-token card of the sets that ship, never the other ingredient
-//! (`distinct`), so the two ends stay distinct.
+//! The fallback (#3869, R3869005): an end the table cannot name is a random non-token card of the sets
+//! that ship, never NA Tech, the end the table names or the other ingredient (`distinct`), so the two
+//! ends stay distinct, as R142 had it before #2521. Through v0.6.0g a missing end was a named card,
+//! Core #75 Infinite Reserves for the lowest and Core #35 Lunar Eclipse for the highest, unless the
+//! other end was that card (R2521007; `script_v0_6_0g`, kept, R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditativeplus-002";
 
-/// R2521007: the highest end when the table names none: Core #35 Lunar Eclipse, 33/48, the leader of
-/// `crates/cards/patches/win_rates/v0.5.9b.json` (v0.4.0's provisional run), as M #50 CN Tech's.
-pub const FALLBACK_LEADER: &str = "core-035";
-/// R2521007: the lowest end when the table names none: Core #75 Infinite Reserves, 7/43, that
-/// table's trailer.
-pub const FALLBACK_TRAILER: &str = "core-075";
+/// R767000, R2521007: the highest end through v0.6.0g when the table named none: Core #35 Lunar
+/// Eclipse, 33/48, the leader of v0.4.0's provisional table, as M #50 CN Tech's.
+pub const FALLBACK_LEADER_V0_6_0G: &str = "core-035";
+/// R767000, R2521007: the lowest end through v0.6.0g when the table named none: Core #75 Infinite
+/// Reserves, 7/43, that table's trailer.
+pub const FALLBACK_TRAILER_V0_6_0G: &str = "core-075";
 
-/// R2521007: an end's fallback card, unless the other end is that card already (`None`: random).
-fn fallback(card: &str, other_end: Option<&str>) -> Option<String> {
-    (other_end != Some(card)).then(|| card.to_string())
+/// R3869005: a missing end is random (`None`); R767000: through v0.6.0g (`kept`) it was `card`, unless
+/// the other end was that card already.
+fn fallback(kept: bool, card: &str, other_end: Option<&str>) -> Option<String> {
+    (kept && other_end != Some(card)).then(|| card.to_string())
 }
 
-fn tech(radiant: bool) -> Script {
+/// The Cry; `kept`, the script through v0.6.0g.
+fn tech(radiant: bool, kept: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let named_leader = win_rate_leader(&*ctx.state, ID);
             let mut skipped = vec![ID];
             skipped.extend(named_leader.as_deref());
             let named_trailer = win_rate_trailer(&*ctx.state, &skipped);
-            // R2521007: a missing end is its hard-coded card, unless the other end the table names is it.
-            let leader = named_leader
-                .clone()
-                .or_else(|| fallback(FALLBACK_LEADER, named_trailer.as_deref()));
-            let trailer = named_trailer.or_else(|| fallback(FALLBACK_TRAILER, named_leader.as_deref()));
+            // R3869005: a missing end is random; R767000: through v0.6.0g, its hard-coded card.
+            let leader = named_leader.clone().or_else(|| fallback(kept, FALLBACK_LEADER_V0_6_0G, named_trailer.as_deref()));
+            let trailer = named_trailer.or_else(|| fallback(kept, FALLBACK_TRAILER_V0_6_0G, named_leader.as_deref()));
             // R1183001: a named end is its own pool; a missing one is any card but the named ones.
             let named: Vec<&str> = [trailer.as_deref(), leader.as_deref()].into_iter().flatten().collect();
             let pool = |end: &Option<String>| match end {
@@ -68,12 +67,21 @@ fn tech(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: tech(false),
-        radiant: tech(true),
+        base: tech(false, false),
+        radiant: tech(true, false),
     }
 }
 
-// M+ #2 NA Tech — SPEC §8.9 row 2, BUILD M11 row M+ 2 (R1100, R77, R2521007).
+/// R767000: through v0.6.0g a missing end was Lunar Eclipse or Infinite Reserves (R2521007);
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_0g() -> CardScripts {
+    CardScripts {
+        base: tech(false, true),
+        radiant: tech(true, true),
+    }
+}
+
+// M+ #2 NA Tech — SPEC §8.9 row 2, BUILD M11 row M+ 2 (R1100, R77, R3869005).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -87,6 +95,16 @@ mod tests {
     const TRAILER: &str = "core-003";
     const MIDDLE: &str = "core-002";
     const FILLER: &str = "core-005";
+    /// Core #35 Lunar Eclipse and Core #75 Infinite Reserves: v0.4.0's table's two ends.
+    const LUNAR_ECLIPSE: &str = FALLBACK_LEADER_V0_6_0G;
+    const INFINITE_RESERVES: &str = FALLBACK_TRAILER_V0_6_0G;
+
+    /// R3869005: whether `id` may stand in for a missing end: a non-token card of a set that ships,
+    /// never NA Tech.
+    fn a_random_stand_in(state: &GameState, id: &str) -> bool {
+        let def = def_of(Some(state), id);
+        !def.token && set_ships(def.set) && id != ID
+    }
 
     fn table(cards: Vec<(&str, i32, i32)>) -> WinRateTable {
         WinRateTable {
@@ -216,48 +234,54 @@ mod tests {
         }
 
         #[test]
-        fn r2521007_with_one_eligible_card_it_is_the_leader_and_infinite_reserves_the_lowest() {
+        fn r3869005_with_one_eligible_card_it_is_the_leader_and_the_lowest_a_random_card() {
             register_win_rates(table(vec![(LEADER, 30, 40)]));
-            let mut s = casting("na-tech-one", false, 1);
-            let card = fused(&mut s);
-            assert_eq!(
-                ingredients(&s, &card),
-                vec![(FALLBACK_TRAILER.to_string(), false), (LEADER.to_string(), false)]
-            );
-        }
-
-        #[test]
-        fn r2521007_with_an_empty_table_infinite_reserves_and_lunar_eclipse_stand_in() {
-            register_win_rates(table(vec![]));
             for n in 0..4 {
-                let mut s = casting(&format!("na-tech-empty-{n}"), false, 1);
-                let card = fused(&mut s);
-                assert_eq!(
-                    ingredients(&s, &card),
-                    vec![(FALLBACK_TRAILER.to_string(), false), (FALLBACK_LEADER.to_string(), false)],
-                    "the same two on every seed, no random card"
-                );
-                assert_eq!(card.cost_override, Some(2));
-            }
-        }
-
-        #[test]
-        fn r2521007_a_leader_that_is_infinite_reserves_leaves_the_lowest_a_random_card() {
-            // The only eligible row is the trailer's fallback itself: the two ends stay distinct, so
-            // the lowest is a random non-token card of the sets that ship, as before #2521.
-            register_win_rates(table(vec![(FALLBACK_TRAILER, 30, 40)]));
-            for n in 0..4 {
-                let mut s = casting(&format!("na-tech-same-end-{n}"), false, 1);
+                let mut s = casting(&format!("na-tech-one-{n}"), false, 1);
                 let card = fused(&mut s);
                 let made = ingredients(&s, &card);
                 assert_eq!(made.len(), 2);
-                assert_eq!(made[1].0, FALLBACK_TRAILER, "the table's leader");
-                assert_ne!(made[0].0, FALLBACK_TRAILER, "two different cards");
-                let stand_in = def_of(Some(s.state()), &made[0].0);
-                assert!(!stand_in.token, "a non-token card stands in");
-                assert!(set_ships(stand_in.set), "of a set that ships");
-                assert_ne!(stand_in.id, ID, "never NA Tech itself");
+                assert_eq!(made[1], (LEADER.to_string(), false), "the table's leader");
+                assert_ne!(made[0].0, LEADER, "two different cards");
+                assert!(a_random_stand_in(s.state(), &made[0].0), "{}", made[0].0);
             }
+        }
+
+        #[test]
+        fn r3869005_with_an_empty_table_two_different_random_cards() {
+            register_win_rates(table(vec![]));
+            let mut seen: Vec<String> = Vec::new();
+            for n in 0..6 {
+                let mut s = casting(&format!("na-tech-empty-{n}"), false, 1);
+                let card = fused(&mut s);
+                let made = ingredients(&s, &card);
+                assert_eq!(made.len(), 2);
+                assert_ne!(made[0].0, made[1].0, "two different cards");
+                for (id, radiant) in &made {
+                    assert!(a_random_stand_in(s.state(), id), "{id}");
+                    assert!(!radiant);
+                }
+                assert_eq!(card.cost_override, Some(2));
+                seen.extend(made.into_iter().map(|(id, _)| id));
+            }
+            seen.sort();
+            seen.dedup();
+            assert!(seen.len() > 2, "not the same two on every seed: {seen:?}");
+        }
+
+        #[test]
+        fn r767000_r2521007_the_script_kept_for_v0_6_0g_fuses_infinite_reserves_and_lunar_eclipse() {
+            register_win_rates(table(vec![]));
+            crate::under_kept(ID, script_v0_6_0g(), || {
+                let mut s = casting("na-tech-kept", false, 1);
+                let card = fused(&mut s);
+                assert_eq!(
+                    ingredients(&s, &card),
+                    vec![(INFINITE_RESERVES.to_string(), false), (LUNAR_ECLIPSE.to_string(), false)],
+                    "the same two on every seed through v0.6.0g"
+                );
+            });
+            clear_overrides();
         }
 
         #[test]
@@ -346,14 +370,16 @@ mod tests {
         }
 
         #[test]
-        fn r2521007_the_radiant_face_fuses_the_two_fallbacks_radiant() {
+        fn r3869005_the_radiant_face_fuses_two_random_cards_radiant() {
             register_win_rates(table(vec![]));
             let mut s = casting("na-tech-empty-radiant", true, 1);
             let card = fused(&mut s);
-            assert_eq!(
-                ingredients(&s, &card),
-                vec![(FALLBACK_TRAILER.to_string(), true), (FALLBACK_LEADER.to_string(), true)]
-            );
+            let made = ingredients(&s, &card);
+            assert_eq!(made.len(), 2);
+            for (id, radiant) in &made {
+                assert!(a_random_stand_in(s.state(), id), "{id}");
+                assert!(radiant, "{id} is Radiant");
+            }
             assert!(card.radiant);
             assert_eq!(card.cost_override, Some(0));
         }
@@ -413,31 +439,31 @@ mod tests {
                     leader_of(shipped.win_rates(), WinRateRanking::Bound, &[ID]).as_deref(),
                     Some("core-047")
                 );
-                assert_eq!(win_rate_leader(s.state(), ID).as_deref(), Some(FALLBACK_LEADER));
+                assert_eq!(win_rate_leader(s.state(), ID).as_deref(), Some(LUNAR_ECLIPSE));
                 assert_eq!(
-                    win_rate_trailer(s.state(), &[ID, FALLBACK_LEADER]).as_deref(),
-                    Some(FALLBACK_TRAILER)
+                    win_rate_trailer(s.state(), &[ID, LUNAR_ECLIPSE]).as_deref(),
+                    Some(INFINITE_RESERVES)
                 );
                 let card = fused(&mut s);
                 assert_eq!(
                     ingredients(&s, &card),
-                    vec![(FALLBACK_TRAILER.to_string(), false), (FALLBACK_LEADER.to_string(), false)]
+                    vec![(INFINITE_RESERVES.to_string(), false), (LUNAR_ECLIPSE.to_string(), false)]
                 );
             });
         }
 
         #[test]
-        fn r1101_r3049000_handed_no_snapshot_it_fuses_infinite_reserves_and_lunar_eclipse() {
+        fn r1101_r3049000_r3869005_handed_no_snapshot_it_fuses_two_random_cards() {
             crate::register_all();
             clear_overrides();
             assert!(registered_win_rates().cards.is_empty(), "no table ships with the build");
             let mut s = casting("na-tech-compiled", false, 1);
             assert_eq!(s.state().win_rates, None, "the scenario was handed none");
             let card = fused(&mut s);
-            assert_eq!(
-                ingredients(&s, &card),
-                vec![(FALLBACK_TRAILER.to_string(), false), (FALLBACK_LEADER.to_string(), false)]
-            );
+            let made = ingredients(&s, &card);
+            assert_eq!(made.len(), 2);
+            assert_ne!(made[0].0, made[1].0);
+            assert!(made.iter().all(|(id, _)| a_random_stand_in(s.state(), id)), "{made:?}");
         }
     }
 }

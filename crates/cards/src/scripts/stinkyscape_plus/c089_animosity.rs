@@ -28,7 +28,7 @@ fn animosity(radiant: bool) -> Script {
         })),
         cry: Some(hook(move |_ctx| {
             vec![add_random_from_catalog(json_as(json!({
-                "query": { "tags": ["Terminus"], "withTokens": true },
+                "query": crate::query::terminus_cards(),
                 "radiant": radiant,
             })))]
         })),
@@ -65,7 +65,7 @@ mod tests {
     /// The Terminus pool of the shipped sets, tokens included.
     fn pool() -> Vec<String> {
         crate::register_all();
-        catalog::query(&json_as(json!({ "tags": ["Terminus"], "withTokens": true })))
+        crate::query::query(&crate::query::terminus_cards())
             .into_iter()
             .map(|def| def.id.clone())
             .collect()

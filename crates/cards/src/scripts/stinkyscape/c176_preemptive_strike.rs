@@ -1,12 +1,13 @@
 //! S #176 Preemptive Strike (SPEC §8.10 row 176; R70, R113, R1839002, R1852003, R1852005, R1852006,
-//! R1857002, R1859006): (2) Spell, Legendary, a card of the Stinkyscape set (#2521).
+//! R1857002, R1859006, R3869001): (2) Spell, Legendary, a card of the Stinkyscape set (#2521).
 //!
 //! Base:    "If you have a Dormant Starship, launch it, then Discover a War Doctrine and cast it."
 //! Radiant: "If you have a Dormant Starship, launch it, then Discover a Radiant War Doctrine and cast it."
 //! Engine: S #137 Starfleet Commander's Cry as a Spell, its resolution hanging off `cry` (Core #5
 //! Stockpile's shape): with a Dormant Starship (`building_a_ship`, R1852005), `awaken` it, which
 //! launches it for nothing, spending no launch price (R1839002, R1852003, R1852006); then a Discover
-//! (§6.3) of three of the four War Doctrines, S #137.1 to S #137.4, named by id (R1857002), and a
+//! (§6.3) of three of the four War Doctrines, S #137.1 to S #137.4 (R1857002), the War Doctrine pool
+//! (`query::war_doctrines`, R3869001, which named them by id through v0.6.0g), and a
 //! `cast_new` of the pick, free and counted as played (R70), Radiant on the Radiant face. The Doctrine
 //! resolves before the Starship's fused When launched answers the launch (R113, R1859006). With no
 //! Dormant Starship, nothing: no launch and no Discover. The prompt names the card as the game's
@@ -15,14 +16,6 @@
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-176";
-
-/// The four War Doctrines, S #137.1 to S #137.4: the Discover's pool (R1857002).
-const WAR_DOCTRINES: [&str; 4] = [
-    "stinkyscape-137-1",
-    "stinkyscape-137-2",
-    "stinkyscape-137-3",
-    "stinkyscape-137-4",
-];
 
 /// The resume step the Discover's answer comes back to (§10.6).
 const PICKED: &str = "picked";
@@ -40,7 +33,7 @@ fn preemptive_strike(radiant: bool) -> Script {
                 awaken(json_as(json!({ "target": { "of": "instance", "instanceId": ship.id } }))),
                 discover_from_catalog(json_as(json!({
                     "step": PICKED,
-                    "query": { "defId": WAR_DOCTRINES },
+                    "query": crate::query::war_doctrines(),
                     "prompt": prompt,
                 }))),
             ]
@@ -68,7 +61,16 @@ pub fn script() -> CardScripts {
 // S #176 Preemptive Strike — SPEC §8.10 row 176, BUILD M12 row S 176 (R1852006, R70, R1859006).
 #[cfg(test)]
 mod tests {
-    use super::{ID, WAR_DOCTRINES};
+    use super::ID;
+
+    /// R3869001: the War Doctrine pool today, S #137.1 to S #137.4, pinned so a change to it is
+    /// deliberate: the four this card named by id through v0.6.0g.
+    const WAR_DOCTRINES: [&str; 4] = [
+        "stinkyscape-137-1",
+        "stinkyscape-137-2",
+        "stinkyscape-137-3",
+        "stinkyscape-137-4",
+    ];
     use crate::built_starship;
     use jackioh_engine::prelude::{building_a_ship, is_launched_starship};
     use jackioh_engine::testkit::*;

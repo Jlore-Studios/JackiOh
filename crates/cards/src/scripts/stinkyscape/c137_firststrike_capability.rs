@@ -1,5 +1,5 @@
 //! S #137 Starfleet Commander (SPEC §8.10 row 137; R1, R70, R113, R1839002, R1852003, R1852005,
-//! R1852006, R1857002, R1859006): (4) Unit, Human, Legendary, 9/9 → 18/18, First Strike, a card of the
+//! R1852006, R1857002, R1859006, R3869001): (4) Unit, Human, Legendary, 9/9 → 18/18, First Strike, a card of the
 //! Stinkyscape set. It was Firststrike Capability, a Common with no tag, until #2521 renamed it; its
 //! Cry is unchanged, and its file keeps the old name.
 //!
@@ -9,8 +9,8 @@
 //!          Doctrine and cast it."
 //! Engine: Cry (R1): with a Dormant Starship (`building_a_ship`, R1852005), `awaken` it, which launches
 //! it for nothing, spending no launch price (R1839002, R1852003, R1852006); then a Discover (§6.3) of
-//! three of the four War Doctrines, S #137.1 to S #137.4, named by id (the pool R1857002 names, which a
-//! held set's gate lets in), and a `cast_new` of the pick, free and counted as played (R70), Radiant on
+//! three of the four War Doctrines, S #137.1 to S #137.4 (R1857002), the War Doctrine pool
+//! (`query::war_doctrines`, R3869001, which named them by id through v0.6.0g), and a `cast_new` of the pick, free and counted as played (R70), Radiant on
 //! the Radiant face. The Doctrine resolves inside the Cry, before the Starship's fused When launched
 //! answers the launch (R113), so its Starship line reads the Starship before those (R1859006). With no
 //! Dormant Starship, nothing: no launch and no Discover. Declares no numbers. The Discover's prompt names
@@ -20,14 +20,6 @@
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-137";
-
-/// The four War Doctrines, S #137.1 to S #137.4: the Discover's pool (R1857002).
-const WAR_DOCTRINES: [&str; 4] = [
-    "stinkyscape-137-1",
-    "stinkyscape-137-2",
-    "stinkyscape-137-3",
-    "stinkyscape-137-4",
-];
 
 /// The resume step the Discover's answer comes back to (§10.6).
 const PICKED: &str = "picked";
@@ -45,7 +37,7 @@ fn firststrike(radiant: bool) -> Script {
                 awaken(json_as(json!({ "target": { "of": "instance", "instanceId": ship.id } }))),
                 discover_from_catalog(json_as(json!({
                     "step": PICKED,
-                    "query": { "defId": WAR_DOCTRINES },
+                    "query": crate::query::war_doctrines(),
                     "prompt": prompt,
                 }))),
             ]
@@ -73,7 +65,23 @@ pub fn script() -> CardScripts {
 // S #137 Starfleet Commander — SPEC §8.10 row 137, BUILD M12 row S 137 (R1859006, R1852006, R70).
 #[cfg(test)]
 mod tests {
-    use super::{ID, WAR_DOCTRINES};
+    use super::ID;
+
+    /// R3869001: the War Doctrine pool today, S #137.1 to S #137.4, pinned so a change to it is
+    /// deliberate: the four this card named by id through v0.6.0g.
+    const WAR_DOCTRINES: [&str; 4] = [
+        "stinkyscape-137-1",
+        "stinkyscape-137-2",
+        "stinkyscape-137-3",
+        "stinkyscape-137-4",
+    ];
+
+    #[test]
+    fn r3869001_the_war_doctrine_pool_is_the_four_it_named_in_the_same_order() {
+        crate::register_all();
+        let pool = crate::query::pool_ids(&crate::query::war_doctrines());
+        assert_eq!(pool, WAR_DOCTRINES.map(str::to_string).to_vec());
+    }
     use crate::built_starship;
     use jackioh_engine::prelude::{building_a_ship, is_launched_starship};
     use jackioh_engine::testkit::*;

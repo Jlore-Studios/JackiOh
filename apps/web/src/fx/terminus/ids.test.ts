@@ -1,6 +1,6 @@
 // R3338000's Terminus cards (fx/terminus/ids.ts): the public ids presentation may read (CLAUDE.md
-// rule 7: no planner reads which of them a hidden card is). The pool's order is the engine's
-// `TERMINUS_CARDS` order, so a mutant reordering or dropping one fails here.
+// rule 7: no planner reads which of them a hidden card is). The first seven are in the Terminus
+// pool's order (`query::terminus_cards`), so a mutant reordering or dropping one fails here.
 
 import { describe, expect, it } from "vitest";
 
@@ -31,7 +31,7 @@ describe("terminus ids", () => {
     expect(DICE_OF_DOOM).toBe("stinkyscape-154");
   });
 
-  it("lists the pool in the engine's TERMINUS_CARDS order", () => {
+  it("lists the first seven in the Terminus pool's order", () => {
     expect(TERMINUS_IDS).toEqual([
       CEASELESS_VOID,
       FAREWELL,

@@ -1,5 +1,5 @@
 //! S #154 Dice of Doom (SPEC §8.10 row S 154; §2.4, §6.1 Lucky, §6.3 Embiggen, R62, R153, R155, R386,
-//! R640, R1178001, R1438, R1440, R1857002, R1870007): (0) Spell, Quickdraw, Mythic; Embiggened (1).
+//! R640, R1178001, R1438, R1440, R1857002, R1870007, R3869000): (0) Spell, Quickdraw, Mythic; Embiggened (1).
 //!   Base:    "Roll a 100-sided die. If it lands on 67, add every Terminus card to your hand. They cost
 //!            (0). / End of turn: Add this back to your hand. / Embiggened (1): This also gains Lucky +1
 //!            for good."
@@ -10,14 +10,16 @@
 //! Radiant face rolls `RADIANT_ROLLS` dice of 1 to `RADIANT_SIDES`, each lucky the same way, either a
 //! hit. Every roll is made, hit or not, so the draws a play takes never hang on the faces. Embiggened,
 //! the instance first gains Lucky +1 for good (`gain_keyword_for_good`, R386, kept in every zone,
-//! R1438), counting toward this play's roll. A hit adds each Terminus card (S #4's `TERMINUS_CARDS`,
-//! R1857002) at `costOverride` 0. The dice are reported to both players as one batch before the Lucky
+//! R1438), counting toward this play's roll. A hit adds one of each card of the Terminus pool
+//! (`query::terminus_cards`, R3869000), in its order, at `costOverride` 0, a full hand burning the rest
+//! (§2.4); through v0.6.0g it added the seven S #4 named by id (R1857002; `script_v0_6_0g`, kept,
+//! R767000). The dice are reported to both players as one batch before the Lucky
 //! gain and the Terminus cards, every roll of each die with the one it kept (R2652001).
 
 use jackioh_engine::effects::{add_to_hand, gain_keyword_for_good};
 use jackioh_engine::prelude::*;
 
-use crate::scripts::stinkyscape::c004_olivian_expanse::TERMINUS_CARDS;
+use crate::scripts::stinkyscape::c004_olivian_expanse::TERMINUS_CARDS_V0_6_0G;
 
 pub const ID: &str = "stinkyscape-154";
 
@@ -29,7 +31,8 @@ const HIT: i32 = 67;
 /// "Embiggened (1): This also gains Lucky +1 for good."
 const LUCKY_GAIN: i32 = 1;
 
-fn roll(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+/// The roll; `kept`, the script through v0.6.0g.
+fn roll(ctx: &mut EffectContext<'_>, kept: bool) -> Vec<Effect> {
     let gain = if ctx.embiggened { LUCKY_GAIN } else { 0 };
     let lucky = ctx.live_self().map_or(0, |me| lucky_on(&*ctx.state, me)) + luck_of(&*ctx.state, ctx.controller) + gain;
     let (rolls, sides) = if ctx.radiant {
@@ -49,11 +52,9 @@ fn roll(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
         )));
     }
     if hit {
-        effects.extend(
-            TERMINUS_CARDS
-                .iter()
-                .map(|def_id| add_to_hand(json_as(json!({ "defId": def_id, "costOverride": 0 })))),
-        );
+        // R3869000: the Terminus pool, one of each; R767000: through v0.6.0g, the seven named by id.
+        let cards = if kept { TERMINUS_CARDS_V0_6_0G.map(str::to_string).to_vec() } else { crate::query::pool_ids(&crate::query::terminus_cards()) };
+        effects.extend(cards.iter().map(|def_id| add_to_hand(json_as(json!({ "defId": def_id, "costOverride": 0 })))));
     }
     effects
 }
@@ -70,13 +71,14 @@ fn return_to_hand(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     vec![bounce(json_as(json!({ "target": { "of": "self" } })))]
 }
 
-pub fn script() -> CardScripts {
+/// Both faces; `kept`, the script through v0.6.0g.
+fn faces(kept: bool) -> CardScripts {
     let base = Script {
         static_flags: Some(StaticFlags {
             quickdraw: Some(true),
             ..StaticFlags::default()
         }),
-        cry: Some(hook(roll)),
+        cry: Some(hook(move |ctx| roll(ctx, kept))),
         end_of_turn: Some(hook(return_to_hand)),
         ..Script::default()
     };
@@ -85,11 +87,17 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
+pub fn script() -> CardScripts { faces(false) }
+
+/// R767000: through v0.6.0g a hit added the seven Terminus cards S #4 named by id; `KEPT_SCRIPTS` folds
+/// those replays under it.
+pub fn script_v0_6_0g() -> CardScripts { faces(true) }
+
 // S #154 Dice of Doom — SPEC §8.10 row S 154, BUILD M12 row S 154 (R1870007).
 #[cfg(test)]
 mod tests {
-    use super::{HIT, ID, RADIANT_SIDES};
-    use crate::scripts::stinkyscape::c004_olivian_expanse::TERMINUS_CARDS;
+    use super::{HIT, ID, RADIANT_SIDES, script_v0_6_0g};
+    use crate::scripts::stinkyscape::c004_olivian_expanse::TERMINUS_CARDS_V0_6_0G;
     use jackioh_engine::rng::Rng;
     use jackioh_engine::testkit::*;
     use jackioh_engine::zones::move_to_zone;
@@ -129,11 +137,15 @@ mod tests {
             .expect("the dice are in hand or in the graveyard")
     }
 
+    /// R3869000: the Terminus pool's ids, in its order.
+    fn terminus() -> Vec<String> {
+        crate::register_all();
+        crate::query::pool_ids(&crate::query::terminus_cards())
+    }
+
     fn added(s: &Scenario) -> Vec<CardInstance> {
-        s.hand(P1)
-            .into_iter()
-            .filter(|card| TERMINUS_CARDS.contains(&card.def_id.as_str()))
-            .collect()
+        let pool = terminus();
+        s.hand(P1).into_iter().filter(|card| pool.contains(&card.def_id)).collect()
     }
 
     fn rolled(seed: &str, radiant: bool, play: Value) -> Scenario {
@@ -150,14 +162,16 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r1870007_rolls_once_and_a_67_adds_the_seven_at_zero() {
+        fn r1870007_r3869000_rolls_once_and_a_67_adds_the_terminus_pool_at_zero_till_the_hand_is_full() {
             let seed = seed_where("dice-of-doom-hit", |seed| hits(seed, false));
             let mut s = board(&seed, false);
             let cursor = s.state().rng_cursor;
             s.play(ID, json!({}));
             assert_eq!(s.state().rng_cursor, cursor + 1, "one roll, one draw");
             let defs: Vec<String> = added(&s).into_iter().map(|card| card.def_id).collect();
-            assert_eq!(defs, TERMINUS_CARDS.map(str::to_string).to_vec(), "one of each, in order");
+            let room = HAND_CAP as usize - 1;
+            assert!(terminus().len() > room, "the pool outgrows a hand holding one filler");
+            assert_eq!(defs, terminus()[..room].to_vec(), "one of each, in pool order, till the hand is full");
             for card in added(&s) {
                 assert_eq!(card.cost_override, Some(0), "{} costs (0)", card.def_id);
                 assert!(!card.radiant);
@@ -185,14 +199,25 @@ mod tests {
             s.play(ID, json!({}));
             assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
             let defs: Vec<String> = added(&s).into_iter().map(|card| card.def_id).collect();
-            assert_eq!(defs, TERMINUS_CARDS[..HAND_CAP as usize - fillers].to_vec());
+            let pool = terminus();
+            assert_eq!(defs, pool[..HAND_CAP as usize - fillers].to_vec());
             let burned: Vec<String> = s
                 .pile(P1, "graveyard")
                 .into_iter()
                 .map(|card| card.def_id)
-                .filter(|def_id| TERMINUS_CARDS.contains(&def_id.as_str()))
+                .filter(|def_id| pool.contains(def_id))
                 .collect();
-            assert_eq!(burned, TERMINUS_CARDS[HAND_CAP as usize - fillers..].to_vec(), "the rest burn");
+            // R11: a burned Unit token ceases to exist, so only the rest that are no Unit token reach
+            // the graveyard.
+            let rest: Vec<String> = pool[HAND_CAP as usize - fillers..]
+                .iter()
+                .filter(|id| {
+                    let def = crate::card_def(id);
+                    !(def.is_token() && def.type_ == CardType::Unit)
+                })
+                .cloned()
+                .collect();
+            assert_eq!(burned, rest, "the rest burn");
         }
 
         #[test]
@@ -227,9 +252,16 @@ mod tests {
 
         #[test]
         fn r1870007_embiggened_rolls_once_more() {
+            // A hit fills the hand with Terminus cards (R3869000), which would burn the bounce back; this
+            // test counts rolls, so it takes them out of the hand after each play.
+            let clear = |s: &mut Scenario| {
+                let pool = terminus();
+                s.state_mut().players.p1.hand.retain(|card| !pool.contains(&card.def_id));
+            };
             let mut s = board("dice-of-doom-more", false);
             let cursor = s.state().rng_cursor;
             s.play(ID, json!({ "embiggen": true }));
+            clear(&mut s);
             assert_eq!(s.state().rng_cursor, cursor + 2, "its new Lucky rolls again this play");
             s.end_turn();
             s.end_turn();
@@ -237,6 +269,7 @@ mod tests {
             let cursor = s.state().rng_cursor;
             s.play(ID, json!({ "embiggen": true }));
             assert_eq!(s.state().rng_cursor, cursor + 3, "Lucky 2: three rolls");
+            clear(&mut s);
             assert_eq!(lucky_on(s.state(), &dice(&s)), 2, "every Embiggened play makes it luckier");
             s.end_turn();
             s.end_turn();
@@ -282,7 +315,7 @@ mod tests {
             let (sides, rolls) = report(&s);
             assert_eq!(sides, 100);
             assert_eq!(rolls, vec![RollResult { faces: vec![HIT], kept: 0 }]);
-            assert_eq!(added(&s).len(), TERMINUS_CARDS.len());
+            assert_eq!(added(&s).len(), HAND_CAP as usize - 1, "the hand fills");
 
             let seed = seed_where("dice-of-doom-reported-miss", |seed| !hits(seed, false));
             let cursor = board(&seed, false).state().rng_cursor;
@@ -345,9 +378,47 @@ mod tests {
             let cursor = s.state().rng_cursor;
             s.play(ID, json!({}));
             assert_eq!(s.state().rng_cursor, cursor + 2, "two dice");
-            assert_eq!(added(&s).len(), TERMINUS_CARDS.len(), "the second die's 67 hits");
+            assert_eq!(added(&s).len(), HAND_CAP as usize - 1, "the second die's 67 hits");
             let seed = seed_where("dice-of-doom-radiant-miss", |seed| !hits(seed, true));
             assert!(added(&rolled(&seed, true, json!({}))).is_empty());
+        }
+    }
+
+    mod r3869000_the_terminus_pool {
+        use super::*;
+
+        #[test]
+        fn r3869000_a_hit_on_an_empty_hand_keeps_the_pools_first_ten_stinkyscape_plus_cards_among_them() {
+            let seed = seed_where("dice-of-doom-plus", |seed| {
+                let mut s = board_with(seed, false, 0);
+                s.play(ID, json!({}));
+                !added(&s).is_empty()
+            });
+            let mut s = board_with(&seed, false, 0);
+            s.play(ID, json!({}));
+            let pool = terminus();
+            let defs: Vec<String> = added(&s).into_iter().map(|card| card.def_id).collect();
+            assert_eq!(defs, pool[..HAND_CAP as usize].to_vec(), "an empty hand fills with the first ten");
+            assert!(pool.iter().any(|id| id.starts_with("stinkyscapeplus-")), "the pool holds S+ cards");
+            for id in TERMINUS_CARDS_V0_6_0G {
+                assert!(pool.contains(&id.to_string()), "{id}");
+            }
+        }
+
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_0g_adds_the_seven_it_named() {
+            crate::under_kept(ID, script_v0_6_0g(), || {
+                let seed = seed_where("dice-of-doom-kept", |seed| hits(seed, false));
+                let s = rolled(&seed, false, json!({}));
+                let defs: Vec<String> = s
+                    .hand(P1)
+                    .into_iter()
+                    .map(|card| card.def_id)
+                    .filter(|def_id| TERMINUS_CARDS_V0_6_0G.contains(&def_id.as_str()))
+                    .collect();
+                assert_eq!(defs, TERMINUS_CARDS_V0_6_0G.map(str::to_string).to_vec(), "one of each, in order");
+                assert_eq!(s.hand(P1).len(), 1 + TERMINUS_CARDS_V0_6_0G.len(), "the filler and the seven");
+            });
         }
     }
 }

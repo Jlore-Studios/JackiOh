@@ -27,7 +27,8 @@ use crate::script::CardScripts;
 use crate::state::GameState;
 use crate::wire::{
     AttackHealth, CATALOG_SETS, CardCost, CardDef, CardDefs, CardTier, CardType, CatalogQuery, CostRange,
-    FusedIngredient, KeywordKind, OneOrMany, Rarity, SetName, Tag, has_keyword, set_ships, string_union,
+    FusedIngredient, KeywordKind, OneOrMany, Rarity, SetName, Tag, TargetAim, has_keyword, set_ships,
+    string_union,
 };
 
 /// A hasher for the registries' card ids: short strings looked up thousands of times a turn, where
@@ -644,6 +645,12 @@ pub struct CatalogQueryArgs {
     /// forbids them; read off the registered script, as `tribute` is (Stinkyscape+ #70 Spaceberry).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cast_on_draw: Option<bool>,
+    /// R3869003: only cards whose base face's first declared target declares this aim outright
+    /// (`TargetDecl.aim`): Stinkyscape #143 Book Launcher's harmful and helpful Books. A target that
+    /// leaves its aim unset, which a random cast reads as harm (R656), matches neither, and neither does
+    /// a card that declares no target; read off the registered script, as `tribute` is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub aim: Option<TargetAim>,
 }
 
 string_union! {
@@ -696,6 +703,14 @@ fn has_tribute_cost(def: &CardDef) -> bool {
         .unwrap_or(false)
 }
 
+/// R3869003: the aim this definition's base face declares outright on its first target
+/// (`TargetDecl.aim`), read off the registered script without state like `has_tribute_cost`; `None`
+/// with no declared target or an aim left unset.
+fn declared_aim(def: &CardDef) -> Option<TargetAim> {
+    crate::scripts::registered_entry(&def.id)
+        .and_then(|entry| entry.base.targets.first().and_then(|target| target.aim))
+}
+
 /// R3566007: whether this definition's base face casts on draw — the `cast_on_draw` static flag of
 /// its registered script, read without state like `has_tribute_cost`.
 fn has_cast_on_draw(def: &CardDef) -> bool {
@@ -737,6 +752,7 @@ impl From<CatalogQuery> for CatalogQueryArgs {
             past: None,
             name_contains: None,
             cast_on_draw: None,
+            aim: None,
         }
     }
 }
@@ -928,6 +944,12 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
     }
     if let Some(wanted) = args.deals_damage
         && (def.deals_damage == Some(true)) != wanted
+    {
+        return false;
+    }
+    // R3869003: `aim` reads the registered base face's first declared target.
+    if let Some(wanted) = args.aim
+        && declared_aim(def) != Some(wanted)
     {
         return false;
     }

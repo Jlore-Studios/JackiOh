@@ -9,24 +9,27 @@
 //! frozen table, which a replay of a game recorded before #3049 folds against (R1266000), else none,
 //! and ranks it by the exact rate, as its version did (R1100).
 //!
-//! The fallback (#2521, R2521007): when no row qualifies it adds `FALLBACK_LEADER`, Core #35 Lunar
-//! Eclipse, the leader of the table every version since v0.4.0 has shipped (v0.4.0's provisional run,
-//! 33 wins in 48 games), Radiant on the Radiant face, and draws nothing: no random card any more (it
-//! was one before, R142).
+//! The fallback (#3869, R3869005): when no row qualifies it adds a random non-token card of the sets
+//! that ship, never CN Tech itself (R387), drawn from the match rng, Radiant on the Radiant face, as
+//! R142 had it before #2521. Through v0.6.0g it added Core #35 Lunar Eclipse instead (R2521007;
+//! `script_v0_6_0g`, kept, R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-050";
 
-/// R2521007: the card added when the table names no leader: Core #35 Lunar Eclipse, 33/48, the
-/// leader of `crates/cards/patches/win_rates/v0.5.9b.json` (v0.4.0's provisional run).
-pub const FALLBACK_LEADER: &str = "core-035";
+/// R767000, R2521007: the card added through v0.6.0g when the table named no leader, Core #35 Lunar
+/// Eclipse, 33/48, the leader of v0.4.0's provisional table.
+pub const FALLBACK_LEADER_V0_6_0G: &str = "core-035";
 
-fn tech(radiant: bool) -> Script {
+/// The Cry; `kept`, the script through v0.6.0g.
+fn tech(radiant: bool, kept: bool) -> Script {
     Script {
-        cry: Some(hook(move |ctx| {
-            let id = win_rate_leader(&*ctx.state, ID).unwrap_or_else(|| FALLBACK_LEADER.to_string());
-            vec![add_to_hand(json_as(json!({ "defId": id, "radiant": radiant })))]
+        cry: Some(hook(move |ctx| match win_rate_leader(&*ctx.state, ID) {
+            Some(id) => vec![add_to_hand(json_as(json!({ "defId": id, "radiant": radiant })))],
+            // R3869005: no leader, a random non-token card of the sets that ship, never this one.
+            None if !kept => vec![add_random_from_catalog(json_as(json!({ "query": { "excludeDefId": ID }, "radiant": radiant })))],
+            None => vec![add_to_hand(json_as(json!({ "defId": FALLBACK_LEADER_V0_6_0G, "radiant": radiant })))],
         })),
         ..Script::default()
     }
@@ -34,14 +37,23 @@ fn tech(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: tech(false),
-        radiant: tech(true),
+        base: tech(false, false),
+        radiant: tech(true, false),
+    }
+}
+
+/// R767000: through v0.6.0g a table with no leader added Lunar Eclipse (R2521007); `KEPT_SCRIPTS` folds
+/// those replays under it.
+pub fn script_v0_6_0g() -> CardScripts {
+    CardScripts {
+        base: tech(false, true),
+        radiant: tech(true, true),
     }
 }
 
 // M #50 CN Tech — SPEC §8.8 row 50, BUILD M10 row M 50: "Add the highest win rate card (the
 // game's snapshot's pick, R377's in-deck rate) to your hand (MD-D1), never itself (R387), the Radiant
-// face's Radiant (MD-D3); Lunar Eclipse when the table names none (R2521007), no random card, hidden
+// face's Radiant (MD-D3); a random non-token card when the table names none (R3869005), hidden
 // from the opponent (R440), burned by a full hand".
 #[cfg(test)]
 mod tests {
@@ -333,27 +345,46 @@ mod tests {
             );
         }
 
-        #[test]
-        fn r2521007_with_no_leader_the_same_card_on_every_seed_and_no_random_draw() {
-            // The fallback is a named card: every seed makes the same one, whoever runs the engine,
-            // and the match rng is not drawn.
-            for n in 0..4 {
-                assert_eq!(picked(vec![], &format!("cn-tech-same-{n}")), FALLBACK_LEADER);
-            }
-            register_win_rates(table(vec![]));
-            let mut s = casting("cn-tech-same", false);
-            let cursor = s.state().rng_cursor;
-            s.play(TECH, json!({}));
-            assert_eq!(s.state().rng_cursor, cursor, "the fallback draws nothing");
+        /// R3869005: whether `id` is a card the fallback may add: a non-token card of a set that ships,
+        /// never CN Tech.
+        fn a_random_stand_in(id: &str) -> bool {
+            let def = crate::card_def(id);
+            !def.token && set_ships(def.set) && id != TECH
         }
 
         #[test]
-        fn r2521007_a_table_with_no_qualifying_row_falls_back_too() {
+        fn r3869005_with_no_leader_a_random_card_drawn_from_the_match_rng() {
+            let added: Vec<String> = (0..8).map(|n| picked(vec![], &format!("cn-tech-random-{n}"))).collect();
+            for id in &added {
+                assert!(a_random_stand_in(id), "{id}");
+            }
+            let mut distinct = added.clone();
+            distinct.sort();
+            distinct.dedup();
+            assert!(distinct.len() > 1, "not the same card on every seed: {added:?}");
+            register_win_rates(table(vec![]));
+            let mut s = casting("cn-tech-random", false);
+            let cursor = s.state().rng_cursor;
+            s.play(TECH, json!({}));
+            assert!(s.state().rng_cursor > cursor, "the fallback draws from the match rng");
+        }
+
+        #[test]
+        fn r3869005_a_table_with_no_qualifying_row_falls_back_too() {
             // Thin rows only (fewer than CN_TECH_MIN_GAMES games) and CN Tech's own: no leader.
-            assert_eq!(
-                picked(vec![("core-008", 19, 19), (TECH, 40, 40)], "cn-tech-thin"),
-                FALLBACK_LEADER
-            );
+            let added = picked(vec![("core-008", 19, 19), (TECH, 40, 40)], "cn-tech-thin");
+            assert!(a_random_stand_in(&added), "{added}");
+        }
+
+        #[test]
+        fn r767000_r2521007_the_script_kept_for_v0_6_0g_adds_lunar_eclipse_with_no_leader() {
+            register_win_rates(table(vec![]));
+            crate::under_kept(TECH, script_v0_6_0g(), || {
+                for n in 0..3 {
+                    assert_eq!(added_by(casting(&format!("cn-tech-kept-{n}"), false)), FALLBACK_LEADER_V0_6_0G);
+                }
+            });
+            clear_overrides();
         }
 
         #[test]
@@ -386,14 +417,14 @@ mod tests {
         }
 
         #[test]
-        fn r2521007_falls_back_to_lunar_eclipse_hidden_from_the_opponent() {
+        fn r3869005_the_random_card_is_hidden_from_the_opponent() {
             register_win_rates(table(vec![]));
             let mut s = casting("cn-tech-fallback", false);
             let before = s.hand(PlayerId::P1).len();
             s.play(TECH, json!({}));
             let added: Vec<CardInstance> = s.hand(PlayerId::P1).into_iter().skip(before - 1).collect();
             assert_eq!(added.len(), 1);
-            assert_eq!(added[0].def_id, FALLBACK_LEADER);
+            assert!(a_random_stand_in(&added[0].def_id), "{}", added[0].def_id);
             assert!(!added[0].radiant);
             // The opponent sees a count, never the card (R440).
             let view: Value = js(&view_for(s.state(), PlayerId::P2));
@@ -402,14 +433,14 @@ mod tests {
         }
 
         #[test]
-        fn r2521007_the_radiant_face_falls_back_to_a_radiant_lunar_eclipse() {
+        fn r3869005_the_radiant_face_adds_a_radiant_random_card() {
             register_win_rates(table(vec![]));
             let mut s = casting("cn-tech-fallback-radiant", true);
             let before = s.hand(PlayerId::P1).len();
             s.play(TECH, json!({}));
             let added: Vec<CardInstance> = s.hand(PlayerId::P1).into_iter().skip(before - 1).collect();
             assert_eq!(added.len(), 1);
-            assert_eq!(added[0].def_id, FALLBACK_LEADER);
+            assert!(a_random_stand_in(&added[0].def_id), "{}", added[0].def_id);
             assert!(added[0].radiant);
         }
 
@@ -439,7 +470,7 @@ mod tests {
         }
 
         #[test]
-        fn r1101_r3049000_no_table_is_compiled_in_so_a_game_handed_none_adds_lunar_eclipse() {
+        fn r1101_r3049000_r3869005_no_table_is_compiled_in_so_a_game_handed_none_adds_a_random_card() {
             crate::register_all();
             clear_overrides();
             assert!(registered_win_rates().cards.is_empty(), "no table ships with the build");
@@ -449,7 +480,7 @@ mod tests {
             s.play(TECH, json!({}));
             let added: Vec<CardInstance> = s.hand(PlayerId::P1).into_iter().skip(before - 1).collect();
             assert_eq!(added.len(), 1);
-            assert_eq!(added[0].def_id, FALLBACK_LEADER);
+            assert!(a_random_stand_in(&added[0].def_id), "{}", added[0].def_id);
         }
     }
 }

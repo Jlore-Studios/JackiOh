@@ -5,8 +5,8 @@
 //!            Cry: Equip a Radiant copy of every Miner into this."
 //!
 //! Tribute 2 is the play validator's (§6.3, R101), read off `staticFlags.tribute`, the keyword line's
-//! printed Tribute (R366). R1872003: the Cry is `equip_picks` (R1841002) from the five Miners, S #62 Miner v1
-//! to S #66 Miner v5, named by id so that the pool reaches them whether or not the set ships (R1420),
+//! printed Tribute (R366). R1872003: the Cry is `equip_picks` (R1841002) from the Miners (`query::miners`,
+//! R3869002), S #62 Miner v1 to S #66 Miner v5 today (named by id through v0.6.0g),
 //! each pick a fresh copy on its Radiant face (R469) fused straight into this (R1086, R77), its Activate
 //! with it (R1751000): two Discovers of three in turn, the second without the first; the Radiant face
 //! fuses all five, v1 first, asking nothing. Flying is a catalog keyword the engine plays. Since #2521 it
@@ -20,15 +20,6 @@ pub const ID: &str = "stinkyscape-080";
 
 /// "Tribute 2" (R101).
 const TRIBUTE: i32 = 2;
-
-/// S #62 Miner v1 to S #66 Miner v5, in the order the Radiant face fuses them.
-const MINERS: [&str; 5] = [
-    "stinkyscape-062",
-    "stinkyscape-063",
-    "stinkyscape-064",
-    "stinkyscape-065",
-    "stinkyscape-066",
-];
 
 /// "Discover 2".
 const PICKS: i32 = 2;
@@ -45,7 +36,7 @@ pub fn script() -> CardScripts {
         static_flags: tribute(),
         cry: Some(hook(|_ctx| {
             vec![equip_picks(json_as(json!({
-                "query": { "defId": MINERS },
+                "query": crate::query::miners(),
                 "times": PICKS,
                 "radiant": true,
             })))]
@@ -56,7 +47,7 @@ pub fn script() -> CardScripts {
     let radiant = Script {
         static_flags: tribute(),
         cry: Some(hook(|_ctx| {
-            MINERS
+            crate::query::pool_ids(&crate::query::miners())
                 .iter()
                 .map(|miner| {
                     equip_picks(json_as(json!({
@@ -80,6 +71,16 @@ mod tests {
     use jackioh_engine::effects::EQUIP_PICK_STEP;
     use jackioh_engine::play_choices::tribute_cost_of;
     use jackioh_engine::testkit::*;
+
+    /// R3869002: the Miner pool today, S #62 Miner v1 to S #66 Miner v5, pinned so a change to it is
+    /// deliberate: the five this card named by id through v0.6.0g, in its order.
+    const MINERS: [&str; 5] = [
+        "stinkyscape-062",
+        "stinkyscape-063",
+        "stinkyscape-064",
+        "stinkyscape-065",
+        "stinkyscape-066",
+    ];
 
     const P1: PlayerId = PlayerId::P1;
 

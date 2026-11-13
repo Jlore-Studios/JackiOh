@@ -19,9 +19,9 @@ pub const ID: &str = "stinkyscape-149";
 /// "It costs (0)": the opponent's Call to Chaos (`costOverride`, a price, R1748003).
 const OPPONENT_COST: i32 = 0;
 
-/// The Call to Chaos pool (`Tag::CallToChaos`), with the riders a pick takes.
+/// The Call to Chaos pool (`query::call_to_chaos_editions`, R3869001), with the riders a pick takes.
 fn add_call_to_chaos(riders: Value) -> Effect {
-    let mut args = json!({ "query": { "tags": [Tag::CallToChaos] } });
+    let mut args = json!({ "query": crate::query::call_to_chaos_editions() });
     if let (Value::Object(into), Value::Object(more)) = (&mut args, riders) {
         into.extend(more);
     }
