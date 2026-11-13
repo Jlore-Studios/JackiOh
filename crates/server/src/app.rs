@@ -117,7 +117,12 @@ pub fn now_ms() -> i64 {
             .unwrap_or(0);
         (std::time::Instant::now(), wall)
     });
-    let now = tokio::time::Instant::now().into_std();
+    reading_at(at, epoch_ms, tokio::time::Instant::now().into_std())
+}
+
+/// `now_ms`'s reading at `now` for its anchor, `at` reading `epoch_ms`. `now` comes before `at` only
+/// on a test's paused clock, paused before the anchor was taken.
+fn reading_at(at: std::time::Instant, epoch_ms: i64, now: std::time::Instant) -> i64 {
     let nanos: i128 = match now.checked_duration_since(at) {
         Some(after) => after.as_nanos() as i128,
         None => -(at.duration_since(now).as_nanos() as i128),
@@ -1567,4 +1572,29 @@ pub async fn serve(env: Env) -> anyhow::Result<()> {
         Duration::from_secs(u64::try_from(crate::config::SHUTDOWN_DRAIN_SECONDS).unwrap_or(0)),
     )
     .await
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::{Duration, Instant};
+
+    use super::reading_at;
+
+    /// `now_ms` floors on both sides of its anchor, so a clock moved by `n` ms always reads `n` ms
+    /// later, before the anchor (a test's runtime paused before the first reading) as after it.
+    #[test]
+    fn now_ms_reads_a_clock_moved_n_ms_n_ms_later_on_both_sides_of_its_anchor() {
+        let epoch_ms = 1_700_000_000_000;
+        let early = Instant::now();
+        // The anchor, 5.3 ms after `early`.
+        let at = early + Duration::from_micros(5_300);
+        let reading = |now: Instant| reading_at(at, epoch_ms, now);
+
+        assert_eq!(reading(at), epoch_ms);
+        assert_eq!(reading(early), epoch_ms - 6);
+        assert_eq!(reading(early + Duration::from_millis(1)), epoch_ms - 5);
+        assert_eq!(reading(early + Duration::from_millis(5)), epoch_ms - 1);
+        assert_eq!(reading(early + Duration::from_millis(6)), epoch_ms);
+        assert_eq!(reading(at + Duration::from_micros(2_500)), epoch_ms + 2);
+    }
 }
