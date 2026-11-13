@@ -4189,5 +4189,7 @@
   "Missing": "缺少",
   "Search cosmetics": "搜索外观",
   "Search by name": "按名称搜索",
-  "Not playable yet": "暂时无法游玩"
+  "Not playable yet": "暂时无法游玩",
+  "Show card text": "显示卡牌文本",
+  "Every card prints its text on its face, with no full art": "每张卡牌都在牌面印出文本，不显示全画"
 }

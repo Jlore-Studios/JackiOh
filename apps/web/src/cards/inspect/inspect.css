@@ -93,6 +93,34 @@
   line-height: 1.35;
 }
 
+/* R3838002: a reference's tooltip (CardRef.tsx, cards.css) with its card's whole text: the panel on the face's left at
+   the hover preview's width and the face's height, or on a phone (`data-stacked`, placement.ts `refTooltipSize`) above
+   it across its width, PREVIEW_EXTENDED_STACKED_MAX_PX tall at most, the pair at the box's foot, nearest the name. */
+.cf-ref-tooltip {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px; /* PREVIEW_GLOSSARY_GAP_PX */
+}
+
+.cf-ref-tooltip[data-stacked="true"] {
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: stretch;
+}
+
+.cf-ref-tooltip .inspect-extended {
+  width: 280px; /* PREVIEW_EXTENDED_WIDTH_PX */
+  max-height: 100%;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.cf-ref-tooltip[data-stacked="true"] .inspect-extended {
+  width: auto;
+  max-height: 200px; /* PREVIEW_EXTENDED_STACKED_MAX_PX */
+}
+
 /* R279: the named cards, a column of their own beyond the glossary, one face under another. */
 .inspect-hover .inspect-refs {
   width: 170px; /* PREVIEW_REFS_WIDTH_PX */
