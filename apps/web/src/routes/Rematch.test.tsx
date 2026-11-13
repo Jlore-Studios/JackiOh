@@ -242,6 +242,53 @@ describe("R3791000 the rematch screen says when the opponent has left", () => {
   });
 });
 
+describe("R3791000 the panel's primary when the left line stands where the buttons were", () => {
+  it("R3791000 the way on after the left line is the one the primary selector covers, and nothing else is", async () => {
+    vi.mocked(rematchStatus).mockResolvedValue(statusOf({ opponentHere: false }));
+    render(
+      <GameResult
+        result={{ winner: "p1", reason: "hero-death" }}
+        viewer="p1"
+        form="panel"
+        actions={
+          <>
+            <RematchButtons token={TOKEN} matchId={MATCH_ID} connection="open" ranked />
+            <button type="button" data-testid="next-way">
+              Watch the replay
+            </button>
+          </>
+        }
+      />,
+    );
+    await screen.findByTestId(rematchTestid.left);
+    const primary = ".result-overlay__actions > .rematch:first-child:not(:has(.rematch-buttons)) + :not(.result-overlay__view)";
+    expect(screen.getByTestId("next-way").matches(primary)).toBe(true);
+    expect(screen.getByTestId(rematchTestid.left).matches(primary)).toBe(false);
+  });
+
+  it("R3791000 the selector leaves a panel with the offers to Rematch", async () => {
+    vi.mocked(rematchStatus).mockResolvedValue(statusOf());
+    render(
+      <GameResult
+        result={{ winner: "p1", reason: "hero-death" }}
+        viewer="p1"
+        form="panel"
+        actions={
+          <>
+            <RematchButtons token={TOKEN} matchId={MATCH_ID} connection="open" ranked />
+            <button type="button" data-testid="next-way">
+              Watch the replay
+            </button>
+          </>
+        }
+      />,
+    );
+    await screen.findByTestId(rematchTestid.offer);
+    const primary = ".result-overlay__actions > .rematch:first-child:not(:has(.rematch-buttons)) + :not(.result-overlay__view)";
+    expect(screen.getByTestId("next-way").matches(primary)).toBe(false);
+  });
+});
+
 function gameCss(file: string): string {
   return readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "game", file), "utf8").replace(/\s+/g, " ");
 }
@@ -302,7 +349,14 @@ describe("RematchButtons in the result panel (#477)", () => {
     const buttons = gameCss(join("..", "buttons.css"));
 
     expect(buttons).toContain(
-      ".result-overlay__actions > :first-child:not(.result-overlay__view, .rematch), .result-overlay__actions > .rematch:first-child .rematch-buttons > :first-child { border-color: var(--primary-edge",
+      ".result-overlay__actions > :first-child:not(.result-overlay__view, .rematch), .result-overlay__actions > .rematch:first-child .rematch-buttons > :first-child, .result-overlay__actions > .rematch:first-child:not(:has(.rematch-buttons)) + :not(.result-overlay__view) { border-color: var(--primary-edge",
+    );
+    // R3791000: with no buttons in the block (the left line), the way on after it takes the primary.
+    expect(buttons).toContain(
+      ".result-overlay__actions > .rematch:first-child:not(:has(.rematch-buttons)) + :not(.result-overlay__view) {",
+    );
+    expect(buttons).toContain(
+      ".result-overlay__actions > .rematch:first-child:not(:has(.rematch-buttons)) + :not(.result-overlay__view):hover:not(:disabled) {",
     );
     expect(animations).not.toContain("--primary-face");
     expect(animations).toMatch(
