@@ -1994,3 +1994,7 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-13T06:30:22Z,43373899802,claude-4,sonnet+opus,revise,3812,medium,built,,7.2,24,7055,746099,0.3699,14,15,,,0.5,claude-3,fresh,other,1
 2026-11-13T06:30:42Z,43368722846,claude-3,sonnet+opus,revise,3810,medium,interrupted,refusal,15.9,30,6073,781374,0.3254,52,53,,,0.6,claude-3,fresh,,1
 2026-11-13T06:48:51Z,43371269656,claude-4,opus,revise,3799,hard,approved,,45,112,23138,4208332,2.4503,12,2,,,49.1,claude-8,fresh,other,2
+2026-11-13T07:15:58Z,43378053380,claude-1,opus,revise,3779,hard,approved,,14.5,59,14981,3322297,4.0104,2,21,,,187.2,claude-1,resumed,,2
+2026-11-13T06:54:08Z,43367489402,claude-6,opus,revise,3797,hard,approved,,75.9,27,6490,1664925,7.4796,3,11,,,14.2,claude-6,resumed,,2
+2026-11-13T07:23:26Z,43378278514,claude-7,opus,revise,3818,hard,built,,21.1,33,10022,5733523,15.2935,14,25,,,5.6,claude-7,resumed,,1
+2026-11-13T07:49:40Z,43378160805,claude-1,opus,revise,3798,hard,approved,,46.6,111,27468,8033395,6.4709,5,35,,,111.3,claude-1,resumed,,2
