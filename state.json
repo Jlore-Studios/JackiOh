@@ -16315,7 +16315,7 @@
       "waiting_comment": 6837979145
     },
     "3798": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "ci_early": true,
@@ -16352,11 +16352,13 @@
       },
       "interruptions": 0,
       "issue": 3778,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "fixing-ci",
+      "live": "reviewing",
       "merge_owner": "claude-1",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-13T10:02:14Z",
         "from_run": "43394979119",
         "gates": [
           {
@@ -16454,7 +16456,7 @@
       "queued_at": "2026-11-13T10:00:36Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "43394979119",
+      "run_id": "pending:1f3f5521-1794564077",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16475,7 +16477,7 @@
         "run": "43394979119"
       },
       "source": "",
-      "started_at": "2026-11-13T08:39:48Z",
+      "started_at": "2026-11-13T10:02:14Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -17983,9 +17985,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T09:50:18Z",
+    "at": "2026-11-13T10:02:14Z",
     "url": "",
-    "what": "plan #3846 on claude-6"
+    "what": "review #3798 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-13T09:45:15Z",
