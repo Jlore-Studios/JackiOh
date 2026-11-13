@@ -89,6 +89,11 @@ fn constants() -> Vec<(&'static str, Value)> {
             json!(c::QUEUE_POPULATION_POLL_SECONDS),
         ),
         ("LIVE_GAME_POLL_SECONDS", json!(c::LIVE_GAME_POLL_SECONDS)),
+        // SPEC §11 R3730002: a private lobby's countdown from its Start to its board (#3730).
+        (
+            "LOBBY_START_COUNTDOWN_SECONDS",
+            json!(c::LOBBY_START_COUNTDOWN_SECONDS),
+        ),
         // SPEC §11 R3213000: the post-game frames' version, which the client holds a frame to.
         ("POST_GAME_FRAME_VERSION", json!(c::POST_GAME_FRAME_VERSION)),
         ("DECK_AUTOSAVE_DEBOUNCE_MS", json!(c::DECK_AUTOSAVE_DEBOUNCE_MS)),
@@ -418,9 +423,10 @@ fn every_name_is_listed_once() {
         // #3213: POST_GAME_FRAME_VERSION (R3213000).
         // #3335: FLEET_TRACK_LEVELS and FLEET_TRACK_XP_DAILY_MAX (R3335001).
         // #3694: MATCH_OVER_CLOSE_CODE (R3694000).
+        // #3730: LOBBY_START_COUNTDOWN_SECONDS (R3730002).
         // #3767: SEAT_TAKEN_CLOSE_CODE (R3767000).
         listed,
-        87 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6 + 6 + 4 + 7 + 2 + 2 + 2 + 1 + 2 + 1 + 1,
+        87 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6 + 6 + 4 + 7 + 2 + 2 + 2 + 1 + 2 + 1 + 1 + 1,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
@@ -445,7 +451,8 @@ fn every_name_is_listed_once() {
          and #3013's PROFICIENCY_LEVEL_PLAYS and PROFICIENCY_LEVELS (R3013000), and #3207's \
          QUEUE_POPULATION_POLL_SECONDS and LIVE_GAME_POLL_SECONDS (R3207000, R3207001), and #3212's \
          PACKS_OPEN_ALL_MAX and DECK_SYNC_ITEMS_MAX (R3212000, R3212001), and #3213's \
-         POST_GAME_FRAME_VERSION (R3213000), and #3694's MATCH_OVER_CLOSE_CODE (R3694000), and #3767's SEAT_TAKEN_CLOSE_CODE (R3767000)"
+         POST_GAME_FRAME_VERSION (R3213000), and #3694's MATCH_OVER_CLOSE_CODE (R3694000), and #3730's \
+         LOBBY_START_COUNTDOWN_SECONDS (R3730002), and #3767's SEAT_TAKEN_CLOSE_CODE (R3767000)"
     );
 }
 

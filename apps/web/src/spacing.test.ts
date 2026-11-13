@@ -90,7 +90,7 @@ const UNMIGRATED: Record<string, number> = {
   "routes/game-banner.css": 9,
   "routes/landing.css": 54,
   "routes/leaderboard.css": 3,
-  "routes/lobby.css": 129,
+  "routes/lobby.css": 111,
   "routes/privacy.css": 4,
   "routes/purchases.css": 2,
   "routes/replays.css": 5,

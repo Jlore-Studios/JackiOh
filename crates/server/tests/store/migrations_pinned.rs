@@ -103,6 +103,7 @@ const PINNED: &[(&str, &str)] = &[
     ("0087_v0_5_13_retcon.sql", "6029729e"),
     ("0088_stinkyscape_plus_tags.sql", "f37c9822"),
     ("0089_daily_games.sql", "eb422bf6"),
+    ("0090_lobbies.sql", "1b219821"),
 ];
 
 /// `PINNED[name]`.

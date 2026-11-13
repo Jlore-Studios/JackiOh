@@ -206,6 +206,9 @@ pub struct FakeTables {
     /// Duos co-op (#946), Fullsend SPEC S6: the co-op rooms, matches and their log (migration 0039).
     /// Their store methods are `crate::duos::store`'s.
     pub duos: crate::duos::store::DuosTables,
+    /// Private lobbies (#3730, R3730000): migration 0090's `public.lobbies`. Their store methods are
+    /// `crate::lobby::store`'s.
+    pub lobbies: Vec<crate::lobby::store::Lobby>,
     /// Economy (SPEC §14, #1299), §14.11: migration 0045's holdings and their ledgers. Their store
     /// methods are `crate::economy::store`'s.
     pub economy: crate::economy::store::EconomyTables,
@@ -3296,6 +3299,8 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     // Duos co-op (#946, R1497000): 0039's rooms cascade with either person; 0051 empties the
     // person's seat on each co-op match, which stays with its log.
     crate::duos::store::remove_duos_rows(&mut tables.duos, profile_id);
+    // Private lobbies (#3730): 0090's lobbies cascade with their host or guest.
+    crate::lobby::store::remove_lobby_rows(&mut tables.lobbies, profile_id);
     // Economy (#1299): 0045's holdings and ledgers cascade with the profile.
     crate::economy::store::remove_economy_rows(&mut tables.economy, profile_id);
     // The dev dashboard (#3074): 0080's hand-set ratings and rating ledger cascade with the

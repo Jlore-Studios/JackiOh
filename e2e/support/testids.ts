@@ -598,11 +598,6 @@ export type QueueMode = "bo1" | "bo3" | "random";
 
 export const PLAY_QUEUE = "play-queue";
 export const PLAY_LEAVE_QUEUE = "play-leave-queue";
-export const PLAY_CREATE_ROOM = "play-create-room";
-export const PLAY_ROOM_CODE = "play-room-code";
-export const PLAY_ROOM_MODE = "play-room-mode";
-export const PLAY_JOIN_INPUT = "play-join-code";
-export const PLAY_JOIN_SUBMIT = "play-join-submit";
 export const PLAY_STATUS = "play-status";
 export const PLAY_ERROR = "play-error";
 export const PLAY_DECK_SELECT = "play-deck-select";
@@ -909,11 +904,6 @@ export const SIDELINE_MENU = "sideline-menu";
 export const SIDELINE_MUTE = "sideline-mute";
 // #936 S8: Duos co-op selectors mirror `duosTestid` in `apps/web/src/duos/testids.ts` (B60–B65).
 
-export const COOP_CREATE = "coop-create";
-export const COOP_DIFFICULTY = "coop-difficulty";
-export const COOP_CODE = "coop-code";
-export const COOP_JOIN_INPUT = "coop-join-input";
-export const COOP_JOIN_SUBMIT = "coop-join-submit";
 export const DUOS_PORTAL = "duos-portal";
 export const DUOS_PASS = "duos-pass";
 export const DUOS_POOL = "duos-pool";
@@ -928,9 +918,6 @@ export function duosPingId(kind: DuosPingKind): string {
   return `duos-ping-${kind}`;
 }
 
-export const COOP_DECK = "coop-deck";
-export const COOP_ERROR = "coop-error";
-export const COOP_LINK = "duos-coop-link";
 export const DUOS_BOARD = "duos-board";
 export const DUOS_BOTH = "duos-both";
 export const DUOS_BOARD_OWN = "duos-board-own";
@@ -1062,3 +1049,21 @@ export function collectionTrackXpId(set: string): string {
 
 /** A card face's root (apps/web/src/cards/CardFace.tsx); `data-full-art="true"` when it prints full art (R1017001, R1313000). */
 export const CARD_FACE = ".cf";
+
+// R3730000: the private lobby, mirroring `lobbyTestid` in apps/web/src/lobby/testids.ts.
+export const LOBBY_SCREEN = "lobby-screen";
+export const LOBBY_CODE = "lobby-code";
+export const LOBBY_COPY_LINK = "lobby-copy-link";
+export const LOBBY_SEAT = "lobby-seat";
+export const LOBBY_INVITE = "lobby-invite";
+export const LOBBY_SETTINGS = "lobby-settings";
+export const LOBBY_DECK_SELECT = "lobby-deck-select";
+export const LOBBY_READY = "lobby-ready";
+export const LOBBY_START = "lobby-start";
+export const LOBBY_LEAVE = "lobby-leave";
+export const LOBBY_COUNTDOWN = "lobby-countdown";
+export const LOBBY_ERROR = "lobby-error";
+export const LOBBY_JOIN_CARD = "lobby-join-card";
+export const LOBBY_JOIN_ROOM = "lobby-join-room";
+export const LOBBY_PANEL = "lobby-panel";
+export const LOBBY_CREATE = "lobby-create";

@@ -1,0 +1,264 @@
+/* The private lobby (R3730000): its screen, its seats, its panel on /play and /together, and the invite
+   toast. Tokens only (palette, spacing, surfaces); every target at least --hit-min (docs/polish/10-menus.md). */
+
+.lobby-screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  padding: var(--space-7);
+  padding-left: max(var(--space-7), env(safe-area-inset-left));
+  padding-right: max(var(--space-7), env(safe-area-inset-right));
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.lobby {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+}
+
+.lobby__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+
+.lobby__title {
+  margin: 0;
+}
+
+.lobby__code {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.lobby__code code {
+  font-size: var(--type-3xl);
+  letter-spacing: 0.12em;
+}
+
+.lobby__body {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--space-9);
+}
+
+.lobby__seats,
+.lobby__side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  min-width: 0;
+}
+
+.lobby__team {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6);
+}
+
+.lobby-seat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 160px;
+  min-width: 0;
+  padding: var(--space-7);
+  border: 1px solid var(--tavern-brass);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  color: var(--text);
+  text-align: center;
+}
+
+.lobby-seat--empty {
+  justify-content: center;
+  border-style: dashed;
+  font: inherit;
+}
+
+.lobby-seat--ai {
+  justify-content: center;
+  opacity: 0.75;
+}
+
+.lobby-seat__portrait {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-round);
+  border: 1px solid var(--tavern-brass);
+}
+
+.lobby-seat__name {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+.lobby-seat__crown {
+  margin-left: var(--space-3);
+  color: var(--selected);
+}
+
+.lobby-seat__state[data-state="ready"] {
+  color: var(--selected);
+}
+
+.lobby__setting,
+.lobby__deck,
+.lobby__invites {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.lobby__subhead {
+  margin: 0;
+}
+
+.lobby__friends {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lobby__friend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  min-height: var(--hit-min);
+}
+
+.lobby__friend-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.lobby__actions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+
+.lobby-screen button,
+.lobby-screen select,
+.lobby-screen input,
+.lobby-panel button,
+.lobby-panel input,
+.lobby-panel a,
+.lobby-invite-toast button {
+  min-height: var(--hit-min);
+  min-width: var(--hit-min);
+}
+
+.lobby__error {
+  margin: 0;
+}
+
+.lobby__failed {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.lobby-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.lobby-panel__mine {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lobby-panel__mine a {
+  display: inline-flex;
+  align-items: center;
+}
+
+.lobby-panel__join {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.lobby-panel__row {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.lobby-panel__row input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* R3730005: a friend's invite, on the toasts' layer, inside the safe-area insets, at the top right so it
+   clears the shell's rail and tab bar and the challenge toasts at the bottom left. */
+.lobby-invite-toasts {
+  position: fixed;
+  z-index: var(--z-toast);
+  top: calc(max(var(--space-7), env(safe-area-inset-top)) + var(--hit-min));
+  right: max(var(--space-7), env(safe-area-inset-right));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: min(360px, calc(100vw - 32px));
+}
+
+.lobby-invite-toast {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-7);
+  border: 1px solid var(--selected);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  color: var(--text);
+}
+
+.lobby-invite-toast p {
+  margin: 0;
+}
+
+.lobby-invite-toast__actions {
+  display: flex;
+  gap: var(--space-4);
+}
+
+@media (max-width: 1024px) {
+  .lobby__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .lobby-screen {
+    padding: var(--space-6);
+  }
+
+  .lobby__team {
+    gap: var(--space-4);
+  }
+
+  .lobby-seat {
+    min-height: 128px;
+    padding: var(--space-6);
+  }
+}
