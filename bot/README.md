@@ -813,9 +813,10 @@ once its secret is in `providers.SecretNames` and the workflow's `HARNESS_SECRET
 
 At the top level, `max_parallel` is how many run at once on GitHub's runners, planning runs
 included (16, #3740: the organization runs 60 hosted jobs at once on GitHub's Team plan since
-2026-11-11, split as 2 for the status loop and the bots' short jobs, 12 for the training lanes, up
-to 24 for these runs once 16 shows the bot's token keeps its REST calls, and the rest, 22 or more,
-for CI; it was 8 of the Free plan's 20, #1455). It is one pool
+2026-11-11, split as 2 for the status loop and the bots' short jobs, 12 for the training lanes, 16
+for these runs, and the rest, 30 or so, for CI; it was 8 of the Free plan's 20, #1455). It stays at
+16, not the 24 #3740 planned: at 16 the bot's token ran out of REST calls near the end of every
+hour (#3760), so more runs wait until what spends them is cut. It is one pool
 the two bots share, first come first served: Squishy's `providers.json` names the same number, and each
 bot counts the other's live runs against it (`plan.OthersOnGithub`, by the workflow its identity
 names), so a free slot goes to whichever bot asks first. `machine_parallel` how
