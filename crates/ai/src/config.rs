@@ -360,6 +360,12 @@ pub struct EvalWeights {
     /// its attacks land nothing, and the threat and pressure terms, `wall_switches` and the learned
     /// features count none of them. Off, every unit that may swing counts, as before.
     pub gauntlet_bars_face_attacks: bool,
+    /// R3793000, #3793: whether `face_threat` and `could_attack_next_turn` (so the threat and pressure
+    /// terms, `wall_switches`, `stands_down` and the learned features) leave out a unit its own Brittle tick
+    /// destroys at the start of its controller's next turn, before it can attack (`crumbles_before_swing`).
+    /// `unit_worth` is untouched: its Brittle share already discounts the unit. Off, every unit that may
+    /// swing counts, as before.
+    pub brittle_crumbles_before_swing: bool,
     /// Per point of unitView.health (current).
     pub health: f64,
     /// Per point of unitView.armor.
@@ -542,6 +548,7 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     defense_attack_share: 0.5,
     deft_defense_attacks: true,
     gauntlet_bars_face_attacks: true,
+    brittle_crumbles_before_swing: true,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
@@ -779,7 +786,7 @@ pub const LEARNED_REACH: LearnedReach = LearnedReach::Finalists;
 /// gates were fixed on the seed series `gate:v2`, frozen here, so tuning AI_EVAL changes the AI and never
 /// its yardstick. Every term and keyword AI_EVAL gained after that (R346, #1602, #1886, …) is 0 here, and
 /// each flag that opts into a later reading (`defense_own_taunt_kept`, `deft_defense_attacks`,
-/// `gauntlet_bars_face_attacks`, `standing_unit_priced_once`) is off.
+/// `gauntlet_bars_face_attacks`, `standing_unit_priced_once`, `brittle_crumbles_before_swing`) is off.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -792,6 +799,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     defense_attack_share: 0.5,
     deft_defense_attacks: false,
     gauntlet_bars_face_attacks: false,
+    brittle_crumbles_before_swing: false,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {

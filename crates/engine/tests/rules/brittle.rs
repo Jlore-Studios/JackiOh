@@ -204,6 +204,19 @@ mod r385_b3_3_where_a_brittle_count_lives_and_when_it_starts {
     }
 
     #[test]
+    fn r385_brittle_due_by_is_the_ticks_turn_test_asked_of_any_turn() {
+        let mut state = at(5, P1);
+        let mut mine = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
+        assert!(!brittle_due_by(&mine, 99));
+        given(&mut state, &mut mine, 1, 5);
+        for turn in 4..=10 {
+            assert_eq!(brittle_due_by(&mine, turn), turn >= 5 + BRITTLE_FIRST_TICK_TURNS);
+            state.turn = turn;
+            assert_eq!(brittle_due(&state, &mine), brittle_due_by(&mine, turn));
+        }
+    }
+
+    #[test]
     fn r638_a_count_in_a_hand_or_a_deck_holds_no_tick_no_crumble_and_no_event_however_long_it_waits() {
         let mut state = at(9, P1);
         let hand_card = in_hand(&mut state, &plain.id, P1, 1).into_iter().next();
