@@ -64,6 +64,7 @@
   * Flavor text: “Yeah, I’m a war hero.”  
 * **Flexible (New Keyword)**  
   * Can be played in the unit row or the back row  
+  * Units only: a Flexible card is a Unit in either row, so it sets off everything that answers a Unit being played. No Field Spell has it (#3828)  
 * **Frenzy (New Keyword)**  
   * **Frenzy** \[effect\]  
   * **Frenzy** triggers the effect after the unit attacks and destroys a unit  
@@ -481,10 +482,8 @@ Can only attack the unit directly across from this
 **Discover** a random **Radiant** **Mindustrial Unit,** give it **Starpiece** & **Equip,** it costs (1) less
 
 **(1) Mender, Field Spell, Mindustrial, Common, Stinkyscape+, \#40**  
-**Flexible**  
 **End of turn:** Heal adjacent units to full  
 \~\~\~  
-**Flexible**  
 **End of turn:** Heal adjacent units to full & give them **Divine Shield**
 
 **(2) Mend Projector, Field Spell, Mindustrial, Rare, Stinkyscape+, \#41**  
@@ -601,12 +600,8 @@ Give a unit **Piece, Deft, Frenzy** this may attack again, & **First Strike**
 **Start of turn:** add a **Radiant** **Mineral** and a **Radiant** **Resource** to your hand
 
 **(2) Mass Driver, Field Spell, Mindustrial, Epic, Stinkyscape+, \#59**  
-**Flexible**  
-0/6  
 **Activate:** in 2 turns add two **Minerals** that cost (0) and a **Resource** to your hand  
 \~\~\~  
-**Flexible**  
-0/12  
 **Activate:** in 2 turns add two **Radiant Minerals** that cost (0) and a **Radiant Resource** to your hand
 
 **(2) Radi, Unit, Rare, Stinkyscape+, \#60**  
