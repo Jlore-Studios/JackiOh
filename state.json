@@ -36989,9 +36989,9 @@
     ],
     "idle_since": null,
     "last_run": "2026-11-13T03:30:12Z",
-    "provider": "claude-3",
+    "provider": null,
     "requested": false,
-    "run_id": "43359395598",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": null,
