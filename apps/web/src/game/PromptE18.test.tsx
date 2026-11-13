@@ -265,16 +265,13 @@ describe("cell (C+ #62)", () => {
     return onAction;
   }
 
-  it("R514 lists the cells by side and row, lane by lane, and a cell or Done answers from the list", () => {
-    const onAction = renderPrompt(cellView());
+  it("R3864000 a cell prompt lists no cells: its zones answer on the board, and Done stays a button", () => {
+    renderPrompt(cellView());
     expect(modal()).toHaveAttribute("data-prompt-kind", "cell");
-    const rows = [...modal().querySelectorAll(".prompt-zone-row")].map((node) => node.textContent);
-    expect(rows).toEqual(["Your backrow", "Your units", "Enemy units", "Enemy backrow"]);
-    expect(screen.getByTestId("prompt-option-zone:p2:units:3")).toHaveTextContent("Lane 3");
-    expect(document.activeElement).toBe(screen.getByTestId("prompt-option-zone:p1:backrow:1"));
-
-    fireEvent.click(screen.getByTestId("prompt-option-zone:p2:units:3"));
-    answered(onAction, [{ pick: "zone", player: "p2", row: "units", lane: 3 }]);
+    expect(modal().querySelector(".prompt-zones")).toBeNull();
+    expect(modal().querySelector(".prompt-zone-row")).toBeNull();
+    expect(screen.queryByTestId("prompt-option-zone:p2:units:3")).toBeNull();
+    expect(screen.getByTestId("prompt-option-none")).toHaveTextContent("Done");
   });
 
   it("R514 Done picks no cell", () => {
