@@ -12,6 +12,7 @@ pub mod attack_order;
 pub mod budget;
 pub mod cleave;
 pub mod combat_mods;
+pub mod created_hand;
 pub mod deaths;
 pub mod decide;
 pub mod deck;

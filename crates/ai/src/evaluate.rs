@@ -38,10 +38,11 @@ use jackioh_engine::{
     exit_mark, face_of, find_def, find_instance, find_instance_mut, first_entry_zone, frozen_next_turn,
     gauntlet_acts, has_keyword, heal_multiplier_of, hero_armor_of, is_extra_turn_card, is_slumbering,
     is_standing_unit, is_starship_piece, is_temporary_card, launched_starship_of, left_field_after,
-    legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces,
-    pile_at, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of, settle, slots_of,
-    stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back, trigger_holders_with_hook, unit_has,
-    unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold,
+    legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, override_of, owed_mana_of, own_cost,
+    pierces, pile_at, playable_from_graveyard, printed_cost, query_cost, queue_hook, reset_instance,
+    script_of, settle, slots_of, stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back,
+    tribute_cost_of, trigger_holders_with_hook, unit_has, unit_view, units_on_field_of, why_sandbox_refused,
+    with_pool_hold,
 };
 use serde::{Deserialize, Serialize};
 
@@ -485,15 +486,18 @@ pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights, price
         + w.turn_hook * turn_hook_price(state, unit, w, prices)
 }
 
-/// B3.4, R65: the crystals the card's own `costMod` moves its cost by (`own_cost`, floored at 0 as a
-/// price is): +1 for a Degrade's dearer card, −1 for an Upgrade's cheaper one, 0 for an X-cost card.
+/// B3.4, R65: the crystals the card's own price moves its cost by from its printed cost (`own_cost`
+/// against `printed_cost`, each floored at 0 as a price is): +1 for a Degrade's dearer card, −1 for an
+/// Upgrade's cheaper one, 0 for an X-cost card. R3575500: a `costOverride` it carries in the hand (a
+/// fusion's "It costs (2)", NA Tech's set price) moves it as a `costMod` does, by the crystals between
+/// the price it is laid at and the card's printed one.
 fn cost_shift(state: &GameState, card: &CardInstance) -> i32 {
-    if card.cost_mod == 0 {
+    if card.cost_mod == 0 && override_of(card).is_none() {
         return 0;
     }
     match own_cost(state, card) {
         None => 0,
-        Some(own) => own.max(0) - (own - card.cost_mod).max(0),
+        Some(own) => own.max(0) - printed_cost(state, card).max(0),
     }
 }
 
@@ -609,9 +613,50 @@ fn doomed_hand_card_value(state: &GameState, card: &CardInstance, doomed: bool, 
     } else {
         0.0
     };
-    (w.hand_card + w.hand_per_cost * cost.min(w.hand_cost_cap) + radiant + uplift + turn - shift)
-        * brittle_share(card, w)
-        * kept
+    // R3575501: a Created Unit is worth at least the body a turn away its crystals and Tribute buy.
+    let priced = w.hand_card + w.hand_per_cost * cost.min(w.hand_cost_cap) + uplift - shift;
+    let priced = match created_unit_floor(state, card, w) {
+        Some(floor) => priced.max(floor),
+        None => priced,
+    };
+    (priced + radiant + turn) * brittle_share(card, w) * kept
+}
+
+/// R3575501: what an own Created hand Unit (R943: minted after the deal, by a Cry, a hook, a fusion) is
+/// worth at least: the body it enters as (`face_worth` of its face with buffs and its own keywords, as
+/// `face_uplift` reads it) a turn away, at `slumber_turn_share` (R2380000's price of a unit one turn off),
+/// less the crystals it costs (`own_cost`, each at `unspent_mana`, the crystal's price at a turn's end)
+/// and its Tribute (`tribute_cost_of`, R3565000's rider read): the worth of the cheapest own units it
+/// would destroy (#1778's order). A dealt card is priced by its cost, the curve its deck was built on and
+/// the hand weights were fit to; a Created card's cost is its generator's choice (R77's cap, a set price, a
+/// Tribute taken off, a token's rung), so its face may stand far above it. `None` for a card not
+/// Created, not a Unit on the face it enters, with an X cost, without the units its Tribute asks, or at
+/// a zero share (the frozen baseline's).
+fn created_unit_floor(state: &GameState, card: &CardInstance, w: &EvalWeights) -> Option<f64> {
+    if w.slumber_turn_share == 0.0 || card.created != Some(true) {
+        return None;
+    }
+    if card_type_of_face(state, &card.def_id, card.radiant) != CardType::Unit {
+        return None;
+    }
+    let crystals = own_cost(state, card)?.max(0);
+    let tribute = usize::try_from(tribute_cost_of(state, card)).unwrap_or(0);
+    let debit = if tribute == 0 {
+        0.0
+    } else {
+        let mut worths: Vec<f64> = units_on_field_of(state, card.controller)
+            .into_iter()
+            .map(|unit| unit_worth(state, unit, w, Prices::NONE))
+            .collect();
+        if worths.len() < tribute {
+            return None;
+        }
+        worths.sort_by(f64::total_cmp);
+        worths[..tribute].iter().sum()
+    };
+    let stats = stats_with_buffs(state, card);
+    let body = face_worth(stats.attack, stats.max_health, &card_keywords(state, card), w);
+    Some(w.slumber_turn_share * (body - w.unspent_mana * f64::from(crystals) - debit))
 }
 
 /// R962: the steps a Jade Counter at `jade` has climbed toward the next threshold it has not crossed.
