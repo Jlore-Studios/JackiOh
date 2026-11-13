@@ -16,6 +16,7 @@ import { UNDO_TOAST, UNDO_TOAST_UNDO } from "../undo/UndoToast.tsx";
 import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { FRIENDS_POLL_MS } from "./config.ts";
 import { stopFollowingChallenge } from "./follow.ts";
+import { takeInviteRefusal } from "../lobby/inviteRefusal.ts";
 import { lobbyTestid } from "../lobby/testids.ts";
 import { challengeKindTestid, togetherTestid } from "./testids.ts";
 import { TogetherRoute } from "./TogetherRoute.tsx";
@@ -1033,5 +1034,84 @@ describe("R2615000 watching has no switch", () => {
     expect(within(panel).queryByRole("switch")).toBeNull();
     // Nothing on the page reads or writes a watching setting.
     expect(server.calls.some((call) => call.path === "/api/settings")).toBe(false);
+  });
+});
+
+// R3874000: a friend's Lobby
+
+describe("R3874000 a friend's Lobby makes one lobby and opens it", () => {
+  const LOBBY_CODE = "LBY234";
+  const CREATE = "/api/lobbies";
+  const INVITE = `/api/lobbies/${LOBBY_CODE}/invite`;
+
+  /** The create answers LOBBY_CODE, the invite `invite`. */
+  function lobbies(invite: Reply): (call: Call) => Reply | undefined {
+    return (call) => {
+      if (call.method === "POST" && call.path === CREATE) return { status: 201, body: { code: LOBBY_CODE } };
+      if (call.method === "POST" && call.path === INVITE) return invite;
+      return undefined;
+    };
+  }
+
+  afterEach(() => {
+    takeInviteRefusal(LOBBY_CODE);
+    at("/together");
+  });
+
+  it("R3874000 one press makes a Best of 1 lobby, invites the friend into it and opens it", async () => {
+    const server = await renderPage(world(), lobbies({ status: 204 }));
+    fireEvent.click(within(rowOf(ANN)).getByTestId(togetherTestid.lobby));
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(`/lobby/${LOBBY_CODE}`);
+    }, SLOW);
+    expect(server.to("POST", CREATE).map((call) => call.body)).toEqual([{ format: "duel", mode: "bo1" }]);
+    expect(server.to("POST", INVITE).map((call) => call.body)).toEqual([{ profileId: ANN.profileId }]);
+    expect(takeInviteRefusal(LOBBY_CODE)).toBeNull();
+    expect(screen.queryByTestId(togetherTestid.error)).toBeNull();
+  });
+
+  it("R3874000 a double press makes one lobby and sends one invite", async () => {
+    const server = await renderPage(world(), lobbies({ status: 204 }));
+    const button = within(rowOf(ANN)).getByTestId(togetherTestid.lobby);
+    fireEvent.click(button);
+    // One of the page's requests: its controls wait for the answer.
+    expect(button).toBeDisabled();
+    expect(within(rowOf(ANN)).getByTestId(togetherTestid.challenge)).toBeDisabled();
+    fireEvent.click(button);
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(`/lobby/${LOBBY_CODE}`);
+    }, SLOW);
+    await settle();
+    expect(server.to("POST", CREATE)).toHaveLength(1);
+    expect(server.to("POST", INVITE)).toHaveLength(1);
+  });
+
+  it("R3874000 a refused invite still opens the lobby made, its refusal held for that lobby's screen", async () => {
+    const message = "too many invites; try again later";
+    const server = await renderPage(world(), lobbies(refusal(429, "rate_limited", message)));
+    fireEvent.click(within(rowOf(ANN)).getByTestId(togetherTestid.lobby));
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(`/lobby/${LOBBY_CODE}`);
+    }, SLOW);
+    expect(server.to("POST", CREATE)).toHaveLength(1);
+    expect(server.to("POST", INVITE)).toHaveLength(1);
+    expect(screen.queryByTestId(togetherTestid.error)).toBeNull();
+    expect(takeInviteRefusal("OTHER2")).toBeNull();
+    expect(takeInviteRefusal(LOBBY_CODE)).toBe(message);
+    expect(takeInviteRefusal(LOBBY_CODE)).toBeNull();
+  });
+
+  it("R3874000 a refused create opens nothing and says why on Play together", async () => {
+    const message = "you have too many lobbies open; close one or let one expire";
+    const server = await renderPage(world(), (call) =>
+      call.method === "POST" && call.path === CREATE ? refusal(409, "conflict", message) : undefined,
+    );
+    fireEvent.click(within(rowOf(ANN)).getByTestId(togetherTestid.lobby));
+    expect(await screen.findByTestId(togetherTestid.error, undefined, SLOW)).toHaveTextContent(message);
+    expect(window.location.pathname).toBe("/together");
+    expect(server.to("POST", INVITE)).toHaveLength(0);
+    await waitFor(() => {
+      expect(offers(rowOf(ANN), togetherTestid.lobby)).toBe(true);
+    }, SLOW);
   });
 });

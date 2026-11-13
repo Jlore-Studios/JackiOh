@@ -46,6 +46,7 @@ import {
   type RoomView,
 } from "./api.ts";
 import { LOBBY_COUNTDOWN_TICK_MS, LOBBY_POLL_MS } from "./config.ts";
+import { takeInviteRefusal } from "./inviteRefusal.ts";
 import { canStart, deckWords, seatsOf, type SeatShown } from "./seats.ts";
 import { lobbyTestid } from "./testids.ts";
 import { coopStartingDeck, rememberCoopPick } from "./coopDeck.ts";
@@ -183,7 +184,11 @@ export function LobbyScreen({ token, code }: LobbyScreenProps): ReactElement {
 /** The lobby itself: its code, its seats, its settings, the member's deck, invites and the actions. */
 function Lobby({ token, view, removed, reload }: { token: string; view: LobbyView; removed: boolean; reload: () => void }): ReactElement {
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // R3874000: an invite refused on Play together opens this lobby saying why, once; the next request clears it.
+  const [error, setError] = useState<string | null>(() => {
+    const refused = takeInviteRefusal(view.code);
+    return refused === null ? null : t(refused);
+  });
   const [copied, setCopied] = useState<"code" | "shared" | "copied" | null>(null);
   const inviteHeading = useRef<HTMLHeadingElement>(null);
 
