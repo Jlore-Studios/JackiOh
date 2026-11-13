@@ -16110,6 +16110,8 @@
       "spot_check_of": 3779,
       "started_at": "2026-11-13T18:47:39Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 1
     },
