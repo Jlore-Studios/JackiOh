@@ -33,7 +33,7 @@ import {
   type OwnedCosmeticsResponse,
 } from "../net/api.ts";
 import { useAccount, type Account } from "../net/gate.ts";
-import { navigate, paths } from "../net/navigate.ts";
+import { navigate, paths, wantedDeck } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { messageOf } from "../net/errors.ts";
@@ -270,6 +270,12 @@ function DecksScreen({ account, portraitsGated }: { account: Account; portraitsG
 
   // R279: a reference in a card's text shows the card the catalog names.
   const { catalog, collection } = screen.data;
+  // Issue #3734: the Collection's deck tiles open their deck by `?deck=<id>`; a deck this account does not hold opens none.
+  const wanted = wantedDeck(window.location.search);
+  const initialOpen =
+    wanted !== null && screen.data.decks.decks.some((deck) => deck.id === wanted)
+      ? ({ kind: "deck", id: wanted } as const)
+      : undefined;
   return (
     <CardDefsProvider defs={catalog.cards}>
       {/* R1313000: every face here is the viewer's own, and prints the full arts they own. */}
@@ -285,6 +291,7 @@ function DecksScreen({ account, portraitsGated }: { account: Account; portraitsG
             data={screen.data.decks}
             profileId={screen.profileId}
             api={api}
+            {...(initialOpen === undefined ? {} : { initialOpen })}
           />
         </PortraitsOwned>
       </OwnCopy>

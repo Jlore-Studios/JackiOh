@@ -356,18 +356,6 @@ mod tests {
         must(s.state().pending.clone(), "an open prompt")
     }
 
-    /// A `mode` prompt's options as the plain option strings the card declared (§10.6).
-    fn mode_options(pending: &PendingChoice) -> Vec<String> {
-        pending
-            .options
-            .iter()
-            .filter_map(|option| match &option.selection {
-                Selection::Mode { option } => Some(option.clone()),
-                _ => None,
-            })
-            .collect()
-    }
-
     /// A Discover-from-library prompt's options are LIBRARY INSTANCES, so read their def ids.
     fn revealed_def_ids(s: &Scenario, pending: &PendingChoice) -> Vec<String> {
         pending
@@ -455,7 +443,7 @@ mod tests {
             let types = open(&s);
             assert_eq!(types.kind, PromptKind::Mode);
             assert_eq!(types.player_id, P1);
-            assert_eq!(mode_options(&types), vec!["Spell", "Unit", "Field Spell", "Trap"]);
+            assert_eq!(prompt_modes_of(&types), vec!["Spell", "Unit", "Field Spell", "Trap"]);
 
             // Answering it opens the NEXT one rather than ending the sequence (R113).
             s.answer(json!("Spell"));
@@ -521,7 +509,7 @@ mod tests {
             let mut s = tutor_with(&[UNIT_1, UNIT_4]);
             s.play(TUTOR, json!({}));
 
-            assert_eq!(mode_options(&open(&s)), vec!["Unit"]);
+            assert_eq!(s.prompt_modes(), vec!["Unit"]);
         }
 
         #[test]
@@ -532,7 +520,7 @@ mod tests {
 
             // Spells in the fixture cost 0, 0, 1, 1 and 2 — so "0-1" and "2", never "3" or "4+".
             s.answer(json!("Spell"));
-            assert_eq!(mode_options(&open(&s)), vec!["0-1", "2"]);
+            assert_eq!(s.prompt_modes(), vec!["0-1", "2"]);
         }
 
         #[test]
@@ -541,12 +529,12 @@ mod tests {
             let mut units = tutor(TutorOpts::default());
             units.play(TUTOR, json!({})).answer(json!("Unit"));
             // Mr. Vanilla at 1 and the 4-mana 7/7 at 4: the two ends and nothing between them.
-            assert_eq!(mode_options(&open(&units)), vec!["0-1", "4+"]);
+            assert_eq!(units.prompt_modes(), vec!["0-1", "4+"]);
 
             let mut fields = tutor(TutorOpts::default());
             fields.play(TUTOR, json!({})).answer(json!("Field Spell"));
             // Mana Well is the only Field Spell in the fixture, at 3.
-            assert_eq!(mode_options(&open(&fields)), vec!["3"]);
+            assert_eq!(fields.prompt_modes(), vec!["3"]);
         }
 
         #[test]
@@ -571,7 +559,7 @@ mod tests {
             let mut s = tutor_with(&[SPELL_2, UNIT_1]);
             s.play(TUTOR, json!({})).answer(json!("Spell"));
             // Call to Arms is the only Spell, so "2" is the only bracket and it is the only reveal.
-            assert_eq!(mode_options(&open(&s)), vec!["2"]);
+            assert_eq!(s.prompt_modes(), vec!["2"]);
 
             s.answer(json!("2"));
             let reveal = open(&s);
@@ -615,10 +603,10 @@ mod tests {
             s.play(TUTOR, json!({}));
 
             // R35, R61: Trap filter matches Traps and Field Traps (#18, #71).
-            assert_eq!(mode_options(&open(&s)), vec!["Trap"]);
+            assert_eq!(s.prompt_modes(), vec!["Trap"]);
 
             s.answer(json!("Trap"));
-            assert_eq!(mode_options(&open(&s)), vec!["0-1"]);
+            assert_eq!(s.prompt_modes(), vec!["0-1"]);
 
             s.answer(json!("0-1"));
             assert_eq!(revealed_def_ids(&s, &open(&s)), vec![FIELD_TRAP_1]);
@@ -642,12 +630,12 @@ mod tests {
             // #74 Adaptive UI is a Spell printed "X"; R65 reads it as 0 in a library, so it is in "0-1".
             let mut x_cost = tutor_with(&["core-074"]);
             x_cost.play(TUTOR, json!({})).answer(json!("Spell"));
-            assert_eq!(mode_options(&open(&x_cost)), vec!["0-1"]);
+            assert_eq!(x_cost.prompt_modes(), vec!["0-1"]);
 
             // #59 Unbiased Immigration is a Field Spell printed "2 embiggen 4"; out of play it reads 2.
             let mut embiggen = tutor_with(&["core-059"]);
             embiggen.play(TUTOR, json!({})).answer(json!("Field Spell"));
-            assert_eq!(mode_options(&open(&embiggen)), vec!["2"]);
+            assert_eq!(embiggen.prompt_modes(), vec!["2"]);
         }
 
         #[test]
@@ -705,10 +693,10 @@ mod tests {
             let mut s = tutor_with(&[SPELL_0A, SPELL_1A, UNIT_4]);
             let bare = json!({ "forYou": false, "pendingFor": "p1" });
             s.play(TUTOR, json!({}));
-            assert_eq!(mode_options(&open(&s)), vec!["Spell", "Unit"]);
+            assert_eq!(s.prompt_modes(), vec!["Spell", "Unit"]);
             assert_eq!(js(&s.view(P2).pending), bare);
             s.answer(json!("Spell"));
-            assert_eq!(mode_options(&open(&s)), vec!["0-1"]);
+            assert_eq!(s.prompt_modes(), vec!["0-1"]);
             assert_eq!(js(&s.view(P2).pending), bare);
             s.answer(json!("0-1"));
             assert_eq!(open(&s).options.len(), 2);
@@ -729,7 +717,7 @@ mod tests {
 
             s.play(TUTOR, json!({}));
 
-            assert_eq!(mode_options(&open(&s)), vec!["Spell", "Unit", "Field Spell", "Trap"]);
+            assert_eq!(s.prompt_modes(), vec!["Spell", "Unit", "Field Spell", "Trap"]);
             s.answer(json!("Spell")).answer(json!("0-1"));
             let first_pick = must(revealed_instance_ids(&open(&s)).first().cloned(), "a first reveal");
             s.answer(json!(first_pick));
@@ -790,7 +778,7 @@ mod tests {
             let mut s = radiant_tutor_with(Some(&[FIELD_TRAP_1, UNIT_1]));
             s.play(TUTOR, json!({}));
 
-            assert_eq!(mode_options(&open(&s)), vec!["Unit", "Trap"]);
+            assert_eq!(s.prompt_modes(), vec!["Unit", "Trap"]);
             s.answer(json!("Trap")).answer(json!("0-1"));
             assert_eq!(revealed_def_ids(&s, &open(&s)), vec![FIELD_TRAP_1]);
         }
@@ -813,7 +801,7 @@ mod tests {
             );
 
             g.play("core-051", json!({}));
-            let types: Option<Vec<String>> = g.state().pending.as_ref().map(mode_options);
+            let types: Option<Vec<String>> = g.state().pending.as_ref().map(prompt_modes_of);
             if types.is_some_and(|types| types.contains(&"Unit".to_string())) {
                 g.answer(json!("Unit"));
                 g.answer(json!("0-1"));

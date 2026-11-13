@@ -24,6 +24,7 @@ pub mod evaluate;
 pub mod evaluate_v020;
 pub mod even_trades;
 pub mod features;
+pub mod float_discount;
 pub mod freeze;
 pub mod gauntlet;
 pub mod graveyard_plays;

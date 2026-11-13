@@ -142,7 +142,8 @@ const TABULAR: Readonly<Record<string, readonly string[]>> = {
   "packs/packs.css": [".packs-held"],
   "economy/economy.css": [".fill-bar__caption"],
   "economy/xp.css": [".xp-reveal__level", ".xp-reveal__quest-pay"],
-  "collection/collection.css": [".tavern.app-shell .collection-set__toggle", ".tavern.app-shell .collection-list"],
+  "collection/collection.css": [".tavern.app-shell .collection-list"],
+  "collection/browse.css": [".collection-screen .collection-count", ".collection-screen .collection-set", ".collection-screen .collection-deck-tile__count"],
   "routes/leaderboard.css": [".tavern.app-shell.leaderboard-screen ol", ".tavern.app-shell.leaderboard-screen ul"],
   "routes/stats.css": [".stats-table", ".stats-grid-figures dd", ".stats-pager-page"],
 };

@@ -32,6 +32,8 @@ describe("R3230000 one name per page across menu, footer and document title", ()
       { path: paths.dungeon, expected: "Dungeon run" },
       { path: paths.play, expected: "Play" },
       { path: paths.account, expected: "Account" },
+      // #3727: the Daily screen.
+      { path: paths.daily, expected: "Daily games" },
     ];
 
     for (const { path, expected, footerTestId } of cases) {

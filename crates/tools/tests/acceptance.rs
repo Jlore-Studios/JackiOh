@@ -946,6 +946,11 @@ struct SharedHelpers {
 /// pick builder may be copied.
 const KIT_READERS: &[&str] = &["crates/engine/tests", "crates/cards", "crates/ai/tests"];
 
+/// The trees where a card test reads an open prompt's Mode options through `Scenario::prompt_modes` (or
+/// `prompt_modes_of` for a prompt it holds), not by matching `Selection::Mode` itself (#3796). The
+/// engine's and the AI's own tests keep their copies.
+const MODE_READERS: &[&str] = &["crates/cards"];
+
 /// The server test trees `tests/server.rs` compiles with `tests/support/`, where no file but a
 /// helper's home may define one (#2385). `tests/store/` builds into `server_store` without them.
 const SERVER_SUPPORT_READERS: &[&str] = &[
@@ -1007,7 +1012,7 @@ const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
     },
     SharedHelpers {
         home: "crates/engine/src/testkit/scenario.rs",
-        names: &["unit_at", "must"],
+        names: &["unit_at", "must", "prompt_modes", "prompt_modes_of"],
         statics: &[],
         structs: &[],
         dirs: KIT_READERS,
@@ -1100,6 +1105,29 @@ fn shared_helper_definitions(text: &str, names: &[&str]) -> Vec<usize> {
                             .is_some_and(|rest| rest.starts_with(['(', '<']))
                     })
             })
+        })
+        .map(|(index, _)| index + 1)
+        .collect()
+}
+
+/// The 1-based lines of `text` that read a prompt option's Mode string by hand: an arm
+/// `Selection::Mode { option } => option.clone(),` (or `Some(option.clone())`, `Some(option)`,
+/// `option`) with nothing after it on the line but its comma and, in a one-line `match`, the `_ =>` arm
+/// that skips the rest; a `//` comment aside. An arm that does more than hand the option back is not a
+/// copy of `prompt_modes`. The same read from a prompt as JSON, `option["selection"]["option"]`, counts too.
+fn mode_extraction_lines(text: &str) -> Vec<usize> {
+    const ARM: &str = "Selection::Mode { option } =>";
+    const JSON_READ: &str = r#"["selection"]["option"]"#;
+    const BODIES: [&str; 4] = ["option.clone()", "Some(option.clone())", "Some(option)", "option"];
+    text.lines()
+        .enumerate()
+        .filter(|(_, line)| {
+            let code = line.split("//").next().unwrap_or("");
+            code.contains(JSON_READ)
+                || code.split_once(ARM).is_some_and(|(_, rest)| {
+                    let body = rest.split(", _ =>").next().unwrap_or(rest);
+                    BODIES.contains(&body.trim().trim_end_matches(',').trim())
+                })
         })
         .map(|(index, _)| index + 1)
         .collect()
@@ -1205,8 +1233,8 @@ fn pick_builder_definitions(text: &str) -> Vec<usize> {
 
 /// Every copy of a shared test helper under `root`, as `<path from root>:<line>`: a definition of
 /// one of a SHARED_TEST_HELPERS row's names, a declaration of one of its statics or a struct of one
-/// of its field lists under its trees outside its home, and a one-instance pick builder under
-/// KIT_READERS.
+/// of its field lists under its trees outside its home, a one-instance pick builder under
+/// KIT_READERS and a hand-written Mode extraction under MODE_READERS.
 fn shared_helper_copies(root: &Path) -> Vec<String> {
     let at =
         |file: &Path, line: usize| format!("{}:{line}", file.strip_prefix(root).unwrap_or(file).display());
@@ -1231,6 +1259,18 @@ fn shared_helper_copies(root: &Path) -> Vec<String> {
             let text = fs::read_to_string(file).unwrap_or_default();
             copies.extend(
                 pick_builder_definitions(&text)
+                    .into_iter()
+                    .map(|line| at(file, line)),
+            );
+        }
+    }
+    for dir in MODE_READERS {
+        let mut files = Vec::new();
+        rust_sources(&root.join(dir), &mut files);
+        for file in &files {
+            let text = fs::read_to_string(file).unwrap_or_default();
+            copies.extend(
+                mode_extraction_lines(&text)
                     .into_iter()
                     .map(|line| at(file, line)),
             );
@@ -1289,7 +1329,7 @@ fn helpers_each_test_takes_its_shared_helpers_from_their_home() {
     let homes: Vec<&str> = SHARED_TEST_HELPERS.iter().map(|row| row.home).collect();
     assert!(
         copies.is_empty(),
-        "a test defines its own copy of a shared helper, nonce counter or sink bench (#1777, #1826, #1997, #2023, #2024, #2385): import the one in {homes:?} or {PICK_HOME}, or give a helper whose body differs another name: {copies:?}"
+        "a test defines its own copy of a shared helper, nonce counter or sink bench, or reads a prompt's Mode options by hand (#1777, #1826, #1997, #2023, #2024, #2385, #3796): import the one in {homes:?} or {PICK_HOME}, or give a helper whose body differs another name: {copies:?}"
     );
 }
 
@@ -1297,6 +1337,26 @@ fn helpers_each_test_takes_its_shared_helpers_from_their_home() {
 fn helpers_the_scan_finds_each_local_copy() {
     let text = "fn both(script: Script) -> CardScripts {\n}\n    pub fn spread(mut base: Value, extra: Value) -> Value {\n}\npub(crate) fn both<T>(script: T) {}\nfn both_faces() {}\nfn spreads(x: i32) {}\n// fn both(script)\nlet scripts = both(script);\n";
     assert_eq!(shared_helper_definitions(text, &["both", "spread"]), [1, 3, 5]);
+}
+
+#[test]
+fn helpers_the_mode_scan_finds_each_hand_written_extraction() {
+    let text = [
+        "x.filter_map(|o| match &o.selection { Selection::Mode { option } => Some(option.clone()), _ => None })",
+        "    Selection::Mode { option } => option.clone(),",
+        "    Selection::Mode { option } => option,",
+        "    Selection::Mode { option } => Some(option),",
+        "// Selection::Mode { option } => option.clone(),",
+        "    Some(Selection::Mode { option }) => option.clone(),",
+        "    [Selection::Mode { option }] => option.clone(),",
+        "    Selection::Mode { option } => option.split_once(','),",
+        "    if let Selection::Mode { option: x } = &y {",
+        "    Selection::Mode { option } => option.clone(), // a comment after the arm",
+        r#"    .map(|option| option["selection"]["option"].as_str().unwrap_or_default().to_string())"#,
+        r#"    // option["selection"]["option"] in a comment"#,
+    ]
+    .join("\n");
+    assert_eq!(mode_extraction_lines(&text), [1, 2, 3, 4, 10, 11]);
 }
 
 #[test]
@@ -1386,6 +1446,11 @@ fn helpers_the_check_refuses_a_copy_in_each_covered_directory() {
         write(&format!("{dir}/pick_copy.rs"), builder);
         expected.push(format!("{dir}/pick_copy.rs:1"));
     }
+    write(
+        "crates/cards/mode_copy.rs",
+        "fn m() { x.map(|o| match &o.selection { Selection::Mode { option } => Some(option.clone()), _ => None }); }\n",
+    );
+    expected.push("crates/cards/mode_copy.rs:1".to_string());
     let mut copies = shared_helper_copies(root);
     drop(scratch);
     copies.sort();

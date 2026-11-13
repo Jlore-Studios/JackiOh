@@ -43,6 +43,10 @@ custom domains and Access are `infra/cloudflare.tf`'s.
   `IMAGE_CHECK_RETRY_MS` after the last try.
 - **Once a day** (`triggers.crons`) the Worker requests `/readyz`, which wakes the server: its hourly
   loops run, and the Supabase project sees a query, so a quiet week does not pause a free project.
+- **Once an hour** (`DAILY_SWEEP_CRON`, #3727) the Worker posts to the server's `/daily-sweep`
+  (`DAILY_SWEEP_PATH`), which ends the daily games whose move ran out and sends the "your move" emails
+  and pushes while nobody else wakes it (SPEC §9.13). The path is outside `/api/*` and `/ws/*`, so
+  nobody else reaches it through the Worker. The daily wake-up stays as it was (CLAUDE.md rule 13).
 - **The caller's address.** The Worker replaces `X-Forwarded-For` with the address Cloudflare saw
   (`CF-Connecting-IP`), and `TRUSTED_PROXY_HOPS` is 1 (R190). Calibrate it once after the first
   deploy: the server's `api.forwarded_for` log line shows the entries it received; if the platform
@@ -64,7 +68,9 @@ pnpm exec wrangler secret put CODE_PEPPER --config ../../wrangler.jsonc --env=""
 and the same three with `--env staging`. `CREATE_ISSUES_TOKEN`, `DEV_PROFILE_IDS`, `ALERT_RESEND_API_KEY`
 and `ALERT_EMAILS` are optional. The last two email the server's alerts (#3595, `crates/server/README.md`,
 Alerts): a Resend API key with Sending access for jackioh.com, and the addresses, comma-separated, kept a
-secret since the repository is public.
+secret since the repository is public. `PLAYER_RESEND_API_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_PUBLIC_KEY`
+are optional too: the daily games' "your move" email and Web Push (#3727, `docs/deploy-cloudflare.md` section 3
+says how to make the VAPID pair); with one unset its channel is off.
 `DATABASE_URL` is Supabase's pooler URI (Connect -> Session pooler), which works over IPv4; the
 direct database host is IPv6 only. A container reads its settings when it starts, so after changing
 one, deploy again (or wait for the next sleep).

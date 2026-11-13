@@ -43,8 +43,9 @@ const GATED_FIXED = [
   paths.collection,
   paths.shop,
   paths.together,
+  paths.daily,
 ];
-const GATED_PREFIXES = ["/match/", "/series/", "/watch/", "/duos/"];
+const GATED_PREFIXES = ["/match/", "/series/", "/watch/", "/duos/", "/daily/"];
 
 const locsOf = (sitemap: string): string[] =>
   [...sitemap.matchAll(/<loc>([^<]*)<\/loc>/gu)].map((match) => match[1] ?? "");
