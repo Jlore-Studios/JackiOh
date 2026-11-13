@@ -11,7 +11,7 @@
 //! `castRandom`: the card is the Radiant face's Radiant and every choice of the cast is random, so nothing
 //! pauses for a prompt. A pick that is no Spell resolves as its own type: a Unit is summoned, a Trap set.
 
-use jackioh_engine::effects::{CastRandomArgs, CastRandomCount, CastRandomQuery, cast_random};
+use jackioh_engine::effects::{CastRandomArgs, CastRandomCount, cast_random};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-156";
@@ -24,7 +24,7 @@ fn breaker(radiant: bool) -> Script {
     Script {
         triggers: vec![when_launched("horizon-breaker", move |_ctx, _event| {
             vec![cast_random(CastRandomArgs {
-                query: CastRandomQuery::Fixed(json_as(json!({ "tags": ["Terminus"], "withTokens": true }))),
+                query: crate::query::terminus_cards().into(),
                 count: Some(CastRandomCount::Fixed(CASTS)),
                 radiant: Some(radiant),
                 target_enemies: None,
@@ -54,7 +54,9 @@ mod tests {
         events
             .iter()
             .filter_map(|event| match event {
-                GameEvent::CardPlayed { instance_id, def_id, .. } => Some((instance_id.clone(), def_id.clone())),
+                GameEvent::CardPlayed {
+                    instance_id, def_id, ..
+                } => Some((instance_id.clone(), def_id.clone())),
                 _ => None,
             })
             .collect()
@@ -77,7 +79,7 @@ mod tests {
     /// The Terminus pool of the shipped sets, tokens included.
     fn pool() -> Vec<String> {
         crate::register_all();
-        catalog::query(&json_as(json!({ "tags": ["Terminus"], "withTokens": true })))
+        crate::query::query(&crate::query::terminus_cards())
             .into_iter()
             .map(|def| def.id.clone())
             .collect()
@@ -114,7 +116,10 @@ mod tests {
                 let Some((_, def)) = made.first() else { continue };
                 assert!(pool.contains(def));
                 let kind = catalog::def_of(None, def).type_;
-                assert!(s.state().pending.is_none() || s.state().result.is_some(), "{def} left a prompt open");
+                assert!(
+                    s.state().pending.is_none() || s.state().result.is_some(),
+                    "{def} left a prompt open"
+                );
                 if !seen.contains(&kind) {
                     seen.push(kind);
                 }

@@ -28,7 +28,7 @@ fn animosity(radiant: bool) -> Script {
         })),
         cry: Some(hook(move |_ctx| {
             vec![add_random_from_catalog(json_as(json!({
-                "query": { "tags": ["Terminus"], "withTokens": true },
+                "query": crate::query::terminus_cards(),
                 "radiant": radiant,
             })))]
         })),
@@ -65,7 +65,7 @@ mod tests {
     /// The Terminus pool of the shipped sets, tokens included.
     fn pool() -> Vec<String> {
         crate::register_all();
-        catalog::query(&json_as(json!({ "tags": ["Terminus"], "withTokens": true })))
+        crate::query::query(&crate::query::terminus_cards())
             .into_iter()
             .map(|def| def.id.clone())
             .collect()
@@ -192,9 +192,10 @@ mod tests {
             }
             crate::register_all();
             let others = [
-                "core-002", "core-005", "core-006", "core-008", "core-011", "core-012", "core-013", "core-015",
-                "core-016", "core-019", "core-020", "core-025", "core-026", "core-032", "core-036", "core-043",
-                "core-044", "core-053", "core-055", "core-001", "core-003", "core-004", "core-009", "core-010",
+                "core-002", "core-005", "core-006", "core-008", "core-011", "core-012", "core-013",
+                "core-015", "core-016", "core-019", "core-020", "core-025", "core-026", "core-032",
+                "core-036", "core-043", "core-044", "core-053", "core-055", "core-001", "core-003",
+                "core-004", "core-009", "core-010",
             ];
             for n in 0..6 {
                 let mut deck: Vec<String> = others.iter().map(|id| id.to_string()).collect();

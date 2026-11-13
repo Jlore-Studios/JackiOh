@@ -11,7 +11,7 @@
 //! `castRandom`: the card is the Radiant face's Radiant, every choice of the cast is random so nothing
 //! pauses for a prompt, and it counts as a link of the Call to Chaos chain (R28).
 
-use jackioh_engine::effects::{CastRandomArgs, CastRandomCount, CastRandomQuery, cast_random};
+use jackioh_engine::effects::{CastRandomArgs, CastRandomCount, cast_random};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-154";
@@ -24,7 +24,7 @@ fn accelerator(radiant: bool) -> Script {
     Script {
         triggers: vec![when_launched("chaos-accelerator", move |_ctx, _event| {
             vec![cast_random(CastRandomArgs {
-                query: CastRandomQuery::Fixed(json_as(json!({ "tags": ["Call to Chaos"], "withTokens": true }))),
+                query: crate::query::call_to_chaos_editions().into(),
                 count: Some(CastRandomCount::Fixed(CASTS)),
                 radiant: Some(radiant),
                 target_enemies: None,
@@ -56,7 +56,9 @@ mod tests {
         events
             .iter()
             .filter_map(|event| match event {
-                GameEvent::CardPlayed { instance_id, def_id, .. } => Some((instance_id.clone(), def_id.clone())),
+                GameEvent::CardPlayed {
+                    instance_id, def_id, ..
+                } => Some((instance_id.clone(), def_id.clone())),
                 _ => None,
             })
             .collect()
@@ -79,7 +81,7 @@ mod tests {
     /// The Call to Chaos pool of the shipped sets, tokens included.
     fn pool() -> Vec<String> {
         crate::register_all();
-        catalog::query(&json_as(json!({ "tags": ["Call to Chaos"], "withTokens": true })))
+        crate::query::query(&crate::query::call_to_chaos_editions())
             .into_iter()
             .map(|def| def.id.clone())
             .collect()
@@ -96,7 +98,10 @@ mod tests {
                 let (s, made) = launched(&format!("r3552000-base-{i}"), false);
                 let (picked, def) = made.first().expect("the launch cast a card");
                 assert!(pool.contains(def), "{def} is no Call to Chaos");
-                assert!(!s.card(picked.as_str()).radiant, "the base face casts it as it is");
+                assert!(
+                    !s.card(picked.as_str()).radiant,
+                    "the base face casts it as it is"
+                );
                 assert!(s.state().pending.is_none() || s.state().result.is_some());
             }
         }
@@ -112,7 +117,10 @@ mod tests {
             let from = s.events().len();
             s.end_turn();
             s.end_turn();
-            assert!(casts(&s.events()[from..]).is_empty(), "nothing is cast before the launch");
+            assert!(
+                casts(&s.events()[from..]).is_empty(),
+                "nothing is cast before the launch"
+            );
             assert!(s.state().active == P1 && !ship.is_empty());
         }
     }
@@ -127,7 +135,10 @@ mod tests {
                 let (s, made) = launched(&format!("r3552000-radiant-{i}"), true);
                 let (picked, def) = made.first().expect("the launch cast a card");
                 assert!(pool.contains(def), "{def} is no Call to Chaos");
-                assert!(s.card(picked.as_str()).radiant, "the Radiant face casts it Radiant");
+                assert!(
+                    s.card(picked.as_str()).radiant,
+                    "the Radiant face casts it Radiant"
+                );
             }
         }
     }

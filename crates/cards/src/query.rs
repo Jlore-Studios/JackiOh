@@ -104,6 +104,37 @@ pub fn prime_cards() -> CardQuery {
     }
 }
 
+/// R3869000: "a Terminus card" (S #4 Olivian Expanse, S #154 Dice of Doom, S+ #81, #82, #89, #156):
+/// every card and token tagged Terminus, from the sets that ship (R380, R1420). Terminus is no
+/// `POOL_TOKEN_TAGS` tag (R382), so the pool asks for its tokens.
+pub fn terminus_cards() -> CardQuery {
+    CardQuery {
+        tags: Some(vec![Tag::Terminus]),
+        with_tokens: Some(true),
+        ..CardQuery::default()
+    }
+}
+
+/// R3869001: "a Call to Chaos" (S #4.6 The Big Crunch, S #149 Wildar, S+ #154 Chaos Accelerator):
+/// every edition, the cards tagged Call to Chaos, from the sets that ship (R380, R1420).
+pub fn call_to_chaos_editions() -> CardQuery {
+    CardQuery {
+        tags: Some(vec![Tag::CallToChaos]),
+        with_tokens: Some(true),
+        ..CardQuery::default()
+    }
+}
+
+/// R3869001: "a War Doctrine" (S #137 Starfleet Commander, S #176 Preemptive Strike): the tokens tagged
+/// War Doctrine (R1857002), from the sets that ship.
+pub fn war_doctrines() -> CardQuery {
+    CardQuery {
+        tags: Some(vec![Tag::WarDoctrine]),
+        with_tokens: Some(true),
+        ..CardQuery::default()
+    }
+}
+
 /// One random pool `spec/CARDS.md` lists (#3804), which `cargo jackioh spec index` writes from this
 /// table: the pool's members as the catalog holds them now and the cards whose scripts draw from it, so
 /// that no spec row lists either by hand.
@@ -174,6 +205,24 @@ pub const POOLS: &[NamedPool] = &[
         rule: "The Prime cards (R1421): every card tagged Prime, each a token, which a pool that names the tag reaches.",
         call: "prime_cards",
         parts: || whole(prime_cards()),
+    },
+    NamedPool {
+        name: "terminus",
+        rule: "The Terminus cards (R3869000): every card and token tagged Terminus, from the sets that ship (R380, R1420).",
+        call: "terminus_cards",
+        parts: || whole(terminus_cards()),
+    },
+    NamedPool {
+        name: "call-to-chaos",
+        rule: "The Call to Chaos editions (R3869001): every card tagged Call to Chaos, from the sets that ship (R380, R1420).",
+        call: "call_to_chaos_editions",
+        parts: || whole(call_to_chaos_editions()),
+    },
+    NamedPool {
+        name: "war-doctrines",
+        rule: "The War Doctrines (R3869001): every token tagged War Doctrine (R1857002), from the sets that ship.",
+        call: "war_doctrines",
+        parts: || whole(war_doctrines()),
     },
     NamedPool {
         name: "resources",

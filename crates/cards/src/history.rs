@@ -60,15 +60,15 @@ use crate::scripts::meditative_plus::{
     c001_bobs_plan, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves, c022_mountaintop_garden,
 };
 use crate::scripts::stinkyscape::{
-    c013_asphyxiants_cloud, c016_rod_of_ages, c018_1_melchior, c026_zolarketh, c033_drone_core_vii,
-    c034_drone_core_viii, c035_drone_core_ix, c036_drone_core_x, c045_drone_commander, c050_beam_v3,
-    c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4, c055_repeater_v4, c056_cannon_v4,
-    c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5, c061_flak_v5, c074_paragon_x,
-    c086_prototype_x2, c094_tmack_trav, c109_xxfreshjack, c111_shockwave447, c115_scornboi, c116_megabase,
-    c129_jlockeeds_missile_pod, c140_rush_token_launcher, c143_book_launcher, c149_wildar, c153_stimmycheck,
-    c163_swear_loyalities, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid,
-    c172_huge_asteroid, c173_abandoned_spice_tower, t_drone_corvette, t_drone_interceptor, t_narcor,
-    t_red_narcor,
+    c004_olivian_expanse, c013_asphyxiants_cloud, c016_rod_of_ages, c018_1_melchior, c026_zolarketh,
+    c033_drone_core_vii, c034_drone_core_viii, c035_drone_core_ix, c036_drone_core_x, c045_drone_commander,
+    c050_beam_v3, c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4, c055_repeater_v4,
+    c056_cannon_v4, c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5, c061_flak_v5,
+    c074_paragon_x, c086_prototype_x2, c094_tmack_trav, c109_xxfreshjack, c111_shockwave447, c115_scornboi,
+    c116_megabase, c129_jlockeeds_missile_pod, c140_rush_token_launcher, c143_book_launcher, c149_wildar,
+    c153_stimmycheck, c154_dice_of_doom, c163_swear_loyalities, c168_drone_hanger, c169_tiny_asteroid,
+    c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid, c173_abandoned_spice_tower,
+    t_drone_corvette, t_drone_interceptor, t_narcor, t_red_narcor,
 };
 use crate::scripts::training_grounds::{
     c036_training_dummy, c038_tutorial_master, c045_jlockeeds_weapons,
@@ -87,7 +87,8 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// #2179 (R1161, R920, R580, R2179003), #2396 (R2396000), #2521 and #2657 (R2657000 with
 /// `never_defense_kept`, R2657001, R2657002, R2657004), and #3000's parts (#3038, #3040, #3041, #3042,
 /// #3044, #3048), #3128's (#3134, #3135, #3139, #3140, #3142),
-/// #3551's S01 (R3551000, R3551001, R3551002, R3551003, R3551004) and #3778 (R3778000).
+/// #3551's S01 (R3551000, R3551001, R3551002, R3551003, R3551004), #3778 (R3778000) and #3869
+/// (R3869000).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -696,6 +697,17 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c073_1_classic_golem::ID,
         "v0.5.12ap",
         c073_1_classic_golem::script_v0_5_13g,
+    ),
+    // #3869 (R3869000): the Terminus cards before the pool read the tag.
+    (
+        c004_olivian_expanse::ID,
+        "v0.6.0g",
+        c004_olivian_expanse::script_v0_6_0g,
+    ),
+    (
+        c154_dice_of_doom::ID,
+        "v0.6.0g",
+        c154_dice_of_doom::script_v0_6_0g,
     ),
 ];
 

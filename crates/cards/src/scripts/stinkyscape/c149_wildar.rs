@@ -19,9 +19,9 @@ pub const ID: &str = "stinkyscape-149";
 /// "It costs (0)": the opponent's Call to Chaos (`costOverride`, a price, R1748003).
 const OPPONENT_COST: i32 = 0;
 
-/// The Call to Chaos pool (`Tag::CallToChaos`), with the riders a pick takes.
+/// The Call to Chaos pool (`query::call_to_chaos_editions`, R3869001), with the riders a pick takes.
 fn add_call_to_chaos(riders: Value) -> Effect {
-    let mut args = json!({ "query": { "tags": [Tag::CallToChaos] } });
+    let mut args = json!({ "query": crate::query::call_to_chaos_editions() });
     if let (Value::Object(into), Value::Object(more)) = (&mut args, riders) {
         into.extend(more);
     }
@@ -113,7 +113,10 @@ mod tests {
     }
 
     fn gained(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
-        s.hand(player).into_iter().filter(|card| card.def_id != ANCHOR).collect()
+        s.hand(player)
+            .into_iter()
+            .filter(|card| card.def_id != ANCHOR)
+            .collect()
     }
 
     fn cost_of(s: &Scenario, card: &CardInstance) -> i32 {
@@ -145,7 +148,10 @@ mod tests {
         let view = s.view(P1);
         assert_eq!(js(&view.opponent.hand), json!({ "count": 2 }));
         let seen = serde_json::to_string(&view.events).unwrap_or_default();
-        assert!(!seen.contains(&theirs[0].id), "the caster reads the opponent's card");
+        assert!(
+            !seen.contains(&theirs[0].id),
+            "the caster reads the opponent's card"
+        );
     }
 
     #[test]
@@ -162,8 +168,14 @@ mod tests {
             mine.push(b);
         }
         for edition in SHIPPED_EDITIONS {
-            assert!(theirs.iter().any(|id| id == edition), "{edition} never reached the opponent");
-            assert!(mine.iter().any(|id| id == edition), "{edition} never reached its caster");
+            assert!(
+                theirs.iter().any(|id| id == edition),
+                "{edition} never reached the opponent"
+            );
+            assert!(
+                mine.iter().any(|id| id == edition),
+                "{edition} never reached its caster"
+            );
         }
         assert!(differ, "the two picks never differed");
     }
