@@ -290,17 +290,6 @@ mod tests {
         must(s.state().pending.clone(), "open prompt")
     }
 
-    fn modes(s: &Scenario) -> Vec<String> {
-        open(s)
-            .options
-            .iter()
-            .map(|option| match &option.selection {
-                Selection::Mode { option } => option.clone(),
-                _ => "?".to_string(),
-            })
-            .collect()
-    }
-
     fn labels(s: &Scenario) -> Vec<String> {
         open(s).options.iter().map(|option| option.label.clone()).collect()
     }
@@ -371,7 +360,7 @@ mod tests {
                 assert_eq!(s.state().active, P2);
                 assert_eq!(pending.player_id, P2);
                 assert_eq!(pending.kind, PromptKind::Mode);
-                assert_eq!(modes(&s), vec!["discard", "exile", "draw"]);
+                assert_eq!(s.prompt_modes(), vec!["discard", "exile", "draw"]);
                 s.answer(json!("exile"));
                 s.answer(json!("discard"));
                 s.answer(json!("draw"));
@@ -407,7 +396,7 @@ mod tests {
                 assert_eq!(s.state().active, P2);
                 assert_eq!(pending.player_id, P2);
                 assert_eq!(pending.kind, PromptKind::Mode);
-                assert_eq!(modes(&s), vec!["discard", "exile", "draw"]);
+                assert_eq!(s.prompt_modes(), vec!["discard", "exile", "draw"]);
                 s.answer(json!("draw"));
                 assert_eq!(open(&s).player_id, P2);
                 assert_eq!(def_ids(&s.pile(P1, "hand")), vec![FILLER, MY_DECK[0]]);
@@ -424,7 +413,7 @@ mod tests {
                     assert_eq!(s.state().active, P1);
                     assert_eq!(pending.player_id, P2);
                     assert_eq!(pending.kind, PromptKind::Mode);
-                    assert_eq!(modes(&s), vec!["discard", "exile", "draw"]);
+                    assert_eq!(s.prompt_modes(), vec!["discard", "exile", "draw"]);
                 });
             }
 
@@ -445,7 +434,7 @@ mod tests {
                     }));
                     s.play(PICKLE, json!({}));
                     assert_eq!(s.state().active, P1);
-                    assert_eq!(modes(&s), vec!["exile", "draw"]);
+                    assert_eq!(s.prompt_modes(), vec!["exile", "draw"]);
                 });
             }
 
@@ -524,7 +513,7 @@ mod tests {
                 );
                 s.play(PICKLE, json!({}));
                 s.end_turn();
-                assert_eq!(modes(&s), vec!["draw"]);
+                assert_eq!(s.prompt_modes(), vec!["draw"]);
             }
 
             #[test]
@@ -533,9 +522,9 @@ mod tests {
                 let mut s = pickle(false, Piles { their_deck: Some(vec!["core-006"]), ..Piles::default() });
                 s.play(PICKLE, json!({}));
                 s.end_turn();
-                assert_eq!(modes(&s), vec!["discard", "exile", "draw"]);
+                assert_eq!(s.prompt_modes(), vec!["discard", "exile", "draw"]);
                 s.answer(json!("exile"));
-                assert_eq!(modes(&s), vec!["discard", "draw"]);
+                assert_eq!(s.prompt_modes(), vec!["discard", "draw"]);
             }
 
             #[test]
@@ -547,10 +536,10 @@ mod tests {
                 );
                 s.play(PICKLE, json!({}));
                 s.end_turn();
-                assert_eq!(modes(&s), vec!["discard", "draw"]);
+                assert_eq!(s.prompt_modes(), vec!["discard", "draw"]);
                 s.answer(json!("discard"));
                 assert_eq!(def_ids(&s.pile(P2, "graveyard")), vec!["core-008"]);
-                assert_eq!(modes(&s), vec!["draw"]);
+                assert_eq!(s.prompt_modes(), vec!["draw"]);
             }
 
             #[test]
@@ -659,7 +648,7 @@ mod tests {
                         "type": "answer",
                         "playerId": "p2",
                         "choiceId": second.id,
-                        "selection": [{ "pick": "mode", "option": "exile" }],
+                        "selection": pick::mode("exile"),
                         "nonce": "pickle-round-trip-1",
                     }),
                 );
@@ -673,7 +662,7 @@ mod tests {
                         "type": "answer",
                         "playerId": "p2",
                         "choiceId": third.id,
-                        "selection": [{ "pick": "mode", "option": "draw" }],
+                        "selection": pick::mode("draw"),
                         "nonce": "pickle-round-trip-2",
                     }),
                 );
@@ -780,7 +769,7 @@ mod tests {
                 }));
                 s.play(PICKLE, json!({}));
                 s.end_turn();
-                assert_eq!(modes(&s), vec!["discard", "exile", "draw"]);
+                assert_eq!(s.prompt_modes(), vec!["discard", "exile", "draw"]);
                 s.answer(json!("discard"));
                 assert_eq!(def_ids(&s.pile(P2, "graveyard")).len(), 1);
                 assert_eq!(
@@ -858,7 +847,7 @@ mod tests {
                 s.play(PICKLE, json!({}));
                 s.end_turn();
                 s.answer(json!("exile"));
-                assert_eq!(modes(&s), vec!["discard", "draw"]);
+                assert_eq!(s.prompt_modes(), vec!["discard", "draw"]);
             }
         }
     }

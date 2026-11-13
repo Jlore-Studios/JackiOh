@@ -187,18 +187,6 @@ mod tests {
         }
     }
 
-    // Differs from Scenario::offered: a prompt's modes, not the seat's legal actions.
-    fn offered(pending: &PendingChoice) -> Vec<String> {
-        pending
-            .options
-            .iter()
-            .filter_map(|option| match &option.selection {
-                Selection::Mode { option } => Some(option.clone()),
-                _ => None,
-            })
-            .collect()
-    }
-
     use crate::js;
 
     fn is_felinor_unit(id: &str) -> bool {
@@ -223,7 +211,7 @@ mod tests {
         s.play(FUSER, json!({ "zone": 2 }));
         let mut picks: Vec<String> = Vec::new();
         for _step in 0..2 {
-            let pick = offered(&open(&s)).first().cloned().unwrap_or_default();
+            let pick = s.prompt_modes().first().cloned().unwrap_or_default();
             picks.push(pick.clone());
             s.answer(json!(pick));
         }
@@ -255,7 +243,7 @@ mod tests {
                 for n in 0..30 {
                     let mut s = scenario(json!({ "seed": format!("fuser-cheap-{n}"), "p1": { "hand": [FUSER, FILLER] } }));
                     s.play(FUSER, json!({}));
-                    for id in offered(&open(&s)) {
+                    for id in s.prompt_modes() {
                         assert!(cheap_enough(&id), "{id}");
                         assert!(query_cost(&crate::card_def(&id)) <= 2, "{id}");
                         seen.insert(id);
@@ -272,14 +260,14 @@ mod tests {
                 let first = open(&s);
                 assert_eq!(first.kind, PromptKind::Discover);
                 assert_eq!(first.player_id, P1);
-                let ids = offered(&first);
+                let ids = prompt_modes_of(&first);
                 assert_eq!(ids.len(), 3);
                 assert_eq!(ids.iter().cloned().collect::<IndexSet<String>>().len(), 3);
                 for id in &ids {
                     assert!(cheap_enough(id));
                 }
                 s.answer(json!(ids.first().cloned().unwrap_or_default()));
-                let second = offered(&open(&s));
+                let second = s.prompt_modes();
                 assert_eq!(second.len(), 3);
                 for id in &second {
                     assert!(cheap_enough(id));
@@ -305,7 +293,7 @@ mod tests {
                 // R2657000: a pick with Can't Defend would take the fusion out of Defense Position at
                 // the state check, so the test takes the first offer without it.
                 let no_cant_defend = |s: &Scenario| -> String {
-                    offered(&open(s))
+                    s.prompt_modes()
                         .into_iter()
                         .find(|id| !has_keyword(&def_of(Some(s.state()), id).base.keywords, KeywordKind::CantDefend))
                         .unwrap_or_default()
@@ -364,14 +352,14 @@ mod tests {
                         "p2": { "hand": [FILLER], "field": [TIMMY] },
                     }));
                     tried.play(FUSER, json!({ "zone": 2 }));
-                    if offered(&open(&tried)).iter().any(|id| id == DUPLICATING) {
+                    if tried.prompt_modes().iter().any(|id| id == DUPLICATING) {
                         found = Some(tried);
                     }
                     at += 1;
                 }
                 let mut s = found.expect("no seed offers Duplicating Felinors first");
                 s.answer(json!(DUPLICATING));
-                let pick = offered(&open(&s)).first().cloned().unwrap_or_default();
+                let pick = s.prompt_modes().first().cloned().unwrap_or_default();
                 s.answer(json!(pick));
                 let fused_id = s.unit(P1, 2).map(|unit| unit.def_id).unwrap_or_default();
                 let parts = fused_id_parts(Some(s.state()), &fused_id).unwrap_or_default();
@@ -387,10 +375,10 @@ mod tests {
                 s.play(FUSER, json!({}));
                 // R2739000: a Discover of catalog cards shows the other seat how many, never which.
                 assert_eq!(js(&s.view(P2).pending), json!({ "forYou": false, "pendingFor": "p1", "optionCount": 3 }));
-                for option in offered(&open(&s)) {
+                for option in s.prompt_modes() {
                     assert!(!serde_json::to_string(&s.view(P2)).unwrap().contains(&option));
                 }
-                s.answer(json!(offered(&open(&s)).first().cloned().unwrap_or_default()));
+                s.answer(json!(s.prompt_modes().first().cloned().unwrap_or_default()));
                 let count = open(&s).options.len();
                 assert_eq!(js(&s.view(P2).pending), json!({ "forYou": false, "pendingFor": "p1", "optionCount": count }));
             }
@@ -399,7 +387,7 @@ mod tests {
             fn r113_paused_between_the_prompts_the_state_survives_json_and_the_answer_replays_to_the_same_hash() {
                 let mut s = scenario(json!({ "p1": { "hand": [FUSER, FILLER] }, "p2": { "hand": [FILLER] } }));
                 s.play(FUSER, json!({}));
-                s.answer(json!(offered(&open(&s)).first().cloned().unwrap_or_default()));
+                s.answer(json!(s.prompt_modes().first().cloned().unwrap_or_default()));
                 let pending = open(&s);
                 let thawed: GameState = serde_json::from_str(&serde_json::to_string(s.state()).unwrap()).unwrap();
                 assert_eq!(hash_state(&thawed), hash_state(s.state()));
@@ -456,7 +444,7 @@ mod tests {
                         "p1": { "hand": [{ "def": FUSER, "radiant": true }, FILLER] },
                     }));
                     s.play(FUSER, json!({}));
-                    for id in offered(&open(&s)) {
+                    for id in s.prompt_modes() {
                         assert!(cheap_enough(&id), "{id}");
                         assert!(query_cost(&crate::card_def(&id)) <= 3, "{id}");
                     }
@@ -475,7 +463,7 @@ mod tests {
                     for n in 0..30 {
                         let mut s = scenario(json!({ "seed": format!("fuser-kept-{n}"), "p1": { "hand": [FUSER, FILLER] } }));
                         s.play(FUSER, json!({}));
-                        let ids = offered(&open(&s));
+                        let ids = s.prompt_modes();
                         assert!(ids.iter().all(|id| is_felinor_unit(id)));
                         costly |= ids.iter().any(|id| COSTING_4.contains(&id.as_str()));
                     }

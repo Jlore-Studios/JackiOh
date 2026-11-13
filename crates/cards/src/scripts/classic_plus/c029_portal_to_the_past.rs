@@ -96,21 +96,6 @@ mod tests {
         }))
     }
 
-    // Differs from Scenario::offered: a state's open prompt's modes, not the seat's legal actions.
-    fn offered(state: &GameState) -> Vec<String> {
-        state
-            .pending
-            .as_ref()
-            .map(|pending| pending.options.as_slice())
-            .unwrap_or(&[])
-            .iter()
-            .map(|option| match &option.selection {
-                Selection::Mode { option } => option.clone(),
-                _ => String::new(),
-            })
-            .collect()
-    }
-
     /// The cards Portal made: everything in p1's hand but the fillers.
     fn made(s: &Scenario) -> Vec<CardInstance> {
         s.hand(P1)
@@ -150,7 +135,7 @@ mod tests {
                 let mut s = game(&BOARD, false, 1);
                 s.play(PORTAL, json!({}));
                 assert!(matches_object(&js(&s.state().pending), &json!({ "kind": "discover", "playerId": "p1" })));
-                let options = offered(s.state());
+                let options = s.prompt_modes();
                 assert_eq!(options.len(), 3);
                 assert_eq!(unique(options.clone()), 3);
                 for def_id in &options {
@@ -182,7 +167,7 @@ mod tests {
                 crate::register_all();
                 let mut s = game(&[BOARD[0], BOARD[0], BOARD[1]], false, 1);
                 s.play(PORTAL, json!({}));
-                let mut options = offered(s.state());
+                let mut options = s.prompt_modes();
                 options.sort();
                 assert_eq!(options, ["core-012", MENACE]);
             }
@@ -235,7 +220,7 @@ mod tests {
                 crate::register_all();
                 let mut s = game(&[(FUSED, false)], false, 1);
                 s.play(PORTAL, json!({}));
-                assert_eq!(offered(s.state()), [FUSED]);
+                assert_eq!(s.prompt_modes(), [FUSED]);
                 let first = match s.view(P1).pending {
                     Some(PendingView::ForYou(prompt)) => prompt.options.first().map(js),
                     _ => None,
@@ -267,7 +252,7 @@ mod tests {
                 crate::register_all();
                 let mut s = game(&[(PORTAL, false), (MENACE, false)], false, 1);
                 s.play(PORTAL, json!({}));
-                assert_eq!(offered(s.state()), [MENACE]);
+                assert_eq!(s.prompt_modes(), [MENACE]);
             }
 
             #[test]
@@ -302,7 +287,7 @@ mod tests {
                 for def_id in BOARD_IDS {
                     assert!(!serde_json::to_string(&s.view(P2)).unwrap().contains(&format!("\"{def_id}\"")));
                 }
-                let pick = offered(s.state()).first().cloned().unwrap_or_default();
+                let pick = s.prompt_modes().first().cloned().unwrap_or_default();
                 s.answer(json!(format!("mode:{pick}")));
                 let added: Vec<Value> = s
                     .view(P2)
@@ -335,12 +320,12 @@ mod tests {
                 s.play(PORTAL, json!({}));
                 let revived: GameState = serde_json::from_str(&serde_json::to_string(s.state()).unwrap()).unwrap();
                 assert_eq!(&revived, s.state());
-                let option = offered(&revived).get(1).cloned().unwrap_or_default();
+                let option = prompt_modes_of(revived.pending.as_ref().expect("a prompt is open")).get(1).cloned().unwrap_or_default();
                 let action: Action = json_as(json!({
                     "type": "answer",
                     "playerId": "p1",
                     "choiceId": revived.pending.as_ref().map(|pending| pending.id.clone()).unwrap_or_default(),
-                    "selection": [{ "pick": "mode", "option": option }],
+                    "selection": pick::mode(&option),
                     "nonce": "portal-round-trip",
                 }));
                 let result = reduce(&revived, &action);
@@ -422,7 +407,7 @@ mod tests {
 
                 let revived: GameState = serde_json::from_str(&serde_json::to_string(&state).unwrap()).unwrap();
                 assert_eq!(revived, state);
-                let options = offered(&revived);
+                let options = prompt_modes_of(revived.pending.as_ref().expect("a prompt is open"));
                 let option = if options.iter().any(|option| option == FUSED) {
                     FUSED.to_string()
                 } else {
@@ -432,7 +417,7 @@ mod tests {
                 let done = act(
                     &mut log,
                     &revived,
-                    json!({ "type": "answer", "playerId": "p1", "choiceId": choice_id, "selection": [{ "pick": "mode", "option": option }] }),
+                    json!({ "type": "answer", "playerId": "p1", "choiceId": choice_id, "selection": pick::mode(&option) }),
                 );
                 assert!(done.players.p1.hand.iter().any(|card| card.def_id == option && card.cost_override == Some(0)));
 

@@ -124,20 +124,10 @@ mod tests {
             .map(|def| def.id.clone())
     }
 
-    fn mode_option(selection: &Selection) -> String {
-        match selection {
-            Selection::Mode { option } => option.clone(),
-            _ => String::new(),
-        }
-    }
-
     /// The options of the open prompt, as their `mode` strings, after checking its kind.
     fn options_of(s: &Scenario, kind: PromptKind) -> Vec<String> {
-        let pending = s.state().pending.as_ref();
-        assert_eq!(pending.map(|p| p.kind), Some(kind));
-        pending
-            .map(|p| p.options.iter().map(|option| mode_option(&option.selection)).collect())
-            .unwrap_or_default()
+        assert_eq!(s.state().pending.as_ref().map(|p| p.kind), Some(kind));
+        s.prompt_modes()
     }
 
     /// The numbers the second Discover offered (§10.6, R247).
@@ -348,8 +338,7 @@ mod tests {
             let options = s.state().pending.as_ref().map(|p| p.options.clone()).unwrap_or_default();
 
             assert_eq!(options.len(), 3);
-            for option in &options {
-                let index = mode_option(&option.selection);
+            for (option, index) in options.iter().zip(s.prompt_modes()) {
                 assert!(card_numbered("Core", &index).is_some(), "{index} numbers a Core card");
                 assert_eq!(option.label, index);
                 assert_eq!(option.key, format!("mode:{index}"));
@@ -402,7 +391,7 @@ mod tests {
             assert_eq!(answers, expected);
 
             let picked = numbers(&s).get(2).cloned().unwrap_or_default();
-            s.answer(json!([{ "pick": "mode", "option": picked }]));
+            s.answer(pick::mode(&picked));
 
             let wanted = card_numbered("Meditative", &picked);
             let added = s

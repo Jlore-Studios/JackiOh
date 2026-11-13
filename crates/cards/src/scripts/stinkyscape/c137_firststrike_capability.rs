@@ -83,21 +83,6 @@ mod tests {
     const CAPACITOR: &str = "stinkyscape-133"; // Ultra Capacitor: When launched: +attack/+health per other piece.
     const VANILLA: &str = "core-008"; // Mr. Vanilla
 
-    // Differs from Scenario::offered: the open Discover's options, not the seat's legal actions.
-    fn offered(s: &Scenario) -> Vec<String> {
-        s.state()
-            .pending
-            .as_ref()
-            .expect("the Discover")
-            .options
-            .iter()
-            .filter_map(|option| match &option.selection {
-                Selection::Mode { option } => Some(option.clone()),
-                _ => None,
-            })
-            .collect()
-    }
-
     /// p1's Starship (an Ultralight Chassis and an Ultra Capacitor) and Starfleet Commander (Radiant
     /// if `radiant`) in hand, played into lane 4.
     fn played(seed: &str, radiant: bool) -> (Scenario, String) {
@@ -124,7 +109,7 @@ mod tests {
         assert!(!building_a_ship(s.state(), P1));
         let prompt = &s.state().pending.as_ref().expect("the Discover").prompt;
         assert!(prompt.starts_with("Starfleet Commander:"), "{prompt}");
-        let options = offered(&s);
+        let options = s.prompt_modes();
         assert_eq!(options.len(), 3, "{options:?}");
         assert!(options.iter().all(|option| WAR_DOCTRINES.contains(&option.as_str())));
         let mut distinct = options.clone();
@@ -139,7 +124,7 @@ mod tests {
             let (mut s, ship) = played("r1859006-cast", radiant);
             let max_health = s.stats(ship.as_str()).max_health;
             let mana = s.state().players.p1.mana.current;
-            let pick = offered(&s)[0].clone();
+            let pick = s.prompt_modes()[0].clone();
             s.answer(json!(pick));
             assert_eq!(s.state().players.p1.mana.current, mana, "the cast is free");
             let types: Vec<GameEventType> = s.last_events().iter().map(GameEvent::event_type).collect();
@@ -172,7 +157,7 @@ mod tests {
         let (mut s, _ship) = played("s137-radiant", true);
         assert_eq!(s.stats(s.unit_at(P1, 4).id.as_str()).attack, 18);
         assert_eq!(s.stats(s.unit_at(P1, 4).id.as_str()).health, 18);
-        let pick = offered(&s)[0].clone();
+        let pick = s.prompt_modes()[0].clone();
         s.answer(json!(pick));
         let doctrine = s
             .state()

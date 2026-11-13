@@ -142,20 +142,8 @@ mod tests {
         s.hand(player).iter().filter(|card| card.def_id == COIN).count()
     }
 
-    fn options(s: &Scenario) -> Vec<String> {
-        let pending = s.state().pending.clone().expect("the Discover is open");
-        pending
-            .options
-            .iter()
-            .map(|option| match &option.selection {
-                Selection::Mode { option } => option.clone(),
-                other => panic!("not a Discover option: {other:?}"),
-            })
-            .collect()
-    }
-
     fn first_option(s: &Scenario) -> String {
-        options(s)[0].clone()
+        s.prompt_modes()[0].clone()
     }
 
     mod base {
@@ -235,7 +223,7 @@ mod tests {
         fn mode_3_discovers_among_3_different_units_and_the_pick_is_radiant() {
             let mut s = bob("bob-discover", false, json!([FILLER, FILLER]), json!([]));
             s.play(ID, json!({ "zone": 1, "modes": [DISCOVER] }));
-            let ids = options(&s);
+            let ids = s.prompt_modes();
             assert_eq!(ids.len(), 3);
             for id in &ids {
                 let def = def_of(Some(s.state()), id);

@@ -73,25 +73,13 @@ mod tests {
         (s, host)
     }
 
-    // Differs from Scenario::offered: the open Discover's options, not the seat's legal actions.
-    fn offered(s: &Scenario) -> Vec<String> {
-        let pending = s.state().pending.clone().expect("a Discover is open");
-        assert_eq!((pending.kind, pending.player_id), (PromptKind::Discover, P1));
-        assert_eq!(pending.resume.step, EQUIP_PICK_STEP);
-        pending
-            .options
-            .iter()
-            .filter_map(|option| match &option.selection {
-                Selection::Mode { option } => Some(option.clone()),
-                _ => None,
-            })
-            .collect()
-    }
-
     fn answers(s: &mut Scenario, host: &str, picks: usize, radiant_offer: bool) -> Vec<String> {
         let mut held: Vec<String> = Vec::new();
         for _ in 0..picks {
-            let offer = offered(s);
+            let pending = s.state().pending.as_ref().expect("a Discover is open");
+            assert_eq!((pending.kind, pending.player_id), (PromptKind::Discover, P1));
+            assert_eq!(pending.resume.step, EQUIP_PICK_STEP);
+            let offer = s.prompt_modes();
             assert_eq!(offer.len(), OFFER as usize, "{offer:?}");
             assert!(offer.iter().all(|id| MINERS.contains(&id.as_str()) && !held.contains(id)), "{offer:?}");
             let before = s.stats(host).health;

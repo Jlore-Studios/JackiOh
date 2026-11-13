@@ -272,15 +272,7 @@ mod tests {
             s.play(MELT, json!({}));
             let pending = open(&s);
             assert_eq!(pending.player_id, P1);
-            let options: Vec<String> = pending
-                .options
-                .iter()
-                .map(|option| match &option.selection {
-                    Selection::Mode { option } => option.clone(),
-                    _ => "?".to_string(),
-                })
-                .collect();
-            assert_eq!(options, ["0", "1", "2", "3"]);
+            assert_eq!(s.prompt_modes(), ["0", "1", "2", "3"]);
         }
 
         #[test]
@@ -338,7 +330,7 @@ mod tests {
         fn sec9_3_the_open_prompt_survives_a_json_round_trip_and_resumes_through_reduce() {
             let mut s = melt(true, json!(THEIR_HAND));
             s.play(MELT, json!({}));
-            let result = revive_and_answer(&s, json!([{ "pick": "mode", "option": "2" }]), "mind-melt-radiant-round-trip");
+            let result = revive_and_answer(&s, pick::mode("2"), "mind-melt-radiant-round-trip");
             assert!(result.error.is_none());
             assert!(result.state.pending.is_none());
             let felinors = s.card(FELINORS).id.clone();

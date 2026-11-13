@@ -92,11 +92,7 @@ mod tests {
     }
 
     fn answer_first(s: &mut Scenario) {
-        let pending = s.state().pending.clone().expect("the Heist's Discover");
-        let first = match &pending.options[0].selection {
-            Selection::Mode { option } => option.clone(),
-            other => panic!("a Discover option, not {other:?}"),
-        };
+        let first = s.prompt_modes()[0].clone();
         s.answer(json!(first));
     }
 

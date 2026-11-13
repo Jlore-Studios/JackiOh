@@ -123,19 +123,7 @@ mod r65_one_cost_calculation_in_play_and_out_of_it {
 
         s.play(TUTOR, json!({}));
         s.answer(json!("Spell"));
-        let brackets = s
-            .state()
-            .pending
-            .clone()
-            .expect("the bracket prompt should be open");
-        let offered: Vec<String> = brackets
-            .options
-            .iter()
-            .map(|o| match &o.selection {
-                Selection::Mode { option } => option.clone(),
-                _ => o.key.clone(),
-            })
-            .collect();
+        let offered = s.prompt_modes();
         assert_eq!(offered, ["0-1"]);
     }
 }

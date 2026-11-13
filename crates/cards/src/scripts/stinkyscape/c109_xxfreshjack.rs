@@ -122,15 +122,9 @@ mod tests {
         let pending = s.state().pending.clone().expect("the Discover");
         assert_eq!(pending.kind, PromptKind::Discover);
         assert_eq!(pending.player_id, P1);
-        let options: Vec<String> = pending
-            .options
-            .iter()
-            .map(|option| match &option.selection {
-                Selection::Mode { option } => option.clone(),
-                other => panic!("a card option, not {other:?}"),
-            })
-            .collect();
+        let options = s.prompt_modes();
         assert_eq!(options.len(), DISCOVER_OPTIONS as usize);
+        assert_eq!(options.len(), pending.options.len(), "a card option each");
         assert!(options.iter().all(|def_id| is_busted(def_id) && def_id != ID));
         let me = s.unit(P1, 1).expect("xxFreshJack").id;
         let stats = s.stats(me.as_str());
