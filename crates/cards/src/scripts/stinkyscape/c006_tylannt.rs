@@ -92,7 +92,9 @@ mod tests {
     }
 
     fn answer_first(s: &mut Scenario) {
-        let first = s.prompt_modes()[0].clone();
+        let modes = s.prompt_modes();
+        assert_eq!(s.state().pending.as_ref().map(|p| p.options.len()), Some(modes.len()), "every option is a Mode");
+        let first = modes[0].clone();
         s.answer(json!(first));
     }
 

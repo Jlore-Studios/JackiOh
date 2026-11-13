@@ -126,8 +126,11 @@ mod tests {
 
     /// The options of the open prompt, as their `mode` strings, after checking its kind.
     fn options_of(s: &Scenario, kind: PromptKind) -> Vec<String> {
-        assert_eq!(s.state().pending.as_ref().map(|p| p.kind), Some(kind));
-        s.prompt_modes()
+        let pending = s.state().pending.as_ref().expect("a prompt is open");
+        assert_eq!(pending.kind, kind);
+        let modes = s.prompt_modes();
+        assert_eq!(modes.len(), pending.options.len(), "every option is a Mode");
+        modes
     }
 
     /// The numbers the second Discover offered (§10.6, R247).
@@ -337,8 +340,10 @@ mod tests {
             let s = trial_scenario(false, "Core");
             let options = s.state().pending.as_ref().map(|p| p.options.clone()).unwrap_or_default();
 
+            let modes = s.prompt_modes();
             assert_eq!(options.len(), 3);
-            for (option, index) in options.iter().zip(s.prompt_modes()) {
+            assert_eq!(modes.len(), options.len(), "every option is a Mode");
+            for (option, index) in options.iter().zip(modes) {
                 assert!(card_numbered("Core", &index).is_some(), "{index} numbers a Core card");
                 assert_eq!(option.label, index);
                 assert_eq!(option.key, format!("mode:{index}"));

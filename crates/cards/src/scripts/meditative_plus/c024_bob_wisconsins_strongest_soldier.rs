@@ -143,7 +143,9 @@ mod tests {
     }
 
     fn first_option(s: &Scenario) -> String {
-        s.prompt_modes()[0].clone()
+        let modes = s.prompt_modes();
+        assert_eq!(s.state().pending.as_ref().map(|p| p.options.len()), Some(modes.len()), "every option is a Mode");
+        modes[0].clone()
     }
 
     mod base {
@@ -225,6 +227,7 @@ mod tests {
             s.play(ID, json!({ "zone": 1, "modes": [DISCOVER] }));
             let ids = s.prompt_modes();
             assert_eq!(ids.len(), 3);
+            assert_eq!(s.state().pending.as_ref().map(|p| p.options.len()), Some(3), "every option is a Mode");
             for id in &ids {
                 let def = def_of(Some(s.state()), id);
                 assert_eq!(def.type_, CardType::Unit, "{id}");
