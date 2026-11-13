@@ -1683,6 +1683,23 @@ mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
         );
     }
 
+    /// R3574000: the Stinkyscape+ set's sweep of record (fullsend 2) writes its bans as Stinkyscape's
+    /// did, at most a fifth of its non-token cards, 33 of its 166, and R1390's gate holds none of it.
+    #[test]
+    fn r3574000_the_shadow_ban_holds_at_most_a_fifth_of_the_stinkyscape_plus_cards() {
+        jackioh_cards::register_all();
+        let cards = non_token_cards(SetName::StinkyscapePlus);
+        assert_eq!(cards, 166, "the set's numbered cards (R3535000)");
+        let ceiling = shadow_ban_ceiling(SetName::StinkyscapePlus, cards).expect("Stinkyscape+ takes bans");
+        assert_eq!(ceiling, 33, "a fifth of its {cards} cards (R3114001)");
+        let banned = banned_in(SetName::StinkyscapePlus);
+        assert!(
+            banned <= ceiling,
+            "{banned} Stinkyscape+ cards banned, more than {ceiling} (R3574000)"
+        );
+        assert!(!AI_DECK_GATED_SETS.contains(&SetName::StinkyscapePlus));
+    }
+
     // R3114001: each set the shadow ban takes holds at most its share of its non-token cards, and a
     // set without a share holds none.
     #[test]
