@@ -25,8 +25,8 @@
 # set's shard; web-<layer> for each of Game.tsx's layers (animations, effects, audio, cards, drag,
 # settings) and the client's two adapters (wire, wasm); edge for the Worker. Shard k of a Rust area
 # holds the k-th of n runs of its mutants in the order cargo-mutants finds them, file after file
-# (its `slice` sharding, the default since 26.0), and of a web area its files k, k+n, k+2n…; the weeks
-# walk every shard in turn.
+# (its `slice` sharding, the default since 26.0), and of a web area the k-th run of its source lines,
+# file after file (SIZE_WEB_LINES, below); the weeks walk every shard in turn.
 #
 # A run writes target/mutants/<area>/: cargo-mutants' mutants.out/ (caught.txt, missed.txt…) or
 # Stryker's mutation.json and mutation.html. The Rust areas need cargo-mutants
@@ -43,22 +43,31 @@ ROOT=$(pwd)
 # Mutants per shard, sized so one shard fits mutants.yml's five-hour step on a runner's four cores,
 # two mutants at a time. A mutant's time is mostly compiling its package and its tests again. In the
 # run crate it is 3 s (259 mutants in 13 minutes on #3512's branch), so one shard holds the whole
-# crate; the rest are estimates until a weekly run times them: about a minute in shared and the cards,
-# three in the engine (the cards are its tests' dev-dependency) and the AI (whose tests play games),
-# four in the server and the tools.
-SIZE_ENGINE=150
+# crate; in shared about a minute (243 mutants in 1 h 46 min, shard 16/21 on #3813's branch) and in
+# the AI 3 minutes (118 in 2 h 52 min, shard 1/30 on main, 2026-11-12). The engine's are 6 minutes'
+# build, since the cards are its tests' dev-dependency and are built again with it, and 2.5 minutes'
+# tests, and the server's 8 to 12 minutes' tests: at 150 and 80 a shard, their first shards on main
+# (2026-11-12) reached about 35 and 25 mutants before the step's five hours ended, so they hold 40 and
+# 25 now. The rest are estimates until a weekly run times them: about a minute in the cards and four
+# in the tools.
+SIZE_ENGINE=40
 SIZE_CARDS=250
 SIZE_AI=120
 SIZE_RUN=1000
 SIZE_SHARED=250
-SIZE_SERVER=80
+SIZE_SERVER=25
 SIZE_TOOLS=120
 SIZE_WASM=200
-# Source files per Stryker shard. Stryker runs each mutant against only the tests that cover it, but a
-# layer the board imports relates most of the web's tests: on #3512's branch the drag's 8 files took 11.5
-# minutes for the first test run, then about 10 s a mutant (586 of their 1,729 in 1 h 34 min), so about
-# 4.5 hours in all. Stryker writes its report only at the end, so a shard must finish inside the step.
-SIZE_WEB_FILES=3
+# Source lines per Stryker shard. Stryker runs each mutant against only the tests that cover it, but a
+# layer the board imports relates most of the web's tests, so a mutant takes about 10 s whatever its
+# file: the drag's 1,639 lines held 1,729 mutants, tested at about 10 s each after an 11.5-minute first
+# test run (#3512's branch), and animations.ts's 2,019 lines 1,671, of which the step's five hours
+# reached 1,524 after a 31-minute first run (main, 2026-11-12). Stryker writes its report only at the
+# end, so a shard must finish inside the step: 900 lines is about 950 mutants, under three hours.
+# The files are packed in order, and a file longer than a shard is cut into ranges of lines
+# (Stryker's `file:a-b`), so one long file never holds a shard past the step. A mutant whose code
+# crosses a cut (a whole function's body, say) falls in neither range.
+SIZE_WEB_LINES=900
 # cargo-mutants' --jobs: mutants tested at once, each in its own copy of the tree.
 JOBS=${MUTANTS_JOBS:-2}
 # The memory, in bytes, one test binary may take: 4 GiB of data (its heap and its other private
@@ -144,13 +153,16 @@ web_files() {
     cards) paths=apps/web/src/cards ;;
     drag) paths=apps/web/src/game/drag ;;
     settings) paths=apps/web/src/settings ;;
-    # Not the generated: ts-rs's types (generated/) and the engine's and the server's constants.
     wire) paths=apps/web/src/wire ;;
     wasm) paths=apps/web/src/wasm ;;
     *) return 1 ;;
   esac
+  # Not the generated (ts-rs's types in generated/, the engine's and the server's constants), and not
+  # the cards' procedural art (cards/art/, 155 files and 80,000 lines when it was left out): its
+  # numbers draw a picture, so its mutant changes the picture, which a unit test cannot judge and
+  # e2e's component and pixel specs do.
   git ls-files -- $paths | grep -E '\.tsx?$' |
-    grep -vE '\.test\.tsx?$|\.d\.ts$|/test/|/generated/|/pkg/|/wire/(engineConfig|serverConfig)\.ts$' || true
+    grep -vE '\.test\.tsx?$|\.d\.ts$|/test/|/generated/|/pkg/|/wire/(engineConfig|serverConfig)\.ts$|/cards/art/' || true
 }
 
 # The Worker's source files.
@@ -198,6 +210,26 @@ run_rust() {
   esac
 }
 
+# An area's files as Stryker shards: "<shard> <pattern>" per line, each pattern a file or a range of
+# its lines, packed in order to at most SIZE_WEB_LINES lines a shard.
+web_shards() {
+  echo "$1" | while IFS= read -r file; do
+    lines=$(count_lines <"$file")
+    if [ "$lines" -le "$SIZE_WEB_LINES" ]; then
+      echo "$lines $file"
+    else
+      from=1
+      while [ "$from" -le "$lines" ]; do
+        to=$((from + SIZE_WEB_LINES - 1))
+        [ "$to" -le "$lines" ] || to=$lines
+        echo "$((to - from + 1)) $file:$from-$to"
+        from=$((to + 1))
+      done
+    fi
+  done | awk -v most="$SIZE_WEB_LINES" '
+    { if (lines > 0 && lines + $1 > most) { shard++; lines = 0 } lines += $1; print shard + 0, $2 }'
+}
+
 run_web() {
   area=$1 k=$2
   shift 2
@@ -208,17 +240,18 @@ run_web() {
   esac
   [ -n "$files" ] || die "$area has no source files"
   total=$(echo "$files" | count_lines)
-  n=$(shards "$total" "${MUTANTS_SHARD_SIZE:-$SIZE_WEB_FILES}")
+  packed=$(web_shards "$files")
+  n=$(($(echo "$packed" | tail -n 1 | cut -d' ' -f1) + 1))
   label="1/1"
+  mine=$(echo "$packed" | cut -d' ' -f2)
   if [ -n "$k" ] && [ "$n" -gt 1 ]; then
-    files=$(echo "$files" | awk -v n="$n" -v k="$((k % n))" '(NR - 1) % n == k')
+    mine=$(echo "$packed" | awk -v k="$((k % n))" '$1 == k { print $2 }')
     label="$((k % n + 1))/$n"
   fi
-  mine=$(echo "$files" | count_lines)
   mkdir -p "$out"
-  printf 'shard=%s\nfiles=%s\n' "$label" "$mine" >"$out/area.env"
-  echo "mutants: $area shard $label, $mine of the area's $total files"
-  mutate=$(echo "$files" | sed "s|^$app/||" | paste -sd, -)
+  printf 'shard=%s\nfiles=%s\n' "$label" "$(echo "$mine" | count_lines)" >"$out/area.env"
+  echo "mutants: $area shard $label, of the area's $total files:" $mine
+  mutate=$(echo "$mine" | sed "s|^$app/||" | paste -sd, -)
   (cd "$app" && MUTANTS_OUT=$out pnpm exec stryker run stryker.config.mjs --mutate "$mutate" "$@")
 }
 
@@ -283,8 +316,8 @@ list_areas() {
   echo "|---|---:|---:|---:|"
   for area in $(known_areas); do
     case "$area" in
-      edge) total=$(edge_files | count_lines) ;;
-      web-*) total=$(web_files "${area#web-}" | count_lines) ;;
+      edge) files=$(edge_files) ;;
+      web-*) files=$(web_files "${area#web-}") ;;
       *)
         rust_area "$area"
         total=$(cargo mutants --list $FILTER | count_lines)
@@ -293,7 +326,8 @@ list_areas() {
         continue
         ;;
     esac
-    echo "| $area | $total files | | $(shards "$total" "$SIZE_WEB_FILES") |"
+    total=$(echo "$files" | count_lines)
+    echo "| $area | $total files | | $(($(web_shards "$files" | tail -n 1 | cut -d' ' -f1) + 1)) |"
   done
 }
 

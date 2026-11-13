@@ -211,7 +211,6 @@ jobs:
         env:
           AREA: ${{ matrix.area }}
           SHARD: ${{ matrix.shard }}
-          MUTANTS_SHARD_SIZE: ${{ needs.plan.outputs.size }}
         run: sh scripts/mutants.sh "$AREA" "$SHARD"
       - uses: actions/upload-artifact@v4
         if: always()
