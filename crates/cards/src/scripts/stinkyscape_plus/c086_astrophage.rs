@@ -79,13 +79,14 @@ fn evolves_when_the_opponent_plays_a_unit() -> TriggerDef {
         "evolveOnOpposingUnit",
         &[GameEventType::CardPlayed],
         |ctx, event| {
-            let GameEvent::CardPlayed { player, def_id, .. } = event else {
+            let GameEvent::CardPlayed { player, .. } = event else {
                 return vec![];
             };
             if *player == ctx.controller {
                 return vec![];
             }
-            let is_unit = find_def(Some(&*ctx.state), def_id).is_some_and(|def| def.type_ == CardType::Unit);
+            // R783005: the play as it counts, so a Unit set face-down by its Cloaked is a Trap play.
+            let is_unit = played_type_of(&*ctx.state, event) == Some(CardType::Unit);
             if is_unit {
                 vec![evolve(json_as(json!({ "target": { "of": "self" } })))]
             } else {
@@ -206,6 +207,16 @@ mod tests {
             let astrophage = s.unit_at(P1, 1);
             s.end_turn();
             s.play(SPELL, json!({}));
+            assert_ne!(s.card(&astrophage).evolved, Some(true));
+            assert_eq!(evolved_events(&s), 0);
+        }
+
+        #[test]
+        fn r783005_a_unit_the_opponent_sets_face_down_by_its_cloaked_evolves_nothing() {
+            let mut s = board(false, vec![json!(VANILLA)], vec![], &[crate::CLOAKED_UNIT]);
+            let astrophage = s.unit_at(P1, 1);
+            s.end_turn();
+            crate::set_cloaked(&mut s, P2, crate::CLOAKED_UNIT, 1);
             assert_ne!(s.card(&astrophage).evolved, Some(true));
             assert_eq!(evolved_events(&s), 0);
         }

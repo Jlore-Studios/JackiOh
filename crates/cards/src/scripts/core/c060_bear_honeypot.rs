@@ -5,7 +5,6 @@
 //! Trap window (§4.2 step 4) after play resolves (§10.5; R68, R89); empty zone check (R64, §3.2).
 //! Tokens attack played Unit if still on field (R174, R350).
 
-use jackioh_engine::catalog::def_of;
 use jackioh_engine::effects::{fill_board, forced_attacks, summon};
 use jackioh_engine::prelude::*;
 use jackioh_engine::zones::open_zones;
@@ -22,7 +21,7 @@ const PRINTED_TOKENS: i32 = 2;
 #[derive(Clone, Debug)]
 struct ResolvedPlay {
     instance_id: String,
-    def_id: String,
+    played_as: CardType,
     permanent: bool,
 }
 
@@ -32,7 +31,6 @@ fn match_(ctx: &EffectContext, event: &GameEvent, any_cost: bool) -> Option<Reso
     let GameEvent::CardResolved {
         player,
         instance_id,
-        def_id,
         permanent,
         cost_paid,
         ..
@@ -55,14 +53,16 @@ fn match_(ctx: &EffectContext, event: &GameEvent, any_cost: bool) -> Option<Reso
     }
     Some(ResolvedPlay {
         instance_id: instance_id.clone(),
-        def_id: def_id.clone(),
+        // R783005: the play as it counts, so a Unit set by its Cloaked is the Trap it was set as.
+        played_as: played_type_of(&*ctx.state, event)?,
         permanent: *permanent,
     })
 }
 
 /// "summon 2 Rush Tokens" / "fill your board with Rush Tokens"; then, if it was a Unit, "they attack
-/// it" with only the tokens this trap summoned (`summonedThisScript`). The Unit test reads the def, so
-/// a unit that died in its own resolution still counts; "it" is the played card's stay on the field
+/// it" with only the tokens this trap summoned (`summonedThisScript`). The Unit test reads the play as
+/// it counts (`played_type_of`, R783005), so a unit that died in its own resolution still counts and a
+/// Unit set by its Cloaked, a Trap play, is never attacked; "it" is the played card's stay on the field
 /// (R174), so once `permanent` says that has ended nothing attacks, including when an earlier trap
 /// answering the same play took the card off the field and Reborn brought a new body back (`traps.rs`
 /// reads the flag again for each trap).
@@ -76,7 +76,7 @@ fn tokens_and_attack(ctx: &EffectContext, played: &ResolvedPlay, fill: bool) -> 
             .collect()
     };
 
-    if def_of(Some(&*ctx.state), &played.def_id).type_ != CardType::Unit || !played.permanent {
+    if played.played_as != CardType::Unit || !played.permanent {
         return tokens;
     }
     tokens.push(forced_attacks(json_as(json!({
@@ -438,6 +438,23 @@ mod tests {
             assert_eq!(count_of(&g, "attackDeclared"), 1);
             g.expect_in_zone("core-015", "graveyard");
             assert_eq!(units_of(&g, P1), ["core-t-rush", "core-t-rush"]);
+        }
+
+        /// R783005: a Unit set face-down by its Cloaked is a Trap play: the Radiant face, which answers any
+        /// card, fires on it, but no Unit was played, so its tokens attack nothing.
+        #[test]
+        fn r783005_radiant_fires_on_a_unit_set_face_down_by_its_cloaked_but_attacks_nothing() {
+            let mut g = scenario(json!({
+                "active": "p2",
+                "p1": { "backrow": [armed(true)] },
+                "p2": merged(spare(), json!({ "hand": [crate::CLOAKED_UNIT, "core-005"], "mana": 10 })),
+            }));
+
+            crate::set_cloaked(&mut g, P2, crate::CLOAKED_UNIT, 1);
+
+            assert_eq!(count_of(&g, "trapFired"), 1);
+            assert_eq!(count_of(&g, "attackDeclared"), 0);
+            assert_eq!(g.backrow(P2, 1).map(|card| card.def_id).as_deref(), Some(crate::CLOAKED_UNIT));
         }
 
         #[test]
