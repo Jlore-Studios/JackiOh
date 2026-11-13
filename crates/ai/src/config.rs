@@ -691,20 +691,10 @@ pub const AI_DEATH_PROBE_NODES: usize = 24;
 /// probes', for a board with a few engines on both sides and the hand's.
 pub const AI_TURN_HOOK_PROBE_NODES: usize = 24;
 
-/// R3575602: the most nodes one reply's second probe of the seat's own turn hooks
-/// (`evaluate::replied_turn_hook_prices`) spends: one per hook of each of its own cards with one, three
-/// hooks for each of about two cards, the few engines a board holds.
-pub const AI_TURN_HOOK_REPLY_PROBE_NODES: usize = 6;
-
 /// R2564000, R2603000: the most nodes a decision's activation probes (`evaluate::activation_prices`)
 /// spend: two turn ends and `AI_REPLY.visible_activations` uses for each of about four cards, units and
 /// face-up backrow cards together.
 pub const AI_ACTIVATION_PROBE_NODES: usize = 20;
-
-/// R3575600: the most nodes a decision's probe of its own hand Units' Activates
-/// (`evaluate::hand_activation_prices`) spends: a placement (two on a full unit row) for each of about
-/// three such Units, two turn ends and `AI_REPLY.visible_activations` uses for each placed one.
-pub const AI_ACTIVATION_HAND_PROBE_NODES: usize = 16;
 
 /// R2688000: the most nodes a decision's attack-hook probes (`evaluate::attack_hook_prices`) spend: two
 /// turn ends, and two attacks (the unit's and its hookless twin's) for each of about five units with an
