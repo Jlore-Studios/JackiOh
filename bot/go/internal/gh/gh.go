@@ -221,6 +221,7 @@ func (x *GitHub) Request(method string, path string, body any /* = None */, acce
 		resp, err := x.Open(req, 60*time.Second)
 		if err == nil {
 			Rate.note(x.Token, resp.Header)
+			Rate.spend(x.Token, resp.Header, 200, method, url)
 			text := py.DecodeReplace(resp.Body)
 			etag := resp.Header.Get("ETag")
 			if cached && etag != "" {
@@ -240,6 +241,7 @@ func (x *GitHub) Request(method string, path string, body any /* = None */, acce
 			continue
 		}
 		Rate.note(x.Token, exc.Header)
+		Rate.spend(x.Token, exc.Header, exc.Code, method, url)
 		if exc.Code == 304 && cached {
 			if kept, ok := Cached.get(key); ok {
 				return parsed(kept[1], raw)

@@ -28,14 +28,8 @@
 # On while the repository variable GATHER_ON_PATCH is `true` (Settings -> Secrets and variables ->
 # Actions -> Variables; named for the per-patch runs it began with). A dispatch (`gh workflow run
 # gather.yml [-f hours=…]`) plays main's newest version whatever the variable says, and starts a next
-# run only while the variable is `true`.
-#
-# With the repository variable TRAINING_ON_PC set to `true`, a run is one part on the PC instead, under
-# a label of its own (`jackioh-selfplay-local-gather`, bot/machine/README.md, The local runner; #2134):
-# the supervisor's config.json makes it an `ownSlot` label, so gather has one of the PC's two halves
-# (four CPUs) to itself while it has a job, and the learn lane the other. Both give way to the owner's
-# own programs alike. Without either secret it plays, keeps the files, and files them only where a
-# secret is set.
+# run only while the variable is `true`. Without either secret it plays, keeps the files, and files
+# them only where a secret is set.
 name: gather
 
 on:
@@ -55,12 +49,12 @@ permissions:
 env:
   # Hours each part plays: with its build and its last batch, under GitHub's 6-hour job limit.
   GATHER_HOURS: "5"
-  # Games played and then filed at a time: about an hour of a GitHub runner (about 870 games an hour
-  # on four vCPUs at the AI's budget since #2628, an estimate from the PC's gather half, which played
-  # 5,000 in 6 h 42 min in run 46), so the statistics take a version's games an hour at a time. Each
+  # Games played and then filed at a time: about an hour of a GitHub runner (about 400 games an hour
+  # on four vCPUs at the AI's budget since #2628: run 72's 850-game batches took about two hours each),
+  # so the statistics take a version's games an hour at a time. Each
   # batch is one file in each database (`game_record_batches`), whose totals are the version's
   # however many.
-  GATHER_FILE_GAMES: "850"
+  GATHER_FILE_GAMES: "400"
   # Game numbers each run owns: run r plays from (r - 1) * GATHER_STRIDE + 1.
   GATHER_STRIDE: "100000"
   # Days the run's record files are kept as its artifacts.
@@ -77,15 +71,14 @@ jobs:
   gather:
     name: gather the newest patch, part ${{ matrix.part }}
     if: ${{ github.event_name == 'workflow_dispatch' || vars.GATHER_ON_PATCH == 'true' }}
-    runs-on: ${{ vars.TRAINING_ON_PC == 'true' && 'jackioh-selfplay-local-gather' || 'ubuntu-latest' }}
-    # GitHub's runners stop a job at 6 hours; the PC's runner slows a job to half a CPU while the PC
-    # is busy, so there allow a day.
-    timeout-minutes: ${{ vars.TRAINING_ON_PC == 'true' && 1440 || 350 }}
+    runs-on: ubuntu-latest
+    # GitHub's runners stop a job at 6 hours.
+    timeout-minutes: 350
     strategy:
       fail-fast: false
-      # Two parts side by side, the gather lane's two runners (#3740); one on the PC.
+      # Two parts side by side, the gather lane's two runners (#3740).
       matrix:
-        part: ${{ fromJSON(vars.TRAINING_ON_PC == 'true' && '[1]' || '[1, 2]') }}
+        part: [1, 2]
     steps:
       # The commit that started the run (a scheduled or dispatched run's, the lane's own `next`
       # among them: main as it was then), so a rerun plays the same commit, and its batches are byte

@@ -1,8 +1,8 @@
 //! M #55 Dragon Fruit (SPEC §8.8 row 55): (2) Spell, CN, Fruit, Rare.
 //!   Base:    "Add {cards|random Prime card|random Prime cards} to your hand." — cards 1
 //!   Radiant: "Add {cards|random Radiant Prime card|random Radiant Prime cards} to your hand."
-//! Engine: the Prime pool (R1421): Prime-tagged tokens (C+ #38.1, C+ #46.1, M #45.1, M #49.1, M #91.1),
-//!   via `add_random_from_catalog` with a Prime tag query (R382's pool takes its tokens);
+//! Engine: the Prime pool (R1421): the Prime-tagged tokens, `query::prime_cards` (spec/CARDS.md lists
+//!   them, #3804), via `add_random_from_catalog` (R382's pool takes its tokens);
 //!   repeats allowed (R60); a full hand burns; hidden (R97). A Fruit, it joins Fruit pools (R382).
 
 use jackioh_engine::effects::add_random_from_catalog;
@@ -14,7 +14,7 @@ fn dragon_fruit(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             vec![add_random_from_catalog(json_as(json!({
-                "query": { "tags": ["Prime"] },
+                "query": crate::query::prime_cards(),
                 "count": param(&*ctx, "cards"),
                 "radiant": radiant,
             })))]

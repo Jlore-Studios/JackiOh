@@ -10,6 +10,8 @@
 import { Container } from "@cloudflare/containers";
 
 import {
+  DAILY_SWEEP_CRON,
+  DAILY_SWEEP_PATH,
   HEALTH_PATH,
   READY_PATH,
   SERVER_PORT,
@@ -160,7 +162,13 @@ export default {
   },
 
   /** wrangler.jsonc's daily cron: wakes the server so its hourly loops run and Supabase sees the project in use. */
-  async scheduled(_controller, env): Promise<void> {
+  async scheduled(controller, env): Promise<void> {
+    // #3727: the hourly cron runs the daily games' sweep; the daily one wakes the server as before.
+    if (controller.cron === DAILY_SWEEP_CRON) {
+      const swept = await server(env).fetch(new Request(`http://container${DAILY_SWEEP_PATH}`, { method: "POST" }));
+      if (!swept.ok) throw new Error(`the server's ${DAILY_SWEEP_PATH} answered ${swept.status}`);
+      return;
+    }
     const ready = await server(env).fetch(new Request(`http://container${READY_PATH}`));
     if (!ready.ok) throw new Error(`the server's ${READY_PATH} answered ${ready.status}`);
   },

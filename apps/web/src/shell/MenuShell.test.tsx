@@ -12,7 +12,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { over, upTo } from "../breakpoints.ts";
 import { useMarkBoardShown } from "../game/boardShown.ts";
-import { WORKSHOP_SPLIT_MIN_WIDTH_PX } from "../game/deckbuilder/DeckWorkshop.tsx";
 import { forgetQueued, readQueued, rememberQueued } from "../net/liveGame.ts";
 import { currentPath, paths } from "../net/navigate.ts";
 import { clearReadCache } from "../net/readCache.ts";
@@ -49,6 +48,7 @@ const OUTSIDE_SHELL: Readonly<Record<string, string>> = {
   series: "a Conquest series between its games, part of a game's flow",
   watch: "a friend's game, watched on a board",
   duos: "a co-op match's board",
+  dailyGame: "a daily game's board (#3727)",
 };
 
 function serve(over: Parameters<typeof meBody>[0] = {}): StubServer {
@@ -193,12 +193,6 @@ describe("R3728000 which screens the shell holds", () => {
 describe("R3728000 the shell's widths and insets", () => {
   const css = sheet("shell/menu-shell.css");
 
-  it("R3728000 the labelled rail and the workshop's 1101 px make the workshop's split", () => {
-    const rail = Number(/--shell-rail-w:\s*(\d+)px;/.exec(css)?.[1]);
-    expect(rail).toBeGreaterThan(0);
-    expect(rail + 1101).toBe(WORKSHOP_SPLIT_MIN_WIDTH_PX);
-  });
-
   it("R3728000 the three layouts are the named breakpoints: a rail over 600 px, icons alone to 1024, a tab bar at 600 and under", () => {
     const queries = [...css.matchAll(/@media\s*([^{]+)\{/g)].map((match) => (match[1] ?? "").trim());
     expect(queries).toEqual([over("phone"), `${over("phone")} and ${upTo("tablet")}`, over("tablet"), upTo("phone")]);
@@ -244,7 +238,7 @@ describe("R3728000 the shell's widths and insets", () => {
     for (const side of ["top", "right", "bottom"]) expect(drawer, side).toContain(`env(safe-area-inset-${side})`);
   });
 
-  it("R3728000 a toast fixed at the column's foot sits above a phone's tab bar and centers on the column beside the rail", () => {
+  it("R3728000 R3734001 a toast fixed at the column's foot sits above a phone's tab bar and centers on the column beside the rail", () => {
     // The room the navigation takes beside the column: none outside the shell or under a board, else the rail's width.
     expect(block(css, ".menu-shell")).toContain("--shell-start: 0px;");
     expect(block(css, ".menu-shell:not([data-board])", css.indexOf(`@media ${over("phone")} {`))).toContain("--shell-start: var(--shell-rail-w);");
@@ -264,7 +258,8 @@ describe("R3728000 the shell's widths and insets", () => {
     const widths = [deckbuilder, sheet("game/deckbuilder/workshop.css")].flatMap((code) =>
       [...code.matchAll(/\.db-deck-status\s*\{([^}]*)\}/g)].flatMap((rule) => [...(rule[1] ?? "").matchAll(/max-width:\s*([^;]+);/g)]),
     );
-    expect(widths).toHaveLength(4);
+    // The editor's, the workshop's over 1024 px and its own from 601 to 1024 px (R3734001, the rail 148 px there).
+    expect(widths).toHaveLength(5);
     for (const width of widths) expect(width[1]).toMatch(/^calc\(100vw - var\(--shell-start, 0px\) - \d+px\)$/);
 
     // The undo toast (R2119000, on the workshop and Play together) is over the bar's layer, so it took the middle tabs' taps.

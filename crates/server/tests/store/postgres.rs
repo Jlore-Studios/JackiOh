@@ -1417,6 +1417,73 @@ mod concurrency {
         assert_eq!(code_by_hash(&ctx.db, &hash).await["uses"].as_i64(), Some(1));
         ctx.finish().await;
     }
+
+    /// How long the second claim may take while the first holds its seek's lock: far past a claim's
+    /// own time, far short of a wait on the first transaction, which never ends while it waits.
+    const SKIP_LOCKED_PATIENCE: std::time::Duration = std::time::Duration::from_secs(5);
+
+    /// §9.13: a claim that meets a seek another open transaction has just taken skips it (`for update
+    /// skip locked`) and takes the next, rather than waiting on it or taking it twice.
+    #[tokio::test]
+    async fn s913_two_seek_claims_at_once_take_two_seeks_without_waiting() {
+        use jackioh_server::db::store::{DailyInviteKind, DailyInviteRow, DailyInviteState, QueueMode};
+
+        let Some(ctx) = setup().await else { return };
+        let now = now_ms();
+        let mut seeks = Vec::new();
+        for at in [now - 2_000, now - 1_000] {
+            let seeker = ctx.active_profile().await;
+            let seek = DailyInviteRow {
+                id: uuid(),
+                kind: DailyInviteKind::Seek,
+                from_profile: seeker.clone(),
+                to_profile: None,
+                mode: QueueMode::Bo1,
+                per_move_days: 3,
+                choice: json!({}),
+                state: DailyInviteState::Open,
+                match_id: None,
+                created_at: at,
+                expires_at: now + 60_000,
+            };
+            assert!(
+                once!(ctx.db, Some(seeker.as_str()), |tx| tx
+                    .daily_invites_create(&seek, now))
+                .expect("dailyInvites.create")
+            );
+            seeks.push(seek.id);
+        }
+        let (me, you) = (ctx.active_profile().await, ctx.active_profile().await);
+
+        let racing_pool = ctx.racing(2).await;
+        let racing = Db::Pg(racing_pool.clone());
+        let mut first = racing
+            .begin(Some(me.as_str()))
+            .await
+            .expect("the first claim's transaction");
+        let took = first
+            .daily_seek_claim(QueueMode::Bo1, 3, &me, &uuid(), now)
+            .await
+            .expect("the first claim")
+            .map(|row| row.id);
+        let mut second = racing
+            .begin(Some(you.as_str()))
+            .await
+            .expect("the second claim's transaction");
+        let next = tokio::time::timeout(
+            SKIP_LOCKED_PATIENCE,
+            second.daily_seek_claim(QueueMode::Bo1, 3, &you, &uuid(), now),
+        )
+        .await
+        .expect("the second claim waited on the first's lock")
+        .expect("the second claim")
+        .map(|row| row.id);
+        first.commit().await.expect("the first claim commits");
+        second.commit().await.expect("the second claim commits");
+        racing_pool.close().await;
+        assert_eq!((took, next), (Some(seeks[0].clone()), Some(seeks[1].clone())));
+        ctx.finish().await;
+    }
 }
 
 // The reaper's input (§9.5)

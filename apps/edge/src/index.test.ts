@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { API_REQUEST_TIMEOUT_SECONDS } from "../../web/src/wire/serverConfig.ts";
 import worker, { IMAGE_CHECK_RETRY_MS, IMAGE_CHECK_TIMEOUT_MS, Server, START_WAIT_MS, type Env } from "./index.ts";
-import { SERVER_PORT } from "./routing.ts";
+import { DAILY_SWEEP_CRON, DAILY_SWEEP_PATH, SERVER_PORT } from "./routing.ts";
 
 const library = vi.hoisted(() => ({
   fetch: vi.fn<(request: Request) => Promise<Response>>(),
@@ -503,6 +503,43 @@ describe("the daily wake-up", () => {
     await expect(worker.scheduled({} as Parameters<typeof worker.scheduled>[0], env)).rejects.toThrow(
       "the server's /readyz answered 500",
     );
+  });
+
+  it("CLAUDE.md rule 13: the daily cron still asks for readiness, not the sweep", async () => {
+    const { env, fetch } = scheduledEnv(200);
+
+    await worker.scheduled({ cron: "23 14 * * *" } as Parameters<typeof worker.scheduled>[0], env);
+
+    expect((fetch.mock.calls[0]?.[0] as Request).url).toBe("http://container/readyz");
+  });
+});
+
+describe("#3727 the daily games' hourly sweep", () => {
+  function sweepEnv(status: number): { env: Env; fetch: ReturnType<typeof vi.fn> } {
+    const fetch = vi.fn(() => Promise.resolve(new Response("{}", { status })));
+    const env = {
+      SERVER: { idFromName: vi.fn((name: string) => name), get: vi.fn((_id: string) => ({ fetch })) },
+    } as unknown as Env;
+    return { env, fetch };
+  }
+
+  it("posts the sweep to the server on the hourly cron", async () => {
+    const { env, fetch } = sweepEnv(200);
+
+    await worker.scheduled({ cron: DAILY_SWEEP_CRON } as Parameters<typeof worker.scheduled>[0], env);
+
+    expect(fetch).toHaveBeenCalledOnce();
+    const request = fetch.mock.calls[0]?.[0] as Request;
+    expect(request.url).toBe(`http://container${DAILY_SWEEP_PATH}`);
+    expect(request.method).toBe("POST");
+  });
+
+  it("fails naming the path and the status when the sweep fails", async () => {
+    const { env } = sweepEnv(500);
+
+    await expect(
+      worker.scheduled({ cron: DAILY_SWEEP_CRON } as Parameters<typeof worker.scheduled>[0], env),
+    ).rejects.toThrow("the server's /daily-sweep answered 500");
   });
 });
 

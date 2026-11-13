@@ -11,10 +11,10 @@
 #             still early on the version before (learn-set.yml). A lane pull request with a failed check, or open LEARN_PR_STALE_HOURS,
 #             is closed and the run goes on, so a stuck promotion never holds the lane. One whose
 #             checks are green or running is left to merge, and the export goes ahead beside it: by the
-#             time this run gates, about half a day on (three days on the PC), it has merged (and when it has not, this run's
+#             time this run gates, about a day on, it has merged (and when it has not, this run's
 #             pass waits behind it, as its artifact)
-#   export    selfplay.yml, called: `games` games in `shards` jobs, 10 at a time on GitHub's runners
-#             (two at a time on the local runner's halves, in five rounds); none with `export_run`, which retrains on an earlier run's
+#   export    selfplay.yml, called: `games` games in `shards` jobs, 10 at a time on GitHub's runners;
+#             none with `export_run`, which retrains on an earlier run's
 #             export (its artifacts are kept 30 days)
 #   retrain   on main: training/ml/retrain.sh over the shards that finished (a shard that failed costs
 #             the export its games, not the run), its positions folded by the export's own
@@ -47,18 +47,12 @@
 #             same export starts (at most LEARN_CHAIN_MAX in a row), on main as it is by then.
 #
 # Every job runs on GitHub's runners (#3740), whose Team plan runs 60 hosted jobs at once for the
-# organization, 12 of them the training lanes': the export's 40 shards of 2,500 games play 10 at a
-# time, about 3 hours each (about 870 games an hour on four vCPUs at the AI's budget since #2628, an
-# estimate from the PC's 670 on a four-CPU half), so a run's 100,000 games take about 12 hours. Each
-# job keeps under GitHub's 6-hour limit (`timeout-minutes` 350 there).
-#
-# With the repository variable TRAINING_ON_PC set to `true`, every job runs on the owner's PC instead,
-# the local runner (`jackioh-selfplay-local`, bot/machine/README.md, The local runner), as from #1455
-# until #3740. It takes two jobs at a time, one on each half of the PC (gather's half goes to gather
-# while it plays a new patch), and only while the PC is otherwise idle, so the export takes about three
-# days of an idle PC (#3722), and a run may take longer. A job no runner takes in 24 hours (the PC
-# off, asleep or busy all day) GitHub fails; the lane goes on with what finished, and the next run
-# comes anyway (training/learn.md, Running unattended).
+# organization, 12 of them the training lanes': the export's 80 shards of 1,250 games play 10 at a
+# time, about 3 hours each (a GitHub runner plays about 400 games an hour at the AI's budget since
+# #2628, measured by gather run 72 on 2026-11-12),
+# so a run's 100,000 games take about a day. Each
+# job keeps under GitHub's 6-hour limit (`timeout-minutes` 350). From #1455 until #3740 the lane ran
+# on the owner's PC.
 #
 # Pushing ai/learn and opening its pull request take LEARN_LANE_TOKEN, a fine-grained token that can
 # write contents and pull requests on this repository alone (a pull request opened with the run's
@@ -77,9 +71,9 @@ on:
         required: true
         default: "100000"
       shards:
-        description: "Export jobs (10 at a time on GitHub's runners, two on the local runner; at most 2,500 games each there)"
+        description: "Export jobs (10 at a time on GitHub's runners; at most 1,250 games each)"
         required: true
-        default: "40"
+        default: "80"
       screen:
         description: "Paired screen games against main (decided before it is played)"
         required: true
@@ -120,7 +114,7 @@ jobs:
   plan:
     name: plan
     if: ${{ github.event_name != 'workflow_run' }}
-    runs-on: ${{ vars.TRAINING_ON_PC == 'true' && 'jackioh-selfplay-local' || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
@@ -193,14 +187,13 @@ jobs:
       games: ${{ inputs.games || '100000' }}
       seed: ${{ needs.plan.outputs.seed }}
       ref: ${{ needs.plan.outputs.sha }}
-      shards: ${{ inputs.shards || '40' }}
-      runner: ${{ vars.TRAINING_ON_PC == 'true' && 'jackioh-selfplay-local' || 'ubuntu-latest' }}
+      shards: ${{ inputs.shards || '80' }}
       retention: "30"
       count: false
       # Each shard files its games into the card statistics this many at a time as it plays them
-      # (selfplay-shards.yml): about an hour and a half of a GitHub runner, two hours of one half of
-      # the PC, and half of a 100,000-game export's 2,500-game shard.
-      file_every: "1250"
+      # (selfplay-shards.yml): about an hour and a half of a GitHub runner, and half of a
+      # 100,000-game export's 1,250-game shard.
+      file_every: "625"
     secrets:
       STATS_IMPORT_DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
       PRODUCTION_STATS_IMPORT_DATABASE_URL: ${{ secrets.PRODUCTION_STATS_IMPORT_DATABASE_URL }}
@@ -211,11 +204,9 @@ jobs:
     # After the export, whether or not every shard finished (the shards step below), or with none
     # when the run reuses an earlier one's (export_run).
     if: ${{ !cancelled() && needs.plan.outputs.run == 'true' }}
-    runs-on: ${{ vars.TRAINING_ON_PC == 'true' && 'jackioh-selfplay-local' || 'ubuntu-latest' }}
-    # GitHub's runners stop a job at 6 hours. The PC's runner throttles a job to half a CPU while the
-    # PC is busy, so there the job may take far longer than the hour or two it takes on an idle PC
-    # (run 21: 59 minutes without a gate).
-    timeout-minutes: ${{ vars.TRAINING_ON_PC == 'true' && 2880 || 350 }}
+    runs-on: ubuntu-latest
+    # GitHub's runners stop a job at 6 hours.
+    timeout-minutes: 350
     permissions:
       contents: read
       actions: write
@@ -253,18 +244,17 @@ jobs:
           path: ${{ runner.temp }}/exporter
           run-id: ${{ inputs.export_run || github.run_id }}
           github-token: ${{ github.token }}
-      # A shard lost (it failed or passed GitHub's 6-hour limit; on the PC, the PC slept or no runner
-      # took the shard in 24 hours) costs the export its games, not the run: the retrain goes on with
-      # the shards that finished, as long as one did.
+      # A shard lost (it failed or passed GitHub's 6-hour limit) costs the export its games, not the
+      # run: the retrain goes on with the shards that finished, as long as one did.
       - name: the export's shards
         env:
-          SHARDS: ${{ inputs.shards || '40' }}
+          SHARDS: ${{ inputs.shards || '80' }}
           EXPORT: ${{ needs.export.result }}
         run: |
           set -euo pipefail
           finished=$(find "$RUNNER_TEMP/export" -name 'selfplay-*.jsonl' 2> /dev/null | wc -l)
           if [ "$finished" = 0 ]; then
-            echo "::error::no shard of the export finished: each one failed (or, on the PC, its runner took none in 24 hours)"
+            echo "::error::no shard of the export finished: each one failed"
             exit 1
           fi
           if [ "$EXPORT" = success ] || [ "$EXPORT" = skipped ]; then
@@ -336,7 +326,7 @@ jobs:
             exit 1
           fi
       # A pass while the lane's last promotion is still open (its checks green or running, as the
-      # plan left it, about half a day ago, three days on the PC) waits behind it: pushing ai/learn again would close it. The
+      # plan left it, about a day ago) waits behind it: pushing ai/learn again would close it. The
       # pass stays this run's artifact (promotion.patch), and the next run gates on main once that
       # promotion has merged.
       - name: a promotion still open, so this one waits
@@ -429,10 +419,9 @@ jobs:
     # Once the retrain has ended, however it ended, so the AI never waits on it. Only for a run that
     # played an export: a run on an earlier one's (export_run) filed nothing new.
     if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && !inputs.export_run }}
-    runs-on: ${{ vars.TRAINING_ON_PC == 'true' && 'jackioh-selfplay-local' || 'ubuntu-latest' }}
-    # GitHub's runners stop a job at 6 hours; the PC's runner slows a job to half a CPU while the PC
-    # is busy.
-    timeout-minutes: ${{ vars.TRAINING_ON_PC == 'true' && 1440 || 350 }}
+    runs-on: ubuntu-latest
+    # GitHub's runners stop a job at 6 hours.
+    timeout-minutes: 350
     permissions:
       contents: read
       actions: read
@@ -539,7 +528,7 @@ jobs:
     name: start the next run
     needs: [plan, export, retrain, import]
     if: ${{ !cancelled() && github.event_name != 'workflow_run' }}
-    runs-on: ${{ vars.TRAINING_ON_PC == 'true' && 'jackioh-selfplay-local' || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       actions: write
@@ -571,7 +560,7 @@ jobs:
   watch:
     name: watch the lane's pull request
     if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion != 'success' && github.event.workflow_run.conclusion != 'skipped' }}
-    runs-on: ${{ vars.TRAINING_ON_PC == 'true' && 'jackioh-selfplay-local' || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read

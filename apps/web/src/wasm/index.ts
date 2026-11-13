@@ -535,6 +535,31 @@ export function practiceConstants(): PracticeConstants {
   });
 }
 
+/** Daily games' numbers (`crates/shared/src/config.rs`, #3727): the times per move, the urgent color's hours, the lists' sizes. */
+export type DailyConstants = {
+  MS_PER_HOUR: number;
+  MS_PER_DAY: number;
+  /** The times per move a daily game may be played at, in days, shortest first. */
+  DAILY_TIME_PER_MOVE_DAYS: readonly number[];
+  DAILY_CHALLENGE_TTL_DAYS: number;
+  DAILY_SEEK_TTL_DAYS: number;
+  DAILY_MAX_ACTIVE_GAMES: number;
+  DAILY_REMINDER_HOURS: number;
+  DAILY_EMAIL_MIN_GAP_HOURS: number;
+  /** Under this many hours left, a move's time shows in the urgent color. */
+  DAILY_URGENT_HOURS: number;
+  DAILY_RECENT_FINISHED: number;
+};
+
+let dailyConstantsCache: DailyConstants | null = null;
+
+export function dailyConstants(): DailyConstants {
+  return call("constants", () => {
+    dailyConstantsCache ??= parsed<DailyConstants>(normal.constants());
+    return dailyConstantsCache;
+  });
+}
+
 // the AI (SURFACE §9)
 
 export function aiToAct(state: GameState, seat: PlayerId): boolean {

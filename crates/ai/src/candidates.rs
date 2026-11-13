@@ -13,8 +13,8 @@ use jackioh_engine::{
 };
 use serde_json::Value;
 
-use crate::config::{AI_SAME_CARD_PLAYS_PER_TURN, AI_SEARCH};
-use crate::evaluate::{Prices, can_swing, deft_in_defense, face_threat};
+use crate::config::{AI_EVAL, AI_SAME_CARD_PLAYS_PER_TURN, AI_SEARCH};
+use crate::evaluate::{Prices, can_swing, crumbles_before_swing, deft_in_defense, face_threat};
 use crate::lethal::ready_gap;
 use crate::reply::{face_value, trade_value};
 
@@ -991,12 +991,14 @@ pub fn wall_switches(state: &GameState, seat: PlayerId, candidates: &[ActionBody
 
 /// R2021000: whether `enemy` could attack `target` on its controller's next turn: it is in Attack
 /// Position, or Defense Position with Deft (R49); it may swing at all (`can_swing`: not Frozen through
-/// that turn, R1174000); and no restriction bars it from `target` (a Dormant card, R1839000, or a
-/// Flying unit only a Flying or Ranged unit may attack, R783002).
+/// that turn, R1174000); its own Brittle tick does not destroy it first (`crumbles_before_swing`,
+/// R3793000, by `AI_EVAL`'s flag: only the search asks); and no restriction bars it from `target` (a
+/// Dormant card, R1839000, or a Flying unit only a Flying or Ranged unit may attack, R783002).
 fn could_attack_next_turn(state: &GameState, enemy: &CardInstance, target: &AttackTarget) -> bool {
     let view = unit_view(state, enemy);
     (view.position == Position::Atk || deft_in_defense(&view))
         && can_swing(state, enemy, &view)
+        && !(AI_EVAL.brittle_crumbles_before_swing && crumbles_before_swing(state, enemy, &view, false))
         && attack_restriction(state, enemy, target).is_ok()
 }
 

@@ -3,11 +3,12 @@
 // Pointing at one of the viewer's own hand cards puts a small bar above it, as the Duos card bar does
 // (`duos/CardActions.tsx`, the same `game/cardBar.ts` underneath). It is offered only on a card
 // `legal` lists a `trade` for, or whose view carries a `tradeReason`; it is live exactly when `legal`
-// lists that card's `trade`, and otherwise greyed, its tooltip the engine's reason, sending nothing
+// lists that card's `trade`, and otherwise greyed (`aria-disabled`, still focusable), the engine's reason its
+// tooltip and its accessible description, and a press reports that reason (R3768000) and sends nothing
 // (CLAUDE.md rule 7: no keyword, cost or count is read here to decide anything). On a Duos board the
 // Trade button rides the card bar beside the pass control instead, and Game's own bar is off (`tradeBar`).
 
-import { useMemo, type ReactElement } from "react";
+import { useId, useMemo, type ReactElement } from "react";
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 
@@ -52,11 +53,14 @@ export type TradeButtonProps = {
   offer: TradeOffer;
   instanceId: string;
   onTrade: (instanceId: string) => void;
+  /** A press on the greyed control, with the engine's reason (R3768000); nothing is sent. */
+  onRefused?: (reason: string) => void;
 };
 
 /** "Trade" on one hand card: the Duos pass control's button (`duos-pass`), and `trade.css`'s copy of it. */
-export function TradeButton({ offer, instanceId, onTrade }: TradeButtonProps): ReactElement {
+export function TradeButton({ offer, instanceId, onTrade, onRefused }: TradeButtonProps): ReactElement {
   useLocale();
+  const reasonId = useId();
   const live = offer.legal.has(instanceId);
   const reason = offer.reasons.get(instanceId);
   return (
@@ -66,15 +70,24 @@ export function TradeButton({ offer, instanceId, onTrade }: TradeButtonProps): R
       data-testid={testid.trade(instanceId)}
       data-instance-id={instanceId}
       data-legal={live ? "true" : "false"}
-      disabled={!live}
+      aria-disabled={live ? undefined : "true"}
+      aria-describedby={!live && reason !== undefined ? reasonId : undefined}
       title={live || reason === undefined ? undefined : t(reason)}
       onClick={() => {
-        if (!live) return;
+        if (!live) {
+          if (reason !== undefined) onRefused?.(reason);
+          return;
+        }
         onTrade(instanceId);
       }}
     >
       <span className="duos-pass__label">{t("Trade")}</span>
       <span className="duos-pass__meta">{t("{left} Trades left", { left: offer.left })}</span>
+      {!live && reason !== undefined ? (
+        <span id={reasonId} className="trade-reason" hidden>
+          {t(reason)}
+        </span>
+      ) : null}
     </button>
   );
 }
@@ -88,10 +101,12 @@ export type TradeBarProps = {
   view: PlayerView;
   legal: readonly ActionBody[];
   onTrade: (body: ActionBody) => void;
+  /** A press on the greyed control, with the engine's reason (R3768000). */
+  onRefused?: (reason: string) => void;
 };
 
 /** The 1v1 board's Trade bar: over the pointed-at hand card while the offer puts a control on it. */
-export function TradeBar({ container, view, legal, onTrade }: TradeBarProps): ReactElement | null {
+export function TradeBar({ container, view, legal, onTrade, onRefused }: TradeBarProps): ReactElement | null {
   const offer = useMemo(() => tradeOfferFor(view, legal), [view, legal]);
   const { focus, close } = useCardBarFocus(container, TRADE_BAR_CLASS, DUOS_HOVER_GRACE_MS);
   const card = offer !== null && focus?.at === "hand" && offersTrade(offer, focus.instanceId) ? focus.instanceId : null;
@@ -109,6 +124,9 @@ export function TradeBar({ container, view, legal, onTrade }: TradeBarProps): Re
       <TradeButton
         offer={offer}
         instanceId={card}
+        onRefused={(reason) => {
+          onRefused?.(reason);
+        }}
         onTrade={(instanceId) => {
           const body = legal.find((action) => action.type === "trade" && action.instanceId === instanceId);
           if (body !== undefined) onTrade(body);

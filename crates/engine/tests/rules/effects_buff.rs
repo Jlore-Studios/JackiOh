@@ -781,3 +781,331 @@ mod r21_random_keywords_m3_t1 {
         assert_eq!(b.events.len(), 0);
     }
 }
+
+mod r3778000_combat_keywords_follow_their_number {
+    use super::*;
+    use jackioh_engine::effects::{
+        DrawCombatKeywordsArgs, aura_combat_keywords, clear_radiant, drawn_combat_keywords, flicker_card,
+        set_number, set_radiant, top_up_combat_keywords, upgrade,
+    };
+
+    use crate::rules::fixtures::harness::{apply_now, both};
+
+    /// R3778000: "Aura: Has {keywords} random combat keywords", 3 on the base face and 6 on the
+    /// Radiant one, following its number with no arrival draw, so a test draws its first list by hand.
+    const AURA: &str = "bf-aura-keywords";
+
+    fn aura() -> CardDef {
+        let text = "Aura: Has {keywords|random combat keyword|random combat keywords}.";
+        json_as(json!({
+            "id": AURA,
+            "index": "902",
+            "name": "Aura Keywords (buff fixture)",
+            "set": "Core",
+            "type": "Unit",
+            "tags": [],
+            "rarity": "Common",
+            "token": false,
+            "cost": 1,
+            "base": { "attack": 2, "health": 2, "keywords": [], "text": text },
+            "radiant": { "attack": 4, "health": 4, "keywords": [], "text": text },
+            "params": [{ "key": "keywords", "base": 3, "radiant": 6, "better": "up", "step": 1, "min": 1 }],
+        }))
+    }
+
+    fn aura_game(seed: &str) -> GameState {
+        let state = game(seed);
+        let mut catalog = registered_catalog().clone();
+        catalog.insert(AURA.to_string(), aura());
+        register_catalog(catalog);
+        let mut scripts = registered_scripts().clone();
+        scripts.insert(
+            AURA.to_string(),
+            both(Script {
+                combat_keywords_follow: Some("keywords"),
+                conditional_keywords: Some(read_hook(|args| aura_combat_keywords(&args, "keywords", None))),
+                ..Script::default()
+            }),
+        );
+        register_scripts(scripts);
+        state
+    }
+
+    fn placed(seed: &str) -> (GameState, String) {
+        let mut state = aura_game(seed);
+        let id = put(&mut state, AURA, slot(PlayerId::P1, Row::Units, 1), json!({})).id;
+        (state, id)
+    }
+
+    fn number(state: &GameState, id: &str) -> i32 {
+        param_value(
+            state,
+            Some(&live(state, id)),
+            "keywords",
+            ParamValueOptions::default(),
+        )
+    }
+
+    /// The arrival's top-up (`top_up_combat_keywords`), for the card's number as it stands.
+    fn top_up(b: &mut Bench, state: &mut GameState, id: &str) {
+        let me = live(state, id);
+        let count = number(state, id);
+        run(
+            b,
+            state,
+            top_up_combat_keywords(DrawCombatKeywordsArgs { count, key: None }),
+            Some(me),
+            HookOptions::default(),
+        );
+    }
+
+    /// The keywords the card acts with.
+    fn shown(state: &GameState, id: &str) -> Vec<KeywordKind> {
+        keywords_of(state, &live(state, id))
+            .iter()
+            .map(Keyword::kind)
+            .collect()
+    }
+
+    /// The card's list, in draw order.
+    fn kept(state: &GameState, id: &str) -> Vec<KeywordKind> {
+        drawn_combat_keywords(&live(state, id), None)
+            .iter()
+            .map(Keyword::kind)
+            .collect()
+    }
+
+    fn on(id: &str) -> Value {
+        json!({ "instanceId": id })
+    }
+
+    #[test]
+    fn r3778000_a_higher_number_keeps_every_keyword_drawn_and_draws_only_the_rest() {
+        let (mut state, id) = placed("aura-up");
+        let mut b = Bench::new(&state);
+        top_up(&mut b, &mut state, &id);
+        let first = kept(&state, &id);
+        assert_eq!(first.len(), 3, "{first:?}");
+        assert_eq!(shown(&state, &id), first);
+
+        step_param(live_mut(&mut state, &id), "keywords", 1);
+        top_up(&mut b, &mut state, &id);
+
+        let now = kept(&state, &id);
+        assert_eq!(now.len(), 4, "{now:?}");
+        assert_eq!(now[..3], first[..], "the 3 it had stay, in their order");
+        assert!(!first.contains(&now[3]), "a 4th, none it had: {now:?}");
+        assert_eq!(shown(&state, &id), now, "it acts with all 4");
+    }
+
+    #[test]
+    fn r3778000_a_lower_number_takes_off_the_newest_and_back_up_returns_it() {
+        let (mut state, id) = placed("aura-down");
+        let mut b = Bench::new(&state);
+        top_up(&mut b, &mut state, &id);
+        let list = kept(&state, &id);
+
+        step_param(live_mut(&mut state, &id), "keywords", -1);
+        assert_eq!(number(&state, &id), 2);
+        let lowered = shown(&state, &id);
+        assert_eq!(lowered, list[..2], "the newest, {:?}, comes off", list[2]);
+        assert!(!lowered.contains(&list[2]));
+        assert_eq!(kept(&state, &id), list, "the list stays whole");
+
+        step_param(live_mut(&mut state, &id), "keywords", 1);
+        top_up(&mut b, &mut state, &id);
+        assert_eq!(shown(&state, &id), list, "the same one comes back");
+        assert_eq!(kept(&state, &id), list, "and nothing new is drawn");
+    }
+
+    #[test]
+    fn r3778000_a_radiant_face_tops_up_as_it_resolves_and_back_gives_the_same() {
+        let (mut state, id) = placed("aura-radiant");
+        let mut b = Bench::new(&state);
+        top_up(&mut b, &mut state, &id);
+        let first = kept(&state, &id);
+
+        apply_now(&mut state, set_radiant(json_as(on(&id))));
+        let radiant = kept(&state, &id);
+        assert_eq!(radiant.len(), 6, "{radiant:?}");
+        assert_eq!(radiant[..3], first[..], "it keeps its 3");
+        assert_eq!(shown(&state, &id), radiant);
+
+        apply_now(&mut state, clear_radiant(json_as(on(&id))));
+        assert_eq!(shown(&state, &id), first, "the base face's 3 are the first 3");
+        assert_eq!(kept(&state, &id), radiant);
+
+        apply_now(&mut state, set_radiant(json_as(on(&id))));
+        assert_eq!(kept(&state, &id), radiant, "Radiant again, the same 6");
+        assert_eq!(shown(&state, &id), radiant);
+    }
+
+    #[test]
+    fn r3778000_a_number_set_higher_tops_up_as_it_resolves() {
+        let (mut state, id) = placed("aura-set");
+        let mut b = Bench::new(&state);
+        top_up(&mut b, &mut state, &id);
+        let first = kept(&state, &id);
+
+        apply_now(
+            &mut state,
+            set_number(json_as(
+                json!({ "instanceId": id, "which": "param:keywords", "value": 5 }),
+            )),
+        );
+
+        let now = kept(&state, &id);
+        assert_eq!(number(&state, &id), 5);
+        assert_eq!(now.len(), 5, "{now:?}");
+        assert_eq!(now[..3], first[..]);
+        assert_eq!(shown(&state, &id), now);
+    }
+
+    #[test]
+    fn r3778000_a_buffs_number_row_tops_up_as_it_resolves() {
+        let buffed = |seed: &str| {
+            let (mut state, id) = placed(seed);
+            let mut b = Bench::new(&state);
+            top_up(&mut b, &mut state, &id);
+            let first = kept(&state, &id);
+            apply_now(&mut state, upgrade(json_as(on(&id))));
+            (state, id, first)
+        };
+        // The Buff draws one row of its menu (B3.4 rule 3): the seed is one whose row is the Number's.
+        let seed = seed_where("bf-aura-buff", |seed| {
+            let (state, id, _) = buffed(seed);
+            number(&state, &id) == 4
+        });
+        let (state, id, first) = buffed(&seed);
+
+        let now = kept(&state, &id);
+        assert_eq!(now.len(), 4, "{now:?}");
+        assert_eq!(now[..3], first[..]);
+        assert_eq!(shown(&state, &id), now);
+    }
+
+    #[test]
+    fn r3778000_a_rise_queues_nothing_and_a_card_that_does_not_follow_draws_nothing() {
+        let (mut state, id) = placed("aura-quiet");
+        let mut b = Bench::new(&state);
+        top_up(&mut b, &mut state, &id);
+        let other = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        )
+        .id;
+        let (seq, cursor) = (state.next_seq, state.rng_cursor);
+
+        apply_now(&mut state, set_radiant(json_as(on(&other))));
+        assert_eq!(state.rng_cursor, cursor, "a card with no such Aura draws nothing");
+        // R68: the event's dispatch numbers it, and that is all a change takes.
+        let per_change = state.next_seq - seq;
+
+        apply_now(&mut state, set_radiant(json_as(on(&id))));
+        assert_eq!(kept(&state, &id).len(), 6);
+        assert_ne!(state.rng_cursor, cursor, "the Aura drew its rest");
+        assert_eq!(
+            state.next_seq - seq,
+            2 * per_change,
+            "and nothing was queued for it"
+        );
+        assert!(state.trigger_queue.is_empty());
+    }
+
+    #[test]
+    fn r3778000_a_card_whose_arrival_draw_is_still_to_come_draws_nothing_on_a_rise() {
+        let (mut state, id) = placed("aura-unarrived");
+        let cursor = state.rng_cursor;
+
+        apply_now(&mut state, set_radiant(json_as(on(&id))));
+        assert!(
+            kept(&state, &id).is_empty(),
+            "no list yet: the arrival draw is still owed"
+        );
+        assert_eq!(state.rng_cursor, cursor);
+
+        let mut b = Bench::new(&state);
+        top_up(&mut b, &mut state, &id);
+        assert_eq!(kept(&state, &id).len(), 6, "which draws the number as it is then");
+    }
+
+    #[test]
+    fn r3778000_with_fewer_left_it_takes_every_one_there_is() {
+        let (mut state, id) = placed("aura-short");
+        let pool = random_pool_keywords();
+        live_mut(&mut state, &id).granted_keywords = pool[2..].to_vec();
+        let mut b = Bench::new(&state);
+
+        top_up(&mut b, &mut state, &id);
+        let mut list = kept(&state, &id);
+        list.sort();
+        let mut left = vec![pool[0].kind(), pool[1].kind()];
+        left.sort();
+        assert_eq!(list, left, "the two left, of the 3 it asks");
+
+        let cursor = b.rng.cursor();
+        top_up(&mut b, &mut state, &id);
+        assert_eq!(kept(&state, &id).len(), 2, "none is left to draw");
+        assert_eq!(b.rng.cursor(), cursor, "and it draws nothing");
+    }
+
+    #[test]
+    fn r3778000_r347_an_indestructible_unit_never_tops_up_into_taunt() {
+        for n in 0..24 {
+            let (mut state, id) = placed(&format!("aura-r347-{n}"));
+            live_mut(&mut state, &id).granted_keywords = vec![Keyword::Indestructible];
+            let mut b = Bench::new(&state);
+            top_up(&mut b, &mut state, &id);
+            step_param(live_mut(&mut state, &id), "keywords", 3);
+            top_up(&mut b, &mut state, &id);
+            let list = kept(&state, &id);
+            assert_eq!(list.len(), 6, "{list:?}");
+            assert!(!list.contains(&KeywordKind::Taunt), "{list:?}");
+        }
+    }
+
+    #[test]
+    fn r3778000_the_auras_copy_still_counts_beside_another_source() {
+        let (mut state, id) = placed("aura-both");
+        let mut b = Bench::new(&state);
+        top_up(&mut b, &mut state, &id);
+        let first = kept(&state, &id);
+        let granted = drawn_combat_keywords(&live(&state, &id), None)[0].clone();
+        live_mut(&mut state, &id).granted_keywords = vec![granted];
+
+        step_param(live_mut(&mut state, &id), "keywords", 1);
+        top_up(&mut b, &mut state, &id);
+
+        let now = kept(&state, &id);
+        assert_eq!(now.len(), 4, "one more, not two: {now:?}");
+        assert_eq!(now[..3], first[..], "the one held twice stays on the list");
+        assert!(!first.contains(&now[3]));
+        for kind in &now {
+            assert!(shown(&state, &id).contains(kind), "{kind:?}");
+        }
+    }
+
+    #[test]
+    fn r3778000_r78_leaving_clears_the_list_and_the_next_draw_is_fresh() {
+        let (mut state, id) = placed("aura-leave");
+        let mut b = Bench::new(&state);
+        step_param(live_mut(&mut state, &id), "keywords", 1);
+        top_up(&mut b, &mut state, &id);
+        assert_eq!(kept(&state, &id).len(), 4);
+
+        let card = live(&state, &id);
+        assert!(b.run(&mut state, |sink| flicker_card(sink, &card)));
+
+        assert!(kept(&state, &id).is_empty(), "R78 clears it");
+        assert!(shown(&state, &id).is_empty());
+        assert_eq!(
+            number(&state, &id),
+            4,
+            "a Buff is the card's own and stays (R386)"
+        );
+        top_up(&mut b, &mut state, &id);
+        assert_eq!(kept(&state, &id).len(), 4, "a fresh draw of its number");
+    }
+}

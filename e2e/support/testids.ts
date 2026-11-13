@@ -314,8 +314,8 @@ export function loadoutErrorId(rule: string): string {
 export const DECKBUILDER_LOADING = "deckbuilder-loading";
 export const DECKBUILDER_ERROR = "deckbuilder-error";
 
-/** Pool drags carry a catalog id, not the board's click target. */
-export const DECK_DRAG_MIME = "application/x-jackioh-card";
+/** Issue #3734: the ghost that follows a pointer while a pool card is dragged to the deck. */
+export const DECK_DRAG_GHOST = "deck-drag-ghost";
 
 export const TRIO_EDITOR = "trio-editor";
 export const TRIO_NAME_INPUT = "trio-name-input";
@@ -547,6 +547,14 @@ export function filterSetId(set: string): string {
 
 export function filterRarityId(rarity: string): string {
   return `db-filter-rarity-${slugOf(rarity)}`;
+}
+
+export function filterKeywordId(kind: string): string {
+  return `db-filter-keyword-${slugOf(kind)}`;
+}
+
+export function filterOwnershipId(view: "all" | "owned" | "missing"): string {
+  return `db-filter-ownership-${view}`;
 }
 
 export const DB_FILTER_OWNED = "db-filter-owned";
@@ -786,6 +794,52 @@ export function togetherChallengeModeId(mode: QueueMode): string {
   return `together-challenge-mode-${mode}`;
 }
 
+/** #3727: the challenge dialog's Live or Daily (`apps/web/src/together/testids.ts`); the form carries `data-kind`. */
+export const TOGETHER_CHALLENGE_KIND = "together-challenge-kind";
+
+export function togetherChallengeKindId(kind: "live" | "daily"): string {
+  return `together-challenge-kind-${kind}`;
+}
+
+// #3727: daily games (`apps/web/src/daily/testids.ts`).
+export const DAILY_ROOT = "daily";
+export const DAILY_NEW_GAME = "daily-new-game";
+/** One per section: `data-section` (`yourMove|theirMove|incoming|outgoing|seeks|finished`). */
+export const DAILY_SECTION = "daily-section";
+/** One per game: `data-match-id`, `data-has-move`, `data-over`. */
+export const DAILY_GAME_ROW = "daily-game-row";
+/** A row's time left: `data-urgent`. */
+export const DAILY_TIME_LEFT = "daily-time-left";
+/** One per challenge or seek: `data-invite-id`, `data-kind`, `data-direction` (`incoming|outgoing|seek`). */
+export const DAILY_INVITE_ROW = "daily-invite-row";
+export const DAILY_ACCEPT = "daily-accept";
+export const DAILY_DECLINE = "daily-decline";
+export const DAILY_CANCEL = "daily-cancel";
+/** A daily game's board: `data-match-id`, `data-has-move`. */
+export const DAILY_BOARD = "daily-board";
+/** Whoever holds the move: `data-holder` (`you|opponent`), `data-urgent`. */
+export const DAILY_CLOCK = "daily-clock";
+export const DAILY_NEXT_GAME = "daily-next-game";
+/** The Play screen's Daily games, and its badge of the games waiting on the player. */
+export const PLAY_DAILY = "play-daily";
+export const PLAY_DAILY_BADGE = "play-daily-badge";
+/** The New daily game dialog: who to play (a friend, `DAILY_FRIEND`'s select, or the queue), the mode and Send. */
+export const DAILY_NEW_DIALOG = "daily-new-dialog";
+export const DAILY_FRIEND = "daily-friend";
+export const DAILY_SEND = "daily-send";
+
+export function dailyKindId(kind: "friend" | "queue"): string {
+  return `daily-kind-${kind}`;
+}
+
+export function dailyModeId(mode: "bo1" | "random"): string {
+  return `daily-mode-${mode}`;
+}
+
+export function dailyPerMoveId(days: number): string {
+  return `daily-per-move-${String(days)}`;
+}
+
 /** `data-friend-id`. */
 export const CHAT_PANEL = "chat-panel";
 export const CHAT_INPUT = "chat-input";
@@ -931,8 +985,25 @@ export const TOKEN_PANEL = "token-panel";
 export const TOKEN_HELD_CARD = "token-held-card";
 
 /** R2730000: a locked card or cosmetic's fullscreen preview in the Collection, the only place a token is spent. */
-export function collectionSetToggleId(set: string): string {
-  return `collection-set-toggle-${set}`;
+/** Issue #3734, R3734000: the Collection's tabs and the Cards tab's grid, count, filters, and the Decks tab's tiles. */
+export function collectionTabId(tab: "cards" | "decks" | "cosmetics" | "progress"): string {
+  return `collection-tab-${tab}`;
+}
+
+export const COLLECTION_GRID = "collection-grid";
+export const COLLECTION_COUNT = "collection-count";
+export const COLLECTION_FILTERS = "collection-filters";
+export const COLLECTION_FILTERS_OPEN = "collection-filters-open";
+export const COLLECTION_FILTERS_SHEET = "collection-filters-sheet";
+export const COLLECTION_DECKS = "collection-decks";
+export const COLLECTION_DECK_NEW = "collection-deck-new";
+
+export function collectionDeckTileId(id: string): string {
+  return `collection-deck-${id}`;
+}
+
+export function collectionSetProgressId(set: string): string {
+  return `collection-set-progress-${set}`;
 }
 
 export function collectionCardId(cardId: string): string {

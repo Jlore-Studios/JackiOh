@@ -93,7 +93,9 @@ to as well, last, on a slice of the counter that leaves the other determinizatio
 reserve alone, and not once the host's wrap-up has fired (`payoff_score`, R3696000). In the reply, a known card guessing an unrevealed secret of the seat's (a
 Fortify Mind) is tried with one guess, drawn on its own stream (`one_guess_per_card`, `AI_GUESS_SEED`)
 before anything is weighed, and while a known card would be discarded by the opponent's cleanup,
-`known_play` judges each play and standing still after its turn ends (R3696001). A line
+`known_play` judges each play and standing still after its turn ends (R3696001). A kept secret is
+part of a position's signature (its owner, choice and revealed flag, never its minted id), so the
+three choices of one Mind Games are three lines the beam weighs (R3772000). A line
 leaving a countdown waiting (an effect "in N turns" with its public badge, R1181000) is replied to again
 on a copy whose countdowns come due at the seat's next turn start, and the scores are blended at
 `AI_REPLY.countdown_share` per turn the farthest still waits past its owner's next turn start (#1995);
@@ -103,7 +105,11 @@ on its countdown, or `slumber_waiting_share` with none (R2380000). A Unit standi
 (R1081000) counts once, as the Unit it is, never again as a backrow card (`standing_unit_priced_once`,
 R2490000; off in `GREEDY_EVAL`). A Unit in The Gauntlet's lanes threatens no face while The Gauntlet
 acts, since it may attack no hero: `face_threat` asks `attack_restriction`, as the lethal solver does
-(`gauntlet_bars_face_attacks`, R1849005, #3287; off in `GREEDY_EVAL`). A unit's Death counts by what it
+(`gauntlet_bars_face_attacks`, R1849005, #3287; off in `GREEDY_EVAL`). A unit its own Brittle tick
+destroys at its controller's next start, before it can attack, threatens no face and makes no stand-down:
+`face_threat` and `could_attack_next_turn` ask `crumbles_before_swing`, which reads the engine's
+`brittle_due_by`; a side the evaluation reads as swinging first on its own turn keeps its units
+(`brittle_crumbles_before_swing`, R3793000, #3793; off in `GREEDY_EVAL`). A unit's Death counts by what it
 leaves behind (R2424000): at the root `death_prices` prices, within `AI_DEATH_PROBE_NODES`, each live
 Death on the field and in the seat's hand (spawned first, R923001) as its controller's evaluation after
 the sandbox's destroy less after its remove (R923003); `unit_worth` adds `AI_EVAL.death` of it,
@@ -143,6 +149,13 @@ card with a wake trigger on either field, and each Unit with one in the seat's o
 prices the controller's evaluation after the one wake less after the other, each crystal gained at
 `next_turn_mana`; `slumber_worth` adds `AI_EVAL.awaken` of it for both sides' sleepers, inside the slumber
 share, and `GREEDY_EVAL` keeps 0.
+A passed line's Float counts toward the seat's own "Float reduces cost" cards (R3695000): the engine's
+`float_cuts_in_hand` reads what the Float took off each of them, and `float_credit` pays
+`AI_EVAL.float_discount` for each crystal that went toward one still above the seat's crystals (its
+`mana.max`, never the handicap's), in `passed_score` and `replied_score` alike; `GREEDY_EVAL` keeps 0.
+A card beneath one of the seat's own Stack piles counts `AI_EVAL.dormant_share`, a half, of its
+`unit_worth` (`dormant_worth`, R3695001), so the Drone Battleship counts its two lower layers; the
+enemy's count `dormant_card` each, and `GREEDY_EVAL` keeps 0.
 A card in either graveyard that its owner may still play from there (`playable_from_graveyard`: its own
 Flashback, R783012, Sanctum's lent one, R1869003, or a field permission such as Second Wind's, R454)
 counts `AI_EVAL.graveyard_playable` of its hand price, the enemy's too, since a graveyard is public; a

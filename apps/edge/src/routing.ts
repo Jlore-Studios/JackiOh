@@ -75,6 +75,15 @@ export const SERVER_PORT = 8080;
 export const HEALTH_PATH = "/healthz";
 export const READY_PATH = "/readyz";
 
+/**
+ * #3727: the daily games' sweep (crates/server/src/daily/notify.rs): ends the games whose move ran out
+ * and sends the "your move" emails and pushes while nobody else wakes the server. Hourly, beside the
+ * daily wake-up's cron, and posted to a path outside `/api` and `/ws`, which `isServerPath` never
+ * forwards from the public.
+ */
+export const DAILY_SWEEP_CRON = "7 * * * *";
+export const DAILY_SWEEP_PATH = "/daily-sweep";
+
 /** The server's settings that wrangler.jsonc's `vars` hold, one set per environment. */
 export const SERVER_VARS = ["PUBLIC_ORIGINS", "SUPABASE_URL", "TRUSTED_PROXY_HOPS", "LADDER_BOTS", "DEV_STRICT"] as const;
 
@@ -88,6 +97,11 @@ export const SERVER_SECRETS = [
   // #3595: an alert's email (crates/server/src/alerts.rs): a sending-only Resend key and the addresses.
   "ALERT_RESEND_API_KEY",
   "ALERT_EMAILS",
+  // #3727: the daily games' "your move" email (a Resend key of its own) and Web Push (the VAPID pair,
+  // whose public half `GET /api/daily/settings` gives the browser). Each channel is off while unset.
+  "PLAYER_RESEND_API_KEY",
+  "VAPID_PRIVATE_KEY",
+  "VAPID_PUBLIC_KEY",
 ] as const;
 
 export type ServerSetting = (typeof SERVER_VARS)[number] | (typeof SERVER_SECRETS)[number];

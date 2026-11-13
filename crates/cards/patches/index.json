@@ -346,7 +346,8 @@
     "v0.3.3",
     "v0.4.6",
     "v0.5.11l",
-    "v0.5.12"
+    "v0.5.12",
+    "v0.6.0"
   ],
   "core-043": [
     "v0.1.0",
@@ -660,7 +661,8 @@
     "v0.1.1",
     "v0.2.0",
     "v0.2.6",
-    "v0.3.1"
+    "v0.3.1",
+    "v0.6.0"
   ],
   "core-079": [
     "v0.1.0",
@@ -820,7 +822,8 @@
     "v0.2.0",
     "v0.3.0",
     "v0.5.0",
-    "v0.5.5"
+    "v0.5.5",
+    "v0.6.0"
   ],
   "core-095-1": [
     "v0.1.0",
@@ -856,7 +859,8 @@
     "v0.2.7",
     "v0.2.7b",
     "v0.4.6",
-    "v0.5.12"
+    "v0.5.12",
+    "v0.6.0"
   ],
   "core-099": [
     "v0.1.0",
@@ -1589,7 +1593,8 @@
   ],
   "classicplus-027": [
     "v0.2.0",
-    "v0.3.0b"
+    "v0.3.0b",
+    "v0.6.0"
   ],
   "classicplus-028": [
     "v0.2.0",
@@ -1734,7 +1739,8 @@
     "v0.5.10"
   ],
   "classicplus-049": [
-    "v0.2.0"
+    "v0.2.0",
+    "v0.6.0"
   ],
   "classicplus-050": [
     "v0.2.0",
@@ -1744,7 +1750,8 @@
     "v0.2.0",
     "v0.3.3b",
     "v0.5.10",
-    "v0.5.12"
+    "v0.5.12",
+    "v0.6.0"
   ],
   "classicplus-052": [
     "v0.2.0",
@@ -1817,7 +1824,8 @@
   "classicplus-065-1": [
     "v0.2.0",
     "v0.2.6",
-    "v0.3.2"
+    "v0.3.2",
+    "v0.6.0"
   ],
   "classicplus-065-2": [
     "v0.2.0",
@@ -1884,13 +1892,15 @@
     "v0.2.7b",
     "v0.3.0",
     "v0.5.0",
-    "v0.5.5"
+    "v0.5.5",
+    "v0.6.0"
   ],
   "classicplus-073-1": [
     "v0.2.0",
     "v0.2.5",
     "v0.3.2",
-    "v0.5.4b"
+    "v0.5.4b",
+    "v0.6.0"
   ],
   "classicplus-074": [
     "v0.2.0",
@@ -2249,7 +2259,8 @@
   "meditative-054": [
     "v0.3.0",
     "v0.3.2",
-    "v0.5.12"
+    "v0.5.12",
+    "v0.6.0"
   ],
   "meditative-055": [
     "v0.3.0"
@@ -2437,7 +2448,8 @@
     "v0.3.4",
     "v0.5.0",
     "v0.5.5",
-    "v0.5.12"
+    "v0.5.12",
+    "v0.6.0"
   ],
   "meditative-095-1": [
     "v0.3.0",
@@ -2660,7 +2672,8 @@
   ],
   "stinkyscape-004-6": [
     "v0.5.0",
-    "v0.5.5"
+    "v0.5.5",
+    "v0.6.0"
   ],
   "stinkyscape-005": [
     "v0.5.0"
@@ -2676,7 +2689,8 @@
     "v0.5.0"
   ],
   "stinkyscape-008-1": [
-    "v0.5.0"
+    "v0.5.0",
+    "v0.6.0"
   ],
   "stinkyscape-009": [
     "v0.5.0"
@@ -2837,7 +2851,8 @@
   "stinkyscape-044": [
     "v0.5.0",
     "v0.5.10",
-    "v0.5.11l"
+    "v0.5.11l",
+    "v0.6.0"
   ],
   "stinkyscape-045": [
     "v0.5.0",
@@ -3050,7 +3065,8 @@
   ],
   "stinkyscape-094": [
     "v0.5.0",
-    "v0.5.12"
+    "v0.5.12",
+    "v0.6.0"
   ],
   "stinkyscape-095": [
     "v0.5.0",
@@ -3263,12 +3279,14 @@
   "stinkyscape-149": [
     "v0.5.0",
     "v0.5.5",
-    "v0.5.10"
+    "v0.5.10",
+    "v0.6.0"
   ],
   "stinkyscape-150": [
     "v0.5.0",
     "v0.5.5",
-    "v0.5.9"
+    "v0.5.9",
+    "v0.6.0"
   ],
   "stinkyscape-150-1": [
     "v0.5.0",
@@ -3278,7 +3296,8 @@
     "v0.5.0",
     "v0.5.4",
     "v0.5.5",
-    "v0.5.12"
+    "v0.5.12",
+    "v0.6.0"
   ],
   "stinkyscape-152": [
     "v0.5.0"
@@ -3571,7 +3590,8 @@
   ],
   "traininggrounds-039": [
     "v0.5.5",
-    "v0.5.12"
+    "v0.5.12",
+    "v0.6.0"
   ],
   "traininggrounds-039-1": [
     "v0.5.5"
@@ -3673,5 +3693,619 @@
   ],
   "stinkyscape-177": [
     "v0.5.9"
+  ],
+  "stinkyscapeplus-001": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-002": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-003": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-004": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-005": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-006": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-006-1": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-006-2": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-007": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-008": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-009": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-010": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-011": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-012": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-013": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-014": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-015": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-016": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-017": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-018": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-019": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-020": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-021": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-022": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-023": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-024": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-025": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-026": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-026-1": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-027": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-027-1": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-028": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-029": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-030": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-031": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-032": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-033": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-034": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-035": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-036": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-037": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-038": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-039": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-040": [
+    "v0.6.0",
+    "v0.6.0c"
+  ],
+  "stinkyscapeplus-041": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-042": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-043": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-044": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-045": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-046": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-047": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-048": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-049": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-050": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-051": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-052": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-053": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-054": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-055": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-056": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-057": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-058": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-059": [
+    "v0.6.0",
+    "v0.6.0c"
+  ],
+  "stinkyscapeplus-060": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-061": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-061-1": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-062": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-063": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-064": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-065": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-066": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-067": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-068": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-069": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-069-1": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-070": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-071": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-072": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-073": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-074": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-075": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-075-1": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-076": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-076-1": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-077": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-078": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-079": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-080": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-081": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-082": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-083": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-084": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-085": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-086": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-087": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-088": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-089": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-090": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-091": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-092": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-093": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-094": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-095": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-096": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-097": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-098": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-099": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-100": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-101": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-102": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-103": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-104": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-105": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-106": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-107": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-108": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-109": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-110": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-111": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-112": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-113": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-114": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-115": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-116": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-117": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-118": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-119": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-120": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-121": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-121-1": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-122": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-123": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-124": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-125": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-126": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-127": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-128": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-129": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-130": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-131": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-132": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-133": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-133-1": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-133-2": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-133-3": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-133-4": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-133-5": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-134": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-135": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-136": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-137": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-138": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-139": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-140": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-141": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-142": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-142-1": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-142-2": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-143": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-144": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-145": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-146": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-147": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-148": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-149": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-150": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-151": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-152": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-153": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-154": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-155": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-156": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-157": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-158": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-159": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-160": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-161": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-162": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-163": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-164": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-165": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-166": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-t-tears-of-the-kwzki-tree": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-t-supernova": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-t-alnilam": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-t-the-enigmata": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-t-warhero-token": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-t-terminus-starship-ark-of-ashes": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-t-terminus-starship-dying-ember": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-t-terminus-starship-heat-death-pilgrim": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-t-terminus-starship-entropys-wake": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-t-terminus-starship-red-giant-requiem": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-t-terminus-starship-cold-exodus": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-t-terminus-starship-omega-drift": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-t-terminus-starship-farthest-shore": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-t-terminus-starship-nightfall-covenant": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-t-terminus-starship-vacuum-psalm": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-t-ai-01": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-t-ai-02": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-t-ai-03": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-t-ai-04": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-t-ai-05": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-t-ai-06": [
+    "v0.6.0"
+  ],
+  "stinkyscapeplus-t-ai-07": [
+    "v0.6.0"
   ]
 }

@@ -262,6 +262,9 @@ pub struct TriggerDef {
     /// though the card has left the field since, as the snapshot it killed with
     /// (`triggers::offer_to_gone_killer`).
     pub even_if_gone: bool,
+    /// R3695000: the trigger is "Float reduces cost" (`float::float_reduces_cost`): its card costs its
+    /// owner's Float less. The AI reads it (`float::float_cuts_in_hand`).
+    pub lowers_cost_on_float: bool,
 }
 
 impl TriggerDef {
@@ -276,6 +279,7 @@ impl TriggerDef {
             when: None,
             run: Arc::new(run),
             even_if_gone: false,
+            lowers_cost_on_float: false,
         }
     }
 
@@ -290,6 +294,12 @@ impl TriggerDef {
     /// R2396000: the same trigger, answering a kill even once its card is gone.
     pub fn even_if_gone(mut self) -> TriggerDef {
         self.even_if_gone = true;
+        self
+    }
+
+    /// R3695000: the same trigger, marked as "Float reduces cost".
+    pub fn lowers_cost_on_float(mut self) -> TriggerDef {
+        self.lowers_cost_on_float = true;
         self
     }
 }
@@ -1183,6 +1193,12 @@ pub struct Script {
     /// the layers with its printed keywords (§10.4), so a Vanilla takes them. A PURE READ of instance
     /// data that must never call back into `unit_view`, or the layers would recurse.
     pub conditional_keywords: Option<ConditionalKeywordsHook>,
+    /// R3778000: the declared number an "Aura: Has {number} random combat keywords" follows (M #65
+    /// Keymaster Keenus's `keywords`): a change that raises it on the field (a Buff's Number row, a
+    /// number set, the card made Radiant) draws what it asks beyond the card's list as the change
+    /// resolves (`effects::buff::follow_combat_keywords`), so nothing is queued and the layers draw
+    /// nothing. `None` for every other card, and on the scripts kept for v0.6.0b (R767000).
+    pub combat_keywords_follow: Option<&'static str>,
     /// "When this attacks" (Classic #13, #45, Classic+ #73.1, Stinkyscape #75): run for the attacker before
     /// any damage of each attack, a declared one's once its trap window has closed (before the defender's
     /// `allyAttacked`), a forced one's before its combat (R2285000). Parkable (R113); `ctx.data`:

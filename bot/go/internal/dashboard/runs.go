@@ -125,9 +125,9 @@ func took(ctx *hctx.Context, run *pyjson.Object, created time.Time) string {
 // ------------------------------------------------------------------ the learn lane
 
 // The learn lane (#466; training/learn.md, .github/workflows/learn.yml): the learned evaluation,
-// retrained and promoted on the owner's PC (the local runner, bot/machine/README.md) with no model
-// in the loop and no harness either, so its facts come from GitHub alone: the generation on main,
-// the lane's pull request and its runs.
+// retrained and promoted on GitHub's runners (#3740) with no model in the loop and no harness
+// either, so its facts come from GitHub alone: the generation on main, the lane's pull request and
+// its runs.
 var (
 	LearnWorkflow = "learn.yml"
 	LearnBranch   = "ai/learn"
@@ -165,9 +165,9 @@ func NextLearnRun(now time.Time) time.Time {
 	return next
 }
 
-// LearnNoRunner is LEARN_NO_RUNNER: a job that ended this way with no runner was never taken: the
-// PC was off, asleep or busy for the 24 hours GitHub lets a job wait for a self-hosted runner.
-var LearnNoRunner = "⏸️ the PC's runner took none of it in 24 hours"
+// LearnNoRunner is LEARN_NO_RUNNER: a job that ended this way with no runner was never taken: it
+// waited out the 24 hours GitHub lets a job wait for a runner, or its run ended before one took it.
+var LearnNoRunner = "⏸️ no runner took it"
 
 // LearnOutcome is learn_outcome: how a learn.yml run ended, from its jobs' and steps' conclusions
 // (learn.yml's names).
@@ -203,17 +203,18 @@ func LearnOutcome(run *pyjson.Object, jobs []*pyjson.Object) string {
 			break
 		}
 	}
+	// Stopped before its retrain ran, by a person or by a new patch or set (learn-set.yml): the jobs
+	// still to come end cancelled with no runner, which reads as cancelled, not as never taken.
+	if pyjson.Equal(run.Get("conclusion"), "cancelled") && (retrain == nil || untaken(retrain) ||
+		pyjson.Equal(conclusion(retrain), "skipped")) {
+		return "⏹️ cancelled"
+	}
 	if untaken(planJob) || untaken(retrain) {
 		return LearnNoRunner
 	}
 	if retrain == nil || pyjson.Equal(conclusion(retrain), "skipped") {
 		if planJob != nil && pyjson.Equal(conclusion(planJob), "failure") {
 			return "❌ the plan failed"
-		}
-		// Stopped in its export, by a person or by a new patch or set (learn-set.yml): its shards were
-		// cancelled, not lost.
-		if pyjson.Equal(run.Get("conclusion"), "cancelled") {
-			return "⏹️ cancelled"
 		}
 		if len(lost) > 0 { // a run from before the retrain went on with the shards that finished
 			return exportFailed
@@ -260,16 +261,13 @@ func LearnOutcome(run *pyjson.Object, jobs []*pyjson.Object) string {
 }
 
 // LearnLane is learn_lane: the learn lane's section: the AI on main, the lane's pull request, the
-// next scheduled run, the owner's PC it runs on (its heartbeat: whether it is working and on what,
-// from the runners `found`, and how loaded it is, with and without its runners), and its last runs
-// with how each ended. Each part says so when GitHub cannot be read. Without `found` it reads the
-// heartbeat alone, which says a runner is in a job but not which.
-func LearnLane(ctx *hctx.Context, found *Found /* = None */) []string {
+// next scheduled run, and its last runs with how each ended. Each part says so when GitHub cannot
+// be read.
+func LearnLane(ctx *hctx.Context) []string {
 	lines := []string{"## 🧠 The learn lane", "",
 		"<sub>`learn.yml` retrains the learned evaluation on fresh self-play on GitHub's " +
-			"runners, one run after another (about half a day a run; on the owner's PC while " +
-			"`TRAINING_ON_PC` is `true`, about three days, #3740), files each export's games into " +
-			"the card statistics, and " +
+			"runners, one run after another (about a day a run, #3740), files each export's games " +
+			"into the card statistics, and " +
 			"promotes the network through the gate, with no model in the loop. It closes a stuck " +
 			"promotion, and gates again when main moves (training/learn.md, Running " +
 			"unattended).</sub>", ""}
@@ -328,16 +326,7 @@ func LearnLane(ctx *hctx.Context, found *Found /* = None */) []string {
 	}
 	lines = append(lines, "- **Its pull request:** "+pulled)
 	upcoming := Local(ctx, NextLearnRun(ctx.Now())).Format("Mon Jan 02 15:04")
-	lines = append(lines, "- **Next scheduled run:** "+upcoming+" (Central).")
-	var beat *pyjson.Object
-	var note string
-	var jobs [][2]*pyjson.Object
-	if found != nil {
-		beat, note, jobs = found.PC, found.PCNote, pcJobsOf(found)
-	} else {
-		beat, note = heartbeat(ctx)
-	}
-	lines = append(lines, "- **The owner's PC:** "+pcWords(ctx, beat, note, jobs, true)+".", "")
+	lines = append(lines, "- **Next scheduled run:** "+upcoming+" (Central).", "")
 	var runs []*pyjson.Object
 	if _, failed := herr.Catch[*herr.GitHubError](func() {
 		for _, r := range ctx.GH.ListRuns(LearnWorkflow, "", 20, false) {

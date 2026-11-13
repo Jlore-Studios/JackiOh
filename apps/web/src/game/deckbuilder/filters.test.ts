@@ -20,12 +20,15 @@ import {
   DECK_CHIP_TAGS,
   DEFAULT_FILTER,
   DEFAULT_SORT,
+  FILTER_KEYWORDS,
   FILTER_RARITIES,
   FILTER_SETS,
   FILTER_TAGS,
   FILTER_TYPES,
+  OWNERSHIPS,
   SORT_KEYS,
   almanacPool,
+  collectionPool,
   costBucket,
   costOrder,
   deckListOrder,
@@ -42,7 +45,18 @@ import {
   type PoolSort,
   type SortKey,
 } from "./filters.ts";
-import { filterCostId, filterRarityId, filterSetId, filterTagId, filterTypeId, slugOf } from "./testids.ts";
+import { PATCH_LOG } from "../../patches/ribbon.ts";
+import { poolFrom } from "./loadout.ts";
+import {
+  filterCostId,
+  filterKeywordId,
+  filterOwnershipId,
+  filterRarityId,
+  filterSetId,
+  filterTagId,
+  filterTypeId,
+  slugOf,
+} from "./testids.ts";
 
 // The inline catalog
 
@@ -175,6 +189,17 @@ const SORTED: Record<SortKey, { asc: string[]; desc: string[] }> = {
     asc: ["x-01", "x-02", "x-03", "x-04", "x-05", "x-06", "x-07", "x-08", "x-09", "x-11", "x-10"],
     desc: ["x-01", "x-02", "x-03", "x-04", "x-05", "x-06", "x-07", "x-08", "x-09", "x-11", "x-10"],
   },
+  // Every card here is Core and no patch added one (issue #3734), so both keys tie and the ties' order, cost then name then
+  // index, is the whole order, whichever way `dir` points. The real catalog's own set and patch orders are
+  // proved below.
+  set: {
+    asc: ["x-01", "x-02", "x-06", "x-09", "x-07", "x-08", "x-11", "x-10", "x-03", "x-04", "x-05"],
+    desc: ["x-01", "x-02", "x-06", "x-09", "x-07", "x-08", "x-11", "x-10", "x-03", "x-04", "x-05"],
+  },
+  newest: {
+    asc: ["x-01", "x-02", "x-06", "x-09", "x-07", "x-08", "x-11", "x-10", "x-03", "x-04", "x-05"],
+    desc: ["x-01", "x-02", "x-06", "x-09", "x-07", "x-08", "x-11", "x-10", "x-03", "x-04", "x-05"],
+  },
 };
 
 describe("the filter vocabulary (B31, B34)", () => {
@@ -238,14 +263,15 @@ describe("the filter vocabulary (B31, B34)", () => {
     expect(DEFAULT_FILTER.costs.size).toBe(0);
     expect(DEFAULT_FILTER.types.size).toBe(0);
     expect(DEFAULT_FILTER.tags.size).toBe(0);
+    expect(DEFAULT_FILTER.keywords.size).toBe(0);
     expect(DEFAULT_FILTER.rarities.size).toBe(0);
     expect(DEFAULT_FILTER.search).toBe("");
     expect(DEFAULT_FILTER.ownedOnly).toBe(true);
   });
 
-  it("B34 there are seven sort keys, and the default sort is cost ascending", () => {
-    expect([...SORT_KEYS].sort()).toEqual(["attack", "cost", "health", "name", "rarity", "type", "winRate"]);
-    expect(SORT_KEYS).toHaveLength(7);
+  it("B34 there are nine sort keys, and the default sort is cost ascending", () => {
+    expect([...SORT_KEYS].sort()).toEqual(["attack", "cost", "health", "name", "newest", "rarity", "set", "type", "winRate"]);
+    expect(SORT_KEYS).toHaveLength(9);
     expect(DEFAULT_SORT).toEqual({ key: "cost", dir: "asc" });
   });
 
@@ -260,6 +286,8 @@ describe("the filter vocabulary (B31, B34)", () => {
     expect(filterTypeId("Field Spell")).toBe("db-filter-type-field-spell");
     expect(filterTagId("Call to Chaos")).toBe("db-filter-tag-call-to-chaos");
     expect(filterRarityId("Legendary")).toBe("db-filter-rarity-legendary");
+    expect(filterKeywordId("Divine Shield")).toBe("db-filter-keyword-divine-shield");
+    expect(filterOwnershipId("missing")).toBe("db-filter-ownership-missing");
   });
 });
 
@@ -996,5 +1024,80 @@ describe("the chips follow what ships (R1380, R1381)", () => {
     // Wincon is in the full list now and in the chips only once a shipped card carries it.
     expect(FILTER_TAGS).toContain("Wincon");
     expect(DECK_CHIP_TAGS.includes("Wincon")).toBe(carried.has("Wincon"));
+  });
+});
+
+// Issue #3734: the Collection's grid shares this logic (R3734000).
+describe("the Collection's keyword chips, sorts and ownership (issue #3734)", () => {
+  const BUNDLED_CATALOG: CatalogSnapshot = { version: "bundled", cards: CORE_CATALOG };
+  const SHELF = poolFrom(BUNDLED_CATALOG, null);
+  const setIndex = (id: string): number => SHIPPED_SETS.indexOf(CORE_CATALOG[id]?.set ?? "Core");
+  const keep = (over: Partial<PoolFilter>): string[] => ALL_IDS.filter((id) => matchesFilter(card(id), filter(over)));
+
+  it("R3734000 FILTER_KEYWORDS lists, in string order, each keyword a shipped card prints, a Token or Glitch card's alone left out", () => {
+    expect(FILTER_KEYWORDS.length).toBeGreaterThan(5);
+    expect([...FILTER_KEYWORDS]).toEqual([...FILTER_KEYWORDS].sort());
+    expect(new Set(FILTER_KEYWORDS).size).toBe(FILTER_KEYWORDS.length);
+    const printed = new Set(
+      SHELF.flatMap((id) => {
+        const def = CORE_CATALOG[id];
+        return def === undefined ? [] : [...def.base.keywords, ...def.radiant.keywords].map((keyword) => keyword.kind);
+      }),
+    );
+    expect(new Set(FILTER_KEYWORDS)).toEqual(printed);
+    expect(FILTER_KEYWORDS).toContain("Taunt");
+  });
+
+  it("R3734000 the keyword chips OR within the group, on either face, and AND across groups", () => {
+    expect(keep({ keywords: new Set(["Taunt"]) })).toEqual(["x-02"]);
+    expect(keep({ keywords: new Set(["Lifesteal"]) })).toEqual(["x-02"]);
+    expect(keep({ keywords: new Set(["Taunt", "Charge"]) })).toEqual(["x-02", "x-04", "x-08"]);
+    expect(keep({ keywords: new Set(["Charge"]), types: new Set<CardType>(["Spell"]) })).toEqual([]);
+    expect(keep({ keywords: new Set(["Charge"]), types: new Set<CardType>(["Unit"]), costs: new Set<CostBucket>(["3"]) })).toEqual(["x-08"]);
+    expect(keep({ keywords: new Set() })).toEqual(ALL_IDS);
+  });
+
+  it("R3734000 sort 'set' follows the order the sets ship, and 'desc' reverses it", () => {
+    const asc = sortPool(SHELF, BUNDLED_CATALOG, { key: "set", dir: "asc" }).map(setIndex);
+    expect(asc).toEqual([...asc].sort((left, right) => left - right));
+    expect(new Set(asc).size).toBeGreaterThan(1);
+    const desc = sortPool(SHELF, BUNDLED_CATALOG, { key: "set", dir: "desc" }).map(setIndex);
+    expect(desc).toEqual([...desc].sort((left, right) => right - left));
+  });
+
+  it("R3734000 sort 'newest' puts a card of the latest patch first, and 'desc' reverses it", () => {
+    const latest = [...PATCH_LOG].reverse().find((patch) => patch.changes.some((change) => SHELF.includes(change.id)));
+    expect(latest).toBeDefined();
+    const ids = new Set(latest?.changes.map((change) => change.id));
+    const ascFirst = sortPool(SHELF, BUNDLED_CATALOG, { key: "newest", dir: "asc" })[0] ?? "";
+    expect(ids.has(ascFirst)).toBe(true);
+    const descLast = sortPool(SHELF, BUNDLED_CATALOG, { key: "newest", dir: "desc" }).at(-1) ?? "";
+    expect(ids.has(descLast)).toBe(true);
+  });
+
+  it("R3734000 the ownership chips are all, owned and missing, in that order", () => {
+    expect([...OWNERSHIPS]).toEqual(["all", "owned", "missing"]);
+  });
+
+  it("R3734000 collectionPool with 'all' holds every id of the shelf, and 'owned' and 'missing' split it exactly", () => {
+    const have = new Set(owned(ALL_IDS));
+    const all = collectionPool(ALL_IDS, CATALOG, have, "all", DEFAULT_FILTER, DEFAULT_SORT);
+    expect([...all].sort()).toEqual([...ALL_IDS].sort());
+    const mine = collectionPool(ALL_IDS, CATALOG, have, "owned", DEFAULT_FILTER, DEFAULT_SORT);
+    const lacking = collectionPool(ALL_IDS, CATALOG, have, "missing", DEFAULT_FILTER, DEFAULT_SORT);
+    expect(lacking).toEqual([UNOWNED]);
+    expect(mine).toEqual(all.filter((id) => id !== UNOWNED));
+    expect([...mine, ...lacking].sort()).toEqual([...all].sort());
+  });
+
+  it("R3734000 collectionPool never reads ownedOnly, and filters and sorts as the pool does", () => {
+    const have = new Set(owned(ALL_IDS));
+    const on = collectionPool(ALL_IDS, CATALOG, have, "all", filter({ ownedOnly: true }), DEFAULT_SORT);
+    const off = collectionPool(ALL_IDS, CATALOG, have, "all", filter({ ownedOnly: false }), DEFAULT_SORT);
+    expect(on).toEqual(off);
+    expect(collectionPool(ALL_IDS, CATALOG, have, "all", filter({ search: "cat" }), DEFAULT_SORT)).toEqual(["x-02"]);
+    expect(collectionPool(ALL_IDS, CATALOG, have, "owned", DEFAULT_FILTER, { key: "name", dir: "desc" })).toEqual(
+      owned(SORTED.name.desc),
+    );
   });
 });
