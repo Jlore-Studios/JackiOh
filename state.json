@@ -15873,9 +15873,7 @@
     },
     "3865": {
       "action": "build",
-      "asks": [
-        "c:6856807032"
-      ],
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-13T15:48:28Z",
         "difficulty": "medium",
@@ -15898,9 +15896,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-1",
-      "owner_since": "2026-11-13T15:28:56Z",
-      "owner_why": "it plans it",
+      "owner": "claude-6",
+      "owner_since": "2026-11-13T16:34:01Z",
+      "owner_why": "handed off from `claude-1`: `claude-1` is busy: its lanes are all taken",
       "paused": {
         "at": "2026-11-13T16:25:34Z",
         "interrupt": "usage",
@@ -15912,16 +15910,18 @@
       "planned_by_id": "claude-1",
       "planned_model": "sonnet",
       "planned_tier": "medium",
-      "provider": "claude-1",
+      "provider": "claude-6",
       "queued_at": "2026-11-13T15:04:24Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "",
-      "run_id": "43457360777",
+      "run_id": "pending:cd982e0e-1794587600",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-13T15:54:46Z",
+      "started_at": "2026-11-13T16:34:01Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6856807032"
+      ],
       "verdict_rounds": 0
     },
     "3866": {
@@ -16143,9 +16143,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T16:33:04Z",
+    "at": "2026-11-13T16:34:01Z",
     "url": "",
-    "what": "spot-check #3779 on claude-3"
+    "what": "build #3865 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-13T15:45:28Z",
