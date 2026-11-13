@@ -18033,6 +18033,7 @@
           }
         ],
         "head": "866908790c5e4fff73b95e3526a651d0479d43dc",
+        "interruptions": 0,
         "kind": "build",
         "model": "opus",
         "provider": "claude-4",
