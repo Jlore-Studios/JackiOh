@@ -177,6 +177,10 @@ export type GameProps = {
   autoEndTurn?: boolean;
   /** Server-synchronised route clock, rendered by Board beside End Turn rather than as floating HUD. */
   turnClock?: ReactNode;
+  /** #3727: End turn's words, already translated, where ending the turn sends it on (a daily game's); absent, "End turn". */
+  endTurnLabel?: string;
+  /** #3727: why the game ended in the route's words, already translated, over the engine reason's (a daily game's "Lost on time"). */
+  resultReason?: string;
   /** Route connection status, rendered on the board rail rather than above it. */
   matchStatus?: ReactNode;
   /** Route navigation and match-series information, mounted in the board rail. */
@@ -291,6 +295,8 @@ export default function Game({
   openResultTestId,
   autoEndTurn: pinnedAutoEndTurn,
   turnClock,
+  endTurnLabel,
+  resultReason,
   matchStatus,
   boardRail,
   phoneRailTop = false,
@@ -985,6 +991,7 @@ export default function Game({
         enemyLabel={enemyLabel}
         controlExtras={controlExtras}
         turnClock={turnClock}
+        endTurnLabel={endTurnLabel}
         matchStatus={matchStatus}
         boardRail={railTop ? undefined : boardRail}
         heroAside={heroAside}
@@ -1091,6 +1098,7 @@ export default function Game({
             viewer={shown.viewer}
             form={resultForm}
             actions={resultActions}
+            reasonText={resultReason}
             animating={animating.get(testid.result)}
             theirHand={theirHandOf(shown)}
             onOpenResult={onOpenResult}

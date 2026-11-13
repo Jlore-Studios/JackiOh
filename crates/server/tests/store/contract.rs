@@ -12379,3 +12379,921 @@ mod r3290000_banned_standings {
 
     both_stores!(r3290000_standings_mark_a_banned_account);
 }
+
+/// SPEC §9.13 (migration 0089, #3727): daily games beside their matches, their invites, their notice
+/// settings and the browsers' push subscriptions.
+mod daily {
+    use super::*;
+    use jackioh_engine::PerPlayer;
+    use jackioh_server::db::store::{
+        DailyGameRow, DailyInviteKind, DailyInviteRow, DailyInviteState, DailyNotifyRow, PushSubRow,
+        QueueMode,
+    };
+    use jackioh_shared::config::MS_PER_DAY;
+    use jackioh_shared::host::daily::{DailyBoard, DailyClock, DailyHold};
+
+    const DAYS: i32 = 3;
+
+    fn clock(days: i32, holder: PlayerId, since: i64) -> DailyClock {
+        DailyClock {
+            per_move_days: days,
+            holds: vec![DailyHold {
+                player: holder,
+                key: format!("1:{}", holder.as_str()),
+                since,
+                deadline: since + i64::from(days) * MS_PER_DAY,
+            }],
+        }
+    }
+
+    fn board(turn: i32) -> DailyBoard {
+        DailyBoard {
+            turn,
+            life: PerPlayer::new(30, 28),
+            seats_swapped: false,
+            result: None,
+        }
+    }
+
+    /// The match row first (`daily_games.match_id` is its foreign key), then the daily game beside it.
+    async fn daily_game(
+        harness: &StoreHarness,
+        p1: &str,
+        p2: &str,
+        created_at: i64,
+        next_deadline_at: Option<i64>,
+    ) -> DailyGameRow {
+        let row = match_row(&id(), p1, p2, harness, created_at);
+        q!(harness, t => t.matches_create(&row));
+        let game = DailyGameRow {
+            match_id: row.id.clone(),
+            players: (p1.to_string(), p2.to_string()),
+            mode: QueueMode::Bo1,
+            per_move_days: DAYS,
+            clock: clock(DAYS, PlayerId::P1, created_at),
+            board: board(1),
+            next_deadline_at,
+            seq: 0,
+            created_at,
+            ended_at: None,
+        };
+        q!(harness, t => t.daily_games_create(&game));
+        game
+    }
+
+    fn invite(
+        kind: DailyInviteKind,
+        from_profile: &str,
+        to_profile: Option<&str>,
+        mode: QueueMode,
+        days: i32,
+        at: i64,
+        expires_at: i64,
+    ) -> DailyInviteRow {
+        DailyInviteRow {
+            id: id(),
+            kind,
+            from_profile: from_profile.to_string(),
+            to_profile: to_profile.map(str::to_string),
+            mode,
+            per_move_days: days,
+            choice: json!({ "deck": { "name": "Aggro", "cards": ["core-001", "core-002"] } }),
+            state: DailyInviteState::Open,
+            match_id: None,
+            created_at: at,
+            expires_at,
+        }
+    }
+
+    fn challenge(from_profile: &str, to_profile: &str, at: i64, expires_at: i64) -> DailyInviteRow {
+        invite(
+            DailyInviteKind::Challenge,
+            from_profile,
+            Some(to_profile),
+            QueueMode::Bo1,
+            DAYS,
+            at,
+            expires_at,
+        )
+    }
+
+    fn seek(from_profile: &str, mode: QueueMode, days: i32, at: i64, expires_at: i64) -> DailyInviteRow {
+        invite(
+            DailyInviteKind::Seek,
+            from_profile,
+            None,
+            mode,
+            days,
+            at,
+            expires_at,
+        )
+    }
+
+    fn match_ids(rows: &[DailyGameRow]) -> Vec<String> {
+        rows.iter().map(|row| row.match_id.clone()).collect()
+    }
+
+    fn state_of(row: Option<DailyInviteRow>) -> DailyInviteState {
+        must(row, "the invite").state
+    }
+
+    fn push_sub(profile_id: &str, endpoint: &str, at: i64) -> PushSubRow {
+        PushSubRow {
+            id: id(),
+            profile_id: profile_id.to_string(),
+            endpoint: endpoint.to_string(),
+            p256dh: format!("p256dh-{endpoint}"),
+            auth: format!("auth-{endpoint}"),
+            created_at: at,
+        }
+    }
+
+    /// §9.13: a daily game is one row beside its match, read back whole; a player's list is the
+    /// running games either seat, oldest first, then the newest ended ones up to the count asked; a
+    /// move writes a running game only.
+    async fn s913_daily_games_round_trip_list_and_end(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let now = harness.now();
+        let first = daily_game(harness, &a.id, &b.id, now - 3_000, Some(now + 1_000)).await;
+        let second = daily_game(harness, &c.id, &a.id, now - 2_000, Some(now + 2_000)).await;
+        let third = daily_game(harness, &a.id, &c.id, now - 1_000, Some(now + 3_000)).await;
+
+        assert!(
+            call!(harness, t => t.daily_games_create(&first)).is_err(),
+            "{}: a second daily game for one match",
+            harness.name
+        );
+        let orphan = DailyGameRow {
+            match_id: id(),
+            ..first.clone()
+        };
+        assert!(
+            call!(harness, t => t.daily_games_create(&orphan)).is_err(),
+            "{}: a daily game with no match row",
+            harness.name
+        );
+        let bo3 = DailyGameRow {
+            match_id: id(),
+            mode: QueueMode::Bo3,
+            ..first.clone()
+        };
+        q!(harness, t => t.matches_create(&match_row(&bo3.match_id, &a.id, &b.id, harness, now)));
+        assert!(
+            call!(harness, t => t.daily_games_create(&bo3)).is_err(),
+            "{}: a Best-of-3 daily game",
+            harness.name
+        );
+        let two_days = DailyGameRow {
+            per_move_days: 2,
+            ..bo3.clone()
+        };
+        assert!(
+            call!(harness, t => t.daily_games_create(&DailyGameRow { mode: QueueMode::Bo1, ..two_days }))
+                .is_err(),
+            "{}: two days per move",
+            harness.name
+        );
+
+        assert_eq!(
+            q!(harness, t => t.daily_games_get(&first.match_id)),
+            Some(first.clone())
+        );
+        assert_eq!(q!(harness, t => t.daily_games_get(&id())), None);
+        assert_eq!(q!(harness, t => t.daily_games_get("not-a-uuid")), None);
+        assert_eq!(
+            match_ids(&q!(harness, t => t.daily_games_of(&a.id, 10))),
+            match_ids(&[first.clone(), second.clone(), third.clone()]),
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            match_ids(&q!(harness, t => t.daily_games_of(&b.id, 10))),
+            vec![first.match_id.clone()]
+        );
+        assert!(q!(harness, t => t.daily_games_of("not-a-uuid", 10)).is_empty());
+
+        // A move: the clock, the board, the deadline and the seq are written; an ending writes
+        // `ended_at`.
+        let moved = clock(DAYS, PlayerId::P2, now);
+        assert!(
+            q!(harness, t => t.daily_games_put(&first.match_id, 0, &moved, &board(2), Some(now + 9_000), None))
+        );
+        let read = must(
+            q!(harness, t => t.daily_games_get(&first.match_id)),
+            "the moved game",
+        );
+        assert_eq!(
+            (
+                read.clock.clone(),
+                read.board.clone(),
+                read.next_deadline_at,
+                read.seq,
+                read.ended_at
+            ),
+            (moved.clone(), board(2), Some(now + 9_000), 1, None),
+            "{}",
+            harness.name
+        );
+        // A second write after the seq the first wrote after (two requests that read one seq) writes
+        // nothing, so the clock stays the logged move's.
+        assert!(
+            !q!(harness, t => t.daily_games_put(&first.match_id, 0, &DailyClock::new(DAYS), &board(7), None, None)),
+            "{}: a write after a seq already moved on",
+            harness.name
+        );
+        assert!(
+            !q!(harness, t => t.daily_games_put(&first.match_id, 5, &DailyClock::new(DAYS), &board(7), None, None)),
+            "{}: a write after a seq not yet reached",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.daily_games_get(&first.match_id)),
+            Some(read),
+            "{}",
+            harness.name
+        );
+        let over = DailyClock::new(DAYS);
+        let ended = DailyBoard {
+            result: Some(from(json!({ "winner": "p1", "reason": "concede" }))),
+            ..board(4)
+        };
+        assert!(
+            q!(harness, t => t.daily_games_put(&second.match_id, 0, &over, &ended, None, Some(now - 500)))
+        );
+        assert!(
+            q!(harness, t => t.daily_games_put(&third.match_id, 0, &over, &ended, None, Some(now - 100)))
+        );
+        assert!(
+            !q!(harness, t => t.daily_games_put(&third.match_id, 1, &moved, &board(9), Some(now), None)),
+            "{}: an ended game is written again",
+            harness.name
+        );
+        assert!(!q!(harness, t => t.daily_games_put(&id(), 0, &moved, &board(9), None, None)));
+        let third_read = must(
+            q!(harness, t => t.daily_games_get(&third.match_id)),
+            "the ended game",
+        );
+        assert_eq!(
+            (third_read.board, third_read.ended_at, third_read.next_deadline_at),
+            (ended.clone(), Some(now - 100), None)
+        );
+
+        // Running first, then the newest ended first, as many as asked.
+        assert_eq!(
+            match_ids(&q!(harness, t => t.daily_games_of(&a.id, 10))),
+            match_ids(&[first.clone(), third.clone(), second.clone()]),
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            match_ids(&q!(harness, t => t.daily_games_of(&a.id, 1))),
+            match_ids(&[first.clone(), third.clone()])
+        );
+        assert_eq!(
+            match_ids(&q!(harness, t => t.daily_games_of(&a.id, 0))),
+            vec![first.match_id.clone()]
+        );
+        assert_eq!(
+            match_ids(&q!(harness, t => t.daily_games_running())),
+            vec![first.match_id.clone()]
+        );
+    }
+
+    /// §9.13: the sweep reads the running games whose earliest deadline has passed, and the games
+    /// over whose match is still `live` (a result whose write failed), earliest first; `matches_live`
+    /// (the reaper's and a restart's read) leaves every daily match out.
+    async fn s913_daily_games_due_by_deadline_and_left_out_of_the_live_matches(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        let live = match_row(&id(), &a.id, &b.id, harness, now);
+        q!(harness, t => t.matches_create(&live));
+        let late = daily_game(harness, &a.id, &b.id, now - 5_000, Some(now - 10)).await;
+        let later = daily_game(harness, &b.id, &a.id, now - 4_000, Some(now + 60_000)).await;
+        let ended = daily_game(harness, &a.id, &b.id, now - 3_000, Some(now - 20)).await;
+        let unheld = daily_game(harness, &b.id, &a.id, now - 2_000, None).await;
+        let latest = daily_game(harness, &a.id, &b.id, now - 1_000, Some(now - 30)).await;
+        let at_now = daily_game(harness, &b.id, &a.id, now - 500, Some(now)).await;
+        let finished = daily_game(harness, &a.id, &b.id, now - 400, Some(now - 40)).await;
+        assert!(
+            q!(harness, t => t.daily_games_put(&ended.match_id, 0, &DailyClock::new(DAYS), &board(3), Some(now - 20), Some(now - 1)))
+        );
+        assert!(
+            q!(harness, t => t.daily_games_put(&finished.match_id, 0, &DailyClock::new(DAYS), &board(3), None, Some(now - 2)))
+        );
+        // Its result landed: the match is over, and nothing is left to write.
+        q!(harness, t => t.matches_finish(&finished.match_id, now));
+
+        assert_eq!(
+            q!(harness, t => t.daily_games_due(now)),
+            vec![
+                latest.match_id.clone(),
+                late.match_id.clone(),
+                ended.match_id.clone(),
+                at_now.match_id.clone()
+            ],
+            "{}",
+            harness.name
+        );
+        assert!(q!(harness, t => t.daily_games_due(now - 1_000)).is_empty());
+        assert_eq!(
+            match_ids(&q!(harness, t => t.daily_games_running())),
+            match_ids(&[late, later, unheld, latest, at_now]),
+            "{}",
+            harness.name
+        );
+        let live_ids: Vec<String> = q!(harness, t => t.matches_live())
+            .iter()
+            .map(|row| row.id.clone())
+            .collect();
+        assert_eq!(live_ids, vec![live.id.clone()], "{}", harness.name);
+    }
+
+    /// §9.13's cap: running games either seat, and the open seeks and challenges sent, unlapsed.
+    async fn s913_daily_active_count_counts_running_games_and_open_sends(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let now = harness.now();
+        daily_game(harness, &a.id, &b.id, now - 5_000, Some(now + 1_000)).await;
+        let ended = daily_game(harness, &b.id, &a.id, now - 4_000, Some(now + 1_000)).await;
+        assert!(
+            q!(harness, t => t.daily_games_put(&ended.match_id, 0, &DailyClock::new(DAYS), &board(3), None, Some(now)))
+        );
+        assert!(
+            q!(harness, t => t.daily_invites_create(&seek(&a.id, QueueMode::Bo1, DAYS, now, now + 60_000), now))
+        );
+        assert!(
+            q!(harness, t => t.daily_invites_create(&seek(&a.id, QueueMode::Random, DAYS, now - 9_000, now - 1), now - 9_000))
+        );
+        assert!(q!(harness, t => t.daily_invites_create(&challenge(&a.id, &c.id, now, now + 60_000), now)));
+        assert!(q!(harness, t => t.daily_invites_create(&challenge(&b.id, &a.id, now, now + 60_000), now)));
+        let declined = challenge(&a.id, &b.id, now, now + 60_000);
+        assert!(q!(harness, t => t.daily_invites_create(&declined, now)));
+        assert!(
+            q!(harness, t => t.daily_invites_close(&declined.id, DailyInviteState::Declined, None)).is_some()
+        );
+
+        assert_eq!(
+            q!(harness, t => t.daily_active_count(&a.id, now)),
+            3,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.daily_active_count(&b.id, now)),
+            2,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.daily_active_count(&c.id, now)),
+            0,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.daily_active_count(&a.id, now + 60_000)),
+            1,
+            "{}",
+            harness.name
+        );
+    }
+
+    /// §9.13: one open challenge per sender and friend, one open seek per sender, mode and days, a
+    /// lapsed one expired as the next is sent; closed from open only; closed between a pair; the
+    /// sweep expires what lapsed. The schema's checks refuse what no invite may be.
+    async fn s913_daily_invites_one_open_per_key_close_and_expire(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let now = harness.now();
+        let ab = challenge(&a.id, &b.id, now - 6_000, now + 60_000);
+        let ba = challenge(&b.id, &a.id, now - 5_000, now + 60_000);
+        let seek_bo1 = seek(&a.id, QueueMode::Bo1, DAYS, now - 4_000, now + 60_000);
+        let seek_week = seek(&a.id, QueueMode::Bo1, 7, now - 3_000, now + 60_000);
+        let seek_random = seek(&a.id, QueueMode::Random, DAYS, now - 2_000, now + 60_000);
+        for row in [&ab, &ba, &seek_bo1, &seek_week, &seek_random] {
+            assert!(
+                q!(harness, t => t.daily_invites_create(row, now)),
+                "{}",
+                harness.name
+            );
+        }
+        assert!(
+            !q!(harness, t => t.daily_invites_create(&challenge(&a.id, &b.id, now, now + 60_000), now)),
+            "{}: a second open challenge a to b",
+            harness.name
+        );
+        assert!(
+            !q!(harness, t => t.daily_invites_create(&seek(&a.id, QueueMode::Bo1, DAYS, now, now + 60_000), now)),
+            "{}: a second open seek of one mode and time",
+            harness.name
+        );
+        let reused = DailyInviteRow {
+            id: ab.id.clone(),
+            ..seek(&c.id, QueueMode::Bo1, DAYS, now, now + 60_000)
+        };
+        assert!(
+            call!(harness, t => t.daily_invites_create(&reused, now)).is_err(),
+            "{}: a reused id",
+            harness.name
+        );
+        let refused = [
+            (
+                "a challenge to oneself",
+                challenge(&a.id, &a.id, now, now + 60_000),
+            ),
+            (
+                "a challenge to nobody",
+                invite(
+                    DailyInviteKind::Challenge,
+                    &a.id,
+                    None,
+                    QueueMode::Bo1,
+                    DAYS,
+                    now,
+                    now + 60_000,
+                ),
+            ),
+            (
+                "a seek to somebody",
+                invite(
+                    DailyInviteKind::Seek,
+                    &a.id,
+                    Some(&c.id),
+                    QueueMode::Bo1,
+                    DAYS,
+                    now,
+                    now + 60_000,
+                ),
+            ),
+            (
+                "a Best-of-3 seek",
+                seek(&c.id, QueueMode::Bo3, DAYS, now, now + 60_000),
+            ),
+            (
+                "two days per move",
+                seek(&c.id, QueueMode::Bo1, 2, now, now + 60_000),
+            ),
+        ];
+        for (what, row) in &refused {
+            assert!(
+                call!(harness, t => t.daily_invites_create(row, now)).is_err(),
+                "{}: {what}",
+                harness.name
+            );
+        }
+
+        assert_eq!(q!(harness, t => t.daily_invites_get(&ab.id)), Some(ab.clone()));
+        assert_eq!(q!(harness, t => t.daily_invites_get(&id())), None);
+        assert_eq!(q!(harness, t => t.daily_invites_get("not-a-uuid")), None);
+        assert_eq!(
+            q!(harness, t => t.daily_invites_open_of(&a.id, now)),
+            vec![
+                ab.clone(),
+                ba.clone(),
+                seek_bo1.clone(),
+                seek_week.clone(),
+                seek_random.clone()
+            ],
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.daily_invites_open_of(&b.id, now)),
+            vec![ab.clone(), ba.clone()]
+        );
+        assert!(q!(harness, t => t.daily_invites_open_of(&c.id, now)).is_empty());
+        assert!(q!(harness, t => t.daily_invites_open_of(&a.id, now + 60_000)).is_empty());
+
+        // A lapsed challenge leaves the reads at once and is expired when the next of its pair is sent.
+        let lapsed = challenge(&a.id, &c.id, now - 10_000, now - 1);
+        assert!(q!(harness, t => t.daily_invites_create(&lapsed, now - 10_000)));
+        assert!(!ids_of(&q!(harness, t => t.daily_invites_open_of(&c.id, now))).contains(&lapsed.id));
+        let next = challenge(&a.id, &c.id, now, now + 60_000);
+        assert!(q!(harness, t => t.daily_invites_create(&next, now)));
+        assert_eq!(
+            state_of(q!(harness, t => t.daily_invites_get(&lapsed.id))),
+            DailyInviteState::Expired
+        );
+
+        // Closed from open only, naming the match it made.
+        let made = id();
+        let accepted = must(
+            q!(harness, t => t.daily_invites_close(&ab.id, DailyInviteState::Accepted, Some(&made))),
+            "the accepted challenge",
+        );
+        assert_eq!(
+            (accepted.state, accepted.match_id.clone()),
+            (DailyInviteState::Accepted, Some(made.clone())),
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.daily_invites_get(&ab.id)),
+            Some(accepted.clone())
+        );
+        assert!(q!(harness, t => t.daily_invites_close(&ab.id, DailyInviteState::Declined, None)).is_none());
+        let cancelled = must(
+            q!(harness, t => t.daily_invites_close(&seek_week.id, DailyInviteState::Cancelled, None)),
+            "the cancelled seek",
+        );
+        assert_eq!(
+            (cancelled.state, cancelled.match_id),
+            (DailyInviteState::Cancelled, None)
+        );
+
+        // Between a pair: the open challenges either way, no seek.
+        let closed =
+            q!(harness, t => t.daily_invites_close_between(&c.id, &a.id, DailyInviteState::Cancelled));
+        assert_eq!(ids_of(&closed), vec![next.id.clone()], "{}", harness.name);
+        assert!(closed.iter().all(|row| row.state == DailyInviteState::Cancelled));
+        assert!(
+            q!(harness, t => t.daily_invites_close_between(&c.id, &a.id, DailyInviteState::Cancelled))
+                .is_empty()
+        );
+        assert_eq!(
+            state_of(q!(harness, t => t.daily_invites_get(&ba.id))),
+            DailyInviteState::Open
+        );
+
+        // The sweep: every open one lapsed by then, oldest first; the closed ones stay as they are.
+        assert!(q!(harness, t => t.daily_invites_expire(now)).is_empty());
+        let expired = q!(harness, t => t.daily_invites_expire(now + 60_000));
+        assert_eq!(
+            ids_of(&expired),
+            vec![ba.id.clone(), seek_bo1.id.clone(), seek_random.id.clone()],
+            "{}",
+            harness.name
+        );
+        assert!(expired.iter().all(|row| row.state == DailyInviteState::Expired));
+        assert_eq!(
+            state_of(q!(harness, t => t.daily_invites_get(&ab.id))),
+            DailyInviteState::Accepted
+        );
+        assert!(q!(harness, t => t.daily_invites_expire(now + 60_000)).is_empty());
+    }
+
+    /// §9.13: a seek is taken by the oldest open one of the same mode and days, not lapsed, from
+    /// another profile, with no block either way, and moved to paired naming the match.
+    async fn s913_daily_seek_claim_takes_the_oldest_fitting_unblocked_seek(harness: &StoreHarness) {
+        let me = active_profile(harness, None).await;
+        let blocked_by_me = active_profile(harness, None).await;
+        let blocking_me = active_profile(harness, None).await;
+        let fits = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        let lapsed = seek(&other.id, QueueMode::Bo1, DAYS, now - 9_000, now - 1);
+        let first = seek(&blocked_by_me.id, QueueMode::Bo1, DAYS, now - 8_000, now + 60_000);
+        let second = seek(&blocking_me.id, QueueMode::Bo1, DAYS, now - 7_000, now + 60_000);
+        let mine = seek(&me.id, QueueMode::Bo1, DAYS, now - 6_000, now + 60_000);
+        let third = seek(&fits.id, QueueMode::Bo1, DAYS, now - 5_000, now + 60_000);
+        let random = seek(&other.id, QueueMode::Random, DAYS, now - 4_000, now + 60_000);
+        let week = seek(&other.id, QueueMode::Bo1, 7, now - 3_000, now + 60_000);
+        let to_me = challenge(&other.id, &me.id, now - 10_000, now + 60_000);
+        for row in [&lapsed, &first, &second, &mine, &third, &random, &week, &to_me] {
+            assert!(
+                q!(harness, t => t.daily_invites_create(row, now - 10_000)),
+                "{}",
+                harness.name
+            );
+        }
+        q!(harness, t => t.blocks_add(&me.id, &blocked_by_me.id, now));
+        q!(harness, t => t.blocks_add(&blocking_me.id, &me.id, now));
+
+        let match_one = id();
+        let paired = must(
+            q!(harness, t => t.daily_seek_claim(QueueMode::Bo1, DAYS, &me.id, &match_one, now)),
+            "the seek that fits",
+        );
+        assert_eq!(paired.id, third.id, "{}", harness.name);
+        assert_eq!(
+            (paired.state, paired.match_id.clone()),
+            (DailyInviteState::Paired, Some(match_one.clone()))
+        );
+        assert_eq!(q!(harness, t => t.daily_invites_get(&third.id)), Some(paired));
+        assert_eq!(
+            q!(harness, t => t.daily_seek_claim(QueueMode::Bo1, DAYS, &me.id, &id(), now)),
+            None,
+            "{}: only blocked, lapsed and own seeks are left",
+            harness.name
+        );
+        assert_eq!(
+            state_of(q!(harness, t => t.daily_invites_get(&mine.id))),
+            DailyInviteState::Open
+        );
+
+        // A lifted block opens its seek again; the other side's block still holds.
+        assert!(q!(harness, t => t.blocks_remove(&me.id, &blocked_by_me.id)));
+        let match_two = id();
+        let next = must(
+            q!(harness, t => t.daily_seek_claim(QueueMode::Bo1, DAYS, &me.id, &match_two, now)),
+            "the unblocked seek",
+        );
+        assert_eq!((next.id, next.match_id), (first.id.clone(), Some(match_two)));
+        assert_eq!(
+            q!(harness, t => t.daily_seek_claim(QueueMode::Bo1, DAYS, &me.id, &id(), now)),
+            None
+        );
+        let took = must(
+            q!(harness, t => t.daily_seek_claim(QueueMode::Random, DAYS, &me.id, &id(), now)),
+            "the All Random seek",
+        );
+        assert_eq!(took.id, random.id);
+        assert_eq!(
+            must(
+                q!(harness, t => t.daily_seek_claim(QueueMode::Bo1, 7, &me.id, &id(), now)),
+                "the week's seek"
+            )
+            .id,
+            week.id
+        );
+        assert_eq!(
+            state_of(q!(harness, t => t.daily_invites_get(&lapsed.id))),
+            DailyInviteState::Open
+        );
+        assert_eq!(
+            state_of(q!(harness, t => t.daily_invites_get(&to_me.id))),
+            DailyInviteState::Open
+        );
+    }
+
+    /// §9.13, RFC 8058: an account's notice settings start at email on with a token of its own, keep
+    /// that token, take each time sent, and an unsubscribe by the token turns email off.
+    async fn s913_daily_notify_defaults_settings_and_unsubscribe(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let now = harness.now();
+        let first = q!(harness, t => t.daily_notify_get(&a.id));
+        assert_eq!(
+            (
+                first.profile_id.clone(),
+                first.email_on,
+                first.last_email_at,
+                first.last_push_at
+            ),
+            (a.id.clone(), true, None, None),
+            "{}",
+            harness.name
+        );
+        assert!(
+            uuid::Uuid::parse_str(&first.unsubscribe_token).is_ok(),
+            "{}",
+            harness.name
+        );
+        assert_eq!(q!(harness, t => t.daily_notify_get(&a.id)), first);
+
+        let off = q!(harness, t => t.daily_notify_put(&a.id, false));
+        assert_eq!(
+            off,
+            DailyNotifyRow {
+                email_on: false,
+                ..first.clone()
+            }
+        );
+        assert_eq!(q!(harness, t => t.daily_notify_put(&a.id, true)), first);
+
+        q!(harness, t => t.daily_notify_sent(&a.id, Some(now - 2_000), None));
+        q!(harness, t => t.daily_notify_sent(&a.id, None, Some(now - 1_000)));
+        q!(harness, t => t.daily_notify_sent(&a.id, None, None));
+        assert_eq!(
+            q!(harness, t => t.daily_notify_get(&a.id)),
+            DailyNotifyRow {
+                last_email_at: Some(now - 2_000),
+                last_push_at: Some(now - 1_000),
+                ..first.clone()
+            },
+            "{}",
+            harness.name
+        );
+
+        // A write to an account with no row writes the row's defaults with it.
+        let b_off = q!(harness, t => t.daily_notify_put(&b.id, false));
+        assert_eq!((b_off.email_on, b_off.last_email_at), (false, None));
+        q!(harness, t => t.daily_notify_sent(&c.id, None, Some(now)));
+        let c_row = q!(harness, t => t.daily_notify_get(&c.id));
+        assert_eq!(
+            (c_row.email_on, c_row.last_email_at, c_row.last_push_at),
+            (true, None, Some(now))
+        );
+        let tokens: IndexSet<String> = [&first, &b_off, &c_row]
+            .iter()
+            .map(|row| row.unsubscribe_token.clone())
+            .collect();
+        assert_eq!(
+            tokens.len(),
+            3,
+            "{}: each account's token is its own",
+            harness.name
+        );
+
+        assert!(q!(harness, t => t.daily_notify_unsubscribe(&first.unsubscribe_token)));
+        assert!(!q!(harness, t => t.daily_notify_get(&a.id)).email_on);
+        assert!(q!(harness, t => t.daily_notify_unsubscribe(&first.unsubscribe_token)));
+        assert!(q!(harness, t => t.daily_notify_get(&c.id)).email_on);
+        assert!(!q!(harness, t => t.daily_notify_unsubscribe(&id())));
+        assert!(!q!(harness, t => t.daily_notify_unsubscribe("not-a-token")));
+        assert!(
+            call!(harness, t => t.daily_notify_get(&id())).is_err(),
+            "{}: notice settings for no account",
+            harness.name
+        );
+    }
+
+    /// §9.13: one subscription per endpoint, an account's oldest first; a re-subscription keeps its
+    /// row's id and takes the rest; a delete with an account deletes only that account's.
+    async fn s913_push_subscriptions_are_one_per_endpoint(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        let one = push_sub(&a.id, "https://push.example.test/one", now - 3_000);
+        let two = push_sub(&a.id, "https://push.example.test/two", now - 2_000);
+        let three = push_sub(&b.id, "https://push.example.test/three", now - 1_000);
+        for row in [&one, &two, &three] {
+            q!(harness, t => t.push_subs_add(row));
+        }
+        assert_eq!(
+            q!(harness, t => t.push_subs_of(&a.id)),
+            vec![one.clone(), two.clone()],
+            "{}",
+            harness.name
+        );
+        assert_eq!(q!(harness, t => t.push_subs_of(&b.id)), vec![three.clone()]);
+        assert!(q!(harness, t => t.push_subs_of("not-a-uuid")).is_empty());
+
+        // The same browser signs in as b: one row, its id kept, the rest b's.
+        let again = PushSubRow {
+            p256dh: "p256dh-again".to_string(),
+            auth: "auth-again".to_string(),
+            created_at: now,
+            ..push_sub(&b.id, &one.endpoint, now)
+        };
+        q!(harness, t => t.push_subs_add(&again));
+        assert_eq!(
+            q!(harness, t => t.push_subs_of(&a.id)),
+            vec![two.clone()],
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.push_subs_of(&b.id)),
+            vec![
+                three.clone(),
+                PushSubRow {
+                    id: one.id.clone(),
+                    ..again.clone()
+                }
+            ],
+            "{}",
+            harness.name
+        );
+        assert!(
+            call!(harness, t => t.push_subs_add(&PushSubRow { id: two.id.clone(), ..push_sub(&a.id, "https://push.example.test/four", now) })).is_err(),
+            "{}: a reused id under another endpoint",
+            harness.name
+        );
+        assert!(
+            call!(harness, t => t.push_subs_add(&push_sub(&id(), "https://push.example.test/five", now)))
+                .is_err(),
+            "{}: a subscription for no account",
+            harness.name
+        );
+
+        assert!(
+            !q!(harness, t => t.push_subs_delete(&two.endpoint, Some(&b.id))),
+            "{}",
+            harness.name
+        );
+        assert!(q!(harness, t => t.push_subs_delete(&two.endpoint, Some(&a.id))));
+        assert!(!q!(harness, t => t.push_subs_delete(&two.endpoint, Some(&a.id))));
+        assert!(q!(harness, t => t.push_subs_delete(&three.endpoint, None)));
+        assert!(!q!(harness, t => t.push_subs_delete(&three.endpoint, None)));
+        assert!(!q!(harness, t => t.push_subs_delete(&one.endpoint, Some("not-a-uuid"))));
+        assert!(q!(harness, t => t.push_subs_of(&a.id)).is_empty());
+        assert_eq!(
+            ids_of(&q!(harness, t => t.push_subs_of(&b.id))),
+            vec![one.id.clone()]
+        );
+    }
+
+    /// 0012's rule: a deleted account takes its daily rows (a game it held a seat in, once its match
+    /// is over, the invites it sent or received, its notice settings and subscriptions), and nobody
+    /// else's.
+    async fn s913_a_deleted_profile_takes_its_daily_rows(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let now = harness.now();
+        let gone = daily_game(harness, &a.id, &b.id, now - 2_000, None).await;
+        let stays = daily_game(harness, &b.id, &c.id, now - 1_000, None).await;
+        for game in [&gone, &stays] {
+            assert!(
+                q!(harness, t => t.daily_games_put(&game.match_id, 0, &DailyClock::new(DAYS), &board(5), None, Some(now)))
+            );
+            q!(harness, t => t.matches_finish(&game.match_id, now));
+        }
+        let to_a = challenge(&b.id, &a.id, now, now + 60_000);
+        let from_a = seek(&a.id, QueueMode::Bo1, DAYS, now, now + 60_000);
+        let b_c = challenge(&b.id, &c.id, now, now + 60_000);
+        for row in [&to_a, &from_a, &b_c] {
+            assert!(q!(harness, t => t.daily_invites_create(row, now)));
+        }
+        let token = q!(harness, t => t.daily_notify_get(&a.id)).unsubscribe_token;
+        q!(harness, t => t.daily_notify_get(&b.id));
+        q!(harness, t => t.push_subs_add(&push_sub(&a.id, "https://push.example.test/a", now)));
+        q!(harness, t => t.push_subs_add(&push_sub(&b.id, "https://push.example.test/b", now)));
+
+        assert!(q!(harness, t => t.profiles_remove(&a.id)));
+        assert_eq!(
+            q!(harness, t => t.daily_games_get(&gone.match_id)),
+            None,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            match_ids(&q!(harness, t => t.daily_games_of(&b.id, 10))),
+            vec![stays.match_id.clone()]
+        );
+        assert_eq!(q!(harness, t => t.daily_invites_get(&to_a.id)), None);
+        assert_eq!(q!(harness, t => t.daily_invites_get(&from_a.id)), None);
+        assert_eq!(
+            ids_of(&q!(harness, t => t.daily_invites_open_of(&b.id, now))),
+            vec![b_c.id.clone()]
+        );
+        assert!(
+            !q!(harness, t => t.daily_notify_unsubscribe(&token)),
+            "{}",
+            harness.name
+        );
+        assert!(q!(harness, t => t.daily_notify_get(&b.id)).email_on);
+        assert_eq!(q!(harness, t => t.push_subs_of(&b.id)).len(), 1);
+        assert!(!q!(harness, t => t.push_subs_delete("https://push.example.test/a", None)));
+    }
+
+    /// R3727008: 0012's `matches_seats_filled_unless_over_check` on a daily game's match, and the
+    /// fake's refusal of it: a profile seated in a running daily game is not deleted, from either
+    /// seat, and the game is left as it was; once its match is over the same delete goes through.
+    async fn r3727008_a_profile_seated_in_a_running_daily_game_is_not_deleted(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        let game = daily_game(harness, &a.id, &b.id, now, Some(now + 1_000)).await;
+
+        for seated in [&a, &b] {
+            assert!(
+                call!(harness, t => t.profiles_remove(&seated.id)).is_err(),
+                "{}: a seat of a running daily game",
+                harness.name
+            );
+            assert!(q!(harness, t => t.profiles_get_by_id(&seated.id)).is_some());
+        }
+        assert_eq!(
+            q!(harness, t => t.daily_games_get(&game.match_id)),
+            Some(game.clone())
+        );
+        assert_eq!(
+            match_ids(&q!(harness, t => t.daily_games_running())),
+            vec![game.match_id.clone()]
+        );
+
+        assert!(
+            q!(harness, t => t.daily_games_put(&game.match_id, 0, &DailyClock::new(DAYS), &board(5), None, Some(now)))
+        );
+        q!(harness, t => t.matches_finish(&game.match_id, now));
+        assert!(q!(harness, t => t.profiles_remove(&b.id)));
+        assert_eq!(q!(harness, t => t.profiles_get_by_id(&b.id)), None);
+    }
+
+    /// R679's void forgets a live match as if it never was, its daily game with it.
+    async fn s913_a_voided_match_takes_its_daily_game(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        let game = daily_game(harness, &a.id, &b.id, now, Some(now + 1_000)).await;
+        q!(harness, t => t.matches_forget_voided(&game.match_id));
+        assert_eq!(
+            q!(harness, t => t.daily_games_get(&game.match_id)),
+            None,
+            "{}",
+            harness.name
+        );
+        assert!(q!(harness, t => t.daily_games_running()).is_empty());
+    }
+
+    both_stores!(
+        s913_daily_games_round_trip_list_and_end,
+        s913_daily_games_due_by_deadline_and_left_out_of_the_live_matches,
+        s913_daily_active_count_counts_running_games_and_open_sends,
+        s913_daily_invites_one_open_per_key_close_and_expire,
+        s913_daily_seek_claim_takes_the_oldest_fitting_unblocked_seek,
+        s913_daily_notify_defaults_settings_and_unsubscribe,
+        s913_push_subscriptions_are_one_per_endpoint,
+        s913_a_deleted_profile_takes_its_daily_rows,
+        r3727008_a_profile_seated_in_a_running_daily_game_is_not_deleted,
+        s913_a_voided_match_takes_its_daily_game,
+    );
+}

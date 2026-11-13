@@ -72,7 +72,6 @@ type Patches struct {
 	DispatchWorkflow       func(workflow string, ref string, inputs map[string]string)
 	GetRun                 func(runID any) *pyjson.Object
 	ListRuns               func(workflow string, status string, limit int, cached bool) []*pyjson.Object
-	GetGist                func(gistID string, cached bool) *pyjson.Object
 	ListRepoRuns           func(status string, limit int, cached bool) []*pyjson.Object
 	ListCommits            func(author string, limit int) []*pyjson.Object
 	RunsForSHA             func(sha string, limit int) []*pyjson.Object
@@ -551,13 +550,6 @@ func (c *FakeGitHub) ListRuns(workflow string, status string, limit int, cached 
 		return c.Patch.ListRuns(workflow, status, limit, cached)
 	}
 	return c.Own().ListRuns(workflow, status, limit, cached)
-}
-
-func (c *FakeGitHub) GetGist(gistID string, cached bool) *pyjson.Object {
-	if c.Patch.GetGist != nil {
-		return c.Patch.GetGist(gistID, cached)
-	}
-	return c.Own().GetGist(gistID, cached)
 }
 
 func (c *FakeGitHub) ListRepoRuns(status string, limit int, cached bool) []*pyjson.Object {

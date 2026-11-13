@@ -1494,6 +1494,38 @@ describe("R3213000 the post-game frames on the board", () => {
     await settle({ advance: 3 * PERIOD });
     expect(reads.rematch()).toBe(1);
   });
+
+  it("R3791000 the board's result panel says the opponent has left once the socket's rematch frame says so, and the waiting line gives way", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    stubPostGameFetch(null);
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    deliver({ type: "rematch", v: POST_GAME_FRAME_VERSION, youOffered: 1, opponentOffer: null, opponentHere: true, matchId: null, mode: "bo1" });
+    pushView(FINISHED);
+    await settle({ advance: 0 });
+    expect(screen.getByTestId("rematch-status")).toHaveTextContent(/waiting for your opponent/i);
+    expect(screen.queryByTestId("rematch-left")).toBeNull();
+
+    deliver({ type: "rematch", v: POST_GAME_FRAME_VERSION, youOffered: 1, opponentOffer: null, opponentHere: false, matchId: null, mode: "bo1" });
+    await settle({ advance: 0 });
+    expect(screen.getByTestId("rematch-left")).toHaveTextContent("Your opponent has left.");
+    for (const absent of ["rematch-status", "rematch-offer", "rematch-double"]) {
+      expect(screen.queryByTestId(absent), absent).toBeNull();
+    }
+  });
+
+  it("R3791000 a game that ended by the opponent's disconnect leaves the saying to the result", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    stubPostGameFetch(null);
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    deliver({ type: "rematch", v: POST_GAME_FRAME_VERSION, youOffered: null, opponentOffer: null, opponentHere: false, matchId: null, mode: "bo1" });
+    pushView(baseView({ viewer: "p1", active: "p1", result: { winner: "p1", reason: "disconnect" } }));
+    await settle({ advance: 0 });
+
+    expect(screen.getByTestId("result-overlay")).toHaveTextContent("Your opponent left the match.");
+    expect(screen.queryByTestId("rematch-left")).toBeNull();
+  });
 });
 
 describe("a socket refused mid-game", () => {
