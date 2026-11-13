@@ -16860,7 +16860,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-13T02:36:00Z",
+      "feedback_since": "2026-11-13T10:27:20Z",
       "forced": false,
       "handoff": {
         "at": "2026-11-13T06:30:42Z",
@@ -16902,11 +16902,11 @@
         "provider": "claude-3",
         "run": "43368722846"
       },
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-13T10:27:20Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [
           "claude"
