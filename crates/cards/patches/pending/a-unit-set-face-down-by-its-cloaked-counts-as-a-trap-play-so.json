@@ -1,7 +1,7 @@
 {
   "title": "Patch: a Unit set face-down by its Cloaked counts as a Trap play, so no card that answers a Unit being played fires on it",
   "sources": "#3790",
-  "notes": "Issue #3790: a card set face-down by its Cloaked counts as the Trap it was set as for every card that answers or counts a play (R783005, R1040). The new engine read query::played_type_of types a cardPlayed or cardResolved play as play_counts::record_play counts it (a set card the Trap or Field Trap it was set as, any other its face's type off the event, so an Animated Field Spell is still a Field Spell play, R383), and every script typing a play reads it: Tesla, Knife Juggler, Floodgates, Warp Disruptor and Warp Disruptor II, Explosive Trap, Sheepish, EU Striker, Sacked, Honeypot, Prison (its kept v0.3.7b script still reads the printed type, R767000), Memory Leak, Wardrum, Catnip, Tatches the Totem, Bear Honeypot, Unlicensed Experimentation and Cloaked Toe Cracker, and the crafted cards' reveal on a Unit or Spell play. The cards claimed are classify's stage 2: the switched cards whose forced games diverged and the cards its unforced games' divergences touched.",
+  "notes": "Issue #3790: a card set face-down by its Cloaked counts as the Trap it was set as for every card that answers or counts a play (R783005, R1040). The new engine read query::played_type_of types a cardPlayed or cardResolved play as play_counts::record_play counts it (a set card the Trap or Field Trap it was set as, any other its face's type off the event, so an Animated Field Spell is still a Field Spell play, R383), and every script typing a play reads it: Tesla, Knife Juggler, Floodgates, Warp Disruptor and Warp Disruptor II, Explosive Trap, Sheepish, EU Striker, Sacked, Honeypot, Prison (its kept v0.3.7b script still reads the printed type, R767000), Memory Leak, Wardrum, Catnip, Tatches the Totem, Bear Honeypot, Unlicensed Experimentation, Cloaked Toe Cracker and Astrophage, query::enemy_unit_arrival (so Ripple and Foreshadow), and the crafted cards' reveal on a Unit or Spell play. The cards claimed are classify's stage 2: the switched cards whose forced games diverged and the cards its unforced games' divergences touched.",
   "player": {
     "title": "A Unit set face-down by Cloaked is a Trap play",
     "new": [],
@@ -28,6 +28,7 @@
     "meditative-097",
     "stinkyscape-135",
     "stinkyscape-t-ai-09",
+    "stinkyscapeplus-086",
     "traininggrounds-014",
     "traininggrounds-018"
   ]

@@ -597,11 +597,11 @@ pub fn enemy_unit_arrival(state: &GameState, controller: PlayerId, event: &GameE
         }
         GameEvent::CardResolved {
             permanent,
-            def_id,
             instance_id,
             ..
         } => {
-            if !*permanent || crate::catalog::def_of(Some(state), def_id).type_ != CardType::Unit {
+            // R783005: the play as it counts, so a Unit set face-down by its Cloaked is no arriving Unit.
+            if !*permanent || played_type_of(state, event) != Some(CardType::Unit) {
                 return None;
             }
             let unit = find_instance(state, instance_id)?;
