@@ -59,6 +59,18 @@ const NAMES_ITS_OWN_POOL: &[(&str, &str)] = &[
         "traininggrounds-023",
         "Quadrupling Felinors summons copies of this (rule 4, as Duplicating Felinors)",
     ),
+    (
+        "classicplus-047",
+        "Jogg's Box casts random Spells, and one of them can be TG #57 Legacy: Recycling Initiative, whose end of turn adds a copy of each other card played that turn, Jogg's Box among them (rule 4: copies are not generation)",
+    ),
+    (
+        "stinkyscapeplus-120",
+        "Crawler adds a Toxopid whose first arrival in a hand adds a Crawler (R3560000): the two texts name the loop (rule 3)",
+    ),
+    (
+        "stinkyscapeplus-083",
+        "Offworld Replicant's Evolve adds a copy of this to your hand (rule 4: a copy of \"this\" is not generation, R3541001)",
+    ),
 ];
 
 const SEEDS: &[&str] = &["self-gen-a", "self-gen-b", "self-gen-c", "self-gen-d"];

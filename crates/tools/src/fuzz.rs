@@ -25,8 +25,9 @@
 //! or activation `reduce` accepts, §4.1, §4.2, §10.2, §10.5) are sampled, by their strides; I13 and I15
 //! read I6's view and listing, so they ride I6's stride. I14 (every action `legalActions` lists is
 //! accepted by `reduce`, §10.2) is sampled too, at setup and by its stride.
-//! I17 holds what the state check leaves (§4.5): on a settled state no unit dead but R69's and no 1v1
-//! hero at 0 that can lose; on every state no mana or card damage below 0 and no `damage` of 0 (R63).
+//! I17 holds what the state check leaves (§4.5): on a settled state no unit dead but R69's or R3539003's
+//! and no 1v1 hero at 0 that can lose; on every state no mana or card damage below 0 and no `damage` of 0
+//! (R63).
 //!
 //! And after every action, GROWTH (#1254): each action is weighed by the events `reduce` returned, the
 //! largest number on any card instance and the instances in play, and a seed fails in the "growth" stage

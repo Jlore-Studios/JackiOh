@@ -13,8 +13,7 @@ use crate::state::{CardInstance, find_instance};
 use crate::stays::{exit_mark, left_field_after};
 use crate::wire::{CardType, PlayerId, Row, Selection, Tag, TargetAim, ZoneName, opponent_of};
 use crate::zones::{
-    ZoneSlot, adjacent, card_at, carried_units_of, is_buried, is_standing_unit, row_size, slot_of, slots_of,
-    standing_units_of,
+    ZoneSlot, card_at, carried_units_of, is_buried, is_standing_unit, row_size, slots_of, standing_units_of,
 };
 
 /// Which card or hero an effect names (discriminated on `of`).
@@ -103,6 +102,10 @@ pub fn resolve_target(ctx: &EffectContext<'_>, spec: &TargetSpec) -> Option<Dama
             if unaffected_by(ctx, instance) {
                 return None;
             }
+            // R3554003: a pick across the slash is passed by too.
+            if !crate::geometry::reaches(ctx.state, ctx.self_.as_ref(), instance) {
+                return None;
+            }
             Some(DamageTarget::Unit {
                 instance: instance.clone(),
             })
@@ -122,6 +125,10 @@ pub fn instance_on_its_stay(ctx: &EffectContext<'_>, instance_id: &str) -> Optio
     }
     // B5 E35: a Spell's effect passes a unit immune to Spells by, named by id as much as chosen.
     if unaffected_by(ctx, instance) {
+        return None;
+    }
+    // R3554003: and one across the slash.
+    if !crate::geometry::reaches(ctx.state, ctx.self_.as_ref(), instance) {
         return None;
     }
     if left_field_after(ctx.state, stay_mark_of(ctx, &instance.id), &instance.id) {
@@ -244,6 +251,10 @@ pub struct BoardScope {
     /// Leave the card running the script standing (#100 "all *other* permanents").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exclude_self: Option<bool>,
+    /// R3538007 (S+ #164 KPIs): keep only the cards whose rate is strictly lower than the named
+    /// card's (`win_rates::lower_win_rate`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub win_rate_below: Option<String>,
 }
 
 /// R68's walk order: the active player's side first, then the opponent's. Public for a sweep that hits
@@ -275,6 +286,8 @@ pub fn matches_scope_aimed(
                 scope.tags.as_deref(),
                 scope.not_tags.as_deref(),
             ))
+        // R3554003: and a scope from one half never takes a card of the other.
+        && crate::geometry::reaches(ctx.state, ctx.self_.as_ref(), card)
 }
 
 /// Whether one card passes a scope's filters. Zone membership is the caller's business.
@@ -303,6 +316,11 @@ pub fn matches_scope(ctx: &EffectContext<'_>, card: &CardInstance, scope: &Board
     }
     if let Some(not_tags) = &scope.not_tags
         && not_tags.iter().any(|tag| tags.contains(tag))
+    {
+        return false;
+    }
+    if let Some(bar) = &scope.win_rate_below
+        && !crate::win_rates::lower_win_rate(&card.def_id, bar)
     {
         return false;
     }
@@ -396,18 +414,18 @@ fn adjacent_to_with(
     if card.zone.z() != ZoneName::Field {
         return Vec::new();
     }
-    let Some(slot) = slot_of(ctx.state, &card) else {
-        return Vec::new();
-    };
 
+    // R3546001: beside a GIGA in either of its lanes, in both; a GIGA beside the card is met once.
     let mut out: Vec<CardInstance> = Vec::new();
-    for neighbour in adjacent(slot) {
-        let Some(found) = card_at(ctx.state, neighbour) else {
+    let mut met: Vec<String> = vec![card.id.clone()];
+    for neighbour in crate::giga::adjacent_slots(ctx.state, &card) {
+        let Some(found) = crate::giga::occupant_at(ctx.state, neighbour) else {
             continue;
         };
-        if found.id == card.id {
+        if met.contains(&found.id) {
             continue;
         }
+        met.push(found.id.clone());
         // R1081000: beside a Unit standing in the backrow, only a Unit standing there is adjacent.
         if !crate::zones::is_adjacent_card(ctx.state, &card, found) {
             continue;

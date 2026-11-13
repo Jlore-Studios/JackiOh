@@ -62,9 +62,10 @@
 //!      the field holds none of R78's field-only state, nor a graveyard or exile card R766's price
 //!      (`field_state_held`).
 //!   I17 the state check ran (§4.5): on I7's settled state no field unit at layered health 0 or less but
-//!      an Indestructible one with max health above 0 (R69), and no seat that `can_lose` (R2201000) at
-//!      hero health 0 or less (a Duos seat's is its pool's, §13.4); on every state mana and card `damage`
-//!      are 0 or more (§2.3), and every `damage` event deals more than 0 (R63, R1361, R1362).
+//!      an Indestructible one with max health above 0 (R69) or a Dormant one (R3539003), and no seat that
+//!      `can_lose` (R2201000) at hero health 0 or less (a Duos seat's is its pool's, §13.4); on every state
+//!      mana and card `damage` are 0 or more (§2.3), and every `damage` event deals more than 0 (R63,
+//!      R1361, R1362).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -617,13 +618,20 @@ fn field_state_held(card: &CardInstance, in_graveyard_or_exile: bool) -> Vec<&'s
         (card.embiggened.is_some(), "embiggened"),
     ]);
     if in_graveyard_or_exile {
+        // R3566004: a card evolved in its graveyard (leaving the field clears `evolved`, R3536000, so one
+        // that holds it there evolved there) keeps what its Evolve gave it, its buff, keywords and stat
+        // line, for the Flashback play that brings it back (S+ #6.2 Stinky Cheese).
+        let evolved_here = card.evolved == Some(true);
         held.extend(held_names(&[
-            (card.buffs != AttackHealth::default(), "buffs"),
-            (!card.granted_keywords.is_empty(), "grantedKeywords"),
+            (card.buffs != AttackHealth::default() && !evolved_here, "buffs"),
+            (
+                !card.granted_keywords.is_empty() && !evolved_here,
+                "grantedKeywords",
+            ),
             (card.grants.is_some(), "grants"),
             (card.vanilla, "vanilla"),
             (card.counters != Counters::default(), "counters"),
-            (card.stats_override.is_some(), "statsOverride"),
+            (card.stats_override.is_some() && !evolved_here, "statsOverride"),
             (card.armor_override.is_some(), "armorOverride"),
         ]));
     }
@@ -702,9 +710,9 @@ fn card_record_findings(state: &GameState) -> Vec<String> {
     found
 }
 
-/// I17 (the header's): what §4.5's state check and §4.4's pipeline leave (§2.3, R63, R69, R2201000). A Duos
-/// seat's hero is its team's pool's (§13.4), bounded by `DuosInvariantMonitor::after`: B15's `sync_pools`
-/// writes the pool into a spent hero in the other duel, where no state check runs.
+/// I17 (the header's): what §4.5's state check and §4.4's pipeline leave (§2.3, R63, R69, R2201000,
+/// R3539003). A Duos seat's hero is its team's pool's (§13.4), bounded by `DuosInvariantMonitor::after`:
+/// B15's `sync_pools` writes the pool into a spent hero in the other duel, where no state check runs.
 fn state_check_findings(events: &[GameEvent], state: &GameState) -> Vec<String> {
     let mut found = Vec::new();
     let turn = state.turn;
@@ -747,6 +755,10 @@ fn state_check_findings(events: &[GameEvent], state: &GameState) -> Vec<String> 
     let auras = AuraTable::new(state);
     for player in PLAYER_IDS {
         for unit in crate::zones::units_on_field_of(state, player) {
+            // R3539003: no health judges a Dormant card, so a 0/0 hull stands.
+            if crate::slumber::is_slumbering(unit) {
+                continue;
+            }
             let view = auras.unit_view(unit);
             let stands = has_keyword(&view.keywords, KeywordKind::Indestructible) && view.max_health > 0;
             if view.health <= 0 && !stands {
@@ -2892,10 +2904,12 @@ impl InvariantMonitor {
                         && !attack.killed
                     {
                         attack.killed = true;
-                        // R1869002: a kill readies its attacker only through its own `afterAttack` text.
+                        // R1869002: a kill readies its attacker only through its own `afterAttack` text;
+                        // R3543003: or its Frenzy, which answers the same kill.
                         let attacker_id = attack.attacker_id.clone();
                         let answers = find_instance(state, &attacker_id).is_some_and(|attacker| {
                             crate::scripts::script_of(state, attacker).after_attack.is_some()
+                                || crate::layers::unit_has(state, attacker, KeywordKind::Frenzy)
                         });
                         if answers {
                             self.credit_kill(&attacker_id);
@@ -3085,11 +3099,16 @@ impl InvariantMonitor {
                             _ => 1,
                         },
                     };
+                    // R3550001: a Unit that "can attack N times per turn" declares N attacks.
                     let per_turn = if self.windfury.get(declarer) == Some(&current) {
                         WINDFURY_ATTACKS
                     } else {
                         1
                     };
+                    let per_turn = per_turn.max(
+                        find_instance(state, declarer)
+                            .map_or(1, |card| crate::combat::attacks_per_turn(state, card)),
+                    );
                     // R1869002: a kill credit's fresh exertion counts the attacks of a turn again from there.
                     let allowed = per_turn + self.credited_at(declarer).unwrap_or(0);
                     if mark.count > allowed {

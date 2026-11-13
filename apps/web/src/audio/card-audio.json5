@@ -2225,7 +2225,7 @@
       attack: { voice: "sapi-heroine" },
       death: { voice: "sapi-heroine" },
     },
-    "stinkyscape-044": { // Great Paperclip Theory
+    "stinkyscape-044": { // Great Paperclip Theory I
       cast: { voice: "sapi-bureaucrat" },
     },
     "stinkyscape-045": { // Drone Commander
@@ -3171,6 +3171,854 @@
     },
     "traininggrounds-060": { // Legacy: Rush Token Farm
       cast: { voice: "elder" },
+    },
+    "stinkyscapeplus-001": { // Starfruit
+      cast: { voice: "sapi-fruit" },
+    },
+    "stinkyscapeplus-002": { // Lone Drifter
+      play: { voice: "plain" },
+      attack: { voice: "plain" },
+      death: { voice: "plain" },
+    },
+    "stinkyscapeplus-003": { // High Evolutionary
+      play: { voice: "prof" },
+      attack: { voice: "prof" },
+      death: { voice: "prof" },
+    },
+    "stinkyscapeplus-004": { // Profe Yates
+      play: { voice: "prof" },
+      attack: { voice: "prof" },
+      death: { voice: "prof" },
+    },
+    "stinkyscapeplus-005": { // Dingleberry Droat
+      play: { voice: "hustler" },
+      attack: { voice: "hustler" },
+      death: { voice: "hustler" },
+    },
+    "stinkyscapeplus-006": { // Wines McCheese
+      play: { voice: "snob" },
+      attack: { voice: "snob" },
+      death: { voice: "snob" },
+    },
+    "stinkyscapeplus-006-1": { // Fine Fermented Grape
+      cast: { voice: "wobble" },
+    },
+    "stinkyscapeplus-006-2": { // Stinky Cheese
+      cast: { voice: "goof" },
+    },
+    "stinkyscapeplus-007": { // Churnwalker
+      play: { voice: "brute" },
+      attack: { voice: "brute" },
+      death: { voice: "brute" },
+    },
+    "stinkyscapeplus-008": { // Drone Assembler v3
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "stinkyscapeplus-009": { // Drone Assembler v4
+      play: { voice: "sapi-synth" },
+      attack: { voice: "sapi-synth" },
+      death: { voice: "sapi-synth" },
+    },
+    "stinkyscapeplus-010": { // Drone Assembler v5
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "stinkyscapeplus-011": { // Energy Booster
+      play: { voice: "zoomer" },
+      attack: { voice: "zoomer" },
+      death: { voice: "zoomer" },
+    },
+    "stinkyscapeplus-012": { // Shield Booster
+      play: { voice: "kid" },
+      attack: { voice: "kid" },
+      death: { voice: "kid" },
+    },
+    "stinkyscapeplus-013": { // Shield Repairer
+      play: { voice: "plain" },
+      attack: { voice: "plain" },
+      death: { voice: "plain" },
+    },
+    "stinkyscapeplus-014": { // Hull Repairer
+      play: { voice: "digger" },
+      attack: { voice: "digger" },
+      death: { voice: "digger" },
+    },
+    "stinkyscapeplus-015": { // Hull Repairer mk2
+      play: { voice: "diva" },
+      attack: { voice: "diva" },
+      death: { voice: "diva" },
+    },
+    "stinkyscapeplus-016": { // Servo Surge
+      play: { voice: "zoomer" },
+      attack: { voice: "zoomer" },
+      death: { voice: "zoomer" },
+    },
+    "stinkyscapeplus-017": { // Smoothie
+      cast: { voice: "bubbles" },
+    },
+    "stinkyscapeplus-018": { // Large Smoothie
+      cast: { voice: "sapi-fruit" },
+    },
+    "stinkyscapeplus-019": { // Normalization Module
+      play: { voice: "sapi-bureaucrat" },
+      attack: { voice: "sapi-bureaucrat" },
+      death: { voice: "sapi-bureaucrat" },
+    },
+    "stinkyscapeplus-020": { // B-Patch
+      cast: { voice: "announcer" },
+    },
+    "stinkyscapeplus-021": { // Jlockeed Shredder-12
+      play: { voice: "guard" },
+      attack: { voice: "guard" },
+      death: { voice: "guard" },
+    },
+    "stinkyscapeplus-022": { // Cryofluid
+      cast: { voice: "whisper" },
+    },
+    "stinkyscapeplus-023": { // GIGA-ify
+      cast: { voice: "goof" },
+    },
+    "stinkyscapeplus-024": { // Forced Propagation
+      cast: { voice: "crone" },
+    },
+    "stinkyscapeplus-025": { // Snom Bunny
+      play: { voice: "kid" },
+      attack: { voice: "kid" },
+      death: { voice: "kid" },
+    },
+    "stinkyscapeplus-026": { // Jlockeed’s Forever War
+      cast: { voice: "narrator" },
+    },
+    "stinkyscapeplus-026-1": { // Conscript
+      play: { voice: "plain" },
+      attack: { voice: "plain" },
+      death: { voice: "plain" },
+    },
+    "stinkyscapeplus-027": { // Gargantuar
+      play: { voice: "brute" },
+      attack: { voice: "brute" },
+      death: { voice: "brute" },
+    },
+    "stinkyscapeplus-027-1": { // Imp
+      play: { voice: "goof" },
+      attack: { voice: "goof" },
+      death: { voice: "goof" },
+    },
+    "stinkyscapeplus-028": { // Zombie-Box
+      cast: { voice: "sapi-ghost" },
+    },
+    "stinkyscapeplus-029": { // Grinder Veteran
+      play: { voice: "elder" },
+      attack: { voice: "elder" },
+      death: { voice: "elder" },
+    },
+    "stinkyscapeplus-030": { // Yeah I’m a War Hero
+      cast: { voice: "hustler" },
+    },
+    "stinkyscapeplus-031": { // Soul Read
+      cast: { voice: "sapi-mystic" },
+    },
+    "stinkyscapeplus-032": { // Z-Patch
+      cast: { voice: "zoomer" },
+    },
+    "stinkyscapeplus-033": { // True Conservative
+      play: { voice: "elder" },
+      attack: { voice: "elder" },
+      death: { voice: "elder" },
+    },
+    "stinkyscapeplus-034": { // Neoconservative
+      play: { voice: "posh" },
+      attack: { voice: "posh" },
+      death: { voice: "posh" },
+    },
+    "stinkyscapeplus-035": { // Scatter
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "stinkyscapeplus-036": { // Duo
+      play: { voice: "sapi-synth" },
+      attack: { voice: "sapi-synth" },
+      death: { voice: "sapi-synth" },
+    },
+    "stinkyscapeplus-037": { // Scorch
+      play: { voice: "brute" },
+      attack: { voice: "brute" },
+      death: { voice: "brute" },
+    },
+    "stinkyscapeplus-038": { // Arc
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "stinkyscapeplus-039": { // Mindustrial Cross-over
+      cast: { voice: "storyteller" },
+    },
+    "stinkyscapeplus-040": { // Mender
+      cast: { voice: "diva" },
+    },
+    "stinkyscapeplus-041": { // Mend Projector
+      cast: { voice: "sapi-heroine" },
+    },
+    "stinkyscapeplus-042": { // Force Projector
+      cast: { voice: "sapi-teacher" },
+    },
+    "stinkyscapeplus-043": { // Segment
+      cast: { voice: "guard" },
+    },
+    "stinkyscapeplus-044": { // Blast Compound
+      cast: { voice: "hustler" },
+    },
+    "stinkyscapeplus-045": { // Surge Alloy
+      cast: { voice: "kid" },
+    },
+    "stinkyscapeplus-046": { // Phase Fabric
+      cast: { voice: "alien" },
+    },
+    "stinkyscapeplus-047": { // Plastanium
+      cast: { voice: "robot" },
+    },
+    "stinkyscapeplus-048": { // Thorium
+      cast: { voice: "prof" },
+    },
+    "stinkyscapeplus-049": { // Metaglass
+      cast: { voice: "posh" },
+    },
+    "stinkyscapeplus-050": { // Graphite
+      cast: { voice: "hustler" },
+    },
+    "stinkyscapeplus-051": { // Chains Bind Me
+      cast: { voice: "sapi-villain" },
+    },
+    "stinkyscapeplus-052": { // Airblast Drill
+      cast: { voice: "brute" },
+    },
+    "stinkyscapeplus-053": { // Laser Drill
+      cast: { voice: "sapi-synth" },
+    },
+    "stinkyscapeplus-054": { // Pneumatic Drill
+      cast: { voice: "digger" },
+    },
+    "stinkyscapeplus-055": { // Thorium Reactor
+      cast: { voice: "sapi-bureaucrat" },
+    },
+    "stinkyscapeplus-056": { // Impact Reactor
+      cast: { voice: "announcer" },
+    },
+    "stinkyscapeplus-057": { // Phase Weaver
+      cast: { voice: "sapi-librarian" },
+    },
+    "stinkyscapeplus-058": { // Phase Conveyer
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "stinkyscapeplus-059": { // Mass Driver
+      cast: { voice: "zoomer" },
+    },
+    "stinkyscapeplus-060": { // Radi
+      play: { voice: "hero" },
+      attack: { voice: "hero" },
+      death: { voice: "hero" },
+    },
+    "stinkyscapeplus-061": { // Jayaad
+      play: { voice: "storyteller" },
+      attack: { voice: "storyteller" },
+      death: { voice: "storyteller" },
+    },
+    "stinkyscapeplus-061-1": { // Shawarma Law
+      cast: { voice: "kid" },
+    },
+    "stinkyscapeplus-062": { // Overdrive Projector
+      cast: { voice: "sapi-synth-deep" },
+    },
+    "stinkyscapeplus-063": { // Overdrive Dome
+      cast: { voice: "sapi-cook" },
+    },
+    "stinkyscapeplus-064": { // Surge Wall
+      play: { voice: "brute-golem" },
+      attack: { voice: "brute-golem" },
+      death: { voice: "brute-golem" },
+    },
+    "stinkyscapeplus-065": { // Thorium Wall
+      play: { voice: "brute" },
+      attack: { voice: "brute" },
+      death: { voice: "brute" },
+    },
+    "stinkyscapeplus-066": { // Plastanium Wall
+      play: { voice: "guard" },
+      attack: { voice: "guard" },
+      death: { voice: "guard" },
+    },
+    "stinkyscapeplus-067": { // Phase Wall
+      play: { voice: "whisper" },
+      attack: { voice: "whisper" },
+      death: { voice: "whisper" },
+    },
+    "stinkyscapeplus-068": { // Shadiris Visions
+      cast: { voice: "crone" },
+    },
+    "stinkyscapeplus-069": { // Exotic Jellybean
+      cast: { voice: "bubbles" },
+    },
+    "stinkyscapeplus-069-1": { // Sweet Essence
+      cast: { voice: "diva" },
+    },
+    "stinkyscapeplus-070": { // Spaceberry
+      cast: { voice: "sapi-fruit" },
+    },
+    "stinkyscapeplus-071": { // Mindustrial Contract
+      cast: { voice: "snob" },
+    },
+    "stinkyscapeplus-072": { // Foreshadow
+      play: { voice: "alien-void" },
+      attack: { voice: "alien-void" },
+      death: { voice: "alien-void" },
+    },
+    "stinkyscapeplus-073": { // Ripple
+      play: { voice: "narrator" },
+      attack: { voice: "narrator" },
+      death: { voice: "narrator" },
+    },
+    "stinkyscapeplus-074": { // Galaxia
+      play: { voice: "sapi-heroine" },
+      attack: { voice: "sapi-heroine" },
+      death: { voice: "sapi-heroine" },
+    },
+    "stinkyscapeplus-075": { // J-lease S-Space EX-plorer
+      play: { voice: "sapi-hero" },
+      attack: { voice: "sapi-hero" },
+      death: { voice: "sapi-hero" },
+    },
+    "stinkyscapeplus-075-1": { // J-lease S-Space EX-plorer Pack
+      cast: { voice: "goof" },
+    },
+    "stinkyscapeplus-076": { // Ayys LMAO
+      cast: { voice: "hustler-hitman" },
+    },
+    "stinkyscapeplus-076-1": { // Ayy
+      play: { voice: "alien" },
+      attack: { voice: "alien" },
+      death: { voice: "alien" },
+    },
+    "stinkyscapeplus-077": { // Black Hole
+      cast: { voice: "sapi-ghost" },
+    },
+    "stinkyscapeplus-078": { // Slashed Dream Cries in Red
+      cast: { voice: "sapi-rasp" },
+    },
+    "stinkyscapeplus-079": { // A Glimpse into the Endless Sea
+      cast: { voice: "sapi-mystic" },
+    },
+    "stinkyscapeplus-080": { // The Last Voyage
+      cast: { voice: "sapi-giant" },
+    },
+    "stinkyscapeplus-081": { // Doomsayer
+      play: { voice: "sapi-wizard" },
+      attack: { voice: "sapi-wizard" },
+      death: { voice: "sapi-wizard" },
+    },
+    "stinkyscapeplus-082": { // Endless Expedition
+      cast: { voice: "plain" },
+    },
+    "stinkyscapeplus-083": { // Offworld Replicant
+      play: { voice: "wobble" },
+      attack: { voice: "wobble" },
+      death: { voice: "wobble" },
+    },
+    "stinkyscapeplus-084": { // Bogos Binted
+      play: { voice: "sapi-trickster" },
+      attack: { voice: "sapi-trickster" },
+      death: { voice: "sapi-trickster" },
+    },
+    "stinkyscapeplus-085": { // Body Snatch
+      cast: { voice: "hustler-hitman" },
+    },
+    "stinkyscapeplus-086": { // Astrophage
+      play: { voice: "kid" },
+      attack: { voice: "kid" },
+      death: { voice: "kid" },
+    },
+    "stinkyscapeplus-087": { // Frontier Flora
+      cast: { voice: "sapi-critter" },
+    },
+    "stinkyscapeplus-088": { // Colony Watcher
+      play: { voice: "guard" },
+      attack: { voice: "guard" },
+      death: { voice: "guard" },
+    },
+    "stinkyscapeplus-089": { // Animosity
+      cast: { voice: "elder" },
+    },
+    "stinkyscapeplus-090": { // Meltdown
+      play: { voice: "hustler" },
+      attack: { voice: "hustler" },
+      death: { voice: "hustler" },
+    },
+    "stinkyscapeplus-091": { // Tsunami
+      play: { voice: "brute" },
+      attack: { voice: "brute" },
+      death: { voice: "brute" },
+    },
+    "stinkyscapeplus-092": { // Crystalline Chiton
+      play: { voice: "digger" },
+      attack: { voice: "digger" },
+      death: { voice: "digger" },
+    },
+    "stinkyscapeplus-093": { // Recessive Replicators
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "stinkyscapeplus-094": { // PIP
+      cast: { voice: "sapi-teacher" },
+    },
+    "stinkyscapeplus-095": { // JC Backed
+      cast: { voice: "hustler" },
+    },
+    "stinkyscapeplus-096": { // Open Enrollment
+      cast: { voice: "announcer" },
+    },
+    "stinkyscapeplus-097": { // Selective Enrollment
+      cast: { voice: "posh" },
+    },
+    "stinkyscapeplus-098": { // Doomed Ship
+      cast: { voice: "sapi-wizard" },
+    },
+    "stinkyscapeplus-099": { // Big Time Recruits
+      cast: { voice: "sapi-announcer" },
+    },
+    "stinkyscapeplus-100": { // Plesiosize
+      cast: { voice: "digger" },
+    },
+    "stinkyscapeplus-101": { // A Wee Whelp
+      play: { voice: "kid" },
+      attack: { voice: "kid" },
+      death: { voice: "kid" },
+    },
+    "stinkyscapeplus-102": { // Cosmic Bard
+      play: { voice: "storyteller" },
+      attack: { voice: "storyteller" },
+      death: { voice: "storyteller" },
+    },
+    "stinkyscapeplus-103": { // Transcend
+      cast: { voice: "sapi-mystic" },
+    },
+    "stinkyscapeplus-104": { // Tireless Cultivation
+      cast: { voice: "sapi-teacher" },
+    },
+    "stinkyscapeplus-105": { // Spacersi
+      play: { voice: "zoomer" },
+      attack: { voice: "zoomer" },
+      death: { voice: "zoomer" },
+    },
+    "stinkyscapeplus-106": { // Spectre
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "stinkyscapeplus-107": { // Fuse
+      play: { voice: "brute" },
+      attack: { voice: "brute" },
+      death: { voice: "brute" },
+    },
+    "stinkyscapeplus-108": { // Swarmer
+      play: { voice: "sapi-synth" },
+      attack: { voice: "sapi-synth" },
+      death: { voice: "sapi-synth" },
+    },
+    "stinkyscapeplus-109": { // Lancer
+      play: { voice: "sapi-heroine" },
+      attack: { voice: "sapi-heroine" },
+      death: { voice: "sapi-heroine" },
+    },
+    "stinkyscapeplus-110": { // Dagger
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "stinkyscapeplus-111": { // Mace
+      play: { voice: "sapi-rasp" },
+      attack: { voice: "sapi-rasp" },
+      death: { voice: "sapi-rasp" },
+    },
+    "stinkyscapeplus-112": { // Fortress
+      play: { voice: "sapi-giant" },
+      attack: { voice: "sapi-giant" },
+      death: { voice: "sapi-giant" },
+    },
+    "stinkyscapeplus-113": { // Scepter
+      play: { voice: "sapi-villain" },
+      attack: { voice: "sapi-villain" },
+      death: { voice: "sapi-villain" },
+    },
+    "stinkyscapeplus-114": { // Reign
+      play: { voice: "brute-golem" },
+      attack: { voice: "brute-golem" },
+      death: { voice: "brute-golem" },
+    },
+    "stinkyscapeplus-115": { // Flare
+      play: { voice: "zoomer" },
+      attack: { voice: "zoomer" },
+      death: { voice: "zoomer" },
+    },
+    "stinkyscapeplus-116": { // Horizon
+      play: { voice: "sapi-synth" },
+      attack: { voice: "sapi-synth" },
+      death: { voice: "sapi-synth" },
+    },
+    "stinkyscapeplus-117": { // Zenith
+      play: { voice: "sapi-hero" },
+      attack: { voice: "sapi-hero" },
+      death: { voice: "sapi-hero" },
+    },
+    "stinkyscapeplus-118": { // Antumbra
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "stinkyscapeplus-119": { // Eclipse
+      play: { voice: "alien" },
+      attack: { voice: "alien" },
+      death: { voice: "alien" },
+    },
+    "stinkyscapeplus-120": { // Crawler
+      play: { voice: "goof" },
+      attack: { voice: "goof" },
+      death: { voice: "goof" },
+    },
+    "stinkyscapeplus-121": { // Toxopid
+      play: { voice: "alien-void" },
+      attack: { voice: "alien-void" },
+      death: { voice: "alien-void" },
+    },
+    "stinkyscapeplus-121-1": { // Toxopid Leg
+      play: { voice: "brute-golem" },
+      attack: { voice: "brute-golem" },
+      death: { voice: "brute-golem" },
+    },
+    "stinkyscapeplus-122": { // Quad
+      play: { voice: "sapi-synth" },
+      attack: { voice: "sapi-synth" },
+      death: { voice: "sapi-synth" },
+    },
+    "stinkyscapeplus-123": { // Oct
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "stinkyscapeplus-124": { // Sei
+      play: { voice: "sapi-teacher" },
+      attack: { voice: "sapi-teacher" },
+      death: { voice: "sapi-teacher" },
+    },
+    "stinkyscapeplus-125": { // Omura
+      play: { voice: "sapi-giant" },
+      attack: { voice: "sapi-giant" },
+      death: { voice: "sapi-giant" },
+    },
+    "stinkyscapeplus-126": { // Vela
+      play: { voice: "sapi-heroine" },
+      attack: { voice: "sapi-heroine" },
+      death: { voice: "sapi-heroine" },
+    },
+    "stinkyscapeplus-127": { // Corvus
+      play: { voice: "crone" },
+      attack: { voice: "crone" },
+      death: { voice: "crone" },
+    },
+    "stinkyscapeplus-128": { // Additive Reconstructor
+      cast: { voice: "sapi-synth" },
+    },
+    "stinkyscapeplus-129": { // Multiplicative Reconstructor
+      cast: { voice: "sapi-bureaucrat" },
+    },
+    "stinkyscapeplus-130": { // Exponential Reconstructor
+      cast: { voice: "robot" },
+    },
+    "stinkyscapeplus-131": { // Tetrative Reconstructor
+      cast: { voice: "sapi-villain" },
+    },
+    "stinkyscapeplus-132": { // Great Paperclip Theory II
+      cast: { voice: "prof" },
+    },
+    "stinkyscapeplus-133": { // Great Paperclip Theory III
+      cast: { voice: "narrator" },
+    },
+    "stinkyscapeplus-133-1": { // Daglare
+      play: { voice: "zoomer" },
+      attack: { voice: "zoomer" },
+      death: { voice: "zoomer" },
+    },
+    "stinkyscapeplus-133-2": { // Macizon
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "stinkyscapeplus-133-3": { // Fortnith
+      play: { voice: "sapi-giant" },
+      attack: { voice: "sapi-giant" },
+      death: { voice: "sapi-giant" },
+    },
+    "stinkyscapeplus-133-4": { // Sceptumbra
+      play: { voice: "sapi-villain" },
+      attack: { voice: "sapi-villain" },
+      death: { voice: "sapi-villain" },
+    },
+    "stinkyscapeplus-133-5": { // Reignclipse
+      play: { voice: "alien" },
+      attack: { voice: "alien" },
+      death: { voice: "alien" },
+    },
+    "stinkyscapeplus-134": { // Basket of Crawlers
+      cast: { voice: "goof" },
+    },
+    "stinkyscapeplus-135": { // Crawler Swarm
+      cast: { voice: "wobble" },
+    },
+    "stinkyscapeplus-136": { // Crawler Assembly Line
+      cast: { voice: "sapi-bureaucrat" },
+    },
+    "stinkyscapeplus-137": { // The Perfect Pair
+      cast: { voice: "diva" },
+    },
+    "stinkyscapeplus-138": { // Delta Definition
+      cast: { voice: "plain" },
+    },
+    "stinkyscapeplus-139": { // Operation Omega
+      cast: { voice: "hero" },
+    },
+    "stinkyscapeplus-140": { // Automa Reintegration Plan
+      cast: { voice: "robot" },
+    },
+    "stinkyscapeplus-141": { // Stinky 1x Engineer
+      play: { voice: "hustler" },
+      attack: { voice: "hustler" },
+      death: { voice: "hustler" },
+    },
+    "stinkyscapeplus-142": { // Call to Chaos (Mindustrial-Swarm Edition)
+      cast: { voice: "announcer" },
+    },
+    "stinkyscapeplus-142-1": { // Mindustrial Golem
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "stinkyscapeplus-142-2": { // Swarm Golem
+      play: { voice: "alien" },
+      attack: { voice: "alien" },
+      death: { voice: "alien" },
+    },
+    "stinkyscapeplus-143": { // Fire Beam v3
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "stinkyscapeplus-144": { // Fire Beam v4
+      play: { voice: "guard" },
+      attack: { voice: "guard" },
+      death: { voice: "guard" },
+    },
+    "stinkyscapeplus-145": { // Fire Beam v5
+      play: { voice: "brute" },
+      attack: { voice: "brute" },
+      death: { voice: "brute" },
+    },
+    "stinkyscapeplus-146": { // Scourge Mortar v3
+      play: { voice: "digger" },
+      attack: { voice: "digger" },
+      death: { voice: "digger" },
+    },
+    "stinkyscapeplus-147": { // Scourge Mortar v4
+      play: { voice: "snob" },
+      attack: { voice: "snob" },
+      death: { voice: "snob" },
+    },
+    "stinkyscapeplus-148": { // Scourge Mortar v5
+      play: { voice: "elder" },
+      attack: { voice: "elder" },
+      death: { voice: "elder" },
+    },
+    "stinkyscapeplus-149": { // Flaming Rounds
+      play: { voice: "goof" },
+      attack: { voice: "goof" },
+      death: { voice: "goof" },
+    },
+    "stinkyscapeplus-150": { // Scorching Rounds
+      play: { voice: "zoomer" },
+      attack: { voice: "zoomer" },
+      death: { voice: "zoomer" },
+    },
+    "stinkyscapeplus-151": { // Volcanic Rounds
+      play: { voice: "hero" },
+      attack: { voice: "hero" },
+      death: { voice: "hero" },
+    },
+    "stinkyscapeplus-152": { // Venomous Rounds
+      play: { voice: "whisper" },
+      attack: { voice: "whisper" },
+      death: { voice: "whisper" },
+    },
+    "stinkyscapeplus-153": { // Noxious Rounds
+      play: { voice: "plain" },
+      attack: { voice: "plain" },
+      death: { voice: "plain" },
+    },
+    "stinkyscapeplus-154": { // Chaos Accelerator
+      play: { voice: "wobble" },
+      attack: { voice: "wobble" },
+      death: { voice: "wobble" },
+    },
+    "stinkyscapeplus-155": { // The Far Vagabond
+      cast: { voice: "narrator" },
+    },
+    "stinkyscapeplus-156": { // Horizon Breaker
+      play: { voice: "hero" },
+      attack: { voice: "hero" },
+      death: { voice: "hero" },
+    },
+    "stinkyscapeplus-157": { // Phantom Shipyard
+      play: { voice: "whisper" },
+      attack: { voice: "whisper" },
+      death: { voice: "whisper" },
+    },
+    "stinkyscapeplus-158": { // Quick Chaos
+      cast: { voice: "zoomer" },
+    },
+    "stinkyscapeplus-159": { // Raven
+      play: { voice: "crone" },
+      attack: { voice: "crone" },
+      death: { voice: "crone" },
+    },
+    "stinkyscapeplus-160": { // Icarus
+      play: { voice: "diva" },
+      attack: { voice: "diva" },
+      death: { voice: "diva" },
+    },
+    "stinkyscapeplus-161": { // Space Invader
+      play: { voice: "alien" },
+      attack: { voice: "alien" },
+      death: { voice: "alien" },
+    },
+    "stinkyscapeplus-162": { // Edwin Van’Spacechief
+      play: { voice: "posh" },
+      attack: { voice: "posh" },
+      death: { voice: "posh" },
+    },
+    "stinkyscapeplus-163": { // Accelerationist
+      play: { voice: "kid" },
+      attack: { voice: "kid" },
+      death: { voice: "kid" },
+    },
+    "stinkyscapeplus-164": { // KPIs
+      cast: { voice: "prof" },
+    },
+    "stinkyscapeplus-165": { // Shadiris
+      play: { voice: "storyteller" },
+      attack: { voice: "storyteller" },
+      death: { voice: "storyteller" },
+    },
+    "stinkyscapeplus-166": { // Mindustrial Revolution
+      cast: { voice: "guard" },
+    },
+    "stinkyscapeplus-t-tears-of-the-kwzki-tree": { // Tears of the Kwzki Tree
+      cast: { voice: "elder" },
+    },
+    "stinkyscapeplus-t-supernova": { // Supernova
+      cast: { voice: "announcer" },
+    },
+    "stinkyscapeplus-t-alnilam": { // Alnilam
+      play: { voice: "narrator" },
+      attack: { voice: "narrator" },
+      death: { voice: "narrator" },
+    },
+    "stinkyscapeplus-t-the-enigmata": { // The Enigmata
+      cast: { voice: "whisper" },
+    },
+    "stinkyscapeplus-t-warhero-token": { // Warhero Token
+      cast: { voice: "hustler" },
+    },
+    "stinkyscapeplus-t-terminus-starship-ark-of-ashes": { // Ark of Ashes
+      play: { voice: "elder" },
+      attack: { voice: "elder" },
+      death: { voice: "elder" },
+    },
+    "stinkyscapeplus-t-terminus-starship-dying-ember": { // Dying Ember
+      play: { voice: "whisper" },
+      attack: { voice: "whisper" },
+      death: { voice: "whisper" },
+    },
+    "stinkyscapeplus-t-terminus-starship-heat-death-pilgrim": { // Heat Death Pilgrim
+      play: { voice: "storyteller" },
+      attack: { voice: "storyteller" },
+      death: { voice: "storyteller" },
+    },
+    "stinkyscapeplus-t-terminus-starship-entropys-wake": { // Entropy's Wake
+      play: { voice: "posh" },
+      attack: { voice: "posh" },
+      death: { voice: "posh" },
+    },
+    "stinkyscapeplus-t-terminus-starship-red-giant-requiem": { // Red Giant Requiem
+      play: { voice: "guard" },
+      attack: { voice: "guard" },
+      death: { voice: "guard" },
+    },
+    "stinkyscapeplus-t-terminus-starship-cold-exodus": { // Cold Exodus
+      play: { voice: "snob" },
+      attack: { voice: "snob" },
+      death: { voice: "snob" },
+    },
+    "stinkyscapeplus-t-terminus-starship-omega-drift": { // Omega Drift
+      play: { voice: "digger" },
+      attack: { voice: "digger" },
+      death: { voice: "digger" },
+    },
+    "stinkyscapeplus-t-terminus-starship-farthest-shore": { // Farthest Shore
+      play: { voice: "diva" },
+      attack: { voice: "diva" },
+      death: { voice: "diva" },
+    },
+    "stinkyscapeplus-t-terminus-starship-nightfall-covenant": { // Nightfall Covenant
+      play: { voice: "narrator" },
+      attack: { voice: "narrator" },
+      death: { voice: "narrator" },
+    },
+    "stinkyscapeplus-t-terminus-starship-vacuum-psalm": { // Vacuum Psalm
+      play: { voice: "bubbles" },
+      attack: { voice: "bubbles" },
+      death: { voice: "bubbles" },
+    },
+    "stinkyscapeplus-t-ai-01": { // Hallucinated Kiwi
+      cast: { voice: "wobble" },
+    },
+    "stinkyscapeplus-t-ai-02": { // Data-Poisoned Plum
+      cast: { voice: "digger" },
+    },
+    "stinkyscapeplus-t-ai-03": { // Jlockeed Loitering Munition
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "stinkyscapeplus-t-ai-04": { // Jlockeed Large Language Model
+      play: { voice: "announcer" },
+      attack: { voice: "announcer" },
+      death: { voice: "announcer" },
+    },
+    "stinkyscapeplus-t-ai-05": { // Lantern Distiller
+      play: { voice: "plain" },
+      attack: { voice: "plain" },
+      death: { voice: "plain" },
+    },
+    "stinkyscapeplus-t-ai-06": { // Abacus Optimizer
+      cast: { voice: "prof" },
+    },
+    "stinkyscapeplus-t-ai-07": { // KY's Line Search Bot
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
     },
   },
   emotes: {

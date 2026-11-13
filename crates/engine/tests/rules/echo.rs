@@ -139,6 +139,16 @@ fn pawn() -> CardDef {
     )
 }
 
+/// R3556001: a Field Spell whose text gives every Spell either player plays Echo +1.
+fn echo_aura() -> CardDef {
+    def("echo-aura", "Field Spell", 1538, json!({}))
+}
+
+/// R3556001: the same, for its controller's Spells alone.
+fn echo_aura_own() -> CardDef {
+    def("echo-aura-own", "Field Spell", 1539, json!({}))
+}
+
 fn defs() -> Vec<CardDef> {
     vec![
         twinspell(),
@@ -154,6 +164,8 @@ fn defs() -> Vec<CardDef> {
         asks(),
         wall(),
         pawn(),
+        echo_aura(),
+        echo_aura_own(),
     ]
 }
 
@@ -300,6 +312,20 @@ fn scripts() -> IndexMap<String, CardScripts> {
     );
     scripts.insert(wall().id, both(Script::default()));
     scripts.insert(pawn().id, both(Script::default()));
+    scripts.insert(
+        echo_aura().id,
+        both(Script {
+            static_flags: Some(json_as(json!({ "spellEchoAura": { "amount": 1, "both": true } }))),
+            ..Script::default()
+        }),
+    );
+    scripts.insert(
+        echo_aura_own().id,
+        both(Script {
+            static_flags: Some(json_as(json!({ "spellEchoAura": { "amount": 1 } }))),
+            ..Script::default()
+        }),
+    );
     let mut resume: IndexMap<&'static str, Hook> = IndexMap::new();
     resume.insert(
         "picked",
@@ -966,7 +992,6 @@ mod r3048002_a_card_that_keeps_its_targets_asks_none_for_its_echo_repeats {
         let body = find_instance(&played.state, &pawn.id).expect("Reborn brought it back");
         assert!(matches!(body.zone, Zone::Field { .. }), "{:?}", body.zone);
     }
-
     #[test]
     fn r3048002_a_cast_keeps_its_pick_too() {
         let mut state = playing("r3048002-cast");
@@ -991,5 +1016,79 @@ mod r3048002_a_card_that_keeps_its_targets_asks_none_for_its_echo_repeats {
         // A random cast picked once, at random, and every repeat hit that pick.
         assert_eq!(state.pending, None);
         assert_eq!(find_instance(&state, &wall.id).map(|unit| unit.damage), Some(3));
+    }
+}
+
+mod r3556001_spells_gain_echo {
+    use super::*;
+
+    /// The aura card on `player`'s field, played from hand.
+    fn aura_on(mut state: GameState, aura: &CardDef, player: PlayerId) -> GameState {
+        let card = hand_card(&mut state, &aura.id, player);
+        let player_id = match player {
+            PlayerId::P1 => "p1",
+            PlayerId::P2 => "p2",
+        };
+        act(
+            &state,
+            json!({ "type": "play", "instanceId": card.id, "playerId": player_id }),
+        )
+    }
+
+    /// `player` plays a pinger at the enemy hero.
+    fn ping(state: &GameState, player: PlayerId) -> GameState {
+        let player_id = match player {
+            PlayerId::P1 => "p1",
+            PlayerId::P2 => "p2",
+        };
+        let mut owned = state.clone();
+        let card = hand_card(&mut owned, &pinger().id, player);
+        let played = act_result(
+            &owned,
+            json!({ "type": "play", "instanceId": card.id, "playerId": player_id }),
+        );
+        assert_eq!(played.error, None);
+        played.state
+    }
+
+    #[test]
+    fn r3556001_a_spell_beside_an_echo_aura_resolves_once_more_for_either_player_with_both() {
+        let mut state = playing("r3556001-both");
+        state = aura_on(state, &echo_aura(), PlayerId::P1);
+        // p1's pinger resolves twice: 2 + 2.
+        state = ping(&state, PlayerId::P1);
+        assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 4);
+        // And p2's own pinger echoes too, played on p2's turn.
+        state = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
+        state = ping(&state, PlayerId::P2);
+        assert_eq!(state.players.p1.hero.health, HERO_HEALTH - 4);
+    }
+
+    #[test]
+    fn r3556001_without_both_only_its_controllers_spells_and_never_a_permanent() {
+        let mut state = playing("r3556001-own");
+        state = aura_on(state, &echo_aura_own(), PlayerId::P1);
+        // p1's pinger resolves twice.
+        state = ping(&state, PlayerId::P1);
+        assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 4);
+        // p2's resolves once, played on p2's turn.
+        state = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
+        state = ping(&state, PlayerId::P2);
+        assert_eq!(state.players.p1.hero.health, HERO_HEALTH - 2);
+        // A permanent cast beside it resolves once: the aura never reaches one.
+        state = act(&state, json!({ "type": "endTurn", "playerId": "p2" }));
+        let mut owned = state.clone();
+        let card = hand_card(&mut owned, &cast_unit().id, PlayerId::P1);
+        let played = act_result(
+            &owned,
+            json!({
+                "type": "play",
+                "instanceId": card.id,
+                "playerId": "p1",
+                "zone": { "row": "units", "lane": 1 },
+            }),
+        );
+        assert_eq!(played.error, None);
+        assert_eq!(played.state.players.p2.hero.health, HERO_HEALTH - 6);
     }
 }

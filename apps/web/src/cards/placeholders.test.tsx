@@ -91,6 +91,12 @@ describe("R386 no placeholder reaches the screen", () => {
         expect(info.text, `${def.id} ${face} lookup text`).not.toContain("{");
         const model = liveFace(info, inHand(def, face === "radiant", values));
         expect(model.text.full, `${def.id} ${face}`).not.toContain("{");
+        // §10.10: a Call to Chaos card reads "???" in play, so its numbers print only in the collection; Stinkyscape+
+        // #142 (§8.12) is the first of them that declares numbers.
+        if (def.tags.includes("Call to Chaos")) {
+          expect(model.text.full, `${def.id} ${face}`).toBe("???");
+          continue;
+        }
         for (const placeholder of paramPlaceholders(def[face].text)) {
           const value = values[placeholder.key];
           if (value === undefined) continue;

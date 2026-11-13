@@ -115,6 +115,17 @@ exclude_re = [
   # it gates nothing: either field left to its default deals the same deck. A set gated there makes the
   # second killable (a bot's deck is a player's random deal, R1453), and then it leaves this line.
   'delete field (lean_set|gated_sets) from struct jackioh_ai::AiDeckOptions expression in deal_bot_deck',
+  # crates/shared (#3513): rematch.rs's next_seats deals an All Random rematch a player's random decks (R1372,
+  # R1453), spelling out three of AiDeckOptions' fields as the values their defaults deal alike while they change
+  # nothing: `banned` as no card, as the default (SHADOW_BAN_IDS, crates/ai/src/shadow_ban.rs) is while SHADOW_BAN
+  # bans none; `gated_sets` as no set, as AI_DECK_GATED_SETS is while it gates none; and `strength` as 0.0, which
+  # deals as `None` does (deck.rs). A card shadow-banned or a set gated makes the first two killable, and then they
+  # leave this line.
+  'delete field (banned|gated_sets|strength) from struct AiDeckOptions expression in next_seats',
+  # crates/shared (#3513): practice/deal.rs's human_deck deals a player's random deck the same way, spelling out
+  # `banned` and `gated_sets` as no card and no set, which their defaults also are while nothing is shadow-banned or
+  # gated (as above).
+  'delete field (banned|gated_sets) from struct AiDeckOptions expression in human_deck',
   # crates/shared (#3513): draw_trio's early None for fewer than TRIO_DECKS decks: validate_trio's L1
   # refuses a trio of any other count, so the trio is None either way.
   'replace < with > in draw_trio',
@@ -164,4 +175,63 @@ exclude_re = [
   # The name has no way to tell this `-` from the function's others, so the entry holds its column (53),
   # which no other `-` of `place_fights` has, and not its line, which moves with the code above it.
   'lib\.rs:\d+:53: replace - with \+ in place_fights',
+  # crates/shared (#3513): glicko2.rs's next_volatility (Glickman's step 5). Its bracket search below a never steps:
+  # f(a - kτ) is 1/τ plus e^x(Δ² - φ² - v - e^x) / (2(φ² + v + e^x)²), which is above -e^x / (2(φ² + v + e^x)) > -1/2,
+  # and every caller passes GLICKO_TAU, 0.5, so f(a - τ) > 3/2 and `f < 0` never holds: as `<= 0` (column 27) or
+  # `== 0` it never holds either, and `k += 1` as `-=` or `*=` (column 15) never runs. Its two loops' caps, `k <` and
+  # `step <` GLICKO_MAX_ITERATIONS, are never reached (the bracket at once, the Illinois loop in a few steps), so `<=`
+  # and `step += 1` as `*=` (column 14) stop at the same place. Its `>`s part from `>=` only on Δ² exactly φ² + v and
+  # on |B - A| exactly GLICKO_CONVERGENCE. `f_c * f_b <= 0` as `f_c / f_b` (column 16) has the same sign, f_b never 0.
+  'ranked/glicko2\.rs:.*replace > with >= in next_volatility',
+  'ranked/glicko2\.rs:.*replace < with <= in next_volatility',
+  'ranked/glicko2\.rs:\d+:27: replace < with == in next_volatility',
+  'ranked/glicko2\.rs:\d+:15: replace \+= with (-=|\*=) in next_volatility',
+  'ranked/glicko2\.rs:\d+:14: replace \+= with \*= in next_volatility',
+  'ranked/glicko2\.rs:\d+:16: replace \* with / in next_volatility',
+  # crates/shared (#3513): season.rs's spread is only given its values' own mean as `center` (soft_reset's two
+  # reports), and about the mean (v + c)(v - c) = v^2 - c^2 averages to E[v^2] - c^2, the same variance (v - c)^2
+  # averages to: either `-` as `+` reports the same spread. The columns hold the entry to those two `-`.
+  'ranked/season\.rs:\d+:(29|48): replace - with \+ in spread',
+  # crates/shared (#3513): ladder.rs's target_ladder takes the last tier on `last` or on the percentile being under
+  # the tiers' running share, and clamps the pips into a tier at `PIPS_PER_TIER - 1`. The shares sum to PERCENT (the
+  # compile-time check after percent_of) and a percentile is under 1 (its numerator, 2 x below + level + 1, is under
+  # its denominator, 2 x (others + 1)), so the running share's test already holds at the last tier, and the pips into
+  # a tier stay under PIPS_PER_TIER: neither `last`'s `len() - 1` nor the clamp's `- 1` decides anything. The columns
+  # hold the entry to those two `-`, apart from the function's others.
+  'ranked/ladder\.rs:\d+:(52|67): replace - with (\+|/) in target_ladder',
+  # crates/shared (#3513): duos.rs's end_as_ceiling_draw is reached only from begin_apply's panic branch, which a
+  # finished host never reaches (it answers MatchOver first), and only for a server action, which a stopped host never
+  # makes (on_ai_move and reach_ceiling return once stopped, and an AI move's retry runs in the step its first try
+  # ran in). So its `finished || stopped` guard never holds, and `&&` decides the same.
+  'host/duos\.rs:.*replace \|\| with && in DuosHost::end_as_ceiling_draw',
+  # crates/shared (#3513): resolve's AI arm is never answered MatchOver: on_ai_move plays nothing once the host is
+  # finished, and a result finishes the host in the step that wrote it (after_change, on_terminal), so begin_apply's
+  # MatchOver never meets an AI move, and that arm and the catch-all after it are never told apart.
+  'host/duos\.rs:.*delete match arm ActionAnswer::MatchOver in DuosHost::resolve',
+  # crates/shared (#3513): resolve's ceiling arm runs the ceiling out again on `is_internal() && !stopped &&
+  # !finished`. The engine refuses the ceiling only once the game has a result (duos/reduce.rs), and a written
+  # ceiling ends the game, which finishes the host before resolve (on_logged runs after_change first): so a ceiling
+  # answer that is not internal comes only to a finished host, and `is_internal() || (!stopped && !finished)` decides
+  # the same. The column (41) holds this entry to the line's first `&&`, where no other `&&` of resolve stands.
+  'host/duos\.rs:\d+:41: replace && with \|\| in DuosHost::resolve',
+  # crates/shared (#3513): ai_mode's guards on a forced KeepHand and a forced AnswerPrompt ask whether the seat still
+  # owes the mulligan or still holds that prompt, which `owes` asks again of the same mode before drive_ai pauses a
+  # seat. A guard of `true` differs only at the end of a pause whose person answered meanwhile: start_job hands
+  # on_ai_move the stale mode, which plays nothing and drives no seat, where None drives every seat again. The
+  # person's answer drove every idle seat already (after_change), so that drive reaches only a seat gone idle since,
+  # after a lost write or a search that threw, and has it decide again before its retry or a newer state, which no
+  # rule asks for.
+  'host/duos\.rs:.*replace match guard (owes_mulligan\(&self\.game, seat\)|held_prompt\(&self\.game, seat\)\.as_deref\(\) == Some\(choice\.as_str\(\)\)) with true in DuosHost::ai_mode',
+  # crates/shared (#3513): curve.rs's `fraction` reduces by `gcd(num, den) * den.signum()`, and a signum is 1 or -1,
+  # which a number is multiplied or divided by alike; at 0 (two cells of one column, a Lagrange denominator of 0)
+  # both divide by 0.
+  'log/curve\.rs:.*replace \* with / in fraction',
+  # crates/shared (#3513): curve.rs's `signed` is given only a curve's terms that are not 0 (the equation filters
+  # the rest out first), so `num < 0` and `num <= 0` part only on a 0 it is never given.
+  'log/curve\.rs:.*replace < with <= in signed',
+  # crates/shared (#3513): chaos.rs's `own` reads a clause in its edition's words, before the words every edition
+  # that has the clause spells it by. Every clause two editions of data/chaos-names.json share they spell alike, so
+  # that fallback finds the same words. A clause two editions spell differently makes this killable (a test of
+  # each edition's words), and then this line goes.
+  'log/chaos\.rs:.*replace own -> ',
 ]

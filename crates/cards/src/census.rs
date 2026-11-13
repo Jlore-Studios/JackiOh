@@ -213,6 +213,52 @@ pub const CENSUS: &[SetCensus] = &[
             ("Mythic", 1),
         ],
     },
+    // R1420, R3535000: the Stinkyscape+ set (issue #3535, docs/stinkyscape-plus-set.md SP1): its 166
+    // numbered cards (the second card on each reused number moved to #161 to #166), the 16 tokens
+    // its cards define, and its shared tokens: the four Terminus `#Token`s, the Warhero Token, the
+    // ten Terminus Starships and the seven AI generated cards. Shipped by #3573, so it counts toward
+    // every total from the release.
+    SetCensus {
+        set: "Stinkyscape+",
+        segment: "stinkyscapeplus",
+        cards: 166,
+        shared_cards: &[],
+        card_defined_tokens: &[
+            "6.1", "6.2", "26.1", "27.1", "61.1", "69.1", "75.1", "76.1", "121.1", "133.1", "133.2", "133.3",
+            "133.4", "133.5", "142.1", "142.2",
+        ],
+        shared_tokens: &[
+            "T-tears-of-the-kwzki-tree",
+            "T-supernova",
+            "T-alnilam",
+            "T-the-enigmata",
+            "T-warhero-token",
+            "T-terminus-starship-ark-of-ashes",
+            "T-terminus-starship-dying-ember",
+            "T-terminus-starship-heat-death-pilgrim",
+            "T-terminus-starship-entropys-wake",
+            "T-terminus-starship-red-giant-requiem",
+            "T-terminus-starship-cold-exodus",
+            "T-terminus-starship-omega-drift",
+            "T-terminus-starship-farthest-shore",
+            "T-terminus-starship-nightfall-covenant",
+            "T-terminus-starship-vacuum-psalm",
+            "T-AI-1",
+            "T-AI-2",
+            "T-AI-3",
+            "T-AI-4",
+            "T-AI-5",
+            "T-AI-6",
+            "T-AI-7",
+        ],
+        rarities: &[
+            ("Common", 36),
+            ("Rare", 47),
+            ("Epic", 43),
+            ("Legendary", 28),
+            ("Mythic", 12),
+        ],
+    },
 ];
 
 /// §5, §7, §8, B2.4: how many catalog entries carry each tag, tokens included, so a tag that drifts
@@ -227,38 +273,68 @@ pub fn tag_count(tag: Tag) -> usize {
         // #114, #115, #147 and #147.1, and #137 Starfleet Commander (#2521).
         // Training Grounds #1, #2, #3, #5, #8, #9, #18, #25, #28, #32 and #38, and the Legacy cards #41, #43,
         // #53 and #54.
-        Tag::Human => 39 + meditative(16) + meditative_plus(5) + stinkyscape(21) + training_grounds(15),
+        Tag::Human => {
+            39 + meditative(16)
+                + meditative_plus(5)
+                + stinkyscape(21)
+                + training_grounds(15)
+                + stinkyscape_plus(11)
+        }
         // Not Core #62 Friend of Felinors nor Classic #32 Felinor Feelings (#1837, R1837000).
         // Stinkyscape #87.
         // Training Grounds #17, #22, #23 and #33, and the Legacy cards #44 and #51.
-        Tag::Felinor => 9 + meditative(11) + stinkyscape(1) + training_grounds(6),
+        Tag::Felinor => 9 + meditative(11) + stinkyscape(1) + training_grounds(6) + stinkyscape_plus(1),
         // Meditative+ #20 KY's Competition, #20.1 Lil' Kenny and #25 KY's Intuition.
         // Stinkyscape #4.2 and #25.
-        Tag::Ky => 9 + meditative(6) + meditative_plus(3) + stinkyscape(2),
+        Tag::Ky => 9 + meditative(6) + meditative_plus(3) + stinkyscape(2) + stinkyscape_plus(1),
         // Meditative+ #21 Harmony Spirit.
         // Stinkyscape #142.
         // Training Grounds #29 Easterner.
-        Tag::Cn => 7 + meditative(33) + meditative_plus(1) + stinkyscape(1) + training_grounds(1),
+        Tag::Cn => {
+            7 + meditative(33)
+                + meditative_plus(1)
+                + stinkyscape(1)
+                + training_grounds(1)
+                + stinkyscape_plus(2)
+        }
         // Meditative #4 Juicy Kumquat Melon and #55 Dragon Fruit; not C+ #61 Bauble Bubble (#831) nor
         // Classic+ #63 Fruit Tree and #68 Organic Produce, the two Field Spells that make Fruit
         // (#1837, R1837000). Meditative+ #23 Enormous Elderberry.
         // Stinkyscape #21.
         // Training Grounds' Legacy card #59 Legacy: Fig of Life.
-        Tag::Fruit => 12 + meditative(2) + meditative_plus(1) + stinkyscape(1) + training_grounds(1),
+        Tag::Fruit => {
+            12 + meditative(2)
+                + meditative_plus(1)
+                + stinkyscape(1)
+                + training_grounds(1)
+                + stinkyscape_plus(7)
+        }
         // Meditative #95 Call to Chaos (Meditative Edition).
         // Stinkyscape #150 and #151.
         // Training Grounds #39.
-        Tag::CallToChaos => 2 + meditative(1) + stinkyscape(2) + training_grounds(1),
+        Tag::CallToChaos => 2 + meditative(1) + stinkyscape(2) + training_grounds(1) + stinkyscape_plus(1),
         // Not Core #84 Going Long nor Meditative #80 Aluneth (#2521).
         // Meditative+ #1 Bob's Plan.
         // Stinkyscape #44, #116, #148 and #154 (#16 Rod of Ages lost it in #3041).
         // Training Grounds #40 Goetzmann Game Design.
-        Tag::Quickdraw => 4 + meditative(4) + meditative_plus(1) + stinkyscape(4) + training_grounds(1),
+        Tag::Quickdraw => {
+            4 + meditative(4)
+                + meditative_plus(1)
+                + stinkyscape(4)
+                + training_grounds(1)
+                + stinkyscape_plus(2)
+        }
         // Meditative #87 Tatches the Totem (every tribal tag, R1424), #97 and #97.9; Meditative+ #4
         // Jlockeed's Supply Drop (the designer's "Jlockheed").
         // Stinkyscape #124 to #130.
         // Training Grounds' Legacy cards #45 and #48.
-        Tag::Jlockeed => 6 + meditative(3) + meditative_plus(1) + stinkyscape(7) + training_grounds(2),
+        Tag::Jlockeed => {
+            6 + meditative(3)
+                + meditative_plus(1)
+                + stinkyscape(7)
+                + training_grounds(2)
+                + stinkyscape_plus(4)
+        }
         // Meditative+ #15 Book of Potions.
         // Stinkyscape #102.
         Tag::Book => 14 + meditative_plus(1) + stinkyscape(1),
@@ -266,21 +342,21 @@ pub fn tag_count(tag: Tag) -> usize {
         // Meditative+ #1.1 Base Camp, #1.2 Spa Day, #1.3 Garage Sale, #1.4 Leg Day and #1.5 Star Chart
         // (#2521), #1 Bob's Plan's AI generated helpers.
         // Stinkyscape's ten AI generated cards, T-AI-1 to T-AI-10.
-        Tag::Ai => 10 + meditative_plus(5) + stinkyscape(10),
+        Tag::Ai => 10 + meditative_plus(5) + stinkyscape(10) + stinkyscape_plus(7),
         // Classic+ #7 The House (#1704) and #39 Book Worm (#1828).
         // Stinkyscape #40 Poison Capsule.
         Tag::Plague => 19 + meditative(2) + stinkyscape(1),
         // Meditative #45, #49 (#831) and #91; their Primes #45.1, #49.1 and #91.1.
         // Meditative+ #16 Jazakus and its #16.1 Jazakus Prime.
         // Stinkyscape #147 (Catalyst) and its #147.1 (Prime).
-        Tag::Catalyst => 2 + meditative(3) + meditative_plus(1) + stinkyscape(1),
+        Tag::Catalyst => 2 + meditative(3) + meditative_plus(1) + stinkyscape(1) + stinkyscape_plus(1),
         Tag::Prime => 2 + meditative(3) + meditative_plus(1) + stinkyscape(1),
         // Meditative #49 and #49.1, not #49.2 nor #49.3 (#831).
         // Stinkyscape #6, #26, #37, #87, #88, #109, #110, #111 and #115.
-        Tag::Acclaimed => 2 + meditative(2) + stinkyscape(9),
+        Tag::Acclaimed => 2 + meditative(2) + stinkyscape(9) + stinkyscape_plus(3),
         // Meditative #8 Reach the Summit and #20 Aestheticize the Game, the tag's only cards.
         // Stinkyscape #148 and #148.1.
-        Tag::Wincon => meditative(2) + stinkyscape(2),
+        Tag::Wincon => meditative(2) + stinkyscape(2) + stinkyscape_plus(1),
         // Meditative+ #11, #12 and #13, the Living Potions, the tag's only catalog cards (R1178000).
         Tag::Potion => meditative_plus(3),
         // #1837, ahead of the Stinkyscape set (R1837000): Core #100 Ceaseless Void; Classic #90 In Too
@@ -288,27 +364,40 @@ pub fn tag_count(tag: Tag) -> usize {
         // #32.3 Blade Storm; and Core #26 to #29, the four Glowy Jelly Beans.
         // Stinkyscape: #4.1 to #4.6 (Terminus); #7 and #112 (Quest); #10 to #12 (Otherworldly) and
         // their nine tokens, #10.1 to #12.3 (Other-Origins).
-        Tag::Terminus => 1 + stinkyscape(6),
+        Tag::Terminus => 1 + stinkyscape(6) + stinkyscape_plus(9),
         Tag::Quest => 1 + stinkyscape(2),
         Tag::Otherworldly => 1 + stinkyscape(3),
         Tag::OtherOrigins => 3 + stinkyscape(9),
         // Training Grounds #27 Hopeful Jelly Bean and the Legacy card #50 Legacy: Glowy Jelly Bean.
-        Tag::JellyBean => 4 + training_grounds(2),
+        Tag::JellyBean => 4 + training_grounds(2) + stinkyscape_plus(2),
         // R1857000, the Stinkyscape set's four: #27 to #36 (Drone Core); #50 to #61 and #140 to #143
         // (Weapon); the four #137 tokens (War Doctrine); #91 and #92, its Swarm Units (Swarm).
         Tag::DroneCore => stinkyscape(10),
-        Tag::Weapon => stinkyscape(16),
+        Tag::Weapon => stinkyscape(16) + stinkyscape_plus(9),
         Tag::WarDoctrine => stinkyscape(4),
-        Tag::Swarm => stinkyscape(2),
+        // S01: C+ #49 Jay Fungus gains the tag, beside the Stinkyscape set's two.
+        Tag::Swarm => 1 + stinkyscape(2) + stinkyscape_plus(15),
         // R2511000: Training Grounds #41 to #60, its twenty Legacy cards.
         Tag::Legacy => training_grounds(20),
         // #2521: the Stinkyscape set's six Resources, T-reknite, T-korrelite, T-gellium, T-axnit,
         // T-narcor and T-red-narcor (Resource), and its five Faction cards, #95 and #159 to #162
         // (Faction).
-        Tag::Resource => stinkyscape(6),
+        Tag::Resource => stinkyscape(6) + stinkyscape_plus(1),
         Tag::Faction => stinkyscape(5),
         // R3038000: the Dormant Starship, the tag's only card; the Drone Battleships are no Starships.
-        Tag::Starship => stinkyscape(1),
+        Tag::Starship => stinkyscape(1) + stinkyscape_plus(10),
+        // R3535002: the Stinkyscape+ set's family tags (counts from SP6, recounted against catalog.json
+        // for the release, #3573).
+        Tag::Mindustrial => stinkyscape_plus(78),
+        Tag::Mineral => stinkyscape_plus(7),
+        Tag::AutomaAlpha => stinkyscape_plus(5),
+        Tag::AutomaBeta => stinkyscape_plus(5),
+        Tag::AutomaGamma => stinkyscape_plus(3),
+        Tag::AutomaDelta => stinkyscape_plus(6),
+        Tag::AutomaOmega => stinkyscape_plus(6),
+        Tag::AutomaZeta => stinkyscape_plus(5),
+        // S01: S #44 Great Paperclip Theory I gains the tag.
+        Tag::Paperclip => stinkyscape(1) + stinkyscape_plus(2),
         // Every token of the sets that ship carries it, so its count is their tokens' sum (R1420).
         Tag::Token => CENSUS
             .iter()
@@ -341,6 +430,15 @@ fn stinkyscape(count: usize) -> usize {
 /// R2194000: `count` once the Training Grounds set ships (#2204), else 0.
 fn training_grounds(count: usize) -> usize {
     if set_ships(SetName::TrainingGrounds) {
+        count
+    } else {
+        0
+    }
+}
+
+/// R3535000: `count` once the Stinkyscape+ set ships, else 0.
+fn stinkyscape_plus(count: usize) -> usize {
+    if set_ships(SetName::StinkyscapePlus) {
         count
     } else {
         0

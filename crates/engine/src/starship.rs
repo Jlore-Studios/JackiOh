@@ -95,8 +95,9 @@ pub fn is_launched_starship(card: &CardInstance) -> bool {
         .is_some_and(|memory| memory.launched.is_some())
 }
 
-/// R1852000, R1852005: `player`'s Dormant Starship, the first in lane order, buried or not (R1839003).
-pub fn dormant_starship_of(state: &GameState, player: PlayerId) -> Option<&CardInstance> {
+/// R1852000, R1852005: `player`'s Dormant Starships, the first in lane order first, buried or not
+/// (R1839003). R3539000 (S+ #80 The Last Voyage): the hulls a random launch picks from.
+pub fn dormant_starships_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
     let side = &state.players[player];
     // R2249000: one standing in a backrow zone, or beneath a backrow pile, counts too.
     side.units
@@ -105,7 +106,13 @@ pub fn dormant_starship_of(state: &GameState, player: PlayerId) -> Option<&CardI
         .flatten()
         .chain(side.backrow.iter().flatten())
         .chain(side.backrow_piles.iter().flatten().flatten())
-        .find(|card| is_dormant_starship(card))
+        .filter(|card| is_dormant_starship(card))
+        .collect()
+}
+
+/// R1852000, R1852005: `player`'s Dormant Starship, the first in lane order, buried or not (R1839003).
+pub fn dormant_starship_of(state: &GameState, player: PlayerId) -> Option<&CardInstance> {
+    dormant_starships_of(state, player).into_iter().next()
 }
 
 /// R1852005 (#137 Starfleet Commander's "If you have a Dormant Starship", which read "If you are
@@ -277,7 +284,16 @@ pub fn fuse_dead_piece(sink: &mut EngineSink<'_>, snapshot: &CardInstance) {
             None => return,
         },
     };
-    let Some(ship) = find_instance(sink.state, &ship_id).cloned() else {
+    fuse_copy_into(sink, &ship_id, snapshot);
+}
+
+/// R3539001, R3539004: a copy of `snapshot`'s base version fuses into the Dormant Starship `ship_id`,
+/// the Starship kept, the copy on the face it was on (R469), the Starship never made a piece by it
+/// (R1852001). Nothing happens when the ship is gone, or when the fusion would pass
+/// `FUSED_CARDS_CAP` (R874000).
+fn fuse_copy_into(sink: &mut EngineSink<'_>, ship_id: &str, snapshot: &CardInstance) {
+    let owner = snapshot.controller;
+    let Some(ship) = find_instance(sink.state, ship_id).cloned() else {
         return;
     };
     let copy = piece_copy(sink.state, snapshot);
@@ -304,7 +320,7 @@ pub fn fuse_dead_piece(sink: &mut EngineSink<'_>, snapshot: &CardInstance) {
     if fused.is_none() {
         return;
     }
-    let Some(live) = find_instance_mut(sink.state, &ship_id) else {
+    let Some(live) = find_instance_mut(sink.state, ship_id) else {
         return;
     };
     let memory = live.starship.get_or_insert_with(StarshipMemory::default);
@@ -312,7 +328,7 @@ pub fn fuse_dead_piece(sink: &mut EngineSink<'_>, snapshot: &CardInstance) {
     let pieces = memory.pieces.len() as u32;
     sink.events.push(GameEvent::StarshipFused {
         player: owner,
-        instance_id: ship_id,
+        instance_id: ship_id.to_string(),
         piece_id: snapshot.id.clone(),
         def_id: base_def_id,
         pieces,
@@ -326,11 +342,79 @@ pub fn fuse_fresh_piece(sink: &mut EngineSink<'_>, player: PlayerId, def_id: &st
     fuse_dead_piece(sink, &fresh);
 }
 
+/// R3539001, R3539004: a fresh card of `def_id`, owned by the ship's controller, fuses into the
+/// Dormant Starship `ship_id` as a dead piece's copy does, on its Radiant face when `radiant`.
+/// Nothing happens when the ship is gone.
+pub fn fuse_fresh_piece_into(sink: &mut EngineSink<'_>, ship_id: &str, def_id: &str, radiant: bool) {
+    let Some(ship) = find_instance(sink.state, ship_id) else {
+        return;
+    };
+    let owner = ship.controller;
+    let mut fresh = new_instance(sink.state, def_id, owner, Zone::Gone { player: owner });
+    fresh.radiant = radiant;
+    fuse_copy_into(sink, ship_id, &fresh);
+}
+
+/// The mirror of `base_piece_def`: the definition of a fused card's hull — the card the others were
+/// fused into, its first ingredient (R3539001: the Terminus Starships a launch picks from by hull).
+/// A card that is no fusion is its own definition.
+pub fn hull_def_of(state: &GameState, def_id: &str) -> String {
+    let kept = crate::catalog::find_def(Some(state), def_id)
+        .and_then(|def| def.ingredients.as_ref())
+        .and_then(|specs| specs.first());
+    match kept {
+        Some(kept) => hull_def_of(state, &kept.def_id),
+        None => def_id.to_string(),
+    }
+}
+
+/// R3539001: where a made Starship goes — the first open zone of `player`'s backrow, middle first,
+/// then of their unit row the same way (`STARSHIP_LANE_ORDER`). Never a pile or a Locked zone.
+/// `None` when every zone of both rows is taken.
+pub fn open_starship_zone(state: &GameState, player: PlayerId) -> Option<ZoneSlot> {
+    [Row::Backrow, Row::Units]
+        .into_iter()
+        .flat_map(|row| {
+            STARSHIP_LANE_ORDER
+                .into_iter()
+                .map(move |lane| ZoneSlot { player, row, lane })
+        })
+        .find(|slot| is_open(state, *slot))
+}
+
+/// R3539004 (S+ #157 Phantom Shipyard): at the start of `player`'s turn, each of their Dormant
+/// Starships that prints the yard fuses in one random Starship Piece — a Radiant one on a Radiant
+/// card — drawn from the match rng. No draw when they hold no yard (R129).
+pub fn yard_at_turn_start(sink: &mut EngineSink<'_>, player: PlayerId) {
+    let yards: Vec<(String, bool)> = crate::zones::units_on_field_of(sink.state, player)
+        .into_iter()
+        .filter(|card| card.controller == player)
+        .filter(|card| {
+            is_dormant_starship(card)
+                && !crate::zones::is_buried(sink.state, card)
+                && crate::scripts::flags_of(sink.state, card).starship_yard == Some(true)
+        })
+        .map(|card| (card.id.clone(), card.radiant))
+        .collect();
+    if yards.is_empty() {
+        return;
+    }
+    let pool = crate::catalog::query(&crate::prelude::json_as(
+        crate::subsystems::call_to_chaos_scape::starship_pieces_query(),
+    ));
+    for (id, radiant) in yards {
+        let Some(piece) = sink.rng.pick(&pool) else {
+            continue;
+        };
+        let def_id = piece.id.clone();
+        fuse_fresh_piece_into(sink, &id, &def_id, radiant);
+    }
+}
+
 // The launch (R1852003–R1852006)
 
-/// R1852006: what `player`'s launch costs now — the least "your Starship launch costs (N)" they hold,
-/// else `STARSHIP_LAUNCH_COST`. Never below 0.
-pub fn launch_cost(state: &GameState, player: PlayerId) -> i32 {
+/// R1852006: the least "your Starship launch costs (N)" `player` holds now, if any.
+fn least_launch_mod(state: &GameState, player: PlayerId) -> Option<i32> {
     state.players[player]
         .mods
         .iter()
@@ -340,15 +424,39 @@ pub fn launch_cost(state: &GameState, player: PlayerId) -> i32 {
             _ => None,
         })
         .min()
+}
+
+/// R1852006: what `player`'s launch costs now — the least "your Starship launch costs (N)" they hold,
+/// else `STARSHIP_LAUNCH_COST`. Never below 0.
+pub fn launch_cost(state: &GameState, player: PlayerId) -> i32 {
+    least_launch_mod(state, player)
         .unwrap_or(STARSHIP_LAUNCH_COST)
         .max(0)
 }
 
+/// R3539000 (S+ #155 The Far Vagabond, S+ #80 The Last Voyage): what a launch by hand of `card`
+/// costs its controller, or nothing when it has no launch by hand. A hull the card that made it
+/// priced (`StarshipMemory.price`) launches for it, or for "launch costs (N)" when that is lower;
+/// a `no_hand_launch` hull has no launch by hand; anything else launches for `launch_cost`.
+pub fn hand_launch_cost(state: &GameState, card: &CardInstance) -> Option<i32> {
+    let own = card.starship.as_ref().and_then(|memory| memory.price);
+    match own {
+        Some(price) => Some(
+            least_launch_mod(state, card.controller)
+                .map_or(price, |least| least.min(price))
+                .max(0),
+        ),
+        None if crate::scripts::flags_of(state, card).no_hand_launch == Some(true) => None,
+        None => Some(launch_cost(state, card.controller)),
+    }
+}
+
 /// R1852003: a Dormant Starship's one ability, "Activate: pay (4) to launch", priced for its controller
-/// now (R1852006). `subsystems::activate` runs the launch (`pay_launch`), so its own list is empty.
-pub fn launch_decl(state: &GameState, card: &CardInstance) -> ActivationDecl {
-    let cost = launch_cost(state, card.controller);
-    ActivationDecl {
+/// now (R1852006, R3539000), which awakens it. `subsystems::activate` runs the launch (`pay_launch`),
+/// so its own list is empty. `None` for a hull with no launch by hand (R3539000).
+pub fn launch_decl(state: &GameState, card: &CardInstance) -> Option<ActivationDecl> {
+    let cost = hand_launch_cost(state, card)?;
+    Some(ActivationDecl {
         id: STARSHIP_LAUNCH_ABILITY.to_string(),
         label: format!("Launch ({cost})"),
         uses: ActivationUses::Count(STARSHIP_LAUNCH_USES),
@@ -361,7 +469,7 @@ pub fn launch_decl(state: &GameState, card: &CardInstance) -> ActivationDecl {
         can_activate: None,
         has: None,
         run: hook(|_ctx| Vec::new()),
-    }
+    })
 }
 
 /// R1852003: whether an activation is a Dormant Starship's launch.

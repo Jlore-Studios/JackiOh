@@ -776,6 +776,15 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "curve" },
     target: () => testid.board,
   },
+  // S+ #109 Lancer, #126 Vela, #127 Corvus (R3554005): the line is drawn from the source's zone
+  // through the lattice cells to the tile, before what it meets is hit.
+  lineDrawn: {
+    animation: "jk-line-drawn",
+    durationMs: 700,
+    testid: "board",
+    fx: { recipe: "line" },
+    target: () => testid.board,
+  },
   // R1183002: a banner says the AI plays the rest of the turn; the actions it takes follow as their
   // own events, each animated as a player's would be.
   autopilotEngaged: {
@@ -787,6 +796,14 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
   },
   // R1839002: a Dormant card awakens where it lies; its Dormant badge falls away with the next view.
   awakened: {
+    animation: "jk-radiant-pulse",
+    durationMs: 400,
+    testid: "card-<instanceId>",
+    fx: { recipe: "brand" },
+    target: (e, view) => locateInstance(view, e.instanceId),
+  },
+  // R3536005: a card evolves where it lies; its Evolved badge arrives with the next view.
+  evolved: {
     animation: "jk-radiant-pulse",
     durationMs: 400,
     testid: "card-<instanceId>",

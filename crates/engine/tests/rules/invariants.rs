@@ -8,9 +8,9 @@
 //! #1902). Each check is proved by tampering with one payload of a real action's events; the untampered
 //! events are clean.
 //!
-//! And its I17 (#3773): what the state check leaves on a settled state (no unit at 0 health but R69's, no
-//! hero at 0 that can lose, R2201000) and, on every state, no mana or card damage below 0 and no `damage`
-//! event of 0 or less (§2.3, §4.5, R63).
+//! And its I17 (#3773): what the state check leaves on a settled state (no unit at 0 health but R69's or
+//! R3539003's, no hero at 0 that can lose, R2201000) and, on every state, no mana or card damage below 0
+//! and no `damage` event of 0 or less (§2.3, §4.5, R63).
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -990,6 +990,24 @@ fn i16_a_hand_or_library_copy_may_carry_stats_and_armor_overrides_but_a_graveyar
     only(&i16(&state), &id, &["R78", "statsOverride"]);
 }
 
+/// R3566004: a card that evolved in its graveyard keeps its Evolve's buff, keywords and stat line there,
+/// for its Flashback play; damage it could only have brought from the field is still a leftover (R78).
+#[test]
+fn r3566004_i16_a_card_evolved_in_its_graveyard_keeps_what_its_evolve_gave() {
+    let mut state = playing("i16-evolved");
+    let mut cheese = new_instance(&mut state, "fx-2", P1, Zone::Graveyard { player: P1 });
+    cheese.evolved = Some(true);
+    cheese.buffs = AttackHealth { attack: 5, health: 5 };
+    cheese.granted_keywords = vec![json_as(json!({ "kind": "Flashback" }))];
+    cheese.stats_override = Some(AttackHealth { attack: 0, health: 0 });
+    let id = cheese.id.clone();
+    state.players[P1].graveyard.push(cheese);
+    assert_eq!(i16(&state), Vec::<String>::new());
+    let held = state.players[P1].graveyard.last_mut().expect("the card");
+    held.damage = 2;
+    only(&i16(&state), &id, &["R78", "damage"]);
+}
+
 #[test]
 fn i16_a_library_card_owned_by_the_other_seat_is_one_owner_drift() {
     let mut state = playing("i16-owner");
@@ -1062,6 +1080,16 @@ fn i17_an_indestructible_unit_at_0_health_stands_while_its_max_health_is_above_0
         health: -2,
     };
     only(&i17(&state, &[]), &id, &["dead unit left standing", "R69"]);
+}
+
+/// R3539003: no health judges a Dormant card, so a 0/0 hull stands on a settled board.
+#[test]
+fn i17_a_dormant_unit_at_0_health_stands() {
+    let (mut state, id) = hurt("i17-dormant", 2);
+    find_instance_mut(&mut state, &id).expect("the unit").slumber = Some(Slumber { turns: None });
+    assert_eq!(i17(&state, &[]), Vec::<String>::new());
+    find_instance_mut(&mut state, &id).expect("the unit").slumber = None;
+    only(&i17(&state, &[]), &id, &["dead unit left standing"]);
 }
 
 #[test]
