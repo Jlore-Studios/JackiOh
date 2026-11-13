@@ -1,7 +1,7 @@
 {
   "title": "Patch: Jungle Loser always attacks",
   "sources": "#3802",
-  "notes": "C+ #19.2 Jungle Loser's end-of-turn attack is no longer a 100% chance: it always attacks a random enemy Unit; its chance param and its rng draw are removed, the old script is kept for replays through v0.5.12ap.",
+  "notes": "C+ #19.2 Jungle Loser's end-of-turn attack is no longer a 100% chance: it always attacks a random enemy Unit; its chance param and its rng draw are removed, the old script is kept for replays through v0.6.0c.",
   "player": {
     "title": "Jungle Loser always attacks",
     "new": [],

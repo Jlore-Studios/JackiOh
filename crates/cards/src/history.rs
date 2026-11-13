@@ -680,11 +680,11 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.5.12ap",
         c073_1_classic_golem::script_v0_5_13g,
     ),
-    // #3802: Jungle Loser's roll, through the same newest shipped version.
+    // #3802: Jungle Loser's roll, through v0.6.0c, the newest shipped version that ran it.
     (
         c019_2_jungle_loser::ID,
-        "v0.5.12ap",
-        c019_2_jungle_loser::script_v0_5_12ap,
+        "v0.6.0c",
+        c019_2_jungle_loser::script_v0_6_0c,
     ),
 ];
 
