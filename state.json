@@ -17260,17 +17260,25 @@
           "claude"
         ],
         "builder": "claude",
-        "built_by": "claude-4",
+        "built_by": "claude-6",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "spec/09-architecture.md"
+          ],
+          "from": "0af674460d5e9189a80951c09b4af3499c7075e0",
+          "main": "196400411208276be38ea6385fad6f92b10427a3"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-6",
-            "run": "43357920338",
+            "run": "43392725183",
             "tier": "strong"
           }
         ],
-        "sha": "0af674460d5e9189a80951c09b4af3499c7075e0",
+        "sha": "af5a39242386270e6ddf1845a7a57583649c4715",
         "tiers": {
           "claude": "strong"
         }
