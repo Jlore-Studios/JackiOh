@@ -17648,6 +17648,13 @@
     "3827": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-13T12:21:19Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "rule 5: about 110 files change in all (61 card scripts, 3 cross tests, 41 rules tests, the kit, the guard, docs), though each edit is a test-side call-site swap"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
