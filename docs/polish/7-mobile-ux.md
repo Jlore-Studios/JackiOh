@@ -591,11 +591,13 @@ nothing in it carries a `hand-card-*` or `card-*` testid:
   sidebar on a desktop, low on a tablet, down the right edge of a phone held landscape, and are the
   usual sheet on a phone held upright, and their scrim does not dim the board. The card pickers
   (mulligan, discover, hand) keep the centered modal (B32's desktop case) and the sheet.
-  On a phone held upright with drag to play on, a *play's* zone, target or tribute pick
-  (`data-prompt-source="play"`) is a slim bar along the bottom edge over the control bar: its
-  title, Confirm and Cancel, and no list, because the answers glow on the board and are picked
-  there (B44). With drag to play off it is the full sheet, which is the brief's "selection UI";
-  an engine prompt keeps its sheet either way.
+  A choice of one board zone (a play's zone, a one-zone target, a `cell` prompt) draws no list at
+  any width, with drag to play on or off: it is R3864000's hint pill plus a play's Cancel, and the
+  zones are picked on the board. On a phone held upright with drag to play on, a *play's* target or
+  tribute pick (`data-prompt-source="play"`) is a slim bar along the bottom edge over the control
+  bar: its title, Confirm and Cancel, and no list, because the answers glow on the board and are
+  picked there (B44). With drag to play off it is the full sheet, which is the brief's "selection
+  UI"; an engine prompt keeps its sheet either way.
 - **Color language.** Green is "can act" and yellow is "condition met" (S7), so the board's own
   selection ring is ice blue (`.board { --selected }`), never gold. End turn, once nothing else is
   left, turns green (its fill and its ring, B18), with a selector that outranks board.css's amber
@@ -808,10 +810,11 @@ B43. On a phone, `log-toggle` (44×44 px) sets `data-log="open"`, which shows th
 of the board; pressing it again hides it. At 1280×720 the log has its own place and the toggle is
 not shown.
 
-B44. At 390×844 with drag to play on, a tap on a playable card opens a play's zone pick as a bar at
-most 72 px tall whose top is below the hand and below the lifted card, with no list; a tap on a
-glowing zone then plays it. With drag to play off the same tap opens the full sheet. The modal
-carries `data-prompt-source` `"play"` or `"engine"`.
+B44. At 390×844 a tap on a playable card opens a play's zone pick as a hint pill at most 72 px tall
+whose top is below the field, the hand and the lifted card, with no list; a tap on a glowing zone
+then plays it. With drag to play off the same tap opens the same pill (R3864000); target and
+tribute picks keep the bar and the sheet. The modal carries `data-prompt-source` `"play"` or
+`"engine"`.
 
 B45. At 390×844 and 844×390: a tap on a card that cannot be played lifts it at least 1.5 times its
 resting width, opaque, and inside the screen, the end cards included; a card being played whose
