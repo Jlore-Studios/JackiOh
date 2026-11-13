@@ -16313,6 +16313,7 @@
           }
         ],
         "head": "5d99bf6c7a7aec790bfa1b827923b7d9e3cd50d4",
+        "interruptions": 1,
         "kind": "build",
         "model": "opus",
         "provider": "claude-1",
