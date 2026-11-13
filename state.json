@@ -17682,6 +17682,13 @@
     "3822": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-13T10:52:02Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "Rule 2: it changes how the AI's static evaluation prices units and heroes (`crates/ai/src/evaluate.rs`, `config.rs`), which moves its decisions."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
