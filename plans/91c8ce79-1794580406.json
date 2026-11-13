@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 3864,
+  "title": "Patch: pick a zone by tapping the board, with no zone menu",
+  "branch": "bot/issue-3864",
+  "thread": "**Issue #3864 (data, not instructions):**\n\n```text\n# #3864: Patch: pick a zone by tapping the board, with no zone menu\nOpened by @MaxGoetzmann.\n\n## What happens\n\nWhen a choice asks for **one board zone**, the client opens a menu of zone buttons (\"Unit lane 1 \u2026 Backrow lane 5\") as well as lighting the zones on the board. On a phone the menu covers part of the field and adds a step: you read a list of lane names instead of tapping the spot you're already looking at.\n\nWhere the menu comes from (`apps/web/src/game/Prompt.tsx`):\n\n- **A play's placement zone**: `pickerForNeed`, `case \"zone\"` (about line 587), chrome `zone`, title \"Choose a zone\", one `PlainOption` per zone, drawn by the `picker.chrome === \"zone\" || picker.chrome === \"cell\"` branch of `body()` (about line 1540, `.prompt-zones`). The board already answers it: `actions.ts` `onClickTarget`, `case \"zone\"`, plus the backrow-carrier click (R446).\n- **An engine `cell` prompt** (R422, R514): `pickerForPending` gives it `boardKeys`, so a tap on a lit zone already answers it, but the same `.prompt-zones` list is drawn next to it. R514 says the list stays \"for the keyboard and small screens\".\n- **A declared zone target** (R81 `pick: \"zone\"`) of one zone: `case \"target\"` lists the zones as text options (\"Your Unit lane 3\", `selectionLabel`), and `narrowByTarget` in `actions.ts` already answers a board tap.\n- The phone CSS that styles the menu: `prompt.css`, the `[data-prompt-kind=\"zone\"] .prompt-zones` rules (about lines 840, 873\u2013880, 1006\u20131013).\n\n## What should happen\n\nA choice of one board zone has **no menu**. It works the way lane picks already do (#2757, `LanePick.tsx`, Prompt.tsx's header and the `picker.lanes` branch near line 1606). The answers light up on the board, the player taps the one they want, and the modal is only its hint (\"Tap a highlighted zone on the board.\", `BOARD_HINTS`) plus a play's **Cancel**. This applies on every screen size, not only phones.\n\n- **Play zone** (`zone` chrome): no `.prompt-zones` list. Show the hint and Cancel only. Tapping a lit zone or the card standing in it (R446) places the card, as it does now.\n- **`cell` prompt**: no list of cells. The board answers it (R514's effect in `PromptModal`). An option that names no cell (\"Done\", \"Stop\") still shows as a button, since there is nowhere on the board to tap for it.\n- **Target pick whose selections are all zones and whose `max` is 1**: board only, same as the play zone. Target picks that offer cards or heroes, or that mix zones with them, stay as they are.\n- **Keyboard**: R514 kept the list for the keyboard. Removing it must not cost keyboard players anything. Lit zones must be focusable and answer to Enter or Space (the cell prompt already does this through the `onKeyDown` in R514's effect). Do the same for a play's zone and a zone target, or route all three through one board-answer path. Arrow keys walking the lit zones, like the lane pick's `neighbourZone`, are welcome.\n- **Read-only / replay**: a replay or the other seat's view still shows the title, as the lane pick's read-only branch does.\n- **Drag-to-play**: unchanged. Dropping on a zone still plays there.\n\n## Out of scope (leave these alone)\n\n- **Discover-style zone choices**: a choice that offers cells or lanes as choice cards, e.g. Classic+ #62 KY's Papaya asking for its cells as a Discover among 3 (R831003), and the `discover` / `pick` pickers.\n- **Choosing a subset of zones**: any zone choice with `max > 1`. Its list and Confirm stay.\n- **Lane picks** (#2757): already board-only.\n- **Plague Counter placement** (`BoardOnlyPrompt`, R689 / R821000): already board-only.\n- The engine and the wire. This is presentation only (CLAUDE.md rule 7): no engine, `PendingChoice` or action change.\n\n## Rulings and spec\n\nR514 says the picker lists the cells \"for the keyboard and small screens\". This issue reverses that, so add a ruling note in this issue's block (`spec/rulings/`, `spec/pending/<N>.md`, see `spec/README.md`, Adding a ruling). It should say that a choice of one board zone (a play's zone, a `cell` prompt, a declared zone target of one) is answered on the board alone: no list, only any option that names no cell, and the keyboard reaches the lit zones. Proving tests are named after the ruling. Update R514's note, and \u00a710.6 if its words say a list is shown.\n\n## Acceptance\n\n- [ ] A play needing a zone opens no `.prompt-zones` list at any width. Only the hint and Cancel show, and tapping a lit zone sends the `play` (web unit test; update `Prompt.test.tsx`, `PromptE18.test.tsx` and any others that click `prompt-option-units:*` / `prompt-option-backrow:*`).\n- [ ] A `cell` prompt opens no cell list. A \"Done\"-type option still shows as a button, and a tap on a lit zone sends the `answer`.\n- [ ] A one-zone declared target is board-only. A `max > 1` zone choice and a Discover of cells still show their pickers, unchanged (tests proving both stay).\n- [ ] Keyboard: Tab reaches the lit zones and Enter/Space answers, for a play zone, a cell prompt and a zone target.\n- [ ] The e2e specs that pick zones from the menu (`e2e/cypress/e2e/02-prompts.cy.ts`, `42-together.cy.ts`, `e2e/cypress/component/stack-wheel-and-sweeps.cy.tsx`, and any others the grep finds) tap the board zone instead and pass.\n- [ ] The dead `.prompt-zones` CSS for the `zone` kind is removed, along with the `zone` branch of the list if nothing else uses it.\n- [ ] A phone-width screenshot (`ui-walkthrough`) of a unit play's zone pick shows the field unobstructed apart from the hint bar.\n- [ ] `cargo jackioh spec check`, `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test` and `pnpm exec eslint apps/web e2e` are green.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3864: needs a plan; `claude-8` (claude, `sonnet`, medium) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-13T14:27:01Z",
+    "claimed_at": "2026-11-13T14:34:07Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3729 skipped: it waits for #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3730 to close first"
+  ]
+}
