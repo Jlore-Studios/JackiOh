@@ -37006,6 +37006,12 @@
         "number": 3823,
         "title": "Patch: the AI's search ranks the answers to its own prompt before cutting them to its width",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-13T05:50:22Z",
+        "number": 3825,
+        "title": "Patch: a Mass Driver played into a unit zone arrives as a Unit for every card that answers one",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": "2026-11-13T05:42:35Z",
