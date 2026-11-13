@@ -16751,6 +16751,7 @@
     "3810": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "cleared": {
         "approver": {
           "family": "claude",
@@ -16766,16 +16767,19 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-12T21:14:49Z",
+      "feedback_since": "2026-11-13T02:36:00Z",
       "forced": false,
       "interruptions": 0,
       "issue": 3802,
       "kind": "revise",
+      "last_findings": [],
       "live": "resolving",
       "merge_owner": "claude-7",
       "pending_request": false,
       "provider": "claude-3",
+      "question": "",
       "queued_at": "2026-11-13T02:33:07Z",
+      "round_tier": "medium",
       "run_id": "43353306193",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -16796,10 +16800,11 @@
         "provider": "claude-7",
         "run": "43308349962"
       },
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-13T02:36:00Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "claude"
