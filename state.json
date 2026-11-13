@@ -16361,16 +16361,24 @@
         ],
         "builder": "claude",
         "built_by": "claude-4",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/engine/README.md"
+          ],
+          "from": "dda78e30e55be391102c65f1fd673a1bee41fb2d",
+          "main": "293a3273ecc54cd3b591da532cd785c200b2df15"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-4",
-            "run": "43371269656",
+            "run": "43385926148",
             "tier": "strong"
           }
         ],
-        "sha": "dda78e30e55be391102c65f1fd673a1bee41fb2d",
+        "sha": "b04c1feea7b521abff082a7644a8809da6f7d8c9",
         "tiers": {
           "claude": "strong"
         }
