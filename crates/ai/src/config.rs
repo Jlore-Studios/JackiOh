@@ -196,6 +196,9 @@ pub struct AiSearch {
     pub expensive_def_ids: &'static [&'static str],
     /// Nodes a Play of an `expensive_def_ids` card pays beyond the one every `simulate` takes.
     pub expensive_def_nodes: i32,
+    /// R3575603: the most expensive steps (`simulate::SimMemo`) one decision keeps to answer again: each
+    /// holds two states, and a decision meets a few at most.
+    pub memo_steps: i32,
     /// The cards an armed backrow copy of which makes a simulated Attack cost `ai_turn_trap_nodes`
     /// (§8.5 core-096: a whole random AI turn inside one reduce), asked only of an attack that could be
     /// the lethal one the trap answers, so an ordinary poke is not priced like losing the turn. A fused
@@ -228,6 +231,7 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     fat_budget_nodes: 600,
     expensive_def_ids: &["core-097", "classicplus-027"],
     expensive_def_nodes: 100,
+    memo_steps: 8,
     ai_turn_trap_ids: &["core-096"],
     ai_turn_trap_nodes: 40,
     judged_card_nodes: 3,
@@ -732,6 +736,14 @@ pub const AI_TURN_HOOK_PROBE_NODES: usize = 24;
 /// spend: two turn ends and `AI_REPLY.visible_activations` uses for each of about four cards, units and
 /// face-up backrow cards together.
 pub const AI_ACTIVATION_PROBE_NODES: usize = 20;
+
+/// R3575400, R3575404: the most nodes a decision's re-keyed Activate probes
+/// (`evaluate::activation_prices`) spend: the seat's own hand cards with an ability, and its own Dormant
+/// cards acting for their awakening, whose price is keyed by the card as the seat holds it now. A spawn
+/// (two nodes on a full unit row) for a hand card, then two turn ends and `AI_REPLY.visible_activations`
+/// uses, for each of about two such cards. A slice of its own beside `AI_ACTIVATION_PROBE_NODES`, so a
+/// hand full of Activates cannot starve the board's prices.
+pub const AI_HAND_ACTIVATION_PROBE_NODES: usize = 16;
 
 /// R2688000: the most nodes a decision's attack-hook probes (`evaluate::attack_hook_prices`) spend: two
 /// turn ends, and two attacks (the unit's and its hookless twin's) for each of about five units with an

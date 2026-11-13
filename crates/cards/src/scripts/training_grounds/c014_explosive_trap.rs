@@ -3,7 +3,6 @@
 //! Core #41 trigger: §10.5 step 7 `cardResolved` (after Cry/Echo, R427; never token/Recruit/Reborn, R1, R61; R174, R99).
 //! C #5 hit states Trample and Pierce (R2199001; §4.4 step 9, R1750000 excess to hero).
 
-use jackioh_engine::catalog::def_of;
 use jackioh_engine::prelude::*;
 use jackioh_engine::query::left_field_since_resolved;
 
@@ -25,12 +24,13 @@ fn explosive_trap(pierce: bool) -> Script {
         vec![damage(json_as(args))]
     })
     .with_when(|ctx, event| {
-        let GameEvent::CardResolved { player, def_id, permanent, .. } = event else {
+        let GameEvent::CardResolved { player, permanent, .. } = event else {
             return false;
         };
-        // R2199003: the opponent's played Unit, still on the field from that play.
+        // R2199003: the opponent's played Unit, still on the field from that play. R783005: the play as
+        // it counts, so a Unit set by its Cloaked is the Trap it was set as.
         *player != ctx.controller
-            && def_of(Some(&*ctx.state), def_id).type_ == CardType::Unit
+            && played_type_of(&*ctx.state, event) == Some(CardType::Unit)
             && *permanent
             && !left_field_since_resolved(&*ctx.state, event)
     });
@@ -116,6 +116,15 @@ mod tests {
             s.expect_health(P1, 30);
             s.expect_in_zone(RENO, "graveyard");
             s.expect_in_zone(TRAP, "graveyard");
+        }
+
+        /// R783005: a Unit set face-down by its Cloaked is a Trap play, no Unit played.
+        #[test]
+        fn r783005_a_unit_set_face_down_by_its_cloaked_leaves_the_trap_set() {
+            let mut s = trap_set(json!([crate::CLOAKED_UNIT]), false);
+            crate::set_cloaked(&mut s, P1, crate::CLOAKED_UNIT, 1);
+            assert!(!fired(&s));
+            s.expect_in_zone(TRAP, "field");
         }
 
         #[test]

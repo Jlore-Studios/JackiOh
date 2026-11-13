@@ -28,6 +28,10 @@ const PERCENT: i32 = 100;
 /// Which Lucky the capture rolls with: `lucky_of` today, `printed_lucky_of` in the script v0.3.7b kept.
 type LuckyOf = fn(&EffectContext<'_>) -> i32;
 
+/// Which type the capture reads a play as: `played_type_of` today (R783005: a Unit set by its Cloaked
+/// is the Trap it was set as), `printed_type_of` in the script v0.3.7b kept.
+type PlayedAs = fn(&GameState, &GameEvent) -> Option<CardType>;
+
 /// §6.1, R1438, R987: Prison's Lucky X, printed (as Nerf and Buff have moved it) plus given
 /// (`lucky_on`), and its controller's Luck.
 fn lucky_of(ctx: &EffectContext<'_>) -> i32 {
@@ -47,7 +51,15 @@ fn printed_lucky_of(ctx: &EffectContext<'_>) -> i32 {
         .unwrap_or(0)
 }
 
-fn prison_trigger(read_lucky: LuckyOf) -> TriggerDef {
+/// R767000: the played card's printed type: what the capture read through v0.3.7b (`script_v0_3_7b`).
+fn printed_type_of(state: &GameState, event: &GameEvent) -> Option<CardType> {
+    let GameEvent::CardResolved { def_id, .. } = event else {
+        return None;
+    };
+    Some(def_of(Some(state), def_id).type_)
+}
+
+fn prison_trigger(read_lucky: LuckyOf, played_as: PlayedAs) -> TriggerDef {
     TriggerDef::new(
         "prison-capture",
         &[GameEventType::CardResolved],
@@ -74,42 +86,37 @@ fn prison_trigger(read_lucky: LuckyOf) -> TriggerDef {
             }
         },
     )
-    .with_when(|ctx, event| {
-        let GameEvent::CardResolved {
-            player,
-            def_id,
-            permanent,
-            ..
-        } = event
-        else {
+    .with_when(move |ctx, event| {
+        let GameEvent::CardResolved { player, permanent, .. } = event else {
             return false;
         };
         // §8: "your opponent", and a play (a card cast on draw is none, R2179002).
         if *player == ctx.controller || cast_on_draw_event(event) {
             return false;
         }
-        // §5.1: a Unit.
-        if def_of(Some(&*ctx.state), def_id).type_ != CardType::Unit {
+        // §5.1: a Unit, the play as it counts (R783005).
+        if played_as(&*ctx.state, event) != Some(CardType::Unit) {
             return false;
         }
         *permanent
     })
 }
 
-/// One face: Tribute 2 and the capture, its roll's Lucky read by `read_lucky`.
-fn face(read_lucky: LuckyOf) -> Script {
+/// One face: Tribute 2 and the capture, its roll's Lucky read by `read_lucky`, the play's type by
+/// `played_as`.
+fn face(read_lucky: LuckyOf, played_as: PlayedAs) -> Script {
     Script {
         static_flags: Some(StaticFlags {
             tribute: Some(TRIBUTE_COST),
             ..StaticFlags::default()
         }),
-        triggers: vec![prison_trigger(read_lucky)],
+        triggers: vec![prison_trigger(read_lucky, played_as)],
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
-    let base = face(lucky_of);
+    let base = face(lucky_of, played_type_of);
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
@@ -118,7 +125,7 @@ pub fn script() -> CardScripts {
 /// alone, without its controller's Luck (R987) or a given Lucky (R1438); `KEPT_SCRIPTS` folds those
 /// versions' replays under them.
 pub fn script_v0_3_7b() -> CardScripts {
-    let base = face(printed_lucky_of);
+    let base = face(printed_lucky_of, printed_type_of);
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
@@ -249,6 +256,23 @@ mod tests {
                 s.backrow(P2, 1).map(|card| card.def_id),
                 Some(FIELD_SPELL.to_string())
             );
+            assert_eq!(
+                jackioh_engine::zones::pile_at(s.state(), slot(P1, 1)).map(|pile| pile.len()),
+                Some(1)
+            );
+        }
+
+        /// R783005: a Unit set face-down by its Cloaked is a Trap play, no Unit played.
+        #[test]
+        fn r783005_a_unit_set_face_down_by_its_cloaked_is_never_captured() {
+            let mut s = prison_at_100(json!([FILLER]), json!([crate::CLOAKED_UNIT, FILLER]));
+            s.end_turn();
+            let cursor = s.state().rng_cursor;
+            crate::set_cloaked(&mut s, P2, crate::CLOAKED_UNIT, 1);
+            // Its condition declined, so its run never rolled (a capture would refuse a backrow card too).
+            assert_eq!(s.state().rng_cursor, cursor);
+            assert_eq!(s.count("controlChanged"), 0);
+            assert_eq!(s.backrow(P2, 1).map(|card| card.controller), Some(P2));
             assert_eq!(
                 jackioh_engine::zones::pile_at(s.state(), slot(P1, 1)).map(|pile| pile.len()),
                 Some(1)
