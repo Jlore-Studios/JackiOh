@@ -17311,7 +17311,7 @@
       }
     },
     "3817": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -17333,12 +17333,12 @@
       "interruptions": 0,
       "issue": 3806,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-8",
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-13T08:28:13Z",
-      "run_id": "43363859515",
+      "run_id": "pending:5784ffe2-1794558477",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17359,16 +17359,9 @@
         "run": "43363859515"
       },
       "source": "conflict",
-      "started_at": "2026-11-13T04:11:14Z",
+      "started_at": "2026-11-13T08:28:50Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-13T08:28:13Z",
-        "until": "2026-11-13T08:58:13Z",
-        "why": "it conflicts with `main` now"
-      },
       "votes": {
         "approvals": [
           "claude"
@@ -17653,9 +17646,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T08:23:21Z",
+    "at": "2026-11-13T08:28:50Z",
     "url": "",
-    "what": "spot-check #3809 on claude-1"
+    "what": "revise #3817 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-13T07:54:03Z",
