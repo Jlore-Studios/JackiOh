@@ -17786,11 +17786,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-13T08:38:29Z",
+        "at": "2026-11-13T09:58:44Z",
         "difficulty": "medium",
-        "provider": "claude-1",
-        "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #3809, a medium change"
+        "provider": "claude-6",
+        "tier": "medium",
+        "why": "Web-only change in one hook plus a spec note and a test, with no engine, AI, cross-crate, migration or 40-file work."
       },
       "failures": 0,
       "forced": false,
