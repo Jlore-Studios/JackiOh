@@ -2,7 +2,9 @@
 //! Activate at the start of its controller's next turn (`activation_prices`), and `unit_worth` adds
 //! `AI_EVAL.activation` of the best use's price, for either side's units. A face-down or hand card is
 //! never probed, so hidden cards change no decision (R185), the frozen baseline reads no price, and a
-//! call not passed a decision's prices reads none. R2603000 prices a face-up backrow card's Activate, a
+//! call not passed a decision's prices reads none. R3575400 has since priced the seat's own hand cards,
+//! so the boards here keep no Activate in the AI's hand unless they mean to price one
+//! (`crates/ai/tests/ai/starship_equip.rs` is that ruling's own file). R2603000 prices a face-up backrow card's Activate, a
 //! Field Spell's, the same way.
 //!
 //! Cannon v3 is a Starship Piece: when it dies, a copy of it fuses into its owner's Dormant Starship
@@ -149,10 +151,10 @@ fn r2564000_an_enemy_cannon_is_worth_more_to_destroy_than_a_bigger_vanilla() {
 }
 
 #[test]
-fn r2564000_a_board_without_an_activate_prices_nothing_and_spends_no_node() {
+fn r2564000_r3575400_a_board_and_hand_without_an_activate_price_nothing_and_spend_no_node() {
     let state = board(
         "ai-activation-none",
-        json!({ "hand": [CANNON], "field": [VANILLA] }),
+        json!({ "hand": [VANILLA], "field": [VANILLA] }),
         json!({ "field": [VANILLA] }),
     );
     assert_eq!(priced(&state), (vec![], 0));
