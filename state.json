@@ -17816,10 +17816,10 @@
       "votes": {
         "approvals": [],
         "builder": "claude",
-        "built_by": "claude-8",
+        "built_by": "claude-3",
         "rejections": [],
         "reviews": [],
-        "sha": "09b91935d4ff59b530a9d3d9cf4e456d1ccd53f4",
+        "sha": "af01b49a2f2a7b78c461bf26c9a52fefc8b4454a",
         "tiers": {}
       }
     },
