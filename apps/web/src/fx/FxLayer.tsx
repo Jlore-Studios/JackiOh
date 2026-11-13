@@ -171,8 +171,9 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
       owned.release();
       squeeze.current = null;
     };
-    // Stryker disable next-line ArrayDeclaration: a constant dependency never changes, so the effect runs once either way
-  }, []);
+  },
+  // Stryker disable next-line ArrayDeclaration: a constant dependency never changes, so the effect runs once either way
+  []);
   const removeSqueeze = (): void => squeeze.current?.remove(SQUEEZE);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const domRef = useRef<HTMLDivElement | null>(null);
@@ -417,8 +418,9 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
     return () => {
       document.removeEventListener("pointerdown", onDown, true);
     };
-    // Stryker disable next-line ArrayDeclaration: a constant dependency never changes, so the effect runs once either way
-  }, []);
+  },
+  // Stryker disable next-line ArrayDeclaration: a constant dependency never changes, so the effect runs once either way
+  []);
   // R3351000: the pointer the shed order measures far auras by (shed.ts). One passive listener for
   // the whole layer; the aura layer reads the same store. There was no layer-wide pointer position
   // before: tilt tracks each face on its own (cards/tilt.ts, R3344001). #3610: the pointer is handled once a frame, the
@@ -436,8 +438,9 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
       follow.cancel();
       setShedPointer(null);
     };
-    // Stryker disable next-line ArrayDeclaration: a constant dependency never changes, so the effect runs once either way
-  }, []);
+  },
+  // Stryker disable next-line ArrayDeclaration: a constant dependency never changes, so the effect runs once either way
+  []);
   const promptForViewer = view.pending !== null && view.pending.forYou;
   useEffect(() => {
     if (promptForViewer) director.current?.dismissBanner();
