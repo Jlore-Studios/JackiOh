@@ -15756,6 +15756,13 @@
     "3865": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-13T15:48:28Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "medium",
+        "why": "None of rules 1-5 holds: the change is one log sentence, a number signer and a dictionary entry inside crates/shared, about 4 files, with no engine, AI, migration or cross-crate contract change."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
