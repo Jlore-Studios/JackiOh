@@ -17270,9 +17270,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T03:18:03Z",
+    "at": "2026-11-13T03:30:12Z",
     "url": "",
-    "what": "revise #3779 on claude-1"
+    "what": "suggestions on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-13T03:23:46Z",
@@ -36802,13 +36802,19 @@
         "number": 3794,
         "title": "Patch: a board row never grows a sixth zone: placing a card past the row is refused, and the fuzz monitor checks every row's size",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-12T21:07:30Z",
+        "number": 3795,
+        "title": "Patch: SPEC \u00a78's Gachaholic and Tmack Trav rows say what the cards do, and a test holds each row's Radiant stats to its stats column",
+        "why": "closed unbuilt by a person (not planned)"
       }
     ],
-    "idle_since": "2026-11-13T03:25:23Z",
-    "last_run": "2026-11-12T17:40:02Z",
-    "provider": null,
+    "idle_since": "2026-11-13T03:30:12Z",
+    "last_run": "2026-11-13T03:30:12Z",
+    "provider": "claude-3",
     "requested": false,
-    "run_id": null,
+    "run_id": "pending:62c88ad2-1794540567",
     "taken_asks": []
   },
   "usage": null,
