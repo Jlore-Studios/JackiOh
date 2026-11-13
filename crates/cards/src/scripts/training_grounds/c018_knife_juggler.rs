@@ -89,6 +89,7 @@ mod tests {
     const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself.
     const ZAO_GAO: &str = "core-080"; // Zao Gao: discard 2 random cards, summon 2 Rush Tokens
     const RUSH_TOKEN: &str = "core-t-rush";
+    const FIELD_SPELL: &str = "stand-in (1) Field Spell";
 
     /// p1, active with 10 mana, has a Knife Juggler (`radiant` its face) in lane 5 and `hand`; p2 has a
     /// 1/14 in lane 1 so a hit may land on a Unit.
@@ -214,6 +215,19 @@ mod tests {
             }));
             s.play(ID, json!({ "zone": 5 }));
             assert!(crate::hits(s.last_events()).is_empty());
+        }
+
+        #[test]
+        fn r2197000_a_field_spell_you_play_draws_no_hit() {
+            // §8.11 row 18: only a Unit's arrival throws. A Field Spell is still in play once it resolves
+            // (`permanent`), on its controller's field, but it is no Unit.
+            let mut s = board(false, json!([FIELD_SPELL, FILLER]), crate::filler(4));
+            s.play(FIELD_SPELL, json!({}));
+            assert!(s.last_events().iter().any(|event| matches!(
+                event,
+                GameEvent::CardResolved { def_id, permanent: true, .. } if def_id == FIELD_SPELL
+            )));
+            assert!(throws(&s).is_empty());
         }
 
         #[test]
