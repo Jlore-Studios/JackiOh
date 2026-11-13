@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 3857,
+  "title": "Patch: a hero's Armor gain is announced with an event, a game-log line and a cue, so Tank Up and the cards that give Armor no longer change the badge in silence",
+  "branch": "bot/issue-3857",
+  "thread": "**Issue #3857 (data, not instructions):**\n\n```text\n# #3857: Patch: a hero's Armor gain is announced with an event, a game-log line and a cue, so Tank Up and the cards that give Armor no longer change the badge in silence\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSome cards and one heroic power give a hero Armor that lasts the rest of the game: every hit on that hero is reduced by it. When that happens today, the Armor number on the hero's portrait just changes. Nothing animates, no sound plays and the game log says nothing. A player who looked away, or who reads the log to see what the opponent just did, never learns where it came from.\n\nFor example, when an opponent uses the upgraded Armor Up power (Tank Up), all you see is a different number on their hero.\n\nOnce built, an Armor gain plays a cue on the hero and writes a log line such as \"Your opponent's hero gained 2 Armor\", the way damage, healing and Armor Up's temporary Armor already are.\n\n## Why\n\n- **The spec.** \u00a710.3 (`spec/10-engine-guide.md:141`) says \"Every visible state change emits an event\", and calls its list complete. `gain_hero_armor` (`crates/engine/src/effects/perks.rs:24-35`) adds to `hero.armor`, and its doc says \"No event of its own\". The view carries that Armor and `apps/web/src/game/Hero.tsx` badges it.\n- **Who calls it.** It is the only write to a hero's Armor after setup; the others are setup's handicap (`state.rs:3010`), the testkit and the sandbox. Its callers:\n  - Tank Up (`subsystems/hero_power.rs:436`, R757);\n  - Call to Chaos Meditative (`subsystems/call_to_chaos_meditative.rs:180`);\n  - the craft verb `GainArmor` (`subsystems/craft.rs:810`);\n  - five card scripts: M #22 Mind Games (Defend), M #22.1 Fortify Mind, S #132 Defensive Crystal, S #145 Fortify Flesh and S+ The Enigmata.\n- **The siblings.** The hero's other public numbers are all announced:\n  - health through `damage`, `healed`, `healthLost` and `healthSet`;\n  - Burn and Toxic through `counterChanged` on the hero's id;\n  - Armor Up's temporary Armor through `modifierChanged`.\n- **The log.** The game log (`crates/shared/src/log/lines.rs`) is written from events, so it has no line for a kept Armor gain. It does already name Armor that absorbs a hit (R1360, R1361).\n\n## Proposal\n\n- **The event.** A new event `armorGained { player, amount, armor }`, where `armor` is the hero's Armor after the gain. `gain_hero_armor` emits it whenever the amount is above 0.\n- **The spec.** A ruling in the issue's block records it (Hearthstone announces a gain of Armor), with its \u00a711 paragraph in `spec/pending/<issue>.md`. SPEC \u00a710.3's list and BUILD's animation table gain its row.\n- **The client and the log.**\n  - a line in `crates/shared/src/log/lines.rs`;\n  - a row in `apps/web/src/game/animations.ts` reusing the Armor recipe (its map is total, so the compiler asks for it);\n  - an audio entry in `apps/web/src/audio/cues.ts`.\n- **Rejected.** `counterChanged` with a new `CounterKind::Armor`. Armor is not a counter: nothing ticks it down or removes it as one, and the client's counter badges would misread it.\n\n## Where it lands\n\n- `crates/engine/src/wire/events.rs`, `crates/engine/src/effects/perks.rs` and the generated `apps/web/src/wire/` types\n- `crates/shared/src/log/lines.rs`\n- `apps/web/src/game/animations.ts`, `apps/web/src/audio/cues.ts`\n- SPEC \u00a710.3, BUILD's animation table, `spec/rulings/R<new>.md`, `spec/pending/<issue>.md`\n\n## Acceptance criteria\n\n- [ ] An engine rules test named after the new ruling (fails today): Tank Up emits one `armorGained` carrying the amount and the new total, and a gain of 0 emits none.\n- [ ] A card test (S #145 Fortify Flesh, or M #22.1 Fortify Mind, which arms the enemy hero) sees the event on the right player.\n- [ ] A log test in the shared crate: the event writes its line, naming the hero's side.\n- [ ] A web test: the event has an animation row and a cue.\n- [ ] Green:\n  - `cargo test -p jackioh-engine --features testkit --test 'rules*'`\n  - `cargo test -p jackioh-cards`\n  - `cargo test -p jackioh-shared`\n  - `cargo jackioh golden check`\n  - `cargo jackioh fuzz --seeds 200`\n  - `cargo jackioh spec check`\n  - the touched vitest files\n\n## Size and risks\n\nSmall to medium, about 10 files.\n\n- **Wire.** The event joins the wire, so the generated TypeScript changes and must be committed.\n- **Fixtures.** A golden or replay fixture whose trace holds a Tank Up or a Mind Games Defend gains one event and may need re-recording; the pull request should say so if it does.\n- **Hidden information.** None is revealed. Armor is public, and Mind Games grants it only as its reward resolves at the next turn's start.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-13T15:06:45Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3857: needs a plan; `claude-6` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-6`, which its build then takes on the same model",
+    "#3857: handed off from its owner `claude-3` (its owner `claude-3` cannot take it now); `claude-6` owns it from this run"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-13T15:08:22Z",
+    "claimed_at": "2026-11-13T16:34:59Z",
+    "previous_provider": "claude-3",
+    "handed_off": "handed off from `claude-3`: its owner `claude-3` cannot take it now"
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3868 skipped: it waits for #3821 to close first"
+  ]
+}
