@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 3855,
+  "title": "Patch: the daily board shows what every other table shows: the opponent's name, the modifiers in play, attack outcomes while aiming, and Watch the replay",
+  "branch": "bot/issue-3855",
+  "thread": "**Issue #3855 (data, not instructions):**\n\n```text\n# #3855: Patch: the daily board shows what every other table shows: the opponent's name, the modifiers in play, attack outcomes while aiming, and Watch the replay\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA daily game (one move a day) is drawn on its own board, and that board leaves out four things every other table shows. It never says who you are playing: the opponent's hero just reads \"Opponent\", and Next game jumps to another board that says the same. It doesn't list the effects running on each player, such as an Armor Up that lasts through the opponent's turn. While you aim an attack it shows no damage numbers or skull on the target, though \"Show attack outcomes\" is on by default. And when the game ends, the only way to watch it back is to leave for the Replays page. Once built, a daily game reads like a ranked one: the name on the hero, the modifiers in the rail, the markers while aiming, and Watch the replay on the result.\n\n## Why\n\n- **Name.** `apps/web/src/daily/DailyBoard.tsx` passes `<Game>` no `enemyLabel`, and reads `game.opponent` only for Rematch. So `apps/web/src/game/Hero.tsx` falls back to \"Opponent\". The Daily list shows the name and portrait (`daily/DailyRoute.tsx`), and practice passes `enemyLabel` (`routes/practice.tsx:1119`).\n- **Modifiers.** Match, practice, watch, replay, Duos and the tutorial all put a `<ModifierList>` in the board rail (`routes/match.tsx:593`). The daily board's rail is a back link alone.\n- **Attack outcomes.**\n  - R3477000 says every seat's own view carries the engine's forecast of its attacks, and `<Game>` takes it as `forecast` on every other table: `routes/match.tsx:501`, `routes/practice.tsx:1107`, `dungeon/fight/FightScreen.tsx:298` and `duos/DuosBoard.tsx:541`.\n  - The daily read, `game_json` in `crates/server/src/daily/games.rs`, sends no `forecast`. `DailyGame` (`apps/web/src/net/daily.ts:69`) has no field for it, and the board passes none.\n  - So the setting's promise (`settings/SettingsPanel.tsx:72`) fails there. Daily games (R3727000) came after R3477000, whose list was never extended.\n- **Replay.** The 1v1 result offers Watch the replay and Share the last turn (`routes/match.tsx:533`). The daily result offers only Next game, Rematch and Back. A finished daily game is a `matches` row with status `over`, a result and its log, which `replay_row` (`crates/server/src/db/pg.rs:3470`) already serves.\n\n## Proposal\n\n1. **Server.** `game_json` adds `forecast`: the engine's `combat_forecast` for the caller's seat, read under the game's own pinned catalog as its legal actions are (R767000, R3727005). It is empty while the seat holds no move. A ruling in the issue's block amends R3477000's list with the daily read, and its \u00a711 paragraph goes in `spec/pending/<issue>.md`.\n2. **Board.** `DailyGame` gains `forecast?: CombatForecast`. `DailyBoard` passes `forecast`, `enemyLabel={game.opponent.username}`, and a `<ModifierList>` in its board rail, as `routes/match.tsx` does.\n3. **Result.** The result panel gains Watch the replay. It opens `<OpenedReplay load={() => openOnlineMatchReplay(token, matchId)} opponentLabel={...} />` as `routes/match.tsx:437-450` does, and the board receives the account token its route already holds.\n\n## Where it lands\n\n- `crates/server/src/daily/games.rs`, `crates/server/tests/api/daily.rs`\n- `apps/web/src/net/daily.ts`, `apps/web/src/daily/DailyBoard.tsx` and its test, the route that mounts the board (for the token)\n- `spec/rulings/R<new>.md`, `spec/pending/<issue>.md`; SPEC \u00a79.13's client paragraph if it lists what the board shows\n\n## Acceptance criteria\n\n- [ ] A server test named after the new ruling: a daily game's `GET` and an action's answer carry a `forecast` whose entries are the seat's legal attacks, and an empty one while the other seat holds the move.\n- [ ] A `DailyBoard` test (fails today): with a legal attack and a forecast, selecting the attacker and hovering the target shows the `-N` marker, as `game/attackOutcome.test.tsx`'s R3615000 tests do.\n- [ ] A `DailyBoard` test (fails today): the opponent's hero reads the opponent's username.\n- [ ] A `DailyBoard` test: the board rail lists a player modifier the view holds.\n- [ ] A `DailyBoard` test: a finished game's result panel holds Watch the replay, and pressing it, with `GET /api/replays/<id>` stubbed, mounts the replay player.\n- [ ] Green: `cargo test -p jackioh-server --test server api::daily`, `cargo jackioh spec check` and the touched vitest files.\n\n## Size and risks\n\nMedium, about 8 files across the server, the web and the spec.\n\n- **Conflicts.** The open daily-board issues #3839, #3840 and #3841 also touch `DailyBoard.tsx`, so whichever lands later merges around the others.\n- **Catalog.** The forecast must be read under the game's own catalog, not today's, or an older-catalog game would show wrong numbers.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-13T15:05:34Z:\n\nShouldn\u2019t they share a lot of the same code paths?????\n\n---\nComment by @MaxGoetzmann at 2026-11-13T15:05:39Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3855: needs a plan; `claude-7` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-13T15:06:04Z",
+    "claimed_at": "2026-11-13T15:30:03Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3837 is held for `claude-4` until 09:30 (5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%))",
+    "#3861 is held for `claude-4` until 09:30 (5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3868 skipped: it waits for #3821 to close first"
+  ]
+}
