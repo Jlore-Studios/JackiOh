@@ -75,7 +75,10 @@ fn r3575300_toxic_lasts_until_it_kills_each_tick_further_off() {
 #[test]
 fn r3575300_the_frozen_baseline_prices_no_count() {
     let clean = worth(&vanilla_with(json!({})), &GREEDY_EVAL);
-    close(worth(&vanilla_with(json!({ "burn": 4, "toxic": 2 })), &GREEDY_EVAL), clean);
+    close(
+        worth(&vanilla_with(json!({ "burn": 4, "toxic": 2 })), &GREEDY_EVAL),
+        clean,
+    );
 }
 
 #[test]
@@ -89,7 +92,10 @@ fn r3575300_burn_and_toxic_on_the_enemy_hero_are_life_it_still_loses() {
             _ => afflicted.players[HUMAN].hero_toxic = Some(4),
         }
         let after = evaluate(&afflicted, AI, NextSwing::Enemy, &AI_EVAL);
-        assert!(after > before, "the enemy hero's {counter} counts for the AI: {after} vs {before}");
+        assert!(
+            after > before,
+            "the enemy hero's {counter} counts for the AI: {after} vs {before}"
+        );
         close(evaluate(&afflicted, AI, NextSwing::Enemy, &GREEDY_EVAL), {
             evaluate(&state, AI, NextSwing::Enemy, &GREEDY_EVAL)
         });
