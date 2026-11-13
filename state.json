@@ -15441,9 +15441,11 @@
     "what": "suggestions on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-13T13:59:53Z",
+    "at": "2026-11-13T14:20:36Z",
     "notes": [
-      "#3779: green and waiting for a person to merge it, so `claude-1` gives up its claim on it"
+      "started suggest on claude-3 (run 43442234301)",
+      "nothing more to start: nothing is queued",
+      "#3860: closed, so `bot:merging` is off"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16149,7 +16151,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-13T13:59:53Z",
+  "loop_tick": "2026-11-13T14:20:36Z",
   "machine_disk": {
     "issue": null,
     "reading": {
