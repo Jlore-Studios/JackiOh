@@ -681,7 +681,7 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.5.12ap",
         c073_1_classic_golem::script_v0_5_13g,
     ),
-    (c099_paranoia::ID, "v0.5.12ap", c099_paranoia::script_v0_5_12ap),
+    (c099_paranoia::ID, "v0.6.0b", c099_paranoia::script_v0_6_0b),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

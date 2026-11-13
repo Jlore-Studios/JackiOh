@@ -17,6 +17,13 @@ import { cosmeticPacksInfo, ownedCosmeticsOf, tokenBars, walletInfo } from "../s
 import { settle } from "../test/settle.ts";
 import { at, meBody, signIn, stubServer, type Reply, type StubServer } from "../test/stubServer.ts";
 
+// The Collection opens on its Cards grid (R3734000), and jsdom has no layout to window it by, so the whole catalog's
+// 480 faces would draw at once; what is counted here is requests, not cards.
+vi.mock("../collection/collection.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../collection/collection.ts")>();
+  return { ...actual, COLLECTED_DEFS: actual.COLLECTED_DEFS.slice(0, 48) };
+});
+
 const { App } = await import("../main.tsx");
 
 /** A lazily-imported route chunk plus a stubbed round trip can outrun testing-library's 1 s default. */

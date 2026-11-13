@@ -10,7 +10,7 @@
 //! a Spell its controller sets face-down while it acts resolves as it is set, its choices prompted,
 //! and stays set to resolve again as it reveals (`resolves_set_spells`, R3806000); the Radiant face's
 //! Echo +{echo} for each Spell its controller reveals while it acts, read as the Spell reveals
-//! (`reveal_echo`, R1045), never as it is set; the Cry draws. Kept script v0.5.12ap (R767000).
+//! (`reveal_echo`, R1045), never as it is set; the Cry draws. Kept script v0.6.0b (R767000).
 
 use jackioh_engine::alt_play::cloak_hand_aura;
 use jackioh_engine::prelude::*;
@@ -37,9 +37,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the script v0.5.12ap and before ran: a set Spell resolved only as it revealed (before
+/// R767000: the script v0.6.0b and before ran: a set Spell resolved only as it revealed (before
 /// R3806000). `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_5_12ap() -> CardScripts {
+pub fn script_v0_6_0b() -> CardScripts {
     let mut scripts = script();
     scripts.base.resolves_set_spells = false;
     scripts.radiant.resolves_set_spells = false;
@@ -53,7 +53,7 @@ mod tests {
     use jackioh_engine::prelude::keywords_of;
     use jackioh_engine::testkit::*;
 
-    use super::script_v0_5_12ap;
+    use super::script_v0_6_0b;
     use crate::scenario;
 
     const P1: PlayerId = PlayerId::P1;
@@ -592,8 +592,8 @@ mod tests {
         }
 
         #[test]
-        fn r767000_r3806000_the_kept_v0_5_12ap_script_resolves_nothing_as_a_spell_is_set() {
-            crate::under_kept(PARANOIA, script_v0_5_12ap(), || {
+        fn r767000_r3806000_the_kept_v0_6_0b_script_resolves_nothing_as_a_spell_is_set() {
+            crate::under_kept(PARANOIA, script_v0_6_0b(), || {
                 let mut s = paranoid("paranoia-kept", json!([ECLIPSE, VANILLA]), json!([]), json!({}));
                 let health = s.state().players.p2.hero.health;
                 let eclipse = set(&mut s, ECLIPSE);

@@ -32,6 +32,7 @@ mod seed_watch;
 mod selfplay;
 mod selfplay_records;
 mod spec;
+mod spec_cards;
 mod stats;
 mod sweep;
 mod technical;

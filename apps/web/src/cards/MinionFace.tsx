@@ -27,7 +27,7 @@
 // R3013002: and its card's proficiency stamp, as CardFace does, at the minion's right edge over the name plate.
 // R3340000: its art moves while it holds a motion slot, when its card wears an animated or signed level and when it is a Mythic,
 // ranked by the pointer, focus and the attack in flight (`useArtMotion`, motionSlots.ts), and answers the pointer, a press and
-// `attackDeclared` (artLive.ts, `data-art-hover`, `data-art-attacking`); its art wears cracks for the health it is missing, a
+// `attackDeclared` (artLive.ts, `data-art-hover`, `data-art-attacking`); its art wears a
 // glow in its card's colours when buffed and frost when frozen (`wear`, art/ArtWear.tsx), from the view's numbers and keywords alone.
 // R3335000: a launched Starship's art wears its seat's Starship look, as CardFace's does.
 // R3334000: a Dormant Starship with pieces idles in its shipyard over its picture (ShipyardIdle.tsx).
@@ -41,7 +41,6 @@ import { hasKeyword, keywordKey, type Keyword, type UnitView } from "@jackioh/sh
 
 import { CardArt } from "./art/index.ts";
 import { dioramaOf } from "./art/dioramas/index.ts";
-import { damageLevel } from "./art/wear.ts";
 import { shipArtOf } from "./art/stinkyscape.ts";
 import { CardStates } from "./CardStates.tsx";
 import { costDigits, hasCrest } from "./CardFace.tsx";
@@ -217,11 +216,10 @@ function MinionFace({ face, unit, className, worn = false, keywordsOffFace = fal
   // token printed Mythic having none), in place of its live layers.
   const diorama = artActive && (artMoves || engaged) && picture === "normal" && ship === null && dioramaOf(face.defId) !== null;
   const cosmetics = cosmeticAttributes(cosmeticAppearance, artActive);
-  // R3340000: what its art wears: cracks for the health it is missing, a glow when buffed, frost when frozen (the view's own).
-  const damage = damageLevel(unit.health, unit.maxHealth);
+  // R3340000, R3776000: what its art wears: a glow when buffed, frost when frozen (the view's own); missing health leaves no mark.
   const buffed = attackTone === "buffed" || healthTone === "buffed";
   const frozen = unit.frozen === true;
-  const wear = damage > 0 || buffed || frozen ? { damage, buffed, frozen } : null;
+  const wear = buffed || frozen ? { buffed, frozen } : null;
 
   return (
     <span

@@ -13,7 +13,7 @@ import JSON5 from "json5";
 import { describe, expect, it } from "vitest";
 
 import { PUBLIC_PAGES } from "../../static-pages.ts";
-import { matchIdOf, paths, seriesIdOf } from "./navigate.ts";
+import { dailyIdOf, matchIdOf, paths, seriesIdOf } from "./navigate.ts";
 import { coopLinkPath, roomLinkPath } from "./roomLink.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -84,14 +84,15 @@ describe("public/_redirects", () => {
     for (const { from } of matchers) expect(spellings.has(from), from).toBe(true);
   });
 
-  it("routes a match, a series, a watched game and a co-op game by id, the way matchIdOf and seriesIdOf read them", () => {
+  it("routes a match, a series, a watched game, a co-op game and a daily game by id, the way matchIdOf and seriesIdOf read them", () => {
     const id = "0b9f3c1e-2d4a-4b8e-9f00-123456789abc";
-    for (const path of [paths.match(id), paths.series(id), paths.watch(id), paths.duos(id)]) {
+    for (const path of [paths.match(id), paths.series(id), paths.watch(id), paths.duos(id), paths.dailyGame(id)]) {
       expect(servedByApp(path), path).toBe(true);
       expect(servedByApp(`${path}/`), `${path}/`).toBe(true);
     }
     expect(matchIdOf(paths.match(id))).toBe(id);
     expect(seriesIdOf(paths.series(id))).toBe(id);
+    expect(dailyIdOf(paths.dailyGame(id))).toBe(id);
   });
 
   it("leaves every other path to the 404 page", () => {

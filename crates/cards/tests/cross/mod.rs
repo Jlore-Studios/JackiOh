@@ -181,6 +181,7 @@ pub mod pools_and_randomness;
 pub mod preview;
 pub mod query;
 pub mod radiant_standard;
+pub mod radiant_stats;
 pub mod re_entry;
 pub mod references;
 pub mod registry;

@@ -309,30 +309,25 @@ runners are registered, a Muse run the planner puts in gpt's or agy's lane waits
 
 ## The local runner
 
-A person's own machine can run the training lanes: since #3740 they run on GitHub's runners (the
-organization's Team plan runs 60 hosted jobs at once, 12 of them the training lanes'), and on this
-machine only while the repository variable `TRAINING_ON_PC` is `true`. Then it runs the learn lane,
-every job of it (`.github/workflows/learn.yml`, `training/learn.md`: the self-play export, the retrain,
-the screen and the gate, the lane's plan and watch, the import of each export's games and the start of
-the next run, one run after another, #1976), and the gather lane's runs, one part each
-(`.github/workflows/gather.yml`, while `GATHER_ON_PATCH` is `true`), as it did from #1455 (on the Free
-plan's 20 hosted jobs, an export held 12 of them while CI waited) until #3740. A dispatch of
-`selfplay.yml` can ask for it (`runner: jackioh-selfplay-local`; #1008, `docs/learned-eval.md` D1,
-`training/README.md`, Where the exports come from). It never touches the training box, which the lanes
-keep, and it can also take some of the night box's own jobs while the box is busy or off; with no
-training job queued for it, its standby runner just waits.
+A person's own machine can take some of the night box's own jobs while the box is busy or off (the
+night box's labels, below). It no longer runs the training lanes: they ran here, the learn lane every
+job of it and gather one part, from #1455 (on the Free plan's 20 hosted jobs, an export held 12 of them
+while CI waited) until #3740, and since 2026-11-13 their labels (`jackioh-selfplay-local`,
+`jackioh-selfplay-local-gather`) and the repository variable `TRAINING_ON_PC` that sent them here are
+gone: `config.json` serves neither label, and `learn.yml`, `gather.yml` and `selfplay.yml` run on
+GitHub's runners alone. It never touches the training box.
 
 | | |
 |---|---|
 | Machine | the owner's laptop (jgoetzmann): Windows 11, Intel i7-11800H (8 cores, 16 threads), 32 GB, Docker Desktop on WSL2 (which `%USERPROFILE%\.wslconfig` caps at 8 GB and 8 processors for every container). The owner looks after it |
-| Label | `jackioh-selfplay-local`: `learn.yml` names it for every job while `TRAINING_ON_PC` is `true`, and `selfplay.yml` when its `runner` input does (its default from #1455 until #3740). And `jackioh-selfplay-local-gather`, which `gather.yml`'s job names while `TRAINING_ON_PC` is `true` (#2134): its entry in `config.json` has `ownSlot`, so gather has one of the PC's two halves to itself from the moment its job queues, beside a learn shard on the other half instead of waiting behind it. While gather has no job, the learn lane trains on both halves; gather plays without a pause since #3740, so on the PC it keeps its half. The halves weigh the same: no runner gets a larger CPU share than another, and every one gives way to the owner's own programs alike (When, below). The supervisor starts gather's runner only when a gather job is queued (no standby) and retires it a minute after it goes idle. Both are registered to this repository alone |
+| Labels | the night box's `night-vm-<id>` labels it serves (`config.json`; the night box's labels, below). Each is registered to this repository alone |
 | How it runs | `bot/machine/local/supervisor.ps1`, started at logon by a scheduled task (`install-task.ps1`). Each runner is one ephemeral container of the image `local/Dockerfile` builds (`jackioh-pc-runner`): it registers with a single-use JIT config, takes one job and is gone. A `docker` or `gh` call that gives no answer in two minutes (`docker info`, 30 seconds) is killed and counts as failed, so a Docker engine that stops answering reads as Docker not running, not as a supervisor stuck in one call |
-| When | only while the PC is otherwise idle: CPU under 50% and memory under 24 GB in every sample of the last minute, leaving out the runners' own use and that of the `yieldingContainers` (a long-running container of the owner's that a gate of its own holds to the same rule and throttles while a runner works, so the two never read each other as the person's load) (`config.json`). A runner starts only when the PC is also quiet, CPU under 15% (`startCpuPercentBelow`) in every sample of that minute; one already up stays while it is calm. It keeps one runner Idle for the label while it is calm; when the PC gets busy the idle runner is unregistered at once, and a runner in a job is throttled to half a CPU until it is calm again, so no export loses a shard |
-| Limits | two jobs at a time (`maxJobs`), the two halves of WSL2's 8 processors: 4 CPUs and 6 GB a container (`containerCpus`, `containerMemory`), swap off (an entry may set its own `containerCpus` and `containerMemory`; gather's build of `jackioh-server` outgrew 3 GB, #2134). Gather's half is kept for it from the moment its job queues: no new shard starts in it. A gather job that lands while two shards hold both halves takes its 4 CPUs at once, and the two shards play on 2 each until one ends (`Target-Cpus`), so nothing is lost; never a GPU (no `--gpus`, `NVIDIA_VISIBLE_DEVICES=void`); a non-root user with `no-new-privileges`, no host folder and no Docker socket |
-| Tools | Rust 1.97.0 (`rust-toolchain.toml`), a C toolchain (`build-essential`, which Rust links through), `git`, `jq` and `gh`, Node 24, Python 3.12, and the night box's CLIs. A job installs the rest itself (the learn lane's retrain: uv, which fetches Python 3.13 and torch for the fit; a night box job, the `harness` binary, from `.github/actions/harness` as on the boxes) |
-| Heartbeat | every `heartbeatSeconds` (120, `config.json`; 0 turns it off) the supervisor writes `pc.json` to a secret gist of the account `gh` is signed in as: the PC's CPU and memory in use, as a whole and without its runners (the figures that decide whether it lends itself), the size of its memory, whether it is calm (lending itself), and each runner container with the CPUs it uses, whether it is throttled and, while it plays games, how many of how many (`Get-Progress`: the `jackioh selfplay` of a learn shard or the `jackioh stats` of gather it runs, its `--games`, `--from` and `--patch`, and the lines its `--out` holds, one a finished game), which the status issue's progress chart at its top reads. It makes the gist the first time, keeps its id in `pc-gist.txt` beside the scripts and names it to the repository as the variable `JACKIOH_PC_GIST` (`gh variable set`, which needs the admin sign-in the supervisor has anyway). `bot-status.yml` hands that variable to the status loop, whose runners section draws the PC from it, gather's job included. A heartbeat that fails is logged and tried again two minutes on; it never holds a runner up. `gh` needs its `gist` scope, which `gh auth login` gives by default (`gh auth refresh -s gist` adds it) |
-| Disk | a container's work directory goes with it, so `target/` never grows between exports; a shard runs the release `jackioh` the export's build job built, so it builds nothing. The learn lane's retrain is the biggest job: about 10 GB while it runs (the export's logs, its positions, two or three builds, the web's install). The image is about 6 GB |
-| Memory | the learn lane's retrain peaks at about 4.1 GB of the container's 6 GB on a 100,000-game export (the positions, the six seeds' fit, the AI's tests and the 800-game screen took 59 minutes here: learn run 21, 2026-10-21). Two halves' 6 GB add up to more than WSL2's 8 GB, which the owner's own containers share too. A cap is a limit, not a reservation: a shard that plays uses well under 1 GB, and the lane nears its cap only in the retrain. Should the VM run out, a runner's step is the one the kernel kills, never the owner's own containers (every runner's `PIPELINE_JOB_OOMSCOREADJ` is 1000); raising `.wslconfig`'s `memory` is the owner's call |
+| When | only while the PC is otherwise idle: CPU under 50% and memory under 24 GB in every sample of the last minute, leaving out the runners' own use and that of the `yieldingContainers` (a long-running container of the owner's that a gate of its own holds to the same rule and throttles while a runner works, so the two never read each other as the person's load) (`config.json`). A runner starts only when the PC is also quiet, CPU under 15% (`startCpuPercentBelow`) in every sample of that minute; one already up stays while it is calm. It starts a runner when one of its labels' jobs is queued; when the PC gets busy an idle runner is unregistered at once, and a runner in a job is throttled to half a CPU until it is calm again, so no job is lost |
+| Limits | two jobs at a time (`maxJobs`), the two halves of WSL2's 8 processors: 4 CPUs and 6 GB a container (`containerCpus`, `containerMemory`, which an entry may set for itself), swap off; never a GPU (no `--gpus`, `NVIDIA_VISIBLE_DEVICES=void`); a non-root user with `no-new-privileges`, no host folder and no Docker socket |
+| Tools | Rust 1.97.0 (`rust-toolchain.toml`), a C toolchain (`build-essential`, which Rust links through), `git`, `jq` and `gh`, Node 24, Python 3.12, and the night box's CLIs. A job installs the rest itself (a night box job, the `harness` binary, from `.github/actions/harness` as on the boxes) |
+| Heartbeat | every `heartbeatSeconds` (120, `config.json`; 0 turns it off) the supervisor writes `pc.json` to a secret gist of the account `gh` is signed in as: the PC's CPU and memory in use, as a whole and without its runners (the figures that decide whether it lends itself), the size of its memory, whether it is calm (lending itself), and each runner container with the CPUs it uses and whether it is throttled. It makes the gist the first time, keeps its id in `pc-gist.txt` beside the scripts and names it to the repository as the variable `JACKIOH_PC_GIST` (`gh variable set`, which needs the admin sign-in the supervisor has anyway). `bot-status.yml` hands that variable to the status loop, whose runners section draws the PC from it. A heartbeat that fails is logged and tried again two minutes on; it never holds a runner up. `gh` needs its `gist` scope, which `gh auth login` gives by default (`gh auth refresh -s gist` adds it) |
+| Disk | a container's work directory goes with it, so nothing grows between jobs. The image is about 6 GB |
+| Memory | two halves' 6 GB add up to more than WSL2's 8 GB, which the owner's own containers share too. A cap is a limit, not a reservation. Should the VM run out, a runner's step is the one the kernel kills, never the owner's own containers (every runner's `PIPELINE_JOB_OOMSCOREADJ` is 1000); raising `.wslconfig`'s `memory` is the owner's call |
 
 Any workflow could ask for the label, so it is safe only while **"Require approval for all external
 contributors"** stays on (Settings → Actions → General), as the night box's runners are (Why each
@@ -343,11 +338,7 @@ subscription is served here only once it is logged in on the PC (`.\login.ps1 <i
 of the same account, into the volume `jackioh-pc-home-<id>`), and then only when one of its jobs is
 queued: a runner here with that label takes it, or the night box does. While the box is stopped the
 PC usually takes it first, since the starter looks every five minutes and the supervisor every 20
-seconds, and the box stays off. The jobs still count against `machine_parallel`. Since the learn lane
-runs one run after another (#1976), the PC is seldom free, and its jobs come first (`config.json`
-lists `jackioh-selfplay-local` first): a night-box job queued while it works waits for the box's own
-starter, which starts the box in five minutes. To give the night box's jobs the PC first instead, list
-their entries before `jackioh-selfplay-local` in the installed `config.json` and restart the task.
+seconds, and the box stays off. The jobs still count against `machine_parallel`.
 
 **Setting it up**, once, on the PC (PowerShell, Docker Desktop running):
 
@@ -360,8 +351,8 @@ cd D:\somewhere\jackioh-pc-runner
 ```
 
 `gh` must be signed in as a repository admin: the supervisor asks GitHub for each runner's JIT
-config. The runner shows Idle under Settings → Actions → Runners as `pc-selfplay-<time>` within a
-minute of a quiet PC. The log is `logs\supervisor.log` beside the scripts.
+config. A runner shows under Settings → Actions → Runners as `pc-<id>-<time>` while it holds a
+night-box job. The log is `logs\supervisor.log` beside the scripts.
 
 **After a change here**, on the PC: build the image again (the `docker build` above) when the
 Dockerfile changed, since a runner started after that uses the new one, and when `config.json` or
@@ -372,10 +363,6 @@ that is running: its container keeps going, and the new supervisor finds it. The
 with the heartbeat makes its gist and sets `JACKIOH_PC_GIST` within two minutes (its log says so);
 the status issue shows the PC from the next `bot-status` loop on, which reads the variable as it
 starts.
-
-**The learn lane runs only here**, so the PC is its only runner: it should not sleep while it is
-plugged in (Settings → System → Power), since a shard in the middle of its work is lost when it does,
-and while it is off or busy for a day the lane's jobs fail (`training/learn.md`, Running unattended).
 
 **Stopping and removing it:**
 

@@ -39,6 +39,8 @@ pub mod bug_reports;
 pub mod cli;
 pub mod config;
 pub mod cosmetics;
+// Daily games (SPEC §9.13, #3727): a move every 1, 3, 7 or 14 days over plain HTTPS.
+pub mod daily;
 pub mod db;
 // Economy (SPEC §14, #1299)
 pub mod economy;

@@ -403,6 +403,13 @@ async fn write_once(
         }
     }
 
+    // R3727004: a daily game holds no seat and sets no flag, so a player may be queued for a live
+    // game while it runs; its ending leaves their ticket alone.
+    let daily = tx
+        .daily_games_get(&input.match_id)
+        .await
+        .map_err(failed)?
+        .is_some();
     for seat in [seat_a, seat_b] {
         // §9.5: "Every ending records a result and clears both players' in-match state", for every
         // reason (M7-T1); R112's unchanged ratings write no rating here. R1896000: only a flag that
@@ -413,6 +420,9 @@ async fn write_once(
         // A profile can be queued *and* in a match (it accepted a room challenge while waiting), and
         // an open ticket would block the re-queue that M7-T1 promises, so the ending clears that
         // too. This mirrors `app.end_match` in migration 0004, which cancels the same stray ticket.
+        if daily {
+            continue;
+        }
         if let Some(ticket) = tx
             .tickets_open_for_profile(&seat.profile_id)
             .await
@@ -800,7 +810,7 @@ pub async fn reap_open_matches(app: &App) -> Result<u64, ApiError> {
 }
 
 /// Seat order is the match row's player order: index 0 is p1 (`MatchRow.players`).
-fn seats_of(match_row: &MatchRow) -> (MatchSeat, MatchSeat) {
+pub(crate) fn seats_of(match_row: &MatchRow) -> (MatchSeat, MatchSeat) {
     (
         MatchSeat {
             profile_id: match_row.players.0.clone(),
