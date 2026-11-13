@@ -161,12 +161,12 @@ jobs:
   # The runner gate (bot/go/internal/cigate, bot/README.md "The runner gate"): a pull request's run
   # and a push to `main` wait here, holding no runner, in the environment the repository variable
   # CI_GATE_ENVIRONMENT names (`ci-runners`, infra/github.tf), until its one required reviewer, the
-  # night bot's account, approves them: the status loop does once a run of theirs ends, so only a
-  # few go at once, counted in pull requests (the owner's order of 2026-11-13: a promotion's pull
-  # request into `_production`, with super.yml's runs, has slots of its own; the push to `main` and
-  # pull requests' share theirs, `main`'s first). Every other job of the run needs this one, so the
-  # whole run waits. A merge-queue build never waits (the queue builds three at once already), nor
-  # a dispatch (a person's). With the variable unset nothing waits: the name is empty, so the job
+  # night bot's account, approves them: the status loop does once they have a slot, as only six CI
+  # and CD runs go at once, in the owner's order of 2026-11-13 (merge-queue builds and the deploys,
+  # which never wait, then a promotion's pull request into `_production` with super.yml's runs, then
+  # the push to `main`, then pull requests'). Every other job of the run needs this one, so the whole
+  # run waits. A merge-queue build never waits (the queue builds three at once already), nor a
+  # dispatch (a person's). With the variable unset nothing waits: the name is empty, so the job
   # has no environment.
   changes:
     name: what the change touches

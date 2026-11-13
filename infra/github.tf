@@ -176,10 +176,10 @@ import {
 # before), shared with the bots' runs, and takes queued jobs in the order they came with no priority
 # of any kind, so a pull request's CI, `main`'s and the super run wait in this environment, holding
 # no runner, until the night bot's account, its one required reviewer, approves them, which the
-# status loop does once a run of theirs ends: only a few go at once, counted in pull requests (three
-# of `main`'s and pull requests', two of staging's and production's). The merge queue's builds never
-# wait. ci.yml's `changes` job and super.yml's first jobs name it through the variable below; with
-# the variable gone, nothing waits.
+# status loop does once they have a slot: only six CI and CD runs go at once, counted in runs, the
+# merge queue's builds and the deploys first (they never wait), then staging's and production's
+# checks, then `main`'s CI, then pull requests'. ci.yml's `changes` job and super.yml's first jobs
+# name it through the variable below; with the variable gone, nothing waits.
 #
 # The bot approves runs it started itself, so self-review stays allowed. An admin may bypass the
 # rule, approving a waiting run by hand, and deleting `ci_gate_environment` turns the gate off for

@@ -49,9 +49,10 @@
 # The runner gate (bot/go/internal/cigate, bot/README.md "The runner gate"): every first job of a
 # run (one that needs no other) waits in the environment the repository variable CI_GATE_ENVIRONMENT
 # names (`ci-runners`, infra/github.tf), holding no runner, until the night bot's status loop
-# approves the run once a run of staging's or production's ends: they go a few at a time, in slots
-# of their own apart from `main`'s CI and pull requests' (the owner's order of 2026-11-13). Every
-# other job needs one of them, so the whole run waits. The schedule's `daily` only starts a run and never waits; with the
+# approves the run once it has a slot: only six CI and CD runs go at once, and staging's and
+# production's checks (at most two) take theirs after the merge queue's builds and the deploys and
+# before `main`'s CI and pull requests' (the owner's order of 2026-11-13). Every other job needs one
+# of them, so the whole run waits. The schedule's `daily` only starts a run and never waits; with the
 # variable unset nothing does.
 #
 # The release binaries and the built client travel between jobs as artifacts, built once per run:

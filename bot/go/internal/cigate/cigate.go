@@ -2,24 +2,31 @@
 // hosted jobs at once for the whole organization (the Team plan's 60, #3740; the Free plan's 20
 // before), gives no job a priority over another (its runners take queued jobs in the order they
 // were queued), and every CI run asks for all of its jobs as soon as it can, so when many runs go at
-// once each shares the runners with all the others and none finishes soon. So the gate lets only a
-// few go at once, counted in pull requests, not runners (the owner's ask of 2026-11-13): a run waits
-// before it starts, in the `ci-runners` environment, whose one required reviewer is the night bot's
-// account, until a run of its rung ends. A job waiting for a reviewer holds no runner. This package
-// is that reviewer.
+// once each shares the runners with all the others and none finishes soon. So only `Slots` CI and
+// CD runs go at once, counted in runs (a pull request's CI is one), not runners, and the slots go in
+// the owner's order (2026-11-13): the merge queue, then staging and production, then `main`'s CI,
+// then pull requests. A run waits for its slot before it starts, in the `ci-runners` environment,
+// whose one required reviewer is the night bot's account; a job waiting for a reviewer holds no
+// runner. This package is that reviewer.
 //
-// The rungs, in the owner's order: the merge queue's builds never wait (ci.yml leaves them out, and
-// the queue builds `max_entries_to_build`, 3, at once already, infra/github.tf); staging's and
-// production's runs (super.yml, production's gate, and CI on a promotion's pull request into
-// `_production`) go `ReleaseRuns` at once; and `main`'s CI and pull requests' go `PullRuns` at once,
-// `main`'s first (the promotions wait on it, and the merge queue ran most of it already), then a
-// ready pull request's (its CI is all that keeps it out of the merge queue), then a draft's (it runs
-// beside its own review run), each the oldest first. A pull request's CI is one run (a newer push
-// replaces its running one), so these count pull requests; a promotion's pull request is two, its
-// CI and its super run. A run that has waited `MaxWaitRelease` or `MaxWaitPull` goes first of its
-// rung, so a draft never starves behind a stream of ready pull requests; every run it waits on is
-// one the gate started, and each ends, so the gate orders and delays CI and never stops it. When the
-// runs going cannot be read, every waiting run starts.
+// The order:
+//   - the merge queue's builds never wait, and take their slots first (the queue builds
+//     `max_entries_to_build`, 3, at once, infra/github.tf);
+//   - staging's and production's deploys and promotions (`Deploys`) never wait either, and take
+//     theirs: a job or two each, the deploy itself, which nothing should hold up;
+//   - then staging's and production's checks: super.yml (production's gate: the daily run on
+//     `_staging`, a promotion's pull request) and CI on a promotion's pull request into
+//     `_production` (a promotion is two runs, its CI and its super run), at most `ReleaseRuns` of
+//     them at once, so a long super run never takes the whole pool;
+//   - then `main`'s CI (the promotions wait on it);
+//   - then pull requests': a ready one's (its CI is all that keeps it out of the merge queue), then
+//     a draft's (it runs beside its own review run), each the oldest first. They always have
+//     `PullMin` slot(s), the pool full or not, so pull requests, which feed the merge queue, never
+//     stop.
+//
+// A run that has waited `MaxWaitRelease` or `MaxWaitPull` goes first of its rung, so a draft never
+// starves behind a stream of ready pull requests; every run it waits on ends, so the gate orders and
+// delays CI and never stops it. When the runs going cannot be read, every waiting run starts.
 //
 // ci.yml's `changes` job, which every other job of the run needs, names the environment (through
 // the repository variable CI_GATE_ENVIRONMENT, which infra/github.tf sets) for a pull request's run
@@ -55,6 +62,10 @@ var Workflow = "ci.yml"
 // Super is the daily super run's workflow (production's gate), whose runs wait too.
 var Super = "super.yml"
 
+// Deploys is staging's and production's deploys and promotions: they never wait, and take their
+// slots.
+var Deploys = []string{"promote-staging.yml", "deploy-staging.yml", "promote-production.yml"}
+
 // Production is the branch a promotion's pull request goes into.
 var Production = "_production"
 
@@ -64,12 +75,16 @@ var Gated = map[string][]string{
 	Super:    {"pull_request", "workflow_dispatch"},
 }
 
-// ReleaseRuns and PullRuns: at most this many runs of staging's and production's, and of `main`'s CI
-// and pull requests' together, go at once (approved and not yet ended).
-var (
-	ReleaseRuns = 2
-	PullRuns    = 3
-)
+// Slots is how many CI and CD runs go at once (approved and not yet ended), every kind together:
+// the merge queue's three builds and three more.
+var Slots = 6
+
+// ReleaseRuns is how many of staging's and production's checks (super runs, CI on a promotion's
+// pull request) go at once at most.
+var ReleaseRuns = 2
+
+// PullMin is how many pull requests' runs may go at once whatever the others hold.
+var PullMin = 1
 
 // MaxWaitRelease and MaxWaitPull: a run of staging's or production's, or of `main`'s or a pull
 // request's, that has waited this long goes first of its rung.
@@ -78,12 +93,19 @@ var (
 	MaxWaitPull    = 30 * time.Minute
 )
 
-// The rungs, in the order runs start (the package's comment).
+// The rungs a waiting run starts in, in order (the package's comment).
 const (
-	rungRelease = iota // staging's and production's
-	rungPulls          // `main`'s CI and pull requests'
+	rungRelease = iota // staging's and production's checks
+	rungMain           // `main`'s CI
+	rungPulls          // pull requests'
 	rungs
 )
+
+// Going is the runs going now (approved, and queued or in progress).
+type Going struct {
+	All  int        // of CI and CD: ci.yml's, super.yml's and the `Deploys`, whatever their event
+	Rung [rungs]int // of those that waited here, by rung
+}
 
 // Tick approves the waiting runs that may start now (the package's comment). A note of what it did,
 // or "" when nothing waits. A variable so the tests can replace it.
@@ -113,20 +135,11 @@ func tick(ctx *hctx.Context) string {
 		return now.Sub(clock.ParseISOValue(run.Get("created_at")))
 	}
 	overdue := func(run *pyjson.Object) bool {
-		return waited(run) >= [rungs]time.Duration{MaxWaitRelease, MaxWaitPull}[rung(run)]
+		return waited(run) >= [rungs]time.Duration{MaxWaitRelease, MaxWaitPull, MaxWaitPull}[rung(run)]
 	}
 	drafts := Drafts(ctx, waiting)
-	place := func(run *pyjson.Object) int {
-		switch {
-		case pyjson.Equal(run.Get("event"), "push"):
-			return 0 // `main`'s
-		case drafts[py.OrStr(run.Get("head_branch"), "")]:
-			return 2
-		}
-		return 1
-	}
-	// Each rung in turn; in it, a run that waited too long first, then by place, each the oldest
-	// first.
+	// Each rung in turn; in it, a run that waited too long first, then a ready pull request's before
+	// a draft's, each the oldest first.
 	sort.SliceStable(waiting, func(i, j int) bool {
 		x, y := waiting[i], waiting[j]
 		if rx, ry := rung(x), rung(y); rx != ry {
@@ -135,20 +148,27 @@ func tick(ctx *hctx.Context) string {
 		if ox, oy := overdue(x), overdue(y); ox != oy {
 			return ox
 		}
-		if pa, pb := place(x), place(y); pa != pb {
-			return pa < pb
+		dx, dy := drafts[py.OrStr(x.Get("head_branch"), "")], drafts[py.OrStr(y.Get("head_branch"), "")]
+		if dx != dy {
+			return dy
 		}
 		return waited(x) > waited(y)
 	})
-	going, read := Going(ctx)
-	most := [rungs]int{ReleaseRuns, PullRuns}
+	going, read := Read(ctx)
 	var started, why []string
 	for _, run := range waiting {
 		g := rung(run)
-		if read && going[g] >= most[g] {
+		slot := going.All < Slots
+		switch g {
+		case rungRelease:
+			slot = slot && going.Rung[g] < ReleaseRuns
+		case rungPulls:
+			slot = slot || going.Rung[g] < PullMin
+		}
+		if read && !slot {
 			continue
 		}
-		reason := fmt.Sprintf("%d of its rung's %d run(s) going", going[g], most[g])
+		reason := fmt.Sprintf("%d of %d slot(s) taken", going.All, Slots)
 		if !read {
 			reason = "the runs going could not be read"
 		}
@@ -157,7 +177,8 @@ func tick(ctx *hctx.Context) string {
 			continue
 		}
 		started = append(started, describe(run))
-		going[g]++
+		going.All++
+		going.Rung[g]++
 	}
 	held := len(waiting) - len(started) - len(why)
 	note := fmt.Sprintf("started %d of %d waiting run(s)", len(started), len(waiting))
@@ -165,7 +186,7 @@ func tick(ctx *hctx.Context) string {
 		note += " (" + strings.Join(started, ", ") + ")"
 	}
 	if held > 0 {
-		note += fmt.Sprintf("; %d wait for a run of theirs to end", held)
+		note += fmt.Sprintf("; %d wait for a slot", held)
 	}
 	if len(why) > 0 {
 		note += "; " + strings.Join(why, "; ")
@@ -173,10 +194,9 @@ func tick(ctx *hctx.Context) string {
 	return note
 }
 
-// Going is how many runs of each rung that wait here are going now (approved, and queued or in
-// progress), and whether they could be read.
-func Going(ctx *hctx.Context) ([rungs]int, bool) {
-	var going [rungs]int
+// Read is the runs going now, and whether they could be read.
+func Read(ctx *hctx.Context) (Going, bool) {
+	var going Going
 	var runs []*pyjson.Object
 	if _, failed := herr.Catch[*herr.GitHubError](func() {
 		runs = append(ctx.GH.ListRepoRuns("in_progress", 100, true), ctx.GH.ListRepoRuns("queued", 100, true)...)
@@ -184,8 +204,14 @@ func Going(ctx *hctx.Context) ([rungs]int, bool) {
 		return going, false
 	}
 	for _, run := range runs {
+		for _, workflow := range append([]string{Workflow, Super}, Deploys...) {
+			if isWorkflow(run, workflow) {
+				going.All++
+				break
+			}
+		}
 		if gated(run) {
-			going[rung(run)]++
+			going.Rung[rung(run)]++
 		}
 	}
 	return going, true
@@ -245,10 +271,13 @@ func approve(ctx *hctx.Context, run *pyjson.Object, reason string) string {
 	return ""
 }
 
-// rung is the rung a run starts in (the package's comment).
+// rung is the rung a waiting run starts in (the package's comment).
 func rung(run *pyjson.Object) int {
-	if release(run) {
+	switch {
+	case release(run):
 		return rungRelease
+	case pyjson.Equal(run.Get("event"), "push"):
+		return rungMain
 	}
 	return rungPulls
 }
