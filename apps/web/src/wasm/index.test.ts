@@ -134,6 +134,7 @@ const WRAPPERS: readonly (readonly [string, (wasm: Wasm) => unknown])[] = [
   ["chooseAction", (w) => w.chooseAction(ANY, ANY, ANY)],
   ["craftPreview", (w) => w.craftPreview(ANY, ANY)],
   ["constants", (w) => w.aiConstants()],
+  ["constants", (w) => w.dailyConstants()],
   ["engineTables", (w) => w.engineTables()],
   ["validateDeck", (w) => w.validator("validateDeck", ANY)],
   ["face", (w) => w.face(ANY)],
