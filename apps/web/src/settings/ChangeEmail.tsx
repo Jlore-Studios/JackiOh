@@ -45,7 +45,7 @@ export function tokenEmail(token: string): string | null {
 /** Renewed once if the provider refused the token as expired (R194). */
 async function sendChange(email: string): Promise<void> {
   const session = readSession();
-  // Stryker disable next-line ConditionalExpression,StringLiteral: the form renders only with a session, and once storage has lost it the next render (the "sending" phase's) is null, so whatever this throws is never shown and nothing is sent either way.
+  // Stryker disable next-line ConditionalExpression,StringLiteral,CallExpression: the form renders only with a session, and once storage has lost it the next render (the "sending" phase's) is null, so whatever this throws (or, with no throw, the TypeError the next line's `session.accessToken` raises and the catch rethrows) is never shown and nothing is sent either way.
   if (session === null) throw new AuthError("sessionEnded");
   try {
     await requestEmailChange(session.accessToken, email);
