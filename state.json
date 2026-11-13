@@ -15731,15 +15731,6 @@
       "failures": 0,
       "feedback_since": "2026-11-13T17:39:27Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-11-13T17:42:37Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "## State\n\nPR #3861 (issue #3733, account screen as profile + settings list). Revision reason: **ci** (3rd earlier run was a review; the build is run 2).\n\n- Done by the build: all of the issue's work (see PR body). Journal: `.bot-journal.md`.\n- CI failure (web unit 5/8, 6/8, 7/8, 8/8): the four CSS ratchets `src/spacing.test.ts`, `palette.test.ts`,\n  `surfaces.test.ts`, `typescale.test.ts` each counted more of `routes/account.css`'s own raw lengths, color,\n  radius and font-size/face than their UNMIGRATED/UNTOKENED_SURFACES/UNSCALED tables hold. Cause: the build's new\n  CSS block used raw px / rgba / 10px radius / `--tavern-serif` + 19px.\n- Fix (this run): `account.css`'s new block now names tokens (`--space-*`, `--radius-md`, `--font-display`,\n  `--type-2xl`, `color-mix(... var(--pal-parchment) 10% ...)`), so the counts are back to main's\n  (spacing 11, palette 3, surfaces 1, typescale 3). Rejected: raising the tables' numbers (the ratchets say none gains one).\n- Left: run the four ratchets + account tests + a wider web test pass, then report.\n- Dead ends: `sh scripts/build-wasm.sh` in a `&`-backgrounded subshell got killed; run it with run_in_background instead.\n\n## Log\n\n- 13:50 UTC ran the four ratchets locally: needed `scripts/build-wasm.sh` first (`src/wasm/pkg` is git-ignored, absent).\n- 13:5x replaced raw values in account.css with tokens; re-running the ratchets next.\n- 14:0x ratchets pass (spacing's `routes/account.css` lowered 11 -> 9, since the build removed two `.account-manage` gaps and every new gap now names a step; palette 3, surfaces 1, typescale 3 held). Also green: account tests, breakpoints/writing/wording, root-level design tests, shell, daily, i18n, replays, chunks, and the account component spec (14/14).\n",
-        "provider": "claude-4",
-        "reason": "used its 3 review rounds with this owner; the work is kept for its final audit, another subscription's when one is free",
-        "trail": ""
-      },
       "interruptions": 0,
       "issue": 3733,
       "kind": "review",
