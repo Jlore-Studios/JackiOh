@@ -17685,6 +17685,8 @@
       "stop_requested": false
     },
     "3849": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-13T06:37:46Z",
@@ -17698,8 +17700,11 @@
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md 2>/dev/null | head -40; git status --short | head; ls target 2>/dev/null | head -3\"}\n- Bash: {\"command\": \"(cargo test -p jackioh-tools --bin jackioh --features jackioh-engine/testkit,jackioh-engine/ts 2>&1 | tail -60) \", \"timeout\": 600000}\n- Bash: {\"command\": \"cargo jackioh names --check 2>&1 | tail -15; git diff HEAD --stat | tail -3\", \"timeout\": 600000}\n- Bash: {\"command\": \"sed -n 700,760p crates/tools/src/names.rs\"}\n- said: Run `cargo jackioh names` and see the diff.\n- Bash: {\"command\": \"cargo jackioh names 2>&1 | tail -5; git diff --stat; git diff | grep '^[+-]' | grep -v '^+++\\\\|^---' | head -30; \", \"timeout\": 600000}\n- Bash: {\"command\": \"cargo fmt --check && echo fmt ok; cargo jackioh names --check 2>&1 | tail -2; cargo jackioh patches check 2>&1 | tail -2; cargo jackioh spec check 2>&1 | tail -2; cargo test -p jackioh-c\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-tools --bin jackioh --features jackioh-engine/testkit,jackioh-engine/ts names:: 2>&1 | grep 'test result'; echo \\\"- run 3: names --check fixed (3 test-helper commen\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the cards that read a lane see a GIGA in both of its lanes\"} --> ## What changed Eight card scripts now read a GIGA in both of its lanes, as R3546001 says. Before, they read only its anchor lane. - **Crushing Walls (C+ #24) and Occidental (TG #28):** a \u2026"
       },
       "issue": 3824,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-13T09:26:03Z",
         "from_run": "43380033850",
         "gates": [
           {
@@ -17791,7 +17796,11 @@
         "source": "build",
         "until": "2026-11-13T09:54:35Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-13T09:24:35Z",
+      "run_id": "pending:ada79ecb-1794561926",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17810,6 +17819,9 @@
         "provider": "claude-8",
         "run": "43380033850"
       },
+      "started_at": "2026-11-13T09:26:03Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17823,9 +17835,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T08:49:44Z",
+    "at": "2026-11-13T09:26:03Z",
     "url": "",
-    "what": "build #3735 on claude-4"
+    "what": "review #3849 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-13T08:46:50Z",
