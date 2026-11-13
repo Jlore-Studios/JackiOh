@@ -16908,30 +16908,13 @@
       "taken_asks": [],
       "verdict_rounds": 3,
       "votes": {
-        "approvals": [
-          "claude"
-        ],
+        "approvals": [],
         "builder": "claude",
         "built_by": "claude-3",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [],
-          "from": "6bf0520dc2423b86a9158a491d04467e946c1ceb",
-          "main": "87fd1e82e87d495a0be712a1b015c4de22142197"
-        },
         "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "provider": "claude-3",
-            "run": "43353306193",
-            "tier": "strong"
-          }
-        ],
-        "sha": "e25dc2b5aa7c446a9b4013a1611c0d2857e4f8f5",
-        "tiers": {
-          "claude": "strong"
-        }
+        "reviews": [],
+        "sha": "29005ed9284f11a5c7bc08294178a01f9b2e6d58",
+        "tiers": {}
       },
       "waiting_comment": 6847795564
     },
