@@ -14904,17 +14904,8 @@
       "verdict_rounds": 0
     },
     "3827": {
-      "action": "plan",
-      "asks": [
-        "c:6845497648"
-      ],
-      "build_next": {
-        "from_run": "43424928576",
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-13T13:25:10Z",
-        "until": "2026-11-13T13:55:10Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-13T13:24:56Z",
         "difficulty": "hard",
@@ -14933,10 +14924,9 @@
         "reason": "planned on opus",
         "trail": "it diff --shortstat; git diff -U0 crates/engine/tests/rules/animated.rs | sed -n 1,12p\", \"description\": \"Format the rehearsal copy\"}\n- Bash: {\"command\": \"cd /tmp/rh3827 && cargo clippy -p jackioh-engine -p jackioh-cards -p jackioh-tools --all-targets --features jackioh-engine/testkit -- -D warnings > /tmp/plan3827/clippy.log 2>&1; echo \\\"\u2026\n- Bash: {\"command\": \"grep -c 'c035_lunar_eclipse\\\\|c044_true_strike\\\\|c058_true_strike' /tmp/plan3827/rewrote.txt; grep 'c035_lunar\\\\|c044_true\\\\|c058_true' /tmp/plan3827/rewrote.txt; cd /tmp/rh3827 && git d\u2026\n- Bash: {\"command\": \"until grep -q '^exit' /tmp/plan3827/clippy.log; do sleep 5; done; grep -E '^(error|warning)' -A6 /tmp/plan3827/clippy.log | head -80; tail -2 /tmp/plan3827/clippy.log\", \"description\": \"W\u2026\n- Bash: {\"command\": \"cd /tmp/rh3827 && cargo test -p jackioh-tools --test acceptance helpers_ 2>&1 | grep -E '^test |test result|panicked|left|right|FAILED' | head -40\", \"description\": \"Run the guard tests i\u2026\n- Bash: {\"command\": \"cd /tmp/rh3827 && cp crates/engine/tests/rules/animated.rs /tmp/plan3827/animated.keep && cp crates/cards/src/scripts/meditative/c036_cn_peptides.rs /tmp/plan3827/pep.keep && git show HE\u2026\n- Bash: {\"command\": \"cd /tmp/rh3827 && { cargo test -p jackioh-cards -- --list 2>/dev/null | grep -c ': test$'; cargo test -p jackioh-engine --features testkit --test rules --test rules_2 --test rules_3 -- -\u2026\n- Bash: {\"command\": \"cd /tmp/rh3827 && git diff crates/tools/tests/acceptance.rs | grep '^[-+]' | grep -v '^+++\\\\|^---' | wc -l; cargo fmt --check >/dev/null 2>&1 && echo fmt-ok\", \"description\": \"Check guard\u2026\n- Bash: {\"command\": \"cd /tmp/rh3827 && git diff -U0 crates/tools/tests/acceptance.rs | sed -n 1,200p | grep -v '^+++\\\\|^---\\\\|^diff\\\\|^index' | head -150\", \"description\": \"View formatted guard diff\"}\n- Bash: {\"command\": \"cd /tmp/rh3827 && python3 -I - <<'PYEOF'\\np = \\\"crates/tools/tests/acceptance.rs\\\"\\nt = open(p).read()\\nold = t[t.index(\\\"fn state_lookup_definitions(text: &str) -> Vec<usize> {\\\"):]\\nol\u2026\n- Bash: {\"command\": \"sed -n 226,236p crates/engine/tests/rules/fixtures/harness.rs\", \"description\": \"Read lines above live in harness\"}\n- Bash: {\"command\": \"cat /tmp/plan3827/rh_counts.txt /tmp/plan3827/rh_cards.log 2>/dev/null; ps aux | grep '[r]ustc' | grep -o 'crate-name [a-z_0-9]*' | sort | uniq -c\", \"description\": \"Check rehearsal test \u2026\n- Bash: {\"command\": \"cd /tmp/rh3827 && git diff -U0 crates/tools/tests/acceptance.rs | sed -n '/fn helpers_the_pick_scan/,$p' | grep '^+' | sed 's/^+//' \", \"description\": \"View rehearsed guard tests diff\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3827/.bot-plan.md\", \"content\": \"## Goal\\n\\nEvery card and rules test takes its one-pick `targets`, its hero pick and its card lookup from one home eac\u2026\n- Bash: {\"command\": \"wc -c -w .bot-plan.md; cat /tmp/plan3827/rh_counts.txt /tmp/plan3827/rh_cards.log /tmp/plan3827/rh_rules.log 2>/dev/null | tail -12; ps aux | grep '[r]ustc' | grep -o 'crate-name [a-z_0-\u2026\n- Bash: {\"command\": \"until grep -q finished /tmp/plan3827/rh_rules.log 2>/dev/null; do sleep 10; done; cat /tmp/plan3827/rh_counts.txt; grep -c 'test result: ok' /tmp/plan3827/rh_cards.log; grep -v 'test res\u2026\n- Bash: {\"command\": \"cat /tmp/plan3827/rh_cards.log; echo ---; cat /tmp/plan3827/rh_rules.log\", \"description\": \"Show rehearsal test result lines\"}\n- Bash: {\"command\": \"cd /tmp/rh3827 && cargo clippy -p jackioh-tools --all-targets -- -D warnings 2>&1 | grep -E '^(warning|error)' -A5 | head -20; cargo test -p jackioh-tools --test acceptance helpers_ 2>&1\u2026\n- Bash: {\"command\": \"grep -n '\\\"--head\\\"\\\\|head:' crates/tools/src/classify.rs | head -5; grep -n 'fn changed_paths\\\\|git(.*diff' crates/tools/src/classify.rs | head -5\", \"description\": \"Check classify's hea\u2026\n- Bash: {\"command\": \"sed -n 100,125p crates/tools/src/classify.rs\", \"description\": \"Read classify args\"}\n- Bash: {\"command\": \"cd /tmp/rh3827 && git add -A >/dev/null && git -c user.email=a@b -c user.name=r commit -qm rehearsal && (cargo run --release -q -p jackioh-tools -- classify --base HEAD~1 > /tmp/plan3827\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3827/.bot-plan.md\", \"old_string\": \"This plan follows claude-3's, which I re-ran on base `6c0aed010f` in a throwaway copy: the sc\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3827/.bot-plan.md\", \"old_string\": \"- `helpers_each_test_takes_its_shared_helpers_from_their_home` is the check on the real tree \u2026\n- Bash: {\"command\": \"grep -n 'mod.rs` line 12\\\\|SURFACE.md` line 711\\\\|in the header, ' .bot-plan.md | cut -c1-120\", \"description\": \"Locate doc-edit lines in draft\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np = \\\".bot-plan.md\\\"\\nt = open(p).read()\\ndef sub(old, new):\\n global t\\n assert t.count(old) == 1, old[:50]\\n t = t.replace(old, new)\\nsub(\\\"\\\"\\\"In `crates/engine/\u2026\n- Bash: {\"command\": \"until grep -q '^exit' /tmp/plan3827/classify.txt 2>/dev/null; do sleep 10; done; cat /tmp/plan3827/classify.txt | tail -20\", \"description\": \"Wait for classify result\", \"timeout\": 3600000}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3827/.bot-plan.md\", \"old_string\": \"All 11 `helpers_*` tests passed, and the base's copies failed the widened guard.\", \"new_strin\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3827/.bot-plan.md\", \"offset\": 1, \"limit\": 60}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3827/.bot-plan.md\", \"offset\": 160, \"limit\": 180}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np = \\\".bot-plan.md\\\"\\nt = open(p).read()\\ndef sub(old, new):\\n global t\\n assert t.count(old) == 1, old[:50]\\n t = t.replace(old, new)\\nsub(\\\"and add `#3827` after \u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule 5, Big: about 114 files change (103 by script, plus kit, guard and docs), far past 40\"} --> ## Goal Every card and rules test takes its one-pick `targets`, its hero pick and its card lookup from one home each: the new `pick::targets` and `pick::hero` in\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-13T12:24:42Z",
       "owner_why": "handed off from `claude-3`: its owner `claude-3` cannot take it now",
@@ -14949,12 +14939,14 @@
       "provider": "claude-7",
       "queued_at": "2026-11-13T06:16:23Z",
       "requested_by": "jgoetzmann",
-      "run_id": "43424928576",
+      "run_id": "pending:b19343df-1794576664",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-13T12:24:42Z",
+      "started_at": "2026-11-13T13:31:38Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6845497648"
+      ]
     },
     "3837": {
       "action": "build",
@@ -15361,9 +15353,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T13:30:49Z",
+    "at": "2026-11-13T13:31:38Z",
     "url": "",
-    "what": "revise #3810 on claude-3"
+    "what": "build #3827 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-13T12:49:40Z",
