@@ -15133,6 +15133,8 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-12T14:22:49Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 2
