@@ -44,6 +44,20 @@ pub(crate) struct Trade {
     pub(crate) splash_kills: bool,
 }
 
+/// §4.4 step 8: what a Lifesteal hit's heal of `amount` is worth to `healer`: `heal_worth` on the hero
+/// curve, or, when a heal converter turns it into damage (E8, R413), minus that much Pierce damage on
+/// `healer`'s own hero (#3858).
+fn lifesteal_value(state: &GameState, healer: PlayerId, amount: i32) -> f64 {
+    if heal_converted(state, healer) {
+        // E8, R413: the heal becomes that much Pierce damage on the healing hero instead,
+        // on the stated amount (`damage.rs`: a replaced heal is never multiplied), ignoring
+        // Armor, so `reply_face_value` without `projected_hero_damage`'s Armor pass.
+        -reply_face_value(state, healer, amount)
+    } else {
+        heal_worth(state, healer, amount, &AI_EVAL)
+    }
+}
+
 /// The opponent's static value of `attacker` hitting `target` (§4.3): what killing the target removes
 /// (`kill_worth`, #1796), less what its own death removes when it dies too, with First Strike deciding
 /// who strikes first and no strike back on a Ranged attacker unless the target is Ranged too (R783000).
@@ -142,14 +156,7 @@ pub(crate) fn trade_value(
     // not cap at the unit's health but for a Trample hit, whose rest heals as it lands on the hero.
     if lands && has_keyword(&a.view.keywords, KeywordKind::Lifesteal) {
         let amount = on_unit(out.dealt, &t) + splashed + trampled;
-        if heal_converted(state, attacker.controller) {
-            // E8, R413: the heal becomes that much Pierce damage on the healing hero instead,
-            // on the stated amount (`damage.rs`: a replaced heal is never multiplied), ignoring
-            // Armor, so `reply_face_value` without `projected_hero_damage`'s Armor pass.
-            value -= reply_face_value(state, attacker.controller, amount);
-        } else {
-            value += heal_worth(state, attacker.controller, amount, &AI_EVAL);
-        }
+        value += lifesteal_value(state, attacker.controller, amount);
     }
     Trade {
         value: value + cleave_value,
@@ -170,8 +177,9 @@ pub fn reply_face_value(state: &GameState, seat: PlayerId, damage: i32) -> f64 {
 
 /// The static trader's value of `attacker` hitting `defender`'s hero: `AI_EVAL.win` when
 /// `face_is_lethal`, else `reply_face_value` of what the hit deals through the hero's Armor and caps
-/// (`projected_hero_damage`). The reply's ranking and the seat's own move order (`candidates.rs`,
-/// #2825) read it alike.
+/// (`projected_hero_damage`). A Lifesteal attacker's hit that is not lethal adds the heal of what it
+/// deals (`lifesteal_value`, the term `trade_value` adds for a hit on a unit, #3858). The reply's ranking
+/// and the seat's own move order (`candidates.rs`, #2825) read it alike.
 pub(crate) fn face_value(
     state: &GameState,
     attacker: &CardInstance,
@@ -181,10 +189,16 @@ pub(crate) fn face_value(
     if face_is_lethal {
         return AI_EVAL.win;
     }
+    let view = unit_view(state, attacker);
     let pierce = pierces(state, Some(attacker), None);
-    let damage =
-        subsystems::projected_hero_damage(state, defender, unit_view(state, attacker).attack, pierce);
-    reply_face_value(state, defender, damage)
+    let damage = subsystems::projected_hero_damage(state, defender, view.attack, pierce);
+    let hit = reply_face_value(state, defender, damage);
+    // §4.4 step 8: Lifesteal heals the attacker's hero by what the hit deals, on a hero as on a unit
+    // (#3858). A lethal hit is the win, whatever it heals.
+    if hit >= AI_EVAL.win || !has_keyword(&view.keywords, KeywordKind::Lifesteal) {
+        return hit;
+    }
+    hit + lifesteal_value(state, attacker.controller, damage)
 }
 
 /// Ranked attacks worth making from `legal`. When `face_is_lethal`, every hero attack is `AI_EVAL.win` (#1634).
@@ -996,9 +1010,62 @@ mod tests {
         assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
     }
 
-    /// p2's best reply attack at `health`: its Lifesteal Mr. Vanilla and its Radiant Professor
+    /// p1's Mr. Vanilla's `face_value` on p2's hero in `setup`, with Lifesteal and without.
+    fn face_twins(setup: Value, face_is_lethal: bool) -> (Scenario, f64, f64) {
+        let steal = vanilla_with(setup.clone(), &[Keyword::Lifesteal]);
+        let plain = vanilla_with(setup, &[]);
+        let steal_value = face_value(steal.state(), steal.card(VANILLA), PlayerId::P2, face_is_lethal);
+        let plain_value = face_value(plain.state(), plain.card(VANILLA), PlayerId::P2, face_is_lethal);
+        (steal, steal_value, plain_value)
+    }
+
+    #[test]
+    fn a_lifesteal_hit_on_the_hero_is_worth_the_heal_of_all_it_deals() {
+        let (s, steal, plain) = face_twins(json!({ "p1": { "health": 10, "field": [VANILLA] } }), false);
+        assert!((plain - AI_REPLY.face_per_damage * 4.0).abs() < 1e-9, "{plain}");
+        let heal = heal_worth(s.state(), PlayerId::P1, 4, &AI_EVAL);
+        assert!(heal > 0.0 && (heal - healed(10, 4)).abs() < 1e-9, "{heal}");
+        assert!((steal - plain - heal).abs() < 1e-9, "{steal} {plain}");
+    }
+
+    #[test]
+    fn a_lifesteal_hit_on_the_hero_heals_what_the_heros_armor_leaves() {
+        let (_, steal, plain) = face_twins(
+            json!({ "p1": { "health": 10, "field": [VANILLA] }, "p2": { "armor": 1 } }),
+            false,
+        );
+        assert!((plain - AI_REPLY.face_per_damage * 3.0).abs() < 1e-9, "{plain}");
+        assert!((steal - plain - healed(10, 3)).abs() < 1e-9, "{steal} {plain}");
+    }
+
+    #[test]
+    fn a_lifesteal_hit_on_the_hero_under_a_face_up_blood_moon_is_worth_self_damage() {
+        let (s, steal, plain) = face_twins(
+            json!({
+                "p1": { "health": 10, "field": [VANILLA] },
+                "p2": { "backrow": [{ "def": MOON, "radiant": true, "faceUp": true }] },
+            }),
+            false,
+        );
+        assert!(steal < plain, "{steal} {plain}");
+        let burn = reply_face_value(s.state(), PlayerId::P1, 4);
+        assert!((plain - steal - burn).abs() < 1e-9, "{steal} {plain}");
+    }
+
+    #[test]
+    fn a_lethal_lifesteal_hit_on_the_hero_scores_the_win_and_no_more() {
+        let (_, steal, _) = face_twins(
+            json!({ "p1": { "health": 10, "field": [VANILLA] }, "p2": { "health": 4 } }),
+            false,
+        );
+        assert_eq!(steal.to_bits(), AI_EVAL.win.to_bits(), "{steal}");
+        let (_, steal, _) = face_twins(json!({ "p1": { "health": 10, "field": [VANILLA] } }), true);
+        assert_eq!(steal.to_bits(), AI_EVAL.win.to_bits(), "{steal}");
+    }
+
+    /// p2's reply attacks at `health`, best first: its Lifesteal Mr. Vanilla and its Radiant Professor
     /// Curvature, a 6/6, facing p1's Zoomerbin Oomen.
-    fn best_reply_attack(health: i32) -> (Scenario, ActionBody) {
+    fn reply_attack_order(health: i32) -> (Scenario, Vec<ActionBody>) {
         let s = vanilla_with(
             json!({
                 "active": "p2",
@@ -1007,38 +1074,50 @@ mod tests {
             }),
             &[Keyword::Lifesteal],
         );
-        let best = ranked_attacks(
+        let ranked = ranked_attacks(
             s.state(),
             PlayerId::P1,
             &legal_actions(s.state(), PlayerId::P2),
             false,
             Prices::NONE,
-        )
-        .into_iter()
-        .next()
-        .expect("an attack worth making");
-        (s, best)
+        );
+        (s, ranked)
+    }
+
+    /// `s`'s attack of `attacker` on `target_id`.
+    fn attack_of(s: &Scenario, attacker: &str, target_id: &str) -> ActionBody {
+        ActionBody::Attack {
+            attacker_id: s.card(attacker).id.clone(),
+            target_id: target_id.to_owned(),
+        }
     }
 
     #[test]
-    fn at_low_life_the_lifesteal_trade_outranks_a_plain_face_hit() {
-        // At 3 life the Oomen's kill and the heal of 4 outweigh the Curvature's 6 on the face.
-        let (s, best) = best_reply_attack(3);
+    fn at_low_life_both_lifesteal_hits_outrank_a_plain_face_hit() {
+        // At 3 life the heal of 4 is worth about 5.00 wherever the Vanilla hits: on the hero 4 + 5.00,
+        // on the Oomen its kill's 3.20 + 5.00, both above the Curvature's 6 on the face (#1820, #3858).
+        let (s, ranked) = reply_attack_order(3);
+        let oomen = s.card(OOMEN).id.clone();
         assert_eq!(
-            best,
-            ActionBody::Attack {
-                attacker_id: s.card(VANILLA).id.clone(),
-                target_id: s.card(OOMEN).id.clone(),
-            }
+            ranked,
+            vec![
+                attack_of(&s, VANILLA, "hero-p1"),
+                attack_of(&s, VANILLA, &oomen),
+                attack_of(&s, CURVATURE, "hero-p1"),
+                attack_of(&s, CURVATURE, &oomen),
+            ]
         );
-        // At full life the same heal is worth less than the face hit.
-        let (s, best) = best_reply_attack(HERO_HEALTH);
+        // At full life the same heal is worth about 1.94, so the Curvature's 6 on the face comes first.
+        let (s, ranked) = reply_attack_order(HERO_HEALTH);
+        let oomen = s.card(OOMEN).id.clone();
         assert_eq!(
-            best,
-            ActionBody::Attack {
-                attacker_id: s.card(CURVATURE).id.clone(),
-                target_id: "hero-p1".to_owned(),
-            }
+            ranked,
+            vec![
+                attack_of(&s, CURVATURE, "hero-p1"),
+                attack_of(&s, VANILLA, "hero-p1"),
+                attack_of(&s, VANILLA, &oomen),
+                attack_of(&s, CURVATURE, &oomen),
+            ]
         );
     }
 
