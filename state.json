@@ -15000,15 +15000,8 @@
       }
     },
     "3821": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43452857900",
-        "model": "opus",
-        "provider": "claude-1",
-        "since": "2026-11-13T15:49:41Z",
-        "until": "2026-11-13T16:19:41Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15020,10 +15013,9 @@
         "reason": "planned on opus",
         "trail": "/game/Zone.tsx; sed -n 80,96p apps/web/src/game/Backrow.tsx; grep -rn \\\"Switch position\\\" apps/web/src --include=*.test.tsx | head -5; grep -n \\\"import.*testi\u2026\n- Bash: {\"command\": \"sed -n 1,60p apps/web/src/game/switchOut.test.tsx; grep -n \\\"unit_view_of(\\\" crates/engine/src/view_for.rs\", \"description\": \"Read switchOut test and unit_view_of callers\"}\n- Bash: {\"command\": \"grep -rl '\\\"canAct\\\"' --include=*.json --include=*.snap --include=*.txt --exclude-dir=node_modules --exclude-dir=target . 2>/dev/null | head; grep -rln \\\"canAct\\\" e2e/cypress 2>/dev/null\u2026\n- Bash: {\"command\": \"awk 'NR<=1368 && /^#/ {h=NR\\\": \\\"$0} END{}; NR<=1368 && /^#/ {print NR\\\": \\\"$0}' docs/v0.3.0/SURFACE.md | tail -3; sed -n 1369,1372p docs/v0.3.0/SURFACE.md | cut -c1-200; grep -n \\\"face\\\u2026\n- Bash: {\"command\": \"sed -n 1350,1356p docs/v0.3.0/SURFACE.md | cut -c1-400; sed -n 1376,1400p docs/v0.3.0/SURFACE.md | cut -c1-120; wc -l docs/v0.3.0/SURFACE.md\", \"description\": \"Read the amendments section\u2026\n- Bash: {\"command\": \"grep -n \\\"R849000\\\\|R3768000\\\" spec/10-engine-guide.md | cut -c1-120\", \"description\": \"Find R849000 mentions in \\u00a710\"}\n- Bash: {\"command\": \"awk 'NR>=256 && NR<=330' spec/10-engine-guide.md | grep -n -i \\\"switch\\\\|reason line\\\\|inspect notes\\\" | cut -c1-250 | head\", \"description\": \"Find switch mentions in \\u00a710.10\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3821/crates/shared/src/face/live.rs\", \"offset\": 600, \"limit\": 50}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3821/crates/shared/src/face/live.rs\", \"offset\": 764, \"limit\": 90}\n- Bash: {\"command\": \"grep -n \\\"fn live_source\\\" -A 14 crates/shared/src/face/live.rs; grep -n \\\"let unit = \\\" crates/shared/src/face/live.rs | head -3\", \"description\": \"Read live_source signature and unit te\u2026\n- Bash: {\"command\": \"grep -n \\\"pub const SLUMBER_REFUSAL\\\" crates/engine/src/restrictions.rs; grep -c \\\"that Unit is Frozen\\\\|that unit has already acted this turn\\\\|is Dormant\\\" apps/web/src/i18n/zh-CN.json\u2026\n- Bash: {\"command\": \"grep -rn \\\"exactOptionalPropertyTypes\\\" apps/web/tsconfig*.json tsconfig*.json 2>/dev/null\", \"description\": \"Check exactOptionalPropertyTypes setting\"}\n- Bash: {\"command\": \"grep -l \\\"crates/shared/src/face\\\" spec/rulings/*.md | head -3; grep -rn \\\"is_unit\\\\b\\\" crates/shared/src/face/live.rs | head -2\", \"description\": \"Check proven_in for shared src files\"}\n- Bash: {\"command\": \"sed -n 28,40p crates/engine/src/view_for.rs; sed -n 1,30p crates/engine/src/view_for.rs | grep -n \\\"^use\\\\|combat::\\\" ; grep -n \\\"^use crate::combat\\\\|why_cannot_declare_in\\\\|position_af\u2026\n- Bash: {\"command\": \"sed -n 95,112p crates/engine/tests/rules/aura_table.rs; grep -n \\\"^use\\\" crates/engine/tests/rules/aura_table.rs | head\", \"description\": \"Verify aura_table UnitView is layers'\"}\n- Bash: {\"command\": \"grep -n \\\"attack_reason\\\" -B2 -A2 crates/engine/tests/rules/freeze.rs | head -30\", \"description\": \"Check freeze tests reading attack_reason\"}\n- Bash: {\"command\": \"grep -rln \\\"tipsyBlur\\\\|sharedChain\\\" apps/web/src --include=*.ts --include=*.tsx | grep -v generated | head; ls apps/web/src/wire/\", \"description\": \"Check hand-written wire files for vi\u2026\n- Bash: {\"command\": \"grep -n \\\"jackioh-shared\\\\|crates/shared\\\" .github/ci/rust-test.toml | head; grep -n \\\"^test = \\\" .github/ci/rust-test.toml | tail -8\", \"description\": \"Check CI groups for the shared cra\u2026\n- Bash: {\"command\": \"git log -3 --format=\\\"%h %s\\\" -- apps/web/src/wire/generated/FaceModel.ts; grep -rn \\\"jackioh-shared --features ts\\\\|shared --features ts\\\" --include=*.md --include=*.sh --include=*.yml \u2026\n- Bash: {\"command\": \"sed -n 775,800p crates/shared/README.md\", \"description\": \"Read shared README test commands\"}\n- Bash: {\"command\": \"grep -rn \\\"Switch position\\\\|switch-button\\\\|switchPosition\\\" e2e/cypress --include=*.ts | head -10; grep -rn \\\"Switch position\\\" apps/web/src --include=*.test.tsx --include=*.test.ts | \u2026\n- Bash: {\"command\": \"sed -n 160,180p apps/web/src/cards/rules.test.ts; grep -rn \\\"switchPosition\\\" e2e/cypress/support/*.ts | head -5\", \"description\": \"Read rules.test switch label and cypress helper\"}\n- Bash: {\"command\": \"sed -n 60,64p spec/README.md | cut -c1-1500\", \"description\": \"Read spec check failure conditions\"}\n- Bash: {\"command\": \"for r in R0020 R0049 R849000 R1174000 R1839000 R1849006 R2179000 R2657000 R3543002 R3768000 R0091; do test -f spec/rulings/$r.md && echo \\\"ok $r\\\" || echo \\\"MISSING $r\\\"; done\", \"descrip\u2026\n- Bash: {\"command\": \"grep -n \\\"pub fn defense_barred\\\" -A 15 crates/engine/src/restrictions.rs\", \"description\": \"Check defense_barred cost\"}\n- Bash: {\"command\": \"grep -n \\\"jackioh perf\\\\|perf --\\\" .github/workflows/*.yml | head -5\", \"description\": \"Check whether perf runs in CI\"}\n- Bash: {\"command\": \"grep -rn \\\"perf\\\" .github/workflows/ci.yml .github/workflows/super.yml | grep -i \\\"jackioh\\\\|cargo\\\" | head -5\", \"description\": \"Search CI for the perf gate\"}\n- Bash: {\"command\": \"grep -rn \\\"fn has_switch_for\\\" -A 12 crates/engine/tests/rules/ | head -16; grep -n \\\"pub use\\\" crates/engine/src/testkit/mod.rs | head -20\", \"description\": \"Find has_switch_for helper a\u2026\n- Bash: {\"command\": \"grep -n \\\"notice\\\\|inspect notes\\\\|StateNotes\\\" apps/web/README.md | cut -c1-220 | head -10\", \"description\": \"Check web README for notice/inspect notes contract\"}\n- Bash: {\"command\": \"sed -n 1055,1080p crates/shared/src/face/model.rs | grep -n \\\"InPlay\\\\|default\\\" ; sed -n 470,482p crates/shared/src/face/model.rs\", \"description\": \"Check InPlay literals use defaults\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3821/.bot-plan.md\", \"content\": \"# Draft plan #3821 (planner notes) \\u2014 complete; final message mirrors this\\n\\nKey findings:\\n- #3768 landed (R3768\u2026\n- said: **Goal.** On the viewer's own unit, the engine's view gets a new field `UnitView.switchReason`. It holds the message `combat::why_cannot_switch_in` gives for the unit's own switch to the other position, spending its exertion. It is set only during its controller's main phase with no prompt open, `c\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-13T15:27:48Z",
       "owner_why": "it plans it",
@@ -15036,9 +15028,9 @@
       "provider": "claude-1",
       "queued_at": "2026-11-13T15:11:54Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43452857900",
+      "run_id": "pending:ba9a4ffd-1794585167",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-13T15:27:48Z",
+      "started_at": "2026-11-13T15:53:37Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15996,9 +15988,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T15:52:32Z",
+    "at": "2026-11-13T15:53:37Z",
     "url": "",
-    "what": "review #3817 on claude-8"
+    "what": "build #3821 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-13T15:19:17Z",
