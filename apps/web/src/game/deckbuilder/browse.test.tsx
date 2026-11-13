@@ -34,9 +34,13 @@ import { KBD_TESTID } from "../../shortcuts/Kbd.tsx";
 import { DECK_STATUS_MS } from "./DeckEditor.tsx";
 import DeckWorkshop from "./DeckWorkshop.tsx";
 import { DECK_SIZE } from "./deckSize.ts";
+import FilterBar from "./FilterBar.tsx";
 import {
   COST_BUCKETS,
   DECK_CHIP_TAGS,
+  DEFAULT_FILTER,
+  DEFAULT_SORT,
+  FILTER_KEYWORDS,
   FILTER_RARITIES,
   FILTER_SETS,
   FILTER_TYPES,
@@ -67,6 +71,8 @@ import {
   DECK_STATUS,
   deckCardId,
   filterCostId,
+  filterKeywordId,
+  filterOwnershipId,
   filterRarityId,
   filterSetId,
   filterTagId,
@@ -180,6 +186,15 @@ const SORTED: Record<SortKey, { asc: string[]; desc: string[] }> = {
   winRate: {
     asc: ["x-01", "x-02", "x-03", "x-04", "x-05", "x-06", "x-07", "x-08", "x-09", "x-11", "x-10"],
     desc: ["x-01", "x-02", "x-03", "x-04", "x-05", "x-06", "x-07", "x-08", "x-09", "x-11", "x-10"],
+  },
+  // Issue #3734: every fixture card is Core and no patch added one, so both tie and the cost order stands (filters.test.ts).
+  set: {
+    asc: ["x-01", "x-02", "x-06", "x-09", "x-07", "x-08", "x-11", "x-10", "x-03", "x-04", "x-05"],
+    desc: ["x-01", "x-02", "x-06", "x-09", "x-07", "x-08", "x-11", "x-10", "x-03", "x-04", "x-05"],
+  },
+  newest: {
+    asc: ["x-01", "x-02", "x-06", "x-09", "x-07", "x-08", "x-11", "x-10", "x-03", "x-04", "x-05"],
+    desc: ["x-01", "x-02", "x-06", "x-09", "x-07", "x-08", "x-11", "x-10", "x-03", "x-04", "x-05"],
   },
 };
 
@@ -390,10 +405,10 @@ describe("the pool grid (B30)", () => {
     expect(sticky.map((rule) => rule.selector)).toEqual([".db-sidebar"]);
     const landscape = /@media \(min-width: 761px\) and \(max-height: 500px\) \{([\s\S]*?)\n\}/.exec(bare)?.[1] ?? "";
     expect(landscape).toMatch(/\.db-sidebar\s*\{[^}]*position\s*:\s*sticky/);
-    // The one fixed element is the status toast, and it is blind to the pointer, so
-    // elementFromPoint (what Cypress asks before a click) never returns it.
+    // The fixed elements are the status toast and, while a card is dragged to the deck (DeckDrag.tsx, R3734001), its
+    // ghost, and each is blind to the pointer, so elementFromPoint (what Cypress asks before a click) never returns it.
     const fixed = rules.filter((rule) => /position\s*:\s*fixed/.test(rule.body));
-    expect(fixed.map((rule) => rule.selector)).toEqual([".db-deck-status"]);
+    expect(fixed.map((rule) => rule.selector)).toEqual([".db-drag-ghost", ".db-deck-status"]);
     for (const rule of fixed) expect(rule.body).toMatch(/pointer-events\s*:\s*none/);
   });
 
@@ -952,12 +967,17 @@ describe("inspecting in the builder (B38)", () => {
     expect(poolCard("x-02")).toHaveAttribute("data-refused", "true");
   });
 
-  it("B38 a card dragged from the pool onto the deck lands in it", () => {
+  it("B38 a card dragged from the pool onto the deck lands in it, with pointer events (R3734001)", () => {
     mount();
-    fireEvent.dragStart(poolCard("x-06"));
     const target = screen.getByTestId(DECK_DROP);
-    fireEvent.dragOver(target);
-    fireEvent.drop(target);
+    // jsdom lays nothing out: the deck's box is where the sequence says it is.
+    target.getBoundingClientRect = () => ({ left: 100, top: 100, right: 300, bottom: 300, width: 200, height: 200, x: 100, y: 100, toJSON: () => ({}) });
+    expect(poolCard("x-06")).not.toHaveAttribute("draggable");
+    fireEvent.pointerDown(poolCard("x-06"), { ...pointer("mouse"), clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(poolCard("x-06"), { ...pointer("mouse"), clientX: 150, clientY: 150 });
+    expect(target).toHaveAttribute("data-drop", "over");
+    fireEvent.pointerUp(poolCard("x-06"), { ...pointer("mouse"), clientX: 150, clientY: 150 });
+    expect(target).not.toHaveAttribute("data-drop");
     expect(screen.getByTestId(deckCardId("x-06"))).toBeInTheDocument();
   });
 
@@ -1069,5 +1089,87 @@ describe("the deck status line", () => {
     mount(["x-02"]);
     fireEvent.click(screen.getByTestId(addPoolId("x-02")));
     expect(screen.getByTestId(DECK_STATUS)).toHaveTextContent(`${card("x-02").name} is already in this deck.`);
+  });
+});
+
+// Issue #3734: the Collection's grid takes the same bar, with two more groups (R3734000).
+describe("the filter bar's Collection groups (issue #3734)", () => {
+  function bar(extra: Partial<Parameters<typeof FilterBar>[0]> = {}) {
+    const onFilter = vi.fn();
+    const onOwnership = vi.fn();
+    render(
+      <FilterBar
+        filter={DEFAULT_FILTER}
+        onFilter={onFilter}
+        sort={DEFAULT_SORT}
+        onSort={() => undefined}
+        count={3}
+        {...extra}
+        {...(extra.ownership === undefined ? {} : { onOwnership })}
+      />,
+    );
+    return { onFilter, onOwnership };
+  }
+
+  it("R3734000 shows keyword and ownership chips only when it is given them", () => {
+    bar();
+    expect(screen.queryByTestId(filterKeywordId("Taunt"))).toBeNull();
+    expect(screen.queryByTestId(filterOwnershipId("owned"))).toBeNull();
+    expect(screen.getByTestId(DB_FILTER_OWNED)).toBeInTheDocument();
+    cleanup();
+    bar({ keywords: ["Taunt", "Rush"], ownership: "all" });
+    expect(screen.getByTestId(filterKeywordId("Taunt"))).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByTestId(filterKeywordId("Rush"))).toBeInTheDocument();
+    expect(screen.getByTestId(filterOwnershipId("all"))).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId(filterOwnershipId("owned"))).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByTestId(filterOwnershipId("missing"))).toBeInTheDocument();
+    // The chips stand in for the box.
+    expect(screen.queryByTestId(DB_FILTER_OWNED)).toBeNull();
+  });
+
+  it("R3734000 a keyword chip toggles filter.keywords, an ownership chip reports its view and Clear resets both", () => {
+    const { onFilter, onOwnership } = bar({ keywords: ["Taunt"], ownership: "owned" });
+    fireEvent.click(screen.getByTestId(filterKeywordId("Taunt")));
+    expect(onFilter).toHaveBeenLastCalledWith({ ...DEFAULT_FILTER, keywords: new Set(["Taunt"]) });
+    fireEvent.click(screen.getByTestId(filterOwnershipId("missing")));
+    expect(onOwnership).toHaveBeenLastCalledWith("missing");
+    fireEvent.click(screen.getByTestId(DB_FILTER_CLEAR));
+    expect(onFilter).toHaveBeenLastCalledWith(DEFAULT_FILTER);
+    expect(onOwnership).toHaveBeenLastCalledWith("all");
+  });
+
+  it("R3734000 the toolbar part is the search, the sort, the count and Clear alone, and the chips part every chip row, open, with no fold", () => {
+    bar({ part: "toolbar", keywords: FILTER_KEYWORDS, ownership: "all" });
+    expect(screen.getByTestId(DB_SEARCH)).toBeInTheDocument();
+    expect(screen.getByTestId(DB_SORT)).toBeInTheDocument();
+    expect(screen.getByTestId(DB_RESULT_COUNT)).toBeInTheDocument();
+    expect(screen.getByTestId(DB_FILTER_CLEAR)).toBeInTheDocument();
+    expect(screen.queryByTestId(filterCostId("2"))).toBeNull();
+    expect(screen.queryByTestId(filterKeywordId("Taunt"))).toBeNull();
+    expect(screen.queryByTestId(filterOwnershipId("owned"))).toBeNull();
+    expect(screen.queryByTestId("db-filter-toggle")).toBeNull();
+    cleanup();
+    bar({ part: "chips", keywords: FILTER_KEYWORDS, ownership: "all" });
+    expect(screen.queryByTestId(DB_FILTERS)).toBeNull();
+    const chips = screen.getByRole("group", { name: "Filters" });
+    expect(chips).toHaveClass("db-filters--chips");
+    expect(chips).toHaveAttribute("data-expanded", "true");
+    expect(screen.queryByTestId(DB_SEARCH)).toBeNull();
+    expect(screen.queryByTestId(DB_SORT)).toBeNull();
+    expect(screen.queryByTestId("db-filter-toggle")).toBeNull();
+    for (const id of [filterCostId("2"), filterSetId("Core"), filterTypeId("Unit"), filterRarityId("Rare"), filterKeywordId("Taunt"), filterOwnershipId("owned")]) {
+      expect(screen.getByTestId(id), id).toBeInTheDocument();
+    }
+  });
+
+  it("R3734000 the Set and Newest sorts are offered, and a bar given its own sorts offers those alone", () => {
+    bar();
+    const options = within(screen.getByTestId(DB_SORT)).getAllByRole("option").map((option) => option.textContent);
+    expect(options).toContain("Set");
+    expect(options).toContain("Newest");
+    expect(options).toContain("Win %");
+    cleanup();
+    bar({ sorts: ["cost", "newest"] });
+    expect(within(screen.getByTestId(DB_SORT)).getAllByRole("option").map((option) => option.textContent)).toEqual(["Cost", "Newest"]);
   });
 });

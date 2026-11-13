@@ -262,6 +262,9 @@ pub struct TriggerDef {
     /// though the card has left the field since, as the snapshot it killed with
     /// (`triggers::offer_to_gone_killer`).
     pub even_if_gone: bool,
+    /// R3695000: the trigger is "Float reduces cost" (`float::float_reduces_cost`): its card costs its
+    /// owner's Float less. The AI reads it (`float::float_cuts_in_hand`).
+    pub lowers_cost_on_float: bool,
 }
 
 impl TriggerDef {
@@ -276,6 +279,7 @@ impl TriggerDef {
             when: None,
             run: Arc::new(run),
             even_if_gone: false,
+            lowers_cost_on_float: false,
         }
     }
 
@@ -290,6 +294,12 @@ impl TriggerDef {
     /// R2396000: the same trigger, answering a kill even once its card is gone.
     pub fn even_if_gone(mut self) -> TriggerDef {
         self.even_if_gone = true;
+        self
+    }
+
+    /// R3695000: the same trigger, marked as "Float reduces cost".
+    pub fn lowers_cost_on_float(mut self) -> TriggerDef {
+        self.lowers_cost_on_float = true;
         self
     }
 }
