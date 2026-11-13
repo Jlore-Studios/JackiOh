@@ -836,10 +836,6 @@
   .prompt[data-prompt-kind="x"]:not([data-prompt-layout="cards"]) {
     width: min(262px, 100%);
   }
-
-  .prompt[data-prompt-kind="zone"] .prompt-zones {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 
 @media (min-width: 601px) and (max-width: 899px) and (min-height: 501px),
@@ -869,18 +865,8 @@
     padding-top: var(--space-5);
   }
 
-  /* All five lanes in one row: the sheet stays short enough to leave the field in view. */
-  .prompt[data-prompt-kind="zone"] .prompt-zones {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-
-  .prompt[data-prompt-kind="zone"] .prompt-zones button {
-    padding: var(--space-2) var(--space-1);
-    font-size: var(--type-xs);
-    line-height: 1.15;
-  }
-
-  /* With drag to play on, a play's zone, target or tribute pick on a phone held upright is a slim
+  /* With drag to play on, a play's target or tribute pick (not a one-zone pick, #3864: that is the pill
+     below) on a phone held upright is a slim
      bar along the bottom edge, over the control bar: its title, Confirm and Cancel, and no list.
      The answers already glow on the board and are picked there by a tap (click-click) or a drop,
      and a sheet of options covered the card that had just been tapped up to be read, and the rest
@@ -888,8 +874,7 @@
      engine prompt (`data-prompt-source="engine"`) keeps its sheet either way. */
   /* #3633: Game's `data-drag` on its root, where this read `.game:has(> .board[data-drag="on"])`; the doubled
      attribute keeps that specificity. */
-  .game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:is(
-      [data-prompt-kind="zone"],
+  .game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:not([data-board-pick]):is(
       [data-prompt-kind="target"],
       [data-prompt-kind="tribute"]
     ) {
@@ -907,8 +892,7 @@
   /* With no options in the bar, a new player did not know to tap the board: a small line under the
      title says where the answers are. Title and hint share the height of the buttons beside them,
      so the bar is no taller for it. */
-  .game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:is(
-      [data-prompt-kind="zone"],
+  .game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:not([data-board-pick]):is(
       [data-prompt-kind="target"],
       [data-prompt-kind="tribute"]
     )
@@ -926,17 +910,15 @@
     white-space: nowrap;
   }
 
-  .game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:is(
-      [data-prompt-kind="zone"],
+  .game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:not([data-board-pick]):is(
       [data-prompt-kind="target"],
       [data-prompt-kind="tribute"]
     )
-    > :is(.prompt-count, .prompt-zones, .prompt-list, .prompt-board-note) {
+    > :is(.prompt-count, .prompt-list, .prompt-board-note) {
     display: none;
   }
 
-  .game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:is(
-      [data-prompt-kind="zone"],
+  .game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:not([data-board-pick]):is(
       [data-prompt-kind="target"],
       [data-prompt-kind="tribute"]
     )
@@ -949,8 +931,7 @@
     white-space: nowrap;
   }
 
-  .game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:is(
-      [data-prompt-kind="zone"],
+  .game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:not([data-board-pick]):is(
       [data-prompt-kind="target"],
       [data-prompt-kind="tribute"]
     )
@@ -963,8 +944,7 @@
     border-top: 0;
   }
 
-  .game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:is(
-      [data-prompt-kind="zone"],
+  .game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:not([data-board-pick]):is(
       [data-prompt-kind="target"],
       [data-prompt-kind="tribute"]
     )
@@ -1001,15 +981,6 @@
     border-bottom: 1px solid var(--line-bright);
     border-right: 0;
     border-radius: var(--radius-lg) 0 0 var(--radius-lg);
-  }
-
-  .prompt[data-prompt-kind="zone"] .prompt-zones {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .prompt[data-prompt-kind="zone"] .prompt-zones button {
-    padding: var(--space-2);
-    font-size: var(--type-xs);
   }
 
   .prompt[data-prompt-kind] .prompt-actions button {
@@ -1268,19 +1239,19 @@
     0 0 14px color-mix(in srgb, var(--pal-ember-500) 25%, transparent);
 }
 
-/* --- a Choose one of lanes is its lanes on the board (#2757) --- */
+/* --- a choice made on the board: a Choose one of lanes (#2757), one board zone (#3864) --- */
 
 /* Last in the sheet, so each rule beats the small pickers' docks of the same weight above. No dim and no
    panel: the lanes are lit on the board (LanePick.tsx), and what is left is a hint and Cancel in one pill at the
    foot of the screen, clear of the home indicator, solid so it reads over the hand and the control bar it covers
    (as the phone's target bar does). A replay's top placement is more specific and wins. */
-.prompt-scrim:has(> .prompt[data-lane-pick]) {
+.prompt-scrim:has(> .prompt[data-board-pick]) {
   place-items: end center;
   padding: var(--space-6) max(var(--space-6), env(safe-area-inset-right)) max(var(--space-6), env(safe-area-inset-bottom)) max(var(--space-6), env(safe-area-inset-left));
   background: transparent;
 }
 
-.prompt[data-prompt-kind][data-lane-pick] {
+.prompt[data-prompt-kind][data-board-pick] {
   flex-direction: row;
   align-items: center;
   gap: var(--space-5);
@@ -1294,21 +1265,21 @@
   box-shadow: var(--shadow-2);
 }
 
-.prompt[data-prompt-kind][data-lane-pick] > :is(.prompt-board-hint, .prompt-title) {
+.prompt[data-prompt-kind][data-board-pick] > :is(.prompt-board-hint, .prompt-title) {
   display: block;
   max-width: none;
   margin: 0;
   font-size: var(--type-sm);
 }
 
-.prompt[data-prompt-kind][data-lane-pick] > .prompt-actions {
+.prompt[data-prompt-kind][data-board-pick] > .prompt-actions {
   position: static;
   padding: 0;
   border-top: 0;
   background: transparent;
 }
 
-.prompt[data-prompt-kind][data-lane-pick] > .prompt-actions button {
+.prompt[data-prompt-kind][data-board-pick] > .prompt-actions button {
   flex: 0 0 auto;
   min-width: 0;
   padding-inline: var(--space-7);

@@ -373,7 +373,7 @@ function signInThroughForm(email: string): void {
 
   it("the account screen shows who you are signed in as, and your record", () => {
     signInThroughForm(P1);
-    cy.visit("/account");
+    cy.visit("/account?section=overview");
 
     cy.get('[data-testid="account-email"]', { timeout: 40_000 }).should("contain.text", P1);
     cy.get('[data-testid="account-status"]').should("have.attr", "data-status", "active");
