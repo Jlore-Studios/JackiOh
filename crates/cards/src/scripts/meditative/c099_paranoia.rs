@@ -1,12 +1,16 @@
 //! M #99 Paranoia (SPEC §8.8 row 99): (2) Field Spell, Epic.
 //!
-//! Base:    "Aura: Your Spells have Cloaked.
+//! Base:    "Aura: Your Spells have Cloaked. Spells you set face-down resolve when set and when
+//!           revealed.
 //!           Cry: Draw {draw}."
-//! Radiant: "Aura: Your Spells have Cloaked. Spells you reveal have Echo +{echo}.
+//! Radiant: "Aura: Your Spells have Cloaked. Spells you set face-down resolve when set and when
+//!           revealed. Spells you reveal have Echo +{echo}.
 //!           Cry: Draw {draw}."
 //! Engine: Cloaked for the Spells in its controller's hand while it acts (`cloak_hand_aura`, R1044);
-//! the Radiant face's Echo +{echo} for each Spell its controller reveals while it acts, read as the
-//! Spell reveals (`reveal_echo`, R1045); the Cry draws.
+//! a Spell its controller sets face-down while it acts resolves as it is set, its choices prompted,
+//! and stays set to resolve again as it reveals (`resolves_set_spells`, R3806000); the Radiant face's
+//! Echo +{echo} for each Spell its controller reveals while it acts, read as the Spell reveals
+//! (`reveal_echo`, R1045), never as it is set; the Cry draws. Kept script v0.5.12ap (R767000).
 
 use jackioh_engine::alt_play::cloak_hand_aura;
 use jackioh_engine::prelude::*;
@@ -21,6 +25,7 @@ fn paranoia(radiant: bool) -> Script {
         })),
         aura: Some(cloak_hand_aura(CardType::Spell)),
         reveal_echo: radiant.then(|| -> RevealEchoHook { Arc::new(|args| param(&args, "echo")) }),
+        resolves_set_spells: true,
         ..Script::default()
     }
 }
@@ -32,6 +37,15 @@ pub fn script() -> CardScripts {
     }
 }
 
+/// R767000: the script v0.5.12ap and before ran: a set Spell resolved only as it revealed (before
+/// R3806000). `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_12ap() -> CardScripts {
+    let mut scripts = script();
+    scripts.base.resolves_set_spells = false;
+    scripts.radiant.resolves_set_spells = false;
+    scripts
+}
+
 // M #99 Paranoia — SPEC §8.8 row 99, BUILD M10 row M 99.
 #[cfg(test)]
 mod tests {
@@ -39,6 +53,7 @@ mod tests {
     use jackioh_engine::prelude::keywords_of;
     use jackioh_engine::testkit::*;
 
+    use super::script_v0_5_12ap;
     use crate::scenario;
 
     const P1: PlayerId = PlayerId::P1;
@@ -54,6 +69,8 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // Hit Job: destroy a Unit
     const SURGERY: &str = "core-063"; // Plastic Surgery: buff a Unit, a needed target (R703)
     const GREAT_WALL: &str = "meditative-097-7"; // The Great Wall: Immutable
+    const TRUE_STRIKE: &str = "core-044"; // True Strike: deal 4 to a target, exile this
+    const CATALYST_COMET: &str = "stinkyscape-156"; // Catalyst Comet: add a Catalyst card, shuffle this into your deck
 
     /// Answer the open Target prompt at the enemy hero.
     fn answer_hero(s: &mut Scenario) {
@@ -113,6 +130,34 @@ mod tests {
 
     fn paranoid(seed: &str, hand: Value, p1_field: Value, p2: Value) -> Scenario {
         paranoid_as(seed, false, hand, p1_field, p2)
+    }
+
+    /// No Paranoia out: `hand` in p1's hand, each card of `cloaked` given Cloaked by a Buff (R2727000).
+    fn buffed(seed: &str, hand: Value, cloaked: &[&str]) -> Scenario {
+        let mut s = scenario(json!({
+            "seed": seed,
+            "p1": { "mana": 8, "hand": hand, "library": [VANILLA, VANILLA] },
+            "p2": { "hand": [VANILLA], "library": [VANILLA, VANILLA] },
+        }));
+        for def in cloaked {
+            let id = in_hand(&s, def).id;
+            s.card_mut(id.as_str()).tuning = Some(Tuning {
+                add_keywords: Some(vec![Keyword::Cloaked]),
+                ..Tuning::default()
+            });
+        }
+        s
+    }
+
+    /// Whether p2's view names the definition anywhere: its board, its events, its prompts (R1046).
+    fn named_to_p2(s: &Scenario, def: &str) -> bool {
+        serde_json::to_string(&s.view(P2))
+            .expect("a view serializes")
+            .contains(def)
+    }
+
+    fn open_kind(s: &Scenario) -> Option<PromptKind> {
+        s.state().pending.as_ref().map(|pending| pending.kind)
     }
 
     /// Set the card of `def` face-down by its Cloaked into backrow lane 2; the set card's fresh id.
@@ -204,14 +249,15 @@ mod tests {
                 json!({}),
             );
             let health = s.state().players.p2.hero.health;
-            // Setting the Spell deals nothing: its text waits for the reveal.
+            // Set, it resolves as it is set (R3806000): its 3 to the chosen hero is a Trap's, so
+            // Solarius's Spell Damage +2 adds nothing (MD-E17).
             let eclipse = set(&mut s, ECLIPSE);
-            assert_eq!(s.state().players.p2.hero.health, health);
-            // Revealed, it deals its 3 to the chosen hero: its damage is a Trap's, so Solarius's
-            // Spell Damage +2 adds nothing (MD-E17).
-            reveal(&mut s, &eclipse);
             answer_hero(&mut s);
             assert_eq!(s.state().players.p2.hero.health, health - 3);
+            // Revealed, it deals its 3 again, a Trap's still.
+            reveal(&mut s, &eclipse);
+            answer_hero(&mut s);
+            assert_eq!(s.state().players.p2.hero.health, health - 6);
         }
 
         #[test]
@@ -275,24 +321,35 @@ mod tests {
             let mut s = paranoid("paranoia-reveal", json!([ECLIPSE, VANILLA]), json!([]), json!({}));
             let health = s.state().players.p2.hero.health;
             let eclipse = set(&mut s, ECLIPSE);
+            answer_hero(&mut s);
             s.end_turn().end_turn().end_turn().end_turn();
             assert!(s.state().pending.is_none());
             s.expect_in_zone(&eclipse, "field");
             reveal(&mut s, &eclipse);
-            assert_eq!(
-                s.state().pending.as_ref().map(|p| p.kind),
-                Some(PromptKind::Target)
-            );
+            assert_eq!(open_kind(&s), Some(PromptKind::Target));
             answer_hero(&mut s);
-            assert_eq!(s.state().players.p2.hero.health, health - 3);
+            assert_eq!(s.state().players.p2.hero.health, health - 6);
             assert!(in_grave(&s, ECLIPSE).is_some());
         }
 
         #[test]
-        fn r1044_r703_with_no_legal_target_it_needs_its_reveal_is_not_offered() {
-            // Plastic Surgery's Unit target is needed (R703), set with no Unit anywhere: no Reveal.
+        fn r1044_r703_r3806000_a_needed_target_with_no_pick_bars_the_set_under_paranoia_and_the_reveal_under_a_buff()
+         {
+            // Plastic Surgery's Unit target is needed (R703). Under Paranoia it would resolve as it is
+            // set, so with no Unit anywhere it is neither offered set nor set.
             let mut s = paranoid("paranoia-fizzle", json!([SURGERY, VANILLA]), json!([]), json!({}));
+            let surgery = in_hand(&s, SURGERY);
+            assert!(cloaked(&s, &surgery.id));
+            assert_eq!(set_plays(&s, &surgery.id), vec![]);
+            s.expect_refused(|s| {
+                s.play(&surgery.id, json!({ "zone": 2, "row": "backrow", "faceDown": "cloaked" }))
+            });
+
+            // Cloaked by a Buff with no Paranoia out, it is set, resolving nothing, and its Reveal waits
+            // for a Unit.
+            let mut s = buffed("paranoia-fizzle-buffed", json!([SURGERY, VANILLA]), &[SURGERY]);
             let surgery = set(&mut s, SURGERY);
+            assert!(s.state().pending.is_none());
             assert!(!reveal_offered(&s, &surgery));
             s.expect_refused(|s| s.activate(surgery.as_str(), json!({ "ability": CLOAKED_REVEAL })));
             s.expect_in_zone(&surgery, "field");
@@ -316,6 +373,8 @@ mod tests {
         fn r1044_it_goes_to_your_graveyard_as_the_spell() {
             let mut s = paranoid("paranoia-grave", json!([ECLIPSE, VANILLA]), json!([]), json!({}));
             let eclipse = set(&mut s, ECLIPSE);
+            answer_hero(&mut s);
+            assert!(in_grave(&s, ECLIPSE).is_none(), "still set after it resolved as it was set");
             reveal(&mut s, &eclipse);
             answer_hero(&mut s);
             let card = in_grave(&s, ECLIPSE).expect("the Spell in the graveyard");
@@ -329,19 +388,22 @@ mod tests {
             let mut s = paranoid("paranoia-left", json!([ECLIPSE, VANILLA]), json!([]), json!({}));
             let health = s.state().players.p2.hero.health;
             let eclipse = set(&mut s, ECLIPSE);
+            answer_hero(&mut s);
             paranoia_leaves(&mut s);
             s.expect_in_zone(&eclipse, "field");
             s.end_turn().end_turn();
             s.expect_in_zone(&eclipse, "field");
+            // Paranoia gone, it still resolves as it reveals (R3806000).
             reveal(&mut s, &eclipse);
             answer_hero(&mut s);
-            assert_eq!(s.state().players.p2.hero.health, health - 3);
+            assert_eq!(s.state().players.p2.hero.health, health - 6);
         }
 
         #[test]
         fn r1045_bounced_it_is_the_spell_again() {
             let mut s = paranoid("paranoia-bounce", json!([ECLIPSE, VANILLA]), json!([]), json!({}));
             let eclipse = set(&mut s, ECLIPSE);
+            answer_hero(&mut s);
             let card = s.card(eclipse.as_str()).clone();
             assert!(card.set_as.is_some());
             {
@@ -372,21 +434,27 @@ mod tests {
             );
             let wall = s.unit(P2, 1).expect("the Wall").id;
             let eclipse = set(&mut s, ECLIPSE);
-            reveal(&mut s, &eclipse);
-            let pending = s.state().pending.clone().expect("the Target prompt");
-            assert!(
-                !pending
-                    .options
-                    .iter()
-                    .any(|option| option.selection == Selection::Instance { instance_id: wall.clone() }),
-                "the Immutable Wall is never offered"
-            );
-            assert!(
-                pending
-                    .options
-                    .iter()
-                    .any(|option| option.selection == Selection::Hero { player: P2 })
-            );
+            // As it is set (R3806000) and as it reveals, its prompt never lists the Wall.
+            for resolution in ["set", "reveal"] {
+                if resolution == "reveal" {
+                    reveal(&mut s, &eclipse);
+                }
+                let pending = s.state().pending.clone().expect("the Target prompt");
+                assert!(
+                    !pending
+                        .options
+                        .iter()
+                        .any(|option| option.selection == Selection::Instance { instance_id: wall.clone() }),
+                    "the Immutable Wall is never offered as it resolves at its {resolution}"
+                );
+                assert!(
+                    pending
+                        .options
+                        .iter()
+                        .any(|option| option.selection == Selection::Hero { player: P2 })
+                );
+                answer_hero(&mut s);
+            }
         }
 
         #[test]
@@ -406,10 +474,135 @@ mod tests {
             let mut s = paranoid("paranoia-no-echo", json!([ECLIPSE, VANILLA]), json!([]), json!({}));
             let health = s.state().players.p2.hero.health;
             let eclipse = set(&mut s, ECLIPSE);
+            answer_hero(&mut s);
             reveal(&mut s, &eclipse);
             answer_hero(&mut s);
             assert!(s.state().pending.is_none(), "no Echo repeat");
+            assert_eq!(s.state().players.p2.hero.health, health - 6);
+        }
+
+        #[test]
+        fn r3806000_a_spell_set_under_paranoia_resolves_as_it_is_set_and_again_as_it_reveals() {
+            let mut s = paranoid("paranoia-twice", json!([ECLIPSE, VANILLA]), json!([]), json!({}));
+            let health = s.state().players.p2.hero.health;
+            let eclipse = set(&mut s, ECLIPSE);
+            // Its target is asked as it is set (R467), and p2 is never told which Spell asks.
+            assert_eq!(open_kind(&s), Some(PromptKind::Target));
+            assert!(!named_to_p2(&s, ECLIPSE));
+            answer_hero(&mut s);
             assert_eq!(s.state().players.p2.hero.health, health - 3);
+
+            // It stays set: face-down in its zone, a Trap, hidden from p2, its Reveal offered.
+            let still = s.backrow(P1, 2).expect("the set Spell");
+            assert_eq!(still.id, eclipse);
+            assert_eq!(still.face_up, None);
+            assert_eq!(still.set_as.and_then(|set| set.revealing), None);
+            assert_eq!(card_type_of(s.state(), &still), CardType::Trap);
+            assert!(reveal_offered(&s, &eclipse));
+            assert!(!named_to_p2(&s, ECLIPSE));
+            let foe = serde_json::to_value(s.view(P2).opponent.backrow[1].clone()).unwrap();
+            assert_eq!(foe["faceDown"], json!(true));
+            assert!(foe.get("defId").is_none());
+            // One Trap play: its resolution as it was set is no play (R70).
+            let by_type = s
+                .state()
+                .players
+                .p1
+                .turn_log
+                .played_by_type
+                .clone()
+                .unwrap_or_default();
+            assert_eq!(by_type.get(&CardType::Trap), Some(&1), "{by_type:?}");
+            assert_eq!(by_type.get(&CardType::Spell), None);
+
+            reveal(&mut s, &eclipse);
+            assert_eq!(open_kind(&s), Some(PromptKind::Target));
+            answer_hero(&mut s);
+            assert_eq!(s.state().players.p2.hero.health, health - 6);
+            assert!(in_grave(&s, ECLIPSE).is_some());
+        }
+
+        #[test]
+        fn r3806000_a_spell_set_by_a_buffed_cloaked_with_no_paranoia_out_resolves_only_as_it_reveals() {
+            let mut s = buffed("paranoia-buffed", json!([ECLIPSE, VANILLA]), &[ECLIPSE]);
+            let health = s.state().players.p2.hero.health;
+            let eclipse = set(&mut s, ECLIPSE);
+            assert!(s.state().pending.is_none(), "nothing asked as it is set");
+            assert_eq!(s.state().players.p2.hero.health, health);
+            reveal(&mut s, &eclipse);
+            assert_eq!(open_kind(&s), Some(PromptKind::Target));
+            answer_hero(&mut s);
+            assert_eq!(s.state().players.p2.hero.health, health - 3);
+        }
+
+        #[test]
+        fn r3806000_a_spell_that_exiles_itself_stays_set_at_its_set_and_is_exiled_as_it_reveals() {
+            let mut s = paranoid("paranoia-exile", json!([TRUE_STRIKE, VANILLA]), json!([]), json!({}));
+            let health = s.state().players.p2.hero.health;
+            let strike = set(&mut s, TRUE_STRIKE);
+            answer_hero(&mut s);
+            assert_eq!(s.state().players.p2.hero.health, health - 4);
+            // "Exile this" names where its reveal sends it: as it is set it stays set.
+            assert_eq!(s.backrow(P1, 2).map(|card| card.id), Some(strike.clone()));
+            assert!(s.state().players.p1.exile.is_empty());
+            reveal(&mut s, &strike);
+            answer_hero(&mut s);
+            assert_eq!(s.state().players.p2.hero.health, health - 8);
+            assert!(s.backrow(P1, 2).is_none());
+            assert!(
+                s.state()
+                    .players
+                    .p1
+                    .exile
+                    .iter()
+                    .any(|card| card.def_id == TRUE_STRIKE),
+                "exiled as it reveals"
+            );
+            assert!(in_grave(&s, TRUE_STRIKE).is_none());
+        }
+
+        #[test]
+        fn r3806000_a_spell_that_shuffles_itself_into_the_deck_stays_set_at_its_set() {
+            let mut s = paranoid("paranoia-shuffle", json!([CATALYST_COMET, VANILLA]), json!([]), json!({}));
+            let others = |s: &Scenario| {
+                s.hand(P1)
+                    .iter()
+                    .filter(|card| card.def_id != VANILLA && card.def_id != CATALYST_COMET)
+                    .count()
+            };
+            let in_library = |s: &Scenario| {
+                s.state()
+                    .players
+                    .p1
+                    .library
+                    .iter()
+                    .filter(|card| card.def_id == CATALYST_COMET)
+                    .count()
+            };
+            let comet = set(&mut s, CATALYST_COMET);
+            assert!(s.state().pending.is_none());
+            // Its Catalyst card is added as it is set, and "shuffle this into your deck" waits.
+            assert_eq!(others(&s), 1);
+            assert_eq!(s.backrow(P1, 2).map(|card| card.id), Some(comet.clone()));
+            assert_eq!(in_library(&s), 0);
+            reveal(&mut s, &comet);
+            assert_eq!(others(&s), 2);
+            assert!(s.backrow(P1, 2).is_none());
+            assert_eq!(in_library(&s), 1, "shuffled in as it reveals");
+        }
+
+        #[test]
+        fn r767000_r3806000_the_kept_v0_5_12ap_script_resolves_nothing_as_a_spell_is_set() {
+            crate::under_kept(PARANOIA, script_v0_5_12ap(), || {
+                let mut s = paranoid("paranoia-kept", json!([ECLIPSE, VANILLA]), json!([]), json!({}));
+                let health = s.state().players.p2.hero.health;
+                let eclipse = set(&mut s, ECLIPSE);
+                assert!(s.state().pending.is_none(), "nothing asked as it is set");
+                assert_eq!(s.state().players.p2.hero.health, health);
+                reveal(&mut s, &eclipse);
+                answer_hero(&mut s);
+                assert_eq!(s.state().players.p2.hero.health, health - 3);
+            });
         }
     }
 
@@ -422,23 +615,23 @@ mod tests {
         }
 
         #[test]
-        fn r1045_radiant_gives_a_revealed_spell_echo_plus_one() {
+        fn r1045_r3806000_radiant_gives_a_revealed_spell_echo_plus_one_and_one_set_none() {
             let mut s = radiant_paranoid("paranoia-echo", json!([]));
             let health = s.state().players.p2.hero.health;
             let eclipse = set(&mut s, ECLIPSE);
-            reveal(&mut s, &eclipse);
-            assert_eq!(
-                s.state().pending.as_ref().map(|pending| pending.kind),
-                Some(PromptKind::Target)
-            );
+            // As it is set, its Echo is its own, none: one resolution.
+            assert_eq!(open_kind(&s), Some(PromptKind::Target));
             answer_hero(&mut s);
-            assert_eq!(
-                s.state().pending.as_ref().map(|pending| pending.kind),
-                Some(PromptKind::Target)
-            );
+            assert!(s.state().pending.is_none(), "no Echo repeat as it is set");
+            assert_eq!(s.state().players.p2.hero.health, health - 3);
+            // As it reveals, Echo +1: two, each with its prompt.
+            reveal(&mut s, &eclipse);
+            assert_eq!(open_kind(&s), Some(PromptKind::Target));
+            answer_hero(&mut s);
+            assert_eq!(open_kind(&s), Some(PromptKind::Target));
             answer_hero(&mut s);
             assert!(s.state().pending.is_none());
-            assert_eq!(s.state().players.p2.hero.health, health - 6);
+            assert_eq!(s.state().players.p2.hero.health, health - 9);
         }
 
         #[test]
@@ -446,11 +639,12 @@ mod tests {
             let mut s = radiant_paranoid("paranoia-echo-left", json!([]));
             let health = s.state().players.p2.hero.health;
             let eclipse = set(&mut s, ECLIPSE);
+            answer_hero(&mut s);
             paranoia_leaves(&mut s);
             reveal(&mut s, &eclipse);
             answer_hero(&mut s);
             assert!(s.state().pending.is_none(), "no Echo repeat");
-            assert_eq!(s.state().players.p2.hero.health, health - 3);
+            assert_eq!(s.state().players.p2.hero.health, health - 6);
         }
 
         #[test]
@@ -461,21 +655,28 @@ mod tests {
             );
             let health = s.state().players.p2.hero.health;
             let eclipse = set(&mut s, ECLIPSE);
+            answer_hero(&mut s);
+            assert!(s.state().pending.is_none(), "no Echo as it is set");
             reveal(&mut s, &eclipse);
             answer_hero(&mut s);
             answer_hero(&mut s);
             assert!(s.state().pending.is_none(), "one repeat, not two");
-            assert_eq!(s.state().players.p2.hero.health, health - 6);
+            assert_eq!(s.state().players.p2.hero.health, health - 9);
         }
 
         #[test]
-        fn r1045_the_radiant_face_prints_the_echo_on_its_aura_line() {
+        fn r1045_r3806000_the_faces_print_their_aura_lines() {
             let def = crate::card_def(PARANOIA);
             assert_eq!(
                 def.radiant.text,
-                "Aura: Your Spells have Cloaked. Spells you reveal have Echo +{echo}.\nCry: Draw {draw}."
+                "Aura: Your Spells have Cloaked. Spells you set face-down resolve when set and when revealed. \
+                 Spells you reveal have Echo +{echo}.\nCry: Draw {draw}."
             );
-            assert_eq!(def.base.text, "Aura: Your Spells have Cloaked.\nCry: Draw {draw}.");
+            assert_eq!(
+                def.base.text,
+                "Aura: Your Spells have Cloaked. Spells you set face-down resolve when set and when \
+                 revealed.\nCry: Draw {draw}."
+            );
         }
     }
 }

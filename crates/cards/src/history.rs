@@ -46,7 +46,8 @@ use crate::scripts::meditative::{
     c053_prestige, c054_money_machine, c063_skull_of_jnari, c074_montana_giant, c080_aluneth,
     c081_deadmans_hand, c085_playtester, c090_spell_basket, c093_1_growing_felinor_sr,
     c093_2_growing_felinor_sr_sr, c093_3_growing_felinor_super_senior, c093_growing_felinor,
-    c094_shrinking_felinor, c095_1_cn_golem, c097_2_wishing_well, c097_8_prison, c102_catboy_maid_ssr,
+    c094_shrinking_felinor, c095_1_cn_golem, c097_2_wishing_well, c097_8_prison, c099_paranoia,
+    c102_catboy_maid_ssr,
 };
 use crate::scripts::meditative_plus::{
     c001_bobs_plan, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves, c022_mountaintop_garden,
@@ -642,6 +643,7 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c016_conjure_rush_token::script_v0_5_11o,
     ),
     (c047_taotie::ID, "v0.5.11r", c047_taotie::script_v0_5_11o),
+    (c099_paranoia::ID, "v0.5.12ap", c099_paranoia::script_v0_5_12ap),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

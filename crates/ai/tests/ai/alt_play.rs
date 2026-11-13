@@ -10,7 +10,7 @@ use jackioh_engine::testkit::{
     json, legal_actions, register_catalog, register_scripts, registered_catalog, registered_scripts,
 };
 
-use super::support::{AI, HUMAN, register_cards, scenario};
+use super::support::{AI, HUMAN, register_cards, run_puzzle, scenario, trace};
 
 const BREAKER: &str = "meditative-045";
 const VANILLA: &str = "core-008";
@@ -246,4 +246,40 @@ fn r783009_determinize_samples_a_printed_cloaked_card_stamped_cloaked() {
         }
     }
     assert!(cloaked > 0, "the Cloaked card was never sampled in 300 worlds");
+}
+
+/// R3806000: under Paranoia a set Spell resolves as it is set and again as it reveals, and the AI counts
+/// both: p2 at 6, Lunar Eclipse's 3 played face-up is no lethal, set and revealed it is.
+#[test]
+fn r3806000_the_ai_sets_a_spell_under_paranoia_and_reveals_it_for_lethal() {
+    let run = run_puzzle(
+        "paranoia-set-lethal",
+        json!({
+            "p1": {
+                "mana": 1,
+                "hand": ["core-035"],
+                "field": [{ "def": "meditative-099", "lane": 1 }],
+                "library": [VANILLA, VANILLA],
+            },
+            "p2": { "health": 6, "library": [VANILLA, VANILLA] },
+        }),
+    );
+    assert_eq!(
+        run.end.result.and_then(|result| result.winner.player()),
+        Some(AI),
+        "{}",
+        trace(&run.turn)
+    );
+    let first = run.turn.decisions.first().map(|decision| decision.action.clone());
+    assert!(
+        matches!(
+            first,
+            Some(ActionBody::Play {
+                face_down: Some(RevealAt::Cloaked),
+                ..
+            })
+        ),
+        "{}",
+        trace(&run.turn)
+    );
 }

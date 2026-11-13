@@ -6,9 +6,9 @@ use jackioh_engine::testkit::*;
 
 use super::fixtures::harness::{act, act_result, put, slot};
 use super::fixtures::keywords_783::{
-    board_783 as playing, cloak_spells, cloak_units, cloaked_bolt, cloaked_field, cloaked_field_trap,
-    cloaked_mourner, cloaked_token, cloaked_trap, cloaked_unit, grunt, plain_spell, plain_unit, second_wind,
-    toe_cracker, trap_discount,
+    board_783 as playing, cloak_spells, cloak_units, cloaked_asker, cloaked_bolt, cloaked_echo,
+    cloaked_field, cloaked_field_trap, cloaked_mourner, cloaked_token, cloaked_trap, cloaked_unit, grunt,
+    plain_spell, plain_unit, second_wind, set_resolver, toe_cracker, trap_discount,
 };
 use super::fixtures::play_pipeline_b::plays_of;
 use super::fixtures::prompt_harness::{answer_keys, cast_now, open_as, round_trip};
@@ -716,5 +716,204 @@ mod r783008_leaving_unrevealed {
             settle(&mut sink, SettleOptions::default());
         }
         state.rng_cursor = rng.cursor();
+    }
+}
+
+/// R3806000: under a card that resolves set Spells (Meditative #99 Paranoia's shape), a Spell set by its
+/// Cloaked resolves as it is set, stays set and hidden, and resolves again as it reveals; a set Unit or
+/// Field Spell runs no Cry at its set.
+mod r3806000_set_time_resolution {
+    use super::*;
+
+    /// p1's turn with 10 mana and a Unit kept in hand so a set never ends the turn by itself (R82), and
+    /// the resolver acting in backrow lane 1 when `resolver` is on.
+    fn board_with(seed: &str, resolver: bool) -> GameState {
+        let mut state = playing(seed);
+        if resolver {
+            let lender = put(
+                &mut state,
+                &set_resolver().id,
+                slot(P1, Row::Backrow, 1),
+                json!({}),
+            );
+            if let Some(card) = find_instance_mut(&mut state, &lender.id) {
+                card.face_up = Some(true);
+            }
+        }
+        state.players.p1.mana.current = 10;
+        state.players.p1.mana.max = 10;
+        in_hand(&mut state, &plain_unit().id, P1);
+        state
+    }
+
+    fn resolving(seed: &str) -> GameState {
+        board_with(seed, true)
+    }
+
+    fn set_body(id: &str, lane: i32) -> Value {
+        json!({
+            "type": "play",
+            "instanceId": id,
+            "zone": { "row": "backrow", "lane": lane },
+            "faceDown": "cloaked",
+            "playerId": "p1",
+        })
+    }
+
+    fn named_to_p2(state: &GameState, def_id: &str) -> bool {
+        serde_json::to_string(&view_for(state, P2))
+            .expect("a view serializes")
+            .contains(def_id)
+    }
+
+    #[test]
+    fn r3806000_a_set_unit_or_field_spell_runs_no_cry_at_its_set_and_cries_on_its_reveal() {
+        // With the resolver out or not: it resolves set Spells, never another card's Cry.
+        for resolver in [false, true] {
+            let mut state = board_with("r3806000-no-cry", resolver);
+            let unit = in_hand(&mut state, &cloaked_unit().id, P1);
+            let field = in_hand(&mut state, &cloaked_field().id, P1);
+            let before = hero_health(&state, P2);
+            let set_unit = cloak(&mut state, &unit.id, 2);
+            assert!(state.pending.is_none(), "the Unit's Cry asks nothing at its set");
+            // The Field Spell's Cry needs no choice, and still runs nothing at its set.
+            let set_field = cloak(&mut state, &field.id, 3);
+            assert!(state.pending.is_none());
+            assert_eq!(hero_health(&state, P2), before, "no Cry ran at either set");
+
+            // Revealed, each cries as before (R783006).
+            state = act(&state, reveal_body(&set_unit.id, "p1"));
+            open_as(&state, PromptKind::Target, P1);
+            assert_eq!(answer_keys(&mut state, &["hero:p2"]).error, None);
+            assert_eq!(hero_health(&state, P2), before - 2);
+            state = act(&state, reveal_body(&set_field.id, "p1"));
+            assert_eq!(hero_health(&state, P2), before - 3);
+        }
+    }
+
+    #[test]
+    fn r3806000_a_spell_set_under_the_resolver_resolves_with_its_prompt_stays_set_and_hidden_then_resolves_again()
+     {
+        let mut state = resolving("r3806000-spell");
+        let spell = in_hand(&mut state, &cloaked_bolt().id, P1);
+        let first = put(&mut state, &grunt().id, slot(P2, Row::Units, 1), json!({}));
+        let second = put(&mut state, &grunt().id, slot(P2, Row::Units, 2), json!({}));
+        let set = cloak(&mut state, &spell.id, 2);
+
+        // Its text resolves as it is set: its Target prompt is p1's, and p2 is never told which card asks.
+        let asked = open_as(&state, PromptKind::Target, P1);
+        assert!(asked.prompt.starts_with("Set: "), "{}", asked.prompt);
+        assert!(!named_to_p2(&state, &cloaked_bolt().id));
+        // A paused set survives JSON and finishes the same (§9.3).
+        let mut copy = round_trip(&state);
+        answer_instance(&mut copy, &first.id);
+        answer_instance(&mut state, &first.id);
+        for after in [&state, &copy] {
+            assert_eq!(find_instance(after, &first.id).map(|card| card.damage), Some(2));
+            let still = must(
+                after.players.p1.backrow[1].clone(),
+                "the set Spell in backrow lane 2",
+            );
+            assert_eq!(still.id, set.id);
+            assert_eq!(still.face_up, None);
+            assert_eq!(still.set_as.and_then(|stamp| stamp.revealing), None);
+            assert_eq!(jackioh_engine::faces::card_type_of(after, &still), CardType::Trap);
+            assert!(reveal_offered(after, &set.id, P1));
+        }
+        assert_eq!(
+            serde_json::to_value(&state).ok(),
+            serde_json::to_value(&copy).ok()
+        );
+
+        // One Trap play, no Spell play (R70), and still a face-down card to p2.
+        let by_type = state
+            .players
+            .p1
+            .turn_log
+            .played_by_type
+            .clone()
+            .unwrap_or_default();
+        assert_eq!(by_type.get(&CardType::Trap).copied(), Some(1));
+        assert_eq!(by_type.get(&CardType::Spell), None);
+        assert!(!named_to_p2(&state, &cloaked_bolt().id));
+        let seen = backrow_as_seen(&state, P1, P2, 2);
+        assert_eq!(seen["faceDown"], json!(true));
+        assert!(seen.get("defId").is_none());
+
+        // Its Reveal asks again and resolves again, then it goes to the graveyard.
+        state = act(&state, reveal_body(&set.id, "p1"));
+        let asked = open_as(&state, PromptKind::Target, P1);
+        assert!(asked.prompt.starts_with("Reveal: "), "{}", asked.prompt);
+        answer_instance(&mut state, &second.id);
+        assert_eq!(find_instance(&state, &second.id).map(|card| card.damage), Some(2));
+        assert_eq!(find_instance(&state, &first.id).map(|card| card.damage), Some(2));
+        assert!(state.players.p1.backrow[1].is_none());
+        assert!(state.players.p1.graveyard.iter().any(|card| card.id == set.id));
+    }
+
+    #[test]
+    fn r3806000_r703_with_the_resolver_out_a_spell_whose_needed_target_has_no_pick_is_not_set() {
+        let mut state = resolving("r3806000-r703");
+        let spell = in_hand(&mut state, &cloaked_bolt().id, P1);
+        // No Unit anywhere: its needed target has no pick, so it would resolve with none.
+        assert_eq!(face_down_offered(&state, &spell.id, P1), Vec::<Value>::new());
+        let refused = act_result(&state, set_body(&spell.id, 2));
+        assert!(
+            refusal(&refused).contains("cannot resolve as it is set"),
+            "{}",
+            refusal(&refused)
+        );
+        put(&mut state, &grunt().id, slot(P2, Row::Units, 1), json!({}));
+        assert!(!face_down_offered(&state, &spell.id, P1).is_empty());
+    }
+
+    #[test]
+    fn r3806000_its_own_echo_repeats_at_both_resolutions() {
+        let mut state = resolving("r3806000-echo");
+        let spell = in_hand(&mut state, &cloaked_echo().id, P1);
+        let before = hero_health(&state, P2);
+        let set = cloak(&mut state, &spell.id, 2);
+        assert!(state.pending.is_none());
+        assert_eq!(hero_health(&state, P2), before - 2, "1, and its Echo 1 again");
+        let still = must(find_instance(&state, &set.id).cloned(), "the set Spell");
+        assert_eq!(still.set_as.and_then(|stamp| stamp.revealing), None);
+        state = act(&state, reveal_body(&set.id, "p1"));
+        assert_eq!(hero_health(&state, P2), before - 4);
+        assert!(state.players.p1.graveyard.iter().any(|card| card.id == set.id));
+    }
+
+    #[test]
+    fn r3806000_r113_a_text_that_asks_as_it_resolves_at_its_set_goes_dormant_once_its_tail_has_run() {
+        let mut state = resolving("r3806000-asker");
+        let spell = in_hand(&mut state, &cloaked_asker().id, P1);
+        let before = hero_health(&state, P2);
+        let set = cloak(&mut state, &spell.id, 2);
+        // Its own text asks part-way through: it is still resolving as it was set, its Reveal not offered.
+        open_as(&state, PromptKind::Mode, P1);
+        let mid = must(find_instance(&state, &set.id).cloned(), "the set Spell");
+        assert_eq!(mid.set_as.and_then(|stamp| stamp.revealing), Some(true));
+        assert_eq!(mid.face_up, None);
+        assert!(!named_to_p2(&state, &cloaked_asker().id));
+        // Answered (and round-tripped), its tail runs and then it is a dormant set Trap again (R113).
+        let mut copy = round_trip(&state);
+        for after in [&mut state, &mut copy] {
+            let key = must(after.pending.clone(), "the question").options[0].key.clone();
+            assert_eq!(answer_keys(after, &[key.as_str()]).error, None);
+            assert_eq!(hero_health(after, P2), before - 1);
+            let still = must(find_instance(after, &set.id).cloned(), "the set Spell");
+            assert_eq!(still.set_as.and_then(|stamp| stamp.revealing), None);
+            assert!(reveal_offered(after, &set.id, P1));
+        }
+        assert_eq!(
+            serde_json::to_value(&state).ok(),
+            serde_json::to_value(&copy).ok()
+        );
+        state = act(&state, reveal_body(&set.id, "p1"));
+        let key = must(state.pending.clone(), "the question again").options[0]
+            .key
+            .clone();
+        assert_eq!(answer_keys(&mut state, &[key.as_str()]).error, None);
+        assert_eq!(hero_health(&state, P2), before - 2);
+        assert!(state.players.p1.graveyard.iter().any(|card| card.id == set.id));
     }
 }

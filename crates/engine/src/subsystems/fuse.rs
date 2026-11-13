@@ -1202,6 +1202,7 @@ fn combine_objects(records: &[Script]) -> Script {
         cost_aura: eager_read(records.iter().map(|s| s.cost_aura.clone()).collect()),
         graveyard_play: eager_read(records.iter().map(|s| s.graveyard_play.clone()).collect()),
         reveal_echo: largest_read(records.iter().map(|s| s.reveal_echo.clone()).collect()),
+        resolves_set_spells: records.iter().any(|s| s.resolves_set_spells),
         targeting_discards: None,
         records_play_as: None,
         draw_limit: eager_read(records.iter().map(|s| s.draw_limit.clone()).collect()),

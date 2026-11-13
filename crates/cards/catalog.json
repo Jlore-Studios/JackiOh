@@ -16740,11 +16740,11 @@
     "loc": 29,
     "base": {
       "keywords": [],
-      "text": "Aura: Your Spells have Cloaked.\nCry: Draw {draw}."
+      "text": "Aura: Your Spells have Cloaked. Spells you set face-down resolve when set and when revealed.\nCry: Draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Your Spells have Cloaked. Spells you reveal have Echo +{echo}.\nCry: Draw {draw}."
+      "text": "Aura: Your Spells have Cloaked. Spells you set face-down resolve when set and when revealed. Spells you reveal have Echo +{echo}.\nCry: Draw {draw}."
     },
     "tags": []
   },

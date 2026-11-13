@@ -1914,7 +1914,8 @@ pub fn hand_play_choices_truncated(state: &GameState, player: PlayerId, card: &C
 }
 
 /// R783004: every face-down `play` a Cloaked card in hand could legally produce — one per price,
-/// payment, tribute set and open backrow zone. No targets or modes are declared when set.
+/// payment, tribute set and open backrow zone. No targets or modes are declared when set; a Spell that
+/// would resolve as it is set (R3806000) is set only at a price whose text has its needed picks (R703).
 fn face_down_play_actions(
     state: &GameState,
     player: PlayerId,
@@ -1933,6 +1934,9 @@ fn face_down_play_actions(
             ..card.clone()
         };
         for price in play_prices(state, player, &probe) {
+            if set_resolution_blocked(state, player, card, price.x, price.embiggen) {
+                continue;
+            }
             let paid = payments(price.cost);
             if paid.is_empty() {
                 continue;
@@ -1963,6 +1967,24 @@ fn face_down_play_actions(
         }
     }
     out
+}
+
+/// R3806000, R703: a face-down set of this Spell at this X and embiggen that would resolve as it is set
+/// (`alt_play::resolves_as_set`) while a declaration its text needs has no legal pick or its play gate
+/// does not hold (`alt_play::spell_text_can_resolve`), so it is neither listed nor accepted.
+fn set_resolution_blocked(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    x: Option<i32>,
+    embiggen: Option<bool>,
+) -> bool {
+    crate::alt_play::resolves_as_set(state, player, card)
+        && !crate::alt_play::spell_text_can_resolve(
+            state,
+            player,
+            &stamped_for_play(state, card, x, embiggen),
+        )
 }
 
 /// E11, R454: every `play` action `legal_actions` lists for a card in the player's graveyard, crossed as
@@ -2828,7 +2850,8 @@ fn refuse_modes(
 
 /// R783004: refusal for a face-down play: a card with no Cloaked (or in a graveyard), a timing other
 /// than Cloaked's (not R1044's three), a named zone outside the open backrow zones, or any target or
-/// mode. X, embiggen and tributes are still checked.
+/// mode. X, embiggen and tributes are still checked, and (R3806000, R703) a Spell that would resolve as
+/// it is set needs its text's picks, as `face_down_play_actions` lists it.
 fn why_face_down_refused(
     state: &GameState,
     player: PlayerId,
@@ -2872,6 +2895,12 @@ fn why_face_down_refused(
         ));
     }
     refuse_x(state, player, card, action.x)?;
+    if set_resolution_blocked(state, player, card, action.x, action.embiggen) {
+        return refuse(format!(
+            "{} cannot resolve as it is set now",
+            name_of(state, &card.def_id)
+        ));
+    }
     // R1181002: a card set face-down is no play Mountaintop Garden reaches, so its prices are read off
     // the card stamped set, as the listing reads them (`face_down_play_actions`).
     let set = CardInstance {

@@ -4039,8 +4039,8 @@ meditative-099: # Paranoia
     cast: They are all watching. Hide it.
   zh:
     name: 偏执
-    base: "光环：你的法术拥有隐匿。\n战吼：抽{draw}张牌。"
-    radiant: "光环：你的法术拥有隐匿。你揭示的法术拥有回响+{echo}。\n战吼：抽{draw}张牌。"
+    base: "光环：你的法术拥有隐匿。你面朝下放置的法术在放置时和揭示时各结算一次。\n战吼：抽{draw}张牌。"
+    radiant: "光环：你的法术拥有隐匿。你面朝下放置的法术在放置时和揭示时各结算一次。你揭示的法术拥有回响+{echo}。\n战吼：抽{draw}张牌。"
 meditative-100: # Greaser
   flavour: Comb in the back pocket, grease in the hair, and not one other thing on his mind.
   voice:
