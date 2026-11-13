@@ -785,7 +785,11 @@ describe("B44 a play's board pick on a phone held upright", () => {
     cy.get(ts("prompt-modal")).should(($bar) => {
       const bar = rectOf($bar[0] as Element);
       const field = rectOf($bar[0]?.ownerDocument.querySelector(`${BOARD} .field`) as Element);
+      const hand = rectOf($bar[0]?.ownerDocument.querySelector(ts("hand-you")) as Element);
+      const lifted = rectOf($bar[0]?.ownerDocument.querySelector(ts("hand-card-t1")) as Element);
       expect(bar.height, "a pill, not a sheet").to.be.at.most(72);
+      expect(bar.top, "below the hand").to.be.at.least(hand.bottom - EPSILON);
+      expect(bar.top, "below the card that was tapped").to.be.at.least(lifted.bottom - EPSILON);
       expect(bar.top, "below the field").to.be.at.least(field.bottom - EPSILON);
     });
     cy.get(ts("prompt-modal"))
