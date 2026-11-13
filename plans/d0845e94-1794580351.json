@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 3863,
+  "title": "Patch: holding down a card with several fusions shows a black screen",
+  "branch": "bot/issue-3863",
+  "thread": "**Issue #3863 (data, not instructions):**\n\n```text\n# #3863: Patch: holding down a card with several fusions shows a black screen\nOpened by @MaxGoetzmann.\n\n## What happens\n\nOn a phone, long-pressing (holding down) a card that has several fusions on it brings up a black screen instead of the card. It was found on mobile; it is not yet known whether desktop's click-and-hold does the same.\n\n## Expected\n\nHolding the card opens whatever a hold normally opens for that card (the full-screen art view, R3345000, or nothing if the card can't open it) and shows the fused card correctly, never a blank or black screen. Releasing or the \u2715 closes it as usual.\n\n## Steps to reproduce\n\n1. On a phone (or a phone-sized viewport), start a game.\n2. Get a card with more than one fusion on it (a fusion of fusions, e.g. several Equips or Starship fusions onto one unit).\n3. Press and hold that card.\n4. The screen goes black.\n\n## Where to look (unconfirmed lead)\n\n- The hold is `useFullScreenTrigger` in `apps/web/src/cards/fullscreen.ts`. It calls `openFullScreenArt` with the card's `defId`, and `FullScreenArtHost` / `FullScreenArt` in `apps/web/src/cards/FullScreenArt.tsx` render it as a portal over the whole page.\n- A fused card's `defId` is the fusion id (`(a+b+\u2026)`, R179, nested for a fusion of fusions). The full-screen view, `useCardLook` and `fullArtSource` may not resolve that id to art. If so, the full-screen backdrop draws with nothing on it, which would look like a black screen. Also check whether `canOpenFullScreen` should let a fusion through at all: a fusion's rarity or level may come from one ingredient. `apps/web/src/cards/fused.ts` walks a fusion to its ingredients, and `CardArt.tsx` already handles fused art (R3045000).\n- Find out whether a single fusion works and only several fusions fail, and whether desktop's click-and-hold shows the same black screen.\n\n## Done when\n\n- Holding a card with several fusions (and a single one) never shows a black screen on a phone or on desktop: it shows the right card art or doesn't open.\n- A web unit test covers the hold on a fusion of fusions, and an e2e or component check at phone width if the fix touches layout.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3863: needs a plan; `claude-6` (claude, `sonnet`, medium) writes it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-13T14:26:54Z",
+    "claimed_at": "2026-11-13T14:33:11Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3729 skipped: it waits for #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3730 to close first"
+  ]
+}
