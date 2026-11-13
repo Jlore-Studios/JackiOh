@@ -83,7 +83,7 @@ const UNMIGRATED: Record<string, number> = {
   "rank/rankCrest.css": 2,
   "rank/streakFlame.css": 1,
   "replay/replay.css": 2,
-  "routes/account.css": 11,
+  "routes/account.css": 9,
   "routes/command-menu.css": 7,
   "routes/dev-panel.css": 2,
   "routes/entry-card.css": 9,
