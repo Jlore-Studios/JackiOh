@@ -32233,11 +32233,6 @@
       }
     },
     "claude-8": {
-      "infra": {
-        "at": "2026-11-13T09:59:41Z",
-        "reason": "the claude CLI could not run: Failed to authenticate. API Error: 403 Attention Required! | Cloudflare",
-        "streak": 1
-      },
       "refused_until": "2026-11-12T11:30:00Z",
       "spent": [
         {
