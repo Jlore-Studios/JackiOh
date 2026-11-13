@@ -4,7 +4,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { API_REQUEST_TIMEOUT_SECONDS } from "../../web/src/wire/serverConfig.ts";
-import worker, { Server, START_WAIT_MS, type Env } from "./index.ts";
+import worker, { IMAGE_CHECK_RETRY_MS, IMAGE_CHECK_TIMEOUT_MS, Server, START_WAIT_MS, type Env } from "./index.ts";
 import { DAILY_SWEEP_CRON, DAILY_SWEEP_PATH, SERVER_PORT } from "./routing.ts";
 
 const library = vi.hoisted(() => ({
@@ -138,7 +138,7 @@ describe("the image check on the first request", () => {
     await serverWith(true).fetch(request());
 
     expect(library.containerFetch).toHaveBeenCalledOnce();
-    expect(library.containerFetch).toHaveBeenCalledWith("http://container/healthz", {}, SERVER_PORT);
+    expect(library.containerFetch).toHaveBeenCalledWith("http://container/healthz", { signal: expect.any(AbortSignal) as unknown }, SERVER_PORT);
   });
 
   it("leaves a server that is not running unchecked", async () => {
@@ -203,6 +203,186 @@ describe("the image check on the first request", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  describe("a check that did not settle, or one that did", () => {
+    const OLDER = () => new Response(null, { headers: { "x-deployed-commit": "older" } });
+
+    it("asks again after the retry interval when the check failed, and retires an older commit then", async () => {
+      vi.useFakeTimers();
+      try {
+        resetLibrary();
+        vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        const container = { running: true };
+        library.containerFetch.mockRejectedValueOnce(new Error("no answer")).mockResolvedValue(OLDER());
+        library.stop.mockImplementation(() => {
+          container.running = false;
+          return Promise.resolve();
+        });
+        const server = serverWithCtx({ container }, { DEPLOYED_COMMIT: COMMIT });
+
+        expect(await server.fetch(request())).toBe(LISTENING);
+        expect(library.containerFetch).toHaveBeenCalledOnce();
+        expect(library.stop).not.toHaveBeenCalled();
+
+        // Inside the interval the request goes through without a new check.
+        expect(await server.fetch(request())).toBe(LISTENING);
+        expect(library.containerFetch).toHaveBeenCalledOnce();
+
+        vi.advanceTimersByTime(IMAGE_CHECK_RETRY_MS);
+        expect(await server.fetch(request())).toBe(LISTENING);
+        expect(library.containerFetch).toHaveBeenCalledTimes(2);
+        expect(library.stop).toHaveBeenCalledWith("SIGTERM");
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("leaves that request and the next one answered when stop rejects once", async () => {
+      vi.useFakeTimers();
+      try {
+        resetLibrary();
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        const container = { running: true };
+        library.containerFetch.mockImplementation(() => Promise.resolve(OLDER()));
+        library.stop.mockRejectedValueOnce(new Error("refused")).mockImplementation(() => {
+          container.running = false;
+          return Promise.resolve();
+        });
+        const server = serverWithCtx({ container }, { DEPLOYED_COMMIT: COMMIT });
+
+        expect(await server.fetch(request())).toBe(LISTENING);
+        expect(warn).toHaveBeenCalledWith("server.retire_failed", expect.any(Error));
+        expect(library.destroy).not.toHaveBeenCalled();
+
+        vi.advanceTimersByTime(IMAGE_CHECK_RETRY_MS);
+        expect(await server.fetch(request())).toBe(LISTENING);
+        expect(library.stop).toHaveBeenCalledTimes(2);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("logs a destroy that rejects and still answers", async () => {
+      vi.useFakeTimers();
+      try {
+        resetLibrary();
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        library.containerFetch.mockResolvedValue(OLDER());
+        library.destroy.mockRejectedValueOnce(new Error("refused"));
+
+        const fetching = serverWithCtx({ container: { running: true } }, { DEPLOYED_COMMIT: COMMIT }).fetch(request());
+        await vi.advanceTimersByTimeAsync(30_000);
+
+        expect(await fetching).toBe(LISTENING);
+        expect(warn).toHaveBeenCalledWith("server.retire_failed", expect.any(Error));
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("lets the request through when /healthz never answers, once the timeout passes", async () => {
+      // A native `AbortSignal.timeout` is not driven by fake timers, so the test holds the signal.
+      const controller = new AbortController();
+      const timeout = vi.spyOn(AbortSignal, "timeout").mockReturnValue(controller.signal);
+      try {
+        resetLibrary();
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        library.containerFetch.mockImplementation(
+          (_url, init) =>
+            new Promise<Response>((resolve) => {
+              // The library's `containerFetch` answers an aborted fetch with a 500 instead of rejecting.
+              (init as RequestInit).signal?.addEventListener("abort", () =>
+                resolve(new Response("Error proxying request to container: timed out", { status: 500 })),
+              );
+            }),
+        );
+
+        let settled = false;
+        const fetching = serverWith(true)
+          .fetch(request())
+          .finally(() => {
+            settled = true;
+          });
+        await Promise.resolve();
+        expect(timeout).toHaveBeenCalledWith(IMAGE_CHECK_TIMEOUT_MS);
+        expect(settled).toBe(false);
+
+        controller.abort();
+        expect(await fetching).toBe(LISTENING);
+        expect(warn).toHaveBeenCalledWith("server.image_check_failed", 500);
+        expect(library.stop).not.toHaveBeenCalled();
+      } finally {
+        timeout.mockRestore();
+      }
+    });
+
+    it("takes the library's 500 for a failed check, not an older image, and asks again after the interval", async () => {
+      vi.useFakeTimers();
+      try {
+        resetLibrary();
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        const container = { running: true };
+        library.containerFetch
+          .mockResolvedValueOnce(new Response("Error proxying request to container: timed out", { status: 500 }))
+          .mockResolvedValue(OLDER());
+        library.stop.mockImplementation(() => {
+          container.running = false;
+          return Promise.resolve();
+        });
+        const server = serverWithCtx({ container }, { DEPLOYED_COMMIT: COMMIT });
+
+        expect(await server.fetch(request())).toBe(LISTENING);
+        expect(warn).toHaveBeenCalledWith("server.image_check_failed", 500);
+        expect(library.stop).not.toHaveBeenCalled();
+
+        vi.advanceTimersByTime(IMAGE_CHECK_RETRY_MS);
+        expect(await server.fetch(request())).toBe(LISTENING);
+        expect(library.containerFetch).toHaveBeenCalledTimes(2);
+        expect(library.stop).toHaveBeenCalledWith("SIGTERM");
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("does not repeat a check that succeeded", async () => {
+      vi.useFakeTimers();
+      try {
+        resetLibrary();
+        const server = serverWith(true);
+
+        await server.fetch(request());
+        vi.advanceTimersByTime(IMAGE_CHECK_RETRY_MS * 3);
+        await server.fetch(request());
+
+        expect(library.containerFetch).toHaveBeenCalledOnce();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("does not repeat a check that retired the old server", async () => {
+      vi.useFakeTimers();
+      try {
+        resetLibrary();
+        const container = { running: true };
+        library.containerFetch.mockImplementation(() => Promise.resolve(OLDER()));
+        library.stop.mockImplementation(() => {
+          container.running = false;
+          return Promise.resolve();
+        });
+        const server = serverWithCtx({ container }, { DEPLOYED_COMMIT: COMMIT });
+
+        await server.fetch(request());
+        vi.advanceTimersByTime(IMAGE_CHECK_RETRY_MS * 3);
+        await server.fetch(request());
+
+        expect(library.containerFetch).toHaveBeenCalledOnce();
+        expect(library.stop).toHaveBeenCalledOnce();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 });
 

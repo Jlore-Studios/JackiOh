@@ -39,6 +39,10 @@ const INSTANCE = "main";
 /** How long a server on an older image gets to drain (its `SHUTDOWN_DRAIN_SECONDS`, 20) before it is killed. */
 const RETIRE_WAIT_MS = 30_000;
 const RETIRE_POLL_MS = 500;
+/** The least time between two image checks that failed: a request inside it skips the check. */
+export const IMAGE_CHECK_RETRY_MS = 10_000;
+/** How long the `/healthz` fetch of the image check may take before it counts as failed. */
+export const IMAGE_CHECK_TIMEOUT_MS = 5_000;
 
 export interface Env extends ServerSettings {
   SERVER: DurableObjectNamespace<Server>;
@@ -51,14 +55,32 @@ export class Server extends Container<Env> {
   override sleepAfter = SLEEP_AFTER;
   override envVars = containerEnv(this.env);
 
-  /** Settles once per object: a deploy restarts this object, so the first request after one checks the running image. */
-  private imageChecked: Promise<void> | undefined;
+  /** True once a check has settled: a deploy restarts this object, so the first request after one checks the running image. */
+  private imageVerified = false;
+  /** The check in flight, shared by the requests that arrive while it runs. */
+  private imageCheck: Promise<void> | undefined;
+  /** When the last check began (`Date.now()`): a failed one is not retried before `IMAGE_CHECK_RETRY_MS` has passed. */
+  private imageCheckedAt: number | undefined;
 
   override async fetch(request: Request): Promise<Response> {
-    this.imageChecked ??= this.retireOlderImage();
-    await this.imageChecked;
+    await this.ensureImageChecked();
     await this.awaitStart(request.signal);
     return super.fetch(request);
+  }
+
+  /** Checks the running image until a check settles; a request inside the retry interval of a failed one goes on unchecked. */
+  private async ensureImageChecked(): Promise<void> {
+    if (this.imageVerified) return;
+    if (this.imageCheck === undefined) {
+      if (this.imageCheckedAt !== undefined && Date.now() - this.imageCheckedAt < IMAGE_CHECK_RETRY_MS) return;
+      this.imageCheckedAt = Date.now();
+      // `retireOlderImage` never rejects, so this always runs and clears the check.
+      this.imageCheck = this.retireOlderImage().then((settled) => {
+        this.imageVerified = settled;
+        this.imageCheck = undefined;
+      });
+    }
+    await this.imageCheck;
   }
 
   /**
@@ -81,26 +103,46 @@ export class Server extends Container<Env> {
    * A container keeps the image it was started with when a new version deploys, so a server still
    * running from before the deploy is stopped (SIGTERM: it drains, and every live match rebuilds
    * from its seed and log when its sockets return, SPEC §9.5) and the next request starts the new
-   * one. The running server names its commit in `/healthz`'s `x-deployed-commit`.
+   * one. The running server names its commit in `/healthz`'s `x-deployed-commit`. Resolves true
+   * when the check is settled (no server running, its commit current, or it retired) and false when
+   * a later request should ask again (the server did not answer within `IMAGE_CHECK_TIMEOUT_MS`, or
+   * stopping it failed); it never rejects.
    */
-  private async retireOlderImage(): Promise<void> {
-    if (!this.ctx.container?.running) return;
+  private async retireOlderImage(): Promise<boolean> {
+    if (!this.ctx.container?.running) return true;
     let running: string | null;
     try {
-      const health = await this.containerFetch(`http://container${HEALTH_PATH}`, {}, SERVER_PORT);
+      const health = await this.containerFetch(
+        `http://container${HEALTH_PATH}`,
+        { signal: AbortSignal.timeout(IMAGE_CHECK_TIMEOUT_MS) },
+        SERVER_PORT,
+      );
+      // `containerFetch` turns a failed or aborted fetch into a 500 (or 503, 429) answer rather than rejecting, and
+      // such an answer names no commit: it is a failed check, not a server on an older image.
+      if (!health.ok) {
+        console.warn("server.image_check_failed", health.status);
+        return false;
+      }
       running = health.headers.get("x-deployed-commit");
     } catch (error) {
-      // A server that cannot answer is left to the request that follows, which reports it.
+      // A server that cannot answer is left to the request that follows, which reports it; a later one asks again.
       console.warn("server.image_check_failed", error);
-      return;
+      return false;
     }
-    if (running === (this.env.DEPLOYED_COMMIT ?? null)) return;
-    await this.stop("SIGTERM");
-    const deadline = Date.now() + RETIRE_WAIT_MS;
-    while (this.ctx.container.running && Date.now() < deadline) {
-      await new Promise((resolve) => setTimeout(resolve, RETIRE_POLL_MS));
+    if (running === (this.env.DEPLOYED_COMMIT ?? null)) return true;
+    try {
+      await this.stop("SIGTERM");
+      const deadline = Date.now() + RETIRE_WAIT_MS;
+      while (this.ctx.container.running && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, RETIRE_POLL_MS));
+      }
+      if (this.ctx.container.running) await this.destroy();
+      return true;
+    } catch (error) {
+      // The request goes on to start (or reach) a server; a later one tries the retire again.
+      console.warn("server.retire_failed", error);
+      return false;
     }
-    if (this.ctx.container.running) await this.destroy();
   }
 }
 
