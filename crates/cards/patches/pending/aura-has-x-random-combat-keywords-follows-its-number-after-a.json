@@ -1,0 +1,43 @@
+{
+  "title": "Patch: \"Aura: Has X random combat keywords\" follows its number after a Buff, a Nerf or a Radiant flip",
+  "sources": "#3778",
+  "notes": "The Aura's keywords follow its number (R3778000); scripts through v0.6.0b kept",
+  "player": {
+    "title": "Random combat keyword Auras follow their number",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "Keymaster Keenus, Shockwave447, Drone Interceptor and Drone Corvette: a Buff, a Nerf or becoming Radiant now adds or removes keywords to match the number on the card, keeping the ones it already has."
+    ]
+  },
+  "cards": [],
+  "plays": [
+    "meditative-065",
+    "stinkyscape-111",
+    "stinkyscape-t-drone-interceptor",
+    "stinkyscape-t-drone-corvette",
+    "classicplus-026",
+    "classicplus-063",
+    "classicplus-065",
+    "classicplus-071",
+    "classicplus-078",
+    "meditative-035",
+    "stinkyscape-021",
+    "stinkyscape-051",
+    "stinkyscape-079",
+    "stinkyscape-107",
+    "stinkyscape-109",
+    "stinkyscape-119",
+    "stinkyscape-t-dormant-starship",
+    "stinkyscapeplus-017",
+    "stinkyscapeplus-032",
+    "stinkyscapeplus-055",
+    "stinkyscapeplus-111",
+    "stinkyscapeplus-113",
+    "stinkyscapeplus-t-ai-05",
+    "traininggrounds-035",
+    "traininggrounds-053"
+  ]
+}
