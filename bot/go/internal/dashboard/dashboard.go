@@ -5,13 +5,13 @@
 // done, on a clock of its own: the sweep, its deliveries, the statistics count and the runner gate
 // each run on a goroutine of their own (#3675), so none of them holds the issue up.
 //
-// It opens with its date, then a bar chart of how far the owner's PC's two local jobs have played (the
-// learn lane's export of `LEARN_GAMES` with its shard, and gather's games of its patch, from the PC's
-// heartbeat: `progress`), then a headline (what runs, what waits and on what, which subscriptions can
+// It opens with its date, then a bar chart of how far the training lanes have played on GitHub's
+// runners (the learn lane's export by its shards, and each part of gather by its hours: `progress`),
+// then a headline (what runs, what waits and on what, which subscriptions can
 // start work), then the excess compute (`ExcessSection`, #3659: the lanes spare, so whether people
 // should open more issues, and of which difficulty), then draws the same facts as `/harness status`
 // (`status.py`) for a glance: what each
-// lane is doing and a timeline of the runs going now, the PC's jobs among them; every subscription
+// lane is doing and a timeline of the runs going now; every subscription
 // as a box with what it is doing or why it
 // is not, and its usage, always; every subscription's lanes, held and open, Squishy's too, with the
 // totals and the limits on them (`lanes_table`); the queue, each item with the tier its difficulty needs and what it
@@ -30,12 +30,10 @@
 //
 // Every runner has a section too, low in the issue (`runners_section`): each job a runner holds now,
 // the step it is on and what it is for, and the jobs queued for one, as boxes the way the
-// subscriptions are drawn and as a table, each folding away. The owner's PC's group carries its load
-// and the gather workflow, from a heartbeat its supervisor writes to a gist (`read_runners`). Between
-// rewrites the loop redraws that section and the progress chart alone every minute
-// (`refresh_runners`). What each runner
-// and each workflow is for changes only with the pool or the workflows, so it is a comment on the issue
-// (`explain`), which the section links.
+// subscriptions are drawn and as a table, each folding away, with the gather workflow's state
+// (`read_runners`). Between rewrites the loop redraws that section and the progress chart alone
+// every minute (`refresh_runners`). What each runner and each workflow is for changes only with the
+// pool or the workflows, so it is a comment on the issue (`explain`), which the section links.
 //
 // Squishy (#60) has a section of its own in the same issue, apart from the night bot's: what it is
 // working on, its account, its queue and its trees. Squishy's own process draws it (`section`), and
@@ -325,26 +323,15 @@ var TimelineStyle = `%%{init: {"themeVariables": {"taskBkgColor": "#ddf4ff", "ta
 
 // Timeline is timeline: a Mermaid timeline of the runs going now: GitHub's runners, then the
 // machine, the longest-running first, each bar named by its subscription, what it does and for how
-// long; then, with the runners `found`, the jobs on the owner's PC (the learn lane's, gather's),
-// each named by its workflow and job. (A gantt chart reads `#` as a comment, so items are named
-// without it.)
-func Timeline(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object,
-	found *Found /* = None */) []string {
-	var pcJobs [][2]*pyjson.Object
-	if found != nil {
-		for _, pair := range found.Busy {
-			if order, _ := Where(pair[1]); order == 3 {
-				pcJobs = append(pcJobs, pair)
-			}
-		}
-	}
-	if live.Len() == 0 && len(pcJobs) == 0 {
+// long. (A gantt chart reads `#` as a comment, so items are named without it.)
+func Timeline(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object) []string {
+	if live.Len() == 0 {
 		return []string{"Nothing is running right now."}
 	}
 	pool := ctx.Cfg.Pool
 	now := Local(ctx, ctx.Now())
 	const layout = "2006-01-02 15:04" // "%Y-%m-%d %H:%M"
-	rows := map[string][]string{"hosted": nil, "night": nil, "pc": nil}
+	rows := map[string][]string{"hosted": nil, "night": nil}
 	earliest := now
 
 	add := func(where, name string, since time.Time) {
@@ -375,15 +362,11 @@ func Timeline(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object,
 		}
 		add(where, l.provider+" · "+verb+" "+strings.TrimLeft(item, "#"), since)
 	}
-	for _, pair := range pcJobs {
-		add("pc", jobName(pair[0], pair[1]), clock.ParseISOValue(pair[1].Get("started_at")))
-	}
 	lines := []string{"```mermaid", TimelineStyle, "gantt",
 		"    title Runs going now, as of " + now.Format("15:04") + " (Central time)",
 		"    dateFormat YYYY-MM-DD HH:mm", "    axisFormat %H:%M",
 		"    tickInterval " + tick(now.Sub(earliest)), "    todayMarker off"}
-	for _, s := range [][2]string{{"hosted", "GitHub's runners"}, {"night", "The night box"},
-		{"pc", "The owner's PC"}} {
+	for _, s := range [][2]string{{"hosted", "GitHub's runners"}, {"night", "The night box"}} {
 		if len(rows[s[0]]) > 0 {
 			lines = append(lines, "    section "+s[1])
 			lines = append(lines, rows[s[0]]...)
@@ -527,9 +510,9 @@ func box(ctx *hctx.Context, state *pyjson.Object, provider *providers.Provider, 
 
 // TrainingLanes is TRAINING_LANES: the AI's training lanes on the training box that keep a pull
 // request open from `ai/<lane>` (training/README.md, #1272). None since 2026-10-25: #682's audit
-// stopped `improve` and `unban` (#1677), and `gather` left the box for the owner's PC (gather.yml,
-// training/gather.md), where the runners section draws it, so no training box is drawn. A lane named
-// here again shows its draft. A variable the tests replace.
+// stopped `improve` and `unban` (#1677), and `gather` left the box and plays on GitHub's runners now
+// (gather.yml, training/gather.md), where the runners section draws it, so no training box is
+// drawn. A lane named here again shows its draft. A variable the tests replace.
 var TrainingLanes = []string{}
 
 // TrainingStale is TRAINING_STALE: a training lane's draft unchanged for longer than a session
