@@ -1988,3 +1988,8 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-13T05:19:56Z,43359395598,claude-3,opus,suggest,,,suggested,,22.7,10,11190,638998,29.4474,57,51,,,,,none,,1
 2026-11-13T05:37:51Z,43366031540,claude-1,opus,revise,3798,hard,interrupted,refusal,31,132,32182,7109680,3.0896,90,100,,,0.7,claude-7,fresh,other,1
 2026-11-13T05:38:45Z,43351915838,claude-8,sonnet+opus,review,3816,medium,approved,,47.4,141,40150,4828042,4.7919,7,22,,,1.5,,fresh,,7
+2026-11-13T06:06:17Z,43373785976,claude-3,opus,suggest,,,interrupted,refusal,21.2,0,0,0,21.2202,53,100,,,,,none,,1
+2026-11-13T06:04:34Z,43358035197,claude-1,opus,revise,3779,hard,interrupted,refusal,20.7,60,14872,2463817,1.4422,84,96,,,4.5,claude-3,fresh,other,1
+2026-11-13T06:30:30Z,43378497289,claude-8,opus,plan,3824,medium,planned,,3,52,23081,2074650,0.8142,25,27,,,37.4,,fresh,,1
+2026-11-13T06:30:22Z,43373899802,claude-4,sonnet+opus,revise,3812,medium,built,,7.2,24,7055,746099,0.3699,14,15,,,0.5,claude-3,fresh,other,1
+2026-11-13T06:30:42Z,43368722846,claude-3,sonnet+opus,revise,3810,medium,interrupted,refusal,15.9,30,6073,781374,0.3254,52,53,,,0.6,claude-3,fresh,,1
