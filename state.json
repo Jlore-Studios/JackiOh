@@ -15312,6 +15312,13 @@
     "3855": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-13T15:47:25Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "None of rules 1\u20135 holds: no engine or AI code, no migration, about 14 files. The forecast field and `CombatForecast` already exist on four other tables, so the daily read is a fifth call site, not a new cross-crate design."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
