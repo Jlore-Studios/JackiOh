@@ -21,8 +21,8 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use indexmap::IndexSet;
 use jackioh_engine::config::{
-    CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT, JADE_BEAUTY_AT,
-    TURN_CAP_PLAYER_TURNS,
+    BURN_DECAY, CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT,
+    JADE_BEAUTY_AT, TURN_CAP_PLAYER_TURNS,
 };
 use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
 use jackioh_engine::float::float_cuts_in_hand;
@@ -33,15 +33,16 @@ use jackioh_engine::{
     PLAYER_IDS, Phase, PlayerId, PlayerState, Position, Rng, Row, SandboxOp, SeatOutcome, SettleOptions,
     Slumber, SpawnZone, Tag, TriggerHolder, TriggerZone, UnitView, ZoneName, acting_with_flag,
     active_brittle_count, active_units_of, animated_with_stats, armor_of, attack_restriction,
-    attacks_per_turn, awaken_card, backrow_is_public, board_totals, cannot_attack, card_at, card_keywords,
-    card_type_of_face, credit_lapsing, death_hook_of, dormant_starship_of, effective_cost, effective_life,
-    exit_mark, face_of, find_def, find_instance, find_instance_mut, first_entry_zone, frozen_next_turn,
-    gauntlet_acts, has_keyword, heal_multiplier_of, hero_armor_of, is_extra_turn_card, is_slumbering,
-    is_standing_unit, is_starship_piece, is_temporary_card, launched_starship_of, left_field_after,
-    legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces,
-    pile_at, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of, settle, slots_of,
-    stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back, trigger_holders_with_hook, unit_has,
-    unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold,
+    attacks_per_turn, awaken_card, backrow_is_public, board_totals, burn_on, cannot_attack, card_at,
+    card_keywords, card_type_of_face, credit_lapsing, death_hook_of, dormant_starship_of, effective_cost,
+    effective_life, exit_mark, face_of, find_def, find_instance, find_instance_mut, first_entry_zone,
+    frozen_next_turn, gauntlet_acts, has_keyword, heal_multiplier_of, hero_armor_of, hero_burn_of,
+    hero_toxic_of, is_extra_turn_card, is_slumbering, is_standing_unit, is_starship_piece, is_temporary_card,
+    launched_starship_of, left_field_after, legal_actions, lost_refreshes_left, modifier_is_live,
+    outcome_for, owed_mana_of, own_cost, pierces, pile_at, playable_from_graveyard, query_cost, queue_hook,
+    reset_instance, script_of, settle, slots_of, stats_with_buffs, subsystems, sync_fused_scripts,
+    takes_strike_back, toxic_on, trigger_holders_with_hook, unit_has, unit_view, units_on_field_of,
+    why_sandbox_refused, with_pool_hold,
 };
 use serde::{Deserialize, Serialize};
 
@@ -115,6 +116,90 @@ fn shown_cost(state: &GameState, card: &CardInstance) -> i32 {
         return card.cost_override.unwrap_or(0);
     }
     effective_cost(state, card, CostOptions::default())
+}
+
+/// R3575300: the damage each coming tick of a Burn count `burn` and a Toxic count `toxic` deals its
+/// carrier (§6.3, Stinkyscape+ E2, R3540001), one entry per start of its owner's turn, in order, until
+/// the ticks have dealt `life`: Burn first, unpierced, so Armor takes `armor` off it, then dropping by
+/// `BURN_DECAY`; then Toxic, piercing and lasting. An unspent Divine Shield takes the turn's first tick
+/// whole, as §4.4 step 1 does. Empty with nothing to tick or no life to take.
+fn affliction_ticks(burn: i32, toxic: i32, armor: i32, shield: bool, life: i32) -> Vec<i32> {
+    let (mut burn, toxic, mut shield, mut left) = (burn.max(0), toxic.max(0), shield, life);
+    let mut ticks = Vec::new();
+    while left > 0 && (burn > 0 || toxic > 0) {
+        let mut dealt = 0;
+        if burn > 0 {
+            if shield {
+                shield = false;
+            } else {
+                dealt += (burn - armor.max(0)).max(0);
+            }
+            burn -= BURN_DECAY;
+        }
+        if toxic > 0 {
+            if shield {
+                shield = false;
+            } else {
+                dealt += toxic;
+            }
+        }
+        let dealt = dealt.min(left);
+        left -= dealt;
+        ticks.push(dealt);
+    }
+    ticks
+}
+
+/// R3575300: what a Unit's Burn and Toxic (`affliction_ticks`) take off its worth, `lost` being what its
+/// death would take: each tick by `affliction_turn_share` to the power of the owner's turns until it
+/// lands, the next one the first power, and worth what it takes, `health` a point, or, the tick that
+/// kills it, the rest of `lost`. An Indestructible Unit takes no damage, so it loses nothing.
+fn unit_affliction_loss(unit: &CardInstance, view: &UnitView, lost: f64, w: &EvalWeights) -> f64 {
+    let (burn, toxic) = (burn_on(unit), toxic_on(unit));
+    if w.affliction_turn_share == 0.0
+        || (burn == 0 && toxic == 0)
+        || has_keyword(&view.keywords, KeywordKind::Indestructible)
+    {
+        return 0.0;
+    }
+    let shield = has_keyword(&view.keywords, KeywordKind::DivineShield);
+    let life = view.health;
+    let ticks = affliction_ticks(burn, toxic, armor_of(&view.keywords), shield, life);
+    let (mut loss, mut share, mut dealt) = (0.0, 1.0, 0);
+    for tick in ticks {
+        share *= w.affliction_turn_share;
+        if dealt + tick >= life {
+            loss += share * (lost - w.health * f64::from(dealt)).max(0.0);
+            break;
+        }
+        loss += share * w.health * f64::from(tick);
+        dealt += tick;
+    }
+    loss
+}
+
+/// R3575300: the life `player`'s hero still loses to its Burn and Toxic (`affliction_ticks`, its Armor
+/// taking Burn's ticks, `hero_armor_of`), each tick by `affliction_turn_share` to the power of its turns
+/// until it lands: `(points, worth)`, the discounted points and what they take off `hero_value`'s curve,
+/// read down to 0 life with no `win` in it, since a tick that would end the game is the reply's and the
+/// lethal search's to see.
+fn hero_affliction_loss(state: &GameState, player: PlayerId, w: &EvalWeights) -> (f64, f64) {
+    let (burn, toxic) = (hero_burn_of(state, player), hero_toxic_of(state, player));
+    if w.affliction_turn_share == 0.0 || (burn == 0 && toxic == 0) {
+        return (0.0, 0.0);
+    }
+    let life = effective_life(state, player);
+    let start = f64::from(starting_life(state, player));
+    let curve = |h: i32| w.hero_health * (f64::from(h.max(0)) * start).sqrt();
+    let ticks = affliction_ticks(burn, toxic, hero_armor_of(state, player), false, life);
+    let (mut points, mut worth, mut share, mut left) = (0.0, 0.0, 1.0, life);
+    for tick in ticks {
+        share *= w.affliction_turn_share;
+        points += share * f64::from(tick);
+        worth += share * (curve(left) - curve(left - tick));
+        left -= tick;
+    }
+    (points, worth)
 }
 
 /// B3.3: the share of itself a card keeps under its Brittle count (`active_brittle_count`), 1 with none.
@@ -479,10 +564,12 @@ pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights, price
     // §10.1: the counters on the card are worth their own, outside the Brittle share — Fed Fauci's Plague
     // Counters are mana it already banked. R2424000: so is what its Death leaves, since Brittle's end is a
     // death too. R2565000: and what one firing of its turn hooks gives, a firing that harms it a debt.
-    value * brittle_share(unit, w)
+    let kept = value * brittle_share(unit, w)
         + w.plague_counter * f64::from(unit.counters.plague.unwrap_or(0))
-        + w.death * death_price(state, unit, w, prices)
-        + w.turn_hook * turn_hook_price(state, unit, w, prices)
+        + w.turn_hook * turn_hook_price(state, unit, w, prices);
+    // R3575300: its Burn and Toxic are damage already on their way, which takes what it keeps when it
+    // dies but never what its Death leaves.
+    kept + w.death * death_price(state, unit, w, prices) - unit_affliction_loss(unit, &view, kept, w)
 }
 
 /// B3.4, R65: the crystals the card's own `costMod` moves its cost by (`own_cost`, floored at 0 as a
@@ -796,10 +883,12 @@ fn slumber_worth(
     share * (unit_worth(state, &awake, w, prices) + w.awaken * awaken_price(state, unit, w, prices))
 }
 
-/// A hero's side of the ledger: its concave life (`effective_life`, R964000) and its armor.
+/// A hero's side of the ledger: its concave life (`effective_life`, R964000), its armor and what its Burn
+/// and Toxic still take (R3575300).
 fn hero_side(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
     hero_value(effective_life(state, player), starting_life(state, player), w)
         + w.hero_armor * f64::from(hero_armor_of(state, player))
+        - hero_affliction_loss(state, player, w).1
 }
 
 /// Everything on one side but the hero: the board and the cards dormant under its piles, what it has
@@ -2160,7 +2249,8 @@ pub fn evaluate_priced(
     let progress = ((f64::from(state.turn) - w.closing_from).max(0.0) / span).min(1.0);
     let closing = w.closing_weight * progress * f64::from(starting_life(state, opp) - opp_life);
 
-    let race = w.enemy_health * f64::from(opp_life);
+    // R3575300: the life the enemy hero's Burn and Toxic still take shortens the race as damage does.
+    let race = w.enemy_health * (f64::from(opp_life) - hero_affliction_loss(state, opp, w).0);
 
     let board = material(state, seat, seat, w, prices) - material(state, opp, seat, w, prices);
 

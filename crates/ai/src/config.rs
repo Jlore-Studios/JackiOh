@@ -475,6 +475,10 @@ pub struct EvalWeights {
     /// trigger (`evaluate::awaken_price`) that `slumber_worth` adds, inside its slumber share, the seat's
     /// sleepers and the enemy's alike.
     pub awaken: f64,
+    /// R3575300: per turn of its owner's still to come before a Burn or Toxic tick (§6.3, Stinkyscape+
+    /// E2) lands, the share of that tick's damage a Unit or a hero counts as lost now: its next tick, at
+    /// the start of its owner's next turn, at this share, the tick after at its square, and so on.
+    pub affliction_turn_share: f64,
     /// An unseen hand card is valued as if it cost this.
     pub opponent_hand_cost: f64,
     /// A readable backrow card: backrowBase + backrowPerCost × queryCost(def).
@@ -644,6 +648,10 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // play a lone Imprisoned Ship Smith and plays a Felinor Token over Imprisoned Cosmality. At 1.0 the
     // smoke gate read 20, 19 and 20 of 20; at 0, 20, 19 and 20.
     awaken: 1.0,
+    // R3575300: half, as `slumber_turn_share` holds a turn's wait and Brittle 1 (`brittle_discount`)
+    // a loss "the next tick away": a tick is a loss its owner still has a turn to answer (a heal, a
+    // Vanilla, a bounce). Set before any measurement, not to the sweep.
+    affliction_turn_share: 0.5,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,
@@ -850,6 +858,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     activation: 0.0,
     attack_hook: 0.0,
     awaken: 0.0,
+    affliction_turn_share: 0.0,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,
