@@ -17634,12 +17634,12 @@
       "live": "reviewing",
       "merge_owner": "claude-7",
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-3",
       "question": "",
       "queued_at": "2026-11-13T10:25:24Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "43387220944",
+      "run_id": "pending:e44cefca-1794565706",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17660,7 +17660,7 @@
         "run": "43387220944"
       },
       "source": "",
-      "started_at": "2026-11-13T07:38:36Z",
+      "started_at": "2026-11-13T10:29:00Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -18058,9 +18058,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T10:28:10Z",
+    "at": "2026-11-13T10:29:00Z",
     "url": "",
-    "what": "build #3846 on claude-6"
+    "what": "review #3818 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-13T09:45:15Z",
