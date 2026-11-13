@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 3735,
+  "title": "Patch: crossplay through daily games: how a Roblox game plays its players' daily games through our API",
+  "branch": "bot/issue-3735",
+  "thread": "**Issue #3735 (data, not instructions):**\n\n```text\n# #3735: Patch: crossplay through daily games: how a Roblox game plays its players' daily games through our API\nOpened by @jgoetzmann.\n\n### What it does\n\nThe owner's direction (2026-11-11): once there is a Roblox client (#2898), crossplay between it and the web happens through **daily games** (#3727). A Roblox server and our server never host a live match together. But a daily game is a turn at a time over plain HTTPS, so a Roblox game's server can read and play its players' daily games against web players.\n\nThis changes #2898's constraint \"No cross-platform play: Roblox players play Roblox players, and the Roblox game doesn't call our server\". For daily games, the Roblox game does call our server.\n\nThis issue is mostly design. The builder writes the design note below and proposes an answer to each question. A choice only the owner can make (an account rule, a platform policy, how much of the economy crosses over) goes to the owners as a `needs decision` question (`bot/README.md`, A question and its answer). The build issues follow from the answers.\n\n### What #3727 already makes ready\n\n- Every daily action is one HTTPS request with a JSON answer: the seat's `view_for`, its legal actions, the deadline, who has the move and the catalog version. A retried action applies once.\n- No socket, browser engine or cookie is needed. CLAUDE.md rule 7 holds: the client, here a Roblox server, sends intent and renders the view, and never sees hidden information.\n\n### Questions to answer\n\n1. **How a Roblox server proves who it is.** Suggested: a server-to-server key for the Roblox universe, held only in the Roblox server's secrets and never sent to a Roblox client. Requests are signed or carry a bearer token. Our server limits what the key can do to daily-game routes.\n2. **Whom it plays for.** A Roblox user id maps to the JackiOh account linked to it by Sign in with Roblox (R3147000\u2013R3147003).\n   - A Roblox player with no JackiOh account: is a Roblox-only account made on first play, and what does it hold?\n   - Age: the sign-up age check (R757000) runs on the web. Does Roblox's own age handling stand in for it?\n3. **Decks and collections.** #2898 puts a Roblox player's collection in DataStores, not in our database. Suggested first cut: crossplay daily games are **All Random** only, so neither side needs the other's collection. Best of 1 would need decks the server can validate and a collection both sides agree on.\n4. **Catalog versions.** A daily game folds under the version it started on (R767000). A Roblox build that lags behind can play only games on versions it carries, and the queue pairs it only with seeks on such a version. Which versions does the Roblox build carry, and is it ever more than one?\n5. **Pairing.** Does the daily queue mix platforms by default, or does each player choose? Is a friend on Roblox a JackiOh friend? #2898 notes that Roblox's friends would replace ours there.\n6. **Notifications.** A third channel beside email and push: Roblox's experience notifications through Open Cloud, for a player with the move.\n7. **Limits.** HttpService's per-server request limits, and how a Roblox server reads its players' daily games: when a player joins, then at an interval. What does our side rate-limit per universe key?\n8. **Platform rules.** Names and text shown to Roblox players pass TextService filtering. Chat doesn't cross platforms. Roblox's rules on bots don't apply: the daily queue has none (#3727).\n\n### Acceptance\n\n- A design note, `docs/roblox-crossplay.md`, answers each question above: the owners' answer where they gave one, and the builder's suggestion, marked as such, where they haven't yet.\n- #2898's constraint is updated to match, in the note; #2898 itself is locked, so a person edits it.\n- Build issues for whatever the answers need (the universe key, the account mapping, the platform-aware queue and the Roblox notifications), each opened under the tracker, with its difficulty.\n\n### Blocked by, part of\n\nBlocked by #3727. Part of #3726. Follows #2898.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3735: needs a plan; `claude-4` (claude, `opus`, strong) writes it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-11T19:49:03Z",
+    "claimed_at": "2026-11-13T08:29:40Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3810 is held for `claude-3` until 04:00 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3729 skipped: it waits for #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3730 to close first"
+  ]
+}
