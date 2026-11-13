@@ -28,6 +28,8 @@ import {
   DORMANT_GLYPH,
   DORMANT_NEXT_TURN_WORDS,
   DORMANT_WORDS,
+  EVOLVED_GLYPH,
+  EVOLVED_WORDS,
   FROZEN_FOREVER_WORDS,
   FROZEN_GLYPH,
   FROZEN_WORDS,
@@ -604,6 +606,34 @@ describe("R1174000 Frozen: a frost badge on a Frozen unit, on either seat", () =
     // The same words announce the freeze and its thaw (`marked`, "frozen"), in the engine's "cyan".
     expect(markWords("frozen").text).toBe(FROZEN_WORDS);
     expect(markColorOf("cyan")).toBe("cyan");
+  });
+});
+
+/* R3536005 Evolved */
+
+describe("R3536005 Evolved: a star badge and a glow on an Evolved unit, on either seat", () => {
+  it("R3536005 an Evolved unit wears the star badge and the glow; an unevolved one neither", () => {
+    vi.useFakeTimers();
+    renderBoard(
+      baseView({
+        you: emptySide("p1", {
+          units: [unit("p1", { instanceId: "u1", defId: "core-008", evolved: true }), unit("p1", { instanceId: "u2", defId: "core-008" }), null, null, null],
+        }),
+        opponent: emptySide("p2", {
+          units: [unit("p2", { instanceId: "u3", defId: "core-008", evolved: true }), null, null, null, null],
+        }),
+      }),
+    );
+    const root = screen.getByTestId(testid.card("u1"));
+    const badge = root.querySelector('.cf-state[data-state="evolved"]');
+    expect(badge?.getAttribute("aria-label")).toBe(EVOLVED_WORDS);
+    expect(badge?.textContent).toBe(EVOLVED_GLYPH);
+    expect(root.getAttribute("data-evolved")).toBe("true");
+    expect(screen.getByTestId(testid.card("u2")).querySelector('.cf-state[data-state="evolved"]')).toBeNull();
+    expect(screen.getByTestId(testid.card("u2")).getAttribute("data-evolved")).toBeNull();
+    expect(screen.getByTestId(testid.card("u3")).querySelector('.cf-state[data-state="evolved"]')).not.toBeNull();
+    const preview = hover(root);
+    expect(within(preview).getByTestId(INSPECT_STATES).textContent).toBe(EVOLVED_GLYPH + EVOLVED_WORDS);
   });
 });
 

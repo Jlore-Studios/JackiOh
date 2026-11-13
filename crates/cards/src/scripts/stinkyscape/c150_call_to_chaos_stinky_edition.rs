@@ -3,7 +3,7 @@
 //!   Base:    "One random effect: Add a Radiant Faction: ETHICS and a Radiant Faction: Vanguard Coalition to
 //!            your hand; add A Very Dandy Lad and an Arctic Citadel to your hand, which cost (0); summon 3
 //!            random Quest or Wincon Field Spells into your backrow; add a random Acclaimed Stinkyscape
-//!            Unit to your hand and refresh as much mana as it costs; switch every enemy Unit to Attack
+//!            Unit to your hand and replenish as much mana as it costs; switch every enemy Unit to Attack
 //!            Position and Freeze them; fill your board with random Human Stinkyscape Units; Allure every
 //!            enemy Unit; for the rest of the game, whenever an Acclaimed card dies, its controller casts a
 //!            random Call to Chaos; summon a Stinkyscape Golem; cast a random Call to Chaos."
@@ -301,7 +301,7 @@ mod tests {
         }
 
         #[test]
-        fn r1882002_entry_acclaimed_adds_an_acclaimed_unit_and_refreshes_its_cost() {
+        fn r1882002_entry_acclaimed_adds_an_acclaimed_unit_and_replenishes_its_cost() {
             let mut s = scenario(json!({
                 "seed": SEED,
                 "p1": side(false, json!([])),
@@ -324,7 +324,7 @@ mod tests {
         }
 
         #[test]
-        fn r1882002_a_full_hand_burns_the_unit_and_refreshes_nothing() {
+        fn r1882002_a_full_hand_burns_the_unit_and_replenishes_nothing() {
             let extra: Vec<Value> = (0..(HAND_CAP - 1)).map(|_| json!(FILLER)).collect();
             let mut s = scenario(json!({
                 "seed": SEED,

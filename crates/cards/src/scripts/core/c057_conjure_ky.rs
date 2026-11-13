@@ -44,10 +44,10 @@ pub fn script() -> CardScripts {
 }
 
 // #57 Conjure KY (SPEC §8.3, BUILD M4-T4 row 57: radiant 2 base + 2 radiant). The pool, every set's KY
-// cards (R380), is asserted twice: against §5.1's query directly and through seeded play. Also proved: R60
-// (generated cards may repeat), R74/§5.2 (a generated Radiant card carries the instance flag), §5.1 (no
-// tokens, never the generating card). R4's hand cap is the engine's
-// (`crates/engine/tests/rules/effects_core.rs`).
+// cards (R380), is asserted twice: against §5.1's query directly and through seeded play. Also proved:
+// R3563000 (generated cards are distinct until the pool runs out; R60's repeats no longer stand), R74/§5.2
+// (a generated Radiant card carries the instance flag), §5.1 (no tokens, never the generating card). R4's
+// hand cap is the engine's (`crates/engine/tests/rules/effects_core.rs`).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -120,9 +120,11 @@ mod tests {
             assert!(!ids.iter().any(|id| id == "meditativeplus-020-1"));
             assert!(!ids.iter().any(|id| id == "core-057"));
             // The KY tokens (Core #51.1, Classic+ #42.1 KY's Gift, Meditative #45.1 Knowledge Breaker
-            // Prime, Meditative+ #20.1 Lil' Kenny, Stinkyscape #4.2 KY's Last Exam, #1187, #1884) are only
-            // reachable by naming the token pool, which this card never does.
+            // Prime, Meditative+ #20.1 Lil' Kenny, Stinkyscape #4.2 KY's Last Exam, #1187, #1884,
+            // Stinkyscape+ T-AI-7 KY's Line Search Bot) are only reachable by naming the token pool, which
+            // this card never does.
             assert!(!ids.iter().any(|id| id == "stinkyscape-004-2"));
+            assert!(!ids.iter().any(|id| id == "stinkyscapeplus-t-ai-07"));
             assert_eq!(
                 query_ids(json!({ "tags": ["KY", "Token"] })),
                 [
@@ -130,7 +132,8 @@ mod tests {
                     "classicplus-042-1",
                     "meditative-045-1",
                     "meditativeplus-020-1",
-                    "stinkyscape-004-2"
+                    "stinkyscape-004-2",
+                    "stinkyscapeplus-t-ai-07"
                 ]
             );
         }
@@ -161,8 +164,10 @@ mod tests {
             assert_eq!(g.hand(P2).len(), 0);
         }
 
+        /// R3563000: a card an effect generates at random is unique within its run until its pool runs
+        /// out, so the 3 picks from the pool of 14 never repeat (R60's repeats no longer stand).
         #[test]
-        fn r60_three_picks_from_a_pool_of_three_may_repeat_nothing_forces_them_to_differ() {
+        fn r3563000_the_three_picks_are_distinct_until_the_pool_runs_out() {
             crate::register_all();
             let seeds = ["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8"];
             let hands: Vec<Vec<String>> = seeds
@@ -174,12 +179,13 @@ mod tests {
                 })
                 .collect();
 
-            // Every hand is 3 cards from the pool, and at least one seed repeats a def — which a
-            // "3 different cards" implementation (R60's Discover rule) could never produce.
+            // Every hand is 3 cards from the pool, and no seed repeats a def: 3 picks are far short of
+            // the 14 cards of the pool, so each comes up once.
             for hand in &hands {
                 assert_eq!(hand.len(), 3);
+                assert!(hand.iter().all(|def_id| in_ky_pool(def_id)), "{hand:?} leaves the KY pool");
+                assert_eq!(hand.iter().collect::<IndexSet<_>>().len(), 3, "{hand:?} repeats a card");
             }
-            assert!(hands.iter().any(|hand| hand.iter().collect::<IndexSet<_>>().len() < 3));
         }
 
         #[test]

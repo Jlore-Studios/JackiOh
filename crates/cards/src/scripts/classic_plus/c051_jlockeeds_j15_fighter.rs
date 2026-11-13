@@ -1,20 +1,31 @@
 //! C+ #51 Jlockeed's J15 Fighter (SPEC §8.7 row 51). (3) Unit, Jlockeed, Epic, 7/2 → 14/4.
-//!   Base:    "Ranged, Flying, Rush, Can't Defend. Can't be attacked."
-//!   Radiant: "Ranged, Flying, Rush, Divine Shield, Can't Defend" and the same.
+//!   Base:    "Ranged, Flying, Rush, Evasive"
+//!   Radiant: "Ranged, Flying, Rush, Divine Shield, Evasive"
+//!   Through v0.5.13g: "Ranged, Flying, Rush, Can't Defend. Can't be attacked" (Radiant: Divine Shield
+//!   among them), the flag `cant_be_attacked` (`script_v0_5_13g`, kept, R767000).
 //!   Through v0.5.11r: the same without Can't Defend, so it could switch to Defense Position (catalog data).
 //!   Through v0.5.9f: "First Strike, Rush (Radiant: and Divine Shield). Can't be in Defense Position. Can't
 //!   be attacked." (`script_v0_5_9f`, kept, R767000)
-//!   Engine:  "Can't be attacked" (§6.1, §4.2 step 2): no attack may name it, a forced one included; it is
-//!            still targeted by effects and hit by "all" effects. A Taunt it gains binds nobody. Tunes: none.
+//! Engine:  Evasive (§6.1, §4.2 step 2, R3551003): no attack may name it, a forced one included; it is
+//!            still targeted by effects and hit by "all" effects. Evasive alone never defends, so no
+//!            Can't Defend is printed. A Taunt it gains binds nobody. Tunes: none.
 //!
-//! A static flag the engine reads everywhere (`restrictions.cannotBeAttacked`); the keywords, Can't Defend
-//! among them (§6.1, R2657000), are the catalog's.
+//! All keywords are the catalog's: the card carries no script.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-051";
 
 pub fn script() -> CardScripts {
+    let base = Script::default();
+    // No script at all: the faces differ only in stats and keywords, which are catalog data.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
+
+/// R767000: through v0.5.13g "Can't be attacked" was the static flag `cant_be_attacked` beside the
+/// Can't Defend keyword; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_13g() -> CardScripts {
     let base = Script {
         static_flags: Some(StaticFlags {
             cant_be_attacked: Some(true),
@@ -22,7 +33,6 @@ pub fn script() -> CardScripts {
         }),
         ..Script::default()
     };
-    // The same script: the Radiant face differs only in its stats and Divine Shield, both catalog data.
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
@@ -30,11 +40,10 @@ pub fn script() -> CardScripts {
 /// R767000: through v0.5.9f "Can't be in Defense Position" was the static flag `never_defense` on both
 /// faces, before R2657000 made it the keyword Can't Defend; `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_9f() -> CardScripts {
-    crate::never_defense_kept(script(), true, true)
+    crate::never_defense_kept(script_v0_5_13g(), true, true)
 }
 
-// C+ #51 Jlockeed's J15 Fighter — SPEC §8.7 row 51, BUILD M9 Classic+ row C+ 51. It has Can't Defend: never
-// in Defense Position.
+// C+ #51 Jlockeed's J15 Fighter — SPEC §8.7 row 51, BUILD M9 Classic+ row C+ 51. Evasive, never defending.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -80,11 +89,49 @@ mod tests {
             let mut s = defended(false, &[]);
             s.expect_stats(J15, json!({ "attack": 7, "health": 2 }));
             let found = kinds(&s, J15);
-            for kind in ["Ranged", "Flying", "Rush", "Can't Defend"] {
+            for kind in ["Ranged", "Flying", "Rush", "Evasive"] {
                 assert!(found.contains(&kind.to_string()), "{kind} in {found:?}");
             }
+            // R3551003: Evasive alone, no Can't Defend printed.
+            assert!(!found.contains(&"Can't Defend".to_string()));
             assert!(!found.contains(&"First Strike".to_string()));
             assert!(!found.contains(&"Divine Shield".to_string()));
+        }
+
+        #[test]
+        fn r3551003_evasive_alone_unattackable_never_defends() {
+            // No script at all: every word is the catalog's.
+            let scripts = super::super::script();
+            assert!(scripts.base.activations.is_empty());
+            assert!(scripts.base.static_flags.is_none());
+            assert!(scripts.radiant.activations.is_empty());
+            assert!(scripts.radiant.static_flags.is_none());
+            let mut s = defended(false, &[]);
+            let found = kinds(&s, J15);
+            assert!(found.contains(&"Evasive".to_string()));
+            assert!(!found.contains(&"Can't Defend".to_string()));
+            // Evasive is "Can't be attacked" as a keyword (R3543002): no attack may name it.
+            s.expect_refused_with(|s| s.attack(VANILLA, J15), "cannot be attacked");
+            // ...and implies Can't Defend (R3543002): never in Defense Position, asked on p1's own turn.
+            s.end_turn();
+            s.expect_refused_with(|s| s.switch_position(J15), "Defense Position");
+            assert_eq!(s.card(J15).position, Some(Position::Atk));
+        }
+
+        #[test]
+        fn r3551003_kept_script_keeps_the_flag() {
+            let kept = super::super::script_v0_5_13g();
+            for face in [&kept.base, &kept.radiant] {
+                assert_eq!(
+                    face.static_flags.as_ref().and_then(|flags| flags.cant_be_attacked),
+                    Some(true)
+                );
+            }
+            crate::under_kept(J15, super::super::script_v0_5_13g(), || {
+                // The kept flag still bars attacks, as the catalog's old "Can't be attacked" did.
+                let mut s = defended(false, &[]);
+                s.expect_refused_with(|s| s.attack(VANILLA, J15), "cannot be attacked");
+            });
         }
 
         #[test]
@@ -191,9 +238,10 @@ mod tests {
             let mut s = defended(true, &[]);
             s.expect_stats(J15, json!({ "attack": 14, "health": 4 }));
             let found = kinds(&s, J15);
-            for kind in ["Ranged", "Flying", "Rush", "Divine Shield", "Can't Defend"] {
+            for kind in ["Ranged", "Flying", "Rush", "Divine Shield", "Evasive"] {
                 assert!(found.contains(&kind.to_string()), "{kind} in {found:?}");
             }
+            assert!(!found.contains(&"Can't Defend".to_string()));
             s.expect_refused_with(|s| s.attack(VANILLA, J15), "cannot be attacked");
         }
 

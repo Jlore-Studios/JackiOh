@@ -21,4 +21,9 @@ name?: string,
  * R1852005: the order it launched in among every Starship of the game (`GameState.next_seq` as it
  * launched), so "the launched Starship" is the latest; absent while it is Dormant.
  */
-launched?: number, };
+launched?: number, 
+/**
+ * R3539000 (S+ #155 The Far Vagabond): the price of its launch by hand, set by the card that
+ * made it; absent launches for `launch_cost` as before.
+ */
+price?: number, };

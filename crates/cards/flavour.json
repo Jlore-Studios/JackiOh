@@ -2321,5 +2321,617 @@
   },
   "traininggrounds-060": {
     "flavour": "Locally grown, freshly sprinted."
+  },
+  "stinkyscapeplus-001": {
+    "flavour": "Cut it any way you like. Every slice is a star, and every star has opinions."
+  },
+  "stinkyscapeplus-002": {
+    "flavour": "He drifts alone until the neighbourhood fills up, and then he gets ideas."
+  },
+  "stinkyscapeplus-003": {
+    "flavour": "He holds that every creature can be improved, starting with yours."
+  },
+  "stinkyscapeplus-004": {
+    "flavour": "Class is cancelled for anyone whose name spells trouble, or at least spells M-O-U-S-E."
+  },
+  "stinkyscapeplus-005": {
+    "flavour": "He blends the whole fruit stand into one very expensive snack and calls it a business plan."
+  },
+  "stinkyscapeplus-006": {
+    "flavour": "Wine, cheese and a coin in his pocket. He considers this a balanced diet."
+  },
+  "stinkyscapeplus-006-1": {
+    "flavour": "Aged in a barrel nobody labelled. It tastes like regret, but expensive regret."
+  },
+  "stinkyscapeplus-006-2": {
+    "flavour": "The smell arrives long before the cheese does. The cheese just follows the smell."
+  },
+  "stinkyscapeplus-007": {
+    "flavour": "He ties everyone together with one big knot, then walks off whistling."
+  },
+  "stinkyscapeplus-008": {
+    "flavour": "Version three still smells of the factory and ships with a manual made entirely of rumours."
+  },
+  "stinkyscapeplus-009": {
+    "flavour": "Version four fixed the bugs. Version five will fix the fix."
+  },
+  "stinkyscapeplus-010": {
+    "flavour": "By version five the drones had a union, a mascot and a retirement plan."
+  },
+  "stinkyscapeplus-011": {
+    "flavour": "It runs on pure enthusiasm and one suspicious extension cord."
+  },
+  "stinkyscapeplus-012": {
+    "flavour": "A bubble with confidence issues. It pops once, politely."
+  },
+  "stinkyscapeplus-013": {
+    "flavour": "It re-blows the bubble every night and asks no questions about the pop."
+  },
+  "stinkyscapeplus-014": {
+    "flavour": "Armed with duct tape and a sincere belief that duct tape is a hull."
+  },
+  "stinkyscapeplus-015": {
+    "flavour": "Mark two uses better tape. The tape is also a paid subscription."
+  },
+  "stinkyscapeplus-016": {
+    "flavour": "It swings twice before you blink, and nobody has ever seen the second swing."
+  },
+  "stinkyscapeplus-017": {
+    "flavour": "Two fruits walk into a blender. One of them comes out in a cup."
+  },
+  "stinkyscapeplus-018": {
+    "flavour": "It won't fit in the cupholder, and it won't fit in your stomach either."
+  },
+  "stinkyscapeplus-019": {
+    "flavour": "It strips the sparkle off anything that wanders too close, and calls this fairness."
+  },
+  "stinkyscapeplus-020": {
+    "flavour": "Patch notes say: various fixes. They did not say whose."
+  },
+  "stinkyscapeplus-021": {
+    "flavour": "It shreds the enemy twice before lunch and files the paperwork twice after."
+  },
+  "stinkyscapeplus-022": {
+    "flavour": "Cold, thick and a little too eager to help. Don't drink it, however thirsty."
+  },
+  "stinkyscapeplus-023": {
+    "flavour": "Makes a thing bigger than the room it's in. The room has asked to be moved."
+  },
+  "stinkyscapeplus-024": {
+    "flavour": "One card goes in. A crowd comes out, and nobody asked for the crowd."
+  },
+  "stinkyscapeplus-025": {
+    "flavour": "Sweet, fluffy and entirely untrustworthy. It steals while you pet it."
+  },
+  "stinkyscapeplus-026": {
+    "flavour": "The war is eternal. The contract is eternal. The invoices are, sadly, eternal too."
+  },
+  "stinkyscapeplus-026-1": {
+    "flavour": "He signed up for the weekend. That was three wars ago."
+  },
+  "stinkyscapeplus-027": {
+    "flavour": "Taller than the house, slower than the mailman, and he carries a very small friend."
+  },
+  "stinkyscapeplus-027-1": {
+    "flavour": "Small, loud and thrown. It always lands somewhere inconvenient."
+  },
+  "stinkyscapeplus-028": {
+    "flavour": "Wind the crank, hear the tune, and try not to scream when it stops."
+  },
+  "stinkyscapeplus-029": {
+    "flavour": "Spent years in the grinder. Won't say who won, but he kept both arms."
+  },
+  "stinkyscapeplus-030": {
+    "flavour": "He tells the story at every dinner. Each time the enemy gets bigger."
+  },
+  "stinkyscapeplus-031": {
+    "flavour": "Your hand is an open book to anyone with sharp eyes and a poor conscience."
+  },
+  "stinkyscapeplus-032": {
+    "flavour": "Watchu know about the Z patch?"
+  },
+  "stinkyscapeplus-033": {
+    "flavour": "He misses the good old days, even the awful ones. Especially those."
+  },
+  "stinkyscapeplus-034": {
+    "flavour": "Like the original, only newer and somehow more insistent about the original."
+  },
+  "stinkyscapeplus-035": {
+    "flavour": "It sprays a little of everything and aims at nothing. The sky takes most of it."
+  },
+  "stinkyscapeplus-036": {
+    "flavour": "One barrel is good, two is better, and the third is somebody else's problem."
+  },
+  "stinkyscapeplus-037": {
+    "flavour": "It only fights what stands right in front of it. It has no time for the rest."
+  },
+  "stinkyscapeplus-038": {
+    "flavour": "It jumps between targets the way gossip jumps between neighbours."
+  },
+  "stinkyscapeplus-039": {
+    "flavour": "The factory floor meets the starship deck. Neither of them read the memo."
+  },
+  "stinkyscapeplus-040": {
+    "flavour": "It fixes whatever stands beside it and never asks what it was doing there."
+  },
+  "stinkyscapeplus-041": {
+    "flavour": "It fixes everybody at once. Nobody has found the invoice."
+  },
+  "stinkyscapeplus-042": {
+    "flavour": "It hums, it glows, and it politely tells the first few hits to go home."
+  },
+  "stinkyscapeplus-043": {
+    "flavour": "It doesn't stop the fight. It just stops the fight from reaching you."
+  },
+  "stinkyscapeplus-044": {
+    "flavour": "Sold in a small jar. The label reads: do not shake, stir or look directly at."
+  },
+  "stinkyscapeplus-045": {
+    "flavour": "Electric, shiny and rude. Whoever holds it cannot stand still."
+  },
+  "stinkyscapeplus-046": {
+    "flavour": "It sits half in this world and half somewhere else, and the other half pays rent."
+  },
+  "stinkyscapeplus-047": {
+    "flavour": "Strong as metal, bends like plastic, and refuses all questions about fashion."
+  },
+  "stinkyscapeplus-048": {
+    "flavour": "It glows a gentle green. Everyone agrees that is probably fine."
+  },
+  "stinkyscapeplus-049": {
+    "flavour": "Perfectly clear, which is why three interns have walked into it."
+  },
+  "stinkyscapeplus-050": {
+    "flavour": "Soft enough to draw with, sharp enough to end an argument."
+  },
+  "stinkyscapeplus-051": {
+    "flavour": "It sounds like a threat, but the chains insist it is a hug."
+  },
+  "stinkyscapeplus-052": {
+    "flavour": "It digs so hard the mountain files a noise complaint."
+  },
+  "stinkyscapeplus-053": {
+    "flavour": "Cuts through rock like a rumour through an office."
+  },
+  "stinkyscapeplus-054": {
+    "flavour": "Rattles the teeth, rattles the walls, rattles the manager."
+  },
+  "stinkyscapeplus-055": {
+    "flavour": "Its safety record is spotless, right up to the spot."
+  },
+  "stinkyscapeplus-056": {
+    "flavour": "The whole thing sleeps quietly, then wakes up with opinions."
+  },
+  "stinkyscapeplus-057": {
+    "flavour": "She knits scarves out of light. They are very warm and slightly late."
+  },
+  "stinkyscapeplus-058": {
+    "flavour": "A belt that delivers your lunch before you finish ordering it."
+  },
+  "stinkyscapeplus-059": {
+    "flavour": "Mail by catapult. Rarely lost, often loud."
+  },
+  "stinkyscapeplus-060": {
+    "flavour": "Found a sword in a ditch and called it a career."
+  },
+  "stinkyscapeplus-061": {
+    "flavour": "Believes every problem is solved by lunch, and he is usually right."
+  },
+  "stinkyscapeplus-061-1": {
+    "flavour": "Article one: no one leaves hungry. Article two: no one leaves."
+  },
+  "stinkyscapeplus-062": {
+    "flavour": "A lamp that makes everything under it hurry up and regret it."
+  },
+  "stinkyscapeplus-063": {
+    "flavour": "Bigger lamp, bigger hurry, bigger apology letter."
+  },
+  "stinkyscapeplus-064": {
+    "flavour": "It never moves, never talks, and never stops humming at your enemies."
+  },
+  "stinkyscapeplus-065": {
+    "flavour": "Dense, warm and unbothered. Practically a landlord."
+  },
+  "stinkyscapeplus-066": {
+    "flavour": "Built from a material nobody can pronounce and nobody can dent."
+  },
+  "stinkyscapeplus-067": {
+    "flavour": "Sometimes there. Sometimes not. Always smug about it."
+  },
+  "stinkyscapeplus-068": {
+    "flavour": "She sees your future and, frankly, she would pick a different deck."
+  },
+  "stinkyscapeplus-069": {
+    "flavour": "Tastes like a colour you have never seen. Pairs well with regret."
+  },
+  "stinkyscapeplus-069-1": {
+    "flavour": "The sweet part of the jellybean, wearing a very small crown."
+  },
+  "stinkyscapeplus-070": {
+    "flavour": "It ripened in zero gravity and has been floating about it ever since."
+  },
+  "stinkyscapeplus-071": {
+    "flavour": "The fine print is mostly machinery. Sign here, here and under the gear."
+  },
+  "stinkyscapeplus-072": {
+    "flavour": "It saw you coming, mostly because it was built to see you coming."
+  },
+  "stinkyscapeplus-073": {
+    "flavour": "Calm as a pond until somebody steps in."
+  },
+  "stinkyscapeplus-074": {
+    "flavour": "Leads the parade, carries the banner, and sets the pace."
+  },
+  "stinkyscapeplus-075": {
+    "flavour": "Left a trail of packs across the stars. Nobody has finished unwrapping them."
+  },
+  "stinkyscapeplus-075-1": {
+    "flavour": "Shiny wrapper, shiny insides, shiny regret over the wrapper."
+  },
+  "stinkyscapeplus-076": {
+    "flavour": "They came in peace, and then they saw the memes."
+  },
+  "stinkyscapeplus-076-1": {
+    "flavour": "Small, grey, and rather pleased with the whole thing."
+  },
+  "stinkyscapeplus-077": {
+    "flavour": "It has not been fed in hours. It is being very polite about it."
+  },
+  "stinkyscapeplus-078": {
+    "flavour": "One clean cut and the dream bleeds red. Stitching is extra."
+  },
+  "stinkyscapeplus-079": {
+    "flavour": "A quiet shore, a long tide, and a clock no one can stop."
+  },
+  "stinkyscapeplus-080": {
+    "flavour": "Every ship leaves port. This fleet just forgot to pack a return."
+  },
+  "stinkyscapeplus-081": {
+    "flavour": "He predicts the end every morning. Technically he keeps being early."
+  },
+  "stinkyscapeplus-082": {
+    "flavour": "Pack light. Pack very light. Actually, pack nothing."
+  },
+  "stinkyscapeplus-083": {
+    "flavour": "Always has a spare. It is also the spare."
+  },
+  "stinkyscapeplus-084": {
+    "flavour": "Remembers exactly how you left the room and insists on it."
+  },
+  "stinkyscapeplus-085": {
+    "flavour": "Your body, but greyer and a lot more fashionable."
+  },
+  "stinkyscapeplus-086": {
+    "flavour": "Tiny, hungry, and glowing. Not a good combination for a star."
+  },
+  "stinkyscapeplus-087": {
+    "flavour": "Grows where nothing should, and stays because it likes the view."
+  },
+  "stinkyscapeplus-088": {
+    "flavour": "Never sleeps on the job, mostly because it has no eyelids."
+  },
+  "stinkyscapeplus-089": {
+    "flavour": "A grudge that waits patiently at the bottom of the deck."
+  },
+  "stinkyscapeplus-090": {
+    "flavour": "Runs hot, hits hard, and has never once read the manual."
+  },
+  "stinkyscapeplus-091": {
+    "flavour": "Arrives like a wall, leaves like a puddle."
+  },
+  "stinkyscapeplus-092": {
+    "flavour": "A gemstone with feet. It would like you to stop tapping on it."
+  },
+  "stinkyscapeplus-093": {
+    "flavour": "Every copy insists it is the original, and each one is quietly lying."
+  },
+  "stinkyscapeplus-094": {
+    "flavour": "Please see attached: your performance, and your replacement."
+  },
+  "stinkyscapeplus-095": {
+    "flavour": "He signed a very generous sponsor's contract, and now everybody gets something."
+  },
+  "stinkyscapeplus-096": {
+    "flavour": "No test, no interview, no standards. Please keep your elbows in."
+  },
+  "stinkyscapeplus-097": {
+    "flavour": "The waiting list is a rumour and the interview is a fight."
+  },
+  "stinkyscapeplus-098": {
+    "flavour": "The captain seated them at opposite ends. Fate had notes."
+  },
+  "stinkyscapeplus-099": {
+    "flavour": "Signed this morning, enormous by lunch."
+  },
+  "stinkyscapeplus-100": {
+    "flavour": "Long neck, short patience, and a growth spurt nobody scheduled."
+  },
+  "stinkyscapeplus-101": {
+    "flavour": "One day it will be a problem. Today it is merely fluffy."
+  },
+  "stinkyscapeplus-102": {
+    "flavour": "His lyrics are about the void. The void left a bad review."
+  },
+  "stinkyscapeplus-103": {
+    "flavour": "Enlightenment, with a small surcharge."
+  },
+  "stinkyscapeplus-104": {
+    "flavour": "Day nine hundred of sitting very still, and the rock remains unimpressed."
+  },
+  "stinkyscapeplus-105": {
+    "flavour": "Nobody knows what he does. Everybody's bill goes up when he arrives."
+  },
+  "stinkyscapeplus-106": {
+    "flavour": "Forty tons of ghost story with a rifle on top."
+  },
+  "stinkyscapeplus-107": {
+    "flavour": "Short fuse, long reach, no apologies."
+  },
+  "stinkyscapeplus-108": {
+    "flavour": "A hundred small rockets and one large attitude problem."
+  },
+  "stinkyscapeplus-109": {
+    "flavour": "A beam so straight it has opinions about everyone's posture."
+  },
+  "stinkyscapeplus-110": {
+    "flavour": "The first model off the line. Every improvement is his own fault."
+  },
+  "stinkyscapeplus-111": {
+    "flavour": "He knocks twice. The second knock is also the first."
+  },
+  "stinkyscapeplus-112": {
+    "flavour": "A building that learned to walk, and chose to walk toward you."
+  },
+  "stinkyscapeplus-113": {
+    "flavour": "Rules the floor, the ceiling and anything else that stands up."
+  },
+  "stinkyscapeplus-114": {
+    "flavour": "The last word in walkers. Also the first, the middle and the loudest."
+  },
+  "stinkyscapeplus-115": {
+    "flavour": "Quick, bright and gone by lunch. Everyone loved it, briefly."
+  },
+  "stinkyscapeplus-116": {
+    "flavour": "He is always just ahead of you, and just behind your last decision."
+  },
+  "stinkyscapeplus-117": {
+    "flavour": "Hangs at the top of the sky, judging everyone's parking."
+  },
+  "stinkyscapeplus-118": {
+    "flavour": "A shadow with a payroll and several enormous opinions."
+  },
+  "stinkyscapeplus-119": {
+    "flavour": "Day becomes night, and the night has a very short temper."
+  },
+  "stinkyscapeplus-120": {
+    "flavour": "Cheap, loyal, and wildly excited about every single wall."
+  },
+  "stinkyscapeplus-121": {
+    "flavour": "More legs than a centipede, with worse manners."
+  },
+  "stinkyscapeplus-121-1": {
+    "flavour": "Strictly a leg. Unreasonably proud of it."
+  },
+  "stinkyscapeplus-122": {
+    "flavour": "Four rotors, one mission, zero interest in arguments."
+  },
+  "stinkyscapeplus-123": {
+    "flavour": "Keeps the whole team dry under eight whirling umbrellas."
+  },
+  "stinkyscapeplus-124": {
+    "flavour": "A navy of one, floating on pure spite."
+  },
+  "stinkyscapeplus-125": {
+    "flavour": "Takes three turns to reload and one second to ruin your day."
+  },
+  "stinkyscapeplus-126": {
+    "flavour": "Draws a straight line through everyone and apologises to none."
+  },
+  "stinkyscapeplus-127": {
+    "flavour": "A big black bird with a ruler and no gift for telling friends apart."
+  },
+  "stinkyscapeplus-128": {
+    "flavour": "Adds a little something every morning, like a dull and polite vending machine."
+  },
+  "stinkyscapeplus-129": {
+    "flavour": "It doesn't build robots. It builds the idea of robots, twice."
+  },
+  "stinkyscapeplus-130": {
+    "flavour": "The first robot is small. The tenth is a problem for the landlord."
+  },
+  "stinkyscapeplus-131": {
+    "flavour": "A factory that builds bigger factories that build bigger robots."
+  },
+  "stinkyscapeplus-132": {
+    "flavour": "Part two of the legendary lecture series. Attendance mandatory, clips optional."
+  },
+  "stinkyscapeplus-133": {
+    "flavour": "The final lecture. Bring coffee and a very sturdy hard hat."
+  },
+  "stinkyscapeplus-133-1": {
+    "flavour": "A dagger with wings and zero patience for foot traffic."
+  },
+  "stinkyscapeplus-133-2": {
+    "flavour": "Hits like a mace and shows up like a sunrise."
+  },
+  "stinkyscapeplus-133-3": {
+    "flavour": "A castle that learned to hover. The neighbours have filed complaints."
+  },
+  "stinkyscapeplus-133-4": {
+    "flavour": "Royalty with a shadow so wide it needs its own postcode."
+  },
+  "stinkyscapeplus-133-5": {
+    "flavour": "Reign and Eclipse, glued together. Both still insist on going first."
+  },
+  "stinkyscapeplus-134": {
+    "flavour": "They come pre-washed. They are still, somehow, not clean."
+  },
+  "stinkyscapeplus-135": {
+    "flavour": "You asked for a wall. Here is a whole row of tiny, eager ones."
+  },
+  "stinkyscapeplus-136": {
+    "flavour": "Every shift is one long afternoon of little clicks and small bangs."
+  },
+  "stinkyscapeplus-137": {
+    "flavour": "A matched set, delivered in one box and already arguing about the lid."
+  },
+  "stinkyscapeplus-138": {
+    "flavour": "Defines a delta as a small change. The change is not small."
+  },
+  "stinkyscapeplus-139": {
+    "flavour": "The briefing lasted one slide. The slide said Omega."
+  },
+  "stinkyscapeplus-140": {
+    "flavour": "The robots are back in the building, and HR insists it was a voluntary return."
+  },
+  "stinkyscapeplus-141": {
+    "flavour": "He tested in production because the staging server had feelings."
+  },
+  "stinkyscapeplus-142": {
+    "flavour": "Roll once, regret in several departments at the same time."
+  },
+  "stinkyscapeplus-142-1": {
+    "flavour": "Built by committee, so it walks in three directions at once."
+  },
+  "stinkyscapeplus-142-2": {
+    "flavour": "A thousand tiny bugs in a trench coat, and the coat is winning."
+  },
+  "stinkyscapeplus-143": {
+    "flavour": "Version three fixed the typo in the manual and not much else."
+  },
+  "stinkyscapeplus-144": {
+    "flavour": "Version four adds a warning label. It is aimed at the wrong end."
+  },
+  "stinkyscapeplus-145": {
+    "flavour": "Version five is version four with a longer beam and a shorter temper."
+  },
+  "stinkyscapeplus-146": {
+    "flavour": "It lobs a gentle suggestion over the wall. The suggestion is a swamp."
+  },
+  "stinkyscapeplus-147": {
+    "flavour": "Lobbed with care, received with a cough."
+  },
+  "stinkyscapeplus-148": {
+    "flavour": "Fifth edition, same recipe, bigger pot."
+  },
+  "stinkyscapeplus-149": {
+    "flavour": "Warm to the touch, and then very much not."
+  },
+  "stinkyscapeplus-150": {
+    "flavour": "Slightly more committed to the idea of being hot."
+  },
+  "stinkyscapeplus-151": {
+    "flavour": "Aimed at the problem. Geology did the rest."
+  },
+  "stinkyscapeplus-152": {
+    "flavour": "Reads the fine print on every target. The fine print says you."
+  },
+  "stinkyscapeplus-153": {
+    "flavour": "Smells like a bad decision, works like one too."
+  },
+  "stinkyscapeplus-154": {
+    "flavour": "A pedal labelled maybe. Nobody has ever let go of it."
+  },
+  "stinkyscapeplus-155": {
+    "flavour": "He left before anyone asked where he was going, which is the whole map."
+  },
+  "stinkyscapeplus-156": {
+    "flavour": "The horizon was here long before, and it has taken this personally."
+  },
+  "stinkyscapeplus-157": {
+    "flavour": "Nobody has ever seen the workers, but the invoices arrive on time."
+  },
+  "stinkyscapeplus-158": {
+    "flavour": "Opens a letter, and the letter opens something else."
+  },
+  "stinkyscapeplus-159": {
+    "flavour": "Brings you a shiny thing and expects a thank-you note."
+  },
+  "stinkyscapeplus-160": {
+    "flavour": "He was warned about the sun. He took notes, in very small print."
+  },
+  "stinkyscapeplus-161": {
+    "flavour": "Each one is a slightly worse copy of the last, and they keep arriving."
+  },
+  "stinkyscapeplus-162": {
+    "flavour": "Edwin never panics. He just reorganises, loudly, in a corridor."
+  },
+  "stinkyscapeplus-163": {
+    "flavour": "Whatever it was, he wants it faster. Mostly the meeting."
+  },
+  "stinkyscapeplus-164": {
+    "flavour": "The spreadsheet has spoken, and it is not a friendly spreadsheet."
+  },
+  "stinkyscapeplus-165": {
+    "flavour": "Sees the future clearly, and would like a word about snacks."
+  },
+  "stinkyscapeplus-166": {
+    "flavour": "The factory gates open at dawn. The union meeting was at four."
+  },
+  "stinkyscapeplus-t-tears-of-the-kwzki-tree": {
+    "flavour": "One drop makes everything shine. The tree is fine, thanks for asking."
+  },
+  "stinkyscapeplus-t-supernova": {
+    "flavour": "The last light of many things, gathered in one tidy spot."
+  },
+  "stinkyscapeplus-t-alnilam": {
+    "flavour": "One bright belt star, carrying every score in the sky."
+  },
+  "stinkyscapeplus-t-the-enigmata": {
+    "flavour": "Everyone takes a turn, and no one is told the rules."
+  },
+  "stinkyscapeplus-t-warhero-token": {
+    "flavour": "Worth a fortune or nothing. He shows it to everyone anyway."
+  },
+  "stinkyscapeplus-t-terminus-starship-ark-of-ashes": {
+    "flavour": "Carries the last of everything, and a few spare seat cushions."
+  },
+  "stinkyscapeplus-t-terminus-starship-dying-ember": {
+    "flavour": "It glows gently, which is the nicest thing about it."
+  },
+  "stinkyscapeplus-t-terminus-starship-heat-death-pilgrim": {
+    "flavour": "Walks toward the end of everything with a very good playlist."
+  },
+  "stinkyscapeplus-t-terminus-starship-entropys-wake": {
+    "flavour": "Everything it passes comes apart, in good order, with receipts."
+  },
+  "stinkyscapeplus-t-terminus-starship-red-giant-requiem": {
+    "flavour": "A funeral for a sun, with the sun in attendance."
+  },
+  "stinkyscapeplus-t-terminus-starship-cold-exodus": {
+    "flavour": "Left in a hurry and in layers."
+  },
+  "stinkyscapeplus-t-terminus-starship-omega-drift": {
+    "flavour": "No destination, just a very firm sense of direction."
+  },
+  "stinkyscapeplus-t-terminus-starship-farthest-shore": {
+    "flavour": "Nobody has returned to describe it, and the reviews are glowing."
+  },
+  "stinkyscapeplus-t-terminus-starship-nightfall-covenant": {
+    "flavour": "Signed in the dark, so nobody read the clauses."
+  },
+  "stinkyscapeplus-t-terminus-starship-vacuum-psalm": {
+    "flavour": "A hymn nobody can hear, sung very loudly."
+  },
+  "stinkyscapeplus-t-ai-01": {
+    "flavour": "It was definitely a kiwi. The kiwi disagrees."
+  },
+  "stinkyscapeplus-t-ai-02": {
+    "flavour": "Looks ripe, tastes like a training set gone off."
+  },
+  "stinkyscapeplus-t-ai-03": {
+    "flavour": "It has all day, and it is in no hurry to leave."
+  },
+  "stinkyscapeplus-t-ai-04": {
+    "flavour": "Confident, enormous, and wrong in a very nice font."
+  },
+  "stinkyscapeplus-t-ai-05": {
+    "flavour": "Brews light, slowly, and then adds a bit more."
+  },
+  "stinkyscapeplus-t-ai-06": {
+    "flavour": "Slides every bead to the edge, which is where the savings live."
+  },
+  "stinkyscapeplus-t-ai-07": {
+    "flavour": "It walks the line, and everything on it has a rough afternoon."
   }
 }

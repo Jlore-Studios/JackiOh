@@ -263,6 +263,32 @@ describe("#2877 a used Heroic Power's mark is an overlay on a fixed-width chip",
   });
 });
 
+describe("R3540005 the hero's Burn and Toxic badges", () => {
+  it("R3540005 the hero's Burn and Toxic show on either seat above 0, and nothing at none", () => {
+    const counted = { health: 30, armor: 0, powers: [], power: null, burn: 6, toxic: 2 };
+    const view = baseView({
+      you: emptySide("p1", { hero: counted }),
+      opponent: emptySide("p2", { hand: { count: 4 }, hero: counted }),
+    });
+    for (const side of ["you", "opponent"] as const) {
+      const { unmount } = render(withCatalog(<Hero view={view} side={side} />));
+      const burn = document.querySelector(".hero-burn[data-burn='6']");
+      const toxic = document.querySelector(".hero-toxic[data-toxic='2']");
+      expect(burn?.textContent).toBe("6");
+      expect(burn?.getAttribute("title")).toBe("Burn counters");
+      expect(toxic?.textContent).toBe("2");
+      expect(toxic?.getAttribute("title")).toBe("Toxic counters");
+      unmount();
+    }
+    for (const side of ["you", "opponent"] as const) {
+      const { unmount } = render(withCatalog(<Hero view={baseView()} side={side} />));
+      expect(document.querySelector(".hero-burn")).toBeNull();
+      expect(document.querySelector(".hero-toxic")).toBeNull();
+      unmount();
+    }
+  });
+});
+
 describe("R1840005 the hero's Credits badge", () => {
   it("R1840005 a count of 0 still shows on either seat, unlike the Jade Counter's, and a seat without Credits draws none", () => {
     const view = baseView({

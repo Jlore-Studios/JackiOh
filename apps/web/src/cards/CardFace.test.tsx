@@ -937,6 +937,21 @@ describe("R503: the set mark and a token's printed rarity", () => {
     expect(face.querySelector("img")?.getAttribute("src")).toBe(mark.src);
   });
 
+  it("R3572000 the Stinkyscape+ mark is Stinkyscape's planet with the plus, not the diamond", () => {
+    const mark = setMarkOf("Stinkyscape+");
+    expect(mark.kind).toBe("stinkyscape-plus");
+    expect(mark.label).toBe("Stinkyscape+ set");
+    const others = ["Stinkyscape", "Classic+", "Meditative+", "Boss"].map((set) => setMarkOf(set).src);
+    expect(others).not.toContain(mark.src);
+    const svg = decodeURIComponent(mark.src);
+    expect(svg).toContain("fill='#7fd23e'");
+    expect(svg).toContain("M17.6 0.8H21.2");
+    expect(svg).toContain("scale(0.8)");
+    expect(svg).not.toContain("<text");
+    expect(svg).not.toContain("<title");
+    expect(one(catalogFace("stinkyscapeplus-001"), ".cf-set").getAttribute("data-set-mark")).toBe("stinkyscape-plus");
+  });
+
   it("R503 a set with no glyph of its own gets the fallback, still named; an unknown card shows no set", () => {
     const boss: CardDef = { ...def("core-002"), set: "Boss" };
     const mark = setMark(renderFace({ defId: boss.id, def: boss, radiant: false }));
@@ -1231,14 +1246,14 @@ describe("issue #814: long faces truncate with an ellipsis and keep their whole 
     }
 
     // A level means nothing off the Summit: Heroic Power prints its own short form, the header over
-    // its thirteen powers.
+    // its fourteen powers.
     const { container } = render(
       <CardFace face={faceModel({ defId: "core-098", def: def("core-098"), radiant: false })} ascentLevel={3} />,
     );
     flushFits();
     const heroic = one(container, ".card-text");
     expect(heroic.getAttribute("data-short")).toBe("true");
-    expect(heroic.textContent).toContain("Discover one of 13 powers");
+    expect(heroic.textContent).toContain("Discover one of 14 powers");
     expect(heroic.textContent).not.toContain("Expedition Map");
   });
 

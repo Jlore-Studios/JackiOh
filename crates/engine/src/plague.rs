@@ -79,6 +79,8 @@ pub fn place_plague_on(sink: &mut EngineSink<'_>, card: &CardInstance, amount: i
     if base <= 0 || !carries_plague(sink.state, card) {
         return 0;
     }
+    // R3542000: the first counter may give a card its stat line (R2280001).
+    let was = crate::animated::ready_to_animate(sink.state, &card.id);
     let placed = base * plague_multiplier_of(sink.state, card);
     let live_plague =
         crate::state::find_instance(sink.state, &card.id).map_or_else(|| plague_on(card), plague_on);
@@ -86,6 +88,7 @@ pub fn place_plague_on(sink: &mut EngineSink<'_>, card: &CardInstance, amount: i
     if let Some(live) = find_instance_mut(sink.state, &card.id) {
         live.counters.plague = Some(value);
     }
+    crate::animated::owe_animation(sink.state, &card.id, was);
     sink.events.push(GameEvent::CounterChanged {
         instance_id: card.id.clone(),
         counter: CounterKind::Plague,

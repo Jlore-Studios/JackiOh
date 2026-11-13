@@ -66,17 +66,17 @@ use crate::state::{
 use crate::subsystems::activate::activation_views_for;
 use crate::subsystems::combo_index::grade_name;
 use crate::subsystems::copied_text::{copied_text_of, text_face_of};
-use crate::subsystems::hero_power::{power_of, power_title_of, used_this_turn};
+use crate::subsystems::hero_power::{power_of, power_price, power_title_of, used_this_turn};
 use crate::subsystems::pareto::pareto_hint_ids;
 use crate::subsystems::quests::quest_view_of;
 use crate::turn::standing_draw_offer;
 use crate::wire::{
-    AnimatedView, BackrowCounters, BackrowView, CardDef, CardMark, CardType, CardView, CopiedTextView,
-    CreditView, DrawOfferView, FaceDownBackrowView, GameEvent, GameEventType, GameResult, GlitchOutcome,
-    HandView, HeroPowerView, HeroView, Keyword, KeywordKind, LibraryOverflowOutcome, ManaView, ModifierView,
-    MulliganView, PLAYER_IDS, PendingElsewhereView, PendingOption, PendingPromptView, PendingView, PlayerId,
-    PlayerView, PreviewValue, PromptKind, PublicBackrowView, Row, RowFlags, Selection, SideView,
-    TuningChange, UnitView, Zone, ZoneName, opponent_of,
+    AnimatedView, BackrowCounters, BackrowView, BlackHoleView, CardDef, CardMark, CardType, CardView,
+    CopiedTextView, CreditView, DrawOfferView, FaceDownBackrowView, GameEvent, GameEventType, GameResult,
+    GlitchOutcome, HandView, HeroPowerView, HeroView, Keyword, KeywordKind, LibraryOverflowOutcome, ManaView,
+    ModifierView, MulliganView, PLAYER_IDS, PendingElsewhereView, PendingOption, PendingPromptView,
+    PendingView, PlayerId, PlayerView, PreviewValue, PromptKind, PublicBackrowView, Row, RowFlags, Selection,
+    SideView, TuningChange, UnitView, Zone, ZoneName, opponent_of,
 };
 use crate::zones::{
     beneath_at, carried_at, carried_units_of, home_of, is_reserved, is_standing_unit, slot_of, slots_of,
@@ -479,6 +479,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         chinese: None,
         created: None,
         created_by: None,
+        evolved: None,
         cost,
         // filled in by `card_view` from the instance data; bare views carry none.
         tags: None,
@@ -508,6 +509,8 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         quest: None,
         copies: None,
         fixed_x: None,
+        // R3548001: a bare view carries no blur.
+        tipsy_blur: None,
     }
 }
 
@@ -538,10 +541,14 @@ fn card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> CardVi
     view.chinese = card.chinese;
     // MD-B6, R943: so is Created.
     view.created = card.created;
+    // R3536005: so is Evolved: evolved, or marked to enter the field evolved.
+    view.evolved = (card.evolved == Some(true) || card.enters_evolved == Some(true)).then_some(true);
     // R1956001: and the card that generated it, to its owner alone.
     view.created_by = crate::generators::generator_shown_to(state, card, viewer);
-    // R1848003: a set X is the card's price, read where the card is.
+    // R1848003: a set X is the card's price, read where the card is. R3548001: and a Tipsy
+    // stamp blurs the card for its owner's view alone.
     view.fixed_x = card.fixed_x.filter(|_| crate::mana::is_x_cost(state, card));
+    view.tipsy_blur = crate::tipsy::blur_for(state, card, viewer);
     view
 }
 
@@ -580,6 +587,14 @@ fn hand_card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> C
         .map(str::to_string);
     if let Some(keywords) = keywords {
         view.keywords = Some(keywords);
+    }
+    // R3558002: a card of a waiting pair wears the meet mark in its owner's view alone — never in
+    // `marks_on`, so R1141's marked-card count leaks nothing of it.
+    if crate::hand_order::meets_partner(state, &card.id).is_some() {
+        view.marks.get_or_insert_with(Vec::new).push(CardMark {
+            mark: crate::hand_order::MEET_MARK.to_string(),
+            color: crate::hand_order::MEET_MARK_COLOR.to_string(),
+        });
     }
     view
 }
@@ -866,6 +881,13 @@ fn unit_view_of(
         // MD-B6, R943: likewise.
         created: card.created,
         created_by: card.created_by,
+        // R3536005: likewise.
+        evolved: card.evolved,
+        // R3546004: the size it stands in, from the instance; the covered zones read empty.
+        giga: top.giga,
+        // R3554007: the damage chains it is in, public on both seats like the unit itself.
+        shared_chain: top.shared_chain,
+        split_chain: top.split_chain,
         // ME-GRANT (MD-D13): the granted Death abilities, as the Unit's lines read them.
         grants: crate::grants::grant_texts(state, top),
         // R849000: summoning sick with neither Rush nor Charge, from public facts on the field.
@@ -874,6 +896,8 @@ fn unit_view_of(
         } else {
             None
         },
+        // R3548001: the field card's blur, if its stamp blurs it for this viewer.
+        tipsy_blur: card.tipsy_blur,
         attack_reason: attack_reason_of(state, auras, top, viewer),
         // R2321000: the counts cards on the field the viewer may read keep on it.
         tallies: crate::preview::tallies_on(state, top, viewer),
@@ -969,6 +993,8 @@ fn backrow_view(
             plague: plague_shown,
             buried,
             marks: with_marks(state, &card.id),
+            // R3546004: the size is public on a face-down card too.
+            giga: card.giga,
         }));
     }
     let grade = card.counters.grade;
@@ -980,6 +1006,9 @@ fn backrow_view(
         chinese: view.chinese,
         created: view.created,
         created_by: view.created_by,
+        evolved: view.evolved,
+        // R3546004: the size it stands in, from the instance.
+        giga: card.giga,
         tags: view.tags,
         cost: view.cost,
         attack: view.attack,
@@ -1005,6 +1034,9 @@ fn backrow_view(
             grade,
             grade_letter: grade.map(|grade| grade_name(grade).to_string()),
             plague: plague_shown,
+            // R3540000: a standing Unit's Burn and Toxic are public like its keywords.
+            burn: card.counters.burn,
+            toxic: card.counters.toxic,
         },
         owner: card.owner,
         controller: card.controller,
@@ -1031,6 +1063,10 @@ fn backrow_view(
         } else {
             None
         },
+        // R3556000: a Dormant Field Spell in the backrow wears its countdown (R1839000).
+        slumber: card.slumber,
+        // R3548001: the backrow card's blur, if its stamp blurs it for this viewer.
+        tipsy_blur: view.tipsy_blur,
     }))
 }
 
@@ -1074,7 +1110,7 @@ fn hero_powers_of(state: &GameState, player: PlayerId) -> Vec<HeroPowerView> {
                 def_id: card.def_id.clone(),
                 name: power.name.to_string(),
                 title: power_title_of(power, card.radiant).to_string(),
-                x: power.x,
+                x: power_price(state, card).unwrap_or(power.x),
                 used_this_turn: used_this_turn(state, card),
             });
         }
@@ -1186,6 +1222,8 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
         ModifierKind::PlayWatch { label, .. } => label.clone(),
         // R1882004: Stinkyscape #150's death watcher, in the card's own words.
         ModifierKind::DeathWatch { label, .. } => label.clone(),
+        // R3570004: Stinkyscape+ #142's launch watcher, in the card's own words.
+        ModifierKind::LaunchWatch { label, .. } => label.clone(),
         // R1180001: Meditative+ #11 Living Mana Potion's "Spell Damage +N this turn".
         ModifierKind::SpellDamage { amount } => format!("You have Spell Damage +{amount} this turn"),
         // R1180004: Meditative+ #6 Bloodbloom's health price, and the Echo the Radiant one adds.
@@ -1412,6 +1450,9 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
             // §10.8's "armor": the number §4.4 step 2 will subtract, never the stored field alone, with
             // every backrow grant (#84 Going Long) summed per R124.
             armor: hero_armor_of(state, player),
+            // R3540000: a hero's Burn and Toxic, public on both seats, absent at none.
+            burn: side.hero_burn,
+            toxic: side.hero_toxic,
             power: powers.first().cloned(),
             powers,
             // #936 S3: a Duos duel's pool and spent flag, public on both seats (absent in 1v1).
@@ -1492,6 +1533,10 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
         fatigue_count: side.fatigue_count,
         // R961: public on both seats, and absent until it first rises (D14).
         jade: side.jade.filter(|value| *value > 0),
+        // R3548000: public on both seats, and absent at none, as Jade is.
+        tipsy: side.tipsy.map(|counter| counter.count).filter(|count| *count > 0),
+        // R3548004: public on both seats, while a card giving it acts on this seat's field.
+        infinite_mana: crate::mana::has_infinite_mana(state, player).then_some(true),
         // R1840005: public on both seats, and absent until first gained.
         market_credits: side.market_credits,
         // R846, R847: owed extra turns and the Rift flag, public on both seats.
@@ -2413,6 +2458,8 @@ fn redact_event(
         | GameEventType::Predicted
         // R831003: the curve is board positions only.
         | GameEventType::CurveDrawn
+        // R3554005: the line is board positions only.
+        | GameEventType::LineDrawn
         // R1183002: the autopilot names a player and a turn.
         | GameEventType::AutopilotEngaged
         // R1838001: a Trade names its player alone; its `shuffledIn` and `drawn` are judged as any are.
@@ -2581,7 +2628,10 @@ fn redact_event(
         | GameEventType::Deanimated
         | GameEventType::Flickered
         // R1839002: an awakening names a card face-up on the field, public as the card is.
-        | GameEventType::Awakened => {
+        // R3536005: an evolution names a card acting on the field or lying readable in a
+        // graveyard, public as the card is.
+        | GameEventType::Awakened
+        | GameEventType::Evolved => {
             if !hidden(&instance) {
                 return event.clone();
             }
@@ -2874,6 +2924,12 @@ pub fn view_for_with_clock(state: &GameState, player_id: PlayerId, clock_ms: Opt
         trades: trades_view(state, player_id),
         // R1853000, R1853003: the Marketplace as the viewer reads it, once it is open.
         marketplace: crate::marketplace::marketplace_view(state, player_id),
+        // R3554000, R3554002: the hole and the slash, public on both seats.
+        black_hole: state
+            .black_hole
+            .as_ref()
+            .map(|hole| BlackHoleView::of(hole, hole.closes_at())),
+        slashed_lane: state.slashed_lane,
     };
     let defs = match_defs_in(state, &view);
     if !defs.is_empty() {

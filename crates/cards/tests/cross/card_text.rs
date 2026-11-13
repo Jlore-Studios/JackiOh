@@ -103,6 +103,9 @@ const RETURNS_OFF_THE_FIELD: &[&str] = &[
     // R2195003: Core #23's snapshot, TG #49.
     "traininggrounds-049 base",
     "traininggrounds-049 radiant",
+    // R3557004: S+ #104 returns from the graveyard at the end of the turn, as Core #23 does.
+    "stinkyscapeplus-104 base",
+    "stinkyscapeplus-104 radiant",
 ];
 
 /// Whether `label`, found at `index` of `line`, is the tail of a longer label that opens the line ("Cry &
@@ -833,7 +836,8 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
                 .any(|why| why == inside)
         );
         // The faces that quote a label are the two that grant a Death (R1107), Meditative+ #9's
-        // Embiggened Cry (#2179) and Stinkyscape #26 ZolarKeth's granted Activate (#2657), on both faces.
+        // Embiggened Cry (#2179), Stinkyscape #26 ZolarKeth's granted Activate (#2657) and Stinkyscape+ #93's
+        // granted line (#3573), on both faces.
         let quoting: Vec<String> = swept()
             .iter()
             .filter(|face| {
@@ -857,6 +861,8 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
                 "meditativeplus-009 radiant",
                 "stinkyscape-026 base",
                 "stinkyscape-026 radiant",
+                "stinkyscapeplus-093 base",
+                "stinkyscapeplus-093 radiant",
             ])
         );
     }
@@ -1606,7 +1612,8 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
         // The eight embiggen cards of issue #1175, Meditative+ #3, #4, #5, #19 and #23 (#1179, #1181),
         // and Core #83, Classic #35 and Meditative+ #9 (#2179). Every face above is held to the label, a
         // held set's too; the list pinned is the shipped sets' (R1857000: the Stinkyscape set's #79,
-        // #127, #128, #129 and #154 joined at its release, #1884).
+        // #127, #128, #129 and #154 joined at its release, #1884; the Stinkyscape+ set's #24, #64 to #67,
+        // #138 and #139 at its release, #3573).
         let shipped: Vec<String> = cards
             .into_iter()
             .filter(|id| {
@@ -1640,6 +1647,13 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
                 "stinkyscape-128",
                 "stinkyscape-129",
                 "stinkyscape-154",
+                "stinkyscapeplus-024",
+                "stinkyscapeplus-064",
+                "stinkyscapeplus-065",
+                "stinkyscapeplus-066",
+                "stinkyscapeplus-067",
+                "stinkyscapeplus-138",
+                "stinkyscapeplus-139",
             ])
         );
     }
