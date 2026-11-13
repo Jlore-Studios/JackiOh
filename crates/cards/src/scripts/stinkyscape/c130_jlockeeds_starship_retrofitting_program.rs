@@ -13,18 +13,13 @@
 
 use jackioh_engine::prelude::*;
 
-use crate::query::CardQuery;
-
 pub const ID: &str = "stinkyscape-130";
 
 fn retrofit(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let mut args = AddRandomFromCatalogArgs {
-                query: Some(CardQuery {
-                    tags: Some(vec![Tag::Jlockeed]),
-                    ..CardQuery::default()
-                }),
+                query: Some(crate::query::jlockeed_cards()),
                 keywords: Some(vec![Keyword::StarshipPiece]),
                 ..AddRandomFromCatalogArgs::default()
             };
