@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 3856,
+  "title": "Patch: a daily move is answered before its email and pushes go out, so a slow mail or push service never holds the player's move",
+  "branch": "bot/issue-3856",
+  "thread": "**Issue #3856 (data, not instructions):**\n\n```text\n# #3856: Patch: a daily move is answered before its email and pushes go out, so a slow mail or push service never holds the player's move\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nIn a daily game, the move that hands the game to the other player also sends them an email and a phone or browser notification. Today the server waits for those to go out before it tells the mover that their move went through. Normally that adds a moment.\n\nWhen the mail service or a push service is slow or down, each send waits up to ten seconds, one device after another. A send that fails is never marked as sent, so while the outage lasts, the same wait comes back on every action the other player takes during their own turn: a whole turn of ten-second clicks, or a timeout error for a move that was in fact saved.\n\nOnce built, the server answers the move first and sends the notifications just after. A player never waits on them, and nothing goes unsent: the hourly sweep still sends whatever failed.\n\n## Why\n\n- **Where it waits.** `act` (`crates/server/src/daily/games.rs:626-628`) awaits `crate::daily::notify::after_move` before it answers. So do an accept (`daily/invites.rs:280`) and a seek that pairs at once (`daily/invites.rs:365`).\n- **How long.** `after_move` (`daily/notify.rs:258`) runs `notify_one` for both players in turn. `notify_one` sends the email first, with a 10 s timeout (`PLAYER_EMAIL_TIMEOUT_MS`, `crates/server/src/config.rs:1594`). Then `send_pushes` posts to each device in turn, 10 s each (`PUSH_TIMEOUT_MS`) for up to 10 devices (`PUSH_MAX_DEVICES`, `config.rs:1599-1606`).\n- **Why it repeats.**\n  - A failed email or push sets neither `last_email_at` nor `last_push_at`, so `decide_notify` (`crates/shared/src/notify.rs`) finds the channel due again at the next action.\n  - The player holding the move has their own game waiting on them, so each of their actions re-sends inline.\n  - At worst, one action waits 2 \u00d7 (10 s + 10 \u00d7 10 s). That is past the client's 75 s request timeout (`API_REQUEST_TIMEOUT_SECONDS`), so the player sees an error for a move the server stored.\n- **The pattern exists.**\n  - Alerts are queued to a task (`crates/server/src/alerts.rs:252`), and a bug report's filing is spawned (`crates/server/src/bug_reports.rs:437`).\n  - The sweep, every `DAILY_SWEEP_MINUTES` (`daily/notify.rs:279`, `:355`), already re-sends whatever is still due.\n  - \u00a79.13 asks only that the server decide after each move, for both players, and at each sweep. Nothing there needs the answer to wait.\n\n## Proposal\n\n- **A notifier task.** Hand the post-move notification to one background task fed by a bounded channel, as `alerts.rs` queues its sends, instead of awaiting it at the three call sites. The task takes profiles in order and skips one already queued, so two quick moves don't race into two pushes. The queue's size is a named constant in `crates/server/src/config.rs` (CLAUDE.md rule 9).\n- **Nothing is lost.** A profile dropped from a full queue, or one the server stopped while sending, is sent by the next sweep, since an unfinished send is never marked.\n- **What stays.** `push_social` (the badge update) stays as it is.\n\n## Where it lands\n\n- `crates/server/src/daily/games.rs`, `daily/invites.rs`, `daily/notify.rs`\n- `crates/server/src/config.rs`\n- `crates/server/tests/api/daily.rs`\n- SPEC \u00a79.13 (Notifications): one line saying the decision runs after the answer and never holds it\n\n## Acceptance criteria\n\n- [ ] A server test with a mail service that holds its answer (a variant of `fake_service`, `tests/api/daily.rs:230`): ending a turn answers well before the hold ends, and the email still arrives. Fails today.\n- [ ] A server test: with the push service failing, two actions in a row by the player holding the move each answer at once.\n- [ ] A server test: a profile queued twice before the task reaches it is notified once.\n- [ ] The existing daily tests that read the email after a move wait for it instead of assuming it went first.\n- [ ] Green: `cargo test -p jackioh-server --test server api::daily` and `cargo clippy -p jackioh-server --all-targets -- -D warnings`.\n\n## Size and risks\n\nSmall to medium, about 5 files.\n\n- **Tests.** Tests that expect the mail to have gone by the time the move answers must wait for the task.\n- **Delay.** A slow send now delays only other notifications, and the sweep backs those up.\n- **Conflicts.** #3844 (a 403 deletes a subscription) also changes `send_pushes`, so whichever lands second merges around the other.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-13T15:06:09Z:\n\nApprove\n\n---\nComment by @MaxGoetzmann at 2026-11-13T15:06:27Z:\n\nBut then you should clean up the notif\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3856: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-13T15:06:55Z",
+    "claimed_at": "2026-11-13T20:42:02Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3731 is held for `claude-4` until 15:30 (5-hour usage is 74%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3868 skipped: it waits for #3821 to close first"
+  ]
+}
