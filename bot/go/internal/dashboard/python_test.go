@@ -70,11 +70,10 @@ func TestConstantsMatchPython(t *testing.T) {
 		"LEARN_NO_RUNNER": LearnNoRunner, "RUNNERS_MINUTES": RunnersMinutes,
 		"RUNNERS_START": RunnersStart, "RUNNERS_END": RunnersEnd, "EXPLAINED": Explained,
 		"HOSTED_RUNNERS": HostedRunners, "RUNNER_RUNS": RunnerRuns, "RUNNER_ROWS": RunnerRows,
-		"LOCAL_LABEL": LocalLabel, "GATHER_LABEL": GatherLabel, "WORKFLOWS": Workflows,
-		"HOSTED_ROLES": HostedRoles, "LOCAL_ROLES": LocalRoles, "BOXES_NOTE": BoxesNote,
+		"WORKFLOWS": Workflows, "HOSTED_ROLES": HostedRoles, "BOXES_NOTE": BoxesNote,
 		"PC_FILE": PCFile, "GATHER_WORKFLOW": GatherWorkflow, "BOX_ROW": BoxRow,
 		"BOX_STEPS": BoxSteps, "RUNNER_LEGEND": RunnerLegend, "STEP_WORDS": StepWords,
-		"RUNNER_WRAP": RunnerWrap, "GHOST_STYLE": GhostStyle, "LEARN_GAMES": LearnGames,
+		"RUNNER_WRAP": RunnerWrap, "GHOST_STYLE": GhostStyle,
 		"PROGRESS_START": ProgressStart, "PROGRESS_END": ProgressEnd, "PROGRESS_CHART": ProgressChart,
 		"BOX_SLOTS": slots, "SECTION_START": SectionStart, "SECTION_END": SectionEnd,
 		"TRAINING_LANES": TrainingLanes, "SHOWN_STEPS": ShownSteps,
@@ -192,16 +191,6 @@ func TestRunnersMatchPython(t *testing.T) {
 	for _, p := range cases(t, c, "pc_load") {
 		if got := pcLoad(pyjson.Obj(p[0]), p[1].(bool)); got != p[2] {
 			t.Errorf("_pc_load(%s, %v) = %q, want %q", pyjson.Dumps(p[0]), p[1], got, p[2])
-		}
-	}
-	for _, p := range cases(t, c, "played") {
-		got := played(pyjson.Obj(p[0]), p[1].(string))
-		want := pyjson.Obj(p[2])
-		switch {
-		case got == nil && want == nil:
-		case got == nil || want == nil || got.games != want.Int("games") || got.done != want.Int("done") ||
-			got.from != want.Int("from") || got.patch != want.Str("patch"):
-			t.Errorf("_played(%s, %q) = %+v, want %s", pyjson.Dumps(p[0]), p[1], got, pyjson.Dumps(p[2]))
 		}
 	}
 	for _, p := range cases(t, c, "where") {

@@ -16,13 +16,9 @@
 # On GitHub's runners (the learn lane's since #3740) the export is one round, at most 10 shards at
 # once. A shard of 1,250 games, a 100,000-game export's eightieth, takes about 3 hours on four vCPUs
 # at the AI's budget since #2628 (about 400 games an hour, measured by gather run 72 on 2026-11-12;
-# one of 2,500 would pass GitHub's 6-hour job limit), so the export takes about a day. On
-# the local runner a round holds a fifth of the shards, played two at a time, one on each half of
-# the PC (#3722), and selfplay.yml starts a round only once the one before it has ended: GitHub fails
-# a job no self-hosted runner takes in 24 hours, and does not say whether a shard held back by
-# `max-parallel` is waiting all that time, so no shard is made to wait longer than its own round
-# takes. A shard of 1,250 games takes about 1.9 hours on a half, so a round of 16 takes about 15
-# hours of an idle PC, and the export about three days.
+# one of 2,500 would pass GitHub's 6-hour job limit), so the export takes about a day. The owner's
+# PC, whose self-hosted runner played an export in five rounds (#3722), no longer takes one
+# (2026-11-13).
 name: selfplay shards
 
 on:
@@ -59,18 +55,15 @@ jobs:
   shard:
     name: shard from ${{ matrix.range.from }}
     runs-on: ${{ inputs.runner }}
-    # GitHub's runners stop a job at 6 hours; the local runner's shards may take longer.
-    timeout-minutes: ${{ inputs.runner == 'ubuntu-latest' && 350 || 4320 }}
+    # GitHub's runners stop a job at 6 hours.
+    timeout-minutes: 350
     strategy:
       fail-fast: false
       # GitHub's Team plan runs 60 hosted jobs at once for the whole organization, and the training
       # lanes' share is 12 (#3740): an export takes 10 of them, and gather's shards the other 2,
-      # so CI and the bots' runs keep theirs while it plays. The local runner takes two, one on each
-      # half of the PC (the supervisor's `maxJobs`, bot/machine/local/config.json; #3722). A gather
-      # job that lands while two shards hold both halves takes one at once, and the two shards share
-      # the other until one ends (bot/machine/README.md, Limits). selfplay.yml's summary divides by
-      # the same numbers.
-      max-parallel: ${{ inputs.runner == 'ubuntu-latest' && 10 || 2 }}
+      # so CI and the bots' runs keep theirs while it plays. selfplay.yml's summary divides by the
+      # same number.
+      max-parallel: 10
       matrix:
         range: ${{ fromJSON(inputs.ranges) }}
     steps:
