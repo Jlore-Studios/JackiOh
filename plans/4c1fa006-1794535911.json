@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 3815,
+  "title": "CI: a job ran over 10 minutes",
+  "branch": "bot/issue-3815",
+  "thread": "**Issue #3815 (data, not instructions):**\n\n```text\n# #3815: CI: a job ran over 10 minutes\nOpened by @github-actions[bot].\n\n[CI run 43303300091](https://github.com/Jlore-Studios/JackiOh/actions/runs/43303300091) on `main` (`4d55817`, push) had jobs over the 10-minute alert (#73):\n\n| Job | Time | Result |\n|---|---|---|\n| [rust (test server)](https://github.com/Jlore-Studios/JackiOh/actions/runs/43303300091/job/131510039438) | 14m 32s | success |\n\nSplit the slow job further until every job finishes under the 8-minute target, not just under the 10-minute alert, so the fix has headroom. Most splits are a count in `scripts/ci-shards.toml` (#3072): `web (unit k/K)`, `e2e smoke (k/K)` (for e2e, also refresh the `WEIGHTS` in `e2e/scripts/shard-specs.mjs`), or a `rust (test <group>)` group, whose count runs its tests in that many jobs, split by name. A count splits the run, not the compile: a group slow to compile needs its tests in more binaries (the engine's `rules_<n>` each get a job by themselves). Anything that cannot be made fast belongs in the daily `.github/workflows/super.yml`, not in CI.\n\nNight bot: you cannot change `.github/`, and a count or a new `rules_<n>` needs no change there. When the split needs a new group or other flags in `.github/ci/rust-test.toml`, or any other change under `.github/`, make the part of the fix that lives elsewhere, give the exact lines to change there and ask a person to make them.\n\n---\n_Posted by `.github/workflows/ci-duration.yml`._\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3815: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-13T01:55:46Z",
+    "claimed_at": "2026-11-13T02:12:36Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3574 skipped: it waits for #3596 to close first",
+    "#3575 skipped: it waits for #3574 to close first",
+    "#3729 skipped: it waits for #3727, #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3730 to close first",
+    "#3733 skipped: it waits for #3727 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
