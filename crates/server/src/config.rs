@@ -1595,6 +1595,9 @@ pub const PLAYER_EMAIL_FROM: &str = "JackiOh <no-reply@jackioh.com>";
 /// §9.13: how long a send to Resend may take before it is given up, in milliseconds; the next sweep
 /// tries again, since nothing was marked sent.
 pub const PLAYER_EMAIL_TIMEOUT_MS: u64 = 10_000;
+/// §9.13: how many profiles wait for the notifier's task (`daily::notify::NotifyQueue`) before a new
+/// one is dropped; the next sweep decides for it, since nothing unsent is ever marked sent.
+pub const DAILY_NOTIFY_QUEUE: usize = 256;
 /// RFC 8030's `TTL`: how long a push service keeps a "your move" push for a device that is offline,
 /// in seconds (a day: the next one says it again).
 pub const PUSH_TTL_SECONDS: u64 = 86_400;

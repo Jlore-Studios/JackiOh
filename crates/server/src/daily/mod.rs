@@ -3,7 +3,8 @@
 //!
 //! - [`games`]: a game's read and its actions, its start, and the list of the caller's games.
 //! - [`invites`]: a challenge to a friend and the daily queue's seeks.
-//! - [`notify`]: "your move" by email and Web Push, the sweep and the settings.
+//! - [`notify`]: "your move" by email and Web Push, the sweep, the settings and the task that sends after
+//!   a move.
 //! - [`webpush`]: RFC 8291's encryption and RFC 8292's VAPID.
 //!
 //! Its clock (who holds the move, until when) and what to send are `jackioh_shared`'s, pure
@@ -50,6 +51,8 @@ pub struct DailyState {
     offset_ms: AtomicI64,
     /// Whether a sweep runs now ([`DailyState::begin_sweep`]).
     sweeping: AtomicBool,
+    /// §9.13: the profiles a move told that wait for their notification (`notify::after_move`).
+    pub notifier: notify::NotifyQueue,
 }
 
 /// A running sweep's hold ([`DailyState::begin_sweep`]), let go when it ends, failed or not.
@@ -73,6 +76,7 @@ impl DailyState {
                 .expect("a client"),
             offset_ms: AtomicI64::new(0),
             sweeping: AtomicBool::new(false),
+            notifier: notify::NotifyQueue::default(),
         }
     }
 
