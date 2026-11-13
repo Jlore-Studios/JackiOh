@@ -13,6 +13,8 @@ import { expectSkeleton } from "../test/skeleton.ts";
 import { at, meBody, must, refusal, signIn, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { UNDO_REPEAT_MS, UNDO_WINDOW_MS, type UndoTimer } from "../undo/hold.ts";
 import { UNDO_TOAST, UNDO_TOAST_UNDO } from "../undo/UndoToast.tsx";
+import { navigate } from "../net/navigate.ts";
+import { sharedWithMePath } from "./anchors.ts";
 import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { FRIENDS_POLL_MS } from "./config.ts";
 import { stopFollowingChallenge } from "./follow.ts";
@@ -1113,5 +1115,78 @@ describe("R3874000 a friend's Lobby makes one lobby and opens it", () => {
     await waitFor(() => {
       expect(offers(rowOf(ANN), togetherTestid.lobby)).toBe(true);
     }, SLOW);
+  });
+});
+
+describe("R3729002 ?replay= opens a shared replay", () => {
+  const ONLY_CY: Partial<World> = { friends: [CY] };
+
+  /** The replay steps the page asked for: the match's replay is read, 404 here, so the player's view is its failure and Back. */
+  function replayReads(server: StubServer, matchId: string): number {
+    return server.calls.filter((call) => call.method === "GET" && call.path === `/api/replays/${matchId}`).length;
+  }
+
+  it("R3729002 the path names the replay: sharedWithMePath() is the list, sharedWithMePath(id) the list with that replay to open", () => {
+    expect(sharedWithMePath()).toBe("/together#shared");
+    expect(sharedWithMePath("m-shared-1")).toBe("/together?replay=m-shared-1#shared");
+    expect(sharedWithMePath("a b&c")).toBe("/together?replay=a%20b%26c#shared");
+  });
+
+  it("R3729002 ?replay= opens the shared replay it names once the list is read, and asks for it once", async () => {
+    at(`/together?replay=${SHARED.matchId}#shared`);
+    signIn("tok-together");
+    const server = serve(world(ONLY_CY));
+    render(<TogetherRoute />);
+    await waitFor(() => {
+      expect(replayReads(server, SHARED.matchId)).toBe(1);
+    }, SLOW);
+    // The page gives way to the replay's own screen, with its way back.
+    expect(screen.queryByTestId(togetherTestid.root)).toBeNull();
+    expect(await screen.findByTestId("replay-back", undefined, SLOW)).toBeInTheDocument();
+    await settle({ macrotasks: 3 });
+    expect(replayReads(server, SHARED.matchId)).toBe(1);
+  });
+
+  it("R3729002 leaving the replay clears the link, so the page shows again and a second Watch for it opens it again", async () => {
+    at(`/together?replay=${SHARED.matchId}#shared`);
+    signIn("tok-together");
+    const server = serve(world(ONLY_CY));
+    render(<TogetherRoute />);
+    fireEvent.click(await screen.findByTestId("replay-back", undefined, SLOW));
+    expect(await screen.findByTestId(togetherTestid.root, undefined, SLOW)).toBeInTheDocument();
+    expect(window.location.search).toBe("");
+    expect(replayReads(server, SHARED.matchId)).toBe(1);
+
+    act(() => {
+      navigate(sharedWithMePath(SHARED.matchId));
+    });
+    await waitFor(() => {
+      expect(replayReads(server, SHARED.matchId)).toBe(2);
+    }, SLOW);
+  });
+
+  it("R3729002 a link to a replay already on the page opens it too (the inbox's Watch from Play together)", async () => {
+    signIn("tok-together");
+    const server = serve(world(ONLY_CY));
+    render(<TogetherRoute />);
+    await screen.findByTestId(TESTID.sharedRow, undefined, SLOW);
+    expect(replayReads(server, SHARED.matchId)).toBe(0);
+    act(() => {
+      navigate(sharedWithMePath(SHARED.matchId));
+    });
+    await waitFor(() => {
+      expect(replayReads(server, SHARED.matchId)).toBe(1);
+    }, SLOW);
+  });
+
+  it("R3729002 a link naming a match the list does not hold opens nothing", async () => {
+    at("/together?replay=m-not-shared#shared");
+    signIn("tok-together");
+    const server = serve(world(ONLY_CY));
+    render(<TogetherRoute />);
+    await screen.findByTestId(TESTID.sharedRow, undefined, SLOW);
+    await settle({ macrotasks: 3 });
+    expect(screen.getByTestId(togetherTestid.root)).toBeInTheDocument();
+    expect(server.calls.some((call) => call.path.startsWith("/api/replays/m-"))).toBe(false);
   });
 });

@@ -1,7 +1,9 @@
-// Play lobby (SPEC §9.5; R253, R257, R258, R259, R264, R330, R505, R612, R661, R765,
-// R1372, R640002, R3207000, R3207003, R3792000). Verdicts are UX only (CLAUDE.md rule 7); the server owns validation and matchmaking.
-// Rank never exposes its hidden rating. R1578000: /play is the hub every play mode starts from, online
-// first. Its "Play a friend" panel is the private lobby's (`lobby/LobbyPanel.tsx`, R3730000).
+// Play hub (SPEC §9.5; R253, R257, R258, R259, R264, R330, R505, R612, R661, R765, R1372, R640002, R3207000,
+// R3207003, R3729000, R3729001, R3792000). Verdicts are UX only (CLAUDE.md rule 7); the server owns validation and
+// matchmaking. Rank never exposes its hidden rating. R1578000, R3729000: /play is the hub every play mode starts
+// from, four groups of cards (`PlayHub.tsx`, the words `playModes.ts`'s); an Online card opens one panel
+// (`QueuePanel.tsx`) with the deck or trio and Find a match, and the Private lobby card the private lobby's panels
+// (`lobby/LobbyPanel.tsx`, R3730000). R3729001: while queued, the search shows in the shell's banner.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
@@ -32,7 +34,6 @@ import {
   getMe,
   getOwnRank,
   ladderOfMode,
-  ladderPath,
   type Ladder,
   type MeResponse,
   getPopulation,
@@ -44,31 +45,34 @@ import {
   type SavedDeck,
   type SavedTrio,
 } from "../net/api.ts";
-import { DailyBadge } from "../daily/DailyBadge.tsx";
-import { EmptyState } from "../empty/EmptyState.tsx";
+import { Dialog } from "../game/Dialog.tsx";
 import { currentCatalog } from "../game/currentCatalog.ts";
 import { pageWake } from "../game/net.ts";
-import { LeanSetPicker, readPlayLean, writePlayLean } from "../game/LeanNewest.tsx";
+import { readPlayLean, writePlayLean } from "../game/LeanNewest.tsx";
 import { MATCH_FOUND_STATUS, MODE_LABEL, forgetQueued, liveGameOf, readQueued, rememberQueued, useQueued } from "../net/liveGame.ts";
 import { isFreshAccount } from "../net/gate.ts";
-import { navigate, paths } from "../net/navigate.ts";
+import { matchIdOf, navigate, paths } from "../net/navigate.ts";
 import { LobbyPanel } from "../lobby/LobbyPanel.tsx";
-import { rankCaption } from "../rank/rank.ts";
-import RankCrest from "../rank/RankCrest.tsx";
+import { useMenuShell } from "../shell/context.ts";
 import { BackLink, followInApp } from "./nav.tsx";
 import { ArrowIcon } from "./ArrowIcon.tsx";
+import { OpponentLine } from "./GameBanner.tsx";
+import { PlayHub } from "./PlayHub.tsx";
+import { playCards } from "./playModes.ts";
+import { QueuePanel, Verdict, type QueuePicks } from "./QueuePanel.tsx";
+import { playTestid, playWaitTestid } from "./playTestids.ts";
 import { Wordmark } from "./Wordmark.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
-import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { attempt, messageOf } from "../net/errors.ts";
+import { waitWords } from "../net/queueReadout.ts";
 import { getStored, setStored } from "../net/storage.ts";
 import { useSocialReads } from "../together/socialPoll.ts";
 import "../auth/tavern.css";
 import "./lobby.css";
+import "./play-hub.css";
 
 /** Unit conversion, not configuration. */
 const MS_PER_SECOND = 1000;
-const SECONDS_PER_MINUTE = 60;
 
 /** R3792000: account reads of a wait failing in a row (the server unreachable, or answering 5xx, R3846000) before the screen says so; at SERIES_POLL_SECONDS apart it is inside the server's ticket timeout (R897000). */
 export const LOBBY_UNREACHABLE_AFTER_READS = 3;
@@ -76,44 +80,8 @@ export const LOBBY_UNREACHABLE_AFTER_READS = 3;
 /** R3846000: the first status of an answer that says the server was not reached: in production the edge Worker answers for a server that is down with a 500, 502, 503 or 504 (`apps/edge/src/index.ts`, `containerFetch`). */
 const FIRST_UNREACHABLE_STATUS = 500;
 
-/** Browser-test contract; `e2e/support/testids.ts` mirrors these strings. */
-export const playTestid = {
-  queue: "play-queue",
-  leaveQueue: "play-leave-queue",
-  status: "play-status",
-  unreachable: "play-unreachable",
-  error: "play-error",
-  practice: "play-practice",
-  /** #2705: the Dungeon run beside the other ways to play. */
-  dungeon: "play-dungeon",
-  screen: "play-screen",
-  online: "play-online",
-  ways: "play-ways",
-  together: "play-together",
-  /** #3727: daily games, badged with how many wait on the player. */
-  daily: "play-daily",
-  dailyBadge: "play-daily-badge",
-  signIn: "play-sign-in",
-  modeBo1: "play-mode-bo1",
-  modeBo3: "play-mode-bo3",
-  modeRandom: "play-mode-random",
-  deckSelect: "play-deck-select",
-  trioSelect: "play-trio-select",
-  verdict: "play-choice-verdict",
-  recentGames: "play-recent-games",
-  decksLink: "play-decks-link",
-  seriesLink: "play-series-link",
-  /** R1566000: a refusal naming the player's live co-op match links to it. */
-  duosLink: "play-duos-link",
-  searching: "play-searching",
-  rank: "play-rank",
-  leaderboard: "play-leaderboard",
-  /** R768000: the recent games and their replays. */
-  replays: "play-replays",
-  leanNewest: "play-lean-newest",
-  /** #1568: a failed decks read offers Try again beside the alert. */
-  decksRetry: "play-decks-retry",
-} as const;
+/** Browser-test contract (`playTestids.ts`, which has no imports); `e2e/support/testids.ts` mirrors these strings. */
+export { playTestid, playWaitTestid };
 
 export const QUEUE_MODES: readonly QueueMode[] = ["bo1", "bo3", "random"];
 
@@ -127,15 +95,8 @@ export function playModeTestid(mode: QueueMode): string {
   return MODE_TESTID[mode];
 }
 
-export function playWaitTestid(mode: QueueMode): string {
-  return `play-wait-${mode}`;
-}
-
-/** R640002: an expected wait the server counted, in seconds, as its tile says it. */
-export function waitWords(seconds: number): string {
-  if (seconds < SECONDS_PER_MINUTE) return t("Usually under {n} s", { n: String(seconds) });
-  return t("Usually under {n} min", { n: String(Math.ceil(seconds / SECONDS_PER_MINUTE)) });
-}
+/** `net/queueReadout.ts` words the expected wait, for the shell's banner too (R3729001); kept here for this file's importers. */
+export { waitWords };
 
 /** R640002: the games that ended in the last hour, bot games among them. */
 export function recentGamesWords(games: number): string {
@@ -352,7 +313,7 @@ export function pairTargetOf(me: {
   return liveGameOf(me)?.path ?? null;
 }
 
-export { MATCH_FOUND_STATUS };
+export { MATCH_FOUND_STATUS, Verdict };
 
 /** R3846000: a read that did not reach the game server: a transport failure or timeout, or the edge's 5xx answer for a server that is down. A 4xx proves the server was reached. */
 function isUnreachableRead(cause: unknown): boolean {
@@ -479,86 +440,6 @@ function useLobbyWatch(
 
 // UI pieces
 
-export function Verdict({ result }: { result: LoadoutResult | null }): ReactElement | null {
-  if (result === null) return null;
-  if (result.ok) {
-    return (
-      <p className="lobby-verdict" data-testid={playTestid.verdict} data-ready="true">
-        <span className="lobby-verdict__mark" aria-hidden="true">
-          ✓
-        </span>
-        {t("Ready to queue")}
-      </p>
-    );
-  }
-  return (
-    <div className="lobby-verdict" data-testid={playTestid.verdict} data-ready="false">
-      <p className="lobby-verdict__lead">{t("Not ready yet. The server checks again when you queue:")}</p>
-      <ul>
-        {result.errors.map((error, index) => (
-          // The same message can repeat for two cards; the index keeps the keys apart.
-          <li key={`${String(index)}-${error.message}`}>{t(error.message)}</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function ModeIcon({ mode }: { mode: QueueMode }): ReactElement {
-  const common = { viewBox: "0 0 32 32", "aria-hidden": true, className: "play-mode-tile__icon" } as const;
-  switch (mode) {
-    case "bo1":
-      return (
-        <svg {...common}>
-          <path d="M22 4h6v6L14 24l-6-6z" />
-          <path d="M9 19l4 4-3 3-1.5-1.5L5 28l-1-1 3.5-3.5L6 22z" />
-        </svg>
-      );
-    case "bo3":
-      return (
-        <svg {...common}>
-          <path d="M4 7l6-2 6 2v6c0 4-2.6 6.7-6 8-3.4-1.3-6-4-6-8z" />
-          <path d="M16 11l6-2 6 2v6c0 4-2.6 6.7-6 8-3.4-1.3-6-4-6-8z" />
-          <path d="M10 15l6-2 6 2v6c0 4-2.6 6.7-6 8-3.4-1.3-6-4-6-8z" />
-        </svg>
-      );
-    case "random":
-      return (
-        <svg {...common}>
-          <rect x="5" y="5" width="22" height="22" rx="5" />
-          <circle cx="11" cy="11" r="2" className="play-mode-tile__pip" />
-          <circle cx="16" cy="16" r="2" className="play-mode-tile__pip" />
-          <circle cx="21" cy="21" r="2" className="play-mode-tile__pip" />
-        </svg>
-      );
-  }
-}
-
-function DeckSummary({ deck }: { deck: SavedDeck }): ReactElement {
-  const full = deck.cards.length === DECK_SIZE;
-  return (
-    <p className="play-pick-summary" data-full={full ? "true" : "false"}>
-      {t("{count} / {size} cards", { count: String(deck.cards.length), size: String(DECK_SIZE) })}
-    </p>
-  );
-}
-
-function TrioSummary({ trio, decks }: { trio: SavedTrio; decks: readonly SavedDeck[] }): ReactElement {
-  return (
-    <ul className="play-trio-decks" aria-label={t("Decks in {name}", { name: trio.name })}>
-      {trio.deckIds.map((id, slot) => {
-        const deck = id === null ? undefined : decks.find((saved) => saved.id === id);
-        return (
-          // Slot identity distinguishes duplicate empty entries.
-          <li key={`${String(slot)}-${id ?? "empty"}`} className="play-trio-deck" data-empty={deck === undefined}>
-            {deck === undefined ? t("Empty slot") : deck.name}
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
 function Searching({ mode }: { mode: QueueMode }): ReactElement {
   return (
     <div className="play-search" data-testid={playTestid.searching} data-mode={mode}>
@@ -570,78 +451,6 @@ function Searching({ mode }: { mode: QueueMode }): ReactElement {
         {t("Looking for a {mode} opponent…", { mode: t(MODE_LABEL[mode]) })}
       </span>
     </div>
-  );
-}
-
-/** R2778000: the rank of the ladder the mode picked plays for, and a link to that ladder's board. */
-function RankPanel({ rank, ladder }: { rank: OwnRankResponse | null; ladder: Ladder }): ReactElement {
-  const board = ladderPath(paths.leaderboard, ladder);
-  return (
-    <section className="lobby-card play-panel play-panel--rank" aria-labelledby="play-rank-heading">
-      <h2 id="play-rank-heading" className="play-panel__heading">
-        {t("Your rank")}
-      </h2>
-      {rank === null ? null : (
-        <p data-testid={playTestid.rank} data-ladder={ladder}>
-          {t(ladder === "random" ? "All random" : "Constructed")} · <RankCrest rank={rank.rank} size="large" />{" "}
-          {t("{rank} · Season {season}", { rank: rankCaption(rank.rank), season: rank.season })}
-        </p>
-      )}
-      <a href={board} data-testid={playTestid.leaderboard} onClick={followInApp(board)}>
-        {t("Leaderboard")}
-        <ArrowIcon direction="forward" />
-      </a>
-    </section>
-  );
-}
-
-type Way = { href: string; testid: string; name: string; badge?: number };
-
-function waysToPlay(dailyWaiting: number): readonly Way[] {
-  return [
-    {
-      href: paths.practice,
-      testid: playTestid.practice,
-      name: t("Practice"),
-    },
-    {
-      href: paths.dungeon,
-      testid: playTestid.dungeon,
-      name: t("Dungeon run"),
-    },
-    {
-      href: paths.together,
-      testid: playTestid.together,
-      name: t("Play together"),
-    },
-    {
-      href: paths.daily,
-      testid: playTestid.daily,
-      name: t("Daily games"),
-      badge: dailyWaiting,
-    },
-    {
-      href: paths.replays,
-      testid: playTestid.replays,
-      name: t("Replays"),
-    },
-  ];
-}
-
-function WaysNav(): ReactElement {
-  // #3727: the social read's count of the daily games waiting on the player (none signed out).
-  const { dailyWaiting } = useSocialReads();
-  return (
-    <nav className="play-ways" data-testid={playTestid.ways} aria-label={t("More ways to play")}>
-      {waysToPlay(dailyWaiting).map((way) => (
-        <a key={way.href} className="play-way" href={way.href} data-testid={way.testid} onClick={followInApp(way.href)}>
-          <span className="play-way__name">
-            {way.name}
-            {way.badge === undefined ? null : <DailyBadge count={way.badge} testid={playTestid.dailyBadge} />}
-          </span>
-        </a>
-      ))}
-    </nav>
   );
 }
 
@@ -683,13 +492,55 @@ function statusWords(status: Status): string {
   }
 }
 
+/** Both ladders, whose ranks the hub's cards show (R2778000). */
+const LADDERS: readonly Ladder[] = ["constructed", "random"];
+
+const NO_RANKS: Readonly<Record<Ladder, OwnRankResponse | null>> = { constructed: null, random: null };
+
+/** A refusal, in the server's words, with the way to the series or the co-op game it names. */
+function Refusal({ error }: { error: LobbyError }): ReactElement {
+  return (
+    <div className="notice" data-testid={playTestid.error} role="alert">
+      {error.issues.length === 0 ? (
+        <p>{t(error.message)}</p>
+      ) : (
+        <ul className="lobby-issues">
+          {error.issues.map((issue, index) => (
+            <li key={`${String(index)}-${issue}`}>{t(issue)}</li>
+          ))}
+        </ul>
+      )}
+      {error.seriesId === null ? null : (
+        <a
+          href={paths.series(error.seriesId)}
+          data-testid={playTestid.seriesLink}
+          onClick={followInApp(paths.series(error.seriesId))}
+        >
+          {t("Go to your series")}
+          <ArrowIcon direction="forward" />
+        </a>
+      )}
+      {error.duosMatchId === null ? null : (
+        <a
+          href={paths.duos(error.duosMatchId)}
+          data-testid={playTestid.duosLink}
+          onClick={followInApp(paths.duos(error.duosMatchId))}
+        >
+          {t("Go to your co-op game")}
+          <ArrowIcon direction="forward" />
+        </a>
+      )}
+    </div>
+  );
+}
+
 function SignedOutPlay(): ReactElement {
   useLocale();
   return (
     <div className="app-shell tavern lobby play-screen play-hub" data-testid={playTestid.screen}>
       <BackLink title={t("Play")} />
       <PlayHero />
-      <div className="play-layout">
+      <div className="play-body">
         <section
           className="play-online play-online--signed-out"
           data-testid={playTestid.online}
@@ -708,9 +559,16 @@ function SignedOutPlay(): ReactElement {
             {t("Sign in")}
           </a>
         </section>
-        <div className="play-side">
-          <WaysNav />
-        </div>
+        <PlayHub
+          cards={playCards({ signedIn: false, dailyWaiting: 0 })}
+          lastMode={null}
+          ranks={NO_RANKS}
+          expectedWait={undefined}
+          dailyWaiting={0}
+          locked={false}
+          onPick={() => undefined}
+          onLobby={() => undefined}
+        />
       </div>
     </div>
   );
@@ -720,13 +578,21 @@ export default function PlayRoute({ token, me }: PlayRouteProps): ReactElement {
   return token === null ? <SignedOutPlay /> : <OnlinePlay token={token} me={me} />;
 }
 
+/** R3729000: what the hub has open over it: an Online card's panel (by mode), the Private lobby's, or nothing. */
+type Panel = QueueMode | "lobby" | null;
+
 function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }): ReactElement {
   useLocale();
+  /** R3729001: inside the menus' shell the banner shows the search, so this screen draws none of its own. */
+  const shell = useMenuShell();
   /** R765 resumes a queue left from another screen. */
   const [rejoined] = useState(readQueued);
   const stored = useMemo(readStoredChoice, []);
   // Queue state takes precedence over the saved choice.
   const [mode, setMode] = useState<QueueMode>(rejoined ?? stored.mode ?? "bo1");
+  /** R3729000: the card marked "Last used": the mode the player queued or picked last, none for a player with no choice kept. */
+  const [lastMode, setLastMode] = useState<QueueMode | null>(rejoined ?? stored.mode ?? null);
+  const [panel, setPanel] = useState<Panel>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<Status | null>(() =>
     rejoined === null ? null : { kind: "queued", mode: rejoined },
@@ -734,7 +600,9 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
   const [error, setError] = useState<LobbyError | null>(null);
   const [waiting, setWaiting] = useState(rejoined !== null);
   const [population, setPopulation] = useState<PopulationResponse | null>(null);
-  const [rank, setRank] = useState<OwnRankResponse | null>(null);
+  const [ranks, setRanks] = useState<Readonly<Record<Ladder, OwnRankResponse | null>>>(NO_RANKS);
+  // #3727: the social read's count of the daily games waiting on the player (none signed out).
+  const { dailyWaiting } = useSocialReads();
 
   const [deckId, setDeckId] = useState<string | null>(stored.deckId ?? null);
   const [trioId, setTrioId] = useState<string | null>(stored.trioId ?? null);
@@ -752,7 +620,8 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
     attempt(() => getPopulation(token)).then(setPopulation, () => undefined);
   }, [token]);
   // Keep setup locked during the found-status beat to avoid racing navigation.
-  const [found, setFound] = useState(false);
+  const [foundPath, setFoundPath] = useState<string | null>(null);
+  const found = foundPath !== null;
   const foundTarget = useRef<string | null>(null);
   const foundTimer = useRef<number | null>(null);
   useEffect(
@@ -761,12 +630,16 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
     },
     [],
   );
+  /** R3729001: set by the code that forgets the queue itself, so the wait it ends is not taken for one ended elsewhere. */
+  const ownForget = useRef(false);
   // Delay navigation so status paints; watcher and response share one target.
   const goFound = useCallback((target: string): void => {
     if (foundTarget.current !== null) return;
     foundTarget.current = target;
+    ownForget.current = true;
     forgetQueued();
-    setFound(true);
+    setPanel(null);
+    setFoundPath(target);
     setStatus({ kind: "found" });
     foundTimer.current = window.setTimeout(() => {
       navigate(target);
@@ -774,13 +647,33 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
   }, []);
   // R897000: Find-a-match is the way back into a queue the server no longer holds. Only a wait this
   // tab remembers (R765) can end.
-  const queueWait = useQueued() !== null;
+  const queued = useQueued();
+  const queueWait = queued !== null;
   const onQueueEnded = useCallback((): void => {
+    ownForget.current = true;
     forgetQueued();
     setWaiting(false);
     setStatus({ kind: "queueEnded" });
   }, []);
   const unreachable = useLobbyWatch(token, waiting, goFound, onQueueEnded, queueWait, me);
+  // R3729001: Cancel on the shell's banner forgets the queue from outside this screen, which ends the wait here
+  // too. A wait this tab never remembered (blocked storage) has no banner to cancel, so it is never taken for one.
+  const sawQueued = useRef(rejoined !== null);
+  useEffect(() => {
+    if (queued !== null) {
+      sawQueued.current = true;
+      return;
+    }
+    if (!sawQueued.current) return;
+    sawQueued.current = false;
+    if (ownForget.current) {
+      ownForget.current = false;
+      return;
+    }
+    if (!waiting || foundTarget.current !== null) return;
+    setWaiting(false);
+    setStatus({ kind: "left" });
+  }, [queued, waiting]);
   useEffect(() => {
     refreshPopulation();
   }, [refreshPopulation]);
@@ -794,22 +687,21 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
     };
   }, [refreshPopulation, waiting]);
 
-  // R2778000: the rank of the mode's ladder, read again when a pick moves to the other ladder.
-  const ladder = ladderOfMode(mode);
+  // R2778000, R3729000: both ladders' ranks, read at mount, for the cards and the panel.
   useEffect(() => {
     let canceled = false;
-    // The other ladder's rank is not this one's: none shows until this one's read answers.
-    setRank(null);
-    attempt(() => getOwnRank(token, ladder)).then(
-      (next) => {
-        if (!canceled) setRank(next);
-      },
-      () => undefined,
-    );
+    for (const ladder of LADDERS) {
+      attempt(() => getOwnRank(token, ladder)).then(
+        (next) => {
+          if (!canceled) setRanks((before) => ({ ...before, [ladder]: next }));
+        },
+        () => undefined,
+      );
+    }
     return () => {
       canceled = true;
     };
-  }, [token, ladder]);
+  }, [token]);
 
   // Persist the displayed IDs so stale saved choices are replaced.
   const deckShown = deck?.id;
@@ -848,12 +740,22 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
     return false;
   }
 
+  function onPick(picked: QueueMode): void {
+    setMode(picked);
+    setLastMode(picked);
+    setError(null);
+    setPanel(picked);
+  }
+
   function onEnqueue(): void {
     if (choice === null) return;
     const chosen = choice;
     run(async () => {
       const result = await enqueue(token, chosen);
+      // The panel's work is done once the server took the ticket: the search shows in the banner (R3729001).
+      setPanel(null);
       if (follow(result)) return;
+      ownForget.current = false;
       setWaiting(true);
       rememberQueued(chosen.mode);
       refreshPopulation();
@@ -865,6 +767,7 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
   function onLeaveQueue(): void {
     run(async () => {
       await dequeue(token);
+      ownForget.current = true;
       forgetQueued();
       setWaiting(false);
       setStatus({ kind: "left" });
@@ -873,9 +776,20 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
 
   const noChoice = choice === null;
   const locked = waiting || found;
-  const queued = waiting && !found;
+  const searching = waiting && !found;
   const expectedWait = population?.expectedWaitSeconds;
   const games = population?.gamesLastHour ?? 0;
+  const picks: QueuePicks =
+    lobby.kind === "ready" && data !== null
+      ? { kind: "ready", decks: data.decks, trios: data.trios, deck, trio }
+      : lobby.kind === "failed"
+        ? { kind: "failed", message: lobby.message, retry: retryLobby }
+        : { kind: "loading" };
+  const closePanel = (): void => {
+    setPanel(null);
+  };
+  const refusal = error === null ? null : <Refusal error={error} />;
+  const foundMatch = foundPath === null ? null : matchIdOf(foundPath);
 
   return (
     <div
@@ -893,6 +807,7 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
           role="status"
         >
           {statusWords(status)}
+          {status.kind === "found" && foundMatch !== null ? <OpponentLine matchId={foundMatch} /> : null}
         </p>
       ) : null}
       {unreachable ? (
@@ -900,213 +815,11 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
           {t("Can't reach the server. Still trying…")}
         </p>
       ) : null}
-      {error !== null ? (
-        <div className="notice" data-testid={playTestid.error} role="alert">
-          {error.issues.length === 0 ? (
-            <p>{t(error.message)}</p>
-          ) : (
-            <ul className="lobby-issues">
-              {error.issues.map((issue, index) => (
-                <li key={`${String(index)}-${issue}`}>{t(issue)}</li>
-              ))}
-            </ul>
-          )}
-          {error.seriesId === null ? null : (
-            <a
-              href={paths.series(error.seriesId)}
-              data-testid={playTestid.seriesLink}
-              onClick={followInApp(paths.series(error.seriesId))}
-            >
-              {t("Go to your series")}
-              <ArrowIcon direction="forward" />
-            </a>
-          )}
-          {error.duosMatchId === null ? null : (
-            <a
-              href={paths.duos(error.duosMatchId)}
-              data-testid={playTestid.duosLink}
-              onClick={followInApp(paths.duos(error.duosMatchId))}
-            >
-              {t("Go to your co-op game")}
-              <ArrowIcon direction="forward" />
-            </a>
-          )}
-        </div>
-      ) : null}
-      <div className="play-layout">
-        <section className="play-online" data-testid={playTestid.online} aria-labelledby="play-online-heading">
-          <h2 id="play-online-heading" className="play-online__heading">
-            {t("Play online")}
-          </h2>
-          <RankPanel rank={rank} ladder={ladder} />
-          <section className="lobby-card play-panel play-panel--setup" aria-labelledby="play-setup-heading">
-            <h2 id="play-setup-heading" className="play-panel__heading">
-              <span className="play-step" aria-hidden="true">
-                1
-              </span>
-              {t("How do you want to play?")}
-            </h2>
-            <fieldset className="lobby-modes">
-              <legend className="lobby-modes__legend">{t("Mode")}</legend>
-              {QUEUE_MODES.map((option) => {
-                const wait = expectedWait?.[option] ?? null;
-                return (
-                  <label
-                    key={option}
-                    className="lobby-mode play-mode-tile"
-                    data-selected={option === mode ? "true" : "false"}
-                    data-mode={option}
-                  >
-                    <input
-                      type="radio"
-                      name="play-mode"
-                      value={option}
-                      checked={option === mode}
-                      data-testid={playModeTestid(option)}
-                      disabled={locked}
-                      onChange={() => {
-                        setMode(option);
-                      }}
-                    />
-                    <ModeIcon mode={option} />
-                    <span className="lobby-mode__text">
-                      <span className="lobby-mode__name">{t(MODE_LABEL[option])}</span>
-                    </span>
-                    {wait === null ? null : (
-                      <span className="play-mode-tile__waiting" data-testid={playWaitTestid(option)}>
-                        {waitWords(wait)}
-                      </span>
-                    )}
-                  </label>
-                );
-              })}
-            </fieldset>
-            {games === 0 ? null : (
-              <p className="lobby-note" data-testid={playTestid.recentGames}>
-                {recentGamesWords(games)}
-              </p>
-            )}
-
-            <h2 className="play-panel__heading play-panel__heading--sub">
-              <span className="play-step" aria-hidden="true">
-                2
-              </span>
-              {mode === "bo3" ? t("Bring a trio") : mode === "bo1" ? t("Bring a deck") : t("No deck to bring")}
-            </h2>
-
-            {lobby.kind === "loading" && mode !== "random" ? (
-              <Skeleton variant="panel" label={t("Loading your decks…")} />
-            ) : null}
-            {lobby.kind === "failed" && mode !== "random" ? (
-              <>
-                <p className="notice" role="alert">
-                  {t("Your decks could not be loaded: {message}", { message: t(lobby.message) })}
-                </p>
-                <div className="row">
-                  <button type="button" data-testid={playTestid.decksRetry} onClick={retryLobby}>
-                    {t("Try again")}
-                  </button>
-                </div>
-              </>
-            ) : null}
-
-            {data !== null && mode === "bo1" ? (
-              data.decks.length === 0 ? (
-                <EmptyState
-                  text={t("You have no saved decks yet.")}
-                  action={{ label: t("Build one in Decks"), to: paths.decks, testId: playTestid.decksLink }}
-                />
-              ) : (
-                <div className="play-pick">
-                  <label htmlFor="play-deck">{t("Your deck")}</label>
-                  <select
-                    id="play-deck"
-                    className="lobby-select"
-                    data-testid={playTestid.deckSelect}
-                    value={deck?.id ?? ""}
-                    disabled={locked}
-                    onChange={(event) => {
-                      setDeckId(event.target.value);
-                    }}
-                  >
-                    {data.decks.map((saved) => (
-                      <option key={saved.id} value={saved.id}>
-                        {saved.name}
-                      </option>
-                    ))}
-                  </select>
-                  {deck === null ? null : <DeckSummary deck={deck} />}
-                </div>
-              )
-            ) : null}
-
-            {data !== null && mode === "bo3" ? (
-              data.trios.length === 0 ? (
-                <EmptyState
-                  text={t("You have no saved trios yet.")}
-                  action={{ label: t("Build one in Decks"), to: paths.decks, testId: playTestid.decksLink }}
-                />
-              ) : (
-                <div className="play-pick">
-                  <label htmlFor="play-trio">{t("Your trio")}</label>
-                  <select
-                    id="play-trio"
-                    className="lobby-select"
-                    data-testid={playTestid.trioSelect}
-                    value={trio?.id ?? ""}
-                    disabled={locked}
-                    onChange={(event) => {
-                      setTrioId(event.target.value);
-                    }}
-                  >
-                    {data.trios.map((saved) => (
-                      <option key={saved.id} value={saved.id}>
-                        {saved.name}
-                      </option>
-                    ))}
-                  </select>
-                  {trio === null ? null : <TrioSummary trio={trio} decks={data.decks} />}
-                </div>
-              )
-            ) : null}
-
-            {mode === "random" ? (
-              <>
-                <p className="lobby-note">
-                  {t("No deck needed: the server deals both of you one when the game starts.")}
-                </p>
-                <LeanSetPicker
-                  value={lean}
-                  disabled={locked}
-                  testid={playTestid.leanNewest}
-                  onChange={(pick) => {
-                    setLean(pick);
-                    writePlayLean(pick);
-                  }}
-                />
-              </>
-            ) : null}
-
-            <Verdict result={verdict} />
-          </section>
-
-          <section className="lobby-card play-panel play-panel--queue" aria-labelledby="play-queue-heading">
-            <h2 id="play-queue-heading" className="play-panel__heading">
-              <span className="play-step" aria-hidden="true">
-                3
-              </span>
-              {t("Find a match")}
-            </h2>
-            {queued ? <Searching mode={mode} /> : null}
-            <button
-              type="button"
-              className="button-primary play-cta"
-              data-testid={playTestid.queue}
-              disabled={busy || noChoice || locked}
-              onClick={onEnqueue}
-            >
-              {t("Find a match")}
-            </button>
+      {panel === null ? refusal : null}
+      <div className="play-body">
+        {searching && shell === null ? (
+          <section className="play-searching" aria-label={t("Find a match")}>
+            <Searching mode={mode} />
             <button
               type="button"
               className="link-button play-leave"
@@ -1117,14 +830,63 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
               {t("Leave the queue")}
             </button>
           </section>
-        </section>
-
-        <div className="play-side">
-          <WaysNav />
-
-          <LobbyPanel format="duel" mode={mode} />
-        </div>
+        ) : null}
+        {games === 0 ? null : (
+          <p className="lobby-note play-recent" data-testid={playTestid.recentGames}>
+            {recentGamesWords(games)}
+          </p>
+        )}
+        <PlayHub
+          cards={playCards({ signedIn: true, dailyWaiting })}
+          lastMode={lastMode}
+          ranks={ranks}
+          expectedWait={expectedWait}
+          dailyWaiting={dailyWaiting}
+          locked={locked}
+          onPick={onPick}
+          onLobby={() => {
+            setError(null);
+            setPanel("lobby");
+          }}
+        />
       </div>
+
+      {panel === "lobby" ? (
+        <Dialog
+          role="dialog"
+          sheet
+          title={t("Private lobby")}
+          testid={playTestid.lobbyDialog}
+          className="play-lobby-dialog"
+          onClose={closePanel}
+          actions={[]}
+        >
+          <LobbyPanel format="duel" mode={mode} />
+          <LobbyPanel format="coop" />
+        </Dialog>
+      ) : null}
+      {panel !== null && panel !== "lobby" ? (
+        <QueuePanel
+          mode={panel}
+          ladder={ladderOfMode(panel)}
+          rank={ranks[ladderOfMode(panel)]}
+          picks={picks}
+          lean={lean}
+          verdict={verdict}
+          locked={locked}
+          busy={busy}
+          noChoice={noChoice}
+          notice={refusal}
+          onDeck={setDeckId}
+          onTrio={setTrioId}
+          onLean={(pick) => {
+            setLean(pick);
+            writePlayLean(pick);
+          }}
+          onFind={onEnqueue}
+          onClose={closePanel}
+        />
+      ) : null}
     </div>
   );
 }

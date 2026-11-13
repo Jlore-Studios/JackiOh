@@ -98,8 +98,8 @@ tab bar, as the deck builder's status toast and the undo toast do. A board drawn
 path (`game/boardShown.ts`) takes the navigation away and keeps the screen mounted. Friends is the friends
 panel's button (`FriendsButton`'s `rail`), which opens the panel as the Dialog's drawer down the right edge,
 and the top bar no longer draws it inside the shell. The shell hands the screens a status row
-(`shell/context.ts`'s `useMenuShell`): the live game to go back to, else this tab's queue search with Leave
-the queue, which BackLink draws as its last slot and Home under its corner. e2e spec `51` clicks through the
+(`shell/context.ts`'s `useMenuShell`): the live game to go back to, else this tab's queue search with Cancel,
+on `/play` too (R3729001), which BackLink draws as its last slot and Home under its corner. e2e spec `51` clicks through the
 five destinations and closes the drawer each way at every size, and spec `38` runs axe over the shell.
 
 On a phone every control takes a tap across `--hit-min` (44 px) each way (R2122000). Under
@@ -688,21 +688,35 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         R3734001: a touch lifts it on a move across, `touch-action: pan-y` leaving a move down to
                         the pool's scroll), and the rail, the pool and the deck sit side by side from 601 px
                         (workshop.css), taking turns only at 600 px and under
-routes/play.tsx         /play, the Play hub (R1578000): one screen that does not scroll, online play first and
-                        largest, Practice, Play together and Replays as three smaller links (R1646000)
-                        beside it, and for a visitor with no account (`token` null) a Sign in in the online
-                        panel and no read at all; the online panel is the mode picker (Best of 1, Conquest, All Random, R257, R330), the deck or
-                        trio choice with the validator's verdict as UX, the queue and the room code; it
-                        waits on /api/auth/me's currentMatchId and currentSeriesId; it shows the player's
-                        own rank on the ladder of the mode picked and links that ladder's /leaderboard
-                        (R661, R2778000); a queue it joined is remembered for the
-                        tab, so the player may leave while they wait and it picks the wait up again (R765);
-                        its "Play a friend" panel is the private lobby's (`lobby/LobbyPanel.tsx`,
-                        R3730000); a queue the server no longer holds ends the wait with a
+routes/play.tsx         /play, the Play hub (R1578000, R3729000): one screen that does not scroll, whose one
+                        region (`.play-body`) holds `PlayHub`'s four groups of cards, Online, Daily, With
+                        friends and Solo, with Replays and Play together under them; the words, times and
+                        needs of every card are `routes/playModes.ts`'s catalog (`playCards`, `GAME_MINUTES`).
+                        For a visitor with no account (`token` null) a Sign in and the Solo cards, and no read
+                        at all. An Online card opens `QueuePanel` (one dialog: the rank of the mode's ladder,
+                        R661, R2778000, the deck or trio choice with the validator's verdict as UX, the
+                        server's refusal, and Find a match; Best of 1, Conquest, All Random, R257, R330), on
+                        the last mode and deck used; the Private lobby card opens the private lobby's panels
+                        (`lobby/LobbyPanel.tsx`, R3730000). It waits on /api/auth/me's currentMatchId and
+                        currentSeriesId; both ladders' ranks are read at mount and shown on their cards; a queue
+                        it joined is remembered for the tab, so the player may leave while they wait and it
+                        picks the wait up again (R765); inside the shell the search is the shell's banner
+                        (R3729001) and Cancel there ends the wait here, outside it the hub draws its own beacon
+                        and Leave the queue; a queue the server no longer holds ends the wait with a
                         rejoin message (R897000); it takes the gate's account (`me`) and sends no
                         /api/auth/me read at mount for a fresh one that names no game, reads the queue readout on
                         mount and then every QUEUE_POPULATION_POLL_SECONDS while it waits, its account
                         read keeping SERIES_POLL_SECONDS for the ticket (R3207000, R3207003)
+routes/playModes.ts     R3729000: the hub's catalog of cards and groups: name, line, time, needs, testid, action
+routes/PlayHub.tsx      R3729000: the groups of cards; routes/QueuePanel.tsx the Online cards' one panel
+routes/playTestids.ts   /play's testids, with no imports, which e2e/support/testids.ts mirrors
+shell/QueueBanner.tsx   R3729001: the queue search in the shell's status row, on every menu screen: the mode, a
+                        ticking clock, the expected wait (net/queueReadout.ts) and Cancel
+inbox/                  R3729002: the bell (`InboxBell`, in the top bar's end group and the landing's corner)
+                        and its sheet (`InboxPanel`): live challenges, lobby invites (`invites.ts`, kept in
+                        the tab), daily games on the player's move, daily challenges, friend requests and
+                        shared replays, in `order.ts`'s order, each answered inline; `store.ts` reads the
+                        daily list, friends and shared replays beside the social read, no new server state
 net/roomLink.ts         R767, R3730006: the room link (/play?room=…&mode=…) and the lobby link
                         (/lobby/:code): built for the share sheet or the clipboard, read once off the
                         address bar into this tab, through a sign-in, for the lobby screen
@@ -712,8 +726,8 @@ net/spending.ts         R2378000: whether one of the tab's spends is out, from i
                         cosmetic pack panel's Open and chase Buy (R2683000) wait on it, Buy, Open and Open
                         all turning economy/spend.css's wheel, and a 429 keeps its press's key
 net/liveGame.ts         R765: the player's online game, read off /api/auth/me: the queue this tab joined,
-                        which main.tsx's useQueueFollow follows on every screen but /play ("Match found!",
-                        then the game), and useLiveGame, the live match, series or co-op game the menus'
+                        which main.tsx's useQueueFollow follows on every screen but /play ("Match found!", naming the
+                        opponent, R3729001, then the game), and useLiveGame, the live match, series or co-op game the menus'
                         banner offers (R1566000), read every LIVE_GAME_POLL_SECONDS (R3207001); an ended
                         queue is forgotten after QUEUE_ENDED_AFTER_READS reads (R897000)
 routes/GameBanner.tsx   R765: the one banner atop a menu while there is a game to go back to: a saved

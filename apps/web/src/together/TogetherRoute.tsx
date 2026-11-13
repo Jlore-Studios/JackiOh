@@ -8,6 +8,8 @@
 // and every refusal is shown in the server's words.
 // R2119000: Remove asks nothing: the friend leaves the list at once and the unfriend waits behind
 // "Friend removed · Undo" (`undo/hold.ts`), so Undo sends nothing.
+// R3729002: `?replay=<matchId>` (the inbox's Watch, `anchors.ts`) opens that match's shared replay once the
+// shared list has been read, as Watch on its row does; a match the list does not hold opens nothing.
 
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
@@ -20,7 +22,7 @@ import { createLobby, inviteToLobby } from "../lobby/api.ts";
 import { holdInviteRefusal } from "../lobby/inviteRefusal.ts";
 import { LobbyPanel } from "../lobby/LobbyPanel.tsx";
 import { withSession } from "../net/gate.ts";
-import { navigate, paths } from "../net/navigate.ts";
+import { navigate, paths, useSearch } from "../net/navigate.ts";
 import {
   acceptFriendRequest,
   blockPlayer,
@@ -42,7 +44,7 @@ import { Wordmark } from "../routes/Wordmark.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { useUndoHold, type UndoTimer } from "../undo/hold.ts";
 import { UndoToast } from "../undo/UndoToast.tsx";
-import { SHARED_ANCHOR } from "./anchors.ts";
+import { REPLAY_PARAM, SHARED_ANCHOR, sharedWithMePath } from "./anchors.ts";
 import { useCatalogLookup } from "./catalog.ts";
 import { ChallengeDialog } from "./ChallengeDialog.tsx";
 import { ChatPanel } from "./ChatPanel.tsx";
@@ -91,6 +93,9 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
   const [challenging, setChallenging] = useState<Challenging | null>(null);
   const [watching, setWatching] = useState<SharedReplay | null>(null);
   const challengeOpener = useRef<HTMLElement | null>(null);
+  /** R3729002: the match a link asks to watch, and the one already opened for it (once per link). */
+  const wanted = new URLSearchParams(useSearch()).get(REPLAY_PARAM);
+  const opened = useRef<string | null>(null);
 
   // The Friends button's badge counts the requests this page last read.
   useEffect(() => {
@@ -122,6 +127,21 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
     // jsdom has no scrolling.
     if (list !== null && typeof list.scrollIntoView === "function") list.scrollIntoView();
   }, [shared.kind]);
+
+  // R3729002: a link to a shared replay opens it once the list is in; the replay is the list's, not the link's.
+  useEffect(() => {
+    if (wanted === null) {
+      opened.current = null;
+      return;
+    }
+    if (shared.kind !== "ready" || opened.current === wanted) return;
+    const replay = shared.value.shared.find((entry) => entry.matchId === wanted);
+    if (replay === undefined) return;
+    opened.current = wanted;
+    // The replay leaves this screen, so a held Remove goes now.
+    sendNow();
+    setWatching(replay);
+  }, [wanted, shared, sendNow]);
 
   const act = (work: () => Promise<unknown>, after: () => void = reloadFriends): void => {
     if (busy) return;
@@ -159,6 +179,8 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
           load={() => withSession((token) => openOnlineMatchReplay(token, watching.matchId))}
           onLeave={() => {
             setWatching(null);
+            // R3729002: a replay a link opened is done with the link, so a second Watch for it opens it again.
+            if (wanted !== null) navigate(sharedWithMePath(), { replace: true, force: true });
           }}
         />
       </CatalogContext.Provider>

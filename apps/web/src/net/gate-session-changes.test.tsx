@@ -623,7 +623,7 @@ describe("R194 the token an open screen holds is kept fresh", SLOW_TEST, () => {
     );
     window.history.replaceState(null, "", paths.play);
     render(<App />);
-    await screen.findByTestId("play-queue", undefined, SLOW);
+    await screen.findByTestId("play-hub", undefined, SLOW);
     expect(refreshes).toHaveLength(0);
 
     // The phone slept (its timers frozen) and is unlocked just before the token runs out.

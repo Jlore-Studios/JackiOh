@@ -25,7 +25,7 @@ import {
   FRIENDS_BUTTON,
   FRIENDS_PANEL,
   GAME,
-  PLAY_QUEUE,
+  PLAY_HUB,
   PRACTICE_HUD,
   REPLAYS_ROOT,
   TOGETHER_ROOT,
@@ -239,7 +239,7 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
         });
 
         it("/play", () => {
-          checkSignedIn(at("/play"), accounts.p1(), routes.play(), PLAY_QUEUE);
+          checkSignedIn(at("/play"), accounts.p1(), routes.play(), PLAY_HUB);
         });
 
         it("/decks", () => {
@@ -319,7 +319,7 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
 
         it("/play", () => {
           cy.visitAs(SHELL_ACCOUNT(), routes.play());
-          cy.get(ts(PLAY_QUEUE), { timeout: timeouts.view }).should("be.visible");
+          cy.get(ts(PLAY_HUB), { timeout: timeouts.view }).should("be.visible");
           expectShellNav(true);
           expectNoBlockingViolations(at("/play"));
         });
@@ -333,7 +333,7 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
 
         it("/play, the friends drawer open (R3728001)", () => {
           cy.visitAs(SHELL_ACCOUNT(), routes.play());
-          cy.get(ts(PLAY_QUEUE), { timeout: timeouts.view }).should("be.visible");
+          cy.get(ts(PLAY_HUB), { timeout: timeouts.view }).should("be.visible");
           cy.get(ts(menuShellTestid.nav)).find(ts(FRIENDS_BUTTON), { timeout: timeouts.view }).click();
           // Checked with the friends list read, never against the skeleton that comes first.
           cy.get(ts(FRIENDS_PANEL), { timeout: timeouts.view }).should("be.visible").find('[role="status"]').should("not.exist");

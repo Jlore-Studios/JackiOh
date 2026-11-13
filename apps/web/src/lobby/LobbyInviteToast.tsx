@@ -1,30 +1,24 @@
 // A friend's lobby invite (R3730005), mounted once beside the challenge toast (`main.tsx`): the social
-// socket's `lobbyInvite` frame shows a toast with Open, which opens the lobby, and Dismiss. Nothing keeps
-// an invite, so a tab with no socket open misses it. CLAUDE.md rule 7: Open only goes to the lobby; the
-// lobby's own screen enters it, and the server decides.
+// socket's `lobbyInvite` frame shows a toast with Open, which opens the lobby, and Dismiss. R3729002: the tab
+// keeps each invite in `inbox/invites.ts`, so Open and Dismiss only send the toast away and the bell's inbox
+// still lists the invite (Join, Dismiss there) until it is answered or `INBOX_INVITE_KEEP_MS` has passed; the
+// server sends the frame once, so a tab with no socket open still misses it. CLAUDE.md rule 7: Open only goes
+// to the lobby; the lobby's own screen enters it, and the server decides.
 
-import { useEffect, useState, type ReactElement } from "react";
+import { useEffect, type ReactElement } from "react";
 
+import { hideInviteToast, noteInvite, useInvites } from "../inbox/invites.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { navigate, paths } from "../net/navigate.ts";
-import { onLobbyInvitePush, type LobbyInvite } from "../together/socialPoll.ts";
+import { onLobbyInvitePush } from "../together/socialPoll.ts";
 import { lobbyTestid } from "./testids.ts";
 import "./lobby.css";
 
 export function LobbyInviteToast(): ReactElement | null {
   useLocale();
-  const [invites, setInvites] = useState<readonly LobbyInvite[]>([]);
-  useEffect(
-    () =>
-      onLobbyInvitePush((invite) => {
-        setInvites((before) => [...before.filter((each) => each.code !== invite.code), invite]);
-      }),
-    [],
-  );
+  const invites = useInvites().filter((invite) => !invite.toastHidden);
+  useEffect(() => onLobbyInvitePush((invite) => noteInvite(invite)), []);
   if (invites.length === 0) return null;
-  const drop = (code: string): void => {
-    setInvites((before) => before.filter((each) => each.code !== code));
-  };
   return (
     <div className="lobby-invite-toasts" role="region" aria-label={t("Lobby invites")}>
       {invites.map((invite) => (
@@ -40,7 +34,7 @@ export function LobbyInviteToast(): ReactElement | null {
               className="button-primary"
               data-testid={lobbyTestid.inviteOpen}
               onClick={() => {
-                drop(invite.code);
+                hideInviteToast(invite.code);
                 navigate(paths.lobby(invite.code));
               }}
             >
@@ -51,7 +45,7 @@ export function LobbyInviteToast(): ReactElement | null {
               className="button-secondary"
               data-testid={lobbyTestid.inviteDismiss}
               onClick={() => {
-                drop(invite.code);
+                hideInviteToast(invite.code);
               }}
             >
               {t("Dismiss")}

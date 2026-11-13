@@ -1,0 +1,327 @@
+/* The Play hub (#3729, R3729000, R1578000, R1581000): every way to play as a card in one of four groups, and
+   one screen: the shell is the viewport's height and the page never scrolls; `.play-body` is the one
+   region that scrolls whatever the cards need. An Online card opens `.play-queue-panel`, a dialog over the hub.
+   Every rule sits under `.tavern.play-screen.play-hub`, because the series screen shares `.play-screen`.
+   Tokens only (palette, spacing, type and surface scales); every card at least --hit-min tall. */
+
+.tavern.play-screen.play-hub {
+  height: 100vh;
+  height: var(--shell-screen-h, 100dvh);
+  min-height: 0;
+  padding-bottom: var(--space-6);
+  overflow: hidden;
+}
+
+.tavern.play-screen.play-hub > * {
+  flex: 0 0 auto;
+}
+
+.tavern.play-screen.play-hub .play-hero {
+  padding-top: 0;
+  gap: 0;
+}
+
+.tavern.play-screen.play-hub .play-hero .brand__word {
+  font-size: var(--type-4xl);
+}
+
+.tavern.play-screen.play-hub > .play-body {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.tavern.play-screen.play-hub .play-cards {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: var(--space-7);
+  min-width: 0;
+}
+
+.tavern.play-screen.play-hub .play-recent {
+  margin: 0;
+}
+
+/* --- a group: its heading, then its cards ---------------------------------------------------- */
+
+.tavern.play-screen.play-hub .play-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.tavern.play-screen.play-hub .play-group__heading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--type-xl);
+  font-weight: 700;
+  color: var(--tavern-gold-pale);
+}
+
+.tavern.play-screen.play-hub .play-group__cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Past a phone's width the cards stand two to a row, and from 900 px, where the menus take their second column
+   (docs/polish/10-menus.md), three to a row, so the three Online cards are one row. */
+@media (min-width: 601px) {
+  .tavern.play-screen.play-hub .play-group__cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-6);
+  }
+}
+
+@media (min-width: 900px) {
+  .tavern.play-screen.play-hub .play-group__cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.tavern.play-screen.play-hub .play-group__cards > li {
+  display: flex;
+  min-width: 0;
+}
+
+/* --- a card: the emblem, its name, its line, and what a player should know before pressing it ---- */
+
+.tavern.play-screen.play-hub .play-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-6);
+  width: 100%;
+  min-height: var(--hit-min);
+  box-sizing: border-box;
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--tavern-brass);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  color: var(--text);
+  font: inherit;
+  font-family: var(--font-text);
+  text-align: start;
+  text-decoration: none;
+  cursor: var(--cursor-glove-point, pointer);
+  transition: border-color calc(var(--motion-fast) * var(--anim-scale, 1)) var(--ease-out);
+}
+
+.tavern.play-screen.play-hub .play-card:hover:not(:disabled) {
+  border-color: var(--tavern-gold);
+}
+
+.tavern.play-screen.play-hub .play-card:focus-visible {
+  outline: 2px solid var(--tavern-gold-pale);
+  outline-offset: var(--space-2);
+}
+
+.tavern.play-screen.play-hub .play-card:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tavern.play-screen.play-hub .play-card[data-last="true"] {
+  border-color: var(--tavern-gold);
+}
+
+.tavern.play-screen.play-hub .play-card__icon {
+  width: 32px;
+  height: 32px;
+  fill: color-mix(in srgb, var(--tavern-gold) 16%, transparent);
+  stroke: var(--tavern-gold);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.tavern.play-screen.play-hub .play-card__pip {
+  fill: var(--tavern-gold);
+  stroke: none;
+}
+
+.tavern.play-screen.play-hub .play-card__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.tavern.play-screen.play-hub .play-card__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-display);
+  font-size: var(--type-xl);
+  font-weight: 700;
+  color: var(--tavern-gold-pale);
+}
+
+.tavern.play-screen.play-hub .play-card__name .daily-badge {
+  margin-inline-start: 0;
+}
+
+.tavern.play-screen.play-hub .play-card__last {
+  padding: 0 var(--space-3);
+  border: 1px solid var(--tavern-teal);
+  border-radius: var(--radius-pill);
+  color: var(--tavern-teal);
+  font-size: var(--type-xs);
+  font-weight: 600;
+}
+
+.tavern.play-screen.play-hub .play-card__line {
+  color: var(--tavern-text-dim);
+  font-size: var(--type-md);
+  line-height: 1.4;
+}
+
+.tavern.play-screen.play-hub .play-card__facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.tavern.play-screen.play-hub .play-card__fact {
+  padding: 0 var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--tavern-brass) 45%, transparent);
+  border-radius: var(--radius-pill);
+  color: var(--tavern-parchment);
+  font-size: var(--type-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.tavern.play-screen.play-hub .play-card__rank {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.tavern.play-screen.play-hub .play-card__waiting {
+  border-color: color-mix(in srgb, var(--tavern-teal) 45%, transparent);
+  color: var(--tavern-teal);
+}
+
+/* --- Replays and Play together, under the groups --------------------------------------------- */
+
+.tavern.play-screen.play-hub .play-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-9);
+  padding-bottom: var(--space-4);
+}
+
+.tavern.play-screen.play-hub .play-more a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--hit-min);
+  font-weight: 700;
+}
+
+/* --- the search, outside the shell (inside it, the banner shows it) ----------------------------- */
+
+.tavern.play-screen.play-hub .play-searching {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+/* --- a visitor with no account: the sign-in panel is its one sentence and the way in ------------- */
+
+.tavern.play-screen.play-hub .play-online--signed-out {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-7);
+  padding: var(--space-9) var(--space-8);
+  border: 1px solid var(--tavern-gold);
+  border-radius: var(--radius-lg);
+  background: var(--bg-raised);
+}
+
+.tavern.play-screen.play-hub .play-online--signed-out p {
+  margin: 0;
+}
+
+.tavern.play-screen.play-hub .play-online__heading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--type-3xl);
+  font-weight: 700;
+  color: var(--tavern-gold-pale);
+}
+
+/* --- the panels the cards open ---------------------------------------------------------------- */
+
+.tavern.play-screen .play-queue-panel,
+.tavern.play-screen .play-lobby-dialog {
+  max-width: 100%;
+}
+
+.tavern.play-screen .play-queue-panel .play-panel,
+.tavern.play-screen .play-lobby-dialog .lobby-panel {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+/* The rank line names its ladder and wears its crest, so its "Your rank" label goes to screen readers only. */
+.tavern.play-screen .play-queue-panel .play-panel--rank {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-7);
+}
+
+.tavern.play-screen .play-queue-panel .play-panel--rank .play-panel__heading {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.tavern.play-screen .play-queue-panel .play-panel--rank p {
+  margin: 0;
+}
+
+/* A phone: the cards pack tighter, and the brand goes to screen readers alone so the hero spends no height. */
+@media (max-width: 600px) {
+  .tavern.play-screen.play-hub {
+    padding-bottom: var(--space-5);
+  }
+
+  .tavern.play-screen.play-hub .play-hero {
+    display: none;
+  }
+
+  .tavern.play-screen.play-hub .play-cards {
+    gap: var(--space-6);
+  }
+
+  .tavern.play-screen.play-hub .play-card {
+    gap: var(--space-5);
+    padding: var(--space-4) var(--space-5);
+  }
+
+  .tavern.play-screen.play-hub .play-card__icon {
+    width: 28px;
+    height: 28px;
+  }
+}

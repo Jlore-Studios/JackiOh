@@ -99,7 +99,7 @@ const UNTOKENED_MOTION: Record<string, number> = {
   "rank/rankCrest.css": 2,
   "routes/game-banner.css": 6,
   "routes/landing.css": 25,
-  "routes/lobby.css": 14,
+  "routes/lobby.css": 12,
   "routes/stats.css": 4,
   "settings/settings.css": 12,
   "shop/shop.css": 1,

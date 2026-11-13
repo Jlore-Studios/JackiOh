@@ -14,10 +14,14 @@ import {
   LOBBY_SEAT,
   LOBBY_SETTINGS,
   LOBBY_START,
+  PLAY_LOBBY,
+  PLAY_LOBBY_DIALOG,
   heroId,
-  playModeId,
   ts,
 } from "../../support/testids.ts";
+
+/** Where Play keeps the mode, deck and trio last used (`PLAY_CHOICE_KEY`, `apps/web/src/routes/play.tsx`, which a spec cannot import: it is a screen). */
+const PLAY_CHOICE_KEY = "jackioh.play.choice";
 
 const GUEST = "lobby-guest";
 const MATCH_PATH = /^\/match\/([^/]+)$/;
@@ -32,10 +36,16 @@ describe("54 private lobby — a 1v1 lobby from Create to the board", () => {
     cy.freeAccount(host);
     cy.freeAccount(guest);
 
-    // R3730000: Play's "Play a friend" makes a lobby in the mode Play has chosen.
-    cy.visitAs(host, routes.play());
-    cy.get(ts(playModeId("random")), { timeout: timeouts.view }).check();
-    cy.get(ts(LOBBY_PANEL)).find(ts(LOBBY_CREATE)).should("not.be.disabled").click();
+    // R3730000, R3729000: Play's Private lobby card opens "Play a friend", which makes a lobby in the mode Play
+    // last had chosen: All random, which the device kept before the page loaded.
+    cy.visitAs(host, routes.play(), {
+      onBeforeLoad(win) {
+        win.localStorage.setItem(PLAY_CHOICE_KEY, JSON.stringify({ mode: "random" }));
+      },
+    });
+    cy.get(ts(PLAY_LOBBY), { timeout: timeouts.view }).should("not.be.disabled").click();
+    cy.get(ts(PLAY_LOBBY_DIALOG), { timeout: timeouts.view }).should("be.visible");
+    cy.get(ts(LOBBY_PANEL)).first().find(ts(LOBBY_CREATE)).should("not.be.disabled").click();
     cy.location("pathname", { timeout: timeouts.view }).should("match", /^\/lobby\/[^/]+$/);
     cy.get(ts(LOBBY_CODE), { timeout: timeouts.view })
       .invoke("text")

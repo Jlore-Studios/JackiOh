@@ -1,0 +1,87 @@
+/* The inbox (R3729002): the bell in the top bar and the panel it opens. The bell wears the bar's one skin
+   (`routes/top-bar.css`, `top-bar-button--round`: a --hit-min circle), as the Friends button does; the panel
+   is the one Dialog's sheet and its rows are Play together's (`together/together.css`: `together-list`,
+   `together-row`). Tokens only: spacing.css, typescale.css, palette.css. */
+
+/* The bell: the round skin's circle, its icon centred and room for the badge at its corner. */
+.inbox-bell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inbox-bell__icon {
+  display: block;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.inbox-bell__icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.inbox-bell__badge {
+  position: absolute;
+  top: calc(var(--space-3) * -1);
+  right: calc(var(--space-3) * -1);
+  margin-left: 0;
+}
+
+/* A phone, 320 to 600 px: with the bell in the bar there is no room for the language button beside Back, the
+   pill and the gear (its Gameplay tab holds Language, #785), so it steps aside as it does for the Friends
+   button (`routes/top-bar.css`), and the bar's gap closes (only top-bar.css places the end group, R3218000). */
+@media (max-width: 600px) {
+  .screen-nav:has(.inbox-bell),
+  .landing .landing-corner:has(> .inbox-bell) {
+    gap: var(--space-3);
+  }
+
+  .screen-nav:has(.inbox-bell) .language-button,
+  .landing .landing-corner:has(> .inbox-bell) .language-button {
+    display: none;
+  }
+
+  .screen-nav:has(.inbox-bell) .top-bar-button--text,
+  .landing .landing-corner:has(> .inbox-bell) .top-bar-button--text {
+    padding: 0 var(--space-5);
+  }
+}
+
+/* The panel: the one Dialog's sheet (R3221000), centred on a wide screen and at the foot of a phone. */
+.dialog.inbox-panel {
+  align-items: stretch;
+  gap: var(--space-5);
+  box-sizing: border-box;
+  width: min(26rem, 100%);
+  max-height: 70vh;
+  padding: var(--space-6) var(--space-7);
+  overflow-y: auto;
+  font-size: var(--type-md);
+  text-align: start;
+}
+
+.dialog.inbox-panel .dialog__title {
+  text-align: center;
+}
+
+/* A row: who and what on the left, its answers on the right; the answers wrap under the text on a narrow panel. */
+.inbox-row__text {
+  display: flex;
+  flex: 1 1 12ch;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.inbox-row__meta {
+  color: var(--text-dim);
+  font-size: var(--type-sm);
+}
+
+/* A move with little time left, in the Daily screen's urgent color. */
+.inbox-row__meta[data-urgent="true"] {
+  color: var(--tavern-danger-text, var(--opponent));
+}

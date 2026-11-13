@@ -605,11 +605,19 @@ export const PLAY_TRIO_SELECT = "play-trio-select";
 export const PLAY_VERDICT = "play-choice-verdict";
 /** R1372: All random's “More cards from the newest set” option. */
 export const PLAY_LEAN_NEWEST = "play-lean-newest";
-/** R1578000: the Play hub, its online panel, the other ways to play and their tiles. */
+/** R1578000: the Play screen and a visitor's sign-in panel. R3729000: the hub of four groups of cards, the panel an Online card opens, the Private lobby's dialog, and the links under the groups. */
 export const PLAY_SCREEN = "play-screen";
 export const PLAY_ONLINE = "play-online";
-export const PLAY_WAYS = "play-ways";
+export const PLAY_HUB = "play-hub";
+export const PLAY_QUEUE_PANEL = "play-queue-panel";
+export const PLAY_LOBBY = "play-lobby";
+export const PLAY_LOBBY_DIALOG = "play-lobby-dialog";
+export const PLAY_MORE = "play-more";
 export const PLAY_TOGETHER = "play-together";
+/** R3729000: a group's section, `online`, `daily`, `friends` or `solo`. */
+export function playGroupId(group: "online" | "daily" | "friends" | "solo"): string {
+  return `play-group-${group}`;
+}
 /** R1578000: a visitor with no account is offered sign-in where the online controls would be. */
 export const PLAY_SIGN_IN = "play-sign-in";
 
@@ -861,6 +869,8 @@ export const CHALLENGE_TOAST = "challenge-toast";
 export const CHALLENGE_ACCEPT = "challenge-toast-accept";
 export const CHALLENGE_DECLINE = "challenge-decline";
 export const CHALLENGE_TOAST_ERROR = "challenge-toast-error";
+/** R3729002: Later sends the toast away; the challenge stays in the inbox. */
+export const CHALLENGE_LATER = "challenge-toast-later";
 
 /** `data-connection` (`connecting|open|closed|refused`). */
 export const WATCH_SCREEN = "watch-screen";

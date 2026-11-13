@@ -118,6 +118,8 @@ export const challengeToastTestid = {
   /** R767: `/play` with the room's code filled in, after a refused join. */
   lobby: "challenge-toast-lobby",
   error: "challenge-toast-error",
+  /** R3729002: sends the toast away; the challenge stays in the inbox until it is answered or lapses. */
+  later: "challenge-toast-later",
 } as const;
 
 export const watchTestid = {

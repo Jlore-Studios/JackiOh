@@ -15,7 +15,7 @@ import { BREAKPOINT_PX } from "../../../apps/web/src/breakpoints.ts";
 import { menuShellTestid } from "../../../apps/web/src/shell/testids.ts";
 import { MENU_SIZES, accounts, routes, timeouts } from "../../support/config.ts";
 import { expectShellNav } from "../../support/shell.ts";
-import { COLLECTION_SCREEN, FRIENDS_BUTTON, FRIENDS_CLOSE, FRIENDS_PANEL, PLAY_QUEUE, SHOP_PANEL, ts } from "../../support/testids.ts";
+import { COLLECTION_SCREEN, FRIENDS_BUTTON, FRIENDS_CLOSE, FRIENDS_PANEL, PLAY_HUB, SHOP_PANEL, ts } from "../../support/testids.ts";
 
 /**
  * R109 refuses an account past 300 requests a minute, and each size here opens about ten screens. 46 signs
@@ -35,7 +35,7 @@ const SAME_PAGE = "__jackioh51SamePage";
 
 /** Each of the shell's links, from the landing in this order: where it goes and what that screen draws. */
 const DESTINATIONS = [
-  { item: menuShellTestid.play, path: routes.play, root: PLAY_QUEUE },
+  { item: menuShellTestid.play, path: routes.play, root: PLAY_HUB },
   { item: menuShellTestid.collection, path: routes.collection, root: COLLECTION_SCREEN },
   { item: menuShellTestid.shop, path: routes.shop, root: SHOP_PANEL },
   { item: menuShellTestid.home, path: routes.landing, root: landingTestid.root },
@@ -44,7 +44,7 @@ const DESTINATIONS = [
 /** The screens shot at every size. */
 const SHOTS = [
   { screen: "home", path: routes.landing, root: landingTestid.root },
-  { screen: "play", path: routes.play, root: PLAY_QUEUE },
+  { screen: "play", path: routes.play, root: PLAY_HUB },
   { screen: "collection", path: routes.collection, root: COLLECTION_SCREEN },
 ] as const;
 

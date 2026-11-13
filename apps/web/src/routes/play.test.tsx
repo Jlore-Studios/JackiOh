@@ -18,7 +18,8 @@ import {
   QUEUE_POPULATION_POLL_SECONDS,
   SERIES_POLL_SECONDS,
 } from "@jackioh/server-config";
-import { readQueued, rememberQueued } from "../net/liveGame.ts";
+import { forgetQueued, readQueued, rememberQueued } from "../net/liveGame.ts";
+import { MenuShellContext } from "../shell/context.ts";
 import { expireRead, keepRead } from "../net/readCache.ts";
 import { clearSession, writeSession } from "../net/session.ts";
 import {
@@ -40,8 +41,13 @@ import {
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { createLobby, getMyLobbies } from "../lobby/api.ts";
+import { getDuosLive } from "../net/duos.ts";
 import { lobbyTestid } from "../lobby/testids.ts";
 import { settle } from "../test/settle.ts";
+import { must } from "../test/stubServer.ts";
+import { dialogTestid } from "../game/Dialog.tsx";
+import { TUTORIAL_LESSONS } from "../tutorial/lessons.ts";
+import { PLAY_GROUPS, playCards } from "./playModes.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { currentCatalog } from "../game/currentCatalog.ts";
 import { PLAY_LEAN_NEWEST_KEY, PLAY_LEAN_SET_KEY, leanLabel } from "../game/LeanNewest.tsx";
@@ -50,12 +56,12 @@ import PlayRoute, {
   MATCH_FOUND_STATUS,
   MODE_LABEL,
   PLAY_CHOICE_KEY,
-  QUEUE_MODES,
   pairTargetOf,
   playModeTestid,
   playTestid,
   playWaitTestid,
 } from "./play.tsx";
+import { playCardRankTestid, playGroupTestid } from "./playTestids.ts";
 import { resetVisibility, setVisibility } from "../test/setup.ts";
 import { expectOnePageTitle } from "../test/pageTitle.ts";
 
@@ -75,6 +81,10 @@ vi.mock("../net/api.ts", async (importOriginal) => {
 vi.mock("../lobby/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lobby/api.ts")>();
   return { ...actual, createLobby: vi.fn(), getMyLobbies: vi.fn() };
+});
+vi.mock("../net/duos.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../net/duos.ts")>();
+  return { ...actual, getDuosLive: vi.fn() };
 });
 vi.mock("../game/currentCatalog.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../game/currentCatalog.ts")>();
@@ -194,17 +204,32 @@ afterEach(() => {
   }
 });
 
-/** Render the lobby and wait for its decks to load. */
-async function renderLobby(): Promise<void> {
+/** R3729000: an Online card opens its mode's panel, which is where the picks and Find a match are. */
+function pickMode(mode: QueueMode): void {
+  fireEvent.click(screen.getByTestId(playModeTestid(mode)));
+}
+
+/** Open `mode`'s panel again, after a wait ended: the cards were locked while it lasted. */
+async function reopen(mode: QueueMode): Promise<void> {
+  await waitFor(() => {
+    expect(screen.getByTestId(playModeTestid(mode))).not.toBeDisabled();
+  });
+  pickMode(mode);
+  await screen.findByTestId(playTestid.queuePanel);
+}
+
+/** Render the hub, wait for its decks to load, and open `open`'s panel (`null`: the hub alone). */
+async function renderLobby(open: QueueMode | null = "bo1"): Promise<void> {
   render(<PlayRoute token={TOKEN} />);
   await waitFor(() => {
     expect(vi.mocked(getDecks)).toHaveBeenCalled();
   });
-  await screen.findByTestId(playTestid.deckSelect);
-}
-
-function pickMode(mode: QueueMode): void {
-  fireEvent.click(screen.getByTestId(playModeTestid(mode)));
+  await screen.findByTestId(playTestid.hub);
+  if (open === null) return;
+  pickMode(open);
+  await screen.findByTestId(playTestid.queuePanel);
+  if (open === "bo1") await screen.findByTestId(playTestid.deckSelect);
+  if (open === "bo3") await screen.findByTestId(playTestid.trioSelect);
 }
 
 // the watch
@@ -323,23 +348,23 @@ describe("the lobby's match watch", () => {
   });
 });
 
-describe("R1578000 the Play hub", () => {
-  function precedes(first: HTMLElement, second: HTMLElement): boolean {
-    return (first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
-  }
+function precedes(first: HTMLElement, second: HTMLElement): boolean {
+  return (first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+}
 
-  const WAYS: readonly (readonly [string, string])[] = [
+describe("R1578000 R3729000 the Play hub", () => {
+  const LINKS: readonly (readonly [string, string])[] = [
+    // #3727: daily games, in their own group.
+    [playTestid.daily, paths.daily],
+    [playTestid.challenge, paths.together],
     [playTestid.practice, paths.practice],
     // B13: the Play hub links the Dungeon run.
     [playTestid.dungeon, paths.dungeon],
-    [playTestid.together, paths.together],
-    // #3727: daily games, beside Play together.
-    [playTestid.daily, paths.daily],
-    [playTestid.replays, paths.replays],
+    [playTestid.tutorial, `${paths.practice}?lesson=${must(TUTORIAL_LESSONS[0], "a first lesson").id}`],
   ];
 
   it("R3223000 the hub has one visible h1, the PageTitle, signed in and signed out", async () => {
-    await renderLobby();
+    await renderLobby(null);
     expectOnePageTitle("Play");
     expect(screen.queryByRole("heading", { name: "JackiOh" })).toBeNull();
 
@@ -348,44 +373,79 @@ describe("R1578000 the Play hub", () => {
     expectOnePageTitle("Play");
   });
 
-  it("R1578000 the hub puts online first with every mode reachable", async () => {
-    await renderLobby();
+  it("R3729000 the hub shows four groups of cards in order, each card with its name, time and what it needs", async () => {
+    await renderLobby(null);
 
-    const online = screen.getByTestId(playTestid.online);
-    const ways = screen.getByTestId(playTestid.ways);
-    expect(screen.getByTestId(playTestid.screen)).toContainElement(online);
-    expect(precedes(online, ways)).toBe(true);
-    expect(await within(online).findByTestId(playTestid.rank)).toBeInTheDocument();
-    expect(within(online).getByRole("region", { name: "How do you want to play?" })).toBeInTheDocument();
-    expect(within(online).getByRole("region", { name: "Find a match" })).toBeInTheDocument();
-    expect(within(online).getByTestId(playTestid.deckSelect)).toBeInTheDocument();
-    expect(within(online).getByTestId(playTestid.queue)).toBeInTheDocument();
-    for (const mode of QUEUE_MODES) expect(within(online).getByTestId(playModeTestid(mode))).toBeInTheDocument();
-    expect(within(ways).getAllByRole("link")).toHaveLength(WAYS.length);
-    for (const [testid, href] of WAYS) expect(within(ways).getByTestId(testid)).toHaveAttribute("href", href);
-    expect(paths.practice).toBe("/practice");
-    expect(screen.getByTestId(lobbyTestid.panel)).toBeInTheDocument();
+    const hub = screen.getByTestId(playTestid.hub);
+    const groups = within(hub).getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent);
+    expect(groups).toEqual(["Online", "Daily", "With friends", "Solo"]);
+    for (const group of PLAY_GROUPS) expect(within(hub).getByTestId(playGroupTestid(group))).toBeInTheDocument();
+    const cards = playCards({ signedIn: true, dailyWaiting: 0 });
+    expect(cards.map((card) => card.id)).toEqual([
+      "bo1",
+      "bo3",
+      "random",
+      "daily",
+      "lobby",
+      "challenge",
+      "practice",
+      "dungeon",
+      "tutorial",
+    ]);
+    for (const card of cards) {
+      const element = within(hub).getByTestId(card.testid);
+      expect(element).toHaveTextContent(card.name);
+      expect(element.querySelector('[data-field="time"]')).toHaveTextContent(card.time);
+      expect(element.querySelector('[data-field="needs"]')).toHaveTextContent(card.needs);
+    }
+    expect(within(hub).getByTestId(playGroupTestid("online"))).toContainElement(screen.getByTestId(playModeTestid("bo1")));
+    expect(within(hub).getByTestId(playGroupTestid("daily"))).toContainElement(screen.getByTestId(playTestid.daily));
+    expect(within(hub).getByTestId(playGroupTestid("friends"))).toContainElement(screen.getByTestId(playTestid.lobby));
+    expect(within(hub).getByTestId(playGroupTestid("solo"))).toContainElement(screen.getByTestId(playTestid.tutorial));
+  });
+
+  it("R3729000 an Online card opens one panel, which holds the picker and Find a match as the screen's one primary action", async () => {
+    await renderLobby(null);
+
+    expect(screen.queryByTestId(playTestid.queuePanel)).toBeNull();
+    expect(screen.queryByTestId(playTestid.queue)).toBeNull();
+    pickMode("bo1");
+    const panel = await screen.findByTestId(playTestid.queuePanel);
+    expect(panel).toHaveAttribute("role", "dialog");
+    expect(within(panel).getByRole("heading", { name: "Best of 1" })).toBeInTheDocument();
+    expect(await within(panel).findByTestId(playTestid.deckSelect)).toBeInTheDocument();
+    expect(await within(panel).findByTestId(playTestid.rank)).toBeInTheDocument();
+    const find = within(panel).getByTestId(playTestid.queue);
+    expect(find).toHaveClass("button-primary");
+    expect(find).toHaveTextContent("Find a match");
+    // The hub's cards are never a second primary button, and a link card is a plain link.
+    const hub = screen.getByTestId(playTestid.hub);
+    expect(hub.querySelector(".button-primary")).toBeNull();
+    for (const [testid] of LINKS) expect(within(hub).getByTestId(testid).tagName).toBe("A");
+    // The panel closes by its ✕ and leaves the hub as it was.
+    fireEvent.click(within(panel).getByTestId(dialogTestid.close));
+    expect(screen.queryByTestId(playTestid.queuePanel)).toBeNull();
+  });
+
+  it("R1578000 a link card opens its screen inside the app, and Replays and Play together sit under the groups", async () => {
+    await renderLobby(null);
+
+    for (const [testid, href] of LINKS) expect(screen.getByTestId(testid)).toHaveAttribute("href", href);
+    const more = screen.getByTestId(playTestid.more);
+    expect(within(more).getByTestId(playTestid.replays)).toHaveAttribute("href", paths.replays);
+    expect(within(more).getByTestId(playTestid.together)).toHaveAttribute("href", paths.together);
     expect(screen.getAllByTestId(playTestid.replays)).toHaveLength(1);
-  });
-
-  it("R1578000 Find a match is the primary action", async () => {
-    await renderLobby();
-
-    expect(screen.getByTestId(playTestid.queue)).toHaveClass("button-primary", "play-cta");
-    const ways = screen.getByTestId(playTestid.ways);
-    expect(ways.querySelector(".button-primary")).toBeNull();
-    // A way to play is a plain link, never a second primary button.
-    for (const [testid] of WAYS) expect(within(ways).getByTestId(testid).tagName).toBe("A");
-  });
-
-  it("R1578000 a way to play opens its screen inside the app", async () => {
-    await renderLobby();
-
     fireEvent.click(screen.getByTestId(playTestid.together));
     expect(vi.mocked(navigate)).toHaveBeenCalledWith(paths.together);
   });
 
-  it("R1578000 signed out reads nothing and offers sign-in", async () => {
+  it("R3729000 the Daily card names no waiting game while none waits on the player", async () => {
+    await renderLobby(null);
+    expect(screen.getByTestId(playTestid.daily)).toHaveTextContent("A game played over days");
+    expect(screen.queryByTestId(playTestid.dailyBadge)).toBeNull();
+  });
+
+  it("R1578000 R3729000 signed out reads nothing, offers sign-in and shows the solo cards alone", async () => {
     render(<PlayRoute token={null} />);
     await act(async () => {
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -398,9 +458,16 @@ describe("R1578000 the Play hub", () => {
     expect(paths.login).toBe("/login");
     expect(screen.queryByTestId(playTestid.queue)).toBeNull();
     expect(screen.queryByTestId(lobbyTestid.panel)).toBeNull();
-    const ways = screen.getByTestId(playTestid.ways);
-    expect(precedes(online, ways)).toBe(true);
-    for (const [testid, href] of WAYS) expect(within(ways).getByTestId(testid)).toHaveAttribute("href", href);
+    const hub = screen.getByTestId(playTestid.hub);
+    expect(precedes(online, hub)).toBe(true);
+    expect(screen.getByTestId(playGroupTestid("solo"))).toBeInTheDocument();
+    for (const group of ["online", "daily", "friends"] as const) expect(screen.queryByTestId(playGroupTestid(group))).toBeNull();
+    const soloIds: readonly string[] = [playTestid.practice, playTestid.dungeon, playTestid.tutorial];
+    for (const [testid, href] of LINKS.filter(([id]) => soloIds.includes(id))) {
+      expect(within(hub).getByTestId(testid)).toHaveAttribute("href", href);
+    }
+    expect(within(hub).getByTestId(playTestid.replays)).toHaveAttribute("href", paths.replays);
+    expect(within(hub).getByTestId(playTestid.together)).toHaveAttribute("href", paths.together);
     // Nothing leaves the page: no decks, rank, population, lobbies, collection or me.
     for (const read of [getDecks, getMe, getOwnRank, getPopulation, getMyLobbies, getCollection]) {
       expect(vi.mocked(read)).not.toHaveBeenCalled();
@@ -410,20 +477,29 @@ describe("R1578000 the Play hub", () => {
   });
 });
 
-describe("R3730000 Play a friend", () => {
-  it("R3730000 Play a friend is the private lobby's panel, in the chosen mode", async () => {
+describe("R3729000 the private lobby card", () => {
+  it("R3729000 R3730000 the Private lobby card opens the lobby's panels, a 1v1 in the chosen mode and a co-op", async () => {
     vi.mocked(createLobby).mockResolvedValue({ code: "ABC234" });
+    vi.mocked(getDuosLive).mockResolvedValue({ matchId: null });
     await renderLobby();
+    // Best of 1 is the card's panel; pick Conquest, close its panel, and open the lobby with it chosen.
+    pickMode("bo3");
+    await screen.findByTestId(playTestid.trioSelect);
+    fireEvent.click(screen.getByTestId(dialogTestid.close));
+    expect(screen.queryByTestId(lobbyTestid.panel)).toBeNull();
 
-    const panel = screen.getByTestId(lobbyTestid.panel);
-    expect(panel).toHaveAttribute("data-format", "duel");
-    expect(within(panel).getByRole("heading", { name: "Play a friend" })).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId(playTestid.lobby));
+    const dialog = await screen.findByTestId(playTestid.lobbyDialog);
+    expect(within(dialog).getByRole("heading", { name: "Private lobby" })).toBeInTheDocument();
+    const panels = within(dialog).getAllByTestId(lobbyTestid.panel);
+    expect(panels.map((panel) => panel.getAttribute("data-format"))).toEqual(["duel", "coop"]);
+    const duel = must(panels[0], "the 1v1 panel");
+    expect(within(duel).getByRole("heading", { name: "Play a friend" })).toBeInTheDocument();
     // The classic room's controls are gone from /play: a friend game starts in a lobby.
     expect(screen.queryByTestId("play-create-room")).toBeNull();
     expect(screen.queryByTestId("play-join-form")).toBeNull();
 
-    pickMode("bo3");
-    fireEvent.click(within(panel).getByTestId(lobbyTestid.create));
+    fireEvent.click(within(duel).getByTestId(lobbyTestid.create));
     await waitFor(() => {
       expect(vi.mocked(navigate)).toHaveBeenCalledWith(paths.lobby("ABC234"));
     });
@@ -440,10 +516,9 @@ describe("R661 the lobby's rank", () => {
     expect(within(rank).getByRole("img", { name: "Normal Grape III · 1/3 pips" })).toHaveAttribute("data-size", "large");
     const link = screen.getByTestId(playTestid.leaderboard);
     expect(link).toHaveAttribute("href", paths.leaderboard);
-    // A panel of its own beside the queue, never inside the Find a match box (R505).
-    const box = screen.getByRole("region", { name: "Find a match" });
-    expect(within(box).queryByTestId(playTestid.rank)).toBeNull();
-    expect(within(box).queryByTestId(playTestid.leaderboard)).toBeNull();
+    // R3729000: the rank is the panel's own, above the picks, and the mode's card shows it too.
+    expect(screen.getByTestId(playTestid.queuePanel)).toContainElement(rank);
+    expect(screen.getByTestId(playCardRankTestid("bo1"))).toHaveTextContent("Normal Grape III");
   });
 
   it("R2778000 shows the rank of the picked mode's ladder and links that ladder's board", async () => {
@@ -458,33 +533,37 @@ describe("R661 the lobby's rank", () => {
     expect(constructed).toHaveAttribute("data-ladder", "constructed");
     expect(constructed).toHaveTextContent("Constructed · Normal Grape III");
     expect(screen.getByTestId(playTestid.leaderboard)).toHaveAttribute("href", paths.leaderboard);
+    // R3729000: both ladders are read at mount, and each Online card shows its own ladder's rank.
+    await waitFor(() => expect(screen.getByTestId(playCardRankTestid("random"))).toHaveTextContent("Golden Grape II"));
+    for (const mode of ["bo1", "bo3"] as const) expect(screen.getByTestId(playCardRankTestid(mode))).toHaveTextContent("Normal Grape III");
 
     pickMode("random");
     await waitFor(() => expect(screen.getByTestId(playTestid.rank)).toHaveAttribute("data-ladder", "random"));
     expect(screen.getByTestId(playTestid.rank)).toHaveTextContent("All random · Golden Grape II");
-    expect(vi.mocked(getOwnRank)).toHaveBeenLastCalledWith(TOKEN, "random");
     expect(screen.getByTestId(playTestid.leaderboard)).toHaveAttribute("href", `${paths.leaderboard}?ladder=random`);
 
-    // Best of 1 and Conquest share the Constructed ladder, so moving between them reads nothing again.
+    // Moving between the modes reads nothing again: one read per ladder, at mount.
     pickMode("bo3");
     await waitFor(() => expect(screen.getByTestId(playTestid.rank)).toHaveAttribute("data-ladder", "constructed"));
-    const reads = vi.mocked(getOwnRank).mock.calls.length;
     pickMode("bo1");
-    expect(vi.mocked(getOwnRank).mock.calls.length).toBe(reads);
+    expect(vi.mocked(getOwnRank).mock.calls).toEqual([
+      [TOKEN, "constructed"],
+      [TOKEN, "random"],
+    ]);
   });
 
   it("R661 puts R612's words on placements and a Jlorious position too, and never a rating", async () => {
     vi.mocked(getOwnRank).mockResolvedValue(
       rankBody({ rank: { tier: "raisin", placementsPlayed: 4, placementGames: 10 } }),
     );
-    const first = render(<PlayRoute token={TOKEN} />);
+    await renderLobby();
     const placing = await screen.findByTestId(playTestid.rank);
     expect(placing).toHaveTextContent("Raisin · Season v0.2");
     expect(within(placing).getByRole("img", { name: "Raisin · 4/10 placements" })).toBeInTheDocument();
-    first.unmount();
+    cleanup();
 
     vi.mocked(getOwnRank).mockResolvedValue(rankBody({ rank: { tier: "jlorious", position: 42 } }));
-    render(<PlayRoute token={TOKEN} />);
+    await renderLobby();
     const rank = await screen.findByTestId(playTestid.rank);
     expect(rank).toHaveTextContent("Jlorious · Season v0.2");
     expect(rank).toHaveTextContent("#42");
@@ -504,14 +583,14 @@ describe("R661 the lobby's rank", () => {
 // modes and choices (R257)
 
 describe("the lobby's modes", () => {
-  it("R257 the mode picker offers Best of 1, Conquest and All random, each with its own choice", async () => {
+  it("R257 R3729000 the Online cards offer Best of 1, Conquest and All random, each opening its own choice", async () => {
     await renderLobby();
 
     for (const mode of ["bo1", "bo3", "random"] as const) {
-      expect(screen.getByTestId(playModeTestid(mode))).toHaveAttribute("type", "radio");
+      expect(screen.getByTestId(playModeTestid(mode))).toHaveAttribute("aria-haspopup", "dialog");
     }
-    // Best of 1 is the default: a deck, listed by name, the first complete one chosen.
-    expect(screen.getByTestId(playModeTestid("bo1"))).toBeChecked();
+    // Best of 1 opens a deck, listed by name, the first complete one chosen.
+    expect(screen.getByTestId(playTestid.queuePanel)).toHaveAttribute("data-mode", "bo1");
     const deckSelect = screen.getByTestId(playTestid.deckSelect) as HTMLSelectElement;
     expect(Array.from(deckSelect.options).map((option) => option.textContent)).toEqual([
       "Aggro",
@@ -523,12 +602,13 @@ describe("the lobby's modes", () => {
     expect(screen.queryByTestId(playTestid.trioSelect)).toBeNull();
 
     pickMode("bo3");
-    expect(screen.getByTestId(playModeTestid("bo3"))).toBeChecked();
+    expect(screen.getByTestId(playTestid.queuePanel)).toHaveAttribute("data-mode", "bo3");
     expect(screen.queryByTestId(playTestid.deckSelect)).toBeNull();
     const trioSelect = screen.getByTestId(playTestid.trioSelect) as HTMLSelectElement;
     expect(Array.from(trioSelect.options).map((option) => option.textContent)).toEqual(["Main trio", "Loose trio"]);
 
     pickMode("random");
+    expect(screen.getByTestId(playTestid.queuePanel)).toHaveAttribute("data-mode", "random");
     expect(screen.queryByTestId(playTestid.deckSelect)).toBeNull();
     expect(screen.queryByTestId(playTestid.trioSelect)).toBeNull();
     expect(screen.getByText(/No deck needed/)).toBeInTheDocument();
@@ -544,11 +624,13 @@ describe("the lobby's modes", () => {
       expect(vi.mocked(enqueue)).toHaveBeenLastCalledWith(TOKEN, { mode: "bo1", deckId: CONTROL.id });
     });
     await screen.findByText(/In the Best of 1 queue/);
+    // R3729000: the panel closes once the server took the ticket.
+    expect(screen.queryByTestId(playTestid.queuePanel)).toBeNull();
 
-    // The setup locks while queued, so the next mode is picked after leaving it.
+    // The cards lock while queued, so the next mode is picked after leaving it.
     fireEvent.click(screen.getByTestId(playTestid.leaveQueue));
     await waitFor(() => {
-      expect(screen.getByTestId(playTestid.queue)).not.toBeDisabled();
+      expect(screen.getByTestId(playModeTestid("bo3"))).not.toBeDisabled();
     });
     pickMode("bo3");
     fireEvent.change(screen.getByTestId(playTestid.trioSelect), { target: { value: LOOSE.id } });
@@ -560,7 +642,7 @@ describe("the lobby's modes", () => {
 
     fireEvent.click(screen.getByTestId(playTestid.leaveQueue));
     await waitFor(() => {
-      expect(screen.getByTestId(playTestid.queue)).not.toBeDisabled();
+      expect(screen.getByTestId(playModeTestid("random"))).not.toBeDisabled();
     });
     pickMode("random");
     fireEvent.click(screen.getByTestId(playTestid.queue));
@@ -570,12 +652,15 @@ describe("the lobby's modes", () => {
     await screen.findByText(/In the All random queue/);
   });
 
-  it("remembers the last mode, deck and trio on this device", async () => {
+  it("R3729000 remembers the last mode, deck and trio on this device, and marks the card of the last mode", async () => {
     window.localStorage.setItem(PLAY_CHOICE_KEY, JSON.stringify({ mode: "bo3", deckId: RAMP.id, trioId: LOOSE.id }));
-    render(<PlayRoute token={TOKEN} />);
+    await renderLobby(null);
 
+    expect(screen.getByTestId(playModeTestid("bo3"))).toHaveAttribute("data-last", "true");
+    expect(within(screen.getByTestId(playModeTestid("bo3"))).getByTestId(playTestid.lastUsed)).toHaveTextContent("Last used");
+    expect(screen.getAllByTestId(playTestid.lastUsed)).toHaveLength(1);
+    pickMode("bo3");
     const trioSelect = (await screen.findByTestId(playTestid.trioSelect)) as HTMLSelectElement;
-    expect(screen.getByTestId(playModeTestid("bo3"))).toBeChecked();
     expect(trioSelect.value).toBe(LOOSE.id);
     pickMode("bo1");
     expect((screen.getByTestId(playTestid.deckSelect) as HTMLSelectElement).value).toBe(RAMP.id);
@@ -628,7 +713,8 @@ describe("the lobby's modes", () => {
 
   it("a player with no decks is sent to /decks, and has nothing to queue a Best of 1 with", async () => {
     vi.mocked(getDecks).mockResolvedValue(decksAnswer([], []));
-    render(<PlayRoute token={TOKEN} />);
+    await renderLobby(null);
+    pickMode("bo1");
 
     const link = await screen.findByTestId(playTestid.decksLink);
     expect(link).toHaveAttribute("href", "/decks");
@@ -642,7 +728,7 @@ describe("the lobby's modes", () => {
 
   it("R640002 shows each mode's expected wait on its tile and the last hour's games once", async () => {
     await renderLobby();
-    const tileOf = (mode: QueueMode): HTMLElement | null => screen.getByTestId(playModeTestid(mode)).closest("label");
+    const tileOf = (mode: QueueMode): HTMLElement | null => screen.getByTestId(playModeTestid(mode)).closest("button");
     expect(await screen.findByTestId(playWaitTestid("bo1"))).toHaveTextContent("Usually under 30 s");
     expect(tileOf("bo1")).toContainElement(screen.getByTestId(playWaitTestid("bo1")));
     // Too few Conquest games were counted to say, so its tile says nothing.
@@ -661,7 +747,7 @@ describe("the lobby's modes", () => {
     });
     for (const mode of ["bo1", "bo3", "random"] as const) expect(screen.queryByTestId(playWaitTestid(mode))).toBeNull();
     expect(screen.queryByTestId(playTestid.recentGames)).toBeNull();
-    expect(screen.getByRole("region", { name: "How do you want to play?" })).not.toHaveTextContent(/usually|played in the last hour/i);
+    expect(screen.getByTestId(playTestid.hub)).not.toHaveTextContent(/usually|played in the last hour/i);
   });
 
   it("R640002 a server from before the readout sends neither field, and the lobby shows nothing for it", async () => {
@@ -677,7 +763,7 @@ describe("the lobby's modes", () => {
   it("R433 All random names no card of the deck it will deal: that deck is dealt when the game starts", async () => {
     await renderLobby();
     pickMode("random");
-    const setup = screen.getByRole("region", { name: "How do you want to play?" });
+    const setup = screen.getByTestId(playTestid.queuePanel);
     expect(setup).toHaveTextContent("No deck needed: the server deals both of you one when the game starts.");
     expect(within(setup).queryByTestId(playTestid.deckSelect)).toBeNull();
     expect(within(setup).queryByTestId(playTestid.trioSelect)).toBeNull();
@@ -686,25 +772,26 @@ describe("the lobby's modes", () => {
     expect(setup.querySelector(".play-pick-summary")).toBeNull();
   });
 
-  it("R505 R640002 the queue's readout is on the mode tiles and the games line alone: the Find a match box and the queued notice repeat none of it", async () => {
+  it("R505 R640002 the queue's readout is on the mode cards and the games line alone: the queue panel and the queued notice repeat none of it", async () => {
     vi.mocked(enqueue).mockImplementation((_token, choice) => Promise.resolve(openTicket(choice.mode)));
     await renderLobby();
-    const tileOf = (mode: QueueMode): HTMLElement | null => screen.getByTestId(playModeTestid(mode)).closest("label");
+    const tileOf = (mode: QueueMode): HTMLElement | null => screen.getByTestId(playModeTestid(mode)).closest("button");
     await waitFor(() => {
       expect(tileOf("bo1")).toHaveTextContent("Usually under 30 s");
     });
     expect(tileOf("random")).toHaveTextContent("Usually under 2 min");
-    const setup = screen.getByRole("region", { name: "How do you want to play?" });
-    expect(within(setup).getByTestId(playTestid.recentGames)).toHaveTextContent("12 games played in the last hour");
+    expect(screen.getByTestId(playTestid.hub).parentElement).toContainElement(screen.getByTestId(playTestid.recentGames));
+    expect(screen.getByTestId(playTestid.recentGames)).toHaveTextContent("12 games played in the last hour");
 
     const READOUT = /usually|played in the last hour|\b(12|30|90)\b/i;
-    const box = screen.getByRole("region", { name: "Find a match" });
-    expect(box).not.toHaveTextContent(READOUT);
-    expect(within(box).queryByTestId(playTestid.recentGames)).toBeNull();
+    const panel = screen.getByTestId(playTestid.queuePanel);
+    expect(panel).not.toHaveTextContent(READOUT);
+    expect(within(panel).queryByTestId(playTestid.recentGames)).toBeNull();
 
-    // Queued: the box says what it is doing and the notice where you are, and neither repeats it.
+    // Queued: the search says what it is doing and the notice where you are, and neither repeats it.
     fireEvent.click(screen.getByTestId(playTestid.queue));
     const status = await screen.findByTestId(playTestid.status);
+    const box = screen.getByRole("region", { name: "Find a match" });
     expect(status).toHaveTextContent(`In the ${MODE_LABEL.bo1} queue.`);
     expect(status).toHaveTextContent("You will be taken to the game as soon as someone is found.");
     expect(status).not.toHaveTextContent(READOUT);
@@ -717,6 +804,8 @@ describe("the lobby's modes", () => {
   it("#1568 decks that could not be loaded offer Try again, which reads them again and makes the queue live", async () => {
     vi.mocked(getDecks).mockRejectedValueOnce(new Error("decks unavailable"));
     render(<PlayRoute token={TOKEN} />);
+    await screen.findByTestId(playTestid.hub);
+    pickMode("bo1");
 
     expect(await screen.findByText("Your decks could not be loaded: decks unavailable")).toBeInTheDocument();
     expect(screen.getByTestId(playTestid.queue)).toBeDisabled();
@@ -837,8 +926,8 @@ describe("R1372 R924000 All random's more cards from", () => {
     await waitFor(() => {
       expect(vi.mocked(getDecks)).toHaveBeenCalled();
     });
-    const random = screen.getByTestId(playModeTestid("random")) as HTMLInputElement;
-    if (!random.checked) pickMode("random");
+    await screen.findByTestId(playTestid.hub);
+    pickMode("random");
     return (await screen.findByTestId(playTestid.leanNewest)) as HTMLSelectElement;
   }
 
@@ -855,12 +944,11 @@ describe("R1372 R924000 All random's more cards from", () => {
     await waitFor(() => {
       expect(vi.mocked(enqueue)).toHaveBeenLastCalledWith(TOKEN, { mode: "random", leanSet: "Classic" });
     });
-    // Locked while queued, like the rest of the setup.
-    expect(screen.getByTestId(playTestid.leanNewest)).toBeDisabled();
+    // Locked while queued, like the rest of the setup: its panel is closed and no card opens it.
+    expect(screen.queryByTestId(playTestid.leanNewest)).toBeNull();
+    expect(screen.getByTestId(playModeTestid("random"))).toBeDisabled();
     fireEvent.click(screen.getByTestId(playTestid.leaveQueue));
-    await waitFor(() => {
-      expect(screen.getByTestId(playTestid.queue)).not.toBeDisabled();
-    });
+    await reopen("random");
 
     // None, the queue is joined with no lean at all.
     pickLean(screen.getByTestId(playTestid.leanNewest), "");
@@ -869,9 +957,7 @@ describe("R1372 R924000 All random's more cards from", () => {
       expect(vi.mocked(enqueue)).toHaveBeenLastCalledWith(TOKEN, { mode: "random" });
     });
     fireEvent.click(screen.getByTestId(playTestid.leaveQueue));
-    await waitFor(() => {
-      expect(screen.getByTestId(playTestid.queue)).not.toBeDisabled();
-    });
+    await reopen("random");
 
     // "Newest" is sent as the pick: the server resolves the set when it deals.
     pickLean(screen.getByTestId(playTestid.leanNewest), LEAN_NEWEST);
@@ -931,11 +1017,12 @@ describe("the lobby's queue state", () => {
     await waitFor(() => {
       expect(screen.getByTestId(playTestid.searching)).toBeInTheDocument();
     });
-    expect(screen.getByTestId(playTestid.queue)).toBeDisabled();
+    // R3729000: the panel closed with the ticket, and no card opens another while the wait lasts.
+    expect(screen.queryByTestId(playTestid.queuePanel)).toBeNull();
+    expect(screen.queryByTestId(playTestid.queue)).toBeNull();
     for (const mode of ["bo1", "bo3", "random"] as const) {
       expect(screen.getByTestId(playModeTestid(mode))).toBeDisabled();
     }
-    expect(screen.getByTestId(playTestid.deckSelect)).toBeDisabled();
     // ...but never traps the player: Leave stays lit.
     expect(screen.getByTestId(playTestid.leaveQueue)).not.toBeDisabled();
   });
@@ -949,9 +1036,8 @@ describe("the lobby's queue state", () => {
     // `navigate` cannot tell — so this asserts the order, not just both happening.
     expect(await screen.findByTestId(playTestid.status)).toHaveTextContent(MATCH_FOUND_STATUS);
     expect(vi.mocked(navigate)).not.toHaveBeenCalled();
-    // The setup stays locked while the found beat plays, Leave included.
-    expect(screen.getByTestId(playTestid.queue)).toBeDisabled();
-    expect(screen.getByTestId(playTestid.leaveQueue)).toBeDisabled();
+    // The cards stay locked while the found beat plays, and a found match is no search to leave.
+    expect(screen.queryByTestId(playTestid.leaveQueue)).toBeNull();
     for (const mode of ["bo1", "bo3", "random"] as const) {
       expect(screen.getByTestId(playModeTestid(mode))).toBeDisabled();
     }
@@ -998,13 +1084,12 @@ describe("the lobby's queue state", () => {
     rememberQueued("bo3");
     vi.mocked(dequeue).mockResolvedValue({ cancelled: true, ticketId: "tk-1" });
     render(<PlayRoute token={TOKEN} />);
-    // Conquest picks a trio, so its select is the one shown.
-    await screen.findByTestId(playTestid.trioSelect);
+    await screen.findByTestId(playTestid.searching);
 
     expect(screen.getByTestId(playTestid.searching)).toHaveAttribute("data-mode", "bo3");
-    expect(screen.getByTestId(playModeTestid("bo3"))).toBeChecked();
+    expect(screen.getByTestId(playModeTestid("bo3"))).toHaveAttribute("data-last", "true");
     expect(screen.getByTestId(playTestid.status)).toHaveTextContent(`In the ${MODE_LABEL.bo3} queue.`);
-    expect(screen.getByTestId(playTestid.queue)).toBeDisabled();
+    expect(screen.getByTestId(playModeTestid("bo3"))).toBeDisabled();
     expect(screen.getByTestId(playTestid.leaveQueue)).not.toBeDisabled();
     expect(enqueue).not.toHaveBeenCalled();
 
@@ -1032,7 +1117,7 @@ describe("the lobby's queue state", () => {
     // Two reads in a row name no ticket: the wait ends, and Find a match is the way back in.
     await screen.findByText("Your queue expired. Find a match to queue again.", undefined, { timeout: 8000 });
     expect(screen.queryByTestId(playTestid.searching)).toBeNull();
-    expect(screen.getByTestId(playTestid.queue)).not.toBeDisabled();
+    expect(screen.getByTestId(playModeTestid("bo1"))).not.toBeDisabled();
     expect(readQueued()).toBeNull();
   });
 
@@ -1052,8 +1137,48 @@ describe("the lobby's queue state", () => {
     );
     expect(screen.getByTestId(playTestid.searching)).toBeInTheDocument();
     expect(screen.queryByText("Your queue expired. Find a match to queue again.")).toBeNull();
-    expect(screen.getByTestId(playTestid.queue)).toBeDisabled();
+    expect(screen.getByTestId(playModeTestid("bo1"))).toBeDisabled();
     expect(readQueued()).toBe("bo1");
+  });
+
+  it("R3729001 inside the menus' shell the banner shows the search, and Cancel there ends the wait here", async () => {
+    vi.mocked(enqueue).mockResolvedValue(openTicket("bo1"));
+    render(
+      <MenuShellContext.Provider value={{ status: null }}>
+        <PlayRoute token={TOKEN} />
+      </MenuShellContext.Provider>,
+    );
+    await waitFor(() => {
+      expect(vi.mocked(getDecks)).toHaveBeenCalled();
+    });
+    await screen.findByTestId(playTestid.hub);
+    pickMode("bo1");
+    await screen.findByTestId(playTestid.deckSelect);
+    fireEvent.click(screen.getByTestId(playTestid.queue));
+    await screen.findByText(/In the Best of 1 queue/);
+    // The banner is the one search display: this screen draws none of its own.
+    expect(screen.queryByTestId(playTestid.searching)).toBeNull();
+    expect(screen.queryByTestId(playTestid.leaveQueue)).toBeNull();
+    expect(readQueued()).toBe("bo1");
+
+    // Cancel on the banner forgets the queue from outside this screen.
+    act(() => {
+      forgetQueued();
+    });
+    await screen.findByText("Left the queue.");
+    expect(screen.getByTestId(playModeTestid("bo1"))).not.toBeDisabled();
+  });
+
+  it("R3729001 Leave on this screen ends its own wait once, and the banner's Cancel path adds no second line", async () => {
+    vi.mocked(enqueue).mockResolvedValue(openTicket("bo1"));
+    vi.mocked(dequeue).mockResolvedValue({ cancelled: true, ticketId: "tk-1" });
+    await renderLobby();
+    fireEvent.click(screen.getByTestId(playTestid.queue));
+    await screen.findByTestId(playTestid.searching);
+    fireEvent.click(screen.getByTestId(playTestid.leaveQueue));
+    // Leave is this screen's own end: one line, "Left the queue.", never a second one for the queue it forgot.
+    await screen.findByText("Left the queue.");
+    expect(screen.getAllByTestId(playTestid.status)).toHaveLength(1);
   });
 });
 
