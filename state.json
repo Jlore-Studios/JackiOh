@@ -16037,15 +16037,8 @@
       }
     },
     "3874": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43482998230",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-13T18:46:13Z",
-        "until": "2026-11-13T19:16:13Z"
-      },
       "difficulty_by": {
         "at": "2026-11-13T18:45:59Z",
         "difficulty": "hard",
@@ -16064,10 +16057,9 @@
         "reason": "planned on opus",
         "trail": "| head -5; ls .. | head\", \"description\": \"Check whether node_modules is installed\"}\n- Bash: {\"command\": \"grep -n \\\"export function usePolled\\\" -A45 apps/web/src/together/session.ts | head -60; grep -n \\\"useEffect\\\\|return () =>\\\\|unmount\\\\|sendNow\\\\|pagehide\\\" apps/web/src/undo/hold.ts | he\u2026\n- Bash: {\"command\": \"sed -n 105,130p apps/web/src/undo/hold.ts; sed -n 85,100p apps/web/src/together/session.ts\", \"description\": \"Read the undo hold's unmount effect and usePolled's reload\"}\n- Bash: {\"command\": \"git log --oneline -300 | grep -i \\\"follow-up\\\" | head -10; grep -n \\\"Adding a ruling\\\" -A40 spec/README.md | head -70\", \"description\": \"Find past follow-up merges and the Adding a ruling\u2026\n- Bash: {\"command\": \"git log --oneline -2000 | grep -i \\\"follow-up to #\\\" | head -8\", \"description\": \"Find earlier spot-check follow-up commits\"}\n- Bash: {\"command\": \"git show --stat 899d4d70f2 | tail -15; ls spec/rulings | grep -E \\\"^R318[0-9]{4}|^R3180\\\" | head\", \"description\": \"Check what the earlier follow-up changed\"}\n- Bash: {\"command\": \"grep -n \\\"^##\\\" spec/09-architecture.md | head -20; cat spec/rulings/R3059000.md | head -12; ls spec/pending/; grep -rn \\\"R3874\\\" spec apps crates e2e 2>/dev/null | head -3\", \"descriptio\u2026\n- Bash: {\"command\": \"cat spec/pending/3864.md | head -20; ls spec/rulings | grep -E \\\"^R38[0-9]{5}\\\" | head; grep -n \\\"Ruling numbers\\\" -A12 docs/issues-and-patches.md | head -20\", \"description\": \"Read a pen\u2026\n- Bash: {\"command\": \"cat spec/rulings/R3864000.md; git show --stat HEAD~0 | head -5; git show 8799056f65 --stat | tail -20\", \"description\": \"Read a recent client ruling note and its commit\"}\n- Bash: {\"command\": \"sed -n 987,1024p apps/web/src/together/TogetherRoute.test.tsx; sed -n 1,90p apps/web/src/lobby/LobbyScreen.test.tsx\", \"description\": \"Read the chat-Join test and the LobbyScreen test hea\u2026\n- Bash: {\"command\": \"grep -n -i \\\"friend row\\\\|friend's row\\\\|onLobby\\\\|together.*lobby\\\\|R3730005\\\" apps/web/README.md | head; grep -n \\\"return undefined\\\\|status: 404\\\\|unhandled\\\\|throw\\\" apps/web/src/tes\u2026\n- Bash: {\"command\": \"sed -n 77,103p apps/web/src/test/stubServer.ts; sed -n 365,400p crates/server/src/lobby/mod.rs; sed -n 960,985p apps/web/README.md\", \"description\": \"Read stubServer's default, server cre\u2026\n- Bash: {\"command\": \"grep -rln \\\"README.md\\\" apps/web/src --include=*.test.ts --include=*.test.tsx | head; grep -rn \\\"README\\\" crates/tools/src/*.rs 2>/dev/null | grep -i \\\"web\\\\|apps\\\" | head -5\", \"descript\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3874/.bot-plan.md\", \"content\": \"# Draft plan #3874 (planner notes)\\n\\nFound:\\n- TogetherRoute.tsx:226 onLobby runs `void attempt(...)` bypassing `act`\u2026\n- Bash: {\"command\": \"grep -n \\\"lobbyTestid.error\\\\|^describe\\\\|^ it(\\\" apps/web/src/lobby/LobbyScreen.test.tsx | head -40; grep -n \\\"lobby\\\" apps/web/src/net/navigate.ts | head -5\", \"description\": \"List Lobb\u2026\n- Bash: {\"command\": \"sed -n 90,116p apps/web/src/lobby/LobbyScreen.test.tsx; sed -n 253,266p apps/web/src/lobby/LobbyScreen.test.tsx; sed -n 591,600p apps/web/src/together/TogetherRoute.test.tsx; sed -n 653,\u2026\n- Bash: {\"command\": \"sed -n 470,482p apps/web/src/together/TogetherRoute.test.tsx; grep -n \\\"429\\\" apps/web/src/net/api.ts | head -10\", \"description\": \"Check how a 429 refusal is surfaced\"}\n- Bash: {\"command\": \"sed -n 300,345p apps/web/src/net/api.ts; grep -n \\\"class ApiRequestError\\\" -A25 apps/web/src/net/api.ts | grep -n \\\"message\\\\|super\\\" | head\", \"description\": \"Check apiRequest retry beha\u2026\n- Bash: {\"command\": \"grep -n \\\"busy\\\" apps/web/src/together/FriendRows.tsx | head -20; ls spec/rulings/R373000*.md\", \"description\": \"Check busy usage in friend rows and lobby ruling files\"}\n- Bash: {\"command\": \"sed -n 178,240p apps/web/src/together/FriendRows.tsx | grep -n \\\"data-testid\\\\|disabled\\\" \", \"description\": \"Identify which friend-row controls honor busy\"}\n- Bash: {\"command\": \"grep -rn \\\"together-lobby\\\\|togetherTestid.lobby\\\\|friendLobby\\\" e2e apps/web/src | grep -v \\\"^apps/web/src/together/testids.ts\\\" | head\", \"description\": \"Find any other uses of the frie\u2026\n- Bash: {\"command\": \"grep -rn \\\"} catch (cause\\\" apps/web/src --include=*.tsx | head -3; sed -n 60,80p apps/web/src/lobby/LobbyPanel.tsx | head -5; grep -n \\\"^let \\\\|^export function\\\\|^// \\\" apps/web/src/ne\u2026\n- Bash: {\"command\": \"ls crates/tools/src | grep -i classif; grep -n \\\"spec/\\\\|rulings\\\\|--claims\\\\|fn claims\\\" crates/tools/src/classify*.rs 2>/dev/null | head -20\", \"description\": \"Check whether classify --\u2026\n- Bash: {\"command\": \"sed -n 1,60p crates/tools/src/classify.rs | grep -v \\\"^$\\\" | head -50\", \"description\": \"Read classify.rs header for what needs a fragment\"}\n- Bash: {\"command\": \"grep -n \\\"together/TogetherRoute\\\\|together/FriendRows\\\" -A4 apps/web/README.md | head -20; grep -n \\\"^lobby/seats.ts\\\" apps/web/README.md\", \"description\": \"Find README lines for the tog\u2026\n- Bash: {\"command\": \"grep -n \\\"export async function apiRequest\\\\|export function apiRequest\\\" -A30 apps/web/src/net/api.ts | grep -n \\\"429\\\\|retry\\\\|Retry\\\" | head; cat apps/web/src/test/settle.ts | head -2\u2026\n- Bash: {\"command\": \"grep -rn \\\"function withSession\\\" -A15 apps/web/src/net/ | head -25; grep -n \\\"export async function apiRequest\\\" -A40 apps/web/src/net/api.ts | head -50 | grep -n \\\"status\\\\|retry\\\" \", \u2026\n- Bash: {\"command\": \"sed -n 897,900p apps/web/README.md | cat -A | cut -c1-120 | head -4; sed -n 68p spec/09-architecture.md | grep -o \\\"and an empty seat invites a friend by a live toast (\\\\[\\\\[R3730005\\\\]\\\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3874/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"the bot already rated it difficulty:hard and a planner may not lower i\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"the bot already rated it difficulty:hard and a planner may not lower it; by the rule alone it is medium (web client only, 9 files, no engine, AI, migration or cross-crate design)\"} --> **Goal.** Lobby on a friend's row of `/together` goes through the page's \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-13T18:28:34Z",
       "owner_why": "handed off from `claude-3`: `claude-3` it refused a call; its limit resets at 2026-11-13T20:30:00Z; it can start again only in 2h 01m, more than the 120 minutes an item waits for its owner",
@@ -16080,10 +16072,10 @@
       "provider": "claude-6",
       "queued_at": "2026-11-13T16:48:02Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "43482998230",
+      "run_id": "pending:ffee7e2a-1794595621",
       "runs_on": "ubuntu-latest",
       "spot_check_of": 3779,
-      "started_at": "2026-11-13T18:28:34Z",
+      "started_at": "2026-11-13T18:47:39Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -16519,9 +16511,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T18:28:34Z",
+    "at": "2026-11-13T18:47:39Z",
     "url": "",
-    "what": "plan #3874 on claude-6"
+    "what": "build #3874 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-13T18:36:21Z",
