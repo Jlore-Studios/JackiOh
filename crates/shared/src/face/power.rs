@@ -112,7 +112,7 @@ mod tests {
     }
 
     #[test]
-    fn the_table_is_the_engines_thirteen_powers() {
+    fn the_table_is_the_engines_powers() {
         assert_eq!(POWERS.len(), HERO_POWERS.len());
         for engine in HERO_POWERS {
             let row = POWERS
@@ -139,16 +139,16 @@ mod tests {
         let none = indexmap::IndexMap::new();
         assert_eq!(
             power_text(&power("recruit"), false, "Indestructible", &none, None).as_deref(),
-            Some("Indestructible\nExpedition Map\nActivate: Spend (3): Recruit a permanent.")
+            Some("Indestructible\nExpedition Map\nActivate: Spend (2): Recruit a permanent.")
         );
         assert_eq!(
             power_text(&power("discover"), true, "Indestructible", &none, None).as_deref(),
-            Some("Indestructible\nWitness Value\nActivate: Spend (2): Discover a Radiant Unit.")
+            Some("Indestructible\nWitness Value\nActivate: Spend (1): Discover a Radiant Unit.")
         );
         let armor = [("armor".to_string(), 4)].into_iter().collect();
         assert_eq!(
             power_text(&power("armor"), true, "", &armor, None).as_deref(),
-            Some("Tank Up\nActivate: Spend (1): Your hero gains 4 Armor, then this power refreshes.")
+            Some("Tank Up\nActivate: Spend (0): Your hero gains 4 Armor, then this power refreshes.")
         );
         assert_eq!(power_text(&power("not-a-power"), false, "", &none, None), None);
     }
@@ -164,7 +164,7 @@ mod tests {
             Some(Words::new(Locale::ZhCn)),
         )
         .expect("a power");
-        assert_eq!(text, "探险地图\n激活：消耗(3)：招募一个永久物。");
+        assert_eq!(text, "探险地图\n激活：消耗(2)：招募一个永久物。");
     }
 
     #[test]
@@ -184,6 +184,12 @@ mod tests {
                 .filter(|param| param.power.as_deref() == Some(row.name))
                 .map(|param| param.key.as_str())
                 .collect();
+            // R3551002: `endTimes` is its card line's, "({endTimes}) End Times: …".
+            let written = if row.name == "endTimes" {
+                written.into_iter().chain(["endTimes"]).collect()
+            } else {
+                written
+            };
             assert_eq!(written, own, "{}", row.name);
         }
     }

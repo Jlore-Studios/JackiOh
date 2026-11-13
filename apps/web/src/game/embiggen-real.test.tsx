@@ -17,7 +17,7 @@ import { createGame, legalActions, reduce, registeredCatalog, viewFor } from "..
 import { closeInspect } from "../cards/index.ts";
 import { __resetSettingsForTests } from "../settings/index.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
-import { testid } from "./contract.ts";
+import { LANES, testid } from "./contract.ts";
 import Game from "./Game.tsx";
 
 type GameState = Parameters<typeof reduce>[0];
@@ -158,7 +158,18 @@ describe("#492 R81 every Embiggen card asks for its price when both are affordab
           const { legal, onAction } = render492(state);
           const listed = plays(legal, cardId);
           expect(new Set(listed.map((play) => play.embiggen))).toEqual(new Set([false, true]));
-          expect(listed.filter((play) => play.embiggen === true)).toHaveLength(listed.length / 2);
+          // Each embiggened play is the twin of a normal one. An Embiggened Wall enters GIGA (R3555001)
+          // and a GIGA is offered only the anchors it fits (R3546000: lane L+1 too), so on this empty
+          // board the one normal play with no embiggened twin is the Wall's in the last lane.
+          const unformed = (play: (typeof listed)[number]): string => JSON.stringify({ ...play, embiggen: undefined });
+          const normal = listed.filter((play) => play.embiggen === false);
+          const twins = new Set(listed.filter((play) => play.embiggen === true).map(unformed));
+          for (const play of listed.filter((play) => play.embiggen === true)) {
+            expect(normal.map(unformed), "an embiggened play's normal twin").toContain(unformed(play));
+          }
+          for (const play of normal.filter((play) => !twins.has(unformed(play)))) {
+            expect(play.zone?.lane, "a normal play with no embiggened twin").toBe(LANES[LANES.length - 1]);
+          }
 
           fireEvent.click(el(testid.handCard(cardId)));
           const modal = el("prompt-modal");

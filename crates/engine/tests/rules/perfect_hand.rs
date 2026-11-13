@@ -1,5 +1,5 @@
 //! B5 E34, the perfect-hand scorer (SPEC §8.7 C+ #27, §10.7, R29, R364, R387, R416, R1446), through a
-//! fixture card of Classic+ #27's shape: "replace your hand with the perfect hand, then refresh your
+//! fixture card of Classic+ #27's shape: "replace your hand with the perfect hand, then replenish your
 //! mana".
 //!
 //! The pool is pinned: this file registers its cards on top of the vanilla Core units and nothing

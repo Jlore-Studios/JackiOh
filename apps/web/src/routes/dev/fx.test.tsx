@@ -79,8 +79,8 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     // signatures that were `none` (Jade Beauty, AI Girlfriend, Keymaster Keenus, Mayor Medinamogger, Prison,
     // Jlockeed's Headquarters). R3399000: Classic+'s 104 (its eight tokens printed Legendary or Mythic that were
     // `none` are signatures now). R3395000: Tylannt's, Paragon Mk2's and Siva 2's signatures, which were `none`
-    // (Stinkyscape 001 to 090's 97).
-    expect(cards).toHaveLength(672);
+    // (Stinkyscape 001 to 090's 97). Stinkyscape+'s 142 at its release (#3596): 131 cards and 11 tokens.
+    expect(cards).toHaveLength(814);
     expect(cards).toContain("classic-071");
     // Playing a motif and a card's entry draws without throwing, whatever is picked.
     fireEvent.change(screen.getByTestId(fxGalleryTestid.motif), { target: { value: "lance" } });

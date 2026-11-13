@@ -58,14 +58,16 @@ mod tests {
     const CORE_CHAOS: &str = "core-095";
     const PLUS_CHAOS: &str = "classicplus-073";
     /// The Call to Chaos pool of the sets that ship, in catalog order (R1240, R1420): #95, C+ #73, this
-    /// card, Stinkyscape's #150 and #151 (#1884) and Training Grounds' #39 (#2204, R2200004).
-    const EDITIONS: [&str; 6] = [
+    /// card, Stinkyscape's #150 and #151 (#1884), Training Grounds' #39 (#2204, R2200004) and Stinkyscape+'s
+    /// #142 (#3573).
+    const EDITIONS: [&str; 7] = [
         CORE_CHAOS,
         PLUS_CHAOS,
         ID,
         "stinkyscape-150",
         "stinkyscape-151",
         "traininggrounds-039",
+        "stinkyscapeplus-142",
     ];
     /// The Prime tokens of the sets that ship (R1421): C+ #38.1, C+ #46.1, M #45.1, M #49.1 (#831), M #91.1,
     /// M+ #16.1 Jazakus Prime (#1187) and Stinkyscape's #147.1 IN33DH3 Prime (#1884).

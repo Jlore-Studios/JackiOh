@@ -307,6 +307,7 @@ fn face_in(words: Words, source: &FaceSource, lookup: &Lookup<'_>, chinese: bool
     let frozen = in_play.is_some_and(|play| play.frozen == Some(true));
     let frozen_forever = in_play.is_some_and(|play| play.frozen_forever == Some(true));
     let created = in_play.is_some_and(|play| play.created == Some(true));
+    let evolved = in_play.is_some_and(|play| play.evolved == Some(true));
     let brittle = in_play.and_then(|play| play.brittle);
 
     // The states the face draws, and the glossary entries they and the face name.
@@ -327,6 +328,7 @@ fn face_in(words: Words, source: &FaceSource, lookup: &Lookup<'_>, chinese: bool
         dormant: dormant.as_ref(),
         starship: starship.as_ref(),
         created,
+        evolved,
     });
     let english_chars: Vec<char> = english
         .as_ref()

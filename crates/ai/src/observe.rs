@@ -270,6 +270,9 @@ fn to_placeholder(card: &mut CardInstance) {
     card.set_as = None;
     // MD-B6, R943: whether the hidden card was minted after the deal goes with its face.
     card.created = None;
+    // R3536002, CLAUDE.md rule 7: a hidden card carries neither Evolve mark.
+    card.evolved = None;
+    card.enters_evolved = None;
     card.buffs = AttackHealth { attack: 0, health: 0 };
     card.damage = 0;
     card.cost_override = None;
@@ -325,6 +328,9 @@ fn to_placeholder_json(card: &mut Value) {
         "setAs",
         // MD-B6, R943: whether the hidden card was minted after the deal goes with its face.
         "created",
+        // R3536002, CLAUDE.md rule 7: a hidden card carries neither Evolve mark.
+        "evolved",
+        "entersEvolved",
     ] {
         object.remove(key);
     }
@@ -547,6 +553,19 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     // maxi-tail: dropped whole, so the AI simulates a Rollback as restoring nothing; redact each snapshot's
     // hidden cards instead if the AI should ever plan around one.
     next.board_history = None;
+    // R3560000: the opponent's once-a-game marks (a hand arrival's among them) are theirs alone.
+    next.players[opp].once_a_game = None;
+    // R3550007: a side snapshot on the opponent's cards is theirs alone (§10.8) — what their Bogos
+    // Binted's Cry saw never reaches the seat's simulation.
+    for (player, place) in every_place(&next) {
+        if player != opp {
+            continue;
+        }
+        if let Some(card) = card_at_mut(&mut next, player, place) {
+            card.memory
+                .shift_remove(jackioh_engine::subsystems::board_history::SIDE_SNAPSHOT_KEY);
+        }
+    }
     // R676, R678: the decks the match began with and the boards a Glitch may lay down are no seat's to
     // read; dropped whole, so the AI simulates a Glitch reset as nothing and its boards as empty fields.
     next.opening = None;
@@ -564,6 +583,20 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
             if secret.owner == opp && secret.revealed != Some(true) {
                 secret.choice = None;
             }
+        }
+    }
+    // R3558001, R3558002: a waiting meet and a lend are their side's hand order made legible — the
+    // seat keeps its own, the opponent's go, and an emptied list goes as `None`.
+    if let Some(meets) = next.hand_meets.as_mut() {
+        meets.retain(|meet| meet.player == seat);
+        if meets.is_empty() {
+            next.hand_meets = None;
+        }
+    }
+    if let Some(lends) = next.radiance_lends.as_mut() {
+        lends.retain(|lend| lend.player == seat);
+        if lends.is_empty() {
+            next.radiance_lends = None;
         }
     }
 

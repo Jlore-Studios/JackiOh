@@ -7,7 +7,8 @@
 //! `summon_copy` of it (R57, into R64's zone, no Cry, R1), made from it before it evolves, then `evolve`
 //! on it, which runs its `Script.evolve` hook: Gain Flying (`grant_keyword`). The copy has no Flying and
 //! the original has it; one that died attacking does nothing, neither copy nor evolve (R2285001); a
-//! full unit row summons no copy. The copy has Rush too, a copy of
+//! full unit row summons no copy. It evolves once: a later attack copies it again but evolves nothing
+//! (R3536000). The copy has Rush too, a copy of
 //! the card, so it may attack a Unit that turn and copy again. Radiant: the same text, the copy of a
 //! Radiant Hornet a Radiant 6/6.
 
@@ -137,6 +138,31 @@ mod tests {
             s.attack(&hornet, "hero");
             assert!(copies(&s).is_empty());
             assert!(flies(&s, &hornet), "it evolves all the same");
+        }
+
+        #[test]
+        fn r3536000_a_second_attack_copies_again_but_evolves_it_no_more() {
+            let mut s = board(false, json!([]), json!([]));
+            let hornet = s.unit_at(P1, 1);
+            s.attack(&hornet, "hero");
+            assert!(flies(&s, &hornet));
+            s.end_turn();
+            s.end_turn();
+            s.attack(&hornet, "hero");
+            assert_eq!(copies(&s).len(), 2, "a later attack copies it again");
+            let evolved = s
+                .events()
+                .iter()
+                .filter(|event| matches!(event, GameEvent::Evolved { .. }))
+                .count();
+            assert_eq!(evolved, 1, "it evolves once");
+            let grants = s
+                .events()
+                .iter()
+                .filter(|event| matches!(event, GameEvent::KeywordGranted { .. }))
+                .count();
+            assert_eq!(grants, 1, "its Evolve text runs once");
+            assert!(flies(&s, &hornet));
         }
     }
 

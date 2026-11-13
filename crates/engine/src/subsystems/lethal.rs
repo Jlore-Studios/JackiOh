@@ -113,12 +113,11 @@ fn struck_by(state: &GameState, attacker: &CardInstance, defender: &CardInstance
     if !has_keyword(&unit_view(state, attacker).keywords, KeywordKind::Cleave) {
         return vec![defender.clone()];
     }
-    let Some(at) = crate::zones::slot_of(state, defender) else {
-        return vec![defender.clone()];
-    };
+    // R3546001: beside a GIGA in either of its lanes, in both; a GIGA beside the target is met once.
     let mut struck = vec![defender.clone()];
-    for slot in crate::zones::adjacent(at) {
-        if let Some(card) = crate::zones::card_at(state, slot)
+    for slot in crate::giga::adjacent_slots(state, defender) {
+        if let Some(card) = crate::giga::occupant_at(state, slot)
+            && !struck.iter().any(|met| met.id == card.id)
             && crate::zones::is_adjacent_card(state, defender, card)
         {
             struck.push(card.clone());

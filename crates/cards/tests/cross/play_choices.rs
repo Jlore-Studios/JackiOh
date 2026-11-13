@@ -532,3 +532,48 @@ mod r81_r90_r102_every_pick_a_crafted_card_s_declaration_may_make_is_one_legalac
         }
     }
 }
+
+mod r3543000_every_catalog_unit_printing_flying_is_flexible_and_shows_flying_alone {
+    use super::*;
+    use jackioh_engine::layers::{is_flexible, unit_has};
+
+    fn prints_flying(face: &CardFace) -> bool {
+        face.keywords
+            .iter()
+            .any(|keyword| keyword.kind() == KeywordKind::Flying)
+    }
+
+    #[test]
+    fn r3543000_every_catalog_unit_printing_flying_is_flexible_and_shows_flying_alone() {
+        register_all();
+        let catalog = registered_catalog().clone();
+        let mut checked = 0;
+        for def in catalog.values().filter(|def| def.type_ == CardType::Unit) {
+            for radiant in [false, true] {
+                let face = if radiant { &def.radiant } else { &def.base };
+                if !prints_flying(face) {
+                    continue;
+                }
+                let radiant_tag = if radiant { "-radiant" } else { "" };
+                let s = super::super::scenario(json!({
+                    "seed": format!("r3543000-{}{}", def.id, radiant_tag),
+                    "p1": { "hand": [{ "def": def.id, "radiant": radiant }] },
+                    "p2": { "library": ["core-019"] },
+                }));
+                let card = s.card(def.id.as_str()).clone();
+                assert!(
+                    is_flexible(s.state(), &card),
+                    "{} (radiant {radiant}): a Flying Unit is Flexible",
+                    def.id,
+                );
+                assert!(
+                    !unit_has(s.state(), &card, KeywordKind::Flexible),
+                    "{} (radiant {radiant}): Flexible is never added to its keywords",
+                    def.id,
+                );
+                checked += 1;
+            }
+        }
+        assert!(checked > 0, "at least one catalog Unit prints Flying");
+    }
+}

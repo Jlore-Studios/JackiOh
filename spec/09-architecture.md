@@ -101,8 +101,8 @@ crates/
   engine/      reduce, state, events, rng, combat, triggers, zones, view_for; wire/ (action, event and
                catalog types); validator.rs (deck, trio and queue rules D1–D5, T1–T3, L1–L6, shared by
                client and server)
-  cards/       catalog.json (634 cards + 140 tokens across Core, Classic, Classic+, Meditative, Meditative+, Stinkyscape,
-               Training Grounds), patches/ (one snapshot per card patch),
+  cards/       catalog.json (800 cards + 178 tokens across Core, Classic, Classic+, Meditative, Meditative+, Stinkyscape,
+               Training Grounds, Stinkyscape+), patches/ (one snapshot per card patch),
                src/scripts/core/, classic/, classic_plus/, meditative/, meditative_plus/, stinkyscape/,
                training_grounds/: one file per card, its tests inside it
   ai/          the practice opponent

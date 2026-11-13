@@ -242,6 +242,123 @@
     "traininggrounds-039": {
       "base": "colon",
       "radiant": "colon"
+    },
+    "classicplus-049": {
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-004": {
+      "base": "clamp",
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-007": {
+      "base": "clamp",
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-024": {
+      "base": "clamp",
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-031": {
+      "base": "clamp",
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-038": {
+      "base": "clamp",
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-055": {
+      "base": "clamp",
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-061-1": {
+      "base": "clamp",
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-064": {
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-072": {
+      "base": "clamp",
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-080": {
+      "base": "clamp",
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-087": {
+      "base": "clamp",
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-089": {
+      "base": "clamp",
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-098": {
+      "base": "clamp",
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-120": {
+      "base": "clamp",
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-121": {
+      "base": "clamp",
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-123": {
+      "base": "clamp",
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-132": {
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-133": {
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-133-5": {
+      "base": "clamp",
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-137": {
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-142": {
+      "base": "colon",
+      "radiant": "colon"
+    },
+    "stinkyscapeplus-157": {
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-t-terminus-starship-ark-of-ashes": {
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-t-terminus-starship-dying-ember": {
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-t-terminus-starship-heat-death-pilgrim": {
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-t-terminus-starship-entropys-wake": {
+      "base": "clamp",
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-t-terminus-starship-red-giant-requiem": {
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-t-terminus-starship-cold-exodus": {
+      "base": "clamp",
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-t-terminus-starship-omega-drift": {
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-t-terminus-starship-farthest-shore": {
+      "base": "clamp",
+      "radiant": "clamp"
+    },
+    "stinkyscapeplus-t-terminus-starship-nightfall-covenant": {
+      "base": "clamp",
+      "radiant": "clamp"
     }
   },
   "long": [
@@ -268,6 +385,13 @@
     "stinkyscape-151 base",
     "stinkyscape-151 radiant",
     "traininggrounds-039 base",
-    "traininggrounds-039 radiant"
+    "traininggrounds-039 radiant",
+    "stinkyscapeplus-004 base",
+    "stinkyscapeplus-004 radiant",
+    "stinkyscapeplus-061-1 radiant",
+    "stinkyscapeplus-121 base",
+    "stinkyscapeplus-121 radiant",
+    "stinkyscapeplus-142 base",
+    "stinkyscapeplus-142 radiant"
   ]
 }

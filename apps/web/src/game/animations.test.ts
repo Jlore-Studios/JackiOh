@@ -118,9 +118,13 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   manaSpent: 150,
   // C+ #62 KY's Papaya, R831003.
   curveDrawn: 700,
+  // Stinkyscape+ E7, R3554005.
+  lineDrawn: 700,
   autopilotEngaged: 600,
   // Stinkyscape's Dormant (R1839002).
   awakened: 400,
+  // Stinkyscape+ Evolve (R3536005).
+  evolved: 400,
   // Issue #1838 (Tradable, R1838001).
   traded: 300,
   marketCreditsChanged: 200,
@@ -251,8 +255,10 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
   predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
   curveDrawn: { type: "curveDrawn", player: "p1", cells: [{ player: "p1", row: "backrow", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
+  lineDrawn: { type: "lineDrawn", player: "p1", cells: [{ player: "p1", row: "units", lane: 1 }, { player: "p2", row: "units", lane: 3 }, { player: "p2", row: "backrow", lane: 5 }] },
   autopilotEngaged: { type: "autopilotEngaged", player: "p1", turn: 9 },
   awakened: { type: "awakened", player: "p1", instanceId: "u1", defId: "core-008" },
+  evolved: { type: "evolved", player: "p1", instanceId: "u1", defId: "core-008" },
   traded: { type: "traded", player: "p1" },
   // Issue #1840 (Credits, R1840005); its Resources are hand cards since #2250 (R2250000).
   marketCreditsChanged: { type: "marketCreditsChanged", player: "p1", value: 2 },
@@ -341,7 +347,7 @@ describe("ANIMATIONS covers every event type", () => {
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
     // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(93);
+    expect(rows).toHaveLength(95);
   });
 
   it("gives every row an animation name and a testid template", () => {
@@ -440,6 +446,17 @@ describe("R831003 KY's Papaya's curve", () => {
     expect(row.fx).toEqual({ recipe: "curve" });
     expect(targetFor(SAMPLES.curveDrawn, fullBoardView())).toBe(testid.board);
     expect(animationsCss).toContain('[data-animating="curveDrawn"]');
+  });
+});
+
+describe("R3554005 the line to an enemy tile", () => {
+  it("R3554005 lineDrawn draws the line across the board", () => {
+    const row = ANIMATIONS.lineDrawn;
+    expect(row.animation).toBe("jk-line-drawn");
+    expect(row.durationMs).toBe(700);
+    expect(row.fx).toEqual({ recipe: "line" });
+    expect(targetFor(SAMPLES.lineDrawn, fullBoardView())).toBe(testid.board);
+    expect(animationsCss).toContain('[data-animating="lineDrawn"]');
   });
 });
 

@@ -21,7 +21,7 @@
 # dispatch plays the same games on any runner, and its shards' files together are the games one
 # machine would have played. A base naming a training gate's hold-out deals or the dev set is refused
 # by `selfplay` itself (R1006002). On GitHub's runners each shard keeps under the 6-hour job limit:
-# 2,500 games (a 100,000-game export in 40 shards) take about 3 hours on four vCPUs at the AI's
+# 1,250 games (a 100,000-game export in 80 shards) take about 3 hours on four vCPUs at the AI's
 # budget since #2628, 10 shards at once (selfplay-shards.yml). On the local runner (`jackioh-selfplay-local`,
 # bot/machine/README.md, The local runner) every job runs there, the plan, the build and the count
 # too, and its shards run two at a time, one on each half of the PC, each for as long as it needs (a
@@ -50,7 +50,7 @@ on:
       shards:
         type: string
         required: false
-        default: "40"
+        default: "80"
       runner:
         type: string
         required: false
@@ -90,9 +90,9 @@ on:
         description: "The seed base (letters, digits, . _ -): game n is <base>:n. Never a gate's (improve, unban) nor improve-dev"
         required: true
       shards:
-        description: "How many jobs to split the games over (on GitHub's runners, at most 2,500 games each: 6 hours a job)"
+        description: "How many jobs to split the games over (on GitHub's runners, at most 1,250 games each: 6 hours a job)"
         required: true
-        default: "40"
+        default: "80"
       runner:
         description: "Where the shards run"
         type: choice
