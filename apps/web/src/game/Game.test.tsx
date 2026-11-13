@@ -14,7 +14,7 @@ import { testid, type Highlight } from "./contract.ts";
 import Game, { GAME_HOST_ATTRIBUTE, sameHighlight } from "./Game.tsx";
 import { resultReason } from "./Result.tsx";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
-import { baseView, card, emptySide, faceDownBackrow, pendingFor, unit, waitingPending, withEvents } from "../test/fixtures.ts";
+import { baseView, card, emptySide, faceDownBackrow, faceUpBackrow, pendingFor, unit, waitingPending, withEvents } from "../test/fixtures.ts";
 import { foldedReplaySteps } from "../test/replay.ts";
 import { readRootVar } from "./rootVars.ts";
 
@@ -561,6 +561,38 @@ describe("R821000 a Plague Counter placement is answered by a click on the board
     fireEvent.click(screen.getByTestId(testid.zone("opponent", "units", 2)));
     fireEvent.click(screen.getByTestId(testid.hero("opponent")));
     expect(onAction).not.toHaveBeenCalled();
+  });
+});
+
+describe("R3777001 a play aimed at a face-down enemy backrow card is built by a click on its zone", () => {
+  const view = baseView({
+    you: emptySide("p1", { hand: [card({ instanceId: "h1" })] }),
+    opponent: emptySide("p2", {
+      hand: { count: 0 },
+      backrow: [null, faceDownBackrow, null, faceUpBackrow("p2", { instanceId: "b1" }), null],
+    }),
+    hiddenTargets: [{ instanceId: "t1", zone: { player: "p2", row: "backrow", lane: 2 } }],
+  });
+  const aimed = (instanceId: string): ActionBody => ({
+    type: "play",
+    instanceId: "h1",
+    targets: [{ pick: "instance", instanceId }],
+  });
+  const legal: ActionBody[] = [aimed("t1"), aimed("b1")];
+
+  it("R3777001 lights the back's zone once the card is picked up, and its click sends the play naming the hidden id", () => {
+    const onAction = vi.fn();
+    render(<Game view={view} legal={legal} onAction={onAction} />);
+    const zone = screen.getByTestId(testid.zone("opponent", "backrow", 2));
+    expect(zone).not.toHaveAttribute("data-legal", "true");
+
+    fireEvent.click(screen.getByTestId(testid.handCard("h1")));
+    expect(zone).toHaveAttribute("data-legal", "true");
+    expect(screen.getByTestId(testid.zone("opponent", "backrow", 3))).not.toHaveAttribute("data-legal", "true");
+
+    fireEvent.click(zone);
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenLastCalledWith(aimed("t1"));
   });
 });
 

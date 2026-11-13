@@ -103,6 +103,18 @@ export const RELEASES: readonly Release[] = [
       "Custom cards and the card creator are gone, and the cards you made are deleted.",
     ],
   },
+  {
+    id: "stinkyscapeplus",
+    name: "Stinkyscape+",
+    summary:
+      "The Stinkyscape+ set, 166 cards and 38 tokens, shipped in v0.6.0, with nine new tags: Mindustrial, Mineral, Automa-α to -Ω and -ζ, and Paperclip. Twelve earlier cards were patched with it.",
+    technical: [
+      "Every random card an effect makes is different from the others it makes until its pool runs out.",
+      "New board rules: GIGA permanents fill two lanes in both rows, a Black Hole can open in the middle lane, and the board can be slashed in two.",
+      "Every Stinkyscape+ card wears the set's mark, Stinkyscape's planet with a plus, and every Legendary and Mythic of the set opens its play with a few bars of its own.",
+      "The practice AI answers every Stinkyscape+ card you play, but does not deal itself any yet.",
+    ],
+  },
 ];
 
 export function playerTitle(patch: Patch): string {

@@ -449,6 +449,34 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
         );
     }
 
+    /// R3777001: p1's view names p2's face-down trap in `hiddenTargets` while #36 Magic Jammed's play may
+    /// target it, by the bare id `legalActions` offers; the same view beside a listing that offers no such
+    /// play names a hidden card.
+    #[test]
+    fn r3777001_i6_lets_the_view_name_a_face_down_target_only_as_legal_actions_offers_it() {
+        let g = scenario(json!({
+            "p1": { "hand": ["core-036"] },
+            "p2": { "backrow": [{ "def": MY_PAWN, "lane": 1 }] },
+        }));
+        let trap = backrow_at(&g, PlayerId::P2, 1, "p2 should hold a face-down trap in lane 1");
+        let view = view_for(g.state(), PlayerId::P1);
+        assert!(
+            view.hidden_targets
+                .iter()
+                .flatten()
+                .any(|hidden| hidden.instance_id == trap.id),
+            "the view names the trap's zone"
+        );
+        assert_eq!(violations(&g, PlayerId::P1, &[]), no_violations());
+        let found = hidden_information_violations(g.state(), PlayerId::P1, &view, &[]);
+        assert!(
+            found
+                .iter()
+                .any(|message| message.contains("in the view") && message.contains(&quoted(&trap.id))),
+            "{found:?}"
+        );
+    }
+
     /// p1's own target prompt offering p2's face-down trap, as #49, #50 and an Echo repeat do (R177).
     fn offer_trap(g: &mut Scenario, trap_id: &str) -> PendingChoice {
         let prompt: PendingChoice = json_as(json!({

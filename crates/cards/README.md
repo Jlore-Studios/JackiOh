@@ -243,6 +243,14 @@ order, set by set and each by index, so a seeded pick replays (§9.3, R60). Neve
 dedupe a pool yourself afterwards. `"type": "Trap"` drops the Field Traps; where the spec says a
 Field Trap counts as a Trap, pass `TRAP_TYPES`.
 
+A pool the spec would otherwise list card by card is a named function there (`luck_based`,
+`jlockeed_cards`, `weapons_of`, `prime_cards`, …) and a row of `POOLS`, its name, its rule and the
+function a script calls (#3804). `cargo jackioh spec index` writes `spec/CARDS.md` from that table:
+each pool's members as the catalog holds them and the cards whose scripts call its function, beside
+every card by keyword and by tag. A script that draws from such a pool calls its function rather than
+writing the query inline, so the list it shows is the pool the game draws from; a spec row states the
+rule and links the heading (`[[CARDS#jlockeed]]`).
+
 ## 4. The registry
 
 `build.rs` walks `src/scripts/<set>/*.rs`, reads each `pub const ID`, and writes the module tree and

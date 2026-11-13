@@ -1,8 +1,9 @@
 //! Flexible, Evasive and Frenzy (issue #3543, R3543000–R3543003): a Flexible Unit plays into
 //! either row and is a normal Unit in the backrow, Flying has Flexible innately and shows Flying
-//! alone, a Flexible Field Spell with stats plays into a unit zone as a Unit while one without keeps
-//! to the backrow, Evasive bars every attack and implies Can't Defend, and Frenzy's kill frees one
-//! more attack. Proved on the fixtures of `fixtures/flexible_evasive_frenzy.rs`, with no card yet.
+//! alone, a Flexible Field Spell keeps to its backrow with or without stats since Flexible is a
+//! Unit's keyword (R3828000, over R3543001) while a Flexible Unit played there is a played Unit,
+//! Evasive bars every attack and implies Can't Defend, and Frenzy's kill frees one more attack.
+//! Proved on the fixtures of `fixtures/flexible_evasive_frenzy.rs`, with no card yet.
 
 use jackioh_engine::effects::{TuneDirection, tune_once};
 use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -319,26 +320,16 @@ mod r3543000_flexible {
     }
 }
 
-mod r3543001_flexible_field_spells {
+mod r3543001_r3828000_flexible_field_spells {
     use super::*;
 
     #[test]
-    fn r3543001_a_flexible_field_spell_with_stats_plays_into_a_unit_zone_as_a_unit() {
-        let mut s = board(
-            "r3543001-field",
-            json!({ "hand": [FLEX_FIELD] }),
-            json!({ "field": [field_unit(GRUNT, 1)] }),
-        );
+    fn r3543001_r3828000_a_flexible_field_spell_with_stats_keeps_to_its_backrow() {
+        let mut s = board("r3828000-field", json!({ "hand": [FLEX_FIELD] }), json!({}));
         let id = s.card(FLEX_FIELD).id.clone();
+        // R3828000, over R3543001: Flexible is a Unit's keyword, so its stats win it no unit zone.
         let zones = play_zones(&s, &id);
         for lane in 1..=5 {
-            assert!(
-                zones.contains(&ZoneChoice {
-                    row: Row::Units,
-                    lane
-                }),
-                "unit lane {lane} offered"
-            );
             assert!(
                 zones.contains(&ZoneChoice {
                     row: Row::Backrow,
@@ -347,41 +338,53 @@ mod r3543001_flexible_field_spells {
                 "backrow lane {lane} offered"
             );
         }
-        s.play(FLEX_FIELD, json!({ "zone": 1, "row": "units" }));
+        assert!(
+            zones.iter().all(|zone| zone.row == Row::Backrow),
+            "no unit zone is offered"
+        );
+        s.expect_refused_with(
+            |s| s.play(FLEX_FIELD, json!({ "zone": 1, "row": "units" })),
+            "goes in the backrow row",
+        );
+        // With no zone named it takes its own row, the backrow.
+        s.play(FLEX_FIELD, json!({}));
         let played = s.card(id.as_str()).clone();
         assert!(
             matches!(
                 played.zone,
                 Zone::Field {
-                    row: Row::Units,
-                    lane: 1,
+                    row: Row::Backrow,
                     ..
                 }
             ),
-            "it lands in unit lane 1"
+            "it lands in the backrow: {:?}",
+            played.zone
         );
-        assert_eq!(played.position, Some(Position::Atk), "in Attack Position");
         assert_eq!(
             jackioh_engine::faces::card_type_of(s.state(), &played),
-            CardType::Unit,
-            "a Unit there"
+            CardType::FieldSpell,
+            "a Field Spell there"
         );
-        // Its text keeps working there: the end of its controller's turn hits the enemy hero.
+        let by_type = s
+            .state()
+            .players
+            .p1
+            .turn_log
+            .played_by_type
+            .clone()
+            .unwrap_or_default();
+        assert_eq!(
+            by_type.get(&CardType::Unit).copied().unwrap_or(0),
+            0,
+            "no Unit play"
+        );
+        // Its text keeps working from the backrow: the end of its controller's turn hits the enemy hero.
         s.end_turn();
         s.expect_health(P2, HERO_HEALTH - 1);
-        // Next turn it attacks as a normal Unit.
-        s.end_turn();
-        s.attack(id.as_str(), "hero");
-        s.expect_health(P2, HERO_HEALTH - 1 - 2);
-        // And a grunt may attack and kill it there.
-        s.end_turn();
-        let hunter = s.unit(P2, 1).expect("no hunter in lane 1").id;
-        s.attack(hunter.as_str(), id.as_str());
-        assert!(s.unit(P1, 1).is_none(), "the field spell died as a Unit");
     }
 
     #[test]
-    fn r3543001_a_flexible_field_spell_without_stats_keeps_to_its_backrow() {
+    fn r3543001_r3828000_a_flexible_field_spell_without_stats_keeps_to_its_backrow() {
         let mut s = board("r3543001-bare", json!({ "hand": [BARE_FIELD] }), json!({}));
         let id = s.card(BARE_FIELD).id.clone();
         let zones = play_zones(&s, &id);
@@ -393,6 +396,66 @@ mod r3543001_flexible_field_spells {
         s.expect_refused_with(
             |s| s.play(BARE_FIELD, json!({ "zone": 1, "row": "units" })),
             "goes in the backrow row",
+        );
+    }
+}
+
+mod r3828000_flexible_is_a_unit_keyword {
+    use super::*;
+
+    #[test]
+    fn r3828000_a_flexible_unit_played_into_the_backrow_is_a_played_unit() {
+        let mut s = board("r3828000-arrival", json!({ "hand": [FLEXER] }), json!({}));
+        let id = s.card(FLEXER).id.clone();
+        s.play(FLEXER, json!({ "zone": 2, "row": "backrow" }));
+        let stood = s.card(id.as_str()).clone();
+        assert!(
+            matches!(
+                stood.zone,
+                Zone::Field {
+                    row: Row::Backrow,
+                    lane: 2,
+                    ..
+                }
+            ),
+            "the flexer stands in backrow lane 2"
+        );
+        assert_eq!(
+            jackioh_engine::faces::card_type_of(s.state(), &stood),
+            CardType::Unit,
+            "a Unit in the backrow"
+        );
+        // The opponent's arrival reader (Foreshadow's, Ripple's) answers it once, as the play resolves.
+        let arrivals: Vec<String> = s
+            .last_events()
+            .iter()
+            .filter_map(|event| enemy_unit_arrival(s.state(), P2, event))
+            .collect();
+        assert_eq!(
+            arrivals,
+            vec![id.clone()],
+            "the backrow play is an enemy Unit's arrival"
+        );
+        // Its own side's reader never does.
+        assert!(
+            s.last_events()
+                .iter()
+                .all(|event| enemy_unit_arrival(s.state(), P1, event).is_none()),
+            "no arrival for its controller"
+        );
+        // And it is counted as a Unit play.
+        let by_type = s
+            .state()
+            .players
+            .p1
+            .turn_log
+            .played_by_type
+            .clone()
+            .unwrap_or_default();
+        assert_eq!(
+            by_type.get(&CardType::Unit).copied().unwrap_or(0),
+            1,
+            "one Unit play"
         );
     }
 }

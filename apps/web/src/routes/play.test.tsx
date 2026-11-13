@@ -1182,11 +1182,52 @@ describe("R3792000 the wait says when the server cannot be reached", () => {
     expect(readQueued()).toBeNull();
   });
 
-  it("R3792000 a read the server refused is not an unreachable one", async () => {
-    vi.mocked(getMe).mockRejectedValue(new ApiRequestError(503, { code: "unavailable", message: "Try again." }));
+  it("R3792000 a read the server refused with a 4xx is not an unreachable one", async () => {
+    vi.mocked(getMe).mockRejectedValue(new ApiRequestError(403, { code: "forbidden", message: "No." }));
     await waitReads(LOBBY_UNREACHABLE_AFTER_READS + 2);
     expect(vi.mocked(getMe)).toHaveBeenCalledTimes(LOBBY_UNREACHABLE_AFTER_READS + 2);
     expect(screen.queryByTestId(playTestid.unreachable)).toBeNull();
+  });
+
+  it("R3846000 a run of 5xx answers shows the notice like unreachable reads", async () => {
+    vi.mocked(getMe).mockRejectedValue(new ApiRequestError(503, { code: "unavailable", message: "Try again." }));
+    await waitReads(LOBBY_UNREACHABLE_AFTER_READS);
+    expect(vi.mocked(getMe)).toHaveBeenCalledTimes(LOBBY_UNREACHABLE_AFTER_READS);
+    expect(screen.getByTestId(playTestid.unreachable)).toHaveTextContent(NOTICE);
+    expect(screen.getByTestId(playTestid.status)).toHaveTextContent(`In the ${MODE_LABEL.bo1} queue.`);
+  });
+
+  it("R3846000 fewer 5xx answers than the constant show nothing", async () => {
+    vi.mocked(getMe).mockRejectedValue(new ApiRequestError(500, { code: "internal", message: "Oops." }));
+    await waitReads(LOBBY_UNREACHABLE_AFTER_READS - 1);
+    expect(vi.mocked(getMe)).toHaveBeenCalledTimes(LOBBY_UNREACHABLE_AFTER_READS - 1);
+    expect(screen.queryByTestId(playTestid.unreachable)).toBeNull();
+  });
+
+  it("R3846000 a 4xx answer after the notice clears it and starts the count again", async () => {
+    const unavailable = new ApiRequestError(503, { code: "unavailable", message: "Try again." });
+    vi.mocked(getMe).mockRejectedValue(unavailable);
+    await waitReads(LOBBY_UNREACHABLE_AFTER_READS);
+    expect(screen.getByTestId(playTestid.unreachable)).toBeInTheDocument();
+
+    vi.mocked(getMe).mockRejectedValue(new ApiRequestError(401, { code: "unauthorized", message: "No." }));
+    await settle({ advance: ACCOUNT_MS });
+    expect(screen.queryByTestId(playTestid.unreachable)).toBeNull();
+
+    vi.mocked(getMe).mockRejectedValue(unavailable);
+    for (let i = 1; i < LOBBY_UNREACHABLE_AFTER_READS; i += 1) await settle({ advance: ACCOUNT_MS });
+    expect(screen.queryByTestId(playTestid.unreachable)).toBeNull();
+    await settle({ advance: ACCOUNT_MS });
+    expect(screen.getByTestId(playTestid.unreachable)).toBeInTheDocument();
+  });
+
+  it("R3846000 a mixed run of transport failures and 5xx answers counts together", async () => {
+    vi.mocked(getMe)
+      .mockRejectedValueOnce(new ApiUnreachableError(new TypeError("Failed to fetch")))
+      .mockRejectedValue(new ApiRequestError(502, { code: "bad_gateway", message: "Try again." }));
+    await waitReads(LOBBY_UNREACHABLE_AFTER_READS);
+    expect(vi.mocked(getMe)).toHaveBeenCalledTimes(LOBBY_UNREACHABLE_AFTER_READS);
+    expect(screen.getByTestId(playTestid.unreachable)).toHaveTextContent(NOTICE);
   });
 
   it("R3792000 an idle lobby never shows it", async () => {

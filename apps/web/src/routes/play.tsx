@@ -70,8 +70,11 @@ import "./lobby.css";
 const MS_PER_SECOND = 1000;
 const SECONDS_PER_MINUTE = 60;
 
-/** R3792000: account reads of a wait failing in a row (the server unreachable) before the screen says so; at SERIES_POLL_SECONDS apart it is inside the server's ticket timeout (R897000). */
+/** R3792000: account reads of a wait failing in a row (the server unreachable, or answering 5xx, R3846000) before the screen says so; at SERIES_POLL_SECONDS apart it is inside the server's ticket timeout (R897000). */
 export const LOBBY_UNREACHABLE_AFTER_READS = 3;
+
+/** R3846000: the first status of an answer that says the server was not reached: in production the edge Worker answers for a server that is down with a 500, 502, 503 or 504 (`apps/edge/src/index.ts`, `containerFetch`). */
+const FIRST_UNREACHABLE_STATUS = 500;
 
 /** Browser-test contract; `e2e/support/testids.ts` mirrors these strings. */
 export const playTestid = {
@@ -351,11 +354,19 @@ export function pairTargetOf(me: {
 
 export { MATCH_FOUND_STATUS };
 
+/** R3846000: a read that did not reach the game server: a transport failure or timeout, or the edge's 5xx answer for a server that is down. A 4xx proves the server was reached. */
+function isUnreachableRead(cause: unknown): boolean {
+  return (
+    cause instanceof ApiUnreachableError ||
+    (cause instanceof ApiRequestError && cause.status >= FIRST_UNREACHABLE_STATUS)
+  );
+}
+
 /**
  * Polls while waiting and reports a pairing once before navigating. R897000: a queue ticket the
  * server calls gone `QUEUE_ENDED_AFTER_READS` reads in a row ends the wait once instead. R3207003:
  * `known` is the account the gate read for this screen, which the first run takes as its mount read
- * when it is fresh and names no game. R3792000: returns whether the wait's reads have failed unreachable
+ * when it is fresh and names no game. R3792000: returns whether the wait's reads have failed unreachable (a transport failure, a timeout or a 5xx answer)
  * `LOBBY_UNREACHABLE_AFTER_READS` times in a row; the first read the server answered clears it.
  */
 function useLobbyWatch(
@@ -425,11 +436,11 @@ function useLobbyWatch(
         })
         .catch((cause: unknown) => {
           if (canceled || !waiting) return;
-          if (cause instanceof ApiUnreachableError) {
+          if (isUnreachableRead(cause)) {
             failedReads.current += 1;
             if (failedReads.current >= LOBBY_UNREACHABLE_AFTER_READS) setUnreachable(true);
           } else {
-            // The server answered (a refusal, a 5xx): reached, so the count starts again.
+            // The server answered (a refusal: 4xx): reached, so the count starts again.
             failedReads.current = 0;
             setUnreachable(false);
           }

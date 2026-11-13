@@ -152,7 +152,9 @@ before any card uses it. The text quoted is the designer's. Defaults follow.
   it rather than carrying the rule itself (same behavior for Flying Units, so no shipped Flying card
   plays differently). **Default:** a Flexible Field Spell may be played into a unit zone and keeps
   working there as a Field Spell; one with printed stats (#59 Mass Driver) is also a Unit there, which
-  can be attacked and can attack. The part writes the ruling.
+  can be attacked and can attack. The part writes the ruling. **The owner's call (2026-11-13, #3828,
+  R3828000):** Flexible is for Units only, and a Flexible Unit played into either row sets off every
+  "a Unit is played" effect. #40 Mender and #59 Mass Driver lose it, and Mass Driver its 0/6 with it.
 - **Evasive**: "Same thing as Can't be attacked … Units with Evasive implicitly have Can't Defend …
   A nerf can remove Evasive." It is a keyword. Every shipped card that says "Can't be attacked" gets
   Evasive instead (a catalog migration plus a fragment, since those cards gain Can't Defend).

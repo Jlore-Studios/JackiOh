@@ -474,6 +474,24 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     });
   });
 
+  it("R3777001 a declared target the viewer may not read is listed as a face-down card where its back lies, and picked by its id", () => {
+    const onAction = vi.fn();
+    const interaction = playing([
+      { type: "play", instanceId: "h2", targets: [{ pick: "instance", instanceId: "t1" }] },
+      { type: "play", instanceId: "h2", targets: [{ pick: "instance", instanceId: "e1" }] },
+    ]);
+    const view = viewWith({ hiddenTargets: [{ instanceId: "t1", zone: { player: "p2", row: "backrow", lane: 2 } }] });
+
+    render(<Prompt view={view} interaction={interaction} onAction={onAction} />);
+
+    const option = screen.getByTestId("prompt-option-instance:t1");
+    expect(option.textContent).toContain("Face-down card");
+    expect(option.textContent).toContain("Enemy backrow, lane 2");
+    expect(option.textContent).not.toContain("t1");
+    fireEvent.click(option);
+    expect(onAction).toHaveBeenCalledWith({ type: "play", instanceId: "h2", targets: [{ pick: "instance", instanceId: "t1" }] });
+  });
+
   it("a play's zone, target and Tribute picks say to tap the board; prompt.css shows it only where the picker is a bar with no options", () => {
     const hint = (): string | null => document.querySelector(".prompt-board-hint")?.textContent ?? null;
     const cases: [ActionBody[], string][] = [

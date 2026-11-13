@@ -1,7 +1,7 @@
-# One round of a self-play export's shards (#466; selfplay.yml calls it once a round, never anything
-# else): one job per range on `runner`, `jackioh selfplay --from <k> --games <n> --seed <base>` with
-# the release `jackioh` the caller's build job uploaded, its log files uploaded as
-# `selfplay-<base>-<k>` (kept `retention` days, 90 at most).
+# A self-play export's shards (#466; selfplay.yml calls it, never anything else): one job per range,
+# `jackioh selfplay --from <k> --games <n> --seed <base>` with the release `jackioh` the caller's
+# build job uploaded, its log files uploaded as `selfplay-<base>-<k>` (kept `retention` days, 90 at
+# most).
 #
 # With `file_every` (the learn lane's), a shard plays its range `file_every` games at a time, one log
 # file each (a game is a function of its seed, R1006001, so the pieces hold the games one run would
@@ -13,29 +13,20 @@
 # database folding a file it holds already no second time. Without it, a shard plays its range in one
 # go and files nothing, as a dispatched export does.
 #
-# On GitHub's runners (the learn lane's since #3740) the export is one round, at most 10 shards at
-# once. A shard of 1,250 games, a 100,000-game export's eightieth, takes about 3 hours on four vCPUs
-# at the AI's budget since #2628 (about 400 games an hour, measured by gather run 72 on 2026-11-12;
-# one of 2,500 would pass GitHub's 6-hour job limit), so the export takes about a day. On
-# the local runner a round holds a fifth of the shards, played two at a time, one on each half of
-# the PC (#3722), and selfplay.yml starts a round only once the one before it has ended: GitHub fails
-# a job no self-hosted runner takes in 24 hours, and does not say whether a shard held back by
-# `max-parallel` is waiting all that time, so no shard is made to wait longer than its own round
-# takes. A shard of 1,250 games takes about 1.9 hours on a half, so a round of 16 takes about 15
-# hours of an idle PC, and the export about three days.
+# The shards play on GitHub's runners (the learn lane's since #3740), at most 10 at once. A shard of
+# 1,250 games, a 100,000-game export's eightieth, takes about 3 hours on four vCPUs at the AI's
+# budget since #2628 (about 400 games an hour, measured by gather run 72 on 2026-11-12; one of 2,500
+# would pass GitHub's 6-hour job limit), so the export takes about a day.
 name: selfplay shards
 
 on:
   workflow_call:
     inputs:
       ranges:
-        description: 'The round''s ranges of game numbers, as JSON: [{"from": 1, "games": 5000}, …]'
+        description: 'The ranges of game numbers, as JSON: [{"from": 1, "games": 1250}, …]'
         type: string
         required: true
       seed:
-        type: string
-        required: true
-      runner:
         type: string
         required: true
       retention:
@@ -58,19 +49,16 @@ permissions:
 jobs:
   shard:
     name: shard from ${{ matrix.range.from }}
-    runs-on: ${{ inputs.runner }}
-    # GitHub's runners stop a job at 6 hours; the local runner's shards may take longer.
-    timeout-minutes: ${{ inputs.runner == 'ubuntu-latest' && 350 || 4320 }}
+    runs-on: ubuntu-latest
+    # GitHub's runners stop a job at 6 hours.
+    timeout-minutes: 350
     strategy:
       fail-fast: false
       # GitHub's Team plan runs 60 hosted jobs at once for the whole organization, and the training
-      # lanes' share is 12 (#3740): an export takes 10 of them, and gather's shards the other 2,
-      # so CI and the bots' runs keep theirs while it plays. The local runner takes two, one on each
-      # half of the PC (the supervisor's `maxJobs`, bot/machine/local/config.json; #3722). A gather
-      # job that lands while two shards hold both halves takes one at once, and the two shards share
-      # the other until one ends (bot/machine/README.md, Limits). selfplay.yml's summary divides by
-      # the same numbers.
-      max-parallel: ${{ inputs.runner == 'ubuntu-latest' && 10 || 2 }}
+      # lanes' share is 12 (#3740): an export takes 10 of them, and gather's parts the other 2,
+      # so CI and the bots' runs keep theirs while it plays. selfplay.yml's summary divides by the
+      # same number.
+      max-parallel: 10
       matrix:
         range: ${{ fromJSON(inputs.ranges) }}
     steps:
@@ -121,8 +109,8 @@ jobs:
             at=$(( at + n ))
           done
           echo "seconds: $(( $(date +%s) - start ))" | tee -a "$RUNNER_TEMP/logs/timing.txt"
-          # The CPUs the shard may use: its container's quota when it has one (the local runner's
-          # --cpus; nproc there counts every processor WSL has), else every processor nproc sees.
+          # The CPUs the shard may use: its container's quota when it has one, else every processor
+          # nproc sees.
           cores=$(nproc)
           if read -r quota period 2>/dev/null < /sys/fs/cgroup/cpu.max && [ "$quota" != max ]; then
             cores=$(( (quota + period - 1) / period ))

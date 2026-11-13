@@ -21,8 +21,10 @@ enforces rules and never sees hidden information.** In practice:
   reads.
 - Choices split two ways per SPEC §11 R81: zone, X, embiggen, Tribute and a card's declared
   targets and modes are built **inline into the `play` action**; everything decided during
-  resolution is a `PendingChoice` answered with an `answer` action. `game/Prompt.tsx` renders
-  both with the same pickers. A choice of `DISCOVER_OPTION_LIMIT` (4) options or fewer that name no
+  resolution is a `PendingChoice` answered with an `answer` action. A declared target the viewer
+  may not read (an enemy face-down backrow card) is lit and clicked by the zone its back lies in,
+  which the view's `hiddenTargets` names (R3777001), as a prompt option names it (R821000).
+  `game/Prompt.tsx` renders both with the same pickers. A choice of `DISCOVER_OPTION_LIMIT` (4) options or fewer that name no
   card draws each option as a choice card (`game/ChoiceCard.tsx`, #2646): art, its label and what it
   does, which is prompt chrome and no card, so it opens no inspect overlay and reaches no zone or log.
   A live card picker (`data-prompt-layout="cards"`) is its cards alone over the dimmed board (`data-bare`, #2738): no panel, title or count, and no `prompt-submit` when one tap answers.

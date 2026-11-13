@@ -3,12 +3,17 @@
 //!   Both faces: "Ranged, Flying\nAura: Has {keywords|random combat keyword|random combat keywords}." — 2
 //!   on the base face, 4 on the Radiant face (the declared number `keywords`, R386).
 //! Engine: as the Drone Interceptor: Ranged and Flying are catalog keywords (§6.1), and the Aura is
-//!   Keymaster Keenus's (R781004), its keywords drawn with the match rng as it arrives on the field and
-//!   kept until it leaves (R78), from R21's pool, all different, none it has and no Taunt beside
-//!   Indestructible (R347). A Fuse that eats it gives the kept card the Aura, which draws its own as it
-//!   fuses (`fused_into`, R781004). A unit token: it ceases to exist off the field (R11).
+//!   Keymaster Keenus's (R781004), its keywords drawn with the match rng as it arrives on the field into
+//!   one list kept until it leaves (R78), from R21's pool, all different, none it has and no Taunt beside
+//!   Indestructible (R347), of which the Aura gives the first `keywords`: a Buff, a number set higher or
+//!   the Radiant face draws only the rest, a lower number takes the newest off (R3778000). A Fuse that
+//!   eats it gives the kept card the Aura, which draws its own as it fuses (`fused_into`, R781004). A
+//!   unit token: it ceases to exist off the field (R11).
 
-use jackioh_engine::effects::{DrawCombatKeywordsArgs, draw_combat_keywords, drawn_combat_keywords};
+use jackioh_engine::effects::{
+    DrawCombatKeywordsArgs, aura_combat_keywords, draw_combat_keywords, drawn_combat_keywords,
+    top_up_combat_keywords,
+};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-t-drone-corvette";
@@ -21,30 +26,43 @@ fn arrived(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
     matches!(event, GameEvent::Summoned { instance_id, .. } if *instance_id == me.id)
 }
 
-fn draw_on_arrival() -> TriggerDef {
+fn draw_on_arrival(top_up: bool) -> TriggerDef {
     TriggerDef::new(
         "drone-corvette-combat-keywords",
         &[GameEventType::Summoned],
-        |ctx, event| {
+        move |ctx, event| {
             if !arrived(ctx, event) {
                 return vec![];
             }
-            vec![draw_for(param(&*ctx, "keywords"))]
+            vec![draw_for(param(&*ctx, "keywords"), top_up)]
         },
     )
     .with_when(|ctx, event| arrived(ctx, event))
 }
 
-fn draw_for(count: i32) -> Effect {
-    draw_combat_keywords(DrawCombatKeywordsArgs { count, key: None })
+/// R3778000: `top_up` draws what the number asks beyond the list; the kept script's draw keeps any it
+/// holds (R781004).
+fn draw_for(count: i32, top_up: bool) -> Effect {
+    let args = DrawCombatKeywordsArgs { count, key: None };
+    if top_up {
+        top_up_combat_keywords(args)
+    } else {
+        draw_combat_keywords(args)
+    }
 }
 
-fn corvette() -> Script {
+fn corvette(top_up: bool) -> Script {
     Script {
-        triggers: vec![draw_on_arrival()],
+        triggers: vec![draw_on_arrival(top_up)],
+        // R3778000: a Buff, a number set or the Radiant face that raises its number draws the rest.
+        combat_keywords_follow: top_up.then_some("keywords"),
         // A Fuse that keeps another card makes it carry the Aura, and it draws its own (R781004).
-        fused_into: Some(hook(|ctx| vec![draw_for(param(&*ctx, "keywords"))])),
-        conditional_keywords: Some(read_hook(|args| drawn_combat_keywords(args.self_, None))),
+        fused_into: Some(hook(move |ctx| vec![draw_for(param(&*ctx, "keywords"), top_up)])),
+        conditional_keywords: Some(if top_up {
+            read_hook(|args| aura_combat_keywords(&args, "keywords", None))
+        } else {
+            read_hook(|args| drawn_combat_keywords(args.self_, None))
+        }),
         ..Script::default()
     }
 }
@@ -53,8 +71,17 @@ pub fn script() -> CardScripts {
     // One script: the Radiant face's 4 is its declared number, which `param` reads off the face, and its
     // 16/16 is catalog data.
     CardScripts {
-        base: corvette(),
-        radiant: corvette(),
+        base: corvette(true),
+        radiant: corvette(true),
+    }
+}
+
+/// R767000: through v0.6.0b the Aura drew once as it arrived and kept its keywords whatever its
+/// number did (R781004); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_0b() -> CardScripts {
+    CardScripts {
+        base: corvette(false),
+        radiant: corvette(false),
     }
 }
 
@@ -74,6 +101,9 @@ mod tests {
     const CORE_V: &str = "stinkyscape-031";
     const FILLER: &str = "core-005";
     const TAOTIE: &str = "meditative-047";
+    use crate::BOOK_OF_BUFF;
+    /// (0) Spell: a Unit gains Reborn; Radiant, then it is made Radiant.
+    const NEW_WRAPS: &str = "classicplus-010";
 
     fn summoned(seed: &str, radiant: bool) -> (Scenario, String) {
         let mut s = scenario(json!({
@@ -91,6 +121,35 @@ mod tests {
             .iter()
             .map(Keyword::kind)
             .collect()
+    }
+
+    /// R3778000: the drawn keywords it acts with, in draw order: what its Aura gives.
+    fn aura(s: &Scenario, id: &str) -> Vec<KeywordKind> {
+        let acting: Vec<KeywordKind> = keywords_of(s.state(), s.card(id)).iter().map(Keyword::kind).collect();
+        drawn(s, id).into_iter().filter(|kind| acting.contains(kind)).collect()
+    }
+
+    /// A Drone Core summons it, `card` in hand.
+    fn with_in_hand(seed: &str, card: Value) -> (Scenario, String) {
+        let mut s = scenario(json!({
+            "seed": seed,
+            "p1": { "hand": [CORE_V, card, FILLER], "library": filler(4), "mana": 10 },
+            "p2": { "hand": [FILLER], "library": filler(4) },
+        }));
+        s.play(CORE_V, json!({}));
+        let id = s.unit(P1, 1).expect("the drone").id;
+        (s, id)
+    }
+
+    /// The Book of Buff in hand.
+    fn with_book(seed: &str) -> (Scenario, String) {
+        with_in_hand(seed, json!(BOOK_OF_BUFF))
+    }
+
+    /// A Radiant New Wraps cast on it: Reborn, then made Radiant on the field.
+    fn wrapped(s: &mut Scenario, id: &str) {
+        s.play(NEW_WRAPS, json!({ "targets": [{ "pick": "instance", "instanceId": id }] }));
+        assert!(s.card(id).radiant);
     }
 
     fn distinct(mut kinds: Vec<KeywordKind>) -> usize {
@@ -149,7 +208,72 @@ mod tests {
         set_param(s.card_mut(CORVETTE), "keywords", 3);
         s.play(CORVETTE, json!({ "zone": 1 }));
         let id = s.unit(P1, 1).expect("the Corvette").id;
-        assert_eq!(drawn(&s, &id).len(), 3);
+        let list = drawn(&s, &id);
+        assert_eq!(list.len(), 3);
+        // R3778000: and on the field it follows the number, a Nerf taking the newest off.
+        assert_eq!(crate::degrade_number(&mut s, &id, "keywords"), 2);
+        assert_eq!(aura(&s, &id), list[..2]);
+    }
+
+    #[test]
+    fn r3778000_a_buff_of_its_number_keeps_its_2_and_draws_one_more() {
+        let (seed, s, id) = crate::buff_number_once("corvette-3778", "keywords", with_book);
+        let (before, first) = with_book(&seed);
+        let old = drawn(&before, &first);
+        assert_eq!(old.len(), 2);
+
+        let now = drawn(&s, &id);
+        assert_eq!(now.len(), 3, "{now:?}");
+        assert_eq!(now[..2], old[..], "it keeps what it drew");
+        assert!(!old.contains(&now[2]), "one more, none it had: {now:?}");
+        assert!(![KeywordKind::Ranged, KeywordKind::Flying].contains(&now[2]));
+        assert_eq!(aura(&s, &id), now, "it acts with them all");
+    }
+
+    #[test]
+    fn r3778000_a_nerf_takes_off_only_its_newest_and_a_buff_back_returns_it() {
+        // The base face's 2 is a floor of 1 away from a Nerf; the Radiant 4 has room.
+        let (mut s, id) = summoned("corvette-3778-nerf", true);
+        let list = drawn(&s, &id);
+        assert_eq!(list.len(), 4);
+
+        assert_eq!(crate::degrade_number(&mut s, &id, "keywords"), 3);
+        assert_eq!(aura(&s, &id), list[..3], "only the newest, {:?}, comes off", list[3]);
+        assert_eq!(drawn(&s, &id), list, "the list stays whole");
+
+        assert_eq!(crate::upgrade_number(&mut s, &id, "keywords"), 4);
+        assert_eq!(aura(&s, &id), list, "the same one comes back");
+    }
+
+    #[test]
+    fn r3778000_made_radiant_on_the_field_it_draws_the_radiant_faces_rest() {
+        let (mut s, id) = with_in_hand("corvette-3778-radiant", json!({ "def": NEW_WRAPS, "radiant": true }));
+        let old = drawn(&s, &id);
+        assert_eq!(old.len(), 2);
+
+        wrapped(&mut s, &id);
+
+        let now = drawn(&s, &id);
+        assert_eq!(now.len(), 4, "{now:?}");
+        assert_eq!(now[..2], old[..], "it keeps what it drew");
+        assert!(!now[2..].contains(&KeywordKind::Reborn), "New Wraps gave it Reborn first");
+        assert_eq!(aura(&s, &id), now);
+    }
+
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_0b_keeps_its_keywords_whatever_its_number() {
+        crate::under_kept(CORVETTE, script_v0_6_0b(), || {
+            let (mut s, id) = summoned("corvette-kept", true);
+            let list = drawn(&s, &id);
+            assert_eq!(list.len(), 4);
+            assert_eq!(crate::degrade_number(&mut s, &id, "keywords"), 3);
+            assert_eq!(aura(&s, &id), list, "it kept all 4 through v0.6.0b");
+
+            let (mut s, id) = with_in_hand("corvette-kept-radiant", json!({ "def": NEW_WRAPS, "radiant": true }));
+            let list = drawn(&s, &id);
+            wrapped(&mut s, &id);
+            assert_eq!(drawn(&s, &id), list, "made Radiant, it drew none more");
+        });
     }
 
     #[test]

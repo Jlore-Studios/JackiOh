@@ -81,7 +81,7 @@ func Section(ctx *hctx.Context) string {
 	if running := RunningTable(ctx, state, live, issues); len(running) > 0 {
 		lines = append(append(lines, running...), "")
 	}
-	lines = append(append(lines, Timeline(ctx, state, live, nil)...), "")
+	lines = append(append(lines, Timeline(ctx, state, live)...), "")
 	lines = append(append(lines, LanesBoxes(ctx, state, live, explained.Now)...), "")
 	lines = append(append(append(lines, "### Its queue", ""), QueueTable(ctx, explained, issues)...), "")
 	lines = append(append(append(lines, "### Its account", ""),
@@ -123,8 +123,8 @@ func Render(ctx *hctx.Context, extra []string /* = () */, statistics string /* =
 	state, issues, live, halted, explained := view.State, view.Issues, view.Live, view.Halted,
 		view.Explained
 	updated := Local(ctx, ctx.Now()).Format("2006-01-02 15:04 MST")
-	// The first line, so a glance at the issue says how fresh it is; then how far the PC's two
-	// local jobs have played.
+	// The first line, so a glance at the issue says how fresh it is; then how far the training
+	// lanes have played.
 	lines := []string{"**Last updated at " + updated + "**", "", Progress(ctx, view.Found), "",
 		"# 🤖 " + Title, ""}
 	if halted != "" {
@@ -149,7 +149,7 @@ func Render(ctx *hctx.Context, extra []string /* = () */, statistics string /* =
 	if table := RunningTable(ctx, state, live, issues); len(table) > 0 {
 		running = append(table, "")
 	}
-	running = append(running, Timeline(ctx, state, live, view.Found)...)
+	running = append(running, Timeline(ctx, state, live)...)
 	running = append(running, "")
 	running = append(running, LanesBoxes(ctx, state, live, explained.Now)...)
 	lines = append(lines, Fold("What each lane is doing, the runs going on a timeline, and every subscription",
@@ -185,10 +185,10 @@ func Render(ctx *hctx.Context, extra []string /* = () */, statistics string /* =
 	lines = append(lines, Fold(fmt.Sprintf("bot-night.yml's last %d runs", RunRows), view.Runs)...)
 	learn := view.Learn
 	if learn == nil {
-		learn = LearnLane(ctx, view.Found)
+		learn = LearnLane(ctx)
 	}
 	lines = append(lines, upTo(learn, 2)...)
-	lines = append(lines, Fold("The AI on main, the lane's pull request, the PC and its last runs",
+	lines = append(lines, Fold("The AI on main, the lane's pull request and its last runs",
 		from(learn, 2))...)
 	if statistics != "" {
 		lines = append(lines, strings.TrimSpace(statistics), "")
@@ -360,7 +360,7 @@ func update(ctx *hctx.Context, extra []string /* = () */, withStats bool /* = Fa
 		defer Looked(ctx, view)
 	}
 	view.Found = ReadRunners(ctx)
-	view.Learn = LearnLane(ctx, view.Found)
+	view.Learn = LearnLane(ctx)
 	state := view.State
 	issue := Find(ctx, state)
 	if issue != nil {

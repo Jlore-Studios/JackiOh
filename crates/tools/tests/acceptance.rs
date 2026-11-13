@@ -228,6 +228,9 @@ const STRUCTURAL_READERS: &[&str] = &[
     "crates/cards/tests/cross/radiant_standard.rs",
     // SPEC §7's table of tokens, its Token and Index cells, one row per token (R1177001).
     "crates/cards/tests/cross/catalog.rs",
+    // SPEC §8's card tables, each row's Stats cell and the `A/B` its Radiant effect cell opens with,
+    // one row per card (#3804).
+    "crates/cards/tests/cross/radiant_stats.rs",
     // This file names the patterns it looks for, and reads `crates/tools/README.md`'s command
     // table (#1720) and `spec/15-dungeon-run.md`'s table of constants (B33), the first cell of each
     // row only, and the line of `spec/README.md`'s map that links §15.
