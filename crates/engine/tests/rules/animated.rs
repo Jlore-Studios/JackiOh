@@ -1259,9 +1259,9 @@ mod r2280001_a_backrow_card_that_comes_to_have_both_animates_at_the_state_check 
         })))
         .apply)(&mut make_context(&mut sink, None, by(P1)));
         // It has both now, stats and plain Animated, but stands in a unit zone, not a backrow zone.
-        assert!(has_stat_line(sink.state, by_id(sink.state, &unit.id)));
+        assert!(has_stat_line(sink.state, &live(sink.state, &unit.id)));
         assert_eq!(
-            animated_kind_of(sink.state, by_id(sink.state, &unit.id)),
+            animated_kind_of(sink.state, &live(sink.state, &unit.id)),
             Some(AnimatedKind::Animated)
         );
         assert!(!owed(sink.state, &unit.id));
@@ -1281,14 +1281,14 @@ mod r2280001_a_backrow_card_that_comes_to_have_both_animates_at_the_state_check 
         );
         // p1's play fires p2's stat-less Animated Trap, which stays face-up in its zone (R2280000).
         let mut state = play_plain(&mut state, 1).state;
-        assert_eq!(by_id(&state, &fired.id).face_up, Some(true));
+        assert_eq!(live(&state, &fired.id).face_up, Some(true));
         let armed = put(
             &mut state,
             &mote.id,
             slot(P2, Row::Backrow, 4),
             Default::default(),
         );
-        by_id_mut(&mut state, &armed.id).revealed = Some(true);
+        live_mut(&mut state, &armed.id).revealed = Some(true);
         let first = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
         let second = put(&mut state, &plain.id, slot(P2, Row::Units, 2), Default::default());
         let mut sink = sink_for(&mut state);
@@ -1346,12 +1346,12 @@ mod r446_r1728000_a_unit_in_a_backrow_zone_is_a_unit_already {
         let mut sink = sink_for(&mut state);
         grant_animated(&mut sink, &unit.id);
         // It has both, stats and plain Animated, but it is carried: a Unit already (R446).
-        let now = by_id(sink.state, &unit.id);
+        let now = &live(sink.state, &unit.id);
         assert!(has_stat_line(sink.state, now));
         assert_eq!(animated_kind_of(sink.state, now), Some(AnimatedKind::Animated));
         assert!(!owed(sink.state, &unit.id));
         state_check(&mut sink);
-        assert!(is_carried(sink.state, by_id(sink.state, &unit.id)));
+        assert!(is_carried(sink.state, &live(sink.state, &unit.id)));
         assert!(card_at(sink.state, slot(P1, Row::Units, 2)).is_none());
         assert!(!owed(sink.state, &unit.id));
         assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
@@ -1367,15 +1367,15 @@ mod r446_r1728000_a_unit_in_a_backrow_zone_is_a_unit_already {
             slot(P1, Row::Backrow, 2),
             PlaceOnFieldOptions::default()
         ));
-        assert!(stands_in_backrow(&state, by_id(&state, &card.id)));
+        assert!(stands_in_backrow(&state, &live(&state, &card.id)));
         let mut sink = sink_for(&mut state);
         grant_animated(&mut sink, &card.id);
-        let now = by_id(sink.state, &card.id);
+        let now = &live(sink.state, &card.id);
         assert!(has_stat_line(sink.state, now));
         assert_eq!(animated_kind_of(sink.state, now), Some(AnimatedKind::Animated));
         assert!(!owed(sink.state, &card.id));
         state_check(&mut sink);
-        assert!(stands_in_backrow(sink.state, by_id(sink.state, &card.id)));
+        assert!(stands_in_backrow(sink.state, &live(sink.state, &card.id)));
         assert!(card_at(sink.state, slot(P1, Row::Units, 2)).is_none());
         assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
     }
@@ -1387,8 +1387,8 @@ mod r446_r1728000_a_unit_in_a_backrow_zone_is_a_unit_already {
         let now = live(sink.state, &unit.id);
         animate_card(&mut sink, &now, Default::default());
         // It steps down only once its carrier stops carrying (R446), never as an animation.
-        assert!(is_carried(sink.state, by_id(sink.state, &unit.id)));
-        assert_eq!(by_id(sink.state, &unit.id).zone, now.zone);
+        assert!(is_carried(sink.state, &live(sink.state, &unit.id)));
+        assert_eq!(live(sink.state, &unit.id).zone, now.zone);
         assert!(card_at(sink.state, slot(P1, Row::Units, 3)).is_none());
         assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
     }
