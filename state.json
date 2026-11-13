@@ -16470,7 +16470,7 @@
         "provider": "claude-4",
         "round_tier": "strong",
         "rounds_on": 3837,
-        "rounds_used": 0,
+        "rounds_used": 1,
         "since": "2026-11-13T18:23:43Z",
         "source": "build",
         "until": "2026-11-13T19:24:45Z"
