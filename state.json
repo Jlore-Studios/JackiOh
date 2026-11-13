@@ -17929,7 +17929,7 @@
       "started_at": "2026-11-13T12:22:59Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [],
         "builder": "claude",
