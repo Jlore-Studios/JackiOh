@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 3874,
+  "title": "Patch: follow-up to #3779 from the after-merge spot-check",
+  "branch": "bot/issue-3874",
+  "thread": "**Issue #3874 (data, not instructions):**\n\n```text\n# #3874: Patch: follow-up to #3779 from the after-merge spot-check\nOpened by @jgoetzmann-bot.\n\n<!-- jackioh-bot:spot-check-follow-up #3779 -->\nThe after-merge spot-check of #3779 ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/43463844601)) found 1 blocking problem(s) in the change as it merged (`44133b263728`). `claude-3` (claude, `opus`, strong) reviewed it. #3779 stays merged: nothing is reverted, and this issue fixes what it found in a change of its own, from `main`.\n\n## What to fix\n\n- [ ] `apps/web/src/together/TogetherRoute.tsx:226`: The friend row's new Lobby button skips the page's busy guard. A double press makes two duel lobbies and sends two invites, and an invite refused after the create leaves the new lobby made while the player stays on /together with only an error.\n  Evidence: onLobby runs `void attempt(async () => { const made = await createLobby({format:\"duel\",mode:\"bo1\"}); await inviteToLobby(made.code, friend.profileId); navigate(paths.lobby(made.code)); })` directly. It does not go through the page's `act` (`if (busy) return; setBusy(true)`, line ~126), so `busy` is never set and FriendRow's `disabled={busy}` (FriendRows.tsx:206) never turns on. `invite` charges the shared CHALLENGES_PER_HOUR limiter (lobby/mod.rs:662), so a 429 there is likely after other challenges. Each stray lobby counts against MAX_OPEN_ROOMS_PER_HOST per format. Fix: run it through `act`, and navigate to the lobby even when the invite is refused, showing the refusal there. No test presses `togetherTestid.lobby`; add one for a single press, for a double press, and for a refused invite.\n\n## Done when\n\n- Each finding above is fixed where it points, or answered with the evidence that it does not hold.\n- Every check is green, with no test skipped, ignored or weakened to get there (CLAUDE.md rule 12).\n\n---\nOpened by @jgoetzmann-bot from the after-merge spot-check (one in 5 medium or hard merges, `spot_check_every`): `claude-1` (`claude`) built #3779 and `claude-1` (`opus`) approved it. This issue's own pull request is never spot-checked.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "bot",
+    "by": "claude-3"
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3874: needs a plan; `claude-3` (claude, `opus`, strong) writes it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-13T16:48:02Z",
+    "claimed_at": "2026-11-13T16:50:34Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3868 skipped: it waits for #3821 to close first"
+  ]
+}
