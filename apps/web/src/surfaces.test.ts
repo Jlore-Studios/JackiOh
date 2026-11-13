@@ -61,7 +61,7 @@ const UNTOKENED_SURFACES: Record<string, number> = {
   "cards/setmark.css": 6,
   "cards/stamps.css": 1,
   "cards/wheel/wheel.css": 6,
-  "collection/collection.css": 25,
+  "collection/collection.css": 24,
   "collection/cosmeticLook.css": 1,
   "collection/tokenOffer.css": 1,
   "duos/duos.css": 22,
@@ -127,6 +127,7 @@ const GRADIENT_KEEP = [
   /var\(--drag-reticle-color\)/, // the drop reticle and its tick bars
   /\/\s*(\d+px\s+100%|100%\s+\d+px)\s+no-repeat/, // R514's cell-pick crosshair bars
   /calc\(50% [-+] 1\.5px\)/, // the countered badge's struck-circle strike
+  /^radial-gradient\(ellipse at center, var\(--pal-black\) 0%, var\(--pal-slate-900\) 55%/, // R3554000's Black Hole, a dark well
 ];
 
 /** The playmat and its marks: the tavern table is board.css's `.field`, and each playmat's tap marks and

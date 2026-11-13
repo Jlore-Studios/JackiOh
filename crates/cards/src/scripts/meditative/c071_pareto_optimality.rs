@@ -70,6 +70,7 @@ fn answering(
             }
         }),
         even_if_gone: false,
+        lowers_cost_on_float: false,
     }
 }
 

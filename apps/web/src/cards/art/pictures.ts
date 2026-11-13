@@ -27,7 +27,8 @@ import { motifFor } from "./motifs.ts";
 import type { ArtMotion, ArtRole } from "./motion.ts";
 import { ART_BOX } from "./procedural.ts";
 import { isStinkyscapeArt } from "./stinkyscape.ts";
-import { proceduralArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
+import { isStinkyscapePlusArt } from "./stinkyscapeplus.ts";
+import { proceduralArtUri, stinkyscapeArtUri, stinkyscapePlusArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { compositionOf, themeFor } from "./themes.ts";
 import { isTrainingGroundsArt } from "./traininggrounds.ts";
 
@@ -45,6 +46,7 @@ export const SHOWCASE_FAMILIES: Readonly<Record<string, ShowcaseFamily>> = {
   "Meditative+": "meditative",
   Stinkyscape: "stinkyscape",
   "Training Grounds": "training-grounds",
+  "Stinkyscape+": "stinkyscape",
 };
 
 /** R2943001: the Set showcase look of a card of `set`, or null for a set with none (no set, a boss's). */
@@ -115,6 +117,9 @@ export function artPlaneUri(defId: string, plane: ArtPlane | "whole", radiant: b
   const theme = themeFor(tags, type);
   if (isStinkyscapeArt(defId)) {
     return stinkyscapeArtUri(defId, name, tags, type, radiant, motion, defId, null, plane);
+  }
+  if (isStinkyscapePlusArt(defId)) {
+    return stinkyscapePlusArtUri(defId, name, tags, type, radiant, motion, defId, null, plane);
   }
   if (isTrainingGroundsArt(defId)) {
     return trainingGroundsArtUri(defId, name, tags, type, radiant, motion, defId, null, plane);

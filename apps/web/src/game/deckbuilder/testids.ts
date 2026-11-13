@@ -172,13 +172,8 @@ export const DECKBUILDER_ERROR = "deckbuilder-error";
 /** The decks read's Try again, beside `DECKBUILDER_ERROR` (#1485). */
 export const DECKBUILDER_RETRY = "deckbuilder-retry";
 
-/**
- * The MIME the pool puts a catalog id on when a drag starts, alongside a `text/plain` copy.
- * `e2e/support/testids.ts` `DECK_DRAG_MIME` is the same string. A drop reads both, and prefers the
- * id the component recorded on `dragstart`, because Cypress and jsdom synthesise drag events
- * without a `DataTransfer` at all.
- */
-export const DECK_DRAG_MIME = "application/x-jackioh-card";
+/** Issue #3734: the card ghost that follows a pointer while a pool card is dragged to the deck (`DeckDrag.tsx`). */
+export const DECK_DRAG_GHOST = "deck-drag-ghost";
 
 // The trio editor
 
@@ -275,9 +270,16 @@ export const TRIO_IMPORT_ERROR = "trio-import-error";
 // No new name starts with `card-` or `hand-card-`: `cy.fieldCardByName` and `cy.handCardByName`
 // select on those prefixes, and a new id carrying one would hijack them.
 
+// R3572000: a Greek letter reads as its name, so the Automa-α to Automa-ζ and Automa-Ω chips each get an id.
 export function slugOf(value: string): string {
   return value
     .toLowerCase()
+    .replace(/α/g, "alpha")
+    .replace(/β/g, "beta")
+    .replace(/γ/g, "gamma")
+    .replace(/δ/g, "delta")
+    .replace(/ζ/g, "zeta")
+    .replace(/ω/g, "omega")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
@@ -304,6 +306,16 @@ export function filterSetId(set: string): string {
 
 export function filterRarityId(rarity: Rarity): string {
   return `db-filter-rarity-${slugOf(rarity)}`;
+}
+
+/** Issue #3734: a keyword chip of the Collection's filters. */
+export function filterKeywordId(kind: string): string {
+  return `db-filter-keyword-${slugOf(kind)}`;
+}
+
+/** Issue #3734: an ownership chip of the Collection's filters: all, owned or missing. */
+export function filterOwnershipId(view: "all" | "owned" | "missing"): string {
+  return `db-filter-ownership-${view}`;
 }
 
 export const DB_FILTER_OWNED = "db-filter-owned";

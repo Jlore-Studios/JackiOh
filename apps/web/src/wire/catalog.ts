@@ -187,7 +187,23 @@ export type Keyword =
    * Starship tag (R3038000) instead. */
   | { kind: "Starship" }
   /** #2657, R2657000: never in Defense Position; the successor to the status "Cannot be in Defense Position". */
-  | { kind: "Can't Defend" };
+  | { kind: "Can't Defend" }
+  /** R3535002: declared with no card printing it; the engine's evolve verb (R3535002) gives its card one evolve. */
+  | { kind: "Evolve" }
+  /** R3535002, R3540000: a counter that ticks N damage at its controller's Start of turn, then drops by 3; no card prints it. */
+  | { kind: "Burn"; n: number }
+  /** R3535002, R3540000: Burn's piercing counter, every turn; no card prints it. */
+  | { kind: "Toxic"; n: number }
+  /** #3535: a permanent that fills its four zones under one frame. */
+  | { kind: "GIGA" }
+  /** #3535: a Unit that may be played into the backrow. */
+  | { kind: "Flexible" }
+  /** #3535: a Unit that strikes again in the same combat. */
+  | { kind: "Frenzy" }
+  /** #3535: a Unit its attackers slip past. */
+  | { kind: "Evasive" }
+  /** R373, R3548001: a Tipsy N stamp: N is the count that drops by 1 at its owner's Start of turn; its view blurs. */
+  | { kind: "Tipsy"; n: number };
 
 export type KeywordKind = Keyword["kind"];
 
@@ -229,7 +245,18 @@ export const KEYWORD_KINDS = [
   "Starship Piece",
   "Starship",
   "Can't Defend",
+  "GIGA",
+  "Flexible",
+  "Frenzy",
+  "Evasive",
+  "Tipsy",
 ] as const;
+
+/**
+ * The kinds of `Keyword` that no card prints: R3535002 declared them, Burn and Toxic name the `via`
+ * of a tick's damage (R3540000). Together with `KEYWORD_KINDS` they cover every `KeywordKind`.
+ */
+export const UNPRINTED_KEYWORD_KINDS = ["Evolve", "Burn", "Toxic"] as const;
 
 export function keywordKey(keyword: Keyword): string {
   return "n" in keyword ? `${keyword.kind} ${keyword.n}` : keyword.kind;

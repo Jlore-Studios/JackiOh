@@ -20,12 +20,15 @@ import {
   DECK_CHIP_TAGS,
   DEFAULT_FILTER,
   DEFAULT_SORT,
+  FILTER_KEYWORDS,
   FILTER_RARITIES,
   FILTER_SETS,
   FILTER_TAGS,
   FILTER_TYPES,
+  OWNERSHIPS,
   SORT_KEYS,
   almanacPool,
+  collectionPool,
   costBucket,
   costOrder,
   deckListOrder,
@@ -42,7 +45,18 @@ import {
   type PoolSort,
   type SortKey,
 } from "./filters.ts";
-import { filterCostId, filterRarityId, filterSetId, filterTagId, filterTypeId, slugOf } from "./testids.ts";
+import { PATCH_LOG } from "../../patches/ribbon.ts";
+import { poolFrom } from "./loadout.ts";
+import {
+  filterCostId,
+  filterKeywordId,
+  filterOwnershipId,
+  filterRarityId,
+  filterSetId,
+  filterTagId,
+  filterTypeId,
+  slugOf,
+} from "./testids.ts";
 
 // The inline catalog
 
@@ -175,6 +189,17 @@ const SORTED: Record<SortKey, { asc: string[]; desc: string[] }> = {
     asc: ["x-01", "x-02", "x-03", "x-04", "x-05", "x-06", "x-07", "x-08", "x-09", "x-11", "x-10"],
     desc: ["x-01", "x-02", "x-03", "x-04", "x-05", "x-06", "x-07", "x-08", "x-09", "x-11", "x-10"],
   },
+  // Every card here is Core and no patch added one (issue #3734), so both keys tie and the ties' order, cost then name then
+  // index, is the whole order, whichever way `dir` points. The real catalog's own set and patch orders are
+  // proved below.
+  set: {
+    asc: ["x-01", "x-02", "x-06", "x-09", "x-07", "x-08", "x-11", "x-10", "x-03", "x-04", "x-05"],
+    desc: ["x-01", "x-02", "x-06", "x-09", "x-07", "x-08", "x-11", "x-10", "x-03", "x-04", "x-05"],
+  },
+  newest: {
+    asc: ["x-01", "x-02", "x-06", "x-09", "x-07", "x-08", "x-11", "x-10", "x-03", "x-04", "x-05"],
+    desc: ["x-01", "x-02", "x-06", "x-09", "x-07", "x-08", "x-11", "x-10", "x-03", "x-04", "x-05"],
+  },
 };
 
 describe("the filter vocabulary (B31, B34)", () => {
@@ -210,6 +235,14 @@ describe("the filter vocabulary (B31, B34)", () => {
       "Swarm",
       "Legacy",
       "Faction",
+      "Mindustrial",
+      "Mineral",
+      "Automa-α",
+      "Automa-β",
+      "Automa-γ",
+      "Automa-δ",
+      "Automa-Ω",
+      "Paperclip",
     ]);
     // Only the ten AI tokens carry "AI", the Prime tokens "Prime", Otherworldly Removal's three
     // tokens "Other-Origins" (R1837000) and the six Resource tokens "Resource" (#2521), and the pool
@@ -219,6 +252,7 @@ describe("the filter vocabulary (B31, B34)", () => {
     expect(FILTER_TAGS).not.toContain("Other-Origins");
     expect(FILTER_TAGS).not.toContain("War Doctrine");
     expect(FILTER_TAGS).not.toContain("Resource");
+    expect(FILTER_TAGS).not.toContain("Automa-ζ");
     expect([...FILTER_RARITIES]).toEqual(["Common", "Rare", "Epic", "Legendary", "Mythic"]);
     expect(FILTER_TAGS).not.toContain("Token");
     expect(FILTER_RARITIES).not.toContain("Token");
@@ -229,14 +263,15 @@ describe("the filter vocabulary (B31, B34)", () => {
     expect(DEFAULT_FILTER.costs.size).toBe(0);
     expect(DEFAULT_FILTER.types.size).toBe(0);
     expect(DEFAULT_FILTER.tags.size).toBe(0);
+    expect(DEFAULT_FILTER.keywords.size).toBe(0);
     expect(DEFAULT_FILTER.rarities.size).toBe(0);
     expect(DEFAULT_FILTER.search).toBe("");
     expect(DEFAULT_FILTER.ownedOnly).toBe(true);
   });
 
-  it("B34 there are seven sort keys, and the default sort is cost ascending", () => {
-    expect([...SORT_KEYS].sort()).toEqual(["attack", "cost", "health", "name", "rarity", "type", "winRate"]);
-    expect(SORT_KEYS).toHaveLength(7);
+  it("B34 there are nine sort keys, and the default sort is cost ascending", () => {
+    expect([...SORT_KEYS].sort()).toEqual(["attack", "cost", "health", "name", "newest", "rarity", "set", "type", "winRate"]);
+    expect(SORT_KEYS).toHaveLength(9);
     expect(DEFAULT_SORT).toEqual({ key: "cost", dir: "asc" });
   });
 
@@ -251,6 +286,8 @@ describe("the filter vocabulary (B31, B34)", () => {
     expect(filterTypeId("Field Spell")).toBe("db-filter-type-field-spell");
     expect(filterTagId("Call to Chaos")).toBe("db-filter-tag-call-to-chaos");
     expect(filterRarityId("Legendary")).toBe("db-filter-rarity-legendary");
+    expect(filterKeywordId("Divine Shield")).toBe("db-filter-keyword-divine-shield");
+    expect(filterOwnershipId("missing")).toBe("db-filter-ownership-missing");
   });
 });
 
@@ -679,7 +716,7 @@ describe("the set chips (R380: one format, every set)", () => {
   const setOf = (id: string): string | undefined => CORE_CATALOG[id]?.set;
 
   it("offers one chip per shipped set, Classic+ with a testid of its own", () => {
-    expect([...FILTER_SETS]).toEqual(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds"]);
+    expect([...FILTER_SETS]).toEqual(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"]);
     expect(FILTER_SETS.map(filterSetId)).toEqual([
       "db-filter-set-core",
       "db-filter-set-classic",
@@ -688,6 +725,7 @@ describe("the set chips (R380: one format, every set)", () => {
       "db-filter-set-meditative-plus",
       "db-filter-set-stinkyscape",
       "db-filter-set-training-grounds",
+      "db-filter-set-stinkyscape-plus",
     ]);
   });
 
@@ -714,8 +752,11 @@ describe("the set chips (R380: one format, every set)", () => {
     // (#41 to #60) among them, join the pool; its token never does.
     expect(pool(["Training Grounds"])).toHaveLength(deckableIn(["Training Grounds"]));
     expect(new Set(pool(["Training Grounds"]).map(setOf))).toEqual(new Set(["Training Grounds"]));
+    // Re-pinned for the Stinkyscape+ release (#3573): its 166 cards join the pool; its 38 tokens never do.
+    expect(pool(["Stinkyscape+"])).toHaveLength(deckableIn(["Stinkyscape+"]));
+    expect(new Set(pool(["Stinkyscape+"]).map(setOf))).toEqual(new Set(["Stinkyscape+"]));
     expect(pool([])).toHaveLength(
-      deckableIn(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds"]),
+      deckableIn(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"]),
     );
   });
 });
@@ -739,6 +780,8 @@ describe("the Jlockeed tag (R278)", () => {
     // Re-pinned for the Training Grounds release (#2204): its Legacy cards of Core #14 and #13, #45
     // and #48, carry the tag as their Core cards do (R2195003).
     const trainingGrounds = setShips("Training Grounds") ? ["traininggrounds-045", "traininggrounds-048"] : [];
+    // Re-pinned for the Stinkyscape+ release (#3573): its #21 and #26 (T-AI-3 and T-AI-4 are tokens).
+    const stinkyscapePlus = setShips("Stinkyscape+") ? ["stinkyscapeplus-021", "stinkyscapeplus-026"] : [];
     expect([...kept].sort()).toEqual([
       "classic-004",
       "classicplus-048",
@@ -749,6 +792,7 @@ describe("the Jlockeed tag (R278)", () => {
       ...meditative,
       ...meditativePlus,
       ...stinkyscape,
+      ...stinkyscapePlus,
       ...trainingGrounds,
     ]);
   });
@@ -838,8 +882,8 @@ describe("the almanac's pool (R630)", () => {
     expect(almanacPool(bare, DEFAULT_FILTER, DEFAULT_SORT)).toEqual([]);
   });
 
-  it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI, Other-Origins, War Doctrine, Resource, Starship and Token", () => {
-    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Starship", "Token"]);
+  it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI, Other-Origins, War Doctrine, Resource, Starship, Automa-ζ and Token", () => {
+    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Starship", "Automa-ζ", "Token"]);
     // R1420, R1381: the chips are the tags the cards of the shipped sets carry; a set being built adds
     // its tags when it ships.
     const carried = new Set(SHIPPED.filter((d) => d.id !== GLITCH_DEF_ID).flatMap((d) => d.tags));
@@ -910,7 +954,8 @@ describe("the chips follow what ships (R1380, R1381)", () => {
       "Faction: Vanguard Coalition",
     ]);
     expect(factions.every((d) => !d.token)).toBe(true);
-    expect(resources.map((d) => d.name).sort()).toEqual(["Axnit", "Gellium", "Korrelite", "Narcor", "Red Narcor", "Reknite"]);
+    // The Stinkyscape+ release (#3573) adds the Warhero Token (R3548002).
+    expect(resources.map((d) => d.name).sort()).toEqual(["Axnit", "Gellium", "Korrelite", "Narcor", "Red Narcor", "Reknite", "Warhero Token"]);
     expect(resources.every((d) => d.token && d.tags.includes("Token"))).toBe(true);
     expect(DECK_CHIP_TAGS).toContain("Faction");
     expect(DECK_CHIP_TAGS).not.toContain("Resource");
@@ -920,10 +965,40 @@ describe("the chips follow what ships (R1380, R1381)", () => {
     expect(filterTagId("Resource")).toBe("db-filter-tag-resource");
   });
 
-  it("R3038000 the Starship tag, the Dormant Starship's alone, gets a chip in the almanac's list only", () => {
-    // The Dormant Starship is no card a deck may hold: only a rule makes it (R1857001).
+  it("R3572000 each Automa tag has a chip id of its own", () => {
+    const ids = (["Automa-α", "Automa-β", "Automa-γ", "Automa-δ", "Automa-Ω"] as const).map((tag) => filterTagId(tag));
+    expect(ids).toEqual(["db-filter-tag-automa-alpha", "db-filter-tag-automa-beta", "db-filter-tag-automa-gamma", "db-filter-tag-automa-delta", "db-filter-tag-automa-omega"]);
+    expect(filterTagId("Automa-ζ")).toBe("db-filter-tag-automa-zeta");
+    expect(slugOf("Mindustrial")).toBe("mindustrial");
+    const all = [...ALMANAC_TAGS.filter((tag) => tag.startsWith("Automa-")).map((tag) => filterTagId(tag))];
+    expect(all).toHaveLength(6);
+    expect(new Set(all).size).toBe(6);
+  });
+
+  it("R3038000 the Starship tag, the Dormant Starship's and the ten Terminus Starships' alone, gets a chip in the almanac's list only", () => {
+    // The Dormant Starship is no card a deck may hold: only a rule makes it (R1857001); the Terminus
+    // Starships are tokens too (the Stinkyscape+ release, #3573).
     const shipped = Object.values(CORE_CATALOG).filter((d) => setShips(d.set));
-    expect(shipped.filter((d) => d.tags.includes("Starship")).map((d) => d.id)).toEqual(["stinkyscape-t-dormant-starship"]);
+    const starships = shipped.filter((d) => d.tags.includes("Starship"));
+    expect(starships.map((d) => d.id).sort()).toEqual(
+      [
+        "stinkyscape-t-dormant-starship",
+        ...[
+          "ark-of-ashes",
+          "dying-ember",
+          "heat-death-pilgrim",
+          "entropys-wake",
+          "red-giant-requiem",
+          "cold-exodus",
+          "omega-drift",
+          "farthest-shore",
+          "nightfall-covenant",
+          "vacuum-psalm",
+        ].map((name) => `stinkyscapeplus-t-terminus-starship-${name}`),
+      ].sort(),
+    );
+    // The Dormant Starship is printed as no token (only R1857001 keeps it out of a deck); the ten are.
+    expect(starships.filter((d) => d.id.startsWith("stinkyscapeplus-")).every((d) => d.token)).toBe(true);
     expect(FILTER_TAGS).not.toContain("Starship");
     expect(DECK_CHIP_TAGS).not.toContain("Starship");
     expect(ALMANAC_CHIP_TAGS).toContain("Starship");
@@ -949,5 +1024,80 @@ describe("the chips follow what ships (R1380, R1381)", () => {
     // Wincon is in the full list now and in the chips only once a shipped card carries it.
     expect(FILTER_TAGS).toContain("Wincon");
     expect(DECK_CHIP_TAGS.includes("Wincon")).toBe(carried.has("Wincon"));
+  });
+});
+
+// Issue #3734: the Collection's grid shares this logic (R3734000).
+describe("the Collection's keyword chips, sorts and ownership (issue #3734)", () => {
+  const BUNDLED_CATALOG: CatalogSnapshot = { version: "bundled", cards: CORE_CATALOG };
+  const SHELF = poolFrom(BUNDLED_CATALOG, null);
+  const setIndex = (id: string): number => SHIPPED_SETS.indexOf(CORE_CATALOG[id]?.set ?? "Core");
+  const keep = (over: Partial<PoolFilter>): string[] => ALL_IDS.filter((id) => matchesFilter(card(id), filter(over)));
+
+  it("R3734000 FILTER_KEYWORDS lists, in string order, each keyword a shipped card prints, a Token or Glitch card's alone left out", () => {
+    expect(FILTER_KEYWORDS.length).toBeGreaterThan(5);
+    expect([...FILTER_KEYWORDS]).toEqual([...FILTER_KEYWORDS].sort());
+    expect(new Set(FILTER_KEYWORDS).size).toBe(FILTER_KEYWORDS.length);
+    const printed = new Set(
+      SHELF.flatMap((id) => {
+        const def = CORE_CATALOG[id];
+        return def === undefined ? [] : [...def.base.keywords, ...def.radiant.keywords].map((keyword) => keyword.kind);
+      }),
+    );
+    expect(new Set(FILTER_KEYWORDS)).toEqual(printed);
+    expect(FILTER_KEYWORDS).toContain("Taunt");
+  });
+
+  it("R3734000 the keyword chips OR within the group, on either face, and AND across groups", () => {
+    expect(keep({ keywords: new Set(["Taunt"]) })).toEqual(["x-02"]);
+    expect(keep({ keywords: new Set(["Lifesteal"]) })).toEqual(["x-02"]);
+    expect(keep({ keywords: new Set(["Taunt", "Charge"]) })).toEqual(["x-02", "x-04", "x-08"]);
+    expect(keep({ keywords: new Set(["Charge"]), types: new Set<CardType>(["Spell"]) })).toEqual([]);
+    expect(keep({ keywords: new Set(["Charge"]), types: new Set<CardType>(["Unit"]), costs: new Set<CostBucket>(["3"]) })).toEqual(["x-08"]);
+    expect(keep({ keywords: new Set() })).toEqual(ALL_IDS);
+  });
+
+  it("R3734000 sort 'set' follows the order the sets ship, and 'desc' reverses it", () => {
+    const asc = sortPool(SHELF, BUNDLED_CATALOG, { key: "set", dir: "asc" }).map(setIndex);
+    expect(asc).toEqual([...asc].sort((left, right) => left - right));
+    expect(new Set(asc).size).toBeGreaterThan(1);
+    const desc = sortPool(SHELF, BUNDLED_CATALOG, { key: "set", dir: "desc" }).map(setIndex);
+    expect(desc).toEqual([...desc].sort((left, right) => right - left));
+  });
+
+  it("R3734000 sort 'newest' puts a card of the latest patch first, and 'desc' reverses it", () => {
+    const latest = [...PATCH_LOG].reverse().find((patch) => patch.changes.some((change) => SHELF.includes(change.id)));
+    expect(latest).toBeDefined();
+    const ids = new Set(latest?.changes.map((change) => change.id));
+    const ascFirst = sortPool(SHELF, BUNDLED_CATALOG, { key: "newest", dir: "asc" })[0] ?? "";
+    expect(ids.has(ascFirst)).toBe(true);
+    const descLast = sortPool(SHELF, BUNDLED_CATALOG, { key: "newest", dir: "desc" }).at(-1) ?? "";
+    expect(ids.has(descLast)).toBe(true);
+  });
+
+  it("R3734000 the ownership chips are all, owned and missing, in that order", () => {
+    expect([...OWNERSHIPS]).toEqual(["all", "owned", "missing"]);
+  });
+
+  it("R3734000 collectionPool with 'all' holds every id of the shelf, and 'owned' and 'missing' split it exactly", () => {
+    const have = new Set(owned(ALL_IDS));
+    const all = collectionPool(ALL_IDS, CATALOG, have, "all", DEFAULT_FILTER, DEFAULT_SORT);
+    expect([...all].sort()).toEqual([...ALL_IDS].sort());
+    const mine = collectionPool(ALL_IDS, CATALOG, have, "owned", DEFAULT_FILTER, DEFAULT_SORT);
+    const lacking = collectionPool(ALL_IDS, CATALOG, have, "missing", DEFAULT_FILTER, DEFAULT_SORT);
+    expect(lacking).toEqual([UNOWNED]);
+    expect(mine).toEqual(all.filter((id) => id !== UNOWNED));
+    expect([...mine, ...lacking].sort()).toEqual([...all].sort());
+  });
+
+  it("R3734000 collectionPool never reads ownedOnly, and filters and sorts as the pool does", () => {
+    const have = new Set(owned(ALL_IDS));
+    const on = collectionPool(ALL_IDS, CATALOG, have, "all", filter({ ownedOnly: true }), DEFAULT_SORT);
+    const off = collectionPool(ALL_IDS, CATALOG, have, "all", filter({ ownedOnly: false }), DEFAULT_SORT);
+    expect(on).toEqual(off);
+    expect(collectionPool(ALL_IDS, CATALOG, have, "all", filter({ search: "cat" }), DEFAULT_SORT)).toEqual(["x-02"]);
+    expect(collectionPool(ALL_IDS, CATALOG, have, "owned", DEFAULT_FILTER, { key: "name", dir: "desc" })).toEqual(
+      owned(SORTED.name.desc),
+    );
   });
 });

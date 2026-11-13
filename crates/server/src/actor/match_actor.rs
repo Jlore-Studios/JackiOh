@@ -54,7 +54,8 @@ use crate::app::now_ms;
 use crate::bug_reports::{Finding, FoundIn, RefusedRow};
 use crate::config::{
     MATCH_CHECKPOINT_MIN_ACTIONS, MATCH_OVER_CLOSE_CODE, MATCH_RECORD_RESULT_ATTEMPTS,
-    MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_VOIDED_CLOSE_CODE, POST_GAME_FRAME_VERSION,
+    MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_VOIDED_CLOSE_CODE, POST_GAME_FRAME_VERSION, SEAT_TAKEN_CLOSE_CODE,
+    SEAT_TAKEN_CLOSE_REASON,
 };
 use crate::db::store::{
     BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus, PlayTelemetry, QueueMode,
@@ -1634,8 +1635,8 @@ impl MatchActor {
         seated
     }
 
-    /// Hands a connection to the account that began in `home` (`seat_of`). Replaces (and closes) a
-    /// socket that account already held.
+    /// Hands a connection to the account that began in `home` (`seat_of`). Replaces (and closes, with
+    /// `SEAT_TAKEN_CLOSE_CODE`, R3767000) a socket that account already held.
     pub fn attach(&self, home: PlayerId, socket: Socket) {
         let previous = {
             let mut core = self.lock();
@@ -1688,7 +1689,9 @@ impl MatchActor {
         if let Some(previous) = previous
             && previous != socket
         {
-            previous.close(Some(1000), Some("replaced by a new socket"));
+            // R3767000: the seat was never empty (no grace, R744), and the replaced socket's client
+            // must not reconnect by itself, or two tabs of one account take the seat in turn.
+            previous.close(Some(SEAT_TAKEN_CLOSE_CODE), Some(SEAT_TAKEN_CLOSE_REASON));
         }
 
         let player = playing(&self.lock(), home);

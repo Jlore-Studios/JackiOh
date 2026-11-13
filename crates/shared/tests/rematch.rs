@@ -207,6 +207,20 @@ fn an_entry_whose_latest_offer_is_stale_is_dropped_when_read_but_one_with_a_game
     assert_eq!(made.len(), 1);
 }
 
+/// R2685000: an entry whose latest offer is exactly the TTL old is still read, and dropped a millisecond
+/// later; the book counts the matches it holds an entry for.
+#[test]
+fn r2685000_an_offer_exactly_the_ttl_old_is_still_read_and_the_book_counts_its_entries() {
+    let mut book = book_with(&[(P1, STAKE_NORMAL)], END + 1);
+    book.offer("m2", Some(END), P1, STAKE_NORMAL, None, END + 1, "g1");
+    assert_eq!((book.len(), book.is_empty()), (2, false));
+    let edge = END + 1 + REMATCH_OFFER_TTL_MS;
+    assert!(book.seen("m1", P1, edge).you_offered.is_some());
+    assert_eq!(book.len(), 2);
+    assert!(book.seen("m1", P1, edge + 1).you_offered.is_none());
+    assert_eq!(book.len(), 1);
+}
+
 #[test]
 fn the_sweep_drops_old_entries_with_no_live_host_and_keeps_the_rest() {
     let mut book = book_with(&[(P1, STAKE_NORMAL)], END + 1);

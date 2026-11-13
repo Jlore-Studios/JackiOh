@@ -5,7 +5,7 @@
 //! Engine: `add_to_hand` S #8.1 Rosemary Triscuit, then `shuffle_into` a new C+ #37 Wardrum at a
 //! random position (R311), in that order (C+ #32 Otherworldly Removal's shape). One add never
 //! overfills a hand the play just freed (§2.4, R4). A full deck refuses the Wardrum (R80).
-//! Radiant: both `radiant: true` (R275: Refresh 4 against 2; a Radiant Wardrum).
+//! Radiant: both `radiant: true` (R275: Replenish 4 against 2; a Radiant Wardrum).
 
 use jackioh_engine::effects::{add_to_hand, shuffle_into};
 use jackioh_engine::prelude::*;

@@ -314,8 +314,8 @@ export function loadoutErrorId(rule: string): string {
 export const DECKBUILDER_LOADING = "deckbuilder-loading";
 export const DECKBUILDER_ERROR = "deckbuilder-error";
 
-/** Pool drags carry a catalog id, not the board's click target. */
-export const DECK_DRAG_MIME = "application/x-jackioh-card";
+/** Issue #3734: the ghost that follows a pointer while a pool card is dragged to the deck. */
+export const DECK_DRAG_GHOST = "deck-drag-ghost";
 
 export const TRIO_EDITOR = "trio-editor";
 export const TRIO_NAME_INPUT = "trio-name-input";
@@ -512,9 +512,16 @@ export const RADIANT_MARK = ".cf-mark";
 export const CARD_REF = ".cf-ref";
 export const CARD_VALUE = ".cf-value";
 
+// R3572000: a Greek letter reads as its name, so the Automa-α to Automa-ζ and Automa-Ω chips each get an id.
 export function slugOf(value: string): string {
   return value
     .toLowerCase()
+    .replace(/α/g, "alpha")
+    .replace(/β/g, "beta")
+    .replace(/γ/g, "gamma")
+    .replace(/δ/g, "delta")
+    .replace(/ζ/g, "zeta")
+    .replace(/ω/g, "omega")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
@@ -540,6 +547,14 @@ export function filterSetId(set: string): string {
 
 export function filterRarityId(rarity: string): string {
   return `db-filter-rarity-${slugOf(rarity)}`;
+}
+
+export function filterKeywordId(kind: string): string {
+  return `db-filter-keyword-${slugOf(kind)}`;
+}
+
+export function filterOwnershipId(view: "all" | "owned" | "missing"): string {
+  return `db-filter-ownership-${view}`;
 }
 
 export const DB_FILTER_OWNED = "db-filter-owned";
@@ -924,8 +939,25 @@ export const TOKEN_PANEL = "token-panel";
 export const TOKEN_HELD_CARD = "token-held-card";
 
 /** R2730000: a locked card or cosmetic's fullscreen preview in the Collection, the only place a token is spent. */
-export function collectionSetToggleId(set: string): string {
-  return `collection-set-toggle-${set}`;
+/** Issue #3734, R3734000: the Collection's tabs and the Cards tab's grid, count, filters, and the Decks tab's tiles. */
+export function collectionTabId(tab: "cards" | "decks" | "cosmetics" | "progress"): string {
+  return `collection-tab-${tab}`;
+}
+
+export const COLLECTION_GRID = "collection-grid";
+export const COLLECTION_COUNT = "collection-count";
+export const COLLECTION_FILTERS = "collection-filters";
+export const COLLECTION_FILTERS_OPEN = "collection-filters-open";
+export const COLLECTION_FILTERS_SHEET = "collection-filters-sheet";
+export const COLLECTION_DECKS = "collection-decks";
+export const COLLECTION_DECK_NEW = "collection-deck-new";
+
+export function collectionDeckTileId(id: string): string {
+  return `collection-deck-${id}`;
+}
+
+export function collectionSetProgressId(set: string): string {
+  return `collection-set-progress-${set}`;
 }
 
 export function collectionCardId(cardId: string): string {

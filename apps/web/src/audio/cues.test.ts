@@ -236,9 +236,13 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
   // #831's patch (C+ #62, R831003).
   curveDrawn: { type: "curveDrawn", player: "p1", cells: [{ player: "p1", row: "backrow", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
+  // Stinkyscape+ E7 (R3554005).
+  lineDrawn: { type: "lineDrawn", player: "p1", cells: [{ player: "p1", row: "units", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
   autopilotEngaged: { type: "autopilotEngaged", player: "p1", turn: 9 },
   // Stinkyscape's Dormant (R1839002).
   awakened: { type: "awakened", player: "p1", instanceId: "u1", defId: "core-008" },
+  // Stinkyscape+ Evolve (R3536005).
+  evolved: { type: "evolved", player: "p1", instanceId: "u1", defId: "core-008" },
   // Issue #1838 (Tradable, R1838001).
   traded: { type: "traded", player: "p1" },
   // Issue #1840 (Credits, R1840005); its Resources are hand cards since #2250 (R2250000).
@@ -347,8 +351,10 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   secretRevealed: "trapSting",
   predicted: "notify",
   curveDrawn: "whoosh",
+  lineDrawn: "whoosh",
   autopilotEngaged: "notify",
   awakened: "radiant",
+  evolved: "radiant",
   traded: "whoosh",
   marketCreditsChanged: "uiClick",
   marketBought: "draw",
@@ -392,6 +398,7 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "turnAutoEnded",
   "autopilotEngaged",
   "awakened",
+  "evolved",
   // R1838001: a Trade's whoosh, whatever the seat.
   "traded",
   // R1840005: the Credits' sound, whatever the seat.

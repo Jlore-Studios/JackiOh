@@ -424,3 +424,29 @@ pub struct ExpiryRun {
     pub expiry: ClockExpiry,
     pub queue: Vec<(PlayerId, ActionBody)>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// §9.3: only the reducer's refusal is the action's own fault, and only a panic or a missed log row the
+    /// host's.
+    #[test]
+    fn s9_3_an_answer_says_whether_the_action_or_the_host_failed() {
+        let illegal = ActionAnswer::Illegal {
+            reason: "no".to_string(),
+        };
+        assert!(illegal.is_illegal() && !illegal.is_internal());
+        for answer in [
+            ActionAnswer::Ack { seq: 1 },
+            ActionAnswer::MatchOver,
+            ActionAnswer::Panicked,
+            ActionAnswer::NotRecorded,
+            ActionAnswer::NonceTaken,
+        ] {
+            assert!(!answer.is_illegal(), "{answer:?}");
+        }
+        assert!(ActionAnswer::Panicked.is_internal() && ActionAnswer::NotRecorded.is_internal());
+        assert!(!ActionAnswer::MatchOver.is_internal());
+    }
+}

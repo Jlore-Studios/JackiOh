@@ -67,6 +67,10 @@ export const duosTestid = {
   /** R2881000: how many friends watch the game, while any do. */
   watchers: "duos-watchers",
   reconnect: "duos-reconnect",
+  /** R3767000: the sentence for a game another tab or device took the seat of, before any view. */
+  elsewhere: "duos-elsewhere",
+  /** R3767000: the button that takes the seat back, there and in the connection line. */
+  playHere: "duos-play-here",
   clock: "duos-clock",
   // The co-op replay's own (#965): its root; its controls carry the replay player's ids (replayTestid).
   replay: "duos-replay",

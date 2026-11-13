@@ -1240,6 +1240,170 @@ fn glitch_marks_and_the_rest_of_the_late_sets_read_as_one_sentence_each() {
     );
 }
 
+/// R437: a mark's line says the name its badge does, each mark its own.
+#[test]
+fn r437_each_mark_is_named_as_its_badge_says() {
+    let marks = [
+        ("steal", "Steal"),
+        ("berserk", "Berserk"),
+        ("frozen", "Frozen"),
+        ("destroy", "Destroy"),
+        ("allure", "Allure"),
+        ("duo", "Duo"),
+        ("endOfTurn", "End of turn"),
+    ];
+    let events: Vec<Value> = marks
+        .iter()
+        .map(|(mark, _)| json!({ "type": "marked", "instanceId": "hidden", "mark": mark, "color": "purple", "added": true }))
+        .collect();
+    let want: Vec<String> = marks
+        .iter()
+        .map(|(_, name)| format!("A card was marked ({name})"))
+        .collect();
+    assert_eq!(english(&bare(Value::Array(events))), want);
+}
+
+/// R404: a quest's line says the quest's words while the card's view lists that quest open, and only the
+/// progress for a quest it does not list.
+#[test]
+fn r404_a_quests_line_says_its_words_while_the_card_lists_it_open() {
+    let quest = json!({
+        "open": [{ "id": "q1", "text": "Play 3 Spells", "progress": 1, "goal": 3, "rewards": [] }],
+        "auras": [],
+    });
+    let view = view(
+        side(
+            "p1",
+            json!({ "units": [unit("p1", "u1", "core-032", json!({ "quest": quest })), null, null, null, null] }),
+        ),
+        side("p2", json!({ "hand": { "count": 4 } })),
+        json!([
+            { "type": "questProgressed", "player": "p1", "instanceId": "u1", "quest": "q1", "progress": 1, "goal": 3 },
+            { "type": "questProgressed", "player": "p1", "instanceId": "u1", "quest": "q2", "progress": 2, "goal": 5 },
+        ]),
+    );
+    let panther = name_of("core-032");
+    assert_eq!(
+        english(&view),
+        [
+            format!("Your {panther} quest: Play 3 Spells, 1/3"),
+            format!("Your {panther} quest: 2/5"),
+        ]
+    );
+}
+
+/// R177, R97, R370: a cost redacted to a negative sentinel says only that it changed, and a cost of 0 or more
+/// is said; a card set in the backrow is a face-down trap only when the viewer may not read it, and a hidden
+/// card summoned among the units enters as a hidden card; a card that became another is a hidden card only
+/// where both sides are hidden; a countered card is stolen only when it went to its counterer's hand.
+#[test]
+fn r177_r97_costs_summons_transforms_and_counters_say_what_the_viewer_may_read() {
+    let view = board(json!([
+        { "type": "costChanged", "instanceId": "u1", "cost": -1 },
+        { "type": "costChanged", "instanceId": "u1", "cost": 0 },
+        { "type": "costChanged", "instanceId": "u1", "cost": 2 },
+        { "type": "summoned", "player": "p2", "instanceId": "w1", "defId": "core-006", "row": "backrow", "lane": 1 },
+        { "type": "summoned", "player": "p2", "instanceId": "hidden", "defId": "hidden", "row": "units", "lane": 2 },
+        { "type": "transformed", "instanceId": "hidden", "fromDefId": "hidden", "toDefId": "core-020", "newInstanceId": "t1" },
+        { "type": "countered", "player": "p2", "instanceId": "c1", "defId": "core-020", "byInstanceId": null, "to": "hand" },
+        { "type": "countered", "player": "p2", "instanceId": "c2", "defId": "core-020", "byInstanceId": null, "to": "graveyard" },
+    ]));
+    let lines = english(&view);
+    let (panther, well, other) = (name_of("core-032"), name_of("core-006"), name_of("core-020"));
+    assert_eq!(
+        lines[..3],
+        [
+            format!("{panther} changed cost"),
+            format!("{panther} now costs (0)"),
+            format!("{panther} now costs (2)"),
+        ]
+    );
+    assert!(lines[3].starts_with(&format!("{well} entered")), "{}", lines[3]);
+    assert!(lines[4].starts_with("A hidden card entered"), "{}", lines[4]);
+    assert_eq!(
+        lines[5..],
+        [
+            format!("A hidden card became {other}"),
+            format!("{other} was countered and stolen"),
+            format!("{other} was countered"),
+        ]
+    );
+}
+
+/// R97: a card in a pile is named by its own instance, in Chinese when the view shows it so, and one that left
+/// the board fused or transformed is named by what it became; an instance whose definition the window hid is
+/// never named by the sentinel.
+#[test]
+fn r97_a_piles_card_and_one_that_became_another_are_named_by_their_instance() {
+    let view = view(
+        side(
+            "p1",
+            json!({ "graveyard": [
+                { "instanceId": "g0", "defId": "core-008", "radiant": false, "cost": 1 },
+                { "instanceId": "g1", "defId": "core-020", "radiant": false, "cost": 2 },
+                { "instanceId": "g2", "defId": "meditative-023", "radiant": false, "cost": 3, "chinese": true },
+            ] }),
+        ),
+        side("p2", json!({ "hand": { "count": 4 } })),
+        json!([
+            { "type": "costChanged", "instanceId": "g1", "cost": 1 },
+            { "type": "costChanged", "instanceId": "g2", "cost": 1 },
+            { "type": "fused", "instanceIds": ["a", "b"], "resultInstanceId": "f1", "defId": "core-032" },
+            { "type": "costChanged", "instanceId": "f1", "cost": 1 },
+            { "type": "transformed", "instanceId": "x1", "fromDefId": "core-008", "toDefId": "core-020", "newInstanceId": "x2" },
+            { "type": "costChanged", "instanceId": "x1", "cost": 1 },
+            { "type": "discarded", "instanceId": "d1", "defId": "hidden", "owner": "p2" },
+            { "type": "costChanged", "instanceId": "d1", "cost": 1 },
+        ]),
+    );
+    let costs: Vec<String> = english(&view)
+        .into_iter()
+        .filter(|line| line.ends_with("now costs (1)"))
+        .collect();
+    let other = name_of("core-020");
+    assert_eq!(
+        costs,
+        [
+            format!("{other} now costs (1)"),
+            format!("{} now costs (1)", chinese_name_of("meditative-023")),
+            format!("{} now costs (1)", name_of("core-032")),
+            format!("{other} now costs (1)"),
+            "A card now costs (1)".to_string(),
+        ]
+    );
+}
+
+/// R1301, R97: a sentinel definition names no card, even for an instance the view shows in Chinese.
+#[test]
+fn r1301_a_hidden_definition_is_a_hidden_card_whatever_its_instance() {
+    let view = view(
+        side(
+            "p1",
+            json!({ "units": [unit("p1", "u5", "meditative-023", json!({ "chinese": true })), null, null, null, null] }),
+        ),
+        side("p2", json!({ "hand": { "count": 4 } })),
+        json!([{ "type": "summoned", "player": "p1", "instanceId": "u5", "defId": "hidden", "row": "units", "lane": 2 }]),
+    );
+    let lines = english(&view);
+    assert!(lines[0].starts_with("A hidden card entered"), "{lines:?}");
+}
+
+/// The card a line opens: the card a transform made, and one no longer Radiant, by its own instance.
+#[test]
+fn a_transformed_or_deradianted_cards_line_opens_that_card() {
+    let view = board(json!([
+        { "type": "transformed", "instanceId": "u1", "fromDefId": "core-032", "toDefId": "core-020", "newInstanceId": "t1" },
+        { "type": "deradianted", "instanceId": "u1", "defId": "core-032", "zone": { "z": "field", "player": "p1", "row": "units", "lane": 1 } },
+    ]));
+    assert_eq!(
+        cards(&view),
+        [
+            ("core-020".to_string(), Some("t1".to_string())),
+            ("core-032".to_string(), Some("u1".to_string())),
+        ]
+    );
+}
+
 #[test]
 fn a_gap_says_events_may_be_missing_in_the_readers_language() {
     let line = |locale| match apply(&LogCall::Gap { locale }) {

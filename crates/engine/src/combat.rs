@@ -193,11 +193,35 @@ pub fn attacks_per_turn(state: &GameState, unit: &CardInstance) -> i32 {
 
 /// `attacks_per_turn` read through a sweep's `AuraTable` (#892).
 pub fn attacks_per_turn_in(auras: &AuraTable<'_>, unit: &CardInstance) -> i32 {
-    if auras.unit_has(unit, KeywordKind::Windfury) {
+    let windfury = if auras.unit_has(unit, KeywordKind::Windfury) {
         WINDFURY_ATTACKS
     } else {
         1
-    }
+    };
+    // R3550001: "Can attack N times per turn" gives N attacks, the larger of N and Windfury's two.
+    let printed = crate::scripts::flags_of(auras.state(), unit)
+        .attacks_per_turn
+        .map_or(1, |n| {
+            crate::params::declared_or(auras.state(), unit, "attacks", n)
+        });
+    windfury.max(printed)
+}
+
+/// R3550001 (Stinkyscape+ #37 Scorch): whether two Units stand directly across from each other — in
+/// each other's lane on opposite sides. The test `lane_multiplier_for` reads for "across its lane".
+pub fn stands_across(state: &GameState, a: &CardInstance, b: &CardInstance) -> bool {
+    let Some(a_slot) = crate::zones::slot_of(state, a) else {
+        return false;
+    };
+    let Some(b_slot) = crate::zones::slot_of(state, b) else {
+        return false;
+    };
+    // R1081000: a Unit standing in a backrow zone is in that zone's lane, as one in its unit zone is.
+    // R3546001: a GIGA meets a lane in either of its lanes.
+    crate::zones::in_units_row_or_standing(state, a)
+        && crate::zones::in_units_row_or_standing(state, b)
+        && a_slot.player != b_slot.player
+        && crate::giga::lanes_meet(a, b)
 }
 
 /// §4.1: one exertion per turn, so a unit that attacked cannot switch and one that switched cannot
@@ -325,12 +349,14 @@ pub fn why_cannot_switch_in(
     // §4.1: a Unit with Can't Defend cannot be switched to Defense Position, by an action or by an
     // effect (R2657000; `never_defense` is the flag it took over from, as #65.1 Spikey Pillow printed it),
     // nor can any Unit while an aura says Units cannot be (R1849006, Stinkyscape #23 Warp Disruptor), nor
-    // an Indestructible one, whatever made it so (R2179000).
+    // an Indestructible one, whatever made it so (R2179000), nor an Evasive one, which implies Can't
+    // Defend as an Indestructible one does (R3543002).
     if to == Position::Def
         && (crate::scripts::flags_of(auras.state(), unit).never_defense == Some(true)
             || auras.unit_has(unit, KeywordKind::CantDefend)
             || crate::restrictions::defense_barred(auras.state())
-            || auras.unit_has(unit, KeywordKind::Indestructible))
+            || auras.unit_has(unit, KeywordKind::Indestructible)
+            || auras.unit_has(unit, KeywordKind::Evasive))
     {
         return Err(EngineError::new("that unit cannot be in Defense Position"));
     }
@@ -518,7 +544,13 @@ pub fn why_cannot_attack_in(
     }
 
     // Step 3: while any enemy unit this attacker may attack has Taunt, the target must be one of them.
-    let wall = taunt_wall(auras, attacker, enemy);
+    // R3560007: an attacker that Ignores Taunt skips it (S+ #121).
+    let ignores = crate::scripts::flags_of(state, attacker).ignores_taunt == Some(true);
+    let wall = if ignores {
+        Vec::new()
+    } else {
+        taunt_wall(auras, attacker, enemy)
+    };
     let in_wall = match target {
         DamageTarget::Unit { instance } => wall.iter().any(|unit| unit.id == instance.id),
         DamageTarget::Hero { .. } => false,
@@ -629,8 +661,48 @@ pub fn attack_mod_for(state: &GameState, attacker: &CardInstance, defender: &Car
     out
 }
 
+/// R3554008 (S+ #107 Fuse): the weight a sweep of `striker` puts on `struck`: `sweepLane` for
+/// lanes that meet, `sweepAdjacent` (defaulting to 1) for lanes one apart, else none. Only when
+/// the striker sweeps, the two are on opposite sides, and both are in unit rows or standing.
+pub fn sweep_weight(state: &GameState, striker: &CardInstance, struck: &CardInstance) -> Option<i32> {
+    let flags = crate::scripts::flags_of(state, striker);
+    let lane = flags.sweep_lane?;
+    let striker_slot = crate::zones::slot_of(state, striker)?;
+    let struck_slot = crate::zones::slot_of(state, struck)?;
+    if striker_slot.player == struck_slot.player {
+        return None;
+    }
+    if !crate::zones::in_units_row_or_standing(state, striker)
+        || !crate::zones::in_units_row_or_standing(state, struck)
+    {
+        return None;
+    }
+    let striker_lanes = crate::giga::lanes_of(striker);
+    let struck_lanes = crate::giga::lanes_of(struck);
+    if striker_lanes.iter().any(|lane| struck_lanes.contains(lane)) {
+        Some(crate::params::declared_or(state, striker, "sweepLane", lane))
+    } else if striker_lanes
+        .iter()
+        .any(|a| struck_lanes.iter().any(|b| (a - b).abs() == 1))
+    {
+        Some(crate::params::declared_or(
+            state,
+            striker,
+            "sweepAdjacent",
+            flags.sweep_adjacent.unwrap_or(1),
+        ))
+    } else {
+        None
+    }
+}
+
 /// MD-F14, R1283: multiplier for attacks across its lane in combat.
 pub fn lane_multiplier_for(state: &GameState, striker: &CardInstance, struck: &CardInstance) -> i32 {
+    // R3554008: a sweep's weight first, so the projections in `lethal.rs` and `query.rs` agree
+    // with combat.
+    if let Some(weight) = sweep_weight(state, striker, struck) {
+        return weight;
+    }
     let Some(printed) = crate::scripts::flags_of(state, striker).lane_multiplier else {
         return 1;
     };
@@ -641,10 +713,11 @@ pub fn lane_multiplier_for(state: &GameState, striker: &CardInstance, struck: &C
         return 1;
     };
     // R1081000: a Unit standing in a backrow zone is in that zone's lane, as one in its unit zone is.
+    // R3546001: a GIGA meets a lane in either of its lanes.
     if crate::zones::in_units_row_or_standing(state, striker)
         && crate::zones::in_units_row_or_standing(state, struck)
         && striker_slot.player != struck_slot.player
-        && striker_slot.lane == struck_slot.lane
+        && crate::giga::lanes_meet(striker, struck)
     {
         crate::params::declared_or(state, striker, "multiplier", printed)
     } else {
@@ -675,13 +748,16 @@ fn cleave(
     let Some(defender) = live_card(sink.state, instance) else {
         return;
     };
-    let Some(at) = crate::zones::slot_of(sink.state, &defender) else {
-        return;
-    };
-    for slot in crate::zones::adjacent(at) {
-        let Some(neighbour) = crate::zones::card_at(sink.state, slot).cloned() else {
+    // R3546001: beside a GIGA in either of its lanes, in both; a GIGA beside the target is hit once.
+    let mut met: Vec<String> = vec![defender.id.clone()];
+    for slot in crate::giga::adjacent_slots(sink.state, &defender) {
+        let Some(neighbour) = crate::giga::occupant_at(sink.state, slot).cloned() else {
             continue;
         };
+        if met.contains(&neighbour.id) {
+            continue;
+        }
+        met.push(neighbour.id.clone());
         // R1081000: beside a Unit standing in the backrow, only a Unit standing there is adjacent.
         if !crate::zones::is_adjacent_card(sink.state, &defender, &neighbour) {
             continue;
@@ -722,6 +798,54 @@ fn strike(
     );
     let source = live_or(sink.state, attacker);
     cleave(sink, &source, target, cleave_amount, poisonous);
+    let source = live_or(sink.state, attacker);
+    sweep(sink, &source, target, cleave_amount, poisonous);
+}
+
+/// R3554008: a sweep's other hits: every other enemy Unit with a weight takes `cleave_amount *
+/// weight` as one damage instance each (`attack_flags`). A walk of `active_units_of`, which no
+/// half narrows (R3554003).
+fn sweep(
+    sink: &mut EngineSink<'_>,
+    attacker: &CardInstance,
+    target: &AttackTarget,
+    cleave_amount: i32,
+    poisonous: bool,
+) {
+    if crate::scripts::flags_of(sink.state, attacker)
+        .sweep_lane
+        .is_none()
+    {
+        return;
+    }
+    let enemy = opponent_of(attacker.controller);
+    let struck = match target {
+        DamageTarget::Unit { instance } => Some(instance.id.clone()),
+        DamageTarget::Hero { .. } => None,
+    };
+    let units: Vec<CardInstance> = crate::zones::active_units_of(sink.state, enemy)
+        .into_iter()
+        .cloned()
+        .collect();
+    for unit in &units {
+        if struck.as_deref() == Some(unit.id.as_str()) {
+            continue;
+        }
+        let Some(weight) = sweep_weight(sink.state, attacker, unit) else {
+            continue;
+        };
+        deal_damage(
+            sink,
+            DamageArgs {
+                source: Some(attacker.clone()),
+                target: DamageTarget::Unit {
+                    instance: unit.clone(),
+                },
+                amount: cleave_amount * weight,
+                flags: attack_flags(poisonous),
+            },
+        );
+    }
 }
 
 /// The defender's strike back; `via` as on `strike`.
@@ -1284,6 +1408,8 @@ pub(crate) fn declare_instead(
     let declaration = sink.events[at].clone();
     crate::triggers::mark_dispatched(sink, &[declaration]);
 
+    // R3550005: a counter cancels a declared Ranged attack before the window.
+    crate::countering::counter_declared_attack(sink, &attacker);
     // Step 4's second sentence: the traps answer the declaration, before any damage.
     crate::traps::run_trap_window(sink, &event);
     let since: Vec<GameEvent> = sink
@@ -2026,6 +2152,9 @@ struct OwedAfterAttack {
     /// Judged once, as the hook first runs, when the check has closed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     survived: Option<bool>,
+    /// R3543003: whether Frenzy answers, judged once with survived.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    frenzy: Option<bool>,
     /// The hook is done and only the state check that follows it is owed. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     check_only: Option<bool>,
@@ -2209,10 +2338,11 @@ fn combatant_hooks(
     from: usize,
 ) {
     let attacker_id = snapshot.id.clone();
-    if crate::scripts::script_of(sink.state, &snapshot)
+    let hooked = crate::scripts::script_of(sink.state, &snapshot)
         .after_attack
-        .is_some()
-    {
+        .is_some();
+    // R3543003: a Frenzy Unit answers its combat as an `afterAttack` hook does, judged when it runs.
+    if hooked || crate::layers::unit_has(sink.state, &snapshot, KeywordKind::Frenzy) {
         let destroyed_ids: Vec<String> = sink.events[from.min(sink.events.len())..]
             .iter()
             .filter_map(|event| match event {
@@ -2232,13 +2362,18 @@ fn combatant_hooks(
             forced,
             since,
             survived: None,
+            frenzy: None,
             check_only: None,
         };
         if is_paused(sink) {
             owe_engine_hook(sink, &owed);
-            return;
+            // A Frenzy-only attacker still lets the defender's `afterAttacked` be owed after it.
+            if hooked {
+                return;
+            }
+        } else {
+            run_after_attack(sink, &owed, None);
         }
-        run_after_attack(sink, &owed, None);
     }
     // MD-C26: then the defender's `afterAttacked`, once per combat it was attacked in (never a hero).
     if let Some(defender) = defender_snapshot
@@ -2267,9 +2402,7 @@ fn combatant_hooks(
 /// The attacker's hook, from `paused` when a question split it, then the check that follows it.
 fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: Option<PausedStep>) {
     let script = crate::scripts::script_of(sink.state, &owed.snapshot);
-    let Some(hook) = script.after_attack.clone() else {
-        return;
-    };
+    let hook = script.after_attack.clone();
     if sink.state.result.is_some() {
         return;
     }
@@ -2280,6 +2413,17 @@ fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: O
                 && !crate::stays::left_field_after(sink.state, owed.since, &live.id)
         })
     });
+    // R3543003: judged once, as `survived` is: Frenzy as the check closes, and its target among its kills.
+    let frenzy = owed.frenzy.unwrap_or_else(|| {
+        survived
+            && owed.destroyed_ids.contains(&owed.target_id)
+            && live
+                .as_ref()
+                .is_some_and(|live| crate::layers::unit_has(sink.state, live, KeywordKind::Frenzy))
+    });
+    if hook.is_none() && !frenzy {
+        return;
+    }
     // R2285001, R2396000 (above): an "After this attacks" for a gone attacker does nothing and owes no
     // check; a "Whenever this attacks" runs as the snapshot it fought with, as `run_after_attacked` runs
     // a dead defender; a Reborn body is not it, so it runs once.
@@ -2290,6 +2434,7 @@ fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: O
     };
     let mut judged = OwedAfterAttack {
         survived: Some(survived),
+        frenzy: Some(frenzy),
         ..owed.clone()
     };
     // `{ ...facts, ...(survived ? {} : { [SELF_KEY]: snapshot }) }`, in that key order.
@@ -2303,6 +2448,24 @@ fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: O
     }
     // R426: its controller in that combat, though a Death in the check took it since.
     let controller = owed.snapshot.controller;
+    // R3543003: Frenzy's "this may attack again" runs first in the step, before the card's own
+    // "After this attacks".
+    let hook: Hook = std::sync::Arc::new(move |ctx: &mut crate::script::EffectContext<'_>| {
+        let mut effects = Vec::new();
+        if frenzy {
+            effects.push(crate::effects::may_attack_again(
+                crate::effects::MayAttackAgainArgs {
+                    target: crate::effects::targets::TargetSpec::SelfCard,
+                    keep_sick: Some(true),
+                    lift_sick: None,
+                },
+            ));
+        }
+        if let Some(hook) = &hook {
+            effects.extend(hook(ctx));
+        }
+        effects
+    });
     let status = run_engine_hook(sink, hook, &self_card, controller, &judged, data, paused);
     match status {
         crate::prompts::ListStatus::Done => crate::state_check::state_check(sink),
