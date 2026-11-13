@@ -39,6 +39,8 @@
 // Sweep of record: 2026-10-29 (UTC), `cargo jackioh sweep`, pass 1 over 60 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 30 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":600,"lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
 // Report of record: training/history/sweep-2026-11-13.md
 // Sweep of record: 2026-11-13 (UTC), `cargo jackioh sweep`, pass 1 over 166 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 70 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":1200,"lethalNodes":300,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
+// Report of record: training/history/sweep-2026-11-13-2.md
+// Sweep of record: 2026-11-13 (UTC), `cargo jackioh sweep`, pass 1 over 4 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 4 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":1200,"lethalNodes":300,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
 // END `cargo jackioh sweep --write`
 
 /// R186: defId → why the AI never deals it to itself. Each reason starts "<SweepFlag>: <tier>: ".
@@ -47,30 +49,13 @@
 /// Empty from #2521, which lifted its last two rows, S #149 Wildar (#2358) and TG #25 Trigor (#2397),
 /// both `neverPlayed`, through the unban lane (`SHADOW_UNBANNED`, R2521010, #2452): a banned card the
 /// beam never casts is a dead slot costing a fraction of a draw. Fullsend 2's sweep of the Stinkyscape+
-/// set (#3574, R3574000) wrote four rows, which fullsend 3 (#3575) is to lift by measured AI and engine
-/// fixes and a sweep of record that clears them. Each generation's lifts and their evidence
+/// set (#3574, R3574000) wrote four rows; fullsend 3 (#3575, R3575000) cleared S+ #47 and #163 by a sweep
+/// of record and lifted #81 and #157 through the unban lane. Each generation's lifts and their evidence
 /// (1–8: beam blind spots and R29 scorers' slow games, #628's game-ending-play artifact, R101, R360;
 /// 9: #732's `timeout` bans as R1390's gate lifted; 10–12: wall-clock bookkeeping, each table held to
 /// the seeded fixtures, R265, R677, B34; then #1186, #1675's R977000 and R1675000, and #1889) are in
 /// the reports under training/history/ and in git log.
-pub const SHADOW_BAN: &[(&str, &str)] = &[
-    (
-        "stinkyscapeplus-047",
-        "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "stinkyscapeplus-081",
-        "error: hard: 1505 engine or search error(s) over 201 games",
-    ),
-    (
-        "stinkyscapeplus-157",
-        "neverPlayed: hard: affordable in hand on 296 turns and playable on 225 over 212 pass-2 games, never played",
-    ),
-    (
-        "stinkyscapeplus-163",
-        "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-];
+pub const SHADOW_BAN: &[(&str, &str)] = &[];
 
 /// `Object.keys(SHADOW_BAN)`, sorted. `SHADOW_BAN` is kept sorted by id, so its ids in order are it.
 pub const SHADOW_BAN_IDS: &[&str] = &{
@@ -87,7 +72,9 @@ pub const SHADOW_BAN_IDS: &[&str] = &{
 /// `SHADOW_BAN` entries, sorted by id (generation 10: 021, 033, 047, 051, 063, 073, 092; 11: 041, 067,
 /// 080; 12: 006, 016, 045, 068, as training/history/ tells; #2521: `stinkyscape-149` Wildar and
 /// `traininggrounds-025` Trigor, the two `neverPlayed` rows #2358 and #2397 wrote, so the AI deals
-/// itself every card of every set, #2452). `cargo jackioh sweep --write` leaves their rows out of
+/// itself every card of every set, #2452; #3575: `stinkyscapeplus-081` Doomsayer and
+/// `stinkyscapeplus-157` Phantom Shipyard, `neverPlayed` at Hard after fullsend 3's fixes, lifted at the
+/// owner's call, R3575000). `cargo jackioh sweep --write` leaves their rows out of
 /// `SHADOW_BAN`, and refuses an id no report of record bans. The lane unbans a card by adding its id
 /// here and running `cargo jackioh sweep --write`; a new sweep of a set drops its own ids from this
 /// list. An id may be any card of a set the ban takes: one whose row of the set table gives it a
@@ -108,6 +95,8 @@ pub const SHADOW_UNBANNED: &[&str] = &[
     "meditative-080",
     "meditative-092",
     "stinkyscape-149",
+    "stinkyscapeplus-081",
+    "stinkyscapeplus-157",
     "traininggrounds-025",
 ];
 
