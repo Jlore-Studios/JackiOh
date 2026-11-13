@@ -15587,7 +15587,7 @@
         "provider": "claude-4",
         "round_tier": "medium",
         "rounds_on": 3861,
-        "rounds_used": 0,
+        "rounds_used": 1,
         "since": "2026-11-13T14:57:48Z",
         "source": "ci",
         "until": "2026-11-13T15:21:18Z"
