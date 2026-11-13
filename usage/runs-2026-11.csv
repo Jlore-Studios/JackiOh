@@ -1963,3 +1963,4 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-12T23:03:24Z,43318016921,claude-6,sonnet+opus,review,3781,medium,approved,,8.8,34,8370,1188198,0.9742,18,20,,,3.5,claude-6,none,,1
 2026-11-12T23:35:39Z,43324549034,claude-8,sonnet+opus,review,3809,medium,approved,,9.2,23,6474,685419,0.6426,4,6,,,1.9,,none,,1
 2026-11-12T23:39:02Z,43308349962,claude-7,sonnet+opus,build,3802,medium,built,,111.6,159,23447,7711982,1.4294,0,17,,,66.8,claude-1,fresh,cap,1
+2026-11-13T00:14:09Z,43307917285,claude-4,opus,build,3800,hard,built,,150,0,0,0,,7,16,,,107.8,claude-4,fresh,,1
