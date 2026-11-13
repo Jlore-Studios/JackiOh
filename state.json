@@ -15469,15 +15469,8 @@
       "taken_asks": []
     },
     "3864": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43443953651",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-13T14:44:11Z",
-        "until": "2026-11-13T15:14:11Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -15489,10 +15482,9 @@
         "reason": "planned on sonnet",
         "trail": "ame/Zone.tsx\", \"offset\": 20, \"limit\": 150}\n- Grep: {\"pattern\": \"export function (onClickTarget|narrowByTarget|highlightFor|zonesInBoardOrder|selectionTestid|zoneKey|parseZoneKey|selectionForOption|selectionKey|outstandingNeed|pickInPlay|laneZoneTesti\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3864/apps/web/src/game/actions.ts\", \"offset\": 735, \"limit\": 130}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3864/apps/web/src/game/actions.ts\", \"offset\": 900, \"limit\": 230}\n- Bash: {\"command\": \"cd apps/web/src/game; grep -n \\\"lane-pick\\\\|board-hint\\\\|prompt-board-note\\\\|prompt-zone\\\\|data-prompt-kind=\\\\\\\"zone\\\\\\\"\\\\|data-prompt-kind=\\\\\\\"cell\\\\\\\"\\\\|data-prompt-cell\\\\|data-board-o\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864/apps/web/src/game; sed -n 380,400p prompt.css; sed -n 660,730p prompt.css; sed -n 770,1020p prompt.css; sed -n 1260,1330p prompt.css\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; grep -rn \\\"ChoiceKind::Cell\\\\|PromptKind::Cell\\\" crates --include=*.rs | grep -v \\\"/tests/\\\\|test\\\" | head -20; grep -rln \\\"data-lane-pick\\\\|la\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; sed -n 770,830p crates/engine/src/effects/choose.rs; grep -rn \\\"prompt-option-units\\\\|prompt-option-backrow\\\\|prompt-option-zone\\\\|prompt-zones\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; sed -n 730,770p crates/engine/src/effects/choose.rs; grep -n \\\"min\\\\|max\\\" crates/engine/src/effects/choose.rs | sed -n 1,5p; grep -rn \\\"prompt\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; grep -rn \\\"PromptKind::Zone\\\" crates --include=*.rs | head; grep -n \\\"fn ask\\\" -A25 crates/engine/src/effects/choose.rs | head -40; sed -n 515,\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; sed -n 995,1020p crates/engine/src/play_choices.rs; grep -rn \\\"min: args.min\\\\|args.min\\\\|args.max\\\" crates/engine/src/effects/*.rs crates/engi\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; sed -n 215,420p apps/web/src/game/PromptE18.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; grep -rn \\\"prompt-option-units\\\\|prompt-option-backrow\\\\|prompt-option-zone\\\\|prompt-zone\\\\|\\\\\\\"Choose a zone\\\\\\\"\\\\|Unit lane\\\\|Backrow lane\\\" \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; grep -rn \\\"promptOption\\\\|prompt-option\\\\|\\\\.prompt-zones\\\\|prompt-zone\\\\|pickZone\\\\|chooseZone\\\" e2e --include=*.ts --include=*.tsx | grep -v \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; sed -n 255,300p e2e/support/commands.ts; sed -n 520,620p e2e/support/commands.ts; sed -n 440,480p e2e/support/tutorial.ts; sed -n 300,330p e2e/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; grep -rn \\\"\\\\\\\"zone\\\\\\\"\\\\|promptOf(\\\\\\\"zone\\\\\\\")\\\\|'zone'\\\\|options: \\\\[\\\\\\\"\\\\(units\\\\|backrow\\\\)\\\" e2e --include=*.ts --include=*.tsx | grep -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; sed -n 305,375p e2e/support/tutorial.ts; sed -n 760,870p e2e/cypress/component/mobile-ux.cy.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864/apps/web/src; grep -rn \\\"inert\\\\|aria-modal\\\\|aria-hidden.*prompt\\\\|focusTrap\\\\|useFocusTrap\\\" game/Game.tsx game/Board.tsx game/*.ts | head; gr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; ls spec/rulings | grep -E \\\"R386[0-9]\\\" ; ls spec/pending | head; cat spec/rulings/R0514.md; grep -n \\\"R514\\\\|cell\\\" spec/10-*.md | head -20; l\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; head -c 1500 spec/pending/3846.md; echo; grep -n \\\"^### 10.6\\\" spec/10-engine-guide.md; grep -n \\\"prompt-zones\\\\|lists the\\\\|list of zones\\\\|zo\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; sed -n 184,200p spec/10-engine-guide.md | cut -c1-1200; grep -n \\\"zone\\\" spec/10-engine-guide.md | grep -in \\\"picker\\\\|prompt\\\\|menu\\\\|list\\\" |\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; grep -rn \\\"R2757\\\" spec/rulings/*.md spec/pending/*.md | cut -c1-120 | head -5; grep -rln \\\"Tap a highlighted zone\\\\|zone picker\\\\|picker lists\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; grep -rln \\\"LanePick\\\\|lane pick\\\\|lights each lane\\\" spec | head; grep -n \\\"R514\\\" -r apps/web/src --include=*.tsx --include=*.ts -l | head; g\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; grep -n \\\"R514\\\" apps/web/src/surfaces.test.ts apps/web/src/game/LanePick.tsx | cut -c1-200; grep -rn \\\"board-ux\\\\|bar below\\\\|B44\\\" apps/web/s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864/apps/web/src/game; grep -n \\\"pointer-events\\\" prompt.css | head; sed -n 1,60p prompt.css | grep -n \\\"prompt-scrim\\\" ; grep -n \\\"^\\\\.prompt-scrim\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864/apps/web/src/game; sed -n 150,215p Prompt.test.tsx; sed -n 470,515p Prompt.test.tsx; grep -rn \\\"Your Unit lane\\\\|Enemy Unit lane\\\\|pick: \\\\\\\"zon\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864/apps/web/src/game; sed -n 1,125p PromptLane.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864/apps/web/src; grep -rn \\\"optionTestids\\\\|prompt-option-\\\\${\\\\|\\\\`prompt-option-\\\" --include=*.test.ts --include=*.test.tsx . | grep -v \\\"^./game\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; grep -rn \\\"zone list\\\\|list of zones\\\\|zone grid\\\\|prompt-zones\\\\|zone picker\\\\|\\\\.prompt-zone\\\" apps/web/README.md docs/*.md BUILD.md 2>/dev/n\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3864/.bot-plan.md\", \"content\": \"# Draft plan #3864 (planner notes)\\nRead: Prompt.tsx (Picker, pickerForPending/Need, PromptModal lane branch, BoardHin\u2026\n- said: ## Goal A choice of one board zone opens no list, at any screen size. This covers a play's placement zone (`zone` chrome), an engine `cell` prompt (and the `zone` kind, which the engine never opens) and a declared target whose selections are all zones with `max` 1 and `min` at least 1. The modal be\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-13T14:34:07Z",
       "owner_why": "it plans it",
@@ -15505,18 +15497,18 @@
       "provider": "claude-8",
       "queued_at": "2026-11-13T14:27:01Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43443953651",
+      "run_id": "pending:b341560c-1794581247",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-13T14:34:07Z",
+      "started_at": "2026-11-13T14:48:17Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T14:47:11Z",
+    "at": "2026-11-13T14:48:17Z",
     "url": "",
-    "what": "build #3863 on claude-6"
+    "what": "build #3864 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-13T14:30:47Z",
