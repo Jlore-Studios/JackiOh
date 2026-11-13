@@ -17775,6 +17775,13 @@
     "3837": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "43417758402",
+        "model": "opus",
+        "provider": "claude-4",
+        "since": "2026-11-13T11:41:13Z",
+        "until": "2026-11-13T12:11:13Z"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
