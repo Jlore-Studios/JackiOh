@@ -17,6 +17,7 @@ import { EmptyState } from "../empty/EmptyState.tsx";
 import { CatalogContext } from "../game/catalog.ts";
 import { formatDateTime, t, useLocale } from "../i18n/i18n.ts";
 import { createLobby, inviteToLobby } from "../lobby/api.ts";
+import { holdInviteRefusal } from "../lobby/inviteRefusal.ts";
 import { LobbyPanel } from "../lobby/LobbyPanel.tsx";
 import { withSession } from "../net/gate.ts";
 import { navigate, paths } from "../net/navigate.ts";
@@ -224,13 +225,17 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
                     setChatWith({ profileId: friend.profileId, username: friend.username });
                   }}
                   onLobby={() => {
-                    // R3730005: a 1v1 lobby of the friend's and the player's own, the friend invited into it.
-                    void attempt(async () => {
+                    // R3730005, R3874000: a 1v1 lobby of the friend's and the player's own, the friend invited
+                    // into it. Through `act`, so the page's controls wait and a second press sends nothing; a
+                    // refused invite still opens the lobby made, whose screen says the refusal.
+                    act(async () => {
                       const made = await createLobby({ format: "duel", mode: "bo1" });
-                      await inviteToLobby(made.code, friend.profileId);
+                      try {
+                        await inviteToLobby(made.code, friend.profileId);
+                      } catch (cause) {
+                        holdInviteRefusal(made.code, messageOf(cause));
+                      }
                       navigate(paths.lobby(made.code));
-                    }).catch((cause: unknown) => {
-                      setError(messageOf(cause));
                     });
                   }}
                   onRemove={() => {
