@@ -835,7 +835,7 @@ step that is not yet implemented says which BUILD task delivers it.
 6. **Seed the catalog.** `target/release/jackioh-server seed-catalog`. It writes the catalog compiled
    into the binary, `crates/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → the entries
    `cargo jackioh catalog check` counts on its second line (`<n> entries (<cards> cards + <tokens> tokens)`:
-   every card and token of the seven shipped sets, spec §8) and `select app.catalog_version();` → your
+   every card and token of the eight shipped sets, spec §8) and `select app.catalog_version();` → your
    `CATALOG_VERSION`, the latest card patch's version (R388).
    In the same transaction it writes the cosmetics registry compiled in, `crates/shared/cosmetics.json`
    (R1295000), into `public.cosmetics`: `select count(*) from public.cosmetics;` → 12. Before its

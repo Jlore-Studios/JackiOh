@@ -210,6 +210,14 @@ describe("the filter vocabulary (B31, B34)", () => {
       "Swarm",
       "Legacy",
       "Faction",
+      "Mindustrial",
+      "Mineral",
+      "Automa-α",
+      "Automa-β",
+      "Automa-γ",
+      "Automa-δ",
+      "Automa-Ω",
+      "Paperclip",
     ]);
     // Only the ten AI tokens carry "AI", the Prime tokens "Prime", Otherworldly Removal's three
     // tokens "Other-Origins" (R1837000) and the six Resource tokens "Resource" (#2521), and the pool
@@ -219,6 +227,7 @@ describe("the filter vocabulary (B31, B34)", () => {
     expect(FILTER_TAGS).not.toContain("Other-Origins");
     expect(FILTER_TAGS).not.toContain("War Doctrine");
     expect(FILTER_TAGS).not.toContain("Resource");
+    expect(FILTER_TAGS).not.toContain("Automa-ζ");
     expect([...FILTER_RARITIES]).toEqual(["Common", "Rare", "Epic", "Legendary", "Mythic"]);
     expect(FILTER_TAGS).not.toContain("Token");
     expect(FILTER_RARITIES).not.toContain("Token");
@@ -679,7 +688,7 @@ describe("the set chips (R380: one format, every set)", () => {
   const setOf = (id: string): string | undefined => CORE_CATALOG[id]?.set;
 
   it("offers one chip per shipped set, Classic+ with a testid of its own", () => {
-    expect([...FILTER_SETS]).toEqual(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds"]);
+    expect([...FILTER_SETS]).toEqual(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"]);
     expect(FILTER_SETS.map(filterSetId)).toEqual([
       "db-filter-set-core",
       "db-filter-set-classic",
@@ -688,6 +697,7 @@ describe("the set chips (R380: one format, every set)", () => {
       "db-filter-set-meditative-plus",
       "db-filter-set-stinkyscape",
       "db-filter-set-training-grounds",
+      "db-filter-set-stinkyscape-plus",
     ]);
   });
 
@@ -714,8 +724,11 @@ describe("the set chips (R380: one format, every set)", () => {
     // (#41 to #60) among them, join the pool; its token never does.
     expect(pool(["Training Grounds"])).toHaveLength(deckableIn(["Training Grounds"]));
     expect(new Set(pool(["Training Grounds"]).map(setOf))).toEqual(new Set(["Training Grounds"]));
+    // Re-pinned for the Stinkyscape+ release (#3573): its 166 cards join the pool; its 38 tokens never do.
+    expect(pool(["Stinkyscape+"])).toHaveLength(deckableIn(["Stinkyscape+"]));
+    expect(new Set(pool(["Stinkyscape+"]).map(setOf))).toEqual(new Set(["Stinkyscape+"]));
     expect(pool([])).toHaveLength(
-      deckableIn(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds"]),
+      deckableIn(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"]),
     );
   });
 });
@@ -739,6 +752,8 @@ describe("the Jlockeed tag (R278)", () => {
     // Re-pinned for the Training Grounds release (#2204): its Legacy cards of Core #14 and #13, #45
     // and #48, carry the tag as their Core cards do (R2195003).
     const trainingGrounds = setShips("Training Grounds") ? ["traininggrounds-045", "traininggrounds-048"] : [];
+    // Re-pinned for the Stinkyscape+ release (#3573): its #21 and #26 (T-AI-3 and T-AI-4 are tokens).
+    const stinkyscapePlus = setShips("Stinkyscape+") ? ["stinkyscapeplus-021", "stinkyscapeplus-026"] : [];
     expect([...kept].sort()).toEqual([
       "classic-004",
       "classicplus-048",
@@ -749,6 +764,7 @@ describe("the Jlockeed tag (R278)", () => {
       ...meditative,
       ...meditativePlus,
       ...stinkyscape,
+      ...stinkyscapePlus,
       ...trainingGrounds,
     ]);
   });
@@ -838,8 +854,8 @@ describe("the almanac's pool (R630)", () => {
     expect(almanacPool(bare, DEFAULT_FILTER, DEFAULT_SORT)).toEqual([]);
   });
 
-  it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI, Other-Origins, War Doctrine, Resource, Starship and Token", () => {
-    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Starship", "Token"]);
+  it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI, Other-Origins, War Doctrine, Resource, Starship, Automa-ζ and Token", () => {
+    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Starship", "Automa-ζ", "Token"]);
     // R1420, R1381: the chips are the tags the cards of the shipped sets carry; a set being built adds
     // its tags when it ships.
     const carried = new Set(SHIPPED.filter((d) => d.id !== GLITCH_DEF_ID).flatMap((d) => d.tags));
@@ -910,7 +926,8 @@ describe("the chips follow what ships (R1380, R1381)", () => {
       "Faction: Vanguard Coalition",
     ]);
     expect(factions.every((d) => !d.token)).toBe(true);
-    expect(resources.map((d) => d.name).sort()).toEqual(["Axnit", "Gellium", "Korrelite", "Narcor", "Red Narcor", "Reknite"]);
+    // The Stinkyscape+ release (#3573) adds the Warhero Token (R3548002).
+    expect(resources.map((d) => d.name).sort()).toEqual(["Axnit", "Gellium", "Korrelite", "Narcor", "Red Narcor", "Reknite", "Warhero Token"]);
     expect(resources.every((d) => d.token && d.tags.includes("Token"))).toBe(true);
     expect(DECK_CHIP_TAGS).toContain("Faction");
     expect(DECK_CHIP_TAGS).not.toContain("Resource");
@@ -920,10 +937,40 @@ describe("the chips follow what ships (R1380, R1381)", () => {
     expect(filterTagId("Resource")).toBe("db-filter-tag-resource");
   });
 
-  it("R3038000 the Starship tag, the Dormant Starship's alone, gets a chip in the almanac's list only", () => {
-    // The Dormant Starship is no card a deck may hold: only a rule makes it (R1857001).
+  it("R3572000 each Automa tag has a chip id of its own", () => {
+    const ids = (["Automa-α", "Automa-β", "Automa-γ", "Automa-δ", "Automa-Ω"] as const).map((tag) => filterTagId(tag));
+    expect(ids).toEqual(["db-filter-tag-automa-alpha", "db-filter-tag-automa-beta", "db-filter-tag-automa-gamma", "db-filter-tag-automa-delta", "db-filter-tag-automa-omega"]);
+    expect(filterTagId("Automa-ζ")).toBe("db-filter-tag-automa-zeta");
+    expect(slugOf("Mindustrial")).toBe("mindustrial");
+    const all = [...ALMANAC_TAGS.filter((tag) => tag.startsWith("Automa-")).map((tag) => filterTagId(tag))];
+    expect(all).toHaveLength(6);
+    expect(new Set(all).size).toBe(6);
+  });
+
+  it("R3038000 the Starship tag, the Dormant Starship's and the ten Terminus Starships' alone, gets a chip in the almanac's list only", () => {
+    // The Dormant Starship is no card a deck may hold: only a rule makes it (R1857001); the Terminus
+    // Starships are tokens too (the Stinkyscape+ release, #3573).
     const shipped = Object.values(CORE_CATALOG).filter((d) => setShips(d.set));
-    expect(shipped.filter((d) => d.tags.includes("Starship")).map((d) => d.id)).toEqual(["stinkyscape-t-dormant-starship"]);
+    const starships = shipped.filter((d) => d.tags.includes("Starship"));
+    expect(starships.map((d) => d.id).sort()).toEqual(
+      [
+        "stinkyscape-t-dormant-starship",
+        ...[
+          "ark-of-ashes",
+          "dying-ember",
+          "heat-death-pilgrim",
+          "entropys-wake",
+          "red-giant-requiem",
+          "cold-exodus",
+          "omega-drift",
+          "farthest-shore",
+          "nightfall-covenant",
+          "vacuum-psalm",
+        ].map((name) => `stinkyscapeplus-t-terminus-starship-${name}`),
+      ].sort(),
+    );
+    // The Dormant Starship is printed as no token (only R1857001 keeps it out of a deck); the ten are.
+    expect(starships.filter((d) => d.id.startsWith("stinkyscapeplus-")).every((d) => d.token)).toBe(true);
     expect(FILTER_TAGS).not.toContain("Starship");
     expect(DECK_CHIP_TAGS).not.toContain("Starship");
     expect(ALMANAC_CHIP_TAGS).toContain("Starship");

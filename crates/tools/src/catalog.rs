@@ -3,7 +3,7 @@
 //!
 //! `catalog check` validates `crates/cards/catalog.json`'s shape and census against SPEC §5, §6.1, §7
 //! and §8 and patch v0.2.0's sets and fields (docs/classic-sets.md B2, B3.4, E36, E40), set by set
-//! (Core to Stinkyscape, R1857000, and the held Training Grounds set, R2194000): every card and token
+//! (Core to Stinkyscape+, R1857000, R2194000, R3535000): every card and token
 //! once, every enum value in the engine's wire unions, stats only on Units and Animated backrow cards
 //! (B3.1, a whole line or none, R2280000), each set's rarities as `jackioh_cards::census` carries them.
 //! It does NOT re-read the §8 cells (`crates/cards/tests/cross/catalog.rs` does); the pending-fragment
@@ -56,7 +56,19 @@ fn keyword_kinds() -> Vec<&'static str> {
 }
 
 /// §6.1, R385, E6: the keywords that carry a number; every other kind is bare.
-const NUMBERED_KEYWORDS: &[&str] = &["Armor", "Lucky", "Brittle", "Spell Damage"];
+const NUMBERED_KEYWORDS: &[&str] = &[
+    "Armor",
+    "Lucky",
+    "Brittle",
+    "Spell Damage",
+    "Burn",
+    "Toxic",
+    "Tipsy",
+];
+
+/// R3566004: the keywords that may print a number but need none (Stinkyscape+ #6.2 Stinky Cheese's
+/// "Temporary 2"; the engine's `Keyword::Temporary { n }`, R2179001, counts a bare one as 1).
+const OPTIONALLY_NUMBERED_KEYWORDS: &[&str] = &["Temporary"];
 
 /* expectations */
 
@@ -277,9 +289,17 @@ fn validate_face(
             .is_some_and(|kind| ANIMATED_KEYWORDS.contains(&kind))
     });
 
+    // R3543001, R3556007: a Flexible Field Spell with stats is a Unit in a unit zone, so its stat
+    // line reads whole or absent like an Animated face's.
+    let flexible_field_spell = running_type.and_then(Json::as_str) == Some("Field Spell")
+        && kinds_written
+            .iter()
+            .any(|kind| kind.and_then(Json::as_str) == Some("Flexible"));
+    let stat_line = animated || flexible_field_spell;
+
     // Stats: present on both faces of every Unit, on an Animated backrow card's as a whole line or not
     // at all (B3.1, R2280000: it becomes a Unit only with stats), absent on every other non-Unit (§5, §8).
-    if !is_unit && animated && face.get("attack").is_some() != face.get("health").is_some() {
+    if !is_unit && stat_line && face.get("attack").is_some() != face.get("health").is_some() {
         fail(
             failures,
             &at,
@@ -288,7 +308,7 @@ fn validate_face(
     }
     for stat in ["attack", "health"] {
         let value = face.get(stat);
-        if is_unit || (animated && value.is_some()) {
+        if is_unit || (stat_line && value.is_some()) {
             if !is_int(value) {
                 let what = if is_unit { "Unit" } else { "Animated" };
                 fail(
@@ -300,7 +320,7 @@ fn validate_face(
                     ),
                 );
             }
-        } else if !animated && value.is_some() {
+        } else if !stat_line && value.is_some() {
             fail(
                 failures,
                 &at,
@@ -400,7 +420,15 @@ fn validate_face(
                 &format!("{kind_text} must carry an integer `n` (got {})", describe(n)),
             );
         }
-        if !numbered && n.is_some() {
+        let optional = OPTIONALLY_NUMBERED_KEYWORDS.contains(&kind_text);
+        if optional && n.is_some() && !is_int(n) {
+            fail(
+                failures,
+                &kw_at,
+                &format!("{kind_text} must carry an integer `n` (got {})", describe(n)),
+            );
+        }
+        if !numbered && !optional && n.is_some() {
             fail(
                 failures,
                 &kw_at,
@@ -1832,7 +1860,8 @@ mod tests {
             })
             .count();
         assert_eq!(shipped.unshipped_count, held);
-        // Stinkyscape ships, so leaving it out holds no more apart: only Training Grounds is (R2194000).
+        // Stinkyscape ships, so leaving it out holds no more apart: every set the catalog holds ships since
+        // the Stinkyscape+ release (#3573, R3535000), so nothing is held apart.
         assert_eq!(check_catalog(&without_stinkyscape()).unshipped_count, held);
 
         let rarity = |name: &str| {
@@ -2136,6 +2165,100 @@ mod tests {
             assert!(failures.contains(&expected), "{expected} in {failures:#?}");
         }
         assert_eq!(failures.len(), 3, "{failures:#?}");
+    }
+
+    /// The base face's keywords of the shipped Temporary token Meditative #22.1, replaced by `keywords`.
+    fn failures_with_keywords(id: &str, keywords: &str) -> Vec<String> {
+        let mut catalog = shipped_catalog();
+        let mut entry = catalog[id].as_object().expect(id).clone();
+        if let Some(Json::Object(base)) = entry.get_mut("base") {
+            base.insert(
+                "keywords".to_string(),
+                js::parse(keywords).expect("keywords JSON"),
+            );
+        }
+        catalog.insert(id.to_string(), Json::Object(entry));
+        check_catalog(&catalog).failures
+    }
+
+    #[test]
+    fn r3566004_a_temporary_may_print_its_count() {
+        let id = "meditative-022-1";
+        assert_eq!(
+            failures_with_keywords(id, r#"[{"kind":"Temporary","n":2}]"#),
+            Vec::<String>::new()
+        );
+        assert_eq!(
+            failures_with_keywords(id, r#"[{"kind":"Temporary"}]"#),
+            Vec::<String>::new()
+        );
+        let wrong = failures_with_keywords(id, r#"[{"kind":"Temporary","n":"2"}]"#);
+        assert!(
+            wrong
+                .iter()
+                .any(|failure| failure.contains("Temporary must carry an integer `n`")),
+            "{wrong:#?}"
+        );
+        let brittle = failures_with_keywords(id, r#"[{"kind":"Brittle"}]"#);
+        assert!(
+            brittle
+                .iter()
+                .any(|failure| failure.contains("Brittle must carry an integer `n`")),
+            "{brittle:#?}"
+        );
+        let rush = failures_with_keywords(id, r#"[{"kind":"Rush","n":1}]"#);
+        assert!(
+            rush.iter()
+                .any(|failure| failure.contains("Rush must not carry `n`")),
+            "{rush:#?}"
+        );
+    }
+
+    #[test]
+    fn a_flexible_field_spell_may_print_a_stat_line_and_another_field_spell_may_not() {
+        // core-006, a shipped Field Spell with no keywords and no stats, stands in for S+ #59.
+        assert_eq!(check_catalog(&shipped_catalog()).failures, Vec::<String>::new());
+        fn faced(keywords: &str, attack: Option<i32>, health: Option<i32>) -> Object {
+            let mut catalog = shipped_catalog();
+            let Some(Json::Object(entry)) = catalog.get_mut("core-006") else {
+                panic!("core-006 is an object")
+            };
+            let Some(Json::Object(base)) = entry.get_mut("base") else {
+                panic!("a base face")
+            };
+            base.insert(
+                "keywords".to_string(),
+                js::parse(keywords).expect("keywords JSON"),
+            );
+            if let Some(attack) = attack {
+                base.insert("attack".to_string(), Json::from(attack));
+            }
+            if let Some(health) = health {
+                base.insert("health".to_string(), Json::from(health));
+            }
+            catalog
+        }
+        let flexible = r#"[{"kind": "Flexible"}]"#;
+        // R3556007: a Flexible Field Spell may print a whole stat line, like an Animated face.
+        assert_eq!(
+            check_catalog(&faced(flexible, Some(0), Some(6))).failures,
+            Vec::<String>::new()
+        );
+        // But not half a line.
+        assert_eq!(
+            check_catalog(&faced(flexible, Some(0), None)).failures,
+            [
+                "catalog[\"core-006\"].base: an Animated face prints both `attack` and `health` or neither (R2280000)"
+            ]
+        );
+        // And a Field Spell without Flexible may print none at all.
+        assert_eq!(
+            check_catalog(&faced("[]", Some(0), Some(6))).failures,
+            [
+                "catalog[\"core-006\"].base: non-Unit face must not carry `attack` (got 0)",
+                "catalog[\"core-006\"].base: non-Unit face must not carry `health` (got 6)",
+            ]
+        );
     }
 
     #[test]

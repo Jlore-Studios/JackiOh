@@ -45,8 +45,8 @@ mod config_constants_build_s2 {
     }
 
     #[test]
-    fn r21_r781005_r1025000_r1615000_random_keyword_pool_is_the_designers_fourteen_combat_keywords_in_order()
-    {
+    fn r21_r781005_r1025000_r1615000_r3551004_random_keyword_pool_is_the_designers_fourteen_combat_keywords_then_frenzy()
+     {
         assert_eq!(
             RANDOM_KEYWORD_POOL.to_vec(),
             vec![
@@ -64,6 +64,7 @@ mod config_constants_build_s2 {
                 "Lifesteal",
                 "Pierce",
                 "Trample",
+                "Frenzy",
             ]
         );
     }

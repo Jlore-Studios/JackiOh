@@ -156,6 +156,7 @@ pub static TWICE_FORWARD_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = Lazy
                         vec![effects::exile(json_as(json!({ "target": { "of": "self" } })))]
                     }),
                     even_if_gone: false,
+                    lowers_cost_on_float: false,
                 },
                 twice_forward_trigger(json_as(json!({ "radiantCopy": false }))),
             ],

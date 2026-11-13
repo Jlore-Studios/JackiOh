@@ -807,3 +807,71 @@ mod r3039000_an_awakened_card_is_never_dormant_again {
         );
     }
 }
+
+mod r3556000_a_dormant_field_spell {
+    use super::*;
+
+    /// p1's dozer in hand, a plain body on each side to read the aura on.
+    fn dozer_board() -> Scenario {
+        board(
+            "p1",
+            json!([dozer.id]),
+            json!([{ "def": plain.id, "lane": 1 }]),
+            json!([plain.id]),
+            json!([{ "def": plain.id, "lane": 1 }]),
+        )
+    }
+
+    fn attack_of(s: &Scenario, player: PlayerId, lane: i32) -> i32 {
+        let id = id_at(s, player, lane);
+        jackioh_engine::layers::unit_view(s.state(), s.card(&id)).attack
+    }
+
+    fn backrow_slumber(s: &Scenario, viewer: PlayerId) -> Option<Slumber> {
+        let view = s.view(viewer);
+        let side = if viewer == P1 { &view.you } else { &view.opponent };
+        match side.backrow.first() {
+            Some(Some(BackrowView::Public(public))) => public.slumber,
+            other => panic!("lane 1 shows the Dormant dozer, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn r3556000_a_field_spell_printing_dormant_is_dormant_played_from_hand_and_both_views_show_it() {
+        let mut s = dozer_board();
+        s.play(dozer.id.as_str(), json!({ "zone": 1 }));
+        let id = s.card(dozer.id.as_str()).id.clone();
+        assert_eq!(slumber_of(&s, &id), dormant_for(2));
+        // Public on both seats, with its countdown.
+        for viewer in [P1, P2] {
+            assert_eq!(backrow_slumber(&s, viewer), dormant_for(2), "{viewer:?}");
+        }
+    }
+
+    #[test]
+    fn r3556000_its_trigger_and_aura_are_off_until_it_awakens_on_its_controllers_second_turn() {
+        let mut s = dozer_board();
+        s.play(dozer.id.as_str(), json!({ "zone": 1 }));
+        let id = s.card(dozer.id.as_str()).id.clone();
+        // Its controller's end of turn: the trigger is off and the aura is off.
+        s.end_turn();
+        assert_eq!(health_of(&s, P2), HERO_HEALTH);
+        assert_eq!(attack_of(&s, P1, 1), 3);
+        assert_eq!(attack_of(&s, P2, 1), 3);
+        // Its controller's first turn after the play: counted down, still off.
+        s.end_turn();
+        assert_eq!(s.state().active, P1);
+        assert_eq!(slumber_of(&s, &id), dormant_for(1));
+        assert_eq!(health_of(&s, P2), HERO_HEALTH);
+        assert_eq!(attack_of(&s, P1, 1), 3);
+        // Its controller's second turn: it awakens at the start, then its trigger fires and its
+        // aura applies, as any acting text does.
+        s.end_turn();
+        s.end_turn();
+        assert_eq!(s.state().active, P1);
+        assert_eq!(slumber_of(&s, &id), None);
+        assert_eq!(health_of(&s, P2), HERO_HEALTH - START_OF_TURN_DAMAGE);
+        assert_eq!(attack_of(&s, P1, 1), 4);
+        assert_eq!(attack_of(&s, P2, 1), 4);
+    }
+}

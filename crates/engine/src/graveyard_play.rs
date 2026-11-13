@@ -1,6 +1,7 @@
 //! Playing cards from the graveyard (docs/classic-sets.md B5 E11, R454): the permissions that allow
 //! it, the plays `legal_actions` offers under them, the refusal §10.5 step 1 gives, and the Plague
-//! Token payment Classic #74 Corpse Plantation adds.
+//! Token payment Classic #74 Corpse Plantation adds. R3560001: a card with `graveyardPrice`
+//! grants itself that play (S+ #120).
 //!
 //! A permission is a card on the field saying so (Classic #28 Second Wind, #74, #90 In Too Deep's
 //! reward L): `Script.graveyard_play`, a pure read asked of the cards acting on the player's own side.
@@ -100,6 +101,12 @@ fn admitting(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<Gr
             permission: GraveyardPlayPermission::default(),
         });
     }
+    if crate::scripts::flags_of(state, card).graveyard_price.is_some() {
+        out.push(GraveyardGrant {
+            source: card.clone(),
+            permission: GraveyardPlayPermission::default(),
+        });
+    }
     out
 }
 
@@ -146,14 +153,15 @@ pub fn graveyard_payments_for(
         return Vec::new();
     }
     let grants = admitting(state, player, card);
-    // R1223: a graveyard play may borrow too.
-    let mana = crate::credit::spendable_mana(state, player);
+    // R1223, R3548004: a graveyard play may borrow too, or pay on infinite mana.
     let mut out: Vec<PlayPayment> = Vec::new();
     let priced: Vec<&GraveyardGrant> = grants
         .iter()
         .filter(|grant| price >= grant.permission.min_price.unwrap_or(0))
         .collect();
-    if priced.iter().any(|grant| grant.permission.plague != Some(true)) && price <= mana {
+    if priced.iter().any(|grant| grant.permission.plague != Some(true))
+        && crate::credit::can_pay(state, player, price)
+    {
         out.push(PlayPayment::default());
     }
     for grant in &priced {
@@ -164,7 +172,7 @@ pub fn graveyard_payments_for(
         let most = plague_on(&grant.source).min(price.div_euclid(PLAGUE_TOKEN_MANA));
         let mut tokens = MIN_PLAGUE_PAYMENT;
         while tokens <= most {
-            if price - tokens * PLAGUE_TOKEN_MANA <= mana {
+            if crate::credit::can_pay(state, player, price - tokens * PLAGUE_TOKEN_MANA) {
                 out.push(PlayPayment {
                     plague: Some(PlagueSpend {
                         from: grant.source.id.clone(),
@@ -207,16 +215,14 @@ pub fn why_graveyard_play_refused(
             "a card played from your graveyard must cost ({least}) or more"
         )));
     }
-    // R1223: a graveyard play may borrow too.
-    let mana = crate::credit::spendable_mana(state, player);
-
+    // R1223, R3548004: a graveyard play may borrow too, or pay on infinite mana.
     let Some(plague) = plague else {
         if !priced.iter().any(|grant| grant.permission.plague != Some(true)) {
             return Err(EngineError::new(
                 "that card may only be played from your graveyard by spending Plague Counters",
             ));
         }
-        if price > mana {
+        if !crate::credit::can_pay(state, player, price) {
             return Err(EngineError::new(format!(
                 "that card costs {price}, more than your mana"
             )));
@@ -241,7 +247,7 @@ pub fn why_graveyard_play_refused(
     if plague.tokens * PLAGUE_TOKEN_MANA > price {
         return Err(EngineError::new("that is more Plague Counters than the price"));
     }
-    if price - plague.tokens * PLAGUE_TOKEN_MANA > mana {
+    if !crate::credit::can_pay(state, player, price - plague.tokens * PLAGUE_TOKEN_MANA) {
         return Err(EngineError::new("the rest of the price is more than your mana"));
     }
     Ok(())

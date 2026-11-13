@@ -594,6 +594,10 @@ pub fn script_step_for(script: &Script, resume: &Resume) -> Option<Hook> {
     if resume.hook == crate::subsystems::CHAOS_DEATH_WATCH_HOOK {
         return Some(crate::subsystems::death_watch_step());
     }
+    // R3570004: Stinkyscape+ #142's launch watcher, the same.
+    if resume.hook == crate::subsystems::CHAOS_MS_LAUNCH_WATCH_HOOK {
+        return Some(crate::subsystems::launch_watch_step());
+    }
     // R1845002: a trade offer's steps, the same, as it comes due and as each of its prompts is answered.
     if resume.hook == crate::effects::trade::TRADE_OFFER_HOOK {
         return crate::effects::trade::trade_offer_step(&resume.step);

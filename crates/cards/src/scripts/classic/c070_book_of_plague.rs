@@ -221,10 +221,11 @@ mod tests {
             }
         }
 
-        /// R380, R387, R60: the pool is the non-token Plague cards but this one; over many seeds every one is
-        /// offered, never a token, never Book of Plague itself, and picks may repeat.
+        /// R380, R387, R3563000: the pool is the non-token Plague cards but this one; over many seeds every one
+        /// is offered, never a token, never Book of Plague itself, and the three picks are distinct (the pool
+        /// holds many more than three, so none repeats).
         #[test]
-        fn r380_r387_r60_the_pool_is_the_other_non_token_plague_cards_and_picks_may_repeat() {
+        fn r380_r387_r3563000_the_pool_is_the_other_non_token_plague_cards_and_the_picks_are_distinct() {
             let pool = plague_pool();
             assert!(!pool.is_empty());
             assert!(!pool.iter().any(|id| id == ID), "never itself");
@@ -234,7 +235,7 @@ mod tests {
                 assert!(def.tags.contains(&Tag::Plague), "{id}");
             }
             let mut seen: IndexSet<String> = IndexSet::new();
-            let mut repeated = false;
+            assert!(pool.len() > 3, "the pool outlasts the three picks");
             for n in 0..150 {
                 for radiant in [false, true] {
                     let mut s = adding(&format!("book-pool-{n}"), radiant);
@@ -242,12 +243,11 @@ mod tests {
                     let added = added_to_hand(&s);
                     assert_eq!(added.len(), 3);
                     let defs: IndexSet<&str> = added.iter().map(|card| card.def_id.as_str()).collect();
-                    repeated |= defs.len() < 3;
+                    assert_eq!(defs.len(), 3, "a pick never repeats a card while the pool lasts (seed {n}, radiant {radiant})");
                     seen.extend(added.iter().map(|card| card.def_id.clone()));
                 }
             }
             assert_eq!(seen, pool.iter().cloned().collect::<IndexSet<String>>(), "every Plague card is offered");
-            assert!(repeated, "a pick may repeat a card");
         }
 
         /// R74: the Radiant face adds Radiant Plague cards.

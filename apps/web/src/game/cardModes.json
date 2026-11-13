@@ -236,6 +236,20 @@
       ]
     ]
   },
+  "meditative-054": {
+    "base": [
+      [
+        "coin",
+        "warhero"
+      ]
+    ],
+    "radiant": [
+      [
+        "coin",
+        "warhero"
+      ]
+    ]
+  },
   "meditative-098": {
     "base": [
       [
@@ -389,6 +403,50 @@
         "Golden Accord",
         "Pegasus",
         "Star-jumper Core"
+      ]
+    ]
+  },
+  "stinkyscapeplus-004": {
+    "base": [
+      [
+        "overwhelm",
+        "wolfsMaw",
+        "ironMandate"
+      ]
+    ],
+    "radiant": [
+      [
+        "overwhelm",
+        "wolfsMaw",
+        "ironMandate"
+      ]
+    ]
+  },
+  "stinkyscapeplus-007": {
+    "base": [
+      [
+        "enemy",
+        "friendly"
+      ]
+    ],
+    "radiant": [
+      [
+        "enemy",
+        "friendly"
+      ]
+    ]
+  },
+  "stinkyscapeplus-132": {
+    "base": [
+      [
+        "α",
+        "β"
+      ]
+    ],
+    "radiant": [
+      [
+        "α",
+        "β"
       ]
     ]
   }

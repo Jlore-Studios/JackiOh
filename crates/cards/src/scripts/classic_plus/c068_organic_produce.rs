@@ -125,8 +125,9 @@ mod tests {
                     "p1": { "hand": [PRODUCE, FILLER] },
                     "p2": { "hand": [FILLER] }
                 }));
+                // R3566001: a Smoothie arrives fused with two Fruits, so a pick is read by what it stands for.
                 for id in play_produce(&mut s) {
-                    seen.insert(id);
+                    seen.extend(jackioh_engine::catalog::self_def_ids(Some(s.state()), &id));
                 }
             }
             assert!(!seen.contains(PRODUCE));
@@ -243,8 +244,9 @@ mod tests {
                     "p1": { "hand": [PRODUCE, FILLER] },
                     "p2": { "hand": [FILLER] }
                 }));
+                // R3566001: a Smoothie arrives fused with two Fruits, so a pick is read by what it stands for.
                 for id in play_produce(&mut s) {
-                    seen.insert(id);
+                    seen.extend(jackioh_engine::catalog::self_def_ids(Some(s.state()), &id));
                 }
             }
             assert!(!seen.contains(TREE));
@@ -353,8 +355,9 @@ mod tests {
                     "p1": { "hand": [{ "def": PRODUCE, "radiant": true }, FILLER] },
                     "p2": { "hand": [FILLER] }
                 }));
+                // R3566001: a Smoothie arrives fused with two Fruits, so a pick is read by what it stands for.
                 for id in play_produce(&mut s) {
-                    seen.insert(id);
+                    seen.extend(jackioh_engine::catalog::self_def_ids(Some(s.state()), &id));
                 }
             }
             assert!(!seen.contains(TREE));

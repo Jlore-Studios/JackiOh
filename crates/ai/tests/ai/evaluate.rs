@@ -1262,7 +1262,7 @@ mod dormant_cards_1506 {
     use super::*;
     use jackioh_ai::{EvalWeights, redact};
 
-    /// The dormant terms on whatever AI_EVAL holds (#1506's screen decides those), so these tests
+    /// The dormant terms on whatever AI_EVAL holds (#1506's screen and R3695001 decide those), so these tests
     /// pin the term, not its tuning.
     const DORMANT: EvalWeights = EvalWeights {
         dormant_share: 0.5,

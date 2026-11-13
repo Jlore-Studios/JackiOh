@@ -63,7 +63,7 @@ fn def_id_at(index: &str) -> Option<String> {
 }
 
 /// R1878000: the Starship Piece pool, the same query as the cards crate's `starship_pieces()`.
-fn starship_pieces_query() -> Value {
+pub(crate) fn starship_pieces_query() -> Value {
     json!({ "set": SET, "keywords": [KeywordKind::StarshipPiece] })
 }
 
@@ -178,7 +178,10 @@ pub fn scape_launch() -> Effect {
             let pool = query(&json_as(starship_pieces_query()));
             let controller = ctx.controller;
             for _ in 0..CHAOS_SCAPE_FUSED_PIECES {
-                let Some(def_id) = ctx.sink.rng.pick(&pool).map(|def| def.id.clone()) else {
+                // R3563000: each pick draws through the run's tally, unique while it holds.
+                let Some(def_id) = crate::catalog::pick_unique(ctx.sink.rng, &pool, &mut ctx.draw_tally)
+                    .map(|def| def.id.clone())
+                else {
                     return;
                 };
                 crate::starship::fuse_fresh_piece(&mut ctx.sink, controller, &def_id);

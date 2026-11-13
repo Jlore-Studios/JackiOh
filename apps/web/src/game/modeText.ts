@@ -180,6 +180,11 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
     "Book of Buff": { label: "Book of Buff", detail: "Add a Book of Buff to your hand." },
     "Book of Nerf": { label: "Book of Nerf", detail: "Add a Book of Nerf to your hand." },
   },
+  // M #54 Money Machine (R3551001): the print its Cry declares with the play.
+  "meditative-054": {
+    coin: { label: "The Coin", detail: "Print The Coin. Shuffle it into both decks. Flip a coin for yours: on heads, put it in your hand instead." },
+    warhero: { label: "Warhero Tokens", detail: "Print Warhero Tokens. Shuffle them into both decks. Flip a coin for yours: on heads, put them in your hand instead." },
+  },
   // S #2 Absolute Zero (radiant).
   "stinkyscape-002": {
     "give Indestructible": { label: "Indestructible too", detail: "Freeze the Unit forever, and give it Indestructible." },
@@ -226,6 +231,22 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
     "gain Brittle": { label: "More Brittle", detail: "This gains more Brittle." },
     "Tribute this": { label: "Tribute this", detail: "Tribute this card." },
   },
+  // S+ #4 Profe Yates: the one Activate it keeps while it stays.
+  "stinkyscapeplus-004": {
+    overwhelm: { label: "Overwhelm", detail: "Activate: Freeze all Units in this lane and the surrounding lanes." },
+    wolfsMaw: { label: "Wolf's Maw", detail: "Activate: Pull a Flying Unit down and deal damage to it. It loses Flying." },
+    ironMandate: { label: "Iron Mandate", detail: "Activate: Fuse this into a Unit. This does not trigger its Cry again." },
+  },
+  // S+ #7 Churnwalker.
+  "stinkyscapeplus-007": {
+    enemy: { label: "Chain enemy Units", detail: "When one takes damage, all other chained Units also take the damage." },
+    friendly: { label: "Chain friendly Units", detail: "When one takes damage, it is split between all allies, rounded down." },
+  },
+  // S+ #132 Great Paperclip Theory II.
+  "stinkyscapeplus-132": {
+    α: { label: "α", detail: "Add a Dagger to your hand. The first time you play each Automa-α cost card, add the next cost one to your hand." },
+    β: { label: "β", detail: "Add a Flare to your hand. The first time you play each Automa-β cost card, add the next cost one to your hand." },
+  },
 };
 
 /** Showdown's five lanes, `lane-1` to `lane-5`, each named by where it sits on the board. */
@@ -250,40 +271,42 @@ function trialSets(): Record<string, ModeText> {
 }
 
 /**
- * #98 Heroic Power's Cry Discovers one of three of its thirteen powers (R3134002), each offered by its stored name
- * (R103) and told by its Activate's words, naming no number the card declares. The Radiant face's lines are its own
- * (Armor Up is Tank Up).
+ * #98 Heroic Power's Cry Discovers one of three of its fourteen powers (R3134002, R3551002), each offered by its
+ * stored name (R103) and told by its Activate's words, naming no number the card declares. The Radiant face's
+ * lines are its own (Armor Up is Tank Up).
  */
 function heroicPowers(radiant: boolean): Record<string, ModeText> {
   const base: readonly [string, string, string][] = [
-    ["recruit", "Expedition Map", "Spend (3): Recruit a permanent."],
-    ["draw", "Life Tap", "Spend (1): Draw cards. Take damage."],
-    ["ping", "Ping", "Spend (1): Pierce. Deal damage to a Unit or a hero."],
-    ["burn", "Steady Shot", "Spend (1): Deal damage to the enemy hero."],
-    ["rush", "Ranching", "Spend (2): Summon a Rush Token."],
-    ["felinor", "Cat Cafe", "Spend (1): Summon a Felinor Token."],
-    ["discover", "Witness Value", "Spend (2): Discover a Unit."],
-    ["stitching", "Stitching", "Spend (2): Discover two cheap Units. Fuse them."],
-    ["armor", "Armor Up", "Spend (1): Your hero gains Armor until your next turn."],
-    ["insect", "Die Insect", "Spend (2): Deal damage to a random enemy."],
-    ["brainstorm", "KY Brainstorm", "Spend (2): Add a random KY card to your hand. Your Spells cost less."],
-    ["pluck", "Pluck", "Spend (2): Add a random Fruit to your hand. It costs less."],
-    ["tricks", "Terminus Tricks", "Spend (3): Discover a Trap to summon."],
+    ["recruit", "Expedition Map", "Spend (2): Recruit a permanent."],
+    ["draw", "Life Tap", "Spend (0): Draw cards. Take damage."],
+    ["ping", "Ping", "Spend (0): Pierce. Deal damage to a Unit or a hero."],
+    ["burn", "Steady Shot", "Spend (0): Deal damage to the enemy hero."],
+    ["rush", "Ranching", "Spend (1): Summon a Rush Token."],
+    ["felinor", "Cat Cafe", "Spend (0): Summon a Felinor Token."],
+    ["discover", "Witness Value", "Spend (1): Discover a Unit."],
+    ["stitching", "Stitching", "Spend (1): Discover two cheap Units. Fuse them."],
+    ["armor", "Armor Up", "Spend (0): Your hero gains Armor until your next turn."],
+    ["insect", "Die Insect", "Spend (1): Deal damage to a random enemy."],
+    ["brainstorm", "KY Brainstorm", "Spend (1): Add a random KY card to your hand. Your Spells cost less."],
+    ["pluck", "Pluck", "Spend (1): Add a random Fruit to your hand. It costs less."],
+    ["tricks", "Terminus Tricks", "Spend (2): Discover a Trap to summon."],
+    ["endTimes", "End Times", "Spend (10): Discover a Terminus card. Its next use costs less each end of your turn."],
   ];
   const shining: Readonly<Record<string, readonly [string, string]>> = {
-    recruit: ["Expedition Map", "Spend (3): Recruit a permanent. Make it Radiant."],
-    draw: ["Life Tap", "Spend (1): Draw from each player's deck."],
-    ping: ["Ping", "Spend (1): Pierce. Deal damage. If this kills a Unit, summon a Ghoul Token with its stats."],
-    burn: ["Steady Shot", "Spend (1): Deal damage to the enemy hero. This permanently deals 2 more damage."],
-    rush: ["Ranching", "Spend (2): Summon a Radiant Rush Token."],
-    felinor: ["Cat Cafe", "Spend (1): Summon a random Felinor."],
-    discover: ["Witness Value", "Spend (2): Discover a Radiant Unit."],
-    stitching: ["Stitching", "Spend (2): Discover two cheap Radiant Units. Fuse them."],
-    armor: ["Tank Up", "Spend (1): Your hero gains Armor, then this power refreshes."],
-    insect: ["Die Insect", "Spend (2): Lucky 1. Deal damage to a random enemy."],
-    brainstorm: ["KY Brainstorm", "Spend (2): Add a Radiant KY card to your hand. Your Spells cost less."],
-    pluck: ["Pluck", "Spend (2): Add a random Radiant Fruit to your hand. It costs less."],
-    tricks: ["Terminus Tricks", "Spend (3): Discover a Radiant Trap to summon."],
+    recruit: ["Expedition Map", "Spend (2): Recruit a permanent. Make it Radiant."],
+    draw: ["Life Tap", "Spend (0): Draw from each player's deck."],
+    ping: ["Ping", "Spend (0): Pierce. Deal damage. If this kills a Unit, summon a Ghoul Token with its stats."],
+    burn: ["Steady Shot", "Spend (0): Deal damage to the enemy hero. This permanently deals 2 more damage."],
+    rush: ["Ranching", "Spend (1): Summon a Radiant Rush Token."],
+    felinor: ["Cat Cafe", "Spend (0): Summon a random Felinor."],
+    discover: ["Witness Value", "Spend (1): Discover a Radiant Unit."],
+    stitching: ["Stitching", "Spend (1): Discover two cheap Radiant Units. Fuse them."],
+    armor: ["Tank Up", "Spend (0): Your hero gains Armor, then this power refreshes."],
+    insect: ["Die Insect", "Spend (1): Lucky 1. Deal damage to a random enemy."],
+    brainstorm: ["KY Brainstorm", "Spend (1): Add a Radiant KY card to your hand. Your Spells cost less."],
+    pluck: ["Pluck", "Spend (1): Add a random Radiant Fruit to your hand. It costs less."],
+    tricks: ["Terminus Tricks", "Spend (2): Discover a Radiant Trap to summon."],
+    endTimes: ["End Times", "Spend (10): Discover a Terminus card. Its next use costs less each end of your turn."],
   };
   return Object.fromEntries(
     base.map(([option, label, detail]) => {
@@ -293,9 +316,9 @@ function heroicPowers(radiant: boolean): Record<string, ModeText> {
   );
 }
 
-/** R21's combat keywords, the pool S #18.1 MELCHIOR Discovers from (`RANDOM_KEYWORD_POOL`). */
+/** R21's combat keywords, the pool S #18.1 MELCHIOR Discovers from (`RANDOM_KEYWORD_POOL`, S01's Frenzy fifteenth, R3551004). */
 function combatKeywords(): Record<string, ModeText> {
-  const pool = ["Taunt", "Rush", "First Strike", "Flying", "Ranged", "Poisonous", "Reborn", "Divine Shield", "Windfury", "Cleave", "Deft", "Lifesteal", "Pierce", "Trample"];
+  const pool = ["Taunt", "Rush", "First Strike", "Flying", "Ranged", "Poisonous", "Reborn", "Divine Shield", "Windfury", "Cleave", "Deft", "Lifesteal", "Pierce", "Trample", "Frenzy"];
   return Object.fromEntries(pool.map((keyword) => [keyword, { label: keyword, detail: `Each of your Units gains ${keyword}.` }]));
 }
 
@@ -331,6 +354,11 @@ export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, 
   },
   // #98 Heroic Power, radiant (R3134002): its own lines, Armor Up named Tank Up.
   "core-098": heroicPowers(true),
+  // M #54 Money Machine, radiant (R3551001): Radiant prints into both decks.
+  "meditative-054": {
+    coin: { label: "Radiant The Coin", detail: "Print Radiant The Coin. Shuffle it into both decks. Flip a coin for yours: on heads, put it in your hand instead." },
+    warhero: { label: "Radiant Warhero Tokens", detail: "Print Radiant Warhero Tokens. Shuffle them into both decks. Flip a coin for yours: on heads, put them in your hand instead." },
+  },
   // S #116 Megabase, radiant: "its Activate gives its controller N and the opponent N − 5".
   "stinkyscape-116": {
     "5 Credits": { label: "5 Credits", detail: "You gain 5 Credits, and your opponent 5 fewer." },
@@ -341,6 +369,11 @@ export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, 
   "stinkyscape-026": {
     university: { label: "Radiant University", detail: "Summon a Radiant University." },
     piece: { label: "Radiant Starship Piece", detail: "This gains “End of turn: Summon a random Radiant Starship Piece.”" },
+  },
+  // S+ #132 Great Paperclip Theory II, radiant: every card it adds is Radiant.
+  "stinkyscapeplus-132": {
+    α: { label: "α", detail: "Add a Radiant Dagger to your hand. The first time you play each Automa-α cost card, add the next cost Radiant one to your hand." },
+    β: { label: "β", detail: "Add a Radiant Flare to your hand. The first time you play each Automa-β cost card, add the next cost Radiant one to your hand." },
   },
   // S #121 System Schematic, radiant: "The one chosen Radiant".
   "stinkyscape-121": {

@@ -19,7 +19,7 @@ use crate::query::zone_cards;
 use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, find_instance, find_instance_mut};
 use crate::wire::TargetAim;
-use crate::wire::{CounteredTo, GameEvent, PlayerId, Zone, ZoneName};
+use crate::wire::{CounteredTo, GameEvent, PlayerId, Tag, Zone, ZoneName, opponent_of};
 use crate::zones::{OffFieldZone, exile_to_pile, is_unit_token, move_to_zone, report_graveyard_landing};
 
 /// §6.3 Exile for one card, which every exile verb goes down. A card reaching the pile feeds the exile
@@ -186,6 +186,136 @@ pub fn exile_all_piles(args: BoardScope) -> Effect {
             }
             for card in &fresh {
                 exile_card(ctx, card);
+            }
+        }
+    })
+}
+
+/// `exileBoard`'s arguments: `player` defaults to "self".
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct ExileBoardArgs {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+}
+
+/// R3539002 (S+ #80 The Last Voyage): exile every card on `player`'s side of the board — the unit
+/// piles whole, top first, then the backrow, the backrow piles and the carried Units. Dormant cards
+/// go too (R1839000's reach does not stop a board exile), while a card no effect reaches is spared,
+/// as a harmful walk spares it (R940). With no rng draw, as on `exile_hand`.
+pub fn exile_board(args: ExileBoardArgs) -> Effect {
+    Effect::new("exileBoard", move |ctx| {
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        // A snapshot: exiling a pile uncovers the cards beneath it.
+        let side = &ctx.state.players[player];
+        let mut ids: Vec<String> = Vec::new();
+        for pile in side.units.iter().flatten() {
+            for card in pile {
+                ids.push(card.id.clone());
+            }
+        }
+        for card in side.backrow.iter().flatten() {
+            ids.push(card.id.clone());
+        }
+        for card in side.backrow_piles.iter().flatten().flatten() {
+            ids.push(card.id.clone());
+        }
+        for card in side.carried.iter().flatten().flatten() {
+            ids.push(card.id.clone());
+        }
+        for id in ids {
+            let Some(card) = find_instance(ctx.state, &id).cloned() else {
+                continue;
+            };
+            if card.zone.z() != ZoneName::Field {
+                continue;
+            }
+            // A Dormant card goes too; only a card no effect reaches is spared (R940).
+            if !crate::slumber::is_slumbering(&card) && crate::restrictions::unaffected_by(ctx, &card) {
+                continue;
+            }
+            exile_to_pile(ctx, card);
+        }
+    })
+}
+
+/// `exileNamed`'s arguments.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct ExileNamedArgs {
+    /// A card whose name holds any of these letters, in either case, is exiled.
+    pub letters: String,
+    /// A card carrying any of these tags (`query::tags_of`) is spared.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub spare_tags: Vec<Tag>,
+}
+
+/// R3567000 (S+ #4 Profe Yates): exile every card on both fields, in both libraries, hands
+/// and graveyards whose name holds any of `letters` in either case — first the controller's
+/// field, then the opponent's, each walked as `exile_board` walks it, then each side's
+/// off-field zones in R135's order. Each card is its own exile (R55). Spared: the running
+/// card itself, a card carrying any of `spare_tags`, and a field card no effect reaches
+/// (R940); Dormant cards go (R3539002).
+pub fn exile_named(args: ExileNamedArgs) -> Effect {
+    Effect::new("exileNamed", move |ctx| {
+        let wanted: Vec<char> = args.letters.to_lowercase().chars().collect();
+        let named = |name: &str| {
+            let name = name.to_lowercase();
+            wanted.iter().any(|letter| name.contains(*letter))
+        };
+        // A snapshot: exiling a pile uncovers the cards beneath it.
+        let mut ids: Vec<String> = Vec::new();
+        for player in [ctx.controller, opponent_of(ctx.controller)] {
+            let side = &ctx.state.players[player];
+            for pile in side.units.iter().flatten() {
+                for card in pile {
+                    ids.push(card.id.clone());
+                }
+            }
+            for card in side.backrow.iter().flatten() {
+                ids.push(card.id.clone());
+            }
+            for card in side.backrow_piles.iter().flatten().flatten() {
+                ids.push(card.id.clone());
+            }
+            for card in side.carried.iter().flatten().flatten() {
+                ids.push(card.id.clone());
+            }
+        }
+        for player in [ctx.controller, opponent_of(ctx.controller)] {
+            for zone in EXILE_ZONE_ORDER {
+                for card in zone_cards(ctx.state, player, zone.pile()) {
+                    ids.push(card.id);
+                }
+            }
+        }
+        let me = ctx.self_.as_ref().map(|card| card.id.clone());
+        for id in ids {
+            if me.as_deref() == Some(id.as_str()) {
+                continue;
+            }
+            let Some(card) = find_instance(ctx.state, &id).cloned() else {
+                continue;
+            };
+            if !named(&crate::catalog::def_of(Some(ctx.state), &card.def_id).name) {
+                continue;
+            }
+            if crate::query::tags_of(ctx.state, &card)
+                .iter()
+                .any(|tag| args.spare_tags.contains(tag))
+            {
+                continue;
+            }
+            if card.zone.z() == ZoneName::Field {
+                // A Dormant card goes too; only a card no effect reaches is spared (R940).
+                if !crate::slumber::is_slumbering(&card) && crate::restrictions::unaffected_by(ctx, &card) {
+                    continue;
+                }
+                exile_to_pile(ctx, card);
+            } else {
+                exile_card(ctx, &card);
             }
         }
     })
@@ -394,7 +524,13 @@ pub fn send_to_graveyard(args: SendToGraveyardArgs) -> Effect {
 /// Hand to GY for one card, with §10.3's discard events, for a discard paid as a price or a rule (R450's
 /// targeting cost, R637's Temporary), which R800's discard guard never reads.
 pub fn discard_from_hand(ctx: &mut EngineSink<'_>, card: &CardInstance) {
-    discard_card(ctx, card);
+    discard_card(ctx, card, false);
+}
+
+/// R3536001: hand to GY for one card Temporary discarded (`temporary::discard_temporary_cards`),
+/// reported with `by_temporary` so a card can evolve in its graveyard on it.
+pub fn discard_by_temporary(ctx: &mut EngineSink<'_>, card: &CardInstance) {
+    discard_card(ctx, card, true);
 }
 
 /// R800: whether a discard guard (`draw::discard_guarded`) stops an effect's discard of `count` cards;
@@ -407,7 +543,7 @@ fn guard_stops(ctx: &mut EngineSink<'_>, player: PlayerId, count: i32) -> bool {
     true
 }
 
-fn discard_card(ctx: &mut EngineSink<'_>, card: &CardInstance) {
+fn discard_card(ctx: &mut EngineSink<'_>, card: &CardInstance, by_temporary: bool) {
     if card.zone.z() != ZoneName::Hand {
         return;
     }
@@ -418,6 +554,7 @@ fn discard_card(ctx: &mut EngineSink<'_>, card: &CardInstance) {
         instance_id: card.id.clone(),
         def_id: card.def_id.clone(),
         owner: card.owner,
+        by_temporary: by_temporary.then_some(true),
     });
     // R11: a unit-token card reaches no graveyard; B5 E5: a replaced move is reported where it went.
     report_graveyard_landing(ctx, &card, moved);
@@ -446,7 +583,7 @@ pub fn discard(args: DiscardArgs) -> Effect {
         {
             return;
         }
-        discard_card(ctx, &card);
+        discard_card(ctx, &card, false);
     })
 }
 
@@ -484,7 +621,7 @@ pub fn discard_random_cards(ctx: &mut EngineSink<'_>, player: PlayerId, count: i
         let Some(card) = ctx.rng.pick(&ctx.state.players[player].hand).cloned() else {
             return;
         };
-        discard_card(ctx, &card);
+        discard_card(ctx, &card, false);
     }
 }
 
@@ -509,7 +646,7 @@ pub fn discard_hand(args: DiscardHandArgs) -> Effect {
             return;
         }
         for card in &hand {
-            discard_card(ctx, card);
+            discard_card(ctx, card, false);
         }
     })
 }
