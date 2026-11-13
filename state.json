@@ -16183,6 +16183,13 @@
     "3796": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-13T00:47:27Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "Test-support helpers in the testkit plus mechanical edits to about 37 test modules; no engine rules, AI, cross-crate design or migration, and under 40 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
