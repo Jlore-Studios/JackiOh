@@ -16378,7 +16378,7 @@
       }
     },
     "3881": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "strong",
       "ci_early": true,
@@ -16404,7 +16404,7 @@
           "where": "spec/rulings/R0508.md:11"
         }
       ],
-      "live": "reviewing",
+      "live": "revising",
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
@@ -16413,7 +16413,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
-      "run_id": "43523410064",
+      "run_id": "pending:0d7b49f0-1794612381",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16434,7 +16434,7 @@
         "run": "43498714409"
       },
       "source": "cross-review",
-      "started_at": "2026-11-13T22:57:18Z",
+      "started_at": "2026-11-13T23:27:13Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -16918,9 +16918,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T22:57:18Z",
+    "at": "2026-11-13T23:27:13Z",
     "url": "",
-    "what": "review #3881 on claude-8"
+    "what": "revise #3881 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-13T22:49:38Z",
