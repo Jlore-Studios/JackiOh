@@ -1,7 +1,7 @@
 //! Alerts told to people (#3595). Not in SPEC, and no R-row: operational, as `bug_reports.rs` is.
 //!
-//! An alert is an error log line with `alert = true`: `api::http::log_alert`'s, and the two of
-//! `loops.rs`. Before #3595 one reached only the Worker's log. `AlertLayer`, beside the JSON log
+//! An alert is an error log line with `alert = true`: `api::http::log_alert`'s, and
+//! `loops.rs`'s. Before #3595 one reached only the Worker's log. `AlertLayer`, beside the JSON log
 //! (`app::init_logging`), now hands each to one task, which makes at most one notice per event in
 //! `ALERT_WINDOW_MS` per process (the rest are counted, logged as `alert.held`, and the next notice
 //! says how many) and tells people two ways:

@@ -72,7 +72,7 @@ class MatrixTests(unittest.TestCase):
         out = matrix.outputs()
         self.assertEqual([job["group"] for job in out["rust_test"]], JOBS)
         self.assertEqual(out["web_unit_shards"], [1, 2, 3, 4, 5, 6, 7, 8])
-        self.assertEqual(out["e2e_smoke_shards"], [1, 2])
+        self.assertEqual(out["e2e_smoke_shards"], [1, 2, 3, 4])
         jobs = {job["group"]: job for job in out["rust_test"]}
         for n, name in enumerate(["rules", "rules_2", "rules_3"]):
             self.assertEqual(jobs[JOBS[n]]["test"], RULES.format(name))
@@ -117,9 +117,9 @@ class MatrixTests(unittest.TestCase):
 
     def test_the_web_and_e2e_counts_come_from_the_file(self):
         self.repo.edit(matrix.COUNTS, "unit = 8", "unit = 5")
-        self.repo.edit(matrix.COUNTS, "smoke = 2", "smoke = 3")
+        self.repo.edit(matrix.COUNTS, "smoke = 4", "smoke = 5")
         out = self.repo.outputs()
-        self.assertEqual((out["web_unit_shards"], out["e2e_smoke_shards"]), ([1, 2, 3, 4, 5], [1, 2, 3]))
+        self.assertEqual((out["web_unit_shards"], out["e2e_smoke_shards"]), ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5]))
 
     def test_it_refuses_what_could_hide_a_job_or_flood_the_runners(self):
         for old, new, says in [
@@ -131,7 +131,7 @@ class MatrixTests(unittest.TestCase):
             ('"cards" = 1', '"cards" = 1\n"card" = 2', "names no group"),
             ("unit = 8", "unit = 0", "from 1 to 8"),
             ("unit = 8", "units = 8", "holds only `unit`"),
-            ("[e2e]\nsmoke = 2", "[e2e]", "has no `smoke`"),
+            ("[e2e]\nsmoke = 4", "[e2e]", "has no `smoke`"),
             ("[web]", "[wbe]\nunit = 1\n[web]", "no job reads the table wbe"),
         ]:
             with self.subTest(new=new):
