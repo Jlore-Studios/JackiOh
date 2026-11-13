@@ -99,7 +99,7 @@
 .cf-ref-tooltip {
   display: flex;
   align-items: flex-start;
-  gap: 10px; /* PREVIEW_GLOSSARY_GAP_PX */
+  gap: var(--space-5); /* PREVIEW_GLOSSARY_GAP_PX */
 }
 
 .cf-ref-tooltip[data-stacked="true"] {
