@@ -17723,6 +17723,23 @@
       "requested_by": "jgoetzmann",
       "run_id": "43401643236",
       "runs_on": "ubuntu-latest",
+      "session": {
+        "action": "plan",
+        "artifact": 14025479689,
+        "artifact_bytes": 750928,
+        "artifact_name": "work",
+        "at": "2026-11-13T09:47:47Z",
+        "bytes": 990704,
+        "cwd": "/home/runner/work/_temp/work/item-3837",
+        "ended": "interrupted: `claude-4` stops mid-call: 5-hour usage is 70%, at or over its 70% cap; it resets at 2026-11-13T11:30:00Z",
+        "head": "40265a66d7ae6218e1043d0eb17d17e1106356e9",
+        "id": "2f0a2209-cc06-4742-a490-eab4d92b2bde",
+        "kind": "plan",
+        "model": "opus",
+        "project": "-home-runner-work--temp-work-item-3837",
+        "provider": "claude-4",
+        "run": "43401643236"
+      },
       "started_at": "2026-11-13T09:28:39Z",
       "stop_requested": false,
       "taken_asks": []
