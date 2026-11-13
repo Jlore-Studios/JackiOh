@@ -1175,8 +1175,20 @@ fn is_pending_option_instance_id(at: &str) -> bool {
     !index.is_empty() && index.bytes().all(|byte| byte.is_ascii_digit()) && tail == ".instanceId"
 }
 
+/// Whether `at` is `view.hiddenTargets[<n>].instanceId` (R3777001), by hand as the one above.
+fn is_hidden_target_instance_id(at: &str) -> bool {
+    let Some(rest) = at.strip_prefix("view.hiddenTargets[") else {
+        return false;
+    };
+    let Some((index, tail)) = rest.split_once(']') else {
+        return false;
+    };
+    !index.is_empty() && index.bytes().all(|byte| byte.is_ascii_digit()) && tail == ".instanceId"
+}
+
 /// I6 for one seat on one state: what `view_for` and `legal_actions` sent it names no card it may not
-/// read (§10.8); `legal` may offer a face-down trap's bare id as a target (R177) and nothing else.
+/// read (§10.8); `legal` may offer a face-down trap's bare id as a target (R177) and nothing else, and
+/// the view may name that bare id in `hiddenTargets` (R3777001) only while `legal` offers it.
 pub fn hidden_information_violations(
     state: &GameState,
     viewer: PlayerId,
@@ -1224,6 +1236,18 @@ pub fn hidden_information_violations(
         object.insert("events".to_string(), Value::Array(events));
     }
 
+    let mut offered: IndexMap<String, String> = IndexMap::new();
+    let legal_json = serde_json::to_value(legal).expect("ActionBodies serialize");
+    walk(
+        &legal_json,
+        "legal",
+        &mut |text, at| {
+            if !offered.contains_key(text) {
+                offered.insert(text.to_string(), at.to_string());
+            }
+        },
+        &mut |_| {},
+    );
     let mut named: IndexMap<String, String> = IndexMap::new();
     walk(
         &scanned,
@@ -1233,20 +1257,12 @@ pub fn hidden_information_violations(
             if offered_bare.contains(text) && is_pending_option_instance_id(at) {
                 return;
             }
+            // R3777001: the view names the zone of a face-down card `legal` offers as a target, by its bare id.
+            if bare.contains(text) && offered.contains_key(text) && is_hidden_target_instance_id(at) {
+                return;
+            }
             if !named.contains_key(text) {
                 named.insert(text.to_string(), at.to_string());
-            }
-        },
-        &mut |_| {},
-    );
-    let mut offered: IndexMap<String, String> = IndexMap::new();
-    let legal_json = serde_json::to_value(legal).expect("ActionBodies serialize");
-    walk(
-        &legal_json,
-        "legal",
-        &mut |text, at| {
-            if !offered.contains_key(text) {
-                offered.insert(text.to_string(), at.to_string());
             }
         },
         &mut |_| {},
@@ -2273,6 +2289,23 @@ impl InvariantMonitor {
         }
     }
 
+    /// R636, R3778000: a change that raises such a unit's number on the field draws the rest of its list
+    /// as it resolves (`effects::buff::follow_combat_keywords`), which no `keywordGranted` reports. On
+    /// the field at the end in the same stint, its list, never shortened in a stay, says whether it drew
+    /// Windfury; gone, or back in a later stint, it reads as `note_drawn_windfury` reads it.
+    fn note_topped_up_windfury(&mut self, id: &str, def_id: &str, state: &GameState, back_later: bool) {
+        match find_instance(state, id) {
+            Some(card) if card.zone.z() == ZoneName::Field && !back_later => {
+                let drawn = crate::effects::drawn_combat_keywords(card, None);
+                if has_keyword(&drawn, KeywordKind::Windfury) {
+                    let stint = self.stint_of(id);
+                    self.windfury.insert(id.to_string(), stint);
+                }
+            }
+            _ => self.note_drawn_windfury(id, def_id, state, back_later),
+        }
+    }
+
     /// R636: a unit that just entered and carries Windfury, as it was before the action
     /// (`carried_windfury`) or as the action left it, has it in this stint.
     fn note_entry_windfury(&mut self, id: &str, state: &GameState) {
@@ -2970,6 +3003,22 @@ impl InvariantMonitor {
                         let stint = self.stint_of(instance_id);
                         self.windfury.insert(instance_id.clone(), stint);
                     }
+                }
+                // R3778000: a raised number tops up a drawn-keywords Aura's list with no `keywordGranted`.
+                GameEvent::Upgraded {
+                    instance_id,
+                    def_id,
+                    change: TuningChange::Number { .. },
+                    ..
+                }
+                | GameEvent::NumberChanged {
+                    instance_id, def_id, ..
+                }
+                | GameEvent::RadiantSet {
+                    instance_id, def_id, ..
+                } => {
+                    let back_later = summoned_later(instance_id, &events[index + 1..]);
+                    self.note_topped_up_windfury(instance_id, def_id, state, back_later);
                 }
                 GameEvent::PositionSwitched { instance_id, .. } => {
                     // R20: an effect's switch emits the same event but spends nothing. I12 counts only
