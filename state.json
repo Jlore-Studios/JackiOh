@@ -16973,6 +16973,8 @@
       }
     },
     "3890": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-13T21:36:48Z",
@@ -16986,8 +16988,11 @@
         "trail": "rial\\\" >> .bot-notes.md\\npnpm --dir apps/web exec vitest run src/practice/claim.test.ts 2>&1 | tail -25\", \"descriptio\u2026\n- said: The claim test passes, so the practice fixture needs no re-record. Now the tutorials:\n- Bash: {\"command\": \"pnpm --dir apps/web exec vitest run src/tutorial 2>&1 | grep -vE \\\"^\\\\s*$|Vite config|JSON import|VITE_CONFIG\\\" | tail -25\", \"description\": \"Run the web tutorial tests\", \"timeout\": 60000\u2026\n- said: Tutorials: 17 files, 200 tests pass. CI's web shards run the whole suite on an AI change, so I'm looking for any other web test that plays AI moves:\n- Bash: {\"command\": \"grep -n \\\"export function\\\\|export const\\\" apps/web/src/wasm/index.ts | grep -iE \\\"decide|ai|bot|choose|think\\\" | head -15\", \"description\": \"Find the wasm AI entry points in the web clie\u2026\n- Bash: {\"command\": \"cd apps/web && grep -rlE \\\"\\\\b(decide|chooseAction|runDailySeed|aiWorker|practice/worker|ai\\\\.worker)\\\\b\\\" src --include=*.test.ts --include=*.test.tsx | grep -v \\\"^src/tutorial/\\\" | sor\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3858 && pnpm --dir apps/web exec vitest run src/practice src/wire/ai.test.ts src/wasm src/game/secrets.test.tsx src/dungeon/start/StartScreen.test.ts\u2026\n- said: All 30 files (389 tests) pass. Next: which other crates depend on `jackioh-ai`, so their tests cover the shifted move order:\n- Bash: {\"command\": \"grep -l \\\"jackioh-ai\\\" crates/*/Cargo.toml crates/*/*/Cargo.toml 2>/dev/null; echo \\\"- build pass 1: web claim (3), tutorial (200), practice/wasm/ai/secrets/StartScreen (389) all pass; f\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-shared -p jackioh-run -p jackioh-wasm-core --features jackioh-engine/testkit 2>&1 | grep -E \\\"^test result|FAILED|panicked|error(\\\\[|:)\\\" | tail -20\", \"description\"\u2026\n- said: Shared, run and wasm-core are all green. Checking where the server's tests drive the AI:\n- Bash: {\"command\": \"grep -rl \\\"jackioh_ai\\\" crates/server/src crates/server/tests | head -20\", \"description\": \"Find server code and tests using the AI\"}\n- said: The server's bot, practice, queue and match-actor tests drive the AI, so I'm running the server suite once:\n- Bash: {\"command\": \"echo \\\"- build pass 1: shared/run/wasm-core tests green; running cargo test -p jackioh-server\\\" >> .bot-notes.md\\ncargo test -p jackioh-server --features jackioh-engine/testkit 2>&1 | gr\u2026\n- Bash: {\"command\": \"pid=$(pgrep -f \\\"cargo test -p jackioh-server\\\" | head -1); echo \\\"pid=$pid\\\"; [ -n \\\"$pid\\\" ] && timeout 590 tail --pid=\\\"$pid\\\" -f /dev/null; cat /tmp/claude-1001/-home-runner-work--te\u2026\n- Bash: {\"command\": \"pid=$(pgrep -f \\\"cargo test -p jackioh-server\\\" | head -1); echo \\\"pid=$pid\\\"; [ -n \\\"$pid\\\" ] && timeout 590 tail --pid=\\\"$pid\\\" -f /dev/null; cat /tmp/claude-1001/-home-runner-work--te\u2026\n- said: Server suite green (1723 + 719 + the smaller binaries; the 2 ignored are existing). Now spec check and classify:\n- Bash: {\"command\": \"echo \\\"- build pass 1: server tests green; running spec check, patches check, classify\\\" >> .bot-notes.md\\ncargo jackioh spec check 2>&1 | tail -4; echo \\\"== patches\\\"; cargo jackioh pat\u2026\n- said: `classify` printed `Internal`, not the `kind:ai` the plan expected. Checking its exit code and what `Internal` means:\n- Bash: {\"command\": \"./../../../JackiOh/JackiOh/target/release/jackioh classify --base origin/main --claims >/dev/null 2>&1; echo \\\"exit=$?\\\"; /home/runner/work/JackiOh/JackiOh/target/release/jackioh classif\u2026\n- Bash: {\"command\": \"set -e; T=$(mktemp -d); export GIT_INDEX_FILE=$T/idx; git read-tree HEAD; git add crates/ai/src/reply.rs crates/ai/README.md docs/polish/3-ai.md; tree=$(git write-tree); unset GIT_INDEX_\u2026\n- said: It needs an author identity. I'll pass one through environment variables for this one command only, leaving git config alone:\n- Bash: {\"command\": \"T=$(mktemp -d); export GIT_INDEX_FILE=$T/idx; git read-tree HEAD && git add crates/ai/src/reply.rs crates/ai/README.md docs/polish/3-ai.md && tree=$(git write-tree); unset GIT_INDEX_FILE\u2026\n- said: `--claims` on an AI change wants `--parent-bin` (the base's build) so stage 2 can compare self-play. First, checking what stage 2 can fail on for an AI-only change:\n- Bash: {\"command\": \"grep -n \\\"left ai unchecked\\\\|selfplay\\\\|Kind::Ai\\\\|kind:ai\\\" crates/tools/src/classify.rs crates/tools/src/claims.rs 2>/dev/null | head -30; ls crates/tools/src | grep -i -E \\\"classif|c\u2026\n- Bash: {\"command\": \"sed -n 10,30p crates/tools/src/classify.rs; grep -n \\\"fn check_claims\\\\|ai unchecked\\\\|Kind::Ai\\\" crates/tools/src/claims.rs crates/tools/src/classify.rs | head\", \"description\": \"Read cl\u2026\n- Bash: {\"command\": \"/home/runner/work/JackiOh/JackiOh/target/release/jackioh classify --base origin/main --head 2170ca87da15a84a268924846c6573beff5212ee; echo \\\"exit=$?\\\"; /home/runner/work/JackiOh/JackiOh/\u2026\n- Bash: {\"command\": \"echo \\\"- build pass 1: spec check ok, patches check ok, classify stage 1 (via dangling commit-tree object) = kind:ai, no problems; --claims needs --parent-bin (CI does it). Running gate \u2026\n- Bash: {\"command\": \"pid=$(pgrep -f \\\"jackioh gate\\\" | head -1); echo \\\"pid=$pid\\\"; [ -n \\\"$pid\\\" ] && timeout 590 tail --pid=\\\"$pid\\\" -f /dev/null; cat /tmp/claude-1001/-home-runner-work--temp-work-item-385\u2026\n- said: The gate passed (exit 0): ai-vs-random 20/20 (17 needed), ai-vs-greedy 17/20 (10 needed), hard-vs-easy 18/20 (16 needed), no search panics. Final tree check and notes:\n- Bash: {\"command\": \"git status --short; cargo fmt --check && echo fmt-ok; python3 -I - <<'EOF'\\nimport pathlib,re\\np=pathlib.Path(\\\".bot-notes.md\\\"); t=p.read_text()\\nstart=t.index(\\\"## State\\\"); end=t.inde\u2026\n- Bash: {\"command\": \"git diff crates/ai/src/reply.rs | head -90\", \"description\": \"Review the reply.rs diff's code part\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the AI counts a Lifesteal unit's heal when it hits the hero, as it already does when it hits a unit\"} --> ## What changed The AI now counts a Lifesteal unit's heal when it hits the enemy hero, not only when it hits a unit (SPEC \u00a74.4 step 8). This change\u2026"
       },
       "issue": 3858,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-13T22:56:10Z",
         "from_run": "43512256841",
         "gates": [
           {
@@ -17079,7 +17084,11 @@
         "source": "build",
         "until": "2026-11-13T23:22:57Z"
       },
+      "pending_request": false,
+      "provider": "claude-1",
       "queued_at": "2026-11-13T22:52:57Z",
+      "run_id": "pending:0171c50d-1794610516",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17098,6 +17107,9 @@
         "provider": "claude-1",
         "run": "43512256841"
       },
+      "started_at": "2026-11-13T22:56:10Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17155,9 +17167,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T22:42:16Z",
+    "at": "2026-11-13T22:56:10Z",
     "url": "",
-    "what": "revise #3810 on claude-8"
+    "what": "review #3890 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-13T22:37:09Z",
