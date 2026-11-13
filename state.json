@@ -15517,24 +15517,17 @@
     "what": "revise #3861 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-13T13:22:50Z",
+    "at": "2026-11-13T13:39:25Z",
     "notes": [
-      "delivered suggest on claude-3 (run 43427474731): suggested",
-      "delivered plan #3827 on claude-7 (run 43424928576): planned",
-      "delivered build #3822 on claude-8 (run 43417502151): built",
-      "delivered build #3733 on claude-1 (run 43417398432): built",
-      "delivered revise #3817 on claude-8 (run 43417297501): approved",
-      "started review #3860 on claude-8 (run 43434166398)",
-      "started revise #3810 on claude-3 (run 43434296304)",
-      "started build #3827 on claude-7 (run 43434418694)",
-      "started review #3861 on claude-8 (run 43434534958)",
+      "#3861: `web (unit 8/8)` red in CI run 43433761825; its other early jobs have until 2026-11-13T13:42:04Z to report",
+      "delivered review #3861 on claude-8 (run 43434534958): reviewed",
+      "delivered revise #3779 on claude-1 (run 43424808443): approved",
+      "delivered revise #3818 on claude-6 (run 43417875519): built",
+      "started review #3818 on claude-6 (run 43436283451)",
+      "started revise #3817 on claude-8 (run 43436410860)",
+      "started revise #3861 on claude-4 (run 43436543095)",
       "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days",
-      "#3859: typed it Task",
-      "#3858: typed it Task",
-      "#3857: typed it Task",
-      "#3856: typed it Task",
-      "#3855: typed it Task"
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16240,7 +16233,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-13T13:22:50Z",
+  "loop_tick": "2026-11-13T13:39:25Z",
   "machine_disk": {
     "issue": null,
     "reading": {
