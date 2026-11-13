@@ -16490,9 +16490,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-7",
-      "owner_since": "2026-11-13T02:33:07Z",
-      "owner_why": "its turn came (it waited 120 minutes for #3798, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway), and the lane that approved it resolves it",
+      "owner": "claude-3",
+      "owner_since": "2026-11-13T02:36:00Z",
+      "owner_why": "handed off from `claude-7`: `claude-7` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-12T20:29:19Z",
       "planned_by": "`claude-1` (claude, `sonnet`, medium)",
@@ -16737,7 +16737,7 @@
       }
     },
     "3810": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -16759,12 +16759,12 @@
       "interruptions": 0,
       "issue": 3802,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-7",
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-3",
       "queued_at": "2026-11-13T02:33:07Z",
-      "run_id": "43331746851",
+      "run_id": "pending:245a12d5-1794537313",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16785,16 +16785,9 @@
         "run": "43308349962"
       },
       "source": "conflict",
-      "started_at": "2026-11-12T23:47:05Z",
+      "started_at": "2026-11-13T02:36:00Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "sonnet",
-        "provider": "claude-7",
-        "since": "2026-11-13T02:33:07Z",
-        "until": "2026-11-13T03:03:07Z",
-        "why": "it waited 120 minutes for #3798, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
-      },
       "votes": {
         "approvals": [
           "claude"
@@ -17258,9 +17251,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T02:24:05Z",
+    "at": "2026-11-13T02:36:00Z",
     "url": "",
-    "what": "review #3816 on claude-8"
+    "what": "revise #3810 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-13T02:20:22Z",
