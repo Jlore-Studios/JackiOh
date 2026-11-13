@@ -17143,7 +17143,16 @@
       "feedback_since": "2026-11-13T00:36:32Z",
       "issue": 3793,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-4",
+        "rejections": [],
+        "reviews": [],
+        "sha": "0af674460d5e9189a80951c09b4af3499c7075e0",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "fce3910f5abefcbe",
