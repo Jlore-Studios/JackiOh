@@ -17729,9 +17729,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "",
-      "owner_since": "2026-11-13T10:01:53Z",
-      "owner_why": "its own review was handed off to its final audit: `claude-8` its last run could not work (the claude CLI could not run: Failed to authenticate. API Error: 403 Attention Required! | Cloudflare); it is left alone until 2026-11-13T10:49:41Z",
+      "owner": "claude-3",
+      "owner_since": "2026-11-13T10:42:50Z",
+      "owner_why": "it took it up; its own review was handed off to its final audit: `claude-8` its last run could not work (the claude CLI could not run: Failed to authenticate. API Error: 403 Attention Required! | Cloudflare); it is left alone until 2026-11-13T10:49:41Z",
       "pending_request": false,
       "planned_at": "2026-11-13T06:34:11Z",
       "planned_by": "`claude-8` (claude, `sonnet`, medium)",
@@ -17870,7 +17870,7 @@
       "taken_asks": []
     },
     "3849": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_early": true,
       "ci_fixes": 1,
@@ -17893,12 +17893,12 @@
       "interruptions": 0,
       "issue": 3824,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "fixing-ci",
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-3",
       "queued_at": "2026-11-13T10:18:20Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "43401288413",
+      "run_id": "pending:ba3e39d3-1794566527",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17919,7 +17919,7 @@
         "run": "43380033850"
       },
       "source": "ci",
-      "started_at": "2026-11-13T09:26:03Z",
+      "started_at": "2026-11-13T10:42:50Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -18084,9 +18084,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T10:41:52Z",
+    "at": "2026-11-13T10:42:50Z",
     "url": "",
-    "what": "review #3851 on claude-4"
+    "what": "revise #3849 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-13T10:20:38Z",
