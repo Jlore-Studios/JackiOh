@@ -684,11 +684,6 @@ func (x *GitHub) ListRuns(workflow string, status string /* = "" */, limit int /
 	return objs(x.Paginate(x.r()+"/actions/workflows/"+workflow+"/runs", params, "workflow_runs", limit, cached))
 }
 
-// GetGist is a gist, by id (the owner's PC's heartbeat, `dashboard.PC_FILE`).
-func (x *GitHub) GetGist(gistID string, cached bool /* = False */) *pyjson.Object {
-	return obj(x.Request("GET", "/gists/"+quote(gistID, "/"), nil, "", false, cached))
-}
-
 // ListRepoRuns is the runs of every workflow with `status` (`in_progress`, `queued`), newest
 // first.
 func (x *GitHub) ListRepoRuns(status string, limit int /* = 100 */, cached bool /* = False */) []*pyjson.Object {
