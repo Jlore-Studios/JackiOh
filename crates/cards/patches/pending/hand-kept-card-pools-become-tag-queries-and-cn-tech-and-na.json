@@ -1,7 +1,7 @@
 {
   "title": "Patch: hand-kept card pools become tag queries, and CN Tech and NA Tech fall back to random cards",
   "sources": "#3869",
-  "notes": "Issue #3869 (the audit in #3847): the card pools kept as lists of ids read the catalog. Olivian Expanse and Dice of Doom read the Terminus pool, which since Stinkyscape+ holds sixteen cards and tokens (R3869000). The Big Crunch, Starfleet Commander, Preemptive Strike and Mining Subroutine read the Call to Chaos, War Doctrine and Resource pools (R3869001), Ozark, Orca and Galaxy the Miners by name (R3869002), Book Launcher the Books by the aim their target declares (R3869003; Blood, Flame, Wildfire and Nerf now declare harm), and four Marketplace lots their tags (R3869004): the same cards in the same order. CN Tech and NA Tech fall back to random non-token cards when the table names none, as before #2521 (R3869005). Scripts through v0.6.0g kept (R767000).",
+  "notes": "Issue #3869 (the audit in #3847): the card pools kept as lists of ids read the catalog. Olivian Expanse and Dice of Doom read the Terminus pool, which since Stinkyscape+ holds sixteen cards and tokens (R3869000). The Big Crunch, Starfleet Commander, Preemptive Strike and Mining Subroutine read the Call to Chaos, War Doctrine and Resource pools (R3869001), Ozark, Orca and Galaxy the Miners by name (R3869002), Book Launcher the Books by the aim their target declares (R3869003; Blood, Flame, Wildfire and Nerf now declare harm), and four Marketplace lots their tags (R3869004): the same cards in the same order. CN Tech and NA Tech fall back to random non-token cards when the table names none, as before #2521 (R3869005). Scripts through v0.6.0g kept (R767000). The cards claimed past the four that changed are classify's stage 2: the switched cards whose forced games diverged and the cards its unforced games' divergences touched (Mining Subroutine, a token no deckable card's refs name, is counted as changed).",
   "player": {
     "title": "Every Terminus card counts as a Terminus card",
     "new": [],
@@ -18,6 +18,23 @@
     "stinkyscape-004",
     "stinkyscape-154",
     "meditative-050",
-    "meditativeplus-002"
+    "meditativeplus-002",
+    "classic-034",
+    "classic-037",
+    "classic-047",
+    "classicplus-047",
+    "core-035",
+    "core-075",
+    "core-t-rush",
+    "meditativeplus-025",
+    "stinkyscape-069",
+    "stinkyscape-072",
+    "stinkyscape-073",
+    "stinkyscape-074",
+    "stinkyscape-079",
+    "stinkyscape-080",
+    "stinkyscape-160",
+    "stinkyscape-t-ai-02",
+    "stinkyscapeplus-154"
   ]
 }
