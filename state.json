@@ -17071,18 +17071,12 @@
     "what": "build #3796 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-13T00:28:29Z",
+    "at": "2026-11-13T00:45:39Z",
     "notes": [
-      "delivered review #3810 on claude-7 (run 43331746851): approved",
-      "delivered plan #3790 on claude-3 (run 43329961153): planned",
-      "delivered plan #3793 on claude-3 (run 43329810309): planned",
-      "delivered plan #3806 on claude-8 (run 43329659521): planned",
-      "started build #3806 on claude-8 (run 43338265739)",
-      "started build #3793 on claude-4 (run 43338414175)",
-      "started plan #3790 on claude-7 (run 43338552188)",
+      "delivered plan #3796 on claude-8 (run 43331876187): planned",
+      "started build #3796 on claude-8 (run 43340101411)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days",
-      "runner gate: started 0 of 1 waiting run(s); 1 wait for room"
+      "pruned 5 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17788,7 +17782,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-13T00:28:29Z",
+  "loop_tick": "2026-11-13T00:45:39Z",
   "machine_disk": {
     "issue": null,
     "reading": {
