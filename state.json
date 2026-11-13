@@ -12542,9 +12542,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "",
-      "owner_since": "2026-11-13T22:55:57Z",
-      "owner_why": "its own review was handed off to its final audit: `claude-3` it refused a call; its limit resets at 2026-11-14T01:40:00Z; it can start again only in 2h 44m, more than the 120 minutes an item waits for its owner",
+      "owner": "claude-6",
+      "owner_since": "2026-11-13T23:42:43Z",
+      "owner_why": "it took it up; its own review was handed off to its final audit: `claude-3` it refused a call; its limit resets at 2026-11-14T01:40:00Z; it can start again only in 2h 44m, more than the 120 minutes an item waits for its owner",
       "pending_request": false,
       "planned_at": "2026-11-13T20:54:53Z",
       "planned_by": "`claude-3` (claude, `sonnet`, medium)",
@@ -16923,6 +16923,8 @@
       }
     },
     "3891": {
+      "action": "revise",
+      "asks": [],
       "ci_early": true,
       "ci_fixes": 1,
       "ci_on_head": true,
@@ -16944,9 +16946,13 @@
       "interruptions": 0,
       "issue": 3732,
       "kind": "revise",
+      "live": "fixing-ci",
       "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-13T23:07:46Z",
       "requested_by": "jgoetzmann-bot",
+      "run_id": "pending:a8f00eee-1794613312",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16966,7 +16972,9 @@
         "run": "43506171191"
       },
       "source": "ci",
+      "started_at": "2026-11-13T23:42:43Z",
       "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16990,9 +16998,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T23:41:36Z",
+    "at": "2026-11-13T23:42:43Z",
     "url": "",
-    "what": "review #3890 on claude-6"
+    "what": "revise #3891 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-13T23:23:05Z",
