@@ -157,6 +157,12 @@ Flashback, R783012, Sanctum's lent one, R1869003, or a field permission such as 
 counts `AI_EVAL.graveyard_playable` of its hand price, the enemy's too, since a graveyard is public; a
 spent Flashback counts nothing (R783013). `keyword.flashback` stays 0, so the play is priced once, and
 `GREEDY_EVAL` keeps 0 (#2928).
+The seat's own library counts what its next draws are worth (`library_draws_worth`, R3575101):
+`AI_EVAL.library_draws`, `AI_LIBRARY_DRAWS` (2.5, the draws a seat still takes from one of its turns in
+the gate's games, measured), of its library's mean `hand_card_value` over an unseen card's price
+(`hand_card` + `hand_per_cost` × `opponent_hand_cost`), every card once when fewer are left, so copies of
+a dear card shuffled in count and a tutor that takes one out costs; `library_card` keeps pricing the
+count. The enemy's library is never read, and `GREEDY_EVAL` keeps 0.
 It re-plans after every action, so a
 lethal the solver proves is played trimmed to the actions it needs
 (`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action
@@ -460,7 +466,9 @@ pub fn unknown_root(view: &GameState, seat: PlayerId, network: &Learned<'_>) -> 
   was fitted before the set, and the hand eval holds what a Starship leaves behind (R2566000, R2380000,
   R3064000). So does a decision whose redacted root view names mostly cards the network has no row for
   (`unknown_root`, R3479000: more than `LEARNED_MAX_UNKNOWN_SHARE` of the copies `unknown_cards` counts,
-  carried in `Prices.unknown_root`), until a retrain gives them rows.
+  carried in `Prices.unknown_root`), until a retrain gives them rows. The network reads the seat's view less
+  the Created cards in its own library (`fitted_view`, R3575100): fitted on games where a library only
+  shrank from the deal, it read the count as the game's stage, about a point for each card a shuffle put in.
 - `src/learned/weights.json` is what `training/ml/jackioh_ml/export.py` writes from a fit: the feature
   version and dense names it was fitted on (a test fails on a mismatch), the standardizer, the sparse
   keys it has rows for (an unknown key is no input), the layers and the skip connection. `build.rs`

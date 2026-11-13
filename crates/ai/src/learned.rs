@@ -22,7 +22,8 @@ use crate::config::{
     LearnedReach,
 };
 use crate::evaluate::{NextSwing, Prices, evaluate_priced};
-use crate::features::{Features, card_id_of_key, features, features_of};
+use crate::features::{Features, card_id_of_key, features};
+use crate::observe::redact;
 
 /// One dense layer of the head: `out = clip(w · input + b)`, `w` row-major `outputs × inputs`.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -340,11 +341,27 @@ pub fn finalist_score_with(
             {
                 return hand;
             }
-            // R1012001: the search takes the correction at its share.
-            let points = network.points(hand, &features_of(state, seat));
+            // R1012001: the search takes the correction at its share. R3575100: of the position its
+            // features would read without the Created cards the view shows in a library.
+            let points = network.points(hand, &features(&fitted_view(state, seat), seat));
             hand + LEARNED_CORRECTION_SHARE * (points - hand)
         }
     }
+}
+
+/// R3575100: what the network reads of `state`: the seat's redacted view less every Created card (R943)
+/// the view shows in a library. That is the seat's own: an enemy library card is hidden, its mark with it
+/// (R185), so the enemy's count stays as the view has it. A library grows in the games the network was fitted on only by the
+/// deal, so it read the count as the game's stage, and its correction rose by about a point for each card
+/// a shuffle put in (Forced Propagation's ten copies, S+ #24, lifted a finalist about nine points). The
+/// hand eval prices those cards (`library_card`, `library_draws`), so the network reads the library as the
+/// deal left it. Created is public wherever the card is (R943), so the view is all it reads (R185).
+pub fn fitted_view(state: &GameState, seat: PlayerId) -> GameState {
+    let mut view = redact(state, seat);
+    for side in [&mut view.players.p1, &mut view.players.p2] {
+        side.library.retain(|card| card.created != Some(true));
+    }
+    view
 }
 
 #[cfg(test)]

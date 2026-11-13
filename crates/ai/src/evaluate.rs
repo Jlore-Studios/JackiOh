@@ -802,6 +802,28 @@ fn hero_side(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
         + w.hero_armor * f64::from(hero_armor_of(state, player))
 }
 
+/// R3575101: what the seat's own library adds to the draws it has still to take, over a card it cannot
+/// see. Its next `library_draws` draws (all of them, when the library holds fewer) each come at the
+/// library's mean hand price (`hand_card_value`), and each is counted over the price the evaluation gives
+/// a card it cannot see (`hand_card` + `hand_per_cost` × `opponent_hand_cost`, the enemy hand's), so a
+/// library no better than unseen cards adds nothing and `library_card` keeps pricing how many there are.
+/// Copies of a dear card shuffled in (Forced Propagation, S+ #24) raise it; a tutor that takes the dearest
+/// card out lowers it. Own side only: the enemy's library is hidden (R185), and a world that resamples
+/// it must not move the score. At a zero `library_draws` nothing is read.
+fn library_draws_worth(state: &GameState, library: &[CardInstance], w: &EvalWeights) -> f64 {
+    if w.library_draws == 0.0 || library.is_empty() {
+        return 0.0;
+    }
+    let unseen = w.hand_card + w.hand_per_cost * w.opponent_hand_cost;
+    let count = library.len() as f64;
+    let mean = library
+        .iter()
+        .map(|card| hand_card_value(state, card, w))
+        .sum::<f64>()
+        / count;
+    w.library_draws.min(count) * (mean - unseen)
+}
+
 /// Everything on one side but the hero: the board and the cards dormant under its piles, what it has
 /// banked, what its coming refreshes will or will not give, the backrow (an enemy face-down card by the
 /// cost it shows, never a Unit standing there, R2490000), the hand, the cards in its graveyard it may
@@ -923,6 +945,9 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
     }
 
     value += w.library_card * (side.library.len() as f64).min(w.library_comfort);
+    if player == seat {
+        value += library_draws_worth(state, &side.library, w);
+    }
     // §2.4: every fatigue draw taken adds a point to each one still to come.
     value -= w.fatigue_draw * f64::from(side.fatigue_count);
     value

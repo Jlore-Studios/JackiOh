@@ -491,6 +491,9 @@ pub struct EvalWeights {
     /// Per library card up to libraryComfort.
     pub library_card: f64,
     pub library_comfort: f64,
+    /// R3575101: the seat's own draws still to come that `library_draws_worth` prices by the library's
+    /// mean hand price over an unseen card's: `AI_LIBRARY_DRAWS`, measured. At 0 nothing is read.
+    pub library_draws: f64,
     /// §2.4: taken off a side per fatigue draw it has taken (`fatigue_count`, public): the Nth draw
     /// from an empty library deals N, so each one taken adds a point to every fatigue hit to come.
     /// It reads the count alone, never the library, which `library_card` prices.
@@ -525,6 +528,12 @@ pub struct EvalWeights {
     /// The extra value per point of enemy hero damage once the turn cap is reached (a draw scores 0).
     pub closing_weight: f64,
 }
+
+/// R3575101: `AI_EVAL.library_draws`, the draws a seat still takes in a game from one of its own turns,
+/// measured: over 20 gate games each of ai-vs-greedy and hard-vs-easy (`gate:v3` seeds 0 to 19, at
+/// `AI_GATE_BUDGET`, issue #3575), the subject's 106 and 108 turns had 2.42 and 2.54 more of its own
+/// turns, each a draw, before the game ended. Games run about six turns a side.
+pub const AI_LIBRARY_DRAWS: f64 = 2.5;
 
 /// `AI_EVAL.hand_per_cost`: an own hand card's worth per mana of its cost, which `market_credit` reads
 /// too (#2389).
@@ -654,6 +663,7 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     enemy_face_down_per_cost: 0.0,
     library_card: 0.1,
     library_comfort: 10.0,
+    library_draws: AI_LIBRARY_DRAWS,
     // #1602: off. At 1.0 its screen read 199-201, edge -0.005 (-0.022 to 0.012), which keeps nothing
     // (training/improve.md, A screen).
     fatigue_draw: 0.0,
@@ -858,6 +868,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     enemy_face_down_per_cost: 0.0,
     library_card: 0.1,
     library_comfort: 10.0,
+    library_draws: 0.0,
     fatigue_draw: 0.0,
     unspent_mana: 0.8,
     float_discount: 0.0,
