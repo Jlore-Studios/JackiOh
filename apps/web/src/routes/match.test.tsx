@@ -9,7 +9,7 @@ import type { ReactElement } from "react";
 import { registeredCatalog } from "@jackioh/engine";
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 
-import { DISCONNECT_GRACE_SECONDS, MATCH_OVER_CLOSE_CODE, MULLIGAN_CLOCK_MS, POST_GAME_FRAME_VERSION, RANK_STREAK_FLAME_LENGTH as N, SERIES_MAX_GAMES, SERIES_POLL_SECONDS, SERIES_WINS_NEEDED, TURN_CLOCK_MS } from "@jackioh/server-config";
+import { DISCONNECT_GRACE_SECONDS, MATCH_OVER_CLOSE_CODE, MULLIGAN_CLOCK_MS, POST_GAME_FRAME_VERSION, RANK_STREAK_FLAME_LENGTH as N, SEAT_TAKEN_CLOSE_CODE, SERIES_MAX_GAMES, SERIES_POLL_SECONDS, SERIES_WINS_NEEDED, TURN_CLOCK_MS } from "@jackioh/server-config";
 
 import { MATCH_RANKS_READ_ATTEMPTS, MATCH_RANKS_RETRY_MS } from "../game/config.ts";
 
@@ -1494,6 +1494,38 @@ describe("R3213000 the post-game frames on the board", () => {
     await settle({ advance: 3 * PERIOD });
     expect(reads.rematch()).toBe(1);
   });
+
+  it("R3791000 the board's result panel says the opponent has left once the socket's rematch frame says so, and the waiting line gives way", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    stubPostGameFetch(null);
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    deliver({ type: "rematch", v: POST_GAME_FRAME_VERSION, youOffered: 1, opponentOffer: null, opponentHere: true, matchId: null, mode: "bo1" });
+    pushView(FINISHED);
+    await settle({ advance: 0 });
+    expect(screen.getByTestId("rematch-status")).toHaveTextContent(/waiting for your opponent/i);
+    expect(screen.queryByTestId("rematch-left")).toBeNull();
+
+    deliver({ type: "rematch", v: POST_GAME_FRAME_VERSION, youOffered: 1, opponentOffer: null, opponentHere: false, matchId: null, mode: "bo1" });
+    await settle({ advance: 0 });
+    expect(screen.getByTestId("rematch-left")).toHaveTextContent("Your opponent has left.");
+    for (const absent of ["rematch-status", "rematch-offer", "rematch-double"]) {
+      expect(screen.queryByTestId(absent), absent).toBeNull();
+    }
+  });
+
+  it("R3791000 a game that ended by the opponent's disconnect leaves the saying to the result", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    stubPostGameFetch(null);
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    deliver({ type: "rematch", v: POST_GAME_FRAME_VERSION, youOffered: null, opponentOffer: null, opponentHere: false, matchId: null, mode: "bo1" });
+    pushView(baseView({ viewer: "p1", active: "p1", result: { winner: "p1", reason: "disconnect" } }));
+    await settle({ advance: 0 });
+
+    expect(screen.getByTestId("result-overlay")).toHaveTextContent("Your opponent left the match.");
+    expect(screen.queryByTestId("rematch-left")).toBeNull();
+  });
 });
 
 describe("a socket refused mid-game", () => {
@@ -1561,6 +1593,53 @@ describe("a match voided mid-game (#1899)", () => {
     expect(status).toHaveTextContent("Reconnecting…");
     expect(screen.getByTestId("match-reconnect")).toHaveTextContent("Reconnect now");
     expect(screen.queryByTestId("match-gone")).toBeNull();
+  });
+});
+
+describe("R3767000 a game another tab or device took the seat of", () => {
+  function seatTaken(): void {
+    act(() => {
+      live().onclose?.({ code: SEAT_TAKEN_CLOSE_CODE, reason: "", wasClean: true });
+    });
+  }
+
+  it("R3767000 before the first view the replaced tab says the game is open elsewhere with Play here, not Joining; a press opens one socket", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    seatTaken();
+    expect(screen.getByTestId("match-elsewhere")).toHaveTextContent(
+      "This game is open in another tab or on another device.",
+    );
+    expect(screen.queryByTestId("gate-loading")).toBeNull();
+    expect(screen.queryByTestId("match-reconnect")).toBeNull();
+    expect(sockets).toHaveLength(1);
+
+    fireEvent.click(screen.getByTestId("match-play-here"));
+    expect(sockets).toHaveLength(2);
+
+    attach({ legal: [{ type: "endTurn" }] });
+    expect(screen.getByTestId("match-status")).toHaveAttribute("data-connection", "open");
+    expect(screen.queryByTestId("match-elsewhere")).toBeNull();
+    expect(screen.queryByTestId("match-play-here")).toBeNull();
+  });
+
+  it("R3767000 on a live board the status line says so and offers Play here, never Reconnect now or the gone notice", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({ legal: [{ type: "endTurn" }] });
+    seatTaken();
+
+    const status = screen.getByTestId("match-status");
+    expect(status).toHaveAttribute("data-connection", "elsewhere");
+    expect(status).toHaveTextContent("This game is open in another tab or on another device");
+    expect(status).toHaveTextContent(connectionWords("elsewhere"));
+    expect(screen.getByTestId("match-play-here")).toHaveTextContent("Play here");
+    expect(screen.queryByTestId("match-reconnect")).toBeNull();
+    expect(screen.queryByTestId("match-gone")).toBeNull();
+    expect(screen.getByTestId("hero-you")).toBeInTheDocument();
+    expect(sockets).toHaveLength(1);
+
+    fireEvent.click(screen.getByTestId("match-play-here"));
+    expect(sockets).toHaveLength(2);
+    expect(screen.getByTestId("match-status")).toHaveAttribute("data-connection", "connecting");
   });
 });
 

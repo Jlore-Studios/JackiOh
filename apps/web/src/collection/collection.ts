@@ -4,6 +4,7 @@
 // cards (§14: the non-token cards of a set that ships), and ownership is the server's row.
 
 import { CATALOG } from "@jackioh/cards";
+import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 import { SET_TRACK_UNLOCK_LEVEL } from "@jackioh/server-config";
 import { SHIPPED_SETS, newestShippedSet, setShips, type CardDef, type SetName } from "@jackioh/shared";
 
@@ -30,25 +31,38 @@ import {
   variantsOn,
   wornLevel,
 } from "../cards/versions.ts";
+import { DEFAULT_FILTER, DEFAULT_SORT, type Ownership, type PoolFilter, type PoolSort, type SortKey } from "../game/deckbuilder/filters.ts";
+import { deckVerdict, trioVerdict, triosHolding } from "../game/deckbuilder/workshop.ts";
+import type { DeckItem, TrioItem } from "../game/deckbuilder/sync.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import type { CollectionResponse, TrackRewards } from "../net/api.ts";
 import { packName } from "../packs/packs.ts";
 import { quantitiesOf } from "../shop/shop.ts";
 import { COSMETICS, type CosmeticRarity } from "../wire/generated/cosmetics.ts";
 
-/** The panels that read for themselves; the quests panel owns its own read. R3335001: the Fleet track's is the tracks' read. */
-export type CollectionPart = "cards" | "wallet" | "tracks" | "fleet";
+/** The panels that read for themselves; the quests panel owns its own read. R3335001: the Fleet track's is the tracks' read. Issue #3734: the deck tiles read the decks. */
+export type CollectionPart = "cards" | "wallet" | "tracks" | "fleet" | "decks";
 
-/** R1579000: the hub's sections that open in place, by `?section=`. */
-export const COLLECTION_SECTIONS = ["cards", "cosmetics"] as const;
+/** R3734000: the Collection's tabs, by `?section=`; Cards when it names none or an unknown one. */
+export const COLLECTION_SECTIONS = ["cards", "decks", "cosmetics", "progress"] as const;
 export type CollectionSection = (typeof COLLECTION_SECTIONS)[number];
-export type CollectionDoor = "decks" | "cards" | "cosmetics";
 
-/** The section `?section=` names, or null for the hub: an unknown name opens the hub. */
-export function collectionSectionOf(search: string): CollectionSection | null {
+/** The tab `?section=` names; an unknown name, or none, opens Cards. */
+export function collectionSectionOf(search: string): CollectionSection {
   const named = new URLSearchParams(search).get("section");
-  return COLLECTION_SECTIONS.find((section) => section === named) ?? null;
+  return COLLECTION_SECTIONS.find((section) => section === named) ?? "cards";
 }
+
+/**
+ * R3734000: the Cards tab's browse state: the shared filter and sort of the deck builder's pool (`filters.ts`) and
+ * the ownership view the Collection adds. The route holds it, so it survives a switch of tab.
+ */
+export type CardsBrowse = { filter: PoolFilter; sort: PoolSort; ownership: Ownership };
+
+/** R3734000: the sorts the Cards tab offers: the issue's five. Attack, health and type are the deck builder's, and win rate needs the statistics it reads. */
+export const CARDS_SORTS: readonly SortKey[] = ["cost", "name", "rarity", "set", "newest"];
+
+export const DEFAULT_CARDS_BROWSE: CardsBrowse = { filter: DEFAULT_FILTER, sort: DEFAULT_SORT, ownership: "all" };
 
 export const collectionTestid = {
   screen: "collection-screen",
@@ -62,8 +76,9 @@ export const collectionTestid = {
   /** #1691: Try again beside a panel's failed read. */
   retry: (part: CollectionPart) => `collection-retry-${part}`,
   set: (set: string) => `collection-set-${set}`,
-  setToggle: (set: string) => `collection-set-toggle-${set}`,
   completion: (set: string) => `collection-completion-${set}`,
+  /** R3734000: a set's `<progress>`, under its owned count. */
+  setProgress: (set: string) => `collection-set-progress-${set}`,
   card: (id: string) => `collection-card-${id}`,
   packs: (pack: string) => `collection-packs-${pack}`,
   track: (set: string) => `collection-track-${set}`,
@@ -84,7 +99,19 @@ export const collectionTestid = {
   cosmeticsTab: (tab: string) => `collection-cosmetics-tab-${tab}`,
   tileEarn: (id: string) => `collection-tile-earn-${id}`,
   body: "collection-body",
-  door: (id: CollectionDoor) => `collection-door-${id}`,
+  // R3734000: the tabs, the Cards tab's grid, its owned count, its filters (a sidebar, or the button that opens the sheet),
+  // and the Decks tab's tiles.
+  tab: (section: CollectionSection) => `collection-tab-${section}`,
+  grid: "collection-grid",
+  count: "collection-count",
+  filters: "collection-filters",
+  filtersOpen: "collection-filters-open",
+  filtersSheet: "collection-filters-sheet",
+  cosmeticsSearch: "collection-cosmetics-search",
+  cosmeticsSort: "collection-cosmetics-sort",
+  decks: "collection-decks",
+  deckTile: (id: string) => `collection-deck-${id}`,
+  deckNew: "collection-deck-new",
   // R1655000: a card in context (CardCosmeticsView) and the account's tiles (AccountCosmeticTiles).
   cardView: "collection-card-view",
   cardViewFace: "collection-card-view-face",
@@ -350,4 +377,32 @@ export function earnWords(cosmetic: {
  */
 export function accountTiles(kind: DeckSlotKind | StarshipSlotKind, owns: (id: string) => boolean): AccountTile[] {
   return cosmeticsOf(kind).map((cosmetic) => ({ cosmetic, owned: owns(cosmetic.id) }));
+}
+
+/** R3734000: the ids of the cards `collection` holds a copy of, which the Cards tab's owned and missing views read. */
+export function ownedIds(collection: CollectionResponse): Set<string> {
+  const owned = new Set<string>();
+  for (const [id, quantity] of quantitiesOf(collection)) if (quantity > 0) owned.add(id);
+  return owned;
+}
+
+/** A game mode a deck can be played in on its own: Best of 1 with the deck, Conquest with a trio that holds it. */
+export type DeckMode = "bo1" | "bo3";
+
+/**
+ * R3734000: the modes a deck can play, from the validator's verdicts and no rule of the client's (CLAUDE.md rule 7):
+ * Best of 1 when the deck's own verdict is ok, Conquest when some trio that holds it has an ok verdict.
+ */
+export function deckModes(
+  deck: DeckItem,
+  decks: readonly DeckItem[],
+  trios: readonly TrioItem[],
+  catalog: CatalogSnapshot,
+  collection: Collection | null,
+  nameLength: number,
+): DeckMode[] {
+  const modes: DeckMode[] = [];
+  if (deckVerdict(deck, catalog, collection, nameLength).ok) modes.push("bo1");
+  if (triosHolding(deck.id, trios).some((trio) => trioVerdict(trio, decks, catalog, collection, nameLength).ok)) modes.push("bo3");
+  return modes;
 }

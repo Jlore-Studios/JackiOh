@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import type { ActionBody, Aim, CombatForecast, EmojiEmoteId, EmoteId, PlayerId, PlayerView, PortraitId, PromptKind } from "@jackioh/shared";
 import { isEmoteId, isPortraitId, parseAim } from "@jackioh/shared";
-import { MATCH_OVER_CLOSE_CODE, POST_GAME_FRAME_VERSION, WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
+import { MATCH_OVER_CLOSE_CODE, POST_GAME_FRAME_VERSION, SEAT_TAKEN_CLOSE_CODE, WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
 import type { CardCosmetics } from "../cards/cosmetics.ts";
 import { createLoadoutsHolder, parseCardLoadouts, parseSeatPicks, type CardLoadouts, type SeatLoadouts } from "../cards/loadouts.ts";
@@ -588,7 +588,9 @@ export type ConnectionState =
   /** The server refused this socket (4401/4403/4404); no reconnect will be attempted, but a 4401 is final only for the token it refused (R1115000). */
   | "refused"
   /** `close()` was called, or the server closed the socket with VOIDED_CLOSE_CODE (R679) or MATCH_OVER_CLOSE_CODE (R3694000): the match is gone, and nothing reopens it until `connect()`. */
-  | "closed";
+  | "closed"
+  /** R3767000: another tab or device took this seat (SEAT_TAKEN_CLOSE_CODE). No reconnect and no backoff, with the last view kept; `connect()` (Play here) opens one socket and takes the seat back. */
+  | "elsewhere";
 
 /** `"none"` leaves the board read-only until a server view provides legal actions. */
 export type LegalSource = "none" | "view";
@@ -916,6 +918,12 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
       // last view stays up; neither is reconnected to.
       if (event.code === VOIDED_CLOSE_CODE || event.code === MATCH_OVER_CLOSE_CODE) {
         patch({ connection: "closed" });
+        return;
+      }
+      // R3767000: another tab or device holds the seat now; reconnecting would take it back, and the two
+      // would take it from each other for as long as both stayed open.
+      if (event.code === SEAT_TAKEN_CLOSE_CODE) {
+        patch({ connection: "elsewhere" });
         return;
       }
       if (REFUSAL_CLOSE_CODES.includes(event.code)) {

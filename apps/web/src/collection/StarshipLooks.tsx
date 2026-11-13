@@ -18,6 +18,7 @@ import {
 } from "../cards/cosmetics.ts";
 import { t } from "../i18n/i18n.ts";
 import { accountTiles, collectionTestid as T, cosmeticKindWords, earnWords, type AccountTile } from "./collection.ts";
+import { browseTiles, type CosmeticsBrowse } from "./cosmeticsBrowse.ts";
 import StarshipPreview from "./StarshipPreview.tsx";
 
 import "../settings/settings.css";
@@ -72,7 +73,7 @@ function StarshipTile({ kind, tile, equipped }: { kind: StarshipSlotKind; tile: 
 }
 
 /** R3335000: the equipped Starship look and every kind's tiles; an unowned pick is equipped as its kind's default (R1833000). */
-export default function StarshipLooks(): ReactElement {
+export default function StarshipLooks({ browse }: { browse?: CosmeticsBrowse }): ReactElement {
   const picks = useCosmetics();
   const owns = useOwnsAccountCosmetic();
   const equipped = wornStarshipLook(true, picks, null, owns);
@@ -81,17 +82,22 @@ export default function StarshipLooks(): ReactElement {
       <div className="collection-starship-equipped" data-testid={T.starshipEquipped}>
         <StarshipPreview look={equipped} />
       </div>
-      {STARSHIP_SLOT_KINDS.map((kind) => (
-        <section key={kind} className="collection-tiles" data-testid={T.tiles(kind)} aria-label={cosmeticKindWords(kind)}>
-          <h3 className="collection-tiles__title">{cosmeticKindWords(kind)}</h3>
-          <p className="settings-hint">{rowHint(kind)}</p>
-          <ul className="collection-tiles__list">
-            {accountTiles(kind, owns).map((tile) => (
-              <StarshipTile key={tile.cosmetic.id} kind={kind} tile={tile} equipped={equipped} />
-            ))}
-          </ul>
-        </section>
-      ))}
+      {STARSHIP_SLOT_KINDS.map((kind) => {
+        const all = accountTiles(kind, owns);
+        // Issue #3734: a row the Cosmetics tab's browse leaves empty is not drawn.
+        const tiles = browse === undefined ? all : browseTiles(all, browse);
+        return tiles.length === 0 ? null : (
+          <section key={kind} className="collection-tiles" data-testid={T.tiles(kind)} aria-label={cosmeticKindWords(kind)}>
+            <h3 className="collection-tiles__title">{cosmeticKindWords(kind)}</h3>
+            <p className="settings-hint">{rowHint(kind)}</p>
+            <ul className="collection-tiles__list">
+              {tiles.map((tile) => (
+                <StarshipTile key={tile.cosmetic.id} kind={kind} tile={tile} equipped={equipped} />
+              ))}
+            </ul>
+          </section>
+        );
+      })}
     </div>
   );
 }

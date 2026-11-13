@@ -471,7 +471,7 @@ fn parse_selections(value: &Value) -> Option<Vec<Selection>> {
 /// Structural validation only. Whether the action is *legal* is the reducer's call (§9.3), so this
 /// checks shapes and nothing else — but it rebuilds the body field by field, which is what keeps a
 /// client-supplied `playerId` (or any other smuggled key) from reaching `reduce`.
-fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMessage> {
+pub(crate) fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMessage> {
     let Some(type_) = is_string(raw.get("type")) else {
         return Err(malformed(r#""action.type" must be a string"#));
     };

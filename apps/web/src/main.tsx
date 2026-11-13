@@ -70,6 +70,7 @@ import { adoptCoopLink, adoptRoomLink, readRoomLink } from "./net/roomLink.ts";
 import { useSettingsAccountSync } from "./settings/accountSync.ts";
 import {
   currentPath,
+  dailyIdOf,
   duosIdOf,
   loginPath,
   matchIdOf,
@@ -129,6 +130,8 @@ const CollectionRoute = routeChunks.collection.Screen;
 const ShopRoute = routeChunks.shop.Screen;
 const StatsRoute = routeChunks.stats.Screen;
 const TogetherRoute = routeChunks.together.Screen;
+const DailyRoute = routeChunks.daily.Screen;
+const DailyBoardRoute = routeChunks.dailyGame.Screen;
 const WatchRoute = routeChunks.watch.Screen;
 
 /** This file's chrome testids, kept in `auth/testids.ts` for Cypress and re-exported for existing imports. */
@@ -767,6 +770,31 @@ export function App(): ReactElement {
           {() => (
             <EngineGate>
               <TogetherRoute />
+            </EngineGate>
+          )}
+        </Gated>
+      );
+    }
+
+    // #3727: daily games ask for an active account the way Play together does.
+    if (path === paths.daily) {
+      return (
+        <Gated key={path} engine>
+          {() => (
+            <EngineGate>
+              <DailyRoute />
+            </EngineGate>
+          )}
+        </Gated>
+      );
+    }
+    const dailyId = dailyIdOf(path);
+    if (dailyId !== null) {
+      return (
+        <Gated key={path} engine>
+          {(account) => (
+            <EngineGate>
+              <DailyBoardRoute key={sessionKeyOf(account.token)} matchId={dailyId} />
             </EngineGate>
           )}
         </Gated>

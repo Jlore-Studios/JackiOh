@@ -434,7 +434,7 @@ ability's words (its `{key}`s filled from the card's `params`) as tooltip and ac
 `activate-<instanceId>` with its badge `activate-uses-<instanceId>`; each ability counts its own uses and
 cooldown (R1751000), and `namedAbility` (`contract.ts`) is kept only for the ability a press names. It is
 live exactly when `legal` lists that card's `activate`; otherwise it is greyed and its tooltip gives the
-view's `reason`. A press reports `{ on: "activate" }`, and `actions.ts` builds the activation exactly as a
+view's `reason`, and a press shows that reason in the board's reason line and sends nothing (R3768000). A press reports `{ on: "activate" }`, and `actions.ts` builds the activation exactly as a
 play's choices are built: one listed body is sent at once, except on a card listing several abilities,
 which asks which first (the `ability` need, a Discover of choice cards in `Prompt.tsx` showing each
 ability's words and uses left, even when only one is legal) and leaves the card's other abilities usable
@@ -456,8 +456,9 @@ zone is picked by clicking the unit or its zone.
 for, or whose view carries a `tradeReason`, gets the Duos pass control's bar when pointed at
 (`TradeControl.tsx` over `cardBar.ts`, which `duos/CardActions.tsx` shares): `trade-bar` holding
 `trade-<instanceId>`, "Trade" with the Trades left from the view's `trades`. It is live
-exactly when `legal` lists that `trade` and sends that body; otherwise it is greyed with the engine's
-reason as its tooltip. On a Duos board the button rides the card bar beside the pass control, and
+exactly when `legal` lists that `trade` and sends that body; otherwise it is greyed (`aria-disabled`, focusable) with the engine's
+reason as its tooltip and accessible description, and a press shows it in the board's reason line and sends
+nothing (R3768000). On a Duos board the button rides the card bar beside the pass control, and
 Game's own bar is off (`tradeBar={false}`).
 
 **Plays from the graveyard** (B5 E11). While `legal` lists a `play` for a card in the viewer's
@@ -658,7 +659,7 @@ decides a rule: every verdict they show comes from `@jackioh/validator` (the Rus
 WASM), the module the server runs at queue, and the server's refusal, when it comes, is shown in its own words (rule 7).
 
 ```
-routes/decks.tsx        /decks: loads GET /api/decks and the collection, hands them and the shipped catalog to the workshop; Back leads to the Collection hub (R1579000);
+routes/decks.tsx        /decks: loads GET /api/decks and the collection, hands them and the shipped catalog to the workshop; Back leads to the Collection's Decks tab (R1579000, R3734000), and `?deck=<id>` opens that deck (R3734000);
                         takes the gate's account and reads none of its own (R3207003)
 game/deckbuilder/       the deck workshop: up to ten named decks and five trios (R250, R252), the pool
                         browser (CardBrowser.tsx, which the Card Almanac renders read-only too, R630, its
@@ -679,7 +680,11 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         deck whose edit has not landed restores nothing;
                         Undo and Redo of the open deck's edits, each one step sent as any edit (history.ts, #2099);
                         a deck holding a card the newest patch changed wears a badge listing them until saved
-                        under it (DeckPatchBadge.tsx, R2097000)
+                        under it (DeckPatchBadge.tsx, R2097000);
+                        a pool card is dragged into the deck by pointer events, so a finger works (DeckDrag.tsx,
+                        R3734001: a touch lifts it on a move across, `touch-action: pan-y` leaving a move down to
+                        the pool's scroll), and the rail, the pool and the deck sit side by side from 601 px
+                        (workshop.css), taking turns only at 600 px and under
 routes/play.tsx         /play, the Play hub (R1578000): one screen that does not scroll, online play first and
                         largest, Practice, Play together and Replays as three smaller links (R1646000)
                         beside it, and for a visitor with no account (`token` null) a Sign in in the online
@@ -726,18 +731,25 @@ routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — 
                         (#1650), for this screen, the account, Play and the board; rank/StreakFlame.tsx
                         draws a ranked win streak as a flame on the account and a ranked match's
                         line (R2101000)
-routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of three doors, Decks (/decks) as a
-                        link, Cards and Cosmetics opened in place by
-                        `?section=` (net/navigate.ts `useSearch`) so the browser's Back and Forward move
-                        between them and the hub; the page never scrolls, a section's body does. Cards is
-                        the account's cards per shipped set, wallet, set tracks and quests, each panel
+routes/collection.tsx   /collection (#1307, #1579, R1579000, #3734, R3734000): four tabs over the whole window,
+                        Cards, Decks, Cosmetics and Progress, by `?section=` (net/navigate.ts `useSearch`; Cards
+                        when it names none), the route holding the Cards and Cosmetics tabs' search and filters so
+                        they survive a switch; the page never scrolls, a tab's body does. Cards is
+                        one virtual grid of every collectible card (collection/CardGrid.tsx, the pool's windowing
+                        in game/deckbuilder/poolWindow.ts) with the deck builder's search, chips and sorts
+                        (game/deckbuilder/filters.ts `collectionPool`, FilterBar.tsx's `part`), an owned count and
+                        a bar for each set, its filters a sidebar over 1024 px and a sheet under it
+                        (collection/BrowsePanel.tsx); Decks is a tile for each deck with the validator's verdict
+                        and modes (collection/DeckTiles.tsx, each opening `/decks?deck=<id>`); Progress is the
+                        wallet, set tracks, Fleet track and quests, each panel
                         reading for itself and saying why when its read fails, each track a filling bar
-                        (economy/FillBar.tsx); Cosmetics is where one is equipped (and a pack reveal's Equip,
+                        (economy/FillBar.tsx); Cosmetics is where one is equipped, with the same search and filters
+                        (collection/CosmeticsFilters.tsx, cosmeticsBrowse.ts) (and a pack reveal's Equip,
                         collection/EquipButton.tsx, R1955000): the playmat, backdrop and card back as preview
                         tiles (collection/AccountCosmeticTiles.tsx), on the same store and `cosmetics` settings
                         group as before (R633), with no list of what the account owns (R2731000) and no
                         defaults of every card, so a card with no pick
-                        of its own wears its kind's default (R1953001); a card of the Cards section opens large
+                        of its own wears its kind's default (R1953001); a card of the Cards tab opens large
                         wearing its own picks
                         (collection/CardCosmeticsView.tsx, R1655000), over a strip of the foils, finishes
                         and borders it may wear drawn as live previews and, R3015007, its variants as ladders
@@ -772,7 +784,7 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of three d
                         holds the panels (OwnedCards, WalletPanel, TracksPanel), their
                         model and CosmeticLook.tsx, a cosmetic's look in the reveals and the shop's rows;
                         every one renders the server's answers and decides nothing (rule 7)
-routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /api/quests: each held quest's progress and
+routes/QuestsPanel.tsx  /collection's Progress tab's quests (§14.9) from GET /api/quests: each held quest's progress and
                         reward, and the countdown to the next; moved from /account (#1307), and Replace on each, behind
                         a confirm, while a replace is left today (R2210000). The landing's bookmark
                         shares `useQuests` and `QuestsView` (R2035000)
@@ -998,6 +1010,46 @@ Test ids, mirrored in `e2e/support/testids.ts`: `together-add-input`,
 `duos-portal`, `duos-both`, `duos-board-own`, `duos-board-teammate`, `duos-pass`, `duos-pool`,
 `duos-own-hp`, `duos-teammate-strip`, `duos-ping-wheel`, `duos-ping-<kind>`, `duos-ping-marker`,
 `sideline-strip`, `sideline-emote`, `sideline-menu` and `sideline-mute`.
+
+## Daily games
+
+Daily games (SPEC §9.13, #3727) are a 1v1 game played a move every 1, 3, 7 or 14 days, by a challenge to
+any friend or the daily queue. The browser runs no engine and opens no socket for one: every read and
+action is one HTTPS request (`crates/server/README.md`, Daily games), and who holds the move, until when,
+what is legal and every refusal are the server's (rule 7). The times per move, the urgent hours and the
+list's sizes are `crates/shared`'s, read from the WebAssembly module (`wasm/index.ts` `dailyConstants`).
+
+```
+routes (net/navigate.ts paths, public/_redirects, behind the gate as /together is):
+  /daily                 daily/DailyRoute.tsx: Your move (least time left first), Their move, the
+                         challenges in and out, the seeks, the games that ended (daily/order.ts); each
+                         game one row (opponent and portrait, mode, turn, both lives, "Your move · 1d 4h
+                         left", urgent under DAILY_URGENT_HOURS); New daily game; the notifications
+                         (email on or off, push on this device, Add to Home Screen on an iPhone or iPad
+                         outside it); the tab reads "Your move (n)"; read again when the social read's
+                         dailyWaiting changes
+  /daily/:matchId        daily/DailyBoard.tsx: Game.tsx on the server's view and legal; each action one
+                         POST sent after the seq it read, under a fresh nonce; End turn says it sends the
+                         move; the clock pill in days and hours (daily/DailyClockPill.tsx); Next game to the
+                         next game waiting once the move has passed; "Lost on time" and "Won on time"; a
+                         notice when the game plays on an older card version; once it ends, Rematch (a new
+                         daily challenge to the opponent at its mode and time, NewDailyDialog's rematch)
+net/daily.ts             fetch wrappers for every daily route, typed
+daily/NewDailyDialog.tsx challenge any friend (online or not) or find an opponent, with daily/DailyFields.tsx:
+                         the mode, its deck or lean, and the time per move on the segmented toggle; as a
+                         rematch, only the deck or lean, to the finished game's opponent
+daily/DailyBadge.tsx     the count of games waiting on the player (the social read's dailyWaiting), on
+                         the Play hub's Daily games
+daily/push.ts            this device's push subscription from GET /api/daily/settings's vapidPublicKey,
+                         kept at POST /api/daily/push; dropped at sign-out (routes/account.tsx)
+public/sw.js             the service worker: shows a push and opens its game; caches nothing
+public/manifest.webmanifest  the web app manifest, so iOS and iPadOS deliver web push once the site is
+                         added to the Home Screen
+```
+
+The friends panel's and /together's Challenge (`together/ChallengeDialog.tsx`) offers Live (an online, idle
+friend, as before) or Daily (any friend). Test ids are `daily/testids.ts`'s, mirrored in
+`e2e/support/testids.ts`.
 
 ## Practice
 

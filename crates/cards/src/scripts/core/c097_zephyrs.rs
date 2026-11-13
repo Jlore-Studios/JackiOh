@@ -102,18 +102,6 @@ mod tests {
         }
     }
 
-    /// A Discover's options are `mode` selections carrying catalog ids (§10.6).
-    fn option_ids(pending: &Value) -> Vec<String> {
-        pending["options"]
-            .as_array()
-            .cloned()
-            .unwrap_or_default()
-            .iter()
-            .filter(|option| option["selection"]["pick"] == "mode")
-            .map(|option| option["selection"]["option"].as_str().unwrap_or_default().to_string())
-            .collect()
-    }
-
     fn sorted(ids: &[String]) -> Vec<String> {
         let mut out = ids.to_vec();
         out.sort();
@@ -175,7 +163,7 @@ mod tests {
                 .iter()
                 .map(|scored| scored.def.id.clone())
                 .collect();
-            assert_eq!(sorted(&option_ids(&pending)), sorted(&top));
+            assert_eq!(sorted(&s.prompt_modes()), sorted(&top));
         }
 
         #[test]
@@ -183,7 +171,7 @@ mod tests {
             let mut s = scenario(json!({ "seed": "zephyrs-self", "p1": { "hand": [ZEPHYRS] } }));
             s.play(ZEPHYRS, json!({}));
 
-            let ids = option_ids(&open(s.state()));
+            let ids = s.prompt_modes();
             assert!(!ids.contains(&ZEPHYRS.to_string()));
             for id in &ids {
                 let candidates = subsystems::candidate_defs();
@@ -211,7 +199,7 @@ mod tests {
             b.play(ZEPHYRS, json!({}));
 
             // The scorer takes no rng at all, so only the order the three are OFFERED in can differ.
-            assert_eq!(sorted(&option_ids(&open(a.state()))), sorted(&option_ids(&open(b.state()))));
+            assert_eq!(sorted(&a.prompt_modes()), sorted(&b.prompt_modes()));
         }
 
         #[test]
@@ -238,14 +226,14 @@ mod tests {
             let top = subsystems::top_three(&resolving(&setup), P1, &options(None));
             assert_eq!(top.first().map(priority_of), Some(json!("lethal")));
             let top: Vec<String> = top.iter().map(|scored| scored.def.id.clone()).collect();
-            assert_eq!(sorted(&option_ids(&open(s.state()))), sorted(&top));
+            assert_eq!(sorted(&s.prompt_modes()), sorted(&top));
         }
 
         #[test]
         fn s8_5_the_pick_goes_to_the_caster_s_hand_not_radiant_on_the_base_face() {
             let mut s = scenario(json!({ "seed": "zephyrs-hand", "p1": { "hand": [ZEPHYRS] } }));
             s.play(ZEPHYRS, json!({}));
-            let picked = option_ids(&open(s.state())).into_iter().next().unwrap_or_default();
+            let picked = s.prompt_modes().into_iter().next().unwrap_or_default();
             s.answer(json!(picked));
 
             assert!(s.state().pending.is_none());
@@ -259,7 +247,7 @@ mod tests {
         fn s8_5_exile_this_the_spell_reaches_the_exile_pile_not_the_graveyard() {
             let mut s = scenario(json!({ "seed": "zephyrs-exile", "p1": { "hand": [ZEPHYRS] } }));
             s.play(ZEPHYRS, json!({}));
-            let first = option_ids(&open(s.state())).into_iter().next().unwrap_or_default();
+            let first = s.prompt_modes().into_iter().next().unwrap_or_default();
             s.answer(json!(first));
 
             s.expect_in_zone(ZEPHYRS, "exile");
@@ -288,7 +276,7 @@ mod tests {
             s.card_mut(ZEPHYRS).radiant = true;
             s.play(ZEPHYRS, json!({}));
 
-            let picked = option_ids(&open(s.state())).into_iter().next().unwrap_or_default();
+            let picked = s.prompt_modes().into_iter().next().unwrap_or_default();
             s.answer(json!(picked));
 
             let held: Vec<CardInstance> = s.hand(P1).into_iter().filter(|card| card.def_id == picked).collect();
@@ -313,7 +301,7 @@ mod tests {
                 .iter()
                 .map(|scored| scored.def.id.clone())
                 .collect();
-            assert_eq!(sorted(&option_ids(&open(s.state()))), sorted(&top));
+            assert_eq!(sorted(&s.prompt_modes()), sorted(&top));
         }
 
         #[test]
@@ -321,7 +309,7 @@ mod tests {
             let mut s = scenario(json!({ "seed": "zephyrs-radiant-exile", "p1": { "hand": [ZEPHYRS] } }));
             s.card_mut(ZEPHYRS).radiant = true;
             s.play(ZEPHYRS, json!({}));
-            let first = option_ids(&open(s.state())).into_iter().next().unwrap_or_default();
+            let first = s.prompt_modes().into_iter().next().unwrap_or_default();
             s.answer(json!(first));
 
             s.expect_in_zone(ZEPHYRS, "exile");
@@ -329,10 +317,6 @@ mod tests {
     }
 
     // §10.7's priorities for cards whose claim lives in their text.
-
-    fn offered_ids(s: &Scenario) -> Vec<String> {
-        option_ids(&open(s.state()))
-    }
 
     /// Core cards that heal their own hero: #5, #24, #47, #53, #56 (Lifesteal), #74 and #95; #19 and #93
     /// are allowed too, so a scorer that reads "heals" more loosely still passes.
@@ -371,7 +355,7 @@ mod tests {
         let top: Vec<String> = top.iter().map(|scored| scored.def.id.clone()).collect();
         let mut s = scenario(setup.clone());
         s.play(ZEPHYRS, json!({}));
-        assert_eq!(sorted(&offered_ids(&s)), sorted(&top));
+        assert_eq!(sorted(&s.prompt_modes()), sorted(&top));
         // R29: three different cards.
         let distinct: IndexSet<&String> = top.iter().collect();
         assert_eq!(distinct.len(), OFFERED as usize);
@@ -474,7 +458,7 @@ mod tests {
     }
 
     fn offered_defs(g: &Scenario) -> Vec<String> {
-        sorted(&option_ids(&open(g.state())))
+        sorted(&g.prompt_modes())
     }
 
     /// §10.7's ranking for the active player now, the one #97's Discover reads (R29).

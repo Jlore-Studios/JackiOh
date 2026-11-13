@@ -32,6 +32,7 @@ use jackioh_engine::wire::{
     StatsTotals, TotalsKey, parse_game_record, portrait_or_default, sources_of,
 };
 use jackioh_engine::{Action, LastBoardEntry, LeanPick, PlayerId, WinRateTable};
+use jackioh_shared::host::daily::{DailyBoard, DailyClock};
 
 use crate::auth::is_uuid;
 use crate::bots::cosmetics::BotCosmetics;
@@ -42,12 +43,13 @@ use crate::config::{
 use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
     ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, BotState, CodeAttempt, CollectionEntry,
-    CollectionGrant, ConsentRow, DeckVersion, DeckVersionOutcome, EmoteEventRow, FoldedRecords, FrozenDeck,
-    FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, LoadoutSample, MatchActionRow,
+    CollectionGrant, ConsentRow, DailyGameRow, DailyInviteKind, DailyInviteRow, DailyInviteState,
+    DailyNotifyRow, DeckVersion, DeckVersionOutcome, EmoteEventRow, FoldedRecords, FrozenDeck, FrozenTrio,
+    GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, LoadoutSample, MatchActionRow,
     MatchCheckpointRow, MatchClocks, MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode, PlayTelemetry,
     PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
     PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
-    ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide,
+    ProfileRecord, ProfileStatus, PublicPlayerSummary, PushSubRow, QueueMode, RatedGameRow, RatedSide,
     RedeemInviteCodeInput, RedeemResult, ReplayRow, ReplayWithMode, ResultRow, RetentionPurgeInput,
     RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow,
     SeriesSide, SignalOutcomeRow, StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket,
@@ -7965,6 +7967,629 @@ pub async fn shares_by(t: &mut PgTx<'_>, match_id: &str, sharer: &str) -> Result
     .await
     .map_err(db_error)?;
     rows.iter().map(|row| uuid_text(row, "friend")).collect()
+}
+
+// Daily games (SPEC §9.13, #3727): migration 0089's four tables. Every time is a bigint of epoch ms, so
+// nothing here goes through `ts!`.
+
+/// `public.daily_games`' columns, in `daily_game_of`'s order.
+macro_rules! daily_game_columns {
+    () => {
+        "match_id, p1_profile_id, p2_profile_id, mode, per_move_days, clock, board, next_deadline_at, seq, \
+         created_at, ended_at"
+    };
+}
+
+/// `public.daily_invites`' columns, in `daily_invite_of`'s order.
+macro_rules! daily_invite_columns {
+    () => {
+        "id, kind, from_profile, to_profile, mode, per_move_days, choice, state, match_id, created_at, expires_at"
+    };
+}
+
+/// `public.daily_notify`'s columns, in `daily_notify_of`'s order.
+macro_rules! daily_notify_columns {
+    () => {
+        "profile_id, email_on, unsubscribe_token, last_email_at, last_push_at"
+    };
+}
+
+/// `public.push_subscriptions`' columns, in `push_sub_of`'s order.
+macro_rules! push_sub_columns {
+    () => {
+        "id, profile_id, endpoint, p256dh, auth, created_at"
+    };
+}
+
+fn daily_game_of(row: &PgRow) -> Result<DailyGameRow, StoreError> {
+    Ok(DailyGameRow {
+        match_id: uuid_text(row, "match_id")?,
+        players: (uuid_text(row, "p1_profile_id")?, uuid_text(row, "p2_profile_id")?),
+        mode: queue_mode_of(&get::<String>(row, "mode")?)?,
+        per_move_days: get(row, "per_move_days")?,
+        clock: json_col(row, "clock")?,
+        board: json_col(row, "board")?,
+        next_deadline_at: get(row, "next_deadline_at")?,
+        seq: get(row, "seq")?,
+        created_at: get(row, "created_at")?,
+        ended_at: get(row, "ended_at")?,
+    })
+}
+
+fn daily_invite_of(row: &PgRow) -> Result<DailyInviteRow, StoreError> {
+    Ok(DailyInviteRow {
+        id: uuid_text(row, "id")?,
+        kind: get::<String>(row, "kind")?.parse::<DailyInviteKind>()?,
+        from_profile: uuid_text(row, "from_profile")?,
+        to_profile: uuid_text_or_null(row, "to_profile")?,
+        mode: queue_mode_of(&get::<String>(row, "mode")?)?,
+        per_move_days: get(row, "per_move_days")?,
+        choice: json_col(row, "choice")?,
+        state: get::<String>(row, "state")?.parse::<DailyInviteState>()?,
+        match_id: uuid_text_or_null(row, "match_id")?,
+        created_at: get(row, "created_at")?,
+        expires_at: get(row, "expires_at")?,
+    })
+}
+
+/// A `returning` clause's invites in the port's order: oldest first, the id breaking a tie.
+fn daily_invites_of(rows: &[PgRow]) -> Result<Vec<DailyInviteRow>, StoreError> {
+    let mut invites = rows.iter().map(daily_invite_of).collect::<Result<Vec<_>, _>>()?;
+    invites.sort_by(|a, b| (a.created_at, &a.id).cmp(&(b.created_at, &b.id)));
+    Ok(invites)
+}
+
+fn daily_notify_of(row: &PgRow) -> Result<DailyNotifyRow, StoreError> {
+    Ok(DailyNotifyRow {
+        profile_id: uuid_text(row, "profile_id")?,
+        email_on: get(row, "email_on")?,
+        unsubscribe_token: uuid_text(row, "unsubscribe_token")?,
+        last_email_at: get(row, "last_email_at")?,
+        last_push_at: get(row, "last_push_at")?,
+    })
+}
+
+fn push_sub_of(row: &PgRow) -> Result<PushSubRow, StoreError> {
+    Ok(PushSubRow {
+        id: uuid_text(row, "id")?,
+        profile_id: uuid_text(row, "profile_id")?,
+        endpoint: get(row, "endpoint")?,
+        p256dh: get(row, "p256dh")?,
+        auth: get(row, "auth")?,
+        created_at: get(row, "created_at")?,
+    })
+}
+
+// daily games
+
+/// The match row must exist first (`daily_games.match_id` is its foreign key), and a second row for
+/// one match raises on the primary key.
+pub async fn daily_games_create(t: &mut PgTx<'_>, row: &DailyGameRow) -> Result<(), StoreError> {
+    run_as(t, None).await?;
+    sqlx::query(
+        "insert into public.daily_games
+           (match_id, p1_profile_id, p2_profile_id, mode, per_move_days, clock, board, next_deadline_at,
+            seq, created_at, ended_at)
+         values ($1::uuid, $2::uuid, $3::uuid, $4::text, $5::integer, $6::jsonb, $7::jsonb, $8::bigint,
+                 $9::bigint, $10::bigint, $11::bigint)",
+    )
+    .bind(row.match_id.as_str())
+    .bind(row.players.0.as_str())
+    .bind(row.players.1.as_str())
+    .bind(literal(&row.mode)?)
+    .bind(row.per_move_days)
+    .bind(json(&row.clock)?)
+    .bind(json(&row.board)?)
+    .bind(row.next_deadline_at)
+    .bind(row.seq)
+    .bind(row.created_at)
+    .bind(row.ended_at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(())
+}
+
+pub async fn daily_games_get(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<DailyGameRow>, StoreError> {
+    if !is_uuid(match_id) {
+        return Ok(None);
+    }
+    run_as(t, None).await?;
+    let row = sqlx::query(concat!(
+        "select ",
+        daily_game_columns!(),
+        " from public.daily_games where match_id = $1::uuid"
+    ))
+    .bind(match_id)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    row.as_ref().map(daily_game_of).transpose()
+}
+
+/// Two reads, the running games then the ended ones, so each keeps its own order (a `union all` of
+/// two ordered selects promises neither).
+pub async fn daily_games_of(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    recent_finished: i64,
+) -> Result<Vec<DailyGameRow>, StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(Vec::new());
+    }
+    run_as(t, Some(profile_id)).await?;
+    let running = sqlx::query(concat!(
+        "select ",
+        daily_game_columns!(),
+        " from public.daily_games
+          where (p1_profile_id = $1::uuid or p2_profile_id = $1::uuid) and ended_at is null
+          order by created_at, match_id"
+    ))
+    .bind(profile_id)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let ended = sqlx::query(concat!(
+        "select ",
+        daily_game_columns!(),
+        " from public.daily_games
+          where (p1_profile_id = $1::uuid or p2_profile_id = $1::uuid) and ended_at is not null
+          order by ended_at desc, match_id desc
+          limit $2::bigint"
+    ))
+    .bind(profile_id)
+    .bind(recent_finished.max(0))
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    running.iter().chain(ended.iter()).map(daily_game_of).collect()
+}
+
+/// Conditional on `seq`: a second request that read the same seq waits on the first's row lock, then
+/// finds `seq` moved on and writes nothing (read committed re-checks the row it waited on).
+pub async fn daily_games_put(
+    t: &mut PgTx<'_>,
+    match_id: &str,
+    after: i64,
+    clock: &DailyClock,
+    board: &DailyBoard,
+    next_deadline_at: Option<i64>,
+    ended_at: Option<i64>,
+) -> Result<bool, StoreError> {
+    if !is_uuid(match_id) {
+        return Ok(false);
+    }
+    run_as(t, None).await?;
+    let done = sqlx::query(
+        "update public.daily_games
+            set clock = $2::jsonb, board = $3::jsonb, next_deadline_at = $4::bigint, ended_at = $5::bigint,
+                seq = $6::bigint + 1
+          where match_id = $1::uuid and ended_at is null and seq = $6::bigint",
+    )
+    .bind(match_id)
+    .bind(json(clock)?)
+    .bind(json(board)?)
+    .bind(next_deadline_at)
+    .bind(ended_at)
+    .bind(after)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(done.rows_affected() == 1)
+}
+
+/// Through `daily_games_due_idx`.
+pub async fn daily_games_due(t: &mut PgTx<'_>, now: i64) -> Result<Vec<String>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(
+        "select d.match_id from public.daily_games d
+          where (d.ended_at is null and d.next_deadline_at <= $1::bigint)
+             or (d.ended_at <= $1::bigint
+                 and exists (select 1 from public.matches m where m.id = d.match_id and m.status = 'live'))
+          order by case when d.ended_at is null then d.next_deadline_at else d.ended_at end, d.match_id",
+    )
+    .bind(now)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(|row| uuid_text(row, "match_id")).collect()
+}
+
+pub async fn daily_games_running(t: &mut PgTx<'_>) -> Result<Vec<DailyGameRow>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(concat!(
+        "select ",
+        daily_game_columns!(),
+        " from public.daily_games where ended_at is null order by created_at, match_id"
+    ))
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(daily_game_of).collect()
+}
+
+pub async fn daily_active_count(t: &mut PgTx<'_>, profile_id: &str, now: i64) -> Result<i64, StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(0);
+    }
+    run_as(t, Some(profile_id)).await?;
+    let row = sqlx::query(
+        "select (select count(*) from public.daily_games
+                  where ended_at is null and (p1_profile_id = $1::uuid or p2_profile_id = $1::uuid))
+              + (select count(*) from public.daily_invites
+                  where from_profile = $1::uuid and state = 'open' and expires_at > $2::bigint) as active",
+    )
+    .bind(profile_id)
+    .bind(now)
+    .fetch_one(&mut **t)
+    .await
+    .map_err(db_error)?;
+    get(&row, "active")
+}
+
+// daily invites
+
+/// Two statements in the caller's transaction: the key's lapsed open row (if any) is marked expired,
+/// then the insert, whose `on conflict` names the kind's partial unique key and its predicate, so an
+/// open live invite of the key answers false instead of raising (and a reused id still raises).
+pub async fn daily_invites_create(
+    t: &mut PgTx<'_>,
+    row: &DailyInviteRow,
+    now: i64,
+) -> Result<bool, StoreError> {
+    run_as(t, Some(row.from_profile.as_str())).await?;
+    sqlx::query(
+        "update public.daily_invites set state = 'expired'
+          where state = 'open' and expires_at <= $6::bigint and kind = $1::text and from_profile = $2::uuid
+            and ((kind = 'challenge' and to_profile = $3::uuid)
+              or (kind = 'seek' and mode = $4::text and per_move_days = $5::integer))",
+    )
+    .bind(literal(&row.kind)?)
+    .bind(row.from_profile.as_str())
+    .bind(row.to_profile.as_deref())
+    .bind(literal(&row.mode)?)
+    .bind(row.per_move_days)
+    .bind(now)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let insert: &'static str = match row.kind {
+        DailyInviteKind::Challenge => concat!(
+            "insert into public.daily_invites (",
+            daily_invite_columns!(),
+            ")
+             values ($1::uuid, $2::text, $3::uuid, $4::uuid, $5::text, $6::integer, $7::jsonb, $8::text,
+                     $9::uuid, $10::bigint, $11::bigint)
+             on conflict (from_profile, to_profile) where state = 'open' and kind = 'challenge' do nothing"
+        ),
+        DailyInviteKind::Seek => concat!(
+            "insert into public.daily_invites (",
+            daily_invite_columns!(),
+            ")
+             values ($1::uuid, $2::text, $3::uuid, $4::uuid, $5::text, $6::integer, $7::jsonb, $8::text,
+                     $9::uuid, $10::bigint, $11::bigint)
+             on conflict (from_profile, mode, per_move_days) where state = 'open' and kind = 'seek' do nothing"
+        ),
+    };
+    let done = sqlx::query(insert)
+        .bind(row.id.as_str())
+        .bind(literal(&row.kind)?)
+        .bind(row.from_profile.as_str())
+        .bind(row.to_profile.as_deref())
+        .bind(literal(&row.mode)?)
+        .bind(row.per_move_days)
+        .bind(json(&row.choice)?)
+        .bind(literal(&row.state)?)
+        .bind(row.match_id.as_deref())
+        .bind(row.created_at)
+        .bind(row.expires_at)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    Ok(done.rows_affected() == 1)
+}
+
+pub async fn daily_invites_get(
+    t: &mut PgTx<'_>,
+    invite_id: &str,
+) -> Result<Option<DailyInviteRow>, StoreError> {
+    if !is_uuid(invite_id) {
+        return Ok(None);
+    }
+    run_as(t, None).await?;
+    let row = sqlx::query(concat!(
+        "select ",
+        daily_invite_columns!(),
+        " from public.daily_invites where id = $1::uuid"
+    ))
+    .bind(invite_id)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    row.as_ref().map(daily_invite_of).transpose()
+}
+
+pub async fn daily_invites_open_of(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    now: i64,
+) -> Result<Vec<DailyInviteRow>, StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(Vec::new());
+    }
+    run_as(t, Some(profile_id)).await?;
+    let rows = sqlx::query(concat!(
+        "select ",
+        daily_invite_columns!(),
+        " from public.daily_invites
+          where (from_profile = $1::uuid or to_profile = $1::uuid)
+            and state = 'open' and expires_at > $2::bigint
+          order by created_at, id"
+    ))
+    .bind(profile_id)
+    .bind(now)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(daily_invite_of).collect()
+}
+
+pub async fn daily_invites_close(
+    t: &mut PgTx<'_>,
+    invite_id: &str,
+    state: DailyInviteState,
+    match_id: Option<&str>,
+) -> Result<Option<DailyInviteRow>, StoreError> {
+    if !is_uuid(invite_id) {
+        return Ok(None);
+    }
+    run_as(t, None).await?;
+    let row = sqlx::query(concat!(
+        "update public.daily_invites set state = $2::text, match_id = coalesce($3::uuid, match_id)
+          where id = $1::uuid and state = 'open'
+          returning ",
+        daily_invite_columns!()
+    ))
+    .bind(invite_id)
+    .bind(literal(&state)?)
+    .bind(match_id)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    row.as_ref().map(daily_invite_of).transpose()
+}
+
+pub async fn daily_invites_close_between(
+    t: &mut PgTx<'_>,
+    x: &str,
+    y: &str,
+    state: DailyInviteState,
+) -> Result<Vec<DailyInviteRow>, StoreError> {
+    if !is_uuid(x) || !is_uuid(y) {
+        return Ok(Vec::new());
+    }
+    run_as(t, Some(x)).await?;
+    let rows = sqlx::query(concat!(
+        "update public.daily_invites set state = $3::text
+          where kind = 'challenge' and state = 'open'
+            and ((from_profile = $1::uuid and to_profile = $2::uuid)
+              or (from_profile = $2::uuid and to_profile = $1::uuid))
+          returning ",
+        daily_invite_columns!()
+    ))
+    .bind(x)
+    .bind(y)
+    .bind(literal(&state)?)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    daily_invites_of(&rows)
+}
+
+/// One statement: the oldest seek that fits, locked `skip locked` so a claim running beside this one
+/// takes the next instead of waiting on this one's, then moved to `paired`.
+pub async fn daily_seek_claim(
+    t: &mut PgTx<'_>,
+    mode: QueueMode,
+    per_move_days: i32,
+    me: &str,
+    match_id: &str,
+    now: i64,
+) -> Result<Option<DailyInviteRow>, StoreError> {
+    if !is_uuid(me) {
+        return Ok(None);
+    }
+    run_as(t, Some(me)).await?;
+    let row = sqlx::query(concat!(
+        "update public.daily_invites set state = 'paired', match_id = $4::uuid
+          where state = 'open'
+            and id = (
+              select i.id from public.daily_invites i
+               where i.kind = 'seek' and i.state = 'open' and i.mode = $1::text
+                 and i.per_move_days = $2::integer and i.from_profile <> $3::uuid
+                 and i.expires_at > $5::bigint
+                 and not exists (
+                   select 1 from public.blocks b
+                    where (b.blocker = i.from_profile and b.blocked = $3::uuid)
+                       or (b.blocker = $3::uuid and b.blocked = i.from_profile))
+               order by i.created_at, i.id
+               limit 1
+               for update of i skip locked)
+          returning ",
+        daily_invite_columns!()
+    ))
+    .bind(literal(&mode)?)
+    .bind(per_move_days)
+    .bind(me)
+    .bind(match_id)
+    .bind(now)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    row.as_ref().map(daily_invite_of).transpose()
+}
+
+/// Through `daily_invites_open_expiry_idx`.
+pub async fn daily_invites_expire(t: &mut PgTx<'_>, now: i64) -> Result<Vec<DailyInviteRow>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(concat!(
+        "update public.daily_invites set state = 'expired'
+          where state = 'open' and expires_at <= $1::bigint
+          returning ",
+        daily_invite_columns!()
+    ))
+    .bind(now)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    daily_invites_of(&rows)
+}
+
+// daily notices
+
+/// Two statements: the row with its defaults (the table's: email on, `gen_random_uuid()`'s token),
+/// unless the account has one, then the read.
+pub async fn daily_notify_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<DailyNotifyRow, StoreError> {
+    run_as(t, Some(profile_id)).await?;
+    sqlx::query(
+        "insert into public.daily_notify (profile_id) values ($1::uuid)
+         on conflict (profile_id) do nothing",
+    )
+    .bind(profile_id)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let row = sqlx::query(concat!(
+        "select ",
+        daily_notify_columns!(),
+        " from public.daily_notify where profile_id = $1::uuid"
+    ))
+    .bind(profile_id)
+    .fetch_one(&mut **t)
+    .await
+    .map_err(db_error)?;
+    daily_notify_of(&row)
+}
+
+pub async fn daily_notify_put(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    email_on: bool,
+) -> Result<DailyNotifyRow, StoreError> {
+    run_as(t, Some(profile_id)).await?;
+    let row = sqlx::query(concat!(
+        "insert into public.daily_notify (profile_id, email_on) values ($1::uuid, $2::boolean)
+         on conflict (profile_id) do update set email_on = excluded.email_on
+         returning ",
+        daily_notify_columns!()
+    ))
+    .bind(profile_id)
+    .bind(email_on)
+    .fetch_one(&mut **t)
+    .await
+    .map_err(db_error)?;
+    daily_notify_of(&row)
+}
+
+pub async fn daily_notify_sent(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    email_at: Option<i64>,
+    push_at: Option<i64>,
+) -> Result<(), StoreError> {
+    run_as(t, Some(profile_id)).await?;
+    sqlx::query(
+        "insert into public.daily_notify (profile_id, last_email_at, last_push_at)
+         values ($1::uuid, $2::bigint, $3::bigint)
+         on conflict (profile_id) do update set
+           last_email_at = coalesce(excluded.last_email_at, public.daily_notify.last_email_at),
+           last_push_at = coalesce(excluded.last_push_at, public.daily_notify.last_push_at)",
+    )
+    .bind(profile_id)
+    .bind(email_at)
+    .bind(push_at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(())
+}
+
+/// A token that is no uuid is no token: false, not the cast's error.
+pub async fn daily_notify_unsubscribe(t: &mut PgTx<'_>, token: &str) -> Result<bool, StoreError> {
+    if !is_uuid(token) {
+        return Ok(false);
+    }
+    run_as(t, None).await?;
+    let done =
+        sqlx::query("update public.daily_notify set email_on = false where unsubscribe_token = $1::uuid")
+            .bind(token)
+            .execute(&mut **t)
+            .await
+            .map_err(db_error)?;
+    Ok(done.rows_affected() == 1)
+}
+
+// push subscriptions
+
+pub async fn push_subs_add(t: &mut PgTx<'_>, row: &PushSubRow) -> Result<(), StoreError> {
+    run_as(t, Some(row.profile_id.as_str())).await?;
+    sqlx::query(concat!(
+        "insert into public.push_subscriptions (",
+        push_sub_columns!(),
+        ")
+         values ($1::uuid, $2::uuid, $3::text, $4::text, $5::text, $6::bigint)
+         on conflict (endpoint) do update set
+           profile_id = excluded.profile_id, p256dh = excluded.p256dh, auth = excluded.auth,
+           created_at = excluded.created_at"
+    ))
+    .bind(row.id.as_str())
+    .bind(row.profile_id.as_str())
+    .bind(row.endpoint.as_str())
+    .bind(row.p256dh.as_str())
+    .bind(row.auth.as_str())
+    .bind(row.created_at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(())
+}
+
+pub async fn push_subs_of(t: &mut PgTx<'_>, profile_id: &str) -> Result<Vec<PushSubRow>, StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(Vec::new());
+    }
+    run_as(t, Some(profile_id)).await?;
+    let rows = sqlx::query(concat!(
+        "select ",
+        push_sub_columns!(),
+        " from public.push_subscriptions where profile_id = $1::uuid order by created_at, id"
+    ))
+    .bind(profile_id)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(push_sub_of).collect()
+}
+
+pub async fn push_subs_delete(
+    t: &mut PgTx<'_>,
+    endpoint: &str,
+    profile_id: Option<&str>,
+) -> Result<bool, StoreError> {
+    if profile_id.is_some_and(|id| !is_uuid(id)) {
+        return Ok(false);
+    }
+    run_as(t, profile_id).await?;
+    let done = sqlx::query(
+        "delete from public.push_subscriptions
+          where endpoint = $1::text and ($2::uuid is null or profile_id = $2::uuid)",
+    )
+    .bind(endpoint)
+    .bind(profile_id)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(done.rows_affected() > 0)
 }
 
 /// #3208's checks that need no database; `tests/store/round_trips.rs` and `tests/store/postgres.rs` hold

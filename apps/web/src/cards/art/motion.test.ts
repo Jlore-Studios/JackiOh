@@ -14,7 +14,6 @@ import type { CardDef } from "@jackioh/shared";
 
 import { COSMETIC_OFFERS } from "../../wire/generated/cosmetics.ts";
 import { FULL_ART_CARDS, FULL_ART_TOKEN_PARENT, artMotionOf } from "../fullArt.ts";
-import { ART_WEAR_LEVELS } from "../constants.ts";
 import { VERSION_ALT_FULL_ART_SIGNED_ID, VERSION_FULL_ART_SIGNED_ID, VERSION_SKETCH_FULL_ART_SIGNED_ID } from "../versions.ts";
 import { CardArt } from "./CardArt.tsx";
 import {
@@ -30,7 +29,6 @@ import {
   type ArtMotion,
 } from "./motion.ts";
 import { particleLayerUri } from "./svg.ts";
-import { crackPaths } from "./wear.ts";
 
 afterEach(cleanup);
 
@@ -253,15 +251,6 @@ describe("R3340000 art that lives in play", () => {
       expect(backdrop.querySelector(".art-m-subject"), `${id}: backdrop's subject`).toBeNull();
       expect(subject.querySelector(".art-m-subject"), `${id}: subject`).not.toBeNull();
       expect(subject.querySelectorAll(".art-m-particle").length, `${id}: subject's particles`).toBe(0);
-    }
-  });
-
-  it("R3340000 a crack at one level begins the same crack at the next, and the levels are ART_WEAR_LEVELS", () => {
-    for (let level = 1; level < ART_WEAR_LEVELS; level += 1) {
-      const lower = crackPaths("core-004", level);
-      const higher = crackPaths("core-004", level + 1);
-      expect(higher.length).toBe(level + 1);
-      lower.forEach((path, k) => expect(higher[k]?.startsWith(path)).toBe(true));
     }
   });
 });

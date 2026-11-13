@@ -21,7 +21,7 @@ import ConfirmLeaveMatch from "../game/ConfirmLeaveMatch.tsx";
 import { connectionWords } from "../game/connectionWords.ts";
 import Game from "../game/Game.tsx";
 import { ModifierList } from "../game/ModifierList.tsx";
-import { OnceRevealed } from "../game/Result.tsx";
+import { OnceRevealed, resultSaysOpponentLeft } from "../game/Result.tsx";
 import { getAudioEngine } from "../audio/index.ts";
 import { announceWallet } from "../economy/wallet.ts";
 import XpReveal from "../economy/XpReveal.tsx";
@@ -75,6 +75,10 @@ export const matchTestid = {
   gone: "match-gone",
   /** The button that retries at once while the connection line says Reconnecting…. */
   reconnect: "match-reconnect",
+  /** R3767000: the sentence for a game another tab or device took the seat of, before any view. */
+  elsewhere: "match-elsewhere",
+  /** R3767000: the button that takes the seat back, there and in the connection line. */
+  playHere: "match-play-here",
   /** Both seats' visible ranks and whether this game moves them (R604, R612). */
   ranks: "match-ranks",
   /** R2388000: one seat's rank before → after in a ranked match's result panel (`data-seat`). */
@@ -98,6 +102,14 @@ function ConnectionLine({ state, onReconnect }: { state: ConnectionState; onReco
           {" "}
           <button type="button" className="link-button" data-testid={matchTestid.reconnect} onClick={onReconnect}>
             {t("Reconnect now")}
+          </button>
+        </>
+      ) : null}
+      {state === "elsewhere" ? (
+        <>
+          {" "}
+          <button type="button" className="link-button" data-testid={matchTestid.playHere} onClick={onReconnect}>
+            {t("Play here")}
           </button>
         </>
       ) : null}
@@ -383,6 +395,22 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
         </ShellPanel>
       );
     }
+    // R3767000: another tab or device took the seat before the first view; nothing is loading, and a press
+    // takes the seat back.
+    if (match.connection === "elsewhere") {
+      return (
+        <ShellPanel testId={matchTestid.connecting}>
+          <p className="notice" data-testid={matchTestid.elsewhere} role="alert">
+            {t("This game is open in another tab or on another device.")}
+          </p>
+          <div className="row">
+            <button type="button" className="button-primary" data-testid={matchTestid.playHere} onClick={match.connect}>
+              {t("Play here")}
+            </button>
+          </div>
+        </ShellPanel>
+      );
+    }
     // A server that has slept takes a while to start again (apps/edge), which `slow` says once it has.
     return (
       <Loading what="Joining the match…" slow testId={matchTestid.connecting}>
@@ -496,6 +524,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
               connection={match.connection}
               ranked={ranks?.ranked ?? false}
               pushed={match.rematch}
+              opponentLeftInResult={view.result !== null && resultSaysOpponentLeft(view.result, view.viewer)}
             />
           ) : null}
           <SeriesContinue series={series} matchId={matchId} />

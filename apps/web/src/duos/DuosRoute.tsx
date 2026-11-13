@@ -41,7 +41,7 @@ import { messageOf } from "../net/errors.ts";
 
 const DEV_ONLY = import.meta.env.MODE !== "production";
 
-/** The connection line: the words for a player, the raw state for tests, and a retry while reconnecting. */
+/** The connection line: the words for a player, the raw state for tests, a retry while reconnecting and Play here (R3767000) once another tab or device took the seat. */
 function ConnectionLine({ state, onReconnect }: { state: DuosConnection; onReconnect: () => void }): ReactElement {
   return (
     <>
@@ -53,6 +53,14 @@ function ConnectionLine({ state, onReconnect }: { state: DuosConnection; onRecon
           {" "}
           <button type="button" className="link-button" data-testid={duosTestid.reconnect} onClick={onReconnect}>
             {t("Reconnect now")}
+          </button>
+        </>
+      ) : null}
+      {state === "elsewhere" ? (
+        <>
+          {" "}
+          <button type="button" className="link-button" data-testid={duosTestid.playHere} onClick={onReconnect}>
+            {t("Play here")}
           </button>
         </>
       ) : null}
@@ -310,6 +318,22 @@ export function DuosRoute({ matchId, token }: { matchId: string; token: string }
             <a className="button-primary" href={paths.together} onClick={followInApp(paths.together)}>
               {t("Back to Play together")}
             </a>
+          </div>
+        </ShellPanel>
+      );
+    }
+    // R3767000: another tab or device took the seat before the first view; nothing is loading, and a press
+    // takes the seat back.
+    if (match.connection === "elsewhere") {
+      return (
+        <ShellPanel testId={duosTestid.connecting}>
+          <p className="notice" data-testid={duosTestid.elsewhere} role="alert">
+            {t("This game is open in another tab or on another device.")}
+          </p>
+          <div className="row">
+            <button type="button" className="button-primary" data-testid={duosTestid.playHere} onClick={match.connect}>
+              {t("Play here")}
+            </button>
           </div>
         </ShellPanel>
       );

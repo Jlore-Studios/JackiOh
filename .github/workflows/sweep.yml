@@ -16,9 +16,7 @@
 #             id, then pass 2 (`--pass2` over every pass-1 file) over each of them, which plays only the
 #             ones at risk. A card whose process passes SWEEP_CARD_MINUTES, or fails, is cut short: its files are
 #             left out of the report, so it keeps the row an earlier report gave it, and the report says
-#             so. On GitHub's runners, never the owner's PC: its runner throttles a job to half a CPU while
-#             the PC is in use, which would read as timeouts (R977000's re-timer would mostly catch it,
-#             but the record should not lean on that).
+#             so.
 #   deliver   on main as it is when the sweep ends: the report under training/history/ as a report of
 #             record, `sweep --write` over the header's reports and it, generation.json's `shadowBan`,
 #             and, when SHADOW_BAN changed, the practice-claim fixture recorded again (R1303002) since the

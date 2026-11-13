@@ -164,14 +164,7 @@ mod tests {
         let mut asked = 0;
         while let Some(pending) = s.state().pending.clone() {
             assert_eq!((pending.kind, pending.player_id), (PromptKind::Discover, P2));
-            let first = pending
-                .options
-                .iter()
-                .find_map(|option| match &option.selection {
-                    Selection::Mode { option } => Some(option.clone()),
-                    _ => None,
-                })
-                .expect("a Weapon is offered");
+            let first = s.prompt_modes().into_iter().next().expect("a Weapon is offered");
             s.answer(json!(first));
             asked += 1;
         }

@@ -39,6 +39,9 @@ base64 = { version = "0.23.1" }
 uuid = { version = "1.27.0", features = ["v4", "serde"] }
 time = { version = "0.3.55", features = ["serde", "formatting", "parsing"] }
 getrandom = { version = "0.4.3" }
+# Web Push for the daily games (#3727, SPEC §9.13): RFC 8291's ECDH P-256, HKDF and AES-128-GCM and RFC
+# 8292's ES256 VAPID signature. Already in the lock through rustls.
+ring = { version = "0.17.14" }
 tracing = { version = "0.1.44" }
 tracing-subscriber = { version = "0.3.23", features = ["json", "env-filter"] }
 anyhow = { version = "1.0.104" }

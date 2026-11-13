@@ -25,7 +25,7 @@ export function WorkshopFrame({ bar, view, testId, children }: WorkshopFrameProp
   return (
     <div className="app-shell app-shell--wide tavern deckbuilder workshop" data-testid={testId} data-view={view}>
       <header className="db-header">
-        <BackLink to={paths.collection} title={t("Decks")}>
+        <BackLink to={paths.collectionSection("decks")} title={t("Decks")}>
           {bar}
         </BackLink>
       </header>

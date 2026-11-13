@@ -52,7 +52,7 @@
 # `rust (classify)` (#1370) reads every change to the cards, the engine and the AI, and runs exactly
 # when `full` does. The other docs are
 # not: `spec check` reads spec/, the radiant-standard test reads docs/radiant-audit.md, the catalog
-# test reads spec/07-tokens.md's table of tokens, web tests
+# test reads spec/07-tokens.md's table of tokens, radiant_stats.rs reads spec/08-catalog.md, web tests
 # read two spec/ notes (06-keywords.md and 05-card-types.md), and the `training gate` job reads
 # training/history/, and the tools' test of shadow_ban.rs reads its sweep-*.md reports. A
 # `full=false` diff prints every other line false too.
@@ -91,7 +91,8 @@
 #  - The files outside a crate that its tests read run that crate's groups: apps/web/src/wire/
 #    (the engine's and the server's export tests write it, and jackioh-wasm-core's constants test reads
 #    engineConfig.ts, #3093) engine and server, and tools, wasm; docs/radiant-audit.md
-#    (radiant_standard.rs) and spec/07-tokens.md (the catalog test's table of tokens, R1177001) cards; e2e/support/config.ts (the server's tests/api/e2e.rs) server;
+#    (radiant_standard.rs), spec/07-tokens.md (the catalog test's table of tokens, R1177001) and
+#    spec/08-catalog.md (radiant_stats.rs, a row's two Radiant stats cells, #3804) cards; e2e/support/config.ts (the server's tests/api/e2e.rs) server;
 #    crates/server/.env.example and apps/web/.env.production (the catalog version's sites, which the
 #    tools' patches tests read) tools, wasm, the first as well as server; crates/server/tests/'s
 #    actor/, api/, bots/, loops/ and support/ (acceptance.rs holds their helpers to support/'s,
@@ -271,7 +272,7 @@ for file in $files; do
       on $RUST
       ;;
     apps/web/src/wire/*) on rust_engine rust_server rust_tools_wasm ;;
-    docs/radiant-audit.md | spec/07-tokens.md) on rust_cards ;;
+    docs/radiant-audit.md | spec/07-tokens.md | spec/08-catalog.md) on rust_cards ;;
     e2e/support/config.ts) on rust_server ;;
     apps/web/.env.production | packages/* | apps/server/* | ladder/* | training/history/sweep-*.md) on rust_tools_wasm ;;
     apps/web/src/audio/voice-text.json) on rust_tools_wasm ;;

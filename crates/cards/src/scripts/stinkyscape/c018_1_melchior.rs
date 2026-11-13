@@ -181,19 +181,11 @@ mod tests {
         active_units_of(s.state(), player).iter().map(|unit| unit.id.clone()).collect()
     }
 
-    // Differs from Scenario::offered: the open Mode prompt's options, not the seat's legal actions.
-    fn offered(s: &Scenario) -> Vec<String> {
+    /// The open prompt is p1's Mode prompt.
+    fn assert_mode_prompt(s: &Scenario) {
         let pending = s.state().pending.as_ref().expect("MELCHIOR's Discover");
         assert_eq!(pending.kind, PromptKind::Mode);
         assert_eq!(pending.player_id, P1);
-        pending
-            .options
-            .iter()
-            .filter_map(|option| match &option.selection {
-                Selection::Mode { option } => Some(option.clone()),
-                _ => None,
-            })
-            .collect()
     }
 
     /// The keywords each of p1's two Units has after the Activate, the opponent's Unit checked bare and
@@ -284,7 +276,8 @@ mod tests {
             under_kept(MELCHIOR, script_v0_5_11o(), || {
                 let mut s = table(false, json!([VANILLA, VANILLA]), json!([VANILLA]));
                 s.activate(melchior_id(&s).as_str(), json!({ "ability": "keywords" }));
-                let options = offered(&s);
+                assert_mode_prompt(&s);
+                let options = s.prompt_modes();
                 assert_eq!(options.len(), 3, "{options:?}");
                 assert_eq!(options.iter().collect::<IndexSet<_>>().len(), 3, "{options:?}");
                 assert!(options.iter().all(|option| RANDOM_KEYWORD_POOL.contains(&option.as_str())), "{options:?}");

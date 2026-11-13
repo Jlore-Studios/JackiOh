@@ -220,6 +220,93 @@ mod signature {
         assert_signed(|state| field_unit(state, AI).tuning = Some(tuning.clone()));
     }
 
+    fn secret(
+        id: &str,
+        owner: PlayerId,
+        choice: Option<SecretChoice>,
+        revealed: Option<bool>,
+    ) -> SecretRecord {
+        SecretRecord {
+            id: id.to_string(),
+            owner,
+            choice,
+            revealed,
+        }
+    }
+
+    /// `base()` with the seat's one secret, minted as `id`, keeping `choice`.
+    fn keeping(id: &str, choice: SecretChoice) -> GameState {
+        let mut state = base();
+        state.secrets = Some(vec![secret(id, AI, Some(choice), None)]);
+        state
+    }
+
+    #[test]
+    fn r3772000_the_seats_own_secret_choice_is_signed() {
+        let signed = |choice| search_signature(&keeping("secret-1", choice), AI);
+        let (greed, attack, defend) = (
+            signed(SecretChoice::Greed),
+            signed(SecretChoice::Attack),
+            signed(SecretChoice::Defend),
+        );
+        assert_ne!(greed, attack);
+        assert_ne!(greed, defend);
+        assert_ne!(attack, defend);
+        // A secret held at all is signed.
+        assert_ne!(search_signature(&base(), AI), greed);
+    }
+
+    #[test]
+    fn r3772000_a_secrets_minted_id_is_not_signed() {
+        assert_eq!(
+            search_signature(&keeping("secret-1", SecretChoice::Attack), AI),
+            search_signature(&keeping("secret-9", SecretChoice::Attack), AI)
+        );
+    }
+
+    #[test]
+    fn r3772000_a_secrets_owner_and_revealed_flag_are_signed() {
+        let held = keeping("secret-1", SecretChoice::Attack);
+        let with = |record: SecretRecord| {
+            let mut state = held.clone();
+            state.secrets = Some(vec![record]);
+            search_signature(&state, AI)
+        };
+        let signatures = [
+            search_signature(&held, AI),
+            with(secret("secret-1", HUMAN, Some(SecretChoice::Attack), None)),
+            with(secret("secret-1", AI, Some(SecretChoice::Attack), Some(true))),
+            with(secret("secret-1", AI, None, None)),
+        ];
+        for (at, one) in signatures.iter().enumerate() {
+            for other in &signatures[at + 1..] {
+                assert_ne!(one, other);
+            }
+        }
+    }
+
+    #[test]
+    fn r3772000_two_secrets_sign_alike_in_either_order() {
+        let mut first = base();
+        first.secrets = Some(vec![
+            secret("secret-1", AI, Some(SecretChoice::Greed), None),
+            secret("secret-2", HUMAN, Some(SecretChoice::Defend), None),
+        ]);
+        let mut second = first.clone();
+        second.secrets = Some(vec![
+            secret("secret-7", HUMAN, Some(SecretChoice::Defend), None),
+            secret("secret-8", AI, Some(SecretChoice::Greed), None),
+        ]);
+        assert_eq!(search_signature(&first, AI), search_signature(&second, AI));
+    }
+
+    #[test]
+    fn r3772000_a_position_with_no_secret_signs_as_before() {
+        let mut emptied = base();
+        emptied.secrets = Some(Vec::new());
+        assert_eq!(search_signature(&base(), AI), search_signature(&emptied, AI));
+    }
+
     #[test]
     fn a_hand_cards_enchantments_are_signed() {
         assert_signed(|state| state.players[AI].hand[0].enchantments = Some(vec![Enchantment::CastOnDraw]));
@@ -229,7 +316,7 @@ mod signature {
     fn a_plain_position_signs_none_of_the_new_parts() {
         let signature = search_signature(&base(), AI);
         let new_parts = [
-            "Mp", "Lp", "Xp", "Tp", "Fp", "Jp", "Ep", "Cp", "Gp", "Yp", "Pp", "D", "K",
+            "Mp", "Lp", "Xp", "Tp", "Fp", "Jp", "Ep", "Cp", "Gp", "Yp", "Pp", "D", "K", "S",
         ];
         for part in signature.split('|') {
             assert!(
