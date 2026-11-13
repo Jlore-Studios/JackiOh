@@ -36781,7 +36781,10 @@
           "provider": "claude-8"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-13T08:38:27Z",
         "every": 5,
+        "findings": 1,
+        "follow_up": 3846,
         "head": "fa69e8703957de4a495b656a2736dc70983d9bdf",
         "issue": 3792,
         "merged_at": "2026-11-13T06:41:30Z",
@@ -36794,12 +36797,13 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "pending:59edfd63-1794558162",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/43392834109",
         "sha": "d412e3fd9fc32d7c2b86f10c329de8101cf00582",
         "started_at": "2026-11-13T08:23:21Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: a queued player is told when the server can't be reached, instead of reading that they are in the queue through the outage",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 234
