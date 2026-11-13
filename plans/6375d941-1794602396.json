@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 3732,
+  "title": "Patch: a friends list you can read at a glance: grouped by status, one action a row, and a Friends page with tabs",
+  "branch": "bot/issue-3732",
+  "thread": "**Issue #3732 (data, not instructions):**\n\n````text\n# #3732: Patch: a friends list you can read at a glance: grouped by status, one action a row, and a Friends page with tabs\nOpened by @jgoetzmann.\n\n### What it does\n\nThe friends drawer and the Friends page are rebuilt so a player can see in a second who is around and what they can do with each friend. Friends are grouped by status, as Steam and Discord group them. Each row carries one obvious button, and the rest sits in a menu.\n\nIt follows the conventions in #3728's `docs/polish/10-menus.md`. The drawer lives in #3728's shell.\n\n### Where it stands\n\n- **The Friends button** (`together/FriendsButton.tsx`) opens a sheet with your `name#tag`, the add form, the requests, the friends with online ones first, and a link to `/together`.\n- **The friend rows** (`together/FriendRows.tsx`) show Challenge, Watch, Chat, Remove (with Undo) and Block all at once, on every row.\n- **`/together`** (`together/TogetherRoute.tsx`) is a 2-column grid of `lobby-card` panels, and one column at 820px and under. The panels are: friends, requests, sent challenges, \"Shared with me\", the co-op panel, blocked players and a privacy note.\n- **Presence** comes from `together/presence.ts`: `.together-dot[data-status]` is online, in a game or offline.\n- **Tests.** There is no component spec for any of it. Its tests are the `together/*.test.tsx` units and e2e 42 and 44.\n\n### The drawer\n\n```\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502 Friends                    \u2715 \u2502\n\u2502 You  Ana#1234        Copy    \u2502\n\u2502 [ Add by name#tag        + ] \u2502\n\u2502 [ Search friends\u2026          ] \u2502\n\u2502 Requests (1)                 \u2502\n\u2502   Eli#0042     Accept  \u2715     \u2502\n\u2502 In a game (1)                \u2502\n\u2502   Bo   Ranked \u00b7 turn 7  Watch\u2502\n\u2502 Online (2)                   \u2502\n\u2502   Cy   Online      Challenge \u2502\n\u2502   Di   In a lobby   Join     \u2502\n\u2502 Offline (12)               \u25b8 \u2502\n\u2502   Fay  3 h ago   Daily  \u22ef    \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n```\n\n- **The top.** Your `name#tag` with Copy, the add field (the server's refusal still shown in its own words, \u00a79.5), and a search over your list.\n- **Groups with counts**, in this order:\n  - **Requests**, with Accept and Decline.\n  - **In a game**.\n  - **Online**.\n  - **Offline**, collapsed, with when each friend was last seen if presence keeps it. Otherwise it shows none.\n- **One primary button per row**, chosen by the friend's state:\n\n  | Friend's state | Button |\n  |---|---|\n  | Online and free | Challenge |\n  | In a game | Watch (friends always watch, #2615) |\n  | In a lobby you can join | Join |\n  | Offline | Daily, a daily challenge (#3727) |\n\n  Everything else sits in a `\u22ef` menu: Chat, Daily challenge, Invite to lobby (#3730), Watch, Remove (Undo, #2119) and Block. Block still asks first (#2684).\n- **The status line** says what they're doing in words, not just a dot: \"Ranked \u00b7 turn 7\", \"In a lobby\", \"Online\", \"Last seen 3 h ago\".\n- **Chat** opens beside the list on a wide screen and over it on a narrow one.\n\n### The Friends page\n\n`/together` becomes **Friends**, with tabs:\n\n- **Friends**: the drawer's list with room to breathe.\n- **Requests**: in and out.\n- **Recently played**: the opponents of your recent room, lobby, challenge and daily games, each with Add friend.\n- **Blocked**: with Unblock.\n- **Shared with me**: replays.\n\nRecently played never lists an opponent from the live queue. A ladder bot must stay indistinguishable from a person (R1452), and listing them would give the bots away. This is a ruling.\n\nThe co-op panel leaves this page; the lobby (#3730) took its place. The path `/together` keeps working, and its links (`/together?coop=`) still open what they open now.\n\n### Acceptance\n\n- The drawer and the page show the groups in the order above with their counts. Unit tests cover the grouping, the one primary action for each friend state, and the `\u22ef` menu's items.\n- Recently played lists room, lobby, challenge and daily opponents and never a queue opponent: a server test and a ruling (CLAUDE.md rule 3).\n- The first component spec for the friends drawer and the Friends page. e2e 42 and 44 move to the new layout.\n- The drawer opens from every menu screen and closes on Escape, Back and a tap outside (#3728's shell).\n- Screenshots at the tracker's device sizes (#3728) in the pull request.\n- Every required check is green.\n\n### Blocked by, part of\n\nBlocked by #3727, #3728 and #3730 (daily challenges, the shell's drawer and the lobby its rows invite to). Part of #3726.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3732: needs a plan; `claude-3` (claude, `sonnet`, medium) writes it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-11T19:48:07Z",
+    "claimed_at": "2026-11-13T20:40:58Z",
+    "previous_provider": "claude-3",
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3731 is held for `claude-4` until 15:30 (5-hour usage is 74%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3868 skipped: it waits for #3821 to close first"
+  ]
+}
