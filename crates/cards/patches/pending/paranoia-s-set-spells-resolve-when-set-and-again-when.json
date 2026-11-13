@@ -1,7 +1,7 @@
 {
   "title": "Patch: Paranoia's set Spells resolve when set and again when revealed",
   "sources": "#3806",
-  "notes": "Meditative #99 Paranoia: a Spell its controller sets face-down while it acts resolves as it is set, its choices prompted, and again as it reveals (R3806000); Radiant Paranoia's Echo only at the reveal. A card played face-down as a Trap no longer runs its Cry at the set (the engine had run a set card's Cry, or a set Spell's text, when it needed no choice), which is why the shipped cards set by a Buff's Cloaked in classify's games play differently; catalog check rejects a Trap or Field Trap face that prints Cry:. Stinkyscape+ #31 Soul Read's pick, the one Trap face that printed Cry:, is worded \"When played face down:\" and plays as before. A card chosen in a hand that an earlier effect of the same run put into a graveyard or an exile pile is passed by for the effects after it (R3806001, found by this patch's fuzz wave: a fused Shockwave447 + GIGA-ify left keywords on a graveyard card).",
+  "notes": "Meditative #99 Paranoia: a Spell its controller sets face-down while it acts resolves as it is set, its choices prompted, and again as it reveals (R3806000); Radiant Paranoia's Echo only at the reveal. A card played face-down as a Trap no longer runs its Cry at the set (the engine had run a set card's Cry, or a set Spell's text, when it needed no choice), which is why the shipped cards set by a Buff's Cloaked in classify's games play differently; catalog check rejects a Trap or Field Trap face that prints Cry:. Stinkyscape+ #31 Soul Read's pick, the one Trap face that printed Cry:, is worded \"When played face down:\" and plays as before. A card chosen in a hand that an earlier effect of the same run put into a graveyard or an exile pile is passed by for the effects after it (R3806001, found by this patch's fuzz wave: a fused Shockwave447 + GIGA-ify left keywords on a graveyard card). A fused Spell answers its end-of-turn hook from the graveyard only when every end-of-turn text in it is a Spell's (R3806002, found by the same wave: Combo-Index fused into Faction: ETHICS raised its grade on a graveyard card).",
   "player": {
     "title": "Paranoia resolves set Spells twice",
     "new": [],
@@ -15,7 +15,8 @@
     ],
     "fixes": [
       "A card set face-down by Cloaked no longer runs its Cry, or a Spell's effect, as it is set: it waits for the reveal, unless Paranoia resolves the Spell as it is set.",
-      "A card you pick from your hand that the same card's effect first sends to the graveyard or exile is no longer changed there."
+      "A card you pick from your hand that the same card's effect first sends to the graveyard or exile is no longer changed there.",
+      "A Spell fused with a permanent's end-of-turn text no longer runs that text from the graveyard."
     ]
   },
   "cards": [
