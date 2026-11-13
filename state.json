@@ -16222,13 +16222,7 @@
           "claude": "strong"
         }
       },
-      "waiting_comment": 6837979145,
-      "wip": {
-        "at": "2026-11-12T22:42:14Z",
-        "provider": "claude-3",
-        "sha": "a7236b3e7031f475585ee40cf27c7994149789ac",
-        "start": "8a8dfa5b618a32fbcf9d1ce00ed2ba13f1d989c8"
-      }
+      "waiting_comment": 6837979145
     },
     "3798": {
       "action": "review",
