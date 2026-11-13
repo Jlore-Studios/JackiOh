@@ -37,7 +37,7 @@ fn conductor(radiant: bool) -> Script {
             }
             vec![
                 shuffle_random_from_catalog(json_as(json!({
-                    "query": { "tags": ["Prime"] },
+                    "query": crate::query::prime_cards(),
                     "count": 1,
                 }))),
                 draw_created(),

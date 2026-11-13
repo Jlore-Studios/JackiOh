@@ -4,7 +4,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ActionBody, CombatForecast, PlayerView } from "@jackioh/shared";
-import { MATCH_OVER_CLOSE_CODE, POST_GAME_FRAME_VERSION, SPECTATOR_EMOTE_HAND_SIZE, WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
+import {
+  MATCH_OVER_CLOSE_CODE,
+  POST_GAME_FRAME_VERSION,
+  SEAT_TAKEN_CLOSE_CODE,
+  SPECTATOR_EMOTE_HAND_SIZE,
+  WS_PING_INTERVAL_SECONDS,
+} from "@jackioh/server-config";
 
 import { DEFAULT_CARD_COSMETICS, cosmeticsOf, type CardCosmetics, type CosmeticKind } from "../cards/cosmetics.ts";
 import { socketProtocols, tokenFromProtocols } from "../net/socketProtocols.ts";
@@ -1053,6 +1059,67 @@ describe("a silent socket", () => {
     window.dispatchEvent(new Event("online"));
     expect(live.frames()).toHaveLength(3);
     expect(h.sockets).toHaveLength(1);
+  });
+});
+
+describe("R3767000 a seat another tab or device took", () => {
+  it("R3767000 a close with SEAT_TAKEN_CLOSE_CODE leaves the client elsewhere: no backoff, no socket however far the clock goes, the last view kept, no error", () => {
+    const h = connected();
+    h.socket().deliver({ type: "view", view: baseView({ turn: 4 }) });
+    h.socket().drop(SEAT_TAKEN_CLOSE_CODE, "this game is open somewhere else");
+    expect(h.client.snapshot().connection).toBe("elsewhere");
+    expect(h.client.snapshot().error).toBeNull();
+    expect(h.client.snapshot().view?.turn).toBe(4);
+    expect(h.pending()).toBe(0);
+
+    h.now(10 * SILENCE_MS);
+    h.wake();
+    h.runTimers();
+    expect(h.sockets).toHaveLength(1);
+    expect(h.client.snapshot().connection).toBe("elsewhere");
+  });
+
+  it("R3767000 a close with 1000 still reconnects", () => {
+    const h = connected();
+    h.socket().drop(1000, "replaced by a new socket");
+    expect(h.client.snapshot().connection).toBe("reconnecting");
+    expect(h.pending()).toBe(1);
+
+    h.runTimers();
+    expect(h.sockets).toHaveLength(2);
+  });
+
+  it("R3767000 connect() takes the seat back by opening exactly one socket", () => {
+    const h = connected();
+    h.socket().drop(SEAT_TAKEN_CLOSE_CODE, "this game is open somewhere else");
+
+    h.client.connect();
+    expect(h.sockets).toHaveLength(2);
+    expect(h.client.snapshot().connection).toBe("connecting");
+    h.client.connect();
+    expect(h.sockets).toHaveLength(2);
+
+    h.socket().open();
+    expect(h.client.snapshot().connection).toBe("open");
+    expect(h.socket().frames()).toEqual([HELLO]);
+  });
+
+  it("R3767000 a tab's own replacement of a stale socket never reaches elsewhere", () => {
+    const h = connected();
+    const old = h.socket();
+    h.now(SILENCE_MS + 1);
+    h.wake();
+    h.runTimers();
+    expect(h.sockets).toHaveLength(2);
+
+    // The server closes the stale socket with SEAT_TAKEN_CLOSE_CODE as the successor attaches; this tab let
+    // that socket go itself, so the close is not its seat taken.
+    old.drop(SEAT_TAKEN_CLOSE_CODE, "this game is open somewhere else");
+    expect(h.client.snapshot().connection).toBe("reconnecting");
+
+    h.socket().open();
+    expect(h.client.snapshot().connection).toBe("open");
+    expect(h.sockets).toHaveLength(2);
   });
 });
 

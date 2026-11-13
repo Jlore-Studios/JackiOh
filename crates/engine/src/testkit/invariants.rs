@@ -15,8 +15,8 @@
 //! `chosenExertion` snapshots the chosen attacker's or switcher's identity and layered Deft before
 //! reduction, since combat may take it off the field before its event.
 //!
-//! The sixteen checks (a message leads with its id and cites the SPEC reference, so `signatureOf` groups one
-//! bug):
+//! The seventeen checks (a message leads with its id and cites the SPEC reference, so `signatureOf` groups
+//! one bug):
 //!   I1 no sick attack is offered (§4.1, §6.1, R83, R171): not in `attack_targets`, not as the chosen
 //!      `attack`.
 //!   I2 one declared attack per stint per turn, two with Windfury (R636); forced attacks are skipped (R53).
@@ -61,6 +61,11 @@
 //!      graveyard or exile card is owned and controlled by its side (R747, R2618000, R73, R12), a card off
 //!      the field holds none of R78's field-only state, nor a graveyard or exile card R766's price
 //!      (`field_state_held`).
+//!   I17 the state check ran (§4.5): on I7's settled state no field unit at layered health 0 or less but
+//!      an Indestructible one with max health above 0 (R69) or a Dormant one (R3539003), and no seat that
+//!      `can_lose` (R2201000) at hero health 0 or less (a Duos seat's is its pool's, §13.4); on every state
+//!      mana and card `damage` are 0 or more (§2.3), and every `damage` event deals more than 0 (R63,
+//!      R1361, R1362).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -72,6 +77,7 @@ use crate::config::{
 };
 use crate::damage::DamageTarget;
 use crate::duos::{DuosState, duos_view_for};
+use crate::layers::AuraTable;
 use crate::play_choices::PlayAction;
 use crate::prompts::prompt_owner_of;
 use crate::reduce::ReduceResult;
@@ -699,6 +705,79 @@ fn card_record_findings(state: &GameState) -> Vec<String> {
                     ));
                 }
             }
+        }
+    }
+    found
+}
+
+/// I17 (the header's): what §4.5's state check and §4.4's pipeline leave (§2.3, R63, R69, R2201000,
+/// R3539003). A Duos seat's hero is its team's pool's (§13.4), bounded by `DuosInvariantMonitor::after`:
+/// B15's `sync_pools` writes the pool into a spent hero in the other duel, where no state check runs.
+fn state_check_findings(events: &[GameEvent], state: &GameState) -> Vec<String> {
+    let mut found = Vec::new();
+    let turn = state.turn;
+    for event in events {
+        if let GameEvent::Damage {
+            target_id, amount, ..
+        } = event
+            && *amount <= 0
+        {
+            found.push(format!(
+                "I17 empty damage: a damage event of {amount} on {target_id} on turn {turn}; a hit of 0 \
+                 emits none (§4.4, R63)"
+            ));
+        }
+    }
+    for player in PLAYER_IDS {
+        let mana = state.players[player].mana;
+        if mana.current < 0 || mana.max < 0 {
+            found.push(format!(
+                "I17 negative mana: {player} holds {} of {} mana on turn {turn} (§2.3)",
+                mana.current, mana.max
+            ));
+        }
+    }
+    for placed in placed_cards(state) {
+        let card = placed.card;
+        if card.damage < 0 {
+            found.push(format!(
+                "I17 negative damage: {} ({}) in {} holds damage {} on turn {turn} (§4.4)",
+                card.id,
+                card.def_id,
+                placed.slot(),
+                card.damage
+            ));
+        }
+    }
+    if state.result.is_some() || state.pending.is_some() || state.mulligan.is_some() {
+        return found;
+    }
+    let auras = AuraTable::new(state);
+    for player in PLAYER_IDS {
+        for unit in crate::zones::units_on_field_of(state, player) {
+            // R3539003: no health judges a Dormant card, so a 0/0 hull stands.
+            if crate::slumber::is_slumbering(unit) {
+                continue;
+            }
+            let view = auras.unit_view(unit);
+            let stands = has_keyword(&view.keywords, KeywordKind::Indestructible) && view.max_health > 0;
+            if view.health <= 0 && !stands {
+                found.push(format!(
+                    "I17 dead unit left standing: {} is at {} health of {} on turn {turn} with no prompt \
+                     open (§4.5, R69)",
+                    name_of(unit),
+                    view.health,
+                    view.max_health
+                ));
+            }
+        }
+        let side = &state.players[player];
+        if side.duos.is_none() && crate::state::can_lose(state, player) && side.hero.health <= 0 {
+            found.push(format!(
+                "I17 live hero at 0: {player}'s hero has {} health on turn {turn} and the game goes on \
+                 (§2.5, §4.5, R2201000)",
+                side.hero.health
+            ));
         }
     }
     found
@@ -2078,8 +2157,8 @@ fn name_of(card: &CardInstance) -> String {
 
 /// The monitor, made by `create_invariant_monitor`: the shadow of this file's header and the checks
 /// run against it. `before` is I1, I3 and I12's chosen-action snapshot, `after` feeds one action's
-/// events into the shadow and runs I2, I4, I5, I7, I9, I10, I11, I12 and I16, `hidden` is I6, I13 and I15 for
-/// both seats, `unlisted` is I8 and `listed` is I14.
+/// events into the shadow and runs I2, I4, I5, I7, I9, I10, I11, I12, I16 and I17, `hidden` is I6, I13 and
+/// I15 for both seats, `unlisted` is I8 and `listed` is I14.
 #[derive(Clone, Debug)]
 pub struct InvariantMonitor {
     turn: i32,
@@ -2668,7 +2747,7 @@ impl InvariantMonitor {
         found
     }
 
-    /// Feeds one action's events into the shadow, then I2, I4, I5, I7, I9–I12 and I16 against the
+    /// Feeds one action's events into the shadow, then I2, I4, I5, I7, I9–I12, I16 and I17 against the
     /// resulting state.
     pub fn after(&mut self, events: &[GameEvent], state: &GameState) -> Vec<String> {
         let mut found: Vec<String> = Vec::new();
@@ -3192,6 +3271,8 @@ impl InvariantMonitor {
         found.extend(unit_token_pile_findings(state));
         // I16: every card's own record agrees with the pile that holds it (§3.2, R78, R766).
         found.extend(card_record_findings(state));
+        // I17: the state check ran and the numbers are in range (§2.3, §4.5, R63, R69).
+        found.extend(state_check_findings(events, state));
         // A chosen action can confirm at most this one reduction. In Duos, `after` also visits the
         // untouched duel, so no marker may survive to match another duel's later event.
         self.chosen_exertion = None;
@@ -3345,8 +3426,8 @@ impl DuosInvariantMonitor {
             .collect()
     }
 
-    /// Feeds one action's events into the monitors, asserts I2, I4, I5, I7, I9–I12 and I16 against both
-    /// duels, and checks pool bounds (§13.4) for both teams.
+    /// Feeds one action's events into the monitors, asserts I2, I4, I5, I7, I9–I12, I16 and I17 against
+    /// both duels, and checks pool bounds (§13.4) for both teams.
     pub fn after(&mut self, events: &[DuosEvent], state: &DuosState) -> Vec<String> {
         let mut found = Vec::new();
         let mut duel_events: [Vec<GameEvent>; DUOS_DUELS] = [Vec::new(), Vec::new()];
@@ -3511,5 +3592,34 @@ mod tests {
                 .iter()
                 .any(|f| f.contains("pool bound: live game has team a pool 0 <= 0"))
         );
+    }
+
+    #[test]
+    fn duos_monitor_leaves_a_duos_seat_s_hero_to_the_pool_bound_but_holds_its_mana_i17() {
+        let mut state = crate::testkit::duos_scenario::duos_scenario("i17-duos", test_decks(), None);
+        let monitor = create_duos_invariant_monitor(&state);
+        // The premise: duel 0 is settled and its p1 is a Duos seat, so only the `duos` guard stops I17.
+        let duel = &state.duels[0];
+        assert!(duel.result.is_none() && duel.pending.is_none() && duel.mulligan.is_none());
+        assert!(duel.players[PlayerId::P1].duos.is_some());
+        let i17 = |found: Vec<String>| -> Vec<String> {
+            found.into_iter().filter(|f| f.contains(": I17 ")).collect()
+        };
+
+        // B15's `sync_pools` writes the pool into a spent hero where no state check runs (§13.4).
+        state.duels[0].players[PlayerId::P1].hero.health = 0;
+        assert_eq!(i17(monitor.clone().after(&[], &state)), Vec::<String>::new());
+
+        // The contrast: the same hero on a 1v1 seat is a live hero at 0.
+        let mut one_v_one = state.clone();
+        one_v_one.duels[0].players[PlayerId::P1].duos = None;
+        let found = i17(monitor.clone().after(&[], &one_v_one));
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].starts_with("duel 0: I17 live hero at 0"), "{}", found[0]);
+
+        state.duels[0].players[PlayerId::P1].mana.current = -1;
+        let found = i17(monitor.clone().after(&[], &state));
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].starts_with("duel 0: I17 negative mana"), "{}", found[0]);
     }
 }

@@ -11,7 +11,7 @@ use std::sync::{Arc, LazyLock, Mutex};
 use indexmap::IndexMap;
 use serde_json::{Value, json};
 
-use jackioh_engine::{PlayerId, pick_portrait_from_seed};
+use jackioh_engine::{LeanPick, PlayerId, pick_portrait_from_seed};
 
 use crate::actor::engine::{deal_random_deck, lean_of};
 use crate::api::crypto::{is_well_formed_code, normalize_code, random_code};
@@ -27,8 +27,10 @@ use jackioh_shared::series::{NewSeriesInput, NewSeriesSide};
 use crate::app::{App, now_ms};
 use crate::config::{MAX_OPEN_ROOMS_PER_HOST, ROOM_CODE_LENGTH, ROOM_CODE_TTL_SECONDS};
 use crate::db::store::{MatchSeat, QueueMode, Room, SeriesRow, StartMatchInput};
+use crate::loadout::DeckSlots;
 use crate::seats::Seat;
 use crate::social::live::push_social;
+use jackioh_shared::deck::FrozenDeck;
 
 /// SPEC §11 R149: bounded retries against the codes in use; eight is far more than a 30-bit space
 /// (R104) needs against the codes R110 has not released. Config's, like R79's clocks.
@@ -197,9 +199,63 @@ async fn joinable_room(app: &App, typed: &str) -> Result<Room, ApiError> {
     Ok(room)
 }
 
+/// The host's side of a two-seat start, what they froze before the joiner came: a room's, or a daily
+/// challenge's or seek's (§9.13, which keeps no room).
+pub(crate) struct HostSide {
+    pub profile_id: String,
+    pub mode: QueueMode,
+    pub deck: Vec<String>,
+    pub portrait: Option<String>,
+    pub deck_slots: Option<DeckSlots>,
+    pub lean: Option<LeanPick>,
+}
+
+impl HostSide {
+    fn of_room(room: &Room) -> HostSide {
+        HostSide {
+            profile_id: room.host_profile_id.clone(),
+            mode: room.mode,
+            deck: room.host_deck.clone(),
+            portrait: room.host_portrait.clone().flatten(),
+            deck_slots: room.host_deck_slots.clone(),
+            lean: room.host_lean,
+        }
+    }
+
+    /// The side `choice` freezes for `profile_id`: a Best-of-1 deck or an All Random lean; `None`
+    /// for a Conquest trio, which seats through its series.
+    pub(crate) fn of_choice(profile_id: &str, choice: &FrozenChoice) -> Option<HostSide> {
+        let side = |mode, deck: Option<&FrozenDeck>, lean| HostSide {
+            profile_id: profile_id.to_string(),
+            mode,
+            deck: deck.map(|deck| deck.cards.clone()).unwrap_or_default(),
+            portrait: deck.and_then(|deck| deck.portrait.clone().flatten()),
+            deck_slots: deck.and_then(|deck| deck.slots.clone()),
+            lean,
+        };
+        match choice {
+            FrozenChoice::Bo1 { deck } => Some(side(QueueMode::Bo1, Some(deck), None)),
+            FrozenChoice::Random { lean } => Some(side(QueueMode::Random, None, *lean)),
+            FrozenChoice::Bo3 { .. } => None,
+        }
+    }
+}
+
 /// The two seats of a room's match: R1989000 seats host and joiner by seed coin.
 fn room_seats(
     room: &Room,
+    joiner_id: &str,
+    joiner: &FrozenChoice,
+    seed: &str,
+    host_is_p1: bool,
+) -> Result<(MatchSeat, MatchSeat), ApiError> {
+    seats_of_sides(&HostSide::of_room(room), joiner_id, joiner, seed, host_is_p1)
+}
+
+/// The two seats, host's then joiner's, of a start between `host` and `joiner_id`, who froze
+/// `joiner`: R1989000 seats them by the seed's coin (`host_is_p1`).
+pub(crate) fn seats_of_sides(
+    host: &HostSide,
     joiner_id: &str,
     joiner: &FrozenChoice,
     seed: &str,
@@ -210,7 +266,7 @@ fn room_seats(
     } else {
         (PlayerId::P2, PlayerId::P1)
     };
-    if room.mode == QueueMode::Random {
+    if host.mode == QueueMode::Random {
         // R258, R642: decks and portraits dealt by seat; R1372, R924000: each leans on its player's set.
         let joiner_lean = match joiner {
             FrozenChoice::Random { lean } => *lean,
@@ -218,11 +274,11 @@ fn room_seats(
         };
         return Ok((
             MatchSeat {
-                profile_id: room.host_profile_id.clone(),
+                profile_id: host.profile_id.clone(),
                 player: host_player,
                 deck: deal_random_deck(
                     &format!("{seed}:{}-deck", host_player.as_str()),
-                    lean_of(room.host_lean),
+                    lean_of(host.lean),
                 ),
                 portrait: Some(
                     pick_portrait_from_seed(&format!("{seed}:portrait:{}", host_player.as_str()))
@@ -256,12 +312,12 @@ fn room_seats(
     };
     Ok((
         MatchSeat {
-            profile_id: room.host_profile_id.clone(),
+            profile_id: host.profile_id.clone(),
             player: host_player,
-            deck: room.host_deck.clone(),
-            portrait: room.host_portrait.clone().flatten(),
+            deck: host.deck.clone(),
+            portrait: host.portrait.clone(),
             // R1834002: each deck's slots, frozen with it: the host's at the room's making.
-            deck_slots: room.host_deck_slots.clone(),
+            deck_slots: host.deck_slots.clone(),
         },
         MatchSeat {
             profile_id: joiner_id.to_string(),

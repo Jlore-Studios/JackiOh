@@ -71,6 +71,35 @@ import {
   faceModel,
   writeCardSettings,
 } from "../cards/index.ts";
+import {
+  DEFAULT_SORT,
+  FILTER_KEYWORDS,
+  costBucket,
+  sortPool,
+  type SortKey,
+} from "../game/deckbuilder/filters.ts";
+import {
+  DB_EMPTY,
+  DB_FILTER_CLEAR,
+  DB_RESULT_COUNT,
+  DB_SEARCH,
+  DB_SORT,
+  DB_SORT_DIR,
+  filterCostId,
+  filterKeywordId,
+  filterOwnershipId,
+  filterRarityId,
+  filterSetId,
+  filterTypeId,
+} from "../game/deckbuilder/testids.ts";
+import { dialogTestid } from "../game/Dialog.tsx";
+import { currentCatalog } from "../game/currentCatalog.ts";
+import { DECK_SIZE } from "../game/deckbuilder/deckSize.ts";
+import { poolFrom } from "../game/deckbuilder/loadout.ts";
+import type { DeckItem, TrioItem } from "../game/deckbuilder/sync.ts";
+import { savedDeck, savedTrio } from "../game/deckbuilder/testkit.ts";
+import { stubTabletNarrow } from "../test/phoneBar.ts";
+import { DECK_NAME_MAX_LENGTH } from "@jackioh/server-config";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { packName } from "../packs/packs.ts";
@@ -94,7 +123,10 @@ import {
   cardNameOf,
   cardStrip,
   collectionSectionOf,
+  CARDS_SORTS,
   collectionTestid as T,
+  deckModes,
+  ownedIds,
   setCompletions,
 } from "./collection.ts";
 import { collectionOwning, fullCollection, track, tracksOf } from "./fixtures.ts";
@@ -164,19 +196,24 @@ describe("#1307 setCompletions", () => {
 });
 
 describe("#1307 OwnedCards", () => {
-  it("shows each set's completion count", () => {
+  it("shows each set's completion count, its bar and the owned count", () => {
     render(<OwnedCards collection={collectionOwning(["core-001"])} defs={DEFS} />);
 
     expect(screen.getByTestId(T.completion("Core"))).toHaveTextContent("1 of 2");
     expect(screen.getByTestId(T.completion("Classic"))).toHaveTextContent("0 of 1");
-    expect(screen.queryByTestId(T.card("core-001"))).toBeNull();
+    // R3734000: the whole catalog is one grid, so no card waits behind a toggle; the count is "owned / total".
+    expect(screen.getByTestId(T.card("core-001"))).toBeInTheDocument();
+    expect(screen.getByTestId(T.count)).toHaveTextContent("1 / 3");
+    const bar = screen.getByTestId(T.setProgress("Core"));
+    expect(bar.tagName).toBe("PROGRESS");
+    expect(bar).toHaveAttribute("value", "1");
+    expect(bar).toHaveAttribute("max", "2");
+    expect(screen.getByTestId(T.setProgress("Classic"))).toHaveAttribute("value", "0");
   });
 
   it("draws an unowned card as a locked silhouette", () => {
     render(<OwnedCards collection={collectionOwning(["core-001"])} defs={DEFS} />);
-    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
 
-    expect(screen.getByTestId(T.setToggle("Core"))).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByTestId(T.card("core-001"))).toHaveAttribute("data-owned", "true");
     expect(screen.getByTestId(T.card("core-001"))).not.toHaveTextContent("Locked");
     expect(screen.getByTestId(T.card("core-002"))).toHaveAttribute("data-owned", "false");
@@ -184,18 +221,19 @@ describe("#1307 OwnedCards", () => {
     expect(screen.queryByTestId(T.card("core-051-1"))).toBeNull();
   });
 
-  it("opens one set at a time", () => {
+  it("R3734000 draws every set's cards in one grid, with the filters and a search that is always on show", () => {
     render(<OwnedCards collection={collectionOwning([])} defs={DEFS} />);
-    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
-    fireEvent.click(screen.getByTestId(T.setToggle("Classic")));
 
-    expect(screen.queryByTestId(T.card("core-001"))).toBeNull();
+    expect(within(screen.getByTestId(T.grid)).getAllByRole("listitem")).toHaveLength(3);
+    expect(screen.getByTestId(T.card("core-001"))).toBeInTheDocument();
     expect(screen.getByTestId(T.card("classic-001"))).toBeInTheDocument();
+    expect(screen.getByTestId(DB_SEARCH)).toBeInTheDocument();
+    expect(screen.getByTestId(T.filters)).toBeInTheDocument();
+    expect(screen.queryByTestId(T.filtersOpen)).toBeNull();
   });
 
   it("a locked card still opens its view, and its text and meta are one click away", () => {
     render(<OwnedCards collection={collectionOwning(["core-001"])} defs={DEFS} />);
-    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
     fireEvent.click(screen.getByTestId(T.card("core-002")));
 
     expect(screen.getByTestId(T.cardView)).toHaveAttribute("data-card", "core-002");
@@ -217,7 +255,6 @@ describe("#1307 OwnedCards", () => {
 
   it("an owned card's view and its detail say so", () => {
     render(<OwnedCards collection={collectionOwning(["core-001"])} defs={DEFS} />);
-    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
     fireEvent.click(screen.getByTestId(T.card("core-001")));
 
     expect(screen.getByTestId(T.cardView)).toHaveTextContent("Owned");
@@ -226,11 +263,221 @@ describe("#1307 OwnedCards", () => {
   });
 });
 
+describe("R3734000 the Cards tab: search, filters, sorts and ownership over one grid", () => {
+  /** Every 24th collected card: a few of each set, type, rarity and cost, and the keywords some of them print. */
+  const SAMPLE = COLLECTED_DEFS.filter((_, at) => at % 24 === 0);
+  /** The first, third and fifth of them are owned. */
+  const OWNED_IDS = [0, 2, 4].map((at) => SAMPLE[at]?.id ?? "");
+
+  function mount(): void {
+    render(<OwnedCards collection={collectionOwning(OWNED_IDS)} defs={SAMPLE} />);
+  }
+
+  function shown(): string[] {
+    const grid = screen.queryByTestId(T.grid);
+    return grid === null ? [] : within(grid).queryAllByRole("listitem").map((item) => item.getAttribute("data-card") ?? "");
+  }
+
+  /** The sample cards `keep` accepts, in the order the grid draws them: by cost, then name, then index. */
+  function expected(keep: (def: CardDef) => boolean): string[] {
+    return sortPool(
+      SAMPLE.filter(keep).map((def) => def.id),
+      { version: "test", cards: Object.fromEntries(SAMPLE.map((def) => [def.id, def])) },
+      DEFAULT_SORT,
+    );
+  }
+
+  function narrows(keep: (def: CardDef) => boolean): void {
+    const want = expected(keep);
+    // A chip that kept everything or nothing would prove nothing about the wiring.
+    expect(want.length).toBeGreaterThan(0);
+    expect(want.length).toBeLessThan(SAMPLE.length);
+    expect(shown()).toEqual(want);
+  }
+
+  it("R3734000 the grid starts with every card of the sample, by cost", () => {
+    mount();
+    expect(shown()).toEqual(expected(() => true));
+    expect(screen.getByTestId(DB_RESULT_COUNT)).toHaveAttribute("data-count", String(SAMPLE.length));
+  });
+
+  it("R3734000 the search narrows the grid by a card's name, and a search that finds nothing says so", () => {
+    mount();
+    const target = SAMPLE[3];
+    if (target === undefined) throw new Error("sample");
+    fireEvent.change(screen.getByTestId(DB_SEARCH), { target: { value: target.name } });
+    expect(shown()).toContain(target.id);
+    expect(shown().length).toBeLessThan(SAMPLE.length);
+    fireEvent.change(screen.getByTestId(DB_SEARCH), { target: { value: "zzz-no-such-card" } });
+    expect(shown()).toEqual([]);
+    expect(screen.queryByTestId(T.grid)).toBeNull();
+    expect(screen.getByTestId(DB_EMPTY)).toBeInTheDocument();
+  });
+
+  it("R3734000 a cost chip narrows the grid to that cost", () => {
+    mount();
+    const bucket = costBucket(SAMPLE[0]?.cost ?? 0);
+    fireEvent.click(screen.getByTestId(filterCostId(bucket)));
+    narrows((def) => costBucket(def.cost) === bucket);
+  });
+
+  it("R3734000 a set chip narrows the grid to that set", () => {
+    mount();
+    const set = SAMPLE[0]?.set ?? "Core";
+    fireEvent.click(screen.getByTestId(filterSetId(set)));
+    narrows((def) => def.set === set);
+  });
+
+  it("R3734000 a type chip narrows the grid to that type", () => {
+    mount();
+    const type = SAMPLE[0]?.type ?? "Unit";
+    fireEvent.click(screen.getByTestId(filterTypeId(type)));
+    narrows((def) => def.type === type);
+  });
+
+  it("R3734000 a rarity chip narrows the grid to that rarity", () => {
+    mount();
+    const rarity = SAMPLE[0]?.rarity;
+    if (rarity === undefined || rarity === "Token") throw new Error("sample");
+    fireEvent.click(screen.getByTestId(filterRarityId(rarity)));
+    narrows((def) => def.rarity === rarity);
+  });
+
+  it("R3734000 a keyword chip narrows the grid to the cards that print it, on either face", () => {
+    mount();
+    const kinds = (def: CardDef): string[] => [...def.base.keywords, ...def.radiant.keywords].map((keyword) => keyword.kind);
+    const kind = FILTER_KEYWORDS.find((candidate) => {
+      const holders = SAMPLE.filter((def) => kinds(def).includes(candidate)).length;
+      return holders > 0 && holders < SAMPLE.length;
+    });
+    if (kind === undefined) throw new Error("no keyword in the sample splits it");
+    fireEvent.click(screen.getByTestId(filterKeywordId(kind)));
+    narrows((def) => kinds(def).includes(kind));
+  });
+
+  it("R3734000 owned and missing split the grid exactly, and All brings it back", () => {
+    mount();
+    fireEvent.click(screen.getByTestId(filterOwnershipId("owned")));
+    expect(shown()).toEqual(expected((def) => OWNED_IDS.includes(def.id)));
+    expect(screen.getByTestId(filterOwnershipId("owned"))).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByTestId(filterOwnershipId("missing")));
+    expect(shown()).toEqual(expected((def) => !OWNED_IDS.includes(def.id)));
+    // A card only hides: the locked silhouettes are the missing ones.
+    for (const id of shown()) expect(screen.getByTestId(T.card(id))).toHaveAttribute("data-owned", "false");
+    fireEvent.click(screen.getByTestId(filterOwnershipId("all")));
+    expect(shown()).toEqual(expected(() => true));
+  });
+
+  it("R3734000 Clear filters puts every chip, the search and the ownership view back", () => {
+    mount();
+    fireEvent.click(screen.getByTestId(filterOwnershipId("owned")));
+    fireEvent.click(screen.getByTestId(filterTypeId(SAMPLE[0]?.type ?? "Unit")));
+    fireEvent.change(screen.getByTestId(DB_SEARCH), { target: { value: "a" } });
+    fireEvent.click(screen.getByTestId(DB_FILTER_CLEAR));
+    expect(shown()).toEqual(expected(() => true));
+    expect(screen.getByTestId(DB_SEARCH)).toHaveValue("");
+    expect(screen.getByTestId(filterOwnershipId("all"))).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("R3734000 each sort orders the grid: cost, name, rarity, set and newest, each ascending and descending", () => {
+    mount();
+    const order = (key: SortKey, dir: "asc" | "desc"): string[] => {
+      fireEvent.change(screen.getByTestId(DB_SORT), { target: { value: key } });
+      const toggle = screen.getByTestId(DB_SORT_DIR);
+      if (toggle.getAttribute("data-dir") !== dir) fireEvent.click(toggle);
+      return shown();
+    };
+    const cards = { version: "test", cards: Object.fromEntries(SAMPLE.map((def) => [def.id, def])) };
+    const ids = SAMPLE.map((def) => def.id);
+    expect(within(screen.getByTestId(DB_SORT)).getAllByRole("option").map((option) => (option as HTMLOptionElement).value)).toEqual([...CARDS_SORTS]);
+    for (const key of CARDS_SORTS) {
+      for (const dir of ["asc", "desc"] as const) {
+        expect(order(key, dir), `${key} ${dir}`).toEqual(sortPool(ids, cards, { key, dir }));
+      }
+    }
+    // The orders differ: the sort is wired to the grid, not to a constant order.
+    expect(order("name", "asc")).not.toEqual(order("name", "desc"));
+    expect(order("set", "asc")).not.toEqual(order("cost", "asc"));
+  });
+
+  it("R3734000 a window of 1024 px or under draws a Filters button that opens the chips in a sheet, and a search that stays on show", () => {
+    const restore = stubTabletNarrow(true);
+    try {
+      mount();
+      expect(screen.queryByTestId(T.filters)).toBeNull();
+      expect(screen.getByTestId(DB_SEARCH)).toBeInTheDocument();
+      expect(screen.queryByTestId(filterCostId("0"))).toBeNull();
+      fireEvent.click(screen.getByTestId(T.filtersOpen));
+      const sheet = screen.getByTestId(T.filtersSheet);
+      const bucket = costBucket(SAMPLE[0]?.cost ?? 0);
+      fireEvent.click(within(sheet).getByTestId(filterCostId(bucket)));
+      narrows((def) => costBucket(def.cost) === bucket);
+      fireEvent.click(screen.getByTestId(dialogTestid.close));
+      expect(screen.queryByTestId(T.filtersSheet)).toBeNull();
+      // The count of what is on shows on the button.
+      expect(screen.getByTestId(T.filtersOpen)).toHaveTextContent("Filters · 1");
+    } finally {
+      restore();
+    }
+  });
+});
+
+describe("R3734000 ownedIds and deckModes", () => {
+  it("R3734000 ownedIds holds the cards with a copy, and a quantity of 0 is none", () => {
+    const owned = ownedIds({
+      catalogVersion: "test",
+      entries: [
+        { cardId: "core-001", quantity: 2 },
+        { cardId: "core-002", quantity: 0 },
+        { cardId: "core-003", quantity: 1 },
+      ],
+    });
+    expect([...owned].sort()).toEqual(["core-001", "core-003"]);
+    expect(ownedIds(collectionOwning([])).size).toBe(0);
+  });
+
+  /** Three decks of `DECK_SIZE` cards, a card once in a deck (L3), and none holding a card another does (R251). */
+  function decks(): DeckItem[] {
+    const { cards, version } = currentCatalog();
+    const pool = poolFrom({ version, cards }, null);
+    return [0, 1, 2].map((slot) =>
+      savedDeck(
+        `d-${String(slot)}`,
+        `Deck ${String(slot)}`,
+        pool.slice(slot * DECK_SIZE, (slot + 1) * DECK_SIZE),
+        slot + 1,
+        version,
+      ),
+    );
+  }
+
+  it("R3734000 deckModes says Best of 1 for a legal deck and Conquest too when a trio that holds it is legal, from the validator's verdicts", () => {
+    const catalog = currentCatalog();
+    const held = decks();
+    const [first, second, third] = held;
+    if (first === undefined || second === undefined || third === undefined) throw new Error("three decks");
+    const trio = savedTrio("t-1", "Trio", [first.id, second.id, third.id], 4);
+    const modes = (deck: DeckItem, trios: TrioItem[], all: DeckItem[] = held): string[] =>
+      deckModes(deck, all, trios, catalog, null, DECK_NAME_MAX_LENGTH);
+
+    expect(modes(first, [])).toEqual(["bo1"]);
+    expect(modes(first, [trio])).toEqual(["bo1", "bo3"]);
+    expect(modes(third, [trio])).toEqual(["bo1", "bo3"]);
+    // A trio that is not whole, or whose decks share a card, is no Conquest deck.
+    expect(modes(first, [savedTrio("t-2", "Pair", [first.id, second.id, null], 5)])).toEqual(["bo1"]);
+    const sharing = savedDeck("d-3", "Sharing", second.cards, 6, catalog.version);
+    expect(modes(first, [savedTrio("t-3", "Shared", [first.id, second.id, sharing.id], 7)], [...held, sharing])).toEqual(["bo1"]);
+    // An illegal deck plays nothing, a trio or none.
+    const short = savedDeck("d-4", "Short", first.cards.slice(0, 3), 8, catalog.version);
+    expect(modes(short, [])).toEqual([]);
+    expect(modes(short, [savedTrio("t-4", "Short trio", [short.id, second.id, third.id], 9)], [...held, short])).toEqual([]);
+  });
+});
+
 describe("#2053 card names in the reader's language", () => {
   /** A locked tile, its view and its detail, opened in turn: the names each carries. */
   function openLocked(): { tile: string | null; locked: string | null; view: HTMLElement; title: string; detail: string | null } {
     render(<OwnedCards collection={collectionOwning(["core-001"])} defs={DEFS} />);
-    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
     const tile = screen.getByTestId(T.card("core-001")).getAttribute("aria-label");
     const locked = screen.getByTestId(T.card("core-002")).getAttribute("aria-label");
     fireEvent.click(screen.getByTestId(T.card("core-002")));
@@ -353,15 +600,17 @@ describe("#1307 TracksPanel", () => {
 });
 
 describe("R1579000 the Collection's cosmetics and sections", () => {
-  it("R1579000 collectionSectionOf reads ?section= and gives the hub otherwise", () => {
+  it("R3734000 collectionSectionOf reads ?section= and gives Cards otherwise", () => {
     expect(collectionSectionOf("?section=cards")).toBe("cards");
+    expect(collectionSectionOf("?section=decks")).toBe("decks");
     expect(collectionSectionOf("?section=cosmetics")).toBe("cosmetics");
-    expect(collectionSectionOf("?x=1&section=cards")).toBe("cards");
-    expect(collectionSectionOf("")).toBeNull();
-    expect(collectionSectionOf("?section=")).toBeNull();
-    expect(collectionSectionOf("?section=shop")).toBeNull();
-    expect(collectionSectionOf("?section=Cards")).toBeNull();
-    expect(collectionSectionOf("?other=cards")).toBeNull();
+    expect(collectionSectionOf("?section=progress")).toBe("progress");
+    expect(collectionSectionOf("?x=1&section=cosmetics")).toBe("cosmetics");
+    expect(collectionSectionOf("")).toBe("cards");
+    expect(collectionSectionOf("?section=")).toBe("cards");
+    expect(collectionSectionOf("?section=shop")).toBe("cards");
+    expect(collectionSectionOf("?section=Cosmetics")).toBe("cards");
+    expect(collectionSectionOf("?other=progress")).toBe("cards");
   });
 });
 
@@ -387,7 +636,6 @@ describe("R1655000 a card in context", () => {
         <OwnedCards collection={collectionOwning(CARDS.map((def) => def.id))} defs={CARDS} />
       </FullArtOwned>,
     );
-    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
     fireEvent.click(screen.getByTestId(T.card(id)));
   }
   const large = (): Element => {
@@ -957,7 +1205,6 @@ describe("R1655000 a card in context", () => {
     // every level of the Sketch.
     const all = defOf(ALL);
     render(<OwnedCards collection={collectionOwning([ALL])} defs={[all]} />);
-    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
     fireEvent.click(screen.getByTestId(T.card(ALL)));
     const picture = (id: string): string | null => rung(id).querySelector(".cf-art")?.getAttribute("data-art-picture") ?? null;
     expect(picture(VERSION_FULL_ART_ID)).toBeNull();
@@ -1025,7 +1272,6 @@ describe("R1655000 a card in context", () => {
     // Each rung draws its look across its tile: Extended art the normal picture, Pixel and Comic restyled, at both levels.
     const pad = defOf(PAD);
     render(<OwnedCards collection={collectionOwning([PAD])} defs={[pad]} />);
-    fireEvent.click(screen.getByTestId(T.setToggle("Meditative+")));
     fireEvent.click(screen.getByTestId(T.card(PAD)));
     const art = (id: string): Element | null => rung(id).querySelector(".cf-art");
     expect(art(VERSION_EXTENDED_ART_ID)?.getAttribute("data-art-picture")).toBeNull();
@@ -1075,7 +1321,6 @@ describe("R1655000 a card in context", () => {
     // Each rung draws its look: Set showcase the picture in Classic's stone, Out of frame its subject alone, at both levels.
     const max = defOf(MAX);
     render(<OwnedCards collection={collectionOwning([MAX])} defs={[max]} />);
-    fireEvent.click(screen.getByTestId(T.setToggle("Classic")));
     fireEvent.click(screen.getByTestId(T.card(MAX)));
     const art = (id: string): Element | null => rung(id).querySelector(".cf-art");
     for (const id of [VERSION_SET_SHOWCASE_ID, `${VERSION_SET_SHOWCASE_ID}-animated`]) {
@@ -1140,7 +1385,6 @@ describe("R1655000 a card in context", () => {
     // Each rung draws its look: Immersive the whole picture hazed, Prismatic in chrome, at both levels.
     const voidDef = defOf(VOID);
     render(<OwnedCards collection={collectionOwning([VOID])} defs={[voidDef]} />);
-    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
     fireEvent.click(screen.getByTestId(T.card(VOID)));
     const art = (id: string): Element | null => rung(id).querySelector(".cf-art");
     for (const id of [VERSION_IMMERSIVE_ID, `${VERSION_IMMERSIVE_ID}-animated`]) {
@@ -1200,7 +1444,6 @@ describe("R1655000 a card in context", () => {
         <OwnedCards collection={collectionOwning([VOID])} defs={[defOf(VOID)]} />
       </FullArtOwned>,
     );
-    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
     fireEvent.click(screen.getByTestId(T.card(VOID)));
     expect(large().getAttribute("data-full-art")).toBe("true");
     expect(large().getAttribute("data-version")).toBe(VERSION_FULL_ART_ID);
@@ -1335,7 +1578,6 @@ describe("R3015007 a held token on a ladder", () => {
         <OwnedCards collection={collectionOf()} defs={[defOf(BIG_D)]} token={TOKEN} />
       </ViewerFullArt>,
     );
-    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
     fireEvent.click(screen.getByTestId(T.card(BIG_D)));
     const previewOf = (id: string): HTMLElement => {
       fireEvent.keyDown(screen.getByTestId(T.rung(id)), { key: "i" });
@@ -1397,7 +1639,6 @@ describe("R3349000 new levels and ladder looks", () => {
   it("R3349000 a new level marks the card until it is viewed", () => {
     markNewLevels(TOKEN, [{ id: VERSION_SKETCH_ID, cardId: CARD }]);
     render(<OwnedCards collection={collectionOwning([CARD])} defs={[defOf(CARD)]} token={TOKEN} />);
-    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
 
     expect(screen.getByTestId(T.card(CARD))).toHaveAttribute("data-new", "true");
     expect(screen.getByTestId(T.newMark(CARD))).toHaveTextContent("New");
@@ -1415,7 +1656,6 @@ describe("R3349000 new levels and ladder looks", () => {
       { id: VERSION_ANIMATED_ID, cardId: CARD },
     ]);
     render(<OwnedCards collection={collectionOwning([CARD])} defs={[defOf(CARD)]} token={TOKEN} />);
-    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
 
     fireEvent.pointerEnter(screen.getByTestId(T.card(CARD)), { pointerType: "mouse" });
     act(() => {
@@ -1482,7 +1722,6 @@ describe("R1956000 the owned cards' grid wears their picks", () => {
     writeCardPick(MYTHIC, "foil", "foil-rainbow");
     writeCardPick(LOCKED, "border", "border-bone");
     render(<OwnedCards collection={collectionOwning([PLAIN, MYTHIC])} defs={DEFS_HERE} />);
-    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
 
     const plain = tile(PLAIN);
     expect(plain.getAttribute("data-frame")).toBe("border-bone");
@@ -1525,7 +1764,6 @@ describe("R1956000 the owned cards' grid wears their picks", () => {
         <OwnedCards collection={collectionOwning([PLAIN])} defs={DEFS_HERE} />
       </FullArtOwned>,
     );
-    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
     expect(tile(PLAIN).getAttribute("data-frame")).toBe("border-bone");
     expect(tile(PLAIN).getAttribute("data-finish")).toBeNull();
   });
@@ -1634,7 +1872,6 @@ describe("R3013001 a card's proficiency in its view", () => {
   /** Opens `id`, owning every card but LOCKED. */
   function open(id: string): void {
     render(<OwnedCards collection={collectionOwning(CARDS.filter((def) => def.id !== LOCKED).map((def) => def.id))} defs={CARDS} />);
-    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
     fireEvent.click(screen.getByTestId(T.card(id)));
   }
   const stamp = (level: number): HTMLElement => screen.getByTestId(T.stamp(level));

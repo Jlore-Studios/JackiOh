@@ -1330,14 +1330,7 @@ fn type_matches(state: &GameState, def_id: &str, want: &str) -> bool {
 }
 
 fn most_matching(pending: &PendingChoice, count: impl Fn(&str) -> usize) -> String {
-    let mut options: Vec<String> = pending
-        .options
-        .iter()
-        .filter_map(|option| match &option.selection {
-            Selection::Mode { option } => Some(option.clone()),
-            _ => None,
-        })
-        .collect();
+    let mut options = prompt_modes_of(pending);
     options.sort_by_key(|option| std::cmp::Reverse(count(option.as_str())));
     must(options.into_iter().next(), "a mode option")
 }

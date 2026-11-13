@@ -320,6 +320,25 @@ pub async fn post_reseed(app: &Arc<App>, _req: Req) -> ApiResult {
     ok_of(&seed_e2e_fixtures(app).await?)
 }
 
+/// The daily clock's path. A contract with `e2e/support/daily.ts`'s `DAILY_CLOCK_PATH`.
+pub const E2E_DAILY_CLOCK_PATH: &str = "/api/e2e/daily-clock";
+
+/// `POST /api/e2e/daily-clock` `{offsetMs}` (`AuthLevel::None`, #3727): the daily games' clock reads
+/// `offsetMs` ahead of the server's from now on (0 puts it back), so spec 53 can watch a move run out
+/// (R3727000). Outside end-to-end mode it answers as a path nobody serves, as the reseed does.
+pub async fn post_daily_clock(app: &Arc<App>, req: Req) -> ApiResult {
+    if !app.env.e2e {
+        return Err(ApiError::new(ApiErrorCode::NotFound, "no such endpoint"));
+    }
+    let offset_ms = req
+        .body
+        .get("offsetMs")
+        .and_then(serde_json::Value::as_i64)
+        .ok_or_else(|| ApiError::new(ApiErrorCode::BadRequest, "\"offsetMs\" must be a whole number"))?;
+    app.daily.set_offset(offset_ms);
+    ok_of(&serde_json::json!({ "offsetMs": offset_ms }))
+}
+
 fn invite_code_for(app: &App, kind: E2EInviteCodeKind, plain: &str, now: i64) -> InviteCode {
     // §9.4: "stored hashed". `Hashes::code` normalizes (upper case, separators dropped) before
     // hashing, exactly as redemption in codes.rs does on the way in, so a typed

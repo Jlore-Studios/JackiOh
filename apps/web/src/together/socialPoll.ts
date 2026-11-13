@@ -17,6 +17,7 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 
+import { dailyWaitingOf } from "../daily/order.ts";
 import { pollWhileVisible, quietWhileHidden } from "../game/net.ts";
 import { readSession } from "../net/session.ts";
 import { getSocial, type Challenge, type SocialRead } from "../net/social.ts";
@@ -39,6 +40,8 @@ export type SocialReads = {
   readonly refused: boolean;
   /** R3214000: the tab's social socket is live, so the server pushes these reads and no poll is sent. */
   readonly live: boolean;
+  /** #3727: how many daily games wait on the player (the Play screen's Daily games badge); 0 when unread. */
+  readonly dailyWaiting: number;
 };
 
 const NO_CHALLENGES: readonly Challenge[] = Object.freeze([]);
@@ -52,6 +55,7 @@ const EMPTY: SocialReads = Object.freeze({
   requests: 0,
   refused: false,
   live: false,
+  dailyWaiting: 0,
 });
 
 let reads: SocialReads = EMPTY;
@@ -100,6 +104,7 @@ function applySocial(answer: SocialRead): void {
     challengeReads: reads.challengeReads + 1,
     unread: unreadCountsOf(answer),
     refused: false,
+    dailyWaiting: dailyWaitingOf(answer.dailyWaiting),
   });
 }
 
@@ -111,7 +116,7 @@ function tick(): void {
     return;
   }
   if (token === refusedToken) {
-    if (!reads.refused) publish({ ...reads, incoming: NO_CHALLENGES, outgoing: NO_CHALLENGES, unread: NO_UNREAD, refused: true });
+    if (!reads.refused) publish({ ...reads, incoming: NO_CHALLENGES, outgoing: NO_CHALLENGES, unread: NO_UNREAD, refused: true, dailyWaiting: 0 });
     return;
   }
   // R3214000: a socket that is down (never opened, refused for an older token) opens again with this
@@ -128,7 +133,7 @@ function tick(): void {
     (cause: unknown) => {
       if (started !== generation || !isRefusedSession(cause)) return;
       refusedToken = token;
-      publish({ ...reads, incoming: NO_CHALLENGES, outgoing: NO_CHALLENGES, unread: NO_UNREAD, refused: true });
+      publish({ ...reads, incoming: NO_CHALLENGES, outgoing: NO_CHALLENGES, unread: NO_UNREAD, refused: true, dailyWaiting: 0 });
     },
   );
 }

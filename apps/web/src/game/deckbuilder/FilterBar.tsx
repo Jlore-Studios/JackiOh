@@ -12,7 +12,7 @@
 
 import { useId, useState, type ReactElement } from "react";
 
-import type { CardType, Rarity, SetName, Tag } from "@jackioh/shared";
+import type { CardType, KeywordKind, Rarity, SetName, Tag } from "@jackioh/shared";
 
 import { CARD_TABLES } from "../../cards/chinese.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
@@ -23,9 +23,11 @@ import {
   FILTER_RARITIES,
   FILTER_SETS,
   FILTER_TYPES,
+  OWNERSHIPS,
   SORT_KEYS,
   toggled,
   type CostBucket,
+  type Ownership,
   type PoolFilter,
   type PoolSort,
   type SortKey,
@@ -40,6 +42,8 @@ import {
   DB_SORT,
   DB_SORT_DIR,
   filterCostId,
+  filterKeywordId,
+  filterOwnershipId,
   filterRarityId,
   filterSetId,
   filterTagId,
@@ -59,6 +63,20 @@ type FilterBarProps = {
   ownedControl?: boolean;
   /** The tag chips, in order; the deck builder's `DECK_CHIP_TAGS` (R1381) when absent. */
   tags?: readonly Tag[];
+  /** Issue #3734: the sorts the select offers, in order; every `SORT_KEYS` entry when absent (the Collection has no win rates to sort by). */
+  sorts?: readonly SortKey[];
+  /** Issue #3734: the keyword chips, in order. None are drawn when absent (the deck builder's bar has none). */
+  keywords?: readonly KeywordKind[];
+  /** Issue #3734: the Collection's view of what is owned. When given, three chips (All, Owned, Missing) stand in
+   *  for the "Owned only" box, and `filter.ownedOnly` is not read. */
+  ownership?: Ownership;
+  onOwnership?: (next: Ownership) => void;
+  /**
+   * Issue #3734: the Collection draws the bar in two places: "toolbar" is the search, the sort, the count and Clear, always
+   * on show above the grid; "chips" is every chip row, open and stacked with no fold, in a sidebar or a sheet. Absent, the
+   * bar is whole, as the deck builder draws it.
+   */
+  part?: "toolbar" | "chips";
 };
 
 const SORT_LABELS: Readonly<Record<SortKey, string>> = {
@@ -71,7 +89,11 @@ const SORT_LABELS: Readonly<Record<SortKey, string>> = {
   // Not "Win rate": the select is as wide as its widest label, and at 390 px a wider one pushes the
   // pool's first row below the first screen (B39).
   winRate: "Win %",
+  set: "Set",
+  newest: "Newest",
 };
+
+const OWNERSHIP_LABELS: Readonly<Record<Ownership, string>> = { all: "All", owned: "Owned", missing: "Missing" };
 
 type ChipProps = {
   testId: string;
@@ -101,7 +123,21 @@ function Chip({ testId, pressed, label, title, className, onToggle, rarity }: Ch
 }
 
 export default function FilterBar(props: FilterBarProps): ReactElement {
-  const { filter, onFilter, sort, onSort, count, ownedUnavailable = false, ownedControl = true, tags = DECK_CHIP_TAGS } = props;
+  const {
+    filter,
+    onFilter,
+    sort,
+    onSort,
+    count,
+    ownedUnavailable = false,
+    ownedControl = true,
+    tags = DECK_CHIP_TAGS,
+    sorts = SORT_KEYS,
+    keywords,
+    ownership,
+    onOwnership,
+    part,
+  } = props;
   // The type, tag and rarity chips print the card frame's own words in the reader's language
   // (cards/chinese.ts, R1303); a language with no card table reads the catalog's English.
   const locale = useLocale();
@@ -122,217 +158,275 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
   const setRarities = (rarity: Rarity) => {
     onFilter({ ...filter, rarities: toggled(filter.rarities, rarity) });
   };
+  const setKeywords = (kind: KeywordKind) => {
+    onFilter({ ...filter, keywords: toggled(filter.keywords, kind) });
+  };
 
   const nextDir = sort.dir === "asc" ? "desc" : "asc";
   const [expanded, setExpanded] = useState(false);
   const chipsId = useId();
   // The toggle counts what it hides: the cost chips are never folded away.
-  const active = filter.sets.size + filter.types.size + filter.tags.size + filter.rarities.size;
+  const withToolbar = part !== "chips";
+  const withChips = part !== "toolbar";
+  const ownershipGroup =
+    ownership === undefined ? null : (
+      <div className="db-chip-group" role="group" aria-label={t("Owned")}>
+        {OWNERSHIPS.map((view) => (
+          <Chip
+            key={view}
+            testId={filterOwnershipId(view)}
+            className="db-chip--ownership"
+            pressed={ownership === view}
+            label={t(OWNERSHIP_LABELS[view])}
+            onToggle={() => {
+              onOwnership?.(view);
+            }}
+          />
+        ))}
+      </div>
+    );
+  const active = filter.sets.size + filter.types.size + filter.tags.size + filter.keywords.size + filter.rarities.size;
 
   return (
     <div
-      className="db-filters"
-      data-testid={DB_FILTERS}
-      data-expanded={expanded ? "true" : "false"}
-      role="search"
-      aria-label={t("Filter the card pool")}
+      className={part === undefined ? "db-filters" : `db-filters db-filters--${part}`}
+      // The Collection draws the bar in two places at once (a sheet's chips and the toolbar), so only the whole bar and the toolbar carry the id.
+      data-testid={part === "chips" ? undefined : DB_FILTERS}
+      data-expanded={expanded || part === "chips" ? "true" : "false"}
+      role={part === "chips" ? "group" : "search"}
+      aria-label={part === "chips" ? t("Filters") : t("Filter the card pool")}
     >
-      <div className="db-filter-row db-filter-row--top">
-        <input
-          type="search"
-          className="db-search"
-          data-testid={DB_SEARCH}
-          placeholder={t("Search name, text, keyword, tag…")}
-          aria-label={t("Search cards")}
-          value={filter.search}
-          onChange={(event) => {
-            onFilter({ ...filter, search: event.target.value });
-          }}
-        />
-        {ownedControl ? (
-          <label className="db-owned">
-            <input
-              type="checkbox"
-              data-testid={DB_FILTER_OWNED}
-              checked={filter.ownedOnly}
-              disabled={ownedUnavailable}
-              onChange={(event) => {
-                onFilter({ ...filter, ownedOnly: event.target.checked });
-              }}
-            />
-            <span>{t("Owned only")}</span>
-          </label>
-        ) : null}
-        {/* The sort and its direction wrap as one, so the arrow never ends up alone on a row. */}
-        <span className="db-sort-group">
-          <label className="db-sort">
-            <span className="db-group-label">{t("Sort")}</span>
-            <select
-              className="db-sort-select"
-              data-testid={DB_SORT}
-              value={sort.key}
-              onChange={(event) => {
-                const key = SORT_KEYS.find((candidate) => candidate === event.target.value);
-                if (key !== undefined) onSort({ ...sort, key });
+      {withToolbar ? (
+        <div className="db-filter-row db-filter-row--top">
+          <input
+            type="search"
+            className="db-search"
+            data-testid={DB_SEARCH}
+            placeholder={t("Search name, text, keyword, tag…")}
+            aria-label={t("Search cards")}
+            value={filter.search}
+            onChange={(event) => {
+              onFilter({ ...filter, search: event.target.value });
+            }}
+          />
+          {ownership !== undefined ? (
+            part === undefined ? (
+              ownershipGroup
+            ) : null
+          ) : ownedControl ? (
+            <label className="db-owned">
+              <input
+                type="checkbox"
+                data-testid={DB_FILTER_OWNED}
+                checked={filter.ownedOnly}
+                disabled={ownedUnavailable}
+                onChange={(event) => {
+                  onFilter({ ...filter, ownedOnly: event.target.checked });
+                }}
+              />
+              <span>{t("Owned only")}</span>
+            </label>
+          ) : null}
+          {/* The sort and its direction wrap as one, so the arrow never ends up alone on a row. */}
+          <span className="db-sort-group">
+            <label className="db-sort">
+              <span className="db-group-label">{t("Sort")}</span>
+              <select
+                className="db-sort-select"
+                data-testid={DB_SORT}
+                value={sort.key}
+                onChange={(event) => {
+                  const key = sorts.find((candidate) => candidate === event.target.value);
+                  if (key !== undefined) onSort({ ...sort, key });
+                }}
+              >
+                {sorts.map((key) => (
+                  <option key={key} value={key}>
+                    {t(SORT_LABELS[key])}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className="db-sort-dir"
+              data-testid={DB_SORT_DIR}
+              data-dir={sort.dir}
+              aria-label={sort.dir === "asc" ? t("Ascending; switch to descending") : t("Descending; switch to ascending")}
+              title={sort.dir === "asc" ? t("Ascending") : t("Descending")}
+              onClick={() => {
+                onSort({ ...sort, dir: nextDir });
               }}
             >
-              {SORT_KEYS.map((key) => (
-                <option key={key} value={key}>
-                  {t(SORT_LABELS[key])}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            type="button"
-            className="db-sort-dir"
-            data-testid={DB_SORT_DIR}
-            data-dir={sort.dir}
-            aria-label={sort.dir === "asc" ? t("Ascending; switch to descending") : t("Descending; switch to ascending")}
-            title={sort.dir === "asc" ? t("Ascending") : t("Descending")}
-            onClick={() => {
-              onSort({ ...sort, dir: nextDir });
-            }}
-          >
-            <span aria-hidden="true">{sort.dir === "asc" ? "↑" : "↓"}</span>
-          </button>
-        </span>
-        <button
-          type="button"
-          className="db-filter-toggle"
-          data-testid={DB_FILTER_TOGGLE}
-          data-active={active > 0 ? "true" : "false"}
-          aria-expanded={expanded}
-          aria-controls={chipsId}
-          onClick={() => {
-            setExpanded(!expanded);
-          }}
-        >
-          {active > 0 ? t("Filters · {count}", { count: active }) : t("Filters")}
-        </button>
-        {/* The count and Clear close the top row rather than taking a row of their own, so a
-            1280x720 screen shows a full row of cards under the filters. */}
-        <span className="db-status">
-          <span
-            className="db-result-count"
-            data-testid={DB_RESULT_COUNT}
-            data-count={String(count)}
-            role="status"
-            aria-live="polite"
-          >
-            {count === 1 ? t("{count} card", { count }) : t("{count} cards", { count })}
+              <span aria-hidden="true">{sort.dir === "asc" ? "↑" : "↓"}</span>
+            </button>
           </span>
-          <button
-            type="button"
-            className="db-filter-clear"
-            data-testid={DB_FILTER_CLEAR}
-            onClick={() => {
-              onFilter(DEFAULT_FILTER);
-            }}
-          >
-            {t("Clear filters")}
-          </button>
-        </span>
-      </div>
-
-      <div className="db-filter-row db-filter-row--cost">
-        <div className="db-chip-group" role="group" aria-label={t("Cost")}>
-          <span className="db-group-label" aria-hidden="true">
-            {t("Cost")}
-          </span>
-          {COST_BUCKETS.map((bucket) => (
-            <Chip
-              key={bucket}
-              testId={filterCostId(bucket)}
-              className="db-chip--cost"
-              pressed={filter.costs.has(bucket)}
-              label={bucket}
-              title={t("({cost}) Cost", { cost: bucket })}
-              onToggle={() => {
-                setCosts(bucket);
+          {part !== undefined ? null : (
+            <button
+              type="button"
+              className="db-filter-toggle"
+              data-testid={DB_FILTER_TOGGLE}
+              data-active={active > 0 ? "true" : "false"}
+              aria-expanded={expanded}
+              aria-controls={chipsId}
+              onClick={() => {
+                setExpanded(!expanded);
               }}
-            />
-          ))}
+            >
+              {active > 0 ? t("Filters · {count}", { count: active }) : t("Filters")}
+            </button>
+          )}
+          {/* The count and Clear close the top row rather than taking a row of their own, so a
+              1280x720 screen shows a full row of cards under the filters. */}
+          <span className="db-status">
+            <span
+              className="db-result-count"
+              data-testid={DB_RESULT_COUNT}
+              data-count={String(count)}
+              role="status"
+              aria-live="polite"
+            >
+              {count === 1 ? t("{count} card", { count }) : t("{count} cards", { count })}
+            </span>
+            <button
+              type="button"
+              className="db-filter-clear"
+              data-testid={DB_FILTER_CLEAR}
+              onClick={() => {
+                onFilter(DEFAULT_FILTER);
+                onOwnership?.("all");
+              }}
+            >
+              {t("Clear filters")}
+            </button>
+          </span>
         </div>
-      </div>
+      ) : null}
 
-      <div className="db-filter-chips" id={chipsId}>
-        <div className="db-filter-row">
-          <div className="db-chip-group" role="group" aria-label={t("Set")}>
+      {withChips ? (
+        <>
+        {part === "chips" && ownershipGroup !== null ? <div className="db-filter-row">{ownershipGroup}</div> : null}
+        <div className="db-filter-row db-filter-row--cost">
+          <div className="db-chip-group" role="group" aria-label={t("Cost")}>
             <span className="db-group-label" aria-hidden="true">
-              {t("Set")}
+              {t("Cost")}
             </span>
-            {FILTER_SETS.map((set) => (
+            {COST_BUCKETS.map((bucket) => (
               <Chip
-                key={set}
-                testId={filterSetId(set)}
-                className="db-chip--set"
-                pressed={filter.sets.has(set)}
-                label={t(set)}
+                key={bucket}
+                testId={filterCostId(bucket)}
+                className="db-chip--cost"
+                pressed={filter.costs.has(bucket)}
+                label={bucket}
+                title={t("({cost}) Cost", { cost: bucket })}
                 onToggle={() => {
-                  setSets(set);
+                  setCosts(bucket);
                 }}
-              />
-            ))}
-          </div>
-          <div className="db-chip-group" role="group" aria-label={t("Type")}>
-            <span className="db-group-label" aria-hidden="true">
-              {t("Type")}
-            </span>
-            {FILTER_TYPES.map((type) => (
-              <Chip
-                key={type}
-                testId={filterTypeId(type)}
-                className="db-chip--type"
-                pressed={filter.types.has(type)}
-                label={terms?.types[type] ?? type}
-                onToggle={() => {
-                  setTypes(type);
-                }}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className="db-filter-row">
-          <div className="db-chip-group" role="group" aria-label={t("Tag")}>
-            <span className="db-group-label" aria-hidden="true">
-              {t("Tag")}
-            </span>
-            {tags.map((tag) => (
-              <Chip
-                key={tag}
-                testId={filterTagId(tag)}
-                className="db-chip--tag"
-                pressed={filter.tags.has(tag)}
-                label={terms?.tags[tag] ?? tag}
-                onToggle={() => {
-                  setTags(tag);
-                }}
-              />
-            ))}
-          </div>
-          <div className="db-chip-group" role="group" aria-label={t("Rarity")}>
-            <span className="db-group-label" aria-hidden="true">
-              {t("Rarity")}
-            </span>
-            {FILTER_RARITIES.map((rarity) => (
-              <Chip
-                key={rarity}
-                testId={filterRarityId(rarity)}
-                className="db-chip--rarity"
-                pressed={filter.rarities.has(rarity)}
-                label={terms?.rarities[rarity] ?? rarity}
-                onToggle={() => {
-                  setRarities(rarity);
-                }}
-                rarity={rarity}
               />
             ))}
           </div>
         </div>
-      </div>
 
+        <div className="db-filter-chips" id={chipsId}>
+          <div className="db-filter-row">
+            <div className="db-chip-group" role="group" aria-label={t("Set")}>
+              <span className="db-group-label" aria-hidden="true">
+                {t("Set")}
+              </span>
+              {FILTER_SETS.map((set) => (
+                <Chip
+                  key={set}
+                  testId={filterSetId(set)}
+                  className="db-chip--set"
+                  pressed={filter.sets.has(set)}
+                  label={t(set)}
+                  onToggle={() => {
+                    setSets(set);
+                  }}
+                />
+              ))}
+            </div>
+            <div className="db-chip-group" role="group" aria-label={t("Type")}>
+              <span className="db-group-label" aria-hidden="true">
+                {t("Type")}
+              </span>
+              {FILTER_TYPES.map((type) => (
+                <Chip
+                  key={type}
+                  testId={filterTypeId(type)}
+                  className="db-chip--type"
+                  pressed={filter.types.has(type)}
+                  label={terms?.types[type] ?? type}
+                  onToggle={() => {
+                    setTypes(type);
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="db-filter-row">
+            <div className="db-chip-group" role="group" aria-label={t("Tag")}>
+              <span className="db-group-label" aria-hidden="true">
+                {t("Tag")}
+              </span>
+              {tags.map((tag) => (
+                <Chip
+                  key={tag}
+                  testId={filterTagId(tag)}
+                  className="db-chip--tag"
+                  pressed={filter.tags.has(tag)}
+                  label={terms?.tags[tag] ?? tag}
+                  onToggle={() => {
+                    setTags(tag);
+                  }}
+                />
+              ))}
+            </div>
+            <div className="db-chip-group" role="group" aria-label={t("Rarity")}>
+              <span className="db-group-label" aria-hidden="true">
+                {t("Rarity")}
+              </span>
+              {FILTER_RARITIES.map((rarity) => (
+                <Chip
+                  key={rarity}
+                  testId={filterRarityId(rarity)}
+                  className="db-chip--rarity"
+                  pressed={filter.rarities.has(rarity)}
+                  label={terms?.rarities[rarity] ?? rarity}
+                  onToggle={() => {
+                    setRarities(rarity);
+                  }}
+                  rarity={rarity}
+                />
+              ))}
+            </div>
+          </div>
+
+          {keywords === undefined ? null : (
+            <div className="db-filter-row">
+              <div className="db-chip-group" role="group" aria-label={t("Keyword")}>
+                <span className="db-group-label" aria-hidden="true">
+                  {t("Keyword")}
+                </span>
+                {keywords.map((kind) => (
+                  <Chip
+                    key={kind}
+                    testId={filterKeywordId(kind)}
+                    className="db-chip--keyword"
+                    pressed={filter.keywords.has(kind)}
+                    label={terms?.keywords[kind] ?? kind}
+                    onToggle={() => {
+                      setKeywords(kind);
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        </>
+      ) : null}
     </div>
   );
 }

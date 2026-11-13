@@ -1575,18 +1575,7 @@ mod m_n75_ever_growing_tree {
 
     fn grow(s: &mut Scenario) -> Vec<GameEvent> {
         activate_listed(s, EVER_GROWING_TREE, any);
-        let offered: Vec<String> = s
-            .state()
-            .pending
-            .as_ref()
-            .expect("the Tree's choice")
-            .options
-            .iter()
-            .filter_map(|option| match &option.selection {
-                Selection::Mode { option } => Some(option.clone()),
-                _ => None,
-            })
-            .collect();
+        let offered = s.prompt_modes();
         assert_eq!(offered.len(), 3);
         s.answer(json!(offered[0]));
         s.last_events().to_vec()
@@ -2753,14 +2742,7 @@ mod stinkyscape {
             assert_eq!((radi.def_id.as_str(), radi.radiant), (RADI, radiant));
             let pending = s.state().pending.clone().expect("the Radi's Discover is open");
             assert_eq!((pending.kind, pending.player_id), (PromptKind::Discover, P1));
-            let offered: Vec<String> = pending
-                .options
-                .iter()
-                .filter_map(|option| match &option.selection {
-                    Selection::Mode { option } => Some(option.clone()),
-                    _ => None,
-                })
-                .collect();
+            let offered = s.prompt_modes();
             let rarity = if radiant { Rarity::Epic } else { Rarity::Rare };
             assert!(!offered.is_empty(), "weapons are offered");
             for def in &offered {
