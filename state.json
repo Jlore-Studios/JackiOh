@@ -17802,15 +17802,8 @@
       "waiting_comment": 6849601821
     },
     "3846": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43404565969",
-        "model": "sonnet",
-        "provider": "claude-6",
-        "since": "2026-11-13T09:58:56Z",
-        "until": "2026-11-13T10:28:56Z"
-      },
       "difficulty_by": {
         "at": "2026-11-13T09:58:44Z",
         "difficulty": "medium",
@@ -17829,10 +17822,9 @@
         "reason": "planned on sonnet",
         "trail": "- Grep: {\"pattern\": \"failedReads|unreachable|ApiUnreachableError\", \"path\": \"/home/runner/work/_temp/work/item-3846/apps/web/src/routes/play.tsx\", \"output_mode\": \"content\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3846; ls spec/rulings | grep -E 'R(3792|3846)'; ls spec/pending | head; grep -rl \\\"R3792000\\\" --include=* . 2>/dev/null | grep -v node_modules | grep\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3846/spec/rulings/R3792000.md\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3846/apps/web/src/routes/play.tsx\", \"offset\": 390, \"limit\": 120}\n- Grep: {\"pattern\": \"R3792000|ApiRequestError|ApiUnreachableError\", \"path\": \"/home/runner/work/_temp/work/item-3846/apps/web/src/routes/play.test.tsx\", \"output_mode\": \"content\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3846; cat spec/pending/3791.md; grep -n \\\"R3792000\\\" spec/11-rulings.md | head; grep -n \\\"class Api\\\\(Request\\\\|Unreachable\\\\)\\\" -A14 apps/web/src/*/\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3846/apps/web/src/routes/play.test.tsx\", \"offset\": 1530, \"limit\": 115}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3846; sed -n 105,140p apps/edge/src/index.ts; grep -n \\\"attempt\\\" apps/web/src/routes/play.tsx | head -5; sed -n 70,92p apps/web/src/routes/play.tsx;\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3846; sed -n 310,350p apps/web/src/net/api.ts; ls spec/rulings | grep R38; grep -rn \\\"R3792000\\\\|3792\\\" e2e docs/*.md 2>/dev/null | head\"}\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Web-only change in one hook plus a spec note and a test, with no engine, AI, cross-crate, migration or 40-file work.\"} --> ## Goal `/play`'s wait must show the \"Can't reach the server. Still trying\u2026\" notice when the edge Worker answers a wait's account rea\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-13T09:50:18Z",
       "owner_why": "it plans it",
@@ -17845,10 +17837,10 @@
       "provider": "claude-6",
       "queued_at": "2026-11-13T08:38:29Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "43404565969",
+      "run_id": "pending:4dbdcd8f-1794565655",
       "runs_on": "ubuntu-latest",
       "spot_check_of": 3809,
-      "started_at": "2026-11-13T09:50:18Z",
+      "started_at": "2026-11-13T10:28:10Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -18066,9 +18058,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T10:27:20Z",
+    "at": "2026-11-13T10:28:10Z",
     "url": "",
-    "what": "revise #3810 on claude-3"
+    "what": "build #3846 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-13T09:45:15Z",
