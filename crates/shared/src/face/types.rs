@@ -362,6 +362,10 @@ pub struct InPlay {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub attack_reason: Option<String>,
+    /// R3821000: why the viewer's own unit cannot switch now, absent where it repeats the attack reason.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub switch_reason: Option<String>,
     /// R2321000: the counts cards on the field keep on the unit.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -897,6 +901,10 @@ pub struct FaceModel {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub attack_reason: Option<String>,
+    /// R3821000: in play, why the viewer's own unit cannot switch now.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub switch_reason: Option<String>,
     /// R2321000: in play, the counts cards on the field keep on the unit.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]

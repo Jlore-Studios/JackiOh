@@ -1,7 +1,7 @@
 // A face in play's states in words beside an inspect overlay's face (SPEC §10.8), where no badge
 // tooltip can be hovered: the tuned ribbon (R386, R1320), badges (R385, E39, R383), quests (B5 E33,
-// R404; stages R1854000), copies (B5 E14, R511), why it cannot attack (R849000) or be played
-// (R979000) now, and field counts (R2321000). `LocLine` is E36's meta line.
+// R404; stages R1854000), copies (B5 E14, R511), why it cannot attack (R849000), switch (R3821000)
+// or be played (R979000) now, and field counts (R2321000). `LocLine` is E36's meta line.
 
 import type { ReactElement } from "react";
 
@@ -31,6 +31,8 @@ const WAY_GLYPH: Readonly<Record<"better" | "worse", string>> = { better: "▲",
 const progressOf = (quest: { progress: number; goal: number }): string => `${String(quest.progress)}/${String(quest.goal)}`;
 const COPY_GLYPH = "“";
 const ATTACK_REASON_GLYPH = "⊘";
+/** R3821000: the attack reason's sibling, for the unit's own switch. */
+const SWITCH_REASON_GLYPH = "⊘";
 /** R979000: the attack reason's sibling. */
 const PLAY_REASON_GLYPH = "⊘";
 
@@ -46,6 +48,7 @@ export function hasStateNotes(face: FaceModel): boolean {
     (face.quest?.auras ?? []).length > 0 ||
     (face.copying ?? null) !== null ||
     face.attackReason !== undefined ||
+    face.switchReason !== undefined ||
     face.playReason !== undefined ||
     (face.tallies ?? []).length > 0
   );
@@ -102,6 +105,7 @@ export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
     auras.length +
     (copying === null ? 0 : 1) +
     (face.attackReason === undefined ? 0 : 1) +
+    (face.switchReason === undefined ? 0 : 1) +
     (face.playReason === undefined ? 0 : 1);
   if (lines === 0 && !tuned) return null;
   return (
@@ -115,6 +119,14 @@ export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
                 {ATTACK_REASON_GLYPH}
               </span>
               <span className="inspect-state-words">{t(face.attackReason)}</span>
+            </li>
+          )}
+          {face.switchReason === undefined ? null : (
+            <li className="inspect-state" data-state="switchReason">
+              <span className="inspect-state-glyph" aria-hidden="true">
+                {SWITCH_REASON_GLYPH}
+              </span>
+              <span className="inspect-state-words">{t(face.switchReason)}</span>
             </li>
           )}
           {face.playReason === undefined ? null : (

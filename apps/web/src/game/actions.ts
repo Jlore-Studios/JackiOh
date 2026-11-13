@@ -1050,8 +1050,10 @@ export function onClickTarget(
       const started = startAttack(legal, target.instanceId);
       if (started !== null) return started;
       // R849000: no attack listed; the notice is the engine's words, `UnitView.attackReason` (on the
-      // viewer's own units only). Nothing is sent.
-      const reason = view.you.units.find((unit) => unit?.instanceId === target.instanceId)?.attackReason;
+      // viewer's own units only), else (R3821000) `UnitView.switchReason`, so a spent unit says it has
+      // already acted. Nothing is sent.
+      const own = view.you.units.find((unit) => unit?.instanceId === target.instanceId);
+      const reason = own?.attackReason ?? own?.switchReason;
       return reason === undefined ? { interaction } : { interaction, notice: reason };
     }
 

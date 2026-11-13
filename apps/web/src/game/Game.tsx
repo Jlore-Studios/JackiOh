@@ -357,8 +357,9 @@ export default function Game({
   /** The seat whose Concede control asked; a hotseat hand-over or the game's end closes it. */
   const [concedeFor, setConcedeFor] = useState<PlayerId | null>(null);
   /**
-   * R849000: the engine's reason a click on your own unit offered no attack (`UnitView.attackReason`),
-   * held with the view it was read from so it disappears when the board shows another view.
+   * R849000: the engine's reason a click on your own unit offered no attack (`UnitView.attackReason`,
+   * else R3821000's `switchReason`), held with the view it was read from so it disappears when the
+   * board shows another view.
    */
   const [notice, setNotice] = useState<{ text: string; view: PlayerView } | null>(null);
   /**

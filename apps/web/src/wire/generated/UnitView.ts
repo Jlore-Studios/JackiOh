@@ -126,6 +126,13 @@ sick?: true,
  */
 attackReason?: string, 
 /**
+ * R3821000: why the viewer's own unit cannot make its own switch now (`combat::why_cannot_switch_in`
+ * to the other position, spending its exertion), as `attack_reason` is for an attack. Only in its
+ * controller's main phase with no prompt open, `canAct` or not, so a spent unit says it has already
+ * acted; absent when that switch is legal, and never on the opponent's units.
+ */
+switchReason?: string, 
+/**
  * R2321000: the counts cards on the field the viewer may read keep on this Unit, in R68's order
  * of the cards keeping them. Absent when none does, never `[]`.
  */

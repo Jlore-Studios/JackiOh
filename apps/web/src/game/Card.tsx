@@ -93,7 +93,7 @@ export function isSelected(highlight: Highlight | undefined, testId: string | un
   return (highlight ?? NO_HIGHLIGHT).selected.has(testId);
 }
 
-/** `data-legal` is the only gate on firing `onClick` but R979000's reason; see the drag note below. */
+/** `data-legal` is the only gate on firing `onClick` but R979000's and R3821000's reasons; see the drag note below. */
 export function legalAttr(legal: boolean): "true" | "false" {
   return legal ? "true" : "false";
 }
@@ -353,11 +353,16 @@ function Card(props: CardProps): ReactElement {
   const awakening = useAwakening(testId);
   // R979000: a card in your hand the view says cannot be played stays greyed out, as `legal` offers
   // it nothing, but its click still reaches the board, which shows `playReason` and sends nothing.
-  const explains = card?.playReason !== undefined;
+  // R3821000: likewise your own unit in a unit zone the view says cannot switch (or, R849000, attack)
+  // now, a spent one among them, whose click also goes on to its zone, which a play being built may
+  // pick (a Stack's or an Equip's), since the card's own click changes nothing then (`onClickTarget`).
+  const explainsUnit =
+    target?.on === "unit" && (unit?.switchReason !== undefined || unit?.attackReason !== undefined);
+  const explains = card?.playReason !== undefined || explainsUnit;
 
   function fire(event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>): void {
     if (!clickable || !(legal || explains)) return;
-    event.stopPropagation();
+    if (legal || !explainsUnit) event.stopPropagation();
     props.onClick?.(target);
   }
 
@@ -656,7 +661,13 @@ function Card(props: CardProps): ReactElement {
         />
       )}
       {props.switchTarget === true && unit !== undefined && unit !== null && (
-        <SwitchButton instanceId={unit.instanceId} highlight={props.highlight} animating={props.animating} onClick={props.onClick} />
+        <SwitchButton
+          instanceId={unit.instanceId}
+          reason={unit.switchReason}
+          highlight={props.highlight}
+          animating={props.animating}
+          onClick={props.onClick}
+        />
       )}
       <OwnCopy own={worn}>{inspect.overlay}</OwnCopy>
     </TheirCopy>
@@ -735,17 +746,23 @@ export default memo(Card, sameCardProps);
 
 function SwitchButton({
   instanceId,
+  reason,
   highlight,
   animating,
   onClick,
 }: {
   instanceId: string;
+  /** R3821000: the engine's reason the viewer's own unit cannot switch now (`UnitView.switchReason`). */
+  reason: string | undefined;
   highlight?: Highlight;
   animating?: AnimatingMap;
   onClick?: (target: ClickTarget) => void;
 }): ReactElement {
   const testId = testid.switchPosition(instanceId);
   const legal = isLegal(highlight, testId);
+  // R3821000: a greyed switch names the engine's reason, in its accessible name and its tooltip.
+  const name = t("Switch position");
+  const label = legal || reason === undefined ? name : t("{name}: {reason}", { name, reason: t(reason) });
   return (
     <button
       type="button"
@@ -756,8 +773,8 @@ function SwitchButton({
       data-animating={animating?.get(testId)}
       aria-disabled={legal ? undefined : "true"}
       disabled={!legal}
-      title={t("Switch position")}
-      aria-label={t("Switch position")}
+      title={label}
+      aria-label={label}
       onClick={(event) => {
         event.stopPropagation();
         if (!legal) return;
