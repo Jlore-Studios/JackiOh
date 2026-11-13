@@ -11,7 +11,9 @@ import type { PlayerId } from "./PlayerId";
 import type { PreviewValue } from "./PreviewValue";
 import type { QuestView } from "./QuestView";
 import type { RevealAt } from "./RevealAt";
+import type { Slumber } from "./Slumber";
 import type { Tag } from "./Tag";
+import type { TipsyBlur } from "./TipsyBlur";
 import type { Tuning } from "./Tuning";
 import type { UnitView } from "./UnitView";
 
@@ -37,7 +39,18 @@ created?: true,
  * (`GameState.generators`), whose foil, finish and border the client dresses it in. Never on
  * another player's card.
  */
-createdBy?: string, cost: number, attack?: number, health?: number, power?: string, conditionActive?: true, counteredOnPlay?: true, preview?: Array<PreviewValue>, brittle?: number, element?: CardElement, params?: { [key in string]: number }, tuning?: Tuning, enchantments?: Array<Enchantment>, keywords?: Array<Keyword>, marks?: Array<CardMark>, activations?: Array<ActivationView>, quest?: QuestView, copies?: CopiedTextView, 
+createdBy?: string, 
+/**
+ * R3536005: the card has evolved, or is marked to enter the field evolved
+ * (`CardInstance.evolved`, `.enters_evolved`). Only on a card the viewer may read, as `created`
+ * is. Only ever `Some(true)`.
+ */
+evolved?: true, 
+/**
+ * R3546004: fills four zones from here, the three others empty in the view; public,
+ * face-down too. Only ever `Some(true)`.
+ */
+giga?: true, cost: number, attack?: number, health?: number, power?: string, conditionActive?: true, counteredOnPlay?: true, preview?: Array<PreviewValue>, brittle?: number, element?: CardElement, params?: { [key in string]: number }, tuning?: Tuning, enchantments?: Array<Enchantment>, keywords?: Array<Keyword>, marks?: Array<CardMark>, activations?: Array<ActivationView>, quest?: QuestView, copies?: CopiedTextView, 
 /**
  * Always `false` here (the discriminant).
  */
@@ -72,4 +85,17 @@ buried?: number,
  * Unit there is a Unit for every rule, so the client draws it as the minion it is. Units are
  * public in any zone, so this carries no hidden information; absent for every other backrow card.
  */
-unit?: UnitView, };
+unit?: UnitView, 
+/**
+ * R1839000, R1839001, R3556000: the card is Dormant (a status, public on the field on both
+ * seats): it can neither attack, be attacked, be targeted nor be reached by an effect until it
+ * awakens, and `turns` is how many more of its controller's turns start before it does (absent:
+ * until an effect awakens it). What the board's Dormant badge and its countdown read. Absent
+ * otherwise.
+ */
+slumber?: Slumber, 
+/**
+ * R3548001: what of this card the owner's Tipsy stamp blurs on their view alone, or nothing.
+ * Never on a face-down card, and never on the opponent's view of it.
+ */
+tipsyBlur?: TipsyBlur, };

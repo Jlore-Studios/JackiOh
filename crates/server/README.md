@@ -155,6 +155,9 @@ placeholders (`app::load_server_env`).
 | `DEV_PROFILE_IDS` | no | the dev accounts (§14.10, R1300000): comma-separated profile ids, each the account secret ID `/account` shows; unset, none. A malformed id refuses the boot, naming it. Only the boot reads it: no catalog stamp grants anyone (R1310001), so `seed-catalog` does not. The boot logs how many, never which |
 | `ALERT_RESEND_API_KEY` | no | a Resend API key with Sending access for jackioh.com, with which an alert is emailed to `ALERT_EMAILS` ([Alerts](#alerts), #3595); unset, no alert is emailed. Secret |
 | `ALERT_EMAILS` | no | the addresses an alert is emailed to, comma-separated; an entry that is not an address is left out with a warning that never prints it, and nothing here refuses the boot. A Worker secret, since the repository is public; the boot logs how many, never which |
+| `PLAYER_RESEND_API_KEY` | no | a Resend API key with Sending access for jackioh.com, apart from the alerts' key, with which the daily games' "your move" emails go ([Daily games](#daily-games-913-3727), #3727); unset, no player is emailed. Secret |
+| `VAPID_PRIVATE_KEY` | no | the daily games' Web Push signing key (RFC 8292): the raw P-256 private scalar, base64url without padding; unset, or no pair with `VAPID_PUBLIC_KEY` (logged as `daily.push.keys_refused`), no push is sent. Secret |
+| `VAPID_PUBLIC_KEY` | no | its public half, the raw uncompressed point (65 bytes) in base64url, which `GET /api/daily/settings` gives the browser to subscribe with; a Worker secret beside the private half, so the two always match |
 | `DEV_STRICT` | no | the dev dashboard's strict mode (§14.10, R3074000): `on` (the default when unset) makes every `/api/admin/*` route need the two-step code (`aal2`) and keeps a hand-set rating off the public ladder until it is reset (R3074001); `off` skips both. wrangler.jsonc sets `on` for production and `off` for staging, and end-to-end mode defaults it to `off`. Any other value refuses the boot |
 
 `mint-code`, `moderate` and `seed-accounts` read the same environment (`seed-accounts` also
@@ -189,7 +192,7 @@ account, its presence to friends, written at most once a `PRESENCE_TOUCH_EVERY_M
 | `GET` | `/api/username/preview?name=…` | active | the exact username a save would give, tag included, or why it is refused (R1432–R1435) |
 | `PUT` | `/api/username` | active | save the previewed username; 409 with a fresh preview when the outcome changed (R1434, R1435) |
 | `POST` | `/api/username/skip` | active | answer the username prompt by keeping `Player#n` (R1435) |
-| `DELETE` | `/api/account` | user | delete the caller's account and every row only it owns; 409 in a live match, series or co-op match |
+| `DELETE` | `/api/account` | user | delete the caller's account and every row only it owns; 409 in a live match, series, co-op match or running daily game (each past its deadline lost on time first, R3727008) |
 | `POST` | `/api/account/consent` | user | `{ termsVersion, birthYear?, birthMonth? }`: the age screen's answer (an account under `MIN_ACCOUNT_AGE_YEARS` is deleted, 403 `under_age`) and agreement to `TERMS_VERSION` (409 `update_required` for any other); stores only that the age check passed, never the birth date (R757000, R757001) |
 | `GET` | `/api/catalog` | none | `{ version, defs }`, the bytes the client ships (R163); `x-deployed-commit` |
 | `GET` | `/api/catalog/:version` | none | the snapshot shipped patch `version` left, in `/api/catalog`'s shape; 404 for a version never shipped (SPEC §9.4, R388) |
@@ -294,9 +297,34 @@ export. The server never ran a game that used one (R915005: they played in pract
 so no log it folds names a custom card; a practice claim whose deck names a custom id does not fold
 (`DoesNotFold`).
 
+**Daily games** (SPEC §9.13, #3727; `daily/`, [below](#daily-games-913-3727)). Plain HTTPS with a bearer
+token, no socket, no cookie and no engine in the client, so any client can play one:
+
+| Route | Auth | What it does |
+| --- | --- | --- |
+| `GET /api/daily` | Active | `{games, challenges: {incoming, outgoing}, seeks, waiting}`: the caller's running games and its newest `DAILY_RECENT_FINISHED` finished ones, its open challenges both ways and its open seeks, and how many games wait on its move; a game past its deadline is ended first (R3727000) |
+| `POST /api/daily/challenges` | Active | `{friendId, mode: "bo1"\|"random", perMoveDays, deckId?, leanSet?}`: 201 `{id}`. Any friend, online or not, in a game or not; 404 for anyone else, 422 `bad_mode` or `bad_time`, 409 `already_challenged` (one open per friend) or `daily_full` (R3727004); counted against `CHALLENGES_PER_HOUR` with the live ones. Lapses `DAILY_CHALLENGE_TTL_DAYS` after it was sent |
+| `POST /api/daily/challenges/:id/accept` | Active | `{mode, deckId?, leanSet?}`, the friend's own deck: 201 `{matchId}`; 409 `mode_mismatch`, `daily_full`; 404 once closed or lapsed |
+| `POST /api/daily/challenges/:id/decline`, `DELETE /api/daily/challenges/:id` | Active | the friend declines, the challenger cancels: 204 |
+| `POST /api/daily/seeks` | Active | `{mode, perMoveDays, deckId?, leanSet?}`: 201 `{matchId}` when it pairs at once with the oldest open seek of the same mode and time from someone neither blocks, else 201 `{seekId}`; never a ladder bot. 409 `already_seeking`, `daily_full`. Lapses `DAILY_SEEK_TTL_DAYS` later |
+| `DELETE /api/daily/seeks/:id` | Active | cancels the caller's seek: 204 |
+| `GET /api/daily/games/:matchId` | Active | `{matchId, seat, view, legal, seq, holds, hasMove, perMoveDays, mode, catalogVersion, olderCatalog, opponent, over, lostOnTime, nextGame}`: the caller's own `view_for` and legal actions only (none while the move is the other player's), under the game's catalog (R3727005); 404 for a game the caller does not play |
+| `POST /api/daily/games/:matchId/actions` | Active | `{after, nonce, action}`, `after` the `seq` it was read at: 200 with the read. A nonce already logged answers 200 and applies nothing; 409 `stale` (the log moved on, or another request sent after the same `seq` was logged first: the clock is written only on `daily_games.seq` still at `after`), `time_up` or `over`; 422 `not_your_move` (anything but `concede` from a seat holding no move, R3727006's offerer among them) or `illegal`. Every refusal carries `game`, the read as it stands |
+| `GET /api/daily/settings`, `PUT /api/daily/settings` | Active | `{emailOn, hasEmail, vapidPublicKey, pushDevices}`; the `PUT` takes `{emailOn}` |
+| `POST /api/daily/push` | Active | `{endpoint, keys: {p256dh, auth}}`, this device's subscription (an `https` endpoint at a browser's push service, one of `PUSH_SERVICE_HOSTS` or a subdomain of one, else 400; past `PUSH_MAX_DEVICES` the oldest goes): 204 |
+| `DELETE /api/daily/push` | User | `{endpoint}`: the device's subscription goes, as the web signs out: 204 |
+| `GET /api/daily/unsubscribe?token=`, `POST …` | None | the email's own link: a small page whose button posts the `POST`, so opening it (a mail scanner following every link) changes nothing; the `POST` is RFC 8058's one-click, emails off for the token's account (a form-encoded or `multipart/form-data` body of `List-Unsubscribe=One-Click` is read as empty): a small page saying so |
+| `POST /daily-sweep` | None | the Worker's hourly cron: `{expired, settled, emailed, pushed}`. Outside `/api` and `/ws`, which the Worker never forwards from the public |
+| `POST /api/e2e/daily-clock` | None | `{offsetMs}`, end-to-end mode only (404 elsewhere): the daily clock reads that far ahead, for spec 53 |
+
+`GET /api/social` and the `social` frame carry `dailyWaiting`, and a daily match's
+`POST /api/matches/:matchId/rematch` is 409 `daily` (its rematch is a new daily challenge).
+
 ## WebSocket surface
 
-One socket per player per match, at `/ws/match` on the same port. The token comes from an offered
+One socket per player per match, at `/ws/match` on the same port. A second socket of the same account
+takes the seat and the first is closed with `SEAT_TAKEN_CLOSE_CODE` (4412, R3767000), which no client
+reconnects on; a watcher's replacement stays 1000. The token comes from an offered
 `jackioh.bearer.` subprotocol, its UTF-8 in base64url without padding (R1379000; `?token=` only when
 none is offered, for the previous day's client); only `jackioh.v1` is echoed, and `/ws/duos`,
 `/ws/watch` and `/ws/social` read the token the same way. The message union is `actor/protocol.rs`:
@@ -471,9 +499,10 @@ does (the subprotocol, R1379000; one request against the account's budget, 4429 
 4403), with every refusal one `error forbidden` frame and a close. It is sent three frames, each only what its own
 account may read:
 
-- `social {incoming, outgoing, unread}`: exactly what that account's `GET /api/social` answers (`reads::
-  social_snapshot`), first as it opens, then after each change to its challenges or unread counts, a lapse among
-  them, and in answer to a `hello`;
+- `social {incoming, outgoing, unread, dailyWaiting}`: exactly what that account's `GET /api/social` answers
+  (`reads::social_snapshot`; `dailyWaiting` is how many daily games wait on its move, #3727), first as it opens,
+  then after each change to its challenges, unread counts or daily games, a lapse among them, and in answer to a
+  `hello`;
 - `chat {friendId}`: a message between it and that friend was sent, either way; no body rides it, and the tab
   reads the conversation itself;
 - `friends`: its friends list changed; the tab reads `GET /api/friends` itself. A friend's status is not pushed:
@@ -716,13 +745,55 @@ has failed on at least `LOOP_FAILING_ALERT_PASSES` passes in a row over at least
 (both must hold, so the 3 s matchmaker alerts after five minutes and the hourly purge on its third failed
 pass), with the failure's text in the line's `message` (the issue shows only the event name, the email every
 field); `ALERT_WINDOW_MS` then holds the event to one notice an hour. The steps are `matchmaker`,
-`matches.reaper`, `seats.reconcile`, `series.sweeper`, `duos.sweeper`, `challenges.sweeper` and the retention
+`matches.reaper`, `seats.reconcile`, `series.sweeper`, `duos.sweeper`, `challenges.sweeper`, `daily.sweeper` and the retention
 purge's seven, `game_records.fold`, `game_records.refile`, `retention.purge`, `chat.purge`, `duos.logs.purge`,
 `idempotency.sweep` and `practice.sweep`. A reaper pass in which any match would not reap counts as failed,
 so one wedged match is reported while the others reap. The first good pass after an alert logs
 `<step>.recovered` at info, and a later streak alerts again. A step that fails only now and then raises
 nothing, and the per-match and per-series warnings stay as they were. The count lives in the loop's future,
 so a restart of the loop or the process starts it afresh.
+
+## Daily games (§9.13, #3727)
+
+A daily game is a 1v1 game of Best of 1 or All Random with 1, 3, 7 or 14 days per move
+(`DAILY_TIME_PER_MOVE_DAYS`), played over the routes [above](#http-surface). Nothing of it stays in memory:
+it is its `matches` row (unranked, its catalog version frozen, R3727005), its `match_actions` log, a
+`match_checkpoints` row every `MATCH_CHECKPOINT_MIN_ACTIONS`, and a `daily_games` row holding its clock
+(`jackioh_shared::host::daily::DailyClock`: who holds the move and until when) and a board summary for the
+list. Each request loads and folds the game (`daily::games::load`, as a rebuild folds), and an action is
+reduced, appended and the clock stored in one transaction, the next `seq` the log's own key, so of two
+requests at once one lands and the other is `stale`. It never has a match actor: `Registry::rebuild` refuses
+a daily id, `app.live_matches()` and the fake's `matches_live` leave daily games out of the reaper's ceiling,
+and its start takes no seat of the ledger and sets no in-match flag (R3727004), so its result clears no live
+game's flag and cancels no live queue ticket.
+
+**Deadlines.** Who holds the move and its deadline are `jackioh_shared`'s, pure: the player whose turn it
+is, the player a prompt waits on with a fresh window (R3727001), both seats at the mulligan (R3727002), and
+the other player while a draw offer stands (R3727006). A move past its deadline loses for its holder
+(R3727000): `daily::games::settle` logs the server's own `disconnectExpired` under the nonce
+`srv-daily-<seq>` and records the result. Every read settles a game first, and the sweep settles every game
+due: `daily::notify::sweep`, every `DAILY_SWEEP_MINUTES` while the server is awake (`daily.sweeper`) and
+on the Worker's hourly cron (`POST /daily-sweep`) while it sleeps, one at a time (`DailyState::begin_sweep`:
+one that lands while another runs does nothing). A game over whose result's write failed (its match still
+`live`) is due too, so the sweep writes it; a Glitch's void (R679) goes through `results::void_match`. A
+game is written in the transaction that accepts its challenge, so a start that fails leaves the challenge
+open; a seek's claim commits first, and a start that fails puts the claimed seek back where it stood.
+
+**Telling a player.** What to send is `jackioh_shared::notify::decide_notify`'s (a game newly waiting, and
+once `DAILY_REMINDER_HOURS` before a deadline; an email at most every `DAILY_EMAIL_MIN_GAP_HOURS`, and none
+to an account with the setting off or no address). The sweep decides for every player a game waits on, and
+each move decides for both players. An email goes through Resend under `PLAYER_RESEND_API_KEY`, one per
+decision, listing every game waiting with a link to its board, with `List-Unsubscribe` and
+`List-Unsubscribe-Post`; Resend's free plan's 100 a day is shared with the alerts and the sign-in mail.
+A push goes to each of the account's subscriptions (`daily::webpush`: RFC 8291's aes128gcm and RFC 8292's
+VAPID, with `ring`), and a subscription its push service answers 404 or 410 is deleted. A subscription is
+kept only at a browser's push service (`webpush::is_push_service`, `PUSH_SERVICE_HOSTS`), and the push
+client follows no redirect, so no player can aim the server's requests elsewhere. With a key unset its
+channel is off, and the end-to-end server sends neither. A block or an unfriending cancels the open daily
+challenges between the two (R3727007); a game already running goes on. `DELETE /api/account` settles the
+caller's overdue daily games and is refused (409 `conflict`) while one still runs, since 0012's
+`matches_seats_filled_unless_over_check` would refuse it in Postgres, and the in-memory store refuses it
+alike (R3727008).
 
 ## Ladder bots (§9.5, §9.12, R1453, R1454, R1451, R1452, R639000, R641000, R747000)
 
@@ -1291,6 +1362,11 @@ rebuild, the reaper, a replay, telemetry, a game record's summary). NULL on a ma
 match from before it, which folds against its version's frozen table (R1266000). `matches_win_rates_check`
 holds it to a jsonb object. `tests/sql/50_match_win_rates.sql` checks the column, the shapes refused and the
 re-apply.
+
+Migration 0088 widens the `cards` tag check once more, as 0083 did, with #3535's nine Stinkyscape+ tags
+(R3535002) — Mindustrial, Mineral, Automa-α, Automa-β, Automa-γ, Automa-δ, Automa-Ω, Automa-ζ and
+Paperclip — so `seed-catalog` can write the set's entries the day it ships (#3573, R3535000), and comments
+`cards.set_id` with the eight sets that ship.
 
 ## Tests
 

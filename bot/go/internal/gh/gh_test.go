@@ -437,3 +437,80 @@ func TestEachAnswerKeepsItsTokensCallsLeft(t *testing.T) {
 		t.Fatal("kept by token")
 	}
 }
+
+// #3760: GraphQL's points are a limit of their own, with their own reset, so its answers never
+// stand for REST's; and each REST path's calls are counted, but not a 304 nor the limit's own
+// refusal, which cost nothing.
+func TestRESTAndGraphQLLimitsAreKeptApartAndEachPathsCallsCounted(t *testing.T) {
+	Rate.Clear()
+	defer Rate.Clear()
+	code, res, left := 200, "core", "4000"
+	o := &opener{answer: func(req *Request) (*Response, error) {
+		header := http.Header{}
+		header.Set("X-RateLimit-Remaining", left)
+		header.Set("X-RateLimit-Limit", "5000")
+		header.Set("X-RateLimit-Reset", "1790000000")
+		header.Set("X-RateLimit-Resource", res)
+		if code != 200 {
+			return nil, &HTTPError{URL: req.URL, Code: code, Msg: "no", Header: header, Body: []byte("{}")}
+		}
+		answer := jsonAnswer(pyjson.New("data", pyjson.New()))
+		answer.Header = header
+		return answer, nil
+	}}
+	client := NewGitHub("o/r", "tok", false, o.open, nil, "")
+	call := func(method, path string) {
+		defer func() { _ = recover() }()
+		client.Request(method, path, nil, "", false, false)
+	}
+	call("GET", "/repos/o/r/actions/runs/123/jobs?per_page=100")
+	call("GET", "/repos/o/r/actions/runs/456/jobs")
+	call("GET", "/repos/o/r/issues?state=open")
+	res, left = "graphql", "4900"
+	call("POST", "/graphql")
+	if got, _ := Rate.Left("tok"); got.Remaining != 4000 {
+		t.Fatalf("GraphQL's answer stood for REST's: %+v", got)
+	}
+	if got, ok := Rate.LeftOf("tok", GraphQL); !ok || got.Remaining != 4900 {
+		t.Fatalf("GraphQL's own: %+v %v", got, ok)
+	}
+	res, code, left = "core", 304, "3999"
+	call("GET", "/repos/o/r/issues")
+	code, left = 403, "0"
+	call("GET", "/repos/o/r/issues")
+	if got, _ := Rate.Left("tok"); got.Remaining != 0 {
+		t.Fatalf("the refusal's reading: %+v", got)
+	}
+	spent := Rate.Take("tok", REST)
+	want := map[string]int{"GET /actions/runs/{n}/jobs": 2, "GET /issues": 1}
+	if len(spent) != len(want) || spent["GET /actions/runs/{n}/jobs"] != 2 || spent["GET /issues"] != 1 {
+		t.Fatalf("spent %v, want %v", spent, want)
+	}
+	if again := Rate.Take("tok", REST); len(again) != 0 {
+		t.Fatalf("taken once: %v", again)
+	}
+	if points := Rate.Take("tok", GraphQL); points["POST /graphql"] != 1 {
+		t.Fatalf("GraphQL's calls: %v", points)
+	}
+}
+
+// #3760: a call counts by its method and its path, without the query or the repository's own
+// prefix, numbers and SHAs as {n}; the costliest come first, ties by path.
+func TestSpendPathAndTopSpent(t *testing.T) {
+	for in, want := range map[string]string{
+		API + "/repos/o/r/actions/workflows/bot-night.yml/runs?per_page=100&page=8":    "GET /actions/workflows/bot-night.yml/runs",
+		API + "/repos/o/r/commits/0123456789abcdef0123456789abcdef01234567/check-runs": "GET /commits/{n}/check-runs",
+		"/repos/o/r/contents/state.json?ref=_bot-state":                                "GET /contents/state.json",
+		"/gists/abc123":    "GET /gists/abc123",
+		API + "/repos/o/r": "GET /",
+	} {
+		if got := SpendPath("GET", in); got != want {
+			t.Errorf("SpendPath(%q) = %q, want %q", in, got, want)
+		}
+	}
+	total, top := TopSpent(map[string]int{"GET /b": 3, "GET /a": 3, "GET /c": 9, "GET /d": 1}, 3)
+	if total != 16 || len(top) != 3 || top[0] != (PathCount{"GET /c", 9}) || top[1].Path != "GET /a" ||
+		top[2].Path != "GET /b" {
+		t.Fatalf("TopSpent: %d %v", total, top)
+	}
+}

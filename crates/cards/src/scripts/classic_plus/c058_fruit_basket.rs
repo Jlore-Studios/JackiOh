@@ -110,7 +110,9 @@ mod tests {
             assert!(seen.iter().any(|id| is_grape(id)));
             assert!(seen.iter().any(|id| !is_grape(id)));
             let tokens: Vec<&String> = seen.iter().filter(|id| def_of(Some(fresh.state()), id).token).collect();
-            assert!(tokens.iter().all(|id| is_grape(id)));
+            // R382: the five Grapes are the Fruit pool's only tokens; Stinkyscape+ #6.1 Fine Fermented
+            // Grape and the AI generated T-AI-1 and T-AI-2 carry the tag and stay out.
+            assert!(tokens.iter().all(|id| is_grape(id)), "{tokens:?}");
         }
 
         #[test]
@@ -181,24 +183,25 @@ mod tests {
             assert!(seen.iter().any(|entry| is_grape(&entry.0)));
         }
 
+        /// R3563000: the Fruits of one play are different pool picks (R60's repeats no longer stand for a card an
+        /// effect generates). The tally counts the pool's pick before R382's Grape roll, so two picked Grapes may
+        /// still be rolled to the same one: the cards that are no Grape never match. One seed adds the same Fruits.
         #[test]
-        fn r60_s9_3_repeats_are_allowed_and_the_same_seed_adds_the_same_fruits() {
+        fn r3563000_r382_s9_3_the_picks_are_distinct_until_the_pool_runs_out_and_the_same_seed_adds_the_same_fruits() {
             let mut a = basket(true, Some("same"), None);
             let mut b = basket(true, Some("same"), None);
             a.play(BASKET, json!({}));
             b.play(BASKET, json!({}));
             let defs = |s: &Scenario| -> Vec<String> { added(s).into_iter().map(|(_, def_id)| def_id).collect() };
             assert_eq!(defs(&a), defs(&b));
-            let mut repeated = false;
-            let mut i = 0;
-            while i < 100 && !repeated {
+            for i in 0..100 {
                 let mut s = basket(true, Some(&format!("rep-{i}")), None);
-                i += 1;
                 s.play(BASKET, json!({}));
                 let ids = defs(&s);
-                repeated = ids.iter().collect::<IndexSet<_>>().len() < ids.len();
+                assert_eq!(ids.len(), 3, "rep-{i}");
+                let others: Vec<&String> = ids.iter().filter(|id| !is_grape(id)).collect();
+                assert_eq!(others.iter().collect::<IndexSet<_>>().len(), others.len(), "rep-{i}: {ids:?}");
             }
-            assert!(repeated);
         }
     }
 }

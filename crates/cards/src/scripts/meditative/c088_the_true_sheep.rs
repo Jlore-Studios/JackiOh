@@ -106,26 +106,6 @@ mod tests {
         }))
     }
 
-    use crate::js;
-
-    fn open(state: &GameState) -> Value {
-        match &state.pending {
-            Some(pending) => js(pending),
-            None => panic!("the Sheep opened no prompt"),
-        }
-    }
-
-    /// A Discover's options are `mode` selections carrying catalog ids (§10.6).
-    fn option_ids(pending: &Value) -> Vec<String> {
-        pending["options"]
-            .as_array()
-            .cloned()
-            .unwrap_or_default()
-            .iter()
-            .filter(|option| option["selection"]["pick"] == "mode")
-            .map(|option| option["selection"]["option"].as_str().unwrap_or_default().to_string())
-            .collect()
-    }
 
     /// The registered script's static flags for one face.
     fn flags(face: &Script) -> StaticFlags {
@@ -142,7 +122,7 @@ mod tests {
             fn r1221_the_pool_is_the_tribute_cost_cards() {
                 let mut s = holding("sheep-pool", false);
                 s.play(ID, json!({ "zone": 1 }));
-                let options = option_ids(&open(s.state()));
+                let options = s.prompt_modes();
                 assert_eq!(options.len(), OFFERED as usize);
                 let mut sorted = options.clone();
                 sorted.sort();
@@ -160,12 +140,14 @@ mod tests {
             }
 
             #[test]
-            fn r1221_the_tribute_query_holds_the_fifteen_shipped_tribute_cost_cards() {
+            fn r1221_the_tribute_query_holds_the_thirty_four_shipped_tribute_cost_cards() {
                 crate::register_all();
                 // A pool that names no set draws from the sets that ship (R1420), as SPEC §8.8 row 88
                 // lists them, M #25 and #91, S #74, #80, #85, #86, #113 and #115 (#1884), TG #25 and #54
-                // (Core #66's snapshot, #2204). Turtinator's Tribute is an Activate's cost, not a play
-                // cost, and M #97's Tribute buildings are tokens, so neither is one of them.
+                // (Core #66's snapshot, #2204), and S+ #21, #52, #72, #112 to #114, #117 to #119, #122 to
+                // #127, #130, #131, #159 and #160 (#3573). Turtinator's Tribute is an Activate's cost, not a
+                // play cost, M #97's Tribute buildings are tokens, and S+ #129's, #138's and #139's "Tribute"
+                // is the one a card they add has or lacks, so none of them is one of them.
                 // Read as it is, not as the pool probe (#3117) rotates it: this tests its content and order.
                 let pool: Vec<&str> = jackioh_engine::testkit::with_pool_shift(0, || {
                     jackioh_engine::catalog::query(&CatalogQueryArgs {
@@ -194,6 +176,25 @@ mod tests {
                         "stinkyscape-115",
                         "traininggrounds-025",
                         "traininggrounds-054",
+                        "stinkyscapeplus-021",
+                        "stinkyscapeplus-052",
+                        "stinkyscapeplus-072",
+                        "stinkyscapeplus-112",
+                        "stinkyscapeplus-113",
+                        "stinkyscapeplus-114",
+                        "stinkyscapeplus-117",
+                        "stinkyscapeplus-118",
+                        "stinkyscapeplus-119",
+                        "stinkyscapeplus-122",
+                        "stinkyscapeplus-123",
+                        "stinkyscapeplus-124",
+                        "stinkyscapeplus-125",
+                        "stinkyscapeplus-126",
+                        "stinkyscapeplus-127",
+                        "stinkyscapeplus-130",
+                        "stinkyscapeplus-131",
+                        "stinkyscapeplus-159",
+                        "stinkyscapeplus-160",
                     ]
                 );
                 // `false` forbids them.
@@ -209,7 +210,7 @@ mod tests {
             fn r1222_discovers_three_different_to_hand_and_stays() {
                 let mut s = holding("sheep-stays", false);
                 s.play(ID, json!({ "zone": 1 }));
-                let picked = option_ids(&open(s.state())).into_iter().next().expect("three options");
+                let picked = s.prompt_modes().into_iter().next().expect("three options");
                 let hand = s.hand(P1).len();
                 s.answer(json!(picked));
                 let after = def_ids(&s.hand(P1));
@@ -224,7 +225,7 @@ mod tests {
             fn r1222_the_pick_costs_1() {
                 let mut s = holding("sheep-costs", false);
                 s.play(ID, json!({ "zone": 1 }));
-                let picked = option_ids(&open(s.state())).into_iter().next().expect("three options");
+                let picked = s.prompt_modes().into_iter().next().expect("three options");
                 s.answer(json!(picked));
                 let pick = s.hand(P1).into_iter().find(|card| card.def_id == picked).expect("the pick");
                 assert_eq!(pick.cost_override, Some(1));
@@ -235,7 +236,7 @@ mod tests {
                 let mut s = holding("sheep-costs", false);
                 step_param(s.card_mut(ID), "setCost", -1);
                 s.play(ID, json!({ "zone": 1 }));
-                let picked = option_ids(&open(s.state())).into_iter().next().expect("three options");
+                let picked = s.prompt_modes().into_iter().next().expect("three options");
                 s.answer(json!(picked));
                 let pick = s.hand(P1).into_iter().find(|card| card.def_id == picked).expect("the pick");
                 assert_eq!(pick.cost_override, Some(0));
@@ -274,7 +275,7 @@ mod tests {
             fn the_pick_is_radiant_and_the_worth_is_500() {
                 let mut s = holding("sheep-radiant", true);
                 s.play(ID, json!({ "zone": 1 }));
-                let picked = option_ids(&open(s.state())).into_iter().next().expect("three options");
+                let picked = s.prompt_modes().into_iter().next().expect("three options");
                 s.answer(json!(picked));
                 let pick = s.hand(P1).into_iter().find(|card| card.def_id == picked).expect("the pick");
                 assert!(pick.radiant);

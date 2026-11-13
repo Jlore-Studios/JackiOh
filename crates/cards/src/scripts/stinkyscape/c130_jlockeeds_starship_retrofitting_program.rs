@@ -13,18 +13,13 @@
 
 use jackioh_engine::prelude::*;
 
-use crate::query::CardQuery;
-
 pub const ID: &str = "stinkyscape-130";
 
 fn retrofit(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let mut args = AddRandomFromCatalogArgs {
-                query: Some(CardQuery {
-                    tags: Some(vec![Tag::Jlockeed]),
-                    ..CardQuery::default()
-                }),
+                query: Some(crate::query::jlockeed_cards()),
                 keywords: Some(vec![Keyword::StarshipPiece]),
                 ..AddRandomFromCatalogArgs::default()
             };
@@ -76,6 +71,15 @@ mod tests {
         })
     }
 
+    /// The Tribute a card prints as a play cost (R1221), 0 for none: a Unit with one cannot be played from
+    /// a field with nothing on it to pay it (S+ #21 Jlockeed Shredder-12 prints Tribute 1).
+    fn tribute_cost(def_id: &str) -> i32 {
+        registered_entry(def_id)
+            .and_then(|entry| entry.base.static_flags.as_ref())
+            .and_then(|flags| flags.tribute)
+            .unwrap_or(0)
+    }
+
     #[test]
     fn r278_r387_r1878003_adds_a_random_jlockeed_card_but_this_one_with_starship_piece() {
         for i in 0..16 {
@@ -95,7 +99,9 @@ mod tests {
         let seed = seed_where("retrofit-unit", |seed| {
             let mut s = holding(false, seed, 1);
             s.play(PROGRAM, json!({}));
-            added(&s).is_some_and(|card| crate::card_def(&card.def_id).type_ == CardType::Unit)
+            added(&s).is_some_and(|card| {
+                crate::card_def(&card.def_id).type_ == CardType::Unit && tribute_cost(&card.def_id) == 0
+            })
         });
         let mut s = holding(false, &seed, 1);
         s.play(PROGRAM, json!({}));

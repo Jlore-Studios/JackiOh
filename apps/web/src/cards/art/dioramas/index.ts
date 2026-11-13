@@ -21,6 +21,7 @@ import { MEDITATIVE_DIORAMAS } from "./meditative/index.ts";
 import { MEDITATIVEPLUS_DIORAMAS } from "./meditativeplus/index.ts";
 import { DIORAMA_CACHE_MAX, matches, motionStyleOf, picturePieces, type PicturePiece } from "./pieces.ts";
 import { STINKYSCAPE_DIORAMAS } from "./stinkyscape/index.ts";
+import { STINKYSCAPEPLUS_DIORAMAS } from "./stinkyscapeplus/index.ts";
 import { TRAININGGROUNDS_DIORAMAS } from "./traininggrounds/index.ts";
 import type { Diorama, DioramaSlice } from "./types.ts";
 
@@ -36,6 +37,7 @@ export const DIORAMAS: ReadonlyMap<string, Diorama> = new Map(
     ...MEDITATIVEPLUS_DIORAMAS,
     ...STINKYSCAPE_DIORAMAS,
     ...TRAININGGROUNDS_DIORAMAS,
+    ...STINKYSCAPEPLUS_DIORAMAS,
   ].map((diorama) => [diorama.id, diorama]),
 );
 

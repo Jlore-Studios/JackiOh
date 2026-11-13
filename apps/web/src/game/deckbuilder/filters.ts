@@ -27,6 +27,7 @@ import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 import { chineseDef, readerName, readerTerms } from "../../cards/chinese.ts";
 import { isGlitch } from "../../cards/glitch.ts";
 import { DEFAULT_LOCALE, getLocale } from "../../i18n/i18n.ts";
+import { PATCH_LOG } from "../../patches/ribbon.ts";
 import { poolFrom } from "./loadout.ts";
 import { almanacShelf } from "./shelf.ts";
 
@@ -78,15 +79,26 @@ export const FILTER_TAGS: readonly Tag[] = [
   // Issue #2521: the Stinkyscape set's five Faction cards, #95 and #159 to #162, which a deck may
   // hold. "Resource" is left out with "War Doctrine": only the six Resource tokens carry it.
   "Faction",
+  // R3572000: the Stinkyscape+ set's (S26): the Mindustrial, Mineral and Paperclip cards and the five
+  // Automa families a deck may hold. "Automa-ζ" is left out: only its five tokens carry it.
+  "Mindustrial",
+  "Mineral",
+  "Automa-α",
+  "Automa-β",
+  "Automa-γ",
+  "Automa-δ",
+  "Automa-Ω",
+  "Paperclip",
 ];
 
 /**
  * The almanac's tag chips (R630): the deck builder's, then the tags no deckable card carries: "Prime" (R1421),
  * "AI", "Other-Origins" (Classic+ #32.1 to #32.3, R1837000), "War Doctrine" (#137.1 to #137.4, R1883000),
- * "Resource" (issue #2521), "Starship" (the Dormant Starship, which only a rule makes, R3038000) and "Token".
+ * "Resource" (issue #2521), "Starship" (the Dormant Starship, which only a rule makes, R3038000), "Automa-ζ"
+ * (Stinkyscape+'s five Automa-ζ tokens, R3572000) and "Token".
  * Every tag a catalog card carries.
  */
-export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Starship", "Token"];
+export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Starship", "Automa-ζ", "Token"];
 
 /** R1381: the tags of `order` a card of a shipped set carries (R1420), in order; Glitch lends none (R674). */
 export function shippedTags(order: readonly Tag[], cards: readonly CardDef[]): readonly Tag[] {
@@ -110,11 +122,25 @@ export const FILTER_SETS: readonly SetName[] = SHIPPED_SETS;
 
 export const FILTER_RARITIES: readonly Rarity[] = ["Common", "Rare", "Epic", "Legendary", "Mythic"];
 
+/** Issue #3734: the keyword chips of the Collection's grid, read off the bundled catalog: every kind a shipped
+ *  card (never a Token, never Glitch's) carries on either face, in string order. */
+export const FILTER_KEYWORDS: readonly KeywordKind[] = shippedKeywords(BUNDLED);
+
+function shippedKeywords(cards: readonly CardDef[]): readonly KeywordKind[] {
+  const carried = new Set<KeywordKind>();
+  for (const def of cards) {
+    if (def.token || def.tags.includes("Token") || isGlitch(def.id) || !setShips(def.set)) continue;
+    for (const kind of keywordKindsOf(def)) carried.add(kind);
+  }
+  return [...carried].sort();
+}
+
 export type PoolFilter = {
   sets: ReadonlySet<SetName>;
   costs: ReadonlySet<CostBucket>;
   types: ReadonlySet<CardType>;
   tags: ReadonlySet<Tag>;
+  keywords: ReadonlySet<KeywordKind>;
   rarities: ReadonlySet<Rarity>;
   search: string;
   ownedOnly: boolean;
@@ -125,14 +151,22 @@ export const DEFAULT_FILTER: PoolFilter = {
   costs: new Set<CostBucket>(),
   types: new Set<CardType>(),
   tags: new Set<Tag>(),
+  keywords: new Set<KeywordKind>(),
   rarities: new Set<Rarity>(),
   search: "",
   ownedOnly: true,
 };
 
-export type SortKey = "cost" | "name" | "rarity" | "attack" | "health" | "type" | "winRate";
+/** Issue #3734: "set" files a card under its set, in the order the sets ship (`SHIPPED_SETS`), and "newest" the
+ *  card the latest patch added first. */
+export type SortKey = "cost" | "name" | "rarity" | "attack" | "health" | "type" | "winRate" | "set" | "newest";
 
-export const SORT_KEYS: readonly SortKey[] = ["cost", "name", "rarity", "attack", "health", "type", "winRate"];
+export const SORT_KEYS: readonly SortKey[] = ["cost", "name", "rarity", "attack", "health", "type", "winRate", "set", "newest"];
+
+/** Issue #3734: the Collection's third ownership view over its one grid. */
+export type Ownership = "all" | "owned" | "missing";
+
+export const OWNERSHIPS: readonly Ownership[] = ["all", "owned", "missing"];
 
 export type CardWinRateInfo = { winRate: number | null; hasEnoughGames: boolean };
 
@@ -234,6 +268,7 @@ export function matchesFilter(def: CardDef, filter: PoolFilter): boolean {
   if (filter.costs.size > 0 && !filter.costs.has(costBucket(def.cost))) return false;
   if (filter.types.size > 0 && !filter.types.has(def.type)) return false;
   if (filter.tags.size > 0 && !def.tags.some((tag) => filter.tags.has(tag))) return false;
+  if (filter.keywords.size > 0 && !keywordKindsOf(def).some((kind) => filter.keywords.has(kind))) return false;
   if (filter.rarities.size > 0 && !filter.rarities.has(def.rarity)) return false;
   return searchMatches(def, filter.search);
 }
@@ -256,8 +291,23 @@ function compareNames(left: CardDef, right: CardDef): number {
   return readerName(left).localeCompare(readerName(right), collationTag(), { sensitivity: "base" });
 }
 
-function comparePrimary(key: "cost" | "name" | "rarity" | "type", left: CardDef, right: CardDef): number {
+/** Issue #3734: the position of the patch of `PATCH_LOG` that added each card, so a later patch is a larger number;
+ *  a card no patch added is -1 (it sorts after every card one did). */
+const ADDED_AT: ReadonlyMap<string, number> = new Map(
+  PATCH_LOG.flatMap((patch, at) => patch.changes.filter((change) => change.kind === "added").map((change) => [change.id, at] as const)),
+);
+
+function addedAt(def: CardDef): number {
+  return ADDED_AT.get(def.id) ?? -1;
+}
+
+function comparePrimary(key: "cost" | "name" | "rarity" | "type" | "set" | "newest", left: CardDef, right: CardDef): number {
   switch (key) {
+    case "set":
+      return compareNumbers(SHIPPED_SETS.indexOf(left.set), SHIPPED_SETS.indexOf(right.set));
+    case "newest":
+      // Ascending is newest first: the later patch is the smaller key.
+      return compareNumbers(addedAt(right), addedAt(left));
     case "cost":
       return compareNumbers(costOrder(left.cost), costOrder(right.cost));
     case "name":
@@ -354,6 +404,24 @@ export function almanacPool(
   winRates?: ReadonlyMap<string, CardWinRateInfo>,
 ): readonly string[] {
   return filteredAndSorted(almanacShelf(catalog.cards), catalog, filter, sort, winRates);
+}
+
+/**
+ * Issue #3734: what the Collection's grid shows: every card of `shelf`, filtered and sorted, then narrowed to the
+ * ones `owned` holds ("owned"), the ones it does not ("missing") or both ("all"). The caller's `shelf` already
+ * leaves a Token or Glitch out, and `filter.ownedOnly` is never read: ownership is its own control here.
+ */
+export function collectionPool(
+  shelf: readonly string[],
+  catalog: CatalogSnapshot,
+  owned: ReadonlySet<string>,
+  ownership: Ownership,
+  filter: PoolFilter,
+  sort: PoolSort,
+): readonly string[] {
+  const ids = filteredAndSorted(shelf, catalog, filter, sort);
+  if (ownership === "all") return ids;
+  return ids.filter((id) => owned.has(id) === (ownership === "owned"));
 }
 
 function filteredAndSorted(

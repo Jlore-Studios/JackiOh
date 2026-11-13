@@ -13,6 +13,7 @@ import type { CardView, CreditView, GameEvent, GameEventType, LibraryView, Playe
 
 import { animTestid } from "./animations.ts";
 import Card, { cx, isLegal, isSelected, legalAttr, type Pops } from "./Card.tsx";
+import { blackHoleCount, laneMarkOf } from "./geometry.ts";
 import { CatalogContext, MatchCardsProvider, type CardLookup } from "./catalog.ts";
 import { RIFFLE_LEAVES } from "./config.ts";
 import {
@@ -160,11 +161,13 @@ function ManaTray({
   mana,
   credit,
   animating,
+  infinite,
 }: {
   side: Side;
   mana: { current: number; max: number };
   credit?: CreditView;
   animating?: AnimatingMap;
+  infinite?: boolean;
 }): ReactElement {
   const testId = `mana-${side}`;
   const crystals = Math.max(mana.max, mana.current);
@@ -177,7 +180,9 @@ function ManaTray({
       data-current={mana.current}
       data-max={mana.max}
       data-animating={animating?.get(testId)}
-      title={t("Mana {current}/{max}", { current: mana.current, max: mana.max })}
+      // R3548004: infinite mana reads infinity, at no number.
+      data-infinite={infinite === true ? "true" : undefined}
+      title={infinite === true ? t("Mana: infinite") : t("Mana {current}/{max}", { current: mana.current, max: mana.max })}
     >
       <span className="crystals">
         {Array.from({ length: crystals }, (_unused, index) => (
@@ -192,7 +197,7 @@ function ManaTray({
         ))}
       </span>
       <span className="mana-text">
-        {mana.current}/{mana.max}
+        {infinite === true ? "∞" : `${mana.current}/${mana.max}`}
       </span>
       {credit !== undefined && (
         <span
@@ -446,7 +451,7 @@ function Seat({
           {aside}
         </div>
       )}
-      <ManaTray side={side} mana={seat.mana} credit={seat.credit} animating={animating} />
+      <ManaTray side={side} mana={seat.mana} credit={seat.credit} animating={animating} infinite={seat.infiniteMana === true} />
       {/* R1847000: the seat's starscape map, both seats' once its player has first traveled. */}
       {seat.starscape !== undefined && <StarscapeMap side={side} starscape={seat.starscape} />}
       <span className="piles">
@@ -574,6 +579,7 @@ export default function Board({
   animating,
   animated,
   turnClock,
+  endTurnLabel,
   matchStatus,
   boardRail,
   heroAside,
@@ -738,7 +744,12 @@ export default function Board({
             <CornerProps mat={slots.table} half="yours" draining={draining} />
             <CornerProps mat={theirSlots.table} half="theirs" />
             {LANES.map((lane) => (
-              <div className="lane" key={lane} data-lane={lane}>
+              <div className="lane" key={lane} data-lane={lane} data-lane-mark={laneMarkOf(view, lane) ?? undefined}>
+                {laneMarkOf(view, lane) === "blackHole" && (
+                  <span className="black-hole-count" data-testid={testid.blackHoleCount}>
+                    {blackHoleCount(view)}
+                  </span>
+                )}
                 {FIELD_ROWS.map((slot) => (
                   <Zone
                     key={`${slot.side}-${slot.row}`}
@@ -797,7 +808,7 @@ export default function Board({
             <ControlButton
               control="end-turn"
               testId={testid.endTurn}
-              label={endTurnState === "enemy" ? t("Enemy turn") : armed ? t("Confirm end turn") : t("End turn")}
+              label={endTurnState === "enemy" ? t("Enemy turn") : armed ? t("Confirm end turn") : (endTurnLabel ?? t("End turn"))}
               highlight={highlight}
               animating={animating}
               confirm={armed ? "armed" : undefined}

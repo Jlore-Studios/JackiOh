@@ -66,9 +66,25 @@ pub struct DamageFlags {
     /// R2783001: the hit's route, the keyword the engine sent it by — Cleave's neighbour hit, a Trample
     /// excess, the strike First Strike moved ahead — which its `damage` (or `damageAbsorbed`) carries as
     /// `via`. Set only by the engine's combat and Trample verbs and never serialized, so no card can
-    /// state it and nothing a state holds carries it.
+    /// state it and nothing a state holds carries it. R3540001: the start-of-turn ticks of Burn and Toxic
+    /// (`afflictions::tick_at_turn_start`) set it too, each to its own keyword.
     #[serde(skip)]
     pub via: Option<KeywordKind>,
+    /// R3554007: the hit is a damage chain's own hit — a split share or a shared echo — so it never
+    /// chains again. Never serialized, so no card can state it (D14).
+    #[serde(skip)]
+    pub chain_hit: bool,
+}
+
+/// R3554007: the flags a split share or a shared echo carries: the hit's own, but never a strike's
+/// (`attacking`), never Trample's, and marked so it chains no further.
+fn chain_flags(flags: Option<&DamageFlags>) -> DamageFlags {
+    let mut chained = flags.cloned().unwrap_or_default();
+    chained.attacking = None;
+    chained.trample = None;
+    chained.trample_onto = None;
+    chained.chain_hit = true;
+    chained
 }
 
 /// R1848001: where a hit's Trample excess goes when it is not §4.4 step 9's hero: onto the Units
@@ -93,7 +109,7 @@ pub struct DamageArgs {
 /// Every caller hands the engine's sink (SURFACE §6.5).
 pub type DamageSink<'a> = EngineSink<'a>;
 
-fn target_id(target: &DamageTarget) -> String {
+pub(crate) fn target_id(target: &DamageTarget) -> String {
     match target {
         DamageTarget::Unit { instance } => instance.id.clone(),
         DamageTarget::Hero { player } => format!("hero-{player}"),
@@ -471,6 +487,36 @@ fn land(
         };
     }
 
+    // R3554007, §4.4 step 0b: a hit on a split-chained Unit is divided among every member of its
+    // chain, rounded down, each share landing as its own chain hit through `land_hit`. The target's
+    // share is what this hit dealt.
+    if flags.is_none_or(|flags| !flags.chain_hit)
+        && let Some(live) = unit.as_ref()
+        && let Some(chain) = live.split_chain
+    {
+        let members = crate::geometry::chain_members(sink.state, chain, crate::geometry::ChainKind::Split);
+        if members.len() > 1 {
+            let share = amount_in / members.len() as i32;
+            let chained = chain_flags(flags);
+            let mut dealt = 0;
+            for member in &members {
+                let hit = DamageArgs {
+                    source: source.cloned(),
+                    target: DamageTarget::Unit {
+                        instance: member.clone(),
+                    },
+                    amount: share,
+                    flags: Some(chained),
+                };
+                let got = land_hit(sink, &hit, share, redirects, caught);
+                if member.id == live.id {
+                    dealt = got;
+                }
+            }
+            return Landed { dealt, held: 0 };
+        }
+    }
+
     // Step 1: Divine Shield negates the whole hit and is gone.
     if let Some(live) = &unit {
         let view = crate::layers::unit_view(sink.state, live);
@@ -521,6 +567,46 @@ fn land(
             }
         }
         (DamageTarget::Unit { .. }, None) => {}
+    }
+
+    // R3540003, §4.4 step 3a: a hit from a source that states "Damage dealt Burns" (or "is Toxic"), past
+    // Armor and the caps, is its target's Burn (or Toxic) instead of damage: nothing of steps 4 to 9
+    // happens. A Unit that takes no damage (Indestructible, step 4) gains none, and a hit of 0 converts
+    // nothing.
+    if amount > 0
+        && let Some(kind) = source.and_then(|source| crate::afflictions::converts_to(sink.state, source))
+    {
+        let indestructible = unit.as_ref().is_some_and(|live| {
+            has_keyword(
+                &crate::layers::unit_view(sink.state, live).keywords,
+                KeywordKind::Indestructible,
+            )
+        });
+        if !indestructible {
+            crate::afflictions::afflict(sink, target, kind, amount);
+        }
+        return Landed::default();
+    }
+
+    // R3550004, §4.4 step 3b: the first damage allies would take per turn is nullified — after Armor
+    // ("accounts for armor"), on the controller's Units and hero alike, never spent on an
+    // Indestructible Unit. No event is emitted.
+    if amount > 0 {
+        let indestructible = unit.as_ref().is_some_and(|live| {
+            has_keyword(
+                &crate::layers::unit_view(sink.state, live).keywords,
+                KeywordKind::Indestructible,
+            )
+        });
+        if !indestructible {
+            let side = match target {
+                DamageTarget::Hero { player } => Some(*player),
+                DamageTarget::Unit { .. } => unit.as_ref().map(|live| live.controller),
+            };
+            if let Some(side) = side {
+                amount = damage_pool(sink, side, amount);
+            }
+        }
     }
 
     // E5, E9: after the caps and before step 5, a hit that alone would bring its hero to 0 or less (R44)
@@ -692,6 +778,23 @@ fn land(
         card.marked_exiled = Some(true);
     }
 
+    // R3550002, §4.4 step 7: "Freeze any Unit damaged by this" — a Unit dealt 1 or more by this
+    // card's hit is Frozen. A hero is never Frozen, and a Unit gone by now is gone (R174).
+    if let (Some(live), Some(source_card)) = (&unit, source)
+        && dealt >= 1
+        && crate::scripts::flags_of(sink.state, source_card).freezes_damaged == Some(true)
+        && find_instance(sink.state, &live.id)
+            .is_some_and(|card| crate::zones::acts_on_field(sink.state, card))
+    {
+        crate::freeze::freeze_unit(sink, &live.id);
+    }
+
+    // R3540002: "Damage also Burns N / applies Toxic N" adds N to a target the hit left standing, after
+    // Poisonous and the exile have had their say.
+    if let Some(source_card) = source {
+        crate::afflictions::ride_damage(sink, source_card, target);
+    }
+
     // Step 8: Lifesteal heals the source's controller's hero by the amount dealt; R85: an effect may
     // state it without granting the source the keyword. With no source it heals nobody.
     let source_has_lifesteal = source_has(sink.state, source, KeywordKind::Lifesteal);
@@ -704,6 +807,30 @@ fn land(
     // R1849003, step 8a: what a reflecting Unit took is dealt again, from it.
     if let Some(live) = &unit {
         reflect_damage(sink, live, source, flags, dealt);
+    }
+
+    // R3554007, §4.4 step 8b: what a shared-chained Unit was dealt is dealt again to each other
+    // member of its chain, as its own chain hit, so no echo echoes again.
+    if dealt > 0
+        && flags.is_none_or(|flags| !flags.chain_hit)
+        && let Some(live) = &unit
+        && let Some(chain) = live.shared_chain
+    {
+        let chained = chain_flags(flags);
+        for member in crate::geometry::chain_members(sink.state, chain, crate::geometry::ChainKind::Shared) {
+            if member.id == live.id {
+                continue;
+            }
+            let hit = DamageArgs {
+                source: source.cloned(),
+                target: DamageTarget::Unit {
+                    instance: member.clone(),
+                },
+                amount: dealt,
+                flags: Some(chained),
+            };
+            land_hit(sink, &hit, dealt, redirects, caught);
+        }
     }
 
     // Step 9: Trample sends the excess on (`send_excess`).
@@ -816,18 +943,74 @@ fn adjacent_units_of(
     struck: &CardInstance,
     source: Option<&CardInstance>,
 ) -> Vec<CardInstance> {
-    let Some(at) = crate::zones::slot_of(state, struck) else {
-        return Vec::new();
-    };
-    crate::zones::adjacent(at)
-        .into_iter()
-        .filter_map(|slot| crate::zones::card_at(state, slot).cloned())
-        .filter(|neighbour| {
-            neighbour.id != struck.id
-                && crate::zones::is_adjacent_card(state, struck, neighbour)
-                && !crate::restrictions::spell_cannot_reach(state, source, neighbour)
+    // R3546001: beside a GIGA in either of its lanes, in both; a GIGA beside the struck is met once.
+    let mut met: Vec<String> = vec![struck.id.clone()];
+    let mut out: Vec<CardInstance> = Vec::new();
+    for slot in crate::giga::adjacent_slots(state, struck) {
+        let Some(neighbour) = crate::giga::occupant_at(state, slot).cloned() else {
+            continue;
+        };
+        if met.contains(&neighbour.id) {
+            continue;
+        }
+        met.push(neighbour.id.clone());
+        if crate::zones::is_adjacent_card(state, struck, &neighbour)
+            && !crate::restrictions::spell_cannot_reach(state, source, &neighbour)
+        {
+            out.push(neighbour);
+        }
+    }
+    out
+}
+
+/// R3550004: where a card with a damage pool notes what it has soaked, `{ turns, used }`, where
+/// `turns` is its controller's `turns_started` — the pool refills at the start of its controller's
+/// turn, and a note from an earlier turn is spent nothing.
+const DAMAGE_POOL_KEY: &str = "@damagePool";
+
+/// R3550004: how much `card`'s damage pool has soaked on its controller's current turn; a note from
+/// another turn is 0. What the pool's rest is counted from, here and in its preview
+/// (`query::damage_pool_left`).
+pub(crate) fn damage_pool_used(state: &GameState, card: &CardInstance) -> i32 {
+    card.memory
+        .get(DAMAGE_POOL_KEY)
+        .filter(|record| {
+            record.get("turns").and_then(serde_json::Value::as_i64)
+                == Some(i64::from(state.players[card.controller].turns_started))
         })
-        .collect()
+        .and_then(|record| record.get("used").and_then(serde_json::Value::as_i64))
+        .map_or(0, |used| used as i32)
+}
+
+/// R3550004 (Stinkyscape+ #42 Force Projector), §4.4 step 3b: each card acting for `player` with a
+/// pool, in R68's order, soaks what its declared `pool` (R386) has left of the hit. Returns the rest
+/// of the hit.
+fn damage_pool(sink: &mut DamageSink<'_>, player: PlayerId, amount: i32) -> i32 {
+    let mut rest = amount;
+    for card in acting_texts_of(sink.state, player) {
+        if rest <= 0 {
+            break;
+        }
+        let Some(pool) = crate::scripts::flags_of(sink.state, &card).damage_pool else {
+            continue;
+        };
+        // R386: the card's declared number `pool` where it declares one.
+        let cap = crate::params::declared_or(sink.state, &card, "pool", pool).max(0);
+        let used = damage_pool_used(sink.state, &card);
+        let take = rest.min(cap - used);
+        if take <= 0 {
+            continue;
+        }
+        let turns = sink.state.players[card.controller].turns_started;
+        if let Some(live) = find_instance_mut(sink.state, &card.id) {
+            live.memory.insert(
+                DAMAGE_POOL_KEY.to_string(),
+                serde_json::json!({ "turns": turns, "used": used + take }),
+            );
+        }
+        rest -= take;
+    }
+    rest
 }
 
 /// R1849004: where a card with an own-turn redirect notes how much it has moved this turn,

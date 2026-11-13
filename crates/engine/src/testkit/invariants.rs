@@ -612,13 +612,20 @@ fn field_state_held(card: &CardInstance, in_graveyard_or_exile: bool) -> Vec<&'s
         (card.embiggened.is_some(), "embiggened"),
     ]);
     if in_graveyard_or_exile {
+        // R3566004: a card evolved in its graveyard (leaving the field clears `evolved`, R3536000, so one
+        // that holds it there evolved there) keeps what its Evolve gave it, its buff, keywords and stat
+        // line, for the Flashback play that brings it back (S+ #6.2 Stinky Cheese).
+        let evolved_here = card.evolved == Some(true);
         held.extend(held_names(&[
-            (card.buffs != AttackHealth::default(), "buffs"),
-            (!card.granted_keywords.is_empty(), "grantedKeywords"),
+            (card.buffs != AttackHealth::default() && !evolved_here, "buffs"),
+            (
+                !card.granted_keywords.is_empty() && !evolved_here,
+                "grantedKeywords",
+            ),
             (card.grants.is_some(), "grants"),
             (card.vanilla, "vanilla"),
             (card.counters != Counters::default(), "counters"),
-            (card.stats_override.is_some(), "statsOverride"),
+            (card.stats_override.is_some() && !evolved_here, "statsOverride"),
             (card.armor_override.is_some(), "armorOverride"),
         ]));
     }
@@ -2818,10 +2825,12 @@ impl InvariantMonitor {
                         && !attack.killed
                     {
                         attack.killed = true;
-                        // R1869002: a kill readies its attacker only through its own `afterAttack` text.
+                        // R1869002: a kill readies its attacker only through its own `afterAttack` text;
+                        // R3543003: or its Frenzy, which answers the same kill.
                         let attacker_id = attack.attacker_id.clone();
                         let answers = find_instance(state, &attacker_id).is_some_and(|attacker| {
                             crate::scripts::script_of(state, attacker).after_attack.is_some()
+                                || crate::layers::unit_has(state, attacker, KeywordKind::Frenzy)
                         });
                         if answers {
                             self.credit_kill(&attacker_id);
@@ -3011,11 +3020,16 @@ impl InvariantMonitor {
                             _ => 1,
                         },
                     };
+                    // R3550001: a Unit that "can attack N times per turn" declares N attacks.
                     let per_turn = if self.windfury.get(declarer) == Some(&current) {
                         WINDFURY_ATTACKS
                     } else {
                         1
                     };
+                    let per_turn = per_turn.max(
+                        find_instance(state, declarer)
+                            .map_or(1, |card| crate::combat::attacks_per_turn(state, card)),
+                    );
                     // R1869002: a kill credit's fresh exertion counts the attacks of a turn again from there.
                     let allowed = per_turn + self.credited_at(declarer).unwrap_or(0);
                     if mark.count > allowed {

@@ -27,7 +27,7 @@
 // R3013002: and its card's proficiency stamp, as CardFace does, at the minion's right edge over the name plate.
 // R3340000: its art moves while it holds a motion slot, when its card wears an animated or signed level and when it is a Mythic,
 // ranked by the pointer, focus and the attack in flight (`useArtMotion`, motionSlots.ts), and answers the pointer, a press and
-// `attackDeclared` (artLive.ts, `data-art-hover`, `data-art-attacking`); its art wears cracks for the health it is missing, a
+// `attackDeclared` (artLive.ts, `data-art-hover`, `data-art-attacking`); its art wears a
 // glow in its card's colours when buffed and frost when frozen (`wear`, art/ArtWear.tsx), from the view's numbers and keywords alone.
 // R3335000: a launched Starship's art wears its seat's Starship look, as CardFace's does.
 // R3334000: a Dormant Starship with pieces idles in its shipyard over its picture (ShipyardIdle.tsx).
@@ -41,7 +41,6 @@ import { hasKeyword, keywordKey, type Keyword, type UnitView } from "@jackioh/sh
 
 import { CardArt } from "./art/index.ts";
 import { dioramaOf } from "./art/dioramas/index.ts";
-import { damageLevel } from "./art/wear.ts";
 import { shipArtOf } from "./art/stinkyscape.ts";
 import { CardStates } from "./CardStates.tsx";
 import { costDigits, hasCrest } from "./CardFace.tsx";
@@ -53,6 +52,7 @@ import { useFitText } from "./fit.ts";
 import { artMotionOf, boardLookOf, boardNameOf, useCardLook } from "./fullArt.ts";
 import { KEYWORD_MARK } from "./keywordMarks.ts";
 import { Icon } from "./icons.tsx";
+import { TipsyName, useTipsyBlur } from "../game/tipsy.tsx";
 import { DormantSeal, dormantAttr } from "./DormantSeal.tsx";
 import { StarshipHull } from "./StarshipHull.tsx";
 import { KeywordFx } from "./KeywordFx.tsx";
@@ -101,7 +101,8 @@ export function drawnAsState(keyword: Keyword, armor: number): boolean {
 
 /** The keywords that get a visible chip, and the ones folded into the "+n" count; a keyword that does nothing on the field (R2577000) is neither. */
 export function keywordChips(keywords: readonly Keyword[], armor: number): { shown: Keyword[]; folded: Keyword[] } {
-  const chips = keywords.filter((keyword) => KEYWORD_VISUALS[keyword.kind].onField && !drawnAsState(keyword, armor));
+  // R3546004: a kind with no visual draws nothing, not a throw: every `KeywordKind` has one since R3572000, the guard stays.
+  const chips = keywords.filter((keyword) => KEYWORD_VISUALS[keyword.kind]?.onField === true && !drawnAsState(keyword, armor));
   const room = chips.length <= KEYWORD_CHIPS_MAX ? chips.length : KEYWORD_CHIPS_MAX - 1;
   return { shown: chips.slice(0, room), folded: chips.slice(room) };
 }
@@ -120,6 +121,8 @@ export function KeywordIcons({
   join: string;
   armor: number;
 }): ReactElement | null {
+  // R3548001: the keyword the stamp blurs draws blurred.
+  const blur = useTipsyBlur();
   if (keywords.length === 0) return null;
   const { shown, folded } = keywordChips(keywords, armor);
   const wordsOf = (keyword: Keyword): string => words[keywords.indexOf(keyword)] ?? keywordKey(keyword);
@@ -134,6 +137,7 @@ export function KeywordIcons({
           data-keyword={keyword.kind}
           data-n={"n" in keyword ? keyword.n : undefined}
           data-chip={shown.includes(keyword) ? undefined : "hidden"}
+          data-tipsy-blur={blur?.kind === "keyword" && blur.keyword === keyword.kind ? "true" : undefined}
           title={wordsOf(keyword)}
         >
           {KEYWORD_MARK[keyword.kind]}
@@ -212,11 +216,10 @@ function MinionFace({ face, unit, className, worn = false, keywordsOffFace = fal
   // token printed Mythic having none), in place of its live layers.
   const diorama = artActive && (artMoves || engaged) && picture === "normal" && ship === null && dioramaOf(face.defId) !== null;
   const cosmetics = cosmeticAttributes(cosmeticAppearance, artActive);
-  // R3340000: what its art wears: cracks for the health it is missing, a glow when buffed, frost when frozen (the view's own).
-  const damage = damageLevel(unit.health, unit.maxHealth);
+  // R3340000, R3776000: what its art wears: a glow when buffed, frost when frozen (the view's own); missing health leaves no mark.
   const buffed = attackTone === "buffed" || healthTone === "buffed";
   const frozen = unit.frozen === true;
-  const wear = damage > 0 || buffed || frozen ? { damage, buffed, frozen } : null;
+  const wear = buffed || frozen ? { buffed, frozen } : null;
 
   return (
     <span
@@ -239,6 +242,8 @@ function MinionFace({ face, unit, className, worn = false, keywordsOffFace = fal
       data-vanilla={unit.vanilla === true ? "true" : undefined}
       data-tuned={face.tuning?.verdict}
       data-dormant={dormant}
+      // R3536005: an Evolved unit glows green (cardstate.css).
+      data-evolved={unit.evolved === true ? "true" : undefined}
       {...cosmetics}
     >
       <span className="cf-scale">
@@ -285,11 +290,11 @@ function MinionFace({ face, unit, className, worn = false, keywordsOffFace = fal
             transparent until hover or focus, in the accessibility tree all the while, so the name is read as it was. */}
         {staticName ? (
           <span className={look === null ? "card-name card-name-compact-translucent" : "card-name"} ref={nameRef}>
-            {face.name}
+            <TipsyName name={face.name} />
           </span>
         ) : (
           <span className="card-name card-name-hover" ref={nameRef}>
-            {face.name}
+            <TipsyName name={face.name} />
           </span>
         )}
 

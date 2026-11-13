@@ -139,8 +139,11 @@ export async function heartbeat(): Promise<void> {
 
 // The social poll (R3210000)
 
-/** What GET /api/challenges and GET /api/chat/unread answer, in one read. */
-export type SocialRead = { incoming: Challenge[]; outgoing: Challenge[]; unread: Record<string, number> };
+/**
+ * What GET /api/challenges and GET /api/chat/unread answer, in one read. #3727: `dailyWaiting`, how many
+ * daily games wait on the caller (absent from an older server: none).
+ */
+export type SocialRead = { incoming: Challenge[]; outgoing: Challenge[]; unread: Record<string, number>; dailyWaiting?: number };
 
 /** The social poll's one read: the caller's open, unexpired challenges, both ways, and its unread counts. */
 export function getSocial(): Promise<SocialRead> {

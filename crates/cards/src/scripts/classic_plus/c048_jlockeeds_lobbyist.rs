@@ -1,9 +1,8 @@
 //! C+ #48 Jlockeed's Lobbyist (SPEC §8.7 row 48). (1) Unit, Jlockeed, Legendary, 0/3 → 0/6.
 //!   Base:    "Can't be in Defense Position. Death: Add a random Jlockeed card to your hand. It costs (0)."
 //!   Radiant: "Death: Add a random Radiant Jlockeed card to your hand. It costs (0)."
-//!   Engine:  "The pool is the non-token cards with the `Jlockeed` tag (#13, #14, C #4, C+ #48, C+ #51,
-//!            C+ #52, M #87, M #97, M+ #4) but this one (R387): #13, #14, C #4, C+ #51, C+ #52, M #87, M #97
-//!            and M+ #4;
+//!   Engine:  "The pool is the non-token cards with the `Jlockeed` tag, of every set that ships (R380),
+//!            but this one (R387), `query::jlockeed_cards` (spec/CARDS.md lists them, #3804);
 //!            `costOverride` 0; the hand
 //!            cap burns it (§2.4). The Defense restriction is a position validator flag (as #65.1's),
 //!            which the Radiant face drops. With 0 attack it never attacks. Tunes: none."
@@ -23,7 +22,7 @@ pub fn script() -> CardScripts {
         // "It costs (0)": the declared number `setCost` (R386), on both faces.
         death: Some(hook(|ctx| {
             vec![add_random_from_catalog(json_as(json!({
-                "query": { "tags": ["Jlockeed"] },
+                "query": crate::query::jlockeed_cards(),
                 "costOverride": param(&*ctx, "setCost"),
             })))]
         })),
@@ -33,7 +32,7 @@ pub fn script() -> CardScripts {
     let radiant = Script {
         death: Some(hook(|ctx| {
             vec![add_random_from_catalog(json_as(json!({
-                "query": { "tags": ["Jlockeed"] },
+                "query": crate::query::jlockeed_cards(),
                 "costOverride": param(&*ctx, "setCost"),
                 "radiant": true,
             })))]
@@ -68,9 +67,9 @@ mod tests {
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
     /// The non-token Jlockeed cards of every set but this one, sorted: Core #13, #14, C #4, C+ #51, #52,
-    /// M #87 and #97 (§8.8), M+ #4 (§8.9, #1187), Stinkyscape #124 to #130 (#1884) and Training Grounds
-    /// #45 and #48 (#2204), snapshots of Core #14 and #13.
-    const POOL: [&str; 17] = [
+    /// M #87 and #97 (§8.8), M+ #4 (§8.9, #1187), Stinkyscape #124 to #130 (#1884), Stinkyscape+ #21 and #26
+    /// (#3573) and Training Grounds #45 and #48 (#2204), snapshots of Core #14 and #13.
+    const POOL: [&str; 19] = [
         "classic-004",
         "classicplus-051",
         "classicplus-052",
@@ -86,6 +85,8 @@ mod tests {
         "stinkyscape-128",
         "stinkyscape-129",
         "stinkyscape-130",
+        "stinkyscapeplus-021",
+        "stinkyscapeplus-026",
         "traininggrounds-045",
         "traininggrounds-048",
     ];
@@ -209,7 +210,8 @@ mod tests {
         fn r278_r387_the_pool_is_exactly_core_n13_n14_classic_n4_c_n51_n52_meditative_n87_n97_and_meditative_plus_n4_one_tag_never_itself() {
             crate::register_all();
             let mut seen: IndexSet<String> = IndexSet::new();
-            for i in 0..80 {
+            // One draw a seed over nineteen cards: this many seeds bring every one of them up.
+            for i in 0..400 {
                 let mut s = board(Board {
                     seed: Some(format!("lobby-{i}")),
                     ..Board::default()

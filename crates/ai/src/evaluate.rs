@@ -12,6 +12,8 @@
 //! twin's (#2688) and each Dormant card's wake trigger by its awakening against its hookless twin's
 //! (#3064), and the rest read them (`Prices`), counting a start-of-turn or end-of-turn firing
 //! once for each time its controller's turn runs it (Meditative #9 Joint Filing's extra runs, #2689).
+//! A passed line's Float is credited for what it took toward an own Float-discount card still out of
+//! reach (`float_credit`, #3695).
 //! It reads only what the seat may know or what a determinization sampled, and nothing here reads a
 //! handicap or a difficulty (R180).
 
@@ -23,6 +25,7 @@ use jackioh_engine::config::{
     JADE_BEAUTY_AT, TURN_CAP_PLAYER_TURNS,
 };
 use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
+use jackioh_engine::float::float_cuts_in_hand;
 use jackioh_engine::multipliers::{Multiplied, extra_runs};
 use jackioh_engine::{
     ActionBody, AltWinCondition, AttackHealth, AttackTarget, CardDef, CardInstance, CardType, CostOptions,
@@ -398,7 +401,10 @@ fn activation_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, pri
 /// (`script_of`: a Vanilla or Dormant card has none).
 fn has_attack_hook(state: &GameState, card: &CardInstance) -> bool {
     let script = script_of(state, card);
-    script.when_attacks.is_some() || script.after_attack.is_some()
+    // R3551004: Frenzy answers a kill as an `afterAttack` hook does, as `combat::combatant_hooks` runs it.
+    script.when_attacks.is_some()
+        || script.after_attack.is_some()
+        || unit_has(state, card, KeywordKind::Frenzy)
 }
 
 /// R2688000: what `unit`'s next attack gives its controller through its attack hooks, by `prices`,
@@ -525,6 +531,25 @@ fn cost_shift(state: &GameState, card: &CardInstance) -> i32 {
         None => 0,
         Some(own) => own.max(0) - (own - card.cost_mod).max(0),
     }
+}
+
+/// R3695000: a passed line's Float of `float`, at `w.float_discount` a crystal, for each crystal it took
+/// off an own "Float reduces cost" card while that still cost more than the seat's crystals
+/// (`mana.max`, never the handicap, R180). Read after the turn ended, when the cut is on the card's
+/// `costMod`, so `own_cost + cut` is its cost before. None for an X-cost card.
+pub fn float_credit(state: &GameState, seat: PlayerId, float: i32, w: &EvalWeights) -> f64 {
+    if w.float_discount == 0.0 || float <= 0 {
+        return 0.0;
+    }
+    let crystals = state.players[seat].mana.max;
+    let nearer: i32 = float_cuts_in_hand(state, seat, float)
+        .into_iter()
+        .filter_map(|(card, cut)| {
+            let before = own_cost(state, card)? + cut;
+            Some((before - crystals).clamp(0, cut))
+        })
+        .sum();
+    w.float_discount * f64::from(nearer)
 }
 
 /// #1143: a Unit's worth off its own stats and keywords by the weights `unit_worth` reads a view with,

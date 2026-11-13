@@ -12,6 +12,8 @@
 //!    machine because an offer outlives the host that played the match.
 //!  - [`post_game`] is what a seat's open socket is told of its rematch or its series after the result
 //!    (R3213000).
+//!  - [`daily`] is the daily game's clock (SPEC §9.13, #3727): who holds the move, until when, and who
+//!    loses when it runs out, beside the live [`clock`].
 //!  - [`practice`] is the practice session: a game against the AI seat, with practice's own setup and rules
 //!    (#3099).
 //!  - [`boundary`] is the one JSON call the browser and Roblox make.
@@ -20,6 +22,7 @@ pub mod again;
 pub mod bot;
 pub mod boundary;
 pub mod clock;
+pub mod daily;
 pub mod duel;
 pub mod duos;
 pub mod post_game;

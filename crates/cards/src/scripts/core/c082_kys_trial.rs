@@ -102,9 +102,9 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const TRIAL: &str = "core-082";
-    /// The seven sets that ship, which the first Discover draws from (R831004). Re-pinned for the
-    /// Training Grounds release (#2204): that set joins them.
-    const SETS: [&str; 7] = [
+    /// The eight sets that ship, which the first Discover draws from (R831004). Re-pinned for the
+    /// Training Grounds release (#2204): that set joins them; and for the Stinkyscape+ release (#3573).
+    const SETS: [&str; 8] = [
         "Core",
         "Classic",
         "Classic+",
@@ -112,6 +112,7 @@ mod tests {
         "Meditative+",
         "Stinkyscape",
         "Training Grounds",
+        "Stinkyscape+",
     ];
 
     use crate::js;
@@ -124,20 +125,13 @@ mod tests {
             .map(|def| def.id.clone())
     }
 
-    fn mode_option(selection: &Selection) -> String {
-        match selection {
-            Selection::Mode { option } => option.clone(),
-            _ => String::new(),
-        }
-    }
-
     /// The options of the open prompt, as their `mode` strings, after checking its kind.
     fn options_of(s: &Scenario, kind: PromptKind) -> Vec<String> {
-        let pending = s.state().pending.as_ref();
-        assert_eq!(pending.map(|p| p.kind), Some(kind));
-        pending
-            .map(|p| p.options.iter().map(|option| mode_option(&option.selection)).collect())
-            .unwrap_or_default()
+        let pending = s.state().pending.as_ref().expect("a prompt is open");
+        assert_eq!(pending.kind, kind);
+        let modes = s.prompt_modes();
+        assert_eq!(modes.len(), pending.options.len(), "every option is a Mode");
+        modes
     }
 
     /// The numbers the second Discover offered (§10.6, R247).
@@ -211,7 +205,8 @@ mod tests {
         fn r831004_the_first_discover_offers_3_different_sets_of_the_four_that_ship_and_seeds_reach_each() {
             crate::register_all();
             let mut seen: IndexSet<String> = IndexSet::new();
-            for n in 0..20 {
+            // 3 of 8 sets per seed: 40 seeds leave a set unseen about one time in 18 million.
+            for n in 0..40 {
                 let sets = options_of(&played(&format!("kys-trial-sets-{n}"), false), PromptKind::Mode);
                 assert_eq!(sets.len(), 3);
                 assert_eq!(sets.iter().collect::<IndexSet<_>>().len(), 3);
@@ -347,9 +342,10 @@ mod tests {
             let s = trial_scenario(false, "Core");
             let options = s.state().pending.as_ref().map(|p| p.options.clone()).unwrap_or_default();
 
+            let modes = s.prompt_modes();
             assert_eq!(options.len(), 3);
-            for option in &options {
-                let index = mode_option(&option.selection);
+            assert_eq!(modes.len(), options.len(), "every option is a Mode");
+            for (option, index) in options.iter().zip(modes) {
                 assert!(card_numbered("Core", &index).is_some(), "{index} numbers a Core card");
                 assert_eq!(option.label, index);
                 assert_eq!(option.key, format!("mode:{index}"));
@@ -402,7 +398,7 @@ mod tests {
             assert_eq!(answers, expected);
 
             let picked = numbers(&s).get(2).cloned().unwrap_or_default();
-            s.answer(json!([{ "pick": "mode", "option": picked }]));
+            s.answer(pick::mode(&picked));
 
             let wanted = card_numbered("Meditative", &picked);
             let added = s

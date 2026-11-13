@@ -56,6 +56,7 @@ import { outcomeFor } from "./attackOutcome.ts";
 import { sameHighlightAt } from "./cardHighlight.ts";
 import FieldBadges from "./FieldBadges.tsx";
 import { usePhonePortrait } from "./phoneBar.ts";
+import { TipsyBlurProvider } from "./tipsy.tsx";
 import { useCardInfo, useCopiedDef, useFieldPower, useTallies } from "./catalog.ts";
 import { useLiveFace } from "./faces.ts";
 import { printedCost } from "./decks.ts";
@@ -186,7 +187,7 @@ export type CardProps = {
    */
   backOf?: PlayerId;
   /** `gradeLetter` is the letter the view names #93's grade by (R372); the badge prints it. */
-  counters?: { plague?: number; grade?: number; gradeLetter?: string };
+  counters?: { plague?: number; grade?: number; gradeLetter?: string; burn?: number; toxic?: number };
   /**
    * R370: a face-down backrow trap's back; absent for every other back. `at` names its zone ("opponent-3"),
    * which keys its inspect overlay (a back has no instance id). R437, R33: `marks`. R471: Plague Counters, public.
@@ -259,6 +260,8 @@ function Card(props: CardProps): ReactElement {
 
   // The card in play: the unit's view when it is one, else the card's own. A back has no face at all.
   const shown = unit ?? card;
+  // R3548001: the owner's-view-only Tipsy blur of this card, from the unit's view when it is one.
+  const blur = unit?.tipsyBlur ?? card?.tipsyBlur ?? null;
   // #3478: the face memoized on the view object, the definition, the live facts and the language.
   const model: FaceModel = useLiveFace(info, shown, {
     ...(props.type === undefined ? {} : { type: props.type }),
@@ -384,6 +387,8 @@ function Card(props: CardProps): ReactElement {
     "data-animating": animatingEvent,
     "data-lost": keywordLost ? "true" : undefined,
     "data-awakening": awakening ? "true" : undefined,
+    // R3536005: an Evolved unit is marked on its card, as its face is (MinionFace.tsx).
+    "data-evolved": unit?.evolved === true ? "true" : undefined,
     "data-glow": glowAttr(props.highlight, testId),
     "aria-disabled": clickable && !legal ? ("true" as const) : undefined,
     onClick: clickable ? fire : undefined,
@@ -496,6 +501,8 @@ function Card(props: CardProps): ReactElement {
       data-marks={marks.length > 0 ? marks.map((entry) => entry.mark).join(" ") : undefined}
       data-unrevealed={props.unrevealed === true ? "true" : undefined}
       data-position={position}
+      // R3548001: which of this card blurs on its owner's view alone; never on a back.
+      data-tipsy-blur={blur?.kind}
       // `canAct` is drawn as state, never read as permission: legality is `props.highlight`.
       data-can-act={unit === undefined || unit === null ? undefined : unit.canAct ? "true" : "false"}
       // #258: no exertion left on the acting side's turn (spent.ts), drawn dimmed with a "Zz".
@@ -507,25 +514,27 @@ function Card(props: CardProps): ReactElement {
       // with it (R849000) the engine's reason a unit of yours cannot attack now.
       title={settings.hoverPreviews && panelHover ? undefined : cardTitle(face.name, unit, card)}
     >
-      {unit !== undefined && unit !== null ? (
-        <MinionFace face={face} unit={unit} worn={worn} keywordsOffFace={offFace} attacking={animatingEvent === "attackDeclared"} />
-      ) : (
-        // Issue #814: a Summit in play shortens to its header and next Ascent line; the overlays keep it all.
-        // R2098000: its terms show their rule on hover and on a long press (cards/TermTip.tsx); a tap on one still reaches this root.
-        // R2723000: a full-art card in the viewer's own hand draws its art alone; its inspect overlays draw it whole.
-        <TermTips>
-          <CardFace
-            face={face}
-            layout={form === "compact" ? "compact" : "full"}
-            ascentLevel={face.ascent}
-            worn={worn}
-            ownHand={worn && props.inOwnHand === true}
-            onBoard={form === "compact"}
-            gemDrain={gemDrain}
-            tilt="host"
-          />
-        </TermTips>
-      )}
+      <TipsyBlurProvider blur={blur}>
+        {unit !== undefined && unit !== null ? (
+          <MinionFace face={face} unit={unit} worn={worn} keywordsOffFace={offFace} attacking={animatingEvent === "attackDeclared"} />
+        ) : (
+          // Issue #814: a Summit in play shortens to its header and next Ascent line; the overlays keep it all.
+          // R2098000: its terms show their rule on hover and on a long press (cards/TermTip.tsx); a tap on one still reaches this root.
+          // R2723000: a full-art card in the viewer's own hand draws its art alone; its inspect overlays draw it whole.
+          <TermTips>
+            <CardFace
+              face={face}
+              layout={form === "compact" ? "compact" : "full"}
+              ascentLevel={face.ascent}
+              worn={worn}
+              ownHand={worn && props.inOwnHand === true}
+              onBoard={form === "compact"}
+              gemDrain={gemDrain}
+              tilt="host"
+            />
+          </TermTips>
+        )}
+      </TipsyBlurProvider>
 
       {/* Everything below is a sibling of `.cf`, not inside it, so it stays clickable while the
           face has `pointer-events: none`. */}
@@ -568,6 +577,18 @@ function Card(props: CardProps): ReactElement {
           title={counters.gradeLetter === undefined ? t("Grade counters") : t("Grade {letter}", { letter: counters.gradeLetter })}
         >
           {counters.gradeLetter ?? counters.grade}
+        </span>
+      )}
+      {counters?.burn !== undefined && (
+        // R3540000: the Burn the Unit ticks at the start of its controller's turn (board.css `.counter-burn`).
+        <span className="counter counter-burn" data-counter="burn" title={t("Burn counters")}>
+          {counters.burn}
+        </span>
+      )}
+      {counters?.toxic !== undefined && (
+        // R3540000: and its Toxic (board.css `.counter-toxic`).
+        <span className="counter counter-toxic" data-counter="toxic" title={t("Toxic counters")}>
+          {counters.toxic}
         </span>
       )}
 

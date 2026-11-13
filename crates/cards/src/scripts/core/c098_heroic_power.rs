@@ -1,15 +1,18 @@
 //! #98 Heroic Power (SPEC §8.5, §6.2 "Start of Game", Quickdraw, Activate; R43, R103, R352, R752–R761,
-//! R3134002). Field Spell, tags Quickdraw, cost (0), Mythic. Base: "Indestructible. Cry: Discover one of
-//! 13 powers, each 'Activate: Spend (X)'" (each power's words are its catalog line). Radiant: every
-//! power's Radiant words, Armor Up named Tank Up (R757).
-//! Through v0.5.11r: "Start of game: Gain one of 13 random powers" (`script_v0_5_11o`, kept, R767000).
-//! The thirteen powers live in `subsystems/hero_power.rs` (R43); `power_abilities` declares each as an
-//! Activate ability (R384, R752) present only while the card has that power, its X the mana price. State is
-//! on the instance (`memory.power`), never a module variable (R43, §10.1), so two Heroic Powers stay apart.
-//! Discovers resume at `hero_power` (`POWER_RESUME`, §10.6). Indestructible is a §10.4 layer (R46),
-//! Quickdraw the flag `setup.rs` step 2 reads (§6.2); Ping's target comes with the activation (R81).
-//!   - The Cry is `discover_power` (R3134002): 3 different powers of the 13 as a Choose one, the answer the
-//!     card's power for the game, named by its title on the face (Tank Up on the Radiant one).
+//! R3134002, R3551002). Field Spell, tags Quickdraw, cost (0), Mythic. Base: "Indestructible. Cry:
+//! Discover one of 14 powers, each 'Activate: Spend (X)'" (each power's words are its catalog line).
+//! Radiant: every power's Radiant words, Armor Up named Tank Up (R757).
+//! Through v0.5.13g: thirteen powers at (1) more each (`script_v0_5_13g`, kept, R767000); through
+//! v0.5.11r: "Start of game: Gain one of 13 random powers" (`script_v0_5_11o`, kept, R767000).
+//! The fourteen powers live in `subsystems/hero_power.rs` (R43); `power_abilities` declares each as an
+//! Activate ability (R384, R752) present only while the card has that power, its X the edition's price.
+//! State is on the instance (`memory.power`), never a module variable (R43, §10.1), so two Heroic Powers
+//! stay apart. Discovers resume at `hero_power` (`POWER_RESUME`, §10.6). Indestructible is a §10.4
+//! layer (R46), Quickdraw the flag `setup.rs` step 2 reads (§6.2); Ping's target comes with the
+//! activation (R81). End Times (10) Discovers a Terminus card; each end of its controller's turn takes
+//! its face's cut off the next use's price, until it is used.
+//!   - The Cry is `discover_power` (R3134002): 3 different powers of the edition's as a Choose one, the
+//!     answer the card's power for the game, named by its title on the face (Tank Up on the Radiant one).
 //!   - The arrival roll is `roll_power_on_field` (R151, R3134002): a copy that reaches the field with no
 //!     Cry (Summoned, Recruited, fused onto a card on the field, Reborn, Flickered) rolls one so it is never
 //!     dead; a copy in a hand or library rolls nothing.
@@ -18,24 +21,30 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-098";
 
-/// Both faces are the same wiring: `power_abilities(radiant)` builds each power on the face that is
-/// running (§5.2), and `has` keeps only the one the instance has. `discovers` is whether the Cry asks
-/// (R3134002), where v0.5.11r's rolled at the start of the game in every zone (R43).
-fn heroic_power(radiant: bool, discovers: bool) -> Script {
+/// Both faces are the same wiring: `power_abilities(radiant, edition)` builds each power on the face
+/// that is running (§5.2), and `has` keeps only the one the instance has. `discovers` is whether the
+/// Cry asks (R3134002), where v0.5.11r's rolled at the start of the game in every zone (R43).
+/// `edition` is which Heroic Power it plays (R3551002): the new face offers fourteen powers, its End
+/// Times ticking each end of its controller's turn; the kept v0.5.13g script's thirteen.
+fn heroic_power(radiant: bool, discovers: bool, edition: subsystems::PowerEdition) -> Script {
     Script {
         // §6.2: starts in the opening hand instead of a draw (setup step 2).
         static_flags: Some(StaticFlags {
             quickdraw: Some(true),
             ..StaticFlags::default()
         }),
-        // R3134002: "Cry: Discover one of 13 powers."
+        // R3134002: "Cry: Discover one of 13 powers." R3551002: fourteen on the new face.
         cry: discovers.then(|| hook(|_ctx| vec![subsystems::discover_power()])),
         // R151, R3134002: the roll of a copy that reaches the field with no Cry to choose; R43, through
         // v0.5.11r: every copy in either hand or library rolls its power after the mulligan (§6.2).
+        // R3551002: the roll is the card's edition's.
         start_of_game: Some(hook(move |_ctx| {
             vec![if discovers { subsystems::roll_power_on_field() } else { subsystems::roll_power() }]
         })),
-        activations: subsystems::power_abilities(radiant),
+        // R3551002: End Times' End of Turn on the new face alone.
+        end_of_turn: (edition == subsystems::PowerEdition::EndTimes)
+            .then(|| hook(|_| vec![subsystems::end_times_tick()])),
+        activations: subsystems::power_abilities(radiant, edition),
         resume: IndexMap::from([(subsystems::POWER_RESUME, hook(subsystems::hero_power::hero_power))]),
         ..Script::default()
     }
@@ -43,8 +52,17 @@ fn heroic_power(radiant: bool, discovers: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: heroic_power(false, true),
-        radiant: heroic_power(true, true),
+        base: heroic_power(false, true, subsystems::PowerEdition::EndTimes),
+        radiant: heroic_power(true, true, subsystems::PowerEdition::EndTimes),
+    }
+}
+
+/// R767000: through v0.5.13g the card offered thirteen powers at the thirteen's old prices;
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_13g() -> CardScripts {
+    CardScripts {
+        base: heroic_power(false, true, subsystems::PowerEdition::Thirteen),
+        radiant: heroic_power(true, true, subsystems::PowerEdition::Thirteen),
     }
 }
 
@@ -52,8 +70,8 @@ pub fn script() -> CardScripts {
 /// copy in either hand or library rolled its power at the start of the game (R43).
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
-        base: heroic_power(false, false),
-        radiant: heroic_power(true, false),
+        base: heroic_power(false, false, subsystems::PowerEdition::Thirteen),
+        radiant: heroic_power(true, false, subsystems::PowerEdition::Thirteen),
     }
 }
 
@@ -208,19 +226,6 @@ mod tests {
         (s, power)
     }
 
-    /// The def ids a Discover prompt offers (§6.3), in the order offered.
-    fn offered_ids(s: &Scenario) -> Vec<String> {
-        let pending = js(must(s.state().pending.as_ref(), "a discover prompt"));
-        pending["options"]
-            .as_array()
-            .cloned()
-            .unwrap_or_default()
-            .iter()
-            .filter(|option| option["selection"]["pick"] == "mode")
-            .map(|option| option["selection"]["option"].as_str().unwrap_or_default().to_string())
-            .collect()
-    }
-
     /// A Heroic Power summoned onto p1's field by an effect (no Cry), the card as it stands.
     fn summon_heroic(s: &mut Scenario, radiant_face: bool) -> CardInstance {
         crate::run_as(
@@ -257,7 +262,7 @@ mod tests {
 
     /// The first seed `prefix-0`, … under which the Cry of a played Heroic Power offers the power `name`.
     fn offering_seed_with(prefix: &str, name: &str, radiant_face: bool) -> String {
-        seed_where(prefix, |seed| offered_ids(&played(seed, radiant_face).0).iter().any(|offered| offered == name))
+        seed_where(prefix, |seed| played(seed, radiant_face).0.prompt_modes().iter().any(|offered| offered == name))
     }
 
     fn offering_seed(name: &str, radiant_face: bool) -> String {
@@ -312,7 +317,7 @@ mod tests {
                     .collect();
                 assert!(kinds.contains(&json!("Indestructible")));
                 let text = face["text"].as_str().unwrap_or_default();
-                assert!(text.contains("Cry: Discover one of 13 powers. Each is an Activate that spends its (X)."));
+                assert!(text.contains("Cry: Discover one of 14 powers. Each is an Activate that spends its (X)."));
                 assert!(!text.contains("Start of game"));
                 assert!(!text.contains("Playing it") && !text.contains("Once per turn, spend"));
             }
@@ -330,7 +335,7 @@ mod tests {
                 .collect();
             assert_eq!(
                 keys,
-                ["shot", "tapDraw", "tapDamage", "ping", "stitchCost", "armor", "insect", "discount", "fruitCost"]
+                ["shot", "tapDraw", "tapDamage", "ping", "stitchCost", "armor", "insect", "discount", "fruitCost", "endTimes", "endTimesCut"]
                     .map(|key| json!(key))
                     .to_vec(),
             );
@@ -344,12 +349,18 @@ mod tests {
             let base = def["base"]["text"].as_str().unwrap_or_default().to_string();
             let radiant = def["radiant"]["text"].as_str().unwrap_or_default().to_string();
             for entry in subsystems::HERO_POWERS.iter() {
-                assert!(base.contains(&format!("({}) {}: {}", entry.x, entry.title, entry.label)));
-                assert!(radiant.contains(&format!("({}) {}: {}", entry.x, entry.radiant_title, entry.radiant_label)));
+                // R3551002: End Times prints its live price, the declared `{endTimes}`, not its (10).
+                let x = if entry.name == subsystems::HeroPowerName::EndTimes {
+                    "{endTimes}".to_string()
+                } else {
+                    entry.x.to_string()
+                };
+                assert!(base.contains(&format!("({x}) {}: {}", entry.title, entry.label)));
+                assert!(radiant.contains(&format!("({x}) {}: {}", entry.radiant_title, entry.radiant_label)));
             }
             // The printed words, the card's numbers filled in (B3.4 rule 5).
             let printed = fill_params(&crate::card_def(HEROIC), FaceKind::Radiant, None);
-            assert!(printed.contains("(1) Tank Up: Your hero gains 4 Armor, then this power refreshes."));
+            assert!(printed.contains("(0) Tank Up: Your hero gains 4 Armor, then this power refreshes."));
         }
 
         #[test]
@@ -364,7 +375,7 @@ mod tests {
         fn r3134002_both_faces_wire_the_cry_the_arrival_roll_the_thirteen_abilities_and_the_discover_step_no_cost_hook() {
             crate::register_all();
             let scripts = script();
-            let wanted = sorted(vec!["staticFlags", "cry", "startOfGame", "activations", "resume"]);
+            let wanted = sorted(vec!["staticFlags", "cry", "startOfGame", "endOfTurn", "activations", "resume"]);
             assert_eq!(sorted(members(&scripts.base)), wanted);
             assert_eq!(sorted(members(&scripts.radiant)), wanted);
             let ids: Vec<String> = scripts.base.activations.iter().map(|decl| decl.id.clone()).collect();
@@ -409,7 +420,7 @@ mod tests {
                 let pending = must(s.state().pending.clone(), "the Cry's prompt");
                 assert_eq!(pending.player_id, P1);
                 assert_eq!(pending.kind, PromptKind::Mode);
-                let offered = offered_ids(&s);
+                let offered = s.prompt_modes();
                 assert_eq!(offered.len() as i32, DISCOVER_OPTIONS, "seed {n}");
                 let distinct: std::collections::BTreeSet<&String> = offered.iter().collect();
                 assert_eq!(distinct.len(), offered.len(), "seed {n}: {offered:?}");
@@ -421,7 +432,7 @@ mod tests {
         fn r3134002_each_of_the_13_powers_can_be_offered() {
             let mut seen = std::collections::BTreeSet::new();
             for n in 0..60 {
-                seen.extend(offered_ids(&played(&format!("hp-cry-all-{n}"), false).0));
+                seen.extend(played(&format!("hp-cry-all-{n}"), false).0.prompt_modes());
             }
             assert_eq!(seen.into_iter().collect::<Vec<_>>(), {
                 let mut all = names();
@@ -434,14 +445,14 @@ mod tests {
         fn r3134002_the_offer_names_each_power_by_its_title_and_the_radiant_names_tank_up() {
             let seed = offering_seed("armor", false);
             let (s, _) = played(&seed, false);
-            let at = must(offered_ids(&s).iter().position(|name| name == "armor"), "armor offered");
+            let at = must(s.prompt_modes().iter().position(|name| name == "armor"), "armor offered");
             assert_eq!(offered_labels(&s)[at], "Armor Up");
 
             let seed = offering_seed("armor", true);
             let (s, _) = played(&seed, true);
-            let at = must(offered_ids(&s).iter().position(|name| name == "armor"), "armor offered");
+            let at = must(s.prompt_modes().iter().position(|name| name == "armor"), "armor offered");
             assert_eq!(offered_labels(&s)[at], "Tank Up");
-            for (name, label) in offered_ids(&s).iter().zip(offered_labels(&s)) {
+            for (name, label) in s.prompt_modes().iter().zip(offered_labels(&s)) {
                 let power = must(subsystems::power_by_name(name), "an offered power");
                 assert_eq!(label, power.radiant_title);
             }
@@ -462,10 +473,10 @@ mod tests {
             assert_eq!(now.memory.get(subsystems::POWER_KEY), Some(&json!("rush")));
             assert_eq!(listed(&s, &now).len(), 1);
             assert_eq!(view_json(&s, P1)["you"]["hero"]["power"]["name"], "rush");
-            assert_eq!(view_json(&s, P1)["you"]["hero"]["power"]["x"], 2);
+            assert_eq!(view_json(&s, P1)["you"]["hero"]["power"]["x"], 1);
             s.expect_mana(P1, 8);
             s.activate(&now, json!({}));
-            s.expect_mana(P1, 6);
+            s.expect_mana(P1, 7);
             assert_eq!(units_of(&s, P1).iter().filter(|unit| unit.def_id == RUSH_TOKEN).count(), 1);
             assert!(listed(&s, &s.backrow(P1, 1).expect("the card")).is_empty());
             s.expect_refused_with(|s| s.activate(&now, json!({})), "already been used this turn");
@@ -502,7 +513,7 @@ mod tests {
         fn r3134002_the_answer_must_be_one_of_the_3_offered() {
             let seed = offering_seed("rush", false);
             let (mut s, _) = played(&seed, false);
-            let absent = must(names().into_iter().find(|name| !offered_ids(&s).contains(name)), "an unoffered power");
+            let absent = must(names().into_iter().find(|name| !s.prompt_modes().contains(name)), "an unoffered power");
             s.expect_refused(|s| s.answer(json!(absent)));
             assert!(s.state().pending.is_some());
         }
@@ -510,7 +521,7 @@ mod tests {
         #[test]
         fn r311_r97_the_other_seat_sees_only_that_a_prompt_is_open_and_not_the_powers_offered() {
             let (s, _) = played("hp-cry-view", false);
-            let offered = offered_ids(&s);
+            let offered = s.prompt_modes();
             let seen = view_json(&s, P2);
             assert_eq!(seen["pending"]["forYou"], false);
             assert_eq!(seen["pending"]["pendingFor"], "p1");
@@ -608,7 +619,7 @@ mod tests {
             assert!(events_of(&s, "activated").is_empty());
 
             s.activate(&card, json!({}));
-            s.expect_mana(P1, 7).expect_health(P2, 28);
+            s.expect_mana(P1, 8).expect_health(P2, 28);
             assert_eq!(events_of(&s, "activated").len(), 1);
             assert!(listed(&s, &card).is_empty());
             s.expect_refused_with(|s| s.activate(&card, json!({})), "already been used this turn");
@@ -619,10 +630,10 @@ mod tests {
             crate::register_all();
             let (mut s, card) = on_field(
                 "tricks",
-                OnField { p1: Some(json!({ "hand": [SPARE], "mana": 2 })), ..OnField::default() },
-            ); // X 3
+                OnField { p1: Some(json!({ "hand": [SPARE], "mana": 1 })), ..OnField::default() },
+            ); // X 2
             assert!(listed(&s, &card).is_empty());
-            s.expect_refused_with(|s| s.activate(&card, json!({})), "costs 3, more than your mana");
+            s.expect_refused_with(|s| s.activate(&card, json!({})), "costs 2, more than your mana");
         }
 
         #[test]
@@ -647,7 +658,7 @@ mod tests {
             let (s, card) = on_field("armor", OnField { radiant_face: true, ..OnField::default() });
             assert!(matches_object(
                 &view_json(&s, P1)["you"]["hero"]["power"],
-                &json!({ "instanceId": card.id, "name": "armor", "title": "Tank Up", "x": 1, "usedThisTurn": false }),
+                &json!({ "instanceId": card.id, "name": "armor", "title": "Tank Up", "x": 0, "usedThisTurn": false }),
             ));
             assert!(matches_object(
                 &view_json(&s, P2)["opponent"]["hero"]["power"],
@@ -674,7 +685,7 @@ mod tests {
                 vec![MENACE.to_string()],
             );
             assert_eq!(units_of(&s, P1).first().map(|unit| unit.radiant), Some(false));
-            s.expect_mana(P1, 5);
+            s.expect_mana(P1, 6);
         }
 
         #[test]
@@ -689,7 +700,7 @@ mod tests {
             );
             s.activate(&card, json!({}));
             assert_eq!(def_ids(&s.hand(P1)), vec![SPARE.to_string(), MENACE.to_string()]);
-            s.expect_health(P1, 28).expect_mana(P1, 7);
+            s.expect_health(P1, 28).expect_mana(P1, 8);
             assert_eq!(
                 events_of(&s, "damage").iter().map(|event| event["targetId"].clone()).collect::<Vec<_>>(),
                 vec![json!("hero-p1")],
@@ -743,7 +754,7 @@ mod tests {
             crate::register_all();
             let (mut s, card) = on_field("discover", OnField::default());
             s.activate(&card, json!({}));
-            let offered = offered_ids(&s);
+            let offered = s.prompt_modes();
             assert_eq!(offered.len(), 3);
             for id in &offered {
                 assert_eq!(def_json(id)["type"], "Unit");
@@ -754,7 +765,7 @@ mod tests {
                 s.hand(P1).into_iter().filter(|entry| entry.def_id == first).map(|entry| entry.radiant).collect::<Vec<_>>(),
                 vec![false],
             );
-            s.expect_mana(P1, 6);
+            s.expect_mana(P1, 7);
         }
 
         #[test]
@@ -764,7 +775,7 @@ mod tests {
             let before = s.hand(P1).len();
             s.activate(&card, json!({}));
             for step in [1, 2] {
-                let offered = offered_ids(&s);
+                let offered = s.prompt_modes();
                 assert_eq!(offered.len(), 3, "Discover {step}");
                 for id in &offered {
                     // An embiggen card prints `{ base, embiggen }`: its play costs `base`.
@@ -846,7 +857,8 @@ mod tests {
             let (mut s, card) = on_field("pluck", OnField::default());
             s.activate(&card, json!({}));
             let fruit = must(s.hand(P1).last().cloned(), "the Fruit");
-            assert!(tags_of(&fruit.def_id).contains(&json!("Fruit")));
+            // Read through the game: a Smoothie (S+ #17, #18) arrives fused (R3558003), an id the catalog lacks.
+            assert!(def_of(Some(s.state()), &fruit.def_id).tags.contains(&Tag::Fruit));
             assert_eq!(effective(&s, &fruit), 0);
             assert!(!fruit.radiant);
         }
@@ -856,7 +868,7 @@ mod tests {
             crate::register_all();
             let (mut s, card) = on_field("tricks", OnField::default());
             s.activate(&card, json!({}));
-            let offered = offered_ids(&s);
+            let offered = s.prompt_modes();
             assert_eq!(offered.len(), 3);
             let traps: Vec<String> = crate::query::query(&json_as(json!({ "type": ["Trap", "Field Trap"] })))
                 .iter()
@@ -871,7 +883,7 @@ mod tests {
             assert_eq!(set.def_id, first);
             assert!(!set.radiant);
             assert!(matches_object(&view_json(&s, P2)["opponent"]["backrow"][1], &json!({ "faceDown": true })));
-            s.expect_mana(P1, 5);
+            s.expect_mana(P1, 6);
         }
     }
 
@@ -972,7 +984,7 @@ mod tests {
             crate::register_all();
             let (mut s, card) = on_field("discover", OnField { radiant_face: true, ..OnField::default() });
             s.activate(&card, json!({}));
-            let picked = must(offered_ids(&s).into_iter().next(), "an offered Unit");
+            let picked = must(s.prompt_modes().into_iter().next(), "an offered Unit");
             s.answer(json!(picked));
             assert_eq!(
                 s.hand(P1).into_iter().filter(|entry| entry.def_id == picked).map(|entry| entry.radiant).collect::<Vec<_>>(),
@@ -985,8 +997,8 @@ mod tests {
             crate::register_all();
             let (mut s, card) = on_field("stitching", OnField { radiant_face: true, ..OnField::default() });
             s.activate(&card, json!({}));
-            s.answer(json!(must(offered_ids(&s).into_iter().next(), "a first Unit")));
-            s.answer(json!(must(offered_ids(&s).into_iter().next(), "a second Unit")));
+            s.answer(json!(must(s.prompt_modes().into_iter().next(), "a first Unit")));
+            s.answer(json!(must(s.prompt_modes().into_iter().next(), "a second Unit")));
             assert!(must(s.hand(P1).last().cloned(), "the fused card").radiant);
         }
 
@@ -1045,7 +1057,7 @@ mod tests {
             crate::register_all();
             let (mut s, card) = on_field("tricks", OnField { radiant_face: true, ..OnField::default() });
             s.activate(&card, json!({}));
-            s.answer(json!(must(offered_ids(&s).into_iter().next(), "an offered Trap")));
+            s.answer(json!(must(s.prompt_modes().into_iter().next(), "an offered Trap")));
             assert!(must(s.backrow(P1, 2), "the summoned Trap").radiant);
         }
     }
@@ -1173,7 +1185,7 @@ mod tests {
                 for step in [1, 2] {
                     let pending = js(must(s.state().pending.as_ref(), "a discover prompt"));
                     assert_eq!(pending["prompt"], json!(format!("Discover a Unit that costs ({max_cost}) or less")));
-                    let offered = offered_ids(&s);
+                    let offered = s.prompt_modes();
                     assert_eq!(offered.len(), 3, "Discover {step}");
                     for id in &offered {
                         // R65: the cost a pool reads out of play, so an X card (C+ #69 Buff Billy) is 0.
@@ -1235,7 +1247,8 @@ mod tests {
             assert_eq!(tuned(&mut s, "fruitCost", false), 1);
             s.activate(&card, json!({}));
             let fruit = must(s.hand(P1).last().cloned(), "the Fruit");
-            assert!(tags_of(&fruit.def_id).contains(&json!("Fruit")));
+            // Read through the game: a Smoothie (S+ #17, #18) arrives fused (R3558003), an id the catalog lacks.
+            assert!(def_of(Some(s.state()), &fruit.def_id).tags.contains(&Tag::Fruit));
             assert_eq!(effective(&s, &fruit), 1);
         }
     }
@@ -1309,12 +1322,20 @@ mod tests {
         #[test]
         fn r1430_each_number_belongs_to_the_power_whose_words_write_it_and_every_power_s_number_is_its_own() {
             crate::register_all();
+            let def = def_json(HEROIC);
             let params = crate::card_def(HEROIC).params.unwrap_or_default();
             for param in &params {
                 let power = must(param.power.as_deref(), "each number names its power");
                 let owner = must(subsystems::power_by_name(power), "the power the number names");
                 let words = [owner.label, owner.radiant_label].map(written).concat();
-                assert!(words.contains(&param.key), "{} is {power}'s", param.key);
+                // R3551002: `endTimes` is written by its card line, "({endTimes}) End Times: …",
+                // not by the power's label.
+                let lined = def["base"]["text"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .lines()
+                    .any(|line| line.contains(owner.title) && written(line).contains(&param.key));
+                assert!(words.contains(&param.key) || lined, "{} is {power}'s", param.key);
             }
             for power in subsystems::HERO_POWERS {
                 let mut words = [power.label, power.radiant_label].map(written).concat();
@@ -1322,6 +1343,11 @@ mod tests {
                 words.dedup();
                 let mut declared = power_keys(power.name.as_str());
                 declared.sort();
+                // R3551002: `endTimes` is its card line's, "({endTimes}) End Times: …".
+                if power.name == subsystems::HeroPowerName::EndTimes {
+                    words.push(subsystems::END_TIMES_PRICE_PARAM.to_string());
+                    words.sort();
+                }
                 assert_eq!(words, declared, "{}", power.name);
             }
             // R754: Steady Shot's `shot` is the Steady Shot power's number.
@@ -1459,6 +1485,245 @@ mod tests {
             assert!(!crate::can_upgrade_number(&s, HEROIC, "tapDamage"));
             step_param(s.card_mut(HEROIC), "tapDamage", -1);
             assert_eq!(param_value(s.state(), Some(s.card(HEROIC)), "tapDamage", Default::default()), 2);
+        }
+    }
+
+    // End Times, the fourteenth power (R3551002).
+
+    mod n98_heroic_power_end_times_r3551002 {
+        use super::*;
+
+        /// The mana prices the script declares, by power name, on the face `radiant` names.
+        fn prices(scripts: &CardScripts, radiant: bool) -> Vec<(String, Option<i32>)> {
+            let face = if radiant { &scripts.radiant } else { &scripts.base };
+            face.activations
+                .iter()
+                .map(|decl| (decl.id.clone(), decl.cost.and_then(|cost| cost.mana)))
+                .collect()
+        }
+
+        /// End Times on the field with mana to use it, both sides able to pass turns. p1 holds a
+        /// (0) card too, so spending the (10) never auto-ends its turn (§2.5).
+        fn end_times_field(radiant_face: bool, seed: &str) -> (Scenario, CardInstance) {
+            on_field(
+                "endTimes",
+                OnField {
+                    radiant_face,
+                    p1: Some(json!({ "hand": [SPARE, FREE], "mana": 10, "library": [JAMMED, JAMMED, JAMMED] })),
+                    p2: Some(json!({ "hand": [FREE], "library": [JAMMED, JAMMED, JAMMED] })),
+                    seed: Some(seed.to_string()),
+                },
+            )
+        }
+
+        /// The live price the hero panel shows.
+        fn panel_price(s: &Scenario) -> i64 {
+            view_json(s, P1)["you"]["hero"]["power"]["x"].as_i64().unwrap_or(-1)
+        }
+
+        /// End Times activated, its Discover open.
+        fn discovering(seed: &str, radiant_face: bool) -> (Scenario, CardInstance) {
+            let (mut s, card) = end_times_field(radiant_face, seed);
+            s.activate(&card, json!({}));
+            assert!(s.state().pending.is_some(), "End Times Discovers");
+            (s, card)
+        }
+
+        #[test]
+        fn r3551002_each_power_costs_one_less_than_the_kept_script() {
+            crate::register_all();
+            let now = prices(&script(), false);
+            let kept: std::collections::BTreeMap<String, Option<i32>> =
+                prices(&script_v0_5_13g(), false).into_iter().collect();
+            assert_eq!(kept.len(), 13);
+            assert!(!kept.contains_key("endTimes"));
+            for (id, price) in &now {
+                if id == "endTimes" {
+                    assert_eq!(price, &Some(10));
+                } else {
+                    let kept_price = kept.get(id).copied().flatten();
+                    assert_eq!(*price, kept_price.map(|kept| (kept - 1).max(0)), "{id}");
+                }
+            }
+            assert_eq!(now.len(), 14);
+        }
+
+        #[test]
+        fn r3551002_the_cry_offers_end_times_among_fourteen() {
+            crate::register_all();
+            assert_eq!(subsystems::HERO_POWER_NAMES.len(), 14);
+            let seed = offering_seed_with("hp-cry-endtimes", "endTimes", false);
+            let (s, _) = played(&seed, false);
+            let offered = s.prompt_modes();
+            assert_eq!(offered.len(), 3);
+            assert!(offered.contains(&"endTimes".to_string()));
+        }
+
+        #[test]
+        fn r3551002_end_times_costs_10_and_discovers_a_terminus_card_tokens_included() {
+            crate::register_all();
+            let (mut s, card) = end_times_field(false, "hp-endtimes-discover");
+            assert_eq!(panel_price(&s), 10);
+            s.activate(&card, json!({}));
+            s.expect_mana(P1, 0);
+            let offered = s.prompt_modes();
+            assert_eq!(offered.len(), 3);
+            for id in &offered {
+                assert!(tags_of(id).contains(&json!("Terminus")), "{id} is Terminus");
+            }
+            let picked = must(offered.first().cloned(), "an offered Terminus card");
+            s.answer(json!(picked));
+            let added = must(
+                s.hand(P1).into_iter().find(|entry| entry.def_id == picked),
+                "the Terminus card in hand",
+            );
+            assert!(!added.radiant);
+            // The use took the cuts back (none yet): the price is (10) again.
+            assert_eq!(panel_price(&s), 10);
+        }
+
+        #[test]
+        fn r3551002_the_offer_includes_tokens() {
+            crate::register_all();
+            let seed = seed_where("hp-endtimes-tokens", |seed| {
+                discovering(seed, false).0.prompt_modes()
+                    .iter()
+                    .any(|id| crate::card_def(id).token)
+            });
+            let (s, _) = discovering(&seed, false);
+            assert!(s.prompt_modes().iter().any(|id| crate::card_def(id).token));
+        }
+
+        #[test]
+        fn r3551002_each_end_of_your_turn_takes_1_off_until_it_is_used() {
+            crate::register_all();
+            let (mut s, card) = end_times_field(false, "hp-endtimes-tick");
+            s.end_turn();
+            assert_eq!(panel_price(&s), 9);
+            s.end_turn();
+            assert_eq!(panel_price(&s), 9);
+            s.end_turn();
+            assert_eq!(panel_price(&s), 8);
+            // Back to p1: p2's end of turn takes nothing.
+            s.end_turn();
+            assert_eq!(panel_price(&s), 8);
+            // MAX_MANA is 4 (§2.3): top p1 up so the (8) is payable.
+            s.state_mut().players.p1.mana.current = 10;
+            s.activate(&card, json!({}));
+            s.expect_mana(P1, 2);
+            s.answer(json!(must(s.prompt_modes().into_iter().next(), "an offered Terminus card")));
+            // Used: the taken 2 are back, so it costs (10) again, then ticks down again.
+            assert_eq!(panel_price(&s), 10);
+            s.end_turn();
+            s.end_turn();
+            assert_eq!(panel_price(&s), 9);
+        }
+
+        #[test]
+        fn r3551002_radiant_takes_2_off() {
+            crate::register_all();
+            let (mut s, _) = end_times_field(true, "hp-endtimes-radiant");
+            assert_eq!(panel_price(&s), 10);
+            s.end_turn();
+            assert_eq!(panel_price(&s), 8);
+            s.end_turn();
+            assert_eq!(panel_price(&s), 8);
+            s.end_turn();
+            assert_eq!(panel_price(&s), 6);
+        }
+
+        #[test]
+        fn r3551002_never_below_0() {
+            crate::register_all();
+            // Libraries long enough that twelve rounds of draws never fatigue a hero to death.
+            let library = [JAMMED; 14];
+            let (mut s, _) = on_field(
+                "endTimes",
+                OnField {
+                    p1: Some(json!({ "hand": [SPARE, FREE], "mana": 10, "library": library })),
+                    p2: Some(json!({ "hand": [FREE], "library": library })),
+                    seed: Some("hp-endtimes-floor".to_string()),
+                    ..OnField::default()
+                },
+            );
+            for _ in 0..12 {
+                s.end_turn();
+                s.end_turn();
+            }
+            assert_eq!(panel_price(&s), 0);
+            // At 0 it is free, and the use takes the cuts back (R3551002): the next costs (10) again.
+            let card = must(s.backrow(P1, 1), "the Heroic Power");
+            s.activate(&card, json!({}));
+            s.answer(json!(must(s.prompt_modes().into_iter().next(), "an offered Terminus card")));
+            assert_eq!(panel_price(&s), 10);
+        }
+
+        #[test]
+        fn r3551002_the_opponents_end_of_turn_takes_nothing() {
+            crate::register_all();
+            let (mut s, _) = end_times_field(false, "hp-endtimes-theirs");
+            s.end_turn();
+            assert_eq!(panel_price(&s), 9);
+            // p2's end of turn: no End Times of p2's, so nothing moves.
+            s.end_turn();
+            assert_eq!(panel_price(&s), 9);
+        }
+
+        #[test]
+        fn r3551002_the_arrival_roll_can_land_on_end_times() {
+            crate::register_all();
+            // R752: a power is listed only when its controller can pay for it, so the (10) needs 10.
+            let seed = seed_where("hp-endtimes-roll", |seed| {
+                let mut s = scenario(json!({ "seed": seed, "p1": { "hand": [SPARE], "mana": 10 } }));
+                let summoned = summon_heroic(&mut s, false);
+                subsystems::power_of(&summoned).is_some_and(|power| power.name.as_str() == "endTimes")
+            });
+            let mut s = scenario(json!({ "seed": seed, "p1": { "hand": [SPARE], "mana": 10 } }));
+            let summoned = summon_heroic(&mut s, false);
+            assert_eq!(
+                subsystems::power_of(&summoned).map(|power| power.name.as_str()),
+                Some("endTimes")
+            );
+            assert_eq!(listed(&s, &summoned).len(), 1);
+        }
+
+        #[test]
+        fn r3551002_the_hero_panel_shows_the_live_price() {
+            crate::register_all();
+            let (mut s, card) = end_times_field(false, "hp-endtimes-panel");
+            assert!(matches_object(
+                &view_json(&s, P1)["you"]["hero"]["power"],
+                &json!({ "name": "endTimes", "title": "End Times", "x": 10, "usedThisTurn": false }),
+            ));
+            s.end_turn();
+            s.end_turn();
+            assert!(matches_object(
+                &view_json(&s, P1)["you"]["hero"]["power"],
+                &json!({ "name": "endTimes", "x": 9 }),
+            ));
+            let _ = card;
+        }
+
+        #[test]
+        fn r767000_the_kept_v0_5_13g_script_offers_thirteen_at_the_old_prices() {
+            crate::register_all();
+            let kept = script_v0_5_13g();
+            assert!(kept.base.end_of_turn.is_none() && kept.radiant.end_of_turn.is_none());
+            assert_eq!(
+                sorted(members(&kept.base)),
+                sorted(vec!["staticFlags", "cry", "startOfGame", "activations", "resume"]),
+            );
+            crate::under_kept(HEROIC, kept, || {
+                let (s, _) = played("hp-kept-13g", false);
+                let offered = s.prompt_modes();
+                assert_eq!(offered.len(), 3);
+                assert!(!offered.contains(&"endTimes".to_string()));
+                let recruit = prices(&script_v0_5_13g(), false)
+                    .into_iter()
+                    .find(|(id, _)| id == "recruit")
+                    .map(|(_, price)| price);
+                assert_eq!(recruit, Some(Some(3)));
+            });
         }
     }
 }

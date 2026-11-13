@@ -11,7 +11,7 @@ use std::sync::LazyLock;
 use jackioh_engine::effects::{damage, destroy_at_next_turn_start, discard_random, draw, gain_mana};
 use jackioh_engine::subsystems::activate::activation_paid;
 use jackioh_engine::subsystems::hero_power::{
-    POWER_RESUME, STEADY_SHOT_PARAM, hero_power, power_abilities, roll_power,
+    POWER_RESUME, PowerEdition, STEADY_SHOT_PARAM, hero_power, power_abilities, roll_power,
 };
 use jackioh_engine::testkit::*;
 
@@ -396,7 +396,7 @@ fn heroic_face(radiant: bool) -> Script {
     Script {
         static_flags: quickdraw(),
         start_of_game: Some(hook(|_ctx| vec![roll_power()])),
-        activations: power_abilities(radiant),
+        activations: power_abilities(radiant, PowerEdition::Thirteen),
         resume: IndexMap::from([(POWER_RESUME, hook(hero_power))]),
         ..Script::default()
     }

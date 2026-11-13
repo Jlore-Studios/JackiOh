@@ -211,13 +211,15 @@ mod tests {
             }
 
             #[test]
-            fn r60_r382_across_seeds_it_never_makes_itself_may_repeat_and_hands_out_tokens() {
+            fn r3563000_r382_across_seeds_it_never_makes_itself_the_picks_are_distinct_and_hands_out_tokens() {
                 let mut saw_token = false;
                 for seed in 1..=40 {
                     let mut s = shop(&format!("drop-seeds-{seed}"), false, &[FILLER]);
                     s.play(DROP, json!({}));
-                    for id in added(&s) {
-                        let def_id = s.card(&id).def_id.clone();
+                    let made: Vec<String> = added(&s).iter().map(|id| s.card(id).def_id.clone()).collect();
+                    // R3563000: the pool is far larger than three, so the three cards are three different ones.
+                    assert_eq!(made.iter().collect::<IndexSet<_>>().len(), made.len(), "seed {seed}: {made:?}");
+                    for def_id in made {
                         assert_ne!(def_id, DROP);
                         if def_id.contains("-t-") || has_token_index(&def_id) {
                             saw_token = true;
@@ -230,8 +232,10 @@ mod tests {
             #[test]
             fn r382_a_grape_the_pool_picks_is_re_rolled_on_grape_odds_not_generated_as_picked() {
                 // Each seed below picks a Grape mid-pool (read off the probe rng): the card Dropshipping
-                // generates for it is the re-roll, so the generated triple equals `pickGenerated` three times
-                // over — and differs from the picked triple, which a plain `rng.pick` would generate as is.
+                // generates for it is the re-roll, so the generated triple equals `pickGeneratedUnique` three
+                // times over — and differs from the picked triple, which a plain unique pick would generate as
+                // is. R3563000: the three picks of one run share a tally, one for the probe's picks as picked
+                // and one for the generated cards, each counting the pool's pick and not the Grape it rolls to.
                 // Which seeds do is a roll of the pool, which a card joining it moves, so each is searched for.
                 crate::register_all();
                 let pool = query(&json_as(json!({ "withTokens": true, "excludeDefId": DROP })));
@@ -241,17 +245,21 @@ mod tests {
                     let s = shop(seed, false, &[FILLER]);
                     let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
                     let mut probe = Rng::new(&s.state().seed, s.state().rng_cursor);
+                    let mut probed = DrawTally::new();
+                    let mut tally = DrawTally::new();
                     let mut expected: Vec<Option<String>> = Vec::new();
                     let mut firsts: Vec<Option<String>> = Vec::new();
                     for _ in 0..3 {
-                        let first = probe.pick(&pool).map(|card| card.id.clone());
+                        let first = pick_unique(&mut probe, &pool, &mut probed).map(|card| card.id.clone());
                         if let Some(id) = &first
                             && grapes.contains(id.as_str())
                         {
                             probe.int(table);
                         }
                         firsts.push(first);
-                        expected.push(pick_generated(&mut rng, &pool, None).map(|card| card.id.clone()));
+                        expected.push(
+                            pick_generated_unique(&mut rng, &pool, None, &mut tally).map(|card| card.id.clone()),
+                        );
                     }
                     (s, firsts, expected)
                 };

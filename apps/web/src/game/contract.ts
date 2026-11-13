@@ -56,6 +56,9 @@ export function laneIndex(lane: number): number {
   return lane - 1;
 }
 
+/** The words a greyed Activate control gives when the view lists no reason for it (R3768000). */
+export const NOT_NOW = "can't be activated right now";
+
 /** The `data-testid`s BUILD M5-T1 fixes. Every clickable element gets its id from here. */
 export const testid = {
   zone: (side: Side, row: Row, lane: number): string => `zone-${side}-${row}-${lane}`,
@@ -77,6 +80,8 @@ export const testid = {
   concede: "concede",
   log: "log",
   board: "board",
+  /** R3554000: the Black Hole lane's swallowed count (`"n/capacity"`). */
+  blackHoleCount: "black-hole-count",
   seatSwitch: "seat-switch",
   result: "result-overlay",
   banner: "turn-banner",
@@ -312,6 +317,8 @@ export type BoardProps = {
   animated?: readonly AnimationFrames[];
   /** A route's server-synchronised clock, mounted in the physical End Turn housing. */
   turnClock?: ReactNode;
+  /** #3727: End turn's words on a route whose turn end is sent on (a daily game's "End turn and send"); absent, "End turn". */
+  endTurnLabel?: string;
   /** A route status line, mounted on the board rail rather than a floating match bar. */
   matchStatus?: ReactNode;
   /** Route chrome carved into the same physical side rail as the controls. */

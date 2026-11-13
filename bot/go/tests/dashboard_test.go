@@ -454,7 +454,7 @@ func TestDashboard_TheSectionSaysWhetherTheOwnersPCWorksAndHowLoadedItIs(t *test
 
 	assertEqual(t, says(pyjson.New()), "calm, lending itself, not working: no job, CPU 44%, memory 65% "+
 		"of 32 GB (7% and 35% without its runners) · heard 21:59.")
-	runner := pyjson.New("name", "pc-selfplay-1", "label", dashboard.LocalLabel, "busy", false)
+	runner := pyjson.New("name", "pc-selfplay-1", "label", "night-vm-gpt", "busy", false)
 	assertIn(t, "not working: a runner waits for a job, CPU 44%", says(pyjson.New("runners", []any{runner})))
 	// Busy in the heartbeat before GitHub lists its job: working, on what not yet known.
 	busy := dashboardMerged(runner, pyjson.New("busy", true, "cpus", 5.8))
@@ -462,7 +462,7 @@ func TestDashboard_TheSectionSaysWhetherTheOwnersPCWorksAndHowLoadedItIs(t *test
 	gh.Runs.Set("40", pyjson.New("id", 40, "status", "in_progress", "workflow", "selfplay.yml",
 		"path", ".github/workflows/selfplay.yml", "created_at", clock.ISO(testsupport.Night)))
 	gh.Jobs["40"] = []*pyjson.Object{pyjson.New("name", "export / shard from 1", "status", "in_progress",
-		"labels", []any{dashboard.LocalLabel}, "runner_name", "pc-selfplay-1")}
+		"labels", []any{"night-vm-gpt"}, "runner_name", "pc-selfplay-1")}
 	assertIn(t, "calm, lending itself, working on selfplay (export / shard from 1), CPU 44%",
 		says(pyjson.New("runners", []any{busy})))
 	assertIn(t, "working on selfplay (export / shard from 1), slowed while the PC is busy, "+
@@ -621,10 +621,10 @@ func TestDashboard_TheVisuals(t *testing.T) {
 	assertIn(t, museRow, body)
 	assertIn(t, claudeRow, body)
 	assertLess(t, strIndex(t, body, museRow), strIndex(t, body, claudeRow))
-	// The date first, then how far the PC's two local jobs have played (no heartbeat here).
+	// The date first, then how far the training lanes have played (neither plays here).
 	assertTrue(t, strings.HasPrefix(body, "**Last updated at 2026-09-29 22:00 CDT**\n\n"+
 		dashboard.ProgressStart+"\n```mermaid\n"), "the body's start")
-	assertIn(t, "<sub>The owner's PC: no heartbeat set up (JACKIOH_PC_GIST).</sub>", body)
+	assertIn(t, "<sub>Neither training lane is playing now.</sub>", body)
 	assertIn(t, dashboard.ProgressEnd+"\n\n# 🤖 ", body)
 	assertIn(t, "`bot-status` rewrites this issue every 2 minutes", body)
 	// A timeline of the runs going now: GitHub's runners, then the machine.
@@ -1404,7 +1404,7 @@ func newDashboardRunners(t *testing.T) *dashboardRunners {
 		pyjson.New("name", "web (unit 3/4)", "status", "queued", "labels", []any{"ubuntu-latest"},
 			"created_at", ago(3))}
 	gh.Jobs["104"] = []*pyjson.Object{
-		pyjson.New("name", "plan", "status", "queued", "labels", []any{dashboard.LocalLabel},
+		pyjson.New("name", "plan", "status", "queued", "labels", []any{"macos-15"},
 			"created_at", ago(90))}
 	return r
 }
@@ -1474,7 +1474,7 @@ func TestDashboard_TheRunnersAsBoxes(t *testing.T) {
 	assertIn(t, `    subgraph qu["Queued for a runner: 3 jobs"]`, diagram)
 	assertIn(t, `qu0["<b>ubuntu-latest</b><br/>⏳ 2 jobs<br/>the longest 4m<br/>ci · web `+
 		`(unit 2/4)"]:::next`, diagram)
-	assertIn(t, `qu1["<b>jackioh-selfplay-local</b><br/>⏳ 1 job<br/>the longest 1h 30m`+
+	assertIn(t, `qu1["<b>macos-15</b><br/>⏳ 1 job<br/>the longest 1h 30m`+
 		`<br/>learn · plan"]:::next`, diagram)
 	assertIn(t, "    gh ~~~ nb ~~~ mb ~~~ pc ~~~ qu\n", diagram)
 	assertIn(t, "classDef busy fill:#1f883d", diagram)
@@ -1556,7 +1556,7 @@ func (r *dashboardRunners) pc(beat *pyjson.Object, gist string) string {
 
 // beat is RunnersTests.beat(minutes_ago, **fields); a nil `fields` is none.
 func (r *dashboardRunners) beat(minutesAgo int, fields *pyjson.Object) *pyjson.Object {
-	runners := []any{pyjson.New("name", "pc-gather-1", "label", dashboard.GatherLabel, "busy", true,
+	runners := []any{pyjson.New("name", "pc-gather-1", "label", "night-vm-agy", "busy", true,
 		"cpus", 1.9, "throttled", false),
 		pyjson.New("name", "pc-lite-2", "label", "night-vm-lite", "busy", false)}
 	return pyjson.New("at", dashboardAgo(minutesAgo), "calm", true, "cpu", 7.4,
@@ -1570,7 +1570,7 @@ func (r *dashboardRunners) gatherGoing(status string) {
 		"path", ".github/workflows/gather.yml",
 		"display_title", "Patch v0.3.40", "created_at", ago(13)))
 	job := pyjson.New("name", "gather the newest patch", "status", status,
-		"labels", []any{dashboard.GatherLabel}, "created_at", ago(13))
+		"labels", []any{"night-vm-agy"}, "created_at", ago(13))
 	if status == "in_progress" {
 		job.Update(pyjson.New("runner_name", "pc-gather-1", "started_at", ago(12),
 			"steps", []any{pyjson.New("name", "build", "status", "completed"),
@@ -1595,15 +1595,16 @@ func TestDashboard_TheOwnersPCFromItsHeartbeat(t *testing.T) {
 		group)
 	assertIn(t, `pc1["<b>pc-lite-2</b><br/>⚪ idle, waiting<br/>for a night-vm-lite job"]`+
 		`:::idle`, group)
-	assertIn(t, `pc2["<b>gather</b><br/>🟢 gathering<br/>play (cargo jackioh stats --serie…`+
-		`<br/>for 12m<br/>on 1.9 CPUs"]:::busy`, group)
-	// The PC busy with its owner's work: gather goes on, slowed.
+	// No gather box of its own: gather plays on GitHub's runners, not here (2026-11-13).
+	assertNotIn(t, `<b>gather</b>`, group)
+	// The PC busy with its owner's work: its job goes on, slowed.
 	slowed := r.beat(1, pyjson.New("calm", false))
 	pyjson.Obj(slowed.List("runners")[0]).Set("throttled", true)
 	group = r.pc(slowed, "g1")
 	assertIn(t, "The owner's PC: busy with its owner's work, working on gather, CPU 7%",
 		group)
-	assertIn(t, "for 12m<br/>⏸️ slowed: the PC is busy\"]:::paused", group)
+	assertIn(t, `pc0["<b>pc-gather-1</b>`, group)
+	assertIn(t, ":::paused", group)
 	// A supervisor that sends the whole PC's load and its memory's size: percentages.
 	group = r.pc(r.beat(1, pyjson.New("cpuAll", 43.6, "memAllGB", 20.8, "memTotalGB", 31.9)), "g1")
 	assertIn(t, `subgraph pc["The owner's PC: calm, lending itself, working on gather, `+
@@ -1611,7 +1612,7 @@ func TestDashboard_TheOwnersPCFromItsHeartbeat(t *testing.T) {
 	// PowerShell 5.1 may write a list as {"value": [...]}.
 	wrapped := r.beat(1, nil)
 	wrapped.Set("runners", pyjson.New("value", wrapped.Get("runners"), "Count", 2))
-	assertIn(t, "on 1.9 CPUs", r.pc(wrapped, "g1"))
+	assertIn(t, `pc1["<b>pc-lite-2</b>`, r.pc(wrapped, "g1"))
 	// No job on the PC: not working, and whether a runner of its waits for one.
 	r.gh.Runs.Delete("300")
 	idle := r.beat(1, nil)
@@ -1622,42 +1623,17 @@ func TestDashboard_TheOwnersPCFromItsHeartbeat(t *testing.T) {
 		r.pc(r.beat(1, pyjson.New("runners", []any{})), "g1"))
 }
 
-// Gather's label has a half of the PC to itself while it has a job, beside the learn lane's
-// (#2134), so the two run together and the group names both.
-func TestDashboard_LearnAndGatherSideBySide(t *testing.T) {
-	r := newDashboardRunners(t)
+// twoOnThePC is two jobs going on the owner's PC's runners, as above: whatever their workflows (the
+// PC takes only the night box's labels now, 2026-11-13), the timeline draws each by its name.
+func (r *dashboardRunners) twoOnThePC() {
 	r.gatherGoing("in_progress")
 	r.gh.Runs.Obj("104").Set("status", "in_progress")
 	r.gh.Jobs["104"] = []*pyjson.Object{pyjson.New("name", "export (shard 3)", "status", "in_progress",
-		"labels", []any{dashboard.LocalLabel}, "runner_name", "pc-selfplay-1",
-		"started_at", dashboardAgo(40), "steps", []any{pyjson.New("name", "play", "status", "in_progress")})}
-	beat := r.beat(1, nil)
-	beat.Set("runners", slices.Insert(beat.List("runners"), 0, any(pyjson.New("name", "pc-selfplay-1",
-		"label", dashboard.LocalLabel, "busy", true, "cpus", 5.8, "throttled", false))))
-	group := r.pc(beat, "g1")
-	assertIn(t, "The owner's PC: calm, lending itself, working on learn and gather, CPU 7%",
-		group)
-	assertIn(t, `pc0["<b>pc-selfplay-1</b><br/>🟢 learn · export (shard 3)`, group)
-	assertIn(t, `pc1["<b>pc-gather-1</b><br/>🟢 gather · gather the newest patch`, group)
-	assertIn(t, `<br/>on 1.9 CPUs"]:::busy`, group)
-}
-
-// bothPlaying is RunnersTests.both_playing: a learn shard and gather both going on the PC, as
-// above, with each runner's `progress` in the heartbeat as given (nil: none).
-func (r *dashboardRunners) bothPlaying(learn, gather *pyjson.Object) {
-	r.gatherGoing("in_progress")
-	r.gh.Runs.Obj("104").Set("status", "in_progress")
-	r.gh.Jobs["104"] = []*pyjson.Object{pyjson.New("name", "export (shard 3)", "status", "in_progress",
-		"labels", []any{dashboard.LocalLabel}, "runner_name", "pc-selfplay-1",
+		"labels", []any{"night-vm-gpt"}, "runner_name", "pc-selfplay-1",
 		"started_at", dashboardAgo(40), "steps", []any{})}
 	beat := r.beat(1, nil)
 	beat.Set("runners", slices.Insert(beat.List("runners"), 0, any(pyjson.New("name", "pc-selfplay-1",
-		"label", dashboard.LocalLabel, "busy", true, "cpus", 5.8, "throttled", false))))
-	for i, played := range []*pyjson.Object{learn, gather} {
-		if played != nil {
-			pyjson.Obj(beat.List("runners")[i]).Set("progress", played)
-		}
-	}
+		"label", "night-vm-gpt", "busy", true, "cpus", 5.8, "throttled", false))))
 	r.heartbeat(beat, "g1")
 }
 
@@ -1670,7 +1646,7 @@ func (r *dashboardRunners) heartbeat(beat *pyjson.Object, gist string) {
 	}
 }
 
-// top is RunnersTests.top: the top of the issue: how far the PC's two local jobs have played.
+// top is RunnersTests.top: the top of the issue: how far the training lanes have played.
 func (r *dashboardRunners) top() string {
 	return dashboard.Progress(r.ctx, dashboard.ReadRunners(r.ctx))
 }
@@ -1697,78 +1673,70 @@ func (r *dashboardRunners) bars() (string, string, string) {
 	return labels, bars[1], note
 }
 
-// Under the issue's date, a Mermaid bar chart: the learn lane's export as the game it is at of
-// learn.yml's 100,000, its shard's games, and gather's games, each in percent over a grey bar to
-// 100, from the heartbeat's `progress` (the games each `jackioh` has written so far); under it,
-// the shard's range, gather's patch and when the PC was heard.
-func TestDashboard_TheTopOfTheIssueChartsHowFarThePcsTwoJobsHavePlayed(t *testing.T) {
+// On GitHub's runners (#3740) no heartbeat counts the games, so the export is its shards played of
+// all of them, and each part of gather its time so far of GATHER_HOURS; a lane playing there has
+// no PC bar, and the chart is the training lanes', not the PC's.
+func TestDashboard_TheTopOfTheIssueChartsTheTrainingLanesOnGithubsRunners(t *testing.T) {
 	r := newDashboardRunners(t)
-	r.bothPlaying(pyjson.New("kind", "selfplay", "games", 5000, "done", 2304, "from", 65001),
-		pyjson.New("kind", "stats", "games", 2000, "done", 1320, "from", 300001, "patch", "v0.4.12d"))
-	text := r.top()
-	assertTrue(t, strings.HasPrefix(text, dashboard.ProgressStart+"\n```mermaid\n"+
-		dashboard.ProgressChart+"\nxychart-beta horizontal\n"+
-		"    title \"The owner's PC: how far its two local jobs "+
-		"have played, %\"\n"), "seed")
-	assertIn(t, `    x-axis ["learn: game 67,304 of 100,000", "its shard: 2,304 of 5,000", `+
-		`"gather: game 1,320 of 2,000"]`+"\n"+`    y-axis "% played" 0 --> 100`+"\n"+
-		"    bar [100, 100, 100]\n    bar [67.3, 46.1, 66.0]\n```\n", text)
-	assertTrue(t, strings.HasSuffix(text, "<sub>The shard plays games 65,001–70,000 · gather plays "+
-		"v0.4.12d · heard 21:59.</sub>\n"+dashboard.ProgressEnd), text)
-	// An export larger than learn.yml's default: its shard alone, and the game it is at.
-	r.bothPlaying(pyjson.New("kind", "selfplay", "games", 5000, "done", 10, "from", 100001), nil)
-	labels, played, note := r.bars()
-	assertEqual(t, labels, `    x-axis ["its shard: 10 of 5,000", "gather: working, no `+
-		`games"]`)
-	assertEqual(t, played, "    bar [0.2, 0.0]")
-	assertEqual(t, note, "<sub>Learn is at game 100,010, past learn.yml's 100,000 · the "+
-		"shard plays games 100,001–105,000 · gather is playing no games now (its "+
-		"build) · heard 21:59.</sub>")
-	// Busy but playing no games: building, retraining, gating.
-	r.bothPlaying(nil, nil)
-	labels, played, note = r.bars()
-	assertEqual(t, labels, `    x-axis ["learn: working, no games", "gather: working, no `+
-		`games"]`)
-	assertEqual(t, played, "    bar [0.0, 0.0]")
-	assertIn(t, "<sub>Learn is playing no games now (a build, the retrain, the screen or "+
-		"the gate) · gather is playing no games now (its build)", note)
-	// Jobs queued for runners the PC has not started (it is not quiet yet), then none at all.
-	r.gatherGoing("queued")
-	r.gh.Runs.Obj("104").Set("status", "queued")
-	r.gh.Jobs["104"] = []*pyjson.Object{pyjson.New("name", "plan", "status", "queued",
-		"labels", []any{dashboard.LocalLabel})}
+	r.gh.Runs.Set("400", pyjson.New("id", 400, "status", "in_progress", "event", "schedule",
+		"path", ".github/workflows/learn.yml", "display_title", "learn", "created_at", dashboardAgo(300)))
+	jobs := []*pyjson.Object{pyjson.New("name", "plan", "status", "completed", "conclusion", "success",
+		"labels", []any{"ubuntu-latest"})}
+	for i := 0; i < 80; i++ {
+		job := pyjson.New("name", fmt.Sprintf("export / round 1 / shard from %d", i*1250+1),
+			"labels", []any{"ubuntu-latest"}, "status", "queued")
+		switch {
+		case i < 3:
+			job.Update(pyjson.New("status", "completed", "conclusion", "success"))
+		case i == 3:
+			job.Update(pyjson.New("status", "completed", "conclusion", "failure"))
+		case i < 14:
+			job.Update(pyjson.New("status", "in_progress", "started_at", dashboardAgo(100)))
+		}
+		jobs = append(jobs, job)
+	}
+	r.gh.Jobs["400"] = jobs
+	r.gh.Runs.Set("401", pyjson.New("id", 401, "status", "in_progress", "event", "workflow_dispatch",
+		"path", ".github/workflows/gather.yml", "display_title", "gather", "created_at", dashboardAgo(131)))
+	r.gh.Jobs["401"] = []*pyjson.Object{
+		pyjson.New("name", "gather the newest patch, part 2", "status", "in_progress",
+			"labels", []any{"ubuntu-latest"}, "started_at", dashboardAgo(130)),
+		pyjson.New("name", "gather the newest patch, part 1", "status", "in_progress",
+			"labels", []any{"ubuntu-latest"}, "started_at", dashboardAgo(70)),
+		pyjson.New("name", "start the next run", "status", "queued", "labels", []any{"ubuntu-latest"})}
 	r.heartbeat(r.beat(1, pyjson.New("runners", []any{})), "g1")
-	labels, _, _ = r.bars()
-	assertEqual(t, labels, `    x-axis ["learn: waiting for its runner", `+
-		`"gather: waiting for its runner"]`)
-	r.gh.Runs = pyjson.New() // gh.runs.clear()
-	labels, _, _ = r.bars()
-	assertEqual(t, labels, `    x-axis ["learn: not playing", "gather: not `+
-		`playing"]`)
-	// No heartbeat to trust: the line under the chart says why.
-	r.heartbeat(r.beat(30, nil), "g1")
+	assertIn(t, `    title "How far the training lanes have played, %"`, r.top())
+	labels, played, note := r.bars()
+	assertEqual(t, labels, `    x-axis ["learn: shard 3 of 80 played", "gather part 1: 1h 10m of 5h", `+
+		`"gather part 2: 2h 10m of 5h"]`)
+	assertEqual(t, played, "    bar [3.8, 23.3, 43.3]")
+	assertEqual(t, note, "<sub>Learn plays 10 shards at once on GitHub's runners · gather plays on "+
+		"GitHub's runners.</sub>")
+	// Gather not playing: a bar at 0 that says so, beside learn's; neither: both, and a line saying so.
+	r.gh.Runs.Delete("401")
 	labels, _, note = r.bars()
-	assertEqual(t, labels, `    x-axis ["learn: no heartbeat", "gather: no heartbeat"]`)
-	assertEqual(t, note, "<sub>The owner's PC: not heard since 21:30.</sub>")
-	r.heartbeat(nil, "")
-	_, _, note = r.bars()
-	assertEqual(t, note, "<sub>The owner's PC: no heartbeat set up "+
-		"(JACKIOH_PC_GIST).</sub>")
+	assertEqual(t, labels, `    x-axis ["learn: shard 3 of 80 played", "gather: not playing"]`)
+	assertEqual(t, note, "<sub>Learn plays 10 shards at once on GitHub's runners.</sub>")
+	r.gh.Runs.Delete("400")
+	labels, played, note = r.bars()
+	assertEqual(t, labels, `    x-axis ["learn: not playing", "gather: not playing"]`)
+	assertEqual(t, played, "    bar [0.0, 0.0]")
+	assertEqual(t, note, "<sub>Neither training lane is playing now.</sub>")
 }
 
-func TestDashboard_TheExportSizeIsLearnYmlsDefault(t *testing.T) {
-	text, err := os.ReadFile(filepath.Join(testsupport.Root, ".github", "workflows", "learn.yml"))
+func TestDashboard_GathersHoursAreGatherYmls(t *testing.T) {
+	text, err := os.ReadFile(filepath.Join(testsupport.Root, ".github", "workflows", "gather.yml"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertIn(t, fmt.Sprintf("games: ${{ inputs.games || '%d' }}", dashboard.LearnGames), string(text))
+	assertIn(t, fmt.Sprintf("\n  GATHER_HOURS: \"%d\"\n", dashboard.GatherHours), string(text))
 }
 
 // The runs-going-now timeline draws the PC's jobs too, by workflow and job, in readable colours:
 // plain bars, whose name beside a short bar is grey, not the dark theme's dark.
 func TestDashboard_TheTimelineDrawsThePcsJobs(t *testing.T) {
 	r := newDashboardRunners(t)
-	r.bothPlaying(nil, nil)
+	r.twoOnThePC()
 	found := dashboard.ReadRunners(r.ctx)
 	chart := strings.Join(dashboard.Timeline(r.ctx, pyjson.New(), pyjson.New(), found), "\n")
 	assertTrue(t, strings.HasPrefix(chart, "```mermaid\n"+dashboard.TimelineStyle+"\ngantt\n"), chart)
@@ -1784,7 +1752,6 @@ func TestDashboard_TheTimelineDrawsThePcsJobs(t *testing.T) {
 
 func TestDashboard_ARedrawKeepsTheTopLinesFresh(t *testing.T) {
 	r := newDashboardRunners(t)
-	r.bothPlaying(pyjson.New("kind", "selfplay", "games", 5000, "done", 2304, "from", 65001), nil)
 	r.gh.AddIssue(148, fakes.Issue{Title: dashboard.Title, Body: "x", User: fakes.Operator})
 	flowUpdate(r.ctx, func(s *pyjson.Object) { s.Set("dashboard", pyjson.New("issue", 148)) }, "state")
 	r.gh.Threads.Get(148).Set("body",
@@ -1793,7 +1760,7 @@ func TestDashboard_ARedrawKeepsTheTopLinesFresh(t *testing.T) {
 	assertEqual(t, dashboard.RefreshRunners(r.ctx), "redrew #148's runners")
 	body := r.gh.Threads.Get(148).Str("body")
 	assertTrue(t, strings.HasPrefix(body, "date\n\n"+dashboard.ProgressStart+"\n```mermaid\n"), body)
-	assertIn(t, `"learn: game 67,304 of 100,000"`, body)
+	assertIn(t, `"learn: not playing"`, body)
 	assertNotIn(t, "old lines", body)
 	assertNotIn(t, "old runners", body)
 	assertTrue(t, strings.HasSuffix(body, dashboard.RunnersEnd+"\nbottom"), "its end")
@@ -1805,35 +1772,11 @@ func TestDashboard_APCGoneQuietOrNeverHeard(t *testing.T) {
 	assertIn(t, "The owner's PC: not heard since 21:30: off, asleep, or its supervisor "+
 		"stopped", group)
 	assertNotIn(t, "pc-lite-2", group) // an old heartbeat's runners are not trusted
-	assertIn(t, `["<b>jackioh-selfplay-local</b><br/>💤 no job<br/>idle, or the PC is off"]`,
-		group)
+	assertIn(t, `["<b>the owner's PC</b><br/>💤 no job<br/>idle, or the PC is off"]`, group)
 	assertIn(t, "The owner's PC: no heartbeat set up (JACKIOH_PC_GIST)", r.pc(nil, ""))
 	r.gh.Gists = map[string]*pyjson.Object{}
 	assertIn(t, "The owner's PC: its heartbeat could not be read", r.pc(nil, "g1"))
 	assertIn(t, "The owner's PC: no heartbeat yet", r.pc(pyjson.New("calm", true), "g1"))
-}
-
-// Gathering now, waiting for the PC's runner, or how its last run ended: off while
-// GATHER_ON_PATCH is not true (its run skipped), done, failed, or never run.
-func TestDashboard_WhatTheGatherBoxSays(t *testing.T) {
-	r := newDashboardRunners(t)
-	gatherBox := func() string {
-		t.Helper()
-		return dashboardBefore(dashboardAfter(t, r.pc(r.beat(1, nil), "g1"), "<b>gather</b>"), "\n")
-	}
-	assertIn(t, "no run yet<br/>it plays each patch<br/>as it ships\"]:::off", gatherBox())
-	r.gatherGoing("queued")
-	assertIn(t, "⏳ waiting for the PC's runner<br/>for 13m\"]:::next", gatherBox())
-	r.gh.Runs.Delete("300")
-	for _, c := range [][2]string{{"skipped", "⚫ off: GATHER_ON_PATCH<br/>is not true (skipped " +
-		"21:00)\"]:::off"},
-		{"success", "⚪ not gathering<br/>last played 21:00\"]:::idle"},
-		{"failure", "❌ its last run: failure<br/>21:00\"]:::broken"}} {
-		r.gh.Runs.Set("301", pyjson.New("id", 301, "status", "completed", "conclusion", c[0],
-			"path", ".github/workflows/gather.yml", "event", "push",
-			"created_at", clock.ISO(testsupport.Night.Add(-time.Hour))))
-		assertIn(t, c[1], gatherBox())
-	}
 }
 
 func TestDashboard_ThePCGistComesFromTheEnvironment(t *testing.T) {
@@ -1933,8 +1876,8 @@ func TestDashboard_WhatEachRunnerIsForIsACommentKeptFromThePool(t *testing.T) {
 		"`lite`: the `codex` CLI with `lite-1`, as the Linux user "+
 		"`agent-lite`, which holds that login alone |", text)
 	assertIn(t, "| `night-vm-gpt` | the bot's AWS boxes, 1 lane | ", text)
-	assertIn(t, "| `"+dashboard.LocalLabel+"` | the owner's PC", text)
-	assertIn(t, "| `"+dashboard.GatherLabel+"` | the owner's PC, a slot of its own", text)
+	// The owner's PC no longer takes a training lane's job (2026-11-13), so no label of its own.
+	assertNotIn(t, "jackioh-selfplay-local", text)
 	assertIn(t, "| `voice` | renders a branch's voice lines", text)
 	// None of the statistics' outcomes reads it as a run's.
 	assertEqual(t, stats.Classify(text), "other")
@@ -1992,8 +1935,6 @@ func TestDashboard_WhereAJobRuns(t *testing.T) {
 		{"night-vm-lite-3", "night-vm-lite", "night box"},
 		{"night-vm-muse-b2", "night-vm-muse", "Muse box"},
 		{"pc-lite-1026021400", "night-vm-lite", "owner's PC"},
-		{"", dashboard.LocalLabel, "owner's PC"},
-		{"", dashboard.GatherLabel, "owner's PC"},
 		{"someone-elses", "gpu", "unknown box"}} {
 		_, where := dashboard.Where(pyjson.New("runner_name", c[0], "labels", []any{c[1]}))
 		assertEqual(t, where, c[2], c[0], " ", c[1])

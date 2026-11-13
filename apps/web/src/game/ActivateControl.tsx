@@ -1,6 +1,7 @@
 // Activate control (B3.2, SPEC §6.2, R384; presentation R510, R1751000).
-// It renders view data only (CLAUDE.md rule 7): `highlight.legal` decides a press, while `usable`
-// and `reason` are displayed only. A press reports `{ on: "activate", instanceId, ability? }`;
+// It renders view data only (CLAUDE.md rule 7): `highlight.legal` decides what a press sends, while `usable`
+// and `reason` are displayed only. A press reports `{ on: "activate", instanceId, ability? }`, a greyed one
+// too (R3768000: the board shows its reason and sends nothing);
 // cards with multiple abilities wear a single button opening an ability picker modal (R1751000).
 // It flashes for its `activated` animation row; reduced motion uses a static ring.
 
@@ -10,7 +11,7 @@ import { fillParams, type ActivationView, type CardView } from "@jackioh/shared"
 
 import { chineseName } from "../cards/chinese.ts";
 import { useCardInfo, type CardInfo } from "./catalog.ts";
-import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
+import { NO_HIGHLIGHT, NOT_NOW, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
 import { glowAttr } from "./glow.ts";
 import { isZhCn, t } from "../i18n/i18n.ts";
 
@@ -19,8 +20,6 @@ import "./activate.css";
 export const ACTIVATED_EVENT = "activated";
 
 export const UNLIMITED_USES = "∞";
-
-export const NOT_NOW = "can't be activated right now";
 
 /** The attribute a drag reads a control's card off (game/drag/targets.ts). */
 export const ACTIVATE_FOR_ATTRIBUTE = "data-activate-for";
@@ -34,6 +33,13 @@ export function usesText(usesLeft: number | null): string {
 export function usesWords(usesLeft: number | null): string {
   if (usesLeft === null) return t("unlimited uses this turn");
   return usesLeft === 1 ? t("1 use left this turn") : t("{count} uses left this turn", { count: String(usesLeft) });
+}
+
+/** R3550003: what a cooling-down ability's badge, title and label say while it sits out `turns` of its user's turns. */
+export function cooldownWords(turns: number): string {
+  return turns === 1
+    ? t("cooling down: 1 more turn")
+    : t("cooling down: {count} more turns", { count: String(turns) });
 }
 
 /** The words as one sentence, ending in a single full stop however the label ended ("。" for a Chinese reader). */
@@ -141,7 +147,7 @@ function ActivateButton(props: {
   function press(event: MouseEvent<HTMLButtonElement>): void {
     // The card under the control has its own click (an attack, a target): this one is the control's.
     event.stopPropagation();
-    if (!legal) return;
+    // A greyed press is reported too (R3768000): `onClickTarget` turns it into the view's reason and sends nothing.
     props.onClick?.(target);
   }
 
@@ -150,12 +156,16 @@ function ActivateButton(props: {
     if (event.key === "Enter" || event.key === " ") event.stopPropagation();
   }
 
-  const uses = usesWords(activation.usesLeft);
+  // R3550003: a cooling-down ability wears its turns left, not its uses.
+  const cooling = activation.cooldownTurnsLeft;
+  const uses = cooling !== undefined ? cooldownWords(cooling) : usesWords(activation.usesLeft);
+  const badge = cooling !== undefined ? `⏳${cooling}` : usesText(activation.usesLeft);
   return (
     <button
       type="button"
       className="activate-control"
       data-testid={testId}
+      data-cooldown={cooling}
       // ACTIVATE_FOR_ATTRIBUTE and ACTIVATE_ABILITY_ATTRIBUTE: what a drag reads the control's build off.
       data-activate-for={card.instanceId}
       data-activate-ability={ability}
@@ -166,9 +176,10 @@ function ActivateButton(props: {
       data-uses={activation.usesLeft ?? "unlimited"}
       data-flash={props.flashing ? ACTIVATED_EVENT : undefined}
       aria-disabled={legal ? undefined : "true"}
-      aria-label={`${t("Activate {name}: {ability} {uses}", { name: props.name, ability: sentence(props.label), uses: sentence(capitalised(uses)) })}${why === null ? "" : ` ${sentence(why)}`}`}
+      aria-label={`${t("Activate {name}: {ability} {uses}", { name: props.name, ability: sentence(props.label), uses: sentence(cooling !== undefined ? uses : capitalised(uses)) })}${why === null ? "" : ` ${sentence(why)}`}`}
       title={
-        why === null
+        // R3550003: a cooling-down ability's title names its turns left, greyed or not.
+        why === null || cooling !== undefined
           ? t("Activate: {ability} ({uses})", { ability: props.label, uses })
           : t("Activate: {ability} — {why}", { ability: props.label, why })
       }
@@ -184,7 +195,7 @@ function ActivateButton(props: {
         data-uses={activation.usesLeft ?? "unlimited"}
         aria-hidden="true"
       >
-        {usesText(activation.usesLeft)}
+        {badge}
       </span>
     </button>
   );

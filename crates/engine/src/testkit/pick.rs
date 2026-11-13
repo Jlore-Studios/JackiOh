@@ -1,5 +1,5 @@
 //! The one-instance `Selection[]` a test hands to a play's `targets` or a prompt's `answer`. Not
-//! globbed in: a test writes `pick::<builder>`. crates/tools/tests/acceptance.rs refuses a test's own
+//! globbed in: a test writes `pick::<builder>`; a Mode answer is `pick::mode`. crates/tools/tests/acceptance.rs refuses a test's own
 //! copy (#1826).
 
 use serde_json::{Value, json};
@@ -25,4 +25,9 @@ pub fn card(s: &Scenario, card: impl Into<CardRef>) -> Value {
 /// The pick of the unit in `player`'s lane `lane`, which must hold one (`Scenario::unit_at`).
 pub fn unit_at(s: &Scenario, player: impl SeatRef, lane: i32) -> Value {
     instance(&s.unit_at(player, lane))
+}
+
+/// The pick of the Mode option `option` (a Discover, Mode or Answer prompt's option string).
+pub fn mode(option: impl AsRef<str>) -> Value {
+    json!([{ "pick": "mode", "option": option.as_ref() }])
 }

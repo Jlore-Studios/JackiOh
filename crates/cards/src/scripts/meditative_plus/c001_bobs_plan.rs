@@ -15,7 +15,9 @@
 //! Chart for S #148 Alteran Reach (R2521008), which travels its starscape map. M #20 Aestheticize the Game
 //! has three lines to win on, so since #1563 its plan is a Discover of one card per line (R1563003): M+
 //! #1.2 Spa Day (the hero's health), #1.3 Garage Sale (the graveyard) and #1.4 Leg Day (the Units'
-//! totals), the chosen one added. A card with no plan (a later set's Wincon card, or a Glitch) is added
+//! totals), the chosen one added. Since #3569 S+ #79 A Glimpse into the Endless Sea has one too, Core #75
+//! Infinite Reserves, so the deck it exiles costs its owner no fatigue before its countdown ends
+//! (R3569006); the card joins the pool when its set ships (R1420). A card with no plan (a later set's Wincon card, or a Glitch) is added
 //! alone. The Radiant face adds both Radiant. A full hand burns what does not fit, in that order (§2.4).
 //! Quickdraw (R640) is a static flag beside the tag.
 //!
@@ -38,8 +40,15 @@ pub const WINCON_PLANS: &[(&str, &[&str])] = &[
     // Sale; the Units' totals, M+ #1.4 Leg Day.
     (
         "meditative-020",
-        &["meditativeplus-001-2", "meditativeplus-001-3", "meditativeplus-001-4"],
+        &[
+            "meditativeplus-001-2",
+            "meditativeplus-001-3",
+            "meditativeplus-001-4",
+        ],
     ),
+    // S+ #79 A Glimpse into the Endless Sea: no fatigue from the exiled deck, Core #75 Infinite
+    // Reserves (R3569006). The card is held with its set (R1420), so the line is inert until it ships.
+    ("stinkyscapeplus-079", &["core-075"]),
 ];
 
 /// A table of Wincon cards and their plans, as `WINCON_PLANS`.
@@ -51,7 +60,11 @@ const WINCON_PLANS_V0_5_11: Plans = &[
     ("meditative-008", &["meditativeplus-001-1"]),
     (
         "meditative-020",
-        &["meditativeplus-001-2", "meditativeplus-001-3", "meditativeplus-001-4"],
+        &[
+            "meditativeplus-001-2",
+            "meditativeplus-001-3",
+            "meditativeplus-001-4",
+        ],
     ),
 ];
 
@@ -71,10 +84,16 @@ pub fn plans_of(def_id: &str) -> &'static [&'static str] {
     plans_in(WINCON_PLANS, def_id)
 }
 
-/// The Wincon card, from the pool by the match rng (R380, R60, R673).
+/// The Wincon card, from the pool by the match rng (R380, R60, R673, R3563000).
 fn picked_wincon(ctx: &mut EffectContext<'_>) -> Option<String> {
     let pool = crate::query::pool(ID, &json_as(json!({ "tags": ["Wincon"] })));
-    pick_generated(&mut *ctx.sink.rng, &pool, Some(&*ctx.sink.state)).map(|def| def.id.clone())
+    pick_generated_unique(
+        &mut *ctx.sink.rng,
+        &pool,
+        Some(&*ctx.sink.state),
+        &mut ctx.draw_tally,
+    )
+    .map(|def| def.id.clone())
 }
 
 /// `table`: `WINCON_PLANS`, or the one a kept script ran (R767000).
@@ -88,7 +107,9 @@ fn bobs_plan(radiant: bool, table: Plans) -> Script {
             let Some(picked) = picked_wincon(ctx) else {
                 return vec![];
             };
-            let mut out = vec![add_to_hand(json_as(json!({ "defId": picked, "radiant": radiant })))];
+            let mut out = vec![add_to_hand(json_as(
+                json!({ "defId": picked, "radiant": radiant }),
+            ))];
             match plans_in(table, &picked) {
                 [] => {}
                 [plan] => out.push(add_to_hand(json_as(json!({ "defId": plan, "radiant": radiant })))),
@@ -142,7 +163,9 @@ fn bobs_plan_v0_4_0f(radiant: bool) -> Script {
             let Some(picked) = picked_wincon(ctx) else {
                 return vec![];
             };
-            let mut out = vec![add_to_hand(json_as(json!({ "defId": picked, "radiant": radiant })))];
+            let mut out = vec![add_to_hand(json_as(
+                json!({ "defId": picked, "radiant": radiant }),
+            ))];
             if let Some(plan) = plans_of(&picked).first() {
                 out.push(add_to_hand(json_as(json!({ "defId": plan, "radiant": radiant }))));
             }
@@ -176,6 +199,9 @@ mod tests {
     const LEG_DAY: &str = "meditativeplus-001-4";
     const ALTERAN_REACH: &str = "stinkyscape-148";
     const STAR_CHART: &str = "meditativeplus-001-5";
+    /// S+ #79 A Glimpse into the Endless Sea, whose plan is Core #75 Infinite Reserves (R3569006).
+    const GLIMPSE: &str = "stinkyscapeplus-079";
+    const INFINITE_RESERVES: &str = "core-075";
 
     fn casting(seed: &str, radiant: bool, hand_extra: usize) -> Scenario {
         crate::register_all();
@@ -189,29 +215,15 @@ mod tests {
     }
 
     fn added(s: &Scenario) -> Vec<CardInstance> {
-        s.hand(P1).into_iter().filter(|card| card.def_id != FILLER).collect()
-    }
-
-    fn offered_plans(s: &Scenario) -> Vec<String> {
-        s.state()
-            .pending
-            .as_ref()
-            .map(|prompt| {
-                prompt
-                    .options
-                    .iter()
-                    .filter_map(|option| match &option.selection {
-                        Selection::Mode { option } => Some(option.clone()),
-                        _ => None,
-                    })
-                    .collect()
-            })
-            .unwrap_or_default()
+        s.hand(P1)
+            .into_iter()
+            .filter(|card| card.def_id != FILLER)
+            .collect()
     }
 
     fn answer_plan(s: &mut Scenario, plan: &str) {
         if s.state().pending.is_some() {
-            s.answer(json!([{ "pick": "mode", "option": plan }]));
+            s.answer(pick::mode(plan));
         }
     }
 
@@ -220,7 +232,11 @@ mod tests {
             let seed = format!("bobs-plan-for-{n}");
             let mut s = casting(&seed, radiant, hand_extra);
             s.play(ID, json!({}));
-            if s.hand(P1).iter().chain(s.pile(P1, "graveyard").iter()).any(|card| card.def_id == wincon) {
+            if s.hand(P1)
+                .iter()
+                .chain(s.pile(P1, "graveyard").iter())
+                .any(|card| card.def_id == wincon)
+            {
                 return casting(&seed, radiant, hand_extra);
             }
         }
@@ -248,6 +264,7 @@ mod tests {
                     Some(SUMMIT) => vec![SUMMIT, BASE_CAMP],
                     Some(AESTHETICIZE) => vec![AESTHETICIZE, SPA_DAY],
                     Some(ALTERAN_REACH) => vec![ALTERAN_REACH, STAR_CHART],
+                    Some(GLIMPSE) => vec![GLIMPSE, INFINITE_RESERVES],
                     other => panic!("seed {n} added {other:?}"),
                 };
                 assert_eq!(def_ids(&cards), expected, "seed {n}");
@@ -255,7 +272,7 @@ mod tests {
                 if !seen.contains(&expected[0].to_string()) {
                     seen.push(expected[0].to_string());
                 }
-                if seen.len() == 3 {
+                if seen.len() == 4 {
                     return;
                 }
             }
@@ -267,7 +284,8 @@ mod tests {
             let pick = |seed: &str| {
                 let mut s = casting(seed, false, 1);
                 s.play(ID, json!({}));
-                let mut seen = offered_plans(&s);
+                // A plan picked outright opens no prompt; one offered is read from it.
+                let mut seen = if s.state().pending.is_some() { s.prompt_modes() } else { Vec::new() };
                 seen.extend(def_ids(&added(&s)));
                 seen
             };
@@ -282,11 +300,15 @@ mod tests {
             for plan in [SPA_DAY, GARAGE_SALE, LEG_DAY] {
                 let mut s = casting_for(AESTHETICIZE, false, 1);
                 s.play(ID, json!({}));
-                let mut offered = offered_plans(&s);
+                let mut offered = s.prompt_modes();
                 offered.sort();
                 assert_eq!(offered, vec![SPA_DAY, GARAGE_SALE, LEG_DAY]);
-                assert_eq!(def_ids(&added(&s)), vec![AESTHETICIZE], "the plan waits for the answer");
-                s.answer(json!([{ "pick": "mode", "option": plan }]));
+                assert_eq!(
+                    def_ids(&added(&s)),
+                    vec![AESTHETICIZE],
+                    "the plan waits for the answer"
+                );
+                s.answer(pick::mode(plan));
                 assert_eq!(def_ids(&added(&s)), vec![AESTHETICIZE, plan]);
                 assert!(added(&s).iter().all(|card| !card.radiant));
             }
@@ -307,7 +329,33 @@ mod tests {
             assert!(s.state().pending.is_none());
             let cards = added(&s);
             assert_eq!(def_ids(&cards), vec![ALTERAN_REACH, STAR_CHART]);
-            assert!(cards.iter().all(|card| !card.radiant), "the base face adds them base");
+            assert!(
+                cards.iter().all(|card| !card.radiant),
+                "the base face adds them base"
+            );
+        }
+
+        #[test]
+        fn r3569006_a_glimpse_into_the_endless_sea_comes_with_infinite_reserves() {
+            assert_eq!(plans_of(GLIMPSE), &[INFINITE_RESERVES]);
+            let mut s = casting_for(GLIMPSE, false, 1);
+            s.play(ID, json!({}));
+            assert!(s.state().pending.is_none(), "one plan: no Discover");
+            let cards = added(&s);
+            assert_eq!(def_ids(&cards), vec![GLIMPSE, INFINITE_RESERVES]);
+            assert!(
+                cards.iter().all(|card| !card.radiant),
+                "the base face adds them base"
+            );
+        }
+
+        #[test]
+        fn r3569006_the_card_joins_the_pool_once_its_set_ships() {
+            crate::register_all();
+            // R1420: Stinkyscape+ ships since #3573's release, so its Wincon card is in the pool.
+            assert!(set_ships(SetName::StinkyscapePlus));
+            let pool = crate::query::pool(ID, &json_as(json!({ "tags": ["Wincon"] })));
+            assert!(pool.iter().any(|def| def.id == GLIMPSE), "{} ids", pool.len());
         }
 
         /// R767000: the script kept for the replays of v0.5.11 and before adds Alteran Reach alone.
@@ -343,16 +391,28 @@ mod tests {
             let mut s = casting_for(SUMMIT, false, 9);
             s.play(ID, json!({}));
             let kept = added(&s);
-            assert_eq!(def_ids(&kept), vec![SUMMIT], "the Wincon card fits, its plan burns");
-            assert!(s.pile(P1, "graveyard").iter().any(|card| card.def_id == BASE_CAMP));
+            assert_eq!(
+                def_ids(&kept),
+                vec![SUMMIT],
+                "the Wincon card fits, its plan burns"
+            );
+            assert!(
+                s.pile(P1, "graveyard")
+                    .iter()
+                    .any(|card| card.def_id == BASE_CAMP)
+            );
             let mut s = casting_for(SUMMIT, false, 10);
             s.play(ID, json!({}));
             assert!(added(&s).is_empty());
             let burned = def_ids(&s.pile(P1, "graveyard"));
-            assert_eq!(burned.len(), 3, "the card, its plan and Bob's Plan itself: {burned:?}");
+            assert_eq!(
+                burned.len(),
+                3,
+                "the card, its plan and Bob's Plan itself: {burned:?}"
+            );
             let mut s = casting_for(AESTHETICIZE, false, 9);
             s.play(ID, json!({}));
-            s.answer(json!([{ "pick": "mode", "option": LEG_DAY }]));
+            s.answer(pick::mode(LEG_DAY));
             assert_eq!(def_ids(&added(&s)), vec![AESTHETICIZE]);
             assert!(s.pile(P1, "graveyard").iter().any(|card| card.def_id == LEG_DAY));
         }
@@ -394,6 +454,15 @@ mod tests {
 
     mod radiant {
         use super::*;
+
+        #[test]
+        fn r3569006_a_radiant_glimpse_comes_with_a_radiant_infinite_reserves() {
+            let mut s = casting_for(GLIMPSE, true, 1);
+            s.play(ID, json!({}));
+            let cards = added(&s);
+            assert_eq!(def_ids(&cards), vec![GLIMPSE, INFINITE_RESERVES]);
+            assert!(cards.iter().all(|card| card.radiant));
+        }
 
         #[test]
         fn r2521008_a_radiant_alteran_reach_comes_with_a_radiant_star_chart() {

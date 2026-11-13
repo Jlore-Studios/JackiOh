@@ -191,6 +191,9 @@
 .hero-health,
 .hero-armor,
 .hero-jade,
+.hero-burn,
+.hero-toxic,
+.hero-tipsy,
 .hero-credits,
 .hero-luck {
   display: inline-flex;
@@ -221,6 +224,28 @@
 .hero-jade {
   border: 1px solid color-mix(in srgb, var(--pal-jade-400) 55%, transparent);
   background: var(--pal-green-700);
+}
+
+/* R3540000: the hero's Burn and Toxic, ember and green beside the Jade Counter's. */
+.hero-burn {
+  border: 1px solid color-mix(in srgb, var(--burn) 55%, transparent);
+  background: color-mix(in srgb, var(--burn) 70%, var(--pal-black));
+}
+
+.hero-toxic {
+  border: 1px solid color-mix(in srgb, var(--toxic) 55%, transparent);
+  background: color-mix(in srgb, var(--toxic) 70%, var(--pal-black));
+}
+
+/* R3548000: the Tipsy counter, amber ale beside the Credits' gold, with its stein. */
+.hero-tipsy {
+  border: 1px solid color-mix(in srgb, var(--pal-brass-500) 55%, transparent);
+  background: color-mix(in srgb, var(--pal-brass-500) 70%, var(--pal-black));
+}
+
+.hero-tipsy .cf-icon {
+  width: 14px;
+  height: 14px;
 }
 
 /* R1840005: the Credits, gold beside the Jade Counter's green. */
@@ -405,6 +430,9 @@ button.modifier-badge[data-open="true"] {
    armor do (`emotes.css` anchors those): Jade top left, Credits top right, at the badges'
    overlay metrics, so gaining or spending one never moves the plate. */
 .hero-portrait .hero-jade,
+.hero-portrait .hero-burn,
+.hero-portrait .hero-toxic,
+.hero-portrait .hero-tipsy,
 .hero-portrait .hero-credits {
   position: absolute;
   top: -6px;
@@ -416,6 +444,34 @@ button.modifier-badge[data-open="true"] {
 
 .hero-portrait .hero-jade {
   left: -6px;
+}
+
+/* R3540000: Burn under the Jade Counter, Toxic beside it. */
+.hero-portrait .hero-burn {
+  left: -6px;
+  top: 22px;
+}
+
+.hero-portrait .hero-toxic {
+  left: 18px;
+}
+
+/* R3548001: at the portrait's right, below the Credits, as Burn sits below the Jade Counter. */
+.hero-portrait .hero-tipsy {
+  right: -6px;
+  top: 22px;
+}
+
+/* R3548001: the Tipsy blur, on the owner's view alone. The card's root names which of it blurs;
+   a blurred name word or term wears `.tipsy-blur`, the keyword chip marks itself. */
+.tipsy-blur,
+.card[data-tipsy-blur="cost"] .cf-gem,
+.card[data-tipsy-blur="attack"] .stat-attack,
+.card[data-tipsy-blur="attack"] .cf-atk,
+.card[data-tipsy-blur="health"] .stat-health,
+.card[data-tipsy-blur="health"] .cf-hp,
+.keyword-icon[data-tipsy-blur="true"] {
+  filter: blur(3px);
 }
 
 .hero-portrait .hero-credits {
@@ -1264,6 +1320,111 @@ button.modifier-badge[data-open="true"] {
   border-radius: var(--radius-round);
 }
 
+/* R3546004: a GIGA permanent draws across its four zones — its anchor's card spans two lanes in
+   both rows, while the three covered zones read empty. The anchor's lane paints above the next,
+   which the span reaches into; the span grows toward its side's other row (down for your units
+   and the enemy backrow, up for the other two). */
+.lane:has(> .zone[data-giga="anchor"]) {
+  z-index: var(--z-raised);
+}
+
+.zone[data-side="you"][data-row="units"][data-giga="anchor"] > .card,
+.zone[data-side="opponent"][data-row="backrow"][data-giga="anchor"] > .card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: auto;
+  width: calc(200% + var(--gap));
+  height: calc(200% + var(--gap));
+  max-width: none;
+  aspect-ratio: auto;
+}
+
+.zone[data-side="opponent"][data-row="units"][data-giga="anchor"] > .card,
+.zone[data-side="you"][data-row="backrow"][data-giga="anchor"] > .card {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  top: auto;
+  width: calc(200% + var(--gap));
+  height: calc(200% + var(--gap));
+  max-width: none;
+  aspect-ratio: auto;
+}
+
+.zone[data-giga="covered"] {
+  border-color: transparent;
+  background: transparent;
+}
+
+/* R3554000: the Black Hole lane is a dark well that breathes, with its swallowed count; still under
+   `prefers-reduced-motion` (BUILD M5-T6). The well is a layer of its own whose opacity loops, so the
+   loop composites (#3706). R3554002: the slashed lane is a deep red edge over a
+   dark sea-blue centre, its zones hidden — the red mark that reveals the endless sea. R3554007:
+   chained Units wear dashed outlines, shared and split each their own color. */
+.lane[data-lane-mark="blackHole"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-below);
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, var(--pal-black) 0%, var(--pal-slate-900) 55%, transparent 75%);
+  animation: jk-hole-breath 6s linear infinite alternate;
+}
+
+.lane[data-lane-mark="blackHole"] > .zone {
+  border-style: dashed;
+  border-color: var(--pal-slate-700);
+  background: transparent;
+}
+
+.black-hole-count {
+  align-self: center;
+  color: var(--pal-violet-300);
+  font-size: var(--type-sm);
+}
+
+@keyframes jk-hole-breath {
+  from {
+    opacity: 0.7;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.lane[data-lane-mark="slashed"] {
+  border-left: 3px solid var(--pal-red-900);
+  border-right: 3px solid var(--pal-red-900);
+  background: color-mix(in srgb, var(--pal-blue-900) 40%, var(--pal-black));
+}
+
+.lane[data-lane-mark="slashed"] > .zone {
+  visibility: hidden;
+}
+
+.zone[data-chain="shared"] > .card {
+  outline: 2px dashed var(--pal-sky-400);
+  outline-offset: 2px;
+}
+
+.zone[data-chain="split"] > .card {
+  outline: 2px dashed var(--pal-orange-400);
+  outline-offset: 2px;
+}
+
+.zone[data-chain="both"] > .card {
+  outline: 2px dashed var(--pal-purple-400);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lane[data-lane-mark="blackHole"]::before {
+    animation: none;
+  }
+}
+
 .resolving {
   display: inline-flex;
   gap: var(--gap);
@@ -1572,6 +1733,19 @@ button.modifier-badge[data-open="true"] {
   left: 18px;
   bottom: 2px;
   background: var(--grade);
+}
+
+/* R3540000: a Unit's Burn and Toxic follow the grade badge along the bottom edge. */
+.counter-burn {
+  left: 34px;
+  bottom: 2px;
+  background: var(--burn);
+}
+
+.counter-toxic {
+  left: 50px;
+  bottom: 2px;
+  background: var(--toxic);
 }
 
 /* R90 (#992): the viewer's own hand card whose listed plays were cut (Card.tsx): an ellipsis pill

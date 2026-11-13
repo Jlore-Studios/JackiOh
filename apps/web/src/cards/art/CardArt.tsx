@@ -31,7 +31,7 @@
 // R3340000: a board face given `live` draws its moving picture in three layers, the backdrop on the window itself and the
 // subject (`.cf-art-subject`) and the motes (`.cf-art-motes`) over it (`data-art-live`), which artLive.css turns toward the
 // pointer, presses and swings; where the picture has no parts (a delivered file, a restyle, a Starship's, a Legacy card's, a
-// Battleship's) it is one image. Given `wear`, its cracks, glow and frost sit over the picture whatever draws it (ArtWear.tsx).
+// Battleship's) it is one image. Given `wear`, its glow and frost sit over the picture whatever draws it (ArtWear.tsx).
 // R3337001: an Anomaly Found! in play holding a board (`FaceModel.anomaly`) wears that board's picture
 // (`data-art-anomaly`), one picture as a Starship's is; a code that is none of the ten draws the card's own.
 // R3350000: given `diorama`, a Mythic's normal picture with a diorama (dioramas/) draws one slice of it (`data-art-slice`),
@@ -59,7 +59,8 @@ import { artSeedOf, isRepaint, restyleOf, type ArtPart, type ArtPicture } from "
 import { starshipArtOf } from "./starshipHulls.ts";
 import type { StarshipLook } from "./starshipLooks.ts";
 import { isStinkyscapeArt, shipDecksOf, stinkySubject, type ShipArt } from "./stinkyscape.ts";
-import { anomalyArtUri, legacyArtUri, particleLayerUri, proceduralArtUri, starshipArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
+import { isStinkyscapePlusArt, STINKYSCAPE_PLUS_FAMILY } from "./stinkyscapeplus.ts";
+import { anomalyArtUri, legacyArtUri, particleLayerUri, proceduralArtUri, starshipArtUri, stinkyscapeArtUri, stinkyscapePlusArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { isTrainingGroundsArt, LEGACY_PREFIX, snapshotArtOf, yardSubject } from "./traininggrounds.ts";
 import { compositionOf, themeFor, THEME_PALETTES, type ArtThemeId } from "./themes.ts";
 import { dioramaOf, dioramaSliceUri } from "./dioramas/index.ts";
@@ -102,7 +103,7 @@ export type CardArtProps = {
   ship?: ShipArt | null;
   /** R3340000: a board face whose art moves answers the player: its picture is drawn in layers (backdrop, subject, motes) that artLive.css moves. */
   live?: boolean;
-  /** R3340000: what the unit's art wears: its damage level (wear.ts), buffed and frozen. Null or absent: nothing. */
+  /** R3340000: what the unit's art wears: whether it is buffed or frozen. Null or absent: nothing. */
   wear?: ArtWearState | null;
   /** R3335000: the Starship look a launched Starship wears (cosmetics.ts `useStarshipLook`); null draws it in none. */
   look?: StarshipLook | null;
@@ -113,8 +114,8 @@ export type CardArtProps = {
   diorama?: { slice: number | "all"; moving: boolean } | null;
 };
 
-/** R3340000: the marks a unit's art wears (`ArtWear`). */
-export type ArtWearState = { damage: number; buffed: boolean; frozen: boolean };
+/** R3340000: the marks a unit's art wears (`ArtWear`): a glow and frost. */
+export type ArtWearState = { buffed: boolean; frozen: boolean };
 
 /**
  * R2943001: whether a window draws a card's picture in parts (`ArtPart`): its painter's own, which a Starship in play
@@ -189,7 +190,7 @@ export function CardArt({
   // R3045000: a Miner or a Weapon fused onto a card leaves that card's art; its id, name and tags stand for the fusion's.
   const { defId, name, tags } = artSubjectOf({ defId: shownId, name: shownName, tags: shownTags }, resolve);
   const theme = themeFor(tags, type);
-  // R2170000, R2202000 and R2724000: the Stinkyscape and Training Grounds sets draw their own
+  // R2170000, R2202000, R2724000 and R3572001: the Stinkyscape, Stinkyscape+ and Training Grounds sets draw their own
   // families, and a Training Grounds Legacy card its own yard picture with its Core card's subject,
   // read by the Core card's name (its own after "Legacy: ", R2511000); every other card keeps R503's art.
   const coreId = snapshotArtOf(defId);
@@ -197,7 +198,8 @@ export function CardArt({
   const cardName = coreId === null ? ownName : ownName?.replace(LEGACY_PREFIX, "");
   const stinky = isStinkyscapeArt(defId);
   const yard = isTrainingGroundsArt(defId);
-  const motif = stinky || yard ? null : motifFor(cardName, theme);
+  const plus = isStinkyscapePlusArt(defId);
+  const motif = stinky || yard || plus ? null : motifFor(cardName, theme);
   const variant = radiant ? "radiant" : "base";
   // R2940001: the Sketch pencils the window's picture, whatever draws it; R2942001: Pixel and Comic restyle it so.
   const restyle = restyleOf(picture);
@@ -220,7 +222,6 @@ export function CardArt({
         data-art="real"
         data-art-theme={theme}
         data-art-variant={variant}
-        data-art-damage={wear !== null && wear.damage > 0 ? wear.damage : undefined}
         data-art-buffed={wear?.buffed === true ? "true" : undefined}
         data-art-frozen={wear?.frozen === true ? "true" : undefined}
         aria-hidden="true"
@@ -236,7 +237,7 @@ export function CardArt({
           onError={() => setFailedSrc(src)}
         />
         {real.tint ? <span className="cf-art-tint" /> : null}
-        {wear !== null && <ArtWear damage={wear.damage} buffed={wear.buffed} frozen={wear.frozen} seedId={defId} />}
+        {wear !== null && <ArtWear buffed={wear.buffed} frozen={wear.frozen} />}
       </span>
     );
   }
@@ -252,11 +253,13 @@ export function CardArt({
         ? anomalyArtUri(anomaly, radiant, restyle)
         : stinky
           ? stinkyscapeArtUri(defId, cardName, tags, type, radiant, m, seedId, restyle, p, ship)
-          : yard
-            ? trainingGroundsArtUri(defId, cardName, tags, type, radiant, m, seedId, restyle, p)
-            : coreId !== null
-              ? legacyArtUri(defId, coreId, cardName, tags, type, radiant, restyle)
-              : proceduralArtUri(seedId, theme, compositionOf(defId, type), radiant, motif, m, restyle, p);
+          : plus
+            ? stinkyscapePlusArtUri(defId, cardName, tags, type, radiant, m, seedId, restyle, p)
+            : yard
+              ? trainingGroundsArtUri(defId, cardName, tags, type, radiant, m, seedId, restyle, p)
+              : coreId !== null
+                ? legacyArtUri(defId, coreId, cardName, tags, type, radiant, restyle)
+                : proceduralArtUri(seedId, theme, compositionOf(defId, type), radiant, motif, m, restyle, p);
   // R3350000: a Mythic's normal picture with a diorama draws its slice of it, or all of them, where the painter draws it.
   const sliced =
     diorama !== null &&
@@ -289,11 +292,13 @@ export function CardArt({
       ? "starship"
       : stinky
         ? stinkySubject(defId, cardName, tags, type).family
-        : yard
-          ? yardSubject(defId, cardName, tags, type).family
-          : coreId !== null
-            ? "legacy"
-            : undefined;
+        : plus
+          ? STINKYSCAPE_PLUS_FAMILY
+          : yard
+            ? yardSubject(defId, cardName, tags, type).family
+            : coreId !== null
+              ? "legacy"
+              : undefined;
   const [skyTop, skyBottom] = THEME_PALETTES[theme].sky;
   return (
     <span
@@ -314,7 +319,6 @@ export function CardArt({
       data-art-live={layered ? "true" : undefined}
       data-art-slice={sliced ? sliceIndex : undefined}
       data-art-lifted={lifts.some((lift) => lift !== null) ? "true" : undefined}
-      data-art-damage={wear !== null && wear.damage > 0 ? wear.damage : undefined}
       data-art-buffed={wear?.buffed === true ? "true" : undefined}
       data-art-frozen={wear?.frozen === true ? "true" : undefined}
       aria-hidden="true"
@@ -345,7 +349,7 @@ export function CardArt({
           />
         );
       })}
-      {wear !== null && <ArtWear damage={wear.damage} buffed={wear.buffed} frozen={wear.frozen} seedId={seedId} />}
+      {wear !== null && <ArtWear buffed={wear.buffed} frozen={wear.frozen} />}
     </span>
   );
 }

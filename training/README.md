@@ -314,7 +314,7 @@ the development lanes' games, R1933001) grows with the patches and not the games
 day on GitHub's runners. Beside them, `.github/workflows/gather.yml` plays without a pause since #3740
 (it played 5,000 games of each new patch or set, once, on the PC's gather half, before): two of
 GitHub's runners each play `GATHER_HOURS` (5) hours of the newest version on `main`, `GATHER_FILE_GAMES`
-(850, about an hour) at a time, and file each batch the same way as it finishes, so the card statistics
+(400, about an hour) at a time, and file each batch the same way as it finishes, so the card statistics
 take fresh games of the version that is live every hour. As a run ends it starts the next on `main` as
 it is then, so a version shipped meanwhile is played from the next run on, within five hours, and a
 schedule every six hours starts the lane again should that chain stop. It runs only while the
@@ -327,7 +327,7 @@ the number before), so its 95% interval is about ±5 points. `cargo jackioh stat
 this build's deal pool, and the number grows with the catalog: 29000 at 633 cards when it landed.
 `--explain` shows the working, `--sigma` and `--rho` set its two guesses, and
 `crates/tools/README.md` has the formula. The lane playing without a pause reaches it for a version
-that stays the newest about a day (two runners at about 870 games an hour), and the learn lane's
+that stays the newest about a day and a half (two runners at about 400 games an hour), and the learn lane's
 exports add theirs. A change to `gather.yml` is a person's, since the bots never edit `.github/`;
 so is growing `GATHER_STRIDE` (100,000), which a run's games pass only past about 50,000 a part.
 
@@ -435,13 +435,12 @@ The live games' records are what the gather lane's figures sit beside, and they 
 The learned evaluation (#466, `docs/learned-eval.md`) learns from self-play exports: game logs
 `cargo jackioh selfplay` plays, which `cargo jackioh positions` folds into training rows (R1006001,
 R1006003). An export is dispatched, never played on the training box, whose two vCPUs the lanes need:
-`gh workflow run selfplay.yml -f games=100000 -f seed=<base> [-f shards=40] [-f
-runner=jackioh-selfplay-local]` plays it in shards on GitHub's runners by default (free for this
-public repository; about 870 games an hour each at the AI's budget since #2628, an estimate, 10 at
-once: 100,000 games in 40 shards of 2,500, each about 3 hours and under GitHub's 6-hour job limit,
-take about 12 hours), or on the local runner when asked (`bot/machine/README.md`, The local runner:
-two shards at a time while the PC is idle, one on each half, about three days of an idle PC for
-100,000 at the 670 games an hour a four-CPU half plays, in five rounds), and keeps each shard's log
+`gh workflow run selfplay.yml -f games=100000 -f seed=<base> [-f shards=80]` plays it in shards on
+GitHub's runners (free for this
+public repository; about 400 games an hour each at the AI's budget since #2628, measured on
+2026-11-12, 10 at once: 100,000 games in 80 shards of 1,250, each about 3 hours and under GitHub's
+6-hour job limit, take about a day; the owner's PC's self-hosted runner, which played them until
+#3740, takes none since 2026-11-13), and keeps each shard's log
 file as an artifact for up to 90 days. GitHub's runners are the default again since the
 organization's Team plan runs 60 hosted jobs at once (#3740), of which the training lanes take 12,
 the export's 10 and gather's 2; whatever they leave idle, CI and the bots take. On the Free plan's

@@ -13,7 +13,7 @@ import { closeInspect } from "../cards/index.ts";
 import { __resetSettingsForTests } from "../settings/index.ts";
 import { renderBoard } from "../test/board.tsx";
 import { baseView, card, emptySide, faceUpBackrow, heroPower, unit } from "../test/fixtures.ts";
-import { abilityLabel, usesText } from "./ActivateControl.tsx";
+import { abilityLabel, cooldownWords, usesText } from "./ActivateControl.tsx";
 import Game from "./Game.tsx";
 import { IDLE, highlightFor } from "./actions.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
@@ -155,7 +155,7 @@ describe("R510 the Activate control on the card", () => {
     expect(usesText(null)).toBe("∞");
   });
 
-  it("R510 a control legal does not list is greyed, says the engine's reason, and a press sends nothing", () => {
+  it("R3768000 a control legal does not list is greyed, says the engine's reason, and a press reports it but sends nothing", () => {
     const { onClick } = renderActivate([PING_E1]);
 
     const spent = el(testid.activate("fs1"));
@@ -167,7 +167,43 @@ describe("R510 the Activate control on the card", () => {
     expect(el(testid.activateUses("fs1"))).toHaveTextContent("0");
 
     fireEvent.click(spent);
-    expect(onClick).not.toHaveBeenCalled();
+    expect(onClick).toHaveBeenCalledWith({ on: "activate", instanceId: "fs1" });
+  });
+
+  it("R3768000 a click on a greyed Activate control shows its reason in the board's reason line and sends nothing", () => {
+    const { onAction } = renderGame([{ type: "endTurn" }]);
+    expect(screen.queryByTestId("attack-reason")).toBeNull();
+
+    fireEvent.click(el(testid.activate("fs1")));
+    expect(el("attack-reason")).toHaveTextContent("that ability has already been used this turn");
+    expect(el(testid.activate("fs1"))).toHaveAttribute("data-legal", "false");
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it("R3768000 a greyed Activate control the view gives no reason for says it can't be activated right now", () => {
+    const { onAction } = renderGame([{ type: "endTurn" }], activateView({ fs1: [{ ...USED, reason: undefined }] }));
+
+    fireEvent.click(el(testid.activate("fs1")));
+    expect(el("attack-reason")).toHaveTextContent("can't be activated right now");
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it("R3768000 a press on a live Activate control shows no reason and sends nothing yet", () => {
+    const { onAction } = renderGame([PING_E1, PING_E2]);
+
+    fireEvent.click(el(testid.activate("act1")));
+    expect(screen.queryByTestId("attack-reason")).toBeNull();
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it("R3768000 while an attack is picked every Activate control is greyed: its press shows a reason and sends no activation", () => {
+    const { onAction } = renderGame([{ type: "attack", attackerId: "u1", targetId: "e1" }, { type: "attack", attackerId: "u1", targetId: "e2" }, DISCARD]);
+
+    fireEvent.click(el(testid.card("u1")));
+    expect(el(testid.activate("fs2"))).toHaveAttribute("data-legal", "false");
+    fireEvent.click(el(testid.activate("fs2")));
+    expect(screen.getByTestId("attack-reason")).toBeInTheDocument();
+    expect(onAction).not.toHaveBeenCalled();
   });
 
   it("R510 cards that list no ability wear no control, and a press on a live one reports the activation, not the card", () => {
@@ -234,6 +270,27 @@ describe("R510 the Activate control on the card", () => {
 });
 
 // Building an activation through the board
+
+describe("R3550003 a cooling-down ability shows its turns left", () => {
+  it("R3550003 a cooling-down ability shows its turns left", () => {
+    expect(cooldownWords(1)).toBe("cooling down: 1 more turn");
+    expect(cooldownWords(3)).toBe("cooling down: 3 more turns");
+    const cooling: ActivationView = {
+      ability: "zap",
+      label: "Zap",
+      usesLeft: 1,
+      usable: false,
+      reason: "that ability is cooling down this turn",
+      cooldownTurnsLeft: 2,
+    };
+    renderActivate([], { view: activateView({ fs1: [cooling] }) });
+    const control = el(testid.activate("fs1"));
+    expect(control).toHaveAttribute("data-cooldown", "2");
+    expect(el(testid.activateUses("fs1"))).toHaveTextContent("⏳2");
+    expect(control.getAttribute("title")).toContain("cooling down: 2 more turns");
+    expect(control.getAttribute("aria-label")).toContain("cooling down: 2 more turns");
+  });
+});
 
 describe("R384 an activation is built through the board as a play is", () => {
   it("R384 one listed activation: a press sends exactly that body", () => {

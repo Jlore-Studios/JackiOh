@@ -171,8 +171,10 @@ mod tests {
 
     /// Re-pinned for the Training
     /// Grounds release (#2204): its Jelly Beans #27 Hopeful Jelly Bean and #50 Glowy Jelly Bean (the
-    /// snapshot of Core #26) join it.
-    const POOL: [&str; 18] = [
+    /// snapshot of Core #26) join it; and for the Stinkyscape+ release (#3573): its Acclaimed Units #4
+    /// Profe Yates, #5 Dingleberry Droat and #61 Jayaad and its Jelly Bean #69 Exotic Jellybean (not its
+    /// token #69.1 Sweet Essence).
+    const POOL: [&str; 22] = [
         "core-026",
         "core-027",
         "core-028",
@@ -191,6 +193,10 @@ mod tests {
         "stinkyscape-115",
         "traininggrounds-027",
         "traininggrounds-050",
+        "stinkyscapeplus-004",
+        "stinkyscapeplus-005",
+        "stinkyscapeplus-061",
+        "stinkyscapeplus-069",
     ];
 
     /// Each turn ends when the
@@ -218,23 +224,16 @@ mod tests {
         }
     }
 
-    // Differs from Scenario::offered: the open Discover's options, not the seat's legal actions.
-    fn offered(s: &Scenario) -> Vec<String> {
-        let pending = s.state().pending.clone().expect("the Heist's Discover");
+    /// The open prompt is p1's Discover from the Heist.
+    fn assert_discover(s: &Scenario) {
+        let pending = s.state().pending.as_ref().expect("the Heist's Discover");
         assert_eq!((pending.kind, pending.player_id), (PromptKind::Discover, P1));
-        pending
-            .options
-            .iter()
-            .filter_map(|option| match &option.selection {
-                Selection::Mode { option } => Some(option.clone()),
-                _ => None,
-            })
-            .collect()
     }
 
     fn played(s: &mut Scenario) -> String {
         s.play(ID, json!({ "zone": 1 }));
-        let first = offered(s)[0].clone();
+        assert_discover(s);
+        let first = s.prompt_modes()[0].clone();
         s.answer(json!(first));
         first
     }
@@ -251,11 +250,14 @@ mod tests {
     #[test]
     fn r1873001_its_cry_discovers_an_acclaimed_unit_or_a_jelly_bean_into_your_hand() {
         let mut seen: IndexSet<String> = IndexSet::new();
-        // Re-pinned for the Stinkyscape release (#1884): the pool is sixteen, so more seeds see it all.
-        for seed in 0..40 {
+        // Re-pinned for the Stinkyscape release (#1884): the pool is sixteen, so more seeds see it all; and
+        // for the Stinkyscape+ release (#3573): twenty-two, so 120 seeds leave one unseen about once in
+        // two million runs.
+        for seed in 0..120 {
             let mut s = holding(false, &format!("heist-{seed}"), &[]);
             s.play(ID, json!({ "zone": 1 }));
-            let offer = offered(&s);
+            assert_discover(&s);
+            let offer = s.prompt_modes();
             assert_eq!(offer.len(), DISCOVER_OPTIONS as usize, "{offer:?}");
             assert!(offer.iter().all(|id| POOL.contains(&id.as_str())), "{offer:?}");
             seen.extend(offer.iter().cloned());
@@ -395,7 +397,8 @@ mod tests {
         for _ in 0..2 {
             s.end_turn();
             while s.state().pending.is_some() {
-                let first = offered(&s)[0].clone();
+                assert_discover(&s);
+                let first = s.prompt_modes()[0].clone();
                 s.answer(json!(first));
             }
         }
@@ -423,7 +426,8 @@ mod tests {
     fn radiant_to_stage_1(seed: &str) -> (Scenario, bool) {
         let mut s = holding(true, seed, &[TYLANNT, TYLANNT]);
         s.play(ID, json!({ "zone": 1 }));
-        let pick = offered(&s)[0].clone();
+        assert_discover(&s);
+        let pick = s.prompt_modes()[0].clone();
         s.answer(json!(pick));
         let card = s.hand(P1).into_iter().rev().find(|card| card.def_id == pick).expect("the pick");
         let radiant = card.radiant;
