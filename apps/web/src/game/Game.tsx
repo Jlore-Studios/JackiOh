@@ -1072,7 +1072,15 @@ export default function Game({
         />
       )}
 
-      {replay || !tradeBar ? null : <TradeBar container={host} view={shown} legal={legal} onTrade={dispatch} />}
+      {replay || !tradeBar ? null : (
+        <TradeBar
+          container={host}
+          view={shown}
+          legal={legal}
+          onTrade={dispatch}
+          onRefused={(reason) => setNotice({ text: reason, view: shown })}
+        />
+      )}
       {sideline === undefined ? null : <SidelineStrip sideline={sideline} />}
 
       {/* R1834004: the opponent's revealed hand (R434) wears their seat's loadout, as their side does. */}

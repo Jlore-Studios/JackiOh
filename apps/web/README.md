@@ -434,7 +434,7 @@ ability's words (its `{key}`s filled from the card's `params`) as tooltip and ac
 `activate-<instanceId>` with its badge `activate-uses-<instanceId>`; each ability counts its own uses and
 cooldown (R1751000), and `namedAbility` (`contract.ts`) is kept only for the ability a press names. It is
 live exactly when `legal` lists that card's `activate`; otherwise it is greyed and its tooltip gives the
-view's `reason`. A press reports `{ on: "activate" }`, and `actions.ts` builds the activation exactly as a
+view's `reason`, and a press shows that reason in the board's reason line and sends nothing (R3768000). A press reports `{ on: "activate" }`, and `actions.ts` builds the activation exactly as a
 play's choices are built: one listed body is sent at once, except on a card listing several abilities,
 which asks which first (the `ability` need, a Discover of choice cards in `Prompt.tsx` showing each
 ability's words and uses left, even when only one is legal) and leaves the card's other abilities usable
@@ -456,8 +456,9 @@ zone is picked by clicking the unit or its zone.
 for, or whose view carries a `tradeReason`, gets the Duos pass control's bar when pointed at
 (`TradeControl.tsx` over `cardBar.ts`, which `duos/CardActions.tsx` shares): `trade-bar` holding
 `trade-<instanceId>`, "Trade" with the Trades left from the view's `trades`. It is live
-exactly when `legal` lists that `trade` and sends that body; otherwise it is greyed with the engine's
-reason as its tooltip. On a Duos board the button rides the card bar beside the pass control, and
+exactly when `legal` lists that `trade` and sends that body; otherwise it is greyed (`aria-disabled`, focusable) with the engine's
+reason as its tooltip and accessible description, and a press shows it in the board's reason line and sends
+nothing (R3768000). On a Duos board the button rides the card bar beside the pass control, and
 Game's own bar is off (`tradeBar={false}`).
 
 **Plays from the graveyard** (B5 E11). While `legal` lists a `play` for a card in the viewer's
