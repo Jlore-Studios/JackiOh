@@ -15442,17 +15442,14 @@
     "what": "review #3811 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-13T13:39:25Z",
+    "at": "2026-11-13T13:53:16Z",
     "notes": [
-      "#3861: `web (unit 8/8)` red in CI run 43433761825; its other early jobs have until 2026-11-13T13:42:04Z to report",
-      "delivered review #3861 on claude-8 (run 43434534958): reviewed",
-      "delivered revise #3779 on claude-1 (run 43424808443): approved",
-      "delivered revise #3818 on claude-6 (run 43417875519): built",
-      "started review #3818 on claude-6 (run 43436283451)",
-      "started revise #3817 on claude-8 (run 43436410860)",
-      "started revise #3861 on claude-4 (run 43436543095)",
+      "delivered review #3860 on claude-8 (run 43434166398): approved",
+      "delivered review #3811 on claude-7 (run 43392597351): interrupted",
+      "started review #3811 on claude-7 (run 43438188147)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "pruned 1 plan file(s) older than 7 days",
+      "runner gate: started 1 of 1 waiting run(s) (run 43438252533 on claude/laughing-mayer-dymimx)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16158,7 +16155,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-13T13:39:25Z",
+  "loop_tick": "2026-11-13T13:53:16Z",
   "machine_disk": {
     "issue": null,
     "reading": {
