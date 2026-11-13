@@ -1,0 +1,38 @@
+{
+  "title": "Patch: fused Spells, Combo-Index grades and KY's Constant off the field",
+  "sources": "#3800",
+  "notes": "Issue #3800: three engine fixes for the daily fuzz's I16 check, each with its ruling. A fused Spell is flagged for the end-of-turn return only for a Spell ingredient's end-of-turn text, and from its graveyard runs no Unit's, Field Spell's or Trap's end-of-turn text (R3800000; Duos seed 1628). A Combo-Index text run after its card left the field writes no grade (R3800001; seed 6091). A cost set on a card in a graveyard or an exile pile changes nothing (R3800002; seed 6140). No catalog change: the plays are the families `classify` finds playing differently in its forced and unforced games.",
+  "player": {
+    "title": "Fused cards behave off the field",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "A fused Spell no longer returns to your hand, or gains keywords in your graveyard, because of a Unit's, Field Spell's or Trap's end-of-turn text fused into it.",
+      "A Combo-Index card that left the field mid-effect no longer keeps a grade.",
+      "Setting the cost of a card that was just discarded or exiled no longer changes its price."
+    ]
+  },
+  "cards": [],
+  "plays": [
+    "classic-052",
+    "classic-090",
+    "classicplus-037",
+    "classicplus-049",
+    "core-005",
+    "core-006",
+    "core-033",
+    "core-060",
+    "meditative-039",
+    "meditative-062",
+    "meditative-063",
+    "meditative-095",
+    "stinkyscape-017",
+    "stinkyscape-026",
+    "stinkyscape-088",
+    "stinkyscape-109",
+    "stinkyscape-115",
+    "traininggrounds-020"
+  ]
+}
