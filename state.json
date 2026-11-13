@@ -17968,14 +17968,9 @@
     "what": "build #3837 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-13T11:39:39Z",
+    "at": "2026-11-13T11:51:38Z",
     "notes": [
-      "delivered plan #3837 on claude-4 (run 43417758402): planned",
-      "delivered review #3851 on claude-4 (run 43417639898): approved",
-      "delivered review #3798 on claude-1 (run 43417086152): approved",
-      "started build #3837 on claude-4 (run 43419462978)",
-      "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days"
+      "delivered review #3852 on claude-6 (run 43417188920): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18681,7 +18676,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-13T11:39:39Z",
+  "loop_tick": "2026-11-13T11:51:38Z",
   "machine_disk": {
     "issue": null,
     "reading": {
