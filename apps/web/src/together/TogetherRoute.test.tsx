@@ -16,6 +16,7 @@ import { UNDO_TOAST, UNDO_TOAST_UNDO } from "../undo/UndoToast.tsx";
 import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { FRIENDS_POLL_MS } from "./config.ts";
 import { stopFollowingChallenge } from "./follow.ts";
+import { lobbyTestid } from "../lobby/testids.ts";
 import { challengeKindTestid, togetherTestid } from "./testids.ts";
 import { TogetherRoute } from "./TogetherRoute.tsx";
 
@@ -39,7 +40,6 @@ const TESTID = {
   watch: "together-watch",
   chatOpen: "together-chat-open",
   chatInput: "chat-input",
-  coopCreate: "coop-create",
   sharedRetry: "together-shared-retry",
   sharedRow: "together-shared-row",
   friendsError: "together-friends-error",
@@ -222,7 +222,7 @@ function buttonNear(text: string, name: RegExp): HTMLElement {
  * row, request or co-op control (so it is that entry's own control, not another part of the page's).
  */
 function controlNear(text: string): HTMLElement {
-  const foreign = `[data-testid="${TESTID.friendRow}"], [data-testid^="together-request-"], [data-testid^="coop-"]`;
+  const foreign = `[data-testid="${TESTID.friendRow}"], [data-testid^="together-request-"], [data-testid^="lobby-"]`;
   for (const anchor of screen.getAllByText(wholeText(text))) {
     let node: HTMLElement | null = anchor;
     for (let depth = 0; node !== null && depth < 6; depth += 1) {
@@ -864,10 +864,12 @@ describe("B59 Shared with me", () => {
 
 // the co-op panel lives on the page
 
-describe("B60 the page holds the co-op panel", () => {
-  it("B60 /together shows the co-op panel's create control", async () => {
+describe("B60 the page holds the co-op lobby panel", () => {
+  it("B60 R3730000 /together shows the co-op lobby panel's Create", async () => {
     await renderPage();
-    expect(await screen.findByTestId(TESTID.coopCreate, undefined, SLOW)).toBeInTheDocument();
+    const panel = await screen.findByTestId(lobbyTestid.panel, undefined, SLOW);
+    expect(panel).toHaveAttribute("data-format", "coop");
+    expect(within(panel).getByTestId(lobbyTestid.create)).toBeInTheDocument();
   });
 });
 
@@ -982,36 +984,13 @@ describe("the challenge dialog's focus (#1569)", () => {
   });
 });
 
-describe("R2094000 a co-op link opens Play together filled", () => {
+describe("R2094000 a co-op link in chat opens its lobby", () => {
   afterEach(() => {
     window.sessionStorage.clear();
     at("/together");
   });
 
-  it("R2094000 opening /together?coop=abc234 signed in shows the co-op panel with ABC234 filled and Join focused", async () => {
-    window.sessionStorage.clear();
-    at("/together?coop=abc234");
-    await renderPage();
-    const input = await screen.findByTestId("coop-join-input", undefined, SLOW);
-    expect(input).toHaveValue("ABC234");
-    expect(window.location.pathname).toBe("/together");
-    expect(window.location.search).toBe("");
-    await waitFor(() => {
-      expect(screen.getByTestId("coop-join-submit")).toHaveFocus();
-    }, SLOW);
-  });
-
-  it("R2094000 an invalid code opens nothing filled", async () => {
-    window.sessionStorage.clear();
-    at("/together?coop=abc123");
-    await renderPage();
-    const input = await screen.findByTestId("coop-join-input", undefined, SLOW);
-    expect(input).toHaveValue("");
-    expect(window.location.search).toBe("");
-    expect(window.sessionStorage.getItem("jackioh.together.coopLink")).toBeNull();
-  });
-
-  it("R2094000 a chat Join on the same screen fills the already-mounted join form and focuses Join", async () => {
+  it("R2094000 R3730006 a chat Join opens the co-op room's lobby", async () => {
     window.sessionStorage.clear();
     at("/together");
     const origin = window.location.origin;
@@ -1037,14 +1016,8 @@ describe("R2094000 a co-op link opens Play together filled", () => {
     );
     fireEvent.click(must(within(rowOf(ANN)).queryByTestId(TESTID.chatOpen), "chat"));
     fireEvent.click(await screen.findByTestId("chat-join", undefined, SLOW));
-    const input = await screen.findByTestId("coop-join-input", undefined, SLOW);
     await waitFor(() => {
-      expect(input).toHaveValue("ABC234");
-    }, SLOW);
-    expect(window.location.pathname).toBe("/together");
-    expect(window.location.search).toBe("");
-    await waitFor(() => {
-      expect(screen.getByTestId("coop-join-submit")).toHaveFocus();
+      expect(window.location.pathname).toBe("/lobby/ABC234");
     }, SLOW);
   });
 });

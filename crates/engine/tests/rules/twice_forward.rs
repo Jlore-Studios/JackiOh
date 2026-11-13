@@ -8,7 +8,7 @@ use jackioh_engine::subsystems::twice_forward::{TWICE_FORWARD_PLAYS_KEY, twice_f
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{
-    act, act_ok, events_of_type, hand_ids, in_hand, new_game, put, round_trip, slot,
+    act, act_ok, events_of_type, hand_ids, in_hand, live, live_mut, new_game, put, round_trip, slot,
 };
 use crate::rules::fixtures::twice_forward::{
     CRIER_DAMAGE, TURNER_DAMAGE, TWICE_FORWARD_SCRIPTS, caster, crier, forward, self_exiler, spell, trap,
@@ -87,14 +87,6 @@ fn play(mut state: GameState, player: PlayerId, def_id: &str, zone: Option<(Row,
     }
 }
 
-fn trap_of<'a>(state: &'a GameState, trap_id: &str) -> &'a CardInstance {
-    find_instance(state, trap_id).expect("the trap is gone")
-}
-
-fn trap_of_mut<'a>(state: &'a mut GameState, trap_id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, trap_id).expect("the trap is gone")
-}
-
 /// The definitions a fused card was made of, in order (R102).
 fn ingredient_defs(state: &GameState, def_id: &str) -> Option<Vec<String>> {
     def_of(Some(state), def_id)
@@ -139,7 +131,7 @@ mod c_plus_c74s_field_trap_r425 {
     #[test]
     fn r687_set_face_down_it_holds_no_brittle_only_its_controller_reads_the_back() {
         let OpponentsTurn { state, trap_id } = opponents_turn("brittle", false);
-        let card = trap_of(&state, &trap_id);
+        let card = &live(&state, &trap_id);
         assert!(card.face_up != Some(true));
         assert_eq!(active_brittle_count(card), None);
         assert_eq!(card.brittle, None);
@@ -149,8 +141,8 @@ mod c_plus_c74s_field_trap_r425 {
     fn r425_r99_counts_the_opponents_1st_play_and_stays_face_down_unfired() {
         let OpponentsTurn { state, trap_id } = opponents_turn("first", false);
         let after = play(state, PlayerId::P2, &spell().id, None);
-        assert_eq!(twice_forward_plays(trap_of(&after.state, &trap_id)), 1);
-        assert!(trap_of(&after.state, &trap_id).face_up != Some(true));
+        assert_eq!(twice_forward_plays(&live(&after.state, &trap_id)), 1);
+        assert!(live(&after.state, &trap_id).face_up != Some(true));
         assert!(events_of_type(&after.events, GameEventType::TrapFired).is_empty());
     }
 
@@ -160,7 +152,7 @@ mod c_plus_c74s_field_trap_r425 {
         let OpponentsTurn { state, trap_id } = opponents_turn("unit", false);
         let first = play(state, PlayerId::P2, &spell().id, None);
         let second = play(first.state, PlayerId::P2, "fx-5", Some((Row::Units, 1)));
-        let kept = trap_of(&second.state, &trap_id);
+        let kept = &live(&second.state, &trap_id);
         // R831011: the Unit is never consumed; a copy of its definition is fused in.
         assert_eq!(
             second.state.players.p2.units[0]
@@ -213,7 +205,7 @@ mod c_plus_c74s_field_trap_r425 {
                 .iter()
                 .any(|card| card.id == second.card.id)
         );
-        let kept = trap_of(&second.state, &trap_id);
+        let kept = &live(&second.state, &trap_id);
         assert_eq!(
             ingredient_defs(&second.state, &kept.def_id),
             Some(vec![spell().id, forward().id])
@@ -238,7 +230,7 @@ mod c_plus_c74s_field_trap_r425 {
                 .map(|card| card.id.clone()),
             set_id
         );
-        let kept = trap_of(&second.state, &trap_id);
+        let kept = &live(&second.state, &trap_id);
         assert_eq!(
             ingredient_defs(&second.state, &kept.def_id),
             Some(vec![trap().id, forward().id])
@@ -255,7 +247,7 @@ mod c_plus_c74s_field_trap_r425 {
             &self_exiler().id,
             None,
         );
-        let kept = trap_of(&second.state, &trap_id);
+        let kept = &live(&second.state, &trap_id);
         assert!(!second.card.id.is_empty());
         // R589's "if it still exists" went with the consumed card: the Spell stays exiled and a copy
         // of it is fused in all the same.
@@ -297,7 +289,7 @@ mod c_plus_c74s_field_trap_r425 {
         );
         // A copy of the cast Spell, the later play, is fused in — not of the card that cast it.
         assert_eq!(
-            ingredient_defs(&first.state, &trap_of(&first.state, &trap_id).def_id),
+            ingredient_defs(&first.state, &live(&first.state, &trap_id).def_id),
             Some(vec![spell().id, forward().id])
         );
         assert_eq!(
@@ -313,7 +305,7 @@ mod c_plus_c74s_field_trap_r425 {
                 .iter()
                 .any(|card| card.def_id == caster().id)
         );
-        assert_eq!(twice_forward_plays(trap_of(&first.state, &trap_id)), 2);
+        assert_eq!(twice_forward_plays(&live(&first.state, &trap_id)), 2);
     }
 
     #[test]
@@ -323,8 +315,8 @@ mod c_plus_c74s_field_trap_r425 {
         next.players.p1.mana.current = 10;
         next = play(next, PlayerId::P1, &spell().id, None).state;
         next = play(next, PlayerId::P1, &spell().id, None).state;
-        assert_eq!(twice_forward_plays(trap_of(&next, &trap_id)), 0);
-        assert!(trap_of(&next, &trap_id).face_up != Some(true));
+        assert_eq!(twice_forward_plays(&live(&next, &trap_id)), 0);
+        assert!(live(&next, &trap_id).face_up != Some(true));
     }
 
     #[test]
@@ -333,7 +325,7 @@ mod c_plus_c74s_field_trap_r425 {
         let mut next = play(state, PlayerId::P2, &turner().id, Some((Row::Units, 1))).state;
         next = play(next, PlayerId::P2, &turner().id, Some((Row::Units, 2))).state;
         // A copy of the second Turner is fused into p1's trap; both Turners stay p2's (R831011).
-        assert_ne!(trap_of(&next, &trap_id).def_id, forward().id);
+        assert_ne!(live(&next, &trap_id).def_id, forward().id);
         let p2_before = next.players.p2.hero.health;
         let p1_before = next.players.p1.hero.health;
         next = act(&next, json!({ "type": "endTurn", "playerId": "p2" }));
@@ -365,14 +357,14 @@ mod c_plus_c74s_field_trap_r425 {
         for _ in 0..4 {
             next = play(next, PlayerId::P2, &spell().id, None).state;
         }
-        assert_eq!(twice_forward_plays(trap_of(&next, &trap_id)), 4);
-        assert_eq!(active_brittle_count(trap_of(&next, &trap_id)), Some(4));
+        assert_eq!(twice_forward_plays(&live(&next, &trap_id)), 4);
+        assert_eq!(active_brittle_count(&live(&next, &trap_id)), Some(4));
     }
 
     #[test]
     fn r386_the_every_n_step_reads_through_param_an_upgrades_plays_never_goes_below_2_a_degrade_makes_it_3() {
         let OpponentsTurn { mut state, trap_id } = opponents_turn("params", false);
-        step_param(trap_of_mut(&mut state, &trap_id), "plays", -1);
+        step_param(live_mut(&mut state, &trap_id), "plays", -1);
         let mut next = play(
             play(state, PlayerId::P2, &spell().id, None).state,
             PlayerId::P2,
@@ -380,11 +372,11 @@ mod c_plus_c74s_field_trap_r425 {
             None,
         )
         .state;
-        assert_eq!(trap_of(&next, &trap_id).face_up, Some(true));
+        assert_eq!(live(&next, &trap_id).face_up, Some(true));
 
         let mut slow = opponents_turn("params-slow", false);
-        step_param(trap_of_mut(&mut slow.state, &slow.trap_id), "plays", 1);
-        step_param(trap_of_mut(&mut slow.state, &slow.trap_id), "brittleGain", 1);
+        step_param(live_mut(&mut slow.state, &slow.trap_id), "plays", 1);
+        step_param(live_mut(&mut slow.state, &slow.trap_id), "brittleGain", 1);
         next = play(
             play(slow.state, PlayerId::P2, &spell().id, None).state,
             PlayerId::P2,
@@ -392,10 +384,10 @@ mod c_plus_c74s_field_trap_r425 {
             None,
         )
         .state;
-        assert!(trap_of(&next, &slow.trap_id).face_up != Some(true));
+        assert!(live(&next, &slow.trap_id).face_up != Some(true));
         next = play(next, PlayerId::P2, &spell().id, None).state;
-        assert_eq!(trap_of(&next, &slow.trap_id).face_up, Some(true));
-        assert_eq!(active_brittle_count(trap_of(&next, &slow.trap_id)), Some(4));
+        assert_eq!(live(&next, &slow.trap_id).face_up, Some(true));
+        assert_eq!(active_brittle_count(&live(&next, &slow.trap_id)), Some(4));
     }
 
     #[test]
@@ -412,7 +404,7 @@ mod c_plus_c74s_field_trap_r425 {
         let mut round: GameState = round_trip(&fused);
         assert_eq!(round, fused);
         assert_eq!(
-            trap_of(&round, &trap_id).memory.get(TWICE_FORWARD_PLAYS_KEY),
+            live(&round, &trap_id).memory.get(TWICE_FORWARD_PLAYS_KEY),
             Some(&json!(2))
         );
         let a = in_hand(&mut fused, &spell().id, PlayerId::P2, 1)
@@ -421,7 +413,7 @@ mod c_plus_c74s_field_trap_r425 {
         let b = in_hand(&mut round, &spell().id, PlayerId::P2, 1)
             .into_iter()
             .next();
-        let live = act(
+        let played = act(
             &fused,
             json!({
                 "type": "play",
@@ -437,8 +429,8 @@ mod c_plus_c74s_field_trap_r425 {
                 "playerId": "p2",
             }),
         );
-        assert_eq!(hash_state(&again), hash_state(&live));
-        assert_eq!(twice_forward_plays(trap_of(&again, &trap_id)), 3);
+        assert_eq!(hash_state(&again), hash_state(&played));
+        assert_eq!(twice_forward_plays(&live(&again, &trap_id)), 3);
     }
 
     mod radiant {
@@ -460,7 +452,7 @@ mod c_plus_c74s_field_trap_r425 {
                     .map(|card| card.id.clone()),
                 Some(second.card.id.clone())
             );
-            let kept = trap_of(&second.state, &trap_id);
+            let kept = &live(&second.state, &trap_id);
             assert_ne!(kept.def_id, forward().id);
             assert_eq!(
                 def_of(Some(&second.state), &kept.def_id).type_,
@@ -480,7 +472,7 @@ mod c_plus_c74s_field_trap_r425 {
                 None,
             );
             assert_eq!(events_of_type(&second.events, GameEventType::Fused).len(), 1);
-            assert_eq!(trap_of(&second.state, &trap_id).face_up, Some(true));
+            assert_eq!(live(&second.state, &trap_id).face_up, Some(true));
             assert!(
                 second
                     .state
@@ -502,7 +494,7 @@ mod c_plus_c74s_field_trap_r425 {
             slot(PlayerId::P1, Row::Backrow, 3),
             json!({}),
         );
-        trap_of_mut(&mut state, &twin_trap.id).face_up = Some(false);
+        live_mut(&mut state, &twin_trap.id).face_up = Some(false);
         let second = play(
             play(state, PlayerId::P2, &spell().id, None).state,
             PlayerId::P2,
@@ -510,7 +502,7 @@ mod c_plus_c74s_field_trap_r425 {
             None,
         );
         // Its first trigger exiled it.
-        let gone = trap_of(&second.state, &twin_trap.id);
+        let gone = &live(&second.state, &twin_trap.id);
         assert_eq!(gone.zone.z(), ZoneName::Exile);
         // R78: the card in the exile pile holds no face-up state, which its later trigger wrote to it.
         assert_eq!(gone.face_up, None);
@@ -526,8 +518,8 @@ mod c_plus_c74s_field_trap_r425 {
             slot(PlayerId::P1, Row::Backrow, 4),
             json!({}),
         );
-        trap_of_mut(&mut state, &placed.id).face_up = Some(false);
+        live_mut(&mut state, &placed.id).face_up = Some(false);
         let next = play(state, PlayerId::P2, &spell().id, None).state;
-        assert_eq!(twice_forward_plays(trap_of(&next, &placed.id)), 1);
+        assert_eq!(twice_forward_plays(&live(&next, &placed.id)), 1);
     }
 }

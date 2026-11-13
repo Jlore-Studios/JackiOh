@@ -67,10 +67,6 @@ mod tests {
         }))
     }
 
-    fn on(card: &CardInstance) -> Value {
-        json!({ "targets": pick::instance(card) })
-    }
-
     fn keyword_count(s: &Scenario, card: &CardInstance, kind: KeywordKind) -> usize {
         s.stats(card).keywords.iter().filter(|keyword| keyword.kind() == kind).count()
     }
@@ -105,7 +101,7 @@ mod tests {
         fn ranged_and_no_attack_change() {
             let mut s = board(false, json!([VANILLA]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(METAGLASS, on(&unit));
+            s.play(METAGLASS, pick::targets(pick::instance(&unit)));
             assert_eq!(keyword_count(&s, &unit, KeywordKind::Ranged), 1);
             s.expect_stats(&unit, json!({ "attack": 4, "health": 4 }));
         }
@@ -114,7 +110,7 @@ mod tests {
         fn the_unit_takes_no_strike_back_from_a_defender_without_ranged() {
             let mut s = board(false, json!([VANILLA]), json!([STRIKER]));
             let (mine, theirs) = (s.unit_at(P1, 1), s.unit_at(P2, 1));
-            s.play(METAGLASS, on(&mine));
+            s.play(METAGLASS, pick::targets(pick::instance(&mine)));
             s.attack(&mine, &theirs);
             assert_eq!(s.card(&mine).damage, 0, "R783000");
             assert_eq!(s.card(&theirs).damage, 4);
@@ -124,7 +120,7 @@ mod tests {
         fn an_enemy_unit_takes_ranged_too() {
             let mut s = board(false, json!([]), json!([VANILLA]));
             let theirs = s.unit_at(P2, 1);
-            s.play(METAGLASS, on(&theirs));
+            s.play(METAGLASS, pick::targets(pick::instance(&theirs)));
             assert_eq!(keyword_count(&s, &theirs, KeywordKind::Ranged), 1);
         }
 
@@ -132,7 +128,7 @@ mod tests {
         fn ranged_once_on_a_unit_that_has_it() {
             let mut s = board(false, json!(["stand-in (1) 4/4 Ranged"]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(METAGLASS, on(&unit));
+            s.play(METAGLASS, pick::targets(pick::instance(&unit)));
             assert_eq!(keyword_count(&s, &unit, KeywordKind::Ranged), 1);
         }
     }
@@ -144,7 +140,7 @@ mod tests {
         fn ranged_and_plus_3_attack_and_no_health_change() {
             let mut s = board(true, json!([VANILLA]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(METAGLASS, on(&unit));
+            s.play(METAGLASS, pick::targets(pick::instance(&unit)));
             assert_eq!(keyword_count(&s, &unit, KeywordKind::Ranged), 1);
             s.expect_stats(&unit, json!({ "attack": 7, "health": 4 }));
             assert_eq!(s.stats(&unit).max_health, 4);
@@ -154,7 +150,7 @@ mod tests {
         fn the_unit_takes_no_strike_back_and_hits_for_the_new_attack() {
             let mut s = board(true, json!([VANILLA]), json!([STRIKER]));
             let (mine, theirs) = (s.unit_at(P1, 1), s.unit_at(P2, 1));
-            s.play(METAGLASS, on(&mine));
+            s.play(METAGLASS, pick::targets(pick::instance(&mine)));
             s.attack(&mine, &theirs);
             assert_eq!(s.card(&mine).damage, 0, "R783000");
             assert_eq!(s.card(&theirs).damage, 7);
@@ -165,7 +161,7 @@ mod tests {
             let mut s = board(true, json!([VANILLA]), json!([]));
             assert_eq!(upgrade_number(&mut s, METAGLASS, "attack"), 4);
             let unit = s.unit_at(P1, 1);
-            s.play(METAGLASS, on(&unit));
+            s.play(METAGLASS, pick::targets(pick::instance(&unit)));
             s.expect_stats(&unit, json!({ "attack": 8, "health": 4 }));
         }
     }

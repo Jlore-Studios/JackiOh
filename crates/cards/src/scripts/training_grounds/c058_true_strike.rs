@@ -74,7 +74,7 @@ mod tests {
         let Some(target) = s.unit(PlayerId::P2, lane) else {
             panic!("no p2 unit in lane {lane}");
         };
-        json!({ "targets": [{ "pick": "instance", "instanceId": target.id }] })
+        pick::targets(pick::instance(&target))
     }
 
     /// p1 holds True Strike; #21 Hinder rides along so the turn does not auto-end (R82). `enemy` is

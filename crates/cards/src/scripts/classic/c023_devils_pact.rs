@@ -115,10 +115,6 @@ mod tests {
 
     const EIGHT: [&str; 8] = [VANILLA, VANILLA, TIMMY, TIMMY, STOCKPILE, STOCKPILE, FILLER, BEAR];
 
-    fn at_p2() -> Value {
-        json!([{ "pick": "hero", "player": "p2" }])
-    }
-
     fn on_field(p1: Value, radiant_face: bool, p2: Value) -> Scenario {
         scenario(json!({
             "p1": merged(
@@ -142,7 +138,7 @@ mod tests {
         Action::new(
             ActionBody::Answer {
                 choice_id: state.pending.as_ref().map(|pending| pending.id.clone()).unwrap_or_default(),
-                selection: json_as(at_p2()),
+                selection: json_as(pick::hero("p2")),
             },
             P1,
             nonce,
@@ -218,7 +214,7 @@ mod tests {
                 s.play(&vanilla, json!({ "zone": 2 }));
 
                 assert_eq!(pending_player(&s), Some(P1));
-                s.answer(at_p2());
+                s.answer(pick::hero("p2"));
 
                 s.expect_in_zone(&vanilla, "gone");
                 assert!(s.unit(P1, 2).is_none());
@@ -250,7 +246,7 @@ mod tests {
                 let mut s = on_field(json!({ "hand": [MENACE, FILLER] }), false, json!({}));
 
                 s.activate(PACT, json!({}));
-                s.play(MENACE, json!({ "zone": 2 })).answer(at_p2());
+                s.play(MENACE, json!({ "zone": 2 })).answer(pick::hero("p2"));
 
                 match s.events().iter().find(|event| event.event_type() == GameEventType::CardPlayed) {
                     Some(GameEvent::CardPlayed { def_id, cost_paid, .. }) => {
@@ -269,7 +265,7 @@ mod tests {
                 let mut s = on_field(json!({}), false, json!({}));
 
                 s.activate(PACT, json!({}));
-                s.play(VANILLA, json!({ "zone": 2 })).answer(at_p2());
+                s.play(VANILLA, json!({ "zone": 2 })).answer(pick::hero("p2"));
 
                 let played: Vec<&GameEvent> = s
                     .events()
@@ -296,7 +292,7 @@ mod tests {
                 let mut s = on_field(json!({ "hand": [BEAR, FILLER] }), false, json!({}));
 
                 s.activate(PACT, json!({}));
-                s.play(BEAR, json!({ "zone": 3 })).answer(at_p2());
+                s.play(BEAR, json!({ "zone": 3 })).answer(pick::hero("p2"));
 
                 assert!(s.backrow(P1, 3).is_none());
                 s.expect_health(P2, 25);
@@ -320,7 +316,7 @@ mod tests {
                 s.activate(PACT, json!({}));
                 s.attack(PANTHER, &prey);
                 assert_eq!(pending_player(&s), Some(P1));
-                s.answer(at_p2());
+                s.answer(pick::hero("p2"));
 
                 s.expect_in_zone(&hinder, "gone");
                 s.expect_health(P2, 25);
@@ -463,7 +459,7 @@ mod tests {
                 let mut s = on_field(json!({}), false, json!({}));
 
                 s.activate(PACT, json!({}));
-                s.play(VANILLA, json!({ "zone": 2 })).answer(at_p2());
+                s.play(VANILLA, json!({ "zone": 2 })).answer(pick::hero("p2"));
 
                 assert!(!serde_json::to_string(&s.view(P2)).unwrap().contains(VANILLA));
             }
@@ -490,7 +486,7 @@ mod tests {
                 for (radiant_face, health) in [(false, 26), (true, 25)] {
                     crate::register_all();
                     let mut s = on_field(json!({ "hand": [LUNAR, FILLER], "mana": 4 }), radiant_face, json!({}));
-                    s.play(LUNAR, json!({ "targets": at_p2() }));
+                    s.play(LUNAR, json!({ "targets": pick::hero("p2") }));
                     s.expect_health(P2, health);
                 }
             }
@@ -567,7 +563,7 @@ mod tests {
                 let mut s = on_field(json!({}), true, json!({}));
 
                 s.activate(PACT, json!({}));
-                s.play(VANILLA, json!({ "zone": 2 })).answer(at_p2());
+                s.play(VANILLA, json!({ "zone": 2 })).answer(pick::hero("p2"));
 
                 s.expect_health(P2, 24);
                 match s.events().iter().find(|event| event.event_type() == GameEventType::CardPlayed) {
@@ -584,7 +580,7 @@ mod tests {
                 crate::under_kept(PACT, script_v0_5_2(), || {
                     let mut s = on_field(json!({}), true, json!({}));
                     s.activate(PACT, json!({}));
-                    s.play(VANILLA, json!({ "zone": 2 })).answer(at_p2());
+                    s.play(VANILLA, json!({ "zone": 2 })).answer(pick::hero("p2"));
                     s.expect_health(P2, 20);
                 });
             }

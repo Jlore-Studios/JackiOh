@@ -1,6 +1,8 @@
 // Card-text references (SPEC §10.10, R279) open their printed, public catalog face in interactive views.
 // They never reveal card state (§5.1; CLAUDE.md rule 7).
 // Escape closes only the tooltip; the detail view and sheet retain their own handling (inspect/store.ts).
+// R3838002: a tooltip whose face prints less than its whole text, or any below an `AlwaysFullText` (R3838001, the
+// Almanac), has the card's whole text beside its face (Extended.tsx), so a full-art card's words can be read.
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -8,10 +10,13 @@ import { createPortal } from "react-dom";
 import type { CardDef } from "@jackioh/shared";
 
 import { CardFace } from "./CardFace.tsx";
-import { FACE_ASPECT, REF_HOVER_DELAY_MS, REF_TOOLTIP_HEIGHT_PX } from "./constants.ts";
-import { placePreview, rectOf, type Rect } from "./inspect/placement.ts";
+import { FACE_ASPECT, REF_HOVER_DELAY_MS } from "./constants.ts";
+import { useFullArt } from "./fullArt.ts";
+import { Extended, showsFullText, useAlwaysFullText } from "./inspect/Extended.tsx";
+import { placePreview, rectOf, refTooltipSize, type Rect } from "./inspect/placement.ts";
 import { faceModel } from "./model.ts";
 import { RefsInteractive, useRefsInteractive } from "./refContext.tsx";
+import "./inspect/inspect.css";
 
 export type CardRefProps = { def: CardDef; radiant: boolean; children: ReactNode };
 
@@ -22,10 +27,11 @@ type Timer = ReturnType<typeof setTimeout>;
 type Press = { touch: boolean; wasOpen: boolean };
 
 function RefTooltip({ id, def, radiant, anchor }: { id: string; def: CardDef; radiant: boolean; anchor: Rect }): ReactElement {
-  const height = Math.min(REF_TOOLTIP_HEIGHT_PX, window.innerHeight);
-  const size = { width: height * FACE_ASPECT, height };
-  const placed = placePreview(anchor, { width: window.innerWidth, height: window.innerHeight }, size, "above");
   const face = faceModel({ defId: def.id, def, radiant });
+  const withText = showsFullText(face, undefined, useFullArt(def.id), useAlwaysFullText());
+  const viewport = { width: window.innerWidth, height: window.innerHeight };
+  const size = refTooltipSize(viewport, withText);
+  const placed = placePreview(anchor, viewport, size, "above");
   return createPortal(
     <div
       id={id}
@@ -34,11 +40,15 @@ function RefTooltip({ id, def, radiant, anchor }: { id: string; def: CardDef; ra
       data-testid={REF_TOOLTIP_TESTID}
       data-ref={def.id}
       data-ref-face={radiant ? "radiant" : "base"}
+      data-stacked={size.stacked ? "true" : undefined}
       style={{ position: "fixed", left: placed.left, top: placed.top, width: size.width, height: size.height }}
     >
       {/* The face in a tooltip marks its own references and opens none: one level is enough. */}
       <RefsInteractive enabled={false}>
-        <CardFace face={face} layout="full" />
+        {withText ? <Extended face={face} /> : null}
+        <div className="cf-ref-tooltip-face" style={{ width: size.faceHeight * FACE_ASPECT, height: size.faceHeight }}>
+          <CardFace face={face} layout="full" />
+        </div>
       </RefsInteractive>
     </div>,
     document.body,

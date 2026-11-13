@@ -263,7 +263,7 @@ describe("B57 the challenge toast", () => {
   );
 
   it(
-    "R1831000 a refused join shows the server's words and Open in lobby, which fills /play's code",
+    "R1831000 R3730006 a refused join shows the server's words and Open in lobby, which opens the room's lobby",
     async () => {
       signIn("tok-toast");
       const server = serve({ incoming: [INCOMING], outgoing: [] }, (call) =>
@@ -282,9 +282,8 @@ describe("B57 the challenge toast", () => {
 
       fireEvent.click(screen.getByTestId(challengeToastTestid.lobby));
       await waitFor(() => {
-        expect(window.location.pathname).toBe("/play");
+        expect(window.location.pathname).toBe(`/lobby/${INCOMING.roomCode}`);
       }, SOON);
-      expect(readRoomLink()?.code).toBe(INCOMING.roomCode);
     },
     TEST_MS,
   );
@@ -303,9 +302,8 @@ describe("B57 the challenge toast", () => {
 
       fireEvent.click(lobby);
       await waitFor(() => {
-        expect(window.location.pathname).toBe("/play");
+        expect(window.location.pathname).toBe(`/lobby/${INCOMING.roomCode}`);
       }, SOON);
-      expect(readRoomLink()?.code).toBe(INCOMING.roomCode);
     },
     TEST_MS,
   );
@@ -462,9 +460,8 @@ describe("B57 the challenge toast", () => {
           must(held[0], "held move")();
         });
         await waitFor(() => {
-          expect(window.location.pathname).toBe("/play");
+          expect(window.location.pathname).toBe(`/lobby/${INCOMING.roomCode}`);
         });
-        expect(readRoomLink()?.code).toBe(INCOMING.roomCode);
       } finally {
         release();
       }

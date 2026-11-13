@@ -811,7 +811,11 @@
   filter: drop-shadow(0 6px 18px rgb(0 0 0 / 0.55));
 }
 
-.cf-ref-tooltip > .cf {
+.cf-ref-tooltip-face {
+  flex: none;
+}
+
+.cf-ref-tooltip-face > .cf {
   width: 100%;
   height: 100%;
 }

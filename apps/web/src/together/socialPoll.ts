@@ -11,7 +11,8 @@
 // `social` frame came) the server pushes the same read whenever it changes, and the poll sends nothing;
 // it reads at once when the socket drops and goes on at its pace until another is live. The socket's
 // `chat` and `friends` pushes go to their listeners (`onChatPush`, `onFriendsPush`): an open chat and an
-// open friends list read again.
+// open friends list read again; its `lobby` and `lobbyInvite` pushes go to `onLobbyPush` and
+// `onLobbyInvitePush` (R3730000, R3730005): an open lobby reads again, and an invite shows a toast.
 // R3576000: a tab hidden for `HIDDEN_QUIET_MS` closes its socket, so the server can sleep, and the poll
 // takes over as for any drop (paused while hidden, R3205000); it opens again when the tab shows.
 
@@ -20,11 +21,11 @@ import { useEffect, useSyncExternalStore } from "react";
 import { dailyWaitingOf } from "../daily/order.ts";
 import { pollWhileVisible, quietWhileHidden } from "../game/net.ts";
 import { readSession } from "../net/session.ts";
-import { getSocial, type Challenge, type SocialRead } from "../net/social.ts";
+import { getSocial, type Challenge, type PlayerRef, type SocialRead } from "../net/social.ts";
 import { HIDDEN_QUIET_MS, SOCIAL_POLL_MS } from "./config.ts";
 import { followingChallenge } from "./follow.ts";
 import { isRefusedSession, unreadCountsOf } from "./session.ts";
-import { openSocialSocket, socialSocketFactory, type SocialPush, type SocialSocket } from "./socialSocket.ts";
+import { openSocialSocket, socialSocketFactory, type LobbyFormat, type SocialPush, type SocialSocket } from "./socialSocket.ts";
 import { isQueueMode } from "../net/api.ts";
 
 export type SocialReads = {
@@ -72,6 +73,11 @@ let socket: SocialSocket | null = null;
 let stopQuiet: (() => void) | null = null;
 const chatListeners = new Set<(friendId: string) => void>();
 const friendsListeners = new Set<() => void>();
+const lobbyListeners = new Set<(code: string) => void>();
+const lobbyInviteListeners = new Set<(invite: LobbyInvite) => void>();
+
+/** R3730005: a friend's invite into their private lobby, as the `lobbyInvite` frame carries it. */
+export type LobbyInvite = { code: string; format: LobbyFormat; from: PlayerRef };
 
 function publish(next: SocialReads): void {
   if (next === reads) return;
@@ -164,6 +170,12 @@ function onPush(push: SocialPush): void {
     case "friends":
       for (const listener of [...friendsListeners]) listener();
       return;
+    case "lobby":
+      for (const listener of [...lobbyListeners]) listener(push.code);
+      return;
+    case "lobbyInvite":
+      for (const listener of [...lobbyInviteListeners]) listener({ code: push.code, format: push.format, from: push.from });
+      return;
   }
 }
 
@@ -254,6 +266,22 @@ export function onFriendsPush(listener: () => void): () => void {
   friendsListeners.add(listener);
   return () => {
     friendsListeners.delete(listener);
+  };
+}
+
+/** R3730000: calls `listener` with the code of a private lobby the server says changed; returns its unsubscribe. */
+export function onLobbyPush(listener: (code: string) => void): () => void {
+  lobbyListeners.add(listener);
+  return () => {
+    lobbyListeners.delete(listener);
+  };
+}
+
+/** R3730005: calls `listener` with each friend's lobby invite the socket carries; returns its unsubscribe. */
+export function onLobbyInvitePush(listener: (invite: LobbyInvite) => void): () => void {
+  lobbyInviteListeners.add(listener);
+  return () => {
+    lobbyInviteListeners.delete(listener);
   };
 }
 

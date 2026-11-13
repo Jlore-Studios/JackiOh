@@ -62,10 +62,6 @@ mod tests {
         }))
     }
 
-    fn on(card: &CardInstance) -> Value {
-        json!({ "targets": pick::instance(card) })
-    }
-
     fn keyword_count(s: &Scenario, card: &CardInstance, kind: KeywordKind) -> usize {
         s.stats(card).keywords.iter().filter(|keyword| keyword.kind() == kind).count()
     }
@@ -102,7 +98,7 @@ mod tests {
             let mut s = board(false);
             s.play(VANILLA, json!({ "zone": 1 }));
             let unit = s.unit_at(P1, 1);
-            s.play(ALLOY, on(&unit));
+            s.play(ALLOY, pick::targets(pick::instance(&unit)));
             assert_eq!(keyword_count(&s, &unit, KeywordKind::Rush), 1);
             assert_eq!(keyword_count(&s, &unit, KeywordKind::Windfury), 1);
             assert_eq!(keyword_count(&s, &unit, KeywordKind::Charge), 0);
@@ -115,7 +111,7 @@ mod tests {
             let unit = s.unit_at(P1, 1);
             let wall = s.unit_at(P2, 1);
             s.expect_refused(|s| s.attack(&unit, &wall));
-            s.play(ALLOY, on(&unit));
+            s.play(ALLOY, pick::targets(pick::instance(&unit)));
 
             s.expect_refused(|s| s.attack(&unit, "hero"));
             s.attack(&unit, &wall);
@@ -130,7 +126,7 @@ mod tests {
         fn an_enemy_unit_takes_both_keywords_too() {
             let mut s = board(false);
             let wall = s.unit_at(P2, 1);
-            s.play(ALLOY, on(&wall));
+            s.play(ALLOY, pick::targets(pick::instance(&wall)));
             assert_eq!(keyword_count(&s, &wall, KeywordKind::Rush), 1);
             assert_eq!(keyword_count(&s, &wall, KeywordKind::Windfury), 1);
         }
@@ -142,7 +138,7 @@ mod tests {
                 "p2": { "hand": [FILLER] },
             }));
             let unit = s.unit_at(P1, 1);
-            s.play(ALLOY, on(&unit));
+            s.play(ALLOY, pick::targets(pick::instance(&unit)));
             assert_eq!(keyword_count(&s, &unit, KeywordKind::Windfury), 1);
         }
     }
@@ -155,7 +151,7 @@ mod tests {
             let mut s = board(true);
             s.play(VANILLA, json!({ "zone": 1 }));
             let unit = s.unit_at(P1, 1);
-            s.play(ALLOY, on(&unit));
+            s.play(ALLOY, pick::targets(pick::instance(&unit)));
             assert_eq!(keyword_count(&s, &unit, KeywordKind::Charge), 1);
             assert_eq!(keyword_count(&s, &unit, KeywordKind::Windfury), 1);
             assert_eq!(keyword_count(&s, &unit, KeywordKind::Rush), 0);
@@ -167,7 +163,7 @@ mod tests {
             s.play(VANILLA, json!({ "zone": 1 }));
             let unit = s.unit_at(P1, 1);
             s.expect_refused(|s| s.attack(&unit, "hero"));
-            s.play(ALLOY, on(&unit));
+            s.play(ALLOY, pick::targets(pick::instance(&unit)));
 
             s.attack(&unit, "hero");
             s.attack(&unit, "hero");

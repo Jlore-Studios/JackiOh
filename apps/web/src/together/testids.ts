@@ -18,6 +18,8 @@ export const togetherTestid = {
   /** R2615000: the Watching panel's note that friends may always watch, and how to stop one. */
   watchingNote: "together-watching-note",
   chatOpen: "together-chat-open",
+  /** R3730005: a 1v1 lobby made with the friend invited into it. */
+  lobby: "together-lobby",
   unread: "together-unread",
   remove: "together-remove",
   block: "together-block",

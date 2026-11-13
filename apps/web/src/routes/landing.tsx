@@ -23,6 +23,7 @@ import { useAccount, type Account } from "../net/gate.ts";
 import { BackLayer } from "../net/backLayers.ts";
 import { useSettingsAccountSync } from "../settings/accountSync.ts";
 import { paths } from "../net/navigate.ts";
+import { useKeptLinkOpensLobby } from "../net/roomLink.ts";
 import { readSession } from "../net/session.ts";
 import { useEngineReady } from "../wasm/useEngineReady.ts";
 import { SettingsButton } from "../settings/index.ts";
@@ -590,6 +591,8 @@ export default function LandingRoute({ random = Math.random, economyLive = ECONO
   const account = useAccount();
   // R634: the first screen most visits see keeps an active account's settings level with this device's.
   useSettingsAccountSync(account);
+  // R767, R3730006: a sign-in lands here, so a link kept through it opens its lobby once the account is active.
+  useKeptLinkOpensLobby(account);
   const shell = useMenuShell();
   const motion = useMotion();
   // R2035000, R2875002: GET /api/quests and GET /api/news answer an active account alone.

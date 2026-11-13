@@ -71,10 +71,6 @@ mod tests {
             .collect()
     }
 
-    fn hero_p1() -> Value {
-        json!([{ "pick": "hero", "player": "p1" }])
-    }
-
     use crate::merged;
 
     /// p2 active, attacking or casting into p1, who holds Anime Armor.
@@ -113,8 +109,8 @@ mod tests {
             crate::register_all();
             let mut s = under_fire(json!({}), json!({ "hand": [LUNAR, TRUE_STRIKE, FILLER] }), false);
 
-            s.play(LUNAR, json!({ "targets": hero_p1() }));
-            s.play(TRUE_STRIKE, json!({ "targets": hero_p1() }));
+            s.play(LUNAR, json!({ "targets": pick::hero("p1") }));
+            s.play(TRUE_STRIKE, json!({ "targets": pick::hero("p1") }));
 
             assert_eq!(hero_hits(&s, P1), vec![1, 1]);
             s.expect_health(P1, 18);
@@ -213,7 +209,7 @@ mod tests {
             crate::register_all();
             let mut s = under_fire(json!({}), json!({ "hand": [VITAL_KILL, FILLER] }), false);
 
-            s.play(VITAL_KILL, json!({ "targets": hero_p1() }));
+            s.play(VITAL_KILL, json!({ "targets": pick::hero("p1") }));
 
             s.expect_health(P1, 13);
         }
@@ -237,7 +233,7 @@ mod tests {
 
             let anime = s.card(ANIME).id.clone();
             s.play(HIT_JOB, json!({ "targets": pick::id(&anime) }));
-            s.play(LUNAR, json!({ "targets": hero_p1() }));
+            s.play(LUNAR, json!({ "targets": pick::hero("p1") }));
 
             s.expect_in_zone(ANIME, "graveyard");
             assert_eq!(hero_hits(&s, P1), vec![3]);
@@ -250,7 +246,7 @@ mod tests {
 
             let anime = s.card(ANIME).id.clone();
             s.play(SILENCE, json!({ "targets": pick::id(&anime) }));
-            s.play(LUNAR, json!({ "targets": hero_p1() }));
+            s.play(LUNAR, json!({ "targets": pick::hero("p1") }));
 
             assert_eq!(hero_hits(&s, P1), vec![3]);
         }
@@ -321,7 +317,7 @@ mod tests {
             crate::under_kept(ANIME, crate::scripts::classic_plus::c011_anime_armor::script_v0_5_2(), || {
                 let mut s = under_fire(json!({}), json!({ "hand": [LUNAR, LUNAR, FILLER] }), false);
                 let anime = s.card(ANIME).id.clone();
-                s.play(LUNAR, json!({ "targets": hero_p1() }));
+                s.play(LUNAR, json!({ "targets": pick::hero("p1") }));
                 assert_eq!(hero_hits(&s, P1), vec![1]);
                 // Uncapped, the 3 lands whole (and kills the 3/3).
                 s.play(LUNAR, json!({ "targets": pick::id(&anime) }));
@@ -334,12 +330,12 @@ mod tests {
             crate::register_all();
             let mut degraded = under_fire(json!({}), json!({ "hand": [LUNAR, FILLER] }), false);
             step_param(degraded.card_mut(ANIME), "cap", 1);
-            degraded.play(LUNAR, json!({ "targets": hero_p1() }));
+            degraded.play(LUNAR, json!({ "targets": pick::hero("p1") }));
             assert_eq!(hero_hits(&degraded, P1), vec![2]);
 
             let mut upgraded = under_fire(json!({}), json!({ "hand": [LUNAR, FILLER] }), false);
             step_param(upgraded.card_mut(ANIME), "cap", -1);
-            upgraded.play(LUNAR, json!({ "targets": hero_p1() }));
+            upgraded.play(LUNAR, json!({ "targets": pick::hero("p1") }));
             assert_eq!(hero_hits(&upgraded, P1), vec![1]);
         }
     }
@@ -368,7 +364,7 @@ mod tests {
             assert_eq!(back.def_id, ANIME);
             s.expect_stats(&back, json!({ "health": 1 }));
 
-            s.play(LUNAR, json!({ "targets": hero_p1() }));
+            s.play(LUNAR, json!({ "targets": pick::hero("p1") }));
             assert_eq!(hero_hits(&s, P1), vec![1]);
         }
     }

@@ -15,7 +15,7 @@ use crate::rules::fixtures::call_to_chaos_plus::{
     trap,
 };
 use crate::rules::fixtures::harness::{
-    events_of_type, in_hand, json_of, matches_object, new_game, put, set_library, slot,
+    events_of_type, in_hand, json_of, live, matches_object, new_game, put, set_library, slot,
 };
 
 fn scripts(cry: Hook) -> CardScripts {
@@ -142,10 +142,6 @@ fn index_of(types: &[GameEventType], kind: GameEventType) -> i64 {
         .unwrap_or(-1)
 }
 
-fn card<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
-
 fn sorted(mut ids: Vec<String>) -> Vec<String> {
     ids.sort();
     ids.dedup();
@@ -256,9 +252,9 @@ mod r423_c_plus_73s_table {
         let hard = put(&mut state, &hard_field.id, slot(P2, Row::Backrow, 2), json!({}));
         let mine = put(&mut state, "fx-3", slot(P1, Row::Units, 1), json!({}));
         run(&mut state, entry("destroy"), None);
-        assert!(card(&state, &face_down.id).face_up != Some(true));
+        assert!(live(&state, &face_down.id).face_up != Some(true));
         assert_eq!(
-            [&unit, &face_down, &hard, &mine].map(|each| card(&state, &each.id).zone.z()),
+            [&unit, &face_down, &hard, &mine].map(|each| live(&state, &each.id).zone.z()),
             [
                 ZoneName::Graveyard,
                 ZoneName::Graveyard,
@@ -292,9 +288,9 @@ mod r423_c_plus_73s_table {
             events_of_type(&events, GameEventType::Upgraded).len() as i32,
             (hand.len() + deck.len()) as i32 * CHAOS_PLUS_UPGRADES
         );
-        assert_eq!(card(&state, &theirs[0].id).tuning, None);
+        assert_eq!(live(&state, &theirs[0].id).tuning, None);
         assert!(hand.iter().chain(deck.iter()).all(|each| {
-            let now = card(&state, &each.id);
+            let now = &live(&state, &each.id);
             now.tuning.is_some() || now.cost_mod != 0
         }));
     }
@@ -395,11 +391,11 @@ mod r423_c_plus_73s_table {
             sorted(degraded.clone()),
             sorted(vec![field.id.clone(), hand[0].id.clone()])
         );
-        assert_eq!(card(&state, &mine.id).tuning, None);
-        assert_eq!(card(&state, &deck[0].id).tuning, None);
-        let field_now = card(&state, &field.id);
+        assert_eq!(live(&state, &mine.id).tuning, None);
+        assert_eq!(live(&state, &deck[0].id).tuning, None);
+        let field_now = &live(&state, &field.id);
         assert!(field_now.tuning.is_some() || field_now.cost_mod != 0);
-        let hand_now = card(&state, &hand[0].id);
+        let hand_now = &live(&state, &hand[0].id);
         assert!(hand_now.tuning.is_some() || hand_now.cost_mod != 0);
     }
 

@@ -817,23 +817,23 @@ describe("R2094000 a room link in chat draws Join", () => {
     }, SLOW);
   }
 
-  it("R2094000 a message with this origin's co-op link shows Join, and Join navigates in-app to that path", async () => {
+  it("R2094000 R3730006 a message with this origin's co-op link shows Join, and Join navigates in-app to its lobby", async () => {
     window.history.replaceState(null, "", "/together");
     await openWith(`Join my co-op game against the AI here: ${origin}/together?coop=ABC234 (room code ABC234).`);
     const join = await screen.findByTestId("chat-join", undefined, SLOW);
     expect(join).toHaveTextContent("Join");
     fireEvent.click(join);
-    expect(window.location.pathname).toBe("/together");
-    expect(window.location.search).toBe("?coop=ABC234");
+    expect(window.location.pathname).toBe("/lobby/ABC234");
+    expect(window.location.search).toBe("");
   });
 
-  it("R2094000 a message with this origin's /play?room= link shows Join and navigates to it", async () => {
+  it("R2094000 R3730006 a message with this origin's /play?room= or /lobby/ link shows Join and navigates to its lobby", async () => {
     window.history.replaceState(null, "", "/together");
     await openWith(`A room for you: ${origin}/play?room=ABC234&mode=bo1`);
     const join = await screen.findByTestId("chat-join", undefined, SLOW);
     fireEvent.click(join);
-    expect(window.location.pathname).toBe("/play");
-    expect(window.location.search).toBe("?room=ABC234&mode=bo1");
+    expect(window.location.pathname).toBe("/lobby/ABC234");
+    expect(window.location.search).toBe("");
   });
 
   it("R2094000 a message with another origin's link, a malformed link, or no link shows no Join", async () => {

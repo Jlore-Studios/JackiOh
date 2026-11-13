@@ -860,10 +860,6 @@ mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
     const ANCHOR: &str = "core-010";
     const LIBRARY: [&str; 2] = ["core-008", "core-011"];
 
-    fn at_hero() -> Value {
-        json!([{ "pick": "hero", "player": "p2" }])
-    }
-
     fn drew(s: &Scenario) -> usize {
         count_of(s, "drawn")
     }
@@ -875,7 +871,7 @@ mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
         );
 
         assert!(hand_glows(&s, &nth(&copies_in_hand(&s, BURN), 0)));
-        s.play(BURN, json!({ "targets": at_hero() }));
+        s.play(BURN, json!({ "targets": pick::hero("p2") }));
         assert_eq!(drew(&s), 1);
     }
 
@@ -886,7 +882,7 @@ mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
         );
 
         assert!(!hand_glows(&s, &nth(&copies_in_hand(&s, BURN), 0)));
-        s.play(BURN, json!({ "targets": at_hero() }));
+        s.play(BURN, json!({ "targets": pick::hero("p2") }));
         assert_eq!(drew(&s), 0);
     }
 
@@ -898,7 +894,7 @@ mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
         );
 
         assert!(!hand_glows(&s, &nth(&copies_in_hand(&s, BURN), 0)));
-        s.play(BURN, json!({ "targets": at_hero() }));
+        s.play(BURN, json!({ "targets": pick::hero("p2") }));
         assert_eq!(drew(&s), 0);
     }
 
@@ -910,7 +906,7 @@ mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
         );
 
         assert!(!hand_glows(&s, &nth(&copies_in_hand(&s, BURN), 0)));
-        s.play(BURN, json!({ "targets": at_hero() }));
+        s.play(BURN, json!({ "targets": pick::hero("p2") }));
         s.expect_mana("p1", 3);
         assert_eq!(drew(&s), 0);
     }
@@ -922,7 +918,7 @@ mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
         );
 
         assert!(hand_glows(&s, &nth(&copies_in_hand(&s, BURN), 0)));
-        s.play(BURN, json!({ "targets": at_hero() }));
+        s.play(BURN, json!({ "targets": pick::hero("p2") }));
         assert_eq!(drew(&s), 1);
     }
 
@@ -933,7 +929,7 @@ mod classic_c36_burn_lights_up_in_hand_when_it_would_draw_if_played_now_r195 {
         );
 
         assert!(!hand_glows(&s, &nth(&copies_in_hand(&s, BURN), 0)));
-        s.play(BURN, json!({ "targets": at_hero() }));
+        s.play(BURN, json!({ "targets": pick::hero("p2") }));
         assert_eq!(drew(&s), 0);
     }
 

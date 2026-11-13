@@ -254,6 +254,11 @@ function printedText(face: FaceModel, text: string): string {
     .join(" ");
 }
 
+/** R3838001: whether `face` has any words to print: its text, a Resource's Credits line, gained keywords or grants. */
+export function printsText(face: FaceModel): boolean {
+  return printedText(face, face.text.full) !== "";
+}
+
 /** What a face's rules box prints (issues #814, #1017). */
 export type RulesBox = {
   /** The words the rules box prints: the whole text, or a short form ending in "…". */
@@ -273,7 +278,7 @@ export type RulesBox = {
  * setting decides. `ascentLevel` is the Summit's level where the surface gives it.
  */
 export function faceText(face: FaceModel, ascentLevel?: number | null, fullArtOn?: boolean): RulesBox {
-  if (showsFullArt(face, fullArtOn)) return { shown: EMPTY_TEXT, short: false, less: printedText(face, face.text.full) !== "" };
+  if (showsFullArt(face, fullArtOn)) return { shown: EMPTY_TEXT, short: false, less: printsText(face) };
   // R2450000: a staged Quest prints one stage, a short form of its own; In Too Deep in play also clamps.
   const quest = face.questBox;
   if (quest !== null) {

@@ -33,10 +33,6 @@ fn id_at(s: &Scenario, player: PlayerId, lane: i32) -> String {
         .id
 }
 
-fn pick(id: &str) -> Value {
-    json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-}
-
 fn stats_of(s: &Scenario, id: &str) -> (i32, i32, i32) {
     let view = s.stats(id);
     (view.attack, view.max_health, view.health)
@@ -243,7 +239,7 @@ mod r1185002_set_stats_sets_attack_and_health_outright_its_damage_and_buffs_gone
                 health: SET_TO
             })
         );
-        s.play(snatch.id.as_str(), pick(&body));
+        s.play(snatch.id.as_str(), pick::targets(pick::id(&body)));
         let taken = s.card(body.as_str()).clone();
         assert_eq!(taken.zone, Zone::Hand { player: P1 });
         assert_eq!(
@@ -384,7 +380,7 @@ mod r1185003_a_unit_on_the_field_is_taken_into_your_hand_as_yours {
             json!({ "hand": [plain.id], "field": [{ "def": big_body.id, "lane": 1 }] }),
         );
         let body = id_at(&s, P2, 1);
-        s.play(snatch.id.as_str(), pick(&body));
+        s.play(snatch.id.as_str(), pick::targets(pick::id(&body)));
         assert_eq!(s.card(body.as_str()).cost_override, Some(0));
     }
 }

@@ -237,10 +237,6 @@ mod tests {
         list.iter().position(|entry| entry == item).map_or(-1, |at| at as i64)
     }
 
-    fn at_hero(player: &str) -> Value {
-        json!({ "targets": [{ "pick": "hero", "player": player }] })
-    }
-
     fn has_shield(s: &Scenario, card: &str) -> bool {
         s.stats(card).keywords.iter().any(|keyword| keyword.kind() == KeywordKind::DivineShield)
     }
@@ -417,9 +413,9 @@ mod tests {
             }));
             play_from_hand(&mut s, FOREVER, json!({})); // the 1st
             let lunar = hand(&s, LUNAR);
-            s.play(&lunar, at_hero("p2")); // the 2nd; it comes back to hand
+            s.play(&lunar, pick::targets(pick::hero("p2"))); // the 2nd; it comes back to hand
             assert_eq!(wardrum_in(&s), ZoneName::Hand);
-            s.play(&lunar, at_hero("p2")); // the 3rd
+            s.play(&lunar, pick::targets(pick::hero("p2"))); // the 3rd
             assert_eq!(s.unit(P1, 1).map(|card| card.def_id), Some(WARDRUM.to_string()));
         }
 
@@ -465,7 +461,7 @@ mod tests {
                 "p2": { "hand": [FILLER] },
             }));
             for _ in 0..3 {
-                play_from_hand(&mut s, LUNAR, at_hero("p2"));
+                play_from_hand(&mut s, LUNAR, pick::targets(pick::hero("p2")));
             }
             assert_eq!(s.unit(P1, 1).map(|card| card.def_id), Some(WARDRUM.to_string()));
             assert_eq!(s.pile(P1, "library").len(), 2);
@@ -682,7 +678,7 @@ mod tests {
                 "p1": { "hand": [LUNAR, BONE_STORM, FILLER], "field": [{ "def": WARDRUM, "radiant": true }], "library": LIBRARY, "mana": 8 },
                 "p2": { "hand": [FILLER], "field": [MENACE], "library": LIBRARY },
             }));
-            s.play(LUNAR, at_hero("p2"));
+            s.play(LUNAR, pick::targets(pick::hero("p2")));
             s.play(BONE_STORM, json!({}));
             s.end_turn();
             let pending = s.state().pending.clone();

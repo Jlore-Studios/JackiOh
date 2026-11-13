@@ -31,10 +31,6 @@ fn id_at(s: &Scenario, player: PlayerId, lane: i32) -> String {
         .id
 }
 
-fn pick(id: &str) -> Value {
-    json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-}
-
 /// A setup entry for a Unit that already carries counters.
 fn with(def: &str, counters: Value) -> Value {
     json!({ "def": def, "counters": counters })
@@ -82,9 +78,9 @@ mod r3540000_counters {
             json!({ "field": [PLAIN] }),
         );
         let target = id_at(&s, P2, 1);
-        s.play(BURNER, pick(&target));
+        s.play(BURNER, pick::targets(pick::id(&target)));
         assert_eq!(burn(&s, &target), BT_BURN);
-        s.play(BURNER, pick(&target));
+        s.play(BURNER, pick::targets(pick::id(&target)));
         assert_eq!(burn(&s, &target), 2 * BT_BURN);
         let reported: Vec<(i32, Option<i32>)> = counter_events(s.events(), CounterKind::Burn)
             .into_iter()
@@ -156,9 +152,9 @@ mod r3540000_counters {
             json!({ "field": [with(PLAIN, json!({ "toxic": 2 }))] }),
         );
         let target = id_at(&s, P2, 1);
-        s.play(BURNER, pick(&target));
+        s.play(BURNER, pick::targets(pick::id(&target)));
         assert_eq!(burn(&s, &target), BT_BURN);
-        s.play(BOUNCER, pick(&target));
+        s.play(BOUNCER, pick::targets(pick::id(&target)));
         s.expect_in_zone(&target, "hand");
         assert_eq!(burn(&s, &target), 0);
         assert_eq!(toxic(&s, &target), 0);
@@ -468,11 +464,11 @@ mod r3540004_vanilla {
             json!({ "field": [with(PLAIN, json!({ "burn": 5, "toxic": 2 }))] }),
         );
         let target = id_at(&s, P2, 1);
-        s.play(NERF, pick(&target));
+        s.play(NERF, pick::targets(pick::id(&target)));
         assert_eq!(burn(&s, &target), 5);
         assert_eq!(toxic(&s, &target), 2);
 
-        s.play(VANILLA, pick(&target));
+        s.play(VANILLA, pick::targets(pick::id(&target)));
         assert_eq!(burn(&s, &target), 0);
         assert_eq!(toxic(&s, &target), 0);
         let cleared: Vec<(CounterKind, i32)> = s
