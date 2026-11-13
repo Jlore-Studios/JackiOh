@@ -1263,6 +1263,9 @@ fn combine_objects(records: &[Script]) -> Script {
         conditional_keywords: without_lent_piece(eager_read(
             records.iter().map(|s| s.conditional_keywords.clone()).collect(),
         )),
+        // R3778000: the fused card's Aura follows the number its first such ingredient names, read off
+        // the fused definition as the Aura reads it.
+        combat_keywords_follow: records.iter().find_map(|s| s.combat_keywords_follow),
         when_attacks: hooks(|s| s.when_attacks.clone(), "whenAttacks"),
         after_attack: hooks(after_attack_part, "afterAttack"),
         // R2396000: a fusion runs its `afterAttack` for a gone attacker when any ingredient's is a

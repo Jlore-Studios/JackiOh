@@ -5,12 +5,18 @@
 //! Engine: Equip is printed (ME-EQUIP, R1086). §10.4's layers read with no rng, so the Aura's keywords
 //! are drawn at an event and kept on the card: as it arrives on the field (played, summoned, Flickered,
 //! back through Reborn) and as an Equip play fuses it into a Unit, which draws its own. They come from
-//! the combat keyword pool (R21's), none the card has and no Taunt beside Indestructible
-//! (`draw_combat_keywords`), and stay until it leaves the field (R78). The Aura reads them back
-//! (`conditionalKeywords`), so a Vanilla takes them with the rest of its text (R781004). It printed
-//! every keyword and, Radiant, a Death that gave them away until patch v0.3.7 (R1084, R1085).
+//! the combat keyword pool (R21's), none the card has and no Taunt beside Indestructible, into one
+//! ordered list the card keeps until it leaves the field (R78). The Aura gives the first `keywords` of
+//! that list (`aura_combat_keywords`): a Buff of the number, a number set higher or the Radiant face
+//! draws only the rest (`combat_keywords_follow`), a lower number takes the newest off, and the number
+//! back returns them (R3778000). The Aura reads them back (`conditionalKeywords`), so a Vanilla takes
+//! them with the rest of its text (R781004). It printed every keyword and, Radiant, a Death that gave
+//! them away until patch v0.3.7 (R1084, R1085).
 
-use jackioh_engine::effects::{DrawCombatKeywordsArgs, draw_combat_keywords, drawn_combat_keywords};
+use jackioh_engine::effects::{
+    DrawCombatKeywordsArgs, aura_combat_keywords, draw_combat_keywords, drawn_combat_keywords,
+    top_up_combat_keywords,
+};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-065";
@@ -23,26 +29,43 @@ fn arrived(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
     matches!(event, GameEvent::Summoned { instance_id, .. } if *instance_id == me.id)
 }
 
-fn draw_on_arrival() -> TriggerDef {
-    TriggerDef::new("keenus-combat-keywords", &[GameEventType::Summoned], |ctx, event| {
-        if !arrived(ctx, event) {
-            return vec![];
-        }
-        vec![draw_for(param(&*ctx, "keywords"))]
-    })
+fn draw_on_arrival(top_up: bool) -> TriggerDef {
+    TriggerDef::new(
+        "keenus-combat-keywords",
+        &[GameEventType::Summoned],
+        move |ctx, event| {
+            if !arrived(ctx, event) {
+                return vec![];
+            }
+            vec![draw_for(param(&*ctx, "keywords"), top_up)]
+        },
+    )
     .with_when(|ctx, event| arrived(ctx, event))
 }
 
-fn draw_for(count: i32) -> Effect {
-    draw_combat_keywords(DrawCombatKeywordsArgs { count, key: None })
+/// R3778000: `top_up` draws what the number asks beyond the list; the kept script's draw keeps any it
+/// holds (R781004).
+fn draw_for(count: i32, top_up: bool) -> Effect {
+    let args = DrawCombatKeywordsArgs { count, key: None };
+    if top_up {
+        top_up_combat_keywords(args)
+    } else {
+        draw_combat_keywords(args)
+    }
 }
 
-fn keenus() -> Script {
+fn keenus(top_up: bool) -> Script {
     Script {
-        triggers: vec![draw_on_arrival()],
+        triggers: vec![draw_on_arrival(top_up)],
+        // R3778000: a Buff, a number set or the Radiant face that raises its number draws the rest.
+        combat_keywords_follow: top_up.then_some("keywords"),
         // An Equip play fuses this into a Unit, which carries the Aura and draws its own (R1086).
-        fused_into: Some(hook(|ctx| vec![draw_for(param(&*ctx, "keywords"))])),
-        conditional_keywords: Some(read_hook(|args| drawn_combat_keywords(args.self_, None))),
+        fused_into: Some(hook(move |ctx| vec![draw_for(param(&*ctx, "keywords"), top_up)])),
+        conditional_keywords: Some(if top_up {
+            read_hook(|args| aura_combat_keywords(&args, "keywords", None))
+        } else {
+            read_hook(|args| drawn_combat_keywords(args.self_, None))
+        }),
         ..Script::default()
     }
 }
@@ -50,8 +73,17 @@ fn keenus() -> Script {
 pub fn script() -> CardScripts {
     // One script: the Radiant face's 10 is its declared number, which `param` reads off the face.
     CardScripts {
-        base: keenus(),
-        radiant: keenus(),
+        base: keenus(true),
+        radiant: keenus(true),
+    }
+}
+
+/// R767000: through v0.6.0b the Aura drew once as it arrived and kept its keywords whatever its
+/// number did (R781004); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_0b() -> CardScripts {
+    CardScripts {
+        base: keenus(false),
+        radiant: keenus(false),
     }
 }
 
@@ -78,6 +110,9 @@ mod tests {
     /// as State of the Game is since #2179.
     const THE_ROCK: &str = "core-066";
     const FILLER: &str = "core-005";
+    /// (0) Spell: a Unit gains Reborn; Radiant, then it is made Radiant.
+    const NEW_WRAPS: &str = "classicplus-010";
+    use crate::BOOK_OF_BUFF;
 
     fn played(seed: &str, radiant: bool, p1: Value) -> Scenario {
         crate::register_all();
@@ -112,6 +147,19 @@ mod tests {
 
     fn pool_kinds() -> Vec<KeywordKind> {
         random_pool_keywords().iter().map(Keyword::kind).collect()
+    }
+
+    /// R3778000: the drawn keywords the card acts with, in draw order: what its Aura gives.
+    fn aura(s: &Scenario, id: &str) -> Vec<KeywordKind> {
+        let acting = acting(s, id);
+        drawn(s, id).into_iter().filter(|kind| acting.contains(kind)).collect()
+    }
+
+    /// Keenus on the field, the Book of Buff in hand; its id.
+    fn with_book(seed: &str) -> (Scenario, String) {
+        let s = played(seed, false, json!({ "hand": [BOOK_OF_BUFF] }));
+        let id = s.card(KEENUS).id.clone();
+        (s, id)
     }
 
     mod m65_keymaster_keenus {
@@ -236,6 +284,35 @@ mod tests {
                 assert!(acting.contains(&KeywordKind::Equip));
                 assert_eq!(drawn(&s, &host.id).len(), 5);
             }
+
+            #[test]
+            fn r3778000_a_buff_of_its_number_keeps_its_5_and_draws_a_6th() {
+                let (seed, s, id) = crate::buff_number_once("keenus-3778", "keywords", with_book);
+                let (before, first) = with_book(&seed);
+                let five = drawn(&before, &first);
+                assert_eq!(five.len(), 5);
+
+                let six = drawn(&s, &id);
+                assert_eq!(six.len(), 6, "{six:?}");
+                assert_eq!(six[..5], five[..], "it keeps the 5 it drew, in their order");
+                assert!(!five.contains(&six[5]), "the 6th is none it had: {six:?}");
+                assert_eq!(aura(&s, &id), six, "it acts with all 6");
+            }
+
+            #[test]
+            fn r3778000_a_nerf_takes_off_only_its_newest_and_a_buff_back_returns_it() {
+                let (mut s, id) = with_book("keenus-3778-nerf");
+                let five = drawn(&s, &id);
+
+                assert_eq!(crate::degrade_number(&mut s, &id, "keywords"), 4);
+                assert_eq!(aura(&s, &id), five[..4], "only the newest, {:?}, comes off", five[4]);
+                assert!(!acting(&s, &id).contains(&five[4]));
+                assert_eq!(drawn(&s, &id), five, "the list stays whole");
+
+                assert_eq!(crate::upgrade_number(&mut s, &id, "keywords"), 5);
+                assert_eq!(aura(&s, &id), five, "the same one comes back");
+                assert_eq!(drawn(&s, &id), five);
+            }
         }
 
         mod radiant {
@@ -267,6 +344,53 @@ mod tests {
                 let id = s.card(KEENUS).id.clone();
                 assert_eq!(drawn(&s, &id).len(), 11);
             }
+
+            #[test]
+            fn r3778000_made_radiant_on_the_field_it_tops_up_from_5_to_10_keeping_the_first_5() {
+                let mut s = played(
+                    "keenus-3778-radiant",
+                    false,
+                    json!({ "hand": [{ "def": NEW_WRAPS, "radiant": true }] }),
+                );
+                let id = s.card(KEENUS).id.clone();
+                let five = drawn(&s, &id);
+                assert_eq!(five.len(), 5);
+
+                s.play(NEW_WRAPS, json!({ "targets": [{ "pick": "instance", "instanceId": id }] }));
+
+                assert!(s.card(id.as_str()).radiant);
+                let ten = drawn(&s, &id);
+                assert_eq!(ten.len(), 10, "{ten:?}");
+                assert_eq!(ten[..5], five[..], "it keeps the 5 it drew");
+                let mut unique = ten.clone();
+                unique.sort();
+                unique.dedup();
+                assert_eq!(unique.len(), 10, "and draws 5 more it does not have");
+                assert!(!ten[5..].contains(&KeywordKind::Reborn), "New Wraps gave it Reborn first");
+                assert_eq!(aura(&s, &id), ten, "it acts with all 10");
+            }
+        }
+
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_0b_keeps_its_5_whatever_its_number() {
+            crate::under_kept(KEENUS, script_v0_6_0b(), || {
+                let (mut s, id) = with_book("keenus-kept");
+                let five = drawn(&s, &id);
+                assert_eq!(five.len(), 5);
+                assert_eq!(crate::degrade_number(&mut s, &id, "keywords"), 4);
+                assert_eq!(aura(&s, &id), five, "it kept all 5 through v0.6.0b");
+
+                let mut s = played(
+                    "keenus-kept-radiant",
+                    false,
+                    json!({ "hand": [{ "def": NEW_WRAPS, "radiant": true }] }),
+                );
+                let id = s.card(KEENUS).id.clone();
+                let five = drawn(&s, &id);
+                s.play(NEW_WRAPS, json!({ "targets": [{ "pick": "instance", "instanceId": id }] }));
+                assert!(s.card(id.as_str()).radiant);
+                assert_eq!(drawn(&s, &id), five, "made Radiant, it drew none more");
+            });
         }
     }
 }
