@@ -1373,6 +1373,46 @@ mod tests {
         assert!(past_def("core-013@v0.0.0-unknown").is_none());
     }
 
+    /// R3574001: a past version reads every number its card declares now, its own declaration first.
+    /// Fullsend 2's sweep met `stinkyscape-053@v0.5.8b`, whose definition declares `damage` while the
+    /// script covering it (v0.5.9f's, R767000) reads `least` and `most`, and the read panicked.
+    #[test]
+    fn r3574001_a_past_version_reads_a_number_it_never_declared_off_its_card() {
+        crate::register_all();
+        let s = jackioh_engine::testkit::scenario(serde_json::json!({ "seed": "r3574001" }));
+        let state = s.state();
+        let mut missing = 0;
+        for (card, now) in CATALOG.iter() {
+            for past in past_ids(card, crate::CATALOG_VERSION) {
+                let def = past_def(&past).expect("a past definition");
+                for param in now.params.iter().flatten() {
+                    let decl = jackioh_engine::params::param_decl_of(state, &past, &param.key)
+                        .unwrap_or_else(|| panic!("{past} reads no {}", param.key));
+                    let own = def.params.iter().flatten().find(|held| held.key == param.key);
+                    match own {
+                        Some(own) => assert_eq!(decl.base, own.base, "{past}: its own {} first", param.key),
+                        None => {
+                            assert_eq!(decl.base, param.base, "{past}: {} off its card", param.key);
+                            missing += 1;
+                        }
+                    }
+                }
+            }
+        }
+        assert!(
+            missing > 0,
+            "some past version lacks a number its card declares now"
+        );
+        let least = jackioh_engine::params::param_decl_of(state, "stinkyscape-053@v0.5.8b", "least")
+            .expect("Flak v3's past version reads least");
+        assert_eq!(
+            least.base,
+            CATALOG["stinkyscape-053"].params.as_ref().expect("params")[0].base
+        );
+        // A catalog card still declares only its own numbers.
+        assert!(jackioh_engine::params::param_decl_of(state, "stinkyscape-053", "damage").is_none());
+    }
+
     #[test]
     fn r3538002_a_past_id_runs_the_script_kept_for_its_version() {
         // Pickle kept its v0.3.16 script under v0.4.0b: a past version from then runs it.
