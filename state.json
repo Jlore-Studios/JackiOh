@@ -13415,6 +13415,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 240,
       "started_at": "2026-11-13T12:23:52Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -34970,9 +34971,33 @@
         "title": "Patch: the fuzz monitor checks that the state check ran: no dead unit left standing, no live hero at 0, no mana below 0",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-1"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "b472b747c42146333c257902c7dd8b4b65312934",
+        "issue": 3730,
+        "merged_at": "2026-11-13T15:21:37Z",
+        "n": 240,
+        "pr": 3779,
+        "queued_at": "2026-11-13T15:21:37Z",
+        "sha": "44133b263728bd7d699e6233aa44690bfeff2eb3",
+        "status": "queued",
+        "title": "Patch: a private lobby screen for 1v1 rooms and co-op rooms: seats, invites, each player's deck and Ready, and the host's Start",
+        "tries": 0
       }
     ],
-    "count": 239
+    "count": 240
   },
   "statistics": {
     "at": "2026-11-13T15:04:10Z"
