@@ -16343,15 +16343,6 @@
       "failures": 0,
       "feedback_since": "2026-11-13T08:39:48Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-11-13T10:19:27Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "## State\n\n- Revision (ci) of PR #3798: DONE, waiting on the harness's checks. `rust (classify)` was red on d728cf70 because main shipped v0.6.0 (Stinkyscape+) and v0.6.0b (#3830): its release fragment is gone, so six stinkyscapeplus-* families our change moves were unclaimed. Added them to `plays`.\n- Also: kept scripts moved from \"v0.5.12ap\" to \"v0.6.0b\" (the newest shipped version that ran them, ADDING_CARDS \u00a73) and renamed `script_v0_6_0b` everywhere this branch named them.\n- Green here: classify --claims vs d3d92bea from a temp head worktree (Cards, micro, exit 0), cards tests (9694 + 1177), fmt, patches/catalog/spec check. Worktrees and ../jackioh-wt removed.\n- Pitfall: two worktrees sharing one CARGO_TARGET_DIR can reuse each other's path-crate artifacts; touch the second checkout's sources (or use separate targets).\n\n## Log\n\n- 2026-11-13 (run 3, ci): .bot-notes.md was missing on the fresh checkout; rewritten. Kept-script version moved to v0.6.0b; building base and head tools for classify.\n- head build in cls-target reused the base's engine artifacts (same metadata hash; head checkout older than the artifacts), so classify ran the base binary twice and said 'Internal'. Touched the head sources and rebuilt.\n- classify --claims vs d3d92bea (origin/main) from temp head worktree 5be32782 (= this tree): Cards, micro, exit 0 after adding stinkyscapeplus-017/032/055/111/113/t-ai-05 to plays. cards tests 9694 + 1177 green with the v0.6.0b rename.\n- Fragment +6 stinkyscapeplus families; classify green; worktrees removed.\n",
-        "provider": "claude-1",
-        "reason": "`claude-1` stops mid-call: 5-hour usage is 100%, at or over its 100% cap; it resets at 2026-11-13T11:20:00Z",
-        "trail": ""
-      },
       "interruptions": 0,
       "issue": 3778,
       "kind": "review",
