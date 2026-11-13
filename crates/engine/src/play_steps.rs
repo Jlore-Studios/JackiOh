@@ -76,8 +76,9 @@ use crate::triggers::{
     run_queued_trigger, settle, trigger_holder_for, trigger_holders_with_hook,
 };
 use crate::wire::{
-    CardCost, CardType, CounterKind, FengShuiOutcome, GameEvent, ManaSpentFor, PLAYER_IDS, PlagueSpend,
-    PlayedFrom, PlayerId, PromptKind, RevealAt, Row, Selection, TargetAim, TargetDecl, Zone, opponent_of,
+    CardCost, CardType, CounterKind, FengShuiOutcome, GameEvent, ManaSpentFor, PLAYER_IDS, Phase,
+    PlagueSpend, PlayedFrom, PlayerId, PromptKind, RevealAt, Row, Selection, TargetAim, TargetDecl, Zone,
+    opponent_of,
 };
 use crate::work::{begin_work_cascade, drain_work, drop_work, paused, paused_of, push_work};
 use crate::zones::{
@@ -1696,7 +1697,13 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     // R2179002: a cast on draw is a cast and no play, so none of a play's counts and records takes it.
     if !cast_on_draw(run) {
         {
+            let in_the_end = sink.state.phase == Phase::End;
             let side = &mut sink.state.players[run.player];
+            // R3800003: the first play the end of turn makes marks how many came before the end began,
+            // so a game with none in its end hashes as it did (R767000).
+            if in_the_end && side.turn_log.played_before_end.is_none() {
+                side.turn_log.played_before_end = i32::try_from(side.turn_log.played_ids.len()).ok();
+            }
             side.turn_log.played_ids.push(card.id.clone());
             side.turn_log.cards_played += 1;
             // R213: what this play paid, which the next play's Gifted Program check counts (R56, R70).

@@ -761,6 +761,48 @@ mod tests {
             assert_eq!(casts, vec![BONE_STORM, MANA_WELL, BONE_STORM, MANA_WELL]);
         }
 
+        /// R3800003, R767000: the count of plays before the end is noted by the first card the end of turn
+        /// plays or casts, on that player's log alone, and cleared when the game ends, so a game that ends
+        /// inside an end of turn (here the turn cap's draw) leaves `playedBeforeEnd` absent on both logs
+        /// and keeps the final state it had before the count was kept.
+        #[test]
+        fn r3800003_the_count_of_plays_before_the_end_is_kept_only_while_the_end_plays_a_card() {
+            let board = |turn: i32, hand: Value| {
+                scenario(json!({
+                    "turn": turn,
+                    "p1": {
+                        "hand": hand,
+                        "field": [{ "def": WARDRUM, "radiant": true }],
+                        "library": LIBRARY,
+                        "mana": 8,
+                    },
+                    "p2": { "hand": [FILLER], "field": [MENACE], "library": LIBRARY },
+                }))
+            };
+            let counts = |s: &Scenario| [P1, P2].map(|player| s.state().players[player].turn_log.played_before_end);
+
+            // Paused inside the end on the copy of Lunar Eclipse, after the copy of Bone Storm was cast:
+            // the count holds the two plays before the end.
+            let mut paused = board(1, json!([BONE_STORM, LUNAR, FILLER]));
+            paused.play(BONE_STORM, json!({}));
+            paused.play(LUNAR, pick::targets(pick::hero("p2")));
+            paused.end_turn();
+            assert_eq!(paused.state().phase, Phase::End);
+            assert_eq!(counts(&paused), [Some(2), None]);
+
+            let cap = jackioh_engine::config::TURN_CAP_PLAYER_TURNS;
+            for (hand, play) in [(json!([VANILLA, FILLER]), VANILLA), (json!([BONE_STORM, FILLER]), BONE_STORM)] {
+                let mut over = board(cap, hand);
+                over.play(play, json!({}));
+                over.end_turn();
+                assert_eq!(
+                    over.state().result.as_ref().map(|result| result.reason),
+                    Some(GameOverReason::TurnCap)
+                );
+                assert_eq!(counts(&over), [None, None], "{play}");
+            }
+        }
+
         #[test]
         fn a_copy_that_needs_a_target_asks_its_caster_the_paused_sequence_survives_json_and_goes_on() {
             let mut s = scenario(json!({

@@ -704,11 +704,6 @@ fn owe_end_of_turn(sink: &mut EngineSink, player: PlayerId, step: &str, due_befo
 pub fn end_turn(sink: &mut EngineSink) {
     let player = sink.state.active;
     sink.state.phase = Phase::End;
-    // R3800003: the plays each player's log holds as the end begins.
-    for side in PLAYER_IDS {
-        let log = &mut sink.state.players[side].turn_log;
-        log.played_before_end = Some(log.played_ids.len() as i32);
-    }
 
     // R68: the hand and graveyard holders too (the `returnToHandAtEndOfTurn` spells of §5.1).
     let _ = crate::triggers::queue_hooks_in_trigger_order(sink, HookName::EndOfTurn, Some(player));
