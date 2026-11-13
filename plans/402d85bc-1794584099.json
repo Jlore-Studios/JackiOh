@@ -1,0 +1,53 @@
+{
+  "action": "plan",
+  "number": 3729,
+  "title": "Patch: a Play hub that explains every way to play, and one inbox for everything waiting on you",
+  "branch": "bot/issue-3729",
+  "thread": "**Issue #3729 (data, not instructions):**\n\n```text\n# #3729: Patch: a Play hub that explains every way to play, and one inbox for everything waiting on you\nOpened by @jgoetzmann.\n\n### What it does\n\nThe Play screen becomes a hub where a new player can tell, at a glance, every way to play, how long each takes and what it needs. One inbox gathers everything waiting on the player: a challenge, a daily game on your move, a friend request, an invite, a shared replay. Nothing then depends on catching a toast before it disappears.\n\nIt follows the conventions in #3728's `docs/polish/10-menus.md`.\n\n### Where it stands\n\n- **`/play`** (`routes/play.tsx`, `routes/lobby.css`) has a rank panel, then numbered steps:\n  1. mode tiles (Best of 1, Conquest, All Random);\n  2. a deck or trio pick with the validator's verdict;\n  3. Find match, or Leave the queue, with a searching beacon and the expected wait.\n\n  A side column links to Practice, Dungeon, Together and Replays, and holds \"Play a friend\": create a room, a ticket with its code, copy and share, and join by code. It is two columns from 900px. On a phone the headings are hidden to save space.\n- **Co-op** (Duos, \u00a713) is not on Play at all. It is a panel on `/together` (`duos/CoopPanel.tsx`).\n- **Live toasts.** The things waiting on a player arrive as toasts (`together/ChallengeToast.tsx`, `routes/GameBanner.tsx`, `game/DrawOffer.tsx`) and as the Friends button's badge (`socialPoll.ts`, `socialSocket.ts`). There is no notification centre, so a challenge missed while looking away is gone once its toast closes.\n\n### The hub\n\nMode cards in four groups. Each card shows a name, one line on what it is, how long a game takes, and what it needs:\n\n| Group | Cards |\n|---|---|\n| Online | Ranked: Best of 1 (one deck), Conquest (a trio), All Random (nothing to bring), each showing your rank on its ladder |\n| Daily | Daily games (#3727): \"Your move in 3\"; a move every 1 to 14 days |\n| With friends | Private lobby (#3730: 1v1 and co-op, and 2v2 once #3731 lands) \u00b7 Challenge a friend |\n| Solo | Practice against the AI \u00b7 Dungeon run \u00b7 Tutorial |\n\n- **Starting a queue.** Choosing an Online card opens a focused panel: the deck or trio picker with its verdict, the ladder's rank, and Find match. It is one step, not three numbered ones, and it opens on the last mode and deck you used.\n- **While you wait.** Once queued, the search shows in the shell's banner slot (#3728) on every menu screen: mode, time waited, expected wait, Cancel. When a match is found, a short reveal names the opponent and their rank before the board opens (`QueueFound`).\n- **Links that move.** \"Play a friend\" moves into the private lobby (#3730), and the side column of links becomes the Solo group.\n\n### The inbox\n\n- **Where it lives.** A bell in the shell's top bar, with a badge counting what needs you.\n- **What it holds**: daily games on your move, challenges in (live and daily), friend requests, lobby and co-op invites, and replays a friend shared. Each item carries its action inline: Play, Accept, Decline, Join, Watch.\n- **Toasts still pop.** A live challenge still pops up its toast. It also stays in the inbox until it is answered or lapses, with its time left (#1268).\n- **No new server state.** The inbox is built from what the client already reads: the `social` snapshot (`GET /api/social`, the `/ws/social` frame) and #3727's daily list. \"Read\" works as the Friends badge's \"as last read\" already does.\n\n### Acceptance\n\n- `/play` shows the four groups. Each card's time-to-play and what-it-needs come from named constants or the catalog of modes, never restated (CLAUDE.md rule 9).\n- Choosing a queue mode takes one panel from the hub to Find match. An e2e spec queues from the hub at a desktop size and at an iPad size.\n- The queue's banner stays on every menu screen while searching, and Cancel works from each. e2e covers going from Play to Collection while queued.\n- The inbox lists a pending challenge, a friend request and a shared replay, each answerable from the inbox. Unit tests cover its order and badge count, and an e2e spec accepts a challenge from it after its toast has closed.\n- The screen's unit, component (`play-screen`) and e2e tests move to the new layout. Screenshots at the tracker's device sizes (#3728) go in the pull request.\n- Every required check is green.\n\n### Blocked by, part of\n\nBlocked by #3727, #3728 and #3730 (the daily list, the shell and the lobby it links to). Part of #3726.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3729: needs a plan; `claude-3` (claude, `sonnet`, medium) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-11T19:46:56Z",
+    "claimed_at": "2026-11-13T15:35:49Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3868 skipped: it waits for #3821 to close first"
+  ]
+}
