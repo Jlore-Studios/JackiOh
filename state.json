@@ -17150,13 +17150,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-8",
         "rejections": [],
-        "reviews": [],
-        "sha": "0d95fefaba03b3958b6b8e6b2c519431f8354001",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-8",
+            "run": "43351915838",
+            "tier": "strong"
+          }
+        ],
+        "sha": "4282d8eb2874dffefaca7c3ff5e0f93177881781",
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "3817": {
