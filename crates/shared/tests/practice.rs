@@ -704,9 +704,11 @@ fn r1705005_a_lesson_seats_the_human_under_the_tutorial_handicap_and_the_pool_ho
 
 #[test]
 fn r668_a_new_session_folds_the_saved_log_back_to_the_same_state_and_ai_stream() {
-    let mut session = started("practice-r668", P2);
+    // Seed "practice-r668" until #3837, whose costs and stats dealt a game there that ended inside the
+    // six steps it plays on after the resume.
+    let mut session = started("practice-r668-6", P2);
     session.answer_mulligans();
-    let mut human = Rng::new("practice-r668:human", 0);
+    let mut human = Rng::new("practice-r668-6:human", 0);
     for _ in 0..24 {
         if !session.ai_turn() {
             let body = random_action(session.state(), P2, &mut human).expect("an action");
