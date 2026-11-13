@@ -17083,6 +17083,13 @@
     "3815": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-13T03:28:29Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "None of the five lines holds: no engine, AI, cross-crate, migration or 40-file change; the repo side is at most one count in scripts/ci-shards.toml plus a two-line test edit."
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
