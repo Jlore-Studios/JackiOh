@@ -13,8 +13,8 @@
 //! it lands in the opponent's leftmost open unit zone, under their control (R3837000, the
 //! `summonForOpponent` flag), or where the play named when they have none (R3837001). It is still the
 //! player's play and card, so the Cry that follows is the player's and reads "left" and "right" from the
-//! player's seat (R3837002); Silas rotates with the rest and may cross back. `script_v0_6_0d` keeps the
-//! scripts through v0.6.0d, both faces staying with their player, for those replays (R767000).
+//! player's seat (R3837002); Silas rotates with the rest and may cross back. `script_v0_6_0g` keeps the
+//! scripts through v0.6.0g, both faces staying with their player, for those replays (R767000).
 //!
 //! The direction is a play-time choice, not a prompt: R81 names this card and §10.6 says no Core card
 //! opens a `direction` prompt, so the script declares `modes` and `chosen_options(ctx)` reads `ctx.modes`.
@@ -86,9 +86,9 @@ pub fn script() -> CardScripts {
     silly_silas(true)
 }
 
-/// R767000: through v0.6.0d both faces stayed with their player; `KEPT_SCRIPTS` folds those replays
+/// R767000: through v0.6.0g both faces stayed with their player; `KEPT_SCRIPTS` folds those replays
 /// under it.
-pub fn script_v0_6_0d() -> CardScripts {
+pub fn script_v0_6_0g() -> CardScripts {
     silly_silas(false)
 }
 
@@ -252,8 +252,8 @@ mod tests {
         }
 
         #[test]
-        fn r767000_the_kept_v0_6_0d_script_stays_with_its_player() {
-            crate::under_kept(super::super::ID, super::super::script_v0_6_0d(), || {
+        fn r767000_the_kept_v0_6_0g_script_stays_with_its_player() {
+            crate::under_kept(super::super::ID, super::super::script_v0_6_0g(), || {
                 let mut s = scenario(json!({ "p1": { "hand": ["core-052"] } }));
                 s.play("core-052", json!({ "zone": 1, "modes": ["right"] }));
                 assert_eq!(landed(&s), (P1, 1));

@@ -14,6 +14,10 @@
 // when the social read says the games waiting on the player changed (the opponent moved). Once the game is
 // over, Rematch sends its opponent a new daily challenge at the same mode and time per move (§9.13).
 //
+// The board shows what every table shows (R3855000): its hero names the opponent, its rail lists the modifiers
+// in play (R169), the seat's forecast of its attacks rides the read and draws an aimed attack's outcomes
+// (R3477000), and a finished game's Watch the replay opens the server's replay of it.
+//
 // CLAUDE.md rule 7: who holds the move, its deadline, what is legal and every refusal are the server's.
 
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
@@ -22,13 +26,17 @@ import type { ActionBody } from "@jackioh/shared";
 
 import Game from "../game/Game.tsx";
 import { CatalogContext } from "../game/catalog.ts";
+import { ModifierList } from "../game/ModifierList.tsx";
 import { outcomeFor } from "../game/Result.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { Loading, ShellPanel } from "../main.tsx";
 import { ApiRequestError } from "../net/api.ts";
 import { getDailyGame, sendDailyAction, type DailyGame } from "../net/daily.ts";
 import { attempt, messageOf } from "../net/errors.ts";
+import { withSession } from "../net/gate.ts";
 import { navigate, paths } from "../net/navigate.ts";
+import OpenedReplay from "../replay/OpenedReplay.tsx";
+import { openOnlineMatchReplay } from "../replay/sources.ts";
 import { BackLink } from "../routes/nav.tsx";
 import { useCatalogLookup } from "../together/catalog.ts";
 import { useSocialReads } from "../together/socialPoll.ts";
@@ -61,6 +69,7 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
   const [error, setError] = useState<string | null>(null);
   const [reads, setReads] = useState(0);
   const [rematching, setRematching] = useState(false);
+  const [watching, setWatching] = useState(false);
   const current = useRef<DailyGame | null>(null);
   current.current = game;
   const sending = useRef(false);
@@ -156,6 +165,20 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
     return <Loading what="Loading your game…" slow skeleton="panel" />;
   }
 
+  if (watching && game.view.result !== null) {
+    return (
+      <CatalogContext.Provider value={lookup}>
+        <OpenedReplay
+          load={() => withSession((token) => openOnlineMatchReplay(token, game.matchId))}
+          opponentLabel={game.opponent.username}
+          onLeave={() => {
+            setWatching(false);
+          }}
+        />
+      </CatalogContext.Provider>
+    );
+  }
+
   const next = game.nextGame;
   const nextButton =
     !game.hasMove && next !== null ? (
@@ -183,6 +206,8 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
         <Game
           view={game.view}
           legal={game.legal}
+          forecast={game.forecast}
+          enemyLabel={game.opponent.username}
           onAction={send}
           error={error}
           wearCosmetics
@@ -191,7 +216,13 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
           resultReason={onTimeWords(game)}
           turnClock={game.over ? undefined : <DailyClockPill holds={game.holds} seat={game.seat} now={now} />}
           phoneRailTop
-          boardRail={<BackLink to={paths.daily} label="Back to daily games" showSettings={false} />}
+          boardRail={
+            <>
+              <BackLink to={paths.daily} label="Back to daily games" showSettings={false} />
+              {/* R169: every live modifier in full, one tap away, as every other table's rail lists them. */}
+              <ModifierList view={game.view} opponentLabel={t("Opponent")} />
+            </>
+          }
           boardNotice={
             <>
               {game.olderCatalog ? (
@@ -214,6 +245,17 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
               >
                 {t("Rematch")}
               </button>
+              {game.view.result?.reason === "voided" ? null : (
+                <button
+                  type="button"
+                  data-testid={dailyTestid.watchReplay}
+                  onClick={() => {
+                    setWatching(true);
+                  }}
+                >
+                  {t("Watch the replay")}
+                </button>
+              )}
               <button type="button" data-testid={dailyTestid.backToList} data-route={paths.daily} onClick={() => navigate(paths.daily)}>
                 {t("Back to daily games")}
               </button>

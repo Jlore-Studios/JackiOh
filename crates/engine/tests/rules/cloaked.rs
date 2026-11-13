@@ -306,6 +306,68 @@ mod r783005_cloaked_price {
             0
         );
     }
+
+    /// R783005 (#3790): `query::played_type_of`, the read every card answering a play types it by, reads
+    /// a card set by its Cloaked as the Trap it was set as (a Field Trap for a Unit or a Field Spell, a
+    /// Trap for a Spell), as the turn's count does, and a face-up play as its own type. A set card gone
+    /// from the game reads as its printed card (R783008).
+    #[test]
+    fn r783005_a_play_set_by_its_cloaked_reads_as_the_trap_it_was_set_as_and_a_face_up_play_as_its_own_type()
+    {
+        use jackioh_engine::query::played_type_of;
+        let mut state = playing("r783005-played-type");
+        state.players.p1.mana.current = 10;
+        state.players.p1.mana.max = 10;
+        let plays = [
+            (cloaked_unit(), Row::Backrow, 2, true, CardType::FieldTrap),
+            (cloaked_bolt(), Row::Backrow, 3, true, CardType::Trap),
+            (cloaked_field(), Row::Backrow, 4, true, CardType::FieldTrap),
+            (plain_unit(), Row::Units, 1, false, CardType::Unit),
+        ];
+        for (def, row, lane, face_down, expected) in plays {
+            let card = in_hand(&mut state, &def.id, P1);
+            let mut body = json!({
+                "type": "play",
+                "instanceId": card.id,
+                "zone": { "row": row, "lane": lane },
+                "playerId": "p1",
+            });
+            if face_down {
+                body["faceDown"] = json!("cloaked");
+            }
+            let result = act_result(&state, body);
+            assert_eq!(result.error, None, "{}", def.id);
+            let mut typed = 0;
+            for event in &result.events {
+                match event {
+                    GameEvent::CardPlayed { def_id, .. } | GameEvent::CardResolved { def_id, .. } => {
+                        assert_eq!(def_id, &def.id);
+                        assert_eq!(
+                            played_type_of(&result.state, event),
+                            Some(expected),
+                            "{}: {event:?}",
+                            def.id
+                        );
+                        typed += 1;
+                    }
+                    _ => assert_eq!(played_type_of(&result.state, event), None, "{event:?}"),
+                }
+            }
+            assert_eq!(typed, 2, "{}: its cardPlayed and its cardResolved", def.id);
+            state = result.state;
+        }
+
+        // R783008: a set card that has left the game is its printed card again.
+        let gone: GameEvent = json_as(json!({
+            "type": "cardResolved",
+            "player": "p1",
+            "instanceId": "c99999",
+            "defId": cloaked_unit().id,
+            "permanent": true,
+            "costPaid": 3,
+        }));
+        assert_eq!(played_type_of(&state, &gone), Some(CardType::Unit));
+    }
 }
 
 mod r783006_cloaked_reveal {

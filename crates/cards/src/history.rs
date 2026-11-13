@@ -700,31 +700,31 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c073_1_classic_golem::script_v0_5_13g,
     ),
     // #3837 (R3837000, R3837003, R3837005): the last scripts before Stinkyscape Balance Changes V.
-    (c052_silly_silas::ID, "v0.6.0d", c052_silly_silas::script_v0_6_0d),
+    (c052_silly_silas::ID, "v0.6.0g", c052_silly_silas::script_v0_6_0g),
     (
         c029_portal_to_the_past::ID,
-        "v0.6.0d",
-        c029_portal_to_the_past::script_v0_6_0d,
+        "v0.6.0g",
+        c029_portal_to_the_past::script_v0_6_0g,
     ),
     (
         c044_cn_jade_well::ID,
-        "v0.6.0d",
-        c044_cn_jade_well::script_v0_6_0d,
+        "v0.6.0g",
+        c044_cn_jade_well::script_v0_6_0g,
     ),
     (
         c087_tatches_the_totem::ID,
-        "v0.6.0d",
-        c087_tatches_the_totem::script_v0_6_0d,
+        "v0.6.0g",
+        c087_tatches_the_totem::script_v0_6_0g,
     ),
     (
         c035_corpse_recycler::ID,
-        "v0.6.0d",
-        c035_corpse_recycler::script_v0_6_0d,
+        "v0.6.0g",
+        c035_corpse_recycler::script_v0_6_0g,
     ),
     (
         c096_ocean_tsunami::ID,
-        "v0.6.0d",
-        c096_ocean_tsunami::script_v0_6_0d,
+        "v0.6.0g",
+        c096_ocean_tsunami::script_v0_6_0g,
     ),
 ];
 

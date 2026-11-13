@@ -5,8 +5,8 @@
 //! `subsystems/last_boards`). Since issue #3837 one that gives no card (hotseat, the AI's seat, a first
 //! game, a board of dropped entries, R564, or of Portal alone, R387) falls back to the non-token Units
 //! and Field Spells costing (3) or (4) (R3837003, R3837004): the base face Discovers one, the Radiant
-//! face adds {cards} different ones, each costing (0) and on its base face. Through v0.6.0d such a board
-//! gave nothing (R129); `script_v0_6_0d` keeps that for its replays (R767000).
+//! face adds {cards} different ones, each costing (0) and on its base face. Through v0.6.0g such a board
+//! gave nothing (R129); `script_v0_6_0g` keeps that for its replays (R767000).
 //! R2739000: the base face sets `secret_option_counts`, since how many cards its Discover offers is read
 //! off a board no view shows, so the other seat is never told it.
 
@@ -123,9 +123,9 @@ pub fn script() -> CardScripts {
     portal(true)
 }
 
-/// R767000: through v0.6.0d a board that gave no card gave nothing (R129); `KEPT_SCRIPTS` folds those
+/// R767000: through v0.6.0g a board that gave no card gave nothing (R129); `KEPT_SCRIPTS` folds those
 /// replays under it.
-pub fn script_v0_6_0d() -> CardScripts {
+pub fn script_v0_6_0g() -> CardScripts {
     portal(false)
 }
 
@@ -409,8 +409,8 @@ mod tests {
             }
 
             #[test]
-            fn r129_r767000_the_kept_v0_6_0d_script_still_fizzles_on_an_empty_board() {
-                crate::under_kept(PORTAL, super::super::super::script_v0_6_0d(), || {
+            fn r129_r767000_the_kept_v0_6_0g_script_still_fizzles_on_an_empty_board() {
+                crate::under_kept(PORTAL, super::super::super::script_v0_6_0g(), || {
                     for radiant in [false, true] {
                         let mut s = scenario(json!({
                             "p1": { "hand": [{ "def": PORTAL, "radiant": radiant }, FILLER] },

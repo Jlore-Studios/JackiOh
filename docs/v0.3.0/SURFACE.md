@@ -923,8 +923,8 @@ daily/<x>.rs   (#3727, SPEC §9.13) daily games over plain HTTPS, no actor: game
 ```
 
 A daily game's boundary (#3727) is plain HTTPS, so a client with no socket and no engine (a Roblox
-server, later) can play one: the caller's `view_for` and legal actions under the game's catalog, the
-`seq` an action is sent `after`, and the clock as `jackioh_shared::host::daily`'s `DailyHold`s
+server, later) can play one: the caller's `view_for`, legal actions and the forecast of its attacks (R3855000)
+under the game's catalog, the `seq` an action is sent `after`, and the clock as `jackioh_shared::host::daily`'s `DailyHold`s
 (`apps/web/src/wire/generated/DailyHold.ts`). The routes are `crates/server/README.md`'s "Daily games".
 
 ### 11.2 The shared shapes (frozen)

@@ -193,6 +193,8 @@ pub async fn get_profile(app: &Arc<App>, req: Req) -> ApiResult {
             "id": profile.id,
             "email": caller.user.email,
             "status": profile.status,
+            // R3733000: when the account was made (epoch ms), for the account screen's "Member since".
+            "createdAt": profile.created_at,
             // R612: never the hidden rating. The rank it moves is `GET /api/ranked`'s.
             "record": { "wins": record.wins, "losses": record.losses, "draws": record.draws },
             // Computed here so the client cannot disagree with itself about what counts as a played

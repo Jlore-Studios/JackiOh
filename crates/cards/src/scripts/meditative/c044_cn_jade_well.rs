@@ -5,8 +5,8 @@
 //!
 //! Engine: an `ActivationDecl` (R384), once a turn and free, as M #40 Feng Shui's (R3140000), that
 //! `add_to_hand`s the Rock (M #39.1). Issue #3837 turned its "Start of turn" into the Activate
-//! (R3837005); through v0.6.0d it was a Field Spell's `start_of_turn` (R62), Core #6 Mana Well's shape,
-//! which `script_v0_6_0d` keeps for those replays (R767000). MD-C15: an Activate needs a card that
+//! (R3837005); through v0.6.0g it was a Field Spell's `start_of_turn` (R62), Core #6 Mana Well's shape,
+//! which `script_v0_6_0g` keeps for those replays (R767000). MD-C15: an Activate needs a card that
 //! stays on the field as much as a start-of-turn text does, as R402 reasoned for C #78.
 //! Tunes: none.
 
@@ -51,9 +51,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the Rock at the start of each of its controller's turns, through v0.6.0d; `KEPT_SCRIPTS`
+/// R767000: the Rock at the start of each of its controller's turns, through v0.6.0g; `KEPT_SCRIPTS`
 /// folds those replays under it.
-fn well_v0_6_0d(radiant: bool) -> Script {
+fn well_v0_6_0g(radiant: bool) -> Script {
     Script {
         start_of_turn: Some(hook(move |_ctx| {
             vec![add_to_hand(json_as(json!({ "defId": ROCK, "radiant": radiant })))]
@@ -62,10 +62,10 @@ fn well_v0_6_0d(radiant: bool) -> Script {
     }
 }
 
-pub fn script_v0_6_0d() -> CardScripts {
+pub fn script_v0_6_0g() -> CardScripts {
     CardScripts {
-        base: well_v0_6_0d(false),
-        radiant: well_v0_6_0d(true),
+        base: well_v0_6_0g(false),
+        radiant: well_v0_6_0g(true),
     }
 }
 
@@ -190,8 +190,8 @@ mod tests {
     }
 
     #[test]
-    fn r767000_the_kept_v0_6_0d_script_adds_a_rock_at_the_start_of_turn() {
-        crate::under_kept(ID, script_v0_6_0d(), || {
+    fn r767000_the_kept_v0_6_0g_script_adds_a_rock_at_the_start_of_turn() {
+        crate::under_kept(ID, script_v0_6_0g(), || {
             for radiant in [false, true] {
                 let mut s = standing(radiant);
                 assert!(!listed_for(&s, P1));

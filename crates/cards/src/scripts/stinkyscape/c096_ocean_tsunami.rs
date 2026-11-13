@@ -5,8 +5,8 @@
 //!            Resources." (12/12)
 //!
 //! Tribute 1 since issue #3837 (§6.3, as C #45 Nature Titan's): one of your units, or one Sheep Token,
-//! sacrificed as the play is paid, so before the Cry. Through v0.6.0d it had none, which
-//! `script_v0_6_0d` keeps for those replays (R767000).
+//! sacrificed as the play is paid, so before the Cry. Through v0.6.0g it had none, which
+//! `script_v0_6_0g` keeps for those replays (R767000).
 //!
 //! Cry (R1): §6.3's Discard of its controller's whole hand (`discard_hand`, no draw from the rng), each
 //! Resource in it paying its Credits as it goes (R2250001), then `gain_resources { fill }`: as many
@@ -44,8 +44,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: no Tribute through v0.6.0d; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_0d() -> CardScripts {
+/// R767000: no Tribute through v0.6.0g; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_0g() -> CardScripts {
     CardScripts {
         base: face(false, None),
         radiant: face(true, None),
@@ -58,7 +58,7 @@ mod tests {
     use jackioh_engine::effects::summon;
     use jackioh_engine::testkit::*;
 
-    use super::{ID, script_v0_6_0d};
+    use super::{ID, script_v0_6_0g};
     use crate::{filler, run_as, scenario};
 
     const P1: PlayerId = PlayerId::P1;
@@ -107,8 +107,8 @@ mod tests {
     }
 
     #[test]
-    fn r767000_the_kept_v0_6_0d_script_needs_no_tribute() {
-        crate::under_kept(ID, script_v0_6_0d(), || {
+    fn r767000_the_kept_v0_6_0g_script_needs_no_tribute() {
+        crate::under_kept(ID, script_v0_6_0g(), || {
             let mut s = tsunami(false);
             s.play(ID, json!({}));
             s.expect_in_zone(ID, "field");

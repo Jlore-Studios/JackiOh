@@ -2,7 +2,7 @@
 //! non-Token Unit dies, summon a Rush Token for you." (Radiant: a Radiant Rush Token.)
 //! A trigger on `destroyed`, as C+ #19.5 Bot Loser's: a Field Spell's, so both players' Units answer it
 //! (R2199006). Since issue #3837 the token goes to the Recycler's controller whoever's Unit died
-//! (R3837005); through v0.6.0d it went to the Unit's controller as it died (R172), which `script_v0_6_0d`
+//! (R3837005); through v0.6.0g it went to the Unit's controller as it died (R172), which `script_v0_6_0g`
 //! keeps for those replays (R767000). It lands in R64's leftmost open zone (the event carries no lane,
 //! R89), none on a full row (§3.2); a Token's death gives nothing (§7).
 
@@ -48,9 +48,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the token for the dead Unit's controller (R172), through v0.6.0d; `KEPT_SCRIPTS` folds those
+/// R767000: the token for the dead Unit's controller (R172), through v0.6.0g; `KEPT_SCRIPTS` folds those
 /// replays under it.
-pub fn script_v0_6_0d() -> CardScripts {
+pub fn script_v0_6_0g() -> CardScripts {
     CardScripts {
         base: recycler(false, false),
         radiant: recycler(true, false),
@@ -121,8 +121,8 @@ mod tests {
         }
 
         #[test]
-        fn r767000_the_kept_v0_6_0d_script_gives_the_enemy_its_token() {
-            crate::under_kept(RECYCLER, super::super::script_v0_6_0d(), || {
+        fn r767000_the_kept_v0_6_0g_script_gives_the_enemy_its_token() {
+            crate::under_kept(RECYCLER, super::super::script_v0_6_0g(), || {
                 let mut s = board(false, json!({ "field": [TIMMY] }), json!({ "field": [SPECIESIST] }));
                 let vanilla = s.unit(P1, 1).unwrap();
                 let speciesist = s.unit(P2, 1).unwrap();

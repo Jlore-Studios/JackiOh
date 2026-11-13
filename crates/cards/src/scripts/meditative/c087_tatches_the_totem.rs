@@ -10,7 +10,7 @@
 //! no open zone it stays in the deck. A face-down play is a Trap with no tags until revealed (R448), so
 //! it summons nothing. End of turn: one Buff on a uniform pick over the hand (R440); Radiant, then one
 //! Buff on each Unit `adjacent_to` this (§3.1). Issue #3837 took the deck out of the pick; through
-//! v0.6.0d it was over hand and deck, which `script_v0_6_0d` keeps for those replays (R767000). "All
+//! v0.6.0g it was over hand and deck, which `script_v0_6_0g` keeps for those replays (R767000). "All
 //! Tribes" is all five tribal tags in the catalog's `tags`, read off them by the client — no catalog
 //! field of its own.
 
@@ -19,9 +19,10 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "meditative-087";
 
 /// Whether this resolution summons Tatches: its owner's play or cast (R70; not on draw, R2179002) of a card whose running
-/// face is neither Trap nor Field Trap and carries a tribal tag (R1424, MD-E11).
+/// face carries a tribal tag (R1424, MD-E11) and whose play counts as neither Trap nor Field Trap
+/// (`played_type_of`: a card set by its Cloaked is the Trap it was set as, R783005).
 fn tribal_play(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
-    let GameEvent::CardResolved { player, def_id, radiant, .. } = event else {
+    let GameEvent::CardResolved { player, def_id, .. } = event else {
         return false;
     };
     // R2179002: a card cast on draw is no play.
@@ -29,10 +30,7 @@ fn tribal_play(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
         return false;
     }
     let state: &GameState = ctx.state;
-    if matches!(
-        card_type_of_face(state, def_id, *radiant == Some(true)),
-        CardType::Trap | CardType::FieldTrap
-    ) {
+    if matches!(played_type_of(state, event), Some(CardType::Trap | CardType::FieldTrap)) {
         return false;
     }
     def_of(Some(state), def_id).tags.iter().any(|tag| TRIBAL_TAGS.contains(tag))
@@ -47,7 +45,7 @@ fn summon_on_tribal() -> TriggerDef {
 
 /// The piles the end-of-turn Buff picks from: the hand since issue #3837.
 const ZONES: &[&str] = &["hand"];
-/// Through v0.6.0d: the hand or the deck.
+/// Through v0.6.0g: the hand or the deck.
 const ZONES_V0_6_0C: &[&str] = &["hand", "library"];
 
 fn end_of_turn(radiant: bool, zones: &'static [&'static str]) -> Hook {
@@ -93,9 +91,9 @@ pub fn script() -> CardScripts {
     tatches(ZONES)
 }
 
-/// R767000: the end-of-turn Buff over hand and deck, through v0.6.0d; `KEPT_SCRIPTS` folds those
+/// R767000: the end-of-turn Buff over hand and deck, through v0.6.0g; `KEPT_SCRIPTS` folds those
 /// replays under it.
-pub fn script_v0_6_0d() -> CardScripts {
+pub fn script_v0_6_0g() -> CardScripts {
     tatches(ZONES_V0_6_0C)
 }
 
@@ -236,6 +234,15 @@ mod tests {
                 assert!(in_deck(&s));
             }
 
+            /// R783005: a Unit set face-down by its Cloaked is a Trap play, so the Human it is summons
+            /// nothing (R448).
+            #[test]
+            fn r783005_a_unit_set_face_down_by_its_cloaked_is_a_trap_play_and_summons_nothing() {
+                let mut s = decked("tatches-cloaked", json!([crate::CLOAKED_UNIT, FILLER]));
+                crate::set_cloaked(&mut s, P1, crate::CLOAKED_UNIT, 1);
+                assert!(in_deck(&s));
+            }
+
             #[test]
             fn r1162_the_opponents_tribal_play_does_nothing() {
                 let mut s = scenario(json!({
@@ -338,8 +345,8 @@ mod tests {
             }
 
             #[test]
-            fn r767000_the_kept_v0_6_0d_script_reaches_the_deck() {
-                crate::under_kept(ID, script_v0_6_0d(), || {
+            fn r767000_the_kept_v0_6_0g_script_reaches_the_deck() {
+                crate::under_kept(ID, script_v0_6_0g(), || {
                     let mut deck_hit = false;
                     for seed in 1..=20 {
                         let mut s = standing(seed, false);

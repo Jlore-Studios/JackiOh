@@ -1381,6 +1381,15 @@ mod api_profile_reports_identity_and_the_ladder_record {
         assert_eq!(body["winRate"], Value::Null);
     }
 
+    /// R3733000: the account screen's "Member since" reads when the profile was made.
+    #[tokio::test]
+    async fn r3733000_the_profile_carries_when_it_was_made() {
+        let app = test_app().await;
+        let (_, _, body) = call(&app, "GET", "/api/profile", Some(TOKEN), Value::Null).await;
+        let made = body["createdAt"].as_i64();
+        assert!(matches!(made, Some(n) if n > 0), "createdAt was {made:?}");
+    }
+
     /// A winnerless row is a DRAW (§9.5 makes the ceiling, a mutual hero death and an accepted draw
     /// all winnerless), and a draw counts as played while being neither a win nor a loss — so one
     /// win, one loss and one draw is a third, not a half.
