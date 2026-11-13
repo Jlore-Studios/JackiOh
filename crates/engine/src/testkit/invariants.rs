@@ -2289,6 +2289,23 @@ impl InvariantMonitor {
         }
     }
 
+    /// R636, R3778000: a change that raises such a unit's number on the field draws the rest of its list
+    /// as it resolves (`effects::buff::follow_combat_keywords`), which no `keywordGranted` reports. On
+    /// the field at the end in the same stint, its list, never shortened in a stay, says whether it drew
+    /// Windfury; gone, or back in a later stint, it reads as `note_drawn_windfury` reads it.
+    fn note_topped_up_windfury(&mut self, id: &str, def_id: &str, state: &GameState, back_later: bool) {
+        match find_instance(state, id) {
+            Some(card) if card.zone.z() == ZoneName::Field && !back_later => {
+                let drawn = crate::effects::drawn_combat_keywords(card, None);
+                if has_keyword(&drawn, KeywordKind::Windfury) {
+                    let stint = self.stint_of(id);
+                    self.windfury.insert(id.to_string(), stint);
+                }
+            }
+            _ => self.note_drawn_windfury(id, def_id, state, back_later),
+        }
+    }
+
     /// R636: a unit that just entered and carries Windfury, as it was before the action
     /// (`carried_windfury`) or as the action left it, has it in this stint.
     fn note_entry_windfury(&mut self, id: &str, state: &GameState) {
@@ -2986,6 +3003,22 @@ impl InvariantMonitor {
                         let stint = self.stint_of(instance_id);
                         self.windfury.insert(instance_id.clone(), stint);
                     }
+                }
+                // R3778000: a raised number tops up a drawn-keywords Aura's list with no `keywordGranted`.
+                GameEvent::Upgraded {
+                    instance_id,
+                    def_id,
+                    change: TuningChange::Number { .. },
+                    ..
+                }
+                | GameEvent::NumberChanged {
+                    instance_id, def_id, ..
+                }
+                | GameEvent::RadiantSet {
+                    instance_id, def_id, ..
+                } => {
+                    let back_later = summoned_later(instance_id, &events[index + 1..]);
+                    self.note_topped_up_windfury(instance_id, def_id, state, back_later);
                 }
                 GameEvent::PositionSwitched { instance_id, .. } => {
                     // R20: an effect's switch emits the same event but spends nothing. I12 counts only

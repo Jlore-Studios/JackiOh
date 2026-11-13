@@ -16,10 +16,15 @@ const MOON: &str = "traininggrounds-007";
 fn caller(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
-            let Some(at) = ctx.live_self().and_then(|me| slot_of(&*ctx.state, me)) else {
+            // R3546001: a GIGA Caller is in both its lanes, so the Moon goes past its last one.
+            let Some(me) = ctx.live_self() else {
                 return vec![];
             };
-            [(SUN, at.lane - 1), (MOON, at.lane + 1)]
+            let lanes = lanes_of(me);
+            let (Some(first), Some(last)) = (lanes.iter().min().copied(), lanes.iter().max().copied()) else {
+                return vec![];
+            };
+            [(SUN, first - 1), (MOON, last + 1)]
                 .into_iter()
                 .filter(|(_, lane)| (1..=UNIT_ZONES).contains(lane))
                 .map(|(def_id, lane)| {
@@ -100,6 +105,22 @@ mod tests {
             s.expect_stats(&moon, json!({ "attack": 3, "health": 3 }));
             assert!(keywords(&s, &moon).iter().any(|keyword| matches!(keyword, Keyword::Armor { n: 3 })));
             assert!(!s.card(&sun).radiant && !s.card(&moon).radiant);
+        }
+
+        #[test]
+        fn r3546001_a_giga_caller_summons_the_sun_before_its_first_lane_and_the_moon_past_its_last() {
+            for (anchor, expected) in [
+                (2, vec![some(SUN), some(CALLER), None, some(MOON), None]),
+                (1, vec![some(CALLER), None, some(MOON), None, None]),
+                (4, vec![None, None, some(SUN), some(CALLER), None]),
+            ] {
+                let mut s = caller(false, json!([]));
+                let id = s.card(CALLER).id.clone();
+                crate::give_giga(&mut s, &id);
+                s.play(CALLER, json!({ "zone": anchor }));
+                assert_eq!(s.card(&id).giga, Some(true));
+                assert_eq!(row(&s), expected, "anchor {anchor}");
+            }
         }
 
         #[test]

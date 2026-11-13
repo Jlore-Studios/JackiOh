@@ -1193,6 +1193,12 @@ pub struct Script {
     /// the layers with its printed keywords (§10.4), so a Vanilla takes them. A PURE READ of instance
     /// data that must never call back into `unit_view`, or the layers would recurse.
     pub conditional_keywords: Option<ConditionalKeywordsHook>,
+    /// R3778000: the declared number an "Aura: Has {number} random combat keywords" follows (M #65
+    /// Keymaster Keenus's `keywords`): a change that raises it on the field (a Buff's Number row, a
+    /// number set, the card made Radiant) draws what it asks beyond the card's list as the change
+    /// resolves (`effects::buff::follow_combat_keywords`), so nothing is queued and the layers draw
+    /// nothing. `None` for every other card, and on the scripts kept for v0.6.0b (R767000).
+    pub combat_keywords_follow: Option<&'static str>,
     /// "When this attacks" (Classic #13, #45, Classic+ #73.1, Stinkyscape #75): run for the attacker before
     /// any damage of each attack, a declared one's once its trap window has closed (before the defender's
     /// `allyAttacked`), a forced one's before its combat (R2285000). Parkable (R113); `ctx.data`:
