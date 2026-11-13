@@ -16483,7 +16483,7 @@
       "started_at": "2026-11-13T11:26:25Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1,
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [],
         "builder": "claude",
