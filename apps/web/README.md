@@ -897,7 +897,8 @@ routes (net/navigate.ts paths, and public/_redirects):
   /together              together/TogetherRoute.tsx: friends with status dots, the requests in and out
                          (accept, decline, cancel), the blocked players (unblock), the add form by
                          name#tag; per friend Challenge (online and idle), Watch (when `watchable`),
-                         Chat (always), Remove and Block; "Shared with me"; the co-op panel
+                         Chat (always), Lobby (not offline: a Best of 1 lobby, the friend invited,
+                         R3874000), Remove and Block; "Shared with me"; the co-op panel
   /watch/:matchId        together/WatchRoute.tsx: a friend's seat over /ws/watch, Game on a view with no
                          legal action, SPECTATE_DELAY_MS behind; its turn clock counts down silently from each frame's
                          `clockMs` (together/WatchClock.tsx); Reconnect now once its own reopens run out;
@@ -974,6 +975,7 @@ lobby/LobbyPanel.tsx     Create a lobby, Join by code and the player's own lobbi
 lobby/LobbyInviteToast.tsx  mounted once beside the challenge toast: a friend's `lobbyInvite`, Open or
                          Dismiss (R3730005)
 lobby/seats.ts           the seats a lobby view shows, whether Start may light, a seat's deck words
+lobby/inviteRefusal.ts   R3874000: a friend's refused invite from /together, said once on its lobby's screen
 duos/DuosBoard.tsx       Game.tsx for the own duel, the life strip (both teams' own HP and pools, a
                          spent seat's bar giving way to its pool), the pass control, the portal, the
                          Both boards toggle (R2095000), the teammate strip and the ping wheel
