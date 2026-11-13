@@ -16371,6 +16371,14 @@
         "sha": "5d99bf6c7a7aec790bfa1b827923b7d9e3cd50d4",
         "tiers": {}
       }
+    },
+    "3881": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-13T15:32:35Z",
+      "issue": 3837,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
