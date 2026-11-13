@@ -12380,15 +12380,8 @@
       "waiting_comment": 6820239956
     },
     "3731": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43479407919",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-13T18:21:13Z",
-        "until": "2026-11-13T18:51:13Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -12400,10 +12393,9 @@
         "reason": "planned on opus",
         "trail": "ln 'DuosSetup\\\\|DuosHost\\\\b' apps/web/src --include=*.ts --include=*.tsx | head; grep -rn 'DuosSetup {' crates --include=*.rs | head; sed -n 536,552p crates/shared/src/host/duos.r\u2026\n- Bash: {\"command\": \"grep -rln 'DuosHost\\\\|DuosSetup' crates/wasm crates/server/src | head; grep -n 'DuosHost\\\\|DuosSetup' apps/web/src/game/TradeControl.test.tsx | head -3\", \"description\": \"Check wasm and s\u2026\n- Bash: {\"command\": \"grep -n 'fn relay_ping' -A 25 crates/server/src/duos/actor.rs | head -35; grep -n '\\\\[_; 2\\\\]\\\\|; 2\\\\]\\\\|HUMAN_SEATS\\\\|human(' crates/server/src/duos/actor.rs | wc -l\", \"description\": \"V\u2026\n- Bash: {\"command\": \"sed -n 1006,1030p crates/server/src/duos/actor.rs\", \"description\": \"Read end of relay_ping\"}\n- Bash: {\"command\": \"grep -n 'struct DuosSeats' -A 8 crates/server/src/seats.rs; grep -n 'people' crates/server/src/seats.rs | head -8; sed -n 385,410p crates/server/src/social/watch.rs\", \"description\": \"Ver\u2026\n- Bash: {\"command\": \"sed -n 1,12p spec/rulings/R2881000.md | cut -c1-1500\", \"description\": \"Read R2881000 watching ruling\"}\n- Bash: {\"command\": \"sed -n 12,30p spec/rulings/R2881000.md | grep -io '[^.]*block[^.]*\\\\.' | head -5\", \"description\": \"Find block wording in R2881000\"}\n- Bash: {\"command\": \"grep -n -i 'amend' spec/README.md | head -8; grep -rl 'Amended by' spec/rulings | head -3\", \"description\": \"Check ruling amendment convention\"}\n- Bash: {\"command\": \"grep -n 'Amended by' spec/rulings/R1862000.md spec/rulings/R0634.md | cut -c1-300; sed -n '/Adding a ruling/,/^## /p' spec/README.md | head -30 | cut -c1-400\", \"description\": \"See amende\u2026\n- Bash: {\"command\": \"grep -n '^\\\\[\\\\[test\\\\]\\\\]' -A 3 crates/server/Cargo.toml | grep name; ls crates/server/tests/api/lobbies.rs crates/server/tests/store/contract.rs; grep -n 'difficulty:\\\\|DuosForced\\\\b' \u2026\n- Bash: {\"command\": \"grep -n -i 'graceDeadlines\\\\|/api/lobbies\\\\|lobby' docs/v0.3.0/SURFACE.md | head -8; grep -n -i 'graceDeadlines\\\\|/api/lobbies\\\\|0090' crates/server/README.md | head -8\", \"description\": \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nreps=[\\n(\\\"| crates/server/tests/actor/duos.rs, tests/api/lobbies.rs, tests/store/contract.rs, README.md | change | tests and docs \u2026\n- Bash: {\"command\": \"grep -n 'pay every person\\\\|DuosHost::new\\\\|16\\\\. \\\\*\\\\*Docs\\\\|tests/store/contract.rs, README' .bot-plan.md\", \"description\": \"Find exact draft lines to edit\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3731/.bot-plan.md\", \"offset\": 1, \"limit\": 60}\n- Bash: {\"command\": \"grep -rn 'duos_matches' crates/server/src --include=*.rs | grep -v 'src/duos/\\\\|db/fake.rs\\\\|db/pg.rs' | head -10; grep -rn 'row.difficulty\\\\|\\\\.difficulty\\\\b' crates/server/src --includ\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3731/.bot-plan.md\", \"offset\": 60, \"limit\": 90}\n- Bash: {\"command\": \"grep -rn 'pub struct DuosMatchOptions' -A 14 crates/server/src crates/engine/src | head -20; grep -n 'difficulty: Difficulty\\\\|DuosMatchOptions' crates/server/src/duos/store.rs | head -5\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3731/.bot-plan.md\", \"offset\": 150, \"limit\": 140}\n- Bash: {\"command\": \"grep -n 'describe\\\\|it(\\\\|lobby' e2e/cypress/e2e/41-duos-coop.cy.ts | sed -n 1,40p | cut -c1-140; grep -n 'it(\\\\|describe' e2e/cypress/e2e/54-private-lobby.cy.ts | cut -c1-140\", \"descrip\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3731/.bot-plan.md\", \"content\": \"## Goal\\n\\nA private lobby gains a `2v2` format, offered on Play together beside co-op, with four people in two teams.\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Count plan words and characters\"}\n- said: The plan comes to 2,919 words, over the 2,500 limit. I'm cutting it down without dropping any step.\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='.bot-plan.md'\\ns=open(p).read()\\ndef sec(name):\\n i=s.index(name); j=s.find('\\\\n## ',i+3)\\n return len(s[i:j if j>0 else None].split())\\nfor n in ['## Go\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nreps=[\\n# Goal\\n(\\\"\\\"\\\"A private lobby gains a `2v2` format, offered on Play together beside co-op, with four people in two teams. \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nreps=[\\n(\\\"\\\"\\\"These govern the change: \\u00a713, \\u00a79.4, \\u00a79.5 and \\u00a714.8, and rulings R3730000\\u2013R3730006, R1989000\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nreps=[\\n(\\\"\\\"\\\"| apps/web/src/lobby/{api.ts,seats.ts,LobbyScreen.tsx,LobbyPanel.tsx,LobbyInviteToast.tsx,testids.ts,lobby.css}, wit\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nreps=[\\n(\\\"\\\"\\\" - `DuosMatchOptions` gains `#[serde(default, skip_serializing_if = \\\"DuosTeamB::is_ai\\\")] team_b`, so a co-op match\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nreps=[\\n(\\\"\\\"\\\" - `DuosSetup` and `DuosHost` gain `#[serde(default)] team_b: DuosTeamB`, and the host gets `pub fn team_b(&self)`.\\\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nreps=[\\n(\\\"\\\"\\\" - `registry.rs:256`, `replay.rs:104` and `callers_match` in `again.rs` use `seat_of`.\\\"\\\"\\\",\\n\\\"\\\"\\\" - `registry.rs\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nreps=[\\n(\\\"\\\"\\\" - Add `CoopTeamB<'a> { b1, b2: &'a str, b1_choice, b2_choice: &'a DuosChoice }` and the field `CoopStart.team_b: Op\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\na=\\\"\\\"\\\" - `presence()` stays over `HUMAN_SEATS` (only co-op Play again reads it); `relay_ping` already sends only to `seat.teammat\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3731/.bot-plan.md\"}\n- said: ## Goal A private lobby gains a `2v2` format (four people, two teams). Its Start makes a Duos match whose team B is two people, the seed's coin picking which lobby team plays A. Views, passing, life, the round clock, team-only pings, the disconnect fallback, concede, watching, replays and pay work \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-13T18:06:43Z",
       "owner_why": "handed off from `claude-3`: `claude-3` it refused a call; its limit resets at 2026-11-13T20:30:00Z; it can start again only in 2h 23m, more than the 120 minutes an item waits for its owner",
@@ -12416,9 +12408,9 @@
       "provider": "claude-4",
       "queued_at": "2026-11-11T21:50:29Z",
       "requested_by": "jgoetzmann",
-      "run_id": "43479407919",
+      "run_id": "pending:2ff8a817-1794594410",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-13T18:06:43Z",
+      "started_at": "2026-11-13T18:27:33Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -16521,9 +16513,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T18:26:33Z",
+    "at": "2026-11-13T18:27:33Z",
     "url": "",
-    "what": "review #3880 on claude-1"
+    "what": "build #3731 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-13T17:46:50Z",
