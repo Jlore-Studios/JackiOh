@@ -4,12 +4,14 @@
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
+use crate::damage::hero_armor_of;
 use crate::effects::cost::set_cost_mod;
 use crate::effects::targets::{PlayerSpec, player_of};
 use crate::mana::{effective_cost, is_x_cost};
 use crate::prelude::json_as;
 use crate::script::Effect;
 use crate::state::CardInstance;
+use crate::wire::GameEvent;
 
 /// `gainHeroArmor`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -22,7 +24,8 @@ pub struct GainHeroArmorArgs {
 }
 
 /// C+ #46: §4.4 step 2's per-hit reduction kept on the hero itself, so it outlasts the card that gave
-/// it and stacks with every other source (`damage::hero_armor_of`, R124). No event of its own.
+/// it and stacks with every other source (`damage::hero_armor_of`, R124). R3857000: a gain above 0
+/// reports `armorGained`, its amount and the hero's Armor after, withheld from the trigger loop.
 pub fn gain_hero_armor(args: GainHeroArmorArgs) -> Effect {
     Effect::new("gainHeroArmor", move |ctx| {
         let amount = args.amount.max(0);
@@ -31,6 +34,15 @@ pub fn gain_hero_armor(args: GainHeroArmorArgs) -> Effect {
         }
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         ctx.state.players[player].hero.armor += amount;
+        let armor = hero_armor_of(&*ctx.sink.state, player);
+        ctx.sink.events.push(GameEvent::ArmorGained {
+            player,
+            amount,
+            armor,
+        });
+        // R3857000: a report nothing answers, so the frontier never takes it (R1361's way, as `rolled`'s).
+        let at = ctx.sink.events.len() - 1;
+        crate::triggers::withhold_report(&mut ctx.sink, at);
     })
 }
 

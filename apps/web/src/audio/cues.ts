@@ -672,6 +672,9 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   // docs/meditative-set.md M8, MN05
   // R1363: the Armor took the whole hit: a bright ring from the unit's lane (a hero's is centered).
   damageAbsorbed: { sfx: "armorRing", cues: () => [sfx("armorRing")] },
+  // R3857000: a hero kept Armor: the sweep of a stat gained, as a Buff and a gained keyword play it,
+  // centered (a hero's). The ring stays Armor's own for a hit it took whole (R1363, R1365).
+  armorGained: { sfx: "buff", cues: () => [sfx("buff")] },
   // R961: a Jade Counter rose; the badge ticks, the same click as every counter badge.
   jadeChanged: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
 

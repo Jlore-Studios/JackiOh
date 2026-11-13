@@ -242,6 +242,7 @@
   "{target}'s Armor absorbed {absorbed} damage from {source}": "{target}的护甲吸收了来自{source}的{absorbed}点伤害",
   "{target}'s Armor absorbed {absorbed} damage in combat": "{target}的护甲在战斗中吸收了{absorbed}点伤害",
   "{target}'s Armor absorbed {absorbed} damage": "{target}的护甲吸收了{absorbed}点伤害",
+  "{whose} hero gained {amount} Armor": "{whose}英雄获得了{amount}点护甲",
   "{seat} kept a secret": "{seat}保守了一个秘密",
   "{whose} secret was {choice}": "{whose}秘密是{choice}",
   "{seat} guessed {guess}: {outcome}": "{seat}猜了{guess}：{outcome}",

@@ -474,6 +474,11 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
             };
             by(text, *via)
         }
+        // R3857000: a hero's kept Armor gain, named by its side.
+        GameEvent::ArmorGained { player, amount, .. } => s(
+            "{whose} hero gained {amount} Armor",
+            vec![p("whose", capitalised(&whose(*player))), p("amount", *amount)],
+        ),
         // R860: the line names only that a secret is held, never the choice.
         GameEvent::SecretChosen { player, .. } => s("{seat} kept a secret", vec![p("seat", seat(*player))]),
         // R864: revealed, the choice is public history.

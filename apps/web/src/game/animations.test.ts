@@ -109,6 +109,8 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   // R800: a discard a discard guard stopped shakes the hand once.
   discardPrevented: 300,
   damageAbsorbed: 300,
+  // R3857000: a hero's kept Armor gain ticks its Armor badge.
+  armorGained: 300,
   // Meditative #39.2, R961.
   jadeChanged: 200,
   secretChosen: 300,
@@ -250,6 +252,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   translated: { type: "translated", instanceId: "u6" },
   discardPrevented: { type: "discardPrevented", player: "p2", count: 1 },
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
+  armorGained: { type: "armorGained", player: "p2", amount: 2, armor: 2 },
   jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
   secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
   secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
@@ -347,7 +350,7 @@ describe("ANIMATIONS covers every event type", () => {
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
     // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(95);
+    expect(rows).toHaveLength(96);
   });
 
   it("gives every row an animation name and a testid template", () => {
@@ -446,6 +449,18 @@ describe("R831003 KY's Papaya's curve", () => {
     expect(row.fx).toEqual({ recipe: "curve" });
     expect(targetFor(SAMPLES.curveDrawn, fullBoardView())).toBe(testid.board);
     expect(animationsCss).toContain('[data-animating="curveDrawn"]');
+  });
+});
+
+describe("R3857000 a hero's kept Armor gain", () => {
+  it("R3857000 armorGained ticks the named hero's badge for 300 ms under the armor recipe", () => {
+    const row = ANIMATIONS.armorGained;
+    expect(row.animation).toBe("jk-badge-tick");
+    expect(row.durationMs).toBe(300);
+    expect(row.fx).toEqual({ recipe: "armor" });
+    expect(targetFor(SAMPLES.armorGained, fullBoardView())).toBe(testid.hero("opponent"));
+    expect(targetFor({ ...SAMPLES.armorGained, player: "p1" }, fullBoardView())).toBe(testid.hero("you"));
+    expect(animationsCss).toContain('[data-animating="armorGained"] .hero-armor');
   });
 });
 

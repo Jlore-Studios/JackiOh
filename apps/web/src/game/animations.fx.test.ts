@@ -162,6 +162,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   translated: { type: "translated", instanceId: "u6" },
   discardPrevented: { type: "discardPrevented", player: "p2", count: 1 },
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
+  armorGained: { type: "armorGained", player: "p2", amount: 2, armor: 2 },
   jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
   secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
   secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
@@ -302,6 +303,8 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   discardPrevented: "fizzle",
   // MN05, R1363: a hit the Armor took whole blooms a shield.
   damageAbsorbed: "armor",
+  // R3857000: a hero's kept Armor gain blooms the same shield over the hero.
+  armorGained: "armor",
   // Meditative #39.2 (R961): the Jade badge ticks and nothing decorates it.
   jadeChanged: null,
   // Meditative MB05 (ME-SECRET): the badge by the hero is the change; no effect decorates it.
@@ -458,6 +461,7 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   translated: ["jk-radiant-pulse", 400, "card-<instanceId>"],
   discardPrevented: ["jk-fatigue", 300, "hand-<side>"],
   damageAbsorbed: ["jk-armor-absorb", 300, "card-<targetId> | hero-<side>"],
+  armorGained: ["jk-badge-tick", 300, "hero-<side>"],
   jadeChanged: ["jk-badge-tick", 200, "hero-<side>"],
   secretChosen: ["jk-badge-fade", 300, "hero-<side>"],
   secretRevealed: ["jk-badge-fade", 400, "hero-<side>"],
@@ -484,10 +488,10 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 67 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002), the awakening (R1839002), the evolution (R3536005), the Trade (R1838001), the launch (R1852003), #1843's two endings (R1843000, R1843002) and #2652's rolls (R2652001) and the drawn line (R3554005) carry fx with the listed recipe and the other 28 carry none", () => {
+  it("B1 exactly the 68 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002), the awakening (R1839002), the evolution (R3536005), the Trade (R1838001), the launch (R1852003), #1843's two endings (R1843000, R1843002) and #2652's rolls (R2652001) and the drawn line (R3554005) and the Armor gain (R3857000) carry fx with the listed recipe and the other 28 carry none", () => {
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, ANIMATIONS[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
-    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(67);
+    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(68);
   });
 
   it("B1 an fx descriptor is data only: one recipe field and nothing else", () => {

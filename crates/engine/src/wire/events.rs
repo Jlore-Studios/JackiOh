@@ -1030,6 +1030,14 @@ pub enum GameEvent {
         #[cfg_attr(feature = "ts", ts(optional))]
         via: Option<KeywordKind>,
     },
+    /// R3857000: `player`'s hero gained `amount` Armor it keeps (`effects::gain_hero_armor`); `armor` is
+    /// its Armor after, as the view's badge reads it (`damage::hero_armor_of`, §10.8). A report nothing
+    /// answers: it takes no number in R68's order. Public: a player and two numbers.
+    ArmorGained {
+        player: PlayerId,
+        amount: i32,
+        armor: i32,
+    },
     // -------------------------------------------------------------------------------------------
     // Patch v0.3.X (docs/meditative-set.md M5, MB10's ME-JADE). Its BUILD M5-T4 row, `ANIMATIONS`
     // and `SOUND_CUES` rows came with it, and `viewFor` sends it to both seats as it is.
@@ -1396,6 +1404,7 @@ string_union! {
         Deradianted = "deradianted",
         ManaSpent = "manaSpent",
         DamageAbsorbed = "damageAbsorbed",
+        ArmorGained = "armorGained",
         JadeChanged = "jadeChanged",
         SecretChosen = "secretChosen",
         SecretRevealed = "secretRevealed",
@@ -1663,6 +1672,7 @@ impl GameEvent {
             GameEvent::Deradianted { .. } => GameEventType::Deradianted,
             GameEvent::ManaSpent { .. } => GameEventType::ManaSpent,
             GameEvent::DamageAbsorbed { .. } => GameEventType::DamageAbsorbed,
+            GameEvent::ArmorGained { .. } => GameEventType::ArmorGained,
             GameEvent::JadeChanged { .. } => GameEventType::JadeChanged,
             GameEvent::SecretChosen { .. } => GameEventType::SecretChosen,
             GameEvent::SecretRevealed { .. } => GameEventType::SecretRevealed,
@@ -1777,8 +1787,8 @@ mod tests {
         // `starscapeTravelled` (R1847001); #1850's one, `held` (R1850003); the Marketplace's two,
         // `marketBought` and `marketSold` (R1853003); and #1855's `boardReplaced` (R1855000); and
         // #2652's `rolled` (R2652001); and #2783's `hookResolving` (R2783000); and Stinkyscape+'s
-        // `evolved` (R3536005); and E7's `lineDrawn` (R3554005).
-        assert_eq!(GAME_EVENT_TYPES.len(), 95);
+        // `evolved` (R3536005); and E7's `lineDrawn` (R3554005); and #3857's `armorGained` (R3857000).
+        assert_eq!(GAME_EVENT_TYPES.len(), 96);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no
@@ -1826,6 +1836,26 @@ mod tests {
         // Appended to the list (later sets append after it: M #39's `jadeChanged`, R961, and MB05's
         // secret events, R860–R865).
         assert!(GAME_EVENT_TYPES.contains(&GameEventType::DamageAbsorbed));
+    }
+
+    /// R3857000: a kept Armor gain names its player, the amount and the hero's Armor after, and the
+    /// rules read it as it is.
+    #[test]
+    fn r3857000_armor_gained_serializes_as_a_player_and_two_numbers() {
+        let event = GameEvent::ArmorGained {
+            player: PlayerId::P2,
+            amount: 2,
+            armor: 5,
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert_eq!(
+            json,
+            r#"{"type":"armorGained","player":"p2","amount":2,"armor":5}"#
+        );
+        assert_eq!(serde_json::from_str::<GameEvent>(&json).unwrap(), event);
+        assert_eq!(event.event_type().as_str(), "armorGained");
+        assert_eq!(event.as_rules_read(), event);
+        assert!(GAME_EVENT_TYPES.contains(&GameEventType::ArmorGained));
     }
 
     /// R2783000: the marker names its card, its definition, who runs the hook and which hook; the seats

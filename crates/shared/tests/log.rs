@@ -853,6 +853,29 @@ fn a_hit_names_its_source_off_combat_only_and_only_where_the_view_names_it() {
     );
 }
 
+/// R3857000: a hero's kept Armor gain names the hero by its side, in both languages.
+#[test]
+fn r3857000_an_armor_gain_names_the_heros_side() {
+    let view = bare(json!([
+        { "type": "armorGained", "player": "p1", "amount": 2, "armor": 2 },
+        { "type": "armorGained", "player": "p2", "amount": 3, "armor": 5 },
+    ]));
+    assert_eq!(
+        english(&view),
+        [
+            "Your hero gained 2 Armor".to_string(),
+            "The opponent's hero gained 3 Armor".to_string(),
+        ]
+    );
+    assert_eq!(
+        said(&view, Locale::ZhCn),
+        [
+            "你的英雄获得了2点护甲".to_string(),
+            "对手的英雄获得了3点护甲".to_string()
+        ]
+    );
+}
+
 /// The ids of the keywords each line names, in order.
 fn keywords(view: &PlayerView, locale: Locale) -> Vec<Vec<String>> {
     call(view, locale)
