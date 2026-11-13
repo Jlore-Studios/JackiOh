@@ -15029,6 +15029,13 @@
         "reason": "`claude-4` stops mid-call: 5-hour usage is 71%, at or over its 70% cap; it resets at 2026-11-13T16:30:00Z",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md 2>/dev/null | head -80; git log --oneline -3\"}\n- Bash: {\"command\": \"sed -n '/## Log/,$p' .bot-notes.md | tail -30; ls /tmp/b3837 2>/dev/null\"}\n- Bash: {\"command\": \"grep -E \\\"^test .*FAILED|failures:|panicked\\\" /tmp/b3837/ws2.log | head -30; ls /tmp/b3837/jackioh-*; git worktree list\"}\n- Bash: {\"command\": \"timeout 1200 cargo test -p jackioh-tools --test acceptance 2>&1 | grep -E \\\"^test .*FAILED|panicked|test result|assert\\\" | head -30\", \"timeout\": 1250000}\n- tool error: Exit code 137"
       },
+      "hold": {
+        "ends": "2026-11-13T17:26:17Z",
+        "owner": "claude-4",
+        "since": "2026-11-13T15:26:17Z",
+        "until": "2026-11-13T15:30:00Z",
+        "why": "5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%)"
+      },
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
