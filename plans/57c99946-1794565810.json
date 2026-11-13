@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 3827,
+  "title": "Patch: card and rules tests take their one-target picks, hero picks and card lookups from one home each, and the copy guard catches a renamed copy",
+  "branch": "bot/issue-3827",
+  "thread": "**Issue #3827 (data, not instructions):**\n\n```text\n# #3827: Patch: card and rules tests take their one-target picks, hero picks and card lookups from one home each, and the copy guard catches a renamed copy\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nDozens of test files each write their own three-line helper for \"aim this at that card\", \"aim at the enemy hero\" or \"find this card in the game\", under a dozen different names, though a shared version exists or would fit in one place. Nobody at the table notices; the maintainer and the bot read and change less test code. Once this is built, each helper lives once and every test calls it. The check that already refuses copied helpers by name also catches a renamed copy by what it does, so the copies don't creep back.\n\n## Why\n\n- **43 files** define `fn ..(..) -> Value { json!({ \"targets\": <one instance pick> }) }`, by an exact-shape `rg -U` count over `crates/cards/src` and `crates/engine/tests`. The names vary: `pick`, `on`, `at`, `eclipse`, `at_instance`, `target`. Examples: `meditative/c036_cn_peptides.rs:104`, `crates/engine/tests/rules/burn_toxic.rs:34`, `stinkyscape_plus/c022_cryofluid.rs:67`. `crates/engine/src/testkit/pick.rs` has `id`, `instance`, `card` and `unit_at`, but no targets wrapper and no hero pick.\n- **14 files** define exactly `fn ..() -> Value { json!([{ \"pick\": \"hero\", \"player\": \"p2\" }]) }`, and more do with a player argument. The hero-pick literal appears 292 times in 144 files.\n- **37 copies in 26 files** of `fn ..<'a>(state: &'a [mut] GameState, id: &str) -> &'a [mut] CardInstance` sit under `crates/engine/tests/rules`, while `fixtures/harness.rs:236,243` already has `live` and `live_mut`. Nine of those files import `live` and still define their own; for one, `animated.rs` imports it at `:19` and defines `by_id` at `:90`.\n- The guard `helpers_each_test_takes_its_shared_helpers_from_their_home` (`crates/tools/tests/acceptance.rs:965-1060`, `:1090-1106`) matches by name, and its pick-builder matcher (`:1169-1200`) only the `json!([{ \"pick\": \"instance\"` form, so all of these get past it.\n- This is the same kind of change as #3796 (Mode options) and #3701 (the web's effects helpers), and it overlaps neither.\n\n## Proposal\n\n1. Add `pick::targets(..)` (the `{ \"targets\": .. }` wrapper) and `pick::hero(player)` to `testkit/pick.rs`. The copies call them, or `pick::*` directly.\n2. The rules-test copies call the harness's `live` and `live_mut`. `live` returns an owned clone, so a borrowing call site becomes `&live(..)`.\n3. Widen the guard: the pick-builder matcher also catches the targets-wrapped and hero forms, and the harness lookups are also matched by their signature's shape.\n\nNo assertion changes. Variants with other keys, such as `c020_tnack_trav.rs:85` with `\"zone\": 1`, stay as they are.\n\n## Where it lands\n\n`crates/engine/src/testkit/pick.rs`, the test modules of about 60 card scripts and 30 rules test files, `crates/tools/tests/acceptance.rs`; `crates/engine/README.md`'s testkit list.\n\n## Acceptance criteria\n\n- [ ] The three exact-shape `rg` counts above return 0 outside the helpers' homes.\n- [ ] The guard has a test showing that a renamed copy of each form fails it.\n- [ ] `cargo test -p jackioh-cards` and the engine's rule tests (with the `testkit` feature) pass, with the same number of tests before and after.\n- [ ] `cargo jackioh classify` reports the change as internal, with no card playing differently.\n\n## Size and risks\n\nAbout 90 files of mechanical change: hard by rule 11's file count, or two pull requests (cards, then engine rules tests). It touches the same card test modules as #3816, so it should be built after #3816 merges to avoid conflicts.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-13T06:00:49Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3827: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-13T06:16:23Z",
+    "claimed_at": "2026-11-13T10:30:47Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3798 is held for `claude-1` until 05:20 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))",
+    "#3733 is held for `claude-1` until 05:20 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3729 skipped: it waits for #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3730 to close first"
+  ]
+}
