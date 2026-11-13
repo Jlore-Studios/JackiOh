@@ -36,12 +36,12 @@ use jackioh_engine::{
     attacks_per_turn, awaken_card, backrow_is_public, board_totals, cannot_attack, card_at, card_keywords,
     card_type_of_face, credit_lapsing, death_hook_of, dormant_starship_of, effective_cost, effective_life,
     exit_mark, face_of, find_def, find_instance, find_instance_mut, first_entry_zone, flags_of,
-    frozen_next_turn, fused_id_specs, gauntlet_acts, has_keyword, heal_multiplier_of, hero_armor_of,
-    is_dormant_starship, is_extra_turn_card, is_slumbering, is_standing_unit, is_starship_piece,
-    is_temporary_card, launched_starship_of, left_field_after, legal_actions, lost_refreshes_left,
-    modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces, pile_at, playable_from_graveyard,
-    query_cost, queue_hook, reset_instance, script_of, settle, slots_of, stats_with_buffs, subsystems,
-    sync_fused_scripts, takes_strike_back, trigger_holders_with_hook, unit_has, unit_view, units_on_field_of,
+    frozen_next_turn, gauntlet_acts, has_keyword, heal_multiplier_of, hero_armor_of, is_dormant_starship,
+    is_extra_turn_card, is_slumbering, is_standing_unit, is_starship_piece, is_temporary_card,
+    launched_starship_of, left_field_after, legal_actions, lost_refreshes_left, modifier_is_live,
+    outcome_for, owed_mana_of, own_cost, pierces, pile_at, playable_from_graveyard, query_cost, queue_hook,
+    reset_instance, script_of, settle, slots_of, stats_with_buffs, subsystems, sync_fused_scripts,
+    takes_strike_back, trigger_holders_with_hook, unit_has, unit_view, units_on_field_of,
     why_sandbox_refused, with_pool_hold, yard_at_turn_start,
 };
 use serde::{Deserialize, Serialize};
@@ -301,41 +301,14 @@ fn turn_hook_price(state: &GameState, card: &CardInstance, w: &EvalWeights, pric
     if w.turn_hook == 0.0 {
         return 0.0;
     }
-    let entries: Vec<&TurnHookPrice> = match prices.turn_hooks.iter().find(|entry| entry.is_for(card)) {
-        Some(entry) => vec![entry],
-        // R3575403: a fusion the root never saw (an Equip the line made) runs each ingredient's hooks.
-        None => {
-            let ingredients = fused_ingredients_of(state, card);
-            prices
-                .turn_hooks
-                .iter()
-                .filter(|entry| {
-                    ingredients
-                        .iter()
-                        .any(|(def_id, radiant)| entry.def_id == *def_id && entry.radiant == *radiant)
-                })
-                .collect()
-        }
+    let Some(entry) = prices.turn_hooks.iter().find(|entry| entry.is_for(card)) else {
+        return 0.0;
     };
-    if entries.is_empty() || !has_turn_hook(state, card) {
+    if !has_turn_hook(state, card) {
         return 0.0;
     }
     let runs = 1 + extra_runs(state, card.controller, Multiplied::TurnHooks).max(0);
-    entries
-        .into_iter()
-        .map(|entry| entry.price * f64::from(runs) + entry.opponent_turn)
-        .sum()
-}
-
-/// R3575403: the ingredients a fused card names (`fused_id_specs`: its definition and face each), so a
-/// fusion the decision's root never saw, an Equip a line made among them, reads the prices its
-/// ingredients' texts were given; none for a card no Fuse minted.
-fn fused_ingredients_of(state: &GameState, card: &CardInstance) -> Vec<(String, bool)> {
-    fused_id_specs(Some(state), &card.def_id)
-        .unwrap_or_default()
-        .into_iter()
-        .map(|spec| (spec.def_id, spec.radiant == Some(true)))
-        .collect()
+    entry.price * f64::from(runs) + entry.opponent_turn
 }
 
 /// R2564000, R2603000: what one use of a card's Activate gives its controller, as a decision's root priced
@@ -382,23 +355,7 @@ fn activation_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, pri
         .activations
         .iter()
         .find(|entry| entry.is_for(unit))
-        .map(|entry| entry.price)
-        .or_else(|| {
-            // R3575403: a fusion the root never saw has each ingredient's abilities, and one use is the
-            // best of them, as the probe prices a card with several.
-            let ingredients = fused_ingredients_of(state, unit);
-            prices
-                .activations
-                .iter()
-                .filter(|entry| {
-                    entry.controller == unit.controller
-                        && ingredients
-                            .iter()
-                            .any(|(def_id, radiant)| entry.def_id == *def_id && entry.radiant == *radiant)
-                })
-                .map(|entry| entry.price)
-                .reduce(f64::max)
-        });
+        .map(|entry| entry.price);
     match price {
         Some(price) if !subsystems::abilities_of(state, unit).is_empty() => price,
         _ => 0.0,
@@ -837,8 +794,16 @@ fn slumber_worth(
     }
     let mut awake = unit.clone();
     awake.slumber = None;
+    // R3575404: the use that wakes it was priced from the sleeping card, so its price already reads the
+    // wait; `unit_worth` of the awake copy counts it inside the share, and the rest of it is put back.
+    let waking = if acts_to_awaken(state, unit) {
+        (1.0 - share) * brittle_share(unit, w) * w.activation * activation_price(state, unit, w, prices)
+    } else {
+        0.0
+    };
     share * (unit_worth(state, &awake, w, prices) + w.awaken * awaken_price(state, unit, w, prices))
         + w.turn_hook * yard_price(state, unit, w, prices)
+        + waking
 }
 
 /// R3575402: what one turn start's fuse gives a shipyard's controller (`yard_probe`), by `prices`, while

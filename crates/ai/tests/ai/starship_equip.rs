@@ -2,13 +2,8 @@
 //!
 //! - R3575400: the seat's own hand cards' Activates are priced at its root, as a card on the field is
 //!   priced a turn later (`activation_prices`), so a play whose worth is the Activate it leaves reads it.
-//! - R3575401: a Unit standing in the backrow (R1081000) is a lane variant there (#1797), as one in the
-//!   unit row is, so one play's backrow placements no longer fill the beam, while the backrow and the
-//!   unit row stay two positions, which offer different plays.
 //! - R3575402: a shipyard's turn-start fuse (R3539004) is priced as its turn text (`turn_hook_prices`),
 //!   outside the slumber share, since it fuses while the card sleeps.
-//! - R3575403: a fusion the root never saw, an Equip a line made among them, reads the Activate and
-//!   turn-hook prices its ingredients were given.
 //! - R3575404: a Dormant card's awakening Activate is priced, the launch among them (R1839002), and for
 //!   that use alone the card need not be the instance left standing (R3539004).
 
@@ -21,8 +16,6 @@ use super::support::{AI, HUMAN, register_cards, unit};
 const CANNON: &str = "stinkyscape-052";
 /// Stinkyscape+ #157 Phantom Shipyard: (4) 0/0, a shipyard Dormant until launched (R3539004).
 const SHIPYARD: &str = "stinkyscapeplus-157";
-/// Stinkyscape #68 Stratos: (1) 3/1 Flying, Ranged, so it may stand in the backrow (R1081000).
-const STRATOS: &str = "stinkyscape-068";
 const SORCERER: &str = "core-068";
 const VANILLA: &str = "core-008";
 const LIBRARY: &[&str] = &[VANILLA, VANILLA, VANILLA, VANILLA];
@@ -106,40 +99,6 @@ fn r3575400_a_hand_without_an_activate_spends_no_node() {
     assert_eq!(counter.used(), 0);
 }
 
-/// Stratos played into `lane` of `row`, on the AI's turn, with a Vanilla kept in hand.
-fn stratos_in(row: &str, lane: i32) -> GameState {
-    let mut s = board(
-        "ai-r3575401-stratos",
-        json!({ "hand": [STRATOS, VANILLA] }),
-        json!({ "hand": [VANILLA] }),
-    );
-    s.play(STRATOS, json!({ "zone": lane, "row": row }));
-    s.state().clone()
-}
-
-#[test]
-fn r3575401_a_backrow_unit_in_two_lanes_is_one_position_and_two_lane_variants() {
-    let (one, two) = (stratos_in("backrow", 1), stratos_in("backrow", 2));
-    assert!(is_standing_unit(&one, unit(&one, AI, STRATOS)));
-    assert_eq!(
-        search_signature(&one, AI),
-        search_signature(&two, AI),
-        "the evaluation reads no lane, so the beam keeps one of them (#1797)"
-    );
-    assert_ne!(unit_lanes(&one), unit_lanes(&two), "but they are two placements");
-    let row = stratos_in("units", 1);
-    assert_ne!(
-        search_signature(&one, AI),
-        search_signature(&row, AI),
-        "but the backrow and the unit row leave different zones for a play, so they stay two positions"
-    );
-    assert_ne!(
-        unit_lanes(&one),
-        unit_lanes(&row),
-        "a backrow lane is never the same lane of the unit row"
-    );
-}
-
 #[test]
 fn r3575402_a_shipyards_turn_start_fuse_is_priced_in_hand_and_on_the_field() {
     let mut s = board(
@@ -199,42 +158,6 @@ fn r3575402_a_shipyards_turn_start_fuse_is_priced_in_hand_and_on_the_field() {
 }
 
 #[test]
-fn r3575403_an_equipped_host_reads_its_pieces_activate_price() {
-    let mut s = board(
-        "ai-r3575403-equip",
-        json!({ "hand": [CANNON, VANILLA], "field": [VANILLA], "mana": 2 }),
-        json!({ "hand": [VANILLA], "field": [SORCERER] }),
-    );
-    let root = s.state().clone();
-    let counter = create_node_counter(AI_BUDGET.nodes, None);
-    let prices = activation_prices(&root, AI, &counter);
-    let price = activation_price_of(&prices, CANNON, AI).expect("the hand Cannon is priced");
-    s.play(CANNON, json!({ "zone": 1, "equip": true }));
-    let equipped = s.state().clone();
-    let host = active_units_of(&equipped, AI)
-        .into_iter()
-        .next()
-        .expect("the host")
-        .clone();
-    assert!(
-        fused_id_parts(Some(&equipped), &host.def_id)
-            .is_some_and(|parts| parts.contains(&CANNON.to_string())),
-        "the Cannon fused into the host: {}",
-        host.def_id
-    );
-    let priced = Prices {
-        activations: prices,
-        ..Prices::default()
-    };
-    let gained = unit_worth(&equipped, &host, &AI_EVAL, &priced)
-        - unit_worth(&equipped, &host, &AI_EVAL, Prices::NONE);
-    assert!(
-        (gained - AI_EVAL.activation * price).abs() < 1e-9,
-        "the fusion has the Cannon's Activate: {gained} against {price}"
-    );
-}
-
-#[test]
 fn r3575404_a_dormant_shipyards_launch_is_priced_though_it_exiles_the_hull() {
     // Played, the shipyard lies Dormant with no piece, so its launch is refused; at the seat's next
     // turn start its yard has fused one in (R3539004) and the probe prices that launch.
@@ -275,7 +198,8 @@ fn r3575404_a_dormant_shipyards_launch_is_priced_though_it_exiles_the_hull() {
     let gained = evaluate_priced(&placed, AI, NextSwing::Enemy, &AI_EVAL, &priced)
         - evaluate_priced(&placed, AI, NextSwing::Enemy, &AI_EVAL, Prices::NONE);
     assert!(
-        gained > 0.0,
-        "and the sleeper is worth more for the launch it offers: {gained}"
+        (gained - AI_EVAL.activation * price).abs() < 1e-9,
+        "the sleeper is worth `activation` of its launch, not the slumber share of that: the price was \
+         read from the sleeping hull, so it already holds the wait: {gained} against {price}"
     );
 }

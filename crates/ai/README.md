@@ -103,11 +103,7 @@ with none waiting, nothing changes. A Dormant card (R1839000) acts in no line an
 it wakes, but the evaluation counts it as the unit it wakes as, `slumber_turn_share` of it per turn left
 on its countdown, or `slumber_waiting_share` with none (R2380000). A Unit standing in the backrow
 (R1081000) counts once, as the Unit it is, never again as a backrow card (`standing_unit_priced_once`,
-R2490000; off in `GREEDY_EVAL`), and it is placed once too: `search_signature` leaves it out of the
-backrow's text and says only how many of that side's Units stand there, while `unit_lanes` says its row
-beside its lane, so one play's backrow placements are lane variants of one position as its unit-row
-placements are, and the backrow and the unit row, which leave different zones for a play, stay two
-(R3575401). A Unit in The Gauntlet's lanes threatens no face while The Gauntlet
+R2490000; off in `GREEDY_EVAL`). A Unit in The Gauntlet's lanes threatens no face while The Gauntlet
 acts, since it may attack no hero: `face_threat` asks `attack_restriction`, as the lethal solver does
 (`gauntlet_bars_face_attacks`, R1849005, #3287; off in `GREEDY_EVAL`). A unit's Death counts by what it
 leaves behind (R2424000): at the root `death_prices` prices, within `AI_DEATH_PROBE_NODES`, each live
@@ -143,9 +139,7 @@ shipyard's launch exiles the hull and stands a fresh Starship in its place. Then
 ability, and each Dormant card of the seat's acting to awaken, is priced the same way and keyed by the
 card as the seat holds it now (R3575400, R923001: a hand card is spawned where a play would put it
 first), so a play worth the Activate it leaves reads it the moment it lands, not a turn later; the
-enemy's hand is never probed. A card with no price of its own whose id names ingredients, an Equip a
-line fused into a host among them (R1086), reads theirs: the best of their Activate prices, the sum of
-their turn-hook prices (R3575403). A shipyard's turn-start fuse (R3539004) is no hook of its script, so
+enemy's hand is never probed. A shipyard's turn-start fuse (R3539004) is no hook of its script, so
 `turn_hook_prices` prices it by one run of the engine's own yard step, for each Dormant shipyard on
 either field and each in the seat's hand, and `slumber_worth` adds `AI_EVAL.turn_hook` of it outside the
 slumber share, which that probe's own evaluation already applied (R3575402).

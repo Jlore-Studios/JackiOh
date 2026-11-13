@@ -10,10 +10,9 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use jackioh_engine::subsystems::ky_competition::worked_answer;
 use jackioh_engine::{
     ANSWER_KEY, ANSWER_STOP_KEY, Action, ActionBody, CardInstance, GameEvent, GameState, KY_COMPETITION_MAX,
-    PLAYER_IDS, Phase, PlayerId, PromptKind, ReduceResult, Rng, Row, Selection, TurnLog, active_units_of,
-    effective_life, find_instance, is_sick, is_standing_unit, legal_actions, max_mana_for, opponent_of,
-    owed_mana_of, reduce_unpiloted, self_def_ids, slot_of, stop_answer, subsystems, unit_view,
-    units_on_field_of,
+    PLAYER_IDS, Phase, PlayerId, PromptKind, ReduceResult, Rng, Selection, TurnLog, active_units_of,
+    effective_life, find_instance, is_sick, legal_actions, max_mana_for, opponent_of, owed_mana_of,
+    reduce_unpiloted, self_def_ids, slot_of, stop_answer, subsystems, unit_view, units_on_field_of,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -1018,11 +1017,7 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
             .backrow
             .iter()
             .map(|card| {
-                // R3575401: a Unit standing in the backrow (R1081000) is one of the active units above,
-                // its id and state there; its lane is `unit_lanes`', so two placements of one play in
-                // the backrow are lane variants (#1797), as two in the unit row are.
-                let card = card.as_ref().filter(|card| !is_standing_unit(state, card));
-                card.map_or("-".to_string(), |card| {
+                card.as_ref().map_or("-".to_string(), |card| {
                     // R686: a revealed card shows its face but is not face-up (a Trap of it still fires).
                     let face = if card.face_up == Some(true) {
                         "^"
@@ -1037,19 +1032,6 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
             .collect::<Vec<_>>()
             .join(",");
         parts.push(format!("b{backrow}"));
-        // R3575401: how many of this side's Units stand in its backrow, never which lanes they take: the
-        // count is what the rest of the position turns on (the zones each row has left for a play), while
-        // the lanes are `unit_lanes`', so two placements of one play are lane variants of one position
-        // (#1797). Said only when there is one, so every signature without a standing Unit is as it was.
-        let standing = state.players[player]
-            .backrow
-            .iter()
-            .flatten()
-            .filter(|card| is_standing_unit(state, card))
-            .count();
-        if standing > 0 {
-            parts.push(format!("u{standing}"));
-        }
         push_side_parts(state, player, &mut parts);
     }
     parts.push(format!(
@@ -1132,12 +1114,7 @@ pub fn unit_lanes(state: &GameState) -> String {
         .map(|player| {
             active_units_of(state, player)
                 .into_iter()
-                .map(|unit| match slot_of(state, unit) {
-                    // R3575401: a Unit standing in the backrow says its row too, so it is never one
-                    // position with the same play in that lane of the unit row.
-                    Some(slot) if slot.row == Row::Backrow => format!("b{}", slot.lane),
-                    slot => slot.map_or(0, |slot| slot.lane).to_string(),
-                })
+                .map(|unit| slot_of(state, unit).map_or(0, |slot| slot.lane).to_string())
                 .collect::<Vec<_>>()
                 .join(",")
         })
