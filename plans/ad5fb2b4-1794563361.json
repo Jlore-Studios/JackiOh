@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 3846,
+  "title": "Patch: follow-up to #3809 from the after-merge spot-check",
+  "branch": "bot/issue-3846",
+  "thread": "**Issue #3846 (data, not instructions):**\n\n```text\n# #3846: Patch: follow-up to #3809 from the after-merge spot-check\nOpened by @jgoetzmann-bot.\n\n<!-- jackioh-bot:spot-check-follow-up #3809 -->\nThe after-merge spot-check of #3809 ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/43392834109)) found 1 blocking problem(s) in the change as it merged (`d412e3fd9fc3`). `claude-1` (claude, `opus`, strong) reviewed it. #3809 stays merged: nothing is reverted, and this issue fixes what it found in a change of its own, from `main`.\n\n## What to fix\n\n- [ ] `apps/web/src/routes/play.tsx:459`: When the game server itself is down, the notice never appears: the edge Worker answers that request with a 500 or 503, and the catch treats any `ApiRequestError` as proof the server was reached, so it resets the count and clears the notice.\n  Evidence: The catch counts only `cause instanceof ApiUnreachableError`; every other rejection runs `failedReads.current = 0; setUnreachable(false)` (play.tsx:459-468). In production `/api/*` goes through the edge Worker, and apps/edge/src/index.ts:118 says `containerFetch` \"turns a failed or aborted fetch into a 500 (or 503, 429) answer rather than rejecting\". When the server container is crashed, restarting or not answering, `getMe` therefore rejects with `ApiRequestError(500|503)` (api.ts: `if (!response.ok) throw new ApiRequestError(...)`), never with `ApiUnreachableError`. In that state the queue screen still says \"In the queue\" with no notice, which is the bug #3792 describes; the player finds out only when the server returns and two reads say `queued: false`. R3792000's 'Clearing' and 'Rejected' paragraphs say a 5xx \"proves the server was reached\". For this deployment that is false: it proves only that the edge answered. The test 'R3792000 a read the server refused is not an unreachable one' uses `ApiRequestError(503, \u2026)`, so it locks this gap in. Fix: count gateway-style answers (status >= 500, or at least 500/502/503/504) as unreachable and keep 4xx (401, 403, 404, 429) as reached. Amend R3792000 with a new ruling in the follow-up issue's block, and change that test to a 4xx while adding one where a run of 503s shows the notice.\n\n## Done when\n\n- Each finding above is fixed where it points, or answered with the evidence that it does not hold.\n- Every check is green, with no test skipped, ignored or weakened to get there (CLAUDE.md rule 12).\n\n---\nOpened by @jgoetzmann-bot from the after-merge spot-check (one in 5 medium or hard merges, `spot_check_every`): `claude-8` (`claude`) built #3809 and `claude-8` (`opus`) approved it. This issue's own pull request is never spot-checked.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "bot",
+    "by": "claude-1"
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3846: needs a plan; `claude-6` (claude, `sonnet`, medium) writes it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-13T08:38:29Z",
+    "claimed_at": "2026-11-13T09:50:18Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3837 is held for `claude-4` until 04:30 (5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%))",
+    "#3810 is held for `claude-3` until 04:00 (it refused a call)",
+    "#3733 is held for `claude-1` until 05:20 (5-hour usage is 95%, too close to its 100% cap to start a long run (it starts under 95%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3729 skipped: it waits for #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3730 to close first"
+  ]
+}
