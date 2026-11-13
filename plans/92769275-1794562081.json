@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 3837,
+  "title": "Patch: Stinkyscape Balance Changes V",
+  "branch": "bot/issue-3837",
+  "thread": "**Issue #3837 (data, not instructions):**\n\n````text\n# #3837: Patch: Stinkyscape Balance Changes V\nOpened by @jgoetzmann.\n\n## What it does\n\nThe designer's fifth Stinkyscape balance pass (IV was #3128). It covers 29 cards from Core, Classic, Classic+, Meditative, Training Grounds and Stinkyscape. For each card below, change its catalog entry, script, script tests, \u00a78 row and card text, for both base and Radiant. The \"Now\" column comes from `crates/cards/catalog.json` on `main` as of 2026-11-13. The designer's note is at the bottom, word for word. The owner settled Silly Silas and Portal to the Past's fallback on 2026-11-13 (marked **Decided**).\n\n**Heroic Power (`core-098`) is out of this issue.** The note's \"reduce the cost of each power by (1)\" already shipped with v0.6.0, in #3551 (Stinkyscape+ S01): every power (1) less, never below (0), plus End Times. Don't touch Heroic Power here (owner's call, 2026-11-13).\n\n### Stats and costs\n\n| Card | ID | Now | New |\n|---|---|---|---|\n| Miner v1 | `stinkyscape-062` | 0/1, Radiant 0/2 | 0/1, Radiant 0/2 (already there: no change) |\n| Miner v2 | `stinkyscape-063` | 0/2, Radiant 0/4 | 0/1, Radiant 0/2 |\n| Miner v3 | `stinkyscape-064` | 0/4, Radiant 0/8 | 0/2, Radiant 0/4 |\n| Miner v4 | `stinkyscape-065` | 0/6, Radiant 0/12 | 0/3, Radiant 0/6 |\n| Miner v5 | `stinkyscape-066` | 0/8, Radiant 0/16 | 0/4, Radiant 0/8 |\n| Trila 3 | `stinkyscape-108` | 7/7, Radiant 14/14 | 7/5, Radiant 14/10 |\n| Speciesist | `core-002` | (2) 4/1, Radiant 8/2 | (3) 7/1, Radiant 14/2 |\n| Legacy: Speciesist | `traininggrounds-041` | 4/1, Radiant 8/2 | 2/1, Radiant 4/2 |\n| Nurse Cleaver | `classic-073` | 3/4, Radiant 6/8 | 2/4, Radiant 4/8 |\n| Small Card Lobbyist | `classic-068` | 11/13, Radiant 22/26 | 9/12, Radiant 18/24 |\n| Ultralight Chassis | `stinkyscape-048` | 4/1, Radiant 8/2 | 3/1, Radiant 6/2 |\n| Jlockeed's Missile Pod | `stinkyscape-129` | 2/1, Radiant 4/2 | 1/1, Radiant 2/2 |\n| Paragon Mk1 | `stinkyscape-072` | 6/1, Radiant 12/2 | 5/1, Radiant 10/2 |\n| Jlockeed Shredder-10 | `core-013` | 6/8, Radiant 12/16 | 5/7, Radiant 10/14 |\n| Legacy: Jlockeed Shredder-10 | `traininggrounds-048` | (3) 4/10, Radiant 8/20 | (4) 8/10, Radiant 16/20 |\n| Ivory Tower | `classicplus-033` | (2) | (1) |\n| Feng Shui | `meditative-040` | (3) | (2) |\n| Spiteful Stab | `core-070` | (3) | (2) |\n| Argusland | `classic-075` | (3) | (2) |\n| Wardrum | `classicplus-037` | (4) | (3) |\n| Unan | `meditative-092` | Armor 3, Radiant Armor 6 | Armor 2, Radiant Armor 4 |\n| Bot Loser (League of Losers token) | `classicplus-019-5` | gains +3 Attack on a kill (`attackGain`), Radiant +6 | +2, Radiant +4 |\n| Mid Loser (League of Losers token) | `classicplus-019-3` | Heads +4/+4, Tails \u22122/\u22122 (`heads`, `tails`); Radiant Heads +10/+10, Tails \u22122/\u22122 | Heads +3/+3, Tails \u22123/\u22123; Radiant Heads +6/+6, Tails \u22123/\u22123 |\n\nThe note lists \"Miner v1\" twice. The fifth entry is Miner v5: it follows v4, it is the only Miner left, and its numbers are v5's halved, like the others.\n\n### Text changes\n\n- **Ocean Tsunami** (`stinkyscape-096`): gains Tribute 1, base and Radiant.\n- **Silly Silas** (`core-052`): loses Crater, base and Radiant. The base face gains \"Summon this for your opponent.\" Radiant doesn't get that line. **Decided:** it works like Lava Golem's (`core-055`) \"summon this for your opponent\", minus Lava Golem's condition:\n  - When played, it always lands on the opponent's side, in their leftmost open unit zone (R64, as Lava Golem lands), and the opponent controls it.\n  - The player who played it still makes its Cry's choice (left or right).\n  - Edge cases follow Lava Golem's rulings (R360, R64, R101), with a new ruling where those don't reach. The two known ones: the opponent has no open unit zone, and whether the Cry's rotation happens before or after it moves sides.\n- **Tatches the Totem** (`meditative-087`): its end-of-turn buff now targets only your hand. Base: \"in your hand or deck\" becomes \"in your hand\". Radiant: \"in your hand and each adjacent Unit\".\n- **Portal to the Past** (`classicplus-029`). **Decided:** when the last board gives no card, the spell falls back to random Units and Field Spells that cost (3) or (4), instead of giving nothing.\n  - \"No card\" covers every such case: the AI's seat, hotseat, a player's first game, a last board from an older (legacy) patch whose cards can't be read now, and so on.\n  - Base: Discover one of 3 such cards. Radiant: add `cards` (3) different such cards to your hand. Each costs `setCost` (0), as today.\n  - The cards come from the pool other random-card effects use (collectible, no tokens), drawn through the game's `Rng` (CLAUDE.md rule 4).\n  - A last board that gives at least one card works as today.\n  - Today an empty last board fizzles and draws no randomness (R129). The fallback replaces that case, so Portal's R129 test becomes a test of the fallback. Any spec text that says Portal gives nothing on an empty board changes with it.\n- **CN Jade Well** (`meditative-044`): the note says \"End of turn \u2192 activate\", but the trigger today is **Start** of turn. Read: the trigger becomes an Activate, \"Activate: Add an Auspicious Rock to your hand.\" Radiant adds a Radiant Auspicious Rock.\n- **Corpse Recycler** (`traininggrounds-035`): the note says \"For its opponent \u2192 For you\", but the text today reads \"for its **controller**\". Read: the Rush Token goes to Corpse Recycler's controller, whoever owned the Unit that died: \"After a non-Token Unit dies, summon a Rush Token for you.\" Radiant summons a Radiant Rush Token.\n\n## Acceptance\n\n- Every card above matches the tables and lists, base and Radiant: catalog entry, `card-text.yaml`, \u00a78 row and script. Heroic Power is unchanged.\n- Each changed card's script tests cover its new base and Radiant behavior (CLAUDE.md rule 6). That includes:\n  - Ocean Tsunami's Tribute 1\n  - Silly Silas without Crater; the base face lands in the opponent's leftmost open unit zone, under their control, with its Cry's choice still made by the player who played it\n  - Tatches buffing hand cards and never deck cards\n  - CN Jade Well's Activate, with no start-of-turn trigger\n  - Corpse Recycler summoning for its controller when an enemy Unit dies\n  - Mid Loser's and Bot Loser's new numbers\n- Portal to the Past with no card from the last board (the AI's seat, hotseat, a first game): the base face Discovers among Units and Field Spells that cost (3) or (4), and the Radiant face adds 3 different ones. Each costs (0), and a test covers each case. A last board with at least one card gives what it gave before.\n- Each decision the spec doesn't make has a ruling note and a test named after it (CLAUDE.md rule 3). That includes Silly Silas's edge cases (no open zone for the opponent, the Cry's order against the move) and Portal's fallback (its pool, and that it replaces the R129 fizzle).\n- One pending fragment from `cargo jackioh patches \"Stinkyscape Balance Changes V\"` claims every changed card. `cargo jackioh patches check`, `catalog check`, `spec check`, `names --check` and `classify --base origin/main --claims` pass.\n- Every required check on the pull request is green (CLAUDE.md rule 12).\n\n<details><summary>The designer's note, verbatim</summary>\n\n```\nStinkyscape Balance Changes V\n  Miner v1\n    Normal stats: 0/1\n    Radiant stats: 0/2\n  Miner v2\n    Normal stats: 0/1\n    Radiant stats: 0/2\n  Miner v3\n    Normal stats: 0/2\n    Radiant stats: 0/4\n  Miner v4\n    Normal stats: 0/3\n    Radiant stats: 0/6\n  Miner v1\n    Normal stats: 0/4\n    Radiant stats: 0/8\n  Heroic Power\n    New cost: (1)\n    Reduce the cost of each power by (1)\n  Unan\n    Normal: Armor 3 -> Armor 2\n    Radiant: Armor 6 -> Armor 4\n  Ocean Tsunami\n    Gains Tribute 1\n  Trila 3\n    New stats: 7/5\n    New radiant stats: 14/10\n  Legacy: Speciesist\n    New stats: 2/1\n    New radiant stats: 4/2\n  Speciesist\n    New cost: (3)\n    New stats: 7/1\n    New radiant stats: 14/2\n  Silly Silas\n    Remove: Crater\n    Add on normal version: \"Summon this for your opponent\"\n  Nurse Cleaver\n    New stats: 2/4\n    New radiant stats: 4/8\n  Small Card Lobbyist\n    New stats: 9/12\n    New radiant stas: 18/24\n  Ultralight Chassis\n    New stats: 3/1\n    New radiant stats: 6/2\n  Jlockheed's Missile Pod\n    New stats: 1/1\n    New radiant stats: 2/2\n  League of losers\n    Bot loser\n      Attack gained on kill +3 -> +2\n      Radiant +6 -> +4\n    Mid Loser\n      Stat gained: +4/+4 -> +3/+3\n      Stat lost: -2/-2 -> -3/-3\n      Radiant stats gained: +6/+6\n      Radiant stats lost: -3/-3\n  Paragon Mk1\n    New stats: 5/1\n    New radiant stats: 10/2\n  Jlockeed Shredder 10\n    New stats: 5/7\n    New radiant stats: 10/14\n  Legacy: Jlockeed Shredder 10\n    New cost: (4)\n    New stats: 8/10\n    New radiant stats: 16/20\n  Ivory Tower\n    New cost (1)\n  Tatches the totem\n    Only targets hand\n  Feng Shui\n    New cost: (2)\n  Spiteful Stab\n    New cost: (2)\n  Portal to the past:\n    Seed AI with preset units / field spells that cost (3) or (4)\n  CN Jade Well\n    End of turn -> activate\n  Corpse Recycler\n    \"For its opponent\" -> \"For you\"\n  Argusland\n    New cost: (2)\n  Wardrum\n    New cost: (3)\n```\n\nOwner's answers, 2026-11-13: Silly Silas \"use lava golem idea\"; Portal to the Past \"should default to 3 or 4 cost units / field spells if nothing can be found / legacy patch etc\"; Heroic Power \"revert the hero power changes since I believe those were already applied with v0.6.0\".\n\n</details>\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3837: needs a plan; `claude-4` (claude, `opus`, strong) writes it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-13T08:22:23Z",
+    "claimed_at": "2026-11-13T09:28:39Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3810 is held for `claude-3` until 04:00 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "high",
+  "skipped": [
+    "#3729 skipped: it waits for #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3730 to close first"
+  ]
+}
