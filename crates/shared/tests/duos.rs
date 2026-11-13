@@ -12,10 +12,10 @@ use jackioh_shared::config::{
     BOT_WRITE_RETRY_MS, DISCONNECT_GRACE_SECONDS, DUOS_AI_STEP_DELAY_MS, DUOS_MULLIGAN_CLOCK_MS,
     DUOS_ROUND_CLOCK_MS, MATCH_CEILING_MINUTES, MATCH_SERVER_ACTION_RETRY_MS,
 };
-use jackioh_shared::host::duos::{DuosAiMode, DuosDecide, DuosLetGo, DuosNote, DuosSeatMessage};
+use jackioh_shared::host::duos::{DuosAiMode, DuosDecide, DuosLetGo, DuosNote, DuosSeatMessage, slot};
 use jackioh_shared::host::timer::{TimerCommand, TimerKey};
 use jackioh_shared::host::{
-    ActionAnswer, DuosHost, DuosHostEvent, DuosHostOutput, DuosSetup, GreetingPart, LogOutcome,
+    ActionAnswer, DuosHost, DuosHostEvent, DuosHostOutput, DuosSetup, DuosTeamB, GreetingPart, LogOutcome,
 };
 
 const SECOND: i64 = 1000;
@@ -60,6 +60,7 @@ fn setup(game: DuosState) -> DuosSetup {
         finished: false,
         next_seq: 1,
         acked: Vec::new(),
+        team_b: DuosTeamB::Ai,
     }
 }
 
@@ -68,7 +69,8 @@ struct Table {
     now: i64,
     timers: Vec<(TimerKey, u32, i64)>,
     log: Vec<(i64, DuosAction)>,
-    sent: [Vec<DuosSeatMessage>; 2],
+    /// By `slot`: an AI team's seats are sent nothing.
+    sent: [Vec<DuosSeatMessage>; 4],
     answers: Vec<(String, ActionAnswer)>,
     records: Vec<DuosResult>,
     decides: Vec<DuosDecide>,
@@ -92,7 +94,7 @@ impl Table {
             now: EPOCH,
             timers: Vec::new(),
             log: Vec::new(),
-            sent: [Vec::new(), Vec::new()],
+            sent: [Vec::new(), Vec::new(), Vec::new(), Vec::new()],
             answers: Vec::new(),
             records: Vec::new(),
             decides: Vec::new(),
@@ -128,11 +130,11 @@ impl Table {
                             .retain(|(held, held_id, _)| !(*held == key && *held_id == id));
                     }
                 },
-                DuosHostOutput::Send { seat, message } => match seat {
-                    DuosSeat::A1 => self.sent[0].push(message),
-                    DuosSeat::A2 => self.sent[1].push(message),
-                    _ => panic!("the AI's seat is sent nothing: {seat}"),
-                },
+                DuosHostOutput::Send { seat, message } => {
+                    let person = self.host.team_b().person(seat);
+                    let index = person.unwrap_or_else(|| panic!("the AI's seat is sent nothing: {seat}"));
+                    self.sent[index].push(message);
+                }
                 DuosHostOutput::Append { .. } if self.holding_appends => {}
                 DuosHostOutput::Append { seq, action, .. } => {
                     let outcome = if self.failing_appends > 0 {
@@ -1605,5 +1607,228 @@ mod scripted {
             &table.notes[notes..]
         );
         assert_eq!(table.ceiling_draws, 1);
+    }
+}
+
+mod two_v_two {
+    //! R3731002: a 2v2 from a private lobby, team B played by two more people.
+    use super::*;
+
+    const B1: DuosSeat = DuosSeat::B1;
+    const B2: DuosSeat = DuosSeat::B2;
+    const PEOPLE: [DuosSeat; 4] = [A1, A2, B1, B2];
+
+    fn versus(seed: &str) -> DuosSetup {
+        DuosSetup {
+            team_b: DuosTeamB::People,
+            ..setup(opening(seed))
+        }
+    }
+
+    fn end_turn(table: &Table, seat: DuosSeat) -> DuosActionBody {
+        table
+            .host
+            .legal(seat)
+            .into_iter()
+            .find(|body| {
+                matches!(
+                    body,
+                    DuosActionBody::Duel {
+                        body: ActionBody::EndTurn
+                    }
+                )
+            })
+            .unwrap_or_else(|| panic!("{seat} may end its turn"))
+    }
+
+    /// Whether the AI wrote a row for a team B seat.
+    fn ai_played_team_b(table: &Table) -> bool {
+        table
+            .log
+            .iter()
+            .any(|(_, action)| (action.seat == B1 || action.seat == B2) && action.nonce.starts_with("srv-"))
+    }
+
+    #[test]
+    fn r3731002_team_b_people_are_never_played_by_the_ai_while_here() {
+        let mut table = Table::new(versus("duos-2v2-1"));
+        for seat in PEOPLE {
+            table.connect(seat);
+        }
+        table.feed(DuosHostEvent::Arm);
+        // Nobody is away, and no seat is the AI's: nothing pauses to act.
+        for seat in PEOPLE {
+            assert!(table.timer(TimerKey::DuosGrace { seat }).is_none(), "{seat}");
+            assert!(table.timer(TimerKey::DuosAi { seat }).is_none(), "{seat}");
+        }
+        // Every person keeps their own hand: round 1 begins with no AI move.
+        for (n, seat) in PEOPLE.into_iter().enumerate() {
+            let keep = jackioh_shared::host::duos::keep_whole_hand(&table.host.legal(seat))
+                .expect("a mulligan is legal");
+            let answer = table.act(seat, &format!("m-{n}"), keep);
+            assert!(matches!(answer, ActionAnswer::Ack { .. }), "{seat} {answer:?}");
+        }
+        assert_eq!(table.round(), 1);
+        assert!(table.timer(TimerKey::DuosRound).is_some());
+        // Team A ends its round: team B's round runs the round clock too, as people's.
+        for (n, seat) in [A1, A2].into_iter().enumerate() {
+            let body = end_turn(&table, seat);
+            let answer = table.act(seat, &format!("e-{n}"), body);
+            assert!(matches!(answer, ActionAnswer::Ack { .. }), "{seat} {answer:?}");
+        }
+        assert_eq!(table.round(), 2);
+        assert_eq!(table.host.game().round_seats, vec![B1, B2]);
+        assert!(table.timer(TimerKey::DuosRound).is_some());
+        // Short of the clock, team B's seats wait for their people.
+        table.sleep(DUOS_ROUND_CLOCK_MS / 2);
+        table.answer_searches();
+        assert!(table.decides.is_empty(), "{:?}", table.decides);
+        assert!(!ai_played_team_b(&table), "{:?}", table.nonces());
+        // Each of the four is sent its own seat's view.
+        for seat in PEOPLE {
+            assert!(
+                table.sent[slot(seat)].iter().any(|message| matches!(
+                    message,
+                    DuosSeatMessage::View { view, .. } if view.seat == seat
+                )),
+                "{seat}"
+            );
+        }
+    }
+
+    #[test]
+    fn r3731002_a_team_b_seat_past_its_grace_is_the_ais_until_its_person_is_back() {
+        let mut table = Table::new(versus("duos-2v2-2"));
+        for seat in [A1, A2, B1] {
+            table.connect(seat);
+        }
+        table.feed(DuosHostEvent::Arm);
+        // b2 never came: its grace runs from the arm, as a team A person's would (R744).
+        assert_eq!(
+            table.timer(TimerKey::DuosGrace { seat: B2 }),
+            Some(EPOCH + grace_ms())
+        );
+        assert!(table.timer(TimerKey::DuosGrace { seat: B1 }).is_none());
+        for (n, seat) in [A1, A2, B1].into_iter().enumerate() {
+            let keep = jackioh_shared::host::duos::keep_whole_hand(&table.host.legal(seat))
+                .expect("a mulligan is legal");
+            table.act(seat, &format!("m-{n}"), keep);
+        }
+        let told = table.sent[slot(B1)].len();
+        // The mulligan clock keeps b2's hand (§13.2), then its grace runs out.
+        table.sleep(grace_ms());
+        assert!(table.host.ai_playing(B2));
+        assert!(!table.host.ai_playing(B1));
+        assert!(
+            table
+                .notes
+                .iter()
+                .any(|note| matches!(note, DuosNote::SeatAiPlaying { seat } if *seat == B2))
+        );
+        // b2's teammate is told.
+        assert!(table.sent[slot(B1)][told..].iter().any(|message| matches!(
+            message,
+            DuosSeatMessage::Teammate {
+                connected: false,
+                ai_playing: true
+            }
+        )));
+        // No loss by disconnect: in team B's round the AI plays b2's seat, and only b2's.
+        assert_eq!(table.round(), 1);
+        for (n, seat) in [A1, A2].into_iter().enumerate() {
+            let body = end_turn(&table, seat);
+            table.act(seat, &format!("e-{n}"), body);
+        }
+        assert_eq!(table.round(), 2);
+        let rows = table.log.len();
+        table.play_on(10 * SECOND, |table| {
+            table.log[rows..].iter().any(|(_, action)| action.seat == B2)
+        });
+        assert!(
+            table.log[rows..].iter().any(|(_, action)| action.seat == B2),
+            "{:?}",
+            table.nonces()
+        );
+        let ai_seats: Vec<DuosSeat> = table
+            .log
+            .iter()
+            .filter(|(_, action)| action.nonce.starts_with("srv-ai-"))
+            .map(|(_, action)| action.seat)
+            .collect();
+        assert!(ai_seats.iter().all(|seat| *seat == B2), "{ai_seats:?}");
+        // b2 comes back: the AI lets go, and b1 is told.
+        let told = table.sent[slot(B1)].len();
+        table.connect(B2);
+        assert!(!table.host.ai_playing(B2));
+        assert!(table.sent[slot(B1)][told..].iter().any(|message| matches!(
+            message,
+            DuosSeatMessage::Teammate {
+                connected: true,
+                ai_playing: false
+            }
+        )));
+        assert!(
+            table
+                .notes
+                .iter()
+                .any(|note| matches!(note, DuosNote::SeatBack { seat } if *seat == B2))
+        );
+    }
+
+    #[test]
+    fn r3731002_the_clock_frame_carries_team_b_graces_only_in_a_two_v_two() {
+        let last_clock = |sent: &[DuosSeatMessage]| {
+            sent.iter()
+                .rev()
+                .find(|message| matches!(message, DuosSeatMessage::Clock { .. }))
+                .cloned()
+                .expect("a clock frame")
+        };
+        let keep = |table: &mut Table, seat: DuosSeat| {
+            let body = jackioh_shared::host::duos::keep_whole_hand(&table.host.legal(seat))
+                .expect("a mulligan is legal");
+            table.act(seat, "m-a1", body);
+        };
+        // Co-op: the AI team has no grace, and its frame has no word of one.
+        let mut coop = Table::new(setup(opening("duos-2v2-3")));
+        coop.connect(A1);
+        coop.connect(A2);
+        coop.feed(DuosHostEvent::Arm);
+        keep(&mut coop, A1);
+        let clock = last_clock(&coop.sent[0]);
+        assert!(matches!(
+            clock,
+            DuosSeatMessage::Clock {
+                grace_b1: None,
+                grace_b2: None,
+                ..
+            }
+        ));
+        let json = serde_json::to_value(&clock).expect("json");
+        assert!(json.get("graceB1").is_none() && json.get("graceB2").is_none(), "{json}");
+        assert!(json.get("graceA1").is_some(), "{json}");
+        // A 2v2 with b2 away: every seat's frame carries b2's grace.
+        let mut table = Table::new(versus("duos-2v2-3"));
+        for seat in [A1, A2, B1] {
+            table.connect(seat);
+        }
+        table.feed(DuosHostEvent::Arm);
+        keep(&mut table, A1);
+        for seat in [A1, B1] {
+            let clock = last_clock(&table.sent[slot(seat)]);
+            assert!(
+                matches!(
+                    clock,
+                    DuosSeatMessage::Clock {
+                        grace_b1: None,
+                        grace_b2: Some(at),
+                        ..
+                    } if at == EPOCH + grace_ms()
+                ),
+                "{seat} {clock:?}"
+            );
+            let json = serde_json::to_value(&clock).expect("json");
+            assert!(json.get("graceB1").is_none() && json.get("graceB2").is_some(), "{json}");
+        }
     }
 }

@@ -972,7 +972,7 @@ pub static ROUTES: &[Route] = &[
         h!(crate::duos::again::again_status),
     ),
     // end Duos co-op (#946)
-    // Private lobbies (#3730, R3730000 to R3730006): lobby/mod.rs.
+    // Private lobbies (#3730, #3731; R3730000 to R3730006, R3731000): lobby/mod.rs.
     (
         "POST",
         "/api/lobbies",
@@ -1033,6 +1033,19 @@ pub static ROUTES: &[Route] = &[
         "/api/lobbies/:code/start",
         AuthLevel::Active,
         h!(crate::lobby::start),
+    ),
+    // R3731000: a 2v2's teams.
+    (
+        "POST",
+        "/api/lobbies/:code/team",
+        AuthLevel::Active,
+        h!(crate::lobby::team_switch),
+    ),
+    (
+        "POST",
+        "/api/lobbies/:code/move",
+        AuthLevel::Active,
+        h!(crate::lobby::move_member),
     ),
     // daily/ (SPEC §9.13, #3727): daily games over plain HTTPS.
     (

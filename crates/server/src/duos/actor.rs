@@ -1,5 +1,5 @@
-//! One actor per Duos co-op match (fullsend SPEC S6, B35–B40): it holds one socket per person (a1, a2)
-//! and carries out what the match host's machine asks of it, and appends every action to
+//! One actor per Duos co-op match (fullsend SPEC S6, B35–B40): it holds one socket per person (a1, a2,
+//! and in a 2v2 b1 and b2 too, R3731002) and carries out what the match host's machine asks of it, and appends every action to
 //! `duos_match_actions`. It decides no clock, grace or AI rule and owns no timer of its own: the decisions
 //! are `jackioh_shared::host::duos`'s (#3101's second part) — which clock runs (the mulligan, round and
 //! prompt clocks, the ceiling and its retry), what an expiry hands the AI (a lapsed mulligan keeps the
@@ -8,8 +8,8 @@
 //! the actor feeds the machine its events (a frame, a socket gone, a timer that fired, a row written, the
 //! AI's search) and does what it answers with: a tokio timer, a socket send, a store write, the AI's
 //! search on the blocking pool. `duos_reduce`'s refusals are relayed verbatim (B35); a socket gets only its
-//! seat's view (B23). Every action takes `apply` (B40), under the dealt catalog (R767000). The AI plays b1,
-//! b2 and a person's seat past its grace (B37) or clock (B38), off the runtime (R1452), with R270's
+//! seat's view (B23). Every action takes `apply` (B40), under the dealt catalog (R767000). The AI plays the
+//! AI team's b1, b2 and a person's seat past its grace (B37) or clock (B38), off the runtime (R1452), with R270's
 //! nonces, never conceding or drawing (R188). Clocks live in the machine, never in the engine, so an
 //! expiry hands the seat to the AI and `(seed, log)` still folds. The ceiling (§9.5, R1047000) is the
 //! engine's own action. Seats keep the 1v1's guards (§9.1, R835001, R137, R835000, R835002); a hello sooner
@@ -62,10 +62,11 @@ use crate::duos::{ceiling_draw, finish_match};
 use crate::economy::rewards::GameEconomy;
 use crate::seats::Seat;
 
-/// Human player seats, host and guest (S6): the per-person arrays' order.
+/// Team A's people, host and guest (S6): a co-op match's people.
 pub use jackioh_shared::host::duos::HUMAN_SEATS;
 
-use jackioh_shared::host::duos::human;
+use jackioh_engine::wire::DUOS_SEATS;
+use jackioh_shared::host::duos::slot;
 
 /// One decision the AI owes a seat, taken off the actor and run on the blocking pool: the search itself.
 /// What to ask, and what a search that finds nothing falls back on, are the machine's.
@@ -225,19 +226,20 @@ struct Core {
     host: DuosHost,
     /// The timers the machine asked for, by key, each with the id it was asked under.
     timers: IndexMap<TimerKey, (u32, Timer)>,
-    sockets: [Option<Socket>; 2],
-    /// By `HUMAN_SEATS`: action flood (R137, §9.8), refusals (R835000), malformed frames (R835002), hello
-    /// interval (R2686000).
-    guards: [SeatGuard; 2],
-    /// By `HUMAN_SEATS`: B39's ping window.
-    pings: [VecDeque<i64>; 2],
-    /// By `HUMAN_SEATS`: pending Hello socket generation to absorb duplicates (R835001).
-    hello_pending: [Option<u64>; 2],
-    socket_generation: [u64; 2],
-    /// By `HUMAN_SEATS`: whether daily Jlore cap held back pay (R1483000).
-    jlore_capped: [bool; 2],
-    /// By `HUMAN_SEATS`: payout per player answered by result write (#1657); `None`, nothing told.
-    economy: [Option<GameEconomy>; 2],
+    /// By `slot`, as every per-person array here: an AI team's seats' stay empty (R3731002).
+    sockets: [Option<Socket>; 4],
+    /// Action flood (R137, §9.8), refusals (R835000), malformed frames (R835002), hello interval
+    /// (R2686000).
+    guards: [SeatGuard; 4],
+    /// B39's ping window.
+    pings: [VecDeque<i64>; 4],
+    /// Pending Hello socket generation to absorb duplicates (R835001).
+    hello_pending: [Option<u64>; 4],
+    socket_generation: [u64; 4],
+    /// Whether daily Jlore cap held back pay (R1483000).
+    jlore_capped: [bool; 4],
+    /// Payout per player answered by result write (#1657); `None`, nothing told.
+    economy: [Option<GameEconomy>; 4],
     /// R2881000: what the actor keeps for the friends watching a person's seat.
     spectate: DuosSpectate,
 }
@@ -313,19 +315,20 @@ pub fn create_duos_actor(app: Arc<App>, input: DuosActorInput) -> DuosActor {
             finished: row.ended_at.is_some(),
             next_seq,
             acked,
+            team_b: row.team_b(),
         },
         now_ms(),
     );
     let core = Core {
         host,
         timers: IndexMap::new(),
-        sockets: [None, None],
-        guards: [SeatGuard::default(), SeatGuard::default()],
-        pings: [VecDeque::new(), VecDeque::new()],
-        hello_pending: [None, None],
-        socket_generation: [0, 0],
-        jlore_capped: [false, false],
-        economy: [None, None],
+        sockets: Default::default(),
+        guards: Default::default(),
+        pings: Default::default(),
+        hello_pending: [None; 4],
+        socket_generation: [0; 4],
+        jlore_capped: [false; 4],
+        economy: Default::default(),
         spectate: DuosSpectate::default(),
     };
     let (inbox, inbox_rx) = mpsc::unbounded_channel();
@@ -351,6 +354,11 @@ impl DuosActor {
         &self.shared.row.id
     }
 
+    /// `seat`'s `slot` when a person plays it (team A's, and team B's in a 2v2, R3731002).
+    fn person(&self, seat: DuosSeat) -> Option<usize> {
+        self.shared.row.team_b().person(seat)
+    }
+
     fn enqueue(&self, task: Task) {
         if self.shared.inbox.send(task).is_err() {
             tracing::warn!(event = "duos.queue.closed", matchId = %self.match_id_str());
@@ -365,7 +373,7 @@ impl DuosActor {
                 // queued Hello stays marked (R835001).
                 {
                     let mut core = self.lock();
-                    if let Some(index) = human(seat)
+                    if let Some(index) = self.person(seat)
                         && core.hello_pending[index] == Some(generation)
                     {
                         core.hello_pending[index] = None;
@@ -512,14 +520,14 @@ impl DuosActor {
             DuosHostOutput::Greeting { seat, part } => {
                 // R2881000: the watcher count, which a socket that was away missed.
                 if part == GreetingPart::Watchers
-                    && let Some(index) = human(seat)
+                    && let Some(index) = self.person(seat)
                 {
                     self.push_watchers_to(core, index);
                 }
             }
             DuosHostOutput::Refused { seat } => {
                 // R835000: person refusals count toward the unusual-rejection alert.
-                if let Some(index) = human(seat) {
+                if let Some(index) = self.person(seat) {
                     self.note_rejection(core, index, now_ms());
                 }
             }
@@ -647,7 +655,7 @@ impl DuosActor {
     // Sockets only carry their own seat's view (B23).
 
     fn socket_for<'c>(&self, core: &'c Core, seat: DuosSeat) -> Option<&'c Socket> {
-        let index = human(seat)?;
+        let index = self.person(seat)?;
         core.sockets[index].as_ref().filter(|socket| socket.is_open())
     }
 
@@ -671,7 +679,7 @@ impl DuosActor {
                 legal,
                 forecast,
             } => {
-                let index = human(seat);
+                let index = self.person(seat);
                 DuosServerMessage::View {
                     view,
                     legal,
@@ -685,12 +693,16 @@ impl DuosActor {
                 round_deadline,
                 grace_a1,
                 grace_a2,
+                grace_b1,
+                grace_b2,
             } => DuosServerMessage::Clock {
                 now,
                 round_deadline,
                 grace_deadlines: GraceDeadlines {
                     a1: grace_a1,
                     a2: grace_a2,
+                    b1: grace_b1,
+                    b2: grace_b2,
                 },
             },
             DuosSeatMessage::Teammate {
@@ -750,32 +762,32 @@ impl DuosActor {
         self.let_go("duos.panicked.drawn");
     }
 
-    /// R1523000: once the result has landed, both people leave the match's seats.
+    /// R1523000: once the result has landed, every person leaves the match's seats.
     fn release_seats(&self) {
         let row = &self.shared.row;
         let seat = Seat::Duos(row.id.clone());
-        for person in [&row.a1, &row.a2] {
+        for (_, person) in row.people() {
             self.shared.app.seats.release(person, &seat);
         }
     }
 
-    /// R1483000: checks if daily Jlore cap held back either seat's pay. Pushes updated view
+    /// R1483000: checks if daily Jlore cap held back any person's pay. Pushes updated view
     /// with `jlore_capped` and payment (#1657) to affected seats; a failed read is only logged.
     async fn load_jlore_caps(&self, announce: bool) {
         let caps = match super::duos_game_jlore_caps(&self.shared.app, self.match_id_str()).await {
             Ok(caps) => caps,
             Err(error) => {
                 tracing::warn!(event = "duos.jloreCaps.failed", matchId = %self.match_id_str(), message = %error);
-                [false, false]
+                [false; 4]
             }
         };
         let mut core = self.lock();
         if caps.iter().any(|capped| *capped) {
             core.jlore_capped = caps;
         }
-        for seat in HUMAN_SEATS {
+        for &seat in self.shared.row.team_b().people() {
             if announce
-                && human(seat).is_some_and(|index| core.jlore_capped[index] || core.economy[index].is_some())
+                && self.person(seat).is_some_and(|index| core.jlore_capped[index] || core.economy[index].is_some())
             {
                 self.push_view(&mut core, seat);
             }
@@ -783,12 +795,12 @@ impl DuosActor {
     }
 
     /// Retries `finish_match` ([[R1502000]]) with backoff; a result already there has landed too.
-    /// Returns payout per `HUMAN_SEATS` (#1657).
+    /// Returns payout per person, by `slot` (#1657).
     async fn record_result(
         &self,
         result: &jackioh_engine::wire::DuosResult,
         at: i64,
-    ) -> Option<[Option<GameEconomy>; 2]> {
+    ) -> Option<[Option<GameEconomy>; 4]> {
         let mut wait_ms = MATCH_RECORD_RESULT_BACKOFF_MS;
         for attempt in 1..=MATCH_RECORD_RESULT_ATTEMPTS {
             let written = one_tx!(self.shared.app.db, |t| finish_match(
@@ -894,7 +906,7 @@ impl DuosActor {
     /// R835000: records rejection, alerting on threshold crossing.
     fn note_rejection(&self, core: &mut Core, index: usize, now: i64) {
         if let Some(rejected) = core.guards[index].note_rejection(now) {
-            let profile_id = [&self.shared.row.a1, &self.shared.row.a2][index];
+            let profile_id = self.shared.row.profile_at(DUOS_SEATS[index]);
             alert_unusual_rejections(self.match_id_str(), profile_id, rejected);
         }
     }
@@ -902,7 +914,7 @@ impl DuosActor {
     fn on_socket_gone(&self, seat: DuosSeat) {
         {
             let mut core = self.lock();
-            let Some(index) = human(seat) else { return };
+            let Some(index) = self.person(seat) else { return };
             // Open replacement or halted socket is not a disconnect.
             if core.sockets[index].as_ref().is_none_or(Socket::is_open) {
                 return;
@@ -919,7 +931,7 @@ impl DuosActor {
     }
 
     fn on_frame(&self, seat: DuosSeat, text: &str) {
-        let Some(index) = human(seat) else { return };
+        let Some(index) = self.person(seat) else { return };
         let message = parse_duos_message(text);
         let mut core = self.lock();
         match message {
@@ -979,7 +991,7 @@ impl DuosActor {
     /// B39: relays rate-limited pings to teammate; a hand target off the team's own hand is dropped
     /// silently (R643).
     fn relay_ping(&self, core: &mut Core, seat: DuosSeat, ping: PingKind, target: PingTarget) {
-        let Some(index) = human(seat) else { return };
+        let Some(index) = self.person(seat) else { return };
         if core.host.is_stopped() {
             return;
         }
@@ -1023,20 +1035,15 @@ impl DuosActor {
         &self.shared.row
     }
 
-    /// The seat `profile_id` holds: a1 for the room's host, a2 for its guest, none otherwise.
+    /// The seat `profile_id` holds: a1 for the room's host, a2 for its guest, b1 and b2 for a 2v2's team
+    /// B (R3731002), none otherwise.
     pub fn seat_of(&self, profile_id: &str) -> Option<DuosSeat> {
-        if self.shared.row.a1 == profile_id {
-            Some(DuosSeat::A1)
-        } else if self.shared.row.a2 == profile_id {
-            Some(DuosSeat::A2)
-        } else {
-            None
-        }
+        self.shared.row.seat_of(profile_id)
     }
 
-    /// Attaches connection to person in `seat` (a1/a2), closing the old; view and clock follow (B35).
+    /// Attaches connection to person in `seat`, closing the old; view and clock follow (B35).
     pub fn attach(&self, seat: DuosSeat, socket: Socket) {
-        let Some(index) = human(seat) else {
+        let Some(index) = self.person(seat) else {
             socket.close(Some(CLOSE_NORMAL), Some("that seat is the AI's"));
             return;
         };
@@ -1139,12 +1146,15 @@ impl DuosActor {
         self.lock().host.finished_at()
     }
 
-    /// Whether either person holds an open socket.
+    /// Whether any person holds an open socket.
     pub fn has_open_socket(&self) -> bool {
         let core = self.lock();
-        HUMAN_SEATS
-            .into_iter()
-            .any(|seat| self.socket_for(&core, seat).is_some())
+        self.shared
+            .row
+            .team_b()
+            .people()
+            .iter()
+            .any(|seat| self.socket_for(&core, *seat).is_some())
     }
 
     /// R2092000: which human seats hold open sockets, for Play again's status (`HUMAN_SEATS`,
@@ -1179,7 +1189,7 @@ impl DuosActor {
             // The machine stops its clocks and takes their timers back.
             let outputs = self.step_in(&mut core, DuosHostEvent::Stop);
             self.exec_now(&mut core, outputs);
-            [core.sockets[0].take(), core.sockets[1].take()]
+            core.sockets.each_mut().map(Option::take)
         };
         for socket in sockets.into_iter().flatten() {
             if socket.is_open() {
@@ -1199,9 +1209,9 @@ impl DuosActor {
 // armed wait. That view is all a watcher is sent of the game: never a ping, a `clock` or `teammate`
 // frame, `jloreCapped` or `economy`; beside it, its own emote hand (R2990001) and the other watchers'
 // emotes. Nothing a watcher's socket sends reaches the reducer, the log, a ping or a clock: its emotes
-// alone are relayed, live, to both people and the other watchers, from its own hand under its own
+// alone are relayed, live, to every person and the other watchers, from its own hand under its own
 // limit (R2990000-R2990003). Past its malformed budget it is closed with 1008. Its leaving changes only
-// the count both people are told.
+// the count every person is told.
 
 use std::collections::BTreeMap;
 
@@ -1223,7 +1233,7 @@ struct DuosSpectateFrame {
     frame: String,
 }
 
-/// One watching socket: the account behind it, the `HUMAN_SEATS` index of its friend's seat, the last
+/// One watching socket: the account behind it, the `slot` of its friend's seat, the last
 /// recorded view it was sent, and (R2609000) its own `SeatGuard`, holding a seat's malformed budget and
 /// its answered hellos. R2990000, R2990001: and the name its emotes are shown under, and its own hand.
 struct DuosWatcher {
@@ -1237,12 +1247,12 @@ struct DuosWatcher {
     emote_hand: Vec<EmoteId>,
 }
 
-/// What the actor keeps for its watchers. Each person's seat's record (by `HUMAN_SEATS`) holds the
+/// What the actor keeps for its watchers. Each person's seat's record (by `slot`) holds the
 /// newest view at least SPECTATE_DELAY_MS old and every view since: all a watcher can still be owed,
 /// and nothing older.
 #[derive(Default)]
 struct DuosSpectate {
-    records: [VecDeque<DuosSpectateFrame>; 2],
+    records: [VecDeque<DuosSpectateFrame>; 4],
     watchers: Vec<DuosWatcher>,
     next_seq: u64,
     next_id: u64,
@@ -1271,7 +1281,7 @@ fn close_finished_watchers(watchers: Vec<DuosWatcher>) {
 impl DuosActor {
     /// B50, R2881000: `profile_id`'s watcher socket on the person's `seat`. A newer socket of the account
     /// replaces its older one; otherwise a game with SPECTATORS_PER_MATCH watchers, both seats' counted
-    /// together, is `Full`. An AI seat, or an actor going away, is `Closed`. Its hellos are answered
+    /// together, is `Full`. An AI team's seat, or an actor going away, is `Closed`. Its hellos are answered
     /// (R1103000), its emotes relayed under `name` (R2990000), its other frames count against its
     /// malformed budget (R2609000).
     pub fn attach_watcher(
@@ -1281,7 +1291,7 @@ impl DuosActor {
         name: &str,
         socket: Socket,
     ) -> Result<(), WatchRefused> {
-        let Some(home) = human(seat) else {
+        let Some(home) = self.person(seat) else {
             return Err(WatchRefused::Closed);
         };
         // R2990001: the watcher's own hand, the same on every socket of the account.
@@ -1379,20 +1389,20 @@ impl DuosActor {
 
     /// B50, B46: revokes the watchers for which `revoked(watcher's account, its friend's, the friend's
     /// teammate's)` holds (unfriended, blocked, a deleted account), sending forbidden and closing with
-    /// R148's 4403; updates both people's count (B51). Answers how many.
+    /// R148's 4403; updates every person's count (B51). Answers how many.
     pub fn revoke_watchers(&self, revoked: &dyn Fn(&str, &str, &str) -> bool) -> usize {
         let gone: Vec<DuosWatcher> = {
             let mut core = self.lock();
             let row = &self.shared.row;
-            let friends = [row.a1.as_str(), row.a2.as_str()];
             let (gone, kept): (Vec<DuosWatcher>, Vec<DuosWatcher>) =
                 std::mem::take(&mut core.spectate.watchers)
                     .into_iter()
                     .partition(|watcher| {
+                        let seat = DUOS_SEATS[watcher.home];
                         revoked(
                             &watcher.profile_id,
-                            friends[watcher.home],
-                            friends[1 - watcher.home],
+                            row.profile_at(seat),
+                            row.profile_at(seat.teammate()),
                         )
                     });
             core.spectate.watchers = kept;
@@ -1450,7 +1460,7 @@ impl DuosActor {
     /// (R1103000) but counts against the watcher's own `MALFORMED_FRAMES_PER_WINDOW`, as a seat's does
     /// (R835002); R2990000: an emote frame naming no pool id counts too, and is answered `malformed`
     /// with `answer` first, as a 1v1 watcher's is. Past the budget the socket is closed with 1008, and
-    /// its close handler takes the watcher off and tells both people the new count (B51).
+    /// its close handler takes the watcher off and tells every person the new count (B51).
     fn note_watcher_junk(&self, id: u64, answer: Option<&str>) {
         let socket = {
             let mut core = self.lock();
@@ -1478,7 +1488,7 @@ impl DuosActor {
 
     /// R2990000: watcher `id`'s emote, as a 1v1 watcher's (`MatchActor::relay_spectator_emote`): one
     /// its hand does not hold (R2990001) or past its limit (R2990002) is dropped silently; one let
-    /// through goes out live as `spectatorEmote` to both people's own sockets (an AI seat has none to
+    /// through goes out live as `spectatorEmote` to every person's own socket (an AI seat has none to
     /// hear it) and every other watcher, never back to its sender, and (R2990003) to none that blocks
     /// it or is blocked by it. It is never queued, so no reducer, log, hash or record sees it.
     fn relay_spectator_emote(&self, id: u64, emote: EmoteId) {
@@ -1509,14 +1519,11 @@ impl DuosActor {
             let mut sent_at = gate.sent_at;
             sent_at.push(now);
             core.spectate.emote_sent_at.insert(sender_id.clone(), sent_at);
-            let row = &self.shared.row;
-            let people =
-                [&row.a1, &row.a2]
-                    .into_iter()
-                    .zip(&core.sockets)
-                    .filter_map(|(profile_id, socket)| {
-                        socket.as_ref().map(|socket| (profile_id.clone(), socket.clone()))
-                    });
+            let people = self.shared.row.people().into_iter().filter_map(|(seat, profile_id)| {
+                core.sockets[slot(seat)]
+                    .as_ref()
+                    .map(|socket| (profile_id.to_string(), socket.clone()))
+            });
             let watchers = core
                 .spectate
                 .watchers
@@ -1534,7 +1541,7 @@ impl DuosActor {
         ));
     }
 
-    /// A watcher's socket went: it leaves, and both people hear the new count (B51).
+    /// A watcher's socket went: it leaves, and every person hears the new count (B51).
     fn detach_watcher(&self, id: u64) {
         let mut core = self.lock();
         let before = core.spectate.watchers.len();
@@ -1546,15 +1553,15 @@ impl DuosActor {
         self.push_watchers(&core);
     }
 
-    /// B51: the count, to both people's own sockets.
+    /// B51: the count, to every person's own socket.
     fn push_watchers(&self, core: &Core) {
         let frame = watchers_frame(core.spectate.watchers.len());
-        for index in 0..HUMAN_SEATS.len() {
+        for index in 0..core.sockets.len() {
             self.send_text_to_seat(core, index, &frame);
         }
     }
 
-    /// B51: the count, to the person in `HUMAN_SEATS[index]`, when anyone watches: what its socket
+    /// B51: the count, to the person at `DUOS_SEATS[index]`, when anyone watches: what its socket
     /// missed while it was away.
     fn push_watchers_to(&self, core: &Core, index: usize) {
         let count = core.spectate.watchers.len();
@@ -1578,7 +1585,8 @@ impl DuosActor {
             return;
         }
         let now = now_ms();
-        for (index, seat) in HUMAN_SEATS.into_iter().enumerate() {
+        for &seat in self.shared.row.team_b().people() {
+            let index = slot(seat);
             let frame = encode(&DuosServerMessage::View {
                 view: Box::new(self.seat_view(core, seat)),
                 legal: Vec::new(),
@@ -1669,7 +1677,7 @@ impl DuosActor {
     }
 
     /// R1107000, B51: removes the watchers that have been sent the view showing a finished game's
-    /// result and tells both people the count. Returns the watchers for `close_finished_watchers`;
+    /// result and tells every person the count. Returns the watchers for `close_finished_watchers`;
     /// called after each `spectate_flush` that can send that view. A game ended with no result in its
     /// state (R1253000's draw) is let go by `halt` instead.
     #[must_use]

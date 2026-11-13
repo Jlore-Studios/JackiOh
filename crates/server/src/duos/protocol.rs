@@ -247,11 +247,16 @@ pub fn parse_duos_message(text: &str) -> Result<DuosClientMessage, MalformedMess
 
 // Server -> client
 
-/// S6's `graceDeadlines`: each person's disconnect grace, epoch ms, or null.
+/// S6's `graceDeadlines`: each person's disconnect grace, epoch ms, or null. R3731002: team B's
+/// people's only while one runs, which only a 2v2's can.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct GraceDeadlines {
     pub a1: Option<i64>,
     pub a2: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub b1: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub b2: Option<i64>,
 }
 
 /// Every frame the co-op socket sends, tagged on `type`.

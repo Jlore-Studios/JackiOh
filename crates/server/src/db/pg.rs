@@ -7279,7 +7279,8 @@ pub async fn presence_in_duos(
     let rows = sqlx::query(
         "select distinct on (p.id) p.id as profile_id, d.id as match_id
            from unnest($1::uuid[]) as p(id)
-           join public.duos_matches d on d.ended_at is null and (d.a1 = p.id or d.a2 = p.id)
+           join public.duos_matches d on d.ended_at is null
+                and (d.a1 = p.id or d.a2 = p.id or d.b1 = p.id or d.b2 = p.id)
           order by p.id, d.created_at desc, d.id",
     )
     .bind(ids.clone())
@@ -7334,8 +7335,8 @@ pub async fn presence_watchable(
     Ok(ids.into_iter().filter(|id| watchable.contains(id)).collect())
 }
 
-/// One statement: of the named co-op matches, those whose a1 or a2 and `viewer` stand blocked,
-/// either way; in the order the ids were named.
+/// One statement: of the named co-op matches, those whose a1 or a2 (or a 2v2's b1 or b2, R3731002)
+/// and `viewer` stand blocked, either way; in the order the ids were named.
 pub async fn presence_duos_blocked(
     t: &mut PgTx<'_>,
     viewer: &str,
@@ -7350,8 +7351,8 @@ pub async fn presence_duos_blocked(
         "select d.id from public.duos_matches d
           where d.id = any($2::uuid[])
             and exists (select 1 from public.blocks k
-                         where (k.blocker = $1::uuid and k.blocked in (d.a1, d.a2))
-                            or (k.blocked = $1::uuid and k.blocker in (d.a1, d.a2)))",
+                         where (k.blocker = $1::uuid and k.blocked in (d.a1, d.a2, d.b1, d.b2))
+                            or (k.blocked = $1::uuid and k.blocker in (d.a1, d.a2, d.b1, d.b2)))",
     )
     .bind(viewer)
     .bind(ids.clone())

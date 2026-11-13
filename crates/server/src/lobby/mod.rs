@@ -1,23 +1,28 @@
-//! Private lobbies (SPEC §9.5, §13.9; R3730000 to R3730006; issue #3730): a friend game's pre-game
-//! stage, 1v1 in a room mode or co-op against the AI team, every route `AuthLevel::Active`.
+//! Private lobbies (SPEC §9.5, §13.9; R3730000 to R3730006, R3731000 to R3731003; issues #3730,
+//! #3731): a friend game's pre-game stage, 1v1 in a room mode, co-op against the AI team, or a 2v2
+//! between two teams of two people, every route `AuthLevel::Active`.
 //!
 //! - `POST /api/lobbies` makes one (`201 {code}`), `GET /api/lobbies` lists the caller's.
 //! - `GET /api/lobbies/:code` is the lobby as the caller sees it, or a classic room still joinable
 //!   under that code (R3730006).
-//! - `POST /api/lobbies/:code/{enter,leave,remove,settings,pick,ready,invite,start}` change it.
+//! - `POST /api/lobbies/:code/{enter,leave,remove,settings,pick,ready,invite,start}` change it, and
+//!   a 2v2's `team` and `move` (R3731000) move its members between its teams.
 //!
-//! A lobby is a row of `public.lobbies` (migration 0090): its host, its one guest seat, the host's
-//! settings, each member's frozen pick and Ready. A member holds no seat of the ledger until the
-//! Start (R1523000, R3730000), which reserves both and starts the game as a room's join does: a 1v1
-//! Start opens and claims a room under the lobby's code (`actor::rooms::start_lobby_room`), a co-op
-//! Start starts the co-op match with the host as a1 (`duos::rooms::start_coop_match`). Every write is
-//! a compare-and-set on the revision it read (`lobbies_update`), runs the TTL from now (R3730004)
-//! and tells every member, old and new, over `/ws/social` (`nudge_lobby`).
+//! A lobby is a row of `public.lobbies` (migrations 0090, 0091): its host, its guest seat (and a 2v2's
+//! other team's two, `guest2` and `guest3`), the host's settings, each member's frozen pick and Ready.
+//! A member holds no seat of the ledger until the Start (R1523000, R3730000), which reserves them all
+//! and starts the game as a room's join does: a 1v1 Start opens and claims a room under the lobby's
+//! code (`actor::rooms::start_lobby_room`), a co-op Start starts the co-op match with the host as a1,
+//! and a 2v2's a Duos match whose team A the seed's coin picks (R3731001)
+//! (`duos::rooms::start_coop_match`). Every write is a compare-and-set on the revision it read
+//! (`lobbies_update`), runs the TTL from now (R3730004) and tells every member, old and new, over
+//! `/ws/social` (`nudge_lobby`).
 //!
 //! Blocks (§9.4, R1689000's reading) make a lobby read as unknown, and a guest a block now separates
-//! from the host is dropped from the seat as the lobby is read. A refusal of a member's own doing is
-//! `409 conflict` with `details.reason` naming it (`full`, `own_lobby`, `not_host`, `started`,
-//! `not_ready`, `no_pick`, `already_in`, `changed`, `busy`).
+//! from the host (in a 2v2, from any member seated before them, R3731000) is dropped from the seat as
+//! the lobby is read. A refusal of a member's own doing is `409 conflict` with `details.reason`
+//! naming it (`full`, `own_lobby`, `not_host`, `started`, `not_ready`, `no_pick`, `already_in`,
+//! `changed`, `busy`, and a 2v2's `team_full` and `host_stays`).
 
 pub mod store;
 
@@ -37,19 +42,20 @@ use crate::api::http::{
     ApiError, ApiErrorCode, ApiResult, Req, account_key, bad_request, json as json_response, ok,
     rate_limited, str,
 };
-use crate::api::queue::new_uuid;
+use crate::api::queue::{new_seed, new_uuid, seat_coin_p1_first, seed_override_of};
 use crate::app::{App, now_ms};
 use crate::config::{DUOS_ROOM_TTL_MS, MAX_OPEN_ROOMS_PER_HOST, ROOM_CODE_LENGTH, ROOM_CODE_TTL_SECONDS};
 use crate::db::store::QueueMode;
 use crate::duos::rooms::{
-    CoopStart, CoopStartOutcome, duos_choice_of, read_choice, read_difficulty, start_coop_match,
+    CoopStart, CoopStartOutcome, CoopTeamB, duos_choice_of, read_choice, read_difficulty, start_coop_match,
 };
 use crate::seats::Taken;
 use crate::social::friends::are_friends;
 use crate::social::live::{nudge_lobby, send_lobby_invite};
 use crate::social::presence::{Standing, standings};
 use crate::social::{PlayerRef, no_content, not_found};
-use store::{Lobby, LobbyPick, LobbySettings};
+use jackioh_engine::config::Difficulty;
+use store::{Lobby, LobbyMember, LobbyPick, LobbySettings};
 
 /// R149's bound, as a room's: a fresh code is tried this many times before the create gives up.
 const CODE_ATTEMPTS: usize = 8;
@@ -80,27 +86,145 @@ fn not_host() -> ApiError {
     conflict("not_host", "Only the host can do that.")
 }
 
-/// R3730004: how long a lobby stays open after its last change: a 1v1 room's or a co-op room's TTL.
+/// R3730004: how long a lobby stays open after its last change: a 1v1 room's or a co-op room's TTL
+/// (a 2v2's too, R3731000).
 fn ttl_of(settings: &LobbySettings) -> i64 {
     match settings {
         LobbySettings::Duel { .. } => ROOM_CODE_TTL_SECONDS * 1000,
-        LobbySettings::Coop { .. } => DUOS_ROOM_TTL_MS,
+        LobbySettings::Coop { .. } | LobbySettings::TwoVTwo => DUOS_ROOM_TTL_MS,
+    }
+}
+
+// A lobby's seats
+
+/// One seat of a lobby: the host's, the guest's, or (R3731000) one of a 2v2's other team's two.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Place {
+    Host,
+    Guest,
+    Other(usize),
+}
+
+const TWO_SEATS: [Place; 2] = [Place::Host, Place::Guest];
+const FOUR_SEATS: [Place; 4] = [Place::Host, Place::Guest, Place::Other(0), Place::Other(1)];
+
+fn two_v_two(lobby: &Lobby) -> bool {
+    lobby.settings == LobbySettings::TwoVTwo
+}
+
+/// The lobby's seats in order, the host's team first.
+fn places(lobby: &Lobby) -> &'static [Place] {
+    if two_v_two(lobby) { &FOUR_SEATS } else { &TWO_SEATS }
+}
+
+/// Who sits at `place`.
+fn profile_at(lobby: &Lobby, place: Place) -> Option<&str> {
+    match place {
+        Place::Host => Some(lobby.host.as_str()),
+        Place::Guest => lobby.guest.as_deref(),
+        Place::Other(index) => lobby.others[index].profile.as_deref(),
+    }
+}
+
+/// Where `id` sits, if they do.
+fn place_of(lobby: &Lobby, id: &str) -> Option<Place> {
+    places(lobby)
+        .iter()
+        .copied()
+        .find(|place| profile_at(lobby, *place) == Some(id))
+}
+
+fn pick_at(lobby: &Lobby, place: Place) -> Option<&LobbyPick> {
+    match place {
+        Place::Host => lobby.host_pick.as_ref(),
+        Place::Guest => lobby.guest_pick.as_ref(),
+        Place::Other(index) => lobby.others[index].pick.as_ref(),
+    }
+}
+
+fn ready_at(lobby: &Lobby, place: Place) -> bool {
+    match place {
+        Place::Host => lobby.host_ready,
+        Place::Guest => lobby.guest_ready,
+        Place::Other(index) => lobby.others[index].ready,
+    }
+}
+
+/// The seat at `place` as one member's: who, their pick and their Ready.
+fn member_at(lobby: &Lobby, place: Place) -> LobbyMember {
+    LobbyMember {
+        profile: profile_at(lobby, place).map(str::to_string),
+        pick: pick_at(lobby, place).cloned(),
+        ready: ready_at(lobby, place),
+    }
+}
+
+/// Seats `member` at `place`; the host's seat keeps its host, whose pick and Ready alone change.
+fn set_at(lobby: &mut Lobby, place: Place, member: LobbyMember) {
+    match place {
+        Place::Host => {
+            lobby.host_pick = member.pick;
+            lobby.host_ready = member.ready;
+        }
+        Place::Guest => {
+            lobby.guest = member.profile;
+            lobby.guest_pick = member.pick;
+            lobby.guest_ready = member.ready;
+        }
+        Place::Other(index) => lobby.others[index] = member,
+    }
+}
+
+/// The word a seat is shown by (`role`, `you`), and a Move names (R3731000).
+fn role(place: Place) -> &'static str {
+    match place {
+        Place::Host => "host",
+        Place::Guest => "guest",
+        Place::Other(0) => "guest2",
+        Place::Other(_) => "guest3",
+    }
+}
+
+/// R3731000: a 2v2's teams, the host's (0) and the other (1).
+fn team(place: Place) -> usize {
+    match place {
+        Place::Host | Place::Guest => 0,
+        Place::Other(_) => 1,
+    }
+}
+
+/// R3731000: the first empty seat, which an entrant takes.
+fn empty_place(lobby: &Lobby) -> Option<Place> {
+    places(lobby)
+        .iter()
+        .copied()
+        .find(|place| profile_at(lobby, *place).is_none())
+}
+
+/// R3731000: every member's Ready off, as a change of teams takes it.
+fn unready_all(lobby: &mut Lobby) {
+    lobby.host_ready = false;
+    lobby.guest_ready = false;
+    for member in &mut lobby.others {
+        member.ready = false;
     }
 }
 
 /// The lobby's members, host first.
 fn members(lobby: &Lobby) -> Vec<&str> {
-    std::iter::once(lobby.host.as_str())
-        .chain(lobby.guest.as_deref())
+    places(lobby)
+        .iter()
+        .filter_map(|place| profile_at(lobby, *place))
         .collect()
 }
 
 /// Whether `id` hosts or sits in the lobby.
 fn is_member(lobby: &Lobby, id: &str) -> bool {
-    lobby.host == id || lobby.guest.as_deref() == Some(id)
+    place_of(lobby, id).is_some()
 }
 
-/// The settings a create's body asks for: `{format: "duel", mode}` or `{format: "coop", difficulty}`.
+/// The settings a create's body asks for: `{format: "duel", mode}`, `{format: "coop", difficulty}`
+/// or `{format: "2v2"}` (R3731000).
 fn read_settings(body: &Value) -> Result<LobbySettings, ApiError> {
     match body.get("format").and_then(Value::as_str) {
         Some("duel") => Ok(LobbySettings::Duel {
@@ -109,7 +233,8 @@ fn read_settings(body: &Value) -> Result<LobbySettings, ApiError> {
         Some("coop") => Ok(LobbySettings::Coop {
             difficulty: read_difficulty(body)?,
         }),
-        _ => Err(bad_request(r#""format" must be "duel" or "coop""#)),
+        Some(store::FORMAT_TWO_V_TWO) => Ok(LobbySettings::TwoVTwo),
+        _ => Err(bad_request(r#""format" must be "duel", "coop" or "2v2""#)),
     }
 }
 
@@ -147,37 +272,62 @@ fn mode_refusal(mode: QueueMode) -> ApiError {
 }
 
 /// The lobby under `code` as `caller` may reach it: missing or expired is 404, and so is one a block
-/// separates the caller from its host (unless the caller is in it). A guest a block now separates from
-/// the host is dropped from the seat first (R3730000), and is then refused as anyone blocked is.
+/// separates the caller from its host (in a 2v2, from any member, R3731000) unless the caller is in
+/// it. A guest a block now separates from the host is dropped from the seat first (R3730000); in a
+/// 2v2, each member a block separates from one seated before them, in seat order (R3731000). One
+/// dropped is then refused as anyone blocked is.
 async fn load(app: &App, code: &str, caller: &str) -> Result<Lobby, ApiError> {
-    let (lobby, guest_blocked, caller_blocked) = one_tx!(app.db, |t| {
+    let (lobby, dropped, caller_blocked) = one_tx!(app.db, |t| {
         let lobby = t.lobbies_get(code).await?;
-        let mut guest_blocked = false;
+        let mut dropped: Vec<Place> = Vec::new();
         let mut caller_blocked = false;
         if let Some(lobby) = &lobby {
-            if let Some(guest) = lobby.guest.as_deref() {
-                guest_blocked = t.blocks_between(&lobby.host, guest).await?;
+            let mut kept: Vec<&str> = vec![lobby.host.as_str()];
+            for place in places(lobby).iter().skip(1) {
+                let Some(member) = profile_at(lobby, *place) else {
+                    continue;
+                };
+                let mut blocked = false;
+                for earlier in &kept {
+                    if t.blocks_between(earlier, member).await? {
+                        blocked = true;
+                        break;
+                    }
+                }
+                if blocked {
+                    dropped.push(*place);
+                } else {
+                    kept.push(member);
+                }
             }
             if !is_member(lobby, caller) {
-                caller_blocked = t.blocks_between(&lobby.host, caller).await?;
+                let guarded = if two_v_two(lobby) { kept.len() } else { 1 };
+                for member in &kept[..guarded] {
+                    if t.blocks_between(member, caller).await? {
+                        caller_blocked = true;
+                        break;
+                    }
+                }
             }
         }
-        (lobby, guest_blocked, caller_blocked)
+        (lobby, dropped, caller_blocked)
     })?;
     let Some(mut lobby) = lobby.filter(|lobby| lobby.expires_at > now_ms()) else {
         return Err(not_open());
     };
-    if guest_blocked && lobby.started_at.is_none() {
-        let guest = lobby.guest.clone().unwrap_or_default();
-        let next = Lobby {
-            guest: None,
-            guest_pick: None,
-            guest_ready: false,
-            ..lobby.clone()
-        };
-        lobby = write(app, &lobby, next, &[&guest]).await?;
-        tracing::info!(event = "lobby.guest_dropped", code = %code, reason = "blocked");
-        if guest == caller {
+    if !dropped.is_empty() && lobby.started_at.is_none() {
+        let gone: Vec<String> = dropped
+            .iter()
+            .filter_map(|place| profile_at(&lobby, *place).map(str::to_string))
+            .collect();
+        let mut next = lobby.clone();
+        for place in &dropped {
+            set_at(&mut next, *place, LobbyMember::default());
+        }
+        let also: Vec<&str> = gone.iter().map(String::as_str).collect();
+        lobby = write(app, &lobby, next, &also).await?;
+        tracing::info!(event = "lobby.guest_dropped", code = %code, reason = "blocked", dropped = gone.len());
+        if gone.iter().any(|id| id == caller) {
             return Err(not_open());
         }
     }
@@ -257,7 +407,8 @@ fn pick_name(pick: &LobbyPick) -> Option<&str> {
 }
 
 /// The lobby as `caller` reads it (R3730000). Rule 7: no card leaves, and a 1v1 opponent's deck is
-/// shown only as its state, never by name, as the queue never names it.
+/// shown only as its state, never by name, as the queue never names it; a 2v2's other team's decks
+/// alike, a teammate's by name (R3731000).
 async fn view(app: &App, lobby: &Lobby, caller: &str) -> Result<Value, ApiError> {
     let ids: Vec<String> = members(lobby).into_iter().map(str::to_string).collect();
     let (profiles, standing) = one_tx!(app.db, |t| {
@@ -265,7 +416,13 @@ async fn view(app: &App, lobby: &Lobby, caller: &str) -> Result<Value, ApiError>
         let standing = standings(&mut t, app, caller, &profiles).await?;
         (profiles, standing)
     })?;
-    let duel = matches!(lobby.settings, LobbySettings::Duel { .. });
+    let yours = place_of(lobby, caller);
+    // Whose decks the caller is shown by name: their own; in co-op everyone's; in a 2v2 their team's.
+    let shown_at = |place: Place| match lobby.settings {
+        LobbySettings::Duel { .. } => yours == Some(place),
+        LobbySettings::Coop { .. } => true,
+        LobbySettings::TwoVTwo => yours.is_some_and(|yours| team(yours) == team(place)),
+    };
     let player = |id: &str| {
         profiles
             .iter()
@@ -276,39 +433,27 @@ async fn view(app: &App, lobby: &Lobby, caller: &str) -> Result<Value, ApiError>
             })
             .unwrap_or(Value::Null)
     };
-    let seat = |role: &str, id: Option<&str>, pick: Option<&LobbyPick>, ready: bool| {
-        let shown = id == Some(caller) || !duel;
+    let seat = |place: Place| {
+        let pick = pick_at(lobby, place);
+        let shown = pick.filter(|_| shown_at(place));
         json!({
-            "role": role,
-            "player": id.map(&player).unwrap_or(Value::Null),
-            "state": deck_state(pick, ready),
-            "deck": pick.filter(|_| shown).and_then(pick_name),
-            "random": pick.filter(|_| shown).is_some_and(|pick| matches!(pick.frozen, FrozenChoice::Random { .. })),
+            "role": role(place),
+            "player": profile_at(lobby, place).map(&player).unwrap_or(Value::Null),
+            "state": deck_state(pick, ready_at(lobby, place)),
+            "deck": shown.and_then(pick_name),
+            "random": shown.is_some_and(|pick| matches!(pick.frozen, FrozenChoice::Random { .. })),
         })
     };
-    let you = if lobby.host == caller {
-        Some("host")
-    } else if lobby.guest.as_deref() == Some(caller) {
-        Some("guest")
-    } else {
-        None
-    };
-    let your_pick = match you {
-        Some("host") => lobby.host_pick.as_ref(),
-        Some(_) => lobby.guest_pick.as_ref(),
-        None => None,
-    };
+    let seats: Vec<Value> = places(lobby).iter().map(|place| seat(*place)).collect();
+    let your_pick = yours.and_then(|place| pick_at(lobby, place));
     Ok(json!({
         "kind": "lobby",
         "code": lobby.code,
         "settings": lobby.settings,
         "expiresAt": lobby.expires_at,
-        "you": you,
+        "you": yours.map(role),
         "yourPick": your_pick.map(|pick| &pick.choice),
-        "seats": [
-            seat("host", Some(&lobby.host), lobby.host_pick.as_ref(), lobby.host_ready),
-            seat("guest", lobby.guest.as_deref(), lobby.guest_pick.as_ref(), lobby.guest_ready),
-        ],
+        "seats": seats,
         "startedAt": lobby.started_at,
         "matchId": lobby.match_id,
         "seriesId": lobby.series_id,
@@ -389,6 +534,7 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
             guest_pick: None,
             host_ready: false,
             guest_ready: false,
+            others: Default::default(),
             rev: 0,
             catalog_version: app.catalog.version.clone(),
             created_at: now,
@@ -424,13 +570,14 @@ pub async fn mine(app: &Arc<App>, req: Req) -> ApiResult {
     let lobbies: Vec<Value> = held
         .iter()
         .filter(|lobby| lobby.started_at.is_none())
-        .map(|lobby| {
-            json!({
+        .filter_map(|lobby| {
+            let place = place_of(lobby, &profile.id)?;
+            Some(json!({
                 "code": lobby.code,
                 "settings": lobby.settings,
-                "you": if lobby.host == profile.id { "host" } else { "guest" },
+                "you": role(place),
                 "expiresAt": lobby.expires_at,
-            })
+            }))
         })
         .collect();
     Ok(ok(json!({ "lobbies": lobbies })))
@@ -445,7 +592,7 @@ pub async fn get_lobby(app: &Arc<App>, req: Req) -> ApiResult {
     };
     match load(app, &code, &profile.id).await {
         Ok(lobby) => {
-            if !is_member(&lobby, &profile.id) && (lobby.guest.is_some() || lobby.started_at.is_some()) {
+            if !is_member(&lobby, &profile.id) && (empty_place(&lobby).is_none() || lobby.started_at.is_some()) {
                 return Err(not_open());
             }
             Ok(ok(view(app, &lobby, &profile.id).await?))
@@ -462,45 +609,52 @@ pub async fn get_lobby(app: &Arc<App>, req: Req) -> ApiResult {
     }
 }
 
-/// `POST /api/lobbies/:code/enter` (R3730000): the caller takes the empty seat. Their own lobby is
-/// `own_lobby`, a filled seat `full`; a blocked caller meets the 404 an unknown code does.
+/// `POST /api/lobbies/:code/enter` (R3730000): the caller takes the empty seat (in a 2v2 the first
+/// empty one, R3731000). Their own lobby is `own_lobby`, a lobby with no empty seat `full`; a blocked
+/// caller meets the 404 an unknown code does.
 pub async fn enter(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let Some(code) = code_of(&req) else {
         return Err(not_open());
     };
     let lobby = load(app, &code, &profile.id).await?;
-    if lobby.guest.as_deref() == Some(profile.id.as_str()) {
+    if lobby.host == profile.id {
+        if lobby.started_at.is_some() {
+            return Err(not_open());
+        }
+        return Err(conflict("own_lobby", "This is your lobby."));
+    }
+    if is_member(&lobby, &profile.id) {
         return Ok(ok(json!({ "code": lobby.code })));
     }
     if lobby.started_at.is_some() {
         return Err(not_open());
     }
-    if lobby.host == profile.id {
-        return Err(conflict("own_lobby", "This is your lobby."));
-    }
-    if lobby.guest.is_some() {
+    let Some(place) = empty_place(&lobby) else {
         return Err(conflict("full", "This lobby is full."));
-    }
+    };
     assert_free_to_play(app, &profile.id).await?;
     // §9.4: a stale catalog is refused at every door into a match.
     if lobby.catalog_version != app.catalog.version {
         return Err(ApiError::new(ApiErrorCode::UpdateRequired, "update required"));
     }
-    let next = Lobby {
-        guest: Some(profile.id.clone()),
-        guest_pick: None,
-        guest_ready: false,
-        ..lobby.clone()
-    };
+    let mut next = lobby.clone();
+    set_at(
+        &mut next,
+        place,
+        LobbyMember {
+            profile: Some(profile.id.clone()),
+            ..LobbyMember::default()
+        },
+    );
     write(app, &lobby, next, &[]).await?;
-    tracing::info!(event = "lobby.entered", code = %code, guestProfileId = %profile.id);
+    tracing::info!(event = "lobby.entered", code = %code, guestProfileId = %profile.id, seat = role(place));
     Ok(ok(json!({ "code": lobby.code })))
 }
 
-/// `POST /api/lobbies/:code/leave` (R3730004): a guest frees the seat; the host leaving closes the
+/// `POST /api/lobbies/:code/leave` (R3730004): a guest frees their seat; the host leaving closes the
 /// lobby (R110, R1075000), `204`. A started lobby is left to its TTL: it is what takes each member
-/// to the board, so a Leave during the countdown would strand the other (`409 started`).
+/// to the board, so a Leave during the countdown would strand the others (`409 started`).
 pub async fn leave(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let lobby = load_open(app, &req, &profile.id).await?;
@@ -512,17 +666,16 @@ pub async fn leave(app: &Arc<App>, req: Req) -> ApiResult {
         }
         return Ok(no_content());
     }
-    let next = Lobby {
-        guest: None,
-        guest_pick: None,
-        guest_ready: false,
-        ..lobby.clone()
+    let Some(place) = place_of(&lobby, &profile.id) else {
+        return Err(not_open());
     };
+    let mut next = lobby.clone();
+    set_at(&mut next, place, LobbyMember::default());
     write(app, &lobby, next, &[]).await?;
     Ok(no_content())
 }
 
-/// `POST /api/lobbies/:code/remove` `{profileId}` (R3730004): the host frees the guest's seat, `204`.
+/// `POST /api/lobbies/:code/remove` `{profileId}` (R3730004): the host frees a guest's seat, `204`.
 /// The removed guest may enter again.
 pub async fn remove(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
@@ -531,15 +684,11 @@ pub async fn remove(app: &Arc<App>, req: Req) -> ApiResult {
     if lobby.host != profile.id {
         return Err(not_host());
     }
-    if lobby.guest.as_deref() != Some(removed.as_str()) {
+    let Some(place) = place_of(&lobby, &removed).filter(|place| *place != Place::Host) else {
         return Err(not_found("that player is not in this lobby"));
-    }
-    let next = Lobby {
-        guest: None,
-        guest_pick: None,
-        guest_ready: false,
-        ..lobby.clone()
     };
+    let mut next = lobby.clone();
+    set_at(&mut next, place, LobbyMember::default());
     write(app, &lobby, next, &[]).await?;
     tracing::info!(event = "lobby.removed", code = %lobby.code);
     Ok(no_content())
@@ -547,7 +696,7 @@ pub async fn remove(app: &Arc<App>, req: Req) -> ApiResult {
 
 /// `POST /api/lobbies/:code/settings` (R3730003): the host's `{mode}` (1v1) or `{difficulty}`
 /// (co-op), `204`. A change takes every Ready off; a new mode takes the picks off too, as no pick
-/// of one mode plays in another. The format never changes.
+/// of one mode plays in another. The format never changes, and a 2v2 has nothing to set (R3731000).
 pub async fn settings(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let lobby = load_open(app, &req, &profile.id).await?;
@@ -581,14 +730,15 @@ pub async fn settings(app: &Arc<App>, req: Req) -> ApiResult {
                 ..lobby.clone()
             }
         }
+        LobbySettings::TwoVTwo => return Err(bad_request("a 2v2 lobby has no settings")),
     };
     write(app, &lobby, next, &[]).await?;
     Ok(no_content())
 }
 
 /// `POST /api/lobbies/:code/pick` (R3730001): the caller's deck, trio or random deck, checked legal
-/// and frozen now (R253): a 1v1 lobby takes the queue's body in its own mode (R264), a co-op lobby a
-/// co-op room's (`deckId` or `random: true`). A new pick takes the caller's Ready off. `204`.
+/// and frozen now (R253): a 1v1 lobby takes the queue's body in its own mode (R264), a co-op or 2v2
+/// lobby a co-op room's (`deckId` or `random: true`). A new pick takes the caller's Ready off. `204`.
 pub async fn pick(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let lobby = load_open(app, &req, &profile.id).await?;
@@ -600,23 +750,22 @@ pub async fn pick(app: &Arc<App>, req: Req) -> ApiResult {
             }
             choice
         }
-        LobbySettings::Coop { .. } => read_choice(&req.body)?,
+        LobbySettings::Coop { .. } | LobbySettings::TwoVTwo => read_choice(&req.body)?,
     };
     let frozen = freeze_choice(app, &profile.id, &choice).await?;
-    let picked = Some(LobbyPick { choice, frozen });
-    let next = if lobby.host == profile.id {
-        Lobby {
-            host_pick: picked,
-            host_ready: false,
-            ..lobby.clone()
-        }
-    } else {
-        Lobby {
-            guest_pick: picked,
-            guest_ready: false,
-            ..lobby.clone()
-        }
+    let Some(place) = place_of(&lobby, &profile.id) else {
+        return Err(not_open());
     };
+    let mut next = lobby.clone();
+    set_at(
+        &mut next,
+        place,
+        LobbyMember {
+            profile: Some(profile.id.clone()),
+            pick: Some(LobbyPick { choice, frozen }),
+            ready: false,
+        },
+    );
     write(app, &lobby, next, &[]).await?;
     Ok(no_content())
 }
@@ -630,30 +779,97 @@ pub async fn ready(app: &Arc<App>, req: Req) -> ApiResult {
         _ => return Err(bad_request(r#""ready" must be true or false"#)),
     };
     let lobby = load_open(app, &req, &profile.id).await?;
-    let host = lobby.host == profile.id;
-    let pick = if host { &lobby.host_pick } else { &lobby.guest_pick };
-    if wanted && pick.is_none() {
+    let Some(place) = place_of(&lobby, &profile.id) else {
+        return Err(not_open());
+    };
+    if wanted && pick_at(&lobby, place).is_none() {
         return Err(conflict("no_pick", "Pick a deck first."));
     }
-    let next = if host {
-        Lobby {
-            host_ready: wanted,
-            ..lobby.clone()
-        }
-    } else {
-        Lobby {
-            guest_ready: wanted,
-            ..lobby.clone()
-        }
-    };
+    let mut next = lobby.clone();
+    let member = member_at(&lobby, place);
+    set_at(
+        &mut next,
+        place,
+        LobbyMember {
+            ready: wanted,
+            ..member
+        },
+    );
     write(app, &lobby, next, &[]).await?;
     Ok(no_content())
 }
 
+/// `POST /api/lobbies/:code/team` (R3731000): a 2v2's member, the host aside, moves to the other team's
+/// first empty seat, keeping their pick; every Ready goes off. `204`. Outside a 2v2 it is `400`; the
+/// host's team is the host's (`host_stays`), and a full other team is `team_full`.
+pub async fn team_switch(app: &Arc<App>, req: Req) -> ApiResult {
+    let profile = caller_profile(&req)?;
+    let lobby = load_open(app, &req, &profile.id).await?;
+    if !two_v_two(&lobby) {
+        return Err(bad_request("only a 2v2 lobby has teams"));
+    }
+    let Some(from) = place_of(&lobby, &profile.id) else {
+        return Err(not_open());
+    };
+    if from == Place::Host {
+        return Err(conflict("host_stays", "The host stays on their own team."));
+    }
+    let Some(to) = places(&lobby)
+        .iter()
+        .copied()
+        .find(|place| team(*place) != team(from) && profile_at(&lobby, *place).is_none())
+    else {
+        return Err(conflict("team_full", "The other team is full."));
+    };
+    let mut next = lobby.clone();
+    set_at(&mut next, to, member_at(&lobby, from));
+    set_at(&mut next, from, LobbyMember::default());
+    unready_all(&mut next);
+    write(app, &lobby, next, &[]).await?;
+    tracing::info!(event = "lobby.team_switched", code = %lobby.code, seat = role(to));
+    Ok(no_content())
+}
+
+/// `POST /api/lobbies/:code/move` `{profileId, seat}` (R3731000): the host seats a member, the host
+/// aside, at `seat` (`guest`, `guest2` or `guest3`), swapping them with whoever sits there; every
+/// Ready goes off. `204`. Outside a 2v2 or for another seat it is `400`; a profile not in the lobby
+/// `404`.
+pub async fn move_member(app: &Arc<App>, req: Req) -> ApiResult {
+    let profile = caller_profile(&req)?;
+    let moved = str(&req.body, "profileId")?;
+    let seat = str(&req.body, "seat")?;
+    let lobby = load_open(app, &req, &profile.id).await?;
+    if lobby.host != profile.id {
+        return Err(not_host());
+    }
+    if !two_v_two(&lobby) {
+        return Err(bad_request("only a 2v2 lobby has teams"));
+    }
+    let Some(to) = FOUR_SEATS
+        .into_iter()
+        .find(|place| *place != Place::Host && role(*place) == seat)
+    else {
+        return Err(bad_request(r#""seat" must be "guest", "guest2" or "guest3""#));
+    };
+    let Some(from) = place_of(&lobby, &moved).filter(|place| *place != Place::Host) else {
+        return Err(not_found("that player is not in this lobby"));
+    };
+    if from == to {
+        return Ok(no_content());
+    }
+    let mut next = lobby.clone();
+    set_at(&mut next, to, member_at(&lobby, from));
+    set_at(&mut next, from, member_at(&lobby, to));
+    unready_all(&mut next);
+    write(app, &lobby, next, &[]).await?;
+    tracing::info!(event = "lobby.member_moved", code = %lobby.code, seat = role(to));
+    Ok(no_content())
+}
+
 /// `POST /api/lobbies/:code/invite` `{profileId}` (R3730005): a member invites a friend neither
-/// blocked into the empty seat, a live toast over `/ws/social`, counted against the challenges'
-/// `CHALLENGES_PER_HOUR`. A non-friend is 404; one in the lobby `already_in`, a full lobby `full`.
-/// `204`.
+/// blocked (in a 2v2, with no member blocked, R3731000) into an empty seat, a live toast over
+/// `/ws/social`, counted against the challenges' `CHALLENGES_PER_HOUR`. A non-friend is 404; one in
+/// the lobby `already_in`, a lobby with no empty seat `full`. `204`.
 pub async fn invite(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let friend_id = str(&req.body, "profileId")?;
@@ -666,9 +882,22 @@ pub async fn invite(app: &Arc<App>, req: Req) -> ApiResult {
         ));
     }
     let lobby = load_open(app, &req, &profile.id).await?;
+    // Who a block with the friend refuses the invite for: the host, or in a 2v2 any member; the
+    // inviter's own friendship already says theirs.
+    let guarded: Vec<&str> = if two_v_two(&lobby) {
+        members(&lobby)
+    } else {
+        vec![lobby.host.as_str()]
+    };
     let friends = one_tx!(app.db, |t| {
-        are_friends(&mut t, &profile.id, &friend_id).await?
-            && (lobby.host == profile.id || !t.blocks_between(&lobby.host, &friend_id).await?)
+        let mut unblocked = are_friends(&mut t, &profile.id, &friend_id).await?;
+        for member in &guarded {
+            if !unblocked || *member == profile.id {
+                continue;
+            }
+            unblocked = !t.blocks_between(member, &friend_id).await?;
+        }
+        unblocked
     })?;
     if !friends {
         return Err(not_found("that player is not your friend"));
@@ -676,7 +905,7 @@ pub async fn invite(app: &Arc<App>, req: Req) -> ApiResult {
     if is_member(&lobby, &friend_id) {
         return Err(conflict("already_in", "They're already in this lobby."));
     }
-    if lobby.guest.is_some() {
+    if empty_place(&lobby).is_none() {
         return Err(conflict("full", "This lobby is full."));
     }
     let from = serde_json::to_value(PlayerRef::of(&profile))
@@ -686,27 +915,49 @@ pub async fn invite(app: &Arc<App>, req: Req) -> ApiResult {
     Ok(no_content())
 }
 
-/// `POST /api/lobbies/:code/start` (R3730002): the host starts the game once the guest's seat is
-/// filled and both are ready (`not_ready`), `200 {matchId, seriesId}`. The Start is written first,
-/// compare-and-set, so one Start wins and nothing changes the lobby under it; then both seats are
-/// reserved and the game starts as a room's does (unranked, R604), the catalog, both players' games
-/// and the ledger checked again. A refusal takes the Start back off.
+/// R3731001: a 2v2's teams as the Duos match seats them, team A then team B, each in seat order (its
+/// first seat a1 or b1, in duel 0): the seed's coin (`seat_coin_p1_first`, R1989000) puts the host's
+/// team first when it lands true. Only the seed goes in, so the same seed always seats the same way.
+pub(crate) fn lineup<'a>(
+    seed: &str,
+    host_team: [&'a str; 2],
+    other_team: [&'a str; 2],
+) -> ([&'a str; 2], [&'a str; 2]) {
+    if seat_coin_p1_first(seed) {
+        (host_team, other_team)
+    } else {
+        (other_team, host_team)
+    }
+}
+
+/// `POST /api/lobbies/:code/start` (R3730002): the host starts the game once every seat is filled
+/// and every member ready (`not_ready`), `200 {matchId, seriesId}`. The Start is written first,
+/// compare-and-set, so one Start wins and nothing changes the lobby under it; then every seat is
+/// reserved and the game starts as a room's does (unranked, R604), the catalog, every player's
+/// games and the ledger checked again. A refusal takes the Start back off. A 2v2's starts the Duos
+/// match its seed's coin lines up (R3731001), which takes an end-to-end server's `seed` (R143).
 pub async fn start(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let lobby = load_open(app, &req, &profile.id).await?;
     if lobby.host != profile.id {
         return Err(not_host());
     }
-    let (Some(guest), Some(host_pick), Some(guest_pick)) = (
-        lobby.guest.clone(),
-        lobby.host_pick.clone(),
-        lobby.guest_pick.clone(),
-    ) else {
+    let seated: Option<Vec<(String, LobbyPick)>> = places(&lobby)
+        .iter()
+        .map(|place| {
+            let id = profile_at(&lobby, *place)?;
+            let pick = pick_at(&lobby, *place)?;
+            ready_at(&lobby, *place).then(|| (id.to_string(), pick.clone()))
+        })
+        .collect();
+    let Some(seated) = seated else {
         return Err(conflict("not_ready", "Every seat must be filled and ready."));
     };
-    if !lobby.host_ready || !lobby.guest_ready {
-        return Err(conflict("not_ready", "Every seat must be filled and ready."));
-    }
+    let seed = if two_v_two(&lobby) {
+        Some(seed_override_of(app, &req.body)?.unwrap_or_else(new_seed))
+    } else {
+        None
+    };
     // §9.4: a stale catalog is refused at every door into a match.
     if lobby.catalog_version != app.catalog.version {
         return Err(ApiError::new(ApiErrorCode::UpdateRequired, "update required"));
@@ -724,41 +975,70 @@ pub async fn start(app: &Arc<App>, req: Req) -> ApiResult {
     )
     .await?;
     let host_id = profile.id.clone();
+    let others_word = if two_v_two(&lobby) {
+        "A player is playing another game right now."
+    } else {
+        "Your opponent is playing another game right now."
+    };
     let refusal = |taken: &Taken| {
         if taken.profile == host_id {
             in_game(&taken.seat)
         } else {
-            conflict("busy", "Your opponent is playing another game right now.")
+            conflict("busy", others_word)
         }
     };
     let began: Result<(Option<String>, Option<String>), ApiError> = match lobby.settings {
         LobbySettings::Duel { .. } => start_lobby_room(
             app,
             &lobby.code,
-            &lobby.host,
-            &host_pick.frozen,
-            &guest,
-            &guest_pick.frozen,
+            &seated[0].0,
+            &seated[0].1.frozen,
+            &seated[1].0,
+            &seated[1].1.frozen,
             refusal,
         )
         .await
         .map(|started| (started.match_id, started.series_id)),
-        LobbySettings::Coop { difficulty } => {
+        LobbySettings::Coop { .. } | LobbySettings::TwoVTwo => {
             async {
-                let host_choice = duos_choice_of(host_pick.frozen.clone(), &lobby.catalog_version)?;
-                let guest_choice = duos_choice_of(guest_pick.frozen.clone(), &lobby.catalog_version)?;
+                let choices = seated
+                    .iter()
+                    .map(|(_, pick)| duos_choice_of(pick.frozen.clone(), &lobby.catalog_version))
+                    .collect::<Result<Vec<_>, ApiError>>()?;
                 let match_id = new_uuid();
+                // Who sits where: the host a1 against the AI team, or a 2v2's teams as its coin
+                // lines them up, each team's first seat in duel 0 (R3731001).
+                let at = |id: &str| seated.iter().position(|(held, _)| held == id).unwrap_or(0);
+                let ids: Vec<&str> = seated.iter().map(|(id, _)| id.as_str()).collect();
+                let (team_a, team_b) = match (&lobby.settings, &seed) {
+                    (LobbySettings::TwoVTwo, Some(seed)) => {
+                        let (a, b) = lineup(seed, [ids[0], ids[1]], [ids[2], ids[3]]);
+                        (a, Some(b))
+                    }
+                    _ => ([ids[0], ids[1]], None),
+                };
+                let difficulty = match lobby.settings {
+                    LobbySettings::Coop { difficulty } => difficulty,
+                    // R3731002: a 2v2 has no AI team; its row stores the lowest tier, never read.
+                    _ => Difficulty::Easy,
+                };
                 let outcome = start_coop_match(
                     app,
                     CoopStart {
                         match_id: match_id.clone(),
-                        a1: &lobby.host,
-                        a2: &guest,
-                        host_choice: &host_choice,
-                        guest_choice: &guest_choice,
+                        a1: team_a[0],
+                        a2: team_a[1],
+                        host_choice: &choices[at(team_a[0])],
+                        guest_choice: &choices[at(team_a[1])],
                         difficulty,
-                        seed: None,
+                        seed: seed.clone(),
                         claim_room: None,
+                        team_b: team_b.map(|b| CoopTeamB {
+                            b1: b[0],
+                            b2: b[1],
+                            b1_choice: &choices[at(b[0])],
+                            b2_choice: &choices[at(b[1])],
+                        }),
                     },
                     |taken| refusal(&taken),
                 )

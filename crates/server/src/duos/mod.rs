@@ -1,10 +1,10 @@
-//! Duos co-op (#936, #946; fullsend SPEC S6, B33–B42): two people against an AI team, as two 1v1
-//! duels side by side (the engine's `DuosState` wrapper), served by its own rooms, its own socket
+//! Duos co-op (#936, #946; fullsend SPEC S6, B33–B42): two people against an AI team or, in a 2v2 from
+//! a private lobby, against two more people (R3731002), as two 1v1 duels side by side (the engine's `DuosState` wrapper), served by its own rooms, its own socket
 //! (`/ws/duos`) and one actor per match (`registry`, `protocol`, `engine`, `store`).
 //!
 //! Submodules: `rooms` (HTTP routes), `again` (R2092000), `replay` (B41), `ws` (B35), `actor` (B35–B40).
-//! Nothing touches a 1v1 match (S6: co-op games are unranked). Its result pays both people
-//! through the reward hook (`finish_match`, [[R1502000]]).
+//! Nothing touches a 1v1 match (S6: co-op games are unranked). Its result pays every person
+//! through the reward hook (`finish_match`, [[R1502000]], R3731003).
 
 pub mod actor;
 pub mod again;
@@ -20,9 +20,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use jackioh_engine::wire::{
-    DUOS_REASON_CEILING, DUOS_REASON_VOIDED, DuosActionBody, DuosOutcome, DuosResult, DuosSeat, Team,
+    DUOS_REASON_CEILING, DUOS_REASON_VOIDED, DuosActionBody, DuosOutcome, DuosResult, DuosSeat,
 };
-use jackioh_engine::{ActionBody, PlayerId};
+use jackioh_shared::host::duos::slot;
+use jackioh_engine::ActionBody;
 use jackioh_shared::economy::fleet::FleetPlay;
 
 use crate::actor::contracts::one_tx;
@@ -78,31 +79,31 @@ pub fn ceiling_draw() -> DuosResult {
     }
 }
 
-/// B40, §14.8, [[R1502000]]: writes `result` and `ended_at` once; the write pays both people in the
+/// B40, §14.8, [[R1502000]]: writes `result` and `ended_at` once; the write pays every person in the
 /// same transaction when `ECONOMY_LIVE` is on ([[R1302006]]), rolling back on failure. Void pays
-/// nothing ([[R679]]). Paid each person by `HUMAN_SEATS` (#1657), or None.
+/// nothing ([[R679]]). Paid each person by `slot` (#1657, R3731003), or None.
 pub async fn finish_match(
     t: &mut Tx<'_>,
     app: &App,
     row: &DuosMatch,
     result: &DuosResult,
     at: i64,
-) -> StoreResult<Option<[Option<GameEconomy>; 2]>> {
+) -> StoreResult<Option<[Option<GameEconomy>; 4]>> {
     let json = serde_json::to_value(result)?;
     if !t.duos_matches_finish(&row.id, &json, at).await? {
         return Ok(None);
     }
     if app.economy_live && result.reason != DUOS_REASON_VOIDED {
-        return Ok(Some(pay_coop(t, row, result, at).await?.map(Some)));
+        return Ok(Some(pay_coop(t, row, result, at).await?));
     }
-    Ok(Some([None, None]))
+    Ok(Some(Default::default()))
 }
 
 /// R1483000: whether the daily Jlore cap held back each person's pay for finished match `match_id`,
-/// by `HUMAN_SEATS`. Held back when the `game` row is below `GameMode::Coop`'s rate and UTC day has
+/// by `slot`. Held back when the `game` row is below `GameMode::Coop`'s rate and UTC day has
 /// reached `JLORE_GAMES_DAILY_CAP`.
-pub async fn duos_game_jlore_caps(app: &App, match_id: &str) -> StoreResult<[bool; 2]> {
-    let none = [false, false];
+pub async fn duos_game_jlore_caps(app: &App, match_id: &str) -> StoreResult<[bool; 4]> {
+    let none = [false; 4];
     if !app.economy_live {
         return Ok(none);
     }
@@ -120,51 +121,51 @@ pub async fn duos_game_jlore_caps(app: &App, match_id: &str) -> StoreResult<[boo
     if result.reason == DUOS_REASON_VOIDED {
         return Ok(none);
     }
-    let won = result.winner.map(|team| team == Team::A);
     let (from, until) = utc_day_bounds(ended_at);
-    let mut capped = [false, false];
-    for (held_back, profile_id) in capped.iter_mut().zip([&row.a1, &row.a2]) {
+    let mut capped = none;
+    for (seat, profile_id) in row.people() {
+        if profile_id.is_empty() {
+            continue;
+        }
+        let won = result.winner.map(|team| team == seat.team());
         let totals = tx
             .economy_game_jlore_totals(profile_id, from, until, match_id)
             .await?;
-        *held_back = totals.reference < i64::from(game_jlore(GameMode::Coop, won))
+        capped[slot(seat)] = totals.reference < i64::from(game_jlore(GameMode::Coop, won))
             && totals.day >= JLORE_GAMES_DAILY_CAP;
     }
     tx.commit().await?;
     Ok(capped)
 }
 
-/// [[R1502000]]: each person paid for their own seat at `GameMode::Coop`'s rates, a win when the
-/// humans' team won. A co-op log is not folded into what a seat played, so its quests count the
-/// result and the seat's attacks alone. Answers what each was paid, by `HUMAN_SEATS`.
+/// [[R1502000]]: each person paid for their own seat at `GameMode::Coop`'s rates, a win when their
+/// team won (R3731003: a 2v2's four people alike). A co-op log is not folded into what a seat played,
+/// so its quests count the result and the seat's attacks alone. Answers what each was paid, by `slot`.
 async fn pay_coop(
     t: &mut Tx<'_>,
     row: &DuosMatch,
     result: &DuosResult,
     at: i64,
-) -> StoreResult<[GameEconomy; 2]> {
-    // [[R1301003]]: both economy locks in profile-id order, as a 1v1 result takes its two.
-    let mut ordered = [row.a1.clone(), row.a2.clone()];
-    ordered.sort();
+) -> StoreResult<[Option<GameEconomy>; 4]> {
+    // [[R1301003]]: every economy lock in profile-id order, as a 1v1 result takes its two.
+    let mut ordered: Vec<&str> = row.people().into_iter().map(|(_, profile_id)| profile_id).collect();
+    ordered.sort_unstable();
     for profile_id in &ordered {
         t.economy_lock_account(profile_id).await?;
     }
     let log = t.duos_actions(&row.id).await?;
-    let won = result.winner.map(|team| team == Team::A);
-    let mut paid: [GameEconomy; 2] = Default::default();
-    for (index, (seat, profile_id)) in [(DuosSeat::A1, &row.a1), (DuosSeat::A2, &row.a2)]
-        .into_iter()
-        .enumerate()
-    {
+    let mut paid: [Option<GameEconomy>; 4] = Default::default();
+    for (seat, profile_id) in row.people() {
         let (actions, attacks) = seat_moves(&log, seat);
-        paid[index] = pay_game_rewards(
+        paid[slot(seat)] = Some(
+            pay_game_rewards(
             t,
             &GameSummary {
                 mode: GameMode::Coop,
-                profile_id: profile_id.clone(),
-                // §13.1: each person is Player 1 of their own duel.
-                player: PlayerId::P1,
-                won,
+                profile_id: profile_id.to_string(),
+                // §13.1: team A's people are Player 1 of their own duels, team B's Player 2.
+                player: seat.player(),
+                won: result.winner.map(|team| team == seat.team()),
                 actions,
                 match_id: row.id.clone(),
                 at,
@@ -179,7 +180,8 @@ async fn pay_coop(
                 fleet: FleetPlay::default(),
             },
         )
-        .await?;
+        .await?,
+        );
     }
     Ok(paid)
 }
@@ -220,7 +222,7 @@ async fn end_abandoned(app: &Arc<App>, match_id: &str, now: i64) {
                     .await?
                     .is_some()
                 {
-                    Some((row.a1, row.a2))
+                    Some(row.people().into_iter().map(|(_, id)| id.to_string()).collect::<Vec<_>>())
                 } else {
                     None
                 }
@@ -230,9 +232,9 @@ async fn end_abandoned(app: &Arc<App>, match_id: &str, now: i64) {
     });
     match ended {
         Ok(Some(people)) => {
-            // R1523000: both people leave the match's seats, as the actor's ending lets them go.
+            // R1523000: every person leaves the match's seats, as the actor's ending lets them go.
             let seat = crate::seats::Seat::Duos(match_id.to_string());
-            for person in [&people.0, &people.1] {
+            for person in &people {
                 app.seats.release(person, &seat);
             }
             tracing::warn!(event = "duos.abandoned.ended", matchId = %match_id);

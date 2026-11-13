@@ -35,5 +35,5 @@ pub mod types;
 
 pub use bot::{BotSeat, DecideJob};
 pub use duel::{DuelHost, DuelSetup, step};
-pub use duos::{DuosHost, DuosHostEvent, DuosHostOutput, DuosSetup, step_duos};
+pub use duos::{DuosHost, DuosHostEvent, DuosHostOutput, DuosSetup, DuosTeamB, step_duos};
 pub use types::*;

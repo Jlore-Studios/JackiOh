@@ -34,7 +34,7 @@ use crate::api::http::{
 use crate::api::queue::{new_seed, new_uuid, seed_override_of};
 use crate::app::{App, now_ms};
 use crate::config::{DUOS_ROOM_TTL_MS, MAX_OPEN_ROOMS_PER_HOST, ROOM_CODE_LENGTH};
-use crate::duos::engine::{self, Pinned};
+use crate::duos::engine::{self, Pinned, TeamBChoices};
 use crate::duos::live_match_of;
 use crate::duos::registry::registry;
 use crate::duos::store::{DuosChoice, DuosMatch, DuosRoom, DuosRoomClaimOutcome};
@@ -264,6 +264,17 @@ pub(crate) struct CoopStart<'a> {
     pub difficulty: Difficulty,
     pub seed: Option<String>,
     pub claim_room: Option<String>,
+    /// R3731002: a 2v2's team B, two more people; none for the AI team at `difficulty`.
+    pub team_b: Option<CoopTeamB<'a>>,
+}
+
+/// R3731002: a 2v2's team B, its two people and their picks.
+#[derive(Clone, Copy)]
+pub(crate) struct CoopTeamB<'a> {
+    pub b1: &'a str,
+    pub b2: &'a str,
+    pub b1_choice: &'a DuosChoice,
+    pub b2_choice: &'a DuosChoice,
 }
 
 /// What `start_coop_match`'s transaction found. `Blocked` and `Unavailable` are the room claim's:
@@ -274,10 +285,10 @@ pub(crate) enum CoopStartOutcome {
     Unavailable,
 }
 
-/// Starts one co-op match for `a1` and `a2` (host is a1, §13.9), shared with Play again (R2092000).
-/// Pins running catalog (R767000), deals and begins under `catch_unwind`, reserves seats in
-/// ledger (R1523000), and in one transaction claims the room, writes match row, and cancels
-/// open tickets. Actor starts after commit.
+/// Starts one co-op match for `a1` and `a2` (host is a1, §13.9), shared with Play again (R2092000),
+/// or a 2v2 with `team_b`'s people at b1 and b2 (R3731002). Pins running catalog (R767000), deals and
+/// begins under `catch_unwind`, reserves every person's seat in ledger (R1523000), and in one
+/// transaction claims the room, writes match row, and cancels open tickets. Actor starts after commit.
 pub(crate) async fn start_coop_match(
     app: &Arc<App>,
     start: CoopStart<'_>,
@@ -290,18 +301,29 @@ pub(crate) async fn start_coop_match(
             "the running catalog {catalog_version} cannot be played: {reason}"
         ))
     })?;
-    // R1523000: both people's seats before writing. A busy seat meets `busy` refusal (R1065000).
+    // R1523000: every person's seat before writing. A busy seat meets `busy` refusal (R1065000).
+    let mut people = vec![start.a1, start.a2];
+    if let Some(team_b) = start.team_b {
+        people.extend([team_b.b1, team_b.b2]);
+    }
     let lease = app
         .seats
-        .reserve(&[start.a1, start.a2], Seat::Duos(start.match_id.clone()))
+        .reserve(&people, Seat::Duos(start.match_id.clone()))
         .map_err(busy)?;
     let seed = start.seed.unwrap_or_else(new_seed);
+    let team_b = match start.team_b {
+        Some(team_b) => TeamBChoices::People {
+            b1: team_b.b1_choice,
+            b2: team_b.b2_choice,
+        },
+        None => TeamBChoices::Ai(start.difficulty),
+    };
     let options = catch_unwind(AssertUnwindSafe(|| {
         engine::match_options(
             pinned,
             &catalog_version,
             &seed,
-            start.difficulty,
+            team_b,
             start.host_choice,
             start.guest_choice,
         )
@@ -313,6 +335,8 @@ pub(crate) async fn start_coop_match(
         seed,
         a1: start.a1.to_string(),
         a2: start.a2.to_string(),
+        b1: start.team_b.map(|team_b| team_b.b1.to_string()).unwrap_or_default(),
+        b2: start.team_b.map(|team_b| team_b.b2.to_string()).unwrap_or_default(),
         difficulty: start.difficulty,
         options,
         created_at: now,
@@ -342,7 +366,7 @@ pub(crate) async fn start_coop_match(
             }
         }
         t.duos_matches_create(&row).await?;
-        for profile_id in [&row.a1, &row.a2] {
+        for profile_id in &people {
             if let Some(stale) = t.tickets_open_for_profile(profile_id).await? {
                 t.tickets_cancel(&stale.id, now).await?;
             }
@@ -404,6 +428,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             difficulty: room.difficulty,
             seed: take_seed(&room.code, joiner_seed),
             claim_room: Some(room.code.clone()),
+            team_b: None,
         },
         // R1523000: a guest who holds a game meets the refusal `assert_free_to_play` answers, and a
         // host who holds one the host's (R1065000).

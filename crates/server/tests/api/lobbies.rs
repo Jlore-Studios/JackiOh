@@ -1,6 +1,6 @@
 //! Private lobbies over HTTP (SPEC §9.5, §13.9; issue #3730; R3730000 to R3730006): a lobby's seats,
 //! picks, Ready, settings, invites and the host's Start, 1v1 and co-op, and the classic rooms an old
-//! link still opens.
+//! link still opens; and a 2v2 between people (issue #3731; R3731000, R3731001, R3731003).
 
 use std::sync::Arc;
 
@@ -623,4 +623,345 @@ async fn r3730005_an_invite_needs_a_friend_with_no_block() {
     befriend(&t.app, &t.host, &t.third).await;
     let (status, body) = act(&t.app, &t.host, &code, "invite", invite(&t.third)).await;
     assert!(status == 409 && refused_for(&body, "full"), "{status} {body}");
+}
+
+// A 2v2 between people (issue #3731, R3731000 to R3731003)
+
+/// A host and four more accounts, the catalog registered.
+struct Five {
+    app: Arc<App>,
+    host: Account,
+    guest: Account,
+    third: Account,
+    fourth: Account,
+    fifth: Account,
+}
+
+async fn five() -> Five {
+    let Three {
+        app,
+        host,
+        guest,
+        third,
+    } = three().await;
+    let fourth = account(&app, 4, "Di").await;
+    let fifth = account(&app, 5, "Ed").await;
+    Five {
+        app,
+        host,
+        guest,
+        third,
+        fourth,
+        fifth,
+    }
+}
+
+async fn two_v_two(app: &Arc<App>, host: &Account) -> String {
+    create(app, host, json!({ "format": "2v2" })).await
+}
+
+/// Each seat's role and who sits there, in the lobby's order.
+fn lineup_of(view: &Value) -> Vec<(String, Option<String>)> {
+    view["seats"]
+        .as_array()
+        .expect("the seats")
+        .iter()
+        .map(|seat| {
+            (
+                seat["role"].as_str().expect("a role").to_string(),
+                seat["player"]["profileId"].as_str().map(str::to_string),
+            )
+        })
+        .collect()
+}
+
+/// A 2v2 lobby with every seat filled in entry order, each member on a random deck and ready.
+async fn full_two_v_two(t: &Five) -> String {
+    let code = two_v_two(&t.app, &t.host).await;
+    for who in [&t.guest, &t.third, &t.fourth] {
+        ok_act(&t.app, who, &code, "enter", Value::Null).await;
+    }
+    for who in [&t.host, &t.guest, &t.third, &t.fourth] {
+        ok_act(&t.app, who, &code, "pick", json!({ "random": true })).await;
+        ok_act(&t.app, who, &code, "ready", json!({ "ready": true })).await;
+    }
+    code
+}
+
+#[tokio::test]
+async fn r3731000_a_two_v_two_lobby_seats_four_in_two_teams() {
+    let t = five().await;
+    let code = two_v_two(&t.app, &t.host).await;
+    let seen = view(&t.app, &t.host, &code).await;
+    assert_eq!(seen["settings"], json!({ "format": "2v2" }), "{seen}");
+    assert_eq!(
+        lineup_of(&seen),
+        vec![
+            ("host".to_string(), Some(t.host.id.clone())),
+            ("guest".to_string(), None),
+            ("guest2".to_string(), None),
+            ("guest3".to_string(), None),
+        ]
+    );
+    // Each entrant takes the first empty seat, and a visitor reads the lobby while one is empty.
+    for (who, role) in [(&t.guest, "guest"), (&t.third, "guest2"), (&t.fourth, "guest3")] {
+        assert_eq!(view(&t.app, who, &code).await["you"], Value::Null);
+        ok_act(&t.app, who, &code, "enter", Value::Null).await;
+        assert_eq!(view(&t.app, who, &code).await["you"], role, "{role}");
+    }
+    let (status, mine) = api(&t.app, "GET", "/api/lobbies", &t.fourth.token, Value::Null).await;
+    assert_eq!(status, 200, "{mine}");
+    assert_eq!(mine["lobbies"][0]["you"], "guest3", "{mine}");
+    // Four is full: a fifth neither reads nor enters it.
+    assert_eq!(read(&t.app, &t.fifth, &code).await.0, 404);
+    let (status, body) = act(&t.app, &t.fifth, &code, "enter", Value::Null).await;
+    assert!(status == 409 && refused_for(&body, "full"), "{status} {body}");
+    // A 2v2 has nothing to set.
+    let (status, body) = act(&t.app, &t.host, &code, "settings", json!({ "difficulty": "hard" })).await;
+    assert_eq!(status, 400, "{body}");
+    // Start waits for all four to be ready.
+    for who in [&t.host, &t.guest, &t.third] {
+        ok_act(&t.app, who, &code, "pick", json!({ "random": true })).await;
+        ok_act(&t.app, who, &code, "ready", json!({ "ready": true })).await;
+    }
+    let (status, body) = act(&t.app, &t.host, &code, "start", Value::Null).await;
+    assert!(status == 409 && refused_for(&body, "not_ready"), "{status} {body}");
+}
+
+#[tokio::test]
+async fn r3731000_switch_team_and_the_hosts_move_take_every_ready_off() {
+    let t = five().await;
+    let code = two_v_two(&t.app, &t.host).await;
+    for who in [&t.guest, &t.third] {
+        ok_act(&t.app, who, &code, "enter", Value::Null).await;
+    }
+    for who in [&t.host, &t.guest, &t.third] {
+        ok_act(&t.app, who, &code, "pick", json!({ "random": true })).await;
+        ok_act(&t.app, who, &code, "ready", json!({ "ready": true })).await;
+    }
+    let all_off = |seen: &Value| {
+        states(seen)
+            .iter()
+            .all(|state| state == "chosen" || state == "choosing")
+    };
+    // The guest switches to the other team's empty seat, keeping their pick; every Ready goes off.
+    ok_act(&t.app, &t.guest, &code, "team", Value::Null).await;
+    let seen = view(&t.app, &t.host, &code).await;
+    assert_eq!(
+        lineup_of(&seen),
+        vec![
+            ("host".to_string(), Some(t.host.id.clone())),
+            ("guest".to_string(), None),
+            ("guest2".to_string(), Some(t.third.id.clone())),
+            ("guest3".to_string(), Some(t.guest.id.clone())),
+        ]
+    );
+    assert_eq!(states(&seen), ["chosen", "choosing", "chosen", "chosen"], "{seen}");
+    assert!(all_off(&seen));
+    // The third crosses to the host's team; the fourth then takes the first empty seat.
+    ok_act(&t.app, &t.third, &code, "team", Value::Null).await;
+    ok_act(&t.app, &t.fourth, &code, "enter", Value::Null).await;
+    let seen = view(&t.app, &t.host, &code).await;
+    let seated: Vec<Option<String>> = lineup_of(&seen).into_iter().map(|(_, id)| id).collect();
+    assert_eq!(
+        seated,
+        vec![
+            Some(t.host.id.clone()),
+            Some(t.third.id.clone()),
+            Some(t.fourth.id.clone()),
+            Some(t.guest.id.clone()),
+        ]
+    );
+    // Full teams: no one switches, and the host's team is the host's.
+    let (status, body) = act(&t.app, &t.guest, &code, "team", Value::Null).await;
+    assert!(status == 409 && refused_for(&body, "team_full"), "{status} {body}");
+    let (status, body) = act(&t.app, &t.host, &code, "team", Value::Null).await;
+    assert!(status == 409 && refused_for(&body, "host_stays"), "{status} {body}");
+    // The host's Move swaps a member into a seat; it is the host's alone.
+    for who in [&t.host, &t.third, &t.fourth, &t.guest] {
+        ok_act(&t.app, who, &code, "pick", json!({ "random": true })).await;
+        ok_act(&t.app, who, &code, "ready", json!({ "ready": true })).await;
+    }
+    let moved = json!({ "profileId": t.fourth.id, "seat": "guest" });
+    let (status, body) = act(&t.app, &t.third, &code, "move", moved.clone()).await;
+    assert!(status == 409 && refused_for(&body, "not_host"), "{status} {body}");
+    ok_act(&t.app, &t.host, &code, "move", moved).await;
+    let seen = view(&t.app, &t.host, &code).await;
+    let seated: Vec<Option<String>> = lineup_of(&seen).into_iter().map(|(_, id)| id).collect();
+    assert_eq!(
+        seated,
+        vec![
+            Some(t.host.id.clone()),
+            Some(t.fourth.id.clone()),
+            Some(t.third.id.clone()),
+            Some(t.guest.id.clone()),
+        ]
+    );
+    assert!(all_off(&seen), "{seen}");
+    // The host is never moved, nor is anyone into the host's seat.
+    let (status, body) = act(
+        &t.app,
+        &t.host,
+        &code,
+        "move",
+        json!({ "profileId": t.host.id, "seat": "guest2" }),
+    )
+    .await;
+    assert_eq!(status, 404, "{body}");
+    let (status, body) = act(
+        &t.app,
+        &t.host,
+        &code,
+        "move",
+        json!({ "profileId": t.guest.id, "seat": "host" }),
+    )
+    .await;
+    assert_eq!(status, 400, "{body}");
+    // Outside a 2v2 there are no teams.
+    let other = coop(&t.app, &t.host).await;
+    ok_act(&t.app, &t.fifth, &other, "enter", Value::Null).await;
+    assert_eq!(act(&t.app, &t.fifth, &other, "team", Value::Null).await.0, 400);
+}
+
+#[tokio::test]
+async fn r3731000_the_other_teams_deck_is_shown_by_its_state_alone() {
+    let t = five().await;
+    let code = two_v_two(&t.app, &t.host).await;
+    for who in [&t.guest, &t.third, &t.fourth] {
+        ok_act(&t.app, who, &code, "enter", Value::Null).await;
+    }
+    with_saved_deck(&t.app, &t.host, "deck-host", "Host's deck").await;
+    with_saved_deck(&t.app, &t.third, "deck-third", "Third's deck").await;
+    ok_act(&t.app, &t.host, &code, "pick", json!({ "deckId": "deck-host" })).await;
+    ok_act(&t.app, &t.guest, &code, "pick", json!({ "random": true })).await;
+    ok_act(&t.app, &t.third, &code, "pick", json!({ "deckId": "deck-third" })).await;
+    ok_act(&t.app, &t.fourth, &code, "pick", json!({ "random": true })).await;
+    let shown = |seen: &Value| -> Vec<(Value, Value)> {
+        seen["seats"]
+            .as_array()
+            .expect("the seats")
+            .iter()
+            .map(|seat| (seat["deck"].clone(), seat["random"].clone()))
+            .collect()
+    };
+    let hidden = (Value::Null, json!(false));
+    // The host's team sees its own decks, and of the other team only that each has picked.
+    let seen = view(&t.app, &t.guest, &code).await;
+    assert_eq!(
+        shown(&seen),
+        vec![(json!("Host's deck"), json!(false)), (Value::Null, json!(true)), hidden.clone(), hidden.clone()],
+        "{seen}"
+    );
+    assert_eq!(states(&seen), ["chosen"; 4]);
+    // And the other team the other way round.
+    let seen = view(&t.app, &t.fourth, &code).await;
+    assert_eq!(
+        shown(&seen),
+        vec![hidden.clone(), hidden, (json!("Third's deck"), json!(false)), (Value::Null, json!(true))],
+        "{seen}"
+    );
+    assert_eq!(seen["yourPick"], json!({ "random": true }), "{seen}");
+}
+
+#[tokio::test]
+async fn r3731000_a_block_between_two_guests_drops_the_later() {
+    let t = five().await;
+    let code = two_v_two(&t.app, &t.host).await;
+    for who in [&t.guest, &t.third, &t.fourth] {
+        ok_act(&t.app, who, &code, "enter", Value::Null).await;
+    }
+    // A block between the guest and the fourth (guest3) drops the fourth, seated later.
+    store!(t.app, tx => tx.blocks_add(&t.fourth.id, &t.guest.id, now_ms()).await.expect("blocks.add"));
+    let seen = view(&t.app, &t.host, &code).await;
+    assert_eq!(
+        lineup_of(&seen)[3],
+        ("guest3".to_string(), None),
+        "{seen}"
+    );
+    assert_eq!(read(&t.app, &t.fourth, &code).await.0, 404);
+    assert_eq!(act(&t.app, &t.fourth, &code, "enter", Value::Null).await.0, 404);
+    // A visitor blocked with any member reads the lobby as an unknown code, and is never invited.
+    let (_, unknown) = read(&t.app, &t.fifth, "ZZZZZZ").await;
+    store!(t.app, tx => tx.blocks_add(&t.third.id, &t.fifth.id, now_ms()).await.expect("blocks.add"));
+    assert_eq!(read(&t.app, &t.fifth, &code).await, (404, unknown));
+    assert_eq!(act(&t.app, &t.fifth, &code, "enter", Value::Null).await.0, 404);
+    befriend(&t.app, &t.guest, &t.fifth).await;
+    let (status, body) = act(&t.app, &t.guest, &code, "invite", json!({ "profileId": t.fifth.id })).await;
+    assert_eq!(status, 404, "{body}");
+    // Once the block is gone the visitor reads it, enters the empty seat and is no one's to drop.
+    store!(t.app, tx => tx.blocks_remove(&t.third.id, &t.fifth.id).await.expect("blocks.remove"));
+    ok_act(&t.app, &t.guest, &code, "invite", json!({ "profileId": t.fifth.id })).await;
+    ok_act(&t.app, &t.fifth, &code, "enter", Value::Null).await;
+    assert_eq!(view(&t.app, &t.fifth, &code).await["you"], "guest3");
+}
+
+/// The first seeds whose coin lands each way (R1989000's `seat_coin_p1_first`).
+fn seeds_each_way() -> (String, String) {
+    let seed = |want: bool| {
+        (0..)
+            .map(|n| format!("seed-2v2-{n}"))
+            .find(|seed| jackioh_server::api::queue::seat_coin_p1_first(seed) == want)
+            .expect("a seed")
+    };
+    (seed(true), seed(false))
+}
+
+#[tokio::test]
+async fn r3731001_the_seeds_coin_picks_which_lobby_team_plays_a() {
+    let (heads, tails) = seeds_each_way();
+    for (seed, host_team_first) in [(heads, true), (tails, false)] {
+        let t = five().await;
+        let code = full_two_v_two(&t).await;
+        let (status, started) = act(&t.app, &t.host, &code, "start", json!({ "seed": seed })).await;
+        assert_eq!(status, 200, "{started}");
+        let match_id = started["matchId"].as_str().expect("a match id").to_string();
+        assert!(started["seriesId"].is_null(), "{started}");
+        let row = store!(t.app, tx => tx.duos_matches_get(&match_id).await.expect("duos.matches.get"))
+            .expect("the 2v2 match");
+        let (team_a, team_b) = if host_team_first {
+            ([&t.host, &t.guest], [&t.third, &t.fourth])
+        } else {
+            ([&t.third, &t.fourth], [&t.host, &t.guest])
+        };
+        // Each team's first seat plays duel 0.
+        assert_eq!(
+            [row.a1.as_str(), row.a2.as_str(), row.b1.as_str(), row.b2.as_str()],
+            [team_a[0].id.as_str(), team_a[1].id.as_str(), team_b[0].id.as_str(), team_b[1].id.as_str()],
+            "{seed}"
+        );
+        assert_eq!(row.seed, seed);
+        // R3731002: team B is two people on the humans' rules, with no handicap and no tier read.
+        assert_eq!(row.team_b(), jackioh_shared::host::DuosTeamB::People);
+        assert_eq!(row.options.teams.b, jackioh_engine::config::DUOS_HUMAN_TEAM);
+        assert_eq!((row.options.handicaps.b1, row.options.handicaps.b2), (None, None));
+        assert_eq!(row.options.dealt.len(), 4, "every random pick is dealt");
+        assert_eq!(serde_json::to_value(row.difficulty).expect("a difficulty"), "easy");
+        // Every person holds the match's seat until it ends.
+        for who in [&t.host, &t.guest, &t.third, &t.fourth] {
+            assert_eq!(t.app.seats.of(&who.id), Some(Seat::Duos(match_id.clone())), "{}", who.id);
+        }
+    }
+}
+
+#[tokio::test]
+async fn r3731003_a_two_v_two_offers_no_play_again() {
+    let t = five().await;
+    let code = full_two_v_two(&t).await;
+    let (status, started) = act(&t.app, &t.host, &code, "start", Value::Null).await;
+    assert_eq!(status, 200, "{started}");
+    let match_id = started["matchId"].as_str().expect("a match id").to_string();
+    let draw = json!({ "outcome": "draw", "winner": null, "reason": "ceiling" });
+    assert!(store!(t.app, tx => tx.duos_matches_finish(&match_id, &draw, now_ms()).await.expect("duos.matches.finish")));
+    let path = format!("/api/duos/matches/{match_id}/again");
+    for who in [&t.host, &t.fourth] {
+        let (status, body) = api(&t.app, "POST", &path, &who.token, json!({})).await;
+        assert_eq!(status, 409, "{body}");
+        assert_eq!(body["error"]["message"], "a 2v2 game cannot be played again", "{body}");
+        let (status, body) = api(&t.app, "GET", &path, &who.token, Value::Null).await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(body["unavailable"], true, "{body}");
+        assert!(body["matchId"].is_null(), "{body}");
+    }
+    // Someone who played none of its seats meets the unknown match's answer.
+    assert_eq!(api(&t.app, "GET", &path, &t.fifth.token, Value::Null).await.0, 404);
 }

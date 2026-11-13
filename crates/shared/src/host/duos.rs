@@ -1,7 +1,8 @@
 //! The Duos co-op match host's decisions as one pure state machine (#3101's second part; fullsend SPEC
 //! S4 to S6, B35 to B40, §13), the 1v1 machine's twin (`duel.rs`): the same `step(host, event, now) ->
 //! (host, outputs)`, the same shapes of event and output, on a `DuosState` of two duels and four seats —
-//! a1 and a2 are people, b1 and b2 the AI's.
+//! a1 and a2 are people, and b1 and b2 the AI's or, in a 2v2 from a private lobby (R3731002), two
+//! more people (`DuosTeamB`).
 //!
 //! What the machine decides, and what stays the host's:
 //!
@@ -10,8 +11,8 @@
 //!    a lapsed mulligan keeps the hand (§13.2, R268), a lapsed round answers the prompts and ends the turn
 //!    of every round seat (B38), a lapsed prompt answers that prompt alone, a lapsed grace hands the seat
 //!    to the AI until its person is back (B37, no loss by disconnect);
-//!  - the AI protocol: when a seat owes the game something it plays (b1 and b2 always, a person's seat in
-//!    the mode an expiry forced or past its grace), the pause before it acts (B36), the move it falls back
+//!  - the AI protocol: when a seat owes the game something it plays (the AI team's b1 and b2 always, a
+//!    person's seat in the mode an expiry forced or past its grace), the pause before it acts (B36), the move it falls back
 //!    on, what a refused or unwritten move comes to, and the ceiling's retry (R776000, R1047000);
 //!  - the order every view, clock and teammate frame goes out in, and the game's end (B40, R1253000).
 //!
@@ -39,8 +40,43 @@ use crate::config::{
     DUOS_PROMPT_CLOCK_MS, DUOS_ROUND_CLOCK_MS, MATCH_SERVER_ACTION_RETRY_MS, MS_PER_SECOND,
 };
 
-/// Human player seats, host and guest (S6): the per-person arrays' order.
+/// Team A's people, host and guest (S6): every co-op match's people.
 pub const HUMAN_SEATS: [DuosSeat; 2] = [DuosSeat::A1, DuosSeat::A2];
+
+/// Who plays team B (R3731002): the AI team (co-op, §13.7) or, in a 2v2 from a private lobby, two more
+/// people. A match's people are `people()`; every per-seat array of the host is by `slot`.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub enum DuosTeamB {
+    #[default]
+    Ai,
+    People,
+}
+
+impl DuosTeamB {
+    /// Whether team B is the AI team (what a row or a setup without the field means).
+    pub fn is_ai(&self) -> bool {
+        *self == DuosTeamB::Ai
+    }
+
+    /// The seats people play: team A's, and team B's too in a 2v2.
+    pub fn people(self) -> &'static [DuosSeat] {
+        match self {
+            DuosTeamB::Ai => &HUMAN_SEATS,
+            DuosTeamB::People => &DUOS_SEATS,
+        }
+    }
+
+    /// `seat`'s `slot` when a person plays it, or none for an AI team's seat.
+    pub fn person(self, seat: DuosSeat) -> Option<usize> {
+        self.people().contains(&seat).then(|| slot(seat))
+    }
+}
 
 /// A seat's index in `DUOS_SEATS` order (a1, a2, b1, b2).
 pub fn slot(seat: DuosSeat) -> usize {
@@ -49,15 +85,6 @@ pub fn slot(seat: DuosSeat) -> usize {
         DuosSeat::A2 => 1,
         DuosSeat::B1 => 2,
         DuosSeat::B2 => 3,
-    }
-}
-
-/// A person's index in `HUMAN_SEATS`, or none for an AI seat.
-pub fn human(seat: DuosSeat) -> Option<usize> {
-    match seat {
-        DuosSeat::A1 => Some(0),
-        DuosSeat::A2 => Some(1),
-        DuosSeat::B1 | DuosSeat::B2 => None,
     }
 }
 
@@ -148,7 +175,7 @@ pub fn keep_whole_hand(legal: &[DuosActionBody]) -> Option<DuosActionBody> {
         .map(|(_, body)| body.clone())
 }
 
-/// Why a person's seat (a1, a2) is in the AI's hands for a while.
+/// Why a person's seat is in the AI's hands for a while.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -174,7 +201,7 @@ pub enum DuosForced {
 )]
 #[serde(tag = "mode", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum DuosAiMode {
-    /// b1 and b2, and a person's seat past its grace (B36, B37): everything it owes.
+    /// The AI team's b1 and b2, and a person's seat past its grace (B36, B37): everything it owes.
     Full,
     /// Its mulligan, by keeping the whole hand: never the AI's own mulligan (R268).
     KeepHand,
@@ -232,8 +259,9 @@ pub enum DuosSeatMessage {
         #[cfg_attr(feature = "ts", ts(optional))]
         forecast: Option<CombatForecast>,
     },
-    /// S6: the deadline the seat is playing against (its round's, its prompt's, or the mulligans'), both
-    /// people's disconnect graces, and the host's `now` to measure them by.
+    /// S6: the deadline the seat is playing against (its round's, its prompt's, or the mulligans'), every
+    /// person's disconnect grace, and the host's `now` to measure them by. R3731002: team B's graces only
+    /// while one runs, which only a 2v2's people's can.
     Clock {
         #[cfg_attr(feature = "ts", ts(type = "number"))]
         now: i64,
@@ -243,6 +271,12 @@ pub enum DuosSeatMessage {
         grace_a1: Option<i64>,
         #[cfg_attr(feature = "ts", ts(type = "number | null"))]
         grace_a2: Option<i64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "number"))]
+        grace_b1: Option<i64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "number"))]
+        grace_b2: Option<i64>,
     },
     /// S6, B37: whether the teammate's socket is open, and whether the AI plays their seat.
     Teammate { connected: bool, ai_playing: bool },
@@ -436,6 +470,9 @@ pub struct DuosSetup {
     pub next_seq: i64,
     /// The nonce, seat and seq of every row already in the log (§9.3).
     pub acked: Vec<DuosAck>,
+    /// R3731002: who plays team B; the AI team when absent.
+    #[serde(default)]
+    pub team_b: DuosTeamB,
 }
 
 /// One row of the log, as the machine remembers it: whose nonce it was and where it landed.
@@ -549,19 +586,23 @@ pub struct DuosHost {
     awaiting: Option<DuosAwaiting>,
 
     // The people (B37)
-    /// By `HUMAN_SEATS`: whether the person's socket is open.
-    connected: [bool; 2],
-    /// By `HUMAN_SEATS`: whether the AI plays the person's seat.
-    ai_playing: [bool; 2],
+    /// R3731002: who plays team B, which says whose seats are people's (`DuosTeamB::people`).
+    #[serde(default)]
+    team_b: DuosTeamB,
+    /// By `slot`: whether the person's socket is open (never an AI team's seat).
+    connected: [bool; 4],
+    /// By `slot`: whether the AI plays the person's seat.
+    ai_playing: [bool; 4],
 
     // The clocks
-    grace: [Option<DuosArmed>; 2],
+    /// By `slot`, as every per-seat array below.
+    grace: [Option<DuosArmed>; 4],
     mulligan: Option<DuosArmed>,
     mulligan_expired: bool,
     round_clock: Option<(i32, DuosArmed)>,
     round_expired: Option<i32>,
-    prompt_clocks: [Option<(String, DuosArmed)>; 2],
-    prompt_expired: [Option<String>; 2],
+    prompt_clocks: [Option<(String, DuosArmed)>; 4],
+    prompt_expired: [Option<String>; 4],
     /// R1047000: the hard ceiling's countdown.
     ceiling: Option<DuosArmed>,
 
@@ -607,6 +648,7 @@ impl DuosHost {
             finished,
             next_seq,
             acked,
+            team_b,
         } = setup;
         let host = DuosHost {
             match_id,
@@ -616,15 +658,16 @@ impl DuosHost {
             acks: acked.into_iter().map(|ack| (ack.nonce.clone(), ack)).collect(),
             panicked: IndexSet::new(),
             awaiting: None,
-            connected: [false, false],
-            ai_playing: [false, false],
-            grace: [None, None],
+            team_b,
+            connected: [false; 4],
+            ai_playing: [false; 4],
+            grace: [None; 4],
             mulligan: None,
             mulligan_expired: false,
             round_clock: None,
             round_expired: None,
-            prompt_clocks: [None, None],
-            prompt_expired: [None, None],
+            prompt_clocks: [None, None, None, None],
+            prompt_expired: [None, None, None, None],
             ceiling: None,
             forced: [None, None, None, None],
             ai_busy: [false; 4],
@@ -646,14 +689,14 @@ impl DuosHost {
         match event {
             DuosHostEvent::Arm => self.on_arm(now),
             DuosHostEvent::Connected { seat } => {
-                if let Some(index) = human(seat) {
+                if let Some(index) = self.person(seat) {
                     self.connected[index] = true;
                 }
             }
             DuosHostEvent::Attached { seat } => self.on_attached(seat, now),
             DuosHostEvent::Hello { seat } => self.push_seat(seat, now),
             DuosHostEvent::Left { seat } => {
-                if let Some(index) = human(seat) {
+                if let Some(index) = self.person(seat) {
                     self.connected[index] = false;
                 }
             }
@@ -679,6 +722,16 @@ impl DuosHost {
 
     pub fn match_id(&self) -> &str {
         &self.match_id
+    }
+
+    /// R3731002: who plays team B.
+    pub fn team_b(&self) -> DuosTeamB {
+        self.team_b
+    }
+
+    /// `seat`'s `slot` when a person plays it.
+    fn person(&self, seat: DuosSeat) -> Option<usize> {
+        self.team_b.person(seat)
     }
 
     /// The game as it stands (never sent to a seat: a seat's window onto it is [`DuosHost::view_for`]).
@@ -707,7 +760,7 @@ impl DuosHost {
 
     /// B37: whether the AI plays this person's seat now.
     pub fn ai_playing(&self, seat: DuosSeat) -> bool {
-        human(seat).is_some_and(|index| self.ai_playing[index])
+        self.person(seat).is_some_and(|index| self.ai_playing[index])
     }
 
     /// The deadline `seat` plays against: the mulligan, round or prompt clock.
@@ -723,7 +776,7 @@ impl DuosHost {
         {
             return Some(armed.deadline);
         }
-        let index = human(seat)?;
+        let index = self.person(seat)?;
         self.prompt_clocks[index]
             .as_ref()
             .map(|(_, armed)| armed.deadline)
@@ -784,7 +837,7 @@ impl DuosHost {
 
     /// Whether the person at `seat` has an open socket.
     fn here(&self, seat: DuosSeat) -> bool {
-        human(seat).is_some_and(|index| self.connected[index])
+        self.person(seat).is_some_and(|index| self.connected[index])
     }
 
     fn send(&mut self, seat: DuosSeat, message: DuosSeatMessage) {
@@ -822,6 +875,8 @@ impl DuosHost {
             round_deadline: self.deadline_for(seat),
             grace_a1: grace(0, self),
             grace_a2: grace(1, self),
+            grace_b1: grace(2, self),
+            grace_b2: grace(3, self),
         };
         self.send(seat, message);
     }
@@ -831,7 +886,7 @@ impl DuosHost {
         let mate = seat.teammate();
         let message = DuosSeatMessage::Teammate {
             connected: self.here(mate),
-            ai_playing: human(mate).is_some_and(|index| self.ai_playing[index]),
+            ai_playing: self.person(mate).is_some_and(|index| self.ai_playing[index]),
         };
         self.send(seat, message);
     }
@@ -861,7 +916,7 @@ impl DuosHost {
 
     /// B37: the person in `seat` is away; the AI takes the seat when the grace runs out.
     fn start_grace(&mut self, seat: DuosSeat, now: i64) {
-        let Some(index) = human(seat) else { return };
+        let Some(index) = self.person(seat) else { return };
         if self.grace[index].is_some() || self.ai_playing[index] || self.finished {
             return;
         }
@@ -883,10 +938,10 @@ impl DuosHost {
             self.cancel(TimerKey::DuosMulligan, old);
         }
 
-        // B38: a round with a human seat runs the round clock.
+        // B38: a round with a person's seat runs the round clock: every round of a 2v2 (R3731002).
         let round = self.game.round;
         let with_people =
-            !over && round >= 1 && self.game.round_seats.iter().any(|seat| human(*seat).is_some());
+            !over && round >= 1 && self.game.round_seats.iter().any(|seat| self.person(*seat).is_some());
         if with_people {
             let armed = self.round_clock.as_ref().is_some_and(|(held, _)| *held == round);
             if !armed && self.round_expired != Some(round) {
@@ -901,8 +956,8 @@ impl DuosHost {
         }
 
         // A prompt held outside the person's own round (inside one, the round clock covers it, B38).
-        for seat in HUMAN_SEATS {
-            let Some(index) = human(seat) else { continue };
+        for &seat in self.team_b.people() {
+            let Some(index) = self.person(seat) else { continue };
             let held = if over { None } else { held_prompt(&self.game, seat) };
             let covered = acting_round_seat(&self.game, seat);
             match held {
@@ -931,8 +986,8 @@ impl DuosHost {
         self.cancel(TimerKey::DuosMulligan, old);
         let old = self.round_clock.take();
         self.cancel(TimerKey::DuosRound, old.map(|(_, armed)| armed));
-        for seat in HUMAN_SEATS {
-            if let Some(index) = human(seat) {
+        for &seat in self.team_b.people() {
+            if let Some(index) = self.person(seat) {
                 let old = self.prompt_clocks[index].take();
                 self.cancel(TimerKey::DuosPrompt { seat }, old.map(|(_, armed)| armed));
                 let old = self.grace[index].take();
@@ -947,7 +1002,7 @@ impl DuosHost {
 
     fn on_arm(&mut self, now: i64) {
         // R744: a seat with no socket starts grace, so one nobody opens goes to the AI.
-        for seat in HUMAN_SEATS {
+        for &seat in self.team_b.people() {
             if !self.here(seat) {
                 self.start_grace(seat, now);
             }
@@ -973,7 +1028,7 @@ impl DuosHost {
     }
 
     fn on_attached(&mut self, seat: DuosSeat, now: i64) {
-        let Some(index) = human(seat) else { return };
+        let Some(index) = self.person(seat) else { return };
         let old = self.grace[index].take();
         self.cancel(TimerKey::DuosGrace { seat }, old);
         if std::mem::replace(&mut self.ai_playing[index], false) {
@@ -1055,7 +1110,7 @@ impl DuosHost {
                 self.mulligan = None;
                 self.mulligan_expired = true;
                 // §13.2, R268: each person still owing keeps the hand they were dealt.
-                for seat in HUMAN_SEATS {
+                for &seat in self.team_b.people() {
                     if owes_mulligan(&self.game, seat) {
                         self.forced[slot(seat)] = Some(DuosForced::KeepHand);
                     }
@@ -1082,7 +1137,7 @@ impl DuosHost {
                 "round"
             }
             TimerKey::DuosPrompt { seat } => {
-                let Some(index) = human(seat) else { return };
+                let Some(index) = self.person(seat) else { return };
                 let Some((choice, armed)) = self.prompt_clocks[index].take() else {
                     return;
                 };
@@ -1097,7 +1152,7 @@ impl DuosHost {
                 "prompt"
             }
             TimerKey::DuosGrace { seat } => {
-                let Some(index) = human(seat) else { return };
+                let Some(index) = self.person(seat) else { return };
                 if !self.grace[index].is_some_and(|armed| armed.timer == id) {
                     return;
                 }
@@ -1115,7 +1170,7 @@ impl DuosHost {
         self.note(DuosNote::ClockExpired {
             kind: kind.to_string(),
         });
-        for seat in HUMAN_SEATS {
+        for &seat in self.team_b.people() {
             self.push_clock(seat, now);
         }
         self.drive_ai(now);
@@ -1207,7 +1262,7 @@ impl DuosHost {
                 reason: reason.clone(),
             });
             // R835000: count person refusals; AI and ceiling carry server nonces (R270) and never do.
-            if human(seat).is_some() && !nonce.starts_with(SERVER_NONCE_PREFIX) {
+            if self.person(seat).is_some() && !nonce.starts_with(SERVER_NONCE_PREFIX) {
                 self.emit(DuosHostOutput::Refused { seat });
             }
             return Some(ActionAnswer::Illegal { reason });
@@ -1349,7 +1404,7 @@ impl DuosHost {
     /// B35: pushes fresh views and clocks after every action, then writes the result or moves the AI.
     fn after_change(&mut self, now: i64) {
         self.sync_clocks(now);
-        for seat in HUMAN_SEATS {
+        for &seat in self.team_b.people() {
             self.push_view(seat, now);
             self.push_clock(seat, now);
         }
@@ -1391,7 +1446,7 @@ impl DuosHost {
     // The AI's seats (B36 to B38)
 
     fn ai_mode(&self, seat: DuosSeat) -> Option<DuosAiMode> {
-        let Some(index) = human(seat) else {
+        let Some(index) = self.person(seat) else {
             return Some(DuosAiMode::Full);
         };
         if self.ai_playing[index] {

@@ -2821,8 +2821,9 @@ impl Tx<'_> {
     }
 
     /// R2881000, one read for a whole friends list: those of the named co-op matches in which
-    /// `viewer` and a person seated (a1 or a2) stand blocked, either way, in the order named. A
-    /// watcher of one seat is shown the other's duel (§13.6), so a block with either refuses it.
+    /// `viewer` and a person seated (a1 or a2, and a 2v2's b1 or b2, R3731002) stand blocked, either
+    /// way, in the order named. A watcher of one seat is shown the other's duel (§13.6), so a block
+    /// with either refuses it; a 2v2's hint is the stricter, for the match and not the friend.
     pub async fn presence_duos_blocked(
         &mut self,
         viewer: &str,

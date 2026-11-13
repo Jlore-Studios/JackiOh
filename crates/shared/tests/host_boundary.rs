@@ -223,6 +223,7 @@ fn a_duos_host_is_made_stepped_and_handed_back_as_json() {
         finished: false,
         next_seq: 1,
         acked: Vec::new(),
+        team_b: jackioh_shared::host::DuosTeamB::Ai,
     };
     let made = call(json!({ "call": "newDuos", "setup": setup, "now": NOW }));
     assert_eq!(made["answer"], "steppedDuos");
