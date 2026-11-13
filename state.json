@@ -15638,6 +15638,13 @@
     "3859": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-13T22:03:20Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "None of the five hard lines holds: the change is one fuzz monitor in crates/engine/src/testkit (a test path, not the rules or the resolution loop) plus its tests, and the engine bug the fuzz turned up is left to a separate hard issue."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
