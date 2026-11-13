@@ -151,9 +151,10 @@ fn affliction_ticks(burn: i32, toxic: i32, armor: i32, shield: bool, life: i32) 
 }
 
 /// R3575300: what a Unit's Burn and Toxic (`affliction_ticks`) take off its worth, `lost` being what its
-/// death would take: each tick by `affliction_turn_share` to the power of the owner's turns until it
-/// lands, the next one the first power, and worth what it takes, `health` a point, or, the tick that
-/// kills it, the rest of `lost`. An Indestructible Unit takes no damage, so it loses nothing.
+/// death would take: each tick by `affliction_turn_share` to the power of the owner's turns before it
+/// in which the owner may answer it, so the next one, which lands before the owner acts, in full, and
+/// worth what it takes, `health` a point, or, the tick that kills it, the rest of `lost`. An
+/// Indestructible Unit takes no damage, so it loses nothing; a zero share reads no count at all.
 fn unit_affliction_loss(unit: &CardInstance, view: &UnitView, lost: f64, w: &EvalWeights) -> f64 {
     let (burn, toxic) = (burn_on(unit), toxic_on(unit));
     if w.affliction_turn_share == 0.0
@@ -167,20 +168,20 @@ fn unit_affliction_loss(unit: &CardInstance, view: &UnitView, lost: f64, w: &Eva
     let ticks = affliction_ticks(burn, toxic, armor_of(&view.keywords), shield, life);
     let (mut loss, mut share, mut dealt) = (0.0, 1.0, 0);
     for tick in ticks {
-        share *= w.affliction_turn_share;
         if dealt + tick >= life {
             loss += share * (lost - w.health * f64::from(dealt)).max(0.0);
             break;
         }
         loss += share * w.health * f64::from(tick);
         dealt += tick;
+        share *= w.affliction_turn_share;
     }
     loss
 }
 
 /// R3575300: the life `player`'s hero still loses to its Burn and Toxic (`affliction_ticks`, its Armor
-/// taking Burn's ticks, `hero_armor_of`), each tick by `affliction_turn_share` to the power of its turns
-/// until it lands: `(points, worth)`, the discounted points and what they take off `hero_value`'s curve,
+/// taking Burn's ticks, `hero_armor_of`), each tick by `affliction_turn_share` to the power of the turns
+/// its player may answer it in first, the next one in full: `(points, worth)`, the discounted points and what they take off `hero_value`'s curve,
 /// read down to 0 life with no `win` in it, since a tick that would end the game is the reply's and the
 /// lethal search's to see.
 fn hero_affliction_loss(state: &GameState, player: PlayerId, w: &EvalWeights) -> (f64, f64) {
@@ -194,10 +195,10 @@ fn hero_affliction_loss(state: &GameState, player: PlayerId, w: &EvalWeights) ->
     let ticks = affliction_ticks(burn, toxic, hero_armor_of(state, player), false, life);
     let (mut points, mut worth, mut share, mut left) = (0.0, 0.0, 1.0, life);
     for tick in ticks {
-        share *= w.affliction_turn_share;
         points += share * f64::from(tick);
         worth += share * (curve(left) - curve(left - tick));
         left -= tick;
+        share *= w.affliction_turn_share;
     }
     (points, worth)
 }

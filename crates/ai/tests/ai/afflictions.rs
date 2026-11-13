@@ -1,6 +1,6 @@
 //! Burn and Toxic in the AI's evaluation (R3575300): a count on a Unit or a hero (§6.3, Stinkyscape+ E2,
-//! R3540000) is damage on its way, so `unit_worth` takes its coming ticks off the Unit, each at
-//! `AI_EVAL.affliction_turn_share` to the power of the owner's turns until it lands, and the hero's side of
+//! R3540000) is damage on its way, so `unit_worth` takes its coming ticks off the Unit, the next in full
+//! and each later one at `AI_EVAL.affliction_turn_share` a turn its owner may answer it in, and the hero's side of
 //! the ledger takes them off its life. Before it, a count was worth nothing, so S+ #144 Fire Beam v4's
 //! and #146 Scourge Mortar v3's Activates had no price (R2564000) and a hit #151 Volcanic Rounds turned
 //! into Burn read as no hit at all. The frozen baseline prices none of it.
@@ -44,31 +44,51 @@ fn close(a: f64, b: f64) {
 }
 
 #[test]
-fn r3575300_a_burn_that_kills_at_its_next_tick_takes_the_shares_worth_of_the_unit() {
-    let clean = worth(&vanilla_with(json!({})), &AI_EVAL);
-    // Mr. Vanilla is a 4/4: Burn 4 kills it at the start of its owner's next turn.
-    let burned = worth(&vanilla_with(json!({ "burn": 4 })), &AI_EVAL);
-    close(burned, clean * (1.0 - AI_EVAL.affliction_turn_share));
+fn r3575300_a_burn_that_kills_at_its_next_tick_takes_the_whole_unit() {
+    // Mr. Vanilla is a 4/4: Burn 4 kills it at the start of its owner's next turn, before it acts, so
+    // the tick counts in full, and a Vanilla's Death leaves nothing.
+    close(worth(&vanilla_with(json!({ "burn": 4 })), &AI_EVAL), 0.0);
 }
 
 #[test]
 fn r3575300_a_burn_that_does_not_kill_takes_its_ticks_at_healths_worth_and_decays() {
     let clean = worth(&vanilla_with(json!({})), &AI_EVAL);
-    let s = AI_EVAL.affliction_turn_share;
-    // Burn 5 deals 5, which kills a 4/4, so a Burn that does not kill is a 2: one tick of 2, then
-    // nothing (2 − BURN_DECAY).
+    // Burn 2: one tick of 2 in full, then nothing (2 − BURN_DECAY).
     let burned = worth(&vanilla_with(json!({ "burn": 2 })), &AI_EVAL);
-    close(burned, clean - s * AI_EVAL.health * 2.0);
+    close(burned, clean - AI_EVAL.health * 2.0);
+    // Burn 5 deals 5, then 2 a turn later: the second at the share. On a 4/4 the first kills.
+    let two = board(
+        "r3575300-tough",
+        json!({}),
+        json!({ "field": [{ "def": VANILLA, "counters": { "burn": 2 }, "statsOverride": { "attack": 4, "health": 9 } }] }),
+    );
+    let tough = board(
+        "r3575300-tough",
+        json!({}),
+        json!({ "field": [{ "def": VANILLA, "statsOverride": { "attack": 4, "health": 9 } }] }),
+    );
+    let five = board(
+        "r3575300-tough",
+        json!({}),
+        json!({ "field": [{ "def": VANILLA, "counters": { "burn": 5 }, "statsOverride": { "attack": 4, "health": 9 } }] }),
+    );
+    let s = AI_EVAL.affliction_turn_share;
+    let h = AI_EVAL.health;
+    close(worth(&two, &AI_EVAL), worth(&tough, &AI_EVAL) - 2.0 * h);
+    close(
+        worth(&five, &AI_EVAL),
+        worth(&tough, &AI_EVAL) - 5.0 * h - s * 2.0 * h,
+    );
 }
 
 #[test]
-fn r3575300_toxic_lasts_until_it_kills_each_tick_further_off() {
+fn r3575300_toxic_lasts_until_it_kills_each_tick_after_the_next_further_off() {
     let clean = worth(&vanilla_with(json!({})), &AI_EVAL);
     let s = AI_EVAL.affliction_turn_share;
     let h = AI_EVAL.health;
-    // Toxic 1 on a 4/4: three ticks of 1, then the fourth kills it.
+    // Toxic 1 on a 4/4: three ticks of 1, the first in full, then the fourth kills it.
     let poisoned = worth(&vanilla_with(json!({ "toxic": 1 })), &AI_EVAL);
-    let loss = s * h + s * s * h + s.powi(3) * h + s.powi(4) * (clean - 3.0 * h);
+    let loss = h + s * h + s * s * h + s.powi(3) * (clean - 3.0 * h);
     close(poisoned, clean - loss);
 }
 

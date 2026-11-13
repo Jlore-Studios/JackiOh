@@ -475,9 +475,10 @@ pub struct EvalWeights {
     /// trigger (`evaluate::awaken_price`) that `slumber_worth` adds, inside its slumber share, the seat's
     /// sleepers and the enemy's alike.
     pub awaken: f64,
-    /// R3575300: per turn of its owner's still to come before a Burn or Toxic tick (§6.3, Stinkyscape+
-    /// E2) lands, the share of that tick's damage a Unit or a hero counts as lost now: its next tick, at
-    /// the start of its owner's next turn, at this share, the tick after at its square, and so on.
+    /// R3575300: per turn its owner may act in before a Burn or Toxic tick (§6.3, Stinkyscape+ E2) lands,
+    /// the share of that tick's damage a Unit or a hero counts as lost now. A tick lands at the start of
+    /// its owner's turn, before the owner acts, so the next one counts in full, the one after at this
+    /// share, the one after that at its square, and so on. 0 reads no count.
     pub affliction_turn_share: f64,
     /// An unseen hand card is valued as if it cost this.
     pub opponent_hand_cost: f64,
@@ -649,8 +650,8 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // smoke gate read 20, 19 and 20 of 20; at 0, 20, 19 and 20.
     awaken: 1.0,
     // R3575300: half, as `slumber_turn_share` holds a turn's wait and Brittle 1 (`brittle_discount`)
-    // a loss "the next tick away": a tick is a loss its owner still has a turn to answer (a heal, a
-    // Vanilla, a bounce). Set before any measurement, not to the sweep.
+    // a loss "the next tick away": each tick after the next is a loss its owner has had a turn to
+    // answer (a heal, a Vanilla, a bounce). Set before any measurement, not to the sweep.
     affliction_turn_share: 0.5,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
