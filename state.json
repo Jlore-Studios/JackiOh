@@ -37054,11 +37054,11 @@
         "why": "rejected by @jgoetzmann"
       }
     ],
-    "idle_since": "2026-11-13T05:42:35Z",
-    "last_run": "2026-11-13T05:42:35Z",
-    "provider": "claude-3",
+    "idle_since": "2026-11-13T05:30:34Z",
+    "last_run": "2026-11-13T03:30:12Z",
+    "provider": null,
     "requested": false,
-    "run_id": "43373785976",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": null,
