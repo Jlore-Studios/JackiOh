@@ -394,9 +394,16 @@ function CardFace({
   const printed = printedText(face, shown.full);
   const names = nameTier(face.name);
   const texts = textTier(printed);
-  useFitText(nameRef, bare ? "" : showStaticName ? face.name : `hover ${face.name}`);
+  useFitText(
+    nameRef,
+    bare
+      ? // Stryker disable next-line StringLiteral: a bare face's name holds no nameRef, so nothing fits, and this key differs from both name keys either way, so a fit runs on the same renders
+        ""
+      : showStaticName ? face.name : `hover ${face.name}`,
+  );
   // The rules box only exists on a full face; keying on the layout refits it when one appears. A face
   // that prints less than its text clamps at once, its art whole (#1017; fit.ts).
+  // Stryker disable next-line StringLiteral: a compact face holds no textRef, so nothing fits; else it only refits a wordless box a layout change shows, at --cf-fit 1, cards.css's default
   useFitText(textRef, full ? printed : "", { floorPx: FIT_FLOOR_PX, long: !less });
 
   const scales = { "--cf-name-scale": String(TIER_SCALE[names]), "--cf-text-scale": String(TIER_SCALE[texts]) } as CSSProperties;
@@ -567,7 +574,11 @@ function CardFace({
               picture={picture}
               motion={motion}
               part={depth ? "far" : outOfFrame || immersive ? "backdrop" : "whole"}
-              live={board && motion !== null}
+              live={
+                board &&
+                // Stryker disable next-line ConditionalExpression: CardArt lays its picture in layers only with a motion (its `layered` asks motion !== null itself), so live with no motion draws as not live
+                motion !== null
+              }
               diorama={diorama !== null ? { slice: 0, moving: dioramaMoving } : null}
             />
           )}

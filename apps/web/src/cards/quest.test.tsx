@@ -25,6 +25,8 @@ import { withCatalog } from "../test/board.tsx";
 import { baseView, emptySide, faceUpBackrow } from "../test/fixtures.ts";
 import { must } from "../test/stubServer.ts";
 import { CardFace, faceText } from "./CardFace.tsx";
+import { PREVIEW_TEXT_LIMIT } from "./constants.ts";
+import { overLimit } from "./fit.ts";
 import { questFaceText, questProgress, questWords, stageWords } from "../test/faceWords.ts";
 import { HOVER_DELAY_MS } from "./inspect/constants.ts";
 import { closeInspect } from "./inspect/store.ts";
@@ -592,6 +594,19 @@ describe("R2450000 a Quest card's face prints only the stage it stands at", () =
       // R2655001: this card prints full art now; the test reads its words.
       expect(faceText(off, undefined, false).shown.full, face.label).toBe(full);
     }
+  });
+
+  it("R2450000 In Too Deep's box is its whole text, no stage: in play it prints less only past the hover preview's limit", () => {
+    // A tree's line is no short form, so the box clamps only where its words outrun PREVIEW_TEXT_LIMIT (#1017).
+    const first = questFace(ITD, false, FIRST);
+    expect(first.inPlay).toBe(true);
+    expect(first.questBox?.less).toBe(false);
+    expect(overLimit(first.questBox?.text.full ?? "", PREVIEW_TEXT_LIMIT)).toBe(false);
+    expect(faceText(first, undefined, false)).toMatchObject({ short: false, less: false });
+    const deeper = questFace(ITD, false, DEEPER);
+    expect(deeper.questBox?.less).toBe(false);
+    expect(overLimit(deeper.questBox?.text.full ?? "", PREVIEW_TEXT_LIMIT)).toBe(true);
+    expect(faceText(deeper, undefined, false)).toMatchObject({ short: false, less: true });
   });
 
   it("R2450000 a Radiant face keeps its gold marks where they now stand", () => {

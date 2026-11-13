@@ -111,6 +111,18 @@ function gemText(gem: Element): string {
   return (copy.textContent ?? "").trim();
 }
 
+type CardFaceModule = typeof import("./CardFace.tsx");
+
+/**
+ * The module as a page load builds it, inside the test that reads it (`vi.resetModules()`): the art's shapes by type,
+ * the planes over the far one and a full art's empty text are built as the module loads, and Stryker turns a mutant on
+ * only after a test file has loaded its imports, so one built wrong fails only in a module imported afresh (#3490).
+ */
+async function freshCardFace(): Promise<CardFaceModule> {
+  vi.resetModules();
+  return import("./CardFace.tsx");
+}
+
 /**
  * Everything B12 and the "Forbidden inside a face" list rule out. A face must sit inside a `<button>`,
  * so its HTML is span, strong and img only; the Surface gives the icons as "aria-hidden SVG, no <text>".
@@ -215,6 +227,28 @@ describe("B12: the full face's DOM", () => {
     }
   });
 
+  it("B12 R3344000 the tables a page load builds: the art's shape by type, the planes over the far one, a full art's empty box", async () => {
+    const fresh = await freshCardFace();
+    const draw = (id: string): HTMLElement => {
+      const { container } = render(<fresh.CardFace face={faceModel({ defId: id, def: def(id), radiant: false })} />);
+      return one(container, ".cf");
+    };
+    for (const [type, id, shape] of TYPE_CARD) {
+      const art = one(draw(id), ".cf-art-frame > .cf-art");
+      expect(art.classList.contains(`cf-art--${shape}`), `${type} (${id})`).toBe(true);
+      cleanup();
+    }
+    // An Epic face draws its picture as depth planes: the far one in the window, the rest stacked over it.
+    const epic = draw("core-022");
+    expect(epic.getAttribute("data-depth")).toBe("true");
+    const planes = [...epic.querySelectorAll(".cf-art-frame > .cf-planes > .cf-plane")].map((plane) => plane.getAttribute("data-plane"));
+    expect(planes).toEqual(["middle", "near", "nearest"]);
+    cleanup();
+    // R1017001: a full-art face prints no words: its box is the empty text, and it prints less than its text.
+    const itd = faceModel({ defId: "classic-090", def: def("classic-090"), radiant: false });
+    expect(fresh.faceText(itd, undefined, true)).toStrictEqual({ shown: { full: "", spans: [] }, short: false, less: true });
+  });
+
   it("B12 .cf-gem carries the rarity for Common, Rare, Epic, Legendary and Mythic", () => {
     for (const [rarity, id] of RARITY_CARD) {
       const cf = catalogFace(id);
@@ -243,8 +277,10 @@ describe("B12: the full face's DOM", () => {
     expect([...human].map((tag) => tag.getAttribute("data-tag"))).toEqual(["Human"]);
   });
 
-  it("B12 a card with no tags renders no .cf-tag", () => {
-    expect(catalogFace("core-005").querySelectorAll(".cf-tag")).toHaveLength(0);
+  it("B12 a card with no tags renders no .cf-tag, nor an empty .cf-tags row", () => {
+    const cf = catalogFace("core-005");
+    expect(cf.querySelectorAll(".cf-tag")).toHaveLength(0);
+    expect(cf.querySelector(".cf-tags")).toBeNull();
   });
 
   it("B12 .card-text is present and empty when the card has no text", () => {
@@ -763,6 +799,28 @@ describe("B15: length tiers, and useFitText without layout", () => {
     }
   });
 
+  it("R280 B15 .cf's data-text-tier counts the values a face in play prints after its words", () => {
+    const words = "Your two largest piles add effects.";
+    const spell: CardDef = { ...def("core-005"), id: "t-values", base: { ...def("core-005").base, keywords: [], text: words } };
+    const face = faceModel({
+      defId: spell.id,
+      def: spell,
+      radiant: false,
+      inPlay: {
+        preview: [
+          { label: "Your two largest piles", value: 5, display: "Deck" },
+          { label: "Your two largest piles", value: 3, display: "Graveyard" },
+        ],
+      },
+    });
+    expect(face.text.full).toBe(words);
+    expect(textTier(words)).toBe("s");
+    // The box prints "{Deck} {Graveyard}" after the label, 19 characters more: past the small tier's TEXT_TIER_MAX.s.
+    expect(words.length + " {Deck} {Graveyard}".length).toBeGreaterThan(TEXT_TIER_MAX.s);
+    const { container } = render(<CardFace face={face} />);
+    expect(one(container, ".cf").getAttribute("data-text-tier")).toBe("m");
+  });
+
   it("B15 useFitText is a no-op on an element with no layout: no --cf-fit, no data-clamped, on content change too", () => {
     const { container, rerender } = render(<FitProbe content="A long line of rules text that would overflow" />);
     flushFits();
@@ -1174,6 +1232,15 @@ describe("R1177001: every token's type line says Token", () => {
   });
 });
 
+describe("§10.10: a face in play ends its rules box with the keywords it gained", () => {
+  it("§10.10 .cf-text-gained names each gained keyword by its key, a | between two", () => {
+    const keywords: Keyword[] = [{ kind: "Taunt" }, { kind: "Armor", n: 3 }];
+    const u = unit("p1", { defId: "core-002", keywords });
+    const cf = catalogFace("core-002", false, "full", { inPlay: {}, live: { attack: u.attack, health: u.health, maxHealth: u.maxHealth, keywords } });
+    expect(one(cf, ".cf-text-gained").getAttribute("data-gained")).toBe("Taunt|Armor 3");
+  });
+});
+
 describe("R1107: a granted Death ability prints on its own line", () => {
   it("R1107 prints a granted ability after the gained keywords and inside the printed text", () => {
     const grant = "Death: Add 1 random Book to your hand.";
@@ -1234,6 +1301,13 @@ describe("issue #814: long faces truncate with an ellipsis and keep their whole 
     const whole = faceModel({ defId: SUMMIT, def: def(SUMMIT), radiant: false }).text.full;
     expect(box.getAttribute("title")).toBe(whole);
     expect(box.getAttribute("title")).toContain("Ascent 0:");
+  });
+
+  it("#912: with hover previews off, a face with no text has no tooltip at all, not an empty one", () => {
+    writeCardSettings({ hoverPreviews: false });
+    const box = one(catalogFace("core-t-felinor"), ".card-text");
+    expect(box.textContent).toBe("");
+    expect(box.hasAttribute("title")).toBe(false);
   });
 
   it("#1017: a Summit without a level prints its short form, its header ending in \"…\", as does one past its lines", () => {
