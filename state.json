@@ -36950,7 +36950,7 @@
         "why": "closed unbuilt by a person (not planned)"
       }
     ],
-    "idle_since": "2026-11-13T03:30:12Z",
+    "idle_since": null,
     "last_run": "2026-11-13T03:30:12Z",
     "provider": "claude-3",
     "requested": false,
