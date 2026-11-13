@@ -12315,9 +12315,9 @@
       "owner_why": "it plans it",
       "pending_request": false,
       "provider": "claude-3",
-      "run_id": "43454212125",
+      "run_id": "pending:82149f07-1794587775",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-13T15:35:49Z",
+      "started_at": "2026-11-13T16:36:58Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -16142,9 +16142,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T16:35:58Z",
+    "at": "2026-11-13T16:36:58Z",
     "url": "",
-    "what": "plan #3731 on claude-3"
+    "what": "plan #3729 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-13T15:45:28Z",
