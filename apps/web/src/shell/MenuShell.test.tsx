@@ -49,6 +49,7 @@ const OUTSIDE_SHELL: Readonly<Record<string, string>> = {
   series: "a Conquest series between its games, part of a game's flow",
   watch: "a friend's game, watched on a board",
   duos: "a co-op match's board",
+  dailyGame: "a daily game's board (#3727)",
 };
 
 function serve(over: Parameters<typeof meBody>[0] = {}): StubServer {
