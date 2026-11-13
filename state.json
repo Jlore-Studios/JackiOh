@@ -21336,10 +21336,10 @@
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-13T01:10:00Z",
-          "utilization": 0.43
+          "resets_at": "2026-11-13T06:20:00Z",
+          "utilization": 0.69
         },
-        "observed_at": "2026-11-12T21:10:19Z",
+        "observed_at": "2026-11-13T03:14:36Z",
         "status": "allowed"
       }
     },
@@ -36787,6 +36787,11 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-13T02:58:34Z,claude-1,ping,before,43350397554,69,2026-11-13T06:20:00Z,,,allowed,40,,"
+    ]
   },
   "version": 1
 }
