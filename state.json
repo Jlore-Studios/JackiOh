@@ -16754,8 +16754,16 @@
     "what": "plan #3886 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-13T21:52:41Z",
-    "notes": [],
+    "at": "2026-11-13T22:01:05Z",
+    "notes": [
+      "#3886 needs a plan",
+      "#3887 needs a plan",
+      "delivered plan #3859 on claude-3 (run 43506471513): planned",
+      "started plan #3887 on claude-3 (run 43516363415)",
+      "started plan #3886 on claude-3 (run 43516525743)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 64%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-16T09:00:00Z; it can start a build or a plan again in 48h 52m; `muse` it refused a call; its limit resets at 2026-11-16T00:00:00Z; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-14T05:00:00Z; it can start a build or a plan again in 6h 52m",
+      "pruned 2 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -17460,7 +17468,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-13T21:52:41Z",
+  "loop_tick": "2026-11-13T22:01:05Z",
   "machine_disk": {
     "issue": null,
     "reading": {
