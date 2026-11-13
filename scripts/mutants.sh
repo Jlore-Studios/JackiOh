@@ -48,10 +48,12 @@ ROOT=$(pwd)
 # build, since the cards are its tests' dev-dependency and are built again with it, and 2.5 minutes'
 # tests, and the server's 8 to 12 minutes' tests: at 150 and 80 a shard, their first shards on main
 # (2026-11-12) reached about 35 and 25 mutants before the step's five hours ended, so they hold 40 and
-# 20 now, the server's tested one at a time (JOBS_SERVER, below). The rest are estimates until a weekly
-# run times them: about a minute in the cards and four in the tools.
+# 20 now, the server's tested one at a time (JOBS_SERVER, below). A card set's mutant took about 1.5
+# minutes, two at a time (Stinkyscape's first shard reached 198 of its 225 in the five hours, the
+# others 200 to 230 in about three, #3813's branch, 2026-11-13), so a card shard holds 150. The tools'
+# are an estimate until a weekly run times them: about four minutes.
 SIZE_ENGINE=40
-SIZE_CARDS=250
+SIZE_CARDS=150
 SIZE_AI=120
 SIZE_RUN=1000
 SIZE_SHARED=250
