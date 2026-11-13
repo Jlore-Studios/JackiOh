@@ -12,6 +12,8 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::config::COIN_DEF_ID;
+use crate::effects::add_to_hand::{AddToHandArgs, add_to_hand};
 use crate::effects::destroy::{DestroyArgs, destroy, destroy_all};
 use crate::effects::move_::{DiscardHandArgs, DiscardRandomArgs, discard_hand, discard_random};
 use crate::effects::radiant::{RadiantTarget, set_radiant};
@@ -26,7 +28,7 @@ use crate::prompts::{RESUME_HOOK, SELF_KEY, resume_self};
 use crate::random_cast::RANDOM_CHOICES_KEY;
 use crate::resolve::{HookOptions, make_context};
 use crate::script::{Effect, EffectContext, EngineSink};
-use crate::state::{CardInstance, DelayedAt, DelayedEffect, Resume, find_instance, is_turn_of};
+use crate::state::{CardInstance, DelayedAt, DelayedEffect, GameState, Resume, find_instance, is_turn_of};
 use crate::wire::{CardMark, GameEvent, Phase, PlayerId, Row, ZoneName, opponent_of};
 use crate::work::RUN_MARKS_KEY;
 use crate::zones::{card_at, slots_of, standing_units_of};
@@ -277,6 +279,12 @@ pub const DUO_MARK_COLOR: &str = "gold";
 pub const END_OF_TURN_MARK: &str = "endOfTurn";
 /// R2321001: that mark's color, the client's ember of a burning fuse.
 pub const END_OF_TURN_MARK_COLOR: &str = "orange";
+/// R3550006 (Stinkyscape+ #94 PIP): the hook a kill deadline waits under.
+pub const DELAYED_KILL_DEADLINE_HOOK: &str = "@delayedKillDeadline";
+/// R3550006: the mark a Unit carries in both views while a kill deadline watches it (R437).
+pub const DEADLINE_MARK: &str = "deadline";
+/// R3550006: that mark's color, the client's crimson for a final warning.
+pub const DEADLINE_MARK_COLOR: &str = "crimson";
 
 /// The def id and face an engine delayed effect records: the running `ctx.def_id` first (B5 E14, R546).
 fn maker_of(ctx: &EffectContext<'_>) -> (String, bool) {
@@ -366,6 +374,78 @@ pub fn destroy_at_next_turn_start(args: DestroyAtNextTurnStartArgs) -> Effect {
             }
         }
     })
+}
+
+/// `kill_deadline`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct KillDeadlineArgs {
+    pub target: TargetSpec,
+    /// The Radiant face's consolation: this many The Coins join the owner's hand when the deadline
+    /// fails. Absent: none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub coins_on_fail: Option<i32>,
+    /// "They have N turns" (R3557006): the deadline is the end of its controller's Nth turn from now.
+    /// Absent, or below 1: the next one, as the verb always did.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub turns: Option<i32>,
+}
+
+/// R3550006 (Stinkyscape+ #94 PIP): "they have 1 turn to get a kill otherwise they are destroyed" —
+/// the Unit `target` names is destroyed at the end of its controller's next turn, unless it destroys
+/// a Unit first (`meet_kill_deadlines`, any kill credited to it meeting it at once, R42, R412). A
+/// destroy (§6.3: Indestructible ignores it, R46) aimed at that stay on the field (`watch`, R76,
+/// R83); the watched Unit wears the `deadline` mark while it waits (R437). A Unit that left the
+/// field fails nothing (R174).
+pub fn kill_deadline(args: KillDeadlineArgs) -> Effect {
+    Effect::new("killDeadline", move |ctx| {
+        let (def_id, radiant) = maker_of(ctx);
+        let Some(unit) = instance_of(ctx, &args.target) else {
+            return;
+        };
+        if unit.zone.z() != ZoneName::Field {
+            return;
+        }
+        // R458: "next turn" waits past the turn it is made on.
+        let at = DelayedAt {
+            phase: Phase::End,
+            player: unit.controller,
+        };
+        let mut data: IndexMap<String, Value> = IndexMap::new();
+        data.insert("instanceId".to_string(), Value::String(unit.id.clone()));
+        if let Some(coins) = args.coins_on_fail {
+            data.insert("coins".to_string(), Value::from(coins));
+        }
+        let resume = Resume {
+            def_id,
+            hook: DELAYED_KILL_DEADLINE_HOOK.to_string(),
+            step: "unit".to_string(),
+            radiant,
+            instance_id: None,
+            data,
+        };
+        let owner = ctx.controller;
+        // R3557006: each turn past the first is one more round of both players' turns.
+        let not_before = next_turn_mark(ctx) + 2 * (args.turns.unwrap_or(1).max(1) - 1);
+        let entry = schedule_delayed(ctx, owner, at, resume, Some(unit.id.clone()), Some(not_before));
+        mark_delayed(
+            ctx,
+            &entry,
+            &CardMark {
+                mark: DEADLINE_MARK.to_string(),
+                color: DEADLINE_MARK_COLOR.to_string(),
+            },
+        );
+    })
+}
+
+/// R3550006: a kill credited to `killer_id` (R42, R412) meets every kill deadline watching it at
+/// once — those entries are dropped, and the sweep takes their marks with them.
+pub fn meet_kill_deadlines(state: &mut GameState, killer_id: &str) {
+    state.delayed.retain(|entry| {
+        !(entry.resume.hook == DELAYED_KILL_DEADLINE_HOOK && entry.watch.as_deref() == Some(killer_id))
+    });
 }
 
 /// R963, MD-C4 (Meditative #39.5 Jade Beauty): "Allure every enemy Unit" — each enemy Unit on the field
@@ -694,6 +774,24 @@ pub fn run_engine_delayed(sink: &mut EngineSink<'_>, effect: &DelayedEffect) -> 
                     ..StealTarget::default()
                 };
                 (steal(target).apply)(&mut ctx);
+            }
+            true
+        }
+        DELAYED_KILL_DEADLINE_HOOK => {
+            if let Some(instance_id) = data.get("instanceId").and_then(Value::as_str) {
+                let target = TargetSpec::Instance {
+                    instance_id: instance_id.to_string(),
+                };
+                (destroy(DestroyArgs { target }).apply)(&mut ctx);
+            }
+            // The Radiant face's consolation: one The Coin per coin, to the owner's hand.
+            let coins = data.get("coins").and_then(Value::as_i64).unwrap_or(0).max(0);
+            for _ in 0..coins {
+                (add_to_hand(AddToHandArgs {
+                    def_id: Some(COIN_DEF_ID.into()),
+                    ..Default::default()
+                })
+                .apply)(&mut ctx);
             }
             true
         }

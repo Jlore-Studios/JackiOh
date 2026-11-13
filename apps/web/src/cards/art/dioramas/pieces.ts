@@ -3,11 +3,12 @@
 // every piece is in one slice (dioramas.test.ts). A scene card's picture (scene.ts, R3331000) is its sky, its glow, its
 // Radiant rays, a ridge for each of its scene's shapes (and the painter's own subject where the recipe keeps it), its emblem
 // and its vignette; a Stinkyscape painter's (stinkyscape.ts `stinkyParts`) is its sky's elements, its rays', its subject's
-// (drawn in the subject's placing transform) and its vignette.
+// (drawn in the subject's placing transform) and its vignette, and a Stinkyscape+ card's that draws that painter
+// (stinkyscapeplus.ts `stinkyscapePlusSvg`) also its Mindustrial overlay's, between its subject and its vignette.
 //
 // The keys: `sky`, `glow`, `rays`, `emblem` and `vignette`; a scene shape's `scene:<layer>:<part>:<n>` (the nth shape of that
 // part in that layer) and the painter's own subject's `own:<n>`; a Stinkyscape painter's `sky:<n>`, `rays:<n>` and
-// `subject:<n>`. A slice picks a key by itself, every key under a prefix ending in ":", or a run `<prefix>:<a>-<b>`.
+// `subject:<n>`, and a Stinkyscape+ overlay's `props:<n>`. A slice picks a key by itself, every key under a prefix ending in ":", or a run `<prefix>:<a>-<b>`.
 // Each piece knows the role its painter moves it in (motion.ts, R2715001), so a slice of a face at an animated level moves
 // its pieces as the whole moving picture does (index.ts).
 // Presentation only (CLAUDE.md rule 7): a piece is drawn from the card's id and face alone (R202).
@@ -17,6 +18,7 @@ import type { ArtMotion, ArtRole } from "../motion.ts";
 import { artPlaneUri } from "../pictures.ts";
 import { composeScene, SCENE_LAYER_ROLES, SCENE_LAYERS, sceneRecipeOf, type SceneShape } from "../scene.ts";
 import { isStinkyscapeArt, stinkyParts } from "../stinkyscape.ts";
+import { mindustrialOverlay, paintsUnderOverlay } from "../stinkyscapeplus.ts";
 
 /** R3350000: how many pictures' pieces, slices and slice URIs are memoised before each memo is cleared. */
 export const DIORAMA_CACHE_MAX = 512;
@@ -161,16 +163,21 @@ function scenePieces(defId: string, radiant: boolean): PicturePieces | null {
   };
 }
 
-/** A Stinkyscape painter's pieces (`stinkyParts`): its sky's, its rays', its subject's and its vignette. */
+/**
+ * A Stinkyscape painter's pieces (`stinkyParts`): its sky's, its rays', its subject's and its vignette; a Stinkyscape+ card's
+ * that draws it, its Mindustrial overlay's too, under the vignette.
+ */
 function stinkyPieces(defId: string, radiant: boolean): PicturePieces | null {
   const def = CATALOG[defId];
-  if (def === undefined || !isStinkyscapeArt(defId)) return null;
+  const overlaid = paintsUnderOverlay(defId);
+  if (def === undefined || !(isStinkyscapeArt(defId) || overlaid)) return null;
   const parts = stinkyParts(defId, def.name, def.tags, def.type, radiant);
   if (parts === null) return null;
   const { head } = headAndBody(wholeSvg(defId, radiant));
   const keyed = (name: string, markup: string, role: ArtRole | null, inSubject = false): PicturePiece[] =>
     splitNodes(markup).map((node, n) => ({ key: `${name}:${n}`, markup: node, inSubject, role }));
-  // The painter moves its sky as the back and its subject as the subject (`stinkyDocument`).
+  // The painter moves its sky as the back and its subject as the subject (`stinkyDocument`), and Stinkyscape+ its overlay as
+  // the props.
   return {
     head,
     transform: parts.transform,
@@ -178,14 +185,15 @@ function stinkyPieces(defId: string, radiant: boolean): PicturePieces | null {
       ...keyed("sky", parts.sky, "back"),
       ...keyed("rays", parts.rays, null),
       ...keyed("subject", parts.subject, "subject", true),
+      ...(overlaid ? keyed("props", mindustrialOverlay(defId, radiant), "props") : []),
       { key: "vignette", markup: parts.vignette, inSubject: false, role: null },
     ],
   };
 }
 
 /**
- * R3350000: `defId`'s still picture on the face `radiant` says, in its pieces: a scene card's, else a Stinkyscape painter's;
- * null for a card drawn by neither. Memoised.
+ * R3350000: `defId`'s still picture on the face `radiant` says, in its pieces: a scene card's, else a Stinkyscape painter's
+ * (a Stinkyscape+ card's under its overlay among them); null for a card drawn by neither. Memoised.
  */
 export function picturePieces(defId: string, radiant: boolean): PicturePieces | null {
   const memo = `${defId}|${radiant}`;

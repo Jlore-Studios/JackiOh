@@ -5,6 +5,7 @@ import type { Counters } from "./Counters";
 import type { Enchantment } from "./Enchantment";
 import type { Exertion } from "./Exertion";
 import type { Grant } from "./Grant";
+import type { Half } from "./Half";
 import type { Keyword } from "./Keyword";
 import type { KnownAs } from "./KnownAs";
 import type { PlayerId } from "./PlayerId";
@@ -13,6 +14,7 @@ import type { SetAs } from "./SetAs";
 import type { Slumber } from "./Slumber";
 import type { StarshipMemory } from "./StarshipMemory";
 import type { Tag } from "./Tag";
+import type { TipsyStamp } from "./TipsyStamp";
 import type { Tuning } from "./Tuning";
 import type { Zone } from "./Zone";
 
@@ -206,4 +208,36 @@ fixedX?: number,
  * without them (R57). Absent on every other card, so a game nothing hides a Nerf in serializes
  * and hashes as before (D3).
  */
-hiddenNerfs?: number, };
+hiddenNerfs?: number, 
+/**
+ * R3536000: has evolved, so it evolves no more; R78's reset takes it off; only `Some(true)`.
+ */
+evolved?: true, 
+/**
+ * R3536002: marked to enter the field evolved; rides every zone until the state check after it enters.
+ */
+entersEvolved?: true, 
+/**
+ * R3546000: fills four zones; stamped as it enters the field, fixed there, taken off by R78's reset.
+ */
+giga?: true, 
+/**
+ * R3548001: the Tipsy counter stamped on this card as it arrived, if one was up. Taken off by
+ * R78's reset with the card leaving the field; only its owner's view reads it.
+ */
+tipsy?: TipsyStamp, 
+/**
+ * R3554003: the half of a slashed board this card was cast on (a Spell in the resolving zone)
+ * or stands on. Taken off by R78's reset with the card leaving the field. Absent on every other
+ * card, so a game nothing slashes serializes and hashes as before (D14).
+ */
+half?: Half, 
+/**
+ * R3554007: the shared damage chain this Unit is in (S+ #7 Churnwalker). Taken off by R78's
+ * reset with the card leaving the field. Absent on every other card (D14).
+ */
+sharedChain?: number, 
+/**
+ * R3554007: the split damage chain this Unit is in. As `shared_chain`.
+ */
+splitChain?: number, };

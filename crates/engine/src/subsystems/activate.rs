@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::combat::FROZEN_REFUSAL;
-use crate::config::{ACTIVATE_COOLDOWN_TURNS, ACTIVATE_UNLIMITED_CAP};
+use crate::config::{ACTIVATE_BASE_COOLDOWN, ACTIVATE_COOLDOWN_TURNS, ACTIVATE_UNLIMITED_CAP};
 use crate::effects::move_::discard_random_cards;
 use crate::layers::unit_view;
 use crate::mana::{mana_event, push_mana_spent};
@@ -182,8 +182,12 @@ fn sourced_abilities_of(
         return vec![(cloaked_reveal_decl(), None)];
     }
     // R1852003: a Dormant Starship has the engine's launch, and nothing its text declares.
-    if crate::starship::is_dormant_starship(card) {
-        return vec![(crate::starship::launch_decl(state, card), None)];
+    // R3539000: a hull whose text names a `wakesBy` Activate offers that ability instead of the launch.
+    if crate::starship::is_dormant_starship(card) && crate::slumber::wakes_by_of(state, card).is_none() {
+        return crate::starship::launch_decl(state, card)
+            .map(|decl| (decl, None))
+            .into_iter()
+            .collect();
     }
     let wakes_by = if crate::slumber::is_slumbering(card) {
         match crate::slumber::wakes_by_of(state, card) {
@@ -365,8 +369,23 @@ pub fn mark_use(state: &mut GameState, card_id: &str, ability: &str) {
 
 /// R1841000: the ability "has an extra turn cooldown".
 fn has_cooldown(decl: &ActivationDecl) -> bool {
-    decl.cost
+    cooldown_sits_out(decl) > 0
+}
+
+/// R3550003: how many of its user's turns the ability sits out after a use. A cooldown of N in the
+/// designer's count sits out N-1 of its user's turns; the extra-turn cooldown is 2 in that count,
+/// sitting out exactly one. Refresh leaves a cooldown alone (R3548003).
+fn cooldown_sits_out(decl: &ActivationDecl) -> i32 {
+    if let Some(n) = decl.cost.and_then(|cost| cost.cooldown_turns) {
+        (n - ACTIVATE_BASE_COOLDOWN).max(0)
+    } else if decl
+        .cost
         .is_some_and(|cost| cost.extra_turn_cooldown == Some(true))
+    {
+        ACTIVATE_COOLDOWN_TURNS
+    } else {
+        0
+    }
 }
 
 /// R1841000: a use of an ability with an extra turn cooldown starts it, on its user's turn count.
@@ -387,8 +406,8 @@ fn start_cooldown(state: &mut GameState, card_id: &str, ability: &str, player: P
 }
 
 /// R1841000: whether the ability sits out this turn — it is the turn of the player who last used it,
-/// one of the `ACTIVATE_COOLDOWN_TURNS` of theirs after the use (an extra turn counts as one).
-fn cooling_down(state: &GameState, card: &CardInstance, ability: &str) -> bool {
+/// one of the `sits_out` of theirs after the use (an extra turn counts as one).
+fn cooling_down(state: &GameState, card: &CardInstance, ability: &str, sits_out: i32) -> bool {
     let Some(record) = card
         .memory
         .get(COOLDOWNS_MEMORY_KEY)
@@ -403,8 +422,33 @@ fn cooling_down(state: &GameState, card: &CardInstance, ability: &str) -> bool {
         return false;
     };
     state.active == by
-        && (1..=i64::from(ACTIVATE_COOLDOWN_TURNS))
-            .contains(&(i64::from(state.players[by].turns_started) - turn))
+        && (1..=i64::from(sits_out)).contains(&(i64::from(state.players[by].turns_started) - turn))
+}
+
+/// R3550003: how many of its user's turns the ability still sits out, for the view. Read from the
+/// `cooldowns` record (`{player: by, turn: t0}`): `k` sits out, `e` of the user's turns have started
+/// since, and on the user's own turn the running one counts as served. `None` when it is not cooling
+/// down.
+pub fn cooldown_turns_left(state: &GameState, card: &CardInstance, decl: &ActivationDecl) -> Option<i32> {
+    let sits_out = cooldown_sits_out(decl);
+    if sits_out <= 0 {
+        return None;
+    }
+    let record = card
+        .memory
+        .get(COOLDOWNS_MEMORY_KEY)
+        .and_then(|cooldowns| cooldowns.get(&decl.id))?;
+    let by = record
+        .get("player")
+        .and_then(|player| serde_json::from_value::<PlayerId>(player.clone()).ok())?;
+    let t0 = record.get("turn").and_then(Value::as_i64)?;
+    let elapsed = i64::from(state.players[by].turns_started) - t0;
+    let left = if state.active == by && elapsed >= 1 {
+        i64::from(sits_out) - elapsed + 1
+    } else {
+        i64::from(sits_out) - elapsed
+    };
+    (left > 0).then_some(left as i32)
 }
 
 /// R757, R1751000: the record with one use of `ability` given back, or `None` when the card has none
@@ -514,7 +558,7 @@ fn why_ability_unusable(
         });
     }
     // R1841000: an extra turn cooldown sits out its user's next turn.
-    if has_cooldown(decl) && cooling_down(state, card, &decl.id) {
+    if has_cooldown(decl) && cooling_down(state, card, &decl.id, cooldown_sits_out(decl)) {
         return Err("that ability is cooling down this turn".into());
     }
     if let Some(can_activate) = &decl.can_activate
@@ -533,8 +577,8 @@ fn why_ability_unusable(
     let side = &state.players[player];
     let cost = decl.cost.unwrap_or_default();
     let mana = mana_price(state, card, cost);
-    // R1223: an Activate's mana cost may be borrowed too.
-    if mana > crate::credit::spendable_mana(state, player) {
+    // R1223, R3548004: an Activate's mana cost may be borrowed too, or paid on infinite mana.
+    if !crate::credit::can_pay(state, player, mana) {
         return Err(EngineError::new(format!(
             "that ability costs {mana}, more than your mana"
         )));
@@ -1064,6 +1108,10 @@ fn run_from(data: &IndexMap<String, Value>) -> Option<ActivationRun> {
 /// `work.rs`'s dispatcher calls it (SURFACE §6.6).
 pub fn run_owed_activation(sink: &mut EngineSink<'_>, item: &WorkItem) {
     if let Some(run) = run_from(&item.resume.data) {
+        // R3550005: a counter answers the owed effect too — it never runs.
+        if crate::countering::counter_activation(sink, run.player) {
+            return;
+        }
         run_effect(sink, &run);
     }
 }
@@ -1163,6 +1211,15 @@ pub fn activate_ability(
         }
         return Ok(());
     }
+    // R3550005: a counter answers the `activate` action here — the Activate does nothing, its use
+    // and costs staying spent above. No trap window opens for Activates, which would retime shipped
+    // Wishing Well and Tommy Tempo.
+    if crate::countering::counter_activation(sink, player) {
+        if !paused(sink) {
+            state_check(sink);
+        }
+        return Ok(());
+    }
     // R1852003, R1852006: a Dormant Starship's launch is the engine's, not its script's: paid for, it
     // spends its price rules and awakens the Starship, which launches it; then the state check (R59).
     if crate::starship::is_launch(&card, &decl.id) {
@@ -1219,12 +1276,13 @@ pub fn activation_views_for(
                     ),
                 };
                 ActivationView {
-                    ability: decl.id,
-                    label: decl.label,
+                    ability: decl.id.clone(),
+                    label: decl.label.clone(),
                     uses_left,
                     usable,
                     reason,
                     printed_on,
+                    cooldown_turns_left: cooldown_turns_left(state, card, &decl),
                 }
             })
             .collect(),

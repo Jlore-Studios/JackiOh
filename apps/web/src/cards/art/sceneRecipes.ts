@@ -64,6 +64,7 @@ import { STINKYSCAPE_ALT_RECIPES_1 } from "./stinkyscapeAltRecipes1.ts";
 import { STINKYSCAPE_ALT_RECIPES_2 } from "./stinkyscapeAltRecipes2.ts";
 import { STINKYSCAPE_ALT_RECIPES_3 } from "./stinkyscapeAltRecipes3.ts";
 import { STINKYSCAPE_RECIPES } from "./stinkyscapeRecipes.ts";
+import { STINKY_PLUS_RECIPES } from "./stinkyscapePlusRecipes.ts";
 import { TRAINING_GROUNDS_ALT_RECIPES } from "./trainingGroundsAltRecipes.ts";
 
 /** Corpse Plantation (Classic #74, Epic): a moonlit graveyard farm under its bone scarecrow. */
@@ -177,7 +178,7 @@ export const STINKYSCAPE_ALT_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   ...STINKYSCAPE_ALT_RECIPES_3,
 };
 
-/** R3331000: the cards that draw from a scene, by id: the proof cards left here, R3390000 every Classic+ entry, R3391000 every Stinkyscape entry of its pass (cards 1 to 90), R3392000 every Core entry, R3393000 every Meditative+ and Training Grounds entry, R3401000 every Meditative entry, R3403000 #3403's Stinkyscape entries and R3352000 every Classic entry. */
+/** R3331000: the cards that draw from a scene, by id: the proof cards left here, R3390000 every Classic+ entry, R3391000 every Stinkyscape entry of its pass (cards 1 to 90), R3392000 every Core entry, R3393000 every Meditative+ and Training Grounds entry, R3401000 every Meditative entry, R3403000 #3403's Stinkyscape entries, R3572001 the Stinkyscape+ Legendaries and Mythics (stinkyscapePlusRecipes.ts) and R3352000 every Classic entry. */
 export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   "classic-074": CORPSE_PLANTATION,
   "core-100": CEASELESS_VOID,
@@ -192,6 +193,7 @@ export const SCENE_RECIPES: Readonly<Record<string, SceneRecipe>> = {
   ...CLASSIC_PLUS_RECIPES_2,
   ...CLASSIC_PLUS_RECIPES_3,
   ...STINKYSCAPE_91_RECIPES,
+  ...STINKY_PLUS_RECIPES,
   ...MEDITATIVE_RECIPES_1,
   ...MEDITATIVE_RECIPES_2,
   ...MEDITATIVE_RECIPES_3,

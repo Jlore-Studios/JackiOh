@@ -805,11 +805,47 @@ fn r668_a_lesson_is_never_saved_a_finished_game_clears_the_save_and_a_run_leaves
 
 // R3476000: a dungeon run's unfinished fight waits where it stood
 
+/// R3476000: whether the run fight dealt on `seed` is still undecided after the walk the test below
+/// takes (24 steps, then the six turns each seat plays on): a fight a random walk ends early has nothing
+/// left to resume. The pools the decks are dealt from move the deal with every set that ships, so the test
+/// takes the first seed that outlasts its walk, as the testkit's `seed_where` does (#848).
+fn run_fight_outlasts_its_walk(seed: &str) -> bool {
+    let mut session = Session::start(&run_config(seed)).expect("starts");
+    session.answer_mulligans();
+    let mut human = Rng::new(&format!("{seed}:human"), 0);
+    for _ in 0..24 {
+        if !session.ai_turn() {
+            let seat = session.host.human_seat();
+            let Some(body) = random_action(session.state(), seat, &mut human) else {
+                return false;
+            };
+            session.act(body);
+        }
+    }
+    if session.host.is_over() {
+        return false;
+    }
+    for _ in 0..6 {
+        if !session.ai_turn() {
+            let seat = session.host.human_seat();
+            let Some(body) = random_action(session.state(), seat, &mut human) else {
+                return false;
+            };
+            session.act(body);
+        }
+    }
+    !session.host.is_over()
+}
+
 #[test]
 fn r3476000_a_run_fight_is_saved_and_resumes_to_the_same_state_and_ai_stream() {
-    let mut session = Session::start(&run_config("practice-r3476000")).expect("starts");
+    let seed = (0..jackioh_engine::config::SEED_SEARCH_BOUND)
+        .map(|index| format!("practice-r3476000-{index}"))
+        .find(|seed| run_fight_outlasts_its_walk(seed))
+        .expect("a seed whose fight outlasts the walk");
+    let mut session = Session::start(&run_config(&seed)).expect("starts");
     session.answer_mulligans();
-    let mut human = Rng::new("practice-r3476000:human", 0);
+    let mut human = Rng::new(&format!("{seed}:human"), 0);
     for _ in 0..24 {
         if !session.ai_turn() {
             let seat = session.host.human_seat();

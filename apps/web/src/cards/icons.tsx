@@ -21,7 +21,8 @@ export type IconName =
   | "target"
   | "cog"
   | "trade"
-  | "altar";
+  | "altar"
+  | "stein";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -131,6 +132,17 @@ const ALTAR = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
 <path d='M21 42 V52 M43 42 V52 M17 52 H47' fill='none' stroke='#e8ecf8' stroke-width='4' stroke-linecap='round'/>
 </svg>`;
 
+// R3548000: a stein (a Tipsy counter's badge), a mug with a lid and foam, drawn as the badges are.
+const STEIN = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
+<circle cx='32' cy='32' r='30' fill='#101522' stroke='#e8ecf8' stroke-width='3'/>
+<path d='M22 22 H44 V50 H22 Z' fill='none' stroke='#e8ecf8' stroke-width='4' stroke-linejoin='round'/>
+<path d='M44 28 C52 28 52 44 44 44' fill='none' stroke='#e8ecf8' stroke-width='4' stroke-linecap='round'/>
+<path d='M20 22 H46' stroke='#e8ecf8' stroke-width='4' stroke-linecap='round'/>
+<circle cx='26' cy='14' r='4' fill='#e8ecf8'/>
+<circle cx='34' cy='12' r='5' fill='#e8ecf8'/>
+<circle cx='42' cy='15' r='3.5' fill='#e8ecf8'/>
+</svg>`;
+
 function dataUri(svg: string): string {
   return `data:image/svg+xml,${encodeURIComponent(svg.replace(/\n/g, ""))}`;
 }
@@ -148,6 +160,7 @@ const ICON_URI: Readonly<Record<IconName, string>> = {
   cog: dataUri(COG),
   trade: dataUri(TRADE),
   altar: dataUri(ALTAR),
+  stein: dataUri(STEIN),
 };
 
 export function Icon({ name }: { name: IconName }): ReactElement {

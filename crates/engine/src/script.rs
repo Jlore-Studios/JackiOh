@@ -13,6 +13,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::query::HandSide;
 use crate::rng::Rng;
 use crate::state::{CardInstance, CostRule, EventStay, GameState, PlayRecord};
 use crate::wire::{
@@ -92,6 +93,9 @@ pub struct EffectContext<'a> {
     /// R136: the units this run summoned in the actions before a prompt split it, which the resumed list's
     /// `events_from` window misses (`work::RunMarks`). Absent for a run that has not paused.
     pub summoned: Option<Vec<String>>,
+    /// R3563000: the catalog cards this run has drawn from random pools; fresh in every context
+    /// `make_context` builds, not carried across a prompt.
+    pub draw_tally: crate::catalog::DrawTally,
     /// R98: the running card sat in the resolving zone as the run began (§10.5 step 4: a Spell, or a
     /// permanent that found no zone), so a continuation re-entered once it has left resumes with no self
     /// (`prompts::run_resume`). Carried across a pause (`work::RunMarks`); absent for any other card.
@@ -128,6 +132,7 @@ impl<'a> EffectContext<'a> {
             chosen_from: None,
             event_stay: None,
             summoned: None,
+            draw_tally: crate::catalog::DrawTally::new(),
             self_resolving: None,
             controller,
             self_: None,
@@ -343,6 +348,30 @@ pub fn aura_hook(f: impl for<'a> Fn(HookArgs<'a>) -> Vec<AuraEntry<'a>> + Send +
     Arc::new(f)
 }
 
+/// R3558001: what a hand card lends a neighbour — Radiance, a cost change, or both — read on its
+/// lender while the lender sits in the hand (`hand_order::sync_hand_auras`,
+/// `hand_order::hand_aura_cost_delta`). Data, so a fusion carries each ingredient's list (R102).
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
+pub struct HandAura {
+    /// Which neighbour takes it: the card to the left takes a `Right` lend, the card to the right a
+    /// `Left` one.
+    pub to: HandSide,
+    /// The neighbour becomes Radiant while the lender sits beside it.
+    pub radiant: bool,
+    /// What the neighbour's price moves by while the lender sits beside it.
+    pub cost: i32,
+}
+
+/// R3558001: a hand card's aura, read on the card in the hand through `hand_aura_hook`, like
+/// `aura_hook` on the field.
+pub type HandAuraHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> Vec<HandAura> + Send + Sync>;
+
+pub fn hand_aura_hook(
+    f: impl for<'a> Fn(HookArgs<'a>) -> Vec<HandAura> + Send + Sync + 'static,
+) -> HandAuraHook {
+    Arc::new(f)
+}
+
 /// MD-D4, R1120: what one combat-only attack modifier adds to an attacker's strike in the combat it
 /// started against a Unit — attack on top of the layered value, and Poisonous on those hits (§4.4
 /// step 7). Never a layer: the shown attack and §4.2 step 1's "attack above 0" do not see it.
@@ -418,12 +447,19 @@ pub struct StaticFlags {
     /// Starts in the opening hand instead of a draw (§6.2).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub quickdraw: Option<bool>,
+    /// R3558006: always starts at the bottom of its owner's deck, below every card without this flag
+    /// (§2.1, §6.2).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub starts_at_bottom: Option<bool>,
     /// R1861000: sells from its owner's hand at an open Marketplace, as a tray Resource sells.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hand_sale: Option<bool>,
     /// Replaces an empty-library draw with a Rush Token card (#75).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub infinite_reserves: Option<bool>,
+    /// R3553002: replaces its controller's first draw each turn with a Warhero Token card (S+ #30).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub warhero_draws: Option<bool>,
     /// Cannot switch to Defense Position (#65.1).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub never_defense: Option<bool>,
@@ -575,6 +611,14 @@ pub struct StaticFlags {
     /// MD-F14, R1283: multiplier for attacks across its lane in combat, read through `multiplier`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lane_multiplier: Option<i32>,
+    /// R3554008 (S+ #107 Fuse): its attack hits every enemy Unit in its lane for `sweepLane` times
+    /// its attack and every enemy Unit in the adjacent lanes for `sweepAdjacent` times, as one damage
+    /// instance each. Read through `sweep_weight`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sweep_lane: Option<i32>,
+    /// R3554008: the adjacent-lane weight, defaulting to 1.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sweep_adjacent: Option<i32>,
     /// R1160 (Meditative #84 Volatility, ME-TUNEMULT): how many times as effective Buffs and
     /// Nerfs are on this card, read off its running face in every zone.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -644,6 +688,14 @@ pub struct StaticFlags {
     /// and its awakening launches it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub starship_hull: Option<bool>,
+    /// R3539000 (S+ #80 The Last Voyage, #155 The Far Vagabond's Terminus Starships): a hull that
+    /// can't be launched by hand; only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub no_hand_launch: Option<bool>,
+    /// R3539004 (S+ #157 Phantom Shipyard): a Dormant hull that fuses in a random Starship Piece at
+    /// the start of its controller's turn, a Radiant one on a Radiant card; only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub starship_yard: Option<bool>,
     // Stinkyscape M15 (issue #1849)
     /// R1849000 (Stinkyscape #74 Paragon-X): "Immune to Spell Damage". While this Unit is on the field,
     /// a hit from a Spell deals it nothing and is no damage instance (§4.4 step 0); Spells may still
@@ -706,6 +758,64 @@ pub struct StaticFlags {
     /// it as an Equip play (R1086) though it has no Equip (`play_choices::equip_onto_at`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lends_equip: Option<bool>,
+    // Stinkyscape+ E2 (issue #3540)
+    /// R3540002: "Damage also Burns N": each hit this card deals that its target survives adds N Burn to
+    /// the target (`afflictions::ride_damage`). N is the card's declared number `burns` where it declares
+    /// one (R386).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub burns_on_damage: Option<i32>,
+    /// R3540002: "Damage also applies Toxic N", as `burns_on_damage`; N is the declared number `toxic`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub toxic_on_damage: Option<i32>,
+    /// R3548004: "When awoken: Gain infinite mana" (Stinkyscape+ #56 Impact Reactor): while this
+    /// card acts on its controller's field, that player's mana is not spent by paying costs, and the
+    /// view shows infinity. It ends when the card leaves the field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub infinite_mana: Option<bool>,
+    /// R3540003: "Damage dealt Burns": a hit this card deals, past Armor and the caps, is its target's Burn
+    /// instead of damage (`afflictions::converts_to`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub damage_burns: Option<bool>,
+    /// R3540003: "Damage dealt is Toxic", as `damage_burns` but Toxic; a card with both burns.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub damage_is_toxic: Option<bool>,
+    // Stinkyscape+ E6 (issue #3550)
+    /// R3550001: "Can attack N times per turn": how many attacks the unit may declare a turn, read
+    /// through the card's declared number `attacks` where it declares one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attacks_per_turn: Option<i32>,
+    /// R3550001: "Can only attack the unit directly across from this": the unit attacks only the
+    /// enemy Unit standing across from it, never a hero. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attacks_only_across: Option<bool>,
+    /// R3550002: "Freeze any Unit damaged by this": a Unit dealt 1 or more by this card's hit is
+    /// Frozen (§4.4 step 7). Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub freezes_damaged: Option<bool>,
+    /// R3550004: "The first N damage allies would take per turn is nullified": the pool of damage
+    /// this card soaks for its controller's side each turn, read through the declared number `pool`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub damage_pool: Option<i32>,
+    /// R3550005: "The first N enemy Ranged attacks or Activates per turn are countered": how many a
+    /// turn this card counters, read through the declared number `perTurn`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub counters_ranged: Option<i32>,
+    /// R3550005: "All enemy Ranged attacks or Activates are countered": no per-turn budget. Only
+    /// ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub counters_ranged_all: Option<bool>,
+    /// R3560001 (S+ #120 Crawler): "May be played from your graveyard for (N)": a permission the card gives
+    /// itself in its owner's graveyard, any number of times, priced N there.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub graveyard_price: Option<i32>,
+    /// R3560007 (S+ #121 Toxopid): "Ignores Taunt": no Taunt binds this attacker (§4.2 step 3). Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ignores_taunt: Option<bool>,
+    /// R3556001 (Stinkyscape+ #62 Overdrive Projector, #63 Overdrive Dome): "Spells gain Echo +N".
+    /// While this card acts on the field, each Spell its side (or, with `both`, either side) plays or
+    /// casts resolves N more times, read through the card's declared number `spellEcho` (R386).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spell_echo_aura: Option<SpellEchoAura>,
 }
 
 /// R1849004 (Stinkyscape #5 Masochism Unmasked): "Redirect all damage you take on your turn to your
@@ -745,6 +855,18 @@ pub struct SlumberText {
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct SpellDamageAura {
+    pub amount: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub both: Option<bool>,
+}
+
+/// R3556001 (Stinkyscape+ #62 Overdrive Projector, #63 Overdrive Dome): the Echo an aura gives —
+/// `amount` more repeats to each Spell its controller plays or casts, and to the opponent's too
+/// when `both`. The amount is the card's declared number `spellEcho` (`params::declared_or`, R386).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct SpellEchoAura {
     pub amount: i32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub both: Option<bool>,
@@ -1080,9 +1202,18 @@ pub struct Script {
     /// there, then on the snapshot it fought with (R78, R89). Not for a Cleave splash nor an attack on the
     /// hero (MD-C26, R1026). `ctx.data`: `combat::after_attacked_of`.
     pub after_attacked: Option<Hook>,
-    /// R1849001 (Stinkyscape #91 The Propagation's Wasp): "Evolve: X", run for this Unit only when an
-    /// effect evolves it (`effects::evolve`), resumably like `fusedInto` (`prompts::run_evolve`).
+    /// R1849001, R3536000 (Stinkyscape #91 The Propagation's Wasp): "Evolve: X", run for this Unit
+    /// only when an effect evolves it (`effects::evolve`), resumably like `fusedInto`
+    /// (`prompts::run_evolve`); once per instance (`evolution::evolve_now`).
     pub evolve: Option<Hook>,
+    /// R3536001: "Evolves when …" as a standing condition, read at every settled state check.
+    pub evolves_when: Option<HasHook>,
+    /// R3536003: "Your evolutions trigger twice/thrice": N extra runs of its controller's Evolve
+    /// texts, the highest holding.
+    pub evolve_extra: Option<TriggerExtraHook>,
+    /// R3542000 (S+ #87 Frontier Flora): a stat line this card's own text gives it while this holds
+    /// ("3X/3X stats for each Plague Counter": while it carries one), read by `layers::has_stat_line`.
+    pub stat_line_when: Option<HasHook>,
     /// R1849008 (Stinkyscape #14 Arm of the Jempire): "When one of your Units is attacked". Run for each
     /// card acting on the defender's side once a declared attack on one of its Units has come through
     /// §4.2 step 4's trap window, before its combat, in R68's order; never for an attack on the hero or a
@@ -1154,6 +1285,12 @@ pub struct Script {
     /// R1864004: the Trades a turn this card gives its controller while it acts on their field, read by
     /// `trade::trades_per_turn_of`; several cards do not add, the most holds.
     pub trades_per_turn: Option<TradesPerTurnHook>,
+    // Stinkyscape+ E8 (#3558)
+    /// R3558001: what this card lends its hand neighbours while it sits in a hand (`hand_order`).
+    pub hand_aura: Option<HandAuraHook>,
+    /// R3558007: the standing condition that casts this card from its owner's library whenever it
+    /// holds at a settled state check (`deck_cast`), as `evolves_when` is read on the field.
+    pub cast_from_deck_when: Option<HasHook>,
 }
 
 /// R1850002: one exile aura: the cards on the field it reaches (`scope`, read as an enemy's harm reads
@@ -1253,6 +1390,10 @@ pub struct ActivationCost {
     /// after a use. Absent: no cooldown.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub extra_turn_cooldown: Option<bool>,
+    /// R3550003: an Activate usable once, then not again for N of its controller's turns (the
+    /// designer's count: N sits out N-1). Absent: no cooldown.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cooldown_turns: Option<i32>,
     /// The declared number (`params`) the mana price reads, so a Buffed price reaches the cost
     /// (B3.4). Skipped in serialization: data, never JSON. Absent: the price is `mana` as written.
     #[serde(skip)]

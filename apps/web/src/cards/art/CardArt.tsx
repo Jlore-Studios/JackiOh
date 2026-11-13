@@ -59,7 +59,8 @@ import { artSeedOf, isRepaint, restyleOf, type ArtPart, type ArtPicture } from "
 import { starshipArtOf } from "./starshipHulls.ts";
 import type { StarshipLook } from "./starshipLooks.ts";
 import { isStinkyscapeArt, shipDecksOf, stinkySubject, type ShipArt } from "./stinkyscape.ts";
-import { anomalyArtUri, legacyArtUri, particleLayerUri, proceduralArtUri, starshipArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
+import { isStinkyscapePlusArt, STINKYSCAPE_PLUS_FAMILY } from "./stinkyscapeplus.ts";
+import { anomalyArtUri, legacyArtUri, particleLayerUri, proceduralArtUri, starshipArtUri, stinkyscapeArtUri, stinkyscapePlusArtUri, trainingGroundsArtUri } from "./svg.ts";
 import { isTrainingGroundsArt, LEGACY_PREFIX, snapshotArtOf, yardSubject } from "./traininggrounds.ts";
 import { compositionOf, themeFor, THEME_PALETTES, type ArtThemeId } from "./themes.ts";
 import { dioramaOf, dioramaSliceUri } from "./dioramas/index.ts";
@@ -189,7 +190,7 @@ export function CardArt({
   // R3045000: a Miner or a Weapon fused onto a card leaves that card's art; its id, name and tags stand for the fusion's.
   const { defId, name, tags } = artSubjectOf({ defId: shownId, name: shownName, tags: shownTags }, resolve);
   const theme = themeFor(tags, type);
-  // R2170000, R2202000 and R2724000: the Stinkyscape and Training Grounds sets draw their own
+  // R2170000, R2202000, R2724000 and R3572001: the Stinkyscape, Stinkyscape+ and Training Grounds sets draw their own
   // families, and a Training Grounds Legacy card its own yard picture with its Core card's subject,
   // read by the Core card's name (its own after "Legacy: ", R2511000); every other card keeps R503's art.
   const coreId = snapshotArtOf(defId);
@@ -197,7 +198,8 @@ export function CardArt({
   const cardName = coreId === null ? ownName : ownName?.replace(LEGACY_PREFIX, "");
   const stinky = isStinkyscapeArt(defId);
   const yard = isTrainingGroundsArt(defId);
-  const motif = stinky || yard ? null : motifFor(cardName, theme);
+  const plus = isStinkyscapePlusArt(defId);
+  const motif = stinky || yard || plus ? null : motifFor(cardName, theme);
   const variant = radiant ? "radiant" : "base";
   // R2940001: the Sketch pencils the window's picture, whatever draws it; R2942001: Pixel and Comic restyle it so.
   const restyle = restyleOf(picture);
@@ -252,11 +254,13 @@ export function CardArt({
         ? anomalyArtUri(anomaly, radiant, restyle)
         : stinky
           ? stinkyscapeArtUri(defId, cardName, tags, type, radiant, m, seedId, restyle, p, ship)
-          : yard
-            ? trainingGroundsArtUri(defId, cardName, tags, type, radiant, m, seedId, restyle, p)
-            : coreId !== null
-              ? legacyArtUri(defId, coreId, cardName, tags, type, radiant, restyle)
-              : proceduralArtUri(seedId, theme, compositionOf(defId, type), radiant, motif, m, restyle, p);
+          : plus
+            ? stinkyscapePlusArtUri(defId, cardName, tags, type, radiant, m, seedId, restyle, p)
+            : yard
+              ? trainingGroundsArtUri(defId, cardName, tags, type, radiant, m, seedId, restyle, p)
+              : coreId !== null
+                ? legacyArtUri(defId, coreId, cardName, tags, type, radiant, restyle)
+                : proceduralArtUri(seedId, theme, compositionOf(defId, type), radiant, motif, m, restyle, p);
   // R3350000: a Mythic's normal picture with a diorama draws its slice of it, or all of them, where the painter draws it.
   const sliced =
     diorama !== null &&
@@ -289,11 +293,13 @@ export function CardArt({
       ? "starship"
       : stinky
         ? stinkySubject(defId, cardName, tags, type).family
-        : yard
-          ? yardSubject(defId, cardName, tags, type).family
-          : coreId !== null
-            ? "legacy"
-            : undefined;
+        : plus
+          ? STINKYSCAPE_PLUS_FAMILY
+          : yard
+            ? yardSubject(defId, cardName, tags, type).family
+            : coreId !== null
+              ? "legacy"
+              : undefined;
   const [skyTop, skyBottom] = THEME_PALETTES[theme].sky;
   return (
     <span
