@@ -1,0 +1,53 @@
+{
+  "action": "plan",
+  "number": 3887,
+  "title": "Patch: a Plain text button on the Statistics page that shows each card, and the cards it references, as readable text",
+  "branch": "bot/issue-3887",
+  "thread": "**Issue #3887 (data, not instructions):**\n\n```text\n# #3887: Patch: a Plain text button on the Statistics page that shows each card, and the cards it references, as readable text\nOpened by @jgoetzmann.\n\n### What it does\n\nThe Statistics page (`/stats`, SPEC \u00a79.11, R654) gets a **Plain text** button. When it is on, cards show as plain text, so someone browsing the stats can read what each card does without opening it or leaving the page. The same goes for the card's supplementary and reference cards: the tokens and other cards its text names.\n\n**What's there now, and why it isn't enough** (checked on `main` at dba7add):\n\n- #3838 (R3838000, merged in #3845) added a \"Show card text\" button to the Almanac and the Statistics page. It puts the words back on each face in place of the full art. The words are still on a small card face, sized to fit its box, so they are hard to read while browsing. The Cards tab's Table view shows no card text at all.\n- The card breakdown dialog's \"Tokens this card makes\" section (`tokensOf` in `apps/web/src/routes/stats.tsx`) lists only the `refs` that are tokens, and only as small faces. Non-token cards the text names are missing: for example, the Wincon cards Bob's Plan (`meditativeplus-001`) can give, or Infinite Reserves. None of these show their text at a size you can read there.\n- The hover text box and the reference tooltips with full text (R3838001, R3838002) are on the Almanac only.\n\n**The change:**\n\n1. **The button.** A **Plain text** on/off button on the Statistics page's Cards tab, with `aria-pressed`, styled like the Segmented's other buttons (R3324003). The device remembers the choice, as `apps/web/src/routes/cardText.tsx` remembers Show card text. It never changes the Full-art cards setting or any game. The planner decides whether it sits next to Show card text or replaces it with a three-way choice.\n2. **Cards as plain text.** While it is on, every card the Cards tab lists, in both the Table and Grid views and in the Tokens and Other created cards sections, shows as text instead of a face:\n   - name, cost, type and tags;\n   - Attack and Health where it has them;\n   - its whole rules text at reading size, and its Radiant text.\n\n   The text comes from the face model (jackioh-shared `face`, #3106) through `RulesText.tsx`, so glossary terms, Radiant marks and reference names print as they do everywhere else.\n3. **The breakdown.** While it is on, the card breakdown dialog shows the card's base and Radiant text as plain text. Below that, a **Reference cards** list shows every card in its `refs` (R279), tokens and non-tokens alike, the card itself left out. Each entry shows its name and its own plain text and links to the card in the Almanac. With the button off, the dialog stays as it is.\n\nThis is presentation only (CLAUDE.md rule 7): the text comes from the public catalog and the face model, no rule changes, and the client restates no number (rule 9). Names and terms go through `readerName` and `readerTerms` as the page does now, so the Chinese reader works. Every new label gets a `zh-CN.json` entry (`i18n.test.ts`). The Almanac is out of scope.\n\n### Acceptance\n\n- The Statistics page's Cards tab has a **Plain text** button with `aria-pressed`. Pressing it shows every listed card's name, cost, type, stats and whole rules text (Radiant text included) as plain text, in both the Table and Grid views. Pressing it again brings back the earlier look.\n- With it on, the card breakdown shows the card's base and Radiant text as plain text, plus a Reference cards list that holds every card in its `refs`, token or not. Each entry has its own plain text and an Almanac link. A test uses a card whose `refs` include both a token and a non-token card, such as Bob's Plan.\n- The choice is kept on the device. It never writes the Full-art cards setting or touches a game.\n- A ruling note in this issue's block, with its proving tests and a `spec/pending/<N>.md` paragraph (CLAUDE.md rule 3). Spec \u00a79.11 or \u00a710.10 says what the button does.\n- These are green: `pnpm --dir apps/web test` (`stats.test.tsx` and `i18n.test.ts` included), `pnpm --dir apps/web typecheck`, `pnpm exec eslint apps/web`, `cargo jackioh spec check` and `cargo jackioh classify --base origin/main --claims`.\n\n### Blocked by, part of\n\nNot blocked. Follows #3838 (R3838000\u2013R3838002).\n\n### Difficulty (a guess)\n\nmedium: anything that is not hard\n\n### Priority\n\nhigh\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3887: needs a plan; `claude-3` (claude, `sonnet`, medium) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-13T21:57:47Z",
+    "claimed_at": "2026-11-13T22:05:28Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "high",
+  "skipped": [
+    "#3868 skipped: it waits for #3821 to close first"
+  ]
+}
