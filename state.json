@@ -36994,6 +36994,12 @@
         "number": 3795,
         "title": "Patch: SPEC \u00a78's Gachaholic and Tmack Trav rows say what the cards do, and a test holds each row's Radiant stats to its stats column",
         "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-11-13T05:48:07Z",
+        "number": 3823,
+        "title": "Patch: the AI's search ranks the answers to its own prompt before cutting them to its width",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": "2026-11-13T05:42:35Z",
