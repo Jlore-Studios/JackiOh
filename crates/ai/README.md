@@ -125,13 +125,20 @@ evaluation after less before, each crystal gained at `next_turn_mana`; the first
 time its controller's turn runs them (`multipliers::extra_runs`, Joint Filing's extra runs, R821), read on
 the state evaluated, and the third once; `material` adds `AI_EVAL.turn_hook` of it for a readable
 backrow card, and `unit_worth` for a unit, so an enemy engine is worth more to answer and an own one more to keep.
+Where a finalist is replied to, `replied_turn_hook_prices` fires the seat's own start-of-turn and
+end-of-turn hooks once more on the board the reply left, within `AI_TURN_HOOK_REPLY_PROBE_NODES`, and that
+price replaces the root's (its start-of-the-opponent's-turn part kept; a key the enemy also holds keeps
+the root's), so a heal counts the damage the reply dealt (R3575602).
 A unit's Activate counts by one use (R2564000), and so does a face-up backrow card's, a Field Spell's
 (R2603000): at the root `activation_prices` ends the seat's turn and then the enemy's, within
 `AI_ACTIVATION_PROBE_NODES`; at the start of each player's next turn it tries that player's units' uses,
 then its face-up backrow cards' (`activate_sources`), as the reply does (`visible_activation`), and
 prices the best as the controller's evaluation after less before, each crystal at `next_turn_mana`;
 `unit_worth` adds `AI_EVAL.activation` of it for both sides' units, and `material` for each readable
-backrow card, inside its Brittle share.
+backrow card, inside its Brittle share. From a cap of its own (`AI_ACTIVATION_HAND_PROBE_NODES`) each Unit
+in the seat's own hand with an Activate no field card prices is placed first (R923001) and walked the same
+two turns (`hand_activation_prices`, R3575600); a use that opens its controller's own prompt (a Choose) is
+priced once `answered_own` has answered it by the best auto-answer (R3575601).
 A unit's "when this attacks" and "after this attacks" hooks count by one attack (R2688000):
 `attack_hook_prices` walks the same two turns, within `AI_ATTACK_HOOK_PROBE_NODES`; at the start of each
 player's next turn it plays each of that player's units with a hook at the enemy hero, or at the first

@@ -1,8 +1,9 @@
 //! A unit's Activate in the AI's evaluation (R2564000): the decision's root tries each visible unit's
 //! Activate at the start of its controller's next turn (`activation_prices`), and `unit_worth` adds
-//! `AI_EVAL.activation` of the best use's price, for either side's units. A face-down or hand card is
-//! never probed, so hidden cards change no decision (R185), the frozen baseline reads no price, and a
-//! call not passed a decision's prices reads none. R2603000 prices a face-up backrow card's Activate, a
+//! `AI_EVAL.activation` of the best use's price, for either side's units. A face-down card or one in the
+//! enemy's hand is never probed (the seat's own hand Units are, R3575600), so hidden cards change no
+//! decision (R185), the frozen baseline reads no price, and a call not passed a decision's prices reads
+//! none. R2603000 prices a face-up backrow card's Activate, a
 //! Field Spell's, the same way.
 //!
 //! Cannon v3 is a Starship Piece: when it dies, a copy of it fuses into its owner's Dormant Starship
@@ -152,8 +153,8 @@ fn r2564000_an_enemy_cannon_is_worth_more_to_destroy_than_a_bigger_vanilla() {
 fn r2564000_a_board_without_an_activate_prices_nothing_and_spends_no_node() {
     let state = board(
         "ai-activation-none",
-        json!({ "hand": [CANNON], "field": [VANILLA] }),
         json!({ "field": [VANILLA] }),
+        json!({ "hand": [CANNON], "field": [VANILLA] }),
     );
     assert_eq!(priced(&state), (vec![], 0));
 }

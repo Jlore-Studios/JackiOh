@@ -15,6 +15,7 @@ pub mod combat_mods;
 pub mod deaths;
 pub mod decide;
 pub mod deck;
+pub mod defense_probes;
 pub mod determinize_shown_cost;
 pub mod determinize_sides;
 pub mod dev_run;

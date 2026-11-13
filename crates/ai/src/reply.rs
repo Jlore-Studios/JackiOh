@@ -26,7 +26,7 @@ use crate::candidates::{Side, blow, candidate_actions_in, cleaved_neighbours, ex
 use crate::config::{AI_EVAL, AI_GUESS_SEED, AI_REPLY};
 use crate::evaluate::{
     NextSwing, Prices, coming_mana, evaluate_priced, float_credit, heal_converted, heal_worth, kill_worth,
-    unit_worth,
+    replied_turn_hook_prices, unit_worth,
 };
 use crate::learned::finalist_score;
 use crate::lethal::{deft_ready_switch, ready_gap};
@@ -683,13 +683,16 @@ pub fn reply_score(
         0
     };
     let after = simulate_reply(end, seat, counter, hidden, prices)?;
-    let first = replied_score(end, &after, seat, unspent, prices);
+    // R3575602: the seat's own turn hooks priced where they fire next, on the board the reply leaves.
+    let repriced = replied_turn_hook_prices(&after, seat, counter, prices);
+    let first = replied_score(end, &after, seat, unspent, repriced.as_ref().unwrap_or(prices));
     // #1995: a countdown still waiting at the seat's next decision is scored a second time, fired.
     let Some((fired, wait)) = countdowns_due(end, &after, seat) else {
         return Some(first);
     };
     let refired = simulate_reply(&fired, seat, counter, hidden, prices)?;
-    let second = replied_score(end, &refired, seat, unspent, prices);
+    let repriced = replied_turn_hook_prices(&refired, seat, counter, prices);
+    let second = replied_score(end, &refired, seat, unspent, repriced.as_ref().unwrap_or(prices));
     let share = (0..wait).fold(1.0, |share, _| share * AI_REPLY.countdown_share);
     Some(first + share * (second - first))
 }

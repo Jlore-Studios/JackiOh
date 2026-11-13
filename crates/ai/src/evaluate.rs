@@ -47,11 +47,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::candidates::{Side, blow, cleaved_neighbours, side_of};
 use crate::config::{
-    AI_ACTIVATION_PROBE_NODES, AI_ATTACK_HOOK_PROBE_NODES, AI_AWAKEN_PROBE_NODES, AI_DEATH_PROBE_NODES,
-    AI_EVAL, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
+    AI_ACTIVATION_HAND_PROBE_NODES, AI_ACTIVATION_PROBE_NODES, AI_ATTACK_HOOK_PROBE_NODES,
+    AI_AWAKEN_PROBE_NODES, AI_DEATH_PROBE_NODES, AI_EVAL, AI_REPLY, AI_SEARCH, AI_TURN_HOOK_PROBE_NODES,
+    AI_TURN_HOOK_REPLY_PROBE_NODES, EvalWeights,
 };
 use crate::reply::{Known, hidden_card_ids, visible_activation};
-use crate::simulate::{create_sub_counter, note_sim_panic, simulate};
+use crate::simulate::{AnswersTried, best_auto_answer, create_sub_counter, note_sim_panic, simulate};
 use crate::types::NodeCounter;
 
 /// The life `player` started the game with, where the hero value and `closing` are anchored (R964000):
@@ -1637,6 +1638,70 @@ pub fn turn_hook_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCou
     priced
 }
 
+/// R3575602: `prices` with the turn-hook price of each of `seat`'s own cards with a start-of-turn or an
+/// end-of-turn hook on its field or in its backrow probed again on `after`, where the opponent's reply
+/// left the board (`turn_hook_probe`, one firing of each hook, as the root probes it): those hooks fire
+/// next on the seat's coming turn, on the board the reply leaves, so a heal counts the damage the reply
+/// dealt and a hook that reads the board reads the one it will act on, where the root's probe read a
+/// board that may not last (an undamaged one heals nothing). Its start-of-the-opponent's-turn price stays
+/// the root's: the reply has run that turn. A card whose key (definition and face) the enemy also holds
+/// with such a hook keeps the root's price, which both copies share. `None`, so the root's prices
+/// stand, when there is nothing to probe, a prompt is open, the game is over or the `turn_hook` weight
+/// is 0; at most `AI_TURN_HOOK_REPLY_PROBE_NODES` nodes of `counter`, a card the counter refuses keeping
+/// the root's price.
+pub fn replied_turn_hook_prices(
+    after: &GameState,
+    seat: PlayerId,
+    counter: &dyn NodeCounter,
+    prices: &Prices,
+) -> Option<Prices> {
+    if AI_EVAL.turn_hook == 0.0 || after.pending.is_some() || after.result.is_some() {
+        return None;
+    }
+    let holders = |owner: PlayerId| -> Vec<CardInstance> {
+        [HookName::StartOfTurn, HookName::EndOfTurn]
+            .into_iter()
+            .flat_map(|hook| trigger_holders_with_hook(after, hook, Some(owner)))
+            .filter(|holder| matches!(holder.zone, TriggerZone::Field | TriggerZone::Backrow))
+            .map(|holder| holder.card)
+            .collect()
+    };
+    let enemy = holders(seat.opponent());
+    let mut own: Vec<CardInstance> = Vec::new();
+    for card in holders(seat) {
+        let key = TurnHookPrice::key(&card);
+        if !own.iter().any(|seen| key.is_for(seen)) && !enemy.iter().any(|theirs| key.is_for(theirs)) {
+            own.push(card);
+        }
+    }
+    if own.is_empty() {
+        return None;
+    }
+    let mut sandbox = after.clone();
+    sandbox.sandbox = Some(true);
+    for player in PLAYER_IDS {
+        sandbox.players[player].auto_end_turn = Some(false);
+    }
+    let probes = create_sub_counter(counter, AI_TURN_HOOK_REPLY_PROBE_NODES);
+    let mut repriced = prices.clone();
+    for card in own {
+        match turn_hook_probe(&sandbox, seat, &card.id, &probes) {
+            None => break,
+            Some(None) => {}
+            Some(Some((price, _))) => {
+                match repriced.turn_hooks.iter_mut().find(|entry| entry.is_for(&card)) {
+                    Some(entry) => entry.price = price,
+                    None => repriced.turn_hooks.push(TurnHookPrice {
+                        price,
+                        ..TurnHookPrice::key(&card)
+                    }),
+                }
+            }
+        }
+    }
+    Some(repriced)
+}
+
 /// R2564000: `before` after `player` ends its turn, one node of `counter` (`simulate`, which answers
 /// the other seat's prompts on the way), when that reaches the other player's main phase with no prompt
 /// open and the game on. `None` when the counter is spent; `Some(None)` when the turn end fails or
@@ -1700,20 +1765,99 @@ fn price_uses(
         if uses.is_empty() {
             continue;
         }
-        match visible_activation(turn, controller.opponent(), &uses, hidden, counter, Prices::NONE) {
-            Known::Cut => return false,
-            Known::Nothing => {}
-            Known::Played(after) => {
-                if let Some(price) = use_price(turn, &after, unit) {
-                    priced.push(ActivationPrice {
-                        price,
-                        ..ActivationPrice::key(unit)
-                    });
-                }
-            }
+        let price =
+            match visible_activation(turn, controller.opponent(), &uses, hidden, counter, Prices::NONE) {
+                Known::Cut => return false,
+                Known::Nothing => match prompted_use_price(turn, unit, &uses, counter) {
+                    None => return false,
+                    Some(price) => price,
+                },
+                Known::Played(after) => match answered_own(*after, controller, counter) {
+                    None => return false,
+                    Some(after) => after.and_then(|after| use_price(turn, &after, unit)),
+                },
+            };
+        if let Some(price) = price {
+            priced.push(ActivationPrice {
+                price,
+                ..ActivationPrice::key(unit)
+            });
         }
     }
     true
+}
+
+/// R3575601: `after` with every prompt of `controller`'s own it holds answered by `controller`'s best
+/// auto-answer (`best_auto_answer`, one node an answer tried), at most `AI_SEARCH.max_auto_answers`, as
+/// the beam answers the seat's own prompt ahead (`own_prompt_score`). `None` when the counter is spent;
+/// `Some(None)` when an answer fails or the prompts outlast the cap; `after` as it is with none of its own.
+fn answered_own(
+    after: GameState,
+    controller: PlayerId,
+    counter: &dyn NodeCounter,
+) -> Option<Option<GameState>> {
+    let mut current = after;
+    let mut answered: usize = 0;
+    while current.result.is_none()
+        && current
+            .pending
+            .as_ref()
+            .is_some_and(|pending| pending.player_id == controller)
+    {
+        if answered >= AI_SEARCH.max_auto_answers as usize {
+            return Some(None);
+        }
+        let Ok(next) = best_auto_answer(
+            &current,
+            controller,
+            AnswersTried::Drawn,
+            counter,
+            "probe",
+            Prices::NONE,
+        )?
+        else {
+            return Some(None);
+        };
+        current = next;
+        answered += 1;
+    }
+    Some(Some(current))
+}
+
+/// R3575601: the best `use_price` of those of `unit`'s `uses` that open a prompt of its controller's own
+/// (a Choose its text asks after the Activate, such as an enemy tile), each answered by `answered_own`,
+/// at most `AI_REPLY.visible_activations` of them: `visible_activation` judges such a use at its open
+/// prompt, before anything it does has happened, so it never beats standing still there. A use that
+/// opens no prompt was judged by `visible_activation` already and is not priced again. `None` when the
+/// counter is spent.
+fn prompted_use_price(
+    turn: &GameState,
+    unit: &CardInstance,
+    uses: &[ActionBody],
+    counter: &dyn NodeCounter,
+) -> Option<Option<f64>> {
+    let controller = unit.controller;
+    let mut best: Option<f64> = None;
+    for action in uses.iter().take(AI_REPLY.visible_activations.max(0) as usize) {
+        let Ok(after) = simulate(turn, controller, action, counter, Prices::NONE)? else {
+            continue;
+        };
+        let opens_own = after.result.is_none()
+            && after
+                .pending
+                .as_ref()
+                .is_some_and(|pending| pending.player_id == controller);
+        if !opens_own {
+            continue;
+        }
+        let Some(after) = answered_own(after, controller, counter)? else {
+            continue;
+        };
+        if let Some(price) = use_price(turn, &after, unit) {
+            best = Some(best.map_or(price, |best: f64| best.max(price)));
+        }
+    }
+    Some(best)
 }
 
 /// R2564000, R2603000: the cards of `player`'s whose Activates the probes try, in this order: each unit
@@ -1823,6 +1967,93 @@ pub fn activation_prices(
         AI_ACTIVATION_PROBE_NODES,
         price_uses,
     )
+    .into_iter()
+    .chain(hand_activation_prices(world, seat, counter))
+    .collect()
+}
+
+/// R3575600: the activation prices of the Units in `seat`'s hand with an Activate (`abilities_of`) that
+/// no unit acting on its field already prices, each placed first as R923001 places a hand Unit for its
+/// Death (`spawn_hand_unit`, one after another on one sandbox copy), then walked as `probe_turns` walks
+/// the field's: `seat` ends its turn, the enemy ends its, and each placed card's best use at the start of
+/// `seat`'s next turn is priced by `price_uses`, so a body played for its Activate counts that use as soon
+/// as it stands on the field, as one already there does. Nothing outside `seat`'s own main phase, with no
+/// prompt open, the game on and a nonzero `activation` weight, at most
+/// `AI_ACTIVATION_HAND_PROBE_NODES` nodes of `counter`.
+fn hand_activation_prices(
+    world: &GameState,
+    seat: PlayerId,
+    counter: &dyn NodeCounter,
+) -> Vec<ActivationPrice> {
+    if AI_EVAL.activation == 0.0
+        || world.pending.is_some()
+        || world.result.is_some()
+        || world.active != seat
+        || world.phase != Phase::Main
+    {
+        return Vec::new();
+    }
+    let on_field: Vec<ActivationPrice> = activate_sources(world, seat)
+        .into_iter()
+        .map(ActivationPrice::key)
+        .collect();
+    let mut keys: Vec<ActivationPrice> = Vec::new();
+    let hand: Vec<&CardInstance> = world.players[seat]
+        .hand
+        .iter()
+        .filter(|card| {
+            card_type_of_face(world, &card.def_id, card.radiant) == CardType::Unit
+                && !subsystems::abilities_of(world, card).is_empty()
+                && !on_field.iter().any(|key| key.is_for(card))
+        })
+        .filter(|card| {
+            let fresh = !keys.iter().any(|key| key.is_for(card));
+            if fresh {
+                keys.push(ActivationPrice::key(card));
+            }
+            fresh
+        })
+        .collect();
+    if hand.is_empty() {
+        return Vec::new();
+    }
+    let probes = create_sub_counter(counter, AI_ACTIVATION_HAND_PROBE_NODES);
+    let mut start = world.clone();
+    start.sandbox = Some(true);
+    for player in PLAYER_IDS {
+        start.players[player].auto_end_turn = Some(false);
+    }
+    let mut placed_any = false;
+    for card in hand {
+        match spawn_hand_unit(&start, seat, card, &probes) {
+            None => break,
+            Some(None) => {}
+            Some(Some((placed, _))) => {
+                start = placed;
+                placed_any = true;
+            }
+        }
+    }
+    if !placed_any {
+        return Vec::new();
+    }
+    start.sandbox = world.sandbox;
+    let hidden = hidden_card_ids(&start, seat);
+    let Some(Some(enemy_turn)) = next_turn(&start, seat, &probes) else {
+        return Vec::new();
+    };
+    let Some(Some(own_turn)) = next_turn(&enemy_turn, seat.opponent(), &probes) else {
+        return Vec::new();
+    };
+    // The field's own cards are priced already: only the placed ones are tried.
+    let mut tried = on_field;
+    let mut priced = Vec::new();
+    price_uses(&own_turn, seat, &hidden, &probes, &mut tried, &mut priced);
+    priced.retain(|price| {
+        keys.iter()
+            .any(|key| key.def_id == price.def_id && key.radiant == price.radiant)
+    });
+    priced
 }
 
 /// R2688000: `turn` with `unit` as its hookless twin, and the keywords it prints: the twin is Vanilla
