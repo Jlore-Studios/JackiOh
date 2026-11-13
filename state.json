@@ -17137,9 +17137,13 @@
     "what": "review #3811 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-13T00:06:26Z",
+    "at": "2026-11-13T00:16:29Z",
     "notes": [
-      "runner gate: started 0 of 1 waiting run(s); 1 wait for room"
+      "delivered build #3800 on claude-4 (run 43307917285): built",
+      "started review #3811 on claude-4 (run 43336230596)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days",
+      "runner gate: started 0 of 2 waiting run(s); 2 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17845,7 +17849,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-13T00:06:26Z",
+  "loop_tick": "2026-11-13T00:16:29Z",
   "machine_disk": {
     "issue": null,
     "reading": {
