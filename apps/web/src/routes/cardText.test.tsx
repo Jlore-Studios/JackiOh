@@ -13,7 +13,7 @@ import { INSPECT_EXTENDED } from "../cards/inspect/testids.ts";
 import { faceModel } from "../cards/model.ts";
 import { readCardSettings } from "../cards/settings.ts";
 import { DEFAULT_FILTER, DEFAULT_SORT, almanacPool } from "../game/deckbuilder/filters.ts";
-import { CARD_POOL, poolCardId } from "../game/deckbuilder/testids.ts";
+import { CARD_POOL, DB_SEARCH, poolCardId } from "../game/deckbuilder/testids.ts";
 import { at } from "../test/stubServer.ts";
 import AlmanacRoute, { ALMANAC_CATALOG } from "./almanac.tsx";
 import { CARD_TEXT_KEY, cardTextTestid } from "./cardText.tsx";
@@ -57,7 +57,8 @@ afterEach(() => {
 });
 
 describe("R3838000 the Almanac's Show card text button", SLOW_GRID, () => {
-  it("R3838000 prints every full-art face in the grid with its words, keeps the choice and leaves the setting alone", () => {
+  // Each test draws the whole grid once (about 700 faces); the button is pressed on a grid the search has narrowed.
+  it("R3838000 pressing it prints a full-art face with its words and keeps the choice, and pressing it again undoes both", () => {
     expect(FULL_ART_ID).toBeDefined();
     render(<AlmanacRoute />);
     const toggle = screen.getByTestId(cardTextTestid.toggle);
@@ -65,26 +66,31 @@ describe("R3838000 the Almanac's Show card text button", SLOW_GRID, () => {
     expect(toggle).toHaveTextContent("Show card text");
     expect(toggle.closest("header")).not.toBeNull();
     expect(fullArtFaces()).toBeGreaterThan(0);
+
+    fireEvent.change(screen.getByTestId(DB_SEARCH), { target: { value: ALMANAC_CATALOG.cards[FULL_ART_ID!]!.name } });
     const face = (): Element | null => screen.getByTestId(poolCardId(FULL_ART_ID!)).querySelector(".cf");
     expect(face()).toHaveAttribute("data-full-art", "true");
 
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-pressed", "true");
-    expect(fullArtFaces()).toBe(0);
     expect(face()).not.toHaveAttribute("data-full-art");
+    expect(fullArtFaces()).toBe(0);
     expect(window.localStorage.getItem(CARD_TEXT_KEY)).toBe("1");
     expect(readCardSettings().fullArt).toBe(true);
 
-    // The device keeps it: the next visit opens with every card's words.
-    cleanup();
-    render(<AlmanacRoute />);
-    expect(screen.getByTestId(cardTextTestid.toggle)).toHaveAttribute("aria-pressed", "true");
-    expect(fullArtFaces()).toBe(0);
-
-    fireEvent.click(screen.getByTestId(cardTextTestid.toggle));
-    expect(screen.getByTestId(cardTextTestid.toggle)).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
     expect(face()).toHaveAttribute("data-full-art", "true");
     expect(window.localStorage.getItem(CARD_TEXT_KEY)).toBe("0");
+  });
+
+  it("R3838000 a visit after it was left pressed opens pressed, every face in the grid with its words", () => {
+    window.localStorage.setItem(CARD_TEXT_KEY, "1");
+    render(<AlmanacRoute />);
+    expect(screen.getByTestId(cardTextTestid.toggle)).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId(CARD_POOL).querySelectorAll(".cf").length).toBeGreaterThan(0);
+    expect(fullArtFaces()).toBe(0);
+    expect(readCardSettings().fullArt).toBe(true);
   });
 });
 
