@@ -95,7 +95,9 @@ reads is only the server's and stays there), and
 the economy's (#3104): the drop tables (`CARD_TIER_WEIGHTS`, `COSMETIC_TIER_WEIGHTS`, `TIER_WEIGHT_TOTAL`, `PACK_SLOTS`, the floors, the global
 cosmetic roll), pity (`PITY_*_PACKS`), the token bars (`CARD_TOKEN_BAR_SIZE`, `COSMETIC_TOKEN_CYCLE` and the
 points per rarity), the cosmetic pack and Chase Shard bar, the set track's `SET_TRACK_XP_PER_LEVEL`, and what a game pays and a quest does (#3104, part 2): the Jlore and XP rates (`JLORE_*`, `XP_*`), the daily cap (`JLORE_GAMES_DAILY_CAP`, R1483000), the track levels (`SET_TRACK_LEVELS`, `SET_TRACK_UNLOCK_LEVEL`, `SET_TRACK_FIRST_LEVEL`) and the quest rhythm and pay (`QUEST_*`). The practice session's are `PRACTICE_AI_CLOCK_MS` (R2575000), `PRACTICE_LETHAL_HINT_CLOCK_MS` (R2102000) and
-`PRACTICE_REPLAYS_KEPT` (R768). The server re-exports the series', the match host's, the ranked ladder's, the bots' and the economy's
+`PRACTICE_REPLAYS_KEPT` (R768). The daily games' (#3727, SPEC §9.13) are `MS_PER_HOUR`, `DAILY_TIME_PER_MOVE_DAYS`,
+`DAILY_CHALLENGE_TTL_DAYS`, `DAILY_SEEK_TTL_DAYS`, `DAILY_MAX_ACTIVE_GAMES` (R3727004), `DAILY_REMINDER_HOURS`,
+`DAILY_EMAIL_MIN_GAP_HOURS`, `DAILY_URGENT_HOURS` and `DAILY_RECENT_FINISHED`. The server re-exports the series', the match host's, the ranked ladder's, the bots' and the economy's
 from its own `config.rs` (so `serverConfig.ts` and its code name them as before), and `jackioh-wasm-core`'s `constants` carries them all, which the browser and the C module
 (`crates/wasm/c`) both bind. `bot-calibrate --write` and `timing-fit` rewrite and print items of this file, and `cosmetics-fit` prints the rows
 to paste over `BOT_COSMETIC_FITS`.
@@ -360,6 +362,31 @@ The AI's search is a body of its own, `bot_decide(call, deadline_ms)`: a `Decide
 there with its best line, its beam wrapped up at `AI_WRAP_UP_SHARE` of the time so that the reply and the
 other worlds still run (R3498000: `bots::decide`, `DecideJob::run` and `boundary::decide` take the
 wrap-up beside the hard stop); the C module has no clock, so the search ends at the strength's budget.
+
+### Daily games (`src/host/daily.rs`, `src/notify.rs`; #3727, SPEC §9.13)
+
+A daily game's clock beside the live one: days per move, no timers, nothing held between requests. The
+server stores a `DailyClock` with each game (`daily_games.clock`) and calls these on every read and move:
+
+- `daily_holders(state)`: who has the move. Nobody once the game is over; else each seat still owing its
+  mulligan (R3727002); else the player an open prompt waits on (R3727001); else the other player while the
+  active player's draw offer stands (R3727006); else the active player.
+- `daily_sync(clock, state, now)`: the clock after a step. A holder that goes on holding the same move (the
+  same seat, and the mulligan or the same turn: `move_key`) keeps its hold; a new one gets the whole
+  `per_move_days` from `now`, so unused time never carries over. KY's Competition's questions are prompts
+  inside one move and arm no window of their own (R3727003).
+- `daily_expired(clock, now)`: the holder whose deadline has come, the earliest first and a tie in seat
+  order; its host logs `disconnectExpired` for it (R3727000).
+- `daily_allows`, `daily_legal`: a seat holding no move may only concede, R3727006's offerer among them, so
+  nobody but the holder appends to the log; `is_daily_time` checks a
+  time per move against `DAILY_TIME_PER_MOVE_DAYS`; `daily_board` is the public summary a list shows.
+
+`notify::decide_notify(input, now)` is what to send one account: an email and a push when a game started
+waiting on it since that channel last went, or a deadline came within `DAILY_REMINDER_HOURS` since then; an
+email only with the setting on, an address, and `DAILY_EMAIL_MIN_GAP_HOURS` since the last; a push only to an
+account with a device; nothing when no game waits. Its `games` are every game waiting, the least time left
+first, which one email lists. Only the server calls either today (a client reads the holds from
+`GET /api/daily/games/:matchId`), so no `jackioh-wasm-core` body binds them yet.
 
 ### Duos co-op (`src/host/duos.rs`, `src/host/again.rs`)
 

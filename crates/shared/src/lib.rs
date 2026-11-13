@@ -22,6 +22,9 @@
 //! Then [`face`] is what a card face prints, worked out from the catalog and a view in the reader's words
 //! (#3106), and last [`log`] is the game log's lines, from the events a view gives, in the same words and
 //! spans (#3108).
+//!
+//! Then the daily games (#3727, SPEC §9.13): `host::daily` is their clock, and [`notify`] what their
+//! "your move" emails and pushes send.
 
 pub mod bots;
 pub mod config;
@@ -32,6 +35,7 @@ pub mod face;
 pub mod host;
 pub mod loadout;
 pub mod log;
+pub mod notify;
 pub mod ranked;
 pub mod series;
 

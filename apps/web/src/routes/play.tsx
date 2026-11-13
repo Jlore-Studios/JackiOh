@@ -50,6 +50,7 @@ import {
   type SavedDeck,
   type SavedTrio,
 } from "../net/api.ts";
+import { DailyBadge } from "../daily/DailyBadge.tsx";
 import { EmptyState } from "../empty/EmptyState.tsx";
 import { currentCatalog } from "../game/currentCatalog.ts";
 import { pageWake } from "../game/net.ts";
@@ -67,6 +68,7 @@ import { t, useLocale } from "../i18n/i18n.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { attempt, messageOf } from "../net/errors.ts";
 import { getStored, setStored } from "../net/storage.ts";
+import { useSocialReads } from "../together/socialPoll.ts";
 import "../auth/tavern.css";
 import "./lobby.css";
 
@@ -97,6 +99,9 @@ export const playTestid = {
   online: "play-online",
   ways: "play-ways",
   together: "play-together",
+  /** #3727: daily games, badged with how many wait on the player. */
+  daily: "play-daily",
+  dailyBadge: "play-daily-badge",
   signIn: "play-sign-in",
   modeBo1: "play-mode-bo1",
   modeBo3: "play-mode-bo3",
@@ -674,9 +679,9 @@ function RankPanel({ rank, ladder }: { rank: OwnRankResponse | null; ladder: Lad
   );
 }
 
-type Way = { href: string; testid: string; name: string };
+type Way = { href: string; testid: string; name: string; badge?: number };
 
-function waysToPlay(): readonly Way[] {
+function waysToPlay(dailyWaiting: number): readonly Way[] {
   return [
     {
       href: paths.practice,
@@ -694,6 +699,12 @@ function waysToPlay(): readonly Way[] {
       name: t("Play together"),
     },
     {
+      href: paths.daily,
+      testid: playTestid.daily,
+      name: t("Daily games"),
+      badge: dailyWaiting,
+    },
+    {
       href: paths.replays,
       testid: playTestid.replays,
       name: t("Replays"),
@@ -702,11 +713,16 @@ function waysToPlay(): readonly Way[] {
 }
 
 function WaysNav(): ReactElement {
+  // #3727: the social read's count of the daily games waiting on the player (none signed out).
+  const { dailyWaiting } = useSocialReads();
   return (
     <nav className="play-ways" data-testid={playTestid.ways} aria-label={t("More ways to play")}>
-      {waysToPlay().map((way) => (
+      {waysToPlay(dailyWaiting).map((way) => (
         <a key={way.href} className="play-way" href={way.href} data-testid={way.testid} onClick={followInApp(way.href)}>
-          <span className="play-way__name">{way.name}</span>
+          <span className="play-way__name">
+            {way.name}
+            {way.badge === undefined ? null : <DailyBadge count={way.badge} testid={playTestid.dailyBadge} />}
+          </span>
         </a>
       ))}
     </nav>

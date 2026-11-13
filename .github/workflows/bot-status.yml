@@ -60,10 +60,11 @@
 # Each tick also runs Squishy (#60) in a process of its own (`--companions`): its sweep, with
 # Squishy's token, and its section of the status issue, which sits apart from the night bot's.
 # Every 30 seconds the loop also ticks the runner gate (bot/go/internal/cigate, bot/README.md "The
-# runner gate"): a pull request's CI and a merge-queue build wait in the `ci-runners` environment,
-# holding no runner, and the bot's account, its one required reviewer, approves them once GitHub's
-# runners have room, merge-queue builds first, each run the oldest first, and any that has waited
-# too long whatever is queued. Each sweep ticks it too, bot-commands' scheduled one among them, so
+# runner gate"): a pull request's CI, `main`'s and the super run wait in the `ci-runners`
+# environment, holding no runner, and the bot's account, its one required reviewer, approves them
+# once they have a slot: only six CI and CD runs go at once, the merge queue's builds and the deploys
+# first (they never wait), then staging's and production's checks, then `main`'s CI, then pull
+# requests'. Each sweep ticks it too, bot-commands' scheduled one among them, so
 # while this loop is down CI still starts, at the sweep's pace.
 # Before each tick of the gate, and in each sweep, the loop also looks at the merge queue's builds
 # (`events.EvacQueue`, bot/README.md "Evacuating the merge queue"): a pull request whose current
