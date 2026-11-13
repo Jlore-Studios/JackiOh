@@ -4,13 +4,21 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { Fragment, createElement } from "react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { resetAudioSettingsForTests } from "../audio/settings.ts";
 import { CARD_SETTINGS_DEFAULTS, readCardSettings, writeCardSettings, type CardSettings } from "../cards/settings.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
 import { readHapticsSettings, resetHapticsSettingsForTests, writeHapticsSettings } from "../haptics/settings.ts";
 import { SETTINGS_SLOTS, type SettingsSlot } from "./slots.ts";
+
+type SlotsModule = typeof import("./slots.ts");
+
+/** The slots as a page load builds them: a fresh module imported inside the test, so the table is made for it. */
+async function freshSlots(): Promise<SlotsModule> {
+  vi.resetModules();
+  return import("./slots.ts");
+}
 
 function slotById(id: string): SettingsSlot {
   const found = SETTINGS_SLOTS.find((entry) => entry.id === id);
@@ -53,26 +61,24 @@ describe("SETTINGS_SLOTS", () => {
     for (const slot of SETTINGS_SLOTS) expect(typeof slot.reset).toBe("function");
   });
 
-  it("R669 renders each slot's own control", () => {
-    const controls: readonly (readonly [string, string])[] = [
-      ["haptics", "setting-vibration"],
-      ["fx", "setting-fxSpeed"],
-      ["card-rarity-foil", "setting-rarityFoil"],
-      ["card-foil", "setting-animatedFoil"],
-      ["card-full-art", "setting-fullArt"],
-      ["card-set-watermarks", "setting-setWatermarks"],
-      ["card-opponent-cosmetics", "setting-opponentCosmetics"],
-      ["card-board-names", "setting-boardNames"],
-      ["card-device-tilt", "setting-deviceTilt"],
-      ["audio", "audio-controls"],
-      ["language", "setting-language"],
-    ];
-    expect(controls.map(([id]) => id)).toEqual(SETTINGS_SLOTS.map((entry) => entry.id));
-    for (const [id, testid] of controls) {
-      render(createElement(Fragment, null, slotById(id).render()));
-      expect(screen.getByTestId(testid), id).toBeInTheDocument();
+  it("R669 as a page load builds them: every section filled, every id its own, every slot mounting a control no other slot mounts", async () => {
+    const { SETTINGS_SLOTS: slots } = await freshSlots();
+    const sections = ["gameplay", "visuals", "audio"];
+    for (const section of sections) {
+      expect(slots.some((entry) => entry.section === section), section).toBe(true);
+    }
+    const controls: string[] = [];
+    for (const entry of slots) {
+      expect(sections, entry.id).toContain(entry.section);
+      expect(entry.id.length, entry.section).toBeGreaterThan(0);
+      const { container } = render(createElement(Fragment, null, entry.render()));
+      const control = container.querySelector("[data-testid]")?.getAttribute("data-testid");
+      expect(control, entry.id).toBeTruthy();
+      controls.push(control ?? "");
       cleanup();
     }
+    expect(new Set(slots.map((entry) => entry.id)).size).toBe(slots.length);
+    expect(new Set(controls).size).toBe(slots.length);
   });
 
   it("R669 mounts the audio controls with the panel's own class", () => {

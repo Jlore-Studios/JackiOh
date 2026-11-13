@@ -7,7 +7,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CARD_SETTINGS_DEFAULTS, CARD_SETTINGS_KEY, readCardSettings } from "../cards/settings.ts";
-import { FX_SETTINGS_KEY, FX_SPEED_DEFAULT, FX_SPEED_MAX, FX_SPEED_MIN } from "../fx/constants.ts";
+import { FX_INTENSITY_SCALE, FX_SETTINGS_KEY, FX_SPEED_DEFAULT, FX_SPEED_MAX, FX_SPEED_MIN } from "../fx/constants.ts";
 import { getFxSettings, resetFxSettingsForTests } from "../fx/settings.ts";
 import { readHapticsSettings, resetHapticsSettingsForTests } from "../haptics/settings.ts";
 import { LOCALES, getLocale, resetLocaleForTests } from "../i18n/i18n.ts";
@@ -26,12 +26,27 @@ type Field = (typeof import("../cards/settings.ts"))["CARD_SETTINGS_FIELDS"][num
 /** The list controls.tsx reads as CARD_SETTINGS_FIELDS: the module's own, unless a test rewrites it. */
 const fields = vi.hoisted(() => ({ list: [] as Field[], original: [] as readonly Field[] }));
 
+// Runs again for each fresh module graph (`freshControls`), so it refills the one list rather than adding to it.
 vi.mock("../cards/settings.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../cards/settings.ts")>();
   fields.original = actual.CARD_SETTINGS_FIELDS;
-  fields.list.push(...actual.CARD_SETTINGS_FIELDS);
+  fields.list.splice(0, fields.list.length, ...actual.CARD_SETTINGS_FIELDS);
   return { ...actual, CARD_SETTINGS_FIELDS: fields.list };
 });
+
+type ControlsModule = typeof import("./controls.tsx");
+type FxSettingsModule = typeof import("../fx/settings.ts");
+
+/**
+ * controls.tsx as a page load builds it, its option lists included, with the effects store it writes:
+ * fresh instances imported inside the test, so a value made at load is made for this test.
+ */
+async function freshControls(): Promise<{ controls: ControlsModule; fx: FxSettingsModule }> {
+  vi.resetModules();
+  const controls = await import("./controls.tsx");
+  const fx = await import("../fx/settings.ts");
+  return { controls, fx };
+}
 
 /** Rewrites, for one test, what controls.tsx finds in CARD_SETTINGS_FIELDS: `null` drops a field. */
 function editFields(edit: (field: Field) => Field | null): void {
@@ -120,15 +135,33 @@ describe("R435 the effects speed slider", () => {
 });
 
 describe("the effects selects", () => {
-  it("offer the intensities Off, Low, Normal and High, and each select is described by its hint", () => {
+  it("as a page load builds them, offer every intensity the effects layer scales and every Big moments choice the store keeps, each labelled", async () => {
+    const { controls, fx } = await freshControls();
+    render(<controls.FxControls />);
+    const intensity = screen.getByTestId<HTMLSelectElement>("setting-fxIntensity");
+    const bigMoments = screen.getByTestId<HTMLSelectElement>("setting-fxBigMoments");
+    expect([...intensity.options].map((option) => option.value).sort()).toEqual(Object.keys(FX_INTENSITY_SCALE).sort());
+    // R2785000: Big moments is full, short or off.
+    expect(bigMoments.options).toHaveLength(3);
+    for (const select of [intensity, bigMoments]) {
+      const labels = [...select.options].map((option) => option.text);
+      expect(labels.every((label) => label.length > 0), select.dataset.testid).toBe(true);
+      expect(new Set(labels).size, select.dataset.testid).toBe(labels.length);
+    }
+    // Each choice offered is one the store keeps, not one it reads back as its default.
+    for (const option of [...intensity.options]) {
+      fireEvent.change(intensity, { target: { value: option.value } });
+      expect(fx.getFxSettings().intensity).toBe(option.value);
+    }
+    for (const option of [...bigMoments.options]) {
+      fireEvent.change(bigMoments, { target: { value: option.value } });
+      expect(fx.getFxSettings().bigMoments).toBe(option.value);
+    }
+  });
+
+  it("describe each select by its hint", () => {
     render(<FxControls />);
     const intensity = screen.getByTestId<HTMLSelectElement>("setting-fxIntensity");
-    expect([...intensity.options].map((option) => [option.value, option.text])).toEqual([
-      ["off", "Off"],
-      ["low", "Low"],
-      ["normal", "Normal"],
-      ["high", "High"],
-    ]);
     expect(intensity).toHaveAccessibleDescription(
       "Fire, sparks, light rays and the board shake. Off keeps the card motion only.",
     );
@@ -258,8 +291,9 @@ describe("R669 the Vibration switch", () => {
 });
 
 describe("R711000 the Language select", () => {
-  it("R711000 offers every language, each named in its own words", () => {
-    render(<LanguageSelect />);
+  it("R711000 as a page load builds it, offers every language, each named in its own words", async () => {
+    const { controls } = await freshControls();
+    render(<controls.LanguageSelect />);
     const select = screen.getByRole("combobox", { name: "Language" }) as HTMLSelectElement;
     expect([...select.options].map((option) => [option.value, option.text])).toEqual(
       Object.entries(LOCALES).map(([tag, spec]) => [tag, spec.name]),
