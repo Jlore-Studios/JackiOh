@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LOBBY_START_COUNTDOWN_SECONDS } from "@jackioh/server-config";
 
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
+import { API_UNREACHABLE_MESSAGE } from "../net/api.ts";
 import { fakeSockets } from "../test/fakeSocket.ts";
 import { settle } from "../test/settle.ts";
 import { at, must, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
@@ -261,6 +262,23 @@ describe("the lobby screen", () => {
     expect(await screen.findByTestId(lobbyTestid.removed, undefined, SLOW)).toHaveTextContent("You were removed from this lobby.");
     expect(screen.getByTestId(lobbyTestid.enter)).toBeInTheDocument();
   });
+
+  it("R3730006 a read that cannot reach the server says so, and the poll's next answered read brings the lobby back", async () => {
+    serve([lobby()]);
+    const answered = globalThis.fetch;
+    let reachable = false;
+    vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) =>
+      reachable ? answered(input, init) : Promise.reject(new TypeError("Failed to fetch")),
+    );
+    show();
+    const alert = await screen.findByTestId(lobbyTestid.error, undefined, SLOW);
+    expect(alert).toHaveTextContent(API_UNREACHABLE_MESSAGE);
+    expect(screen.queryByTestId(lobbyTestid.leave)).toBeNull();
+    reachable = true;
+    // The social socket is down, so the lobby's own poll reads it again (R3730000).
+    expect(await screen.findByTestId(lobbyTestid.leave, undefined, { timeout: LOBBY_POLL_MS * 2 })).toBeInTheDocument();
+    expect(screen.queryByTestId(lobbyTestid.error)).toBeNull();
+  }, LOBBY_POLL_MS * 4);
 
   it("R3730006 with no lobby under the code, the classic room joins at once", async () => {
     const server = serve([{ kind: "room", code: CODE, mode: "random", host: { profileId: "p-ana", username: "Ana#1" } }], (call) =>

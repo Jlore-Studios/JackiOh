@@ -11,8 +11,9 @@
 //! would be refused.
 //!
 //! The server sends five frames, each only what its account may read:
-//! - `{type: "social", incoming, outgoing, unread}`: `GET /api/social`'s own body for the socket's
-//!   account (`social_snapshot`), on connect, after every change to its challenges or unread counts,
+//! - `{type: "social", incoming, outgoing, unread, dailyWaiting}`: `GET /api/social`'s own body for
+//!   the socket's account (`social_snapshot`), on connect, after every change to its challenges, unread
+//!   counts or daily games (#3727),
 //!   when one of its challenges lapses, and in answer to a hello;
 //! - `{type: "chat", friendId}`: a message between it and that friend was sent; no body rides it,
 //!   the tab reads the conversation itself;

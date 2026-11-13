@@ -379,7 +379,7 @@ pub const BIRTH_YEAR_EARLIEST: i32 = 1900;
 /// asked to agree again. R970001: a second change on a day the page already changed keeps its date
 /// and gives its half a letter (`2026-10-15b`, then `c`); `privacy.test.tsx` holds each version to
 /// the words of both pages, so a change to them fails until this moves.
-pub const TERMS_VERSION: &str = "2026-11-05/2026-11-05";
+pub const TERMS_VERSION: &str = "2026-11-05/2026-11-11";
 
 // ---------------------------------------------------------------------------------------------
 // Redemption rate limits (§9.4).
@@ -1566,3 +1566,58 @@ pub const SERVER_PERF_BROADCAST_MS_BUDGET: f64 = 500.0;
 /// `cargo test`'s profile. Measured in the same eleven runs: 16 matches of 1,887 actions in all, in
 /// 16.5 to 18.68 s, so 0.86 to 0.97 a second. The least divided by 5, rounded down.
 pub const SERVER_PERF_MATCHES_PER_SECOND_FLOOR: f64 = 0.17;
+
+// ---------------------------------------------------------------------------------------------
+// Daily games (#3727, SPEC §9.13): the sweep, the player mail and Web Push. The clock's and the
+// notification decision's numbers are `jackioh_shared::config`'s, re-exported here for the server.
+// ---------------------------------------------------------------------------------------------
+
+pub use jackioh_shared::config::{
+    DAILY_CHALLENGE_TTL_DAYS, DAILY_EMAIL_MIN_GAP_HOURS, DAILY_MAX_ACTIVE_GAMES, DAILY_RECENT_FINISHED,
+    DAILY_REMINDER_HOURS, DAILY_SEEK_TTL_DAYS, DAILY_TIME_PER_MOVE_DAYS, DAILY_URGENT_HOURS, MS_PER_HOUR,
+};
+
+/// §9.13: how often the daily sweep ends the games whose move ran out, lapses old challenges and
+/// seeks and sends the emails and pushes due, in minutes, while the server is awake. The Worker's
+/// hourly cron (`apps/edge`'s `DAILY_SWEEP_CRON`) wakes it for one while nobody else does.
+pub const DAILY_SWEEP_MINUTES: u64 = 60;
+/// §9.13: the route the Worker's cron posts the sweep to; outside `/api`, so the Worker's public
+/// `fetch` never forwards it.
+pub const DAILY_SWEEP_PATH: &str = "/daily-sweep";
+/// §9.13: how many times a request ends a game on time when another request moved first and its
+/// log row clashed (R3727000), before it answers what it read.
+pub const DAILY_SETTLE_ATTEMPTS: usize = 3;
+/// §9.13: Resend's send endpoint, for the "your move" emails (`daily::notify`), under the player
+/// mail's own key (`PLAYER_RESEND_API_KEY`), never the operators' alert key.
+pub const PLAYER_EMAIL_API_URL: &str = "https://api.resend.com/emails";
+/// §9.13: who a "your move" email is from, on the domain Resend sends jackioh.com's mail for.
+pub const PLAYER_EMAIL_FROM: &str = "JackiOh <no-reply@jackioh.com>";
+/// §9.13: how long a send to Resend may take before it is given up, in milliseconds; the next sweep
+/// tries again, since nothing was marked sent.
+pub const PLAYER_EMAIL_TIMEOUT_MS: u64 = 10_000;
+/// RFC 8030's `TTL`: how long a push service keeps a "your move" push for a device that is offline,
+/// in seconds (a day: the next one says it again).
+pub const PUSH_TTL_SECONDS: u64 = 86_400;
+/// How long a send to a push service may take, in milliseconds.
+pub const PUSH_TIMEOUT_MS: u64 = 10_000;
+/// RFC 8292's `sub`: how a push service reaches the site's operators about its pushes.
+pub const VAPID_SUBJECT: &str = "mailto:no-reply@jackioh.com";
+/// RFC 8292: how long one VAPID token is good for, in seconds (12 hours; the RFC caps it at 24).
+pub const VAPID_TOKEN_SECONDS: i64 = 43_200;
+/// §9.8: the most devices one account keeps push subscriptions for; a new one past it replaces the
+/// oldest.
+pub const PUSH_MAX_DEVICES: usize = 10;
+/// §9.8: the longest push endpoint or key the server keeps, in characters (a push service's
+/// endpoint is a few hundred).
+pub const PUSH_FIELD_MAX_LENGTH: usize = 2048;
+/// §9.8, §9.13: the browsers' push services, the only hosts a push subscription's endpoint may name
+/// (it or a subdomain of it, over https on the default port), so the server's pushes reach nothing
+/// else: Firebase Cloud Messaging under both its names (Chrome and the other Chromium browsers but
+/// Edge), Mozilla's (Firefox), Apple's (Safari) and Windows Push Notification Services (Edge).
+pub const PUSH_SERVICE_HOSTS: [&str; 5] = [
+    "fcm.googleapis.com",
+    "android.googleapis.com",
+    "push.services.mozilla.com",
+    "push.apple.com",
+    "notify.windows.com",
+];

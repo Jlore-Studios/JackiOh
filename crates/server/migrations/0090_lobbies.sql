@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0089: Private lobbies, a friend game's pre-game stage (SPEC §9.5,
+-- Migration 0090: Private lobbies, a friend game's pre-game stage (SPEC §9.5,
 -- §13.9; R3730000, R3730001, R3730003, R3730004; issue #3730)
 -- ============================================================================
 -- Serves R3730000. A private lobby is where a 1v1 game or a co-op game with a
@@ -21,7 +21,7 @@
 -- A profile's deletion takes the lobbies it hosts or sits in (on delete
 -- cascade). No data is changed or lost: this file only ADDS a table.
 --
--- Apply order: ... -> 0039 (duos_rooms) -> ... -> 0088 -> 0089 (this file).
+-- Apply order: ... -> 0039 (duos_rooms) -> ... -> 0089 -> 0090 (this file).
 -- Safe to re-apply: create-if-not-exists throughout.
 -- ============================================================================
 

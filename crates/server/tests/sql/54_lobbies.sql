@@ -1,9 +1,9 @@
--- Private lobbies (migration 0089, SPEC §9.5, §13.9; R3730000; issue #3730). Runs after 52_v0_5_13_retcon.sql;
+-- Private lobbies (migration 0090, SPEC §9.5, §13.9; R3730000; issue #3730). Runs after 53_daily_games.sql;
 -- profiles 1 and 2 (11111111-…, 22222222-…) are active by then (03 activated them). A lobby is the server's
 -- alone: RLS on, no policy, no client privilege, and a profile's deletion takes the lobbies it hosts or sits in.
 \set ON_ERROR_STOP on
 
--- Same rules as 01-52: every check raises on failure (`raise exception 'FAIL (…): …'`), every expected refusal is
+-- Same rules as 01-53: every check raises on failure (`raise exception 'FAIL (…): …'`), every expected refusal is
 -- matched on its sqlstate, each check that could pass vacuously carries a guard, and every block that writes runs
 -- inside a transaction that is rolled back.
 

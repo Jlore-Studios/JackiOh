@@ -35,6 +35,10 @@ export const togetherTestid = {
   blockedRow: "together-blocked-row",
   unblock: "together-unblock",
   challengeForm: "together-challenge-form",
+  /** #3727: Live or Daily, a segmented control; the form carries `data-kind`. */
+  challengeKind: "together-challenge-kind",
+  /** Why Live can't be played now. */
+  challengeLiveRefusal: "together-challenge-live-refusal",
   challengeDeck: "together-challenge-deck",
   challengeTrio: "together-challenge-trio",
   challengeLean: "together-challenge-lean",
@@ -54,6 +58,10 @@ export const togetherTestid = {
   friendsError: "together-friends-error",
   friendsRetry: "together-friends-retry",
 } as const;
+
+export function challengeKindTestid(kind: "live" | "daily"): string {
+  return `together-challenge-kind-${kind}`;
+}
 
 export function challengeModeTestid(mode: "bo1" | "bo3" | "random"): string {
   return `together-challenge-mode-${mode}`;

@@ -1,4 +1,4 @@
-// #3730 52: a 1v1 private lobby from Create to both players on the board (SPEC §9.5; R3730000 to R3730002).
+// #3730 54: a 1v1 private lobby from Create to both players on the board (SPEC §9.5; R3730000 to R3730002).
 // Cypress drives the host's browser; the guest enters, picks and readies by the lobby's routes and opens
 // its socket onto the match the host's Start began, as spec 06's second seat does (`wsPlayer`).
 // All Random, so neither seat needs a saved deck; the seats fall by the seed's coin (R1989000).
@@ -22,7 +22,7 @@ import {
 const GUEST = "lobby-guest";
 const MATCH_PATH = /^\/match\/([^/]+)$/;
 
-describe("52 private lobby — a 1v1 lobby from Create to the board", () => {
+describe("54 private lobby — a 1v1 lobby from Create to the board", () => {
   it("R3730002 a 1v1 lobby from Create to both players on the board", () => {
     const host = accounts.p1();
     const guest = accounts.p2();

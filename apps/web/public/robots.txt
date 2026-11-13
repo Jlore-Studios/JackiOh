@@ -10,6 +10,7 @@ Disallow: /invite
 Disallow: /play
 Disallow: /decks
 Disallow: /together
+Disallow: /daily
 Disallow: /leaderboard
 Disallow: /collection
 Disallow: /shop
@@ -18,5 +19,6 @@ Disallow: /series/
 Disallow: /watch/
 Disallow: /duos/
 Disallow: /lobby/
+Disallow: /daily/
 
 Sitemap: https://staging.jackioh.com/sitemap.xml

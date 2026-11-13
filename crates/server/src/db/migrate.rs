@@ -369,8 +369,12 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         include_str!("../../migrations/0088_stinkyscape_plus_tags.sql"),
     ),
     (
-        "0089_lobbies.sql",
-        include_str!("../../migrations/0089_lobbies.sql"),
+        "0089_daily_games.sql",
+        include_str!("../../migrations/0089_daily_games.sql"),
+    ),
+    (
+        "0090_lobbies.sql",
+        include_str!("../../migrations/0090_lobbies.sql"),
     ),
 ];
 

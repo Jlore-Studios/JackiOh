@@ -64,12 +64,11 @@ export function parseSocialPush(data: unknown): SocialPush | null {
   if (!isRecord(parsed)) return null;
   switch (parsed.type) {
     case "social": {
-      const { incoming, outgoing, unread } = parsed;
+      const { incoming, outgoing, unread, dailyWaiting } = parsed;
       if (!Array.isArray(incoming) || !Array.isArray(outgoing) || !isRecord(unread)) return null;
-      return {
-        kind: "social",
-        read: { incoming: incoming as Challenge[], outgoing: outgoing as Challenge[], unread: unread as Record<string, number> },
-      };
+      const read: SocialRead = { incoming: incoming as Challenge[], outgoing: outgoing as Challenge[], unread: unread as Record<string, number> };
+      // #3727: the daily games waiting on the player; a frame without it (an older server) says none.
+      return { kind: "social", read: typeof dailyWaiting === "number" ? { ...read, dailyWaiting } : read };
     }
     case "chat":
       return typeof parsed.friendId === "string" ? { kind: "chat", friendId: parsed.friendId } : null;

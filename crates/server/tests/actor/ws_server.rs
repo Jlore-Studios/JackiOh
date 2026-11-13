@@ -921,6 +921,8 @@ mod the_graceful_shutdown {
                 // #936: Play together's challenge sweeper and the co-op sweeper.
                 "challenges.sweeper".to_string(),
                 "duos.sweeper".to_string(),
+                // #3727: the daily games' sweeper.
+                "daily.sweeper".to_string(),
             ]
         );
         let halted = logs.named("server.stopped");

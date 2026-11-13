@@ -4,7 +4,7 @@
 
 import { lazy, useState, type ComponentType, type ReactElement } from "react";
 
-import { duosIdOf, lobbyCodeOf, matchIdOf, paths, seriesIdOf, watchIdOf } from "../net/navigate.ts";
+import { dailyIdOf, duosIdOf, lobbyCodeOf, matchIdOf, paths, seriesIdOf, watchIdOf } from "../net/navigate.ts";
 import type { DecksRouteProps } from "./decks.tsx";
 import type { InviteRouteProps } from "./invite.tsx";
 import { loadWasm } from "../wasm/index.ts";
@@ -85,6 +85,9 @@ export const routeChunks = {
   stats: routeChunk(() => import("./stats.tsx")),
   together: routeChunk(() => import("../together/TogetherRoute.tsx").then((module) => ({ default: module.TogetherRoute }))),
   watch: routeChunk(() => import("../together/WatchRoute.tsx").then((module) => ({ default: module.WatchRoute }))),
+  // #3727: daily games, the list and one game's board, each read from the server (no socket, no engine run).
+  daily: routeChunk(() => import("../daily/DailyRoute.tsx")),
+  dailyGame: routeChunk(() => import("../daily/DailyBoard.tsx")),
 };
 
 export type RouteChunkName = keyof typeof routeChunks;
@@ -100,6 +103,9 @@ const ENGINE_CHUNKS: ReadonlySet<RouteChunkName> = new Set<RouteChunkName>([
   "watch",
   "dungeon",
   "dungeonStats",
+  // The board's card faces and log lines, and the list's numbers (`dailyConstants`), are the module's.
+  "daily",
+  "dailyGame",
 ]);
 
 /** The chunk drawing `path` (query ignored), or null. */
@@ -110,6 +116,7 @@ export function chunkAt(path: string): RouteChunkName | null {
   if (watchIdOf(pathname) !== null) return "watch";
   if (duosIdOf(pathname) !== null) return "duos";
   if (lobbyCodeOf(pathname) !== null) return "lobby";
+  if (dailyIdOf(pathname) !== null) return "dailyGame";
   for (const name of Object.keys(routeChunks) as RouteChunkName[]) {
     if (paths[name] === pathname) return name;
   }

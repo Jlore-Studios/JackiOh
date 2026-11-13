@@ -159,10 +159,9 @@ A card on the board moves its art too, and answers the player (`artLive.ts`, `ar
   springs back on the overshoot curve. `attackDeclared`: the subject swings on the attack's own `--fx-lunge-x/y` and
   the motes fire. All in `rotate`, `translate`, `scale` and `opacity`, inside the reduced-motion gate, with
   `motion.css`'s times and curves.
-- **The marks.** A Unit's art wears cracks for the health it is missing (`wear.ts`: `damageLevel`, one more of
-  `ART_WEAR_LEVELS` steps each time, each crack grown from the card's id so a level's cracks start the next
-  level's), a glow in its card's theme colour when buffed (`--art-glow`) and frost when frozen
-  (`ArtWear.tsx`). They read the view's numbers and keywords only, and are still drawings: reduced motion keeps them.
+- **The marks.** A Unit's art wears a glow in its card's theme colour when buffed (`--art-glow`) and frost when
+  frozen (`ArtWear.tsx`). They read the view's numbers and keywords only, and are still drawings: reduced motion keeps
+  them. Missing health draws no mark (R3776000).
 
 ## Dioramas (R3350000)
 

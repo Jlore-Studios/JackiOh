@@ -3,7 +3,7 @@
 // re-exports them and writes them into the document (`useDocumentHead`).
 
 import { t } from "../i18n/i18n.ts";
-import { duosIdOf, lobbyCodeOf, matchIdOf, paths, seriesIdOf, siteOrigin, watchIdOf } from "./navigate.ts";
+import { dailyIdOf, duosIdOf, lobbyCodeOf, matchIdOf, paths, seriesIdOf, siteOrigin, watchIdOf } from "./navigate.ts";
 
 export const SITE_NAME = "JackiOh";
 
@@ -48,6 +48,8 @@ export function screenNameFor(path: string): string | null {
       return "Replays";
     case paths.together:
       return "Play together";
+    case paths.daily:
+      return "Daily games";
     case paths.collection:
       return "Collection";
     case paths.shop:
@@ -71,12 +73,14 @@ export function screenNameFor(path: string): string | null {
   if (watchIdOf(path) !== null) return "Watching";
   if (duosIdOf(path) !== null) return "Duos";
   if (lobbyCodeOf(path) !== null) return "Private lobby";
+  if (dailyIdOf(path) !== null) return "Daily game";
   return null;
 }
 
 /**
  * The match and co-op screens replace this tab title with "Your turn · JackiOh" while the game waits
- * on the player (`awaitsYou`, game/net.ts).
+ * on the player (`awaitsYou`, game/net.ts), and the Daily screen with "Your move (n) · JackiOh" while
+ * n daily games do (#3727).
  */
 export function documentTitleFor(path: string): string {
   const name = screenNameFor(path);
