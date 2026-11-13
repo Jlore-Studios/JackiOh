@@ -267,7 +267,7 @@ func LearnOutcome(run *pyjson.Object, jobs []*pyjson.Object) string {
 func LearnLane(ctx *hctx.Context, found *Found /* = None */) []string {
 	lines := []string{"## 🧠 The learn lane", "",
 		"<sub>`learn.yml` retrains the learned evaluation on fresh self-play on GitHub's " +
-			"runners, one run after another (about half a day a run; on the owner's PC while " +
+			"runners, one run after another (about a day a run; on the owner's PC while " +
 			"`TRAINING_ON_PC` is `true`, about three days, #3740), files each export's games into " +
 			"the card statistics, and " +
 			"promotes the network through the gate, with no model in the loop. It closes a stuck " +

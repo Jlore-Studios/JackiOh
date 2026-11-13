@@ -892,6 +892,14 @@ pub const MATCH_VOIDED_CLOSE_CODE: u16 = 4410;
 /// 1v1 and co-op) once `REMATCH_OFFER_TTL_MS` has passed since its end, beside "the match is over".
 /// In the 4000–4999 range beside `MATCH_VOIDED_CLOSE_CODE`, and as final: no client reconnects on it.
 pub const MATCH_OVER_CLOSE_CODE: u16 = 4411;
+/// R3767000: the close code a seat's replaced socket gets when a newer socket of the same account takes
+/// the seat (a second tab, or another device), 1v1 and co-op, beside `SEAT_TAKEN_CLOSE_REASON`. In the
+/// 4000–4999 range beside `MATCH_OVER_CLOSE_CODE`; no client reconnects on it, so two clients of one
+/// account stop taking the seat from each other. An older client reads it as a drop and reconnects, as
+/// it did on 1000. A watcher's replacement stays 1000.
+pub const SEAT_TAKEN_CLOSE_CODE: u16 = 4412;
+/// R3767000: the reason that close carries.
+pub const SEAT_TAKEN_CLOSE_REASON: &str = "this game is open somewhere else";
 
 // ---------------------------------------------------------------------------------------------
 // Saved decks and trios (SPEC §9.4, R250–R256). PUBLIC: the deck builder imports these too.

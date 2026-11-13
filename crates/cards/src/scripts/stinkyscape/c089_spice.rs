@@ -101,18 +101,11 @@ mod tests {
             .collect()
     }
 
-    // Differs from Scenario::offered: the open Discover's cards, not the seat's legal actions.
-    fn offered(s: &Scenario) -> Vec<String> {
+    /// The open prompt is shown to its caster and offers only cards (every option a Mode).
+    fn assert_discover_of_cards(s: &Scenario) {
         let pending = s.state().pending.as_ref().expect("the Discover is open");
         assert_eq!(pending.player_id, P1, "shown to its caster");
-        pending
-            .options
-            .iter()
-            .map(|option| match &option.selection {
-                Selection::Mode { option } => option.clone(),
-                other => panic!("a Discover offers cards: {other:?}"),
-            })
-            .collect()
+        assert_eq!(s.prompt_modes().len(), pending.options.len(), "a Discover offers cards");
     }
 
     #[test]
@@ -120,7 +113,8 @@ mod tests {
         for seed in (0..10).map(|n| format!("spice-discover-{n}")) {
             let mut s = spice(&seed, false);
             s.play(ID, json!({}));
-            let options = offered(&s);
+            assert_discover_of_cards(&s);
+            let options = s.prompt_modes();
             assert_eq!(options.len(), 3, "{seed}");
             for id in &options {
                 let def = card_def(id);
@@ -208,7 +202,8 @@ mod tests {
     fn radiant_the_pick_is_radiant() {
         let mut s = spice("spice-radiant", true);
         s.play(ID, json!({}));
-        let options = offered(&s);
+        assert_discover_of_cards(&s);
+        let options = s.prompt_modes();
         s.answer(json!(options[0].clone()));
         let pick = s.hand(P1).last().cloned().expect("the pick");
         assert_eq!(pick.def_id, options[0]);

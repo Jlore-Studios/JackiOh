@@ -221,26 +221,9 @@ mod tests {
             .collect()
     }
 
-    fn offered_plans(s: &Scenario) -> Vec<String> {
-        s.state()
-            .pending
-            .as_ref()
-            .map(|prompt| {
-                prompt
-                    .options
-                    .iter()
-                    .filter_map(|option| match &option.selection {
-                        Selection::Mode { option } => Some(option.clone()),
-                        _ => None,
-                    })
-                    .collect()
-            })
-            .unwrap_or_default()
-    }
-
     fn answer_plan(s: &mut Scenario, plan: &str) {
         if s.state().pending.is_some() {
-            s.answer(json!([{ "pick": "mode", "option": plan }]));
+            s.answer(pick::mode(plan));
         }
     }
 
@@ -301,7 +284,8 @@ mod tests {
             let pick = |seed: &str| {
                 let mut s = casting(seed, false, 1);
                 s.play(ID, json!({}));
-                let mut seen = offered_plans(&s);
+                // A plan picked outright opens no prompt; one offered is read from it.
+                let mut seen = if s.state().pending.is_some() { s.prompt_modes() } else { Vec::new() };
                 seen.extend(def_ids(&added(&s)));
                 seen
             };
@@ -316,7 +300,7 @@ mod tests {
             for plan in [SPA_DAY, GARAGE_SALE, LEG_DAY] {
                 let mut s = casting_for(AESTHETICIZE, false, 1);
                 s.play(ID, json!({}));
-                let mut offered = offered_plans(&s);
+                let mut offered = s.prompt_modes();
                 offered.sort();
                 assert_eq!(offered, vec![SPA_DAY, GARAGE_SALE, LEG_DAY]);
                 assert_eq!(
@@ -324,7 +308,7 @@ mod tests {
                     vec![AESTHETICIZE],
                     "the plan waits for the answer"
                 );
-                s.answer(json!([{ "pick": "mode", "option": plan }]));
+                s.answer(pick::mode(plan));
                 assert_eq!(def_ids(&added(&s)), vec![AESTHETICIZE, plan]);
                 assert!(added(&s).iter().all(|card| !card.radiant));
             }
@@ -428,7 +412,7 @@ mod tests {
             );
             let mut s = casting_for(AESTHETICIZE, false, 9);
             s.play(ID, json!({}));
-            s.answer(json!([{ "pick": "mode", "option": LEG_DAY }]));
+            s.answer(pick::mode(LEG_DAY));
             assert_eq!(def_ids(&added(&s)), vec![AESTHETICIZE]);
             assert!(s.pile(P1, "graveyard").iter().any(|card| card.def_id == LEG_DAY));
         }

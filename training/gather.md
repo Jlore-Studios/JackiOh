@@ -17,7 +17,7 @@ since #3740, `.github/workflows/gather.yml` plays without a pause the way this l
 gather` on the newest version on `main`, game `n` of run `r` being `gather:<(r - 1) × 100,000 + n>` and
 each of a run's two parts playing its own half of that range, while the repository variable
 `GATHER_ON_PATCH` is `true`. Each part plays five hours (`GATHER_HOURS`) and files its games as totals
-only into both projects' databases 850 at a time as they finish (`GATHER_FILE_GAMES`, about an hour),
+only into both projects' databases 400 at a time as they finish (`GATHER_FILE_GAMES`, about an hour),
 so the newest version's figures grow every hour; each run starts the next as it ends. Until #3740 it
 played 5,000 games of each new patch or set (never a micro) once, on the owner's PC. The learn lane's shards file theirs the same way, 1,250 at a
 time (`training/learn.md`, step 7), with `training/file-records.sh`. No box runs this lane since 2026-11-04: the training box (the Muse box
