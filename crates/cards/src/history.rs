@@ -51,13 +51,15 @@ use crate::scripts::meditative::{
     c018_expedition12, c019_expedition123, c021_api_key_fishing, c030_fickle_e_kitten,
     c032_spiritually_zhongguo, c037_cn_in_a_bottle, c038_h1b_printer, c040_feng_shui, c045_knowledge_breaker,
     c047_taotie, c048_tranquility, c049_1_yilegpt_unleashed, c049_3_ai_girlfriend, c049_yilegpt_tamed,
-    c053_prestige, c054_money_machine, c063_skull_of_jnari, c065_keymaster_keenus, c074_montana_giant,
-    c080_aluneth, c081_deadmans_hand, c085_playtester, c090_spell_basket, c093_1_growing_felinor_sr,
-    c093_2_growing_felinor_sr_sr, c093_3_growing_felinor_super_senior, c093_growing_felinor,
-    c094_shrinking_felinor, c095_1_cn_golem, c097_2_wishing_well, c097_8_prison, c102_catboy_maid_ssr,
+    c050_cn_tech, c053_prestige, c054_money_machine, c063_skull_of_jnari, c065_keymaster_keenus,
+    c074_montana_giant, c080_aluneth, c081_deadmans_hand, c085_playtester, c090_spell_basket,
+    c093_1_growing_felinor_sr, c093_2_growing_felinor_sr_sr, c093_3_growing_felinor_super_senior,
+    c093_growing_felinor, c094_shrinking_felinor, c095_1_cn_golem, c097_2_wishing_well, c097_8_prison,
+    c102_catboy_maid_ssr,
 };
 use crate::scripts::meditative_plus::{
-    c001_bobs_plan, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves, c022_mountaintop_garden,
+    c001_bobs_plan, c002_na_tech, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves,
+    c022_mountaintop_garden,
 };
 use crate::scripts::stinkyscape::{
     c004_olivian_expanse, c013_asphyxiants_cloud, c016_rod_of_ages, c018_1_melchior, c026_zolarketh,
@@ -88,7 +90,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// `never_defense_kept`, R2657001, R2657002, R2657004), and #3000's parts (#3038, #3040, #3041, #3042,
 /// #3044, #3048), #3128's (#3134, #3135, #3139, #3140, #3142),
 /// #3551's S01 (R3551000, R3551001, R3551002, R3551003, R3551004), #3778 (R3778000) and #3869
-/// (R3869000).
+/// (R3869000, R3869005).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -698,7 +700,8 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.5.12ap",
         c073_1_classic_golem::script_v0_5_13g,
     ),
-    // #3869 (R3869000): the Terminus cards before the pool read the tag.
+    // #3869 (R3869000, R3869005): the Terminus cards before the pool read the tag, and CN Tech and NA
+    // Tech before their fallbacks were random.
     (
         c004_olivian_expanse::ID,
         "v0.6.0g",
@@ -709,6 +712,8 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.6.0g",
         c154_dice_of_doom::script_v0_6_0g,
     ),
+    (c050_cn_tech::ID, "v0.6.0g", c050_cn_tech::script_v0_6_0g),
+    (c002_na_tech::ID, "v0.6.0g", c002_na_tech::script_v0_6_0g),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
