@@ -16963,7 +16963,7 @@
       "provider": "claude-4",
       "queued_at": "2026-11-13T05:43:11Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "pending:ae772696-1794548569",
+      "run_id": "43373899802",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
