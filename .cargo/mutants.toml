@@ -301,4 +301,14 @@ exclude_re = [
   # then `in_units_row_or_standing`, which reads the same card's zone, is false too, so the `&&` decides
   # "not in midlane" whatever lane the sentinel is (`1` included, midlane on a board of one or two lanes).
   'training_grounds/c005_midlane_menace\.rs:.*delete - in cry',
+  # crates/cards (#3517): Core #8 Mr. Vanilla is vanilla, Core #11 Tempo Timmy, Core #20 Pointmaster, Core #25 4-mana
+  # 7/7 and M+ #8 Arch Mage keywords only (spec §8.1 rows 8, 11 and 20, §8.2 row 25, §8.9 row 8): their stats and
+  # keywords are catalog data, so both faces are `Script::default()`, which is exactly what `CardScripts`'s derived
+  # Default builds.
+  '(core/(c008_mr_vanilla|c011_tempo_timmy|c020_pointmaster|c025_4_mana_7_7)|meditative_plus/c008_arch_mage)\.rs:.*replace script -> CardScripts with Default::default\(\)',
+  # crates/cards (#3517): S #5 Masochism Unmasked's `declared_cap` reads the `cap` the face declares off the build's
+  # catalog (`crate::card_def`, never a folded version's), and catalog.json declares 20 on both faces, so the guard
+  # forced either way gives the same 20. The engine then reads the card's own `cap` over it (R386:
+  # flag + tuned - printed), the same either way, so only a patch to one face's cap could tell them apart.
+  'stinkyscape/c005_masochism_unmasked\.rs:.*replace match guard radiant with (true|false) in declared_cap',
 ]

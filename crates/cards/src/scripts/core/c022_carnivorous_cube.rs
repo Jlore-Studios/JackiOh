@@ -214,6 +214,8 @@ mod tests {
     const HITTER: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
     const SPECIESIST: &str = "core-002"; // Speciesist: set by the fixture, not as printed: the second hit that finishes the radiant Cube.
     const FILLER: &str = "core-005"; // Stockpile: A card in hand, so no turn auto-ends mid-fixture
+    const TESLA: &str = "classic-005"; // Tesla: a Field Trap that animates once it fires (R383)
+    const SUMMONED: &str = "stand-in (1) 1/1";
 
     /// The controller's unit row as def ids, lane 1 to 5.
     fn row(s: &Scenario, player: PlayerId) -> Vec<Option<String>> {
@@ -471,6 +473,43 @@ mod tests {
                     row(&s, P1),
                     lanes([Some(TIMMY), Some(TIMMY), Some(TIMMY), Some(TIMMY), Some(TIMMY)])
                 );
+            }
+
+            /// B3.1, R383, R64: a Field Trap standing animated in a unit zone is a Unit to eat, but no Unit
+            /// card, so "fill your board" copies it as its own card: one summon per unit zone, each placed
+            /// where a Field Trap goes, the backrow.
+            #[test]
+            fn r383_r64_an_animated_field_trap_it_ate_fills_the_backrow_with_copies_of_it() {
+                let mut s = scenario(json!({
+                    "seed": "cube-radiant-animated",
+                    "active": "p2",
+                    "p1": {
+                        "hand": [{ "def": CUBE, "radiant": true }, FILLER],
+                        "backrow": [{ "def": TESLA, "faceUp": false, "lane": 3 }],
+                        "library": [FILLER, FILLER],
+                    },
+                    "p2": {
+                        "hand": [SUMMONED, FILLER],
+                        "field": [HITTER, { "def": SPECIESIST, "statsOverride": { "attack": 6, "health": 1 } }],
+                        "library": [FILLER, FILLER],
+                    },
+                }));
+                // p2's summon reveals Tesla, which animates into p1's unit zone in its lane (R383).
+                s.play(SUMMONED, json!({}));
+                let tesla = s.card(TESLA).clone();
+                assert_eq!(s.unit(P1, 3).map(|card| card.id), Some(tesla.id.clone()));
+                s.end_turn();
+                s.play(CUBE, json!({ "targets": [{ "pick": "instance", "instanceId": tesla.id }] }));
+                s.expect_in_zone(&tesla, "graveyard");
+                let cube = s.card(CUBE).clone();
+
+                s.end_turn();
+                s.attack(HITTER, &cube);
+                s.attack(SPECIESIST, &cube);
+
+                s.expect_in_zone(&cube, "graveyard");
+                assert_eq!(row(&s, P1), lanes([None; 5]));
+                assert_eq!(backrow(&s, P1), lanes([Some(TESLA); 5]));
             }
 
             #[test]
