@@ -15553,17 +15553,8 @@
       "suggestion": true
     },
     "3857": {
-      "action": "plan",
-      "asks": [
-        "c:6856889488"
-      ],
-      "build_next": {
-        "from_run": "43472330316",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-13T17:33:22Z",
-        "until": "2026-11-13T18:03:22Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-13T17:33:08Z",
         "difficulty": "hard",
@@ -15582,10 +15573,9 @@
         "reason": "planned on opus",
         "trail": "- Bash: {\"command\": \"git log --oneline -1 && git status --short | head; tail -20 .bot-plan.md\", \"description\": \"Check branch state and draft tail\"}\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n9. DECISION: event `armor` = damage::hero_armor_of(state, player) after the gain (the view's badge, \\u00a710.8's armor), not the stored hero.armor. Test with\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Engine rules (crates/engine/src/): a new wire event, kept out of the trigger loop, R68's numbering and the view's R168 window; also design across the engine, shared log and web crates\"} --> ## Goal When `gain_hero_armor` gives a hero more than 0 Armor, it em\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-13T16:34:59Z",
       "owner_why": "handed off from `claude-3`: its owner `claude-3` cannot take it now",
@@ -15599,16 +15589,18 @@
       "queued_at": "2026-11-13T15:08:22Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "",
-      "run_id": "43472330316",
+      "run_id": "pending:db2c27ac-1794591465",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-13T17:23:25Z",
+      "started_at": "2026-11-13T17:38:27Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6856889488"
+      ],
       "verdict_rounds": 0
     },
     "3858": {
@@ -16390,9 +16382,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T17:37:28Z",
+    "at": "2026-11-13T17:38:27Z",
     "url": "",
-    "what": "review #3878 on claude-6"
+    "what": "build #3857 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-13T17:18:41Z",
