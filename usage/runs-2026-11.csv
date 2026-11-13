@@ -1993,3 +1993,4 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-13T06:30:30Z,43378497289,claude-8,opus,plan,3824,medium,planned,,3,52,23081,2074650,0.8142,25,27,,,37.4,,fresh,,1
 2026-11-13T06:30:22Z,43373899802,claude-4,sonnet+opus,revise,3812,medium,built,,7.2,24,7055,746099,0.3699,14,15,,,0.5,claude-3,fresh,other,1
 2026-11-13T06:30:42Z,43368722846,claude-3,sonnet+opus,revise,3810,medium,interrupted,refusal,15.9,30,6073,781374,0.3254,52,53,,,0.6,claude-3,fresh,,1
+2026-11-13T06:48:51Z,43371269656,claude-4,opus,revise,3799,hard,approved,,45,112,23138,4208332,2.4503,12,2,,,49.1,claude-8,fresh,other,2
