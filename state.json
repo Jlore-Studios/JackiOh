@@ -16820,6 +16820,8 @@
     "3811": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "f334c1b5d000539c822b43911bd9e453f4991a28",
+      "ci_fixes": 1,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-12T21:12:17Z",
