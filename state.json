@@ -15309,9 +15309,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "",
-      "owner_since": "2026-11-13T19:26:02Z",
-      "owner_why": "its own review was handed off to its final audit: `claude-4` 5-hour usage is 74%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-13T21:30:00Z; it can start again only in 2h 03m, more than the 120 minutes an item waits for its owner",
+      "owner": "claude-8",
+      "owner_since": "2026-11-13T20:08:05Z",
+      "owner_why": "it took it up; its own review was handed off to its final audit: `claude-4` 5-hour usage is 74%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-13T21:30:00Z; it can start again only in 2h 03m, more than the 120 minutes an item waits for its owner",
       "pending_request": false,
       "planned_at": "2026-11-13T11:41:05Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -16324,7 +16324,7 @@
       }
     },
     "3881": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_early": true,
       "ci_fixes": 1,
@@ -16347,12 +16347,12 @@
       "interruptions": 0,
       "issue": 3837,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "fixing-ci",
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-8",
       "queued_at": "2026-11-13T19:33:56Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "43482528235",
+      "run_id": "pending:a7737ad2-1794600437",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16373,7 +16373,7 @@
         "run": "43482528235"
       },
       "source": "ci",
-      "started_at": "2026-11-13T18:25:34Z",
+      "started_at": "2026-11-13T20:08:05Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16446,9 +16446,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T19:55:35Z",
+    "at": "2026-11-13T20:08:05Z",
     "url": "",
-    "what": "review #3880 on claude-6"
+    "what": "revise #3881 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-13T19:51:59Z",
