@@ -15463,14 +15463,6 @@
         "reason": "`claude-4` stops mid-call: 5-hour usage is 70%, at or over its 70% cap; it resets at 2026-11-13T16:30:00Z",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md 2>/dev/null | head -30; cat spec/rulings/R2255000.md; cat spec/rulings/R3733000.md; cat spec/pending/3733.md; grep -n \\\"R2778000\\\" -r spec/rulings/R2778000.md | head -3\u2026\n- Bash: {\"command\": \"cat spec/rulings/R2778000.md; git diff 4203afb6614a9a65babb4752520cecd779a1f733...HEAD -- apps/web/src/routes/account.test.tsx | grep -n \\\"R2255000\\\" ; grep -n \\\"R2255000\\\\|R2778000\\\" ap\u2026\n- Bash: {\"command\": \"sed -n 395,445p apps/web/src/routes/account.test.tsx; grep -n \\\"heading\\\\|<h2\\\\|<h3\\\" apps/web/src/routes/account.tsx | head -40\"}\n- Bash: {\"command\": \"sed -n 240,300p apps/web/src/routes/account.tsx; sed -n 585,660p apps/web/src/routes/account.tsx; git diff 4203afb6614a9a65babb4752520cecd779a1f733...HEAD -- apps/web/src/routes/account.\u2026\n- Bash: {\"command\": \"sed -n 190,225p apps/web/src/routes/account.test.tsx; grep -n \\\"amends\\\" spec/README.md | head\"}\n- said: Now edit the ruling, pending paragraph and test.\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='spec/rulings/R3733000.md'\\ns=open(p).read()\\ns=s.replace(\\\"issue #3733; amends R1646000)\\\\\\\"\\\",\\\"issue #3733; amends R1646000, R2255000 and R2778000)\\\\\\\"\u2026\n- bash: {\"command\": \"echo\"}\n- tool error: <tool_use_error>Error: No such tool available: bash. Tool names are case-sensitive: call Bash instead.</tool_use_error>\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3861/apps/web/src/routes/account.test.tsx\", \"old_string\": \" it(\\\"R2255000 a failed ranked read shows the record as it was and no\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3861/apps/web/src/routes/account.test.tsx\", \"old_string\": \" expect(screen.queryByTestId(accountTestid.seasonRecord)).toBeNull();\u2026\n- Bash: {\"command\": \"ls apps/web/src/wasm/pkg >/dev/null 2>&1 && echo wasm ok; cd apps/web && pnpm exec vitest run src/routes/account.test.tsx src/routes/account-sections.test.tsx 2>&1 | tail -15; cd ../.. &\u2026\n- tool error: Exit code 137 wasm ok"
       },
-      "hold": {
-        "ends": "2026-11-13T17:26:23Z",
-        "lifted": "2026-11-13T15:31:06Z",
-        "owner": "claude-4",
-        "since": "2026-11-13T15:26:23Z",
-        "until": "2026-11-13T15:30:00Z",
-        "why": "5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%)"
-      },
       "interruptions": 0,
       "issue": 3733,
       "kind": "review",
@@ -15478,7 +15470,8 @@
       "live": "reviewing",
       "merge_owner": "claude-8",
       "own_review": {
-        "claimed_at": "2026-11-13T15:00:38Z",
+        "claimed": true,
+        "claimed_at": "2026-11-13T15:31:22Z",
         "from_run": "43436543095",
         "gates": [
           {
@@ -15579,7 +15572,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "43448246690",
+      "run_id": "pending:84e4473e-1794583820",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -15600,7 +15593,7 @@
         "run": "43448246690"
       },
       "source": "",
-      "started_at": "2026-11-13T15:00:38Z",
+      "started_at": "2026-11-13T15:31:22Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -15781,9 +15774,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T15:30:03Z",
+    "at": "2026-11-13T15:31:22Z",
     "url": "",
-    "what": "plan #3855 on claude-7"
+    "what": "review #3861 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-13T14:55:46Z",
