@@ -11,7 +11,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::call_to_chaos_plus::{
-    book, book_token, chaos_plus_catalog, classic, core95, fruit, golem, grape, hard_field, immutable, plus,
+    book, book_token, chaos_plus_catalog, classic, core95, fruit, golem, grapes, hard_field, immutable, plus,
     trap,
 };
 use crate::rules::fixtures::harness::{
@@ -182,7 +182,8 @@ mod r423_c_plus_73s_table {
     }
 
     #[test]
-    fn r382_r60_entry_1_5_fruits_that_cost_0_the_grapes_in_the_pool_repeats_allowed() {
+    fn r382_r60_entry_1_5_fruits_that_cost_0_the_grapes_in_the_pool() {
+        let is_grape = |id: &str| grapes.iter().any(|grape| grape.id == id);
         let mut seen: Vec<String> = Vec::new();
         for i in 0..6 {
             let mut state = game(&format!("fruits-{i}"), None, None);
@@ -190,12 +191,17 @@ mod r423_c_plus_73s_table {
             let hand = &state.players.p1.hand;
             assert_eq!(hand.len() as i32, CHAOS_PLUS_FRUITS);
             for card in hand {
-                assert!([fruit.id.clone(), grape.id.clone()].contains(&card.def_id));
+                assert!(
+                    card.def_id == fruit.id || is_grape(&card.def_id),
+                    "{}",
+                    card.def_id
+                );
                 assert_eq!(card.cost_override, Some(0));
                 seen.push(card.def_id.clone());
             }
         }
-        assert_eq!(sorted(seen), sorted(vec![fruit.id.clone(), grape.id.clone()]));
+        assert!(seen.contains(&fruit.id), "the Fruit is in the pool");
+        assert!(seen.iter().any(|id| is_grape(id)), "the Grapes are in the pool");
     }
 
     #[test]

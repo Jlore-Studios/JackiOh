@@ -52,10 +52,15 @@ fn mismatches(note: &str) -> Vec<String> {
         if !in_table || line.starts_with("| ---") {
             continue;
         }
-        let cells: Vec<&str> = line
+        // An empty cell is written `|  |` and now and then `| |` (S+ #28's Stats): read both as empty.
+        let mut row = line.to_string();
+        while row.contains("| |") {
+            row = row.replace("| |", "|  |");
+        }
+        let cells: Vec<&str> = row
             .strip_prefix("| ")
             .and_then(|row| row.strip_suffix(" |"))
-            .unwrap_or(line)
+            .unwrap_or(&row)
             .split(" | ")
             .collect();
         if cells.len() != header.len() {
@@ -99,9 +104,9 @@ fn tmack_trav_s_radiant_cell_put_back_to_18_18_fails() {
         .lines()
         .find(|line| line.starts_with("| 94 | Tmack Trav |"))
         .expect("§8.10 row 94");
-    assert!(row.contains("| 16/16, plus Pierce |"), "{row}");
+    assert!(row.contains("| 16/16, plus Pierce"), "{row}");
     let header = TABLE_HEADER;
-    let stale = row.replace("| 16/16, plus Pierce |", "| 18/18, plus Pierce |");
+    let stale = row.replace("| 16/16, plus Pierce", "| 18/18, plus Pierce");
     let stale = format!("{header}\n| --- |\n{stale}\n");
     assert_eq!(
         mismatches(&stale),
@@ -118,4 +123,15 @@ fn a_cell_opens_with_stats_only_when_it_starts_with_numbers_around_a_slash() {
     assert_eq!(leading_stats("+4 Armor"), None);
     assert_eq!(leading_stats("Cry: deal 2/3 of it"), None);
     assert_eq!(leading_stats("3/4x"), None);
+}
+
+#[test]
+fn an_empty_cell_written_with_one_space_still_counts_as_a_cell() {
+    let one_space = format!(
+        "{TABLE_HEADER}\n| --- |\n| 28 | Box | Rare | 0 | Spell | | Text | 2/2, plus Rush | Engine |\n"
+    );
+    assert_eq!(
+        mismatches(&one_space),
+        vec!["#28 Box: the Radiant cell says 2/2, the Stats cell \"\"".to_string()]
+    );
 }

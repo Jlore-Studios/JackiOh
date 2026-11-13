@@ -14,6 +14,10 @@ export const FROZEN_FOREVER_WORDS = "Frozen forever: can't attack, switch positi
 export const DORMANT_WORDS = "Dormant: it can't attack or be attacked and nothing reaches it, until an effect awakens it";
 export const DORMANT_NEXT_TURN_WORDS = "Dormant: it awakens at the start of its controller's next turn; until then nothing reaches it";
 export const FROZEN_GLYPH = "❄︎";
+export const EVOLVED_WORDS =
+  "Evolved: its Evolve has happened, or happens as it enters the field; it evolves only once";
+// R3536005: the star (U+2726) in text presentation (U+FE0E), as the shared face model draws it.
+export const EVOLVED_GLYPH = "\u2726\uFE0E";
 export const DORMANT_GLYPH = "☾︎";
 export const STARSHIP_GLYPH = "☄︎";
 export const TEMPORARY_GLYPH = "⌛︎";

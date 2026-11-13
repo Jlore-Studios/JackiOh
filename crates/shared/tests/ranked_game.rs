@@ -451,3 +451,111 @@ fn r603_a_call_that_does_not_parse_is_an_error() {
         );
     }
 }
+
+/// R608: a Jlorious position is 1-based, and none for a profile not in it.
+#[test]
+fn r608_a_jlorious_position_is_one_based() {
+    use jackioh_shared::ranked::game::position_in;
+    let order: Vec<String> = ["a", "b", "c"].map(String::from).to_vec();
+    assert_eq!(position_in(&order, "a"), Some(1));
+    assert_eq!(position_in(&order, "c"), Some(3));
+    assert_eq!(position_in(&order, "z"), None);
+}
+
+/// R606, R640000: a placement lands on the target its new rating's percentile calls for among the other placed
+/// people only: not the player themselves, not a player still placing, not a ladder bot.
+#[test]
+fn r606_r640000_a_placement_lands_on_its_target_among_the_other_placed_people() {
+    use jackioh_shared::config::RANK_PLACEMENT_GAMES;
+    use jackioh_shared::ranked::ladder::{percentile_of, target_ladder};
+    let mut placing = standing("a", None, 1500.0);
+    placing.rank.games = RANK_PLACEMENT_GAMES - 1;
+    let mut bot = standing("e", Some(tier_bottom(4)), 2400.0);
+    bot.bot = true;
+    let standings = vec![
+        placing,
+        standing("b", Some(tier_bottom(2)), 1400.0),
+        standing("c", Some(tier_bottom(1)), 1300.0),
+        standing("d", None, 2500.0),
+        bot,
+    ];
+    let decision = decide(&game(
+        standings,
+        (
+            player("a", glicko(1500.0, 200.0)),
+            player("b", glicko(1400.0, 200.0)),
+        ),
+        Some(0),
+    ));
+    let (a, b) = (decision.sides.0.after.rating, decision.sides.1.after.rating);
+    let target = target_ladder(&percentile_of(a, &[b, 1300.0]));
+    let placed = decision
+        .ranks
+        .iter()
+        .find(|rank| rank.profile_id == "a")
+        .expect("a's row");
+    assert_eq!(placed.games, RANK_PLACEMENT_GAMES);
+    assert_eq!(placed.ladder, Some(target));
+}
+
+/// R2778000: a player's first game on a ladder opens their row on that ladder.
+#[test]
+fn r2778000_a_first_game_opens_the_row_on_its_ladder() {
+    let mut input = game(
+        Vec::new(),
+        (
+            player("a", glicko(1500.0, 200.0)),
+            player("b", glicko(1500.0, 200.0)),
+        ),
+        Some(0),
+    );
+    input.ladder = Ladder::Random;
+    let decision = decide(&input);
+    assert_eq!(decision.ranks.len(), 2);
+    assert!(decision.ranks.iter().all(|rank| rank.format == Ladder::Random));
+}
+
+/// R608: after a game the sides' rows take their 1-based Jlorious places as peaks, and each bystander whose place
+/// is new or better than their peak is written one; one at their peak already is not.
+#[test]
+fn r608_the_sides_and_the_bystanders_take_their_new_jlorious_peaks() {
+    let mythic = tier_bottom(4);
+    // Each row has reached Mythic Grape this season, so its floor holds it there: the side that loses stays in
+    // Jlorious (R607).
+    let at_peak = |id: &str, rating: f64, peak: Option<i32>| {
+        let mut row = standing(id, Some(mythic), rating);
+        row.rank.floor = jackioh_shared::ranked::ladder::tier_index_of(mythic);
+        row.rank.peak_jlorious = peak;
+        row
+    };
+    let standings = vec![
+        at_peak("a", 2100.0, None),
+        at_peak("b", 2000.0, None),
+        at_peak("c", 1950.0, None),
+        at_peak("d", 1900.0, Some(4)),
+        at_peak("e", 1850.0, Some(9)),
+    ];
+    let decision = decide(&game(
+        standings,
+        (
+            player("a", glicko(2100.0, 50.0)),
+            player("b", glicko(2000.0, 50.0)),
+        ),
+        Some(0),
+    ));
+    // R2755000: the sides in Jlorious, and each bystander whose peak is written.
+    assert_eq!(decision.jlorious, ["a", "b", "c", "e"].map(String::from).to_vec());
+    let peak = |id: &str| {
+        decision
+            .ranks
+            .iter()
+            .find(|rank| rank.profile_id == id)
+            .and_then(|rank| rank.peak_jlorious)
+    };
+    assert_eq!((peak("a"), peak("b")), (Some(1), Some(2)));
+    let write = |id: &str, position: i32| PeakWrite {
+        profile_id: id.to_owned(),
+        position,
+    };
+    assert_eq!(decision.peaks, vec![write("c", 3), write("e", 5)]);
+}

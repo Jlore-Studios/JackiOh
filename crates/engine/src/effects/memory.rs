@@ -9,14 +9,17 @@
 //! `query::recalled` applies too; a card a Fuse keeps moves what its texts remembered to their path in
 //! the new fusion (`work::reroot_remembered`, R77).
 
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+
+use crate::damage::DamageTarget;
 
 use crate::script::Effect;
 use crate::state::find_instance_mut;
 use crate::work::remember_on;
 
-use super::targets::self_on_its_stay;
+use super::targets::{TargetSpec, resolve_target, self_on_its_stay};
 
 /// R2247000: the memory key a card keeps a word under that it shows in place of its text in its owner's
 /// hand (the view's `CardView.label`): Anomaly Found!'s board code, remembered as it arrives.
@@ -42,6 +45,30 @@ pub fn remember(args: RememberArgs) -> Effect {
     })
 }
 
+/// `rememberOnto`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct RememberOntoArgs {
+    pub target: TargetSpec,
+    pub key: String,
+    pub value: Value,
+}
+
+/// R3566006 (Stinkyscape+ #61.1 Shawarma Law): writes one memory key onto another card, the target's.
+/// The key is plain (`remember_on` with no part data), so every writer shares it and R78's reset clears
+/// it when the card leaves the field.
+pub fn remember_onto(args: RememberOntoArgs) -> Effect {
+    Effect::new("rememberOnto", move |ctx| {
+        let Some(DamageTarget::Unit { instance }) = resolve_target(ctx, &args.target) else {
+            return;
+        };
+        if let Some(card) = find_instance_mut(ctx.sink.state, &instance.id) {
+            remember_on(&mut card.memory, &IndexMap::new(), &args.key, args.value.clone());
+        }
+    })
+}
+
 /// `rememberRandom`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
@@ -49,6 +76,25 @@ pub fn remember(args: RememberArgs) -> Effect {
 pub struct RememberRandomArgs {
     pub key: String,
     pub options: Vec<Value>,
+}
+
+/// `markOnceAGame`'s argument (R3560000).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct OnceAGameArgs {
+    pub key: String,
+}
+
+pub fn mark_once_a_game(args: OnceAGameArgs) -> Effect {
+    Effect::new("markOnceAGame", move |ctx| {
+        let entry = ctx.sink.state.players[ctx.controller]
+            .once_a_game
+            .get_or_insert_with(Vec::new);
+        if !entry.contains(&args.key) {
+            entry.push(args.key.clone());
+        }
+    })
 }
 
 /// Remember one of `options`, drawn from the match rng so setup replays the same way (R43).

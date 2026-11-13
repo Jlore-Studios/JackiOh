@@ -9,7 +9,7 @@ pub use crate::damage::TrampleOnto;
 use crate::effects::targets::{BoardScope, TargetSpec, cards_in_scope_aimed, resolve_target, sides_of};
 use crate::rng::Rng;
 use crate::script::Effect;
-use crate::wire::TargetAim;
+use crate::wire::{KeywordKind, TargetAim};
 
 /// The §4.4 modifiers an effect may put on its own damage; shared by `damage` and `damageAll`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -70,6 +70,8 @@ fn damage_flags(args: &DamageFlagArgs) -> DamageFlags {
             None
         },
         via: None,
+        // R3554007: an effect's own hit is never a chain's.
+        chain_hit: false,
     }
 }
 
@@ -101,7 +103,18 @@ pub struct DamageOdds {
     pub weight: i32,
 }
 
-/// `damageAll`'s argument: `{ amount; heroes?; odds?; lucky? } & DamageFlagArgs & BoardScope`.
+/// R3559000 (S+ #35 Scatter): "if the Unit is Flying deal N damage instead": a Unit target that has
+/// `keyword` when its hit comes (§10.4's layers) takes `amount` in place of the sweep's amount or roll,
+/// drawing no roll.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct KeywordDamage {
+    pub keyword: KeywordKind,
+    pub amount: i32,
+}
+
+/// `damageAll`'s argument: `{ amount; heroes?; odds?; lucky?; keywordInstead? } & DamageFlagArgs & BoardScope`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -118,6 +131,10 @@ pub struct DamageAllArgs {
     /// amount kept. The script states the whole X (the card's Lucky and its controller's Luck, R987).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lucky: Option<i32>,
+    /// R3559000: a Unit target with this keyword takes its `amount` instead of the sweep's, rolling
+    /// nothing. A hero never has a keyword, so the heroes' loop ignores it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub keyword_instead: Option<KeywordDamage>,
     #[serde(flatten)]
     pub flags: DamageFlagArgs,
     #[serde(flatten)]
@@ -130,6 +147,7 @@ pub struct DamageAllArgs {
 ///
 /// R2521001: with `odds`, each target's amount is its own roll, made just before its hit, in hit order
 /// (the units, then the heroes), as Hearthstone's Lightning Storm does; without `odds` nothing is drawn.
+/// R3559000: with `keywordInstead`, a Unit that has the keyword takes the stated amount and rolls nothing.
 pub fn damage_all(args: DamageAllArgs) -> Effect {
     Effect::new("damageAll", move |ctx| {
         let flags = damage_flags(&args.flags);
@@ -138,7 +156,16 @@ pub fn damage_all(args: DamageAllArgs) -> Effect {
 
         for instance in targets {
             let source = ctx.self_.clone();
-            let amount = sweep_amount(&mut *ctx.sink.rng, &args);
+            // R3559000: the keyword is read as the hit comes, off the live card, so an earlier hit's
+            // change (a Flying lost) shows.
+            let instead = args.keyword_instead.filter(|instead| {
+                crate::state::find_instance(ctx.state, &instance.id)
+                    .is_some_and(|live| crate::layers::unit_has(ctx.state, live, instead.keyword))
+            });
+            let amount = match instead {
+                Some(instead) => instead.amount,
+                None => sweep_amount(&mut *ctx.sink.rng, &args),
+            };
             deal_damage(
                 ctx,
                 DamageArgs {

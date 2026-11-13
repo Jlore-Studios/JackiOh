@@ -946,7 +946,8 @@ end $$;
 -- with #1837's Terminus, Quest, Otherworldly, Other-Origins and Jelly Bean (R1837000), and 0065
 -- with the Stinkyscape set's Drone Core, Weapon, War Doctrine and Swarm (R1857000), and 0069 with
 -- the Training Grounds Legacy cards' Legacy (R2511000), and 0070 with #2521's Resource and
--- Faction, and 0083 with #3038's Starship (R3038000). Each probe
+-- Faction, and 0083 with #3038's Starship (R3038000), and 0087 with #3535's Mindustrial, Mineral,
+-- Automa-α, Automa-β, Automa-γ, Automa-δ, Automa-Ω, Automa-ζ and Paperclip (R3535002). Each probe
 -- row is removed before the next, and each probe runs in a block of its own, so later checks see
 -- only the cards CHECK 10 seeded.
 do $$
@@ -956,7 +957,8 @@ declare
     'Human', 'Felinor', 'KY', 'CN', 'Fruit', 'Call to Chaos', 'Quickdraw', 'Jlockeed', 'Book', 'Pancake',
     'AI', 'Plague', 'Catalyst', 'Prime', 'Acclaimed', 'Wincon', 'Potion', 'Terminus', 'Quest',
     'Otherworldly', 'Other-Origins', 'Jelly Bean', 'Drone Core', 'Weapon', 'War Doctrine', 'Swarm',
-    'Legacy', 'Resource', 'Faction', 'Starship', 'Token'];
+    'Legacy', 'Resource', 'Faction', 'Starship', 'Mindustrial', 'Mineral', 'Automa-α', 'Automa-β',
+    'Automa-γ', 'Automa-δ', 'Automa-Ω', 'Automa-ζ', 'Paperclip', 'Token'];
   tag      text;
   refused  boolean;
 begin
@@ -972,14 +974,14 @@ begin
     delete from public.cards where id = 'check18-probe';
   end loop;
 
-  -- All thirty-one on one card: `<@` holds for the whole list, not only one tag at a time.
+  -- All forty on one card: `<@` holds for the whole list, not only one tag at a time.
   begin
     insert into public.cards (id, card_index, name, set_id, type, tags, rarity, token, cost,
                               catalog_version)
     values ('check18-probe', '18', 'Check 18 probe', 'Core', 'Unit', catalog_tags, 'Common', false,
             '1'::jsonb, 'core-1');
   exception when check_violation then
-    raise exception 'FAIL (CHECK 18): cards_tags_check refuses a card carrying all thirty-one tags';
+    raise exception 'FAIL (CHECK 18): cards_tags_check refuses a card carrying all forty tags';
   end;
   delete from public.cards where id = 'check18-probe';
 

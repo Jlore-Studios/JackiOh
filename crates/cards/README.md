@@ -1,12 +1,12 @@
 # `jackioh-cards`
 
-The catalog entries of the seven shipped sets, Core (spec §8.1–§8.5), Classic (§8.6, and Glitch, a
+The catalog entries of the eight shipped sets, Core (spec §8.1–§8.5), Classic (§8.6, and Glitch, a
 hidden token), Classic+ (§8.7), Meditative (§8.8), Meditative+ (§8.9, shipped in v0.3.15 by #1187),
-Stinkyscape (§8.10, the Dormant Starship among its cards, shipped by #1884, R1857000) and Training
-Grounds (§8.11, shipped by #2204, R2194000), each set's counts written once in `src/census.rs` (#2581).
+Stinkyscape (§8.10, the Dormant Starship among its cards, shipped by #1884, R1857000), Training
+Grounds (§8.11, shipped by #2204, R2194000) and Stinkyscape+ (§8.12, shipped by #3573, R3535000), each set's counts written once in `src/census.rs` (#2581).
 A set the catalog holds before it ships, as Meditative was while issue #496 built it, Meditative+
-while issue #1173 did (R1178000), Stinkyscape while issue #1836 did, and Training Grounds while tracker
-#2193 did, is in no pool that names no set, no deck and no random deck until the patch that lists it in `SHIPPED_SETS`
+while issue #1173 did (R1178000), Stinkyscape while issue #1836 did, Training Grounds while tracker
+#2193 did, and Stinkyscape+ while tracker #3533 did (R3535000), is in no pool that names no set, no deck and no random deck until the patch that lists it in `SHIPPED_SETS`
 (R1420), counts toward none of the census's totals, and a test opens it with the testkit's `preview_sets`; one script file per entry with its tests inside it; the catalog query every random pool goes through; and the
 catalog's patch history. This file is the contract between the card files. The spec (`spec/08-catalog.md`
 for every card, `spec/07-tokens.md` for the tokens) is the only source of card text; when it and this
@@ -40,7 +40,8 @@ crates/cards
 │   ├── meditative/     one Meditative card or token per file (shipped in v0.3.5, R1420)
 │   ├── meditative_plus/ one Meditative+ card or token per file (shipped in v0.3.15, R1178000)
 │   ├── stinkyscape/    one Stinkyscape card or token per file (shipped by #1884, R1857000)
-│   └── training_grounds/ one Training Grounds card or token per file (shipped by #2204, R2194000)
+│   ├── training_grounds/ one Training Grounds card or token per file (shipped by #2204, R2194000)
+│   └── stinkyscape_plus/ one Stinkyscape+ card or token per file (shipped by #3573, R3535000)
 └── tests/cards.rs      the cross-card tests: tests/cross/<x>.rs (catalog, query, references, radiant
                         standard, flavour, condition_active, preview, invariants, …)
 ```
@@ -271,7 +272,8 @@ card's number, or a catalog id with no file. It also compiles in `CATALOG_VERSIO
 of `patches/patches.json`.
 
 `register_all()` hands the catalog and every script to the engine, once per process, and where the
-older shipped catalogs are found (`register_shipped`); the WASM module, the server and the tools
+older shipped catalogs are found (`register_shipped`) and where a card's past versions are found
+(`register_past_versions`, R3538002); the WASM module, the server and the tools
 call it at start. A card test calls `crate::register_all()` first.
 
 R767000: `build.rs` also writes `$OUT_DIR/history.json`, how each shipped version but the newest

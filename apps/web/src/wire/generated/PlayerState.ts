@@ -13,6 +13,7 @@ import type { ManaState } from "./ManaState";
 import type { PlayerModifier } from "./PlayerModifier";
 import type { RowFlags } from "./RowFlags";
 import type { StarscapeMap } from "./StarscapeMap";
+import type { TipsyCounter } from "./TipsyCounter";
 import type { TurnLog } from "./TurnLog";
 import type { VoteTally } from "./VoteTally";
 
@@ -92,6 +93,13 @@ tradesPerTurn?: number,
  * game without one hashes as it did before this field existed (D14).
  */
 deathWatchCasts?: DrawCount, 
+/**
+ * R3570004: how many launches S+ #142's launch watch (entry 8) has answered for this player on turn
+ * `turn`, kept as `death_watch_casts` is: a count kept for an earlier turn reads as 0
+ * (`call_to_chaos_mindustrial_swarm::launch_watch_answers_this_turn`). Absent until the watch first
+ * answers, so a game without one hashes as it did before this field existed (D14).
+ */
+launchWatchCasts?: DrawCount, 
 /**
  * R1143: this player's hand size for the rest of the game, once an effect has set one (Meditative
  * #79 Touched by KY), the latest setting winning; every rule that reads the hand cap reads it
@@ -185,4 +193,28 @@ starscape?: StarscapeMap,
  * scans have missed (`effects::scan_for_anomaly`), each adding to their later scans' chances.
  * Absent until the first miss, so a game without one hashes as before this field existed (D3).
  */
-anomalyMisses?: number, };
+anomalyMisses?: number, 
+/**
+ * R3536004: how many of this player's cards evolved this game (`evolution::begin`). Absent
+ * until the first, so a game without one hashes as before this field existed (D3).
+ */
+evolutions?: number, 
+/**
+ * R3540000: the Burn on this player's hero (`afflictions::afflict`), ticking at the start of their
+ * turn (R3540001). Absent at none, so a game without one hashes as before this field existed (D3).
+ */
+heroBurn?: number, 
+/**
+ * R3540000: the Toxic on this player's hero, as `hero_burn`.
+ */
+heroToxic?: number, 
+/**
+ * R3548000: this player's Tipsy counter, public on both seats. Absent at none, so a game
+ * without one hashes as it did before this field existed.
+ */
+tipsy?: TipsyCounter, 
+/**
+ * R3560000: the once-a-game firsts this player has used, by key (S+ #120, #121). Absent until
+ * the first, so a game without one hashes as before.
+ */
+onceAGame?: Array<string>, };

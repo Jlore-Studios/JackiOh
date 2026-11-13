@@ -82,6 +82,11 @@ mod tests {
         "classicplus-065-4",
         "classicplus-065-5",
     ];
+    /// The other Fruit-tagged tokens of the sets that ship, which its query takes by the Fruit tag (R2521006):
+    /// Stinkyscape+'s #6.1 Fine Fermented Grape and its AI generated T-AI-1 Hallucinated Kiwi and T-AI-2
+    /// Data-Poisoned Plum (#3573).
+    const OTHER_FRUIT_TOKENS: [&str; 3] =
+        ["stinkyscapeplus-006-1", "stinkyscapeplus-t-ai-01", "stinkyscapeplus-t-ai-02"];
 
     /// p2's Vanilla, 2 damage on it, and p1's hero hurt too, so a heal has somewhere else to go.
     fn board(seed: &str, radiant: bool) -> Scenario {
@@ -167,13 +172,17 @@ mod tests {
             let def = crate::card_def(&def_id);
             assert!(def.token && def.tags.contains(&Tag::Fruit), "a Fruit token");
             assert!(s.state().pending.is_none(), "a random cast asks nobody");
-            // No other token: every cast over the seeds is a Fruit, and a token only if a Grape.
+            // No other token: every cast over the seeds is a Fruit, and a token only if a Grape or another
+            // Fruit-tagged token of the sets that ship.
             for n in 0..16 {
                 let (_, _, cast) = fire(&format!("s141-pool-{n}"), false);
                 let id = cast.first().map(|(_, id, _)| id.clone()).expect("a cast");
                 let def = crate::card_def(&id);
                 assert!(def.tags.contains(&Tag::Fruit), "{id}");
-                assert!(!def.token || GRAPES.contains(&id.as_str()), "{id}");
+                assert!(
+                    !def.token || GRAPES.contains(&id.as_str()) || OTHER_FRUIT_TOKENS.contains(&id.as_str()),
+                    "{id}"
+                );
             }
         }
 

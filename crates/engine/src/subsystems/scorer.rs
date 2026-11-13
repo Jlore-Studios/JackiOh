@@ -137,8 +137,8 @@ fn lethal_contribution(auras: &AuraTable<'_>, viewer: PlayerId, def: &CardDef, f
     if !has_keyword(&face.keywords, KeywordKind::Charge) {
         return 0;
     }
-    // R1223: lethal may be bought on borrowed mana.
-    if crate::catalog::query_cost(def) > crate::credit::spendable_mana(state, viewer) {
+    // R1223, R3548004: lethal may be bought on borrowed mana, or on infinite mana.
+    if !crate::credit::can_pay(state, viewer, crate::catalog::query_cost(def)) {
         return 0;
     }
     // It must reach the field this turn (§3.2; Stack onto an occupied zone, #92).
@@ -609,6 +609,9 @@ fn hide(card: &mut CardInstance, def_id: &str) {
     card.chinese = None;
     card.set_as = None;
     card.created = None;
+    // R3536002, CLAUDE.md rule 7: a hidden card carries neither Evolve mark.
+    card.evolved = None;
+    card.enters_evolved = None;
     card.damage = 0;
     card.embiggen_cost_override = None;
     card.x = None;

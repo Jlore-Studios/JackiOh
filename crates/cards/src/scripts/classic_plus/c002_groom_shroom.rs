@@ -97,7 +97,7 @@ mod tests {
     /// Every non-token Felinor-tagged Unit of every set (R405, R380): Meditative's are §8.8 #25, #30,
     /// #67, #87 (all tribes), #93, #94 and #102 (whose card the catalog does not hold yet); Stinkyscape's
     /// #87 Siva 1 (#1884); Training Grounds' #17, #22, #23 and #33 and the snapshots #44 (of Core #12)
-    /// and #51 (of Core #43) (#2204).
+    /// and #51 (of Core #43) (#2204); Stinkyscape+'s #4 Profe Yates (#3573).
     const FELINOR_UNITS: &[&str] = &[
         "core-012",
         "core-043",
@@ -119,6 +119,7 @@ mod tests {
         "traininggrounds-033",
         "traininggrounds-044",
         "traininggrounds-051",
+        "stinkyscapeplus-004",
     ];
 
     use crate::merged;
@@ -206,11 +207,12 @@ mod tests {
         }
 
         #[test]
-        fn r60_r380_draws_from_every_set_with_repeats_allowed_and_never_a_felinor_spell_or_token() {
+        fn r3563000_r380_draws_from_every_set_with_distinct_picks_and_never_a_felinor_spell_or_token() {
             crate::register_all();
             let mut seen: IndexSet<String> = IndexSet::new();
-            let mut repeated = false;
-            for seed in 1..=12 {
+            // R3563000: the five fills of one run are five different Felinors (the pool holds 21), so it
+            // takes this many seeds to bring every Felinor with a Cry to light.
+            for seed in 1..=40 {
                 let mut s = setup(json!({}), false, Some(&format!("groom-{seed}")));
                 let attacker = s.unit(P2, 1).unwrap();
                 s.attack(&attacker, "hero");
@@ -221,14 +223,15 @@ mod tests {
                 assert_eq!(s.count("destroyed"), 0);
                 assert!(s.state().pending.is_none());
                 assert_eq!(s.state().players.p1.hero.armor, 0);
-                if defs.iter().cloned().collect::<IndexSet<_>>().len() < defs.len() {
-                    repeated = true;
-                }
+                assert_eq!(
+                    defs.iter().cloned().collect::<IndexSet<_>>().len(),
+                    defs.len(),
+                    "seed {seed}: a Felinor comes once per run while the pool lasts: {defs:?}"
+                );
                 for id in defs {
                     seen.insert(id);
                 }
             }
-            assert!(repeated);
             assert!(seen.iter().all(|id| FELINOR_UNITS.contains(&id.as_str())));
             assert!(seen.iter().any(|id| !id.starts_with("core-")));
             // The no-Cry checks above bit: the Felinors whose Cries would show were among those summoned.

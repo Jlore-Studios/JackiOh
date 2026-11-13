@@ -20,8 +20,8 @@ use jackioh_engine::subsystems::activate::{
 use jackioh_engine::subsystems::combo_index::{grade_of, grade_rises, played_cards_this_turn};
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::subsystems::hero_power::{
-    HERO_POWER_NAMES, HERO_POWERS, POWER_KEY, POWER_RESUME, RUSH_TOKEN_INDEX, STEADY_SHOT_PARAM, hero_power,
-    power_abilities, power_ability_of, power_of, roll_power, used_this_turn,
+    HERO_POWER_NAMES, HERO_POWERS, POWER_KEY, POWER_RESUME, PowerEdition, RUSH_TOKEN_INDEX,
+    STEADY_SHOT_PARAM, hero_power, power_abilities, power_ability_of, power_of, roll_power, used_this_turn,
 };
 use jackioh_engine::testkit::*;
 use jackioh_engine::triggers::SettleOptions;
@@ -527,7 +527,7 @@ fn heroic_script() -> Script {
             ..StaticFlags::default()
         }),
         start_of_game: Some(hook(|_| vec![roll_power()])),
-        activations: power_abilities(false),
+        activations: power_abilities(false, PowerEdition::Thirteen),
         resume,
         ..Script::default()
     }
@@ -2174,7 +2174,8 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
     #[test]
     fn r103_stores_the_thirteen_power_names_each_its_activate_abilitys_id_a_card_that_has_not_rolled_has_none()
      {
-        // §11 R103 writes them out; they are state, so stable across versions (R352, R752 appended theirs).
+        // §11 R103 writes them out; they are state, so stable across versions (R352, R752 appended theirs,
+        // R3551002 End Times last).
         let names = json!([
             "recruit",
             "draw",
@@ -2189,6 +2190,7 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
             "brainstorm",
             "pluck",
             "tricks",
+            "endTimes",
         ]);
         assert_eq!(as_json(&HERO_POWER_NAMES), names);
         assert_eq!(
@@ -2202,7 +2204,7 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
                 .find(|power| as_json(&power.name) == json!("ping")),
             "the ping power",
         );
-        assert_eq!(ping.x, 1);
+        assert_eq!(ping.x, 0);
         let ping_targets = ping.targets.map(|targets| targets()).unwrap_or_default();
         assert_eq!(
             ping_targets.first().map(|decl| as_json(&decl.filter)),
@@ -4295,7 +4297,7 @@ mod spec_11_r151_and_r153_arrivals_and_zone_gated_hooks_m3_gate {
                 .as_array()
                 .is_some_and(|names| names.contains(&rolled))
         );
-        assert!(must(power_of(&live(&state, &card)), "the rolled power").x > 0);
+        assert!(PowerEdition::Thirteen.price(must(power_of(&live(&state, &card)), "the rolled power")) > 0);
 
         // And the roll is idempotent: a card that already has one keeps it when it arrives again.
         let kept = must(power_of(&live(&state, &card)), "the rolled power");

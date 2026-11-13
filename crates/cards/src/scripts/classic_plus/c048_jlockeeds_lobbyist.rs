@@ -67,9 +67,9 @@ mod tests {
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const FILLER: &str = "core-005";
     /// The non-token Jlockeed cards of every set but this one, sorted: Core #13, #14, C #4, C+ #51, #52,
-    /// M #87 and #97 (§8.8), M+ #4 (§8.9, #1187), Stinkyscape #124 to #130 (#1884) and Training Grounds
-    /// #45 and #48 (#2204), snapshots of Core #14 and #13.
-    const POOL: [&str; 17] = [
+    /// M #87 and #97 (§8.8), M+ #4 (§8.9, #1187), Stinkyscape #124 to #130 (#1884), Stinkyscape+ #21 and #26
+    /// (#3573) and Training Grounds #45 and #48 (#2204), snapshots of Core #14 and #13.
+    const POOL: [&str; 19] = [
         "classic-004",
         "classicplus-051",
         "classicplus-052",
@@ -85,6 +85,8 @@ mod tests {
         "stinkyscape-128",
         "stinkyscape-129",
         "stinkyscape-130",
+        "stinkyscapeplus-021",
+        "stinkyscapeplus-026",
         "traininggrounds-045",
         "traininggrounds-048",
     ];
@@ -208,7 +210,8 @@ mod tests {
         fn r278_r387_the_pool_is_exactly_core_n13_n14_classic_n4_c_n51_n52_meditative_n87_n97_and_meditative_plus_n4_one_tag_never_itself() {
             crate::register_all();
             let mut seen: IndexSet<String> = IndexSet::new();
-            for i in 0..80 {
+            // One draw a seed over nineteen cards: this many seeds bring every one of them up.
+            for i in 0..400 {
                 let mut s = board(Board {
                     seed: Some(format!("lobby-{i}")),
                     ..Board::default()

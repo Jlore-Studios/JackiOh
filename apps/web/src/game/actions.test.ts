@@ -1065,6 +1065,44 @@ describe("R1044 playing face-down as a Trap", () => {
   });
 });
 
+describe("R3543000 a Flexible play lights both rows", () => {
+  const view = seatedView();
+
+  it("R3543000 a unit-row and a backrow play of one card light both zones, and the backrow click sends that play", () => {
+    const backrow = { type: "play", instanceId: "h1", zone: { row: "backrow", lane: 1 } } as const;
+    const legal: ActionBody[] = [playZone("h1", 3), backrow];
+    const playing = onClickTarget(view, legal, IDLE, { on: "hand", instanceId: "h1" }).interaction;
+
+    const { legal: lit } = highlightFor(view, legal, playing);
+
+    expect(lit.has(testid.zone("you", "units", 3))).toBe(true);
+    expect(lit.has(testid.zone("you", "backrow", 1))).toBe(true);
+    expect(lit.has(testid.zone("you", "units", 1))).toBe(false);
+
+    const result = onClickTarget(view, legal, playing, { on: "zone", side: "you", row: "backrow", lane: 1 });
+
+    expect(result.action).toEqual(backrow);
+  });
+
+  it("R3543001 a Field Spell offered a unit zone lights it", () => {
+    const units = { type: "play", instanceId: "h2", zone: { row: "units", lane: 2 } } as const;
+    const legal: ActionBody[] = [
+      units,
+      { type: "play", instanceId: "h2", zone: { row: "backrow", lane: 4 } },
+    ];
+    const playing = onClickTarget(view, legal, IDLE, { on: "hand", instanceId: "h2" }).interaction;
+
+    const { legal: lit } = highlightFor(view, legal, playing);
+
+    expect(lit.has(testid.zone("you", "units", 2))).toBe(true);
+    expect(lit.has(testid.zone("you", "backrow", 4))).toBe(true);
+
+    const result = onClickTarget(view, legal, playing, { on: "zone", side: "you", row: "units", lane: 2 });
+
+    expect(result.action).toEqual(units);
+  });
+});
+
 describe("R1086 Equip plays (issue #532)", () => {
   it("R1086 an Equip card onto a friendly Unit sends equip: true", () => {
     const legal: ActionBody[] = [

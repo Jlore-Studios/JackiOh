@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::config::{CAST_ON_DRAW_ACTION_CAP, CAST_ON_DRAW_CHAIN_CAP, FATIGUE_DAMAGE, SETUP_TURN};
+use crate::query::HandSide;
 use crate::script::{DrawLimit, DrawLimitPlayer, EngineSink, HookArgs};
 use crate::state::{CardInstance, DrawCount, GameState, Resume, WorkItem, find_instance_mut, new_instance};
 use crate::wire::{
@@ -56,6 +57,21 @@ fn infinite_reserves_source(sink: &EngineSink, player: PlayerId) -> Option<CardI
     None
 }
 
+/// R3553002 (S+ #30): a backrow card that turns its controller's first draw each turn into a
+/// Warhero Token card.
+fn warhero_draws_source(sink: &EngineSink, player: PlayerId) -> Option<CardInstance> {
+    for slot in crate::zones::slots_of(player, Row::Backrow) {
+        // R1487000: a face-down card's text sleeps until it is revealed or face-up.
+        if let Some(card) = crate::zones::card_at(sink.state, slot)
+            && !crate::preview::lasting_text_off(sink.state, card)
+            && crate::scripts::script_of(sink.state, card).flags().warhero_draws == Some(true)
+        {
+            return Some(card.clone());
+        }
+    }
+    None
+}
+
 /// Where `add_to_hand` put a card.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
@@ -69,6 +85,16 @@ pub enum AddToHandOutcome {
 /// card that reaches a hand comes through here, so a caller reads where it went from the outcome
 /// rather than testing the hand again.
 pub fn add_to_hand(sink: &mut EngineSink, instance: &mut CardInstance) -> AddToHandOutcome {
+    add_to_hand_at(sink, instance, None)
+}
+
+/// R3558000: `add_to_hand` at the named end of the hand — the left end, or the right end every other
+/// arrival takes (§3). Absent is the right end.
+pub fn add_to_hand_at(
+    sink: &mut EngineSink,
+    instance: &mut CardInstance,
+    at: Option<HandSide>,
+) -> AddToHandOutcome {
     let full = crate::query::room_in(sink.state, instance.owner, crate::zones::OffFieldZone::Hand) == 0;
     if full {
         let landed = crate::zones::move_to_zone(
@@ -90,7 +116,10 @@ pub fn add_to_hand(sink: &mut EngineSink, instance: &mut CardInstance) -> AddToH
         sink.state,
         instance,
         crate::zones::OffFieldZone::Hand,
-        Default::default(),
+        crate::zones::MoveToZoneOptions {
+            hand_left: (at == Some(HandSide::Left)).then_some(true),
+            ..Default::default()
+        },
     );
     sink.events.push(GameEvent::AddedToHand {
         player: instance.owner,
@@ -696,6 +725,8 @@ pub fn complete_draw(
         return DrawOutcome::Cast;
     }
 
+    // R3548001: the stamp a Tipsy counter now up lays on the drawn card, before it reaches the hand.
+    card.tipsy = crate::tipsy::stamp_for(sink.state, player);
     if add_to_hand(sink, &mut card) == AddToHandOutcome::Burned {
         DrawOutcome::Burned
     } else {
@@ -778,6 +809,32 @@ pub fn draw_one(sink: &mut EngineSink, player: PlayerId, link: Option<ChainLinkO
     // B5 E3, R457: a draw past the player's limit this turn does not happen at all.
     if draw_blocked(sink, player) {
         return DrawOutcome::Limited;
+    }
+
+    // R3553002 (S+ #30): the turn's first draw is a Warhero Token card instead, the library top
+    // staying for the next draw. Setup draws are no turn's (SETUP_TURN), and an empty library
+    // still fatigues below.
+    if draws_this_turn(sink.state, player) == 0
+        && sink.state.turn != SETUP_TURN
+        && !sink.state.players[player].library.is_empty()
+        && let Some(source) = warhero_draws_source(sink, player)
+        && let Some(token_def_id) =
+            crate::catalog::def_id_by_index(SetName::StinkyscapePlus, "T-warhero-token")
+    {
+        let mut token = new_instance(sink.state, &token_def_id, player, Zone::Hand { player });
+        token.radiant = source.radiant;
+        crate::generators::record_generator_of(sink.state, &source, &token);
+        sink.state.counters.drawn += 1;
+        let counted = count_draw(sink.state, player);
+        sink.events.push(GameEvent::Drawn {
+            player,
+            instance_id: token.id.clone(),
+            def_id: token.def_id.clone(),
+            turn_draw: counted,
+            emptied: None,
+        });
+        add_to_hand(sink, &mut token);
+        return DrawOutcome::Token;
     }
 
     if sink.state.players[player].library.is_empty() {

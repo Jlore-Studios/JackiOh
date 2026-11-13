@@ -70,9 +70,9 @@ mod tests {
     const NETHER: &str = "core-088"; // Twisting Nether: destroy all permanents
     const FILLER: &str = "core-005";
     /// The non-token Jlockeed cards of every set but this one, sorted: Core #13, #14, C #4, C+ #48, #51,
-    /// Meditative #87 and #97 (§8.8), Meditative+ #4 (§8.9, #1187), Stinkyscape #124 to #130 (#1884) and
-    /// Training Grounds #45 and #48 (#2204).
-    const POOL: [&str; 17] = [
+    /// Meditative #87 and #97 (§8.8), Meditative+ #4 (§8.9, #1187), Stinkyscape #124 to #130 (#1884),
+    /// Stinkyscape+ #21 and #26 (#3573) and Training Grounds #45 and #48 (#2204).
+    const POOL: [&str; 19] = [
         "classic-004",
         "classicplus-048",
         "classicplus-051",
@@ -88,6 +88,8 @@ mod tests {
         "stinkyscape-128",
         "stinkyscape-129",
         "stinkyscape-130",
+        "stinkyscapeplus-021",
+        "stinkyscapeplus-026",
         "traininggrounds-045",
         "traininggrounds-048",
     ];
@@ -229,7 +231,8 @@ mod tests {
         #[test]
         fn r278_r387_the_pool_is_exactly_core_n13_n14_classic_n4_c_n48_n51_meditative_n87_n97_and_meditative_plus_n4_never_this_card() {
             let mut seen: IndexSet<String> = IndexSet::new();
-            for i in 0..60 {
+            // One draw a seed over nineteen cards: this many seeds bring every one of them up.
+            for i in 0..400 {
                 let mut s = signed(false, Some(&format!("contract-{i}")), None, None);
                 play_all(&mut s);
                 next_turn(&mut s);
@@ -388,23 +391,21 @@ mod tests {
 
         #[test]
         fn s2_3_the_discount_floors_at_0_a_lobbyist_1_costs_0() {
-            let mut checked = false;
-            let mut i = 0;
-            // The pool is large (#1884), so the search for a seed that delivers the Lobbyist runs long.
-            while i < 120 && !checked {
-                let mut s = signed(true, Some(&format!("rfloor-{i}")), None, None);
-                i += 1;
+            // The pool is large (#1884, #3573), so the seed that delivers the Lobbyist is searched for.
+            let seed = seed_where("rfloor", |seed| {
+                let mut s = signed(true, Some(seed), None, None);
                 play_all(&mut s);
                 next_turn(&mut s);
                 let id = delivered(&s).first().map(instance_of).unwrap_or_default();
-                let card = s.card(&id).clone();
-                if card.def_id != "classicplus-048" {
-                    continue;
-                }
-                assert_eq!(effective_cost(s.state(), &card, Default::default()), 0);
-                checked = true;
-            }
-            assert!(checked);
+                !id.is_empty() && s.card(&id).def_id == "classicplus-048"
+            });
+            let mut s = signed(true, Some(&seed), None, None);
+            play_all(&mut s);
+            next_turn(&mut s);
+            let id = delivered(&s).first().map(instance_of).unwrap_or_default();
+            let card = s.card(&id).clone();
+            assert_eq!(card.def_id, "classicplus-048");
+            assert_eq!(effective_cost(s.state(), &card, Default::default()), 0);
         }
 
         #[test]

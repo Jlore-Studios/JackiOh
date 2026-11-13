@@ -25,6 +25,7 @@ import { artSpec, ART_BOX, type ArtSpec } from "./procedural.ts";
 import { sceneRecipeOf } from "./scene.ts";
 import { starshipArtKey, type StarshipArt } from "./starshipHulls.ts";
 import { ANOMALY_SEED_PREFIX, anomalySvg, starshipModuleIconSvg, starshipModuleSvg, starshipSvg, stinkyscapeSvg, type ShipArt } from "./stinkyscape.ts";
+import { stinkyscapePlusSvg } from "./stinkyscapeplus.ts";
 import { legacySvg, trainingGroundsSvg } from "./traininggrounds.ts";
 import { compositionFor, RADIANT_PALETTE, themeFor, type ArtThemeId, type Composition } from "./themes.ts";
 
@@ -355,6 +356,31 @@ export function stinkyscapeArtUri(
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
   const svg = sceneArtSvg(seedId, tags, type, radiant, motion, part) ?? stinkyscapeSvg(defId, name, tags, type, radiant, motion, seedId, part, ship);
+  const uri = `${DATA_PREFIX}${encodeSvg(restyled(svg, restyle, radiant, seedId))}`;
+  proceduralCache.set(key, uri);
+  return uri;
+}
+
+/**
+ * R3572001: a Stinkyscape+ face's picture (stinkyscapeplus.ts), memoised and seeded as Stinkyscape's is. A card with a
+ * scene recipe draws its scene (R3331000), every other card its painter's picture.
+ */
+export function stinkyscapePlusArtUri(
+  defId: string,
+  name: string | undefined,
+  tags: readonly Tag[],
+  type: CardType,
+  radiant: boolean,
+  motion: ArtMotion | null = null,
+  seedId = defId,
+  restyle: ArtRestyle | null = null,
+  part: ArtPart = "whole",
+): string {
+  const key = `${seedId}|${radiant}|stinkyscapeplus|${name ?? ""}|${tags.join(",")}|${type}${movingKey(motion)}${restyleKey(restyle)}${partKey(part)}`;
+  const hit = proceduralCache.get(key);
+  if (hit !== undefined) return hit;
+  if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
+  const svg = sceneArtSvg(seedId, tags, type, radiant, motion, part) ?? stinkyscapePlusSvg(defId, name, tags, type, radiant, motion, seedId, part);
   const uri = `${DATA_PREFIX}${encodeSvg(restyled(svg, restyle, radiant, seedId))}`;
   proceduralCache.set(key, uri);
   return uri;

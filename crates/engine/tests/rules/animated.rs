@@ -5,15 +5,15 @@ use serde::Serialize;
 
 use jackioh_engine::effects::steal::steal;
 use jackioh_engine::effects::targets::cards_in_scope;
-use jackioh_engine::effects::{TuneDirection, TuneRow, applicable_changes, grant_keyword};
+use jackioh_engine::effects::{TuneDirection, TuneRow, applicable_changes, grant_keyword, place_plague};
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{plain, stacker};
 use crate::rules::fixtures::field::{
-    asker, banner, ears, flush, golem, listener, mote, notes_of, playing, spatula, springer, tesla, tower,
-    wisp,
+    BLOOM_STATS, asker, banner, bloom, ears, flush, golem, listener, mote, notes_of, playing, spatula,
+    springer, tesla, tower, wisp,
 };
 use crate::rules::fixtures::harness::{
     act, act_result, by, events_of_type, ids, in_hand, input, json_of, live, matches_object, put, sink_for,
@@ -1254,5 +1254,154 @@ mod r2280001_a_backrow_card_that_comes_to_have_both_animates_at_the_state_check 
         state_check(&mut sink);
         assert_eq!(id_at(sink.state, slot(P1, Row::Units, 1)), Some(flag.id.clone()));
         assert_eq!(events_of_type(sink.events, GameEventType::Animated).len(), 1);
+    }
+}
+
+// R3542000 (issue #3542): a card whose own text gives it stats by its Plague Counters has a stat line
+// while it carries one, and its first counter owes it the animation of R2280001.
+mod r3542000_a_card_whose_text_gives_it_stats_by_its_plague_counters {
+    use super::*;
+
+    /// `place_plague` of `amount` on the card `id`, as a verb of p1's.
+    fn place(sink: &mut EngineSink<'_>, id: &str, amount: i32) {
+        (place_plague(json_as(json!({
+            "amount": amount,
+            "target": { "of": "instance", "instanceId": id },
+        })))
+        .apply)(&mut make_context(sink, None, by(P1)));
+    }
+
+    #[test]
+    fn r3542000_with_no_counter_it_enters_and_stays_a_field_spell() {
+        let mut state = playing("animated-bloom-entry");
+        let card = in_hand(&mut state, &bloom.id, P1, 1).remove(0);
+        flush(&mut state, P1, 10);
+        let result = act_result(
+            &state,
+            input(json!({
+                "type": "play", "instanceId": card.id, "zone": { "row": "backrow", "lane": 2 }, "playerId": "p1"
+            })),
+        );
+        assert_eq!(result.error, None);
+        assert_eq!(
+            id_at(&result.state, slot(P1, Row::Backrow, 2)),
+            Some(card.id.clone())
+        );
+        assert!(card_at(&result.state, slot(P1, Row::Units, 2)).is_none());
+        assert!(events_of_type(&result.events, GameEventType::Animated).is_empty());
+        assert!(!jackioh_engine::layers::has_stat_line(
+            &result.state,
+            by_id(&result.state, &card.id)
+        ));
+    }
+
+    #[test]
+    fn r3542000_the_first_counter_animates_it_at_the_state_check_as_3_3_per_counter() {
+        let mut state = playing("animated-bloom-owed");
+        let card = put(
+            &mut state,
+            &bloom.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        let turn = state.turn;
+        let mut sink = sink_for(&mut state);
+        place(&mut sink, &card.id, 2);
+        // Owed, not yet moved: the counters animate nothing themselves.
+        assert!(owed(sink.state, &card.id));
+        assert_eq!(
+            id_at(sink.state, slot(P1, Row::Backrow, 2)),
+            Some(card.id.clone())
+        );
+        assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
+
+        state_check(&mut sink);
+        assert_eq!(id_at(sink.state, slot(P1, Row::Units, 2)), Some(card.id.clone()));
+        let view = unit_view(sink.state, by_id(sink.state, &card.id));
+        assert_eq!((view.attack, view.health), (2 * BLOOM_STATS, 2 * BLOOM_STATS));
+        assert_eq!(events_of_type(sink.events, GameEventType::Animated).len(), 1);
+        // An entry, as every animation from the backrow is (R83, R171).
+        assert_eq!(by_id(sink.state, &card.id).summoned_turn, Some(turn));
+        assert!(!owed(sink.state, &card.id));
+
+        // Once a Unit it stays one, and a counter more is 3/3 more.
+        place(&mut sink, &card.id, 1);
+        let view = unit_view(sink.state, by_id(sink.state, &card.id));
+        assert_eq!((view.attack, view.health), (3 * BLOOM_STATS, 3 * BLOOM_STATS));
+        assert_eq!(events_of_type(sink.events, GameEventType::Animated).len(), 1);
+    }
+
+    #[test]
+    fn r3542000_with_no_open_unit_zone_it_stays_and_is_owed_nothing_more() {
+        let mut state = playing("animated-bloom-no-room");
+        fill_units(&mut state, P1);
+        let card = put(
+            &mut state,
+            &bloom.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        let mut sink = sink_for(&mut state);
+        place(&mut sink, &card.id, 1);
+        state_check(&mut sink);
+        assert_eq!(
+            id_at(sink.state, slot(P1, Row::Backrow, 2)),
+            Some(card.id.clone())
+        );
+        assert!(!owed(sink.state, &card.id));
+
+        // A unit zone opens: the card had both already, so nothing more is owed it.
+        let first = id_at(sink.state, slot(P1, Row::Units, 1)).expect("a unit in zone 1");
+        by_id_mut(sink.state, &first).damage = 99;
+        state_check(&mut sink);
+        assert!(card_at(sink.state, slot(P1, Row::Units, 1)).is_none());
+        assert_eq!(
+            id_at(sink.state, slot(P1, Row::Backrow, 2)),
+            Some(card.id.clone())
+        );
+        assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
+    }
+
+    #[test]
+    fn r3542000_a_statless_card_without_the_hook_gains_no_stat_line_from_counters() {
+        let mut state = playing("animated-wisp-counters");
+        let card = put(
+            &mut state,
+            &wisp.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        let mut sink = sink_for(&mut state);
+        place(&mut sink, &card.id, 2);
+        assert!(!owed(sink.state, &card.id));
+        assert!(!jackioh_engine::layers::has_stat_line(
+            sink.state,
+            by_id(sink.state, &card.id)
+        ));
+        state_check(&mut sink);
+        assert_eq!(
+            id_at(sink.state, slot(P1, Row::Backrow, 2)),
+            Some(card.id.clone())
+        );
+        assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
+    }
+
+    #[test]
+    fn r3542000_losing_every_counter_leaves_an_animated_card_a_0_0_that_dies() {
+        let mut state = playing("animated-bloom-lose");
+        let card = put(
+            &mut state,
+            &bloom.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        let mut sink = sink_for(&mut state);
+        place(&mut sink, &card.id, 1);
+        state_check(&mut sink);
+        assert_eq!(id_at(sink.state, slot(P1, Row::Units, 2)), Some(card.id.clone()));
+        let held = by_id(sink.state, &card.id).clone();
+        remove_plague(&mut make_context(&mut sink, None, by(P1)), &held, 1);
+        state_check(&mut sink);
+        assert!(card_at(sink.state, slot(P1, Row::Units, 2)).is_none());
     }
 }
