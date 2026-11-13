@@ -197,7 +197,6 @@ mod tests {
 
     #[test]
     fn r3557001_a_second_radiant_cast_buffs_its_own_copies_and_none_the_first_made() {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": SEED,
             "p1": {
