@@ -9,6 +9,7 @@ import type { Keyword } from "./Keyword";
 import type { PreviewValue } from "./PreviewValue";
 import type { QuestView } from "./QuestView";
 import type { Tag } from "./Tag";
+import type { TipsyBlur } from "./TipsyBlur";
 import type { Tuning } from "./Tuning";
 
 export type CardView = { instanceId: string, defId: string, radiant: boolean, 
@@ -29,6 +30,12 @@ created?: true,
  * another player's card.
  */
 createdBy?: string, 
+/**
+ * R3536005: the card has evolved, or is marked to enter the field evolved
+ * (`CardInstance.evolved`, `.enters_evolved`). Only on a card the viewer may read, as `created`
+ * is. Only ever `Some(true)`.
+ */
+evolved?: true, 
 /**
  * Cost as it stands now (§6.3 Cost, R65); "X" cards show 0 until X is chosen.
  */
@@ -188,4 +195,9 @@ copies?: CopiedTextView,
  * and the X it is played for, so the face prints the number where it would print X. Only on a
  * card the viewer may read; absent on every other card.
  */
-fixedX?: number, };
+fixedX?: number, 
+/**
+ * R3548001: what of this card the owner's Tipsy stamp blurs on their view alone, or nothing.
+ * Never on the opponent's view of it.
+ */
+tipsyBlur?: TipsyBlur, };

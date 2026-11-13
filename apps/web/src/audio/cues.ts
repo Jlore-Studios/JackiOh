@@ -682,10 +682,14 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   predicted: { sfx: "notify", cues: () => [sfx("notify")] },
   // R831003: KY's Papaya's curve sweeps across the board.
   curveDrawn: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
+  // R3554005: the line runs to its tile.
+  lineDrawn: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
   // R1183002: the AI takes the rest of the turn.
   autopilotEngaged: { sfx: "notify", cues: () => [sfx("notify")] },
   // R1839002: a Dormant card awakens.
   awakened: { sfx: "radiant", cues: () => [sfx("radiant")] },
+  // R3536005: a card evolves.
+  evolved: { sfx: "radiant", cues: () => [sfx("radiant")] },
   // R1838001: a Trade sends a card into the deck with a shuffle-in's whoosh, naming no card (R203).
   traded: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
   // R1840005: the Credits count ticks, as the Jade Counter's does.

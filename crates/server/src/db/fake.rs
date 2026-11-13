@@ -214,7 +214,7 @@ pub struct FakeTables {
     pub admin: crate::admin::store::AdminTables,
     /// R1523000: migration 0054's `app.seat_epoch`, its one row's epoch (0 in an empty store).
     pub seat_epoch: i64,
-    /// Daily games (SPEC §9.13, #3727): migration 0088's games, invites, notice settings and push
+    /// Daily games (SPEC §9.13, #3727): migration 0089's games, invites, notice settings and push
     /// subscriptions.
     pub daily: DailyTables,
 }
@@ -1430,7 +1430,7 @@ pub fn matches_finish(f: &mut FakeTx<'_>, match_id: &str, at: i64) -> Result<(),
     Ok(())
 }
 
-/// A daily game's match is left out (migration 0088's `app.live_matches()`): no actor holds it.
+/// A daily game's match is left out (migration 0089's `app.live_matches()`): no actor holds it.
 pub fn matches_live(f: &mut FakeTx<'_>) -> Result<Vec<MatchRow>, StoreError> {
     call(f, "matches.live")?;
     let tables: &FakeTables = f.tables();
@@ -3301,7 +3301,7 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     // The dev dashboard (#3074): 0080's hand-set ratings and rating ledger cascade with the
     // profile; its audit rows and posts stay and forget it (`on delete set null`).
     crate::admin::store::remove_admin_rows(&mut tables.admin, profile_id);
-    // Daily games (#3727): 0088's rows cascade with the profile.
+    // Daily games (#3727): 0089's rows cascade with the profile.
     remove_daily_rows(&mut tables.daily, profile_id);
     true
 }
@@ -3323,7 +3323,7 @@ pub fn forget_voided_rows(tables: &mut FakeTables, match_id: &str) {
     keep_only(&mut tables.match_actions, |row| row.match_id != match_id);
     // #1169: 0042's checkpoint goes with the match (`on delete cascade`).
     keep_only(&mut tables.match_checkpoints, |row| row.match_id != match_id);
-    // #3727: so does 0088's daily game.
+    // #3727: so does 0089's daily game.
     keep_only(&mut tables.daily.games, |row| row.match_id != match_id);
     for profile in tables.profiles.iter_mut() {
         if profile.in_match_id.as_deref() == Some(match_id) {
@@ -4948,7 +4948,7 @@ pub fn shares_by(f: &mut FakeTx<'_>, match_id: &str, sharer: &str) -> Result<Vec
 }
 
 // Daily games (SPEC §9.13, #3727)
-// Migration 0088's four tables, in memory. Strict where Postgres is strict: one game per match and only
+// Migration 0089's four tables, in memory. Strict where Postgres is strict: one game per match and only
 // beside its match row, one open challenge per sender and friend and one open seek per sender, mode and
 // days per move (the two partial unique keys), each table's checks, one subscription per endpoint, and
 // every row goes with the profile it names (`remove_daily_rows`) and a game with its match.
@@ -4958,7 +4958,7 @@ use crate::db::store::{
 };
 use jackioh_shared::host::daily::{DailyBoard, DailyClock, is_daily_time};
 
-/// The tables migration 0088 adds.
+/// The tables migration 0089 adds.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct DailyTables {
     pub games: Vec<DailyGameRow>,
@@ -4967,7 +4967,7 @@ pub struct DailyTables {
     pub push_subs: Vec<PushSubRow>,
 }
 
-/// Every daily row naming the profile, as 0088's `on delete cascade` takes them.
+/// Every daily row naming the profile, as 0089's `on delete cascade` takes them.
 pub fn remove_daily_rows(daily: &mut DailyTables, profile_id: &str) {
     keep_only(&mut daily.games, |row| {
         row.players.0 != profile_id && row.players.1 != profile_id

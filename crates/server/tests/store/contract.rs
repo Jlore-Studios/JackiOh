@@ -12380,7 +12380,7 @@ mod r3290000_banned_standings {
     both_stores!(r3290000_standings_mark_a_banned_account);
 }
 
-/// SPEC §9.13 (migration 0088, #3727): daily games beside their matches, their invites, their notice
+/// SPEC §9.13 (migration 0089, #3727): daily games beside their matches, their invites, their notice
 /// settings and the browsers' push subscriptions.
 mod daily {
     use super::*;

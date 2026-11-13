@@ -57,7 +57,7 @@ begin
   raise notice 'OK (CHECK 1): all % public tables have RLS enabled', total;
 end $$;
 
-\echo '=== CHECK 2: the 80 tables of migrations 0001-0088 ==='
+\echo '=== CHECK 2: the 80 tables of migrations 0001-0089 ==='
 select count(*) as public_tables from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind = 'r';
@@ -89,11 +89,11 @@ declare
   -- dashboard's admin_actions, hand_set_ratings, rating_grants and news_posts (0080, R3074000),
   -- and each card's plays, level and stamp, card_proficiency (0081, R3013000), and the Fleet track's
   -- fleet_tracks and fleet_track_grants (0086, R3335001), and the daily games' daily_games,
-  -- daily_invites, daily_notify and push_subscriptions (0088, SPEC §9.13, #3727).
+  -- daily_invites, daily_notify and push_subscriptions (0089, SPEC §9.13, #3727).
   -- 0005, 0006, 0008, 0010, 0012, 0013, 0015, 0016, 0019, 0020, 0023, 0024, 0025, 0026, 0027, 0028,
   -- 0030, 0031, 0033, 0035, 0036, 0040, 0043, 0044, 0046, 0048, 0049, 0050, 0051, 0052, 0053, 0054,
   -- 0055, 0056, 0057, 0058, 0059, 0062, 0064, 0065, 0068, 0069, 0070, 0071, 0072, 0073, 0074, 0075,
-  -- 0076 and 0079 add no table, 0082 drops custom_cards, which 0037 had added, and 0083, 0084, 0085 and 0087 add none.
+  -- 0076 and 0079 add no table, 0082 drops custom_cards, which 0037 had added, and 0083, 0084, 0085, 0087 and 0088 add none.
   -- The three loadout tables stay after 0007, unread and unwritten (R254), so they are still expected
   -- here.
   expected constant text[] := array[
@@ -947,7 +947,8 @@ end $$;
 -- with #1837's Terminus, Quest, Otherworldly, Other-Origins and Jelly Bean (R1837000), and 0065
 -- with the Stinkyscape set's Drone Core, Weapon, War Doctrine and Swarm (R1857000), and 0069 with
 -- the Training Grounds Legacy cards' Legacy (R2511000), and 0070 with #2521's Resource and
--- Faction, and 0083 with #3038's Starship (R3038000). Each probe
+-- Faction, and 0083 with #3038's Starship (R3038000), and 0087 with #3535's Mindustrial, Mineral,
+-- Automa-α, Automa-β, Automa-γ, Automa-δ, Automa-Ω, Automa-ζ and Paperclip (R3535002). Each probe
 -- row is removed before the next, and each probe runs in a block of its own, so later checks see
 -- only the cards CHECK 10 seeded.
 do $$
@@ -957,7 +958,8 @@ declare
     'Human', 'Felinor', 'KY', 'CN', 'Fruit', 'Call to Chaos', 'Quickdraw', 'Jlockeed', 'Book', 'Pancake',
     'AI', 'Plague', 'Catalyst', 'Prime', 'Acclaimed', 'Wincon', 'Potion', 'Terminus', 'Quest',
     'Otherworldly', 'Other-Origins', 'Jelly Bean', 'Drone Core', 'Weapon', 'War Doctrine', 'Swarm',
-    'Legacy', 'Resource', 'Faction', 'Starship', 'Token'];
+    'Legacy', 'Resource', 'Faction', 'Starship', 'Mindustrial', 'Mineral', 'Automa-α', 'Automa-β',
+    'Automa-γ', 'Automa-δ', 'Automa-Ω', 'Automa-ζ', 'Paperclip', 'Token'];
   tag      text;
   refused  boolean;
 begin
@@ -973,14 +975,14 @@ begin
     delete from public.cards where id = 'check18-probe';
   end loop;
 
-  -- All thirty-one on one card: `<@` holds for the whole list, not only one tag at a time.
+  -- All forty on one card: `<@` holds for the whole list, not only one tag at a time.
   begin
     insert into public.cards (id, card_index, name, set_id, type, tags, rarity, token, cost,
                               catalog_version)
     values ('check18-probe', '18', 'Check 18 probe', 'Core', 'Unit', catalog_tags, 'Common', false,
             '1'::jsonb, 'core-1');
   exception when check_violation then
-    raise exception 'FAIL (CHECK 18): cards_tags_check refuses a card carrying all thirty-one tags';
+    raise exception 'FAIL (CHECK 18): cards_tags_check refuses a card carrying all forty tags';
   end;
   delete from public.cards where id = 'check18-probe';
 

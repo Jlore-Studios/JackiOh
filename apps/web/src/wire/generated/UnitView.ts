@@ -16,6 +16,7 @@ import type { Slumber } from "./Slumber";
 import type { StarshipMemory } from "./StarshipMemory";
 import type { Tag } from "./Tag";
 import type { TallyView } from "./TallyView";
+import type { TipsyBlur } from "./TipsyBlur";
 import type { Tuning } from "./Tuning";
 
 /**
@@ -98,6 +99,17 @@ created?: true,
  */
 createdBy?: string, 
 /**
+ * R3536005: the card has evolved, or is marked to enter the field evolved
+ * (`CardInstance.evolved`, `.enters_evolved`). Only on a card the viewer may read, as `created`
+ * is. Only ever `Some(true)`.
+ */
+evolved?: true, 
+/**
+ * R3546004: fills four zones from here, the three others empty in the view; public,
+ * face-down too. Only ever `Some(true)`.
+ */
+giga?: true, 
+/**
  * ME-GRANT (MD-D13): the Death abilities other cards granted this Unit, as its lines read them
  * (`grants::grant_texts`). Absent when it holds none.
  */
@@ -117,4 +129,17 @@ attackReason?: string,
  * R2321000: the counts cards on the field the viewer may read keep on this Unit, in R68's order
  * of the cards keeping them. Absent when none does, never `[]`.
  */
-tallies?: Array<TallyView>, };
+tallies?: Array<TallyView>, 
+/**
+ * R3548001: what of this Unit the owner's Tipsy stamp blurs on their view alone, or nothing.
+ * Never on the opponent's view of it.
+ */
+tipsyBlur?: TipsyBlur, 
+/**
+ * R3554007: the shared damage chain this Unit is in, on both seats. Absent otherwise (D14).
+ */
+sharedChain?: number, 
+/**
+ * R3554007: the split damage chain this Unit is in, on both seats. Absent otherwise (D14).
+ */
+splitChain?: number, };

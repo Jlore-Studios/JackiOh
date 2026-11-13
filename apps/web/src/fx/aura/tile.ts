@@ -9,6 +9,7 @@ import { motifFor } from "../../cards/art/motifs.ts";
 import { showcaseFamilyOf, type ShowcaseFamily } from "../../cards/art/pictures.ts";
 import { artSpec } from "../../cards/art/procedural.ts";
 import { FAMILY_PAINTS as STINKY_PAINTS, isStinkyscapeArt, stinkySubject } from "../../cards/art/stinkyscape.ts";
+import { isStinkyscapePlusArt, stinkyscapePlusColors } from "../../cards/art/stinkyscapeplus.ts";
 import { compositionFor, themeFor, THEME_MOTES, turnHue, type MoteShape } from "../../cards/art/themes.ts";
 import { FAMILY_PAINTS as YARD_PAINTS, isTrainingGroundsArt, LEGACY_PAINT, snapshotArtOf, yardSubject } from "../../cards/art/traininggrounds.ts";
 import { LANES, laneIndex, sideView, testid, type AnimatingMap, type Highlight, type Side } from "../../game/contract.ts";
@@ -38,6 +39,15 @@ export const TILE_PATTERN_OF_FAMILY: Readonly<Record<ShowcaseFamily, TilePattern
   meditative: "ink",
   stinkyscape: "starfield",
   "training-grounds": "roots",
+};
+
+/**
+ * R3342000: the cards whose tile steps past its hashed variant by this many, each because it would
+ * otherwise wear an earlier card of its set's fingerprint (colors, variant, pattern, look and motes):
+ * Stinkyscape+'s Icarus, whose crew colors, hue turn and variant are Meltdown's.
+ */
+export const TILE_VARIANT_STEP: Readonly<Record<string, number>> = {
+  "stinkyscapeplus-160": 1,
 };
 
 export const TILE_LOOK_OF_FLAVOR: Readonly<Record<Flavor, AuraLook>> = {
@@ -150,6 +160,8 @@ export function pictureColors(
     const subject = stinkySubject(defId, def.name, def.tags, def.type);
     const paint = STINKY_PAINTS[subject.family];
     colors = [paint.light, paint.nebula[0], paint.glow];
+  } else if (isStinkyscapePlusArt(defId)) {
+    colors = stinkyscapePlusColors({ id: defId, name: def.name, tags: def.tags, type: def.type });
   } else if (snapshotArtOf(defId) !== null || isTrainingGroundsArt(defId)) {
     const paint = snapshotArtOf(defId) !== null
       ? LEGACY_PAINT
@@ -223,7 +235,8 @@ export function planTileAura(
   const moteShape = THEME_MOTES[themeFor(def.tags, def.type)];
   const family = showcaseFamilyOf(def.set);
   const pattern = tier === "Mythic" ? (family !== null ? TILE_PATTERN_OF_FAMILY[family] : "runes") : null;
-  const variant = hashId(`${live.defId}:tile`) % TILE_VARIANTS;
+  const step = Object.hasOwn(TILE_VARIANT_STEP, live.defId) ? (TILE_VARIANT_STEP[live.defId] ?? 0) : 0;
+  const variant = (hashId(`${live.defId}:tile`) + step) % TILE_VARIANTS;
   const hue = hueOf(colors[1]);
 
   const dim =

@@ -189,6 +189,12 @@ pub fn printed_cost(state: &GameState, instance: &CardInstance) -> i32 {
     if let Some(cost) = script.cost.as_ref() {
         return cost(CostArgs { state, instance }).max(0);
     }
+    // R3560001: the graveyard price reads in the graveyard (S+ #120 Crawler).
+    if let Some(price) = crate::scripts::flags_of(state, instance).graveyard_price
+        && matches!(instance.zone, Zone::Graveyard { .. })
+    {
+        return price.max(0);
+    }
 
     let cost: CardCost = def_of(Some(state), &instance.def_id).cost;
     match cost {
@@ -376,7 +382,8 @@ fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) ->
     // price plus the premium.
     let mut cost = override_.unwrap_or_else(|| {
         garden_dearer_price(state, instance).unwrap_or_else(|| printed_cost(state, instance))
-    }) + instance.cost_mod;
+    }) + instance.cost_mod
+        + crate::hand_order::hand_aura_cost_delta(state, instance);
     // R65: a player's discounts price a play, and a play takes a card from its hand — or from its
     // graveyard, while a permission lets its player play it from there (E11, R454).
     let for_play = options.as_play == Some(true)
@@ -479,6 +486,12 @@ pub fn health_priced(state: &GameState, instance: &CardInstance) -> bool {
 /// cost. What every affordability check compares with the player's spendable mana.
 pub fn mana_due_now(state: &GameState, instance: &CardInstance, cost: i32) -> i32 {
     if health_priced(state, instance) { 0 } else { cost }
+}
+
+/// R3548004: whether `player`'s mana is infinite now: a card giving it acts on their field (a
+/// Dormant one sleeps through it, a face-down one's text with it, as every flag read this way).
+pub fn has_infinite_mana(state: &GameState, player: PlayerId) -> bool {
+    crate::query::acting_with_flag(state, player, |flags| flags.infinite_mana)
 }
 
 /// R396 (Classic #10, #18, #25, #32, #39): what a card costs wherever a rule or a card script compares

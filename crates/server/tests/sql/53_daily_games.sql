@@ -1,5 +1,5 @@
 -- Daily games: a 1v1 match played at days per move, its invites, its notice settings and the
--- browsers' push subscriptions (migration 0088, SPEC §9.13, §9.1; issue #3727). Runs after
+-- browsers' push subscriptions (migration 0089, SPEC §9.13, §9.1; issue #3727). Runs after
 -- 52_v0_5_13_retcon.sql; profiles 1 and 2 (11111111-…, 22222222-…) are active by then (03 activated
 -- them).
 \set ON_ERROR_STOP on
@@ -10,7 +10,7 @@
 -- inside a transaction that is rolled back. Nothing here selects into the log: the do blocks raise
 -- or say OK.
 
-\echo '### §9.13: 0088''s four tables have RLS on, their columns, and foreign keys that cascade ###'
+\echo '### §9.13: 0089''s four tables have RLS on, their columns, and foreign keys that cascade ###'
 do $$
 declare
   t      text;
@@ -588,14 +588,14 @@ begin
 end $$;
 rollback;
 
-\echo '### §9.13: 0088 re-applies over rows of its own and changes none ###'
+\echo '### §9.13: 0089 re-applies over rows of its own and changes none ###'
 begin;
 insert into public.daily_notify (profile_id, email_on) values ('11111111-1111-1111-1111-111111111111', false);
 create temp table r3727_rows (token uuid not null) on commit drop;
 insert into r3727_rows select unsubscribe_token from public.daily_notify;
 -- What run.sh's apply_migration filters, a re-run's "already exists, skipping", is quieted here.
 set local client_min_messages = warning;
-\i /tmp/0088_daily_games.sql
+\i /tmp/0089_daily_games.sql
 set local client_min_messages = notice;
 do $$
 begin
@@ -605,16 +605,16 @@ begin
   if (select count(*) from public.daily_notify) <> 1
      or (select email_on from public.daily_notify) is distinct from false
      or (select unsubscribe_token from public.daily_notify) is distinct from (select token from r3727_rows) then
-    raise exception 'FAIL (§9.13): re-applying 0088 changed public.daily_notify';
+    raise exception 'FAIL (§9.13): re-applying 0089 changed public.daily_notify';
   end if;
   if (select count(*) from pg_policies where schemaname = 'public'
        and tablename in ('daily_games', 'daily_invites', 'daily_notify', 'push_subscriptions')) <> 2 then
-    raise exception 'FAIL (§9.13): re-applying 0088 left other than two policies on the daily tables';
+    raise exception 'FAIL (§9.13): re-applying 0089 left other than two policies on the daily tables';
   end if;
   if has_column_privilege('authenticated', 'public.daily_invites', 'choice', 'SELECT') then
-    raise exception 'FAIL (§9.13): re-applying 0088 granted a client an invite''s choice';
+    raise exception 'FAIL (§9.13): re-applying 0089 granted a client an invite''s choice';
   end if;
-  raise notice 'OK (§9.13): 0088 re-applies over its own rows and changes none';
+  raise notice 'OK (§9.13): 0089 re-applies over its own rows and changes none';
 end $$;
 rollback;
 

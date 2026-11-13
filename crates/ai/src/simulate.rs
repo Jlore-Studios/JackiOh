@@ -21,7 +21,7 @@ use crate::candidates::action_key;
 use crate::config::{
     AI_EVAL, AI_KY_COMPETITION_EXPECTED_STREAK, AI_KY_COMPETITION_RADIANT_EXPECTED_STREAK, AI_SEARCH,
 };
-use crate::evaluate::{NextSwing, Prices, evaluate_priced};
+use crate::evaluate::{NextSwing, Prices, evaluate_priced, float_credit};
 use crate::learned::{line_score, open_score};
 use crate::types::{NodeCounter, StoppedBy};
 
@@ -721,10 +721,12 @@ fn simulate_answering(
     }
 }
 
-/// A passed turn's value: the line's score (`line_score`), less the crystals the seat left unspent.
+/// A passed turn's value: the line's score (`line_score`), less the crystals the seat left unspent,
+/// plus what that Float brought its Float-discount cards (R3695000).
 fn passed_score(state: &GameState, seat: PlayerId, prices: &Prices) -> f64 {
     let unspent = state.players[seat].turn_log.unspent_at_end.unwrap_or(0);
     line_score(state, seat, NextSwing::Enemy, prices) - AI_EVAL.unspent_mana * f64::from(unspent)
+        + float_credit(state, seat, unspent, &AI_EVAL)
 }
 
 /// `closeLine`'s step: the line's turn ended here, or `None` where the line stays as it stands.
@@ -948,7 +950,7 @@ fn push_side_parts(state: &GameState, player: PlayerId, parts: &mut Vec<String>)
     }
 }
 
-/// Position signature for beam deduplication and lethal visited set (R1224, #898, #1797).
+/// Position signature for beam deduplication and lethal visited set (R1224, #898, #1797, R3772000).
 pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
     let opp = opponent_of(seat);
     let mut parts: Vec<String> = vec![
@@ -1067,6 +1069,22 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
                 .map(|mark| format!("{}:{}:{}", mark.instance_id, mark.mark, mark.color)),
         );
         parts.push(format!("K{marks}"));
+    }
+    // R3772000: the secrets a Mind Games kept, by the same rule: each one's owner, choice and whether
+    // it is revealed, sorted and without the id the engine minted it, so the three choices of one cast
+    // stay three positions.
+    if let Some(secrets) = &state.secrets
+        && !secrets.is_empty()
+    {
+        let secrets = sorted(secrets.iter().map(|secret| {
+            format!(
+                "{}:{}:{}",
+                secret.owner,
+                secret.choice.map_or("-", |choice| choice.as_str()),
+                if secret.revealed == Some(true) { "r" } else { "" }
+            )
+        }));
+        parts.push(format!("S{secrets}"));
     }
     // R1853004: an open Marketplace's deals change the seat's Credits and its stock, which are part of
     // the position only while it is open, so every other signature stays as it was (a card bought or

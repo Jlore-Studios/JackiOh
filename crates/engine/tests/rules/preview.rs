@@ -645,6 +645,7 @@ mod r280_preview_on_the_field {
             plague: None,
             buried: None,
             marks: None,
+            giga: None,
         }));
         assert_eq!(other.opponent.backrow[0], marker);
         assert_eq!(other.opponent.backrow[1], marker);
@@ -672,6 +673,7 @@ mod r280_preview_on_the_field {
                 plague: None,
                 buried: None,
                 marks: None,
+                giga: None,
             }))
         );
         assert!(asked_about(&trap.id).is_empty());

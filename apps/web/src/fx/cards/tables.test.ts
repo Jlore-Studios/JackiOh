@@ -2,7 +2,7 @@
 // included, in catalog order, one line each under its own name, Stinkyscape split in two at 091; and
 // the loader's errors, each naming its file and card. R502, R670: the seven former `CARD_FX` cards are
 // `{ bespoke }` entries but #100 Ceaseless Void, whose `{ setPiece }` lands it with its collapse (R2800000).
-// R2787000: an entry's `aura`, and the ten Field Spells that wear one. R2794000: a Unit's `entrance` beside
+// R2787000: an entry's `aura`, and the eleven Field Spells that wear one. R2794000: a Unit's `entrance` beside
 // its hooks (Nature Titan's, beside its Cry). R3332000: the frame, an `entrance` beside any entry of a Unit
 // or a Field Spell or alone, a `takeover` beside a Mythic's and a `signature` naming its first beat, and
 // the eight marquee cards' entrances and looks folded into it. R3400000: a bespoke entry's aura, a Unit's
@@ -611,7 +611,7 @@ describe("R2784000 the per-set effects tables", () => {
     }
   });
 
-  it("R2787000 R2794000 R3405001 the ten example Field Spells across the sets wear their auras", () => {
+  it("R2787000 R2794000 R3405001 the eleven example Field Spells across the sets wear their auras", () => {
   const examples = {
     "core-014": { look: "storm", scope: "side" },
     "core-046": { look: "void", scope: "board" },
@@ -624,8 +624,10 @@ describe("R2784000 the per-set effects tables", () => {
     "stinkyscape-046": { look: "storm", scope: "lane" },
     "stinkyscape-155": { look: "ember", scope: "zone" },
     "traininggrounds-019": { look: "bloom", scope: "zone" },
+    // Stinkyscape+'s Mender (#3596), one example a file.
+    "stinkyscapeplus-040": { look: "bloom", scope: "zone" },
   };
-  expect(Object.keys(examples)).toHaveLength(10);
+  expect(Object.keys(examples)).toHaveLength(11);
   // R2794000: Classic's pass gave its two examples their play's motifs beside the aura.
   const hooksOf: Readonly<Record<string, object>> = {
     "classic-042": { cast: { motif: "tally" }, activate: { motif: "tally" } },

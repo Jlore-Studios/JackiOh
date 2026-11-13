@@ -22,7 +22,7 @@
    (together/FriendsButton.tsx's `rail`) takes the item's look as one of them. */
 
 :root {
-  /* The labelled rail; the workshop's split (DeckWorkshop.tsx) is this and its own 1101 px. */
+  /* The labelled rail, over 1024 px. */
   --shell-rail-w: 176px;
   --shell-rail-icons-w: 80px;
   --shell-tabbar-h: 64px;

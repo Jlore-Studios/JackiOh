@@ -296,7 +296,7 @@ async fn record(app: &Arc<App>, loaded: &Loaded, now: i64) {
     };
     if outcome.reason == GameOverReason::Voided {
         // R679, as the live actor's void: the game never happened, so the store forgets its match
-        // row, its log and (0088's `on delete cascade`) its daily game, and no result is written.
+        // row, its log and (0089's `on delete cascade`) its daily game, and no result is written.
         // A void that fails leaves the match `live`, and the game's next read voids it again.
         let input = VoidMatchInput {
             match_id: loaded.match_row.id.clone(),

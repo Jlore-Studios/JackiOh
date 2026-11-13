@@ -7969,7 +7969,7 @@ pub async fn shares_by(t: &mut PgTx<'_>, match_id: &str, sharer: &str) -> Result
     rows.iter().map(|row| uuid_text(row, "friend")).collect()
 }
 
-// Daily games (SPEC §9.13, #3727): migration 0088's four tables. Every time is a bigint of epoch ms, so
+// Daily games (SPEC §9.13, #3727): migration 0089's four tables. Every time is a bigint of epoch ms, so
 // nothing here goes through `ts!`.
 
 /// `public.daily_games`' columns, in `daily_game_of`'s order.

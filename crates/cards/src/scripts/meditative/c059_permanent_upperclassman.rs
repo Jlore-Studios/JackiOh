@@ -139,17 +139,19 @@ mod tests {
     }
 
     /// Like `summoned`, from the first seed after `seed` whose pick the death pass can destroy (not
-    /// Indestructible, no Divine Shield, no Reborn), so its granted Death fires.
+    /// Indestructible, no Divine Shield, no Reborn) and the grant can reach (not Dormant: R1839000, S+ #157
+    /// Phantom Shipyard, which no effect reaches until it awakens), so its granted Death fires.
     fn mortal(seed: &str, radiant_face: bool) -> (Scenario, CardInstance) {
         (0..200)
             .map(|n| summoned(&format!("{seed}-{n}"), radiant_face))
             .find(|(s, unit)| {
-                !keywords_of(s.state(), unit).iter().any(|keyword| {
-                    matches!(
-                        keyword.kind(),
-                        KeywordKind::Indestructible | KeywordKind::DivineShield | KeywordKind::Reborn
-                    )
-                })
+                !is_slumbering(unit)
+                    && !keywords_of(s.state(), unit).iter().any(|keyword| {
+                        matches!(
+                            keyword.kind(),
+                            KeywordKind::Indestructible | KeywordKind::DivineShield | KeywordKind::Reborn
+                        )
+                    })
             })
             .expect("a seed summons a mortal (4) Unit")
     }

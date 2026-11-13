@@ -44,6 +44,7 @@ const KEEP: Record<string, string[]> = {
   "game/board.css": [
     "90ms", // R434's flip stagger
     ...["420ms", "1600ms", "260ms", "520ms", "2400ms", "700ms"], // the table's tap marks
+    "6s", // R3554000's Black Hole breath, a loop
     ...["250ms", "400ms", "220ms", "250ms", "320ms", "400ms"], // R701's wobbles and flashes
     "1.2s", // the End turn button's loop
     "150ms", // BUILD's `turnEnded` row
@@ -64,7 +65,7 @@ const KEEP: Record<string, string[]> = {
 
 /** How many durations in each board sheet scale by --anim-scale: none loses the factor. */
 const ANIM_SCALED: Record<string, number> = {
-  "game/activate.css": 1, "game/animations.css": 67, "game/board.css": 13, "game/drag/blocked.css": 1, "game/facedown.css": 3,
+  "game/activate.css": 1, "game/animations.css": 68, "game/board.css": 13, "game/drag/blocked.css": 1, "game/facedown.css": 3,
   "game/dialog.css": 1, "game/highlights.css": 2, "game/prompt.css": 2, "game/reveal.css": 2, "game/spent.css": 1,
 };
 

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::effects::targets::{PlayerSpec, player_of};
 use crate::marketplace::add_fixed_market_lot;
-use crate::resources::{add_market_credits, gain_resource, is_resource_card, roll_resource};
+use crate::resources::{add_market_credits, gain_resource, is_resource_card, roll_resource_unique};
 use crate::script::Effect;
 
 /// R1855002: the memory key of a board replacement's rider naming the card's own Resource pool (a list
@@ -53,7 +53,10 @@ pub fn gain_resources(args: GainResourcesArgs) -> Effect {
             .or_else(|| args.pool.clone());
         for _ in 0..count.max(0) {
             let sink = &mut ctx.sink;
-            let Some(def_id) = roll_resource(sink.state, sink.rng, pool.as_deref()) else {
+            // R3563000: each roll draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
+            let Some(def_id) =
+                roll_resource_unique(sink.state, sink.rng, pool.as_deref(), &mut ctx.draw_tally)
+            else {
                 return;
             };
             gain_resource(sink, player, &def_id, radiant);

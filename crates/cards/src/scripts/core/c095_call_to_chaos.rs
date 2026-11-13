@@ -268,6 +268,23 @@ mod tests {
         panic!("no cursor below {CURSOR_SEARCH} rolls \"recast\" into #95 itself from seed \"{SEED}\"");
     }
 
+    /// R3563000: the first cursor whose base roll is "backrow" and whose five picks all stay in the backrow.
+    /// The picks are the match rng's from a pool that holds every set's Traps and Field Spells, and one may
+    /// leave the zone it was summoned into at once (C #88 Siphon Squad Tributes itself while p2 holds no
+    /// Units, R403), so the cursor is searched for, as a new card in the pool would move a pinned one.
+    fn backrow_cursor_keeping_five() -> u32 {
+        for cursor in 0..CURSOR_SEARCH {
+            if rolled_at(cursor).as_deref() != Some("backrow") {
+                continue;
+            }
+            let s = chaos(None, ChaosOpts { cursor: Some(cursor), ..ChaosOpts::default() });
+            if backrow_of(&s, P1).len() == 5 {
+                return cursor;
+            }
+        }
+        panic!("no cursor below {CURSOR_SEARCH} rolls \"backrow\" and keeps its five picks from seed \"{SEED}\"");
+    }
+
     fn recast_of_core(opts: ChaosOpts) -> Scenario {
         chaos(None, ChaosOpts { cursor: Some(recast_of_core_cursor(opts.chain)), ..opts })
     }
@@ -584,7 +601,7 @@ mod tests {
         #[test]
         fn s8_4_9_10_summons_5_random_field_spells_or_traps_into_your_backrow_traps_face_down_r33() {
             crate::register_all();
-            let s = chaos(Some("backrow"), ChaosOpts::default());
+            let s = chaos(None, ChaosOpts { cursor: Some(backrow_cursor_keeping_five()), ..ChaosOpts::default() });
             let summoned = events_of(&s, "summoned");
             assert_eq!(summoned.len(), 5);
             assert!(summoned.iter().all(|event| event["row"] == "backrow"));
@@ -595,6 +612,8 @@ mod tests {
 
             let placed = backrow_of(&s, P1);
             assert_eq!(placed.len(), 5);
+            // R3563000: the five picks of one effect are five different cards.
+            assert_eq!(placed.iter().map(|card| card.def_id.as_str()).collect::<IndexSet<_>>().len(), 5);
             for card in &placed {
                 let def = js(&crate::card_def(&card.def_id));
                 // "Field Spells or Traps (Field Traps included)".

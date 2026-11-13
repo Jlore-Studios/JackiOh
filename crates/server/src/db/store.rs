@@ -3026,7 +3026,7 @@ impl Tx<'_> {
 }
 
 // Daily games (SPEC §9.13, #3727)
-// Migration 0088: a 1v1 match played at days per move beside its row in `matches`, its invites (a
+// Migration 0089: a 1v1 match played at days per move beside its row in `matches`, its invites (a
 // challenge to a friend, a seek any other player may take), and how its players are told it is
 // their move (an email setting and its unsubscribe token, the browsers' push subscriptions). The
 // rules are `daily/*` and `jackioh_shared::host::daily`; these are their rows. Every time is epoch ms.
