@@ -15436,6 +15436,13 @@
     "3863": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "43443802005",
+        "model": "sonnet",
+        "provider": "claude-6",
+        "since": "2026-11-13T14:45:10Z",
+        "until": "2026-11-13T15:15:10Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
