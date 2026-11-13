@@ -15591,10 +15591,8 @@
       "verdict_rounds": 0
     },
     "3858": {
-      "action": "plan",
-      "asks": [
-        "c:6856866283"
-      ],
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-13T21:33:51Z",
         "difficulty": "hard",
@@ -15615,25 +15613,27 @@
       },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-13T20:43:15Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "claude-1",
+      "owner_since": "2026-11-13T21:36:48Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-13T21:33:56Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "claude-1",
       "queued_at": "2026-11-13T15:06:24Z",
       "requested_by": "squishy-squooby",
-      "run_id": "43506318178",
+      "run_id": "pending:6d96c3cb-1794605760",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-13T20:57:36Z",
+      "started_at": "2026-11-13T21:36:48Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6856866283"
+      ]
     },
     "3859": {
       "action": "plan",
@@ -16686,9 +16686,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T21:35:44Z",
+    "at": "2026-11-13T21:36:48Z",
     "url": "",
-    "what": "build #3731 on claude-4"
+    "what": "build #3858 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-13T21:16:54Z",
