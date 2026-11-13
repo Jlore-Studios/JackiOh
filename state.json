@@ -16636,6 +16636,7 @@
       "run_id": "43509887483",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 245,
       "started_at": "2026-11-13T21:20:54Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -36207,9 +36208,33 @@
         "title": "Patch: a private lobby screen for 1v1 rooms and co-op rooms: seats, invites, each player's deck and Ready, and the host's Start",
         "tries": 1,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-6"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "6dcd69fea799ed04969159e8eabe7813fd7c6638",
+        "issue": 3863,
+        "merged_at": "2026-11-13T23:52:54Z",
+        "n": 245,
+        "pr": 3885,
+        "queued_at": "2026-11-13T23:52:54Z",
+        "sha": "dc91028185efb8afb079aa221025da98a4f43e6d",
+        "status": "queued",
+        "title": "Patch: holding down a card with several fusions shows a black screen",
+        "tries": 0
       }
     ],
-    "count": 244
+    "count": 245
   },
   "statistics": {
     "at": "2026-11-13T23:51:59Z"
