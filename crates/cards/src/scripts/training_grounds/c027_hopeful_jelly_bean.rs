@@ -74,10 +74,6 @@ mod tests {
         }))
     }
 
-    fn on(card: &CardInstance) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": card.id }] })
-    }
-
     fn felinors(s: &Scenario, player: PlayerId) -> usize {
         (1..=5)
             .filter_map(|lane| s.unit(player, lane))
@@ -93,7 +89,7 @@ mod tests {
             let mut s = board(false, json!([{ "def": FELINORS, "lane": 1, "damage": 1 }]), json!([]), json!([]));
             let unit = s.unit_at(P1, 1);
             s.card_mut(&unit).buffs = AttackHealth { attack: 1, health: 1 };
-            s.play(BEAN, on(&unit));
+            s.play(BEAN, pick::targets(pick::instance(&unit)));
             assert!(s.card(&unit).radiant);
             // 6/8 Radiant, +1/+1 kept, 1 damage kept.
             s.expect_stats(&unit, json!({ "attack": 7, "health": 8 }));
@@ -104,7 +100,7 @@ mod tests {
         fn its_cry_does_not_fire_again() {
             let mut s = board(false, json!([FELINORS]), json!([]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(BEAN, on(&unit));
+            s.play(BEAN, pick::targets(pick::instance(&unit)));
             assert!(s.card(&unit).radiant);
             assert_eq!(felinors(&s, P1), 1, "R22: no copy summoned");
         }
@@ -115,7 +111,7 @@ mod tests {
             let unit = s.unit_at(P1, 1);
             let weapons = s.backrow(P1, 1).expect("the Field Spell");
             assert_eq!(s.stats(&unit).attack, 6);
-            s.play(BEAN, on(&weapons));
+            s.play(BEAN, pick::targets(pick::instance(&weapons)));
             assert!(s.card(&weapons).radiant);
             assert_eq!(s.stats(&unit).attack, 8, "+4 now");
         }
@@ -124,7 +120,7 @@ mod tests {
         fn a_face_down_trap_of_yours_turns_radiant_its_opponent_seeing_only_a_change() {
             let mut s = board(false, json!([]), json!([{ "def": TRAP, "faceUp": false }]), json!([]));
             let trap = s.backrow(P1, 1).expect("the set Trap");
-            s.play(BEAN, on(&trap));
+            s.play(BEAN, pick::targets(pick::instance(&trap)));
             assert!(s.card(&trap).radiant);
             assert_ne!(s.card(&trap).face_up, Some(true), "still hidden");
             let seen = serde_json::to_string(&s.view(P2)).unwrap();
@@ -135,7 +131,7 @@ mod tests {
         fn an_enemy_permanent_may_be_picked() {
             let mut s = board(false, json!([]), json!([]), json!([VANILLA]));
             let theirs = s.unit_at(P2, 1);
-            s.play(BEAN, on(&theirs));
+            s.play(BEAN, pick::targets(pick::instance(&theirs)));
             assert!(s.card(&theirs).radiant);
             s.expect_stats(&theirs, json!({ "attack": 12, "health": 12 }));
         }
@@ -144,7 +140,7 @@ mod tests {
         fn an_already_radiant_pick_nothing() {
             let mut s = board(false, json!([{ "def": FELINORS, "radiant": true, "lane": 1 }]), json!([]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(BEAN, on(&unit));
+            s.play(BEAN, pick::targets(pick::instance(&unit)));
             assert!(s.card(&unit).radiant);
             s.expect_stats(&unit, json!({ "attack": 6, "health": 8 }));
             assert_eq!(felinors(&s, P1), 1);
@@ -154,7 +150,7 @@ mod tests {
         fn the_base_face_makes_the_pick_alone_radiant() {
             let mut s = board(false, json!([VANILLA, VANILLA, VANILLA]), json!([]), json!([]));
             let (left, pick, right) = (s.unit_at(P1, 1), s.unit_at(P1, 2), s.unit_at(P1, 3));
-            s.play(BEAN, on(&pick));
+            s.play(BEAN, pick::targets(pick::instance(&pick)));
             assert!(s.card(&pick).radiant);
             assert!(!s.card(&left).radiant && !s.card(&right).radiant);
         }
@@ -174,7 +170,7 @@ mod tests {
             let (left, pick, right, far) = (s.unit_at(P1, 1), s.unit_at(P1, 2), s.unit_at(P1, 3), s.unit_at(P1, 4));
             let behind = s.backrow(P1, 2).expect("the Field Spell");
             let across = s.unit_at(P2, 2);
-            s.play(BEAN, on(&pick));
+            s.play(BEAN, pick::targets(pick::instance(&pick)));
             for made in [&left, &pick, &right] {
                 assert!(s.card(made).radiant);
             }
@@ -196,7 +192,7 @@ mod tests {
                 json!([]),
             );
             let (immune, pick, right) = (s.unit_at(P1, 1), s.unit_at(P1, 2), s.unit_at(P1, 3));
-            s.play(BEAN, on(&pick));
+            s.play(BEAN, pick::targets(pick::instance(&pick)));
             assert!(s.card(&pick).radiant && s.card(&right).radiant);
             assert!(!s.card(&immune).radiant);
         }

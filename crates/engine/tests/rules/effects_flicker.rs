@@ -12,15 +12,8 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::combat::{plain, stacker};
 use crate::rules::fixtures::field::{blink, flush, playing, spatula, tesla, watcher};
 use crate::rules::fixtures::harness::{
-    Bench, act, act_result, events_of_type, in_hand, live_mut, matches_object, put, slot,
+    Bench, act, act_result, events_of_type, in_hand, live, live_mut, matches_object, put, slot,
 };
-
-fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    match find_instance(state, id) {
-        Some(card) => card,
-        None => panic!("no card {id}"),
-    }
-}
 
 fn apply(bench: &mut Bench, state: &mut GameState, effect: Effect, controller: PlayerId) {
     let mut sink = bench.sink(state);
@@ -36,7 +29,7 @@ fn apply(bench: &mut Bench, state: &mut GameState, effect: Effect, controller: P
 }
 
 fn flicker_by_id(bench: &mut Bench, state: &mut GameState, id: &str) -> bool {
-    let card = by_id(state, id).clone();
+    let card = live(state, id);
     flicker_card(&mut bench.sink(state), &card)
 }
 
@@ -105,7 +98,7 @@ mod b5_e22_flicker {
             id_at(&state, slot(PlayerId::P1, Row::Units, 3)),
             Some(unit.id.clone())
         );
-        let card = by_id(&state, &unit.id);
+        let card = &live(&state, &unit.id);
         assert_eq!(card.damage, 0);
         assert_eq!(card.buffs, AttackHealth { attack: 0, health: 0 });
         assert_eq!(card.granted_keywords, Vec::<Keyword>::new());
@@ -160,14 +153,14 @@ mod b5_e22_flicker {
             Some(token.id.clone())
         );
         assert_eq!(
-            by_id(&state, &token.id).zone,
+            live(&state, &token.id).zone,
             Zone::Field {
                 player: PlayerId::P1,
                 row: Row::Units,
                 lane: 2
             }
         );
-        assert_eq!(by_id(&state, &token.id).damage, 0);
+        assert_eq!(live(&state, &token.id).damage, 0);
         assert_eq!(state.players[PlayerId::P1].graveyard, Vec::<CardInstance>::new());
     }
 
@@ -196,13 +189,13 @@ mod b5_e22_flicker {
             PlayerId::P1,
         );
         assert_eq!(
-            by_id(&state, &token.id).stats_override,
+            live(&state, &token.id).stats_override,
             Some(AttackHealth { attack: 3, health: 3 }),
             "R1185002: Set Stats replaces the token's current layer-1 stats"
         );
         live_mut(&mut state, &token.id).damage = 1;
         assert!(flicker_by_id(&mut sink, &mut state, &token.id));
-        let flickered = by_id(&state, &token.id);
+        let flickered = &live(&state, &token.id);
         assert_eq!(
             flickered.stats_override,
             Some(AttackHealth { attack: 5, health: 5 }),
@@ -247,8 +240,8 @@ mod b5_e22_flicker {
             set_stats_all(json_as(json!({ "side": "any", "attack": 3, "health": 3 }))),
             PlayerId::P1,
         );
-        let target = by_id(&state, &target.id).clone();
-        let food = by_id(&state, &food.id).clone();
+        let target = live(&state, &target.id);
+        let food = live(&state, &food.id);
         let fused = fuse(
             &mut sink.sink(&mut state),
             json_as::<FuseArgs>(json!({
@@ -258,11 +251,11 @@ mod b5_e22_flicker {
         )
         .expect("the two unit tokens fuse");
         assert!(jackioh_engine::catalog::def_of(Some(&state), &fused.def_id).token);
-        let view = jackioh_engine::layers::unit_view(&state, by_id(&state, &fused.id));
+        let view = jackioh_engine::layers::unit_view(&state, &live(&state, &fused.id));
         assert_eq!((view.attack, view.health), (6, 6));
 
         assert!(flicker_by_id(&mut sink, &mut state, &fused.id));
-        let flickered = by_id(&state, &fused.id);
+        let flickered = &live(&state, &fused.id);
         assert_eq!(
             flickered.stats_override, None,
             "R77: the transient definition, not the target token's former 4/4 face, is layer 1"
@@ -311,7 +304,7 @@ mod b5_e22_flicker {
             ),
             vec![json!(zapper.id)]
         );
-        assert_eq!(by_id(&state, &unit.id).damage, 4);
+        assert_eq!(live(&state, &unit.id).damage, 4);
     }
 
     #[test]
@@ -365,11 +358,11 @@ mod b5_e22_flicker {
             )),
             PlayerId::P1,
         );
-        let at = by_id(&state, &unit.id).zone.clone();
+        let at = live(&state, &unit.id).zone.clone();
         flicker_by_id(&mut sink, &mut state, &unit.id);
-        assert_eq!(by_id(&state, &unit.id).zone, at);
-        assert_eq!(by_id(&state, &unit.id).controller, PlayerId::P1);
-        assert_eq!(by_id(&state, &unit.id).owner, PlayerId::P2);
+        assert_eq!(live(&state, &unit.id).zone, at);
+        assert_eq!(live(&state, &unit.id).controller, PlayerId::P1);
+        assert_eq!(live(&state, &unit.id).owner, PlayerId::P2);
     }
 
     #[test]
@@ -414,7 +407,7 @@ mod b5_e22_flicker {
             ),
             vec![json!(top.id), json!(other.id)]
         );
-        assert!(is_buried(&state, by_id(&state, &low.id)));
+        assert!(is_buried(&state, &live(&state, &low.id)));
         assert!(!flicker_by_id(&mut sink, &mut state, &low.id));
         let lane_one: Option<Vec<String>> = state.players[PlayerId::P2].units[0]
             .as_ref()
@@ -489,7 +482,7 @@ mod b5_e22_flicker {
             id_at(&state, slot(PlayerId::P1, Row::Units, 1)),
             Some(card.id.clone())
         );
-        assert_eq!(by_id(&state, &card.id).face_up, Some(true));
+        assert_eq!(live(&state, &card.id).face_up, Some(true));
         assert!(home_of(&state, &card.id).is_none());
     }
 }
@@ -549,7 +542,7 @@ mod b5_e22_flicker_inside_a_play_that_pauses_r113 {
             state.pending.as_ref().map(|pending| pending.player_id),
             Some(PlayerId::P1)
         );
-        assert_eq!(by_id(&state, &unit).damage, 0);
+        assert_eq!(live(&state, &unit).damage, 0);
         let done = answer_hero_p2(&state);
         assert!(done.pending.is_none());
         assert_eq!(id_at(&done, slot(PlayerId::P1, Row::Units, 2)), Some(unit));

@@ -11,7 +11,8 @@ use crate::rules::fixtures::board_history::{phoenix, register_board_history_fixt
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::field::{banner, playing, spatula, tower, watcher};
 use crate::rules::fixtures::harness::{
-    act, events_of_type, ids_of, input, json_of, matches_object, put, round_trip, setup_catalog, slot,
+    act, events_of_type, ids_of, input, json_of, live, live_mut, matches_object, put, round_trip,
+    setup_catalog, slot,
 };
 
 /// p1's main phase of turn 1 with the field fixtures and this file's registered, the history emptied.
@@ -23,14 +24,6 @@ fn board(seed: &str) -> GameState {
 }
 
 const PLAIN_UNIT: &str = "fx-1";
-
-fn card<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
-
-fn card_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
 
 fn restore(
     state: &mut GameState,
@@ -68,7 +61,7 @@ mod e29_the_record_r419_r62 {
         assert_eq!(history_turns(&state), Some(vec![1]));
         put(&mut state, &spatula.id, slot(P1, Row::Backrow, 2), json!({}));
         let unit = put(&mut state, PLAIN_UNIT, slot(P1, Row::Units, 1), json!({}));
-        card_mut(&mut state, &unit.id).damage = 1;
+        live_mut(&mut state, &unit.id).damage = 1;
         state = act(&state, input(json!({ "type": "endTurn", "playerId": "p1" })));
         state = act(&state, input(json!({ "type": "endTurn", "playerId": "p2" })));
 
@@ -236,7 +229,7 @@ mod e29_the_restore_r419 {
             ids_of(&zone_contents(&state, slot(P1, Row::Backrow, 2))),
             vec![over.id.clone(), under.id.clone()]
         );
-        assert_eq!(card(&state, &newcomer.id).zone.z(), ZoneName::Hand);
+        assert_eq!(live(&state, &newcomer.id).zone.z(), ZoneName::Hand);
         assert!(!is_locked(&state, slot(P1, Row::Units, 3)));
         assert!(is_locked(&state, slot(P2, Row::Units, 5)));
         let side = &state.players.p1;
@@ -355,9 +348,9 @@ mod e29_the_restore_r419 {
         let mut state = board("bh-face-up");
         let trap = put(&mut state, &watcher.id, slot(P1, Row::Backrow, 2), json!({}));
         let turn = state.turn;
-        card_mut(&mut state, &trap.id).summoned_turn = Some(turn - 2);
+        live_mut(&mut state, &trap.id).summoned_turn = Some(turn - 2);
         record_board_snapshot(&mut state);
-        card_mut(&mut state, &trap.id).face_up = Some(true);
+        live_mut(&mut state, &trap.id).face_up = Some(true);
         let old = trap.id.clone();
         let mut events: Vec<GameEvent> = Vec::new();
         restore(&mut state, &mut events, P1, 1, &[P1]);
@@ -380,7 +373,7 @@ mod e29_the_restore_r419 {
         let mut state = playing("bh-brittle");
         let unit = put(&mut state, PLAIN_UNIT, slot(P1, Row::Units, 1), json!({}));
         let turn = state.turn;
-        card_mut(&mut state, &unit.id).brittle = Some(BrittleCounter {
+        live_mut(&mut state, &unit.id).brittle = Some(BrittleCounter {
             count: 3,
             since: turn,
             printed: None,
@@ -389,7 +382,7 @@ mod e29_the_restore_r419 {
         state = act(&state, input(json!({ "type": "endTurn", "playerId": "p2" })));
         // Turn 3, p1's: recorded first, then the tick (R62) took the live count down.
         assert_eq!(
-            card(&state, &unit.id).brittle.map(|brittle| brittle.count),
+            live(&state, &unit.id).brittle.map(|brittle| brittle.count),
             Some(2)
         );
         let recorded = state
@@ -410,7 +403,7 @@ mod e29_the_restore_r419 {
 
         restore(&mut state, &mut Vec::new(), P1, 1, &[P1]);
         assert_eq!(
-            card(&state, &unit.id).brittle,
+            live(&state, &unit.id).brittle,
             Some(BrittleCounter {
                 count: 3,
                 since: 1,
@@ -425,7 +418,7 @@ mod e29_the_restore_r419 {
         let mut state = board("bh-tuning");
         let mut unit = put(&mut state, PLAIN_UNIT, slot(P1, Row::Units, 1), json!({}));
         {
-            let live = card_mut(&mut state, &unit.id);
+            let live = live_mut(&mut state, &unit.id);
             live.tuning = Some(json_as(json!({ "attack": 1 })));
             live.memory = IndexMap::from([("meal".to_string(), json!("kept"))]);
         }
@@ -438,7 +431,7 @@ mod e29_the_restore_r419 {
         );
         // Since, in the hand (B3.4, §6.3): what R78 leaves alone on the way out, the restore takes back.
         {
-            let live = card_mut(&mut state, &unit.id);
+            let live = live_mut(&mut state, &unit.id);
             live.tuning = Some(json_as(json!({ "attack": -1, "health": -1 })));
             live.cost_mod = 1;
             live.radiant = true;
@@ -446,7 +439,7 @@ mod e29_the_restore_r419 {
         }
         restore(&mut state, &mut Vec::new(), P1, 1, &[P1]);
         assert!(matches_object(
-            &json_of(card(&state, &unit.id)),
+            &json_of(live(&state, &unit.id)),
             &json!({ "zone": { "z": "field" }, "tuning": { "attack": 1 }, "costMod": 0, "radiant": false, "memory": { "meal": "kept" } })
         ));
     }
@@ -471,16 +464,16 @@ mod e29_the_restore_r419 {
             OffFieldZone::Hand,
             MoveToZoneOptions::default(),
         );
-        let mut resolving = card(&state, &carrier.id).clone();
+        let mut resolving = live(&state, &carrier.id);
         remove_from_any_zone(&mut state, &mut carrier);
         resolving.zone = Zone::Resolving { player: P1 };
         state.players.p1.resolving.push(resolving);
 
         let mut events: Vec<GameEvent> = Vec::new();
         restore(&mut state, &mut events, P1, 1, &[P1]);
-        assert_eq!(card(&state, &carrier.id).zone.z(), ZoneName::Resolving);
+        assert_eq!(live(&state, &carrier.id).zone.z(), ZoneName::Resolving);
         assert!(zone_contents(&state, slot(P1, Row::Backrow, 1)).is_empty());
-        assert_eq!(card(&state, &rider.id).zone.z(), ZoneName::Hand);
+        assert_eq!(live(&state, &rider.id).zone.z(), ZoneName::Hand);
         assert_eq!(
             state
                 .players
@@ -504,7 +497,7 @@ mod e29_the_restore_r419 {
         let stayed = put(&mut state, PLAIN_UNIT, slot(P1, Row::Units, 1), json!({}));
         let mut away = put(&mut state, "fx-2", slot(P1, Row::Units, 2), json!({}));
         record_board_snapshot(&mut state);
-        card_mut(&mut state, &stayed.id).exertion = Exertion {
+        live_mut(&mut state, &stayed.id).exertion = Exertion {
             attacked: true,
             switched: false,
             attacks: None,
@@ -517,7 +510,7 @@ mod e29_the_restore_r419 {
         );
         let mut events: Vec<GameEvent> = Vec::new();
         restore(&mut state, &mut events, P1, 1, &[P1]);
-        assert!(card(&state, &stayed.id).exertion.attacked);
+        assert!(live(&state, &stayed.id).exertion.attacked);
         let back = find_instance(&state, &away.id);
         assert_eq!(back.and_then(|card| card.summoned_turn), Some(state.turn));
         assert_eq!(
@@ -543,7 +536,7 @@ mod r563_e29_held_zones {
             MoveToZoneOptions::default(),
         );
         let bird = put(&mut state, &phoenix.id, slot(P1, Row::Units, 1), json!({}));
-        card_mut(&mut state, &bird.id).damage = 2;
+        live_mut(&mut state, &bird.id).damage = 2;
 
         let mut events: Vec<GameEvent> = Vec::new();
         {
@@ -556,7 +549,7 @@ mod r563_e29_held_zones {
             ids_of(&zone_contents(&state, slot(P1, Row::Units, 1))),
             vec![occupant.id.clone()]
         );
-        assert_eq!(card(&state, &bird.id).zone.z(), ZoneName::Graveyard);
+        assert_eq!(live(&state, &bird.id).zone.z(), ZoneName::Graveyard);
         assert!(state.reserved.is_empty());
     }
 

@@ -12,7 +12,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::view_for::view_for;
 
 use super::fixtures::giga::*;
-use super::fixtures::harness::{Bench, live, run_effect, run_on_sink as run, slot};
+use super::fixtures::harness::{Bench, live, live_mut, run_effect, run_on_sink as run, slot};
 
 /// p1's main phase with `p1` and `p2` as given, plain cards to draw, and no turn that ends by
 /// itself, so each test ends every turn it means to.
@@ -117,15 +117,11 @@ fn backrow_card(def: &str, lane: i32) -> Value {
     json!({ "def": def, "lane": lane, "row": "backrow" })
 }
 
-fn card_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
-
 /// Enough damage to put a unit at 0 health, read through the layers (§10.4).
 fn lethal_damage(state: &mut GameState, id: &str) {
     let unit = find_instance(state, id).unwrap_or_else(|| panic!("no instance {id}"));
     let max_health = layers::unit_view(state, unit).max_health;
-    card_mut(state, id).damage = max_health;
+    live_mut(state, id).damage = max_health;
 }
 
 /// Where a card sits now, as "p2 units 5", for readable assertions.

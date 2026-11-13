@@ -61,10 +61,6 @@ mod tests {
         }))
     }
 
-    fn on(card: &CardInstance) -> Value {
-        json!({ "targets": pick::instance(card) })
-    }
-
     fn keyword_count(s: &Scenario, card: &CardInstance, kind: KeywordKind) -> usize {
         s.stats(card).keywords.iter().filter(|keyword| keyword.kind() == kind).count()
     }
@@ -109,7 +105,7 @@ mod tests {
         fn attack_up_2_cleave_and_the_zone_locked() {
             let mut s = board(false, json!([]), json!([{ "def": VANILLA, "lane": 2 }]));
             let target = s.unit_at(P2, 2);
-            s.play(BLAST, on(&target));
+            s.play(BLAST, pick::targets(pick::instance(&target)));
             s.expect_stats(&target, json!({ "attack": 6, "health": 4 }));
             assert_eq!(s.stats(&target).max_health, 4);
             assert_eq!(keyword_count(&s, &target, KeywordKind::Cleave), 1);
@@ -125,7 +121,7 @@ mod tests {
                 json!([{ "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 3 }]),
             );
             let target = s.unit_at(P1, 3);
-            s.play(BLAST, on(&target));
+            s.play(BLAST, pick::targets(pick::instance(&target)));
             assert!(locked(&s, P1, Row::Units, 3), "its own zone");
             assert_eq!(locked_zones(&s), 1, "the zone beside it, the same lane across and the other side's stay open");
             assert!(s.last_events().iter().any(|event| {
@@ -142,7 +138,7 @@ mod tests {
                 json!([]),
             );
             let target = s.backrow(P1, 2).expect("the Flexible Unit stands in the backrow");
-            s.play(BLAST, on(&target));
+            s.play(BLAST, pick::targets(pick::instance(&target)));
             assert!(locked(&s, P1, Row::Backrow, 2));
             assert_eq!(locked_zones(&s), 0, "no unit zone is locked");
             assert_eq!(keyword_count(&s, &target, KeywordKind::Cleave), 1);
@@ -152,7 +148,7 @@ mod tests {
         fn an_enemy_unit_takes_the_attack_and_its_zone_locks_on_their_side() {
             let mut s = board(false, json!([VANILLA]), json!([VANILLA]));
             let (mine, theirs) = (s.unit_at(P1, 1), s.unit_at(P2, 1));
-            s.play(BLAST, on(&theirs));
+            s.play(BLAST, pick::targets(pick::instance(&theirs)));
             s.expect_stats(&theirs, json!({ "attack": 6, "health": 4 }));
             s.expect_stats(&mine, json!({ "attack": 4, "health": 4 }));
             assert!(locked(&s, P2, Row::Units, 1));
@@ -163,7 +159,7 @@ mod tests {
         fn cleave_once_on_a_unit_that_has_it() {
             let mut s = board(false, json!(["stand-in (1) 4/4 Cleave"]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(BLAST, on(&unit));
+            s.play(BLAST, pick::targets(pick::instance(&unit)));
             assert_eq!(keyword_count(&s, &unit, KeywordKind::Cleave), 1);
         }
 
@@ -172,7 +168,7 @@ mod tests {
             let mut s = board(false, json!([VANILLA]), json!([]));
             assert_eq!(upgrade_number(&mut s, BLAST, "attack"), 3);
             let unit = s.unit_at(P1, 1);
-            s.play(BLAST, on(&unit));
+            s.play(BLAST, pick::targets(pick::instance(&unit)));
             s.expect_stats(&unit, json!({ "attack": 7, "health": 4 }));
         }
     }
@@ -184,7 +180,7 @@ mod tests {
         fn attack_up_6_cleave_and_the_zone_locked() {
             let mut s = board(true, json!([{ "def": VANILLA, "lane": 4 }]), json!([]));
             let target = s.unit_at(P1, 4);
-            s.play(BLAST, on(&target));
+            s.play(BLAST, pick::targets(pick::instance(&target)));
             s.expect_stats(&target, json!({ "attack": 10, "health": 4 }));
             assert_eq!(s.stats(&target).max_health, 4);
             assert_eq!(keyword_count(&s, &target, KeywordKind::Cleave), 1);
@@ -197,7 +193,7 @@ mod tests {
             let mut s = board(true, json!([VANILLA]), json!([]));
             assert_eq!(upgrade_number(&mut s, BLAST, "attack"), 7);
             let unit = s.unit_at(P1, 1);
-            s.play(BLAST, on(&unit));
+            s.play(BLAST, pick::targets(pick::instance(&unit)));
             s.expect_stats(&unit, json!({ "attack": 11, "health": 4 }));
         }
     }

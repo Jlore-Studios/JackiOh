@@ -59,10 +59,6 @@ fn health(s: &Scenario, player: PlayerId) -> i32 {
     s.state().players[player].hero.health
 }
 
-fn hero(player: PlayerId) -> Value {
-    json!([{ "pick": "hero", "player": player.as_str() }])
-}
-
 fn hand_card(s: &Scenario, player: PlayerId, def_id: &str) -> CardInstance {
     s.hand(player)
         .into_iter()
@@ -152,7 +148,7 @@ mod r1180000_spell_damage_is_one_sum {
         );
         assert_eq!(spell_damage_of(s.state(), P1), 2);
         assert_eq!(spell_damage_of(s.state(), P2), 2);
-        s.play(BOLT, json!({ "targets": hero(P2) }));
+        s.play(BOLT, json!({ "targets": pick::hero(P2) }));
         assert_eq!(hits_on(&s, "hero-p2"), vec![3]);
     }
 
@@ -164,7 +160,7 @@ mod r1180000_spell_damage_is_one_sum {
             json!({ "hand": [BOLT] }),
         );
         s.end_turn();
-        s.play(BOLT, json!({ "targets": hero(P1) }));
+        s.play(BOLT, json!({ "targets": pick::hero(P1) }));
         assert_eq!(hits_on(&s, "hero-p1"), vec![3]);
     }
 
@@ -185,7 +181,7 @@ mod r1180000_spell_damage_is_one_sum {
         s.activate(POTION, json!({}));
         // Units' 1, the aura's 2, the modifier's 5.
         assert_eq!(spell_damage_of(s.state(), P1), 8);
-        s.play(BOLT, json!({ "targets": hero(P2) }));
+        s.play(BOLT, json!({ "targets": pick::hero(P2) }));
         assert_eq!(hits_on(&s, "hero-p2"), vec![9]);
     }
 
@@ -277,7 +273,7 @@ mod r1180001_spell_damage_this_turn {
         assert_eq!(spell_damage_of(s.state(), P1), 5);
         assert_eq!(spell_damage_of(s.state(), P2), 0);
         assert!(badges(&s, P1).contains(&"You have Spell Damage +5 this turn".to_string()));
-        s.play(BOLT, json!({ "targets": hero(P2) }));
+        s.play(BOLT, json!({ "targets": pick::hero(P2) }));
         assert_eq!(hits_on(&s, "hero-p2"), vec![6]);
         s.end_turn();
         assert_eq!(spell_damage_mods(&s, P1), 0);
@@ -304,7 +300,7 @@ mod r1180001_spell_damage_this_turn {
             ))],
         );
         assert_eq!(spell_damage_of(s.state(), P1), 10);
-        s.play(BOLT, json!({ "targets": hero(P2) }));
+        s.play(BOLT, json!({ "targets": pick::hero(P2) }));
         assert_eq!(hits_on(&s, "hero-p2"), vec![11]);
     }
 }
@@ -321,7 +317,7 @@ mod r1180002_spells_have_lifesteal {
             json!({ "field": [MAGE], "hand": [BOLT, ZAP], "health": 20, "mana": 9 }),
             json!({}),
         );
-        s.play(BOLT, json!({ "targets": hero(P2) }));
+        s.play(BOLT, json!({ "targets": pick::hero(P2) }));
         assert_eq!(health(&s, P1), 21);
         s.play(ZAP, json!({}));
         assert_eq!(heals_on(&s, "hero-p1"), vec![1, 1, 1]);
@@ -335,7 +331,7 @@ mod r1180002_spells_have_lifesteal {
             json!({ "field": [MAGE, MAGE], "hand": [BOLT], "health": 20 }),
             json!({}),
         );
-        s.play(BOLT, json!({ "targets": hero(P2) }));
+        s.play(BOLT, json!({ "targets": pick::hero(P2) }));
         assert_eq!(heals_on(&s, "hero-p1"), vec![1]);
     }
 
@@ -358,7 +354,7 @@ mod r1180002_spells_have_lifesteal {
         );
         assert_eq!(health(&s, P1), 20);
         s.end_turn();
-        s.play(BOLT, json!({ "targets": hero(P1) }));
+        s.play(BOLT, json!({ "targets": pick::hero(P1) }));
         assert_eq!(health(&s, P2), 18);
         assert!(heals_on(&s, "hero-p2").is_empty());
     }
@@ -379,7 +375,7 @@ mod r1180002_spells_have_lifesteal {
                 json!({ "target": { "of": "instance", "instanceId": mage.id } }),
             ))],
         );
-        s.play(BOLT, json!({ "targets": hero(P2) }));
+        s.play(BOLT, json!({ "targets": pick::hero(P2) }));
         assert_eq!(health(&s, P1), 20);
     }
 }
@@ -396,7 +392,7 @@ mod r1180003_healing_twice_as_effective {
             json!({ "field": [DOUBLER, { "def": BODY, "damage": 8 }], "hand": [MEND, MEND], "health": 10, "mana": 9 }),
             json!({}),
         );
-        s.play(MEND, json!({ "targets": hero(P1) }));
+        s.play(MEND, json!({ "targets": pick::hero(P1) }));
         assert_eq!(health(&s, P1), 16);
         let body = s.unit_at(P1, 2);
         s.play(
@@ -413,7 +409,7 @@ mod r1180003_healing_twice_as_effective {
             json!({ "field": [MAGE, DOUBLER, DOUBLER], "hand": [BOLT], "health": 10 }),
             json!({}),
         );
-        s.play(BOLT, json!({ "targets": hero(P2) }));
+        s.play(BOLT, json!({ "targets": pick::hero(P2) }));
         assert_eq!(heals_on(&s, "hero-p1"), vec![4]);
     }
 
@@ -425,7 +421,7 @@ mod r1180003_healing_twice_as_effective {
             json!({ "hand": [MEND], "health": 10 }),
         );
         s.end_turn();
-        s.play(MEND, json!({ "targets": hero(P2) }));
+        s.play(MEND, json!({ "targets": pick::hero(P2) }));
         assert_eq!(health(&s, P2), 13);
     }
 
@@ -436,7 +432,7 @@ mod r1180003_healing_twice_as_effective {
             json!({ "field": [DOUBLER], "hand": [MEND], "health": 20 }),
             json!({ "backrow": [{ "def": MOON, "faceUp": true }] }),
         );
-        s.play(MEND, json!({ "targets": hero(P1) }));
+        s.play(MEND, json!({ "targets": pick::hero(P1) }));
         // The heal of 3 became 3 Pierce damage from the converter, never 6.
         assert_eq!(health(&s, P1), 17);
     }
@@ -695,7 +691,7 @@ mod r1180005_after_a_spell_targeting_an_enemy {
     fn r1180005_the_enemy_hero_and_a_prompt_chosen_target_call_it_too() {
         let mut s = game("sp-pile-prompt", json!({ "hand": [ASKER, PILER] }), json!({}));
         s.play(ASKER, json!({}));
-        s.answer(hero(P2));
+        s.answer(pick::hero(P2));
         assert_eq!(hits_on(&s, "hero-p2"), vec![1, 2]);
         assert_eq!(graveyard_count(&s, P1, PILER), 1);
     }
@@ -707,7 +703,7 @@ mod r1180005_after_a_spell_targeting_an_enemy {
             json!({ "hand": [ECHO_BOLT, PILER] }),
             json!({ "field": [BODY] }),
         );
-        s.play(ECHO_BOLT, json!({ "targets": hero(P2) }));
+        s.play(ECHO_BOLT, json!({ "targets": pick::hero(P2) }));
         // The repeat asks again; the body is picked, and the answer is the first enemy targeted.
         let body = s.unit_at(P2, 1);
         s.answer(pick::instance(&body));
@@ -723,7 +719,7 @@ mod r1180005_after_a_spell_targeting_an_enemy {
             json!({}),
         );
         let in_hand = hand_card(&s, P1, PILER);
-        s.play(BOLT, json!({ "targets": hero(P2) }));
+        s.play(BOLT, json!({ "targets": pick::hero(P2) }));
         let named = answers(&s);
         assert_eq!(named[0].1.by, in_hand.id);
         assert_eq!(named.len(), 3);
@@ -740,7 +736,7 @@ mod r1180005_after_a_spell_targeting_an_enemy {
         );
         let first = s.hand(P1)[1].clone();
         let second = s.hand(P1)[2].clone();
-        s.play(BOLT, json!({ "targets": hero(P2) }));
+        s.play(BOLT, json!({ "targets": pick::hero(P2) }));
         let named = answers(&s);
         assert_eq!(named.len(), 2);
         assert_eq!(named[0].1.by, first.id);
@@ -760,7 +756,7 @@ mod r1180005_after_a_spell_targeting_an_enemy {
         let body = s.unit_at(P1, 1);
         s.play(MEND, json!({ "targets": pick::instance(&body) }));
         s.end_turn();
-        s.play(BOLT, json!({ "targets": hero(P1) }));
+        s.play(BOLT, json!({ "targets": pick::hero(P1) }));
         assert!(answers(&s).is_empty());
         assert_eq!(s.hand(P1).iter().filter(|card| card.def_id == PILER).count(), 1);
     }
@@ -781,7 +777,7 @@ mod r1180005_after_a_spell_targeting_an_enemy {
     #[test]
     fn r1180005_nothing_is_kept_or_named_without_an_answering_card() {
         let mut s = game("sp-pile-quiet", json!({ "hand": [BOLT] }), json!({}));
-        s.play(BOLT, json!({ "targets": hero(P2) }));
+        s.play(BOLT, json!({ "targets": pick::hero(P2) }));
         assert!(answers(&s).is_empty());
         let bolt = s
             .pile(P1, "graveyard")
@@ -794,7 +790,7 @@ mod r1180005_after_a_spell_targeting_an_enemy {
     #[test]
     fn r1180005_no_view_forwards_the_answer() {
         let mut s = game("sp-pile-view", json!({ "hand": [BOLT, PILER] }), json!({}));
-        s.play(BOLT, json!({ "targets": hero(P2) }));
+        s.play(BOLT, json!({ "targets": pick::hero(P2) }));
         for player in [P1, P2] {
             let events = serde_json::to_value(s.view(player).events).expect("events serialize");
             assert!(!events.to_string().contains("\"answer\""), "{player:?}'s view");

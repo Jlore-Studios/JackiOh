@@ -31,10 +31,6 @@ fn id_at(s: &Scenario, player: PlayerId, lane: i32) -> String {
         .id
 }
 
-fn pick(id: &str) -> Value {
-    json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-}
-
 fn evolved_events(events: &[GameEvent]) -> Vec<&GameEvent> {
     events
         .iter()
@@ -61,13 +57,13 @@ mod r3536000_once {
             json!({}),
         );
         let pinger = id_at(&s, P1, 1);
-        s.play(EVOLVER, pick(&pinger));
+        s.play(EVOLVER, pick::targets(pick::id(&pinger)));
         s.expect_health(P2, HERO_HEALTH - EV_PING);
         assert!(is_evolved(&s, &pinger));
         assert_eq!(evolutions(&s, P1), 1);
         assert_eq!(evolved_events(s.events()).len(), 1);
         // A second evolve of the same permanent runs nothing and counts nothing.
-        s.play(EVOLVER, pick(&pinger));
+        s.play(EVOLVER, pick::targets(pick::id(&pinger)));
         s.expect_health(P2, HERO_HEALTH - EV_PING);
         assert_eq!(evolutions(&s, P1), 1);
         assert_eq!(evolved_events(s.events()).len(), 1);
@@ -81,15 +77,15 @@ mod r3536000_once {
             json!({}),
         );
         let pinger = id_at(&s, P1, 1);
-        s.play(EVOLVER, pick(&pinger));
+        s.play(EVOLVER, pick::targets(pick::id(&pinger)));
         assert!(is_evolved(&s, &pinger));
         // R78's reset takes the mark off with the card leaving the field.
-        s.play(BOUNCER, pick(&pinger));
+        s.play(BOUNCER, pick::targets(pick::id(&pinger)));
         assert!(!is_evolved(&s, &pinger));
         s.play(PINGER, json!({ "zone": 1 }));
         let back = id_at(&s, P1, 1);
         assert!(!is_evolved(&s, &back));
-        s.play(EVOLVER, pick(&back));
+        s.play(EVOLVER, pick::targets(pick::id(&back)));
         s.expect_health(P2, HERO_HEALTH - 2 * EV_PING);
         assert_eq!(evolutions(&s, P1), 2);
         assert_eq!(evolved_events(s.events()).len(), 2);
@@ -103,11 +99,11 @@ mod r3536000_once {
             json!({}),
         );
         let pinger = id_at(&s, P1, 1);
-        s.play(EVOLVER, pick(&pinger));
-        s.play(COPIER, pick(&pinger));
+        s.play(EVOLVER, pick::targets(pick::id(&pinger)));
+        s.play(COPIER, pick::targets(pick::id(&pinger)));
         let copy = id_at(&s, P1, 2);
         assert!(!is_evolved(&s, &copy), "a copy is a new card (R57)");
-        s.play(EVOLVER, pick(&copy));
+        s.play(EVOLVER, pick::targets(pick::id(&copy)));
         assert!(is_evolved(&s, &copy));
         s.expect_health(P2, HERO_HEALTH - 2 * EV_PING);
         assert_eq!(evolutions(&s, P1), 2);
@@ -122,7 +118,7 @@ mod r3536000_once {
             json!({}),
         );
         let plain = id_at(&s, P1, 1);
-        s.play(EVOLVER, pick(&plain));
+        s.play(EVOLVER, pick::targets(pick::id(&plain)));
         s.expect_health(P2, HERO_HEALTH);
         assert!(!is_evolved(&s, &plain));
         assert_eq!(evolutions(&s, P1), 0);
@@ -187,7 +183,7 @@ mod r3536001_evolves_when {
             json!({}),
         );
         let half = id_at(&s, P1, 1);
-        s.play(BOLT, pick(&half));
+        s.play(BOLT, pick::targets(pick::id(&half)));
         assert!(is_evolved(&s, &half));
         assert_eq!(evolutions(&s, P1), 1);
         s.expect_health(P2, HERO_HEALTH - EV_PING);
@@ -299,7 +295,7 @@ mod r3536001_evolves_when {
             json!({}),
         );
         let survivor = id_at(&s, P1, 1);
-        s.play(BOLT, pick(&survivor));
+        s.play(BOLT, pick::targets(pick::id(&survivor)));
         assert!(is_evolved(&s, &survivor), "five off six lives and evolves");
         assert_eq!(evolutions(&s, P1), 1);
         assert_eq!(evolved_events(s.events()).len(), 1);
@@ -315,7 +311,7 @@ mod r3536001_evolves_when {
         );
         let plain = id_at(&s, P1, 2);
         let mourner = id_at(&s, P1, 1);
-        s.play(BOLT, pick(&plain));
+        s.play(BOLT, pick::targets(pick::id(&plain)));
         assert_eq!(s.card(&plain).zone.z(), ZoneName::Graveyard);
         assert!(is_evolved(&s, &mourner));
         assert!(!is_evolved(&s, &plain), "the dead card evolves nothing");
@@ -386,7 +382,7 @@ mod r3536001_evolves_when {
         }
         let ship = id_at(&s, P1, 2);
         let booster = id_at(&s, P1, 1);
-        s.play(ss::bolt.id.as_str(), pick(&booster));
+        s.play(ss::bolt.id.as_str(), pick::targets(pick::id(&booster)));
         let hull = jackioh_engine::starship::dormant_starship_of(s.state(), P1)
             .unwrap_or_else(|| panic!("the piece's death summons a Dormant Starship"))
             .id
@@ -478,7 +474,7 @@ mod r3536003_multiplier {
             json!({}),
         );
         let pinger = id_at(&s, P1, 1);
-        s.play(EVOLVER, pick(&pinger));
+        s.play(EVOLVER, pick::targets(pick::id(&pinger)));
         assert!(is_evolved(&s, &pinger));
         s.expect_health(P2, HERO_HEALTH - 2 * EV_PING);
         assert_eq!(evolutions(&s, P1), 1, "the once-only rule counts evolvings");
@@ -493,7 +489,7 @@ mod r3536003_multiplier {
             json!({}),
         );
         let pinger = id_at(&s, P1, 1);
-        s.play(EVOLVER, pick(&pinger));
+        s.play(EVOLVER, pick::targets(pick::id(&pinger)));
         s.expect_health(P2, HERO_HEALTH - 3 * EV_PING);
         assert_eq!(evolutions(&s, P1), 1);
     }
@@ -527,12 +523,12 @@ mod r3536004_count {
         let pinger = id_at(&s, P1, 1);
         s.play(BREEDER, json!({}));
         assert_eq!(evolutions(&s, P1), 0, "a mark counts nothing");
-        s.play(EVOLVER, pick(&pinger));
+        s.play(EVOLVER, pick::targets(pick::id(&pinger)));
         assert_eq!(evolutions(&s, P1), 1);
         assert_eq!(evolutions(&s, P2), 0);
         s.end_turn();
         let foe = id_at(&s, P2, 1);
-        s.play(EVOLVER, pick(&foe));
+        s.play(EVOLVER, pick::targets(pick::id(&foe)));
         assert_eq!(evolutions(&s, P2), 1);
         assert_eq!(evolutions(&s, P1), 1);
         assert_eq!(evolved_events(s.events()).len(), 2);
@@ -550,7 +546,7 @@ mod r3536005_view {
             json!({}),
         );
         let pinger = id_at(&s, P1, 1);
-        s.play(EVOLVER, pick(&pinger));
+        s.play(EVOLVER, pick::targets(pick::id(&pinger)));
         for viewer in [P1, P2] {
             let seen = s
                 .view(viewer)

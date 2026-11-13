@@ -63,10 +63,6 @@ mod tests {
         }))
     }
 
-    fn on(card: &CardInstance) -> Value {
-        json!({ "targets": pick::instance(card) })
-    }
-
     fn brittle(s: &Scenario, card: &CardInstance) -> Option<i32> {
         s.card(card).brittle.map(|counter| counter.count)
     }
@@ -100,7 +96,7 @@ mod tests {
             let mut s = board(false, json!([VANILLA]), json!([]));
             let unit = s.unit_at(P1, 1);
             assert_eq!(brittle(&s, &unit), None);
-            s.play(THORIUM, on(&unit));
+            s.play(THORIUM, pick::targets(pick::instance(&unit)));
             s.expect_stats(&unit, json!({ "attack": 9, "health": 9 }));
             assert_eq!(s.stats(&unit).max_health, 9);
             assert_eq!(brittle(&s, &unit), Some(1));
@@ -111,7 +107,7 @@ mod tests {
         fn an_enemy_unit_takes_both() {
             let mut s = board(false, json!([]), json!([VANILLA]));
             let theirs = s.unit_at(P2, 1);
-            s.play(THORIUM, on(&theirs));
+            s.play(THORIUM, pick::targets(pick::instance(&theirs)));
             s.expect_stats(&theirs, json!({ "attack": 9, "health": 9 }));
             assert_eq!(brittle(&s, &theirs), Some(1));
         }
@@ -121,7 +117,7 @@ mod tests {
             let mut s = board(false, json!([BRITTLE]), json!([]));
             let unit = s.unit_at(P1, 1);
             assert_eq!(brittle(&s, &unit), Some(3), "the printed Brittle 3 is running");
-            s.play(THORIUM, on(&unit));
+            s.play(THORIUM, pick::targets(pick::instance(&unit)));
             assert_eq!(brittle(&s, &unit), Some(1), "R385: Give Brittle N sets the count to N");
         }
 
@@ -131,7 +127,7 @@ mod tests {
             assert_eq!(upgrade_number(&mut s, THORIUM, "buff"), 6);
             assert_eq!(upgrade_number(&mut s, THORIUM, "brittle2"), 2);
             let unit = s.unit_at(P1, 1);
-            s.play(THORIUM, on(&unit));
+            s.play(THORIUM, pick::targets(pick::instance(&unit)));
             s.expect_stats(&unit, json!({ "attack": 10, "health": 10 }));
             assert_eq!(brittle(&s, &unit), Some(2));
         }
@@ -144,7 +140,7 @@ mod tests {
         fn stats_up_10_10_and_brittle_1() {
             let mut s = board(true, json!([VANILLA]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(THORIUM, on(&unit));
+            s.play(THORIUM, pick::targets(pick::instance(&unit)));
             s.expect_stats(&unit, json!({ "attack": 14, "health": 14 }));
             assert_eq!(s.stats(&unit).max_health, 14);
             assert_eq!(brittle(&s, &unit), Some(1));
@@ -156,7 +152,7 @@ mod tests {
             assert_eq!(upgrade_number(&mut s, THORIUM, "buff2"), 11);
             assert_eq!(upgrade_number(&mut s, THORIUM, "brittle2"), 2);
             let unit = s.unit_at(P1, 1);
-            s.play(THORIUM, on(&unit));
+            s.play(THORIUM, pick::targets(pick::instance(&unit)));
             s.expect_stats(&unit, json!({ "attack": 15, "health": 15 }));
             assert_eq!(brittle(&s, &unit), Some(2));
         }
