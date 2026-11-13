@@ -15865,17 +15865,8 @@
       "taken_asks": []
     },
     "3865": {
-      "action": "plan",
-      "asks": [
-        "c:6856807032"
-      ],
-      "build_next": {
-        "from_run": "43453044902",
-        "model": "sonnet",
-        "provider": "claude-1",
-        "since": "2026-11-13T15:48:42Z",
-        "until": "2026-11-13T16:18:42Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-13T15:48:28Z",
         "difficulty": "medium",
@@ -15894,10 +15885,9 @@
         "reason": "planned on sonnet",
         "trail": "- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3865/crates/shared/src/log/lines.rs\", \"offset\": 585, \"limit\": 45}\n- Grep: {\"pattern\": \"impl From<|pub (fn|struct|enum)|^use \", \"path\": \"/home/runner/work/_temp/work/item-3865/crates/shared/src/log/say.rs\", \"output_mode\": \"content\"}\n- Grep: {\"pattern\": \"gained \\\\+\", \"path\": \"/home/runner/work/_temp/work/item-3865\", \"glob\": \"!target\", \"output_mode\": \"content\", \"head_limit\": 30}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3865/crates/shared/src/log/say.rs\", \"limit\": 90}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3865/crates/shared/tests/log.rs\", \"offset\": 1, \"limit\": 160}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3865/crates/shared/tests/log.rs\", \"offset\": 380, \"limit\": 100}\n- Grep: {\"pattern\": \"MINUS\", \"path\": \"/home/runner/work/_temp/work/item-3865/crates/shared/src\", \"output_mode\": \"content\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3865/crates/shared && sed -n 95,115p src/face/tuning.rs; sed -n 1,30p src/log/curve.rs; grep -n \\\"mod \\\\|pub use\\\" src/face/mod.rs src/log/mod.rs | h\u2026\n- Bash: {\"command\": \"sed -n 1475,1560p tests/duel.rs; grep -n \\\"pub fn \\\\(view\\\\|play\\\\|cast\\\\|events\\\\)\\\\|pub fn \\\" ../engine/src/testkit/*.rs | grep -i \\\"view\\\\|play\\\\|events\\\\|tails\\\\|seed\\\" | head -30\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3865; grep -rn \\\"testkit\\\" crates/shared/Cargo.toml Cargo.toml crates/cards/Cargo.toml | head; sed -n 1,30p crates/shared/tests/duel.rs | grep -n \\\"c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3865; sed -n 10,25p crates/cards/Cargo.toml; grep -n \\\"jackioh-cards\\\\|testkit\\\" crates/ai/Cargo.toml; grep -rn \\\"fn tails\\\\|tails\\\" crates/cards/src\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3865; grep -n \\\"events\\\" crates/engine/src/view_for.rs | head -20; grep -n \\\"fn play\\\\b\\\" -A30 crates/engine/src/testkit/scenario.rs | sed -n 1,50p; \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3865; grep -n \\\"events:\\\" crates/engine/src/view_for.rs | head; grep -n \\\"Buffed\\\" crates/engine/src/view_for.rs | head; grep -n \\\"stinkyscape-118\\\" \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3865; grep -n \\\"fn recent_events\\\" -B6 -A25 crates/engine/src/view_for.rs; sed -n 2373,2395p crates/engine/src/view_for.rs\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3865/.bot-plan.md\", \"content\": \"Plan drafted in final message: signed() in say.rs; Buffed arm split in lines.rs; zh entry; tests in crates/shared/test\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"None of rules 1-5 holds: the change is one log sentence, a number signer and a dictionary entry inside crates/shared, about 4 files, with no engine, AI, migration or cross-crate contract change.\"} --> ## Goal When a `buffed` event lowers a unit's Attack or\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-13T15:28:56Z",
       "owner_why": "it plans it",
@@ -15910,12 +15900,14 @@
       "provider": "claude-1",
       "queued_at": "2026-11-13T15:04:24Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43453044902",
+      "run_id": "pending:235cd224-1794585232",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-13T15:28:56Z",
+      "started_at": "2026-11-13T15:54:46Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6856807032"
+      ]
     },
     "3866": {
       "action": "review",
@@ -15988,9 +15980,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T15:53:37Z",
+    "at": "2026-11-13T15:54:46Z",
     "url": "",
-    "what": "build #3821 on claude-1"
+    "what": "build #3865 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-13T15:19:17Z",
