@@ -14253,10 +14253,8 @@
       "run_id": "43208715702",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-12T11:23:13Z",
-      "strike_log": [
-        "CI still failed after 1 fix(es)"
-      ],
-      "strikes": 1,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": []
     },
     "3736": {
