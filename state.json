@@ -13361,11 +13361,10 @@
       "kind": "revise",
       "last_findings": [],
       "live": "resolving",
-      "merge_owner": "claude-1",
       "merge_owner_gave_up": {
-        "at": "2026-11-13T10:21:49Z",
+        "at": "2026-11-13T14:01:14Z",
         "provider": "claude-1",
-        "sha": "a01998c75b8b3d28da71d1cc4672d027c6f44e71"
+        "sha": "b472b747c42146333c257902c7dd8b4b65312934"
       },
       "pending_request": false,
       "provider": "claude-1",
