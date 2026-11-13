@@ -950,7 +950,7 @@ fn push_side_parts(state: &GameState, player: PlayerId, parts: &mut Vec<String>)
     }
 }
 
-/// Position signature for beam deduplication and lethal visited set (R1224, #898, #1797).
+/// Position signature for beam deduplication and lethal visited set (R1224, #898, #1797, R3772000).
 pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
     let opp = opponent_of(seat);
     let mut parts: Vec<String> = vec![
@@ -1069,6 +1069,22 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
                 .map(|mark| format!("{}:{}:{}", mark.instance_id, mark.mark, mark.color)),
         );
         parts.push(format!("K{marks}"));
+    }
+    // R3772000: the secrets a Mind Games kept, by the same rule: each one's owner, choice and whether
+    // it is revealed, sorted and without the id the engine minted it, so the three choices of one cast
+    // stay three positions.
+    if let Some(secrets) = &state.secrets
+        && !secrets.is_empty()
+    {
+        let secrets = sorted(secrets.iter().map(|secret| {
+            format!(
+                "{}:{}:{}",
+                secret.owner,
+                secret.choice.map_or("-", |choice| choice.as_str()),
+                if secret.revealed == Some(true) { "r" } else { "" }
+            )
+        }));
+        parts.push(format!("S{secrets}"));
     }
     // R1853004: an open Marketplace's deals change the seat's Credits and its stock, which are part of
     // the position only while it is open, so every other signature stays as it was (a card bought or

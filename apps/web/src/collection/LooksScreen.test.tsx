@@ -251,7 +251,6 @@ describe("R3016001 a card's equip and buy screen", () => {
         <OwnedCards collection={collectionOwning([BIG_D])} defs={[defOf(BIG_D)]} />
       </FullArtOwned>,
     );
-    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
     fireEvent.click(screen.getByTestId(T.card(BIG_D)));
     fireEvent.pointerEnter(screen.getByTestId(T.rung(VERSION_SKETCH_FULL_ART_ID)), { pointerType: "mouse" });
     act(() => {
@@ -269,7 +268,6 @@ describe("R3016001 a card's equip and buy screen", () => {
     server();
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     render(<OwnedCards collection={collectionOwning([BIG_D])} defs={[defOf(BIG_D)]} token={TOKEN} />);
-    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
     const tile = screen.getByTestId(T.card(BIG_D));
     fireEvent.pointerEnter(tile, { pointerType: "mouse" });
     act(() => {
