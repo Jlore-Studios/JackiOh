@@ -18123,6 +18123,14 @@
         "tiers": {}
       },
       "waiting_comment": 6850789745
+    },
+    "3852": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-13T10:28:10Z",
+      "issue": 3846,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
