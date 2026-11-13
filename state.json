@@ -15422,6 +15422,11 @@
     "3861": {
       "action": "review",
       "asks": [],
+      "ci_early": true,
+      "ci_fixes": 1,
+      "ci_on_head": true,
+      "ci_run_id": 43433761825,
+      "ci_sha": "08b48750cf9056903de1bbd990e12e67cd6ec68f",
       "cleared": {
         "approver": {
           "family": "claude",
@@ -15442,12 +15447,13 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3733,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner": "claude-8",
       "pending_request": false,
       "provider": "claude-8",
-      "queued_at": "2026-11-13T13:29:44Z",
+      "queued_at": "2026-11-13T13:43:24Z",
+      "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "run_id": "43434534958",
@@ -15470,6 +15476,7 @@
         "provider": "claude-1",
         "run": "43417398432"
       },
+      "source": "ci",
       "started_at": "2026-11-13T13:32:26Z",
       "stop_requested": false,
       "taken_asks": [],
