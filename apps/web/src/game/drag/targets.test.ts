@@ -1,9 +1,17 @@
 // The DOM target reader (`./targets.ts`, S9, R384, R510, R1081000): board identity comes from
 // `data-testid` and zone data attributes. Built with real elements, one `it` per rule.
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { lockedZoneAt, pickDropSpot, placeOf, targetFromElement } from "./targets.ts";
+
+type TargetsModule = typeof import("./targets.ts");
+
+/** targets.ts as a page load builds it, its testid patterns included: a fresh module imported inside the test. */
+async function freshTargets(): Promise<TargetsModule> {
+  vi.resetModules();
+  return import("./targets.ts");
+}
 
 function element(tag: string, attrs: Record<string, string>, parent?: Element): Element {
   const el = document.createElement(tag);
@@ -133,36 +141,6 @@ describe("targetFromElement", () => {
     expect(targetFromElement(art)).toEqual({ target: { on: "hand", instanceId: "abc" }, testid: "hand-card-abc" });
   });
 
-  it("reads a testid only whole: a name with anything before or after it names nothing", () => {
-    expect(targetFromElement(element("div", { "data-testid": "xhand-card-1" }))).toBeNull();
-    for (const testid of ["superpower", "powerful"]) {
-      const el = element("div", { "data-testid": testid, "data-instance-id": "hero-1" });
-      expect(targetFromElement(el), testid).toBeNull();
-    }
-    for (const testid of ["xzone-you-units-1", "zone-you-units-1x"]) {
-      const el = element("div", { "data-testid": testid, "data-side": "you", "data-row": "units", "data-lane": "1" });
-      expect(targetFromElement(el), testid).toBeNull();
-    }
-    const zoneEl = zone("you", "units", "5");
-    expect(targetFromElement(element("div", { "data-testid": "xcard-1" }, zoneEl))?.target).toEqual({
-      on: "zone",
-      side: "you",
-      row: "units",
-      lane: 5,
-    });
-  });
-
-  it("R510 reads a Heroic Power under any power- testid, and a zone of a two-digit lane", () => {
-    const power = element("div", { "data-testid": "power-ab", "data-instance-id": "hero-1" });
-    expect(targetFromElement(power)?.target).toEqual({ on: "activate", instanceId: "hero-1" });
-    expect(targetFromElement(zone("you", "units", "12"))?.target).toEqual({
-      on: "zone",
-      side: "you",
-      row: "units",
-      lane: 12,
-    });
-  });
-
   it("refuses a zone testid whose zone attributes are missing", () => {
     expect(targetFromElement(element("div", { "data-testid": "zone-you-units-1" }))).toBeNull();
   });
@@ -209,6 +187,53 @@ describe("targetFromElement", () => {
 
   it("answers null where nothing names a target", () => {
     expect(targetFromElement(element("div", {}))).toBeNull();
+  });
+});
+
+describe("the testid patterns, as a page load builds them", () => {
+  it("read a hand card's and a card's whole id, however long", async () => {
+    const { targetFromElement: read } = await freshTargets();
+    expect(read(element("div", { "data-testid": "hand-card-abc" }))?.target).toEqual({ on: "hand", instanceId: "abc" });
+    const zoneEl = zone("you", "units", "3");
+    expect(read(element("div", { "data-testid": "card-abc" }, zoneEl))?.target).toEqual({
+      on: "unit",
+      instanceId: "abc",
+      side: "you",
+      lane: 3,
+    });
+  });
+
+  it("read a testid only whole: anything before or after a name, a line break included, names nothing", async () => {
+    const { targetFromElement: read } = await freshTargets();
+    for (const testid of ["xhand-card-1", "hand-card-a\nb"]) {
+      expect(read(element("div", { "data-testid": testid })), testid).toBeNull();
+    }
+    for (const testid of ["superpower", "powerful"]) {
+      expect(read(element("div", { "data-testid": testid, "data-instance-id": "hero-1" })), testid).toBeNull();
+    }
+    for (const testid of ["xzone-you-units-1", "zone-you-units-1x"]) {
+      const el = element("div", { "data-testid": testid, "data-side": "you", "data-row": "units", "data-lane": "1" });
+      expect(read(el), testid).toBeNull();
+    }
+    // Not a card: the press falls through to the zone the element stands in.
+    const zoneEl = zone("you", "units", "5");
+    for (const testid of ["xcard-1", "card-a\nb"]) {
+      expect(read(element("div", { "data-testid": testid }, zoneEl))?.target, testid).toEqual({
+        on: "zone",
+        side: "you",
+        row: "units",
+        lane: 5,
+      });
+    }
+  });
+
+  it("R510 read a Heroic Power under power and under any power- testid, and a zone of a two-digit lane", async () => {
+    const { targetFromElement: read } = await freshTargets();
+    for (const testid of ["power", "power-ab"]) {
+      const el = element("div", { "data-testid": testid, "data-instance-id": "hero-1" });
+      expect(read(el)?.target, testid).toEqual({ on: "activate", instanceId: "hero-1" });
+    }
+    expect(read(zone("you", "units", "12"))?.target).toEqual({ on: "zone", side: "you", row: "units", lane: 12 });
   });
 });
 
