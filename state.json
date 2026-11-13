@@ -35320,6 +35320,7 @@
         "every": 5,
         "head": "b472b747c42146333c257902c7dd8b4b65312934",
         "issue": 3730,
+        "last_why": "its run ended without finishing",
         "merged_at": "2026-11-13T15:21:37Z",
         "n": 240,
         "pr": 3779,
@@ -35330,12 +35331,12 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:bfcd705d-1794583539",
+        "run_id": "",
         "sha": "44133b263728bd7d699e6233aa44690bfeff2eb3",
         "started_at": "2026-11-13T15:26:44Z",
         "status": "queued",
         "title": "Patch: a private lobby screen for 1v1 rooms and co-op rooms: seats, invites, each player's deck and Ready, and the host's Start",
-        "tries": 0
+        "tries": 1
       }
     ],
     "count": 241
