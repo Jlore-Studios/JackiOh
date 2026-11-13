@@ -1,5 +1,5 @@
 // Play lobby (SPEC §9.5; R104, R253, R257, R258, R259, R264, R330, R505, R612, R661, R765, R767,
-// R1372, R640002, R3207000, R3207003). Verdicts are UX only (CLAUDE.md rule 7); the server owns validation and matchmaking.
+// R1372, R640002, R3207000, R3207003, R3792000). Verdicts are UX only (CLAUDE.md rule 7); the server owns validation and matchmaking.
 // Room links only prefill, and rank never exposes its hidden rating.
 // R1075000: the host cancels a room nobody has joined. R1578000: /play is the hub every play mode
 // starts from, online first.
@@ -25,6 +25,7 @@ import {
 import type { LeanPick } from "@jackioh/shared";
 import {
   ApiRequestError,
+  ApiUnreachableError,
   cancelRoom,
   createRoom,
   dequeue,
@@ -73,6 +74,9 @@ import "./lobby.css";
 const MS_PER_SECOND = 1000;
 const SECONDS_PER_MINUTE = 60;
 
+/** R3792000: account reads of a wait failing in a row (the server unreachable) before the screen says so; at SERIES_POLL_SECONDS apart it is inside the server's ticket timeout (R897000). */
+export const LOBBY_UNREACHABLE_AFTER_READS = 3;
+
 /** Browser-test contract; `e2e/support/testids.ts` mirrors these strings. */
 export const playTestid = {
   queue: "play-queue",
@@ -84,6 +88,7 @@ export const playTestid = {
   joinInput: "play-join-code",
   joinSubmit: "play-join-submit",
   status: "play-status",
+  unreachable: "play-unreachable",
   error: "play-error",
   practice: "play-practice",
   /** #2705: the Dungeon run beside the other ways to play. */
@@ -383,7 +388,8 @@ export { MATCH_FOUND_STATUS };
  * Polls while waiting and reports a pairing once before navigating. R897000: a queue ticket the
  * server calls gone `QUEUE_ENDED_AFTER_READS` reads in a row ends the wait once instead. R3207003:
  * `known` is the account the gate read for this screen, which the first run takes as its mount read
- * when it is fresh and names no game.
+ * when it is fresh and names no game. R3792000: returns whether the wait's reads have failed unreachable
+ * `LOBBY_UNREACHABLE_AFTER_READS` times in a row; the first read the server answered clears it.
  */
 function useLobbyWatch(
   token: string,
@@ -392,7 +398,7 @@ function useLobbyWatch(
   onQueueEnded: () => void,
   queueWait: boolean,
   known: MeResponse | undefined,
-): void {
+): boolean {
   // Prevents a slow response from navigating twice after a re-render.
   const navigated = useRef(false);
   // R897000: like `navigated`, but for the queue ending under the wait.
@@ -405,6 +411,9 @@ function useLobbyWatch(
   queueEnded.current = onQueueEnded;
   /** R897000: consecutive reads saying the ticket is gone. */
   const endedReads = useRef(0);
+  /** R3792000: consecutive reads that could not reach the server. */
+  const failedReads = useRef(0);
+  const [unreachable, setUnreachable] = useState(false);
 
   useEffect(() => {
     let canceled = false;
@@ -412,6 +421,8 @@ function useLobbyWatch(
       // Idle again: a later wait judges its own reads from nothing.
       ended.current = false;
       endedReads.current = 0;
+      failedReads.current = 0;
+      setUnreachable(false);
     }
 
     // A wake while a read is out would only repeat it; each effect run counts its own.
@@ -421,7 +432,11 @@ function useLobbyWatch(
       reading = true;
       attempt(() => getMe(token))
         .then((me) => {
-          if (canceled || navigated.current || ended.current) return;
+          if (canceled) return;
+          // R3792000: an answer of any kind proves the server was reached.
+          failedReads.current = 0;
+          setUnreachable(false);
+          if (navigated.current || ended.current) return;
           const target = pairTargetOf(me);
           if (target !== null) {
             navigated.current = true;
@@ -441,7 +456,17 @@ function useLobbyWatch(
             endedReads.current = 0;
           }
         })
-        .catch(() => undefined)
+        .catch((cause: unknown) => {
+          if (canceled || !waiting) return;
+          if (cause instanceof ApiUnreachableError) {
+            failedReads.current += 1;
+            if (failedReads.current >= LOBBY_UNREACHABLE_AFTER_READS) setUnreachable(true);
+          } else {
+            // The server answered (a refusal, a 5xx): reached, so the count starts again.
+            failedReads.current = 0;
+            setUnreachable(false);
+          }
+        })
         .finally(() => {
           reading = false;
         });
@@ -471,6 +496,7 @@ function useLobbyWatch(
       clearInterval(handle);
     };
   }, [token, waiting, queueWait]);
+  return waiting && unreachable;
 }
 
 // UI pieces
@@ -837,7 +863,7 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
     setWaiting(false);
     setStatus({ kind: "queueEnded" });
   }, []);
-  useLobbyWatch(token, waiting, goFound, onQueueEnded, queueWait, me);
+  const unreachable = useLobbyWatch(token, waiting, goFound, onQueueEnded, queueWait, me);
   useEffect(() => {
     refreshPopulation();
   }, [refreshPopulation]);
@@ -1050,6 +1076,11 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
           role="status"
         >
           {statusWords(status)}
+        </p>
+      ) : null}
+      {unreachable ? (
+        <p className="notice" data-testid={playTestid.unreachable} role="status">
+          {t("Can't reach the server. Still trying…")}
         </p>
       ) : null}
       {error !== null ? (

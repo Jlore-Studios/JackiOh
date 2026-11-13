@@ -2919,6 +2919,7 @@
   "your units": "你的随从",
   "{count} of {limit} cards": "{count} / {limit} 张卡牌",
   "Your queue expired. Find a match to queue again.": "排队已过期，请重新寻找对局。",
+  "Can't reach the server. Still trying…": "无法连接服务器。仍在重试…",
   "Reconnect now": "立即重新连接",
   "Play here": "在这里玩",
   "Loading the replay…": "正在加载回放…",
