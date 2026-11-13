@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::animated::animate_on_entry;
-use crate::catalog::{CatalogQueryArgs, def_of, excluding_def_id, pick_generated, query};
+use crate::catalog::{CatalogQueryArgs, def_of, excluding_def_id, pick_generated_unique, query};
 use crate::config::CRY_ON_PLAY_ONLY;
 use crate::damage::DamageTarget;
 use crate::effects::buff::{grant_keyword, grant_random_keywords};
@@ -24,15 +24,15 @@ use crate::prelude::json_as;
 use crate::prompts::run_start_of_game;
 use crate::resolve::lazy_part;
 use crate::script::{Effect, EffectContext, EffectPart};
-use crate::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
+use crate::state::{CardInstance, GameState, Slumber, find_instance, find_instance_mut, new_instance};
 use crate::stays::exit_mark;
 use crate::wire::{
     AttackHealth, CardType, CostRange, GameEvent, Keyword, OneOrMany, PlayerId, Row, Tag, Zone, ZoneName,
 };
 use crate::zones::{
-    PlaceOnFieldOptions, ZoneSlot, fill_board_zones, first_entry_zone, fresh_face_down_id, is_empty,
-    is_reserved, is_unit_token, lands_face_down, open_zones, place_on_field, place_standing_on_field,
-    remove_from_any_zone, row_size,
+    PlaceOnFieldOptions, ZoneSlot, fill_board_zones, first_entry_zone, first_entry_zone_where,
+    fresh_face_down_id, is_empty, is_reserved, is_unit_token, lands_face_down, open_zones, place_on_field,
+    place_standing_on_field, remove_from_any_zone, row_size, takes_move,
 };
 
 // R1: no verb placing a card without a play fires a Cry (Transform, Flicker, Reborn, `summon_this`).
@@ -91,6 +91,28 @@ pub struct SummonPlacement {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(type = "Record<string, unknown>", optional))]
     pub memory: Option<IndexMap<String, Value>>,
+    /// R3557003: "in the backrow if possible" — a Unit that names no lane enters the leftmost open
+    /// backrow zone, standing there as a Unit (R1081000), and only with none open the unit row (R64).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub backrow_first: Option<bool>,
+    /// R3554009 (S+ #121 Toxopid's Legs): exile the named lane's pile as this lands on it — a void
+    /// lane stays void, and a pile holding a Dormant card is left alone. `summon_onto` then fires
+    /// Crater on the arrival as ever.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exile_below: Option<bool>,
+    /// R3570002 (S+ #142 entry 3, "make them GIGA"): the fresh card enters GIGA whatever it prints, taking
+    /// the leftmost four-zone fit (R3546000), else nothing lands. Fresh summons only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub giga: Option<bool>,
+    /// R3570001 (S+ #142.2 Swarm Golem, "a Swarm card that is Evolved"): the fresh card is marked to
+    /// enter evolved (R3536002), when its text prints an Evolve hook. Fresh summons only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enters_evolved: Option<bool>,
+    /// S+ #28 Zombie-Box (R3541002): the fresh summon enters Dormant for this many of its controller's
+    /// turns though its text prints no Dormant ("Summon a Dormant 1 Gargantuar"); absent or 0 enters
+    /// awake. Fresh summons only, and never a card that has awakened before (R3039000).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dormant_turns: Option<i32>,
 }
 
 /// `summon`'s arguments, the placement's keys beside the rest.
@@ -144,6 +166,17 @@ pub struct SummonArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(type = "Record<string, unknown>", optional))]
     pub memory: Option<IndexMap<String, Value>>,
+    /// R3557003: "in the backrow if possible" — a Unit that names no lane enters the leftmost open
+    /// backrow zone, standing there as a Unit (R1081000), and only with none open the unit row (R64).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub backrow_first: Option<bool>,
+    /// R3554009 (S+ #121 Toxopid's Legs): exile the named lane's pile as this lands on it
+    /// (`SummonPlacement.exile_below`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exile_below: Option<bool>,
+    /// R3541002: the fresh card enters Dormant for this many turns (`SummonPlacement.dormant_turns`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dormant_turns: Option<i32>,
 }
 
 impl SummonArgs {
@@ -160,6 +193,11 @@ impl SummonArgs {
             source_id: None,
             chinese: None,
             memory: self.memory.clone(),
+            backrow_first: self.backrow_first,
+            exile_below: self.exile_below,
+            giga: None,
+            enters_evolved: None,
+            dormant_turns: self.dormant_turns,
         }
     }
 }
@@ -193,7 +231,7 @@ fn can_place(ctx: &EffectContext<'_>, slot: &ZoneSlot, stack: bool) -> bool {
 
 /// R64 with no lane named, the named lane otherwise; `None` when the summon fizzles (§3.2).
 fn zone_for(ctx: &EffectContext<'_>, player: PlayerId, row: Row, at: &SummonPlacement) -> Option<ZoneSlot> {
-    zone_and_stance_for(ctx, player, row, at, false).map(|(slot, _)| slot)
+    zone_and_stance_for(ctx, player, row, at, false, false).map(|(slot, _)| slot)
 }
 
 /// `zone_for`, and whether the card stands in a backrow zone (`entry_zone`, R1081000, R2248000).
@@ -203,15 +241,40 @@ fn zone_and_stance_for(
     row: Row,
     at: &SummonPlacement,
     flies: bool,
+    giga: bool,
 ) -> Option<(ZoneSlot, bool)> {
+    // R3554003: a summon stays on its summoner's half of a slashed board.
+    let half = ctx
+        .self_
+        .as_ref()
+        .and_then(|source| crate::geometry::half_of_card(ctx.state, source));
+    let allow = |lane: i32| crate::geometry::lane_in_half(ctx.state, lane, half);
     let Some(lane) = at.lane else {
-        return entry_zone(ctx.state, player, row, flies);
+        // R3557003: backrow first, where a Unit stands as it does there (R1081000); else R64's row.
+        if at.backrow_first == Some(true)
+            && row == Row::Units
+            && !giga
+            && let Some(slot) = first_entry_zone(ctx.state, player, Row::Backrow)
+        {
+            return Some((slot, true));
+        }
+        return entry_zone(ctx.state, player, row, flies, giga, &allow);
     };
+    if !allow(lane) {
+        return None;
+    }
     if lane < 1 || lane > row_size(row) {
         return None;
     }
     let slot = ZoneSlot { player, row, lane };
-    if can_place(ctx, &slot, at.stack == Some(true)) {
+    // R3546000: a named lane takes a GIGA only whole — every spanned slot a move may enter (R688).
+    if giga {
+        if crate::giga::fits(slot, |s| takes_move(ctx.state, s)) {
+            Some((slot, false))
+        } else {
+            None
+        }
+    } else if can_place(ctx, &slot, at.stack == Some(true)) {
         Some((slot, false))
     } else {
         None
@@ -220,28 +283,48 @@ fn zone_and_stance_for(
 
 /// R64, R688, R2248000: the zone a summon that names no lane enters, the leftmost entry zone of its
 /// row, else, for a Unit that `flies`, the backrow's, where it stands (R1081000).
-fn entry_zone(state: &GameState, player: PlayerId, row: Row, flies: bool) -> Option<(ZoneSlot, bool)> {
-    if let Some(slot) = first_entry_zone(state, player, row) {
+fn entry_zone(
+    state: &GameState,
+    player: PlayerId,
+    row: Row,
+    flies: bool,
+    giga: bool,
+    allow: &dyn Fn(i32) -> bool,
+) -> Option<(ZoneSlot, bool)> {
+    // R3546000: a GIGA takes the leftmost fit (R64, R688), never standing.
+    if giga {
+        return crate::giga::entry_anchor_where(state, player, row, allow).map(|slot| (slot, false));
+    }
+    if let Some(slot) = first_entry_zone_where(state, player, row, allow) {
         return Some((slot, false));
     }
     if row == Row::Units && flies {
-        return first_entry_zone(state, player, Row::Backrow).map(|slot| (slot, true));
+        return first_entry_zone_where(state, player, Row::Backrow, allow).map(|slot| (slot, true));
     }
     None
 }
 
-/// R2248000: whether this Unit's face, as it stands where it is (§10.4), has Flying, so a summon into a
-/// full unit row may stand it in the backrow.
+/// R2248000: whether this Unit's face, as it stands where it is (§10.4), is a Flexible Unit (Flying
+/// has it innately, R3543000), so a summon into a full unit row may stand it in the backrow.
 fn summon_flies(state: &GameState, card: &CardInstance) -> bool {
-    card_type_of(state, card) == CardType::Unit
-        && crate::layers::unit_has(state, card, crate::wire::KeywordKind::Flying)
+    card_type_of(state, card) == CardType::Unit && crate::layers::is_flexible(state, card)
 }
 
-/// R2248000: whether a summon of `card` that names no lane finds a zone on `player`'s side, a Flying
-/// Unit's in the backrow included, for a caller that must know before it draws or moves anything (R129).
+/// R2248000: whether a summon of `card` that names no lane finds a zone on `player`'s side, a Flexible
+/// Unit's (Flying has it innately, R3543000) in the backrow included, for a caller that must know
+/// before it draws or moves anything (R129).
 pub(crate) fn summon_lands(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
-    row_of(card_type_of(state, card))
-        .is_some_and(|row| entry_zone(state, player, row, summon_flies(state, card)).is_some())
+    row_of(card_type_of(state, card)).is_some_and(|row| {
+        entry_zone(
+            state,
+            player,
+            row,
+            summon_flies(state, card),
+            crate::giga::enters_giga(state, card),
+            &|_| true,
+        )
+        .is_some()
+    })
 }
 
 /// The body every summon shares: place the card (standing in a backrow zone if `stands`, R1081000,
@@ -269,8 +352,11 @@ fn summon_onto(
 
     let turn = ctx.state.turn;
     let stats_override = at.stats_override;
+    // R3548001: the stamp a Tipsy counter now up lays on the summoned card.
+    let stamp = crate::tipsy::stamp_for(ctx.state, slot.player);
     if let Some(live) = find_instance_mut(ctx.state, &card.id) {
         live.summoned_turn = Some(turn);
+        live.tipsy = stamp;
         if let Some(stats) = stats_override {
             live.stats_override = Some(AttackHealth {
                 attack: stats.attack,
@@ -315,6 +401,28 @@ fn summon_onto(
     true
 }
 
+/// R3554009: empty the named lane's slot for a summon landing with `exile_below`: a void lane
+/// stays void, and a pile holding a Dormant card is left alone (the summon then fizzles there).
+fn exile_below(ctx: &mut EffectContext<'_>, player: PlayerId, row: Row, at: &SummonPlacement) {
+    if at.exile_below != Some(true) {
+        return;
+    }
+    let Some(lane) = at.lane else {
+        return;
+    };
+    let slot = ZoneSlot { player, row, lane };
+    if crate::geometry::is_void(ctx.state, slot) {
+        return;
+    }
+    if crate::zones::zone_contents(ctx.state, slot)
+        .iter()
+        .any(crate::slumber::is_slumbering)
+    {
+        return;
+    }
+    crate::geometry::exile_zone(ctx, slot);
+}
+
 /// A fresh card of `def_id`, created only once a zone is known so a fizzle creates nothing.
 pub(crate) fn summon_fresh(
     ctx: &mut EffectContext<'_>,
@@ -324,8 +432,13 @@ pub(crate) fn summon_fresh(
 ) -> Option<CardInstance> {
     let probe = face_probe(def_id, player, at.radiant == Some(true));
     let row = row_of(card_type_of(ctx.state, &probe))?;
+    // R3554009: exile the pile below before the zone is read, so the fresh card lands on it.
+    exile_below(ctx, player, row, at);
     let flies = summon_flies(ctx.state, &probe);
-    let (slot, stands) = zone_and_stance_for(ctx, player, row, at, flies)?;
+    // R3546000: a fresh card printing GIGA takes the leftmost fit, else nothing lands; R3570002: so does
+    // one the summon makes GIGA.
+    let giga = at.giga == Some(true) || crate::giga::enters_giga(ctx.state, &probe);
+    let (slot, stands) = zone_and_stance_for(ctx, player, row, at, flies, giga)?;
     summon_fresh_into(ctx, def_id, player, &slot, at, stands)
 }
 
@@ -377,6 +490,22 @@ fn summon_fresh_into(
     if let Some(memory) = &at.memory {
         card.memory.extend(memory.clone());
     }
+    // R3570002: made GIGA by a granted keyword, so `place_on_field` stamps the size as it stamps a
+    // printed one (R3546002).
+    if at.giga == Some(true) {
+        card.granted_keywords.push(Keyword::Giga);
+    }
+    // R3570001: marked only when its text prints an Evolve hook (R3536002), a card with none staying as it is.
+    if at.enters_evolved == Some(true) && crate::evolution::can_evolve(&*ctx.state, &card) {
+        card.enters_evolved = Some(true);
+    }
+    // R3541002: asleep before it lands, as a card printing Dormant is (`slumber::start_slumber_on_field`
+    // then finds it Dormant already and leaves its countdown as it is). A fresh card has never awakened.
+    if at.dormant_turns.is_some_and(|turns| turns > 0) {
+        card.slumber = Some(Slumber {
+            turns: at.dormant_turns,
+        });
+    }
     crate::generators::record_generator(ctx, &card);
     if summon_onto(ctx, &mut card, slot, at, None, stands) {
         Some(card)
@@ -414,9 +543,20 @@ fn summon_existing(
     }
     let probe = face_probe(&card.def_id, player, card.radiant || at.radiant == Some(true));
     let row = row_of(card_type_of(ctx.state, &probe))?;
+    // R3554009: exile the pile below before the zone is read, so the moving card lands on it.
+    exile_below(ctx, player, row, at);
     // R2248000: the card's Flying as it stands where it is (a hand's, a graveyard's printed one).
     let flies = summon_flies(ctx.state, card);
-    let (slot, stands) = zone_and_stance_for(ctx, player, row, at, flies)?;
+    // R3546002: the size is read off the card with the summon's riders, as `place_with` reads it.
+    let mut giga_probe = card.clone();
+    if at.radiant == Some(true) {
+        giga_probe.radiant = true;
+    }
+    if let Some(x) = at.x {
+        giga_probe.x = Some(x);
+    }
+    let giga = crate::giga::enters_giga(ctx.state, &giga_probe);
+    let (slot, stands) = zone_and_stance_for(ctx, player, row, at, flies, giga)?;
 
     let mut moving = card.clone();
     remove_from_any_zone(ctx.state, &mut moving);
@@ -697,7 +837,9 @@ pub fn summon_copy(args: SummonCopyArgs) -> Effect {
         // R2248000: a Flying copy stands in the backrow when the unit row is full.
         let at = args.placement();
         let flies = summon_flies(ctx.state, &source);
-        let Some((slot, stands)) = zone_and_stance_for(ctx, player, row, &at, flies) else {
+        // R3546000: a copy of a GIGA lands whole or not at all.
+        let giga = crate::giga::enters_giga(ctx.state, &source);
+        let Some((slot, stands)) = zone_and_stance_for(ctx, player, row, &at, flies, giga) else {
             return;
         };
         let mut copy = clone_of(ctx, &source, player, &args);
@@ -735,11 +877,45 @@ impl SummonRandomArgs {
     }
 }
 
+/// `summonRandom`'s arguments with the riders a card drawn lands with: `SummonRandomArgs`' keys beside
+/// `keywords`, `giga` and `entersEvolved`. A struct of its own, so the shipped cards that spell
+/// `SummonRandomArgs` out field by field keep compiling (CLAUDE.md rule 6: each card's file is its own).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct SummonRandomWithArgs {
+    #[serde(flatten)]
+    pub random: SummonRandomArgs,
+    /// R3570006 (S+ #142.1 Mindustrial Golem, "a random Mindustrial card that can't attack"): keywords the
+    /// card drawn gains as it lands (`SummonArgs.keywords`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub keywords: Option<Vec<Keyword>>,
+    /// R3570002 (S+ #142 entry 3, "make them GIGA"): the card drawn enters GIGA (`SummonPlacement.giga`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub giga: Option<bool>,
+    /// R3570001 (S+ #142.2 Swarm Golem, "a Swarm card that is Evolved"): the card drawn is marked to enter
+    /// evolved where its text prints an Evolve hook (`SummonPlacement.enters_evolved`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enters_evolved: Option<bool>,
+}
+
 /// §6.3 Summon from a random pool (#67 Zoomerbin Oomen, #95 Call to Chaos): one `rng.pick` over
 /// `query({ …, excludeDefId })` (§10.7, §5.1, R387), drawn inside `apply`, never as the effect is built,
 /// which would desync every later replay (§9.3, R60), and before placement, as the def drawn picks the
 /// row (R64, R47, §3.2/R33). R129: it draws only when some card of the pool has a zone to go to.
+/// R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
 pub fn summon_random(args: SummonRandomArgs) -> Effect {
+    summon_random_with(SummonRandomWithArgs {
+        random: args,
+        ..SummonRandomWithArgs::default()
+    })
+}
+
+/// `summon_random` with riders on the card it draws (R3570001, R3570002, R3570006): GIGA, marked to
+/// evolve, and keywords granted as it lands. The draw is still one pick over the pool, made only when
+/// a zone fits the card (R129), a GIGA's four-zone fit included (R3570002).
+pub fn summon_random_with(with: SummonRandomWithArgs) -> Effect {
+    let args = with.random.clone();
     Effect::new("summonRandom", move |ctx| {
         // §5.1: a random pool never offers the card that generated it.
         let own = ctx
@@ -750,29 +926,47 @@ pub fn summon_random(args: SummonRandomArgs) -> Effect {
         let asked: CatalogQueryArgs = args.query.clone().unwrap_or_default();
         let pool = query(&excluding_def_id(Some(&*ctx.state), &asked, own.as_deref()));
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
-        let at = args.placement();
+        let at = SummonPlacement {
+            giga: with.giga,
+            enters_evolved: with.enters_evolved,
+            ..args.placement()
+        };
         let rows: IndexSet<Row> = pool.iter().filter_map(|def| row_of(def.type_)).collect();
-        // R2248000: a Flying Unit of the pool may stand in the backrow when the unit row is full.
+        // R2248000: a Flexible Unit of the pool (Flying has it innately, R3543000) may stand in
+        // the backrow when the unit row is full.
+        let giga = at.giga == Some(true);
         let a_flier_lands = || {
-            at.lane.is_none()
+            // R3570002: a GIGA never stands in the backrow, so a flier saves no draw for one.
+            !giga
+                && at.lane.is_none()
                 && pool.iter().any(|def| {
                     def.type_ == CardType::Unit
                         && def
                             .base
                             .keywords
                             .iter()
-                            .any(|keyword| keyword.kind() == crate::wire::KeywordKind::Flying)
+                            .any(|keyword| crate::layers::grants_flexible(keyword.kind()))
                 })
                 && first_entry_zone(ctx.state, player, Row::Backrow).is_some()
         };
-        if !rows.iter().any(|row| zone_for(ctx, player, *row, &at).is_some()) && !a_flier_lands() {
+        // R3570002: a GIGA draw needs the four-zone fit its card will ask for (R129).
+        if !rows
+            .iter()
+            .any(|row| zone_and_stance_for(ctx, player, *row, &at, false, giga).is_some())
+            && !a_flier_lands()
+        {
             return;
         }
 
-        let Some(def_id) = pick_generated(ctx.sink.rng, &pool, None).map(|def| def.id.clone()) else {
+        let Some(def_id) =
+            pick_generated_unique(ctx.sink.rng, &pool, None, &mut ctx.draw_tally).map(|def| def.id.clone())
+        else {
             return;
         };
-        summon_fresh(ctx, &def_id, player, &at);
+        // R3570006: the keywords go on once it has landed, as `summon`'s `keywords` rider does.
+        if let Some(made) = summon_fresh(ctx, &def_id, player, &at) {
+            grant_summon_keywords(ctx, &made, with.keywords.clone().unwrap_or_default());
+        }
     })
 }
 
@@ -1119,8 +1313,9 @@ pub struct FillBoardRandomArgs {
 }
 
 /// R1080 (M #51): "fill your board" with a pick from the match rng (R60) for each unit zone `fill_board`
-/// fills (R64, R1136000), repeats allowed, from `summon_random`'s pool (every set, R380, but the card
-/// that generated it, R387) kept to Units. With no zone to fill nothing is drawn (R129).
+/// fills (R64, R1136000), repeats allowed unless `UNIQUE_RANDOM_DRAWS` holds (R3563000), from
+/// `summon_random`'s pool (every set, R380, but the card that generated it, R387) kept to Units. With
+/// no zone to fill nothing is drawn (R129).
 pub fn fill_board_random(args: FillBoardRandomArgs) -> Effect {
     Effect::new("fillBoardRandom", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -1142,7 +1337,9 @@ pub fn fill_board_random(args: FillBoardRandomArgs) -> Effect {
             return;
         }
         for slot in slots {
-            let Some(def_id) = pick_generated(ctx.sink.rng, &pool, None).map(|def| def.id.clone()) else {
+            let Some(def_id) = pick_generated_unique(ctx.sink.rng, &pool, None, &mut ctx.draw_tally)
+                .map(|def| def.id.clone())
+            else {
                 return;
             };
             let at = SummonPlacement {

@@ -30,13 +30,15 @@ fn dealt_by_a_rule(card: &CardDef) -> bool {
 const MAKER_STILL_TO_COME: &[(&str, &[&str])] = &[];
 
 /// R381 (B2.8): card names that are also rules words. A text using one names that card only when the
-/// card's `refs` lists it.
-const RULES_WORDS: &[&str] = &["Exile", "Burn", "Echo", "Recycle"];
+/// card's `refs` lists it. R3535001: "Fuse" and "Duo" join them for the Stinkyscape+ set's #107 Fuse and
+/// #36 Duo, whose verbs the set's texts use everywhere (Stinkyscape #110 iKwzki: "Duo with a permanent").
+const RULES_WORDS: &[&str] = &["Exile", "Burn", "Echo", "Recycle", "Fuse", "Duo"];
 
 /// R961: rules phrases that hold a card's name without naming it (R381): "Jade Counter" holds
 /// "Jade" (Meditative #39.2), which names nothing inside it. R2198004: "Fortify Mind" (M #22.1)
-/// holds "Fortify" (TG #12), and still names itself.
-const RULES_PHRASES: &[&str] = &["Jade Counter", "Fortify Mind"];
+/// holds "Fortify" (TG #12), and still names itself. R3535001: "Ocean Tsunami" (Stinkyscape #96) holds
+/// "Tsunami" (Stinkyscape+ #91), which Stinkyscape #95's list of cards to add does not name.
+const RULES_PHRASES: &[&str] = &["Jade Counter", "Fortify Mind", "Ocean Tsunami"];
 
 /// A match that is the whole phrase is not inside it (R2198004: the phrase may be a card's own name).
 /// Both bounds sit on the match's own edges, so every byte index here is a character boundary.
@@ -91,6 +93,16 @@ const TOKEN_POOLS: &[TokenPool] = &[
     TokenPool {
         tag: Tag::WarDoctrine,
         phrase: "War Doctrine",
+    },
+    // R3535001: the held Stinkyscape+ set's #80 and #155 name its ten Terminus Starships as
+    // "Terminus Starship", and #133 its five Automa-ζ fusion tokens as "Automa-ζ".
+    TokenPool {
+        tag: Tag::Starship,
+        phrase: "Terminus Starship",
+    },
+    TokenPool {
+        tag: Tag::AutomaZeta,
+        phrase: "Automa-ζ",
     },
 ];
 
@@ -322,6 +334,9 @@ mod r279_the_reference_map_spec_5_7_10_10 {
                 "T-AI-1", "T-AI-2", "T-AI-3", "T-AI-4", "T-AI-5", "T-AI-6", "T-AI-7", "T-AI-8", "T-AI-9",
                 "T-AI-10", "1.1", "1.2", "1.3", "1.4", "1.5", "T-AI-1", "T-AI-2", "T-AI-3", "T-AI-4",
                 "T-AI-5", "T-AI-6", "T-AI-7", "T-AI-8", "T-AI-9", "T-AI-10",
+                // The Stinkyscape+ set's T-AI-1 to T-AI-7 (R3535000), which its Marketplace-less cards
+                // reach through the tag alone.
+                "T-AI-1", "T-AI-2", "T-AI-3", "T-AI-4", "T-AI-5", "T-AI-6", "T-AI-7",
             ])
         );
         // The pins are the shipped sets' cards (R1857000: a held set's are pinned at its release).
@@ -345,11 +360,20 @@ mod r279_the_reference_map_spec_5_7_10_10 {
         assert_eq!(naming("AI Generated card"), Vec::<String>::new());
         assert_eq!(
             indices_of(Tag::Fruit),
-            strings(&["65.1", "65.2", "65.3", "65.4", "65.5"])
+            // The five Grapes, then the Stinkyscape+ set's three Fruit tokens (R3535000): #6.1 Fine
+            // Fermented Grape and its T-AI-1 Hallucinated Kiwi and T-AI-2 Data-Poisoned Plum.
+            strings(&["65.1", "65.2", "65.3", "65.4", "65.5", "6.1", "T-AI-1", "T-AI-2"])
         );
         assert_eq!(
             shipped(naming("Grape")),
-            strings(&["classicplus-065", "classicplus-066"])
+            // The Stinkyscape+ release (#3573): #6 Wines McCheese adds a Fine Fermented Grape, which
+            // fuses "a different Grape" in turn (#6.1).
+            strings(&[
+                "classicplus-065",
+                "classicplus-066",
+                "stinkyscapeplus-006",
+                "stinkyscapeplus-006-1"
+            ])
         );
         assert_eq!(shipped(naming("random reward")), strings(&["classicplus-042"]));
     }
@@ -369,7 +393,18 @@ mod r279_the_reference_map_spec_5_7_10_10 {
         // (Core #100 Ceaseless Void, the other Terminus card, names none and is no token).
         assert_eq!(
             shipped(naming("Terminus card")),
-            strings(&["stinkyscape-004", "stinkyscape-154"])
+            strings(&[
+                // S01 (R3551002): Core #98 Heroic Power's End Times Discovers a Terminus card.
+                "core-098",
+                "stinkyscape-004",
+                "stinkyscape-154",
+                // The Stinkyscape+ release (#3573): its #81 Doomsayer, #82 Endless Expedition, #89
+                // Animosity and #142 Call to Chaos (Mindustrial-Swarm Edition) read the pool too.
+                "stinkyscapeplus-081",
+                "stinkyscapeplus-082",
+                "stinkyscapeplus-089",
+                "stinkyscapeplus-142",
+            ])
         );
         assert_eq!(
             shipped(naming("War Doctrine")),
@@ -408,15 +443,18 @@ mod r279_the_reference_map_spec_5_7_10_10 {
     }
 
     #[test]
-    fn r381_reads_exile_burn_echo_and_recycle_as_rules_words_a_text_that_says_one_names_no_card_unless_its_refs_list_it()
+    fn r381_reads_exile_burn_echo_recycle_and_fuse_as_rules_words_a_text_that_says_one_names_no_card_unless_its_refs_list_it()
      {
         for word in RULES_WORDS {
             let card = entries().into_iter().find(|entry| entry.name == *word);
-            assert_eq!(
-                card.map(|card| card.set),
-                Some(SetName::Classic),
-                "{word} is a Classic card"
-            );
+            // R3535001: every rules word but Fuse and Duo is a Classic card; they are the Stinkyscape+
+            // set's #107 and #36, whose verbs the set's texts use everywhere.
+            let set = if matches!(*word, "Fuse" | "Duo") {
+                SetName::StinkyscapePlus
+            } else {
+                SetName::Classic
+            };
+            assert_eq!(card.map(|card| card.set), Some(set), "{word} is a {set} card");
         }
         let uses_exile = entries()
             .into_iter()

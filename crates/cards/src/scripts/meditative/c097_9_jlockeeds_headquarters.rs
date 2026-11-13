@@ -81,9 +81,9 @@ mod tests {
     const SPARE: &str = "core-005"; // Stockpile: library spare
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     /// Every non-token Jlockeed Unit of the sets that ship, in catalog order (R380, R1420): Core #13, C+ #48
-    /// and #51, M #87 (every tribe), Stinkyscape's #127, #128 and #129 (#1884) and Training Grounds' #48,
-    /// Core #13's snapshot (#2204).
-    const JLOCKEED_UNITS: [&str; 8] = [
+    /// and #51, M #87 (every tribe), Stinkyscape's #127, #128 and #129 (#1884), Training Grounds' #48,
+    /// Core #13's snapshot (#2204), and Stinkyscape+'s #21 Jlockeed Shredder-12 (#3573).
+    const JLOCKEED_UNITS: [&str; 9] = [
         "core-013",
         "classicplus-048",
         "classicplus-051",
@@ -92,6 +92,7 @@ mod tests {
         "stinkyscape-128",
         "stinkyscape-129",
         "traininggrounds-048",
+        "stinkyscapeplus-021",
     ];
 
     fn slot(lane: i32) -> ZoneSlot {
@@ -165,7 +166,7 @@ mod tests {
     }
 
     #[test]
-    fn r380_the_jlockeed_units_of_the_sets_that_ship_are_the_eight_the_tests_name() {
+    fn r380_the_jlockeed_units_of_the_sets_that_ship_are_the_nine_the_tests_name() {
         crate::register_all();
         let pool: Vec<String> = crate::CATALOG
             .values()
@@ -221,20 +222,21 @@ mod tests {
             assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(ID.to_string()));
         }
 
+        /// R3563000: one Activate is one run, so its four picks are four different Jlockeed Units while the
+        /// pool of nine lasts (R60's repeats no longer stand for a card an effect generates), and over the
+        /// seeds all nine come.
         #[test]
-        fn r1261_r60_repeats_allowed_and_all_eight_reached() {
+        fn r1261_r3563000_the_picks_are_distinct_until_the_pool_runs_out_and_all_nine_reached() {
             let mut seen: Vec<String> = Vec::new();
-            let mut repeated = false;
-            for n in 0..12 {
+            for n in 0..20 {
                 let mut s = setup(&format!("hq-{n}"), false, &[]);
                 s.activate(ID, json!({}));
                 let defs: Vec<String> = summoned(&s).into_iter().map(|unit| unit.def_id).collect();
                 assert_eq!(defs.len(), 4);
                 assert!(defs.iter().all(|def| JLOCKEED_UNITS.contains(&def.as_str())));
-                repeated |= defs.iter().enumerate().any(|(at, def)| defs[..at].contains(def));
+                assert_eq!(defs.iter().collect::<IndexSet<_>>().len(), 4, "seed {n}: {defs:?}");
                 seen.extend(defs);
             }
-            assert!(repeated);
             for unit in JLOCKEED_UNITS {
                 assert!(seen.iter().any(|def| def == unit), "{unit} never came");
             }

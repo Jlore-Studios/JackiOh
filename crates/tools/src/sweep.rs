@@ -1750,12 +1750,13 @@ mod tests {
                 SetName::Meditative,
                 SetName::MeditativePlus,
                 SetName::Stinkyscape,
-                SetName::TrainingGrounds
+                SetName::TrainingGrounds,
+                SetName::StinkyscapePlus
             ]
         );
         assert_eq!(
             ban_sets_named(),
-            "Meditative, Meditative+, Stinkyscape and Training Grounds"
+            "Meditative, Meditative+, Stinkyscape, Training Grounds and Stinkyscape+"
         );
         let ids = stinkyscape_ids();
         let fifth = ids.len() / 5;
@@ -1768,7 +1769,9 @@ mod tests {
             .unwrap_err()
             .to_string();
         assert!(
-            error.contains("holds Meditative, Meditative+, Stinkyscape and Training Grounds cards only"),
+            error.contains(
+                "holds Meditative, Meditative+, Stinkyscape, Training Grounds and Stinkyscape+ cards only"
+            ),
             "{error}"
         );
     }

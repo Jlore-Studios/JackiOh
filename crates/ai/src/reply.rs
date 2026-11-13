@@ -25,7 +25,8 @@ use jackioh_engine::{
 use crate::candidates::{Side, blow, candidate_actions_in, cleaved_neighbours, exchange, side_of};
 use crate::config::{AI_EVAL, AI_GUESS_SEED, AI_REPLY};
 use crate::evaluate::{
-    NextSwing, Prices, coming_mana, evaluate_priced, heal_converted, heal_worth, kill_worth, unit_worth,
+    NextSwing, Prices, coming_mana, evaluate_priced, float_credit, heal_converted, heal_worth, kill_worth,
+    unit_worth,
 };
 use crate::learned::finalist_score;
 use crate::lethal::{deft_ready_switch, ready_gap};
@@ -694,7 +695,8 @@ pub fn reply_score(
 }
 
 /// A passed line's score at `after`, where the reply from `end` stopped: the finalists' evaluation
-/// with whoever swings next, less the crystals the line left `unspent`.
+/// with whoever swings next, less the crystals the line left `unspent`, plus what that Float brought
+/// its Float-discount cards at `end` (R3695000).
 fn replied_score(end: &GameState, after: &GameState, seat: PlayerId, unspent: i32, prices: &Prices) -> f64 {
     let next = if after.active == seat {
         NextSwing::Seat
@@ -709,6 +711,7 @@ fn replied_score(end: &GameState, after: &GameState, seat: PlayerId, unspent: i3
         0.0
     };
     finalist_score(after, seat, next, prices) + spent - AI_EVAL.unspent_mana * f64::from(unspent)
+        + float_credit(end, seat, unspent, &AI_EVAL)
 }
 
 /// #1995: advances countdowns waiting at `after` (public badges, R1181000, R169, R185) to seat's

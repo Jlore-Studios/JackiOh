@@ -10,7 +10,7 @@
 //! which the first Resource or Credits either player gains opens (R1853000). The verbs a card script
 //! composes are `effects::tray`'s; this module is the rule they share.
 
-use crate::catalog::{find_def, registered_catalog};
+use crate::catalog::{DrawTally, find_def, record_draw, registered_catalog, times_drawn};
 use crate::config::RESOURCE_RARITY_ODDS;
 use crate::rng::Rng;
 use crate::script::EngineSink;
@@ -38,15 +38,32 @@ fn resource_rarity(state: &GameState, def_id: &str) -> Option<PrintedRarity> {
 
 /// R1840002: one random Resource's id, of the catalog's or only those `pool` names: the odds over the
 /// rarities they hold (one draw, walked in the table's order as `catalog::roll_weighted` walks its),
-/// then one of that rarity, uniformly. With no candidate, `None` and no draw.
+/// then one of that rarity, uniformly. With no candidate, `None` and no draw. The one-draw form: a
+/// run drawing several shares its tally through `roll_resource_unique` (R3563000).
 pub fn roll_resource(state: &GameState, rng: &mut Rng, pool: Option<&[String]>) -> Option<String> {
-    let candidates: Vec<(String, PrintedRarity)> = resource_def_ids()
+    roll_resource_unique(state, rng, pool, &mut DrawTally::new())
+}
+
+/// R3563000: `roll_resource` through the run's tally: only the run's least-drawn candidates take the
+/// rarity roll, so no Resource comes twice until every candidate has come once, while the rarity odds
+/// still roll over what is left (R1840002).
+pub fn roll_resource_unique(
+    state: &GameState,
+    rng: &mut Rng,
+    pool: Option<&[String]>,
+    tally: &mut DrawTally,
+) -> Option<String> {
+    let mut candidates: Vec<(String, PrintedRarity)> = resource_def_ids()
         .into_iter()
         .filter(|id| pool.is_none_or(|pool| pool.contains(id)))
         // R2201001: a held game rolls no Legendary or Mythic Resource.
         .filter(|id| !find_def(Some(state), id).is_some_and(crate::catalog::held_out))
         .filter_map(|id| resource_rarity(state, &id).map(|rarity| (id, rarity)))
         .collect();
+    // R3563000: only the run's least-drawn stay; with the tally empty (always, while unique draws
+    // do not hold) every candidate counts 0 and all stay.
+    let fewest = candidates.iter().map(|(id, _)| times_drawn(tally, id)).min();
+    candidates.retain(|(id, _)| Some(times_drawn(tally, id)) == fewest);
     let table: Vec<(PrintedRarity, i32)> = RESOURCE_RARITY_ODDS
         .iter()
         .copied()
@@ -68,7 +85,10 @@ pub fn roll_resource(state: &GameState, rng: &mut Rng, pool: Option<&[String]>) 
         .filter(|(_, rarity)| *rarity == rolled)
         .map(|(id, _)| id)
         .collect();
-    rng.pick(&of_rarity).map(|id| (*id).clone())
+    // R3563000: the gain counts, so the run's next roll passes it by while its pool has fresher cards.
+    let id = rng.pick(&of_rarity).map(|id| (*id).clone())?;
+    record_draw(tally, &id);
+    Some(id)
 }
 
 /// R1840001, R1853002: a whole number drawn uniformly in one face's sell range.
@@ -78,7 +98,12 @@ pub fn draw_sell_price(rng: &mut Rng, price: ResourcePrice) -> i32 {
 
 /// R1840001, R2250001: what a Resource fetches now: its quote this turn while the Marketplace is open,
 /// with no draw (R1853002); otherwise a draw in its face's sell range. 0, with no draw, for no Resource.
+/// R3548002: a Warhero Token fetches the game-wide worth, doubled on its Radiant face, whatever the
+/// Marketplace holds.
 pub fn sell_price(state: &GameState, rng: &mut Rng, card: &CardInstance) -> i32 {
+    if let Some(worth) = crate::warhero::worth_of(state, card) {
+        return worth;
+    }
     if let Some(quote) = crate::marketplace::sell_quote(state, card) {
         return quote;
     }
@@ -124,8 +149,12 @@ pub fn gain_resource(sink: &mut EngineSink<'_>, player: PlayerId, def_id: &str, 
 }
 
 /// R2250000, R2250001: whether a card is a Resource (its definition carries `resource`).
+/// R3548002: a Warhero Token is one too, though its definition carries no `resource` block: it pays
+/// the game-wide worth instead of a roll, so `resource_def_ids` — the rolls and the requote — never
+/// lists it.
 pub fn is_resource_card(state: &GameState, card: &CardInstance) -> bool {
     find_def(Some(state), &card.def_id).is_some_and(|def| def.resource.is_some())
+        || crate::warhero::is_warhero_token(&card.def_id)
 }
 
 /// R2250001: a Resource `player` played or discarded from their hand pays them its Credits

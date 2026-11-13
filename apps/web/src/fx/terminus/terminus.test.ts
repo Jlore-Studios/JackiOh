@@ -2,7 +2,8 @@
 // plans every entry (remember, then plan): each held inside its entry and gone within FX_MAX_TAIL_MS of
 // its end (R200) at every hold Big moments and the speed give it, Dice of Doom's three outcomes drawn
 // each its own way, no cue naming a hidden card from the other seat (R202), the follow-ups the turns
-// they owe open, and the Terminus pool the catalog's own.
+// they owe open, and the Terminus pool the catalog's own: every Terminus card before Stinkyscape+'s, which
+// neither Olivian Expanse's pool nor Dice of Doom's holds (#3596).
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -40,7 +41,7 @@ import {
 } from "../setPieces.ts";
 import type { FxCue, FxMemory, FxRollCue, FxSetPieceCue } from "../types.ts";
 import { TERMINUS_TUNING } from "./build.ts";
-import { BIG_CRUNCH, DICE_OF_DOOM, EVENT_HORIZON, LAST_WORD, OLIVIAN_EXPANSE, TERMINUS_IDS } from "./ids.ts";
+import { BIG_CRUNCH, DICE_OF_DOOM, EVENT_HORIZON, LAST_WORD, OLIVIAN_EXPANSE, STINKYSCAPE_PLUS_TERMINUS_IDS, TERMINUS_IDS } from "./ids.ts";
 import { TERMINUS_PLANNERS, planTerminus, planTerminusStill } from "./index.ts";
 
 const claimOf: SetPieceClaimer = (entry) => wipeClaim(entry) ?? signatureClaim(entry);
@@ -338,9 +339,9 @@ describe("R3338000 the Terminus set pieces", () => {
     expect(pieceOf(last?.cues ?? [])).toBeUndefined();
   });
 
-  it("R3338000 TERMINUS_IDS are the catalog's Terminus cards, in its order", () => {
+  it("R3338000 TERMINUS_IDS, then Stinkyscape+'s, are the catalog's Terminus cards, in its order", () => {
     const tagged = Object.keys(CATALOG).filter((id) => CATALOG[id]?.tags.includes("Terminus") === true);
-    expect(tagged).toEqual([...TERMINUS_IDS]);
+    expect(tagged).toEqual([...TERMINUS_IDS, ...STINKYSCAPE_PLUS_TERMINUS_IDS]);
     expect(SET_PIECE_KEYS).toEqual(expect.arrayContaining([...TERMINUS_KEYS]));
   });
 });

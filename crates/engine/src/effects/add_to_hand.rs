@@ -9,7 +9,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::targets::{PlayerSpec, TargetSpec, instance_of, player_of};
-use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_generated, query};
+use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_generated_unique, query};
+use crate::query::HandSide;
 use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, find_instance, find_instance_mut, new_instance};
 use crate::wire::{AttackHealth, Keyword, Tuning, Zone, ZoneName};
@@ -21,6 +22,8 @@ use crate::wire::{AttackHealth, Keyword, Tuning, Zone, ZoneName};
 #[derive(Clone, Debug, Default, PartialEq)]
 struct HandRiders {
     player: Option<PlayerSpec>,
+    /// R3558000: the end of the hand the card takes, absent the right end.
+    at: Option<HandSide>,
     radiant: Option<bool>,
     cost_override: Option<i32>,
     /// R1181003: the Embiggened version's own price (Meditative+ #23).
@@ -46,6 +49,10 @@ struct HandRiders {
     fixed_x: Option<i32>,
     /// R1878003: the card is given these keywords as it reaches the hand.
     keywords: Option<Vec<Keyword>>,
+    /// R3565000: the Tribute X the card has while it is in a hand or a deck (0: none).
+    tribute: Option<i32>,
+    /// R3570001: the card is marked to enter the field evolved (R3536002), when its text prints an Evolve hook.
+    enters_evolved: Option<bool>,
 }
 
 /// `costMod` adds (R65 sums it); `costOverride` and `radiant` replace. The Radiant flag goes on first,
@@ -108,6 +115,14 @@ fn apply_cost_riders(card: &mut CardInstance, riders: &HandRiders) {
     for keyword in riders.keywords.iter().flatten() {
         card.granted_keywords.push(keyword.clone());
     }
+    // R3565000: a Tribute set in place of the printed one is a price for the card in the hand, so it
+    // goes on with the other prices and a burned card takes none.
+    if let Some(tribute) = riders.tribute {
+        card.memory.insert(
+            crate::play_choices::TRIBUTE_SET_KEY.to_string(),
+            Value::from(tribute.max(0)),
+        );
+    }
 }
 
 /// §2.4's pipeline, with the riders applied around it as `apply_radiant_rider` explains.
@@ -116,12 +131,13 @@ fn apply_cost_riders(card: &mut CardInstance, riders: &HandRiders) {
 /// moves, and on the card in its pile too when it already is in one; the cost riders go on the card
 /// where the move put it. Whether it reached the hand is `crate::draw::add_to_hand`'s outcome: a card
 /// a full hand burns (§2.4, R4, R1143, `query::room_in`) takes no price.
-fn put_in_hand_with(ctx: &mut EffectContext<'_>, mut card: CardInstance, riders: &HandRiders) {
+fn put_in_hand_with(ctx: &mut EffectContext<'_>, mut card: CardInstance, riders: &HandRiders) -> bool {
     apply_radiant_rider(&mut card, riders);
     if let Some(live) = find_instance_mut(&mut *ctx.state, &card.id) {
         apply_radiant_rider(live, riders);
     }
-    let reaches_hand = crate::draw::add_to_hand(ctx, &mut card) == crate::draw::AddToHandOutcome::Hand;
+    let reaches_hand =
+        crate::draw::add_to_hand_at(ctx, &mut card, riders.at) == crate::draw::AddToHandOutcome::Hand;
     if reaches_hand && let Some(live) = find_instance_mut(&mut *ctx.state, &card.id) {
         apply_cost_riders(live, riders);
     }
@@ -146,17 +162,25 @@ fn put_in_hand_with(ctx: &mut EffectContext<'_>, mut card: CardInstance, riders:
             live.cost_mod -= back;
         }
     }
+    reaches_hand
 }
 
 /// The one creation path, shared by `add_to_hand` and `add_random_from_catalog`: a fresh card of
-/// `defId` with these riders, into that player's hand through §2.4's pipeline.
-fn create_in_hand(ctx: &mut EffectContext<'_>, def_id: &str, riders: &HandRiders) {
+/// `defId` with these riders, into that player's hand through §2.4's pipeline. Hands back the id
+/// when the card reached the hand, `None` for a burned one.
+fn create_in_hand(ctx: &mut EffectContext<'_>, def_id: &str, riders: &HandRiders) -> Option<String> {
     let player = player_of(ctx, riders.player.unwrap_or(PlayerSpec::SelfSide));
-    let card = new_instance(&mut *ctx.state, def_id, player, Zone::Hand { player });
+    let mut card = new_instance(&mut *ctx.state, def_id, player, Zone::Hand { player });
+    // R3570001: R3536002's mark, which rides the card from the hand to the field; a card whose text
+    // prints no Evolve hook is given none.
+    if riders.enters_evolved == Some(true) && crate::evolution::can_evolve(&*ctx.state, &card) {
+        card.enters_evolved = Some(true);
+    }
     crate::generators::record_generator(ctx, &card);
     let id = card.id.clone();
-    put_in_hand_with(ctx, card, riders);
+    let reaches_hand = put_in_hand_with(ctx, card, riders);
     crate::generators::credit_creator(ctx, &id);
+    reaches_hand.then(|| id.clone())
 }
 
 /// R57, R1242: what a copy made into a hand carries of the card copied, as `library_copies`'s do.
@@ -242,12 +266,17 @@ pub struct AddToHandArgs {
     /// and costs it. Nothing on a card that has no X, or one a full hand burns.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub fixed_x: Option<i32>,
+    /// R3558000: the end of the hand the card takes — the left end, or, absent, the right end every
+    /// other arrival takes (§3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub at: Option<HandSide>,
 }
 
 impl AddToHandArgs {
     fn riders(&self) -> HandRiders {
         HandRiders {
             player: self.player,
+            at: self.at,
             radiant: self.radiant,
             cost_override: self.cost_override,
             embiggen_cost_override: self.embiggen_cost_override,
@@ -262,6 +291,8 @@ impl AddToHandArgs {
             memory: self.memory.clone(),
             fixed_x: self.fixed_x,
             keywords: None,
+            tribute: None,
+            enters_evolved: None,
         }
     }
 }
@@ -357,12 +388,21 @@ pub struct AddRandomFromCatalogArgs {
     /// gains Starship Piece").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub keywords: Option<Vec<Keyword>>,
+    /// R3565000 (Stinkyscape #129's "it has no Tribute condition", #138's "they have Tribute 1"): the
+    /// Tribute X each card added has while in a hand or a deck, in place of its printed one (0: none).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tribute: Option<i32>,
+    /// R3570001 (Stinkyscape+ #142's "random Evolved Swarm cards"): each card added is marked to enter the
+    /// field evolved (R3536002), when its text prints an Evolve hook; a card with none is added plain.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enters_evolved: Option<bool>,
 }
 
 impl AddRandomFromCatalogArgs {
     fn riders(&self) -> HandRiders {
         HandRiders {
             player: self.player,
+            at: None,
             radiant: self.radiant,
             cost_override: self.cost_override,
             embiggen_cost_override: self.embiggen_cost_override,
@@ -377,13 +417,16 @@ impl AddRandomFromCatalogArgs {
             memory: None,
             fixed_x: None,
             keywords: self.keywords.clone(),
+            tribute: self.tribute,
+            enters_evolved: self.enters_evolved,
         }
     }
 }
 
 /// §6.3 Add to hand, N times, from a §10.7 catalog pool (#54, #57, #59); the hand cap burns the
-/// overflow (§2.4, R4). Repeats are allowed (R60), so it picks `count` times rather than shuffling and
-/// slicing, as `discover_from_catalog` does to draw "without replacement".
+/// overflow (§2.4, R4). Repeats are allowed (R60) unless `UNIQUE_RANDOM_DRAWS` holds (R3563000), so it
+/// picks `count` times through the run's tally rather than shuffling and slicing, as
+/// `discover_from_catalog` does to draw "without replacement".
 pub fn add_random_from_catalog(args: AddRandomFromCatalogArgs) -> Effect {
     Effect::new("addRandomFromCatalog", move |ctx| {
         let pool = query(&pool_query(ctx, args.query.as_ref()));
@@ -395,7 +438,13 @@ pub fn add_random_from_catalog(args: AddRandomFromCatalogArgs) -> Effect {
         let count = args.count.unwrap_or(1).max(0);
         for _ in 0..count {
             // R673: a card generated into a hand may be Glitch (`catalog::GlitchOdds` is the state).
-            let Some(def) = pick_generated(&mut *ctx.sink.rng, &pool, Some(&*ctx.sink.state)) else {
+            // R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
+            let Some(def) = pick_generated_unique(
+                &mut *ctx.sink.rng,
+                &pool,
+                Some(&*ctx.sink.state),
+                &mut ctx.draw_tally,
+            ) else {
                 return;
             };
             let def_id = def.id.clone();
@@ -415,6 +464,71 @@ pub struct AddRandomFromGraveyardArgs {
     pub count: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exile: Option<bool>,
+}
+
+/// `addMeetingPair`'s arguments.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct AddMeetingPairArgs {
+    /// The definition of the card taking the left end of the hand.
+    pub left: String,
+    /// The definition of the card taking the right end of the hand.
+    pub right: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub radiant: Option<bool>,
+    /// R3558002: the price both cards take when they meet, absent keeping theirs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub meet_cost: Option<i32>,
+}
+
+/// R3558002: add a pair of cards to the two ends of a hand — `left` to its left end, `right` to
+/// its right — that become Radiant together the moment they sit side by side ("when they meet",
+/// `hand_order::meet_pairs`). When both reach the hand the pair starts waiting, even side by side
+/// at once; a card a full hand burns (§2.4, R4) never meets its partner.
+pub fn add_meeting_pair(args: AddMeetingPairArgs) -> Effect {
+    Effect::new("addMeetingPair", move |ctx| {
+        let spec = args.player.unwrap_or(PlayerSpec::SelfSide);
+        let player = player_of(ctx, spec);
+        let left = create_in_hand(
+            ctx,
+            &args.left,
+            &HandRiders {
+                player: Some(spec),
+                at: Some(HandSide::Left),
+                radiant: args.radiant,
+                ..HandRiders::default()
+            },
+        );
+        let right = create_in_hand(
+            ctx,
+            &args.right,
+            &HandRiders {
+                player: Some(spec),
+                at: Some(HandSide::Right),
+                radiant: args.radiant,
+                ..HandRiders::default()
+            },
+        );
+        if let (Some(left), Some(right)) = (left, right) {
+            // Both landed where the meet watches: the side's hand, in its order.
+            if crate::query::hand_index(ctx.state, &left).is_some_and(|(side, _)| side == player)
+                && crate::query::hand_index(ctx.state, &right).is_some_and(|(side, _)| side == player)
+            {
+                crate::hand_order::add_meet(
+                    ctx.state,
+                    crate::state::HandMeet {
+                        player,
+                        left,
+                        right,
+                        cost: args.meet_cost,
+                    },
+                );
+            }
+        }
+    })
 }
 
 /// Move random cards from your graveyard (with `exile`, and your exile pile) to your hand (#37, C #34,

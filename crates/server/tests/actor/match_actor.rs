@@ -14,14 +14,14 @@ use jackioh_engine::{
 };
 use jackioh_server::actor::match_actor::MatchActor;
 use jackioh_server::actor::ws_server::{
-    CLOSE_GOING_AWAY, CLOSE_NORMAL, Socket, WS_CLOSE, WS_PATH, WS_SUBPROTOCOL, bearer_protocol,
+    CLOSE_GOING_AWAY, Socket, WS_CLOSE, WS_PATH, WS_SUBPROTOCOL, bearer_protocol,
 };
 use jackioh_server::app::{App, router};
 use jackioh_server::config::{
     DISCONNECT_GRACE_SECONDS, MALFORMED_FRAMES_PER_WINDOW, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MINUTES,
     MULLIGAN_CLOCK_SECONDS, PLAYER_SETTINGS_BYTES_MAX, PLAYER_SETTINGS_GROUPS_MAX, PROMPT_CLOCK_SECONDS,
     RATING_DEVIATION_START, RATING_VOLATILITY_START, REJECTION_ALERT_THRESHOLD, REMATCH_OFFER_TTL_MS,
-    TURN_CLOCK_SECONDS,
+    SEAT_TAKEN_CLOSE_CODE, SEAT_TAKEN_CLOSE_REASON, TURN_CLOCK_SECONDS,
 };
 use jackioh_server::db::store::{
     Db, MatchRow, PlayerSettingsLimits, PlayerSettingsMergeInput, StartMatchInput,
@@ -5643,17 +5643,19 @@ mod seat_states_3678 {
         assert_eq!(match_row(&h.app, MATCH_ID).await["clocks"], stored);
     }
 
-    /// S12: a second socket for one home (a second tab, or a reconnect before the old socket closed)
-    /// takes the seat; the first is closed with 1000 and, as the seat was never empty, no grace starts
-    /// (R744, `on_socket_gone`).
+    /// S12, R3767000: a second socket for one home (a second tab, or another device) takes the seat; the
+    /// first is closed with `SEAT_TAKEN_CLOSE_CODE`, which its client does not reconnect on, and, as the
+    /// seat was never empty, no grace starts (R744, `on_socket_gone`).
     #[tokio::test(start_paused = true)]
-    async fn a_second_socket_for_one_seat_replaces_the_first_with_a_normal_close_and_starts_no_grace() {
+    async fn r3767000_a_second_socket_for_one_seat_replaces_the_first_with_seat_taken_and_starts_no_grace() {
         let h = harness(Options::default()).await;
         let second = Client::new();
         h.actor.attach(P1, second.socket());
         h.idle().await;
 
-        assert_eq!(h.p1.close_code(), Some(CLOSE_NORMAL));
+        assert_eq!(h.p1.close_code(), Some(SEAT_TAKEN_CLOSE_CODE));
+        assert_eq!(h.p1.0.close_reason().as_deref(), Some(SEAT_TAKEN_CLOSE_REASON));
+        assert_eq!(second.close_code(), None);
         assert!(second.is_open());
         assert_eq!(views(&second).len(), 1);
         assert!(h.clocks().await["graceDeadline"]["p1"].is_null());
@@ -5692,7 +5694,7 @@ mod seat_states_3678 {
         h.actor.attach(P1, narrow.clone());
         h.idle().await;
         assert!(!narrow.is_open());
-        assert_eq!(h.p1.close_code(), Some(CLOSE_NORMAL));
+        assert_eq!(h.p1.close_code(), Some(SEAT_TAKEN_CLOSE_CODE));
         let presence = h.actor.presence();
         assert!(!presence[P1] && presence[P2]);
         assert!(h.clocks().await["graceDeadline"]["p1"].is_null());

@@ -1458,3 +1458,32 @@ fn r3047004_a_resource_in_its_owners_hand_shows_what_it_sells_for_while_the_mark
     );
     assert_eq!(state.players[P1].market_credits.unwrap_or(0) - before, shown_base);
 }
+
+#[test]
+fn r3571001_an_open_ids_lot_offers_a_card_only_while_its_set_is_open() {
+    let state = board("r3571001-open", "p1", json!({}), json!({}));
+    // FREE and FOUR are Boss-X cards, a set that does not ship; FIVE is named by a lot that asks no set.
+    let table = [
+        MarketLot {
+            pool: MarketPool::OpenIds(&[FREE, FOUR]),
+            count: 1,
+        },
+        MarketLot {
+            pool: MarketPool::Ids(&[FIVE]),
+            count: 1,
+        },
+    ];
+    let def_ids = |state: &GameState| -> Vec<String> {
+        roll_offers(state, &mut Rng::new("r3571001-open-roll", 0), &table, P1)
+            .into_iter()
+            .map(|offer| offer.def_id)
+            .collect()
+    };
+    assert_eq!(
+        def_ids(&state),
+        vec![FIVE.to_string()],
+        "the held set's cards wait"
+    );
+    let _preview = preview_sets(&[SetName::BossX]);
+    assert_eq!(def_ids(&state).len(), 3, "the open set's cards join the roll");
+}

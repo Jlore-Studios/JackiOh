@@ -87,7 +87,7 @@ const UNSCALED: Record<string, number> = {
   "cards/keywords.css": 3,
   "cards/marks.css": 1,
   "cards/wheel/wheel.css": 3,
-  "collection/collection.css": 10,
+  "collection/collection.css": 8,
   "duos/duos.css": 14,
   "economy/economy.css": 6,
   "economy/xp.css": 1,

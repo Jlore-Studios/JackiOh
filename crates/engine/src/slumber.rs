@@ -26,32 +26,29 @@ pub fn slumber_turns_of(card: &CardInstance) -> Option<i32> {
     card.slumber.and_then(|slumber| slumber.turns)
 }
 
-/// R1839000, R1839001: a Unit (`as_unit`: in a unit zone, or standing in or carried on a backrow zone,
-/// R1081000, R446) arriving from off the field whose running text prints Dormant enters Dormant, with
-/// its printed countdown; "Dormant for 0 turns" is no Dormant. A field-to-field move is no arrival, and
-/// a card set face-down as a Trap has no text in force (R1487000), so neither starts one. Nor does a
-/// card that has awakened before, however it comes back (R3039000).
-pub fn start_slumber_on_field(
-    state: &GameState,
-    card: &mut CardInstance,
-    from_off_field: bool,
-    as_unit: bool,
-) {
-    if !from_off_field
-        || !as_unit
-        || card.set_as.is_some()
-        || card.slumber.is_some()
-        || card.awakened == Some(true)
-    {
+/// The declared number tuning a Dormant countdown (`StaticFlags.slumber.turns`, R3556000).
+pub const DORMANT_PARAM: &str = "dormant";
+
+/// R1839000, R1839001: a Unit (in a unit zone, or standing in or carried on a backrow zone, R1081000,
+/// R446) or a face-up Field Spell (R3556000) arriving from off the field whose running text prints
+/// Dormant enters Dormant, with its printed countdown tuned by its declared `dormant` (R386);
+/// "Dormant for 0 turns" is no Dormant. A field-to-field move is no arrival, and a card set
+/// face-down as a Trap has no text in force (R1487000), so neither starts one. Nor does a card that
+/// has awakened before, however it comes back (R3039000).
+pub fn start_slumber_on_field(state: &GameState, card: &mut CardInstance, from_off_field: bool) {
+    if !from_off_field || card.set_as.is_some() || card.slumber.is_some() || card.awakened == Some(true) {
         return;
     }
     let Some(text) = crate::scripts::flags_of(state, card).slumber else {
         return;
     };
-    if text.turns.is_some_and(|turns| turns <= 0) {
+    let turns = text
+        .turns
+        .map(|turns| crate::params::declared_or(state, card, DORMANT_PARAM, turns));
+    if turns.is_some_and(|turns| turns <= 0) {
         return;
     }
-    card.slumber = Some(Slumber { turns: text.turns });
+    card.slumber = Some(Slumber { turns });
 }
 
 /// R1839002: the Activate ability a Dormant card keeps while it sleeps (`StaticFlags.slumber.wakesBy`).
@@ -104,13 +101,15 @@ pub fn awaken_card(sink: &mut EngineSink<'_>, instance_id: &str) -> bool {
 
 /// R1839001: the start of `player`'s turn, right after the Brittle tick (§2.2, R62): every Dormant card
 /// with a countdown that tops a zone on their side counts down, and one reaching 0 awakens there and
-/// then, in `zones::units_on_field_of`'s order. A card beneath a Stack pile does not count (R1839003).
+/// then, the Units in the same order, then the backrow tops (R3556000: a Dormant Field Spell counts
+/// down after the Units). A card beneath a Stack pile does not count (R1839003).
 pub fn awaken_at_turn_start(sink: &mut EngineSink<'_>, player: PlayerId) {
-    let counting: Vec<String> = crate::zones::units_on_field_of(sink.state, player)
-        .into_iter()
-        .filter(|card| card.controller == player && slumber_turns_of(card).is_some())
-        .map(|card| card.id.clone())
-        .collect();
+    let counting: Vec<String> =
+        crate::zones::acting_on(sink.state, player, crate::zones::StandingAt::AmongUnits)
+            .into_iter()
+            .filter(|card| card.controller == player && slumber_turns_of(card).is_some())
+            .map(|card| card.id.clone())
+            .collect();
     for id in counting {
         let Some(live) = find_instance_mut(sink.state, &id) else {
             continue;

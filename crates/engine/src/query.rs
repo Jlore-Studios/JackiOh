@@ -24,10 +24,10 @@ use crate::state::{
 };
 use crate::subsystems::lethal::{falls_to_first_strike, is_lethal, projected_damage};
 use crate::wire::{
-    ActionBody, AttackHealth, CardType, GameEvent, KeywordKind, PlayerId, Row, Tag, Zone, has_keyword,
-    opponent_of,
+    ActionBody, AttackHealth, CardType, GameEvent, KeywordKind, PLAYER_IDS, PlayerId, Row, Tag, Zone,
+    ZoneName, has_keyword, opponent_of,
 };
-use crate::zones::{OffFieldZone, active_units_of, card_at, slot_of};
+use crate::zones::{OffFieldZone, active_units_of, card_at, slot_of, stands_in_backrow};
 
 /// A hero's block as a card may see it (§10.1), copied so a script cannot write through it. Not the
 /// view's `wire::HeroView`; `lib.rs` resolves the root name to this one.
@@ -153,6 +153,59 @@ pub fn resources_in_hand_of(state: &GameState, player: PlayerId) -> Vec<CardInst
         .filter(|card| crate::resources::is_resource_card(state, card))
         .cloned()
         .collect()
+}
+
+/// R3558000: which end of a hand an added card takes — the left end, or the right end every other
+/// arrival takes (§3). The player's own choice never moves a card: no player reorders a hand.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub enum HandSide {
+    Left,
+    #[default]
+    Right,
+}
+
+/// R3558000: where `id` sits in a hand — its owner and its index — or `None` when it is in no hand.
+/// Index 0 is the leftmost card (§3).
+pub fn hand_index(state: &GameState, id: &str) -> Option<(PlayerId, usize)> {
+    for player in PLAYER_IDS {
+        if let Some(at) = state.players[player].hand.iter().position(|card| card.id == id) {
+            return Some((player, at));
+        }
+    }
+    None
+}
+
+/// R3558000: the leftmost card of `player`'s hand (index 0), or `None` for an empty hand.
+pub fn hand_leftmost(state: &GameState, player: PlayerId) -> Option<&CardInstance> {
+    state.players[player].hand.first()
+}
+
+/// R3558000: the rightmost card of `player`'s hand, or `None` for an empty hand.
+pub fn hand_rightmost(state: &GameState, player: PlayerId) -> Option<&CardInstance> {
+    state.players[player].hand.last()
+}
+
+/// R3558000: the card beside `id` in its hand, on `side` of it, or `None` when `id` is in no hand
+/// or has no neighbour there.
+pub fn hand_neighbor<'a>(state: &'a GameState, id: &str, side: HandSide) -> Option<&'a CardInstance> {
+    let (player, at) = hand_index(state, id)?;
+    let hand = &state.players[player].hand;
+    match side {
+        HandSide::Left => at.checked_sub(1).and_then(|left| hand.get(left)),
+        HandSide::Right => hand.get(at + 1),
+    }
+}
+
+/// R3558000: whether `id` is the leftmost card of its hand.
+pub fn is_leftmost_in_hand(state: &GameState, id: &str) -> bool {
+    hand_index(state, id).is_some_and(|(_, at)| at == 0)
+}
+
+/// R3558000: whether `id` is the rightmost card of its hand.
+pub fn is_rightmost_in_hand(state: &GameState, id: &str) -> bool {
+    hand_index(state, id).is_some_and(|(player, at)| at + 1 == state.players[player].hand.len())
 }
 
 /// R1881007: whether a card of one of these definitions is mid-resolution (§10.5's `resolving`) for this
@@ -343,6 +396,9 @@ pub fn killer_of<'a>(state: &'a GameState, card: Option<&CardInstance>) -> Optio
 // `permanents_on_field` is every permanent on the field in R68's order, face-down included.
 pub use crate::plague::{permanents_on_field, plague_multiplier_of, plague_on, plague_on_field};
 
+// Burn and Toxic (Stinkyscape+ E2, R3540000), ruled by `afflictions.rs`.
+pub use crate::afflictions::{burn_on, hero_burn_of, hero_toxic_of, toxic_on};
+
 // Readers: play pipeline A (B5 E1 announces, E4 play counters, R448, R451)
 
 /// B5 E4: how many cards this player has played this turn of these types, each as the type it was
@@ -459,6 +515,12 @@ pub fn anomaly_misses_of(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].anomaly_misses.unwrap_or(0)
 }
 
+/// R3536004: how many of `player`'s cards evolved this game (`evolution::begin`), which
+/// Accelerationist counts (`evolution`).
+pub fn evolutions_of(state: &GameState, player: PlayerId) -> i32 {
+    state.players[player].evolutions.unwrap_or(0)
+}
+
 /// R1849004, R2476000: how much more `card`'s own-turn redirect (Stinkyscape #5 Masochism Unmasked)
 /// may take off its controller's hero this turn: its declared `cap` (R386) less what it has taken this
 /// turn, at least 0. `None` for a card with no such redirect.
@@ -466,6 +528,148 @@ pub fn own_turn_redirect_left(state: &GameState, card: &CardInstance) -> Option<
     let redirect = crate::scripts::flags_of(state, card).own_turn_redirect?;
     let cap = crate::params::declared_or(state, card, "cap", redirect.cap).max(0);
     Some((cap - crate::damage::own_turn_redirect_moved(state, card)).max(0))
+}
+
+/// R3550004: how much more `card`'s damage pool (Stinkyscape+ #42 Force Projector) may soak this
+/// turn: its declared `pool` (R386) less what it has soaked on its controller's current turn, at
+/// least 0. `None` for a card with no pool.
+pub fn damage_pool_left(state: &GameState, card: &CardInstance) -> Option<i32> {
+    let pool = crate::scripts::flags_of(state, card).damage_pool?;
+    let cap = crate::params::declared_or(state, card, "pool", pool).max(0);
+    Some((cap - crate::damage::damage_pool_used(state, card)).max(0))
+}
+
+/// R3572002: the game-wide worth of a Warhero Token before its face doubles it (R3548002): 0 until
+/// the first Token has been printed, then the game's value. Public: it is one number both seats may
+/// read, so a preview of it hides nothing.
+pub fn warhero_worth(state: &GameState) -> i32 {
+    state.warhero_worth.unwrap_or(0)
+}
+
+/// R3560000: whether this player has used the once-a-game first `key` (S+ #120, #121).
+pub fn once_a_game_used(state: &GameState, player: PlayerId, key: &str) -> bool {
+    state.players[player]
+        .once_a_game
+        .as_ref()
+        .is_some_and(|used| used.iter().any(|seen| seen == key))
+}
+
+/// R3560005: whether a summon with `exileBelow` (E7) may land on `slot` for `source`: its half of a
+/// slashed board, never a void lane, never a pile holding a Dormant card, never a reserved zone.
+pub fn exiling_summon_lands(state: &GameState, source: &CardInstance, slot: crate::zones::ZoneSlot) -> bool {
+    crate::geometry::lane_in_half(state, slot.lane, crate::geometry::half_of_card(state, source))
+        && !crate::geometry::is_void(state, slot)
+        && !crate::zones::zone_contents(state, slot)
+            .iter()
+            .any(crate::slumber::is_slumbering)
+        && !crate::zones::is_reserved(state, slot)
+}
+
+/// R3560006: whether a card of `def_id` stands on either side's field. A pure read, never
+/// `unit_view`, so `conditional_keywords` may call it.
+pub fn def_on_field(state: &GameState, def_id: &str) -> bool {
+    crate::wire::PLAYER_IDS.iter().any(|player| {
+        crate::zones::active_units_of(state, *player)
+            .iter()
+            .any(|card| card.def_id == def_id)
+    })
+}
+
+/// R3550000: the enemy Unit this event brings onto the field, or `None`: a summon of a Unit onto
+/// the enemy side (Recruit, a token, a copy, Reborn), or a played one once it resolves — its play's
+/// own placement (§10.5 step 4, which carries `exitsFrom`) waits for that. Copied from Stinkyscape
+/// #23 Warp Disruptor's arrival (R1875003), with the controller as a parameter.
+pub fn enemy_unit_arrival(state: &GameState, controller: PlayerId, event: &GameEvent) -> Option<String> {
+    match event {
+        GameEvent::Summoned {
+            player,
+            row,
+            exits_from,
+            instance_id,
+            ..
+        } => {
+            if *player == controller || exits_from.is_some() {
+                return None;
+            }
+            // R1081000: a Unit summoned standing in a backrow zone is a summoned Unit too.
+            let unit = find_instance(state, instance_id)?;
+            (*row == Row::Units || stands_in_backrow(state, unit)).then(|| instance_id.clone())
+        }
+        GameEvent::CardResolved {
+            permanent,
+            def_id,
+            instance_id,
+            ..
+        } => {
+            if !*permanent || crate::catalog::def_of(Some(state), def_id).type_ != CardType::Unit {
+                return None;
+            }
+            let unit = find_instance(state, instance_id)?;
+            (unit.zone.z() == ZoneName::Field && unit.controller != controller).then(|| instance_id.clone())
+        }
+        _ => None,
+    }
+}
+
+/// R3550009: every enemy permanent — the opponent's acting units, then their backrow, each once
+/// (Stinkyscape+ #25 Snom Bunny's Death). Copied from Classic #40 MC Tech's pick.
+pub fn enemy_permanents(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
+    let enemy = opponent_of(player);
+    let backrow: Vec<CardInstance> = crate::zones::slots_of(enemy, Row::Backrow)
+        .iter()
+        .flat_map(|slot| card_at(state, slot).cloned())
+        .collect();
+    let mut permanents: Vec<CardInstance> = active_units_of(state, enemy).into_iter().cloned().collect();
+    // R1081000: a Unit standing in the backrow is already among the units — one permanent, once.
+    let backrow: Vec<CardInstance> = backrow
+        .into_iter()
+        .filter(|card| !permanents.iter().any(|unit| unit.id == card.id))
+        .collect();
+    permanents.extend(backrow);
+    permanents
+}
+
+/// R3550008: how the opponent's announced play meets the secret pick.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SecretPickHit {
+    Chosen,
+    OtherSeen,
+}
+
+/// R3550008: the opponent's announced play against the card's secret pick — the chosen card, or
+/// another card seen in the pick. `None` for the owner's own plays and cards never seen.
+pub fn secret_pick_hit(card: &CardInstance, event: &GameEvent) -> Option<SecretPickHit> {
+    let GameEvent::CardAnnounced {
+        player, instance_id, ..
+    } = event
+    else {
+        return None;
+    };
+    if *player == card.controller {
+        return None;
+    }
+    let note = card.memory.get(crate::effects::secret_pick::SECRET_PICK_KEY)?;
+    if note.get("chosen").and_then(Value::as_str) == Some(instance_id.as_str()) {
+        return Some(SecretPickHit::Chosen);
+    }
+    let seen = note.get("seen").and_then(Value::as_array)?;
+    seen.iter()
+        .any(|id| id.as_str() == Some(instance_id.as_str()))
+        .then_some(SecretPickHit::OtherSeen)
+}
+
+/// R3550002: whether the event is this Unit being Frozen — a `marked` adding the Frozen mark on
+/// its id. Every freeze that lands answers, a re-freeze included.
+pub fn is_frozen_event(event: &GameEvent, instance_id: &str) -> bool {
+    matches!(
+        event,
+        GameEvent::Marked {
+            instance_id: id,
+            mark,
+            added: true,
+            ..
+        } if id.as_str() == instance_id && mark.as_str() == crate::config::FROZEN_MARK.mark
+    )
 }
 
 // Readers for the Classic #1–#45 cards (card-specific)
@@ -613,27 +817,34 @@ pub fn emotes_heard(state: &GameState, player: PlayerId) -> bool {
 /// MD-D19, R1122: the acting Units beside the attacker on its own side that a redirect may re-aim it at,
 /// in lane order: §4.2 step 2's restrictions apply, never step 3's Taunt wall.
 pub fn redirect_neighbours(state: &GameState, attacker: &CardInstance) -> Vec<CardInstance> {
-    let Some(at) = slot_of(state, attacker) else {
-        return Vec::new();
-    };
-    crate::zones::adjacent(at)
-        .into_iter()
-        .filter_map(|slot| card_at(state, slot).cloned())
-        .filter(|unit| {
-            // R1081000: beside a Unit standing in the backrow, only a Unit standing there is adjacent.
-            crate::zones::is_adjacent_card(state, attacker, unit)
-                && crate::zones::acts_on_field(state, unit)
-                && !crate::zones::is_carried(state, unit)
-                && crate::restrictions::attack_restriction(
-                    state,
-                    attacker,
-                    &DamageTarget::Unit {
-                        instance: unit.clone(),
-                    },
-                )
-                .is_ok()
-        })
-        .collect()
+    // R3546001: beside a GIGA in either of its lanes, in both; a GIGA beside the attacker is met once.
+    let mut met: Vec<String> = vec![attacker.id.clone()];
+    let mut out: Vec<CardInstance> = Vec::new();
+    for slot in crate::giga::adjacent_slots(state, attacker) {
+        let Some(unit) = crate::giga::occupant_at(state, slot).cloned() else {
+            continue;
+        };
+        if met.contains(&unit.id) {
+            continue;
+        }
+        met.push(unit.id.clone());
+        // R1081000: beside a Unit standing in the backrow, only a Unit standing there is adjacent.
+        if crate::zones::is_adjacent_card(state, attacker, &unit)
+            && crate::zones::acts_on_field(state, &unit)
+            && !crate::zones::is_carried(state, &unit)
+            && crate::restrictions::attack_restriction(
+                state,
+                attacker,
+                &DamageTarget::Unit {
+                    instance: unit.clone(),
+                },
+            )
+            .is_ok()
+        {
+            out.push(unit);
+        }
+    }
+    out
 }
 
 /// R901 (Meditative #30 Fickle E-Kitten's "a more expensive permanent than you"): the highest R396
@@ -678,10 +889,11 @@ pub fn credit_used_this_turn(state: &GameState, player: PlayerId) -> bool {
 /// R831008 (Meditative #98 Showdown's "an empty lane"): whether both players' unit and backrow zones of
 /// this lane are empty. A face-down card occupies its zone: the opponent sees it taken, never by what.
 pub fn lane_is_empty(state: &GameState, lane: i32) -> bool {
+    // R3546001: a lane a GIGA covers is no empty lane (`zones::is_empty` reads the cover).
     [PlayerId::P1, PlayerId::P2].into_iter().all(|player| {
         [Row::Units, Row::Backrow]
             .into_iter()
-            .all(|row| card_at(state, crate::zones::ZoneSlot { player, row, lane }).is_none())
+            .all(|row| crate::zones::is_empty(state, crate::zones::ZoneSlot { player, row, lane }))
     })
 }
 

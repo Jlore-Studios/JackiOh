@@ -954,6 +954,23 @@ const curve: Recipe = (event, p) => {
   return cues;
 };
 
+/** S+ #109 Lancer, #126 Vela, #127 Corvus (R3554005): the line drawn to its tile — a ring at each
+ * cell after the first and one beam from the first cell to the last, fire for a laser. */
+const line: Recipe = (event, p) => {
+  if (event.type !== "lineDrawn") return [];
+  const cells = event.cells.map((cell) => anchor(testid.zone(sideOf(p.view, cell.player), cell.row, cell.lane)));
+  if (cells.length < 2) return [];
+  const preset = event.laser === true ? "fire" : "arcane";
+  const step = Math.floor(p.D / Math.max(1, cells.length - 1));
+  const cues: FxCue[] = cells.slice(1).map((cell, i) => ring(p.D, preset, cell, (i + 1) * step));
+  const from = cells[0];
+  const to = cells[cells.length - 1];
+  if (from !== undefined && to !== undefined) {
+    cues.push({ ...projectile(p.env.intensity, preset, from, to, p.D), delayMs: 0 });
+  }
+  return cues;
+};
+
 /* Issue #124: the runner's new entry shapes (game/runs.ts), each planned as one */
 
 /** The public facts of a readable defId; undefined for R97's sentinel or an unknown id (R202). */
@@ -1153,6 +1170,7 @@ const RECIPES: { readonly [R in FxRecipe]: Recipe } = {
   rewind,
   armor,
   curve,
+  line,
 };
 
 /* Public planners (S6) */

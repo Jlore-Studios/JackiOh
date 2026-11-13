@@ -31,6 +31,8 @@
   --radiant: var(--pal-gold-300);
   --plague: var(--pal-violet-500);
   --grade: var(--pal-sky-400);
+  --burn: var(--pal-ember-500);
+  --toxic: var(--pal-green-500);
   --mana: var(--pal-blue-600);
   --locked: var(--pal-grey-500);
 

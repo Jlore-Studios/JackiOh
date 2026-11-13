@@ -658,7 +658,7 @@ decides a rule: every verdict they show comes from `@jackioh/validator` (the Rus
 WASM), the module the server runs at queue, and the server's refusal, when it comes, is shown in its own words (rule 7).
 
 ```
-routes/decks.tsx        /decks: loads GET /api/decks and the collection, hands them and the shipped catalog to the workshop; Back leads to the Collection hub (R1579000);
+routes/decks.tsx        /decks: loads GET /api/decks and the collection, hands them and the shipped catalog to the workshop; Back leads to the Collection's Decks tab (R1579000, R3734000), and `?deck=<id>` opens that deck (R3734000);
                         takes the gate's account and reads none of its own (R3207003)
 game/deckbuilder/       the deck workshop: up to ten named decks and five trios (R250, R252), the pool
                         browser (CardBrowser.tsx, which the Card Almanac renders read-only too, R630, its
@@ -679,7 +679,11 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         deck whose edit has not landed restores nothing;
                         Undo and Redo of the open deck's edits, each one step sent as any edit (history.ts, #2099);
                         a deck holding a card the newest patch changed wears a badge listing them until saved
-                        under it (DeckPatchBadge.tsx, R2097000)
+                        under it (DeckPatchBadge.tsx, R2097000);
+                        a pool card is dragged into the deck by pointer events, so a finger works (DeckDrag.tsx,
+                        R3734001: a touch lifts it on a move across, `touch-action: pan-y` leaving a move down to
+                        the pool's scroll), and the rail, the pool and the deck sit side by side from 601 px
+                        (workshop.css), taking turns only at 600 px and under
 routes/play.tsx         /play, the Play hub (R1578000): one screen that does not scroll, online play first and
                         largest, Practice, Play together and Replays as three smaller links (R1646000)
                         beside it, and for a visitor with no account (`token` null) a Sign in in the online
@@ -726,18 +730,25 @@ routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — 
                         (#1650), for this screen, the account, Play and the board; rank/StreakFlame.tsx
                         draws a ranked win streak as a flame on the account and a ranked match's
                         line (R2101000)
-routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of three doors, Decks (/decks) as a
-                        link, Cards and Cosmetics opened in place by
-                        `?section=` (net/navigate.ts `useSearch`) so the browser's Back and Forward move
-                        between them and the hub; the page never scrolls, a section's body does. Cards is
-                        the account's cards per shipped set, wallet, set tracks and quests, each panel
+routes/collection.tsx   /collection (#1307, #1579, R1579000, #3734, R3734000): four tabs over the whole window,
+                        Cards, Decks, Cosmetics and Progress, by `?section=` (net/navigate.ts `useSearch`; Cards
+                        when it names none), the route holding the Cards and Cosmetics tabs' search and filters so
+                        they survive a switch; the page never scrolls, a tab's body does. Cards is
+                        one virtual grid of every collectible card (collection/CardGrid.tsx, the pool's windowing
+                        in game/deckbuilder/poolWindow.ts) with the deck builder's search, chips and sorts
+                        (game/deckbuilder/filters.ts `collectionPool`, FilterBar.tsx's `part`), an owned count and
+                        a bar for each set, its filters a sidebar over 1024 px and a sheet under it
+                        (collection/BrowsePanel.tsx); Decks is a tile for each deck with the validator's verdict
+                        and modes (collection/DeckTiles.tsx, each opening `/decks?deck=<id>`); Progress is the
+                        wallet, set tracks, Fleet track and quests, each panel
                         reading for itself and saying why when its read fails, each track a filling bar
-                        (economy/FillBar.tsx); Cosmetics is where one is equipped (and a pack reveal's Equip,
+                        (economy/FillBar.tsx); Cosmetics is where one is equipped, with the same search and filters
+                        (collection/CosmeticsFilters.tsx, cosmeticsBrowse.ts) (and a pack reveal's Equip,
                         collection/EquipButton.tsx, R1955000): the playmat, backdrop and card back as preview
                         tiles (collection/AccountCosmeticTiles.tsx), on the same store and `cosmetics` settings
                         group as before (R633), with no list of what the account owns (R2731000) and no
                         defaults of every card, so a card with no pick
-                        of its own wears its kind's default (R1953001); a card of the Cards section opens large
+                        of its own wears its kind's default (R1953001); a card of the Cards tab opens large
                         wearing its own picks
                         (collection/CardCosmeticsView.tsx, R1655000), over a strip of the foils, finishes
                         and borders it may wear drawn as live previews and, R3015007, its variants as ladders
@@ -772,7 +783,7 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of three d
                         holds the panels (OwnedCards, WalletPanel, TracksPanel), their
                         model and CosmeticLook.tsx, a cosmetic's look in the reveals and the shop's rows;
                         every one renders the server's answers and decides nothing (rule 7)
-routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /api/quests: each held quest's progress and
+routes/QuestsPanel.tsx  /collection's Progress tab's quests (§14.9) from GET /api/quests: each held quest's progress and
                         reward, and the countdown to the next; moved from /account (#1307), and Replace on each, behind
                         a confirm, while a replace is left today (R2210000). The landing's bookmark
                         shares `useQuests` and `QuestsView` (R2035000)
@@ -1258,7 +1269,7 @@ and encoded to the same mono AAC at 22050 Hz and about 32 kbps. After editing a 
 `PATH` for SAPI voices; with neither it exits 2. It renders only the keys whose input hash changed
 and whose backend this machine has, reports a stale key of the other backend as needing it, deletes
 orphan files, rewrites `src/audio/voice-manifest.json`, and fails if the set passes
-`VOICE_BUDGET_BYTES` (12 MiB since R1448; 6 MiB from R501) or a line runs past 4 s. `--only <defId>` limits it to one card
+`VOICE_BUDGET_BYTES` (24 MiB since R3596000, 16 MiB since R1884000, 12 MiB since R1448; 6 MiB from R501) or a line runs past 4 s. `--only <defId>` limits it to one card
 and `--force` renders everything this machine can again (legacy `say` voices such as Fred are not
 byte-deterministic, so expect a large diff). Commit the manifest together with `public/audio/voice/`.
 With neither machine at hand, push a commit whose message holds `[gen:voice]` (or run the `voice`
