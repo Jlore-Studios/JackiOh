@@ -12394,17 +12394,18 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "le_path\": \"/home/runner/work/_temp/work/item-3731/crates/server/src/lobby/mod.rs\", \"offset\": 440, \"limit\": 365}\n- said: I found nothing in the Duos board that hard-codes team A. Every seat-dependent value comes from `view.seat` through the helpers in `seats.ts`, which handle all four seats. The board can already render B1 and B2 today, because the dev hotseat at `/dev/duos` lets you switch to either. What does assum\u2026\n- Bash: {\"command\": \"grep -n 'duos_matches\\\\|lobbies' crates/server/tests/sql/01_schema_invariants.sql crates/server/tests/sql/02_rls_as_client.sql | head -20; sed -n 130,160p crates/server/tests/sql/run.sh;\u2026\n- Bash: {\"command\": \"sed -n 55,105p crates/server/src/api/e2e.rs; sed -n 1275,1305p crates/server/src/auth.rs; sed -n 95,115p e2e/support/config.ts\", \"description\": \"Read e2e fixture accounts definitions\"}\n- Bash: {\"command\": \"sed -n 295,375p crates/server/src/duos/again.rs; grep -rn 'again' apps/web/src/net/duos.ts | head; grep -rln 'getDuosAgain\\\\|duosAgain\\\\|/again' apps/web/src --include=*.tsx --include=*.\u2026\n- Bash: {\"command\": \"grep -n 'again\\\\|Again' apps/web/src/duos/DuosRoute.tsx | head -40; grep -n 'DuosAgainStatus' -A 8 apps/web/src/net/duos.ts | head -20\", \"description\": \"Web Play again handling in DuosRo\u2026\n- Bash: {\"command\": \"grep -n 'DuosPlayAgain' -A 12 apps/web/src/duos/context.ts | head -30; grep -n 'playAgain' apps/web/src/duos/DuosBoard.tsx | head\", \"description\": \"DuosPlayAgain type and board use\"}\n- Bash: {\"command\": \"sed -n 7262,7290p crates/server/src/db/pg.rs; sed -n 7335,7360p crates/server/src/db/pg.rs; sed -n 4448,4462p crates/server/src/db/fake.rs; sed -n 4490,4512p crates/server/src/db/fake.rs\u2026\n- Bash: {\"command\": \"grep -n -i 'graceDeadlines\\\\|grace_a1\\\\|HUMAN_SEATS\\\\|duos_matches\\\\|/api/lobbies' docs/v0.3.0/SURFACE.md crates/server/README.md apps/web/README.md e2e/README.md | head -20; grep -n 'R1\u2026\n- Bash: {\"command\": \"grep -n 'data-you\\\\|you ===\\\\|view.you\\\\|role ===\\\\|\\\"guest\\\"\\\\|\\\"host\\\"' apps/web/src/lobby/LobbyScreen.tsx | head -30; sed -n 1,47p apps/web/src/lobby/seats.ts\", \"description\": \"How Lo\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3731/apps/web/src/lobby/LobbyPanel.tsx\", \"offset\": 1, \"limit\": 177}\n- Bash: {\"command\": \"grep -rn 'R3730006' spec/rulings/R2094000.md spec/rulings/R767.md 2>/dev/null | head -5; grep -n 'Adding a ruling' -A 30 spec/README.md | head -50\", \"description\": \"How amended rulings a\u2026\n- Bash: {\"command\": \"sed -n 15,76p crates/server/src/lobby/store.rs; sed -n 150,240p crates/server/src/lobby/store.rs; sed -n 285,300p crates/server/src/lobby/store.rs; sed -n 355,370p crates/server/src/lobb\u2026\n- Bash: {\"command\": \"grep -rn 'DuosSetup {' crates --include=*.rs | grep -v '^crates/tools/src/duos_fuzz' | head; grep -rn 'grace_a1\\\\|graceDeadlines\\\\|GraceDeadlines' crates apps/web/src --include=*.rs --in\u2026\n- Bash: {\"command\": \"grep -n '^async fn \\\\|^fn \\\\|^pub fn \\\\|^pub async fn \\\\|^struct \\\\|^mod \\\\|^use ' crates/server/tests/actor/duos.rs | head -60; grep -n 'duos' crates/server/tests/actor/mod.rs\", \"descri\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3731/crates/server/tests/actor/duos.rs\", \"offset\": 640, \"limit\": 160}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3731/crates/server/tests/actor/duos.rs\", \"offset\": 1134, \"limit\": 150}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3731/apps/web/src/lobby/LobbyScreen.tsx\", \"offset\": 200, \"limit\": 210}\n- Bash: {\"command\": \"grep -n 'opponent\\\\]\\\\[\\\"hand\\\\|handCount\\\\|hidden' crates/server/tests/actor/duos.rs | head -10; grep -n 'fn seed_override_of' -A 12 crates/server/src/duos/rooms.rs crates/server/src/ap\u2026\n- Bash: {\"command\": \"grep -rn 'hand_count\\\\|pub hand:' crates/engine/src/wire/*.rs | head -8\", \"description\": \"Find view hand fields\"}\n- Bash: {\"command\": \"grep -n 'pub enum HandView' -B4 -A 14 crates/engine/src/wire/view.rs\", \"description\": \"HandView enum shape\"}\n- Bash: {\"command\": \"grep -n 'pub use\\\\|pub mod' crates/shared/src/host/mod.rs | head -20; grep -n 'both_stores!' crates/server/tests/store/contract.rs | head -3; sed -n 9343,9360p crates/server/tests/store/\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3731/.bot-plan.md\", \"content\": \"# Plan draft for #3731 \\u2014 status: reading done, final plan being written (see final message; this file mirrors it)\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3731/.bot-plan.md\", \"content\": \"## Goal\\n\\nA private lobby gets a third format, `2v2`: four seats in two teams of people, made from Play together besi\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; grep -n 'shared\\\\b\\\\|jackioh-shared' crates/shared/Cargo.toml | head -3; grep -n '^\\\\[\\\\[test\\\\]\\\\]\\\\|name = \\\"server\\\"' -A1 crates/server/Cargo.toml | head; ls crate\u2026\n- Bash: {\"command\": \"sed -n 22,40p crates/shared/Cargo.toml; grep -n 'store' crates/server/Cargo.toml | sed -n 1,6p; sed -n 61,72p crates/server/Cargo.toml\", \"description\": \"Shared ts feature and server test\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3731/.bot-plan.md\", \"content\": \"## Goal\\n\\nThe private lobby gains a third format, `2v2`, made on Play together beside today's co-op: four people in t\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Count plan words\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='.bot-plan.md'\\ns=open(p).read()\\nfor sec in ['## Goal','## Files to touch','## Steps','## Tests','## Done when','## Risks','## Open questions']:\\n i=s.in\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3731/.bot-plan.md\", \"content\": \"## Goal\\n\\nThe private lobby gets a third format, `2v2`, made on Play together beside today's co-op: four people in tw\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Count plan words\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nreps=[\\n(\\\"The private lobby gets a third format, `2v2`, made on Play together beside today's co-op: four people in two teams. The \u2026\n- said: You've hit your 5-hour limit \u00b7 resets 8:30pm (UTC)"
       },
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
       "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-13T15:34:45Z",
-      "owner_why": "it plans it",
+      "owner": "claude-4",
+      "owner_since": "2026-11-13T18:06:43Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` it refused a call; its limit resets at 2026-11-13T20:30:00Z; it can start again only in 2h 23m, more than the 120 minutes an item waits for its owner",
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-4",
       "queued_at": "2026-11-11T21:50:29Z",
       "requested_by": "jgoetzmann",
-      "run_id": "43464343961",
+      "run_id": "pending:a6b83837-1794593158",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
@@ -12423,7 +12424,7 @@
         "provider": "claude-3",
         "run": "43464343961"
       },
-      "started_at": "2026-11-13T16:35:58Z",
+      "started_at": "2026-11-13T18:06:43Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -16251,9 +16252,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T18:05:42Z",
+    "at": "2026-11-13T18:06:43Z",
     "url": "",
-    "what": "revise #3810 on claude-8"
+    "what": "plan #3731 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-13T17:46:50Z",
