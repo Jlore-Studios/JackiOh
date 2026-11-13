@@ -37139,7 +37139,8 @@
       "2026-11-13T05:12:58Z,claude-1,stream,call,43358035197,96,2026-11-13T06:20:00Z,,,allowed_warning,100,,"
     ],
     "runs": [
-      "2026-11-13T06:06:17Z,43373785976,claude-3,opus,suggest,,,interrupted,refusal,21.2,0,0,0,21.2202,53,100,,,,,none,,1"
+      "2026-11-13T06:06:17Z,43373785976,claude-3,opus,suggest,,,interrupted,refusal,21.2,0,0,0,21.2202,53,100,,,,,none,,1",
+      "2026-11-13T06:04:34Z,43358035197,claude-1,opus,revise,3779,hard,interrupted,refusal,20.7,60,14872,2463817,1.4422,84,96,,,4.5,claude-3,fresh,other,1"
     ]
   },
   "version": 1
