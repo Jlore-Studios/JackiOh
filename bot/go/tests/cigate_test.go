@@ -165,9 +165,10 @@ func TestCigate_ARunApprovedCountsForItsJobsUntilItsFirstJobHasRun(t *testing.T)
 	w.gh.Jobs["1"] = []*pyjson.Object{pyjson.New("id", 100, "name", cigate.FirstJob, "status", "in_progress",
 		"labels", []any{"ubuntu-latest"})}
 	assertIn(t, "started 0 of 1 waiting run(s); 1 wait for room", cigate.Tick(w.ctx))
-	queued, inUse, read := cigate.Queued(w.ctx)
-	assertEqual(t, queued, cigate.RunJobs)
-	assertEqual(t, inUse, cigate.RunJobs+1) // and its first job holds a runner
+	load, read := cigate.Read(w.ctx)
+	assertEqual(t, load.Queued, cigate.RunJobs)
+	assertEqual(t, load.InUse, cigate.RunJobs+1) // and its first job holds a runner
+	assertEqual(t, load.Runs, [3]int{1, 0, 0})
 	assertEqual(t, read, true)
 	// Its first job has run and its jobs have asked for runners: only those queued count now.
 	w.started(1, 5)
@@ -178,12 +179,13 @@ func TestCigate_ARunApprovedCountsForItsJobsUntilItsFirstJobHasRun(t *testing.T)
 	w2 := newCigateWorld(t)
 	w2.gh.Runs.Set("7", pyjson.New("id", 7, "name", "bot-night", "path", ".github/workflows/bot-night.yml",
 		"status", "in_progress", "event", "workflow_dispatch"))
-	queued, _, _ = cigate.Queued(w2.ctx)
-	assertEqual(t, queued, 0)
+	load, _ = cigate.Read(w2.ctx)
+	assertEqual(t, load.Queued, 0)
 	w2.gh.Runs.Set("8", pyjson.New("id", 8, "name", "CI", "path", ".github/workflows/ci.yml",
 		"status", "queued", "event", "push"))
-	queued, _, _ = cigate.Queued(w2.ctx)
-	assertEqual(t, queued, cigate.RunJobs) // main's CI counts as any CI run's
+	load, _ = cigate.Read(w2.ctx)
+	assertEqual(t, load.Queued, cigate.RunJobs) // main's CI counts as any CI run's
+	assertEqual(t, load.Runs, [3]int{0, 0, 1})
 }
 
 // A ready pull request's run starts before a draft's, which runs beside its own review run; each
@@ -259,6 +261,44 @@ func TestCigate_RunnersStayFreeForTheRungsAbove(t *testing.T) {
 	w3.waiting(1, "pull_request", 0)
 	cigate.Tick(w3.ctx)
 	assertEqual(t, w3.approved(), []string{"1"})
+}
+
+// Below the merge queue, a rung has only a few runs going at once (`ReleaseRuns`, `PullRuns`), so
+// the runners finish a few soon rather than many late; a run that waited too long waits for a slot
+// too, first of its rung, and the merge queue has no such cap.
+func TestCigate_OnlyAFewRunsOfARungGoAtOnce(t *testing.T) {
+	w := newCigateWorld(t)
+	patch(t, &cigate.RunJobs, 0)
+	for id := 1; id <= cigate.PullRuns; id++ {
+		w.gh.Runs.Set(fmt.Sprint(id), pyjson.New("id", id, "workflow", "ci.yml", "status", "in_progress",
+			"event", "pull_request"))
+		w.started(id, 0)
+	}
+	w.waiting(10, "pull_request", 1)
+	w.waiting(11, "push", 2)
+	w.waiting(12, "pull_request", int(cigate.MaxWaitPull/time.Minute)) // a draft that waited too long
+	w.gh.CreatePull("Patch: twelve", "branch-12", "main", "", true)
+	w.waitingIn(13, "super.yml", "pull_request", 1)
+	w.waiting(14, "merge_group", 0)
+	assertIn(t, "started 2 of 5 waiting run(s) (queue build 14, super run 13 on branch-13); 3 wait for room",
+		cigate.Tick(w.ctx))
+	// One ends: the draft that waited too long takes its slot first, and only it.
+	w.gh.Runs.Obj("1").Set("status", "completed")
+	cigate.Tick(w.ctx)
+	assertEqual(t, w.approved(), []string{"14", "13", "12"})
+	w.gh.Runs.Obj("2").Set("status", "completed")
+	cigate.Tick(w.ctx)
+	assertEqual(t, w.approved(), []string{"14", "13", "12", "11"}) // main's before a ready pull request's
+	// Staging's and production's runs have slots of their own.
+	w2 := newCigateWorld(t)
+	patch(t, &cigate.RunJobs, 0)
+	for id := 1; id <= cigate.ReleaseRuns; id++ {
+		w2.waitingIn(id, "super.yml", "workflow_dispatch", id)
+	}
+	w2.waitingIn(9, "super.yml", "workflow_dispatch", 9)
+	w2.waiting(10, "pull_request", 0)
+	cigate.Tick(w2.ctx)
+	assertEqual(t, w2.approved(), []string{"9", "2", "10"})
 }
 
 // A run that has waited too long starts whatever is queued, so the gate never starves CI; so does

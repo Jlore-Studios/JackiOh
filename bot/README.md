@@ -1331,6 +1331,11 @@ then `main`'s CI and pull requests**.
   - each rung's limits are tighter than the one above's, so a run never starts while one above it
     waits for room, and the runners the lower rungs leave free let a merge-queue build start at
     once rather than in line behind their jobs, with nothing queued too;
+  - and each rung below the merge queue has only a few runs going at once (approved and not ended):
+    `ReleaseRuns` (2) of staging's and production's, `PullRuns` (3) of `main`'s and pull requests'
+    together, as the merge queue builds only `max_entries_to_build` (3) at once (the owner's ask of
+    2026-11-13): GitHub's runners share themselves among every run going, so many side by side each
+    end late, where a few at a time each end soon, and a pull request reaches the merge queue sooner;
   - a CI run counts for `RunJobs` (20, the builds and Rust test groups a full run asks for at once)
     from its approval until its first job (`FirstJob`, `what the change touches`) has finished, on
     every tick in between: it asks for the rest of its jobs only then, about a minute after it
@@ -1338,9 +1343,17 @@ then `main`'s CI and pull requests**.
     tick apart all got in before the first of them asked for its runners. A super run counts for as
     many on its approval's tick, and for its jobs after;
   - and any run that has waited `MaxWaitQueue` (10 minutes, a queue build), `MaxWaitRelease` (15,
-    staging's or production's) or `MaxWaitPull` (30, `main`'s or a pull request's) whatever is
-    queued, and every waiting run when the jobs queued cannot be read: the gate orders and delays
-    CI, and never starves it.
+    staging's or production's) or `MaxWaitPull` (30, `main`'s or a pull request's) starts whatever
+    is queued, first of its rung once the rung has a run free (the runs it waits on are the gate's
+    own, and each ends), and every waiting run starts when what the runners hold cannot be read: the
+    gate orders and delays CI, and never starves it.
+- **Why not GitHub's own queueing.** A workflow's `concurrency` group runs one run at a time, and
+  `queue: max` (May 2026) lets up to 100 wait their turn in order, but only one goes per group, it
+  cannot be combined with `cancel-in-progress` (which a pull request's newer push needs to replace
+  its running CI), and nothing orders one group before another. A `schedule:` would be the clock,
+  but GitHub fires this repository's schedules hours late. So the gate is the queue, the status
+  loop's 30-second tick its clock, and a few at a time per rung its stagger, the way the merge queue
+  staggers its builds.
   Each approval's comment says why. Only the reviewer's process approves: Squishy's sweep skips it.
 - **The way out.** An admin may approve a waiting run by hand (the environment lets admins bypass
   it). Deleting the `CI_GATE_ENVIRONMENT` variable (Settings -> Secrets and variables -> Actions ->

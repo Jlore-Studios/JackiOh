@@ -21,13 +21,15 @@
 // fewer than `PullLimit` are queued and more than `PullFree` are free. Each rung's limits are
 // tighter than the one above's, so a run never starts while one above it waits for room, and the
 // runners kept free are what lets a merge-queue build start at once rather than in line behind the
-// jobs of the rungs below it. A CI run asks for most of its jobs only once its first, `FirstJob`, has
+// jobs of the rungs below it. And each rung below the merge queue has only a few runs going at once
+// (`ReleaseRuns`, `PullRuns`), so the runners finish a few runs soon rather than many late. A CI run asks for most of its jobs only once its first, `FirstJob`, has
 // run, about a minute after it starts, so until then it counts for `RunJobs` queued jobs: from its
 // approval on, and on every later tick until that job has finished (`Queued`), so runs approved a
 // tick apart are not all let in before the first of them asks for its runners. Any run that has
 // waited its rung's longest wait (`MaxWaitQueue`, `MaxWaitRelease`, `MaxWaitPull`) starts whatever is
-// queued, so the gate only orders and delays CI, never starves it; and when the jobs queued cannot
-// be read, every waiting run starts. A dispatch of ci.yml, a person's, never waits. The status loop
+// queued, first of its rung once the rung has a run free (the gate started the runs it waits on, and
+// each ends), so the gate only orders and delays CI, never starves it; and when what the runners
+// hold cannot be read, every waiting run starts. A dispatch of ci.yml, a person's, never waits. The status loop
 // runs a tick every `--gate-every` seconds, and every sweep runs one too (bot-commands' schedule
 // among them), so a stopped loop slows the gate to the sweep's pace rather than stopping CI.
 package cigate
@@ -105,20 +107,31 @@ var RunJobs = 20
 var FirstJob = "what the change touches"
 
 // MaxWaitQueue, MaxWaitRelease and MaxWaitPull: a run of the merge queue, of staging or production,
-// or of the last rung that has waited this long starts whatever is queued.
+// or of the last rung that has waited this long starts whatever is queued, first of its rung, once
+// the rung has a run free of those it may have going (`ReleaseRuns`, `PullRuns`).
 var (
 	MaxWaitQueue   = 10 * time.Minute
 	MaxWaitRelease = 15 * time.Minute
 	MaxWaitPull    = 30 * time.Minute
 )
 
-// The rungs, in the order runs start (the package's comment): from rankMain on, the last rung's.
+// ReleaseRuns and PullRuns: at most this many runs of staging's and production's, and of the last
+// rung (`main`'s CI and pull requests'), go at once: approved and not yet ended. GitHub's runners
+// take queued jobs in the order they came, so runs that go side by side share them and each ends
+// late; a few at a time each end sooner, and a pull request reaches the merge queue sooner (the
+// owner's ask of 2026-11-13). The merge queue has no such cap here: it builds
+// `max_entries_to_build` (3) at once already (infra/github.tf).
+var (
+	ReleaseRuns = 2
+	PullRuns    = 3
+)
+
+// The rungs, in the order runs start (the package's comment).
 const (
-	rankQueue   = iota // a merge-queue build
-	rankRelease        // staging's or production's
-	rankMain           // `main`'s own CI
-	rankReady          // a ready pull request's
-	rankDraft          // a draft's
+	rungQueue   = iota // merge-queue builds
+	rungRelease        // staging's and production's
+	rungLast           // `main`'s CI and pull requests'
+	rungs
 )
 
 // Tick approves the waiting runs that may start now (the package's comment). A note of what it did,
@@ -144,61 +157,76 @@ func tick(ctx *hctx.Context) string {
 	if len(waiting) == 0 {
 		return ""
 	}
-	drafts := Drafts(ctx, waiting)
-	rank := func(run *pyjson.Object) int {
-		switch {
-		case isQueue(run):
-			return rankQueue
-		case release(run):
-			return rankRelease
-		case pyjson.Equal(run.Get("event"), "push"):
-			return rankMain
-		case drafts[py.OrStr(run.Get("head_branch"), "")]:
-			return rankDraft
-		}
-		return rankReady
-	}
-	sort.SliceStable(waiting, func(i, j int) bool {
-		ri, rj := rank(waiting[i]), rank(waiting[j])
-		if ri != rj {
-			return ri < rj
-		}
-		return py.OrStr(waiting[i].Get("created_at"), "") < py.OrStr(waiting[j].Get("created_at"), "")
-	})
-	queued, inUse, read := Queued(ctx)
 	now := ctx.Now()
+	waited := func(run *pyjson.Object) time.Duration {
+		return now.Sub(clock.ParseISOValue(run.Get("created_at")))
+	}
+	overdue := func(run *pyjson.Object) bool {
+		return waited(run) >= [rungs]time.Duration{MaxWaitQueue, MaxWaitRelease, MaxWaitPull}[rung(run)]
+	}
+	// Within the last rung: `main`'s CI first (the promotions wait on it, and the merge queue ran
+	// most of it already), then a ready pull request's, then a draft's.
+	drafts := Drafts(ctx, waiting)
+	place := func(run *pyjson.Object) int {
+		switch {
+		case pyjson.Equal(run.Get("event"), "push"):
+			return 0
+		case drafts[py.OrStr(run.Get("head_branch"), "")]:
+			return 2
+		}
+		return 1
+	}
+	// Each rung in turn; in it, a run that waited too long first, then by place, each the oldest
+	// first.
+	sort.SliceStable(waiting, func(i, j int) bool {
+		x, y := waiting[i], waiting[j]
+		if rx, ry := rung(x), rung(y); rx != ry {
+			return rx < ry
+		}
+		if ox, oy := overdue(x), overdue(y); ox != oy {
+			return ox
+		}
+		if pa, pb := place(x), place(y); pa != pb {
+			return pa < pb
+		}
+		return waited(x) > waited(y)
+	})
+	load, read := Read(ctx)
 	pulls := 0
 	var started, why []string
 	for _, run := range waiting {
-		r := rank(run)
-		waited := now.Sub(clock.ParseISOValue(run.Get("created_at")))
-		limit, free, most := QueueLimit, 0, MaxWaitQueue
-		switch {
-		case r == rankRelease:
-			limit, free, most = ReleaseLimit, ReleaseFree, MaxWaitRelease
-		case r >= rankMain:
-			limit, free, most = PullLimit, PullFree, MaxWaitPull
+		g := rung(run)
+		limit, free, most := QueueLimit, 0, 0
+		switch g {
+		case rungRelease:
+			limit, free, most = ReleaseLimit, ReleaseFree, ReleaseRuns
+		case rungLast:
+			limit, free, most = PullLimit, PullFree, PullRuns
 		}
-		overdue := waited >= most
-		room := queued < limit && (free == 0 || Runners-inUse > free) && (r < rankMain || pulls < PullsPerTick)
-		if read && !room && !overdue {
+		// A slot among the runs its rung may have going: a run that waited too long waits for one
+		// too, since the gate itself started those runs and each ends.
+		slot := most == 0 || load.Runs[g] < most
+		room := load.Queued < limit && (free == 0 || Runners-load.InUse > free) && (g != rungLast || pulls < PullsPerTick)
+		if read && !(slot && (room || overdue(run))) {
 			continue
 		}
-		reason := fmt.Sprintf("%d job(s) queued for a runner, %d of GitHub's %d runners in use", queued, inUse, Runners)
+		reason := fmt.Sprintf("%d job(s) queued for a runner, %d of GitHub's %d runners in use", load.Queued,
+			load.InUse, Runners)
 		switch {
 		case !read:
 			reason = "the jobs queued could not be read"
 		case !room:
-			reason = fmt.Sprintf("it waited %d min", int(waited.Minutes()))
+			reason = fmt.Sprintf("it waited %d min", int(waited(run).Minutes()))
 		}
 		if note := approve(ctx, run, reason); note != "" {
 			why = append(why, note)
 			continue
 		}
 		started = append(started, describe(run))
-		queued += RunJobs
-		inUse += RunJobs
-		if r >= rankMain {
+		load.Queued += RunJobs
+		load.InUse += RunJobs
+		load.Runs[g]++
+		if g == rungLast {
 			pulls++
 		}
 	}
@@ -216,33 +244,42 @@ func tick(ctx *hctx.Context) string {
 	return note
 }
 
-// Queued is how many jobs are queued for one of GitHub's own runners now (a self-hosted runner's
-// queue is its box's), how many of those runners are in use (the jobs queued and the jobs going),
-// from the runs going and queued, and whether they could be read. A CI run whose `FirstJob` has not
-// finished counts for `RunJobs` more in both: it has not asked for the rest of its jobs yet, and
-// will within a minute or so.
-func Queued(ctx *hctx.Context) (int, int, bool) {
+// Load is what GitHub's runners hold now (`Read`).
+type Load struct {
+	// Queued is how many jobs are queued for one of GitHub's own runners (a self-hosted runner's
+	// queue is its box's).
+	Queued int
+	// InUse is how many of GitHub's runners are in use: the jobs queued and the jobs going.
+	InUse int
+	// Runs is how many runs of each rung that waited here are going (approved, not ended).
+	Runs [rungs]int
+}
+
+// Read is the load on GitHub's runners now, from the runs going and queued, and whether it could be
+// read. A CI run whose `FirstJob` has not finished counts for `RunJobs` more jobs, queued and in
+// use: it has not asked for the rest of its jobs yet, and will within a minute or so.
+func Read(ctx *hctx.Context) (Load, bool) {
+	var load Load
 	var runs []*pyjson.Object
 	if _, failed := herr.Catch[*herr.GitHubError](func() {
 		runs = append(ctx.GH.ListRepoRuns("in_progress", 100, true), ctx.GH.ListRepoRuns("queued", 100, true)...)
 	}); failed {
-		return 0, 0, false
+		return Load{}, false
 	}
-	queued, inUse := 0, 0
 	for _, run := range runs {
 		var jobs []*pyjson.Object
 		if _, failed := herr.Catch[*herr.GitHubError](func() { jobs = ctx.GH.ListJobs(run.Get("id"), true) }); failed {
-			return 0, 0, false
+			return Load{}, false
 		}
 		first := false // its FirstJob has finished
 		for _, job := range jobs {
 			if hosted(job) {
 				switch job.Str("status") {
 				case "queued":
-					queued++
-					inUse++
+					load.Queued++
+					load.InUse++
 				case "in_progress":
-					inUse++
+					load.InUse++
 				}
 			}
 			if job.Str("name") == FirstJob && job.Str("status") == "completed" {
@@ -250,11 +287,14 @@ func Queued(ctx *hctx.Context) (int, int, bool) {
 			}
 		}
 		if isWorkflow(run, Workflow) && !first {
-			queued += RunJobs
-			inUse += RunJobs
+			load.Queued += RunJobs
+			load.InUse += RunJobs
+		}
+		if gated(run) {
+			load.Runs[rung(run)]++
 		}
 	}
-	return queued, inUse, true
+	return load, true
 }
 
 // Drafts is the head branches of the open pull requests that are drafts, read only when two or more
@@ -312,6 +352,17 @@ func approve(ctx *hctx.Context, run *pyjson.Object, reason string) string {
 }
 
 func isQueue(run *pyjson.Object) bool { return pyjson.Equal(run.Get("event"), "merge_group") }
+
+// rung is the rung a run starts in (the package's comment).
+func rung(run *pyjson.Object) int {
+	switch {
+	case isQueue(run):
+		return rungQueue
+	case release(run):
+		return rungRelease
+	}
+	return rungLast
+}
 
 // isWorkflow is whether a run is one of `workflow`'s: the API names its file in `path`
 // (`.github/workflows/ci.yml`).
