@@ -80,6 +80,8 @@ struct Table {
     row_checks: usize,
     pushed: usize,
     failing_appends: usize,
+    /// While set, a row the host asks for is neither written nor answered: the test feeds its `Logged` itself.
+    holding_appends: bool,
 }
 
 impl Table {
@@ -102,6 +104,7 @@ impl Table {
             row_checks: 0,
             pushed: 0,
             failing_appends: 0,
+            holding_appends: false,
         };
         table.run(outputs);
         table
@@ -130,6 +133,7 @@ impl Table {
                     DuosSeat::A2 => self.sent[1].push(message),
                     _ => panic!("the AI's seat is sent nothing: {seat}"),
                 },
+                DuosHostOutput::Append { .. } if self.holding_appends => {}
                 DuosHostOutput::Append { seq, action, .. } => {
                     let outcome = if self.failing_appends > 0 {
                         self.failing_appends -= 1;
@@ -253,6 +257,7 @@ impl Table {
 
 mod the_clocks {
     use super::*;
+    use jackioh_shared::host::duos::acting_round_seat;
 
     #[test]
     fn b2_r744_arming_starts_the_one_mulligan_clock_and_the_ceiling_and_the_seats_that_never_came_start_their_grace()
@@ -298,6 +303,16 @@ mod the_clocks {
             note,
             DuosNote::ClockExpired { kind } if kind == "mulligan"
         )));
+        // KeepHand needs no search: after its pause each person's seat keeps its hand at once.
+        table.sleep(DUOS_AI_STEP_DELAY_MS);
+        assert!(
+            table
+                .decides
+                .iter()
+                .all(|request| request.seat != A1 && request.seat != A2),
+            "{:?}",
+            table.decides
+        );
         // The expiry hands the seats to the AI, which acts after its pause: each person keeps the hand.
         table.play_on(30 * SECOND, |table| table.round() >= 1);
         assert!(table.round() >= 1);
@@ -347,12 +362,48 @@ mod the_clocks {
                 note,
                 DuosNote::ClockExpired { kind } if kind == "round"
             )));
+            // FinishRound with nothing to answer needs no search: after its pause each person's round seat ends
+            // its turn at once.
+            table.sleep(DUOS_AI_STEP_DELAY_MS);
+            assert!(
+                table
+                    .decides
+                    .iter()
+                    .all(|request| request.seat != A1 && request.seat != A2),
+                "{:?}",
+                table.decides
+            );
             table.play_on(60 * SECOND, |table| table.round() != round);
             assert_ne!(table.round(), round, "{:?}", &table.nonces()[rows..]);
             assert!(
                 table.nonces()[rows..]
                     .iter()
                     .any(|nonce| nonce.starts_with("srv-ai-"))
+            );
+            // The lapse held its own round only: the next round a person acts in waits for them again.
+            let person_acts = |table: &Table| {
+                [A1, A2]
+                    .into_iter()
+                    .any(|seat| acting_round_seat(table.host.game(), seat))
+            };
+            table.play_on(120 * SECOND, |table| {
+                table.round() > round + 1 && person_acts(table)
+            });
+            assert!(
+                person_acts(&table),
+                "round {} nonces {:?}",
+                table.round(),
+                table.nonces()
+            );
+            let later = table.log.len();
+            table.sleep(3 * DUOS_AI_STEP_DELAY_MS);
+            table.answer_searches();
+            assert!(
+                table.log[later..]
+                    .iter()
+                    .all(|(_, action)| action.seat != A1 && action.seat != A2),
+                "{:?}",
+                &table.nonces()[later..]
             );
         } else {
             // Team B's round: no person to wait for, no round clock.
@@ -502,6 +553,60 @@ mod the_clocks {
         table.sleep(MATCH_SERVER_ACTION_RETRY_MS);
         assert_eq!(table.nonces(), vec!["srv-ceiling-1"]);
         assert_eq!(table.records.len(), 1);
+    }
+
+    /// R1047000: a game folded back to exactly its ceiling runs it out at once, with no ceiling clock armed.
+    #[test]
+    fn r1047000_a_game_folded_back_to_exactly_its_ceiling_runs_it_out_with_no_clock() {
+        let mut edge = setup(opening("duos-ceiling-5"));
+        edge.created_at = EPOCH - MATCH_CEILING_MINUTES * MINUTE;
+        let mut table = Table::new(edge);
+        table.holding_appends = true;
+        table.feed(DuosHostEvent::Arm);
+        assert!(table.notes.iter().any(|note| matches!(
+            note,
+            DuosNote::ClockExpired { kind } if kind == "ceiling"
+        )));
+        assert_eq!(table.timer(TimerKey::DuosCeiling), None);
+    }
+
+    /// B40: a host made for a match already finished arms no ceiling and moves no AI seat.
+    #[test]
+    fn b40_a_host_made_for_a_finished_match_arms_no_ceiling_and_moves_no_ai() {
+        let mut done = setup(opening("duos-finished-1"));
+        done.finished = true;
+        let mut table = Table::new(done);
+        table.feed(DuosHostEvent::Arm);
+        assert_eq!(table.timer(TimerKey::DuosCeiling), None);
+        assert!(
+            table
+                .timers
+                .iter()
+                .all(|(key, _, _)| !matches!(key, TimerKey::DuosAi { .. })),
+            "{:?}",
+            table.timers
+        );
+    }
+
+    /// R776000: a ceiling row the log would not take whose answer comes after the host stopped runs the ceiling out
+    /// again no more.
+    #[test]
+    fn r776000_a_ceiling_row_lost_after_the_stop_is_not_run_out_again() {
+        let mut late = setup(opening("duos-ceiling-4"));
+        late.created_at = EPOCH - MATCH_CEILING_MINUTES * MINUTE - 1;
+        let mut table = Table::new(late);
+        table.holding_appends = true;
+        table.feed(DuosHostEvent::Arm);
+        table.feed(DuosHostEvent::Stop);
+        table.feed(DuosHostEvent::Logged {
+            outcome: LogOutcome::Failed,
+        });
+        assert!(
+            !table.notes.contains(&DuosNote::CeilingRetrying),
+            "{:?}",
+            table.notes
+        );
+        assert_eq!(table.timer(TimerKey::DuosCeiling), None);
     }
 }
 
@@ -766,6 +871,134 @@ mod the_ai {
         assert_eq!(table.let_go, vec![DuosLetGo::MatchGone]);
     }
 
+    fn end_turn() -> DuosActionBody {
+        DuosActionBody::Duel {
+            body: ActionBody::EndTurn,
+        }
+    }
+
+    /// Both people here and the game armed, past the AI team's first pause: its two searches are out, asked on
+    /// one state.
+    fn asked(seed: &str) -> (Table, DuosDecide, DuosDecide) {
+        let mut table = Table::new(setup(opening(seed)));
+        table.connect(A1);
+        table.connect(A2);
+        table.feed(DuosHostEvent::Arm);
+        table.sleep(DUOS_AI_STEP_DELAY_MS);
+        let (first, second) = (table.decides[0].clone(), table.decides[1].clone());
+        assert_eq!(first.version, second.version, "PREMISE: both asked on one state");
+        (table, first, second)
+    }
+
+    /// B36: a search that threw plays nothing and, on the state it was asked on, asks for nothing more; once
+    /// another seat's move changes the state, the seat pauses again, counted from the change.
+    #[test]
+    fn b36_a_search_that_threw_waits_for_a_newer_state_and_its_pause_runs_from_the_change() {
+        let (mut table, threw, other) = asked("duos-ai-6");
+        table.feed(DuosHostEvent::Decided {
+            seat: threw.seat,
+            body: None,
+            cursor: 0,
+            failed: true,
+        });
+        assert!(table.log.is_empty());
+        assert_eq!(table.timer(TimerKey::DuosAi { seat: threw.seat }), None);
+        table.feed(DuosHostEvent::Decided {
+            seat: other.seat,
+            body: None,
+            cursor: 1,
+            failed: false,
+        });
+        assert_eq!(table.log.len(), 1);
+        assert_eq!(
+            table.timer(TimerKey::DuosAi { seat: threw.seat }),
+            Some(table.now + DUOS_AI_STEP_DELAY_MS)
+        );
+    }
+
+    /// R1452: once the write retry pace has passed, the seat whose move the log would not take pauses and
+    /// decides again.
+    #[test]
+    fn r1452_once_the_write_retry_pace_passes_the_seat_decides_again() {
+        let (mut table, request, _) = asked("duos-ai-4");
+        table.decides.retain(|held| held.seat != request.seat);
+        table.failing_appends = 1;
+        table.feed(DuosHostEvent::Decided {
+            seat: request.seat,
+            body: None,
+            cursor: 1,
+            failed: false,
+        });
+        table.feed(DuosHostEvent::RowChecked { exists: true });
+        assert!(table.decides.iter().all(|held| held.seat != request.seat));
+        table.sleep(BOT_WRITE_RETRY_MS + DUOS_AI_STEP_DELAY_MS);
+        assert!(
+            table.decides.iter().any(|again| again.seat == request.seat),
+            "{:?}",
+            table.decides
+        );
+    }
+
+    /// R1452: a move decided on the state as it still stands that is refused is played once more as the
+    /// seat's answer without search, under its nonce marked as the retry.
+    #[test]
+    fn r1452_a_refused_move_on_the_state_it_was_decided_on_falls_back_once() {
+        let (mut table, request, _) = asked("duos-ai-7");
+        table.feed(DuosHostEvent::Decided {
+            seat: request.seat,
+            body: Some(end_turn()),
+            cursor: 1,
+            failed: false,
+        });
+        assert_eq!(table.nonces(), vec![format!("srv-ai-{}-r", request.version)]);
+        assert_eq!(table.log[0].1.seat, request.seat);
+        assert!(matches!(
+            table.log[0].1.body,
+            DuosActionBody::Duel {
+                body: ActionBody::Mulligan { .. }
+            }
+        ));
+    }
+
+    /// R1452: a move decided on a state that has since moved on that is refused is not retried: the seat
+    /// pauses and decides again.
+    #[test]
+    fn r1452_a_refused_move_on_a_state_since_moved_on_is_decided_again() {
+        let (mut table, stale, other) = asked("duos-ai-8");
+        table.feed(DuosHostEvent::Decided {
+            seat: other.seat,
+            body: None,
+            cursor: 1,
+            failed: false,
+        });
+        assert_eq!(table.log.len(), 1);
+        table.feed(DuosHostEvent::Decided {
+            seat: stale.seat,
+            body: Some(end_turn()),
+            cursor: 1,
+            failed: false,
+        });
+        assert_eq!(table.log.len(), 1, "{:?}", table.nonces());
+        assert_eq!(
+            table.timer(TimerKey::DuosAi { seat: stale.seat }),
+            Some(table.now + DUOS_AI_STEP_DELAY_MS)
+        );
+    }
+
+    /// B36: a search that comes back after the host stopped plays nothing.
+    #[test]
+    fn b36_a_search_answered_after_the_stop_plays_nothing() {
+        let (mut table, request, _) = asked("duos-ai-9");
+        table.feed(DuosHostEvent::Stop);
+        table.feed(DuosHostEvent::Decided {
+            seat: request.seat,
+            body: None,
+            cursor: 1,
+            failed: false,
+        });
+        assert!(table.log.is_empty(), "{:?}", table.nonces());
+    }
+
     #[test]
     fn b37_a_person_who_is_back_is_never_played_for() {
         // a2 never comes, so its grace runs out and the AI holds its seat; a2 returns before the AI acts.
@@ -840,7 +1073,24 @@ mod stop {
             table.feed(DuosHostEvent::TimerFired { key, id });
         }
         assert!(table.log.is_empty());
+        assert!(table.decides.is_empty(), "{:?}", table.decides);
         assert!(table.host.is_stopped());
+    }
+
+    /// B36: a host stopped before its arming moves no AI seat when a person attaches.
+    #[test]
+    fn a_host_stopped_before_its_arming_moves_no_ai_when_a_seat_attaches() {
+        let mut table = Table::new(setup(opening("duos-stop-2")));
+        table.feed(DuosHostEvent::Stop);
+        table.connect(A1);
+        assert!(
+            table
+                .timers
+                .iter()
+                .all(|(key, _, _)| !matches!(key, TimerKey::DuosAi { .. })),
+            "{:?}",
+            table.timers
+        );
     }
 }
 
@@ -1018,5 +1268,342 @@ mod owings {
         assert!(!table.host.is_stopped());
         table.through_the_mulligans();
         assert!(table.host.next_seq() > 2, "{}", table.host.next_seq());
+    }
+}
+
+/// Scripted cards on the real catalog, as the server's tests install them (`crates/server/tests/support/engine.rs`):
+/// a prompt its caster's opponent answers, one its caster answers, a play that panics (R1253000), and fillers that do
+/// nothing, each a 0-cost Quickdraw Spell so it starts in the opening hand.
+mod scripted {
+    use super::*;
+    use indexmap::IndexMap;
+    use jackioh_engine::effects::choose_mode;
+    use jackioh_engine::prelude::json_as;
+    use jackioh_engine::testkit::{register_catalog, register_scripts};
+    use jackioh_engine::{CardDef, CardScripts, Script, StaticFlags, hook};
+    use jackioh_shared::config::DUOS_PROMPT_CLOCK_MS;
+    use jackioh_shared::host::duos::{acting_round_seat, held_prompt, keep_whole_hand};
+    use serde_json::json;
+
+    const PROMPT_SELF: &str = "test-prompt-self";
+    const PROMPT_ENEMY: &str = "test-prompt-enemy";
+    const PANICS: &str = "test-panics";
+    const FILLER: &str = "test-card-";
+    const FIRST_INDEX: i32 = 9001;
+    const ANSWERED: &str = "answered";
+    const B1: DuosSeat = DuosSeat::B1;
+
+    fn def(id: &str, index: i32, text: &str) -> CardDef {
+        json_as(json!({
+            "id": id,
+            "index": index.to_string(),
+            "name": format!("{id} (duos tests)"),
+            "set": "Core",
+            "type": "Spell",
+            "tags": [],
+            "rarity": "Common",
+            "token": false,
+            "cost": 0,
+            "base": { "keywords": [], "text": text },
+            "radiant": { "keywords": [], "text": text },
+        }))
+    }
+
+    fn quickdraw() -> Option<StaticFlags> {
+        Some(StaticFlags {
+            quickdraw: Some(true),
+            ..StaticFlags::default()
+        })
+    }
+
+    /// A "choose one: keep or pass" prompt (§6.3), answered by `by`, `"self"` or `"enemy"`.
+    fn prompt(by: &'static str) -> Script {
+        let mut resume = IndexMap::new();
+        resume.insert(ANSWERED, hook(|_ctx| Vec::new()));
+        Script {
+            static_flags: quickdraw(),
+            cry: Some(hook(move |_ctx| {
+                vec![choose_mode(json_as(json!({
+                    "options": ["keep", "pass"],
+                    "step": ANSWERED,
+                    "prompt": "pick one",
+                    "by": by,
+                })))]
+            })),
+            resume,
+            ..Script::default()
+        }
+    }
+
+    /// The real catalog and scripts with the scripted cards and `DECK_SIZE` fillers, under the testkit's override.
+    fn install() {
+        jackioh_cards::register_all();
+        let mut defs = jackioh_cards::CATALOG.clone();
+        let mut scripts = jackioh_cards::scripts_of();
+        let panics = Script {
+            static_flags: quickdraw(),
+            cry: Some(hook(|_ctx| {
+                panic!("test-panics: a server action's reduce panicked")
+            })),
+            ..Script::default()
+        };
+        let mut cards = vec![
+            (
+                PROMPT_SELF.to_string(),
+                "Quickdraw. Choose one: keep or pass.",
+                prompt("self"),
+            ),
+            (
+                PROMPT_ENEMY.to_string(),
+                "Quickdraw. Your opponent chooses: keep or pass.",
+                prompt("enemy"),
+            ),
+            (PANICS.to_string(), "Quickdraw. Panics.", panics),
+        ];
+        for n in 0..DECK_SIZE {
+            cards.push((format!("{FILLER}{n}"), "Does nothing.", Script::default()));
+        }
+        for (index, (id, text, script)) in (FIRST_INDEX..).zip(cards) {
+            defs.insert(id.clone(), def(&id, index, text));
+            scripts.insert(
+                id,
+                CardScripts {
+                    base: script.clone(),
+                    radiant: script,
+                },
+            );
+        }
+        register_catalog(defs);
+        register_scripts(scripts);
+    }
+
+    /// A deck of fillers, holding `card` too.
+    fn deck(card: Option<&str>) -> Vec<String> {
+        let mut deck: Vec<String> = card.into_iter().map(str::to_string).collect();
+        let fillers = DECK_SIZE as usize - deck.len();
+        deck.extend((0..fillers).map(|n| format!("{FILLER}{n}")));
+        deck
+    }
+
+    /// Both people here, the game armed and their mulligans kept: a1's deck holds `a1`, b1's holds `b1`.
+    fn scripted_table(seed: &str, a1: Option<&str>, b1: Option<&str>) -> Table {
+        install();
+        let options: DuosCreateOptions = serde_json::from_value(json!({
+            "seed": seed,
+            "decks": { "a1": deck(a1), "a2": deck(None), "b1": deck(b1), "b2": deck(None) },
+        }))
+        .expect("create options");
+        let begun = duos_begin(&duos_create(&options));
+        assert!(begun.error.is_none(), "{:?}", begun.error);
+        let mut table = Table::new(setup(begun.state));
+        table.connect(A1);
+        table.connect(A2);
+        table.feed(DuosHostEvent::Arm);
+        for (n, seat) in [A1, A2].into_iter().enumerate() {
+            let keep = keep_whole_hand(&table.host.legal(seat)).expect("a mulligan is legal");
+            table.act(seat, &format!("m-{n}"), keep);
+        }
+        // The AI team keeps its whole hands too, so a scripted card dealt to it stays there: a search answered
+        // with nothing plays the fallback's answer, which may send it back.
+        table.sleep(DUOS_AI_STEP_DELAY_MS);
+        while let Some(request) = table.decides.pop() {
+            let keep = keep_whole_hand(&table.host.legal(request.seat));
+            assert!(keep.is_some(), "PREMISE: {} owes its mulligan", request.seat);
+            table.feed(DuosHostEvent::Decided {
+                seat: request.seat,
+                body: keep,
+                cursor: request.cursor + 1,
+                failed: false,
+            });
+        }
+        table
+    }
+
+    fn end_turn() -> DuosActionBody {
+        DuosActionBody::Duel {
+            body: ActionBody::EndTurn,
+        }
+    }
+
+    /// `seat`'s legal Play of `card`, if any.
+    fn play_of(table: &Table, seat: DuosSeat, card: &str) -> Option<DuosActionBody> {
+        let duel = &table.host.game().duels[seat.duel()];
+        table.host.legal(seat).into_iter().find(|body| {
+            matches!(
+                body,
+                DuosActionBody::Duel { body: ActionBody::Play { instance_id, .. } }
+                    if jackioh_engine::state::find_instance(duel, instance_id)
+                        .is_some_and(|held| held.def_id == card)
+            )
+        })
+    }
+
+    /// Plays on, every search answered with nothing and each person's turn ended as it comes, until `seat` is a
+    /// round seat that can play `card`: that Play. A search `seat` was asked for in that round stays unanswered.
+    fn until_it_can_play(table: &mut Table, seat: DuosSeat, card: &str) -> DuosActionBody {
+        let ready = |table: &Table| {
+            if acting_round_seat(table.host.game(), seat) {
+                play_of(table, seat, card)
+            } else {
+                None
+            }
+        };
+        for step in 0..400 {
+            if let Some(play) = ready(&*table) {
+                return play;
+            }
+            for person in [A1, A2] {
+                let end = end_turn();
+                if person != seat
+                    && acting_round_seat(table.host.game(), person)
+                    && table.host.legal(person).contains(&end)
+                {
+                    table.act(person, &format!("end-{step}-{person}"), end);
+                }
+            }
+            if let Some(play) = ready(&*table) {
+                return play;
+            }
+            table.sleep(DUOS_AI_STEP_DELAY_MS);
+            if let Some(play) = ready(&*table) {
+                return play;
+            }
+            table.answer_searches();
+        }
+        panic!(
+            "{seat} never could play {card}: round {}, {:?}",
+            table.round(),
+            table.nonces()
+        );
+    }
+
+    /// The search `seat` is asked for, after its pause if it is not out yet.
+    fn search_of(table: &mut Table, seat: DuosSeat) -> DuosDecide {
+        if !table.decides.iter().any(|request| request.seat == seat) {
+            table.sleep(DUOS_AI_STEP_DELAY_MS);
+        }
+        let at = table
+            .decides
+            .iter()
+            .position(|request| request.seat == seat)
+            .unwrap_or_else(|| panic!("{seat} was asked for no search: {:?}", table.decides));
+        table.decides.remove(at)
+    }
+
+    /// B38, R79: a prompt a person holds outside their own round runs its own clock, and once that runs out, and not
+    /// before, the AI answers it for them, under a server nonce.
+    #[test]
+    fn b38_a_prompt_held_outside_the_persons_round_is_answered_by_the_ai_once_its_clock_runs_out() {
+        let mut table = scripted_table("duos-prompt-enemy", None, Some(PROMPT_ENEMY));
+        let play = until_it_can_play(&mut table, B1, PROMPT_ENEMY);
+        let request = search_of(&mut table, B1);
+        table.feed(DuosHostEvent::Decided {
+            seat: B1,
+            body: Some(play),
+            cursor: request.cursor + 1,
+            failed: false,
+        });
+        let choice = held_prompt(table.host.game(), A1).expect("PREMISE: b1's card asks a1");
+        assert!(
+            !acting_round_seat(table.host.game(), A1),
+            "PREMISE: outside a1's round"
+        );
+        let lapses = table.now + DUOS_PROMPT_CLOCK_MS;
+        assert_eq!(table.timer(TimerKey::DuosPrompt { seat: A1 }), Some(lapses));
+        // A later sync of the clocks keeps the one already armed for the same prompt.
+        table.sleep(SECOND);
+        table.feed(DuosHostEvent::Arm);
+        assert_eq!(table.timer(TimerKey::DuosPrompt { seat: A1 }), Some(lapses));
+        let rows = table.log.len();
+        table.sleep(lapses - table.now - 1);
+        table.answer_searches();
+        assert!(table.log[rows..].iter().all(|(_, action)| action.seat != A1));
+        table.sleep(1);
+        assert!(table.notes.iter().any(|note| matches!(
+            note,
+            DuosNote::ClockExpired { kind } if kind == "prompt"
+        )));
+        let answered = |table: &Table| held_prompt(table.host.game(), A1).as_deref() != Some(choice.as_str());
+        table.play_on(10 * SECOND, answered);
+        assert!(answered(&table), "{:?}", &table.nonces()[rows..]);
+        assert!(
+            table.log[rows..]
+                .iter()
+                .any(|(_, action)| action.seat == A1 && action.nonce.starts_with("srv-ai-")),
+            "{:?}",
+            &table.nonces()[rows..]
+        );
+    }
+
+    /// B38: a round that runs out while its person still owes an answer has the AI answer it first, with its
+    /// search, and then end the turn.
+    #[test]
+    fn b38_a_lapsed_round_owing_an_answer_answers_it_and_then_ends_the_turn() {
+        let mut table = scripted_table("duos-prompt-self", Some(PROMPT_SELF), None);
+        let play = until_it_can_play(&mut table, A1, PROMPT_SELF);
+        let answer = table.act(A1, "play-self", play);
+        assert!(matches!(answer, ActionAnswer::Ack { .. }), "{answer:?}");
+        assert!(
+            held_prompt(table.host.game(), A1).is_some(),
+            "PREMISE: a1 holds its own prompt"
+        );
+        // Inside a1's own round the round clock covers the prompt: no prompt clock of its own.
+        assert_eq!(table.timer(TimerKey::DuosPrompt { seat: A1 }), None);
+        let due = table.timer(TimerKey::DuosRound).expect("the round clock runs");
+        let rows = table.log.len();
+        table.sleep(due - table.now);
+        let ended = |table: &Table| {
+            table.log[rows..]
+                .iter()
+                .any(|(_, action)| action.seat == A1 && action.body == end_turn())
+        };
+        table.play_on(10 * SECOND, ended);
+        assert!(ended(&table), "{:?}", &table.nonces()[rows..]);
+        let played: Vec<&DuosAction> = table.log[rows..]
+            .iter()
+            .map(|(_, action)| action)
+            .filter(|action| action.seat == A1)
+            .collect();
+        assert!(
+            played.iter().all(|action| action.nonce.starts_with("srv-ai-")),
+            "{played:?}"
+        );
+        assert_ne!(played[0].body, end_turn(), "the answer comes first: {played:?}");
+    }
+
+    /// R1253000, R1047001, B40: an AI move whose `reduce` panics ends the match as a ceiling draw. The match takes no
+    /// more actions, and no clock left running, a person's grace or the ceiling, runs anything out after it.
+    #[test]
+    fn r1253000_an_ai_move_whose_reduce_panics_ends_the_match_as_a_ceiling_draw_and_nothing_runs_out_after() {
+        let mut table = scripted_table("duos-panics", None, Some(PANICS));
+        let play = until_it_can_play(&mut table, B1, PANICS);
+        let request = search_of(&mut table, B1);
+        // a2 drops first, so its grace is running when the match ends.
+        table.feed(DuosHostEvent::Left { seat: A2 });
+        table.feed(DuosHostEvent::Disconnected { seat: A2 });
+        assert!(table.timer(TimerKey::DuosGrace { seat: A2 }).is_some());
+        table.feed(DuosHostEvent::Decided {
+            seat: B1,
+            body: Some(play),
+            cursor: request.cursor + 1,
+            failed: false,
+        });
+        assert_eq!(table.ceiling_draws, 1);
+        assert!(table.host.is_finished());
+        assert_eq!(
+            table.act(A1, "after-the-draw", end_turn()),
+            ActionAnswer::MatchOver
+        );
+        let notes = table.notes.len();
+        table.sleep(MATCH_CEILING_MINUTES * MINUTE);
+        assert!(
+            table.notes[notes..].iter().all(|note| !matches!(
+                note,
+                DuosNote::ClockExpired { .. } | DuosNote::SeatAiPlaying { .. }
+            )),
+            "{:?}",
+            &table.notes[notes..]
+        );
+        assert_eq!(table.ceiling_draws, 1);
     }
 }

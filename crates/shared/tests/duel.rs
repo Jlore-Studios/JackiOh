@@ -1893,3 +1893,283 @@ mod the_choice_hover {
         assert_eq!(table.timer(TimerKey::Hover { player: P1 }), None);
     }
 }
+
+/// Scripted cards on the real catalog, as the server's tests install them (`crates/server/tests/support/engine.rs`):
+/// a Glitch forced to swap the seats (R677), one forced to void the game (R679), and a Field Spell whose turn's end
+/// panics (R1253000), each a 0-cost Quickdraw card so it starts in the opening hand, and fillers that do nothing.
+mod scripted {
+    use super::*;
+    use indexmap::IndexMap;
+    use jackioh_engine::game_over::end_game;
+    use jackioh_engine::prelude::json_as;
+    use jackioh_engine::script::Effect;
+    use jackioh_engine::testkit::{register_catalog, register_scripts};
+    use jackioh_engine::wire::{GameEvent, GlitchOutcome};
+    use jackioh_engine::{CardDef, CardScripts, Script, StaticFlags, hook};
+    use serde_json::json;
+
+    const SWAP: &str = "test-glitch-swap";
+    const VOID: &str = "test-glitch-void";
+    const PANICS_AT_TURN_END: &str = "test-panics-at-turn-end";
+    const FILLER: &str = "test-card-";
+    const FIRST_INDEX: i32 = 9001;
+
+    fn def(id: &str, index: i32, card_type: &str, text: &str) -> CardDef {
+        json_as(json!({
+            "id": id,
+            "index": index.to_string(),
+            "name": format!("{id} (duel tests)"),
+            "set": "Core",
+            "type": card_type,
+            "tags": [],
+            "rarity": "Common",
+            "token": false,
+            "cost": 0,
+            "base": { "keywords": [], "text": text },
+            "radiant": { "keywords": [], "text": text },
+        }))
+    }
+
+    fn quickdraw() -> Option<StaticFlags> {
+        Some(StaticFlags {
+            quickdraw: Some(true),
+            ..StaticFlags::default()
+        })
+    }
+
+    /// A Glitch forced to `outcome`: the public `glitched` event, then the outcome's write.
+    fn glitch(outcome: GlitchOutcome) -> Script {
+        Script {
+            static_flags: quickdraw(),
+            cry: Some(hook(move |_ctx| {
+                vec![Effect::new("test-glitch", move |ctx| {
+                    ctx.sink.events.push(GameEvent::Glitched {
+                        player: ctx.controller,
+                        outcome,
+                    });
+                    if outcome == GlitchOutcome::Void {
+                        end_game(&mut ctx.sink, Winner::Draw, GameOverReason::Voided);
+                    } else {
+                        ctx.sink.state.seat_swaps = Some(ctx.sink.state.seat_swaps.unwrap_or(0) + 1);
+                    }
+                })]
+            })),
+            ..Script::default()
+        }
+    }
+
+    fn install() {
+        jackioh_cards::register_all();
+        let mut defs = jackioh_cards::CATALOG.clone();
+        let mut scripts: IndexMap<String, CardScripts> = jackioh_cards::scripts_of();
+        let panics = Script {
+            static_flags: quickdraw(),
+            end_of_turn: Some(hook(|_ctx| {
+                panic!("test-panics-at-turn-end: the turn's end panicked")
+            })),
+            ..Script::default()
+        };
+        let mut cards = vec![
+            (
+                SWAP.to_string(),
+                "Spell",
+                "Quickdraw. Glitch: swap.",
+                glitch(GlitchOutcome::Swap),
+            ),
+            (
+                VOID.to_string(),
+                "Spell",
+                "Quickdraw. Glitch: void.",
+                glitch(GlitchOutcome::Void),
+            ),
+            (
+                PANICS_AT_TURN_END.to_string(),
+                "Field Spell",
+                "Quickdraw. End of turn: panics.",
+                panics,
+            ),
+        ];
+        for n in 0..DECK_SIZE {
+            cards.push((
+                format!("{FILLER}{n}"),
+                "Spell",
+                "Does nothing.",
+                Script::default(),
+            ));
+        }
+        for (index, (id, card_type, text, script)) in (FIRST_INDEX..).zip(cards) {
+            defs.insert(id.clone(), def(&id, index, card_type, text));
+            scripts.insert(
+                id,
+                CardScripts {
+                    base: script.clone(),
+                    radiant: script,
+                },
+            );
+        }
+        register_catalog(defs);
+        register_scripts(scripts);
+    }
+
+    /// A deck of fillers holding `card`.
+    fn deck(card: &str) -> Vec<String> {
+        let mut deck = vec![card.to_string()];
+        deck.extend((1..DECK_SIZE).map(|n| format!("{FILLER}{n}")));
+        deck
+    }
+
+    /// Both seats here, each holding `card`, and through their mulligans.
+    fn holding(seed: &str, card: &str) -> Table {
+        install();
+        let options = serde_json::from_value(json!({ "seed": seed, "decks": [deck(card), deck(card)] }))
+            .expect("create options");
+        let begun = jackioh_engine::begin_game(&jackioh_engine::create_game(&options));
+        assert!(begun.error.is_none(), "{:?}", begun.error);
+        let mut table = Table::new(setup(begun.state));
+        table.connect(P1);
+        table.connect(P2);
+        table.feed(DuelEvent::Arm);
+        table.through_the_mulligans();
+        table
+    }
+
+    /// The seat on turn plays its `card`.
+    fn play(table: &mut Table, card: &str, nonce: &str) -> PlayerId {
+        let holder = table.active();
+        let body = {
+            let game = table.host.game();
+            table
+                .host
+                .legal(holder)
+                .into_iter()
+                .find(|body| {
+                    matches!(body, ActionBody::Play { instance_id, .. }
+                        if jackioh_engine::state::find_instance(game, instance_id)
+                            .is_some_and(|held| held.def_id == card))
+                })
+                .unwrap_or_else(|| panic!("{holder} cannot play {card}"))
+        };
+        let answer = table.act(holder, nonce, body);
+        assert!(matches!(answer, ActionAnswer::Ack { .. }), "{answer:?}");
+        holder
+    }
+
+    /// R677: a Glitch swap moves the grace of the account that is away to the seat it plays now, restarted there,
+    /// and leaves the seat the account that is here plays now without one.
+    #[test]
+    fn r677_a_swap_moves_the_away_accounts_grace_to_the_seat_it_plays_now() {
+        let mut table = holding("duel-swap", SWAP);
+        let holder = table.active();
+        let away = holder.opponent();
+        table.feed(DuelEvent::Left { home: away });
+        table.feed(DuelEvent::Disconnected { home: away });
+        assert!(table.host.clocks().grace_deadline[away].is_some());
+        table.sleep(SECOND);
+        play(&mut table, SWAP, "swap");
+        assert_eq!(
+            table.host.game().seat_swaps,
+            Some(1),
+            "PREMISE: the seats swapped"
+        );
+        let grace = table.host.clocks().grace_deadline;
+        assert_eq!(grace[holder], Some(table.now + grace_ms()), "{grace:?}");
+        assert_eq!(grace[away], None, "{grace:?}");
+    }
+
+    /// R679: a Glitch that voids the game ends the match voided, recording nothing.
+    #[test]
+    fn r679_a_voided_game_is_voided_and_records_nothing() {
+        let mut table = holding("duel-void", VOID);
+        play(&mut table, VOID, "void");
+        assert_eq!(table.voids, 1);
+        assert!(table.host.is_voided());
+        assert!(table.records.is_empty());
+    }
+
+    /// R1253000, R112: a clock action whose `reduce` panics (the turn clock's timeout running a turn's end that
+    /// panics) ends the match as a ceiling draw, and an aim still held for the relay is never sent after it (R738).
+    #[test]
+    fn r1253000_a_clock_action_that_panics_ends_the_match_as_a_ceiling_draw_and_relays_nothing_after() {
+        let mut table = holding("duel-panics", PANICS_AT_TURN_END);
+        let holder = play(&mut table, PANICS_AT_TURN_END, "field");
+        let due = table.timer(TimerKey::Turn).expect("the turn clock runs");
+        let aim = |target: Option<AimEnd>| {
+            Some(Aim {
+                source: AimEnd::Hero { player: holder },
+                target,
+            })
+        };
+        table.sleep(due - table.now - AIM_RELAY_INTERVAL_MS / 2);
+        table.feed(DuelEvent::Aim {
+            home: holder,
+            aim: aim(Some(AimEnd::Hero {
+                player: holder.opponent(),
+            })),
+        });
+        table.sleep(AIM_RELAY_INTERVAL_MS / 4);
+        table.feed(DuelEvent::Aim {
+            home: holder,
+            aim: aim(None),
+        });
+        let receiver = &table.sent[holder.opponent()];
+        let relayed = receiver
+            .iter()
+            .filter(|message| matches!(message, SeatMessage::Aim { .. }))
+            .count();
+        table.sleep(AIM_RELAY_INTERVAL_MS);
+        assert_eq!(table.ceiling_draws, 1);
+        assert!(table.host.is_finished());
+        let after = table.sent[holder.opponent()]
+            .iter()
+            .filter(|message| matches!(message, SeatMessage::Aim { .. }))
+            .count();
+        assert_eq!(after, relayed, "an aim was relayed after the draw");
+    }
+}
+
+mod the_sequence {
+    use super::*;
+    use jackioh_engine::testkit::{json, scenario};
+
+    const COMPETITION: &str = "meditativeplus-020";
+
+    /// R1563006: the sequence clock's expiry answers Stop for the player whose question is open, and nothing for
+    /// the other.
+    #[test]
+    fn r1563006_a_sequence_expiry_answers_stop_for_the_question_holder_only() {
+        jackioh_cards::register_all();
+        let built = scenario(json!({
+            "seed": "r1563006-duel",
+            "active": "p1",
+            "p1": { "hand": [COMPETITION], "mana": 10, "library": ["core-008", "core-020"] },
+            "p2": { "library": ["core-008"] },
+        }));
+        let card = built.hand(P1)[0].id.clone();
+        let mut table = Table::new(setup(built.state().clone()));
+        table.feed(DuelEvent::Arm);
+        table.connect(P1);
+        table.connect(P2);
+        let play = table
+            .host
+            .legal(P1)
+            .into_iter()
+            .find(|body| matches!(body, ActionBody::Play { instance_id, .. } if *instance_id == card))
+            .expect("KY's Competition is playable");
+        let answer = table.act(P1, "play-competition", play);
+        assert!(matches!(answer, ActionAnswer::Ack { .. }), "{answer:?}");
+        let stop =
+            jackioh_engine::prompts::stop_answer(table.host.game()).expect("PREMISE: a question is open");
+        assert_eq!(
+            table
+                .host
+                .server_actions_for(ClockExpiry::Sequence { player: P1 }),
+            vec![(P1, stop)]
+        );
+        assert!(
+            table
+                .host
+                .server_actions_for(ClockExpiry::Sequence { player: P2 })
+                .is_empty()
+        );
+    }
+}
