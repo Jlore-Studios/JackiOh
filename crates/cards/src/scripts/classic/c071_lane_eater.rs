@@ -40,11 +40,10 @@ fn destroy_in_lane(ctx: &EffectContext, enemy_only: bool) -> Vec<Effect> {
     }
     // R3546001: a GIGA is in both its lanes, so a GIGA Lane Eater eats both, and a GIGA that covers
     // one of them (from the lane beside it) is found there; each card once.
-    let zones = lane_zones(ctx.controller, at.row, enemy_only);
     let mut ids: Vec<String> = Vec::new();
-    for lane in lanes_of(me) {
-        for (player, row) in &zones {
-            if let Some(card) = occupant_at(&*ctx.state, ZoneSlot { player: *player, row: *row, lane })
+    for (player, row) in lane_zones(ctx.controller, at.row, enemy_only) {
+        for lane in lanes_of(me) {
+            if let Some(card) = occupant_at(&*ctx.state, ZoneSlot { player, row, lane })
                 && card.id != me.id
                 && !ids.contains(&card.id)
             {

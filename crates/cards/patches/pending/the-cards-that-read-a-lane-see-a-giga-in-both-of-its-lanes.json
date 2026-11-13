@@ -14,7 +14,7 @@
       "Midlane Menace and Mid Runner count as in midlane when a GIGA covers the middle lane.",
       "Celestial Caller summons its Moon past the far end of a GIGA.",
       "Right-Hand Felinor sees a GIGA to its left, and a GIGA Felinor buffs the Unit beside its first lane.",
-      "Joon Juicer upgrades the Unit past the far end of a GIGA Joon."
+      "Joon Juicer buffs the Unit past the far end of a GIGA Joon."
     ]
   },
   "cards": [],
@@ -22,10 +22,6 @@
     "classicplus-024",
     "traininggrounds-028",
     "classic-071",
-    "traininggrounds-005",
-    "classic-022",
-    "traininggrounds-016",
-    "traininggrounds-022",
-    "meditative-061"
+    "traininggrounds-016"
   ]
 }
