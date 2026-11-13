@@ -16252,11 +16252,6 @@
       "last_findings": [],
       "live": "resolving",
       "merge_owner": "claude-7",
-      "paused": {
-        "at": "2026-11-13T05:39:54Z",
-        "interrupt": "usage",
-        "provider": "claude-1"
-      },
       "pending_request": false,
       "provider": "claude-1",
       "queued_at": "2026-11-13T04:30:21Z",
