@@ -36989,7 +36989,7 @@
         "why": "closed unbuilt by a person (not planned)"
       }
     ],
-    "idle_since": null,
+    "idle_since": "2026-11-13T05:30:34Z",
     "last_run": "2026-11-13T03:30:12Z",
     "provider": null,
     "requested": false,
