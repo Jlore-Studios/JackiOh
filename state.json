@@ -15375,6 +15375,10 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-13T15:32:35Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-8` (claude, opus) rejected it: `spec/rulings/R0508.md:11`: The issue asks that any spec text saying Portal to the Past gives nothing on an empty board be changed along with it, but two ruling "
+      ],
+      "strikes": 1,
       "taken_asks": [],
       "verdict_rounds": 1,
       "waiting_comment": 6849601821
