@@ -68,12 +68,13 @@ button,
    out). When that is the rematch block, the block is no button: its first button, Rematch, is the
    primary (#477: the rule used to paint the whole block gold and hand its ink to Double or nothing).
    Its first child can be a note, so the place sets the edge's color and never the `border`. When the
-   block holds no buttons (R3791000: "Your opponent has left." stands in their place), the way on
-   after it is the primary instead. */
+   block holds no buttons (R3791000: `.rematch--left`, "Your opponent has left." in their place), the
+   way on after it is the primary instead. No `:has()` here: one before a universal compound is
+   what #3633 bans (hasSelectors.test.ts), so Rematch.tsx marks the block. */
 .button-primary,
 .result-overlay__actions > :first-child:not(.result-overlay__view, .rematch),
 .result-overlay__actions > .rematch:first-child .rematch-buttons > :first-child,
-.result-overlay__actions > .rematch:first-child:not(:has(.rematch-buttons)) + :not(.result-overlay__view) {
+.result-overlay__actions > .rematch--left:first-child + :not(.result-overlay__view) {
   border-color: var(--primary-edge);
   background: var(--primary-face);
   color: var(--primary-ink);
@@ -84,7 +85,7 @@ button,
 .button-primary:hover:not(:disabled, [aria-disabled="true"]),
 .result-overlay__actions > :first-child:not(.result-overlay__view, .rematch):hover,
 .result-overlay__actions > .rematch:first-child .rematch-buttons > :first-child:hover:not(:disabled),
-.result-overlay__actions > .rematch:first-child:not(:has(.rematch-buttons)) + :not(.result-overlay__view):hover:not(:disabled) {
+.result-overlay__actions > .rematch--left:first-child + :not(.result-overlay__view):hover:not(:disabled) {
   background: var(--primary-face-hover);
 }
 

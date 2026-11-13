@@ -261,7 +261,7 @@ describe("R3791000 the panel's primary when the left line stands where the butto
       />,
     );
     await screen.findByTestId(rematchTestid.left);
-    const primary = ".result-overlay__actions > .rematch:first-child:not(:has(.rematch-buttons)) + :not(.result-overlay__view)";
+    const primary = ".result-overlay__actions > .rematch--left:first-child + :not(.result-overlay__view)";
     expect(screen.getByTestId("next-way").matches(primary)).toBe(true);
     expect(screen.getByTestId(rematchTestid.left).matches(primary)).toBe(false);
   });
@@ -284,7 +284,7 @@ describe("R3791000 the panel's primary when the left line stands where the butto
       />,
     );
     await screen.findByTestId(rematchTestid.offer);
-    const primary = ".result-overlay__actions > .rematch:first-child:not(:has(.rematch-buttons)) + :not(.result-overlay__view)";
+    const primary = ".result-overlay__actions > .rematch--left:first-child + :not(.result-overlay__view)";
     expect(screen.getByTestId("next-way").matches(primary)).toBe(false);
   });
 });
@@ -349,14 +349,14 @@ describe("RematchButtons in the result panel (#477)", () => {
     const buttons = gameCss(join("..", "buttons.css"));
 
     expect(buttons).toContain(
-      ".result-overlay__actions > :first-child:not(.result-overlay__view, .rematch), .result-overlay__actions > .rematch:first-child .rematch-buttons > :first-child, .result-overlay__actions > .rematch:first-child:not(:has(.rematch-buttons)) + :not(.result-overlay__view) { border-color: var(--primary-edge",
+      ".result-overlay__actions > :first-child:not(.result-overlay__view, .rematch), .result-overlay__actions > .rematch:first-child .rematch-buttons > :first-child, .result-overlay__actions > .rematch--left:first-child + :not(.result-overlay__view) { border-color: var(--primary-edge",
     );
     // R3791000: with no buttons in the block (the left line), the way on after it takes the primary.
     expect(buttons).toContain(
-      ".result-overlay__actions > .rematch:first-child:not(:has(.rematch-buttons)) + :not(.result-overlay__view) {",
+      ".result-overlay__actions > .rematch--left:first-child + :not(.result-overlay__view) {",
     );
     expect(buttons).toContain(
-      ".result-overlay__actions > .rematch:first-child:not(:has(.rematch-buttons)) + :not(.result-overlay__view):hover:not(:disabled) {",
+      ".result-overlay__actions > .rematch--left:first-child + :not(.result-overlay__view):hover:not(:disabled) {",
     );
     expect(animations).not.toContain("--primary-face");
     expect(animations).toMatch(

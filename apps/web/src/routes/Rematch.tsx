@@ -205,7 +205,7 @@ export default function RematchButtons({
   // one line in place of the offers, the wait, the picker and a refusal; nothing when the result says it already.
   if (!status.opponentHere) {
     return opponentLeftInResult ? null : (
-      <div className="rematch">
+      <div className="rematch rematch--left">
         <p className="rematch-status" data-testid={rematchTestid.left} role="status">
           {t("Your opponent has left.")}
         </p>
