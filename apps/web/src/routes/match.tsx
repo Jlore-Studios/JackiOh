@@ -21,7 +21,7 @@ import ConfirmLeaveMatch from "../game/ConfirmLeaveMatch.tsx";
 import { connectionWords } from "../game/connectionWords.ts";
 import Game from "../game/Game.tsx";
 import { ModifierList } from "../game/ModifierList.tsx";
-import { OnceRevealed } from "../game/Result.tsx";
+import { OnceRevealed, resultSaysOpponentLeft } from "../game/Result.tsx";
 import { getAudioEngine } from "../audio/index.ts";
 import { announceWallet } from "../economy/wallet.ts";
 import XpReveal from "../economy/XpReveal.tsx";
@@ -524,6 +524,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
               connection={match.connection}
               ranked={ranks?.ranked ?? false}
               pushed={match.rematch}
+              opponentLeftInResult={view.result !== null && resultSaysOpponentLeft(view.result, view.viewer)}
             />
           ) : null}
           <SeriesContinue series={series} matchId={matchId} />

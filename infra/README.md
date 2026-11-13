@@ -132,11 +132,12 @@ application (`depends_on`), so the hostname never serves a request Access has no
 
 ## The runner gate
 
-`ci-runners` is the environment a pull request's CI and a merge-queue build wait in, holding no
-runner, until the night bot's account, its one required reviewer, approves them once GitHub's
-runners have room (bot/README.md "The runner gate", bot/go/internal/cigate). The
-`CI_GATE_ENVIRONMENT` variable is what turns it on: ci.yml's `changes` job names the environment
-through it, so with the variable unset nothing waits. Neither existed, so the first `apply` creates
+`ci-runners` is the environment a pull request's CI, `main`'s and the super run wait in, holding no
+runner, until the night bot's account, its one required reviewer, approves them once they have a
+slot: only six CI and CD runs go at once, the merge queue's builds and the deploys first, which never
+wait (bot/README.md "The runner gate", bot/go/internal/cigate). The
+`CI_GATE_ENVIRONMENT` variable is what turns it on: ci.yml's `changes` job and super.yml's first
+jobs name the environment through it, so with the variable unset nothing waits. Neither existed, so the first `apply` creates
 both (`Plan: 2 to add`). Apply it only once the status loop runs a `main` that has
 bot/go/internal/cigate: until then nothing would approve the runs, and the sweep, which ticks the
 gate too, comes only every few minutes. After the `apply`, a pull request's next run shows
