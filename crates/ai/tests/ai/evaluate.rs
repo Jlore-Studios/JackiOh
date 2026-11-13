@@ -2086,3 +2086,377 @@ mod r2490000_backrow_unit_priced_once {
         assert_eq!(scored(&back, &AI_EVAL), scored(&front, &AI_EVAL));
     }
 }
+
+/// R3822000: the Burn and Toxic still to come on a unit or a hero (§6.3, R3540001), priced by the ticks
+/// they will deal over `AI_AFFLICTION_TICKS` of their controller's turn starts. Mr. Vanilla is a 4/4 and
+/// Reno a 4/6, neither with a keyword, so a unit's worth is `health` a point of health and `attack` a point
+/// of attack, and every tick lands whole.
+mod r3822000_burn_and_toxic {
+    use super::*;
+    use jackioh_ai::{AI_AFFLICTION_TICKS, EvalWeights, kill_worth};
+    use jackioh_engine::testkit::{BrittleCounter, Scenario, active_units_of};
+
+    const VANILLA: &str = "core-008";
+    const RENO: &str = "core-053";
+
+    fn worth(state: &GameState, card: &CardInstance) -> f64 {
+        unit_worth(state, card, &AI_EVAL, Prices::NONE)
+    }
+
+    /// `card` carrying Burn `burn` and Toxic `toxic`, absent at 0 as the engine stores them.
+    fn countered(card: &CardInstance, burn: i32, toxic: i32) -> CardInstance {
+        let mut out = card.clone();
+        out.counters.burn = (burn > 0).then_some(burn);
+        out.counters.toxic = (toxic > 0).then_some(toxic);
+        out
+    }
+
+    /// `state` with `player`'s hero carrying Burn `burn` and Toxic `toxic`.
+    fn hero_countered(state: &GameState, player: PlayerId, burn: i32, toxic: i32) -> GameState {
+        let mut out = clone(state);
+        out.players[player].hero_burn = (burn > 0).then_some(burn);
+        out.players[player].hero_toxic = (toxic > 0).then_some(toxic);
+        out
+    }
+
+    /// `hero_value` at `life` in a 1v1 game.
+    fn hv(life: i32) -> f64 {
+        AI_EVAL.hero_health * (f64::from(life) * f64::from(HERO_HEALTH)).sqrt()
+    }
+
+    /// The AI's one unit on a board whose p1 field is `field`.
+    fn own_unit(field: Value) -> (GameState, CardInstance) {
+        let state = board(json!({ "p1": { "field": [field] } }));
+        let card = active_units_of(&state, AI)[0].clone();
+        (state, card)
+    }
+
+    /// Off: the three weights at 0, every other as the AI's.
+    const OFF: EvalWeights = EvalWeights {
+        unit_affliction: 0.0,
+        unit_doomed: 0.0,
+        hero_affliction: 0.0,
+        ..AI_EVAL
+    };
+
+    #[test]
+    fn r3822000_burn_or_toxic_on_an_enemy_unit_raises_the_seats_eval_and_on_its_own_unit_lowers_it() {
+        let vanilla = json!({ "def": VANILLA });
+        let base = eval(
+            &board(json!({ "p1": { "field": [vanilla] }, "p2": { "field": [vanilla] } })),
+            AI,
+        );
+        for counters in [
+            json!({ "burn": 2 }),
+            json!({ "toxic": 1 }),
+            json!({ "burn": 4 }),
+            json!({ "toxic": 4 }),
+        ] {
+            let afflicted = json!({ "def": VANILLA, "counters": counters });
+            let enemy = board(json!({ "p1": { "field": [vanilla] }, "p2": { "field": [afflicted] } }));
+            let own = board(json!({ "p1": { "field": [afflicted] }, "p2": { "field": [vanilla] } }));
+            assert!(eval(&enemy, AI) > base, "{counters} on the enemy's unit");
+            assert!(eval(&own, AI) < base, "{counters} on the own unit");
+        }
+    }
+
+    #[test]
+    fn r3822000_a_unit_its_next_tick_kills_is_worth_less_than_the_same_unit_without_the_counter() {
+        let (state, plain) = own_unit(json!({ "def": VANILLA }));
+        let (a, d, hp) = (AI_EVAL.unit_affliction, AI_EVAL.unit_doomed, AI_EVAL.health);
+        let p = worth(&state, &plain);
+        // Burn 4 deals 4 at the first tick: dead there.
+        assert_close(
+            worth(&state, &countered(&plain, 4, 0)),
+            (p - a * hp * 4.0) * (1.0 - d),
+            9,
+        );
+        // Toxic 2 deals 2 and 2: dead at the second.
+        assert_close(
+            worth(&state, &countered(&plain, 0, 2)),
+            (p - a * hp * 4.0) * (1.0 - d / 2.0),
+            9,
+        );
+        // Toxic 1 deals 1 each tick: dead at the fourth.
+        assert_close(
+            worth(&state, &countered(&plain, 0, 1)),
+            (p - a * hp * 4.0) * (1.0 - d / 4.0),
+            9,
+        );
+        // Burn 2 deals 2 and is gone: the unit lives on 2 points lower.
+        assert_close(worth(&state, &countered(&plain, 2, 0)), p - a * hp * 2.0, 9);
+        let doomed = worth(&state, &countered(&plain, 4, 0));
+        let scorched = worth(&state, &countered(&plain, 2, 0));
+        assert!(doomed < scorched && scorched < p, "{doomed} < {scorched} < {p}");
+        assert!(
+            kill_worth(&state, &countered(&plain, 4, 0), &AI_EVAL, Prices::NONE)
+                < kill_worth(&state, &plain, &AI_EVAL, Prices::NONE)
+        );
+    }
+
+    #[test]
+    fn r3822000_more_health_is_never_worth_less_and_more_counters_never_more() {
+        for (burn, toxic) in [(0, 1), (4, 0)] {
+            let mut last = f64::INFINITY;
+            for damage in 0..=5 {
+                let (state, reno) = own_unit(json!({ "def": RENO, "damage": damage }));
+                let now = worth(&state, &countered(&reno, burn, toxic));
+                assert!(
+                    now < last,
+                    "Burn {burn}, Toxic {toxic}: at {damage} damage {now}, one less {last}"
+                );
+                last = now;
+            }
+        }
+        let (state, reno) = own_unit(json!({ "def": RENO }));
+        let plain = worth(&state, &reno);
+        let mut last = plain;
+        for toxic in 1..=6 {
+            let now = worth(&state, &countered(&reno, 0, toxic));
+            assert!(now <= last, "Toxic {toxic}: {now}, one less {last}");
+            last = now;
+        }
+        assert!(last < plain, "Toxic 6 took nothing off {plain}");
+    }
+
+    #[test]
+    fn r3822000_divine_shield_armor_and_indestructible_meet_the_ticks_as_r3540001_says() {
+        let (state, plain) = own_unit(json!({ "def": VANILLA }));
+        let (a, d, hp) = (AI_EVAL.unit_affliction, AI_EVAL.unit_doomed, AI_EVAL.health);
+        let granted = |keyword: Keyword| {
+            let mut out = plain.clone();
+            out.granted_keywords.push(keyword);
+            out
+        };
+
+        let shielded = granted(Keyword::DivineShield);
+        let s = worth(&state, &shielded);
+        let ds = AI_EVAL.keyword.divine_shield;
+        // Burn 4's first hit takes the shield; its second, 1, lands.
+        let burning = worth(&state, &countered(&shielded, 4, 0));
+        assert_close(burning - s, -a * (ds + hp * 1.0), 9);
+        assert!(burning < s, "{burning}: losing the shield cost nothing off {s}");
+        // Toxic 2's first hit takes the shield too, which Toxic never passes: then 2 and 2, dead at the
+        // third.
+        assert_close(
+            worth(&state, &countered(&shielded, 0, 2)),
+            (s - a * (ds + hp * 4.0)) * (1.0 - d / 3.0),
+            9,
+        );
+
+        let armored = granted(Keyword::Armor { n: 3 });
+        let s = worth(&state, &armored);
+        // Armor 3 takes Burn 3 whole, and the 0 it drops to after.
+        assert_eq!(worth(&state, &countered(&armored, 3, 0)), s);
+        // Burn 4 lands 1 through it, its 1 after none.
+        let burning = worth(&state, &countered(&armored, 4, 0));
+        assert_close(burning - s, -a * hp * 1.0, 9);
+        assert!(
+            burning < s,
+            "{burning}: the point through Armor cost nothing off {s}"
+        );
+        // Toxic pierces it: 1 a tick, dead at the fourth.
+        assert_close(
+            worth(&state, &countered(&armored, 0, 1)),
+            (s - a * hp * 4.0) * (1.0 - d / 4.0),
+            9,
+        );
+
+        let indestructible = granted(Keyword::Indestructible);
+        assert_eq!(
+            worth(&state, &countered(&indestructible, 10, 6)),
+            worth(&state, &indestructible)
+        );
+    }
+
+    #[test]
+    fn r3822000_the_earlier_of_burns_end_and_brittles_counts() {
+        let (state, plain) = own_unit(json!({ "def": VANILLA }));
+        let mut brittle = plain.clone();
+        brittle.brittle = Some(BrittleCounter {
+            count: 2,
+            since: 0,
+            printed: None,
+        });
+        let (a, d) = (AI_EVAL.unit_affliction, AI_EVAL.unit_doomed);
+        let share = (1.0 - AI_EVAL.brittle_discount / 2.0).min(1.0 - d);
+        let burning = worth(&state, &countered(&brittle, 4, 0));
+        assert_close(
+            burning,
+            (worth(&state, &plain) - a * AI_EVAL.health * 4.0) * share,
+            9,
+        );
+        let crumbling = worth(&state, &brittle);
+        assert!(
+            burning < crumbling,
+            "{burning}: the Burn took nothing off {crumbling}"
+        );
+    }
+
+    /// The board the engine ticks: p2's Mr. Vanilla carrying `counters`, both sides with a library and
+    /// R82's automatic turn end off, the AI on turn.
+    fn ticking(seed: &str, field: Value) -> Scenario {
+        register_cards();
+        let library = [VANILLA; 6];
+        let mut s = scenario(json!({
+            "seed": seed,
+            "p1": { "library": library },
+            "p2": { "field": field, "library": library },
+        }));
+        for player in [AI, HUMAN] {
+            s.state_mut().players[player].auto_end_turn = Some(false);
+        }
+        s
+    }
+
+    #[test]
+    fn r3822000_a_unit_keeps_the_share_of_the_turn_start_the_engine_kills_it_at() {
+        let (a, d) = (AI_EVAL.unit_affliction, AI_EVAL.unit_doomed);
+        for counters in [
+            json!({ "burn": 4 }),
+            json!({ "toxic": 2 }),
+            json!({ "toxic": 1 }),
+            json!({ "burn": 5, "toxic": 1 }),
+        ] {
+            let mut s = ticking(
+                "r3822000-ticks",
+                json!([{ "def": VANILLA, "counters": counters }]),
+            );
+            let vanilla = active_units_of(s.state(), HUMAN)[0].clone();
+            let predicted = worth(s.state(), &vanilla);
+            let p = worth(s.state(), &countered(&vanilla, 0, 0));
+            let mut died_at = None;
+            for n in 1..=AI_AFFLICTION_TICKS {
+                s.end_turn();
+                if active_units_of(s.state(), HUMAN).is_empty() {
+                    died_at = Some(n);
+                    break;
+                }
+                s.end_turn();
+            }
+            let n = died_at.unwrap_or_else(|| panic!("{counters}: the Vanilla outlived the horizon"));
+            assert!(predicted < p, "{counters}: {predicted} against {p}");
+            assert_close(
+                predicted,
+                (p - a * AI_EVAL.health * 4.0) * (1.0 - d / f64::from(n)),
+                9,
+            );
+        }
+    }
+
+    #[test]
+    fn r3822000_a_hero_loses_what_the_engines_ticks_take() {
+        let mut s = ticking("r3822000-hero-ticks", json!([]));
+        {
+            let hero = &mut s.state_mut().players[HUMAN];
+            hero.hero.armor = 2;
+            hero.hero_burn = Some(5);
+            hero.hero_toxic = Some(1);
+        }
+        let life = s.state().players[HUMAN].hero.health;
+        let gain = eval(s.state(), AI) - eval(&hero_countered(s.state(), HUMAN, 0, 0), AI);
+        for _ in 1..=AI_AFFLICTION_TICKS {
+            s.end_turn();
+            s.end_turn();
+        }
+        let taken = life - s.state().players[HUMAN].hero.health;
+        assert!(
+            taken > 0 && gain > 0.0,
+            "the ticks took {taken}, priced at {gain}"
+        );
+        let h = AI_EVAL.hero_affliction;
+        assert_close(
+            gain,
+            h * (hv(life) - hv(life - taken) + AI_EVAL.enemy_health * f64::from(taken)),
+            9,
+        );
+    }
+
+    #[test]
+    fn r3822000_a_heros_burn_or_toxic_lowers_its_owners_side_and_raises_the_other() {
+        let state = board(base());
+        let base = eval(&state, AI);
+        for (burn, toxic) in [(4, 0), (0, 2)] {
+            assert!(eval(&hero_countered(&state, HUMAN, burn, toxic), AI) > base);
+            assert!(eval(&hero_countered(&state, AI, burn, toxic), AI) < base);
+        }
+    }
+
+    #[test]
+    fn r3822000_a_hero_loses_the_curves_share_of_the_life_its_ticks_take() {
+        let h = AI_EVAL.hero_affliction;
+        let state = board(base());
+        let base = eval(&state, AI);
+        // Toxic 3 over four turn starts: 12, from 30 to 18.
+        let own = base - eval(&hero_countered(&state, AI, 0, 3), AI);
+        assert_close(own, h * (hv(30) - hv(18)), 9);
+        assert!(own > 0.0, "the own hero's Toxic cost {own}");
+        let enemy = eval(&hero_countered(&state, HUMAN, 0, 3), AI) - base;
+        assert_close(enemy, h * (hv(30) - hv(18) + AI_EVAL.enemy_health * 12.0), 9);
+
+        let mut armored = clone(&state);
+        armored.players[AI].hero.armor = 3;
+        let armored_base = eval(&armored, AI);
+        // Armor 3 takes each hit of Burn 3 whole; Toxic pierces it.
+        assert_eq!(eval(&hero_countered(&armored, AI, 3, 0), AI), armored_base);
+        assert_close(
+            armored_base - eval(&hero_countered(&armored, AI, 0, 3), AI),
+            own,
+            9,
+        );
+
+        // At 3 life the ticks take at most 2: the reply plays out a tick that kills.
+        let low = with_health(&state, AI, 3);
+        let dying = eval(&hero_countered(&low, AI, 0, 5), AI);
+        assert_close(eval(&low, AI) - dying, h * (hv(3) - hv(1)), 9);
+        assert!(dying < eval(&low, AI) && dying > -AI_EVAL.win / 2.0, "{dying}");
+    }
+
+    #[test]
+    fn r3822000_a_heros_toxic_weighs_more_than_an_equal_burn_over_the_horizon() {
+        let state = board(base());
+        for n in [2, 3, 5] {
+            assert!(
+                eval(&hero_countered(&state, AI, 0, n), AI) < eval(&hero_countered(&state, AI, n, 0), AI),
+                "own {n}"
+            );
+            assert!(
+                eval(&hero_countered(&state, HUMAN, 0, n), AI)
+                    > eval(&hero_countered(&state, HUMAN, n, 0), AI),
+                "enemy {n}"
+            );
+        }
+    }
+
+    #[test]
+    fn r3822000_greedy_eval_and_zero_weights_read_no_counter() {
+        assert_eq!(GREEDY_EVAL.unit_affliction, 0.0);
+        assert_eq!(GREEDY_EVAL.unit_doomed, 0.0);
+        assert_eq!(GREEDY_EVAL.hero_affliction, 0.0);
+        let vanilla = json!({ "def": VANILLA });
+        let afflicted = json!({ "def": VANILLA, "counters": { "burn": 4, "toxic": 2 } });
+        let plain = board(json!({ "p1": { "field": [vanilla] }, "p2": { "field": [vanilla] } }));
+        let units = board(json!({ "p1": { "field": [afflicted] }, "p2": { "field": [afflicted] } }));
+        let heroes = hero_countered(&hero_countered(&plain, AI, 4, 2), HUMAN, 5, 3);
+        for w in [&OFF, &GREEDY_EVAL] {
+            let scored = |state: &GameState| evaluate(state, AI, NextSwing::Enemy, w);
+            assert_eq!(scored(&units), scored(&plain));
+            assert_eq!(scored(&heroes), scored(&plain));
+        }
+    }
+
+    #[test]
+    fn r3822000_the_redacted_view_prices_the_counters_alike() {
+        let vanilla = json!({ "def": VANILLA });
+        let afflicted = json!({ "def": VANILLA, "counters": { "burn": 4 } });
+        let plain = board(json!({ "p1": { "field": [vanilla] }, "p2": { "field": [vanilla] } }));
+        let units = board(json!({ "p1": { "field": [vanilla] }, "p2": { "field": [afflicted] } }));
+        let heroes = hero_countered(&plain, HUMAN, 0, 2);
+        for afflicted in [&units, &heroes] {
+            let seen = eval(&redact(afflicted, AI), AI) - eval(&redact(&plain, AI), AI);
+            let true_gain = eval(afflicted, AI) - eval(&plain, AI);
+            assert!(true_gain != 0.0);
+            assert_close(seen, true_gain, 9);
+        }
+    }
+}

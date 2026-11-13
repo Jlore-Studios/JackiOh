@@ -68,10 +68,6 @@ fn hand(state: &mut GameState, player: PlayerId, def_id: &str, radiant: bool) ->
     held.clone()
 }
 
-fn at_p2() -> Value {
-    json!([{ "pick": "hero", "player": "p2" }])
-}
-
 /// Play a Spell from p1's hand at p2's hero (a bolt) or with no choices.
 fn play_spell(mut state: GameState, def_id: &str, radiant: bool, player: PlayerId) -> GameState {
     let card = hand(&mut state, player, def_id, radiant);
@@ -177,7 +173,7 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
         state = act_as(
             &state,
             P1,
-            json!({ "type": "play", "instanceId": echo.id, "targets": at_p2() }),
+            json!({ "type": "play", "instanceId": echo.id, "targets": pick::hero("p2") }),
         )
         .state;
         assert_eq!(state.players.p2.hero.health, health - 2);
@@ -192,7 +188,7 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
         let events = act_as(
             &radiant,
             P1,
-            json!({ "type": "play", "instanceId": echo.id, "targets": at_p2() }),
+            json!({ "type": "play", "instanceId": echo.id, "targets": pick::hero("p2") }),
         )
         .events;
         assert_eq!(hero_hits(&events, P2), vec![4]);
@@ -203,7 +199,7 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
         let base_events = act_as(
             &base,
             P1,
-            json!({ "type": "play", "instanceId": echo2.id, "targets": at_p2() }),
+            json!({ "type": "play", "instanceId": echo2.id, "targets": pick::hero("p2") }),
         )
         .events;
         assert_eq!(hero_hits(&base_events, P2), vec![2]);
@@ -599,7 +595,7 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
         state = act_as(
             &state,
             P1,
-            json!({ "type": "play", "instanceId": echo.id, "targets": at_p2() }),
+            json!({ "type": "play", "instanceId": echo.id, "targets": pick::hero("p2") }),
         )
         .state;
         let pending = state.pending.clone().expect("a prompt");
@@ -731,7 +727,7 @@ mod e14_a_copier_has_the_last_spells_text_classic_57_echo {
         state = act_as(
             &state,
             P1,
-            json!({ "type": "play", "instanceId": glow.id, "targets": at_p2() }),
+            json!({ "type": "play", "instanceId": glow.id, "targets": pick::hero("p2") }),
         )
         .state;
         let echo = hand(&mut state, P1, &CT.echo.id, false);
@@ -851,7 +847,7 @@ mod r3048000_a_copier_naming_a_fallback_has_its_text_before_any_spell {
         let events = act_as(
             &state,
             P1,
-            json!({ "type": "play", "instanceId": echo.id, "targets": at_p2() }),
+            json!({ "type": "play", "instanceId": echo.id, "targets": pick::hero("p2") }),
         )
         .events;
         assert_eq!(hero_hits(&events, P2), vec![2]);

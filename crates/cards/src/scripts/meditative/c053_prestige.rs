@@ -208,10 +208,6 @@ mod tests {
     /// Sheepish (Core #41): a Trap, face-down.
     const TRAP: &str = "core-041";
 
-    fn pick(id: &str) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-    }
-
     /// p1 holds Prestige (base unless `radiant_face`) and plenty of mana; p2's backrow holds a
     /// Radiant Field Spell and a Radiant face-down Trap, and its field a plain Unit.
     fn backrow_game(seed: &str, radiant_face: bool) -> Scenario {
@@ -293,7 +289,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": VANILLA, "radiant": true }], "library": filler(4) },
             }));
             let enemy = must_unit(&s, "p2", 1);
-            s.play(PRESTIGE, pick(&enemy.id));
+            s.play(PRESTIGE, pick::targets(pick::id(&enemy.id)));
             assert!(play_one(&mut s, VANILLA), "the next play is made Radiant");
             assert!(!next_play_radiant(&s), "and it spent the modifier");
             assert!(!play_one(&mut s, VANILLA), "the one after is not");
@@ -303,7 +299,7 @@ mod tests {
         fn r831005_r70_a_cast_is_the_next_play_too() {
             let mut s = casting("prestige-cast", false);
             let unit = must_unit(&s, "p1", 1);
-            s.play(PRESTIGE, pick(&unit.id));
+            s.play(PRESTIGE, pick::targets(pick::id(&unit.id)));
             let events = by_hand(&mut s, vec![jackioh_engine::effects::cast_new(json_as(json!({ "def": FILLER })))]);
             assert!(events.iter().any(|event| matches!(event, GameEvent::RadiantSet { def_id, .. } if def_id == FILLER)));
             assert!(!next_play_radiant(&s));
@@ -317,7 +313,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": VANILLA, "radiant": true }], "library": filler(4) },
             }));
             let enemy = must_unit(&s, "p2", 1);
-            s.play(PRESTIGE, pick(&enemy.id));
+            s.play(PRESTIGE, pick::targets(pick::id(&enemy.id)));
             s.end_turn().end_turn();
             assert!(!next_play_radiant(&s));
             assert!(!play_one(&mut s, VANILLA));
@@ -327,7 +323,7 @@ mod tests {
         fn r831005_your_view_names_the_modifier_on_a_badge() {
             let mut s = casting("prestige-badge", false);
             let unit = must_unit(&s, "p1", 1);
-            s.play(PRESTIGE, pick(&unit.id));
+            s.play(PRESTIGE, pick::targets(pick::id(&unit.id)));
             let mine = serde_json::to_string(&s.view(PlayerId::P1)).expect("the view serializes");
             assert!(mine.contains("The next card you play becomes Radiant"));
         }
@@ -365,7 +361,7 @@ mod tests {
         fn targets_a_face_up_backrow_card_on_the_enemy_side() {
             let mut s = backrow_game("prestige-backrow", false);
             let field_spell = s.backrow("p2", 1).expect("the Field Spell");
-            s.play(PRESTIGE, pick(&field_spell.id));
+            s.play(PRESTIGE, pick::targets(pick::id(&field_spell.id)));
             assert!(!s.card(&field_spell.id).radiant);
             assert!(next_play_radiant(&s));
         }
@@ -376,8 +372,8 @@ mod tests {
             let trap = s.backrow("p2", 2).expect("the Trap");
             let plain = must_unit(&s, "p2", 1);
             assert!(!plain.radiant);
-            s.expect_refused(|s| s.play(PRESTIGE, pick(&trap.id)));
-            s.expect_refused(|s| s.play(PRESTIGE, pick(&plain.id)));
+            s.expect_refused(|s| s.play(PRESTIGE, pick::targets(pick::id(&trap.id))));
+            s.expect_refused(|s| s.play(PRESTIGE, pick::targets(pick::id(&plain.id))));
             assert!(s.card(&trap.id).radiant, "the face-down Trap stays Radiant");
         }
 
@@ -396,7 +392,7 @@ mod tests {
                     .collect()
             };
             assert!(kinds(&s).contains(&KeywordKind::DivineShield));
-            s.play(PRESTIGE, pick(&kpop.id));
+            s.play(PRESTIGE, pick::targets(pick::id(&kpop.id)));
             // Back to the base 1/1 with no Divine Shield, and its Cry did not run: no prompt.
             assert!(!kinds(&s).contains(&KeywordKind::DivineShield));
             s.expect_stats(&kpop.id, json!({ "attack": 1, "health": 1 }));
@@ -419,7 +415,7 @@ mod tests {
                 .into_iter()
                 .find(|card| card.def_id == MR_TOKEN)
                 .expect("Mr Token");
-            s.play(PRESTIGE, pick(&held.id));
+            s.play(PRESTIGE, pick::targets(pick::id(&held.id)));
             // A Stockpile spends the next play's Radiant (R831005), so Mr Token is played as it stands.
             play_one(&mut s, FILLER);
             // Played now, it runs its base Cry: one Rush Token, not the Radiant face's three.
@@ -458,7 +454,7 @@ mod tests {
                 .into_iter()
                 .find(|card| card.def_id == VANILLA)
                 .expect("held");
-            s.play(PRESTIGE, pick(&held.id));
+            s.play(PRESTIGE, pick::targets(pick::id(&held.id)));
             let seen = deradianted(&s);
             assert_eq!(seen.len(), 1);
             assert_eq!(
@@ -469,7 +465,7 @@ mod tests {
             // A Stockpile spends the next play's Radiant (R831005), so the second Prestige is base too.
             play_one(&mut s, FILLER);
             let unit = must_unit(&s, "p1", 1);
-            s.play(PRESTIGE, pick(&unit.id));
+            s.play(PRESTIGE, pick::targets(pick::id(&unit.id)));
             // The view keeps the earlier actions' events too: the new one comes last.
             let seen = deradianted(&s);
             assert_eq!(seen.len(), 2);
@@ -616,7 +612,7 @@ mod tests {
                 s.card_mut(&unit.id).radiant = true;
                 assert!(offered(&s), "a Radiant Unit on {seat}'s field");
                 assert_eq!(play_reason(&s), None);
-                s.play(PRESTIGE, pick(&unit.id));
+                s.play(PRESTIGE, pick::targets(pick::id(&unit.id)));
                 assert!(!s.card(&unit.id).radiant);
             }
             let s = scenario(json!({
@@ -749,7 +745,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [VANILLA], "library": filler(4) },
             }));
             let own = must_unit(&s, "p1", 1);
-            s.play(PRESTIGE, pick(&own.id));
+            s.play(PRESTIGE, pick::targets(pick::id(&own.id)));
             assert!(next_play_radiant(&s));
             // The second Prestige would resolve on its Radiant face (R831005, R214), so that face's gate
             // decides: the Radiant card in p1's hand, a pick for the base face, does not open it.

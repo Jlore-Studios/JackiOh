@@ -128,10 +128,6 @@ mod tests {
         s.state().players.p1.mana.current
     }
 
-    fn at_hero(player: &str) -> Value {
-        json!([{ "pick": "hero", "player": player }])
-    }
-
     mod n24_efficiency_dividend {
         use super::*;
 
@@ -168,11 +164,11 @@ mod tests {
                 let mut s = dividend_in("dividend-x", false, None);
                 // §2.3: 0 ≤ X ≤ current mana, so X = 5 on 4 mana is refused.
                 s.expect_refused_with(
-                    |s| s.play(DIVIDEND, json!({ "x": 5, "modes": ["damage"], "targets": at_hero("p2") })),
+                    |s| s.play(DIVIDEND, json!({ "x": 5, "modes": ["damage"], "targets": pick::hero("p2") })),
                     "mana",
                 );
 
-                s.play(DIVIDEND, json!({ "x": 3, "modes": ["damage"], "targets": at_hero("p2") }));
+                s.play(DIVIDEND, json!({ "x": 3, "modes": ["damage"], "targets": pick::hero("p2") }));
 
                 s.expect_mana(P1, 1);
                 assert!(s.state().pending.is_none());
@@ -182,7 +178,7 @@ mod tests {
             fn the_damage_mode_deals_x_damage_to_the_chosen_hero() {
                 crate::register_all();
                 let mut s = dividend_in("dividend-damage", false, None);
-                s.play(DIVIDEND, json!({ "x": 3, "modes": ["damage"], "targets": at_hero("p2") }));
+                s.play(DIVIDEND, json!({ "x": 3, "modes": ["damage"], "targets": pick::hero("p2") }));
 
                 s.expect_health(P2, 27);
             }
@@ -204,7 +200,7 @@ mod tests {
             fn r19_the_heal_mode_heals_the_chosen_target_3x() {
                 crate::register_all();
                 let mut s = dividend_in("dividend-heal", false, Some(20));
-                s.play(DIVIDEND, json!({ "x": 2, "modes": ["heal"], "targets": at_hero("p1") }));
+                s.play(DIVIDEND, json!({ "x": 2, "modes": ["heal"], "targets": pick::hero("p1") }));
 
                 // §3: a hero has no maximum health, so the heal is a flat 3X.
                 s.expect_health(P1, 26);
@@ -235,7 +231,7 @@ mod tests {
             fn s5_1_r68_at_the_end_of_the_turn_it_returns_to_your_hand() {
                 crate::register_all();
                 let mut s = dividend_in("dividend-return", false, None);
-                s.play(DIVIDEND, json!({ "x": 2, "modes": ["damage"], "targets": at_hero("p2") }));
+                s.play(DIVIDEND, json!({ "x": 2, "modes": ["damage"], "targets": pick::hero("p2") }));
                 let spell = s.card(DIVIDEND).clone();
                 s.expect_in_zone(&spell, "graveyard");
 
@@ -252,7 +248,7 @@ mod tests {
             fn r275_the_damage_mode_deals_2x_x_2_deals_4_and_costs_2() {
                 crate::register_all();
                 let mut s = dividend_in("dividend-radiant-damage", true, None);
-                s.play(DIVIDEND, json!({ "x": 2, "modes": ["damage"], "targets": at_hero("p2") }));
+                s.play(DIVIDEND, json!({ "x": 2, "modes": ["damage"], "targets": pick::hero("p2") }));
 
                 // R65: X = 2 is what it cost; 4 is what it dealt.
                 s.expect_health(P2, 26);
@@ -263,7 +259,7 @@ mod tests {
             fn r275_the_damage_mode_at_an_odd_x_x_3_deals_6() {
                 crate::register_all();
                 let mut s = dividend_in("dividend-radiant-damage-odd", true, None);
-                s.play(DIVIDEND, json!({ "x": 3, "modes": ["damage"], "targets": at_hero("p2") }));
+                s.play(DIVIDEND, json!({ "x": 3, "modes": ["damage"], "targets": pick::hero("p2") }));
 
                 s.expect_health(P2, 24);
                 s.expect_mana(P1, 1);
@@ -274,7 +270,7 @@ mod tests {
                 crate::register_all();
                 let mut s = dividend_in("dividend-radiant-damage-zero", true, None);
                 s.expect_refused_with(
-                    |s| s.play(DIVIDEND, json!({ "x": 0, "modes": ["damage"], "targets": at_hero("p2") })),
+                    |s| s.play(DIVIDEND, json!({ "x": 0, "modes": ["damage"], "targets": pick::hero("p2") })),
                     "X must be at least 1",
                 );
 
@@ -300,7 +296,7 @@ mod tests {
             fn r275_the_heal_mode_heals_6x_x_2_heals_12() {
                 crate::register_all();
                 let mut s = dividend_in("dividend-radiant-heal", true, Some(20));
-                s.play(DIVIDEND, json!({ "x": 2, "modes": ["heal"], "targets": at_hero("p1") }));
+                s.play(DIVIDEND, json!({ "x": 2, "modes": ["heal"], "targets": pick::hero("p1") }));
 
                 s.expect_health(P1, 32);
             }
@@ -309,7 +305,7 @@ mod tests {
             fn r275_the_heal_mode_at_an_odd_x_x_3_heals_18() {
                 crate::register_all();
                 let mut s = dividend_in("dividend-radiant-heal-odd", true, Some(10));
-                s.play(DIVIDEND, json!({ "x": 3, "modes": ["heal"], "targets": at_hero("p1") }));
+                s.play(DIVIDEND, json!({ "x": 3, "modes": ["heal"], "targets": pick::hero("p1") }));
 
                 s.expect_health(P1, 28);
             }
@@ -319,7 +315,7 @@ mod tests {
                 crate::register_all();
                 let mut s = dividend_in("dividend-radiant-heal-zero", true, Some(20));
                 s.expect_refused_with(
-                    |s| s.play(DIVIDEND, json!({ "x": 0, "modes": ["heal"], "targets": at_hero("p1") })),
+                    |s| s.play(DIVIDEND, json!({ "x": 0, "modes": ["heal"], "targets": pick::hero("p1") })),
                     "X must be at least 1",
                 );
 
@@ -370,7 +366,7 @@ mod tests {
             fn the_return_to_hand_is_kept_s8_conventions() {
                 crate::register_all();
                 let mut s = dividend_in("dividend-radiant-return", true, None);
-                s.play(DIVIDEND, json!({ "x": 1, "modes": ["damage"], "targets": at_hero("p2") }));
+                s.play(DIVIDEND, json!({ "x": 1, "modes": ["damage"], "targets": pick::hero("p2") }));
                 let spell = s.card(DIVIDEND).clone();
 
                 s.end_turn();
@@ -393,7 +389,7 @@ mod tests {
                         crate::degrade_number(&mut s, DIVIDEND, "damage")
                     };
                     assert_eq!(moved, per_x);
-                    s.play(DIVIDEND, json!({ "x": 2, "modes": ["damage"], "targets": at_hero("p2") }));
+                    s.play(DIVIDEND, json!({ "x": 2, "modes": ["damage"], "targets": pick::hero("p2") }));
                     s.expect_health(P2, 30 - 2 * per_x);
                 }
             }
@@ -410,7 +406,7 @@ mod tests {
                     crate::degrade_number(&mut s, DIVIDEND, "heal")
                 };
                 assert_eq!(moved, per_x);
-                s.play(DIVIDEND, json!({ "x": 2, "modes": ["heal"], "targets": at_hero("p1") }));
+                s.play(DIVIDEND, json!({ "x": 2, "modes": ["heal"], "targets": pick::hero("p1") }));
                 s.expect_health(P1, 10 + 2 * per_x);
             }
         }

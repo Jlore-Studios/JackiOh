@@ -47,10 +47,6 @@ fn backrow_id(s: &Scenario, player: PlayerId, lane: i32) -> String {
         .id
 }
 
-fn pick(id: &str) -> Value {
-    json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-}
-
 fn has_flying(s: &Scenario, id: &str) -> bool {
     unit_has(s.state(), s.card(id), KeywordKind::Flying)
 }
@@ -96,7 +92,7 @@ mod r1849000_immune_to_spell_damage {
             json!({ "field": [IMMUNE] }),
         );
         let immune = id_at(&s, P2, 1);
-        s.play(BOLT, pick(&immune));
+        s.play(BOLT, pick::targets(pick::id(&immune)));
         let kinds = types_of(s.last_events());
         assert!(
             !kinds.contains(&GameEventType::Damage),
@@ -118,7 +114,7 @@ mod r1849000_immune_to_spell_damage {
             json!({ "field": [IMMUNE] }),
         );
         let immune = id_at(&s, P2, 1);
-        s.play(RALLY, pick(&immune));
+        s.play(RALLY, pick::targets(pick::id(&immune)));
         s.expect_stats(immune.as_str(), json!({ "attack": 3 }));
     }
 
@@ -151,7 +147,7 @@ mod r1849001_evolve {
         );
         let wasp = id_at(&s, P1, 1);
         assert!(!has_flying(&s, &wasp));
-        s.play(EVOLVER, pick(&wasp));
+        s.play(EVOLVER, pick::targets(pick::id(&wasp)));
         assert!(has_flying(&s, &wasp), "Evolve: gain Flying");
     }
 
@@ -179,7 +175,7 @@ mod r1849001_evolve {
             json!({}),
         );
         let grunt = id_at(&s, P1, 1);
-        s.play(EVOLVER, pick(&grunt));
+        s.play(EVOLVER, pick::targets(pick::id(&grunt)));
         assert!(!types_of(s.last_events()).contains(&GameEventType::KeywordGranted));
         assert!(!has_flying(&s, &grunt));
 
@@ -210,7 +206,7 @@ mod r1849002_destroy_becomes_exile {
             json!({ "field": [PHOENIX] }),
         );
         let phoenix = id_at(&s, P2, 1);
-        s.play(BOLT, pick(&phoenix));
+        s.play(BOLT, pick::targets(pick::id(&phoenix)));
         s.expect_in_zone(phoenix.as_str(), "exile");
         assert!(s.unit(P2, 1).is_none(), "no Reborn body came back");
         assert!(s.hand(P2).is_empty(), "no Death drew a card");
@@ -228,7 +224,7 @@ mod r1849002_destroy_becomes_exile {
             json!({ "backrow": [FIELD] }),
         );
         let field = backrow_id(&s, P2, 1);
-        s.play(SMASH, pick(&field));
+        s.play(SMASH, pick::targets(pick::id(&field)));
         s.expect_in_zone(field.as_str(), "exile");
     }
 
@@ -269,7 +265,7 @@ mod r1849002_destroy_becomes_exile {
             json!({}),
         );
         let grunt = id_at(&s, P1, 2);
-        s.play(OFFERING, pick(&grunt));
+        s.play(OFFERING, pick::targets(pick::id(&grunt)));
         s.expect_in_zone(grunt.as_str(), "graveyard");
         assert!(types_of(s.last_events()).contains(&GameEventType::Destroyed));
     }
@@ -298,7 +294,7 @@ mod r1849003_reflected_damage {
             json!({ "field": [PLATING] }),
         );
         let plating = id_at(&s, P2, 1);
-        s.play(BOLT, pick(&plating));
+        s.play(BOLT, pick::targets(pick::id(&plating)));
         s.expect_stats(plating.as_str(), json!({ "health": 6 - BOLT_DAMAGE }));
         s.expect_health(P1, HERO_HEALTH - BOLT_DAMAGE);
         s.expect_health(P2, HERO_HEALTH);
@@ -327,7 +323,7 @@ mod r1849003_reflected_damage {
             json!({ "field": [PLATING_R] }),
         );
         let plating = id_at(&s, P2, 1);
-        s.play(BOLT, pick(&plating));
+        s.play(BOLT, pick::targets(pick::id(&plating)));
         assert_eq!(
             damage_events(s.last_events()),
             vec![
@@ -546,7 +542,7 @@ mod r1849005_gauntlet_lanes {
         );
         let inside = id_at(&s, P1, 3);
         let taunter = id_at(&s, P2, 2);
-        s.play(GOAD, pick(&taunter));
+        s.play(GOAD, pick::targets(pick::id(&taunter)));
         assert_eq!(forced_attackers(s.last_events()), vec![inside]);
         s.expect_stats(taunter.as_str(), json!({ "health": 1 }));
     }
@@ -594,7 +590,7 @@ mod r1849006_units_cannot_be_in_defense {
         assert!(!offers_switch(&s, &mine));
         s.expect_refused_with(|s| s.switch_position(mine.as_str()), REFUSAL);
         // An effect's switch does nothing either.
-        s.play(SHOVE, pick(&theirs));
+        s.play(SHOVE, pick::targets(pick::id(&theirs)));
         assert_ne!(s.card(theirs.as_str()).position, Some(Position::Def));
         assert!(!types_of(s.last_events()).contains(&GameEventType::PositionSwitched));
         // The aura reaches the other side on its own turn too.
@@ -640,7 +636,7 @@ mod r1849006_units_cannot_be_in_defense {
         );
         let (grunt, warp) = (id_at(&s, P1, 1), backrow_id(&s, P1, 1));
         assert!(!offers_switch(&s, &grunt));
-        s.play(SMASH, pick(&warp));
+        s.play(SMASH, pick::targets(pick::id(&warp)));
         s.expect_in_zone(warp.as_str(), "graveyard");
         assert!(offers_switch(&s, &grunt));
         s.switch_position(grunt.as_str());
@@ -760,7 +756,7 @@ mod r1849008_ally_attacked {
         s.attack(grunt.as_str(), "hero");
         assert!(s.state().pending.is_none(), "an attack on the hero asks nothing");
         s.expect_health(P2, HERO_HEALTH - 3);
-        s.play(GOAD, pick(&asker));
+        s.play(GOAD, pick::targets(pick::id(&asker)));
         assert!(s.state().pending.is_none(), "a forced attack asks nothing (R121)");
         assert_eq!(forced_attackers(s.last_events()), vec![grunt]);
         s.expect_stats(asker.as_str(), json!({ "attack": 1, "health": 2 }));
@@ -902,7 +898,7 @@ mod r1875006_would_die_in_combat {
     #[test]
     fn r1875006_a_spells_hit_or_a_destroy_is_no_death_in_combat() {
         let (mut s, grunt, trap) = reprieved("r1875006-spell", json!({ "hand": [BOLT, SMASH] }));
-        s.play(BOLT, pick(&grunt));
+        s.play(BOLT, pick::targets(pick::id(&grunt)));
         assert!(!types_of(s.last_events()).contains(&GameEventType::TrapFired));
         s.expect_in_zone(grunt.as_str(), "graveyard");
         assert_eq!(backrow_id(&s, P2, 1), trap);
@@ -912,7 +908,7 @@ mod r1875006_would_die_in_combat {
             json!({ "field": [{ "def": GRUNT, "lane": 2 }], "backrow": [REPRIEVE] }),
         );
         let grunt = id_at(&s, P2, 2);
-        s.play(SMASH, pick(&grunt));
+        s.play(SMASH, pick::targets(pick::id(&grunt)));
         assert!(!types_of(s.last_events()).contains(&GameEventType::TrapFired));
         s.expect_in_zone(grunt.as_str(), "graveyard");
     }

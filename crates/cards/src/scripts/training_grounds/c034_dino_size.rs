@@ -61,10 +61,6 @@ mod tests {
         }))
     }
 
-    fn on(card: &CardInstance) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": card.id }] })
-    }
-
     // Differs from Scenario::offered: one card's play targets, not the seat's whole legal list.
     fn offered(s: &Scenario) -> Vec<Selection> {
         let dino = s.card(DINO).id.clone();
@@ -84,7 +80,7 @@ mod tests {
         fn r2198000_the_target_is_ten_ten_its_damage_healed() {
             let mut s = board(false, json!([{ "def": VANILLA, "lane": 1, "damage": 3 }]), json!([]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(DINO, on(&unit));
+            s.play(DINO, pick::targets(pick::instance(&unit)));
             s.expect_stats(&unit, json!({ "attack": 10, "health": 10 }));
             assert_eq!(s.card(&unit).damage, 0);
             assert_eq!(s.stats(&unit).max_health, 10);
@@ -95,7 +91,7 @@ mod tests {
             let mut s = board(false, json!([VANILLA]), json!([WEAPONS]), json!([]));
             let unit = s.unit_at(P1, 1);
             s.card_mut(&unit).buffs = AttackHealth { attack: 2, health: 2 };
-            s.play(DINO, on(&unit));
+            s.play(DINO, pick::targets(pick::instance(&unit)));
             assert_eq!(s.card(&unit).buffs, AttackHealth { attack: 0, health: 0 });
             s.expect_stats(&unit, json!({ "attack": 12, "health": 10 }));
         }
@@ -104,7 +100,7 @@ mod tests {
         fn r2198000_an_enemy_unit_can_be_targeted() {
             let mut s = board(false, json!([]), json!([]), json!([VANILLA]));
             let theirs = s.unit_at(P2, 1);
-            s.play(DINO, on(&theirs));
+            s.play(DINO, pick::targets(pick::instance(&theirs)));
             s.expect_stats(&theirs, json!({ "attack": 10, "health": 10 }));
         }
 
@@ -123,7 +119,7 @@ mod tests {
         fn r2198000_bounced_it_is_its_printed_card_again() {
             let mut s = board(false, json!([VANILLA]), json!([]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(DINO, on(&unit));
+            s.play(DINO, pick::targets(pick::instance(&unit)));
             run_as(&mut s, jackioh_engine::effects::bounce(json_as(json!({ "target": { "of": "instance", "instanceId": unit.id } }))), P1);
             s.expect_in_zone(&unit, "hand");
             assert!(s.card(&unit).stats_override.is_none());
@@ -138,7 +134,7 @@ mod tests {
         fn r2198000_twenty_twenty() {
             let mut s = board(true, json!([{ "def": VANILLA, "lane": 1, "damage": 1 }]), json!([]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(DINO, on(&unit));
+            s.play(DINO, pick::targets(pick::instance(&unit)));
             s.expect_stats(&unit, json!({ "attack": 20, "health": 20 }));
         }
     }

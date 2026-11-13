@@ -9,9 +9,6 @@ import { socketProtocols } from "../../../apps/web/src/net/socketProtocols.ts";
 import { ROOM_CODE_LENGTH } from "../../../apps/web/src/wire/serverConfig.ts";
 import { accounts, apiUrl, bearerHeaders, server, timeouts, type E2EAccount } from "../../support/config.ts";
 import {
-  COOP_CODE,
-  COOP_CREATE,
-  COOP_DIFFICULTY,
   DUOS_BOARD,
   DUOS_CARD_ACTIONS,
   DUOS_CONCEDE,
@@ -28,6 +25,13 @@ import {
   DUOS_TEAMMATE_STRIP,
   DUOS_WAITING,
   END_TURN,
+  LOBBY_CODE,
+  LOBBY_COUNTDOWN,
+  LOBBY_CREATE,
+  LOBBY_DECK_SELECT,
+  LOBBY_READY,
+  LOBBY_SETTINGS,
+  LOBBY_START,
   REPLAY_BACK,
   REPLAY_BACK_STEP,
   REPLAY_END,
@@ -241,7 +245,7 @@ function untilHostMayAct(guest: DuosSocket, rounds: number): void {
 }
 
 describe("41 duos co-op — two players against the Easy AI", () => {
-  it("B60–B64: make and join a room, pass, ping both ways, look through the portal, end the round together and concede as a team", () => {
+  it("B60–B64 R3730002: make a co-op lobby, ready up and start it, pass, ping both ways, look through the portal, end the round together and concede as a team", () => {
     const host = accounts.p1();
     const guestAccount = accounts.p2();
     const guest = new DuosSocket("guest");
@@ -257,27 +261,48 @@ describe("41 duos co-op — two players against the Easy AI", () => {
     cy.freeAccount(guestAccount);
     endLiveDuos(host, guestAccount);
 
-    // B60: the host's co-op panel makes an Easy room with a random deck and shows its code.
+    // B60, R3730000: the host's co-op panel makes a co-op lobby, set to Easy, and the host takes a random deck.
     cy.visitAs(host, TOGETHER_PATH);
-    cy.get(ts(COOP_DIFFICULTY), { timeout: timeouts.view }).select("easy");
-    cy.get(ts(COOP_CREATE)).should("not.be.disabled").click();
-    cy.get(ts(COOP_CODE), { timeout: timeouts.view })
+    cy.get(ts(LOBBY_CREATE), { timeout: timeouts.view }).should("not.be.disabled").click();
+    cy.location("pathname", { timeout: timeouts.view }).should("match", /^\/lobby\/[^/]+$/);
+    cy.get(ts(LOBBY_CODE), { timeout: timeouts.view })
       .invoke("text")
       .then((text) => {
         code = text.trim();
-        expect(code, `S6: a room code is ${String(ROOM_CODE_LENGTH)} characters`).to.have.length(ROOM_CODE_LENGTH);
+        expect(code, `S6: a lobby's code is ${String(ROOM_CODE_LENGTH)} characters`).to.have.length(ROOM_CODE_LENGTH);
       });
+    cy.get(ts(LOBBY_SETTINGS)).select("easy");
+    cy.get(ts(LOBBY_DECK_SELECT), { timeout: timeouts.view }).should("not.be.disabled").select("random");
+    cy.get(ts(LOBBY_READY)).should("not.be.disabled").click();
+    cy.get(ts(LOBBY_READY), { timeout: timeouts.view }).should("have.attr", "data-ready", "true");
 
-    // B33: the guest joins by the code, and the host's panel follows the room to the board (B60).
+    // R3730001: the guest enters, takes a random deck and is ready, by the lobby's routes.
     cy.then(() => {
-      cy.request<{ matchId: string }>({
-        method: "POST",
-        url: apiUrl(`/api/duos/rooms/${code}/join`),
+      for (const [verb, body] of [
+        ["enter", {}],
+        ["pick", { random: true }],
+        ["ready", { ready: true }],
+      ] as const) {
+        cy.request({
+          method: "POST",
+          url: apiUrl(`/api/lobbies/${code}/${verb}`),
+          headers: bearerHeaders(guestAccount.token),
+          body,
+        });
+      }
+    });
+
+    // R3730002: the host's Start lights once both are ready, and the countdown opens the co-op board.
+    cy.get(ts(LOBBY_START), { timeout: timeouts.view }).should("not.be.disabled").click();
+    cy.get(ts(LOBBY_COUNTDOWN), { timeout: timeouts.view }).should("exist");
+    cy.then(() => {
+      cy.request<{ matchId: string | null }>({
+        method: "GET",
+        url: apiUrl(`/api/lobbies/${code}`),
         headers: bearerHeaders(guestAccount.token),
-        body: { random: true },
-      }).then((joined) => {
-        matchId = joined.body.matchId;
-        expect(matchId, "the join answers the match it started").to.be.a("string").and.not.eq("");
+      }).then((read) => {
+        matchId = read.body.matchId ?? "";
+        expect(matchId, "the Start answers the match it started").to.be.a("string").and.not.eq("");
       });
     });
     cy.then(() => {

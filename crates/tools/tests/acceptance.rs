@@ -945,8 +945,8 @@ struct SharedHelpers {
     more_than: usize,
 }
 
-/// The test trees that read the engine testkit, where none of `unit_at`, `must` and a one-instance
-/// pick builder may be copied.
+/// The test trees that read the engine testkit, where none of `unit_at`, `must` and a one-pick
+/// builder (an instance or a hero, bare or as `targets`) may be copied.
 const KIT_READERS: &[&str] = &["crates/engine/tests", "crates/cards", "crates/ai/tests"];
 
 /// The trees where a card test reads an open prompt's Mode options through `Scenario::prompt_modes` (or
@@ -1087,11 +1087,28 @@ const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
     },
 ];
 
-/// The engine testkit's one-instance pick builders, the only home of one (#1826).
+/// The engine testkit's one-pick builders and `targets`, the only home of one (#1826, #3827).
 const PICK_HOME: &str = "crates/engine/src/testkit/pick.rs";
 
-/// How a one-instance pick builder's body starts.
-const PICK_LITERAL: &str = r#"json!([{ "pick": "instance", "instanceId":"#;
+/// The one-pick builders PICK_HOME defines: `id` and `hero`.
+const PICK_HOME_BUILDERS: usize = 2;
+
+/// How a one-pick builder's body starts, and what closes it: an instance or a hero pick, bare or
+/// as a play's `targets`, or `targets` around a testkit builder (#1826, #3827).
+const PICK_FORMS: &[(&str, &str)] = &[
+    (r#"json!([{ "pick": "instance", "instanceId":"#, "}])"),
+    (r#"json!([{ "pick": "hero", "player":"#, "}])"),
+    (
+        r#"json!({ "targets": [{ "pick": "instance", "instanceId":"#,
+        "}] })",
+    ),
+    (r#"json!({ "targets": [{ "pick": "hero", "player":"#, "}] })"),
+    (r#"json!({ "targets": pick::"#, " })"),
+];
+
+/// The test trees where no file may look a card up in a state under a name of its own: the
+/// harness's `live` and `live_mut` do it (#3827).
+const LOOKUP_READERS: &[&str] = &["crates/engine/tests/rules"];
 
 /// The 1-based lines of `text` that define one of `names` (`fn both(`, `pub fn spread<`, at any
 /// indent), a `//` comment aside.
@@ -1194,9 +1211,9 @@ fn shared_struct_definitions(text: &str, field_sets: &[&[&str]]) -> Vec<usize> {
         .collect()
 }
 
-/// The 1-based header lines of `text`'s one-instance pick builders: a function whose signature
-/// returns a `Value` and whose body, `//` comments aside, holds PICK_LITERAL closed by `}])` with no
-/// second `"pick"`.
+/// The 1-based header lines of `text`'s one-pick builders: a function whose signature returns a
+/// `Value` and whose body, `//` comments aside, holds one of PICK_FORMS on one line, closed by its end
+/// with no second key (`"zone"`, `"ability"`, a second pick) after its start.
 fn pick_builder_definitions(text: &str) -> Vec<usize> {
     let code: Vec<&str> = text
         .lines()
@@ -1221,10 +1238,12 @@ fn pick_builder_definitions(text: &str) -> Vec<usize> {
                 .is_some_and(|(_, returns)| returns.contains("Value"))
                 .then_some(header);
         }
-        let builds_one = code
-            .get(index)
-            .and_then(|line| line.split_once(PICK_LITERAL))
-            .is_some_and(|(_, rest)| rest.contains("}])") && !rest.contains("\"pick\""));
+        let builds_one = code.get(index).is_some_and(|line| {
+            PICK_FORMS.iter().any(|(start, end)| {
+                line.split_once(start)
+                    .is_some_and(|(_, rest)| rest.contains(end) && !rest.contains("\":"))
+            })
+        });
         if let Some(header) = open.filter(|_| builds_one) {
             found.push(header + 1);
             open = None;
@@ -1234,10 +1253,72 @@ fn pick_builder_definitions(text: &str) -> Vec<usize> {
     found
 }
 
+/// `ty` as a reference: whether it is `mut`, and the type it refers to (`&'a mut GameState` is
+/// `(true, "GameState")`); `None` when it is no reference.
+fn reference_to(ty: &str) -> Option<(bool, &str)> {
+    let rest = ty.trim().strip_prefix('&')?.trim_start();
+    let rest = if rest.starts_with('\'') {
+        rest.split_once(char::is_whitespace)?.1.trim_start()
+    } else {
+        rest
+    };
+    Some(match rest.strip_prefix("mut ") {
+        Some(rest) => (true, rest.trim()),
+        None => (false, rest.trim()),
+    })
+}
+
+/// Whether `signature` (a function's header, joined onto one line) looks a card up in a state: two
+/// parameters, a `&GameState` and a `&str`, and a `&CardInstance` back, the state and the card both
+/// `mut` or neither, whatever the names and lifetimes.
+fn is_state_lookup(signature: &str) -> bool {
+    let Some((params, returns)) = signature.split_once("->") else {
+        return false;
+    };
+    let Some((params, _)) = params.split_once('(').and_then(|(_, rest)| rest.rsplit_once(')')) else {
+        return false;
+    };
+    let mut params = params.split(',').map(str::trim).filter(|param| !param.is_empty());
+    let (Some(state), Some(id), None) = (params.next(), params.next(), params.next()) else {
+        return false;
+    };
+    let ty = |param: &str| param.split_once(':').map(|(_, ty)| ty.trim().to_string());
+    let (Some(state), Some(id)) = (ty(state), ty(id)) else {
+        return false;
+    };
+    let returns = returns.split('{').next().unwrap_or("");
+    reference_to(&id) == Some((false, "str"))
+        && matches!(
+            (reference_to(&state), reference_to(returns)),
+            (Some((a, "GameState")), Some((b, "CardInstance"))) if a == b
+        )
+}
+
+/// The 1-based header lines of `text`'s state lookups (`is_state_lookup`), `//` comments aside: a
+/// copy of the harness's `live` or `live_mut` under any name.
+fn state_lookup_definitions(text: &str) -> Vec<usize> {
+    let code: Vec<&str> = text
+        .lines()
+        .map(|line| line.split("//").next().unwrap_or(""))
+        .collect();
+    (0..code.len())
+        .filter(|&index| {
+            code[index].split_whitespace().any(|word| word == "fn") && {
+                let end = code[index..]
+                    .iter()
+                    .position(|line| line.contains(['{', ';']))
+                    .map_or(code.len(), |offset| index + offset + 1);
+                is_state_lookup(&code[index..end].concat())
+            }
+        })
+        .map(|index| index + 1)
+        .collect()
+}
+
 /// Every copy of a shared test helper under `root`, as `<path from root>:<line>`: a definition of
 /// one of a SHARED_TEST_HELPERS row's names, a declaration of one of its statics or a struct of one
-/// of its field lists under its trees outside its home, a one-instance pick builder under
-/// KIT_READERS and a hand-written Mode extraction under MODE_READERS.
+/// of its field lists under its trees outside its home, a one-pick builder under KIT_READERS, a state
+/// lookup under LOOKUP_READERS and a hand-written Mode extraction under MODE_READERS.
 fn shared_helper_copies(root: &Path) -> Vec<String> {
     let at =
         |file: &Path, line: usize| format!("{}:{line}", file.strip_prefix(root).unwrap_or(file).display());
@@ -1262,6 +1343,18 @@ fn shared_helper_copies(root: &Path) -> Vec<String> {
             let text = fs::read_to_string(file).unwrap_or_default();
             copies.extend(
                 pick_builder_definitions(&text)
+                    .into_iter()
+                    .map(|line| at(file, line)),
+            );
+        }
+    }
+    for dir in LOOKUP_READERS {
+        let mut files = Vec::new();
+        rust_sources(&root.join(dir), &mut files);
+        for file in &files {
+            let text = fs::read_to_string(file).unwrap_or_default();
+            copies.extend(
+                state_lookup_definitions(&text)
                     .into_iter()
                     .map(|line| at(file, line)),
             );
@@ -1325,14 +1418,14 @@ fn helpers_each_test_takes_its_shared_helpers_from_their_home() {
     let picks = fs::read_to_string(root.join(PICK_HOME)).unwrap_or_default();
     assert_eq!(
         pick_builder_definitions(&picks).len(),
-        1,
-        "{PICK_HOME} builds the one-instance pick once"
+        PICK_HOME_BUILDERS,
+        "{PICK_HOME} builds the instance pick and the hero pick once each"
     );
     let copies = shared_helper_copies(&root);
     let homes: Vec<&str> = SHARED_TEST_HELPERS.iter().map(|row| row.home).collect();
     assert!(
         copies.is_empty(),
-        "a test defines its own copy of a shared helper, nonce counter or sink bench, or reads a prompt's Mode options by hand (#1777, #1826, #1997, #2023, #2024, #2385, #3796): import the one in {homes:?} or {PICK_HOME}, or give a helper whose body differs another name: {copies:?}"
+        "a test defines its own copy of a shared helper, nonce counter or sink bench, looks a card up in a state under a name of its own, or reads a prompt's Mode options by hand (#1777, #1826, #1997, #2023, #2024, #2385, #3796, #3827): import the one in {homes:?} or {PICK_HOME}, or give a helper whose body differs another name: {copies:?}"
     );
 }
 
@@ -1375,7 +1468,7 @@ fn helpers_the_scan_finds_each_sink_bench() {
 }
 
 #[test]
-fn helpers_the_pick_scan_finds_each_one_instance_builder() {
+fn helpers_the_pick_scan_finds_each_one_pick_builder() {
     let text = [
         r#"fn at(card: &CardInstance) -> Value {"#,
         r#"    json!([{ "pick": "instance", "instanceId": card.id }])"#,
@@ -1399,9 +1492,57 @@ fn helpers_the_pick_scan_finds_each_one_instance_builder() {
         r#"// fn at(id: &str) -> Value {"#,
         r#"//     json!([{ "pick": "instance", "instanceId": id }])"#,
         r#"// }"#,
+        r#"fn on(card: &CardInstance) -> Value {"#,
+        r#"    json!({ "targets": pick::instance(card) })"#,
+        r#"}"#,
+        r#"fn at_foe() -> Value {"#,
+        r#"    json!([{ "pick": "hero", "player": "p2" }])"#,
+        r#"}"#,
+        r#"fn at_hero(player: &str) -> Value {"#,
+        r#"    json!({ "targets": [{ "pick": "hero", "player": player }] })"#,
+        r#"}"#,
+        r#"fn in_zone(card: &CardInstance) -> Value {"#,
+        r#"    json!({ "targets": [{ "pick": "instance", "instanceId": card.id }], "zone": 1 })"#,
+        r#"}"#,
+        r#"fn in_lane(card: &CardInstance) -> Value {"#,
+        r#"    json!({ "targets": pick::instance(card), "zone": 1 })"#,
+        r#"}"#,
+        r#"fn burn() -> Value {"#,
+        r#"    json!({ "ability": "burn", "targets": [{ "pick": "hero", "player": "p2" }] })"#,
+        r#"}"#,
+        r#"fn hero_object(player: PlayerId) -> Value {"#,
+        r#"    json!({ "pick": "hero", "player": player.as_str() })"#,
+        r#"}"#,
     ]
     .join("\n");
-    assert_eq!(pick_builder_definitions(&text), [1, 4]);
+    assert_eq!(pick_builder_definitions(&text), [1, 4, 17, 23, 26, 29]);
+}
+
+#[test]
+fn helpers_the_lookup_scan_finds_each_state_lookup() {
+    let text = [
+        "fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {",
+        r#"    find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))"#,
+        "}",
+        "pub fn trap_of_mut<'s>(s: &'s mut GameState, trap_id: &str) -> &'s mut CardInstance {",
+        r#"    find_instance_mut(s, trap_id).expect("the trap")"#,
+        "}",
+        "fn card<'a>(",
+        "    state: &'a GameState,",
+        "    id: &str,",
+        ") -> &'a CardInstance {",
+        r#"    find_instance(state, id).expect("the card")"#,
+        "}",
+        "fn owned(state: &GameState, id: &str) -> CardInstance {",
+        "fn in_lane<'a>(state: &'a GameState, lane: i32) -> &'a CardInstance {",
+        "fn mixed<'a>(state: &'a GameState, id: &str) -> &'a mut CardInstance {",
+        "fn seat<'a>(state: &'a GameState, id: &str) -> &'a PlayerState {",
+        "fn three<'a>(state: &'a GameState, id: &str, seat: &str) -> &'a CardInstance {",
+        "// fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {",
+        r#"    let card = by_id(&state, "c1");"#,
+    ]
+    .join("\n");
+    assert_eq!(state_lookup_definitions(&text), [1, 4, 7]);
 }
 
 #[test]
@@ -1443,11 +1584,33 @@ fn helpers_the_check_refuses_a_copy_in_each_covered_directory() {
             );
         }
     }
-    let builder = r#"fn at(id: &str) -> Value { json!([{ "pick": "instance", "instanceId": id }]) }"#;
-    write(PICK_HOME, builder);
+    let builders = [
+        r#"fn at(id: &str) -> Value { json!([{ "pick": "instance", "instanceId": id }]) }"#,
+        r#"fn on(id: &str) -> Value { json!({ "targets": [{ "pick": "instance", "instanceId": id }] }) }"#,
+        r#"fn aim(card: &CardInstance) -> Value { json!({ "targets": pick::instance(card) }) }"#,
+        r#"fn foe() -> Value { json!([{ "pick": "hero", "player": "p2" }]) }"#,
+        r#"fn at_foe() -> Value { json!({ "targets": [{ "pick": "hero", "player": "p2" }] }) }"#,
+    ]
+    .join("\n");
+    write(PICK_HOME, &builders);
     for dir in KIT_READERS {
-        write(&format!("{dir}/pick_copy.rs"), builder);
-        expected.push(format!("{dir}/pick_copy.rs:1"));
+        write(&format!("{dir}/pick_copy.rs"), &builders);
+        expected.extend((1..=5).map(|line| format!("{dir}/pick_copy.rs:{line}")));
+    }
+    let lookups = [
+        "fn found<'a>(state: &'a GameState, id: &str) -> &'a CardInstance { find(state, id) }",
+        "fn found_mut<'a>(s: &'a mut GameState, wanted: &str) -> &'a mut CardInstance { find(s, wanted) }",
+        "fn wrapped<'a>(",
+        "    state: &'a GameState,",
+        "    id: &str,",
+        ") -> &'a CardInstance {",
+        "    find(state, id)",
+        "}",
+    ]
+    .join("\n");
+    for dir in LOOKUP_READERS {
+        write(&format!("{dir}/lookup_copy.rs"), &lookups);
+        expected.extend([1, 2, 3].map(|line| format!("{dir}/lookup_copy.rs:{line}")));
     }
     write(
         "crates/cards/mode_copy.rs",

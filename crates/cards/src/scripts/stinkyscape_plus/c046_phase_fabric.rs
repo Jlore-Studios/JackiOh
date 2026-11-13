@@ -71,10 +71,6 @@ mod tests {
         }))
     }
 
-    fn on(card: &CardInstance) -> Value {
-        json!({ "targets": pick::instance(card) })
-    }
-
     fn keyword_count(s: &Scenario, card: &CardInstance, kind: KeywordKind) -> usize {
         s.stats(card).keywords.iter().filter(|keyword| keyword.kind() == kind).count()
     }
@@ -108,7 +104,7 @@ mod tests {
         fn immutable_and_immune_to_spells_and_no_evasive() {
             let mut s = board(false, json!([VANILLA]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(FABRIC, on(&unit));
+            s.play(FABRIC, pick::targets(pick::instance(&unit)));
             assert_eq!(keyword_count(&s, &unit, KeywordKind::Immutable), 1);
             assert_eq!(keyword_count(&s, &unit, KeywordKind::ImmuneToSpells), 1);
             assert_eq!(keyword_count(&s, &unit, KeywordKind::Evasive), 0);
@@ -120,7 +116,7 @@ mod tests {
             let mut s = board(false, json!([VANILLA, VANILLA]), json!([]));
             let (fabric, other) = (s.unit_at(P1, 1), s.unit_at(P1, 2));
             assert!(offered(&s, CRYO).contains(&Selection::Instance { instance_id: fabric.id.clone() }));
-            s.play(FABRIC, on(&fabric));
+            s.play(FABRIC, pick::targets(pick::instance(&fabric)));
             let offered = offered(&s, CRYO);
             assert!(!offered.contains(&Selection::Instance { instance_id: fabric.id }));
             assert!(offered.contains(&Selection::Instance { instance_id: other.id }));
@@ -130,7 +126,7 @@ mod tests {
         fn an_attack_still_reaches_the_unit() {
             let mut s = board(false, json!([VANILLA]), json!([WALL]));
             let (mine, theirs) = (s.unit_at(P1, 1), s.unit_at(P2, 1));
-            s.play(FABRIC, on(&theirs));
+            s.play(FABRIC, pick::targets(pick::instance(&theirs)));
             s.attack(&mine, &theirs);
             assert_eq!(s.card(&theirs).damage, 4);
         }
@@ -143,7 +139,7 @@ mod tests {
         fn r3547002_immutable_immune_to_spells_and_evasive_all_three_land() {
             let mut s = board(true, json!([VANILLA]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(FABRIC, on(&unit));
+            s.play(FABRIC, pick::targets(pick::instance(&unit)));
             assert_eq!(keyword_count(&s, &unit, KeywordKind::Immutable), 1);
             assert_eq!(keyword_count(&s, &unit, KeywordKind::ImmuneToSpells), 1);
             assert_eq!(keyword_count(&s, &unit, KeywordKind::Evasive), 1);
@@ -154,7 +150,7 @@ mod tests {
         fn r3543002_no_attack_may_target_it_afterwards() {
             let mut s = board(true, json!([VANILLA]), json!([WALL]));
             let (mine, theirs) = (s.unit_at(P1, 1), s.unit_at(P2, 1));
-            s.play(FABRIC, on(&theirs));
+            s.play(FABRIC, pick::targets(pick::instance(&theirs)));
             s.expect_refused_with(|s| s.attack(&mine, &theirs), "cannot be attacked");
             assert_eq!(s.card(&theirs).damage, 0);
         }
@@ -163,7 +159,7 @@ mod tests {
         fn no_spell_may_pick_the_unit_afterwards() {
             let mut s = board(true, json!([VANILLA]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(FABRIC, on(&unit));
+            s.play(FABRIC, pick::targets(pick::instance(&unit)));
             assert!(!offered(&s, CRYO).contains(&Selection::Instance { instance_id: unit.id }));
         }
     }

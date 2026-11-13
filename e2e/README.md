@@ -1,4 +1,4 @@
-# `e2e/` — the fifty-one specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34`, the settings dialog's `35`, the Meditative play-through's `36`, the rematch offers' `37`, the accessibility check's `38`, the replays' `39`, Duos co-op's `41`, Play together's `42`, the preview rings' `43`, watching a friend's `44`, the economy loop's `45`, every menu on one screen's `46`, the tap areas' `47`, the tutorial's final exam's `48`, the dev dashboard's `49`, the menus' shell's `51` and daily games' `52` and `53`, plus twenty-one component specs
+# `e2e/` — the fifty-two specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34`, the settings dialog's `35`, the Meditative play-through's `36`, the rematch offers' `37`, the accessibility check's `38`, the replays' `39`, Duos co-op's `41`, Play together's `42`, the preview rings' `43`, watching a friend's `44`, the economy loop's `45`, every menu on one screen's `46`, the tap areas' `47`, the tutorial's final exam's `48`, the dev dashboard's `49`, the menus' shell's `51`, daily games' `52` and `53` and the private lobby's `54`, plus twenty-two component specs
 
 Cypress runs against `apps/web` in `E2E=1` mode: the `/dev/hotseat` route for the local specs and
 a test server with fixture accounts for the networked ones, the Rust `jackioh-server` started with
@@ -35,7 +35,7 @@ pnpm check:fixtures                       # every deck fixture obeys L2/L3/L6 be
 # 1. the client, in E2E mode
 E2E=1 pnpm --dir apps/web dev                  # must serve http://localhost:5173
 
-# 2. the server, in E2E mode, for the networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39, 41, 42, 44, 45, 46, 47, 49, 51, 52, 53
+# 2. the server, in E2E mode, for the networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39, 41, 42, 44, 45, 46, 47, 49, 51, 52, 53, 54
 E2E=1 cargo run --release -p jackioh-server    # http://localhost:8787 and ws://…/ws/match (WS_PATH)
 
 # 2b. spec 49 only: the dev dashboard's own client (apps/admin/README.md), proxying /api to the server
@@ -111,7 +111,11 @@ Electron; unset, nothing changes):
 
 ```
 E2E_WINDOW_SIZE=1600,1200 pnpm exec cypress run --browser chrome --spec cypress/e2e/25-overflow-animations.cy.ts --expose shots=1
+E2E_WINDOW_SIZE=1600,1300 pnpm exec cypress run --component --browser chrome --spec cypress/component/lobby-screen.cy.tsx
 ```
+
+The component block takes the same variable, so the lobby's shots (#3730) come out whole at every one of
+`MENU_SIZES`, into `artifacts/component/screenshots`.
 
 A shot of something in motion also wants `cy.screenshot(name, { disableTimersAndAnimations: false })`:
 by default Cypress jumps every CSS animation to its end for the capture, and a card that burns or
@@ -142,9 +146,12 @@ for contract reasons rather than rules reasons.
    not a preference: `support/config.ts`, `cypress.config.ts` and the `wsPlayer` task all default
    to it.
 
-8. **Play together and Duos** (SPEC §9.4, §9.5, §13). Spec 42 is Play together between two fixture
-   accounts, and spec 41 a Duos co-op game of those two against the AI team. Both are networked, so
-   the server must be up. Their test ids (`together-*`, `chat-*`, `coop-*`, `duos-*`)
+8. **Play together, private lobbies and Duos** (SPEC §9.4, §9.5, §13). Spec 42 is Play together between
+   two fixture accounts, spec 41 a Duos co-op game of those two against the AI team, started from a
+   co-op lobby, and spec 54 a 1v1 private lobby from Create on `/play` to both players on the board
+   (R3730000 to R3730002); the component spec `lobby-screen.cy.tsx` shoots the lobby at each of
+   `MENU_SIZES`. All but the component spec are networked, so the server must be up. Their test ids
+   (`together-*`, `chat-*`, `lobby-*`, `duos-*`)
    are `apps/web/README.md`'s list, mirrored in `support/testids.ts`; the
    sockets are `/ws/duos` and `/ws/watch` beside `WS_PATH`, on the same host. Spec 44 watches a
    friend's live game over `/ws/watch`. A watcher holds no seat, so it reseeds and activates

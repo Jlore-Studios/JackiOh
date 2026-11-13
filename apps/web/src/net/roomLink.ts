@@ -1,13 +1,18 @@
-// Play room links (SPEC §9.5, R767) and co-op room links (R2094000).
-// They only fill the lobby form; the server validates the mode (R264, CLAUDE.md rule 7).
-// At boot, valid `room` and `mode` leave the URL for per-tab storage (R632).
+// Play room links (SPEC §9.5, R767), co-op room links (R2094000) and private lobby links (R3730006).
+// Every one opens the lobby screen, `/lobby/:code`, which shows a lobby or the classic room under the
+// code; the server validates the mode (R264, CLAUDE.md rule 7).
+// At boot, valid `room` and `mode` leave the URL for per-tab storage (R632), as a lobby path's code does,
+// so the link survives the sign-in and the invite page; `useKeptLinkOpensLobby` opens its lobby once the
+// account is active.
 // Sign-in keeps only code and mode (B35); unavailable storage means no link.
 
+import { useEffect } from "react";
 import { canonicalCode } from "@jackioh/shared";
 import { ROOM_CODE_FORMAT } from "@jackioh/server-config";
 import { t } from "../i18n/i18n.ts";
 import { isQueueMode, type QueueMode } from "./api.ts";
-import { currentPath, paths } from "./navigate.ts";
+import type { Account } from "./gate.ts";
+import { currentPath, lobbyCodeOf, navigate, paths } from "./navigate.ts";
 import { getStored, removeStored, sessionStorageOrNull, setStored } from "./storage.ts";
 
 const ROOM_PARAM = "room";
@@ -29,6 +34,21 @@ export function roomLinkUrl(code: string, mode: QueueMode): string {
   return `${window.location.origin}${roomLinkPath(code, mode)}`;
 }
 
+/** R3730006: a private lobby's link, the one Copy link shares. */
+export function lobbyLinkPath(code: string): string {
+  return paths.lobby(code);
+}
+
+export function lobbyLinkUrl(code: string): string {
+  return `${window.location.origin}${lobbyLinkPath(code)}`;
+}
+
+/** R3730006: the code a lobby path names, canonical, or null for none. */
+function lobbyCodeOfPath(pathname: string): string | null {
+  const raw = lobbyCodeOf(pathname.replace(/\/+$/u, "") || "/");
+  return raw === null ? null : canonicalCode(raw, ROOM_CODE_FORMAT);
+}
+
 /** R191: invalid room codes yield no link; unrecognized modes are only omitted hints. */
 export function roomLinkOf(search: string): RoomLink | null {
   const params = new URLSearchParams(search);
@@ -40,9 +60,18 @@ export function roomLinkOf(search: string): RoomLink | null {
   return { code, mode: isQueueMode(mode) ? mode : null };
 }
 
-/** Before routing, adopt only a `/play` link and remove its room parameters without touching others. */
+/**
+ * Before routing, adopt a `/play` link and remove its room parameters without touching others; a lobby
+ * path's code is kept the same way, signed in or not, so it waits through the sign-in and the invite
+ * page (R3730006).
+ */
 export function adoptRoomLink(): boolean {
   if (typeof window === "undefined") return false;
+  const lobby = lobbyCodeOfPath(currentPath());
+  if (lobby !== null) {
+    setStored(ROOM_LINK_STORAGE_KEY, JSON.stringify({ code: lobby, mode: null }), sessionStorageOrNull());
+    return true;
+  }
   if (currentPath() !== paths.play) return false;
   const url = new URL(window.location.href);
   if (!url.searchParams.has(ROOM_PARAM)) return false;
@@ -140,11 +169,29 @@ export function forgetCoopLink(): void {
 }
 
 /**
- * R2094000: the first room link of this site (`/play?room=…` or `/together?coop=…`) a message holds,
- * built as a path, never markup.
+ * R767, R2094000, R3730006: a room, co-op or lobby link kept in this tab opens its lobby once, and only
+ * when the account reading it is active. A signed-out, expired or pending one keeps it: the gate sends
+ * that one to sign in or to the invite page, and the link waits for the first screen it reaches active.
+ * Called by the gate of every gated screen and by the main menu, where a sign-in lands.
+ */
+export function useKeptLinkOpensLobby(account: Account): void {
+  const active = account.kind === "ready" && account.me.profile.status === "active";
+  useEffect(() => {
+    if (!active) return;
+    const code = readRoomLink()?.code ?? readCoopLink();
+    if (code === null) return;
+    forgetRoomLink();
+    forgetCoopLink();
+    if (currentPath() !== paths.lobby(code)) navigate(paths.lobby(code), { replace: true });
+  }, [active]);
+}
+
+/**
+ * R2094000, R3730006: the first room link of this site (`/play?room=…`, `/together?coop=…` or
+ * `/lobby/CODE`) a message holds, as the path of the lobby it opens, built as a path, never markup.
  */
 export function findRoomLinkInText(text: string, origin: string): { path: string } | null {
-  const candidates = text.match(/https?:\/\/[^\s"'<>]+|\/(?:play\?room=|together\?coop=)[^\s"'<>]*/g);
+  const candidates = text.match(/https?:\/\/[^\s"'<>]+|\/(?:play\?room=|together\?coop=|lobby\/)[^\s"'<>]*/g);
   if (candidates === null) return null;
   for (let candidate of candidates) {
     // Trailing punctuation the sentence added is not the link's: "here: <link> (room code …)."
@@ -159,14 +206,14 @@ export function findRoomLinkInText(text: string, origin: string): { path: string
     const bare = url.pathname.replace(/\/+$/u, "") || "/";
     if (bare === paths.play) {
       const room = roomLinkOf(url.search);
-      if (room !== null) {
-        return { path: room.mode === null ? `${paths.play}?room=${room.code}` : roomLinkPath(room.code, room.mode) };
-      }
+      if (room !== null) return { path: lobbyLinkPath(room.code) };
     }
     if (bare === paths.together) {
       const coop = coopLinkOf(url.search);
-      if (coop !== null) return { path: coopLinkPath(coop) };
+      if (coop !== null) return { path: lobbyLinkPath(coop) };
     }
+    const lobby = lobbyCodeOfPath(url.pathname);
+    if (lobby !== null) return { path: lobbyLinkPath(lobby) };
   }
   return null;
 }

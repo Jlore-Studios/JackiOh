@@ -71,10 +71,6 @@ mod tests {
     const BODY: &str = "core-019"; // Midrange Menace
     const ROCK: &str = "core-066"; // The Rock: Immutable on its Radiant face.
 
-    fn pick(id: &str) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-    }
-
     fn board(radiant: bool, target: Value) -> Scenario {
         scenario(json!({
             "seed": "body-snatch",
@@ -88,7 +84,7 @@ mod tests {
         crate::register_all();
         let mut s = board(false, json!({ "def": BODY, "lane": 1 }));
         let old = s.unit_at(P2, 1).id;
-        s.play(ID, pick(&old));
+        s.play(ID, pick::targets(pick::id(&old)));
         let ayy = s.unit(P2, 1).expect("an Ayy stands there");
         assert_eq!(ayy.def_id, AYY);
         assert_ne!(ayy.id, old.clone());
@@ -102,7 +98,7 @@ mod tests {
         let mut s = board(true, json!({ "def": BODY, "lane": 1 }));
         let old = s.unit_at(P2, 1).id;
         let before = s.card(&old).position;
-        s.play(ID, pick(&old));
+        s.play(ID, pick::targets(pick::id(&old)));
         let ayy = s.unit(P2, 1).expect("an Ayy stands there");
         assert_eq!(ayy.def_id, AYY);
         assert_eq!(ayy.position, before);
@@ -113,7 +109,7 @@ mod tests {
         crate::register_all();
         let mut s = board(false, json!({ "def": ROCK, "lane": 1, "radiant": true }));
         let rock = s.card(ROCK).clone();
-        s.expect_refused(|s| s.play(ID, pick(&rock.id)));
+        s.expect_refused(|s| s.play(ID, pick::targets(pick::id(&rock.id))));
         assert_eq!(s.unit(P2, 1).map(|unit| unit.id), Some(rock.id));
     }
 }

@@ -18,9 +18,10 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "meditative-087";
 
 /// Whether this resolution summons Tatches: its owner's play or cast (R70; not on draw, R2179002) of a card whose running
-/// face is neither Trap nor Field Trap and carries a tribal tag (R1424, MD-E11).
+/// face carries a tribal tag (R1424, MD-E11) and whose play counts as neither Trap nor Field Trap
+/// (`played_type_of`: a card set by its Cloaked is the Trap it was set as, R783005).
 fn tribal_play(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
-    let GameEvent::CardResolved { player, def_id, radiant, .. } = event else {
+    let GameEvent::CardResolved { player, def_id, .. } = event else {
         return false;
     };
     // R2179002: a card cast on draw is no play.
@@ -28,10 +29,7 @@ fn tribal_play(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
         return false;
     }
     let state: &GameState = ctx.state;
-    if matches!(
-        card_type_of_face(state, def_id, *radiant == Some(true)),
-        CardType::Trap | CardType::FieldTrap
-    ) {
+    if matches!(played_type_of(state, event), Some(CardType::Trap | CardType::FieldTrap)) {
         return false;
     }
     def_of(Some(state), def_id).tags.iter().any(|tag| TRIBAL_TAGS.contains(tag))
@@ -217,6 +215,15 @@ mod tests {
                 let trap = s.backrow(P1, 1).expect("the set trap");
                 assert_eq!(trap.def_id, GROOM);
                 assert!(trap.face_up != Some(true));
+                assert!(in_deck(&s));
+            }
+
+            /// R783005: a Unit set face-down by its Cloaked is a Trap play, so the Human it is summons
+            /// nothing (R448).
+            #[test]
+            fn r783005_a_unit_set_face_down_by_its_cloaked_is_a_trap_play_and_summons_nothing() {
+                let mut s = decked("tatches-cloaked", json!([crate::CLOAKED_UNIT, FILLER]));
+                crate::set_cloaked(&mut s, P1, crate::CLOAKED_UNIT, 1);
                 assert!(in_deck(&s));
             }
 

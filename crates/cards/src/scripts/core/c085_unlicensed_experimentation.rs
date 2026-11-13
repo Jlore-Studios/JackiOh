@@ -22,9 +22,10 @@ fn type_key(type_: CardType) -> CardType {
     }
 }
 
-/// The permanent this play put on the opponent's field, or `None` when the event is not one this trap
+/// The permanent this play put on the opponent's field and the type its play counts as (R783005: a
+/// card set by its Cloaked is the Trap it was set as), or `None` when the event is not one this trap
 /// answers.
-fn played_permanent(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<CardInstance> {
+fn played_permanent(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<(CardInstance, CardType)> {
     let GameEvent::CardResolved {
         player,
         instance_id,
@@ -52,7 +53,7 @@ fn played_permanent(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<CardIn
     if played.token || played.tags.contains(&Tag::Token) {
         return None;
     }
-    Some(card.clone())
+    Some((card.clone(), played_type_of(&*ctx.state, event)?))
 }
 
 /// "a permanent of yours of that type" (§8): never the firing trap (R61), a card dormant under a Stack
@@ -96,12 +97,11 @@ fn experimentation(on_all: bool) -> TrapTrigger {
             if !matches!(event, GameEvent::CardResolved { .. }) {
                 return vec![];
             }
-            let Some(played) = played_permanent(ctx, event) else {
+            let Some((played, type_)) = played_permanent(ctx, event) else {
                 return vec![];
             };
 
             // R23: "Immutable permanents are never chosen" as the Fuse target.
-            let type_ = def_of(Some(&*ctx.state), &played.def_id).type_;
             let target_ids: Vec<String> = matching_permanents(ctx, type_, &played)
                 .into_iter()
                 .filter(|card| !unit_has(ctx.state, card, KeywordKind::Immutable))
@@ -129,12 +129,11 @@ fn experimentation(on_all: bool) -> TrapTrigger {
         if !matches!(event, GameEvent::CardResolved { .. }) {
             return false;
         }
-        let Some(played) = played_permanent(ctx, event) else {
+        let Some((played, type_)) = played_permanent(ctx, event) else {
             return false;
         };
         // §8: "whose type matches one you control". R61 counts an Immutable permanent of yours here,
         // so the trap fires and is consumed even though nothing can be fused onto it.
-        let type_ = def_of(Some(&*ctx.state), &played.def_id).type_;
         !matching_permanents(ctx, type_, &played).is_empty()
     })
 }
@@ -274,6 +273,21 @@ mod tests {
             }));
 
             s.play(STOCKPILE, json!({}));
+
+            expect_still_armed(&s);
+        }
+
+        /// R783005: a Unit set face-down by its Cloaked is a Field Trap play, no Unit played: a Unit of
+        /// yours is no match for it.
+        #[test]
+        fn r783005_a_unit_set_face_down_by_its_cloaked_is_no_unit_play_and_leaves_it_armed() {
+            let mut s = scenario(json!({
+                "active": "p2",
+                "p1": { "backrow": [armed(false)], "field": [{ "def": TIMMY, "lane": 1 }] },
+                "p2": { "hand": [crate::CLOAKED_UNIT, STOCKPILE] },
+            }));
+
+            crate::set_cloaked(&mut s, P2, crate::CLOAKED_UNIT, 1);
 
             expect_still_armed(&s);
         }
@@ -482,6 +496,23 @@ mod tests {
                 Some(CardType::FieldTrap)
             );
             s.expect_in_zone(&played, "gone");
+        }
+
+        /// R783005: a Unit set face-down by its Cloaked is a Field Trap play, so it is fused onto a Trap of
+        /// yours, as any Trap play is (R61: Field Trap counts as Trap).
+        #[test]
+        fn r783005_a_unit_set_face_down_by_its_cloaked_is_a_trap_play_fused_onto_your_trap() {
+            let mut s = scenario(json!({
+                "active": "p2",
+                "p1": { "backrow": [{ "def": MY_PAWN, "lane": 1 }, armed(false)] },
+                "p2": { "hand": [crate::CLOAKED_UNIT, STOCKPILE] },
+            }));
+
+            // `set_cloaked` would look for the set card, which the trap fuses away.
+            s.play(crate::CLOAKED_UNIT, json!({ "zone": 1, "row": "backrow", "faceDown": "cloaked" }));
+
+            s.expect_events(json!(["cardPlayed", "trapFired", "fused"]));
+            assert!(s.backrow(P2, 1).is_none());
         }
 
         #[test]

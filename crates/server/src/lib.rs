@@ -23,6 +23,8 @@
 //! - `economy`: the economy's holdings and ledgers (SPEC §14.11, #1299) and the writing of an outcome
 //!   `jackioh_shared::economy` decides (the rolls, pity, the token bars and the level curve, #1298, #1301,
 //!   #3104), and the card packs (#1301).
+//! - `lobby`: the private lobbies, a 1v1 or co-op friend game's seats, picks, Ready and Start
+//!   (SPEC §9.5, §13.9; #3730, R3730000 to R3730006).
 //! - `admin`: the dev dashboard's store (#3074): the audit of every dev and admin action, the
 //!   hand-set ratings and their ledger, and the news posts (R3074000, R3074001, R3074003).
 
@@ -50,6 +52,8 @@ pub mod duos;
 // end Duos co-op (#946)
 pub mod env;
 pub mod loadout;
+// Private lobbies (#3730): a friend game's pre-game stage, 1v1 or co-op (SPEC §9.5, §13.9).
+pub mod lobby;
 pub mod loops;
 /// The ranked ladder's rules are `jackioh-shared`'s (#3105); the old paths (`ranked::ladder::…`) name them.
 pub use jackioh_shared::ranked;

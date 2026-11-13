@@ -66,10 +66,6 @@ mod tests {
         }))
     }
 
-    fn on(card: &CardInstance) -> Value {
-        json!({ "targets": pick::instance(card) })
-    }
-
     fn keyword_count(s: &Scenario, card: &CardInstance, kind: KeywordKind) -> usize {
         s.stats(card).keywords.iter().filter(|keyword| keyword.kind() == kind).count()
     }
@@ -102,7 +98,7 @@ mod tests {
         fn pierce_deft_frenzy_and_no_first_strike() {
             let mut s = board(false, json!([VANILLA]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(GRAPHITE, on(&unit));
+            s.play(GRAPHITE, pick::targets(pick::instance(&unit)));
             for kind in [KeywordKind::Pierce, KeywordKind::Deft, KeywordKind::Frenzy] {
                 assert_eq!(keyword_count(&s, &unit, kind), 1, "{kind:?}");
             }
@@ -115,7 +111,7 @@ mod tests {
             let mut s = board(false, json!([VANILLA]), json!([FRAIL, FRAIL, FRAIL]));
             let unit = s.unit_at(P1, 1);
             let frail: Vec<CardInstance> = (1..=3).map(|lane| s.unit_at(P2, lane)).collect();
-            s.play(GRAPHITE, on(&unit));
+            s.play(GRAPHITE, pick::targets(pick::instance(&unit)));
 
             s.attack(&unit, &frail[0]);
             assert!(s.unit(P2, 1).is_none(), "the first frail died");
@@ -131,7 +127,7 @@ mod tests {
             let mut s = board(false, json!([VANILLA]), json!(["stand-in (1) 1/30"]));
             let unit = s.unit_at(P1, 1);
             let wall = s.unit_at(P2, 1);
-            s.play(GRAPHITE, on(&unit));
+            s.play(GRAPHITE, pick::targets(pick::instance(&unit)));
             s.attack(&unit, &wall);
             assert!(s.card(&unit).exertion.attacked);
             s.expect_refused(|s| s.attack(&unit, &wall));
@@ -141,7 +137,7 @@ mod tests {
         fn an_enemy_unit_takes_all_three() {
             let mut s = board(false, json!([]), json!([VANILLA]));
             let theirs = s.unit_at(P2, 1);
-            s.play(GRAPHITE, on(&theirs));
+            s.play(GRAPHITE, pick::targets(pick::instance(&theirs)));
             for kind in [KeywordKind::Pierce, KeywordKind::Deft, KeywordKind::Frenzy] {
                 assert_eq!(keyword_count(&s, &theirs, kind), 1, "{kind:?}");
             }
@@ -155,7 +151,7 @@ mod tests {
         fn pierce_deft_frenzy_and_first_strike() {
             let mut s = board(true, json!([VANILLA]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(GRAPHITE, on(&unit));
+            s.play(GRAPHITE, pick::targets(pick::instance(&unit)));
             for kind in [KeywordKind::Pierce, KeywordKind::Deft, KeywordKind::Frenzy, KeywordKind::FirstStrike] {
                 assert_eq!(keyword_count(&s, &unit, kind), 1, "{kind:?}");
             }
@@ -166,7 +162,7 @@ mod tests {
             let mut s = board(true, json!([VANILLA]), json!(["stand-in (1) 4/4", FRAIL]));
             let unit = s.unit_at(P1, 1);
             let (killer, frail) = (s.unit_at(P2, 1), s.unit_at(P2, 2));
-            s.play(GRAPHITE, on(&unit));
+            s.play(GRAPHITE, pick::targets(pick::instance(&unit)));
 
             s.attack(&unit, &killer);
 

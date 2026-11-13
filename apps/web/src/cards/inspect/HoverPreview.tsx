@@ -13,10 +13,10 @@
 import { useLayoutEffect, useRef } from "react";
 import type { ReactElement } from "react";
 import { createPortal } from "react-dom";
-import { CardFace, faceText } from "../CardFace.tsx";
+import { CardFace } from "../CardFace.tsx";
 import { useFullArt, useOwnCopy } from "../fullArt.ts";
 import type { FaceModel } from "../model.ts";
-import { Extended } from "./Extended.tsx";
+import { Extended, showsFullText, useAlwaysFullText } from "./Extended.tsx";
 import { Glossary } from "./Glossary.tsx";
 import { estimatedPreviewSize, placePreview, previewCardHeight, type PreviewPrefer, type Rect } from "./placement.ts";
 import { Flavour, showsEasterEgg } from "./Flavour.tsx";
@@ -51,7 +51,8 @@ export function HoverPreview({ face, anchor, prefer = "beside", note, keyHint }:
   const flavoured = face.known && (flavourFor(face.defId) !== null || showsEasterEgg(face));
   const side = notes || face.printed !== null || flavoured;
   const ascentLevel = face.ascent;
-  const extended = faceText(face, ascentLevel, fullArtOn).less;
+  // R3838001: below an `AlwaysFullText` the panel is there whenever the face has words.
+  const extended = showsFullText(face, ascentLevel, fullArtOn, useAlwaysFullText());
   // #3602: on a phone the full text stacks across the card's width, so the estimate and the face
   // use the stacked geometry inspect.css draws there; off a phone both match what was there before.
   const viewport = viewportSize();

@@ -49,10 +49,6 @@ fn hand_id(s: &Scenario, player: PlayerId, def: &str) -> String {
         .clone()
 }
 
-fn pick(id: &str) -> Value {
-    json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-}
-
 fn face_up(def: &str) -> Value {
     json!([{ "def": def, "faceUp": true }])
 }
@@ -490,7 +486,7 @@ mod r3550006_a_kill_deadline {
         );
         let ranger = id_at(&s, P1, 1);
         let plain = id_at(&s, P2, 1);
-        s.play(PIP, pick(&ranger));
+        s.play(PIP, pick::targets(pick::id(&ranger)));
         assert_eq!(kill_deadlines(&s), vec![ranger.clone()]);
         assert_eq!(deadline_marks(&s), vec![ranger.clone()]);
         // The kill credited to it meets the deadline at once.
@@ -513,7 +509,7 @@ mod r3550006_a_kill_deadline {
             json!({ "field": [BIG] }),
         );
         let ranger = id_at(&s, P1, 1);
-        s.play(PIP, pick(&ranger));
+        s.play(PIP, pick::targets(pick::id(&ranger)));
         // No kill by the end of its controller's next turn: destroyed, and 3 The Coins.
         s.end_turn();
         s.end_turn();

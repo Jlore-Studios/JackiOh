@@ -11,7 +11,7 @@
 // the Other created cards, two sortable sections that share no row (R2089000, R2370000, R3184002, R3324002); its
 // on/off controls are the Segmented's pressed buttons (R3324003). The card drill-down shows the faces (a full-art
 // card's still Epic while the Full-art cards setting is on, R3011000), patch history, turn curve and co-played
-// synergy.
+// synergy. R3838000: its "Show card text" button, the Almanac's, prints every face's words, no full art (cardText.tsx).
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import catalogJson from "@jackioh/cards/catalog.json";
@@ -65,6 +65,7 @@ import { TableScroll } from "../stats/TableScroll.tsx";
 import { statsTestid } from "../stats/testids.ts";
 import { TierChip, adjustedText } from "../stats/TierChip.tsx";
 import { cardTierFit } from "../stats/tierFit.ts";
+import { CardTextButton, CardTextFaces, useCardText, type CardText } from "./cardText.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import { Segmented, Tabs } from "../tabs/index.ts";
 
@@ -272,7 +273,17 @@ function CollectingNote({
   );
 }
 
+/** R3838000: the page below its Show card text, which the Almanac shares: every face prints its words while it is pressed. */
 export default function StatsRoute(): ReactElement {
+  const cardText = useCardText();
+  return (
+    <CardTextFaces shown={cardText.shown}>
+      <StatsPage cardText={cardText} />
+    </CardTextFaces>
+  );
+}
+
+function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const locale = useLocale();
   const initialParams = useMemo(() => new URLSearchParams(window.location.search), []);
 
@@ -653,6 +664,7 @@ export default function StatsRoute(): ReactElement {
             <span className="stats-current-patch" data-testid={statsTestid.currentPatch}>
               {t("Current patch {patch}", { patch: currentVersion(patchList) })}
             </span>
+            <CardTextButton shown={cardText.shown} onToggle={cardText.toggle} />
           </BackLink>
         </header>
 

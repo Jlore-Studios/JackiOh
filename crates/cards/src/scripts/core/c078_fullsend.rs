@@ -95,12 +95,6 @@ mod tests {
     const COST_4: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
     const X_CARD: &str = "core-074"; // Adaptive UI
 
-    /// R81: #74 Adaptive UI declares one target with its play, so the `play` action must carry it. The
-    /// enemy hero is always a legal pick, and the X damage lands off to one side.
-    fn at_enemy_hero() -> Value {
-        json!([{ "pick": "hero", "player": "p2" }])
-    }
-
     const LIBRARY: [&str; 4] = ["core-008", "core-008", "core-008", "core-008"];
 
     use crate::js;
@@ -248,7 +242,7 @@ mod tests {
             s.play(FULLSEND, json!({}));
             s.expect_mana(P1, 3);
 
-            s.play(X_CARD, json!({ "x": 2, "targets": at_enemy_hero() }));
+            s.play(X_CARD, json!({ "x": 2, "targets": pick::hero("p2") }));
 
             // Exactly 2, not 1: "costMod and discounts don't change it" (R65).
             s.expect_mana(P1, 1);
@@ -429,7 +423,7 @@ mod tests {
             let mut s = board(true);
             s.play(FULLSEND, json!({}));
 
-            s.play(X_CARD, json!({ "x": 2, "targets": at_enemy_hero() }));
+            s.play(X_CARD, json!({ "x": 2, "targets": pick::hero("p2") }));
 
             s.expect_mana(P1, 1);
         }

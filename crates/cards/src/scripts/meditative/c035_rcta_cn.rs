@@ -96,11 +96,6 @@ mod tests {
         }))
     }
 
-    /// The pick of the victim, as the play action carries it (R81).
-    fn pick(id: &str) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-    }
-
     fn buffed_for(events: &[GameEvent]) -> Vec<(String, i32, i32)> {
         events
             .iter()
@@ -148,7 +143,7 @@ mod tests {
     fn granted(seed: &str) -> (Scenario, String) {
         let mut s = casting(seed, false);
         let victim = s.unit(P1, 1).expect("the Vanilla").id;
-        s.play(RCTA, pick(&victim));
+        s.play(RCTA, pick::targets(pick::id(&victim)));
         assert!(tags_of(s.state(), s.card(&victim)).contains(&Tag::Cn));
         (s, victim)
     }
@@ -167,7 +162,7 @@ mod tests {
             fn r923_target_gains_cn_chinese_plus_2_2_and_one_buff() {
                 let mut s = casting("rcta", false);
                 let victim = s.unit(P1, 1).expect("the Vanilla");
-                s.play(RCTA, pick(&victim.id));
+                s.play(RCTA, pick::targets(pick::id(&victim.id)));
                 let changed = s.card(&victim.id).clone();
                 assert_eq!(changed.granted_tags, Some(vec![Tag::Cn]));
                 assert_eq!(changed.chinese, Some(true));
@@ -198,7 +193,7 @@ mod tests {
                 apply_for_p1(&mut s, &[translate(json_as(json!({ "instanceId": victim })))]);
                 assert_eq!(s.card(&victim).chinese, Some(true));
                 assert!(tags_of(s.state(), s.card(&victim)).contains(&Tag::Cn));
-                s.expect_refused(|s| s.play(RCTA, pick(&victim)));
+                s.expect_refused(|s| s.play(RCTA, pick::targets(pick::id(&victim))));
                 s.expect_refused(|s| s.play(RCTA, json!({})));
             }
 
@@ -217,7 +212,7 @@ mod tests {
                     },
                 }));
                 let trap = s.backrow(P2, 1).expect("the face-down trap");
-                s.play(RCTA, pick(&trap.id));
+                s.play(RCTA, pick::targets(pick::id(&trap.id)));
                 let changed = s.card(&trap.id).clone();
                 assert_eq!(changed.granted_tags, Some(vec![Tag::Cn]));
                 assert_eq!(changed.chinese, Some(true));
@@ -243,7 +238,7 @@ mod tests {
                 find_instance_mut(s.state_mut(), &trap.id)
                     .expect("the trap")
                     .granted_tags = Some(vec![Tag::Cn]);
-                s.play(RCTA, pick(&trap.id));
+                s.play(RCTA, pick::targets(pick::id(&trap.id)));
                 let unchanged = s.card(&trap.id).clone();
                 assert_eq!(unchanged.chinese, None);
                 assert_eq!((unchanged.buffs.attack, unchanged.buffs.health), (0, 0));
@@ -257,7 +252,7 @@ mod tests {
                 set_param(s.card_mut(RCTA), "stats", 4);
                 set_param(s.card_mut(RCTA), "times", 3);
                 let victim = s.unit(P1, 1).expect("the Vanilla");
-                s.play(RCTA, pick(&victim.id));
+                s.play(RCTA, pick::targets(pick::id(&victim.id)));
                 let changed = s.card(&victim.id).clone();
                 assert_eq!((changed.buffs.attack, changed.buffs.health), (4, 4));
                 assert_eq!(upgraded_for(s.events(), &victim.id), 3);
@@ -271,7 +266,7 @@ mod tests {
                     "p2": { "hand": [FILLER], "field": [{ "def": VANILLA, "lane": 1 }], "library": filler(4) },
                 }));
                 let enemy = s.unit(P2, 1).expect("the enemy Vanilla").id;
-                s.play(RCTA, pick(&enemy));
+                s.play(RCTA, pick::targets(pick::id(&enemy)));
                 assert_eq!(s.card(&enemy).granted_tags, Some(vec![Tag::Cn]));
             }
 
@@ -356,7 +351,7 @@ mod tests {
             fn plus_2_2_permanently_and_one_buff() {
                 let mut s = casting("rcta-permanent", false);
                 let victim = s.unit(P1, 1).expect("the Vanilla").id;
-                s.play(RCTA, pick(&victim));
+                s.play(RCTA, pick::targets(pick::id(&victim)));
                 assert_eq!(upgraded_for(s.events(), &victim), 1);
                 // Past both turns' ends, the +2/+2 stays.
                 s.end_turn().end_turn();
@@ -372,7 +367,7 @@ mod tests {
             fn plus_4_4_and_two_buffs() {
                 let mut s = casting("rcta-radiant", true);
                 let victim = s.unit(P1, 1).expect("the Vanilla");
-                s.play(RCTA, pick(&victim.id));
+                s.play(RCTA, pick::targets(pick::id(&victim.id)));
                 let changed = s.card(&victim.id).clone();
                 assert_eq!(changed.granted_tags, Some(vec![Tag::Cn]));
                 assert_eq!(changed.chinese, Some(true));

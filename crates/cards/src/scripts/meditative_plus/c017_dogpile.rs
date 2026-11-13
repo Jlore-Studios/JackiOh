@@ -93,10 +93,6 @@ mod tests {
         crate::scenario(sides)
     }
 
-    fn hero(player: PlayerId) -> Value {
-        json!([{ "pick": "hero", "player": player.as_str() }])
-    }
-
     fn health(s: &Scenario, player: PlayerId) -> i32 {
         s.state().players[player].hero.health
     }
@@ -128,7 +124,7 @@ mod tests {
     #[test]
     fn played_it_deals_2_to_the_enemy_hero() {
         let mut s = game("m+017-hero", json!({ "hand": [ID] }), json!({}));
-        s.play(ID, json!({ "targets": hero(P2) }));
+        s.play(ID, json!({ "targets": pick::hero(P2) }));
         assert_eq!(health(&s, P2), 28);
     }
 
@@ -137,7 +133,7 @@ mod tests {
         // A card left in hand, so the turn does not end itself before the log is read (§2.5).
         let mut s = game("m+017-hand", json!({ "hand": [TRUE_STRIKE, ID, FILLER] }), json!({}));
         let dogpile = s.card(ID).id.clone();
-        s.play(TRUE_STRIKE, json!({ "targets": hero(P2) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::hero(P2) }));
         assert_eq!(hits_on(&s, "hero-p2"), vec![4, 2]);
         assert_eq!(dogpiles_in(&s, P1, "hand"), 0);
         assert_eq!(dogpiles_in(&s, P1, "graveyard"), 1);
@@ -157,7 +153,7 @@ mod tests {
         s.activate(TWINSPELL, json!({}));
         let menace = s.unit(P1, 1).expect("the menace");
         s.play(TRUE_STRIKE, json!({ "targets": pick::instance(&menace) }));
-        s.answer(hero(P2));
+        s.answer(pick::hero(P2));
         assert_eq!(hits_on(&s, "hero-p2"), vec![4, 2]);
         assert_eq!(dogpiles_in(&s, P1, "graveyard"), 1);
     }
@@ -169,7 +165,7 @@ mod tests {
             json!({ "hand": [TRUE_STRIKE], "library": [ID, FILLER, FILLER] }),
             json!({}),
         );
-        s.play(TRUE_STRIKE, json!({ "targets": hero(P2) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::hero(P2) }));
         assert_eq!(hits_on(&s, "hero-p2"), vec![4, 2]);
         assert_eq!(dogpiles_in(&s, P1, "library"), 0);
         assert_eq!(dogpiles_in(&s, P1, "graveyard"), 1);
@@ -183,7 +179,7 @@ mod tests {
             json!({}),
         );
         let in_hand = s.hand(P1)[1].id.clone();
-        s.play(TRUE_STRIKE, json!({ "targets": hero(P2) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::hero(P2) }));
         let first_answer = s.events().iter().find_map(|event| match event {
             GameEvent::CardResolved {
                 answer: Some(answer), ..
@@ -200,7 +196,7 @@ mod tests {
         let mut s = game("m+017-chain", json!({ "hand": [TRUE_STRIKE, ID, ID] }), json!({}));
         let first = s.hand(P1)[1].id.clone();
         let second = s.hand(P1)[2].id.clone();
-        s.play(TRUE_STRIKE, json!({ "targets": hero(P2) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::hero(P2) }));
         let answered: Vec<(String, String)> = s
             .events()
             .iter()
@@ -246,7 +242,7 @@ mod tests {
             json!({ "hand": [TRUE_STRIKE, FILLER] }),
         );
         s.end_turn();
-        s.play(TRUE_STRIKE, json!({ "targets": hero(P1) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::hero(P1) }));
         assert_eq!(dogpiles_in(&s, P1, "hand"), 1);
         assert_eq!(health(&s, P2), 30);
     }
@@ -269,7 +265,7 @@ mod tests {
         let mut s = game("m+017-param", json!({ "hand": [TRUE_STRIKE, ID] }), json!({}));
         let dogpile = s.card(ID).id.clone();
         set_param(s.card_mut(&dogpile), "damage", 3);
-        s.play(TRUE_STRIKE, json!({ "targets": hero(P2) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::hero(P2) }));
         assert_eq!(hits_on(&s, "hero-p2"), vec![4, 3]);
     }
 
@@ -280,7 +276,7 @@ mod tests {
             json!({ "hand": [TRUE_STRIKE, { "def": ID, "radiant": true }] }),
             json!({}),
         );
-        s.play(TRUE_STRIKE, json!({ "targets": hero(P2) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::hero(P2) }));
         assert_eq!(hits_on(&s, "hero-p2"), vec![4, 4]);
     }
 
@@ -288,7 +284,7 @@ mod tests {
     fn radiant_played_it_deals_4() {
         let radiant = json!({ "hand": [{ "def": ID, "radiant": true }] });
         let mut s = game("m+017-radiant-played", radiant, json!({}));
-        s.play(ID, json!({ "targets": hero(P2) }));
+        s.play(ID, json!({ "targets": pick::hero(P2) }));
         assert_eq!(health(&s, P2), 26);
     }
 
@@ -307,7 +303,7 @@ mod tests {
             }),
         );
         s.end_turn();
-        s.play(TRUE_STRIKE, json!({ "targets": hero(P1) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::hero(P1) }));
         let cast = s
             .events()
             .iter()

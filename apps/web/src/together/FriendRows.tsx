@@ -141,6 +141,8 @@ export type FriendRowProps = {
    * daily game, and its dialog says it of Live.
    */
   challengeRefusal?: string | null;
+  /** R3730005: a screen that passes it offers Lobby: a 1v1 lobby made and the friend invited into it. */
+  onLobby?: () => void;
 };
 
 export function FriendRow({
@@ -153,6 +155,7 @@ export function FriendRow({
   onBlock,
   onWatch,
   challengeRefusal = null,
+  onLobby,
 }: FriendRowProps): ReactElement {
   const [asking, setAsking] = useState(false);
   // #3727: any friend can be challenged to a daily game; a live one needs them online and both free.
@@ -199,6 +202,11 @@ export function FriendRow({
               {t("Watch")}
             </button>
           ) : null}
+          {onLobby === undefined || friend.status === "offline" ? null : (
+            <button type="button" data-testid={togetherTestid.lobby} disabled={busy} onClick={onLobby}>
+              {t("Lobby")}
+            </button>
+          )}
           <button type="button" data-testid={togetherTestid.chatOpen} onClick={onChat}>
             {t("Chat")}
             {unread > 0 ? (

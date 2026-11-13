@@ -35,12 +35,10 @@ fn arrival(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String> {
             (*row == Row::Units || stands_in_backrow(state, unit)).then(|| instance_id.clone())
         }
         GameEvent::CardResolved {
-            permanent,
-            def_id,
-            instance_id,
-            ..
+            permanent, instance_id, ..
         } => {
-            if !*permanent || def_of(Some(state), def_id).type_ != CardType::Unit {
+            // R783005: the play as it counts, so a Unit set by its Cloaked is the Trap it was set as.
+            if !*permanent || played_type_of(state, event) != Some(CardType::Unit) {
                 return None;
             }
             let unit = find_instance(state, instance_id)?;
@@ -177,6 +175,19 @@ mod tests {
             s.play(MOTHS, json!({ "zone": 3 }));
             s.expect_in_zone(MOTHS, "field");
             assert_eq!(s.stats(MOTHS).attack, 1 + ATTACK);
+        }
+
+        /// R783005: a Unit set face-down by its Cloaked is a Trap play, no Unit played.
+        #[test]
+        fn r783005_a_unit_set_face_down_by_its_cloaked_is_not_attacked() {
+            let mut s = played(
+                false,
+                json!([{ "def": MOTHS, "lane": 1 }, { "def": MOTHS, "lane": 2 }, { "def": MOTHS, "lane": 3 }]),
+                json!([crate::CLOAKED_UNIT, FILLER]),
+            );
+            their_turn(&mut s);
+            crate::set_cloaked(&mut s, P2, crate::CLOAKED_UNIT, 1);
+            assert!(forced(&s).is_empty(), "{:?}", forced(&s));
         }
 
         #[test]
