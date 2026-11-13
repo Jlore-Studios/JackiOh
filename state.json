@@ -14509,7 +14509,18 @@
           "claude": "strong"
         }
       },
-      "waiting_comment": 6847795564
+      "waiting_comment": 6847795564,
+      "waiting_turn": {
+        "behind": [
+          3817
+        ],
+        "ends": "2026-11-13T22:26:44Z",
+        "from_run": "43489380955",
+        "head": "30fa4fb5b780982bdc4788965f7219c12d33a055",
+        "model": "sonnet",
+        "provider": "claude-8",
+        "since": "2026-11-13T20:26:44Z"
+      }
     },
     "3811": {
       "action": "review",
