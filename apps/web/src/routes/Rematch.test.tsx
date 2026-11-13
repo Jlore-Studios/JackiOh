@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SERIES_POLL_SECONDS } from "@jackioh/server-config";
 
-import { GameResult } from "../game/Result.tsx";
+import { GameResult, resultSaysOpponentLeft } from "../game/Result.tsx";
 import { navigate, paths } from "../net/navigate.ts";
 import { rematchOffer, rematchStatus, type RematchOfferResponse, type RematchStatusResponse } from "../net/api.ts";
 import { PLAY_LEAN_NEWEST_KEY, PLAY_LEAN_SET_KEY, leanLabel } from "../game/LeanNewest.tsx";
@@ -58,14 +58,16 @@ describe("RematchButtons", () => {
     expect(screen.queryByTestId(rematchTestid.double)).toBeNull();
   });
 
-  it("renders nothing once the opponent is gone", async () => {
-    vi.mocked(rematchStatus).mockResolvedValue(statusOf({ opponentHere: false }));
-    renderButtons();
-    await waitFor(() => {
-      expect(vi.mocked(rematchStatus)).toHaveBeenCalled();
-    });
+  it("R3791000 says the opponent has left, in place of the offers, the lean picker and the ranked note", async () => {
+    vi.mocked(rematchStatus).mockResolvedValue(statusOf({ opponentHere: false, mode: "random" }));
+    renderButtons("open", false);
+    const left = await screen.findByTestId(rematchTestid.left);
+    expect(left).toHaveTextContent(/^Your opponent has left\.$/);
+    expect(left).toHaveAttribute("role", "status");
     expect(screen.queryByTestId(rematchTestid.offer)).toBeNull();
     expect(screen.queryByTestId(rematchTestid.double)).toBeNull();
+    expect(screen.queryByTestId(rematchTestid.leanNewest)).toBeNull();
+    expect(screen.queryByText(/needs a ranked match/i)).toBeNull();
   });
 
   it("both buttons offer with their stakes, and an offer waits for the opponent", async () => {
@@ -170,6 +172,73 @@ describe("RematchButtons", () => {
     expect(double).toBeDisabled();
     expect(screen.getByText(/needs a ranked match/i)).toBeInTheDocument();
     expect(screen.getByTestId(rematchTestid.offer)).not.toBeDisabled();
+  });
+});
+
+describe("R3791000 the rematch screen says when the opponent has left", () => {
+  it("R3791000 an offer made, then a pushed status with the opponent gone, gives the waiting line way to the left line", async () => {
+    const buttons = (pushed: RematchStatusResponse) => (
+      <RematchButtons token={TOKEN} matchId={MATCH_ID} connection="open" ranked pushed={pushed} />
+    );
+    const { rerender } = render(buttons(statusOf({ youOffered: 1 })));
+    expect(await screen.findByTestId(rematchTestid.status)).toHaveTextContent(/waiting for your opponent/i);
+    expect(screen.queryByTestId(rematchTestid.left)).toBeNull();
+
+    rerender(buttons(statusOf({ youOffered: 1, opponentHere: false })));
+    expect(await screen.findByTestId(rematchTestid.left)).toHaveTextContent("Your opponent has left.");
+    expect(screen.queryByTestId(rematchTestid.status)).toBeNull();
+    expect(screen.queryByTestId(rematchTestid.offer)).toBeNull();
+
+    rerender(buttons(statusOf({ youOffered: 1 })));
+    expect(await screen.findByTestId(rematchTestid.offer)).toBeInTheDocument();
+    expect(screen.queryByTestId(rematchTestid.left)).toBeNull();
+  });
+
+  it("R3791000 a closed socket and no status yet still render nothing", async () => {
+    const { container } = render(
+      <RematchButtons
+        token={TOKEN}
+        matchId={MATCH_ID}
+        connection="closed"
+        ranked
+        pushed={statusOf({ opponentHere: false })}
+      />,
+    );
+    await settle();
+    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByTestId(rematchTestid.left)).toBeNull();
+  });
+
+  it("R3791000 a result that already says the opponent left gets no second line", async () => {
+    const result = { winner: "p1", reason: "disconnect" } as const;
+    const { container } = render(
+      <GameResult
+        result={result}
+        viewer="p1"
+        form="panel"
+        actions={
+          <RematchButtons
+            token={TOKEN}
+            matchId={MATCH_ID}
+            connection="open"
+            ranked
+            pushed={statusOf({ opponentHere: false })}
+            opponentLeftInResult={resultSaysOpponentLeft(result, "p1")}
+          />
+        }
+      />,
+    );
+    await settle();
+    expect(container.querySelector(".result-overlay__reason")).toHaveTextContent("Your opponent left the match.");
+    expect(screen.queryByTestId(rematchTestid.left)).toBeNull();
+    expect(screen.queryByText("Your opponent has left.")).toBeNull();
+  });
+
+  it("R3791000 only the opponent's disconnect counts as the result saying so", () => {
+    expect(resultSaysOpponentLeft({ winner: "p1", reason: "disconnect" }, "p1")).toBe(true);
+    // The viewer left: the result says "You left the match."
+    expect(resultSaysOpponentLeft({ winner: "p1", reason: "disconnect" }, "p2")).toBe(false);
+    expect(resultSaysOpponentLeft({ winner: "p1", reason: "concede" }, "p1")).toBe(false);
   });
 });
 
@@ -520,7 +589,7 @@ describe("R3213000 the rematch status the match socket pushes", () => {
     resetVisibility();
   });
 
-  it("R3213000 with a pushed status nothing is read over three periods, each frame is drawn, and a pushed match id navigates", async () => {
+  it("R3213000 R3791000 with a pushed status nothing is read over three periods, each frame is drawn, and a pushed match id navigates", async () => {
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
     const { rerender } = render(<Both pushed={statusOf()} />);
     await settle({ advance: 3 * PERIOD });
@@ -534,6 +603,7 @@ describe("R3213000 the rematch status the match socket pushes", () => {
     rerender(<Both pushed={statusOf({ opponentHere: false })} />);
     await settle({ advance: PERIOD });
     expect(screen.queryByTestId(rematchTestid.offer)).toBeNull();
+    expect(screen.getByTestId(rematchTestid.left)).toHaveTextContent("Your opponent has left.");
     expect(vi.mocked(navigate)).not.toHaveBeenCalled();
 
     rerender(<Both pushed={statusOf({ youOffered: 1, opponentOffer: 1, matchId: "match-9" })} />);

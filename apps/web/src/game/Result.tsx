@@ -34,6 +34,11 @@ export function outcomeFor(result: Result, viewer: PlayerId): ResultOutcome {
   return seatOutcome(result.winner, result.reason, viewer);
 }
 
+/** R3791000: whether the result's own words already say the opponent left ("Your opponent left the match."): their disconnect, this seat's win. */
+export function resultSaysOpponentLeft(result: Result, viewer: PlayerId): boolean {
+  return result.reason === "disconnect" && outcomeFor(result, viewer) === "win";
+}
+
 /** BUILD M5-T4's overlay words, which e2e reads (`cy.expectResult`). */
 export const RESULT_WORD: Readonly<Record<ResultOutcome, string>> = { win: "Win", loss: "Loss", draw: "Draw" };
 

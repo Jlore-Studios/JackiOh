@@ -1,6 +1,7 @@
 // Rematch offers after an online match (SPEC §9.5, R672).
 // UI sends server intent and renders server status only (CLAUDE.md rule 7).
 // R1372, R924000: All random offers may carry the player's "More cards from" pick; Best-of-1 offers do not.
+// R3791000: says so when the opponent has left.
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
 
@@ -22,6 +23,7 @@ export const rematchTestid = {
   double: "rematch-double",
   incoming: "rematch-incoming",
   status: "rematch-status",
+  left: "rematch-left",
   leanNewest: "rematch-lean-newest",
 } as const;
 
@@ -32,6 +34,8 @@ export type RematchButtonsProps = {
   ranked: boolean;
   /** R3213000: the match socket's last `rematch` frame (`MatchSnapshot.rematch`); while it is held, nothing is read. */
   pushed?: RematchStatusResponse | null;
+  /** R3791000: the result's own words already say the opponent left, so this component says it no more. */
+  opponentLeftInResult?: boolean;
 };
 
 const MS_PER_SECOND = 1000;
@@ -178,7 +182,14 @@ export function RematchWatcher({
   return null;
 }
 
-export default function RematchButtons({ token, matchId, connection, ranked, pushed = null }: RematchButtonsProps): ReactElement | null {
+export default function RematchButtons({
+  token,
+  matchId,
+  connection,
+  ranked,
+  pushed = null,
+  opponentLeftInResult = false,
+}: RematchButtonsProps): ReactElement | null {
   const [status, setStatus] = useState<RematchStatusResponse | null>(null);
   const [offering, setOffering] = useState<RematchStakes | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -189,7 +200,18 @@ export default function RematchButtons({ token, matchId, connection, ranked, pus
     if (answer.matchId !== null) navigate(paths.match(answer.matchId));
   });
 
-  if (connection !== "open" || status === null || !status.opponentHere) return null;
+  if (connection !== "open" || status === null) return null;
+  // R3791000: the opponent is gone (a person who left, or a ladder bot's linger over, which read the same, R1452):
+  // one line in place of the offers, the wait, the picker and a refusal; nothing when the result says it already.
+  if (!status.opponentHere) {
+    return opponentLeftInResult ? null : (
+      <div className="rematch">
+        <p className="rematch-status" data-testid={rematchTestid.left} role="status">
+          {t("Your opponent has left.")}
+        </p>
+      </div>
+    );
+  }
 
   const random = status.mode === "random";
 
