@@ -254,8 +254,8 @@ mod r119_10_5_step_6_an_echo_repeats_granted_combo_parts_do_not_answer_what_its_
 
         s.play(FULLSEND, json!({}));
 
-        // Twinspell's grant was taken, so /fullsend resolved twice (§10.5 step 6): two "Refresh 3 mana"
-        // (8 − 2 − 4 = 2, refreshed to max 4, and the second has nothing to give back, R364) and two
+        // Twinspell's grant was taken, so /fullsend resolved twice (§10.5 step 6): two "Replenish 3 mana"
+        // (8 − 2 − 4 = 2, replenished to max 4, and the second has nothing to give back, R364) and two
         // "Combo: Draw 1" riders.
         s.expect_mana(P1, 4);
         assert_eq!(combo_draws(&s), 2);

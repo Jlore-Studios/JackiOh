@@ -46,6 +46,10 @@ pub struct LiveCard {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub created: Option<bool>,
+    /// R3536005: the card has evolved, or is marked to enter the field evolved.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub evolved: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub created_by: Option<String>,
@@ -153,6 +157,7 @@ impl From<&CardView> for LiveCard {
             radiant: card.radiant,
             chinese: card.chinese,
             created: card.created,
+            evolved: card.evolved,
             created_by: card.created_by.clone(),
             cost: Some(card.cost),
             embiggen_cost: card.embiggen_cost,
@@ -187,6 +192,7 @@ impl From<&UnitView> for LiveCard {
             radiant: unit.radiant,
             chinese: unit.chinese,
             created: unit.created,
+            evolved: unit.evolved,
             created_by: unit.created_by.clone(),
             cost: Some(unit.cost),
             attack: Some(unit.attack),
@@ -232,6 +238,7 @@ impl LiveCard {
             radiant: card.radiant,
             chinese: card.chinese,
             created: card.created,
+            evolved: card.evolved,
             created_by: card.created_by.clone(),
             cost: Some(card.cost),
             attack: card.attack,
@@ -240,6 +247,7 @@ impl LiveCard {
             power: card.power.clone(),
             vanilla: card.vanilla,
             preview: card.preview.clone(),
+            slumber: card.slumber,
             type_: Some(card.type_),
             tags: card.tags.clone(),
             brittle: card.brittle,
@@ -344,10 +352,8 @@ pub fn live_source(
     in_play.berserk = (unit && card.berserk == Some(true)).then_some(true);
     in_play.frozen = (unit && card.frozen == Some(true)).then_some(true);
     // R1839000, R1839001: a Dormant card, with its countdown.
-    in_play.dormant = card
-        .slumber
-        .filter(|_| unit)
-        .map(|slumber| DormantFace { turns: slumber.turns });
+    // R3556000: a Dormant Field Spell in the backrow too.
+    in_play.dormant = card.slumber.map(|slumber| DormantFace { turns: slumber.turns });
     in_play.frozen_forever = (unit && card.frozen_forever == Some(true)).then_some(true);
     // R1852000, R1852004: a Starship, with the pieces fused into it and the name it launched under.
     // R2249000: and the pieces themselves, which its face lists in place of its text.
@@ -369,6 +375,10 @@ pub fn live_source(
     // MD-B6, R943: a Created card, wherever the view carries the mark; R1956001: and the card that made it.
     if card.created == Some(true) {
         in_play.created = Some(true);
+    }
+    // R3536005: an Evolved card, wherever the view carries the mark.
+    if card.evolved == Some(true) {
+        in_play.evolved = Some(true);
     }
     in_play.created_by = card.created_by.clone();
     // ME-GRANT, R1107: the Death abilities other cards granted the unit, as its lines read them.

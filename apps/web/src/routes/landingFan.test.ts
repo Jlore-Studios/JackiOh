@@ -84,9 +84,9 @@ describe("R374 the landing fan is dealt at random", () => {
 });
 
 describe("R639 the rotation's pool", () => {
-  it("R639 is every non-token card of the shipped sets, Meditative included since v0.3.0, Meditative+ since v0.4.0, Stinkyscape and Training Grounds since their releases, as the catalog holds it", () => {
-    // #2204: Training Grounds ships, so its 60 cards join the pool.
-    const SETS: readonly string[] = ["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds"];
+  it("R639 is every non-token card of the shipped sets, Meditative included since v0.3.0, Meditative+ since v0.4.0, Stinkyscape, Training Grounds and Stinkyscape+ since their releases, as the catalog holds it", () => {
+    // #2204: Training Grounds ships, so its 60 cards join the pool; #3573: so do Stinkyscape+'s 166.
+    const SETS: readonly string[] = ["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"];
     const expected = Object.values(CATALOG).filter((def) => !def.token && SETS.includes(def.set));
     expect(ROTATION_POOL).toEqual(expected);
     expect(ROTATION_POOL.length).toBeGreaterThan(FAN_POOL.length);
@@ -197,7 +197,7 @@ describe("R639 one rotation step", () => {
       hand = rotateFan(hand, step, random);
       for (const { def } of hand) sets.add(def.set);
     }
-    expect(sets).toEqual(new Set(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds"]));
+    expect(sets).toEqual(new Set(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"]));
   });
 });
 

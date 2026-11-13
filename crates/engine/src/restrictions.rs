@@ -156,7 +156,11 @@ pub fn gauntlet_acts(state: &GameState) -> bool {
 /// R1849005: whether the unit stands in the Gauntlet — a unit zone of one of `GAUNTLET_LANES`, on either
 /// side. A Unit a carrier holds or one standing in the backrow is outside it.
 pub fn in_gauntlet(state: &GameState, unit: &CardInstance) -> bool {
-    slot_of(state, unit).is_some_and(|at| at.row == Row::Units && GAUNTLET_LANES.contains(&at.lane))
+    // R3546001: a GIGA is in the Gauntlet in either of its lanes.
+    slot_of(state, unit).is_some_and(|at| at.row == Row::Units)
+        && crate::giga::lanes_of(unit)
+            .iter()
+            .any(|lane| GAUNTLET_LANES.contains(lane))
 }
 
 /// R1849006: whether an aura that Units cannot be in Defense Position acts on the field now (Stinkyscape
@@ -170,6 +174,10 @@ pub fn defense_barred(state: &GameState) -> bool {
 /// R1839000: why a Dormant card may neither attack, be attacked, switch its position nor be picked —
 /// the one reason `legal_actions`, the reducer and the view all give.
 pub const SLUMBER_REFUSAL: &str = "that card is Dormant";
+
+/// R3554003: why a Unit may not attack across the slash — the one reason `legal_actions`, the
+/// reducer and the view all give.
+pub const SLASH_REFUSAL: &str = "that unit is across the slash";
 
 /// E35: this unit may make no attack, declared or forced ("can't attack or be attacked").
 pub fn cannot_attack(state: &GameState, unit: &CardInstance) -> bool {
@@ -218,6 +226,27 @@ pub fn attack_restriction_in(
     if inside != target_inside && gauntlet_acts(state) {
         return Err(EngineError::new("the Gauntlet's Units fight only each other"));
     }
+    // R3554003: a Unit attacks only Units on its own half of a slashed board — declared or
+    // forced, which both read this, and a Taunt across the slash walls nothing on this half. Heroes
+    // are shared by both halves (health stays shared), so they are attacked from either.
+    if let DamageTarget::Unit { instance } = target
+        && !crate::geometry::reaches(state, Some(attacker), instance)
+    {
+        return Err(EngineError::new(SLASH_REFUSAL));
+    }
+    // R3550001: a Unit that "can only attack the unit directly across from it" attacks only the
+    // enemy Unit across, never a hero — declared or forced, which both read this.
+    if crate::scripts::flags_of(state, attacker).attacks_only_across == Some(true) {
+        let across = match target {
+            DamageTarget::Hero { .. } => false,
+            DamageTarget::Unit { instance } => crate::combat::stands_across(state, attacker, instance),
+        };
+        if !across {
+            return Err(EngineError::new(
+                "this Unit can only attack the Unit directly across from it",
+            ));
+        }
+    }
     let defender = match target {
         DamageTarget::Hero { .. } => return Ok(()),
         DamageTarget::Unit { instance } => instance,
@@ -225,19 +254,13 @@ pub fn attack_restriction_in(
     if crate::slumber::is_slumbering(defender) {
         return Err(EngineError::new(SLUMBER_REFUSAL));
     }
-    if cannot_be_attacked(state, defender) {
+    // R3543002: Evasive is "Can't be attacked" as a keyword.
+    if cannot_be_attacked(state, defender) || auras.unit_has(defender, KeywordKind::Evasive) {
         return Err(EngineError::new("that unit cannot be attacked"));
     }
-    if attackable_only_from_lane(state, defender) {
-        let from = slot_of(state, attacker);
-        let to = slot_of(state, defender);
-        let same_lane = match (from, to) {
-            (Some(from), Some(to)) => from.lane == to.lane,
-            _ => false,
-        };
-        if !same_lane {
-            return Err(EngineError::new("only a unit in its lane may attack that unit"));
-        }
+    // R3546001: a GIGA meets "this lane" from either of its lanes (Top Loser's attacker included).
+    if attackable_only_from_lane(state, defender) && !crate::giga::lanes_meet(attacker, defender) {
+        return Err(EngineError::new("only a unit in its lane may attack that unit"));
     }
     if flies_out_of_reach(auras, attacker, defender) {
         return Err(EngineError::new(

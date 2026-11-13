@@ -8,7 +8,9 @@
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::catalog::{CatalogQueryArgs, def_of, excluding_def_id, glitch_or_not, pick_generated, query};
+use crate::catalog::{
+    CatalogQueryArgs, def_of, excluding_def_id, glitch_or_not, pick_generated_unique, query, query_cost,
+};
 use crate::damage::DamageTarget;
 use crate::enchantments::add_enchantment;
 use crate::faces::card_type_of;
@@ -18,8 +20,8 @@ use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
 use crate::temporary::is_temporary_card;
 use crate::wire::{
-    AttackHealth, CardDef, CardType, Enchantment, GameEvent, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Row,
-    Tuning, Zone, ZoneName, opponent_of,
+    AttackHealth, CardDef, CardType, CostRange, Enchantment, GameEvent, Keyword, KeywordKind, OneOrMany,
+    PLAYER_IDS, PlayerId, Row, Tuning, Zone, ZoneName, opponent_of,
 };
 use crate::zones::{
     LibraryPosition, MoveToZoneOptions, OffFieldZone, cease_to_exist, is_carried, move_to_zone, pile_at,
@@ -341,6 +343,8 @@ pub fn vanilla(args: TransformTarget) -> Effect {
         });
         // R1174000: a Vanilla removes Frozen, as Hearthstone's Silence removes Freeze.
         crate::freeze::unfreeze(&mut ctx.sink, &card.id);
+        // R3540004: and Burn and Toxic, as it removes Frozen.
+        crate::afflictions::clear_afflictions(&mut ctx.sink, &card.id);
     })
 }
 
@@ -461,7 +465,7 @@ pub fn transform_random(args: TransformRandomArgs) -> Effect {
                 .into_iter()
                 .filter(|def| olds.iter().all(|old| can_replace(&*ctx.state, old, def)))
                 .collect();
-            pick_generated(ctx.sink.rng, &pool, None).cloned()
+            pick_generated_unique(ctx.sink.rng, &pool, None, &mut ctx.draw_tally).cloned()
         } else {
             None
         };
@@ -481,7 +485,8 @@ pub fn transform_random(args: TransformRandomArgs) -> Effect {
                         .filter(|def| can_replace(&*ctx.state, old, def))
                         .collect();
                     let glitch: Option<&GameState> = if held { Some(&*ctx.sink.state) } else { None };
-                    pick_generated(ctx.sink.rng, &pool, glitch).cloned()
+                    // R3563000: each pick draws through the run's tally, unique while it holds.
+                    pick_generated_unique(ctx.sink.rng, &pool, glitch, &mut ctx.draw_tally).cloned()
                 }
             };
             let Some(def) = def else {
@@ -511,6 +516,87 @@ pub fn transform_random(args: TransformRandomArgs) -> Effect {
             {
                 crate::draw::run_arrival_hooks(ctx, &live);
             }
+        }
+    })
+}
+
+/// `transformCostStep`'s argument: the cards to rewrite (the scope's, else the one the target names) and
+/// how many more each new card costs.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct TransformCostStepArgs {
+    #[serde(flatten)]
+    pub target: TransformTarget,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<CardScope>,
+    pub step: i32,
+}
+
+/// R3557004 (Stinkyscape+ #103 Transcend, #104 Tireless Cultivation, #105 Spacersi): "Transform into
+/// one that costs (N) more". Each card of the scope (else the target) that a Transform may reach
+/// (Immutable refuses it, R23; a Dormant card is passed by, R1839000; one beneath a Stack pile is in no
+/// scope) is Replaced (§6.3, R35) in place, no Cry (R691), keeping its face, by a card of its own type
+/// whose printed price (R65: X as 0, an embiggen card at its base price) is the old card's own plus `step`, one
+/// drawn with `ctx.rng` from §5.1's pool (shipped sets, never a token, R380, R1420), never the running
+/// card (R387). With none at that price the closest higher one is used, and with none at all, or in a
+/// row the card could not stay in, the card stays as it is (R129). The price it starts from is the old
+/// card's printed one, read as the pool reads prices, so cost changes on the field move nothing.
+pub fn transform_cost_step(args: TransformCostStepArgs) -> Effect {
+    Effect::new("transformCostStep", move |ctx| {
+        let olds: Vec<CardInstance> = match &args.scope {
+            Some(scope) => cards_in_card_scope(ctx, scope, None)
+                .into_iter()
+                .filter(|entry| entry.matches)
+                .map(|entry| entry.card)
+                .collect(),
+            None => instance_by_id_or_spec(
+                ctx,
+                args.target.instance_id.as_deref(),
+                args.target.target.as_ref(),
+            )
+            .into_iter()
+            .collect(),
+        };
+        let own: Option<String> = match &ctx.self_ {
+            Some(this) => Some(this.def_id.clone()),
+            None => ctx.def_id.clone(),
+        };
+        for old in olds {
+            if !transformable(ctx, &old) || crate::slumber::is_slumbering(&old) {
+                continue;
+            }
+            let start = query_cost(def_of(Some(&*ctx.state), &old.def_id));
+            let asked = excluding_def_id(
+                Some(&*ctx.state),
+                &CatalogQueryArgs {
+                    type_: Some(OneOrMany::One(card_type_of(ctx.state, &old))),
+                    cost_range: Some(CostRange {
+                        min: Some(start + args.step),
+                        max: None,
+                    }),
+                    ..CatalogQueryArgs::default()
+                },
+                own.as_deref(),
+            );
+            let higher: Vec<&CardDef> = query(&asked)
+                .into_iter()
+                .filter(|def| can_replace(&*ctx.state, &old, def))
+                .collect();
+            // The exact price when the pool has it, else the cheapest above it.
+            let Some(price) = higher.iter().map(|def| query_cost(def)).min() else {
+                continue;
+            };
+            let pool: Vec<&CardDef> = higher
+                .into_iter()
+                .filter(|def| query_cost(def) == price)
+                .collect();
+            // R3563000: the pick draws through the run's tally, unique while it holds.
+            let Some(def) = pick_generated_unique(ctx.sink.rng, &pool, None, &mut ctx.draw_tally).cloned()
+            else {
+                continue;
+            };
+            replace_card(ctx, &old, &def, old.radiant);
         }
     })
 }
@@ -611,7 +697,8 @@ pub fn swap_book(args: SwapBookArgs) -> Effect {
             .into_iter()
             .filter(|def| def.id != old.def_id && def.id != args.from)
             .collect();
-        let Some(def) = pick_generated(ctx.sink.rng, &pool, None) else {
+        // R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
+        let Some(def) = pick_generated_unique(ctx.sink.rng, &pool, None, &mut ctx.draw_tally) else {
             return;
         };
         let temporary = is_temporary_card(ctx.state, &old)

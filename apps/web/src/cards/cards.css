@@ -115,6 +115,16 @@
   left: auto;
 }
 
+.card.cf-host--minion > .counter-burn {
+  right: 34px;
+  left: auto;
+}
+
+.card.cf-host--minion > .counter-toxic {
+  right: 50px;
+  left: auto;
+}
+
 /* A Flying minion's counters rise with its face, in the motion gate at the end of this file. */
 
 .card.cf-host--compact > .counter {

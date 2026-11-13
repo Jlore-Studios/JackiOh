@@ -109,7 +109,34 @@ const SET_VARIETY_SALTS: Readonly<Record<string, number>> = {
   stinkyscape: 0x275c6732,
   // R2194000: so no held Training Grounds card repeats a shipped card's picture.
   traininggrounds: 0x3c6ef373,
+  // R3572001: so no held Stinkyscape+ card repeats a shipped card's picture.
+  stinkyscapeplus: 0x1b873593,
 };
+/**
+ * R3572001: the Stinkyscape+ cards whose variety stream is drawn again, by the number of draws it is moved on, because the
+ * first draw lands on a layout, backdrop, sky, emblem and motif another card of its theme has (R503): a set of 200 cards
+ * cannot be kept apart by one salt. The table is found by running the draw card by card in catalog order; a card not in it
+ * keeps the set's own draw, and #t-ai-03's is moved on until its layout fills the four B40 asks of the AI tokens' group.
+ */
+const STINKYSCAPE_PLUS_REDRAWS: Readonly<Record<string, number>> = {
+  "stinkyscapeplus-005": 1,
+  "stinkyscapeplus-029": 2,
+  "stinkyscapeplus-053": 1,
+  "stinkyscapeplus-064": 1,
+  "stinkyscapeplus-074": 1,
+  "stinkyscapeplus-081": 1,
+  "stinkyscapeplus-087": 1,
+  "stinkyscapeplus-090": 1,
+  "stinkyscapeplus-094": 1,
+  "stinkyscapeplus-105": 1,
+  "stinkyscapeplus-122": 1,
+  "stinkyscapeplus-131": 1,
+  "stinkyscapeplus-149": 1,
+  "stinkyscapeplus-153": 1,
+  "stinkyscapeplus-t-ai-03": 4,
+};
+/** What a redraw adds to the salt, per draw it moves. */
+const REDRAW_STEP = 0x9e3779b1;
 /** Salt the motif's and the family twist's own streams, so neither moves anything else. */
 const MOTIF_SALT = 0x165667b1;
 const TWIST_SALT = 0x3c6ef372;
@@ -1616,7 +1643,9 @@ function accentCorner(emblem: { x: number; y: number }): { x: number; y: number 
 export function varietySalt(defId: string): number {
   const dash = defId.indexOf("-");
   const prefix = dash < 0 ? "" : defId.slice(0, dash);
-  return Object.hasOwn(SET_VARIETY_SALTS, prefix) ? (SET_VARIETY_SALTS[prefix] ?? VARIETY_SALT) : VARIETY_SALT;
+  const salt = Object.hasOwn(SET_VARIETY_SALTS, prefix) ? (SET_VARIETY_SALTS[prefix] ?? VARIETY_SALT) : VARIETY_SALT;
+  const redraws = Object.hasOwn(STINKYSCAPE_PLUS_REDRAWS, defId) ? (STINKYSCAPE_PLUS_REDRAWS[defId] ?? 0) : 0;
+  return redraws === 0 ? salt : (salt + Math.imul(redraws, REDRAW_STEP)) >>> 0;
 }
 
 export function artSpec(

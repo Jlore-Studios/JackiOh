@@ -523,3 +523,56 @@ describe("R1410 a trio's decks carry the Training Grounds set's numbers, 6000 + 
     expect(before.slots[1]?.dropped.unknown).toEqual([6041, 6001]);
   });
 });
+
+describe("R1410 a trio's decks carry the Stinkyscape+ set's numbers, 7000 + n (the release, issue #3573)", () => {
+  const base = catalog.cards[fixtureCardId(1)] as CardDef;
+  const inSet = (id: string, set: CardDef["set"], index: string): CardDef => ({ ...base, id, index, name: id, set });
+  const eightSets: CatalogSnapshot = {
+    version: catalog.version,
+    cards: {
+      ...catalog.cards,
+      "stinkyscape-148": inSet("stinkyscape-148", "Stinkyscape", "148"),
+      "traininggrounds-041": inSet("traininggrounds-041", "Training Grounds", "41"),
+      "stinkyscapeplus-001": inSet("stinkyscapeplus-001", "Stinkyscape+", "1"),
+      "stinkyscapeplus-064": inSet("stinkyscapeplus-064", "Stinkyscape+", "64"),
+    },
+  };
+  const withoutSet: CatalogSnapshot = {
+    version: catalog.version,
+    cards: Object.fromEntries(Object.entries(eightSets.cards).filter(([, def]) => def.set !== "Stinkyscape+")),
+  };
+
+  /**
+   * A version 2 trio code of Core, Stinkyscape and Training Grounds cards in its first slot, exactly as
+   * this client wrote it before the Stinkyscape+ set had an offset (pinned here).
+   */
+  const MINTED_BEFORE = "JKT2.E0JlZm9yZSBTdGlua3lzY2FwZSsBA0JvYgOcKJkvK7eP";
+  const MINTED_SLOTS: readonly TrioCodeSlot[] = [
+    { name: "Bob", cards: ["stinkyscape-148", "traininggrounds-041", fixtureCardId(43)] },
+    null,
+    null,
+  ];
+
+  it("R1410 a trio code minted before the Stinkyscape+ set had a number is byte for byte the code written now, and reads back the same", () => {
+    expect(encodeTrioCode("Before Stinkyscape+", MINTED_SLOTS, eightSets)).toBe(MINTED_BEFORE);
+    for (const cards of [eightSets, withoutSet]) {
+      const decoded = expectOk(decodeTrioCode(MINTED_BEFORE, cards, null));
+      expect(decoded.name).toBe("Before Stinkyscape+");
+      expect(decoded.slots.map((slot) => slot?.cards ?? null)).toEqual(MINTED_SLOTS.map((slot) => slot?.cards ?? null));
+    }
+  });
+
+  it("R1410 writes a Stinkyscape+ card in a trio's deck and reads it back from its own set", () => {
+    const slots: readonly TrioCodeSlot[] = [
+      null,
+      { name: "Plant", cards: ["stinkyscapeplus-064", fixtureCardId(1), "traininggrounds-041", "stinkyscapeplus-001"] },
+      null,
+    ];
+    const code = encodeTrioCode("Stinkyscape+", slots, eightSets);
+    const decoded = expectOk(decodeTrioCode(code, eightSets, null));
+    expect(decoded.slots[1]?.cards).toEqual(["stinkyscapeplus-064", fixtureCardId(1), "traininggrounds-041", "stinkyscapeplus-001"]);
+    const before = expectOk(decodeTrioCode(code, withoutSet, null));
+    expect(before.slots[1]?.cards).toEqual([fixtureCardId(1), "traininggrounds-041"]);
+    expect(before.slots[1]?.dropped.unknown).toEqual([7064, 7001]);
+  });
+});

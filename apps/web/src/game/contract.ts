@@ -77,6 +77,8 @@ export const testid = {
   concede: "concede",
   log: "log",
   board: "board",
+  /** R3554000: the Black Hole lane's swallowed count (`"n/capacity"`). */
+  blackHoleCount: "black-hole-count",
   seatSwitch: "seat-switch",
   result: "result-overlay",
   banner: "turn-banner",

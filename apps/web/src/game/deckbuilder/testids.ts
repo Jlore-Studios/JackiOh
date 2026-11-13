@@ -275,9 +275,16 @@ export const TRIO_IMPORT_ERROR = "trio-import-error";
 // No new name starts with `card-` or `hand-card-`: `cy.fieldCardByName` and `cy.handCardByName`
 // select on those prefixes, and a new id carrying one would hijack them.
 
+// R3572000: a Greek letter reads as its name, so the Automa-α to Automa-ζ and Automa-Ω chips each get an id.
 export function slugOf(value: string): string {
   return value
     .toLowerCase()
+    .replace(/α/g, "alpha")
+    .replace(/β/g, "beta")
+    .replace(/γ/g, "gamma")
+    .replace(/δ/g, "delta")
+    .replace(/ζ/g, "zeta")
+    .replace(/ω/g, "omega")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
