@@ -439,12 +439,6 @@ pub struct EvalWeights {
     /// lent one, R1869003, or a field permission such as Second Wind's), either side's, since a
     /// graveyard is public. At 0 nothing is read.
     pub graveyard_playable: f64,
-    /// R3575800, §2.4, R4: the share of an unseen hand card's price (`hand_card` + `hand_per_cost` ×
-    /// `opponent_hand_cost`) a side loses for each draw its coming start of turn takes that its hand has
-    /// no room for (`coming_burns`): the draw is burned, so it is that one card fewer in hand. Read for
-    /// the side whose turn is not running, whose hand nothing of its own changes before that draw. At 0
-    /// nothing is read.
-    pub burned_draw_share: f64,
     /// §3.2, R13, R3695001: the share of its `unit_worth` a card dormant under one of the seat's own
     /// unit piles counts. It resumes when the cards above it leave.
     pub dormant_share: f64,
@@ -622,9 +616,6 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // one more play, once, and only while its permission lasts. At 0.5 its screen read 202-198, edge 0.01
     // (-0.021 to 0.041), against the control (training/improve.md, A screen).
     graveyard_playable: 0.5,
-    // R3575800: a whole card, untuned. A burned draw is a card the side would otherwise hold, at the
-    // price `material` gives a card in a hand it cannot see, the drawn card being one it cannot see yet.
-    burned_draw_share: 1.0,
     // R3695001: half, as a turn's wait is for R2380000's shares: a card beneath an own Stack pile acts
     // again only once the cards above it leave. #1506 had it off (at 0.5 and 1.0 its screen read
     // 200-200, edge 0.0, -0.024 to 0.024), so casting Drone Core X gained only its Shield Layer and
@@ -850,7 +841,6 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     alt_win: 0.0,
     doomed_hand_discount: 0.0,
     graveyard_playable: 0.0,
-    burned_draw_share: 0.0,
     dormant_share: 0.0,
     dormant_card: 0.0,
     slumber_turn_share: 0.0,

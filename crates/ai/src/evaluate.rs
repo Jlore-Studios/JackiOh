@@ -21,8 +21,8 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use indexmap::IndexSet;
 use jackioh_engine::config::{
-    CALL_TO_CHAOS_RADIANT_EFFECTS, DRAW_EVERY_TURN, DRAWS_PER_TURN, DUOS_OWN_HEALTH, FIRST_GRADE,
-    HERO_HEALTH, JADE_ASCEND_AT, JADE_BEAUTY_AT, TURN_CAP_PLAYER_TURNS,
+    CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT, JADE_BEAUTY_AT,
+    TURN_CAP_PLAYER_TURNS,
 };
 use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
 use jackioh_engine::float::float_cuts_in_hand;
@@ -36,13 +36,12 @@ use jackioh_engine::{
     attacks_per_turn, awaken_card, backrow_is_public, board_totals, cannot_attack, card_at, card_keywords,
     card_type_of_face, credit_lapsing, death_hook_of, dormant_starship_of, effective_cost, effective_life,
     exit_mark, face_of, find_def, find_instance, find_instance_mut, first_entry_zone, frozen_next_turn,
-    gauntlet_acts, hand_cap_of, handicap_of, has_keyword, heal_multiplier_of, hero_armor_of,
-    is_extra_turn_card, is_slumbering, is_standing_unit, is_starship_piece, is_temporary_card,
-    launched_starship_of, left_field_after, legal_actions, lost_refreshes_left, modifier_is_live,
-    outcome_for, owed_mana_of, own_cost, pierces, pile_at, playable_from_graveyard, query_cost, queue_hook,
-    reset_instance, script_of, settle, slots_of, stats_with_buffs, subsystems, sync_fused_scripts,
-    takes_strike_back, trigger_holders_with_hook, unit_has, unit_view, units_on_field_of,
-    why_sandbox_refused, with_pool_hold,
+    gauntlet_acts, has_keyword, heal_multiplier_of, hero_armor_of, is_extra_turn_card, is_slumbering,
+    is_standing_unit, is_starship_piece, is_temporary_card, launched_starship_of, left_field_after,
+    legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces,
+    pile_at, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of, settle, slots_of,
+    stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back, trigger_holders_with_hook, unit_has,
+    unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold,
 };
 use serde::{Deserialize, Serialize};
 
@@ -615,26 +614,6 @@ fn doomed_hand_card_value(state: &GameState, card: &CardInstance, doomed: bool, 
         * kept
 }
 
-/// R3575800, §2.4, R4, R183, R3582000: the draws `player`'s coming start of turn takes that its hand has
-/// no room for, each burned: DRAWS_PER_TURN plus its handicap's `extraDrawsPerTurn` (public, R180) on a
-/// turn its `drawEvery` lets it draw, no more than its library holds (the rest are fatigue, priced
-/// apart), past its hand cap (`hand_cap_of`). A draw a card or trap adds is not foreseen.
-pub fn coming_burns(state: &GameState, player: PlayerId) -> i32 {
-    let side = &state.players[player];
-    let handicap = handicap_of(side);
-    let every = handicap
-        .draw_every
-        .unwrap_or(DRAW_EVERY_TURN)
-        .max(DRAW_EVERY_TURN);
-    if (side.turns_started + 1) % every != 0 {
-        return 0;
-    }
-    let library = i32::try_from(side.library.len()).unwrap_or(i32::MAX);
-    let hand = i32::try_from(side.hand.len()).unwrap_or(i32::MAX);
-    let draws = (DRAWS_PER_TURN + handicap.extra_draws_per_turn).clamp(0, library);
-    (hand.saturating_add(draws) - hand_cap_of(state, player)).clamp(0, draws)
-}
-
 /// R962: the steps a Jade Counter at `jade` has climbed toward the next threshold it has not crossed.
 /// It only rises (R961): toward JADE_BEAUTY_AT, then toward JADE_ASCEND_AT, then none.
 fn jade_steps(jade: i32) -> i32 {
@@ -941,14 +920,6 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
                 value += w.graveyard_playable * hand_card_value(state, card, w);
             }
         }
-    }
-
-    // R3575800: a draw the side's coming turn will burn is a card fewer in hand, at an unseen card's
-    // price. Only the side whose turn is not running: the other may still empty its hand first.
-    if w.burned_draw_share != 0.0 && state.active != player {
-        value -= w.burned_draw_share
-            * f64::from(coming_burns(state, player))
-            * (w.hand_card + w.hand_per_cost * w.opponent_hand_cost);
     }
 
     value += w.library_card * (side.library.len() as f64).min(w.library_comfort);
