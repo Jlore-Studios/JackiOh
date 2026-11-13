@@ -16486,13 +16486,14 @@
     "3881": {
       "action": "review",
       "asks": [],
-      "audit_tier": "",
+      "audit_tier": "strong",
       "ci_early": true,
       "ci_fixed_head": "059bc2a05bf7b8607639efe876ae458578e9fbc9",
       "ci_fixes": 1,
       "ci_on_head": true,
       "ci_run_id": 43491959877,
       "ci_sha": "a122c349ea471133f525b04bce6497b1636ae61d",
+      "cross_rounds": 1,
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
@@ -16509,13 +16510,20 @@
       },
       "interruptions": 0,
       "issue": 3837,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The issue asks that any spec text saying Portal to the Past gives nothing on an empty board be changed along with it, but two ruling notes still say C+ #29 fizzles there, which now contradicts R3837003.",
+          "evidence": "R0508.md:11 reads \"The AI's seat never has a last board ... so the AI's C+ #29 fizzles.\" R2706000.md:10 reads \"it brings no last board and leaves none ([[R508]]), and C+ #29 cast in it fizzles.\" Both seats now fall back through `portal(true)` in c029_portal_to_the_past.rs. The diff changes R0417's matching sentence to \"falls back ([[R3837003]])\" but leaves these two alone. Fix: give each the same one-sentence amendment, e.g. \"so the AI's C+ #29 falls back ([[R3837003]])\" and \"and C+ #29 cast in it falls back ([[R3837003]])\".",
+          "severity": "blocking",
+          "where": "spec/rulings/R0508.md:11"
+        }
+      ],
       "live": "reviewing",
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
-      "queued_at": "2026-11-13T22:29:37Z",
+      "queued_at": "2026-11-13T23:07:35Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
@@ -16540,7 +16548,7 @@
         "provider": "claude-8",
         "run": "43498714409"
       },
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-11-13T22:57:18Z",
       "stop_requested": false,
       "taken_asks": [],
