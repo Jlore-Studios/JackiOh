@@ -278,6 +278,10 @@ export const paths = {
   watch: (matchId: string): string => "/watch/" + matchId,
   /** #936 B61–B64: a Duos co-op match against the AI team. */
   duos: (matchId: string): string => `/duos/${matchId}`,
+  /** #3727: daily games, a move every few days: the games, challenges and seeks, and the notifications. */
+  daily: "/daily",
+  /** #3727: one daily game's board, read from the server on every move (no socket). */
+  dailyGame: (matchId: string): string => `/daily/${matchId}`,
   /** #936 B65: the four-seat Duos hotseat over WASM; production serves a 404 there, as at `hotseat`. */
   duosDev: "/dev/duos",
   /** R2784000: the card-animation motif gallery; production serves a 404 there, as at `hotseat`. */
@@ -306,12 +310,17 @@ export function duosIdOf(path: string): string | null {
   return idUnder(path, "duos");
 }
 
+export function dailyIdOf(path: string): string | null {
+  return idUnder(path, "daily");
+}
+
 /** R2117000: the board routes, whose moves the animation queue owns (practice's setup shares its game's path). */
 export function isBoardPath(path: string): boolean {
   return (
     matchIdOf(path) !== null ||
     watchIdOf(path) !== null ||
     duosIdOf(path) !== null ||
+    dailyIdOf(path) !== null ||
     path === paths.practice ||
     path === paths.hotseat ||
     path === paths.duosDev

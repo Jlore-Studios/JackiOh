@@ -434,7 +434,7 @@ ability's words (its `{key}`s filled from the card's `params`) as tooltip and ac
 `activate-<instanceId>` with its badge `activate-uses-<instanceId>`; each ability counts its own uses and
 cooldown (R1751000), and `namedAbility` (`contract.ts`) is kept only for the ability a press names. It is
 live exactly when `legal` lists that card's `activate`; otherwise it is greyed and its tooltip gives the
-view's `reason`. A press reports `{ on: "activate" }`, and `actions.ts` builds the activation exactly as a
+view's `reason`, and a press shows that reason in the board's reason line and sends nothing (R3768000). A press reports `{ on: "activate" }`, and `actions.ts` builds the activation exactly as a
 play's choices are built: one listed body is sent at once, except on a card listing several abilities,
 which asks which first (the `ability` need, a Discover of choice cards in `Prompt.tsx` showing each
 ability's words and uses left, even when only one is legal) and leaves the card's other abilities usable
@@ -456,8 +456,9 @@ zone is picked by clicking the unit or its zone.
 for, or whose view carries a `tradeReason`, gets the Duos pass control's bar when pointed at
 (`TradeControl.tsx` over `cardBar.ts`, which `duos/CardActions.tsx` shares): `trade-bar` holding
 `trade-<instanceId>`, "Trade" with the Trades left from the view's `trades`. It is live
-exactly when `legal` lists that `trade` and sends that body; otherwise it is greyed with the engine's
-reason as its tooltip. On a Duos board the button rides the card bar beside the pass control, and
+exactly when `legal` lists that `trade` and sends that body; otherwise it is greyed (`aria-disabled`, focusable) with the engine's
+reason as its tooltip and accessible description, and a press shows it in the board's reason line and sends
+nothing (R3768000). On a Duos board the button rides the card bar beside the pass control, and
 Game's own bar is off (`tradeBar={false}`).
 
 **Plays from the graveyard** (B5 E11). While `legal` lists a `play` for a card in the viewer's
@@ -1009,6 +1010,46 @@ Test ids, mirrored in `e2e/support/testids.ts`: `together-add-input`,
 `duos-portal`, `duos-both`, `duos-board-own`, `duos-board-teammate`, `duos-pass`, `duos-pool`,
 `duos-own-hp`, `duos-teammate-strip`, `duos-ping-wheel`, `duos-ping-<kind>`, `duos-ping-marker`,
 `sideline-strip`, `sideline-emote`, `sideline-menu` and `sideline-mute`.
+
+## Daily games
+
+Daily games (SPEC §9.13, #3727) are a 1v1 game played a move every 1, 3, 7 or 14 days, by a challenge to
+any friend or the daily queue. The browser runs no engine and opens no socket for one: every read and
+action is one HTTPS request (`crates/server/README.md`, Daily games), and who holds the move, until when,
+what is legal and every refusal are the server's (rule 7). The times per move, the urgent hours and the
+list's sizes are `crates/shared`'s, read from the WebAssembly module (`wasm/index.ts` `dailyConstants`).
+
+```
+routes (net/navigate.ts paths, public/_redirects, behind the gate as /together is):
+  /daily                 daily/DailyRoute.tsx: Your move (least time left first), Their move, the
+                         challenges in and out, the seeks, the games that ended (daily/order.ts); each
+                         game one row (opponent and portrait, mode, turn, both lives, "Your move · 1d 4h
+                         left", urgent under DAILY_URGENT_HOURS); New daily game; the notifications
+                         (email on or off, push on this device, Add to Home Screen on an iPhone or iPad
+                         outside it); the tab reads "Your move (n)"; read again when the social read's
+                         dailyWaiting changes
+  /daily/:matchId        daily/DailyBoard.tsx: Game.tsx on the server's view and legal; each action one
+                         POST sent after the seq it read, under a fresh nonce; End turn says it sends the
+                         move; the clock pill in days and hours (daily/DailyClockPill.tsx); Next game to the
+                         next game waiting once the move has passed; "Lost on time" and "Won on time"; a
+                         notice when the game plays on an older card version; once it ends, Rematch (a new
+                         daily challenge to the opponent at its mode and time, NewDailyDialog's rematch)
+net/daily.ts             fetch wrappers for every daily route, typed
+daily/NewDailyDialog.tsx challenge any friend (online or not) or find an opponent, with daily/DailyFields.tsx:
+                         the mode, its deck or lean, and the time per move on the segmented toggle; as a
+                         rematch, only the deck or lean, to the finished game's opponent
+daily/DailyBadge.tsx     the count of games waiting on the player (the social read's dailyWaiting), on
+                         the Play hub's Daily games
+daily/push.ts            this device's push subscription from GET /api/daily/settings's vapidPublicKey,
+                         kept at POST /api/daily/push; dropped at sign-out (routes/account.tsx)
+public/sw.js             the service worker: shows a push and opens its game; caches nothing
+public/manifest.webmanifest  the web app manifest, so iOS and iPadOS deliver web push once the site is
+                         added to the Home Screen
+```
+
+The friends panel's and /together's Challenge (`together/ChallengeDialog.tsx`) offers Live (an online, idle
+friend, as before) or Daily (any friend). Test ids are `daily/testids.ts`'s, mirrored in
+`e2e/support/testids.ts`.
 
 ## Practice
 

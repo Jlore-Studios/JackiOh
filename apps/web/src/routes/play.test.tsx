@@ -338,6 +338,8 @@ describe("R1578000 the Play hub", () => {
     // B13: the Play hub links the Dungeon run.
     [playTestid.dungeon, paths.dungeon],
     [playTestid.together, paths.together],
+    // #3727: daily games, beside Play together.
+    [playTestid.daily, paths.daily],
     [playTestid.replays, paths.replays],
   ];
 

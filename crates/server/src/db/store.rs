@@ -31,6 +31,7 @@ use jackioh_engine::wire::{
     Action, ActionType, EmoteId, GameEventType, GameMode, GameOverReason, GameRecord, LeanPick, ListTotal,
     PlayerId, PortraitId, SourceFilter, StatsTotals,
 };
+use jackioh_shared::host::daily::{DailyBoard, DailyClock};
 
 use super::{fake, pg};
 use crate::bots::cosmetics::BotCosmetics;
@@ -3021,5 +3022,284 @@ impl Tx<'_> {
     /// it (as `shares_sharers` judges each), first shared first.
     pub async fn shares_by(&mut self, match_id: &str, sharer: &str) -> StoreResult<Vec<String>> {
         dispatch!(self, shares_by(match_id, sharer))
+    }
+}
+
+// Daily games (SPEC §9.13, #3727)
+// Migration 0089: a 1v1 match played at days per move beside its row in `matches`, its invites (a
+// challenge to a friend, a seek any other player may take), and how its players are told it is
+// their move (an email setting and its unsubscribe token, the browsers' push subscriptions). The
+// rules are `daily/*` and `jackioh_shared::host::daily`; these are their rows. Every time is epoch ms.
+
+store_union! {
+    /// §9.13: a challenge names one friend; a seek waits for any other player (`daily_invites.kind`).
+    pub enum DailyInviteKind {
+        Challenge = "challenge",
+        Seek = "seek",
+    }
+}
+
+store_union! {
+    /// §9.13: where an invite stands (`daily_invites.state`). Only an open one may be answered; a
+    /// challenge closes accepted, declined, cancelled or expired, a seek paired, cancelled or expired.
+    pub enum DailyInviteState {
+        Open = "open",
+        Accepted = "accepted",
+        Declined = "declined",
+        Cancelled = "cancelled",
+        Expired = "expired",
+        Paired = "paired",
+    }
+}
+
+/// §9.13: a daily game beside its match (`public.daily_games`): the accounts at p1 and p2 as the
+/// game began (seat order, like `MatchRow.players`), its mode (`bo1` or `random`) and days per
+/// move, its clock and its public board, the earliest deadline its clock holds, and when it began
+/// and ended. Running while `ended_at` is `None`.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct DailyGameRow {
+    pub match_id: String,
+    pub players: (String, String),
+    pub mode: QueueMode,
+    pub per_move_days: i32,
+    pub clock: DailyClock,
+    pub board: DailyBoard,
+    pub next_deadline_at: Option<i64>,
+    /// The seq of the log's last row the clock and board are of (0 before the first action), which a
+    /// move's write is conditional on ([`Tx::daily_games_put`]).
+    pub seq: i64,
+    pub created_at: i64,
+    pub ended_at: Option<i64>,
+}
+
+/// §9.13: a daily challenge or seek (`public.daily_invites`): the sender, the friend a challenge
+/// names (`None` for a seek), the mode and days per move, the sender's frozen choice (its deck or
+/// deal, as the server froze it), where it stands, the match it made, and when it lapses.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct DailyInviteRow {
+    pub id: String,
+    pub kind: DailyInviteKind,
+    pub from_profile: String,
+    pub to_profile: Option<String>,
+    pub mode: QueueMode,
+    pub per_move_days: i32,
+    pub choice: Value,
+    pub state: DailyInviteState,
+    pub match_id: Option<String>,
+    pub created_at: i64,
+    pub expires_at: i64,
+}
+
+/// §9.13: an account's daily notice settings (`public.daily_notify`): whether it is emailed when a
+/// game waits on it, the token its unsubscribe link carries (RFC 8058), and when it was last
+/// emailed and pushed.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct DailyNotifyRow {
+    pub profile_id: String,
+    pub email_on: bool,
+    pub unsubscribe_token: String,
+    pub last_email_at: Option<i64>,
+    pub last_push_at: Option<i64>,
+}
+
+/// §9.13: one browser's Web Push subscription (`public.push_subscriptions`), one per endpoint.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PushSubRow {
+    pub id: String,
+    pub profile_id: String,
+    pub endpoint: String,
+    pub p256dh: String,
+    pub auth: String,
+    pub created_at: i64,
+}
+
+impl Tx<'_> {
+    // daily games
+
+    /// §9.13: writes the daily game beside its match, whose `matches` row this transaction (or an
+    /// earlier one) wrote first. A second row for one match is an error.
+    pub async fn daily_games_create(&mut self, row: &DailyGameRow) -> StoreResult<()> {
+        dispatch!(self, daily_games_create(row))
+    }
+
+    /// One daily game, running or ended, or `None` (an id that is not a uuid among them).
+    pub async fn daily_games_get(&mut self, match_id: &str) -> StoreResult<Option<DailyGameRow>> {
+        dispatch!(self, daily_games_get(match_id))
+    }
+
+    /// §9.13, a player's list: every running game `profile_id` holds either seat in, oldest first,
+    /// then the newest `recent_finished` ended ones, newest ended first (the match id breaking a tie
+    /// in both).
+    pub async fn daily_games_of(
+        &mut self,
+        profile_id: &str,
+        recent_finished: i64,
+    ) -> StoreResult<Vec<DailyGameRow>> {
+        dispatch!(self, daily_games_of(profile_id, recent_finished))
+    }
+
+    /// §9.13: after the move logged at `after + 1` (or the game's end), the running game's clock,
+    /// board, earliest deadline and `ended_at`, and its `seq` moved to `after + 1`. Only a running row
+    /// still at `after` is written: false, and nothing written, when the game has ended already, a
+    /// move was written after `after` (another request read the same seq, and its row stands in the
+    /// log, even under the same nonce), or there is none.
+    pub async fn daily_games_put(
+        &mut self,
+        match_id: &str,
+        after: i64,
+        clock: &DailyClock,
+        board: &DailyBoard,
+        next_deadline_at: Option<i64>,
+        ended_at: Option<i64>,
+    ) -> StoreResult<bool> {
+        dispatch!(
+            self,
+            daily_games_put(match_id, after, clock, board, next_deadline_at, ended_at)
+        )
+    }
+
+    /// §9.13, the sweep: the running games whose earliest deadline is at or before `now`, and the
+    /// games that ended by `now` whose match is still `live` (their result's write failed, so the
+    /// sweep writes it again), by that deadline or end (the match id breaking a tie).
+    pub async fn daily_games_due(&mut self, now: i64) -> StoreResult<Vec<String>> {
+        dispatch!(self, daily_games_due(now))
+    }
+
+    /// Every running daily game, oldest first (the match id breaking a tie).
+    pub async fn daily_games_running(&mut self) -> StoreResult<Vec<DailyGameRow>> {
+        dispatch!(self, daily_games_running())
+    }
+
+    /// §9.13's cap: the running games `profile_id` holds either seat in, plus the open seeks and
+    /// challenges it sent that have not lapsed by `now`.
+    pub async fn daily_active_count(&mut self, profile_id: &str, now: i64) -> StoreResult<i64> {
+        dispatch!(self, daily_active_count(profile_id, now))
+    }
+
+    // daily invites
+
+    /// §9.13: writes the open invite. One of the same key (a challenge: the same sender and friend;
+    /// a seek: the same sender, mode and days per move) still open but lapsed by `now` is marked
+    /// expired first; one open and live makes this false, with nothing written
+    /// (`daily_invites_open_challenge_key`, `daily_invites_open_seek_key`).
+    pub async fn daily_invites_create(&mut self, row: &DailyInviteRow, now: i64) -> StoreResult<bool> {
+        dispatch!(self, daily_invites_create(row, now))
+    }
+
+    /// One invite, whatever its state, or `None`.
+    pub async fn daily_invites_get(&mut self, invite_id: &str) -> StoreResult<Option<DailyInviteRow>> {
+        dispatch!(self, daily_invites_get(invite_id))
+    }
+
+    /// §9.13: the open invites `profile_id` sent or received that have not lapsed by `now`, oldest
+    /// first (the id breaking a tie).
+    pub async fn daily_invites_open_of(
+        &mut self,
+        profile_id: &str,
+        now: i64,
+    ) -> StoreResult<Vec<DailyInviteRow>> {
+        dispatch!(self, daily_invites_open_of(profile_id, now))
+    }
+
+    /// §9.13: moves an open invite to `state`, naming `match_id` as the match it made (when one is
+    /// given), and answers it as it now stands; `None`, and nothing written, when it is not open.
+    pub async fn daily_invites_close(
+        &mut self,
+        invite_id: &str,
+        state: DailyInviteState,
+        match_id: Option<&str>,
+    ) -> StoreResult<Option<DailyInviteRow>> {
+        dispatch!(self, daily_invites_close(invite_id, state, match_id))
+    }
+
+    /// B46, §9.13: moves every open challenge between the two, either way, to `state`; answers them,
+    /// oldest first.
+    pub async fn daily_invites_close_between(
+        &mut self,
+        x: &str,
+        y: &str,
+        state: DailyInviteState,
+    ) -> StoreResult<Vec<DailyInviteRow>> {
+        dispatch!(self, daily_invites_close_between(x, y, state))
+    }
+
+    /// §9.13: `me` takes the oldest open seek of `mode` and `per_move_days`, not lapsed by `now`,
+    /// that another profile sent and that no block stands between (either way): it is moved to
+    /// `paired`, naming `match_id`, and answered as it now stands. `None` when there is none. Two
+    /// claims at once take two different seeks (Postgres: `for update skip locked`).
+    pub async fn daily_seek_claim(
+        &mut self,
+        mode: QueueMode,
+        per_move_days: i32,
+        me: &str,
+        match_id: &str,
+        now: i64,
+    ) -> StoreResult<Option<DailyInviteRow>> {
+        dispatch!(self, daily_seek_claim(mode, per_move_days, me, match_id, now))
+    }
+
+    /// §9.13, the sweep: every open invite lapsed by `now` (`expires_at <= now`) moved to `expired`;
+    /// answers them, oldest first.
+    pub async fn daily_invites_expire(&mut self, now: i64) -> StoreResult<Vec<DailyInviteRow>> {
+        dispatch!(self, daily_invites_expire(now))
+    }
+
+    // daily notices
+
+    /// §9.13: the account's notice settings. A missing row is written first, with the defaults:
+    /// email on, a fresh unsubscribe token, never emailed or pushed.
+    pub async fn daily_notify_get(&mut self, profile_id: &str) -> StoreResult<DailyNotifyRow> {
+        dispatch!(self, daily_notify_get(profile_id))
+    }
+
+    /// §9.13: sets whether the account is emailed (writing the row with the defaults first, when it
+    /// has none) and answers the row.
+    pub async fn daily_notify_put(
+        &mut self,
+        profile_id: &str,
+        email_on: bool,
+    ) -> StoreResult<DailyNotifyRow> {
+        dispatch!(self, daily_notify_put(profile_id, email_on))
+    }
+
+    /// §9.13: the account was emailed at `email_at` and pushed at `push_at`; each `Some` is written,
+    /// each `None` left as it was (the row written with the defaults first, when it has none).
+    pub async fn daily_notify_sent(
+        &mut self,
+        profile_id: &str,
+        email_at: Option<i64>,
+        push_at: Option<i64>,
+    ) -> StoreResult<()> {
+        dispatch!(self, daily_notify_sent(profile_id, email_at, push_at))
+    }
+
+    /// §9.13, RFC 8058: turns email off for the account whose unsubscribe token is `token`. False
+    /// for a token no row holds, a malformed one among them; true for a known one, off already or not.
+    pub async fn daily_notify_unsubscribe(&mut self, token: &str) -> StoreResult<bool> {
+        dispatch!(self, daily_notify_unsubscribe(token))
+    }
+
+    // push subscriptions
+
+    /// §9.13: keeps the subscription. A row already under its endpoint keeps its id and takes the
+    /// rest of `row` (its account, keys and time), so a browser re-subscribing is one row.
+    pub async fn push_subs_add(&mut self, row: &PushSubRow) -> StoreResult<()> {
+        dispatch!(self, push_subs_add(row))
+    }
+
+    /// The account's subscriptions, oldest first (the id breaking a tie).
+    pub async fn push_subs_of(&mut self, profile_id: &str) -> StoreResult<Vec<PushSubRow>> {
+        dispatch!(self, push_subs_of(profile_id))
+    }
+
+    /// Deletes the subscription under `endpoint`: with `Some(profile_id)` only while it is that
+    /// account's (a client's own unsubscribe), with `None` whoever's it is (the push service said
+    /// it is gone). False when nothing went.
+    pub async fn push_subs_delete(&mut self, endpoint: &str, profile_id: Option<&str>) -> StoreResult<bool> {
+        dispatch!(self, push_subs_delete(endpoint, profile_id))
     }
 }

@@ -579,6 +579,7 @@ export default function Board({
   animating,
   animated,
   turnClock,
+  endTurnLabel,
   matchStatus,
   boardRail,
   heroAside,
@@ -807,7 +808,7 @@ export default function Board({
             <ControlButton
               control="end-turn"
               testId={testid.endTurn}
-              label={endTurnState === "enemy" ? t("Enemy turn") : armed ? t("Confirm end turn") : t("End turn")}
+              label={endTurnState === "enemy" ? t("Enemy turn") : armed ? t("Confirm end turn") : (endTurnLabel ?? t("End turn"))}
               highlight={highlight}
               animating={animating}
               confirm={armed ? "armed" : undefined}

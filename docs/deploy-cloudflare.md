@@ -23,7 +23,7 @@ WebAssembly module, stored brotli-compressed (`/assets/*.wasm-*.br`, #3183), whi
 from the `ASSETS` binding with its `Content-Encoding`, so the browser decodes it as it downloads. Those
 two prefixes go to the Worker, which hands them to one container running `crates/server/Dockerfile`'s image. The
 container sleeps after ten minutes with no request and no open socket, and the next request starts
-it again. A daily cron wakes it.
+it again. A daily cron wakes it, and an hourly one wakes it for the daily games' sweep (#3727).
 
 Each deploy ships the web build and the server together, so a site's client and server are never
 from different commits, and production's server no longer runs a day ahead of its client.
@@ -185,6 +185,8 @@ staging -> Run workflow moves it now (to its `sha`, or main's newest green commi
 | Cloudflare | the Workers Paid plan (Containers need it) | both Workers |
 | Cloudflare | each Worker's secrets: `SUPABASE_SECRET_KEY`, `DATABASE_URL`, `CODE_PEPPER`, and optionally `CREATE_ISSUES_TOKEN`, `DEV_PROFILE_IDS`, `ALERT_RESEND_API_KEY`, `ALERT_EMAILS` (`apps/edge/README.md`, Settings) | the servers |
 | Resend | a sending-only API key for jackioh.com, the Worker secret `ALERT_RESEND_API_KEY`, beside the sign-in mail's (section 8) | the server's alert emails (`crates/server/README.md`, Alerts) |
+| Resend | another sending-only key for jackioh.com, the Worker secret `PLAYER_RESEND_API_KEY`; unset, no player is emailed. The free plan's 100 a day are shared with the alerts and the sign-in mail | the daily games' "your move" emails (`crates/server/README.md`, Daily games; #3727) |
+| Cloudflare | the Worker secrets `VAPID_PRIVATE_KEY` and `VAPID_PUBLIC_KEY`, one pair per Worker, generated once: `openssl ecparam -name prime256v1 -genkey -noout -out vapid.pem`, then the raw private scalar (`openssl ec -in vapid.pem -outform DER \| tail -c +8 \| head -c 32 \| basenc --base64url \| tr -d '=\n'`) and the raw public point (`openssl ec -in vapid.pem -pubout -outform DER \| tail -c 65 \| basenc --base64url \| tr -d '=\n'`); unset, no push is sent. A new pair orphans every device's subscription, each player turning push on again | the daily games' Web Push (`crates/server/README.md`, Daily games; #3727) |
 | Cloudflare Zero Trust | the team's organisation, and a service token for staging's deploy check | Access |
 | GitHub secret | `CLOUDFLARE_API_TOKEN`: the Edit Cloudflare Workers template, plus Containers if wrangler asks for it | both deploy jobs |
 | GitHub secrets | `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET`: the service token's pair | staging's live check |
@@ -433,6 +435,10 @@ owner when the period's projected usage spend crosses them. `cf-spend.yml` reads
 once a day and opens a `human` issue once the period's spend, or its projection, reaches its
 `ALERT_DOLLARS` ($15, about both containers awake all month); it needs `CLOUDFLARE_BILLING_TOKEN`
 (section 3) and says so, green, until it is set.
+
+The daily games' hourly cron (#3727, `DAILY_SWEEP_CRON`) wakes each site's container once an hour for a
+sweep that takes a moment, which then sleeps `SLEEP_AFTER` later: about a sixth of the hours awake on a
+quiet site, at most a dollar or so a month for each `basic` container.
 
 ## 7. Known gaps
 

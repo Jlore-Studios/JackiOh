@@ -107,22 +107,15 @@ mod tests {
         s
     }
 
-    // Differs from Scenario::offered: the open Discover's options, not the seat's legal actions.
-    fn offered(s: &Scenario) -> Vec<String> {
-        let pending = s.state().pending.clone().expect("a Discover is open");
+    /// The open prompt is p1's Discover.
+    fn assert_discover(s: &Scenario) {
+        let pending = s.state().pending.as_ref().expect("a Discover is open");
         assert_eq!((pending.kind, pending.player_id), (PromptKind::Discover, P1));
-        pending
-            .options
-            .iter()
-            .filter_map(|option| match &option.selection {
-                Selection::Mode { option } => Some(option.clone()),
-                _ => None,
-            })
-            .collect()
     }
 
     fn pick(s: &mut Scenario) -> Option<CardInstance> {
-        let options = offered(s);
+        assert_discover(s);
+        let options = s.prompt_modes();
         let choice = PLAYABLE
             .iter()
             .find(|id| options.iter().any(|offered| offered == *id))
@@ -138,7 +131,8 @@ mod tests {
         fn r1870000_discovers_three_different_terminus_cards() {
             for i in 0..10 {
                 let s = expanse(&format!("olivian-{i}"), false, json!([]), json!([FILLER]));
-                let options = offered(&s);
+                assert_discover(&s);
+                let options = s.prompt_modes();
                 assert_eq!(options.len(), DISCOVER_OPTIONS as usize);
                 let mut distinct = options.clone();
                 distinct.sort();
@@ -175,7 +169,8 @@ mod tests {
             let held: Vec<&str> = vec![FILLER; HAND_CAP as usize];
             let mut s = expanse("olivian-full", false, json!(held), json!([]));
             let graveyard = s.pile(P1, "graveyard").len();
-            let options = offered(&s);
+            assert_discover(&s);
+            let options = s.prompt_modes();
             s.answer(json!(options[0]));
             assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
             assert!(s.hand(P1).iter().all(|card| card.def_id == FILLER), "the pick is not in hand");

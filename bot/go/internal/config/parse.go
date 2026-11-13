@@ -457,7 +457,6 @@ func Parse(raw *pyjson.Object, root string, env map[string]string, pool *provide
 		c.ServerURL = "https://github.com"
 	}
 	c.NowOverride = env["HARNESS_NOW"]
-	c.PCGist = env["JACKIOH_PC_GIST"]
 	c.Secrets = providers.SecretsOf(env)
 	c.ProviderSecrets = map[string]string{}
 	for _, k := range append([]string{ProviderSecretKey}, providers.SecretNames...) {

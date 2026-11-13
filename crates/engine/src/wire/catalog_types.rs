@@ -717,7 +717,7 @@ pub enum Keyword {
     #[serde(rename = "GIGA")]
     Giga,
     /// R3535002: declared for SP3 E3. R3543000: a Unit's backrow placement, which Flying has
-    /// innately; R3543001: a Field Spell's unit-zone placement.
+    /// innately; R3828000: a Unit's alone, no other card reading it.
     Flexible,
     /// R3535002: declared for SP3 E3. R3543003: after it attacks and destroys a Unit, it may attack again.
     Frenzy,
@@ -787,7 +787,7 @@ string_union! {
         /// R3535002: declared for SP3 E4. R3546000: two lanes wide in both rows, four zones (`giga.rs`).
         Giga = "GIGA",
         /// R3535002: declared for SP3 E3. R3543000: a Unit's backrow placement, which Flying has
-        /// innately; R3543001: a Field Spell's unit-zone placement.
+        /// innately; R3828000: a Unit's alone, no other card reading it.
         Flexible = "Flexible",
         /// R3535002: declared for SP3 E3. R3543003: after it attacks and destroys a Unit, it may attack again.
         Frenzy = "Frenzy",

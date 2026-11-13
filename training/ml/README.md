@@ -19,8 +19,8 @@ To move a pin, edit `pyproject.toml`, run `uv lock --project training/ml` and co
 
 ## Where the data comes from
 
-1. An export: `gh workflow run selfplay.yml -f games=100000 -f seed=<base>` on GitHub's runners or the
-   local runner (`training/README.md`, Where the exports come from), or by hand:
+1. An export: `gh workflow run selfplay.yml -f games=100000 -f seed=<base>` on GitHub's runners
+   (`training/README.md`, Where the exports come from), or by hand:
    `cargo jackioh selfplay --games 2000 --seed <base> --out <dir>` (R1006001, R1006002).
 2. Positions: `cargo jackioh positions <dir>/selfplay-*.jsonl --out positions.jsonl` (one row per seat
    per turn, the default; `--every decision` for every decision), which drops and counts any game that

@@ -147,25 +147,9 @@ mod tests {
     /// pick, by def id.
     fn grow(s: &mut Scenario, tree: &str) -> String {
         s.activate(tree, json!({ "ability": "grow" }));
-        let pick = offered(s).into_iter().next().expect("a Field Spell on offer");
+        let pick = s.prompt_modes().into_iter().next().expect("a Field Spell on offer");
         s.answer(json!(pick));
         pick
-    }
-
-    /// The def ids the open Discover offers.
-    // Differs from Scenario::offered: the open choice's modes, not the seat's legal actions.
-    fn offered(s: &Scenario) -> Vec<String> {
-        s.state()
-            .pending
-            .as_ref()
-            .expect("the Tree's choice")
-            .options
-            .iter()
-            .filter_map(|option| match &option.selection {
-                Selection::Mode { option } => Some(option.clone()),
-                _ => None,
-            })
-            .collect()
     }
 
     fn fused(s: &Scenario) -> bool {
@@ -215,11 +199,11 @@ mod tests {
                     (s, tree)
                 };
                 let (mut s, tree) = choosing();
-                let options = offered(&s);
+                let options = s.prompt_modes();
                 assert_eq!(options.len(), 3, "{options:?}");
                 assert_eq!(options.iter().collect::<IndexSet<_>>().len(), 3, "{options:?}");
                 // Seeded: the same game offers the same three.
-                assert_eq!(offered(&choosing().0), options);
+                assert_eq!(choosing().0.prompt_modes(), options);
                 for option in &options {
                     assert_ne!(option, TREE);
                     assert_eq!(def_of(Some(s.state()), option).type_, CardType::FieldSpell);
@@ -416,7 +400,7 @@ mod tests {
                 s.play(TREE, json!({}));
                 let tree = s.card(TREE).id.clone();
                 s.activate(tree.as_str(), json!({ "ability": "grow" }));
-                let options = offered(&s);
+                let options = s.prompt_modes();
                 assert_eq!(options.len(), 3, "{options:?}");
                 s.answer(json!(options[2]));
 
