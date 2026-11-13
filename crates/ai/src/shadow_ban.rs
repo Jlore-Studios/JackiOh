@@ -39,6 +39,8 @@
 // Sweep of record: 2026-10-29 (UTC), `cargo jackioh sweep`, pass 1 over 60 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 30 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":600,"lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
 // Report of record: training/history/sweep-2026-11-13.md
 // Sweep of record: 2026-11-13 (UTC), `cargo jackioh sweep`, pass 1 over 166 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 70 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":1200,"lethalNodes":300,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
+// Report of record: training/history/sweep-2026-11-13-2.md
+// Sweep of record: 2026-11-13 (UTC), `cargo jackioh sweep`, pass 1 over 4 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 4 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":1200,"lethalNodes":300,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
 // END `cargo jackioh sweep --write`
 
 /// R186: defId → why the AI never deals it to itself. Each reason starts "<SweepFlag>: <tier>: ".
@@ -53,24 +55,7 @@
 /// 9: #732's `timeout` bans as R1390's gate lifted; 10–12: wall-clock bookkeeping, each table held to
 /// the seeded fixtures, R265, R677, B34; then #1186, #1675's R977000 and R1675000, and #1889) are in
 /// the reports under training/history/ and in git log.
-pub const SHADOW_BAN: &[(&str, &str)] = &[
-    (
-        "stinkyscapeplus-047",
-        "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "stinkyscapeplus-081",
-        "error: hard: 1505 engine or search error(s) over 201 games",
-    ),
-    (
-        "stinkyscapeplus-157",
-        "neverPlayed: hard: affordable in hand on 296 turns and playable on 225 over 212 pass-2 games, never played",
-    ),
-    (
-        "stinkyscapeplus-163",
-        "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-];
+pub const SHADOW_BAN: &[(&str, &str)] = &[];
 
 /// `Object.keys(SHADOW_BAN)`, sorted. `SHADOW_BAN` is kept sorted by id, so its ids in order are it.
 pub const SHADOW_BAN_IDS: &[&str] = &{
