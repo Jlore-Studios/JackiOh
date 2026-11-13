@@ -12361,10 +12361,16 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-13T15:35:49Z",
       "owner_why": "it plans it",
+      "paused": {
+        "at": "2026-11-13T22:26:59Z",
+        "interrupt": "usage",
+        "provider": "claude-3"
+      },
       "pending_request": false,
       "planned_at": "2026-11-13T17:01:53Z",
       "planned_by": "`claude-3` (claude, `sonnet`, medium)",
@@ -12372,11 +12378,13 @@
       "planned_model": "sonnet",
       "planned_tier": "medium",
       "provider": "claude-3",
+      "round_tier": "medium",
       "run_id": "43503604097",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-13T20:39:39Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "waiting_comment": 6861730949
     },
     "3730": {
