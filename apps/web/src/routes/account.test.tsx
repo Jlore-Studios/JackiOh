@@ -423,7 +423,7 @@ describe("the account screen", () => {
     expect(screen.getByTestId(accountTestid.winRate)).toHaveTextContent("70%");
   });
 
-  it("R2255000 a failed ranked read shows the record as it was and no rank", async () => {
+  it("R3733000 a failed ranked read (amending R2255000 and R2778000) leaves no rank, season record, badges or Rank heading, and Overview's All time alone", async () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
     vi.mocked(getOwnRank).mockRejectedValue(new Error("the ladder is down"));
     render(<AccountRoute token={TOKEN} />);
@@ -435,6 +435,12 @@ describe("the account screen", () => {
     expect(screen.queryByTestId(accountTestid.randomRank)).toBeNull();
     expect(screen.queryByTestId(accountTestid.badges)).toBeNull();
     expect(screen.queryByTestId(accountTestid.seasonRecord)).toBeNull();
+    expect(screen.queryByTestId(accountTestid.overviewSeasonRecord)).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Rank" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "This season" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Constructed" })).toBeNull();
+    // R3733000: the Record heading is Overview's "All time", the figures the same.
+    expect(screen.getByRole("heading", { name: "All time" })).toBeInTheDocument();
     expect(screen.getByTestId(accountTestid.winRate)).toHaveTextContent("70%");
     expect(screen.queryByRole("alert")).toBeNull();
   });
