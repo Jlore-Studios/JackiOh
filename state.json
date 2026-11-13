@@ -17140,6 +17140,8 @@
       }
     },
     "3814": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-13T00:36:32Z",
@@ -17153,8 +17155,13 @@
         "trail": "est -p jackioh-ai` is green: 36 unit, 826 `ai` and 98 `ai_slow` tests pass (the 7 ignored are daily ones). Next: clippy, then `spec check`.\n- Bash: {\"command\": \"echo \\\"- Build run 1: cargo test -p jackioh-ai green (36 + 826 + 98). Running clippy, spec check.\\\" >> .bot-notes.md; cargo clippy -p jackioh-engine -p jackioh-ai --all-targets -- -D war\u2026\n- Bash: {\"command\": \"cargo jackioh spec check 2>&1 | tail -15\", \"description\": \"Run the spec rulings check\", \"timeout\": 1800000}\n- said: Clippy and `spec check` are clean. Now `classify --base origin/main --claims`, which replays games against the base to make sure the engine refactor changes no play.\n- Bash: {\"command\": \"echo \\\"- Build run 1: clippy and spec check green; running classify --claims.\\\" >> .bot-notes.md; git rev-parse --short origin/main 2>&1; cargo jackioh classify --base origin/main --clai\u2026\n- Bash: {\"command\": \"grep -v 'Compiling\\\\|Finished\\\\|Running' /tmp/classify.log | head -20\", \"description\": \"Show the classify output\"}\n- said: `classify` reports the change as `Internal` (no card plays differently), exit 0. Now the AI's quality gate at smoke size.\n- Bash: {\"command\": \"echo \\\"- Build run 1: classify --claims: Internal, exit 0. Running cargo jackioh gate (smoke).\\\" >> .bot-notes.md; cargo jackioh gate > /tmp/gate.log 2>&1; echo exit $? >> /tmp/gate.log\"\u2026\n- said: While the gate runs, I'm re-reading the diff. One test comment says the Corpse Eater was \"played\" on turn 9, but the scenario places it there, so I'll fix the wording.\n- Bash: {\"command\": \"grep -n 'Core #89 grown' -A2 crates/ai/tests/ai/brittle.rs\", \"description\": \"Find the Corpse Eater test comment\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3793/crates/ai/tests/ai/brittle.rs\", \"offset\": 198, \"limit\": 8}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3793/crates/ai/tests/ai/brittle.rs\", \"old_string\": \"/// Core #89 grown to 8/8 in the human's hand and played on turn 9 starts it\u2026\n- said: Checking that the greedy baseline doesn't reach the `AI_EVAL`-gated paths (`stands_down`, `wall_switches`, `face_threat`), since the acceptance requires its decisions unchanged:\n- Bash: {\"command\": \"grep -n 'face_threat\\\\|stands_down\\\\|wall_switches\\\\|search(\\\\|candidate_actions\\\\|root_candidate\\\\|evaluate' crates/ai/src/baselines.rs | head -20\", \"description\": \"Check what the greed\u2026\n- Bash: {\"command\": \"grep -n 'could_attack_next_turn\\\\|stands_down(\\\\|face_threat(' crates/ai/src/candidates.rs\", \"description\": \"List callers in candidates.rs\"}\n- Bash: {\"command\": \"grep -rln 'AI_EVAL\\\\|EvalWeights' crates/wasm crates/shared crates/server crates/tools apps/web/src 2>/dev/null | head\", \"description\": \"Check whether other crates read AI_EVAL\"}\n- Bash: {\"command\": \"grep -n 'AI_EVAL\\\\|EvalWeights' crates/shared/src/bots/signals.rs crates/server/src/actor/telemetry.rs crates/tools/src/positions.rs crates/tools/src/trace.rs crates/tools/src/think.rs |\u2026\n- Bash: {\"command\": \"sleep 1; tail -c 1500 /tmp/gate.log\", \"description\": \"Peek at the gate's progress\"}\n- Bash: {\"command\": \"echo \\\"- Build run 1: gate ai-vs-random 19/20 (17 needed); ai-vs-greedy running. Checked: the greedy baseline reads only candidate_actions + evaluate(GREEDY_EVAL), so the AI_EVAL-gated s\u2026\n- Bash: {\"command\": \"until grep -q '^exit ' /tmp/gate.log; do sleep 10; done; grep -v 'Compiling\\\\|Finished\\\\|Running' /tmp/gate.log | tail -30\", \"description\": \"Wait for the gate to finish and show results\"\u2026\n- Bash: {\"command\": \"until grep -q '^exit ' /tmp/gate.log; do sleep 10; done; grep -v 'Compiling\\\\|Finished\\\\|Running' /tmp/gate.log | tail -30\", \"description\": \"Wait for gate results\", \"timeout\": 3600000}\n- Bash: {\"command\": \"echo \\\"- Build run 1: gate (smoke) green: 19/20, 16/20, 20/20, 0 panics. Running the workspace tests (testkit,ts) + wire diff.\\\" >> .bot-notes.md; cargo test --workspace --features jacki\u2026\n- Bash: {\"command\": \"until grep -q '^wire-checked' /tmp/ws-tests.log; do sleep 15; done; grep -E '^test result: FAILED|FAILED|panicked at|^exit ' /tmp/ws-tests.log | head -30; grep -c '^test result: ok' /tmp\u2026\n- Bash: {\"command\": \"grep -E 'Running|test result' /tmp/ws-tests.log | tail -6; grep -E 'FAILED|panicked at' /tmp/ws-tests.log | head\", \"description\": \"Check workspace tests progress\"}\n- Bash: {\"command\": \"tail -c 600 /tmp/ws-tests.log\", \"description\": \"Peek at the workspace test log tail\"}\n- said: The workspace build is still compiling. I'll update the notes' State section while it runs.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## State'); j=s.index('## Log')\\nstate=\\\"\\\"\\\"## State\\n\\n- Build run 1 (claude, opus, 2026-11-13). All plan steps 1-10 \u2026\n- Bash: {\"command\": \"until grep -q '^wire-checked' /tmp/ws-tests.log; do sleep 15; done; echo done\", \"description\": \"Wait for workspace tests to finish\", \"timeout\": 3600000, \"run_in_background\": true}\n- Bash: {\"command\": \"until grep -q '^wire-checked' /tmp/ws-tests.log; do sleep 15; done; echo done\", \"description\": \"Block until workspace tests finish\", \"timeout\": 600000}\n- Bash: {\"command\": \"grep -E 'test result: FAILED|^test .* FAILED|panicked at' /tmp/ws-tests.log | head -20; echo \\\"ok binaries: $(grep -c '^test result: ok' /tmp/ws-tests.log)\\\"; sed -n '/^exit /,$p' /tmp/w\u2026\n- Bash: {\"command\": \"cargo fmt --check && echo FMT-OK; cargo jackioh catalog check 2>&1 | tail -1; cargo jackioh patches check 2>&1 | tail -1; git status --short\", \"description\": \"Run fmt, catalog and patche\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## State'); j=s.index('## Log')\\nstate=\\\"\\\"\\\"## State\\n\\n- Build run 1 (claude, opus, 2026-11-13): DONE. All plan steps\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the AI's count of next turn's attacks leaves out a unit its Brittle destroys before it can swing\"} --> ## What changed When the AI works out next turn's attacks, it now leaves out any unit whose own Brittle tick will destroy it at the start of its contr\u2026"
       },
       "issue": 3793,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
+      "pending_request": false,
+      "provider": "claude-1",
       "queued_at": "2026-11-13T01:50:30Z",
+      "run_id": "pending:a955e66b-1794535846",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17173,6 +17180,9 @@
         "provider": "claude-4",
         "run": "43338414175"
       },
+      "started_at": "2026-11-13T02:11:36Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17186,9 +17196,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T01:38:28Z",
+    "at": "2026-11-13T02:11:36Z",
     "url": "",
-    "what": "revise #3781 on claude-6"
+    "what": "review #3814 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-13T01:34:34Z",
