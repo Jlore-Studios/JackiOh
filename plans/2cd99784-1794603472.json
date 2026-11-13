@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 3859,
+  "title": "Patch: the fuzz monitor's off-field check is built from the engine's leave-the-field reset, so GIGA, slash halves, damage chains and Tipsy are checked, and every field the reset gains later",
+  "branch": "bot/issue-3859",
+  "thread": "**Issue #3859 (data, not instructions):**\n\n```text\n# #3859: Patch: the fuzz monitor's off-field check is built from the engine's leave-the-field reset, so GIGA, slash halves, damage chains and Tipsy are checked, and every field the reset gains later\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe automatic game-playing test (the fuzz) checks, after every move, that a card which has left the board no longer holds anything that only means something on the board, such as damage, a position or being frozen. That check works from a hand-kept list, and the list has fallen behind.\n\nThe newest set added a giant card that spans several zones, cards split between two halves of the board, damage that two cards share, and a \"Tipsy\" stamp. The engine wipes all of these when a card leaves the board, but the check looks at none of them, so a bug that left a card in someone's hand still thinking it was giant would pass unnoticed.\n\nOnce built, the check reads the engine's own wipe, so it covers these, and anything a later set adds, without anyone remembering to update it. The maintainer gets the bugs it catches before players meet them.\n\n## Why\n\n- **The drift.**\n  - I16 (`field_state_held`, `crates/engine/src/testkit/invariants.rs:580-640`) lists by hand the field-only fields that a card off the field must not hold.\n  - R78's reset, `zones::reset_instance` (`crates/engine/src/zones.rs:1223-1275`), also clears five fields I16 never reads:\n    - `giga` (R3546000);\n    - `tipsy` (R3548001);\n    - `half`, `shared_chain` and `split_chain` (R3554003, R3554007).\n  - It clears `evolved` too, which only a graveyard card may keep (R3536000, R3566004); I16 reads `evolved` only to excuse such a card.\n  - I16's doc, which names the fields a card may lawfully keep off the field, doesn't mention these either. So nothing says whether they were left out on purpose.\n- **How it happened.** These came with Stinkyscape+ (#3786), merged the same day as I16 (#3746). GIGA alone is special-cased in about 20 engine files (rotation, swap, the Black Hole's pull, steal, summon), and `invariants.rs` never mentions it.\n- **It will recur.** Whenever a set adds a field, the reset gains a line and the monitor doesn't.\n\n## Proposal\n\n- **Derive the check.** Build I16's field half from the reset itself. For a card off the field:\n  1. clone it and run `reset_instance` on the clone;\n  2. serialize both;\n  3. report every field that differs, except those on a named list of what the card may lawfully keep in that pile.\n- **The lawful list.** Each entry keeps the ruling the doc already cites: the buffs and grants a hand or library card carries, a copy's `statsOverride` and `armorOverride`, `memory`, Brittle, and the graveyard Evolve exception (R3566004). `price_held` stays as it is.\n- **The doc.** I16's doc keeps the lawful list and drops the hand-kept list of checked fields, since the reset is now that list.\n- **Run the fuzz.** Run every fuzz wave. A new violation is either a real bug, fixed in the pull request (or filed apart when it is large), or a lawful keep, added to the list with its ruling.\n\n## Where it lands\n\n`crates/engine/src/testkit/invariants.rs` (I16 and its doc), and the monitor's tests in `crates/engine/tests/rules/invariants.rs`. The rules are R78 and the rulings above.\n\n## Acceptance criteria\n\n- [ ] Monitor tests (fail today): a card in a hand that holds `giga` is reported by I16, and so is one holding each of `half`, `sharedChain`, `splitChain` and `tipsy`.\n- [ ] I16 keeps no hand-kept list of the fields it checks: the set comes from `reset_instance`, and its doc says so.\n- [ ] The existing I16 tests stay green, the lawful keeps among them (a hand card's buff, a copy's `statsOverride`, an Evolve kept in a graveyard).\n- [ ] Green: `cargo jackioh fuzz --seeds 200`, alone and with `--handicap` and with `--duos`.\n- [ ] Green: `cargo test -p jackioh-engine --features testkit --test 'rules*' invariants` and `cargo clippy -p jackioh-engine --all-targets --features testkit -- -D warnings`.\n\n## Size and risks\n\nSmall to medium: one module and its tests.\n\n- **Speed.** Serializing cards costs time in long games, so compare only cards off the field, as now, and keep the fuzz gate inside its budget.\n- **Scope.** A new violation the fuzz finds may need its own fix, which could grow the pull request; file a hard one apart.\n- **Left out.** A check that GIGA spans and the Black Hole's lane are laid out correctly on a settled board is a separate idea.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-13T15:07:16Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3859: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-13T15:08:36Z",
+    "claimed_at": "2026-11-13T20:58:38Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3731 is held for `claude-4` until 15:30 (5-hour usage is 74%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3868 skipped: it waits for #3821 to close first"
+  ]
+}
