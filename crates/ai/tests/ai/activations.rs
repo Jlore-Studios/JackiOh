@@ -148,12 +148,14 @@ fn r2564000_an_enemy_cannon_is_worth_more_to_destroy_than_a_bigger_vanilla() {
     );
 }
 
+/// R3575301 prices a Unit in the seat's own hand, so the Cannon here is the enemy's, whose hand is
+/// never probed.
 #[test]
 fn r2564000_a_board_without_an_activate_prices_nothing_and_spends_no_node() {
     let state = board(
         "ai-activation-none",
-        json!({ "hand": [CANNON], "field": [VANILLA] }),
         json!({ "field": [VANILLA] }),
+        json!({ "hand": [CANNON], "field": [VANILLA] }),
     );
     assert_eq!(priced(&state), (vec![], 0));
 }
