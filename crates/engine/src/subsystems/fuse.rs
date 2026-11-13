@@ -1253,6 +1253,7 @@ fn combine_objects(records: &[Script]) -> Script {
         cost_aura: eager_read(records.iter().map(|s| s.cost_aura.clone()).collect()),
         graveyard_play: eager_read(records.iter().map(|s| s.graveyard_play.clone()).collect()),
         reveal_echo: largest_read(records.iter().map(|s| s.reveal_echo.clone()).collect()),
+        resolves_set_spells: records.iter().any(|s| s.resolves_set_spells),
         targeting_discards: None,
         records_play_as: None,
         draw_limit: eager_read(records.iter().map(|s| s.draw_limit.clone()).collect()),
@@ -1958,6 +1959,28 @@ pub fn is_trap_ingredient_trigger(state: &GameState, def_id: &str, trigger_id: &
         let is_trap = crate::catalog::find_def(Some(state), &spec.def_id)
             .is_some_and(|def| matches!(def.type_, CardType::Trap | CardType::FieldTrap));
         is_trap || is_trap_ingredient_trigger(state, &spec.def_id, inner)
+    })
+}
+
+/// R3806002: whether fused def `def_id`'s `endOfTurn` hook is a Spell's text alone: every ingredient whose
+/// face (Radiant when `radiant` is or its own mark says so, R469) carries one is printed a Spell, a fused
+/// ingredient judged by its own ingredients. A permanent's end-of-turn text works from the field (R153),
+/// so a Spell it was fused into never answers it from a graveyard (R155). `true` for a definition naming
+/// no fusion.
+pub fn end_of_turn_is_spell_text(state: &GameState, def_id: &str, radiant: bool) -> bool {
+    let Some(specs) = fused_specs(state, def_id) else {
+        return true;
+    };
+    specs.iter().all(|spec| {
+        let radiant = radiant || spec.radiant == Some(true);
+        if fused_specs(state, &spec.def_id).is_some() {
+            return end_of_turn_is_spell_text(state, &spec.def_id, radiant);
+        }
+        crate::scripts::face_ref(state, &spec.def_id, radiant)
+            .end_of_turn
+            .is_none()
+            || crate::catalog::find_def(Some(state), &spec.def_id)
+                .is_some_and(|def| def.type_ == CardType::Spell)
     })
 }
 

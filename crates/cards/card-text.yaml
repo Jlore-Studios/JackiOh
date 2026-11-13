@@ -4039,8 +4039,8 @@ meditative-099: # Paranoia
     cast: They are all watching. Hide it.
   zh:
     name: 偏执
-    base: "光环：你的法术拥有隐匿。\n战吼：抽{draw}张牌。"
-    radiant: "光环：你的法术拥有隐匿。你揭示的法术拥有回响+{echo}。\n战吼：抽{draw}张牌。"
+    base: "光环：你的法术拥有隐匿。你面朝下放置的法术在放置时和揭示时各结算一次。\n战吼：抽{draw}张牌。"
+    radiant: "光环：你的法术拥有隐匿。你面朝下放置的法术在放置时和揭示时各结算一次。你揭示的法术拥有回响+{echo}。\n战吼：抽{draw}张牌。"
 meditative-100: # Greaser
   flavour: Comb in the back pocket, grease in the hair, and not one other thing on his mind.
   voice:
@@ -7331,8 +7331,8 @@ stinkyscapeplus-031: # Soul Read
     cast: I know what you're holding.
   zh:
     name: 读魂
-    base: "战吼：查看你对手的手牌，并秘密选择一张牌。\n如果你的对手在打出你所看到的其他牌之前打出了所选的牌，则揭示。改为夺取那张牌。否则，献祭此陷阱。"
-    radiant: "战吼：查看你对手的手牌，并秘密选择一张牌。\n如果你的对手打出了所选的牌，则揭示。改为夺取那张牌。"
+    base: "面朝下打出时：查看你对手的手牌，并秘密选择一张牌。\n如果你的对手在打出你所看到的其他牌之前打出了所选的牌，则揭示。改为夺取那张牌。否则，献祭此陷阱。"
+    radiant: "面朝下打出时：查看你对手的手牌，并秘密选择一张牌。\n如果你的对手打出了所选的牌，则揭示。改为夺取那张牌。"
 stinkyscapeplus-032: # Z-Patch
   flavour: Watchu know about the Z patch?
   voice:
