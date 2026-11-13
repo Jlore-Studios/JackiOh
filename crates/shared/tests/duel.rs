@@ -1140,6 +1140,32 @@ mod bots {
         assert_eq!(stale.log.len(), 1, "{:?}", stale.nonces());
     }
 
+    /// R1452: a fresh move the engine refuses falls back to `fallback_action` once, under its own nonce; a refused
+    /// move decided on a state since moved on falls back to nothing, and the bot is asked again.
+    #[test]
+    fn r1452_only_a_refused_fresh_move_falls_back() {
+        // The bot owes its mulligan, so the engine refuses its ending the turn.
+        let mut table = with_bot_at_p2(false);
+        let request = table.decides[0].clone();
+        decided(&mut table, &request, chose(Some(ActionBody::EndTurn)));
+        assert_eq!(table.log.len(), 1, "{:?}", table.nonces());
+        let (_, row) = &table.log[0];
+        assert_eq!(row.player_id, P2);
+        assert!(matches!(row.body, ActionBody::Mulligan { .. }), "{:?}", row.body);
+        assert!(row.nonce.ends_with("-r"), "{}", row.nonce);
+
+        let mut stale = with_bot_at_p2(false);
+        let request = stale.decides[0].clone();
+        let keep = stale.keep_hand(P1);
+        stale.act(P1, "p1", keep);
+        assert_ne!(stale.host.next_seq(), request.version, "PREMISE: stale");
+        assert_eq!(stale.host.game().turn, request.turn, "PREMISE: the same turn");
+        let asked = stale.decides.len();
+        decided(&mut stale, &request, chose(Some(ActionBody::EndTurn)));
+        assert_eq!(stale.log.len(), 1, "{:?}", stale.nonces());
+        assert_eq!(stale.decides.len(), asked + 1, "{:?}", stale.decides);
+    }
+
     #[test]
     fn r1452_a_move_the_log_would_not_take_is_decided_again_after_the_write_retry_pace() {
         let mut table = with_bot_at_p2(false);
@@ -1863,6 +1889,33 @@ mod reads_and_stops {
         table
     }
 
+    /// R268: the mulligan clock's timeouts, one for each seat still owing, run one after the other, each logged
+    /// before the next is reduced; a stop that lands between the two dispatches the second to no one.
+    #[test]
+    fn r268_a_stop_between_the_mulligan_timeouts_dispatches_no_more_of_them() {
+        let mut table = playing("stop-between-timeouts");
+        let expired = |table: &Table| {
+            table
+                .notes
+                .iter()
+                .filter(|note| matches!(note, HostNote::ClockExpired { .. }))
+                .count()
+        };
+        table.holding_appends = true;
+        table.sleep(mulligan_ms());
+        assert_eq!(
+            expired(&table),
+            1,
+            "PREMISE: the first seat's timeout awaits its row"
+        );
+        table.feed(DuelEvent::Stop);
+        table.feed(DuelEvent::Logged {
+            outcome: LogOutcome::Written,
+        });
+        assert!(table.host.is_stopped());
+        assert_eq!(expired(&table), 1, "{:?}", table.notes);
+    }
+
     /// The host's reads for its own sends and its checkpoint: the match's id, the newest nonce in the log, and
     /// whether the match is finished, voided or stopped.
     #[test]
@@ -2376,6 +2429,144 @@ mod scripted {
             .filter(|message| matches!(message, SeatMessage::Aim { .. }))
             .count();
         assert_eq!(after, relayed, "an aim was relayed after the draw");
+    }
+
+    /// p1, a person on turn, with core-007 (a Discover, §10.6) to play and, in its backrow, the Field Spell whose
+    /// turn's end panics, on host seed `seed`. p2 is a person here too, or, with `bot`, a bot that passes for a
+    /// person, so its persona watches p1's turn (R645).
+    fn a_panicking_turn(seed: &str, bot: bool) -> Table {
+        install();
+        let built = jackioh_engine::testkit::scenario(json!({
+            "seed": "duel-panics-turn",
+            "active": "p1",
+            "p1": {
+                "hand": ["core-007"],
+                "mana": 1,
+                "library": ["core-008", "core-020"],
+                "backrow": [{ "def": PANICS_AT_TURN_END, "faceUp": true }],
+            },
+            "p2": { "library": ["core-008"] },
+        }));
+        let mut setup = setup(built.state().clone());
+        setup.seed = seed.to_string();
+        if bot {
+            setup.bots = PerPlayer::new(
+                None,
+                Some(BotSeat {
+                    strength: 2,
+                    speed: 1.0,
+                    persona: PersonaName::Balanced,
+                    hidden: true,
+                }),
+            );
+        }
+        let mut table = Table::new(setup);
+        table.connect(P1);
+        if !bot {
+            table.connect(P2);
+        }
+        table.feed(DuelEvent::Arm);
+        table
+    }
+
+    /// p1 plays the Discover, whose prompt then asks p1.
+    fn play_the_discover(table: &mut Table) {
+        let play = table
+            .host
+            .legal(P1)
+            .into_iter()
+            .find(|body| matches!(body, ActionBody::Play { .. }))
+            .expect("core-007 is playable");
+        let answer = table.act(P1, "play-007", play);
+        assert!(matches!(answer, ActionAnswer::Ack { .. }), "{answer:?}");
+        assert!(
+            table
+                .host
+                .game()
+                .pending
+                .as_ref()
+                .is_some_and(|pending| pending.player_id == P1),
+            "PREMISE: the Discover asks p1"
+        );
+    }
+
+    /// What p2 was told of p1's choice hover, in order.
+    fn hovers(sent: &[SeatMessage]) -> Vec<Option<i32>> {
+        sent.iter()
+            .filter_map(|message| match message {
+                SeatMessage::ChoiceHover { from: P1, index } => Some(*index),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// R1253000, R2739001: the turn clock's timeout answers p1's open Discover and runs the turn's end, which
+    /// panics: the match ends as a ceiling draw, and the choice hover p1's seat held for the relay is never sent
+    /// after it, as no aim is (R738).
+    #[test]
+    fn r1253000_a_hover_held_for_the_relay_is_never_sent_after_the_ceiling_draw() {
+        let mut table = a_panicking_turn("duel-panics-hover", false);
+        let due = table.timer(TimerKey::Turn).expect("the turn clock runs");
+        play_the_discover(&mut table);
+        table.sleep(due - table.now - AIM_RELAY_INTERVAL_MS / 2);
+        table.feed(DuelEvent::Hover {
+            home: P1,
+            index: Some(0),
+        });
+        table.sleep(AIM_RELAY_INTERVAL_MS / 4);
+        table.feed(DuelEvent::Hover {
+            home: P1,
+            index: Some(1),
+        });
+        assert_eq!(hovers(&table.sent.p2), vec![Some(0)]);
+        assert!(
+            table
+                .timer(TimerKey::Hover { player: P1 })
+                .is_some_and(|at| at > due),
+            "PREMISE: the hover is held past the clock"
+        );
+        table.sleep(AIM_RELAY_INTERVAL_MS);
+        assert_eq!(table.ceiling_draws, 1);
+        assert!(table.host.is_finished());
+        assert_eq!(
+            hovers(&table.sent.p2),
+            vec![Some(0)],
+            "a hover was relayed after the draw"
+        );
+    }
+
+    /// R1253000, R645: a bot's reaction to the person's long turn never goes out after the ceiling draw. p1 plays
+    /// the Discover just before the bot's first long-turn wait ends, which sets the wait going again, now past the
+    /// turn clock, whose timeout panics. On some host seed the bot's persona reacts to a long turn (R645's own
+    /// test), so twenty seeds hold the rule.
+    #[test]
+    fn r1253000_a_long_turn_wait_left_running_earns_no_emote_after_the_ceiling_draw() {
+        for k in 0..20 {
+            let seed = format!("duel-panics-turn-{k}");
+            let mut table = a_panicking_turn(&seed, true);
+            let due = table.timer(TimerKey::Turn).expect("the turn clock runs");
+            let long_turn = TimerKey::BotLongTurn { player: P2 };
+            table.sleep(AI_EMOTE.long_turn_ms - 5 * SECOND);
+            play_the_discover(&mut table);
+            let reacts_at = table.timer(long_turn).expect("the long-turn wait runs");
+            assert!(reacts_at > due, "PREMISE: the wait ends after the clock");
+            table.sleep(due - table.now - SECOND);
+            assert_eq!(
+                table.timer(TimerKey::BotEmote { player: P2 }),
+                None,
+                "PREMISE: no emote of the bot's still waits"
+            );
+            let emotes = table.emotes.len();
+            table.sleep(reacts_at - table.now + 10 * SECOND);
+            assert_eq!(table.ceiling_draws, 1, "{seed}");
+            assert!(table.host.is_finished(), "{seed}");
+            assert_eq!(
+                table.emotes.len(),
+                emotes,
+                "{seed}: {:?}",
+                &table.emotes[emotes..]
+            );
+        }
     }
 }
 

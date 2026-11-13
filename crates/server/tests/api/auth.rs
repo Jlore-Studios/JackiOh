@@ -1200,6 +1200,30 @@ mod r1443_username_sign_in {
         );
     }
 
+    /// R665: the code the session still needs is the first factor that is both an authenticator app
+    /// (`totp`) and verified: not a verified factor of another kind, nor an app still unverified.
+    #[tokio::test]
+    async fn r665_the_second_factor_is_the_first_verified_authenticator_app() {
+        let h = Harness::new().await;
+        h.gotrue.answer_grant(GrantReply::Tokens(json!({
+            "access_token": "access-1",
+            "user": {
+                "id": "e2e-p1",
+                "email_confirmed_at": "2026-10-01T00:00:00Z",
+                "factors": [
+                    { "id": "phone-1", "factor_type": "phone", "status": "verified" },
+                    { "id": "app-unverified", "factor_type": "totp", "status": "unverified" },
+                    { "id": "app-verified", "factor_type": "totp", "status": "verified" },
+                ],
+            },
+        })));
+        let app = h.app().await;
+
+        let (status, text) = sign_in(&app, "e2e_p1", "pw").await;
+        assert_eq!(status, 200, "{text}");
+        assert_eq!(body_of(&text)["secondFactor"], json!("app-verified"));
+    }
+
     #[tokio::test]
     async fn r1443_turns_the_providers_refusal_limit_and_outage_into_ours() {
         let h = Harness::new().await;

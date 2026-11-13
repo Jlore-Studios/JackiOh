@@ -1002,7 +1002,7 @@ fn could_attack_next_turn(state: &GameState, enemy: &CardInstance, target: &Atta
 
 #[cfg(test)]
 mod tests {
-    use jackioh_engine::testkit::{Scenario, Value, json, scenario};
+    use jackioh_engine::testkit::{Keyword, Scenario, Value, json, scenario};
 
     use super::*;
 
@@ -1039,6 +1039,144 @@ mod tests {
             even_trade(s.state(), &cleaver.id, &reno.id, Prices::NONE),
             Some(trade.value)
         );
+    }
+
+    /// #8 Mr. Vanilla, a 4/4.
+    const VANILLA: &str = "core-008";
+    /// #30 Archivist, a 4/5.
+    const ARCHIVIST: &str = "core-030";
+    /// M #97.5 Bunker, a 5/10 with Armor 3, Can't attack and First Strike, 3× on the Unit across its lane.
+    const BUNKER: &str = "meditative-097-5";
+    /// M #52 Economic Anxiety: +3 attack to a Unit attacking a Unit that shares no tag with it.
+    const ANXIETY: &str = "meditative-052";
+    /// #43 Big Felinor, a 3/10 Felinor.
+    const BIG_FELINOR: &str = "core-043";
+
+    /// Whether p1's `attacker`, given `attacker_keywords`, kills p2's `target`, given `target_keywords`,
+    /// and survives, by `kills_and_survives`.
+    fn kills_and_survives_with(
+        attacker: &str,
+        attacker_keywords: &[Keyword],
+        target: &str,
+        target_keywords: &[Keyword],
+    ) -> bool {
+        jackioh_cards::register_all();
+        let mut state = scenario(json!({ "p1": { "field": [attacker] }, "p2": { "field": [target] } }))
+            .state()
+            .clone();
+        let attacker_id = active_units_of(&state, PlayerId::P1)[0].id.clone();
+        let target_id = active_units_of(&state, PlayerId::P2)[0].id.clone();
+        for (id, keywords) in [(&attacker_id, attacker_keywords), (&target_id, target_keywords)] {
+            let unit = find_instance_mut(&mut state, id).expect("on the field");
+            unit.granted_keywords.extend(keywords.iter().cloned());
+        }
+        let attacker = find_instance(&state, &attacker_id).expect("the attacker");
+        let target = find_instance(&state, &target_id).expect("the target");
+        kills_and_survives(&state, attacker, target)
+    }
+
+    /// §4.4 steps 1 and 4: the Archivist's 4 kills a 4/4 and the 4 back leaves it standing, but a
+    /// Divine Shield or Indestructible on the target, either one alone, means no kill.
+    #[test]
+    fn a_target_with_divine_shield_or_indestructible_is_no_kill() {
+        assert!(kills_and_survives_with(ARCHIVIST, &[], VANILLA, &[]));
+        for keyword in [Keyword::DivineShield, Keyword::Indestructible] {
+            assert!(
+                !kills_and_survives_with(ARCHIVIST, &[], VANILLA, std::slice::from_ref(&keyword)),
+                "{keyword:?}"
+            );
+        }
+    }
+
+    /// §4.3: two 4/4s trade, unless the attacker alone strikes first; when both have First Strike they
+    /// strike together and still trade.
+    #[test]
+    fn only_a_first_strike_the_target_lacks_survives_an_even_fight() {
+        assert!(!kills_and_survives_with(VANILLA, &[], VANILLA, &[]));
+        assert!(kills_and_survives_with(
+            VANILLA,
+            &[Keyword::FirstStrike],
+            VANILLA,
+            &[]
+        ));
+        assert!(!kills_and_survives_with(
+            VANILLA,
+            &[Keyword::FirstStrike],
+            VANILLA,
+            &[Keyword::FirstStrike]
+        ));
+    }
+
+    /// §4.4 steps 1 and 4: an attacker with Divine Shield or Indestructible, either one alone, takes
+    /// nothing from the strike back, so it survives the fight two 4/4s would trade in.
+    #[test]
+    fn an_attacker_with_divine_shield_or_indestructible_survives_an_even_fight() {
+        for keyword in [Keyword::DivineShield, Keyword::Indestructible] {
+            assert!(
+                kills_and_survives_with(VANILLA, std::slice::from_ref(&keyword), VANILLA, &[]),
+                "{keyword:?}"
+            );
+        }
+    }
+
+    /// §4.4 step 7: Poisonous destroys only when 1 or more was dealt, so a Poisonous hit the Bunker's
+    /// Armor 3 takes whole kills nothing, and one past it kills the 5/10.
+    #[test]
+    fn a_poisonous_blow_kills_only_when_it_deals_damage() {
+        jackioh_cards::register_all();
+        let s = scenario(json!({ "p1": { "field": [VANILLA] }, "p2": { "field": [BUNKER] } }));
+        let from = side_of(s.state(), s.card(VANILLA));
+        let to = side_of(s.state(), s.card(BUNKER));
+        assert_eq!(to.view.armor, 3);
+        let absorbed = blow(&from, 3, true, &to);
+        assert_eq!((absorbed.dealt, absorbed.kills), (0, false));
+        let dealt = blow(&from, 4, true, &to);
+        assert_eq!((dealt.dealt, dealt.kills), (1, true));
+    }
+
+    /// R1283: the attacker's strike on the Unit across its own lane is its attack times its lane
+    /// multiplier, as `resolve_combat` reads it in a forced attack (the Bunker's Can't attack is skipped
+    /// there, §4.2), and the strike back is the defender's attack times its own, 1.
+    #[test]
+    fn the_strike_across_a_bunkers_lane_is_multiplied() {
+        jackioh_cards::register_all();
+        let s = scenario(json!({
+            "p1": { "field": [{ "def": BUNKER, "lane": 1 }] },
+            "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
+        }));
+        let (bunker, vanilla) = (s.card(BUNKER), s.card(VANILLA));
+        let state = s.state();
+        let combat = exchange(
+            state,
+            bunker,
+            &unit_view(state, bunker),
+            vanilla,
+            &unit_view(state, vanilla),
+        );
+        assert_eq!(lane_multiplier_for(state, bunker, vanilla), 3);
+        assert_eq!((combat.hit, combat.strike_back, combat.splash), (15, 4, 5));
+    }
+
+    /// R1120, §4.4 step 10: Economic Anxiety's +3 rides the strike and the Cleave splash alike (a
+    /// Felinor attacking a Human, which shares no tag with it).
+    #[test]
+    fn the_combat_only_bonus_rides_the_strike_and_the_splash() {
+        jackioh_cards::register_all();
+        let s = scenario(json!({
+            "p1": { "field": [BIG_FELINOR], "backrow": [ANXIETY] },
+            "p2": { "field": [VANILLA] },
+        }));
+        let (felinor, vanilla) = (s.card(BIG_FELINOR), s.card(VANILLA));
+        let state = s.state();
+        let combat = exchange(
+            state,
+            felinor,
+            &unit_view(state, felinor),
+            vanilla,
+            &unit_view(state, vanilla),
+        );
+        assert_eq!(attack_mod_for(state, felinor, vanilla).attack, 3);
+        assert_eq!((combat.hit, combat.strike_back, combat.splash), (6, 4, 6));
     }
 
     #[test]

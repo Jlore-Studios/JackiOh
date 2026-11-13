@@ -950,6 +950,32 @@ mod r144_the_reseed_on_demand {
         }))
         .await;
     }
+
+    /// `E2E` as `1` or `true` fills every unset variable with its placeholder, so an environment of
+    /// that flag alone boots (`e2e/README.md`); unset, `0` or `false`, the boot is `load_env`'s exactly
+    /// and a missing variable fails it by name, never filled in.
+    #[test]
+    fn r144_only_e2e_on_fills_the_placeholders() {
+        for on in ["1", "true"] {
+            let source = IndexMap::from([("E2E".to_string(), on.to_string())]);
+            let env = app::load_server_env(&source).unwrap_or_else(|error| panic!("E2E={on}: {error}"));
+            assert!(env.e2e, "E2E={on}");
+        }
+        let mut without_pepper = production_source();
+        without_pepper.shift_remove("CODE_PEPPER");
+        without_pepper.shift_remove("NODE_ENV");
+        for off in [None, Some("0"), Some("false")] {
+            let mut source = without_pepper.clone();
+            if let Some(off) = off {
+                source.insert("E2E".to_string(), off.to_string());
+            }
+            let refused = app::load_server_env(&source).expect_err("no CODE_PEPPER");
+            assert!(
+                refused.to_string().contains("CODE_PEPPER"),
+                "E2E={off:?}: {refused}"
+            );
+        }
+    }
 }
 
 // R143

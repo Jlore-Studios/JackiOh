@@ -344,6 +344,62 @@ mod candidate_actions_b14 {
         assert_eq!(lanes_of(&crowded, "core-008", &deeper_expansion), deeper);
     }
 
+    /// B14 (#1014): a placement reads the seat's other zone of the lane too. With the AI's own
+    /// face-down card behind lane 3 only, lane 3 is a placement of its own, and lanes 2 and 4, with
+    /// nothing beside, behind or opposite them, are one placement outside the midlane, which keeps its
+    /// lowest lane.
+    #[test]
+    fn b14_a_placement_reads_the_seats_other_zone_and_keeps_its_lowest_lane_outside_the_midlane() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "search-other-row",
+            "p1": { "hand": ["core-008"], "backrow": [{ "def": "core-041", "lane": 3 }] },
+            "p2": { "hand": ["core-005"] },
+        }))
+        .state()
+        .clone();
+        assert_eq!(midlane_lanes_of(&state, AI), vec![3]);
+        let zone = |lane: i32| ZoneChoice {
+            row: Row::Units,
+            lane,
+        };
+        assert_ne!(placement(&state, AI, &zone(2)), placement(&state, AI, &zone(3)));
+        assert_eq!(placement(&state, AI, &zone(2)), placement(&state, AI, &zone(4)));
+        assert_eq!(root_offered_lanes(&state, "core-008"), vec![1, 2, 3, 5]);
+    }
+
+    /// R1086: an Equip play lands on its host, so it is no lane variant of the plain play and none of
+    /// its hosts is cut at AI_SEARCH.zone_variants: Sentient Cat Ears (M #67, a (1) Equip Unit) is
+    /// offered onto each of three Mr. Vanillas, and as a plain play into the free lanes.
+    #[test]
+    fn r1086_an_equip_play_onto_each_host_is_kept_past_the_zone_cap() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "search-equip-hosts",
+            "p1": { "hand": ["meditative-067"], "field": ["core-008", "core-008", "core-008"] },
+            "p2": { "hand": ["core-005"] },
+        }))
+        .state()
+        .clone();
+        let ears = hand_id(&state, "meditative-067");
+        let equips: Vec<i32> = candidate_actions(&state, AI, Prices::NONE)
+            .iter()
+            .filter_map(|action| match action {
+                ActionBody::Play {
+                    instance_id,
+                    zone: Some(zone),
+                    equip: Some(true),
+                    ..
+                } if *instance_id == ears => Some(zone.lane),
+                _ => None,
+            })
+            .collect();
+        assert!(equips.len() > AI_SEARCH.zone_variants as usize);
+        let mut hosts = equips.clone();
+        hosts.sort();
+        assert_eq!(hosts, vec![1, 2, 3]);
+    }
+
     /// #1635: only the search's root keeps every placement. The lethal solver (lethal.rs
     /// `lethal_moves`, which reads `candidate_actions`), the opponent's reply (reply.rs, which reads
     /// `candidate_actions_in`) and a line's later actions (`candidate_set`) keep the lowest
