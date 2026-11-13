@@ -8,6 +8,10 @@
 //! `index`), so a card branch never writes it and never conflicts on it: a card merged since the last
 //! fold is in the catalog and not here yet.
 //!
+//! It cites sections and rulings as plain text (`§6.1`, `R1444`) and holds no `[[…]]` link, so `spec
+//! check`'s rule 4 has nothing in it to resolve, whatever tree `--root` names (a test's spec notes
+//! alone hold no §6.1).
+//!
 //! A pool's "drawn by" is every script under `crates/cards/src/scripts/` whose code, above its
 //! `#[cfg(test)]` and with its comments and strings blanked, calls the pool's function
 //! (`NamedPool::call`), so that list is not kept by hand either.
@@ -98,7 +102,7 @@ fn keyword_rows(out: &mut String) -> Result<()> {
     writeln!(out, "## {KEYWORDS_HEADING}\n")?;
     writeln!(
         out,
-        "The cards and tokens that print each keyword on either face, as the catalog's `keywords` hold them; `(Radiant)` marks one only its Radiant face prints. A keyword a card gives, lends or gains in play is the rules' to name ([[§6.1]]), and a keyword no card prints says {NONE}.\n"
+        "The cards and tokens that print each keyword on either face, as the catalog's `keywords` hold them; `(Radiant)` marks one only its Radiant face prints. A keyword a card gives, lends or gains in play is the rules' to name (§6.1), and a keyword no card prints says {NONE}.\n"
     )?;
     writeln!(out, "| Keyword | Cards | Tokens |\n| --- | --- | --- |")?;
     for kind in KeywordKind::ALL
@@ -140,7 +144,7 @@ fn tag_rows(out: &mut String) -> Result<()> {
     writeln!(out, "\n## {TAGS_HEADING}\n")?;
     writeln!(
         out,
-        "The cards and tokens that carry each tag ([[§5]]); a pool that names a tag takes its cards, and its tokens only when it asks for them ([[§5.1]], [[R382]]).\n"
+        "The cards and tokens that carry each tag (§5); a pool that names a tag takes its cards, and its tokens only when it asks for them (§5.1, R382).\n"
     )?;
     writeln!(out, "| Tag | Cards | Tokens |\n| --- | --- | --- |")?;
     for tag in Tag::ALL {
@@ -212,7 +216,7 @@ fn pool_sections(out: &mut String, scripts: &[(String, String)]) -> Result<()> {
     writeln!(out, "\n## {POOLS_HEADING}\n")?;
     writeln!(
         out,
-        "Each random pool `crates/cards/src/query.rs` names (`POOLS`): its rule, the cards whose scripts draw from it, and its members today. A card that draws from a pool it is in leaves itself out ([[R387]]).\n"
+        "Each random pool `crates/cards/src/query.rs` names (`POOLS`): its rule, the cards whose scripts draw from it, and its members today. A card that draws from a pool it is in leaves itself out (R387).\n"
     )?;
     for pool in POOLS {
         writeln!(out, "### {}\n\n{}\n", pool.name, pool.rule)?;
@@ -315,6 +319,9 @@ mod tests {
         assert!(weapons.contains("- Legendary: S #58 "), "{weapons}");
         let resources = pool(&index, "resources").join("\n");
         assert!(resources.contains("S #62 "), "{resources}");
+        // It links nothing: its one `[[` is the header's example, in a code span.
+        assert_eq!(index.matches("[[").count(), HEADER.matches("[[").count());
+        assert_eq!(HEADER.matches("`[[CARDS#jlockeed]]`").count(), 1);
         // Every heading a link may name is in the file.
         for heading in headings() {
             assert!(

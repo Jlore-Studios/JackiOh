@@ -6,7 +6,7 @@ A card is written as the spec writes it, its set's abbreviation and its index (`
 
 ## Keywords
 
-The cards and tokens that print each keyword on either face, as the catalog's `keywords` hold them; `(Radiant)` marks one only its Radiant face prints. A keyword a card gives, lends or gains in play is the rules' to name ([[§6.1]]), and a keyword no card prints says none.
+The cards and tokens that print each keyword on either face, as the catalog's `keywords` hold them; `(Radiant)` marks one only its Radiant face prints. A keyword a card gives, lends or gains in play is the rules' to name (§6.1), and a keyword no card prints says none.
 
 | Keyword | Cards | Tokens |
 | --- | --- | --- |
@@ -49,7 +49,7 @@ The cards and tokens that print each keyword on either face, as the catalog's `k
 
 ## Tags
 
-The cards and tokens that carry each tag ([[§5]]); a pool that names a tag takes its cards, and its tokens only when it asks for them ([[§5.1]], [[R382]]).
+The cards and tokens that carry each tag (§5); a pool that names a tag takes its cards, and its tokens only when it asks for them (§5.1, R382).
 
 | Tag | Cards | Tokens |
 | --- | --- | --- |
@@ -87,11 +87,11 @@ The cards and tokens that carry each tag ([[§5]]); a pool that names a tag take
 
 ## Pools
 
-Each random pool `crates/cards/src/query.rs` names (`POOLS`): its rule, the cards whose scripts draw from it, and its members today. A card that draws from a pool it is in leaves itself out ([[R387]]).
+Each random pool `crates/cards/src/query.rs` names (`POOLS`): its rule, the cards whose scripts draw from it, and its members today. A card that draws from a pool it is in leaves itself out (R387).
 
 ### luck-based
 
-The Luck-based cards ([[R1444]]): every non-token card that prints Lucky on either face or whose text says "Flip a coin", read off the definition, from the sets that ship ([[R380]], [[R1420]]).
+The Luck-based cards (R1444): every non-token card that prints Lucky on either face or whose text says "Flip a coin", read off the definition, from the sets that ship (R380, R1420).
 
 Drawn by: M #101 Gachaholic.
 
@@ -99,7 +99,7 @@ Cards: #4 Gary the Gambler, #23 Reoccurring Dream, C #65 Ace in the Hole, C+ #16
 
 ### embiggen
 
-The embiggen cards ([[R1178001]]): every non-token card that prints two prices, from the sets that ship.
+The embiggen cards (R1178001): every non-token card that prints two prices, from the sets that ship.
 
 Drawn by: M+ #22 Mountaintop Garden, M+ #23 Enormous Elderberry.
 
@@ -107,7 +107,7 @@ Cards: #46 Suppressive Aura, #56 Jilliax, #59 Unbiased Immigration, #83 Transmog
 
 ### starship-pieces
 
-The Starship Pieces ([[R1878000]]): every non-token Stinkyscape card that prints Starship Piece on its base face, which leaves out the Dormant Starship ([[R1857001]]).
+The Starship Pieces (R1878000): every non-token Stinkyscape card that prints Starship Piece on its base face, which leaves out the Dormant Starship (R1857001).
 
 Drawn by: S #25 KY's Tricknology, S #26 ZolarKeth, S #124 Jlockeed's Shipbuilding Grant, S #125 Jlockeed's Spacerace Propaganda, S #126 Jlockeed's Permanent Procurement Lobbying, S T-AI-3 Route Optimizer, S T-AI-10 Salvage Protocol.
 
@@ -115,7 +115,7 @@ Cards: S #38 Shield Amplifier, S #40 Poison Capsule, S #43 Healing Capsule, S #4
 
 ### jlockeed
 
-The Jlockeed cards ([[R278]]): every non-token card tagged Jlockeed, from the sets that ship ([[R380]], [[R1420]]); the card drawing it leaves itself out ([[R387]]).
+The Jlockeed cards (R278): every non-token card tagged Jlockeed, from the sets that ship (R380, R1420); the card drawing it leaves itself out (R387).
 
 Drawn by: C+ #48 Jlockeed's Lobbyist, C+ #52 Jlockeed's Permanent Defense Contract, M+ #4 Jlockeed's Supply Drop, S #130 Jlockeed's Starship Retrofitting Program.
 
@@ -123,7 +123,7 @@ Cards: #13 Jlockeed Shredder-10, #14 Jlockeed's Weapons, C #4 Palantir, C+ #48 J
 
 ### weapons
 
-The Weapons ([[R1862002]]): the Weapon-tagged Stinkyscape cards of the rarity the text names, the pool naming its set ([[R1420]]).
+The Weapons (R1862002): the Weapon-tagged Stinkyscape cards of the rarity the text names, the pool naming its set (R1420).
 
 Drawn by: S #81 Radix, S #82 Phalanx, S #83 Halo, S #85 Prototype-X1, S #86 Prototype-X2.
 
@@ -133,7 +133,7 @@ Drawn by: S #81 Radix, S #82 Phalanx, S #83 Halo, S #85 Prototype-X1, S #86 Prot
 
 ### prime
 
-The Prime cards ([[R1421]]): every card tagged Prime, each a token, which a pool that names the tag reaches.
+The Prime cards (R1421): every card tagged Prime, each a token, which a pool that names the tag reaches.
 
 Drawn by: M #31 The Conductor, M #55 Dragon Fruit.
 
@@ -141,7 +141,7 @@ Cards: C+ #38.1 Solarius Prime, C+ #46.1 Felinor Flagbearer Prime, M #45.1 Knowl
 
 ### resources
 
-The Resources ([[R1840002]]): every Resource the catalog holds, shipped or not, rolled over the rarities they hold; a gain that names its own pool rolls over that one.
+The Resources (R1840002): every Resource the catalog holds, shipped or not, rolled over the rarities they hold; a gain that names its own pool rolls over that one.
 
 Drawn by: S #7 The Greatest Heist, S #39 The Narcor Project, S #62 Miner v1, S #63 Miner v2, S #64 Miner v3, S #65 Miner v4, S #66 Miner v5, S #67 Tractor Beam, S #75 Badger, S #76 Honey Badger, S #84.1 Metal Scraps, S #96 Ocean Tsunami, S #97 Asteroid Field, S #155 Comet Crash, S #169 Tiny Asteroid, S #170 Medium Asteroid, S #171 Large Asteroid, S #172 Huge Asteroid, S T-AI-2 Mining Subroutine.
 

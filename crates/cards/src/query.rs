@@ -110,7 +110,8 @@ pub fn prime_cards() -> CardQuery {
 pub struct NamedPool {
     /// Its heading in `spec/CARDS.md`, which a spec row links as `[[CARDS#<name>]]`.
     pub name: &'static str,
-    /// What decides its members, in one line of the spec's words.
+    /// What decides its members, in one line of the spec's words, its sections and rulings cited as
+    /// plain text (`R1444`), since `spec/CARDS.md` holds no `[[…]]` link for `spec check` to resolve.
     pub rule: &'static str,
     /// The function a script calls to draw from it. Every script under `src/scripts/` whose code calls
     /// it is a card that draws from the pool.
@@ -135,31 +136,31 @@ const WEAPON_RARITIES: [Rarity; 3] = [Rarity::Rare, Rarity::Epic, Rarity::Legend
 pub const POOLS: &[NamedPool] = &[
     NamedPool {
         name: "luck-based",
-        rule: "The Luck-based cards ([[R1444]]): every non-token card that prints Lucky on either face or whose text says \"Flip a coin\", read off the definition, from the sets that ship ([[R380]], [[R1420]]).",
+        rule: "The Luck-based cards (R1444): every non-token card that prints Lucky on either face or whose text says \"Flip a coin\", read off the definition, from the sets that ship (R380, R1420).",
         call: "luck_based",
         parts: || whole(luck_based()),
     },
     NamedPool {
         name: "embiggen",
-        rule: "The embiggen cards ([[R1178001]]): every non-token card that prints two prices, from the sets that ship.",
+        rule: "The embiggen cards (R1178001): every non-token card that prints two prices, from the sets that ship.",
         call: "embiggen_cards",
         parts: || whole(embiggen_cards()),
     },
     NamedPool {
         name: "starship-pieces",
-        rule: "The Starship Pieces ([[R1878000]]): every non-token Stinkyscape card that prints Starship Piece on its base face, which leaves out the Dormant Starship ([[R1857001]]).",
+        rule: "The Starship Pieces (R1878000): every non-token Stinkyscape card that prints Starship Piece on its base face, which leaves out the Dormant Starship (R1857001).",
         call: "starship_pieces",
         parts: || whole(starship_pieces()),
     },
     NamedPool {
         name: "jlockeed",
-        rule: "The Jlockeed cards ([[R278]]): every non-token card tagged Jlockeed, from the sets that ship ([[R380]], [[R1420]]); the card drawing it leaves itself out ([[R387]]).",
+        rule: "The Jlockeed cards (R278): every non-token card tagged Jlockeed, from the sets that ship (R380, R1420); the card drawing it leaves itself out (R387).",
         call: "jlockeed_cards",
         parts: || whole(jlockeed_cards()),
     },
     NamedPool {
         name: "weapons",
-        rule: "The Weapons ([[R1862002]]): the Weapon-tagged Stinkyscape cards of the rarity the text names, the pool naming its set ([[R1420]]).",
+        rule: "The Weapons (R1862002): the Weapon-tagged Stinkyscape cards of the rarity the text names, the pool naming its set (R1420).",
         call: "weapons_of",
         parts: || {
             WEAPON_RARITIES
@@ -170,13 +171,13 @@ pub const POOLS: &[NamedPool] = &[
     },
     NamedPool {
         name: "prime",
-        rule: "The Prime cards ([[R1421]]): every card tagged Prime, each a token, which a pool that names the tag reaches.",
+        rule: "The Prime cards (R1421): every card tagged Prime, each a token, which a pool that names the tag reaches.",
         call: "prime_cards",
         parts: || whole(prime_cards()),
     },
     NamedPool {
         name: "resources",
-        rule: "The Resources ([[R1840002]]): every Resource the catalog holds, shipped or not, rolled over the rarities they hold; a gain that names its own pool rolls over that one.",
+        rule: "The Resources (R1840002): every Resource the catalog holds, shipped or not, rolled over the rarities they hold; a gain that names its own pool rolls over that one.",
         call: "gain_resources",
         parts: || {
             let ids = jackioh_engine::resources::resource_def_ids();
