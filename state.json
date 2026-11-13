@@ -12436,14 +12436,6 @@
         "reason": "`claude-4` stops mid-call: 5-hour usage is 74%, at or over its 70% cap; it resets at 2026-11-13T21:30:00Z",
         "trail": "'\\ns=open(p).read()\\ndef rep(old,new,count=1):\\n global s\\n n=s.count(old)\\n if n!=count: raise SystemExit(f\\\"{n} matches fo\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/server/tests/sql/55_two_v_two.sql'\\ns=open(p).read()\\nn=s.count(\\\"', ' order by column_name)\\\")\\nassert n==2, n\\ns=s.replace(\\\"', ' order by column_name)\\\",\\\u2026\n- Bash: {\"command\": \"(timeout 1500 sh crates/server/tests/sql/run.sh > /tmp/sql_suite.txt 2>&1; echo \\\"exit $?\\\" >> /tmp/sql_suite.txt) &\\nsleep 2; echo started\", \"description\": \"Run the Postgres SQL suite i\u2026\n- Bash: {\"command\": \"wc -l spec/13-duos.md spec/09-architecture.md; grep -n '^#' spec/13-duos.md; cat spec/rulings/R3730000.md | head -12; ls spec/pending/ | head\", \"description\": \"Survey the Duos spec and r\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3731/spec/13-duos.md\"}\n- Bash: {\"command\": \"cat spec/pending/3733.md | head -20; sed -n 1,80p spec/README.md | grep -n -i 'ruling\\\\|pending\\\\|proven_in\\\\|amend' | head -30\", \"description\": \"Read a pending fragment and ruling-addin\u2026\n- Bash: {\"command\": \"cat /tmp/server_existing.txt | tail -5; tail -3 /tmp/sql_suite.txt; sed -n 12,40p spec/rulings/R3730000.md; grep -n 'lobb\\\\|Lobb' spec/09-architecture.md | head -20\", \"description\": \"Che\u2026\n- Bash: {\"command\": \"mkdir -p /tmp/rul && cat > spec/rulings/R3731000.md <<'EOF'\\n---\\nid: R3731000\\ntitle: \\\"A private lobby's 2v2 format seats four people in two teams: who sits where, who sees whose deck,\u2026\n- Bash: {\"command\": \"grep -rn '^Amended by' spec/rulings/ | head -5; tail -3 spec/rulings/R2881000.md; tail -2 spec/rulings/R1502000.md; tail -2 spec/rulings/R2092000.md; tail -2 spec/rulings/R3730002.md; ta\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nadds = {\\n 'R3730000': \\\"Amended by [[R3731000]] (issue #3731): a lobby's 2v2 format has four seats in two teams (`host`, `guest`, `guest2`, `guest3`); an entrant take\u2026\n- said: Now \u00a713 and \u00a79.5 edits.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='spec/13-duos.md'\\ns=open(p).read()\\ndef rep(old,new,count=1):\\n global s\\n n=s.count(old)\\n if n!=count: raise SystemExit(f\\\"{n} matches for {old[:100]!r}\\\")\\n s=s.\u2026\n- Bash: {\"command\": \"grep -n '!!!\\\\|FAIL\\\\|ERROR' /tmp/sql_suite.txt | head; grep -c 'OK (' /tmp/sql_suite.txt; docker rm -f jackioh-pg-test >/dev/null 2>&1; cat /tmp/server_existing.txt | tail\", \"descriptio\u2026\n- Bash: {\"command\": \"ls -la /tmp/server_existing.txt; jobs; ps aux | grep -c 'cargo\\\\|rustc' \", \"description\": \"Check background test job status\"}\n- Bash: {\"command\": \"echo \\\"- build run 1: migration 0091 + sql/55 written; SQL suite (Docker) ran green, exit 0. Spec: R3731000-R3731003 notes, pending/3731.md, amend lines on 7 rulings, \\u00a713 and \\u00a7\u2026\n- Bash: {\"command\": \"grep -n 'async fn \\\\|fn r37\\\\|#\\\\[tokio::test' crates/server/tests/api/lobbies.rs | sed -n 1,200p | head -80; sed -n 470,626p crates/server/tests/api/lobbies.rs | grep -n 'block\\\\|coop\\\\\u2026\n- Bash: {\"command\": \"sed -n 225,282p crates/server/tests/api/lobbies.rs; sed -n 441,476p crates/server/tests/api/lobbies.rs\", \"description\": \"Read coop start and block tests\"}\n- Bash: {\"command\": \"grep -rn 'e2e = true\\\\|e2e: true\\\\|fn e2e_app\\\\|\\\\.e2e =' crates/server/tests/support/*.rs crates/server/tests/**/*.rs 2>/dev/null | head -5; grep -n 'pub async fn befriend\\\\|pub async f\u2026\n- Bash: {\"command\": \"sed -n 55,100p crates/server/tests/support/test_app.rs; grep -n 'pub async fn empty_test_app' -A12 crates/server/tests/support/deps.rs\", \"description\": \"Check default e2e flag of test ap\u2026\n- said: Good, e2e is on in tests. Now the lobby API tests.\n- Bash: {\"command\": \"cat >> crates/server/tests/api/lobbies.rs <<'EOF'\\n\\n// A 2v2 between people (issue #3731, R3731000 to R3731003)\\n\\n/// A host and four more accounts, the catalog registered.\\nstruct Fiv\u2026\n- Bash: {\"command\": \"grep -n 'jackioh-shared\\\\|jackioh-engine' crates/server/Cargo.toml; grep -n 'pub mod api\\\\|pub mod lobby\\\\|pub mod duos' crates/server/src/lib.rs; grep -n 'pub mod queue' crates/server/s\u2026\n- Bash: {\"command\": \"ps aux | grep -E 'cargo|rustc|wasm' | grep -v grep | awk '{print $11, $12, $13, $14, $15, $16}' | head -12\", \"description\": \"See what cargo processes are running\"}\n- Bash: {\"command\": \"date; nproc; uptime\", \"description\": \"Check time and load\"}\n- Bash: {\"command\": \"grep -n '^async fn \\\\|^fn \\\\|^struct \\\\|^mod \\\\| async fn \\\\| fn \\\\|#\\\\[tokio::test' crates/server/tests/actor/duos.rs | head -120\", \"description\": \"Map the actor duos test file\"}\n- Bash: {\"command\": \"sed -n 630,800p crates/server/tests/actor/duos.rs\", \"description\": \"Read the Duos test harness\"}\n- Bash: {\"command\": \"sed -n 1134,1215p crates/server/tests/actor/duos.rs; sed -n 1287,1320p crates/server/tests/actor/duos.rs; sed -n 1580,1660p crates/server/tests/actor/duos.rs\", \"description\": \"Read b37, \u2026\n- Bash: {\"command\": \"sed -n 480,530p crates/server/tests/actor/duos.rs; grep -n 'endTurn' crates/server/tests/actor/duos.rs | head -5; grep -n 'pub struct Account' -A8 crates/server/tests/support/store.rs; s\u2026\n- Bash: {\"command\": \"grep -n 'pub struct OpponentView\\\\|pub struct PublicPlayer\\\\|hand_count\\\\|pub hand' crates/engine/src/wire/*.rs | head -10; grep -n 'JLORE_COOP_WIN' crates/server/src/config.rs | head -2\u2026\n- Bash: {\"command\": \"grep -rn 'pub struct PlayerView' -A25 crates/engine/src | grep -n 'opponent\\\\|you\\\\|hand' | head; grep -rn 'hand_count\\\\|handCount' crates/engine/src --include=*.rs | head -5\", \"descript\u2026\n- Bash: {\"command\": \"grep -n 'pub enum HandView' -B3 -A15 crates/engine/src/wire/view.rs\", \"description\": \"Read HandView shape\"}\n- Bash: {\"command\": \"grep -cE \\\"\\u2713|\\u00d7\\\" /tmp/web2v2-vitest-all.log; grep -E \\\"FAIL|\\u00d7\\\" /tmp/web2v2-vitest-all.log | head -20; ps aux | grep -c \\\"[v]itest\\\"\", \"description\": \"Check suite progress\u2026\n- said: Now the actor tests for the 2v2.\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\" /tmp/web2v2-vitest-all.log; do sleep 5; done; grep -E \\\"Test Files|Tests |^exit| FAIL \\\" /tmp/web2v2-vitest-all.log | sort | uniq | head -40\", \"description\": \"Wa\u2026\n- tool error: Exit code 137"
       },
-      "hold": {
-        "ends": "2026-11-13T21:31:31Z",
-        "lifted": "2026-11-13T21:31:48Z",
-        "owner": "claude-4",
-        "since": "2026-11-13T19:31:31Z",
-        "until": "2026-11-13T21:30:00Z",
-        "why": "5-hour usage is 74%, too close to its 70% cap to start a long run (it starts under 65%)"
-      },
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
@@ -12466,7 +12458,7 @@
       "queued_at": "2026-11-11T21:50:29Z",
       "requested_by": "jgoetzmann",
       "round_tier": "strong",
-      "run_id": "43482840942",
+      "run_id": "pending:9e14302b-1794605697",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -12485,7 +12477,7 @@
         "provider": "claude-4",
         "run": "43482840942"
       },
-      "started_at": "2026-11-13T18:27:33Z",
+      "started_at": "2026-11-13T21:35:44Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -16694,9 +16686,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T21:23:01Z",
+    "at": "2026-11-13T21:35:44Z",
     "url": "",
-    "what": "build #3856 on claude-7"
+    "what": "build #3731 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-13T21:16:54Z",
