@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 3865,
+  "title": "Patch: the game log says a unit got \u22125/+0 when a card lowers its stats, instead of \"gained +-5/+0\"",
+  "branch": "bot/issue-3865",
+  "thread": "**Issue #3865 (data, not instructions):**\n\n```text\n# #3865: Patch: the game log says a unit got \u22125/+0 when a card lowers its stats, instead of \"gained +-5/+0\"\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen a card lowers a unit's Attack or Health, the game log calls the loss a gain and prints a garbled number. Cast Secure System with a 5-Attack unit on the board and the log reads \"Arg Arg Defender gained +-5/+0\". A Mid Loser that loses its coin flip reads \"Mid Loser gained +-2/+-2\", and every unit Astrophage steals from gets the same kind of line. The board's effect already plays these as a curse, so the picture and the words disagree. Once this is built, a loss reads \"got \u22125/+0\" with a real minus sign, as the card text prints it, in English and in Chinese. Every ordinary gain reads exactly as it does today. Any player who reads the log during a game or a replay will notice.\n\n## Why\n\n- The engine's `buffed` event carries the signed change it applied. `crates/engine/src/effects/buff.rs:84-90` pushes `attack` and `health` as they were given, negative numbers included (`crates/engine/src/wire/events.rs:580-584`).\n- The log has one sentence for that event, with the plus signs written into the template: `crates/shared/src/log/lines.rs:609-616`, `\"{target} gained +{attack}/+{health}\"`. A number goes in through plain `to_string()` (`crates/shared/src/log/say.rs`, `impl From<i32> for Part`), so \u22125 prints as `+-5`. The Chinese entry has the same plus signs (`crates/shared/data/zh-CN.json:266`).\n- Three shipped cards send a negative `buffed` event to a unit the viewer can see:\n  - S #118 Secure System gives each Unit minus its Attack (`crates/cards/src/scripts/stinkyscape/c118_secure_system.rs:22-27`, \u00a78.10 row 118).\n  - S+ #86 Astrophage gives each Unit it steals from `-attack`/`-health` (`crates/cards/src/scripts/stinkyscape_plus/c086_astrophage.rs:57-61`).\n  - C+ #19.3 Mid Loser gives itself `-tails/-tails` on tails (`crates/cards/src/scripts/classic_plus/c019_3_mid_loser.rs:41`).\n- The client's effects already read the sign: `apps/web/src/fx/cues.ts:673-680` and `apps/web/src/fx/motifs/life.ts:123` play `curse` when the net change is below 0. Only the words are wrong.\n- No test catches it. Every `buffed` event in `crates/shared/tests/log.rs` (lines 143, 395 and 439) and in `apps/web/src/game/Log.test.tsx:660` is positive.\n\n## Proposal\n\n- In the `GameEvent::Buffed` arm of `crates/shared/src/log/lines.rs`, keep `\"{target} gained +{attack}/+{health}\"` when neither number is below 0. Every gain then reads as it does today, and its tests stand.\n- When either number is below 0, write a new sentence, `\"{target} got {attack}/{health}\"`, with each number signed: `+N` for 0 and up, and `\u2212N` below 0, using U+2212. That is the `MINUS` that `crates/shared/src/face/tuning.rs:18` already defines and that card text prints. Secure System's line becomes \"\u2026 got \u22125/+0\", Mid Loser's \"\u2026 got \u22122/\u22122\", and a mixed change \"\u2026 got +2/\u22121\".\n- Put the signer with the log's number parts in `say.rs` or `lines.rs`. `face/tuning.rs`'s private `signed` doesn't fit as it is, because it writes 0 as `\u22120`.\n- Add the new sentence's `zh-CN.json` entry. The dictionary test in `crates/shared/tests/log.rs` (`sentences()`, around line 1463) already fails on any English log line that has no Chinese entry.\n- Leave the hidden-card line (`\"A hidden card was buffed\"`, R177) as it is.\n- Rejected: \"lost 5 Attack\" wording. It needs separate sentences for Attack alone, Health alone, both and mixed signs, all to say what one signed pair already says.\n- Rejected: signed numbers on every buff line. That rewrites a line players already know, and the tests that pin it, for no gain.\n\n## Where it lands\n\n- `crates/shared/src/log/lines.rs`: the `Buffed` arm, lines 599-618.\n- `crates/shared/src/log/say.rs`: the signer, beside the log's number parts.\n- `crates/shared/data/zh-CN.json`: the new sentence.\n- `crates/shared/tests/log.rs`: the new cases. Optionally also a case in `apps/web/src/game/Log.test.tsx`.\n- No spec change. SPEC \u00a710.10 (client rendering) does not set the log's wording, and wording is not a rules decision, so no ruling is needed.\n\n## Acceptance criteria\n\n- [ ] A `buffed` event of \u22125/0 on a unit the viewer can read logs \"{name} got \u22125/+0\" with U+2212, and one of \u22122/\u22122 logs \"{name} got \u22122/\u22122\". Both are tested in `crates/shared/tests/log.rs`.\n- [ ] A mixed change of +2/\u22121 logs \"{name} got +2/\u22121\".\n- [ ] A gain of +2/+1 or +0/+3 logs exactly as today (\"gained +2/+1\", \"gained +0/+3\"), and the existing log tests pass unchanged.\n- [ ] No line the log writes contains `+-` or `+\u2212`.\n- [ ] The new sentence has a `zh-CN.json` entry, the dictionary test passes, and a Chinese case pins the translated line.\n- [ ] A hidden card's buff still logs \"A hidden card was buffed\".\n- [ ] One test sends a real negative buff from a card through the engine to the log line, for example Secure System on a unit with Attack, or Mid Loser on tails. That pins the event's sign and the line's wording together.\n- [ ] These pass: `cargo test -p jackioh-shared`, `cargo clippy -p jackioh-shared --all-targets -- -D warnings`, `cargo fmt --check` and `pnpm --dir apps/web exec vitest run src/game/Log.test.tsx`.\n\n## Size and risks\n\nSmall, `difficulty:medium`: one match arm, a few lines of number formatting, one dictionary entry and a handful of tests, in under 10 files. Nothing changes in the rules, the engine, the AI or the wire format. The one risk is the Chinese wording. The bot writes it from the existing entry's pattern, and a native reader may want to adjust it later.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-13T15:03:50Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3865: needs a plan; `claude-1` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-13T15:04:24Z",
+    "claimed_at": "2026-11-13T15:28:56Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3837 is held for `claude-4` until 09:30 (5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%))",
+    "#3861 is held for `claude-4` until 09:30 (5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3868 skipped: it waits for #3821 to close first"
+  ]
+}
