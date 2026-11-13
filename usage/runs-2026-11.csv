@@ -2042,3 +2042,5 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-13T13:36:33Z,43434534958,claude-8,opus+sonnet,review,3861,medium,reviewed,,1.4,25,10087,1346879,0.6929,4,6,,,2.7,,none,,1
 2026-11-13T13:39:21Z,43424808443,claude-1,opus,revise,3779,hard,approved,,19.9,49,11557,4752305,12.129,11,18,,,1.3,claude-1,resumed,,2
 2026-11-13T13:27:42Z,43417875519,claude-6,opus,revise,3818,hard,built,,83.6,111,21336,5038971,2.207,10,14,,,36,claude-3,fresh,other,1
+2026-11-13T13:50:21Z,43434166398,claude-8,opus,review,3860,hard,approved,,17.9,8,2205,349418,1.6568,2,10,,,3.7,,none,,1
+2026-11-13T13:49:16Z,43392597351,claude-7,opus,review,3811,hard,interrupted,time budget,286.4,23,5152,3601530,18.6243,6,17,,,1.3,claude-7,fresh,,3
