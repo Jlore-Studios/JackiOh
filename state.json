@@ -16958,6 +16958,14 @@
         "sha": "78ffce3165ffda7c44bbe4ed866cfd33939daa36",
         "tiers": {}
       }
+    },
+    "3890": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-13T21:36:48Z",
+      "issue": 3858,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
