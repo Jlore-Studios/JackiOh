@@ -11,7 +11,7 @@ use crate::restrictions::unaffected_by;
 use crate::script::EffectContext;
 use crate::state::{CardInstance, find_instance};
 use crate::stays::{exit_mark, left_field_after};
-use crate::wire::{CardType, PlayerId, Row, Selection, Tag, TargetAim, ZoneName, opponent_of};
+use crate::wire::{CardType, GameEvent, PlayerId, Row, Selection, Tag, TargetAim, ZoneName, opponent_of};
 use crate::zones::{
     ZoneSlot, card_at, carried_units_of, is_buried, is_standing_unit, row_size, slots_of, standing_units_of,
 };
@@ -93,6 +93,11 @@ pub fn resolve_target(ctx: &EffectContext<'_>, spec: &TargetSpec) -> Option<Dama
             if left_field_after(ctx.state, stay_mark_of(ctx, &instance.id), &instance.id) {
                 return None;
             }
+            // R3806001: a pick off the field (one in a hand) that an earlier effect of this run put into a
+            // graveyard or an exile pile is gone for it too: a fused S #111's replaced hand takes S+ #23's pick.
+            if put_away_since(ctx, instance) {
+                return None;
+            }
             // §3.2, R13: nor while it lies dormant under a Stack pile, as one the play's own Stack card
             // buried at §10.5 step 4 does: #61's copy and #22's meal fizzle, as #68's damage does.
             if is_buried(ctx.state, instance) {
@@ -112,6 +117,20 @@ pub fn resolve_target(ctx: &EffectContext<'_>, spec: &TargetSpec) -> Option<Dama
         }
         _ => None,
     }
+}
+
+/// R3806001: whether `instance` lies in a graveyard or an exile pile that an effect of this run put it in
+/// (an `enteredGraveyard` or `exiled` event since `ctx.events_from`, R136's window). A card chosen there
+/// and left alone is still the card chosen.
+fn put_away_since(ctx: &EffectContext<'_>, instance: &CardInstance) -> bool {
+    matches!(instance.zone.z(), ZoneName::Graveyard | ZoneName::Exile)
+        && ctx.sink.events.iter().skip(ctx.events_from).any(|event| {
+            matches!(
+                event,
+                GameEvent::EnteredGraveyard { instance_id, .. } | GameEvent::Exiled { instance_id, .. }
+                    if *instance_id == instance.id
+            )
+        })
 }
 
 /// R174: a card a script names by its id, on the stay it had when the run began (`stay_mark_of`): one an
