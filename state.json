@@ -13398,16 +13398,24 @@
         ],
         "builder": "claude",
         "built_by": "claude-1",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/routes/play.test.tsx"
+          ],
+          "from": "a01998c75b8b3d28da71d1cc4672d027c6f44e71",
+          "main": "6c0aed010f869124d9beced1c508b636d468737b"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-1",
-            "run": "43385829476",
+            "run": "43424808443",
             "tier": "strong"
           }
         ],
-        "sha": "a01998c75b8b3d28da71d1cc4672d027c6f44e71",
+        "sha": "b472b747c42146333c257902c7dd8b4b65312934",
         "tiers": {
           "claude": "strong"
         }
