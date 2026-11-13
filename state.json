@@ -14137,9 +14137,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-3",
-      "owner_since": "2026-11-13T03:13:34Z",
-      "owner_why": "its turn came (it waited 120 minutes for #3783 and #3809, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway), and the lane that approved it resolves it",
+      "owner": "claude-1",
+      "owner_since": "2026-11-13T03:18:03Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-12T09:28:57Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -15403,7 +15403,7 @@
       "verdict_rounds": 1
     },
     "3779": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -15425,12 +15425,12 @@
       "interruptions": 0,
       "issue": 3730,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-3",
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-1",
       "queued_at": "2026-11-13T03:13:34Z",
-      "run_id": "43324718351",
+      "run_id": "pending:3560cbbd-1794539835",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -15451,16 +15451,9 @@
         "run": "43324718351"
       },
       "source": "conflict",
-      "started_at": "2026-11-12T22:58:09Z",
+      "started_at": "2026-11-13T03:18:03Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-13T03:13:34Z",
-        "until": "2026-11-13T03:43:34Z",
-        "why": "it waited 120 minutes for #3783 and #3809, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
-      },
       "votes": {
         "approvals": [
           "claude"
@@ -17255,9 +17248,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T03:17:01Z",
+    "at": "2026-11-13T03:18:03Z",
     "url": "",
-    "what": "review #3814 on claude-6"
+    "what": "revise #3779 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-13T02:44:17Z",
