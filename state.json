@@ -16346,7 +16346,7 @@
       "waiting_comment": 6845225736
     },
     "3799": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "cleared": {
@@ -16371,22 +16371,23 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3773,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "resolving",
+      "live": "reviewing",
       "merge_owner": "claude-4",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-1",
       "question": "",
       "queued_at": "2026-11-13T07:25:22Z",
       "round_tier": "strong",
-      "run_id": "43385926148",
+      "run_id": "pending:1e316fac-1794562031",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 235,
-      "started_at": "2026-11-13T07:27:43Z",
+      "started_at": "2026-11-13T09:27:46Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -17835,9 +17836,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T09:26:56Z",
+    "at": "2026-11-13T09:27:46Z",
     "url": "",
-    "what": "revise #3797 on claude-6"
+    "what": "spot-check #3799 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-13T08:46:50Z",
@@ -36985,7 +36986,15 @@
         "n": 235,
         "pr": 3799,
         "queued_at": "2026-11-13T09:25:20Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "run_id": "pending:1e316fac-1794562031",
         "sha": "40265a66d7ae6218e1043d0eb17d17e1106356e9",
+        "started_at": "2026-11-13T09:27:46Z",
         "status": "queued",
         "title": "Patch: the fuzz monitor checks that the state check ran: no dead unit left standing, no live hero at 0, no mana below 0",
         "tries": 0
