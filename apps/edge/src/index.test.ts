@@ -361,6 +361,54 @@ describe("the image check on the first request", () => {
       }
     });
 
+    it("does not check again a server it found asleep and then started", async () => {
+      vi.useFakeTimers();
+      try {
+        resetLibrary();
+        const container = { running: false };
+        library.startAndWaitForPorts.mockImplementation(() => {
+          container.running = true;
+          return Promise.resolve();
+        });
+        const server = serverWithCtx({ container }, { DEPLOYED_COMMIT: COMMIT });
+
+        await server.fetch(request());
+        vi.advanceTimersByTime(IMAGE_CHECK_RETRY_MS * 3);
+        await server.fetch(request());
+
+        // Nothing was running to be on an older image, and what the first request started is the deployed one.
+        expect(library.startAndWaitForPorts).toHaveBeenCalledOnce();
+        expect(library.containerFetch).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("holds a request that comes during the check until that one check settles", async () => {
+      resetLibrary();
+      let answer: (response: Response) => void = () => undefined;
+      library.containerFetch.mockImplementation(
+        () =>
+          new Promise<Response>((resolve) => {
+            answer = resolve;
+          }),
+      );
+      const server = serverWith(true);
+
+      const first = server.fetch(request());
+      const second = server.fetch(request());
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // Neither reaches the server while the check is out, and the second starts no check of its own.
+      expect(library.containerFetch).toHaveBeenCalledOnce();
+      expect(library.fetch).not.toHaveBeenCalled();
+      answer(new Response(null, { headers: { "x-deployed-commit": COMMIT } }));
+      expect(await first).toBe(LISTENING);
+      expect(await second).toBe(LISTENING);
+      expect(library.fetch).toHaveBeenCalledTimes(2);
+      expect(library.containerFetch).toHaveBeenCalledOnce();
+    });
+
     it("does not repeat a check that retired the old server", async () => {
       vi.useFakeTimers();
       try {
@@ -371,12 +419,18 @@ describe("the image check on the first request", () => {
           container.running = false;
           return Promise.resolve();
         });
+        // The request then starts the deployed image's server, so a second check would find one to ask.
+        library.startAndWaitForPorts.mockImplementation(() => {
+          container.running = true;
+          return Promise.resolve();
+        });
         const server = serverWithCtx({ container }, { DEPLOYED_COMMIT: COMMIT });
 
         await server.fetch(request());
         vi.advanceTimersByTime(IMAGE_CHECK_RETRY_MS * 3);
         await server.fetch(request());
 
+        expect(library.startAndWaitForPorts).toHaveBeenCalledOnce();
         expect(library.containerFetch).toHaveBeenCalledOnce();
         expect(library.stop).toHaveBeenCalledOnce();
       } finally {

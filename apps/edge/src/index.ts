@@ -57,8 +57,11 @@ export class Server extends Container<Env> {
   private imageVerified = false;
   /** The check in flight, shared by the requests that arrive while it runs. */
   private imageCheck: Promise<void> | undefined;
-  /** When the last check began (`Date.now()`): a failed one is not retried before `IMAGE_CHECK_RETRY_MS` has passed. */
-  private imageCheckedAt: number | undefined;
+  /**
+   * When the last check began (`Date.now()`): a failed one is not retried before `IMAGE_CHECK_RETRY_MS` has
+   * passed. Before the first, -Infinity, which no retry interval reaches.
+   */
+  private imageCheckedAt = Number.NEGATIVE_INFINITY;
 
   override async fetch(request: Request): Promise<Response> {
     await this.ensureImageChecked();
@@ -70,7 +73,7 @@ export class Server extends Container<Env> {
   private async ensureImageChecked(): Promise<void> {
     if (this.imageVerified) return;
     if (this.imageCheck === undefined) {
-      if (this.imageCheckedAt !== undefined && Date.now() - this.imageCheckedAt < IMAGE_CHECK_RETRY_MS) return;
+      if (Date.now() - this.imageCheckedAt < IMAGE_CHECK_RETRY_MS) return;
       this.imageCheckedAt = Date.now();
       // `retireOlderImage` never rejects, so this always runs and clears the check.
       this.imageCheck = this.retireOlderImage().then((settled) => {
