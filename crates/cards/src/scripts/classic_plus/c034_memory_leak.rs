@@ -19,15 +19,15 @@ const END_OF_TURN: &str = "endOfTurn";
 const AFTER_PLAY: &str = "afterPlay";
 
 fn opponent_played_unit_or_field_spell(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
-    let GameEvent::CardResolved { player, def_id, .. } = event else {
+    let GameEvent::CardResolved { player, .. } = event else {
         return false;
     };
     // R2179002: a card cast on draw is no play.
     if *player == ctx.controller || cast_on_draw_event(event) {
         return false;
     }
-    let type_ = def_of(Some(&*ctx.state), def_id).type_;
-    type_ == CardType::Unit || type_ == CardType::FieldSpell
+    // R783005: the play as it counts, so a card set by its Cloaked is the Trap it was set as.
+    matches!(played_type_of(&*ctx.state, event), Some(CardType::Unit | CardType::FieldSpell))
 }
 
 fn memory_leak<F>(has: F) -> Script
@@ -304,6 +304,16 @@ mod tests {
                 let before = locked_of(&s, P2).len();
                 s.play(MENACE, json!({}));
                 assert_eq!(locked_of(&s, P2).len(), before);
+            }
+
+            /// R783005: a Unit set face-down by its Cloaked is a Trap play, no Unit played.
+            #[test]
+            fn r783005_after_play_a_unit_set_face_down_by_its_cloaked_locks_nothing() {
+                crate::register_all();
+                let mut s = leak(Some("afterPlay"), json!({ "hand": [crate::CLOAKED_UNIT, FILLER] }));
+                s.end_turn();
+                crate::set_cloaked(&mut s, P2, crate::CLOAKED_UNIT, 1);
+                assert!(locked_of(&s, P2).is_empty(), "{:?}", locked_of(&s, P2));
             }
 
             #[test]

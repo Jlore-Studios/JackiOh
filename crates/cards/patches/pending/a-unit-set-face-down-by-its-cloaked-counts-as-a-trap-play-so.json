@@ -1,0 +1,30 @@
+{
+  "title": "Patch: a Unit set face-down by its Cloaked counts as a Trap play, so no card that answers a Unit being played fires on it",
+  "sources": "#3790",
+  "notes": "Issue #3790: a card set face-down by its Cloaked counts as the Trap it was set as for every card that answers or counts a play (R783005, R1040). The new engine read query::played_type_of types a cardPlayed or cardResolved play as play_counts::record_play counts it (a set card the Trap or Field Trap it was set as, any other its face's type off the event, so an Animated Field Spell is still a Field Spell play, R383), and every script typing a play reads it: Tesla, Knife Juggler, Floodgates, Warp Disruptor and Warp Disruptor II, Explosive Trap, Sheepish, EU Striker, Sacked, Honeypot, Prison (its kept v0.3.7b script still reads the printed type, R767000), Memory Leak, Wardrum, Catnip, Tatches the Totem, Bear Honeypot, Unlicensed Experimentation and Cloaked Toe Cracker, and the crafted cards' reveal on a Unit or Spell play. The cards claimed are classify's stage 2: the switched cards whose forced games diverged and the cards its unforced games' divergences touched.",
+  "player": {
+    "title": "A Unit set face-down by Cloaked is a Trap play",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "A Unit set face-down by Cloaked now counts as a Trap: cards that answer a Unit being played no longer fire on it.",
+      "A Spell set face-down under Paranoia no longer sets off cards that answer a Spell being played.",
+      "Wardrum counts a Unit set face-down by Cloaked among its non-Units, and Tatches the Totem is not summoned by one."
+    ]
+  },
+  "cards": [],
+  "plays": [
+    "classic-005",
+    "classicplus-034",
+    "meditative-068",
+    "meditativeplus-025",
+    "stinkyscape-054",
+    "stinkyscape-103",
+    "stinkyscape-135",
+    "stinkyscape-t-ai-07",
+    "stinkyscape-t-ai-09",
+    "traininggrounds-030"
+  ]
+}

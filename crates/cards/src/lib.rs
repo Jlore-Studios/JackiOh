@@ -331,6 +331,28 @@ pub(crate) fn stand_in_backrow(s: &mut jackioh_engine::testkit::Scenario, id: &s
     ));
 }
 
+#[cfg(test)]
+pub(crate) const CLOAKED_UNIT: &str = "classic-006"; // Cloaked Toe Cracker: a Unit that prints Cloaked
+
+/// R783004, R783005: sets `card` from `player`'s hand face-down by its Cloaked into backrow `lane`, a
+/// Trap play; the set card's fresh id (R227).
+#[cfg(test)]
+pub(crate) fn set_cloaked(
+    s: &mut jackioh_engine::testkit::Scenario,
+    player: jackioh_engine::PlayerId,
+    card: &str,
+    lane: i32,
+) -> String {
+    use jackioh_engine::testkit::json;
+    s.play(
+        card,
+        json!({ "zone": lane, "row": "backrow", "faceDown": "cloaked" }),
+    );
+    s.backrow(player, lane)
+        .expect("the card set face-down by its Cloaked")
+        .id
+}
+
 /// R1852000, #1859: builds p1's Dormant Starship from pieces fused via Core #16 Hit Jobs.
 #[cfg(test)]
 pub(crate) fn built_starship(

@@ -268,6 +268,32 @@ pub fn cast_on_draw_event(event: &GameEvent) -> bool {
     )
 }
 
+/// R783005, R1040, R1044: the type a `cardPlayed` or `cardResolved` play counts as, as
+/// `play_counts::record_play` counted it (§10.5 step 4): a card set by its Cloaked the Trap it was set
+/// as, any other its face's type off the played definition (B2.7), so an Animated Field Spell that
+/// animated as it entered is still a Field Spell play (R383). A set card off the field is its printed
+/// card (R783008). Scripts typing a play read this, never `def_of(..).type_`; `None` for other events.
+pub fn played_type_of(state: &GameState, event: &GameEvent) -> Option<CardType> {
+    let (instance_id, def_id, radiant) = match event {
+        GameEvent::CardPlayed {
+            instance_id, def_id, ..
+        } => (instance_id, def_id, None),
+        GameEvent::CardResolved {
+            instance_id,
+            def_id,
+            radiant,
+            ..
+        } => (instance_id, def_id, *radiant),
+        _ => return None,
+    };
+    let live = find_instance(state, instance_id);
+    if let Some(set) = live.and_then(|card| crate::alt_play::set_type_of(state, card)) {
+        return Some(set);
+    }
+    let radiant = radiant.or_else(|| live.map(|card| card.radiant)).unwrap_or(false);
+    Some(crate::faces::card_type_of_face(state, def_id, radiant))
+}
+
 /// R174, R2199007: the field's departures so far, a mark to ask `left_field_since_mark` with later
 /// (Training Grounds #31 Level Up!: a Unit that left and came back is a new arrival).
 pub fn field_exit_mark(state: &GameState) -> u32 {

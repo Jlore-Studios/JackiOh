@@ -143,6 +143,7 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | `cards_played_this_turn(state, player)` | §10.5 step 4's counter, counting the card being played |
 | `unspent_mana_of(state, player)`, `max_mana_of(state, player)` | the mana a player holds now; §2.3's max mana |
 | `played_ids_this_turn`, `played_earlier`, `was_played_this_turn` | the turn's plays, §6.2's Combo count, the one-shot gate of §5.1's "return to hand" spells |
+| `played_type_of(state, event)` | the type a `cardPlayed` or `cardResolved` play counts as: a card set by its Cloaked the Trap it was set as, else its face's type (R783005); every script typing a play reads it |
 | `active_units_of`, `dormant_units_of`, `card_at`, `slots_of`, `slot_of` | the field, by lane (§3.2, R13) |
 | `units_on_field_of`, `is_slumbering`, `slumber_turns_of` | the Units filling a side's zones, Dormant ones included, which `active_units_of` leaves out; whether a card is Dormant and its countdown (§6.1, R1839000) |
 | `building_a_ship`, `dormant_starship_of`, `is_dormant_starship`, `launched_starship_of`, `is_launched_starship`, `starship_pieces_of`, `launch_cost`, `when_launched` | the Starship (§6.1, §6.2, R1852000–R1852006): whether a player has a Dormant Starship and which, a player's launched Starship, the pieces a Starship holds, what a launch costs now, and a piece's "When launched" trigger; the price rule is the verb `starship_launch_costs` |
