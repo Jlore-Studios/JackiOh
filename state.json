@@ -12334,7 +12334,7 @@
       "verdict_rounds": 0
     },
     "3729": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "handoff": {
         "at": "2026-11-13T16:47:00Z",
@@ -12345,16 +12345,8 @@
         "reason": "planned on sonnet",
         "trail": "2p; sed -n \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3729 && grep -rn \\\"minutes\\\\b\\\" spec/0[1-2]*.md spec/09-architecture.md spec/15-dungeon-run.md | cut -c1-220 | head -15; grep -n \\\"dailyConstants\\\" -\u2026\n- Bash: {\"command\": \"grep -n \\\"type DailyConstants\\\" -B2 -A18 apps/web/src/wasm/index.ts; grep -n \\\"DAILY_PER_MOVE\\\\|PER_MOVE_DAYS\\\" crates/shared/src/config.rs | head\"}\n- Bash: {\"command\": \"cd apps/web && grep -n \\\"^function call\\\\|function call\\\" -A14 src/wasm/index.ts | head -30; grep -rn \\\"loadWasm\\\" src/routes/play.test.tsx vitest.setup.* src/test/*.ts 2>/dev/null | hea\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3729/apps/web/src && grep -n \\\"needsEngine\\\\|engineGate\\\\|loadWasm\\\\|EngineGate\\\" main.tsx | head -12; grep -n \\\"paths.play\\\\b\\\\|paths.daily\\\\|PlayRo\u2026\n- Bash: {\"command\": \"grep -rn \\\"paths.replays\\\" --include=*.tsx --include=*.ts . | grep -v test | cut -c1-150 | head; grep -rn \\\"paths.together\\\" --include=*.tsx . | grep -v test | cut -c1-140 | head -12; gr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3729/e2e && grep -n \\\"it(\\\\|describe(\\\\|shared\\\\|SHARED\\\\|toast\\\\|TOAST\\\" cypress/e2e/42-together.cy.ts | cut -c1-200 | head -60; sed -n 1,60p cypres\u2026\n- Bash: {\"command\": \"sed -n 60,135p cypress/e2e/42-together.cy.ts; sed -n 405,470p cypress/e2e/42-together.cy.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3729/apps/web/src && ls i18n | head -20; grep -rn \\\"Play a friend\\\" --include=*.ts --include=*.json . -l | head; sed -n 655,680p routes/landing.tsx\"}\n- Bash: {\"command\": \"grep -n \\\"zh-CN\\\\|missing\\\\|every t(\\\" i18n/i18n.test.ts | head -10; grep -c \\\"\\\" i18n/zh-CN.json; grep -rn \\\"zh-CN.json\\\" --include=*.ts --include=*.mjs --include=*.yml ../.. 2>/dev/nul\u2026\n- Bash: {\"command\": \"sed -n 60,110p i18n/i18n.test.ts; sed -n 1,40p writing.test.ts\"}\n- Bash: {\"command\": \"grep -n \\\" it(\\\" writing.test.ts | cut -c1-200; grep -n \\\"untranslated(\\\" i18n/i18n.test.ts | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3729 && sed -n 1,60p spec/rulings/R1581000.md | cut -c1-900; sed -n 250,290p e2e/cypress/e2e/46-menus-fit-one-screen.cy.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3729/apps/web/src && grep -n \\\"play-hub\\\\|play-layout\\\\|play-online\\\\|play-side\\\\|play-ways\\\\|play-way\\\\b\\\\|play-panel\\\\|play-step\\\\|play-search\\\\|pl\u2026\n- Bash: {\"command\": \"grep -n \\\"acceptDailyChallenge\\\" -B12 -A22 daily/DailyRoute.tsx | sed -n 1,90p; grep -n \\\"matchIdOf\\\\|export function seriesIdOf\\\\|export function idUnder\\\" net/navigate.ts\"}\n- Bash: {\"command\": \"sed -n 380,420p together/TogetherRoute.tsx; grep -n \\\"watching\\\" together/TogetherRoute.tsx | head; grep -n \\\"sharedReplay\\\\|shared\\\\b\\\" -i routes/replays.tsx | head\"}\n- Bash: {\"command\": \"sed -n 148,175p together/TogetherRoute.tsx; sed -n 1,60p together/anchors.ts; grep -n \\\"export\\\" together/ShareReplay.tsx | head\"}\n- Bash: {\"command\": \"grep -n \\\"coop\\\\|location.search\\\\|URLSearchParams\\\\|hash\\\" together/TogetherRoute.tsx | head -20; grep -n \\\"export function currentPath\\\\|export function currentSearch\\\\|search\\\" net/na\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3729 && grep -n \\\"ROOM_TTL\\\\|ROOM_EXPIRY\\\\|LOBBY_.*MS\\\\|LOBBY_\\\" crates/server/src/config.rs | head; grep -n \\\"TS_EXPORT\\\\|serverConfig\\\" crates/serv\u2026\n- Bash: {\"command\": \"grep -n -i \\\"minute\\\\|how long\\\\|lasts\\\\|short run\\\" spec/15-dungeon-run.md docs/dungeon-run.md 2>/dev/null | cut -c1-200 | head -8; grep -rn -i \\\"minutes\\\" apps/web/src/tutorial/*.ts ap\u2026\n- Bash: {\"command\": \"grep -n \\\"R1578000\\\\|Play hub\\\\|the hub\\\\|Play a friend\\\" spec/09-architecture.md | cut -c1-260 | head -8; grep -n \\\"^### 9\\\\.\\\\|^## 9\\\" spec/09-architecture.md | head -20; grep -n \\\"51-\u2026\n- Bash: {\"command\": \"sed -n 60,81p spec/09-architecture.md | cut -c1-330; sed -n 294,296p spec/09-architecture.md | cut -c1-200\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3729/e2e && grep -rn \\\"expectBackLinkBarOrder\\\" support | head -3; grep -n \\\"export function expectBackLinkBarOrder\\\" -A40 support/*.ts | head -60; g\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3729/apps/web/src && grep -n \\\"tutorial\\\" net/navigate.ts | head -3; sed -n 60,100p game/Dialog.tsx; grep -n \\\"wantedDeck\\\\|replays:\\\" net/navigate.t\u2026\n- Bash: {\"command\": \"grep -n \\\"tutorial\\\\|learn\\\" net/navigate.ts routes/commandEntries.ts | head -5; grep -rn \\\"paths\\\\.\\\\w*[tT]utorial\\\" routes/landing.tsx | head -2\"}\n- Bash: {\"command\": \"grep -rn \\\"tutorial\\\" -i routes/landing.tsx auth/testids.ts 2>/dev/null | head -5; grep -rn \\\"TUTORIAL_\\\\|/tutorial\\\\|tutorial:\\\" net/navigate.ts tutorial/*.ts 2>/dev/null | grep -i \\\"pa\u2026\n- Bash: {\"command\": \"grep -n \\\"tutorial\\\\|Tutorial\\\" -i net/navigate.ts practice/*.tsx 2>/dev/null | head -8; ls | head -60 | tr '\\\\n' ' '; grep -rn \\\"tutorialPath\\\\|lessonPath\\\\|paths.practice}?\\\" --include\u2026\n- Bash: {\"command\": \"grep -rn \\\"tutorial\\\" -il routes/practice.tsx routes/landing.tsx tutorial/*.ts* 2>/dev/null | head -6; grep -n \\\"tutorialPath\\\\|\\\\\\\"tutorial\\\\\\\"\\\\|tutorialPlay\\\\|?tutorial\\\\|lesson=\\\" -r\u2026\n- Bash: {\"command\": \"grep -n \\\"TutorialPath\\\\|tutorial-path\\\\|id=\\\\\\\"tutorial\\\\|#tutorial\\\\|TUTORIAL_ANCHOR\\\" routes/practice.tsx tutorial/TutorialPath.tsx | head -8\"}\n- Bash: {\"command\": \"grep -n \\\"export const LESSONS\\\\|export function lessonById\\\\|id: \\\\\\\"\\\" tutorial/lessons.ts | head -5; sed -n 242,262p routes/practice.tsx\"}\n- Bash: {\"command\": \"grep -n \\\"^export\\\" tutorial/lessons.ts | head -8\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3729/.bot-plan.md\", \"content\": \"# Plan #3729 (final draft; the final message is this text)\\n\\nSee the final message. Key decisions: Online card -> Dia\u2026\n- said: **Open questions come first, because one affects the rating.** By the difficulty rule this item is **hard**: it changes about 50 files, tests included, and rule 5 is \"about 40 files or more\". It touches only `apps/web`, `e2e` and `spec`, with no engine, AI or migration work. See Open questions. ## \u2026"
       },
-      "hold": {
-        "ends": "2026-11-13T20:37:14Z",
-        "lifted": "2026-11-13T20:37:45Z",
-        "owner": "claude-3",
-        "since": "2026-11-13T18:37:14Z",
-        "until": "2026-11-13T20:30:00Z",
-        "why": "it refused a call"
-      },
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-13T15:35:49Z",
       "owner_why": "it plans it",
@@ -12365,9 +12357,9 @@
       "planned_model": "sonnet",
       "planned_tier": "medium",
       "provider": "claude-3",
-      "run_id": "43464512245",
+      "run_id": "pending:4e94a5ad-1794602326",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-13T16:36:58Z",
+      "started_at": "2026-11-13T20:39:39Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 6861730949
@@ -16378,9 +16370,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T20:28:23Z",
+    "at": "2026-11-13T20:39:39Z",
     "url": "",
-    "what": "revise #3817 on claude-8"
+    "what": "build #3729 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-13T20:24:34Z",
