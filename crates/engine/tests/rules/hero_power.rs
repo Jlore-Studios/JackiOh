@@ -15,13 +15,14 @@
 
 use serde::Serialize;
 
+use jackioh_engine::config::{END_TIMES_COST, HERO_POWER_DISCOUNT, POWERS_THROUGH_V0_5_13G};
 use jackioh_engine::effects::tune::TuneDirection;
 use jackioh_engine::effects::{bounce, summon};
 use jackioh_engine::subsystems::activate::uses_this_turn;
 use jackioh_engine::subsystems::hero_power::{
-    DISCOVER_POWER_PROMPT, HERO_POWER_NAMES, HERO_POWERS, POWER_KEY, POWER_RESUME, STEADY_SHOT_PARAM,
-    discover_power, ensure_power, hero_power, power_abilities, power_ability_of, power_by_name, power_of,
-    roll_power_on_field, used_this_turn,
+    DISCOVER_POWER_PROMPT, END_TIMES_PRICE_PARAM, HERO_POWER_NAMES, HERO_POWERS, HeroPowerName, POWER_KEY,
+    POWER_RESUME, PowerEdition, STEADY_SHOT_PARAM, discover_power, edition_of, ensure_power, hero_power,
+    power_abilities, power_ability_of, power_by_name, power_of, roll_power_on_field, used_this_turn,
 };
 use jackioh_engine::testkit::*;
 use jackioh_engine::view_for::view_for;
@@ -135,7 +136,7 @@ fn heroic_script(radiant: bool) -> Script {
         }),
         cry: Some(hook(|_ctx| vec![discover_power()])),
         start_of_game: Some(hook(|_ctx| vec![roll_power_on_field()])),
-        activations: power_abilities(radiant),
+        activations: power_abilities(radiant, PowerEdition::Thirteen),
         resume,
         ..Script::default()
     }
@@ -272,6 +273,7 @@ mod heroic_power_the_thirteen_powers_and_their_abilities_r103_r752 {
 
     #[test]
     fn r103_keeps_the_eight_stored_names_and_adds_the_patchs_five_at_the_end_each_with_its_x() {
+        // R3551002: End Times closes the table.
         assert_eq!(
             json_of(HERO_POWER_NAMES),
             json!([
@@ -288,10 +290,11 @@ mod heroic_power_the_thirteen_powers_and_their_abilities_r103_r752 {
                 "brainstorm",
                 "pluck",
                 "tricks",
+                "endTimes",
             ])
         );
         let xs: Vec<i32> = HERO_POWERS.iter().map(|power| power.x).collect();
-        assert_eq!(xs, vec![3, 1, 1, 1, 2, 1, 2, 2, 1, 2, 2, 2, 3]);
+        assert_eq!(xs, vec![2, 0, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 2, 10]);
         let titles: Vec<String> = HERO_POWERS.iter().map(|power| power.title.to_string()).collect();
         assert_eq!(
             titles,
@@ -309,6 +312,7 @@ mod heroic_power_the_thirteen_powers_and_their_abilities_r103_r752 {
                 "KY Brainstorm",
                 "Pluck",
                 "Terminus Tricks",
+                "End Times",
             ]
         );
         // R757: Armor Up is the one power named otherwise on the Radiant face.
@@ -322,17 +326,73 @@ mod heroic_power_the_thirteen_powers_and_their_abilities_r103_r752 {
     }
 
     #[test]
+    fn r3551002_editions_powers_and_prices() {
+        // The new face holds fourteen powers, the kept thirteen the thirteen (R3551002).
+        assert_eq!(HERO_POWERS.len(), POWERS_THROUGH_V0_5_13G + 1);
+        assert_eq!(PowerEdition::Thirteen.powers().len(), POWERS_THROUGH_V0_5_13G);
+        assert_eq!(PowerEdition::EndTimes.powers().len(), POWERS_THROUGH_V0_5_13G + 1);
+        assert_eq!(PowerEdition::Thirteen.names().len(), POWERS_THROUGH_V0_5_13G);
+        assert_eq!(PowerEdition::EndTimes.names().len(), POWERS_THROUGH_V0_5_13G + 1);
+        assert_eq!(
+            PowerEdition::EndTimes.names()[POWERS_THROUGH_V0_5_13G],
+            HeroPowerName::EndTimes
+        );
+        // Every one of the thirteen costs (1) less on the new face; End Times costs (10) there.
+        for power in PowerEdition::Thirteen.powers() {
+            assert_eq!(PowerEdition::Thirteen.price(power), power.x + HERO_POWER_DISCOUNT);
+            assert_eq!(PowerEdition::EndTimes.price(power), power.x);
+        }
+        let end_times = power_by_name("endTimes").expect("End Times");
+        assert_eq!(end_times.title, "End Times");
+        assert_eq!(end_times.x, END_TIMES_COST);
+        assert_eq!(end_times.x_param, Some(END_TIMES_PRICE_PARAM));
+        assert_eq!(
+            PowerEdition::Thirteen.price(end_times),
+            END_TIMES_COST + HERO_POWER_DISCOUNT
+        );
+
+        // The script's declarations pick the edition: the fixture's thirteen, and a script declaring
+        // the endTimes ability the new face.
+        let mut state = game("r3551002-editions");
+        let thirteen = powered(&mut state, "rush", false, 1);
+        assert_eq!(edition_of(&state, &thirteen), PowerEdition::Thirteen);
+        let end_def = def("heroic-end", "Field Spell", 1602, json!({ "cost": 0 }));
+        let mut catalog = registered_catalog().clone();
+        catalog.insert(end_def.id.clone(), end_def.clone());
+        register_catalog(catalog);
+        let mut scripts = registered_scripts();
+        scripts.insert(
+            end_def.id.clone(),
+            CardScripts {
+                base: Script {
+                    activations: power_abilities(false, PowerEdition::EndTimes),
+                    resume: IndexMap::from([(POWER_RESUME, hook(hero_power))]),
+                    ..Script::default()
+                },
+                radiant: Script::default(),
+            },
+        );
+        register_scripts(scripts);
+        let end_card = put(&mut state, &end_def.id, slot(P1, Row::Backrow, 2), json!({}));
+        assert_eq!(edition_of(&state, &end_card), PowerEdition::EndTimes);
+    }
+
+    #[test]
     fn r752_each_power_is_a_once_per_turn_activate_ability_paying_its_x_the_cards_only_while_it_rolled_it() {
         let mut state = game("r752-abilities");
         let card = powered(&mut state, "ping", false, 1);
         for radiant in [false, true] {
-            let abilities = power_abilities(radiant);
+            let abilities = power_abilities(radiant, PowerEdition::Thirteen);
             let ids: Vec<String> = abilities.iter().map(|decl| decl.id.clone()).collect();
-            assert_eq!(json!(ids), json_of(HERO_POWER_NAMES));
+            // The fixture is the kept Thirteen edition, so only its thirteen show.
+            assert_eq!(json!(ids), json_of(FIXTURE_POWER_NAMES));
             for (index, decl) in abilities.iter().enumerate() {
                 let power = HERO_POWERS.get(index).expect("a power");
                 assert_eq!(decl.uses, ActivationUses::Count(1));
-                assert_eq!(decl.cost.and_then(|cost| cost.mana), Some(power.x));
+                assert_eq!(
+                    decl.cost.and_then(|cost| cost.mana),
+                    Some(PowerEdition::Thirteen.price(power))
+                );
                 let title = if radiant {
                     &power.radiant_title
                 } else {
@@ -350,7 +410,7 @@ mod heroic_power_the_thirteen_powers_and_their_abilities_r103_r752 {
             }
         }
         // R81: only Ping declares a target, any unit or hero.
-        let targeted: Vec<String> = power_abilities(false)
+        let targeted: Vec<String> = power_abilities(false, PowerEdition::Thirteen)
             .iter()
             .filter(|decl| !decl.targets.is_empty())
             .map(|decl| decl.id.clone())
@@ -400,9 +460,13 @@ mod heroic_power_the_thirteen_powers_and_their_abilities_r103_r752 {
         assert!(lists_activation_of(&answered.state, &on_field));
         let used = use_power(&answered.state, &on_field, None);
         // A power that aims (Ping) names its target with the activation, so it is refused bare here.
+        // The fixture is the kept Thirteen edition, so the price is the old one.
         if power.targets.is_none() {
             assert_eq!(used.error, None);
-            assert_eq!(used.state.players.p1.mana.current, 4 - power.x);
+            assert_eq!(
+                used.state.players.p1.mana.current,
+                4 - PowerEdition::Thirteen.price(power)
+            );
             assert!(used_this_turn(&used.state, &on_field_now(&used.state, &card.id)));
         }
     }
@@ -855,7 +919,8 @@ mod heroic_power_cry_discovers_its_power_r3134002 {
         for n in 0..60 {
             seen.extend(offered(&played(&format!("r3134002-all-{n}"), false).0));
         }
-        let all: IndexSet<String> = HERO_POWER_NAMES.iter().map(name_of).collect();
+        // The fixture is the kept Thirteen edition: End Times is never its offer (R3551002).
+        let all: IndexSet<String> = FIXTURE_POWER_NAMES.iter().map(name_of).collect();
         assert_eq!(
             seen.len(),
             all.len(),

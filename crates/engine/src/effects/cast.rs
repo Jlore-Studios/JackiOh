@@ -14,8 +14,9 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_generated, query};
+use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_generated_unique, query};
 use crate::effects::each::{ForEachCardArgs, for_each_card};
+use crate::effects::summon::SummonArgs;
 use crate::effects::targets::{PlayerSpec, TargetSpec, instance_of, player_of};
 use crate::modifiers::add_modifier;
 use crate::random_cast::may_cast_now;
@@ -24,7 +25,7 @@ use crate::script::{Effect, EffectContext, EffectPart, EngineSink};
 use crate::state::{CostRule, ModifierExpiry, ModifierKind, find_instance_mut, new_instance};
 use crate::subsystems::call_to_chaos::{CHAOS_CHAIN_KEY, CHAOS_TAG, chaos_chain_of};
 use crate::subsystems::perfect_hand::{RankPerfectHandOptions, rank_perfect_hand};
-use crate::wire::{Enchantment, PlayerId, Zone, ZoneName};
+use crate::wire::{CardType, Enchantment, PlayerId, Zone, ZoneName};
 
 /// How a cast verb casts (`resolve.CastOptions`, without the choices R70 leaves to the caster).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
@@ -279,6 +280,13 @@ pub fn cast_new(args: CastNewArgs) -> Effect {
     })
 }
 
+/// R3558008: cast a new card `times` times (Shadiris's "Cast Shadiris Visions twice"): one
+/// `castNew` effect per cast, so each cast asks its own targets and resolves before the next
+/// begins (R113). No new prompt kind: each effect pauses the list on its own (R113).
+pub fn cast_new_times(args: CastNewArgs, times: i32) -> Vec<Effect> {
+    (0..times.max(0)).map(|_| cast_new(args.clone())).collect()
+}
+
 /// `helpful_cast`'s argument.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
@@ -331,32 +339,72 @@ fn cast_one_random(asked: CatalogQueryArgs, radiant: bool, how: CastHow) -> Effe
             .map(|card| card.def_id.clone())
             .or_else(|| ctx.def_id.clone());
         let pool = query(&excluding_def_id(Some(&*ctx.sink.state), &asked, own.as_deref()));
-        let Some(def) = pick_generated(&mut *ctx.sink.rng, &pool, None) else {
+        // R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
+        let Some(def) = pick_generated_unique(&mut *ctx.sink.rng, &pool, None, &mut ctx.draw_tally) else {
             return;
         };
         let def_id = def.id.clone();
         let chaos = def.tags.contains(&CHAOS_TAG);
-        let controller = ctx.controller;
-        let mut card = new_instance(
-            &mut *ctx.sink.state,
-            &def_id,
-            controller,
-            Zone::Resolving { player: controller },
-        );
-        card.radiant = radiant;
-        crate::generators::record_generator(ctx, &card);
-        // R28: a Call to Chaos a random cast makes is a cast of the chain (Classic+ #47 Jogg's Box), one
-        // deeper than the card casting it, so it counts against CALL_TO_CHAOS_CHAIN_CAP.
-        if chaos {
-            let depth = chaos_chain_of(ctx.self_.as_ref()) + 1;
-            card.memory.insert(CHAOS_CHAIN_KEY.to_string(), json!(depth));
-        }
-        let options = CastOptions {
-            random: Some(true),
-            ..options_of(&how)
-        };
-        cast_card(&mut sink_of(ctx), &card, options);
+        cast_generated(ctx, &def_id, chaos, radiant, &how);
     })
+}
+
+/// R3570003: one random pick of a pool, each Spell cast as `castRandom`'s are (R452) and each permanent
+/// summoned with no Cry (R1) — S+ #142 entry 4's "Summon or cast 5 random Jlockeed cards", whose pool
+/// holds Units. The pick is `cast_one_random`'s (`may_cast_now`, never the casting card's own definition,
+/// R387, the run's unique-draw tally, R3563000), made before the type is known; a permanent that finds no
+/// zone lands nowhere (R64), the draw spent as a summon of a random pool's pick spends it.
+pub fn summon_or_cast_one_random(asked: CatalogQueryArgs) -> Effect {
+    Effect::new("summonOrCastRandom:one", move |ctx| {
+        if !may_cast_now(ctx.sink.state, ctx.controller) {
+            return;
+        }
+        let own = ctx
+            .self_
+            .as_ref()
+            .map(|card| card.def_id.clone())
+            .or_else(|| ctx.def_id.clone());
+        let pool = query(&excluding_def_id(Some(&*ctx.sink.state), &asked, own.as_deref()));
+        let Some(def) = pick_generated_unique(&mut *ctx.sink.rng, &pool, None, &mut ctx.draw_tally) else {
+            return;
+        };
+        let def_id = def.id.clone();
+        if def.type_ == CardType::Spell {
+            let chaos = def.tags.contains(&CHAOS_TAG);
+            cast_generated(ctx, &def_id, chaos, false, &CastHow::default());
+            return;
+        }
+        let summon = crate::effects::summon::summon(SummonArgs {
+            def_id: Some(def_id),
+            ..SummonArgs::default()
+        });
+        (summon.apply)(ctx);
+    })
+}
+
+/// A random pick's card, made and cast by the running card's controller as a random cast (R452): a real
+/// generated card (R60) in their resolving zone that §10.5 sends to the graveyard.
+fn cast_generated(ctx: &mut EffectContext<'_>, def_id: &str, chaos: bool, radiant: bool, how: &CastHow) {
+    let controller = ctx.controller;
+    let mut card = new_instance(
+        &mut *ctx.sink.state,
+        def_id,
+        controller,
+        Zone::Resolving { player: controller },
+    );
+    card.radiant = radiant;
+    crate::generators::record_generator(ctx, &card);
+    // R28: a Call to Chaos a random cast makes is a cast of the chain (Classic+ #47 Jogg's Box), one
+    // deeper than the card casting it, so it counts against CALL_TO_CHAOS_CHAIN_CAP.
+    if chaos {
+        let depth = chaos_chain_of(ctx.self_.as_ref()) + 1;
+        card.memory.insert(CHAOS_CHAIN_KEY.to_string(), json!(depth));
+    }
+    let options = CastOptions {
+        random: Some(true),
+        ..options_of(how)
+    };
+    cast_card(&mut sink_of(ctx), &card, options);
 }
 
 /// `castRandom`'s `query`: a fixed query, or one read off the context as the part is built (set in

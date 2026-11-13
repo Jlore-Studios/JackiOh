@@ -259,7 +259,7 @@ mod tests {
             let discard = s.events().iter().find(|event| event.event_type() == GameEventType::Discarded).cloned();
             assert_eq!(
                 discard,
-                Some(GameEvent::Discarded { instance_id: card.id.clone(), def_id: VANILLA.to_string(), owner: P1 })
+                Some(GameEvent::Discarded { instance_id: card.id.clone(), def_id: VANILLA.to_string(), owner: P1, by_temporary: None })
             );
             assert!(s
                 .events()

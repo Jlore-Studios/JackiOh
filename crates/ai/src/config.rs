@@ -981,8 +981,9 @@ pub const AI_DETERMINIZE: AiDeterminize = AiDeterminize {
 /// thread previews (R1420): `build_ai_deck`'s default `gated_sets`, while a player's random deck
 /// (`gated_sets: Some(vec![])`) is dealt from every set. A lean on a gated set leans on the newest
 /// ungated set instead. Meditative was gated until #732 (MN08 of #496), Stinkyscape from #1884 until
-/// #1885's sweep (R1885000).
-pub const AI_DECK_GATED_SETS: &[SetName] = &[];
+/// #1885's sweep (R1885000). Stinkyscape+ is gated from its release (#3573) until fullsend 2's sweep
+/// (#3574) empties it.
+pub const AI_DECK_GATED_SETS: &[SetName] = &[SetName::StinkyscapePlus];
 
 /// The most times the AI plays one card (one instance) in a turn; past it the card is no candidate
 /// until the next turn. Only a card that comes back after each play reaches it: a (0) Spell castable

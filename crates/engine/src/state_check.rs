@@ -62,6 +62,11 @@ fn units_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
 /// §4.5 step 1: a unit dies at 0 or less health or when marked destroyed; an Indestructible one only
 /// when its max health has fallen to 0 or less (R69).
 fn is_dying(auras: &AuraTable<'_>, unit: &CardInstance) -> bool {
+    // R3539003: no damage or aura reaches a Dormant card, so no health judges it; only a destroy mark
+    // does.
+    if crate::slumber::is_slumbering(unit) {
+        return unit.marked_destroyed == Some(true);
+    }
     let view = auras.unit_view(unit);
     let indestructible = has_keyword(&view.keywords, KeywordKind::Indestructible);
     if indestructible {
@@ -175,7 +180,8 @@ fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
 /// Unit on either side in Defense Position switches to Attack Position, active player's first (R68), whether
 /// it arrived in it or stood in it as the aura came. An effect's switch (R20), so no exertion is spent;
 /// `positionSwitched` reports it. R2179000: so does an Indestructible Unit in Defense Position, aura or not
-/// (one that arrived in it, or became Indestructible standing in it), and R2657000 a Unit with Can't Defend.
+/// (one that arrived in it, or became Indestructible standing in it), R2657000 a Unit with Can't Defend,
+/// and R3543002 an Evasive one, which implies Can't Defend as an Indestructible one does.
 fn leave_defense(sink: &mut EngineSink<'_>) {
     let barred = crate::restrictions::defense_barred(sink.state);
     for player in active_first(sink.state) {
@@ -186,6 +192,7 @@ fn leave_defense(sink: &mut EngineSink<'_>) {
             if !barred
                 && !crate::layers::unit_has(sink.state, &unit, KeywordKind::Indestructible)
                 && !crate::layers::unit_has(sink.state, &unit, KeywordKind::CantDefend)
+                && !crate::layers::unit_has(sink.state, &unit, KeywordKind::Evasive)
             {
                 continue;
             }
@@ -253,6 +260,9 @@ pub struct RebornEntry {
     /// R1081000: the unit stood in a backrow zone itself, so it returns standing there. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub standing: Option<bool>,
+    /// R3546003: the other three zones a returning GIGA holds with its anchor, released at its return.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub giga_zones: Option<Vec<ZoneRef>>,
 }
 
 /// One of step 5's reports (`DeathPass.collected`).
@@ -389,6 +399,12 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
             continue;
         }
         crate::zones::release_zone(sink.state, entry.at);
+        // R3546003: a returning GIGA's other three zones go with its anchor.
+        if let Some(zones) = &entry.giga_zones {
+            for slot in zones {
+                crate::zones::release_zone(sink.state, *slot);
+            }
+        }
         // R127: found by id, so a unit a Death hook exiled or unmade in between is not resurrected; a
         // unit token is in no pile (R11, R175), so the pass carries it, reset as R78 resets any body.
         let mut copy = match &entry.token {
@@ -764,6 +780,20 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
             && let Some(at) = card.at
         {
             crate::zones::reserve_zone(sink.state, at);
+            // R3546003: a returning GIGA holds its other three zones with its anchor.
+            let giga_zones = if crate::giga::is_giga(&card.snapshot) {
+                let rest: Vec<ZoneRef> = crate::giga::spanned_slots(at)
+                    .unwrap_or_default()
+                    .into_iter()
+                    .filter(|slot| *slot != at)
+                    .collect();
+                for slot in &rest {
+                    crate::zones::reserve_zone(sink.state, *slot);
+                }
+                if rest.is_empty() { None } else { Some(rest) }
+            } else {
+                None
+            };
             // R175: a unit token is in no pile, so the pass carries its return with the X/X it was
             // summoned as, read off the snapshot since the move above reset the instance (R78).
             let face = reborn_face_of(sink.state, &card.snapshot);
@@ -779,6 +809,7 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
                 },
                 face,
                 standing: if card.standing { Some(true) } else { None },
+                giga_zones,
             });
         }
         sink.state.counters.destroyed += 1;
@@ -797,6 +828,11 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
                 .kill_snapshots
                 .get_or_insert_with(IndexMap::new)
                 .insert(card.unit.id.clone(), killer.clone());
+        }
+        // R3550006: a kill credited to the killer meets its kill deadlines at once, before the
+        // event reports it.
+        if let Some(killer) = killer_id.as_ref() {
+            crate::effects::delay::meet_kill_deadlines(sink.state, killer);
         }
         // R89: the event carries what the card was, since R78 resets the instance as it leaves.
         sink.events.push(GameEvent::Destroyed {
@@ -911,7 +947,7 @@ fn forget_spent_killers(sink: &mut EngineSink<'_>, survivors: &[CardInstance]) {
 }
 
 /// The cards acting on the field, the active player's side first (units, then the backrow, lane 1 up).
-fn permanents_in_play(state: &GameState) -> Vec<CardInstance> {
+pub(crate) fn permanents_in_play(state: &GameState) -> Vec<CardInstance> {
     let first = state.active;
     let mut out: Vec<CardInstance> = Vec::new();
     for player in [first, first.opponent()] {
@@ -989,6 +1025,7 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
         if crate::card_on_card::release_held(sink)
             || crate::card_on_card::standing_text(sink)
             || crate::animated::animate_owed(sink)
+            || crate::geometry::swallow_standing(sink)
         {
             continue;
         }
@@ -1038,6 +1075,16 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
             if hero_check(sink) || crate::win_conditions::win_check(sink) {
                 return;
             }
+            // R3569000: with Tears of the Kwzki Tree in force, every card turns Radiant on the settled board.
+            crate::effects::radiant::radiate_world(sink);
+            // R3536001, R3536002: the settled board: standing "Evolves when" conditions and cards
+            // marked to enter evolved evolve now, queuing their Evolve texts behind the check.
+            crate::evolution::evolve_standing(sink);
+            // R3558001, R3558002, R3558007: the settled hand and library: lends sync to the cards
+            // the lenders sit beside, waiting pairs meet, and standing deck casts queue.
+            crate::hand_order::sync_hand_auras(sink);
+            crate::hand_order::meet_pairs(sink);
+            crate::deck_cast::queue_deck_casts(sink);
             // B5 E33, R404: the board has settled, so a quest completed by what happened is noticed now.
             crate::subsystems::quests::notice_quests(sink);
             return;

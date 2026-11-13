@@ -23,7 +23,7 @@ use crate::query::{luck_of, lucky_on};
 use crate::resolve::lazy_part;
 use crate::script::{Effect, EffectPart};
 use crate::state::{CardInstance, GameState, find_instance_mut};
-use crate::wire::{CardType, GameEvent, KeywordKind, PLAYER_IDS, Position, Row, TargetAim};
+use crate::wire::{CardType, GameEvent, PLAYER_IDS, Position, Row, TargetAim};
 use crate::zones::{ZoneSlot, card_at, exile_to_pile};
 
 use super::add_to_hand::{AddToHandArgs, add_to_hand};
@@ -133,7 +133,8 @@ pub fn replace_board(args: ReplaceBoardArgs) -> Effect {
                 let radiant = entry.radiant == Some(true);
                 let card_type = card_type_of_face(at.state, &entry.def_id, radiant);
                 let is_unit = card_type == CardType::Unit;
-                // R1879001: a Flying Unit named in the backrow stands there, as a Flying play may.
+                // R1879001: a Flexible Unit named in the backrow stands there, as a Flexible play
+                // may (Flying has it innately, R3543000).
                 let stands =
                     entry.row == Row::Backrow && is_unit && prints_flying(at.state, &entry.def_id, radiant);
                 if row_of(card_type) != Some(entry.row) && !stands {
@@ -211,12 +212,13 @@ pub fn replace_board(args: ReplaceBoardArgs) -> Effect {
     })
 }
 
-/// R1879001: whether a face of `def_id` prints Flying.
+/// R1879001: whether a face of `def_id` prints a Flexible keyword (Flying has it innately,
+/// R3543000).
 fn prints_flying(state: &GameState, def_id: &str, radiant: bool) -> bool {
     running_face_of(state, def_id, radiant)
         .keywords
         .iter()
-        .any(|keyword| keyword.kind() == KeywordKind::Flying)
+        .any(|keyword| crate::layers::grants_flexible(keyword.kind()))
 }
 
 /// R1855003: what a scan finds, worst first, so a Lucky roll keeps the greatest.

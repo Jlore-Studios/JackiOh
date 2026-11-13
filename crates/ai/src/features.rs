@@ -73,14 +73,23 @@ const SIDES: [&str; 2] = ["own", "enemy"];
 
 /// The keyword kinds no count reads: a hand keyword newer than the layout, which does nothing on the
 /// field where the counts are taken (R1838000's Tradable), and the kinds that came after the layout was
-/// fitted and wait for its next refit: Stinkyscape's Starship Piece and Starship (R1852000, R1852003) and
-/// Can't Defend (R2657000). Left out, so the layout stays the one `FEATURES_VERSION` names and the weights
+/// fitted and wait for its next refit: Stinkyscape's Starship Piece and Starship (R1852000, R1852003),
+/// Can't Defend (R2657000) and Stinkyscape+'s Evolve, Burn, Toxic, GIGA, Flexible, Frenzy, Evasive and
+/// Tipsy (R3535002). Left out, so the layout stays the one `FEATURES_VERSION` names and the weights
 /// fitted on it still read it (R1010000); a Unit carrying one counts its other keywords as before.
 const UNCOUNTED_KEYWORDS: &[KeywordKind] = &[
     KeywordKind::Tradable,
     KeywordKind::StarshipPiece,
     KeywordKind::Starship,
     KeywordKind::CantDefend,
+    KeywordKind::Evolve,
+    KeywordKind::Burn,
+    KeywordKind::Toxic,
+    KeywordKind::Giga,
+    KeywordKind::Flexible,
+    KeywordKind::Frenzy,
+    KeywordKind::Evasive,
+    KeywordKind::Tipsy,
 ];
 
 /// The keyword kinds the layout counts, one dense feature a side each, in `KeywordKind::ALL`'s order.

@@ -43,6 +43,7 @@ const SET_DIRS: Readonly<Record<string, string>> = {
   "Meditative+": "meditativeplus",
   Stinkyscape: "stinkyscape",
   "Training Grounds": "traininggrounds",
+  "Stinkyscape+": "stinkyscapeplus",
 };
 
 const FACES = [false, true] as const;

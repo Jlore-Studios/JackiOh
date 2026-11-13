@@ -9,6 +9,7 @@
 
 use serde_json::{Value, json};
 
+use crate::catalog::CatalogQueryArgs;
 use crate::config::{
     CALL_TO_CHAOS_CHAIN_CAP, CALL_TO_CHAOS_RADIANT_EFFECTS, CHAOS_ADDED_CARDS, CHAOS_BACKROW_CARDS,
     CHAOS_COST_DISCOUNT, CHAOS_HEAL, CHAOS_MANA, CHAOS_RUSH_TOKENS, CHAOS_UNIT_COST, CHAOS_UNIT_COUNT,
@@ -106,8 +107,8 @@ fn on_instance(effect: Effect, instance_id: String) -> Effect {
 
 // The ten effects, in the order §8 #95 lists them.
 
-/// 1. "Summon 3 random 3-cost Units": three independent picks (R60), placed per R64, each drawing
-///    only when its unit has a zone to go to (R129).
+/// 1. "Summon 3 random 3-cost Units": three independent picks (R60; unique within the run, R3563000),
+///    placed per R64, each drawing only when its unit has a zone to go to (R129).
 pub fn summon_random_three_cost_units() -> Effect {
     chaos_effect(ChaosEffectName::Units, |_ctx| {
         (0..CHAOS_UNIT_COUNT)
@@ -205,8 +206,9 @@ pub fn summon_chaos_golem() -> Effect {
     })
 }
 
-/// 9. "Summon 5 random Field Spells or Traps into your backrow": five picks (R60), Traps face-down
-///    and Field Spells public (§3.2, R33), each drawing only when it has a zone (R129).
+/// 9. "Summon 5 random Field Spells or Traps into your backrow": five picks (R60; unique within the
+///    run, R3563000), Traps face-down and Field Spells public (§3.2, R33), each drawing only when it
+///    has a zone (R129).
 pub fn summon_random_backrow() -> Effect {
     chaos_effect(ChaosEffectName::Backrow, |_ctx| {
         (0..CHAOS_BACKROW_CARDS)
@@ -219,15 +221,42 @@ pub fn summon_random_backrow() -> Effect {
 ///     (R28). At CALL_TO_CHAOS_CHAIN_CAP casts this resolves into nothing, with no re-roll (R87, R423).
 ///     The cast card is a real generated card (R60) that §10.5 step 7 sends to the graveyard.
 pub fn cast_random_call_to_chaos() -> Effect {
-    Effect::new("callToChaos:recast", |ctx| {
+    recast(false)
+}
+
+/// R3570005: `cast_random_call_to_chaos` that never draws the card casting it — S+ #142's tenth entry, "Cast a
+/// random Call to Chaos" in the Mindustrial-Swarm Edition, which a random pick of its own would loop through
+/// (R387's rule for a random pool, which this recursion's pool otherwise skips). Only the casting card's own
+/// definition is left out: another edition's recursion may still draw it, and each cast counts toward R28's cap.
+pub fn cast_random_other_call_to_chaos() -> Effect {
+    recast(true)
+}
+
+fn recast(exclude_self: bool) -> Effect {
+    Effect::new("callToChaos:recast", move |ctx| {
         let depth = chaos_chain_of(ctx.live_self());
         if chaos_chain_cap_reached(depth) {
             return;
         }
 
-        let pool = crate::catalog::query(&json_as(json!({ "tags": [CHAOS_TAG] })));
+        let asked: CatalogQueryArgs = json_as(json!({ "tags": [CHAOS_TAG] }));
+        let pool = if exclude_self {
+            let own = ctx
+                .live_self()
+                .map(|card| card.def_id.clone())
+                .or_else(|| ctx.def_id.clone());
+            crate::catalog::query(&crate::catalog::excluding_def_id(
+                Some(&*ctx.sink.state),
+                &asked,
+                own.as_deref(),
+            ))
+        } else {
+            crate::catalog::query(&asked)
+        };
+        // R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
         let Some(def_id) =
-            crate::catalog::pick_generated(&mut *ctx.sink.rng, &pool, None).map(|def| def.id.clone())
+            crate::catalog::pick_generated_unique(&mut *ctx.sink.rng, &pool, None, &mut ctx.draw_tally)
+                .map(|def| def.id.clone())
         else {
             return;
         };

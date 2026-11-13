@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
-import { KEYWORD_KINDS, fillParams, setShips, type KeywordKind } from "@jackioh/shared";
+import { KEYWORD_KINDS, UNPRINTED_KEYWORD_KINDS, fillParams, setShips, type KeywordKind } from "@jackioh/shared";
 
 import { KEYWORD_MARK } from "./keywordMarks.ts";
 import {
@@ -104,6 +104,14 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "When this attacks",
     "Whenever this attacks",
     "After this attacks",
+    // R3572000: its Frozen is §6.1's status ("Frozen"), which the glossary names; the row is a trigger on it.
+    "When this is Frozen",
+    // R3558001, R3558002, R3558006, R3558007: Stinkyscape+'s hand and deck rows; the cards print each in their own
+    // words ("The card to the right of this …", "When your exile has 5 cards cast this").
+    "Hand aura",
+    "When they meet",
+    "Always starts on the bottom of your deck",
+    "Cast from the deck",
   ],
   "§6.3": [
     "Summon",
@@ -113,7 +121,29 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Discard",
     "Heal X",
     "Mana / gain mana",
-    "Refresh X",
+    // R3572000: rows the Stinkyscape+ parts (#3535 to #3571) added to §6.3: the spec states their rules and the
+    // glossary names none of them, the card text printing each in plain words.
+    "Kill deadline",
+    "Side snapshot",
+    "Secret pick",
+    "Evolve all cards in your deck",
+    "Random cards",
+    "Open a Black Hole",
+    "Slash the board",
+    "Line damage",
+    "Chain lightning",
+    "Damage chains",
+    "Sweep",
+    "Summon onto an occupied zone",
+    "Summon Starships",
+    "Launch a random Starship",
+    "Exile a whole board",
+    // R3548003: Refresh gives back Activates, never mana.
+    "Refresh",
+    // R3548004: infinite mana spends nothing.
+    "Infinite mana",
+    // R3548002: the game-wide Warhero worth.
+    "Warhero Token's worth",
     "Damage",
     "Lose health",
     "Draw",
@@ -165,8 +195,6 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Complete the current stage",
     "Hear back",
     "Steal mana crystals",
-    // R1849001: Stinkyscape's.
-    "Evolve",
     // R1844000, R1844001, R1844002: Stinkyscape's M10.
     "Autopilot aura",
     "Pareto hint",
@@ -227,6 +255,7 @@ const TRIGGERS: readonly TriggerTermId[] = [
   "Activate",
   "When this awakens",
   "When launched",
+  "Evolves when",
 ];
 
 /** R512: §6.1's statuses that are not keyword kinds. */
@@ -270,11 +299,17 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "Exile",
   "Hand size",
   "Mark in a hand",
+  // R3572000: the verbs and counters of #3535 and #3540: Evolve, Burn and Toxic, and Replenish (R364).
+  "Evolve",
+  "Burn",
+  "Toxic",
+  "Replenish",
 ];
 
 /**
  * The marks as Card.tsx drew them, kept unchanged, among them R346's PI, R636's WF, R637's TE, R1220's
- * UT, R1086's MG, #783's RG FL CK CR FB, R1838000's TD, R1852000's SP SS and R2657000's CD.
+ * UT, R1086's MG, #783's RG FL CK CR FB, R1838000's TD, R1852000's SP SS and R2657000's CD; R3572000 adds
+ * the eight of #3535 (GG FX FZ EA TP, and the unprinted EV BU TX).
  */
 const MARKS: Readonly<Record<KeywordKind, string>> = {
   Taunt: "TA",
@@ -313,6 +348,14 @@ const MARKS: Readonly<Record<KeywordKind, string>> = {
   "Starship Piece": "SP",
   Starship: "SS",
   "Can't Defend": "CD",
+  Evolve: "EV",
+  Burn: "BU",
+  Toxic: "TX",
+  GIGA: "GG",
+  Flexible: "FX",
+  Frenzy: "FZ",
+  Evasive: "EA",
+  Tipsy: "TP",
 };
 
 type Term = { text: string; term: GlossaryTermId };
@@ -356,7 +399,7 @@ describe("B10: tokenizeRules and termsIn", () => {
     ]);
   });
 
-  it("R781005 R1025000 R1615000 combat keywords are a term the cards that draw them print, its entry listing the fourteen", () => {
+  it("R781005 R1025000 R1615000 R3551004 combat keywords are a term the cards that draw them print, its entry listing the fifteen", () => {
     expect(termsOf("Aura: Has 5 random combat keywords.")).toEqual([
       { text: "Aura:", term: "Aura" },
       { text: "combat keywords", term: "Combat keyword" },
@@ -366,7 +409,7 @@ describe("B10: tokenizeRules and termsIn", () => {
     ]);
     const entry = GLOSSARY["Combat keyword"];
     expect(entry.section).toBe("§6.1");
-    for (const word of ["Taunt", "Flying", "Ranged", "Deft", "Trample"]) {
+    for (const word of ["Taunt", "Flying", "Ranged", "Deft", "Trample", "Frenzy"]) {
       expect(entry.rule).toContain(word);
     }
     // R1025000: Armor and Spell Damage are not in the pool; R1615000: nor are Charge and Indestructible.
@@ -571,9 +614,11 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
   });
 
   it("B11 KEYWORD_MARK has a distinct two-letter mark for every keyword kind, patch v0.2.0's included", () => {
-    expect(Object.keys(KEYWORD_MARK).sort()).toEqual([...KEYWORD_KINDS].sort());
-    const marks = KEYWORD_KINDS.map((kind) => KEYWORD_MARK[kind]);
-    for (const [index, mark] of marks.entries()) expect(mark, KEYWORD_KINDS[index]).toMatch(/^[A-Z]{2}$/);
+    // R3572000: the three kinds no card prints (R3535002) have a mark too: a view may carry any `KeywordKind`.
+    const kinds = [...KEYWORD_KINDS, ...UNPRINTED_KEYWORD_KINDS];
+    expect(Object.keys(KEYWORD_MARK).sort()).toEqual([...kinds].sort());
+    const marks = kinds.map((kind) => KEYWORD_MARK[kind]);
+    for (const [index, mark] of marks.entries()) expect(mark, kinds[index]).toMatch(/^[A-Z]{2}$/);
     expect(new Set(marks).size).toBe(marks.length);
   });
 
@@ -679,7 +724,9 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
   });
 
   it("R1320 a plain stat buff stays plain words: matching is case-sensitive, and a word glued on is no term", () => {
-    expect(termsIn("Give a Unit +2/+2, a plain buff")).toEqual([]);
+    expect(termsIn("Give a Unit +2/+2, a plain stat change")).toEqual([]);
+    // R3572000: since #3572 the lower-case verb the Stinkyscape+ faces print ("then buff them") bolds, as "steal" does (R910000).
+    expect(termsIn("Shuffle 3 copies of it into your deck, then buff them")).toEqual(["Buff"]);
     expect(termsIn("Buff it twice. Nerf them")).toEqual(["Buff", "Nerf"]);
     expect(termsIn("Buffed and Nerfed")).toEqual([]);
   });
@@ -719,10 +766,10 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       Tribute: ["Tributes"],
       Fuse: ["fuse", "fused", "fuses"],
       Transform: ["transform", "transforms"],
-      Lock: ["Locked"],
+      Lock: ["Locked", "lock"],
       Steal: ["steal"],
       Nerf: ["Nerfs"],
-      Buff: ["Buffs"],
+      Buff: ["Buffs", "buff", "buffs"],
       Redirect: ["redirected"],
       Exile: ["exile", "exiles", "exiled"],
       // R1174000: Freeze's spellings; Frozen is its own §6.1 status.
@@ -732,9 +779,16 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       // R1857000: the Stinkyscape set's faces print these mid-sentence, and "fuses" and "Floated" above.
       "End the turn": ["end the turn"],
       Allure: ["Allured"],
-      Launch: ["launch", "launches"],
       // #2521: ZolarKeth's "A University can be Activated at most once each turn" (R2521003).
-      Activate: ["Activated"],
+      Activate: ["Activated", "Activates"],
+      // R3572000: the Stinkyscape+ faces print these mid-sentence ("Burns 3", "then buff them", "lock the tile", "is countered",
+      // "when it awakens", "is launched", "Evolved Swarm cards", "replenish 2 mana"); "Evolves" is the trigger's own verb.
+      Awaken: ["awakens"],
+      Counter: ["countered"],
+      Launch: ["launch", "launches", "launched"],
+      Evolve: ["evolve", "Evolved", "Evolves"],
+      Burn: ["Burns"],
+      Replenish: ["replenish"],
     };
     for (const [key, entry] of Object.entries(GLOSSARY)) {
       expect(entry.aliases, key).toEqual(printed[key as GlossaryTermId] ?? []);
@@ -813,7 +867,9 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
   });
 
   it("R512 each new status, and the v0.2.0 keyword kinds, are found where a card prints them", () => {
-    expect(termsIn(played("classicplus-051"))).toContain("Can't be attacked");
+    // R3551003: Jlockeed's J15 Fighter, the one card that printed Can't be attacked, prints Evasive in its place.
+    expect(termsIn(played("classicplus-051"))).toContain("Evasive");
+    expect(termsIn(played("classicplus-051"))).not.toContain("Can't be attacked");
     expect(termsIn(played("classicplus-019-1"))).toContain("Only Units in this lane can attack this");
     expect(termsIn(played("classicplus-019-1", "radiant"))).toContain("Immune to Spells");
     expect(termsOf(played("classicplus-019-5"))).toContainEqual({ text: "Berserk:", term: "Berserk" });
@@ -840,9 +896,10 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
   });
 
   it("R512 every new term has at least one catalog text that prints it", () => {
-    // No status is left unprinted: the Stinkyscape set's faces (#1884) print Frozen and Dormant
-    // (R1839000), where M+ #24 Bob (#1185) prints only the verb, Freeze.
-    const unprinted: readonly GlossaryTermId[] = [];
+    // The Stinkyscape set's faces (#1884) print Frozen and Dormant (R1839000), where M+ #24 Bob (#1185)
+    // prints only the verb, Freeze. R3551003: Can't be attacked is printed by no card since Jlockeed's J15
+    // Fighter took Evasive in its place (§6.1's row: "None yet").
+    const unprinted: readonly GlossaryTermId[] = ["Can't be attacked"];
     const fresh: readonly GlossaryTermId[] = [
       ...STATUSES.filter((id) => !unprinted.includes(id)),
       "Activate",
@@ -894,9 +951,12 @@ describe("R2657000: Can't Defend, the keyword that took over from the status Can
     );
     expect(termsIn(played("classicplus-019-1", "radiant"))).toEqual(expect.arrayContaining(["Immune to Spells", "Can't Defend"]));
     expect(termsIn(played("core-065-1"))).toEqual(expect.arrayContaining(["Can't Defend", "Aura"]));
-    // Jlockeed's J15 Fighter prints it again on both faces since #3042 (part 5 of #3000).
-    expect(termsIn(played("classicplus-051"))).toContain("Can't Defend");
-    expect(termsIn(played("classicplus-051", "radiant"))).toContain("Can't Defend");
+    // Jlockeed's J15 Fighter printed it again on both faces from #3042 (part 5 of #3000) until R3551003 gave it
+    // Evasive, which implies Can't Defend (R3543002), alone.
+    for (const face of ["base", "radiant"] as const) {
+      expect(termsIn(played("classicplus-051", face))).toContain("Evasive");
+      expect(termsIn(played("classicplus-051", face))).not.toContain("Can't Defend");
+    }
   });
 
   it("R2657000 the status's spellings are plain words now, and Warp Disruptor's aura stays plain words", () => {

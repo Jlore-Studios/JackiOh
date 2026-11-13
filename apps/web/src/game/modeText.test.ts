@@ -39,12 +39,14 @@ const ENGINE_MODES: readonly { id: string; faces: readonly Face[]; options: read
   // crates/cards/src/scripts/core/c051_kys_private_tutor.rs: TypeOption, then BracketOption.
   { id: "core-051", faces: ["base", "radiant"], options: ["Spell", "Unit", "Field Spell", "Trap"] },
   { id: "core-051", faces: ["base", "radiant"], options: ["0-1", "2", "3", "4+"] },
-  // crates/engine/src/subsystems/hero_power.rs: `discover_power` offers three of HERO_POWER_NAMES (R3134002).
+  // crates/engine/src/subsystems/hero_power.rs: `discover_power` offers three of the fourteen names (R3134002, R3551002).
   {
     id: "core-098",
     faces: ["base", "radiant"],
-    options: ["recruit", "draw", "ping", "burn", "rush", "felinor", "discover", "stitching", "armor", "insect", "brainstorm", "pluck", "tricks"],
+    options: ["recruit", "draw", "ping", "burn", "rush", "felinor", "discover", "stitching", "armor", "insect", "brainstorm", "pluck", "tricks", "endTimes"],
   },
+  // crates/cards/src/scripts/meditative/c054_money_machine.rs: the Cry's declared print (R3551001).
+  { id: "meditative-054", faces: ["base", "radiant"], options: ["coin", "warhero"] },
   // crates/cards/src/scripts/core/c065_masochism_mask.rs: base_options, radiant_options ("lose" and its `loss`).
   { id: "core-065", faces: ["base"], options: ["exile bottom", "lose 3", "summon Spikey Pillow"] },
   { id: "core-065", faces: ["radiant"], options: ["nothing", "exile bottom", "lose 3", "summon Spikey Pillow"] },
