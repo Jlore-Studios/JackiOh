@@ -15422,17 +15422,8 @@
       "stop_requested": false
     },
     "3855": {
-      "action": "plan",
-      "asks": [
-        "c:6856858267"
-      ],
-      "build_next": {
-        "from_run": "43453224732",
-        "model": "sonnet",
-        "provider": "claude-7",
-        "since": "2026-11-13T15:47:39Z",
-        "until": "2026-11-13T16:17:39Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-13T15:47:25Z",
         "difficulty": "medium",
@@ -15451,10 +15442,9 @@
         "reason": "planned on sonnet",
         "trail": "0\"}\n- Bash: {\"command\": \"cat spec/rulings/R3615000.md | head -12; grep -rn \\\"api::daily\\\\|mod daily\\\" crates/server/tests/server.rs crates/server/tests/api/mod.rs 2>/dev/null | head\"}\n- Bash: {\"command\": \"sed -n 85,262p crates/server/tests/api/daily.rs; sed -n 379,422p crates/server/tests/api/daily.rs\"}\n- Bash: {\"command\": \"sed -n 1,120p crates/server/tests/support/engine.rs; sed -n 949,1044p crates/server/tests/api/daily.rs\"}\n- Bash: {\"command\": \"sed -n 261,332p crates/server/tests/api/daily.rs; grep -n \\\"seed\\\" crates/server/tests/support/deps.rs | head\"}\n- Bash: {\"command\": \"grep -n \\\"install_test_cards\\\\|register_all\\\\|register_catalog\\\" crates/server/tests/support/*.rs crates/server/tests/api/daily.rs | head -20; sed -n 120,200p crates/server/tests/support\u2026\n- Bash: {\"command\": \"sed -n 40,70p crates/server/tests/api/daily.rs; sed -n 165,200p crates/server/tests/support/test_app.rs\"}\n- Bash: {\"command\": \"grep -rn \\\"seed\\\" crates/server/src/daily/*.rs | head; grep -rn \\\"fn new_seed\\\\|fn random_seed\\\\|fn make_seed\\\" crates/server/src | head\"}\n- Bash: {\"command\": \"grep -n \\\"Play {\\\" -B3 -A14 crates/engine/src/wire/actions.rs | head -60; grep -n \\\"const MAX_MANA\\\\|MAX_MANA\\\\b\\\" crates/engine/src/config.rs | head -3\"}\n- Bash: {\"command\": \"grep -n \\\"pub struct HandCardView\\\\|pub struct CardView\\\" -A30 crates/engine/src/wire/view.rs | head -60\"}\n- Bash: {\"command\": \"sed -n 160,200p apps/web/src/net/errors.ts 2>/dev/null | head -5; grep -n \\\"withSession\\\" -B3 -A30 apps/web/src/net/gate.ts | head -80\"}\n- Bash: {\"command\": \"grep -n \\\"opponent\\\" apps/web/src/daily/DailyRoute.tsx | head -20; grep -n \\\"export type PlayerRef\\\" -A8 apps/web/src/net/social.ts; grep -n \\\"pub struct PlayerRef\\\" -B3 -A22 crates/serv\u2026\n- Bash: {\"command\": \"sed -n 80,140p apps/web/src/game/ModifierList.tsx; grep -n \\\"yourModifiers\\\\|opponentModifiers\\\" -B2 -A12 apps/web/src/test/fixtures.ts | sed -n 1,60p; grep -rn \\\"modifierListTestid\\\" ap\u2026\n- Bash: {\"command\": \"sed -n 695,730p apps/web/src/duos/DuosBoard.test.tsx; grep -n \\\"OpenedReplay\\\\|replayTestid\\\" apps/web/src/duos/DuosBoard.test.tsx | head; sed -n 100,140p apps/web/src/test/replay.ts; gr\u2026\n- Bash: {\"command\": \"grep -n \\\"replayTestid\\\" apps/web/src/replay/ReplayPlayer.tsx | head -3; grep -n \\\"replayTestid\\\\|foldedReplaySteps\\\" apps/web/src/routes/match.test.tsx | head -5; grep -n \\\"@vitest-envi\u2026\n- Bash: {\"command\": \"cat apps/web/src/together/catalog.ts | head -60; sed -n 95,118p apps/web/src/game/Result.tsx; grep -n \\\"forecast\\\\|combatForecast\\\\|CombatForecast\\\" apps/web/src/net/daily.ts apps/web/sr\u2026\n- tool error: Exit code 2 // The card names a board needs when no engine runs it (a watched game, a shared replay, a Duos board): // the catalog the client ships (`game/currentCatalog.ts`, \u00a79.4, #1378), as on the \u2026\n- Bash: {\"command\": \"cat apps/web/src/game/attackOutcome.ts | head -80; grep -rn \\\"result is shown\\\\|result-overlay\\\" apps/web/src/game/Result.tsx | head -5\"}\n- Bash: {\"command\": \"sed -n 440,470p apps/web/src/game/net.ts; grep -n \\\"attackOutcomes\\\" -B2 -A40 apps/web/src/game/attackOutcome.ts | sed -n 1,5p\"}\n- Bash: {\"command\": \"grep -rln \\\"olderCatalog\\\\|lostOnTime\\\" --include=*.md --include=*.ts --include=*.tsx --include=*.rs --include=*.yml . 2>/dev/null | grep -v node_modules | grep -v \\\"^./target\\\" | head -\u2026\n- Bash: {\"command\": \"grep -n \\\"daily\\\" docs/v0.3.0/SURFACE.md | head -20; grep -n \\\"daily\\\\|Daily\\\" crates/server/README.md | head -20; grep -n \\\"daily\\\" apps/web/README.md | head\"}\n- Bash: {\"command\": \"sed -n 920,935p docs/v0.3.0/SURFACE.md; sed -n 1025,1055p apps/web/README.md; grep -n \\\"lostOnTime\\\" -B5 -A5 e2e/support/daily.ts | head -40; grep -n \\\"Daily games (9.13\\\" -A30 crates/se\u2026\n- Bash: {\"command\": \"grep -n \\\"^## Daily games\\\\|^### Daily games\\\\|#daily-games\\\" crates/server/README.md | head; awk '/Daily games \\\\(\\u00a79.13/{f=1} f{print NR\\\": \\\"$0}' crates/server/README.md | head -5\u2026\n- Bash: {\"command\": \"sed -n 761,800p crates/server/README.md | cut -c1-900\"}\n- Bash: {\"command\": \"grep -n \\\"export type ReplayPlayerProps\\\" -A40 apps/web/src/replay/ReplayPlayer.tsx | head -60; grep -n \\\"Authorization\\\\|authorization\\\" apps/web/src/net/api.ts | head -5; grep -n \\\"typ\u2026\n- Bash: {\"command\": \"grep -n \\\"async function callWithRenewal\\\" -B6 -A40 apps/web/src/net/gate.ts\"}\n- Bash: {\"command\": \"sed -n 1,48p crates/server/src/actor/engine.rs; grep -n \\\"pub use.*combat_forecast\\\\|CombatForecast\\\" crates/engine/src/lib.rs | head -3; grep -n \\\"^use\\\\|^pub use\\\" crates/server/src/ap\u2026\n- Bash: {\"command\": \"cat spec/pending/3846.md | cut -c1-300; grep -n \\\"ruling\\\" docs/issues-and-patches.md | head -20; ls docs/patches 2>/dev/null | head; ls patches 2>/dev/null | head\"}\n- Bash: {\"command\": \"sed -n 1,60p crates/tools/src/classify.rs 2>/dev/null | head -80; ls crates/tools/src | head -40\"}\n- Bash: {\"command\": \"git show --stat 44133b2637 | head -40; git show --stat 3eba879085 | grep -i \\\"patch\\\\|pending\\\" | head\"}\n- Bash: {\"command\": \"grep -n '\\\"Watch the replay\\\"\\\\|\\\"Opponent\\\"' apps/web/src/i18n/zh-CN.json | head; git show --stat 3eba879085 | grep -v \\\"^ *\\\\*\\\" | tail -15; ls patches* 2>/dev/null | head -3; git ls-f\u2026\n- Bash: {\"command\": \"grep -rn \\\"budget\\\\|bundle-size\\\\|chunkSize\\\" apps/web/package.json apps/web/vite.config.* package.json scripts/*.sh 2>/dev/null | head -8; grep -n \\\"import/order\\\\|no-restricted-imports\u2026\n- Bash: {\"command\": \"grep -rln \\\"daily\\\" e2e/cypress/e2e | head; grep -rn \\\"Opponent\\\" e2e/cypress/e2e/5*daily* 2>/dev/null | head -3\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3855/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"medium\\\", \\\"why\\\": \\\"none of rule 1-5 holds: no engine/AI code, no migration, ~14 files; \u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"None of rules 1\u20135 holds: no engine or AI code, no migration, about 14 files. The forecast field and `CombatForecast` already exist on four other tables, so the daily read is a fifth call site, not a new cross-crate design.\"} --> ## Goal A daily board shows\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-13T15:30:03Z",
       "owner_why": "it plans it",
@@ -15467,12 +15457,14 @@
       "provider": "claude-7",
       "queued_at": "2026-11-13T15:06:04Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43453224732",
+      "run_id": "pending:b887841c-1794585301",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-13T15:30:03Z",
+      "started_at": "2026-11-13T15:55:56Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6856858267"
+      ]
     },
     "3856": {
       "asks": [
@@ -15981,9 +15973,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T15:54:46Z",
+    "at": "2026-11-13T15:55:56Z",
     "url": "",
-    "what": "build #3865 on claude-1"
+    "what": "build #3855 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-13T15:19:17Z",
