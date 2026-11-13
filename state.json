@@ -15993,6 +15993,8 @@
       "stop_requested": false
     },
     "3873": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-13T14:48:17Z",
@@ -16006,8 +16008,11 @@
         "trail": "est.* . | head; \"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864/apps/web/src; sed -n 472,530p game/actions.test.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864/apps/web/src/game; grep -n \\\"data-testid\\\" Backrow*.tsx Zone.tsx 2>/dev/null | head; ls | grep -i backrow; tail -2 /tmp/wasm.log | cut -c1-150\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864/apps/web/src/game; grep -n \\\"testid\\\\|testId\\\\|onClick\\\" Backrow.tsx | head -12; grep -n \\\"testId\\\\|onClick\\\" Zone.tsx | sed -n 1,30p\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864/apps/web/src/game; cat > PromptBoardZone.test.tsx <<'EOF'\\n// #3864 (R3864000): a choice of one board zone (a play's zone, a `cell` prompt, a de\u2026\n- said: Tidy: use IDLE, drop the NO_HIGHLIGHT hack.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864/apps/web/src/game; python3 - <<'EOF'\\np='PromptBoardZone.test.tsx'\\ns=open(p).read()\\ns=s.replace('import { highlightFor, type Interaction } fro\u2026\n- said: Meanwhile update e2e files.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; grep -rn \\\"prompt-option-units\\\\|prompt-option-backrow\\\\|prompt-zones\\\\|prompt-option-zone\\\\|inPicker\\\" e2e --include=*.ts --include=*.tsx | gr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; python3 - <<'EOF'\\np='e2e/support/tutorial.ts'\\ns=open(p).read()\\nold='cy.get(onBoard(where) ? ts(where) : inPicker(`${zone.row}:${String(zone.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; grep -n \\\"\\\\.field\\\\|BOARD\\\\b\\\" e2e/cypress/component/mobile-ux.cy.tsx | head -12\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; python3 - <<'EOF'\\np='e2e/cypress/component/mobile-ux.cy.tsx'\\ns=open(p).read()\\ndef rep(old,new):\\n global s\\n assert s.count(old)==1,old\\n s=\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864/apps/web/src/game; sed -n 1270,1360p Prompt.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864/apps/web/src/game; grep -n '\\\"cell\\\"' Prompt.test.tsx | head; sed -n 1236,1262p Prompt.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864/apps/web/src/game; sed -n 1056,1080p Prompt.test.tsx; sed -n 1258,1268p Prompt.test.tsx; sed -n 1362,1380p Prompt.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864/apps/web/src/game; python3 - <<'EOF'\\np='Prompt.test.tsx'\\ns=open(p).read()\\nold=''' [\\n \\\"cell\\\",\\n pendingFor(\\\"cell\\\", [\\n { key: \\\"zone:p2:u\u2026\n- said: Meanwhile, typecheck, eslint, spec check.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; pnpm --dir apps/web typecheck 2>&1 | tail -8; pnpm exec eslint apps/web/src/game/Prompt.tsx apps/web/src/game/PromptBoardZone.test.tsx apps/web\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; cargo jackioh spec check 2>&1 | tail -8\"}\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-3864/d00ec693-5ec4-43fe-a4b1-572ffb6cf05e/tasks/br1u4m798.output | tail -30\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864/apps/web; (pnpm exec vitest run --project web --exclude 'src/game/**' > /tmp/web-rest.log 2>&1 &); sleep 100; cat /tmp/claude-1001/-home-runner-\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; python3 - <<'EOF'\\ns=open('.bot-notes.md').read()\\nstate='''## State\\n\\nBuild run 2 (sonnet). Plan followed. DONE: Prompt.tsx (Picker.boardOnly\u2026\n- Bash: {\"command\": \"sleep 110; tail -8 /tmp/web-rest.log | cut -c1-200; tail -5 /tmp/claude-1001/-home-runner-work--temp-work-item-3864/d00ec693-5ec4-43fe-a4b1-572ffb6cf05e/tasks/bgvfn2pxv.output\"}\n- tool error: <tool_use_error>Blocked: sleep 110 followed by: tail -8 /tmp/web-rest.log cut -c1-200 tail -5 /tmp/claude-1001/-home-runner-work--temp-work-item-3864/d00ec693-5ec4-43fe-a4b1-572ffb6cf05e/tasks/bgvfn2\u2026\n- said: Quick status: implementation is done, `src/game` tests pass (2539), typecheck and eslint are clean. I'm waiting on the rest of the web tests and `spec check`.\n- Bash: {\"command\": \"until grep -q \\\"Test Files\\\" /tmp/web-rest.log; do sleep 5; done; tail -12 /tmp/web-rest.log | cut -c1-200\", \"timeout\": 600000}\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-3864/d00ec693-5ec4-43fe-a4b1-572ffb6cf05e/tasks/bgvfn2pxv.output | tail -5; tail -12 /tmp/web-rest.log | cut -c1-200\"}\n- Bash: {\"command\": \"until grep -q \\\"Test Files\\\" /tmp/web-rest.log; do sleep 5; done; grep -v \\\"Not implemented\\\" /tmp/web-rest.log | tail -15 | cut -c1-200\", \"timeout\": 590000}\n- Bash: {\"command\": \"ps aux | grep -c \\\"[v]itest\\\"; grep -v \\\"Not implemented\\\" /tmp/web-rest.log | tail -8 | cut -c1-200\"}\n- Bash: {\"command\": \"until grep -q \\\"Test Files\\\" /tmp/web-rest.log; do sleep 5; done; grep -v \\\"Not implemented\\\" /tmp/web-rest.log | tail -15 | cut -c1-200\", \"timeout\": 590000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864/e2e; (pnpm exec cypress verify 2>&1 | tail -3); git -C .. status --short\", \"timeout\": 90000}\n- said: Cypress can run here, so I'll run the B44 component spec.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864/e2e; timeout 590 pnpm exec cypress run --component --spec cypress/component/mobile-ux.cy.tsx --browser electron 2>&1 | grep -v \\\"^$\\\" | tail -50\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864; grep -rn \\\"promptOptionId\\\\|prompt-option\\\" e2e --include=*.ts --include=*.tsx -l | grep -v node_modules; grep -rn \\\"promptOptionId(\\\\`\\\\?zone\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3864/e2e; grep -n \\\"zone\\\\|cell\\\" support/practice.ts support/commands.ts cypress/component/meditative-prompts.cy.tsx | grep -i \\\"option\\\\|picker\\\" |\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: pick a zone by tapping the board, with no zone menu\"} --> A choice of one board zone now opens no list at any width. The modal is the hint \"Tap a highlighted zone on the board.\" plus a play's **Cancel**. The web tests, typecheck, eslint, `cargo jackioh \u2026"
       },
       "issue": 3864,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-13T16:29:38Z",
         "from_run": "43446243123",
         "gates": [
           {
@@ -16099,7 +16104,11 @@
         "source": "build",
         "until": "2026-11-13T16:57:22Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-13T16:27:22Z",
+      "run_id": "pending:b7308aed-1794587301",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16118,6 +16127,9 @@
         "provider": "claude-8",
         "run": "43446243123"
       },
+      "started_at": "2026-11-13T16:29:38Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16131,9 +16143,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T15:55:56Z",
+    "at": "2026-11-13T16:29:38Z",
     "url": "",
-    "what": "build #3855 on claude-7"
+    "what": "review #3873 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-13T15:45:28Z",
