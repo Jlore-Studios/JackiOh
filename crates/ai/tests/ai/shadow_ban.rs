@@ -1766,6 +1766,21 @@ mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
         }
     }
 
+    /// R3575000: fullsend 3 lifts S+ #81 Doomsayer and S+ #157 Phantom Shipyard through the unban lane:
+    /// after its fixes they are `neverPlayed` at Hard alone, and the owner chose to deal them anyway.
+    #[test]
+    fn r3575000_the_unban_lane_lifts_doomsayer_and_phantom_shipyard() {
+        jackioh_cards::register_all();
+        for def_id in ["stinkyscapeplus-081", "stinkyscapeplus-157"] {
+            assert_eq!(def_of(None, def_id).set, SetName::StinkyscapePlus, "{def_id}");
+            assert!(
+                SHADOW_UNBANNED.contains(&def_id),
+                "{def_id}: lifted by the unban lane"
+            );
+            assert!(!SHADOW_BAN_IDS.contains(&def_id), "{def_id}: out of SHADOW_BAN");
+        }
+    }
+
     #[test]
     fn r732000_the_gate_is_lifted_and_generation_json_counts_the_table() {
         // Generation 9 lifted R1390's gate on the table (#1884, #1885); the Stinkyscape+ release (#3573)

@@ -165,6 +165,32 @@ fn legal_has(game: &Value, kind: &str) -> bool {
         .is_some_and(|legal| legal.iter().any(|action| action["type"] == kind))
 }
 
+/// The `(attackerId, targetId)` of each attack `game`'s seat may declare, in `legal`'s order.
+fn legal_attack_ids(game: &Value) -> Vec<(String, String)> {
+    game["legal"]
+        .as_array()
+        .expect("legal")
+        .iter()
+        .filter(|action| action["type"] == "attack")
+        .map(ids_of)
+        .collect()
+}
+
+/// The `(attackerId, targetId)` of each entry of `game`'s forecast, in its order (R3855000).
+fn forecast_ids(game: &Value) -> Vec<(String, String)> {
+    game["forecast"]["attacks"]
+        .as_array()
+        .expect("a forecast's attacks")
+        .iter()
+        .map(ids_of)
+        .collect()
+}
+
+fn ids_of(entry: &Value) -> (String, String) {
+    let id = |key: &str| entry[key].as_str().expect("an id").to_string();
+    (id("attackerId"), id("targetId"))
+}
+
 /// The move `game`'s seat makes: keep its whole hand at the mulligan, else end its turn, else the
 /// first answer to its prompt.
 fn next_move(game: &Value) -> Value {
@@ -413,6 +439,72 @@ async fn a_player_not_holding_the_move_may_only_concede() {
     .await;
     assert_eq!(status, 200, "{body}");
     assert_eq!(body["seq"], seq + 1, "{body}");
+}
+
+/// R3855000: a daily game's read, and every answer to an action, carries the engine's forecast of the
+/// seat's attacks (R3477000): one entry per attack its `legal` lists, in its order, and none while the
+/// other seat holds the move. The game is dealt from a random seed, so the test plays a card whenever
+/// one is legal and ends its turn when none is, until a seat has an attack to forecast.
+#[tokio::test]
+async fn r3855000_a_daily_read_carries_the_forecast_of_its_seats_legal_attacks() {
+    /// More than enough turns for a unit to be played and to be old enough to attack.
+    const MOVES_TO_AN_ATTACK: usize = 60;
+    let (app, ada, bo) = two_friends().await;
+    let match_id = daily_game(&app, &ada, &bo, 1).await;
+    past_the_mulligan(&app, [&ada, &bo], &match_id).await;
+
+    let mut found = None;
+    for n in 0..MOVES_TO_AN_ATTACK {
+        let (on_move, waiting) = holder(&app, [&ada, &bo], &match_id).await;
+        let game = read(&app, on_move, &match_id).await;
+        if legal_has(&game, "attack") {
+            found = Some((on_move, waiting, game));
+            break;
+        }
+        let action = game["legal"]
+            .as_array()
+            .and_then(|legal| legal.iter().find(|action| action["type"] == "play"))
+            .cloned()
+            .unwrap_or_else(|| next_move(&game));
+        let seq = game["seq"].as_i64().expect("a seq");
+        let (status, body) = send(&app, on_move, &match_id, seq, &format!("fc-{n}"), action).await;
+        assert_eq!(status, 200, "{body}");
+    }
+    let (on_move, waiting, game) = found.expect("a seat with a legal attack");
+
+    // The holder: the forecast's entries are its legal attacks, in order.
+    let attacks = legal_attack_ids(&game);
+    assert!(!attacks.is_empty(), "{game}");
+    assert_eq!(forecast_ids(&game), attacks, "{game}");
+    assert!(game["forecast"]["lethal"].is_boolean(), "{game}");
+
+    // The other seat: no attack, and no lethal; a refusal's `game` says so too.
+    let none = json!({ "attacks": [], "lethal": false });
+    let theirs = read(&app, waiting, &match_id).await;
+    assert_eq!(theirs["forecast"], none, "{theirs}");
+    let seq = game["seq"].as_i64().expect("a seq");
+    let (status, body) = send(
+        &app,
+        waiting,
+        &match_id,
+        seq,
+        "fc-not-mine",
+        json!({ "type": "setAutoEndTurn", "enabled": true }),
+    )
+    .await;
+    assert_eq!((status, code_of(&body)), (422, "not_your_move"), "{body}");
+    assert_eq!(body["game"]["forecast"], none, "{body}");
+
+    // An action's answer carries the forecast as the new read of the holder's seat.
+    let attack = game["legal"]
+        .as_array()
+        .and_then(|legal| legal.iter().find(|action| action["type"] == "attack"))
+        .cloned()
+        .expect("a legal attack");
+    let (status, body) = send(&app, on_move, &match_id, seq, "fc-attack", attack).await;
+    assert_eq!(status, 200, "{body}");
+    assert!(body["forecast"].is_object(), "{body}");
+    assert_eq!(forecast_ids(&body), legal_attack_ids(&body), "{body}");
 }
 
 /// Two requests under one nonce with different actions, both read at one seq: the store takes the

@@ -45,11 +45,8 @@ fn arrive() -> TriggerDef {
     TriggerDef::new("eu-striker-arrive", &[GameEventType::CardResolved], |ctx, event| {
         let played = your_other_play(ctx, event);
         match played {
-            Some(GameEvent::CardResolved { def_id, .. })
-                if def_of(Some(&*ctx.state), def_id).type_ == CardType::Unit =>
-            {
-                vec![summon_this()]
-            }
+            // R783005: the play as it counts, so a Unit set by its Cloaked is the Trap it was set as.
+            Some(played) if played_type_of(&*ctx.state, played) == Some(CardType::Unit) => vec![summon_this()],
             _ => vec![],
         }
     })
@@ -144,6 +141,16 @@ mod tests {
                 assert!(!s.last_events().iter().any(
                     |event| matches!(event, GameEvent::CardPlayed { instance_id, .. } if *instance_id == striker.id)
                 ));
+            }
+
+            /// R783005: a Unit set face-down by its Cloaked is a Trap play, no Unit played.
+            #[test]
+            fn r783005_a_unit_set_face_down_by_its_cloaked_does_not_summon_it() {
+                let mut s = scenario(json!({ "p1": { "hand": [STRIKER, crate::CLOAKED_UNIT, FILLER], "mana": 10 } }));
+                let striker = s.card(STRIKER).clone();
+                crate::set_cloaked(&mut s, P1, crate::CLOAKED_UNIT, 1);
+                assert!(summoned(&s, &striker.id).is_empty());
+                s.expect_in_zone(&striker, "hand");
             }
 
             #[test]

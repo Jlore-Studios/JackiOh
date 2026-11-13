@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 use serde_json::json;
 
-use crate::catalog::{FUSED_DIGEST_MARK, def_of};
+use crate::catalog::FUSED_DIGEST_MARK;
 use crate::config::{
     CRAFT_ADJECTIVES, CRAFT_ECHO_POINTS_PER_N, CRAFT_HAT_PRICES, CRAFT_HUGE_POTION_BUDGET_MULTIPLE,
     CRAFT_HUGE_POTION_COST, CRAFT_ID_PREFIX, CRAFT_KEYWORD_PRICES, CRAFT_LOC_BUDGET, CRAFT_LOC_SKELETON,
@@ -876,13 +876,14 @@ fn reveal_trigger(hat: CraftHatKind, compiled: Vec<CompiledEffect>) -> TriggerDe
         out
     })
     .with_when(move |ctx, event| match event {
-        GameEvent::CardPlayed { player, def_id, .. } => {
+        GameEvent::CardPlayed { player, .. } => {
             if *player == ctx.controller {
                 return false;
             }
-            let played = def_of(Some(&*ctx.state), def_id).type_;
-            (hat == CraftHatKind::OpponentPlaysUnit && played == CardType::Unit)
-                || (hat == CraftHatKind::OpponentPlaysSpell && played == CardType::Spell)
+            // R783005: the play as it counts, so a card set by its Cloaked is the Trap it was set as.
+            let played = crate::query::played_type_of(&*ctx.state, event);
+            (hat == CraftHatKind::OpponentPlaysUnit && played == Some(CardType::Unit))
+                || (hat == CraftHatKind::OpponentPlaysSpell && played == Some(CardType::Spell))
         }
         // R121: a forced attack is declared by the effect that forces it, not by the opponent, so it never
         // reveals one.

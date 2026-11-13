@@ -1,9 +1,11 @@
 //! SPEC §8.12 S+ #31 Soul Read, a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base:    (1) Trap; "Cry: Look at your opponent's hand and choose a card secretly. Reveals
-//!            if your opponent plays the chosen card before any of the other cards you saw.
-//!            Take control of that card instead. Otherwise, Tribute this Trap."
-//!   Radiant: (1) Trap; "Cry:" the same pick; "Reveals if your opponent plays the chosen card.
-//!            Take control of that card instead."
+//!   Base:    (1) Trap; "When played face down: Look at your opponent's hand and choose a card
+//!            secretly. Reveals if your opponent plays the chosen card before any of the other
+//!            cards you saw. Take control of that card instead. Otherwise, Tribute this Trap."
+//!   Radiant: (1) Trap; "When played face down:" the same pick; "Reveals if your opponent plays
+//!            the chosen card. Take control of that card instead."
+//!   The designer's note prints "Cry:"; R3806000 words it "When played face down:", since no Trap
+//!   prints a Cry. The script's play-time hook (`cry`) runs it as the Trap is set, as before.
 //!
 //! Engine: E6's secret pick (R3550008): the Cry opens the opponent's hand to its owner alone,
 //! who secretly chooses one card; the pick and every card seen are kept on the Trap's own

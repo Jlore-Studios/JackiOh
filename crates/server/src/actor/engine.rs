@@ -13,9 +13,9 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::{
-    Action, ActionBody, CreateGameOptions, DECK_SIZE, GameState, GameSummary, LastBoardEntry, LeanPick,
-    PlayerId, PlayerView, ReplayCheckpoints, ReplayOpen, ReplayPage, ReplayRecord, ReplayRefusal, Rng,
-    SetName, ShippedCatalog, WinRateTable,
+    Action, ActionBody, CombatForecast, CreateGameOptions, DECK_SIZE, GameState, GameSummary, LastBoardEntry,
+    LeanPick, PlayerId, PlayerView, ReplayCheckpoints, ReplayOpen, ReplayPage, ReplayRecord, ReplayRefusal,
+    Rng, SetName, ShippedCatalog, WinRateTable,
 };
 
 pub use jackioh_engine::{FoldArgs, FoldResult, ReduceResult};
@@ -138,6 +138,12 @@ pub fn reduce(pinned: Pinned, state: &EngineState, action: &Action) -> ReduceRes
 pub fn legal_actions(pinned: Pinned, state: &EngineState, player: PlayerId) -> Vec<ActionBody> {
     registered();
     pinned.run(|| jackioh_engine::legal_actions(state, player))
+}
+
+/// R3477000: the forecast of `player`'s attacks, under the match's catalog as its legal actions are read.
+pub fn combat_forecast(pinned: Pinned, state: &EngineState, player: PlayerId) -> CombatForecast {
+    registered();
+    pinned.run(|| jackioh_engine::combat_forecast(state, player))
 }
 
 /// SPEC §10.8: the only window a player gets onto the match.

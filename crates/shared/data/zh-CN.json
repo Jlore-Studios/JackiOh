@@ -264,6 +264,7 @@
   "{seat} shuffled a card into the deck": "{seat}将一张牌洗入牌库",
   "A hidden card was buffed": "一张隐藏的牌获得了加成",
   "{target} gained +{attack}/+{health}": "{target}获得了+{attack}/+{health}",
+  "{target} got {attack}/{health}": "{target}的属性变化：{attack}/{health}",
   "{target} lost {keyword}": "{target}失去了{keyword}",
   "{target} gained {keyword}": "{target}获得了{keyword}",
   "{target} plague counters: {value}": "{target}的瘟疫指示物：{value}",

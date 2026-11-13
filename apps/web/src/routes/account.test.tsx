@@ -14,6 +14,7 @@ import {
   getPacks,
   getProfile,
   getQuests,
+  getReplays,
   getTokens,
   getWallet,
   previewUsername,
@@ -23,6 +24,7 @@ import {
   type OwnUsername,
 } from "../net/api.ts";
 import { announceAccountChange } from "../net/gate.ts";
+import { navigate } from "../net/navigate.ts";
 import { SESSION_STORAGE_KEY, readSession } from "../net/session.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { expectOnePageTitle } from "../test/pageTitle.ts";
@@ -30,6 +32,7 @@ import AccountRoute, { accountTestid, formatWinRate, resetSigningOutForTests, st
 import { packTestid } from "../packs/packs.ts";
 import { shopTestid } from "../shop/shop.ts";
 import { devToolsTestid } from "./DevTools.tsx";
+import { accountSectionPath, type AccountSection } from "./accountSections.ts";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
@@ -37,6 +40,7 @@ vi.mock("../net/api.ts", async (importOriginal) => {
     ...actual,
     getProfile: vi.fn(),
     getOwnRank: vi.fn(),
+    getReplays: vi.fn(),
     getPacks: vi.fn(),
     getQuests: vi.fn(),
     getWallet: vi.fn(),
@@ -83,13 +87,22 @@ function rankBody(over: Partial<OwnRankResponse> = {}): OwnRankResponse {
   };
 }
 
+/** R3733000: opens a section of the account screen, as a press on its list item does. */
+function openSection(section: AccountSection): void {
+  act(() => {
+    navigate(accountSectionPath(section));
+  });
+}
+
 beforeEach(() => {
+  vi.mocked(getReplays).mockResolvedValue({ replays: [], nextOffset: null });
   vi.mocked(getOwnRank).mockResolvedValue(rankBody());
   vi.mocked(getQuests).mockResolvedValue({ quests: [], nextDueAt: null });
 });
 
 afterEach(() => {
   cleanup();
+  window.history.replaceState(null, "", "/");
   vi.resetAllMocks();
 });
 
@@ -197,8 +210,8 @@ describe("the account screen", () => {
     expect(screen.getByTestId(accountTestid.randomSeasonRecord)).toHaveTextContent("This season (ranked): 3–0–0");
     expect(screen.getByTestId(accountTestid.randomBadges)).toHaveTextContent(/no season best yet/i);
     expect(screen.getByTestId(accountTestid.seasonRecord)).toHaveTextContent("7–2–1");
-    expect(screen.getByRole("heading", { name: "Constructed" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "All random" })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Constructed" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("heading", { name: "All random" }).length).toBeGreaterThan(0);
     expect(vi.mocked(getOwnRank)).toHaveBeenCalledWith(TOKEN, "random");
   });
 
@@ -261,7 +274,7 @@ describe("the account screen", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it("shows the summary without opening management", async () => {
+  it("R3733000 mounts only the open section: Overview holds the summary, and none of the sign-in options", async () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
     render(<AccountRoute token={TOKEN} />);
 
@@ -270,14 +283,15 @@ describe("the account screen", () => {
     expect(screen.getByTestId("account-leaderboard")).toBeInTheDocument();
     expect(screen.getByTestId("account-record")).toBeInTheDocument();
     expect(screen.getByTestId("account-sign-out")).toBeInTheDocument();
-    expect(screen.getByTestId("account-manage-toggle")).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByTestId(accountTestid.listItem("overview"))).toHaveAttribute("aria-current", "page");
+    expect(screen.queryByTestId(accountTestid.username)).toBeNull();
     expect(screen.queryByTestId("settings-email-input")).toBeNull();
     expect(screen.queryByTestId("account-two-step")).toBeNull();
     expect(screen.queryByTestId(usernameTestid.input)).toBeNull();
     expect(screen.queryByTestId("account-delete")).toBeNull();
   });
 
-  it("opening management reveals the rare options", async () => {
+  it("R3733000 Sign-in & security and Delete account hold the rare options", async () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
     vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co");
     vi.stubEnv("VITE_SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test");
@@ -302,20 +316,18 @@ describe("the account screen", () => {
       );
       await screen.findByTestId("account-email");
 
-      const toggle = screen.getByTestId("account-manage-toggle");
-      await userEvent.click(toggle);
-      expect(toggle).toHaveAttribute("aria-expanded", "true");
+      await userEvent.click(screen.getByTestId(accountTestid.listItem("security")));
+      expect(screen.getByTestId(accountTestid.listItem("security"))).toHaveAttribute("aria-current", "page");
       expect(screen.getByTestId(usernameTestid.input)).toBeInTheDocument();
       expect(screen.getByTestId("settings-email")).toBeInTheDocument();
       expect(screen.getByTestId("account-two-step")).toBeInTheDocument();
-      expect(screen.getByTestId("account-delete")).toBeInTheDocument();
+      expect(screen.queryByTestId("account-delete")).toBeNull();
 
-      await userEvent.click(toggle);
-      expect(toggle).toHaveAttribute("aria-expanded", "false");
+      await userEvent.click(screen.getByTestId(accountTestid.listItem("delete")));
+      expect(screen.getByTestId("account-delete")).toHaveClass("button-danger");
       expect(screen.queryByTestId(usernameTestid.input)).toBeNull();
       expect(screen.queryByTestId("settings-email")).toBeNull();
       expect(screen.queryByTestId("account-two-step")).toBeNull();
-      expect(screen.queryByTestId("account-delete")).toBeNull();
     } finally {
       vi.unstubAllEnvs();
       vi.unstubAllGlobals();
@@ -411,7 +423,7 @@ describe("the account screen", () => {
     expect(screen.getByTestId(accountTestid.winRate)).toHaveTextContent("70%");
   });
 
-  it("R2255000 a failed ranked read shows what it showed before: the Rank heading alone and the record as it was", async () => {
+  it("R3733000 a failed ranked read (amending R2255000 and R2778000) leaves no rank, season record, badges or Rank heading, and Overview's All time alone", async () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
     vi.mocked(getOwnRank).mockRejectedValue(new Error("the ladder is down"));
     render(<AccountRoute token={TOKEN} />);
@@ -419,11 +431,16 @@ describe("the account screen", () => {
     expect(await screen.findByTestId(accountTestid.record)).toHaveTextContent("7–2–1");
     // R2778000: one read per ladder, both failed.
     expect(getOwnRank).toHaveBeenCalledTimes(2);
-    expect(screen.getByRole("heading", { name: "Rank" })).toBeInTheDocument();
     expect(screen.queryByTestId(accountTestid.rank)).toBeNull();
     expect(screen.queryByTestId(accountTestid.randomRank)).toBeNull();
     expect(screen.queryByTestId(accountTestid.badges)).toBeNull();
     expect(screen.queryByTestId(accountTestid.seasonRecord)).toBeNull();
+    expect(screen.queryByTestId(accountTestid.overviewSeasonRecord)).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Rank" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "This season" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Constructed" })).toBeNull();
+    // R3733000: the Record heading is Overview's "All time", the figures the same.
+    expect(screen.getByRole("heading", { name: "All time" })).toBeInTheDocument();
     expect(screen.getByTestId(accountTestid.winRate)).toHaveTextContent("70%");
     expect(screen.queryByRole("alert")).toBeNull();
   });
@@ -457,7 +474,7 @@ describe("R1435 the username on the account page", () => {
     );
     vi.mocked(saveUsername).mockResolvedValue({ name: "Max", nextChangeAt: Date.now() + 86_400_000, promptOwed: false });
     render(<AccountRoute token={TOKEN} me={activeMe({ name: "Player#7", nextChangeAt: null, promptOwed: false })} />);
-    await userEvent.click(screen.getByTestId("account-manage-toggle"));
+    openSection("security");
 
     expect(screen.getByTestId("account-username").textContent).toBe("Player#7");
     expect(screen.queryByTestId("account-username-cooldown")).toBeNull();
@@ -487,7 +504,7 @@ describe("R1435 the username on the account page", () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
     const next = Date.now() + 3_600_000;
     render(<AccountRoute token={TOKEN} me={activeMe({ name: "Max#3", nextChangeAt: next, promptOwed: false })} />);
-    await userEvent.click(screen.getByTestId("account-manage-toggle"));
+    openSection("security");
 
     expect(screen.getByTestId("account-username").textContent).toBe("Max#3");
     expect(screen.getByTestId("account-username-cooldown")).toHaveTextContent(
@@ -499,7 +516,7 @@ describe("R1435 the username on the account page", () => {
   it("R1435 a cooldown that has run out offers the field again", async () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
     render(<AccountRoute token={TOKEN} me={activeMe({ name: "Max#3", nextChangeAt: Date.now() - 1_000, promptOwed: false })} />);
-    await userEvent.click(screen.getByTestId("account-manage-toggle"));
+    openSection("security");
 
     expect(screen.queryByTestId("account-username-cooldown")).toBeNull();
     expect(screen.getByTestId(usernameTestid.input)).toBeInTheDocument();
@@ -510,7 +527,7 @@ describe("R1435 the username on the account page", () => {
     try {
       vi.mocked(getProfile).mockResolvedValue(profileBody());
       render(<AccountRoute token={TOKEN} me={activeMe({ name: "Max#3", nextChangeAt: Date.now() + 2_000, promptOwed: false })} />);
-      await userEvent.click(screen.getByTestId("account-manage-toggle"));
+      openSection("security");
       expect(screen.getByTestId("account-username-cooldown")).toBeInTheDocument();
 
       act(() => {
@@ -537,7 +554,7 @@ describe("R1435 the username on the account page", () => {
         }}
       />,
     );
-    await userEvent.click(screen.getByTestId("account-manage-toggle"));
+    openSection("security");
 
     expect(screen.getByTestId("account-username").textContent).toBe("Player#7");
     expect(screen.queryByTestId(usernameTestid.input)).toBeNull();
@@ -573,7 +590,7 @@ describe("R1300000 the account secret ID, and no Dev tools here", () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody({ id: ID }));
     for (const isDev of [true, false, undefined]) {
       const view = render(<AccountRoute token={TOKEN} me={me(isDev)} />);
-      await userEvent.click(screen.getByTestId("account-manage-toggle"));
+      openSection("security");
       expect(screen.queryByTestId(devToolsTestid.panel), `isDev ${String(isDev)}`).toBeNull();
       expect(screen.queryByText("Dev tools"), `isDev ${String(isDev)}`).toBeNull();
       view.unmount();
@@ -583,7 +600,7 @@ describe("R1300000 the account secret ID, and no Dev tools here", () => {
   it("keeps the account secret ID hidden until asked", async () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody({ id: ID }));
     render(<AccountRoute token={TOKEN} me={me()} />);
-    await userEvent.click(screen.getByTestId("account-manage-toggle"));
+    openSection("security");
 
     expect(screen.queryByTestId(accountTestid.secretId)).toBeNull();
     expect(screen.getByTestId(accountTestid.screen).textContent).not.toContain(ID);
@@ -595,7 +612,7 @@ describe("R1300000 the account secret ID, and no Dev tools here", () => {
   it("copies the account secret ID", async () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody({ id: ID }));
     render(<AccountRoute token={TOKEN} me={me()} />);
-    await userEvent.click(screen.getByTestId("account-manage-toggle"));
+    openSection("security");
     await userEvent.click(screen.getByTestId(accountTestid.secretIdShow));
 
     // Stubbed after user-event's clicks, which install a clipboard of their own.
@@ -629,6 +646,8 @@ describe("deleting the account", () => {
 
   it("asks for DELETE before it sends anything, then deletes at the server and signs this device out", async () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
+    // The URL first: the stubbed location below is a copy, which reads the search as it is now.
+    window.history.replaceState(null, "", accountSectionPath("delete"));
     const fetchMock = answer(204);
     vi.stubGlobal("fetch", fetchMock);
     const assign = vi.fn();
@@ -636,8 +655,7 @@ describe("deleting the account", () => {
     window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: TOKEN }));
     try {
       render(<AccountRoute token={TOKEN} />);
-      await screen.findByTestId("account-email");
-      await userEvent.click(screen.getByTestId("account-manage-toggle"));
+      await screen.findByTestId("account-delete");
       await userEvent.click(screen.getByTestId("account-delete"));
 
       // R3221000: the question is an alertdialog, its Cancel first and holding the focus, the deletion last.
@@ -675,14 +693,14 @@ describe("deleting the account", () => {
 
   it("keeps the session and says why when the server refuses", async () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
+    window.history.replaceState(null, "", accountSectionPath("delete"));
     vi.stubGlobal("fetch", answer(503, { error: { code: "unavailable", message: "Try again in a minute." } }));
     const assign = vi.fn();
     vi.stubGlobal("location", { ...window.location, assign });
     window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: TOKEN }));
     try {
       render(<AccountRoute token={TOKEN} />);
-      await screen.findByTestId("account-email");
-      await userEvent.click(screen.getByTestId("account-manage-toggle"));
+      await screen.findByTestId("account-delete");
       await userEvent.click(screen.getByTestId("account-delete"));
       await userEvent.type(screen.getByTestId("account-delete-input"), "DELETE");
       await userEvent.click(screen.getByTestId("account-delete-confirm"));
@@ -708,7 +726,7 @@ describe("deleting the account", () => {
         }}
       />,
     );
-    await userEvent.click(screen.getByTestId("account-manage-toggle"));
+    openSection("delete");
     await userEvent.click(screen.getByTestId("account-delete"));
     await userEvent.click(screen.getByTestId("account-delete-cancel"));
     expect(screen.queryByTestId("account-delete-input")).toBeNull();

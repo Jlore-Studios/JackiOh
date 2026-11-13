@@ -39,9 +39,10 @@ fn arrival(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String> {
             }
             Some(instance_id.clone())
         }
-        GameEvent::CardResolved { permanent, def_id, instance_id, .. } => {
+        GameEvent::CardResolved { permanent, instance_id, .. } => {
             let state: &GameState = &*ctx.state;
-            if !*permanent || def_of(Some(state), def_id).type_ != CardType::Unit {
+            // R783005: the play as it counts, so a Unit set by its Cloaked is the Trap it was set as.
+            if !*permanent || played_type_of(state, event) != Some(CardType::Unit) {
                 return None;
             }
             let unit = find_instance(state, instance_id)?;
@@ -176,6 +177,16 @@ mod tests {
                     &hit.unwrap_or(Value::Null),
                     &json!({ "sourceId": tesla.id, "amount": 4 })
                 ));
+            }
+
+            /// R783005: a Unit set face-down by its Cloaked is a Trap play, no Unit played.
+            #[test]
+            fn r783005_a_unit_set_face_down_by_its_cloaked_leaves_tesla_set() {
+                crate::register_all();
+                let mut s = setup(json!({ "hand": [crate::CLOAKED_UNIT, FILLER], "mana": 10 }), json!({}), false);
+                crate::set_cloaked(&mut s, P2, crate::CLOAKED_UNIT, 1);
+                assert!(!s.events().iter().any(|event| matches!(event, GameEvent::TrapFired { .. })));
+                assert_eq!(s.backrow(P1, 3).map(|card| card.def_id).as_deref(), Some(TESLA));
             }
 
             #[test]

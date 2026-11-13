@@ -415,6 +415,50 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
         );
     }
 
+    /// R383, R783005 (#3790): an Animated Field Spell is a Unit once it has animated as it entered, but
+    /// its play is still a Field Spell play: `query::played_type_of`, which every card answering a play
+    /// types it by, reads it as the turn's count did, so a card answering a Unit play passes it by.
+    #[test]
+    fn r383_an_animated_field_spell_that_animated_as_it_entered_is_still_a_field_spell_play() {
+        let mut state = playing("animated-golem-played-type");
+        let card = in_hand(&mut state, &golem.id, P1, 1)
+            .into_iter()
+            .next()
+            .expect("the Field Spell in hand");
+        flush(&mut state, P1, 10);
+        let result = act_result(
+            &state,
+            input(json!({
+                "type": "play", "instanceId": card.id, "zone": { "row": "backrow", "lane": 3 }, "playerId": "p1"
+            })),
+        );
+        assert_eq!(result.error, None);
+        let next = &result.state;
+        let animated = live(next, &card.id);
+        assert_eq!(
+            jackioh_engine::faces::card_type_of(next, &animated),
+            CardType::Unit
+        );
+        let resolved = result
+            .events
+            .iter()
+            .find(|event| matches!(event, GameEvent::CardResolved { instance_id, .. } if *instance_id == card.id))
+            .expect("its cardResolved");
+        assert_eq!(
+            jackioh_engine::query::played_type_of(next, resolved),
+            Some(CardType::FieldSpell)
+        );
+        let by_type = next
+            .players
+            .p1
+            .turn_log
+            .played_by_type
+            .clone()
+            .unwrap_or_default();
+        assert_eq!(by_type.get(&CardType::FieldSpell).copied(), Some(1));
+        assert_eq!(by_type.get(&CardType::Unit).copied(), None);
+    }
+
     #[test]
     fn r383_an_on_your_turn_card_played_on_its_controllers_turn_animates_at_once_and_holds_its_backrow_zone_for_its_return()
      {

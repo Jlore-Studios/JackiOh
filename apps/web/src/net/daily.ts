@@ -6,7 +6,7 @@
 // the client sends intent and shows its answers. Every route is `AuthLevel::Active`, so no function takes a
 // token: each reads the tab's session and renews it once on a 401 (R194), as `net/social.ts` does.
 
-import type { ActionBody, GameOverReason, LeanPick, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
+import type { ActionBody, CombatForecast, GameOverReason, LeanPick, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
 
 import type { DailyHold } from "../wire/generated/DailyHold.ts";
 import { apiRequest, type RequestOptions } from "./api.ts";
@@ -72,6 +72,8 @@ export type DailyGame = {
   view: PlayerView;
   /** The caller's legal actions; none while the other seat holds the move. */
   legal: ActionBody[];
+  /** R3855000: the engine's forecast of the caller's attacks (R3477000); absent from an older server. */
+  forecast?: CombatForecast;
   /** The last action's number: the next action is sent `after` it. */
   seq: number;
   holds: DailyHold[];

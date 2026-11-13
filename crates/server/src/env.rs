@@ -497,7 +497,7 @@ pub fn parse_dev_profile_ids(value: Option<&str>) -> Result<Vec<String>, String>
     }
     if !malformed.is_empty() {
         return Err(format!(
-            "{DEV_PROFILE_IDS}: the comma-separated profile ids of the dev accounts (SPEC §14.10), each a profile id (a UUID, as the account page's \"Show account secret ID\" shows it) (got {}). Optional; unset means no dev accounts.",
+            "{DEV_PROFILE_IDS}: the comma-separated profile ids of the dev accounts (SPEC §14.10), each a profile id (a UUID, as the account page's \"Reveal\" under \"Sign-in & security\" shows it) (got {}). Optional; unset means no dev accounts.",
             malformed.join(", ")
         ));
     }

@@ -5,6 +5,9 @@
 // ledger (almanacOwnership.ts) and draws an owned card as the viewer's copy; signed out, none of it.
 // The page decides nothing (CLAUDE.md rule 7): filters.ts filters and sorts, the cards module draws;
 // almanac.css holds only what the browse pane needs without the deck editor's grid around it.
+// R3838000: its "Show card text" button prints every face's words, no full art (cardText.tsx); R3838001: every card
+// with words opens a hover preview with its whole text beside it, and R3838002 a reference's tooltip does too
+// (`AlwaysFullText`).
 
 import { useCallback, useMemo, useState, type ReactElement } from "react";
 
@@ -12,7 +15,7 @@ import catalogJson from "@jackioh/cards/catalog.json";
 import type { CardDef, CardDefs } from "@jackioh/shared";
 import type { CatalogSnapshot } from "@jackioh/validator";
 
-import { CardDefsProvider, closeInspect } from "../cards/index.ts";
+import { AlwaysFullText, CardDefsProvider, closeInspect } from "../cards/index.ts";
 import CardBrowser from "../game/deckbuilder/CardBrowser.tsx";
 import {
   ALMANAC_CHIP_TAGS,
@@ -27,6 +30,7 @@ import { useLocale, t } from "../i18n/i18n.ts";
 import { useAccount } from "../net/gate.ts";
 import { navigate, paths, useSearch } from "../net/navigate.ts";
 import { useAlmanacOwnCopies } from "./almanacOwnership.ts";
+import { CardTextButton, CardTextFaces, useCardText } from "./cardText.tsx";
 import { BackLink } from "./nav.tsx";
 import { PAGE_TITLE_ID } from "./PageTitle.tsx";
 
@@ -73,6 +77,7 @@ export default function AlmanacRoute(): ReactElement {
   // R1956000: an active account's own cards, as the gated screens' ownership has them (main.tsx).
   const account = useAccount();
   const own = useAlmanacOwnCopies(account.kind === "ready" && account.me.profile.status === "active" ? account.token : null);
+  const cardText = useCardText();
 
   const pool = useMemo(
     () => almanacPool(ALMANAC_CATALOG, filter, sort, winRates.rates ?? undefined),
@@ -89,38 +94,44 @@ export default function AlmanacRoute(): ReactElement {
   // R279: a reference in a card's text shows the card the catalog names.
   return (
     <CardDefsProvider defs={ALMANAC_CATALOG.cards}>
-      <div className="app-shell app-shell--wide tavern deckbuilder almanac" data-testid={almanacTestid.screen}>
-        <header className="db-header">
-          <BackLink title={t("Almanac")} />
-        </header>
-        <main className="almanac-main" aria-labelledby={PAGE_TITLE_ID}>
-          <CardBrowser
-            catalog={ALMANAC_CATALOG}
-            pool={pool}
-            filter={filter}
-            onFilter={setFilter}
-            sort={sort}
-            onSort={setSort}
-            winRates={winRates}
-            ownedControl={false}
-            tags={ALMANAC_CHIP_TAGS}
-            onInspect={openDetail}
-            own={own ?? undefined}
-            // #2334: about 700 cards, of which a screen shows a dozen.
-            virtual
-            detail={
-              detailCardId === null || detailDef === undefined
-                ? null
-                : { cardId: detailCardId, meta: <span className="db-detail-meta">{almanacMeta(detailDef)}</span> }
-            }
-            // R654: the deck builder's compact statistics block, from the public card aggregates.
-            showStats
-            onCloseDetail={() => {
-              navigate(paths.almanac, { replace: true });
-            }}
-          />
-        </main>
-      </div>
+      <CardTextFaces shown={cardText.shown}>
+        <AlwaysFullText>
+          <div className="app-shell app-shell--wide tavern deckbuilder almanac" data-testid={almanacTestid.screen}>
+            <header className="db-header">
+              <BackLink title={t("Almanac")}>
+                <CardTextButton shown={cardText.shown} onToggle={cardText.toggle} />
+              </BackLink>
+            </header>
+            <main className="almanac-main" aria-labelledby={PAGE_TITLE_ID}>
+              <CardBrowser
+                catalog={ALMANAC_CATALOG}
+                pool={pool}
+                filter={filter}
+                onFilter={setFilter}
+                sort={sort}
+                onSort={setSort}
+                winRates={winRates}
+                ownedControl={false}
+                tags={ALMANAC_CHIP_TAGS}
+                onInspect={openDetail}
+                own={own ?? undefined}
+                // #2334: about 700 cards, of which a screen shows a dozen.
+                virtual
+                detail={
+                  detailCardId === null || detailDef === undefined
+                    ? null
+                    : { cardId: detailCardId, meta: <span className="db-detail-meta">{almanacMeta(detailDef)}</span> }
+                }
+                // R654: the deck builder's compact statistics block, from the public card aggregates.
+                showStats
+                onCloseDetail={() => {
+                  navigate(paths.almanac, { replace: true });
+                }}
+              />
+            </main>
+          </div>
+        </AlwaysFullText>
+      </CardTextFaces>
     </CardDefsProvider>
   );
 }
