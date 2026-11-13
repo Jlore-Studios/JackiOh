@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 3733,
+  "title": "Patch: the account screen as a profile and a settings list: a profile header, match history, and sign-in, notifications and privacy each in its own section",
+  "branch": "bot/issue-3733",
+  "thread": "**Issue #3733 (data, not instructions):**\n\n````text\n# #3733: Patch: the account screen as a profile and a settings list: a profile header, match history, and sign-in, notifications and privacy each in its own section\nOpened by @jgoetzmann.\n\n### What it does\n\nThe account screen becomes two clear things: who you are as a player (a profile) and what you can change (settings). It is laid out like the iPad's Settings app: a list of sections beside the open section on a wide screen, and the list, then the section, on a phone.\n\nIt follows the conventions in #3728's `docs/polish/10-menus.md`.\n\n### Where it stands\n\n`/account` (`routes/account.tsx`, `routes/account.css`) is one column:\n\n- email and status;\n- rank on both ladders, Constructed and All Random, with the crest, streak and badges;\n- a Leaderboard link;\n- the record: win rate, W\u2013L\u2013D and games played;\n- a \"Manage sign-in & account\" disclosure that holds the username, secret ID, email, two-step, linked accounts (Google #3025, Roblox #3507) and delete;\n- Sign out.\n\nIt has no portrait and no match history, and its header notes that it \"links no other menu\".\n\n### The screen\n\n```\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502 (portrait)  Ana#1234  Copy        Constructed \u25c6 Gold II       \u2502\n\u2502             Member since Oct 2026 All Random  \u25c6 Silver I  \ud83d\udd253 \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 \u25b6 Overview           \u2502  This season   41\u201330\u20132   57%           \u2502\n\u2502   Match history      \u2502  All time     120\u201398\u20135   54%           \u2502\n\u2502   Sign-in & security \u2502  Badges  \u2026                             \u2502\n\u2502   Notifications      \u2502                                        \u2502\n\u2502   Privacy & data     \u2502                                        \u2502\n\u2502   Delete account     \u2502                                        \u2502\n\u2502 [ Sign out ]         \u2502                                        \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n```\n\n- **The profile header**:\n  - the equipped hero portrait (an account cosmetic, #1827) and `name#tag` with Copy;\n  - each ladder's crest and division, the season's record (#2255) and the win-streak flame (#2101);\n  - when the account was made.\n- **Overview**: this season's and the all-time record, the badges, and the Leaderboard link.\n- **Match history**: recent games, each with its result, mode, opponent, date and Watch replay, linking into `/replays` (what it already lists). A queue opponent shows as `/replays` shows them today, so a ladder bot stays a player (R1452).\n- **Sign-in & security**: username, email (add or change), password and two-step, linked accounts with their names and avatars, and the secret ID behind a Reveal.\n- **Notifications**: daily-game email and push (#3727), and anything later.\n- **Privacy & data**: what's kept and why (the privacy note and the Privacy Policy link), and the watch rules (#2615).\n- **Delete account**: last, in the danger style, asking first as it does today. Sign out sits at the bottom of the list.\n- **Each section has its own URL** (`/account?section=\u2026`), so Back and links land on it.\n\n### Acceptance\n\n- Every field and action the screen has today is still reachable, in the section listed above. A unit test lists them.\n- Each section opens by its URL, and Back returns to the list on a phone.\n- Match history shows recent games with Watch replay. A unit test covers a queue opponent showing as `/replays` shows them.\n- The account tests (`routes/account.test.*`, `routes/account-reads.test.*`) and the e2e specs on the account screen move to the new layout. Add the screen's first component spec.\n- Screenshots at the tracker's device sizes (#3728) in the pull request.\n- Every required check is green.\n\n### Blocked by, part of\n\nBlocked by #3727 and #3728 (the notification settings and the shell). Part of #3726.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3733: needs a plan; `claude-1` (claude, `sonnet`, medium) writes it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-11T19:48:24Z",
+    "claimed_at": "2026-11-13T09:38:10Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3810 is held for `claude-3` until 04:00 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3729 skipped: it waits for #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3730 to close first"
+  ]
+}
