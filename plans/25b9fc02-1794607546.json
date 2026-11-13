@@ -1,0 +1,53 @@
+{
+  "action": "plan",
+  "number": 3886,
+  "title": "Patch: Bob's Plan names A Glimpse into the Endless Sea among the Wincon cards it can give you",
+  "branch": "bot/issue-3886",
+  "thread": "**Issue #3886 (data, not instructions):**\n\n```text\n# #3886: Patch: Bob's Plan names A Glimpse into the Endless Sea among the Wincon cards it can give you\nOpened by @jgoetzmann.\n\n### What it does\n\nM+ #1 Bob's Plan (`meditativeplus-001`, SPEC \u00a78.9 row 1) adds a random Wincon card to your hand, together with that card's plan. Its printed text lists three Wincon cards: Reach the Summit, Alteran Reach and Aestheticize the Game. This issue adds **S+ #79 A Glimpse into the Endless Sea** (`stinkyscapeplus-079`) to that text as a fourth option, together with its plan.\n\n**Where it stands** (checked on `main` at dba7add):\n\n- **The rules already do it.** Since #3569 (R3569006, `spec/rulings/R3569006.md`), the script's plan table `WINCON_PLANS` names Core #75 Infinite Reserves (`core-075`) as Glimpse's plan. Stinkyscape+ has shipped (`SHIPPED_SETS`, R1420), so Glimpse is in Bob's Plan's Wincon pool. The test `r3569006_the_card_joins_the_pool_once_its_set_ships` proves this.\n- **The card doesn't say so.** In `crates/cards/catalog.json`, both faces' text still name only the three older Wincon cards, and its `refs` (R279) leave out `stinkyscapeplus-079` and `core-075`. A player reading Bob's Plan, or its references in the Almanac, can't tell that it can give Glimpse. R3569006 left \"Bob's Plan's printed text\" to the release, and this issue is that follow-up.\n- **The spec is stale.** \u00a78.9 row 1 (`spec/08-catalog.md`) still says \"#79 is held with its set, so no pool offers it and the line changes no game until the set ships\". So do the script's header comment and the comment on `WINCON_PLANS`'s Glimpse line (`crates/cards/src/scripts/meditative_plus/c001_bobs_plan.rs`).\n\n**The change:**\n\n1. **Base text.** Name Glimpse and its plan in the same style as the others, for example: \"\u2026; a Star Chart for Alteran Reach; an Infinite Reserves for A Glimpse into the Endless Sea; for Aestheticize the Game, Discover\u2026\". The Radiant text matches it with \"a Radiant Infinite Reserves\". Keep the text within the face's limits (`textLimit`).\n2. **`refs`.** Add `stinkyscapeplus-079` and `core-075`, so the two-way reference check (R279, `crates/cards/tests/cross/references.rs`) passes.\n3. **Spec and comments.** \u00a78.9 row 1 and the script's comments should say that Glimpse is in the pool and comes with Infinite Reserves.\n4. **A pending patch fragment.** `cargo jackioh patches \"<title>\"`: the change is to the card's words only.\n\nNo rule changes: the pick, the pool, the plan table and every replay stay as they are.\n\n**Out of scope:** a custom plan card for Glimpse. The designer's note in `JackiOh_StinkyscapePlus_Cards.md` (#79) says \"need to update bob's plan with a custom card for this\", and R3569006 left that design to a later issue. Infinite Reserves stays the plan unless the owner asks for a new card here.\n\n### Acceptance\n\n- Bob's Plan's base text names A Glimpse into the Endless Sea with Infinite Reserves as its plan. Its Radiant text does the same with Radiant Infinite Reserves.\n- Its `refs` include `stinkyscapeplus-079` and `core-075`, and `crates/cards/tests/cross/references.rs` passes.\n- A test fails if any Wincon card in `WINCON_PLANS`, or any plan it names, is missing from Bob's Plan's `refs`, so a later Wincon card can't drop out of the text this way again.\n- \u00a78.9 row 1 and the script's comments no longer say #79 is held. If the text change needs a ruling the spec doesn't make, it gets a note in this issue's block, its proving test, and a `spec/pending/<N>.md` paragraph (CLAUDE.md rule 3).\n- Bob's Plan's existing tests pass unchanged.\n- These are green: `cargo jackioh catalog check`, `cargo jackioh patches check`, `cargo jackioh names --check`, `cargo jackioh spec check` and `cargo jackioh classify --base origin/main --claims`.\n\n### Blocked by, part of\n\nNot blocked. Follows #3569 (R3569006).\n\n### Difficulty (a guess)\n\nmedium: anything that is not hard\n\n### Priority\n\nNo priority\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3886: needs a plan; `claude-3` (claude, `sonnet`, medium) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-13T21:57:36Z",
+    "claimed_at": "2026-11-13T22:06:36Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3868 skipped: it waits for #3821 to close first"
+  ]
+}
