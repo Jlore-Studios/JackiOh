@@ -106,6 +106,11 @@ fn field_card() -> CardDef {
 fn hand_over_golem() -> CardDef {
     unit("hand-over-golem", 10, 5, 1559, json!({ "cost": 3 }))
 }
+/// §8 #52 Silly Silas's base face: every play of it is summoned for the opponent, no Tribute needed
+/// (R3837000).
+fn summoned_for_opponent() -> CardDef {
+    unit("summoned-for-opponent", 2, 2, 1561, json!({ "cost": 1 }))
+}
 /// A body with Reborn, whose tributed body comes back into the zone it reserved (§4.5 step 4, R64).
 fn reborn_body() -> CardDef {
     unit(
@@ -132,6 +137,7 @@ fn defs() -> Vec<CardDef> {
         field_card(),
         hand_over_golem(),
         reborn_body(),
+        summoned_for_opponent(),
     ]
 }
 
@@ -209,6 +215,14 @@ fn scripts() -> IndexMap<String, CardScripts> {
                 ..Script::default()
             },
         },
+    );
+    // R3837000: every play of it lands on the opponent's side.
+    scripts.insert(
+        summoned_for_opponent().id,
+        both(Script {
+            static_flags: flags(json!({ "summonForOpponent": true })),
+            ..Script::default()
+        }),
     );
     scripts.insert(
         death_pinger().id,
@@ -1033,6 +1047,85 @@ mod r360_a_tribute_that_takes_an_opposing_unit_summons_55s_base_face_for_the_opp
         assert_eq!(
             top(&after.players.p1.units[2]).map(|unit| unit.controller),
             Some(PlayerId::P1)
+        );
+    }
+}
+
+mod r3837000_a_card_that_says_so_is_summoned_for_the_opponent {
+    use super::*;
+
+    #[test]
+    fn r3837000_it_lands_in_the_opponents_leftmost_open_unit_zone_under_their_control_still_the_players_play_and_card()
+     {
+        let mut state = playing("summoned-for-opponent");
+        put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
+        let card = hand_card(&mut state, &summoned_for_opponent().id, PlayerId::P1);
+
+        let result = act_result(
+            &state,
+            json!({
+                "type": "play",
+                "instanceId": card.id,
+                "zone": { "row": "units", "lane": 3 },
+                "playerId": "p1",
+            }),
+        );
+        assert_eq!(result.error, None);
+        let after = &result.state;
+        // Not p2's lane 3, the one the play named, as #55 takes (R360): their leftmost open one.
+        let landed = top(&after.players.p2.units[1]);
+        assert_eq!(landed.map(|unit| unit.id.clone()), Some(card.id.clone()));
+        assert_eq!(landed.map(|unit| unit.controller), Some(PlayerId::P2));
+        assert_eq!(landed.map(|unit| unit.owner), Some(PlayerId::P1));
+        assert!(after.players.p1.units.iter().all(Option::is_none));
+        assert!(after.players.p2.units[2].is_none());
+        assert!(matches_object(
+            &of_type(&result.events, GameEventType::CardPlayed),
+            &json!([{ "player": "p1", "instanceId": card.id }])
+        ));
+        assert!(matches_object(
+            &of_type(&result.events, GameEventType::Summoned),
+            &json!([{ "player": "p2", "instanceId": card.id, "lane": 2 }])
+        ));
+    }
+
+    #[test]
+    fn r3837001_with_no_open_zone_on_the_opponents_side_it_lands_where_the_play_named() {
+        let mut state = playing("summoned-for-opponent-full");
+        for lane in 1..=5 {
+            put(
+                &mut state,
+                &plain.id,
+                slot(PlayerId::P2, Row::Units, lane),
+                json!({}),
+            );
+        }
+        let card = hand_card(&mut state, &summoned_for_opponent().id, PlayerId::P1);
+
+        let after = act(
+            &state,
+            json!({
+                "type": "play",
+                "instanceId": card.id,
+                "zone": { "row": "units", "lane": 3 },
+                "playerId": "p1",
+            }),
+        );
+        let landed = top(&after.players.p1.units[2]);
+        assert_eq!(landed.map(|unit| unit.id.clone()), Some(card.id.clone()));
+        assert_eq!(landed.map(|unit| unit.controller), Some(PlayerId::P1));
+        assert!(
+            after
+                .players
+                .p2
+                .units
+                .iter()
+                .all(|pile| top(pile).is_some_and(|unit| unit.def_id == plain.id))
         );
     }
 }

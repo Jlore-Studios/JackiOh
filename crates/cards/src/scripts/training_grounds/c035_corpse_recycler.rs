@@ -1,8 +1,10 @@
-//! TG #35 Corpse Recycler (SPEC §8.11 row 35). (3) Field Spell, Epic. "After a non-Token Unit dies,
-//! summon a Rush Token for its controller." (Radiant: a Radiant Rush Token.)
+//! TG #35 Corpse Recycler (SPEC §8.11 row 35, R2199006, R3837005). (3) Field Spell, Epic. "After a
+//! non-Token Unit dies, summon a Rush Token for you." (Radiant: a Radiant Rush Token.)
 //! A trigger on `destroyed`, as C+ #19.5 Bot Loser's: a Field Spell's, so both players' Units answer it
-//! (R2199006). The token goes to the Unit's controller as it died (R172), in R64's leftmost open zone (the
-//! event carries no lane, R89), none on a full row (§3.2); a Token's death gives nothing (§7).
+//! (R2199006). Since issue #3837 the token goes to the Recycler's controller whoever's Unit died
+//! (R3837005); through v0.6.0c it went to the Unit's controller as it died (R172), which `script_v0_6_0c`
+//! keeps for those replays (R767000). It lands in R64's leftmost open zone (the event carries no lane,
+//! R89), none on a full row (§3.2); a Token's death gives nothing (§7).
 
 use jackioh_engine::catalog::def_of;
 use jackioh_engine::effects::summon;
@@ -23,12 +25,13 @@ fn died_unit(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<PlayerId> {
 }
 
 /// The condition is written twice, as Core #18's: a queued trigger takes an empty list as "not met".
-fn recycler(radiant: bool) -> Script {
+/// `for_you`: the token is the Recycler's controller's (R3837005), not the dead Unit's (R172).
+fn recycler(radiant: bool, for_you: bool) -> Script {
     let trigger = TriggerDef::new("corpse-recycler", &[GameEventType::Destroyed], move |ctx, event| {
         let Some(controller) = died_unit(ctx, event) else {
             return vec![];
         };
-        let side = if controller == ctx.controller { "self" } else { "enemy" };
+        let side = if for_you || controller == ctx.controller { "self" } else { "enemy" };
         vec![summon(json_as(json!({ "defId": RUSH_TOKEN, "player": side, "radiant": radiant })))]
     })
     .with_when(|ctx, event| died_unit(ctx, event).is_some());
@@ -40,8 +43,17 @@ fn recycler(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: recycler(false),
-        radiant: recycler(true),
+        base: recycler(false, true),
+        radiant: recycler(true, true),
+    }
+}
+
+/// R767000: the token for the dead Unit's controller (R172), through v0.6.0c; `KEPT_SCRIPTS` folds those
+/// replays under it.
+pub fn script_v0_6_0c() -> CardScripts {
+    CardScripts {
+        base: recycler(false, false),
+        radiant: recycler(true, false),
     }
 }
 
@@ -95,15 +107,30 @@ mod tests {
         }
 
         #[test]
-        fn r172_an_enemy_unit_dies_and_the_enemy_gets_one() {
+        fn r3837005_an_enemy_unit_dies_and_you_get_the_token() {
             // Timmy's First Strike kills the Speciesist before it strikes back.
             let mut s = board(false, json!({ "field": [TIMMY] }), json!({ "field": [SPECIESIST] }));
             let vanilla = s.unit(P1, 1).unwrap();
             let speciesist = s.unit(P2, 1).unwrap();
             s.attack(&vanilla, &speciesist);
 
-            assert_eq!(tokens(&s, P2), 1);
-            assert_eq!(tokens(&s, P1), 0);
+            // "For you": the Recycler's controller's, in their leftmost open zone (R64).
+            assert_eq!(tokens(&s, P1), 1);
+            assert_eq!(units(&s, P1)[1].as_deref(), Some(RUSH));
+            assert_eq!(tokens(&s, P2), 0);
+        }
+
+        #[test]
+        fn r767000_the_kept_v0_6_0c_script_gives_the_enemy_its_token() {
+            crate::under_kept(RECYCLER, super::super::script_v0_6_0c(), || {
+                let mut s = board(false, json!({ "field": [TIMMY] }), json!({ "field": [SPECIESIST] }));
+                let vanilla = s.unit(P1, 1).unwrap();
+                let speciesist = s.unit(P2, 1).unwrap();
+                s.attack(&vanilla, &speciesist);
+
+                assert_eq!(tokens(&s, P2), 1);
+                assert_eq!(tokens(&s, P1), 0);
+            });
         }
 
         #[test]
@@ -144,9 +171,9 @@ mod tests {
             );
             s.play(BIG_FELINOR, json!({ "zone": 1 }));
 
-            // Three non-Felinor Units died: one token for p1 (its Vanilla), two for p2.
-            assert_eq!(tokens(&s, P1), 1);
-            assert_eq!(tokens(&s, P2), 2);
+            // Three non-Felinor Units died: three tokens, every one p1's (R3837005).
+            assert_eq!(tokens(&s, P1), 3);
+            assert_eq!(tokens(&s, P2), 0);
 
             // R68: death triggers run in side then lane order, the active player's first.
             let p1_vanilla = |e: &GameEvent| matches!(e, GameEvent::Destroyed { controller: P1, def_id, .. } if def_id == VANILLA);
@@ -168,8 +195,8 @@ mod tests {
                     _ => None,
                 })
                 .collect();
-            // p1's token in its leftmost open zone (lane 2, the Felinor in 1), then p2's in lanes 1 and 2.
-            assert_eq!(summons, vec![(P1, 2), (P2, 1), (P2, 2)]);
+            // Each in p1's leftmost open zone: lane 2 (the Felinor in 1), then 3, then 4 (its Vanilla's).
+            assert_eq!(summons, vec![(P1, 2), (P1, 3), (P1, 4)]);
         }
 
         #[test]

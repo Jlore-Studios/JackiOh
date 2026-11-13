@@ -1258,8 +1258,8 @@ describe("issue #814: long faces truncate with an ellipsis and keep their whole 
   });
 
   it("#1017: a face that fits prints its whole text, and a clamp prints its whole text as printing less", () => {
-    // Silly Silas's base face: its Radiant face has been a clamp since Crater joined it (issue #3136).
-    const { container } = render(<CardFace face={faceModel({ defId: "core-052", def: def("core-052"), radiant: false })} />);
+    // Silly Silas's Radiant face: his base face has been the clamp since it gained its first line (issue #3837).
+    const { container } = render(<CardFace face={faceModel({ defId: "core-052", def: def("core-052"), radiant: true })} />);
     flushFits();
     const fits = one(container, ".card-text");
     expect(fits.hasAttribute("data-short")).toBe(false);

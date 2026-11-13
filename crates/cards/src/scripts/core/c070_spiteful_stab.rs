@@ -1,4 +1,4 @@
-//! #70 Spiteful Stab (SPEC §8.3, §3, §4.4, §10.9, R72, R81, R90).
+//! #70 Spiteful Stab (SPEC §8.3, §3, §4.4, §10.9, R72, R81, R90): a Spell, cost 2 (3 until issue #3837).
 //!
 //! Base: "Deal 2 damage to a target, +1 per full 5 health your hero is below 30, +1 per card in your
 //! exile". Radiant (R275): 4, per full 3, +2 per card; the target and the 30 baseline are kept.
@@ -208,7 +208,7 @@ mod tests {
             let mut s = board(json!({ "p1": { "hand": [STAB] } }));
             s.play(STAB, json!({ "targets": at_enemy_hero() }));
             s.expect_in_zone(STAB, "graveyard")
-                .expect_mana(P1, 1)
+                .expect_mana(P1, 2)
                 .expect_events(json!(["cardPlayed", "damage", "enteredGraveyard"]));
         }
 

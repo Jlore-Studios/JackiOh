@@ -21,7 +21,7 @@ from their hook's `hookResolving` marker, and a Trap's `cast` from its `trapFire
 | Card | Name | Type | Entry | Scale | Census | Why |
 | --- | --- | --- | --- | --- | --- | --- |
 | `core-001` | Big D-fender | Unit | none: its Aura is standing Armor, with no moment to draw | — | none: vanilla | the census agrees: its Aura changes nothing as it plays |
-| `core-002` | Speciesist | Unit | cry bolt | 1.16 | bolt | cry: the census agrees (bolt) |
+| `core-002` | Speciesist | Unit | cry bolt | 1.24 | bolt | cry: the census agrees (bolt) |
 | `core-003` | Right-house defender | Unit | none: vanilla | — | none: vanilla | keywords only, which the keyword beats and the attack rows draw |
 | `core-004` | Gary the Gambler | Unit | cry bless Hustle/cash | 1.08 | none: no motif reads questCompleted | cry: the census leaves out the events on the card itself, its buffed, upgraded and keywordGranted, which bless reads |
 | `core-005` | Stockpile | Spell | cast flight | 1.08 | bolt | cast: the census's suggestion is noise in its window (fatigue, other cards' events); its own effect is drawn, which flight reads |
@@ -91,7 +91,7 @@ from their hook's `hookResolving` marker, and a Trap's `cast` from its `trapFire
 | `core-067` | Zoomerbin Oomen | Unit | cry conjure | 1.19 | none: no motif reads summoned | cry: no census family reads summoned, which conjure (#2786) reads |
 | `core-068` | Twisted Sorcerer | Unit | cry bolt | 1.16 | bolt | cry: the census agrees (bolt) |
 | `core-069` | Call to Arms | Spell | cast conjure | 1.16 | none: no motif reads summoned | cast: no census family reads summoned, which conjure (#2786) reads |
-| `core-070` | Spiteful Stab | Spell | cast bolt Physical/blade | 1.24 | bolt | cast: the census agrees (bolt) |
+| `core-070` | Spiteful Stab | Spell | cast bolt Physical/blade | 1.16 | bolt | cast: the census agrees (bolt) |
 | `core-071` | Intern Stimmy | Field Trap | cast snap | 1.19 | bolt | cast: a Trap's cast is its firing, which plans nothing until firings open a window; snap reads its trapFired then |
 | `core-072` | Reminisce | Spell | cast send | 1.19 | none: no motif reads addedToHand | cast: no census family reads addedToHand and shuffledIn, which send (#2793) reads |
 | `core-073` | Anti-oneshot Armor | Field Spell | cast flight Physical/steel; aura frost side Physical/steel | 1.28 | bolt | cast: the census's suggestion is noise in its window (fatigue, other cards' events); its own effect is drawn, which flight reads |

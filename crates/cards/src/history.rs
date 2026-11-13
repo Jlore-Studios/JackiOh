@@ -35,26 +35,27 @@ use crate::scripts::classic::{
 };
 use crate::scripts::classic_plus::{
     c007_the_house, c011_anime_armor, c016_conjure_rush_token, c019_1_top_loser, c023_dropshipping,
-    c030_felinor_fuser, c033_ivory_tower, c040_appropriations, c042_kys_test, c043_ai_slop, c047_joggs_box,
-    c048_jlockeeds_lobbyist, c049_jay_fungus, c051_jlockeeds_j15_fighter, c053_book_of_tokens,
-    c062_kys_papaya, c071_book_of_buff, c073_1_classic_golem, c078_claudes_datacenter,
+    c029_portal_to_the_past, c030_felinor_fuser, c033_ivory_tower, c040_appropriations, c042_kys_test,
+    c043_ai_slop, c047_joggs_box, c048_jlockeeds_lobbyist, c049_jay_fungus, c051_jlockeeds_j15_fighter,
+    c053_book_of_tokens, c062_kys_papaya, c071_book_of_buff, c073_1_classic_golem, c078_claudes_datacenter,
 };
 use crate::scripts::core::{
     c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c032_prem_panther, c042_eugenics,
     c043_big_felinor, c049_snom_bunny_mind_control, c050_k_pop_fanatic, c051_1_kys_empty_notebook,
-    c054_straaza, c059_unbiased_immigration, c065_1_spikey_pillow, c065_masochism_mask, c069_call_to_arms,
-    c073_anti_oneshot_armor, c075_infinite_reserves, c079_twinspell, c080_zao_gao, c081_radiant_saintess,
-    c083_transmogulate, c084_going_long, c089_corpse_eater, c098_heroic_power,
+    c052_silly_silas, c054_straaza, c059_unbiased_immigration, c065_1_spikey_pillow, c065_masochism_mask,
+    c069_call_to_arms, c073_anti_oneshot_armor, c075_infinite_reserves, c079_twinspell, c080_zao_gao,
+    c081_radiant_saintess, c083_transmogulate, c084_going_long, c089_corpse_eater, c098_heroic_power,
 };
 use crate::scripts::meditative::{
     c005_death_by_1000_cuts, c007_introspection, c009_joint_filing, c017_true_craft_a_card,
     c018_expedition12, c019_expedition123, c021_api_key_fishing, c030_fickle_e_kitten,
-    c032_spiritually_zhongguo, c037_cn_in_a_bottle, c038_h1b_printer, c040_feng_shui, c045_knowledge_breaker,
-    c047_taotie, c048_tranquility, c049_1_yilegpt_unleashed, c049_3_ai_girlfriend, c049_yilegpt_tamed,
-    c053_prestige, c054_money_machine, c063_skull_of_jnari, c074_montana_giant, c080_aluneth,
-    c081_deadmans_hand, c085_playtester, c090_spell_basket, c093_1_growing_felinor_sr,
-    c093_2_growing_felinor_sr_sr, c093_3_growing_felinor_super_senior, c093_growing_felinor,
-    c094_shrinking_felinor, c095_1_cn_golem, c097_2_wishing_well, c097_8_prison, c102_catboy_maid_ssr,
+    c032_spiritually_zhongguo, c037_cn_in_a_bottle, c038_h1b_printer, c040_feng_shui, c044_cn_jade_well,
+    c045_knowledge_breaker, c047_taotie, c048_tranquility, c049_1_yilegpt_unleashed, c049_3_ai_girlfriend,
+    c049_yilegpt_tamed, c053_prestige, c054_money_machine, c063_skull_of_jnari, c074_montana_giant,
+    c080_aluneth, c081_deadmans_hand, c085_playtester, c087_tatches_the_totem, c090_spell_basket,
+    c093_1_growing_felinor_sr, c093_2_growing_felinor_sr_sr, c093_3_growing_felinor_super_senior,
+    c093_growing_felinor, c094_shrinking_felinor, c095_1_cn_golem, c097_2_wishing_well, c097_8_prison,
+    c102_catboy_maid_ssr,
 };
 use crate::scripts::meditative_plus::{
     c001_bobs_plan, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves, c022_mountaintop_garden,
@@ -64,13 +65,13 @@ use crate::scripts::stinkyscape::{
     c034_drone_core_viii, c035_drone_core_ix, c036_drone_core_x, c045_drone_commander, c050_beam_v3,
     c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4, c055_repeater_v4, c056_cannon_v4,
     c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5, c061_flak_v5, c074_paragon_x,
-    c086_prototype_x2, c094_tmack_trav, c109_xxfreshjack, c115_scornboi, c116_megabase,
+    c086_prototype_x2, c094_tmack_trav, c096_ocean_tsunami, c109_xxfreshjack, c115_scornboi, c116_megabase,
     c129_jlockeeds_missile_pod, c140_rush_token_launcher, c143_book_launcher, c149_wildar, c153_stimmycheck,
     c163_swear_loyalities, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid,
     c172_huge_asteroid, c173_abandoned_spice_tower, t_narcor, t_red_narcor,
 };
 use crate::scripts::training_grounds::{
-    c036_training_dummy, c038_tutorial_master, c045_jlockeeds_weapons,
+    c035_corpse_recycler, c036_training_dummy, c038_tutorial_master, c045_jlockeeds_weapons,
     c052_snom_bunny_mind_control as c052_legacy_snom_bunny_mind_control,
 };
 use crate::{CATALOG, REGISTRY, catalog_json};
@@ -86,7 +87,8 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// #2179 (R1161, R920, R580, R2179003), #2396 (R2396000), #2521 and #2657 (R2657000 with
 /// `never_defense_kept`, R2657001, R2657002, R2657004), and #3000's parts (#3038, #3040, #3041, #3042,
 /// #3044, #3048) and #3128's (#3134, #3135, #3139, #3140, #3142),
-/// and #3551's S01 (R3551000, R3551001, R3551002, R3551003, R3551004).
+/// and #3551's S01 (R3551000, R3551001, R3551002, R3551003, R3551004), and #3837 (R3837000, R3837003,
+/// R3837005).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -679,6 +681,33 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c073_1_classic_golem::ID,
         "v0.5.12ap",
         c073_1_classic_golem::script_v0_5_13g,
+    ),
+    // #3837 (R3837000, R3837003, R3837005): the last scripts before Stinkyscape Balance Changes V.
+    (c052_silly_silas::ID, "v0.6.0c", c052_silly_silas::script_v0_6_0c),
+    (
+        c029_portal_to_the_past::ID,
+        "v0.6.0c",
+        c029_portal_to_the_past::script_v0_6_0c,
+    ),
+    (
+        c044_cn_jade_well::ID,
+        "v0.6.0c",
+        c044_cn_jade_well::script_v0_6_0c,
+    ),
+    (
+        c087_tatches_the_totem::ID,
+        "v0.6.0c",
+        c087_tatches_the_totem::script_v0_6_0c,
+    ),
+    (
+        c035_corpse_recycler::ID,
+        "v0.6.0c",
+        c035_corpse_recycler::script_v0_6_0c,
+    ),
+    (
+        c096_ocean_tsunami::ID,
+        "v0.6.0c",
+        c096_ocean_tsunami::script_v0_6_0c,
     ),
 ];
 

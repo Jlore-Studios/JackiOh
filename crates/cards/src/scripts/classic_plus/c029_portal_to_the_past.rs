@@ -1,23 +1,35 @@
-//! C+ #29 Portal to the Past (SPEC §8.7 row 29, R417, R564). (3) Spell.
+//! C+ #29 Portal to the Past (SPEC §8.7 row 29, R417, R564, R3837003, R3837004). (3) Spell.
 //!   Base:    Discover a card from the board your last game ended with; it arrives costing (0).
 //!   Radiant: {cards} different random cards of that board straight to your hand, each costing (0).
 //! The board is the caster's last board, a setup input frozen into the match (B5 E30,
-//! `subsystems/last_boards`); an empty one (hotseat, a first game) gives nothing (R129).
+//! `subsystems/last_boards`). Since issue #3837 one that gives no card (hotseat, the AI's seat, a first
+//! game, a board of dropped entries, R564, or of Portal alone, R387) falls back to the non-token Units
+//! and Field Spells costing (3) or (4) (R3837003, R3837004): the base face Discovers one, the Radiant
+//! face adds {cards} different ones, each costing (0) and on its base face. Through v0.6.0c such a board
+//! gave nothing (R129); `script_v0_6_0c` keeps that for its replays (R767000).
 //! R2739000: the base face sets `secret_option_counts`, since how many cards its Discover offers is read
 //! off a board no view shows, so the other seat is never told it.
 
-use jackioh_engine::effects::{add_from_last_board, add_random_from_last_board, discover_from_last_board};
+use jackioh_engine::effects::{
+    add_from_last_board, add_random_from_catalog, add_random_from_last_board, add_to_hand, discover_from_catalog,
+    discover_from_last_board,
+};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-029";
 
 /// The step the Discover's answer re-enters (§10.6).
 const PICKED: &str = "picked";
+/// R3837003: the step the fallback Discover's answer re-enters.
+const FALLBACK_PICKED: &str = "fallbackPicked";
+/// R3837004: the fallback pool's lowest and highest cost, "(3) or (4)".
+const FALLBACK_MIN_COST: i32 = 3;
+const FALLBACK_MAX_COST: i32 = 4;
 
 /// R2476000: in its owner's hand, the different cards it can give from the board the caster's last game
 /// ended with, after the words both faces print: the candidates `discover_from_last_board` and
-/// `add_random_from_last_board` draw from (R564), never its own definitions (R387). 0 is a fizzle
-/// (R129: hotseat, a first game). The board is the caster's own, so only they see the count.
+/// `add_random_from_last_board` draw from (R564), never its own definitions (R387). 0 is the fallback
+/// (R3837003: hotseat, a first game). The board is the caster's own, so only they see the count.
 fn preview() -> PreviewHook {
     condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
         if ctx.zone != ConditionZone::Hand {
@@ -29,20 +41,73 @@ fn preview() -> PreviewHook {
     })
 }
 
-/// "It costs (0)", "Each costs (0)": the declared number `setCost` (R386), less being better.
-pub fn script() -> CardScripts {
+/// R3837004: the fallback pool, by query and never card by card: the non-token (the default) Units and
+/// Field Spells of the sets that ship (R380, R1420) whose cost a query reads (R65) is (3) or (4).
+fn fallback_query() -> Value {
+    json!({
+        "type": ["Unit", "Field Spell"],
+        "costRange": { "min": FALLBACK_MIN_COST, "max": FALLBACK_MAX_COST },
+    })
+}
+
+/// R3837003: whether the caster's last board gives a card, read as the last-board verbs read it: its
+/// candidates (R564) less this card's own definitions (R387).
+fn last_board_gives(ctx: &EffectContext<'_>) -> bool {
+    let own = match &ctx.self_ {
+        Some(this) => Some(this.def_id.clone()),
+        None => ctx.def_id.clone(),
+    };
+    let exclude = own.map(|own| self_def_ids(Some(&*ctx.state), &own)).unwrap_or_default();
+    !subsystems::last_boards::last_board_candidates(&*ctx.state, ctx.controller, &exclude).is_empty()
+}
+
+/// "It costs (0)", "Each costs (0)": the declared number `setCost` (R386), less being better. `fallback`
+/// is whether a board that gives no card falls back to the (3) or (4) Cost pool (R3837003).
+fn portal(fallback: bool) -> CardScripts {
     let base = Script {
-        cry: Some(hook(|_ctx| vec![discover_from_last_board(json_as(json!({ "step": PICKED })))])),
-        resume: IndexMap::from([(
-            PICKED,
-            hook(|ctx| vec![add_from_last_board(json_as(json!({ "costOverride": param(&*ctx, "setCost") })))]),
-        )]),
+        cry: Some(hook(move |ctx| {
+            if fallback && !last_board_gives(ctx) {
+                return vec![discover_from_catalog(json_as(json!({
+                    "step": FALLBACK_PICKED,
+                    "query": fallback_query(),
+                    "prompt": "Discover a (3) or (4) Cost Unit or Field Spell",
+                })))];
+            }
+            vec![discover_from_last_board(json_as(json!({ "step": PICKED })))]
+        })),
+        resume: IndexMap::from([
+            (
+                PICKED,
+                hook(|ctx| vec![add_from_last_board(json_as(json!({ "costOverride": param(&*ctx, "setCost") })))]),
+            ),
+            (
+                FALLBACK_PICKED,
+                // A Discover's pick arrives as a `mode` selection carrying a catalog id (§10.6).
+                hook(|ctx| {
+                    let Some(picked) = chosen_options(ctx).into_iter().next() else {
+                        return vec![];
+                    };
+                    vec![add_to_hand(json_as(json!({
+                        "defId": picked,
+                        "costOverride": param(&*ctx, "setCost"),
+                    })))]
+                }),
+            ),
+        ]),
         preview: Some(preview()),
         secret_option_counts: true,
         ..Script::default()
     };
     let radiant = Script {
-        cry: Some(hook(|ctx| {
+        cry: Some(hook(move |ctx| {
+            if fallback && !last_board_gives(ctx) {
+                // R3563000: different cards, as the run's draws are unique.
+                return vec![add_random_from_catalog(json_as(json!({
+                    "query": fallback_query(),
+                    "count": param(&*ctx, "cards"),
+                    "costOverride": param(&*ctx, "setCost"),
+                })))];
+            }
             vec![add_random_from_last_board(json_as(json!({
                 "count": param(&*ctx, "cards"),
                 "costOverride": param(&*ctx, "setCost"),
@@ -52,6 +117,16 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
     CardScripts { base, radiant }
+}
+
+pub fn script() -> CardScripts {
+    portal(true)
+}
+
+/// R767000: through v0.6.0c a board that gave no card gave nothing (R129); `KEPT_SCRIPTS` folds those
+/// replays under it.
+pub fn script_v0_6_0c() -> CardScripts {
+    portal(false)
 }
 
 // C+ #29 Portal to the Past — SPEC §8.7 row 29, BUILD M9 Classic+ row C+ 29. `scenario({ lastBoards })` hands
@@ -110,6 +185,14 @@ mod tests {
 
     fn unique(ids: impl IntoIterator<Item = String>) -> usize {
         ids.into_iter().collect::<IndexSet<String>>().len()
+    }
+
+    /// R3837004: a non-token Unit or Field Spell whose query cost (R65) is (3) or (4).
+    fn in_fallback_pool(def_id: &str) -> bool {
+        let def = crate::card_def(def_id);
+        !def.token
+            && matches!(def.type_, CardType::Unit | CardType::FieldSpell)
+            && (3..=4).contains(&crate::query::query_cost(&def))
     }
 
     mod c_n29_portal_to_the_past {
@@ -270,16 +353,79 @@ mod tests {
             }
 
             #[test]
-            fn r129_an_empty_last_board_hotseat_a_first_game_fizzles_no_prompt_no_random_draw_the_spell_still_played() {
-                let mut s = scenario(json!({ "p1": { "hand": [PORTAL, FILLER] }, "p2": { "hand": [FILLER] } }));
-                let cursor = s.state().rng_cursor;
-                let played = s.state().counters.played;
+            fn r3837003_r3837004_an_empty_last_board_discovers_one_of_3_units_or_field_spells_costing_3_or_4() {
+                crate::register_all();
+                // Hotseat and the AI's seat hand no last board; a first game hands an empty one.
+                let none = scenario(json!({ "p1": { "hand": [PORTAL, FILLER] }, "p2": { "hand": [FILLER] } }));
+                for mut s in [none, game(&[], false, 1)] {
+                    let played = s.state().counters.played;
+                    s.play(PORTAL, json!({}));
+                    assert!(matches_object(&js(&s.state().pending), &json!({ "kind": "discover", "playerId": "p1" })));
+                    let options = s.prompt_modes();
+                    assert_eq!(options.len(), DISCOVER_OPTIONS as usize);
+                    assert_eq!(unique(options.iter().cloned()), options.len());
+                    for option in &options {
+                        assert!(in_fallback_pool(option), "{option}");
+                    }
+                    s.answer(json!(format!("mode:{}", options[0])));
+                    let cards = made(&s);
+                    assert_eq!(cards.len(), 1);
+                    assert!(matches_object(&js(&cards[0]), &json!({ "defId": options[0], "costOverride": 0, "owner": "p1" })));
+                    assert!(!cards[0].radiant);
+                    assert_eq!(s.state().counters.played, played + 1);
+                    s.expect_in_zone(PORTAL, "graveyard");
+                }
+            }
+
+            #[test]
+            fn r3837003_a_board_of_dropped_entries_or_only_portal_falls_back() {
+                crate::register_all();
+                // R564 dropped the entry the match's catalog lacks (an older patch's card); R387 never
+                // offers Portal itself. Neither board gives a card, so both fall back.
+                for board in [[("core-999", false)], [(PORTAL, false)]] {
+                    let mut s = game(&board, false, 1);
+                    s.play(PORTAL, json!({}));
+                    let options = s.prompt_modes();
+                    assert_eq!(options.len(), DISCOVER_OPTIONS as usize, "{board:?}");
+                    assert!(options.iter().all(|option| in_fallback_pool(option)), "{board:?}: {options:?}");
+
+                    let mut radiant = game(&board, true, 1);
+                    radiant.play(PORTAL, json!({}));
+                    let cards = made(&radiant);
+                    assert_eq!(cards.len(), 3, "{board:?}");
+                    assert!(cards.iter().all(|card| in_fallback_pool(&card.def_id)), "{board:?}");
+                }
+            }
+
+            #[test]
+            fn r3837003_the_opponents_board_never_stands_in_for_yours() {
+                crate::register_all();
+                // `game` hands p2 the opponent's board, Felinor Fiender, a (2): never yours to Discover.
+                let mut s = game(&[], false, 1);
                 s.play(PORTAL, json!({}));
-                assert!(s.state().pending.is_none());
-                assert_eq!(s.state().rng_cursor, cursor);
-                assert_eq!(s.state().counters.played, played + 1);
-                assert!(made(&s).is_empty());
-                s.expect_in_zone(PORTAL, "graveyard").expect_events(json!("cardPlayed"));
+                let options = s.prompt_modes();
+                assert!(!options.iter().any(|option| option == OPPONENT_BOARD[0].0));
+                assert!(options.iter().all(|option| in_fallback_pool(option)));
+            }
+
+            #[test]
+            fn r129_r767000_the_kept_v0_6_0c_script_still_fizzles_on_an_empty_board() {
+                crate::under_kept(PORTAL, super::super::super::script_v0_6_0c(), || {
+                    for radiant in [false, true] {
+                        let mut s = scenario(json!({
+                            "p1": { "hand": [{ "def": PORTAL, "radiant": radiant }, FILLER] },
+                            "p2": { "hand": [FILLER] },
+                        }));
+                        let cursor = s.state().rng_cursor;
+                        let played = s.state().counters.played;
+                        s.play(PORTAL, json!({}));
+                        assert!(s.state().pending.is_none());
+                        assert_eq!(s.state().rng_cursor, cursor);
+                        assert_eq!(s.state().counters.played, played + 1);
+                        assert!(made(&s).is_empty());
+                        s.expect_in_zone(PORTAL, "graveyard").expect_events(json!("cardPlayed"));
+                    }
+                });
             }
 
             #[test]
@@ -467,16 +613,25 @@ mod tests {
             }
 
             #[test]
-            fn r129_an_empty_board_adds_nothing_and_draws_no_random_number() {
-                let mut s = scenario(json!({
+            fn r3837003_r3837004_radiant_an_empty_last_board_adds_3_different_units_or_field_spells_costing_3_or_4() {
+                crate::register_all();
+                let none = scenario(json!({
                     "p1": { "hand": [{ "def": PORTAL, "radiant": true }, FILLER] },
                     "p2": { "hand": [FILLER] },
                 }));
-                let cursor = s.state().rng_cursor;
-                s.play(PORTAL, json!({}));
-                assert_eq!(s.state().rng_cursor, cursor);
-                assert!(made(&s).is_empty());
-                s.expect_in_zone(PORTAL, "graveyard");
+                for mut s in [none, game(&[], true, 1)] {
+                    s.play(PORTAL, json!({}));
+                    assert!(s.state().pending.is_none());
+                    let cards = made(&s);
+                    assert_eq!(cards.len(), 3);
+                    assert_eq!(unique(cards.iter().map(|card| card.def_id.clone())), 3);
+                    for card in &cards {
+                        assert!(in_fallback_pool(&card.def_id), "{}", card.def_id);
+                        assert!(matches_object(&js(card), &json!({ "costOverride": 0, "owner": "p1" })));
+                        assert!(!card.radiant);
+                    }
+                    s.expect_in_zone(PORTAL, "graveyard");
+                }
             }
 
             #[test]

@@ -36,6 +36,8 @@ mod tests {
 
     const SEED: &str = "core-028";
 
+    const SHREDDER: &str = "stand-in (3) 6/8 R12/16";
+
     /// Exactly the union #28 draws from: hand, library and field — never the graveyard.
     fn pool_cards(state: &GameState) -> Vec<CardInstance> {
         let side = &state.players.p1;
@@ -88,13 +90,13 @@ mod tests {
             crate::register_all();
             // The pool holds exactly one card — the unit on the field: #28 itself is in the `resolving`
             // zone while its script runs and the library is empty, so the pick is not a coin flip.
-            let mut s = knockoff(json!({ "hand": ["core-028"], "library": [], "field": [{ "def": "core-013", "damage": 2 }] }));
+            let mut s = knockoff(json!({ "hand": ["core-028"], "library": [], "field": [{ "def": SHREDDER, "damage": 2 }] }));
             let unit_id = s.unit(P1, 1).map(|card| card.id.clone()).unwrap_or_default();
             s.expect_stats(&unit_id, json!({ "attack": 6, "maxHealth": 8, "health": 6 }));
 
             s.play("core-028", json!({}));
 
-            // #13 Jlockeed Shredder-10 is 6/8 → 12/16. R22: the base layer swaps, the 2 damage stays (so
+            // The stand-in is 6/8 → 12/16. R22: the base layer swaps, the 2 damage stays (so
             // health is 14, not a fresh 16), and setting a flag is no entry to the field, so no Cry re-fires.
             assert!(s.card(&unit_id).radiant);
             s.expect_stats(&unit_id, json!({ "attack": 12, "maxHealth": 16, "health": 14 }));

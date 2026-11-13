@@ -4,8 +4,8 @@
 //!
 //! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
 //! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
-//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
-//! file's notes, as they stood:
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). It is a (4)
+//! 8/10 → 16/20 ((3) 4/10 → 8/20 until issue #3837). The Core file's notes, as they stood:
 //!
 //! #13 Jlockeed Shredder-10 (SPEC §8.1): 6/10 → 12/20 Unit, cost 3. Base "End of turn: deal 2 damage
 //! to each enemy unit and the enemy hero", radiant "4 damage" — a radiant cell that changes only a
@@ -167,11 +167,12 @@ mod tests {
         }
 
         #[test]
-        fn issue_3136_enters_as_a_4_10_and_radiant_an_8_20() {
-            // Core #13 is a 6/8 and 12/16 since the same patch; the Legacy card is its own copy (R2195003).
-            for (radiant, attack, health, amount) in [(false, 4, 10, 2), (true, 8, 20, 4)] {
+        fn issue_3837_costs_4_and_enters_as_an_8_10_and_radiant_a_16_20() {
+            // Core #13 is a 5/7 and 10/14 since the same patch; the Legacy card is its own copy (R2195003).
+            for (radiant, attack, health, amount) in [(false, 8, 10, 2), (true, 16, 20, 4)] {
                 let mut s = scenario(json!({
                     "p1": {
+                        "mana": 4,
                         "hand": [{ "def": "traininggrounds-048", "radiant": radiant }, "core-005"],
                         "library": ["core-005"]
                     },
@@ -179,6 +180,7 @@ mod tests {
                 }));
 
                 s.play("traininggrounds-048", json!({}));
+                s.expect_mana(PlayerId::P1, 0);
                 s.expect_stats("traininggrounds-048", json!({ "attack": attack, "health": health, "maxHealth": health }));
 
                 // And it deals 2 [4] to the enemy hero at its controller's end of turn.

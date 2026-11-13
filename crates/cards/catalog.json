@@ -48,16 +48,16 @@
     "rarity": "Common",
     "flavor": "Physical",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "loc": 10,
     "base": {
-      "attack": 4,
+      "attack": 7,
       "health": 1,
       "keywords": [],
       "text": "Cry: Destroy an enemy non-Human Unit."
     },
     "radiant": {
-      "attack": 8,
+      "attack": 14,
       "health": 2,
       "keywords": [],
       "text": "Cry: Destroy all enemy non-Human Units."
@@ -478,14 +478,14 @@
     ],
     "loc": 10,
     "base": {
-      "attack": 6,
-      "health": 8,
+      "attack": 5,
+      "health": 7,
       "keywords": [],
       "text": "End of turn: Deal {damage} damage to each enemy."
     },
     "radiant": {
-      "attack": 12,
-      "health": 16,
+      "attack": 10,
+      "health": 14,
       "keywords": [],
       "text": "End of turn: Deal {damage} damage to each enemy."
     }
@@ -1791,22 +1791,14 @@
     "base": {
       "attack": 2,
       "health": 2,
-      "keywords": [
-        {
-          "kind": "Crater"
-        }
-      ],
-      "text": "Crater\nCry: Choose left or right. Rotate every card on the field one step that way. Cards that cross sides change control."
+      "keywords": [],
+      "text": "Summon this for your opponent.\nCry: Choose left or right. Rotate every card on the field one step that way. Cards that cross sides change control."
     },
     "radiant": {
       "attack": 4,
       "health": 4,
-      "keywords": [
-        {
-          "kind": "Crater"
-        }
-      ],
-      "text": "Crater\nCry: Choose left or right. Rotate every card on the field one step that way. Cards crossing to your opponent's side are Bounced instead and cost (0)."
+      "keywords": [],
+      "text": "Cry: Choose left or right. Rotate every card on the field one step that way. Cards crossing to your opponent's side are Bounced instead and cost (0)."
     }
   },
   "core-053": {
@@ -2529,7 +2521,7 @@
     "rarity": "Common",
     "flavor": "Physical",
     "token": false,
-    "cost": 3,
+    "cost": 2,
     "params": [
       {
         "key": "damage",
@@ -6585,14 +6577,14 @@
     ],
     "loc": 9,
     "base": {
-      "attack": 11,
-      "health": 13,
+      "attack": 9,
+      "health": 12,
       "keywords": [],
       "text": "Aura: ({threshold})+ Cost cards cost ({surcharge}) more."
     },
     "radiant": {
-      "attack": 22,
-      "health": 26,
+      "attack": 18,
+      "health": 24,
       "keywords": [],
       "text": "Aura: Your opponent can't play ({threshold})+ Cost cards."
     }
@@ -6743,7 +6735,7 @@
     "cost": 2,
     "loc": 3,
     "base": {
-      "attack": 3,
+      "attack": 2,
       "health": 4,
       "keywords": [
         {
@@ -6759,7 +6751,7 @@
       "text": "Rush, Cleave, Lifesteal"
     },
     "radiant": {
-      "attack": 6,
+      "attack": 4,
       "health": 8,
       "keywords": [
         {
@@ -6820,7 +6812,7 @@
     "rarity": "Rare",
     "flavor": "Holy",
     "token": false,
-    "cost": 3,
+    "cost": 2,
     "params": [
       {
         "key": "divisor",
@@ -8532,8 +8524,8 @@
     "params": [
       {
         "key": "heads",
-        "base": 4,
-        "radiant": 10,
+        "base": 3,
+        "radiant": 6,
         "better": "up",
         "step": 1,
         "min": 1,
@@ -8541,8 +8533,8 @@
       },
       {
         "key": "tails",
-        "base": 2,
-        "radiant": 2,
+        "base": 3,
+        "radiant": 3,
         "better": "down",
         "step": 1,
         "min": 1,
@@ -8643,8 +8635,8 @@
     "params": [
       {
         "key": "attackGain",
-        "base": 3,
-        "radiant": 6,
+        "base": 2,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1
@@ -9034,11 +9026,11 @@
     "loc": 9,
     "base": {
       "keywords": [],
-      "text": "Discover a card from the board your last game ended with. It costs ({setCost})."
+      "text": "Discover a card from the board your last game ended with (if none, a (3) or (4) Cost Unit or Field Spell). It costs ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add {cards|random card|random cards} from the board your last game ended with to your hand. Each costs ({setCost})."
+      "text": "Add {cards|random card|random cards} from the board your last game ended with (if none, (3) or (4) Cost Units or Field Spells) to your hand. Each costs ({setCost})."
     }
   },
   "classicplus-030": {
@@ -9226,7 +9218,7 @@
     "rarity": "Rare",
     "flavor": "Holy",
     "token": false,
-    "cost": 2,
+    "cost": 1,
     "loc": 38,
     "base": {
       "keywords": [],
@@ -9380,7 +9372,7 @@
     "rarity": "Legendary",
     "flavor": "Physical",
     "token": false,
-    "cost": 4,
+    "cost": 3,
     "params": [
       {
         "key": "threshold",
@@ -13636,7 +13628,7 @@
     "rarity": "Legendary",
     "flavor": "Nature",
     "token": false,
-    "cost": 3,
+    "cost": 2,
     "refs": [
       "meditative-039-1"
     ],
@@ -13758,11 +13750,11 @@
     "loc": 16,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Add an Auspicious Rock to your hand."
+      "text": "Activate: Add an Auspicious Rock to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Add a Radiant Auspicious Rock to your hand."
+      "text": "Activate: Add a Radiant Auspicious Rock to your hand."
     }
   },
   "meditative-045": {
@@ -15588,13 +15580,13 @@
       "attack": 0,
       "health": 3,
       "keywords": [],
-      "text": "While in your deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand or deck."
+      "text": "While in your deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand."
     },
     "radiant": {
       "attack": 0,
       "health": 6,
       "keywords": [],
-      "text": "While in your deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand or deck and each adjacent Unit."
+      "text": "While in your deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand and each adjacent Unit."
     }
   },
   "meditative-088": {
@@ -15837,10 +15829,10 @@
       "keywords": [
         {
           "kind": "Armor",
-          "n": 3
+          "n": 2
         }
       ],
-      "text": "Armor 3\nLethal damage your hero or your other Units would take is redirected to this."
+      "text": "Armor 2\nLethal damage your hero or your other Units would take is redirected to this."
     },
     "radiant": {
       "attack": 6,
@@ -15848,10 +15840,10 @@
       "keywords": [
         {
           "kind": "Armor",
-          "n": 6
+          "n": 4
         }
       ],
-      "text": "Armor 6\nLethal damage your hero or your other Units would take is redirected to this."
+      "text": "Armor 4\nLethal damage your hero or your other Units would take is redirected to this."
     }
   },
   "meditative-093": {
@@ -20385,7 +20377,7 @@
     "cost": 1,
     "loc": 6,
     "base": {
-      "attack": 4,
+      "attack": 3,
       "health": 1,
       "keywords": [
         {
@@ -20401,7 +20393,7 @@
       "text": "Starship Piece, Equip, Rush"
     },
     "radiant": {
-      "attack": 8,
+      "attack": 6,
       "health": 2,
       "keywords": [
         {
@@ -21161,7 +21153,7 @@
     "loc": 35,
     "base": {
       "attack": 0,
-      "health": 2,
+      "health": 1,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -21174,7 +21166,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 4,
+      "health": 2,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -21200,7 +21192,7 @@
     "loc": 36,
     "base": {
       "attack": 0,
-      "health": 4,
+      "health": 2,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -21213,7 +21205,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 8,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -21239,7 +21231,7 @@
     "loc": 36,
     "base": {
       "attack": 0,
-      "health": 6,
+      "health": 3,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -21252,7 +21244,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 12,
+      "health": 6,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -21278,7 +21270,7 @@
     "loc": 36,
     "base": {
       "attack": 0,
-      "health": 8,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -21291,7 +21283,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 16,
+      "health": 8,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -21498,7 +21490,7 @@
     "cost": 3,
     "loc": 6,
     "base": {
-      "attack": 6,
+      "attack": 5,
       "health": 1,
       "keywords": [
         {
@@ -21514,7 +21506,7 @@
       "text": "Charge, Flying, Ranged"
     },
     "radiant": {
-      "attack": 12,
+      "attack": 10,
       "health": 2,
       "keywords": [
         {
@@ -22431,13 +22423,13 @@
       "attack": 6,
       "health": 6,
       "keywords": [],
-      "text": "Cry: Discard your hand. Fill your hand with random Stinkyscape Resources."
+      "text": "Tribute 1\nCry: Discard your hand. Fill your hand with random Stinkyscape Resources."
     },
     "radiant": {
       "attack": 12,
       "health": 12,
       "keywords": [],
-      "text": "Cry: Discard your hand. Fill your hand with random Radiant Stinkyscape Resources."
+      "text": "Tribute 1\nCry: Discard your hand. Fill your hand with random Radiant Stinkyscape Resources."
     }
   },
   "stinkyscape-097": {
@@ -22907,7 +22899,7 @@
     "loc": 6,
     "base": {
       "attack": 7,
-      "health": 7,
+      "health": 5,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -22923,7 +22915,7 @@
     },
     "radiant": {
       "attack": 14,
-      "health": 14,
+      "health": 10,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -23727,13 +23719,13 @@
     ],
     "loc": 26,
     "base": {
-      "attack": 2,
+      "attack": 1,
       "health": 1,
       "keywords": [],
       "text": "End of turn: Deal damage equal to its Attack divided by {divisor}, rounded up, to all enemies.\nEmbiggened (2): Starship Piece and Equip."
     },
     "radiant": {
-      "attack": 4,
+      "attack": 2,
       "health": 2,
       "keywords": [],
       "text": "End of turn: Deal damage equal to its Attack divided by {divisor}, rounded up, to all enemies.\nEmbiggened (2): Starship Piece and Equip."
@@ -28049,11 +28041,11 @@
     "loc": 29,
     "base": {
       "keywords": [],
-      "text": "After a non-Token Unit dies, summon a Rush Token for its controller."
+      "text": "After a non-Token Unit dies, summon a Rush Token for you."
     },
     "radiant": {
       "keywords": [],
-      "text": "After a non-Token Unit dies, summon a Radiant Rush Token for its controller."
+      "text": "After a non-Token Unit dies, summon a Radiant Rush Token for you."
     }
   },
   "traininggrounds-036": {
@@ -28300,13 +28292,13 @@
     "cost": 2,
     "loc": 23,
     "base": {
-      "attack": 4,
+      "attack": 2,
       "health": 1,
       "keywords": [],
       "text": "Cry: Destroy an enemy non-Human Unit."
     },
     "radiant": {
-      "attack": 8,
+      "attack": 4,
       "health": 2,
       "keywords": [],
       "text": "Cry: Destroy all enemy non-Human Units."
@@ -28517,7 +28509,7 @@
     "rarity": "Common",
     "flavor": "Tech",
     "token": false,
-    "cost": 3,
+    "cost": 4,
     "params": [
       {
         "key": "damage",
@@ -28530,13 +28522,13 @@
     ],
     "loc": 12,
     "base": {
-      "attack": 4,
+      "attack": 8,
       "health": 10,
       "keywords": [],
       "text": "End of turn: Deal {damage} damage to each enemy."
     },
     "radiant": {
-      "attack": 8,
+      "attack": 16,
       "health": 20,
       "keywords": [],
       "text": "End of turn: Deal {damage} damage to each enemy."

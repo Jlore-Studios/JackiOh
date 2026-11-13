@@ -31,10 +31,11 @@ pub fn script() -> CardScripts {
 }
 
 // #9 Moths to the Flame — SPEC §8.1 row 9, BUILD M4-T4 must-pass (R53). `start_turn()` is the controller's
-// own, so it is the whole trigger. #7, #12, #2 and #13 have Cry or end-of-turn text only, which never fires
-// when placed or forced to attack. "Sick units included" is unreachable: an enemy unit is a turn old at its
-// opponent's start of turn; `force_attack` skips §4.2 steps 1-3, so a Defense Position unit is forced all
-// the same (`crates/engine/tests/rules/combat_resolution.rs` covers the sick attacker directly).
+// own, so it is the whole trigger. #7 and #12 have Cry text only, which never fires when placed or forced to
+// attack; the stand-ins hold the numbers #2 Speciesist and #13 Jlockeed Shredder-10 had until issue #3837.
+// "Sick units included" is unreachable: an enemy unit is a turn old at its opponent's start of turn;
+// `force_attack` skips §4.2 steps 1-3, so a Defense Position unit is forced all the same
+// (`crates/engine/tests/rules/combat_resolution.rs` covers the sick attacker directly).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -42,6 +43,8 @@ mod tests {
     use crate::scenario;
 
     const LIBRARY: [&str; 3] = ["core-011", "core-011", "core-011"];
+    const SPECIESIST: &str = "stand-in (2) 4/1 R8/2";
+    const SHREDDER: &str = "stand-in (3) 6/8 R12/16";
 
     /// One `attackDeclared` event: who attacked whom, and whether the attack was forced.
     #[derive(Clone, Debug, PartialEq)]
@@ -80,11 +83,11 @@ mod tests {
                 "seed": "core-009-base",
                 "p1": { "field": ["core-009"], "library": LIBRARY },
                 // Lane order: 1/1, then 3/4, then 4/1 (§4.2, R53).
-                "p2": { "field": ["core-007", "core-012", "core-002"] }
+                "p2": { "field": ["core-007", "core-012", SPECIESIST] }
             }));
             let scarab = s.card("core-007").clone();
             let felinors = s.card("core-012").clone();
-            let speciesist = s.card("core-002").clone();
+            let speciesist = s.card(SPECIESIST).clone();
 
             s.start_turn();
 
@@ -138,13 +141,13 @@ mod tests {
             let mut s = scenario(json!({
                 "seed": "core-009-stops",
                 "p1": { "field": ["core-009"], "library": LIBRARY },
-                // 8 then 6 is lethal to a 1/14 after two combats; lane 3 never gets to attack. Speciesist
-                // (a 4/1) is set to 8/1; the Shredder is a 6/8.
-                "p2": { "field": [{ "def": "core-002", "statsOverride": { "attack": 8, "health": 1 } }, "core-013", "core-007"] }
+                // 8 then 6 is lethal to a 1/14 after two combats; lane 3 never gets to attack. The 4/1 is
+                // set to 8/1; the Shredder stand-in is a 6/8.
+                "p2": { "field": [{ "def": SPECIESIST, "statsOverride": { "attack": 8, "health": 1 } }, SHREDDER, "core-007"] }
             }));
             let moths = s.card("core-009").clone();
-            let speciesist = s.card("core-002").clone();
-            let shredder = s.card("core-013").clone();
+            let speciesist = s.card(SPECIESIST).clone();
+            let shredder = s.card(SHREDDER).clone();
             let scarab = s.card("core-007").clone();
 
             s.start_turn();
@@ -168,10 +171,10 @@ mod tests {
             let mut s = scenario(json!({
                 "seed": "core-009-radiant",
                 "p1": { "field": [{ "def": "core-009", "radiant": true }], "library": LIBRARY },
-                "p2": { "field": ["core-012", "core-002"] }
+                "p2": { "field": ["core-012", SPECIESIST] }
             }));
             let felinors = s.card("core-012").clone();
-            let speciesist = s.card("core-002").clone();
+            let speciesist = s.card(SPECIESIST).clone();
 
             s.start_turn();
 

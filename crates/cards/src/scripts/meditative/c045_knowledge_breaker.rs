@@ -394,7 +394,7 @@ mod tests {
 
         #[test]
         fn r1040_r1046_a_set_unit_pays_its_own_price_takes_no_targets_and_shows_as_a_trap() {
-            // Speciesist (2): its Cry targets an enemy non-Human, but set face-down it names none and its
+            // Speciesist (3): its Cry targets an enemy non-Human, but set face-down it names none and its
             // text is dormant.
             let mut s = scenario(json!({
                 "seed": "breaker-set-price",
@@ -404,7 +404,7 @@ mod tests {
             let speciesist = in_hand(&s, SPECIESIST);
             set_face_down(&mut s, &speciesist.id, 2);
             assert!(s.state().pending.is_none(), "no target is asked");
-            s.expect_mana(P1, 3);
+            s.expect_mana(P1, 2);
             assert!(s.unit(P2, 1).is_some(), "the Cry is dormant");
             let set = s.backrow(P1, 2).expect("set in the backrow");
             assert_eq!(set.def_id, SPECIESIST);

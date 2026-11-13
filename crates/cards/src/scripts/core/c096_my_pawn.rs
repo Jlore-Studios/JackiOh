@@ -104,8 +104,8 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const MY_PAWN: &str = "core-096";
-    /// #13 Jlockeed Shredder-10, 6/10 with no keywords: a plain 6-damage swing.
-    const ATTACKER: &str = "core-013";
+    /// A 6-attack Unit with no keywords: a plain 6-damage swing.
+    const ATTACKER: &str = "stand-in (3) 6/8 R12/16";
     /// #73 Anti-oneshot Armor: `staticFlags.antiOneshot`, so §4.4 step 3 clamps to 5 (radiant 3).
     const ANTI_ONESHOT: &str = "core-073";
     /// A 1/1 body to be attacked, so Trample excess has something to spill past (§4.4 step 9).

@@ -1,7 +1,8 @@
 //! C+ #19.5 Bot Loser (SPEC §8.7 row 19.5): "After this destroys a Unit", +{attackGain} Attack each time
 //! it is R42's killer and still stands on the field as the kill is dispatched, so dying in that combat
 //! it gains nothing (R1245, R2396000); while Berserk it attacks its own hero at your start and end of
-//! turn; the Radiant face can't go Berserk (R412).
+//! turn; the Radiant face can't go Berserk (R412). `attackGain` is 2, Radiant 4 (3, Radiant 6 until
+//! issue #3837).
 
 use jackioh_engine::prelude::*;
 
@@ -147,16 +148,16 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r42_whenever_it_destroys_a_unit_it_gets_3_attack_permanently() {
+            fn r42_whenever_it_destroys_a_unit_it_gets_2_attack_permanently() {
                 let mut s = with_bot(json!({}), false, json!({ "field": [{ "def": VANILLA, "lane": 3 }] }));
                 let me = bot(&s, P1);
                 let target = unit_or_blank(&s, P2, 3);
                 s.attack(&me, target);
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 7, "health": 4 }));
+                s.expect_stats(&me, json!({ "attack": 6, "health": 4 }));
                 s.end_turn().end_turn();
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 7 }));
+                s.expect_stats(&me, json!({ "attack": 6 }));
             }
 
             #[test]
@@ -169,7 +170,7 @@ mod tests {
                 s.start_turn();
                 assert!(s.unit(P2, 1).is_none());
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 7 }));
+                s.expect_stats(&me, json!({ "attack": 6 }));
             }
 
             #[test]
@@ -289,14 +290,14 @@ mod tests {
             }
 
             #[test]
-            fn r386_the_gain_reads_through_param_an_upgrade_makes_it_4() {
+            fn r386_the_gain_reads_through_param_an_upgrade_makes_it_3() {
                 let mut s = with_bot(json!({}), false, json!({ "field": [{ "def": VANILLA, "lane": 3 }] }));
                 let id = bot(&s, P1).id;
                 step_param(s.card_mut(&id), "attackGain", 1);
                 let target = unit_or_blank(&s, P2, 3);
                 s.attack(&id, target);
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 8 }));
+                s.expect_stats(&me, json!({ "attack": 7 }));
             }
         }
 
@@ -304,13 +305,13 @@ mod tests {
             use super::*;
 
             #[test]
-            fn t_8_8_charge_first_strike_it_gets_6_attack_per_kill() {
+            fn t_8_8_charge_first_strike_it_gets_4_attack_per_kill() {
                 let mut s = with_bot(json!({}), true, json!({ "field": [{ "def": VANILLA, "lane": 3 }] }));
                 let me = bot(&s, P1);
                 let target = unit_or_blank(&s, P2, 3);
                 s.attack(&me, target);
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 14, "health": 8 }));
+                s.expect_stats(&me, json!({ "attack": 12, "health": 8 }));
             }
 
             #[test]

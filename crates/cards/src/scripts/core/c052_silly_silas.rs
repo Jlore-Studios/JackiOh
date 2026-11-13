@@ -1,15 +1,20 @@
 //! #52 Silly Silas (SPEC §8.3, §3.1's rotation-topology ruling, §3.2, §6.3 Rotate; R4, R11, R12,
-//! R14, R33, R78, R81, R88). Unit 2/2 → 4/4, Human, cost 4, Legendary, Crater on both faces (issue #3136;
-//! it was 4/4 → 8/8 and had no Crater). BUILD wave 3 (rotation).
-//!   Base:    "Crater. Cry: choose left or right; rotate every card on the field one step around its ring
-//!            (3.1); cards crossing sides change control"
+//! R14, R33, R78, R81, R88, R3837000, R3837001, R3837002). Unit 2/2 → 4/4, Human, cost 4, Legendary
+//! (issue #3136; it was 4/4 → 8/8). BUILD wave 3 (rotation).
+//!   Base:    "Summon this for your opponent. Cry: choose left or right; rotate every card on the field
+//!            one step around its ring (3.1); cards crossing sides change control"
 //!   Radiant: "Cards that would move to the opponent are bounced to their controller's hand costing 0
 //!            instead" — §8 Conventions: the cell restates only what happens to a crossing card, so
-//!            the direction choice and the rotation itself are kept.
+//!            the direction choice and the rotation itself are kept. The Radiant face stays with its
+//!            player.
 //!
-//! Crater (R783010, R688) is the catalog's keyword, so the script has nothing to add: the engine Locks
-//! the unit zone Silas arrives in before his Cry, the Rotate then moves him on with the rest, and the
-//! Lock stays on the zone he arrived in.
+//! Issue #3837 took Crater off both faces (issue #3136 had put it on) and gave the base face "Summon
+//! this for your opponent", as #55 Lava Golem's base face is (R360) but with no condition: every play of
+//! it lands in the opponent's leftmost open unit zone, under their control (R3837000, the
+//! `summonForOpponent` flag), or where the play named when they have none (R3837001). It is still the
+//! player's play and card, so the Cry that follows is the player's and reads "left" and "right" from the
+//! player's seat (R3837002); Silas rotates with the rest and may cross back. `script_v0_6_0c` keeps the
+//! scripts through v0.6.0c, both faces staying with their player, for those replays (R767000).
 //!
 //! The direction is a play-time choice, not a prompt: R81 names this card and §10.6 says no Core card
 //! opens a `direction` prompt, so the script declares `modes` and `chosen_options(ctx)` reads `ctx.modes`.
@@ -55,11 +60,16 @@ fn silas(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     }
 }
 
-pub fn script() -> CardScripts {
+/// Both faces, with the base face summoned for the opponent when `for_opponent` (R3837000).
+fn silly_silas(for_opponent: bool) -> CardScripts {
     CardScripts {
         base: Script {
             modes: vec![direction_decl()],
             cry: Some(hook(silas)),
+            static_flags: for_opponent.then(|| StaticFlags {
+                summon_for_opponent: Some(true),
+                ..StaticFlags::default()
+            }),
             ..Script::default()
         },
         // The same declaration and hook: the radiant difference is `ctx.radiant`, which the rotation
@@ -70,6 +80,16 @@ pub fn script() -> CardScripts {
             ..Script::default()
         },
     }
+}
+
+pub fn script() -> CardScripts {
+    silly_silas(true)
+}
+
+/// R767000: through v0.6.0c both faces stayed with their player; `KEPT_SCRIPTS` folds those replays
+/// under it.
+pub fn script_v0_6_0c() -> CardScripts {
+    silly_silas(false)
 }
 
 // #52 Silly Silas (SPEC §8.3, §3.1's rotation-topology ruling, §3.2, §6.3 Rotate; R4, R11, R12,
@@ -110,27 +130,136 @@ mod tests {
         );
     }
 
-    /// Issue #3136: Silas has Crater on both faces. As he arrives he Locks the unit zone he is played
-    /// into, before his Cry (R783010, §6.1 Crater); the Rotate then moves him one step along the ring and
-    /// the Lock stays on the zone he arrived in (R688).
+    /// The `summoned` event that landed Silas: its side and lane.
+    fn landed(s: &Scenario) -> (PlayerId, i32) {
+        s.last_events()
+            .iter()
+            .find_map(|event| match event {
+                GameEvent::Summoned { player, def_id, lane, .. } if def_id == "core-052" => Some((*player, *lane)),
+                _ => None,
+            })
+            .expect("Silas was summoned")
+    }
+
+    /// Issue #3837 took Crater off both faces (issue #3136 had put it on): no zone is Locked as he
+    /// arrives, and nothing is Locked after the Rotate.
     #[test]
-    fn r783010_crater_locks_the_arrival_zone_before_the_cry_then_the_rotate_moves_silas_on() {
+    fn issue_3837_neither_face_has_crater_and_no_zone_is_locked() {
         for radiant in [false, true] {
+            let def = crate::card_def("core-052");
+            let face = if radiant { &def.radiant } else { &def.base };
+            assert!(face.keywords.is_empty(), "radiant {radiant}");
             let mut s = scenario(json!({ "p1": { "hand": [{ "def": "core-052", "radiant": radiant }] } }));
-            assert_eq!(s.state().players.p1.locks.units, vec![false; 5]);
 
             s.play("core-052", json!({ "zone": 1, "modes": ["right"] }));
 
-            // The Lock is on lane 1 and only there; Silas stands one step along, in lane 2.
-            assert_eq!(s.state().players.p1.locks.units, vec![true, false, false, false, false]);
-            assert!(s.unit(P1, 1).is_none());
-            assert_eq!(s.unit_at(P1, 2).def_id, "core-052");
-            // The Lock came first, then the Rotate.
-            let kinds: Vec<GameEventType> = s.last_events().iter().map(|event| event.event_type()).collect();
-            let locked = kinds.iter().position(|kind| *kind == GameEventType::Locked);
+            assert_eq!(s.state().players.p1.locks.units, vec![false; 5]);
+            assert_eq!(s.state().players.p2.locks.units, vec![false; 5]);
+            assert!(
+                !s.last_events()
+                    .iter()
+                    .any(|event| event.event_type() == GameEventType::Locked)
+            );
+        }
+    }
+
+    mod n52_silly_silas_summoned_for_the_opponent_r3837000 {
+        use super::*;
+
+        #[test]
+        fn r3837000_the_base_face_lands_in_the_opponents_leftmost_open_unit_zone_under_their_control() {
+            let mut s = scenario(json!({
+                "p1": { "hand": ["core-052"] },
+                "p2": { "field": [{ "def": "core-t-felinor", "lane": 1 }] },
+            }));
+            let felinor = s.unit_at(P2, 1).id;
+
+            s.play("core-052", json!({ "zone": 3, "modes": ["left"] }));
+
+            // Not p1's lane 3, nor p2's lane 3 as #55 would take (R360): p2's leftmost open zone.
+            assert_eq!(landed(&s), (P2, 2));
+            // Then the Cry: "left" is one step back along p1's ring, so p2's lanes step up by one.
+            assert_eq!(slot_of(s.card("core-052")), "p2 units 3");
+            assert_eq!(s.card("core-052").controller, P2);
+            assert_eq!(s.card("core-052").owner, P1);
+            assert_eq!(slot_of(s.card(&felinor)), "p2 units 2");
+            assert!(s.state().players.p1.units.iter().all(Option::is_none));
+            // It is still p1's play (R360).
+            assert!(
+                s.last_events()
+                    .iter()
+                    .any(|event| matches!(event, GameEvent::CardPlayed { player, .. } if *player == P1))
+            );
+        }
+
+        #[test]
+        fn r3837000_only_a_play_hands_him_over_a_summoned_silas_stays_with_its_summoner() {
+            let mut s = scenario(json!({ "p1": { "hand": [] } }));
+            crate::run_as(
+                &mut s,
+                jackioh_engine::effects::summon(json_as(json!({ "defId": "core-052" }))),
+                P1,
+            );
+            assert_eq!(slot_of(s.card("core-052")), "p1 units 1");
+            assert_eq!(s.card("core-052").controller, P1);
+        }
+
+        #[test]
+        fn r3837000_the_radiant_face_stays_with_its_player() {
+            let mut s = scenario(json!({ "p1": { "hand": [{ "def": "core-052", "radiant": true }] } }));
+
+            s.play("core-052", json!({ "zone": 1, "modes": ["right"] }));
+
+            assert_eq!(landed(&s), (P1, 1));
+            assert_eq!(slot_of(s.card("core-052")), "p1 units 2");
+            assert_eq!(s.card("core-052").controller, P1);
+        }
+
+        #[test]
+        fn r3837001_with_no_open_unit_zone_on_the_opponents_side_it_lands_where_the_play_named() {
+            let field: Vec<Value> = (1..=5)
+                .map(|lane| json!({ "def": "stand-in (1) 1/1", "lane": lane }))
+                .collect();
+            let mut s = scenario(json!({ "p1": { "hand": ["core-052"] }, "p2": { "field": field } }));
+
+            s.play("core-052", json!({ "zone": 3, "modes": ["right"] }));
+
+            assert_eq!(landed(&s), (P1, 3));
+            assert_eq!(slot_of(s.card("core-052")), "p1 units 4");
+            assert_eq!(s.card("core-052").controller, P1);
+        }
+
+        #[test]
+        fn r3837002_the_cry_rotates_after_the_landing_from_the_players_seat() {
+            // "right" from p2's lane 1 is one step forward along p1's ring: home, to p1's lane 1.
+            let mut right = scenario(json!({ "p1": { "hand": ["core-052"] } }));
+            right.play("core-052", json!({ "zone": 1, "modes": ["right"] }));
+            assert_eq!(landed(&right), (P2, 1));
+            assert_eq!(slot_of(right.card("core-052")), "p1 units 1");
+            assert_eq!(right.card("core-052").controller, P1);
+            let kinds: Vec<GameEventType> = right.last_events().iter().map(|event| event.event_type()).collect();
+            let summoned = kinds.iter().position(|kind| *kind == GameEventType::Summoned);
             let rotated = kinds.iter().position(|kind| *kind == GameEventType::Rotated);
-            assert!(locked.is_some() && rotated.is_some());
-            assert!(locked < rotated);
+            assert!(summoned.is_some() && rotated.is_some());
+            assert!(summoned < rotated);
+
+            // "left" is one step back: on along p2's row, still theirs.
+            let mut left = scenario(json!({ "p1": { "hand": ["core-052"] } }));
+            left.play("core-052", json!({ "zone": 1, "modes": ["left"] }));
+            assert_eq!(landed(&left), (P2, 1));
+            assert_eq!(slot_of(left.card("core-052")), "p2 units 2");
+            assert_eq!(left.card("core-052").controller, P2);
+        }
+
+        #[test]
+        fn r767000_the_kept_v0_6_0c_script_stays_with_its_player() {
+            crate::under_kept(super::super::ID, super::super::script_v0_6_0c(), || {
+                let mut s = scenario(json!({ "p1": { "hand": ["core-052"] } }));
+                s.play("core-052", json!({ "zone": 1, "modes": ["right"] }));
+                assert_eq!(landed(&s), (P1, 1));
+                assert_eq!(slot_of(s.card("core-052")), "p1 units 2");
+                assert_eq!(s.card("core-052").controller, P1);
+            });
         }
     }
 
@@ -157,8 +286,9 @@ mod tests {
 
             s.play("core-052", json!({ "zone": 1, "modes": ["right"] }));
 
-            // The Engine cell's "Silas rotates too": he is on the field for his own Cry (§10.5 step 4).
-            assert_eq!(s.unit_at(P1, 2).def_id, "core-052");
+            // The Engine cell's "Silas rotates too": he is on the field for his own Cry (§10.5 step 4),
+            // in p2's leftmost open zone, lane 2 (R3837000), and steps on to their lane 1.
+            assert_eq!(s.unit_at(P2, 1).def_id, "core-052");
             assert_eq!(slot_of(s.card(&reno)), "p2 units 5");
             assert_eq!(slot_of(s.card(&felinor)), "p1 units 1");
             assert_eq!(slot_of(s.card(&farm)), "p1 backrow 2");
@@ -181,7 +311,10 @@ mod tests {
             assert_eq!(s.card(&reno).owner, P1);
             assert_eq!(s.card(&felinor).controller, P1);
             assert_eq!(s.card(&felinor).owner, P2);
-            assert_eq!(s.card("core-052").controller, P1);
+            // Summoned for p2 into their lane 2 (R3837000), Silas steps to their lane 1 and stays theirs.
+            assert_eq!(slot_of(s.card("core-052")), "p2 units 1");
+            assert_eq!(s.card("core-052").controller, P2);
+            assert_eq!(s.card("core-052").owner, P1);
         }
 
         #[test]
@@ -233,7 +366,8 @@ mod tests {
 
             s.play("core-052", json!({ "zone": 3, "modes": ["left"] }));
 
-            assert_eq!(s.unit_at(P1, 2).def_id, "core-052");
+            // Summoned into p2's lane 1 (R3837000), Silas steps back along the ring to their lane 2.
+            assert_eq!(s.unit_at(P2, 2).def_id, "core-052");
             assert_eq!(slot_of(s.card(&reno)), "p2 units 1");
             assert_eq!(s.card(&reno).controller, P2);
             assert_eq!(slot_of(s.card(&felinor)), "p1 units 5");
@@ -274,7 +408,8 @@ mod tests {
             assert_eq!(s.card(&reno).owner, P1);
             assert_eq!(s.card(&reno).damage, 2);
             s.expect_events(json!(["rotated", "controlChanged"]));
-            assert_eq!(s.unit_at(P1, 2).def_id, "core-052");
+            // Summoned into p2's leftmost open zone, lane 1 (their lane 5 is Locked), Silas crosses home.
+            assert_eq!(s.unit_at(P1, 1).def_id, "core-052");
         }
 
         #[test]

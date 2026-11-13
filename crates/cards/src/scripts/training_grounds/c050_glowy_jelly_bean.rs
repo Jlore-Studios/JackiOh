@@ -49,6 +49,9 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
+    /// A Unit whose faces differ in their numbers alone.
+    const TWO_FACED: &str = "stand-in (3) 6/8 R12/16";
+
     /// The ids of p1's Radiant hand cards, which is the whole of what this card does (R74).
     fn radiant_hand(state: &GameState) -> Vec<String> {
         state
@@ -96,14 +99,14 @@ mod tests {
         #[test]
         fn r74_the_flag_is_the_whole_model_so_the_card_s_stats_swap_while_it_sits_in_hand_s5_2() {
             crate::register_all();
-            let mut s = glowy(json!(["traininggrounds-050", "core-013"]));
-            let chosen = hand_id_of(s.state(), "core-013");
+            let mut s = glowy(json!(["traininggrounds-050", TWO_FACED]));
+            let chosen = hand_id_of(s.state(), TWO_FACED);
 
             s.play("traininggrounds-050", json!({ "targets": [{ "pick": "instance", "instanceId": chosen }] }));
 
-            // #13 Jlockeed Shredder-10 is 6/8 → 12/16: no card id changed, only the flag.
+            // The 6/8 is a 12/16 now: no card id changed, only the flag.
             s.expect_stats(&chosen, json!({ "attack": 12, "maxHealth": 16 }));
-            assert_eq!(s.card(&chosen).def_id, "core-013");
+            assert_eq!(s.card(&chosen).def_id, TWO_FACED);
             assert_eq!(s.card(&chosen).zone.z(), ZoneName::Hand);
         }
 

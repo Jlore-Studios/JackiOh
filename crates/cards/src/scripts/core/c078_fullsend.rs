@@ -91,7 +91,7 @@ mod tests {
     const FULLSEND: &str = "core-078";
 
     const COST_0: &str = "core-010"; // Rapid Replenish: a discount floors at 0 (R65)
-    const COST_3: &str = "core-070"; // Spiteful Stab: Flood costs 4 since patch v0.2.0
+    const COST_3: &str = "stand-in (3) Spell";
     const COST_4: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
     const X_CARD: &str = "core-074"; // Adaptive UI
 

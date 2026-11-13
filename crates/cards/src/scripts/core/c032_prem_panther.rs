@@ -66,14 +66,17 @@ pub fn script_v0_5_11() -> CardScripts {
 
 // #32 Prem Panther — SPEC §8.2 row 32, BUILD M4-T4 must-pass row 32 (R426, R2396000).
 // Sparring partners: #15 Me and Mr Token (its Cry does not fire from a `field` setup), #13 Jlockeed
-// Shredder-10 (kills a 5/4 Panther on the swing back), #11 Tempo Timmy (First Strike) and #9 Moths to the
-// Flame (makes every enemy Unit attack it).
+// Shredder-10 (another attacker), the stand-in of the 6/8 it was until issue #3837 (kills a 5/4 Panther
+// on the swing back), #11 Tempo Timmy (First Strike) and #9 Moths to the Flame (makes every enemy Unit
+// attack it).
 #[cfg(test)]
 mod tests {
     use crate::js;
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
+
+    const SHREDDER: &str = "stand-in (3) 6/8 R12/16";
 
     /// `register_all` first: the engine's testkit cannot name the cards crate.
     fn scn(opts: Value) -> Scenario {
@@ -169,14 +172,14 @@ mod tests {
             let mut s = scn(json!({
                 "seed": "panther-trade",
                 "p1": { "field": ["32"], "library": ["15", "15", "15"] },
-                "p2": { "field": ["13"] },
+                "p2": { "field": [SHREDDER] },
             }));
             let wall = must(s.unit("p2", 1), "p2 lane 1");
             let panther = must(s.unit("p1", 1), "p1 lane 1");
 
             s.attack(&panther, &wall);
 
-            // 5 into an 8/10 is not lethal; 8 back into a 5/4 is.
+            // 5 into a 6/8 is not lethal; 6 back into a 5/4 is.
             s.expect_in_zone(&panther, "graveyard");
             s.expect_in_zone(&wall, "field");
             assert_eq!(s.hand("p1").len(), 0);
@@ -369,11 +372,11 @@ mod tests {
                     "hand": ["5"],
                     "library": ["15", "15", "15", "15", "15", "15", "15", "15"],
                 },
-                "p2": { "field": ["15", "13", "15"], "hand": ["15"] },
+                "p2": { "field": ["15", SHREDDER, "15"], "hand": ["15"] },
             }));
             let panther = must(s.unit("p1", 1), "the radiant Panther");
 
-            // 10 kills the 6/10 and cleaves both 1/1s; 6 back kills the 10/8, 2 damage down already. Three
+            // 10 kills the 6/8 and cleaves both 1/1s; 6 back kills the 10/8, 2 damage down already. Three
             // kills the attack destroyed, and the Panther that died draws 2 for each (R2396000).
             let shredder = must(s.unit("p2", 2), "p2's Shredder");
             s.attack(&panther, &shredder);

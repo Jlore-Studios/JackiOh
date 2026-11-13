@@ -1,7 +1,7 @@
 {
   "forms": {
     "core-052": {
-      "radiant": "clamp"
+      "base": "clamp"
     },
     "core-093": {
       "base": 2,

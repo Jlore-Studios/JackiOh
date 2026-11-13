@@ -73,7 +73,7 @@ mod tests {
     const POSTDOC: &str = "traininggrounds-053"; // Legacy: Prejudiced Postdoc: Human
     const TIMMY: &str = "core-011"; // Tempo Timmy: Human, Rush + First Strike
     const ROCK: &str = "core-066"; // The Rock: Human, Indestructible plus Immutable
-    const SHREDDER: &str = "core-013"; // Jlockeed Shredder-10: no tags, — the radiant face's "any unit"
+    const SHREDDER: &str = "stand-in (3) 6/8 R12/16"; // no tags: the radiant face's "any unit"
     const PILLOW: &str = "core-065-1"; // Spikey Pillow: #65.1, the aura source for "auras apply afresh"
     const SURGERY: &str = "core-063"; // Plastic Surgery: #63, the only buff this wave can put on an enemy unit
 

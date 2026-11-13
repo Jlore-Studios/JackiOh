@@ -75,6 +75,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const X_REFUSAL: &str = "X must be at least 1";
+    const SHREDDER: &str = "stand-in (3) 6/8 R12/16";
 
     fn setup(opts: Value) -> Scenario {
         scenario(opts)
@@ -146,9 +147,9 @@ mod tests {
             let mut s = setup(json!({
                 "seed": "core-074-unit-target",
                 "p1": { "hand": ["core-074", "core-005"], "library": ["core-035", "core-036"], "health": 20 },
-                "p2": { "field": ["core-013"], "hand": ["core-005"], "health": 30 },
+                "p2": { "field": [SHREDDER], "hand": ["core-005"], "health": 30 },
             }));
-            let shredder = s.unit(P2, 1).expect("setup: Jlockeed Shredder-10 in p2's lane 1");
+            let shredder = s.unit(P2, 1).expect("setup: the 6/8 stand-in in p2's lane 1");
 
             s.play("core-074", json!({ "x": 2, "targets": [{ "pick": "instance", "instanceId": shredder.id }] }));
 

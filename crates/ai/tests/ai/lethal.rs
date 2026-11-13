@@ -565,7 +565,7 @@ mod free_replays_r1965000 {
     const BASE_CAMP: &str = "meditativeplus-001-1";
     /// Meditative+ #17 Dogpile, (1): 2 damage to an enemy, and casts another Dogpile in hand at it.
     const DOGPILE: &str = "meditativeplus-017";
-    const SPECIESIST: &str = "core-002";
+    const SPECIESIST: &str = "stand-in (2) 4/1 R8/2";
     const SEVEN_SEVEN: &str = "core-025";
     const FELINOR_TOKEN: &str = "core-t-felinor";
     const STOCKPILE: &str = "core-005";

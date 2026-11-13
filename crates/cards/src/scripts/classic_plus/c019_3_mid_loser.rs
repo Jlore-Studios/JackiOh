@@ -1,6 +1,8 @@
 //! C+ #19.3 Mid Loser (SPEC §8.7 row 19.3): Cry flips a coin (Lucky X: X more flips, heads kept): heads
 //! +{heads}/+{heads}; tails −{tails}/−{tails} and the opponent's next refresh is 1 higher. The coin is
-//! reported to both players before its buff, each Lucky flip with it (R2652001).
+//! reported to both players before its buff, each Lucky flip with it (R2652001). Base heads +3/+3,
+//! tails −3/−3; Radiant (Lucky 1) heads +6/+6, tails −3/−3 (heads +4/+4, tails −2/−2; Radiant heads
+//! +10/+10, tails −2/−2 until issue #3837).
 
 use jackioh_engine::prelude::*;
 
@@ -52,7 +54,7 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's Lucky 1 and its heads 10 are catalog data the script reads.
+    // The same script: the Radiant face's Lucky 1 and its heads 6 are catalog data the script reads.
     let radiant = base.clone();
 
     CardScripts { base, radiant }
@@ -162,8 +164,8 @@ mod tests {
         }
 
         #[test]
-        fn heads_gives_4_4_on_the_base_face_and_10_10_on_the_radiant() {
-            for (radiant_face, lucky, heads) in [(false, 0, 4), (true, 1, 10)] {
+        fn heads_gives_3_3_on_the_base_face_and_6_6_on_the_radiant() {
+            for (radiant_face, lucky, heads) in [(false, 0, 3), (true, 1, 6)] {
                 let mut s = seeded(from_hand(radiant_face), |each| next_flip(each, lucky) == Flip::Heads);
                 s.play(MID, json!({}));
                 let me = mid(&s);
@@ -175,11 +177,11 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r1_played_from_a_hand_heads_4_4_permanently_and_the_opponent_gains_nothing() {
+            fn r1_played_from_a_hand_heads_3_3_permanently_and_the_opponent_gains_nothing() {
                 let mut s = seeded(from_hand(false), |each| next_flip(each, 0) == Flip::Heads);
                 s.play(MID, json!({}));
                 let me = mid(&s);
-                s.expect_stats(&me, json!({ "attack": 8, "health": 8, "maxHealth": 8 }));
+                s.expect_stats(&me, json!({ "attack": 7, "health": 7, "maxHealth": 7 }));
                 assert_eq!(s.state().players[P2].mana.next_turn_mod, 0);
             }
 
@@ -204,12 +206,12 @@ mod tests {
             }
 
             #[test]
-            fn r1_played_from_a_hand_tails_2_2_permanently_and_the_opponent_s_next_refresh_is_1_higher() {
+            fn r1_played_from_a_hand_tails_3_3_permanently_and_the_opponent_s_next_refresh_is_1_higher() {
                 let mut s = seeded(from_hand(false), |each| next_flip(each, 0) == Flip::Tails);
                 let before = s.state().players[P2].mana.max;
                 s.play(MID, json!({}));
                 let me = mid(&s);
-                s.expect_stats(&me, json!({ "attack": 2, "health": 2, "maxHealth": 2 }));
+                s.expect_stats(&me, json!({ "attack": 1, "health": 1, "maxHealth": 1 }));
                 assert_eq!(s.state().players[P2].mana.next_turn_mod, 1);
                 s.end_turn();
                 assert_eq!(s.state().players[P2].mana.current, before + 1);
@@ -242,7 +244,7 @@ mod tests {
                 let mut heads = seeded(tesla, |each| next_flip(each, 0) == Flip::Heads);
                 heads.play(MID, json!({}));
                 let me = mid(&heads);
-                heads.expect_stats(&me, json!({ "attack": 8, "health": 5, "maxHealth": 8 }));
+                heads.expect_stats(&me, json!({ "attack": 7, "health": 4, "maxHealth": 7 }));
             }
 
             #[test]
@@ -288,22 +290,22 @@ mod tests {
                 );
                 s.play(LEAGUE, json!({}));
                 let third = unit_or_blank(&s, P1, 3);
-                s.expect_stats(&third, json!({ "attack": 8, "health": 8 }));
+                s.expect_stats(&third, json!({ "attack": 7, "health": 7 }));
             }
 
             #[test]
-            fn r386_heads_and_tails_read_through_param_an_upgrade_makes_heads_5_5_and_tails_1_1() {
+            fn r386_heads_and_tails_read_through_param_an_upgrade_makes_heads_4_4_and_tails_2_2() {
                 let mut heads = seeded(from_hand(false), |each| next_flip(each, 0) == Flip::Heads);
                 step_param(heads.card_mut(MID), "heads", 1);
                 heads.play(MID, json!({}));
                 let me = mid(&heads);
-                heads.expect_stats(&me, json!({ "attack": 9, "health": 9 }));
+                heads.expect_stats(&me, json!({ "attack": 8, "health": 8 }));
 
                 let mut tails = seeded(from_hand(false), |each| next_flip(each, 0) == Flip::Tails);
                 step_param(tails.card_mut(MID), "tails", -1);
                 tails.play(MID, json!({}));
                 let me = mid(&tails);
-                tails.expect_stats(&me, json!({ "attack": 3, "health": 3 }));
+                tails.expect_stats(&me, json!({ "attack": 2, "health": 2 }));
             }
 
             #[test]
@@ -327,7 +329,7 @@ mod tests {
 
             #[test]
             fn r2652001_base_one_coin_is_reported_before_its_buff() {
-                for (flip, face, size) in [(Flip::Heads, ROLL_HEADS, 8), (Flip::Tails, ROLL_TAILS, 2)] {
+                for (flip, face, size) in [(Flip::Heads, ROLL_HEADS, 7), (Flip::Tails, ROLL_TAILS, 1)] {
                     let mut s = seeded(from_hand(false), |each| next_flip(each, 0) == flip);
                     s.play(MID, json!({}));
                     assert_eq!(
@@ -356,23 +358,23 @@ mod tests {
             use super::*;
 
             #[test]
-            fn s6_1_lucky_1_tails_then_heads_is_heads_10_10() {
+            fn s6_1_lucky_1_tails_then_heads_is_heads_6_6() {
                 let mut s = seeded(from_hand(true), |each| {
                     let mut rng = Rng::new(&each.state().seed, each.state().rng_cursor);
                     !rng.coin() && rng.coin()
                 });
                 s.play(MID, json!({}));
                 let me = mid(&s);
-                s.expect_stats(&me, json!({ "attack": 18, "health": 18 }));
+                s.expect_stats(&me, json!({ "attack": 14, "health": 14 }));
                 assert_eq!(s.state().players[P2].mana.next_turn_mod, 0);
             }
 
             #[test]
-            fn s6_1_lucky_1_two_tails_is_tails_2_2_and_a_mana_for_the_opponent() {
+            fn s6_1_lucky_1_two_tails_is_tails_3_3_and_a_mana_for_the_opponent() {
                 let mut s = seeded(from_hand(true), |each| next_flip(each, 1) == Flip::Tails);
                 s.play(MID, json!({}));
                 let me = mid(&s);
-                s.expect_stats(&me, json!({ "attack": 6, "health": 6 }));
+                s.expect_stats(&me, json!({ "attack": 5, "health": 5 }));
                 assert_eq!(s.state().players[P2].mana.next_turn_mod, 1);
             }
 

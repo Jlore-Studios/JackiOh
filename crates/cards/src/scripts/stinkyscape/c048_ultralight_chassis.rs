@@ -1,5 +1,5 @@
 //! SPEC §8.10 Stinkyscape 48 Ultralight Chassis, a card of the Stinkyscape set.
-//! (1) Unit, Common, 4/1 → 8/2: Starship Piece, Equip, Rush.
+//! (1) Unit, Common, 3/1 → 6/2 (4/1 → 8/2 until issue #3837): Starship Piece, Equip, Rush.
 //!
 //! Keywords only (§6.1): its script is empty. Equip (R1086): played onto one of your Units it
 //! fuses into it, the host keeping its zone and taking its stats, keywords and text (R77, R102),
@@ -50,7 +50,8 @@ mod tests {
         // §4.2: Rush cannot hit the hero on its summon turn, but it may hit a unit.
         s.expect_refused(|s| s.attack(CHASSIS, "hero"));
         s.attack(CHASSIS, VANILLA);
-        s.expect_in_zone(VANILLA, "graveyard");
+        // Its 3 Attack leaves the 4/4 on 1, and the 4 struck back kills it.
+        s.expect_stats(VANILLA, json!({ "health": 1 }));
         s.expect_in_zone(CHASSIS, "graveyard");
     }
 
@@ -76,7 +77,7 @@ mod tests {
     }
 
     #[test]
-    fn r1852001_equipped_onto_a_unit_the_host_gains_4_1_and_rush_and_stays_no_piece() {
+    fn r1852001_equipped_onto_a_unit_the_host_gains_3_1_and_rush_and_stays_no_piece() {
         let mut s = scenario(json!({
             "p1": { "hand": [VANILLA, CHASSIS, ANCHOR], "mana": 10, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -85,7 +86,7 @@ mod tests {
         s.play(CHASSIS, json!({ "zone": 1, "equip": true }));
 
         let host = s.unit(PlayerId::P1, 1).expect("the fused host");
-        s.expect_stats(host.id.as_str(), json!({ "attack": 8, "health": 5 }));
+        s.expect_stats(host.id.as_str(), json!({ "attack": 7, "health": 5 }));
         let host_kinds = kinds(&s, host.id.as_str());
         assert!(host_kinds.contains(&"Rush".to_string()), "{host_kinds:?}");
         // A piece equipped onto a Unit that is no piece leaves it no piece (R1852001).
