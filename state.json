@@ -15602,11 +15602,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-13T20:52:47Z",
+        "at": "2026-11-13T21:33:51Z",
         "difficulty": "hard",
         "provider": "claude-3",
-        "tier": "medium",
-        "why": "Rule 2: it changes the AI's decisions (`face_value` in crates/ai/src/reply.rs feeds the reply's attack ranking and the seat's own move order), so Opus builds it."
+        "tier": "strong",
+        "why": "rule 2, the AI: it changes the static trader's values in crates/ai/src/reply.rs, which order the AI's own moves and predict the reply"
       },
       "failures": 0,
       "forced": false,
