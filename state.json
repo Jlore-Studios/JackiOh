@@ -12430,6 +12430,13 @@
     "3732": {
       "action": "plan",
       "asks": [],
+      "hold": {
+        "ends": "2026-11-13T20:37:21Z",
+        "owner": "claude-3",
+        "since": "2026-11-13T18:37:21Z",
+        "until": "2026-11-13T20:30:00Z",
+        "why": "it refused a call"
+      },
       "kind": "build",
       "live": "planning",
       "owner": "claude-3",
