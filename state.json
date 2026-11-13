@@ -15574,7 +15574,7 @@
       "pending_request": false,
       "provider": "claude-1",
       "question": "",
-      "queued_at": "2026-11-13T07:25:32Z",
+      "queued_at": "2026-11-13T12:22:32Z",
       "round_tier": "strong",
       "run_id": "43385829476",
       "runs_on": "ubuntu-latest",
@@ -15596,7 +15596,7 @@
         "provider": "claude-1",
         "run": "43385829476"
       },
-      "source": "",
+      "source": "conflict",
       "started_at": "2026-11-13T07:26:52Z",
       "stop_requested": false,
       "taken_asks": [],
