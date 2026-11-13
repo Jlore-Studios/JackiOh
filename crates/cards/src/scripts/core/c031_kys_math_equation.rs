@@ -184,10 +184,6 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    fn at_enemy_hero() -> Value {
-        json!({ "targets": [{ "pick": "hero", "player": "p2" }] })
-    }
-
     #[derive(Clone, Copy, Default)]
     struct BoardOptions {
         times_played: Option<i32>,
@@ -225,7 +221,7 @@ mod tests {
     }
 
     fn play_and_come_back(mut s: Scenario) -> Scenario {
-        s.play("31", at_enemy_hero());
+        s.play("31", pick::targets(pick::hero("p2")));
         s.end_turn();
         s.end_turn();
         assert_eq!(s.state().active, P1);
@@ -236,7 +232,7 @@ mod tests {
     /// what the equation costs back in hand.
     fn climb_once(s: &mut Scenario, equation: &CardInstance) -> (i32, i32) {
         s.state_mut().players.p1.mana.current = 10;
-        s.play(equation, at_enemy_hero());
+        s.play(equation, pick::targets(pick::hero("p2")));
         let paid = 10 - s.state().players.p1.mana.current;
         s.end_turn();
         s.expect_in_zone(equation, "hand");
@@ -262,7 +258,7 @@ mod tests {
         fn r429_its_1st_play_deals_fib_1_1_fib_2_1_damage_to_the_target() {
             crate::register_all();
             let mut s = board(BoardOptions::default());
-            s.play("31", at_enemy_hero());
+            s.play("31", pick::targets(pick::hero("p2")));
             s.expect_health(P2, 29);
             s.expect_events(json!(["cardPlayed", "damage"]));
         }
@@ -274,7 +270,7 @@ mod tests {
             let equation = s.card("31").clone();
             assert_eq!(times_played_of(&equation), 0);
 
-            s.play(&equation, at_enemy_hero());
+            s.play(&equation, pick::targets(pick::hero("p2")));
             s.expect_in_zone(&equation, "graveyard");
             assert_eq!(times_played_of(s.card(&equation)), 1);
 
@@ -289,7 +285,7 @@ mod tests {
             let mut s = play_and_come_back(board(BoardOptions::default()));
             s.expect_health(P2, 29);
 
-            s.play("31", at_enemy_hero());
+            s.play("31", pick::targets(pick::hero("p2")));
 
             s.expect_health(P2, 27);
             assert_eq!(times_played_of(s.card("31")), 2);
@@ -303,7 +299,7 @@ mod tests {
                     times_played: Some(before),
                     ..BoardOptions::default()
                 });
-                s.play("31", at_enemy_hero());
+                s.play("31", pick::targets(pick::hero("p2")));
                 s.expect_health(P2, 30 - dealt);
             }
         }
@@ -316,7 +312,7 @@ mod tests {
                 health: Some(200),
                 ..BoardOptions::default()
             });
-            s.play("31", at_enemy_hero());
+            s.play("31", pick::targets(pick::hero("p2")));
             s.expect_health(P2, 111);
         }
 
@@ -328,7 +324,7 @@ mod tests {
                 ..BoardOptions::default()
             });
             assert_eq!(effective_cost(pricey.state(), pricey.card("31"), Default::default()), 4);
-            pricey.play("31", at_enemy_hero());
+            pricey.play("31", pick::targets(pick::hero("p2")));
             pricey.expect_mana(P1, 6);
             pricey.expect_health(P2, 29);
 
@@ -341,7 +337,7 @@ mod tests {
                 "expiry": { "until": "never" },
             }));
             cheap.state_mut().players.p1.mods.push(discount);
-            cheap.play("31", at_enemy_hero());
+            cheap.play("31", pick::targets(pick::hero("p2")));
             cheap.expect_mana(P1, 10);
             cheap.expect_health(P2, 29);
         }
@@ -351,7 +347,7 @@ mod tests {
             crate::register_all();
             let mut s = board(BoardOptions::default());
             let equation = s.card("31").clone();
-            s.play("31", at_enemy_hero());
+            s.play("31", pick::targets(pick::hero("p2")));
             s.expect_in_zone(&equation, "graveyard");
 
             s.end_turn();
@@ -383,7 +379,7 @@ mod tests {
                     cost_mod: Some(raised),
                     ..BoardOptions::default()
                 });
-                s.play("31", at_enemy_hero());
+                s.play("31", pick::targets(pick::hero("p2")));
                 s.expect_mana(P1, 10 - (1 + raised).max(0));
                 assert_eq!(return_price_of(s.card("31")), 0);
                 s.end_turn();
@@ -431,7 +427,7 @@ mod tests {
             assert_eq!(effective_cost(s.state(), s.card(&equation), Default::default()), 2);
             s.state_mut().players.p1.mana.current = 10;
 
-            s.play(&equation, at_enemy_hero());
+            s.play(&equation, pick::targets(pick::hero("p2")));
 
             s.expect_in_zone(&equation, "graveyard");
             assert_eq!(s.card(&equation).cost_mod, 0);
@@ -488,7 +484,7 @@ mod tests {
                 "p2": { "field": ["15"], "library": ["15", "15", "15", "15"] },
             }));
             let equation = s.card("31").clone();
-            s.play(&equation, at_enemy_hero());
+            s.play(&equation, pick::targets(pick::hero("p2")));
             s.play("5", json!({})); // #5 Stockpile: 8 in hand, draws 2 → the hand is full as the turn ends
             assert_eq!(s.hand(P1).len(), 10);
 
@@ -542,7 +538,7 @@ mod tests {
             let mut s = board(BoardOptions::default());
             let id = s.card("31").id.clone();
             find_instance_mut(s.state_mut(), &id).expect("the equation in hand").cost_override = Some(0);
-            s.play("31", at_enemy_hero());
+            s.play("31", pick::targets(pick::hero("p2")));
             s.expect_mana(P1, 10);
             assert_eq!(s.card("31").cost_override, None);
             s.end_turn();
@@ -558,7 +554,7 @@ mod tests {
             }));
             // R3044000: Twinspell's Activate gives the next Spell this turn its Echo +1.
             s.activate("79", json!({}));
-            s.play("31", at_enemy_hero());
+            s.play("31", pick::targets(pick::hero("p2")));
             // The repeat asks its target afresh (§10.6).
             assert_eq!(s.state().pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Target));
             let labels: Vec<String> = s
@@ -626,7 +622,7 @@ mod tests {
                 radiant: true,
                 ..BoardOptions::default()
             });
-            s.play("31", at_enemy_hero());
+            s.play("31", pick::targets(pick::hero("p2")));
             s.expect_health(P2, 27);
         }
 
@@ -638,7 +634,7 @@ mod tests {
                 times_played: Some(1),
                 ..BoardOptions::default()
             });
-            second.play("31", at_enemy_hero());
+            second.play("31", pick::targets(pick::hero("p2")));
             second.expect_health(P2, 25);
 
             let mut third = board(BoardOptions {
@@ -646,7 +642,7 @@ mod tests {
                 times_played: Some(2),
                 ..BoardOptions::default()
             });
-            third.play("31", at_enemy_hero());
+            third.play("31", pick::targets(pick::hero("p2")));
             third.expect_health(P2, 22);
         }
 
@@ -676,7 +672,7 @@ mod tests {
                 health: Some(200),
                 ..BoardOptions::default()
             });
-            s.play("31", at_enemy_hero());
+            s.play("31", pick::targets(pick::hero("p2")));
             s.expect_health(P2, 111);
         }
 
@@ -693,7 +689,7 @@ mod tests {
             s.expect_health(P2, 27);
 
             // The 2nd play: Fib(2 + 3) = 5.
-            s.play(&equation, at_enemy_hero());
+            s.play(&equation, pick::targets(pick::hero("p2")));
             s.expect_health(P2, 22);
         }
     }

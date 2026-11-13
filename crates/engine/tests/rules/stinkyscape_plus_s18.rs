@@ -140,10 +140,6 @@ fn board(p1: Value, p2: Value) -> Scenario {
     s
 }
 
-fn pick(id: &str) -> Value {
-    json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-}
-
 mod r3557002_dormant_by_an_effect {
     use super::*;
 
@@ -154,7 +150,7 @@ mod r3557002_dormant_by_an_effect {
             json!({ "field": [PLAIN], "library": [PLAIN, PLAIN, PLAIN, PLAIN] }),
         );
         let target = s.unit_at(P2, 1).id;
-        s.play(DORMANT, pick(&target));
+        s.play(DORMANT, pick::targets(pick::id(&target)));
         assert_eq!(
             jackioh_engine::slumber::slumber_turns_of(s.card(&target)),
             Some(2)
@@ -180,7 +176,7 @@ mod r3557002_dormant_by_an_effect {
             json!({ "field": [PLAIN], "library": [PLAIN, PLAIN] }),
         );
         let target = s.unit_at(P2, 1).id;
-        s.play(DORMANT, pick(&target));
+        s.play(DORMANT, pick::targets(pick::id(&target)));
         let before = s.card(&target).slumber;
         // A second Dormant does not restart the countdown.
         s.end_turn().end_turn();
@@ -270,7 +266,7 @@ mod r3557004_transform_cost_step {
             json!({}),
         );
         let old = s.unit_at(P1, 1).id;
-        s.play(STEP_2, pick(&old));
+        s.play(STEP_2, pick::targets(pick::id(&old)));
         let new = s.unit(P1, 1).expect("a Unit stands there");
         assert_ne!(new.id, old);
         assert_eq!(new.def_id, MID);
@@ -282,7 +278,7 @@ mod r3557004_transform_cost_step {
     fn r3557004_with_none_at_the_price_the_cheapest_higher_one_is_used() {
         let mut s = board(json!({ "hand": [STEP_3], "field": [GAP] }), json!({}));
         let old = s.unit_at(P1, 1).id;
-        s.play(STEP_3, pick(&old));
+        s.play(STEP_3, pick::targets(pick::id(&old)));
         assert_eq!(
             s.unit(P1, 1).map(|card| card.def_id),
             Some(HIGH.to_string()),
@@ -295,7 +291,7 @@ mod r3557004_transform_cost_step {
     fn r3557004_the_top_of_the_curve_stays_as_it_is() {
         let mut s = board(json!({ "hand": [STEP_1], "field": [TOP] }), json!({}));
         let old = s.unit_at(P1, 1).id;
-        s.play(STEP_1, pick(&old));
+        s.play(STEP_1, pick::targets(pick::id(&old)));
         assert_eq!(s.unit_at(P1, 1).id, old);
     }
 

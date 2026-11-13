@@ -72,10 +72,6 @@ mod tests {
         }))
     }
 
-    fn on(card: &CardInstance) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": card.id }] })
-    }
-
     mod base {
         use super::*;
 
@@ -83,7 +79,7 @@ mod tests {
         fn exiles_an_enemy_unit_an_indestructible_one_included() {
             let mut s = board(false, json!([]), json!([ROCK]));
             let rock = s.unit_at(P2, 1);
-            s.play(PATH, on(&rock));
+            s.play(PATH, pick::targets(pick::instance(&rock)));
             s.expect_in_zone(&rock, "exile");
         }
 
@@ -92,7 +88,7 @@ mod tests {
             let mut s = board_with(false, json!([]), json!([]), json!([{ "def": TRAP, "lane": 2 }]));
             let trap = s.backrow(P2, 2).expect("the set Trap");
             assert_ne!(trap.face_up, Some(true));
-            s.play(PATH, on(&trap));
+            s.play(PATH, pick::targets(pick::instance(&trap)));
             s.expect_in_zone(&trap, "exile");
         }
 
@@ -100,7 +96,7 @@ mod tests {
         fn can_pick_your_own_permanent() {
             let mut s = board(false, json!([VANILLA]), json!([]));
             let mine = s.unit_at(P1, 1);
-            s.play(PATH, on(&mine));
+            s.play(PATH, pick::targets(pick::instance(&mine)));
             s.expect_in_zone(&mine, "exile");
         }
 
@@ -108,7 +104,7 @@ mod tests {
         fn a_unit_token_ceases_to_exist() {
             let mut s = board(false, json!([]), json!([RUSH_TOKEN]));
             let token = s.unit_at(P2, 1);
-            s.play(PATH, on(&token));
+            s.play(PATH, pick::targets(pick::instance(&token)));
             s.expect_in_zone(&token, "gone");
         }
 
@@ -117,7 +113,7 @@ mod tests {
             let mut s = board(false, json!([]), json!([VANILLA]));
             let theirs = s.unit_at(P2, 1);
             let held = s.hand(P1).len();
-            s.play(PATH, on(&theirs));
+            s.play(PATH, pick::targets(pick::instance(&theirs)));
             assert_eq!(s.hand(P1).len(), held, "the Path left and one card came in");
         }
 
@@ -127,7 +123,7 @@ mod tests {
             assert_eq!(upgrade_number(&mut s, PATH, "draw"), 2);
             let theirs = s.unit_at(P2, 1);
             let held = s.hand(P1).len();
-            s.play(PATH, on(&theirs));
+            s.play(PATH, pick::targets(pick::instance(&theirs)));
             assert_eq!(s.hand(P1).len(), held + 1);
         }
 
@@ -135,7 +131,7 @@ mod tests {
         fn the_base_face_exiles_the_pick_alone() {
             let mut s = board(false, json!([]), json!([VANILLA, VANILLA, VANILLA]));
             let (left, pick, right) = (s.unit_at(P2, 1), s.unit_at(P2, 2), s.unit_at(P2, 3));
-            s.play(PATH, on(&pick));
+            s.play(PATH, pick::targets(pick::instance(&pick)));
             s.expect_in_zone(&pick, "exile");
             s.expect_in_zone(&left, "field");
             s.expect_in_zone(&right, "field");
@@ -161,7 +157,7 @@ mod tests {
             let (left, pick, right, far) = (s.unit_at(P2, 1), s.unit_at(P2, 2), s.unit_at(P2, 3), s.unit_at(P2, 4));
             let across = s.unit_at(P1, 2);
             let behind = s.backrow(P2, 2).expect("the set Trap");
-            s.play(PATH, on(&pick));
+            s.play(PATH, pick::targets(pick::instance(&pick)));
             for gone in [&left, &pick, &right] {
                 s.expect_in_zone(gone, "exile");
             }
@@ -180,7 +176,7 @@ mod tests {
             );
             let (beside, pick) = (s.backrow(P2, 2).unwrap(), s.backrow(P2, 3).unwrap());
             let front = s.unit_at(P2, 2);
-            s.play(PATH, on(&pick));
+            s.play(PATH, pick::targets(pick::instance(&pick)));
             s.expect_in_zone(&pick, "exile");
             s.expect_in_zone(&beside, "exile");
             s.expect_in_zone(&front, "field");
@@ -190,7 +186,7 @@ mod tests {
         fn r2198003_a_neighbour_immune_to_spells_is_passed_by() {
             let mut s = board(true, json!([]), json!([{ "def": MEGABASE, "lane": 1 }, { "def": VANILLA, "lane": 2 }]));
             let (immune, pick) = (s.unit_at(P2, 1), s.unit_at(P2, 2));
-            s.play(PATH, on(&pick));
+            s.play(PATH, pick::targets(pick::instance(&pick)));
             s.expect_in_zone(&pick, "exile");
             s.expect_in_zone(&immune, "field");
         }
@@ -200,7 +196,7 @@ mod tests {
             let mut s = board(true, json!([]), json!([VANILLA]));
             let theirs = s.unit_at(P2, 1);
             let held = s.hand(P1).len();
-            s.play(PATH, on(&theirs));
+            s.play(PATH, pick::targets(pick::instance(&theirs)));
             assert_eq!(s.hand(P1).len(), held + 1);
         }
 

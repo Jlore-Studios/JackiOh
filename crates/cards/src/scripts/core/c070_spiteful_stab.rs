@@ -108,10 +108,6 @@ mod tests {
         scenario(opts)
     }
 
-    fn at_enemy_hero() -> Value {
-        json!([{ "pick": "hero", "player": "p2" }])
-    }
-
     /// N cards in a pile fixture, so a test names the exile COUNT and not particular cards (R72).
     fn pile_of(count: usize) -> Vec<&'static str> {
         vec![FODDER; count]
@@ -135,28 +131,28 @@ mod tests {
         #[test]
         fn s8_3_deals_the_bare_2_at_30_health_with_an_empty_exile() {
             let mut s = board(json!({ "p1": { "hand": [STAB] } }));
-            s.play(STAB, json!({ "targets": at_enemy_hero() }));
+            s.play(STAB, json!({ "targets": pick::hero("p2") }));
             s.expect_health(P2, 28);
         }
 
         #[test]
         fn r72_adds_one_per_full_5_health_missing_from_30_20_health_is_2_2_4() {
             let mut s = board(json!({ "p1": { "hand": [STAB], "health": 20 } }));
-            s.play(STAB, json!({ "targets": at_enemy_hero() }));
+            s.play(STAB, json!({ "targets": pick::hero("p2") }));
             s.expect_health(P2, 26);
         }
 
         #[test]
         fn r72_the_division_floors_23_health_is_missing_7_so_2_floor_7_5_3() {
             let mut s = board(json!({ "p1": { "hand": [STAB], "health": 23 } }));
-            s.play(STAB, json!({ "targets": at_enemy_hero() }));
+            s.play(STAB, json!({ "targets": pick::hero("p2") }));
             s.expect_health(P2, 27);
         }
 
         #[test]
         fn r72_missing_health_counts_from_30_even_when_the_hero_has_more_35_health_is_missing_0() {
             let mut s = board(json!({ "p1": { "hand": [STAB], "health": 35 } }));
-            s.play(STAB, json!({ "targets": at_enemy_hero() }));
+            s.play(STAB, json!({ "targets": pick::hero("p2") }));
             s.expect_health(P2, 28);
         }
 
@@ -164,21 +160,21 @@ mod tests {
         fn s8_3_adds_one_per_card_in_the_exile_pile_3_exiled_is_2_3_5() {
             let mut s = board(json!({ "p1": { "hand": [STAB], "exile": pile_of(3) } }));
             assert_eq!(s.pile(P1, "exile").len(), 3);
-            s.play(STAB, json!({ "targets": at_enemy_hero() }));
+            s.play(STAB, json!({ "targets": pick::hero("p2") }));
             s.expect_health(P2, 25);
         }
 
         #[test]
         fn r72_cards_in_exile_is_your_own_pile_the_opponents_exile_adds_nothing() {
             let mut s = board(json!({ "p1": { "hand": [STAB] }, "p2": { "exile": pile_of(4) } }));
-            s.play(STAB, json!({ "targets": at_enemy_hero() }));
+            s.play(STAB, json!({ "targets": pick::hero("p2") }));
             s.expect_health(P2, 28);
         }
 
         #[test]
         fn s8_3_the_two_bonuses_stack_13_health_missing_17_and_2_exiled_is_2_3_2_7() {
             let mut s = board(json!({ "p1": { "hand": [STAB], "health": 13, "exile": pile_of(2) } }));
-            s.play(STAB, json!({ "targets": at_enemy_hero() }));
+            s.play(STAB, json!({ "targets": pick::hero("p2") }));
             s.expect_health(P2, 23);
         }
 
@@ -206,7 +202,7 @@ mod tests {
         #[test]
         fn s10_5_the_spell_goes_to_the_graveyard_and_counts_as_played() {
             let mut s = board(json!({ "p1": { "hand": [STAB] } }));
-            s.play(STAB, json!({ "targets": at_enemy_hero() }));
+            s.play(STAB, json!({ "targets": pick::hero("p2") }));
             s.expect_in_zone(STAB, "graveyard")
                 .expect_mana(P1, 2)
                 .expect_events(json!(["cardPlayed", "damage", "enteredGraveyard"]));
@@ -223,21 +219,21 @@ mod tests {
         #[test]
         fn s8_3_the_radiant_base_is_4_at_30_health_with_an_empty_exile() {
             let mut s = board(json!({ "p1": { "hand": [{ "def": STAB, "radiant": true }] } }));
-            s.play(STAB, json!({ "targets": at_enemy_hero() }));
+            s.play(STAB, json!({ "targets": pick::hero("p2") }));
             s.expect_health(P2, 26);
         }
 
         #[test]
         fn s8_3_the_radiant_step_is_a_full_3_health_21_health_is_missing_9_so_4_3_7() {
             let mut s = board(json!({ "p1": { "hand": [{ "def": STAB, "radiant": true }], "health": 21 } }));
-            s.play(STAB, json!({ "targets": at_enemy_hero() }));
+            s.play(STAB, json!({ "targets": pick::hero("p2") }));
             s.expect_health(P2, 23);
         }
 
         #[test]
         fn s8_3_the_radiant_division_floors_too_23_health_is_missing_7_so_4_floor_7_3_6() {
             let mut s = board(json!({ "p1": { "hand": [{ "def": STAB, "radiant": true }], "health": 23 } }));
-            s.play(STAB, json!({ "targets": at_enemy_hero() }));
+            s.play(STAB, json!({ "targets": pick::hero("p2") }));
             s.expect_health(P2, 24);
         }
 
@@ -246,7 +242,7 @@ mod tests {
             let mut s = board(json!({
                 "p1": { "hand": [{ "def": STAB, "radiant": true }], "health": 23, "exile": pile_of(2) }
             }));
-            s.play(STAB, json!({ "targets": at_enemy_hero() }));
+            s.play(STAB, json!({ "targets": pick::hero("p2") }));
             s.expect_health(P2, 20);
         }
 
@@ -256,14 +252,14 @@ mod tests {
                 "p1": { "hand": [{ "def": STAB, "radiant": true }] },
                 "p2": { "exile": pile_of(3) }
             }));
-            s.play(STAB, json!({ "targets": at_enemy_hero() }));
+            s.play(STAB, json!({ "targets": pick::hero("p2") }));
             s.expect_health(P2, 26);
         }
 
         #[test]
         fn r72_the_radiant_face_measures_from_30_as_well_35_health_is_still_missing_0() {
             let mut s = board(json!({ "p1": { "hand": [{ "def": STAB, "radiant": true }], "health": 35 } }));
-            s.play(STAB, json!({ "targets": at_enemy_hero() }));
+            s.play(STAB, json!({ "targets": pick::hero("p2") }));
             s.expect_health(P2, 26);
         }
 
@@ -301,7 +297,7 @@ mod tests {
         fn r662_base_at_full_health_with_an_empty_exile_it_does_not_glow_and_deals_its_base_2() {
             let mut s = board(json!({ "p1": { "hand": [STAB] } }));
             assert!(!stab_glows(&s));
-            s.play(STAB, json!({ "targets": at_enemy_hero() }));
+            s.play(STAB, json!({ "targets": pick::hero("p2") }));
             assert_eq!(dealt(&s), [2]);
         }
 
@@ -309,7 +305,7 @@ mod tests {
         fn r662_base_5_below_30_or_one_card_in_exile_and_it_glows_and_deals_3() {
             let mut hurt = board(json!({ "p1": { "hand": [STAB], "health": 25 } }));
             assert!(stab_glows(&hurt));
-            hurt.play(STAB, json!({ "targets": at_enemy_hero() }));
+            hurt.play(STAB, json!({ "targets": pick::hero("p2") }));
             assert_eq!(dealt(&hurt), [3]);
 
             let exiled = board(json!({ "p1": { "hand": [STAB], "exile": pile_of(1) } }));
@@ -322,12 +318,12 @@ mod tests {
         fn r662_radiant_a_full_step_is_3_so_27_glows_and_28_does_not() {
             let mut off = board(json!({ "p1": { "hand": [{ "def": STAB, "radiant": true }], "health": 28 } }));
             assert!(!stab_glows(&off));
-            off.play(STAB, json!({ "targets": at_enemy_hero() }));
+            off.play(STAB, json!({ "targets": pick::hero("p2") }));
             assert_eq!(dealt(&off), [4]);
 
             let mut on = board(json!({ "p1": { "hand": [{ "def": STAB, "radiant": true }], "health": 27 } }));
             assert!(stab_glows(&on));
-            on.play(STAB, json!({ "targets": at_enemy_hero() }));
+            on.play(STAB, json!({ "targets": pick::hero("p2") }));
             assert_eq!(dealt(&on), [5]);
         }
 
@@ -339,7 +335,7 @@ mod tests {
             } else {
                 crate::degrade_number(&mut s, STAB, key);
             }
-            s.play(STAB, json!({ "targets": at_enemy_hero() }));
+            s.play(STAB, json!({ "targets": pick::hero("p2") }));
             dealt(&s)[0]
         }
 

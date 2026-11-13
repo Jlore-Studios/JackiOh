@@ -69,16 +69,6 @@ mod tests {
         }
     }
 
-    /// The play's declared pick (R81) of one instance.
-    fn at_instance(id: &str) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-    }
-
-    /// The play's declared pick (R81) of a hero.
-    fn at_hero(player: &str) -> Value {
-        json!({ "targets": [{ "pick": "hero", "player": player }] })
-    }
-
     /// "#47 Fig of Life"
     mod fig_of_life {
         use super::*;
@@ -92,7 +82,7 @@ mod tests {
             let ally = unit_id(&g, PlayerId::P1, 1, "setup: p1 should hold the 7/7");
             g.expect_stats(&ally, json!({ "health": 2, "maxHealth": 7 }));
 
-            g.play(FIG, at_instance(&ally));
+            g.play(FIG, pick::targets(pick::id(&ally)));
 
             // 20 healing onto 5 damage takes off 5: healing never raises max health.
             g.expect_stats(&ally, json!({ "health": 7, "maxHealth": 7 }));
@@ -112,7 +102,7 @@ mod tests {
             }));
             g.expect_health(PlayerId::P1, 30);
 
-            g.play(FIG, at_hero("p1"));
+            g.play(FIG, pick::targets(pick::hero("p1")));
 
             g.expect_health(PlayerId::P1, 50);
             g.expect_events(json!(["healed"]));
@@ -127,7 +117,7 @@ mod tests {
             let ally = unit_id(&g, PlayerId::P1, 1, "setup: p1 should hold the 7/7");
             g.expect_stats(&ally, json!({ "health": 1 }));
 
-            g.play(FIG, at_instance(&ally));
+            g.play(FIG, pick::targets(pick::id(&ally)));
 
             g.expect_stats(&ally, json!({ "health": 7, "maxHealth": 7 }));
         }
@@ -140,7 +130,7 @@ mod tests {
                 "p2": { "field": [BYSTANDER] },
             }));
 
-            g.play(FIG, at_hero("p1"));
+            g.play(FIG, pick::targets(pick::hero("p1")));
 
             g.expect_health(PlayerId::P1, 70);
         }

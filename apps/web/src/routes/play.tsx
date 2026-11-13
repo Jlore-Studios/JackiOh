@@ -1,10 +1,9 @@
-// Play lobby (SPEC §9.5; R104, R253, R257, R258, R259, R264, R330, R505, R612, R661, R765, R767,
+// Play lobby (SPEC §9.5; R253, R257, R258, R259, R264, R330, R505, R612, R661, R765,
 // R1372, R640002, R3207000, R3207003, R3792000). Verdicts are UX only (CLAUDE.md rule 7); the server owns validation and matchmaking.
-// Room links only prefill, and rank never exposes its hidden rating.
-// R1075000: the host cancels a room nobody has joined. R1578000: /play is the hub every play mode
-// starts from, online first.
+// Rank never exposes its hidden rating. R1578000: /play is the hub every play mode starts from, online
+// first. Its "Play a friend" panel is the private lobby's (`lobby/LobbyPanel.tsx`, R3730000).
 
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
 import { DECK_SIZE } from "@jackioh/engine/config";
 import {
@@ -26,14 +25,11 @@ import type { LeanPick } from "@jackioh/shared";
 import {
   ApiRequestError,
   ApiUnreachableError,
-  cancelRoom,
-  createRoom,
   dequeue,
   enqueue,
   getCollection,
   getDecks,
   getMe,
-  getOpenRooms,
   getOwnRank,
   ladderOfMode,
   ladderPath,
@@ -41,8 +37,6 @@ import {
   type MeResponse,
   getPopulation,
   isQueueMode,
-  joinRoom,
-  roomModeOf,
   type ModeChoice,
   type OwnRankResponse,
   type PopulationResponse,
@@ -57,8 +51,8 @@ import { pageWake } from "../game/net.ts";
 import { LeanSetPicker, readPlayLean, writePlayLean } from "../game/LeanNewest.tsx";
 import { MATCH_FOUND_STATUS, MODE_LABEL, forgetQueued, liveGameOf, readQueued, rememberQueued, useQueued } from "../net/liveGame.ts";
 import { isFreshAccount } from "../net/gate.ts";
-import { navigate, paths, useSearch } from "../net/navigate.ts";
-import { forgetRoomLink, readRoomLink, roomLinkUrl, sendRoomLink } from "../net/roomLink.ts";
+import { navigate, paths } from "../net/navigate.ts";
+import { LobbyPanel } from "../lobby/LobbyPanel.tsx";
 import { rankCaption } from "../rank/rank.ts";
 import RankCrest from "../rank/RankCrest.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
@@ -76,19 +70,16 @@ import "./lobby.css";
 const MS_PER_SECOND = 1000;
 const SECONDS_PER_MINUTE = 60;
 
-/** R3792000: account reads of a wait failing in a row (the server unreachable) before the screen says so; at SERIES_POLL_SECONDS apart it is inside the server's ticket timeout (R897000). */
+/** R3792000: account reads of a wait failing in a row (the server unreachable, or answering 5xx, R3846000) before the screen says so; at SERIES_POLL_SECONDS apart it is inside the server's ticket timeout (R897000). */
 export const LOBBY_UNREACHABLE_AFTER_READS = 3;
+
+/** R3846000: the first status of an answer that says the server was not reached: in production the edge Worker answers for a server that is down with a 500, 502, 503 or 504 (`apps/edge/src/index.ts`, `containerFetch`). */
+const FIRST_UNREACHABLE_STATUS = 500;
 
 /** Browser-test contract; `e2e/support/testids.ts` mirrors these strings. */
 export const playTestid = {
   queue: "play-queue",
   leaveQueue: "play-leave-queue",
-  createRoom: "play-create-room",
-  roomCode: "play-room-code",
-  roomMode: "play-room-mode",
-  joinForm: "play-join-form",
-  joinInput: "play-join-code",
-  joinSubmit: "play-join-submit",
   status: "play-status",
   unreachable: "play-unreachable",
   error: "play-error",
@@ -114,9 +105,6 @@ export const playTestid = {
   seriesLink: "play-series-link",
   /** R1566000: a refusal naming the player's live co-op match links to it. */
   duosLink: "play-duos-link",
-  copyRoomCode: "play-copy-room-code",
-  copyRoomLink: "play-copy-room-link",
-  cancelRoom: "play-cancel-room",
   searching: "play-searching",
   rank: "play-rank",
   leaderboard: "play-leaderboard",
@@ -192,7 +180,7 @@ function writeStoredChoice(choice: StoredChoice): void {
 
 // Lobby reads
 
-type LobbyData = {
+export type LobbyData = {
   decks: readonly SavedDeck[];
   trios: readonly SavedTrio[];
   /** A missing catalog skips the verdict. */
@@ -210,7 +198,7 @@ function collectionOf(entries: readonly { cardId: string; quantity: number }[]):
 }
 
 /** A collection failure skips only the client verdict; the catalog is the one the client ships (game/currentCatalog.ts). */
-function useLobbyData(token: string): [LobbyLoad, () => void] {
+export function useLobbyData(token: string): [LobbyLoad, () => void] {
   const [load, setLoad] = useState<LobbyLoad>({ kind: "loading" });
   const [round, setRound] = useState(0);
   useEffect(() => {
@@ -241,7 +229,7 @@ function useLobbyData(token: string): [LobbyLoad, () => void] {
 }
 
 /** The remembered deck if it is still saved, else the first complete deck, else the first deck. */
-function defaultDeck(decks: readonly SavedDeck[], remembered: string | null): SavedDeck | null {
+export function defaultDeck(decks: readonly SavedDeck[], remembered: string | null): SavedDeck | null {
   return (
     decks.find((deck) => deck.id === remembered) ??
     decks.find((deck) => deck.cards.length === DECK_SIZE) ??
@@ -251,7 +239,7 @@ function defaultDeck(decks: readonly SavedDeck[], remembered: string | null): Sa
 }
 
 /** The remembered trio if it is still saved, else the first with three decks, else the first trio. */
-function defaultTrio(trios: readonly SavedTrio[], remembered: string | null): SavedTrio | null {
+export function defaultTrio(trios: readonly SavedTrio[], remembered: string | null): SavedTrio | null {
   return (
     trios.find((trio) => trio.id === remembered) ??
     trios.find((trio) => trio.deckIds.every((id) => id !== null)) ??
@@ -311,8 +299,6 @@ type LobbyError = {
   seriesId: string | null;
   /** R1566000: the live co-op match an `already_in_match` refusal names (R1065000). */
   duosMatchId: string | null;
-  /** R264: the room's mode, worded at render (`roomModeMessage`) so a language switch rewords it. */
-  roomMode: QueueMode | null;
 };
 
 /** Keeps validator sentences verbatim. */
@@ -344,24 +330,7 @@ function errorOf(cause: unknown): LobbyError {
       cause instanceof ApiRequestError && cause.code === LOADOUT_INVALID ? issueMessagesOf(cause.details) : [],
     seriesId: detailIdOfError(cause, "seriesId"),
     duosMatchId: detailIdOfError(cause, "duosMatchId"),
-    roomMode: null,
   };
-}
-
-export function roomModeMessage(mode: QueueMode): string {
-  if (mode === "random") return t("This room plays {mode}: join again.", { mode: t(MODE_LABEL[mode]) });
-  return t("This room plays {mode}: pick a {thing} and join again.", {
-    mode: t(MODE_LABEL[mode]),
-    thing: mode === "bo3" ? t("trio") : t("deck"),
-  });
-}
-
-export function roomLinkStatus(mode: QueueMode): string {
-  if (mode === "random") return t("No deck needed for {mode}: press Join.", { mode: t(MODE_LABEL[mode]) });
-  return t("Pick a {thing} for {mode}, then press Join.", {
-    mode: t(MODE_LABEL[mode]),
-    thing: mode === "bo3" ? t("trio") : t("deck"),
-  });
 }
 
 // The status line
@@ -370,12 +339,8 @@ export function roomLinkStatus(mode: QueueMode): string {
 type Status =
   | { kind: "queued"; mode: QueueMode }
   | { kind: "queueEnded" }
-  | { kind: "roomLink"; mode: QueueMode }
   | { kind: "found" }
-  | { kind: "left" }
-  | { kind: "ticket" }
-  | { kind: "roomCanceled" }
-  | { kind: "roomGone" };
+  | { kind: "left" };
 
 // Pairing watch
 
@@ -389,11 +354,19 @@ export function pairTargetOf(me: {
 
 export { MATCH_FOUND_STATUS };
 
+/** R3846000: a read that did not reach the game server: a transport failure or timeout, or the edge's 5xx answer for a server that is down. A 4xx proves the server was reached. */
+function isUnreachableRead(cause: unknown): boolean {
+  return (
+    cause instanceof ApiUnreachableError ||
+    (cause instanceof ApiRequestError && cause.status >= FIRST_UNREACHABLE_STATUS)
+  );
+}
+
 /**
  * Polls while waiting and reports a pairing once before navigating. R897000: a queue ticket the
  * server calls gone `QUEUE_ENDED_AFTER_READS` reads in a row ends the wait once instead. R3207003:
  * `known` is the account the gate read for this screen, which the first run takes as its mount read
- * when it is fresh and names no game. R3792000: returns whether the wait's reads have failed unreachable
+ * when it is fresh and names no game. R3792000: returns whether the wait's reads have failed unreachable (a transport failure, a timeout or a 5xx answer)
  * `LOBBY_UNREACHABLE_AFTER_READS` times in a row; the first read the server answered clears it.
  */
 function useLobbyWatch(
@@ -449,8 +422,8 @@ function useLobbyWatch(
             return;
           }
           if (!waiting) return;
-          // Explicit `false` only (`undefined` never ends a wait). Room waits never count: their
-          // host holds no ticket, so `false` there says nothing about anyone being gone.
+          // Explicit `false` only (`undefined` never ends a wait), and only of a wait this tab
+          // remembers (R765).
           if (me.queued === false && queueWait) {
             endedReads.current += 1;
             if (endedReads.current >= QUEUE_ENDED_AFTER_READS) {
@@ -463,11 +436,11 @@ function useLobbyWatch(
         })
         .catch((cause: unknown) => {
           if (canceled || !waiting) return;
-          if (cause instanceof ApiUnreachableError) {
+          if (isUnreachableRead(cause)) {
             failedReads.current += 1;
             if (failedReads.current >= LOBBY_UNREACHABLE_AFTER_READS) setUnreachable(true);
           } else {
-            // The server answered (a refusal, a 5xx): reached, so the count starts again.
+            // The server answered (a refusal: 4xx): reached, so the count starts again.
             failedReads.current = 0;
             setUnreachable(false);
           }
@@ -478,7 +451,7 @@ function useLobbyWatch(
     };
 
     // R3205000: this wait keeps reading in a hidden tab, unlike the polls on `pollWhileVisible`: a queue
-    // wait's reads keep its ticket alive (R897000), and a room wait's host holds a room that expires.
+    // wait's reads keep its ticket alive (R897000).
     // Check every mount so a reload after pairing cannot strand the player.
     // R3207003: the first run starts from the account the gate read for this screen, when that answer is
     // fresh (inside READ_CACHE_FRESH_MS) and names no game. A kept answer the gate opened on may be of any
@@ -506,7 +479,7 @@ function useLobbyWatch(
 
 // UI pieces
 
-function Verdict({ result }: { result: LoadoutResult | null }): ReactElement | null {
+export function Verdict({ result }: { result: LoadoutResult | null }): ReactElement | null {
   if (result === null) return null;
   if (result.ok) {
     return (
@@ -600,63 +573,6 @@ function Searching({ mode }: { mode: QueueMode }): ReactElement {
   );
 }
 
-function RoomTicket({
-  room,
-  disabled,
-  onCancel,
-}: {
-  room: Room;
-  disabled: boolean;
-  onCancel: () => void;
-}): ReactElement {
-  const [copied, setCopied] = useState(false);
-  const [linkSent, setLinkSent] = useState<"shared" | "copied" | null>(null);
-  function copy(): void {
-    // Copy failures stay silent because the code remains visible.
-    attempt(() => navigator.clipboard.writeText(room.code)).then(
-      () => {
-        setCopied(true);
-      },
-      () => undefined,
-    );
-  }
-  function sendLink(): void {
-    // R767: sharing failures stay silent, like copying failures.
-    attempt(() => sendRoomLink(roomLinkUrl(room.code, room.mode))).then(setLinkSent, () => undefined);
-  }
-  return (
-    <div className="play-ticket">
-      <span className="play-ticket__label">{t("Room code")}</span>
-      <code className="play-ticket__code" data-testid={playTestid.roomCode}>
-        {room.code}
-      </code>
-      <span className="lobby-room-mode" data-testid={playTestid.roomMode} data-mode={room.mode}>
-        {t(MODE_LABEL[room.mode])}
-      </span>
-      <button type="button" className="play-ticket__copy" data-testid={playTestid.copyRoomCode} onClick={copy}>
-        {copied ? t("Copied") : t("Copy")}
-      </button>
-      <button
-        type="button"
-        className="play-ticket__copy play-ticket__copy--link"
-        data-testid={playTestid.copyRoomLink}
-        onClick={sendLink}
-      >
-        {linkSent === "shared" ? t("Link shared") : linkSent === "copied" ? t("Link copied") : t("Copy invite link")}
-      </button>
-      <button
-        type="button"
-        className="link-button"
-        data-testid={playTestid.cancelRoom}
-        disabled={disabled}
-        onClick={onCancel}
-      >
-        {t("Cancel room")}
-      </button>
-    </div>
-  );
-}
-
 /** R2778000: the rank of the ladder the mode picked plays for, and a link to that ladder's board. */
 function RankPanel({ rank, ladder }: { rank: OwnRankResponse | null; ladder: Ladder }): ReactElement {
   const board = ladderPath(paths.leaderboard, ladder);
@@ -746,8 +662,6 @@ export type PlayRouteProps = {
   me?: MeResponse;
 };
 
-type Room = { code: string; mode: QueueMode };
-
 /** R505 queue status carries no count. */
 export function queuedStatus(mode: QueueMode): string {
   return t(
@@ -762,18 +676,10 @@ function statusWords(status: Status): string {
       return queuedStatus(status.mode);
     case "queueEnded":
       return t("Your queue expired. Find a match to queue again.");
-    case "roomLink":
-      return roomLinkStatus(status.mode);
     case "found":
       return t(MATCH_FOUND_STATUS);
     case "left":
       return t("Left the queue.");
-    case "ticket":
-      return t("Give your opponent this code. You will be taken to the game when they join.");
-    case "roomCanceled":
-      return t("Room canceled. Its code no longer works.");
-    case "roomGone":
-      return t("That room is no longer open: someone joined it or it expired.");
   }
 }
 
@@ -818,19 +724,14 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
   useLocale();
   /** R765 resumes a queue left from another screen. */
   const [rejoined] = useState(readQueued);
-  /** R767 room link, consumed below. */
-  const [link] = useState(readRoomLink);
   const stored = useMemo(readStoredChoice, []);
-  // Queue state takes precedence over a link hint and the saved choice.
-  const [mode, setMode] = useState<QueueMode>(rejoined ?? link?.mode ?? stored.mode ?? "bo1");
+  // Queue state takes precedence over the saved choice.
+  const [mode, setMode] = useState<QueueMode>(rejoined ?? stored.mode ?? "bo1");
   const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState<Status | null>(() => {
-    if (rejoined !== null) return { kind: "queued", mode: rejoined };
-    return link === null ? null : { kind: "roomLink", mode };
-  });
+  const [status, setStatus] = useState<Status | null>(() =>
+    rejoined === null ? null : { kind: "queued", mode: rejoined },
+  );
   const [error, setError] = useState<LobbyError | null>(null);
-  const [room, setRoom] = useState<Room | null>(null);
-  const [joinCode, setJoinCode] = useState(link?.code ?? "");
   const [waiting, setWaiting] = useState(rejoined !== null);
   const [population, setPopulation] = useState<PopulationResponse | null>(null);
   const [rank, setRank] = useState<OwnRankResponse | null>(null);
@@ -871,8 +772,8 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
       navigate(target);
     }, MATCH_FOUND_NAV_DELAY_MS);
   }, []);
-  // R897000: Find-a-match is the way back into a queue the server no longer holds. This tab
-  // remembers only the waits Find-a-match started, so a stale room cannot stop a queue from ending.
+  // R897000: Find-a-match is the way back into a queue the server no longer holds. Only a wait this
+  // tab remembers (R765) can end.
   const queueWait = useQueued() !== null;
   const onQueueEnded = useCallback((): void => {
     forgetQueued();
@@ -910,26 +811,6 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
     };
   }, [token, ladder]);
 
-  // R1075000: a reload loses the ticket with the page, so a lobby that opened idle asks for the
-  // host's open rooms and shows the newest again.
-  const opensIdle = rejoined === null && link === null;
-  useEffect(() => {
-    if (!opensIdle) return;
-    let canceled = false;
-    attempt(() => getOpenRooms(token))
-      .then((answer) => {
-        const open = answer.rooms[0];
-        if (canceled || open === undefined) return;
-        setRoom((current) => current ?? { code: open.code, mode: open.mode });
-        setWaiting(true);
-        setStatus((current) => current ?? { kind: "ticket" });
-      })
-      .catch(() => undefined);
-    return () => {
-      canceled = true;
-    };
-  }, [token, opensIdle]);
-
   // Persist the displayed IDs so stale saved choices are replaced.
   const deckShown = deck?.id;
   const trioShown = trio?.id;
@@ -941,40 +822,6 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
       ...(trioShown === undefined ? {} : { trioId: trioShown }),
     });
   }, [data, mode, deckShown, trioShown]);
-
-  useEffect(() => {
-    forgetRoomLink();
-  }, []);
-  // R767 focuses the link's requested pick once it is available.
-  const deckSelect = useRef<HTMLSelectElement>(null);
-  const trioSelect = useRef<HTMLSelectElement>(null);
-  const joinSubmit = useRef<HTMLButtonElement>(null);
-  const focusPending = useRef(link !== null && rejoined === null);
-  // R2094000: a chat Join pressed on this screen arrives as a new query without remounting, so it
-  // is adopted here, unless the lobby is queued or found.
-  const search = useSearch();
-  // Counts adopted links, so the focus below waits for the mode they chose to render.
-  const [adopted, setAdopted] = useState(0);
-  useEffect(() => {
-    const next = readRoomLink();
-    if (next === null) return;
-    forgetRoomLink();
-    setJoinCode(next.code);
-    if (waiting || found) return;
-    const named = next.mode ?? mode;
-    setMode(named);
-    setStatus({ kind: "roomLink", mode: named });
-    focusPending.current = true;
-    setAdopted((count) => count + 1);
-  }, [search]);
-  useEffect(() => {
-    if (!focusPending.current) return;
-    if (mode !== "random" && lobby.kind === "loading") return;
-    focusPending.current = false;
-    if (mode === "bo1") deckSelect.current?.focus();
-    else if (mode === "bo3") trioSelect.current?.focus();
-    else joinSubmit.current?.focus();
-  }, [lobby.kind, mode, adopted]);
 
   function run(work: () => Promise<void>): void {
     if (busy) return;
@@ -1024,55 +871,9 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
     });
   }
 
-  function onCreateRoom(): void {
-    if (choice === null) return;
-    const chosen = choice;
-    run(async () => {
-      const created = await createRoom(token, chosen);
-      setRoom({ code: created.code, mode: created.mode });
-      setWaiting(true);
-      setStatus({ kind: "ticket" });
-    });
-  }
-
-  function onCancelRoom(): void {
-    if (room === null) return;
-    const code = room.code;
-    run(async () => {
-      const answer = await cancelRoom(token, code);
-      setRoom(null);
-      setWaiting(false);
-      setStatus({ kind: answer.cancelled ? "roomCanceled" : "roomGone" });
-    });
-  }
-
-  function dropLinkStatus(named: QueueMode): void {
-    setStatus((current) => (current?.kind === "roomLink" && current.mode === named ? null : current));
-  }
-
-  function onJoin(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault();
-    if (choice === null) return;
-    const chosen = choice;
-    run(async () => {
-      try {
-        // R104 matches server-side room-code canonicalization.
-        const joined = await joinRoom(token, joinCode.trim().toUpperCase(), chosen);
-        follow(joined);
-      } catch (cause: unknown) {
-        // R264 switches to the room's mode while retaining its code.
-        const roomMode = roomModeOf(cause);
-        if (roomMode === null) throw cause;
-        setMode(roomMode);
-        dropLinkStatus(chosen.mode);
-        setError({ message: "", issues: [], seriesId: null, duosMatchId: null, roomMode });
-      }
-    });
-  }
-
   const noChoice = choice === null;
   const locked = waiting || found;
-  const queued = waiting && room === null && !found;
+  const queued = waiting && !found;
   const expectedWait = population?.expectedWaitSeconds;
   const games = population?.gamesLastHour ?? 0;
 
@@ -1102,7 +903,7 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
       {error !== null ? (
         <div className="notice" data-testid={playTestid.error} role="alert">
           {error.issues.length === 0 ? (
-            <p>{error.roomMode === null ? t(error.message) : roomModeMessage(error.roomMode)}</p>
+            <p>{t(error.message)}</p>
           ) : (
             <ul className="lobby-issues">
               {error.issues.map((issue, index) => (
@@ -1164,7 +965,6 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
                       data-testid={playModeTestid(option)}
                       disabled={locked}
                       onChange={() => {
-                        dropLinkStatus(mode);
                         setMode(option);
                       }}
                     />
@@ -1221,7 +1021,6 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
                   <label htmlFor="play-deck">{t("Your deck")}</label>
                   <select
                     id="play-deck"
-                    ref={deckSelect}
                     className="lobby-select"
                     data-testid={playTestid.deckSelect}
                     value={deck?.id ?? ""}
@@ -1252,7 +1051,6 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
                   <label htmlFor="play-trio">{t("Your trio")}</label>
                   <select
                     id="play-trio"
-                    ref={trioSelect}
                     className="lobby-select"
                     data-testid={playTestid.trioSelect}
                     value={trio?.id ?? ""}
@@ -1324,51 +1122,7 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
         <div className="play-side">
           <WaysNav />
 
-          <section className="lobby-card play-panel play-panel--room" aria-labelledby="play-room-heading">
-            <h2 id="play-room-heading" className="play-panel__heading">
-              {t("Play a friend")}
-            </h2>
-            <p className="lobby-note">
-              {t("A room plays the mode it was made with; the joiner picks for the same mode.")}
-            </p>
-            <button
-              type="button"
-              className="play-room-create"
-              data-testid={playTestid.createRoom}
-              disabled={busy || noChoice || locked}
-              onClick={onCreateRoom}
-            >
-              {t("Create a room")}
-            </button>
-            {room === null ? null : <RoomTicket room={room} disabled={busy || found} onCancel={onCancelRoom} />}
-
-            <form className="play-join" data-testid={playTestid.joinForm} onSubmit={onJoin}>
-              <label htmlFor="play-join-code">{t("Join a room")}</label>
-              <div className="play-join__row">
-                <input
-                  id="play-join-code"
-                  data-testid={playTestid.joinInput}
-                  value={joinCode}
-                  autoComplete="off"
-                  spellCheck={false}
-                  placeholder={t("Code")}
-                  disabled={locked}
-                  onChange={(event) => {
-                    setJoinCode(event.target.value);
-                  }}
-                />
-                <button
-                  type="submit"
-                  className="button-secondary"
-                  ref={joinSubmit}
-                  data-testid={playTestid.joinSubmit}
-                  disabled={busy || noChoice || locked}
-                >
-                  {t("Join")}
-                </button>
-              </div>
-            </form>
-          </section>
+          <LobbyPanel format="duel" mode={mode} />
         </div>
       </div>
     </div>

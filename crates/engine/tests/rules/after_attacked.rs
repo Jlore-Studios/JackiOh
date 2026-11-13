@@ -12,11 +12,7 @@ use crate::rules::fixtures::damage_combat::{
     answer, cleave_veteran, defender, defender_asker, grunt, notes, playing, recorder, replays_to,
     round_trip, veteran,
 };
-use crate::rules::fixtures::harness::{by, input, put, sink_for, slot};
-
-fn by_id_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
+use crate::rules::fixtures::harness::{by, input, live_mut, put, sink_for, slot};
 
 mod script_after_attacked {
     use super::*;
@@ -46,7 +42,7 @@ mod script_after_attacked {
     fn r1026_a_defender_that_died_runs_it_on_its_snapshot() {
         let mut state = playing("dc-attacked-died");
         let striker = put(&mut state, &grunt.id, slot(P1, Row::Units, 1), Default::default());
-        by_id_mut(&mut state, &striker.id).buffs = AttackHealth { attack: 4, health: 0 };
+        live_mut(&mut state, &striker.id).buffs = AttackHealth { attack: 4, health: 0 };
         let target = put(
             &mut state,
             &defender.id,

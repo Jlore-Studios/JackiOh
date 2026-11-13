@@ -10,7 +10,7 @@
 //! so a session the provider ended (R194) or an account banned meanwhile is cut off as a polling tab
 //! would be refused.
 //!
-//! The server sends three frames, each only what its account may read:
+//! The server sends five frames, each only what its account may read:
 //! - `{type: "social", incoming, outgoing, unread, dailyWaiting}`: `GET /api/social`'s own body for
 //!   the socket's account (`social_snapshot`), on connect, after every change to its challenges, unread
 //!   counts or daily games (#3727),
@@ -19,6 +19,10 @@
 //!   the tab reads the conversation itself;
 //! - `{type: "friends"}`: its friends list changed (a request, an accept, a removal, a block); the tab
 //!   reads the list itself. A friend's status is not pushed: the list keeps its own read for that.
+//! - `{type: "lobby", code}`: a private lobby it is in (or was just removed from) changed (R3730000);
+//!   the tab reads the lobby itself;
+//! - `{type: "lobbyInvite", code, format, from}`: a friend invites it into their lobby (R3730005), a
+//!   live toast that nothing keeps.
 //!
 //! The socket takes one frame, `{type: "hello"}`, answered with a `social` frame at most once a
 //! `WATCH_HELLO_INTERVAL_MS` (R2609000's interval), so a woken page's probe (R1441) hears a live
@@ -240,6 +244,23 @@ pub fn nudge_friends(app: &App, ids: &[&str]) {
     for id in ids {
         send_to(app, id, &frame);
     }
+}
+
+/// R3730000: lobby `code` changed (a join, a leave, a pick, a Ready, a setting, a Start): each of
+/// `ids`, its members old and new, is told which lobby, and nothing of it; the tab reads the lobby
+/// itself, as its member.
+pub fn nudge_lobby(app: &App, ids: &[&str], code: &str) {
+    let frame = json!({ "type": "lobby", "code": code }).to_string();
+    for id in ids {
+        send_to(app, id, &frame);
+    }
+}
+
+/// R3730005: `from` invites `to` into lobby `code` of `format` (`"duel"` or `"coop"`), a live toast
+/// that no inbox keeps: `from` is the inviter's `{profileId, username}`.
+pub fn send_lobby_invite(app: &App, to: &str, code: &str, format: &str, from: &Value) {
+    let frame = json!({ "type": "lobbyInvite", "code": code, "format": format, "from": from }).to_string();
+    send_to(app, to, &frame);
 }
 
 /// A social socket's life after its upgrade: who it is, its room under the account's cap, its first

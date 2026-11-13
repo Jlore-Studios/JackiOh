@@ -80,10 +80,6 @@ mod tests {
         crate::scenario(sides)
     }
 
-    fn hero(player: PlayerId) -> Value {
-        json!([{ "pick": "hero", "player": player.as_str() }])
-    }
-
     fn health(s: &Scenario, player: PlayerId) -> i32 {
         s.state().players[player].hero.health
     }
@@ -102,7 +98,7 @@ mod tests {
     fn r1180001_your_spells_deal_5_more_per_hit_this_turn() {
         let mut s = game("m+011-hits", json!({ "field": [ID], "hand": [TRUE_STRIKE] }), json!({}));
         s.activate(ID, json!({}));
-        s.play(TRUE_STRIKE, json!({ "targets": hero(P2) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::hero(P2) }));
         assert_eq!(health(&s, P2), 21);
     }
 
@@ -135,7 +131,7 @@ mod tests {
         );
         s.activate(ID, json!({}));
         assert_eq!(spell_damage_of(s.state(), P1), 9);
-        s.play(TRUE_STRIKE, json!({ "targets": hero(P2) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::hero(P2) }));
         assert_eq!(health(&s, P2), 17);
     }
 

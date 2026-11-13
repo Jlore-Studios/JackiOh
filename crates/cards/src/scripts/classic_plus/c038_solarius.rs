@@ -51,10 +51,6 @@ mod tests {
     const MENACE: &str = "core-019"; // Midrange Menace: Taunt
     const FILLER: &str = "core-005";
 
-    fn at_hero() -> Value {
-        json!({ "targets": [{ "pick": "hero", "player": "p2" }] })
-    }
-
     use crate::scenario;
 
     fn own_library_cards(s: &Scenario) -> Vec<Value> {
@@ -73,7 +69,7 @@ mod tests {
         #[test]
         fn s4_4_step_0_a_spell_you_play_deals_2_more_per_hit() {
             let mut s = scenario(json!({ "p1": { "hand": [LUNAR_ECLIPSE, FILLER], "field": [SOLARIUS] }, "p2": { "hand": [FILLER] } }));
-            s.play(LUNAR_ECLIPSE, at_hero());
+            s.play(LUNAR_ECLIPSE, pick::targets(pick::hero("p2")));
             s.expect_health(P2, HERO_HEALTH - 5);
         }
 
@@ -94,7 +90,7 @@ mod tests {
         #[test]
         fn two_sources_add_two_solarius_make_4() {
             let mut s = scenario(json!({ "p1": { "hand": [LUNAR_ECLIPSE, FILLER], "field": [SOLARIUS, SOLARIUS] }, "p2": { "hand": [FILLER] } }));
-            s.play(LUNAR_ECLIPSE, at_hero());
+            s.play(LUNAR_ECLIPSE, pick::targets(pick::hero("p2")));
             s.expect_health(P2, HERO_HEALTH - 7);
         }
 
@@ -112,7 +108,7 @@ mod tests {
         #[test]
         fn never_a_units_hit_a_crys_damage_is_not_raised() {
             let mut s = scenario(json!({ "p1": { "hand": [SORCERER, FILLER], "field": [SOLARIUS] }, "p2": { "hand": [FILLER] } }));
-            s.play(SORCERER, at_hero());
+            s.play(SORCERER, pick::targets(pick::hero("p2")));
             s.expect_health(P2, HERO_HEALTH - 4);
         }
 
@@ -154,7 +150,7 @@ mod tests {
             let solarius = s.card(SOLARIUS).id.clone();
             s.play(&first, json!({ "targets": [{ "pick": "instance", "instanceId": solarius }] }));
             s.expect_in_zone(SOLARIUS, "graveyard");
-            s.play(&second, at_hero());
+            s.play(&second, pick::targets(pick::hero("p2")));
             s.expect_health(P2, HERO_HEALTH - 3);
         }
 
@@ -233,7 +229,7 @@ mod tests {
             find_instance_mut(s.state_mut(), &id).expect("Solarius on the field").tuning =
                 Some(json_as(json!({ "x": { "Spell Damage": 1 } })));
             assert!(s.stats(SOLARIUS).keywords.contains(&Keyword::SpellDamage { n: 3 }));
-            s.play(LUNAR_ECLIPSE, at_hero());
+            s.play(LUNAR_ECLIPSE, pick::targets(pick::hero("p2")));
             s.expect_health(P2, HERO_HEALTH - 6);
         }
 
@@ -255,7 +251,7 @@ mod tests {
                 "p1": { "hand": [LUNAR_ECLIPSE, FILLER], "field": [{ "def": SOLARIUS, "radiant": true }] },
                 "p2": { "hand": [FILLER] },
             }));
-            s.play(LUNAR_ECLIPSE, at_hero());
+            s.play(LUNAR_ECLIPSE, pick::targets(pick::hero("p2")));
             s.expect_health(P2, HERO_HEALTH - 7);
         }
 

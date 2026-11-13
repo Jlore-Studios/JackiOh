@@ -181,10 +181,6 @@ const LUNAR_ECLIPSE: &str = "core-035";
 const FULLSEND: &str = "core-078"; // /fullsend: a Spell
 const GREED: &str = "core-094";
 
-fn at_p2() -> Value {
-    json!([{ "pick": "hero", "player": "p2" }])
-}
-
 /// A play-time discount is not a library or graveyard card's cost (§6.3 Cost, R48, R65, §8 #35, #77, #78)
 mod a_play_time_discount_is_not_a_library_or_graveyard_cards_cost {
     use super::*;
@@ -223,7 +219,7 @@ mod a_play_time_discount_is_not_a_library_or_graveyard_cards_cost {
             },
             "p2": { "hand": [HINDER], "library": LIBRARY },
         }));
-        g.play(LUNAR_ECLIPSE, json!({ "targets": at_p2() }));
+        g.play(LUNAR_ECLIPSE, json!({ "targets": pick::hero("p2") }));
         g.play(ARCHIVIST, json!({ "zone": 1, "modes": ["highest"] }));
 
         assert!(def_ids(&g.hand("p1")).contains(&FULLSEND.to_string()));

@@ -66,12 +66,13 @@ import { countLocaleVisit, initLocale, t, useLocale } from "./i18n/i18n.ts";
 import { useAccount, type Account } from "./net/gate.ts";
 import { SITE_NAME, canonicalUrlFor, documentTitleFor } from "./net/head.ts";
 import { useQueueFollow } from "./net/liveGame.ts";
-import { adoptCoopLink, adoptRoomLink, readRoomLink } from "./net/roomLink.ts";
+import { adoptCoopLink, adoptRoomLink, readRoomLink, useKeptLinkOpensLobby } from "./net/roomLink.ts";
 import { useSettingsAccountSync } from "./settings/accountSync.ts";
 import {
   currentPath,
   dailyIdOf,
   duosIdOf,
+  lobbyCodeOf,
   loginPath,
   matchIdOf,
   navigate,
@@ -84,6 +85,7 @@ import { readSession } from "./net/session.ts";
 import type { MeResponse } from "./net/api.ts";
 import { GlitchPath, NotFoundPlay } from "./notfound/NotFoundPlay.tsx";
 import { ChallengeToast } from "./together/ChallengeToast.tsx";
+import { LobbyInviteToast } from "./lobby/LobbyInviteToast.tsx";
 import { usePresenceHeartbeat } from "./together/presence.ts";
 import { watchCoopOf, watchFriendOf } from "./together/watchLink.ts";
 // Static, not lazy: the gate's own panels offer "Sign out", which must work synchronously from a
@@ -106,6 +108,7 @@ const HotseatRoute = routeChunks.hotseat?.Screen ?? null;
 const DevDuosRoute = routeChunks.duosDev?.Screen ?? null;
 const FxGalleryRoute = routeChunks.fxGallery?.Screen ?? null;
 const DuosRoute = routeChunks.duos.Screen;
+const LobbyScreen = routeChunks.lobby.Screen;
 const ReplaysRoute = routeChunks.replays.Screen;
 const LoginRoute = routeChunks.login.Screen;
 const ResetPasswordRoute = routeChunks.resetPassword.Screen;
@@ -470,6 +473,8 @@ export function Gated({ allowPending = false, consentExempt = false, engine = fa
   useCardPicksAccountSync(account);
   // R3013001: and its card proficiency, which only the account holds, and the stamp each card wears.
   useProficiencyAccountSync(account);
+  // R767, R3730006: a link kept through the sign-in opens its lobby once this account is active.
+  useKeptLinkOpensLobby(account);
   const target = redirectFor(account, allowPending);
   // R1435: renders the gate again once the prompt is answered here, since the page-wide set above
   // renders nothing by changing.
@@ -845,6 +850,20 @@ export function App(): ReactElement {
       );
     }
 
+    // R3730000: a private lobby, 1v1 or co-op, behind the gate; a signed-out visitor's code waits through the sign-in (R3730006).
+    const lobbyCode = lobbyCodeOf(path);
+    if (lobbyCode !== null) {
+      return (
+        <Gated key={path} engine>
+          {(account) => (
+            <EngineGate>
+              <LobbyScreen key={sessionKeyOf(account.token)} token={account.token} code={lobbyCode.toUpperCase()} />
+            </EngineGate>
+          )}
+        </Gated>
+      );
+    }
+
     // #936: a Duos co-op match, behind the same gate as a match; its socket carries the gate's token (R1115000).
     const duosId = duosIdOf(path);
     if (duosId !== null) {
@@ -895,6 +914,7 @@ export function App(): ReactElement {
       {menuShellOn(path) ? <MenuShell path={path}>{boundary}</MenuShell> : boundary}
       <QueueFound game={found} />
       {signedIn ? <ChallengeToast /> : null}
+      {signedIn ? <LobbyInviteToast /> : null}
       {/* Keyed by the path, so a move closes it; its own key, as the boundary above holds `path`. */}
       <CommandMenu key={`command-menu:${path}`} path={path} />
       <FullScreenArtHost />

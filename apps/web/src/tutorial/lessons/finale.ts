@@ -6,7 +6,8 @@
 // Goetzmann Game Design's random effects find, "-59" was the seed that won within the lesson's 11 turns;
 // since #3128's costs, whose deals and AI's plays moved, "-133" was; since the Stinkyscape+ release (#3596),
 // whose cards join those random effects' pools and whose Fruit pools keep to the five Grapes (R382), "-159"
-// is, every Legendary and Mythic played.
+// was; since #3837's costs and stats (Legacy: Speciesist and Legacy: Jlockeed Shredder-10 among them), on
+// which Call to Chaos went unplayed there, "-175" is, every Legendary and Mythic played.
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -16,7 +17,7 @@ export const lesson: TutorialLesson = {
   title: "The final exam",
   summary: "Legendary and Mythic cards, random effects, Quickdraw and copies: everything at once.",
   discoveries: ["quickdraw", "legendary", "random", "copying"],
-  seed: "tg-finale-159",
+  seed: "tg-finale-175",
   humanSeat: "p1",
   poolHold: false,
   humanDeck: [

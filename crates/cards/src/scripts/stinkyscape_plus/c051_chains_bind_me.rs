@@ -83,10 +83,6 @@ mod tests {
     const FILLER: &str = "core-005";
     const BODY: &str = "core-019"; // Midrange Menace
 
-    fn pick(id: &str) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-    }
-
     fn board(radiant: bool) -> Scenario {
         scenario(json!({
             "seed": "chains-bind-me",
@@ -113,7 +109,7 @@ mod tests {
         crate::register_all();
         let mut s = board(false);
         let own = s.unit_at(P1, 1).id;
-        s.play(ID, pick(&own));
+        s.play(ID, pick::targets(pick::id(&own)));
         assert_eq!(slumber(&s, &own), Some(2));
         s.end_turn();
         assert_eq!(slumber(&s, &own), Some(2), "the opponent's turn does not count");
@@ -135,7 +131,7 @@ mod tests {
         crate::register_all();
         let mut s = board(false);
         let enemy = s.unit_at(P2, 1).id;
-        s.play(ID, pick(&enemy));
+        s.play(ID, pick::targets(pick::id(&enemy)));
         assert_eq!(slumber(&s, &enemy), Some(2));
         s.end_turn();
         assert_eq!(slumber(&s, &enemy), Some(1), "p2's first turn started");
@@ -151,7 +147,7 @@ mod tests {
         crate::register_all();
         let mut s = board(true);
         let enemy = s.unit_at(P2, 1).id;
-        s.play(ID, pick(&enemy));
+        s.play(ID, pick::targets(pick::id(&enemy)));
         s.end_turn().end_turn().end_turn();
         assert_eq!(changes(s.last_events(), &enemy, "degraded"), 5);
     }
@@ -161,7 +157,7 @@ mod tests {
         crate::register_all();
         let mut s = board(false);
         let enemy = s.unit_at(P2, 1).id;
-        s.play(ID, pick(&enemy));
+        s.play(ID, pick::targets(pick::id(&enemy)));
         s.state_mut().players[P2].units[0] = None;
         s.end_turn().end_turn().end_turn();
         let all: usize = changes(s.events(), &enemy, "degraded") + changes(s.last_events(), &enemy, "degraded");

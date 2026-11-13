@@ -10,7 +10,7 @@
 //! no open zone it stays in the deck. A face-down play is a Trap with no tags until revealed (R448), so
 //! it summons nothing. End of turn: one Buff on a uniform pick over the hand (R440); Radiant, then one
 //! Buff on each Unit `adjacent_to` this (§3.1). Issue #3837 took the deck out of the pick; through
-//! v0.6.0c it was over hand and deck, which `script_v0_6_0c` keeps for those replays (R767000). "All
+//! v0.6.0d it was over hand and deck, which `script_v0_6_0d` keeps for those replays (R767000). "All
 //! Tribes" is all five tribal tags in the catalog's `tags`, read off them by the client — no catalog
 //! field of its own.
 
@@ -47,7 +47,7 @@ fn summon_on_tribal() -> TriggerDef {
 
 /// The piles the end-of-turn Buff picks from: the hand since issue #3837.
 const ZONES: &[&str] = &["hand"];
-/// Through v0.6.0c: the hand or the deck.
+/// Through v0.6.0d: the hand or the deck.
 const ZONES_V0_6_0C: &[&str] = &["hand", "library"];
 
 fn end_of_turn(radiant: bool, zones: &'static [&'static str]) -> Hook {
@@ -93,9 +93,9 @@ pub fn script() -> CardScripts {
     tatches(ZONES)
 }
 
-/// R767000: the end-of-turn Buff over hand and deck, through v0.6.0c; `KEPT_SCRIPTS` folds those
+/// R767000: the end-of-turn Buff over hand and deck, through v0.6.0d; `KEPT_SCRIPTS` folds those
 /// replays under it.
-pub fn script_v0_6_0c() -> CardScripts {
+pub fn script_v0_6_0d() -> CardScripts {
     tatches(ZONES_V0_6_0C)
 }
 
@@ -338,8 +338,8 @@ mod tests {
             }
 
             #[test]
-            fn r767000_the_kept_v0_6_0c_script_reaches_the_deck() {
-                crate::under_kept(ID, script_v0_6_0c(), || {
+            fn r767000_the_kept_v0_6_0d_script_reaches_the_deck() {
+                crate::under_kept(ID, script_v0_6_0d(), || {
                     let mut deck_hit = false;
                     for seed in 1..=20 {
                         let mut s = standing(seed, false);

@@ -1,7 +1,7 @@
 {
   "title": "Patch: Stinkyscape Balance Changes V",
   "sources": "#3837",
-  "notes": "Issue #3837, the designer's fifth Stinkyscape balance pass: new costs, stats and numbers for 22 cards (Miner v2 to v5, Trila 3, Speciesist, Legacy: Speciesist, Nurse Cleaver, Small Card Lobbyist, Ultralight Chassis, Jlockeed's Missile Pod, Paragon Mk1, Jlockeed Shredder-10, Legacy: Jlockeed Shredder-10, Ivory Tower, Feng Shui, Spiteful Stab, Argusland, Wardrum, Unan, Bot Loser, Mid Loser), and new text for six: Ocean Tsunami gains Tribute 1; Silly Silas loses Crater and its base face is summoned for the opponent (R3837000, R3837001, R3837002; the engine's summonForOpponent flag); Tatches the Totem buffs the hand only; Portal to the Past falls back to (3) or (4) Cost Units and Field Spells when the last board gives no card (R3837003, R3837004); CN Jade Well's Start of turn is an Activate and Corpse Recycler's token is its controller's (R3837005). Each of the six keeps its v0.6.0c script in KEPT_SCRIPTS (R767000). Heroic Power is unchanged: its line shipped in #3551. The plays are the families classify finds playing differently in its unforced games against main's build: the random pools that read a cost, a stat or a 1/1 (Speciesist, Wardrum, Missile Pod and the rest moving), the Rush Token Corpse Recycler gives the other side now, the Resources, and S #109 xxFreshJack and #111 Shockwave447, which read the complicated list that Portal to the Past and Tatches the Totem join at more than 60 code lines, their kept scripts counted (R1846000, R2173001). The rule is the deal-time views that show a moved cost (a hand card's cost, a library sorted by cost), which no card explains (R2455000).",
+  "notes": "Issue #3837, the designer's fifth Stinkyscape balance pass: new costs, stats and numbers for 22 cards (Miner v2 to v5, Trila 3, Speciesist, Legacy: Speciesist, Nurse Cleaver, Small Card Lobbyist, Ultralight Chassis, Jlockeed's Missile Pod, Paragon Mk1, Jlockeed Shredder-10, Legacy: Jlockeed Shredder-10, Ivory Tower, Feng Shui, Spiteful Stab, Argusland, Wardrum, Unan, Bot Loser, Mid Loser), and new text for six: Ocean Tsunami gains Tribute 1; Silly Silas loses Crater and its base face is summoned for the opponent (R3837000, R3837001, R3837002; the engine's summonForOpponent flag); Tatches the Totem buffs the hand only; Portal to the Past falls back to (3) or (4) Cost Units and Field Spells when the last board gives no card (R3837003, R3837004); CN Jade Well's Start of turn is an Activate and Corpse Recycler's token is its controller's (R3837005). Each of the six keeps its v0.6.0d script in KEPT_SCRIPTS (R767000). Heroic Power is unchanged: its line shipped in #3551. The plays are the families classify finds playing differently in its unforced games against main's build: the random pools that read a cost, a stat or a 1/1 (Speciesist, Wardrum, Missile Pod and the rest moving), the Rush Token Corpse Recycler gives the other side now, the Resources, and S #109 xxFreshJack and #111 Shockwave447, which read the complicated list that Portal to the Past and Tatches the Totem join at more than 60 code lines, their kept scripts counted (R1846000, R2173001). The rule is the deal-time views that show a moved cost (a hand card's cost, a library sorted by cost), which no card explains (R2455000).",
   "player": {
     "title": "Stinkyscape Balance Changes V",
     "new": [],
@@ -33,7 +33,7 @@
       "Ocean Tsunami gains Tribute 1.",
       "Silly Silas loses Crater. Its base face is summoned for your opponent, into their leftmost open unit zone, and you still choose which way its Cry rotates.",
       "Tatches the Totem's end-of-turn Buff picks a card in your hand only, never your deck.",
-      "Portal to the Past: when your last board gives no card, it Discovers a (3) or (4) Cost Unit or Field Spell instead (Radiant: adds 3 different ones), each costing (0).",
+      "Portal to the Past: when your last board gives no card, it Discovers a (3) or (4) Cost Unit or Field Spell instead (Radiant: adds 3 different ones). Each costs (0).",
       "CN Jade Well's Start of turn is now an Activate: once a turn, add an Auspicious Rock (Radiant: a Radiant one) to your hand.",
       "Corpse Recycler's Rush Token is always yours, whoever's Unit died."
     ],
@@ -81,6 +81,7 @@
     "classicplus-047",
     "classicplus-055",
     "classicplus-062",
+    "classicplus-067",
     "classicplus-071",
     "classicplus-072",
     "classicplus-077",

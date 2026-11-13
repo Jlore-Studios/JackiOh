@@ -1036,3 +1036,71 @@ mod draw_offers_b21 {
         }
     }
 }
+
+/// R3822000: a unit its own Burn kills at the start of its controller's next turn is worth less than its
+/// twin without the counter, so of two equal kills the AI makes the one the Burn will not.
+mod r3822000_afflicted_targets {
+    use super::*;
+    use jackioh_ai::{Prices, candidate_actions};
+    use jackioh_engine::testkit::active_units_of;
+
+    /// Reno (Core #53, a 4/6) in lane 1 against a Mr. Vanilla (a 4/4) in each of lanes 1 and 2, the one in
+    /// `lane` carrying Burn 4: its next tick deals 4 and kills it. The AI on turn.
+    fn burning_board(lane: i32) -> GameState {
+        register_cards();
+        let vanilla = |at: i32| {
+            if at == lane {
+                json!({ "def": "core-008", "lane": at, "counters": { "burn": 4 } })
+            } else {
+                json!({ "def": "core-008", "lane": at })
+            }
+        };
+        scenario(json!({
+            "seed": "decide-burning-target",
+            "p1": { "field": [{ "def": "core-053", "lane": 1 }], "library": ["core-008", "core-011", "core-008", "core-011"] },
+            "p2": { "field": [vanilla(1), vanilla(2)], "library": ["core-008", "core-011", "core-008", "core-011"] },
+        }))
+        .state()
+        .clone()
+    }
+
+    /// Reno's attack on the enemy Vanilla with the Burn (`burning`) or without it.
+    fn attack_on(state: &GameState, burning: bool) -> ActionBody {
+        let attacker_id = active_units_of(state, AI)[0].id.clone();
+        let target_id = active_units_of(state, HUMAN)
+            .into_iter()
+            .find(|card| card.counters.burn.is_some() == burning)
+            .expect("the target")
+            .id
+            .clone();
+        ActionBody::Attack {
+            attacker_id,
+            target_id,
+        }
+    }
+
+    #[test]
+    fn r3822000_the_move_order_tries_the_kill_its_burn_will_not_make_first() {
+        for lane in [1, 2] {
+            let state = burning_board(lane);
+            let order = candidate_actions(&state, AI, Prices::NONE);
+            let at = |action: &ActionBody| {
+                order
+                    .iter()
+                    .position(|candidate| candidate == action)
+                    .unwrap_or_else(|| panic!("{action:?} is no candidate (lane {lane})"))
+            };
+            assert!(
+                at(&attack_on(&state, false)) < at(&attack_on(&state, true)),
+                "the Burn in lane {lane}: {order:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn r3822000_the_ai_attacks_the_unit_its_own_burn_will_not_kill() {
+        let state = burning_board(1);
+        let decision = must_decide(&state, AI, "decide-burning-target");
+        assert_eq!(decision.action, attack_on(&state, false));
+    }
+}

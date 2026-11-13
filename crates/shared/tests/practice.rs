@@ -644,8 +644,10 @@ fn r3100000_a_lessons_every_snapshot_holds_the_forecast() {
 
 #[test]
 fn r3477000_a_free_games_every_snapshot_holds_the_forecast_of_the_humans_attacks() {
-    let mut session = started("practice-r3477000", P2);
-    let mut human = Rng::new("practice-r3477000:human", 0);
+    // Seed "practice-r3477000" until #3837, whose costs and stats dealt a game there that ended before the
+    // human had an attack to forecast.
+    let mut session = started("practice-r3477000-8", P2);
+    let mut human = Rng::new("practice-r3477000-8:human", 0);
     let mut forecast_attacks = 0;
     for _ in 0..MOVE_CAP {
         if session.host.is_over() {

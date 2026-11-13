@@ -79,15 +79,6 @@ mod tests {
             .collect()
     }
 
-    /// R81: the play's declared target, one instance.
-    fn at(card: &CardInstance) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": card.id }] })
-    }
-
-    fn at_hero(player: &str) -> Value {
-        json!({ "targets": [{ "pick": "hero", "player": player }] })
-    }
-
     fn postdoc_of(s: &Scenario) -> CardInstance {
         s.unit(P2, 1)
             .unwrap_or_else(|| panic!("expected p2's Postdoc in lane 1"))
@@ -104,7 +95,7 @@ mod tests {
             }));
             let postdoc = postdoc_of(&s);
 
-            s.play(FODDER, at(&postdoc));
+            s.play(FODDER, pick::targets(pick::instance(&postdoc)));
 
             s.expect_mana(P1, 4);
             assert_eq!(damage_on(&s, &postdoc.id), vec![2]);
@@ -119,7 +110,7 @@ mod tests {
             let mut s = scenario(json!({ "p1": { "hand": [FODDER, ANCHOR], "health": 20 } }));
             let fodder = s.card(FODDER).clone();
 
-            s.play(FODDER, at_hero("p2"));
+            s.play(FODDER, pick::targets(pick::hero("p2")));
 
             assert!(s.state().pending.is_none());
             assert_eq!(damage_on(&s, "hero-p2"), vec![2]);
@@ -141,7 +132,7 @@ mod tests {
             let postdoc = postdoc_of(&s);
             assert!(s.card(FODDER).radiant);
 
-            s.play(FODDER, at(&postdoc));
+            s.play(FODDER, pick::targets(pick::instance(&postdoc)));
 
             s.expect_mana(P1, 4);
             assert_eq!(damage_on(&s, &postdoc.id), vec![4]);
@@ -157,7 +148,7 @@ mod tests {
             }));
             let fodder = s.card(FODDER).clone();
 
-            s.play(FODDER, at_hero("p2"));
+            s.play(FODDER, pick::targets(pick::hero("p2")));
 
             assert_eq!(damage_on(&s, "hero-p2"), vec![4]);
             s.expect_health(P2, 26).expect_health(P1, 24);
@@ -175,7 +166,7 @@ mod tests {
                 crate::degrade_number(&mut s, FODDER, "damage")
             };
             assert_eq!(moved, amount);
-            s.play(FODDER, at_hero("p2"));
+            s.play(FODDER, pick::targets(pick::hero("p2")));
             assert_eq!(damage_on(&s, "hero-p2"), vec![amount]);
             s.expect_health(P1, 20 + amount);
         }
