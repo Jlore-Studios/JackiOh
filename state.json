@@ -16646,6 +16646,13 @@
     "3806": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "43329659521",
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-13T00:33:41Z",
+        "until": "2026-11-13T01:03:41Z"
+      },
       "handoff": {
         "at": "2026-11-12T21:58:30Z",
         "draft": "# Draft plan #3806 (planner notes) \u2014 design settled, writing final plan\n\n## Found\n- Set path: play_steps::validate_play stamps set_as; place_card fresh id; resolve_step ResolvePart::Script runs run_script_cry\n  on dormant card (empty script) => nothing. Keep that call; add alt_play::resolve_at_set after it.\n- Reveal path: fire_trap sets face_up=Some(true) BEFORE reveal_effect sets revealing=Some(true) -> discriminator:\n  resolving_at_set(card) = revealing==Some(true) && face_up != Some(true).\n- revealing read only in alt_play + cry_trigger::cry_place_of. SetAs doc comments are ts-exported (apps/web/src/wire/generated/SetAs.ts).\n- cry_trigger::run_cry_once: after repeats block, if Backrow && repeats==0 && live resolving_at_set: ran -> end_set_resolution, else owe \"@setResolved\".\n- work.rs ENGINE_WORK_HOOKS + run_work_item arm for \"@setResolved\".\n- Script new bool `resolves_set_spells`; fuse.rs combine_objects is exhaustive -> add line.\n- Self moves: effects/move_.rs exile_card (is_self) + effects/shuffle_card.rs shuffle_card_into guard.\n- legal_actions: play_choices::face_down_play_actions + why_face_down_refused filter via alt_play::spell_text_can_resolve\n  (refactor reveal_can_complete Spell arm + cry_trigger::reveal_set_spell check).\n- Kept script: c099 script_v0_5_12ap in crates/cards/src/history.rs KEPT_SCRIPTS (newest shipped v0.5.12ap; verify patches.json last).\n- Tests broken by change: c099 tests (most), c102_book_of_nono_words r1848003_a_bounced_copy_keeps_its_x (No-No Words needs Unit;\n  set refused under Paranoia) -> replace Paranoia with granted Cloaked; web apps/web/src/game/entrance.real.test.ts (Summit, Chaos set under Paranoia) run + adapt.\n- view: no change (never named); hookResolving withheld for unreadable seat unless trapFired follows (view_for ~2720).\n- AI: no src change; test find_lethal Paranoia+Eclipse(core-035) p2 at 6 -> first action face-down play.\n- catalog check: crates/tools/src/catalog.rs validate_face (running_type) + test; tools README row.\n- classify --claims needs --parent-bin (stage 1 bails on play code).",
