@@ -350,6 +350,7 @@ mod tests {
             // The guard stops only discards off the holder's turn: on p1's own turn it
             // sleeps, so "discard" is offered.
             assert_eq!(s.prompt_modes(), vec!["discard", "exile", "draw"]);
+            assert_eq!(pending.options.len(), 3, "an option other than a Mode is offered");
         }
 
         #[test]

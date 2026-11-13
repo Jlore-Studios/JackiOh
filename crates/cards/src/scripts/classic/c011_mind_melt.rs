@@ -273,6 +273,7 @@ mod tests {
             let pending = open(&s);
             assert_eq!(pending.player_id, P1);
             assert_eq!(s.prompt_modes(), ["0", "1", "2", "3"]);
+            assert_eq!(pending.options.len(), 4, "an option other than a Mode is offered");
         }
 
         #[test]

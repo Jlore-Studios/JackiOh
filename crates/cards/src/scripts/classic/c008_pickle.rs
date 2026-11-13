@@ -290,6 +290,12 @@ mod tests {
         must(s.state().pending.clone(), "open prompt")
     }
 
+    /// The open prompt offers exactly these Mode options in this order and nothing else.
+    fn assert_modes(s: &Scenario, want: &[&str]) {
+        assert_eq!(s.prompt_modes(), want);
+        assert_eq!(open(s).options.len(), want.len(), "an option other than a Mode is offered");
+    }
+
     fn labels(s: &Scenario) -> Vec<String> {
         open(s).options.iter().map(|option| option.label.clone()).collect()
     }
@@ -360,7 +366,7 @@ mod tests {
                 assert_eq!(s.state().active, P2);
                 assert_eq!(pending.player_id, P2);
                 assert_eq!(pending.kind, PromptKind::Mode);
-                assert_eq!(s.prompt_modes(), vec!["discard", "exile", "draw"]);
+                assert_modes(&s, &["discard", "exile", "draw"]);
                 s.answer(json!("exile"));
                 s.answer(json!("discard"));
                 s.answer(json!("draw"));
@@ -396,7 +402,7 @@ mod tests {
                 assert_eq!(s.state().active, P2);
                 assert_eq!(pending.player_id, P2);
                 assert_eq!(pending.kind, PromptKind::Mode);
-                assert_eq!(s.prompt_modes(), vec!["discard", "exile", "draw"]);
+                assert_modes(&s, &["discard", "exile", "draw"]);
                 s.answer(json!("draw"));
                 assert_eq!(open(&s).player_id, P2);
                 assert_eq!(def_ids(&s.pile(P1, "hand")), vec![FILLER, MY_DECK[0]]);
@@ -413,7 +419,7 @@ mod tests {
                     assert_eq!(s.state().active, P1);
                     assert_eq!(pending.player_id, P2);
                     assert_eq!(pending.kind, PromptKind::Mode);
-                    assert_eq!(s.prompt_modes(), vec!["discard", "exile", "draw"]);
+                    assert_modes(&s, &["discard", "exile", "draw"]);
                 });
             }
 
@@ -434,7 +440,7 @@ mod tests {
                     }));
                     s.play(PICKLE, json!({}));
                     assert_eq!(s.state().active, P1);
-                    assert_eq!(s.prompt_modes(), vec!["exile", "draw"]);
+                    assert_modes(&s, &["exile", "draw"]);
                 });
             }
 
@@ -513,7 +519,7 @@ mod tests {
                 );
                 s.play(PICKLE, json!({}));
                 s.end_turn();
-                assert_eq!(s.prompt_modes(), vec!["draw"]);
+                assert_modes(&s, &["draw"]);
             }
 
             #[test]
@@ -522,9 +528,9 @@ mod tests {
                 let mut s = pickle(false, Piles { their_deck: Some(vec!["core-006"]), ..Piles::default() });
                 s.play(PICKLE, json!({}));
                 s.end_turn();
-                assert_eq!(s.prompt_modes(), vec!["discard", "exile", "draw"]);
+                assert_modes(&s, &["discard", "exile", "draw"]);
                 s.answer(json!("exile"));
-                assert_eq!(s.prompt_modes(), vec!["discard", "draw"]);
+                assert_modes(&s, &["discard", "draw"]);
             }
 
             #[test]
@@ -536,10 +542,10 @@ mod tests {
                 );
                 s.play(PICKLE, json!({}));
                 s.end_turn();
-                assert_eq!(s.prompt_modes(), vec!["discard", "draw"]);
+                assert_modes(&s, &["discard", "draw"]);
                 s.answer(json!("discard"));
                 assert_eq!(def_ids(&s.pile(P2, "graveyard")), vec!["core-008"]);
-                assert_eq!(s.prompt_modes(), vec!["draw"]);
+                assert_modes(&s, &["draw"]);
             }
 
             #[test]
@@ -769,7 +775,7 @@ mod tests {
                 }));
                 s.play(PICKLE, json!({}));
                 s.end_turn();
-                assert_eq!(s.prompt_modes(), vec!["discard", "exile", "draw"]);
+                assert_modes(&s, &["discard", "exile", "draw"]);
                 s.answer(json!("discard"));
                 assert_eq!(def_ids(&s.pile(P2, "graveyard")).len(), 1);
                 assert_eq!(
@@ -847,7 +853,7 @@ mod tests {
                 s.play(PICKLE, json!({}));
                 s.end_turn();
                 s.answer(json!("exile"));
-                assert_eq!(s.prompt_modes(), vec!["discard", "draw"]);
+                assert_modes(&s, &["discard", "draw"]);
             }
         }
     }

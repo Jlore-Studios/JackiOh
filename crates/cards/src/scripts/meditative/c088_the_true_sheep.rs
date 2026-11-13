@@ -106,26 +106,6 @@ mod tests {
         }))
     }
 
-    use crate::js;
-
-    fn open(state: &GameState) -> Value {
-        match &state.pending {
-            Some(pending) => js(pending),
-            None => panic!("the Sheep opened no prompt"),
-        }
-    }
-
-    /// A Discover's options are `mode` selections carrying catalog ids (§10.6).
-    fn option_ids(pending: &Value) -> Vec<String> {
-        pending["options"]
-            .as_array()
-            .cloned()
-            .unwrap_or_default()
-            .iter()
-            .filter(|option| option["selection"]["pick"] == "mode")
-            .map(|option| option["selection"]["option"].as_str().unwrap_or_default().to_string())
-            .collect()
-    }
 
     /// The registered script's static flags for one face.
     fn flags(face: &Script) -> StaticFlags {
@@ -142,7 +122,7 @@ mod tests {
             fn r1221_the_pool_is_the_tribute_cost_cards() {
                 let mut s = holding("sheep-pool", false);
                 s.play(ID, json!({ "zone": 1 }));
-                let options = option_ids(&open(s.state()));
+                let options = s.prompt_modes();
                 assert_eq!(options.len(), OFFERED as usize);
                 let mut sorted = options.clone();
                 sorted.sort();
@@ -209,7 +189,7 @@ mod tests {
             fn r1222_discovers_three_different_to_hand_and_stays() {
                 let mut s = holding("sheep-stays", false);
                 s.play(ID, json!({ "zone": 1 }));
-                let picked = option_ids(&open(s.state())).into_iter().next().expect("three options");
+                let picked = s.prompt_modes().into_iter().next().expect("three options");
                 let hand = s.hand(P1).len();
                 s.answer(json!(picked));
                 let after = def_ids(&s.hand(P1));
@@ -224,7 +204,7 @@ mod tests {
             fn r1222_the_pick_costs_1() {
                 let mut s = holding("sheep-costs", false);
                 s.play(ID, json!({ "zone": 1 }));
-                let picked = option_ids(&open(s.state())).into_iter().next().expect("three options");
+                let picked = s.prompt_modes().into_iter().next().expect("three options");
                 s.answer(json!(picked));
                 let pick = s.hand(P1).into_iter().find(|card| card.def_id == picked).expect("the pick");
                 assert_eq!(pick.cost_override, Some(1));
@@ -235,7 +215,7 @@ mod tests {
                 let mut s = holding("sheep-costs", false);
                 step_param(s.card_mut(ID), "setCost", -1);
                 s.play(ID, json!({ "zone": 1 }));
-                let picked = option_ids(&open(s.state())).into_iter().next().expect("three options");
+                let picked = s.prompt_modes().into_iter().next().expect("three options");
                 s.answer(json!(picked));
                 let pick = s.hand(P1).into_iter().find(|card| card.def_id == picked).expect("the pick");
                 assert_eq!(pick.cost_override, Some(0));
@@ -274,7 +254,7 @@ mod tests {
             fn the_pick_is_radiant_and_the_worth_is_500() {
                 let mut s = holding("sheep-radiant", true);
                 s.play(ID, json!({ "zone": 1 }));
-                let picked = option_ids(&open(s.state())).into_iter().next().expect("three options");
+                let picked = s.prompt_modes().into_iter().next().expect("three options");
                 s.answer(json!(picked));
                 let pick = s.hand(P1).into_iter().find(|card| card.def_id == picked).expect("the pick");
                 assert!(pick.radiant);

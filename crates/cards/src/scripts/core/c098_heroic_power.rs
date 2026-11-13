@@ -208,19 +208,6 @@ mod tests {
         (s, power)
     }
 
-    /// The def ids a Discover prompt offers (§6.3), in the order offered.
-    fn offered_ids(s: &Scenario) -> Vec<String> {
-        let pending = js(must(s.state().pending.as_ref(), "a discover prompt"));
-        pending["options"]
-            .as_array()
-            .cloned()
-            .unwrap_or_default()
-            .iter()
-            .filter(|option| option["selection"]["pick"] == "mode")
-            .map(|option| option["selection"]["option"].as_str().unwrap_or_default().to_string())
-            .collect()
-    }
-
     /// A Heroic Power summoned onto p1's field by an effect (no Cry), the card as it stands.
     fn summon_heroic(s: &mut Scenario, radiant_face: bool) -> CardInstance {
         crate::run_as(
@@ -257,7 +244,7 @@ mod tests {
 
     /// The first seed `prefix-0`, … under which the Cry of a played Heroic Power offers the power `name`.
     fn offering_seed_with(prefix: &str, name: &str, radiant_face: bool) -> String {
-        seed_where(prefix, |seed| offered_ids(&played(seed, radiant_face).0).iter().any(|offered| offered == name))
+        seed_where(prefix, |seed| played(seed, radiant_face).0.prompt_modes().iter().any(|offered| offered == name))
     }
 
     fn offering_seed(name: &str, radiant_face: bool) -> String {
@@ -409,7 +396,7 @@ mod tests {
                 let pending = must(s.state().pending.clone(), "the Cry's prompt");
                 assert_eq!(pending.player_id, P1);
                 assert_eq!(pending.kind, PromptKind::Mode);
-                let offered = offered_ids(&s);
+                let offered = s.prompt_modes();
                 assert_eq!(offered.len() as i32, DISCOVER_OPTIONS, "seed {n}");
                 let distinct: std::collections::BTreeSet<&String> = offered.iter().collect();
                 assert_eq!(distinct.len(), offered.len(), "seed {n}: {offered:?}");
@@ -421,7 +408,7 @@ mod tests {
         fn r3134002_each_of_the_13_powers_can_be_offered() {
             let mut seen = std::collections::BTreeSet::new();
             for n in 0..60 {
-                seen.extend(offered_ids(&played(&format!("hp-cry-all-{n}"), false).0));
+                seen.extend(played(&format!("hp-cry-all-{n}"), false).0.prompt_modes());
             }
             assert_eq!(seen.into_iter().collect::<Vec<_>>(), {
                 let mut all = names();
@@ -434,14 +421,14 @@ mod tests {
         fn r3134002_the_offer_names_each_power_by_its_title_and_the_radiant_names_tank_up() {
             let seed = offering_seed("armor", false);
             let (s, _) = played(&seed, false);
-            let at = must(offered_ids(&s).iter().position(|name| name == "armor"), "armor offered");
+            let at = must(s.prompt_modes().iter().position(|name| name == "armor"), "armor offered");
             assert_eq!(offered_labels(&s)[at], "Armor Up");
 
             let seed = offering_seed("armor", true);
             let (s, _) = played(&seed, true);
-            let at = must(offered_ids(&s).iter().position(|name| name == "armor"), "armor offered");
+            let at = must(s.prompt_modes().iter().position(|name| name == "armor"), "armor offered");
             assert_eq!(offered_labels(&s)[at], "Tank Up");
-            for (name, label) in offered_ids(&s).iter().zip(offered_labels(&s)) {
+            for (name, label) in s.prompt_modes().iter().zip(offered_labels(&s)) {
                 let power = must(subsystems::power_by_name(name), "an offered power");
                 assert_eq!(label, power.radiant_title);
             }
@@ -502,7 +489,7 @@ mod tests {
         fn r3134002_the_answer_must_be_one_of_the_3_offered() {
             let seed = offering_seed("rush", false);
             let (mut s, _) = played(&seed, false);
-            let absent = must(names().into_iter().find(|name| !offered_ids(&s).contains(name)), "an unoffered power");
+            let absent = must(names().into_iter().find(|name| !s.prompt_modes().contains(name)), "an unoffered power");
             s.expect_refused(|s| s.answer(json!(absent)));
             assert!(s.state().pending.is_some());
         }
@@ -510,7 +497,7 @@ mod tests {
         #[test]
         fn r311_r97_the_other_seat_sees_only_that_a_prompt_is_open_and_not_the_powers_offered() {
             let (s, _) = played("hp-cry-view", false);
-            let offered = offered_ids(&s);
+            let offered = s.prompt_modes();
             let seen = view_json(&s, P2);
             assert_eq!(seen["pending"]["forYou"], false);
             assert_eq!(seen["pending"]["pendingFor"], "p1");
@@ -743,7 +730,7 @@ mod tests {
             crate::register_all();
             let (mut s, card) = on_field("discover", OnField::default());
             s.activate(&card, json!({}));
-            let offered = offered_ids(&s);
+            let offered = s.prompt_modes();
             assert_eq!(offered.len(), 3);
             for id in &offered {
                 assert_eq!(def_json(id)["type"], "Unit");
@@ -764,7 +751,7 @@ mod tests {
             let before = s.hand(P1).len();
             s.activate(&card, json!({}));
             for step in [1, 2] {
-                let offered = offered_ids(&s);
+                let offered = s.prompt_modes();
                 assert_eq!(offered.len(), 3, "Discover {step}");
                 for id in &offered {
                     // An embiggen card prints `{ base, embiggen }`: its play costs `base`.
@@ -856,7 +843,7 @@ mod tests {
             crate::register_all();
             let (mut s, card) = on_field("tricks", OnField::default());
             s.activate(&card, json!({}));
-            let offered = offered_ids(&s);
+            let offered = s.prompt_modes();
             assert_eq!(offered.len(), 3);
             let traps: Vec<String> = crate::query::query(&json_as(json!({ "type": ["Trap", "Field Trap"] })))
                 .iter()
@@ -972,7 +959,7 @@ mod tests {
             crate::register_all();
             let (mut s, card) = on_field("discover", OnField { radiant_face: true, ..OnField::default() });
             s.activate(&card, json!({}));
-            let picked = must(offered_ids(&s).into_iter().next(), "an offered Unit");
+            let picked = must(s.prompt_modes().into_iter().next(), "an offered Unit");
             s.answer(json!(picked));
             assert_eq!(
                 s.hand(P1).into_iter().filter(|entry| entry.def_id == picked).map(|entry| entry.radiant).collect::<Vec<_>>(),
@@ -985,8 +972,8 @@ mod tests {
             crate::register_all();
             let (mut s, card) = on_field("stitching", OnField { radiant_face: true, ..OnField::default() });
             s.activate(&card, json!({}));
-            s.answer(json!(must(offered_ids(&s).into_iter().next(), "a first Unit")));
-            s.answer(json!(must(offered_ids(&s).into_iter().next(), "a second Unit")));
+            s.answer(json!(must(s.prompt_modes().into_iter().next(), "a first Unit")));
+            s.answer(json!(must(s.prompt_modes().into_iter().next(), "a second Unit")));
             assert!(must(s.hand(P1).last().cloned(), "the fused card").radiant);
         }
 
@@ -1045,7 +1032,7 @@ mod tests {
             crate::register_all();
             let (mut s, card) = on_field("tricks", OnField { radiant_face: true, ..OnField::default() });
             s.activate(&card, json!({}));
-            s.answer(json!(must(offered_ids(&s).into_iter().next(), "an offered Trap")));
+            s.answer(json!(must(s.prompt_modes().into_iter().next(), "an offered Trap")));
             assert!(must(s.backrow(P1, 2), "the summoned Trap").radiant);
         }
     }
@@ -1173,7 +1160,7 @@ mod tests {
                 for step in [1, 2] {
                     let pending = js(must(s.state().pending.as_ref(), "a discover prompt"));
                     assert_eq!(pending["prompt"], json!(format!("Discover a Unit that costs ({max_cost}) or less")));
-                    let offered = offered_ids(&s);
+                    let offered = s.prompt_modes();
                     assert_eq!(offered.len(), 3, "Discover {step}");
                     for id in &offered {
                         // R65: the cost a pool reads out of play, so an X card (C+ #69 Buff Billy) is 0.

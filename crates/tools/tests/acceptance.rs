@@ -1114,18 +1114,20 @@ fn shared_helper_definitions(text: &str, names: &[&str]) -> Vec<usize> {
 /// `Selection::Mode { option } => option.clone(),` (or `Some(option.clone())`, `Some(option)`,
 /// `option`) with nothing after it on the line but its comma and, in a one-line `match`, the `_ =>` arm
 /// that skips the rest; a `//` comment aside. An arm that does more than hand the option back is not a
-/// copy of `prompt_modes`.
+/// copy of `prompt_modes`. The same read from a prompt as JSON, `option["selection"]["option"]`, counts too.
 fn mode_extraction_lines(text: &str) -> Vec<usize> {
     const ARM: &str = "Selection::Mode { option } =>";
+    const JSON_READ: &str = r#"["selection"]["option"]"#;
     const BODIES: [&str; 4] = ["option.clone()", "Some(option.clone())", "Some(option)", "option"];
     text.lines()
         .enumerate()
         .filter(|(_, line)| {
             let code = line.split("//").next().unwrap_or("");
-            code.split_once(ARM).is_some_and(|(_, rest)| {
-                let body = rest.split(", _ =>").next().unwrap_or(rest);
-                BODIES.contains(&body.trim().trim_end_matches(',').trim())
-            })
+            code.contains(JSON_READ)
+                || code.split_once(ARM).is_some_and(|(_, rest)| {
+                    let body = rest.split(", _ =>").next().unwrap_or(rest);
+                    BODIES.contains(&body.trim().trim_end_matches(',').trim())
+                })
         })
         .map(|(index, _)| index + 1)
         .collect()
@@ -1350,9 +1352,11 @@ fn helpers_the_mode_scan_finds_each_hand_written_extraction() {
         "    Selection::Mode { option } => option.split_once(','),",
         "    if let Selection::Mode { option: x } = &y {",
         "    Selection::Mode { option } => option.clone(), // a comment after the arm",
+        r#"    .map(|option| option["selection"]["option"].as_str().unwrap_or_default().to_string())"#,
+        r#"    // option["selection"]["option"] in a comment"#,
     ]
     .join("\n");
-    assert_eq!(mode_extraction_lines(&text), [1, 2, 3, 4, 10]);
+    assert_eq!(mode_extraction_lines(&text), [1, 2, 3, 4, 10, 11]);
 }
 
 #[test]

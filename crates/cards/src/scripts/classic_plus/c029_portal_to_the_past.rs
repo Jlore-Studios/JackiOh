@@ -137,6 +137,7 @@ mod tests {
                 assert!(matches_object(&js(&s.state().pending), &json!({ "kind": "discover", "playerId": "p1" })));
                 let options = s.prompt_modes();
                 assert_eq!(options.len(), 3);
+                assert_eq!(must(s.state().pending.as_ref(), "an open prompt").options.len(), 3);
                 assert_eq!(unique(options.clone()), 3);
                 for def_id in &options {
                     assert!(BOARD_IDS.contains(&def_id.as_str()));
@@ -170,6 +171,7 @@ mod tests {
                 let mut options = s.prompt_modes();
                 options.sort();
                 assert_eq!(options, ["core-012", MENACE]);
+                assert_eq!(must(s.state().pending.as_ref(), "an open prompt").options.len(), 2);
             }
 
             #[test]
@@ -221,6 +223,7 @@ mod tests {
                 let mut s = game(&[(FUSED, false)], false, 1);
                 s.play(PORTAL, json!({}));
                 assert_eq!(s.prompt_modes(), [FUSED]);
+                assert_eq!(must(s.state().pending.as_ref(), "an open prompt").options.len(), 1);
                 let first = match s.view(P1).pending {
                     Some(PendingView::ForYou(prompt)) => prompt.options.first().map(js),
                     _ => None,
@@ -253,6 +256,7 @@ mod tests {
                 let mut s = game(&[(PORTAL, false), (MENACE, false)], false, 1);
                 s.play(PORTAL, json!({}));
                 assert_eq!(s.prompt_modes(), [MENACE]);
+                assert_eq!(must(s.state().pending.as_ref(), "an open prompt").options.len(), 1);
             }
 
             #[test]
