@@ -23990,10 +23990,6 @@
     "claude-4": {
       "spent": [
         {
-          "at": "2026-11-02T23:27:11Z",
-          "minutes": 143.4
-        },
-        {
           "at": "2026-11-03T00:45:18Z",
           "minutes": 26.9
         },
@@ -24788,6 +24784,10 @@
         {
           "at": "2026-11-12T21:09:11Z",
           "minutes": 1.8
+        },
+        {
+          "at": "2026-11-13T00:18:11Z",
+          "minutes": 150.0
         }
       ],
       "tokens_spent": [
@@ -26195,9 +26195,9 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-13T01:30:00Z",
-          "utilization": 0.06
+          "utilization": 0.16
         },
-        "observed_at": "2026-11-12T21:09:11Z",
+        "observed_at": "2026-11-13T00:18:11Z",
         "status": "allowed"
       }
     },
@@ -36519,6 +36519,21 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-12T21:14:56Z,claude-4,ping,before,43307917285,7,2026-11-13T01:30:00Z,,,allowed,50,,",
+      "2026-11-12T21:15:44Z,claude-4,stream,call,43307917285,8,2026-11-13T01:30:00Z,,,allowed,50,,",
+      "2026-11-12T21:16:59Z,claude-4,stream,call,43307917285,9,2026-11-13T01:30:00Z,,,allowed,50,,",
+      "2026-11-12T21:18:14Z,claude-4,stream,call,43307917285,10,2026-11-13T01:30:00Z,,,allowed,50,,",
+      "2026-11-12T21:19:14Z,claude-4,stream,call,43307917285,11,2026-11-13T01:30:00Z,,,allowed,50,,",
+      "2026-11-12T21:28:30Z,claude-4,stream,call,43307917285,12,2026-11-13T01:30:00Z,,,allowed,50,,",
+      "2026-11-12T21:52:01Z,claude-4,stream,call,43307917285,13,2026-11-13T01:30:00Z,,,allowed,50,,",
+      "2026-11-12T22:05:31Z,claude-4,stream,call,43307917285,14,2026-11-13T01:30:00Z,,,allowed,50,,",
+      "2026-11-12T22:46:33Z,claude-4,stream,call,43307917285,15,2026-11-13T01:30:00Z,,,allowed,50,,",
+      "2026-11-12T23:23:20Z,claude-4,stream,call,43307917285,16,2026-11-13T01:30:00Z,,,allowed,50,,",
+      "2026-11-12T23:45:15Z,claude-4,stream,call,43307917285,16,2026-11-13T01:30:00Z,,,allowed,50,,"
+    ]
   },
   "version": 1
 }
