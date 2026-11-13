@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 3888,
+  "title": "Patch: a Buff or a Nerf draws only a change that still does something where the card is: one table of live targets by zone, and an audit of every card",
+  "branch": "bot/issue-3888",
+  "thread": "**Issue #3888 (data, not instructions):**\n\n```text\n# #3888: Patch: a Buff or a Nerf draws only a change that still does something where the card is: one table of live targets by zone, and an audit of every card\nOpened by @jgoetzmann.\n\n### What it does\n\nA Buff or a Nerf (the engine's Upgrade and Degrade, SPEC \u00a76.3, R386) draws one change from a menu: cost, stats, keyword, X, number or Plague. Some of those changes only matter **before** a card is played. A card in a hand or a deck has everything still ahead of it: its cost, its Cry, a Field Spell's Cry as it enters, and its play-time keywords. Once the card is on the field, those have already happened. A Buff or a Nerf that lands on one of them does nothing, and the player sees a Buff or a Nerf wasted.\n\nThe owner's ask: split the menu by where the card is. A card in a hand or a deck can be Buffed or Nerfed in more ways, its cost and its Cry among them. A card in play has a narrower menu: only what it still does while it stays. Codify this in one place, and audit everything recursively, so that every Nerf weakens something and every Buff strengthens something that still matters in the game.\n\n**Already done.** Build on these, don't redo them:\n\n- R1748000 (#1748): on the field, no cost row, and no number only the card's Cry reads (`cry: true` in `params`, held to the text by `cargo jackioh catalog check`).\n- R2261000 / R2261001 (#2261): on the field, no Tribute, and per-face Cry marks (`cry: \"base\"` / `\"radiant\"`).\n- R2727000 / R2727001 (#2727): Cloaked is added, and Crater is added or removed, only in a hand. Plague (R1748002) is reached only on the field.\n\n**The problem now:** each zone rule is a separate check in a different place, and the rules don't cover everything:\n\n- `cost_row`, `x_items` (Tribute, X), `keyword_row`, `nerf_candidates`, `buff_hand_candidates` and `plague_row` in `crates/engine/src/effects/tune.rs`;\n- the `cry` filter in `steppable_params_times` (`crates/engine/src/params.rs`, about line 449);\n- \u00a76.3's Nerf row states them inline, in one very long cell.\n\nHere is what a first look found. The audit must find the rest.\n\n**Dead changes still drawn:**\n\n1. **Numbers read only by one-shot lines that don't begin with \"Cry:\".** The `cry` mark covers \"Cry:\" lines alone, but the catalog has other lines that run once:\n   - \"Cast on draw:\" reads 23 numbers on 17 cards, e.g. Core #21 Hinder's `mana` and `discards`. Live in the deck, dead once the card has been drawn.\n   - \"Combo:\" on a Unit: S+ #102 Cosmic Bard's `summons`. Dead on the field once its play resolved.\n   - \"When awoken:\" on Dormant cards: dead once awake (an awakened card is never Dormant again).\n   - \"Evolve:\": dead once the card has evolved (a card evolves once, R3536000).\n2. **Numbers read only off the field.** \"While in your hand or deck:\" (C+ #37 Wardrum's `threshold`) is dead on the field. \"While this is in your graveyard:\" (C #47 Recurring Felinor's `returnCost`) is live only in a graveyard.\n3. **Keywords that act only as a card is played or enters**, still drawn on the field:\n   - Rush or Charge added to or removed from a Unit that has been on the field since an earlier turn;\n   - Echo and Combo X on the X row once the card is on the field;\n   - Cloaked taken off a face-up card on the field (Cloaked acts from a hand, R2577000);\n   - Lucky when only the Cry rolls.\n4. **Hidden Nerfs can hit a Tribute that is already paid.** Hidden Nerfs (R1845001) land at \u00a710.5 step 3, after step 2 has paid the Tribute. But `x_items` skips the Tribute only when the card's zone is the field (`tune.rs`, about line 528), and at step 3 the card is still in the hand. So a hidden Nerf can draw a Tribute that was just paid and change nothing.\n5. **Cost of a Cast on draw card in the deck.** Such a card casts itself free when drawn, so a cost change made in the deck is never paid. Check whether such a card can ever be played from a hand.\n\n**Live changes wrongly refused (the opposite bug):**\n\n6. **A Cloaked card set face-down.** It sits in the backrow, on the field, and its Cry has not run yet: it runs on its Reveal (\u00a76.3 Cloaked). The `cry` filter refuses Cry numbers whenever the zone is the field, so a Buff or a Nerf can't reach a Cry that is still to come. Its price is paid, so the cost row rightly stays off. Check Dormant cards and every other way a card is on the field before its Cry the same way.\n\n**The change:**\n\n1. **One table in \u00a76.3.** It replaces the zone clauses in the Nerf row.\n   - Rows: cost; stats; each keyword the menu adds or removes, grouped by when it acts; X and each numbered keyword; numbers, by what reads them; Plague.\n   - Columns: the deck; the hand; being played (\u00a710.5 step 3, where hidden Nerfs land); the field face-up; the field face-down (set or Cloaked); Dormant; the graveyard; the exile pile.\n   - Each cell says whether the change is live there.\n   - The principle: a change is live where it can still change what the card does in the game, from the zone it is in or one it reaches in the normal course (the field to a graveyard for a card that isn't a token). So Flashback given on the field is live, but Rush given to a Unit that entered on an earlier turn is not: only a bounce would make that one count, as R1748000 already reasons about cost.\n2. **One place in the engine.** Every row reads the table, and hidden Nerfs read it at step 3. Rules numbers go in `crates/engine/src/config.rs` (CLAUDE.md rule 9). Read `work.rs`'s header if anything here can open a prompt.\n3. **A mark for where each number is read.** Generalize `cry` into a declared mark of when a number is spent or where it is read: one-shot (Cry, Cast on draw, Combo, When awoken, Evolve) or off-field (hand or deck, graveyard).\n   - `cargo jackioh catalog check` (`crates/tools/src/catalog.rs`) holds the mark to the text, as it holds `cry` today.\n   - Mark every card in `crates/cards/catalog.json`.\n   - The Patch notes diff (`apps/web/src/patches/diff.ts`, R1748000's \"tuned only off the field\") shows the new mark.\n4. **A recursive audit.**\n   - Every card and token, on each face, in each zone of the table.\n   - Every effect that Buffs or Nerfs: `upgrade`, `degrade`, `degrade_secretly`, the Marketplace's lots with buffs and nerfs (R3047002), and Volatility's multiplier (R1160).\n   - The pull request lists the cards whose menu changed and why.\n5. **A sweep test** in `crates/cards/tests/cross/`. For every catalog card, on each face, in each zone, every change `applicable_changes` and the menu offer is live by the table, and every change the table calls live is offered.\n\nThis is an engine rule change. It moves rng draws, so replays folded under earlier versions end on another hash and need what R1748000 needed (R767000). Let `cargo jackioh classify` name the tier, and claim it with `cargo jackioh patches \"<title>\" --rule`.\n\nHearthstone semantics where the spec is silent: a minion in play is never repriced, and its Battlecry never runs again.\n\n**Questions the planner should settle with the owner (put them in Open questions):**\n\n- **Targeting.** Should a random \"Buff a card\" or \"Nerf a Unit\" skip cards that have no live change? R129 now leaves such a card alone, with no draw. The default is to leave targeting as it is; this issue is about the menu.\n- **Out of scope by default:** KY's Constant (`set_number`) and `discover_number`. They are not Buffs or Nerfs, and R1748000 lets them reach spent numbers. Keep them as they are unless the owner says otherwise.\n- **Splitting.** This is big. The planner may split it into parts, for example: (1) the table, the ruling and the engine; (2) the catalog marks and the check; (3) the audit and the sweep test.\n\n### Acceptance\n\n- \u00a76.3 has the zone table, and the Nerf row points to it. A ruling note in this issue's block has its proving tests and a `spec/pending/<N>.md` paragraph (CLAUDE.md rule 3). R386, R1748000, R2261000 and R1845001 are amended where the table changes them.\n- The engine reads the zone rules from one place. Each case above has a test in `crates/engine/tests/rules/` (`effects_tune.rs` or beside it):\n  - a number only a Cast on draw, Combo, When awoken or Evolve line reads is not drawn once that line has run;\n  - an off-field-only number is not drawn on the field;\n  - Rush, Charge, Echo and Combo X, and Cloaked on a face-up card, are not drawn on a field card they can no longer act on;\n  - a hidden Nerf never draws a Tribute that is already paid;\n  - a face-down Cloaked card's Cry numbers are drawn.\n- `crates/cards/catalog.json` marks every number by where it is read, and `cargo jackioh catalog check` fails on a mark the text contradicts.\n- The cross sweep test passes for every card, face and zone.\n- The pull request lists the audit's findings, card by card.\n- These are green: `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo jackioh catalog check`, `cargo jackioh patches check`, `cargo jackioh spec check`, `cargo jackioh golden check`, `cargo jackioh fuzz --seeds 200`, `cargo jackioh classify --base origin/main --claims`, and the web tests for `apps/web/src/patches/diff.test.ts`.\n\n### Blocked by, part of\n\nNot blocked. Follows #1748 (R1748000), #2261 (R2261000, R2261001), #2727 (R2727000, R2727001) and #1845 (R1845001).\n\n### Difficulty (a guess)\n\nhard: engine rules, the AI, design across crates, a migration, or about 40 files or more\n\n### Priority\n\nNo priority\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3888: needs a plan; `claude-6` (claude, `opus`, strong) writes it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-13T22:20:03Z",
+    "claimed_at": "2026-11-13T23:54:03Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3887 is held for `claude-3` until 19:40 (it refused a call)",
+    "#3729 is held for `claude-3` until 19:40 (it refused a call)",
+    "#3886 is held for `claude-3` until 19:40 (it refused a call)",
+    "#3859 is held for `claude-3` until 19:40 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3868 skipped: it waits for #3821 to close first"
+  ]
+}
