@@ -103,7 +103,7 @@ mod tests {
     const TOKEN_MAKER: &str = "core-015"; // Me and Mr Token: Cry: summon a Rush Token
     const STOCKPILE: &str = "core-005";
     const GIGA_BODY: &str = "stand-in (1) 4/4 GIGA R12/12";
-    const AIRBLAST_DRILL: &str = "stinkyscapeplus-052"; // a printed GIGA Field Spell
+    const AIRBLAST_DRILL: &str = "stinkyscapeplus-052"; // Airblast Drill: a printed GIGA Field Spell
 
     use crate::scenario;
 

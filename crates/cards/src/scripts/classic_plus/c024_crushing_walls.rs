@@ -68,7 +68,7 @@ mod tests {
     const TOWER: &str = "classicplus-033"; // Ivory Tower: the first Unit stacked onto it is fused into it
     const FILLER: &str = "core-005";
     const GIGA_BODY: &str = "stand-in (1) 4/4 GIGA R12/12";
-    const AIRBLAST_DRILL: &str = "stinkyscapeplus-052"; // a printed GIGA Field Spell
+    const AIRBLAST_DRILL: &str = "stinkyscapeplus-052"; // Airblast Drill: a printed GIGA Field Spell
 
     /// p1 plays Walls; each side holds a GIGA stand-in anchored at the given units lane.
     fn gigas(radiant_face: bool, p1_anchor: Option<i32>, p2_anchor: i32) -> Scenario {
