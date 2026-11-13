@@ -28,10 +28,12 @@ export const changeEmailTestid = {
 /** Reads the unverified `email` claim, for display only. */
 export function tokenEmail(token: string): string | null {
   const payload = token.split(".")[1];
+  // Stryker disable next-line ConditionalExpression: without this return a missing payload throws a TypeError on its first `replace`, inside the try, whose catch answers the same null.
   if (payload === undefined) return null;
   try {
     const json = atob(payload.replace(/-/gu, "+").replace(/_/gu, "/"));
     const claims: unknown = JSON.parse(json);
+    // Stryker disable next-line ConditionalExpression,LogicalOperator: a redundant guard: a primitive claims value has no string `email`, and null's TypeError lands in the catch, so without it each still answers null.
     if (typeof claims !== "object" || claims === null) return null;
     const email = (claims as { email?: unknown }).email;
     return typeof email === "string" && email.length > 0 ? email : null;
@@ -43,6 +45,7 @@ export function tokenEmail(token: string): string | null {
 /** Renewed once if the provider refused the token as expired (R194). */
 async function sendChange(email: string): Promise<void> {
   const session = readSession();
+  // Stryker disable next-line ConditionalExpression,StringLiteral: the form renders only with a session, and once storage has lost it the next render (the "sending" phase's) is null, so whatever this throws is never shown and nothing is sent either way.
   if (session === null) throw new AuthError("sessionEnded");
   try {
     await requestEmailChange(session.accessToken, email);
@@ -70,6 +73,7 @@ export default function ChangeEmail({ adding = false }: ChangeEmailProps = {}): 
   if (session === null || authConfig() === null) return null;
   const currentEmail = tokenEmail(session.accessToken);
   // "Signed in as a@b.c.": split around the address, so English keeps its text nodes.
+  // Stryker disable next-line StringLiteral: the defaults only satisfy noUncheckedIndexedAccess: the sentence holds {email} in English and in every dictionary (zh-CN.json), so the split always gives both halves.
   const [signedInBefore = "", signedInAfter = ""] = t("Signed in as {email}.").split("{email}");
 
   async function onSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
