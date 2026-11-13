@@ -4,7 +4,7 @@
 //! Can't attack is a printed keyword, so its controller never declares an attack with it. The end-of-turn
 //! attack is a forced one, which skips §4.2 steps 1 to 3, Can't attack's included, and keeps only step 2's
 //! target restrictions (R53): it is the card's only attack. It is
-//! unconditional: no roll is drawn, only the random target's pick. `script_v0_6_0d` keeps the older
+//! unconditional: no roll is drawn, only the random target's pick. `script_v0_6_0g` keeps the older
 //! one, which drew a 100% roll (R386) each end of turn (R767000).
 
 use jackioh_engine::prelude::*;
@@ -13,7 +13,7 @@ pub const ID: &str = "classicplus-019-2";
 
 const BOT_LOSER: &str = "classicplus-019-5";
 
-/// R767000: the declared `chance` of the script kept for v0.6.0d is a percentage.
+/// R767000: the declared `chance` of the script kept for v0.6.0g is a percentage.
 const PERCENT: i32 = 100;
 
 /// §3.1: lane N faces lane N. Each Bot Loser of yours with each enemy Unit across from it. A Unit standing
@@ -51,9 +51,9 @@ fn attacks(ctx: &mut EffectContext<'_>) -> Vec<String> {
     vec![me.id]
 }
 
-/// R767000: through v0.6.0d one `rng.chance(chance / 100)` was drawn each end of turn, even at 100%,
+/// R767000: through v0.6.0g one `rng.chance(chance / 100)` was drawn each end of turn, even at 100%,
 /// and only when an enemy Unit it may attack stood (R129).
-fn attacks_v0_6_0d(ctx: &mut EffectContext<'_>) -> Vec<String> {
+fn attacks_v0_6_0g(ctx: &mut EffectContext<'_>) -> Vec<String> {
     let me = match ctx.live_self() {
         Some(me) => me.clone(),
         None => return Vec::new(),
@@ -74,7 +74,7 @@ fn attacks_v0_6_0d(ctx: &mut EffectContext<'_>) -> Vec<String> {
 
 fn jungle(transfer: bool, rolled: bool) -> Script {
     let cards: ForEachCardCards =
-        if rolled { Arc::new(attacks_v0_6_0d) } else { Arc::new(attacks) };
+        if rolled { Arc::new(attacks_v0_6_0g) } else { Arc::new(attacks) };
     Script {
         end_of_turn: Some(hook(move |_ctx| {
             vec![for_each_card(ForEachCardArgs {
@@ -115,9 +115,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.0d its end-of-turn attack drew a 100% roll first; `KEPT_SCRIPTS` folds those
+/// R767000: through v0.6.0g its end-of-turn attack drew a 100% roll first; `KEPT_SCRIPTS` folds those
 /// replays under it.
-pub fn script_v0_6_0d() -> CardScripts {
+pub fn script_v0_6_0g() -> CardScripts {
     CardScripts {
         base: jungle(false, true),
         radiant: jungle(true, true),
@@ -228,7 +228,7 @@ mod tests {
     }
 
     /// On `radiant_face`, across 12 seeds, with one target the Loser attacks it and the end of turn draws
-    /// one number fewer than the roll of `script_v0_6_0d` did.
+    /// one number fewer than the roll of `script_v0_6_0g` did.
     fn attacks_with_no_roll(radiant_face: bool) {
         for seed in 1..=12 {
             let opts = json!({ "field": [{ "def": FELINORS, "lane": 4 }] });
@@ -244,7 +244,7 @@ mod tests {
                 let declared = json!([{ "key": "chance", "base": 100, "radiant": 100, "better": "up", "step": 10, "min": 1, "max": 100 }]);
                 def.params = serde_json::from_value(declared).ok();
             };
-            let (old_id, old_drawn) = crate::under_kept_as(ID, script_v0_6_0d(), chance, || {
+            let (old_id, old_drawn) = crate::under_kept_as(ID, script_v0_6_0g(), chance, || {
                 let mut old = jungle(json!([]), radiant_face, opts, Some(&name));
                 let old_id = loser(&old).id;
                 let old_before = old.state().rng_cursor;

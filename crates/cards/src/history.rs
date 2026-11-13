@@ -697,11 +697,11 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.5.12ap",
         c073_1_classic_golem::script_v0_5_13g,
     ),
-    // #3802: Jungle Loser's roll, through v0.6.0d, the newest shipped version that ran it.
+    // #3802: Jungle Loser's roll, through v0.6.0g, the newest shipped version that ran it.
     (
         c019_2_jungle_loser::ID,
-        "v0.6.0d",
-        c019_2_jungle_loser::script_v0_6_0d,
+        "v0.6.0g",
+        c019_2_jungle_loser::script_v0_6_0g,
     ),
 ];
 
@@ -1132,6 +1132,18 @@ mod tests {
         assert_eq!(at("v2", "b"), None);
         assert_eq!(at("v1", "c"), None);
         assert_eq!(at("v0", "a"), None, "a version the order does not hold");
+    }
+
+    #[test]
+    fn r767000_jungle_loser_roll_is_kept_through_the_newest_version_that_ran_it() {
+        crate::register_all();
+        let id = c019_2_jungle_loser::ID;
+        for version in ["v0.5.12ap", "v0.6.0b", "v0.6.0d", "v0.6.0e", "v0.6.0f", "v0.6.0g"] {
+            assert!(
+                covering(&HISTORY.order, KEPT_SCRIPTS, version, id).is_some(),
+                "{version} ran the roll: its replays need the kept script"
+            );
+        }
     }
 
     #[test]
