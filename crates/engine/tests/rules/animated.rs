@@ -1255,6 +1255,64 @@ mod r2280001_a_backrow_card_that_comes_to_have_both_animates_at_the_state_check 
         assert_eq!(id_at(sink.state, slot(P1, Row::Units, 1)), Some(flag.id.clone()));
         assert_eq!(events_of_type(sink.events, GameEventType::Animated).len(), 1);
     }
+
+    #[test]
+    fn r2280001_only_a_card_on_top_of_a_backrow_zone_is_owed_a_unit_given_animated_in_its_unit_zone_is_not() {
+        let mut state = playing("animated-owed-unit-zone");
+        let unit = put(&mut state, &plain.id, slot(P1, Row::Units, 3), Default::default());
+        let mut sink = sink_for(&mut state);
+        (grant_keyword(json_as(json!({
+            "target": { "of": "instance", "instanceId": unit.id },
+            "keyword": { "kind": "Animated" },
+        })))
+        .apply)(&mut make_context(&mut sink, None, by(P1)));
+        // It has both now, stats and plain Animated, but stands in a unit zone, not a backrow zone.
+        assert!(has_stat_line(sink.state, by_id(sink.state, &unit.id)));
+        assert_eq!(
+            animated_kind_of(sink.state, by_id(sink.state, &unit.id)),
+            Some(AnimatedKind::Animated)
+        );
+        assert!(!owed(sink.state, &unit.id));
+        state_check(&mut sink);
+        assert_eq!(id_at(sink.state, slot(P1, Row::Units, 3)), Some(unit.id.clone()));
+        assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
+    }
+
+    #[test]
+    fn r2280001_a_trap_counts_once_it_has_fired_face_up_and_one_only_revealed_is_still_armed() {
+        let mut state = playing("animated-owed-fired-trap");
+        let fired = put(
+            &mut state,
+            &mote.id,
+            slot(P2, Row::Backrow, 3),
+            Default::default(),
+        );
+        // p1's play fires p2's stat-less Animated Trap, which stays face-up in its zone (R2280000).
+        let mut state = play_plain(&mut state, 1).state;
+        assert_eq!(by_id(&state, &fired.id).face_up, Some(true));
+        let armed = put(
+            &mut state,
+            &mote.id,
+            slot(P2, Row::Backrow, 4),
+            Default::default(),
+        );
+        by_id_mut(&mut state, &armed.id).revealed = Some(true);
+        let first = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
+        let second = put(&mut state, &plain.id, slot(P2, Row::Units, 2), Default::default());
+        let mut sink = sink_for(&mut state);
+        fuse_into(&mut sink, &first, &fired);
+        fuse_into(&mut sink, &second, &armed);
+        assert!(owed(sink.state, &fired.id));
+        assert!(!owed(sink.state, &armed.id));
+
+        state_check(&mut sink);
+        assert_eq!(id_at(sink.state, slot(P2, Row::Units, 3)), Some(fired.id.clone()));
+        assert_eq!(
+            id_at(sink.state, slot(P2, Row::Backrow, 4)),
+            Some(armed.id.clone())
+        );
+        assert_eq!(events_of_type(sink.events, GameEventType::Animated).len(), 1);
+    }
 }
 
 // R3542000 (issue #3542): a card whose own text gives it stats by its Plague Counters has a stat line

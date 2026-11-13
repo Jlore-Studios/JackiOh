@@ -152,7 +152,11 @@ pub fn cloak_units() -> CardDef {
     def(7844, "cloak-units", "Field Spell", 1, json!([]))
 }
 
-/// "Aura: The Spells in your hand have Cloaked."
+/// The Echo the Radiant `cloak_spells` adds to a Spell its controller reveals.
+pub const REVEAL_ECHO: i32 = 1;
+
+/// "Aura: The Spells in your hand have Cloaked." — Meditative #99 Paranoia's shape, its Radiant face
+/// adding "Spells you reveal have Echo +`REVEAL_ECHO`" (R1045).
 pub fn cloak_spells() -> CardDef {
     def(7845, "cloak-spells", "Field Spell", 1, json!([]))
 }
@@ -517,10 +521,17 @@ pub static KW_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
     );
     table.insert(
         cloak_spells().id,
-        both(Script {
-            aura: Some(cloak_hand(CardType::Spell)),
-            ..Script::default()
-        }),
+        CardScripts {
+            base: Script {
+                aura: Some(cloak_hand(CardType::Spell)),
+                ..Script::default()
+            },
+            radiant: Script {
+                aura: Some(cloak_hand(CardType::Spell)),
+                reveal_echo: Some(read_hook(|_args| REVEAL_ECHO)),
+                ..Script::default()
+            },
+        },
     );
     table.insert(
         plain_spell().id,

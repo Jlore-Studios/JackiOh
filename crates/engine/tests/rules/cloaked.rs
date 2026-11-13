@@ -6,9 +6,9 @@ use jackioh_engine::testkit::*;
 
 use super::fixtures::harness::{act, act_result, put, slot};
 use super::fixtures::keywords_783::{
-    board_783 as playing, cloak_spells, cloak_units, cloaked_bolt, cloaked_field, cloaked_field_trap,
-    cloaked_mourner, cloaked_token, cloaked_trap, cloaked_unit, grunt, plain_spell, plain_unit, second_wind,
-    toe_cracker, trap_discount,
+    REVEAL_ECHO, board_783 as playing, cloak_spells, cloak_units, cloaked_bolt, cloaked_field,
+    cloaked_field_trap, cloaked_mourner, cloaked_token, cloaked_trap, cloaked_unit, crater_cloaked, grunt,
+    plain_spell, plain_unit, second_wind, toe_cracker, trap_discount,
 };
 use super::fixtures::play_pipeline_b::plays_of;
 use super::fixtures::prompt_harness::{answer_keys, cast_now, open_as, round_trip};
@@ -539,6 +539,23 @@ mod r783006_cloaked_reveal {
         assert!(!reveal_offered(&state, &set.id, P1));
     }
 
+    #[test]
+    fn r783006_only_a_card_set_by_its_cloaked_has_the_reveal_a_timed_set_card_has_none() {
+        let mut state = playing("r783006-timed");
+        let unit = in_hand(&mut state, &cloaked_unit().id, P1);
+        let set = cloak(&mut state, &unit.id, 2);
+        assert!(reveal_offered(&state, &set.id, P1));
+        // ME-ALTPLAY's timed reveals, which no card grants and the wire keeps for old records: such a
+        // set card has no Activate: Reveal, though a unit zone is open for it.
+        for timing in RevealAt::ALL {
+            let mut old = state.clone();
+            if let Some(stamp) = find_instance_mut(&mut old, &set.id).and_then(|card| card.set_as.as_mut()) {
+                stamp.reveal = timing;
+            }
+            assert!(!reveal_offered(&old, &set.id, P1), "{timing:?}");
+        }
+    }
+
     fn live_of(state: &GameState, id: &str) -> CardInstance {
         must(find_instance(state, id).cloned(), "the card")
     }
@@ -716,5 +733,97 @@ mod r783008_leaving_unrevealed {
             settle(&mut sink, SettleOptions::default());
         }
         state.rng_cursor = rng.cursor();
+    }
+}
+
+mod r783009_what_a_hidden_cloaked_card_may_be {
+    use super::*;
+    use jackioh_engine::alt_play::{lent_cloaked_def_ids, printed_cloaked_def_ids};
+
+    /// This file's cards among `ids`, in their order.
+    fn ours(ids: Vec<String>) -> Vec<String> {
+        ids.into_iter().filter(|id| id.starts_with("kw-")).collect()
+    }
+
+    fn turn_face_up(state: &mut GameState, id: &str) {
+        if let Some(card) = find_instance_mut(state, id) {
+            card.face_up = Some(true);
+        }
+    }
+
+    #[test]
+    fn r783009_the_cards_that_print_cloaked_on_a_face_that_is_no_trap_in_catalog_order() {
+        let _state = playing("r783009-printed");
+        // Not the Trap nor the Field Trap that print it, nor the token, which no catalog query yields.
+        assert_eq!(
+            ours(printed_cloaked_def_ids()),
+            vec![
+                cloaked_unit().id,
+                cloaked_bolt().id,
+                cloaked_field().id,
+                crater_cloaked().id,
+                cloaked_mourner().id,
+            ]
+        );
+    }
+
+    #[test]
+    fn r783009_r783007_the_cards_an_aura_lends_cloaked_in_a_hand_and_none_while_no_aura_lends_it() {
+        let mut state = playing("r783009-lent");
+        // An aura that lends something else (the field's +1 Attack): no card is lent Cloaked, and the
+        // cards that print it are left to `printed_cloaked_def_ids`.
+        let field = put(
+            &mut state,
+            &cloaked_field().id,
+            slot(P1, Row::Backrow, 1),
+            json!({}),
+        );
+        turn_face_up(&mut state, &field.id);
+        assert_eq!(lent_cloaked_def_ids(&state, P1), Vec::<String>::new());
+        assert_eq!(lent_cloaked_def_ids(&state, P2), Vec::<String>::new());
+
+        let lender = put(
+            &mut state,
+            &cloak_units().id,
+            slot(P1, Row::Backrow, 2),
+            json!({}),
+        );
+        turn_face_up(&mut state, &lender.id);
+        let lent = lent_cloaked_def_ids(&state, P1);
+        // Every Unit in p1's hand, and a card that prints Cloaked reads as Cloaked there too.
+        for card in [plain_unit(), grunt(), cloaked_unit(), cloaked_bolt()] {
+            assert!(lent.contains(&card.id), "{}", card.id);
+        }
+        // Not a Spell the aura passes over, nor a Trap or Field Trap, which a Cloaked play never sets.
+        for card in [plain_spell(), cloak_units(), cloaked_trap(), cloaked_field_trap()] {
+            assert!(!lent.contains(&card.id), "{}", card.id);
+        }
+        // p2's hand is lent nothing: only the cards that print Cloaked read as Cloaked there.
+        assert_eq!(lent_cloaked_def_ids(&state, P2), printed_cloaked_def_ids());
+    }
+}
+
+mod r1045_reveal_echo {
+    use super::*;
+
+    #[test]
+    fn r1045_a_spell_revealed_while_a_radiant_paranoia_acts_resolves_with_its_echo() {
+        let mut state = playing("r1045-reveal-echo");
+        let lender = put(
+            &mut state,
+            &cloak_spells().id,
+            slot(P1, Row::Backrow, 1),
+            json!({ "radiant": true }),
+        );
+        if let Some(card) = find_instance_mut(&mut state, &lender.id) {
+            card.face_up = Some(true);
+        }
+        let spell = in_hand(&mut state, &plain_spell().id, P1);
+        let set = cloak(&mut state, &spell.id, 3);
+        let before = hero_health(&state, P2);
+        state = act(&state, reveal_body(&set.id, "p1"));
+        // The Spell deals 1 as it resolves, then once more for each Echo the Radiant aura adds.
+        assert_eq!(hero_health(&state, P2), before - (1 + REVEAL_ECHO));
+        assert!(state.players.p1.graveyard.iter().any(|card| card.id == set.id));
     }
 }
