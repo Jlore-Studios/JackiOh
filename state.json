@@ -16290,17 +16290,17 @@
           "claude"
         ],
         "builder": "claude",
-        "built_by": "claude-7",
+        "built_by": "claude-1",
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "provider": "claude-7",
-            "run": "43279828282",
+            "provider": "claude-1",
+            "run": "43378160805",
             "tier": "strong"
           }
         ],
-        "sha": "b3d96627333c22ce3f910c5446996990420f3f99",
+        "sha": "b2351bb29a4e55fb1a953bbf8360951d16857d3d",
         "tiers": {
           "claude": "strong"
         }
