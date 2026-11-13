@@ -16932,7 +16932,7 @@
       "provider": "claude-7",
       "queued_at": "2026-11-13T06:18:10Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "pending:2249ecc6-1794550973",
+      "run_id": "43378388906",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
