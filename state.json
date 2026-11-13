@@ -15556,11 +15556,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-13T16:46:58Z",
+        "at": "2026-11-13T17:33:08Z",
         "difficulty": "hard",
         "provider": "claude-6",
-        "tier": "medium",
-        "why": "Rule 1 (engine rules: `crates/engine/src/` gains an event and a ruling) and rule 3 (the engine, shared and web crates must agree on one new wire event), so hard."
+        "tier": "strong",
+        "why": "Engine rules (crates/engine/src/): a new wire event, kept out of the trigger loop, R68's numbering and the view's R168 window; also design across the engine, shared log and web crates"
       },
       "failures": 1,
       "forced": false,
