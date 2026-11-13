@@ -14858,14 +14858,26 @@
       }
     },
     "3821": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "claude-1",
+      "owner_since": "2026-11-13T15:27:48Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "claude-1",
       "queued_at": "2026-11-13T15:11:54Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
+      "run_id": "pending:181d7173-1794583621",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-13T15:27:48Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "3822": {
       "action": "build",
@@ -15757,9 +15769,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T15:26:44Z",
+    "at": "2026-11-13T15:27:48Z",
     "url": "",
-    "what": "spot-check #3779 on claude-6"
+    "what": "plan #3821 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-13T14:55:46Z",
