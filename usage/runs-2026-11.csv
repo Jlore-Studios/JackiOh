@@ -1982,3 +1982,4 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-13T04:08:17Z,43338265739,claude-8,opus,build,3806,hard,built,,150,0,0,0,,26,6,,,188.6,claude-8,fresh,,1
 2026-11-13T04:36:10Z,43357920338,claude-6,opus,review,3814,hard,reviewed,,2,23,11072,1021832,1.0908,0,2,,,86.5,claude-1,none,,1
 2026-11-13T04:40:02Z,43344936566,claude-7,opus,build,3790,hard,built,,146.5,391,97347,36995934,11.4901,47,11,,,238.1,claude-7,fresh,,1
+2026-11-13T04:52:30Z,43353306193,claude-3,sonnet+opus,revise,3810,medium,approved,,8.3,34,6951,1171389,0.8454,56,57,,,2.9,claude-7,none,other,1
