@@ -24,15 +24,30 @@ fn non_unit(state: &GameState, card: &CardInstance) -> bool {
     NON_UNIT.contains(&card_type_of_face(state, &card.def_id, card.radiant))
 }
 
-/// This turn's non-Unit plays of `player` that still exist, in play order (R86).
-fn non_unit_plays(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
-    played_ids_this_turn(state, player)
+/// The non-Units among `played`, the ids of this turn's plays, that still exist, in play order (R86).
+fn non_units_of(state: &GameState, played: &[String]) -> Vec<CardInstance> {
+    played
         .iter()
         .filter_map(|id| find_instance(state, id))
         .filter(|card| non_unit(state, card))
         .cloned()
         .collect()
 }
+
+/// This turn's non-Unit plays of `player` that still exist, made before the turn's end began: another
+/// Wardrum's end-of-turn copies are none of them (R3800003).
+fn non_unit_plays(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
+    non_units_of(state, &played_ids_before_this_end(state, player))
+}
+
+/// R767000: the pool as it was through v0.6.0b, every non-Unit played this turn, the copies an earlier
+/// Wardrum's end of turn cast included; `KEPT_SCRIPTS` folds those replays under it.
+fn non_unit_plays_v0_6_0b(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
+    non_units_of(state, &played_ids_this_turn(state, player))
+}
+
+/// Where an end of turn casts from: `non_unit_plays`, or the kept script's pool.
+type Pool = fn(&GameState, PlayerId) -> Vec<CardInstance>;
 
 /// R578: whether the play this event resolves is the controller's threshold-th non-Unit play of the turn.
 /// Its place is the turn's count of such plays (which keeps a play whose card has since ceased to exist)
@@ -110,9 +125,9 @@ fn copy_of(id: String) -> impl Fn(&mut EffectContext<'_>) -> Option<CastDef> + S
     }
 }
 
-/// The radiant face's `forEachCard` list: this turn's non-Unit plays that still exist, by id.
-fn played_non_unit_ids(ctx: &mut EffectContext<'_>) -> Vec<String> {
-    non_unit_plays(ctx.state, ctx.controller).into_iter().map(|card| card.id).collect()
+/// The radiant face's `forEachCard` list: the pool's cards, by id.
+fn played_non_unit_ids(pool: Pool) -> impl Fn(&mut EffectContext<'_>) -> Vec<String> + Send + Sync + 'static {
+    move |ctx| pool(ctx.state, ctx.controller).into_iter().map(|card| card.id).collect()
 }
 
 /// The radiant face's `forEachCard` step: cast a copy of that card, by definition and face.
@@ -135,10 +150,10 @@ fn wardrum(end_of_turn: Hook) -> Script {
     }
 }
 
-pub fn script() -> CardScripts {
-    let base = wardrum(hook(|_ctx| {
-        vec![cast_new_read(|ctx| {
-            let plays = non_unit_plays(ctx.state, ctx.controller);
+fn scripts(pool: Pool) -> CardScripts {
+    let base = wardrum(hook(move |_ctx| {
+        vec![cast_new_read(move |ctx| {
+            let plays = pool(ctx.state, ctx.controller);
             ctx.rng.pick(&plays).map(|card| CastDef {
                 def_id: card.def_id.clone(),
                 radiant: Some(card.radiant),
@@ -146,14 +161,24 @@ pub fn script() -> CardScripts {
         })]
     }));
 
-    let radiant = wardrum(hook(|_ctx| {
+    let radiant = wardrum(hook(move |_ctx| {
         vec![for_each_card(ForEachCardArgs {
-            cards: Arc::new(played_non_unit_ids),
+            cards: Arc::new(played_non_unit_ids(pool)),
             each: Arc::new(cast_copy_of),
         })]
     }));
 
     CardScripts { base, radiant }
+}
+
+pub fn script() -> CardScripts {
+    scripts(non_unit_plays)
+}
+
+/// R767000, R3800003: through v0.6.0b each end of turn cast from every non-Unit played this turn, an
+/// earlier Wardrum's copies included; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_0b() -> CardScripts {
+    scripts(non_unit_plays_v0_6_0b)
 }
 
 // C+ #37 Wardrum (SPEC §8.7): summoned with no Cry (R1); a Trap copy stays hidden (R33, R97).
@@ -674,6 +699,32 @@ mod tests {
                 .collect();
             assert_eq!(casts, vec![BONE_STORM, MANA_WELL, SHEEPISH]);
             s.expect_stats(MENACE, json!({ "health": 7 }));
+        }
+
+        /// R3800003 (issue #3800, fuzz seed 5763): each Radiant Wardrum casts a copy of the non-Units
+        /// played before the turn's end began, not of the copies another Wardrum's end of turn cast, so
+        /// two of them cast the two plays twice, four casts, where reading each other's would make six.
+        #[test]
+        fn r3800003_two_radiant_wardrums_each_cast_the_plays_made_before_the_end_not_each_others_copies() {
+            let mut s = scenario(json!({
+                "p1": {
+                    "hand": [BONE_STORM, MANA_WELL, FILLER],
+                    "field": [{ "def": WARDRUM, "radiant": true, "lane": 1 }, { "def": WARDRUM, "radiant": true, "lane": 2 }],
+                    "library": LIBRARY,
+                    "mana": 8,
+                },
+                "p2": { "hand": [FILLER], "field": [MENACE], "library": LIBRARY },
+            }));
+            s.play(BONE_STORM, json!({}));
+            s.play(MANA_WELL, json!({}));
+            let from = s.events().len();
+            s.end_turn();
+            let casts: Vec<String> = events_json(&s)[from..]
+                .iter()
+                .filter(|event| event["type"] == "cardAnnounced" && event["player"] == "p1")
+                .filter_map(|event| event["defId"].as_str().map(str::to_string))
+                .collect();
+            assert_eq!(casts, vec![BONE_STORM, MANA_WELL, BONE_STORM, MANA_WELL]);
         }
 
         #[test]

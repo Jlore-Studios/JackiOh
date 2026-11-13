@@ -8,7 +8,7 @@
 //! side, a Unit or a backrow card (R81). `transform_cost_step` replaces it in place by a card of its type
 //! that costs `STEP` more (R3557004). Temporary is catalog data, 1 on both faces; the Radiant face's 2 is
 //! granted to the card as it returns (`RADIANT_TEMPORARY`). At the end of the turn it was cast on, the spell goes from the graveyard back to its owner's hand,
-//! a full hand burning it (§2.4, R4), as Core #23 Reoccurring Dream returns; the cleanup after the
+//! a full hand burning it (§2.4, R4) (no count given then, issue #3800), as Core #23 Reoccurring Dream returns; the cleanup after the
 //! end-of-turn steps then counts the returned card down (R637), so the base face's Temporary 1 discards it
 //! at once and the Radiant face's Temporary 2 keeps it one more turn (R3557004).
 
@@ -32,7 +32,7 @@ fn returns_to_hand(ctx: &EffectContext<'_>) -> bool {
     self_.return_to_hand_at_end_of_turn == Some(true) || was_played_this_turn(ctx.state, self_.controller, self_)
 }
 
-fn cultivation(step: i32) -> Script {
+fn cultivation(step: i32, burned_keeps_count: bool) -> Script {
     Script {
         targets: vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow"] }))],
         cry: Some(hook(move |_ctx| {
@@ -43,8 +43,11 @@ fn cultivation(step: i32) -> Script {
                 return vec![];
             }
             let mut effects = vec![bounce(json_as(json!({ "target": { "of": "self" } })))];
+            // A full hand burns it on its return (§2.4, R4): it stays in the graveyard, which keeps no
+            // keyword given to it (R78), so the count goes only on a card that reaches the hand.
             if step == RADIANT_STEP
                 && let Some(this) = ctx.live_self()
+                && (burned_keeps_count || room_in(ctx.state, this.owner, OffFieldZone::Hand) > 0)
             {
                 effects.push(grant_keyword(json_as(json!({
                     "target": { "of": "instance", "instanceId": this.id },
@@ -59,8 +62,17 @@ fn cultivation(step: i32) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: cultivation(BASE_STEP),
-        radiant: cultivation(RADIANT_STEP),
+        base: cultivation(BASE_STEP, false),
+        radiant: cultivation(RADIANT_STEP, false),
+    }
+}
+
+/// R767000: through v0.6.0b the Radiant face gave the count to a card a full hand had burned, in its
+/// graveyard (issue #3800); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_0b() -> CardScripts {
+    CardScripts {
+        base: cultivation(BASE_STEP, true),
+        radiant: cultivation(RADIANT_STEP, true),
     }
 }
 
@@ -146,6 +158,29 @@ mod tests {
         s.end_turn();
         s.expect_in_zone(ID, "hand");
         assert_eq!(s.card(ID).temporary, Some(1));
+    }
+
+    /// Issue #3800 (fuzz seed 8687): a full hand burns the returning card into the graveyard (§2.4, R4),
+    /// which keeps no keyword granted to it (R78, R215), the Radiant face's Temporary 2 among them.
+    #[test]
+    fn r4_r78_radiant_burned_by_a_full_hand_on_its_return_keeps_no_temporary_in_the_graveyard() {
+        crate::register_all();
+        // With it played, the hand left is full.
+        let mut hand = vec![json!({ "def": ID, "radiant": true })];
+        hand.extend((0..jackioh_engine::config::HAND_CAP).map(|_| json!(FILLER)));
+        let mut s = scenario(json!({
+            "seed": "tireless",
+            "p1": { "hand": hand, "field": ["core-008"], "library": filler(4), "mana": 10 },
+            "p2": { "hand": [FILLER], "field": ["core-008"], "library": filler(4) },
+        }));
+        let old = s.unit_at(P2, 1).id;
+        s.play(ID, pick(&old));
+        s.expect_in_zone(ID, "graveyard");
+        s.end_turn();
+        let kinds: Vec<&str> = s.last_events().iter().map(|event| event.event_type().as_str()).collect();
+        assert!(kinds.contains(&"burned"), "{kinds:?}");
+        s.expect_in_zone(ID, "graveyard");
+        assert!(s.card(ID).granted_keywords.is_empty(), "{:?}", s.card(ID).granted_keywords);
     }
 
     #[test]

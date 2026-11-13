@@ -35,9 +35,9 @@ use crate::scripts::classic::{
 };
 use crate::scripts::classic_plus::{
     c007_the_house, c011_anime_armor, c016_conjure_rush_token, c019_1_top_loser, c023_dropshipping,
-    c030_felinor_fuser, c033_ivory_tower, c040_appropriations, c042_kys_test, c043_ai_slop, c047_joggs_box,
-    c048_jlockeeds_lobbyist, c049_jay_fungus, c051_jlockeeds_j15_fighter, c053_book_of_tokens,
-    c062_kys_papaya, c071_book_of_buff, c073_1_classic_golem, c078_claudes_datacenter,
+    c030_felinor_fuser, c033_ivory_tower, c037_wardrum, c040_appropriations, c042_kys_test, c043_ai_slop,
+    c047_joggs_box, c048_jlockeeds_lobbyist, c049_jay_fungus, c051_jlockeeds_j15_fighter,
+    c053_book_of_tokens, c062_kys_papaya, c071_book_of_buff, c073_1_classic_golem, c078_claudes_datacenter,
 };
 use crate::scripts::core::{
     c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c032_prem_panther, c042_eugenics,
@@ -69,6 +69,7 @@ use crate::scripts::stinkyscape::{
     c163_swear_loyalities, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid,
     c172_huge_asteroid, c173_abandoned_spice_tower, t_narcor, t_red_narcor,
 };
+use crate::scripts::stinkyscape_plus::c104_tireless_cultivation;
 use crate::scripts::training_grounds::{
     c036_training_dummy, c038_tutorial_master, c045_jlockeeds_weapons,
     c052_snom_bunny_mind_control as c052_legacy_snom_bunny_mind_control,
@@ -86,7 +87,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// #2179 (R1161, R920, R580, R2179003), #2396 (R2396000), #2521 and #2657 (R2657000 with
 /// `never_defense_kept`, R2657001, R2657002, R2657004), and #3000's parts (#3038, #3040, #3041, #3042,
 /// #3044, #3048) and #3128's (#3134, #3135, #3139, #3140, #3142),
-/// and #3551's S01 (R3551000, R3551001, R3551002, R3551003, R3551004).
+/// and #3551's S01 (R3551000, R3551001, R3551002, R3551003, R3551004), and #3800 (R3800003, S+ #104).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -326,15 +327,15 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (c050_beam_v3::ID, "v0.5.7", c050_beam_v3::script_v0_5_11),
     (c051_repeater_v3::ID, "v0.5.7", c051_repeater_v3::script_v0_5_11),
     (c052_cannon_v3::ID, "v0.5.7", c052_cannon_v3::script_v0_5_11),
-    (c053_flak_v3::ID, "v0.5.7", c053_flak_v3::script_v0_5_11),
+    (c053_flak_v3::ID, "v0.5.8b", c053_flak_v3::script_v0_5_11),
     (c054_beam_v4::ID, "v0.5.7", c054_beam_v4::script_v0_5_11),
     (c055_repeater_v4::ID, "v0.5.7", c055_repeater_v4::script_v0_5_11),
     (c056_cannon_v4::ID, "v0.5.7", c056_cannon_v4::script_v0_5_11),
-    (c057_flak_v4::ID, "v0.5.7", c057_flak_v4::script_v0_5_11),
+    (c057_flak_v4::ID, "v0.5.8b", c057_flak_v4::script_v0_5_11),
     (c058_beam_v5::ID, "v0.5.7", c058_beam_v5::script_v0_5_11),
     (c059_repeater_v5::ID, "v0.5.7", c059_repeater_v5::script_v0_5_11),
     (c060_cannon_v5::ID, "v0.5.7", c060_cannon_v5::script_v0_5_11),
-    (c061_flak_v5::ID, "v0.5.7", c061_flak_v5::script_v0_5_11),
+    (c061_flak_v5::ID, "v0.5.8b", c061_flak_v5::script_v0_5_11),
     (c074_paragon_x::ID, "v0.5.7", c074_paragon_x::script_v0_5_11),
     (c094_tmack_trav::ID, "v0.5.7", c094_tmack_trav::script_v0_5_11),
     (
@@ -679,6 +680,13 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c073_1_classic_golem::ID,
         "v0.5.12ap",
         c073_1_classic_golem::script_v0_5_13g,
+    ),
+    // Issue #3800, kept under v0.6.0b, the newest version shipped when it was written.
+    (c037_wardrum::ID, "v0.6.0b", c037_wardrum::script_v0_6_0b),
+    (
+        c104_tireless_cultivation::ID,
+        "v0.6.0b",
+        c104_tireless_cultivation::script_v0_6_0b,
     ),
 ];
 
@@ -1094,6 +1102,49 @@ pub fn has_script_at(version: &str, id: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// R767000, R3538002: a kept script runs on the definitions of every version it covers, so from
+    /// v0.5.0 on each of them declares the numbers the version it is kept at declares (a script reads
+    /// its numbers through `param`, which refuses an undeclared one). Flak v3, v4 and v5 rolled their
+    /// `least` to `most` from v0.5.9 on: v0.5.7b through v0.5.8b still dealt their `damage`, so the
+    /// `damage` script is kept at v0.5.8b, not at v0.5.7, where a past version from v0.5.8b ran the
+    /// rolling script and panicked (issue #3800, S+ #33 True Conservative).
+    #[test]
+    fn r767000_from_v0_5_0_on_a_kept_script_covers_only_versions_declaring_its_numbers() {
+        let keys = |version: &str, id: &str| -> Option<Vec<String>> {
+            let def = catalog_defs_at(version)?.get(id)?;
+            Some(
+                def.params
+                    .iter()
+                    .flatten()
+                    .map(|param| param.key.clone())
+                    .collect(),
+            )
+        };
+        let from = HISTORY
+            .order
+            .iter()
+            .position(|version| version == "v0.5.0")
+            .expect("v0.5.0 shipped");
+        let mut wrong: Vec<String> = Vec::new();
+        for (at, (id, kept_at, _)) in KEPT_SCRIPTS.iter().enumerate() {
+            let own = keys(kept_at, id);
+            for version in &HISTORY.order[from..] {
+                if covering_at(&HISTORY.order, KEPT_SCRIPTS, version, id) != Some(at) {
+                    continue;
+                }
+                let Some(theirs) = keys(version, id) else {
+                    continue;
+                };
+                if Some(&theirs) != own.as_ref() {
+                    wrong.push(format!(
+                        "{id} kept at {kept_at} covers {version}: {own:?} against {theirs:?}"
+                    ));
+                }
+            }
+        }
+        assert!(wrong.is_empty(), "{wrong:#?}");
+    }
 
     #[test]
     fn r767000_a_kept_script_covers_its_version_and_those_before_back_to_the_previous() {

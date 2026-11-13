@@ -246,6 +246,16 @@ pub fn played_ids_this_turn(state: &GameState, player: PlayerId) -> Vec<String> 
     state.players[player].turn_log.played_ids.clone()
 }
 
+/// R3800003: `played_ids_this_turn` as this turn's end began (§2.2): once it has, the plays and casts
+/// the end of turn itself made are left off; before it, every play this turn.
+pub fn played_ids_before_this_end(state: &GameState, player: PlayerId) -> Vec<String> {
+    let log = &state.players[player].turn_log;
+    let before = log
+        .played_before_end
+        .map_or(log.played_ids.len(), |count| usize::try_from(count).unwrap_or(0));
+    log.played_ids.iter().take(before).cloned().collect()
+}
+
 /// §6.2 Combo X: how many cards this player played this turn before this card's play, its place in
 /// the log §10.5 step 4 wrote (§8 #10). A card the play itself casts (R70) comes after it; a card
 /// played twice counts from its latest play; for a card in a hand or not in the log every play is

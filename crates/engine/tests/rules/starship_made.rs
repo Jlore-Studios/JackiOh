@@ -186,6 +186,45 @@ fn r3539001_made_starships_stand_backrow_middle_first_holding_their_pieces() {
     }
 }
 
+/// R1852000, R1852005, issue #3800 (fuzz seed 5912, S+ #155 The Far Vagabond then a Classic+ #35
+/// Rollback): a made Starship's fusions name each piece's definition to both seats, the public memory of
+/// a face-up fusion, after the Starship has gone back to its owner's hand and while a card of a piece's
+/// definition waits in that owner's library. The piece's own card was never in any pile.
+#[test]
+fn r1852000_a_made_starships_fusions_name_their_pieces_once_it_is_back_in_a_hand() {
+    register_starship_made_fixtures();
+    let mut s = scenario(json!({
+        "seed": "r3539000",
+        "active": "p1",
+        "p1": { "hand": [maker.id], "library": [booster.id, plain.id, plain.id, plain.id] },
+        "p2": { "library": [plain.id, plain.id, plain.id, plain.id] },
+    }));
+    s.state_mut().players[P1].auto_end_turn = Some(false);
+    s.play(maker.id.as_str(), json!({}));
+    for lane in [3, 2] {
+        let ship = s.backrow(P1, lane).expect("a made Starship");
+        let mut events: Vec<GameEvent> = Vec::new();
+        let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
+        effects::bounce_card(&mut EngineSink::new(s.state_mut(), &mut events, &mut rng), &ship);
+        assert_eq!(s.card(&ship.id).zone.z(), ZoneName::Hand);
+    }
+    let fused: Vec<Value> = s
+        .view(P2)
+        .events
+        .iter()
+        .filter(|event| event.event_type() == GameEventType::StarshipFused)
+        .map(|event| serde_json::to_value(event).expect("an event serializes"))
+        .collect();
+    assert!(
+        fused.iter().any(|event| event["defId"] == json!(booster.id)),
+        "{fused:?}"
+    );
+    assert_eq!(
+        create_invariant_monitor(s.state()).hidden(s.state()),
+        Vec::<String>::new()
+    );
+}
+
 #[test]
 fn r3539001_made_starships_never_repeat_until_every_blueprint_is_out() {
     let mut s = board("p1", json!([]), json!([]), json!([]), json!([]));

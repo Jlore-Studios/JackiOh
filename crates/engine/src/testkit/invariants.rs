@@ -1036,6 +1036,19 @@ fn drop_launched_pieces(shown: &mut Value, launched: &[String]) {
     }
 }
 
+/// R1852000, R1852005: a fusion names its dead piece with the definition it died as, face up, the public
+/// memory of a public death whatever has become of the piece's card or its Starship since (a Classic+ #35
+/// Rollback that took the Starship back to its owner's hand while a copy of the piece waits in that
+/// owner's library: fuzz seed 5912, issue #3800). The definition the engine's own event named is taken out
+/// of the view's copy of it, as a launch's pieces are; the piece's id is still scanned.
+fn drop_fused_piece(shown: &mut Value, piece_def: &str) {
+    if let Some(object) = shown.as_object_mut()
+        && object.get("defId").and_then(Value::as_str) == Some(piece_def)
+    {
+        object.remove("defId");
+    }
+}
+
 /// Every string and object inside `value`, with the path it was found at. Values only, never keys.
 fn walk(
     value: &Value,
@@ -1134,6 +1147,9 @@ pub fn hidden_information_violations(
         let mut shown = serde_json::to_value(event).expect("a GameEvent serializes");
         if let Some(GameEvent::StarshipLaunched { pieces, .. }) = source {
             drop_launched_pieces(&mut shown, pieces);
+        }
+        if let Some(GameEvent::StarshipFused { def_id, .. }) = source {
+            drop_fused_piece(&mut shown, def_id);
         }
         events.push(shown);
     }
@@ -2088,6 +2104,12 @@ pub struct InvariantMonitor {
     /// R636, R781004: the units `note_drawn_windfury` read as maybe Windfury, whose drawn keywords a
     /// change of control keeps (the card stays on the field).
     drawn_windfury: IndexSet<String>,
+    /// R3543003: the stint in which each field unit was seen with Frenzy as the action began, read by
+    /// `before`. A kill inside the action is answered by the Frenzy its attacker had then, though the
+    /// state the action leaves no longer shows it: the autopilot's whole turn kills, attacks again and
+    /// loses the attacker to a trap's exile or a counter-hit, which resets the keywords a Drone Corvette
+    /// drew (R78, R781004; fuzz seeds 8022 and 7429, issue #3800).
+    frenzy: IndexMap<String, i32>,
     /// The cards that fired as traps this turn: one animates as its firing's last step, not at the
     /// start of the turn, and that is an entry even on its controller's turn (R383, R1062).
     fired: IndexSet<String>,
@@ -2136,6 +2158,7 @@ impl InvariantMonitor {
             chosen_exertion: None,
             windfury: IndexMap::new(),
             carried_windfury: IndexSet::new(),
+            frenzy: IndexMap::new(),
             drawn_windfury: IndexSet::new(),
             fired: IndexSet::new(),
             readied: IndexSet::new(),
@@ -2158,6 +2181,17 @@ impl InvariantMonitor {
             if crate::layers::unit_has(state, card, KeywordKind::Windfury) {
                 let stint = self.stint_of(&card.id);
                 self.windfury.insert(card.id.clone(), stint);
+            }
+        }
+    }
+
+    /// R3543003: the field units with Frenzy as the action begins, each in its stint (`frenzy`).
+    fn note_frenzy(&mut self, state: &GameState) {
+        self.frenzy.clear();
+        for card in field_cards(state) {
+            if crate::layers::unit_has(state, card, KeywordKind::Frenzy) {
+                let stint = self.stint_of(&card.id);
+                self.frenzy.insert(card.id.clone(), stint);
             }
         }
     }
@@ -2565,6 +2599,7 @@ impl InvariantMonitor {
             })
         });
         self.note_windfury(state);
+        self.note_frenzy(state);
         self.carried_windfury = PLAYER_IDS
             .into_iter()
             .flat_map(|player| {
@@ -2828,10 +2863,14 @@ impl InvariantMonitor {
                         // R1869002: a kill readies its attacker only through its own `afterAttack` text;
                         // R3543003: or its Frenzy, which answers the same kill.
                         let attacker_id = attack.attacker_id.clone();
-                        let answers = find_instance(state, &attacker_id).is_some_and(|attacker| {
-                            crate::scripts::script_of(state, attacker).after_attack.is_some()
-                                || crate::layers::unit_has(state, attacker, KeywordKind::Frenzy)
-                        });
+                        // R3543003: the Frenzy it began the action with, in the stint it still attacks in.
+                        let began_frenzied =
+                            self.frenzy.get(&attacker_id) == Some(&self.stint_of(&attacker_id));
+                        let answers = began_frenzied
+                            || find_instance(state, &attacker_id).is_some_and(|attacker| {
+                                crate::scripts::script_of(state, attacker).after_attack.is_some()
+                                    || crate::layers::unit_has(state, attacker, KeywordKind::Frenzy)
+                            });
                         if answers {
                             self.credit_kill(&attacker_id);
                         }

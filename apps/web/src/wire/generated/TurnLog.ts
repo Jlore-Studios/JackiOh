@@ -28,4 +28,11 @@ borrowedParts?: number,
  * R1224: the instalment actually taken off this turn's refresh, after any forgiveness — the
  * locked crystals the view shows. Set at the refresh, which follows the log reset.
  */
-manaLocked?: number, };
+manaLocked?: number, 
+/**
+ * R3800003: how many entries `playedIds` held as this turn's end began (§2.2), set on both players'
+ * logs by `turn::end_turn`: Classic+ #37 Wardrum's end of turn casts from the plays before it, so
+ * what the end of turn itself plays or casts (another Wardrum's copies) joins no pool. `startTurn`
+ * rebuilds the log, which clears it.
+ */
+playedBeforeEnd?: number, };

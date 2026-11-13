@@ -1129,6 +1129,13 @@ pub struct TurnLog {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub mana_locked: Option<i32>,
+    /// R3800003: how many entries `playedIds` held as this turn's end began (§2.2), set on both players'
+    /// logs by `turn::end_turn`: Classic+ #37 Wardrum's end of turn casts from the plays before it, so
+    /// what the end of turn itself plays or casts (another Wardrum's copies) joins no pool. `startTurn`
+    /// rebuilds the log, which clears it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub played_before_end: Option<i32>,
 }
 
 /// `PlayerState.hero`.

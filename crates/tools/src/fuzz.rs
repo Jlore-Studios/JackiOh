@@ -1859,6 +1859,11 @@ pub(crate) fn largest_number(card: &CardInstance) -> i64 {
     card.memory.values().map(largest_in_json).fold(most, i64::max)
 }
 
+/// The turn stamps `largest_number` leaves out, by their JSON names, left out of a card record a
+/// memory holds as well: S+ #84 Bogos Binted keeps its side's cards on its memory (R3550007), and a
+/// Unit frozen forever there carries `FROZEN_FOREVER` (R1848000), a turn, not a growth (issue #3800).
+const TURN_STAMP_KEYS: [&str; 3] = ["summonedTurn", "frozen", "since"];
+
 pub(crate) fn largest_in_json(value: &Value) -> i64 {
     match value {
         Value::Number(number) => number
@@ -1867,7 +1872,12 @@ pub(crate) fn largest_in_json(value: &Value) -> i64 {
             .or_else(|| number.as_f64().map(|f| f.abs() as i64))
             .unwrap_or(0),
         Value::Array(items) => items.iter().map(largest_in_json).max().unwrap_or(0),
-        Value::Object(fields) => fields.values().map(largest_in_json).max().unwrap_or(0),
+        Value::Object(fields) => fields
+            .iter()
+            .filter(|(key, _)| !TURN_STAMP_KEYS.contains(&key.as_str()))
+            .map(|(_, value)| largest_in_json(value))
+            .max()
+            .unwrap_or(0),
         _ => 0,
     }
 }
@@ -3899,6 +3909,8 @@ pub(crate) mod tests {
 
     mod fuzz_growth_stage {
         use super::*;
+        use jackioh_engine::config::FROZEN_FOREVER;
+        use jackioh_engine::effects::SIDE_SNAPSHOT_KEY;
         use jackioh_engine::testkit::{
             CardScripts, GameEventType, Script, TriggerDef, clear_overrides, effects, json_as,
             register_catalog_as, register_scripts,
@@ -4057,6 +4069,14 @@ pub(crate) mod tests {
             card.memory
                 .insert("activations".to_string(), json!({ "turn": 3, "count": 4100 }));
             assert_eq!(largest_number(card), 4100);
+            card.memory.clear();
+            // Issue #3800: a card record on a memory (R3550007's side snapshot) counts no turn stamp.
+            card.memory.insert(
+                SIDE_SNAPSHOT_KEY.to_string(),
+                json!({ "turn": 12, "side": { "units": [[{ "frozen": FROZEN_FOREVER, "summonedTurn": 9,
+                    "brittle": [{ "count": 2, "since": 11 }], "buffs": { "attack": 1, "health": 30 } }]] } }),
+            );
+            assert_eq!(largest_number(card), 30);
             card.memory.clear();
             card.tuning = Some(Tuning {
                 numbers: Some(IndexMap::from([("times".to_string(), 33_724)])),

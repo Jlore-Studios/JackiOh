@@ -1,7 +1,7 @@
 {
   "title": "Patch: fused Spells, Combo-Index grades and KY's Constant off the field",
   "sources": "#3800",
-  "notes": "Issue #3800: three engine fixes for the daily fuzz's I16 check, each with its ruling. A fused Spell is flagged for the end-of-turn return only for a Spell ingredient's end-of-turn text, and from its graveyard runs no Unit's, Field Spell's or Trap's end-of-turn text (R3800000; Duos seed 1628). A Combo-Index text run after its card left the field writes no grade (R3800001; seed 6091). A cost set on a card in a graveyard or an exile pile changes nothing (R3800002; seed 6140). No catalog change: the plays are the families `classify` finds playing differently in its forced and unforced games.",
+  "notes": "Issue #3800: engine and card fixes for the daily fuzz. A fused Spell is flagged for the end-of-turn return only for a Spell ingredient's end-of-turn text, and from its graveyard runs no Unit's, Field Spell's or Trap's end-of-turn text (R3800000; Duos seed 1628). A Combo-Index text run after its card left the field writes no grade (R3800001; seed 6091). A cost set on a card in a graveyard or an exile pile changes nothing (R3800002; seed 6140). C+ #37 Wardrum's end of turn casts from the non-Units played before the turn's end began, not another Wardrum's copies (R3800003; seed 5763). S+ #104 Tireless Cultivation's Radiant face gives its Temporary 2 only to a card that reaches the hand, not one a full hand burned (seed 8687). Flak v3, v4 and v5 keep their `damage` script through v0.5.8b, so a past version from v0.5.8b no longer panics (R767000; seed 5172). No catalog change: the plays are the families `classify` finds playing differently in its forced and unforced games.",
   "player": {
     "title": "Fused cards behave off the field",
     "new": [],
@@ -11,7 +11,9 @@
     "fixes": [
       "A fused Spell no longer returns to your hand, or gains keywords in your graveyard, because of a Unit's, Field Spell's or Trap's end-of-turn text fused into it.",
       "A Combo-Index card that left the field mid-effect no longer keeps a grade.",
-      "Setting the cost of a card that was just discarded or exiled no longer changes its price."
+      "Setting the cost of a card that was just discarded or exiled no longer changes its price.",
+      "Several Radiant Wardrums no longer recast each other's copies at the end of your turn: each casts the Spells, Field Spells and Traps you played before the turn ended.",
+      "A Radiant Tireless Cultivation burned by a full hand no longer keeps its Temporary in your graveyard."
     ]
   },
   "cards": [],
