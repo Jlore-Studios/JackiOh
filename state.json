@@ -15583,9 +15583,7 @@
     },
     "3858": {
       "action": "plan",
-      "asks": [
-        "c:6856866283"
-      ],
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-13T20:52:47Z",
         "difficulty": "hard",
@@ -15619,12 +15617,14 @@
       "provider": "claude-3",
       "queued_at": "2026-11-13T15:06:24Z",
       "requested_by": "squishy-squooby",
-      "run_id": "43504153865",
+      "run_id": "pending:dc3630bb-1794603412",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-13T20:43:15Z",
+      "started_at": "2026-11-13T20:57:36Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6856866283"
+      ]
     },
     "3859": {
       "asks": [
@@ -16438,9 +16438,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T20:56:36Z",
+    "at": "2026-11-13T20:57:36Z",
     "url": "",
-    "what": "build #3732 on claude-3"
+    "what": "plan #3858 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-13T20:36:41Z",
