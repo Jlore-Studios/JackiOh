@@ -15917,17 +15917,8 @@
       }
     },
     "3790": {
-      "action": "plan",
-      "asks": [
-        "c:6836308880"
-      ],
-      "build_next": {
-        "from_run": "43338552188",
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-13T01:24:43Z",
-        "until": "2026-11-13T01:54:43Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-13T01:24:29Z",
         "difficulty": "hard",
@@ -15946,10 +15937,9 @@
         "reason": "planned on opus",
         "trail": "unner/work/_temp/work/item-3790; grep -n \\\"fn resolve\\\\b\\\\|fn resolve<\\\\|fn resolve(\\\" crates/engine/src/testkit/*.rs | head; grep -n \\\"Where::Hand =>\\\" -B 2 -A 12 crates/engin\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; sed -n '1318,1345p' crates/engine/src/testkit/scenario.rs\", \"description\": \"Read Scenario::resolve\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; grep -rn \\\"played_type_of\\\\|fn play_type_of\\\" crates apps/web/src --include=*.rs --include=*.ts | head\", \"description\": \"Check the new function\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; grep -n \\\"proven_in\\\" spec/README.md | head -10; grep -c \\\"proven_in\\\\|cloaked.rs\\\" spec/INDEX.md\", \"description\": \"Check spec README rules on \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; grep -n '\\\"--plays\\\"' -A 8 crates/tools/src/patches.rs | head -20; ls crates/cards/patches/ | grep -v \\\"^v0\\\" ; git log -3 --diff-filter=A --fo\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; h=$(git log -1 --diff-filter=A --format=%h -- 'crates/cards/patches/pending/*.json'); git show $h:crates/cards/patches/pending/the-pointer-s-ar\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; grep -rn \\\"pub const BUSTED_CODE_LINES\\\\|pub const COMPLICATED_CODE_LINES\\\" crates --include=*.rs | head; python3 -I -c \\\"\\nimport json\\nd=json\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; cat rustfmt.toml .rustfmt.toml 2>/dev/null; grep -rn \\\"else { return vec!\\\\[\\\\]; };\\\\|else { return false; };\\\" crates/cards/src/scripts --incl\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790/crates/cards/src/scripts; for f in classic/c006_cloaked_toe_cracker.rs training_grounds/c018_knife_juggler.rs classic/c005_tesla.rs training_gro\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; grep -n \\\"pub(crate) fn code_lines\\\\b\\\\|pub fn code_lines\\\\b\\\\|fn code_lines(\\\" -A 30 crates/tools/src/catalog.rs | head -45\", \"description\": \"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; grep -n \\\"lib.rs\\\\|helper\\\\|test\\\" crates/cards/README.md | head -20\", \"description\": \"Skim the cards crate README for test-helper rules\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; sed -n '130,175p' crates/cards/README.md\", \"description\": \"Read the cards README section on read helpers\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; sed -n '1,60p' crates/engine/src/testkit/scenario.rs | grep -n \\\"field\\\\|backrow\\\" | head -12\", \"description\": \"Check how scenario places field\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; sed -n '12,24p' crates/engine/src/testkit/scenario.rs\", \"description\": \"Read scenario side-setup rules\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; grep -rln '\\\"faceDown\\\": \\\"cloaked\\\"\\\\|faceDown: \\\"cloaked\\\"\\\\|RevealAt::Cloaked' crates apps/web/src e2e --include=*.rs --include=*.ts --inclu\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; for f in crates/cards/src/scripts/stinkyscape/c177_cloaking_module.rs crates/cards/src/scripts/stinkyscape/c123_gokugains.rs crates/cards/src/s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; grep -n \\\"core-041\\\" -B 3 -A 25 crates/ai/tests/ai/alt_play.rs | head -60; grep -n \\\"classic-005\\\" -B 2 -A 3 crates/cards/src/scripts/meditativ\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; grep -n \\\"SHEEPISH\\\" -B 2 -A 12 crates/ai/tests/ai/alt_play.rs | sed -n '1,60p' | grep -v \\\"^--$\\\" | tail -40\", \"description\": \"Read how the AI\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; grep -n '\\\"--head\\\"\\\\|head.unwrap_or\\\\|working tree\\\\|worktree' crates/tools/src/classify.rs | head -10\", \"description\": \"Check what classify c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; grep -rn \\\"\\\\-\\\\-head\\\" crates/tools/src/*.rs | head -8\", \"description\": \"Find classify's head argument handling\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; grep -n \\\"head\\\" crates/tools/src/classify.rs | sed -n '1,30p' | grep -i \\\"arg\\\\|default\\\\|HEAD\\\\|rev\\\" | head -12\", \"description\": \"Look for t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; grep -n \\\"pub(crate) fn run\\\\|pub fn run\\\\|fn parse_args\\\\|struct ClassifyArgs\\\\|fn classify_cmd\\\" crates/tools/src/classify.rs | head; grep -n\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; sed -n '106,118p;1128,1160p' crates/tools/src/classify.rs\", \"description\": \"Read classify's head default and diff\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3790/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"Rule 1, engine rules: a new play-type read in crates/engine/src/query.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count the plan's words and characters\"}\n- said: The draft is 3,118 words, over the 2,500 limit. Trimming it without dropping any instruction.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3790/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"Rule 1, engine rules: a new play-type read in crates/engine/src/query.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; wc -w .bot-plan.md\", \"description\": \"Count the trimmed plan's words\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3790; python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\ns=s.replace(\\\"`proven_in` + the 19 card files above but c006\\\",\\\"`proven_in` + the 18\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3790/.bot-plan.md\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule 1, engine rules: a new play-type read in crates/engine/src/query.rs and a fix to the crafted trap hat in crates/engine/src/subsystems/craft.rs, which 18 card scripts then switch to\"} --> ## Goal A card set face-down by its Cloaked counts as the Trap it \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-13T00:37:36Z",
       "owner_why": "handed off from `claude-3`: its owner `claude-3` cannot take it now",
@@ -15962,12 +15952,14 @@
       "provider": "claude-7",
       "queued_at": "2026-11-12T21:28:19Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43338552188",
+      "run_id": "pending:81c24de6-1794533132",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-13T00:37:36Z",
+      "started_at": "2026-11-13T01:26:24Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6836308880"
+      ]
     },
     "3791": {
       "action": "build",
@@ -17160,9 +17152,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T01:14:05Z",
+    "at": "2026-11-13T01:26:24Z",
     "url": "",
-    "what": "review #3812 on claude-3"
+    "what": "build #3790 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-13T01:09:20Z",
