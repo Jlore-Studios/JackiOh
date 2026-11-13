@@ -412,6 +412,14 @@ pub(crate) fn give_flying(s: &mut jackioh_engine::testkit::Scenario, id: &str) {
     card.granted_keywords.push(Keyword::Flying);
 }
 
+/// R3546002: grants GIGA to the card `id` while it is held, so it enters the field GIGA when played.
+#[cfg(test)]
+pub(crate) fn give_giga(s: &mut jackioh_engine::testkit::Scenario, id: &str) {
+    use jackioh_engine::prelude::*;
+    let card = find_instance_mut(s.state_mut(), id).expect("the card exists");
+    card.granted_keywords.push(Keyword::Giga);
+}
+
 /// An engine value as its JSON, for the card tests' comparisons.
 #[cfg(test)]
 pub(crate) fn js<T: serde::Serialize + ?Sized>(value: &T) -> serde_json::Value {

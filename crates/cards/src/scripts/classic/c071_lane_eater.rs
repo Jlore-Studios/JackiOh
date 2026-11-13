@@ -2,7 +2,8 @@
 //!   Base:    "Cry: Destroy every other card in this lane. Lock this lane."
 //!   Radiant: "Cry: Destroy the enemy cards in this lane. Lock the enemy side of this lane."
 //!
-//! "This lane" is the column Lane Eater stands in (§3.1), read as the Cry resolves. Destroys the top card
+//! "This lane" is the column Lane Eater stands in (§3.1), read as the Cry resolves; a GIGA Lane Eater
+//! stands in two, and a GIGA covering one of them counts there (R3546001). Destroys the top card
 //! in each other zone (dormant cards resume, R13); collected at state check (R59); Indestructible stays (R46).
 //! Locks the zones (§6.3; both sides on base, enemy on radiant) before that check, so destroyed Reborn cannot
 //! return (R47). Lock evicts nothing; zone stays locked after leave; later summons and plays refused (§3.2).
@@ -37,13 +38,21 @@ fn destroy_in_lane(ctx: &EffectContext, enemy_only: bool) -> Vec<Effect> {
     if !in_units_row_or_standing(&*ctx.state, me) {
         return Vec::new();
     }
-    lane_zones(ctx.controller, at.row, enemy_only)
-        .into_iter()
-        .filter_map(|(player, row)| {
-            card_at(&*ctx.state, ZoneSlot { player, row, lane: at.lane }).map(|card| {
-                destroy(json_as(json!({ "target": { "of": "instance", "instanceId": card.id } })))
-            })
-        })
+    // R3546001: a GIGA is in both its lanes, so a GIGA Lane Eater eats both, and a GIGA that covers
+    // one of them (from the lane beside it) is found there; each card once.
+    let mut ids: Vec<String> = Vec::new();
+    for (player, row) in lane_zones(ctx.controller, at.row, enemy_only) {
+        for lane in lanes_of(me) {
+            if let Some(card) = occupant_at(&*ctx.state, ZoneSlot { player, row, lane })
+                && card.id != me.id
+                && !ids.contains(&card.id)
+            {
+                ids.push(card.id.clone());
+            }
+        }
+    }
+    ids.into_iter()
+        .map(|id| destroy(json_as(json!({ "target": { "of": "instance", "instanceId": id } }))))
         .collect()
 }
 
@@ -92,6 +101,8 @@ mod tests {
     const GIFTED: &str = "core-064"; // Gifted Program: a Field Spell
     const TOKEN_MAKER: &str = "core-015"; // Me and Mr Token: Cry: summon a Rush Token
     const STOCKPILE: &str = "core-005";
+    const GIGA_BODY: &str = "stand-in (1) 4/4 GIGA R12/12";
+    const AIRBLAST_DRILL: &str = "stinkyscapeplus-052"; // Airblast Drill: a printed GIGA Field Spell
 
     use crate::scenario;
 
@@ -320,6 +331,80 @@ mod tests {
                 2
             );
         }
+    }
+
+    /// R3546001: an enemy GIGA anchored in the lane beside it covers its lane, so it is eaten.
+    #[test]
+    fn r3546001_an_enemy_giga_covering_its_lane_from_the_lane_beside_it_is_destroyed() {
+        let mut s = scenario(json!({
+            "p1": merged(spare(), json!({ "hand": [LANE_EATER, STOCKPILE], "mana": 10 })),
+            "p2": merged(spare(), json!({ "field": [{ "def": GIGA_BODY, "lane": 2 }] })),
+        }));
+        let giga = s.unit(P2, 2).expect("setup");
+        s.play(LANE_EATER, json!({ "zone": 3 }));
+        s.expect_in_zone(&giga, "graveyard");
+        assert!(s.unit(P2, 2).is_none() && s.unit(P2, 3).is_none());
+        assert!(locked(&s, P2, Row::Units, 3));
+    }
+
+    /// R3546001: the same for a GIGA Field Spell in the backrow row.
+    #[test]
+    fn r3546001_an_enemy_giga_backrow_card_covering_its_lane_is_destroyed() {
+        let mut s = scenario(json!({
+            "p1": merged(spare(), json!({ "hand": [LANE_EATER, STOCKPILE], "mana": 10 })),
+            "p2": merged(spare(), json!({ "backrow": [{ "def": AIRBLAST_DRILL, "lane": 2 }] })),
+        }));
+        let drill = s.backrow(P2, 2).expect("setup");
+        s.play(LANE_EATER, json!({ "zone": 3 }));
+        s.expect_in_zone(&drill, "graveyard");
+        assert!(s.backrow(P2, 2).is_none() && s.backrow(P2, 3).is_none());
+    }
+
+    /// R3546001: a GIGA Lane Eater is in two lanes and eats both, a GIGA covering both once.
+    #[test]
+    fn r3546001_a_giga_lane_eater_eats_both_its_lanes_and_hits_a_giga_once() {
+        let mut s = scenario(json!({
+            "p1": merged(spare(), json!({ "hand": [LANE_EATER, STOCKPILE], "mana": 10 })),
+            "p2": merged(spare(), json!({
+                "field": [{ "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 2 }, { "def": GIGA_BODY, "lane": 3 }],
+            })),
+        }));
+        let eater = s.card(LANE_EATER).id.clone();
+        crate::give_giga(&mut s, &eater);
+        let bystander = s.unit(P2, 1).expect("setup");
+        let plain = s.unit(P2, 2).expect("setup");
+        let giga = s.unit(P2, 3).expect("setup");
+        s.play(LANE_EATER, json!({ "zone": 2 }));
+        assert_eq!(s.card(&eater).giga, Some(true));
+        s.expect_in_zone(&giga, "graveyard").expect_in_zone(&plain, "graveyard");
+        s.expect_in_zone(&bystander, "field").expect_in_zone(eater.as_str(), "field");
+        let hits = s
+            .last_events()
+            .iter()
+            .filter(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == giga.id))
+            .count();
+        assert_eq!(hits, 1);
+        assert_eq!(
+            vec![locked(&s, P2, Row::Units, 2), locked(&s, P2, Row::Units, 3), locked(&s, P2, Row::Units, 1)],
+            vec![true, true, false]
+        );
+    }
+
+    /// R3546001: Radiant, an enemy GIGA beside it is eaten and the own side's card in its lane stays.
+    #[test]
+    fn r3546001_radiant_eats_only_an_enemy_giga_covering_its_lane() {
+        let mut s = scenario(json!({
+            "p1": merged(spare(), json!({
+                "hand": [{ "def": LANE_EATER, "radiant": true }, STOCKPILE],
+                "backrow": [{ "def": MANA_WELL, "lane": 3 }],
+                "mana": 10,
+            })),
+            "p2": merged(spare(), json!({ "field": [{ "def": GIGA_BODY, "lane": 2 }] })),
+        }));
+        let giga = s.unit(P2, 2).expect("setup");
+        s.play(LANE_EATER, json!({ "zone": 3 }));
+        s.expect_in_zone(&giga, "graveyard");
+        assert_eq!(s.backrow(P1, 3).map(|card| card.def_id).as_deref(), Some(MANA_WELL));
     }
 
     /// R1081000: a Flying Lane Eater played into a backrow zone eats every other card in its lane from
