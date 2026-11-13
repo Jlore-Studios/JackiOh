@@ -17652,6 +17652,24 @@
       "queued_at": "2026-11-13T08:22:23Z",
       "requested_by": "jgoetzmann",
       "stop_requested": false
+    },
+    "3846": {
+      "difficulty_by": {
+        "at": "2026-11-13T08:38:29Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "the after-merge spot-check's follow-up of #3809, a medium change"
+      },
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-11-13T08:38:29Z",
+      "requested_by": "jgoetzmann-bot",
+      "spot_check_of": 3809,
+      "stop_requested": false
     }
   },
   "labels_synced": "fce3910f5abefcbe",
