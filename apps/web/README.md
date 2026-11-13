@@ -733,6 +733,12 @@ routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — 
                         (#1650), for this screen, the account, Play and the board; rank/StreakFlame.tsx
                         draws a ranked win streak as a flame on the account and a ranked match's
                         line (R2101000)
+routes/account.tsx      /account (#3733, R3733000): a profile header (the last game's portrait, name#tag with Copy,
+                        Member since, each ladder's rank, season record and flame) over a settings list of six
+                        sections by `?section=` (routes/accountSections.ts: Overview, Match history, Sign-in &
+                        security, Notifications, Privacy & data, Delete account; only the open one mounts); the
+                        list beside the section over 600 px, the list and then one section on a phone; the history
+                        is GET /api/replays worded by routes/replayWords.ts, shared with /replays
 routes/collection.tsx   /collection (#1307, #1579, R1579000, #3734, R3734000): four tabs over the whole window,
                         Cards, Decks, Cosmetics and Progress, by `?section=` (net/navigate.ts `useSearch`; Cards
                         when it names none), the route holding the Cards and Cosmetics tabs' search and filters so
@@ -822,8 +828,8 @@ routes/lobby.css        the lobby's, the series screen's and its picker's tavern
 routes/DevTools.tsx     R1300000: a dev account's own tools on /account (XP, Jlore, fill, the clears, give or
                         complete a quest, §14.9), shown
                         when /api/auth/me says isDev; the server decides every grant, and the panel shows
-                        its answer or refusal; /account's "Manage sign-in & account" shows every account
-                        its account secret ID, hidden until asked for, with a copy button
+                        its answer or refusal; /account's Sign-in & security section shows every account
+                        its account secret ID, hidden until Reveal, with a copy button
 packs/                  #1308: the card packs on /shop (R1580000, SPEC §14.3, §14.4; `PackOpening.tsx`, imported
                         by routes/shop.tsx): the packs held, each a physical pack (`PackObject.tsx`, #1663: a
                         foil wrapper with crimped seals, its set's emblem and colors, a sheen and a tilt
@@ -1040,6 +1046,7 @@ net/daily.ts             fetch wrappers for every daily route, typed
 daily/NewDailyDialog.tsx challenge any friend (online or not) or find an opponent, with daily/DailyFields.tsx:
                          the mode, its deck or lean, and the time per move on the segmented toggle; as a
                          rematch, only the deck or lean, to the finished game's opponent
+daily/NotificationSettings.tsx  email and push on or off: /daily's panel and /account's Notifications section
 daily/DailyBadge.tsx     the count of games waiting on the player (the social read's dailyWaiting), on
                          the Play hub's Daily games
 daily/push.ts            this device's push subscription from GET /api/daily/settings's vapidPublicKey,

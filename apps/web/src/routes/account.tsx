@@ -4,12 +4,16 @@
 // pending account, which that route refuses (403 `account_pending`), is shown from the gate's
 // `/api/auth/me` read, with the way on: an invite code. The username is R1435's and R1436's; the
 // shop lives on `/shop` (#1580, R1580000); this screen links no other menu (R1646000).
+// R3733000 (#3733): the screen is a profile header over a settings list, laid out like iPadOS Settings: six
+// sections, each at its own `/account?section=` URL, the list beside the open one on a wide window and,
+// on a phone, the list first and then one section (so Back returns to the list).
 // R2778000: the rank, season record and badges show for Constructed, then All random, each its own
 // `GET /api/ranked` read.
 
 import {
   useEffect,
   useId,
+  useRef,
   useState,
   useSyncExternalStore,
   type FormEvent,
@@ -21,7 +25,9 @@ import {
   deleteAccount,
   getOwnRank,
   getProfile,
+  getReplays,
   type MeResponse,
+  type OnlineReplayListing,
   type OwnRankResponse,
   type OwnUsername,
   type ProfileResponse,
@@ -29,12 +35,14 @@ import {
 import { forgetPushOnSignOut } from "../daily/push.ts";
 import { revokeSignedOutSession, sessionNearExpiry } from "../net/auth.ts";
 import { announceAccountChange } from "../net/gate.ts";
-import { t } from "../i18n/i18n.ts";
+import { PortraitArt } from "../emotes/PortraitArt.tsx";
+import { formatDateTime, t } from "../i18n/i18n.ts";
+import { NotificationSettings } from "../daily/NotificationSettings.tsx";
 import { rankCaption } from "../rank/rank.ts";
 import RankCrest from "../rank/RankCrest.tsx";
 import StreakFlame from "../rank/StreakFlame.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
-import { paths } from "../net/navigate.ts";
+import { navigate, paths, useSearch } from "../net/navigate.ts";
 import {
   clearSession,
   forgetLinkAfterSignIn,
@@ -53,6 +61,15 @@ import Username from "../auth/Username.tsx";
 import UsernameField, { nextChangeSentence } from "../auth/UsernameField.tsx";
 import { attempt, messageOf } from "../net/errors.ts";
 import { Dialog } from "../game/Dialog.tsx";
+import {
+  ACCOUNT_HISTORY_ROWS,
+  ACCOUNT_SECTIONS,
+  PENDING_ACCOUNT_SECTIONS,
+  accountSectionOf,
+  accountSectionPath,
+  type AccountSection,
+} from "./accountSections.ts";
+import { MODE_WORDS, RESULT_WORDS, opponentName, unavailableText } from "./replayWords.ts";
 
 import "../auth/tavern.css";
 import "./account.css";
@@ -73,8 +90,29 @@ export const accountTestid = {
   randomSeasonRecord: "account-random-season-record",
   randomBadges: "account-random-badges",
   leaderboard: "account-leaderboard",
-  manage: "account-manage",
-  manageToggle: "account-manage-toggle",
+  /** R3733000: the list of sections, one item per section, and the open one's panel. */
+  list: "account-list",
+  listItem: (section: AccountSection): string => `account-section-${section}`,
+  section: "account-section",
+  /** R3733000: a phone's way from the open section back to the list. */
+  sectionBack: "account-section-back",
+  /** R3733000: the profile header, its portrait, Copy and "Member since". */
+  profile: "account-profile",
+  portrait: "account-portrait",
+  nameCopy: "account-name-copy",
+  memberSince: "account-member-since",
+  /** R3733000: the Overview's own copies of the season record, the header having the first. */
+  overviewSeasonRecord: "account-overview-season-record",
+  overviewRandomSeasonRecord: "account-overview-random-season-record",
+  historyRow: (matchId: string): string => `account-history-${matchId}`,
+  historyEmpty: "account-history-empty",
+  historyError: "account-history-error",
+  historyRetry: "account-history-retry",
+  historyAll: "account-history-all",
+  /** R3733000: Privacy & data's note, its policy link and the watch rules (R2615000). */
+  privacyNote: "account-privacy-note",
+  privacyPolicy: "account-privacy-policy",
+  watchRules: "account-watch-rules",
   record: "account-record",
   winRate: "account-win-rate",
   signOut: "account-sign-out",
@@ -90,7 +128,7 @@ export const accountTestid = {
   deleteError: "account-delete-error",
   /** R3221000: the question "Delete my account" opens, an alertdialog on Dialog.tsx. */
   deleteDialog: "account-delete-dialog",
-  /** R1300000: the account secret ID, hidden until "Show account secret ID", and its copy button. */
+  /** R1300000: the account secret ID, hidden until "Reveal", and its copy button. */
   secretIdShow: "account-secret-id-show",
   secretId: "account-secret-id",
   secretIdCopy: "account-secret-id-copy",
@@ -202,13 +240,13 @@ export type AccountRouteProps = {
   me?: MeResponse;
 };
 
-/** R2778000: one ladder's rank line, season record (R2255000) and badges (R607), with the test ids it is drawn under. */
-function LadderRank({
+/** R2778000: one ladder's rank line and, at 1 game or more, its season record (R2255000), with the test ids it is drawn under. */
+function LadderLine({
   rank,
   testids,
 }: {
   rank: OwnRankResponse;
-  testids: { rank: string; seasonRecord: string; badges: string };
+  testids: { rank: string; seasonRecord: string };
 }): ReactElement {
   return (
     <>
@@ -217,7 +255,7 @@ function LadderRank({
         {t("{rank} · Season {season}", { rank: rankCaption(rank.rank), season: rank.season })}
         <StreakFlame streak={rank.streak} size="large" />
       </p>
-      {/* R2255000: the season's ranked record, labeled apart from the all-time Record below; none at 0 games. */}
+      {/* R2255000: the season's ranked record, labeled apart from the all-time Record; none at 0 games. */}
       {rank.record.games > 0 ? (
         <p data-testid={testids.seasonRecord}>
           {t("This season (ranked): {wins}–{losses}–{draws}", {
@@ -227,24 +265,51 @@ function LadderRank({
           })}
         </p>
       ) : null}
-      <p data-testid={testids.badges}>
-        {rank.badges.length === 0 ? (
-          t("No season best yet — finish placements to earn one.")
-        ) : (
-          <>
-            {t("Season best:")}
-            {rank.badges.map((badge, index) => (
-              <span key={badge.seasonId}>
-                {index === 0 ? " " : t(", ")}
-                <RankCrest badge={badge} size="large" />{" "}
-                {t("{rank} · Season {season}", { rank: rankCaption(badge), season: badge.seasonId })}
-              </span>
-            ))}
-          </>
-        )}
-      </p>
     </>
   );
+}
+
+/** R607: one ladder's season best badges, under the test id it is drawn with. */
+function LadderBadges({ rank, testid }: { rank: OwnRankResponse; testid: string }): ReactElement {
+  return (
+    <p data-testid={testid}>
+      {rank.badges.length === 0 ? (
+        t("No season best yet — finish placements to earn one.")
+      ) : (
+        <>
+          {t("Season best:")}
+          {rank.badges.map((badge, index) => (
+            <span key={badge.seasonId}>
+              {index === 0 ? " " : t(", ")}
+              <RankCrest badge={badge} size="large" />{" "}
+              {t("{rank} · Season {season}", { rank: rankCaption(badge), season: badge.seasonId })}
+            </span>
+          ))}
+        </>
+      )}
+    </p>
+  );
+}
+
+/** The Match history's read: the newest games, or that the read failed (which never hides the rest). */
+type History = { rows: OnlineReplayListing[] } | "failed";
+
+/** A section's title in the list and over its panel. */
+function sectionTitle(section: AccountSection): string {
+  switch (section) {
+    case "overview":
+      return t("Overview");
+    case "history":
+      return t("Match history");
+    case "security":
+      return t("Sign-in & security");
+    case "notifications":
+      return t("Notifications");
+    case "privacy":
+      return t("Privacy & data");
+    case "delete":
+      return t("Delete account");
+  }
 }
 
 export default function AccountRoute({ token, me }: AccountRouteProps): ReactElement {
@@ -255,10 +320,19 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
   const [rank, setRank] = useState<OwnRankResponse | null>(null);
   // R2778000: the All random ladder's, read beside it.
   const [randomRank, setRandomRank] = useState<OwnRankResponse | null>(null);
+  const [history, setHistory] = useState<History | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
-  // Open where a provider link's outcome is said (R3025000), or where the one to link is (R3147002).
-  const [manageOpen, setManageOpen] = useState(() => hasLinkResult() || linkAfterSignIn() !== null);
+  const section = accountSectionOf(useSearch());
+  // Open in Sign-in & security where a provider link's outcome is said (R3025000), or where the one to
+  // link is (R3147002): once, on mount, so that the list is still one press of Back away.
+  const [linkWaiting] = useState(() => hasLinkResult() || linkAfterSignIn() !== null);
+  const redirected = useRef(false);
+  useEffect(() => {
+    if (redirected.current) return;
+    redirected.current = true;
+    if (section === null && linkWaiting) navigate(accountSectionPath("security"), { replace: true });
+  }, [section, linkWaiting]);
 
   useEffect(() => {
     if (pending) return;
@@ -282,13 +356,24 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
         if (!canceled) setRandomRank(next);
       })
       .catch(() => undefined);
+    // R3733000: the match history, the listing `/replays` shows (no log, no seed: rule 7).
+    getReplays(token)
+      .then((next) => {
+        if (!canceled) setHistory({ rows: next.replays });
+      })
+      .catch(() => {
+        if (!canceled) setHistory("failed");
+      });
     return () => {
       canceled = true;
     };
     // The name too: a rename read back by the gate shows on the rank line at once (R1436).
   }, [token, pending, username?.name, attempt]);
 
-  const played = profile === null ? 0 : profile.record.wins + profile.record.losses + profile.record.draws;
+  const visible: readonly AccountSection[] = pending ? PENDING_ACCOUNT_SECTIONS : ACCOUNT_SECTIONS;
+  const shown: AccountSection = section !== null && visible.includes(section) ? section : "overview";
+  const headingId = useId();
+  const last = history === null || history === "failed" ? undefined : history.rows[0];
 
   return (
     <div className="app-shell tavern account-screen one-screen" data-testid={accountTestid.screen}>
@@ -318,113 +403,99 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
             </>
           ) : null}
 
-          {pending && me !== undefined ? (
-            <>
-              <AccountIdentity email={me.email} status={me.profile.status} />
-              <p>{t("Online play opens once this account has redeemed an invite code.")}</p>
-              <div className="account-actions">
-                <a
-                  className="button-primary"
-                  href={paths.invite}
-                  data-testid={accountTestid.redeem}
-                  onClick={followInApp(paths.invite)}
-                >
-                  {t("Redeem an invite code")}
-                </a>
-              </div>
-            </>
-          ) : null}
-
           {!pending && profile === null && error === null ? (
             <Skeleton variant="panel" label={t("Loading your account…")} testId={accountTestid.loading} />
           ) : null}
 
           {profile !== null ? (
-            <>
-              <AccountIdentity email={profile.email} status={profile.status} />
-
-              <h2 className="account-heading">{t("Rank")}</h2>
-              {rank !== null ? (
-                <>
-                  <h3 className="account-heading">{t("Constructed")}</h3>
-                  <LadderRank
-                    rank={rank}
-                    testids={{ rank: accountTestid.rank, seasonRecord: accountTestid.seasonRecord, badges: accountTestid.badges }}
-                  />
-                  {randomRank !== null ? (
-                    <>
-                      <h3 className="account-heading">{t("All random")}</h3>
-                      <LadderRank
-                        rank={randomRank}
-                        testids={{
-                          rank: accountTestid.randomRank,
-                          seasonRecord: accountTestid.randomSeasonRecord,
-                          badges: accountTestid.randomBadges,
-                        }}
-                      />
-                    </>
-                  ) : null}
-                  <div className="account-actions">
-                    <a
-                      className="button-secondary"
-                      href={paths.leaderboard}
-                      data-testid={accountTestid.leaderboard}
-                      onClick={followInApp(paths.leaderboard)}
-                    >
-                      {t("Leaderboard")}
-                    </a>
-                  </div>
-                </>
-              ) : null}
-
-              <h2 className="account-heading">{t("Record")}</h2>
-              <div className="stat-row">
-                <div className="stat">
-                  <span className="stat-value" data-testid={accountTestid.winRate}>
-                    {formatWinRate(profile.winRate)}
-                  </span>
-                  <span className="stat-label">{t("Win rate")}</span>
-                </div>
-                <div className="stat">
-                  <span className="stat-value" data-testid={accountTestid.record}>
-                    {profile.record.wins}–{profile.record.losses}–{profile.record.draws}
-                  </span>
-                  <span className="stat-label">{t("W–L–D")}</span>
-                </div>
-                <div className="stat">
-                  <span className="stat-value">{played}</span>
-                  <span className="stat-label">{t("Played")}</span>
-                </div>
-              </div>
-              {played === 0 ? <p>{t("No finished matches yet.")}</p> : null}
-            </>
+            <AccountProfileHeader
+              profile={profile}
+              name={username?.name ?? rank?.username}
+              rank={rank}
+              randomRank={randomRank}
+              lastGame={last}
+            />
           ) : null}
 
-          <AccountManage
-            open={manageOpen}
-            onToggle={() => {
-              setManageOpen(!manageOpen);
-            }}
-            token={token}
-            own={username}
-            canChange={me?.profile.status === "active"}
-            profileId={me?.profile.id}
-          />
+          <div className="account-layout" data-open={section === null ? "list" : "section"}>
+            <nav aria-label={t("Account sections")} className="account-list" data-testid={accountTestid.list}>
+              <ul>
+                {visible.map((id) => (
+                  <li key={id}>
+                    <a
+                      href={accountSectionPath(id)}
+                      onClick={followInApp(accountSectionPath(id))}
+                      aria-current={shown === id ? "page" : undefined}
+                      className={id === "delete" ? "account-list__danger" : undefined}
+                      data-testid={accountTestid.listItem(id)}
+                    >
+                      {sectionTitle(id)}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              <div className="account-session">
+                <div className="account-actions">
+                  <button
+                    type="button"
+                    data-testid={accountTestid.signOut}
+                    disabled={leaving}
+                    aria-busy={leaving}
+                    onClick={signOut}
+                  >
+                    {signOutLabel(leaving)}
+                  </button>
+                </div>
+                <p>{t("Signing out forgets this session on this device and revokes it.")}</p>
+              </div>
+            </nav>
 
-          <div className="account-session">
-            <p>
-              {t("Signing out forgets this session on this device and revokes it.")}
-            </p>
-            <div className="account-actions">
-              <button
-                type="button"
-                data-testid={accountTestid.signOut}
-                disabled={leaving}
-                aria-busy={leaving}
-                onClick={signOut}
+            <div className="account-section" data-testid={accountTestid.section}>
+              <a
+                className="account-section__back"
+                href={paths.account}
+                onClick={followInApp(paths.account)}
+                data-testid={accountTestid.sectionBack}
               >
-                {signOutLabel(leaving)}
-              </button>
+                ‹ {t("Account")}
+              </a>
+              <section aria-labelledby={headingId} className="account-section__panel">
+                <h2 id={headingId} className="account-heading">
+                  {sectionTitle(shown)}
+                </h2>
+                {shown === "overview" ? (
+                  pending && me !== undefined ? (
+                    <PendingOverview me={me} />
+                  ) : (
+                    <Overview profile={profile} rank={rank} randomRank={randomRank} />
+                  )
+                ) : null}
+                {shown === "history" ? (
+                  <MatchHistory
+                    history={history}
+                    onRetry={() => {
+                      setHistory(null);
+                      setAttempt((before) => before + 1);
+                    }}
+                  />
+                ) : null}
+                {shown === "security" ? (
+                  <div className="account-section__stack">
+                    {username !== undefined ? (
+                      <AccountUsername token={token} own={username} canChange={me?.profile.status === "active"} />
+                    ) : null}
+                    {/* R663: the email change, through the auth provider (it renders nothing signed out). */}
+                    <ChangeEmail />
+                    {/* R665: an authenticator app for this account. */}
+                    <TwoStepSettings token={token} />
+                    <LinkedAccounts token={token} />
+                    {me?.profile.id !== undefined ? <AccountSecretId id={me.profile.id} /> : null}
+                  </div>
+                ) : null}
+                {shown === "notifications" ? <NotificationSettings /> : null}
+                {shown === "privacy" ? <PrivacyAndData /> : null}
+                {shown === "delete" ? <DeleteAccount token={token} /> : null}
+              </section>
             </div>
           </div>
         </div>
@@ -434,53 +505,247 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
 }
 
 /**
- * "Manage sign-in & account": the rare and destructive options behind a second click, so the summary
- * fits a phone screen; they mount only once opened, making no network or focus demands until asked.
+ * R3733000: who the player is: the portrait of the last game played (no account holds an equipped one,
+ * R641), `name#tag` with Copy, when the account was made and each ladder's crest, division, season record
+ * and win-streak flame.
  */
-function AccountManage({
-  open,
-  onToggle,
-  token,
-  own,
-  canChange,
-  profileId,
+function AccountProfileHeader({
+  profile,
+  name,
+  rank,
+  randomRank,
+  lastGame,
 }: {
-  open: boolean;
-  onToggle: () => void;
-  token: string;
-  own: OwnUsername | undefined;
-  canChange: boolean;
-  profileId: string | undefined;
+  profile: ProfileResponse;
+  name: string | undefined;
+  rank: OwnRankResponse | null;
+  randomRank: OwnRankResponse | null;
+  lastGame: OnlineReplayListing | undefined;
 }): ReactElement {
-  const bodyId = useId();
+  const [copied, setCopied] = useState(false);
+  const portrait = lastGame === undefined ? "vanilla" : lastGame.portraits[lastGame.seat];
+  const copy = (): void => {
+    if (name === undefined) return;
+    attempt(() => navigator.clipboard.writeText(name)).then(
+      () => {
+        setCopied(true);
+      },
+      () => undefined,
+    );
+  };
   return (
-    <div className="account-manage" data-testid={accountTestid.manage}>
-      <div className="account-actions">
-        <button
-          type="button"
-          className="account-manage__toggle"
-          data-testid={accountTestid.manageToggle}
-          aria-expanded={open}
-          aria-controls={bodyId}
-          onClick={onToggle}
-        >
-          {t("Manage sign-in & account")}
-        </button>
+    <header className="account-profile" data-testid={accountTestid.profile}>
+      <span className="account-profile__portrait" data-testid={accountTestid.portrait}>
+        <PortraitArt portrait={portrait} />
+      </span>
+      <div className="account-profile__who">
+        {name === undefined ? null : (
+          <p className="account-profile__name">
+            <Username name={name} />
+            <button type="button" data-testid={accountTestid.nameCopy} onClick={copy}>
+              {copied ? t("Copied") : t("Copy")}
+            </button>
+          </p>
+        )}
+        {profile.createdAt === undefined ? null : (
+          <p className="account-profile__since" data-testid={accountTestid.memberSince}>
+            {t("Member since {date}", { date: formatDateTime(profile.createdAt, { month: "short", year: "numeric" }) })}
+          </p>
+        )}
       </div>
-      {open ? (
-        <div className="account-manage__body" id={bodyId}>
-          {own !== undefined ? (
-            <AccountUsername token={token} own={own} canChange={canChange} />
-          ) : null}
-          {profileId !== undefined ? <AccountSecretId id={profileId} /> : null}
-          {/* R663: the email change, through the auth provider (it renders nothing signed out). */}
-          <ChangeEmail />
-          {/* R665: an authenticator app for this account. */}
-          <TwoStepSettings token={token} />
-          <LinkedAccounts token={token} />
-          <DeleteAccount token={token} />
+      {rank === null ? null : (
+        <div className="account-profile__ladders">
+          <div>
+            <p className="account-label">{t("Constructed")}</p>
+            <LadderLine rank={rank} testids={{ rank: accountTestid.rank, seasonRecord: accountTestid.seasonRecord }} />
+          </div>
+          {randomRank === null ? null : (
+            <div>
+              <p className="account-label">{t("All random")}</p>
+              <LadderLine
+                rank={randomRank}
+                testids={{ rank: accountTestid.randomRank, seasonRecord: accountTestid.randomSeasonRecord }}
+              />
+            </div>
+          )}
         </div>
+      )}
+    </header>
+  );
+}
+
+/** Overview: this season's and the all-time record, the badges, and the way to the Leaderboard. */
+function Overview({
+  profile,
+  rank,
+  randomRank,
+}: {
+  profile: ProfileResponse | null;
+  rank: OwnRankResponse | null;
+  randomRank: OwnRankResponse | null;
+}): ReactElement | null {
+  if (profile === null) return null;
+  const played = profile.record.wins + profile.record.losses + profile.record.draws;
+  const season = (ladder: OwnRankResponse, label: string, testid: string): ReactElement | null =>
+    ladder.record.games > 0 ? (
+      <p data-testid={testid}>
+        {t("{ladder}: {wins}–{losses}–{draws}", {
+          ladder: label,
+          wins: ladder.record.wins,
+          losses: ladder.record.losses,
+          draws: ladder.record.draws,
+        })}
+      </p>
+    ) : null;
+  return (
+    <div className="account-section__stack">
+      <AccountIdentity email={profile.email} status={profile.status} />
+
+      {rank !== null ? (
+        <>
+          <h3 className="account-heading">{t("This season")}</h3>
+          {season(rank, t("Constructed"), accountTestid.overviewSeasonRecord)}
+          {randomRank === null ? null : season(randomRank, t("All random"), accountTestid.overviewRandomSeasonRecord)}
+        </>
       ) : null}
+
+      <h3 className="account-heading">{t("All time")}</h3>
+      <div className="stat-row">
+        <div className="stat">
+          <span className="stat-value" data-testid={accountTestid.winRate}>
+            {formatWinRate(profile.winRate)}
+          </span>
+          <span className="stat-label">{t("Win rate")}</span>
+        </div>
+        <div className="stat">
+          <span className="stat-value" data-testid={accountTestid.record}>
+            {profile.record.wins}–{profile.record.losses}–{profile.record.draws}
+          </span>
+          <span className="stat-label">{t("W–L–D")}</span>
+        </div>
+        <div className="stat">
+          <span className="stat-value">{played}</span>
+          <span className="stat-label">{t("Played")}</span>
+        </div>
+      </div>
+      {played === 0 ? <p>{t("No finished matches yet.")}</p> : null}
+
+      {rank !== null ? (
+        <>
+          <h3 className="account-heading">{t("Constructed")}</h3>
+          <LadderBadges rank={rank} testid={accountTestid.badges} />
+          {randomRank !== null ? (
+            <>
+              <h3 className="account-heading">{t("All random")}</h3>
+              <LadderBadges rank={randomRank} testid={accountTestid.randomBadges} />
+            </>
+          ) : null}
+          <div className="account-actions">
+            <a
+              className="button-secondary"
+              href={paths.leaderboard}
+              data-testid={accountTestid.leaderboard}
+              onClick={followInApp(paths.leaderboard)}
+            >
+              {t("Leaderboard")}
+            </a>
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+/** A pending account has no record (§9.4): who it is, and the way on, an invite code. */
+function PendingOverview({ me }: { me: MeResponse }): ReactElement {
+  return (
+    <div className="account-section__stack">
+      <AccountIdentity email={me.email} status={me.profile.status} />
+      <p>{t("Online play opens once this account has redeemed an invite code.")}</p>
+      <div className="account-actions">
+        <a
+          className="button-primary"
+          href={paths.invite}
+          data-testid={accountTestid.redeem}
+          onClick={followInApp(paths.invite)}
+        >
+          {t("Redeem an invite code")}
+        </a>
+      </div>
+    </div>
+  );
+}
+
+/** Match history: the newest online games as `/replays` words them, each with the way to watch it there. */
+function MatchHistory({ history, onRetry }: { history: History | null; onRetry: () => void }): ReactElement {
+  if (history === null) return <Skeleton variant="rows" label={t("Loading your match history…")} />;
+  if (history === "failed") {
+    return (
+      <div className="account-section__stack">
+        <p className="notice" role="alert" data-testid={accountTestid.historyError}>
+          {t("We couldn't load your match history.")}
+        </p>
+        <div className="row">
+          <button type="button" className="button-primary" data-testid={accountTestid.historyRetry} onClick={onRetry}>
+            {t("Try again")}
+          </button>
+        </div>
+      </div>
+    );
+  }
+  if (history.rows.length === 0) {
+    return <p data-testid={accountTestid.historyEmpty}>{t("No online game of yours is kept yet.")}</p>;
+  }
+  return (
+    <div className="account-section__stack">
+      <ul className="account-history">
+        {history.rows.slice(0, ACCOUNT_HISTORY_ROWS).map((row) => {
+          const why = unavailableText(row.unavailable);
+          return (
+            <li key={row.matchId} className="account-history__row" data-testid={accountTestid.historyRow(row.matchId)}>
+              <span className="account-history__what">
+                <strong>{t(RESULT_WORDS[row.result])}</strong> · {t("vs {opponent}", { opponent: opponentName(row) })}
+                {row.mode === null ? null : <> · {t(MODE_WORDS[row.mode])}</>} ·{" "}
+                {formatDateTime(row.endedAt, { dateStyle: "medium", timeStyle: "short" })}
+              </span>
+              {why === null ? (
+                <a className="button-secondary" href={paths.replays} onClick={followInApp(paths.replays)}>
+                  {t("Watch replay")}
+                </a>
+              ) : (
+                <span className="account-history__why">{why}</span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <div className="account-actions">
+        <a href={paths.replays} data-testid={accountTestid.historyAll} onClick={followInApp(paths.replays)}>
+          {t("All replays")}
+        </a>
+      </div>
+    </div>
+  );
+}
+
+/** Privacy & data: what is kept and why, the policy, and who may watch (R2615000). */
+function PrivacyAndData(): ReactElement {
+  return (
+    <div className="account-section__stack">
+      <p data-testid={accountTestid.privacyNote}>
+        {t("We keep your account, your matches and your replays for as long as the account exists, and delete them with it.")}
+      </p>
+      <p>
+        <a href={paths.privacy} data-testid={accountTestid.privacyPolicy} onClick={followInApp(paths.privacy)}>
+          {t("Privacy policy")}
+        </a>
+      </p>
+      {/* R2615000: no switch; the friendship is the way out. */}
+      <p data-testid={accountTestid.watchRules}>
+        {t(
+          "Your friends can always watch your online games, a few seconds behind. To stop someone watching, remove them as a friend or block them.",
+        )}
+      </p>
     </div>
   );
 }
@@ -494,17 +759,19 @@ function AccountSecretId({ id }: { id: string }): ReactElement {
   const [copied, setCopied] = useState(false);
   if (!shown) {
     return (
-      <div className="account-actions">
-        <button
-          type="button"
-          className="link-button"
-          data-testid={accountTestid.secretIdShow}
-          onClick={() => {
-            setShown(true);
-          }}
-        >
-          {t("Show account secret ID")}
-        </button>
+      <div className="account-username">
+        <p className="account-label">{t("Account secret ID")}</p>
+        <div className="account-actions">
+          <button
+            type="button"
+            data-testid={accountTestid.secretIdShow}
+            onClick={() => {
+              setShown(true);
+            }}
+          >
+            {t("Reveal")}
+          </button>
+        </div>
       </div>
     );
   }
@@ -577,7 +844,7 @@ function DeleteAccount({ token }: { token: string }): ReactElement {
       <div className="account-actions">
         <button
           type="button"
-          className="link-button account-delete__start"
+          className="button-danger"
           data-testid={accountTestid.deleteStart}
           onClick={() => {
             setAsking(true);

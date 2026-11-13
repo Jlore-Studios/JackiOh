@@ -366,8 +366,8 @@ later, so Render would stop billing:
   the failed run. The next run that publishes writes every release the failed ones left out and
   closes it; Actions -> releases -> Run workflow starts one by hand.
 - **A dev account (SPEC §14.10):** the `DEV_PROFILE_IDS` secret of that site's Worker, each
-  developer's profile id comma-separated (from `/account`: "Manage sign-in & account", then "Show
-  account secret ID"); then redeploy. A malformed id refuses the boot, and the Worker's logs name it.
+  developer's profile id comma-separated (from `/account`: "Sign-in & security", then "Reveal"
+  under "Account secret ID"); then redeploy. A malformed id refuses the boot, and the Worker's logs name it.
 - **A deploy job fails:** the run's log names the step: the build, the bundle check (a missing
   `VITE_` setting), the deploy (the token, or Docker building the image), or the live check (the
   server did not report the commit in time: Workers & Pages -> the Worker -> Logs shows the server's
