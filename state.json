@@ -14138,8 +14138,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-3",
-      "owner_since": "2026-11-12T12:48:44Z",
-      "owner_why": "handed off from `claude-8`: `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-12T16:30:00Z; it can start again only in 2h 41m, more than the 120 minutes an item waits for its owner",
+      "owner_since": "2026-11-13T03:13:34Z",
+      "owner_why": "its turn came (it waited 120 minutes for #3783 and #3809, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-12T09:28:57Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -15424,12 +15424,12 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3730,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner": "claude-3",
       "pending_request": false,
       "provider": "claude-3",
-      "queued_at": "2026-11-12T15:02:18Z",
+      "queued_at": "2026-11-13T03:13:34Z",
       "run_id": "43324718351",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -15450,9 +15450,17 @@
         "provider": "claude-3",
         "run": "43324718351"
       },
+      "source": "conflict",
       "started_at": "2026-11-12T22:58:09Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "opus",
+        "provider": "claude-3",
+        "since": "2026-11-13T03:13:34Z",
+        "until": "2026-11-13T03:43:34Z",
+        "why": "it waited 120 minutes for #3783 and #3809, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
+      },
       "votes": {
         "approvals": [
           "claude"
@@ -15473,19 +15481,7 @@
           "claude": "strong"
         }
       },
-      "waiting_comment": 6829242268,
-      "waiting_turn": {
-        "behind": [
-          3809,
-          3783
-        ],
-        "ends": "2026-11-13T03:12:36Z",
-        "from_run": "43324718351",
-        "head": "7c71f3c981f66e94005a59800e85c2c1883057fd",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-13T01:12:36Z"
-      }
+      "waiting_comment": 6829242268
     },
     "3780": {
       "action": "review",
