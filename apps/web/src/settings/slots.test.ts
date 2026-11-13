@@ -18,18 +18,18 @@ function slotById(id: string): SettingsSlot {
   return found;
 }
 
-function reset(): void {
+function resetStores(): void {
   localStorage.clear();
   resetAudioSettingsForTests();
   resetFxSettingsForTests();
   resetHapticsSettingsForTests();
 }
 
-beforeEach(reset);
+beforeEach(resetStores);
 
 afterEach(() => {
   cleanup();
-  reset();
+  resetStores();
 });
 
 describe("SETTINGS_SLOTS", () => {
