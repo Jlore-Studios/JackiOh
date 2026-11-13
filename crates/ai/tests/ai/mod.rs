@@ -27,6 +27,7 @@ pub mod features;
 pub mod float_discount;
 pub mod freeze;
 pub mod gauntlet;
+pub mod giga;
 pub mod graveyard_plays;
 pub mod hidden_nerfs;
 pub mod infinite_mana;

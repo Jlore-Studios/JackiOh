@@ -31,18 +31,18 @@ use jackioh_engine::{
     ActionBody, AltWinCondition, AttackHealth, AttackTarget, CardDef, CardInstance, CardType, CostOptions,
     EngineSink, GameEvent, GameEventType, GameState, Grant, HookName, Keyword, KeywordKind, ModifierKind,
     PLAYER_IDS, Phase, PlayerId, PlayerState, Position, Rng, Row, SandboxOp, SeatOutcome, SettleOptions,
-    Slumber, SpawnZone, Tag, TriggerHolder, TriggerZone, UnitView, ZoneName, acting_with_flag,
+    Slumber, SpawnZone, Tag, TriggerHolder, TriggerZone, UnitView, ZoneName, ZoneSlot, acting_with_flag,
     active_brittle_count, active_units_of, animated_with_stats, armor_of, attack_restriction,
     attacks_per_turn, awaken_card, backrow_is_public, board_totals, cannot_attack, card_at, card_keywords,
     card_type_of_face, credit_lapsing, death_hook_of, dormant_starship_of, effective_cost, effective_life,
-    exit_mark, face_of, find_def, find_instance, find_instance_mut, first_entry_zone, frozen_next_turn,
-    gauntlet_acts, has_infinite_mana, has_keyword, heal_multiplier_of, hero_armor_of, is_extra_turn_card,
-    is_slumbering, is_standing_unit, is_starship_piece, is_temporary_card, launched_starship_of,
-    left_field_after, legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, override_of,
-    owed_mana_of, own_cost, pierces, pile_at, playable_from_graveyard, printed_cost, query_cost, queue_hook,
-    reset_instance, script_of, settle, slots_of, stats_with_buffs, subsystems, sync_fused_scripts,
-    takes_strike_back, trigger_holders_with_hook, unit_has, unit_view, units_on_field_of,
-    why_sandbox_refused, with_pool_hold,
+    enters_giga, entry_anchor, exit_mark, face_of, find_def, find_instance, find_instance_mut,
+    first_entry_zone, frozen_next_turn, gauntlet_acts, has_infinite_mana, has_keyword, heal_multiplier_of,
+    hero_armor_of, is_extra_turn_card, is_slumbering, is_standing_unit, is_starship_piece, is_temporary_card,
+    launched_starship_of, left_field_after, legal_actions, lost_refreshes_left, modifier_is_live,
+    outcome_for, override_of, owed_mana_of, own_cost, pierces, pile_at, playable_from_graveyard,
+    printed_cost, query_cost, queue_hook, reset_instance, script_of, settle, slots_of, stats_with_buffs,
+    subsystems, sync_fused_scripts, takes_strike_back, trigger_holders_with_hook, unit_has, unit_view,
+    units_on_field_of, why_sandbox_refused, with_pool_hold,
 };
 use serde::{Deserialize, Serialize};
 
@@ -1339,6 +1339,13 @@ fn spawn_hand_unit(
     card: &CardInstance,
     counter: &dyn NodeCounter,
 ) -> Option<Option<(GameState, CardInstance)>> {
+    // R3575202: a GIGA Unit enters at the leftmost anchor its four zones fit (R3546000), and none is made.
+    if enters_giga(world, card) {
+        let Some(slot) = entry_anchor(world, seat, Row::Units) else {
+            return Some(None);
+        };
+        return spawn_at(world, seat, card, slot, counter);
+    }
     let cleared;
     let (room, slot) = match first_entry_zone(world, seat, Row::Units) {
         Some(slot) => (world, slot),
@@ -1388,15 +1395,35 @@ fn spawn_hand_field_spell(
     card: &CardInstance,
     counter: &dyn NodeCounter,
 ) -> Option<Option<(GameState, CardInstance)>> {
-    let Some(slot) = first_entry_zone(world, seat, Row::Backrow) else {
+    // R3575202: a GIGA Field Spell is set at the leftmost anchor its four zones fit (R3546000), as a
+    // play's leftmost lane would take it; the first open backrow zone may have its unit lanes taken.
+    let slot = if enters_giga(world, card) {
+        entry_anchor(world, seat, Row::Backrow)
+    } else {
+        first_entry_zone(world, seat, Row::Backrow)
+    };
+    let Some(slot) = slot else {
         return Some(None);
     };
+    spawn_at(world, seat, card, slot, counter)
+}
+
+/// R923001: `card`, from `seat`'s hand, spawned into `slot` on `world` (a fresh card of its definition and
+/// face), with the state after it and the card as it stands there. `None` when the counter refuses the
+/// step; `Some(None)` on a refused tool.
+fn spawn_at(
+    world: &GameState,
+    seat: PlayerId,
+    card: &CardInstance,
+    slot: ZoneSlot,
+    counter: &dyn NodeCounter,
+) -> Option<Option<(GameState, CardInstance)>> {
     let spawn = SandboxOp::Spawn {
         player: seat,
         def_id: card.def_id.clone(),
         radiant: card.radiant.then_some(true),
         to: SpawnZone::Field {
-            row: Row::Backrow,
+            row: slot.row,
             lane: slot.lane,
         },
     };

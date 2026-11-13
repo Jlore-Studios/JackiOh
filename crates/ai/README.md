@@ -150,6 +150,8 @@ Infinite mana counts by what one turn of it frees (R3575200): `material` adds `A
 unseen hand at `opponent_hand_cost` a card), all of it while the side acts with it and a Dormant giver's
 slumber share while it sleeps; `GREEDY_EVAL` keeps 0. A hand card's `costOverride` moves its price from its
 printed cost by `hand_cost_delta` a crystal, as a `costMod` does (`cost_shift`, R3575201).
+A hand card the root's probes set or place first (R923001) goes, when it enters GIGA, to the leftmost anchor
+its four zones fit (`entry_anchor`), not the first open zone (`spawn_at`, R3575202).
 A passed line's Float counts toward the seat's own "Float reduces cost" cards (R3695000): the engine's
 `float_cuts_in_hand` reads what the Float took off each of them, and `float_credit` pays
 `AI_EVAL.float_discount` for each crystal that went toward one still above the seat's crystals (its
