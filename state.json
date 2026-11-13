@@ -16954,14 +16954,14 @@
       "cleared": {
         "approver": {
           "family": "claude",
-          "model": "opus",
-          "provider": "claude-3",
-          "tier": "strong"
+          "model": "sonnet",
+          "provider": "claude-1",
+          "tier": "medium"
         },
-        "at": "2026-11-13T02:34:24Z",
-        "built_by": "claude-3",
-        "by": "`claude` (strong)",
-        "sha": "1f0d315eabcd8969e5ec473d942ebd0d06b270c5"
+        "at": "2026-11-13T08:19:15Z",
+        "built_by": "claude-4",
+        "by": "`claude` (medium)",
+        "sha": "c0aa8f9fa69c59cfb4925c0352d4b4dc378e9443"
       },
       "cross_rounds": 0,
       "died": 0,
@@ -16983,7 +16983,7 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
-      "merge_owner": "claude-3",
+      "merge_owner": "claude-1",
       "pending_request": false,
       "provider": "claude-1",
       "question": "",
