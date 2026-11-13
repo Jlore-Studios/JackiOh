@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DAILY_SWEEP_PATH,
   MODULE_CACHE_CONTROL,
   MODULE_ROUTES,
   SERVER_PORT,
@@ -14,6 +15,10 @@ import {
 } from "./routing.ts";
 
 describe("isServerPath", () => {
+  it("#3727 never forwards the daily sweep's path from the public: only the cron posts it", () => {
+    expect(isServerPath(DAILY_SWEEP_PATH)).toBe(false);
+  });
+
   it("sends the API and the sockets to the server", () => {
     for (const path of ["/api/catalog", "/api/decks/abc", "/ws/match", "/ws/duos", "/ws/watch"]) {
       expect(isServerPath(path), path).toBe(true);
@@ -21,7 +26,7 @@ describe("isServerPath", () => {
   });
 
   it("leaves the client's screens and files to the assets, the ones that only start alike included", () => {
-    for (const path of ["/", "/login", "/watch/abc", "/match/abc", "/apiary", "/wsx", "/api", "/assets/index.js"]) {
+    for (const path of ["/", "/login", "/watch/abc", "/match/abc", "/apiary", "/wsx", "/api", "/assets/index.js", "/daily/abc"]) {
       expect(isServerPath(path), path).toBe(false);
     }
   });
@@ -86,6 +91,13 @@ describe("containerEnv", () => {
     const vars = containerEnv({ ALERT_RESEND_API_KEY: "re_key", ALERT_EMAILS: "a@example.com,b@example.com" });
     expect(vars.ALERT_RESEND_API_KEY).toBe("re_key");
     expect(vars.ALERT_EMAILS).toBe("a@example.com,b@example.com");
+  });
+
+  it("#3727 hands the container the daily games' mail key and VAPID pair", () => {
+    const vars = containerEnv({ PLAYER_RESEND_API_KEY: "re_player", VAPID_PRIVATE_KEY: "priv", VAPID_PUBLIC_KEY: "pub" });
+    expect(vars.PLAYER_RESEND_API_KEY).toBe("re_player");
+    expect(vars.VAPID_PRIVATE_KEY).toBe("priv");
+    expect(vars.VAPID_PUBLIC_KEY).toBe("pub");
   });
 
   it("leaves out an optional secret that is unset or empty, and anything that is not a server setting", () => {

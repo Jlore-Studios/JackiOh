@@ -24,7 +24,7 @@ import { expectSkeleton } from "../test/skeleton.ts";
 import { menuShellTestid } from "../shell/testids.ts";
 import { stopFollowingChallenge } from "./follow.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
-import { friendsTestid, togetherTestid } from "./testids.ts";
+import { challengeKindTestid, friendsTestid, togetherTestid } from "./testids.ts";
 import { FriendsButton } from "./FriendsButton.tsx";
 import { tabStops } from "./modalKeys.ts";
 
@@ -407,13 +407,15 @@ describe("#1831 the panel", () => {
 
       const [ann, bob, cy] = rows as [HTMLElement, HTMLElement, HTMLElement];
       expect(within(ann).getByTestId(togetherTestid.challenge)).toBeEnabled();
+      expect(within(ann).getByTestId(togetherTestid.challenge)).toHaveAttribute("data-live", "true");
       expect(within(ann).queryByTestId(togetherTestid.watch)).toBeNull();
       expect(within(ann).getByTestId(togetherTestid.chatOpen)).toBeInTheDocument();
       expect(within(ann).getByTestId(togetherTestid.unread)).toHaveTextContent("2");
-      expect(within(bob).queryByTestId(togetherTestid.challenge)).toBeNull();
+      // #3727: a friend in a game or offline can be challenged to a daily game, never a live one.
+      expect(within(bob).getByTestId(togetherTestid.challenge)).toHaveAttribute("data-live", "false");
       expect(within(bob).getByTestId(togetherTestid.watch)).toBeInTheDocument();
       expect(within(bob).getByTestId(togetherTestid.chatOpen)).toBeInTheDocument();
-      expect(within(cy).queryByTestId(togetherTestid.challenge)).toBeNull();
+      expect(within(cy).getByTestId(togetherTestid.challenge)).toHaveAttribute("data-live", "false");
       expect(within(cy).queryByTestId(togetherTestid.watch)).toBeNull();
       expect(within(cy).getByTestId(togetherTestid.chatOpen)).toBeInTheDocument();
       // Remove and Block are Play together's.
@@ -793,7 +795,7 @@ describe("#1831 challenging from the panel", () => {
   );
 
   it(
-    "#1831 in a game, Challenge is disabled with the server's sentence, and Watch and Chat are not",
+    "#1831 #3727 in a game, Challenge's Live is disabled with the server's sentence, its Daily is not, and Chat stays",
     async () => {
       signIn("tok-ingame");
       const cases = [
@@ -809,11 +811,19 @@ describe("#1831 challenging from the panel", () => {
         const panel = await openPanel();
         await within(panel).findByText(wholeText("Ann#2"), undefined, SLOW);
         await waitFor(() => {
-          expect(within(panel).getAllByTestId(togetherTestid.challenge)[0]).toBeDisabled();
+          expect(within(panel).getAllByTestId(togetherTestid.challenge)[0]).toHaveAttribute("data-live", "false");
         }, SLOW);
-        const challenge = within(panel).getAllByTestId(togetherTestid.challenge)[0];
-        expect(challenge).toHaveAttribute("title", entry.words);
+        const challenge = must(within(panel).getAllByTestId(togetherTestid.challenge)[0], "the first Challenge");
+        expect(challenge).toBeEnabled();
         expect(within(panel).getAllByTestId(togetherTestid.chatOpen).length).toBeGreaterThan(0);
+        fireEvent.click(challenge);
+        const form = await screen.findByTestId(togetherTestid.challengeForm, undefined, SLOW);
+        expect(form).toHaveAttribute("data-kind", "daily");
+        const live = screen.getByTestId(challengeKindTestid("live"));
+        expect(live).toBeDisabled();
+        expect(live).toHaveAttribute("title", entry.words);
+        expect(screen.getByTestId(togetherTestid.challengeLiveRefusal)).toHaveTextContent(entry.words);
+        expect(screen.getByTestId(challengeKindTestid("daily"))).toBeEnabled();
         cleanup();
       }
     },

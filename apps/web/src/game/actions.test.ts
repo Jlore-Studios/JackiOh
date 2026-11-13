@@ -1,7 +1,7 @@
 // M5-T2: the client asks `legalActions` and narrows. These tests exist to prove that it never
 // computes legality itself.
 
-import type { ActionBody, CraftRecipe, PendingOption, PendingView, PlayerView, RevealAt, Selection } from "@jackioh/shared";
+import type { ActionBody, ActivationView, CraftRecipe, PendingOption, PendingView, PlayerView, RevealAt, Selection } from "@jackioh/shared";
 import { RANDOM_ATTACK_TARGET } from "@jackioh/engine/config";
 import { describe, expect, it } from "vitest";
 
@@ -23,7 +23,7 @@ import {
   selectionTestid,
   type Interaction,
 } from "./actions.ts";
-import { testid, type ClickTarget } from "./contract.ts";
+import { NOT_NOW, testid, type ClickTarget } from "./contract.ts";
 import { baseView, card, emptySide, faceUpBackrow, pendingFor, unit, waitingPending } from "../test/fixtures.ts";
 
 function seatedView(over: Partial<PlayerView> = {}): PlayerView {
@@ -1235,5 +1235,41 @@ describe("R821000 a Plague Counter placement is answered on the board", () => {
     expect(click({ on: "unit", instanceId: "e1", side: "opponent", lane: 1 }, target)).toBeNull();
     expect(click({ on: "unit", instanceId: "e1", side: "opponent", lane: 1 }, waitingPending)).toBeNull();
     expect(click({ on: "unit", instanceId: "e1", side: "opponent", lane: 1 }, null)).toBeNull();
+  });
+});
+
+describe("R3768000 a greyed Activate press returns the view's reason", () => {
+  const ACTIVATE = { on: "activate", instanceId: "u1" } as const;
+  const SPENT = "that ability has already been used this turn";
+  const viewWith = (activations?: ActivationView[]): PlayerView =>
+    seatedView({
+      you: emptySide("p1", { units: [unit("p1", { instanceId: "u1", ...(activations === undefined ? {} : { activations }) }), null, null, null, null] }),
+    });
+  const ping = (reason?: string): ActivationView => ({ ability: "ping", label: "x", usesLeft: 0, usable: false, ...(reason === undefined ? {} : { reason }) });
+
+  it("R3768000 an activate click with no listed activation returns the reason as its notice", () => {
+    const result = onClickTarget(viewWith([ping(SPENT)]), [{ type: "endTurn" }], IDLE, ACTIVATE);
+    expect(result).toEqual({ interaction: IDLE, notice: SPENT });
+    expect(result.action).toBeUndefined();
+  });
+
+  it("R3768000 a named ability takes its own reason, and an unlisted one gives no notice", () => {
+    const view = viewWith([ping(SPENT), { ...ping("not enough mana"), ability: "zap" }]);
+    expect(onClickTarget(view, [], IDLE, { ...ACTIVATE, ability: "zap" }).notice).toBe("not enough mana");
+    expect(onClickTarget(view, [], IDLE, { ...ACTIVATE, ability: "nope" })).toEqual({ interaction: IDLE });
+  });
+
+  it("R3768000 a card the view lists no activations for gives no notice, and a missing reason falls back to NOT_NOW", () => {
+    expect(onClickTarget(viewWith(), [], IDLE, ACTIVATE)).toEqual({ interaction: IDLE });
+    expect(onClickTarget(viewWith([ping()]), [], IDLE, ACTIVATE).notice).toBe(NOT_NOW);
+  });
+
+  it("R3768000 an Activate press while an attack is picked is greyed too: a notice, no activation, the attack kept", () => {
+    const view = viewWith([{ ...ping(), usable: true, usesLeft: 1 }]);
+    const activate: ActionBody = { type: "activate", instanceId: "u1", ability: "ping" };
+    const attacking: Interaction = { stage: "attacking", attackerId: "u2", candidates: [] };
+    const result = onClickTarget(view, [activate], attacking, ACTIVATE);
+    expect(result).toEqual({ interaction: attacking, notice: NOT_NOW });
+    expect(result.action).toBeUndefined();
   });
 });

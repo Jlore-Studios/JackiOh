@@ -1764,6 +1764,60 @@ func TestDashboard_TheExportSizeIsLearnYmlsDefault(t *testing.T) {
 	assertIn(t, fmt.Sprintf("games: ${{ inputs.games || '%d' }}", dashboard.LearnGames), string(text))
 }
 
+// On GitHub's runners (#3740) no heartbeat counts the games, so the export is its shards played of
+// all of them, and each part of gather its time so far of GATHER_HOURS; a lane playing there has
+// no PC bar, and the chart is the training lanes', not the PC's.
+func TestDashboard_TheTopOfTheIssueChartsTheTrainingLanesOnGithubsRunners(t *testing.T) {
+	r := newDashboardRunners(t)
+	r.gh.Runs.Set("400", pyjson.New("id", 400, "status", "in_progress", "event", "schedule",
+		"path", ".github/workflows/learn.yml", "display_title", "learn", "created_at", dashboardAgo(300)))
+	jobs := []*pyjson.Object{pyjson.New("name", "plan", "status", "completed", "conclusion", "success",
+		"labels", []any{"ubuntu-latest"})}
+	for i := 0; i < 80; i++ {
+		job := pyjson.New("name", fmt.Sprintf("export / round 1 / shard from %d", i*1250+1),
+			"labels", []any{"ubuntu-latest"}, "status", "queued")
+		switch {
+		case i < 3:
+			job.Update(pyjson.New("status", "completed", "conclusion", "success"))
+		case i == 3:
+			job.Update(pyjson.New("status", "completed", "conclusion", "failure"))
+		case i < 14:
+			job.Update(pyjson.New("status", "in_progress", "started_at", dashboardAgo(100)))
+		}
+		jobs = append(jobs, job)
+	}
+	r.gh.Jobs["400"] = jobs
+	r.gh.Runs.Set("401", pyjson.New("id", 401, "status", "in_progress", "event", "workflow_dispatch",
+		"path", ".github/workflows/gather.yml", "display_title", "gather", "created_at", dashboardAgo(131)))
+	r.gh.Jobs["401"] = []*pyjson.Object{
+		pyjson.New("name", "gather the newest patch, part 2", "status", "in_progress",
+			"labels", []any{"ubuntu-latest"}, "started_at", dashboardAgo(130)),
+		pyjson.New("name", "gather the newest patch, part 1", "status", "in_progress",
+			"labels", []any{"ubuntu-latest"}, "started_at", dashboardAgo(70)),
+		pyjson.New("name", "start the next run", "status", "queued", "labels", []any{"ubuntu-latest"})}
+	r.heartbeat(r.beat(1, pyjson.New("runners", []any{})), "g1")
+	assertIn(t, `    title "How far the training lanes have played, %"`, r.top())
+	labels, played, note := r.bars()
+	assertEqual(t, labels, `    x-axis ["learn: shard 3 of 80 played", "gather part 1: 1h 10m of 5h", `+
+		`"gather part 2: 2h 10m of 5h"]`)
+	assertEqual(t, played, "    bar [3.8, 23.3, 43.3]")
+	assertEqual(t, note, "<sub>Learn plays 10 shards at once on GitHub's runners · gather plays on "+
+		"GitHub's runners.</sub>")
+	// Gather back on the PC: its bar is the heartbeat's again, beside learn's on GitHub's runners.
+	r.gh.Runs.Delete("401")
+	labels, _, note = r.bars()
+	assertEqual(t, labels, `    x-axis ["gather: not playing", "learn: shard 3 of 80 played"]`)
+	assertEqual(t, note, "<sub>Heard 21:59 · learn plays 10 shards at once on GitHub's runners.</sub>")
+}
+
+func TestDashboard_GathersHoursAreGatherYmls(t *testing.T) {
+	text, err := os.ReadFile(filepath.Join(testsupport.Root, ".github", "workflows", "gather.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertIn(t, fmt.Sprintf("\n  GATHER_HOURS: \"%d\"\n", dashboard.GatherHours), string(text))
+}
+
 // The runs-going-now timeline draws the PC's jobs too, by workflow and job, in readable colours:
 // plain bars, whose name beside a short bar is grey, not the dark theme's dark.
 func TestDashboard_TheTimelineDrawsThePcsJobs(t *testing.T) {
