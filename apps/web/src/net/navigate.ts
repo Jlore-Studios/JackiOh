@@ -260,8 +260,8 @@ export const paths = {
   together: "/together",
   /** #1307: the account's collection, wallet, tracks and quests. */
   collection: "/collection",
-  /** R1579000: a Collection section that opens in place. */
-  collectionSection: (section: "cards" | "cosmetics"): string => `/collection?section=${section}`,
+  /** R1579000, R3734000: a Collection tab, by `?section=`. */
+  collectionSection: (section: "cards" | "decks" | "cosmetics" | "progress"): string => `/collection?section=${section}`,
   /** #1577, R1580000: the shop. */
   shop: "/shop",
   /** #1665, R1665000: the odds and pity of every pack, public like the terms; the account's counters need a session. */
@@ -338,6 +338,17 @@ export function loginPath(options: { reason?: LoginReason; mode?: LoginEntryMode
  */
 export function practiceDeckPath(place: number): string {
   return `${paths.practice}?deck=saved:${String(place)}`;
+}
+
+/** Issue #3734: a saved deck opened in the workshop by its id (`?deck=`); the Collection's deck tiles link to it. */
+export function deckPath(id: string): string {
+  return `${paths.decks}?deck=${encodeURIComponent(id)}`;
+}
+
+/** The id `?deck=` names, or null. */
+export function wantedDeck(search: string): string | null {
+  const id = queryValue(search, "deck");
+  return id === null || id.length === 0 ? null : id;
 }
 
 /** R2118000: the command menu's New deck: the workshop makes and opens one, then drops it from the address. */

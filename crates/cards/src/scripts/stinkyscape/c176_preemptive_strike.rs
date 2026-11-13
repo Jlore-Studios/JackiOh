@@ -80,22 +80,6 @@ mod tests {
     /// Its printed cost, (2).
     const COST: i32 = 2;
 
-    /// The def ids the open Discover offers.
-    // Differs from Scenario::offered: the open Discover's options, not the seat's legal actions.
-    fn offered(s: &Scenario) -> Vec<String> {
-        s.state()
-            .pending
-            .as_ref()
-            .expect("the Discover")
-            .options
-            .iter()
-            .filter_map(|option| match &option.selection {
-                Selection::Mode { option } => Some(option.clone()),
-                _ => None,
-            })
-            .collect()
-    }
-
     /// p1's Starship (an Ultralight Chassis and an Ultra Capacitor), and Preemptive Strike (Radiant if
     /// `radiant`) cast from hand.
     fn cast(seed: &str, radiant: bool) -> (Scenario, String) {
@@ -137,7 +121,7 @@ mod tests {
             assert!(!building_a_ship(s.state(), P1));
             let prompt = &s.state().pending.as_ref().expect("the Discover").prompt;
             assert!(prompt.starts_with("Preemptive Strike:"), "{prompt}");
-            let options = offered(&s);
+            let options = s.prompt_modes();
             assert_eq!(options.len(), DISCOVER_OPTIONS as usize, "{options:?}");
             assert!(options.iter().all(|option| WAR_DOCTRINES.contains(&option.as_str())));
             let mut distinct = options.clone();
@@ -151,7 +135,7 @@ mod tests {
             let (mut s, ship) = cast("s176-cast", false);
             let max_health = s.stats(ship.as_str()).max_health;
             let mana = s.state().players.p1.mana.current;
-            let pick = offered(&s)[0].clone();
+            let pick = s.prompt_modes()[0].clone();
             s.answer(json!(pick));
             assert_eq!(s.state().players.p1.mana.current, mana, "the cast is free");
             let events = s.last_events();
@@ -203,7 +187,7 @@ mod tests {
             assert!(is_launched_starship(s.card(ship.as_str())));
             let prompt = &s.state().pending.as_ref().expect("the Discover").prompt;
             assert!(prompt.contains("Radiant War Doctrine"), "{prompt}");
-            let pick = offered(&s)[0].clone();
+            let pick = s.prompt_modes()[0].clone();
             s.answer(json!(pick));
             assert!(cast_doctrine(&s, &pick).radiant, "the Doctrine is cast Radiant");
         }

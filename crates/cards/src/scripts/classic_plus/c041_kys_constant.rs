@@ -309,18 +309,9 @@ mod tests {
             assert_eq!(pending.player_id, P1);
             assert_eq!(pending.options.len(), 3);
             assert_eq!(view(&s, P2)["pending"], json!({ "forYou": false, "pendingFor": "p1" }));
-            let option = pending
-                .options
-                .iter()
-                .find(|entry| entry.key == "mode:health")
-                .or_else(|| pending.options.first())
-                .cloned()
-                .expect("an option");
-            let key = match &option.selection {
-                Selection::Mode { option } => option.clone(),
-                _ => String::new(),
-            };
-            s.answer(json!(option.key));
+            let modes = s.prompt_modes();
+            let key = modes.iter().find(|m| *m == "health").or_else(|| modes.first()).cloned().expect("an option");
+            s.answer(json!(key));
             assert_eq!(numbers(&s, ARMORED).get(&key), Some(&3));
         }
 

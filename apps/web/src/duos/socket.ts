@@ -12,7 +12,7 @@
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 
 import type { CombatForecast, EmojiEmoteId } from "@jackioh/shared";
-import { MATCH_OVER_CLOSE_CODE, PING_RATE_LIMIT, PING_RATE_WINDOW_MS, PING_SHOW_MS } from "@jackioh/server-config";
+import { MATCH_OVER_CLOSE_CODE, PING_RATE_LIMIT, PING_RATE_WINDOW_MS, PING_SHOW_MS, SEAT_TAKEN_CLOSE_CODE } from "@jackioh/server-config";
 
 import { economyField, type GameEconomy } from "../economy/xp.ts";
 import { forecastField } from "../game/attackOutcome.ts";
@@ -169,7 +169,8 @@ export function parseDuosFrame(text: string): DuosServerFrame | null {
 
 // The client
 
-export type DuosConnection = "connecting" | "open" | "reconnecting" | "refused" | "closed";
+/** `elsewhere` (R3767000): another tab or device took this seat; no reconnect until `connect()` (Play here). */
+export type DuosConnection = "connecting" | "open" | "reconnecting" | "refused" | "closed" | "elsewhere";
 
 export type DuosSnapshot = {
   connection: DuosConnection;
@@ -409,6 +410,11 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
       // R3694000: a finished game past its window is closed for good, as a voided one is (R679).
       if (stopped || event.code === VOIDED_CLOSE_CODE || event.code === MATCH_OVER_CLOSE_CODE) {
         patch({ connection: "closed" });
+        return;
+      }
+      // R3767000: another tab or device holds the seat now, as in the 1v1 socket (`net.ts`): no backoff.
+      if (event.code === SEAT_TAKEN_CLOSE_CODE) {
+        patch({ connection: "elsewhere" });
         return;
       }
       if (REFUSAL_CLOSE_CODES.includes(event.code)) {

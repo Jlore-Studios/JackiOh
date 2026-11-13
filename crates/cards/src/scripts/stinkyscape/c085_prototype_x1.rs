@@ -96,14 +96,7 @@ mod tests {
             let pending = s.state().pending.clone().expect("a Discover is open");
             assert_eq!((pending.kind, pending.player_id), (PromptKind::Discover, P1));
             assert_eq!(pending.resume.step, EQUIP_PICK_STEP);
-            let offered: Vec<String> = pending
-                .options
-                .iter()
-                .filter_map(|option| match &option.selection {
-                    Selection::Mode { option } => Some(option.clone()),
-                    _ => None,
-                })
-                .collect();
+            let offered = s.prompt_modes();
             assert_eq!(
                 offered.len(),
                 (DISCOVER_OPTIONS as usize).min(pool.len() - held.len()),

@@ -439,8 +439,8 @@ pub struct EvalWeights {
     /// lent one, R1869003, or a field permission such as Second Wind's), either side's, since a
     /// graveyard is public. At 0 nothing is read.
     pub graveyard_playable: f64,
-    /// §3.2, R13: the share of its `unit_worth` a card dormant under one of the seat's own unit piles
-    /// counts. It resumes when the cards above it leave.
+    /// §3.2, R13, R3695001: the share of its `unit_worth` a card dormant under one of the seat's own
+    /// unit piles counts. It resumes when the cards above it leave.
     pub dormant_share: f64,
     /// §3.2, R447: per card dormant under a pile the seat counts but does not read card by card: the
     /// enemy's unit piles, and every backrow pile, its own and the enemy's.
@@ -497,6 +497,10 @@ pub struct EvalWeights {
     pub fatigue_draw: f64,
     /// Per crystal left at the end of the seat's own turn (terminal only).
     pub unspent_mana: f64,
+    /// R3695000: per crystal of a passed line's Float that a "Float reduces cost" card in the seat's own
+    /// hand took toward its crystals (`evaluate::float_credit`), each card up to the cost it still owed
+    /// above them.
+    pub float_discount: f64,
     /// R1224: per mana owed on the coming refreshes (Jlarna's credit line) — a debt is coming
     /// turns' mana spent early.
     pub owed_mana: f64,
@@ -612,9 +616,13 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // one more play, once, and only while its permission lasts. At 0.5 its screen read 202-198, edge 0.01
     // (-0.021 to 0.041), against the control (training/improve.md, A screen).
     graveyard_playable: 0.5,
-    // #1506: off. At 0.5 and 1.0 its screen read 200-200, edge 0.0 (-0.024 to 0.024), which keeps
-    // nothing (training/improve.md, A screen).
-    dormant_share: 0.0,
+    // R3695001: half, as a turn's wait is for R2380000's shares: a card beneath an own Stack pile acts
+    // again only once the cards above it leave. #1506 had it off (at 0.5 and 1.0 its screen read
+    // 200-200, edge 0.0, -0.024 to 0.024), so casting Drone Core X gained only its Shield Layer and
+    // Hard on 7 crystals cast Genn or Greaser over it. At 0.5 the smoke gate read 19, 16 and 20 of 20,
+    // as at 0, its screen against 0 read 200-200, edge 0.0 (0.0 to 0.0), and the sweep of the four Drone
+    // Cores cast X once in Hard's 3 affordable pass-2 turns, where 0 cast it in none (R3695001).
+    dormant_share: 0.5,
     dormant_card: 0.0,
     // R2380000: untuned starts for the training lanes, as #1886's are. A turn's wait at half, so
     // "Dormant for 2 turns" counts a quarter of the unit it wakes as; an effect's wake at half too.
@@ -650,6 +658,12 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // (training/improve.md, A screen).
     fatigue_draw: 0.0,
     unspent_mana: 0.8,
+    // R3695000: a crystal Floated toward a Float-discount card still above the crystals counts as one
+    // left unspent does, the least issue #3695 allows: on such a crystal the line nets the card's
+    // `hand_cost_delta` and no more. The smoke gate read 19, 16 and 20 of 20 at 0.8 as at 0, and Drone
+    // Core X's pass-1 sweep 2 casts at Easy where 0 had 1; at 2.4 it read none at Hard in 4 affordable
+    // turns (R3695000).
+    float_discount: 0.8,
     // R1224: a debt counts as unspent mana does.
     owed_mana: 0.8,
     // #1224: untuned starts: a crystal a coming refresh will or will not give counts as one left
@@ -846,6 +860,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     library_comfort: 10.0,
     fatigue_draw: 0.0,
     unspent_mana: 0.8,
+    float_discount: 0.0,
     owed_mana: 0.0,
     lost_refresh: 0.0,
     next_turn_mana: 0.0,

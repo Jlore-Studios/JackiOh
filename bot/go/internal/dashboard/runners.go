@@ -802,6 +802,66 @@ func gatherBox(ctx *hctx.Context, found *Found, beat *pyjson.Object) Box {
 // in shards whose ranges the heartbeat names, so a shard's games read as the export's (`progress`).
 var LearnGames = 100_000
 
+// GatherHours is gather.yml's GATHER_HOURS: how long each part of a gather run plays on GitHub's
+// runners, so a part's time so far reads as how far it has played (`Progress`, #3740).
+var GatherHours = 5
+
+// hostedShards is the learn lane's export on GitHub's runners as `hostedLearn` reads it: its
+// shards played, those playing and all of them.
+type hostedShards struct{ done, playing, total int }
+
+// hostedLearn is the export of the learn run that `found` read the jobs of, when its shards play
+// on GitHub's runners (#3740), where no heartbeat counts their games: each shard's job, played
+// once it has ended well. Nil while no such run was read.
+func hostedLearn(found *Found) *hostedShards {
+	for _, read := range found.Read {
+		if !strings.HasSuffix(py.OrStr(read.Run.Get("path"), ""), "/"+LearnWorkflow) {
+			continue
+		}
+		h := &hostedShards{}
+		for _, job := range read.Jobs {
+			if !strings.Contains(job.Str("name"), "shard from") ||
+				containsStr(pyjson.List(job.Get("labels")), LocalLabel) {
+				continue
+			}
+			h.total++
+			switch {
+			case job.Str("status") == "completed" && job.Str("conclusion") == "success":
+				h.done++
+			case job.Str("status") == "in_progress":
+				h.playing++
+			}
+		}
+		if h.total > 0 {
+			return h
+		}
+	}
+	return nil
+}
+
+// hostedGather is the parts of the gather runs that `found` read playing on GitHub's runners
+// (#3740), each its name's part ("part 1") and when it started.
+func hostedGather(found *Found) [][2]string {
+	var parts [][2]string
+	for _, read := range found.Read {
+		if !isGather(read.Run) {
+			continue
+		}
+		for _, job := range read.Jobs {
+			if job.Str("status") != "in_progress" || containsStr(pyjson.List(job.Get("labels")), GatherLabel) {
+				continue
+			}
+			part := job.Str("name")
+			if _, after, ok := strings.Cut(part, ", "); ok {
+				part = after
+			}
+			parts = append(parts, [2]string{part, py.OrStr(job.Get("started_at"), "")})
+		}
+	}
+	sort.SliceStable(parts, func(i, j int) bool { return parts[i][0] < parts[j][0] })
+	return parts
+}
+
 // ProgressStart and ProgressEnd are PROGRESS_START and PROGRESS_END: the top of the issue after its
 // date: how far the PC's two local jobs have played, between these markers, so the runners' redraw
 // keeps them as fresh as the heartbeat (`refresh_runners`).
@@ -864,11 +924,13 @@ var ProgressChart = `%%{init: {"xyChart": {"height": 220}, "themeVariables": {"x
 	`{"plotColorPalette": "#d0d7de, #1f883d"}}}}%%`
 
 // Progress is progress: the top of the issue, between `PROGRESS_START` and `PROGRESS_END`: how far
-// the owner's PC's two local jobs have played, as a Mermaid bar chart in percent, with a line under
-// it. The learn lane's export is the game it is at of `LEARN_GAMES`, then its shard's games; gather
-// is its games of its patch. Each comes from the games its `jackioh` has written so far (the
-// heartbeat's `progress`); a job playing none has a bar at 0 that says why. Without `found` it
-// reads the heartbeat alone.
+// the training lanes have played, as a Mermaid bar chart in percent, with a line under it. On the
+// owner's PC, the learn lane's export is the game it is at of `LEARN_GAMES`, then its shard's
+// games; gather is its games of its patch. Each comes from the games its `jackioh` has written so
+// far (the heartbeat's `progress`); a job playing none has a bar at 0 that says why. On GitHub's
+// runners (#3740), which send no heartbeat, the export is its shards played of all of them, and
+// each part of gather its time so far of `GatherHours`; a lane playing there has no PC bar. Without
+// `found` it reads the heartbeat alone.
 func Progress(ctx *hctx.Context, found *Found /* = None */) string {
 	if found == nil {
 		found = &Found{}
@@ -882,6 +944,8 @@ func Progress(ctx *hctx.Context, found *Found /* = None */) string {
 	}
 	var bars []bar
 	var notes []string
+	learnHosted, gatherHosted := hostedLearn(found), hostedGather(found)
+	onPC := map[string]bool{"selfplay": learnHosted == nil, "stats": len(gatherHosted) == 0}
 	if beat == nil {
 		at := clock.ParseISOValue(found.PC.Get("at"))
 		why := found.PCNote
@@ -890,8 +954,15 @@ func Progress(ctx *hctx.Context, found *Found /* = None */) string {
 		} else if why == "" {
 			why = "no heartbeat"
 		}
-		bars = []bar{{"learn: no heartbeat", 0.0}, {"gather: no heartbeat", 0.0}}
-		notes = []string{"The owner's PC: " + why}
+		if onPC["selfplay"] {
+			bars = append(bars, bar{"learn: no heartbeat", 0.0})
+		}
+		if onPC["stats"] {
+			bars = append(bars, bar{"gather: no heartbeat", 0.0})
+		}
+		if len(bars) > 0 {
+			notes = []string{"The owner's PC: " + why}
+		}
 	} else {
 		queued := map[string]bool{}
 		for _, pair := range found.Queued {
@@ -909,6 +980,9 @@ func Progress(ctx *hctx.Context, found *Found /* = None */) string {
 		for _, j := range []struct{ name, label, kind, between string }{
 			{"learn", LocalLabel, "selfplay", "a build, the retrain, the screen or the gate"},
 			{"gather", GatherLabel, "stats", "its build"}} {
+			if !onPC[j.kind] {
+				continue
+			}
 			var busy []*pyjson.Object
 			for _, r := range runners {
 				if l, ok := r.Get("label").(string); ok && l == j.label && r.Truthy("busy") {
@@ -955,7 +1029,30 @@ func Progress(ctx *hctx.Context, found *Found /* = None */) string {
 				float64(done) / float64(games)})
 			notes = append(notes, "the shard plays games "+py.Thousands(first)+"–"+py.Thousands(last))
 		}
-		notes = append(notes, "heard "+clockText(ctx, clock.ParseISOValue(beat.Get("at"))))
+		if onPC["selfplay"] || onPC["stats"] {
+			notes = append(notes, "heard "+clockText(ctx, clock.ParseISOValue(beat.Get("at"))))
+		}
+	}
+	if h := learnHosted; h != nil {
+		bars = append(bars, bar{"learn: shard " + py.Thousands(h.done) + " of " + py.Thousands(h.total) +
+			" played", float64(h.done) / float64(h.total)})
+		notes = append(notes, fmt.Sprintf("learn plays %d shards at once on GitHub's runners", h.playing))
+	}
+	for _, part := range gatherHosted {
+		played, label := 0.0, "gather "+part[0]+": started"
+		if at := clock.ParseISOValue(part[1]); !at.IsZero() {
+			so := ctx.Now().Sub(at)
+			played = so.Hours() / float64(GatherHours)
+			label = fmt.Sprintf("gather %s: %s of %dh", part[0], clock.HumanDelta(so), GatherHours)
+		}
+		bars = append(bars, bar{label, played})
+	}
+	if len(gatherHosted) > 0 {
+		notes = append(notes, "gather plays on GitHub's runners")
+	}
+	title := "The owner's PC: how far its two local jobs have played, %"
+	if learnHosted != nil || len(gatherHosted) > 0 {
+		title = "How far the training lanes have played, %"
 	}
 	var labels, full, values []string
 	for _, b := range bars {
@@ -972,7 +1069,7 @@ func Progress(ctx *hctx.Context, found *Found /* = None */) string {
 	}
 	note := strings.Join(notes, " · ")
 	lines := []string{ProgressStart, "```mermaid", ProgressChart, "xychart-beta horizontal",
-		`    title "The owner's PC: how far its two local jobs have played, %"`,
+		`    title "` + title + `"`,
 		"    x-axis [" + strings.Join(labels, ", ") + "]", `    y-axis "% played" 0 --> 100`,
 		"    bar [" + strings.Join(full, ", ") + "]",
 		"    bar [" + strings.Join(values, ", ") + "]", "```",

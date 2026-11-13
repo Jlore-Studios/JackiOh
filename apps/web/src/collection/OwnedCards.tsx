@@ -1,6 +1,9 @@
-// The owned-cards panel (#1307, SPEC §14): a completion count per shipped set and, behind each set's
-// toggle, its cards, owned as `GET /api/collection` says (CLAUDE.md rule 7). An unowned card is a
-// locked silhouette that still opens its view (R1655000), so a player sees what they miss. R1953001,
+// The Cards tab (#1307, SPEC §14; issue #3734, R3734000): one grid of the whole catalog, owned as `GET /api/collection`
+// says (CLAUDE.md rule 7), with an always-visible search, the sort, the filter chips (a sidebar over 1024 px, a sheet
+// under it), an owned count and a bar for each set. The search, filters and sort are the deck builder pool's
+// (`game/deckbuilder/filters.ts`, `FilterBar.tsx`) and the grid is virtual as it is (`CardGrid.tsx`). An unowned card
+// is a locked silhouette that still opens its view (R1655000), so a player sees what they miss; "owned" and
+// "missing" only hide cards. R1953001,
 // R2730000: `token` lets a held token's offer show in a locked item's fullscreen preview, which a hold
 // or the inspect key opens: a card token on an unowned card of the grid, a cosmetic token in the
 // card's view. R1956000: an owned tile wears the viewer's picks. R3016000: a mouse resting on a card, or the
@@ -8,18 +11,32 @@
 // with a Radiant toggle; the fullscreen preview shows the same views. R3016001: "Equip or buy" on either opens the
 // card's equip and buy screen (LooksScreen.tsx), over the fullscreen preview where it opened from there.
 
-import { useId, useState, type ReactElement } from "react";
+import { useMemo, useRef, useState, type ReactElement } from "react";
 
 import { CATALOG } from "@jackioh/cards";
-import type { CardDef, SetName } from "@jackioh/shared";
+import { setShips, type CardDef } from "@jackioh/shared";
+import type { CatalogSnapshot } from "@jackioh/validator";
 
 import { readerName } from "../cards/chinese.ts";
 import { useCanOpenFullScreen, CardDefsProvider, CardFace, closeInspect, faceModel, INSPECT_KEY_SHORTCUT, openFullScreenArt } from "../cards/index.ts";
-import { formatNumber, t } from "../i18n/i18n.ts";
+import FilterBar from "../game/deckbuilder/FilterBar.tsx";
+import { FILTER_KEYWORDS, collectionPool } from "../game/deckbuilder/filters.ts";
+import { DB_EMPTY } from "../game/deckbuilder/testids.ts";
+import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import { getCollection, type CollectionResponse } from "../net/api.ts";
 import { quantitiesOf } from "../shop/shop.ts";
+import BrowsePanel from "./BrowsePanel.tsx";
 import CardCosmeticsView from "./CardCosmeticsView.tsx";
-import { COLLECTED_DEFS, collectionTestid, setCompletions } from "./collection.ts";
+import CardGrid from "./CardGrid.tsx";
+import {
+  CARDS_SORTS,
+  COLLECTED_DEFS,
+  DEFAULT_CARDS_BROWSE,
+  collectionTestid,
+  ownedIds,
+  setCompletions,
+  type CardsBrowse,
+} from "./collection.ts";
 import ItemPreview, { usePreviewHold } from "./ItemPreview.tsx";
 import { LookHoverPanel, useLookHover, type LookHoverTrigger } from "./LookHover.tsx";
 import LookViews, { LooksButton, RadiantToggle } from "./LookViews.tsx";
@@ -105,12 +122,28 @@ export default function OwnedCards({
   collection,
   defs = COLLECTED_DEFS,
   token = null,
+  browse,
+  onBrowse,
 }: {
   collection: CollectionResponse;
   defs?: readonly CardDef[];
   token?: string | null;
+  /** The route holds the search, filters and sort, so they survive a switch of tab; without it the tab holds its own. */
+  browse?: CardsBrowse;
+  onBrowse?: (next: CardsBrowse) => void;
 }): ReactElement {
-  const [openSet, setOpenSet] = useState<SetName | null>(null);
+  const [own, setOwn] = useState(DEFAULT_CARDS_BROWSE);
+  const now = browse ?? own;
+  const { filter, sort, ownership } = now;
+  // Clear filters changes the filter and the ownership view in one press, as two calls: each patches the state the
+  // one before it left, never the render's.
+  const latest = useRef(now);
+  latest.current = now;
+  const patchBrowse = (patch: Partial<CardsBrowse>): void => {
+    latest.current = { ...latest.current, ...patch };
+    (onBrowse ?? setOwn)(latest.current);
+  };
+  const locale = useLocale();
   const [inspected, setInspected] = useState<Inspected | null>(null);
   const [previewing, setPreviewing] = useState<string | null>(null);
   // R3016000: the fullscreen preview's Radiant toggle, base whenever a preview opens.
@@ -122,7 +155,24 @@ export default function OwnedCards({
   const [reread, setReread] = useState<{ from: CollectionResponse; value: CollectionResponse } | null>(null);
   const shown = reread !== null && reread.from === collection ? reread.value : collection;
   const completions = setCompletions(shown, defs);
-  const idBase = useId();
+  const owned = useMemo(() => ownedIds(shown), [shown]);
+  // What the grid holds is what a set counts (§14): the non-token cards of the sets that ship. The pool's own filter
+  // and sort read these defs, so a `defs` that is not the catalog still filters as itself.
+  const collected = useMemo(() => defs.filter((def) => !def.token && setShips(def.set)), [defs]);
+  const catalog = useMemo<CatalogSnapshot>(
+    () => ({ version: "bundled", cards: Object.fromEntries(collected.map((def) => [def.id, def])) }),
+    [collected],
+  );
+  const shelf = useMemo(() => collected.map((def) => def.id), [collected]);
+  const ids = useMemo(
+    () => collectionPool(shelf, catalog, owned, ownership, filter, sort),
+    // The locale: names and Chinese card words are what a search and the name sort read.
+    [shelf, catalog, owned, ownership, filter, sort, locale],
+  );
+  const ownedTotal = completions.reduce((sum, set) => sum + set.owned, 0);
+  const total = completions.reduce((sum, set) => sum + set.total, 0);
+  const activeFilters =
+    filter.sets.size + filter.costs.size + filter.types.size + filter.tags.size + filter.keywords.size + filter.rarities.size + (ownership === "all" ? 0 : 1);
   // `held` names a card's ownership in the grid below; the tokens are `tokens`.
   const [tokens, setTokens] = useHeldTokens(completions.some((set) => set.owned < set.total) ? token : null);
   const shownCards = completions.flatMap((set) => set.cards);
@@ -153,54 +203,112 @@ export default function OwnedCards({
 
   return (
     <CardDefsProvider defs={CATALOG}>
-      {completions.map(({ set, owned, total, cards }) => {
-        const open = openSet === set;
-        const gridId = `${idBase}-${set}`;
-        return (
-          <div key={set} className="collection-set" data-testid={collectionTestid.set(set)}>
-            <button
-              type="button"
-              className="collection-set__toggle"
-              data-testid={collectionTestid.setToggle(set)}
-              aria-expanded={open}
-              aria-controls={gridId}
-              onClick={() => {
-                setOpenSet(open ? null : set);
+      <div className="collection-cards">
+        <BrowsePanel
+          active={activeFilters}
+          controls={
+            <FilterBar
+              part="chips"
+              filter={filter}
+              onFilter={(next) => {
+                patchBrowse({ filter: next });
               }}
-            >
-              <span>{t(set)}</span>
-              <span data-testid={collectionTestid.completion(set)}>
-                {t("{progress} of {target}", { progress: formatNumber(owned), target: formatNumber(total) })}
-              </span>
-            </button>
-            {open ? (
-              <ul id={gridId} className="collection-grid">
-                {cards.map(({ def, owned: held }) => (
-                  <li key={def.id}>
-                    <CollectionCardTile
-                      def={def}
-                      owned={held}
-                      isNew={token !== null && hasUnseen(token, def.id)}
-                      hover={hover.trigger(def.id)}
-                      onOpen={() => {
-                        hover.close();
-                        clearNew(def.id);
-                        setInspected({ def, owned: held });
-                      }}
-                      onPreview={() => {
-                        hover.close();
-                        clearNew(def.id);
-                        setPreviewRadiant(false);
-                        setPreviewing(def.id);
-                      }}
-                    />
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        );
-      })}
+              sort={sort}
+              onSort={(next) => {
+                patchBrowse({ sort: next });
+              }}
+              count={ids.length}
+              ownedControl={false}
+              keywords={FILTER_KEYWORDS}
+              ownership={ownership}
+              onOwnership={(next) => {
+                patchBrowse({ ownership: next });
+              }}
+            />
+          }
+        />
+        <div className="collection-bar">
+          <FilterBar
+            part="toolbar"
+            filter={filter}
+            onFilter={(next) => {
+              patchBrowse({ filter: next });
+            }}
+            sort={sort}
+            onSort={(next) => {
+              patchBrowse({ sort: next });
+            }}
+            count={ids.length}
+            ownedControl={false}
+            sorts={CARDS_SORTS}
+            keywords={FILTER_KEYWORDS}
+            ownership={ownership}
+            onOwnership={(next) => {
+              patchBrowse({ ownership: next });
+            }}
+          />
+        </div>
+        <div className="collection-sets">
+          <p className="collection-count">
+            <span>{t("Owned")}</span>{" "}
+            <strong data-testid={collectionTestid.count}>
+              {formatNumber(ownedTotal)} / {formatNumber(total)}
+            </strong>
+          </p>
+          <ul className="collection-set-list">
+            {completions.map(({ set, owned: have, total: of }) => (
+              <li key={set} className="collection-set" data-testid={collectionTestid.set(set)}>
+                <span className="collection-set__name">{t(set)}</span>
+                <span className="collection-set__count" data-testid={collectionTestid.completion(set)}>
+                  {t("{progress} of {target}", { progress: formatNumber(have), target: formatNumber(of) })}
+                </span>
+                <progress
+                  className="collection-set__bar"
+                  data-testid={collectionTestid.setProgress(set)}
+                  value={have}
+                  max={Math.max(of, 1)}
+                  aria-label={t(set)}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="collection-scroll">
+          {ids.length === 0 ? (
+            <p className="db-empty" data-testid={DB_EMPTY}>
+              {t("No card matches these filters.")}
+            </p>
+          ) : (
+            <CardGrid
+              ids={ids}
+              render={(id) => {
+                const def = catalog.cards[id];
+                if (def === undefined) return <></>;
+                const held = owned.has(id);
+                return (
+                  <CollectionCardTile
+                    def={def}
+                    owned={held}
+                    isNew={token !== null && hasUnseen(token, def.id)}
+                    hover={hover.trigger(def.id)}
+                    onOpen={() => {
+                      hover.close();
+                      clearNew(def.id);
+                      setInspected({ def, owned: held });
+                    }}
+                    onPreview={() => {
+                      hover.close();
+                      clearNew(def.id);
+                      setPreviewRadiant(false);
+                      setPreviewing(def.id);
+                    }}
+                  />
+                );
+              }}
+            />
+          )}
+        </div>
+      </div>
       {hovered === null || hover.hovered === null || inspected !== null || previewed !== null || looked !== null ? null : (
         <LookHoverPanel
           key={hovered.def.id}

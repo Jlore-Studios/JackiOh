@@ -146,16 +146,17 @@ func providersWithPool(cfg *config.Config, change func(*providers.Pool)) *config
 
 // ---------------------------------------------------------------------------- ParseTests
 
-// #1455, #3740: the organization runs 60 hosted jobs at once, and the bots' share is at most 24 of
+// #1455, #3740: the organization runs 60 hosted jobs at once, and the bots' share is at most 16 of
 // them (2 go to the status loop and the bots' short jobs, 12 to the training lanes, and CI keeps
-// the rest, at least 22). The bots share one pool, first come first served: each bot's
+// the rest); #3740 planned 24, held at 16 since the bot's token ran out of REST calls near the end
+// of every hour there (#3760). The bots share one pool, first come first served: each bot's
 // `max_parallel` is the whole pool, and each counts the other's runs against it
 // (`plan.others_on_github`), planning runs included (`plan.Lanes.free`).
 func TestProviders_TheBotsShareOnePoolOfGithubsRunners(t *testing.T) {
 	night := providersLoad(filepath.Join(ts.Root, ".harness", "providers.json"))
 	squishy := providersLoad(filepath.Join(ts.Root, ".squishy", "providers.json"))
 	assertEqual(t, night.Get("max_parallel"), squishy.Get("max_parallel"))
-	assertTrue(t, night.Int("max_parallel") <= 24)
+	assertTrue(t, night.Int("max_parallel") <= 16)
 	for _, pair := range [][2]string{{".harness", "squishy-run.yml"}, {".squishy", "bot-night.yml"}} {
 		raw := providersLoad(filepath.Join(ts.Root, pair[0], "config.json"))
 		workflows := []any{}

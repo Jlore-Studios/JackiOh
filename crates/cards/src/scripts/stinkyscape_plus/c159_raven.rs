@@ -75,14 +75,7 @@ mod tests {
         let pending = s.state().pending.clone().expect("a Discover is open");
         assert_eq!((pending.kind, pending.player_id), (PromptKind::Discover, P1));
         assert_eq!(pending.resume.step, EQUIP_PICK_STEP);
-        let mut offered: Vec<String> = pending
-            .options
-            .iter()
-            .filter_map(|option| match &option.selection {
-                Selection::Mode { option } => Some(option.clone()),
-                _ => None,
-            })
-            .collect();
+        let mut offered = s.prompt_modes();
         offered.sort();
         assert_eq!(offered, pool, "radiant {radiant}: the whole pool is offered");
         let before = s.stats(host.as_str()).health;
