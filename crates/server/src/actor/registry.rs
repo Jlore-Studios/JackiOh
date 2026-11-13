@@ -161,6 +161,165 @@ async fn bots_of(
     Ok(PerPlayer::new(bot(&players.0), bot(&players.1)))
 }
 
+/// What [`prepare_match`] made of a `StartMatchInput`: the row to write and the begun game, with what
+/// a live actor is built from beside them.
+pub(crate) struct Prepared {
+    pub match_row: MatchRow,
+    pub state: engine::EngineState,
+    pub derived_mode: Option<QueueMode>,
+    pub bots: PerPlayer<Option<BotRow>>,
+    pub pinned: engine::Pinned,
+    pub dealt_cards: std::collections::BTreeMap<String, (PlayerId, String)>,
+}
+
+/// The `matches` row a start writes and the game it begins, nothing written yet (§9.2): what a live
+/// match's [`Registry::start`] and a daily game's start (`daily::games`, which has no actor, §9.13)
+/// share.
+pub(crate) async fn prepare_match(
+    app: &Arc<App>,
+    input: &StartMatchInput,
+    now: i64,
+) -> Result<Prepared, ApiError> {
+    let (first, second) = &input.seats;
+    let profile_ids = vec![first.profile_id.clone(), second.profile_id.clone()];
+    let players = (first.profile_id.clone(), second.profile_id.clone());
+    // R3049000: the win-rate snapshot the game is handed, the cached card stats as it starts: always
+    // one, so no new game reads a version's frozen table.
+    let snapshot = match input.win_rates.clone() {
+        Some(table) => table,
+        None => crate::api::stats::win_rate_snapshot(app).await,
+    };
+    let (boards, sampled, derived_mode, bots, picks) = one_tx!(app.db, |t| {
+        // R417: each seat's last server-match board, frozen on the match as it starts.
+        let boards = (
+            t.last_boards_get(&first.profile_id, LastBoardKind::Server)
+                .await?
+                .unwrap_or_default(),
+            t.last_boards_get(&second.profile_id, LastBoardKind::Server)
+                .await?
+                .unwrap_or_default(),
+        );
+        // R678: two other players' last boards, never a seat's own, sampled once and frozen on
+        // the row so every rebuild folds the same Glitch.
+        let sampled = t
+            .last_boards_sample_others(&profile_ids, GLITCH_BOARDS_SAMPLED as i64)
+            .await?;
+        // R433: mode read from tickets/room/series, the same before the row is written as
+        // `rebuild` reads it after. R672: a rematch states its mode.
+        let derived_mode = match input.mode {
+            Some(mode) => Some(mode),
+            None => t.matches_mode_of(&input.match_id).await?,
+        };
+        // R1452: the ladder bot at either seat, which the actor plays.
+        let bots = bots_of(&mut t, &players).await?;
+        // R1834002: what each seat's loadout freezes from, as the match starts; R1834005: a
+        // bot's from its own row, through the same path.
+        let picks = (
+            read_seat_picks(&mut t, &first.profile_id, bots.p1.as_ref()).await?,
+            read_seat_picks(&mut t, &second.profile_id, bots.p2.as_ref()).await?,
+        );
+        (boards, sampled, derived_mode, bots, picks)
+    })?;
+
+    let glitch_boards = (
+        sampled.first().cloned().unwrap_or_default(),
+        sampled.get(1).cloned().unwrap_or_default(),
+    );
+    let mut match_row = MatchRow {
+        id: input.match_id.clone(),
+        seed: input.seed.clone(),
+        players: (first.profile_id.clone(), second.profile_id.clone()),
+        decks: (first.deck.clone(), second.deck.clone()),
+        catalog_version: input.catalog_version.clone(),
+        ranked: Some(input.ranked),
+        // R672, R1555000: rematch and bot-vs-bot matches state mode/stakes explicitly.
+        mode: input.mode,
+        stake: input.stake,
+        status: MatchStatus::Live,
+        created_at: now,
+        finished_at: None,
+        clocks: initial_clocks(now, MATCH_CEILING_MINUTES),
+        last_boards: if boards.0.len() + boards.1.len() > 0 {
+            Some(boards)
+        } else {
+            None
+        },
+        glitch_boards: if sampled.is_empty() {
+            None
+        } else {
+            Some(glitch_boards)
+        },
+        // R642: the portraits the seats were dealt, frozen on the row so a rebuilt actor (and a
+        // reconnected client) reads the same pair.
+        portraits: Some((
+            portrait_or_default(first.portrait.as_deref()),
+            portrait_or_default(second.portrait.as_deref()),
+        )),
+        // R1834002: frozen below, once the opening shows which cards each deck dealt.
+        loadouts: None,
+        // R768: written with the result, never at the start.
+        final_hash: None,
+        // R3049000: frozen below, as the game kept it.
+        win_rates: None,
+    };
+    let dealt = dealt_for(derived_mode);
+    // R388, R767000: the match is pinned to the catalog its row froze. A version this build
+    // neither is nor carries is refused before anything is written, as a co-op join refuses
+    // (`duos::rooms`).
+    let pinned = engine::Pinned::of(&match_row.catalog_version).map_err(|reason| {
+        ApiError::internal(format!(
+            "catalog {} cannot be played: {reason}",
+            match_row.catalog_version
+        ))
+    })?;
+
+    // The opening draw is the engine's, not the log's (§9.3). It runs before the row is written,
+    // so a game the engine cannot begin leaves no `live` row nothing but the ceiling could end;
+    // an `open` skeleton stays for `matches_discard_open` (R263). The engine's panic is the error.
+    let (last_boards, glitch) = last_boards_of(&match_row);
+    let args = engine::create_game_args(
+        &match_row.seed,
+        &match_row.decks,
+        last_boards,
+        glitch,
+        dealt,
+        Some(snapshot),
+    );
+    let state = std::panic::catch_unwind(AssertUnwindSafe(|| {
+        engine::begin_game(pinned, &engine::create_game(pinned, &args)).state
+    }))
+    .map_err(|payload| ApiError::internal(panic_text(payload)))?;
+    // R3049000: the rows of the snapshot the game kept, which every fold of the row is handed.
+    match_row.win_rates = state.win_rates.clone();
+    // R1834002: each seat's loadout, frozen on the row beside its portrait, over the cards its
+    // deck dealt (an All Random seat's dealt deck among them).
+    let dealt_cards = engine::dealt_cards(&state);
+    let deck_cards = |seat: PlayerId| -> Vec<String> {
+        dealt_cards
+            .values()
+            .filter(|(owner, _)| *owner == seat)
+            .map(|(_, def)| def.clone())
+            .collect()
+    };
+    match_row.loadouts = Some((
+        picks
+            .0
+            .freeze(first.deck_slots.as_ref(), &deck_cards(PlayerId::P1)),
+        picks
+            .1
+            .freeze(second.deck_slots.as_ref(), &deck_cards(PlayerId::P2)),
+    ));
+
+    Ok(Prepared {
+        match_row,
+        state,
+        derived_mode,
+        bots,
+        pinned,
+        dealt_cards,
+    })
+}
+
 impl Registry {
     pub fn new() -> Registry {
         Registry {
@@ -186,137 +345,14 @@ impl Registry {
     /// Writes the `matches` row and creates the actor (§9.2). Called by queue pairing, a room's
     /// join, a series' game and a rematch.
     pub async fn start(&self, app: &Arc<App>, input: StartMatchInput) -> Result<(), ApiError> {
-        let (first, second) = &input.seats;
-        let now = now_ms();
-        let profile_ids = vec![first.profile_id.clone(), second.profile_id.clone()];
-        let players = (first.profile_id.clone(), second.profile_id.clone());
-        // R3049000: the win-rate snapshot the game is handed, the cached card stats as it starts: always
-        // one, so no new game reads a version's frozen table.
-        let snapshot = match input.win_rates.clone() {
-            Some(table) => table,
-            None => crate::api::stats::win_rate_snapshot(app).await,
-        };
-        let (boards, sampled, derived_mode, bots, picks) = one_tx!(app.db, |t| {
-            // R417: each seat's last server-match board, frozen on the match as it starts.
-            let boards = (
-                t.last_boards_get(&first.profile_id, LastBoardKind::Server)
-                    .await?
-                    .unwrap_or_default(),
-                t.last_boards_get(&second.profile_id, LastBoardKind::Server)
-                    .await?
-                    .unwrap_or_default(),
-            );
-            // R678: two other players' last boards, never a seat's own, sampled once and frozen on
-            // the row so every rebuild folds the same Glitch.
-            let sampled = t
-                .last_boards_sample_others(&profile_ids, GLITCH_BOARDS_SAMPLED as i64)
-                .await?;
-            // R433: mode read from tickets/room/series, the same before the row is written as
-            // `rebuild` reads it after. R672: a rematch states its mode.
-            let derived_mode = match input.mode {
-                Some(mode) => Some(mode),
-                None => t.matches_mode_of(&input.match_id).await?,
-            };
-            // R1452: the ladder bot at either seat, which the actor plays.
-            let bots = bots_of(&mut t, &players).await?;
-            // R1834002: what each seat's loadout freezes from, as the match starts; R1834005: a
-            // bot's from its own row, through the same path.
-            let picks = (
-                read_seat_picks(&mut t, &first.profile_id, bots.p1.as_ref()).await?,
-                read_seat_picks(&mut t, &second.profile_id, bots.p2.as_ref()).await?,
-            );
-            (boards, sampled, derived_mode, bots, picks)
-        })?;
-
-        let glitch_boards = (
-            sampled.first().cloned().unwrap_or_default(),
-            sampled.get(1).cloned().unwrap_or_default(),
-        );
-        let mut match_row = MatchRow {
-            id: input.match_id.clone(),
-            seed: input.seed.clone(),
-            players: (first.profile_id.clone(), second.profile_id.clone()),
-            decks: (first.deck.clone(), second.deck.clone()),
-            catalog_version: input.catalog_version.clone(),
-            ranked: Some(input.ranked),
-            // R672, R1555000: rematch and bot-vs-bot matches state mode/stakes explicitly.
-            mode: input.mode,
-            stake: input.stake,
-            status: MatchStatus::Live,
-            created_at: now,
-            finished_at: None,
-            clocks: initial_clocks(now, MATCH_CEILING_MINUTES),
-            last_boards: if boards.0.len() + boards.1.len() > 0 {
-                Some(boards)
-            } else {
-                None
-            },
-            glitch_boards: if sampled.is_empty() {
-                None
-            } else {
-                Some(glitch_boards)
-            },
-            // R642: the portraits the seats were dealt, frozen on the row so a rebuilt actor (and a
-            // reconnected client) reads the same pair.
-            portraits: Some((
-                portrait_or_default(first.portrait.as_deref()),
-                portrait_or_default(second.portrait.as_deref()),
-            )),
-            // R1834002: frozen below, once the opening shows which cards each deck dealt.
-            loadouts: None,
-            // R768: written with the result, never at the start.
-            final_hash: None,
-            // R3049000: frozen below, as the game kept it.
-            win_rates: None,
-        };
-        let dealt = dealt_for(derived_mode);
-        // R388, R767000: the match is pinned to the catalog its row froze. A version this build
-        // neither is nor carries is refused before anything is written, as a co-op join refuses
-        // (`duos::rooms`).
-        let pinned = engine::Pinned::of(&match_row.catalog_version).map_err(|reason| {
-            ApiError::internal(format!(
-                "catalog {} cannot be played: {reason}",
-                match_row.catalog_version
-            ))
-        })?;
-
-        // The opening draw is the engine's, not the log's (§9.3). It runs before the row is written,
-        // so a game the engine cannot begin leaves no `live` row nothing but the ceiling could end;
-        // an `open` skeleton stays for `matches_discard_open` (R263). The engine's panic is the error.
-        let (last_boards, glitch) = last_boards_of(&match_row);
-        let args = engine::create_game_args(
-            &match_row.seed,
-            &match_row.decks,
-            last_boards,
-            glitch,
-            dealt,
-            Some(snapshot),
-        );
-        let state = std::panic::catch_unwind(AssertUnwindSafe(|| {
-            engine::begin_game(pinned, &engine::create_game(pinned, &args)).state
-        }))
-        .map_err(|payload| ApiError::internal(panic_text(payload)))?;
-        // R3049000: the rows of the snapshot the game kept, which every fold of the row is handed.
-        match_row.win_rates = state.win_rates.clone();
-        // R1834002: each seat's loadout, frozen on the row beside its portrait, over the cards its
-        // deck dealt (an All Random seat's dealt deck among them).
-        let dealt_cards = engine::dealt_cards(&state);
-        let deck_cards = |seat: PlayerId| -> Vec<String> {
-            dealt_cards
-                .values()
-                .filter(|(owner, _)| *owner == seat)
-                .map(|(_, def)| def.clone())
-                .collect()
-        };
-        match_row.loadouts = Some((
-            picks
-                .0
-                .freeze(first.deck_slots.as_ref(), &deck_cards(PlayerId::P1)),
-            picks
-                .1
-                .freeze(second.deck_slots.as_ref(), &deck_cards(PlayerId::P2)),
-        ));
-
+        let Prepared {
+            match_row,
+            state,
+            derived_mode,
+            bots,
+            pinned,
+            dealt_cards,
+        } = prepare_match(app, &input, now_ms()).await?;
         one_tx!(app.db, |t| t.matches_create(&match_row).await?)?;
         let match_id = match_row.id.clone();
         let players = match_row.players.clone();
@@ -344,8 +380,11 @@ impl Registry {
 
     async fn rebuild(&self, app: &Arc<App>, match_id: &str) -> Result<MatchActor, RebuildError> {
         let store = |error: crate::db::store::StoreError| RebuildError::Internal(error.to_string());
-        let (match_row, log, mode, bots, saved) = one_tx!(app.db, |t| {
+        let (match_row, log, mode, bots, saved, daily) = one_tx!(app.db, |t| {
             let match_row = t.matches_get(match_id).await?;
+            // §9.13 (#3727): a daily game is played over HTTPS a request at a time (`daily::games`),
+            // never by an actor in memory.
+            let daily = t.daily_games_get(match_id).await?.is_some();
             let log = t.matches_actions(match_id).await?;
             let mode = t.matches_mode_of(match_id).await?;
             // R1452: a restart resumes a bot's seat as it resumes the match.
@@ -358,10 +397,10 @@ impl Registry {
                 Some(_) => t.matches_checkpoint(match_id).await?,
                 None => None,
             };
-            (match_row, log, mode, bots, saved)
+            (match_row, log, mode, bots, saved, daily)
         })
         .map_err(store)?;
-        let Some(match_row) = match_row else {
+        let Some(match_row) = match_row.filter(|_| !daily) else {
             return Err(RebuildError::NotFound);
         };
         if match_row.status == MatchStatus::Finished && log.is_empty() {

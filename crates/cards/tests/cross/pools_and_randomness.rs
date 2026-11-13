@@ -292,17 +292,6 @@ mod seed_search_survives_a_pool_change {
         }
     }
 
-    fn offered(s: &Scenario) -> Vec<String> {
-        let pending = serde_json::to_value(s.state().pending.as_ref()).unwrap_or_default();
-        pending["options"]
-            .as_array()
-            .cloned()
-            .unwrap_or_default()
-            .iter()
-            .filter_map(|option| option["selection"]["option"].as_str().map(str::to_string))
-            .collect()
-    }
-
     fn first_offers() -> Vec<Vec<String>> {
         (0..SEEDS_COMPARED)
             .map(|n| {
@@ -312,7 +301,7 @@ mod seed_search_survives_a_pool_change {
                     "p2": { "hand": [RENO], "field": [PREM_PANTHER] },
                 }));
                 s.play(CRAFT, json!({}));
-                offered(&s)
+                s.prompt_modes()
             })
             .collect()
     }

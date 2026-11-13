@@ -108,14 +108,9 @@ mod tests {
     fn offered(s: &Scenario) -> Vec<String> {
         let pending = s.state().pending.as_ref().expect("the Discover is open");
         assert_eq!((pending.kind, pending.player_id), (PromptKind::Discover, P1));
-        pending
-            .options
-            .iter()
-            .map(|option| match &option.selection {
-                Selection::Mode { option } => option.clone(),
-                other => panic!("a Discover offers cards: {other:?}"),
-            })
-            .collect()
+        let offered = s.prompt_modes();
+        assert_eq!(offered.len(), pending.options.len(), "a card option each");
+        offered
     }
 
     /// The card the last step added to p1's hand, if one was.

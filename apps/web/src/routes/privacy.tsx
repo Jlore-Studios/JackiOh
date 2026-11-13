@@ -26,7 +26,7 @@ export const privacyTestid = {
 } as const;
 
 /** The date the text below last changed, as the page shows it. */
-export const PRIVACY_LAST_UPDATED = "2026-11-05";
+export const PRIVACY_LAST_UPDATED = "2026-11-11";
 
 export default function PrivacyRoute(): ReactElement {
   const locale = useLocale();
@@ -55,6 +55,11 @@ export default function PrivacyRoute(): ReactElement {
             Your email and username, confirmation that you&rsquo;re {MIN_ACCOUNT_AGE_YEARS} or older, your decks,
             cards, matches and how you play, your friends, chats and shared replays, and technical info like your
             IP address and browser.
+          </p>
+          <p>
+            For daily games, your notification settings (email on or off, and when we last emailed you or sent a
+            push) and, for each device you turn notifications on for, its push subscription: its push
+            service&rsquo;s address and keys.
           </p>
         </section>
 
@@ -89,6 +94,10 @@ export default function PrivacyRoute(): ReactElement {
           <p>
             We keep your data while you have an account. Card statistics that don&rsquo;t identify you may be kept
             indefinitely.
+          </p>
+          <p>
+            A device&rsquo;s push subscription is kept until you turn its notifications off, sign out on it, or its
+            push service tells us it&rsquo;s gone.
           </p>
         </section>
 

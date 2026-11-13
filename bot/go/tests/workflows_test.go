@@ -866,7 +866,8 @@ func TestWorkflows_GatherPlaysTheNewestMainWithoutAPause(t *testing.T) {
 	assertNotIn(t, "  push:", text)
 	job := workflowsJob(t, text, "gather")
 	assertIn(t, "ref: ${{ github.sha }}", job)
-	assertIn(t, "timeout-minutes: ${{ vars.TRAINING_ON_PC == 'true' && 1440 || 350 }}", job)
+	assertIn(t, "runs-on: ubuntu-latest\n", job)
+	assertIn(t, "timeout-minutes: 350\n", job)
 	hours := regexp.MustCompile(`(?m)^  GATHER_HOURS: "(\d+)"$`).FindStringSubmatch(text)
 	assertTrue(t, hours != nil, "GATHER_HOURS")
 	// Its hours, and half an hour for the build and the last batch's overrun, within the timeout.
@@ -882,16 +883,22 @@ func TestWorkflows_GatherPlaysTheNewestMainWithoutAPause(t *testing.T) {
 }
 
 // #3740: the training lanes hold 12 of the organization's 60 hosted jobs, the learn lane's export
-// 10 shards at a time and the gather lane's two parts, and on the PC two shards and one part.
+// 10 shards at a time and the gather lane's two parts, on GitHub's runners alone: the owner's PC's
+// self-hosted runner takes none of their jobs (2026-11-13), and no workflow names its labels or the
+// TRAINING_ON_PC switch.
 func TestWorkflows_TheTrainingLanesHoldTwelveOfGithubsRunners(t *testing.T) {
 	shards := workflowsJob(t, workflowsRead(t, "selfplay-shards.yml"), "shard")
-	assertIn(t, "max-parallel: ${{ inputs.runner == 'ubuntu-latest' && 10 || 2 }}", shards)
+	assertIn(t, "max-parallel: 10\n", shards)
 	gather := workflowsJob(t, workflowsRead(t, "gather.yml"), "gather")
-	assertIn(t, `part: ${{ fromJSON(vars.TRAINING_ON_PC == 'true' && '[1]' || '[1, 2]') }}`, gather)
+	assertIn(t, "part: [1, 2]\n", gather)
 	learn := workflowsRead(t, "learn.yml")
-	on := "${{ vars.TRAINING_ON_PC == 'true' && 'jackioh-selfplay-local' || 'ubuntu-latest' }}"
-	assertEqual(t, strings.Count(learn, "    runs-on: "+on+"\n"), 5)
-	assertIn(t, "      runner: "+on+"\n", workflowsJob(t, learn, "export"))
+	assertEqual(t, strings.Count(learn, "    runs-on: ubuntu-latest\n"), 5)
+	assertIn(t, "      runner: ubuntu-latest\n", workflowsJob(t, learn, "export"))
+	for _, name := range []string{"gather.yml", "learn.yml", "selfplay.yml", "selfplay-shards.yml"} {
+		text := workflowsRead(t, name)
+		assertNotIn(t, "jackioh-selfplay-local", text)
+		assertNotIn(t, "TRAINING_ON_PC ==", text)
+	}
 }
 
 // workflowsGatherPlay is the name of gather.yml's step that plays and files the games.
