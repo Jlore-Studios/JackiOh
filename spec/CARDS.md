@@ -50,7 +50,7 @@ The cards and tokens that print each keyword on either face, as the catalog's `k
 | Burn | none | none |
 | Toxic | none | none |
 | GIGA | S+ #52 Airblast Drill, S+ #53 Laser Drill, S+ #56 Impact Reactor, S+ #106 Spectre | S+ T-AI-4 Jlockeed Large Language Model |
-| Flexible | S+ #35 Scatter, S+ #36 Duo, S+ #40 Mender, S+ #58 Phase Conveyer, S+ #59 Mass Driver, S+ #72 Foreshadow, S+ #73 Ripple, S+ #90 Meltdown, S+ #91 Tsunami, S+ #106 Spectre, S+ #108 Swarmer, S+ #109 Lancer | none |
+| Flexible | S+ #35 Scatter, S+ #36 Duo, S+ #58 Phase Conveyer, S+ #72 Foreshadow, S+ #73 Ripple, S+ #90 Meltdown, S+ #91 Tsunami, S+ #106 Spectre, S+ #108 Swarmer, S+ #109 Lancer | none |
 | Frenzy | S #94 Tmack Trav | C+ #73.1 Classic Golem |
 | Evasive | C+ #51 Jlockeed's J15 Fighter | S+ T-AI-3 Jlockeed Loitering Munition |
 | Tipsy | none | C+ #65.1 Rotten Grape, S+ #6.1 Fine Fermented Grape, S+ T-AI-1 Hallucinated Kiwi |
