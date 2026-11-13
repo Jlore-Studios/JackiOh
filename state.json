@@ -16368,14 +16368,6 @@
         "reason": "`claude-1` stops mid-call: 5-hour usage is 100%, at or over its 100% cap; it resets at 2026-11-13T11:20:00Z",
         "trail": ""
       },
-      "hold": {
-        "ends": "2026-11-13T12:25:12Z",
-        "lifted": "2026-11-13T11:20:40Z",
-        "owner": "claude-1",
-        "since": "2026-11-13T10:25:12Z",
-        "until": "2026-11-13T11:20:00Z",
-        "why": "5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%)"
-      },
       "interruptions": 0,
       "issue": 3778,
       "kind": "review",
@@ -16383,7 +16375,8 @@
       "live": "reviewing",
       "merge_owner": "claude-1",
       "own_review": {
-        "claimed_at": "2026-11-13T10:02:14Z",
+        "claimed": true,
+        "claimed_at": "2026-11-13T11:26:25Z",
         "from_run": "43394979119",
         "gates": [
           {
@@ -16482,7 +16475,7 @@
       "queued_at": "2026-11-13T10:00:36Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "43406005345",
+      "run_id": "pending:57e7bb7c-1794569132",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16503,7 +16496,7 @@
         "run": "43394979119"
       },
       "source": "",
-      "started_at": "2026-11-13T10:02:14Z",
+      "started_at": "2026-11-13T11:26:25Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -18267,9 +18260,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T10:54:32Z",
+    "at": "2026-11-13T11:26:25Z",
     "url": "",
-    "what": "plan #3822 on claude-8"
+    "what": "review #3798 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-13T10:49:52Z",
