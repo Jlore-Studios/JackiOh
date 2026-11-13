@@ -17655,17 +17655,8 @@
       }
     },
     "3822": {
-      "action": "plan",
-      "asks": [
-        "c:6845285660"
-      ],
-      "build_next": {
-        "from_run": "43412763596",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-13T11:21:55Z",
-        "until": "2026-11-13T11:51:55Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-13T11:21:40Z",
         "difficulty": "hard",
@@ -17684,10 +17675,9 @@
         "reason": "planned on opus",
         "trail": "talog.json | grep -viE 'burnout|heartburn' | head -40; grep -rlE 'Affliction::(Burn|Toxic)|burn_all|fn burn|toxic\\\\(' crates\u2026\n- Bash: {\"command\": \"grep -oE '\\\"(burns|toxic|burn)\\\" *: *[0-9]+' crates/cards/catalog.json | sort | uniq -c; grep -oE '\\\\{(burns|toxic|burn)\\\\}|(Burn|Toxic) \\\\{[a-z]+\\\\}' crates/cards/catalog.json | sort | \u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport json,re\\ncat=json.load(open('crates/cards/catalog.json'))\\nvals={}\\ndef walk(o,path=\\\"\\\"):\\n if isinstance(o,dict):\\n for k,v in o.items():\\n if k in (\\\"burn\u2026\n- Bash: {\"command\": \"grep -o '.\\\\{200\\\\}Burn {burn}.\\\\{300\\\\}' crates/cards/catalog.json | head -2; grep -rn 'BURNS_PARAM\\\\|\\\"burns\\\"' crates/cards/src/scripts | head -5\", \"description\": \"Inspect a Burn card\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport json\\ncat=json.load(open('crates/cards/catalog.json'))\\ncards = cat if isinstance(cat,list) else cat.get('cards', cat)\\nif isinstance(cards, dict): cards=lis\u2026\n- Bash: {\"command\": \"tail -c 1500 /tmp/gate-base.log\", \"description\": \"Check gate progress\"}\n- Bash: {\"command\": \"grep -n 'pub brittle:' -B2 crates/engine/src/state.rs; grep -n 'pub struct BrittleCount\\\\|pub struct Brittle ' -A 8 crates/engine/src/state.rs crates/engine/src/wire/*.rs | head -20; gre\u2026\n- Bash: {\"command\": \"sed -n '1,30p' crates/ai/tests/ai/support.rs; grep -n '\\\"counters\\\"\\\\|\\\"lane\\\"' crates/engine/src/testkit/scenario.rs | head -5; grep -n 'pub use state::\\\\*\\\\|pub use crate::\\\\*' crates/\u2026\n- Bash: {\"command\": \"grep -n 'counters' crates/engine/src/testkit/scenario.rs | head -10; tail -c 600 /tmp/gate-base.log\", \"description\": \"Check scenario counters parsing; gate result\"}\n- Bash: {\"command\": \"grep -n 'fn [a-z_]*(' crates/tools/tests/acceptance.rs | head -40; grep -n 'README\\\\|config.rs\\\\|AI_EVAL' crates/tools/tests/acceptance.rs | head -20\", \"description\": \"See what the tools\u2026\n- Bash: {\"command\": \"sed -n '1241,1300p' crates/tools/tests/acceptance.rs\", \"description\": \"Read the shared helper copy checks\"}\n- Bash: {\"command\": \"grep -n 'SHARED_TEST_HELPERS' -A 40 crates/tools/tests/acceptance.rs | grep -n 'crates/ai\\\\|names\\\\|statics\\\\|structs' | head -20\", \"description\": \"List the AI tests' forbidden helper na\u2026\n- Bash: {\"command\": \"sed -n '968,1030p' crates/tools/tests/acceptance.rs\", \"description\": \"Read shared helper rows for AI tests\"}\n- Bash: {\"command\": \"sed -n '1030,1095p' crates/tools/tests/acceptance.rs | grep -n 'home\\\\|names\\\\|dirs\\\\|KIT_READERS' ; grep -n 'const KIT_READERS' -A 8 crates/tools/tests/acceptance.rs\", \"description\": \"F\u2026\n- Bash: {\"command\": \"tail -8 /tmp/gate-base.log; sed -n '1196,1236p' crates/tools/tests/acceptance.rs\", \"description\": \"Gate final result; pick-builder rule\"}\n- Bash: {\"command\": \"sed -n '1,12p' spec/rulings/R1370000.md | cut -c1-1500; echo; sed -n '5,8p' spec/rulings/R1365000.md | cut -c1-1500\", \"description\": \"Read classify rulings for AI-only changes\"}\n- Bash: {\"command\": \"c=$(git log --format=%h -1 -- spec/rulings/R3064000.md); git show --stat --format='%h %s' $c | head -20\", \"description\": \"See files an earlier AI-pricing PR touched\"}\n- Bash: {\"command\": \"head -c 600 spec/pending/3791.md; echo; git show 69b0567001 -- spec/pending/3064.md | tail -3 | cut -c1-400; git show 69b0567001 -- spec/09-architecture.md | grep '^+' | cut -c1-200 | ta\u2026\n- Bash: {\"command\": \"grep -rn 'fn afflicted\\\\|coming_hero_ticks\\\\|fn coming_ticks' crates/ai/src | head; grep -n 'pub fn first_unit\\\\|fn first_unit' crates/ai/tests/ai/evaluate.rs; sed -n '199,215p' crates/a\u2026\n- Bash: {\"command\": \"grep -rln 'ai/README.md\\\\|crates/ai/README' crates --include=*.rs | head; grep -rn 'GREEDY_EVAL' crates/tools/src/gate.rs | head -5\", \"description\": \"Check tests reading the AI README\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport json\\ncat=json.load(open('crates/cards/catalog.json'))\\ncards = cat if isinstance(cat,list) else cat.get('cards')\\nif isinstance(cards, dict): cards=list(car\u2026\n- tool error: Exit code 1 Traceback (most recent call last): File \"<stdin>\", line 5, in <module> TypeError: 'NoneType' object is not iterable\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport json;cat=json.load(open('crates/cards/catalog.json'));print(type(cat), list(cat)[:10] if isinstance(cat,dict) else len(cat))\\\"; grep -o '\\\"id\\\": *\\\"core-053\\\"[^}\u2026\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport json;cat=json.load(open('crates/cards/catalog.json'))\\nfor k in ['core-053','core-008','core-019']:\\n c=cat[k]; print(k, c.get('name'), json.dumps({x:c[x] for x \u2026\n- Bash: {\"command\": \"grep -rlE 'aiDecide|decide\\\\(|practice' apps/web/src --include=*.test.ts --include=*.test.tsx | xargs grep -liE 'burn|toxic' 2>/dev/null | head; grep -rn 'fn r3822\\\\|R3822' crates spec a\u2026\n- Bash: {\"command\": \"grep -niE 'burn|toxic' apps/web/src/routes/practice.test.tsx apps/web/src/surfaces.test.ts | head -5\", \"description\": \"See Burn mentions in web practice tests\"}\n- Bash: {\"command\": \"grep -n 'lane' spec/04-*.md | head -12 | cut -c1-300\", \"description\": \"Check whether attacks are lane-restricted\"}\n- Bash: {\"command\": \"grep -n '\\\\[\\\\[test\\\\]\\\\]' -A 3 crates/ai/Cargo.toml; ls crates/ai/tests/; grep -n 'testkit' crates/ai/Cargo.toml\", \"description\": \"Check the AI crate's test targets\"}\n- Bash: {\"command\": \"sed -n '155,162p' crates/ai/README.md; grep -n 'face_threat' crates/ai/src/features.rs | head -3; grep -n 'A passed line.s Float is credited' crates/ai/src/evaluate.rs\", \"description\": \"\u2026\n- said: Now I'll write the full plan into the draft before emitting it.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3822/.bot-plan.md\", \"content\": \"# Draft plan #3822 (opus planner) \\u2014 complete; the final message is this plan\\n\\nFindings: see the \\\"Departures\\\" \u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule line 2 (the AI): it changes crates/ai/src/evaluate.rs, which drives the AI's search and its decisions.\"} --> ## Goal The practice AI prices Burn and Toxic. Both are public (R3540005), and the AI counts them as R3540001 ticks them: - **Units.** A unit lo\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-13T10:54:32Z",
       "owner_why": "handed off from `claude-3`: its owner `claude-3` cannot take it now",
@@ -17700,12 +17690,14 @@
       "provider": "claude-8",
       "queued_at": "2026-11-13T05:47:52Z",
       "requested_by": "jgoetzmann",
-      "run_id": "43412763596",
+      "run_id": "pending:90923bea-1794569345",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-13T10:54:32Z",
+      "started_at": "2026-11-13T11:29:38Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6845285660"
+      ]
     },
     "3824": {
       "action": "build",
@@ -18256,9 +18248,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T11:28:51Z",
+    "at": "2026-11-13T11:29:38Z",
     "url": "",
-    "what": "build #3733 on claude-1"
+    "what": "build #3822 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-13T10:49:52Z",
