@@ -23,7 +23,9 @@ fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     if left.lane < 1 || !in_units_row_or_standing(&*ctx.state, me) {
         return vec![];
     }
-    let Some(neighbour) = card_at(&*ctx.state, left)
+    // R3546001: a GIGA to its left covers that zone from further left, which `occupant_at` finds
+    // (a GIGA Felinor's anchor is its leftmost lane, so its left zone is the one before the anchor).
+    let Some(neighbour) = occupant_at(&*ctx.state, left)
         .filter(|card| !is_slumbering(card) && is_adjacent_card(&*ctx.state, me, card))
         .map(|card| card.id.clone())
     else {
@@ -66,6 +68,7 @@ mod tests {
     const FILLER: &str = "core-005";
     const TOWER: &str = "classicplus-033"; // Ivory Tower: carries a Unit stacked onto it as its play resolves
     const TRAP: &str = "stand-in (1) Trap";
+    const GIGA_BODY: &str = "stand-in (1) 4/4 GIGA R12/12";
 
     fn felinor(radiant: bool, mine: Value, theirs: Value) -> Scenario {
         scenario(json!({
@@ -128,6 +131,39 @@ mod tests {
             s.expect_in_zone(&rider, "gone");
             assert_eq!(s.last_count(GameEventType::Buffed), 0);
             unbuffed(&mut s, &trap);
+        }
+
+        #[test]
+        fn r3546001_a_giga_felinor_beside_a_giga_buffs_both() {
+            let mut s = felinor(false, json!([{ "def": GIGA_BODY, "lane": 1 }]), json!([]));
+            let id = s.card(FELINOR).id.clone();
+            crate::give_giga(&mut s, &id);
+            let body = s.unit_at(P1, 1);
+            s.play(FELINOR, json!({ "zone": 3 }));
+            assert_eq!(s.card(&id).giga, Some(true));
+            s.expect_stats(FELINOR, json!({ "attack": 6, "health": 6 }));
+            s.expect_stats(&body, json!({ "attack": 7, "health": 7 }));
+        }
+
+        #[test]
+        fn r3546001_a_plain_felinor_beside_a_giga_buffs_both() {
+            let mut s = felinor(false, json!([{ "def": GIGA_BODY, "lane": 1 }]), json!([]));
+            let body = s.unit_at(P1, 1);
+            s.play(FELINOR, json!({ "zone": 3 }));
+            s.expect_stats(FELINOR, json!({ "attack": 6, "health": 6 }));
+            s.expect_stats(&body, json!({ "attack": 7, "health": 7 }));
+        }
+
+        #[test]
+        fn r3546001_a_giga_felinor_beside_a_plain_unit_still_buffs_both() {
+            let mut s = felinor(false, json!([{ "def": BODY, "lane": 1 }]), json!([]));
+            let id = s.card(FELINOR).id.clone();
+            crate::give_giga(&mut s, &id);
+            s.play(FELINOR, json!({ "zone": 2 }));
+            assert_eq!(s.card(&id).giga, Some(true));
+            s.expect_stats(FELINOR, json!({ "attack": 6, "health": 6 }));
+            let body = s.unit_at(P1, 1);
+            s.expect_stats(&body, json!({ "attack": 7, "health": 7 }));
         }
 
         #[test]

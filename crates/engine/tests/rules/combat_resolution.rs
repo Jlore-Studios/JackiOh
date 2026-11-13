@@ -7,7 +7,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{big_body, first_striker, moths, plain, taunter, trampler};
 use crate::rules::fixtures::harness::{
-    events_of_type, live, new_game, put, run_on_sink as run, sink_for, slot,
+    events_of_type, live, live_mut, new_game, put, run_on_sink as run, sink_for, slot,
 };
 
 /// p1's main phase on turn 4, so nothing placed with `put` is summoning sick (§4.1).
@@ -42,14 +42,6 @@ fn field_ids(state: &GameState, player: PlayerId) -> Vec<String> {
 
 fn refusal(check: Result<(), EngineError>) -> Option<String> {
     check.err().map(|error| error.message)
-}
-
-fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
-
-fn by_id_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
 
 /// Each `damage` event as `(sourceId, targetId, amount, combat)`.
@@ -88,7 +80,7 @@ fn attack_declared(events: &[GameEvent]) -> Vec<(String, String, bool)> {
 fn declare(sink: &mut EngineSink<'_>, attacker_id: &str, target: Option<&str>) -> Option<String> {
     let attacker = live(sink.state, attacker_id);
     let target = match target {
-        Some(id) => on_unit(by_id(sink.state, id)),
+        Some(id) => on_unit(&live(sink.state, id)),
         None => AttackTarget::Hero { player: P2 },
     };
     refusal(declare_attack(sink, &attacker, &target))
@@ -97,7 +89,7 @@ fn declare(sink: &mut EngineSink<'_>, attacker_id: &str, target: Option<&str>) -
 /// `force_attack` with both read live off the sink.
 fn force(sink: &mut EngineSink<'_>, attacker_id: &str, target_id: &str) {
     let attacker = live(sink.state, attacker_id);
-    let target = on_unit(by_id(sink.state, target_id));
+    let target = on_unit(&live(sink.state, target_id));
     force_attack(sink, &attacker, &target);
 }
 
@@ -133,8 +125,8 @@ mod combat_resolution_m2_t4 {
 
         assert_eq!(graveyard_ids(&state, P2), vec![defender.id.clone()]);
         assert_eq!(field_ids(&state, P1), vec![attacker.id.clone()]);
-        assert_eq!(by_id(&state, &attacker.id).damage, 0);
-        assert_eq!(unit_view(&state, by_id(&state, &attacker.id)).health, 4);
+        assert_eq!(live(&state, &attacker.id).damage, 0);
+        assert_eq!(unit_view(&state, &live(&state, &attacker.id)).health, 4);
     }
 
     #[test]
@@ -194,7 +186,7 @@ mod combat_resolution_m2_t4 {
         assert_eq!(switched, None);
 
         // Defense grants Taunt and Armor +1 but never lowers the attack it strikes back with (§4.1).
-        let defender_view = unit_view(&state, by_id(&state, &defender.id));
+        let defender_view = unit_view(&state, &live(&state, &defender.id));
         assert_eq!(defender_view.position, Position::Def);
         assert_eq!(defender_view.attack, 5);
         assert_eq!(defender_view.armor, 1);
@@ -208,7 +200,7 @@ mod combat_resolution_m2_t4 {
         let strike_back = strike_back.map(|(_, target, amount, combat)| (target, amount, combat));
         assert_eq!(strike_back, Some((attacker.id.clone(), 5, true)));
 
-        assert_eq!(by_id(&state, &defender.id).damage, 2); // the attacker's 3 less the Defense Armor
+        assert_eq!(live(&state, &defender.id).damage, 2); // the attacker's 3 less the Defense Armor
         assert_eq!(graveyard_ids(&state, P1), vec![attacker.id.clone()]);
         assert_eq!(field_ids(&state, P2), vec![defender.id.clone()]);
     }
@@ -237,7 +229,7 @@ mod combat_resolution_m2_t4 {
 
         assert_eq!(state.players.p2.hero.health, enemy_hero - 5);
         assert_eq!(state.players.p1.hero.health, own_hero);
-        assert_eq!(by_id(&state, &attacker.id).damage, 0);
+        assert_eq!(live(&state, &attacker.id).damage, 0);
         assert_eq!(field_ids(&state, P1), vec![attacker.id.clone()]);
     }
 
@@ -303,7 +295,7 @@ fn a_defender_with_first_strike_hits_first_and_a_surviving_attacker_strikes_back
         damage.get(1).and_then(|hit| hit.0.clone()),
         Some(attacker.id.clone())
     );
-    assert_eq!(unit_view(&state, by_id(&state, &attacker.id)).health, 6);
+    assert_eq!(unit_view(&state, &live(&state, &attacker.id)).health, 6);
     assert_eq!(graveyard_ids(&state, P2), vec![defender.id.clone()]);
 }
 
@@ -323,7 +315,7 @@ fn a_defender_with_first_strike_that_kills_the_attacker_takes_nothing_back_4_3()
     let amounts: Vec<i32> = hits(&events).iter().map(|hit| hit.2).collect();
     assert_eq!(amounts, vec![4]);
     assert_eq!(graveyard_ids(&state, P1), vec![attacker.id.clone()]);
-    assert_eq!(unit_view(&state, by_id(&state, &defender.id)).health, 4);
+    assert_eq!(unit_view(&state, &live(&state, &defender.id)).health, 4);
 }
 
 mod r53_forced_attacks_m2_t4 {
@@ -335,14 +327,14 @@ mod r53_forced_attacks_m2_t4 {
         let flame = put(&mut state, &moths.id, slot(P1, Row::Units, 1), Default::default()); // 1/14
         let sick = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default()); // 3/3
         let turn = state.turn;
-        by_id_mut(&mut state, &sick.id).summoned_turn = Some(turn);
+        live_mut(&mut state, &sick.id).summoned_turn = Some(turn);
 
-        assert!(is_sick(&state, by_id(&state, &sick.id)));
+        assert!(is_sick(&state, &live(&state, &sick.id)));
         assert_eq!(
             refusal(why_cannot_attack(
                 &state,
-                by_id(&state, &sick.id),
-                &on_unit(by_id(&state, &flame.id))
+                &live(&state, &sick.id),
+                &on_unit(&live(&state, &flame.id))
             )),
             Some("that unit is summoning sick".to_string())
         );
@@ -353,14 +345,14 @@ mod r53_forced_attacks_m2_t4 {
             serde_json::to_value(events_of_type(&events, GameEventType::AttackDeclared)).expect("serializes"),
             json!([{ "type": "attackDeclared", "attackerId": sick.id, "targetId": flame.id, "forced": true }])
         );
-        assert_eq!(by_id(&state, &flame.id).damage, 3);
-        assert_eq!(by_id(&state, &sick.id).damage, 1);
+        assert_eq!(live(&state, &flame.id).damage, 3);
+        assert_eq!(live(&state, &sick.id).damage, 1);
 
         // No exertion spent: the unit is still free to act on its own turn (§4.2, R53).
-        assert_eq!(by_id(&state, &sick.id).exertion, exertion(false, false));
+        assert_eq!(live(&state, &sick.id).exertion, exertion(false, false));
         assert!(has_exertion(
             &state,
-            by_id(&state, &sick.id),
+            &live(&state, &sick.id),
             ExertionKind::Attack
         ));
     }
@@ -391,26 +383,26 @@ mod r53_forced_attacks_m2_t4 {
         });
         assert_eq!(switched, None);
         let turn = state.turn;
-        by_id_mut(&mut state, &sick.id).summoned_turn = Some(turn);
+        live_mut(&mut state, &sick.id).summoned_turn = Some(turn);
 
         // Every one of the three is refused by §4.2 steps 1 to 3.
         assert!(
-            unit_view(&state, by_id(&state, &guard.id))
+            unit_view(&state, &live(&state, &guard.id))
                 .keywords
                 .iter()
                 .any(|keyword| keyword.kind() == KeywordKind::Taunt)
         );
-        let target = on_unit(by_id(&state, &flame.id));
+        let target = on_unit(&live(&state, &flame.id));
         assert_eq!(
-            refusal(why_cannot_attack(&state, by_id(&state, &defending.id), &target)),
+            refusal(why_cannot_attack(&state, &live(&state, &defending.id), &target)),
             Some("only Attack-Position units may attack".to_string())
         );
         assert_eq!(
-            refusal(why_cannot_attack(&state, by_id(&state, &sick.id), &target)),
+            refusal(why_cannot_attack(&state, &live(&state, &sick.id), &target)),
             Some("that unit is summoning sick".to_string())
         );
         assert_eq!(
-            refusal(why_cannot_attack(&state, by_id(&state, &blocked.id), &target)),
+            refusal(why_cannot_attack(&state, &live(&state, &blocked.id), &target)),
             Some("a Taunt unit must be attacked first".to_string())
         );
 
@@ -429,10 +421,10 @@ mod r53_forced_attacks_m2_t4 {
         assert!(declared.iter().all(|(.., forced)| *forced));
 
         // All three struck for their full 3, the Defense-Position one included.
-        assert_eq!(by_id(&state, &flame.id).damage, 9);
-        assert_eq!(by_id(&state, &defending.id).damage, 0); // Moths' 1 is eaten by the Defense Armor
-        assert_eq!(by_id(&state, &sick.id).damage, 1);
-        assert_eq!(by_id(&state, &blocked.id).damage, 1);
+        assert_eq!(live(&state, &flame.id).damage, 9);
+        assert_eq!(live(&state, &defending.id).damage, 0); // Moths' 1 is eaten by the Defense Armor
+        assert_eq!(live(&state, &sick.id).damage, 1);
+        assert_eq!(live(&state, &blocked.id).damage, 1);
     }
 
     #[test]
@@ -456,10 +448,10 @@ mod r53_forced_attacks_m2_t4 {
 
         let mut sink = sink_for(&mut state);
         assert_eq!(declare(&mut sink, &ordinary.id, Some(&first.id)), None);
-        assert!(by_id(sink.state, &ordinary.id).exertion.attacked);
+        assert!(live(sink.state, &ordinary.id).exertion.attacked);
         assert!(!has_exertion(
             sink.state,
-            by_id(sink.state, &ordinary.id),
+            &live(sink.state, &ordinary.id),
             ExertionKind::Attack
         ));
         assert_eq!(
@@ -468,16 +460,16 @@ mod r53_forced_attacks_m2_t4 {
         );
 
         force(&mut sink, &forced.id, &second.id);
-        assert_eq!(by_id(sink.state, &forced.id).exertion, exertion(false, false));
+        assert_eq!(live(sink.state, &forced.id).exertion, exertion(false, false));
         assert!(has_exertion(
             sink.state,
-            by_id(sink.state, &forced.id),
+            &live(sink.state, &forced.id),
             ExertionKind::Attack
         ));
 
         // The exertion is still there, so the same unit can still make its own attack this turn.
         assert_eq!(declare(&mut sink, &forced.id, Some(&third.id)), None);
-        assert!(by_id(sink.state, &forced.id).exertion.attacked);
+        assert!(live(sink.state, &forced.id).exertion.attacked);
         assert_eq!(
             graveyard_ids(sink.state, P2),
             vec![first.id.clone(), second.id.clone(), third.id.clone()]
@@ -497,7 +489,7 @@ mod r53_forced_attacks_m2_t4 {
         let second = put(&mut state, &plain.id, slot(P2, Row::Units, 2), Default::default()); // 3/3
 
         let attackers = vec![live(&state, &first.id), live(&state, &second.id)];
-        let on_target = on_unit(by_id(&state, &target.id));
+        let on_target = on_unit(&live(&state, &target.id));
         let (_, events) = run(&mut state, |sink| {
             force_attacks_on(sink, &attackers, &on_target, None)
         });
@@ -522,8 +514,8 @@ mod r53_forced_attacks_m2_t4 {
             graveyard_ids(&state, P2),
             vec![first.id.clone(), second.id.clone()]
         );
-        assert_eq!(by_id(&state, &target.id).damage, 6);
-        assert_eq!(unit_view(&state, by_id(&state, &target.id)).health, 4);
+        assert_eq!(live(&state, &target.id).damage, 6);
+        assert_eq!(unit_view(&state, &live(&state, &target.id)).health, 4);
     }
 
     #[test]
@@ -543,7 +535,7 @@ mod r53_forced_attacks_m2_t4 {
             .iter()
             .map(|unit| (*unit).clone())
             .collect();
-        let on_target = on_unit(by_id(&state, &target.id));
+        let on_target = on_unit(&live(&state, &target.id));
         let (_, events) = run(&mut state, |sink| {
             force_attacks_on(sink, &attackers, &on_target, None)
         });
@@ -555,13 +547,13 @@ mod r53_forced_attacks_m2_t4 {
             .collect();
         assert_eq!(declared, vec![first.id.clone(), second.id.clone()]);
         assert_eq!(graveyard_ids(&state, P1), vec![target.id.clone()]);
-        assert_eq!(by_id(&state, &third.id).damage, 0);
+        assert_eq!(live(&state, &third.id).damage, 0);
         assert_eq!(
             field_ids(&state, P2),
             vec![first.id.clone(), second.id.clone(), third.id.clone()]
         );
         assert_eq!(
-            vec![by_id(&state, &first.id).damage, by_id(&state, &second.id).damage],
+            vec![live(&state, &first.id).damage, live(&state, &second.id).damage],
             vec![2, 2]
         );
     }

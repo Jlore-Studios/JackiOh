@@ -217,10 +217,6 @@ mod tests {
         super::script()
     }
 
-    fn target(id: &str) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-    }
-
     fn unit_id(g: &Scenario, player: PlayerId, lane: i32) -> Option<String> {
         g.unit(player, lane).map(|unit| unit.id.clone())
     }
@@ -310,7 +306,7 @@ mod tests {
             }));
             let prey = g.unit_at(P2, 4);
 
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
 
             // The choice was made at play time, so resolution never paused (R81, §10.6).
             assert!(g.state().pending.is_none());
@@ -336,7 +332,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
 
             g.end_turn();
             // The entry names p1's start of turn, so the opponent's start of turn does not fire it.
@@ -366,7 +362,7 @@ mod tests {
             }));
             let prey = g.unit_at(P2, 2);
             // K-Pop Fanatic takes the leftmost free zone, lane 1 (R64).
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             assert_eq!(g.unit(P1, 1).map(|unit| unit.def_id.clone()), Some(KPOP.to_string()));
 
             g.end_turn();
@@ -389,7 +385,7 @@ mod tests {
                 },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             let fanatic = g.unit_at(P1, 1);
 
             g.end_turn();
@@ -413,7 +409,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": DUELIST, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
 
             g.end_turn();
             // The 4/3 throws itself at a 10/10 Indestructible wall and dies.
@@ -438,8 +434,8 @@ mod tests {
             }));
             let prey = g.unit_at(P2, 2);
 
-            g.play(KPOP, target(&prey.id));
-            g.play("core-049", target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
+            g.play("core-049", pick::targets(pick::id(&prey.id)));
             assert_eq!(g.card(&prey).controller, P1);
 
             g.end_turn();
@@ -459,7 +455,7 @@ mod tests {
             }));
             let prey = g.unit_at(P2, 3);
 
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             let fanatic = g.unit_at(P1, 1);
             g.expect_stats(&fanatic, json!({ "attack": 2, "maxHealth": 2, "health": 2 }));
             assert!(g.stats(&fanatic).keywords.iter().any(|keyword| keyword.kind() == KeywordKind::DivineShield));
@@ -501,7 +497,7 @@ mod tests {
             }));
             let prey = g.unit_at(P2, 4);
             let opener = g.unit_at(P2, 3);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             let fanatic = g.unit_at(P1, 1);
 
             g.end_turn();
@@ -566,7 +562,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2, "damage": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             assert!(!g.card(&prey).radiant);
 
             g.end_turn();
@@ -593,7 +589,7 @@ mod tests {
                 .backrow(P2, 3)
                 .expect("setup: p2 should hold the Clone Machine in backrow lane 3")
                 .clone();
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
 
             g.end_turn();
             g.end_turn();
@@ -611,7 +607,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": DUELIST, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
 
             g.end_turn();
             g.attack(&prey, ROCK);
@@ -632,7 +628,7 @@ mod tests {
                 "p2": { "hand": [FLOOD, FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             g.end_turn();
 
             // #17 Flood bounces every unit on both sides, the prey into p2's hand.
@@ -655,7 +651,7 @@ mod tests {
                 "p2": { "hand": [FLOOD, FILLER, "core-t-coin"], "field": [{ "def": VANILLA, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             g.end_turn();
 
             g.play("core-t-coin", json!({}));
@@ -677,7 +673,7 @@ mod tests {
                 "p2": { "hand": [FIENDER, FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             g.end_turn();
 
             // p2 stacks Felinor Fiender onto the prey's zone: the prey is dormant (§3.2, R13).
@@ -703,9 +699,9 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             // Base #49 takes the same permanent this turn, with no rider of its own.
-            g.play(MIND_CONTROL, target(&prey.id));
+            g.play(MIND_CONTROL, pick::targets(pick::id(&prey.id)));
             assert_eq!(g.card(&prey).controller, P1);
 
             until_active(&mut g, P2);
@@ -728,7 +724,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             assert_eq!(g.unit(P1, 5).map(|unit| unit.def_id.clone()), Some(KPOP.to_string()));
 
             g.end_turn();
@@ -756,7 +752,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             // Radiant GIGA Glowy Jelly Bean makes every permanent p1 controls Radiant, the Fanatic included.
             g.play("core-029", json!({}));
             assert!(g.card(KPOP).radiant);
@@ -788,7 +784,7 @@ mod tests {
                 }));
                 trial.state_mut().rng_cursor = cursor;
                 let kpop_id = trial.card(KPOP).id.clone();
-                trial.play(SURGERY, target(&kpop_id));
+                trial.play(SURGERY, pick::targets(pick::id(&kpop_id)));
                 if trial.stats(KPOP).keywords.iter().any(|k| k.kind() == KeywordKind::DivineShield) {
                     found = Some(trial);
                 }
@@ -829,7 +825,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
 
             assert_eq!(mark_events(g.last_events()), vec![marked(&prey.id, true)]);
             assert_eq!(marks_in(&g.view(P1), &prey.id), json!([allure_mark()]));
@@ -856,8 +852,8 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
-            g.play(MIND_CONTROL, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
+            g.play(MIND_CONTROL, pick::targets(pick::id(&prey.id)));
             // Taking control is not leaving the field (R171): the steal still waits, and so does its mark.
             assert_eq!(marks_in(&g.view(P1), &prey.id), json!([allure_mark()]));
 
@@ -877,7 +873,7 @@ mod tests {
                 "p2": { "hand": [FLOOD, FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             g.end_turn();
 
             g.play(FLOOD, json!({}));
@@ -909,7 +905,7 @@ mod tests {
                 .backrow(P2, 3)
                 .expect("setup: p2 should hold a face-down trap in backrow lane 3")
                 .clone();
-            g.play(KPOP, target(&trap.id));
+            g.play(KPOP, pick::targets(pick::id(&trap.id)));
 
             let p1_view = g.view(P1);
             let back = js(&p1_view.opponent.backrow[2]);
@@ -1076,7 +1072,7 @@ mod tests {
             crate::register_all();
             let mut g = full_row(json!({ "def": VANILLA, "lane": 2 }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
             assert_eq!(g.unit(P1, 5).map(|unit| unit.def_id.clone()), Some(KPOP.to_string()));
 
             g.end_turn();
@@ -1097,7 +1093,7 @@ mod tests {
             crate::register_all();
             let mut g = full_row(json!({ "def": WALL, "lane": 2 }));
             let prey = g.unit_at(P2, 2);
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
 
             g.end_turn();
             g.end_turn();
@@ -1127,7 +1123,7 @@ mod tests {
                 .backrow(P2, 3)
                 .expect("setup: p2 should hold Infinite Reserves in backrow lane 3")
                 .clone();
-            g.play(KPOP, target(&prey.id));
+            g.play(KPOP, pick::targets(pick::id(&prey.id)));
 
             assert_eq!(marks_in(&g.view(P2), &prey.id), json!([allure_mark()]));
 
@@ -1147,7 +1143,7 @@ mod tests {
             jackioh_engine::with_shipped(Some(shipped), || {
                 let mut g = full_row(json!({ "def": VANILLA, "lane": 2 }));
                 let prey = g.unit_at(P2, 2);
-                g.play(KPOP, target(&prey.id));
+                g.play(KPOP, pick::targets(pick::id(&prey.id)));
                 assert_eq!(
                     marks_in(&g.view(P2), &prey.id),
                     json!([{ "mark": "steal", "color": "purple" }])

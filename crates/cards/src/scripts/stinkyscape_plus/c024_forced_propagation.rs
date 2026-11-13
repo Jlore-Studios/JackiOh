@@ -104,10 +104,6 @@ mod tests {
     const BODY: &str = "core-019"; // Midrange Menace
     const SPELL: &str = "core-088"; // Twisting Nether: a Spell, never Buffed.
 
-    fn pick(id: &str) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-    }
-
     fn pick_embiggened(id: &str) -> Value {
         json!({ "embiggen": true, "targets": [{ "pick": "instance", "instanceId": id }] })
     }
@@ -153,7 +149,7 @@ mod tests {
         let mut s = board(false);
         let body = s.unit_at(P1, 1).id;
         s.card_mut(&body).cost_mod = 2;
-        s.play(ID, pick(&body));
+        s.play(ID, pick::targets(pick::id(&body)));
         let made = copies(&s, BODY);
         assert_eq!(made.len(), 10);
         assert!(made.iter().all(|card| card.cost_mod == 0 && card.buffs == AttackHealth { attack: 0, health: 0 }));
@@ -166,7 +162,7 @@ mod tests {
         crate::register_all();
         let mut s = board(false);
         let spell = s.card(SPELL).id.clone();
-        s.play(ID, pick(&spell));
+        s.play(ID, pick::targets(pick::id(&spell)));
         assert_eq!(copies(&s, SPELL).len(), 10);
         s.expect_in_zone(&spell, "hand");
     }
@@ -185,7 +181,7 @@ mod tests {
         crate::register_all();
         let mut s = board(true);
         let body = s.unit_at(P1, 1).id;
-        s.play(ID, pick(&body));
+        s.play(ID, pick::targets(pick::id(&body)));
         let made = copies(&s, BODY);
         assert_eq!(made.len(), 10);
         let buffed = s.events().iter().filter(|event| event.event_type().as_str() == "upgraded").count();
@@ -208,8 +204,8 @@ mod tests {
             "p2": { "hand": [FILLER], "library": filler(4) },
         }));
         let body = s.unit_at(P1, 1).id;
-        s.play(ID, pick(&body));
-        s.play(ID, pick(&body));
+        s.play(ID, pick::targets(pick::id(&body)));
+        s.play(ID, pick::targets(pick::id(&body)));
         assert_eq!(copies(&s, BODY).len(), 20);
         let buffed = s.last_events().iter().filter(|event| event.event_type().as_str() == "upgraded").count();
         assert_eq!(buffed, 10, "the second cast Buffs its ten copies alone");
@@ -224,7 +220,7 @@ mod tests {
         }));
         let fused = fused_in_hand(&mut s, &[BODY, SPELL]);
         let before = s.state().players[P1].library.len();
-        s.play(ID, pick(&fused.id));
+        s.play(ID, pick::targets(pick::id(&fused.id)));
         assert_eq!(s.state().players[P1].library.len(), before, "nothing was copied");
         s.expect_in_zone(&fused.id, "hand");
     }

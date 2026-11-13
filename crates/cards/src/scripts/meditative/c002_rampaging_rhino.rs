@@ -97,10 +97,6 @@ mod tests {
             .count()
     }
 
-    fn at(unit: &CardInstance) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": unit.id }] })
-    }
-
     /// The keywords the client sees on p1's lane-1 unit, by kind.
     fn kinds_of_p1_lane_1(s: &Scenario) -> Vec<String> {
         s.view(P1)
@@ -224,10 +220,10 @@ mod tests {
                 "p2": { "field": [ID], "hand": [FILLER, FILLER], "library": [VANILLA, VANILLA] },
             }));
             let rhino = s.card(ID).clone();
-            s.play(STEAL, at(&rhino));
+            s.play(STEAL, pick::targets(pick::instance(&rhino)));
             assert_eq!(s.card(&rhino).controller, P1);
             assert_eq!(discarded(&s, P1), 0);
-            s.play(ECLIPSE, at(&rhino));
+            s.play(ECLIPSE, pick::targets(pick::instance(&rhino)));
             s.expect_stats(&rhino, json!({ "attack": 5, "health": 6, "maxHealth": 9 }));
             assert_eq!(discarded(&s, P1), 1);
             assert_eq!(s.hand(P1).len(), 2);
@@ -328,7 +324,7 @@ mod tests {
                 "p2": { "hand": [ECLIPSE, FILLER], "library": [VANILLA, VANILLA], "mana": 8 },
             }));
             let rhino = s.card(ID).clone();
-            s.play(ECLIPSE, at(&rhino));
+            s.play(ECLIPSE, pick::targets(pick::instance(&rhino)));
             s.expect_stats(ID, json!({ "attack": 10, "health": 15, "maxHealth": 18 }));
             assert_eq!(discarded(&s, P1), 1);
             assert_eq!(s.hand(P1).len(), 2);

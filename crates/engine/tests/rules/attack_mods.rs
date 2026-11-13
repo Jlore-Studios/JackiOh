@@ -19,10 +19,6 @@ fn board(seed: &str) -> GameState {
     state
 }
 
-fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
-
 /// `declare_attack` with both read live off the sink.
 fn declare(sink: &mut EngineSink<'_>, attacker_id: &str, target: AttackTarget) -> Option<String> {
     let attacker = live(sink.state, attacker_id);
@@ -182,11 +178,11 @@ mod attack_mods_r1120 {
             Default::default(),
         );
         // The listed attack never sees the modifier, before or after.
-        assert_eq!(unit_view(&state, by_id(&state, &attacker.id)).attack, 3);
+        assert_eq!(unit_view(&state, &live(&state, &attacker.id)).attack, 3);
         let (_, events) = run(&mut state, |sink| {
             declare(sink, &attacker.id, on_unit(sink.state, &defender.id))
         });
-        assert_eq!(unit_view(&state, by_id(&state, &attacker.id)).attack, 3);
+        assert_eq!(unit_view(&state, &live(&state, &attacker.id)).attack, 3);
         // The strike back is the defender's own 5.
         assert_eq!(
             hits(&events)[1],

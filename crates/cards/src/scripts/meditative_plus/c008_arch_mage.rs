@@ -35,14 +35,10 @@ mod tests {
 
     use crate::scenario;
 
-    fn at_hero() -> Value {
-        json!({ "targets": [{ "pick": "hero", "player": "p2" }] })
-    }
-
     #[test]
     fn s4_4_step_0_your_spell_deals_3_more_per_hit() {
         let mut s = scenario(json!({ "p1": { "hand": [LUNAR_ECLIPSE, FILLER], "field": [MAGE] }, "p2": { "hand": [FILLER] } }));
-        s.play(LUNAR_ECLIPSE, at_hero());
+        s.play(LUNAR_ECLIPSE, pick::targets(pick::hero("p2")));
         s.expect_health(P2, HERO_HEALTH - 6);
     }
 
@@ -134,7 +130,7 @@ mod tests {
         s.play(TRUE_STRIKE, json!({ "targets": [{ "pick": "instance", "instanceId": mage }] }));
         s.expect_in_zone(MAGE, "graveyard");
         assert_eq!(spell_damage_of(s.state(), P1), 0, "and goes with it");
-        s.play(LUNAR_ECLIPSE, at_hero());
+        s.play(LUNAR_ECLIPSE, pick::targets(pick::hero("p2")));
         s.expect_health(P2, HERO_HEALTH - 3);
     }
 
@@ -145,7 +141,7 @@ mod tests {
         find_instance_mut(s.state_mut(), &id).expect("the mage on the field").tuning =
             Some(json_as(json!({ "x": { "Spell Damage": -1 } })));
         assert!(s.stats(MAGE).keywords.contains(&Keyword::SpellDamage { n: 2 }));
-        s.play(LUNAR_ECLIPSE, at_hero());
+        s.play(LUNAR_ECLIPSE, pick::targets(pick::hero("p2")));
         s.expect_health(P2, HERO_HEALTH - 5);
     }
 
@@ -155,7 +151,7 @@ mod tests {
             "p1": { "hand": [LUNAR_ECLIPSE, FILLER], "field": [{ "def": MAGE, "radiant": true }] },
             "p2": { "hand": [FILLER] },
         }));
-        s.play(LUNAR_ECLIPSE, at_hero());
+        s.play(LUNAR_ECLIPSE, pick::targets(pick::hero("p2")));
         s.expect_health(P2, HERO_HEALTH - 9);
     }
 }

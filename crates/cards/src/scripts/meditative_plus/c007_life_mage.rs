@@ -67,10 +67,6 @@ mod tests {
         s.state().players[player].hero.health
     }
 
-    fn hero(player: PlayerId) -> Value {
-        json!([{ "pick": "hero", "player": player.as_str() }])
-    }
-
     fn trap_hits_enemy_hero(s: &mut Scenario, amount: i32) {
         let trap = s.backrow(P1, 1).expect("the trap");
         let mut rng = create_rng(&s.state().seed, s.state().rng_cursor);
@@ -127,7 +123,7 @@ mod tests {
             json!({ "field": [ID], "hand": [TRUE_STRIKE], "health": 20 }),
             json!({}),
         );
-        s.play(TRUE_STRIKE, json!({ "targets": hero(P2) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::hero(P2) }));
         assert_eq!(health(&s, P2), 26);
         assert_eq!(health(&s, P1), 24);
     }
@@ -141,8 +137,8 @@ mod tests {
         );
         s.play(TWINSPELL, json!({}));
         s.activate(TWINSPELL, json!({}));
-        s.play(TRUE_STRIKE, json!({ "targets": hero(P2) }));
-        s.answer(hero(P2));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::hero(P2) }));
+        s.answer(pick::hero(P2));
         assert_eq!(heals_on(&s, "hero-p1"), vec![4, 4]);
         assert_eq!(health(&s, P1), 28);
     }
@@ -195,7 +191,7 @@ mod tests {
             json!({ "hand": [TRUE_STRIKE, FILLER], "health": 20 }),
         );
         s.end_turn();
-        s.play(TRUE_STRIKE, json!({ "targets": hero(P1) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::hero(P1) }));
         assert_eq!(health(&s, P1), 26);
         assert_eq!(health(&s, P2), 20);
     }
@@ -210,7 +206,7 @@ mod tests {
         let mage = s.unit(P1, 1).expect("the mage");
         s.play(HIT_JOB, json!({ "targets": pick::instance(&mage) }));
         s.expect_in_zone(mage.id.as_str(), "graveyard");
-        s.play(TRUE_STRIKE, json!({ "targets": hero(P2) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::hero(P2) }));
         assert_eq!(health(&s, P1), 20);
     }
 
@@ -221,7 +217,7 @@ mod tests {
             json!({ "field": [ID, ID], "hand": [TRUE_STRIKE], "health": 20 }),
             json!({}),
         );
-        s.play(TRUE_STRIKE, json!({ "targets": hero(P2) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::hero(P2) }));
         assert_eq!(heals_on(&s, "hero-p1"), vec![4]);
     }
 
@@ -269,7 +265,7 @@ mod tests {
             json!({ "field": [{ "def": ID, "radiant": true }], "hand": [TRUE_STRIKE], "health": 20 }),
             json!({}),
         );
-        s.play(TRUE_STRIKE, json!({ "targets": hero(P2) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::hero(P2) }));
         assert_eq!(heals_on(&s, "hero-p1"), vec![8]);
     }
 

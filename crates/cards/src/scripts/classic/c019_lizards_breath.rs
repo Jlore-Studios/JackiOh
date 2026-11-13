@@ -144,10 +144,6 @@ mod tests {
     const ANCHOR: &str = "core-010";
     const X: &str = "core-008";
 
-    fn at_hero() -> Value {
-        json!([{ "pick": "hero", "player": "p2" }])
-    }
-
     #[derive(Clone, Copy, PartialEq, Eq)]
     enum Face {
         Base,
@@ -213,7 +209,7 @@ mod tests {
                 crate::register_all();
                 let mut s = breath(Face::Base, 3, 1, 1, None);
 
-                s.play(BREATH, json!({ "targets": at_hero() }));
+                s.play(BREATH, json!({ "targets": pick::hero("p2") }));
 
                 assert_eq!(hits(&s), vec![2]);
                 assert_eq!(drawn(&s), 1);
@@ -237,7 +233,7 @@ mod tests {
                 crate::register_all();
                 let mut s = breath(Face::Base, 1, 3, 1, None);
 
-                s.play(BREATH, json!({ "targets": at_hero() }));
+                s.play(BREATH, json!({ "targets": pick::hero("p2") }));
 
                 assert_eq!(hits(&s), vec![2]);
                 assert_eq!(drawn(&s), 0);
@@ -250,7 +246,7 @@ mod tests {
                 crate::register_all();
                 let mut s = breath(Face::Base, 1, 3, 1, None);
 
-                s.play(BREATH, json!({ "targets": at_hero() }));
+                s.play(BREATH, json!({ "targets": pick::hero("p2") }));
 
                 assert_eq!(serde_json::to_value(s.view(P1).you.mana).unwrap(), json!({ "current": 5, "max": 4 }));
             }
@@ -260,7 +256,7 @@ mod tests {
                 crate::register_all();
                 let mut s = breath(Face::Base, 2, 0, 2, None);
 
-                s.play(BREATH, json!({ "targets": at_hero() }));
+                s.play(BREATH, json!({ "targets": pick::hero("p2") }));
 
                 assert_eq!(hits(&s), vec![2]);
                 assert_eq!(drawn(&s), 1);
@@ -271,7 +267,7 @@ mod tests {
                 crate::register_all();
                 let mut s = breath(Face::Base, 1, 1, 3, None);
 
-                s.play(BREATH, json!({ "targets": at_hero() }));
+                s.play(BREATH, json!({ "targets": pick::hero("p2") }));
 
                 assert_eq!(hits(&s), vec![6]);
                 s.expect_health(P2, 24);
@@ -284,7 +280,7 @@ mod tests {
                 crate::register_all();
                 let mut s = breath(Face::Base, 2, 2, 0, None);
 
-                s.play(BREATH, json!({ "targets": at_hero() }));
+                s.play(BREATH, json!({ "targets": pick::hero("p2") }));
 
                 assert_eq!(drawn(&s), 1);
                 s.expect_mana(P1, 3);
@@ -297,7 +293,7 @@ mod tests {
                 crate::register_all();
                 let mut s = breath(Face::Base, 0, 2, 2, None);
 
-                s.play(BREATH, json!({ "targets": at_hero() }));
+                s.play(BREATH, json!({ "targets": pick::hero("p2") }));
 
                 assert_eq!(hits(&s), vec![2]);
                 s.expect_mana(P1, 5);
@@ -308,7 +304,7 @@ mod tests {
                 crate::register_all();
                 let mut s = breath(Face::Base, 0, 0, 0, None);
 
-                s.play(BREATH, json!({ "targets": at_hero() }));
+                s.play(BREATH, json!({ "targets": pick::hero("p2") }));
 
                 assert_eq!(
                     s.events().iter().filter(|event| event.event_type() == GameEventType::Fatigue).count(),
@@ -322,22 +318,22 @@ mod tests {
                 crate::register_all();
                 let mut dmg = breath(Face::Base, 3, 1, 1, None);
                 step_param(dmg.card_mut(BREATH), "damage", 1);
-                dmg.play(BREATH, json!({ "targets": at_hero() }));
+                dmg.play(BREATH, json!({ "targets": pick::hero("p2") }));
                 assert_eq!(hits(&dmg), vec![3]);
 
                 let mut more = breath(Face::Base, 3, 1, 1, None);
                 step_param(more.card_mut(BREATH), "draw", 1);
-                more.play(BREATH, json!({ "targets": at_hero() }));
+                more.play(BREATH, json!({ "targets": pick::hero("p2") }));
                 assert_eq!(drawn(&more), 2);
 
                 let mut mana = breath(Face::Base, 1, 3, 1, None);
                 step_param(mana.card_mut(BREATH), "mana", 1);
-                mana.play(BREATH, json!({ "targets": at_hero() }));
+                mana.play(BREATH, json!({ "targets": pick::hero("p2") }));
                 mana.expect_mana(P1, 6);
 
                 let mut extra = breath(Face::Base, 1, 1, 3, None);
                 step_param(extra.card_mut(BREATH), "extraDamage", 1);
-                extra.play(BREATH, json!({ "targets": at_hero() }));
+                extra.play(BREATH, json!({ "targets": pick::hero("p2") }));
                 assert_eq!(hits(&extra), vec![7]);
             }
         }
@@ -350,7 +346,7 @@ mod tests {
                 crate::register_all();
                 let mut s = breath(Face::Radiant, 1, 3, 5, None);
 
-                s.play(BREATH, json!({ "targets": at_hero() }));
+                s.play(BREATH, json!({ "targets": pick::hero("p2") }));
 
                 assert_eq!(hits(&s), vec![8]);
                 assert_eq!(drawn(&s), 0);
@@ -362,7 +358,7 @@ mod tests {
                 crate::register_all();
                 let mut s = breath(Face::Radiant, 4, 1, 3, None);
 
-                s.play(BREATH, json!({ "targets": at_hero() }));
+                s.play(BREATH, json!({ "targets": pick::hero("p2") }));
 
                 assert_eq!(hits(&s), vec![8]);
                 assert_eq!(drawn(&s), 1);
@@ -374,7 +370,7 @@ mod tests {
                 crate::register_all();
                 let mut s = breath(Face::Radiant, 4, 3, 1, None);
 
-                s.play(BREATH, json!({ "targets": at_hero() }));
+                s.play(BREATH, json!({ "targets": pick::hero("p2") }));
 
                 assert_eq!(hits(&s), vec![4]);
                 assert_eq!(drawn(&s), 1);
@@ -387,7 +383,7 @@ mod tests {
                 crate::register_all();
                 let mut s = breath(Face::Radiant, 2, 2, 5, None);
 
-                s.play(BREATH, json!({ "targets": at_hero() }));
+                s.play(BREATH, json!({ "targets": pick::hero("p2") }));
 
                 assert_eq!(hits(&s), vec![8]);
                 assert_eq!(drawn(&s), 1);
@@ -399,7 +395,7 @@ mod tests {
                 crate::register_all();
                 let mut s = breath(Face::Radiant, 2, 2, 2, None);
 
-                s.play(BREATH, json!({ "targets": at_hero() }));
+                s.play(BREATH, json!({ "targets": pick::hero("p2") }));
 
                 assert_eq!(hits(&s), vec![4]);
                 assert_eq!(drawn(&s), 1);
@@ -412,7 +408,7 @@ mod tests {
                 let mut s = breath(Face::Radiant, 4, 1, 3, None);
                 step_param(s.card_mut(BREATH), "damage", 1);
 
-                s.play(BREATH, json!({ "targets": at_hero() }));
+                s.play(BREATH, json!({ "targets": pick::hero("p2") }));
 
                 assert_eq!(hits(&s), vec![9]);
             }

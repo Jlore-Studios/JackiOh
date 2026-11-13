@@ -31,8 +31,9 @@ fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
         return vec![];
     };
     // R685: midlane is computed from the lane count, never hardcoded, through the engine helper (M3-T1).
-    let lane = slot_of(&*ctx.state, &self_).map_or(-1, |slot| slot.lane);
-    let in_midlane = midlane_lanes_of(&*ctx.state, ctx.controller).contains(&lane)
+    // R3546001: a GIGA is in midlane when any of its lanes is.
+    let mids = midlane_lanes_of(&*ctx.state, ctx.controller);
+    let in_midlane = lanes_of(&self_).iter().any(|lane| mids.contains(lane))
         // R1081000: standing in the midlane's backrow zone is being in midlane too.
         && in_units_row_or_standing(&*ctx.state, &self_);
     let bounces = param(&*ctx, "bounces");
@@ -165,6 +166,22 @@ mod tests {
                     .iter()
                     .any(|event| matches!(event, GameEvent::Destroyed { def_id, .. } if def_id == RUNNER)));
                 assert_eq!(bounced_ids(&s), Vec::<String>::new());
+            }
+
+            /// R3546001: a GIGA Mid Runner anchored at 2 or 3 covers the midlane, so it Tributes itself;
+            /// anchored at 1 or 4 it does not.
+            #[test]
+            fn r3546001_a_giga_over_the_midlane_tributes_itself_and_one_clear_of_it_stays() {
+                for (lane, in_midlane) in [(1, false), (2, true), (3, true), (4, false)] {
+                    let mut s = scenario(json!({ "p1": { "hand": [RUNNER, ANCHOR], "mana": 3 }, "p2": { "hand": [ANCHOR] } }));
+                    let id = s.card(RUNNER).id.clone();
+                    crate::give_giga(&mut s, &id);
+                    s.play(RUNNER, json!({ "zone": lane }));
+                    if !in_midlane {
+                        assert_eq!(s.card(&id).giga, Some(true));
+                    }
+                    s.expect_in_zone(RUNNER, if in_midlane { "graveyard" } else { "field" });
+                }
             }
 
             #[test]

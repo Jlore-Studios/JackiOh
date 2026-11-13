@@ -86,16 +86,17 @@ fn forget_seed(code: &str) {
 
 // Reading a request
 
-/// S6: `difficulty`, one of §9.9's three tiers.
-fn read_difficulty(body: &Value) -> Result<Difficulty, ApiError> {
+/// S6: `difficulty`, one of §9.9's three tiers. A co-op lobby's settings read it too (R3730003).
+pub(crate) fn read_difficulty(body: &Value) -> Result<Difficulty, ApiError> {
     body.get("difficulty")
         .and_then(Value::as_str)
         .and_then(|text| text.parse::<Difficulty>().ok())
         .ok_or_else(|| bad_request(r#""difficulty" must be "easy", "medium" or "hard""#))
 }
 
-/// S6: exactly one of `deckId` or `random: true` (with lean, R924000, R1372).
-fn read_choice(body: &Value) -> Result<ModeChoiceInput, ApiError> {
+/// S6: exactly one of `deckId` or `random: true` (with lean, R924000, R1372). A co-op lobby's pick
+/// reads it too (R3730001).
+pub(crate) fn read_choice(body: &Value) -> Result<ModeChoiceInput, ApiError> {
     let deck_id = body.get("deckId").filter(|value| !value.is_null());
     let random = match body.get("random") {
         None | Some(Value::Null) => false,
@@ -114,10 +115,19 @@ fn read_choice(body: &Value) -> Result<ModeChoiceInput, ApiError> {
 /// R253: the deck is checked legal now, under the running catalog, and frozen with that catalog's
 /// version; a random choice keeps its lean for the deal.
 async fn freeze(app: &App, profile_id: &str, choice: &ModeChoiceInput) -> Result<DuosChoice, ApiError> {
-    match freeze_choice(app, profile_id, choice).await? {
+    duos_choice_of(
+        freeze_choice(app, profile_id, choice).await?,
+        &app.catalog.version,
+    )
+}
+
+/// A frozen choice as a co-op seat holds it, with the catalog it was checked against: a room's, or a
+/// co-op lobby's pick at its Start (R3730002).
+pub(crate) fn duos_choice_of(frozen: FrozenChoice, catalog_version: &str) -> Result<DuosChoice, ApiError> {
+    match frozen {
         FrozenChoice::Bo1 { deck } => Ok(DuosChoice::Deck {
             deck,
-            catalog_version: app.catalog.version.clone(),
+            catalog_version: catalog_version.to_string(),
         }),
         FrozenChoice::Random { lean } => Ok(DuosChoice::Random { lean }),
         FrozenChoice::Bo3 { .. } => Err(ApiError::internal("a trio reached a co-op room")),
@@ -193,7 +203,10 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
             created_at: now,
             expires_at,
         };
-        let created = one_tx!(app.db, |t| t.duos_rooms_create(&room).await?)?;
+        // R3730006: a code a private lobby holds is its lobby's, so a room never shares it.
+        let created = one_tx!(app.db, |t| {
+            t.lobbies_get(&code).await?.is_none() && t.duos_rooms_create(&room).await?
+        })?;
         if !created {
             continue;
         }

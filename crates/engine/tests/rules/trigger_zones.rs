@@ -13,7 +13,7 @@
 
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{act, both, hand_ids, in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{act, both, hand_ids, in_hand, live_mut, new_game, put, slot};
 
 // Fixtures.
 
@@ -303,10 +303,6 @@ fn only<T>(items: Vec<T>) -> T {
     items.into_iter().next().expect("expected at least one item")
 }
 
-fn card_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).unwrap_or_else(|| panic!("no instance {id}"))
-}
-
 fn holder_def_ids(holders: &[TriggerHolder]) -> Vec<String> {
     holders.iter().map(|holder| holder.card.def_id.clone()).collect()
 }
@@ -415,7 +411,7 @@ mod r153_a_card_registers_only_the_triggers_its_zone_allows_s10_3_s6_2_r13_r68 {
         let spell = bury(&mut state, &wanderer().id, PlayerId::P1);
         // §5.1: "Spells with 'End of turn: add this back to your hand' are flagged
         // `returnToHandAtEndOfTurn` when they are played". This is that flag, and nothing else.
-        card_mut(&mut state, &spell.id).return_to_hand_at_end_of_turn = Some(true);
+        live_mut(&mut state, &spell.id).return_to_hand_at_end_of_turn = Some(true);
         assert_eq!(
             holder_ids(&trigger_holders_with_hook(
                 &state,
@@ -433,7 +429,7 @@ mod r153_a_card_registers_only_the_triggers_its_zone_allows_s10_3_s6_2_r13_r68 {
     fn r153_the_graveyard_answers_the_end_of_turn_return_only_not_a_start_of_turn_hook_on_the_same_spell() {
         let mut state = playing("tz-gy-start");
         let spell = bury(&mut state, &wanderer().id, PlayerId::P1);
-        card_mut(&mut state, &spell.id).return_to_hand_at_end_of_turn = Some(true);
+        live_mut(&mut state, &spell.id).return_to_hand_at_end_of_turn = Some(true);
         assert!(trigger_holders_with_hook(&state, HookName::StartOfTurn, Some(PlayerId::P1)).is_empty());
 
         let after_start = round_to_p1_start(&state);
@@ -449,7 +445,7 @@ mod r153_a_card_registers_only_the_triggers_its_zone_allows_s10_3_s6_2_r13_r68 {
         // R155 gives §10.5 step 7 the setter, so the flag is the gate and the turn log is not consulted.
         let mut played = playing("tz-gy-log");
         let spell = bury(&mut played, &wanderer().id, PlayerId::P1);
-        card_mut(&mut played, &spell.id).return_to_hand_at_end_of_turn = Some(true);
+        live_mut(&mut played, &spell.id).return_to_hand_at_end_of_turn = Some(true);
 
         assert_eq!(
             notes(&act(&played, json!({ "type": "endTurn", "playerId": "p1" }))),

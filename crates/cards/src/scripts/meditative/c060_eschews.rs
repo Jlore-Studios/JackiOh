@@ -110,10 +110,6 @@ mod tests {
     /// (1) Spell, deals 3 to a target; each cast makes the next Spell cost (1) less.
     const ECLIPSE: &str = "core-035";
 
-    fn eclipse(target: &str) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": target }] })
-    }
-
     /// p1 holds Eschews (`radiant_face`) with five Timmies on the field to die and five Eclipses to
     /// kill them with on the same turn — before any end-of-turn cast could interfere.
     fn boarded(seed: &str, radiant_face: bool) -> Scenario {
@@ -136,7 +132,7 @@ mod tests {
     /// Kill the Timmy in `lane` with an Eclipse.
     fn kill_timmy(s: &mut Scenario, lane: i32) {
         let id = s.unit(P1, lane).expect("a timmy").id.clone();
-        s.play(ECLIPSE, eclipse(&id));
+        s.play(ECLIPSE, pick::targets(pick::id(&id)));
     }
 
     fn eschews_on_field(s: &Scenario) -> bool {

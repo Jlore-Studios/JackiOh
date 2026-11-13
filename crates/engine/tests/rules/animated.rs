@@ -16,8 +16,8 @@ use crate::rules::fixtures::field::{
     springer, tesla, tower, wisp,
 };
 use crate::rules::fixtures::harness::{
-    act, act_result, by, events_of_type, ids, in_hand, input, json_of, live, matches_object, put, sink_for,
-    slot,
+    act, act_result, by, events_of_type, ids, in_hand, input, json_of, live, live_mut, matches_object, put,
+    sink_for, slot,
 };
 
 fn expect_match(actual: impl Serialize, expected: Value) {
@@ -87,14 +87,6 @@ fn play_plain(state: &mut GameState, lane: i32) -> Played {
     }
 }
 
-fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
-
-fn by_id_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
-
 fn fill_units(state: &mut GameState, player: PlayerId) {
     for lane in 1..=5 {
         put(
@@ -125,7 +117,7 @@ mod r383_b3_1_animated_traps {
         );
         let played = play_plain(&mut start, 1);
         let state = &played.state;
-        let tesla2 = by_id(state, &zapper.id);
+        let tesla2 = &live(state, &zapper.id);
 
         // The arrival was zapped for 4 (a 3/3 dies), and then the trap stepped into p2's unit zone 2.
         assert!(
@@ -163,7 +155,7 @@ mod r383_b3_1_animated_traps {
             Default::default(),
         );
         state = play_plain(&mut state, 1).state;
-        by_id_mut(&mut state, &zapper.id).position = Some(Position::Atk);
+        live_mut(&mut state, &zapper.id).position = Some(Position::Atk);
         let second = play_plain(&mut state, 3);
         let state = second.state;
 
@@ -180,7 +172,7 @@ mod r383_b3_1_animated_traps {
                 .any(|card| card.id == second.unit)
         );
         assert_eq!(id_at(&state, slot(P2, Row::Units, 2)), Some(zapper.id.clone()));
-        assert_eq!(by_id(&state, &zapper.id).position, Some(Position::Atk));
+        assert_eq!(live(&state, &zapper.id).position, Some(Position::Atk));
         assert!(events_of_type(&second.events, GameEventType::Animated).is_empty());
     }
 
@@ -233,7 +225,7 @@ mod r383_b3_1_animated_traps {
             Default::default(),
         );
         state = play_plain(&mut state, 1).state;
-        let card = by_id(&state, &trap.id);
+        let card = &live(&state, &trap.id);
         assert!(is_animated(&state, card));
         assert_eq!(id_at(&state, slot(P2, Row::Units, 5)), Some(trap.id.clone()));
         assert!(is_spent(&state, card));
@@ -255,7 +247,7 @@ mod r383_b3_1_animated_traps {
         );
         let played = play_plain(&mut state, 1);
         let state = played.state;
-        let card = by_id(&state, &trap.id);
+        let card = &live(&state, &trap.id);
         assert_eq!(id_at(&state, slot(P2, Row::Backrow, 3)), Some(trap.id.clone()));
         assert_eq!(card.face_up, Some(true));
         assert!(is_spent(&state, card));
@@ -285,7 +277,7 @@ mod r383_b3_1_animated_traps {
         );
         let played = play_plain(&mut state, 3);
         let state = played.state;
-        assert!(is_animated(&state, by_id(&state, &trap.id)));
+        assert!(is_animated(&state, &live(&state, &trap.id)));
         let summons = instance_ids(events_of_type(&played.events, GameEventType::Summoned));
         assert_eq!(summons, vec![played.unit.clone()]);
         assert!(!summons.contains(&trap.id));
@@ -293,7 +285,7 @@ mod r383_b3_1_animated_traps {
             instance_ids(events_of_type(&played.events, GameEventType::TrapFired)),
             vec![trap.id.clone()]
         );
-        assert_eq!(by_id(&state, &zapper.id).face_up, None);
+        assert_eq!(live(&state, &zapper.id).face_up, None);
         assert_eq!(id_at(&state, slot(P1, Row::Backrow, 1)), Some(zapper.id.clone()));
     }
 }
@@ -335,7 +327,7 @@ mod r383_b3_1_an_animated_card_is_a_unit_for_every_rule {
         let attacker = card_at(&state, slot(P1, Row::Units, 1)).cloned();
         assert!(attacker.is_some());
         let Some(attacker) = attacker else { return };
-        by_id_mut(&mut state, &trap.id).damage = 2;
+        live_mut(&mut state, &trap.id).damage = 2;
         assert!(can_attack(
             &state,
             &attacker,
@@ -364,7 +356,7 @@ mod r383_b3_1_an_animated_card_is_a_unit_for_every_rule {
             Default::default(),
         );
         {
-            let spent = by_id_mut(&mut state, &card.id);
+            let spent = live_mut(&mut state, &card.id);
             spent.face_up = Some(true);
             spent.exertion = Exertion {
                 attacked: true,
@@ -488,7 +480,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
             id_at(sink.state, slot(P1, Row::Backrow, 4)),
             Some(card.id.clone())
         );
-        assert_eq!(by_id(sink.state, &card.id).position, None);
+        assert_eq!(live(sink.state, &card.id).position, None);
         assert!(home_of(sink.state, &card.id).is_none());
         assert_eq!(
             json_of(events_of_type(sink.events, GameEventType::Deanimated)),
@@ -532,7 +524,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
             Default::default(),
         );
         {
-            let kept = by_id_mut(&mut state, &card.id);
+            let kept = live_mut(&mut state, &card.id);
             kept.damage = 1;
             kept.buffs = AttackHealth { attack: 2, health: 2 };
             kept.memory.insert("kept".to_string(), json!("yes"));
@@ -543,7 +535,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
         animate_at_turn_start(&mut sink, P1);
         return_at_cleanup(&mut sink, P1);
         animate_at_turn_start(&mut sink, P1);
-        let after = by_id(sink.state, &card.id);
+        let after = &live(sink.state, &card.id);
         assert_eq!(after.damage, 1);
         assert_eq!(after.buffs, AttackHealth { attack: 2, health: 2 });
         assert_eq!(after.memory.get("kept"), Some(&json!("yes")));
@@ -617,7 +609,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
             json!({ "target": { "of": "instance", "instanceId": card.id } }),
         ))
         .apply)(&mut make_context(&mut sink, None, by(P2)));
-        assert_eq!(by_id(sink.state, &card.id).controller, P2);
+        assert_eq!(live(sink.state, &card.id).controller, P2);
         return_at_cleanup(&mut sink, P2);
         // p2's backrow lane 1 is taken, so lane 2; the old home on p1's side is let go.
         assert_eq!(
@@ -673,8 +665,8 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
         );
         let mut sink = sink_for(&mut state);
         animate_at_turn_start(&mut sink, P1);
-        by_id_mut(sink.state, &card.id).vanilla = true;
-        assert!(animated_kind_of(sink.state, by_id(sink.state, &card.id)).is_none());
+        live_mut(sink.state, &card.id).vanilla = true;
+        assert!(animated_kind_of(sink.state, &live(sink.state, &card.id)).is_none());
         return_at_cleanup(&mut sink, P1);
         assert_eq!(id_at(sink.state, slot(P1, Row::Units, 1)), Some(card.id.clone()));
         assert!(home_of(sink.state, &card.id).is_none());
@@ -694,7 +686,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
         state.active = P2;
         let mut sink = sink_for(&mut state);
         animate_at_turn_start(&mut sink, P2);
-        by_id_mut(sink.state, &card.id).damage = 5;
+        live_mut(sink.state, &card.id).damage = 5;
         settle(&mut sink, SettleOptions::default());
         assert!(graveyard_ids(sink.state, P2).contains(&card.id));
         assert!(home_of(sink.state, &card.id).is_none());
@@ -714,8 +706,8 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
         );
         let now = live(sink.state, &base.id);
         assert!(!animate_card(&mut sink, &now, Default::default()));
-        assert_eq!(unit_view(sink.state, by_id(sink.state, &base.id)).attack, 0);
-        assert_eq!(unit_view(sink.state, by_id(sink.state, &base.id)).max_health, 0);
+        assert_eq!(unit_view(sink.state, &live(sink.state, &base.id)).attack, 0);
+        assert_eq!(unit_view(sink.state, &live(sink.state, &base.id)).max_health, 0);
         let radiant = put(
             sink.state,
             &wisp.id,
@@ -725,7 +717,7 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
         let now = live(sink.state, &radiant.id);
         assert!(!animate_card(&mut sink, &now, Default::default()));
         assert_eq!(
-            unit_view(sink.state, by_id(sink.state, &radiant.id)).max_health,
+            unit_view(sink.state, &live(sink.state, &radiant.id)).max_health,
             0
         );
         // Granted Animated on a stat-less card is the same.
@@ -735,13 +727,13 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
             slot(P1, Row::Backrow, 4),
             Default::default(),
         );
-        by_id_mut(sink.state, &granted.id)
+        live_mut(sink.state, &granted.id)
             .granted_keywords
             .push(Keyword::Animated);
         let now = live(sink.state, &granted.id);
         assert!(!animate_card(&mut sink, &now, Default::default()));
         assert_eq!(
-            unit_view(sink.state, by_id(sink.state, &granted.id)).max_health,
+            unit_view(sink.state, &live(sink.state, &granted.id)).max_health,
             0
         );
         // All three stay in their backrow zones through the state check, no Unit to die.
@@ -770,7 +762,7 @@ mod r1062_animated_on_your_turn_at_start_of_turn_after_an_earlier_entry {
             Default::default(),
         );
         let turn = state.turn;
-        by_id_mut(&mut state, &card.id).summoned_turn = Some(turn);
+        live_mut(&mut state, &card.id).summoned_turn = Some(turn);
         state.turn += 2;
         let mut sink = sink_for(&mut state);
         animate_at_turn_start(&mut sink, P1);
@@ -792,7 +784,7 @@ mod r1062_animated_on_your_turn_at_start_of_turn_after_an_earlier_entry {
             Default::default(),
         );
         let turn = state.turn;
-        by_id_mut(&mut state, &card.id).summoned_turn = Some(turn);
+        live_mut(&mut state, &card.id).summoned_turn = Some(turn);
         state.turn += 2;
         let mut sink = sink_for(&mut state);
         animate_at_turn_start(&mut sink, P1);
@@ -811,7 +803,7 @@ mod r1062_animated_on_your_turn_at_start_of_turn_after_an_earlier_entry {
             slot(P1, Row::Backrow, 2),
             Default::default(),
         );
-        by_id_mut(&mut state, &card.id).summoned_turn = Some(state.turn);
+        live_mut(&mut state, &card.id).summoned_turn = Some(state.turn);
         let mut sink = sink_for(&mut state);
         animate_at_turn_start(&mut sink, P1);
         let now = live(sink.state, &card.id);
@@ -956,7 +948,7 @@ fn fuse_into(sink: &mut EngineSink<'_>, ingredient: &CardInstance, target: &Card
 }
 
 fn owed(state: &GameState, id: &str) -> bool {
-    by_id(state, id).memory.contains_key(ANIMATE_OWED_KEY)
+    live(state, id).memory.contains_key(ANIMATE_OWED_KEY)
 }
 
 // R2280000 (issue #2280): a backrow card becomes a Unit only with both the Animated keyword and stats.
@@ -996,7 +988,7 @@ mod r2280000_a_backrow_card_becomes_a_unit_only_with_animated_and_stats {
         let state = played.state;
         assert_eq!(notes_of(find_instance(&state, &trap.id)), vec!["moted"]);
         assert_eq!(id_at(&state, slot(P2, Row::Backrow, 3)), Some(trap.id.clone()));
-        assert_eq!(by_id(&state, &trap.id).face_up, Some(true));
+        assert_eq!(live(&state, &trap.id).face_up, Some(true));
         assert!(state.players.p2.graveyard.is_empty());
         assert!(events_of_type(&played.events, GameEventType::Animated).is_empty());
     }
@@ -1010,7 +1002,7 @@ mod r2280000_a_backrow_card_becomes_a_unit_only_with_animated_and_stats {
             slot(P1, Row::Backrow, 1),
             Default::default(),
         );
-        by_id_mut(&mut state, &card.id)
+        live_mut(&mut state, &card.id)
             .granted_keywords
             .push(Keyword::AnimatedOnYourTurn);
         let mut sink = sink_for(&mut state);
@@ -1040,7 +1032,7 @@ mod r2280000_a_backrow_card_becomes_a_unit_only_with_animated_and_stats {
             id_at(sink.state, slot(P1, Row::Backrow, 1)),
             Some(flag.id.clone())
         );
-        assert!(has_stat_line(sink.state, by_id(sink.state, &flag.id)));
+        assert!(has_stat_line(sink.state, &live(sink.state, &flag.id)));
         assert!(!unit_ids(sink.state, P1).contains(&flag.id));
         assert!(!owed(sink.state, &flag.id));
         assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
@@ -1062,7 +1054,7 @@ mod r2280000_a_backrow_card_becomes_a_unit_only_with_animated_and_stats {
             slot(P1, Row::Backrow, 3),
             Default::default(),
         );
-        by_id_mut(&mut state, &card.id).buffs = AttackHealth { attack: 2, health: 2 };
+        live_mut(&mut state, &card.id).buffs = AttackHealth { attack: 2, health: 2 };
         let mut sink = sink_for(&mut state);
         let now = live(sink.state, &card.id);
         assert!(!has_stat_line(sink.state, &now));
@@ -1089,11 +1081,11 @@ mod r2280000_a_backrow_card_becomes_a_unit_only_with_animated_and_stats {
             Default::default(),
         );
         let rows =
-            |state: &GameState, id: &str| applicable_changes(state, by_id(state, id), TuneDirection::Upgrade);
+            |state: &GameState, id: &str| applicable_changes(state, &live(state, id), TuneDirection::Upgrade);
         assert!(!rows(&state, &statless.id).contains(&TuneRow::Stats));
         assert!(rows(&state, &stated.id).contains(&TuneRow::Stats));
         assert!(
-            !applicable_changes(&state, by_id(&state, &statless.id), TuneDirection::Degrade)
+            !applicable_changes(&state, &live(&state, &statless.id), TuneDirection::Degrade)
                 .contains(&TuneRow::Stats)
         );
     }
@@ -1107,7 +1099,7 @@ mod r2280000_a_backrow_card_becomes_a_unit_only_with_animated_and_stats {
             slot(P1, Row::Backrow, 2),
             Default::default(),
         );
-        by_id_mut(&mut state, &card.id).stats_override = Some(AttackHealth { attack: 2, health: 2 });
+        live_mut(&mut state, &card.id).stats_override = Some(AttackHealth { attack: 2, health: 2 });
         let stated = put(
             &mut state,
             &golem.id,
@@ -1121,20 +1113,20 @@ mod r2280000_a_backrow_card_becomes_a_unit_only_with_animated_and_stats {
         assert!(animate_card(&mut sink, &now, Default::default()));
 
         // The wisp loses its stats (a buff keeps it alive), the golem its Animated (a Vanilla).
-        let wisp_now = by_id_mut(sink.state, &card.id);
+        let wisp_now = live_mut(sink.state, &card.id);
         wisp_now.stats_override = None;
         wisp_now.buffs = AttackHealth { attack: 0, health: 2 };
-        by_id_mut(sink.state, &stated.id).vanilla = true;
+        live_mut(sink.state, &stated.id).vanilla = true;
         state_check(&mut sink);
-        assert!(!has_stat_line(sink.state, by_id(sink.state, &card.id)));
-        assert!(animated_kind_of(sink.state, by_id(sink.state, &stated.id)).is_none());
+        assert!(!has_stat_line(sink.state, &live(sink.state, &card.id)));
+        assert!(animated_kind_of(sink.state, &live(sink.state, &stated.id)).is_none());
         assert_eq!(id_at(sink.state, slot(P1, Row::Units, 2)), Some(card.id.clone()));
         assert_eq!(
             id_at(sink.state, slot(P1, Row::Units, 3)),
             Some(stated.id.clone())
         );
-        assert!(is_animated(sink.state, by_id(sink.state, &card.id)));
-        assert!(is_animated(sink.state, by_id(sink.state, &stated.id)));
+        assert!(is_animated(sink.state, &live(sink.state, &card.id)));
+        assert!(is_animated(sink.state, &live(sink.state, &stated.id)));
     }
 }
 
@@ -1165,11 +1157,11 @@ mod r2280001_a_backrow_card_that_comes_to_have_both_animates_at_the_state_check 
 
         state_check(&mut sink);
         assert_eq!(id_at(sink.state, slot(P1, Row::Units, 2)), Some(card.id.clone()));
-        let view = unit_view(sink.state, by_id(sink.state, &card.id));
+        let view = unit_view(sink.state, &live(sink.state, &card.id));
         assert_eq!((view.attack, view.health), (3, 3));
         assert_eq!(events_of_type(sink.events, GameEventType::Animated).len(), 1);
         // An entry, as every animation from the backrow is (R83, R171).
-        assert_eq!(by_id(sink.state, &card.id).summoned_turn, Some(turn));
+        assert_eq!(live(sink.state, &card.id).summoned_turn, Some(turn));
         assert!(!owed(sink.state, &card.id));
     }
 
@@ -1195,7 +1187,7 @@ mod r2280001_a_backrow_card_that_comes_to_have_both_animates_at_the_state_check 
 
         // A unit zone opens: the card had both already, so nothing more is owed it.
         let first = id_at(sink.state, slot(P1, Row::Units, 1)).expect("a unit in zone 1");
-        by_id_mut(sink.state, &first).damage = 99;
+        live_mut(sink.state, &first).damage = 99;
         state_check(&mut sink);
         assert!(card_at(sink.state, slot(P1, Row::Units, 1)).is_none());
         assert_eq!(
@@ -1223,7 +1215,7 @@ mod r2280001_a_backrow_card_that_comes_to_have_both_animates_at_the_state_check 
             id_at(sink.state, slot(P1, Row::Backrow, 2)),
             Some(trap.id.clone())
         );
-        assert!(is_face_down(sink.state, by_id(sink.state, &trap.id)));
+        assert!(is_face_down(sink.state, &live(sink.state, &trap.id)));
         assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
     }
 
@@ -1436,7 +1428,7 @@ mod r3542000_a_card_whose_text_gives_it_stats_by_its_plague_counters {
         assert!(events_of_type(&result.events, GameEventType::Animated).is_empty());
         assert!(!jackioh_engine::layers::has_stat_line(
             &result.state,
-            by_id(&result.state, &card.id)
+            &live(&result.state, &card.id)
         ));
     }
 
@@ -1462,16 +1454,16 @@ mod r3542000_a_card_whose_text_gives_it_stats_by_its_plague_counters {
 
         state_check(&mut sink);
         assert_eq!(id_at(sink.state, slot(P1, Row::Units, 2)), Some(card.id.clone()));
-        let view = unit_view(sink.state, by_id(sink.state, &card.id));
+        let view = unit_view(sink.state, &live(sink.state, &card.id));
         assert_eq!((view.attack, view.health), (2 * BLOOM_STATS, 2 * BLOOM_STATS));
         assert_eq!(events_of_type(sink.events, GameEventType::Animated).len(), 1);
         // An entry, as every animation from the backrow is (R83, R171).
-        assert_eq!(by_id(sink.state, &card.id).summoned_turn, Some(turn));
+        assert_eq!(live(sink.state, &card.id).summoned_turn, Some(turn));
         assert!(!owed(sink.state, &card.id));
 
         // Once a Unit it stays one, and a counter more is 3/3 more.
         place(&mut sink, &card.id, 1);
-        let view = unit_view(sink.state, by_id(sink.state, &card.id));
+        let view = unit_view(sink.state, &live(sink.state, &card.id));
         assert_eq!((view.attack, view.health), (3 * BLOOM_STATS, 3 * BLOOM_STATS));
         assert_eq!(events_of_type(sink.events, GameEventType::Animated).len(), 1);
     }
@@ -1497,7 +1489,7 @@ mod r3542000_a_card_whose_text_gives_it_stats_by_its_plague_counters {
 
         // A unit zone opens: the card had both already, so nothing more is owed it.
         let first = id_at(sink.state, slot(P1, Row::Units, 1)).expect("a unit in zone 1");
-        by_id_mut(sink.state, &first).damage = 99;
+        live_mut(sink.state, &first).damage = 99;
         state_check(&mut sink);
         assert!(card_at(sink.state, slot(P1, Row::Units, 1)).is_none());
         assert_eq!(
@@ -1521,7 +1513,7 @@ mod r3542000_a_card_whose_text_gives_it_stats_by_its_plague_counters {
         assert!(!owed(sink.state, &card.id));
         assert!(!jackioh_engine::layers::has_stat_line(
             sink.state,
-            by_id(sink.state, &card.id)
+            &live(sink.state, &card.id)
         ));
         state_check(&mut sink);
         assert_eq!(
@@ -1544,7 +1536,7 @@ mod r3542000_a_card_whose_text_gives_it_stats_by_its_plague_counters {
         place(&mut sink, &card.id, 1);
         state_check(&mut sink);
         assert_eq!(id_at(sink.state, slot(P1, Row::Units, 2)), Some(card.id.clone()));
-        let held = by_id(sink.state, &card.id).clone();
+        let held = live(sink.state, &card.id);
         remove_plague(&mut make_context(&mut sink, None, by(P1)), &held, 1);
         state_check(&mut sink);
         assert!(card_at(sink.state, slot(P1, Row::Units, 2)).is_none());

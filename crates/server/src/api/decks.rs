@@ -1024,7 +1024,7 @@ pub async fn sync_decks(app: &Arc<App>, req: Req) -> ApiResult {
 
 /// What `POST /api/queue`, `POST /api/rooms` and `POST /api/rooms/:code/join` were asked for, parsed
 /// but not yet looked up (R257).
-#[derive(serde::Serialize, Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(tag = "mode", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum ModeChoiceInput {
     Bo1 {
@@ -1041,9 +1041,9 @@ pub enum ModeChoiceInput {
     },
 }
 
-/// What a ticket or a room freezes (§9.4: "Decks are frozen into the queue ticket"); a daily invite
-/// stores it and reads it back when it is answered (§9.13).
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
+/// What a ticket, a room or a lobby's pick (R3730001) freezes (§9.4: "Decks are frozen into the
+/// queue ticket"); a daily invite stores it and reads it back when it is answered (§9.13).
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq)]
 #[serde(tag = "mode", rename_all = "camelCase")]
 pub enum FrozenChoice {
     Bo1 {

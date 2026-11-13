@@ -12,7 +12,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::token_def;
 use crate::rules::fixtures::harness::{
-    act, act_ok, in_hand, input, new_game, put, run_as_p1 as run, run_effect, sink_for, slot,
+    act, act_ok, in_hand, input, live, live_mut, new_game, put, run_as_p1 as run, run_effect, sink_for, slot,
 };
 use crate::rules::fixtures::meditative_riders::{
     GRANT_KEY, LOG_LANE, RIDER_SCRIPTS, bearer, book, closed_mic, ear, fuser, granter, log_card, mind, notes,
@@ -61,14 +61,6 @@ fn playing(seed: &str) -> GameState {
 
 fn activate(player: PlayerId, instance_id: &str) -> ActionInput {
     input(json!({ "type": "activate", "instanceId": instance_id, "playerId": player }))
-}
-
-fn card<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
-
-fn card_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
 
 /// The events of one action, as a player's view sends them.
@@ -161,17 +153,17 @@ fn r1102_deradiant_swaps_face_keeps_damage_and_buffs() {
         slot(P1, Row::Units, 1),
         json!({ "radiant": true }),
     );
-    card_mut(&mut state, &unit.id).damage = 1;
-    card_mut(&mut state, &unit.id).buffs = AttackHealth { attack: 2, health: 0 };
-    assert!(card(&state, &unit.id).radiant);
+    live_mut(&mut state, &unit.id).damage = 1;
+    live_mut(&mut state, &unit.id).buffs = AttackHealth { attack: 2, health: 0 };
+    assert!(live(&state, &unit.id).radiant);
     // Radiant doubles 2 to 4, and the +2 buff rides on top.
-    assert_eq!(unit_view(&state, card(&state, &unit.id)).attack, 6);
+    assert_eq!(unit_view(&state, &live(&state, &unit.id)).attack, 6);
 
     let events = run(
         &mut state,
         clear_radiant(json_as(json!({ "instanceId": unit.id }))),
     );
-    let after = card(&state, &unit.id);
+    let after = &live(&state, &unit.id);
     assert!(!after.radiant);
     assert_eq!(after.damage, 1);
     assert_eq!(after.buffs, AttackHealth { attack: 2, health: 0 });
@@ -195,7 +187,7 @@ fn r1102_deradiant_swaps_face_keeps_damage_and_buffs() {
         &mut state,
         clear_radiant(json_as(json!({ "instanceId": plain.id }))),
     );
-    assert!(!card(&state, &plain.id).radiant);
+    assert!(!live(&state, &plain.id).radiant);
     assert!(events.is_empty());
 }
 
@@ -204,12 +196,12 @@ fn r1102_deradiant_swaps_face_keeps_damage_and_buffs() {
 fn r1102_deradianted_hidden_in_a_hand() {
     let mut state = playing("deradiant-hand");
     let held = in_hand(&mut state, &open_mic.id, P1, 1).remove(0);
-    card_mut(&mut state, &held.id).radiant = true;
+    live_mut(&mut state, &held.id).radiant = true;
     let events = run(
         &mut state,
         clear_radiant(json_as(json!({ "instanceId": held.id }))),
     );
-    assert!(!card(&state, &held.id).radiant);
+    assert!(!live(&state, &held.id).radiant);
     assert_eq!(events.len(), 1);
     let p2 = sent(&mut state, events, P2);
     assert_eq!(p2[0]["instanceId"], json!("hidden"));
@@ -270,19 +262,19 @@ fn r1105_both_views_list_it() {
     let mut state = playing("views");
     let mic = put(&mut state, &open_mic.id, slot(P1, Row::Units, 1), json!({}));
     let shy = put(&mut state, &closed_mic.id, slot(P1, Row::Units, 2), json!({}));
-    let own: Vec<String> = activation_views_for(&state, P1, card(&state, &mic.id))
+    let own: Vec<String> = activation_views_for(&state, P1, &live(&state, &mic.id))
         .unwrap_or_default()
         .into_iter()
         .map(|view| view.ability)
         .collect();
     assert_eq!(own, vec!["share".to_string()]);
-    let seen: Vec<String> = activation_views_for(&state, P2, card(&state, &mic.id))
+    let seen: Vec<String> = activation_views_for(&state, P2, &live(&state, &mic.id))
         .unwrap_or_default()
         .into_iter()
         .map(|view| view.ability)
         .collect();
     assert_eq!(seen, vec!["share".to_string()]);
-    assert!(activation_views_for(&state, P2, card(&state, &shy.id)).is_none());
+    assert!(activation_views_for(&state, P2, &live(&state, &shy.id)).is_none());
 }
 
 /// R1107 (MD-D13): the granted Death runs after the card's own, for the controller at the death —
@@ -298,16 +290,16 @@ fn r1107_granted_death_runs_after_own_for_controller_at_death() {
             "grant": GRANT_KEY,
         }))),
     );
-    assert_eq!(card(&state, &target.id).grants.as_ref().map(Vec::len), Some(1));
+    assert_eq!(live(&state, &target.id).grants.as_ref().map(Vec::len), Some(1));
     // The grant shows on the Unit, as its line reads.
     assert_eq!(
-        grant_texts(&state, card(&state, &target.id)),
+        grant_texts(&state, &live(&state, &target.id)),
         Some(vec!["Death: notes `granted`.".to_string()])
     );
     // Stolen: p2 holds it at its death, and both Deaths still fire, own first.
     run_effect(&mut state, steal(json_as(json!({ "instanceId": target.id }))), P2);
-    assert_eq!(card(&state, &target.id).controller, P2);
-    card_mut(&mut state, &target.id).marked_destroyed = Some(true);
+    assert_eq!(live(&state, &target.id).controller, P2);
+    live_mut(&mut state, &target.id).marked_destroyed = Some(true);
     let mut sink = sink_for(&mut state);
     state_check(&mut sink);
     assert_eq!(notes(sink.state), vec!["own".to_string(), "granted".to_string()]);
@@ -329,12 +321,12 @@ fn r1107_grants_survive_json_vanilla_copy_and_reset_off_field() {
     // A JSON round trip keeps it.
     let round: GameState =
         serde_json::from_value(serde_json::to_value(&state).expect("serializes")).expect("deserializes");
-    assert_eq!(card(&round, &target.id).grants, card(&state, &target.id).grants);
+    assert_eq!(live(&round, &target.id).grants, live(&state, &target.id).grants);
     // A Vanilla keeps it (grants behave like granted keywords, §10.4).
-    card_mut(&mut state, &target.id).vanilla = true;
-    assert_eq!(card(&state, &target.id).grants.as_ref().map(Vec::len), Some(1));
+    live_mut(&mut state, &target.id).vanilla = true;
+    assert_eq!(live(&state, &target.id).grants.as_ref().map(Vec::len), Some(1));
     // A copy keeps it (R57).
-    let source = card(&state, &target.id).clone();
+    let source = live(&state, &target.id);
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let copy = {
@@ -356,7 +348,7 @@ fn r1107_grants_survive_json_vanilla_copy_and_reset_off_field() {
     };
     assert_eq!(copy.grants, source.grants);
     // Leaving the field loses it (R78).
-    let mut gone = card(&state, &target.id).clone();
+    let mut gone = live(&state, &target.id);
     reset_instance(&mut gone);
     assert_eq!(gone.grants, None);
 }

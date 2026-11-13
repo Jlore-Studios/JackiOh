@@ -23,10 +23,13 @@ fn joon() -> Script {
                 return vec![];
             }
             let zones = if at.row == Row::Units { UNIT_ZONES } else { BACKROW_ZONES };
-            if at.lane >= zones {
+            // R3546001: a GIGA Joon is in both its lanes, so the Unit to its right is past its last one
+            // (a neighbour's anchor is always that next lane).
+            let last = lanes_of(me).into_iter().max().unwrap_or(at.lane);
+            if last >= zones {
                 return vec![];
             }
-            let next = ZoneSlot { player: at.player, row: at.row, lane: at.lane + 1 };
+            let next = ZoneSlot { player: at.player, row: at.row, lane: last + 1 };
             let Some(id) = card_at(&*ctx.state, next)
                 .filter(|card| is_adjacent_card(&*ctx.state, me, card))
                 .map(|card| card.id.clone())
@@ -79,6 +82,40 @@ mod tests {
         let lane3 = upgraded_for(s.events(), &right);
         assert_eq!(lane3, 4);
         assert_eq!(upgraded_for(s.events(), &left), 0);
+    }
+
+    #[test]
+    fn r3546001_a_giga_joon_upgrades_the_unit_past_its_last_lane() {
+        let mut s = scenario(json!({
+            "p1": { "field": [{ "def": VANILLA, "lane": 4 }, { "def": VANILLA, "lane": 1 }], "hand": [JOON, FILLER] },
+            "p2": { "hand": [FILLER] },
+        }));
+        let joon = s.card(JOON).id.clone();
+        crate::give_giga(&mut s, &joon);
+        s.play(JOON, json!({ "zone": 2 }));
+        assert_eq!(s.card(&joon).giga, Some(true));
+        let right = s.unit(PlayerId::P1, 4).expect("the unit past its last lane").id.clone();
+        let left = s.unit(PlayerId::P1, 1).expect("the left unit").id.clone();
+        s.end_turn();
+        assert_eq!(upgraded_for(s.events(), &right), 4);
+        assert_eq!(upgraded_for(s.events(), &left), 0);
+    }
+
+    #[test]
+    fn r3546001_a_giga_joon_in_lanes_4_and_5_has_no_right_neighbour() {
+        let mut s = scenario(json!({
+            "p1": { "field": [{ "def": VANILLA, "lane": 3 }], "hand": [JOON, FILLER] },
+            "p2": { "hand": [FILLER] },
+        }));
+        let joon = s.card(JOON).id.clone();
+        crate::give_giga(&mut s, &joon);
+        s.play(JOON, json!({ "zone": 4 }));
+        assert_eq!(s.card(&joon).giga, Some(true));
+        s.end_turn();
+        assert_eq!(
+            s.events().iter().filter(|event| matches!(event, GameEvent::Upgraded { .. })).count(),
+            0
+        );
     }
 
     #[test]
