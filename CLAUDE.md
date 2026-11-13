@@ -181,10 +181,10 @@ Branch protection on `main` requires five checks, all jobs of `ci.yml`: `rust`, 
 out failed there, against the newer `main`, and its fix starts from merging `main`. So merge `main` into a pull
 request only when GitHub shows a conflict or the queue took it out: one that merges cleanly needs no update,
 since the queue tests it on the newest `main`, and every push runs its CI again on the organization's shared
-runners. Turn auto-merge on once it is ready, so the queue takes it as soon as its checks pass. A pull
-request's CI and a merge-queue build may show "Waiting" before they start: the runner gate holds them, with no
-runner, until GitHub's 60 have room (bot/README.md "The runner gate"), while `main`'s and a promotion's never
-wait. Run
+runners. Turn auto-merge on once it is ready, so the queue takes it as soon as its checks pass. Every CI run but a
+dispatch, and every super run, may show "Waiting" before it starts: the runner gate holds it, with no runner,
+until GitHub's 60 have room, starting the merge queue's builds first, then staging's and production's, then
+`main`'s and pull requests' (bot/README.md "The runner gate"). Run
 `cargo jackioh classify --base origin/main --claims` before pushing: on a pull request `rust` runs it as
 `rust (classify)` (R1370000). A pull request runs only the jobs that read what it changes (`scripts/ci-scope.sh`,
 whose header says what turns each on; #751), so a file a test newly reads from outside its crate goes in the

@@ -158,15 +158,15 @@ jobs:
   # is set here, not in ci-scope.sh, because a bot-only diff is exactly the one ci-scope.sh answers
   # `full=false` for, and because .github/ is a path the bots may not change. Any doubt says `true`.
   #
-  # The runner gate (bot/go/internal/cigate, bot/README.md "The runner gate"): a pull request into
-  # `main` and a merge-queue build wait here, holding no runner, in the environment the repository
-  # variable CI_GATE_ENVIRONMENT names (`ci-runners`, infra/github.tf), until its one required
-  # reviewer, the night bot's account, approves them: the status loop does once GitHub's runners
-  # have room, merge-queue builds first. Every other job of the run needs this one, so the whole run
-  # waits. A push to `main`, a promotion's pull request (into `_production`) and a dispatch never
-  # wait, and with the variable unset nothing does: the name is empty, so the job has no
-  # environment. `queue-supersede` needs nothing, so a merge-queue build cancels its pull
-  # request's older builds while it waits.
+  # The runner gate (bot/go/internal/cigate, bot/README.md "The runner gate"): every run but a
+  # dispatch (a person's) waits here, holding no runner, in the environment the repository variable
+  # CI_GATE_ENVIRONMENT names (`ci-runners`, infra/github.tf), until its one required reviewer, the
+  # night bot's account, approves it: the status loop does once GitHub's runners have room, in the
+  # owner's order (2026-11-13): merge-queue builds, then a promotion's pull request (into
+  # `_production`) with super.yml's runs, then the push to `main` and pull requests'. Every other job
+  # of the run needs this one, so the whole run waits. With the variable unset nothing waits: the
+  # name is empty, so the job has no environment. `queue-supersede` needs nothing, so a merge-queue
+  # build cancels its pull request's older builds while it waits.
   changes:
     name: what the change touches
     runs-on: ubuntu-latest
@@ -176,7 +176,7 @@ jobs:
     permissions:
       contents: read
       actions: read
-    environment: ${{ ((github.event_name == 'pull_request' && github.base_ref == 'main') || github.event_name == 'merge_group') && vars.CI_GATE_ENVIRONMENT || '' }}
+    environment: ${{ github.event_name != 'workflow_dispatch' && vars.CI_GATE_ENVIRONMENT || '' }}
     outputs:
       full: ${{ steps.scope.outputs.full }}
       db: ${{ steps.scope.outputs.db }}

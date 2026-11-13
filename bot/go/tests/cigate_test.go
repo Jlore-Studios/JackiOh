@@ -1,12 +1,14 @@
-// The runner gate (bot/go/internal/cigate, bot/README.md "The runner gate"): a pull request's CI and
-// a merge-queue build wait in `ci-runners`, holding no runner, until the night bot's account, its
-// one required reviewer, approves them, once GitHub's runners have room: merge-queue builds first,
-// each the oldest first, and any that waited too long whatever is queued.
+// The runner gate (bot/go/internal/cigate, bot/README.md "The runner gate"): CI (but a dispatch) and
+// super runs wait in `ci-runners`, holding no runner, until the night bot's account, its one
+// required reviewer, approves them, once GitHub's runners have room: merge-queue builds first, then
+// staging's and production's runs, then `main`'s CI and pull requests', each the oldest first, and
+// any that waited too long whatever is queued.
 package tests
 
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -39,8 +41,13 @@ func newCigateWorld(t *testing.T) *cigateWorld {
 // waiting is a CI run of `event` that has waited `minutes` in `ci-runners`, which this account may
 // approve.
 func (w *cigateWorld) waiting(id int, event string, minutes int) {
+	w.waitingIn(id, "ci.yml", event, minutes)
+}
+
+// waitingIn is `waiting` for a run of `workflow`.
+func (w *cigateWorld) waitingIn(id int, workflow, event string, minutes int) {
 	key := fmt.Sprint(id)
-	w.gh.Runs.Set(key, pyjson.New("id", id, "name", "CI", "workflow", "ci.yml", "status", "waiting",
+	w.gh.Runs.Set(key, pyjson.New("id", id, "name", workflow, "workflow", workflow, "status", "waiting",
 		"event", event, "head_branch", fmt.Sprintf("branch-%d", id),
 		"created_at", clock.ISO(testsupport.Day.Add(-time.Duration(minutes)*time.Minute))))
 	w.gh.Pending[key] = []*pyjson.Object{pyjson.New("environment", pyjson.New("id", 77, "name", "ci-runners"),
@@ -59,6 +66,17 @@ func (w *cigateWorld) busy(hosted, boxed int) {
 	jobs = append(jobs, pyjson.New("id", 999, "status", "in_progress", "labels", []any{"ubuntu-latest"}))
 	w.gh.Runs.Set("500", pyjson.New("id", 500, "name", "CI", "status", "in_progress", "event", "push"))
 	w.gh.Jobs["500"] = jobs
+}
+
+// going is a run with `n` jobs on GitHub's runners, none queued.
+func (w *cigateWorld) going(n int) {
+	var jobs []*pyjson.Object
+	for i := 0; i < n; i++ {
+		jobs = append(jobs, pyjson.New("id", 600+i, "status", "in_progress", "labels", []any{"ubuntu-latest"}))
+	}
+	w.gh.Runs.Set("600", pyjson.New("id", 600, "name", "bot-night", "path", ".github/workflows/bot-night.yml",
+		"status", "in_progress", "event", "workflow_dispatch"))
+	w.gh.Jobs["600"] = jobs
 }
 
 // started is: run `id` has run its first job (`cigate.FirstJob`) and asked for the rest, `queued`
@@ -147,8 +165,9 @@ func TestCigate_ARunApprovedCountsForItsJobsUntilItsFirstJobHasRun(t *testing.T)
 	w.gh.Jobs["1"] = []*pyjson.Object{pyjson.New("id", 100, "name", cigate.FirstJob, "status", "in_progress",
 		"labels", []any{"ubuntu-latest"})}
 	assertIn(t, "started 0 of 1 waiting run(s); 1 wait for room", cigate.Tick(w.ctx))
-	queued, read := cigate.Queued(w.ctx)
+	queued, inUse, read := cigate.Queued(w.ctx)
 	assertEqual(t, queued, cigate.RunJobs)
+	assertEqual(t, inUse, cigate.RunJobs+1) // and its first job holds a runner
 	assertEqual(t, read, true)
 	// Its first job has run and its jobs have asked for runners: only those queued count now.
 	w.started(1, 5)
@@ -159,12 +178,12 @@ func TestCigate_ARunApprovedCountsForItsJobsUntilItsFirstJobHasRun(t *testing.T)
 	w2 := newCigateWorld(t)
 	w2.gh.Runs.Set("7", pyjson.New("id", 7, "name", "bot-night", "path", ".github/workflows/bot-night.yml",
 		"status", "in_progress", "event", "workflow_dispatch"))
-	queued, _ = cigate.Queued(w2.ctx)
+	queued, _, _ = cigate.Queued(w2.ctx)
 	assertEqual(t, queued, 0)
 	w2.gh.Runs.Set("8", pyjson.New("id", 8, "name", "CI", "path", ".github/workflows/ci.yml",
 		"status", "queued", "event", "push"))
-	queued, _ = cigate.Queued(w2.ctx)
-	assertEqual(t, queued, cigate.RunJobs) // main's CI is never gated, but it takes runners as well
+	queued, _, _ = cigate.Queued(w2.ctx)
+	assertEqual(t, queued, cigate.RunJobs) // main's CI counts as any CI run's
 }
 
 // A ready pull request's run starts before a draft's, which runs beside its own review run; each
@@ -193,6 +212,55 @@ func TestCigate_AReadyPullRequestsRunStartsBeforeADrafts(t *testing.T) {
 	assertEqual(t, w2.approved(), []string{"1"})
 }
 
+// The owner's order (2026-11-13): the merge queue, then staging and production (a super run, CI on
+// a promotion's pull request into `_production`), then `main`'s CI, then pull requests', each the
+// oldest first; the last rung one a tick.
+func TestCigate_StagingAndProductionStartAfterTheMergeQueueAndBeforeMainAndPullRequests(t *testing.T) {
+	// Each rung starts only while the rung above it could: a queue build fills the queue past the
+	// rungs below it, and none of them starts in that tick.
+	w2 := newCigateWorld(t)
+	w2.waitingIn(1, "super.yml", "pull_request", 5)
+	w2.waiting(2, "push", 4)
+	w2.waiting(3, "merge_group", 1)
+	cigate.Tick(w2.ctx)
+	assertEqual(t, w2.approved(), []string{"3"})
+	w := newCigateWorld(t)
+	w.waiting(1, "pull_request", 9)
+	w.waiting(2, "push", 5)
+	w.waiting(3, "pull_request", 2)
+	w.gh.Runs.Obj("3").Set("pull_requests", []any{pyjson.New("base", pyjson.New("ref", "_production"))})
+	w.waitingIn(4, "super.yml", "workflow_dispatch", 3)
+	w.waiting(5, "merge_group", 1)
+	patch(t, &cigate.RunJobs, 1)
+	cigate.Tick(w.ctx)
+	assertEqual(t, w.approved(), []string{"5", "4", "3", "2"})
+	cigate.Tick(w.ctx)
+	assertEqual(t, w.approved(), []string{"5", "4", "3", "2", "1"})
+}
+
+// The rungs below the merge queue keep runners free for the ones above them, with nothing queued
+// too: `main`'s CI and pull requests' `PullFree`, staging's and production's `ReleaseFree`, and the
+// merge queue none.
+func TestCigate_RunnersStayFreeForTheRungsAbove(t *testing.T) {
+	w := newCigateWorld(t)
+	w.going(cigate.Runners - cigate.PullFree)
+	w.waiting(1, "pull_request", 5)
+	w.waitingIn(2, "super.yml", "workflow_dispatch", 1)
+	assertIn(t, "started 1 of 2 waiting run(s) (super run 2 on branch-2); 1 wait for room", cigate.Tick(w.ctx))
+	assertIn(t, "0 job(s) queued for a runner, 40 of GitHub's 60 runners in use", w.gh.Approvals[0].Comment)
+	w2 := newCigateWorld(t)
+	w2.going(cigate.Runners - cigate.ReleaseFree)
+	w2.waitingIn(1, "super.yml", "pull_request", 5)
+	w2.waiting(2, "merge_group", 1)
+	cigate.Tick(w2.ctx)
+	assertEqual(t, w2.approved(), []string{"2"})
+	w3 := newCigateWorld(t)
+	w3.going(cigate.Runners - cigate.PullFree - 1)
+	w3.waiting(1, "pull_request", 0)
+	cigate.Tick(w3.ctx)
+	assertEqual(t, w3.approved(), []string{"1"})
+}
+
 // A run that has waited too long starts whatever is queued, so the gate never starves CI; so does
 // every waiting run when the jobs queued cannot be read.
 func TestCigate_ARunThatWaitedTooLongOrAnUnreadableQueueStartsAnyway(t *testing.T) {
@@ -200,14 +268,19 @@ func TestCigate_ARunThatWaitedTooLongOrAnUnreadableQueueStartsAnyway(t *testing.
 	w.waiting(1, "pull_request", int(cigate.MaxWaitPull/time.Minute))
 	w.waiting(2, "merge_group", int(cigate.MaxWaitQueue/time.Minute))
 	w.waiting(3, "pull_request", 1)
+	w.waitingIn(4, "super.yml", "pull_request", int(cigate.MaxWaitRelease/time.Minute))
 	w.busy(50, 0)
 	cigate.Tick(w.ctx)
-	assertEqual(t, w.approved(), []string{"2", "1"})
-	assertIn(t, "it waited 30 min", w.gh.Approvals[1].Comment)
+	assertEqual(t, w.approved(), []string{"2", "4", "1"})
+	assertIn(t, "it waited 15 min", w.gh.Approvals[1].Comment)
+	assertIn(t, "it waited 30 min", w.gh.Approvals[2].Comment)
 	w2 := newCigateWorld(t)
 	w2.waiting(1, "pull_request", 1)
 	w2.waiting(2, "pull_request", 2)
-	w2.gh.Patch.ListRepoRuns = func(string, int, bool) []*pyjson.Object {
+	w2.gh.Patch.ListRepoRuns = func(status string, limit int, cached bool) []*pyjson.Object {
+		if status == "waiting" {
+			return w2.gh.Own().ListRepoRuns(status, limit, cached)
+		}
 		panic(&herr.GitHubError{Msg: "rate limited", Status: 403})
 	}
 	cigate.Tick(w2.ctx)
@@ -216,8 +289,8 @@ func TestCigate_ARunThatWaitedTooLongOrAnUnreadableQueueStartsAnyway(t *testing.
 }
 
 // It approves only `ci-runners`, and only what this account may approve; it leaves alone a run
-// that is not waiting, a push's or a dispatch's, and it never runs for another bot (Squishy), which
-// is not the environment's reviewer.
+// that is not waiting, a dispatch of CI's (a person's) and another workflow's, and it never runs for
+// another bot (Squishy), which is not the environment's reviewer.
 func TestCigate_ItApprovesOnlyItsOwnEnvironmentForTheGatedEvents(t *testing.T) {
 	w := newCigateWorld(t)
 	w.waiting(1, "pull_request", 1)
@@ -225,8 +298,8 @@ func TestCigate_ItApprovesOnlyItsOwnEnvironmentForTheGatedEvents(t *testing.T) {
 		"current_user_can_approve", true)}
 	w.waiting(2, "pull_request", 2)
 	w.gh.Pending["2"][0].Set("current_user_can_approve", false)
-	w.waiting(3, "push", 3)
 	w.waiting(4, "workflow_dispatch", 4)
+	w.waitingIn(6, "deploy-staging.yml", "push", 6)
 	w.gh.Runs.Set("5", pyjson.New("id", 5, "workflow", "ci.yml", "status", "queued", "event", "pull_request"))
 	w.started(5, 0)
 	note := cigate.Tick(w.ctx)
@@ -234,6 +307,13 @@ func TestCigate_ItApprovesOnlyItsOwnEnvironmentForTheGatedEvents(t *testing.T) {
 	assertIn(t, "run 1 on branch-1: it waits on nothing this account may approve", note)
 	assertIn(t, "run 2 on branch-2: it waits on nothing this account may approve", note)
 	assertIn(t, "of 2 waiting run(s)", note)
+	// main's CI waits, and a super run, whatever started it.
+	patch(t, &cigate.RunJobs, 0)
+	w.waiting(3, "push", 3)
+	w.waitingIn(7, "super.yml", "workflow_dispatch", 1)
+	w.waitingIn(8, "super.yml", "pull_request", 0)
+	assertIn(t, "started 3 of 5 waiting run(s) (super run 7 on branch-7, super run 8 on branch-8, run 3 on branch-3)",
+		cigate.Tick(w.ctx))
 	squishy := newCigateWorld(t)
 	squishy.ctx.Cfg.BotLogin = "squishy-squooby"
 	squishy.waiting(1, "pull_request", 1)
@@ -288,15 +368,30 @@ func TestCigate_EverySweepTicksTheGate(t *testing.T) {
 }
 
 // ci.yml's `changes` job, which every other job of the run needs, waits in the environment the
-// repository variable names, for a pull request into `main` and a merge-queue build only: never a
-// push to `main`, a promotion's pull request (into `_production`) or a dispatch, and nothing waits
-// with the variable unset. The status loop ticks the gate every 30 seconds.
-func TestWorkflows_OnlyAPullRequestIntoMainAndAMergeQueueBuildWaitForTheRunnerGate(t *testing.T) {
+// repository variable names for every run but a dispatch (a person's), the events cigate.Gated
+// names; super.yml's every first job (one that needs none) waits there too, but its schedule's,
+// which only starts the daily run; and nothing waits with the variable unset. The status loop ticks
+// the gate every 30 seconds.
+func TestWorkflows_CIAndTheSuperRunWaitForTheRunnerGate(t *testing.T) {
 	text := workflowsRead(t, "ci.yml")
 	changes := workflowsJob(t, text, "changes")
-	assertIn(t, "    environment: ${{ ((github.event_name == 'pull_request' && github.base_ref == 'main') || "+
-		"github.event_name == 'merge_group') && vars.CI_GATE_ENVIRONMENT || '' }}\n", changes)
+	assertIn(t, "    environment: ${{ github.event_name != 'workflow_dispatch' && vars.CI_GATE_ENVIRONMENT || '' }}\n",
+		changes)
 	assertEqual(t, strings.Count(text, "environment:"), 1, "only `changes` names an environment")
+	assertEqual(t, cigate.Gated["ci.yml"], []string{"merge_group", "pull_request", "push"})
+	super := workflowsRead(t, "super.yml")
+	firsts := 0
+	for _, m := range regexp.MustCompile(`(?m)^  ([a-z0-9-]+):\n`).FindAllStringSubmatch(super[strings.Index(super, "\njobs:\n"):], -1) {
+		job := workflowsJob(t, super, m[1])
+		if m[1] == "daily" || strings.Contains(job, "    needs:") {
+			assertNotIn(t, "environment:", job)
+			continue
+		}
+		assertIn(t, "    environment: ${{ vars.CI_GATE_ENVIRONMENT || '' }}\n", job)
+		firsts++
+	}
+	assertEqual(t, firsts, 6) // rust-build, wasm, daily-tests, coverage, notebooks, db
+	assertEqual(t, cigate.Gated["super.yml"], []string{"pull_request", "workflow_dispatch"})
 	supersede := workflowsJob(t, text, "queue-supersede")
 	assertNotIn(t, "needs:", supersede) // it cancels older builds while this one waits
 	status := workflowsRead(t, "bot-status.yml")

@@ -46,6 +46,14 @@
 # promotion pull request closes it. A dispatched run on any other branch tests that branch's change,
 # so it is reported but never handed over, and its report says the branch's author owns it.
 #
+# The runner gate (bot/go/internal/cigate, bot/README.md "The runner gate"): every first job of a
+# run (one that needs no other) waits in the environment the repository variable CI_GATE_ENVIRONMENT
+# names (`ci-runners`, infra/github.tf), holding no runner, until the night bot's status loop
+# approves the run once GitHub's runners have room: after the merge queue's builds and before
+# `main`'s CI and pull requests' (the owner's order of 2026-11-13). Every other job needs one of
+# them, so the whole run waits. The schedule's `daily` only starts a run and never waits; with the
+# variable unset nothing does.
+#
 # The release binaries and the built client travel between jobs as artifacts, built once per run:
 # both binaries in one `rust-build` job at Cargo.toml's opt-levels (ci.yml splits them in two,
 # #2540; the daily run waits on nobody), and the client as ci.yml's `wasm` jobs build it.
@@ -115,6 +123,7 @@ jobs:
   rust-build:
     name: release build
     if: github.event_name != 'schedule'
+    environment: ${{ vars.CI_GATE_ENVIRONMENT || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -137,6 +146,7 @@ jobs:
   wasm:
     name: wasm and client build
     if: github.event_name != 'schedule'
+    environment: ${{ vars.CI_GATE_ENVIRONMENT || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -290,6 +300,7 @@ jobs:
   daily-tests:
     name: daily tests (cargo test -- --ignored)
     if: github.event_name != 'schedule'
+    environment: ${{ vars.CI_GATE_ENVIRONMENT || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -306,6 +317,7 @@ jobs:
   coverage:
     name: coverage (engine, cards, ai)
     if: github.event_name != 'schedule'
+    environment: ${{ vars.CI_GATE_ENVIRONMENT || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -427,6 +439,7 @@ jobs:
   notebooks:
     name: notebooks
     if: github.event_name != 'schedule'
+    environment: ${{ vars.CI_GATE_ENVIRONMENT || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -449,6 +462,7 @@ jobs:
   db:
     name: db (${{ matrix.suite }})
     if: github.event_name != 'schedule'
+    environment: ${{ vars.CI_GATE_ENVIRONMENT || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
