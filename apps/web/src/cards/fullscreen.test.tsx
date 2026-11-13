@@ -642,18 +642,22 @@ describe("R3345000 a fused card's full-screen hold", () => {
     fireEvent.pointerUp(element, { pointerId: 1, pointerType: "touch", button: 0, clientX: 10, clientY: 10 });
   }
 
-  function Board({ fusion }: { fusion: CardDef }) {
+  // `hostAtRoot`: the app's leading host is mounted at its root (`main.tsx`), outside the board's definitions.
+  function Board({ fusion, hostAtRoot = false }: { fusion: CardDef; hostAtRoot?: boolean }) {
     const unit = unitView("p1", { instanceId: "fused-unit", defId: fusion.id });
     const defs = { ...CATALOG, [fusion.id]: fusion };
     return (
-      <CatalogContext.Provider value={lookupFromDefs(defs)}>
-        <CardDefsProvider defs={defs}>
-          <WearerProvider seat="p1" viewer="p1">
-            <Card testId="card-fused-unit" card={unit} unit={unit} onField />
-            <FullScreenArtHost />
-          </WearerProvider>
-        </CardDefsProvider>
-      </CatalogContext.Provider>
+      <>
+        {hostAtRoot ? <FullScreenArtHost /> : null}
+        <CatalogContext.Provider value={lookupFromDefs(defs)}>
+          <CardDefsProvider defs={defs}>
+            <WearerProvider seat="p1" viewer="p1">
+              <Card testId="card-fused-unit" card={unit} unit={unit} onField />
+              {hostAtRoot ? null : <FullScreenArtHost />}
+            </WearerProvider>
+          </CardDefsProvider>
+        </CatalogContext.Provider>
+      </>
     );
   }
 
@@ -693,6 +697,15 @@ describe("R3345000 a fused card's full-screen hold", () => {
     pressAndHold(screen.getByTestId("card-fused-unit"));
     lift(screen.getByTestId("card-fused-unit"));
     expect(screen.queryByTestId("fullscreen-art")).toBeNull();
+  });
+
+  it("R3345000 a digest id's hold draws the host's planes under a host outside the board's definitions", () => {
+    // R468: a digest id (`t-N:#hex`) is readable only through the board's defs, which list its ingredients.
+    const digest = { ...fusedDef([def(WEAPON), def(MYTHIC)]), id: "t-9:#0123456789abcdef" };
+    render(<Board fusion={digest} hostAtRoot />);
+    pressAndHold(screen.getByTestId("card-fused-unit"));
+    expect(screen.getByTestId("fullscreen-art")).toBeInTheDocument();
+    planesDrawFrom(MYTHIC);
   });
 
   it("R3345000 a fusion no art resolves for does not open by a hold", () => {

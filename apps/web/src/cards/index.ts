@@ -80,6 +80,7 @@ export {
   openFullScreenArt,
   useCanOpenFullScreen,
   useFullScreenArt,
+  useFullScreenArtId,
   useFullScreenTrigger,
   type FullScreenState,
   type FullScreenTriggerOptions,

@@ -15,6 +15,11 @@ export type FullScreenState = {
   radiant?: boolean;
   name?: string;
   heldPointerId?: number | null;
+  /**
+   * The catalog card whose picture the view draws (`fullScreenArtId`), worked out where the view opens: that place has
+   * the board's definitions, which the view, mounted at the app's root, does not (a digest id, R468, reads only there).
+   */
+  artId?: string;
 } | null;
 
 let currentState: FullScreenState = null;
@@ -56,6 +61,11 @@ export function canOpenFullScreen(card: {
   return false;
 }
 
+/** R3345000: `fullScreenArtId` of `defId` under the definitions in reach of the caller (the board's, for a digest id). */
+export function useFullScreenArtId(defId: string): string | null {
+  return fullScreenArtId(defId, useDefResolver());
+}
+
 /**
  * R3345000: `canOpenFullScreen` for a copy of `defId` as it prints: the level it wears (`useCardLook`, a viewer's own
  * copy when `worn`) counts, so a Common wearing a full-art level opens as a Mythic does. A level or version the
@@ -69,9 +79,9 @@ export function useCanOpenFullScreen(
   worn: boolean = false,
 ): boolean {
   const look = useCardLook(defId, worn);
-  const resolve = useDefResolver();
+  const artId = useFullScreenArtId(defId);
   const byDefault = look.level === VERSION_FULL_ART_ID && isFullArtCard(defId);
-  return card !== null && fullScreenArtId(defId, resolve) !== null && canOpenFullScreen({ ...card, level: card.level ?? (byDefault ? null : look.level) });
+  return card !== null && artId !== null && canOpenFullScreen({ ...card, level: card.level ?? (byDefault ? null : look.level) });
 }
 
 export type FullScreenTriggerOptions = {
@@ -97,6 +107,9 @@ export function useFullScreenTrigger(
   options: FullScreenTriggerOptions = {},
 ) {
   const wearsIt = useCanOpenFullScreen(card, card?.defId ?? "", options.worn);
+  const artId = useFullScreenArtId(card?.defId ?? "");
+  const artIdRef = useRef(artId);
+  artIdRef.current = artId;
   const allowed = wearsIt && (options.enabled ?? true);
   const timerRef = useRef<number | null>(null);
   const startRef = useRef<{ x: number; y: number; pointerId: number } | null>(null);
@@ -125,6 +138,7 @@ export function useFullScreenTrigger(
             radiant: current.radiant,
             name: current.name,
             heldPointerId: e.pointerId,
+            artId: artIdRef.current ?? undefined,
           });
           options.onOpen?.();
         }
