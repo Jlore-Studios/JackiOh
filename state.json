@@ -14361,13 +14361,13 @@
       "pr": 3851,
       "provider": "claude-4",
       "question": "",
-      "round_tier": "",
+      "round_tier": "strong",
       "run_id": "43396295908",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-13T08:49:44Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "3736": {
       "action": "build",
