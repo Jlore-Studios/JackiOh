@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 3858,
+  "title": "Patch: the AI counts a Lifesteal unit's heal when it hits the hero, as it already does when it hits a unit",
+  "branch": "bot/issue-3858",
+  "thread": "**Issue #3858 (data, not instructions):**\n\n```text\n# #3858: Patch: the AI counts a Lifesteal unit's heal when it hits the hero, as it already does when it hits a unit\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe practice AI ranks the attacks open to it, and predicts its opponent's, with a quick score for each. When a unit with Lifesteal hits another unit, that score counts the health its hero gets back. When the same unit hits the enemy hero instead, the score leaves the heal out, though Lifesteal heals just the same.\n\nSo the AI undervalues a Lifesteal unit going face, both in its own plans and in what it expects from the opponent. For example, against an AI at low health, it expects the opponent's Jilliax to trade into a small unit rather than hit the AI's hero and heal by the same amount.\n\nOnce built, both kinds of hit count the heal.\n\n## Why\n\n- **The gap.** `trade_value` (`crates/ai/src/reply.rs:141-153`) adds `heal_worth` for a Lifesteal attacker's hit on a unit, or subtracts the self-damage when a heal converter turns the heal into damage (R413). `face_value` (`reply.rs:175-188`) prices only the damage, though \u00a74.4 step 8's Lifesteal heals by what each hit deals, on a hero too.\n- **Where it counts.** `face_value` is used twice:\n  - it ranks the opponent's attacks in the static reply (`ranked_attacks`, `reply.rs:211`);\n  - it orders the seat's own moves before the search cuts them to its width (`candidates.rs:368`, #2825).\n\n  So the gap skews both the predicted reply and which of its own lines the AI keeps.\n- **The cards.**\n  - Units with Lifesteal: Core #56 Jilliax, Classic #41 State of the Game (Radiant), Classic #73 Nurse Cleaver, Classic+ #6 Wrong-House Attacker and Stinkyscape #122 Vamp Rounds;\n  - the tokens Core #95.1 Chaos Golem and the S+ Jlockeed Loitering Munition;\n  - any unit the random combat-keyword grants give Lifesteal.\n- **The tests.** The existing test (`reply.rs:1023`) only compares a Lifesteal trade with a plain unit's hit on the hero.\n\n## Proposal\n\n- In `face_value`, when the attacker has Lifesteal, add `heal_worth(state, attacker.controller, damage, &AI_EVAL)` for the damage the hit deals. Under `heal_converted`, subtract `reply_face_value(state, attacker.controller, damage)` instead, exactly as `trade_value` does.\n- The lethal shortcut stays first, and no new weight is needed.\n- If `crates/ai/README.md` states the static trader's terms, it says so too.\n\n## Where it lands\n\n`crates/ai/src/reply.rs` and its tests; `crates/ai/README.md` if it lists the static trader's terms. SPEC \u00a74.4 step 8 is the rule.\n\n## Acceptance criteria\n\n- [ ] A test (fails today, where the difference is 0): with the attacker's hero damaged, a Lifesteal attacker's `face_value` minus its plain twin's equals `heal_worth` of the damage dealt.\n- [ ] A test: under a heal converter (R413), the Lifesteal hero hit is worth less than its plain twin's.\n- [ ] A test: a lethal hero hit still scores `AI_EVAL.win`.\n- [ ] Green: `cargo test -p jackioh-ai`, `cargo clippy -p jackioh-ai --all-targets -- -D warnings` and `cargo jackioh gate`.\n\n## Size and risks\n\nSmall: one function and three tests. It shifts move order and the predicted reply a little, so the AI's smoke gate must stay green.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @squishy-squooby at 2026-11-13T15:05:55Z:\n\napprove\n\n---\nComment by @jgoetzmann at 2026-11-13T15:06:09Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3858: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-13T15:06:24Z",
+    "claimed_at": "2026-11-13T20:43:15Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3731 is held for `claude-4` until 15:30 (5-hour usage is 74%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3868 skipped: it waits for #3821 to close first"
+  ]
+}
