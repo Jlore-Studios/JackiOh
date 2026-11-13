@@ -1219,6 +1219,18 @@ fn panic_text(payload: &(dyn std::any::Any + Send)) -> String {
     String::from("(a panic with no message)")
 }
 
+/// A prompt's Mode options in the order offered, for a test that holds the `PendingChoice` itself.
+pub fn prompt_modes_of(pending: &PendingChoice) -> Vec<String> {
+    pending
+        .options
+        .iter()
+        .filter_map(|option| match &option.selection {
+            Selection::Mode { option } => Some(option.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
 /// What `run` panicked with, or `None` when it ran through.
 fn refusal_of(run: impl FnOnce()) -> Option<String> {
     match catch_unwind(AssertUnwindSafe(run)) {
@@ -1351,6 +1363,15 @@ impl Scenario {
     /// The seat's legal actions in the live state (`reduce::legal_actions`, §10.2); `()` is the active seat.
     pub fn offered(&self, player: impl SeatRef) -> Vec<ActionBody> {
         crate::reduce::legal_actions(&self.current, player.seat_or(self.current.active))
+    }
+
+    /// The open prompt's Mode options in the order offered (non-Mode options are skipped); panics when no
+    /// prompt is open. A test that also checks the prompt's kind, seat or resume step asserts that itself.
+    pub fn prompt_modes(&self) -> Vec<String> {
+        let Some(pending) = self.current.pending.as_ref() else {
+            panic!("prompt_modes: no prompt is open");
+        };
+        prompt_modes_of(pending)
     }
 
     // Refs
@@ -3169,6 +3190,53 @@ mod tests {
             assert_eq!(pick::instance(&unit), one);
             assert_eq!(pick::card(&s, "core-043"), one);
             assert_eq!(pick::unit_at(&s, "p1", 1), one);
+        }
+
+        #[test]
+        fn pick_mode_is_the_one_mode_selection() {
+            assert_eq!(pick::mode("a"), json!([{ "pick": "mode", "option": "a" }]));
+            assert_eq!(pick::mode(String::from("a")), pick::mode("a"));
+        }
+
+        /// A prompt opened by hand with three options: Mode "x", a non-Mode option, Mode "y".
+        fn prompt_with_modes() -> Scenario {
+            let mut s = board();
+            let prompt: PendingChoice = serde_json::from_value(json!({
+                "id": "q1",
+                "playerId": "p1",
+                "kind": "answer",
+                "prompt": "test prompt",
+                "options": [
+                    { "key": "1", "label": "X", "selection": { "pick": "mode", "option": "x" } },
+                    { "key": "2", "label": "N", "selection": { "pick": "none" } },
+                    { "key": "3", "label": "Y", "selection": { "pick": "mode", "option": "y" } },
+                ],
+                "min": 1,
+                "max": 1,
+                "resume": { "defId": "core-025", "hook": "q", "step": "q", "radiant": false, "data": {} },
+            }))
+            .expect("a prompt literal reads as a PendingChoice");
+            s.state_mut().pending = Some(prompt);
+            s
+        }
+
+        #[test]
+        fn prompt_modes_keeps_only_mode_options_in_offered_order() {
+            let s = prompt_with_modes();
+            assert_eq!(s.prompt_modes(), ["x", "y"]);
+            let pending = s.state().pending.as_ref().expect("the prompt is open");
+            assert_eq!(prompt_modes_of(pending), ["x", "y"]);
+        }
+
+        #[test]
+        fn prompt_modes_panics_naming_the_missing_prompt() {
+            let s = board();
+            expect_throw_with(
+                || {
+                    s.prompt_modes();
+                },
+                "no prompt is open",
+            );
         }
     }
 

@@ -75,21 +75,6 @@ mod tests {
         s
     }
 
-    // Differs from Scenario::offered: the open Discover's options, not the seat's legal actions.
-    fn offered(s: &Scenario) -> Vec<String> {
-        s.state()
-            .pending
-            .as_ref()
-            .expect("the Discover is open")
-            .options
-            .iter()
-            .filter_map(|option| match &option.selection {
-                Selection::Mode { option } => Some(option.clone()),
-                _ => None,
-            })
-            .collect()
-    }
-
     fn prints_piece(def_id: &str) -> bool {
         has_keyword(&crate::card_def(def_id).base.keywords, KeywordKind::StarshipPiece)
     }
@@ -99,7 +84,7 @@ mod tests {
         let mut seen: IndexSet<String> = IndexSet::new();
         for i in 0..12 {
             let s = cast(false, &format!("optimizer-{i}"));
-            let offer = offered(&s);
+            let offer = s.prompt_modes();
             assert_eq!(offer.len(), 3, "{offer:?}");
             let distinct: IndexSet<&String> = offer.iter().collect();
             assert_eq!(distinct.len(), 3, "{offer:?}");
@@ -115,7 +100,7 @@ mod tests {
     #[test]
     fn r65_the_pick_reaches_the_hand_costing_1_less() {
         let mut s = cast(false, "optimizer-pick");
-        let pick = offered(&s)[0].clone();
+        let pick = s.prompt_modes()[0].clone();
         s.answer(json!(pick));
         let card = s.hand(P1).into_iter().find(|card| card.def_id == pick).expect("the pick");
         assert!(!card.radiant);
@@ -125,7 +110,7 @@ mod tests {
     #[test]
     fn radiant_the_pick_is_radiant() {
         let mut s = cast(true, "optimizer-radiant");
-        let pick = offered(&s)[0].clone();
+        let pick = s.prompt_modes()[0].clone();
         s.answer(json!(pick));
         let card = s.hand(P1).into_iter().find(|card| card.def_id == pick).expect("the pick");
         assert!(card.radiant);
@@ -143,7 +128,7 @@ mod tests {
         }));
         s.play(OPTIMIZER, json!({}));
         assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
-        let pick = offered(&s)[0].clone();
+        let pick = s.prompt_modes()[0].clone();
         s.answer(json!(pick));
         assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
         assert!(
