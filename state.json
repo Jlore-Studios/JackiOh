@@ -17408,9 +17408,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T05:19:25Z",
+    "at": "2026-11-13T05:42:35Z",
     "url": "",
-    "what": "revise #3799 on claude-4"
+    "what": "suggestions on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-13T05:27:14Z",
@@ -36958,11 +36958,11 @@
         "why": "closed unbuilt by a person (not planned)"
       }
     ],
-    "idle_since": "2026-11-13T05:30:34Z",
-    "last_run": "2026-11-13T03:30:12Z",
-    "provider": null,
+    "idle_since": "2026-11-13T05:42:35Z",
+    "last_run": "2026-11-13T05:42:35Z",
+    "provider": "claude-3",
     "requested": false,
-    "run_id": null,
+    "run_id": "pending:026dccc2-1794548504",
     "taken_asks": []
   },
   "usage": null,
