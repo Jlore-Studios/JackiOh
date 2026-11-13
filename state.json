@@ -12382,6 +12382,13 @@
     "3731": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "43479407919",
+        "model": "opus",
+        "provider": "claude-4",
+        "since": "2026-11-13T18:21:13Z",
+        "until": "2026-11-13T18:51:13Z"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
