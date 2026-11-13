@@ -17082,6 +17082,13 @@
     },
     "3815": {
       "action": "plan",
+      "archived": {
+        "at": "2026-11-13T03:28:45Z",
+        "branch": "",
+        "head": "",
+        "pr": null,
+        "why": "On GitHub, open job 131510039438 of CI run 43303300091 (`rust (test server)`) and read each step's duration. The bot has no GitHub access and cannot see which step took the 14m 32s. Nothing the bot may change makes this job faster by a measurable amount (measurements below), so a person decides between the follow-ups under **Steps**."
+      },
       "asks": [],
       "difficulty_by": {
         "at": "2026-11-13T03:28:29Z",
@@ -17090,22 +17097,17 @@
         "tier": "medium",
         "why": "None of the five lines holds: no engine, AI, cross-crate, migration or 40-file change; the repo side is at most one count in scripts/ci-shards.toml plus a two-line test edit."
       },
-      "in_lane": true,
-      "kind": "build",
       "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-13T02:12:36Z",
-      "owner_why": "it plans it",
-      "pending_request": false,
+      "owner": "",
       "planned_at": "2026-11-13T03:28:33Z",
       "planned_by": "`claude-3` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-3",
       "planned_tier": "medium",
       "provider": "claude-3",
+      "question": "On GitHub, open job 131510039438 of CI run 43303300091 (`rust (test server)`) and read each step's duration. The bot has no GitHub access and cannot see which step took the 14m 32s. Nothing the bot may change makes this job faster by a measurable amount (measurements below), so a person decides between the follow-ups under **Steps**.",
       "run_id": "43350513487",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-13T02:12:36Z",
-      "stop_requested": false,
       "taken_asks": []
     },
     "3816": {
