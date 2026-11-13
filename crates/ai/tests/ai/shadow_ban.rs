@@ -1773,7 +1773,10 @@ mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
         jackioh_cards::register_all();
         for def_id in ["stinkyscapeplus-081", "stinkyscapeplus-157"] {
             assert_eq!(def_of(None, def_id).set, SetName::StinkyscapePlus, "{def_id}");
-            assert!(SHADOW_UNBANNED.contains(&def_id), "{def_id}: lifted by the unban lane");
+            assert!(
+                SHADOW_UNBANNED.contains(&def_id),
+                "{def_id}: lifted by the unban lane"
+            );
             assert!(!SHADOW_BAN_IDS.contains(&def_id), "{def_id}: out of SHADOW_BAN");
         }
     }
