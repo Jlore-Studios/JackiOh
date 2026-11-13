@@ -293,8 +293,9 @@ A player's random deck passes `Some(vec![])` beside `banned: Some(vec![])`; an `
 gated card in by name. Emptying the list lifts the gate and deals every deck as before it, which issue
 #732 did once it had measured the AI on the Meditative set, the list's one set until then. It held the
 Stinkyscape set from its release (issue #1884) until issue #1885 measured the AI on it: gating a set that
-ships before the AI is trained on it is listing it there. It lists the Stinkyscape+ set from its release
-(issue #3573) until fullsend 2's sweep (#3574) measures the AI on it. `shape`
+ships before the AI is trained on it is listing it there. It held the Stinkyscape+ set from its release
+(issue #3573) until fullsend 2's sweep of record measured the AI on it (issue #3574, R3574000), and is
+empty since. `shape`
 (R976000) multiplies each card's weight by `shaped_weight`, the unban lane's dealt-quality table in
 `src/shadow_ban.rs`; it is off unless a caller sets it, whatever `banned` holds, and no caller does, so
 practice, the quality gates and both seats of an arena or a promotion deal unshaped. The mulligan still

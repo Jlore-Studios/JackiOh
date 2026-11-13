@@ -140,10 +140,11 @@ mod build_ai_deck_b22 {
     }
 
     #[test]
-    fn r380_b22_the_decks_reach_every_set_core_classic_classic_plus_meditative_meditative_plus_stinkyscape_and_training_grounds_alike()
+    fn r380_b22_the_decks_reach_every_set_core_classic_classic_plus_meditative_meditative_plus_stinkyscape_training_grounds_and_stinkyscape_plus_alike()
      {
-        // The AI's soft gate is empty (#1885), so every set that ships is dealt: Meditative+ too, as #1186's
-        // sweep banned none of it (#1187), and Training Grounds (#2204).
+        // The AI's soft gate is empty (#1885, and again since #3574), so every set that ships is dealt:
+        // Meditative+ too, as #1186's sweep banned none of it (#1187), Training Grounds (#2204) and
+        // Stinkyscape+ (R3574000).
         let dealt: IndexSet<String> = decks(30, &options(json!({})), "sets")
             .iter()
             .flatten()
@@ -160,6 +161,7 @@ mod build_ai_deck_b22 {
                 "Meditative",
                 "Meditative+",
                 "Stinkyscape",
+                "Stinkyscape+",
                 "Training Grounds"
             ]
         );
