@@ -696,9 +696,12 @@ pub const AI_TURN_HOOK_PROBE_NODES: usize = 24;
 /// face-up backrow cards together.
 pub const AI_ACTIVATION_PROBE_NODES: usize = 20;
 
-/// R3575400: the most nodes a decision's probes of its own hand cards' Activates
-/// (`evaluate::activation_prices`) spend: a spawn (two nodes on a full unit row), two turn ends and
-/// `AI_REPLY.visible_activations` uses for each of about two hand cards with an Activate.
+/// R3575400, R3575404: the most nodes a decision's re-keyed Activate probes
+/// (`evaluate::activation_prices`) spend: the seat's own hand cards with an ability, and its own Dormant
+/// cards acting for their awakening, whose price is keyed by the card as the seat holds it now. A spawn
+/// (two nodes on a full unit row) for a hand card, then two turn ends and `AI_REPLY.visible_activations`
+/// uses, for each of about two such cards. A slice of its own beside `AI_ACTIVATION_PROBE_NODES`, so a
+/// hand full of Activates cannot starve the board's prices.
 pub const AI_HAND_ACTIVATION_PROBE_NODES: usize = 16;
 
 /// R2688000: the most nodes a decision's attack-hook probes (`evaluate::attack_hook_prices`) spend: two
