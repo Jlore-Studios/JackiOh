@@ -16767,6 +16767,7 @@
       "run_id": "43324549034",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 230,
       "started_at": "2026-11-12T22:56:55Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -36642,9 +36643,33 @@
         "title": "Patch: a server sweep that keeps failing raises an alert, not just a warning on every pass",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-8"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "fa69e8703957de4a495b656a2736dc70983d9bdf",
+        "issue": 3792,
+        "merged_at": "2026-11-13T06:41:30Z",
+        "n": 230,
+        "pr": 3809,
+        "queued_at": "2026-11-13T06:41:30Z",
+        "sha": "d412e3fd9fc32d7c2b86f10c329de8101cf00582",
+        "status": "queued",
+        "title": "Patch: a queued player is told when the server can't be reached, instead of reading that they are in the queue through the outage",
+        "tries": 0
       }
     ],
-    "count": 229
+    "count": 230
   },
   "statistics": {
     "at": "2026-11-13T06:40:41Z"
