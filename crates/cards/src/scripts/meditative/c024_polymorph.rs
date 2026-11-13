@@ -87,10 +87,6 @@ mod tests {
         json!([VANILLA, VANILLA, VANILLA])
     }
 
-    fn at(unit: &CardInstance) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": unit.id }] })
-    }
-
     fn lane_def(s: &Scenario, player: PlayerId, lane: i32) -> Option<String> {
         s.unit(player, lane).map(|unit| unit.def_id)
     }
@@ -131,7 +127,7 @@ mod tests {
             let mut s = board(false, json!([]), json!([VANILLA, { "def": VANILLA, "damage": 1 }]));
             let victim = s.unit(P2, 2).map(|unit| unit.id).unwrap_or_default();
             let victim = s.card(victim.as_str()).clone();
-            s.play(ID, at(&victim));
+            s.play(ID, pick::targets(pick::instance(&victim)));
             assert_base_sheep(&mut s, P2, 2);
             s.expect_in_zone(&victim, "gone");
             assert!(s.pile(P2, "graveyard").is_empty());
@@ -144,7 +140,7 @@ mod tests {
             let mut s = board(false, json!([VANILLA]), json!([VANILLA]));
             let mine = s.unit(P1, 1).map(|unit| unit.id).unwrap_or_default();
             let mine = s.card(mine.as_str()).clone();
-            s.play(ID, at(&mine));
+            s.play(ID, pick::targets(pick::instance(&mine)));
             assert_base_sheep(&mut s, P1, 1);
             assert_eq!(lane_def(&s, P2, 1), Some(VANILLA.to_string()));
         }
@@ -153,7 +149,7 @@ mod tests {
         fn r781001_an_immutable_unit_in_play_is_no_target() {
             let mut s = board(false, json!([]), json!([{ "def": ROCK, "radiant": true }]));
             let rock = s.card(ROCK).clone();
-            s.expect_refused(|s| s.play(ID, at(&rock)));
+            s.expect_refused(|s| s.play(ID, pick::targets(pick::instance(&rock))));
             // With no other Unit it is played with no pick and fizzles (R90).
             s.play(ID, json!({}));
             assert_eq!(s.unit(P2, 1).map(|unit| unit.id), Some(rock.id));
@@ -165,7 +161,7 @@ mod tests {
             let mut s = board(false, json!([]), three_vanillas());
             let middle = s.unit(P2, 2).map(|unit| unit.id).unwrap_or_default();
             let middle = s.card(middle.as_str()).clone();
-            s.play(ID, at(&middle));
+            s.play(ID, pick::targets(pick::instance(&middle)));
             assert_base_sheep(&mut s, P2, 2);
             assert_eq!(lane_def(&s, P2, 1), Some(VANILLA.to_string()));
             assert_eq!(lane_def(&s, P2, 3), Some(VANILLA.to_string()));
@@ -180,7 +176,7 @@ mod tests {
             let mut s = board(true, three_vanillas(), three_vanillas());
             let middle = s.unit(P2, 2).map(|unit| unit.id).unwrap_or_default();
             let middle = s.card(middle.as_str()).clone();
-            s.play(ID, at(&middle));
+            s.play(ID, pick::targets(pick::instance(&middle)));
             for lane in [1, 2, 3] {
                 assert_base_sheep(&mut s, P2, lane);
             }
@@ -195,7 +191,7 @@ mod tests {
             let mut s = board(true, json!([]), three_vanillas());
             let first = s.unit(P2, 1).map(|unit| unit.id).unwrap_or_default();
             let first = s.card(first.as_str()).clone();
-            s.play(ID, at(&first));
+            s.play(ID, pick::targets(pick::instance(&first)));
             assert_base_sheep(&mut s, P2, 1);
             assert_base_sheep(&mut s, P2, 2);
             assert_eq!(lane_def(&s, P2, 3), Some(VANILLA.to_string()));
@@ -206,12 +202,12 @@ mod tests {
             let theirs = json!([{ "def": ROCK, "radiant": true }, VANILLA, VANILLA]);
             let mut s = board(true, json!([]), theirs);
             let rock = s.card(ROCK).clone();
-            s.expect_refused(|s| s.play(ID, at(&rock)));
+            s.expect_refused(|s| s.play(ID, pick::targets(pick::instance(&rock))));
             // A neighbour is no target (R450), so Polymorph reaches the Rock beside its target, and
             // Immutable's text half leaves it as it is (R23).
             let middle = s.unit(P2, 2).map(|unit| unit.id).unwrap_or_default();
             let middle = s.card(middle.as_str()).clone();
-            s.play(ID, at(&middle));
+            s.play(ID, pick::targets(pick::instance(&middle)));
             assert_eq!(s.unit(P2, 1).map(|unit| unit.id), Some(rock.id));
             assert_base_sheep(&mut s, P2, 2);
             assert_base_sheep(&mut s, P2, 3);

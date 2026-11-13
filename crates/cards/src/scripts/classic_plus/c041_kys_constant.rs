@@ -116,10 +116,6 @@ mod tests {
         entries.iter().map(|(key, value)| (key.to_string(), *value)).collect()
     }
 
-    fn pick(s: &Scenario, card: &str) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": s.card(card).id }] })
-    }
-
     /// The hand cards `legal_actions` offers as the Constant's pick.
     // Differs from Scenario::offered: one card's play targets as def ids, not the seat's whole legal list.
     fn offered(s: &Scenario) -> Vec<String> {
@@ -196,7 +192,7 @@ mod tests {
         fn r129_one_number_not_3_tempo_timmys_cost_becomes_3_raised_through_costmod_with_no_random_draw() {
             let mut s = constant(&[TIMMY], false, None);
             let cursor = s.state().rng_cursor;
-            let targets = pick(&s, TIMMY);
+            let targets = pick::targets(pick::card(&s, TIMMY));
             s.play(CONSTANT, targets);
             assert_eq!(numbers(&s, TIMMY), expected(&[("cost", 3), ("attack", 3), ("health", 3)]));
             assert_eq!(s.card(TIMMY).cost_mod, 2);
@@ -210,7 +206,7 @@ mod tests {
             for n in 0..20 {
                 let seed = format!("constant-{n}");
                 let mut s = constant(&[VANILLA], false, Some(&seed));
-                let targets = pick(&s, VANILLA);
+                let targets = pick::targets(pick::card(&s, VANILLA));
                 s.play(CONSTANT, targets);
                 let now = numbers(&s, VANILLA);
                 let moved: Vec<&str> = [("cost", 1), ("attack", 4), ("health", 4)]
@@ -228,7 +224,7 @@ mod tests {
         #[test]
         fn r386_it_lowers_as_well_midrange_menaces_attack_or_health_becomes_3() {
             let mut s = constant(&[MENACE], false, None);
-            let targets = pick(&s, MENACE);
+            let targets = pick::targets(pick::card(&s, MENACE));
             s.play(CONSTANT, targets);
             let now = numbers(&s, MENACE);
             let mut pair = vec![now.get("attack").copied(), now.get("health").copied()];
@@ -244,7 +240,7 @@ mod tests {
                 let mut s = constant(&[ARMORED, GIFT], false, Some(&seed));
                 let target = if n % 2 == 0 { ARMORED } else { GIFT };
                 let before = numbers(&s, target);
-                let targets = pick(&s, target);
+                let targets = pick::targets(pick::card(&s, target));
                 s.play(CONSTANT, targets);
                 let now = numbers(&s, target);
                 for (key, was) in &before {
@@ -262,7 +258,7 @@ mod tests {
             for n in 0..20 {
                 let seed = format!("constant-copy-{n}");
                 let mut s = constant(&[DUPLICATING, FILLER], false, Some(&seed));
-                let targets = pick(&s, DUPLICATING);
+                let targets = pick::targets(pick::card(&s, DUPLICATING));
                 s.play(CONSTANT, targets);
                 if numbers(&s, DUPLICATING).get("health") != Some(&3) {
                     continue;
@@ -280,7 +276,7 @@ mod tests {
         #[test]
         fn r97_the_opponents_view_names_neither_the_card_nor_the_number() {
             let mut s = constant(&[TIMMY], false, None);
-            let targets = pick(&s, TIMMY);
+            let targets = pick::targets(pick::card(&s, TIMMY));
             s.play(CONSTANT, targets);
             let changed = |seat: PlayerId| -> Option<Value> {
                 view(&s, seat)["events"]
@@ -302,7 +298,7 @@ mod tests {
         #[test]
         fn r2739000_discover_up_to_3_different_numbers_on_the_card_shown_to_you_only_the_chosen_one_becomes_3() {
             let mut s = constant(&[ARMORED], true, None);
-            let targets = pick(&s, ARMORED);
+            let targets = pick::targets(pick::card(&s, ARMORED));
             s.play(CONSTANT, targets);
             let pending = s.state().pending.clone().expect("the Discover");
             assert_eq!(pending.kind, PromptKind::Discover);
@@ -319,7 +315,7 @@ mod tests {
         fn r129_with_no_more_than_3_numbers_not_3_all_are_offered_and_nothing_is_drawn() {
             let mut s = constant(&[VANILLA], true, None);
             let cursor = s.state().rng_cursor;
-            let targets = pick(&s, VANILLA);
+            let targets = pick::targets(pick::card(&s, VANILLA));
             s.play(CONSTANT, targets);
             let keys: Vec<String> = s
                 .state()
@@ -336,7 +332,7 @@ mod tests {
         #[test]
         fn s9_3_paused_on_the_discover_the_state_survives_json_and_answers_to_the_same_hash() {
             let mut s = constant(&[ARMORED], true, None);
-            let targets = pick(&s, ARMORED);
+            let targets = pick::targets(pick::card(&s, ARMORED));
             s.play(CONSTANT, targets);
             let thawed: GameState =
                 serde_json::from_str(&serde_json::to_string(s.state()).expect("the state is JSON")).expect("and back");

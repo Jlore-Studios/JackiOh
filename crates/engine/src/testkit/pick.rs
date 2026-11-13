@@ -1,6 +1,9 @@
-//! The one-instance `Selection[]` a test hands to a play's `targets` or a prompt's `answer`. Not
-//! globbed in: a test writes `pick::<builder>`; a Mode answer is `pick::mode`. crates/tools/tests/acceptance.rs refuses a test's own
-//! copy (#1826).
+//! The one-pick `Selection[]` a test hands to a play's `targets` or a prompt's `answer` (an instance,
+//! a hero or a Mode option), and `targets`, the play's `{ "targets": … }` around one. Not globbed in:
+//! a test writes `pick::<builder>`. crates/tools/tests/acceptance.rs refuses a test's own copy of one,
+//! whatever its name (#1826, #3827).
+
+use std::fmt::Display;
 
 use serde_json::{Value, json};
 
@@ -30,4 +33,14 @@ pub fn unit_at(s: &Scenario, player: impl SeatRef, lane: i32) -> Value {
 /// The pick of the Mode option `option` (a Discover, Mode or Answer prompt's option string).
 pub fn mode(option: impl AsRef<str>) -> Value {
     json!([{ "pick": "mode", "option": option.as_ref() }])
+}
+
+/// The pick of `player`'s hero (`"p1"`, `"p2"` or a `PlayerId`).
+pub fn hero(player: impl Display) -> Value {
+    json!([{ "pick": "hero", "player": player.to_string() }])
+}
+
+/// The `targets` of a play: `picks` (a builder above, or any `Selection[]`) as its only key.
+pub fn targets(picks: Value) -> Value {
+    json!({ "targets": picks })
 }

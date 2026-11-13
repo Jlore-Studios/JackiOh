@@ -145,10 +145,6 @@ mod tests {
         }))
     }
 
-    fn p1_hero() -> Value {
-        json!([{ "pick": "hero", "player": "p1" }])
-    }
-
     fn view_text(s: &Scenario, player: PlayerId) -> String {
         serde_json::to_string(&s.view(player)).expect("serializes")
     }
@@ -235,7 +231,7 @@ mod tests {
             #[test]
             fn r81_a_spell_that_targets_your_hero_or_one_of_their_own_units_leaves_it_set() {
                 let mut s = setup(json!({}), json!({}), false);
-                s.play(TRUE_STRIKE, json!({ "targets": p1_hero() }));
+                s.play(TRUE_STRIKE, json!({ "targets": pick::hero("p1") }));
                 s.expect_health(P1, 26);
                 let targets = pick::unit_at(&s, P2, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
@@ -296,7 +292,7 @@ mod tests {
             fn r81_a_pick_made_while_it_resolves_is_no_target_of_the_play_an_echo_repeat_aimed_at_your_unit_leaves_it_set() {
                 let mut s = setup(json!({}), json!({ "backrow": [{ "def": TWINSPELL, "faceUp": true }] }), false);
                 s.activate(TWINSPELL, json!({}));
-                s.play(TRUE_STRIKE, json!({ "targets": p1_hero() }));
+                s.play(TRUE_STRIKE, json!({ "targets": pick::hero("p1") }));
                 assert_eq!(s.state().pending.as_ref().map(|pending| pending.player_id), Some(P2));
                 let targets = pick::unit_at(&s, P1, 1);
                 s.answer(targets);
@@ -338,7 +334,7 @@ mod tests {
             fn r448_counters_a_spell_that_targets_your_hero_and_you_draw_1() {
                 let mut s = setup(json!({}), json!({}), true);
                 let hand = s.hand(P1).len();
-                s.play(TRUE_STRIKE, json!({ "targets": p1_hero() }));
+                s.play(TRUE_STRIKE, json!({ "targets": pick::hero("p1") }));
                 s.expect_health(P1, 30);
                 s.expect_in_zone(TRUE_STRIKE, "graveyard");
                 assert_eq!(s.hand(P1).len(), hand + 1);

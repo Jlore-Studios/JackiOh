@@ -39,10 +39,6 @@ fn dormant_for(turns: i32) -> Option<Slumber> {
     Some(Slumber { turns: Some(turns) })
 }
 
-fn pick(id: &str) -> Value {
-    json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-}
-
 fn awakened_ids(events: &[GameEvent]) -> Vec<String> {
     events
         .iter()
@@ -219,7 +215,7 @@ mod r1839000_a_dormant_card_fills_its_zone_and_nothing_reaches_it {
             acts_through(&s, P2, &awake),
             "the awake Unit beside it is offered"
         );
-        s.expect_refused(|s| s.play(snipe.id.as_str(), pick(&dormant)));
+        s.expect_refused(|s| s.play(snipe.id.as_str(), pick::targets(pick::id(&dormant))));
         assert_eq!(s.card(&dormant).damage, 0);
     }
 

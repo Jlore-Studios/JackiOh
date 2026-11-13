@@ -83,10 +83,6 @@ fn redirected(events: &[GameEvent]) -> Vec<(String, String)> {
         .collect()
 }
 
-fn pick(id: &str) -> Value {
-    json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-}
-
 fn in_graveyard(s: &Scenario, id: &str) -> bool {
     s.card(id).zone.z() == ZoneName::Graveyard
 }
@@ -342,7 +338,7 @@ mod r1842001_a_lethal_guard_in_a_pile_guards_only_while_it_is_the_top {
         let guard_id = s.unit(P1, 2).expect("the guard").id;
         s.end_turn();
 
-        s.play(bolt.id.as_str(), pick(&ally_id));
+        s.play(bolt.id.as_str(), pick::targets(pick::id(&ally_id)));
         assert_eq!(
             redirected(s.last_events()),
             vec![(ally_id.clone(), guard_id.clone())]
@@ -388,7 +384,7 @@ mod r1842001_a_lethal_guard_in_a_pile_guards_only_while_it_is_the_top {
         let health = s.state().players[P1].hero.health;
         s.end_turn();
 
-        s.play(smite.id.as_str(), pick(&ids[0]));
+        s.play(smite.id.as_str(), pick::targets(pick::id(&ids[0])));
         assert!(
             redirected(s.last_events()).is_empty(),
             "R460: never its own to catch"
@@ -419,7 +415,7 @@ mod r1842001_a_lethal_guard_in_a_pile_guards_only_while_it_is_the_top {
         let last = s.unit(P1, 3).expect("the second ally").id;
         s.end_turn();
 
-        s.play(bolt.id.as_str(), pick(&first));
+        s.play(bolt.id.as_str(), pick::targets(pick::id(&first)));
         assert!(
             redirected(s.last_events()).is_empty(),
             "a dormant guard catches nothing"
@@ -427,14 +423,14 @@ mod r1842001_a_lethal_guard_in_a_pile_guards_only_while_it_is_the_top {
         assert!(in_graveyard(&s, &first));
         assert_eq!(s.card(ids[1].as_str()).damage, 0);
 
-        s.play(bolt.id.as_str(), pick(&ids[0]));
+        s.play(bolt.id.as_str(), pick::targets(pick::id(&ids[0])));
         assert!(
             redirected(s.last_events()).is_empty(),
             "nor a hit on the card above it"
         );
         assert_eq!(s.unit(P1, 2).expect("the guard").id, ids[1], "the guard resumes");
 
-        s.play(bolt.id.as_str(), pick(&last));
+        s.play(bolt.id.as_str(), pick::targets(pick::id(&last)));
         assert_eq!(redirected(s.last_events()), vec![(last.clone(), ids[1].clone())]);
         assert_eq!(s.card(ids[1].as_str()).damage, BOLT - GUARD_ARMOR);
     }

@@ -104,10 +104,6 @@ mod tests {
             .collect()
     }
 
-    fn at_enemy_hero() -> Value {
-        json!([{ "pick": "hero", "player": "p2" }])
-    }
-
     mod adaptive_ui_base {
         use super::*;
 
@@ -123,7 +119,7 @@ mod tests {
                 "p2": { "hand": ["core-005"], "health": 30 },
             }));
 
-            s.play("core-074", json!({ "x": 2, "targets": at_enemy_hero() }));
+            s.play("core-074", json!({ "x": 2, "targets": pick::hero("p2") }));
 
             s.expect_health(P2, 28);
             s.expect_health(P1, 22);
@@ -167,9 +163,9 @@ mod tests {
             }));
 
             assert_eq!(offered_x(&s), [1, 2, 3, 4]);
-            s.expect_refused_with(|s| s.play("core-074", json!({ "x": 0, "targets": at_enemy_hero() })), X_REFUSAL);
+            s.expect_refused_with(|s| s.play("core-074", json!({ "x": 0, "targets": pick::hero("p2") })), X_REFUSAL);
             // A play that names no X is X = 0 too, and refused the same way.
-            s.expect_refused_with(|s| s.play("core-074", json!({ "targets": at_enemy_hero() })), X_REFUSAL);
+            s.expect_refused_with(|s| s.play("core-074", json!({ "targets": pick::hero("p2") })), X_REFUSAL);
 
             s.expect_health(P2, 30).expect_health(P1, 20);
             let hand = def_ids(&s.hand(P1));
@@ -187,7 +183,7 @@ mod tests {
                 "p2": { "hand": ["core-005"] },
             }));
             assert!(offered_x(&s).is_empty());
-            s.expect_refused_with(|s| s.play("core-074", json!({ "x": 0, "targets": at_enemy_hero() })), X_REFUSAL);
+            s.expect_refused_with(|s| s.play("core-074", json!({ "x": 0, "targets": pick::hero("p2") })), X_REFUSAL);
         }
 
         #[test]
@@ -203,7 +199,7 @@ mod tests {
                 "p2": { "hand": ["core-005"], "health": 30 },
             }));
 
-            s.play("core-074", json!({ "x": 2, "targets": at_enemy_hero() }));
+            s.play("core-074", json!({ "x": 2, "targets": pick::hero("p2") }));
 
             s.expect_health(P2, 28).expect_health(P1, 22);
             assert_eq!(s.hand(P1).len(), 3);
@@ -229,7 +225,7 @@ mod tests {
             }));
             assert_eq!(s.hand(P1).first().map(|card| card.radiant), Some(true));
 
-            s.play("core-074", json!({ "x": 2, "targets": at_enemy_hero() }));
+            s.play("core-074", json!({ "x": 2, "targets": pick::hero("p2") }));
 
             s.expect_health(P2, 26);
             s.expect_health(P1, 26);
@@ -258,7 +254,7 @@ mod tests {
                 "p2": { "hand": ["core-005"], "health": 30 },
             }));
 
-            s.play("core-074", json!({ "x": 1, "targets": at_enemy_hero() }));
+            s.play("core-074", json!({ "x": 1, "targets": pick::hero("p2") }));
 
             s.expect_health(P2, 28).expect_health(P1, 23);
             assert_eq!(s.hand(P1).len(), 3);
@@ -280,7 +276,7 @@ mod tests {
             }));
 
             assert_eq!(offered_x(&s), [1, 2, 3, 4]);
-            s.expect_refused_with(|s| s.play("core-074", json!({ "x": 0, "targets": at_enemy_hero() })), X_REFUSAL);
+            s.expect_refused_with(|s| s.play("core-074", json!({ "x": 0, "targets": pick::hero("p2") })), X_REFUSAL);
             assert!(s.unit(P1, 1).is_none());
             assert_eq!(s.hand(P1).len(), 2);
             assert_eq!(s.state().players.p1.turn_log.cards_played, 0);
@@ -293,7 +289,7 @@ mod tests {
                 "p1": { "hand": [{ "def": "core-074", "radiant": true }, "core-005"], "library": ["core-035", "core-036"] },
                 "p2": { "backrow": ["core-084"], "hand": ["core-005"], "health": 30 },
             }));
-            s.play("core-074", json!({ "x": 1, "targets": at_enemy_hero() }));
+            s.play("core-074", json!({ "x": 1, "targets": pick::hero("p2") }));
             // 2X = 2 to the hero, Armor 2 takes it all.
             s.expect_health(P2, 30);
             let ghoul = s.unit(P1, 1).expect("a Ghoul Token in lane 1");
@@ -326,7 +322,7 @@ mod tests {
                     crate::degrade_number(&mut s, "core-074", key);
                 }
             }
-            s.play("core-074", json!({ "x": 1, "targets": at_enemy_hero() }));
+            s.play("core-074", json!({ "x": 1, "targets": pick::hero("p2") }));
             s.expect_health(P2, 30 - damage);
             s.expect_health(P1, 20 + healed);
             assert_eq!(s.pile(P1, "library").len(), 4 - drawn as usize);

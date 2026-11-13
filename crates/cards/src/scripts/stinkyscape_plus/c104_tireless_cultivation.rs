@@ -81,10 +81,6 @@ mod tests {
         jackioh_engine::catalog::query_cost(catalog::def_of(None, def_id))
     }
 
-    fn pick(id: &str) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-    }
-
     fn board(radiant: bool) -> Scenario {
         scenario(json!({
             "seed": "tireless",
@@ -104,7 +100,7 @@ mod tests {
             let mut s = board(false);
             let old = s.unit_at(side, 1).id;
             let cost = cost_of(&s, &old);
-            s.play(ID, pick(&old));
+            s.play(ID, pick::targets(pick::id(&old)));
             let new = s.unit(side, 1).expect("a Unit stands there");
             assert_ne!(new.id, old);
             assert_eq!(printed(&new.def_id), cost + 1);
@@ -117,7 +113,7 @@ mod tests {
         let mut s = board(true);
         let old = s.unit_at(P2, 1).id;
         let cost = cost_of(&s, &old);
-        s.play(ID, pick(&old));
+        s.play(ID, pick::targets(pick::id(&old)));
         let new = s.unit(P2, 1).expect("a Unit stands there");
         assert_eq!(printed(&new.def_id), cost + 2);
     }
@@ -127,7 +123,7 @@ mod tests {
         crate::register_all();
         let mut s = board(false);
         let old = s.unit_at(P2, 1).id;
-        s.play(ID, pick(&old));
+        s.play(ID, pick::targets(pick::id(&old)));
         s.expect_in_zone(ID, "graveyard");
         s.end_turn();
         let kinds: Vec<&str> = s.last_events().iter().map(|event| event.event_type().as_str()).collect();
@@ -142,7 +138,7 @@ mod tests {
         crate::register_all();
         let mut s = board(true);
         let old = s.unit_at(P2, 1).id;
-        s.play(ID, pick(&old));
+        s.play(ID, pick::targets(pick::id(&old)));
         s.end_turn();
         s.expect_in_zone(ID, "hand");
         assert_eq!(s.card(ID).temporary, Some(1));
@@ -155,6 +151,6 @@ mod tests {
             "p2": { "hand": [FILLER], "field": [{ "def": "core-066", "radiant": true }], "library": filler(4) },
         }));
         let rock = s.unit_at(P2, 1).id;
-        s.expect_refused(|s| s.play(ID, pick(&rock)));
+        s.expect_refused(|s| s.play(ID, pick::targets(pick::id(&rock))));
     }
 }
