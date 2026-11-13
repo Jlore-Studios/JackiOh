@@ -36992,7 +36992,9 @@
           "provider": "claude-4"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-13T09:37:04Z",
         "every": 5,
+        "findings": 0,
         "head": "b04c1feea7b521abff082a7644a8809da6f7d8c9",
         "issue": 3773,
         "merged_at": "2026-11-13T09:25:20Z",
@@ -37005,12 +37007,13 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "pending:1e316fac-1794562031",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/43401525018",
         "sha": "40265a66d7ae6218e1043d0eb17d17e1106356e9",
         "started_at": "2026-11-13T09:27:46Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the fuzz monitor checks that the state check ran: no dead unit left standing, no live hero at 0, no mana below 0",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 235
