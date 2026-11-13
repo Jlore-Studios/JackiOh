@@ -15454,7 +15454,7 @@
       "failures": 0,
       "feedback_since": "2026-11-12T12:48:44Z",
       "forced": false,
-      "interruptions": 0,
+      "interruptions": 1,
       "issue": 3730,
       "kind": "revise",
       "live": "resolving",
