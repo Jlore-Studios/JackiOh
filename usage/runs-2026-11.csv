@@ -1998,3 +1998,5 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-13T06:54:08Z,43367489402,claude-6,opus,revise,3797,hard,approved,,75.9,27,6490,1664925,7.4796,3,11,,,14.2,claude-6,resumed,,2
 2026-11-13T07:23:26Z,43378278514,claude-7,opus,revise,3818,hard,built,,21.1,33,10022,5733523,15.2935,14,25,,,5.6,claude-7,resumed,,1
 2026-11-13T07:49:40Z,43378160805,claude-1,opus,revise,3798,hard,approved,,46.6,111,27468,8033395,6.4709,5,35,,,111.3,claude-1,resumed,,2
+2026-11-13T08:00:29Z,43389478286,claude-1,opus+sonnet,review,3812,medium,reviewed,,0.8,21,5303,721058,0.4094,36,37,,,79.9,claude-4,none,,1
+2026-11-13T08:09:18Z,43378388906,claude-7,opus,revise,3811,hard,built,,62.2,1,1140,118747,2.3345,19,0,,,5.4,claude-4,fresh,other,1
