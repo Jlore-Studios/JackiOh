@@ -15550,7 +15550,9 @@
     },
     "3857": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6856889488"
+      ],
       "difficulty_by": {
         "at": "2026-11-13T16:46:58Z",
         "difficulty": "hard",
@@ -15613,9 +15615,7 @@
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": [
-        "c:6856889488"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "3858": {
