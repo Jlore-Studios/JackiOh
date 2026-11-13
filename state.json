@@ -15490,7 +15490,9 @@
     },
     "3857": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6856889488"
+      ],
       "failures": 0,
       "forced": false,
       "in_lane": true,
@@ -15509,9 +15511,7 @@
       "started_at": "2026-11-13T15:33:40Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6856889488"
-      ]
+      "taken_asks": []
     },
     "3858": {
       "asks": [
