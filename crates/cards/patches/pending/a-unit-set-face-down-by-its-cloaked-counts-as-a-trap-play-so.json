@@ -17,14 +17,18 @@
   "cards": [],
   "plays": [
     "classic-005",
+    "classic-006",
     "classicplus-034",
+    "core-018",
+    "core-041",
+    "core-057",
+    "core-085",
+    "core-t-bread",
     "meditative-068",
-    "meditativeplus-025",
-    "stinkyscape-054",
-    "stinkyscape-103",
+    "meditative-097",
     "stinkyscape-135",
-    "stinkyscape-t-ai-07",
     "stinkyscape-t-ai-09",
-    "traininggrounds-030"
+    "traininggrounds-014",
+    "traininggrounds-018"
   ]
 }
