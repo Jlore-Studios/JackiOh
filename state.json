@@ -14276,8 +14276,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-8",
-      "owner_since": "2026-11-13T18:05:42Z",
-      "owner_why": "handed off from `claude-3`: `claude-3` it refused a call; its limit resets at 2026-11-13T20:30:00Z; it can start again only in 2h 24m, more than the 120 minutes an item waits for its owner",
+      "owner_since": "2026-11-13T22:29:04Z",
+      "owner_why": "its turn came (it waited 120 minutes for #3817, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-12T20:29:19Z",
       "planned_by": "`claude-1` (claude, `sonnet`, medium)",
@@ -14478,14 +14478,14 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3802,
-      "kind": "review",
+      "kind": "revise",
       "last_findings": [],
       "live": "reviewing",
       "merge_owner": "claude-8",
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
-      "queued_at": "2026-11-13T19:07:07Z",
+      "queued_at": "2026-11-13T22:29:04Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
       "run_id": "43489380955",
@@ -14508,10 +14508,17 @@
         "provider": "claude-8",
         "run": "43489380955"
       },
-      "source": "",
+      "source": "conflict",
       "started_at": "2026-11-13T19:08:35Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "sonnet",
+        "provider": "claude-8",
+        "since": "2026-11-13T22:29:04Z",
+        "until": "2026-11-13T22:59:04Z",
+        "why": "it waited 120 minutes for #3817, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
+      },
       "verdict_rounds": 3,
       "votes": {
         "approvals": [
@@ -14533,18 +14540,7 @@
           "claude": "strong"
         }
       },
-      "waiting_comment": 6847795564,
-      "waiting_turn": {
-        "behind": [
-          3817
-        ],
-        "ends": "2026-11-13T22:26:44Z",
-        "from_run": "43489380955",
-        "head": "30fa4fb5b780982bdc4788965f7219c12d33a055",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-13T20:26:44Z"
-      }
+      "waiting_comment": 6847795564
     },
     "3811": {
       "action": "review",
