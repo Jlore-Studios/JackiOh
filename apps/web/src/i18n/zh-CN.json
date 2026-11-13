@@ -1148,6 +1148,8 @@
   "Reconnecting…": "重新连接中…",
   "This match isn't available": "这场对局不可用",
   "Disconnected": "已断开连接",
+  "This game is open in another tab or on another device": "这场对局已在另一个标签页或另一台设备上打开",
+  "This game is open in another tab or on another device.": "这场对局已在另一个标签页或另一台设备上打开。",
   "This match isn't available. It may have ended, or it may not be yours to join.": "这场对局不可用。它可能已经结束，或者你无权加入。",
   "This match is no longer available. It closed before the board could load.": "这场对局已不可用。它在棋盘加载前就已关闭。",
   "This match is no longer available.": "这场对局已不可用。",
@@ -2918,6 +2920,7 @@
   "{count} of {limit} cards": "{count} / {limit} 张卡牌",
   "Your queue expired. Find a match to queue again.": "排队已过期，请重新寻找对局。",
   "Reconnect now": "立即重新连接",
+  "Play here": "在这里玩",
   "Loading the replay…": "正在加载回放…",
   "Landscape": "横屏",
   "Square": "方形",
@@ -4157,5 +4160,11 @@
   "This room starts the moment you join it.": "你一加入，这个房间的对局就会开始。",
   "Choosing a deck…": "正在选择卡组…",
   "Deck chosen": "已选卡组",
-  "Lobby": "大厅"
+  "Lobby": "大厅",
+  "Newest": "最新",
+  "All": "全部",
+  "Missing": "缺少",
+  "Search cosmetics": "搜索外观",
+  "Search by name": "按名称搜索",
+  "Not playable yet": "暂时无法游玩"
 }

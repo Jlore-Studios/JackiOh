@@ -58,7 +58,7 @@ const UNMIGRATED: Record<string, number> = {
   "cards/marks.css": 2,
   "cards/tallies.css": 3,
   "cards/wheel/wheel.css": 13,
-  "collection/collection.css": 40,
+  "collection/collection.css": 30,
   "collection/tokenOffer.css": 1,
   "dungeon/dungeon.css": 14,
   "dungeon/fight/fight.css": 11,

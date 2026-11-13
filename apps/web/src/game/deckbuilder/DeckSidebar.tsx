@@ -8,7 +8,7 @@
 // R1956000: a tile is the viewer's own copy below the deck builder's `OwnCopy`, unless the collection
 // says the card is unowned, and its art strip wears the foil that copy wears (deckbuilder.css).
 
-import { useId, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type ReactElement, type ReactNode, type RefObject } from "react";
+import { useId, useLayoutEffect, useMemo, useRef, useState, type ReactElement, type ReactNode, type RefObject } from "react";
 
 import type { CardDef } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection, LoadoutError } from "@jackioh/validator";
@@ -35,7 +35,6 @@ type DeckSidebarProps = {
   /** The verdict's first error naming each card (DeckEditor's `cardIssues`), shown on its tile. */
   issues: ReadonlyMap<string, LoadoutError>;
   head: ReactNode;
-  onDropCard: (event: DragEvent<HTMLElement>) => void;
   onRemove: (cardId: string) => void;
   onInspect: (cardId: string) => void;
   children?: ReactNode;
@@ -76,16 +75,6 @@ function tileKeys(ordered: readonly string[]): [string, string][] {
     seen.set(cardId, copy + 1);
     return [cardId, `${cardId}:${String(copy)}`];
   });
-}
-
-/** `preventDefault` marks a drop target, enabling the browser's `drop` event. */
-function allowDrop(event: DragEvent<HTMLElement>): void {
-  event.preventDefault();
-  try {
-    event.dataTransfer.dropEffect = "move";
-  } catch {
-    // Synthesised events lack DataTransfer; `preventDefault` enables drops.
-  }
 }
 
 type DeckTileProps = {
@@ -190,7 +179,7 @@ function DeckTile({ deckName, cardId, def, owned, conflict, issue, onRemove, onI
 
 export default function DeckSidebar(props: DeckSidebarProps): ReactElement {
   const locale = useLocale();
-  const { deckName, cards, catalog, collection, conflicts, issues, head, onDropCard, onRemove, onInspect, children } = props;
+  const { deckName, cards, catalog, collection, conflicts, issues, head, onRemove, onInspect, children } = props;
   const [listOpen, setListOpen] = useState(false);
   const ordered = useMemo(() => deckListOrder(cards, catalog), [cards, catalog, locale]);
   const full = cards.length >= DECK_SIZE;
@@ -206,8 +195,6 @@ export default function DeckSidebar(props: DeckSidebarProps): ReactElement {
         aria-label={t("Cards in {deck}", { deck: deckName })}
         data-testid={DECK_DROP}
         data-list-open={listOpen ? "true" : "false"}
-        onDragOver={allowDrop}
-        onDrop={onDropCard}
       >
         <header className="db-deck-head">
           <span className="db-deck-title">{t("Cards")}</span>

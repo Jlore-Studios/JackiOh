@@ -416,6 +416,55 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   }
 
+  // R3734001: the rail, the pool and the deck sit side by side from 601 px, so an upright iPad shows a whole builder.
+  for (const viewport of [
+    { label: "upright iPad", width: 820, height: 1180 },
+    { label: "iPad on its side", width: 1180, height: 820 },
+  ] as const) {
+    const where = `${viewport.label} ${String(viewport.width)}x${String(viewport.height)}`;
+    it(`R3734001 the rail, the pool and the deck are on screen at once, left to right, inside the window, at ${where}`, () => {
+      cy.viewport(viewport.width, viewport.height);
+      cy.get(ts(WORKSHOP)).should("have.attr", "data-view", "editor");
+      cy.get(".ws-rail").should("be.visible");
+      cy.get(ts(CARD_POOL)).should("be.visible");
+      cy.get(ts(DB_SIDEBAR)).should("be.visible");
+      cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);
+      cy.document().should((doc) => {
+        const box = (selector: string): DOMRect => {
+          const found = doc.querySelector(selector)?.getBoundingClientRect();
+          expect(found, selector).to.not.eq(undefined);
+          return found ?? new DOMRect();
+        };
+        const rail = box(".ws-rail");
+        const pool = box(ts(CARD_POOL));
+        const deck = box(ts(DB_SIDEBAR));
+        for (const [name, rect] of [["rail", rail], ["pool", pool], ["deck", deck]] as const) {
+          expect(rect.width, `the ${name} is drawn at ${where}`).to.be.greaterThan(0);
+          expect(Math.floor(rect.left), `the ${name} starts inside ${where}`).to.be.at.least(0);
+          expect(Math.ceil(rect.right), `the ${name} ends inside ${where}`).to.be.at.most(viewport.width);
+        }
+        expect(Math.ceil(rail.right), `the rail ends before the pool begins at ${where}`).to.be.at.most(Math.ceil(pool.left) + 1);
+        expect(Math.ceil(pool.right), `the pool ends before the deck begins at ${where}`).to.be.at.most(Math.ceil(deck.left) + 1);
+        expect(pool.width, `the pool keeps room for two cards at ${where}`).to.be.at.least(250);
+        expect(doc.documentElement.scrollWidth, `the document fits ${where}`).to.be.at.most(viewport.width);
+        expect(doc.body.scrollWidth, `the body fits ${where}`).to.be.at.most(viewport.width);
+        expect(doc.querySelector(ts(WORKSHOP))?.scrollWidth, `the builder fits ${where}`).to.be.at.most(viewport.width);
+      });
+    });
+  }
+
+  it("R3734001 at 601 px the list and the editor are both on screen, and at 600 px they take turns", () => {
+    cy.viewport(601, 900);
+    cy.get(".ws-rail").should("be.visible");
+    cy.get(ts(DB_SIDEBAR)).should("be.visible");
+    cy.document().should((doc) => {
+      expect(doc.documentElement.scrollWidth, "the document fits 601 px").to.be.at.most(601);
+    });
+    cy.viewport(600, 900);
+    cy.get(".ws-rail").should("not.be.visible");
+    cy.get(ts(DB_SIDEBAR)).should("be.visible");
+  });
+
   it("B39 shows at least two pool columns at 390 px", () => {
     cy.viewport(390, 844);
     cy.get(POOL_ITEMS).should(($items) => {
