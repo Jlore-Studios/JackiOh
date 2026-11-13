@@ -72,6 +72,14 @@ exclude_re = [
   # compiled out, so no test can see them. Their testkit twins share their names and only reach the
   # harness (above).
   'replace (test_override|shipped_override|previewed|override_map) -> ',
+  # crates/engine (#3514): Burn and Toxic's tick (R3540001), tick_at_turn_start's four `> 0`. A count is
+  # never below 0 (`burn_on`, `toxic_on` and `counter_on` floor it there), so `>= 0` lets every acting Unit
+  # into the targets and runs both hits at a count of 0. A hit of 0 is no damage instance (deal_damage
+  # returns before step 1, R63) and Burn's drop from 0 is to 0, a change `set_counter` neither stores nor
+  # reports; and a Unit that carried neither count at the read gains none inside the tick: its hits have no
+  # source for a rider or a conversion (R3540002, R3540003), no state check runs (R59), and a replacement's
+  # follow-up waits as work.
+  'afflictions\.rs:.*replace > with >= in tick_at_turn_start',
   # crates/run (#3513): a boss card's slot is the last, Anything, and `run_check_setup` only asks
   # whether a card's slot is at or above each rank, so any index at or past the last fits the same
   # slots (`len - 1`, `len + 1` and `len / 1` alike).

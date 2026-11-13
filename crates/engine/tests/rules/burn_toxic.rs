@@ -358,10 +358,44 @@ mod r3540001_tick {
         let result = s.state().result.expect("the burn killed the hero");
         assert_eq!(result.winner, Winner::P1);
     }
+
+    #[test]
+    fn r3540001_a_unit_carrying_toxic_and_no_burn_still_takes_its_toxic() {
+        let mut s = board(
+            "r3540001-toxic-alone",
+            json!({}),
+            json!({ "field": [with(PLAIN, json!({ "toxic": 3 }))] }),
+        );
+        let plain = id_at(&s, P2, 1);
+        s.end_turn();
+        assert_eq!(
+            hits(s.last_events()),
+            vec![(plain.clone(), 3, Some(KeywordKind::Toxic))],
+            "a Unit with a count of either kind ticks"
+        );
+        assert_eq!(s.card(&plain).damage, 3);
+        assert_eq!(toxic(&s, &plain), 3);
+        assert_eq!(burn(&s, &plain), 0);
+    }
 }
 
 mod r3540002_riders {
     use super::*;
+
+    #[test]
+    fn r3540002_no_rider_on_a_hero_the_hit_leaves_at_0() {
+        let mut s = board("r3540002-hero-0", json!({ "field": [MACE] }), json!({}));
+        let mace = id_at(&s, P1, 1);
+        // The Mace's hit takes the hero to exactly 0: no life left, so its Burn does not follow.
+        let attack = unit_view(s.state(), s.card(&mace)).attack;
+        s.state_mut().players[P2].hero.health = attack;
+        s.attack(&mace, "hero");
+        s.expect_health(P2, 0);
+        assert!(counter_events(s.events(), CounterKind::Burn).is_empty());
+        assert_eq!(query::hero_burn_of(s.state(), P2), 0);
+        let result = s.state().result.expect("the hit killed the hero");
+        assert_eq!(result.winner, Winner::P1);
+    }
 
     #[test]
     fn r3540002_damage_also_burns_after_each_hit_its_target_survives() {
