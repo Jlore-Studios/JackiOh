@@ -15750,7 +15750,7 @@
       "question": "",
       "queued_at": "2026-11-13T15:06:24Z",
       "requested_by": "squishy-squooby",
-      "round_tier": "strong",
+      "round_tier": "",
       "run_id": "43512256841",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-13T21:36:48Z",
