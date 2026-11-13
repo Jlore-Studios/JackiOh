@@ -16459,6 +16459,8 @@
       }
     },
     "3884": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-13T17:38:27Z",
@@ -16472,8 +16474,13 @@
         "trail": "o jackioh golden check 2>&1 | tail -3\", \"description\"\u2026\n- Bash: {\"command\": \"cargo jackioh golden check >/dev/null 2>&1; echo golden EXIT $?; (time cargo jackioh fuzz --seeds 200) 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | tail -8\", \"description\": \"Confirm golden exit \u2026\n- Bash: {\"command\": \"cargo jackioh fuzz --seeds 200 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | grep -iE 'fuzz|fail|ok|violation|panic' | head -10; echo EXIT ${PIPESTATUS[0]}\", \"description\": \"Get fuzz summary line\u2026\n- said: Fuzz: 200 passed, 0 failed, 0 replay mismatches, 0 invariant violations. Next are `classify --claims`, the web typecheck and clippy.\n- Bash: {\"command\": \"cargo jackioh classify --base origin/main --claims 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | tail -15; echo EXIT ${PIPESTATUS[0]}\", \"description\": \"Run classify with claims against origin/mai\u2026\n- Bash: {\"command\": \"grep -n 'classify' .github/workflows/ci.yml | head -20\", \"description\": \"See how CI runs classify stage 2\"}\n- Bash: {\"command\": \"sed -n '686,714p' .github/workflows/ci.yml\", \"description\": \"Read CI classify steps\"}\n- said: Stage 2 runs only when stage 1 lists `unchecked` work. Checking:\n- Bash: {\"command\": \"cargo jackioh classify --base origin/main --json 2>/dev/null | python3 -c 'import json,sys; d=json.load(sys.stdin); print({k:(v if k!=\\\"unchecked\\\" else v) for k,v in d.items() if k in (\u2026\n- said: Stage 1 says `internal` with nothing unchecked, so CI won't run stage 2 for this change. Next, typecheck and clippy:\n- Bash: {\"command\": \"timeout 900 pnpm --dir apps/web typecheck 2>&1 | tail -8; echo EXIT ${PIPESTATUS[0]}\", \"description\": \"Typecheck the web app\", \"timeout\": 920000}\n- Bash: {\"command\": \"cargo clippy --workspace --all-targets -- -D warnings 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | grep -E '^(error|warning)|-->|Finished' | head -20; echo EXIT ${PIPESTATUS[0]}\", \"description\":\u2026\n- said: Typecheck and clippy are clean. Now the harness's own web command, which runs every test file related to the change:\n- Bash: {\"command\": \"timeout 1500 pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts' 2>&1 | grep -E \u2026\n- Bash: {\"command\": \"timeout 600 pnpm exec eslint apps/web/src/audio/cues.ts apps/web/src/audio/cues.test.ts 2>&1 | tail -5; echo EXIT $?; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\u2026\n- Bash: {\"command\": \"until grep -qE 'Test Files|Error' /tmp/claude-1001/-home-runner-work--temp-work-item-3857/0418de3c-3e46-4c97-8c40-4cd9c7c63e29/tasks/bnfn155i1.output 2>/dev/null; do sleep 10; done; slee\u2026\n- said: I'm waiting on the harness's web test run, which covers every test file that imports the changed modules. After it, I'll run the full `src/fx` and `src/audio` directories that it skips.\n- TaskStop: {\"task_id\": \"byr6r5svk\"}\n- Bash: {\"command\": \"pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts' > /tmp/vitest-changed.log 2>\u2026\n- Bash: {\"command\": \"sleep 120 2>/dev/null; grep -cE '\\u2713|\\u276f' /tmp/vitest-changed.log; grep -E 'FAIL|\\u00d7' /tmp/vitest-changed.log | head -10; tail -3 /tmp/vitest-changed.log | cut -c1-200\", \"descri\u2026\n- tool error: <tool_use_error>Blocked: sleep 120 followed by: grep -cE '\u2713|\u276f' /tmp/vitest-changed.log grep -E 'FAIL|\u00d7' /tmp/vitest-changed.log head -10 tail -3 /tmp/vitest-changed.log cut -c1-200. To wait for a con\u2026\n- Monitor: {\"command\": \"tail -n 0 -F /tmp/vitest-changed.log | grep --line-buffered -E 'FAIL|\\u00d7|Test Files|Tests |EXIT|Error:'\", \"description\": \"web changed-files vitest failures and summary\", \"timeout_ms\":\u2026\n- tool error: This Bash command contains multiple operations. The following part requires approval: tail -n 0 -F /tmp/vitest-changed.log\n- said: I'll wait for that run to finish. Its completion notification is the signal; meanwhile there is nothing else to run that wouldn't compete with it for CPU.\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-3857/0418de3c-3e46-4c97-8c40-4cd9c7c63e29/tasks/bszdspvc3.output; tail -15 /tmp/vitest-changed.log | cut -c1-300\", \"description\": \"\u2026\n- Bash: {\"command\": \"grep -n 'art.test.ts' -A12 /tmp/vitest-changed.log | grep -E 'Error|timed out|Timeout|ms' | head -5; sed -n '55,75p' apps/web/src/cards/art/art.test.ts\", \"description\": \"Inspect the art.\u2026\n- Bash: {\"command\": \"timeout 600 pnpm --dir apps/web exec vitest run src/cards/art/art.test.ts 2>&1 | grep -E 'Test Files|Tests |FAIL|\\u00d7|B1 equal' | head\", \"description\": \"Rerun art.test.ts on its own\", \u2026\n- said: On its own it passes, 32 of 32, so the failure was the machine's load. Now the `src/fx` and `src/audio` directories, which the harness skips and CI runs:\n- Bash: {\"command\": \"cd apps/web && pnpm exec vitest run src/fx src/audio > /tmp/vitest-fx-audio.log 2>&1; echo EXIT $? >> /tmp/vitest-fx-audio.log; grep -E 'Test Files|Tests |FAIL|EXIT' /tmp/vitest-fx-audio\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\"- Left: harness vitest --changed run (in progress), full src/fx + src/audio vitest dirs, final report.\\\"\\\"\\\",\\\"\\\u2026\n- said: The `src/fx` and `src/audio` run is still going. I'll write the report when it finishes.\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-3857/0418de3c-3e46-4c97-8c40-4cd9c7c63e29/tasks/b2kwkxbzz.output; grep -E '\\u00d7|FAIL' /tmp/vitest-fx-audio.log | head\", \"descript\u2026\n- Bash: {\"command\": \"git status --short; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\"- Left: full src/fx + src/audio vitest dirs (running), final report.\\\"\\\"\\\",\\\"\\\"\\\"- src/fx + \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a hero's Armor gain is announced with an event, a game-log line and a cue, so Tank Up and the cards that give Armor no longer change the badge in silence\"} --> When a hero gains Armor it keeps, the engine now sends a public `armorGained` event: the play\u2026"
       },
       "issue": 3857,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
+      "pending_request": false,
+      "provider": "claude-1",
       "queued_at": "2026-11-13T21:10:11Z",
+      "run_id": "pending:ec5395a1-1794604870",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16492,6 +16499,9 @@
         "provider": "claude-6",
         "run": "43474796458"
       },
+      "started_at": "2026-11-13T21:21:58Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16653,9 +16663,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T21:20:54Z",
+    "at": "2026-11-13T21:21:58Z",
     "url": "",
-    "what": "review #3885 on claude-6"
+    "what": "review #3884 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-13T21:06:11Z",
