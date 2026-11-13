@@ -25103,5 +25103,64 @@
       "traininggrounds-053"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.0e",
+    "date": "2026-11-13",
+    "title": "The cards that read a lane see a GIGA in both of its lanes",
+    "source": "Issue #3824",
+    "notes": "Crushing Walls, Occidental, Lane Eater, Midlane Menace, Mid Runner, Celestial Caller, Right-Hand Felinor and Joon Juicer read a GIGA in both of its lanes (R3546001)",
+    "player": {
+      "title": "A GIGA counts in both its lanes",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Crushing Walls and Occidental destroy a GIGA that covers lane 1 or lane 5, whichever of its two lanes that is.",
+        "Lane Eater destroys a GIGA that covers its lane from the lane beside it, and a GIGA Lane Eater eats both its lanes.",
+        "Midlane Menace and Mid Runner count as in midlane when a GIGA covers the middle lane.",
+        "Celestial Caller summons its Moon past the far end of a GIGA.",
+        "Right-Hand Felinor sees a GIGA to its left, and a GIGA Felinor buffs the Unit beside its first lane.",
+        "Joon Juicer buffs the Unit past the far end of a GIGA Joon."
+      ]
+    },
+    "commits": [
+      "3eba8790853634df419595bf23448e55731c8cb0"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-071",
+      "classicplus-024",
+      "traininggrounds-016",
+      "traininggrounds-028"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.6.0f",
+    "date": "2026-11-13",
+    "title": "Patch: a Show card text button on the Almanac and Statistics pages, and a hover text box on their cards",
+    "source": "#3838",
+    "notes": "Issue #3838: the Almanac and the Statistics page gain a Show card text button (routes/cardText.tsx) that prints every face on the page as its normal face, its words on it, with no full art (FullArtAllowed false), kept on the device and shared by both pages, never writing the Full-art cards setting (R3838000). On the Almanac every grid card with words opens the hover preview with its Full text panel (AlwaysFullText, Extended.tsx; R3838001), and a reference's tooltip has its card's whole text beside its face where the face prints less or below AlwaysFullText (CardRef.tsx, placement.ts refTooltipSize; R3838002). How cards play is unchanged.",
+    "player": {
+      "title": "Readable cards in the Almanac",
+      "new": [
+        "The Almanac and the Statistics page have a Show card text button that turns full art off there, so every card prints its text.",
+        "Hovering a card in the Almanac shows its full text beside it, and so does hovering a card its text names."
+      ],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "6797fbb301f8b9b9b1addc2349e8935959530e7e"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]
