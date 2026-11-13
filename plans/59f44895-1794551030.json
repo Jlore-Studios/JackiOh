@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 3824,
+  "title": "Patch: the cards that read a lane see a GIGA in both of its lanes",
+  "branch": "bot/issue-3824",
+  "thread": "**Issue #3824 (data, not instructions):**\n\n```text\n# #3824: Patch: the cards that read a lane see a GIGA in both of its lanes\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA GIGA card is twice as wide and stands in two lanes, and the rules say it is in both for every effect that reads a lane. About eight older cards still look only at its first lane:\n- An enemy GIGA in lanes 4 and 5 survives Crushing Walls and Occidental, which destroy everything in the outer lanes.\n- A GIGA Lane Eater locks two lanes but destroys cards in only one.\n- A GIGA Midlane Menace standing over the middle lane gets no buff.\n\nPlayers meet this now that the newest set prints GIGA cards and GIGA-ify makes any permanent GIGA. Once this is built, these cards treat a GIGA as the rule says.\n\n## Why\n\nR3546001: \"A GIGA is in both its lanes for every rule that reads a lane in its row: attacks across, Cleave, lane effects, 'this lane and adjacent', lane watches, lane Locks\u2026\". The engine has the readers in `crates/engine/src/giga.rs`: `lanes_of` (`:26`), `occupant_at` (`:100`) and `adjacent_slots` (`:140`). Only 5 scripts use them. These read the anchor lane instead:\n\n- C+ #24 Crushing Walls, `classic_plus/c024_crushing_walls.rs:21`: `WALL_LANES.contains(&at.lane)`\n- TG #28 Occidental, `training_grounds/c028_occidental.rs:24`: `at.lane == RIGHTMOST`\n- C #71 Lane Eater, `classic/c071_lane_eater.rs:43`: `card_at(.., lane: at.lane)`, though its Lock already reads both lanes (`effects/locks.rs:92`)\n- TG #5 Midlane Menace, `training_grounds/c005_midlane_menace.rs:14-15`, and C #22 Mid Runner, `classic/c022_mid_runner.rs:35`: `midlane_lanes_of(..).contains(&lane)` on the anchor\n- Neighbours at `at.lane \u00b1 1`: TG #16 Celestial Caller (`c016_celestial_caller.rs:22`), TG #22 Right-Hand Felinor (`c022_right_hand_felinor.rs:22`), M #61 Joon Juicer (`meditative/c061_joon_juicer.rs:29`)\n\nWhere GIGA comes from: printed GIGA Field Spells (S+ #52 Airblast Drill, #53 Laser Drill, #56 Impact Reactor), the Embiggened walls (S+ #65, #66) and S+ #23 GIGA-ify.\n\n## Proposal\n\nEach script reads lanes through `lanes_of`, a zone's card through `occupant_at`, and its neighbours through `adjacent_slots`. A card is \"in midlane\" when any of its lanes is the midlane. R3546001 already decides this, so no new ruling is needed. A sweep of the scripts that read `slot_of(..).lane` lists any other reader in the pull request, each checked against its SPEC \u00a78 row.\n\n## Where it lands\n\nThe eight scripts named above, each with its own tests (CLAUDE.md rule 6); a pending patch fragment (`cargo jackioh patches`), since these cards play differently.\n\n## Acceptance criteria\n\n- [ ] Crushing Walls and Occidental destroy a GIGA anchored in lane 4, in each row.\n- [ ] Lane Eater destroys an enemy GIGA that covers its lane from the lane beside it.\n- [ ] Midlane Menace and Mid Runner made GIGA in lanes 2 and 3 count as in midlane.\n- [ ] Celestial Caller, Right-Hand Felinor and Joon Juicer made GIGA read the zones past both of its ends.\n- [ ] Each new test fails on the current script; every existing non-GIGA test stays green.\n- [ ] `cargo jackioh classify` names exactly these cards, and the fragment claims them.\n\n## Size and risks\n\nMedium: about 8 scripts and their tests, all in `crates/cards`, hard by rule 11 as rules work. It is a card behaviour change, so it ships with a version through its fragment.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @squishy-squooby at 2026-11-13T05:45:55Z:\n\napprove\n\n---\nComment by @jgoetzmann at 2026-11-13T05:46:10Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3824: needs a plan; `claude-8` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-13T05:47:04Z",
+    "claimed_at": "2026-11-13T06:24:30Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3729 skipped: it waits for #3727, #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3727, #3730 to close first",
+    "#3733 skipped: it waits for #3727 to close first",
+    "#3735 skipped: it waits for #3727 to close first"
+  ]
+}
