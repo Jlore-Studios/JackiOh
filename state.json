@@ -14887,11 +14887,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-13T12:21:19Z",
+        "at": "2026-11-13T13:24:56Z",
         "difficulty": "hard",
-        "provider": "claude-3",
-        "tier": "medium",
-        "why": "rule 5: about 110 files change in all (61 card scripts, 3 cross tests, 41 rules tests, the kit, the guard, docs), though each edit is a test-side call-site swap"
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "Rule 5, Big: about 114 files change (103 by script, plus kit, guard and docs), far past 40"
       },
       "failures": 0,
       "forced": false,
