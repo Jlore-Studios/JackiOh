@@ -270,7 +270,7 @@ mod tests {
         }
 
         #[test]
-        fn r767000_the_script_kept_for_v0_6_0g_fuses_infinite_reserves_and_lunar_eclipse() {
+        fn r767000_r2521007_the_script_kept_for_v0_6_0g_fuses_infinite_reserves_and_lunar_eclipse() {
             register_win_rates(table(vec![]));
             crate::under_kept(ID, script_v0_6_0g(), || {
                 let mut s = casting("na-tech-kept", false, 1);

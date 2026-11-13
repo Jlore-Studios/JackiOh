@@ -207,7 +207,17 @@ mod tests {
                 .map(|card| card.def_id)
                 .filter(|def_id| pool.contains(def_id))
                 .collect();
-            assert_eq!(burned, pool[HAND_CAP as usize - fillers..].to_vec(), "the rest burn");
+            // R11: a burned Unit token ceases to exist, so only the rest that are no Unit token reach
+            // the graveyard.
+            let rest: Vec<String> = pool[HAND_CAP as usize - fillers..]
+                .iter()
+                .filter(|id| {
+                    let def = crate::card_def(id);
+                    !(def.is_token() && def.type_ == CardType::Unit)
+                })
+                .cloned()
+                .collect();
+            assert_eq!(burned, rest, "the rest burn");
         }
 
         #[test]
@@ -242,9 +252,16 @@ mod tests {
 
         #[test]
         fn r1870007_embiggened_rolls_once_more() {
+            // A hit fills the hand with Terminus cards (R3869000), which would burn the bounce back; this
+            // test counts rolls, so it takes them out of the hand after each play.
+            let clear = |s: &mut Scenario| {
+                let pool = terminus();
+                s.state_mut().players.p1.hand.retain(|card| !pool.contains(&card.def_id));
+            };
             let mut s = board("dice-of-doom-more", false);
             let cursor = s.state().rng_cursor;
             s.play(ID, json!({ "embiggen": true }));
+            clear(&mut s);
             assert_eq!(s.state().rng_cursor, cursor + 2, "its new Lucky rolls again this play");
             s.end_turn();
             s.end_turn();
@@ -252,6 +269,7 @@ mod tests {
             let cursor = s.state().rng_cursor;
             s.play(ID, json!({ "embiggen": true }));
             assert_eq!(s.state().rng_cursor, cursor + 3, "Lucky 2: three rolls");
+            clear(&mut s);
             assert_eq!(lucky_on(s.state(), &dice(&s)), 2, "every Embiggened play makes it luckier");
             s.end_turn();
             s.end_turn();

@@ -377,7 +377,7 @@ mod tests {
         }
 
         #[test]
-        fn r767000_the_script_kept_for_v0_6_0g_adds_lunar_eclipse_with_no_leader() {
+        fn r767000_r2521007_the_script_kept_for_v0_6_0g_adds_lunar_eclipse_with_no_leader() {
             register_win_rates(table(vec![]));
             crate::under_kept(TECH, script_v0_6_0g(), || {
                 for n in 0..3 {
