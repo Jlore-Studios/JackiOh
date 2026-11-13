@@ -15550,6 +15550,13 @@
     "3858": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-13T20:52:47Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "Rule 2: it changes the AI's decisions (`face_value` in crates/ai/src/reply.rs feeds the reply's attack ranking and the seat's own move order), so Opus builds it."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
