@@ -135,18 +135,6 @@ mod tests {
         js(must(s.state().pending.as_ref(), "an open prompt"))
     }
 
-    /// A Discover's options are `mode` selections carrying catalog ids (§10.6).
-    fn option_ids(pending: &Value) -> Vec<String> {
-        pending["options"]
-            .as_array()
-            .cloned()
-            .unwrap_or_default()
-            .iter()
-            .filter(|option| option["selection"]["pick"] == "mode")
-            .map(|option| option["selection"]["option"].as_str().unwrap_or_default().to_string())
-            .collect()
-    }
-
     /// The key of the prompt's first option, the answer the tests give.
     fn first_key(pending: &Value) -> Value {
         must(pending["options"].as_array().and_then(|options| options.first()), "the first option")["key"].clone()
@@ -184,7 +172,7 @@ mod tests {
         let mut picks = Vec::new();
         for step in 0..expected {
             let pending = open(&s);
-            let pick = must(option_ids(&pending).into_iter().next(), &format!("an option on Discover {}", step + 1));
+            let pick = must(s.prompt_modes().into_iter().next(), &format!("an option on Discover {}", step + 1));
             picks.push(pick);
             s.answer(first_key(&pending));
         }
@@ -271,7 +259,7 @@ mod tests {
             assert_eq!(pending["max"], 1);
             assert_eq!(pending["options"].as_array().map(Vec::len), Some(3));
 
-            let ids = option_ids(&pending);
+            let ids = s.prompt_modes();
             assert_eq!(ids.iter().collect::<IndexSet<_>>().len(), 3); // drawn without replacement (§6.3)
             let units = unit_ids();
             for id in &ids {
@@ -292,7 +280,7 @@ mod tests {
             s.play(CRAFT, json!({}));
 
             let first = open(&s);
-            let first_pick = must(option_ids(&first).into_iter().next(), "an option on the first Discover");
+            let first_pick = must(s.prompt_modes().into_iter().next(), "an option on the first Discover");
             s.answer(first_key(&first));
 
             let second = open(&s);
@@ -302,7 +290,7 @@ mod tests {
             assert_eq!(events_of(&s, "promptOpened").len(), 2);
 
             let units = unit_ids();
-            for id in option_ids(&second) {
+            for id in s.prompt_modes() {
                 assert!(units.contains(&id));
             }
 
@@ -324,9 +312,9 @@ mod tests {
                 let mut s = craft_scenario(CraftOpts { seed: Some(format!("craft-repeat-{n}")), ..CraftOpts::default() });
                 s.play(CRAFT, json!({}));
                 let first = open(&s);
-                let picked = must(option_ids(&first).into_iter().next(), "an option");
+                let picked = must(s.prompt_modes().into_iter().next(), "an option");
                 s.answer(first_key(&first));
-                offered_again = option_ids(&open(&s)).contains(&picked);
+                offered_again = s.prompt_modes().contains(&picked);
                 n += 1;
             }
             assert!(offered_again);

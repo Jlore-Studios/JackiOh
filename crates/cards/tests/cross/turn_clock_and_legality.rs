@@ -436,7 +436,19 @@ mod s9_1_legal_actions_and_a_face_down_trap_s_instance_id {
         assert_eq!(set.def_id, SHEEPISH);
         assert_ne!(set.id, trap_id);
         assert!(!to_json(&g.view(PlayerId::P1)).contains(&format!("\"{trap_id}\"")));
-        assert!(!to_json(&g.view(PlayerId::P1)).contains(&format!("\"{}\"", set.id)));
+        // R3777001: the fresh id rides p1's view only where `hiddenTargets` names the zone of the
+        // face-down target `legalActions` offers (Magic Jammed's), and nowhere else.
+        let mut view = serde_json::to_value(g.view(PlayerId::P1)).expect("the view serializes");
+        let hidden = must(
+            view.as_object_mut()
+                .and_then(|object| object.remove("hiddenTargets")),
+            "p1's view names its hidden targets",
+        );
+        assert_eq!(
+            hidden,
+            json!([{ "instanceId": set.id, "zone": { "player": "p2", "row": "backrow", "lane": 1 } }])
+        );
+        assert!(!to_json(&view).contains(&format!("\"{}\"", set.id)));
 
         let actions = legal_actions(g.state(), PlayerId::P1);
         assert_eq!(

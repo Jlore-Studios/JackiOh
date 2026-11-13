@@ -7,7 +7,15 @@ import { fileURLToPath } from "node:url";
 import JSON5 from "json5";
 import { describe, expect, it } from "vitest";
 
-import { HEALTH_PATH, MODULE_CACHE_CONTROL, READY_PATH, SERVER_SECRETS, SERVER_VARS, WORKER_ROUTES } from "./routing.ts";
+import {
+  DAILY_SWEEP_CRON,
+  HEALTH_PATH,
+  MODULE_CACHE_CONTROL,
+  READY_PATH,
+  SERVER_SECRETS,
+  SERVER_VARS,
+  WORKER_ROUTES,
+} from "./routing.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -55,7 +63,8 @@ describe.each(ENVIRONMENTS)("wrangler.jsonc, $label", ({ worker, name, origin })
     expect(container?.image_build_context).toBe(".");
     expect(worker.durable_objects.bindings).toEqual([{ name: "SERVER", class_name: "Server" }]);
     expect(worker.migrations).toEqual([{ tag: "v1", new_sqlite_classes: ["Server"] }]);
-    expect(worker.triggers.crons).toHaveLength(1);
+    // CLAUDE.md rule 13: the daily wake-up stays; #3727 adds the daily games' hourly sweep.
+    expect(worker.triggers.crons).toEqual(["23 14 * * *", DAILY_SWEEP_CRON]);
   });
 
   it("holds the server's settings that are not secrets, its own origin among them, and no secret", () => {

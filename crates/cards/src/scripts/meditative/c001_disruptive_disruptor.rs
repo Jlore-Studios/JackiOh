@@ -349,15 +349,8 @@ mod tests {
             assert_eq!(pending.player_id, P1);
             // The guard stops only discards off the holder's turn: on p1's own turn it
             // sleeps, so "discard" is offered.
-            let offered: Vec<String> = pending
-                .options
-                .iter()
-                .map(|option| match &option.selection {
-                    Selection::Mode { option } => option.clone(),
-                    _ => "?".to_string(),
-                })
-                .collect();
-            assert_eq!(offered, vec!["discard", "exile", "draw"]);
+            assert_eq!(s.prompt_modes(), vec!["discard", "exile", "draw"]);
+            assert_eq!(pending.options.len(), 3, "an option other than a Mode is offered");
         }
 
         #[test]

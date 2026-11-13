@@ -1,7 +1,7 @@
 // R3340000: art that lives in play. The board's faces (a Unit's `MinionFace`, a face-up backrow card's compact `CardFace`) move
 // their art for an animated or signed level and for every Mythic, in the one budget of motion slots the hand shares (ranked
 // by the pointer or focus first, then Mythics, Legendaries and the rest newest first); a tab hidden, a face off screen and
-// every motion setting hold them still; the art answers the pointer, a press and an attack; and a unit's art wears cracks, a
+// every motion setting hold them still; the art answers the pointer, a press and an attack; and a unit's art wears a
 // glow and frost. Vitest stubs CSS, so artLive.css is read as text; the pixels are e2e's cypress/component/art-answers.cy.tsx.
 
 import { act, cleanup, render } from "@testing-library/react";
@@ -515,8 +515,8 @@ describe("R3340000 motion pauses and the settings still rule", () => {
       expect(motions(container), why).toEqual(["static", "static"]);
       expect(container.querySelector("[data-art-moving], [data-art-live]"), why).toBeNull();
       expect(worn.hasAttribute("data-art-response"), `${why}: the whole-art fallback is still too`).toBe(false);
-      // Damage, a buff and frost are still marks.
-      expect(worn.querySelectorAll(".cf-art-cracks path"), why).toHaveLength(3);
+      // A buff and frost are still marks; missing health is none (R3776000).
+      expect(worn.querySelector(".cf-art-cracks"), why).toBeNull();
       expect(worn.querySelector(".cf-art-glow"), why).not.toBeNull();
       expect(worn.querySelector(".cf-art-frost"), why).not.toBeNull();
       cleanup();
@@ -748,23 +748,52 @@ describe("R3340000 cards that answer", () => {
   });
 });
 
-describe("R3340000 the marks of a unit's state", () => {
-  it("R3340000 the cracks grow with the health missing, from none for a whole unit", () => {
-    const cracks = (over: Partial<UnitView>): number => {
+describe("R3340000 and R3776000 the marks of a unit's state", () => {
+  it("R3776000 a damaged unit's art wears no mark for its missing health, however much is missing", () => {
+    const damaged: Partial<UnitView>[] = [
+      {},
+      { health: 3, maxHealth: 4 },
+      { health: 1, maxHealth: 4 },
+      { health: 1, maxHealth: 30 },
+    ];
+    for (const over of damaged) {
       const { container } = render(<Board specs={[{ id: COMMON, over }]} />);
       const art = container.querySelector<HTMLElement>(".cf-art");
-      const count = art?.querySelectorAll(".cf-art-cracks path").length ?? 0;
-      expect(art?.getAttribute("data-art-damage") ?? "0", JSON.stringify(over)).toBe(String(count));
+      const why = JSON.stringify(over);
+      expect(art, why).not.toBeNull();
+      expect(container.querySelector(".cf-art-cracks"), why).toBeNull();
+      expect(container.querySelector(".cf-art-wear"), why).toBeNull();
+      for (const attribute of ["data-art-damage", "data-art-buffed", "data-art-frozen"]) {
+        expect(art?.hasAttribute(attribute), `${why}: ${attribute}`).toBe(false);
+      }
       cleanup();
-      return count;
-    };
-    expect(cracks({ health: 4, maxHealth: 4 })).toBe(0);
-    expect(cracks({ health: 3, maxHealth: 4 })).toBe(1);
-    expect(cracks({ health: 2, maxHealth: 4 })).toBe(2);
-    expect(cracks({ health: 1, maxHealth: 4 })).toBe(3);
-    expect(cracks({ health: 1, maxHealth: 30 })).toBe(4);
-    const { container } = render(<Board specs={[{ id: COMMON }]} />);
-    expect(container.querySelector(".cf-art-wear"), "a whole, unbuffed, unfrozen unit wears nothing").toBeNull();
+    }
+  });
+
+  it("R3776000 a damaged unit that is buffed still glows and one that is frozen still frosts, and neither draws cracks", () => {
+    const over = { health: 1, maxHealth: 4 };
+    const { container } = render(
+      <Board
+        specs={[
+          { id: COMMON, attack: 9, over },
+          { id: COMMON, over: { ...over, frozen: true } },
+          { id: COMMON, attack: 9, over: { ...over, frozen: true } },
+        ]}
+      />,
+    );
+    const [buffed, frozen, both] = [...container.querySelectorAll<HTMLElement>(".cf-art")] as [HTMLElement, HTMLElement, HTMLElement];
+    expect(buffed.querySelector(".cf-art-glow")).not.toBeNull();
+    expect(buffed.getAttribute("data-art-buffed")).toBe("true");
+    expect(buffed.querySelector(".cf-art-frost")).toBeNull();
+    expect(frozen.querySelector(".cf-art-frost")).not.toBeNull();
+    expect(frozen.getAttribute("data-art-frozen")).toBe("true");
+    expect(frozen.querySelector(".cf-art-glow")).toBeNull();
+    expect(both.querySelector(".cf-art-glow")).not.toBeNull();
+    expect(both.querySelector(".cf-art-frost")).not.toBeNull();
+    for (const art of [buffed, frozen, both]) {
+      expect(art.querySelector(".cf-art-wear")).not.toBeNull();
+      expect(art.querySelector(".cf-art-cracks")).toBeNull();
+    }
   });
 
   it("R3340000 a buffed unit glows in its card's theme colour and a frozen one frosts over", () => {
@@ -782,7 +811,7 @@ describe("R3340000 the marks of a unit's state", () => {
     expect(first.querySelector(".cf-art-frost")).not.toBeNull();
     expect(second.hasAttribute("data-art-frozen")).toBe(false);
     expect(second.querySelector(".cf-art-frost")).toBeNull();
-    for (const attribute of ["data-art-buffed", "data-art-frozen", "data-art-damage"]) expect(plain.hasAttribute(attribute), attribute).toBe(false);
+    for (const attribute of ["data-art-buffed", "data-art-frozen"]) expect(plain.hasAttribute(attribute), attribute).toBe(false);
     expect(plain.style.getPropertyValue("--art-glow")).toBe("");
     // The marks sit over the picture, and are drawings, hidden from assistive technology like the art.
     expect(first.querySelector(".cf-art-wear")?.getAttribute("aria-hidden")).toBe("true");
@@ -828,10 +857,11 @@ describe("R3340000 the stylesheet", () => {
     );
     expect(css).toContain("var(--lunge-distance)");
     const gate = css.indexOf("@media (prefers-reduced-motion: no-preference)");
-    for (const mark of [".cf-art-cracks path", ".cf-art-glow {", ".cf-art-frost {"]) {
+    for (const mark of [".cf-art-glow {", ".cf-art-frost {"]) {
       const at = css.indexOf(mark);
       expect(at, mark).toBeGreaterThan(-1);
       expect(at, mark).toBeLessThan(gate);
     }
+    expect(css).not.toContain("cf-art-cracks");
   });
 });

@@ -158,14 +158,8 @@ mod tests {
             s.play(ID, json!({}));
             let pending = s.state().pending.as_ref().expect("the lane pick is open");
             assert_eq!(pending.kind, PromptKind::Mode);
-            let options: Vec<String> = pending
-                .options
-                .iter()
-                .map(|option| match &option.selection {
-                    Selection::Mode { option } => option.clone(),
-                    other => panic!("a mode pick offers modes: {other:?}"),
-                })
-                .collect();
+            let options = s.prompt_modes();
+            assert_eq!(options.len(), pending.options.len(), "a mode each");
             let lanes: Vec<String> = SLASH_LANES.iter().map(|lane| lane.to_string()).collect();
             assert_eq!(options, lanes);
             assert_eq!(s.state().slashed_lane, None, "nothing is slashed before the answer");

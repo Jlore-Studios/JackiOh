@@ -23,7 +23,9 @@
 //!    `describe` titled with `R<n>`, or an SQL `\echo` heading naming it;
 //! 3. every `r<n>` token of a Rust `fn` or `mod` name and every `R<n>` cited in `CITING_ROOTS`
 //!    (comments included) has a note;
-//! 4. every `[[…]]` link in `spec/` outside code resolves to a ruling note, a section heading or a note;
+//! 4. every `[[…]]` link in `spec/` outside code resolves to a ruling note, a section heading or a note,
+//!    and a `[[CARDS#…]]` one to a heading `spec/CARDS.md` has as `index` would write it now, not as the
+//!    file on disk has it, so a branch that adds a pool links it before the fold (#3804);
 //! 5. every note's `title` and `cards` are filled in, and each ruling, section and card `cards` names
 //!    exists (#2047);
 //! 6. every file in `spec/pending/` is a non-empty `<n>.md`, `n` the issue whose §11 paragraph it
@@ -34,7 +36,8 @@
 //! 8. every ruling marker in §2 to §10 links a ruling before its sentence ends (REVIEW A2.3, #2048).
 //!
 //! It reads ids, file names, headings, test names and `cards`' references, never the wording but rule
-//! 7's and rule 8's markers (#133). `index` rewrites `spec/INDEX.md` from the notes; `fold` appends the
+//! 7's and rule 8's markers (#133). `index` rewrites `spec/INDEX.md` from the notes and `spec/CARDS.md`
+//! from the catalog and its named pools (`spec_cards.rs`, #3804); `fold` appends the
 //! pending paragraphs to `spec/11-rulings.md` in number order, deletes them and runs `index`
 //! (`spec-fold.yml`, on `main` daily).
 
@@ -63,9 +66,9 @@ pub struct Args {
 pub enum SpecCommand {
     /// The eight checks (SURFACE §15, #1243, #2048): ids and file names, proofs, citations, links, titles and cards, the pending paragraphs' names, unresolved-ruling markers, ruling markers without a link.
     Check,
-    /// Rewrite `spec/INDEX.md` from the ruling notes.
+    /// Rewrite `spec/INDEX.md` from the ruling notes and `spec/CARDS.md` from the catalog and its named pools.
     Index,
-    /// Append `spec/pending/<n>.md` to `spec/11-rulings.md` in number order, delete them and rewrite `spec/INDEX.md` (spec-fold.yml, daily).
+    /// Append `spec/pending/<n>.md` to `spec/11-rulings.md` in number order, delete them and rewrite `spec/INDEX.md` and `spec/CARDS.md` (spec-fold.yml, daily).
     Fold,
 }
 
@@ -569,7 +572,7 @@ fn unlinked_markers(path: &str, text: &str) -> Vec<String> {
 /// Rust source with its comments, string literals and char literals blanked out, so a name in a
 /// comment or a string is not a test. Each blanked character reads as a space and line breaks are
 /// kept, so a character's index here is its index in the source and line numbers still hold.
-fn rust_code_only(src: &str) -> String {
+pub(crate) fn rust_code_only(src: &str) -> String {
     let chars: Vec<char> = src.chars().collect();
     let mut out = String::with_capacity(src.len());
     let mut i = 0;
@@ -1172,6 +1175,13 @@ fn wiki_links(text: &str) -> Vec<(usize, String, String)> {
     links
 }
 
+/// The heading a link's inner text names after its `#`, before any `|alias`: `Pools` in
+/// `[[CARDS#Pools|the pools]]`, none in `[[CARDS]]`.
+fn cards_heading(inner: &str) -> Option<&str> {
+    let target = inner.split('|').next().unwrap_or("");
+    target.split_once('#').map(|(_, heading)| heading.trim())
+}
+
 /// A line with its inline code spans (`…`) removed.
 fn without_code_spans(line: &str) -> String {
     let mut out = String::with_capacity(line.len());
@@ -1340,6 +1350,7 @@ fn check(root: &Path) -> Result<()> {
         texts.push((relative(root, file), text));
     }
     let mut links = 0usize;
+    let card_headings = crate::spec_cards::headings();
     for (path, text) in &texts {
         for (line, inner, target) in wiki_links(text) {
             links += 1;
@@ -1347,6 +1358,9 @@ fn check(root: &Path) -> Result<()> {
                 ids.contains_key(&number)
             } else if let Some(section) = target.strip_prefix('§') {
                 sections.contains(section)
+            } else if target == crate::spec_cards::CARDS_STEM {
+                // #3804: the index is the fold's to write, so a link holds to what it would write now.
+                cards_heading(&inner).is_none_or(|heading| card_headings.contains(heading))
             } else {
                 stems.contains(&target)
             };
@@ -1425,6 +1439,11 @@ fn index(root: &Path) -> Result<()> {
     let path = root.join("spec").join("INDEX.md");
     fs::write(&path, out).with_context(|| format!("writing {}", path.display()))?;
     println!("spec index: wrote spec/INDEX.md ({} rulings)", notes.len());
+    // #3804: the cards by keyword, tag and pool, from the catalog this build compiles.
+    let cards = crate::spec_cards::render(root)?;
+    let path = root.join("spec").join(crate::spec_cards::CARDS_NOTE);
+    fs::write(&path, cards).with_context(|| format!("writing {}", path.display()))?;
+    println!("spec index: wrote spec/{}", crate::spec_cards::CARDS_NOTE);
     Ok(())
 }
 
@@ -1696,6 +1715,11 @@ mod tests {
         assert_eq!(
             fs::read_to_string(root.join("spec").join("INDEX.md")).unwrap(),
             render_index(&[note]).unwrap()
+        );
+        // #3804: and the cards by keyword, tag and pool beside it.
+        assert_eq!(
+            fs::read_to_string(root.join("spec").join(crate::spec_cards::CARDS_NOTE)).unwrap(),
+            crate::spec_cards::render(&root).unwrap()
         );
 
         // Nothing pending changes nothing but the index.

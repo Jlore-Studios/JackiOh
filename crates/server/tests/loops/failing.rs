@@ -14,7 +14,7 @@ use jackioh_server::actor::clock::initial_clocks;
 use jackioh_server::api::{queue, results, retention, series};
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
-    CHALLENGE_SWEEP_INTERVAL_SECONDS, LOOP_FAILING_ALERT_MS, LOOP_FAILING_ALERT_PASSES,
+    CHALLENGE_SWEEP_INTERVAL_SECONDS, DAILY_SWEEP_MINUTES, LOOP_FAILING_ALERT_MS, LOOP_FAILING_ALERT_PASSES,
     MATCH_CEILING_MINUTES, MATCH_REAPER_INTERVAL_SECONDS, MATCHMAKER_SWEEP_INTERVAL_SECONDS, MS_PER_SECOND,
     RETENTION_PURGE_INTERVAL_SECONDS, SERIES_SWEEP_INTERVAL_SECONDS,
 };
@@ -80,6 +80,11 @@ fn failing_alerts(logs: &RecordingLogger) -> Vec<String> {
 /// A loop's cadence, from a config constant in seconds, in milliseconds.
 fn ms(seconds: i64) -> i64 {
     seconds * MS_PER_SECOND
+}
+
+/// The daily sweep's cadence, `DAILY_SWEEP_MINUTES`, in milliseconds.
+fn daily_sweep_ms() -> i64 {
+    ms(i64::try_from(DAILY_SWEEP_MINUTES * 60).unwrap_or(i64::MAX))
 }
 
 #[tokio::test(start_paused = true)]
@@ -352,6 +357,13 @@ async fn every_other_sweep_alerts_when_its_store_keeps_failing() {
             first_pass_ms: 0,
             interval_ms: ms(CHALLENGE_SWEEP_INTERVAL_SECONDS),
             spawn: |app| tokio::spawn(jackioh_server::social::challenges::run_sweeper(app)),
+        },
+        Sweep {
+            event: "daily.sweeper.failing",
+            method: "dailyInvites.expire",
+            first_pass_ms: daily_sweep_ms(),
+            interval_ms: daily_sweep_ms(),
+            spawn: |app| tokio::spawn(jackioh_server::daily::notify::run_sweeper(app)),
         },
         Sweep {
             event: "seats.reconcile.failing",

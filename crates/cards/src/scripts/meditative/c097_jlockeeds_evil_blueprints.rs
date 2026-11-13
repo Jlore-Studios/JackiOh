@@ -84,23 +84,6 @@ mod tests {
         state.pending.as_ref().expect("pending prompt is open")
     }
 
-    fn option_ids(state: &GameState) -> Vec<String> {
-        state
-            .pending
-            .as_ref()
-            .map(|pending| {
-                pending
-                    .options
-                    .iter()
-                    .filter_map(|opt| match &opt.selection {
-                        Selection::Mode { option } => Some(option.clone()),
-                        _ => None,
-                    })
-                    .collect()
-            })
-            .unwrap_or_default()
-    }
-
     fn setup(seed: &str, radiant: bool) -> Scenario {
         crate::scenario(json!({
             "seed": seed,
@@ -121,7 +104,7 @@ mod tests {
             let pending = open_pending(s.state());
             assert_eq!(pending.kind, PromptKind::Discover);
             assert_eq!(pending.player_id, P1);
-            let options = option_ids(s.state());
+            let options = s.prompt_modes();
             assert_eq!(options.len(), 3);
 
             let unique: IndexSet<_> = options.iter().collect();
@@ -144,7 +127,7 @@ mod tests {
                 let mut s = setup(&format!("bp-sweep-{n}"), false);
                 s.play(ID, json!({}));
 
-                let options = option_ids(s.state());
+                let options = s.prompt_modes();
                 for opt in options {
                     assert!(
                         BUILDINGS.contains(&opt.as_str()),
@@ -179,7 +162,7 @@ mod tests {
             let mut s = setup("bp-pick-base", false);
             s.play(ID, json!({}));
 
-            let picked = option_ids(s.state())[0].clone();
+            let picked = s.prompt_modes()[0].clone();
             s.answer(json!(picked));
 
             let hand = s.hand(P1);
@@ -205,7 +188,7 @@ mod tests {
             s.play(ID, json!({}));
             assert_eq!(s.hand(P1).len(), 10, "hand is full (10 cards) after play");
 
-            let picked = option_ids(s.state())[0].clone();
+            let picked = s.prompt_modes()[0].clone();
             s.answer(json!(picked));
 
             assert_eq!(s.hand(P1).len(), 10, "hand remains at cap (10)");
@@ -244,7 +227,7 @@ mod tests {
             let mut s = setup("bp-pick-radiant", true);
             s.play(ID, json!({}));
 
-            let picked = option_ids(s.state())[0].clone();
+            let picked = s.prompt_modes()[0].clone();
             s.answer(json!(picked));
 
             let hand = s.hand(P1);

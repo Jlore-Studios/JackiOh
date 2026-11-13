@@ -7,6 +7,8 @@
 //! EFFECT ORDER is load-bearing: `lock` reads the zone where the chosen card sits now and `steal`
 //! MOVES it (R15), so the lock runs FIRST. `destroy` only marks the card (§4.5), so the base order
 //! is not load-bearing. R33's visibility needs no line here: `viewFor` keys it on `controller`.
+//! Any face-down backrow card is a target, a set Cloaked card included (R3777000); a client clicks its
+//! zone (R3777001).
 
 use jackioh_engine::effects::{destroy, lock, steal};
 use jackioh_engine::prelude::*;
@@ -63,6 +65,10 @@ mod tests {
     const SPARE: &str = "core-005";
     /// (1) 4/4 Unit with no text.
     const VANILLA: &str = "core-008";
+    /// C #6 Cloaked Toe Cracker: a (2) Unit with Cloaked, so it may be set face-down as a Trap (§6.1).
+    const CRACKER: &str = "classic-006";
+    /// M #99 Paranoia: a Field Spell whose Aura gives its controller's Spells Cloaked (R1044).
+    const PARANOIA: &str = "meditative-099";
 
     /// Registers the catalog first: the engine's testkit cannot name the cards crate.
     fn scn(opts: Value) -> Scenario {
@@ -79,6 +85,38 @@ mod tests {
         for (key, value) in expected {
             assert_eq!(&actual[key.as_str()], value, "key {key} of {actual}");
         }
+    }
+
+    /// R783004: on p2's turn, p2 sets `def` face-down by its Cloaked in backrow lane 2, beside
+    /// `p2_backrow`; then p1's turn begins with `jammed` in hand. The set card's fresh id (R227).
+    fn set_by_p2(def: &str, p2_backrow: Value, jammed: Value) -> (Scenario, String) {
+        let mut s = scn(json!({
+            "active": "p2",
+            "p1": { "hand": [jammed, SPARE], "library": [SPARE, SPARE] },
+            "p2": { "hand": [def, SPARE], "backrow": p2_backrow, "library": [SPARE, SPARE] },
+        }));
+        s.play(def, json!({ "zone": 2, "row": "backrow", "faceDown": "cloaked" }));
+        let set = s.backrow("p2", 2).expect("the set card in p2's backrow lane 2");
+        assert!(set.set_as.is_some(), "set by its Cloaked");
+        s.end_turn();
+        (s, set.id)
+    }
+
+    /// Whether `legalActions` lists p1's Magic Jammed aimed at `target` alone.
+    fn listed(s: &Scenario, target: &str) -> bool {
+        let jammed = s
+            .hand("p1")
+            .into_iter()
+            .find(|card| card.def_id == MAGIC_JAMMED)
+            .expect("Magic Jammed in p1's hand")
+            .id;
+        let aimed = vec![Selection::Instance {
+            instance_id: target.to_string(),
+        }];
+        s.offered("p1").iter().any(|action| {
+            matches!(action, ActionBody::Play { instance_id, targets: Some(targets), .. }
+                if *instance_id == jammed && *targets == aimed)
+        })
     }
 
     mod magic_jammed {
@@ -128,6 +166,121 @@ mod tests {
             s.expect_refused(|s| s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&unit) })));
 
             s.expect_in_zone(unit.as_str(), "field");
+        }
+
+        /// R3777000: a face-down Trap is a backrow card to target, offered by its bare id (R177).
+        #[test]
+        fn r3777000_base_destroys_an_enemy_face_down_trap_listed_and_locks_its_zone() {
+            let mut s = scn(json!({
+                "p1": { "hand": [MAGIC_JAMMED, SPARE], "library": [SPARE] },
+                "p2": { "backrow": [{ "def": SHEEPISH, "lane": 3 }], "hand": [SPARE], "library": [SPARE] },
+            }));
+            let trap = s.backrow("p2", 3).expect("Sheepish in p2's backrow lane 3");
+            let before = view_json(&s, "p1");
+            assert_eq!(before["opponent"]["backrow"][2], json!({ "faceDown": true, "cost": 1 }));
+            assert!(!before.to_string().contains(SHEEPISH), "R33: p1 reads nothing of it");
+            assert!(listed(&s, &trap.id));
+
+            s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&trap.id) }));
+
+            s.expect_in_zone(&trap, "graveyard");
+            assert!(s.backrow("p2", 3).is_none());
+            assert!(s.state().players.p2.locks.backrow[2]);
+        }
+
+        /// R3777000, R783008: a set Cloaked Unit is a backrow card, no Unit; destroyed unrevealed, it is
+        /// its printed card again in its owner's graveyard.
+        #[test]
+        fn r3777000_base_destroys_a_set_cloaked_unit_which_reaches_the_graveyard_as_its_printed_card() {
+            let (mut s, id) = set_by_p2(CRACKER, json!([]), json!(MAGIC_JAMMED));
+            assert!(listed(&s, &id));
+
+            s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&id) }));
+
+            let dead = s
+                .pile("p2", "graveyard")
+                .into_iter()
+                .find(|card| card.id == id)
+                .expect("the set Toe Cracker in p2's graveyard");
+            assert_eq!(dead.def_id, CRACKER);
+            assert_eq!(dead.set_as, None);
+            assert!(s.backrow("p2", 2).is_none());
+            assert!(s.state().players.p2.locks.backrow[1]);
+        }
+
+        /// R3777000: Radiant steals a set Cloaked card as the set card it is, and its owner stops reading it.
+        #[test]
+        fn r3777000_radiant_steals_a_set_cloaked_unit_still_set_and_locks_its_original_zone() {
+            let (mut s, id) = set_by_p2(CRACKER, json!([]), json!({ "def": MAGIC_JAMMED, "radiant": true }));
+            assert!(listed(&s, &id));
+
+            s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&id) }));
+
+            assert_eq!(s.backrow("p1", 2).map(|card| card.id), Some(id.clone()));
+            let stolen = s.card(id.as_str()).clone();
+            assert_eq!(stolen.set_as.map(|set| set.reveal), Some(RevealAt::Cloaked));
+            assert_eq!(stolen.controller, PlayerId::P1);
+            assert_eq!(stolen.owner, PlayerId::P2);
+            assert!(s.state().players.p2.locks.backrow[1]);
+            let owners = view_json(&s, "p2")["opponent"]["backrow"][1].clone();
+            assert_eq!(owners["faceDown"], true);
+            assert!(owners.get("defId").is_none(), "{owners}");
+        }
+
+        /// R3777000: a Spell set by a lent Cloaked (M #99 Paranoia, R1044) is a backrow card too.
+        #[test]
+        fn r3777000_a_set_cloaked_spell_is_a_backrow_card_too() {
+            let (mut s, id) = set_by_p2(SPARE, json!([{ "def": PARANOIA, "lane": 5 }]), json!(MAGIC_JAMMED));
+            assert_eq!(s.card(id.as_str()).def_id, SPARE);
+            assert!(listed(&s, &id));
+
+            s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&id) }));
+
+            assert!(
+                s.pile("p2", "graveyard")
+                    .iter()
+                    .any(|card| card.id == id && card.def_id == SPARE && card.set_as.is_none())
+            );
+            assert!(s.state().players.p2.locks.backrow[1]);
+        }
+
+        /// R3777000, R783006: revealed, a Cloaked Unit stands in a unit zone and is no backrow card.
+        #[test]
+        fn r3777000_a_cloaked_unit_revealed_into_a_unit_zone_is_no_backrow_target() {
+            let mut s = scn(json!({
+                "active": "p2",
+                "p1": { "hand": [MAGIC_JAMMED, SPARE], "library": [SPARE, SPARE] },
+                "p2": { "hand": [CRACKER, SPARE], "library": [SPARE, SPARE] },
+            }));
+            s.play(CRACKER, json!({ "zone": 2, "row": "backrow", "faceDown": "cloaked" }));
+            let id = s.backrow("p2", 2).expect("the set Toe Cracker").id;
+            s.activate(id.as_str(), json!({ "ability": jackioh_engine::alt_play::CLOAKED_REVEAL }));
+            assert_eq!(s.unit("p2", 2).map(|unit| unit.id), Some(id.clone()));
+            s.end_turn();
+
+            assert!(!listed(&s, &id));
+            s.expect_refused(|s| s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&id) })));
+            assert_eq!(s.unit("p2", 2).map(|unit| unit.id), Some(id));
+        }
+
+        /// R3777001: the targeter's view names the zone of the set card its play may target, by the id
+        /// `legalActions` offers, and nothing else of it (R33, R177); no other view names it.
+        #[test]
+        fn r3777001_the_targeter_s_view_names_the_set_card_s_zone_and_nothing_of_it() {
+            let (mut s, id) = set_by_p2(CRACKER, json!([]), json!(MAGIC_JAMMED));
+
+            let view = view_json(&s, "p1");
+            assert_eq!(view["opponent"]["backrow"][1], json!({ "faceDown": true, "cost": 2 }));
+            assert_eq!(
+                view["hiddenTargets"],
+                json!([{ "instanceId": id, "zone": { "player": "p2", "row": "backrow", "lane": 2 } }])
+            );
+            assert!(!view.to_string().contains(CRACKER), "R33: p1 reads nothing of it");
+            assert!(view_json(&s, "p2").get("hiddenTargets").is_none());
+
+            s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&id) }));
+
+            assert!(view_json(&s, "p1").get("hiddenTargets").is_none());
         }
 
         #[test]

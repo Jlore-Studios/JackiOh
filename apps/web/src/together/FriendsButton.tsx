@@ -39,7 +39,7 @@ import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { ChallengeDialog } from "./ChallengeDialog.tsx";
 import { ChatPanel } from "./ChatPanel.tsx";
 import { FRIENDS_POLL_MS } from "./config.ts";
-import { AddFriend, FriendRow, RequestRow } from "./FriendRows.tsx";
+import { AddFriend, FriendRow, RequestRow, liveRefusalOf, type Challenging } from "./FriendRows.tsx";
 import { usePolled } from "./session.ts";
 import { friendsBadgeCount, noteFriends, onFriendsPush, reloadSocial, useSocialReads } from "./socialPoll.ts";
 import { friendsTestid, togetherTestid } from "./testids.ts";
@@ -89,7 +89,7 @@ function FriendsPanel({
   unread: Readonly<Record<string, number>>;
   onClose: () => void;
   onChat: (friend: PlayerRef) => void;
-  onChallenge: (friend: PlayerRef) => void;
+  onChallenge: (friend: Challenging) => void;
 }): ReactElement {
   useLocale();
   const [friends, reloadFriends] = usePolled(getFriends, FRIENDS_POLL_MS, cachedFriends);
@@ -221,7 +221,7 @@ function FriendsPanel({
               busy={busy}
               challengeRefusal={challengeRefusal}
               onChallenge={() => {
-                onChallenge({ profileId: friend.profileId, username: friend.username });
+                onChallenge({ profileId: friend.profileId, username: friend.username, liveRefusal: liveRefusalOf(friend, challengeRefusal) });
               }}
               onChat={() => {
                 onChat({ profileId: friend.profileId, username: friend.username });
@@ -273,7 +273,7 @@ export function FriendsButton({ placement, fallback = null }: FriendsButtonProps
   const button = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [chatWith, setChatWith] = useState<PlayerRef | null>(null);
-  const [challenging, setChallenging] = useState<PlayerRef | null>(null);
+  const [challenging, setChallenging] = useState<Challenging | null>(null);
 
   /** Gives the focus back to the button, as a modal should leave it (WAI-ARIA APG; `SettingsButton.tsx`). */
   const refocus = useCallback((): void => {
@@ -364,7 +364,7 @@ export function FriendsButton({ placement, fallback = null }: FriendsButtonProps
                 />
               ) : null}
               {chatWith === null ? null : <ChatPanel key={chatWith.profileId} friend={chatWith} onClose={closeChat} />}
-              {challenging === null ? null : <ChallengeDialog friend={challenging} onClose={closeChallenge} onSent={sentChallenge} />}
+              {challenging === null ? null : <ChallengeDialog friend={challenging} liveRefusal={challenging.liveRefusal} onClose={closeChallenge} onSent={sentChallenge} />}
             </div>,
             document.body,
           )
