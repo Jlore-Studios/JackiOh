@@ -16587,6 +16587,8 @@
     "3885": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "6dcd69fea799ed04969159e8eabe7813fd7c6638",
+      "ci_fixes": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-13T20:09:01Z",
