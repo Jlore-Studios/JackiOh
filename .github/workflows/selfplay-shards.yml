@@ -14,14 +14,14 @@
 # go and files nothing, as a dispatched export does.
 #
 # On GitHub's runners (the learn lane's since #3740) the export is one round, at most 10 shards at
-# once. A shard of 2,500 games, a 100,000-game export's fortieth, takes about 3 hours on four vCPUs
-# at the AI's budget since #2628 (about 870 games an hour, estimated from the PC's 670 on a four-CPU
-# half; one of 5,000 would pass GitHub's 6-hour job limit), so the export takes about 12 hours. On
+# once. A shard of 1,250 games, a 100,000-game export's eightieth, takes about 3 hours on four vCPUs
+# at the AI's budget since #2628 (about 400 games an hour, measured by gather run 72 on 2026-11-12;
+# one of 2,500 would pass GitHub's 6-hour job limit), so the export takes about a day. On
 # the local runner a round holds a fifth of the shards, played two at a time, one on each half of
 # the PC (#3722), and selfplay.yml starts a round only once the one before it has ended: GitHub fails
 # a job no self-hosted runner takes in 24 hours, and does not say whether a shard held back by
 # `max-parallel` is waiting all that time, so no shard is made to wait longer than its own round
-# takes. A shard of 2,500 games takes about 3.7 hours on a half, so a round of eight takes about 15
+# takes. A shard of 1,250 games takes about 1.9 hours on a half, so a round of 16 takes about 15
 # hours of an idle PC, and the export about three days.
 name: selfplay shards
 

@@ -1,5 +1,7 @@
-//! Heroic Power (SPEC §8 #98, R43, R103, R352, R752–R761): the thirteen powers, the roll that picks
-//! one, and each power as the Activate ability it is.
+//! Heroic Power (SPEC §8 #98, R43, R103, R352, R752–R761, R3551002): the fourteen powers, the roll
+//! that picks one, and each power as the Activate ability it is. The kept v0.5.13g script plays the
+//! thirteen (`PowerEdition::Thirteen`); the new face adds End Times and prices each of the thirteen
+//! (1) less (`PowerEdition::EndTimes`).
 //!
 //! R43 puts everything about the card on its instance (`memory.power`), so two Heroic Powers in one
 //! game never share a roll or a use and a serialized game resumes knowing both (§10.1). The roll goes
@@ -23,8 +25,9 @@ use indexmap::IndexMap;
 
 use crate::config::{
     ARMOR_UP_ARMOR, BRAINSTORM_DISCOUNT, DIE_INSECT_DAMAGE, DIE_INSECT_LUCKY, DISCOVER_OPTIONS,
-    LIFE_TAP_DAMAGE, LIFE_TAP_DRAW, PING_DAMAGE, PLUCK_COST, STEADY_SHOT_RAISE, STITCHING_INGREDIENTS,
-    STITCHING_MAX_COST, TANK_UP_ARMOR,
+    END_TIMES_COST, END_TIMES_CUT, END_TIMES_RADIANT_CUT, HERO_POWER_DISCOUNT, LIFE_TAP_DAMAGE,
+    LIFE_TAP_DRAW, PING_DAMAGE, PLUCK_COST, POWERS_THROUGH_V0_5_13G, STEADY_SHOT_RAISE,
+    STITCHING_INGREDIENTS, STITCHING_MAX_COST, TANK_UP_ARMOR,
 };
 use crate::damage::DamageTarget;
 use crate::effects::TargetSpec;
@@ -122,6 +125,7 @@ pub enum HeroPowerName {
     Brainstorm,
     Pluck,
     Tricks,
+    EndTimes,
 }
 
 impl HeroPowerName {
@@ -140,6 +144,7 @@ impl HeroPowerName {
         HeroPowerName::Brainstorm,
         HeroPowerName::Pluck,
         HeroPowerName::Tricks,
+        HeroPowerName::EndTimes,
     ];
 
     /// The stored name (the Activate ability's id).
@@ -158,6 +163,7 @@ impl HeroPowerName {
             HeroPowerName::Brainstorm => "brainstorm",
             HeroPowerName::Pluck => "pluck",
             HeroPowerName::Tricks => "tricks",
+            HeroPowerName::EndTimes => "endTimes",
         }
     }
 }
@@ -179,6 +185,9 @@ pub struct HeroPower {
     pub radiant_title: &'static str,
     /// "Activate: Spend (X)" (R752): the mana each use pays.
     pub x: i32,
+    /// R3551002: the declared number the X is read off when the power's price moves (End Times'
+    /// `endTimes`); `None` while the price is the table's `x` alone.
+    pub x_param: Option<&'static str>,
     /// The §8 #98 words this entry implements, base face and Radiant face.
     pub label: &'static str,
     pub radiant_label: &'static str,
@@ -194,6 +203,7 @@ impl std::fmt::Debug for HeroPower {
             .field("title", &self.title)
             .field("radiant_title", &self.radiant_title)
             .field("x", &self.x)
+            .field("x_param", &self.x_param)
             .field("label", &self.label)
             .field("radiant_label", &self.radiant_label)
             .field("targets", &self.targets.is_some())
@@ -389,13 +399,16 @@ fn write_memory(ctx: &mut EffectContext<'_>, id: &str, key: &str, value: Value) 
 
 /// R757: the power rerolls among the other twelve (the match rng) and gives back the use this
 /// activation spent, so the new power may be activated this turn too, paying its own X.
+/// R3551002: the card's edition picks the roll (Tank Up's refresh never lands on End Times).
 pub fn refresh_power() -> Effect {
     Effect::new("refreshPower", |ctx| {
         let Some(mut card) = ctx.live_self().cloned() else {
             return;
         };
         let current = power_of(&card).map(|power| power.name);
-        let others: Vec<&'static HeroPower> = HERO_POWERS
+        let edition = edition_of(&*ctx.sink.state, &card);
+        let others: Vec<&'static HeroPower> = edition
+            .powers()
             .iter()
             .filter(|power| Some(power.name) != current)
             .collect();
@@ -570,13 +583,100 @@ fn terminus_tricks(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     })))]
 }
 
+/// R3551002: End Times (S01's fourteenth power): "Discover a Terminus card." Its answer is the
+/// named `defId`, never Radiant on either face; with no answer (no such card) nothing happens.
+/// `end_times_reset` runs first, so a use takes back what the ends of turn took off.
+fn end_times(ctx: &mut EffectContext<'_>, _radiant: bool) -> Vec<Effect> {
+    if let Some(picked) = crate::effects::chosen_options(ctx).first().cloned() {
+        return vec![crate::effects::add_to_hand(json_as(json!({
+            "defId": picked,
+            "player": "self"
+        })))];
+    }
+    vec![
+        end_times_reset(),
+        crate::effects::discover_from_catalog(json_as(json!({
+            "step": POWER_RESUME,
+            "query": { "tags": ["Terminus"], "withTokens": true },
+            "prompt": END_TIMES_PROMPT,
+            "data": { POWER_DATA_KEY: "endTimes" }
+        }))),
+    ]
+}
+
+/// R3551002: End Times' End of Turn, on its controller's end of turn alone (the hook's): it takes
+/// the face's cut (1, Radiant 2) off the next use's price, never below 0, and banks what it took in
+/// `END_TIMES_TAKEN_KEY` so the use takes it back. With any other power, nothing.
+pub fn end_times_tick() -> Effect {
+    Effect::new("endTimesTick", |ctx| {
+        let Some(card) = ctx.live_self().cloned() else {
+            return;
+        };
+        if power_of(&card).map(|power| power.name) != Some(HeroPowerName::EndTimes) {
+            return;
+        }
+        let price =
+            crate::params::declared_or(&*ctx.sink.state, &card, END_TIMES_PRICE_PARAM, END_TIMES_COST);
+        let printed_cut = if ctx.radiant {
+            END_TIMES_RADIANT_CUT
+        } else {
+            END_TIMES_CUT
+        };
+        let cut = power_number(ctx, END_TIMES_CUT_PARAM, printed_cut);
+        let step = cut.min(price).max(0);
+        if step <= 0 {
+            return;
+        }
+        let lower = crate::effects::set_number(json_as(json!({
+            "target": { "of": "self" },
+            "which": format!("param:{END_TIMES_PRICE_PARAM}"),
+            "value": price - step
+        })));
+        (lower.apply)(ctx);
+        let taken = card
+            .memory
+            .get(END_TIMES_TAKEN_KEY)
+            .and_then(Value::as_i64)
+            .unwrap_or(0) as i32;
+        write_memory(ctx, &card.id, END_TIMES_TAKEN_KEY, json!(taken + step));
+    })
+}
+
+/// R3551002: give back what the ends of turn took off, so a used End Times costs (10) again: the
+/// price moves back up by the banked `END_TIMES_TAKEN_KEY`, banked to 0.
+fn end_times_reset() -> Effect {
+    Effect::new("endTimesReset", |ctx| {
+        let Some(card) = ctx.live_self().cloned() else {
+            return;
+        };
+        let taken = card
+            .memory
+            .get(END_TIMES_TAKEN_KEY)
+            .and_then(Value::as_i64)
+            .unwrap_or(0) as i32;
+        if taken <= 0 {
+            return;
+        }
+        let price =
+            crate::params::declared_or(&*ctx.sink.state, &card, END_TIMES_PRICE_PARAM, END_TIMES_COST);
+        let back = crate::effects::set_number(json_as(json!({
+            "target": { "of": "self" },
+            "which": format!("param:{END_TIMES_PRICE_PARAM}"),
+            "value": price + taken
+        })));
+        (back.apply)(ctx);
+        write_memory(ctx, &card.id, END_TIMES_TAKEN_KEY, json!(0));
+    })
+}
+
 /// The thirteen powers of §8 #98 (R752), in R103's stored order.
 pub const HERO_POWERS: &[HeroPower] = &[
     HeroPower {
         name: HeroPowerName::Recruit,
         title: "Expedition Map",
         radiant_title: "Expedition Map",
-        x: 3,
+        x: 2,
+        x_param: None,
         label: "Recruit a permanent.",
         radiant_label: "Recruit a permanent. Make it Radiant.",
         targets: None,
@@ -586,7 +686,8 @@ pub const HERO_POWERS: &[HeroPower] = &[
         name: HeroPowerName::Draw,
         title: "Life Tap",
         radiant_title: "Life Tap",
-        x: 1,
+        x: 0,
+        x_param: None,
         label: "Draw {tapDraw}. Take {tapDamage} damage.",
         radiant_label: "Draw {tapDraw} from each player's deck.",
         targets: None,
@@ -596,7 +697,8 @@ pub const HERO_POWERS: &[HeroPower] = &[
         name: HeroPowerName::Ping,
         title: "Ping",
         radiant_title: "Ping",
-        x: 1,
+        x: 0,
+        x_param: None,
         label: "Pierce. Deal {ping} damage.",
         radiant_label: "Pierce. Deal {ping} damage. If this kills a Unit, summon a Ghoul Token with its stats.",
         targets: Some(ping_targets),
@@ -606,7 +708,8 @@ pub const HERO_POWERS: &[HeroPower] = &[
         name: HeroPowerName::Burn,
         title: "Steady Shot",
         radiant_title: "Steady Shot",
-        x: 1,
+        x: 0,
+        x_param: None,
         label: "Deal {shot} damage to the enemy hero.",
         radiant_label: "Deal {shot} damage to the enemy hero. This permanently deals 2 more damage.",
         targets: None,
@@ -616,7 +719,8 @@ pub const HERO_POWERS: &[HeroPower] = &[
         name: HeroPowerName::Rush,
         title: "Ranching",
         radiant_title: "Ranching",
-        x: 2,
+        x: 1,
+        x_param: None,
         label: "Summon a Rush Token.",
         radiant_label: "Summon a Radiant Rush Token.",
         targets: None,
@@ -626,7 +730,8 @@ pub const HERO_POWERS: &[HeroPower] = &[
         name: HeroPowerName::Felinor,
         title: "Cat Cafe",
         radiant_title: "Cat Cafe",
-        x: 1,
+        x: 0,
+        x_param: None,
         label: "Summon a Felinor Token.",
         radiant_label: "Summon a random Felinor.",
         targets: None,
@@ -636,7 +741,8 @@ pub const HERO_POWERS: &[HeroPower] = &[
         name: HeroPowerName::Discover,
         title: "Witness Value",
         radiant_title: "Witness Value",
-        x: 2,
+        x: 1,
+        x_param: None,
         label: "Discover a Unit.",
         radiant_label: "Discover a Radiant Unit.",
         targets: None,
@@ -646,7 +752,8 @@ pub const HERO_POWERS: &[HeroPower] = &[
         name: HeroPowerName::Stitching,
         title: "Stitching",
         radiant_title: "Stitching",
-        x: 2,
+        x: 1,
+        x_param: None,
         label: "Discover two ({stitchCost}) Cost or less Units. Fuse them.",
         radiant_label: "Discover two Radiant ({stitchCost}) Cost or less Units. Fuse them.",
         targets: None,
@@ -656,7 +763,8 @@ pub const HERO_POWERS: &[HeroPower] = &[
         name: HeroPowerName::Armor,
         title: "Armor Up",
         radiant_title: "Tank Up",
-        x: 1,
+        x: 0,
+        x_param: None,
         label: "Your hero gains {armor} Armor until your next turn.",
         radiant_label: "Your hero gains {armor} Armor, then this power refreshes.",
         targets: None,
@@ -666,7 +774,8 @@ pub const HERO_POWERS: &[HeroPower] = &[
         name: HeroPowerName::Insect,
         title: "Die Insect",
         radiant_title: "Die Insect",
-        x: 2,
+        x: 1,
+        x_param: None,
         label: "Deal {insect} damage to a random enemy.",
         radiant_label: "Lucky 1. Deal {insect} damage to a random enemy.",
         targets: None,
@@ -676,7 +785,8 @@ pub const HERO_POWERS: &[HeroPower] = &[
         name: HeroPowerName::Brainstorm,
         title: "KY Brainstorm",
         radiant_title: "KY Brainstorm",
-        x: 2,
+        x: 1,
+        x_param: None,
         label: "Add a random KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).",
         radiant_label: "Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).",
         targets: None,
@@ -686,7 +796,8 @@ pub const HERO_POWERS: &[HeroPower] = &[
         name: HeroPowerName::Pluck,
         title: "Pluck",
         radiant_title: "Pluck",
-        x: 2,
+        x: 1,
+        x_param: None,
         label: "Add a random Fruit to your hand. It costs ({fruitCost}).",
         radiant_label: "Add a random Radiant Fruit to your hand. It costs ({fruitCost}).",
         targets: None,
@@ -696,13 +807,92 @@ pub const HERO_POWERS: &[HeroPower] = &[
         name: HeroPowerName::Tricks,
         title: "Terminus Tricks",
         radiant_title: "Terminus Tricks",
-        x: 3,
+        x: 2,
+        x_param: None,
         label: "Discover a Trap to summon.",
         radiant_label: "Discover a Radiant Trap to summon.",
         targets: None,
         build: terminus_tricks,
     },
+    HeroPower {
+        name: HeroPowerName::EndTimes,
+        title: "End Times",
+        radiant_title: "End Times",
+        x: END_TIMES_COST,
+        x_param: Some(END_TIMES_PRICE_PARAM),
+        label: "Discover a Terminus card. Each end of turn, reduce the cost of the next use of this by ({endTimesCut}).",
+        radiant_label: "Discover a Terminus card. Each end of turn, reduce the cost of the next use of this by ({endTimesCut}).",
+        targets: None,
+        build: end_times,
+    },
 ];
+
+/// R3551002: the declared number End Times' price is read off (`power: "endTimes"`, R1430), and
+/// the number its End of Turn takes off, (1) on the base face and (2) on the Radiant one.
+pub const END_TIMES_PRICE_PARAM: &str = "endTimes";
+pub const END_TIMES_CUT_PARAM: &str = "endTimesCut";
+
+/// R3551002: where the cuts taken so far wait while End Times sits unused, so its activation takes
+/// them back.
+pub const END_TIMES_TAKEN_KEY: &str = "endTimesTaken";
+
+/// R3551002: what End Times Discovers.
+pub const END_TIMES_PROMPT: &str = "Discover a Terminus card";
+
+/// R3551002: the thirteen powers v0.5.13g and the versions before it offered, without End Times;
+/// `THIRTEEN_POWER_NAMES` the same over the stored names.
+pub const THIRTEEN_POWERS: &[HeroPower] = HERO_POWERS.split_at(POWERS_THROUGH_V0_5_13G).0;
+pub const THIRTEEN_POWER_NAMES: &[HeroPowerName] = HeroPowerName::ALL.split_at(POWERS_THROUGH_V0_5_13G).0;
+
+/// R3551002: which Heroic Power the card plays (S01): `EndTimes` for the new face, `Thirteen` for
+/// the kept v0.5.13g script's. The script's declarations pick it, never a new `ActivationCost` field.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PowerEdition {
+    Thirteen,
+    EndTimes,
+}
+
+impl PowerEdition {
+    /// The powers the edition offers, and the price each use pays (`HERO_POWER_DISCOUNT` off the
+    /// thirteen for the new face; EndTimes' own X moves as its ends of turn take off it).
+    pub fn powers(self) -> &'static [HeroPower] {
+        match self {
+            PowerEdition::Thirteen => THIRTEEN_POWERS,
+            PowerEdition::EndTimes => HERO_POWERS,
+        }
+    }
+
+    /// The stored names the edition may roll or offer.
+    pub fn names(self) -> &'static [HeroPowerName] {
+        match self {
+            PowerEdition::Thirteen => THIRTEEN_POWER_NAMES,
+            PowerEdition::EndTimes => HeroPowerName::ALL,
+        }
+    }
+
+    /// The mana one use of `power` pays under this edition.
+    pub fn price(self, power: &HeroPower) -> i32 {
+        match self {
+            PowerEdition::Thirteen => power.x + HERO_POWER_DISCOUNT,
+            PowerEdition::EndTimes => power.x,
+        }
+    }
+}
+
+/// R3551002: the edition the card plays: End Times if and only if its running script declares the
+/// `endTimes` ability. `abilities_of` is not read: its `has` filter hides that id.
+pub fn edition_of(state: &GameState, card: &CardInstance) -> PowerEdition {
+    let script = crate::scripts::script_of(state, card);
+    let end_times = script
+        .activations
+        .iter()
+        .any(|decl| decl.id.split('#').next() == Some(HeroPowerName::EndTimes.as_str()));
+    if end_times {
+        PowerEdition::EndTimes
+    } else {
+        PowerEdition::Thirteen
+    }
+}
 
 /// The stored names in the table's order.
 pub const HERO_POWER_NAMES: &[HeroPowerName] = HeroPowerName::ALL;
@@ -729,11 +919,13 @@ pub fn power_title_of(power: &HeroPower, radiant: bool) -> &'static str {
 
 /// R43's roll, idempotent: #98 calls it from `startOfGame` for every copy in a hand or library (§6.2)
 /// and again whenever a copy arrives without a power (a bounced or reset instance, R78, R151).
+/// R3551002: the card's edition picks the roll (End Times joins the new face's roll alone).
 pub fn ensure_power(sink: &mut EngineSink<'_>, instance: &mut CardInstance) -> Option<&'static HeroPower> {
     if let Some(existing) = power_of(instance) {
         return Some(existing);
     }
-    let rolled = sink.rng.pick(HERO_POWERS)?;
+    let edition = edition_of(&*sink.state, instance);
+    let rolled = sink.rng.pick(edition.powers())?;
     instance
         .memory
         .insert(POWER_KEY.to_string(), json!(rolled.name.as_str()));
@@ -771,13 +963,18 @@ pub fn set_power(name: HeroPowerName) -> Effect {
 /// without replacement from the thirteen through the match rng (R60), each named by its title on the
 /// card's face (Tank Up for Armor Up on the Radiant one, R757). Its answer re-enters `hero_power` at
 /// `POWER_RESUME` and becomes the card's power. Only its controller reads the offer (§10.6).
+/// R3551002: the card's edition picks the offer (End Times joins the new face's Cry alone).
 pub fn discover_power() -> Effect {
     Effect::new("discoverPower", |ctx| {
         let radiant = ctx.radiant;
+        let edition = ctx
+            .live_self()
+            .map(|card| edition_of(&*ctx.sink.state, card))
+            .unwrap_or(PowerEdition::Thirteen);
         let offered: Vec<&'static HeroPower> = ctx
             .sink
             .rng
-            .shuffle(HERO_POWER_NAMES)
+            .shuffle(edition.names())
             .into_iter()
             .take(DISCOVER_OPTIONS.max(0) as usize)
             .filter_map(|name| power_by_name(name.as_str()))
@@ -822,11 +1019,13 @@ pub fn roll_power_on_field() -> Effect {
     })
 }
 
-/// R752: the thirteen Activate abilities on the face `radiant` names, each paying its power's X,
-/// declaring its targets (R81) and the card's only while it rolled that power (`has`). The id is the
-/// stored name (R103), so a fused card's ids (R102), a resumed tail and the alias name the same power.
-pub fn power_abilities(radiant: bool) -> Vec<ActivationDecl> {
-    HERO_POWERS
+/// R752: the edition's Activate abilities on the face `radiant` names, each paying its edition
+/// price (R3551002), declaring its targets (R81) and the card's only while it rolled that power
+/// (`has`). The id is the stored name (R103), so a fused card's ids (R102), a resumed tail and the
+/// alias name the same power.
+pub fn power_abilities(radiant: bool, edition: PowerEdition) -> Vec<ActivationDecl> {
+    edition
+        .powers()
         .iter()
         .map(|power: &'static HeroPower| {
             let name = power.name.as_str();
@@ -839,7 +1038,8 @@ pub fn power_abilities(radiant: bool) -> Vec<ActivationDecl> {
                 ),
                 uses: ActivationUses::Count(1),
                 cost: Some(ActivationCost {
-                    mana: Some(power.x),
+                    mana: Some(edition.price(power)),
+                    mana_param: power.x_param,
                     ..ActivationCost::default()
                 }),
                 targets: power.targets.map(|targets| targets()).unwrap_or_default(),
@@ -882,6 +1082,14 @@ pub fn power_ability_of(state: &GameState, card: &CardInstance) -> Option<Activa
     abilities_of(state, card)
         .into_iter()
         .find(|decl| decl.id.split('#').next() == Some(power.name.as_str()))
+}
+
+/// R3551002: the mana the card's power costs to use now: the declared `endTimes` moved by its ends
+/// of turn, or the edition's price of any other power.
+pub fn power_price(state: &GameState, card: &CardInstance) -> Option<i32> {
+    let decl = power_ability_of(state, card)?;
+    decl.cost
+        .map(|cost| super::activate::mana_price(state, card, cost))
 }
 
 /// R752: whether the card's power has spent this turn's uses (Activate's count, R384).

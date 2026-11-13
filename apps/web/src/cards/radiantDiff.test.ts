@@ -116,7 +116,9 @@ describe("R277 the word diff", () => {
     // (R1021), Classic #29 Book of Vital Kill's, Meditative+ #11, #12 and #13's Living potions (less the Tribute they
     // activate with) and Stinkyscape #9 Ticketed's (less Brittle 3, R1857000). #149 Wildar's is marked (#2657): its
     // Radiant face keeps the opponent's Call to Chaos and makes its own cost (0) too. Core #79 Twinspell's is its base
-    // text less "Then this goes to the graveyard.", so it stays on the field to serve each turn (R3044000).
+    // text less "Then this goes to the graveyard.", so it stays on the field to serve each turn (R3044000). Stinkyscape+
+    // (§8.12) adds four of the designer's: #31 Soul Read's (less the Tribute when another seen card comes first), #72
+    // Foreshadow's and #73 Ripple's (less Can't attack) and #85 Body Snatch's (less "in Defense Position").
     expect(silent).toEqual([
       "core-055",
       "core-079",
@@ -132,6 +134,10 @@ describe("R277 the word diff", () => {
       "meditativeplus-012",
       "meditativeplus-013",
       "stinkyscape-009",
+      "stinkyscapeplus-031",
+      "stinkyscapeplus-072",
+      "stinkyscapeplus-073",
+      "stinkyscapeplus-085",
     ]);
   });
 });

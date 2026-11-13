@@ -14,7 +14,7 @@ use std::collections::BTreeSet;
 use jackioh_engine::effects;
 use jackioh_engine::subsystems::activate::{activate_ability, why_cannot_activate_ability};
 use jackioh_engine::subsystems::fuse::fuse;
-use jackioh_engine::subsystems::hero_power::{ensure_power, power_abilities, power_of};
+use jackioh_engine::subsystems::hero_power::{PowerEdition, ensure_power, power_abilities, power_of};
 use jackioh_engine::subsystems::{
     AI_SKIPPED_ACTIONS, PolicyOptions, choose_action, is_lethal, policy_actions, projected_damage,
 };
@@ -421,7 +421,7 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts.insert(
         HEROIC.into(),
         both(Script {
-            activations: power_abilities(false),
+            activations: power_abilities(false, PowerEdition::Thirteen),
             ..Script::default()
         }),
     );
@@ -835,7 +835,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
             live.memory.insert("power".to_string(), json!("recruit"));
         });
         let recruiting = instance_in(sink.state, &card.id);
-        assert_eq!(power_of(&recruiting).map(|power| power.x), Some(3));
+        assert_eq!(power_of(&recruiting).map(|power| power.x), Some(2));
         assert_eq!(effective_cost(sink.state, &recruiting, Default::default()), 0);
 
         // Expedition Map's "Recruit a permanent": the Spell on top of the library is skipped.

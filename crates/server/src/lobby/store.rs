@@ -1,4 +1,4 @@
-//! The private lobbies' store (SPEC §9.5, §13.9; migration 0088; R3730000 to R3730004; issue #3730):
+//! The private lobbies' store (SPEC §9.5, §13.9; migration 0089; R3730000 to R3730004; issue #3730):
 //! `public.lobbies` over Postgres (`pg` below) or the in-memory fake (`fake` below, whose rows are
 //! `FakeTables::lobbies`).
 //!
@@ -128,7 +128,7 @@ impl Tx<'_> {
     }
 }
 
-/// Migration 0088: a deleted profile takes the lobbies it hosts or sits in (`on delete cascade`).
+/// Migration 0089: a deleted profile takes the lobbies it hosts or sits in (`on delete cascade`).
 pub fn remove_lobby_rows(lobbies: &mut Vec<Lobby>, profile_id: &str) {
     lobbies.retain(|lobby| lobby.host != profile_id && lobby.guest.as_deref() != Some(profile_id));
 }

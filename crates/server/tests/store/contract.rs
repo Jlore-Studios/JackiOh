@@ -9338,7 +9338,7 @@ mod duos {
     );
 }
 
-// Private lobbies (SPEC §9.5, §13.9; migration 0088; issue #3730)
+// Private lobbies (SPEC §9.5, §13.9; migration 0089; issue #3730)
 
 mod lobbies {
     use super::*;
@@ -9475,7 +9475,7 @@ mod lobbies {
         assert_eq!(q!(harness, t => t.lobbies_get("LOBBCC")), None);
     }
 
-    /// Migration 0088: a deleted profile takes the lobbies it hosts or sits in.
+    /// Migration 0089: a deleted profile takes the lobbies it hosts or sits in.
     async fn r3730000_a_deleted_profile_takes_its_lobbies(harness: &StoreHarness) {
         let host = active_profile(harness, None).await;
         let guest = active_profile(harness, None).await;

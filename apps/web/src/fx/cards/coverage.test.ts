@@ -16,12 +16,15 @@ import { FX_COVERAGE_FLOOR } from "../constants.ts";
 /** The catalog's non-token cards, in catalog order. */
 const CARDS = Object.keys(CATALOG).filter((id) => CATALOG[id]?.token !== true);
 
+/** The census `CARDS` holds: 634 before Stinkyscape+ shipped its 166 (#3596). */
+const NON_TOKEN_CARDS = 800;
+
 /** A Spell part's own moments are the Starship's, not the card's: its entry stays `none` (R2801000). */
 const STARSHIP_PART_NONE = "none: Starship part";
 
 describe("R2803000 the audit's coverage", () => {
   it("R2803000 at least half of non-token cards animate", () => {
-    expect(CARDS).toHaveLength(634);
+    expect(CARDS).toHaveLength(NON_TOKEN_CARDS);
     expect(FX_CARD_TABLE.size).toBe(Object.keys(CATALOG).length);
     const drawn = CARDS.filter((id) => entryOf(id).kind !== "none");
     expect(drawn.length).toBeGreaterThanOrEqual(Math.ceil(FX_COVERAGE_FLOOR * CARDS.length));
@@ -58,6 +61,7 @@ describe("R2803000 the audit's coverage", () => {
     // R3405001: Meditative's eight signature Field Spells with a recipe (The Cane's is its entrance alone).
     // R3399000: and Classic+'s Claude's Datacenter (its three token Field Spells are no card of the census).
     // R3395000: and Stinkyscape's three, The Greatest Heist, Rod of Ages and The Narcor Project.
+    // Stinkyscape+'s (#3596) wear hooks beside their auras, so none of them is a recipe.
     expect(recipes).toEqual([
     "core-093",
     "core-098",

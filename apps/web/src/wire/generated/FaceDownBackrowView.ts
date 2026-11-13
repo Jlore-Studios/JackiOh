@@ -29,4 +29,9 @@ buried?: number,
  * R437: the marks the face-down card carries — an effect aimed at it that waits (#50's
  * pending steal) — which the player who may not read it sees on its back (R33).
  */
-marks?: Array<CardMark>, };
+marks?: Array<CardMark>, 
+/**
+ * R3546004: fills four zones from here, the three others empty in the view; public,
+ * face-down too. Only ever `Some(true)`.
+ */
+giga?: true, };

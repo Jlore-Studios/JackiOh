@@ -61,7 +61,8 @@ Specs 46, 47 and 51, and 38's block on the menus' shell, run the menus at each o
 (`support/config.ts`), issue #3728's device sizes from a 1440x900 desktop to a 390x844 phone (R3728000).
 47 measures the board at BUILD M5-T1's phone alone, and over 600 px emulates touch, as an iPad is held.
 `node scripts/shard-specs.mjs --component <k> <K>` splits the component specs the same way, by measured
-time, for the super run's component jobs.
+time, for the super run's component jobs. All 78 in one job took 45 of its 60 minutes (#3744), so
+super.yml runs them in three shards.
 Electron is no longer run.
 
 Chrome 155 kills its own network service now and then under Cypress 16, whose Chrome runs pause

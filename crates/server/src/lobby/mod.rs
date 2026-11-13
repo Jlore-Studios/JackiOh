@@ -6,7 +6,7 @@
 //!   under that code (R3730006).
 //! - `POST /api/lobbies/:code/{enter,leave,remove,settings,pick,ready,invite,start}` change it.
 //!
-//! A lobby is a row of `public.lobbies` (migration 0088): its host, its one guest seat, the host's
+//! A lobby is a row of `public.lobbies` (migration 0089): its host, its one guest seat, the host's
 //! settings, each member's frozen pick and Ready. A member holds no seat of the ledger until the
 //! Start (R1523000, R3730000), which reserves both and starts the game as a room's join does: a 1v1
 //! Start opens and claims a room under the lobby's code (`actor::rooms::start_lobby_room`), a co-op

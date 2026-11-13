@@ -489,11 +489,27 @@ fn r3114000_each_shipped_set_s_offset_is_its_catalog_place_in_thousands() {
             "Meditative+": 4000,
             "Stinkyscape": 5000,
             "Training Grounds": 6000,
+            "Stinkyscape+": 7000,
         })
     );
     for set in [SetName::Boss, SetName::BossX] {
         assert_eq!(c::catalog_number_set_offset(set), None, "{set:?}");
     }
+}
+
+// R3535000: the Stinkyscape+ set kept its catalog place (offset 7000) while it was held, and since it
+// ships (#3573) a deck holds it, so the client is given its offset with the others' (CLAUDE.md rule 3).
+#[test]
+fn r3535000_the_stinkyscape_plus_set_is_exported_at_7000_since_it_shipped() {
+    assert_eq!(c::catalog_number_set_offset(SetName::StinkyscapePlus), Some(7000));
+    assert_eq!(
+        catalog_number_set_offsets()
+            .as_object()
+            .expect("offsets are a record")
+            .get("Stinkyscape+"),
+        Some(&json!(7000)),
+        "a shipped set is in a deck"
+    );
 }
 
 /// The exported value of one name.

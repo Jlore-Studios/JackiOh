@@ -341,6 +341,73 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     numbered: false,
     onField: true,
   },
+  // R3572000: the Stinkyscape+ kinds (#3535). GIGA, Frenzy and Evasive act on the field; the rest act before it
+  // (Flexible, Tipsy: where and how a card is played) or are no printed keyword at all (R3535002's Evolve, R3540000's
+  // Burn and Toxic counters), so they keep their chip in the hover and inspect lists and draw nothing on the board.
+  GIGA: {
+    layer: "glyph",
+    priority: 37,
+    shape: "four zones under one frame",
+    motion: { keyframes: "kw-giga-pulse", when: "always" },
+    numbered: false,
+    onField: true,
+  },
+  Flexible: {
+    layer: "glyph",
+    priority: 38,
+    shape: "an arrow between two rows",
+    motion: { keyframes: "kw-flexible-slide", when: "always" },
+    numbered: false,
+    onField: false,
+  },
+  Frenzy: {
+    layer: "glyph",
+    priority: 39,
+    shape: "three claw slashes",
+    motion: { keyframes: "kw-frenzy-slash", when: "always" },
+    numbered: false,
+    onField: true,
+  },
+  Evasive: {
+    layer: "glyph",
+    priority: 40,
+    shape: "an arrow bending around a ring",
+    motion: { keyframes: "kw-evasive-slip", when: "always" },
+    numbered: false,
+    onField: true,
+  },
+  Tipsy: {
+    layer: "glyph",
+    priority: 41,
+    shape: "a frothing beer stein",
+    motion: { keyframes: "kw-tipsy-sway", when: "always" },
+    numbered: false,
+    onField: false,
+  },
+  Evolve: {
+    layer: "glyph",
+    priority: 42,
+    shape: "a double helix",
+    motion: { keyframes: "kw-evolve-twist", when: "always" },
+    numbered: false,
+    onField: false,
+  },
+  Burn: {
+    layer: "glyph",
+    priority: 43,
+    shape: "a flame",
+    motion: { keyframes: "kw-burn-flicker", when: "always" },
+    numbered: false,
+    onField: false,
+  },
+  Toxic: {
+    layer: "glyph",
+    priority: 44,
+    shape: "a dripping drop",
+    motion: { keyframes: "kw-toxic-drip", when: "always" },
+    numbered: false,
+    onField: false,
+  },
 };
 
 /** One treatment a unit gets. */
@@ -392,7 +459,8 @@ export function treatedKinds(source: KeywordFxSource): KeywordKind[] {
   const kinds: KeywordKind[] = [];
   for (const keyword of source.keywords) {
     // R2577000: a keyword that does nothing on the field draws no treatment there.
-    if (KEYWORD_VISUALS[keyword.kind].onField && !kinds.includes(keyword.kind)) kinds.push(keyword.kind);
+    // R3546004: a kind with no visual draws nothing, not a throw: every `KeywordKind` has one since R3572000, the guard stays.
+    if (KEYWORD_VISUALS[keyword.kind]?.onField === true && !kinds.includes(keyword.kind)) kinds.push(keyword.kind);
   }
   // R385: a Brittle count the view gives (one an effect gave, "Give Brittle N") is Brittle whether or
   // not the keyword list names it, a Vanilla unit's included (a Vanilla keeps a given count, §6.1).
@@ -489,4 +557,7 @@ export const KEYWORD_CALLOUT_ICONS: Readonly<Partial<Record<KeywordKind, Keyword
   Deft: { d: "M22 74 L46 26 M78 74 L54 26 M50 84 a4 4 0 1 0 0.1 0", line: true },
   Flashback: { d: "M18 86 H82 M50 76 V24 M34 40 L50 24 L66 40", line: true },
   Temporary: { d: "M30 8 H70 L52 46 L70 92 H30 L48 46 Z" },
+  // R3572000: Frenzy's three claw slashes and Evasive's arrow slipping round a ring.
+  Frenzy: { d: "M22 10 L46 90 M44 10 L68 90 M66 10 L90 90", line: true },
+  Evasive: { d: "M66 14 A38 38 0 1 0 66 86 M40 50 H92 M80 38 L92 50 L80 62", line: true },
 };

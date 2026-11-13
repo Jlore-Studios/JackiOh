@@ -29,7 +29,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 
 | Layer | Modules | Rule |
 | --- | --- | --- |
-| Boot and routes | `main.rs`, `app.rs`, `loops.rs` | the route table (`ROUTES`, in the order the router tries them), the background loops (each started through `loops::spawn_supervised`, which logs a panic as `loop.crashed` or a return as `loop.returned`, both alerts, and restarts the loop), `serve`; on SIGTERM or Ctrl-C, `serve_until`'s drain (loops aborted, requests finished, each live match checkpointed and its actor stopped with 1001, every practice claim still settling waited for, R2422000, store closed) inside `SHUTDOWN_DRAIN_SECONDS` |
+| Boot and routes | `main.rs`, `app.rs`, `loops.rs` | the route table (`ROUTES`, in the order the router tries them), the background loops (each started through `loops::spawn_supervised`, which logs a panic as `loop.crashed` or a return as `loop.returned`, both alerts, and restarts the loop; the sweeps feed each step's result to a `loops::FailingStreak`, #3770), `serve`; on SIGTERM or Ctrl-C, `serve_until`'s drain (loops aborted, requests finished, each live match checkpointed and its actor stopped with 1001, every practice claim still settling waited for, R2422000, store closed) inside `SHUTDOWN_DRAIN_SECONDS` |
 | Handlers | `api/*.rs` | `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult`; no SQL of their own |
 | Match | `actor/match_actor.rs`, `clock.rs`, `registry.rs`, `rooms.rs`, `ws_server.rs`, `seats.rs` | state in memory; time from `tokio::time`. The 1v1 actor decides no clock, reconnect or rematch rule (#3101): `jackioh_shared::host`'s pure machine does (`step(host, event, now) -> (host, outputs)`: which clock runs and what an expiry becomes, the disconnect grace, the order every view is sent in, the aim relay, a bot's turn, what a rematch offer meets), and the actor feeds it events and carries out its outputs: a tokio timer (`clock.rs` is only that), a socket send, a store write. The Duos actor is the same driver over `host::duos`'s machine (the mulligan, round and prompt clocks, the grace after which the AI plays a person's seat, the AI's pause and fallback, the ceiling's retry), and `duos/again.rs` keeps the request, the store reads and the wake-up of an offer waiting on a create around `host::again`'s book. `seats.rs` is the seat ledger, the one game each profile holds (a match, a series not over or a co-op match), which every door into a game reserves all its seats through in one step before it writes; the in-match flag stays its record and second guard, boot fills it from the database after bumping `app.seat_epoch`, the reaper's tick reconciles it (`seats.drift`), and a claim on an older epoch writes nothing (R1523000) |
 | Wire | `actor/protocol.rs`, `actor/contracts.rs` | every WebSocket frame |
@@ -692,7 +692,7 @@ from public.duos_matches m where m.id = '<match id>';
 
 An alert is an error log line marked `alert = true`: `api::http::log_alert`'s (`api.rejections.unusual`,
 `match.rejections.unusual`, `ranked.profile_missing`, `game_records.fold_poison`, `bug.found`,
-`bug.reports.refused`) and `loops.rs`'s (`loop.crashed`, `loop.returned`). `alerts.rs` (#3595) tells people
+`bug.reports.refused`) and `loops.rs`'s (`loop.crashed`, `loop.returned`, and a sweep step's `<step>.failing`). `alerts.rs` (#3595) tells people
 of each, from a tracing layer beside the JSON log, at most once an hour per event in a process
 (`ALERT_WINDOW_MS`; the rest are logged as `alert.held`, and the next notice says how many):
 
@@ -713,6 +713,21 @@ Either alone works. The boot logs `alerts.ready` (`issues`, and how many address
 that fails logs `alert.issue.failed` or `alert.email.failed`, never another alert. The end-to-end server tells
 nobody. A server that cannot boot cannot tell anyone, nor can one the Worker cannot reach: those are #3595's
 next steps, in the Worker.
+
+A sweep that keeps failing (#3770). Each sweep catches its own failure and tries again on the next pass, so
+a step that failed on every pass was a warning an hour or a few seconds apart and nobody told. `loops.rs`'s
+`FailingStreak`, one per step and fed each pass's result, raises one alert, `<step>.failing`, once the step
+has failed on at least `LOOP_FAILING_ALERT_PASSES` passes in a row over at least `LOOP_FAILING_ALERT_MS`
+(both must hold, so the 3 s matchmaker alerts after five minutes and the hourly purge on its third failed
+pass), with the failure's text in the line's `message` (the issue shows only the event name, the email every
+field); `ALERT_WINDOW_MS` then holds the event to one notice an hour. The steps are `matchmaker`,
+`matches.reaper`, `seats.reconcile`, `series.sweeper`, `duos.sweeper`, `challenges.sweeper` and the retention
+purge's seven, `game_records.fold`, `game_records.refile`, `retention.purge`, `chat.purge`, `duos.logs.purge`,
+`idempotency.sweep` and `practice.sweep`. A reaper pass in which any match would not reap counts as failed,
+so one wedged match is reported while the others reap. The first good pass after an alert logs
+`<step>.recovered` at info, and a later streak alerts again. A step that fails only now and then raises
+nothing, and the per-match and per-series warnings stay as they were. The count lives in the loop's future,
+so a restart of the loop or the process starts it afresh.
 
 ## Ladder bots (§9.5, §9.12, R1453, R1454, R1451, R1452, R639000, R641000, R747000)
 
@@ -1281,6 +1296,11 @@ rebuild, the reaper, a replay, telemetry, a game record's summary). NULL on a ma
 match from before it, which folds against its version's frozen table (R1266000). `matches_win_rates_check`
 holds it to a jsonb object. `tests/sql/50_match_win_rates.sql` checks the column, the shapes refused and the
 re-apply.
+
+Migration 0088 widens the `cards` tag check once more, as 0083 did, with #3535's nine Stinkyscape+ tags
+(R3535002) — Mindustrial, Mineral, Automa-α, Automa-β, Automa-γ, Automa-δ, Automa-Ω, Automa-ζ and
+Paperclip — so `seed-catalog` can write the set's entries the day it ships (#3573, R3535000), and comments
+`cards.set_id` with the eight sets that ship.
 
 ## Tests
 

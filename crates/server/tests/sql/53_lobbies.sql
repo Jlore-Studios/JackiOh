@@ -1,4 +1,4 @@
--- Private lobbies (migration 0088, SPEC §9.5, §13.9; R3730000; issue #3730). Runs after 52_v0_5_13_retcon.sql;
+-- Private lobbies (migration 0089, SPEC §9.5, §13.9; R3730000; issue #3730). Runs after 52_v0_5_13_retcon.sql;
 -- profiles 1 and 2 (11111111-…, 22222222-…) are active by then (03 activated them). A lobby is the server's
 -- alone: RLS on, no policy, no client privilege, and a profile's deletion takes the lobbies it hosts or sits in.
 \set ON_ERROR_STOP on

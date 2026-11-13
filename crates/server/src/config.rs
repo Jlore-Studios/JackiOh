@@ -442,6 +442,17 @@ pub const GAME_RECORD_REFILE_WINDOW_SECONDS: i64 = 24 * 60 * 60;
 /// loop. Five seconds holds such a loop to one alert line per five seconds and leaves a pairing or
 /// a sweep late by seconds only.
 pub const LOOP_RESTART_DELAY_SECONDS: i64 = 5;
+/// #3770: how long a sweep step (the matchmaker, the reaper, a sweeper, a retention purge) must have
+/// failed on every pass before `loops::FailingStreak` raises its `<step>.failing` alert. Both this
+/// and `LOOP_FAILING_ALERT_PASSES` must hold: the 3 s matchmaker alerts after five minutes (about a
+/// hundred passes), the hourly purge on its third failed pass. Five minutes passes over a database
+/// blip, which a reconnect clears, and still reaches the owners before a player gives up on the
+/// queue. `ALERT_WINDOW_MS` then holds each event to one notice an hour.
+pub const LOOP_FAILING_ALERT_MS: i64 = 5 * 60 * 1000;
+/// #3770: how many passes in a row a sweep step must fail before `<step>.failing` is raised, beside
+/// `LOOP_FAILING_ALERT_MS`. Three keeps one unlucky pass of a slow loop (the hourly purge) from
+/// being a streak.
+pub const LOOP_FAILING_ALERT_PASSES: u32 = 3;
 
 // ---------------------------------------------------------------------------------------------
 // The probes and the shutdown (`api/health.rs`, `app::serve_until`). Not in SPEC, and no R-row (#861).

@@ -122,6 +122,14 @@
       "row": "Lucky X"
     },
     {
+      "id": "Tipsy",
+      "label": "Tipsy",
+      "rule": "Playing this adds X to your Tipsy counter, which drops by 1 at your Start of turn; while it is up, new cards may blur",
+      "section": "§6.1",
+      "aliases": [],
+      "row": "Tipsy X"
+    },
+    {
       "id": "Animated",
       "label": "Animated",
       "rule": "A Field Spell or Trap with stats that becomes a Unit in an open unit zone when it fires or enters the field, or as it gains stats",
@@ -166,6 +174,13 @@
       "aliases": []
     },
     {
+      "id": "Frenzy",
+      "label": "Frenzy",
+      "rule": "After it attacks and destroys a unit, it may attack again",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
       "id": "Temporary",
       "label": "Temporary",
       "rule": "At the end of its owner's turn the count drops by 1; at 0 the card is discarded from their hand. Temporary alone is Temporary 1",
@@ -205,6 +220,20 @@
       "id": "Flying",
       "label": "Flying",
       "rule": "Only Units with Flying or Ranged can attack it, unless it is in Defense Position. It may be played into your backrow as well as into a unit zone",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Flexible",
+      "label": "Flexible",
+      "rule": "Can be played into your backrow as well as into a unit zone, and is a unit in either. Every Flying unit has it",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "GIGA",
+      "label": "GIGA",
+      "rule": "Fills two adjacent lanes in both rows, four zones, and is in both lanes for every rule that reads one",
       "section": "§6.1",
       "aliases": []
     },
@@ -265,6 +294,13 @@
       "aliases": []
     },
     {
+      "id": "Evasive",
+      "label": "Evasive",
+      "rule": "No attack may target it, and it can't be in Defense Position",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
       "id": "Only Units in this lane can attack this",
       "label": "Only Units in this lane can attack this",
       "rule": "An attack on it is legal only from the enemy unit zone of its own lane",
@@ -295,7 +331,7 @@
     {
       "id": "Combat keyword",
       "label": "Combat keyword",
-      "rule": "One of the keywords Units fight with: Taunt, Rush, First Strike, Flying, Ranged, Poisonous, Reborn, Divine Shield, Windfury, Cleave, Deft, Lifesteal, Pierce, Trample",
+      "rule": "One of the keywords Units fight with: Taunt, Rush, First Strike, Flying, Ranged, Poisonous, Reborn, Divine Shield, Windfury, Cleave, Deft, Lifesteal, Pierce, Trample, Frenzy",
       "section": "§6.1",
       "aliases": [
         "combat keywords",
@@ -395,7 +431,8 @@
       "rule": "Once per turn on your turn, click the card to do an effect; \"Activate X\" up to X times per turn, \"Activate ♾️\" any number of times",
       "section": "§6.2",
       "aliases": [
-        "Activated"
+        "Activated",
+        "Activates"
       ],
       "row": "Activate / Activate X / Activate ♾️"
     },
@@ -410,6 +447,13 @@
       "id": "When launched",
       "label": "When launched",
       "rule": "When the Starship this is fused into launches, after its Cries",
+      "section": "§6.2",
+      "aliases": []
+    },
+    {
+      "id": "Evolves when",
+      "label": "Evolves when",
+      "rule": "When the condition after it comes true, this evolves",
       "section": "§6.2",
       "aliases": []
     },
@@ -479,7 +523,8 @@
       "rule": "Zone can't be played into",
       "section": "§6.3",
       "aliases": [
-        "Locked"
+        "Locked",
+        "lock"
       ]
     },
     {
@@ -494,7 +539,9 @@
       "label": "Counter",
       "rule": "Cancel a card being played or cast",
       "section": "§6.3",
-      "aliases": []
+      "aliases": [
+        "countered"
+      ]
     },
     {
       "id": "Steal",
@@ -544,7 +591,9 @@
       "rule": "Strengthen a card: one change per application",
       "section": "§6.3",
       "aliases": [
-        "Buffs"
+        "Buffs",
+        "buff",
+        "buffs"
       ]
     },
     {
@@ -621,7 +670,9 @@
       "label": "Awaken",
       "rule": "A Dormant card awakens now",
       "section": "§6.3",
-      "aliases": []
+      "aliases": [
+        "awakens"
+      ]
     },
     {
       "id": "Launch",
@@ -630,7 +681,8 @@
       "section": "§6.3",
       "aliases": [
         "launch",
-        "launches"
+        "launches",
+        "launched"
       ]
     },
     {
@@ -671,6 +723,43 @@
       ]
     },
     {
+      "id": "Evolve",
+      "label": "Evolve",
+      "rule": "The Unit does what its \"Evolve:\" text says. A card evolves only once",
+      "section": "§6.3",
+      "aliases": [
+        "evolve",
+        "Evolved",
+        "Evolves"
+      ]
+    },
+    {
+      "id": "Burn",
+      "label": "Burn",
+      "rule": "A counter on a Unit or a hero: at the start of its controller's turn it takes that much damage, and the count then drops by 3",
+      "section": "§6.3",
+      "aliases": [
+        "Burns"
+      ]
+    },
+    {
+      "id": "Toxic",
+      "label": "Toxic",
+      "rule": "A counter on a Unit or a hero: at the start of its controller's turn it takes that much piercing damage, every turn",
+      "section": "§6.3",
+      "aliases": []
+    },
+    {
+      "id": "Replenish",
+      "label": "Replenish",
+      "rule": "Give back spent mana, never above your max mana",
+      "section": "§6.3",
+      "aliases": [
+        "replenish"
+      ],
+      "row": "Replenish X"
+    },
+    {
       "id": "Radiant",
       "label": "Radiant",
       "rule": "Raise a card to its Radiant form. In hand or deck: cost unchanged, stats and text swap to the radiant form.",
@@ -679,6 +768,7 @@
     }
   ],
   "plain": [
+    "choose one",
     "your exile",
     "their exile",
     "from exile",
