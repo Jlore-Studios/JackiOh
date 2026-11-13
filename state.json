@@ -16332,6 +16332,14 @@
         "sha": "86a69fae078ec293fbc24d01fcc23fe2aa99a6ed",
         "tiers": {}
       }
+    },
+    "3878": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-13T16:34:01Z",
+      "issue": 3865,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
