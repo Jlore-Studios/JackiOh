@@ -12479,14 +12479,7 @@
     "3732": {
       "action": "plan",
       "asks": [],
-      "hold": {
-        "ends": "2026-11-13T20:37:21Z",
-        "lifted": "2026-11-13T20:37:51Z",
-        "owner": "claude-3",
-        "since": "2026-11-13T18:37:21Z",
-        "until": "2026-11-13T20:30:00Z",
-        "why": "it refused a call"
-      },
+      "in_lane": true,
       "kind": "build",
       "live": "planning",
       "owner": "claude-3",
@@ -12494,9 +12487,9 @@
       "owner_why": "it plans it",
       "pending_request": false,
       "provider": "claude-3",
-      "run_id": "43454399383",
+      "run_id": "pending:6375d941-1794602396",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-13T15:36:56Z",
+      "started_at": "2026-11-13T20:40:58Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 6861733556
@@ -16370,9 +16363,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T20:39:39Z",
+    "at": "2026-11-13T20:40:58Z",
     "url": "",
-    "what": "build #3729 on claude-3"
+    "what": "plan #3732 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-13T20:24:34Z",
