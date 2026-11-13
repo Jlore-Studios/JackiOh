@@ -17684,9 +17684,7 @@
     },
     "3822": {
       "action": "plan",
-      "asks": [
-        "c:6845285660"
-      ],
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-13T10:52:02Z",
         "difficulty": "hard",
@@ -17705,27 +17703,30 @@
         "reason": "planned on sonnet",
         "trail": "ecide.rs; grep -n \\\"fn \\\\|^mod \\\" crates/ai/tests/ai/decide.rs | sed -n 1,80p\"}\n- Bash: {\"command\": \"grep -rn \\\"burn\\\\|toxic\\\" crates/engine/src/testkit* -i | head -20; sed -n 1,90p crates/ai/tests/ai/even_trades.rs\"}\n- Bash: {\"command\": \"sed -n 1,160p crates/ai/src/reply.rs\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn \\\\|pub(crate) fn \\\\|^fn \\\" crates/ai/src/reply.rs | head -80\"}\n- Bash: {\"command\": \"sed -n 540,740p crates/ai/src/reply.rs\"}\n- Bash: {\"command\": \"grep -rn \\\"tick_at_turn_start\\\" crates --include=*.rs | grep -v \\\"^crates/engine/tests\\\" | head; grep -n \\\"pub fn kill_worth\\\" -B6 -A30 crates/ai/src/evaluate.rs\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn face_threat_with\\\" -B12 -A70 crates/ai/src/evaluate.rs | head -150\"}\n- Bash: {\"command\": \"sed -n 395,425p crates/engine/src/turn.rs; grep -n \\\"pub struct UnitView\\\" -A30 crates/engine/src/*.rs | head -50\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn acts_on_field\\\" -B4 -A25 crates/engine/src/zones.rs; grep -n \\\"pub fn acting_on\\\" -B6 -A30 crates/engine/src/zones.rs | head -70\"}\n- Bash: {\"command\": \"sed -n 70,92p crates/ai/src/features.rs; sed -n 120,200p crates/ai/README.md\"}\n- Bash: {\"command\": \"grep -n \\\"^#\\\" crates/ai/README.md | head -50; sed -n 96,120p crates/ai/README.md\"}\n- Bash: {\"command\": \"grep -n -i \\\"burn\\\\|toxic\\\" crates/ai/README.md | head; sed -n 437,478p crates/ai/README.md | head -60; grep -rn \\\"Burn\\\\|burn\\\" spec/09-architecture.md | head\"}\n- Bash: {\"command\": \"grep -rn \\\"EvalWeights\\\" --include=*.rs --include=*.md --include=*.py --include=*.json --include=*.ts -l . 2>/dev/null | grep -v \\\"^./target\\\\|node_modules\\\"; grep -rn \\\"answerableThreat\u2026\n- Bash: {\"command\": \"grep -rn \\\"AI_EVAL)\\\\|GREEDY_EVAL)\\\" crates/ai/tests crates/tools crates/wasm crates/server 2>/dev/null | grep -v \\\"evaluate(\\\" | head; sed -n 470,490p crates/ai/tests/ai/slumber.rs; gre\u2026\n- Bash: {\"command\": \"grep -rhoE \\\"(Burns? [0-9]+|Toxic [0-9]+)\\\" JackiOh_StinkyscapePlus_Cards.md | sort | uniq -c | sort -rn | head -20; grep -rn \\\"Burn\\\\b\\\" docs/v0.3.0/SURFACE.md | head -3\"}\n- Bash: {\"command\": \"cat spec/pending/3791.md | cut -c1-600; sed -n 1,60p crates/ai/src/lib.rs\"}\n- Bash: {\"command\": \"sed -n 2440,2460p crates/engine/src/config.rs; grep -n \\\"BURN_DECAY\\\" crates/engine/src/lib.rs crates/engine/src/testkit/*.rs | head -3; grep -n \\\"^pub use\\\\|^pub mod\\\" crates/engine/src\u2026\n- Bash: {\"command\": \"grep -n \\\"query\\\" crates/engine/src/lib.rs | head; grep -n \\\"UnitView\\\" crates/ai/src/evaluate.rs | head -3; grep -n \\\"BURN_DECAY\\\" crates/ai/src -r\"}\n- Bash: {\"command\": \"sed -n 1,80p crates/ai/tests/ai/slumber.rs; grep -n \\\"AI_EVAL.unit\\\\|fn board\\\\|fn clone\\\" crates/ai/tests/ai/support.rs | head\"}\n- Bash: {\"command\": \"ls target 2>/dev/null | head; ls ../ 2>/dev/null | head; df -h . | tail -1; nproc\"}\n- Bash: {\"command\": \"grep -rn \\\"EvalWeights {\\\" crates | grep -v \\\"^crates/ai/src/config.rs:.*pub struct\\\"; grep -rn \\\"EvalWeights\\\" crates/tools crates/wasm crates/server 2>/dev/null | head -3; sed -n 60,80\u2026\n- Bash: {\"command\": \"grep -rln \\\"AI_EVAL\\\\|GREEDY_EVAL\\\" crates apps --include=*.rs --include=*.ts --include=*.tsx 2>/dev/null | grep -v \\\"^crates/ai/\\\" | head; grep -n \\\"ai_eval\\\\|\\\\\\\"ai\\\\\\\"\\\" crates/tools/\u2026\n- Bash: {\"command\": \"grep -n \\\"AI_EVAL\\\\|GREEDY_EVAL\\\" crates/shared/src/bots/signals.rs crates/server/src/actor/telemetry.rs crates/tools/src/positions.rs crates/tools/src/trace.rs crates/tools/src/think.rs\u2026\n- Bash: {\"command\": \"grep -n -i \\\"\\\\bai\\\\b\\\" docs/issues-and-patches.md | head -20; ls patches 2>/dev/null | head -3; ls crates/cards/patches 2>/dev/null | head\"}\n- Bash: {\"command\": \"grep -n \\\"counters\\\\|hero_burn\\\\|hero_toxic\\\" crates/ai/src/observe.rs crates/ai/src/determinize.rs | head -20; grep -rn \\\"hero_burn\\\\|hero_toxic\\\" crates/engine/src --include=*.rs -l | \u2026\n- Bash: {\"command\": \"sed -n 240,310p crates/ai/src/observe.rs; sed -n 600,640p crates/ai/src/observe.rs\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn redact\\\" -A6 crates/ai/src/observe.rs | head -20; grep -n \\\"redact(\\\" crates/ai/tests/ai/evaluate.rs | head -5\"}\n- Bash: {\"command\": \"grep -n \\\"pub enum Keyword \\\" -A40 crates/engine/src/wire/*.rs | grep -n \\\"Armor\\\\|DivineShield\\\\|Indestructible\\\" ; grep -rn \\\"granted_keywords.push\\\\|granted_keywords = \\\" crates/ai/te\u2026\n- Bash: {\"command\": \"grep -n \\\"granted_keywords\\\" crates/ai/tests/ai/*.rs | head -8; grep -n \\\"pub fn give_keyword\\\\|pub fn grant_keyword\\\" -r crates/engine/src | head\"}\n- Bash: {\"command\": \"sed -n 315,330p crates/ai/tests/ai/evaluate.rs; sed -n 630,640p crates/engine/src/wire/catalog_types.rs; sed -n 1,30p crates/ai/tests/ai/pierce.rs | head -40\"}\n- Bash: {\"command\": \"grep -n \\\"fn \\\\|copy\\\\|refus\\\" crates/tools/tests/acceptance.rs | head -40\"}\n- Bash: {\"command\": \"sed -n 812,890p crates/tools/tests/acceptance.rs\"}\n- Bash: {\"command\": \"cat crates/ai/clippy.toml | head -50; grep -n \\\"lints\\\\|clippy::\\\" crates/ai/Cargo.toml Cargo.toml | head\"}\n- Bash: {\"command\": \"grep -n \\\"pub burn\\\\|pub toxic\\\\|pub hero_burn\\\\|pub hero_toxic\\\" crates/engine/src/state.rs crates/engine/src/wire/*.rs; grep -n \\\"hero_armor\\\\|pub armor\\\" crates/engine/src/state.rs | \u2026\n- Bash: {\"command\": \"grep -n \\\"pub struct Counters\\\" -B3 -A30 crates/engine/src/state.rs | grep -n \\\"burn\\\\|toxic\\\\|plague\\\\|struct\\\"; sed -n 1138,1148p crates/engine/src/state.rs\"}\n- Bash: {\"command\": \"grep -rn \\\"pub struct Counters\\\" -A30 crates/engine/src/ | grep -E \\\"struct Counters|burn|toxic|plague\\\" | head\"}\n- Bash: {\"command\": \"cat crates/ai/Cargo.toml; ls crates/ai/tests\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3822/.bot-plan.md\", \"content\": \"# Draft plan, issue #3822 (planner's notes; the final message is the whole plan)\\n\\nRead: afflictions.rs (tick model, \u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule 2: it changes how the AI's static evaluation prices units and heroes (`crates/ai/src/evaluate.rs`, `config.rs`), which moves its decisions.\"} --> ## Goal The practice AI prices Burn and Toxic, which both seats can see (R3540005). - **Units.** A unit's w\u2026"
       },
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
       "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-13T10:29:55Z",
-      "owner_why": "it plans it",
+      "owner": "claude-8",
+      "owner_since": "2026-11-13T10:54:32Z",
+      "owner_why": "handed off from `claude-3`: its owner `claude-3` cannot take it now",
       "pending_request": false,
       "planned_at": "2026-11-13T10:52:06Z",
       "planned_by": "`claude-3` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-3",
       "planned_model": "sonnet",
       "planned_tier": "medium",
-      "provider": "claude-3",
+      "provider": "claude-8",
       "queued_at": "2026-11-13T05:47:52Z",
       "requested_by": "jgoetzmann",
-      "run_id": "43409504034",
+      "run_id": "pending:040c79b3-1794567229",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-13T10:29:55Z",
+      "started_at": "2026-11-13T10:54:32Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6845285660"
+      ]
     },
     "3824": {
       "action": "build",
@@ -18115,9 +18116,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T10:42:50Z",
+    "at": "2026-11-13T10:54:32Z",
     "url": "",
-    "what": "revise #3849 on claude-3"
+    "what": "plan #3822 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-13T10:38:14Z",
