@@ -652,6 +652,7 @@ const ENGINE_WORK_HOOKS: &[&str] = &[
     "@activate",
     "@aiTurn",
     "@setRepeat",
+    "@setResolved",
     "@extraCry",
     "@melee",
 ];
@@ -696,6 +697,7 @@ pub fn run_work_item(sink: &mut EngineSink<'_>, item: &WorkItem) {
         "@activate" => crate::subsystems::activate::run_owed_activation(sink, item),
         "@aiTurn" => crate::subsystems::ai_policy::run_owed_ai_turn(sink, item),
         "@setRepeat" => crate::cry_trigger::run_owed_repeat(sink, item),
+        "@setResolved" => crate::cry_trigger::run_owed_set_resolved(sink, item),
         "@extraCry" => crate::cry_trigger::run_owed_extra_cries(sink, item),
         "@melee" => crate::combat::run_owed_melee(sink, item),
         _ => {

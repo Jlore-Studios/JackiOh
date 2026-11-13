@@ -292,7 +292,9 @@ pub(crate) fn code_changed(path: &str, before: Option<&str>, after: Option<&str>
 
 /// R1365000: a card's family, the card a token counts with (`meditative-097-6` is `meditative-097`).
 /// A set's own token (`stinkyscape-t-dormant-starship`) is no one card's, so it is its own family.
+/// A past version (`classic-004@v0.3.0c`, R3538002) counts with its card, the id a fragment claims.
 pub(crate) fn family(id: &str) -> String {
+    let id = id.split_once('@').map_or(id, |(card, _)| card);
     let mut parts = id.splitn(3, '-');
     match (parts.next(), parts.next()) {
         (Some(_), Some("t")) => id.to_string(),
@@ -1913,6 +1915,9 @@ mod tests {
         assert_eq!(family("meditative-097-6"), "meditative-097");
         assert_eq!(family("core-002"), "core-002");
         assert_eq!(family("core-t-rush"), "core-t-rush");
+        assert_eq!(family("classic-004@v0.3.0c"), "classic-004");
+        assert_eq!(family("meditative-097-6@v0.5.11s"), "meditative-097");
+        assert_eq!(family("core-t-rush@v0.5.11s"), "core-t-rush");
         assert_eq!(
             family("stinkyscape-t-dormant-starship"),
             "stinkyscape-t-dormant-starship"
