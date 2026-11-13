@@ -696,6 +696,11 @@ pub const AI_TURN_HOOK_PROBE_NODES: usize = 24;
 /// face-up backrow cards together.
 pub const AI_ACTIVATION_PROBE_NODES: usize = 20;
 
+/// R3575400: the most nodes a decision's probes of its own hand cards' Activates
+/// (`evaluate::activation_prices`) spend: a spawn (two nodes on a full unit row), two turn ends and
+/// `AI_REPLY.visible_activations` uses for each of about two hand cards with an Activate.
+pub const AI_HAND_ACTIVATION_PROBE_NODES: usize = 16;
+
 /// R2688000: the most nodes a decision's attack-hook probes (`evaluate::attack_hook_prices`) spend: two
 /// turn ends, and two attacks (the unit's and its hookless twin's) for each of about five units with an
 /// attack hook, on either field.
