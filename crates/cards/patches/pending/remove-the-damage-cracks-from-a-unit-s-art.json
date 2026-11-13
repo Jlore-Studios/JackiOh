@@ -1,0 +1,17 @@
+{
+  "title": "Patch: remove the damage cracks from a unit's art",
+  "sources": "#3776",
+  "notes": "Issue #3776: a damaged unit's art no longer draws cracks for the health it is missing, while the buffed glow and the frozen frost stay. Under apps/web/src/cards/art/ the wear.ts cracks, the ART_WEAR_LEVELS constant and the .cf-art-cracks styles are deleted (R3340000, amended by R3776000). How cards play is unchanged.",
+  "player": {
+    "title": "Clearer unit art",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "A damaged unit's art no longer shows cracks; its health number says it is hurt, and the buff glow and freeze frost stay."
+    ]
+  },
+  "cards": [],
+  "visual": true
+}
