@@ -169,6 +169,35 @@ mod tests {
             }
         }
 
+        /// R987: its controller's Luck rolls each enemy's amount that many more times, the highest kept
+        /// (R2521001). No card gives Luck since R3140000, so Feng Shui's kept v0.5.11r script, "You have
+        /// Luck 1", lends it.
+        #[test]
+        fn r987_its_controllers_luck_rolls_each_amount_once_more_and_keeps_the_highest() {
+            const FENG_SHUI: &str = "meditative-040"; // Feng Shui: "You have Luck 1" through v0.5.11r
+            crate::under_kept(FENG_SHUI, crate::scripts::meditative::c040_feng_shui::script_v0_5_11o(), || {
+                let mut s = weapon_board(
+                    "s035-luck",
+                    json!({ "field": [ID], "backrow": [FENG_SHUI] }),
+                    json!({ "field": [TOUGH, TOUGH] }),
+                );
+                let (a, b) = (s.unit_at(P2, 1).id, s.unit_at(P2, 2).id);
+                let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
+                let span = MOST - LEAST + 1;
+                let rolls: Vec<i32> = (0..3)
+                    .map(|_| {
+                        let first = LEAST + rng.int(span);
+                        first.max(LEAST + rng.int(span))
+                    })
+                    .collect();
+                s.activate(ID, json!({}));
+                assert_eq!(s.card(a.as_str()).damage, rolls[0]);
+                assert_eq!(s.card(b.as_str()).damage, rolls[1]);
+                s.expect_health(P2, HERO_HEALTH - rolls[2]);
+                assert_eq!(s.state().rng_cursor, rng.cursor(), "two draws for each enemy, no other");
+            });
+        }
+
         #[test]
         fn r384_it_activates_once_a_turn() {
             let mut s = board(false, "s035-once", json!([TOUGH]));

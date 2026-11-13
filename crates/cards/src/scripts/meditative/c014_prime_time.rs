@@ -96,6 +96,9 @@ mod tests {
     const ELEVEN: &str = "core-011"; // Tempo Timmy: Index 11: prime.
     const NINETEEN: &str = "core-019"; // Midrange Menace: Index 19: prime. Unit.
     const MED_FIVE: &str = "meditative-005"; // Death by 1000 cuts: Index 5: prime, another set. Spell.
+    const ONE: &str = "core-001"; // Big D-fender: Index 1: not prime
+    const TWO: &str = "core-002"; // Speciesist: Index 2: the smallest prime
+    const FOUR: &str = "core-004"; // Gary the Gambler: Index 4: not prime
     const EIGHT: &str = "core-008"; // Mr. Vanilla: Index 8: not prime
     const TEN: &str = "core-010"; // Rapid Replenish: Index 10: not prime
     const FIFTEEN: &str = "core-015"; // Me and Mr Token: Index 15: not prime
@@ -150,6 +153,20 @@ mod tests {
             assert_eq!(drawn_defs(&s), vec![FIVE]);
             let library = def_ids(&s.pile(P1, "library"));
             assert_eq!(library, vec![RUSH_TOKEN, EIGHT]);
+        }
+
+        #[test]
+        fn r804_index_2_is_prime_and_index_1_is_not() {
+            let mut s = scenario(json!({
+                "p1": { "hand": [PRIME, FILLER], "mana": 9, "library": [ONE, TWO, FOUR] },
+                "p2": { "hand": [FILLER] },
+            }));
+
+            s.play(PRIME, json!({}));
+
+            assert_eq!(drawn_defs(&s), vec![TWO]);
+            let library = def_ids(&s.pile(P1, "library"));
+            assert_eq!(library, vec![ONE, FOUR]);
         }
 
         #[test]

@@ -311,4 +311,17 @@ exclude_re = [
   # forced either way gives the same 20. The engine then reads the card's own `cap` over it (R386:
   # flag + tuned - printed), the same either way, so only a patch to one face's cap could tell them apart.
   'stinkyscape/c005_masochism_unmasked\.rs:.*replace match guard radiant with (true|false) in declared_cap',
+  # crates/cards (#3517): S+ #12 Shield Booster, S+ #16 Servo Surge, S+ #26.1 Conscript, S+ #27.1 Imp and S+ #36 Duo
+  # are keywords only (spec §8.12 rows 12, 16, 26.1, 27.1 and 36): their stats and keywords are catalog data, so
+  # both faces are `Script::default()`, which is exactly what `CardScripts`'s derived Default builds.
+  'stinkyscape_plus/(c012_shield_booster|c016_servo_surge|c026_1_conscript|c027_1_imp|c036_duo)\.rs:.*replace script -> CardScripts with Default::default\(\)',
+  # crates/cards (#3517): M #14 Prime Time's trial division. For a divisor of 2 or more `d + d <= d * d`, so the
+  # mutant's loop tries every divisor the real one does, in the same order, and then more, each above the square
+  # root of `n` and at most `n / 2`. A composite `n` has a divisor at or below its square root, which both loops
+  # reach first; a prime has no divisor in either range. Both answer the same for every `n`.
+  'c014_prime_time\.rs:.*replace \* with \+ in is_prime',
+  # crates/cards (#3517): S+ #33 True Conservative's `strongest` ranks (total, cost, index) keys, the index each past
+  # version's own place in the list, so a key held from an earlier place never equals a later one: `<=` replaces
+  # exactly when `<` does.
+  'c033_true_conservative\.rs:.*replace < with <= in strongest',
 ]
