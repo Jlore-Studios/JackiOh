@@ -37300,7 +37300,8 @@
       "2026-11-13T07:28:39Z,claude-7,stream,call,43378388906,0,2026-11-13T12:20:00Z,,,allowed,70,,"
     ],
     "runs": [
-      "2026-11-13T08:00:29Z,43389478286,claude-1,opus+sonnet,review,3812,medium,reviewed,,0.8,21,5303,721058,0.4094,36,37,,,79.9,claude-4,none,,1"
+      "2026-11-13T08:00:29Z,43389478286,claude-1,opus+sonnet,review,3812,medium,reviewed,,0.8,21,5303,721058,0.4094,36,37,,,79.9,claude-4,none,,1",
+      "2026-11-13T08:09:18Z,43378388906,claude-7,opus,revise,3811,hard,built,,62.2,1,1140,118747,2.3345,19,0,,,5.4,claude-4,fresh,other,1"
     ]
   },
   "version": 1
