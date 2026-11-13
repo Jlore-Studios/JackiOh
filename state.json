@@ -13451,17 +13451,17 @@
       },
       "merged": true,
       "pending_request": false,
-      "provider": "claude-6",
+      "provider": "claude-3",
       "question": "",
       "queued_at": "2026-11-13T12:22:32Z",
       "round_tier": "strong",
-      "run_id": "43452688029",
+      "run_id": "pending:0baa813e-1794587542",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
       "spot_check": true,
       "spot_check_n": 240,
-      "started_at": "2026-11-13T15:26:44Z",
+      "started_at": "2026-11-13T16:33:04Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 3,
@@ -16143,9 +16143,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T16:32:07Z",
+    "at": "2026-11-13T16:33:04Z",
     "url": "",
-    "what": "build #3821 on claude-1"
+    "what": "spot-check #3779 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-13T15:45:28Z",
@@ -35340,12 +35340,12 @@
         "reviewer": {
           "family": "claude",
           "model": "opus",
-          "provider": "claude-6",
+          "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "",
+        "run_id": "pending:0baa813e-1794587542",
         "sha": "44133b263728bd7d699e6233aa44690bfeff2eb3",
-        "started_at": "2026-11-13T15:26:44Z",
+        "started_at": "2026-11-13T16:33:04Z",
         "status": "queued",
         "title": "Patch: a private lobby screen for 1v1 rooms and co-op rooms: seats, invites, each player's deck and Ready, and the host's Start",
         "tries": 1
