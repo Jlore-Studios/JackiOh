@@ -271,6 +271,10 @@ included, or one turn hook its root fires (R2477000, R2565000). A step whose `re
 card holding either, and a play the other side's Pareto Optimality judges, per card held; #1240),
 and once a step has run, for each such card it cast without playing it, from a graveyard or at random
 (`announced_surcharge_nodes`, read off its `cardAnnounced` events; #1347).
+Such a step, once run, is kept for the rest of its decision (`SimMemo` on the root counter, at most
+`AI_SEARCH.memo_steps`), and the same step from the same state, nonce records aside, is answered from
+it without the engine, its nonce record rebuilt as the engine builds it and its nodes charged as before,
+so the search and its decision are unchanged and only the time it takes falls (R3575603).
 A prompt answered ahead inside a simulation (`best_auto_answer`: the other seat's in a step, the
 reply's, and the beam's look past the seat's own; #891, #1112), but the seat's own question it works
 out (`worked_step`, #2929), tries at most

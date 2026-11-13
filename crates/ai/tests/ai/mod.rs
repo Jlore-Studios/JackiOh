@@ -67,6 +67,7 @@ pub mod reply;
 pub mod scorer_casts;
 pub mod search;
 pub mod secrets;
+pub mod sim_memo;
 pub mod sim_panics;
 pub mod skill;
 pub mod slumber;

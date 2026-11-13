@@ -196,6 +196,9 @@ pub struct AiSearch {
     pub expensive_def_ids: &'static [&'static str],
     /// Nodes a Play of an `expensive_def_ids` card pays beyond the one every `simulate` takes.
     pub expensive_def_nodes: i32,
+    /// R3575603: the most expensive steps (`simulate::SimMemo`) one decision keeps to answer again: each
+    /// holds two states, and a decision meets a few at most.
+    pub memo_steps: i32,
     /// The cards an armed backrow copy of which makes a simulated Attack cost `ai_turn_trap_nodes`
     /// (§8.5 core-096: a whole random AI turn inside one reduce), asked only of an attack that could be
     /// the lethal one the trap answers, so an ordinary poke is not priced like losing the turn. A fused
@@ -228,6 +231,7 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     fat_budget_nodes: 600,
     expensive_def_ids: &["core-097", "classicplus-027"],
     expensive_def_nodes: 100,
+    memo_steps: 8,
     ai_turn_trap_ids: &["core-096"],
     ai_turn_trap_nodes: 40,
     judged_card_nodes: 3,
