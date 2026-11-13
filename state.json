@@ -16309,10 +16309,12 @@
           "provider": "claude-4",
           "tier": "strong"
         },
-        "at": "2026-11-13T06:56:17Z",
+        "at": "2026-11-13T08:25:58Z",
         "built_by": "claude-4",
         "by": "`claude` (strong)",
-        "sha": "dda78e30e55be391102c65f1fd673a1bee41fb2d"
+        "carried_from": "dda78e30e55be391102c65f1fd673a1bee41fb2d",
+        "resolved_by": "`claude` (strong)",
+        "sha": "b04c1feea7b521abff082a7644a8809da6f7d8c9"
       },
       "died": 0,
       "difficulty": "hard",
