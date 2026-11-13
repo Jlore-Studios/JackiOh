@@ -9,6 +9,7 @@ pub mod alt_play;
 pub mod answer_key;
 pub mod attack_hooks;
 pub mod attack_order;
+pub mod brittle;
 pub mod budget;
 pub mod cleave;
 pub mod combat_mods;
