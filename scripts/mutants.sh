@@ -63,11 +63,13 @@ SIZE_WASM=200
 # file: the drag's 1,639 lines held 1,729 mutants, tested at about 10 s each after an 11.5-minute first
 # test run (#3512's branch), and animations.ts's 2,019 lines 1,671, of which the step's five hours
 # reached 1,524 after a 31-minute first run (main, 2026-11-12). Stryker writes its report only at the
-# end, so a shard must finish inside the step: 900 lines is about 950 mutants, under three hours.
+# end, so a shard must finish inside the step. A mutant of a component nearly every test renders runs
+# far longer: web-cards' first 900 lines (CardBack.tsx, CardFace.tsx and more) took 4 h 51 min of the
+# step's five hours on #3813's branch (2026-11-13), so a shard holds 600 lines.
 # The files are packed in order, and a file longer than a shard is cut into ranges of lines
 # (Stryker's `file:a-b`), so one long file never holds a shard past the step. A mutant whose code
 # crosses a cut (a whole function's body, say) falls in neither range.
-SIZE_WEB_LINES=900
+SIZE_WEB_LINES=600
 # cargo-mutants' --jobs: mutants tested at once, each in its own copy of the tree. The server's one at a
 # time, since its test binary alone takes 4 GB of a runner's 16 (TEST_MEMORY_SERVER, below).
 JOBS=${MUTANTS_JOBS:-2}
