@@ -112,7 +112,7 @@
   width: 280px; /* PREVIEW_EXTENDED_WIDTH_PX */
   max-height: 100%;
   overflow: hidden;
-  font-size: 12px;
+  font-size: var(--type-sm);
   line-height: 1.35;
 }
 
