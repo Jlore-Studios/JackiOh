@@ -68,7 +68,7 @@ fn term(state: &GameState) -> f64 {
 #[test]
 fn r3575200_a_dormant_reactor_counts_its_hand_past_its_crystals_at_its_slumber_share() {
     let state = reactor_played(AI, &[DEAR, DEAR, DEAR]);
-    let slumber = reactor(&state).slumber.clone().expect("the Reactor sleeps");
+    let slumber = reactor(&state).slumber.expect("the Reactor sleeps");
     let turns = slumber.turns.expect("a countdown");
     let crystals = state.players[AI].mana.max;
     let freed = f64::from(3 * 4 - crystals);
@@ -104,7 +104,7 @@ fn r3575200_a_hand_its_crystals_already_pay_for_counts_nothing() {
 #[test]
 fn r3575200_the_enemys_reactor_counts_against_the_seat_by_its_unseen_hand() {
     let state = reactor_played(HUMAN, &[DEAR, DEAR, DEAR]);
-    let slumber = reactor(&state).slumber.clone().expect("the Reactor sleeps");
+    let slumber = reactor(&state).slumber.expect("the Reactor sleeps");
     let side = &state.players[HUMAN];
     let unseen = side.hand.len() as f64 * AI_EVAL.opponent_hand_cost;
     let freed = (unseen - f64::from(side.mana.max)).max(0.0);
