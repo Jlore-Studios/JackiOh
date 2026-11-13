@@ -18008,7 +18008,16 @@
       "feedback_since": "2026-11-13T08:49:44Z",
       "issue": 3735,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-4",
+        "rejections": [],
+        "reviews": [],
+        "sha": "866908790c5e4fff73b95e3526a651d0479d43dc",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "fce3910f5abefcbe",
