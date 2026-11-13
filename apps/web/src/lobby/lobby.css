@@ -64,6 +64,17 @@
   gap: var(--space-6);
 }
 
+/* R3731000: a 2v2 team's name over its two seats, and the member's Switch team under both teams. */
+.lobby__team-name {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-weight: 600;
+}
+
+.lobby__switch {
+  align-self: flex-start;
+}
+
 .lobby-seat {
   display: flex;
   flex-direction: column;
@@ -83,6 +94,11 @@
   justify-content: center;
   border-style: dashed;
   font: inherit;
+}
+
+/* R3731000: a seat the host may drag onto another. */
+.lobby-seat[draggable="true"] {
+  cursor: grab;
 }
 
 .lobby-seat--ai {

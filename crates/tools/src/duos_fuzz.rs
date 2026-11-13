@@ -112,10 +112,23 @@ pub fn duos_decks_for_seed(seed: u32) -> DuosDecks {
     duos_decks_for_handicaps(seed, &DuosHandicaps::default())
 }
 
-/// The tiers the seeds rotate the AI team (team B) through (#1573), as a co-op match sets it up
-/// (§13.7): its rules `duos_ai_team(tier)` and each of its seats' handicap `AI_DIFFICULTY[tier]`.
-/// Easy is the humans' rules and resources.
-const DUOS_FUZZ_TIERS: [Difficulty; 3] = [Difficulty::Easy, Difficulty::Medium, Difficulty::Hard];
+/// Who plays team B in a seed's game: the AI team at a tier, as a co-op match sets it up (§13.7), its
+/// rules `duos_ai_team(tier)` and each of its seats' handicap `AI_DIFFICULTY[tier]` (Easy is the
+/// humans' rules and resources); or (R3731002) a 2v2's two people, on `DUOS_HUMAN_TEAM` with no
+/// handicap. The fuzz plays every seat by the random policy either way.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum DuosTeamBSetup {
+    Ai(Difficulty),
+    People,
+}
+
+/// What the seeds rotate team B through (#1573, R3731002): the AI team at each tier, then people.
+const DUOS_FUZZ_TEAM_B: [DuosTeamBSetup; 4] = [
+    DuosTeamBSetup::Ai(Difficulty::Easy),
+    DuosTeamBSetup::Ai(Difficulty::Medium),
+    DuosTeamBSetup::Ai(Difficulty::Hard),
+    DuosTeamBSetup::People,
+];
 
 /// The seats whose deck a seed deals rather than builds (R433), rotating (#1573): none; A1's alone,
 /// so duel 1 deals none; A2's and B1's, a seat of each duel and of each team, so `create_duel` maps a
@@ -127,25 +140,38 @@ const DUOS_DEALT_SEATS: [&[DuosSeat]; 4] = [
     &[DuosSeat::A1, DuosSeat::A2],
 ];
 
-/// One seed's setup beyond its decks (#1573): the AI team's tier and the seats dealt their deck.
+/// One seed's setup beyond its decks (#1573): who plays team B and the seats dealt their deck.
 /// Team A always plays `DUOS_HUMAN_TEAM` with no handicap, as a co-op match's people do (§13.7).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct DuosSetup {
-    tier: Difficulty,
+    team_b: DuosTeamBSetup,
     dealt: &'static [DuosSeat],
 }
 
 impl DuosSetup {
-    /// Each seat's handicap: team B's `AI_DIFFICULTY[tier]`, none at Easy, whose resources are a
-    /// person's (a co-op match stores none for it either); team A's none.
+    /// Each seat's handicap: the AI team's `AI_DIFFICULTY[tier]`, none at Easy, whose resources are a
+    /// person's (a co-op match stores none for it either); team A's none, and a 2v2's people's none.
     fn handicaps(self) -> DuosHandicaps {
-        let handicap = AI_DIFFICULTY[self.tier];
-        let ai = (handicap != HUMAN_HANDICAP).then_some(handicap);
+        let ai = match self.team_b {
+            DuosTeamBSetup::Ai(tier) => {
+                let handicap = AI_DIFFICULTY[tier];
+                (handicap != HUMAN_HANDICAP).then_some(handicap)
+            }
+            DuosTeamBSetup::People => None,
+        };
         DuosHandicaps {
             a1: None,
             a2: None,
             b1: ai,
             b2: ai,
+        }
+    }
+
+    /// Team B's rules: the AI team's at its tier, or the humans' for a 2v2's people (R3731002).
+    fn teams(self) -> PerTeam<jackioh_engine::wire::DuosTeamRules> {
+        match self.team_b {
+            DuosTeamBSetup::Ai(tier) => PerTeam::new(DUOS_HUMAN_TEAM, duos_ai_team(tier)),
+            DuosTeamBSetup::People => PerTeam::new(DUOS_HUMAN_TEAM, DUOS_HUMAN_TEAM),
         }
     }
 
@@ -156,19 +182,23 @@ impl DuosSetup {
         } else {
             dealt.join(", ")
         };
-        format!("AI team {}, dealt {dealt}", self.tier)
+        let team_b = match self.team_b {
+            DuosTeamBSetup::Ai(tier) => format!("AI team {tier}"),
+            DuosTeamBSetup::People => "team B people".to_string(),
+        };
+        format!("{team_b}, dealt {dealt}")
     }
 }
 
-/// The seed's setup (#1573), rotating as `handicap_for_seed` does: the tier by the seed modulo the
-/// tiers, the dealt seats by the quotient, so every 12 consecutive seeds play each pairing once. The
+/// The seed's setup (#1573), rotating as `handicap_for_seed` does: team B by the seed modulo its
+/// setups, the dealt seats by the quotient, so every 16 consecutive seeds play each pairing once. The
 /// seed alone fixes it, so `--from <seed> --seeds 1` plays the same game.
 fn duos_setup_for_seed(seed: u32) -> DuosSetup {
     let at = usize::try_from(seed).unwrap_or(0);
-    let tiers = DUOS_FUZZ_TIERS.len();
+    let setups = DUOS_FUZZ_TEAM_B.len();
     DuosSetup {
-        tier: DUOS_FUZZ_TIERS[at % tiers],
-        dealt: DUOS_DEALT_SEATS[(at / tiers) % DUOS_DEALT_SEATS.len()],
+        team_b: DUOS_FUZZ_TEAM_B[at % setups],
+        dealt: DUOS_DEALT_SEATS[(at / setups) % DUOS_DEALT_SEATS.len()],
     }
 }
 
@@ -199,7 +229,7 @@ fn duos_options_for_seed(seed: u32) -> DuosCreateOptions {
     DuosCreateOptions {
         seed: format!("jackioh-duos-fuzz-{seed}"),
         decks: duos_decks_for_handicaps(seed, &handicaps),
-        teams: Some(PerTeam::new(DUOS_HUMAN_TEAM, duos_ai_team(setup.tier))),
+        teams: Some(setup.teams()),
         handicaps: Some(handicaps),
         dealt: (!setup.dealt.is_empty()).then(|| setup.dealt.to_vec()),
         ..DuosCreateOptions::default()
@@ -1005,47 +1035,83 @@ mod tests {
 
     #[test]
     fn the_setup_rotates_by_seed_through_every_tier_and_dealt_seats() {
+        use DuosTeamBSetup::{Ai, People};
         assert_eq!(
             duos_setup_for_seed(1),
             DuosSetup {
-                tier: Difficulty::Medium,
+                team_b: Ai(Difficulty::Medium),
                 dealt: &[],
             }
         );
         assert_eq!(
             duos_setup_for_seed(2),
             DuosSetup {
-                tier: Difficulty::Hard,
+                team_b: Ai(Difficulty::Hard),
                 dealt: &[],
             }
         );
         assert_eq!(
-            duos_setup_for_seed(3),
+            duos_setup_for_seed(4),
             DuosSetup {
-                tier: Difficulty::Easy,
+                team_b: Ai(Difficulty::Easy),
                 dealt: &[DuosSeat::A1],
             }
         );
         assert_eq!(
-            duos_setup_for_seed(7),
+            duos_setup_for_seed(9),
             DuosSetup {
-                tier: Difficulty::Medium,
+                team_b: Ai(Difficulty::Medium),
                 dealt: &[DuosSeat::A2, DuosSeat::B1],
             }
         );
         assert_eq!(
-            duos_setup_for_seed(11),
+            duos_setup_for_seed(15),
             DuosSetup {
-                tier: Difficulty::Hard,
+                team_b: People,
                 dealt: &[DuosSeat::A1, DuosSeat::A2],
             }
         );
-        let seen: Vec<DuosSetup> = (1..=12).map(duos_setup_for_seed).collect();
-        for tier in DUOS_FUZZ_TIERS {
+        let seen: Vec<DuosSetup> = (1..=16).map(duos_setup_for_seed).collect();
+        for team_b in DUOS_FUZZ_TEAM_B {
             for dealt in DUOS_DEALT_SEATS {
-                assert!(seen.contains(&DuosSetup { tier, dealt }), "{tier} {dealt:?}");
+                assert!(
+                    seen.contains(&DuosSetup { team_b, dealt }),
+                    "{team_b:?} {dealt:?}"
+                );
             }
         }
+    }
+
+    #[test]
+    fn r3731002_every_fourth_seed_plays_team_b_as_people() {
+        for seed in (3..=63).step_by(4) {
+            let setup = duos_setup_for_seed(seed);
+            assert_eq!(setup.team_b, DuosTeamBSetup::People, "{seed}");
+            assert!(setup.label().starts_with("team B people"), "{}", setup.label());
+            // Both teams on the humans' rules, with no handicap: decks of DECK_SIZE each.
+            let options = duos_options_for_seed(seed);
+            assert_eq!(
+                options.teams,
+                Some(PerTeam::new(DUOS_HUMAN_TEAM, DUOS_HUMAN_TEAM))
+            );
+            assert_eq!(options.handicaps, Some(DuosHandicaps::default()), "{seed}");
+            for seat in DUOS_SEATS {
+                assert_eq!(
+                    options.decks.of(seat).len(),
+                    usize::try_from(DECK_SIZE).unwrap_or(0)
+                );
+            }
+        }
+        // Every other seed's team B is the AI team.
+        assert!(
+            (1..=63)
+                .filter(|seed| seed % 4 != 3)
+                .all(|seed| { matches!(duos_setup_for_seed(seed).team_b, DuosTeamBSetup::Ai(_)) })
+        );
+        // And a people seed's game plays to an end the fold reaches again, as every seed's must.
+        let _preview = preview_every_set();
+        let run = play_duos_game(3).unwrap_or_else(|failure| panic!("seed 3: {failure}"));
+        assert!(run.state.result.is_some(), "seed 3 ended with no result");
     }
 
     #[test]
@@ -1060,8 +1126,10 @@ mod tests {
 
     #[test]
     fn a_seed_s_options_are_a_co_op_match_s_at_its_tier() {
-        for seed in 1..=3 {
-            let tier = duos_setup_for_seed(seed).tier;
+        for seed in [1, 2, 4] {
+            let DuosTeamBSetup::Ai(tier) = duos_setup_for_seed(seed).team_b else {
+                panic!("seed {seed}'s team B is the AI team");
+            };
             let options = duos_options_for_seed(seed);
             assert_eq!(
                 options.teams,
@@ -1103,15 +1171,15 @@ mod tests {
                 .map(|duel| duel.opening.as_ref().and_then(|opening| opening.dealt.clone()))
                 .collect::<Vec<Option<Vec<PlayerId>>>>()
         };
-        assert_eq!(dealt(7), vec![Some(vec![PlayerId::P2]), Some(vec![PlayerId::P1])]);
-        assert_eq!(dealt(3), vec![Some(vec![PlayerId::P1]), None]);
+        assert_eq!(dealt(9), vec![Some(vec![PlayerId::P2]), Some(vec![PlayerId::P1])]);
+        assert_eq!(dealt(5), vec![Some(vec![PlayerId::P1]), None]);
         assert_eq!(dealt(1), vec![None, None]);
     }
 
     #[test]
     fn a_failure_names_its_setup_options_and_four_decks() {
         let outcome = DuosSeedOutcome {
-            seed: 7,
+            seed: 9,
             reason: None,
             error: Some("planted".to_string()),
             heaviest: Heaviest::default(),
@@ -1121,11 +1189,11 @@ mod tests {
         let lines = failure_lines(std::slice::from_ref(&outcome));
         assert_eq!(lines.len(), 1);
         assert!(
-            lines[0].starts_with("seed 7: planted\n  setup: AI team medium, dealt a2, b1\n"),
+            lines[0].starts_with("seed 9: planted\n  setup: AI team medium, dealt a2, b1\n"),
             "unexpected report: {}",
             lines[0]
         );
-        let options = duos_options_for_seed(7);
+        let options = duos_options_for_seed(9);
         assert!(
             lines[0].contains(&format!("\n  options: {}\n", setup_options_json(&options))),
             "unexpected report: {}",
@@ -1139,15 +1207,15 @@ mod tests {
         for seat in DUOS_SEATS {
             assert!(
                 lines[0].contains(&format!(
-                    "\n  seed 7 {seat} deck: {}",
+                    "\n  seed 9 {seat} deck: {}",
                     options.decks.of(seat).join(", ")
                 )),
                 "unexpected report: {}",
                 lines[0]
             );
         }
-        let json = wave_json(7, 1, &[outcome]);
-        assert_eq!(json["failures"][0]["seed"], serde_json::json!(7));
+        let json = wave_json(9, 1, &[outcome]);
+        assert_eq!(json["failures"][0]["seed"], serde_json::json!(9));
         assert_eq!(
             json["failures"][0]["options"],
             serde_json::to_value(&options).expect("options serialize")

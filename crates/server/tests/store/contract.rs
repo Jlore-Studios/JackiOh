@@ -9221,6 +9221,44 @@ mod duos {
         assert_eq!((ended.a1.as_str(), ended.a2.as_str()), (a1.id.as_str(), ""));
     }
 
+    /// R3731003, migration 0091: a 2v2's match keeps team B's people, each found live by their own seat;
+    /// a live one's team B person is not deleted, and once it has ended the seat empties, as 0051's
+    /// rule for a1 and a2 has it (R1497000).
+    async fn r3731003_a_two_v_two_match_keeps_team_bs_people(harness: &StoreHarness) {
+        let a1 = active_profile(harness, None).await;
+        let a2 = active_profile(harness, None).await;
+        let b1 = active_profile(harness, None).await;
+        let b2 = active_profile(harness, None).await;
+        let now = harness.now();
+        let made = duos_match(&a1.id, &a2.id, now);
+        let row: DuosMatch = from(spread(
+            j(&made),
+            json!({ "b1": b1.id, "b2": b2.id, "difficulty": "easy", "options": spread(j(&made.options), json!({ "teamB": "people" })) }),
+        ));
+        assert_eq!(row.team_b(), jackioh_shared::host::DuosTeamB::People);
+        q!(harness, t => t.duos_matches_create(&row));
+        assert_eq!(q!(harness, t => t.duos_matches_get(&row.id)), Some(row.clone()));
+        for seated in [&b1, &b2] {
+            assert_eq!(
+                q!(harness, t => t.duos_matches_live_for(&seated.id)),
+                Some(row.id.clone())
+            );
+            assert!(
+                call!(harness, t => t.profiles_remove(&seated.id)).is_err(),
+                "team B's seat of a live 2v2"
+            );
+        }
+        assert_eq!(q!(harness, t => t.duos_matches_get(&row.id)), Some(row.clone()));
+
+        let result = json!({ "outcome": "win", "winner": "a", "reason": "concede" });
+        assert!(q!(harness, t => t.duos_matches_finish(&row.id, &result, now + 1_000)));
+        assert_eq!(q!(harness, t => t.duos_matches_live_for(&b1.id)), None);
+        assert!(q!(harness, t => t.profiles_remove(&b1.id)));
+        let ended = must(q!(harness, t => t.duos_matches_get(&row.id)), "the match");
+        assert_eq!((ended.b1.as_str(), ended.b2.as_str()), ("", b2.id.as_str()));
+        assert_eq!(ended.team_b(), jackioh_shared::host::DuosTeamB::People);
+    }
+
     /// §13.9, the retention purge: a co-op match's log goes once the match ended before the cutoff,
     /// as a 1v1 match's; a match that ended later, or is live, keeps its log; the row stays.
     async fn s6_the_purge_takes_the_logs_of_matches_that_ended_before_the_cutoff(harness: &StoreHarness) {
@@ -9334,6 +9372,7 @@ mod duos {
         s6_matches_finish_once_and_the_log_is_append_only,
         r1497000_a_deleted_profile_takes_its_rooms_and_empties_its_seat_on_a_finished_match,
         r1497000_a_profile_seated_in_a_live_co_op_match_is_not_deleted,
+        r3731003_a_two_v_two_match_keeps_team_bs_people,
         s6_the_purge_takes_the_logs_of_matches_that_ended_before_the_cutoff,
     );
 }
@@ -9342,7 +9381,7 @@ mod duos {
 
 mod lobbies {
     use super::*;
-    use jackioh_server::lobby::store::{FORMAT_COOP, FORMAT_DUEL, Lobby};
+    use jackioh_server::lobby::store::{FORMAT_COOP, FORMAT_DUEL, FORMAT_TWO_V_TWO, Lobby};
 
     fn lobby(code: &str, host: &str, format: &str, at: i64, expires_at: i64) -> Lobby {
         let settings = if format == FORMAT_DUEL {
@@ -9498,10 +9537,72 @@ mod lobbies {
         assert_eq!(q!(harness, t => t.lobbies_get("LOBBDB")), None);
     }
 
+    /// R3731000, migration 0091: a 2v2 lobby keeps its other team's seats, picks and Readys; each of
+    /// them finds it as a member; no one sits in two seats; and a deleted member of the other team
+    /// takes the lobby.
+    async fn r3731000_a_two_v_two_lobby_keeps_its_other_team(harness: &StoreHarness) {
+        let host = active_profile(harness, None).await;
+        let guest = active_profile(harness, None).await;
+        let third = active_profile(harness, None).await;
+        let fourth = active_profile(harness, None).await;
+        let now = harness.now();
+        let made: Lobby = from(spread(
+            j(&lobby("LOBBTA", &host.id, FORMAT_COOP, now, now + 600_000)),
+            json!({ "settings": { "format": "2v2" } }),
+        ));
+        assert!(q!(harness, t => t.lobbies_create(&made)));
+        assert_eq!(q!(harness, t => t.lobbies_get("LOBBTA")), Some(made.clone()));
+        assert_eq!(
+            q!(harness, t => t.lobbies_count_open_by_host(&host.id, FORMAT_TWO_V_TWO, now)),
+            1
+        );
+        assert_eq!(
+            q!(harness, t => t.lobbies_count_open_by_host(&host.id, FORMAT_COOP, now)),
+            0
+        );
+
+        let pick = json!({ "choice": { "mode": "random", "leanSet": "newest" }, "frozen": { "mode": "random", "leanSet": "newest" } });
+        let next: Lobby = from(spread(
+            j(&made),
+            json!({
+                "guest": guest.id,
+                "others": [
+                    { "profile": third.id, "pick": pick, "ready": true },
+                    { "profile": fourth.id, "pick": null, "ready": false },
+                ],
+                "rev": 1,
+            }),
+        ));
+        assert!(q!(harness, t => t.lobbies_update(&next, 0)));
+        assert_eq!(q!(harness, t => t.lobbies_get("LOBBTA")), Some(next.clone()));
+        for member in [&third, &fourth] {
+            let held = q!(harness, t => t.lobbies_of_member(&member.id, now));
+            assert_eq!(held, vec![next.clone()]);
+        }
+
+        // One person in two seats is refused, and the lobby stays as it was.
+        let twice: Lobby = from(spread(
+            j(&next),
+            json!({
+                "others": [
+                    { "profile": guest.id, "pick": null, "ready": false },
+                    { "profile": fourth.id, "pick": null, "ready": false },
+                ],
+                "rev": 2,
+            }),
+        ));
+        assert!(call!(harness, t => t.lobbies_update(&twice, 1)).is_err());
+        assert_eq!(q!(harness, t => t.lobbies_get("LOBBTA")), Some(next.clone()));
+
+        assert!(q!(harness, t => t.profiles_remove(&fourth.id)));
+        assert_eq!(q!(harness, t => t.lobbies_get("LOBBTA")), None);
+    }
+
     both_stores!(
         r3730000_creates_reads_updates_by_revision_and_deletes,
         r3730004_counts_lists_and_reaps,
         r3730000_a_deleted_profile_takes_its_lobbies,
+        r3731000_a_two_v_two_lobby_keeps_its_other_team,
     );
 }
 

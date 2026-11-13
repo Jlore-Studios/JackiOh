@@ -86,7 +86,7 @@ describe("#936 S6 the co-op socket", () => {
       type: "clock",
       now: 5,
       roundDeadline: 90,
-      graceDeadlines: { a1: null, a2: 7 },
+      graceDeadlines: { a1: null, a2: 7, b1: null, b2: null },
     });
     expect(parseDuosFrame(JSON.stringify({ type: "teammate", connected: false, aiPlaying: true }))).toEqual({
       type: "teammate",

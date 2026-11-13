@@ -940,8 +940,13 @@ impl DuosHost {
 
         // B38: a round with a person's seat runs the round clock: every round of a 2v2 (R3731002).
         let round = self.game.round;
-        let with_people =
-            !over && round >= 1 && self.game.round_seats.iter().any(|seat| self.person(*seat).is_some());
+        let with_people = !over
+            && round >= 1
+            && self
+                .game
+                .round_seats
+                .iter()
+                .any(|seat| self.person(*seat).is_some());
         if with_people {
             let armed = self.round_clock.as_ref().is_some_and(|(held, _)| *held == round);
             if !armed && self.round_expired != Some(round) {

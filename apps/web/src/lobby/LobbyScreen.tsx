@@ -1,14 +1,26 @@
-// The private lobby screen, `/lobby/:code` (SPEC §9.5, §13.9; R3730000 to R3730006): one screen for a 1v1
-// lobby and a co-op lobby. Its seats show who is in, an empty seat invites a friend, each member picks
-// their own deck and presses Ready, the host sets the game and presses Start, and a countdown opens the
-// board. With no lobby under the code it is the classic room's join card, so an old link still joins.
+// The private lobby screen, `/lobby/:code` (SPEC §9.5, §13.9; R3730000 to R3730006, R3731000): one screen
+// for a 1v1 lobby, a co-op lobby and a 2v2. Its seats show who is in, an empty seat invites a friend, each
+// member picks their own deck and presses Ready, the host sets the game and presses Start, and a countdown
+// opens the board. A 2v2's seats are two teams: a member other than the host switches team, and the host
+// moves a member across, by a seat's button or by dragging it onto another. With no lobby under the code it
+// is the classic room's join card, so an old link still joins.
 //
 // CLAUDE.md rule 7: the screen sends intent and draws the server's view. Who may enter, what a pick may
-// be, whether the Start may go and every seat's state are the server's; a refusal is shown in its words.
-// The view holds no card and no 1v1 opponent's deck. It reads again on every `lobby` push over the social
+// be, who sits on which team, whether the Start may go and every seat's state are the server's; a refusal
+// is shown in its words. The view holds no card, no 1v1 opponent's deck and no other team's. It reads again on every `lobby` push over the social
 // socket, every LOBBY_POLL_MS while the socket is down, and as the lobby's time runs out.
 
-import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type ReactElement, type RefObject } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type DragEvent,
+  type FormEvent,
+  type ReactElement,
+  type RefObject,
+} from "react";
 
 import { DIFFICULTIES, type Difficulty } from "@jackioh/engine/config";
 import { LOBBY_START_COUNTDOWN_SECONDS } from "@jackioh/server-config";
@@ -33,20 +45,25 @@ import {
   getLobby,
   inviteToLobby,
   leaveLobby,
+  moveInLobby,
   pickLobby,
   readyLobby,
   removeFromLobby,
   setLobbySettings,
   startLobby,
+  switchLobbyTeam,
   type CoopPick,
   type CoopRoomView,
+  type LobbyMoveSeat,
   type LobbyRead,
+  type LobbyRole,
   type LobbySeat,
   type LobbyView,
   type RoomView,
 } from "./api.ts";
 import { LOBBY_COUNTDOWN_TICK_MS, LOBBY_POLL_MS } from "./config.ts";
-import { canStart, deckWords, seatsOf, type SeatShown } from "./seats.ts";
+import { takeInviteRefusal } from "./inviteRefusal.ts";
+import { canStart, deckWords, lobbyTeamOf, moveTargetOf, otherTeamHasRoom, seatsOf, type SeatShown } from "./seats.ts";
 import { lobbyTestid } from "./testids.ts";
 import { coopStartingDeck, rememberCoopPick } from "./coopDeck.ts";
 import "./lobby.css";
@@ -57,13 +74,28 @@ const MS_PER_SECOND = 1000;
 /** The co-op deck select's value for a random deck. */
 const RANDOM = "random";
 
+/** R3731000: what a seat the host drags carries, its member's profile id. */
+const SEAT_DRAG_MIME = "application/x-jackioh-lobby-seat";
+
 export const DIFFICULTY_LABEL: Readonly<Record<Difficulty, string>> = { easy: "Easy", medium: "Medium", hard: "Hard" };
 
-/** The board a started lobby opens: a series for Conquest, a co-op board, or a match (R3730002). */
+/** The board a started lobby opens: a series for Conquest, a Duos board for co-op and a 2v2, or a match (R3730002). */
 export function boardOf(view: LobbyView): string | null {
   if (view.seriesId !== null) return paths.series(view.seriesId);
   if (view.matchId === null) return null;
-  return view.settings.format === "coop" ? paths.duos(view.matchId) : paths.match(view.matchId);
+  return view.settings.format === "duel" ? paths.match(view.matchId) : paths.duos(view.matchId);
+}
+
+/** R3731000: a 2v2 team's name from the reader's seat: theirs, else the host's or the other one. */
+function teamName(team: 0 | 1, yours: 0 | 1 | null): string {
+  if (team === yours) return t("Your team");
+  return team === 0 ? t("Host's team") : t("Other team");
+}
+
+/** A seat's role, for the AI's none. */
+function roleOf(shown: SeatShown): LobbyRole | null {
+  if (shown.kind === "ai") return null;
+  return shown.kind === "player" ? shown.seat.role : shown.role;
 }
 
 /** A refusal in the server's words. */
@@ -183,7 +215,11 @@ export function LobbyScreen({ token, code }: LobbyScreenProps): ReactElement {
 /** The lobby itself: its code, its seats, its settings, the member's deck, invites and the actions. */
 function Lobby({ token, view, removed, reload }: { token: string; view: LobbyView; removed: boolean; reload: () => void }): ReactElement {
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // R3874000: an invite refused on Play together opens this lobby saying why, once; the next request clears it.
+  const [error, setError] = useState<string | null>(() => {
+    const refused = takeInviteRefusal(view.code);
+    return refused === null ? null : t(refused);
+  });
   const [copied, setCopied] = useState<"code" | "shared" | "copied" | null>(null);
   const inviteHeading = useRef<HTMLHeadingElement>(null);
 
@@ -204,10 +240,21 @@ function Lobby({ token, view, removed, reload }: { token: string; view: LobbyVie
       });
   };
 
-  const host = view.you === "host";
-  const member = view.you !== null;
+  const you = view.you;
+  const host = you === "host";
+  const member = you !== null;
   const full = view.seats.every((seat) => seat.player !== null);
   const started = view.startedAt !== null;
+  const twoVTwo = view.settings.format === "2v2";
+  const yourTeam = you === null ? null : lobbyTeamOf(you);
+  const move = (profileId: string, seat: LobbyMoveSeat): void => {
+    run(() => moveInLobby(view.code, profileId, seat));
+  };
+  /** R3731000: the seat a host's drag may drop on: in a 2v2, any but the host's own. */
+  const dropRoleOf = (shown: SeatShown): LobbyMoveSeat | null => {
+    const role = roleOf(shown);
+    return host && twoVTwo && role !== null && role !== "host" ? role : null;
+  };
 
   return (
     <section className="lobby-card lobby" aria-labelledby={PAGE_TITLE_ID} data-format={view.settings.format}>
@@ -253,26 +300,59 @@ function Lobby({ token, view, removed, reload }: { token: string; view: LobbyVie
 
       <div className="lobby__body">
         <div className="lobby__seats">
-          {seatsOf(view).map((team, index) => (
-            <div key={index === 0 ? "a" : "b"} className="lobby__team" data-team={index === 0 ? "a" : "b"}>
-              {team.map((shown, place) => (
-                <Seat
-                  key={`${String(index)}-${String(place)}`}
-                  shown={shown}
-                  hostView={host}
-                  duel={view.settings.format === "duel"}
-                  busy={busy || started}
-                  onInvite={() => inviteHeading.current?.focus()}
-                  onEnter={() => {
-                    run(() => enterLobby(view.code));
-                  }}
-                  onRemove={(profileId) => {
-                    run(() => removeFromLobby(view.code, profileId));
-                  }}
-                />
-              ))}
-            </div>
-          ))}
+          {seatsOf(view).map((team, index) => {
+            // R3731000: a 2v2's teams are the host's (1) and the other (2); the coin picks which plays as A.
+            const name = twoVTwo ? String(index + 1) : index === 0 ? "a" : "b";
+            const label = twoVTwo ? teamName(index === 0 ? 0 : 1, yourTeam) : null;
+            return (
+              <div
+                key={name}
+                className="lobby__team"
+                data-testid={lobbyTestid.team}
+                data-team={name}
+                role={label === null ? undefined : "group"}
+                aria-label={label ?? undefined}
+              >
+                {label === null ? null : (
+                  <p className="lobby__team-name" aria-hidden="true">
+                    {label}
+                  </p>
+                )}
+                {team.map((shown, place) => (
+                  <Seat
+                    key={`${String(index)}-${String(place)}`}
+                    shown={shown}
+                    hostView={host}
+                    duel={view.settings.format === "duel"}
+                    busy={busy || started}
+                    moveTo={host && twoVTwo && shown.kind === "player" ? moveTargetOf(view, shown.seat.role) : null}
+                    dropRole={dropRoleOf(shown)}
+                    onInvite={() => inviteHeading.current?.focus()}
+                    onEnter={() => {
+                      run(() => enterLobby(view.code));
+                    }}
+                    onRemove={(profileId) => {
+                      run(() => removeFromLobby(view.code, profileId));
+                    }}
+                    onMove={move}
+                  />
+                ))}
+              </div>
+            );
+          })}
+          {twoVTwo && you !== null && you !== "host" ? (
+            <button
+              type="button"
+              className="button-secondary lobby__switch"
+              data-testid={lobbyTestid.switchTeam}
+              disabled={busy || started || !otherTeamHasRoom(view, you)}
+              onClick={() => {
+                run(() => switchLobbyTeam(view.code));
+              }}
+            >
+              {t("Switch team")}
+            </button>
+          ) : null}
         </div>
 
         <div className="lobby__side">
@@ -301,7 +381,7 @@ function Lobby({ token, view, removed, reload }: { token: string; view: LobbyVie
             onClick={() => {
               run(async () => {
                 await leaveLobby(view.code);
-                navigate(view.settings.format === "coop" ? paths.together : paths.play);
+                navigate(view.settings.format === "duel" ? paths.play : paths.together);
               });
             }}
           >
@@ -326,23 +406,54 @@ function Lobby({ token, view, removed, reload }: { token: string; view: LobbyVie
   );
 }
 
+/**
+ * R3731000: what a seat the host may drop a dragged seat on answers: the drag's member to this seat, unless
+ * it is the seat dragged. No handlers where nothing may drop.
+ */
+function dropProps(
+  role: LobbyMoveSeat | null,
+  self: string | null,
+  onMove: (profileId: string, seat: LobbyMoveSeat) => void,
+): { onDragOver?: (event: DragEvent<HTMLElement>) => void; onDrop?: (event: DragEvent<HTMLElement>) => void } {
+  if (role === null) return {};
+  return {
+    onDragOver: (event) => {
+      if (Array.from(event.dataTransfer.types).includes(SEAT_DRAG_MIME)) event.preventDefault();
+    },
+    onDrop: (event) => {
+      const profileId = event.dataTransfer.getData(SEAT_DRAG_MIME);
+      if (profileId === "") return;
+      event.preventDefault();
+      if (profileId !== self) onMove(profileId, role);
+    },
+  };
+}
+
 /** One seat: a player, an empty seat to invite into or take, or one of the AI's. */
 function Seat({
   shown,
   hostView,
   duel,
   busy,
+  moveTo,
+  dropRole,
   onInvite,
   onEnter,
   onRemove,
+  onMove,
 }: {
   shown: SeatShown;
   hostView: boolean;
   duel: boolean;
   busy: boolean;
+  /** R3731000: the seat the host's Move asks for this seat's member; null offers none. */
+  moveTo: LobbyMoveSeat | null;
+  /** R3731000: this seat, when the host may drop another seat's member on it; else null. */
+  dropRole: LobbyMoveSeat | null;
   onInvite: () => void;
   onEnter: () => void;
   onRemove: (profileId: string) => void;
+  onMove: (profileId: string, seat: LobbyMoveSeat) => void;
 }): ReactElement {
   if (shown.kind === "ai") {
     return (
@@ -354,7 +465,16 @@ function Seat({
   }
   if (shown.kind === "invite") {
     return (
-      <button type="button" className="lobby-seat lobby-seat--empty" data-testid={lobbyTestid.invite} data-seat="invite" disabled={busy} onClick={onInvite}>
+      <button
+        type="button"
+        className="lobby-seat lobby-seat--empty"
+        data-testid={lobbyTestid.invite}
+        data-seat="invite"
+        data-role={shown.role}
+        disabled={busy}
+        onClick={onInvite}
+        {...dropProps(busy ? null : dropRole, null, onMove)}
+      >
         <span aria-hidden="true">+</span> {t("Invite a friend")}
       </button>
     );
@@ -370,8 +490,25 @@ function Seat({
   }
   const { seat } = shown;
   const player = seat.player;
+  const draggable = moveTo !== null && player !== null && !busy;
   return (
-    <div className="lobby-seat" data-testid={lobbyTestid.seat} data-seat={seat.role} data-state={seat.state} data-you={shown.you ? "true" : "false"}>
+    <div
+      className="lobby-seat"
+      data-testid={lobbyTestid.seat}
+      data-seat={seat.role}
+      data-state={seat.state}
+      data-you={shown.you ? "true" : "false"}
+      draggable={draggable ? true : undefined}
+      onDragStart={
+        draggable
+          ? (event) => {
+              event.dataTransfer.setData(SEAT_DRAG_MIME, player.profileId);
+              event.dataTransfer.effectAllowed = "move";
+            }
+          : undefined
+      }
+      {...dropProps(busy ? null : dropRole, player?.profileId ?? null, onMove)}
+    >
       <span className="lobby-seat__portrait" aria-hidden="true">
         {player?.username.slice(0, 1) ?? "?"}
       </span>
@@ -396,6 +533,19 @@ function Seat({
           }}
         >
           {t("Remove")}
+        </button>
+      ) : null}
+      {moveTo !== null && player !== null ? (
+        <button
+          type="button"
+          className="link-button"
+          data-testid={lobbyTestid.move}
+          disabled={busy}
+          onClick={() => {
+            onMove(player.profileId, moveTo);
+          }}
+        >
+          {t("Move to the other team")}
         </button>
       ) : null}
     </div>
@@ -425,6 +575,17 @@ function Settings({
 }): ReactElement {
   const id = useId();
   const host = view.you === "host";
+  // R3731000: a 2v2 has nothing to set.
+  if (view.settings.format === "2v2") {
+    return (
+      <div className="lobby__setting">
+        <label htmlFor={id}>{t("Format")}</label>
+        <output id={id} data-testid={lobbyTestid.settings}>
+          {t("2v2 · two teams of two · unranked")}
+        </output>
+      </div>
+    );
+  }
   if (view.settings.format === "duel") {
     const mode = view.settings.mode;
     return (
@@ -492,22 +653,22 @@ type LocalPick = { deckId: string | null; trioId: string | null; random: boolean
 
 /**
  * The pick the screen starts on: the server's when the member made one, else the defaults, which in
- * co-op start on the device's last co-op pick (R2094000 as R3730006 amends it).
+ * co-op and a 2v2 start on the device's last co-op pick (R2094000 as R3730006 amends it; R3731000).
  */
 function startingPick(view: LobbyView, data: LobbyData | null): LocalPick {
   const sent = view.yourPick;
   const decks = data?.decks ?? [];
   const lean = sent?.mode === "random" ? (sent.leanSet ?? null) : readPlayLean();
-  const fallback = view.settings.format === "coop" && sent === null ? coopStartingDeck(decks) : defaultDeck(decks, null);
+  const fallback = view.settings.format !== "duel" && sent === null ? coopStartingDeck(decks) : defaultDeck(decks, null);
   const deckId = sent?.mode === "bo1" ? sent.deckId : (fallback?.id ?? null);
   const trioId = sent?.mode === "bo3" ? sent.trioId : (defaultTrio(data?.trios ?? [], null)?.id ?? null);
-  const random = view.settings.format === "coop" ? sent?.mode === "random" || (sent === null && deckId === null) : view.settings.mode === "random";
+  const random = view.settings.format === "duel" ? view.settings.mode === "random" : sent?.mode === "random" || (sent === null && deckId === null);
   return { deckId, trioId, random, lean };
 }
 
-/** The request a local pick sends: the queue's choice in a duel, a co-op room's in co-op. */
+/** The request a local pick sends: the queue's choice in a duel, a co-op room's in co-op and a 2v2 (R3731000). */
 function pickBody(view: LobbyView, pick: LocalPick, data: LobbyData | null): ModeChoice | CoopPick | null {
-  if (view.settings.format === "coop") {
+  if (view.settings.format !== "duel") {
     if (pick.random || pick.deckId === null) return pick.lean === null ? { random: true } : { random: true, leanSet: pick.lean };
     return { deckId: pick.deckId };
   }
@@ -516,7 +677,7 @@ function pickBody(view: LobbyView, pick: LocalPick, data: LobbyData | null): Mod
   return choiceFor(view.settings.mode, deck, trio, pick.lean);
 }
 
-/** A co-op pick is remembered on the device (R2094000); a duel's is not. */
+/** A co-op pick, a 2v2's among them, is remembered on the device (R2094000); a duel's is not. */
 function remember(body: ModeChoice | CoopPick): void {
   if (!("mode" in body)) rememberCoopPick(body);
 }
@@ -606,7 +767,7 @@ function YourDeck({
             send(value === RANDOM ? { ...pick, random: true } : { ...pick, random: false, deckId: value });
           }}
         >
-          {view.settings.format === "coop" ? <option value={RANDOM}>{t("A random deck")}</option> : null}
+          {view.settings.format === "duel" ? null : <option value={RANDOM}>{t("A random deck")}</option>}
           {(data?.decks ?? []).map((saved: SavedDeck) => (
             <option key={saved.id} value={saved.id}>
               {saved.name}

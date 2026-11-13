@@ -820,7 +820,7 @@ mod r1310000_going_live {
             let profile = store!(app.db, profiles_get_by_user_id(fixture.user_id))
                 .unwrap_or_else(|| panic!("{} has a profile", fixture.user_id));
             let owned = store!(app.db, collection_get(&profile.id)).len();
-            let active = fixture.user_id == "e2e-p1" || fixture.user_id == "e2e-p2";
+            let active = fixture.status == jackioh_server::api::e2e::E2EAccountStatus::Active;
             assert_eq!(
                 owned,
                 if active { every_card(&app) } else { 0 },
@@ -1069,7 +1069,8 @@ mod r143_the_optional_seed {
     #[tokio::test(start_paused = true)]
     async fn still_mints_a_seed_when_none_is_supplied_9_3_the_server_owns_it() {
         let h = queue_harness(true).await;
-        for index in 0..h.tokens.len() {
+        // The first two active fixtures make one pair (the 2v2's other two, R3731000, stay out).
+        for index in 0..2 {
             let (status, _) = enqueue(&h, index, None).await;
             assert_eq!(status, 200);
         }

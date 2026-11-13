@@ -1,7 +1,8 @@
 // The way into a private lobby (R3730000), where "Play a friend" stood on `/play` and the co-op panel on
 // `/together`: Create a lobby in this screen's format, Join one by its code, and the player's own lobbies
-// not started, so a reload finds its lobby again (R3730004). A co-op panel also offers the way back to a
-// live co-op game (B42). CLAUDE.md rule 7: the server makes the lobby and refuses what it refuses.
+// not started, so a reload finds its lobby again (R3730004). A co-op panel also makes a 2v2 lobby and lists
+// the player's (R3731000), and offers the way back to a live co-op game (B42). CLAUDE.md rule 7: the server
+// makes the lobby and refuses what it refuses.
 
 import { useEffect, useId, useState, type FormEvent, type ReactElement } from "react";
 
@@ -15,18 +16,21 @@ import { attempt, messageOf } from "../net/errors.ts";
 import { MODE_LABEL } from "../net/liveGame.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { followInApp } from "../routes/nav.tsx";
-import { createLobby, getMyLobbies, type LobbyFormat, type MyLobby } from "./api.ts";
+import { createLobby, getMyLobbies, type LobbySettings, type MyLobby } from "./api.ts";
 import { lobbyTestid } from "./testids.ts";
 import "./lobby.css";
 
 /** What a lobby of the list is, in words. */
 function lobbyWords(lobby: MyLobby): string {
   if (lobby.settings.format === "duel") return t("1v1 · {mode}", { mode: t(MODE_LABEL[lobby.settings.mode]) });
-  return t("Co-op");
+  return lobby.settings.format === "2v2" ? t("2v2") : t("Co-op");
 }
 
+/** The screen a panel stands on: Play's 1v1 or Play together's co-op, which makes 2v2 lobbies too (R3731000). */
+export type LobbyPanelFormat = "duel" | "coop";
+
 export type LobbyPanelProps = {
-  format: LobbyFormat;
+  format: LobbyPanelFormat;
   /** A 1v1 lobby's first mode: the one the Play screen has chosen. */
   mode?: QueueMode;
 };
@@ -74,10 +78,9 @@ export function LobbyPanel({ format, mode }: LobbyPanelProps): ReactElement {
     };
   }, [format, liveRound]);
 
-  const create = (): void => {
+  const create = (settings: LobbySettings): void => {
     setBusy(true);
     setError(null);
-    const settings = format === "duel" ? ({ format, mode: mode ?? "bo1" } as const) : ({ format, difficulty: "medium" } as const);
     attempt(() => createLobby(settings)).then(
       (made) => {
         navigate(paths.lobby(made.code));
@@ -99,7 +102,7 @@ export function LobbyPanel({ format, mode }: LobbyPanelProps): ReactElement {
     navigate(paths.lobby(canonical));
   };
 
-  const shown = mine.filter((lobby) => lobby.settings.format === format);
+  const shown = mine.filter((lobby) => lobby.settings.format === format || (format === "coop" && lobby.settings.format === "2v2"));
   return (
     <section className="lobby-card lobby-panel" aria-labelledby={headingId} data-testid={lobbyTestid.panel} data-format={format}>
       <h2 id={headingId} className="play-panel__heading">
@@ -134,9 +137,30 @@ export function LobbyPanel({ format, mode }: LobbyPanelProps): ReactElement {
           ? t("Make a private lobby, invite a friend, and start when you are both ready.")
           : t("Make a co-op lobby, invite a friend, and take on the AI team together.")}
       </p>
-      <button type="button" className="button-secondary" data-testid={lobbyTestid.create} disabled={busy} onClick={create}>
+      <button
+        type="button"
+        className="button-secondary"
+        data-testid={lobbyTestid.create}
+        disabled={busy}
+        onClick={() => {
+          create(format === "duel" ? { format, mode: mode ?? "bo1" } : { format, difficulty: "medium" });
+        }}
+      >
         {t("Create a lobby")}
       </button>
+      {format === "coop" ? (
+        <button
+          type="button"
+          className="button-secondary"
+          data-testid={lobbyTestid.create2v2}
+          disabled={busy}
+          onClick={() => {
+            create({ format: "2v2" });
+          }}
+        >
+          {t("Create a 2v2 lobby")}
+        </button>
+      ) : null}
       {shown.length === 0 ? null : (
         <ul className="lobby-panel__mine" data-testid={lobbyTestid.mine}>
           {shown.map((lobby) => (

@@ -251,9 +251,7 @@ impl DuosRegistry {
             None => {
                 let row = one_tx!(app.db, |t| t.duos_matches_get(match_id).await?)
                     .map_err(|error| DuosAttachError::Internal(error.to_string()))?;
-                let seated = row
-                    .as_ref()
-                    .is_some_and(|row| row.seat_of(profile_id).is_some());
+                let seated = row.as_ref().is_some_and(|row| row.seat_of(profile_id).is_some());
                 if !seated {
                     return Err(DuosAttachError::NotFound);
                 }

@@ -787,7 +787,9 @@ impl DuosActor {
         }
         for &seat in self.shared.row.team_b().people() {
             if announce
-                && self.person(seat).is_some_and(|index| core.jlore_capped[index] || core.economy[index].is_some())
+                && self
+                    .person(seat)
+                    .is_some_and(|index| core.jlore_capped[index] || core.economy[index].is_some())
             {
                 self.push_view(&mut core, seat);
             }
@@ -1519,11 +1521,16 @@ impl DuosActor {
             let mut sent_at = gate.sent_at;
             sent_at.push(now);
             core.spectate.emote_sent_at.insert(sender_id.clone(), sent_at);
-            let people = self.shared.row.people().into_iter().filter_map(|(seat, profile_id)| {
-                core.sockets[slot(seat)]
-                    .as_ref()
-                    .map(|socket| (profile_id.to_string(), socket.clone()))
-            });
+            let people = self
+                .shared
+                .row
+                .people()
+                .into_iter()
+                .filter_map(|(seat, profile_id)| {
+                    core.sockets[slot(seat)]
+                        .as_ref()
+                        .map(|socket| (profile_id.to_string(), socket.clone()))
+                });
             let watchers = core
                 .spectate
                 .watchers

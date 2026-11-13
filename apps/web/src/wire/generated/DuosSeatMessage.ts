@@ -12,4 +12,4 @@ export type DuosSeatMessage = { "message": "view", view: DuosView, legal: Array<
  * R3477000: the engine's forecast of the attacks among `legal` (`DuosHost::forecast`); never a
  * watcher's.
  */
-forecast?: CombatForecast, } | { "message": "clock", now: number, roundDeadline: number | null, graceA1: number | null, graceA2: number | null, } | { "message": "teammate", connected: boolean, aiPlaying: boolean, };
+forecast?: CombatForecast, } | { "message": "clock", now: number, roundDeadline: number | null, graceA1: number | null, graceA2: number | null, graceB1?: number, graceB2?: number, } | { "message": "teammate", connected: boolean, aiPlaying: boolean, };

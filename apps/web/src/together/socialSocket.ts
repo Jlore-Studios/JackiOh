@@ -49,8 +49,14 @@ export type SocialPush =
   /** R3730005: a friend invites the tab's account into their lobby, a toast nothing keeps. */
   | { kind: "lobbyInvite"; code: string; format: LobbyFormat; from: PlayerRef };
 
-/** A lobby's format, as `lobbyInvite` names it. */
-export type LobbyFormat = "duel" | "coop";
+/** A lobby's format, as `lobbyInvite` names it: a 2v2's too (R3731000). */
+export type LobbyFormat = "duel" | "coop" | "2v2";
+
+const LOBBY_FORMATS: readonly string[] = ["duel", "coop", "2v2"] satisfies readonly LobbyFormat[];
+
+function isLobbyFormat(value: unknown): value is LobbyFormat {
+  return typeof value === "string" && LOBBY_FORMATS.includes(value);
+}
 
 /** One text frame, or null for anything this client does not read (an error frame, junk). */
 export function parseSocialPush(data: unknown): SocialPush | null {
@@ -78,7 +84,7 @@ export function parseSocialPush(data: unknown): SocialPush | null {
       return typeof parsed.code === "string" ? { kind: "lobby", code: parsed.code } : null;
     case "lobbyInvite": {
       const { code, format, from } = parsed;
-      if (typeof code !== "string" || (format !== "duel" && format !== "coop") || !isRecord(from)) return null;
+      if (typeof code !== "string" || !isLobbyFormat(format) || !isRecord(from)) return null;
       if (typeof from.profileId !== "string" || typeof from.username !== "string") return null;
       return { kind: "lobbyInvite", code, format, from: { profileId: from.profileId, username: from.username } };
     }

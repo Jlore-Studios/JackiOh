@@ -327,11 +327,21 @@ describe("R3214000 the social socket", () => {
     });
     for (const other of [
       JSON.stringify({ type: "lobby" }),
-      JSON.stringify({ type: "lobbyInvite", code: "K7Q2XM", format: "2v2", from }),
+      JSON.stringify({ type: "lobbyInvite", code: "K7Q2XM", format: "trio", from }),
       JSON.stringify({ type: "lobbyInvite", code: "K7Q2XM", format: "duel", from: { profileId: "f-ann" } }),
       JSON.stringify({ type: "lobbyInvite", format: "duel", from }),
     ]) {
       expect(parseSocialPush(other), other).toBeNull();
     }
+  });
+
+  it("R3731000 an invite to a 2v2 lobby parses", () => {
+    const from = { profileId: "f-ann", username: "Ann#1" };
+    expect(parseSocialPush(JSON.stringify({ type: "lobbyInvite", code: "K7Q2XM", format: "2v2", from }))).toEqual({
+      kind: "lobbyInvite",
+      code: "K7Q2XM",
+      format: "2v2",
+      from,
+    });
   });
 });

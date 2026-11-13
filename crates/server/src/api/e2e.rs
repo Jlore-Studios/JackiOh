@@ -1,7 +1,8 @@
 //! BUILD M8's `E2E=1` test server: the fixture accounts and invite codes and R144's reseed, at boot
 //! and on `POST /api/e2e/reseed`; `crate::auth::E2eAuth` (SURFACE §11.1), built from `E2E_ACCOUNTS`
 //! here, honors the fixture tokens. `e2e-p1` and `e2e-p2` are active and own every card (a
-//! redemption grants only the starter cards, R1310000, so they are granted the rest), `e2e-pending`
+//! redemption grants only the starter cards, R1310000, so they are granted the rest), as do `e2e-p3`
+//! and `e2e-p4`, a 2v2's other two people (spec 55, R3731000), `e2e-pending`
 //! is pending, and R1310004's `e2e-econ` is a dev account in end-to-end mode alone ([`is_e2e_dev`]).
 //!
 //! SPEC §11 R144: the reseed makes a spec that activates the pending account or spends a code
@@ -76,6 +77,25 @@ pub const E2E_ACCOUNTS: &[E2EAccount] = &[
         token: "e2e-token-p2",
         status: E2EAccountStatus::Active,
         username: "e2e_p2",
+        dev: false,
+    },
+    // R3731000: a 2v2 lobby's other two people (spec 55).
+    E2EAccount {
+        user_id: "e2e-p3",
+        email: "e2e-p3@jackioh.test",
+        password: "e2e-p3-password",
+        token: "e2e-token-p3",
+        status: E2EAccountStatus::Active,
+        username: "e2e_p3",
+        dev: false,
+    },
+    E2EAccount {
+        user_id: "e2e-p4",
+        email: "e2e-p4@jackioh.test",
+        password: "e2e-p4-password",
+        token: "e2e-token-p4",
+        status: E2EAccountStatus::Active,
+        username: "e2e_p4",
         dev: false,
     },
     E2EAccount {

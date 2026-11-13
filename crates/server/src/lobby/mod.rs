@@ -592,7 +592,9 @@ pub async fn get_lobby(app: &Arc<App>, req: Req) -> ApiResult {
     };
     match load(app, &code, &profile.id).await {
         Ok(lobby) => {
-            if !is_member(&lobby, &profile.id) && (empty_place(&lobby).is_none() || lobby.started_at.is_some()) {
+            if !is_member(&lobby, &profile.id)
+                && (empty_place(&lobby).is_none() || lobby.started_at.is_some())
+            {
                 return Err(not_open());
             }
             Ok(ok(view(app, &lobby, &profile.id).await?))

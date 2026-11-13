@@ -70,8 +70,14 @@ export function getDuosReplay(matchId: string): Promise<{ seat: DuosSeat; steps:
 /** `POST /api/duos/matches/:matchId/again` (R2092000): the new match's id once both seats offered, else null. */
 export type DuosAgainOffer = { matchId: string | null };
 
-/** `GET /api/duos/matches/:matchId/again` (R2092000). */
-export type DuosAgainStatus = { youOffered: boolean; teammateOffered: boolean; teammateHere: boolean; matchId: string | null };
+/** `GET /api/duos/matches/:matchId/again` (R2092000); `unavailable` for a 2v2, which offers no Play again (R3731003). */
+export type DuosAgainStatus = {
+  youOffered: boolean;
+  teammateOffered: boolean;
+  teammateHere: boolean;
+  matchId: string | null;
+  unavailable?: boolean;
+};
 
 /** R2092000: record this seat's Play again offer, carrying the device's lean pick for a dealt seat (`leanSet`, R924000, R2031000). */
 export function offerDuosAgain(matchId: string, lean: LeanPick | null): Promise<DuosAgainOffer> {

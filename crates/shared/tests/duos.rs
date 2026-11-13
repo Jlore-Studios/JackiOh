@@ -1805,7 +1805,10 @@ mod two_v_two {
             }
         ));
         let json = serde_json::to_value(&clock).expect("json");
-        assert!(json.get("graceB1").is_none() && json.get("graceB2").is_none(), "{json}");
+        assert!(
+            json.get("graceB1").is_none() && json.get("graceB2").is_none(),
+            "{json}"
+        );
         assert!(json.get("graceA1").is_some(), "{json}");
         // A 2v2 with b2 away: every seat's frame carries b2's grace.
         let mut table = Table::new(versus("duos-2v2-3"));
@@ -1828,7 +1831,10 @@ mod two_v_two {
                 "{seat} {clock:?}"
             );
             let json = serde_json::to_value(&clock).expect("json");
-            assert!(json.get("graceB1").is_none() && json.get("graceB2").is_some(), "{json}");
+            assert!(
+                json.get("graceB1").is_none() && json.get("graceB2").is_some(),
+                "{json}"
+            );
         }
     }
 }

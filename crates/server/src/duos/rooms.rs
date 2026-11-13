@@ -335,8 +335,14 @@ pub(crate) async fn start_coop_match(
         seed,
         a1: start.a1.to_string(),
         a2: start.a2.to_string(),
-        b1: start.team_b.map(|team_b| team_b.b1.to_string()).unwrap_or_default(),
-        b2: start.team_b.map(|team_b| team_b.b2.to_string()).unwrap_or_default(),
+        b1: start
+            .team_b
+            .map(|team_b| team_b.b1.to_string())
+            .unwrap_or_default(),
+        b2: start
+            .team_b
+            .map(|team_b| team_b.b2.to_string())
+            .unwrap_or_default(),
         difficulty: start.difficulty,
         options,
         created_at: now,

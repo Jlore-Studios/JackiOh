@@ -19,12 +19,12 @@ pub mod ws;
 use std::sync::Arc;
 use std::time::Duration;
 
+use jackioh_engine::ActionBody;
 use jackioh_engine::wire::{
     DUOS_REASON_CEILING, DUOS_REASON_VOIDED, DuosActionBody, DuosOutcome, DuosResult, DuosSeat,
 };
-use jackioh_shared::host::duos::slot;
-use jackioh_engine::ActionBody;
 use jackioh_shared::economy::fleet::FleetPlay;
+use jackioh_shared::host::duos::slot;
 
 use crate::actor::contracts::one_tx;
 use crate::actor::protocol::SERVER_NONCE_PREFIX;
@@ -148,7 +148,11 @@ async fn pay_coop(
     at: i64,
 ) -> StoreResult<[Option<GameEconomy>; 4]> {
     // [[R1301003]]: every economy lock in profile-id order, as a 1v1 result takes its two.
-    let mut ordered: Vec<&str> = row.people().into_iter().map(|(_, profile_id)| profile_id).collect();
+    let mut ordered: Vec<&str> = row
+        .people()
+        .into_iter()
+        .map(|(_, profile_id)| profile_id)
+        .collect();
     ordered.sort_unstable();
     for profile_id in &ordered {
         t.economy_lock_account(profile_id).await?;
@@ -159,28 +163,28 @@ async fn pay_coop(
         let (actions, attacks) = seat_moves(&log, seat);
         paid[slot(seat)] = Some(
             pay_game_rewards(
-            t,
-            &GameSummary {
-                mode: GameMode::Coop,
-                profile_id: profile_id.to_string(),
-                // §13.1: team A's people are Player 1 of their own duels, team B's Player 2.
-                player: seat.player(),
-                won: result.winner.map(|team| team == seat.team()),
-                actions,
-                match_id: row.id.clone(),
-                at,
-                bot: false,
-                tally: GameTally {
-                    attacks,
-                    ..GameTally::default()
+                t,
+                &GameSummary {
+                    mode: GameMode::Coop,
+                    profile_id: profile_id.to_string(),
+                    // §13.1: team A's people are Player 1 of their own duels, team B's Player 2.
+                    player: seat.player(),
+                    won: result.winner.map(|team| team == seat.team()),
+                    actions,
+                    match_id: row.id.clone(),
+                    at,
+                    bot: false,
+                    tally: GameTally {
+                        attacks,
+                        ..GameTally::default()
+                    },
+                    // R3013000: the co-op log is not folded, so no play is counted.
+                    proficiency: Vec::new(),
+                    // R3335001: nor does the Fleet track count anything of it.
+                    fleet: FleetPlay::default(),
                 },
-                // R3013000: the co-op log is not folded, so no play is counted.
-                proficiency: Vec::new(),
-                // R3335001: nor does the Fleet track count anything of it.
-                fleet: FleetPlay::default(),
-            },
-        )
-        .await?,
+            )
+            .await?,
         );
     }
     Ok(paid)
@@ -222,7 +226,12 @@ async fn end_abandoned(app: &Arc<App>, match_id: &str, now: i64) {
                     .await?
                     .is_some()
                 {
-                    Some(row.people().into_iter().map(|(_, id)| id.to_string()).collect::<Vec<_>>())
+                    Some(
+                        row.people()
+                            .into_iter()
+                            .map(|(_, id)| id.to_string())
+                            .collect::<Vec<_>>(),
+                    )
                 } else {
                     None
                 }

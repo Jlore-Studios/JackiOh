@@ -716,3 +716,25 @@ describe("R2990000 a co-op seat hears the watchers' emotes", () => {
     expect(h.client.snapshot()).toBe(before);
   });
 });
+
+describe("R3731002 a 2v2's team B people have disconnect graces too", () => {
+  it("R3731002 a clock frame with team B's graces parses", () => {
+    const clock = (graceDeadlines: Record<string, unknown>): string => JSON.stringify({ type: "clock", now: 5, roundDeadline: 90, graceDeadlines });
+    // A team B person's grace rides beside team A's while it runs.
+    expect(parseDuosFrame(clock({ a1: null, a2: 7, b1: 40, b2: 60 }))).toEqual({
+      type: "clock",
+      now: 5,
+      roundDeadline: 90,
+      graceDeadlines: { a1: null, a2: 7, b1: 40, b2: 60 },
+    });
+    // Absent, it is none: a co-op game's frame, and a 2v2's with no team B grace running.
+    expect(parseDuosFrame(clock({ a1: 3, a2: null, b2: 60 }))).toMatchObject({ graceDeadlines: { a1: 3, a2: null, b1: null, b2: 60 } });
+    expect(parseDuosFrame(clock({ a1: null, a2: null }))).toMatchObject({ graceDeadlines: { a1: null, a2: null, b1: null, b2: null } });
+    // One that is not a time is no frame this client knows.
+    expect(parseDuosFrame(clock({ a1: null, a2: null, b1: "soon" }))).toBeNull();
+    // A seat's snapshot keeps them.
+    const h = connected();
+    h.socket().deliver({ type: "clock", now: 5, roundDeadline: null, graceDeadlines: { a1: null, a2: null, b1: 40 } });
+    expect(h.client.snapshot().clock?.graceDeadlines).toEqual({ a1: null, a2: null, b1: 40, b2: null });
+  });
+});

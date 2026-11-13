@@ -897,7 +897,8 @@ routes (net/navigate.ts paths, and public/_redirects):
   /together              together/TogetherRoute.tsx: friends with status dots, the requests in and out
                          (accept, decline, cancel), the blocked players (unblock), the add form by
                          name#tag; per friend Challenge (online and idle), Watch (when `watchable`),
-                         Chat (always), Remove and Block; "Shared with me"; the co-op panel
+                         Chat (always), Lobby (not offline: a Best of 1 lobby, the friend invited,
+                         R3874000), Remove and Block; "Shared with me"; the co-op panel
   /watch/:matchId        together/WatchRoute.tsx: a friend's seat over /ws/watch, Game on a view with no
                          legal action, SPECTATE_DELAY_MS behind; its turn clock counts down silently from each frame's
                          `clockMs` (together/WatchClock.tsx); Reconnect now once its own reopens run out;
@@ -961,19 +962,21 @@ together/ChallengeToast.tsx  mounted once in the shell; reads the challenges (so
 together/presence.ts     usePresenceHeartbeat: POST /api/presence once PRESENCE_HEARTBEAT_MS passes with
                          no signed-in request (onSignedInRequest, R3210000), none while the tab has
                          been hidden for HIDDEN_QUIET_MS (R3576000)
-lobby/LobbyScreen.tsx    /lobby/:code (R3730000 to R3730006): a private lobby, 1v1 or co-op: its code with
-                         Copy and Copy link, its seats (player, presence, the host's crown, the deck
-                         state; an empty seat invites a friend; co-op's other two the AI's), the host's
-                         settings, the member's own deck with the validator's verdict and Ready, the
+lobby/LobbyScreen.tsx    /lobby/:code (R3730000 to R3730006, R3731000): a private lobby, 1v1, co-op or
+                         2v2: its code with Copy and Copy link, its seats (player, presence, the host's
+                         crown, the deck state; an empty seat invites a friend; co-op's other two the
+                         AI's; a 2v2's four in two team rows, Switch team for a guest, the host's Move
+                         and dragging a seat onto another), the host's settings, the member's own deck with the validator's verdict and Ready, the
                          friends to invite, Leave, the host's Remove and Start, and the countdown to the
                          board; read again on every `lobby` push and every LOBBY_POLL_MS while the social
                          socket is down; with no lobby under the code, the classic room's join card
 lobby/LobbyPanel.tsx     Create a lobby, Join by code and the player's own lobbies, where "Play a friend"
                          stood on /play and the co-op panel on /together (with the way back to a live
-                         co-op game there)
+                         co-op game there, and Create a 2v2 lobby, R3731000)
 lobby/LobbyInviteToast.tsx  mounted once beside the challenge toast: a friend's `lobbyInvite`, Open or
                          Dismiss (R3730005)
 lobby/seats.ts           the seats a lobby view shows, whether Start may light, a seat's deck words
+lobby/inviteRefusal.ts   R3874000: a friend's refused invite from /together, said once on its lobby's screen
 duos/DuosBoard.tsx       Game.tsx for the own duel, the life strip (both teams' own HP and pools, a
                          spent seat's bar giving way to its pool), the pass control, the portal, the
                          Both boards toggle (R2095000), the teammate strip and the ping wheel
@@ -1009,8 +1012,8 @@ snapshot's `watchers`). While any modifier is live on either side, the rail carr
   (`POST /api/duos/matches/:matchId/again`) with the device's "More cards from" pick, and
   `duos-result-again-status` reads `GET` every `SERIES_POLL_SECONDS`: waiting, the teammate wanting
   to play again, the teammate gone (the button hidden), or a refusal in the server's words. An
-  answer naming the new match takes both people to `/duos/:matchId`. A replay and `/dev/duos` show
-  no button.
+  answer naming the new match takes both people to `/duos/:matchId`. A replay, `/dev/duos` and a 2v2
+  (`unavailable`, R3731003) show no button.
 - a game a duel's ending decided (`duelResult`) says which board and how in its result panel (#3697): "On your board: …"
   in `game/Result.tsx`'s `resultReason` words for the seat, else "On your teammate's board: …" in words written for the
   teammate's side (`DuosBoard.tsx`'s `teammateReason`), else the old "One of the duels decided the game."; the turn cap
@@ -1025,7 +1028,7 @@ any other build each throws the reason.
 Test ids, mirrored in `e2e/support/testids.ts`: `together-add-input`,
 `together-add-submit`, `together-friend-row`, `together-request-accept`, `together-request-decline`,
 `together-challenge`, `together-watch`, `together-chat-open`, `friends-button`, `friends-badge`,
-`friends-panel`, `challenge-toast-accept`, `chat-input`, `chat-send`, `chat-message`, `chat-join`, `lobby-create`, `lobby-code`, `lobby-ready`, `lobby-start`, `lobby-settings`, `lobby-deck-select`,
+`friends-panel`, `challenge-toast-accept`, `chat-input`, `chat-send`, `chat-message`, `chat-join`, `lobby-create`, `lobby-code`, `lobby-ready`, `lobby-start`, `lobby-settings`, `lobby-deck-select`, `lobby-team`, `lobby-switch-team`, `lobby-move`, `lobby-create-2v2`,
 `duos-portal`, `duos-both`, `duos-board-own`, `duos-board-teammate`, `duos-pass`, `duos-pool`,
 `duos-own-hp`, `duos-teammate-strip`, `duos-ping-wheel`, `duos-ping-<kind>`, `duos-ping-marker`,
 `sideline-strip`, `sideline-emote`, `sideline-menu` and `sideline-mute`.

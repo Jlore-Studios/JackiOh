@@ -59,11 +59,14 @@ export function duosSocketUrl(base: string = matchSocketUrl()): string {
 
 // Frames (S6), parsed shallowly: the server shapes the view, the client only checks it is there.
 
-/** The round clock and the human seats' disconnect graces, as absolute server times (epoch ms). */
+/**
+ * The round clock and the human seats' disconnect graces, as absolute server times (epoch ms): team A's
+ * always, a 2v2's team B people's while one runs (R3731002), which the frame leaves out otherwise.
+ */
 export type DuosClockFrame = {
   now: number;
   roundDeadline: number | null;
-  graceDeadlines: { a1: number | null; a2: number | null };
+  graceDeadlines: { a1: number | null; a2: number | null; b1: number | null; b2: number | null };
 };
 
 /** A clock frame and the local monotonic reading it landed at, so countdowns never read wall time. */
@@ -136,11 +139,15 @@ export function parseDuosFrame(text: string): DuosServerFrame | null {
       const grace = parsed.graceDeadlines;
       if (typeof parsed.now !== "number" || !isNumberOrNull(parsed.roundDeadline) || !isRecord(grace)) return null;
       if (!isNumberOrNull(grace.a1) || !isNumberOrNull(grace.a2)) return null;
+      // R3731002: team B's graces are there only while one runs; absent is none.
+      const b1 = grace.b1 ?? null;
+      const b2 = grace.b2 ?? null;
+      if (!isNumberOrNull(b1) || !isNumberOrNull(b2)) return null;
       return {
         type: "clock",
         now: parsed.now,
         roundDeadline: parsed.roundDeadline,
-        graceDeadlines: { a1: grace.a1, a2: grace.a2 },
+        graceDeadlines: { a1: grace.a1, a2: grace.a2, b1, b2 },
       };
     }
     case "teammate":
