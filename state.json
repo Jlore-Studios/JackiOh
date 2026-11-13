@@ -15535,6 +15535,8 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-12T15:35:34Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 1
     },
