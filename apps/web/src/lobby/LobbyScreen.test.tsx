@@ -15,6 +15,7 @@ import { setSocialSocketFactory } from "../together/socialSocket.ts";
 import type { LobbyRead, LobbySeat, LobbyView } from "./api.ts";
 import { LOBBY_POLL_MS } from "./config.ts";
 import { COOP_DECK_KEY } from "./coopDeck.ts";
+import { holdInviteRefusal, takeInviteRefusal } from "./inviteRefusal.ts";
 import { LobbyScreen } from "./LobbyScreen.tsx";
 import { lobbyTestid } from "./testids.ts";
 
@@ -403,5 +404,36 @@ describe("#1568 decks that could not be read", () => {
       expect(count.decks).toBe(1);
     }, SLOW);
     expect(screen.queryByTestId(lobbyTestid.decksRetry)).toBeNull();
+  });
+});
+
+describe("R3874000 an invite refused on Play together", () => {
+  const MESSAGE = "too many invites; try again later";
+
+  it("R3874000 the lobby it opened says the refusal once, in the server's words, until the next request", async () => {
+    holdInviteRefusal(CODE, MESSAGE);
+    serve([lobby()]);
+    show();
+    expect(await screen.findByTestId(lobbyTestid.error, undefined, SLOW)).toHaveTextContent(MESSAGE);
+    fireEvent.change(screen.getByTestId(lobbyTestid.settings), { target: { value: "bo1" } });
+    await waitFor(() => {
+      expect(screen.queryByTestId(lobbyTestid.error)).toBeNull();
+    }, SLOW);
+    cleanup();
+
+    // A reload of the lobby says nothing again.
+    serve([lobby()]);
+    show();
+    await screen.findByTestId(lobbyTestid.code, undefined, SLOW);
+    expect(screen.queryByTestId(lobbyTestid.error)).toBeNull();
+  });
+
+  it("R3874000 a refusal held for another lobby is not said here", async () => {
+    holdInviteRefusal("OTHER2", MESSAGE);
+    serve([lobby()]);
+    show();
+    await screen.findByTestId(lobbyTestid.code, undefined, SLOW);
+    expect(screen.queryByTestId(lobbyTestid.error)).toBeNull();
+    expect(takeInviteRefusal("OTHER2")).toBe(MESSAGE);
   });
 });
