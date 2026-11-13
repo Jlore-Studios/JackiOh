@@ -443,7 +443,7 @@ describe("B32 /practice shows setup to anyone", () => {
 
     // The Play hub holds the other ways; the setup links to none of them.
     expect(screen.queryByRole("navigation", { name: "More ways to play" })).toBeNull();
-    expect(screen.queryByRole("link", { name: "Play together" })).toBeNull();
+    expect(screen.queryByRole("link", { name: /^(Play together|Friends)$/ })).toBeNull();
 
     fireEvent.click(screen.getByTestId(navTestid.back));
     expect(window.location.pathname).toBe("/play");

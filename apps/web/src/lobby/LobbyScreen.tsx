@@ -306,7 +306,7 @@ function Lobby({ token, view, removed, reload }: { token: string; view: LobbyVie
             onClick={() => {
               run(async () => {
                 await leaveLobby(view.code);
-                navigate(view.settings.format === "coop" ? paths.together : paths.play);
+                navigate(paths.play);
               });
             }}
           >

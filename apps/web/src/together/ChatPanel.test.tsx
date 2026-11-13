@@ -10,6 +10,7 @@ import { CHAT_POLL_MS } from "@jackioh/server-config";
 
 import type { ChatMessage, Friend, PlayerRef } from "../net/social.ts";
 import { fakeSockets, type FakeSocket } from "../test/fakeSocket.ts";
+import { pressFriendMenuItem } from "../test/friendMenu.ts";
 import { pressBack } from "../test/history.ts";
 import { settle } from "../test/settle.ts";
 import { resetVisibility, setVisibility } from "../test/setup.ts";
@@ -733,7 +734,7 @@ describe("B58 chat from the Friends panel", () => {
     await openPanel();
     expect(screen.queryByTestId("chat-input")).toBeNull();
     await screen.findByText(wholeText("Ann#2"), undefined, SLOW);
-    fireEvent.click(within(annsRow()).getByTestId(togetherTestid.chatOpen));
+    pressFriendMenuItem(annsRow(), togetherTestid.chatOpen);
     expect(await screen.findByTestId("chat-input", undefined, SLOW)).toBeInTheDocument();
     // The conversation has the panel's place: the panel itself is gone.
     expect(screen.queryByTestId(friendsTestid.panel)).toBeNull();
@@ -748,7 +749,7 @@ describe("B58 chat from the Friends panel", () => {
     const panel = screen.getByTestId(friendsTestid.panel);
     expect(button).toHaveAttribute("aria-controls", panel.id);
     await screen.findByText(wholeText("Ann#2"), undefined, SLOW);
-    fireEvent.click(within(annsRow()).getByTestId(togetherTestid.chatOpen));
+    pressFriendMenuItem(annsRow(), togetherTestid.chatOpen);
     expect(await screen.findByTestId("chat-input", undefined, SLOW)).toHaveFocus();
     expect(button).not.toHaveAttribute("aria-controls");
 
@@ -758,7 +759,7 @@ describe("B58 chat from the Friends panel", () => {
 
     fireEvent.click(button);
     await screen.findByText(wholeText("Ann#2"), undefined, SLOW);
-    fireEvent.click(within(annsRow()).getByTestId(togetherTestid.chatOpen));
+    pressFriendMenuItem(annsRow(), togetherTestid.chatOpen);
     fireEvent.keyDown(await screen.findByTestId("chat-input", undefined, SLOW), { key: "Escape" });
     expect(screen.queryByTestId("chat-panel")).toBeNull();
     expect(button).toHaveFocus();
@@ -770,7 +771,7 @@ describe("B58 chat from the Friends panel", () => {
     serveFriends();
     const button = await openPanel();
     await screen.findByText(wholeText("Ann#2"), undefined, SLOW);
-    fireEvent.click(within(annsRow()).getByTestId(togetherTestid.chatOpen));
+    pressFriendMenuItem(annsRow(), togetherTestid.chatOpen);
     expect(await screen.findByTestId("chat-input", undefined, SLOW)).toHaveFocus();
 
     await pressBack();
@@ -780,10 +781,12 @@ describe("B58 chat from the Friends panel", () => {
     expect(window.location.pathname).toBe("/play");
   });
 
-  it("B58 the panel lists the friends who are on first, the offline ones last", async () => {
+  it("B58 R3732002 the panel lists the friends who are on first, the offline ones last and behind Offline's toggle", async () => {
     serveFriends();
     await openPanel();
     await screen.findByText(wholeText("Ann#2"), undefined, SLOW);
+    expect(screen.getAllByTestId(togetherTestid.friendRow).map((row) => row.getAttribute("data-profile-id"))).toEqual(["f-ann"]);
+    fireEvent.click(screen.getByTestId(togetherTestid.offlineToggle));
     const order = screen.getAllByTestId(togetherTestid.friendRow).map((row) => row.getAttribute("data-profile-id"));
     expect(order).toEqual(["f-ann", "f-cy"]);
   });

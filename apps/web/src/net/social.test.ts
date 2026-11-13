@@ -16,6 +16,7 @@ import {
   declineFriendRequest,
   getChat,
   getFriends,
+  getRecentOpponents,
   getSharedReplays,
   getSocial,
   heartbeat,
@@ -384,6 +385,14 @@ describe("B52 replay shares", () => {
     expect(call.method).toBe("GET");
     expect(call.path).toBe("/api/replays/shared");
     expect(result).toEqual({ shared: [SHARED] });
+  });
+
+  it("R3732000 getRecentOpponents reads GET /api/friends/recent", async () => {
+    const recent = [{ profileId: "p-cy", username: "Cy#7", playedAt: "2026-11-13T10:00:00.000Z" }];
+    const { call, result } = await sent(() => getRecentOpponents(), { status: 200, body: { recent } });
+    expect(call.method).toBe("GET");
+    expect(call.path).toBe("/api/friends/recent");
+    expect(result).toEqual({ recent });
   });
 
   it("B52 a refused unshare rejects with ApiRequestError carrying the status and code", async () => {

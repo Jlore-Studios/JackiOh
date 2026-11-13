@@ -7,7 +7,7 @@
 
 import { socketProtocols } from "../../../apps/web/src/net/socketProtocols.ts";
 import { ROOM_CODE_LENGTH } from "../../../apps/web/src/wire/serverConfig.ts";
-import { accounts, apiUrl, bearerHeaders, server, timeouts, type E2EAccount } from "../../support/config.ts";
+import { accounts, apiUrl, bearerHeaders, routes, server, timeouts, type E2EAccount } from "../../support/config.ts";
 import {
   DUOS_BOARD,
   DUOS_CARD_ACTIONS,
@@ -29,6 +29,7 @@ import {
   LOBBY_COUNTDOWN,
   LOBBY_CREATE,
   LOBBY_DECK_SELECT,
+  LOBBY_PANEL,
   LOBBY_READY,
   LOBBY_SETTINGS,
   LOBBY_START,
@@ -45,7 +46,6 @@ import {
 } from "../../support/testids.ts";
 
 /** S8's paths; support/config.ts's `routes` predate them. */
-const TOGETHER_PATH = "/together";
 function duosPath(matchId: string): string {
   return `/duos/${matchId}`;
 }
@@ -262,8 +262,12 @@ describe("41 duos co-op — two players against the Easy AI", () => {
     endLiveDuos(host, guestAccount);
 
     // B60, R3730000: the host's co-op panel makes a co-op lobby, set to Easy, and the host takes a random deck.
-    cy.visitAs(host, TOGETHER_PATH);
-    cy.get(ts(LOBBY_CREATE), { timeout: timeouts.view }).should("not.be.disabled").click();
+    // R3732002: the co-op panel is on /play, under the duel's, and left the Friends page.
+    cy.visitAs(host, routes.play());
+    cy.get(`${ts(LOBBY_PANEL)}[data-format="coop"]`, { timeout: timeouts.view })
+      .find(ts(LOBBY_CREATE))
+      .should("not.be.disabled")
+      .click();
     cy.location("pathname", { timeout: timeouts.view }).should("match", /^\/lobby\/[^/]+$/);
     cy.get(ts(LOBBY_CODE), { timeout: timeouts.view })
       .invoke("text")

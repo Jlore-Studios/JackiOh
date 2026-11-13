@@ -13,8 +13,21 @@ export const togetherTestid = {
   /** One per friend: `data-profile-id`, `data-status` (`offline|online|inMatch`), `data-watchable`. */
   friendRow: "together-friend-row",
   noFriends: "together-no-friends",
+  /** The primary button of a Challenge or a Daily row: `data-action` (`challenge|daily`), `data-live`. */
   challenge: "together-challenge",
+  /** R3732002: the primary Watch of a row in a game the player may watch: `data-route`. */
   watch: "together-watch",
+  /** R3732002: the primary Join of an online friend's open lobby: `data-route`. */
+  join: "together-join",
+  /** R3732002: the ⋯ menu's Daily challenge, Watch and the menu's own button, with the unread count on it. */
+  daily: "together-daily",
+  watchItem: "together-watch-item",
+  menu: "together-menu",
+  menuUnread: "together-menu-unread",
+  /** R3732002: the search over the list, a group (`data-group`: `requests|inGame|online|offline`) and Offline's toggle. */
+  search: "together-search",
+  group: "together-group",
+  offlineToggle: "together-offline-toggle",
   /** R2615000: the Watching panel's note that friends may always watch, and how to stop one. */
   watchingNote: "together-watching-note",
   chatOpen: "together-chat-open",
@@ -57,7 +70,20 @@ export const togetherTestid = {
   sharedRetry: "together-shared-retry",
   friendsError: "together-friends-error",
   friendsRetry: "together-friends-retry",
+  /** R3732000: Recently played: one row per opponent (`data-profile-id`), its Add friend, and the empty and failed reads. */
+  recentRow: "together-recent-row",
+  recentAdd: "together-recent-add",
+  noRecent: "together-no-recent",
+  recentError: "together-recent-error",
+  recentRetry: "together-recent-retry",
+  noBlocked: "together-no-blocked",
+  noRequests: "together-no-requests",
 } as const;
+
+/** R3732002: one tab of the Friends page. */
+export function togetherTabTestid(section: string): string {
+  return `together-tab-${section}`;
+}
 
 export function challengeKindTestid(kind: "live" | "daily"): string {
   return `together-challenge-kind-${kind}`;

@@ -7,6 +7,8 @@
 // UX; what a message may say, how many may be sent, and the word filter are the server's, and its
 // refusal is shown in its own words. A message is drawn as text, never as markup.
 // R3221000: a modal sheet, the one Dialog's: Escape, Back and its ✕ close it, and the focus starts in the box.
+// R3732002: opened from the friends drawer or the Friends page it is the Dialog's drawer instead (`drawer`),
+// where the friends list was.
 
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactElement } from "react";
 
@@ -60,7 +62,16 @@ export function mergeMessages(held: readonly ChatMessage[], page: readonly ChatM
 /** A send no answer of the server's has replaced yet (R2120000); `key` is the panel's own, never a message id. */
 type Outgoing = { key: string; body: string } & ({ state: "sending" } | { state: "failed"; error: string });
 
-export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () => void }): ReactElement {
+export function ChatPanel({
+  friend,
+  onClose,
+  drawer = false,
+}: {
+  friend: PlayerRef;
+  onClose: () => void;
+  /** R3732002: opened from the friends drawer: down the right edge as it is, beside the screen over 1024 px (R3728001); a sheet otherwise. */
+  drawer?: boolean;
+}): ReactElement {
   useLocale();
   const [messages, setMessages] = useState<readonly ChatMessage[]>([]);
   /** A read of the newest page has answered: before one has, no messages is no empty conversation (#1898). */
@@ -241,7 +252,8 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
   return (
     <Dialog
       role="dialog"
-      sheet
+      sheet={!drawer}
+      drawer={drawer}
       title={<Named text={t("Chat with {name}")} name={friend.username} />}
       onClose={onClose}
       actions={[]}

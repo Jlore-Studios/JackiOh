@@ -894,11 +894,23 @@ active account, and asks for one the way `/play` does.
 
 ```
 routes (net/navigate.ts paths, and public/_redirects):
-  /together              together/TogetherRoute.tsx: friends with status dots, the requests in and out
-                         (accept, decline, cancel), the blocked players (unblock), the add form by
-                         name#tag; per friend Challenge (online and idle), Watch (when `watchable`),
-                         Chat (always), Lobby (not offline: a Best of 1 lobby, the friend invited,
-                         R3874000), Remove and Block; "Shared with me"; the co-op panel
+  /together              together/TogetherRoute.tsx: Friends (R3732002), five tabs by `?section=`
+                         (together/anchors.ts): Friends (the add form by name#tag and the friends in
+                         groups, together/FriendList.tsx), Requests (in and out: accept, decline,
+                         cancel, block; the challenges sent), Recently played (R3732000, from
+                         `GET /api/friends/recent`, each with Add friend), Blocked (unblock) and Shared
+                         with me (`#shared` opens it); together/TogetherPanels.tsx draws the last four.
+                         The co-op lobby panel is on /play now
+together/FriendList.tsx  R3732002: the drawer's list and the Friends tab's: a search, the requests, and the
+                         friends in groups, In a game, Online and Offline (collapsed), each heading with
+                         its count; together/friendGroups.ts is the pure read of the server's facts
+                         (`status`, `watchable`, `matchId`, `lobbyCode`, `turn`, `lastSeenAt`, R3732001):
+                         the groups, the one primary button (Watch, Join, Challenge or Daily), the ⋯ menu's
+                         items and the status line
+together/FriendMenu.tsx  a row's ⋯ menu: Chat, Daily challenge, Invite to lobby, Watch, Remove and Block;
+                         a layer of its own (Escape and Back close it alone, a press outside closes it)
+together/useFriendActions.ts  what the drawer and the page do to a friend: Remove behind Undo
+                         (R2119000), Block, Invite to lobby (R3874000), one change at a time
   /watch/:matchId        together/WatchRoute.tsx: a friend's seat over /ws/watch, Game on a view with no
                          legal action, SPECTATE_DELAY_MS behind; its turn clock counts down silently from each frame's
                          `clockMs` (together/WatchClock.tsx); Reconnect now once its own reopens run out;
@@ -917,8 +929,8 @@ sideline/                R2990000, R2990004: the sideline strip (SidelineStrip.t
                          Audio tab's Mute spectator emotes mutes every match's from its start
   /dev/duos              duos/DevDuosRoute.tsx: a four-seat hotseat Duos game over the WASM Duos
                          bindings, with a seat switcher (development only, as /dev/hotseat)
-net/social.ts            fetch wrappers for every Play together route, typed (Friend, FriendRequest,
-                         Challenge, ChatMessage, SharedReplay, PlayerRef); errors are ApiRequestError
+net/social.ts            fetch wrappers for every Friends route, typed (Friend, FriendRequest,
+                         Challenge, ChatMessage, SharedReplay, RecentOpponent, PlayerRef); errors are ApiRequestError
 net/duos.ts              fetch wrappers for the co-op routes, and the ping types (PingKind, PingTarget)
 together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open and the social socket is
                          down, and read on its friend's chat push while it is live (R3214000); a message holding
@@ -933,10 +945,11 @@ together/FriendsButton.tsx  the Friends button on every signed-in screen (the me
                          R3728000, which opens its panel as a drawer, R3728001; the top bar off the shell;
                          a board's controls) with its badge (incoming requests, challenges
                          and unread chats), and its panel: the player's name#tag, the add form, the
-                         requests in, the friends online first with Challenge, Watch and Chat (the rows
-                         of FriendRows.tsx, shared with /together) and a link to /together; the friends
-                         list is read only while the panel is open, ChatPanel and ChallengeDialog open
-                         from it without leaving the screen
+                         list of FriendList.tsx (the requests in, the friends in groups, each row with
+                         one primary button and a ⋯ menu, the rows of FriendRows.tsx, shared with
+                         /together) and a link to /together; the friends list is read only while the
+                         panel is open, ChatPanel (the drawer too, from the shell) and ChallengeDialog
+                         open from it without leaving the screen
 together/socialPoll.ts   the one SOCIAL_POLL_MS read per tab (challenges and unread counts, one
                          GET /api/social, R3210000) the toast,
                          the button and /together share, and the badge's count (paused while the tab is
@@ -969,13 +982,13 @@ lobby/LobbyScreen.tsx    /lobby/:code (R3730000 to R3730006): a private lobby, 1
                          friends to invite, Leave, the host's Remove and Start, and the countdown to the
                          board; read again on every `lobby` push and every LOBBY_POLL_MS while the social
                          socket is down; with no lobby under the code, the classic room's join card
-lobby/LobbyPanel.tsx     Create a lobby, Join by code and the player's own lobbies, where "Play a friend"
-                         stood on /play and the co-op panel on /together (with the way back to a live
-                         co-op game there)
+lobby/LobbyPanel.tsx     Create a lobby, Join by code and the player's own lobbies: "Play a friend" on /play,
+                         and under it the co-op panel (with the way back to a live co-op game there; it
+                         left /together with R3732002)
 lobby/LobbyInviteToast.tsx  mounted once beside the challenge toast: a friend's `lobbyInvite`, Open or
                          Dismiss (R3730005)
 lobby/seats.ts           the seats a lobby view shows, whether Start may light, a seat's deck words
-lobby/inviteRefusal.ts   R3874000: a friend's refused invite from /together, said once on its lobby's screen
+lobby/inviteRefusal.ts   R3874000: a friend's refused invite from the Friends page or drawer, said once on its lobby's screen
 duos/DuosBoard.tsx       Game.tsx for the own duel, the life strip (both teams' own HP and pools, a
                          spent seat's bar giving way to its pool), the pass control, the portal, the
                          Both boards toggle (R2095000), the teammate strip and the ping wheel
@@ -1072,7 +1085,7 @@ public/manifest.webmanifest  the web app manifest, so iOS and iPadOS deliver web
                          added to the Home Screen
 ```
 
-The friends panel's and /together's Challenge (`together/ChallengeDialog.tsx`) offers Live (an online, idle
+The friends panel's and /together's Challenge or Daily (`together/ChallengeDialog.tsx`) offers Live (an online, idle
 friend, as before) or Daily (any friend). Test ids are `daily/testids.ts`'s, mirrored in
 `e2e/support/testids.ts`.
 

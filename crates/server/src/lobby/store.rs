@@ -122,6 +122,13 @@ impl Tx<'_> {
         lobby_dispatch!(self, of_member(profile_id, at))
     }
 
+    /// R3732001: the unstarted, unexpired lobbies of `hosts` with an empty guest seat, newest first,
+    /// the code breaking a tie: a friend's row reads whether it holds one (`GET /api/friends`), by one
+    /// read for every friend.
+    pub async fn lobbies_open_of_hosts(&mut self, hosts: &[String], at: i64) -> StoreResult<Vec<Lobby>> {
+        lobby_dispatch!(self, open_of_hosts(hosts, at))
+    }
+
     /// R3730004: deletes every lobby expired at `before`.
     pub async fn lobbies_reap(&mut self, before: i64) -> StoreResult<u64> {
         lobby_dispatch!(self, reap(before))
@@ -302,6 +309,31 @@ mod pg {
         rows.iter().map(lobby_of).collect()
     }
 
+    pub async fn open_of_hosts(
+        t: &mut PgTx<'_>,
+        hosts: &[String],
+        at: i64,
+    ) -> Result<Vec<Lobby>, StoreError> {
+        run_as(t, None).await?;
+        let hosts: Vec<String> = hosts.iter().filter(|host| is_uuid(host)).cloned().collect();
+        if hosts.is_empty() {
+            return Ok(Vec::new());
+        }
+        let rows = sqlx::query(concat!(
+            "select ",
+            lobby_columns!(),
+            " from public.lobbies
+              where host = any($1::uuid[]) and guest is null and started_at is null
+                and expires_at > to_timestamp($2::double precision / 1000.0)
+              order by created_at desc, code"
+        ))
+        .bind(hosts)
+        .bind(at)
+        .fetch_all(&mut **t)
+        .await?;
+        rows.iter().map(lobby_of).collect()
+    }
+
     pub async fn reap(t: &mut PgTx<'_>, before: i64) -> Result<u64, StoreError> {
         run_as(t, None).await?;
         let done = sqlx::query(
@@ -408,6 +440,22 @@ mod fake {
             .collect();
         held.sort_by(|a, b| b.created_at.cmp(&a.created_at).then_with(|| a.code.cmp(&b.code)));
         Ok(held)
+    }
+
+    pub fn open_of_hosts(f: &mut FakeTx<'_>, hosts: &[String], at: i64) -> Result<Vec<Lobby>, StoreError> {
+        let lobbies = call(f, "lobbies.openOfHosts")?;
+        let mut open: Vec<Lobby> = lobbies
+            .iter()
+            .filter(|lobby| {
+                hosts.contains(&lobby.host)
+                    && lobby.guest.is_none()
+                    && lobby.started_at.is_none()
+                    && lobby.expires_at > at
+            })
+            .cloned()
+            .collect();
+        open.sort_by(|a, b| b.created_at.cmp(&a.created_at).then_with(|| a.code.cmp(&b.code)));
+        Ok(open)
     }
 
     pub fn reap(f: &mut FakeTx<'_>, before: i64) -> Result<u64, StoreError> {

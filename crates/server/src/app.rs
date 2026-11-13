@@ -819,6 +819,12 @@ pub static ROUTES: &[Route] = &[
         h!(crate::social::friends::get_friends),
     ),
     (
+        "GET",
+        "/api/friends/recent",
+        AuthLevel::Active,
+        h!(crate::social::recent::get_recent),
+    ),
+    (
         "POST",
         "/api/friends/requests",
         AuthLevel::Active,

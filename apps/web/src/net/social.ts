@@ -23,7 +23,16 @@ export type Friend = PlayerRef & {
   watchable: boolean;
   duos?: boolean;
   since: string;
+  /** R3732001: an offline friend's last heartbeat, ISO-8601, when presence kept one. */
+  lastSeenAt?: string;
+  /** R3732001: the turn of the 1v1 game the friend is in, while the player may watch it. */
+  turn?: number;
+  /** R3732001: the code of an online friend's open lobby, one the player may enter (R3730000). */
+  lobbyCode?: string;
 };
+
+/** R3732000: someone the player lately played an unranked game with, when that game ended. */
+export type RecentOpponent = PlayerRef & { playedAt: string };
 
 export type FriendRequest = { requestId: string; from: PlayerRef; to: PlayerRef; createdAt: string };
 
@@ -200,6 +209,11 @@ export function getReplayShares(matchId: string): Promise<{ friendIds: string[] 
 }
 
 /** The replays friends have shared with the caller. */
+/** R3732000: the opponents of the player's recent unranked games; never one the queue paired. */
+export function getRecentOpponents(): Promise<{ recent: RecentOpponent[] }> {
+  return social<{ recent: RecentOpponent[] }>("/api/friends/recent");
+}
+
 export function getSharedReplays(): Promise<{ shared: SharedReplay[] }> {
   return social<{ shared: SharedReplay[] }>("/api/replays/shared");
 }

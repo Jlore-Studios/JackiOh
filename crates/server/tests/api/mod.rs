@@ -41,6 +41,7 @@ pub mod quests;
 pub mod queue;
 pub mod ranked;
 pub mod rate_limit;
+pub mod recent;
 pub mod redeem_feedback;
 pub mod rematch;
 pub mod replays;

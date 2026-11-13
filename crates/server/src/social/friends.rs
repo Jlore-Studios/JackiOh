@@ -8,7 +8,8 @@
 //! - `POST /api/blocks` `{profileId}` (B46): ends friendships, requests, challenges, shares,
 //!   watches (B50, B52) and mutes emotes (R1351000). `DELETE /api/blocks/:profileId` lifts it.
 //!
-//! `GET /api/friends` reads everything in one transaction (`presence::standings`). R3214000: each
+//! `GET /api/friends` reads everything in one transaction (`presence::standings`, and one read of the
+//! online friends' open lobbies, R3732001). R3214000: each
 //! change nudges the `/ws/social` sockets of the accounts whose list it changed (`friends`), and one
 //! that ends a friendship or a challenge pushes both their social reads.
 
@@ -46,10 +47,26 @@ pub struct Friend {
     pub duos: bool,
     /// When the friendship began, ISO-8601.
     pub since: String,
+    /// R3732001: when an offline friend's last heartbeat was, ISO-8601; left off while they are
+    /// online or in a match, and when presence kept none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_seen_at: Option<String>,
+    /// R3732001: the turn of the 1v1 match the friend is in, while the viewer may watch it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub turn: Option<i32>,
+    /// R3732001: the code of an online friend's lobby (R3730000) whose guest seat is empty and which
+    /// has not started, which the friend may enter as anyone holding the code may.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lobby_code: Option<String>,
 }
 
 impl Friend {
-    pub fn of(profile: &Profile, since: i64, standing: Option<&Standing>) -> Friend {
+    pub fn of(
+        profile: &Profile,
+        since: i64,
+        standing: Option<&Standing>,
+        lobby_code: Option<String>,
+    ) -> Friend {
         let standing = standing.cloned().unwrap_or(Standing::OFFLINE);
         Friend {
             profile_id: profile.id.clone(),
@@ -59,6 +76,9 @@ impl Friend {
             watchable: standing.watchable,
             duos: standing.duos,
             since: iso(since),
+            last_seen_at: standing.last_seen.map(iso),
+            turn: standing.turn,
+            lobby_code,
         }
     }
 }
@@ -120,10 +140,30 @@ pub async fn get_friends(app: &Arc<App>, req: Req) -> ApiResult {
         .map(|(profile, _)| profile.clone())
         .collect();
     let standing = standings(&mut tx, app, &me, &listed).await?;
+    // R3732001: one read of the open lobbies of every online friend; the newest of a host's is the
+    // one their row names.
+    let online: Vec<String> = listed
+        .iter()
+        .filter(|profile| {
+            standing
+                .get(&profile.id)
+                .is_some_and(|standing| standing.status == Status::Online)
+        })
+        .map(|profile| profile.id.clone())
+        .collect();
+    let lobbies = tx.lobbies_open_of_hosts(&online, now_ms()).await?;
     tx.commit().await?;
     let friends: Vec<Friend> = friend_profiles
         .iter()
-        .map(|(profile, since)| Friend::of(profile, *since, standing.get(&profile.id)))
+        .map(|(profile, since)| {
+            let lobby = lobbies.iter().find(|lobby| lobby.host == profile.id);
+            Friend::of(
+                profile,
+                *since,
+                standing.get(&profile.id),
+                lobby.map(|lobby| lobby.code.clone()),
+            )
+        })
         .collect();
 
     let request_of = |row: &FriendRequestRow| -> Option<FriendRequest> {
@@ -264,7 +304,7 @@ pub async fn accept_request(app: &Arc<App>, req: Req) -> ApiResult {
         "friends.added",
         json!({ "profileId": me, "friendProfileId": sender.id, "mutual": false }),
     );
-    let friend = Friend::of(&sender, friendship.since, standing.get(&sender.id));
+    let friend = Friend::of(&sender, friendship.since, standing.get(&sender.id), None);
     Ok(crate::api::http::ok(json!({ "friend": to_json(&friend)? })))
 }
 

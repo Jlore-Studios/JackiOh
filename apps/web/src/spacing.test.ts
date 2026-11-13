@@ -104,7 +104,7 @@ const UNMIGRATED: Record<string, number> = {
   "sideline/sideline.css": 7,
   "skeleton/skeleton.css": 5,
   "stats/tier.css": 2,
-  "together/together.css": 41,
+  "together/together.css": 39,
   "tutorial/path-visibility.css": 12,
   "tutorial/tutorial.css": 104,
   "undo/undo.css": 3,

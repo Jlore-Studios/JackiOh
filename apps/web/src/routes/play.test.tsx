@@ -40,8 +40,10 @@ import {
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { createLobby, getMyLobbies } from "../lobby/api.ts";
+import { getDuosLive } from "../net/duos.ts";
 import { lobbyTestid } from "../lobby/testids.ts";
 import { settle } from "../test/settle.ts";
+import { must } from "../test/stubServer.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { currentCatalog } from "../game/currentCatalog.ts";
 import { PLAY_LEAN_NEWEST_KEY, PLAY_LEAN_SET_KEY, leanLabel } from "../game/LeanNewest.tsx";
@@ -75,6 +77,10 @@ vi.mock("../net/api.ts", async (importOriginal) => {
 vi.mock("../lobby/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lobby/api.ts")>();
   return { ...actual, createLobby: vi.fn(), getMyLobbies: vi.fn() };
+});
+vi.mock("../net/duos.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../net/duos.ts")>();
+  return { ...actual, getDuosLive: vi.fn() };
 });
 vi.mock("../game/currentCatalog.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../game/currentCatalog.ts")>();
@@ -182,6 +188,8 @@ beforeEach(() => {
   vi.mocked(getPopulation).mockResolvedValue({ gamesLastHour: 12, expectedWaitSeconds: { bo1: 30, bo3: null, random: 90 } });
   vi.mocked(getOwnRank).mockResolvedValue(rankBody());
   vi.mocked(getMyLobbies).mockResolvedValue({ lobbies: [] });
+  // R3732002: the co-op lobby panel under the duel's asks whether a co-op game is live.
+  vi.mocked(getDuosLive).mockResolvedValue({ matchId: null });
 });
 
 afterEach(() => {
@@ -364,7 +372,8 @@ describe("R1578000 the Play hub", () => {
     expect(within(ways).getAllByRole("link")).toHaveLength(WAYS.length);
     for (const [testid, href] of WAYS) expect(within(ways).getByTestId(testid)).toHaveAttribute("href", href);
     expect(paths.practice).toBe("/practice");
-    expect(screen.getByTestId(lobbyTestid.panel)).toBeInTheDocument();
+    // R3732002: the duel's lobby panel and, under it, the co-op one the Friends page gave up.
+    expect(screen.getAllByTestId(lobbyTestid.panel).map((panel) => panel.getAttribute("data-format"))).toEqual(["duel", "coop"]);
     expect(screen.getAllByTestId(playTestid.replays)).toHaveLength(1);
   });
 
@@ -415,8 +424,10 @@ describe("R3730000 Play a friend", () => {
     vi.mocked(createLobby).mockResolvedValue({ code: "ABC234" });
     await renderLobby();
 
-    const panel = screen.getByTestId(lobbyTestid.panel);
-    expect(panel).toHaveAttribute("data-format", "duel");
+    const panel = must(
+      screen.getAllByTestId(lobbyTestid.panel).find((candidate) => candidate.getAttribute("data-format") === "duel"),
+      "the duel's lobby panel",
+    );
     expect(within(panel).getByRole("heading", { name: "Play a friend" })).toBeInTheDocument();
     // The classic room's controls are gone from /play: a friend game starts in a lobby.
     expect(screen.queryByTestId("play-create-room")).toBeNull();
