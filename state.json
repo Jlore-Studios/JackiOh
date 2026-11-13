@@ -15441,14 +15441,9 @@
     "what": "review #3811 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-13T13:53:16Z",
+    "at": "2026-11-13T13:59:53Z",
     "notes": [
-      "delivered review #3860 on claude-8 (run 43434166398): approved",
-      "delivered review #3811 on claude-7 (run 43392597351): interrupted",
-      "started review #3811 on claude-7 (run 43438188147)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days",
-      "runner gate: started 1 of 1 waiting run(s) (run 43438252533 on claude/laughing-mayer-dymimx)"
+      "#3779: green and waiting for a person to merge it, so `claude-1` gives up its claim on it"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16154,7 +16149,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-13T13:53:16Z",
+  "loop_tick": "2026-11-13T13:59:53Z",
   "machine_disk": {
     "issue": null,
     "reading": {
