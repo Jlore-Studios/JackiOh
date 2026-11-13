@@ -2985,6 +2985,854 @@
     },
     "traininggrounds-060": {
       "cast": "Fresh tokens, farm to table!"
+    },
+    "stinkyscapeplus-001": {
+      "cast": "Make a wish. Then duck."
+    },
+    "stinkyscapeplus-002": {
+      "play": "Just passing through. Don't mind me.",
+      "attack": "Not alone anymore!",
+      "death": "Drifted off. Permanently."
+    },
+    "stinkyscapeplus-003": {
+      "play": "Behold, the next step!",
+      "attack": "Improve yourself!",
+      "death": "Natural selection, apparently."
+    },
+    "stinkyscapeplus-004": {
+      "play": "Every pack needs an alpha. I'll step up.",
+      "attack": "Mouse bit my sister!",
+      "death": "I'll never see the Northern Lights."
+    },
+    "stinkyscapeplus-005": {
+      "play": "Fresh fruit, fresh scheme.",
+      "attack": "Squash the competition!",
+      "death": "My fruit stand! No!"
+    },
+    "stinkyscapeplus-006": {
+      "play": "Care for a vintage?",
+      "attack": "Uncultured swine!",
+      "death": "Corked. I've been corked."
+    },
+    "stinkyscapeplus-006-1": {
+      "cast": "Cheers. Now hold the wall."
+    },
+    "stinkyscapeplus-006-2": {
+      "cast": "Who smelt it? I did."
+    },
+    "stinkyscapeplus-007": {
+      "play": "We're all in this together!",
+      "attack": "Share the pain!",
+      "death": "The knot comes undone."
+    },
+    "stinkyscapeplus-008": {
+      "play": "Assembly line, go!",
+      "attack": "Drones, deploy!",
+      "death": "Line stopped."
+    },
+    "stinkyscapeplus-009": {
+      "play": "Version four, now with more drones.",
+      "attack": "Launch the swarm!",
+      "death": "Rolling back to version three."
+    },
+    "stinkyscapeplus-010": {
+      "play": "Version five. Fully loaded.",
+      "attack": "Corvettes, away!",
+      "death": "Reverting. Please wait."
+    },
+    "stinkyscapeplus-011": {
+      "play": "Powering up! Again!",
+      "attack": "Zap zap!",
+      "death": "Battery low."
+    },
+    "stinkyscapeplus-012": {
+      "play": "Bubble up!",
+      "attack": "Bounce off!",
+      "death": "Pop."
+    },
+    "stinkyscapeplus-013": {
+      "play": "Shields up, again.",
+      "attack": "Not today.",
+      "death": "Out of spare bubbles."
+    },
+    "stinkyscapeplus-014": {
+      "play": "Patching the hull, as usual.",
+      "attack": "Tape it up!",
+      "death": "Hull's on its own."
+    },
+    "stinkyscapeplus-015": {
+      "play": "Mark two, now with warranty.",
+      "attack": "Patch and smash!",
+      "death": "Subscription expired."
+    },
+    "stinkyscapeplus-016": {
+      "play": "Servos spinning, fingers crossed.",
+      "attack": "Zip, zip!",
+      "death": "Servo's seized."
+    },
+    "stinkyscapeplus-017": {
+      "cast": "Blend it, don't bend it."
+    },
+    "stinkyscapeplus-018": {
+      "cast": "Large, thick and ready to go."
+    },
+    "stinkyscapeplus-019": {
+      "play": "Be normal. Be boring.",
+      "attack": "Plain it is!",
+      "death": "Reverting to factory settings."
+    },
+    "stinkyscapeplus-020": {
+      "cast": "Roll the dice, ship the patch."
+    },
+    "stinkyscapeplus-021": {
+      "play": "Shredder twelve. Lunch is cancelled.",
+      "attack": "Shred it!",
+      "death": "Budget cuts got me."
+    },
+    "stinkyscapeplus-022": {
+      "cast": "Chill out, and grow big."
+    },
+    "stinkyscapeplus-023": {
+      "cast": "Go big or go home!"
+    },
+    "stinkyscapeplus-024": {
+      "cast": "Spread the word. Spread everything."
+    },
+    "stinkyscapeplus-025": {
+      "play": "Hi! I'm harmless!",
+      "attack": "Boop!",
+      "death": "Thanks for the stuff!"
+    },
+    "stinkyscapeplus-026": {
+      "cast": "War never ends. Neither do invoices."
+    },
+    "stinkyscapeplus-026-1": {
+      "play": "Reporting for duty, again.",
+      "attack": "Pew pew!",
+      "death": "Is it the weekend yet?"
+    },
+    "stinkyscapeplus-027": {
+      "play": "Gargantuar here. Make room!",
+      "attack": "Smash!",
+      "death": "Timber! Watch the lawn!"
+    },
+    "stinkyscapeplus-027-1": {
+      "play": "Wheee!",
+      "attack": "Bite!",
+      "death": "Splat."
+    },
+    "stinkyscapeplus-028": {
+      "cast": "Pop goes the zombie!"
+    },
+    "stinkyscapeplus-029": {
+      "play": "Back in the grind.",
+      "attack": "Grind them down!",
+      "death": "Finally, some rest."
+    },
+    "stinkyscapeplus-030": {
+      "cast": "Yeah, I'm a war hero."
+    },
+    "stinkyscapeplus-031": {
+      "cast": "I know what you're holding."
+    },
+    "stinkyscapeplus-032": {
+      "cast": "Watchu know about the Z patch?"
+    },
+    "stinkyscapeplus-033": {
+      "play": "Things were better before.",
+      "attack": "Back in my day!",
+      "death": "Progress got me."
+    },
+    "stinkyscapeplus-034": {
+      "play": "Let's bring back the classics.",
+      "attack": "Tradition!",
+      "death": "Nostalgia wins."
+    },
+    "stinkyscapeplus-035": {
+      "play": "Scatter online.",
+      "attack": "Spray!",
+      "death": "Out of scrap."
+    },
+    "stinkyscapeplus-036": {
+      "play": "Two barrels, one plan.",
+      "attack": "Double tap!",
+      "death": "Barrel jammed."
+    },
+    "stinkyscapeplus-037": {
+      "play": "Right in front, got it.",
+      "attack": "Light it up!",
+      "death": "Fuel's out."
+    },
+    "stinkyscapeplus-038": {
+      "play": "Arc ready. Stand close.",
+      "attack": "Zap!",
+      "death": "Short circuit."
+    },
+    "stinkyscapeplus-039": {
+      "cast": "Two worlds, one very weird crossing."
+    },
+    "stinkyscapeplus-040": {
+      "cast": "Hold still, I'll fix it."
+    },
+    "stinkyscapeplus-041": {
+      "cast": "Everyone's fixed. You're welcome."
+    },
+    "stinkyscapeplus-042": {
+      "cast": "Field up. Nobody gets through."
+    },
+    "stinkyscapeplus-043": {
+      "cast": "Not through me."
+    },
+    "stinkyscapeplus-044": {
+      "cast": "Light it and run."
+    },
+    "stinkyscapeplus-045": {
+      "cast": "Hold on tight!"
+    },
+    "stinkyscapeplus-046": {
+      "cast": "Now you see me. Mostly."
+    },
+    "stinkyscapeplus-047": {
+      "cast": "Tough now, bendy later."
+    },
+    "stinkyscapeplus-048": {
+      "cast": "Handle with tongs. Big tongs."
+    },
+    "stinkyscapeplus-049": {
+      "cast": "Crystal clear. Aim true!"
+    },
+    "stinkyscapeplus-050": {
+      "cast": "Sharpened and ready!"
+    },
+    "stinkyscapeplus-051": {
+      "cast": "Chains, hold them tight!"
+    },
+    "stinkyscapeplus-052": {
+      "cast": "Drill, baby, drill!"
+    },
+    "stinkyscapeplus-053": {
+      "cast": "Pew pew, ore's due!"
+    },
+    "stinkyscapeplus-054": {
+      "cast": "Rattle, rattle, rock!"
+    },
+    "stinkyscapeplus-055": {
+      "cast": "Everything is under control. Mostly."
+    },
+    "stinkyscapeplus-056": {
+      "cast": "Brace for impact. Everyone, brace!"
+    },
+    "stinkyscapeplus-057": {
+      "cast": "Weaving the threads of tomorrow."
+    },
+    "stinkyscapeplus-058": {
+      "play": "Parcels incoming, mind the belt!",
+      "attack": "Belt up!",
+      "death": "Delivery cancelled, sadly."
+    },
+    "stinkyscapeplus-059": {
+      "cast": "Packages away! Hold your hats!"
+    },
+    "stinkyscapeplus-060": {
+      "play": "Which weapon is the shiniest?",
+      "attack": "Pointy end first!",
+      "death": "Dropped my sword."
+    },
+    "stinkyscapeplus-061": {
+      "play": "Lunch is served. Sit down!",
+      "attack": "Eat first!",
+      "death": "Out of garlic sauce."
+    },
+    "stinkyscapeplus-061-1": {
+      "cast": "Shawarma for everyone!"
+    },
+    "stinkyscapeplus-062": {
+      "cast": "Faster, everyone, faster!"
+    },
+    "stinkyscapeplus-063": {
+      "cast": "Under the dome, move!"
+    },
+    "stinkyscapeplus-064": {
+      "play": "Stand clear. I'm humming.",
+      "attack": "Bzzt!",
+      "death": "Fuse blown."
+    },
+    "stinkyscapeplus-065": {
+      "play": "Nobody gets past me.",
+      "attack": "Shove!",
+      "death": "Cracked at last."
+    },
+    "stinkyscapeplus-066": {
+      "play": "Plastic, but make it fantastic.",
+      "attack": "Bonk!",
+      "death": "Plastic fantastic, shattered."
+    },
+    "stinkyscapeplus-067": {
+      "play": "Here. Or maybe not.",
+      "attack": "Boop!",
+      "death": "Phased out, finally."
+    },
+    "stinkyscapeplus-068": {
+      "cast": "I foresee a good draw."
+    },
+    "stinkyscapeplus-069": {
+      "cast": "Yum! Unknown flavour, unlocked."
+    },
+    "stinkyscapeplus-069-1": {
+      "cast": "Sweetness spreads to the right."
+    },
+    "stinkyscapeplus-070": {
+      "cast": "Berry nice to meet you!"
+    },
+    "stinkyscapeplus-071": {
+      "cast": "Sign here. And here. And there."
+    },
+    "stinkyscapeplus-072": {
+      "play": "I saw this coming.",
+      "attack": "Told you so!",
+      "death": "Nobody saw that coming."
+    },
+    "stinkyscapeplus-073": {
+      "play": "Easy now. Easy.",
+      "attack": "Splash!",
+      "death": "Gone with the tide."
+    },
+    "stinkyscapeplus-074": {
+      "play": "Make way for the stars!",
+      "attack": "Stellar strike!",
+      "death": "Fading to starlight."
+    },
+    "stinkyscapeplus-075": {
+      "play": "Exploring! Don't look at me.",
+      "attack": "Onward!",
+      "death": "Lost in space. Again."
+    },
+    "stinkyscapeplus-075-1": {
+      "cast": "Unwrap the galaxy!"
+    },
+    "stinkyscapeplus-076": {
+      "cast": "Ayy! Take me to your memes!"
+    },
+    "stinkyscapeplus-076-1": {
+      "play": "Ayy lmao.",
+      "attack": "Probe time!",
+      "death": "Beam me home."
+    },
+    "stinkyscapeplus-077": {
+      "cast": "Everything must go. Into me."
+    },
+    "stinkyscapeplus-078": {
+      "cast": "Cut. Clean. Done."
+    },
+    "stinkyscapeplus-079": {
+      "cast": "Just wait. The sea remembers."
+    },
+    "stinkyscapeplus-080": {
+      "cast": "All ships, last voyage. Sail!"
+    },
+    "stinkyscapeplus-081": {
+      "play": "The end is near!",
+      "attack": "Doom!",
+      "death": "I did say so."
+    },
+    "stinkyscapeplus-082": {
+      "cast": "Into the endless unknown!"
+    },
+    "stinkyscapeplus-083": {
+      "play": "I brought a copy.",
+      "attack": "Replicate!",
+      "death": "Copy that."
+    },
+    "stinkyscapeplus-084": {
+      "play": "Everybody hold still, snapshot!",
+      "attack": "Binted!",
+      "death": "Rewind everything!"
+    },
+    "stinkyscapeplus-085": {
+      "cast": "Nice body. I'll take it."
+    },
+    "stinkyscapeplus-086": {
+      "play": "Nom nom stars.",
+      "attack": "Nibble!",
+      "death": "Glowed too bright."
+    },
+    "stinkyscapeplus-087": {
+      "cast": "Growing on the frontier!"
+    },
+    "stinkyscapeplus-088": {
+      "play": "Eyes on the colony.",
+      "attack": "Watch this!",
+      "death": "Colony, I failed."
+    },
+    "stinkyscapeplus-089": {
+      "cast": "I've been waiting for this."
+    },
+    "stinkyscapeplus-090": {
+      "play": "Running a little hot!",
+      "attack": "Melting!",
+      "death": "Cooling down. Finally."
+    },
+    "stinkyscapeplus-091": {
+      "play": "Tide's coming in!",
+      "attack": "Wave!",
+      "death": "Back to the sea."
+    },
+    "stinkyscapeplus-092": {
+      "play": "Shiny and stubborn.",
+      "attack": "Clack!",
+      "death": "Cracked up."
+    },
+    "stinkyscapeplus-093": {
+      "play": "More of us inside.",
+      "attack": "We swarm!",
+      "death": "We'll be back."
+    },
+    "stinkyscapeplus-094": {
+      "cast": "Let's review your performance."
+    },
+    "stinkyscapeplus-095": {
+      "cast": "Backed by JC. Everyone gets the good stuff!"
+    },
+    "stinkyscapeplus-096": {
+      "cast": "Everyone's admitted! Even you, Gary."
+    },
+    "stinkyscapeplus-097": {
+      "cast": "Only the finest few. Sorry, not you."
+    },
+    "stinkyscapeplus-098": {
+      "cast": "She's going down, and we're all aboard!"
+    },
+    "stinkyscapeplus-099": {
+      "cast": "Fresh faces. Huge faces!"
+    },
+    "stinkyscapeplus-100": {
+      "cast": "Eat your vegetables, big guy!"
+    },
+    "stinkyscapeplus-101": {
+      "play": "Look at me, a wee beastie!",
+      "attack": "Tiny teeth, big hopes!",
+      "death": "I was going to be huge."
+    },
+    "stinkyscapeplus-102": {
+      "play": "Gather round, the stars are singing!",
+      "attack": "Take this ballad!",
+      "death": "My final verse falls flat."
+    },
+    "stinkyscapeplus-103": {
+      "cast": "Rise! Rise above it all!"
+    },
+    "stinkyscapeplus-104": {
+      "cast": "Again! Again! Breathe!"
+    },
+    "stinkyscapeplus-105": {
+      "play": "Spacersi has arrived, slightly late.",
+      "attack": "Spacer strike!",
+      "death": "Back to the void."
+    },
+    "stinkyscapeplus-106": {
+      "play": "Spectre online. Hide. Or don't.",
+      "attack": "Haunted!",
+      "death": "Spectre, offline."
+    },
+    "stinkyscapeplus-107": {
+      "play": "Lighting the fuse!",
+      "attack": "Boom shaka!",
+      "death": "Fuse blown!"
+    },
+    "stinkyscapeplus-108": {
+      "play": "Swarmer, locked and loaded!",
+      "attack": "Missiles away!",
+      "death": "Out of missiles."
+    },
+    "stinkyscapeplus-109": {
+      "play": "Lancer standing by.",
+      "attack": "Beam out!",
+      "death": "Lens cracked."
+    },
+    "stinkyscapeplus-110": {
+      "play": "Dagger reporting in.",
+      "attack": "Stab stab!",
+      "death": "Dagger down. Send another."
+    },
+    "stinkyscapeplus-111": {
+      "play": "Mace here. Bonk time.",
+      "attack": "Bonk!",
+      "death": "Mace, bent."
+    },
+    "stinkyscapeplus-112": {
+      "play": "Fortress on site. Move along.",
+      "attack": "Knock knock!",
+      "death": "Walls down. Sorry."
+    },
+    "stinkyscapeplus-113": {
+      "play": "All rise for the Scepter.",
+      "attack": "By royal decree!",
+      "death": "The crown falls."
+    },
+    "stinkyscapeplus-114": {
+      "play": "Long may I reign!",
+      "attack": "Bow down!",
+      "death": "My reign is over."
+    },
+    "stinkyscapeplus-115": {
+      "play": "Flare out!",
+      "attack": "Zip zip!",
+      "death": "Flared out."
+    },
+    "stinkyscapeplus-116": {
+      "play": "Horizon in sight.",
+      "attack": "Over the edge!",
+      "death": "Sunset."
+    },
+    "stinkyscapeplus-117": {
+      "play": "Zenith overhead. Look up.",
+      "attack": "Top-down view!",
+      "death": "I fall from grace."
+    },
+    "stinkyscapeplus-118": {
+      "play": "Antumbra casts a long shadow.",
+      "attack": "Shadow strike!",
+      "death": "Lights out."
+    },
+    "stinkyscapeplus-119": {
+      "play": "Total eclipse. Please stop looking.",
+      "attack": "Darkness falls!",
+      "death": "The sun returns."
+    },
+    "stinkyscapeplus-120": {
+      "play": "Skitter skitter, here I come!",
+      "attack": "Boom time!",
+      "death": "Splat, as planned."
+    },
+    "stinkyscapeplus-121": {
+      "play": "All eight legs, no regrets.",
+      "attack": "Skitter-crush!",
+      "death": "Even giants fall."
+    },
+    "stinkyscapeplus-121-1": {
+      "play": "Leg day, every day!",
+      "attack": "Kick!",
+      "death": "Lost a leg."
+    },
+    "stinkyscapeplus-122": {
+      "play": "Quad is on station.",
+      "attack": "Pew pew!",
+      "death": "Quad down."
+    },
+    "stinkyscapeplus-123": {
+      "play": "Oct, eight rotors and a plan.",
+      "attack": "Eight at once!",
+      "death": "Oct, offline."
+    },
+    "stinkyscapeplus-124": {
+      "play": "Sei, sailing in.",
+      "attack": "Torpedo!",
+      "death": "Sinking slowly."
+    },
+    "stinkyscapeplus-125": {
+      "play": "Omura rises from the deep.",
+      "attack": "Big gun, big day!",
+      "death": "Down to the depths."
+    },
+    "stinkyscapeplus-126": {
+      "play": "Vela, sails set.",
+      "attack": "Ray cast!",
+      "death": "Sails torn."
+    },
+    "stinkyscapeplus-127": {
+      "play": "Corvus watches from above.",
+      "attack": "Caw! Strike!",
+      "death": "Wings down."
+    },
+    "stinkyscapeplus-128": {
+      "cast": "One part in, one part out. Easy."
+    },
+    "stinkyscapeplus-129": {
+      "cast": "Multiply the fun! Multiply the parts!"
+    },
+    "stinkyscapeplus-130": {
+      "cast": "Exponential growth. Please stand back."
+    },
+    "stinkyscapeplus-131": {
+      "cast": "Four times over. And again!"
+    },
+    "stinkyscapeplus-132": {
+      "cast": "Paperclips, but make it fancy!"
+    },
+    "stinkyscapeplus-133": {
+      "cast": "Paperclips, part three. Brace yourselves!"
+    },
+    "stinkyscapeplus-133-1": {
+      "play": "Daglare, double trouble!",
+      "attack": "Stab and zoom!",
+      "death": "Daglare, grounded."
+    },
+    "stinkyscapeplus-133-2": {
+      "play": "Macizon, mace in the sky!",
+      "attack": "Bonk from above!",
+      "death": "Dropped it."
+    },
+    "stinkyscapeplus-133-3": {
+      "play": "Fortnith, fortress at the zenith.",
+      "attack": "Cannon fall!",
+      "death": "Fortress fell."
+    },
+    "stinkyscapeplus-133-4": {
+      "play": "Sceptumbra, long shadow, longer staff.",
+      "attack": "Crowned shadow!",
+      "death": "The throne goes dark."
+    },
+    "stinkyscapeplus-133-5": {
+      "play": "Reignclipse. Bow, then hide.",
+      "attack": "Reign, then dark!",
+      "death": "The era ends."
+    },
+    "stinkyscapeplus-134": {
+      "cast": "Fresh crawlers, straight from the basket!"
+    },
+    "stinkyscapeplus-135": {
+      "cast": "Skitter! Skitter! Everywhere!"
+    },
+    "stinkyscapeplus-136": {
+      "cast": "Another crawler off the line!"
+    },
+    "stinkyscapeplus-137": {
+      "cast": "Two parts, one perfect match!"
+    },
+    "stinkyscapeplus-138": {
+      "cast": "Delta, defined. And delivered!"
+    },
+    "stinkyscapeplus-139": {
+      "cast": "Operation Omega is a go!"
+    },
+    "stinkyscapeplus-140": {
+      "cast": "Rehire the robots. Quietly."
+    },
+    "stinkyscapeplus-141": {
+      "play": "Prod is down. Report the intern.",
+      "attack": "Hotfix incoming!",
+      "death": "Rolled back. Again."
+    },
+    "stinkyscapeplus-142": {
+      "cast": "Roll the dice. Pray to the dice!"
+    },
+    "stinkyscapeplus-142-1": {
+      "play": "Built by committee. Walks by committee.",
+      "attack": "Committee approved!",
+      "death": "Meeting adjourned."
+    },
+    "stinkyscapeplus-142-2": {
+      "play": "We are many. We are loud.",
+      "attack": "Swarm, swarm, swarm!",
+      "death": "We were many."
+    },
+    "stinkyscapeplus-143": {
+      "play": "Beam online. Please stand there.",
+      "attack": "Pew, but hotter!",
+      "death": "Beam offline."
+    },
+    "stinkyscapeplus-144": {
+      "play": "Now with a warning label.",
+      "attack": "Warm regards!",
+      "death": "Warranty void."
+    },
+    "stinkyscapeplus-145": {
+      "play": "Longer beam. Shorter temper.",
+      "attack": "Mind the beam!",
+      "death": "Out of fuel."
+    },
+    "stinkyscapeplus-146": {
+      "play": "Lobbing opinions over the wall.",
+      "attack": "Incoming gloop!",
+      "death": "Jammed. Sorry."
+    },
+    "stinkyscapeplus-147": {
+      "play": "Gentle mortar, firm sneeze.",
+      "attack": "Bless you!",
+      "death": "Cough, cough, done."
+    },
+    "stinkyscapeplus-148": {
+      "play": "Fifth time's the sludge.",
+      "attack": "Sludge away!",
+      "death": "The pot's empty."
+    },
+    "stinkyscapeplus-149": {
+      "play": "Warm hello, everybody!",
+      "attack": "Hot, hot, hot!",
+      "death": "Cooled off."
+    },
+    "stinkyscapeplus-150": {
+      "play": "Slightly hotter than before.",
+      "attack": "Toasty!",
+      "death": "Fizzled out."
+    },
+    "stinkyscapeplus-151": {
+      "play": "Geology will handle this.",
+      "attack": "Eruption!",
+      "death": "Back to sleep."
+    },
+    "stinkyscapeplus-152": {
+      "play": "A little poison never hurt much.",
+      "attack": "Sip this!",
+      "death": "Antidote found. Ugh."
+    },
+    "stinkyscapeplus-153": {
+      "play": "Smells like trouble. Is trouble.",
+      "attack": "Stink bomb!",
+      "death": "Air out the room."
+    },
+    "stinkyscapeplus-154": {
+      "play": "Pedal to the maybe.",
+      "attack": "Going maybe!",
+      "death": "Pedal stuck. Oops."
+    },
+    "stinkyscapeplus-155": {
+      "cast": "Where to? Away!"
+    },
+    "stinkyscapeplus-156": {
+      "play": "The horizon started it.",
+      "attack": "Horizon, break!",
+      "death": "Horizon wins. Barely."
+    },
+    "stinkyscapeplus-157": {
+      "play": "Workers not pictured.",
+      "attack": "Invoice incoming!",
+      "death": "Lease expired."
+    },
+    "stinkyscapeplus-158": {
+      "cast": "Opened it. Regretted it."
+    },
+    "stinkyscapeplus-159": {
+      "play": "Brought you something shiny.",
+      "attack": "Caw, caw, caw!",
+      "death": "Nevermore. Okay, sometimes more."
+    },
+    "stinkyscapeplus-160": {
+      "play": "Sun, I have notes.",
+      "attack": "Higher, higher!",
+      "death": "Should have read the notes."
+    },
+    "stinkyscapeplus-161": {
+      "play": "More of me, coming soon.",
+      "attack": "Pixel attack!",
+      "death": "Game over. Insert coin."
+    },
+    "stinkyscapeplus-162": {
+      "play": "Everybody calm down. I am calm.",
+      "attack": "Reorganise!",
+      "death": "Reassign my corridor."
+    },
+    "stinkyscapeplus-163": {
+      "play": "Faster! Whatever it is, faster!",
+      "attack": "Speed up!",
+      "death": "Slow down, apparently."
+    },
+    "stinkyscapeplus-164": {
+      "cast": "The spreadsheet has spoken."
+    },
+    "stinkyscapeplus-165": {
+      "play": "I see snacks in your future.",
+      "attack": "Foreseen!",
+      "death": "Saw that coming."
+    },
+    "stinkyscapeplus-166": {
+      "cast": "Open the gates. Mind the union."
+    },
+    "stinkyscapeplus-t-tears-of-the-kwzki-tree": {
+      "cast": "One drop, everything shines."
+    },
+    "stinkyscapeplus-t-supernova": {
+      "cast": "Gather round. Big finish."
+    },
+    "stinkyscapeplus-t-alnilam": {
+      "play": "Brightest star in the belt.",
+      "attack": "Shine on!",
+      "death": "Lights out. For everyone."
+    },
+    "stinkyscapeplus-t-the-enigmata": {
+      "cast": "Everyone takes a turn. Gently."
+    },
+    "stinkyscapeplus-t-warhero-token": {
+      "cast": "Yeah, I'm a war hero."
+    },
+    "stinkyscapeplus-t-terminus-starship-ark-of-ashes": {
+      "play": "All aboard the ashes.",
+      "attack": "Ark, fire!",
+      "death": "Ashes to ashes."
+    },
+    "stinkyscapeplus-t-terminus-starship-dying-ember": {
+      "play": "Still glowing. Barely.",
+      "attack": "Spark!",
+      "death": "Ember out."
+    },
+    "stinkyscapeplus-t-terminus-starship-heat-death-pilgrim": {
+      "play": "Walking to the end. Nice playlist.",
+      "attack": "Pilgrim, advance!",
+      "death": "Pilgrimage complete."
+    },
+    "stinkyscapeplus-t-terminus-starship-entropys-wake": {
+      "play": "Everything comes apart. Neatly.",
+      "attack": "Come apart!",
+      "death": "Order restored. Sadly."
+    },
+    "stinkyscapeplus-t-terminus-starship-red-giant-requiem": {
+      "play": "A funeral for a sun.",
+      "attack": "Requiem, now!",
+      "death": "Sun sets. Curtain."
+    },
+    "stinkyscapeplus-t-terminus-starship-cold-exodus": {
+      "play": "Left in a hurry. In layers.",
+      "attack": "Cold shoulder!",
+      "death": "Frozen out."
+    },
+    "stinkyscapeplus-t-terminus-starship-omega-drift": {
+      "play": "No destination. Firm direction.",
+      "attack": "Drifting through!",
+      "death": "Drift over."
+    },
+    "stinkyscapeplus-t-terminus-starship-farthest-shore": {
+      "play": "Reviews are glowing. Allegedly.",
+      "attack": "Shore up!",
+      "death": "Nobody returned. Again."
+    },
+    "stinkyscapeplus-t-terminus-starship-nightfall-covenant": {
+      "play": "Signed in the dark.",
+      "attack": "Clause four!",
+      "death": "Covenant void."
+    },
+    "stinkyscapeplus-t-terminus-starship-vacuum-psalm": {
+      "play": "A hymn nobody can hear.",
+      "attack": "Amen, loudly!",
+      "death": "Silence. Finally."
+    },
+    "stinkyscapeplus-t-ai-01": {
+      "cast": "I was definitely a kiwi."
+    },
+    "stinkyscapeplus-t-ai-02": {
+      "cast": "Eat me. Regret later."
+    },
+    "stinkyscapeplus-t-ai-03": {
+      "play": "Just loitering. Nothing to see.",
+      "attack": "Boop!",
+      "death": "Loitering concluded."
+    },
+    "stinkyscapeplus-t-ai-04": {
+      "play": "As a large model, I object.",
+      "attack": "Confidently wrong!",
+      "death": "Context window closed."
+    },
+    "stinkyscapeplus-t-ai-05": {
+      "play": "Brewing light, slowly.",
+      "attack": "Glow up!",
+      "death": "Lights out, friends."
+    },
+    "stinkyscapeplus-t-ai-06": {
+      "cast": "Slide those beads over."
+    },
+    "stinkyscapeplus-t-ai-07": {
+      "play": "Walking the line. Excuse me.",
+      "attack": "Linear search!",
+      "death": "Index out of range."
     }
   },
   "emotes": {

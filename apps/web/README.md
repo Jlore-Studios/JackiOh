@@ -1258,7 +1258,7 @@ and encoded to the same mono AAC at 22050 Hz and about 32 kbps. After editing a 
 `PATH` for SAPI voices; with neither it exits 2. It renders only the keys whose input hash changed
 and whose backend this machine has, reports a stale key of the other backend as needing it, deletes
 orphan files, rewrites `src/audio/voice-manifest.json`, and fails if the set passes
-`VOICE_BUDGET_BYTES` (12 MiB since R1448; 6 MiB from R501) or a line runs past 4 s. `--only <defId>` limits it to one card
+`VOICE_BUDGET_BYTES` (24 MiB since R3596000, 16 MiB since R1884000, 12 MiB since R1448; 6 MiB from R501) or a line runs past 4 s. `--only <defId>` limits it to one card
 and `--force` renders everything this machine can again (legacy `say` voices such as Fred are not
 byte-deterministic, so expect a large diff). Commit the manifest together with `public/audio/voice/`.
 With neither machine at hand, push a commit whose message holds `[gen:voice]` (or run the `voice`

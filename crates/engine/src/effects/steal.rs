@@ -47,12 +47,25 @@ pub enum StealOtherwise {
 }
 
 /// R15: the same lane on the stealer's side when that zone is free, else its first free zone.
-fn destination_for(ctx: &EffectContext<'_>, thief: PlayerId, from: &ZoneSlot) -> Option<ZoneSlot> {
+/// R3546003: a GIGA takes the same lane whole when all four zones are free (R64), else the
+/// leftmost fit (R64, R688), else nothing.
+fn destination_for(
+    ctx: &EffectContext<'_>,
+    thief: PlayerId,
+    card: &CardInstance,
+    from: &ZoneSlot,
+) -> Option<ZoneSlot> {
     let same_lane = ZoneSlot {
         player: thief,
         row: from.row,
         lane: from.lane,
     };
+    if crate::giga::is_giga(card) {
+        if crate::giga::fits(same_lane, |slot| is_open(ctx.state, slot)) {
+            return Some(same_lane);
+        }
+        return crate::giga::entry_anchor(ctx.state, thief, from.row);
+    }
     if is_open(ctx.state, same_lane) {
         return Some(same_lane);
     }
@@ -86,7 +99,7 @@ fn move_control(
     }
     let previous = card.controller;
 
-    let Some(to) = destination_for(ctx, receiver, &from) else {
+    let Some(to) = destination_for(ctx, receiver, card, &from) else {
         return false;
     };
 
@@ -229,6 +242,10 @@ pub fn capture(args: CaptureArgs) -> Effect {
             return;
         }
         if target_card.id == holder_live.id || target_card.controller == holder_live.controller {
+            return;
+        }
+        // R3546000: nothing captures with a GIGA, neither as captor nor as captive.
+        if crate::giga::is_giga(holder_live) || crate::giga::is_giga(&target_card) {
             return;
         }
 

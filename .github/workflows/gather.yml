@@ -55,12 +55,13 @@ permissions:
 env:
   # Hours each part plays: with its build and its last batch, under GitHub's 6-hour job limit.
   GATHER_HOURS: "5"
-  # Games played and then filed at a time: about an hour of a GitHub runner (about 870 games an hour
-  # on four vCPUs at the AI's budget since #2628, an estimate from the PC's gather half, which played
-  # 5,000 in 6 h 42 min in run 46), so the statistics take a version's games an hour at a time. Each
+  # Games played and then filed at a time: about an hour of a GitHub runner (about 400 games an hour
+  # on four vCPUs at the AI's budget since #2628: run 72's 850-game batches took about two hours each;
+  # the PC's gather half played 5,000 in 6 h 42 min in run 46), so the statistics take a version's
+  # games an hour at a time. Each
   # batch is one file in each database (`game_record_batches`), whose totals are the version's
   # however many.
-  GATHER_FILE_GAMES: "850"
+  GATHER_FILE_GAMES: "400"
   # Game numbers each run owns: run r plays from (r - 1) * GATHER_STRIDE + 1.
   GATHER_STRIDE: "100000"
   # Days the run's record files are kept as its artifacts.

@@ -539,6 +539,34 @@ mod r21_random_keywords_m3_t1 {
     use super::*;
 
     #[test]
+    fn r3551004_a_random_keyword_can_be_frenzy() {
+        // R3551004: Frenzy is the pool's fifteenth entry, so a full-pool grant lands it.
+        assert!(random_pool_keywords().contains(&Keyword::Frenzy));
+        let mut state = game("random-kw-frenzy");
+        let unit = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let mut b = Bench::new(&state);
+        run(
+            &mut b,
+            &mut state,
+            grant_random_keywords(json_as(json!({ "target": { "of": "chosen" }, "count": 15 }))),
+            None,
+            on_instance(&unit),
+        );
+        let kinds: Vec<KeywordKind> = live(&state, &unit.id)
+            .granted_keywords
+            .iter()
+            .map(Keyword::kind)
+            .collect();
+        assert_eq!(kinds.len(), 15);
+        assert!(kinds.contains(&KeywordKind::Frenzy));
+    }
+
+    #[test]
     fn r21_draws_from_the_pool_never_repeats_within_one_grant_and_is_seeded() {
         let mut state = game("random-kw");
         let unit = put(
@@ -680,7 +708,8 @@ mod r21_random_keywords_m3_t1 {
         );
         let mut b = Bench::new(&state);
 
-        // Drawn dry on a keywordless unit: all fourteen, Taunt among them, never Charge or Indestructible.
+        // Drawn dry on a keywordless unit: all fifteen (R3551004: Frenzy the fifteenth), Taunt among them,
+        // never Charge or Indestructible.
         run(
             &mut b,
             &mut state,
@@ -692,7 +721,7 @@ mod r21_random_keywords_m3_t1 {
         );
 
         let kinds = granted_kinds(&b.events);
-        assert_eq!(kinds.len(), 14);
+        assert_eq!(kinds.len(), 15);
         assert_eq!(kinds.len(), RANDOM_KEYWORD_POOL.len());
         assert_eq!(kinds.iter().collect::<IndexSet<_>>().len(), kinds.len());
         assert!(kinds.contains(&"Taunt".to_string()));

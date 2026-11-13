@@ -59,6 +59,10 @@ pub static starship: LazyLock<CardDef> =
     LazyLock::new(|| def(18391, "starship", "Unit", 0, (4, 4), json!([])));
 /// "Dormant for 1 turn. Cry: deal 2 damage to the enemy hero, then give this +2/+2."
 pub static napper: LazyLock<CardDef> = LazyLock::new(|| def(18392, "napper", "Unit", 0, (2, 2), json!([])));
+/// R3556000: a Dormant Field Spell — "Dormant for 2 turns. Start of turn: deal 1 damage to the enemy
+/// hero. Aura: every Unit has +1/+1."
+pub static dozer: LazyLock<CardDef> =
+    LazyLock::new(|| def(18409, "dozer", "Field Spell", 0, (0, 0), json!([])));
 /// "Aura: every Unit has +1/+1."
 pub static banner: LazyLock<CardDef> = LazyLock::new(|| def(18393, "banner", "Unit", 0, (1, 1), json!([])));
 /// "Stack. Cry: the cards beneath this become copies of it" (Classic+ #4).
@@ -220,6 +224,15 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
             }),
         ),
         (
+            dozer.id.clone(),
+            both(Script {
+                static_flags: slumber_text(Some(2), None),
+                start_of_turn: Some(hook(|_ctx| vec![to_enemy_hero(START_OF_TURN_DAMAGE)])),
+                aura: Some(every_unit_aura()),
+                ..Script::default()
+            }),
+        ),
+        (
             banner.id.clone(),
             both(Script {
                 aura: Some(every_unit_aura()),
@@ -352,6 +365,7 @@ pub static SLUMBER_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         swarm.clone(),
         rouse.clone(),
         call.clone(),
+        dozer.clone(),
     ]
 });
 

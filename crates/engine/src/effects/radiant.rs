@@ -9,7 +9,7 @@ use crate::catalog::def_of;
 use crate::effects::targets::{PlayerSpec, TargetSpec, instance_by_id_or_spec, player_of};
 use crate::faces::card_type_of;
 use crate::rng::Rng;
-use crate::script::{Effect, EffectContext};
+use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, find_instance_mut};
 use crate::wire::{CardType, GameEvent, Keyword, OneOrMany, PlayerId, Row, Zone, ZoneName};
 use crate::zones::{StandingAt, acting_on};
@@ -59,6 +59,8 @@ fn hidden_from_someone(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
 /// hand or #26's pick was Radiant already, the face R177 hides (random picks take non-Radiant cards
 /// only, R60). `card` is a snapshot; the card is read again by its id and written there.
 pub(crate) fn make_radiant(ctx: &mut EffectContext<'_>, card: &CardInstance) -> bool {
+    // R3558001: a card made Radiant on its own keeps it: its lend is no longer a lend.
+    crate::hand_order::forget_lend(ctx.state, &card.id);
     let card = crate::zones::live_or(ctx.state, card);
     if card.radiant {
         if hidden_from_someone(ctx, &card) {
@@ -148,6 +150,46 @@ pub fn set_radiant(args: RadiantTarget) -> Effect {
         };
         make_radiant(ctx, &card);
     })
+}
+
+/// R3569000 (S+ Tears of the Kwzki Tree): "All cards for the rest of the game are Radiant": the flag
+/// `GameState.radiantWorld`, which `radiate_world` keeps true at every settled check, so a card made
+/// later turns Radiant as it lands, and a Radiant card never turns back but for De-Radiant.
+pub fn make_all_radiant() -> Effect {
+    Effect::new("makeAllRadiant", |ctx| {
+        ctx.state.radiant_world = Some(true);
+    })
+}
+
+/// R3569000: the sweep of `make_all_radiant`'s flag, run at the settled state check (`state_check`):
+/// every card of both sides in every zone but the resolving and the gone turns Radiant, the active
+/// player's side first (R68). It draws nothing (R129). A public pile cues the cards it changes; a hand,
+/// a face-down trap or a library holding any card not yet Radiant cues all of its cards, so the cues
+/// count nothing a player may not read (R97, R177, R440).
+pub(crate) fn radiate_world(sink: &mut EngineSink<'_>) {
+    if sink.state.radiant_world != Some(true) {
+        return;
+    }
+    let active = sink.state.active;
+    let mut ctx = EffectContext::new(sink.reborrow(), active);
+    let mut swept: Vec<CardInstance> = Vec::new();
+    for player in crate::state::active_first(ctx.state) {
+        let cards: Vec<CardInstance> = crate::state::side_cards(&ctx.state.players[player])
+            .filter(|card| !matches!(card.zone, Zone::Resolving { .. } | Zone::Gone { .. }))
+            .cloned()
+            .collect();
+        for reader in READERS {
+            let group: Vec<&CardInstance> = cards
+                .iter()
+                .filter(|card| readers_of(&ctx, card) == reader)
+                .collect();
+            let whole = reader != Readers::Everyone && group.iter().any(|card| !card.radiant);
+            swept.extend(group.into_iter().filter(|card| whole || !card.radiant).cloned());
+        }
+    }
+    for card in &swept {
+        make_radiant(&mut ctx, card);
+    }
 }
 
 /// MD-D6 (§5.2's exception, Meditative #53 Prestige): De-Radiant is Make Radiant reversed, reported by

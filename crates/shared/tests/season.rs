@@ -109,6 +109,18 @@ mod r609_the_soft_reset {
             report.spread_before * (1.0 - float(SEASON_RESET_STRENGTH)),
             9
         ));
+        // The spread is the ratings' standard deviation about their mean: 800, 1100 and 1400 are 300, 0 and 300
+        // from it, so sqrt(60000) before and, each pulled halfway in, sqrt(15000) after.
+        assert!(
+            close_to(report.spread_before, 60_000f64.sqrt(), 9),
+            "{}",
+            report.spread_before
+        );
+        assert!(
+            close_to(report.spread_after, 15_000f64.sqrt(), 9),
+            "{}",
+            report.spread_after
+        );
         assert_eq!(
             [
                 report.lowest_before,

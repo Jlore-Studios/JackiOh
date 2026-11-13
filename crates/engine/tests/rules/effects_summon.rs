@@ -1350,3 +1350,65 @@ mod r2248000_a_flying_unit_summoned_into_a_full_unit_row_stands_in_the_backrow {
         assert!(card_at(&state, slot(PlayerId::P1, Row::Backrow, 1)).is_none());
     }
 }
+
+mod r3541002_a_summon_names_its_dormant_turns {
+    use super::*;
+
+    /// A scenario whose catalog carries this file's fixtures, with a plain card in each hand and library
+    /// so no turn ends by itself.
+    fn board() -> Scenario {
+        let _ = game();
+        let plain = crier().id;
+        let library = json!([plain, plain, plain, plain, plain, plain]);
+        scenario(json!({
+            "seed": "r3541002",
+            "p1": { "hand": [plain], "library": library },
+            "p2": { "hand": [plain], "library": library },
+        }))
+    }
+
+    fn summon_into(s: &mut Scenario, args: Value) -> CardInstance {
+        run(s.state_mut(), summon(json_as(args)), RunOptions::default());
+        s.unit_at(PlayerId::P1, 1)
+    }
+
+    #[test]
+    fn r3541002_summon_with_dormant_turns_enters_dormant_for_n_turns() {
+        let mut s = board();
+        let sleeper = summon_into(&mut s, json!({ "defId": crier().id, "dormantTurns": 2 }));
+        assert!(
+            is_slumbering(s.card(&sleeper)),
+            "the text prints no Dormant, the summon names it"
+        );
+        assert_eq!(slumber_turns_of(s.card(&sleeper)), Some(2));
+        // R1839001: its controller's turn starts count it down, the other seat's do not.
+        s.end_turn();
+        assert_eq!(slumber_turns_of(s.card(&sleeper)), Some(2));
+        s.end_turn();
+        assert_eq!(
+            slumber_turns_of(s.card(&sleeper)),
+            Some(1),
+            "its controller's first turn"
+        );
+        s.end_turn();
+        s.end_turn();
+        assert!(
+            !is_slumbering(s.card(&sleeper)),
+            "it awakens at its controller's second turn start"
+        );
+        assert_eq!(s.card(&sleeper).awakened, Some(true));
+    }
+
+    #[test]
+    fn r3541002_a_summon_naming_no_dormant_turns_or_none_enters_awake() {
+        for args in [
+            json!({ "defId": crier().id }),
+            json!({ "defId": crier().id, "dormantTurns": 0 }),
+        ] {
+            let mut s = board();
+            let awake = summon_into(&mut s, args);
+            assert!(s.card(&awake).slumber.is_none());
+            assert!(!is_slumbering(s.card(&awake)));
+        }
+    }
+}

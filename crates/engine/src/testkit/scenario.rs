@@ -82,6 +82,7 @@ thread_local! {
         const { Cell::new(None) };
     static CODE_BLOCKS_OVERRIDE: Cell<Option<crate::catalog::CodeBlocks>> = const { Cell::new(None) };
     static SHIPPED_OVERRIDE: Cell<Option<&'static [crate::catalog::ShippedCatalog]>> = const { Cell::new(None) };
+    static PAST_DEFS_OVERRIDE: Cell<Option<&'static [CardDef]>> = const { Cell::new(None) };
     static CARD_METRICS_OVERRIDE: Cell<Option<crate::catalog::CardMetrics>> = const { Cell::new(None) };
     static MARKETPLACE_TABLE_OVERRIDE: Cell<Option<&'static [crate::config::MarketLot]>> =
         const { Cell::new(None) };
@@ -162,6 +163,18 @@ pub fn shipped_override() -> Option<&'static [crate::catalog::ShippedCatalog]> {
     SHIPPED_OVERRIDE.with(Cell::get)
 }
 
+/// R3538002: the past definitions (`<card>@<version>`, oldest first) `catalog::past_ids_of` and
+/// `catalog::past_def` read on this thread, in place of the provider `register_past_versions` hands
+/// over.
+pub fn register_past_defs(defs: Vec<CardDef>) {
+    let defs: &'static [CardDef] = Box::leak(defs.into_boxed_slice());
+    PAST_DEFS_OVERRIDE.with(|cell| cell.set(Some(defs)));
+}
+
+pub fn past_defs_override() -> Option<&'static [CardDef]> {
+    PAST_DEFS_OVERRIDE.with(Cell::get)
+}
+
 /// R1846000: each fixture card's code lines, and the BUSTED and complicated lists `crates/cards/build.rs`
 /// would compile from them, in place of the compiled ones (`catalog::card_metrics`), sorted by id.
 pub fn register_code_lines(lines: Vec<(&str, usize)>) {
@@ -213,6 +226,7 @@ pub struct ThreadOverrides {
     win_rates: Option<&'static crate::win_rates::WinRateTable>,
     code_blocks: Option<crate::catalog::CodeBlocks>,
     shipped: Option<&'static [crate::catalog::ShippedCatalog]>,
+    past_defs: Option<&'static [CardDef]>,
     card_metrics: Option<crate::catalog::CardMetrics>,
     marketplace_table: Option<&'static [crate::config::MarketLot]>,
     pool_shift: usize,
@@ -228,6 +242,7 @@ impl ThreadOverrides {
         WIN_RATES_OVERRIDE.with(|cell| cell.set(self.win_rates));
         CODE_BLOCKS_OVERRIDE.with(|cell| cell.set(self.code_blocks));
         SHIPPED_OVERRIDE.with(|cell| cell.set(self.shipped));
+        PAST_DEFS_OVERRIDE.with(|cell| cell.set(self.past_defs));
         CARD_METRICS_OVERRIDE.with(|cell| cell.set(self.card_metrics));
         MARKETPLACE_TABLE_OVERRIDE.with(|cell| cell.set(self.marketplace_table));
         crate::testkit::pool_probe::install_pool_shift(self.pool_shift);
@@ -243,6 +258,7 @@ pub fn thread_overrides() -> ThreadOverrides {
         win_rates: win_rates_override(),
         code_blocks: code_blocks_override(),
         shipped: shipped_override(),
+        past_defs: past_defs_override(),
         card_metrics: card_metrics_override(),
         marketplace_table: marketplace_table_override(),
         pool_shift: crate::testkit::pool_probe::pool_shift(),
@@ -257,6 +273,7 @@ pub fn clear_overrides() {
     WIN_RATES_OVERRIDE.with(|cell| cell.set(None));
     CODE_BLOCKS_OVERRIDE.with(|cell| cell.set(None));
     SHIPPED_OVERRIDE.with(|cell| cell.set(None));
+    PAST_DEFS_OVERRIDE.with(|cell| cell.set(None));
     CARD_METRICS_OVERRIDE.with(|cell| cell.set(None));
     MARKETPLACE_TABLE_OVERRIDE.with(|cell| cell.set(None));
 }
@@ -735,6 +752,26 @@ struct Placement {
     lane: Option<i32>,
 }
 
+/// R3543000: whether the definition prints a Flexible keyword on either face (Flying has it
+/// innately), so a setup may lay the Unit in the backrow standing, as a Flexible play may.
+fn prints_flexible(def: &CardDef) -> bool {
+    [&def.base, &def.radiant].iter().any(|face| {
+        face.keywords
+            .iter()
+            .any(|keyword| crate::layers::grants_flexible(keyword.kind()))
+    })
+}
+
+/// R3543001: whether the definition is a Flexible Field Spell with printed stats on either face, so a
+/// setup may lay it in a unit zone, where it is a Unit.
+fn prints_flexible_field(def: &CardDef) -> bool {
+    def.type_ == CardType::FieldSpell
+        && prints_flexible(def)
+        && [&def.base, &def.radiant]
+            .iter()
+            .any(|face| face.x_stats.is_some() || face.attack.is_some() || face.health.is_some())
+}
+
 /// §3.2: the def's type picks the row and the entry's `row` overrides it, so `field` and `backrow`
 /// accept the same entries: naming the list is a convenience, not a second rule.
 fn normalize_placement(
@@ -772,14 +809,16 @@ fn normalize_placement(
             def.name
         ));
     }
-    if row == Row::Units && def.type_ != CardType::Unit {
+    // R3543000: a Flexible Unit (Flying has it innately) stands in the backrow as a Flexible play
+    // may, and R3543001: a Flexible Field Spell with stats is a Unit in a unit zone.
+    if row == Row::Units && def.type_ != CardType::Unit && !prints_flexible_field(&def) {
         return Err(format!(
             "{label}: \"{}\" is a {}; the unit zones hold Units only",
             def.name,
             def.type_.as_str()
         ));
     }
-    if row == Row::Backrow && def.type_ == CardType::Unit {
+    if row == Row::Backrow && def.type_ == CardType::Unit && !prints_flexible(&def) {
         return Err(format!(
             "{label}: \"{}\" is a Unit; the backrow holds Field Spells and Traps",
             def.name
@@ -894,6 +933,8 @@ fn place_one(sink: &mut EngineSink<'_>, player: PlayerId, entry: &Placement) -> 
         card.counters = counters;
     }
     apply_cost_setup(&mut card, Some(&entry.entry.cost));
+    // R3546000: a fixture card printing GIGA is placed at its size, as `place_with` stamps one.
+    card.giga = crate::giga::enters_giga(&*sink.state, &card).then_some(true);
     let id = card.id.clone();
 
     // §3.2 Stack: `place_on_field` puts the arriving card on top of whatever the lane holds.
@@ -905,9 +946,9 @@ fn place_one(sink: &mut EngineSink<'_>, player: PlayerId, entry: &Placement) -> 
             None
         },
     };
-    // R1081000: a Flying Unit set in a backrow zone stands there, as one played into it does.
-    let stands =
-        row == Row::Backrow && crate::layers::unit_has(&*sink.state, &card, crate::wire::KeywordKind::Flying);
+    // R1081000: a Flexible Unit (Flying has it innately, R3543000) set in a backrow zone stands
+    // there, as one played into it does.
+    let stands = row == Row::Backrow && crate::layers::is_flexible(&*sink.state, &card);
     let placed = if stands {
         crate::zones::place_standing_on_field(&mut *sink.state, &mut card, slot, options)
     } else {

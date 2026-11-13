@@ -87,3 +87,49 @@ pub fn mulligan_key(owed: &[PlayerId]) -> String {
         .collect::<Vec<_>>()
         .join(",")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use jackioh_engine::wire::{GameOverReason, Winner};
+
+    /// p1 owes its mulligan; the prompt, the phase and the result as given.
+    fn at(pending_for: Option<PlayerId>, phase: Phase, result: Option<GameResult>) -> MatchSnapshot {
+        MatchSnapshot {
+            turn: 1,
+            active: PlayerId::P1,
+            pending_for,
+            mulligan_owed: vec![PlayerId::P1],
+            phase,
+            result,
+            seats_swapped: false,
+            sequence: None,
+        }
+    }
+
+    fn won() -> Option<GameResult> {
+        Some(GameResult {
+            winner: Winner::P1,
+            reason: GameOverReason::Concede,
+        })
+    }
+
+    /// R265: the window's owing seats, only while no prompt stands in front of it and the game has no result.
+    #[test]
+    fn r265_the_mulligan_window_is_open_only_with_no_prompt_and_no_result() {
+        assert_eq!(
+            mulligan_window(&at(None, Phase::Mulligan, None)),
+            vec![PlayerId::P1]
+        );
+        assert!(mulligan_window(&at(Some(PlayerId::P2), Phase::Mulligan, None)).is_empty());
+        assert!(mulligan_window(&at(None, Phase::Mulligan, won())).is_empty());
+    }
+
+    /// R79: the clock reads a game as over once it has a result or its phase is over, either alone.
+    #[test]
+    fn r79_the_clock_reads_a_game_over_by_its_result_or_its_phase() {
+        assert!(!clock_view_for(&at(None, Phase::Main, None)).over);
+        assert!(clock_view_for(&at(None, Phase::Main, won())).over);
+        assert!(clock_view_for(&at(None, Phase::Over, None)).over);
+    }
+}
