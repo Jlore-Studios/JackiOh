@@ -62,6 +62,13 @@ exclude_globs = [
   # reach (crates/tools: every `cargo jackioh` command; crates/server: the server's boot).
   "crates/tools/src/main.rs",
   "crates/server/src/main.rs",
+  # The cards' code-line counter, which crates/cards/build.rs `#[path]`-includes (R1846000), so each of
+  # its mutants also runs inside the build script, outside scripts/mutants.sh's cap on a test binary's
+  # memory: a mutant that loops while it allocates fills the runner's memory long before the build
+  # timeout. cards-lib's shard 0 lost its runner three times so (mutants.yml runs 43378307697,
+  # 43405250294 and 43444553828, 2026-11-13). Its tests and the tools' hold it; mutating it waits for a
+  # memory cap on build scripts (#3836).
+  "crates/cards/src/code_lines.rs",
 ]
 
 exclude_re = [
