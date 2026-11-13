@@ -157,6 +157,11 @@ Flashback, R783012, Sanctum's lent one, R1869003, or a field permission such as 
 counts `AI_EVAL.graveyard_playable` of its hand price, the enemy's too, since a graveyard is public; a
 spent Flashback counts nothing (R783013). `keyword.flashback` stays 0, so the play is priced once, and
 `GREEDY_EVAL` keeps 0 (#2928).
+A draw a side's coming start of turn will burn (§2.4's hand cap, R4) costs that side
+`AI_EVAL.burned_draw_share`, a whole card, of an unseen hand card's price (`coming_burns`, R3575800). Its
+draws are DRAWS_PER_TURN plus its handicap's `extraDrawsPerTurn` read off the state (R180), no more than
+its library holds. Only the side whose turn is not running counts, since the other may still play its
+hand down, and `GREEDY_EVAL` keeps 0.
 It re-plans after every action, so a
 lethal the solver proves is played trimmed to the actions it needs
 (`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action
