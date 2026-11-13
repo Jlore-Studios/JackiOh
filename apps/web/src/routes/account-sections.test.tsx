@@ -135,6 +135,7 @@ describe("R3733000 the account screen's sections", () => {
       { section: "security", testid: accountTestid.secretIdShow },
       { section: "security", testid: "settings-email" },
       { section: "security", testid: "account-two-step" },
+      { section: "security", testid: accountTestid.changePassword },
       { section: "notifications", testid: dailyTestid.settings },
       { section: "privacy", testid: accountTestid.privacyPolicy },
       { section: "privacy", testid: accountTestid.watchRules },

@@ -42,7 +42,7 @@ import { rankCaption } from "../rank/rank.ts";
 import RankCrest from "../rank/RankCrest.tsx";
 import StreakFlame from "../rank/StreakFlame.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
-import { navigate, paths, useSearch } from "../net/navigate.ts";
+import { loginPath, navigate, paths, useSearch } from "../net/navigate.ts";
 import {
   clearSession,
   forgetLinkAfterSignIn,
@@ -113,6 +113,8 @@ export const accountTestid = {
   privacyNote: "account-privacy-note",
   privacyPolicy: "account-privacy-policy",
   watchRules: "account-watch-rules",
+  /** R3733000: Sign-in & security's way to a new password, the sign-in's emailed reset. */
+  changePassword: "account-change-password",
   record: "account-record",
   winRate: "account-win-rate",
   signOut: "account-sign-out",
@@ -486,6 +488,15 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
                     ) : null}
                     {/* R663: the email change, through the auth provider (it renders nothing signed out). */}
                     <ChangeEmail />
+                    <p>
+                      <a
+                        href={loginPath({ mode: "forgot" })}
+                        data-testid={accountTestid.changePassword}
+                        onClick={followInApp(loginPath({ mode: "forgot" }))}
+                      >
+                        {t("Change password")}
+                      </a>
+                    </p>
                     {/* R665: an authenticator app for this account. */}
                     <TwoStepSettings token={token} />
                     <LinkedAccounts token={token} />

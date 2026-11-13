@@ -839,6 +839,7 @@
   "Couldn't skip just now. Try again in a moment.": "暂时无法跳过。请稍后再试。",
   "Signed in as {email}.": "已登录为 {email}。",
   "Change email": "更改邮箱",
+  "Change password": "更改密码",
   "New email address": "新邮箱地址",
   "Send confirmation link": "发送确认链接",
   "Effects speed": "特效速度",
