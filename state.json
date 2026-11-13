@@ -17903,9 +17903,11 @@
         "by": "`claude` (strong)",
         "sha": "8dcb56d04f187ea27a350c34d7589f127942ab4d"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-13T10:28:10Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-13T11:15:59Z",
         "family": "claude",
@@ -17915,6 +17917,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -30; grep -n \\\"ApiUnreachableError\\\\|LOBBY_UNREACHABLE_AFTER_READS\\\\|net/api\\\" apps/web/src/routes/play.tsx | head -30\"}\n- Bash: {\"command\": \"sed -n 20,55p apps/web/src/routes/play.tsx; sed -n 70,82p apps/web/src/routes/play.tsx; sed -n 385,480p apps/web/src/routes/play.tsx\"}\n- Bash: {\"command\": \"python3 - <<'E'\\np='apps/web/src/routes/play.tsx'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\"failing in a row (the server unreachable) before\\\"\\\"\\\",\\\"\\\"\\\"failing in a row (the server unreachab\u2026\n- Bash: {\"command\": \"cat spec/rulings/R3792000.md; cat spec/pending/3791.md | head -20; grep -n \\\"R3792000\\\" spec/11-rulings.md | head\"}\n- Bash: {\"command\": \"python3 - <<'E'\\ndef sub(p,a,b):\\n s=open(p).read()\\n assert a in s,(p,a)\\n open(p,'w').write(s.replace(a,b,1))\\np='spec/rulings/R3792000.md'\\nsub(p,\\\"(`ApiUnreachableError`: a transport\u2026\n- Bash: {\"command\": \"python3 - <<'E'\\np='apps/web/src/routes/play.test.tsx'\\ns=open(p).read()\\nold=s[s.index(' it(\\\"R3792000 a read the server refused is not'):s.index(' it(\\\"R3792000 a room wait shows the n\u2026\n- Bash: {\"command\": \"cargo fmt --check 2>&1 | tail -3; git status --short\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: follow-up to #3809 from the after-merge spot-check\"} --> `/play`'s wait now shows \"Can't reach the server. Still trying\u2026\" when the edge Worker answers the account read with a 5xx. Before, only a transport failure or timeout (`ApiUnreachableError`) count\u2026"
       },
+      "interruptions": 0,
       "issue": 3846,
       "kind": "review",
       "live": "reviewing",
