@@ -141,8 +141,9 @@ fn moved_price(rng: &mut Rng, base: i32) -> i32 {
 
 /// R1853001: the ids one lot draws from, in a fixed order: the named ids with a definition, or (R3571001)
 /// those of a set that is open, or a set's non-token cards in catalog order, all or (R1881006) those
-/// printing a keyword on their base face, never a card only a rule makes (R1857001's Dormant Starship),
-/// as in no `catalog::query` pool.
+/// printing a keyword on their base face, or (R3869004) the cards of open sets carrying a tag, by
+/// their name when the lot says, never a card only a rule makes (R1857001's Dormant Starship), as in no
+/// `catalog::query` pool.
 fn pool_ids(state: &GameState, pool: MarketPool) -> Vec<String> {
     let in_set = |def: &CardDef, set| def.set == set && !def.token && !made_by_a_rule(def);
     match pool {
@@ -164,6 +165,24 @@ fn pool_ids(state: &GameState, pool: MarketPool) -> Vec<String> {
         MarketPool::SetKeyword(set, keyword) => registered_catalog()
             .values()
             .filter(|def| in_set(def, set) && has_keyword(&def.base.keywords, keyword))
+            .map(|def| def.id.clone())
+            .collect(),
+        // R3869004: a lot read off its cards' tag, and its name when it names one.
+        MarketPool::Tagged {
+            sets,
+            tag,
+            tokens,
+            name,
+        } => registered_catalog()
+            .values()
+            .filter(|def| {
+                sets.contains(&def.set)
+                    && set_is_open(def.set)
+                    && def.is_token() == tokens
+                    && !made_by_a_rule(def)
+                    && def.tags.contains(&tag)
+                    && name.is_none_or(|(text, holds)| def.name.contains(text) == holds)
+            })
             .map(|def| def.id.clone())
             .collect(),
     }

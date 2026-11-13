@@ -42,7 +42,73 @@ fn pool(pool: MarketPool) -> Vec<String> {
             })
             .map(|def| def.id.clone())
             .collect(),
+        MarketPool::Tagged {
+            sets,
+            tag,
+            tokens,
+            name,
+        } => registered_catalog()
+            .values()
+            .filter(|def| {
+                sets.contains(&def.set)
+                    && set_is_open(def.set)
+                    && def.is_token() == tokens
+                    && !made_by_a_rule(def)
+                    && def.tags.contains(&tag)
+                    && name.is_none_or(|(text, holds)| def.name.contains(text) == holds)
+            })
+            .map(|def| def.id.clone())
+            .collect(),
     }
+}
+
+/// R3869004: the lots that named their cards by id through v0.6.0g, pinned so a change to what they
+/// read is deliberate: each reads the same cards in the same order.
+const WEAPONS_V0_6_0G: [&str; 12] = [
+    "stinkyscape-050",
+    "stinkyscape-051",
+    "stinkyscape-052",
+    "stinkyscape-053",
+    "stinkyscape-054",
+    "stinkyscape-055",
+    "stinkyscape-056",
+    "stinkyscape-057",
+    "stinkyscape-058",
+    "stinkyscape-059",
+    "stinkyscape-060",
+    "stinkyscape-061",
+];
+const DRONE_CORES_V0_6_0G: [&str; 10] = [
+    "stinkyscape-027",
+    "stinkyscape-028",
+    "stinkyscape-029",
+    "stinkyscape-030",
+    "stinkyscape-031",
+    "stinkyscape-032",
+    "stinkyscape-033",
+    "stinkyscape-034",
+    "stinkyscape-035",
+    "stinkyscape-036",
+];
+const LAUNCHERS_V0_6_0G: [&str; 4] = [
+    "stinkyscape-140",
+    "stinkyscape-141",
+    "stinkyscape-142",
+    "stinkyscape-143",
+];
+
+#[test]
+fn r3869004_the_tagged_lots_read_the_cards_they_named_in_the_same_order() {
+    register_all();
+    let ids = |list: &[&str]| list.iter().map(|id| (*id).to_string()).collect::<Vec<String>>();
+    assert_eq!(pool(MARKETPLACE_WEAPONS), ids(&WEAPONS_V0_6_0G));
+    assert_eq!(pool(MARKETPLACE_DRONE_CORES), ids(&DRONE_CORES_V0_6_0G));
+    assert_eq!(pool(MARKETPLACE_LAUNCHERS), ids(&LAUNCHERS_V0_6_0G));
+    let ai: Vec<String> = (1..=10)
+        .map(|n| format!("stinkyscape-t-ai-{n:02}"))
+        .chain((1..=7).map(|n| format!("stinkyscapeplus-t-ai-{n:02}")))
+        .collect();
+    assert_eq!(pool(MARKETPLACE_AI_CARDS), ai);
 }
 
 #[test]
@@ -83,11 +149,13 @@ fn r1881006_each_named_pool_is_the_kind_st3_names() {
             assert!(is(id), "{id} is {what}");
         }
     };
-    named(MARKETPLACE_WEAPONS, "a v3–v5 Weapon", &|id| {
+    let weapons = pool(MARKETPLACE_WEAPONS);
+    let weapons: Vec<&str> = weapons.iter().map(String::as_str).collect();
+    named(&weapons, "a v3–v5 Weapon", &|id| {
         let def = card_def(id);
         def.tags.contains(&Tag::Weapon) && ["v3", "v4", "v5"].iter().any(|v| def.name.ends_with(v))
     });
-    assert_eq!(MARKETPLACE_WEAPONS.len(), 12);
+    assert_eq!(weapons.len(), 12);
     named(MARKETPLACE_WARP_DISRUPTORS, "a Warp Disruptor", &|id| {
         card_def(id).name.starts_with("Warp Disruptor")
     });
@@ -98,29 +166,31 @@ fn r1881006_each_named_pool_is_the_kind_st3_names() {
     named(MARKETPLACE_PROBE_MK2, "Scanning Probe Mk2", &|id| {
         card_def(id).name == "Scanning Probe Mk2"
     });
-    named(MARKETPLACE_DRONE_CORES, "a Drone Core", &|id| {
+    let drone_cores = pool(MARKETPLACE_DRONE_CORES);
+    let drone_cores: Vec<&str> = drone_cores.iter().map(String::as_str).collect();
+    named(&drone_cores, "a Drone Core", &|id| {
         card_def(id).tags.contains(&Tag::DroneCore)
     });
     assert_eq!(
-        MARKETPLACE_DRONE_CORES.len(),
+        drone_cores.len(),
         registered_catalog()
             .values()
             .filter(|def| def.tags.contains(&Tag::DroneCore))
             .count(),
         "every Drone Core"
     );
-    named(MARKETPLACE_LAUNCHERS, "a Launcher", &|id| {
+    let launchers = pool(MARKETPLACE_LAUNCHERS);
+    let launchers: Vec<&str> = launchers.iter().map(String::as_str).collect();
+    named(&launchers, "a Launcher", &|id| {
         card_def(id).name.ends_with("Launcher")
     });
-    named(
-        MARKETPLACE_AI_CARDS,
-        "an AI card of Stinkyscape or Stinkyscape+",
-        &|id| {
-            let def = card_def(id);
-            matches!(def.set, SetName::Stinkyscape | SetName::StinkyscapePlus) && def.tags.contains(&Tag::Ai)
-        },
-    );
-    assert_eq!(MARKETPLACE_AI_CARDS.len(), 17);
+    let ai_cards = pool(MARKETPLACE_AI_CARDS);
+    let ai_cards: Vec<&str> = ai_cards.iter().map(String::as_str).collect();
+    named(&ai_cards, "an AI card of Stinkyscape or Stinkyscape+", &|id| {
+        let def = card_def(id);
+        matches!(def.set, SetName::Stinkyscape | SetName::StinkyscapePlus) && def.tags.contains(&Tag::Ai)
+    });
+    assert_eq!(ai_cards.len(), 17);
     for id in pool(MarketPool::SetKeyword(
         SetName::Stinkyscape,
         KeywordKind::StarshipPiece,
@@ -201,10 +271,12 @@ fn r3571001_the_ai_lot_offers_stinkyscape_plus_s_seven_only_once_the_set_ships()
     register_all();
     let lot = *MARKETPLACE_TABLE.last().expect("the AI lot is the table's last");
     assert_eq!(lot.count, 1, "R2250002: its share is unchanged");
-    let MarketPool::OpenIds(ids) = lot.pool else {
-        panic!("the AI lot is an open-ids lot: {:?}", lot.pool);
-    };
+    assert_eq!(
+        lot.pool, MARKETPLACE_AI_CARDS,
+        "R3869004: the AI lot reads its cards' tag"
+    );
     // The ten Stinkyscape cards keep their place and order, then Stinkyscape+'s seven.
+    let ids = pool(lot.pool);
     let (stinkyscape, stinkyscape_plus) = ids.split_at(10);
     let ten: Vec<String> = (1..=10).map(|n| format!("stinkyscape-t-ai-{n:02}")).collect();
     let seven: Vec<String> = (1..=7).map(|n| format!("stinkyscapeplus-t-ai-{n:02}")).collect();

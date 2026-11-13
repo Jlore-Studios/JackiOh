@@ -1,7 +1,7 @@
 {
   "title": "Patch: hand-kept card pools become tag queries, CN Tech and NA Tech fall back to random cards, and the stats tiers read live win rates",
   "sources": "#3869",
-  "notes": "Issue #3869 (the audit in #3847): the card pools kept as lists of ids read their tags. Olivian Expanse and Dice of Doom read the Terminus pool, which since Stinkyscape+ holds sixteen cards and tokens (R3869000); The Big Crunch, Starfleet Commander and Preemptive Strike read the Call to Chaos and War Doctrine pools, the same cards in the same order (R3869001). Scripts through v0.6.0g kept (R767000). CN Tech and NA Tech fall back to random non-token cards when the table names none, as before #2521 (R3869005).",
+  "notes": "Issue #3869 (the audit in #3847): the card pools kept as lists of ids read the catalog. Olivian Expanse and Dice of Doom read the Terminus pool, which since Stinkyscape+ holds sixteen cards and tokens (R3869000). The Big Crunch, Starfleet Commander, Preemptive Strike and Mining Subroutine read the Call to Chaos, War Doctrine and Resource pools (R3869001), Ozark, Orca and Galaxy the Miners by name (R3869002), Book Launcher the Books by the aim their target declares (R3869003; Blood, Flame, Wildfire and Nerf now declare harm), and four Marketplace lots their tags (R3869004): the same cards in the same order. CN Tech and NA Tech fall back to random non-token cards when the table names none, as before #2521 (R3869005). Scripts through v0.6.0g kept (R767000).",
   "player": {
     "title": "Every Terminus card counts as a Terminus card",
     "new": [],

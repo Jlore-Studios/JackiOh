@@ -10,7 +10,9 @@
 //! Scripts reach it through `use crate::query::*;`: [`query`], [`pool`], [`query_cost`], [`TRAP_TYPES`],
 //! and the named pools [`POOLS`] lists, which `spec/CARDS.md` shows (#3804).
 
-use jackioh_engine::{CardDef, CardType, CatalogQueryArgs, KeywordKind, OneOrMany, Rarity, SetName, Tag};
+use jackioh_engine::{
+    CardDef, CardType, CatalogQueryArgs, KeywordKind, OneOrMany, PrintedRarity, Rarity, SetName, Tag,
+};
 
 /// §5.1's query arguments: `{ type, cost, costRange, tags, notTags, rarity, set, excludeDefId,
 /// withTokens }`, plus the engine's identity fields (`defId`, `token`) for a pool a card names card by
@@ -141,6 +143,40 @@ pub fn war_doctrines() -> CardQuery {
     }
 }
 
+/// R3869002: what a Miner's name holds (S #62 Miner v1 to S #66 Miner v5).
+pub const MINER_NAME: &str = "Miner";
+
+/// R3869002: "a random Miner" (S #78 Ozark, #79 Orca, #80 Galaxy): every non-token card whose name holds
+/// "Miner", from the sets that ship (`nameContains`, R3558005), the Stinkyscape set's five today. No
+/// tag marks a Miner, so its name does, as a Grape's does.
+pub fn miners() -> CardQuery {
+    CardQuery {
+        name_contains: Some(MINER_NAME.to_string()),
+        ..CardQuery::default()
+    }
+}
+
+/// R1881000: the rarities "a random Common or Rare … Resource" rolls over.
+pub const COMMON_OR_RARE: [PrintedRarity; 2] = [PrintedRarity::Common, PrintedRarity::Rare];
+
+/// R1881000, R3869001: the ids of the Resources (`resources::resource_def_ids`, sorted) of `set` that
+/// roll as one of `rarities`: S T-AI-2 Mining Subroutine's "a random Common or Rare Stinkyscape
+/// Resource". A Resource a later printing of the set adds joins it.
+pub fn resources_of(set: SetName, rarities: &[PrintedRarity]) -> Vec<String> {
+    let catalog = jackioh_engine::catalog::registered_catalog();
+    jackioh_engine::resources::resource_def_ids()
+        .into_iter()
+        .filter(|id| {
+            catalog.get(id).is_some_and(|def| {
+                def.set == set
+                    && def
+                        .resource
+                        .is_some_and(|resource| rarities.contains(&resource.rarity))
+            })
+        })
+        .collect()
+}
+
 /// One random pool `spec/CARDS.md` lists (#3804), which `cargo jackioh spec index` writes from this
 /// table: the pool's members as the catalog holds them now and the cards whose scripts draw from it, so
 /// that no spec row lists either by hand.
@@ -229,6 +265,27 @@ pub const POOLS: &[NamedPool] = &[
         rule: "The War Doctrines (R3869001): every token tagged War Doctrine (R1857002), from the sets that ship.",
         call: "war_doctrines",
         parts: || whole(war_doctrines()),
+    },
+    NamedPool {
+        name: "miners",
+        rule: "The Miners (R3869002): every non-token card whose name holds \"Miner\", from the sets that ship (R380, R1420, R3558005).",
+        call: "miners",
+        parts: || whole(miners()),
+    },
+    NamedPool {
+        name: "common-or-rare-stinkyscape-resources",
+        rule: "The Common and Rare Stinkyscape Resources (R1881000, R3869001): every Stinkyscape Resource that rolls as Common or Rare.",
+        call: "resources_of",
+        parts: || {
+            let catalog = jackioh_engine::catalog::registered_catalog();
+            vec![(
+                "",
+                resources_of(SetName::Stinkyscape, &COMMON_OR_RARE)
+                    .iter()
+                    .filter_map(|id| catalog.get(id))
+                    .collect(),
+            )]
+        },
     },
     NamedPool {
         name: "resources",

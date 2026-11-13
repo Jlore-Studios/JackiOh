@@ -2,8 +2,8 @@
 //!   Base:    "Cry: Equip a random Miner into this."
 //!   Radiant: "Cry: Equip a random Radiant Miner into this, twice."
 //!
-//! R1872001: the Cry is `equip_picks` (R1841002), a random pick from the five Miners, S #62 Miner v1 to
-//! S #66 Miner v5, named by id so that the pool reaches them whether or not the set ships (R1420): a
+//! R1872001: the Cry is `equip_picks` (R1841002), a random pick from the Miners (`query::miners`,
+//! R3869002), S #62 Miner v1 to S #66 Miner v5 today (named by id through v0.6.0g): a
 //! fresh copy fused straight into this, as an Equip play fuses its card (R1086, R77), with no hand, no
 //! play and no Cry, its Activate with it (R1751000). The Radiant face picks twice, each pick on its
 //! Radiant face (R469), the second from the Miners it does not hold yet. Off the field, Immutable, or
@@ -16,15 +16,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-078";
 
-/// S #62 Miner v1 to S #66 Miner v5.
-const MINERS: [&str; 5] = [
-    "stinkyscape-062",
-    "stinkyscape-063",
-    "stinkyscape-064",
-    "stinkyscape-065",
-    "stinkyscape-066",
-];
-
 /// "twice", on the Radiant face.
 const RADIANT_PICKS: i32 = 2;
 
@@ -32,7 +23,7 @@ const RADIANT_PICKS: i32 = 2;
 fn prospect(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |_ctx| {
-            let mut args = json!({ "query": { "defId": MINERS }, "pick": "random" });
+            let mut args = json!({ "query": crate::query::miners(), "pick": "random" });
             if radiant {
                 args["times"] = json!(RADIANT_PICKS);
                 args["radiant"] = json!(true);
@@ -56,6 +47,23 @@ mod tests {
     use super::*;
     use crate::weapon_board;
     use jackioh_engine::testkit::*;
+
+    /// R3869002: the Miner pool today, S #62 Miner v1 to S #66 Miner v5, pinned so a change to it is
+    /// deliberate: the five this card named by id through v0.6.0g, in its order.
+    const MINERS: [&str; 5] = [
+        "stinkyscape-062",
+        "stinkyscape-063",
+        "stinkyscape-064",
+        "stinkyscape-065",
+        "stinkyscape-066",
+    ];
+
+    #[test]
+    fn r3869002_the_miner_pool_is_the_five_it_named_in_the_same_order() {
+        crate::register_all();
+        let pool = crate::query::pool_ids(&crate::query::miners());
+        assert_eq!(pool, MINERS.map(str::to_string).to_vec());
+    }
 
     const P1: PlayerId = PlayerId::P1;
 

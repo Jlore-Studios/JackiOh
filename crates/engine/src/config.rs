@@ -1436,6 +1436,17 @@ pub enum MarketPool {
     /// R1881006: every card of the set that is no token and prints the keyword on its base face, in
     /// catalog order (S21's two Starship Pieces, `query::starship_pieces()`'s pool).
     SetKeyword(SetName, KeywordKind),
+    /// R3869004: every card of one of `sets` tagged `tag`, the tokens alone when `tokens` and no token
+    /// otherwise, in catalog order, of a set that is open (`catalog::set_is_open`, R1420); with `name`,
+    /// only those whose English name holds its text (`(text, true)`) or does not (`(text, false)`), as
+    /// a catalog query's `nameContains` reads it (R3558005). A card a later printing of the sets adds
+    /// joins its lot.
+    Tagged {
+        sets: &'static [SetName],
+        tag: Tag,
+        tokens: bool,
+        name: Option<(&'static str, bool)>,
+    },
 }
 
 /// R1853001, R2250002: one lot of the Marketplace's table: a pool and its `count`, the share of a
@@ -1446,67 +1457,47 @@ pub struct MarketLot {
     pub count: i32,
 }
 
-/// R1881006: the twelve v3–v5 Weapons (Stinkyscape #50 to #61), one lot of S21's table.
-pub const MARKETPLACE_WEAPONS: &[&str] = &[
-    "stinkyscape-050",
-    "stinkyscape-051",
-    "stinkyscape-052",
-    "stinkyscape-053",
-    "stinkyscape-054",
-    "stinkyscape-055",
-    "stinkyscape-056",
-    "stinkyscape-057",
-    "stinkyscape-058",
-    "stinkyscape-059",
-    "stinkyscape-060",
-    "stinkyscape-061",
-];
+/// R3869004: the Weapons lot, Stinkyscape's v3–v5 Weapons (#50 to #61): its Weapon-tagged cards but the
+/// Launchers. Named by id through v0.6.0g.
+pub const MARKETPLACE_WEAPONS: MarketPool = MarketPool::Tagged {
+    sets: &[SetName::Stinkyscape],
+    tag: Tag::Weapon,
+    tokens: false,
+    name: Some((MARKETPLACE_LAUNCHER_NAME, false)),
+};
 /// R1881006: both Warp Disruptors (Stinkyscape #23, #24).
 pub const MARKETPLACE_WARP_DISRUPTORS: &[&str] = &["stinkyscape-023", "stinkyscape-024"];
 /// R1881006: Scanning Probe Mk1 (Stinkyscape #166), a lot of its own.
 pub const MARKETPLACE_PROBE_MK1: &[&str] = &["stinkyscape-166"];
 /// R1881006: Scanning Probe Mk2 (Stinkyscape #167), a lot of its own.
 pub const MARKETPLACE_PROBE_MK2: &[&str] = &["stinkyscape-167"];
-/// R1881006: the ten Drone Cores (Stinkyscape #27 to #36).
-pub const MARKETPLACE_DRONE_CORES: &[&str] = &[
-    "stinkyscape-027",
-    "stinkyscape-028",
-    "stinkyscape-029",
-    "stinkyscape-030",
-    "stinkyscape-031",
-    "stinkyscape-032",
-    "stinkyscape-033",
-    "stinkyscape-034",
-    "stinkyscape-035",
-    "stinkyscape-036",
-];
-/// R1881006: the four Launchers (Stinkyscape #140 to #143).
-pub const MARKETPLACE_LAUNCHERS: &[&str] = &[
-    "stinkyscape-140",
-    "stinkyscape-141",
-    "stinkyscape-142",
-    "stinkyscape-143",
-];
-/// R1881006, R3571001: the AI cards: Stinkyscape's ten (T-AI-1 to T-AI-10, ST15), then Stinkyscape+'s seven (T-AI-1 to T-AI-7, SP7), offered once their set ships.
-pub const MARKETPLACE_AI_CARDS: &[&str] = &[
-    "stinkyscape-t-ai-01",
-    "stinkyscape-t-ai-02",
-    "stinkyscape-t-ai-03",
-    "stinkyscape-t-ai-04",
-    "stinkyscape-t-ai-05",
-    "stinkyscape-t-ai-06",
-    "stinkyscape-t-ai-07",
-    "stinkyscape-t-ai-08",
-    "stinkyscape-t-ai-09",
-    "stinkyscape-t-ai-10",
-    "stinkyscapeplus-t-ai-01",
-    "stinkyscapeplus-t-ai-02",
-    "stinkyscapeplus-t-ai-03",
-    "stinkyscapeplus-t-ai-04",
-    "stinkyscapeplus-t-ai-05",
-    "stinkyscapeplus-t-ai-06",
-    "stinkyscapeplus-t-ai-07",
-];
+/// R3869004: the Drone Cores lot, Stinkyscape's Drone Core-tagged cards (#27 to #36). Named by id
+/// through v0.6.0g.
+pub const MARKETPLACE_DRONE_CORES: MarketPool = MarketPool::Tagged {
+    sets: &[SetName::Stinkyscape],
+    tag: Tag::DroneCore,
+    tokens: false,
+    name: None,
+};
+/// R3869004: what a Launcher's name holds (Stinkyscape #140 to #143, "Rush Token Launcher" and the rest).
+pub const MARKETPLACE_LAUNCHER_NAME: &str = "Launcher";
+/// R3869004: the Launchers lot, Stinkyscape's Weapons whose name holds `MARKETPLACE_LAUNCHER_NAME`
+/// (#140 to #143). Named by id through v0.6.0g.
+pub const MARKETPLACE_LAUNCHERS: MarketPool = MarketPool::Tagged {
+    sets: &[SetName::Stinkyscape],
+    tag: Tag::Weapon,
+    tokens: false,
+    name: Some((MARKETPLACE_LAUNCHER_NAME, true)),
+};
+/// R1881006, R3571001, R3869004: the AI cards lot, the AI-tagged tokens of Stinkyscape (T-AI-1 to
+/// T-AI-10, ST15) and Stinkyscape+ (T-AI-1 to T-AI-7, SP7), each set's offered once it is open. Named
+/// by id through v0.6.0g.
+pub const MARKETPLACE_AI_CARDS: MarketPool = MarketPool::Tagged {
+    sets: &[SetName::Stinkyscape, SetName::StinkyscapePlus],
+    tag: Tag::Ai,
+    tokens: true,
+    name: None,
+};
 /// R1881006: one of S21's lots of `count` cards of `pool`.
 const fn card_lot(pool: MarketPool, count: i32) -> MarketLot {
     MarketLot { pool, count }
@@ -1517,18 +1508,18 @@ const fn card_lot(pool: MarketPool, count: i32) -> MarketLot {
 /// start of their turn, each lot weighted by its count. A test registers a fixture table in its place
 /// (`testkit::register_marketplace_table`).
 pub const MARKETPLACE_TABLE: &[MarketLot] = &[
-    card_lot(MarketPool::Ids(MARKETPLACE_WEAPONS), 3),
+    card_lot(MARKETPLACE_WEAPONS, 3),
     card_lot(MarketPool::Ids(MARKETPLACE_WARP_DISRUPTORS), 2),
     card_lot(MarketPool::Ids(MARKETPLACE_PROBE_MK1), 1),
     card_lot(MarketPool::Ids(MARKETPLACE_PROBE_MK2), 1),
-    card_lot(MarketPool::Ids(MARKETPLACE_DRONE_CORES), 2),
-    card_lot(MarketPool::Ids(MARKETPLACE_LAUNCHERS), 1),
+    card_lot(MARKETPLACE_DRONE_CORES, 2),
+    card_lot(MARKETPLACE_LAUNCHERS, 1),
     card_lot(
         MarketPool::SetKeyword(SetName::Stinkyscape, KeywordKind::StarshipPiece),
         2,
     ),
     card_lot(MarketPool::Set(SetName::Stinkyscape), 2),
-    card_lot(MarketPool::OpenIds(MARKETPLACE_AI_CARDS), 1),
+    card_lot(MARKETPLACE_AI_CARDS, 1),
 ];
 /// R2250002, R3047000: the offers the Marketplace rolls a player at the start of each of their turns.
 pub const MARKETPLACE_OFFERS_PER_TURN: i32 = 4;

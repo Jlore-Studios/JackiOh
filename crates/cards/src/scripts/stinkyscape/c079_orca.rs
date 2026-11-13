@@ -16,15 +16,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-079";
 
-/// S #62 Miner v1 to S #66 Miner v5.
-const MINERS: [&str; 5] = [
-    "stinkyscape-062",
-    "stinkyscape-063",
-    "stinkyscape-064",
-    "stinkyscape-065",
-    "stinkyscape-066",
-];
-
 /// "Choose one of 2 Miners".
 const OFFER: i32 = 2;
 
@@ -35,7 +26,7 @@ const RADIANT_PICKS: i32 = 2;
 fn trawl(picks: i32) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
-            let mut args = json!({ "query": { "defId": MINERS }, "options": OFFER, "times": picks });
+            let mut args = json!({ "query": crate::query::miners(), "options": OFFER, "times": picks });
             if ctx.embiggened {
                 args["radiant"] = json!(true);
             }
@@ -59,6 +50,16 @@ mod tests {
     use crate::weapon_board;
     use jackioh_engine::effects::EQUIP_PICK_STEP;
     use jackioh_engine::testkit::*;
+
+    /// R3869002: the Miner pool today, S #62 Miner v1 to S #66 Miner v5, pinned so a change to it is
+    /// deliberate: the five this card named by id through v0.6.0g, in its order.
+    const MINERS: [&str; 5] = [
+        "stinkyscape-062",
+        "stinkyscape-063",
+        "stinkyscape-064",
+        "stinkyscape-065",
+        "stinkyscape-066",
+    ];
 
     const P1: PlayerId = PlayerId::P1;
 
