@@ -12448,7 +12448,8 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-13T15:36:56Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "waiting_comment": 6861733556
     },
     "3733": {
       "action": "build",
