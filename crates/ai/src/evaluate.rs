@@ -429,17 +429,37 @@ impl ActivationPrice {
 pub type AttackHookPrice = ActivationPrice;
 
 /// R2564000, R2603000: what one use of `unit`'s Activate gives its controller, by `prices`, while it has
-/// an ability to use (`abilities_of`: a Vanilla card has none). 0 with `Prices::NONE`, for a card its root
-/// did not price, and at a zero `activation` weight (no reading).
+/// an ability to use (`abilities_of`: a Vanilla card has none). R3575301: a card its root did not price
+/// that a fusion gave an Activate, an Equip's host, reads the best price of the ingredients that print
+/// its abilities (`activation_sources`, R3291000), each as its own card under the same controller. 0 with
+/// `Prices::NONE`, for a card none of whose keys its root priced, and at a zero `activation` weight.
 fn activation_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, prices: &Prices) -> f64 {
     if w.activation == 0.0 {
         return 0.0;
     }
-    let price = prices
+    let own = prices
         .activations
         .iter()
         .find(|entry| entry.is_for(unit))
         .map(|entry| entry.price);
+    let price = own.or_else(|| {
+        script_of(state, unit)
+            .activation_sources
+            .iter()
+            .filter_map(|source| {
+                let radiant = source.radiant == Some(true);
+                prices
+                    .activations
+                    .iter()
+                    .find(|entry| {
+                        entry.def_id == source.def_id
+                            && entry.radiant == radiant
+                            && entry.controller == unit.controller
+                    })
+                    .map(|entry| entry.price)
+            })
+            .reduce(f64::max)
+    });
     match price {
         Some(price) if !subsystems::abilities_of(state, unit).is_empty() => price,
         _ => 0.0,
@@ -1893,25 +1913,103 @@ fn root_prices<P>(
     probe_turns(&start, seat, own, &probes, price)
 }
 
-/// R2564000, R2603000: the activation prices a decision of `seat`'s passes (`Prices`), probed on `world`
-/// (R185): one use of the Activate of each unit acting on either field and each card acting face-up in
-/// either backrow, each once. The enemy's are tried at the start of its next turn, the seat's at the start
-/// of its own (`probe_turns`), so a use already spent this turn hides nothing. Automatic turn end off
-/// (R345), no price passed, at most `AI_ACTIVATION_PROBE_NODES` nodes.
+/// R2564000, R2603000, R3575301: the activation prices a decision of `seat`'s passes (`Prices`), probed on
+/// `world` (R185): one use of the Activate of each unit acting on either field and each card acting face-up
+/// in either backrow, each once. The enemy's are tried at the start of its next turn, the seat's at the start
+/// of its own (`probe_turns`), so a use already spent this turn hides nothing. Then each Unit in the seat's
+/// own hand with an Activate, placed first (`hand_activation_prices`). Automatic turn end off (R345), no
+/// price passed, at most `AI_ACTIVATION_PROBE_NODES` nodes, the board's first.
 pub fn activation_prices(
     world: &GameState,
     seat: PlayerId,
     counter: &dyn NodeCounter,
 ) -> Vec<ActivationPrice> {
-    root_prices(
+    let probes = create_sub_counter(counter, AI_ACTIVATION_PROBE_NODES);
+    let mut priced = root_prices(
         world,
         seat,
-        counter,
+        &probes,
         AI_EVAL.activation,
         has_activate_card,
         AI_ACTIVATION_PROBE_NODES,
         price_uses,
-    )
+    );
+    let hand = hand_activation_prices(world, seat, &probes, &priced);
+    priced.extend(hand);
+    priced
+}
+
+/// R3575301: the activation prices of the Units in `seat`'s own hand with an Activate (`script_of`'s
+/// `activations`), each once and none `board` already holds: each placed first on a sandbox copy of `world`
+/// (R923001's spawn, `spawn_hand_unit`), then priced as R2564000 prices the seat's own units: its turn and
+/// then the enemy's ended untouched, one use tried at the start of the seat's next turn (`price_uses`, the
+/// placed card alone). It never reads the enemy's hand. Nothing while a prompt is open, outside `seat`'s
+/// own main phase, once the game is over or at a zero `activation` weight; it stops where `counter` does.
+fn hand_activation_prices(
+    world: &GameState,
+    seat: PlayerId,
+    counter: &dyn NodeCounter,
+    board: &[ActivationPrice],
+) -> Vec<ActivationPrice> {
+    let mut priced: Vec<ActivationPrice> = Vec::new();
+    if AI_EVAL.activation == 0.0
+        || world.pending.is_some()
+        || world.result.is_some()
+        || world.active != seat
+        || world.phase != Phase::Main
+    {
+        return priced;
+    }
+    let mut cards: Vec<&CardInstance> = Vec::new();
+    for card in &world.players[seat].hand {
+        let unit = card_type_of_face(world, &card.def_id, card.radiant) == CardType::Unit;
+        if unit
+            && !script_of(world, card).activations.is_empty()
+            && !board.iter().any(|key| key.is_for(card))
+            && !cards.iter().any(|kept| ActivationPrice::key(kept).is_for(card))
+        {
+            cards.push(card);
+        }
+    }
+    if cards.is_empty() {
+        return priced;
+    }
+    let mut start = world.clone();
+    start.sandbox = Some(true);
+    for player in PLAYER_IDS {
+        start.players[player].auto_end_turn = Some(false);
+    }
+    let hidden = hidden_card_ids(world, seat);
+    for card in cards {
+        let Some(spawned) = spawn_hand_unit(&start, seat, card, counter) else {
+            break;
+        };
+        let Some((placed, unit)) = spawned else {
+            continue;
+        };
+        let Some(enemy_turn) = next_turn(&placed, seat, counter) else {
+            break;
+        };
+        let Some(enemy_turn) = enemy_turn else {
+            continue;
+        };
+        let Some(own_turn) = next_turn(&enemy_turn, seat.opponent(), counter) else {
+            break;
+        };
+        let Some(own_turn) = own_turn else {
+            continue;
+        };
+        // The placed card alone: every other source is marked tried.
+        let mut tried: Vec<ActivationPrice> = activate_sources(&own_turn, seat)
+            .into_iter()
+            .filter(|source| source.id != unit.id)
+            .map(ActivationPrice::key)
+            .collect();
+        if !price_uses(&own_turn, seat, &hidden, counter, &mut tried, &mut priced) {
+            break;
+        }
+    }
+    priced
 }
 
 /// R2688000: `turn` with `unit` as its hookless twin, and the keywords it prints: the twin is Vanilla

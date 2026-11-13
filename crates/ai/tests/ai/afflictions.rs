@@ -161,3 +161,71 @@ fn r3575300_a_hit_volcanic_rounds_turns_to_burn_still_counts() {
         "the Burn counts for the attacker: {after} vs {after_unpriced} unpriced (before {before})"
     );
 }
+
+/// R3575301: a Fire Beam in the AI's own hand is priced as if placed, so a line that plays it reads its
+/// Activate at once; the enemy's hand is never probed.
+#[test]
+fn r3575301_a_unit_in_the_seats_own_hand_has_its_activate_priced() {
+    let state = board(
+        "r3575301-hand",
+        json!({ "hand": [BEAM], "field": [VANILLA] }),
+        json!({ "hand": [MORTAR], "field": [VANILLA] }),
+    );
+    let counter = create_node_counter(AI_BUDGET.nodes, None);
+    let prices = activation_prices(&state, AI, &counter);
+    assert!(
+        prices
+            .iter()
+            .any(|entry| entry.def_id == BEAM && entry.controller == AI && entry.price > 0.0),
+        "the hand Fire Beam is priced: {prices:?}"
+    );
+    assert!(
+        !prices.iter().any(|entry| entry.def_id == MORTAR),
+        "the enemy's hand is never probed: {prices:?}"
+    );
+    assert!(counter.used() <= AI_ACTIVATION_PROBE_NODES);
+}
+
+/// R3575301: a Fire Beam equipped into a host during the search lends the host its Activate (R1751000),
+/// and the host, which its root never priced, reads the beam's price through the ingredient that prints
+/// the ability (R3291000).
+#[test]
+fn r3575301_an_equips_host_reads_the_price_of_the_piece_it_fused() {
+    let state = board(
+        "r3575301-equip",
+        json!({ "hand": [BEAM], "field": [VANILLA] }),
+        json!({ "field": [VANILLA] }),
+    );
+    let counter = create_node_counter(AI_BUDGET.nodes, None);
+    let prices = Prices {
+        activations: activation_prices(&state, AI, &counter),
+        ..Prices::default()
+    };
+    let beam = prices
+        .activations
+        .iter()
+        .find(|entry| entry.def_id == BEAM)
+        .map(|entry| entry.price)
+        .expect("the hand Fire Beam is priced");
+    let equip = legal_actions(&state, AI)
+        .into_iter()
+        .find(|action| {
+            matches!(
+                action,
+                ActionBody::Play {
+                    equip: Some(true),
+                    ..
+                }
+            )
+        })
+        .expect("the Fire Beam may be equipped into the Vanilla");
+    let equipped = act(&state, AI, equip);
+    // The fusion is a card of its own definition (R1086), the AI's one unit.
+    let units = active_units_of(&equipped, AI);
+    let [host] = units.as_slice() else {
+        panic!("the host is the AI's one unit: {units:?}");
+    };
+    let priced = unit_worth(&equipped, host, &AI_EVAL, &prices);
+    let unpriced = unit_worth(&equipped, host, &AI_EVAL, Prices::NONE);
+    close(priced - unpriced, AI_EVAL.activation * beam);
+}
