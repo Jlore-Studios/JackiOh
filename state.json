@@ -16223,6 +16223,8 @@
       }
     },
     "3880": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-13T16:32:07Z",
@@ -16236,8 +16238,11 @@
         "trail": "section with where things stand.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold_start=s.index('## State')\\nold_end=s.index('## Log')\\nstate='''## State\\n\\n- Run 3 (2026-11-13, opus): ALL plan steps 1-19 bui\u2026\n- Bash: {\"command\": \"git diff crates/ apps/web/src/game apps/web/src/cards | grep -v '^ ' | head -250\", \"description\": \"Review the code diff\"}\n- Bash: {\"command\": \"git diff -U0 | grep '^+' | grep -v '^+++' | awk '{ if (length($0) > 121) print length($0)\\\": \\\"substr($0,1,100) }' | head\", \"description\": \"Find overly long added lines\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/game/Game.tsx'\\ns=open(p).read()\\nold=\\\"\\\"\\\" * R849000: the engine's reason a click on your own unit offered no attack (`UnitView.attackReason`,\\n * el\u2026\n- Bash: {\"command\": \"sleep 60; tail -5 /tmp/web-changed.txt; cat /tmp/engine-all.txt 2>/dev/null | tail -5\", \"description\": \"Check background test progress\", \"timeout\": 120000}\n- tool error: <tool_use_error>Blocked: sleep 60 followed by: tail -5 /tmp/web-changed.txt cat /tmp/engine-all.txt tail -5. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; \u2026\n- Bash: {\"command\": \"tail -5 /tmp/web-changed.txt; cat /tmp/engine-all.txt 2>/dev/null | tail -5\", \"description\": \"Check background test progress\"}\n- Bash: {\"command\": \"grep -rn 'Switch position\\\\|switch-' e2e/cypress --include=*.ts | grep -v node_modules | head -10\", \"description\": \"Check e2e specs for switch label reliance\"}\n- Bash: {\"command\": \"grep -rln 'switchPosition\\\\|aria-label=\\\"Switch\\\\|attack-reason' e2e --include=*.ts 2>/dev/null | grep -v node_modules | head; grep -rn '\\\"Switch position\\\"' apps/web/src --include=*.ts \u2026\n- Bash: {\"command\": \"grep -n 'attack-reason\\\\|switchPosition' e2e/cypress/e2e/01-hotseat-full-game.cy.ts e2e/cypress/e2e/04-combat.cy.ts e2e/support/commands.ts | head -20\", \"description\": \"Inspect e2e uses \u2026\n- Bash: {\"command\": \"sed -n 80,125p e2e/cypress/e2e/01-hotseat-full-game.cy.ts\", \"description\": \"Read hotseat e2e around switch-only click\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3821/apps/web/src/game/Card.tsx\", \"offset\": 352, \"limit\": 16}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3821/apps/web/src/game/Card.tsx\", \"old_string\": \" // R3821000: likewise your own unit the view says cannot switch (or, R849000, \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3821/apps/web/src/game/Card.tsx\", \"old_string\": \" // pick (a Stack's or an Equip's); the board reads such a click only when idle\u2026\n- Bash: {\"command\": \"tail -3 /tmp/web-changed.txt | cut -c1-200; cat /tmp/engine-all.txt | tail -3\", \"description\": \"Check background test progress\"}\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/web-changed.txt && grep -q '^exit=' /tmp/engine-all.txt; do sleep 5; done; echo done\", \"description\": \"Wait until both background test runs finish\", \"timeout\"\u2026\n- said: While the full engine suite and the harness's changed-file web run finish, I'll update the ruling note to match the narrowed click gate (unit-zone units only).\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='spec/rulings/R3821000.md'\\ns=open(p).read()\\nold=\\\"The board lets such a click through though the card is greyed, as it does a hand card's with a `playReason` ([[R9\u2026\n- Bash: {\"command\": \"sed -i 's/read \\\"Switch position: <reason>\\\" while it is greyed/read \\\"Switch position:\\\" followed by the reason while it is greyed/' spec/rulings/R3821000.md && grep -c 'followed by the\u2026\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/web-changed.txt; do sleep 5; done; tail -12 /tmp/web-changed.txt | cut -c1-250\", \"description\": \"Wait for the web changed-test run to finish\", \"timeout\": 2400\u2026\n- Bash: {\"command\": \"grep -v 'test result: ok' /tmp/engine-all.txt | head; grep -c 'test result: ok' /tmp/engine-all.txt; awk '/test result/ {s+=$4} END {print \\\"passed:\\\", s}' /tmp/engine-all.txt\", \"descrip\u2026\n- said: The full engine suite passes (8 test binaries, 4742 tests). Still waiting on the web run.\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/web-changed.txt; do sleep 5; done; grep -aE 'Test Files|Tests |FAIL|exit=' /tmp/web-changed.txt | head -20\", \"description\": \"Wait for the web changed-test run\u2026\n- ToolSearch: {\"query\": \"select:TaskStop\", \"max_results\": 1}\n- TaskStop: {\"task_id\": \"b2by5s2y3\"}\n- TaskStop: {\"task_id\": \"bu1oipcl4\"}\n- Bash: {\"command\": \"timeout 900 pnpm --dir apps/web typecheck 2>&1 | tail -5; echo \\\"tc=$?\\\"; timeout 900 pnpm exec eslint apps/web/src/game/Card.tsx apps/web/src/game/Game.tsx apps/web/src/game/actions.ts \u2026\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/web-changed.txt; do sleep 5; done; grep -aE 'Test Files|Tests |FAIL|exit=' /tmp/web-changed.txt | head -20\", \"description\": \"Wait for the web run result\", \"ti\u2026\n- Bash: {\"command\": \"grep -aE -A12 '^ FAIL ' /tmp/web-changed.txt | grep -aE 'Error|Timeout|timed out|expected|FAIL' | head -20\", \"description\": \"Show the three failure reasons\"}\n- Bash: {\"command\": \"timeout 900 pnpm exec vitest run --project web src/collection/collection.test.tsx src/routes/landing.test.tsx src/together/FriendsButton.test.tsx 2>&1 | grep -aE 'Test Files|Tests |FAIL|\u2026\n- Bash: {\"command\": \"grep -n 'R3821000' apps/web/src/wire/generated/InPlay.ts; cargo fmt --check && echo FMT_OK; timeout 600 cargo jackioh spec check 2>&1 | tail -1; git status --short\", \"description\": \"Fina\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\na=s.index('## State'); b=s.index('## Log')\\nstate='''## State\\n\\n- Run 3 (2026-11-13, opus): DONE. All plan steps built and verifi\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch (part 1 of 2): your own unit's greyed switch says why, and a unit with no action left says so when tapped\"} --> ## What changed Your own unit now says why it can't switch position, and tapping a unit with no action left shows \"that unit has already acted\u2026"
       },
       "issue": 3821,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-13T18:26:33Z",
         "from_run": "43463680002",
         "gates": [
           {
@@ -16329,7 +16334,11 @@
         "source": "build",
         "until": "2026-11-13T18:52:27Z"
       },
+      "pending_request": false,
+      "provider": "claude-1",
       "queued_at": "2026-11-13T18:22:27Z",
+      "run_id": "pending:edde2549-1794594350",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16348,6 +16357,9 @@
         "provider": "claude-1",
         "run": "43463680002"
       },
+      "started_at": "2026-11-13T18:26:33Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16509,9 +16521,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T18:25:34Z",
+    "at": "2026-11-13T18:26:33Z",
     "url": "",
-    "what": "review #3881 on claude-4"
+    "what": "review #3880 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-13T17:46:50Z",
