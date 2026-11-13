@@ -60,7 +60,7 @@ function thrown(run: () => unknown): Error {
     run();
   } catch (cause) {
     if (cause instanceof Error) return cause;
-    throw new Error(`threw a non-Error: ${String(cause)}`);
+    throw new Error(`threw a non-Error: ${String(cause)}`, { cause });
   }
   throw new Error("threw nothing");
 }
@@ -71,7 +71,7 @@ async function failure(pending: Promise<unknown>): Promise<Error> {
     await pending;
   } catch (cause) {
     if (cause instanceof Error) return cause;
-    throw new Error(`rejected with a non-Error: ${String(cause)}`);
+    throw new Error(`rejected with a non-Error: ${String(cause)}`, { cause });
   }
   throw new Error("resolved");
 }
