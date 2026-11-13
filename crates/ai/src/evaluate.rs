@@ -13,7 +13,8 @@
 //! (#3064), and the rest read them (`Prices`), counting a start-of-turn or end-of-turn firing
 //! once for each time its controller's turn runs it (Meditative #9 Joint Filing's extra runs, #2689).
 //! A passed line's Float is credited for what it took toward an own Float-discount card still out of
-//! reach (`float_credit`, #3695).
+//! reach (`float_credit`, #3695). The Burn and Toxic still to come on a unit or a hero count by the ticks
+//! they will deal (`afflicted`, `coming_hero_ticks`, R3822000).
 //! It reads only what the seat may know or what a determinization sampled, and nothing here reads a
 //! handicap or a difficulty (R180).
 
@@ -21,8 +22,8 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use indexmap::IndexSet;
 use jackioh_engine::config::{
-    CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT, JADE_BEAUTY_AT,
-    TURN_CAP_PLAYER_TURNS,
+    BRITTLE_TICK, BURN_DECAY, CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH,
+    JADE_ASCEND_AT, JADE_BEAUTY_AT, TURN_CAP_PLAYER_TURNS,
 };
 use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
 use jackioh_engine::float::float_cuts_in_hand;
@@ -33,22 +34,23 @@ use jackioh_engine::{
     PLAYER_IDS, Phase, PlayerId, PlayerState, Position, Rng, Row, SandboxOp, SeatOutcome, SettleOptions,
     Slumber, SpawnZone, Tag, TriggerHolder, TriggerZone, UnitView, ZoneName, acting_with_flag,
     active_brittle_count, active_units_of, animated_with_stats, armor_of, attack_restriction,
-    attacks_per_turn, awaken_card, backrow_is_public, board_totals, cannot_attack, card_at, card_keywords,
-    card_type_of_face, credit_lapsing, death_hook_of, dormant_starship_of, effective_cost, effective_life,
-    exit_mark, face_of, find_def, find_instance, find_instance_mut, first_entry_zone, frozen_next_turn,
-    gauntlet_acts, has_keyword, heal_multiplier_of, hero_armor_of, is_extra_turn_card, is_slumbering,
-    is_standing_unit, is_starship_piece, is_temporary_card, launched_starship_of, left_field_after,
-    legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces,
-    pile_at, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of, settle, slots_of,
-    stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back, trigger_holders_with_hook, unit_has,
+    attacks_per_turn, awaken_card, backrow_is_public, board_totals, brittle_due_by, burn_on, cannot_attack,
+    card_at, card_keywords, card_type_of_face, credit_lapsing, death_hook_of, dormant_starship_of,
+    effective_cost, effective_life, exit_mark, face_of, find_def, find_instance, find_instance_mut,
+    first_entry_zone, frozen_next_turn, gauntlet_acts, has_keyword, heal_multiplier_of, hero_armor_of,
+    hero_burn_of, hero_toxic_of, is_extra_turn_card, is_slumbering, is_standing_unit, is_starship_piece,
+    is_temporary_card, launched_starship_of, left_field_after, legal_actions, lost_refreshes_left,
+    modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces, pile_at, playable_from_graveyard,
+    query_cost, queue_hook, reset_instance, script_of, settle, slots_of, stats_with_buffs, subsystems,
+    sync_fused_scripts, takes_strike_back, toxic_on, trigger_holders_with_hook, unit_damage_cap, unit_has,
     unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::candidates::{Side, blow, cleaved_neighbours, side_of};
 use crate::config::{
-    AI_ACTIVATION_PROBE_NODES, AI_ATTACK_HOOK_PROBE_NODES, AI_AWAKEN_PROBE_NODES, AI_DEATH_PROBE_NODES,
-    AI_EVAL, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
+    AI_ACTIVATION_PROBE_NODES, AI_AFFLICTION_TICKS, AI_ATTACK_HOOK_PROBE_NODES, AI_AWAKEN_PROBE_NODES,
+    AI_DEATH_PROBE_NODES, AI_EVAL, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
 };
 use crate::reply::{Known, hidden_card_ids, visible_activation};
 use crate::simulate::{create_sub_counter, note_sim_panic, simulate};
@@ -132,6 +134,42 @@ pub(crate) fn can_swing(state: &GameState, unit: &CardInstance, view: &UnitView)
     !has_keyword(&view.keywords, KeywordKind::CantAttack)
         && !cannot_attack(state, unit)
         && !frozen_next_turn(state, unit)
+}
+
+/// R845, §2.2: every turn start, an extra turn's too, numbers the next turn (`state.turn`). The player not
+/// on turn starts at the next number; the player on turn at the one after the other player's turn.
+const NEXT_START_TURNS: i32 = 1;
+const OWN_NEXT_START_TURNS: i32 = 2;
+
+/// R3793000: whether the unit's own Brittle tick destroys it before its controller's next attacks:
+/// its count in force is at most one tick (`BRITTLE_TICK`; a count at 0 crumbles at its tick too), that
+/// tick is due (`brittle_due_by`) at the controller's next start, and it is not Indestructible (R46). With
+/// `on_turn_swings` the player on turn still has this turn's attacks to come, after this turn's tick, so
+/// none of its units crumbles first. An extra turn owed to the player on turn starts as its turn ends
+/// (R846). One owed to the other player only puts a start later, and a tick due earlier is due later too,
+/// so it is left out: it can only leave a doomed unit counted, as before.
+pub(crate) fn crumbles_before_swing(
+    state: &GameState,
+    unit: &CardInstance,
+    view: &UnitView,
+    on_turn_swings: bool,
+) -> bool {
+    if !active_brittle_count(unit).is_some_and(|count| count <= BRITTLE_TICK)
+        || has_keyword(&view.keywords, KeywordKind::Indestructible)
+    {
+        return false;
+    }
+    let on_turn = state.active == unit.controller;
+    if on_turn && on_turn_swings {
+        return false;
+    }
+    let owes_extra = state.players[unit.controller].extra_turns.unwrap_or(0) > 0;
+    let wait = if on_turn && !owes_extra {
+        OWN_NEXT_START_TURNS
+    } else {
+        NEXT_START_TURNS
+    };
+    brittle_due_by(unit, state.turn + wait)
 }
 
 /// R49: a unit with Deft, read through the layers, in Defense Position. Its switch to Attack spends
@@ -422,10 +460,64 @@ fn awaken_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, prices:
     }
 }
 
+/// R3822000: `value`, a unit's worth inside its Brittle share, less what its Burn and Toxic will deal it
+/// over its controller's next `AI_AFFLICTION_TICKS` turn starts, and the share the unit keeps: 1, or
+/// `1 − unit_doomed / n` when the nth tick kills it. Each tick is R3540001's, before the start-of-turn
+/// triggers: Burn's hit, dropping by `BURN_DECAY` after it, then Toxic's; an unspent Divine Shield
+/// negates the first (its worth goes), Armor meets Burn's and Toxic pierces it, the unit's own cap holds
+/// both (R2179005), and an Indestructible unit takes none. Nothing is read with no counter or both
+/// weights at 0.
+fn afflicted(
+    state: &GameState,
+    unit: &CardInstance,
+    view: &UnitView,
+    value: f64,
+    w: &EvalWeights,
+) -> (f64, f64) {
+    let (burn, toxic) = (burn_on(unit), toxic_on(unit));
+    if (burn == 0 && toxic == 0)
+        || (w.unit_affliction == 0.0 && w.unit_doomed == 0.0)
+        || has_keyword(&view.keywords, KeywordKind::Indestructible)
+    {
+        return (value, 1.0);
+    }
+    let cap = unit_damage_cap(state, unit);
+    let mut shield = has_keyword(&view.keywords, KeywordKind::DivineShield);
+    let mut spent = 0.0;
+    let mut taken: i32 = 0;
+    let mut share = 1.0;
+    for tick in 1..=AI_AFFLICTION_TICKS {
+        let burning = burn.saturating_sub((tick - 1).saturating_mul(BURN_DECAY));
+        for (amount, piercing) in [(burning, false), (toxic, true)] {
+            if amount <= 0 {
+                continue;
+            }
+            if shield {
+                shield = false;
+                spent = w.keyword.divine_shield;
+                continue;
+            }
+            let hit = if piercing {
+                amount
+            } else {
+                amount.saturating_sub(view.armor).max(0)
+            };
+            taken = taken.saturating_add(cap.map_or(hit, |cap| hit.min(cap)));
+        }
+        if taken >= view.health {
+            share = 1.0 - w.unit_doomed / f64::from(tick);
+            break;
+        }
+    }
+    let lost = spent + w.health * f64::from(taken.min(view.health.max(0)));
+    (value - w.unit_affliction * lost, share)
+}
+
 /// One unit's worth on the board: its stats through the layers and its keywords (AI_EVAL), Spell
 /// Damage per point, `activation` of one use of its Activate (R2564000) and, while it may attack,
-/// `attack_hook` of its attack hooks (R2688000), all discounted by its Brittle count; then `death` of
-/// what its Death leaves behind (R2424000) and `turn_hook` of one firing of its turn hooks (R2565000).
+/// `attack_hook` of its attack hooks (R2688000), all discounted by its Brittle count and by its Burn and
+/// Toxic (R3822000); then `death` of what its Death leaves behind (R2424000) and `turn_hook` of one
+/// firing of its turn hooks (R2565000).
 pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights, prices: &Prices) -> f64 {
     let view = unit_view(state, unit);
     let weights = &w.keyword;
@@ -479,7 +571,10 @@ pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights, price
     // §10.1: the counters on the card are worth their own, outside the Brittle share — Fed Fauci's Plague
     // Counters are mana it already banked. R2424000: so is what its Death leaves, since Brittle's end is a
     // death too. R2565000: and what one firing of its turn hooks gives, a firing that harms it a debt.
-    value * brittle_share(unit, w)
+    // R3822000: less what its Burn and Toxic will deal it; a unit a tick kills keeps the smaller of that
+    // share and its Brittle one, both ends coming at the same stage.
+    let (value, doom) = afflicted(state, unit, &view, value, w);
+    value * brittle_share(unit, w).min(doom)
         + w.plague_counter * f64::from(unit.counters.plague.unwrap_or(0))
         + w.death * death_price(state, unit, w, prices)
         + w.turn_hook * turn_hook_price(state, unit, w, prices)
@@ -796,10 +891,39 @@ fn slumber_worth(
     share * (unit_worth(state, &awake, w, prices) + w.awaken * awaken_price(state, unit, w, prices))
 }
 
-/// A hero's side of the ledger: its concave life (`effective_life`, R964000) and its armor.
-fn hero_side(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
-    hero_value(effective_life(state, player), starting_life(state, player), w)
-        + w.hero_armor * f64::from(hero_armor_of(state, player))
+/// R3822000: the life `player`'s hero will lose to its Burn and Toxic over their next `AI_AFFLICTION_TICKS`
+/// turn starts, each tick a hit as `projected_hero_damage` reads it (Burn's through Armor, Toxic's
+/// piercing it, R3540001; the divisors and caps for both), at most all but 1 of its life: the reply
+/// already plays out a tick that kills. 0 at a zero `hero_affliction`, with neither counter, or at 1 life.
+fn coming_hero_ticks(state: &GameState, player: PlayerId, w: &EvalWeights) -> i32 {
+    let (burn, toxic) = (hero_burn_of(state, player), hero_toxic_of(state, player));
+    let life = effective_life(state, player);
+    if w.hero_affliction == 0.0 || (burn == 0 && toxic == 0) || life <= 1 {
+        return 0;
+    }
+    let mut taken: i32 = 0;
+    for tick in 1..=AI_AFFLICTION_TICKS {
+        let burning = burn.saturating_sub((tick - 1).saturating_mul(BURN_DECAY));
+        if burning > 0 {
+            taken = taken.saturating_add(subsystems::projected_hero_damage(state, player, burning, false));
+        }
+        if toxic > 0 {
+            taken = taken.saturating_add(subsystems::projected_hero_damage(state, player, toxic, true));
+        }
+    }
+    taken.min(life - 1)
+}
+
+/// A hero's side of the ledger: its concave life (`effective_life`, R964000) and its armor, less
+/// `hero_affliction` of what `ticks` (`coming_hero_ticks`) costs on that curve (R3822000).
+fn hero_side(state: &GameState, player: PlayerId, ticks: i32, w: &EvalWeights) -> f64 {
+    let life = effective_life(state, player);
+    let start = starting_life(state, player);
+    let side = hero_value(life, start, w) + w.hero_armor * f64::from(hero_armor_of(state, player));
+    if ticks == 0 {
+        return side;
+    }
+    side - w.hero_affliction * (hero_value(life, start, w) - hero_value(life - ticks, start, w))
 }
 
 /// Everything on one side but the hero: the board and the cards dormant under its piles, what it has
@@ -939,8 +1063,16 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
 /// Taunts soak the smallest first (`damage_past_taunts`); each remaining attack goes through
 /// `subsystems::projected_hero_damage` (armor, which a Pierce hit skips, R346, and the Anti-oneshot cap), summed.
 /// With `w.gauntlet_bars_face_attacks`, an attack `attack_restriction` bars from the hero (a Unit inside The
-/// Gauntlet, R1849005) lands nothing past the Taunts.
+/// Gauntlet, R1849005) lands nothing past the Taunts. With `w.brittle_crumbles_before_swing`, a unit its own
+/// Brittle tick destroys first counts none (`crumbles_before_swing`, R3793000), read as at the end of the turn
+/// under way: the player on turn has made this turn's attacks.
 pub fn face_threat_with(state: &GameState, attacker: PlayerId, w: &EvalWeights) -> i32 {
+    face_threat_from(state, attacker, w, false)
+}
+
+/// `face_threat_with`, `on_turn_swings` saying whether the player on turn still has this turn's attacks to
+/// come (R3793000). `evaluate_priced` reads it off its `NextSwing`.
+fn face_threat_from(state: &GameState, attacker: PlayerId, w: &EvalWeights, on_turn_swings: bool) -> i32 {
     let mut attacks: Vec<(&CardInstance, i32, bool)> = Vec::new();
     // R1849005, #3287: while The Gauntlet acts, `attack_restriction` bars a Unit in its lanes from the hero.
     // The board is asked once; a unit's restriction only then, so a board with no Gauntlet reads as before
@@ -956,6 +1088,10 @@ pub fn face_threat_with(state: &GameState, attacker: PlayerId, w: &EvalWeights) 
             continue;
         }
         if !can_swing(state, unit, &view) {
+            continue;
+        }
+        // R3793000, #3793: a unit its own Brittle tick destroys before it can swing deals nothing.
+        if w.brittle_crumbles_before_swing && crumbles_before_swing(state, unit, &view, on_turn_swings) {
             continue;
         }
         // R636: the unit's next turn starts with its exertion reset, so a Windfury unit swings twice.
@@ -2130,13 +2266,15 @@ pub fn evaluate_priced(
         };
     }
 
-    let enemy_damage = face_threat_with(state, opp, w);
-    let our_damage = face_threat_with(state, seat, w);
+    let seat_first = next == NextSwing::Seat;
+    // R3793000: the player on turn still swings this turn when it is the one `next` says swings first.
+    let on_turn_swings = (state.active == seat) == seat_first;
+    let enemy_damage = face_threat_from(state, opp, w, on_turn_swings);
+    let our_damage = face_threat_from(state, seat, w, on_turn_swings);
     // §13.4, R964000: a hero's life is `effective_life`, own HP and the team's pool in a Duos duel,
     // the hero's health in a 1v1 game.
     let seat_life = effective_life(state, seat);
     let opp_life = effective_life(state, opp);
-    let seat_first = next == NextSwing::Seat;
     let threat_share = if seat_first { w.answerable_threat } else { 1.0 };
     let threat = threat_share
         * (if enemy_damage >= seat_life {
@@ -2160,9 +2298,15 @@ pub fn evaluate_priced(
     let progress = ((f64::from(state.turn) - w.closing_from).max(0.0) / span).min(1.0);
     let closing = w.closing_weight * progress * f64::from(starting_life(state, opp) - opp_life);
 
-    let race = w.enemy_health * f64::from(opp_life);
+    // R3822000: the life each hero's coming Burn and Toxic take; the enemy's counts at the race's rate too.
+    let seat_ticks = coming_hero_ticks(state, seat, w);
+    let opp_ticks = coming_hero_ticks(state, opp, w);
+    let race = w.enemy_health * (f64::from(opp_life) - w.hero_affliction * f64::from(opp_ticks));
 
     let board = material(state, seat, seat, w, prices) - material(state, opp, seat, w, prices);
 
-    hero_side(state, seat, w) - hero_side(state, opp, w) + board - threat + pressure + closing - race
+    hero_side(state, seat, seat_ticks, w) - hero_side(state, opp, opp_ticks, w) + board - threat
+        + pressure
+        + closing
+        - race
 }

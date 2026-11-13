@@ -105,7 +105,11 @@ on its countdown, or `slumber_waiting_share` with none (R2380000). A Unit standi
 (R1081000) counts once, as the Unit it is, never again as a backrow card (`standing_unit_priced_once`,
 R2490000; off in `GREEDY_EVAL`). A Unit in The Gauntlet's lanes threatens no face while The Gauntlet
 acts, since it may attack no hero: `face_threat` asks `attack_restriction`, as the lethal solver does
-(`gauntlet_bars_face_attacks`, R1849005, #3287; off in `GREEDY_EVAL`). A unit's Death counts by what it
+(`gauntlet_bars_face_attacks`, R1849005, #3287; off in `GREEDY_EVAL`). A unit its own Brittle tick
+destroys at its controller's next start, before it can attack, threatens no face and makes no stand-down:
+`face_threat` and `could_attack_next_turn` ask `crumbles_before_swing`, which reads the engine's
+`brittle_due_by`; a side the evaluation reads as swinging first on its own turn keeps its units
+(`brittle_crumbles_before_swing`, R3793000, #3793; off in `GREEDY_EVAL`). A unit's Death counts by what it
 leaves behind (R2424000): at the root `death_prices` prices, within `AI_DEATH_PROBE_NODES`, each live
 Death on the field and in the seat's hand (spawned first, R923001) as its controller's evaluation after
 the sandbox's destroy less after its remove (R923003); `unit_worth` adds `AI_EVAL.death` of it,
@@ -157,6 +161,15 @@ Flashback, R783012, Sanctum's lent one, R1869003, or a field permission such as 
 counts `AI_EVAL.graveyard_playable` of its hand price, the enemy's too, since a graveyard is public; a
 spent Flashback counts nothing (R783013). `keyword.flashback` stays 0, so the play is priced once, and
 `GREEDY_EVAL` keeps 0 (#2928).
+Burn and Toxic count by the ticks still to come over `AI_AFFLICTION_TICKS` of their controller's turn starts
+(R3822000, R3540001). `afflicted` takes `AI_EVAL.unit_affliction` of a `health` point off a unit for each
+point they will deal it, up to its health, and a Divine Shield they spend costs that share of its keyword
+worth; Armor meets Burn, Toxic pierces it, the unit's own cap holds both, and an Indestructible unit takes
+none. A unit the nth tick kills keeps `1 − unit_doomed / n` of itself, or its Brittle share if that is
+smaller. `coming_hero_ticks` reads a hero's ticks through `projected_hero_damage`, leaving it at least 1
+life, and `hero_side` loses `hero_affliction` of that life's cost on the hero curve; the enemy's also counts
+at `enemy_health`. The reply already plays one tick a side. `GREEDY_EVAL` keeps all three at 0, and the
+learned features leave both counters out until a refit (R3535002).
 It re-plans after every action, so a
 lethal the solver proves is played trimmed to the actions it needs
 (`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action
@@ -293,8 +306,9 @@ A player's random deck passes `Some(vec![])` beside `banned: Some(vec![])`; an `
 gated card in by name. Emptying the list lifts the gate and deals every deck as before it, which issue
 #732 did once it had measured the AI on the Meditative set, the list's one set until then. It held the
 Stinkyscape set from its release (issue #1884) until issue #1885 measured the AI on it: gating a set that
-ships before the AI is trained on it is listing it there. It lists the Stinkyscape+ set from its release
-(issue #3573) until fullsend 2's sweep (#3574) measures the AI on it. `shape`
+ships before the AI is trained on it is listing it there. It held the Stinkyscape+ set from its release
+(issue #3573) until fullsend 2's sweep of record measured the AI on it (issue #3574, R3574000), and is
+empty since. `shape`
 (R976000) multiplies each card's weight by `shaped_weight`, the unban lane's dealt-quality table in
 `src/shadow_ban.rs`; it is off unless a caller sets it, whatever `banned` holds, and no caller does, so
 practice, the quality gates and both seats of an arena or a promotion deal unshaped. The mulligan still

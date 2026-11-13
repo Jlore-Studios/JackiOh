@@ -140,10 +140,11 @@ mod build_ai_deck_b22 {
     }
 
     #[test]
-    fn r380_b22_the_decks_reach_every_set_core_classic_classic_plus_meditative_meditative_plus_stinkyscape_and_training_grounds_alike()
+    fn r380_b22_the_decks_reach_every_set_core_classic_classic_plus_meditative_meditative_plus_stinkyscape_training_grounds_and_stinkyscape_plus_alike()
      {
-        // The AI's soft gate is empty (#1885), so every set that ships is dealt: Meditative+ too, as #1186's
-        // sweep banned none of it (#1187), and Training Grounds (#2204).
+        // The AI's soft gate is empty (#1885, and again since #3574), so every set that ships is dealt:
+        // Meditative+ too, as #1186's sweep banned none of it (#1187), Training Grounds (#2204) and
+        // Stinkyscape+ (R3574000).
         let dealt: IndexSet<String> = decks(30, &options(json!({})), "sets")
             .iter()
             .flatten()
@@ -160,6 +161,7 @@ mod build_ai_deck_b22 {
                 "Meditative",
                 "Meditative+",
                 "Stinkyscape",
+                "Stinkyscape+",
                 "Training Grounds"
             ]
         );
@@ -1104,8 +1106,9 @@ mod r1390_the_ai_decks_soft_gate {
     const FORCED_MEDITATIVE: &str = "meditative-002";
 
     /// A gate the tests of the gate's mechanics deal under: Meditative, which the AI's decks were
-    /// dealt under from #551 until #732 lifted it, and Stinkyscape+, which `AI_DECK_GATED_SETS` holds
-    /// from its release (#3573), so a lean on the first lands on the newest set that is in neither.
+    /// dealt under from #551 until #732 lifted it, and Stinkyscape+, which `AI_DECK_GATED_SETS` held from
+    /// its release (#3573) until fullsend 2 (#3574), so a lean on the first lands on the newest set that is
+    /// in neither.
     const GATE: &[SetName] = &[SetName::Meditative, SetName::StinkyscapePlus];
 
     fn gated_in(deck: &[String]) -> Vec<&String> {
@@ -1337,9 +1340,9 @@ mod r1390_the_ai_decks_soft_gate {
     fn r1390_the_gate_is_lifted_and_the_ai_decks_are_dealt_meditative_cards() {
         register_cards();
         // Issue #732 measured the AI on the Meditative set and took it off the list (R1390): the AI's
-        // own decks are dealt from it. The list holds the Stinkyscape+ set alone since its release
-        // (#3573).
-        assert_eq!(AI_DECK_GATED_SETS, &[SetName::StinkyscapePlus]);
+        // own decks are dealt from it. The list is empty since fullsend 2 (#3574, R3574000) lifted the
+        // Stinkyscape+ set's gate.
+        assert_eq!(AI_DECK_GATED_SETS, &[] as &[SetName]);
         assert_eq!(
             ungated_lean(Some(SetName::Meditative), AI_DECK_GATED_SETS),
             Some(SetName::Meditative)
@@ -1399,47 +1402,41 @@ mod r1390_the_ai_decks_soft_gate {
         );
     }
 
-    /// The gate holds the Stinkyscape+ set from its release (#3573, R3535000) until fullsend 2's sweep
-    /// (#3574) measures the AI on it: no AI deck at any tier holds one of its cards, a lean on it leans
-    /// on Training Grounds, the newest set that ships and is not gated, and a player's random deck from
-    /// the same stream holds some.
+    /// R3574000: fullsend 2's sweep of record measured the AI on the Stinkyscape+ set, so the gate holds
+    /// none of it: the AI's own decks are dealt from it at every tier, every card the shadow ban leaves
+    /// it, and a lean on it leans on it.
     #[test]
-    fn r1390_the_gate_holds_the_stinkyscape_plus_set_from_its_release() {
+    fn r3574000_r1390_the_gate_is_lifted_and_the_ai_decks_are_dealt_stinkyscape_plus_cards() {
         register_cards();
-        assert_eq!(AI_DECK_GATED_SETS, &[SetName::StinkyscapePlus]);
         assert!(SHIPPED_SETS.contains(&SetName::StinkyscapePlus));
+        assert!(!AI_DECK_GATED_SETS.contains(&SetName::StinkyscapePlus));
         assert_eq!(
             ungated_lean(Some(SetName::StinkyscapePlus), AI_DECK_GATED_SETS),
-            Some(SetName::TrainingGrounds)
+            Some(SetName::StinkyscapePlus)
         );
-        let mut players = 0;
+        let mut dealt = 0;
         for (tier, size, base) in ai_rules() {
             for n in 1..=GATE_SEEDS {
-                let seed = format!("r1390:plus:{tier}:{n}");
-                let ai = build_ai_deck(&mut create_rng(&seed, 0), size, &options(base.clone()));
-                assert_eq!(ai.len(), size as usize, "{seed}");
-                assert_eq!(of_set(&ai, SetName::StinkyscapePlus), 0, "{seed}: {ai:?}");
-                let mut player = base.clone();
-                player["gatedSets"] = json!([]);
-                let deck = build_ai_deck(&mut create_rng(&seed, 0), size, &options(player));
-                players += of_set(&deck, SetName::StinkyscapePlus);
+                let seed = format!("r3574000:plus:{tier}:{n}");
+                let deck = build_ai_deck(&mut create_rng(&seed, 0), size, &options(base.clone()));
+                assert_eq!(deck.len(), size as usize, "{seed}");
+                assert!(
+                    deck.iter().all(|id| !SHADOW_BAN_IDS.contains(&id.as_str())),
+                    "{seed}: a shadow-banned card dealt: {deck:?}"
+                );
+                dealt += of_set(&deck, SetName::StinkyscapePlus);
             }
         }
-        assert!(players > 0, "no player's random deck held a Stinkyscape+ card");
+        assert!(dealt > 0, "no AI deck held a Stinkyscape+ card");
         for n in 1..=GATE_SEEDS {
-            let seed = format!("r1390:plus:lean:{n}");
+            let seed = format!("r3574000:plus:lean:{n}");
             let leaning = build_ai_deck(
                 &mut create_rng(&seed, 0),
                 DECK_SIZE,
                 &options(json!({ "leanSet": "Stinkyscape+" })),
             );
-            assert_eq!(
-                of_set(&leaning, SetName::StinkyscapePlus),
-                0,
-                "{seed}: {leaning:?}"
-            );
             assert!(
-                of_set(&leaning, SetName::TrainingGrounds) >= lean_floor(DECK_SIZE),
+                of_set(&leaning, SetName::StinkyscapePlus) >= lean_floor(DECK_SIZE),
                 "{seed}: {leaning:?}"
             );
         }

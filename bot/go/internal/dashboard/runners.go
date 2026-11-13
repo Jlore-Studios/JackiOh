@@ -10,7 +10,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 	"unicode/utf8"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
@@ -85,7 +84,7 @@ var Workflows = map[string]string{
 	"promote-staging.yml":    "every two hours: staging takes main's newest commit whose CI passed",
 	"releases.yml":           "a GitHub release per shipped patch, a pre-release while only staging has it",
 	"selfplay-shards.yml":    "one round of a self-play export's shards",
-	"selfplay.yml":           "a self-play export, on GitHub's runners",
+	"selfplay.yml":           "a self-play export in shards: the learn lane's, or one dispatched by hand",
 	"spec-fold.yml":          "folds the pending §11 paragraphs and rewrites the rulings index once a day",
 	"squishy-commands.yml":   "Squishy's ears and its sweep",
 	"squishy-run.yml":        "Squishy: gate, plan, `work` on its own Claude account, deliver",
@@ -96,8 +95,8 @@ var Workflows = map[string]string{
 	"winrates-refresh.yml":   "daily: the Tech decks' win-rate table, once a patch",
 }
 
-// HostedRoles is HOSTED_ROLES: GitHub's runners and the owner's PC, and what each is for, as
-// (label, where, what it runs); the bot's machine's are drawn from the pool (`explanation`).
+// HostedRoles is HOSTED_ROLES: GitHub's runners, and what each is for, as (label, where, what it
+// runs); the bot's machine's are drawn from the pool (`explanation`).
 var HostedRoles = [][3]string{
 	{"ubuntu-latest", "GitHub's Linux: a fresh machine each job, four vCPUs",
 		"nearly every job: CI, every bot job that holds a write token (gate, plan, deliver, the " +
@@ -110,16 +109,12 @@ var HostedRoles = [][3]string{
 // BoxesNote is BOXES_NOTE. A variable the tests replace.
 var BoxesNote = "The night box and the Muse box (a runner name ending `-b2`) are the bot's two AWS " +
 	"machines, 2 vCPUs and 8 GB each; each starts when one of its jobs queues and stops " +
-	"after 30 idle minutes. A lane past a subscription's first is `-2`, `-3` …. A " +
-	"subscription logged in on the owner's PC may take its job there too " +
-	"(`pc-<id>-<time>`). The PC's supervisor sends a heartbeat every two minutes (its " +
-	"CPU and memory in use, with and without its runners, and each runner's CPUs and " +
-	"whether it is slowed), which the PC's group in the runners section and the learn " +
-	"lane show with whether it is working. bot/machine/README.md has the rest."
+	"after 30 idle minutes. A lane past a subscription's first is `-2`, `-3` …. " +
+	"bot/machine/README.md has the rest."
 
-// Explanation is explanation: the comment that says what each runner is for: GitHub's, each
-// subscription's on the bot's machine (from the pool, so a subscription added there shows), and
-// the owner's PC; then what each workflow is for.
+// Explanation is explanation: the comment that says what each runner is for: GitHub's, and each
+// subscription's on the bot's machine (from the pool, so a subscription added there shows); then
+// what each workflow is for.
 func Explanation(ctx *hctx.Context) string {
 	pool := ctx.Cfg.Pool
 	var rows []string
@@ -216,15 +211,6 @@ func Explain(ctx *hctx.Context, number int, state *pyjson.Object) {
 	state.Set("runners_explained", record)
 }
 
-// PCFile and PCQuiet are PC_FILE and PC_QUIET: the owner's PC's heartbeat: the gist file its
-// supervisor rewrites every `heartbeatSeconds` (bot/machine/local/supervisor.ps1, `Send-Heartbeat`),
-// and how old it may be before the issue says the PC has gone quiet (several missed beats: off,
-// asleep, or the supervisor stopped).
-var (
-	PCFile  = "pc.json"
-	PCQuiet = 10 * time.Minute
-)
-
 // GatherWorkflow is GATHER_WORKFLOW: the gather workflow (training/gather.md), on two of GitHub's
 // runners without a pause since #3740.
 var GatherWorkflow = "gather.yml"
@@ -238,22 +224,19 @@ var (
 )
 
 // RunnerLegend is RUNNER_LEGEND.
-var RunnerLegend = "🟢 in a job · ⏸️ in a job, slowed while the PC is busy · ⏳ queued for a runner · " +
-	"⚪ idle, waiting for a job · 💤 no job: idle, or its box is off · ⚫ off · ❌ its " +
-	"last run failed. GitHub's runners exist only while they hold a job."
+var RunnerLegend = "🟢 in a job · ⏳ queued for a runner · ⚪ idle, waiting for a job · 💤 no job: " +
+	"idle, or its box is off · ⚫ off · ❌ its last run failed. GitHub's runners exist only while " +
+	"they hold a job."
 
 // Found is what the runners section draws, read once: each busy job and each queued one with its
 // run (each pair is [run, job]), how many runs were not read and whether the runs could be read;
-// the gather workflow's last runs; and the owner's PC's heartbeat (nil, with `PCNote` saying why,
-// when there is none).
+// and the gather workflow's last runs.
 type Found struct {
 	Busy   [][2]*pyjson.Object
 	Queued [][2]*pyjson.Object
 	Unread int              // default: 0
 	Failed bool             // default: False
 	Gather []*pyjson.Object // default: field(default_factory=list)
-	PC     *pyjson.Object   // default: None
-	PCNote string           // default: ""
 
 	// Read is every run read, with all its jobs, the finished ones too: the early stop of a bot
 	// pull request's red CI looks at them (#2948, `StopRed`).
@@ -267,8 +250,8 @@ type RunJobs struct {
 }
 
 // ReadRunners is read_runners: the jobs of the runs going and queued, from GitHub, since it lists
-// a repository's own runners only to an admin, which the bot is not; the gather workflow's last
-// runs; and the PC's heartbeat. Every read is a conditional request (`gh._CACHED`).
+// a repository's own runners only to an admin, which the bot is not; and the gather workflow's last
+// runs. Every read is a conditional request (`gh._CACHED`).
 func ReadRunners(ctx *hctx.Context) *Found {
 	var runs []*pyjson.Object
 	if _, failed := herr.Catch[*herr.GitHubError](func() {
@@ -320,35 +303,7 @@ func ReadRunners(ctx *hctx.Context) *Found {
 		}
 		found.Gather = gather
 	})
-	found.PC, found.PCNote = heartbeat(ctx)
 	return found
-}
-
-// heartbeat is _heartbeat: the owner's PC's last heartbeat, from the gist the repository variable
-// JACKIOH_PC_GIST names (`cfg.pc_gist`), or nil and why not.
-func heartbeat(ctx *hctx.Context) (*pyjson.Object, string) {
-	if ctx.Cfg.PCGist == "" {
-		return nil, "no heartbeat set up (JACKIOH_PC_GIST)"
-	}
-	var beat any
-	unreadable := false
-	if _, failed := herr.Catch[*herr.GitHubError](func() {
-		files := ctx.GH.GetGist(ctx.Cfg.PCGist, true).Obj("files")
-		text := "{}"
-		if content := files.Obj(PCFile).Get("content"); pyjson.Truthy(content) {
-			text = py.Str(content)
-		}
-		var err error
-		beat, err = pyjson.LoadsString(text)
-		unreadable = err != nil // json.loads's ValueError
-	}); failed || unreadable {
-		return nil, "its heartbeat could not be read"
-	}
-	b, ok := beat.(*pyjson.Object)
-	if !ok || b == nil || clock.ParseISOValue(b.Get("at")).IsZero() {
-		return nil, "no heartbeat yet"
-	}
-	return b, ""
 }
 
 // isGather is _is_gather.
@@ -362,9 +317,6 @@ func Where(job *pyjson.Object) (int, string) {
 	label := ""
 	if labels := pyjson.List(job.Get("labels")); len(labels) > 0 {
 		label = py.Str(labels[0])
-	}
-	if strings.HasPrefix(name, "pc-") {
-		return 3, "owner's PC"
 	}
 	if strings.HasPrefix(name, "night-vm-") || strings.HasPrefix(label, "night-vm-") {
 		if memory.BoxOf(name, label) != "" {
@@ -380,7 +332,7 @@ func Where(job *pyjson.Object) (int, string) {
 	if providers.Hosted(label) {
 		return 0, "GitHub's"
 	}
-	return 4, "unknown box"
+	return 3, "unknown box"
 }
 
 // StepWords is STEP_WORDS: steps whose names say less than they seem to: bot-night's model step is
@@ -537,183 +489,57 @@ func Boxes(sid string, title string, boxes []Box) []string {
 	return append(lines, "    end")
 }
 
-// fresh is _fresh: the PC's heartbeat while it is recent enough to trust.
-func fresh(ctx *hctx.Context, found *Found) *pyjson.Object {
-	at := clock.ParseISOValue(found.PC.Get("at"))
-	if !at.IsZero() && ctx.Now().Sub(at) <= PCQuiet {
-		return found.PC
-	}
-	return nil
-}
-
-// pcLoad is _pc_load: how loaded the PC is, as its CPU and memory in use, runners included; with
-// `full`, also its memory's size and its load without its runners (what decides whether it lends
-// itself). A heartbeat from a supervisor older than its memory's size says its load without its
-// runners, in GB.
-func pcLoad(beat *pyjson.Object, full bool) string {
-	// The except (KeyError, TypeError, ValueError, ZeroDivisionError).
-	const unreported = "its load not reported"
-	// float(beat[key])
-	num := func(key string) (float64, bool) {
-		v, ok := beat.Lookup(key)
-		if !ok {
-			return 0, false
-		}
-		f, err := py.Float(v)
-		return f, err == nil
-	}
-	if !beat.Truthy("memTotalGB") {
-		cpu, ok := num("cpu")
-		if !ok {
-			return unreported
-		}
-		mem, ok := num("memGB")
-		if !ok {
-			return unreported
-		}
-		return fmt.Sprintf("CPU %.0f%%, %.1f GB in use", cpu, mem)
-	}
-	whole, ok := num("memTotalGB")
-	if !ok {
-		return unreported
-	}
-	cpuOwn, ok := beat.Lookup("cpu") // beat.get("cpuAll", beat["cpu"]) reads beat["cpu"] first
-	if !ok {
-		return unreported
-	}
-	cpu, err := py.Float(beat.GetOr("cpuAll", cpuOwn))
-	if err != nil {
-		return unreported
-	}
-	memOwn, ok := beat.Lookup("memGB")
-	if !ok {
-		return unreported
-	}
-	mem, err := py.Float(beat.GetOr("memAllGB", memOwn))
-	if err != nil || whole == 0 {
-		return unreported
-	}
-	load := fmt.Sprintf("CPU %.0f%%, memory %.0f%%", cpu, 100*mem/whole)
-	if full {
-		ownCPU, ok := num("cpu")
-		if !ok {
-			return unreported
-		}
-		ownMem, ok := num("memGB")
-		if !ok {
-			return unreported
-		}
-		load += fmt.Sprintf(" of %.0f GB (%.0f%% and %.0f%% without its runners)", whole, ownCPU,
-			100*ownMem/whole)
-	}
-	return load
-}
-
-// pcJobsOf is _pc_jobs: the jobs the PC's runners hold now, as GitHub lists them.
-func pcJobsOf(found *Found) [][2]*pyjson.Object {
-	var out [][2]*pyjson.Object
+// gatherBox is _gather_box: the gather workflow: gathering now, waiting for a runner, or how its
+// last run ended.
+func gatherBox(ctx *hctx.Context, found *Found) Box {
+	title := "<b>gather</b>"
 	for _, pair := range found.Busy {
-		if order, _ := Where(pair[1]); order == 3 {
-			out = append(out, pair)
+		if !isGather(pair[0]) {
+			continue
+		}
+		job := pair[1]
+		since := clock.ParseISOValue(job.Get("started_at"))
+		took := "?"
+		if !since.IsZero() {
+			took = clock.HumanDelta(ctx.Now().Sub(since))
+		}
+		return Box{[]string{title, "🟢 gathering", Text(Step_(job, 45), 34), "for " + took}, "busy"}
+	}
+	for _, pair := range found.Queued {
+		if !isGather(pair[0]) {
+			continue
+		}
+		since := clock.ParseISOValue(pair[1].Get("created_at"))
+		waited := ""
+		if !since.IsZero() {
+			waited = "for " + clock.HumanDelta(ctx.Now().Sub(since))
+		}
+		return Box{[]string{title, "⏳ waiting for a runner", waited}, "next"}
+	}
+	var done []*pyjson.Object
+	for _, r := range found.Gather {
+		if r.Str("status") == "completed" {
+			done = append(done, r)
 		}
 	}
-	return out
-}
-
-// pcWork is _pc_work: whether the PC is working: the workflows of the jobs its runners hold
-// (GitHub's jobs, or the heartbeat's busy runners when GitHub has not listed them yet), with `full`
-// each job's name and whether it is slowed; or that it is not, and whether a runner of its waits for
-// a job.
-func pcWork(beat *pyjson.Object, jobs [][2]*pyjson.Object, full bool) string {
-	runners := pcRunners(beat)
-	anyBusy, anyIdle := false, false
-	for _, r := range runners {
-		if r.Truthy("busy") {
-			anyBusy = true
-		} else {
-			anyIdle = true
-		}
+	sort.SliceStable(done, func(i, j int) bool { // sorted(…, reverse=True): equal ones keep their order
+		return py.OrStr(done[i].Get("created_at"), "") > py.OrStr(done[j].Get("created_at"), "")
+	})
+	if len(done) == 0 {
+		return Box{[]string{title, "no run yet", "it plays each patch", "as it ships"}, "off"}
 	}
-	if len(jobs) == 0 && !anyBusy {
-		if anyIdle {
-			return "not working: a runner waits for a job"
-		}
-		return "not working: no job"
+	last, at := done[0], clock.ParseISOValue(done[0].Get("created_at"))
+	when := "?"
+	if !at.IsZero() {
+		when = clockText(ctx, at)
 	}
-	if len(jobs) == 0 {
-		return "working on a job"
+	if pyjson.Equal(last.Get("conclusion"), "skipped") {
+		return Box{[]string{title, "⚫ off: GATHER_ON_PATCH", "is not true (skipped " + when + ")"}, "off"}
 	}
-	if !full {
-		var flows []string
-		for _, pair := range jobs {
-			if f := flow(pair[0]); !slices.Contains(flows, f) {
-				flows = append(flows, f)
-			}
-		}
-		return "working on " + strings.Join(flows, " and ")
+	if pyjson.Equal(last.Get("conclusion"), "success") {
+		return Box{[]string{title, "⚪ not gathering", "last played " + when}, "idle"}
 	}
-	slowed := false
-	for _, pair := range jobs {
-		if pcRunner(beat, py.OrStr(pair[1].Get("runner_name"), "")).Truthy("throttled") {
-			slowed = true
-			break
-		}
-	}
-	var parts []string
-	for _, pair := range jobs {
-		parts = append(parts, flow(pair[0])+" ("+Cell(pair[1].Get("name"), 48)+")")
-	}
-	text := "working on " + strings.Join(parts, "; ")
-	if slowed {
-		text += ", slowed while the PC is busy"
-	}
-	return text
-}
-
-// pcWords is _pc_words: the PC from its heartbeat: lending itself or busy, whether it is working
-// (on `jobs`, the ones GitHub lists on its runners), how loaded, and when it was heard; or that it
-// has gone quiet, or why there is no heartbeat (`note`).
-func pcWords(ctx *hctx.Context, beat *pyjson.Object, note string, jobs [][2]*pyjson.Object,
-	full bool) string {
-	if beat == nil {
-		return note
-	}
-	at := clock.ParseISOValue(beat.Get("at"))
-	if at.IsZero() || ctx.Now().Sub(at) > PCQuiet {
-		return "not heard since " + clockText(ctx, at) + ": off, asleep, or its supervisor stopped"
-	}
-	mood := "busy with its owner's work"
-	if beat.Truthy("calm") {
-		mood = "calm, lending itself"
-	}
-	return mood + ", " + pcWork(beat, jobs, full) + ", " + pcLoad(beat, full) + " · heard " +
-		clockText(ctx, at)
-}
-
-// pcTitle is _pc_title: the PC's group: whether it is working, how loaded it is, from its
-// heartbeat, and when it was heard.
-func pcTitle(ctx *hctx.Context, found *Found) string {
-	return "The owner's PC: " + pcWords(ctx, found.PC, found.PCNote, pcJobsOf(found), false)
-}
-
-// pcRunners is _pc_runners: the heartbeat's runner containers (PowerShell 5.1 may write a list as
-// `{"value": [...]}`).
-func pcRunners(beat *pyjson.Object) []*pyjson.Object {
-	runners := beat.Get("runners")
-	if o, ok := runners.(*pyjson.Object); ok && o.Len() > 0 {
-		runners = o.Get("value")
-	}
-	return pyjson.Objs(runners)
-}
-
-// pcRunner is _pc_runner: the heartbeat's runner named `name`, or nil (which reads as {}).
-func pcRunner(beat *pyjson.Object, name string) *pyjson.Object {
-	for _, r := range pcRunners(beat) {
-		if n, ok := r.Get("name").(string); ok && n == name {
-			return r
-		}
-	}
-	return nil
+	return Box{[]string{title, "❌ its last run: " + Text(last.Get("conclusion"), 12), when}, "broken"}
 }
 
 // GatherHours is gather.yml's GATHER_HOURS: how long each part of a gather run plays on GitHub's
@@ -724,9 +550,8 @@ var GatherHours = 5
 // shards played, those playing and all of them.
 type hostedShards struct{ done, playing, total int }
 
-// hostedLearn is the export of the learn run that `found` read the jobs of, when its shards play
-// on GitHub's runners (#3740), where no heartbeat counts their games: each shard's job, played
-// once it has ended well. Nil while no such run was read.
+// hostedLearn is the export of the learn run that `found` read the jobs of, its shards on GitHub's
+// runners (#3740): each shard's job, played once it has ended well. Nil while no such run was read.
 func hostedLearn(found *Found) *hostedShards {
 	for _, read := range found.Read {
 		if !strings.HasSuffix(py.OrStr(read.Run.Get("path"), ""), "/"+LearnWorkflow) {
@@ -776,8 +601,8 @@ func hostedGather(found *Found) [][2]string {
 }
 
 // ProgressStart and ProgressEnd are PROGRESS_START and PROGRESS_END: the top of the issue after its
-// date: how far the training lanes have played, between these markers, so the runners' redraw keeps
-// them fresh (`refresh_runners`).
+// date: how far the training lanes have played, between these markers, so the runners' redraw
+// keeps it as fresh as the runners (`refresh_runners`).
 var (
 	ProgressStart = "<!-- jackioh-bot:progress -->"
 	ProgressEnd   = "<!-- /jackioh-bot:progress -->"
@@ -790,10 +615,10 @@ var ProgressChart = `%%{init: {"xyChart": {"height": 220}, "themeVariables": {"x
 	`{"plotColorPalette": "#d0d7de, #1f883d"}}}}%%`
 
 // Progress is progress: the top of the issue, between `PROGRESS_START` and `PROGRESS_END`: how far
-// the training lanes have played on GitHub's runners (#3740), as a Mermaid bar chart in percent, with
-// a line under it: the learn lane's export as its shards played of all of them, and each part of
-// gather as its time so far of `GatherHours`. A lane that is not playing has a bar at 0 that says so.
-// The owner's PC no longer runs either (2026-11-13).
+// the training lanes have played on GitHub's runners (#3740), as a Mermaid bar chart in percent,
+// with a line under it: the learn lane's export is its shards played of all of them, and each part
+// of gather its time so far of `GatherHours`; a lane playing nothing has a bar at 0 that says so.
+// Without `found` neither lane reads as playing.
 func Progress(ctx *hctx.Context, found *Found /* = None */) string {
 	if found == nil {
 		found = &Found{}
@@ -811,8 +636,8 @@ func Progress(ctx *hctx.Context, found *Found /* = None */) string {
 	} else {
 		bars = append(bars, bar{"learn: not playing", 0.0})
 	}
-	gatherHosted := hostedGather(found)
-	for _, part := range gatherHosted {
+	gather := hostedGather(found)
+	for _, part := range gather {
 		played, label := 0.0, "gather "+part[0]+": started"
 		if at := clock.ParseISOValue(part[1]); !at.IsZero() {
 			so := ctx.Now().Sub(at)
@@ -821,10 +646,13 @@ func Progress(ctx *hctx.Context, found *Found /* = None */) string {
 		}
 		bars = append(bars, bar{label, played})
 	}
-	if len(gatherHosted) > 0 {
+	if len(gather) > 0 {
 		notes = append(notes, "gather plays on GitHub's runners")
 	} else {
 		bars = append(bars, bar{"gather: not playing", 0.0})
+	}
+	if len(notes) == 0 {
+		notes = []string{"neither lane is playing on GitHub's runners now"}
 	}
 	title := "How far the training lanes have played, %"
 	var labels, full, values []string
@@ -841,9 +669,6 @@ func Progress(ctx *hctx.Context, found *Found /* = None */) string {
 		values = append(values, fmt.Sprintf("%.1f", v*100))
 	}
 	note := strings.Join(notes, " · ")
-	if note == "" {
-		note = "neither training lane is playing now"
-	}
 	lines := []string{ProgressStart, "```mermaid", ProgressChart, "xychart-beta horizontal",
 		`    title "` + title + `"`,
 		"    x-axis [" + strings.Join(labels, ", ") + "]", `    y-axis "% played" 0 --> 100`,
@@ -968,11 +793,10 @@ func boxSlots(ctx *hctx.Context, state *pyjson.Object, items *pyjson.Object, pla
 }
 
 // RunnerDiagram is runner_diagram: the runners as boxes, as the subscriptions are drawn: GitHub's
-// runners (at most `boxes` of them), the night box's and the Muse box's, the owner's PC with its
-// heartbeat and the gather workflow, then the jobs queued for a runner, by label.
+// runners (at most `boxes` of them), the night box's and the Muse box's, the gather workflow, then
+// the jobs queued for a runner, by label.
 func RunnerDiagram(ctx *hctx.Context, state *pyjson.Object, found *Found, boxes int) []string {
 	items := nightItems(state)
-	beat := fresh(ctx, found)
 
 	busyBox := func(run, job *pyjson.Object, named bool) Box {
 		since := clock.ParseISOValue(job.Get("started_at"))
@@ -986,9 +810,6 @@ func RunnerDiagram(ctx *hctx.Context, state *pyjson.Object, found *Found, boxes 
 			lines = []string{"<b>" + Text(job.Get("runner_name"), 34) + "</b>", "🟢 " + what}
 		}
 		lines = append(lines, Text(runFor(state, items, run), 34), Text(Step_(job, 45), 34), took)
-		if pcRunner(beat, py.OrStr(job.Get("runner_name"), "")).Truthy("throttled") {
-			return Box{append(lines, "⏸️ slowed: the PC is busy"), "paused"}
-		}
 		return Box{lines, "busy"}
 	}
 
@@ -1071,37 +892,9 @@ func RunnerDiagram(ctx *hctx.Context, state *pyjson.Object, found *Found, boxes 
 		lines = append(lines, Boxes("nj", "Other AWS labels with no job", idle)...)
 		groups = append(groups, "nj")
 	}
-	pcJobs := byPlace[3]
-	var pc []Box
-	withJobs := map[string]bool{}
-	for _, pair := range pcJobs {
-		pc = append(pc, busyBox(pair[0], pair[1], true))
-	}
-	for _, pair := range pcJobs {
-		withJobs[py.OrStr(pair[1].Get("runner_name"), "")] = true
-	}
-	for _, runner := range pcRunners(beat) {
-		if withJobs[py.OrStr(runner.Get("name"), "")] {
-			continue
-		}
-		name := "<b>" + Text(runner.Get("name"), 34) + "</b>"
-		if runner.Truthy("busy") {
-			pc = append(pc, Box{[]string{name, "🟢 in a job"}, "busy"})
-		} else {
-			pc = append(pc, Box{[]string{name, "⚪ idle, waiting", "for a " + Text(runner.Get("label"), 30) +
-				" job"}, "idle"})
-		}
-	}
-	if len(pc) == 0 {
-		why := "idle, or the PC is off"
-		if beat != nil && !beat.Truthy("calm") {
-			why = "the PC is busy"
-		}
-		pc = append(pc, Box{[]string{"<b>the owner's PC</b>", "💤 no job", why}, "closed"})
-	}
-	lines = append(lines, Boxes("pc", pcTitle(ctx, found), pc)...)
-	groups = append(groups, "pc")
-	if others := byPlace[4]; len(others) > 0 {
+	lines = append(lines, Boxes("ga", "The gather workflow", []Box{gatherBox(ctx, found)})...)
+	groups = append(groups, "ga")
+	if others := byPlace[3]; len(others) > 0 {
 		title := fmt.Sprintf("Other runners: %d busy", len(others))
 		var bs []Box
 		for _, pair := range others {
@@ -1213,8 +1006,8 @@ func RunnersSection(ctx *hctx.Context, state *pyjson.Object, found *Found /* = N
 	head = append(head, fmt.Sprintf("🟢 **%d %s busy**: ", len(busy), runnersWord)+
 		strings.Join(counts, ", ")+fmt.Sprintf(" · ⏳ **%d ", len(queued))+jobsWord+
 		" queued** for a runner · read at "+read,
-		"", fmt.Sprintf("<sub>Redrawn every %s from the runs going and queued, "+
-			"their jobs and the owner's PC's heartbeat. %s</sub>", minutes(RunnersMinutes), explained), "")
+		"", fmt.Sprintf("<sub>Redrawn every %s from the runs going and queued and their jobs. "+
+			"%s</sub>", minutes(RunnersMinutes), explained), "")
 	items := nightItems(state)
 	var rows []string
 	for _, pair := range upTo(busy, RunnerRows) {
@@ -1328,7 +1121,7 @@ func StopRed(ctx *hctx.Context, found *Found) []string {
 }
 
 // refreshRunners is refresh_runners: redraw the status issue's runners section alone, between the
-// loop's rewrites, and the PC's progress chart at its top (`progress`): the rest of the issue stays
+// loop's rewrites, and the progress chart at its top (`progress`): the rest of the issue stays
 // as the last rewrite left it, and the table lists what room it leaves. The runs it reads go to the
 // early stop of red CI first (`StopRed`), whose notes follow what it says of the issue.
 func refreshRunners(ctx *hctx.Context) string {

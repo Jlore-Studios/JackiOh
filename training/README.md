@@ -436,17 +436,14 @@ The learned evaluation (#466, `docs/learned-eval.md`) learns from self-play expo
 `cargo jackioh selfplay` plays, which `cargo jackioh positions` folds into training rows (R1006001,
 R1006003). An export is dispatched, never played on the training box, whose two vCPUs the lanes need:
 `gh workflow run selfplay.yml -f games=100000 -f seed=<base> [-f shards=80]` plays it in shards on
-GitHub's runners (free for this
-public repository; about 400 games an hour each at the AI's budget since #2628, measured on
-2026-11-12, 10 at once: 100,000 games in 80 shards of 1,250, each about 3 hours and under GitHub's
-6-hour job limit, take about a day; the owner's PC's self-hosted runner, which played them until
-#3740, takes none since 2026-11-13), and keeps each shard's log
-file as an artifact for up to 90 days. GitHub's runners are the default again since the
-organization's Team plan runs 60 hosted jobs at once (#3740), of which the training lanes take 12,
-the export's 10 and gather's 2; whatever they leave idle, CI and the bots take. On the Free plan's
-20 an export held 12, and CI waited behind it, 70 to 110 minutes a run on 2026-10-20 against 10 to
-16 without one, so from #1455 until #3740 the local runner was the default. The learn lane's own
-exports play where every job of the lane does ([`learn.md`](learn.md), How it runs). Its last job runs
+GitHub's runners (free for this public repository; about 400 games an hour each at the AI's budget
+since #2628, measured on 2026-11-12, 10 at once: 100,000 games in 80 shards of 1,250, each about 3
+hours and under GitHub's 6-hour job limit, take about a day), and keeps each shard's log file as an
+artifact for up to 90 days. The organization's Team plan runs 60 hosted jobs at once (#3740), of
+which the training lanes take 12, the export's 10 and gather's 2; whatever they leave idle, CI and
+the bots take. On the Free plan's 20 an export held 12, and CI waited behind it, 70 to 110 minutes a
+run on 2026-10-20 against 10 to 16 without one, so from #1455 until #3740 the exports played on the
+owner's PC. The learn lane's own exports play the same way ([`learn.md`](learn.md), How it runs). Its last job runs
 `positions` over the whole export and writes the counts (games, positions, games that no longer
 replay) and the games an hour to the run's summary. The same base and game numbers always play the
 same games, so an export can be played again on any runner, and a base never names a gate's
