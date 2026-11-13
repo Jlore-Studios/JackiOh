@@ -16321,24 +16321,22 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "apps/web/src/wire/generated/PlayerView.ts",
-            "crates/engine/src/view_for.rs",
-            "crates/engine/src/wire/view.rs",
+            "apps/web/src/game/actions.test.ts",
             "spec/06-keywords.md"
           ],
-          "from": "a7236b3e7031f475585ee40cf27c7994149789ac",
-          "main": "1d108b9acc0690320a6dfff5156876777337838a"
+          "from": "3a2434d007ea7b3cbb29e368d4f5cc446226969b",
+          "main": "40265a66d7ae6218e1043d0eb17d17e1106356e9"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-6",
-            "run": "43367489402",
+            "run": "43401414929",
             "tier": "strong"
           }
         ],
-        "sha": "3a2434d007ea7b3cbb29e368d4f5cc446226969b",
+        "sha": "86eb4fe40913999a56c307287b5fc530d269906d",
         "tiers": {
           "claude": "strong"
         }
