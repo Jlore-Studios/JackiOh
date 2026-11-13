@@ -17680,15 +17680,8 @@
       ]
     },
     "3837": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43417758402",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-13T11:41:13Z",
-        "until": "2026-11-13T12:11:13Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -17700,10 +17693,9 @@
         "reason": "planned on opus",
         "trail": "- Bash: {\"command\": \"git log --oneline -1; grep -n \\\"===== FINAL PLAN (as delivered) =====\\\" .bot-plan.md; ls /tmp/s3837-final.md 2>/dev/null\", \"description\": \"Check branch and saved final plan\"}\n- tool error: Exit code 2 5ab816ceda Patch: Magic Jammed targets any face-down backrow card, a Cloaked one included (#3797)\n- Bash: {\"command\": \"wc -l .bot-plan.md; grep -n \\\"^## \\\\|^=====\\\\|^\\\\*\\\\*Goal\\\\|^\\\\*\\\\*Steps\\\" .bot-plan.md | head -30\", \"description\": \"Inspect current draft structure\"}\n- Bash: {\"command\": \"git diff --stat be9a6505ce HEAD -- crates/cards/catalog.json crates/engine/src/play_steps.rs crates/engine/src/script.rs crates/engine/src/subsystems/fuse.rs crates/cards/src/history.rs \u2026\n- Bash: {\"command\": \"git diff be9a6505ce HEAD -- spec/08-catalog.md | grep \\\"^[-+]|\\\" | cut -c1-80; grep -n \\\"R3837\\\\|R3837000\\\" -r spec/pending | head -2; git diff be9a6505ce HEAD --stat | tail -1; git diff\u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'PLANEOF'\\n\\n## Session 3: branch now at 5ab816ceda; nothing under the planned files moved (main touched only Magic Jammed's \\u00a78 row, invariants.rs, turn_clock_\u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'PLANEOF'\\n\\n===== FINAL PLAN (as delivered, session 3) =====\\n**Goal.** Ship the fifth Stinkyscape balance pass on 29 cards, base and Radiant, in catalog, script, \u2026\n- said: **Goal.** Ship the fifth Stinkyscape balance pass on 29 cards, base and Radiant, in catalog, script, tests, \u00a78/\u00a77 rows and Chinese text: - the issue's number table; - Tribute 1 on Ocean Tsunami; - Silly Silas without Crater, its base face summoned for the opponent (Lava Golem's landing without the \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-13T09:28:39Z",
       "owner_why": "it plans it",
@@ -17716,9 +17708,9 @@
       "provider": "claude-4",
       "queued_at": "2026-11-13T08:22:23Z",
       "requested_by": "jgoetzmann",
-      "run_id": "43417758402",
+      "run_id": "pending:b88adeb7-1794570229",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-13T11:31:29Z",
+      "started_at": "2026-11-13T11:44:25Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 6849601821
@@ -18059,9 +18051,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T11:32:20Z",
+    "at": "2026-11-13T11:44:25Z",
     "url": "",
-    "what": "revise #3818 on claude-6"
+    "what": "build #3837 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-13T11:19:48Z",
