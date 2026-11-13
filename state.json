@@ -14295,7 +14295,7 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-4",
-      "run_id": "pending:99cd34b2-1794559752",
+      "run_id": "43396295908",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-13T08:49:44Z",
       "stop_requested": false,
