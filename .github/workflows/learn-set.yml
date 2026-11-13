@@ -4,9 +4,9 @@
 # export plays the new one, as gather.yml plays each new patch and no micro.
 #
 # Every learn run plays the newest version as it starts (learn.yml, plan: main as it is then), so a
-# micro reaches the next run, at most one run (about a day, three days on the PC) on, and stops
-# nothing. Micros ship several times a day and an export takes about a day on GitHub's runners
-# (#3740; three days of the PC), so a lane that started again on each would seldom finish one. A patch reprints 15 card families or more, or plays 50 cards
+# micro reaches the next run, at most one run (about a day) on, and stops nothing. Micros ship
+# several times a day and an export takes about a day on GitHub's runners (#3740), so a lane that
+# started again on each would seldom finish one. A patch reprints 15 card families or more, or plays 50 cards
 # differently (R2499000), and a set brings a set's cards (v0.5.0: 231 changes): enough that an
 # export on the version before learns stale worths. So a run that has played fewer than
 # LEARN_SET_KEEP_SHARDS of its export's shards is cancelled (the shards that finished stay its
@@ -17,7 +17,7 @@
 # (`export_run`) and one that planned after the patch shipped. A run waiting to start plans on the
 # new patch when it does.
 #
-# A few API calls, on GitHub's runner, whichever runner the export it may stop plays on.
+# A few API calls, on GitHub's runner.
 name: learn set
 
 on:
@@ -75,7 +75,7 @@ jobs:
               gh api "repos/$REPO/actions/runs/$id/jobs?per_page=100" --jq '
                 ([.jobs[] | select(.name == "plan") | .started_at // empty] | first // ""),
                 ([.jobs[] | select(.name | startswith("export / "))] | length),
-                ([.jobs[] | select(.name | test("^export / round [0-9]+ / "))
+                ([.jobs[] | select(.name | test("^export / .+ / shard from "))
                   | select(.conclusion == "success")] | length),
                 ([.jobs[] | select(.name | startswith("retrain"))] | length)')
             if [ -z "$planned" ]; then

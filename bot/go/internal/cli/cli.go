@@ -939,8 +939,8 @@ func companions(cfg *config.Config, doSweep bool, argv []string /* = ("dashboard
 // else does: a rewrite every `--rewrite-every` seconds (as often as `--every` when unset), with
 // the newest sections and count, and the runners redrawn between. Each of these keeps its pace
 // from when it started; one still going when the next is due skips that one. While the bot's
-// token has fewer than `RewriteRateFloor` calls left this hour, the rewrites come at the sweep's
-// pace. Once `--for` has passed, nothing new starts, and the loop ends when what is going ends.
+// token has fewer than `RewriteRateFloor` REST calls left this hour, the rewrites and the runners'
+// redraws come at the sweep's pace. Once `--for` has passed, nothing new starts, and the loop ends when what is going ends.
 func CmdDashboard(cfg *config.Config, args *Args) int {
 	if args.SectionOnly {
 		say(dashboard.Section(Ctx(cfg, false)))
@@ -961,10 +961,11 @@ func CmdDashboard(cfg *config.Config, args *Args) int {
 // its runner gate (#3675). A variable so the tests run each in place, when the clock gives it.
 var Background = func(f func()) { go f() }
 
-// RewriteRateFloor is how many calls the bot's token must have left this hour for the status loop
-// to rewrite the issue every `--rewrite-every` seconds (#3675); below it, the loop rewrites at its
-// sweep's pace (`--every`) until the hour's calls come back, so the issue never spends what the
-// night runs need. GitHub gives a token 5,000 an hour.
+// RewriteRateFloor is how many REST calls the bot's token must have left this hour for the status
+// loop to rewrite the issue every `--rewrite-every` seconds and redraw its runners every
+// `--runners-every` (#3675, #3760); below it, the loop does both at its sweep's pace (`--every`)
+// until the hour's calls come back, so the issue never spends what the night runs need. GitHub
+// gives a token 5,000 REST calls an hour, and GraphQL's 5,000 points apart.
 var RewriteRateFloor = 1500
 
 // OthersRecordEvery is how often the loop's count asks the other bots for their records (Squishy's
@@ -1015,6 +1016,7 @@ func onTheClock(due, every, now float64) float64 {
 }
 
 func dashboardLoop(cfg *config.Config, args *Args) int {
+	rateHour = time.Time{} // each loop counts its own hours (`rateNote`)
 	every := float64(args.Every)
 	rewriteEvery := float64(max(0, args.RewriteEvery))
 	if rewriteEvery == 0 {
@@ -1116,6 +1118,10 @@ func dashboardLoop(cfg *config.Config, args *Args) int {
 		}
 		if low {
 			rewriteJob.due = max(rewriteJob.due, begun+every)
+			if runnersJob != nil {
+				// Each redraw reads the jobs of up to `dashboard.RunnerRuns` runs (#3760).
+				runnersJob.due = max(runnersJob.due, begun+every)
+			}
 		}
 		mu.Unlock()
 	}
@@ -1237,28 +1243,76 @@ func diskTick(cfg *config.Config) {
 	}
 }
 
-// RateLeft is how many calls a token has left this hour, as GitHub's last answer to it gave them
-// (`gh.Rate`, #3675); a variable so the tests can replace it.
+// RateLeft is how many REST calls a token has left this hour, as GitHub's last answer to it gave
+// them (`gh.Rate`, #3675); a variable so the tests can replace it.
 var RateLeft = gh.Rate.Left
 
-// rateNote says how many calls the bot's token has left this hour (`RateLeft`), and whether that
-// is under `RewriteRateFloor`. Nothing is said before any answer gave them.
+// GraphqlLeft is how many of GraphQL's points a token has left this hour, which GitHub counts
+// apart from its REST calls (#3760); a variable so the tests can replace it.
+var GraphqlLeft = func(token string) (gh.RateLeft, bool) { return gh.Rate.LeftOf(token, gh.GraphQL) }
+
+// RateSpent is the REST calls a token cost this process by path since it was last asked, and
+// forgets them (`gh.Rate.Take`); a variable so the tests can replace it.
+var RateSpent = func(token string) map[string]int { return gh.Rate.Take(token, gh.REST) }
+
+// RateSpentShown is how many of the loop's costliest paths its hourly line names.
+var RateSpentShown = 8
+
+// rateHour is the end of the REST hour the loop's counted calls fall in (`rateNote`), only ever
+// read and written on the loop's own thread.
+var rateHour time.Time
+
+// rateNote says how many REST calls the bot's token has left this hour (`RateLeft`), and GraphQL's
+// points beside them, and whether the calls are under `RewriteRateFloor`. Once REST's hour has
+// turned, it also says what this loop spent of the one before, by path (#3760: the token ran out
+// near each hour's end, at 8 runs and at 16). Nothing is said before any answer gave them.
 func rateNote(cfg *config.Config, every float64) bool {
-	left, ok := RateLeft(cfg.WriteToken())
+	token := cfg.WriteToken()
+	left, ok := RateLeft(token)
 	if !ok {
 		return false
 	}
+	local := func(at time.Time) string { return dashboard.Local(Ctx(cfg, false), at).Format("15:04") }
+	if !left.Reset.IsZero() && !left.Reset.Equal(rateHour) {
+		if !rateHour.IsZero() {
+			if line := spentLine(RateSpent(token), local(rateHour)); line != "" {
+				say(line)
+			}
+		}
+		rateHour = left.Reset
+	}
 	low := left.Remaining < RewriteRateFloor
-	line := fmt.Sprintf("rate: the bot's token has %d of %d calls left this hour", left.Remaining, left.Limit)
+	line := fmt.Sprintf("rate: the bot's token has %d of %d REST calls left this hour", left.Remaining, left.Limit)
 	if !left.Reset.IsZero() {
-		line += ", until " + dashboard.Local(Ctx(cfg, false), left.Reset).Format("15:04")
+		line += ", until " + local(left.Reset)
+	}
+	if points, ok := GraphqlLeft(token); ok {
+		line += fmt.Sprintf("; GraphQL %d of %d", points.Remaining, points.Limit)
+		if !points.Reset.IsZero() {
+			line += ", until " + local(points.Reset)
+		}
 	}
 	if low {
-		line += fmt.Sprintf(": under %d, so the issue is rewritten every %g seconds, the sweep's pace",
-			RewriteRateFloor, every)
+		line += fmt.Sprintf(": under %d REST calls, so the issue and its runners are redrawn every %g "+
+			"seconds, the sweep's pace", RewriteRateFloor, every)
 	}
 	say(line)
 	return low
+}
+
+// spentLine is the loop's line on what it spent of a REST hour that ended at `until`: its calls
+// and its costliest paths, or "" when it spent none.
+func spentLine(spent map[string]int, until string) string {
+	total, top := gh.TopSpent(spent, RateSpentShown)
+	if total == 0 {
+		return ""
+	}
+	var paths []string
+	for _, p := range top {
+		paths = append(paths, fmt.Sprintf("%d %s", p.Calls, p.Path))
+	}
+	return fmt.Sprintf("rate: this loop spent %d of the bot's REST calls in the hour to %s; the most: %s",
+		total, until, strings.Join(paths, ", "))
 }
 
 // gateTick is a tick of the runner gate between the loop's rewrites (`cigate.Tick`), after the look

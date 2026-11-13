@@ -780,9 +780,6 @@ type Config struct {
 	RunID       string            // default: ""
 	ServerURL   string            // default: "https://github.com"
 	NowOverride string            // default: ""
-	// PCGist is the gist the owner's PC writes its heartbeat to (the repository variable
-	// JACKIOH_PC_GIST, which its supervisor sets; bot/machine/README.md, The local runner).
-	PCGist string // default: ""
 	// Secrets says which provider secrets the workflow has; the plan job learns that, never their
 	// values.
 	Secrets *providers.Secrets // default: field(default_factory=lambda: Secrets(frozenset(), False))

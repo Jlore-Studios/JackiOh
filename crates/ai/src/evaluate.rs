@@ -21,8 +21,8 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use indexmap::IndexSet;
 use jackioh_engine::config::{
-    CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT, JADE_BEAUTY_AT,
-    TURN_CAP_PLAYER_TURNS,
+    BRITTLE_TICK, CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT,
+    JADE_BEAUTY_AT, TURN_CAP_PLAYER_TURNS,
 };
 use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
 use jackioh_engine::float::float_cuts_in_hand;
@@ -33,15 +33,15 @@ use jackioh_engine::{
     PLAYER_IDS, Phase, PlayerId, PlayerState, Position, Rng, Row, SandboxOp, SeatOutcome, SettleOptions,
     Slumber, SpawnZone, Tag, TriggerHolder, TriggerZone, UnitView, ZoneName, acting_with_flag,
     active_brittle_count, active_units_of, animated_with_stats, armor_of, attack_restriction,
-    attacks_per_turn, awaken_card, backrow_is_public, board_totals, cannot_attack, card_at, card_keywords,
-    card_type_of_face, credit_lapsing, death_hook_of, dormant_starship_of, effective_cost, effective_life,
-    exit_mark, face_of, find_def, find_instance, find_instance_mut, first_entry_zone, frozen_next_turn,
-    gauntlet_acts, has_keyword, heal_multiplier_of, hero_armor_of, is_extra_turn_card, is_slumbering,
-    is_standing_unit, is_starship_piece, is_temporary_card, launched_starship_of, left_field_after,
-    legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces,
-    pile_at, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of, settle, slots_of,
-    stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back, trigger_holders_with_hook, unit_has,
-    unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold,
+    attacks_per_turn, awaken_card, backrow_is_public, board_totals, brittle_due_by, cannot_attack, card_at,
+    card_keywords, card_type_of_face, credit_lapsing, death_hook_of, dormant_starship_of, effective_cost,
+    effective_life, exit_mark, face_of, find_def, find_instance, find_instance_mut, first_entry_zone,
+    frozen_next_turn, gauntlet_acts, has_keyword, heal_multiplier_of, hero_armor_of, is_extra_turn_card,
+    is_slumbering, is_standing_unit, is_starship_piece, is_temporary_card, launched_starship_of,
+    left_field_after, legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of,
+    own_cost, pierces, pile_at, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of,
+    settle, slots_of, stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back,
+    trigger_holders_with_hook, unit_has, unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold,
 };
 use serde::{Deserialize, Serialize};
 
@@ -132,6 +132,42 @@ pub(crate) fn can_swing(state: &GameState, unit: &CardInstance, view: &UnitView)
     !has_keyword(&view.keywords, KeywordKind::CantAttack)
         && !cannot_attack(state, unit)
         && !frozen_next_turn(state, unit)
+}
+
+/// R845, §2.2: every turn start, an extra turn's too, numbers the next turn (`state.turn`). The player not
+/// on turn starts at the next number; the player on turn at the one after the other player's turn.
+const NEXT_START_TURNS: i32 = 1;
+const OWN_NEXT_START_TURNS: i32 = 2;
+
+/// R3793000: whether the unit's own Brittle tick destroys it before its controller's next attacks:
+/// its count in force is at most one tick (`BRITTLE_TICK`; a count at 0 crumbles at its tick too), that
+/// tick is due (`brittle_due_by`) at the controller's next start, and it is not Indestructible (R46). With
+/// `on_turn_swings` the player on turn still has this turn's attacks to come, after this turn's tick, so
+/// none of its units crumbles first. An extra turn owed to the player on turn starts as its turn ends
+/// (R846). One owed to the other player only puts a start later, and a tick due earlier is due later too,
+/// so it is left out: it can only leave a doomed unit counted, as before.
+pub(crate) fn crumbles_before_swing(
+    state: &GameState,
+    unit: &CardInstance,
+    view: &UnitView,
+    on_turn_swings: bool,
+) -> bool {
+    if !active_brittle_count(unit).is_some_and(|count| count <= BRITTLE_TICK)
+        || has_keyword(&view.keywords, KeywordKind::Indestructible)
+    {
+        return false;
+    }
+    let on_turn = state.active == unit.controller;
+    if on_turn && on_turn_swings {
+        return false;
+    }
+    let owes_extra = state.players[unit.controller].extra_turns.unwrap_or(0) > 0;
+    let wait = if on_turn && !owes_extra {
+        OWN_NEXT_START_TURNS
+    } else {
+        NEXT_START_TURNS
+    };
+    brittle_due_by(unit, state.turn + wait)
 }
 
 /// R49: a unit with Deft, read through the layers, in Defense Position. Its switch to Attack spends
@@ -939,8 +975,16 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
 /// Taunts soak the smallest first (`damage_past_taunts`); each remaining attack goes through
 /// `subsystems::projected_hero_damage` (armor, which a Pierce hit skips, R346, and the Anti-oneshot cap), summed.
 /// With `w.gauntlet_bars_face_attacks`, an attack `attack_restriction` bars from the hero (a Unit inside The
-/// Gauntlet, R1849005) lands nothing past the Taunts.
+/// Gauntlet, R1849005) lands nothing past the Taunts. With `w.brittle_crumbles_before_swing`, a unit its own
+/// Brittle tick destroys first counts none (`crumbles_before_swing`, R3793000), read as at the end of the turn
+/// under way: the player on turn has made this turn's attacks.
 pub fn face_threat_with(state: &GameState, attacker: PlayerId, w: &EvalWeights) -> i32 {
+    face_threat_from(state, attacker, w, false)
+}
+
+/// `face_threat_with`, `on_turn_swings` saying whether the player on turn still has this turn's attacks to
+/// come (R3793000). `evaluate_priced` reads it off its `NextSwing`.
+fn face_threat_from(state: &GameState, attacker: PlayerId, w: &EvalWeights, on_turn_swings: bool) -> i32 {
     let mut attacks: Vec<(&CardInstance, i32, bool)> = Vec::new();
     // R1849005, #3287: while The Gauntlet acts, `attack_restriction` bars a Unit in its lanes from the hero.
     // The board is asked once; a unit's restriction only then, so a board with no Gauntlet reads as before
@@ -956,6 +1000,10 @@ pub fn face_threat_with(state: &GameState, attacker: PlayerId, w: &EvalWeights) 
             continue;
         }
         if !can_swing(state, unit, &view) {
+            continue;
+        }
+        // R3793000, #3793: a unit its own Brittle tick destroys before it can swing deals nothing.
+        if w.brittle_crumbles_before_swing && crumbles_before_swing(state, unit, &view, on_turn_swings) {
             continue;
         }
         // R636: the unit's next turn starts with its exertion reset, so a Windfury unit swings twice.
@@ -2130,13 +2178,15 @@ pub fn evaluate_priced(
         };
     }
 
-    let enemy_damage = face_threat_with(state, opp, w);
-    let our_damage = face_threat_with(state, seat, w);
+    let seat_first = next == NextSwing::Seat;
+    // R3793000: the player on turn still swings this turn when it is the one `next` says swings first.
+    let on_turn_swings = (state.active == seat) == seat_first;
+    let enemy_damage = face_threat_from(state, opp, w, on_turn_swings);
+    let our_damage = face_threat_from(state, seat, w, on_turn_swings);
     // §13.4, R964000: a hero's life is `effective_life`, own HP and the team's pool in a Duos duel,
     // the hero's health in a 1v1 game.
     let seat_life = effective_life(state, seat);
     let opp_life = effective_life(state, opp);
-    let seat_first = next == NextSwing::Seat;
     let threat_share = if seat_first { w.answerable_threat } else { 1.0 };
     let threat = threat_share
         * (if enemy_damage >= seat_life {

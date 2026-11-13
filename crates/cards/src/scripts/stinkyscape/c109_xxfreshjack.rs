@@ -141,14 +141,9 @@ mod tests {
         let pending = s.state().pending.clone().expect("the Discover");
         assert_eq!(pending.kind, PromptKind::Discover);
         assert_eq!(pending.player_id, P1);
-        pending
-            .options
-            .iter()
-            .map(|option| match &option.selection {
-                Selection::Mode { option } => option.clone(),
-                other => panic!("a card option, not {other:?}"),
-            })
-            .collect()
+        let options = s.prompt_modes();
+        assert_eq!(options.len(), pending.options.len(), "a card option each");
+        options
     }
 
     #[test]

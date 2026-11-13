@@ -866,7 +866,8 @@ func TestWorkflows_GatherPlaysTheNewestMainWithoutAPause(t *testing.T) {
 	assertNotIn(t, "  push:", text)
 	job := workflowsJob(t, text, "gather")
 	assertIn(t, "ref: ${{ github.sha }}", job)
-	assertIn(t, "timeout-minutes: ${{ vars.TRAINING_ON_PC == 'true' && 1440 || 350 }}", job)
+	assertIn(t, "runs-on: ubuntu-latest", job)
+	assertIn(t, "timeout-minutes: 350", job)
 	hours := regexp.MustCompile(`(?m)^  GATHER_HOURS: "(\d+)"$`).FindStringSubmatch(text)
 	assertTrue(t, hours != nil, "GATHER_HOURS")
 	// Its hours, and half an hour for the build and the last batch's overrun, within the timeout.
@@ -882,16 +883,22 @@ func TestWorkflows_GatherPlaysTheNewestMainWithoutAPause(t *testing.T) {
 }
 
 // #3740: the training lanes hold 12 of the organization's 60 hosted jobs, the learn lane's export
-// 10 shards at a time and the gather lane's two parts, and on the PC two shards and one part.
+// 10 shards at a time and the gather lane's two parts, and every job of theirs runs on GitHub's
+// runners: the owner's PC no longer runs them.
 func TestWorkflows_TheTrainingLanesHoldTwelveOfGithubsRunners(t *testing.T) {
 	shards := workflowsJob(t, workflowsRead(t, "selfplay-shards.yml"), "shard")
-	assertIn(t, "max-parallel: ${{ inputs.runner == 'ubuntu-latest' && 10 || 2 }}", shards)
+	assertIn(t, "max-parallel: 10\n", shards)
 	gather := workflowsJob(t, workflowsRead(t, "gather.yml"), "gather")
-	assertIn(t, `part: ${{ fromJSON(vars.TRAINING_ON_PC == 'true' && '[1]' || '[1, 2]') }}`, gather)
-	learn := workflowsRead(t, "learn.yml")
-	on := "${{ vars.TRAINING_ON_PC == 'true' && 'jackioh-selfplay-local' || 'ubuntu-latest' }}"
-	assertEqual(t, strings.Count(learn, "    runs-on: "+on+"\n"), 5)
-	assertIn(t, "      runner: "+on+"\n", workflowsJob(t, learn, "export"))
+	assertIn(t, "part: [1, 2]\n", gather)
+	assertEqual(t, strings.Count(workflowsRead(t, "learn.yml"), "    runs-on: ubuntu-latest\n"), 5)
+	assertEqual(t, strings.Count(workflowsRead(t, "selfplay.yml"), "    runs-on: ubuntu-latest\n"), 3)
+	for _, name := range []string{"learn.yml", "selfplay.yml", "selfplay-shards.yml", "gather.yml"} {
+		text := workflowsRead(t, name)
+		assertNotIn(t, "TRAINING_ON_PC", text)
+		assertNotIn(t, "jackioh-selfplay-local", text)
+		assertNotIn(t, "inputs.runner", text)
+		assertTrue(t, workflowsLinted(t, name))
+	}
 }
 
 // workflowsGatherPlay is the name of gather.yml's step that plays and files the games.
@@ -917,8 +924,9 @@ func TestWorkflows_GatherAndTheLearnShardsFileTheirGamesAsTheyPlay(t *testing.T)
 	assertIn(t, `"$RUNNER_TEMP/training/file-records.sh" "$bin/jackioh-server" "$records"`, shard)
 
 	selfplay := workflowsRead(t, "selfplay.yml")
-	assertEqual(t, strings.Count(selfplay, "      file_every: ${{ inputs.file_every }}\n"), 5)
-	assertEqual(t, strings.Count(selfplay, "      PRODUCTION_STATS_IMPORT_DATABASE_URL: ${{ secrets.PRODUCTION_STATS_IMPORT_DATABASE_URL }}\n"), 5)
+	calls := workflowsJob(t, selfplay, "shards")
+	assertIn(t, "      file_every: ${{ inputs.file_every }}\n", calls)
+	assertIn(t, "      PRODUCTION_STATS_IMPORT_DATABASE_URL: ${{ secrets.PRODUCTION_STATS_IMPORT_DATABASE_URL }}\n", calls)
 	assertIn(t, "training/file-records.sh", workflowsJob(t, selfplay, "build"))
 
 	learn := workflowsRead(t, "learn.yml")

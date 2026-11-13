@@ -718,3 +718,51 @@ mod r783008_leaving_unrevealed {
         state.rng_cursor = rng.cursor();
     }
 }
+
+mod r3777000_a_set_card_is_a_backrow_card {
+    use super::*;
+
+    /// The backrow cards P2 may name for "target backrow card" (#36 Magic Jammed's declaration), either side.
+    fn backrow_picks(state: &mut GameState) -> Vec<String> {
+        let declarer = in_hand(state, &plain_spell().id, P2);
+        let decl = TargetDecl::target(1, 1, json!({ "side": "any", "of": ["backrow"] }));
+        jackioh_engine::play_choices::legal_selections_for(state, P2, &declarer, &decl)
+            .into_iter()
+            .filter_map(|selection| match selection {
+                Selection::Instance { instance_id } => Some(instance_id),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn r3777000_a_set_unit_spell_and_field_spell_are_each_a_backrow_card_to_target() {
+        let mut state = playing("r3777000-set");
+        state.players.p1.mana.current = 10;
+        state.players.p1.mana.max = 10;
+        let mut set = Vec::new();
+        for (def, lane) in [(cloaked_unit(), 2), (cloaked_bolt(), 3), (cloaked_field(), 4)] {
+            let card = in_hand(&mut state, &def.id, P1);
+            set.push(cloak(&mut state, &card.id, lane).id);
+        }
+
+        let picks = backrow_picks(&mut state);
+        for id in &set {
+            assert!(picks.contains(id), "{id} among {picks:?}");
+        }
+    }
+
+    #[test]
+    fn r3777000_revealed_into_a_unit_zone_the_unit_is_no_backrow_card() {
+        let mut state = playing("r3777000-revealed");
+        let unit = in_hand(&mut state, &cloaked_unit().id, P1);
+        let set = cloak(&mut state, &unit.id, 2);
+        assert!(backrow_picks(&mut state).contains(&set.id));
+
+        state = act(&state, reveal_body(&set.id, "p1"));
+        assert_eq!(answer_keys(&mut state, &["hero:p2"]).error, None);
+
+        assert!(state.players.p1.backrow[1].is_none());
+        assert!(!backrow_picks(&mut state).contains(&set.id));
+    }
+}

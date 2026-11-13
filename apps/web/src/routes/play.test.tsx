@@ -23,6 +23,7 @@ import { expireRead, keepRead } from "../net/readCache.ts";
 import { clearSession, writeSession } from "../net/session.ts";
 import {
   ApiRequestError,
+  ApiUnreachableError,
   cancelRoom,
   createRoom,
   dequeue,
@@ -48,6 +49,7 @@ import { expectSkeleton } from "../test/skeleton.ts";
 import { currentCatalog } from "../game/currentCatalog.ts";
 import { PLAY_LEAN_NEWEST_KEY, PLAY_LEAN_SET_KEY, leanLabel } from "../game/LeanNewest.tsx";
 import PlayRoute, {
+  LOBBY_UNREACHABLE_AFTER_READS,
   MATCH_FOUND_STATUS,
   MODE_LABEL,
   PLAY_CHOICE_KEY,
@@ -336,6 +338,8 @@ describe("R1578000 the Play hub", () => {
     // B13: the Play hub links the Dungeon run.
     [playTestid.dungeon, paths.dungeon],
     [playTestid.together, paths.together],
+    // #3727: daily games, beside Play together.
+    [playTestid.daily, paths.daily],
     [playTestid.replays, paths.replays],
   ];
 
@@ -1526,6 +1530,146 @@ describe("R3207000 the queue readout's pace", () => {
     await settle({ advance: 0 });
     await settle({ advance: 3 * POPULATION_MS });
     expect(vi.mocked(getPopulation)).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("R3792000 the wait says when the server cannot be reached", () => {
+  const ACCOUNT_MS = SERIES_POLL_SECONDS * 1000;
+  const NOTICE = "Can't reach the server. Still trying…";
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const down = (): void => {
+    vi.mocked(getMe).mockRejectedValue(new ApiUnreachableError(new TypeError("Failed to fetch")));
+  };
+
+  /** Mount the queue wait and let `reads` account reads pass (the mount's among them). */
+  async function waitReads(reads: number): Promise<void> {
+    rememberQueued("bo1");
+    render(<PlayRoute token={TOKEN} />);
+    await settle({ advance: 0 });
+    for (let i = 1; i < reads; i += 1) await settle({ advance: ACCOUNT_MS });
+  }
+
+  it("R3792000 the constant's count of unreachable reads shows the notice and keeps the queue line", async () => {
+    down();
+    await waitReads(LOBBY_UNREACHABLE_AFTER_READS);
+    expect(vi.mocked(getMe)).toHaveBeenCalledTimes(LOBBY_UNREACHABLE_AFTER_READS);
+    const notice = screen.getByTestId(playTestid.unreachable);
+    expect(notice).toHaveTextContent(NOTICE);
+    expect(notice).toHaveAttribute("role", "status");
+    expect(screen.getByTestId(playTestid.status)).toHaveTextContent(`In the ${MODE_LABEL.bo1} queue.`);
+    expect(screen.getByTestId(playTestid.searching)).toBeInTheDocument();
+  });
+
+  it("R3792000 fewer failed reads than the constant show nothing", async () => {
+    down();
+    await waitReads(LOBBY_UNREACHABLE_AFTER_READS - 1);
+    expect(vi.mocked(getMe)).toHaveBeenCalledTimes(LOBBY_UNREACHABLE_AFTER_READS - 1);
+    expect(screen.queryByTestId(playTestid.unreachable)).toBeNull();
+  });
+
+  it("R3792000 a good read after the notice clears it and starts the count again", async () => {
+    down();
+    await waitReads(LOBBY_UNREACHABLE_AFTER_READS);
+    expect(screen.getByTestId(playTestid.unreachable)).toBeInTheDocument();
+
+    vi.mocked(getMe).mockResolvedValue({ ...me(null), queued: true });
+    await settle({ advance: ACCOUNT_MS });
+    expect(screen.queryByTestId(playTestid.unreachable)).toBeNull();
+
+    down();
+    for (let i = 1; i < LOBBY_UNREACHABLE_AFTER_READS; i += 1) await settle({ advance: ACCOUNT_MS });
+    expect(screen.queryByTestId(playTestid.unreachable)).toBeNull();
+    await settle({ advance: ACCOUNT_MS });
+    expect(screen.getByTestId(playTestid.unreachable)).toBeInTheDocument();
+  });
+
+  it("R3792000 reads saying the ticket is gone still end the wait after the notice", async () => {
+    down();
+    await waitReads(LOBBY_UNREACHABLE_AFTER_READS);
+    expect(screen.getByTestId(playTestid.unreachable)).toBeInTheDocument();
+
+    vi.mocked(getMe).mockResolvedValue({ ...me(null), queued: false });
+    for (let i = 0; i < QUEUE_ENDED_AFTER_READS; i += 1) await settle({ advance: ACCOUNT_MS });
+    expect(screen.getByText("Your queue expired. Find a match to queue again.")).toBeInTheDocument();
+    expect(screen.queryByTestId(playTestid.unreachable)).toBeNull();
+    expect(readQueued()).toBeNull();
+  });
+
+  it("R3792000 a read the server refused with a 4xx is not an unreachable one", async () => {
+    vi.mocked(getMe).mockRejectedValue(new ApiRequestError(403, { code: "forbidden", message: "No." }));
+    await waitReads(LOBBY_UNREACHABLE_AFTER_READS + 2);
+    expect(vi.mocked(getMe)).toHaveBeenCalledTimes(LOBBY_UNREACHABLE_AFTER_READS + 2);
+    expect(screen.queryByTestId(playTestid.unreachable)).toBeNull();
+  });
+
+  it("R3846000 a run of 5xx answers shows the notice like unreachable reads", async () => {
+    vi.mocked(getMe).mockRejectedValue(new ApiRequestError(503, { code: "unavailable", message: "Try again." }));
+    await waitReads(LOBBY_UNREACHABLE_AFTER_READS);
+    expect(vi.mocked(getMe)).toHaveBeenCalledTimes(LOBBY_UNREACHABLE_AFTER_READS);
+    expect(screen.getByTestId(playTestid.unreachable)).toHaveTextContent(NOTICE);
+    expect(screen.getByTestId(playTestid.status)).toHaveTextContent(`In the ${MODE_LABEL.bo1} queue.`);
+  });
+
+  it("R3846000 fewer 5xx answers than the constant show nothing", async () => {
+    vi.mocked(getMe).mockRejectedValue(new ApiRequestError(500, { code: "internal", message: "Oops." }));
+    await waitReads(LOBBY_UNREACHABLE_AFTER_READS - 1);
+    expect(vi.mocked(getMe)).toHaveBeenCalledTimes(LOBBY_UNREACHABLE_AFTER_READS - 1);
+    expect(screen.queryByTestId(playTestid.unreachable)).toBeNull();
+  });
+
+  it("R3846000 a 4xx answer after the notice clears it and starts the count again", async () => {
+    const unavailable = new ApiRequestError(503, { code: "unavailable", message: "Try again." });
+    vi.mocked(getMe).mockRejectedValue(unavailable);
+    await waitReads(LOBBY_UNREACHABLE_AFTER_READS);
+    expect(screen.getByTestId(playTestid.unreachable)).toBeInTheDocument();
+
+    vi.mocked(getMe).mockRejectedValue(new ApiRequestError(401, { code: "unauthorized", message: "No." }));
+    await settle({ advance: ACCOUNT_MS });
+    expect(screen.queryByTestId(playTestid.unreachable)).toBeNull();
+
+    vi.mocked(getMe).mockRejectedValue(unavailable);
+    for (let i = 1; i < LOBBY_UNREACHABLE_AFTER_READS; i += 1) await settle({ advance: ACCOUNT_MS });
+    expect(screen.queryByTestId(playTestid.unreachable)).toBeNull();
+    await settle({ advance: ACCOUNT_MS });
+    expect(screen.getByTestId(playTestid.unreachable)).toBeInTheDocument();
+  });
+
+  it("R3846000 a mixed run of transport failures and 5xx answers counts together", async () => {
+    vi.mocked(getMe)
+      .mockRejectedValueOnce(new ApiUnreachableError(new TypeError("Failed to fetch")))
+      .mockRejectedValue(new ApiRequestError(502, { code: "bad_gateway", message: "Try again." }));
+    await waitReads(LOBBY_UNREACHABLE_AFTER_READS);
+    expect(vi.mocked(getMe)).toHaveBeenCalledTimes(LOBBY_UNREACHABLE_AFTER_READS);
+    expect(screen.getByTestId(playTestid.unreachable)).toHaveTextContent(NOTICE);
+  });
+
+  it("R3792000 a room wait shows the notice too", async () => {
+    vi.mocked(createRoom).mockResolvedValue({ code: "QRST", expiresAt: 0, mode: "random" });
+    vi.mocked(getMe).mockResolvedValue({ ...me(null), queued: false });
+    await renderLobby();
+    pickMode("random");
+    fireEvent.click(screen.getByTestId(playTestid.createRoom));
+    await screen.findByTestId(playTestid.roomCode);
+
+    down();
+    for (let i = 0; i < LOBBY_UNREACHABLE_AFTER_READS; i += 1) await settle({ advance: ACCOUNT_MS });
+    expect(screen.getByTestId(playTestid.unreachable)).toHaveTextContent(NOTICE);
+    expect(screen.getByTestId(playTestid.roomCode)).toHaveTextContent("QRST");
+  });
+
+  it("R3792000 an idle lobby never shows it", async () => {
+    down();
+    render(<PlayRoute token={TOKEN} />);
+    await settle({ advance: 0 });
+    await settle({ advance: 2 * LOBBY_UNREACHABLE_AFTER_READS * ACCOUNT_MS });
+    expect(screen.queryByTestId(playTestid.unreachable)).toBeNull();
   });
 });
 

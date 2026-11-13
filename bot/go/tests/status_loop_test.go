@@ -96,11 +96,12 @@ func TestStatusLoop_ASlowSweepNeverHoldsUpTheIssue(t *testing.T) {
 	assertEqual(t, gates, every30)
 }
 
-// While the bot's token has fewer than 1,500 calls left this hour, the issue is rewritten at the
-// sweep's pace, and the loop says so; with the calls back, every two minutes again.
+// While the bot's token has fewer than 1,500 REST calls left this hour, the issue is rewritten and
+// its runners redrawn at the sweep's pace, and the loop says so; with the calls back, every two
+// minutes and every minute again (#3675, #3760). GraphQL's points are said beside REST's calls.
 func TestStatusLoop_TheRewritesComeAtTheSweepsPaceWhileTheTokenRunsLow(t *testing.T) {
 	now := statusLoopClock(t, 0)
-	var rewrites []float64
+	var rewrites, runners []float64
 	left := 1000
 	patch[dashboardUpdateFunc](t, &dashboard.Update, func(*hctx.Context, []string, bool, func() []string, bool,
 		cardsets.Fetch) string {
@@ -110,16 +111,58 @@ func TestStatusLoop_TheRewritesComeAtTheSweepsPaceWhileTheTokenRunsLow(t *testin
 		}
 		return "rewrote #148"
 	})
+	patch(t, &dashboard.RefreshRunners, func(*hctx.Context) string {
+		runners = append(runners, *now)
+		return "redrew #148's runners"
+	})
 	patch(t, &cli.RateLeft, func(string) (ghpkg.RateLeft, bool) {
 		return ghpkg.RateLeft{Remaining: left, Limit: 5000}, true
 	})
+	patch(t, &cli.GraphqlLeft, func(string) (ghpkg.RateLeft, bool) {
+		return ghpkg.RateLeft{Remaining: 4800, Limit: 5000}, true
+	})
 	dashboardOffline(t, nil)
 	out, _ := capture(t, &cli.Stdout)
-	cli.CmdDashboard(testsupport.MakeConfig(), &cli.Args{Every: 300, RewriteEvery: 120, ForSeconds: 900})
+	cli.CmdDashboard(testsupport.MakeConfig(), &cli.Args{Every: 300, RewriteEvery: 120, RunnersEvery: 60,
+		ForSeconds: 900})
 	assertEqual(t, rewrites, []float64{0, 300, 600, 720, 840})
-	assertIn(t, "rate: the bot's token has 1000 of 5000 calls left this hour: under 1500, so the issue is "+
-		"rewritten every 300 seconds, the sweep's pace", out.String())
-	assertIn(t, "rate: the bot's token has 4000 of 5000 calls left this hour\n", out.String())
+	assertEqual(t, runners, []float64{660, 780, 900})
+	assertIn(t, "rate: the bot's token has 1000 of 5000 REST calls left this hour; GraphQL 4800 of 5000: "+
+		"under 1500 REST calls, so the issue and its runners are redrawn every 300 seconds, the sweep's pace",
+		out.String())
+	assertIn(t, "rate: the bot's token has 4000 of 5000 REST calls left this hour; GraphQL 4800 of 5000\n",
+		out.String())
+}
+
+// Once the REST hour turns, the loop says what it spent of the one before, by path, the costliest
+// first, and counts the new hour afresh (#3760); an hour it spent nothing of says nothing.
+func TestStatusLoop_SaysWhatItSpentOfEachRESTHour(t *testing.T) {
+	now := statusLoopClock(t, 0)
+	hour := time.Date(2026, 11, 13, 6, 6, 0, 0, time.UTC)
+	patch[dashboardUpdateFunc](t, &dashboard.Update, func(*hctx.Context, []string, bool, func() []string, bool,
+		cardsets.Fetch) string {
+		if *now == 240 {
+			hour = hour.Add(time.Hour)
+		}
+		return "rewrote #148"
+	})
+	patch(t, &cli.RateLeft, func(string) (ghpkg.RateLeft, bool) {
+		return ghpkg.RateLeft{Remaining: 3000, Limit: 5000, Reset: hour}, true
+	})
+	patch(t, &cli.GraphqlLeft, func(string) (ghpkg.RateLeft, bool) { return ghpkg.RateLeft{}, false })
+	var takes int
+	patch(t, &cli.RateSpent, func(string) map[string]int {
+		takes++
+		return map[string]int{"GET /actions/runs/{n}/jobs": 1200, "GET /issues": 300, "PATCH /issues/{n}": 30}
+	})
+	patch(t, &cli.RateSpentShown, 2)
+	dashboardOffline(t, nil)
+	out, _ := capture(t, &cli.Stdout)
+	cli.CmdDashboard(testsupport.MakeConfig(), &cli.Args{Every: 300, RewriteEvery: 120, ForSeconds: 600})
+	assertEqual(t, takes, 1)
+	assertEqual(t, strings.Count(out.String(), "rate: this loop spent"), 1)
+	assertIn(t, "rate: this loop spent 1530 of the bot's REST calls in the hour to ", out.String())
+	assertIn(t, "; the most: 1200 GET /actions/runs/{n}/jobs, 300 GET /issues\n", out.String())
 }
 
 // The statistics are counted on a clock of their own, every 10 minutes, and each rewrite draws the

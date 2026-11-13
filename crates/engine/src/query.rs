@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::combat::{AttackTarget, attack_target_of};
-use crate::config::{CHINESE_TAG, HAND_CAP, LIBRARY_CAP};
+use crate::config::{BRITTLE_FIRST_TICK_TURNS, CHINESE_TAG, HAND_CAP, LIBRARY_CAP};
 use crate::damage::DamageTarget;
 use crate::duos_life::effective_life;
 use crate::layers::{AuraTable, face_of, unit_has, unit_view};
@@ -222,6 +222,15 @@ pub fn is_resolving(state: &GameState, player: PlayerId, def_ids: &[&str]) -> bo
 /// spent count (`state_check.rs`'s collect, R441), so only a crumble's death reads true.
 pub fn brittle_spent(card: &CardInstance) -> bool {
     crate::brittle_count::active_brittle_count(card) == Some(0)
+}
+
+/// R385, R638: whether the card's Brittle count ticks at a start of its controller's turn numbered `turn`:
+/// a count started on turn t first ticks at the first such start numbered t + `BRITTLE_FIRST_TICK_TURNS`
+/// or later, then at each one after. False with no count. `brittle::brittle_due` asks it of the turn
+/// under way; the AI asks it of the controller's next start (R3793000).
+pub fn brittle_due_by(card: &CardInstance, turn: i32) -> bool {
+    card.brittle
+        .is_some_and(|brittle| turn >= brittle.since + BRITTLE_FIRST_TICK_TURNS)
 }
 
 /// R1840005: this player's Credits, 0 until first gained. Public (§10.8).

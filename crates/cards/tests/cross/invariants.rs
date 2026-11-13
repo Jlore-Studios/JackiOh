@@ -449,6 +449,34 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
         );
     }
 
+    /// R3777001: p1's view names p2's face-down trap in `hiddenTargets` while #36 Magic Jammed's play may
+    /// target it, by the bare id `legalActions` offers; the same view beside a listing that offers no such
+    /// play names a hidden card.
+    #[test]
+    fn r3777001_i6_lets_the_view_name_a_face_down_target_only_as_legal_actions_offers_it() {
+        let g = scenario(json!({
+            "p1": { "hand": ["core-036"] },
+            "p2": { "backrow": [{ "def": MY_PAWN, "lane": 1 }] },
+        }));
+        let trap = backrow_at(&g, PlayerId::P2, 1, "p2 should hold a face-down trap in lane 1");
+        let view = view_for(g.state(), PlayerId::P1);
+        assert!(
+            view.hidden_targets
+                .iter()
+                .flatten()
+                .any(|hidden| hidden.instance_id == trap.id),
+            "the view names the trap's zone"
+        );
+        assert_eq!(violations(&g, PlayerId::P1, &[]), no_violations());
+        let found = hidden_information_violations(g.state(), PlayerId::P1, &view, &[]);
+        assert!(
+            found
+                .iter()
+                .any(|message| message.contains("in the view") && message.contains(&quoted(&trap.id))),
+            "{found:?}"
+        );
+    }
+
     /// p1's own target prompt offering p2's face-down trap, as #49, #50 and an Echo repeat do (R177).
     fn offer_trap(g: &mut Scenario, trap_id: &str) -> PendingChoice {
         let prompt: PendingChoice = json_as(json!({
@@ -1886,6 +1914,37 @@ mod r1829000_a_card_uncovered_beneath_a_stack {
         );
         let found = monitor.clone().after(&[announced, played], g.state());
         assert_eq!(entry_mismatches(&found).len(), 1, "{found:?}");
+    }
+
+    /// R3554001: the hole's pull at a turn's start moves a pile one lane and no event says so. A card the
+    /// action summoned (a Drone Battleship's layer, beneath its Shield), uncovered on a later turn of that
+    /// action and pulled on, takes the turn it was uncovered on, though it stands in no zone an event named
+    /// (fuzz handicap seed 6708, issue #3800). A card no event of the action named still does not.
+    #[test]
+    fn r3554001_r1829000_i4_takes_the_turn_of_a_unit_the_action_summoned_though_a_pull_moved_its_pile() {
+        let (mut g, monitor, _, fiender, _) = covered_on_an_earlier_turn();
+        let summoned_on = g.state().turn;
+        g.end_turn();
+        let uncovered_on = g.state().turn;
+        assert!(uncovered_on > summoned_on);
+        find_instance_mut(g.state_mut(), &fiender.id)
+            .expect("the Fiender")
+            .summoned_turn = Some(uncovered_on);
+        // Summoned into lane 2 on the earlier turn; it stands in lane 1 now.
+        let summoned = event(json!({
+            "type": "summoned", "player": "p1", "instanceId": fiender.id, "defId": FIENDER,
+            "row": "units", "lane": 2,
+        }));
+        let turn = g.last_events().to_vec();
+
+        let events: Vec<GameEvent> = std::iter::once(summoned).chain(turn.iter().cloned()).collect();
+        let found = monitor.clone().after(&events, g.state());
+        assert!(entry_mismatches(&found).is_empty(), "{found:?}");
+
+        let found = monitor.clone().after(&turn, g.state());
+        let mismatches = entry_mismatches(&found);
+        assert_eq!(mismatches.len(), 1, "{found:?}");
+        assert!(mismatches[0].contains(&fiender.id), "{found:?}");
     }
 }
 

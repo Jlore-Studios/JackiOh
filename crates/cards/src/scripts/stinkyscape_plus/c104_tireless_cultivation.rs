@@ -67,9 +67,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.0b the Radiant face gave the count to a card a full hand had burned, in its
+/// R767000: through v0.6.0d the Radiant face gave the count to a card a full hand had burned, in its
 /// graveyard (issue #3800); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_0b() -> CardScripts {
+pub fn script_v0_6_0d() -> CardScripts {
     CardScripts {
         base: cultivation(BASE_STEP, true),
         radiant: cultivation(RADIANT_STEP, true),

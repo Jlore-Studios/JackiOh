@@ -37,7 +37,7 @@
 //   - A set is a map[T]bool; nil stands for None where the Python allows it (BranchChecks).
 //   - A tuple is a [2]string (Files' keys and values, CreatedBranches) or a small struct
 //     (Reaction, ReviewRequest, Dispatch).
-//   - An attribute fakes.py reads with getattr or creates on first use (commits, gists,
+//   - An attribute fakes.py reads with getattr or creates on first use (commits,
 //     created_branches, deleted_branches) is a field that starts nil.
 //   - A list the fake returns is never nil, as a Python list is never None.
 //
@@ -114,10 +114,8 @@ type FakeGitHub struct {
 	ConflictsToInject int
 	DryRun            bool
 
-	// What fakes.py reads with getattr(self, "commits", []) and getattr(self, "gists", {}): a
-	// test sets them.
+	// What fakes.py reads with getattr(self, "commits", []): a test sets it.
 	Commits []*pyjson.Object
-	Gists   map[string]*pyjson.Object
 	// What create_branch and delete_branch record, from the first call.
 	CreatedBranches [][2]string // (branch, sha)
 	DeletedBranches []string
@@ -977,14 +975,6 @@ func (o *Own) CancelRun(runID any) {
 
 // RerunRun records the full re-run.
 func (o *Own) RerunRun(runID any) { o.FullReruns = append(o.FullReruns, runID) }
-
-func (o *Own) GetGist(gistID string, cached bool) *pyjson.Object {
-	gist, ok := o.Gists[gistID]
-	if !ok {
-		panic(githubError("no gist", 404))
-	}
-	return deep(gist)
-}
 
 func (o *Own) ListRepoRuns(status string, limit int, cached bool) []*pyjson.Object {
 	out := []*pyjson.Object{}
