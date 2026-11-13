@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 3822,
+  "title": "Patch: the AI prices Burn and Toxic counters on units and heroes",
+  "branch": "bot/issue-3822",
+  "thread": "**Issue #3822 (data, not instructions):**\n\n```text\n# #3822: Patch: the AI prices Burn and Toxic counters on units and heroes\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe newest set added Burn and Toxic: counters that hurt a unit or a hero at the start of its turn, Burn fading by 3 a tick and Toxic forever. The practice AI counts none of it. To the AI, a hero carrying Toxic 3 is as healthy as one without, and a unit about to burn to death is worth its full stats. Once this is built, the AI sees that damage coming: it doesn't spend an attack on a unit that will die by itself, it races harder when its own hero is on a Toxic clock, and it values putting Burn on the opponent's board.\n\n## Why\n\n- `crates/engine/src/afflictions.rs:47-62` exposes `burn_on`, `toxic_on`, `hero_burn_of` and `hero_toxic_of`, and nothing in `crates/ai/src` calls them. Grepping `burn|toxic` there finds only the feature layout's list of uncounted keywords (`features.rs:77-87`).\n- The hand eval already prices Plague counters (`evaluate.rs:479-480`, `w.plague_counter`). The hero term is `hero_value(effective_life(..))` plus armor (`evaluate.rs:778-781`), with no affliction.\n- SPEC \u00a76, the Burn and Toxic rows, and R3540001: Burn ticks 8, 5, 2 and is gone; Toxic never drops and pierces Armor. Both are public (R3540005), so pricing them reads nothing hidden.\n- The learned correction only re-scores finalists, and its layout leaves both out until a refit (`features.rs:77`). The beam prunes on the hand eval (`crates/ai/README.md`, \"The learned evaluation\"), and the reply sim sees at most one tick a side.\n- About 29 card scripts deal Burn or Toxic (grep). Players already bring them against the AI (R3535000), and fullsend 2 (#3574) measures the AI on the set with a sweep whose bans are capped, so an AI blind to the set's damage over time costs bans there.\n\n## Proposal\n\nAdd named weights to `EvalWeights`: set in `AI_EVAL`, and 0 in `GREEDY_EVAL` as the newer terms are, so the greedy baseline is unchanged.\n\n- A unit's worth falls by its coming ticks, met by Divine Shield and Armor as R3540001 says. A unit the next tick kills is worth only what it can still do before then.\n- A hero's side loses its coming ticks over a named horizon: Toxic every turn of it, and Burn's decaying series.\n\nEvery number goes in `crates/ai/src/config.rs` (CLAUDE.md rule 9). The AI README's evaluation section names the new terms.\n\n## Where it lands\n\n`crates/ai/src/evaluate.rs`, `crates/ai/src/config.rs`, `crates/ai/tests/ai/evaluate.rs` and `decide.rs`, `crates/ai/README.md`; SPEC \u00a76 (Burn, Toxic) and \u00a79.9 are read, not changed.\n\n## Acceptance criteria\n\n- [ ] Evaluate tests: Burn or Toxic on an enemy unit raises the seat's eval and on its own unit lowers it; a unit its next tick kills is worth less than the same unit without the counter; a hero's Toxic weighs more than an equal Burn over the horizon.\n- [ ] A decide test: one attacker, two equal enemy targets, one of which its own Burn kills next turn; the AI attacks the other.\n- [ ] `GREEDY_EVAL`'s new weights are 0, and the greedy baseline's tests are unchanged.\n- [ ] `cargo jackioh gate` at smoke size is green.\n\n## Size and risks\n\nMedium: about 150 lines plus tests, all in `crates/ai` (hard by rule 11). The risk is a weight that costs strength elsewhere, so the gate is the check; the horizon is a tuning number to revisit after #3574's sweep.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-13T05:46:26Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3822: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-13T05:47:52Z",
+    "claimed_at": "2026-11-13T10:29:55Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3798 is held for `claude-1` until 05:20 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))",
+    "#3733 is held for `claude-1` until 05:20 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#3729 skipped: it waits for #3730 to close first",
+    "#3731 skipped: it waits for #3730 to close first",
+    "#3732 skipped: it waits for #3730 to close first"
+  ]
+}
