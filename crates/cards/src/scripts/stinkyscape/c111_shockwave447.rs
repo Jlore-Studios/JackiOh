@@ -86,9 +86,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.12ap the Aura drew once as it arrived and kept its keywords whatever its
+/// R767000: through v0.6.0b the Aura drew once as it arrived and kept its keywords whatever its
 /// number did (R781004); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_5_12ap() -> CardScripts {
+pub fn script_v0_6_0b() -> CardScripts {
     CardScripts {
         base: shockwave(false, false),
         radiant: shockwave(true, false),
@@ -249,14 +249,14 @@ mod tests {
     }
 
     #[test]
-    fn r767000_the_script_kept_for_v0_5_12ap_keeps_its_3_whatever_its_number() {
-        crate::under_kept(ID, script_v0_5_12ap(), || {
+    fn r767000_the_script_kept_for_v0_6_0b_keeps_its_3_whatever_its_number() {
+        crate::under_kept(ID, script_v0_6_0b(), || {
             let (mut s, _, _) = played(false, "shockwave-kept", 2);
             let id = me(&s);
             let three = drawn(&s, &id);
             assert_eq!(three.len(), 3);
             assert_eq!(crate::degrade_number(&mut s, &id, "keywords"), 2);
-            assert_eq!(aura(&s, &id), three, "it kept all 3 through v0.5.12ap");
+            assert_eq!(aura(&s, &id), three, "it kept all 3 through v0.6.0b");
         });
     }
 

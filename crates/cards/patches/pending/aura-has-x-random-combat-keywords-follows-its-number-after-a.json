@@ -1,7 +1,7 @@
 {
   "title": "Patch: \"Aura: Has X random combat keywords\" follows its number after a Buff, a Nerf or a Radiant flip",
   "sources": "#3778",
-  "notes": "The Aura's keywords follow its number (R3778000); scripts through v0.5.12ap kept",
+  "notes": "The Aura's keywords follow its number (R3778000); scripts through v0.6.0b kept",
   "player": {
     "title": "Random combat keyword Auras follow their number",
     "new": [],
@@ -31,6 +31,12 @@
     "stinkyscape-109",
     "stinkyscape-119",
     "stinkyscape-t-dormant-starship",
+    "stinkyscapeplus-017",
+    "stinkyscapeplus-032",
+    "stinkyscapeplus-055",
+    "stinkyscapeplus-111",
+    "stinkyscapeplus-113",
+    "stinkyscapeplus-t-ai-05",
     "traininggrounds-035",
     "traininggrounds-053"
   ]

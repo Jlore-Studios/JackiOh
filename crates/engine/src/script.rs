@@ -1197,7 +1197,7 @@ pub struct Script {
     /// Keymaster Keenus's `keywords`): a change that raises it on the field (a Buff's Number row, a
     /// number set, the card made Radiant) draws what it asks beyond the card's list as the change
     /// resolves (`effects::buff::follow_combat_keywords`), so nothing is queued and the layers draw
-    /// nothing. `None` for every other card, and on the scripts kept for v0.5.12ap (R767000).
+    /// nothing. `None` for every other card, and on the scripts kept for v0.6.0b (R767000).
     pub combat_keywords_follow: Option<&'static str>,
     /// "When this attacks" (Classic #13, #45, Classic+ #73.1, Stinkyscape #75): run for the attacker before
     /// any damage of each attack, a declared one's once its trap window has closed (before the defender's

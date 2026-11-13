@@ -654,24 +654,20 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (c047_taotie::ID, "v0.5.11r", c047_taotie::script_v0_5_11o),
     (
         c065_keymaster_keenus::ID,
-        "v0.5.12ap",
-        c065_keymaster_keenus::script_v0_5_12ap,
+        "v0.6.0b",
+        c065_keymaster_keenus::script_v0_6_0b,
     ),
     (
         c111_shockwave447::ID,
-        "v0.5.12ap",
-        c111_shockwave447::script_v0_5_12ap,
+        "v0.6.0b",
+        c111_shockwave447::script_v0_6_0b,
     ),
     (
         t_drone_interceptor::ID,
-        "v0.5.12ap",
-        t_drone_interceptor::script_v0_5_12ap,
+        "v0.6.0b",
+        t_drone_interceptor::script_v0_6_0b,
     ),
-    (
-        t_drone_corvette::ID,
-        "v0.5.12ap",
-        t_drone_corvette::script_v0_5_12ap,
-    ),
+    (t_drone_corvette::ID, "v0.6.0b", t_drone_corvette::script_v0_6_0b),
     (
         c109_xxfreshjack::ID,
         "v0.5.12ap",

@@ -78,9 +78,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.12ap the Aura drew once as it arrived and kept its keywords whatever its
+/// R767000: through v0.6.0b the Aura drew once as it arrived and kept its keywords whatever its
 /// number did (R781004); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_5_12ap() -> CardScripts {
+pub fn script_v0_6_0b() -> CardScripts {
     CardScripts {
         base: keenus(false),
         radiant: keenus(false),
@@ -372,13 +372,13 @@ mod tests {
         }
 
         #[test]
-        fn r767000_the_script_kept_for_v0_5_12ap_keeps_its_5_whatever_its_number() {
-            crate::under_kept(KEENUS, script_v0_5_12ap(), || {
+        fn r767000_the_script_kept_for_v0_6_0b_keeps_its_5_whatever_its_number() {
+            crate::under_kept(KEENUS, script_v0_6_0b(), || {
                 let (mut s, id) = with_book("keenus-kept");
                 let five = drawn(&s, &id);
                 assert_eq!(five.len(), 5);
                 assert_eq!(crate::degrade_number(&mut s, &id, "keywords"), 4);
-                assert_eq!(aura(&s, &id), five, "it kept all 5 through v0.5.12ap");
+                assert_eq!(aura(&s, &id), five, "it kept all 5 through v0.6.0b");
 
                 let mut s = played(
                     "keenus-kept-radiant",
