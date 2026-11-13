@@ -35365,7 +35365,10 @@
           "provider": "claude-1"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-13T16:47:59Z",
         "every": 5,
+        "findings": 1,
+        "follow_up": 3874,
         "head": "b472b747c42146333c257902c7dd8b4b65312934",
         "issue": 3730,
         "last_why": "its run ended without finishing",
@@ -35379,12 +35382,13 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:0baa813e-1794587542",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/43463844601",
         "sha": "44133b263728bd7d699e6233aa44690bfeff2eb3",
         "started_at": "2026-11-13T16:33:04Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: a private lobby screen for 1v1 rooms and co-op rooms: seats, invites, each player's deck and Ready, and the host's Start",
-        "tries": 1
+        "tries": 1,
+        "verdict": "findings"
       }
     ],
     "count": 241
