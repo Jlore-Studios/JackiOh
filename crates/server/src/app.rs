@@ -972,6 +972,68 @@ pub static ROUTES: &[Route] = &[
         h!(crate::duos::again::again_status),
     ),
     // end Duos co-op (#946)
+    // Private lobbies (#3730, R3730000 to R3730006): lobby/mod.rs.
+    (
+        "POST",
+        "/api/lobbies",
+        AuthLevel::Active,
+        h!(crate::lobby::create),
+    ),
+    ("GET", "/api/lobbies", AuthLevel::Active, h!(crate::lobby::mine)),
+    (
+        "GET",
+        "/api/lobbies/:code",
+        AuthLevel::Active,
+        h!(crate::lobby::get_lobby),
+    ),
+    (
+        "POST",
+        "/api/lobbies/:code/enter",
+        AuthLevel::Active,
+        h!(crate::lobby::enter),
+    ),
+    (
+        "POST",
+        "/api/lobbies/:code/leave",
+        AuthLevel::Active,
+        h!(crate::lobby::leave),
+    ),
+    (
+        "POST",
+        "/api/lobbies/:code/remove",
+        AuthLevel::Active,
+        h!(crate::lobby::remove),
+    ),
+    (
+        "POST",
+        "/api/lobbies/:code/settings",
+        AuthLevel::Active,
+        h!(crate::lobby::settings),
+    ),
+    (
+        "POST",
+        "/api/lobbies/:code/pick",
+        AuthLevel::Active,
+        h!(crate::lobby::pick),
+    ),
+    (
+        "POST",
+        "/api/lobbies/:code/ready",
+        AuthLevel::Active,
+        h!(crate::lobby::ready),
+    ),
+    (
+        "POST",
+        "/api/lobbies/:code/invite",
+        AuthLevel::Active,
+        h!(crate::lobby::invite),
+    ),
+    (
+        "POST",
+        "/api/lobbies/:code/start",
+        AuthLevel::Active,
+        h!(crate::lobby::start),
+    ),
     // daily/ (SPEC §9.13, #3727): daily games over plain HTTPS.
     (
         "GET",

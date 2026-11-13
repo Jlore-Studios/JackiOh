@@ -23,7 +23,7 @@ use crate::rules::fixtures::call_to_chaos_meditative::{
 };
 use crate::rules::fixtures::call_to_chaos_plus::{chaos_plus_catalog, core95, immutable, plus, trap};
 use crate::rules::fixtures::harness::{
-    act_ok, events_of_type, ids_of, in_hand, json_of, new_game, put, set_library, slot,
+    act_ok, events_of_type, ids_of, in_hand, json_of, live, new_game, put, set_library, slot,
 };
 
 fn scripts(cry: Hook) -> CardScripts {
@@ -161,10 +161,6 @@ fn index_of(types: &[GameEventType], kind: GameEventType) -> i64 {
         .position(|each| *each == kind)
         .map(|at| at as i64)
         .unwrap_or(-1)
-}
-
-fn card<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
 
 fn sorted(mut ids: Vec<String>) -> Vec<String> {
@@ -593,7 +589,7 @@ mod r1242_the_hand_fusion {
             });
             live.cost_mod = -1;
         }
-        let before = card(&state, &source[0].id).clone();
+        let before = live(&state, &source[0].id);
         let copy = add_to_hand(AddToHandArgs {
             copy_of: Some(source[0].id.clone()),
             cost_override: Some(CHAOS_MED_COST),
@@ -625,7 +621,7 @@ mod r1242_the_hand_fusion {
             }),
             None,
         );
-        assert_eq!(card(&state, &unit.id).zone.z(), ZoneName::Field);
+        assert_eq!(live(&state, &unit.id).zone.z(), ZoneName::Field);
         assert_eq!(state.players.p1.hand.len(), 3);
         assert_eq!(state.players.p1.hand[2].def_id, "fx-5");
         let events = run(
@@ -688,7 +684,7 @@ mod the_other_entries {
         );
         // The Jade Beauty is its base face (the entry touches no Jade Counter).
         let summoned = field_of(&jade, GameEventType::Summoned, "instanceId");
-        assert!(!card(&state, summoned[0].as_str().unwrap_or_default()).radiant);
+        assert!(!live(&state, summoned[0].as_str().unwrap_or_default()).radiant);
     }
 
     #[test]
@@ -729,7 +725,7 @@ mod the_other_entries {
         );
         // R11: the token ceased to exist, so it is no card to Nerf.
         assert!(find_instance(&state, &token.id).is_none());
-        assert_eq!(card(&state, &mine.id).zone.z(), ZoneName::Field);
+        assert_eq!(live(&state, &mine.id).zone.z(), ZoneName::Field);
         let nerfed = strings_of(&field_of(&events, GameEventType::Degraded, "instanceId"));
         assert_eq!(
             sorted(nerfed.clone()),

@@ -135,7 +135,18 @@ A unit's Activate counts by one use (R2564000), and so does a face-up backrow ca
 then its face-up backrow cards' (`activate_sources`), as the reply does (`visible_activation`), and
 prices the best as the controller's evaluation after less before, each crystal at `next_turn_mana`;
 `unit_worth` adds `AI_EVAL.activation` of it for both sides' units, and `material` for each readable
-backrow card, inside its Brittle share.
+backrow card, inside its Brittle share. `activate_sources` lists each Dormant card acting for its
+awakening alone too (R3575404, R1839002: a Dormant Starship's launch, and the `wakesBy` ability a hull's
+text names, R3539000), and for that use alone the card need not be the instance left standing, since a
+shipyard's launch exiles the hull and stands a fresh Starship in its place. Then, within
+`AI_HAND_ACTIVATION_PROBE_NODES` of its own, each Unit and Field Spell in the seat's own hand with an
+ability, and each Dormant card of the seat's acting to awaken, is priced the same way and keyed by the
+card as the seat holds it now (R3575400, R923001: a hand card is spawned where a play would put it
+first), so a play worth the Activate it leaves reads it the moment it lands, not a turn later; the
+enemy's hand is never probed. A shipyard's turn-start fuse (R3539004) is no hook of its script, so
+`turn_hook_prices` prices it by one run of the engine's own yard step, for each Dormant shipyard on
+either field and each in the seat's hand, and `slumber_worth` adds `AI_EVAL.turn_hook` of it outside the
+slumber share, which that probe's own evaluation already applied (R3575402).
 A unit's "when this attacks" and "after this attacks" hooks count by one attack (R2688000):
 `attack_hook_prices` walks the same two turns, within `AI_ATTACK_HOOK_PROBE_NODES`; at the start of each
 player's next turn it plays each of that player's units with a hook at the enemy hero, or at the first
@@ -161,6 +172,15 @@ Flashback, R783012, Sanctum's lent one, R1869003, or a field permission such as 
 counts `AI_EVAL.graveyard_playable` of its hand price, the enemy's too, since a graveyard is public; a
 spent Flashback counts nothing (R783013). `keyword.flashback` stays 0, so the play is priced once, and
 `GREEDY_EVAL` keeps 0 (#2928).
+Burn and Toxic count by the ticks still to come over `AI_AFFLICTION_TICKS` of their controller's turn starts
+(R3822000, R3540001). `afflicted` takes `AI_EVAL.unit_affliction` of a `health` point off a unit for each
+point they will deal it, up to its health, and a Divine Shield they spend costs that share of its keyword
+worth; Armor meets Burn, Toxic pierces it, the unit's own cap holds both, and an Indestructible unit takes
+none. A unit the nth tick kills keeps `1 − unit_doomed / n` of itself, or its Brittle share if that is
+smaller. `coming_hero_ticks` reads a hero's ticks through `projected_hero_damage`, leaving it at least 1
+life, and `hero_side` loses `hero_affliction` of that life's cost on the hero curve; the enemy's also counts
+at `enemy_health`. The reply already plays one tick a side. `GREEDY_EVAL` keeps all three at 0, and the
+learned features leave both counters out until a refit (R3535002).
 It re-plans after every action, so a
 lethal the solver proves is played trimmed to the actions it needs
 (`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action
@@ -262,6 +282,10 @@ included, or one turn hook its root fires (R2477000, R2565000). A step whose `re
 card holding either, and a play the other side's Pareto Optimality judges, per card held; #1240),
 and once a step has run, for each such card it cast without playing it, from a graveyard or at random
 (`announced_surcharge_nodes`, read off its `cardAnnounced` events; #1347).
+Such a step, once run, is kept for the rest of its decision (`SimMemo` on the root counter, at most
+`AI_SEARCH.memo_steps`), and the same step from the same state, nonce records aside, is answered from
+it without the engine, its nonce record rebuilt as the engine builds it and its nodes charged as before,
+so the search and its decision are unchanged and only the time it takes falls (R3575603).
 A prompt answered ahead inside a simulation (`best_auto_answer`: the other seat's in a step, the
 reply's, and the beam's look past the seat's own; #891, #1112), but the seat's own question it works
 out (`worked_step`, #2929), tries at most
@@ -297,8 +321,9 @@ A player's random deck passes `Some(vec![])` beside `banned: Some(vec![])`; an `
 gated card in by name. Emptying the list lifts the gate and deals every deck as before it, which issue
 #732 did once it had measured the AI on the Meditative set, the list's one set until then. It held the
 Stinkyscape set from its release (issue #1884) until issue #1885 measured the AI on it: gating a set that
-ships before the AI is trained on it is listing it there. It lists the Stinkyscape+ set from its release
-(issue #3573) until fullsend 2's sweep (#3574) measures the AI on it. `shape`
+ships before the AI is trained on it is listing it there. It held the Stinkyscape+ set from its release
+(issue #3573) until fullsend 2's sweep of record measured the AI on it (issue #3574, R3574000), and is
+empty since. `shape`
 (R976000) multiplies each card's weight by `shaped_weight`, the unban lane's dealt-quality table in
 `src/shadow_ban.rs`; it is off unless a caller sets it, whatever `banned` holds, and no caller does, so
 practice, the quality gates and both seats of an arena or a promotion deal unshaped. The mulligan still

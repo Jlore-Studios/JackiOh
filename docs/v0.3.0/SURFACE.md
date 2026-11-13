@@ -708,8 +708,9 @@ seeded draw moves; production builds compile none of it. A stand-in is a Common 
 no script and no text but its keywords, named by its id.
 
 A card reference resolves by catalog id, §5 index or name, as in TS. `s.unit_at(p, lane)` is `s.unit(p, lane)`
-that panics on an empty lane, and `testkit::pick` holds the one-instance selection builders (`id`, `instance`,
-`card`, `unit_at`); tests take these rather than a copy (#1826). `testkit::must(value, what)` is an
+that panics on an empty lane, and `testkit::pick` holds the one-pick selection builders (`id`, `instance`,
+`card`, `unit_at`, `hero`) and `targets`, a play's `{ "targets": … }` around one; tests take these rather
+than a copy (#1826, #3827). `testkit::must(value, what)` is an
 `Option`'s value or a panic `expected {what}`, and tests take it too (#2023). `s.count(kind)` and
 `s.events_of(kind)` read the log by event type (a `GameEventType` or its string; a string naming none panics),
 `s.last_count(kind)` and `s.last_events_of(kind)` the last step's, and `s.offered(p)` is `legal_actions` for that
@@ -922,8 +923,8 @@ daily/<x>.rs   (#3727, SPEC §9.13) daily games over plain HTTPS, no actor: game
 ```
 
 A daily game's boundary (#3727) is plain HTTPS, so a client with no socket and no engine (a Roblox
-server, later) can play one: the caller's `view_for` and legal actions under the game's catalog, the
-`seq` an action is sent `after`, and the clock as `jackioh_shared::host::daily`'s `DailyHold`s
+server, later) can play one: the caller's `view_for`, legal actions and the forecast of its attacks (R3855000)
+under the game's catalog, the `seq` an action is sent `after`, and the clock as `jackioh_shared::host::daily`'s `DailyHold`s
 (`apps/web/src/wire/generated/DailyHold.ts`). The routes are `crates/server/README.md`'s "Daily games".
 
 ### 11.2 The shared shapes (frozen)

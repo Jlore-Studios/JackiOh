@@ -1,5 +1,5 @@
-// `/together` — Play together (#936, SPEC S8, B54–B59), Duos co-op included (`duos/CoopPanel.tsx`,
-// which gets the friends list).
+// `/together` — Play together (#936, SPEC S8, B54–B59), Duos co-op included: its lobby panel
+// (`lobby/LobbyPanel.tsx`, R3730000) makes a co-op lobby or joins one by its code.
 // Behind the gate like `/play` (B54). Every list is the server's answer (`net/social.ts`), read again
 // without a reload: the friends list every `FRIENDS_POLL_MS`, the pace a status changes at, when the
 // tab's social socket says it changed (R3214000), and each list at once after each of this page's own
@@ -13,11 +13,14 @@ import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
 import { AccountError } from "../auth/AccountError.tsx";
 import Username from "../auth/Username.tsx";
-import { CoopPanel } from "../duos/CoopPanel.tsx";
 import { EmptyState } from "../empty/EmptyState.tsx";
 import { CatalogContext } from "../game/catalog.ts";
 import { formatDateTime, t, useLocale } from "../i18n/i18n.ts";
+import { createLobby, inviteToLobby } from "../lobby/api.ts";
+import { holdInviteRefusal } from "../lobby/inviteRefusal.ts";
+import { LobbyPanel } from "../lobby/LobbyPanel.tsx";
 import { withSession } from "../net/gate.ts";
+import { navigate, paths } from "../net/navigate.ts";
 import {
   acceptFriendRequest,
   blockPlayer,
@@ -29,7 +32,6 @@ import {
   getSharedReplays,
   removeFriend,
   unblockPlayer,
-  type Friend,
   type PlayerRef,
   type SharedReplay,
 } from "../net/social.ts";
@@ -55,8 +57,6 @@ import { attempt, messageOf } from "../net/errors.ts";
 import "../auth/tavern.css";
 import "../routes/lobby.css";
 import "./together.css";
-
-const NO_FRIENDS: readonly Friend[] = [];
 
 function when(iso: string): string {
   const at = Date.parse(iso);
@@ -223,6 +223,20 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
                   }}
                   onChat={() => {
                     setChatWith({ profileId: friend.profileId, username: friend.username });
+                  }}
+                  onLobby={() => {
+                    // R3730005, R3874000: a 1v1 lobby of the friend's and the player's own, the friend invited
+                    // into it. Through `act`, so the page's controls wait and a second press sends nothing; a
+                    // refused invite still opens the lobby made, whose screen says the refusal.
+                    act(async () => {
+                      const made = await createLobby({ format: "duel", mode: "bo1" });
+                      try {
+                        await inviteToLobby(made.code, friend.profileId);
+                      } catch (cause) {
+                        holdInviteRefusal(made.code, messageOf(cause));
+                      }
+                      navigate(paths.lobby(made.code));
+                    });
                   }}
                   onRemove={() => {
                     const id = friend.profileId;
@@ -398,7 +412,7 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
             ) : null}
           </section>
 
-          <CoopPanel friends={shownFriends ?? NO_FRIENDS} />
+          <LobbyPanel format="coop" />
 
           {list !== null && list.blocked.length > 0 ? (
             <section className="lobby-card together-panel" aria-labelledby="together-blocked-heading">

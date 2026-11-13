@@ -278,6 +278,8 @@ export const paths = {
   watch: (matchId: string): string => "/watch/" + matchId,
   /** #936 B61–B64: a Duos co-op match against the AI team. */
   duos: (matchId: string): string => `/duos/${matchId}`,
+  /** R3730000: a private lobby, 1v1 or co-op, by its code. */
+  lobby: (code: string): string => `/lobby/${code}`,
   /** #3727: daily games, a move every few days: the games, challenges and seeks, and the notifications. */
   daily: "/daily",
   /** #3727: one daily game's board, read from the server on every move (no socket). */
@@ -308,6 +310,11 @@ export function watchIdOf(path: string): string | null {
 
 export function duosIdOf(path: string): string | null {
   return idUnder(path, "duos");
+}
+
+/** R3730000: the code a lobby path names, as typed (the screen canonicalizes it). */
+export function lobbyCodeOf(path: string): string | null {
+  return idUnder(path, "lobby");
 }
 
 export function dailyIdOf(path: string): string | null {

@@ -82,10 +82,6 @@ mod tests {
 
     use crate::js;
 
-    fn at_hero() -> Value {
-        json!([{ "pick": "hero", "player": "p2" }])
-    }
-
     mod c_36_burn {
         use super::*;
 
@@ -139,7 +135,7 @@ mod tests {
                     }
                 };
 
-                s.play(&first, json!({ "targets": at_hero() }));
+                s.play(&first, json!({ "targets": pick::hero("p2") }));
                 s.play(&second, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
 
                 s.expect_health(PlayerId::P2, 28);
@@ -153,7 +149,7 @@ mod tests {
                     "p2": { "hand": [ANCHOR] },
                 }));
 
-                s.play(BURN, json!({ "targets": at_hero() }));
+                s.play(BURN, json!({ "targets": pick::hero("p2") }));
 
                 s.expect_health(PlayerId::P2, 28);
                 assert_eq!(def_ids(&s.hand(PlayerId::P1)), vec![ANCHOR]);
@@ -166,7 +162,7 @@ mod tests {
                     "p2": { "hand": [ANCHOR] },
                 }));
 
-                s.play(BURN, json!({ "targets": at_hero() }));
+                s.play(BURN, json!({ "targets": pick::hero("p2") }));
 
                 s.expect_mana(PlayerId::P1, 3);
                 assert_eq!(def_ids(&s.hand(PlayerId::P1)), vec![ANCHOR]);
@@ -180,7 +176,7 @@ mod tests {
                     "p2": { "hand": [ANCHOR] },
                 }));
 
-                s.play(BURN, json!({ "targets": at_hero() }));
+                s.play(BURN, json!({ "targets": pick::hero("p2") }));
 
                 assert_eq!(def_ids(&s.hand(PlayerId::P1)), vec![ANCHOR, A]);
             }
@@ -189,17 +185,17 @@ mod tests {
             fn r386_an_upgrade_deals_3_a_degrade_of_the_threshold_to_5_stops_4_mana_drawing_an_upgrade_of_draw_draws_2() {
                 let mut dmg = scenario(json!({ "p1": { "hand": [BURN, ANCHOR], "library": [A, B] }, "p2": { "hand": [ANCHOR] } }));
                 step_param(dmg.card_mut(BURN), "damage", 1);
-                dmg.play(BURN, json!({ "targets": at_hero() }));
+                dmg.play(BURN, json!({ "targets": pick::hero("p2") }));
                 dmg.expect_health(PlayerId::P2, 27);
 
                 let mut harder = scenario(json!({ "p1": { "hand": [BURN, ANCHOR], "library": [A, B] }, "p2": { "hand": [ANCHOR] } }));
                 step_param(harder.card_mut(BURN), "threshold", 1);
-                harder.play(BURN, json!({ "targets": at_hero() }));
+                harder.play(BURN, json!({ "targets": pick::hero("p2") }));
                 assert_eq!(def_ids(&harder.hand(PlayerId::P1)), vec![ANCHOR]);
 
                 let mut more = scenario(json!({ "p1": { "hand": [BURN, ANCHOR], "library": [A, B] }, "p2": { "hand": [ANCHOR] } }));
                 step_param(more.card_mut(BURN), "draw", 1);
-                more.play(BURN, json!({ "targets": at_hero() }));
+                more.play(BURN, json!({ "targets": pick::hero("p2") }));
                 assert_eq!(def_ids(&more.hand(PlayerId::P1)), vec![ANCHOR, A, B]);
             }
         }
@@ -214,7 +210,7 @@ mod tests {
                     "p2": { "hand": [ANCHOR] },
                 }));
 
-                s.play(BURN, json!({ "targets": at_hero() }));
+                s.play(BURN, json!({ "targets": pick::hero("p2") }));
 
                 s.expect_health(PlayerId::P2, 26);
                 assert_eq!(def_ids(&s.hand(PlayerId::P1)), vec![ANCHOR, A]);
@@ -229,7 +225,7 @@ mod tests {
                 }));
                 assert_eq!(s.view(PlayerId::P1).you.mana.max, 3);
 
-                s.play(BURN, json!({ "targets": at_hero() }));
+                s.play(BURN, json!({ "targets": pick::hero("p2") }));
 
                 s.expect_health(PlayerId::P2, 26);
                 assert_eq!(def_ids(&s.hand(PlayerId::P1)), vec![ANCHOR]);
@@ -243,7 +239,7 @@ mod tests {
                 }));
                 step_param(s.card_mut(BURN), "threshold", 1);
 
-                s.play(BURN, json!({ "targets": at_hero() }));
+                s.play(BURN, json!({ "targets": pick::hero("p2") }));
 
                 assert_eq!(def_ids(&s.hand(PlayerId::P1)), vec![ANCHOR]);
             }

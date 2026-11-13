@@ -30,6 +30,7 @@ enforces rules and never sees hidden information.** In practice:
   A live card picker (`data-prompt-layout="cards"`) is its cards alone over the dimmed board (`data-bare`, #2738): no panel, title or count, and no `prompt-submit` when one tap answers.
   The other seat's is its backs (`game/OpponentChoice.tsx`, R2739000) when the view's `pending` carries `optionCount`: that many of the opponent's card backs, laid out as the bare picker over the waiting notice's lighter dim and in the middle of the screen at every width (a phone docks the chooser's picker to its bottom edge), with no words or control and "Your opponent is choosing…" as the dialog's name; without it, the notice. Online, the back the opponent's pointer or focus is on is outlined in their color, still (R2739001): an engine card picker but the mulligan sends its option's index as it changes and null as it leaves, folds or closes (`game/choiceHover.ts`, `net.ts`'s `choiceHover` frame), which the server relays to the opponent alone and drops when the count is not shown; a play's own picker, a replay's, hotseat and practice send none.
   A Choose one of lanes (`lane-<n>`, #2757) opens no list: one oblong a lane (`game/LanePick.tsx`), answered from its zones as R514's cells are.
+  A choice of one board zone (a play's zone, a `cell` prompt, a declared zone target; R3864000) opens no list either: the zones glow, a tap, Enter or Space on one answers, and the modal is the hint, a play's Cancel and any option that names no cell.
 
 The arena (`src/game/arena/`, R3348000, R3348001): a living playmat that is only ever the viewer's own, and that
 no rule reads. `SandSurface.tsx` answers a press on any tile with a press-in and a ripple in its half's playmat
@@ -696,15 +697,15 @@ routes/play.tsx         /play, the Play hub (R1578000): one screen that does not
                         own rank on the ladder of the mode picked and links that ladder's /leaderboard
                         (R661, R2778000); a queue it joined is remembered for the
                         tab, so the player may leave while they wait and it picks the wait up again (R765);
-                        a room's ticket shares it as an invite link, and a lobby opened on one fills in
-                        its join form (R767); a queue the server no longer holds ends the wait with a
+                        its "Play a friend" panel is the private lobby's (`lobby/LobbyPanel.tsx`,
+                        R3730000); a queue the server no longer holds ends the wait with a
                         rejoin message (R897000); it takes the gate's account (`me`) and sends no
                         /api/auth/me read at mount for a fresh one that names no game, reads the queue readout on
                         mount and then every QUEUE_POPULATION_POLL_SECONDS while it waits, its account
                         read keeping SERIES_POLL_SECONDS for the ticket (R3207000, R3207003)
-net/roomLink.ts         R767: the room link (/play?room=…&mode=…): built for the share sheet or the
-                        clipboard, read once off the address bar into this tab, through a sign-in, for
-                        the lobby
+net/roomLink.ts         R767, R3730006: the room link (/play?room=…&mode=…) and the lobby link
+                        (/lobby/:code): built for the share sheet or the clipboard, read once off the
+                        address bar into this tab, through a sign-in, for the lobby screen
 net/spending.ts         R2378000: whether one of the tab's spends is out, from its press until its answer or
                         its failure (`net/api.ts`'s spends run through `whileSpending`); the Shop's Buy and
                         the pack panel's Open, Open all, sealed pack, Reveal all and Next pack and the
@@ -733,6 +734,12 @@ routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — 
                         (#1650), for this screen, the account, Play and the board; rank/StreakFlame.tsx
                         draws a ranked win streak as a flame on the account and a ranked match's
                         line (R2101000)
+routes/account.tsx      /account (#3733, R3733000): a profile header (the last game's portrait, name#tag with Copy,
+                        Member since, each ladder's rank, season record and flame) over a settings list of six
+                        sections by `?section=` (routes/accountSections.ts: Overview, Match history, Sign-in &
+                        security, Notifications, Privacy & data, Delete account; only the open one mounts); the
+                        list beside the section over 600 px, the list and then one section on a phone; the history
+                        is GET /api/replays worded by routes/replayWords.ts, shared with /replays
 routes/collection.tsx   /collection (#1307, #1579, R1579000, #3734, R3734000): four tabs over the whole window,
                         Cards, Decks, Cosmetics and Progress, by `?section=` (net/navigate.ts `useSearch`; Cards
                         when it names none), the route holding the Cards and Cosmetics tabs' search and filters so
@@ -822,8 +829,8 @@ routes/lobby.css        the lobby's, the series screen's and its picker's tavern
 routes/DevTools.tsx     R1300000: a dev account's own tools on /account (XP, Jlore, fill, the clears, give or
                         complete a quest, §14.9), shown
                         when /api/auth/me says isDev; the server decides every grant, and the panel shows
-                        its answer or refusal; /account's "Manage sign-in & account" shows every account
-                        its account secret ID, hidden until asked for, with a copy button
+                        its answer or refusal; /account's Sign-in & security section shows every account
+                        its account secret ID, hidden until Reveal, with a copy button
 packs/                  #1308: the card packs on /shop (R1580000, SPEC §14.3, §14.4; `PackOpening.tsx`, imported
                         by routes/shop.tsx): the packs held, each a physical pack (`PackObject.tsx`, #1663: a
                         foil wrapper with crimped seals, its set's emblem and colors, a sheen and a tilt
@@ -890,7 +897,8 @@ routes (net/navigate.ts paths, and public/_redirects):
   /together              together/TogetherRoute.tsx: friends with status dots, the requests in and out
                          (accept, decline, cancel), the blocked players (unblock), the add form by
                          name#tag; per friend Challenge (online and idle), Watch (when `watchable`),
-                         Chat (always), Remove and Block; "Shared with me"; the co-op panel
+                         Chat (always), Lobby (not offline: a Best of 1 lobby, the friend invited,
+                         R3874000), Remove and Block; "Shared with me"; the co-op panel
   /watch/:matchId        together/WatchRoute.tsx: a friend's seat over /ws/watch, Game on a view with no
                          legal action, SPECTATE_DELAY_MS behind; its turn clock counts down silently from each frame's
                          `clockMs` (together/WatchClock.tsx); Reconnect now once its own reopens run out;
@@ -917,9 +925,10 @@ together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open an
                          this site's room link draws a Join button that navigates in-app (R2094000);
                          a send shows at once, sends go one at a time, a failed one offers Retry and
                          Discard (R2120000)
-net/roomLink.ts          R767's room link (/play?room=…&mode=…) and R2094000's co-op link
-                         (/together?coop=…): built for the share sheet or the clipboard, read once off
-                         the address bar into this tab, through a sign-in, for the lobby or the co-op panel
+net/roomLink.ts          R767's room link (/play?room=…&mode=…), R2094000's co-op link
+                         (/together?coop=…) and R3730006's lobby link (/lobby/:code): built for the share
+                         sheet or the clipboard, read once off the address bar into this tab, through a
+                         sign-in, for the lobby screen, which every one of them opens
 together/FriendsButton.tsx  the Friends button on every signed-in screen (the menus' shell's navigation,
                          R3728000, which opens its panel as a drawer, R3728001; the top bar off the shell;
                          a board's controls) with its badge (incoming requests, challenges
@@ -948,15 +957,25 @@ together/config.ts       the social reads' pace: the friends list every FRIENDS_
 together/ChallengeToast.tsx  mounted once in the shell; reads the challenges (socialPoll.ts's GET /api/social) while signed in and
                          toasts an incoming challenge anywhere with a deck picker (the last deck used for
                          its mode): Accept joins the room with it and goes to the game (R1831000), a
-                         refused join offers Open in lobby, /play with the room code filled in (R767);
+                         refused join offers Open in lobby, the room's /lobby/:code (R3730006);
                          Decline declines
 together/presence.ts     usePresenceHeartbeat: POST /api/presence once PRESENCE_HEARTBEAT_MS passes with
                          no signed-in request (onSignedInRequest, R3210000), none while the tab has
                          been hidden for HIDDEN_QUIET_MS (R3576000)
-duos/CoopPanel.tsx       create a co-op room (difficulty, a deck or a random one), show its code,
-                         offer its link, invite a friend by sending the link in chat, join by code or by
-                         a co-op link that fills the join form and focuses Join (R2094000); both players
-                         go to /duos/:matchId once the guest joins
+lobby/LobbyScreen.tsx    /lobby/:code (R3730000 to R3730006): a private lobby, 1v1 or co-op: its code with
+                         Copy and Copy link, its seats (player, presence, the host's crown, the deck
+                         state; an empty seat invites a friend; co-op's other two the AI's), the host's
+                         settings, the member's own deck with the validator's verdict and Ready, the
+                         friends to invite, Leave, the host's Remove and Start, and the countdown to the
+                         board; read again on every `lobby` push and every LOBBY_POLL_MS while the social
+                         socket is down; with no lobby under the code, the classic room's join card
+lobby/LobbyPanel.tsx     Create a lobby, Join by code and the player's own lobbies, where "Play a friend"
+                         stood on /play and the co-op panel on /together (with the way back to a live
+                         co-op game there)
+lobby/LobbyInviteToast.tsx  mounted once beside the challenge toast: a friend's `lobbyInvite`, Open or
+                         Dismiss (R3730005)
+lobby/seats.ts           the seats a lobby view shows, whether Start may light, a seat's deck words
+lobby/inviteRefusal.ts   R3874000: a friend's refused invite from /together, said once on its lobby's screen
 duos/DuosBoard.tsx       Game.tsx for the own duel, the life strip (both teams' own HP and pools, a
                          spent seat's bar giving way to its pool), the pass control, the portal, the
                          Both boards toggle (R2095000), the teammate strip and the ping wheel
@@ -1008,7 +1027,7 @@ any other build each throws the reason.
 Test ids, mirrored in `e2e/support/testids.ts`: `together-add-input`,
 `together-add-submit`, `together-friend-row`, `together-request-accept`, `together-request-decline`,
 `together-challenge`, `together-watch`, `together-chat-open`, `friends-button`, `friends-badge`,
-`friends-panel`, `challenge-toast-accept`, `chat-input`, `chat-send`, `chat-message`, `chat-join`, `coop-create`, `coop-difficulty`, `coop-code`, `duos-coop-link`, `coop-join-input`, `coop-join-submit`,
+`friends-panel`, `challenge-toast-accept`, `chat-input`, `chat-send`, `chat-message`, `chat-join`, `lobby-create`, `lobby-code`, `lobby-ready`, `lobby-start`, `lobby-settings`, `lobby-deck-select`,
 `duos-portal`, `duos-both`, `duos-board-own`, `duos-board-teammate`, `duos-pass`, `duos-pool`,
 `duos-own-hp`, `duos-teammate-strip`, `duos-ping-wheel`, `duos-ping-<kind>`, `duos-ping-marker`,
 `sideline-strip`, `sideline-emote`, `sideline-menu` and `sideline-mute`.
@@ -1030,16 +1049,20 @@ routes (net/navigate.ts paths, public/_redirects, behind the gate as /together i
                          (email on or off, push on this device, Add to Home Screen on an iPhone or iPad
                          outside it); the tab reads "Your move (n)"; read again when the social read's
                          dailyWaiting changes
-  /daily/:matchId        daily/DailyBoard.tsx: Game.tsx on the server's view and legal; each action one
+  /daily/:matchId        daily/DailyBoard.tsx: Game.tsx on the server's view, legal and forecast (the
+                         opponent's name on its hero, the modifiers in its rail, an aimed attack's
+                         outcomes, R3855000); each action one
                          POST sent after the seq it read, under a fresh nonce; End turn says it sends the
                          move; the clock pill in days and hours (daily/DailyClockPill.tsx); Next game to the
                          next game waiting once the move has passed; "Lost on time" and "Won on time"; a
                          notice when the game plays on an older card version; once it ends, Rematch (a new
                          daily challenge to the opponent at its mode and time, NewDailyDialog's rematch)
+                         and Watch the replay (the server's replay of it, none for a voided game)
 net/daily.ts             fetch wrappers for every daily route, typed
 daily/NewDailyDialog.tsx challenge any friend (online or not) or find an opponent, with daily/DailyFields.tsx:
                          the mode, its deck or lean, and the time per move on the segmented toggle; as a
                          rematch, only the deck or lean, to the finished game's opponent
+daily/NotificationSettings.tsx  email and push on or off: /daily's panel and /account's Notifications section
 daily/DailyBadge.tsx     the count of games waiting on the player (the social read's dailyWaiting), on
                          the Play hub's Daily games
 daily/push.ts            this device's push subscription from GET /api/daily/settings's vapidPublicKey,

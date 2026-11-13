@@ -55,6 +55,8 @@ export const dailyTestid = {
   nextGame: "daily-next-game",
   /** A finished game's Rematch: a new daily challenge to its opponent at its mode and time. */
   rematch: "daily-rematch",
+  /** A finished game's Watch the replay. */
+  watchReplay: "daily-watch-replay",
   olderCatalog: "daily-older-catalog",
   backToList: "daily-back",
 } as const;

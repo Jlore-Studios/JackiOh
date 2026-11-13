@@ -20,7 +20,7 @@ import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import type { CardLookup } from "../game/catalog.ts";
 import { formatDateTime, t, useLocale } from "../i18n/i18n.ts";
 import { getReplays } from "../net/api.ts";
-import type { OnlineReplayListing, QueueMode } from "../net/api.ts";
+import type { OnlineReplayListing } from "../net/api.ts";
 import { useAccount } from "../net/gate.ts";
 import { paths } from "../net/navigate.ts";
 import { createPracticeHost } from "../practice/host.ts";
@@ -29,7 +29,7 @@ import type { PracticeReplayListing } from "../practice/protocol.ts";
 import ReplayPlayer from "../replay/ReplayPlayer.tsx";
 import { downloadFile, onlineGame, practiceGame, readReplayJsonFile, replayJsonFile, replayStepsOf } from "../replay/download.ts";
 import type { ReplayJsonGame } from "../replay/download.ts";
-import { ReplayFailure, memoryReplaySource, replayFailureOf, replayFailureText } from "../replay/source.ts";
+import { memoryReplaySource, replayFailureOf, replayFailureText } from "../replay/source.ts";
 import type { ReplaySource } from "../replay/source.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { WhenEngineReady } from "../wasm/WhenEngineReady.tsx";
@@ -38,6 +38,7 @@ import { ShareWithFriend } from "../together/ShareReplay.tsx";
 import { sharedWithMePath } from "../together/anchors.ts";
 import { BackLink, followInApp } from "./nav.tsx";
 import { ArrowIcon } from "./ArrowIcon.tsx";
+import { MODE_WORDS, RESULT_WORDS, opponentName, unavailableText } from "./replayWords.ts";
 import { messageOf } from "../net/errors.ts";
 
 import "./replays.css";
@@ -83,18 +84,6 @@ type Listed<Row> =
  */
 type Open = { key: string; source: ReplaySource; matchId?: string; practice?: true; opponentLabel?: string } | { key: string; duos: DuosReplaySteps };
 
-const RESULT_WORDS: Readonly<Record<PracticeReplayListing["result"], string>> = {
-  win: "Win",
-  loss: "Loss",
-  draw: "Draw",
-};
-
-const MODE_WORDS: Readonly<Record<QueueMode, string>> = {
-  bo1: "Best of 1",
-  bo3: "Conquest",
-  random: "All random",
-};
-
 /** The worker's card data and the games it kept, asked in turn (its answers arrive in order). */
 async function readDevice(host: PracticeHost): Promise<{ lookup: CardLookup; replays: PracticeReplayListing[] }> {
   const catalog = await host.request({ type: "catalog" });
@@ -104,19 +93,9 @@ async function readDevice(host: PracticeHost): Promise<{ lookup: CardLookup; rep
   return { lookup: lookupFromDefs(catalog.defs), replays: replays.replays };
 }
 
-/** #3698: the opponent as the row and its replay both name them: the username, "a deleted account" when it is gone. */
-function opponentName(row: OnlineReplayListing): string {
-  return row.opponent.username === "" ? t("a deleted account") : row.opponent.username;
-}
-
 /** How long the game ran, in turns. */
 function turnsText(turns: number): string {
   return turns === 1 ? t("1 turn") : t("{turns} turns", { turns });
-}
-
-/** The row's reason it cannot be shown, if any, worded as the player words it. */
-function unavailableText(reason: PracticeReplayListing["unavailable"]): string | null {
-  return reason === undefined ? null : replayFailureText(new ReplayFailure(reason));
 }
 
 /**

@@ -47,10 +47,6 @@ mod tests {
         }))
     }
 
-    fn on(card: &CardInstance) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": card.id }] })
-    }
-
     /// What the last step's hits dealt to `card` (`damage` events, after Armor and the shield): read
     /// off the events, since a lethal hit leaves no damage on a Unit gone to the graveyard.
     fn dealt(s: &Scenario, card: &CardInstance) -> Vec<i32> {
@@ -96,7 +92,7 @@ mod tests {
         fn one_hit_of_ten_on_the_chosen_unit() {
             let mut s = board(false, json!([]), json!([BIG, GREASER]));
             let (big, other) = (s.unit_at(P2, 1), s.unit_at(P2, 2));
-            s.play(THWOMP, on(&big));
+            s.play(THWOMP, pick::targets(pick::instance(&big)));
             assert_eq!(dealt(&s, &big), vec![10], "one hit of 10");
             assert!(dealt(&s, &other).is_empty());
         }
@@ -105,7 +101,7 @@ mod tests {
         fn its_casters_spell_damage_raises_it() {
             let mut s = board(false, json!([ARCH_MAGE]), json!([BIG]));
             let big = s.unit_at(P2, 1);
-            s.play(THWOMP, on(&big));
+            s.play(THWOMP, pick::targets(pick::instance(&big)));
             assert_eq!(dealt(&s, &big), vec![13]);
         }
 
@@ -113,7 +109,7 @@ mod tests {
         fn armor_lowers_it() {
             let mut s = board(false, json!([]), json!([ARMORED]));
             let armored = s.unit_at(P2, 1);
-            s.play(THWOMP, on(&armored));
+            s.play(THWOMP, pick::targets(pick::instance(&armored)));
             assert_eq!(dealt(&s, &armored), vec![3], "10 less Armor 7");
         }
 
@@ -121,7 +117,7 @@ mod tests {
         fn a_divine_shield_takes_it_whole_and_is_spent() {
             let mut s = board(false, json!([]), json!([SHIELDED]));
             let shielded = s.unit_at(P2, 1);
-            s.play(THWOMP, on(&shielded));
+            s.play(THWOMP, pick::targets(pick::instance(&shielded)));
             s.expect_in_zone(&shielded, "field");
             assert_eq!(s.card(&shielded).damage, 0);
             assert_eq!(s.card(&shielded).divine_shield_spent, Some(true));
@@ -132,7 +128,7 @@ mod tests {
             let mut s = board(false, json!([]), json!([BIG]));
             assert_eq!(upgrade_number(&mut s, THWOMP, "damage"), 12);
             let big = s.unit_at(P2, 1);
-            s.play(THWOMP, on(&big));
+            s.play(THWOMP, pick::targets(pick::instance(&big)));
             assert_eq!(dealt(&s, &big), vec![12]);
         }
     }
@@ -144,7 +140,7 @@ mod tests {
         fn one_hit_of_one_hundred() {
             let mut s = board(true, json!([]), json!([BIG]));
             let big = s.unit_at(P2, 1);
-            s.play(THWOMP, on(&big));
+            s.play(THWOMP, pick::targets(pick::instance(&big)));
             assert_eq!(dealt(&s, &big), vec![100]);
         }
     }

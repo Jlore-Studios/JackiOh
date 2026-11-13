@@ -1,4 +1,4 @@
-// `/play`: the lobby's modes, choices and refusals (R257, R264), and its watch. The watch: only one side's HTTP
+// `/play`: the lobby's modes, choices and refusals (R257), and its watch. The watch: only one side's HTTP
 // response carries the match (or series) id, so the other side reads its own `currentMatchId` /
 // `currentSeriesId` on every mount: a reload after pairing loses `waiting`. The modes: the lobby sends intent
 // (`ModeChoice`) and relays what the server said; its verdict is the shared validator's, as UX.
@@ -24,17 +24,13 @@ import { clearSession, writeSession } from "../net/session.ts";
 import {
   ApiRequestError,
   ApiUnreachableError,
-  cancelRoom,
-  createRoom,
   dequeue,
   enqueue,
   getCollection,
   getDecks,
   getMe,
-  getOpenRooms,
   getOwnRank,
   getPopulation,
-  joinRoom,
   type DecksResponse,
   type EnqueueResponse,
   type OwnRankResponse,
@@ -43,7 +39,8 @@ import {
   type SavedTrio,
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
-import { ROOM_LINK_SHARE_TITLE, ROOM_LINK_STORAGE_KEY } from "../net/roomLink.ts";
+import { createLobby, getMyLobbies } from "../lobby/api.ts";
+import { lobbyTestid } from "../lobby/testids.ts";
 import { settle } from "../test/settle.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { currentCatalog } from "../game/currentCatalog.ts";
@@ -58,8 +55,6 @@ import PlayRoute, {
   playModeTestid,
   playTestid,
   playWaitTestid,
-  queuedStatus,
-  roomLinkStatus,
 } from "./play.tsx";
 import { resetVisibility, setVisibility } from "../test/setup.ts";
 import { expectOnePageTitle } from "../test/pageTitle.ts";
@@ -71,15 +66,15 @@ vi.mock("../net/api.ts", async (importOriginal) => {
     getMe: vi.fn(),
     enqueue: vi.fn(),
     dequeue: vi.fn(),
-    createRoom: vi.fn(),
-    cancelRoom: vi.fn(),
-    getOpenRooms: vi.fn(),
-    joinRoom: vi.fn(),
     getDecks: vi.fn(),
     getCollection: vi.fn(),
     getPopulation: vi.fn(),
     getOwnRank: vi.fn(),
   };
+});
+vi.mock("../lobby/api.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lobby/api.ts")>();
+  return { ...actual, createLobby: vi.fn(), getMyLobbies: vi.fn() };
 });
 vi.mock("../game/currentCatalog.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../game/currentCatalog.ts")>();
@@ -186,7 +181,7 @@ beforeEach(() => {
   });
   vi.mocked(getPopulation).mockResolvedValue({ gamesLastHour: 12, expectedWaitSeconds: { bo1: 30, bo3: null, random: 90 } });
   vi.mocked(getOwnRank).mockResolvedValue(rankBody());
-  vi.mocked(getOpenRooms).mockResolvedValue({ rooms: [] });
+  vi.mocked(getMyLobbies).mockResolvedValue({ lobbies: [] });
 });
 
 afterEach(() => {
@@ -369,8 +364,7 @@ describe("R1578000 the Play hub", () => {
     expect(within(ways).getAllByRole("link")).toHaveLength(WAYS.length);
     for (const [testid, href] of WAYS) expect(within(ways).getByTestId(testid)).toHaveAttribute("href", href);
     expect(paths.practice).toBe("/practice");
-    expect(screen.getByTestId(playTestid.createRoom)).toBeInTheDocument();
-    expect(screen.getByTestId(playTestid.joinForm)).toBeInTheDocument();
+    expect(screen.getByTestId(lobbyTestid.panel)).toBeInTheDocument();
     expect(screen.getAllByTestId(playTestid.replays)).toHaveLength(1);
   });
 
@@ -403,16 +397,37 @@ describe("R1578000 the Play hub", () => {
     expect(within(online).getByTestId(playTestid.signIn)).toHaveAttribute("href", paths.login);
     expect(paths.login).toBe("/login");
     expect(screen.queryByTestId(playTestid.queue)).toBeNull();
-    expect(screen.queryByTestId(playTestid.createRoom)).toBeNull();
+    expect(screen.queryByTestId(lobbyTestid.panel)).toBeNull();
     const ways = screen.getByTestId(playTestid.ways);
     expect(precedes(online, ways)).toBe(true);
     for (const [testid, href] of WAYS) expect(within(ways).getByTestId(testid)).toHaveAttribute("href", href);
-    // Nothing leaves the page: no decks, rank, population, open rooms, collection or me.
-    for (const read of [getDecks, getMe, getOwnRank, getPopulation, getOpenRooms, getCollection]) {
+    // Nothing leaves the page: no decks, rank, population, lobbies, collection or me.
+    for (const read of [getDecks, getMe, getOwnRank, getPopulation, getMyLobbies, getCollection]) {
       expect(vi.mocked(read)).not.toHaveBeenCalled();
     }
     fireEvent.click(screen.getByTestId(playTestid.signIn));
     expect(vi.mocked(navigate)).toHaveBeenCalledWith(paths.login);
+  });
+});
+
+describe("R3730000 Play a friend", () => {
+  it("R3730000 Play a friend is the private lobby's panel, in the chosen mode", async () => {
+    vi.mocked(createLobby).mockResolvedValue({ code: "ABC234" });
+    await renderLobby();
+
+    const panel = screen.getByTestId(lobbyTestid.panel);
+    expect(panel).toHaveAttribute("data-format", "duel");
+    expect(within(panel).getByRole("heading", { name: "Play a friend" })).toBeInTheDocument();
+    // The classic room's controls are gone from /play: a friend game starts in a lobby.
+    expect(screen.queryByTestId("play-create-room")).toBeNull();
+    expect(screen.queryByTestId("play-join-form")).toBeNull();
+
+    pickMode("bo3");
+    fireEvent.click(within(panel).getByTestId(lobbyTestid.create));
+    await waitFor(() => {
+      expect(vi.mocked(navigate)).toHaveBeenCalledWith(paths.lobby("ABC234"));
+    });
+    expect(vi.mocked(createLobby)).toHaveBeenCalledWith({ format: "duel", mode: "bo3" });
   });
 });
 
@@ -800,167 +815,6 @@ describe("the lobby's answers", () => {
       { timeout: 5000 },
     );
   });
-
-  it("a join that makes a series goes to the series screen", async () => {
-    vi.mocked(joinRoom).mockResolvedValueOnce({ matchId: null, seriesId: "series-2", code: "ABCD", seat: "p2", mode: "bo3" });
-    await renderLobby();
-    pickMode("bo3");
-    fireEvent.change(screen.getByTestId(playTestid.joinInput), { target: { value: "abcd" } });
-    fireEvent.submit(screen.getByTestId(playTestid.joinForm));
-
-    await waitFor(
-      () => {
-        expect(vi.mocked(navigate)).toHaveBeenCalledWith("/series/series-2");
-      },
-      { timeout: 5000 },
-    );
-    expect(vi.mocked(joinRoom)).toHaveBeenCalledWith(TOKEN, "ABCD", { mode: "bo3", trioId: MAIN.id });
-  });
-
-  it("a join that makes a match goes to the board", async () => {
-    vi.mocked(joinRoom).mockResolvedValueOnce({ matchId: "match-3", seriesId: null, code: "ABCD", seat: "p2", mode: "random" });
-    await renderLobby();
-    pickMode("random");
-    fireEvent.change(screen.getByTestId(playTestid.joinInput), { target: { value: "abcd" } });
-    fireEvent.submit(screen.getByTestId(playTestid.joinForm));
-
-    await waitFor(
-      () => {
-        expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/match-3");
-      },
-      { timeout: 5000 },
-    );
-  });
-
-  it("R264 a join refused for another mode switches to the room's mode and says what to pick", async () => {
-    vi.mocked(joinRoom).mockRejectedValue(
-      new ApiRequestError(409, {
-        code: "conflict",
-        message: "This room plays Conquest: pick one of your trios.",
-        details: { mode: "bo3" },
-      }),
-    );
-    await renderLobby();
-    fireEvent.change(screen.getByTestId(playTestid.joinInput), { target: { value: "wxyz" } });
-    fireEvent.submit(screen.getByTestId(playTestid.joinForm));
-
-    const error = await screen.findByTestId(playTestid.error);
-    expect(error).toHaveTextContent(`This room plays ${MODE_LABEL.bo3}: pick a trio and join again.`);
-    expect(screen.getByTestId(playModeTestid("bo3"))).toBeChecked();
-    expect(screen.getByTestId(playTestid.trioSelect)).toBeInTheDocument();
-    // The code is kept, so joining again is one press.
-    expect(screen.getByTestId(playTestid.joinInput)).toHaveValue("wxyz");
-  });
-
-  it("R264 Create a room sends the choice and shows the code with the room's mode", async () => {
-    vi.mocked(createRoom).mockResolvedValue({ code: "QRST", expiresAt: 0, mode: "random" });
-    await renderLobby();
-    pickMode("random");
-    fireEvent.click(screen.getByTestId(playTestid.createRoom));
-
-    expect(await screen.findByTestId(playTestid.roomCode)).toHaveTextContent("QRST");
-    expect(vi.mocked(createRoom)).toHaveBeenCalledWith(TOKEN, { mode: "random" });
-    const roomMode = screen.getByTestId(playTestid.roomMode);
-    expect(roomMode).toHaveAttribute("data-mode", "random");
-    expect(roomMode).toHaveTextContent("All random");
-  });
-});
-
-// R1075000: a room's host cancels it, and a reload finds it again
-describe("R1075000 a room's host cancels it, and a reload finds it again", () => {
-  afterEach(() => {
-    window.sessionStorage.clear();
-  });
-
-  async function createRandomRoom(): Promise<void> {
-    vi.mocked(createRoom).mockResolvedValue({ code: "QRST", expiresAt: 0, mode: "random" });
-    await renderLobby();
-    pickMode("random");
-    fireEvent.click(screen.getByTestId(playTestid.createRoom));
-    await screen.findByTestId(playTestid.roomCode);
-  }
-
-  it("R1075000 Cancel room frees the room: the ticket goes, the setup unlocks and the status says so", async () => {
-    vi.mocked(cancelRoom).mockResolvedValue({ cancelled: true });
-    await createRandomRoom();
-    expect(screen.getByTestId(playTestid.createRoom)).toBeDisabled();
-
-    fireEvent.click(screen.getByTestId(playTestid.cancelRoom));
-
-    await waitFor(() => {
-      expect(screen.queryByTestId(playTestid.roomCode)).toBeNull();
-    });
-    expect(vi.mocked(cancelRoom)).toHaveBeenCalledWith(TOKEN, "QRST");
-    expect(screen.getByTestId(playTestid.status)).toHaveTextContent("Room canceled. Its code no longer works.");
-    expect(screen.getByTestId(playTestid.createRoom)).not.toBeDisabled();
-    expect(screen.queryByTestId(playTestid.error)).toBeNull();
-  });
-
-  it("R1075000 a room joined or lapsed answers canceled false: the ticket goes and the status says so", async () => {
-    vi.mocked(cancelRoom).mockResolvedValue({ cancelled: false });
-    await createRandomRoom();
-
-    fireEvent.click(screen.getByTestId(playTestid.cancelRoom));
-
-    await waitFor(() => {
-      expect(screen.queryByTestId(playTestid.roomCode)).toBeNull();
-    });
-    expect(screen.getByTestId(playTestid.status)).toHaveTextContent(
-      "That room is no longer open: someone joined it or it expired.",
-    );
-    expect(screen.getByTestId(playTestid.createRoom)).not.toBeDisabled();
-  });
-
-  it("R1075000 after a reload the lobby shows the host's open room again, with its copy link, and Cancel room frees it", async () => {
-    vi.mocked(getOpenRooms).mockResolvedValue({ rooms: [{ code: "WXYZ23", expiresAt: 0, mode: "bo3" }] });
-    vi.mocked(cancelRoom).mockResolvedValue({ cancelled: true });
-    await renderLobby();
-
-    expect(await screen.findByTestId(playTestid.roomCode)).toHaveTextContent("WXYZ23");
-    expect(vi.mocked(getOpenRooms)).toHaveBeenCalledWith(TOKEN);
-    expect(screen.getByTestId(playTestid.roomMode)).toHaveAttribute("data-mode", "bo3");
-    expect(screen.getByTestId(playTestid.copyRoomLink)).toBeInTheDocument();
-    expect(screen.getByTestId(playTestid.status)).toHaveTextContent(
-      "Give your opponent this code. You will be taken to the game when they join.",
-    );
-    expect(screen.getByTestId(playTestid.createRoom)).toBeDisabled();
-
-    fireEvent.click(screen.getByTestId(playTestid.cancelRoom));
-
-    await waitFor(() => {
-      expect(screen.queryByTestId(playTestid.roomCode)).toBeNull();
-    });
-    expect(vi.mocked(cancelRoom)).toHaveBeenCalledWith(TOKEN, "WXYZ23");
-    expect(screen.getByTestId(playTestid.status)).toHaveTextContent("Room canceled. Its code no longer works.");
-  });
-
-  it("R1075000 a failed read leaves the idle lobby", async () => {
-    vi.mocked(getOpenRooms).mockRejectedValue(new Error("the server is down"));
-    await renderLobby();
-    pickMode("random");
-    await waitFor(() => {
-      expect(vi.mocked(getOpenRooms)).toHaveBeenCalled();
-    });
-    await act(async () => {
-      await new Promise<void>((resolve) => setTimeout(resolve, 0));
-    });
-
-    expect(screen.queryByTestId(playTestid.roomCode)).toBeNull();
-    expect(screen.queryByTestId(playTestid.error)).toBeNull();
-    expect(screen.getByTestId(playTestid.createRoom)).not.toBeDisabled();
-  });
-
-  it("R1075000 a lobby resuming a queue wait does not ask for rooms", async () => {
-    rememberQueued("bo1");
-    render(<PlayRoute token={TOKEN} />);
-    await screen.findByTestId(playTestid.deckSelect);
-    await act(async () => {
-      await new Promise<void>((resolve) => setTimeout(resolve, 0));
-    });
-
-    expect(vi.mocked(getOpenRooms)).not.toHaveBeenCalled();
-    expect(screen.queryByTestId(playTestid.roomCode)).toBeNull();
-  });
 });
 
 // R1372, R924000: All random's "More cards from"
@@ -992,10 +846,8 @@ describe("R1372 R924000 All random's more cards from", () => {
     fireEvent.change(picker, { target: { value } });
   }
 
-  it("R924000 with a pick, Find a match, Create a room and Join send leanSet; with none, they send none", async () => {
+  it("R924000 with a pick, Find a match sends leanSet; with none, it sends none", async () => {
     vi.mocked(enqueue).mockImplementation((_token, choice) => Promise.resolve(openTicket(choice.mode)));
-    vi.mocked(createRoom).mockResolvedValue({ code: "QRST", expiresAt: 0, mode: "random" });
-    vi.mocked(joinRoom).mockResolvedValue({ matchId: "match-9", seriesId: null, code: "ABCD", seat: "p2", mode: "random" });
     pickLean(await renderRandomLobby(), "Classic");
     expect((screen.getByTestId(playTestid.leanNewest) as HTMLSelectElement).value).toBe("Classic");
 
@@ -1010,19 +862,22 @@ describe("R1372 R924000 All random's more cards from", () => {
       expect(screen.getByTestId(playTestid.queue)).not.toBeDisabled();
     });
 
-    // None, a room is made with no lean at all.
+    // None, the queue is joined with no lean at all.
     pickLean(screen.getByTestId(playTestid.leanNewest), "");
-    fireEvent.click(screen.getByTestId(playTestid.createRoom));
-    await screen.findByTestId(playTestid.roomCode);
-    expect(vi.mocked(createRoom)).toHaveBeenLastCalledWith(TOKEN, { mode: "random" });
-    cleanup();
+    fireEvent.click(screen.getByTestId(playTestid.queue));
+    await waitFor(() => {
+      expect(vi.mocked(enqueue)).toHaveBeenLastCalledWith(TOKEN, { mode: "random" });
+    });
+    fireEvent.click(screen.getByTestId(playTestid.leaveQueue));
+    await waitFor(() => {
+      expect(screen.getByTestId(playTestid.queue)).not.toBeDisabled();
+    });
 
     // "Newest" is sent as the pick: the server resolves the set when it deals.
-    pickLean(await renderRandomLobby(), LEAN_NEWEST);
-    fireEvent.change(screen.getByTestId(playTestid.joinInput), { target: { value: "abcd" } });
-    fireEvent.submit(screen.getByTestId(playTestid.joinForm));
+    pickLean(screen.getByTestId(playTestid.leanNewest), LEAN_NEWEST);
+    fireEvent.click(screen.getByTestId(playTestid.queue));
     await waitFor(() => {
-      expect(vi.mocked(joinRoom)).toHaveBeenLastCalledWith(TOKEN, "ABCD", { mode: "random", leanSet: LEAN_NEWEST });
+      expect(vi.mocked(enqueue)).toHaveBeenLastCalledWith(TOKEN, { mode: "random", leanSet: LEAN_NEWEST });
     });
   });
 
@@ -1081,9 +936,6 @@ describe("the lobby's queue state", () => {
       expect(screen.getByTestId(playModeTestid(mode))).toBeDisabled();
     }
     expect(screen.getByTestId(playTestid.deckSelect)).toBeDisabled();
-    expect(screen.getByTestId(playTestid.createRoom)).toBeDisabled();
-    expect(screen.getByTestId(playTestid.joinInput)).toBeDisabled();
-    expect(screen.getByTestId(playTestid.joinSubmit)).toBeDisabled();
     // ...but never traps the player: Leave stays lit.
     expect(screen.getByTestId(playTestid.leaveQueue)).not.toBeDisabled();
   });
@@ -1202,278 +1054,6 @@ describe("the lobby's queue state", () => {
     expect(screen.queryByText("Your queue expired. Find a match to queue again.")).toBeNull();
     expect(screen.getByTestId(playTestid.queue)).toBeDisabled();
     expect(readQueued()).toBe("bo1");
-  });
-
-  it("R897000 a room wait holds no ticket, so ticketless reads never end it", async () => {
-    vi.mocked(createRoom).mockResolvedValue({ code: "QRST", expiresAt: 0, mode: "random" });
-    // The room host holds no queue ticket: every read says so, and no series has formed yet.
-    vi.mocked(getMe).mockResolvedValue({ ...me(null), queued: false });
-    await renderLobby();
-    pickMode("random");
-    fireEvent.click(screen.getByTestId(playTestid.createRoom));
-    await screen.findByTestId(playTestid.roomCode);
-
-    // Past the queue's ended threshold, all ticketless: still the room ticket, Find a match
-    // still locked, and no rejoin message.
-    await waitFor(
-      () => {
-        expect(vi.mocked(getMe).mock.calls.length).toBeGreaterThanOrEqual(QUEUE_ENDED_AFTER_READS + 1);
-      },
-      { timeout: 8000 },
-    );
-    expect(screen.getByTestId(playTestid.roomCode)).toHaveTextContent("QRST");
-    expect(screen.getByTestId(playTestid.queue)).toBeDisabled();
-    expect(screen.queryByText("Your queue expired. Find a match to queue again.")).toBeNull();
-  });
-
-  it("a join that pairs at once announces before navigating", async () => {
-    vi.mocked(joinRoom).mockResolvedValue({ matchId: "match-8", seriesId: null, code: "ABCD", seat: "p2", mode: "bo1" });
-    await renderLobby();
-    fireEvent.change(screen.getByTestId(playTestid.joinInput), { target: { value: "abcd" } });
-    fireEvent.submit(screen.getByTestId(playTestid.joinForm));
-
-    expect(await screen.findByTestId(playTestid.status)).toHaveTextContent(MATCH_FOUND_STATUS);
-    expect(vi.mocked(navigate)).not.toHaveBeenCalled();
-    await waitFor(
-      () => {
-        expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/match-8");
-      },
-      { timeout: 5000 },
-    );
-  });
-});
-
-// R767: a room shared as a link
-describe("R767 a room shared as a link", () => {
-  afterEach(() => {
-    window.history.replaceState(null, "", "/");
-    window.sessionStorage.clear();
-    Reflect.deleteProperty(navigator, "clipboard");
-    Reflect.deleteProperty(navigator, "share");
-  });
-
-  /** Opens `/play` on `search`, as a visitor who followed the link does, and renders the lobby. */
-  function openLink(search: string): void {
-    window.history.replaceState(null, "", `${paths.play}${search}`);
-    render(<PlayRoute token={TOKEN} />);
-  }
-
-  function stubClipboard(writeText: () => Promise<void>): ReturnType<typeof vi.fn> {
-    const spy = vi.fn(writeText);
-    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: spy } });
-    return spy;
-  }
-
-  async function createRandomRoom(): Promise<void> {
-    vi.mocked(createRoom).mockResolvedValue({ code: "QRSTUV", expiresAt: 0, mode: "random" });
-    await renderLobby();
-    pickMode("random");
-    fireEvent.click(screen.getByTestId(playTestid.createRoom));
-    await screen.findByTestId(playTestid.roomCode);
-  }
-
-  it("R767 /play?room=abc234&mode=bo1 fills in ABC234, chooses Best of 1, says what to pick, focuses the deck and sends no join", async () => {
-    // The last choice was Conquest, so the switch to Best of 1 is the link's doing.
-    window.localStorage.setItem(PLAY_CHOICE_KEY, JSON.stringify({ mode: "bo3" }));
-    openLink("?room=abc234&mode=bo1");
-
-    const select = await screen.findByTestId(playTestid.deckSelect);
-    expect(screen.getByTestId(playTestid.joinInput)).toHaveValue("ABC234");
-    expect(screen.getByTestId(playModeTestid("bo1"))).toBeChecked();
-    expect(screen.getByTestId(playTestid.status)).toHaveTextContent(roomLinkStatus("bo1"));
-    expect(roomLinkStatus("bo1")).toBe("Pick a deck for Best of 1, then press Join.");
-    await waitFor(() => {
-      expect(select).toHaveFocus();
-    });
-    expect(vi.mocked(joinRoom)).not.toHaveBeenCalled();
-    expect(screen.queryByTestId(playTestid.error)).toBeNull();
-    // The link is gone from the address bar and from this tab, so a reload or Back refills nothing.
-    expect(window.location.pathname).toBe(paths.play);
-    expect(window.location.search).toBe("");
-    expect(window.sessionStorage.getItem(ROOM_LINK_STORAGE_KEY)).toBeNull();
-  });
-
-  it("R767 a Conquest link focuses the trio and an All random one focuses Join", async () => {
-    openLink("?room=abc234&mode=bo3");
-    const trioSelect = await screen.findByTestId(playTestid.trioSelect);
-    expect(screen.getByTestId(playModeTestid("bo3"))).toBeChecked();
-    expect(screen.getByTestId(playTestid.status)).toHaveTextContent("Pick a trio for Conquest, then press Join.");
-    await waitFor(() => {
-      expect(trioSelect).toHaveFocus();
-    });
-    cleanup();
-    window.sessionStorage.clear();
-
-    openLink("?room=wxyz23&mode=random");
-    expect(screen.getByTestId(playTestid.joinInput)).toHaveValue("WXYZ23");
-    expect(screen.getByTestId(playModeTestid("random"))).toBeChecked();
-    expect(screen.getByTestId(playTestid.status)).toHaveTextContent("No deck needed for All random: press Join.");
-    await waitFor(() => {
-      expect(screen.getByTestId(playTestid.joinSubmit)).toHaveFocus();
-    });
-    expect(vi.mocked(joinRoom)).not.toHaveBeenCalled();
-  });
-
-  it("R767 a link with no usable mode fills in the code and leaves the last choice", async () => {
-    window.localStorage.setItem(PLAY_CHOICE_KEY, JSON.stringify({ mode: "bo3" }));
-    openLink("?room=abc234&mode=bo5");
-    await screen.findByTestId(playTestid.trioSelect);
-    expect(screen.getByTestId(playTestid.joinInput)).toHaveValue("ABC234");
-    expect(screen.getByTestId(playModeTestid("bo3"))).toBeChecked();
-    expect(screen.getByTestId(playTestid.status)).toHaveTextContent(roomLinkStatus("bo3"));
-  });
-
-  it("R2094000 a room link opened on /play itself, as a chat Join does, fills the code, the mode and the focus", async () => {
-    window.localStorage.setItem(PLAY_CHOICE_KEY, JSON.stringify({ mode: "bo3" }));
-    openLink("");
-    const trioSelect = await screen.findByTestId(playTestid.trioSelect);
-    expect(screen.getByTestId(playTestid.joinInput)).toHaveValue("");
-    // The same path with a new query: no remount, as `navigate` does it.
-    act(() => {
-      window.history.pushState(null, "", `${paths.play}?room=abc234&mode=bo1`);
-      window.dispatchEvent(new PopStateEvent("popstate"));
-    });
-    const deckSelect = await screen.findByTestId(playTestid.deckSelect);
-    expect(trioSelect).not.toBeInTheDocument();
-    expect(screen.getByTestId(playTestid.joinInput)).toHaveValue("ABC234");
-    expect(screen.getByTestId(playModeTestid("bo1"))).toBeChecked();
-    expect(screen.getByTestId(playTestid.status)).toHaveTextContent(roomLinkStatus("bo1"));
-    await waitFor(() => {
-      expect(deckSelect).toHaveFocus();
-    });
-    expect(window.location.search).toBe("");
-    expect(window.sessionStorage.getItem(ROOM_LINK_STORAGE_KEY)).toBeNull();
-    expect(vi.mocked(joinRoom)).not.toHaveBeenCalled();
-  });
-
-  it("R767 a code that is no room code is ignored without a word", async () => {
-    // abc123 has a 1 (R104's alphabet has none), abc23 is short and abc2345 is long.
-    for (const code of ["abc123", "abc23", "abc2345"]) {
-      openLink(`?room=${code}&mode=bo3`);
-      await screen.findByTestId(playTestid.deckSelect);
-      expect(screen.getByTestId(playTestid.joinInput)).toHaveValue("");
-      expect(screen.getByTestId(playModeTestid("bo1"))).toBeChecked();
-      expect(screen.queryByTestId(playTestid.status)).toBeNull();
-      expect(screen.queryByTestId(playTestid.error)).toBeNull();
-      expect(window.location.search).toBe("");
-      expect(window.sessionStorage.getItem(ROOM_LINK_STORAGE_KEY)).toBeNull();
-      cleanup();
-    }
-    expect(vi.mocked(joinRoom)).not.toHaveBeenCalled();
-  });
-
-  it("R767 the link's mode is a hint: R264's refusal still switches to the room's", async () => {
-    vi.mocked(joinRoom).mockRejectedValue(
-      new ApiRequestError(409, {
-        code: "conflict",
-        message: "This room plays Conquest: pick one of your trios.",
-        details: { mode: "bo3" },
-      }),
-    );
-    openLink("?room=abc234&mode=bo1");
-    await screen.findByTestId(playTestid.deckSelect);
-    fireEvent.submit(screen.getByTestId(playTestid.joinForm));
-
-    const error = await screen.findByTestId(playTestid.error);
-    expect(vi.mocked(joinRoom)).toHaveBeenCalledWith(TOKEN, "ABC234", { mode: "bo1", deckId: AGGRO.id });
-    expect(error).toHaveTextContent(`This room plays ${MODE_LABEL.bo3}: pick a trio and join again.`);
-    expect(screen.getByTestId(playModeTestid("bo3"))).toBeChecked();
-    // The notice named the link's mode; it must not sit beside an error that says the opposite.
-    expect(screen.queryByTestId(playTestid.status)).toBeNull();
-    // The code stays, so joining again is one press.
-    expect(screen.getByTestId(playTestid.joinInput)).toHaveValue("ABC234");
-  });
-
-  it("R767 the link's notice goes when the player picks another mode", async () => {
-    openLink("?room=abc234&mode=bo1");
-    await screen.findByTestId(playTestid.deckSelect);
-    expect(screen.getByTestId(playTestid.status)).toHaveTextContent(roomLinkStatus("bo1"));
-    fireEvent.click(screen.getByTestId(playModeTestid("bo3")));
-    expect(screen.queryByTestId(playTestid.status)).toBeNull();
-  });
-
-  it("R767 a lobby still queued keeps its queue's mode and notice; the link fills in only the code", async () => {
-    rememberQueued("bo3");
-    openLink("?room=abc234&mode=bo1");
-    await screen.findByTestId(playTestid.trioSelect);
-    expect(screen.getByTestId(playModeTestid("bo3"))).toBeChecked();
-    expect(screen.getByTestId(playTestid.status)).toHaveTextContent(queuedStatus("bo3"));
-    expect(screen.getByTestId(playTestid.joinInput)).toHaveValue("ABC234");
-    expect(screen.getByTestId(playTestid.trioSelect)).not.toHaveFocus();
-    expect(window.location.search).toBe("");
-  });
-
-  it("R767 Copy invite link puts the full link on the clipboard where there is no share sheet", async () => {
-    const writeText = stubClipboard(() => Promise.resolve());
-    await createRandomRoom();
-    const button = screen.getByTestId(playTestid.copyRoomLink);
-    expect(button).toHaveTextContent("Copy invite link");
-    fireEvent.click(button);
-
-    await waitFor(() => {
-      expect(button).toHaveTextContent("Link copied");
-    });
-    expect(writeText).toHaveBeenCalledTimes(1);
-    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/play?room=QRSTUV&mode=random`);
-    // The code's own button is a separate one and is untouched.
-    expect(screen.getByTestId(playTestid.copyRoomCode)).toHaveTextContent("Copy");
-  });
-
-  it("R767 a refused clipboard leaves both copy buttons as they were", async () => {
-    const writeText = stubClipboard(() => Promise.reject(new Error("denied")));
-    await createRandomRoom();
-    fireEvent.click(screen.getByTestId(playTestid.copyRoomLink));
-    fireEvent.click(screen.getByTestId(playTestid.copyRoomCode));
-    await waitFor(() => {
-      expect(writeText).toHaveBeenCalledTimes(2);
-    });
-    await settle({ macrotasks: 1, ticks: 0 });
-
-    expect(screen.getByTestId(playTestid.copyRoomLink)).toHaveTextContent("Copy invite link");
-    expect(screen.getByTestId(playTestid.copyRoomCode)).toHaveTextContent("Copy");
-    expect(screen.getByTestId(playTestid.copyRoomCode)).not.toHaveTextContent("Copied");
-    expect(screen.queryByTestId(playTestid.error)).toBeNull();
-  });
-
-  it("R767 no clipboard at all (an insecure origin) leaves the buttons as they were", async () => {
-    await createRandomRoom();
-    fireEvent.click(screen.getByTestId(playTestid.copyRoomLink));
-    await settle({ macrotasks: 1, ticks: 0 });
-    expect(screen.getByTestId(playTestid.copyRoomLink)).toHaveTextContent("Copy invite link");
-    expect(screen.queryByTestId(playTestid.error)).toBeNull();
-  });
-
-  it("R767 Copy invite link opens the share sheet where there is one", async () => {
-    const writeText = stubClipboard(() => Promise.resolve());
-    const share = vi.fn(() => Promise.resolve());
-    Object.defineProperty(navigator, "share", { configurable: true, value: share });
-    await createRandomRoom();
-    fireEvent.click(screen.getByTestId(playTestid.copyRoomLink));
-
-    await waitFor(() => {
-      expect(screen.getByTestId(playTestid.copyRoomLink)).toHaveTextContent("Link shared");
-    });
-    expect(share).toHaveBeenCalledWith({
-      title: ROOM_LINK_SHARE_TITLE,
-      url: `${window.location.origin}/play?room=QRSTUV&mode=random`,
-    });
-    expect(writeText).not.toHaveBeenCalled();
-  });
-
-  it("R767 a share sheet closed without sharing changes nothing", async () => {
-    const writeText = stubClipboard(() => Promise.resolve());
-    const share = vi.fn(() => Promise.reject(new DOMException("", "AbortError")));
-    Object.defineProperty(navigator, "share", { configurable: true, value: share });
-    await createRandomRoom();
-    fireEvent.click(screen.getByTestId(playTestid.copyRoomLink));
-    await waitFor(() => {
-      expect(share).toHaveBeenCalledTimes(1);
-    });
-    await settle({ macrotasks: 1, ticks: 0 });
-
-    expect(screen.getByTestId(playTestid.copyRoomLink)).toHaveTextContent("Copy invite link");
-    expect(writeText).not.toHaveBeenCalled();
-    expect(screen.queryByTestId(playTestid.error)).toBeNull();
   });
 });
 
@@ -1648,20 +1228,6 @@ describe("R3792000 the wait says when the server cannot be reached", () => {
     await waitReads(LOBBY_UNREACHABLE_AFTER_READS);
     expect(vi.mocked(getMe)).toHaveBeenCalledTimes(LOBBY_UNREACHABLE_AFTER_READS);
     expect(screen.getByTestId(playTestid.unreachable)).toHaveTextContent(NOTICE);
-  });
-
-  it("R3792000 a room wait shows the notice too", async () => {
-    vi.mocked(createRoom).mockResolvedValue({ code: "QRST", expiresAt: 0, mode: "random" });
-    vi.mocked(getMe).mockResolvedValue({ ...me(null), queued: false });
-    await renderLobby();
-    pickMode("random");
-    fireEvent.click(screen.getByTestId(playTestid.createRoom));
-    await screen.findByTestId(playTestid.roomCode);
-
-    down();
-    for (let i = 0; i < LOBBY_UNREACHABLE_AFTER_READS; i += 1) await settle({ advance: ACCOUNT_MS });
-    expect(screen.getByTestId(playTestid.unreachable)).toHaveTextContent(NOTICE);
-    expect(screen.getByTestId(playTestid.roomCode)).toHaveTextContent("QRST");
   });
 
   it("R3792000 an idle lobby never shows it", async () => {

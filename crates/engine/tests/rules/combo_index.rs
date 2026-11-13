@@ -11,7 +11,7 @@ use jackioh_engine::subsystems::combo_index::{
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
-use crate::rules::fixtures::harness::{both, events_of_type, in_hand, json_of, new_game, put, slot};
+use crate::rules::fixtures::harness::{both, events_of_type, in_hand, json_of, live, new_game, put, slot};
 
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     let mut out = json!({
@@ -139,12 +139,8 @@ const STEP_KINDS: [&str; 5] = [
     "damage",
 ];
 
-fn card<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
-
 fn grade_now(state: &GameState, id: &str) -> Option<i32> {
-    card(state, id).counters.grade
+    live(state, id).counters.grade
 }
 
 fn sink_events(state: &mut GameState, events: &mut Vec<GameEvent>, f: impl FnOnce(&mut EngineSink<'_>)) {
@@ -203,11 +199,11 @@ mod r27_combo_index_s8_93_m3_t7 {
         );
 
         sink_events(&mut state, &mut events, |sink| {
-            let card = card(sink.state, &card_id).clone();
+            let card = live(sink.state, &card_id);
             run(sink, &card, vec![raise_grade(RaiseGradeArgs::default())]);
         });
         assert_eq!(grade_now(&state, &card_id), Some(2));
-        assert_eq!(json_of(grade_name_of(card(&state, &card_id))), json!("D"));
+        assert_eq!(json_of(grade_name_of(&live(&state, &card_id))), json!("D"));
     }
 
     #[test]
@@ -222,7 +218,7 @@ mod r27_combo_index_s8_93_m3_t7 {
         play(&mut sink, &trick().id, false);
         assert_eq!(cards_played_this_turn(sink.state, P1), 2);
 
-        let card = super::card(sink.state, &card.id).clone();
+        let card = live(sink.state, &card.id);
         assert!(!grade_rises(sink.state, &card));
         let effects = combo_index_end_of_turn(&sink, &card);
         assert!(effects.is_empty());
@@ -316,7 +312,7 @@ mod r27_combo_index_s8_93_m3_t7 {
         };
 
         assert_eq!(grade_now(&state, &card_id), Some(6));
-        assert_eq!(json_of(grade_name_of(card(&state, &card_id))), json!("S"));
+        assert_eq!(json_of(grade_name_of(&live(&state, &card_id))), json!("S"));
         let types: Vec<Value> = events[from..]
             .iter()
             .map(|event| json_of(event)["type"].clone())
@@ -453,7 +449,7 @@ mod r27_combo_index_s8_93_m3_t7 {
 
         let discounted: Vec<CardInstance> = hand_ids
             .iter()
-            .map(|id| card(&state, id).clone())
+            .map(|id| live(&state, id))
             .filter(|held| held.cost_mod == -1)
             .collect();
         assert_eq!(discounted.len(), 2); // R60: N different cards
@@ -476,7 +472,7 @@ mod r27_combo_index_s8_93_m3_t7 {
         assert_eq!(
             hand_ids
                 .iter()
-                .filter(|id| card(&state, id).cost_mod == 0)
+                .filter(|id| live(&state, id.as_str()).cost_mod == 0)
                 .count(),
             2
         );
@@ -489,7 +485,7 @@ mod r27_combo_index_s8_93_m3_t7 {
             only_id = in_hand(sink.state, &trick().id, P1, 1).remove(0).id;
             run(sink, &small_card, vec![step_d()]);
         });
-        assert_eq!(card(&small, &only_id).cost_mod, -1);
+        assert_eq!(live(&small, &only_id).cost_mod, -1);
 
         let mut none = game("step-d-empty");
         sink_events(&mut none, &mut Vec::new(), |sink| {
@@ -566,8 +562,8 @@ mod r27_combo_index_s8_93_m3_t7 {
                 hand.into_iter().map(|held| held.id).collect::<Vec<String>>(),
             )
         };
-        assert!(card(&state, &hand_ids[0]).radiant);
-        assert!(hand_ids.iter().all(|id| card(&state, id).radiant));
+        assert!(live(&state, &hand_ids[0]).radiant);
+        assert!(hand_ids.iter().all(|id| live(&state, id).radiant));
 
         // With every hand card Radiant the pool is empty and nothing changes (R60): no card and no
         // random number (R129). The hidden hand is still cued once, as a pick would cue it (R177).
@@ -576,7 +572,7 @@ mod r27_combo_index_s8_93_m3_t7 {
             let mut rng = Rng::new(&state.seed, state.rng_cursor);
             let mut second_sink = EngineSink::new(&mut state, &mut events_after, &mut rng);
             let cursor = second_sink.rng.cursor();
-            let me = card(second_sink.state, &card_id).clone();
+            let me = live(second_sink.state, &card_id);
             run(&mut second_sink, &me, vec![step_b()]);
             assert_eq!(second_sink.rng.cursor(), cursor);
         }
@@ -596,7 +592,7 @@ mod r27_combo_index_s8_93_m3_t7 {
             unit_id = put(sink.state, &body().id, slot(P1, Row::Units, 1), json!({})).id;
             run(sink, &field_card, vec![step_b()]);
         });
-        assert!(!card(&field, &unit_id).radiant);
+        assert!(!live(&field, &unit_id).radiant);
     }
 
     #[test]
@@ -687,10 +683,7 @@ mod r27_combo_index_s8_93_m3_t7 {
         end_turn(&mut sink);
 
         assert_eq!(grade_now(sink.state, &card.id), Some(2));
-        assert_eq!(
-            json_of(grade_name_of(super::card(sink.state, &card.id))),
-            json!("D")
-        );
+        assert_eq!(json_of(grade_name_of(&live(sink.state, &card.id))), json!("D"));
         // E and D ran before the turn ended (§2.2).
         let added: Vec<Value> = events_of_type(sink.events, GameEventType::AddedToHand)
             .iter()
@@ -721,7 +714,7 @@ mod r27_combo_index_s8_93_m3_t7 {
         assert_eq!(grade_now(sink.state, &card.id), Some(2));
         assert_eq!(sink.state.active, P1);
         assert_eq!(cards_played_this_turn(sink.state, P1), 0);
-        let card = super::card(sink.state, &card.id).clone();
+        let card = live(sink.state, &card.id);
         assert!(!grade_rises(sink.state, &card));
     }
 }
@@ -790,7 +783,7 @@ mod r3800001_a_grade_is_written_only_on_the_field {
                 vec![effects::exile(json_as(json!({ "target": { "of": "self" } })))],
             );
         });
-        assert_eq!(card(&state, &index.id).zone, Zone::Exile { player: P1 });
+        assert_eq!(live(&state, &index.id).zone, Zone::Exile { player: P1 });
 
         let mut events = Vec::new();
         sink_events(&mut state, &mut events, |sink| {

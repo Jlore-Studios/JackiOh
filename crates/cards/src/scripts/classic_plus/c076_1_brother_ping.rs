@@ -77,10 +77,6 @@ mod tests {
 
     use crate::js;
 
-    fn enemy_hero() -> Value {
-        json!([{ "pick": "hero", "player": "p2" }])
-    }
-
     /// The `activate`/`activatePower` actions `legalActions` lists for `player` on that card, as JSON.
     fn listed(s: &Scenario, player: PlayerId, instance_id: &str) -> Vec<Value> {
         legal_actions(s.state(), player)
@@ -136,7 +132,7 @@ mod tests {
             #[test]
             fn r384_it_may_hit_either_hero_or_a_unit_of_its_own_side() {
                 let mut s = setup(false, &[MENACE], &[]);
-                s.activate(PING, json!({ "targets": enemy_hero() }));
+                s.activate(PING, json!({ "targets": pick::hero("p2") }));
                 s.expect_health(P2, 29);
                 s.end_turn().end_turn();
                 s.activate(PING, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
@@ -158,7 +154,7 @@ mod tests {
             #[test]
             fn e6_it_is_no_spells_hit_so_spell_damage_never_raises_it() {
                 let mut s = setup(false, &[SOLARIUS], &[]);
-                s.activate(PING, json!({ "targets": enemy_hero() }));
+                s.activate(PING, json!({ "targets": pick::hero("p2") }));
                 s.expect_health(P2, 29);
             }
 
@@ -172,14 +168,14 @@ mod tests {
                     None => panic!("no Ping"),
                 };
                 assert!(!listed(&s, P1, &ping.id).is_empty());
-                s.activate(&ping, json!({ "targets": enemy_hero() }));
+                s.activate(&ping, json!({ "targets": pick::hero("p2") }));
                 s.expect_health(P2, 29);
             }
 
             #[test]
             fn r384_activating_spends_no_exertion_it_may_still_attack_that_turn() {
                 let mut s = setup(false, &[], &[]);
-                s.activate(PING, json!({ "targets": enemy_hero() })).attack(PING, "hero");
+                s.activate(PING, json!({ "targets": pick::hero("p2") })).attack(PING, "hero");
                 s.expect_health(P2, 25);
             }
 
@@ -191,7 +187,7 @@ mod tests {
                 }));
                 let played = s.state().players.p1.turn_log.cards_played;
                 let price = js(&s.view(P1))["you"]["hand"].clone();
-                s.activate(PING, json!({ "targets": enemy_hero() }));
+                s.activate(PING, json!({ "targets": pick::hero("p2") }));
                 assert!(!s.last_events().iter().any(|event| event.event_type() == GameEventType::CardPlayed));
                 assert_eq!(s.state().players.p1.turn_log.cards_played, played);
                 assert_eq!(js(&s.view(P1))["you"]["hand"], price);
@@ -201,13 +197,13 @@ mod tests {
             fn r384_a_second_use_that_turn_is_refused_and_not_listed_it_is_back_the_next_turn() {
                 let mut s = setup(false, &[], &[]);
                 let ping = s.card(PING).clone();
-                s.activate(&ping, json!({ "targets": enemy_hero() }));
+                s.activate(&ping, json!({ "targets": pick::hero("p2") }));
                 assert!(listed(&s, P1, &ping.id).is_empty());
-                s.expect_refused(|s| s.activate(&ping, json!({ "targets": enemy_hero() })));
+                s.expect_refused(|s| s.activate(&ping, json!({ "targets": pick::hero("p2") })));
                 s.expect_health(P2, 29);
                 s.end_turn().end_turn();
                 assert!(!listed(&s, P1, &ping.id).is_empty());
-                s.activate(&ping, json!({ "targets": enemy_hero() }));
+                s.activate(&ping, json!({ "targets": pick::hero("p2") }));
                 s.expect_health(P2, 28);
             }
 
@@ -219,7 +215,7 @@ mod tests {
                     "p2": { "hand": [FILLER] },
                 }));
                 s.card_mut(PING).granted_keywords = vec![json_as(json!({ "kind": "Reborn" }))];
-                s.activate(PING, json!({ "targets": enemy_hero() }));
+                s.activate(PING, json!({ "targets": pick::hero("p2") }));
                 let ping = s.card(PING).id.clone();
                 assert!(listed(&s, P1, &ping).is_empty());
                 let target = s.unit(P1, 1).expect("Ping on the field").id;
@@ -228,7 +224,7 @@ mod tests {
                 assert_eq!(back.as_ref().map(|card| card.def_id.clone()), Some(PING.to_string()));
                 let back = back.expect("Ping back on the field");
                 assert!(!listed(&s, P1, &back.id).is_empty());
-                s.activate(&back, json!({ "targets": enemy_hero() }));
+                s.activate(&back, json!({ "targets": pick::hero("p2") }));
                 s.expect_health(P2, 28);
             }
 
@@ -241,7 +237,7 @@ mod tests {
                 }));
                 let ping = s.card(PING).clone();
                 assert!(listed(&s, P1, &ping.id).is_empty());
-                s.expect_refused(|s| s.activate(&ping, json!({ "targets": enemy_hero() })));
+                s.expect_refused(|s| s.activate(&ping, json!({ "targets": pick::hero("p2") })));
             }
 
             #[test]
@@ -249,7 +245,7 @@ mod tests {
                 let s = setup(false, &[], &[MENACE]);
                 let targets: Vec<String> =
                     listed(&s, P1, &s.card(PING).id).iter().map(|action| action["targets"].to_string()).collect();
-                assert!(targets.contains(&enemy_hero().to_string()));
+                assert!(targets.contains(&pick::hero("p2").to_string()));
                 assert!(targets.contains(&pick::id(&s.card(MENACE).id).to_string()));
             }
 
@@ -257,28 +253,28 @@ mod tests {
             fn r386_an_upgrade_of_its_x_makes_it_activate_2_a_degrade_never_takes_it_below_1() {
                 let mut up = setup(false, &[], &[]);
                 up.card_mut(PING).tuning = Some(json_as(json!({ "x": { "Activate": 1 } })));
-                up.activate(PING, json!({ "targets": enemy_hero() }))
-                    .activate(PING, json!({ "targets": enemy_hero() }));
+                up.activate(PING, json!({ "targets": pick::hero("p2") }))
+                    .activate(PING, json!({ "targets": pick::hero("p2") }));
                 up.expect_health(P2, 28);
-                up.expect_refused(|s| s.activate(PING, json!({ "targets": enemy_hero() })));
+                up.expect_refused(|s| s.activate(PING, json!({ "targets": pick::hero("p2") })));
 
                 let mut down = setup(false, &[], &[]);
                 down.card_mut(PING).tuning = Some(json_as(json!({ "x": { "Activate": -3 } })));
-                down.activate(PING, json!({ "targets": enemy_hero() }));
+                down.activate(PING, json!({ "targets": pick::hero("p2") }));
                 down.expect_health(P2, 29);
-                down.expect_refused(|s| s.activate(PING, json!({ "targets": enemy_hero() })));
+                down.expect_refused(|s| s.activate(PING, json!({ "targets": pick::hero("p2") })));
             }
 
             #[test]
             fn r386_an_upgrade_of_its_damage_deals_2_a_degrade_never_below_1() {
                 let mut up = setup(false, &[], &[]);
                 step_param(up.card_mut(PING), "damage", 1);
-                up.activate(PING, json!({ "targets": enemy_hero() }));
+                up.activate(PING, json!({ "targets": pick::hero("p2") }));
                 up.expect_health(P2, 28);
 
                 let mut down = setup(false, &[], &[]);
                 step_param(down.card_mut(PING), "damage", -1);
-                down.activate(PING, json!({ "targets": enemy_hero() }));
+                down.activate(PING, json!({ "targets": pick::hero("p2") }));
                 down.expect_health(P2, 29);
             }
         }
@@ -291,12 +287,12 @@ mod tests {
                 let mut s = setup(true, &[], &[]);
                 let ping = s.card(PING).clone();
                 s.expect_stats(&ping, json!({ "attack": 8, "maxHealth": 8 }));
-                s.activate(&ping, json!({ "targets": enemy_hero() }));
+                s.activate(&ping, json!({ "targets": pick::hero("p2") }));
                 assert!(!listed(&s, P1, &ping.id).is_empty());
-                s.activate(&ping, json!({ "targets": enemy_hero() }));
+                s.activate(&ping, json!({ "targets": pick::hero("p2") }));
                 s.expect_health(P2, 28);
                 assert!(listed(&s, P1, &ping.id).is_empty());
-                s.expect_refused(|s| s.activate(&ping, json!({ "targets": enemy_hero() })));
+                s.expect_refused(|s| s.activate(&ping, json!({ "targets": pick::hero("p2") })));
             }
 
             #[test]
@@ -312,11 +308,11 @@ mod tests {
             fn r386_an_upgrade_of_the_radiant_x_makes_it_activate_3() {
                 let mut s = setup(true, &[], &[]);
                 s.card_mut(PING).tuning = Some(json_as(json!({ "x": { "Activate": 1 } })));
-                s.activate(PING, json!({ "targets": enemy_hero() }))
-                    .activate(PING, json!({ "targets": enemy_hero() }))
-                    .activate(PING, json!({ "targets": enemy_hero() }));
+                s.activate(PING, json!({ "targets": pick::hero("p2") }))
+                    .activate(PING, json!({ "targets": pick::hero("p2") }))
+                    .activate(PING, json!({ "targets": pick::hero("p2") }));
                 s.expect_health(P2, 27);
-                s.expect_refused(|s| s.activate(PING, json!({ "targets": enemy_hero() })));
+                s.expect_refused(|s| s.activate(PING, json!({ "targets": pick::hero("p2") })));
             }
         }
     }

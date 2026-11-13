@@ -196,6 +196,9 @@ pub struct AiSearch {
     pub expensive_def_ids: &'static [&'static str],
     /// Nodes a Play of an `expensive_def_ids` card pays beyond the one every `simulate` takes.
     pub expensive_def_nodes: i32,
+    /// R3575603: the most expensive steps (`simulate::SimMemo`) one decision keeps to answer again: each
+    /// holds two states, and a decision meets a few at most.
+    pub memo_steps: i32,
     /// The cards an armed backrow copy of which makes a simulated Attack cost `ai_turn_trap_nodes`
     /// (§8.5 core-096: a whole random AI turn inside one reduce), asked only of an attack that could be
     /// the lethal one the trap answers, so an ordinary poke is not priced like losing the turn. A fused
@@ -228,6 +231,7 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     fat_budget_nodes: 600,
     expensive_def_ids: &["core-097", "classicplus-027"],
     expensive_def_nodes: 100,
+    memo_steps: 8,
     ai_turn_trap_ids: &["core-096"],
     ai_turn_trap_nodes: 40,
     judged_card_nodes: 3,
@@ -481,6 +485,19 @@ pub struct EvalWeights {
     /// trigger (`evaluate::awaken_price`) that `slumber_worth` adds, inside its slumber share, the seat's
     /// sleepers and the enemy's alike.
     pub awaken: f64,
+    /// R3822000: for each point of damage a unit's Burn and Toxic will deal it over `AI_AFFLICTION_TICKS`
+    /// of its controller's turn starts (`evaluate::afflicted`), up to its health, the share of a `health`
+    /// point taken off its worth; a Divine Shield a tick takes costs the same share of
+    /// `keyword.divine_shield`. At most 1, so more health is never worth less.
+    pub unit_affliction: f64,
+    /// R3822000: a unit the nth tick of its Burn and Toxic kills keeps (1 − unitDoomed / n) of the rest of
+    /// its worth. Brittle n crumbles at the same stage, so the smaller of this share and its Brittle share
+    /// (`brittle_discount`) counts.
+    pub unit_doomed: f64,
+    /// R3822000: the share of what the hero's coming Burn and Toxic ticks (`evaluate::coming_hero_ticks`)
+    /// cost on `hero_value`'s curve that its side loses. For the enemy hero, the same share of that life
+    /// also counts at `enemy_health`.
+    pub hero_affliction: f64,
     /// An unseen hand card is valued as if it cost this.
     pub opponent_hand_cost: f64,
     /// A readable backrow card: backrowBase + backrowPerCost × queryCost(def).
@@ -651,6 +668,13 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // play a lone Imprisoned Ship Smith and plays a Felinor Token over Imprisoned Cosmality. At 1.0 the
     // smoke gate read 20, 19 and 20 of 20; at 0, 20, 19 and 20.
     awaken: 1.0,
+    // R3822000: untuned starts, to revisit after #3574's sweep. A point of damage still to come at half a
+    // point of health now, a hero's coming life at half its cost on the curve, and a unit a tick kills at
+    // Brittle's own `brittle_discount`, since both ends come at the same stage. At 0.5 the smoke gate read
+    // 20, 18 and 18 of 20; at 0, 19, 18 and 18.
+    unit_affliction: 0.5,
+    unit_doomed: 0.5,
+    hero_affliction: 0.5,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,
@@ -687,6 +711,16 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     closing_weight: 3.0,
 };
 
+/// R3822000: the turn starts of a counter's controller over which the evaluation reads Burn and Toxic
+/// (`evaluate::afflicted`, `evaluate::coming_hero_ticks`). Four hold the whole series of Eclipse's Radiant
+/// Burn 10 (S+ #119: 10, 7, 4 and 1 at `BURN_DECAY`), the largest one line declares; a larger count, a
+/// fused rider's or one several hits stacked (R3540000), is read for its first four. Toxic, which never
+/// fades, is read over the same horizon.
+pub const AI_AFFLICTION_TICKS: i32 = 4;
+const _: () = assert!(AI_AFFLICTION_TICKS >= 1);
+const _: () = assert!(AI_EVAL.unit_affliction >= 0.0 && AI_EVAL.unit_affliction <= 1.0);
+const _: () = assert!(AI_EVAL.unit_doomed >= 0.0 && AI_EVAL.unit_doomed <= 1.0);
+
 /// R2424000, R2687000: the most nodes a decision's Death probes (`evaluate::death_prices`) spend: two
 /// per field unit or readable backrow card with a Death, three per own hand Field Spell with one, three
 /// or four per own hand Unit with one.
@@ -702,6 +736,14 @@ pub const AI_TURN_HOOK_PROBE_NODES: usize = 24;
 /// spend: two turn ends and `AI_REPLY.visible_activations` uses for each of about four cards, units and
 /// face-up backrow cards together.
 pub const AI_ACTIVATION_PROBE_NODES: usize = 20;
+
+/// R3575400, R3575404: the most nodes a decision's re-keyed Activate probes
+/// (`evaluate::activation_prices`) spend: the seat's own hand cards with an ability, and its own Dormant
+/// cards acting for their awakening, whose price is keyed by the card as the seat holds it now. A spawn
+/// (two nodes on a full unit row) for a hand card, then two turn ends and `AI_REPLY.visible_activations`
+/// uses, for each of about two such cards. A slice of its own beside `AI_ACTIVATION_PROBE_NODES`, so a
+/// hand full of Activates cannot starve the board's prices.
+pub const AI_HAND_ACTIVATION_PROBE_NODES: usize = 16;
 
 /// R2688000: the most nodes a decision's attack-hook probes (`evaluate::attack_hook_prices`) spend: two
 /// turn ends, and two attacks (the unit's and its hookless twin's) for each of about five units with an
@@ -858,6 +900,9 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     activation: 0.0,
     attack_hook: 0.0,
     awaken: 0.0,
+    unit_affliction: 0.0,
+    unit_doomed: 0.0,
+    hero_affliction: 0.0,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,
@@ -1004,9 +1049,9 @@ pub const AI_DETERMINIZE: AiDeterminize = AiDeterminize {
 /// thread previews (R1420): `build_ai_deck`'s default `gated_sets`, while a player's random deck
 /// (`gated_sets: Some(vec![])`) is dealt from every set. A lean on a gated set leans on the newest
 /// ungated set instead. Meditative was gated until #732 (MN08 of #496), Stinkyscape from #1884 until
-/// #1885's sweep (R1885000). Stinkyscape+ is gated from its release (#3573) until fullsend 2's sweep
-/// (#3574) empties it.
-pub const AI_DECK_GATED_SETS: &[SetName] = &[SetName::StinkyscapePlus];
+/// #1885's sweep (R1885000), and Stinkyscape+ from its release (#3573) until fullsend 2's sweep (#3574,
+/// R3574000) measured the AI on it. Empty: the AI deals itself every set the shadow ban leaves it.
+pub const AI_DECK_GATED_SETS: &[SetName] = &[];
 
 /// The most times the AI plays one card (one instance) in a turn; past it the card is no candidate
 /// until the next turn. Only a card that comes back after each play reaches it: a (0) Spell castable

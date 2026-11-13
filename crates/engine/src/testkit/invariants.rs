@@ -2570,7 +2570,7 @@ impl InvariantMonitor {
                 && !kept.contains(&card.id.as_str())
                 && crate::zones::acts_on_field(state, card);
             let may_have_been =
-                was_dormant || landed.contains(&(player, row, lane)) || (arrived.contains(&card.id.as_str()) && false);
+                was_dormant || landed.contains(&(player, row, lane)) || arrived.contains(&card.id.as_str());
             let during = card.summoned_turn.filter(|turn| (began_on..=now).contains(turn));
             let at = match during {
                 Some(turn) if may_have_been => Some(turn),

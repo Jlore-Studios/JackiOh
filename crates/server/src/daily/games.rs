@@ -4,7 +4,8 @@
 //! actor (§9.2): `Registry::rebuild` refuses a daily id.
 //!
 //! - `GET /api/daily`: the caller's games, challenges and seeks, and how many games wait on them.
-//! - `GET /api/daily/games/:matchId`: one game as the caller's seat sees it.
+//! - `GET /api/daily/games/:matchId`: one game as the caller's seat sees it: its view, its legal actions
+//!   and the forecast of its attacks (R3855000).
 //! - `POST /api/daily/games/:matchId/actions` `{after, nonce, action}`: one action, sent after the log's
 //!   last row `after`, so a retried request applies once (its nonce is logged) and a stale one is
 //!   refused (`stale`).
@@ -17,7 +18,7 @@ use std::sync::Arc;
 
 use serde_json::{Value, json};
 
-use jackioh_engine::{Action, ActionBody, GameOverReason, PlayerId, Winner, opponent_of};
+use jackioh_engine::{Action, ActionBody, CombatForecast, GameOverReason, PlayerId, Winner, opponent_of};
 use jackioh_shared::host::SERVER_NONCE_PREFIX;
 use jackioh_shared::host::daily::{
     DailyBoard, DailyClock, daily_allows, daily_board, daily_expired, daily_legal, daily_sync,
@@ -490,6 +491,20 @@ pub(crate) async fn running_after_settling(
     Ok(running)
 }
 
+/// R3855000: R3477000's forecast of `seat`'s attacks, under the game's catalog (R767000, R3727005), kept to
+/// the attacks `legal` lists, in its order: none while the other seat holds the move.
+fn forecast_of(pinned: Pinned, state: &EngineState, seat: PlayerId, legal: &[ActionBody]) -> CombatForecast {
+    let mut forecast = engine::combat_forecast(pinned, state, seat);
+    forecast.attacks.retain(|entry| {
+        legal.iter().any(|action| {
+            matches!(action, ActionBody::Attack { attacker_id, target_id }
+                if *attacker_id == entry.attacker_id && *target_id == entry.target_id)
+        })
+    });
+    forecast.lethal = forecast.lethal && !forecast.attacks.is_empty();
+    forecast
+}
+
 /// The caller's read of one game, as `GET /api/daily/games/:matchId` and every action answer it.
 async fn game_json(app: &Arc<App>, loaded: &Loaded, me: &str, seat: PlayerId) -> Result<Value, ApiError> {
     let other = opponent_of(seat);
@@ -497,7 +512,7 @@ async fn game_json(app: &Arc<App>, loaded: &Loaded, me: &str, seat: PlayerId) ->
     let opponent = tx.profiles_get_by_id(loaded.account_at(other)).await?;
     let rows = tx.daily_games_of(me, 0).await?;
     tx.commit().await?;
-    // CLAUDE.md rule 7: the caller's view and legal actions only, under the game's catalog.
+    // CLAUDE.md rule 7: the caller's view, legal actions and forecast only, under the game's catalog.
     let pinned = loaded.pinned;
     let view = engine::view_for(pinned, &loaded.state, seat);
     let legal: Vec<ActionBody> = daily_legal(
@@ -509,6 +524,7 @@ async fn game_json(app: &Arc<App>, loaded: &Loaded, me: &str, seat: PlayerId) ->
     // R1127: an emote rides the live socket's rate gate, which a daily game has none of.
     .filter(|action| !matches!(action, ActionBody::Emote { .. }))
     .collect();
+    let forecast = forecast_of(pinned, &loaded.state, seat, &legal);
     let next_game = waiting_of(&rows, me)
         .into_iter()
         .map(|(id, _, _)| id)
@@ -518,6 +534,7 @@ async fn game_json(app: &Arc<App>, loaded: &Loaded, me: &str, seat: PlayerId) ->
         "seat": seat,
         "view": to_json(&view)?,
         "legal": to_json(&legal)?,
+        "forecast": to_json(&forecast)?,
         "seq": loaded.last_seq(),
         "holds": to_json(&loaded.daily.clock.holds)?,
         "hasMove": loaded.daily.clock.has_move(seat),

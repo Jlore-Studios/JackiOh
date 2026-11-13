@@ -2,7 +2,7 @@
 // holding the card, `card-pool-<id>` (`data-held-by` when a compared deck holds it, R251: a card is its
 // catalog id, so one copy per trio), and `db-add-<id>`, the "+" that adds it in one tap. A click, right-click
 // or long-press opens the detail view ("Add to <deck>"). A resting mouse opens a preview only on a card whose
-// face prints less than its whole text (#1017). The face is decoration to a screen reader. READ-ONLY, for the
+// face prints less than its whole text (#1017), or (R3838001) below an `AlwaysFullText` any card with words. The face is decoration to a screen reader. READ-ONLY, for the
 // Card Almanac (R630): given none of the deck editor's props, no "+", no drag (DeckDrag.tsx), no `data-*` or `aria-disabled`.
 // R1956000: a card the viewer owns is drawn as their own copy with their picks (R1655000's foil, finish,
 // border, full art): below the deck builder's `OwnCopy` every card the collection does not say is unowned,
@@ -26,7 +26,16 @@ import {
 import type { CardDef, SetName } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
-import { CardFace, TermTips, useCanOpenFullScreen, faceModel, faceText, openFullScreenArt, useInspectTrigger } from "../../cards/index.ts";
+import {
+  CardFace,
+  TermTips,
+  useCanOpenFullScreen,
+  faceModel,
+  openFullScreenArt,
+  showsFullText,
+  useAlwaysFullText,
+  useInspectTrigger,
+} from "../../cards/index.ts";
 import { OwnershipContext, type CardOwnership } from "../../cards/cosmetics.ts";
 import { FullArtOwned, OwnCopy, useFullArt, useOwnCopy } from "../../cards/fullArt.ts";
 import { CARD_TABLES, readerName } from "../../cards/chinese.ts";
@@ -194,13 +203,15 @@ function PoolItem({ cardId, def, deck, fresh, area, onInspect }: PoolItemProps):
   const face = useMemo(() => faceModel({ defId: cardId, def, radiant: false }), [cardId, def, locale]);
   // R1313000: a full art the viewer does not own prints its words, and opens a preview as they do.
   const fullArtOn = useFullArt(cardId);
+  // R3838001: below an `AlwaysFullText` (the Almanac) every card with words opens the preview, its text beside it.
+  const alwaysText = useAlwaysFullText();
   // R1956000: the viewer's own copy wears their picks; a card the collection says is unowned is not one.
   const worn = useOwnCopy() && deck?.owned !== false;
   const isFs = useCanOpenFullScreen(face, cardId, worn);
   const inspect = useInspectTrigger(
     { key: poolCardId(cardId), face },
     {
-      hover: faceText(face, undefined, fullArtOn).less,
+      hover: showsFullText(face, undefined, fullArtOn, alwaysText),
       holdAnyPointer: isFs ? true : undefined,
       onLongPress: (pointerId) => {
         if (isFs) {

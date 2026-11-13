@@ -17,19 +17,14 @@ const SACK: &str = "stinkyscape-135-1";
 
 /// R427, R1875004: an opponent's Unit's play that has resolved, the Unit still on the field from it.
 fn answers(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
-    let GameEvent::CardResolved {
-        player,
-        def_id,
-        permanent,
-        ..
-    } = event
-    else {
+    let GameEvent::CardResolved { player, permanent, .. } = event else {
         return false;
     };
-    // R2179002: a card cast on draw is no play.
+    // R2179002: a card cast on draw is no play. R783005: the play as it counts, so a Unit set by its
+    // Cloaked is the Trap it was set as.
     *player != ctx.controller
         && !cast_on_draw_event(event)
-        && def_of(Some(&*ctx.state), def_id).type_ == CardType::Unit
+        && played_type_of(&*ctx.state, event) == Some(CardType::Unit)
         && (*permanent || !left_field_since_resolved(&*ctx.state, event))
 }
 
@@ -128,6 +123,16 @@ mod tests {
             let summoned = types.iter().rposition(|t| *t == GameEventType::Summoned);
             let held = types.iter().position(|t| *t == GameEventType::Held);
             assert!(summoned < held, "{types:?}");
+        }
+
+        /// R783005: a Unit set face-down by its Cloaked is a Trap play, no Unit played.
+        #[test]
+        fn r783005_a_unit_set_face_down_by_its_cloaked_leaves_sacked_set() {
+            let mut s = trapped(false, json!([crate::CLOAKED_UNIT, FILLER]));
+            crate::set_cloaked(&mut s, P1, crate::CLOAKED_UNIT, 1);
+            assert!(held_ids(&s).is_empty());
+            assert!(sack_of(&s, P1).is_none());
+            s.expect_in_zone(ID, "field");
         }
 
         #[test]

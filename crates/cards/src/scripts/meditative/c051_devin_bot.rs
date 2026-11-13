@@ -70,10 +70,6 @@ mod tests {
     /// Lunar Eclipse (Core #35): (1) Spell, deals 3 to a target.
     const ECLIPSE: &str = "core-035";
 
-    fn eclipse(target: &str) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": target }] })
-    }
-
     /// p1 with `field` already on the board and Devin Bot in hand.
     fn board(seed: &str, field: Value) -> Scenario {
         scenario(json!({
@@ -129,7 +125,7 @@ mod tests {
                 let keywords = serde_json::to_string(&s.stats(me.as_str()).keywords).expect("JSON");
                 assert!(!keywords.contains("Reborn"), "{keywords}");
                 s.end_turn();
-                s.play(ECLIPSE, eclipse(&me));
+                s.play(ECLIPSE, pick::targets(pick::id(&me)));
                 // Nothing comes back into its zone, lane 5.
                 assert!(s.unit(P1, 5).is_none());
                 s.expect_in_zone(&me, "graveyard");
@@ -265,7 +261,7 @@ mod tests {
                 // Lunar Eclipse deals 3 to the 1/1 Bot itself: a deterministic kill.
                 s.end_turn();
                 let me = s.card(BOT).id.clone();
-                s.play(ECLIPSE, eclipse(&me));
+                s.play(ECLIPSE, pick::targets(pick::id(&me)));
                 let mut after: Vec<String> = units_of(&s, P1).iter().map(|unit| unit.id.clone()).collect();
                 after.sort();
                 let survivors: Vec<String> = before.into_iter().filter(|id| id != &me).collect();

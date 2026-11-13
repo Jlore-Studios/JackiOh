@@ -19,7 +19,10 @@ pub const ID: &str = "classicplus-037";
 
 const NON_UNIT: &[CardType] = &[CardType::Spell, CardType::FieldSpell, CardType::Trap, CardType::FieldTrap];
 
-/// The type a card was played as: its running face's, wherever it stands now (B2.7).
+/// The type a card was played as: its running face's, wherever it stands now (B2.7). It reads the
+/// printed face, not the play as it counts (`played_type_of`), because the end of turn casts copies by
+/// definition and face (E12): a Unit set by its Cloaked, a Trap play (R783005) that the threshold
+/// counts, would be cast as the Unit it is, so it stays out of the pool.
 fn non_unit(state: &GameState, card: &CardInstance) -> bool {
     NON_UNIT.contains(&card_type_of_face(state, &card.def_id, card.radiant))
 }
@@ -40,9 +43,9 @@ fn non_unit_plays(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     non_units_of(state, &played_ids_before_this_end(state, player))
 }
 
-/// R767000: the pool as it was through v0.6.0d, every non-Unit played this turn, the copies an earlier
+/// R767000: the pool as it was through v0.6.0g, every non-Unit played this turn, the copies an earlier
 /// Wardrum's end of turn cast included; `KEPT_SCRIPTS` folds those replays under it.
-fn non_unit_plays_v0_6_0d(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
+fn non_unit_plays_v0_6_0g(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     non_units_of(state, &played_ids_this_turn(state, player))
 }
 
@@ -54,14 +57,15 @@ type Pool = fn(&GameState, PlayerId) -> Vec<CardInstance>;
 /// less those logged after its latest play — the casts its own resolution made — so a 4th cast inside the
 /// 3rd's resolution answers neither as the 3rd, and a card played again this turn is placed by this play.
 fn reaches_threshold(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
-    let GameEvent::CardResolved { player, instance_id, def_id, radiant, .. } = event else {
+    let GameEvent::CardResolved { player, instance_id, .. } = event else {
         return false;
     };
     if *player != ctx.controller {
         return false;
     }
     let state: &GameState = ctx.state;
-    if !NON_UNIT.contains(&card_type_of_face(state, def_id, *radiant == Some(true))) {
+    // R783005: the play as it counts (as the turn's count does), so a Unit set by its Cloaked is a Trap.
+    if !played_type_of(state, event).is_some_and(|played| NON_UNIT.contains(&played)) {
         return false;
     }
     let log = played_ids_this_turn(state, ctx.controller);
@@ -175,10 +179,10 @@ pub fn script() -> CardScripts {
     scripts(non_unit_plays)
 }
 
-/// R767000, R3800003: through v0.6.0d each end of turn cast from every non-Unit played this turn, an
+/// R767000, R3800003: through v0.6.0g each end of turn cast from every non-Unit played this turn, an
 /// earlier Wardrum's copies included; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_0d() -> CardScripts {
-    scripts(non_unit_plays_v0_6_0d)
+pub fn script_v0_6_0g() -> CardScripts {
+    scripts(non_unit_plays_v0_6_0g)
 }
 
 // C+ #37 Wardrum (SPEC §8.7): summoned with no Cry (R1); a Trap copy stays hidden (R33, R97).
@@ -260,10 +264,6 @@ mod tests {
 
     fn index_of(list: &[String], item: &str) -> i64 {
         list.iter().position(|entry| entry == item).map_or(-1, |at| at as i64)
-    }
-
-    fn at_hero(player: &str) -> Value {
-        json!({ "targets": [{ "pick": "hero", "player": player }] })
     }
 
     fn has_shield(s: &Scenario, card: &str) -> bool {
@@ -379,6 +379,26 @@ mod tests {
             assert!(!events.iter().any(|event| event["type"] == "cardPlayed" && event["defId"] == WARDRUM));
         }
 
+        /// R783005: a Unit set face-down by its Cloaked is a Trap play, so it is a non-Unit play, the
+        /// third of the turn here.
+        #[test]
+        fn r783005_a_unit_set_face_down_by_its_cloaked_is_the_third_non_unit_that_summons_it() {
+            let mut s = scenario(json!({
+                "p1": {
+                    "hand": [WARDRUM, REPLENISH, REPLENISH, crate::CLOAKED_UNIT],
+                    "field": [{ "def": MENACE, "lane": 1 }],
+                    "library": LIBRARY,
+                    "mana": 10,
+                },
+                "p2": { "hand": [FILLER] },
+            }));
+            play_from_hand(&mut s, REPLENISH, json!({}));
+            play_from_hand(&mut s, REPLENISH, json!({}));
+            assert_eq!(wardrum_in(&s), ZoneName::Hand);
+            crate::set_cloaked(&mut s, P1, crate::CLOAKED_UNIT, 1);
+            assert_eq!(s.unit(P1, 2).map(|card| card.def_id), Some(WARDRUM.to_string()));
+        }
+
         #[test]
         fn field_spells_traps_and_field_traps_count_units_do_not() {
             let mut s = scenario(json!({
@@ -442,9 +462,9 @@ mod tests {
             }));
             play_from_hand(&mut s, FOREVER, json!({})); // the 1st
             let lunar = hand(&s, LUNAR);
-            s.play(&lunar, at_hero("p2")); // the 2nd; it comes back to hand
+            s.play(&lunar, pick::targets(pick::hero("p2"))); // the 2nd; it comes back to hand
             assert_eq!(wardrum_in(&s), ZoneName::Hand);
-            s.play(&lunar, at_hero("p2")); // the 3rd
+            s.play(&lunar, pick::targets(pick::hero("p2"))); // the 3rd
             assert_eq!(s.unit(P1, 1).map(|card| card.def_id), Some(WARDRUM.to_string()));
         }
 
@@ -490,7 +510,7 @@ mod tests {
                 "p2": { "hand": [FILLER] },
             }));
             for _ in 0..3 {
-                play_from_hand(&mut s, LUNAR, at_hero("p2"));
+                play_from_hand(&mut s, LUNAR, pick::targets(pick::hero("p2")));
             }
             assert_eq!(s.unit(P1, 1).map(|card| card.def_id), Some(WARDRUM.to_string()));
             assert_eq!(s.pile(P1, "library").len(), 2);
@@ -632,6 +652,20 @@ mod tests {
             assert!(!events_json(&s)[from..].iter().any(|event| event["type"] == "cardAnnounced" && event["player"] == "p1"));
         }
 
+        /// R783005: a Unit set face-down by its Cloaked is a Trap play, but its copy would be the Unit it
+        /// is (cast by definition and face, E12), so it is no candidate.
+        #[test]
+        fn r783005_a_unit_set_face_down_by_its_cloaked_is_not_a_candidate() {
+            let mut s = scenario(json!({
+                "p1": { "hand": [crate::CLOAKED_UNIT, FILLER], "field": [WARDRUM], "library": LIBRARY, "mana": 10 },
+                "p2": { "hand": [FILLER], "library": LIBRARY },
+            }));
+            crate::set_cloaked(&mut s, P1, crate::CLOAKED_UNIT, 1);
+            let from = s.events().len();
+            s.end_turn();
+            assert!(!events_json(&s)[from..].iter().any(|event| event["type"] == "cardAnnounced" && event["player"] == "p1"));
+        }
+
         #[test]
         fn r33_r97_a_trap_copy_is_set_face_down_hidden_from_the_opponent() {
             let mut s = scenario(json!({
@@ -733,7 +767,7 @@ mod tests {
                 "p1": { "hand": [LUNAR, BONE_STORM, FILLER], "field": [{ "def": WARDRUM, "radiant": true }], "library": LIBRARY, "mana": 8 },
                 "p2": { "hand": [FILLER], "field": [MENACE], "library": LIBRARY },
             }));
-            s.play(LUNAR, at_hero("p2"));
+            s.play(LUNAR, pick::targets(pick::hero("p2")));
             s.play(BONE_STORM, json!({}));
             s.end_turn();
             let pending = s.state().pending.clone();

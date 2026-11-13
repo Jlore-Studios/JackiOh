@@ -35,10 +35,6 @@ fn id_at(s: &Scenario, player: PlayerId, lane: i32) -> String {
         .id
 }
 
-fn pick(id: &str) -> Value {
-    json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-}
-
 fn hero_health(s: &Scenario, player: PlayerId) -> i32 {
     s.state().players[player].hero.health
 }
@@ -111,7 +107,7 @@ mod r1848000_freeze_forever_never_thaws {
             json!([{ "def": plain.id, "lane": 1 }]),
         );
         let unit = id_at(&s, P2, 1);
-        s.play(absolute_zero.id.as_str(), pick(&unit));
+        s.play(absolute_zero.id.as_str(), pick::targets(pick::id(&unit)));
         assert_eq!(s.card(&unit).frozen, Some(FROZEN_FOREVER));
         assert_eq!(
             frozen_marks(s.last_events(), &unit),
@@ -148,16 +144,16 @@ mod r1848000_freeze_forever_never_thaws {
             json!([{ "def": plain.id, "lane": 1 }]),
         );
         let unit = id_at(&s, P2, 1);
-        s.play(chill.id.as_str(), pick(&unit));
+        s.play(chill.id.as_str(), pick::targets(pick::id(&unit)));
         assert_eq!(
             s.card(&unit).frozen,
             Some(10),
             "an ordinary freeze on turn 9 thaws at turn 10's cleanup"
         );
         assert_eq!(shown_forever(&s, P1, P2, 1), None);
-        s.play(absolute_zero.id.as_str(), pick(&unit));
+        s.play(absolute_zero.id.as_str(), pick::targets(pick::id(&unit)));
         assert_eq!(s.card(&unit).frozen, Some(FROZEN_FOREVER));
-        s.play(chill.id.as_str(), pick(&unit));
+        s.play(chill.id.as_str(), pick::targets(pick::id(&unit)));
         assert_eq!(
             s.card(&unit).frozen,
             Some(FROZEN_FOREVER),
@@ -176,21 +172,21 @@ mod r1848000_freeze_forever_never_thaws {
             json!([{ "def": plain.id, "lane": 1 }, { "def": plain.id, "lane": 2 }]),
         );
         let stolen = id_at(&s, P2, 1);
-        s.play(absolute_zero.id.as_str(), pick(&stolen));
-        s.play(grab.id.as_str(), pick(&stolen));
+        s.play(absolute_zero.id.as_str(), pick::targets(pick::id(&stolen)));
+        s.play(grab.id.as_str(), pick::targets(pick::id(&stolen)));
         assert_eq!(s.card(&stolen).controller, P1);
         assert_eq!(
             s.card(&stolen).frozen,
             Some(FROZEN_FOREVER),
             "no thaw to stamp again on the new side"
         );
-        s.play(hush.id.as_str(), pick(&stolen));
+        s.play(hush.id.as_str(), pick::targets(pick::id(&stolen)));
         assert_eq!(s.card(&stolen).frozen, None, "a Vanilla removes it");
         assert_eq!(frozen_marks(s.last_events(), &stolen), vec![false]);
 
         let bounced = id_at(&s, P2, 2);
-        s.play(absolute_zero.id.as_str(), pick(&bounced));
-        s.play(recall.id.as_str(), pick(&bounced));
+        s.play(absolute_zero.id.as_str(), pick::targets(pick::id(&bounced)));
+        s.play(recall.id.as_str(), pick::targets(pick::id(&bounced)));
         assert_eq!(s.card(&bounced).frozen, None, "leaving the field ends it (R78)");
     }
 }
@@ -224,7 +220,7 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
         let mut s = meteor_board("r1848001", false, json!([]), three_plains());
         let (left, target, right) = (id_at(&s, P2, 1), id_at(&s, P2, 2), id_at(&s, P2, 3));
         let before = s.state().rng_cursor;
-        s.play(meteor.id.as_str(), pick(&target));
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
         let hits = hits(&s);
         assert_eq!(hits.len(), 3, "{hits:?}");
         assert_eq!(
@@ -254,7 +250,7 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
     fn r1848001_the_radiant_face_sends_what_passes_both_neighbours_on_to_their_hero() {
         let mut s = meteor_board("r1848001-radiant", true, json!([]), three_plains());
         let target = id_at(&s, P2, 2);
-        s.play(meteor.id.as_str(), pick(&target));
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
         assert_eq!(hero_health(&s, P2), HERO_HEALTH - (20 - 9));
         let hero = format!("hero-{}", P2.as_str());
         assert_eq!(hits(&s).last(), Some(&(hero, 11)));
@@ -278,7 +274,7 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
             let mut s = setup();
             s.state_mut().rng_cursor = cursor;
             let target = id_at(&s, P2, 2);
-            s.play(meteor.id.as_str(), pick(&target));
+            s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
             hits(&s)
         };
         let probe = setup();
@@ -302,7 +298,7 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
         );
         let before = s.state().rng_cursor;
         let target = id_at(&s, P2, 1);
-        s.play(meteor.id.as_str(), pick(&target));
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
         assert_eq!(hits(&s).len(), 2);
         assert_eq!(s.state().rng_cursor, before, "a lone neighbour is no draw");
 
@@ -313,7 +309,7 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
             json!([{ "def": plain.id, "lane": 3 }]),
         );
         let target = id_at(&s, P2, 3);
-        s.play(meteor.id.as_str(), pick(&target));
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
         assert_eq!(hero_health(&s, P2), HERO_HEALTH - 17);
         let mut s = meteor_board(
             "r1848001-none-base",
@@ -322,7 +318,7 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
             json!([{ "def": plain.id, "lane": 3 }]),
         );
         let target = id_at(&s, P2, 3);
-        s.play(meteor.id.as_str(), pick(&target));
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
         assert_eq!(hits(&s).len(), 1);
         assert_eq!(hero_health(&s, P2), HERO_HEALTH);
     }
@@ -337,7 +333,7 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
             json!([{ "def": plain.id, "lane": 1 }, { "def": shielded.id, "lane": 2 }]),
         );
         let (target, shield) = (id_at(&s, P2, 1), id_at(&s, P2, 2));
-        s.play(meteor.id.as_str(), pick(&target));
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
         assert!(s.last_events().iter().any(
             |event| matches!(event, GameEvent::DivineShieldLost { instance_id } if *instance_id == shield)
         ));
@@ -358,7 +354,7 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
         );
         let before = s.state().rng_cursor;
         let (ward, target, right) = (id_at(&s, P2, 1), id_at(&s, P2, 2), id_at(&s, P2, 3));
-        s.play(meteor.id.as_str(), pick(&target));
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
         assert_eq!(hits(&s), vec![(target, 3), (right, 3)]);
         assert_eq!(s.card(&ward).damage, 0);
         assert_eq!(s.state().rng_cursor, before);
@@ -374,7 +370,7 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
             json!([{ "def": armored.id, "lane": 1 }, { "def": plain.id, "lane": 2 }]),
         );
         let (target, right) = (id_at(&s, P2, 1), id_at(&s, P2, 2));
-        s.play(meteor.id.as_str(), pick(&target));
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
         assert_eq!(hits(&s), vec![(target, 7), (right, 1)]);
 
         let mut s = meteor_board(
@@ -384,7 +380,7 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
             json!([{ "def": indestructible.id, "lane": 1 }, { "def": plain.id, "lane": 2 }]),
         );
         let target = id_at(&s, P2, 1);
-        s.play(meteor.id.as_str(), pick(&target));
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
         assert!(
             hits(&s).is_empty(),
             "Indestructible takes nothing, so nothing passes it"
@@ -401,7 +397,7 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
             json!([{ "def": plain.id, "lane": 5 }]),
         );
         let target = id_at(&s, P2, 5);
-        s.play(meteor.id.as_str(), pick(&target));
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
         // 20 + 2 = 22; the 3/3 counts 3 and the hero takes the 19 left, not 21.
         assert_eq!(hero_health(&s, P2), HERO_HEALTH - 19);
     }
@@ -468,7 +464,7 @@ mod r1848002_a_spell_with_poisonous_destroys_a_unit_it_damages {
             .filter(|card| card.def_id == ping.id)
             .map(|card| card.id.clone())
             .collect();
-        s.play(pings[0].as_str(), pick(&first));
+        s.play(pings[0].as_str(), pick::targets(pick::id(&first)));
         assert!(s.last_events().iter().any(|event| matches!(
             event,
             GameEvent::KeywordGranted { instance_id, keyword: Keyword::Poisonous, .. } if *instance_id == pings[0]
@@ -478,7 +474,7 @@ mod r1848002_a_spell_with_poisonous_destroys_a_unit_it_damages {
         // R78: the keyword went with the resolution.
         assert!(s.card(&pings[0]).granted_keywords.is_empty());
 
-        s.play(pings[1].as_str(), pick(&second));
+        s.play(pings[1].as_str(), pick::targets(pick::id(&second)));
         s.expect_in_zone(second.as_str(), "field");
         assert_eq!(s.card(&second).damage, 1);
     }
@@ -508,7 +504,7 @@ mod r1848002_a_spell_with_poisonous_destroys_a_unit_it_damages {
             .unwrap()
             .id
             .clone();
-        s.play(ping_id.as_str(), pick(&unit));
+        s.play(ping_id.as_str(), pick::targets(pick::id(&unit)));
         s.expect_in_zone(unit.as_str(), "field");
     }
 }

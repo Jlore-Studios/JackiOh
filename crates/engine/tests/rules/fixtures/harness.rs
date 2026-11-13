@@ -5,8 +5,9 @@
 //! `put` hands back an owned copy of the placed card; a test that changes it writes through
 //! `find_instance_mut`.
 //! The rules tests take these helpers from here rather than a copy (#1777, #1997, #2024, #2160, #2930;
-//! crates/tools/tests/acceptance.rs refuses a copy, a local `static NONCE` and a local struct of just
-//! `events` and `rng`); a file that calls one `run` or `playing` imports it under that name.
+//! crates/tools/tests/acceptance.rs refuses a copy, a local `static NONCE`, a local struct of just
+//! `events` and `rng`, and a card lookup of its own under any name, #3827); a file that calls one `run` or
+//! `playing` imports it under that name.
 
 use std::borrow::Borrow;
 use std::cell::Cell;
@@ -240,6 +241,7 @@ pub fn live(state: &GameState, card: impl Into<CardRef>) -> CardInstance {
         .unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
+/// The card in `state` itself, by its id or a copy of it, to change in place.
 pub fn live_mut(state: &mut GameState, card: impl Into<CardRef>) -> &mut CardInstance {
     let id = ref_id(card.into());
     find_instance_mut(state, &id).unwrap_or_else(|| panic!("no card {id} in the state"))

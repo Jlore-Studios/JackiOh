@@ -16,6 +16,8 @@ import { UNDO_TOAST, UNDO_TOAST_UNDO } from "../undo/UndoToast.tsx";
 import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { FRIENDS_POLL_MS } from "./config.ts";
 import { stopFollowingChallenge } from "./follow.ts";
+import { takeInviteRefusal } from "../lobby/inviteRefusal.ts";
+import { lobbyTestid } from "../lobby/testids.ts";
 import { challengeKindTestid, togetherTestid } from "./testids.ts";
 import { TogetherRoute } from "./TogetherRoute.tsx";
 
@@ -39,7 +41,6 @@ const TESTID = {
   watch: "together-watch",
   chatOpen: "together-chat-open",
   chatInput: "chat-input",
-  coopCreate: "coop-create",
   sharedRetry: "together-shared-retry",
   sharedRow: "together-shared-row",
   friendsError: "together-friends-error",
@@ -222,7 +223,7 @@ function buttonNear(text: string, name: RegExp): HTMLElement {
  * row, request or co-op control (so it is that entry's own control, not another part of the page's).
  */
 function controlNear(text: string): HTMLElement {
-  const foreign = `[data-testid="${TESTID.friendRow}"], [data-testid^="together-request-"], [data-testid^="coop-"]`;
+  const foreign = `[data-testid="${TESTID.friendRow}"], [data-testid^="together-request-"], [data-testid^="lobby-"]`;
   for (const anchor of screen.getAllByText(wholeText(text))) {
     let node: HTMLElement | null = anchor;
     for (let depth = 0; node !== null && depth < 6; depth += 1) {
@@ -864,10 +865,12 @@ describe("B59 Shared with me", () => {
 
 // the co-op panel lives on the page
 
-describe("B60 the page holds the co-op panel", () => {
-  it("B60 /together shows the co-op panel's create control", async () => {
+describe("B60 the page holds the co-op lobby panel", () => {
+  it("B60 R3730000 /together shows the co-op lobby panel's Create", async () => {
     await renderPage();
-    expect(await screen.findByTestId(TESTID.coopCreate, undefined, SLOW)).toBeInTheDocument();
+    const panel = await screen.findByTestId(lobbyTestid.panel, undefined, SLOW);
+    expect(panel).toHaveAttribute("data-format", "coop");
+    expect(within(panel).getByTestId(lobbyTestid.create)).toBeInTheDocument();
   });
 });
 
@@ -982,36 +985,13 @@ describe("the challenge dialog's focus (#1569)", () => {
   });
 });
 
-describe("R2094000 a co-op link opens Play together filled", () => {
+describe("R2094000 a co-op link in chat opens its lobby", () => {
   afterEach(() => {
     window.sessionStorage.clear();
     at("/together");
   });
 
-  it("R2094000 opening /together?coop=abc234 signed in shows the co-op panel with ABC234 filled and Join focused", async () => {
-    window.sessionStorage.clear();
-    at("/together?coop=abc234");
-    await renderPage();
-    const input = await screen.findByTestId("coop-join-input", undefined, SLOW);
-    expect(input).toHaveValue("ABC234");
-    expect(window.location.pathname).toBe("/together");
-    expect(window.location.search).toBe("");
-    await waitFor(() => {
-      expect(screen.getByTestId("coop-join-submit")).toHaveFocus();
-    }, SLOW);
-  });
-
-  it("R2094000 an invalid code opens nothing filled", async () => {
-    window.sessionStorage.clear();
-    at("/together?coop=abc123");
-    await renderPage();
-    const input = await screen.findByTestId("coop-join-input", undefined, SLOW);
-    expect(input).toHaveValue("");
-    expect(window.location.search).toBe("");
-    expect(window.sessionStorage.getItem("jackioh.together.coopLink")).toBeNull();
-  });
-
-  it("R2094000 a chat Join on the same screen fills the already-mounted join form and focuses Join", async () => {
+  it("R2094000 R3730006 a chat Join opens the co-op room's lobby", async () => {
     window.sessionStorage.clear();
     at("/together");
     const origin = window.location.origin;
@@ -1037,14 +1017,8 @@ describe("R2094000 a co-op link opens Play together filled", () => {
     );
     fireEvent.click(must(within(rowOf(ANN)).queryByTestId(TESTID.chatOpen), "chat"));
     fireEvent.click(await screen.findByTestId("chat-join", undefined, SLOW));
-    const input = await screen.findByTestId("coop-join-input", undefined, SLOW);
     await waitFor(() => {
-      expect(input).toHaveValue("ABC234");
-    }, SLOW);
-    expect(window.location.pathname).toBe("/together");
-    expect(window.location.search).toBe("");
-    await waitFor(() => {
-      expect(screen.getByTestId("coop-join-submit")).toHaveFocus();
+      expect(window.location.pathname).toBe("/lobby/ABC234");
     }, SLOW);
   });
 });
@@ -1060,5 +1034,84 @@ describe("R2615000 watching has no switch", () => {
     expect(within(panel).queryByRole("switch")).toBeNull();
     // Nothing on the page reads or writes a watching setting.
     expect(server.calls.some((call) => call.path === "/api/settings")).toBe(false);
+  });
+});
+
+// R3874000: a friend's Lobby
+
+describe("R3874000 a friend's Lobby makes one lobby and opens it", () => {
+  const LOBBY_CODE = "LBY234";
+  const CREATE = "/api/lobbies";
+  const INVITE = `/api/lobbies/${LOBBY_CODE}/invite`;
+
+  /** The create answers LOBBY_CODE, the invite `invite`. */
+  function lobbies(invite: Reply): (call: Call) => Reply | undefined {
+    return (call) => {
+      if (call.method === "POST" && call.path === CREATE) return { status: 201, body: { code: LOBBY_CODE } };
+      if (call.method === "POST" && call.path === INVITE) return invite;
+      return undefined;
+    };
+  }
+
+  afterEach(() => {
+    takeInviteRefusal(LOBBY_CODE);
+    at("/together");
+  });
+
+  it("R3874000 one press makes a Best of 1 lobby, invites the friend into it and opens it", async () => {
+    const server = await renderPage(world(), lobbies({ status: 204 }));
+    fireEvent.click(within(rowOf(ANN)).getByTestId(togetherTestid.lobby));
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(`/lobby/${LOBBY_CODE}`);
+    }, SLOW);
+    expect(server.to("POST", CREATE).map((call) => call.body)).toEqual([{ format: "duel", mode: "bo1" }]);
+    expect(server.to("POST", INVITE).map((call) => call.body)).toEqual([{ profileId: ANN.profileId }]);
+    expect(takeInviteRefusal(LOBBY_CODE)).toBeNull();
+    expect(screen.queryByTestId(togetherTestid.error)).toBeNull();
+  });
+
+  it("R3874000 a double press makes one lobby and sends one invite", async () => {
+    const server = await renderPage(world(), lobbies({ status: 204 }));
+    const button = within(rowOf(ANN)).getByTestId(togetherTestid.lobby);
+    fireEvent.click(button);
+    // One of the page's requests: its controls wait for the answer.
+    expect(button).toBeDisabled();
+    expect(within(rowOf(ANN)).getByTestId(togetherTestid.challenge)).toBeDisabled();
+    fireEvent.click(button);
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(`/lobby/${LOBBY_CODE}`);
+    }, SLOW);
+    await settle();
+    expect(server.to("POST", CREATE)).toHaveLength(1);
+    expect(server.to("POST", INVITE)).toHaveLength(1);
+  });
+
+  it("R3874000 a refused invite still opens the lobby made, its refusal held for that lobby's screen", async () => {
+    const message = "too many invites; try again later";
+    const server = await renderPage(world(), lobbies(refusal(429, "rate_limited", message)));
+    fireEvent.click(within(rowOf(ANN)).getByTestId(togetherTestid.lobby));
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(`/lobby/${LOBBY_CODE}`);
+    }, SLOW);
+    expect(server.to("POST", CREATE)).toHaveLength(1);
+    expect(server.to("POST", INVITE)).toHaveLength(1);
+    expect(screen.queryByTestId(togetherTestid.error)).toBeNull();
+    expect(takeInviteRefusal("OTHER2")).toBeNull();
+    expect(takeInviteRefusal(LOBBY_CODE)).toBe(message);
+    expect(takeInviteRefusal(LOBBY_CODE)).toBeNull();
+  });
+
+  it("R3874000 a refused create opens nothing and says why on Play together", async () => {
+    const message = "you have too many lobbies open; close one or let one expire";
+    const server = await renderPage(world(), (call) =>
+      call.method === "POST" && call.path === CREATE ? refusal(409, "conflict", message) : undefined,
+    );
+    fireEvent.click(within(rowOf(ANN)).getByTestId(togetherTestid.lobby));
+    expect(await screen.findByTestId(togetherTestid.error, undefined, SLOW)).toHaveTextContent(message);
+    expect(window.location.pathname).toBe("/together");
+    expect(server.to("POST", INVITE)).toHaveLength(0);
+    await waitFor(() => {
+      expect(offers(rowOf(ANN), togetherTestid.lobby)).toBe(true);
+    }, SLOW);
   });
 });
