@@ -688,7 +688,10 @@ fn r1705005_a_lesson_seats_the_human_under_the_tutorial_handicap_and_the_pool_ho
     assert_eq!(human.deck_size, TUTORIAL_HUMAN.deck_size);
     assert_eq!(human.hero_floor, TUTORIAL_HUMAN.hero_floor);
     assert_eq!(human.pool_hold, Some(true));
-    assert_eq!(handicaps.p1.expect("the AI's").hero_health, Some(20));
+    let ai = handicaps.p1.expect("the AI's");
+    assert_eq!(ai.hero_health, Some(20));
+    // R2201001: the lesson's pool hold rides on the AI's handicap too.
+    assert_eq!(ai.pool_hold, Some(true));
     // A lesson with no decks is no lesson.
     let mut bare = lesson_config("practice-r1705005");
     bare.lesson_deal = None;
@@ -1536,6 +1539,29 @@ fn r1563006_the_window_lapsing_answers_stop_for_the_human_as_its_own_action() {
     assert_eq!(session.log().len(), logged + 1);
 }
 
+/// R1563006, R677: a window that lapses on a question the human no longer holds (a Glitch swap has put it in the
+/// AI's seat) answers nothing for the human.
+#[test]
+fn r1563006_r677_a_window_lapsing_on_a_question_in_the_ais_seat_answers_nothing() {
+    let session = sequence_opened("practice-r1563006-swapped");
+    let (id, at) = sequence_windows(&session)[0];
+    let mut swapped = with_game(&session, |game| game["seatSwaps"] = serde_json::json!(1));
+    assert_eq!(swapped.host.human_seat(), P2, "PREMISE: the human plays p2 now");
+    let logged = swapped.log().len();
+    swapped.now = at;
+    swapped.feed(PracticeEvent::TimerFired {
+        key: TimerKey::Sequence,
+        id,
+    });
+    assert_eq!(swapped.log().len(), logged, "{:?}", swapped.log().last());
+    assert!(
+        swapped.snapshot().error.is_none(),
+        "{:?}",
+        swapped.snapshot().error
+    );
+    assert!(swapped.state().pending.is_some(), "the question is still open");
+}
+
 #[test]
 fn r1563006_a_sequence_the_human_stops_itself_takes_its_window_back() {
     let mut session = sequence_opened("practice-r1563006-stop");
@@ -1620,4 +1646,276 @@ fn the_boundary_starts_steps_and_lists_by_json() {
         verdicts: Vec::new(),
         build: build(),
     };
+}
+
+/// R1373: a random deck leaned on a set holds AI_DECK's floor of that set's cards, so it is not the deck the
+/// same seed deals with no lean.
+#[test]
+fn r1373_a_leaned_random_deck_holds_its_sets_floor() {
+    let seed = "practice-r1373-floor";
+    let plain = Session::start(&config(seed, P2))
+        .expect("starts")
+        .host
+        .fold_args();
+    let mut newest = config(seed, P2);
+    newest.deck = PracticeDeckChoice::Random {
+        lean_set: Some(LeanPick::Newest),
+        lean_newest: None,
+    };
+    let leaned = Session::start(&newest).expect("starts").host.fold_args();
+    let set = LeanPick::Newest.resolve();
+    let floor = (f64::from(DECK_SIZE) * jackioh_ai::AI_DECK.lean_min_share).ceil();
+    let held = newest_cards(&leaned.decks.1, set);
+    assert!(held as f64 >= floor, "{held} of {set:?}, under the floor {floor}");
+    assert_ne!(leaned.decks.1, plain.decks.1);
+}
+
+/// B38, R187: the AI's deck is its own deal for its difficulty's handicap, under its mana cap and the ban list it
+/// is given, so it holds no banned card.
+#[test]
+fn b38_the_ais_deck_is_dealt_under_its_handicaps_mana_cap_and_its_ban_list() {
+    jackioh_cards::register_all();
+    let seed = "practice-ai-deck";
+    let banned: Vec<String> = (0..3)
+        .flat_map(|n| deck_of(&format!("practice-ai-deck-banned-{n}"), DECK_SIZE))
+        .collect();
+    let mut hard = PracticeConfig::free(seed, Difficulty::Hard, P2, random_deck());
+    hard.ai_banned = Some(banned.clone());
+    let ai_deck = Session::start(&hard).expect("starts").host.fold_args().decks.0;
+    assert!(ai_deck.iter().all(|id| !banned.contains(id)), "{ai_deck:?}");
+    let handicap = jackioh_engine::AI_DIFFICULTY[Difficulty::Hard];
+    assert_eq!(
+        ai_deck,
+        build_ai_deck(
+            &mut Rng::new(&format!("{seed}:ai-deck"), 0),
+            handicap.deck_size,
+            &AiDeckOptions {
+                mana_cap: Some(handicap.mana_cap),
+                banned: Some(banned),
+                ..AiDeckOptions::default()
+            },
+        )
+    );
+}
+
+/// R2706000: a run fight's Radiant and buffed run cards are created on the human's seat.
+#[test]
+fn r2706000_a_run_fights_marked_cards_are_created_at_the_humans_seat() {
+    let mut setup = run_config("practice-marks");
+    let run = setup.run.as_mut().expect("a run");
+    run.human_marks = vec![jackioh_engine::DeckMark {
+        index: 0,
+        radiant: true,
+        upgrades: 0,
+    }];
+    let args = Session::start(&setup).expect("starts").host.fold_args();
+    assert!(args.deck_marks.is_some(), "{:?}", args.deck_marks);
+}
+
+/// R768, R767000: a kept game folds again from the setup it kept, its handicaps, its last board and its sandbox
+/// flag among them: a hard game, one that began with a board, and a sandbox game each open ready.
+#[test]
+fn r768_a_kept_game_folds_with_its_handicaps_last_board_and_sandbox() {
+    let ready = |config: PracticeConfig| {
+        let mut session = Session::start(&config).expect("starts");
+        let replay = kept_game(&mut session);
+        let build = session.catalog.clone();
+        let opened = page_replay(&replay, None, 0, 1, &build).open;
+        assert!(
+            matches!(opened, jackioh_engine::ReplayOpen::Ready { .. }),
+            "{opened:?}"
+        );
+    };
+    let mut hard = config("practice-r768-hard", P2);
+    hard.difficulty = Difficulty::Hard;
+    ready(hard);
+    let mut boarded = config("practice-r768-board", P2);
+    boarded.last_board = Some(vec![LastBoardEntry {
+        def_id: "core-001".to_string(),
+        radiant: false,
+    }]);
+    ready(boarded);
+    let mut sandbox = config("practice-r768-sandbox", P2);
+    sandbox.sandbox = Some(true);
+    ready(sandbox);
+}
+
+/// R768, R767000: a game kept before setups were, on this build's catalog, is still foldable: its config deals it
+/// again.
+#[test]
+fn r768_a_game_kept_with_no_setup_on_this_builds_catalog_folds() {
+    use jackioh_shared::host::practice::replays::foldable;
+    let mut session = started("practice-r768-no-setup", P2);
+    let mut replay = kept_game(&mut session);
+    replay.setup = None;
+    assert!(foldable(&replay, &session.catalog));
+}
+
+/// R768: a page's run of one seat stops at the count asked for.
+#[test]
+fn r768_a_seat_run_stops_at_the_count_asked_for() {
+    use jackioh_shared::host::practice::replays::replay_seat_run;
+    let end_turn = |seat: PlayerId, nonce: &str| Action::new(ActionBody::EndTurn, seat, nonce);
+    let log = vec![end_turn(P1, "h0"), end_turn(P1, "h1"), end_turn(P1, "h2")];
+    assert_eq!(replay_seat_run(&log, P1, 0, 2), (P1, 2));
+}
+
+/// Scripted cards on the real catalog, as the server's tests install them: a play that panics (R1253000) and one
+/// that voids the game (R679), each a 0-cost Quickdraw Spell so it starts in the opening hand, and fillers that
+/// do nothing. The AI's deck is banned all of them.
+mod scripted {
+    use super::*;
+    use indexmap::IndexMap;
+    use jackioh_engine::game_over::end_game;
+    use jackioh_engine::prelude::json_as;
+    use jackioh_engine::script::Effect;
+    use jackioh_engine::testkit::{register_catalog, register_scripts};
+    use jackioh_engine::{CardDef, CardScripts, Script, StaticFlags, hook};
+    use serde_json::json;
+
+    const PANICS: &str = "test-panics";
+    const VOIDS: &str = "test-voids";
+    const FILLER: &str = "test-card-";
+    const FIRST_INDEX: i32 = 9001;
+
+    fn def(id: &str, index: i32, text: &str) -> CardDef {
+        json_as(json!({
+            "id": id,
+            "index": index.to_string(),
+            "name": format!("{id} (practice tests)"),
+            "set": "Core",
+            "type": "Spell",
+            "tags": [],
+            "rarity": "Common",
+            "token": false,
+            "cost": 0,
+            "base": { "keywords": [], "text": text },
+            "radiant": { "keywords": [], "text": text },
+        }))
+    }
+
+    fn quickdraw() -> Option<StaticFlags> {
+        Some(StaticFlags {
+            quickdraw: Some(true),
+            ..StaticFlags::default()
+        })
+    }
+
+    /// The ids `install` adds.
+    fn ids() -> Vec<String> {
+        let mut ids = vec![PANICS.to_string(), VOIDS.to_string()];
+        ids.extend((0..DECK_SIZE).map(|n| format!("{FILLER}{n}")));
+        ids
+    }
+
+    fn install() {
+        jackioh_cards::register_all();
+        let mut defs = jackioh_cards::CATALOG.clone();
+        let mut scripts: IndexMap<String, CardScripts> = jackioh_cards::scripts_of();
+        let panics = Script {
+            static_flags: quickdraw(),
+            cry: Some(hook(|_ctx| panic!("test-panics: the engine failed"))),
+            ..Script::default()
+        };
+        let voids = Script {
+            static_flags: quickdraw(),
+            cry: Some(hook(|_ctx| {
+                vec![Effect::new("test-voids", |ctx| {
+                    end_game(&mut ctx.sink, Winner::Draw, GameOverReason::Voided);
+                })]
+            })),
+            ..Script::default()
+        };
+        let mut cards = vec![
+            (PANICS.to_string(), "Quickdraw. Panics.", panics),
+            (VOIDS.to_string(), "Quickdraw. Voids the game.", voids),
+        ];
+        for n in 0..DECK_SIZE {
+            cards.push((format!("{FILLER}{n}"), "Does nothing.", Script::default()));
+        }
+        for (index, (id, text, script)) in (FIRST_INDEX..).zip(cards) {
+            defs.insert(id.clone(), def(&id, index, text));
+            scripts.insert(
+                id,
+                CardScripts {
+                    base: script.clone(),
+                    radiant: script,
+                },
+            );
+        }
+        register_catalog(defs);
+        register_scripts(scripts);
+    }
+
+    /// A free game whose human, at p1, holds `card` among fillers, and whose AI's deck holds none of them.
+    fn holding(seed: &str, card: &str) -> PracticeConfig {
+        install();
+        let mut cards = vec![card.to_string()];
+        cards.extend((1..DECK_SIZE).map(|n| format!("{FILLER}{n}")));
+        let mut config = PracticeConfig::free(
+            seed,
+            Difficulty::Easy,
+            P1,
+            PracticeDeckChoice::Saved {
+                index: 1,
+                cards,
+                portrait: None,
+                cosmetics: None,
+            },
+        );
+        config.ai_banned = Some(ids());
+        config
+    }
+
+    /// Plays on, the AI its own turns and the human ending theirs, until the human can play `card`: that Play.
+    fn play_of(session: &mut Session, card: &str) -> ActionBody {
+        session.answer_mulligans();
+        for _ in 0..40 {
+            let held = |id: &str| {
+                jackioh_engine::state::find_instance(session.state(), id)
+                    .is_some_and(|held| held.def_id == card)
+            };
+            let play = session
+                .snapshot()
+                .legal
+                .iter()
+                .find(|body| matches!(body, ActionBody::Play { instance_id, .. } if held(instance_id)))
+                .cloned();
+            if let Some(play) = play {
+                return play;
+            }
+            if !session.ai_turn() {
+                session.act(ActionBody::EndTurn);
+            }
+        }
+        panic!("the human never could play {card}: {:?}", session.log());
+    }
+
+    /// R1253000: a human action the engine panics on is refused with the engine's own words, naming the action.
+    #[test]
+    fn r1253000_an_action_the_engine_panics_on_is_refused_naming_it() {
+        let mut session = Session::start(&holding("practice-panics", PANICS)).expect("starts");
+        let play = play_of(&mut session, PANICS);
+        let rows = session.log().len();
+        let error = session.act(play).error.clone().expect("refused");
+        assert!(
+            error.starts_with("the engine failed on ") && error.contains("test-panics: the engine failed"),
+            "{error}"
+        );
+        assert_eq!(session.log().len(), rows);
+    }
+
+    /// R679, R1303000: a claim on a game that ended voided is refused as voided.
+    #[test]
+    fn r679_a_claim_on_a_voided_game_is_refused_as_voided() {
+        let config = holding("practice-voids", VOIDS);
+        let mut session = Session::start(&config).expect("starts");
+        let play = play_of(&mut session, VOIDS);
+        session.act(play);
+        assert_eq!(session.voids, 1, "PREMISE: the game is voided");
+        assert_eq!(
+            check_claim(&config, &build(), PracticeResult::Draw, session.log()).err(),
+            Some(ClaimRefusal::Voided)
+        );
+    }
 }
