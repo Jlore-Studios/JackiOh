@@ -17256,13 +17256,8 @@
     "what": "revise #3810 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-13T02:32:16Z",
+    "at": "2026-11-13T02:44:17Z",
     "notes": [
-      "#3810: its turn came (it waited 120 minutes for #3798, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway)",
-      "delivered review #3812 on claude-3 (run 43343353741): approved",
-      "started revise #3810 on claude-3 (run 43353306193)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days",
       "runner gate: started 0 of 2 waiting run(s); 2 wait for room"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -17969,7 +17964,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-13T02:32:16Z",
+  "loop_tick": "2026-11-13T02:44:17Z",
   "machine_disk": {
     "issue": null,
     "reading": {
