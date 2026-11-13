@@ -10,6 +10,27 @@ import { jackiohAliases } from "../apps/web/vite.config.ts";
 import { pinChrome } from "./support/chrome-pin.ts";
 import { registerTasks } from "./support/tasks/index.ts";
 
+/**
+ * E2E_WINDOW_SIZE=W,H launches the browser at that window size. Headless Chrome's default window crops a
+ * `capture: "viewport"` shot taller than about 633 px, so a run that must show a whole 1280x720 or 390x844
+ * screen (spec 25's `--expose shots=1`, the lobby component spec's device sizes) passes a larger one. Unset,
+ * the browser launches exactly as before.
+ */
+function launchAtWindowSize(on: Cypress.PluginEvents): void {
+  const windowSize = /^(\d+),(\d+)$/.exec(process.env.E2E_WINDOW_SIZE ?? "");
+  if (windowSize === null) return;
+  const [, width, height] = windowSize;
+  on("before:browser:launch", (browser, launchOptions) => {
+    if (browser.family === "chromium" && browser.name !== "electron") {
+      launchOptions.args.push(`--window-size=${String(width)},${String(height)}`);
+    } else if (browser.name === "electron") {
+      launchOptions.preferences.width = Number(width);
+      launchOptions.preferences.height = Number(height);
+    }
+    return launchOptions;
+  });
+}
+
 export default defineConfig({
   // The layout BUILD §1 fixes: e2e/cypress/e2e/*.cy.ts, e2e/fixtures/decks/*.json, e2e/support/.
   e2e: {
@@ -64,23 +85,7 @@ export default defineConfig({
       // requests and sockets mid-spec; on CI `chrome` is then Chrome for Testing 154 instead
       // (support/chrome-pin.ts). Any other Chrome is launched exactly as found.
       config.browsers = await pinChrome(config.browsers, resolve(config.projectRoot, ".."));
-      // E2E_WINDOW_SIZE=W,H launches the browser at that window size. Headless Chrome's default
-      // window crops a `capture: "viewport"` shot taller than about 633 px, so a run that must show a
-      // whole 1280x720 or 390x844 screen (spec 25's `--expose shots=1`) passes a larger one. Unset,
-      // the browser launches exactly as before.
-      const windowSize = /^(\d+),(\d+)$/.exec(process.env.E2E_WINDOW_SIZE ?? "");
-      if (windowSize !== null) {
-        const [, width, height] = windowSize;
-        on("before:browser:launch", (browser, launchOptions) => {
-          if (browser.family === "chromium" && browser.name !== "electron") {
-            launchOptions.args.push(`--window-size=${String(width)},${String(height)}`);
-          } else if (browser.name === "electron") {
-            launchOptions.preferences.width = Number(width);
-            launchOptions.preferences.height = Number(height);
-          }
-          return launchOptions;
-        });
-      }
+      launchAtWindowSize(on);
       return config;
     },
   },
@@ -166,6 +171,8 @@ export default defineConfig({
       // Vite modules through the same DevTools interception, so `chrome` is pinned the same way
       // (support/chrome-pin.ts).
       config.browsers = await pinChrome(config.browsers, resolve(config.projectRoot, ".."));
+      // #3730: the lobby's shots at #3728's device sizes are whole only in a window that holds them.
+      launchAtWindowSize(on);
       on("task", {
         /**
          * Print a measured layout row in the terminal. Cypress swallows `console.log` from the

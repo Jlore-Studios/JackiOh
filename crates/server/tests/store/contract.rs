@@ -9338,6 +9338,173 @@ mod duos {
     );
 }
 
+// Private lobbies (SPEC §9.5, §13.9; migration 0090; issue #3730)
+
+mod lobbies {
+    use super::*;
+    use jackioh_server::lobby::store::{FORMAT_COOP, FORMAT_DUEL, Lobby};
+
+    fn lobby(code: &str, host: &str, format: &str, at: i64, expires_at: i64) -> Lobby {
+        let settings = if format == FORMAT_DUEL {
+            json!({ "format": "duel", "mode": "bo1" })
+        } else {
+            json!({ "format": "coop", "difficulty": "medium" })
+        };
+        from(json!({
+            "code": code,
+            "host": host,
+            "guest": null,
+            "settings": settings,
+            "hostPick": null,
+            "guestPick": null,
+            "hostReady": false,
+            "guestReady": false,
+            "rev": 0,
+            "catalogVersion": CATALOG_VERSION,
+            "createdAt": at,
+            "expiresAt": expires_at,
+            "matchId": null,
+            "seriesId": null,
+            "startedAt": null,
+        }))
+    }
+
+    /// R3730000: a code is held once; an update writes only over the revision it read, every
+    /// column but the code, the host and the creation; a delete takes the row.
+    async fn r3730000_creates_reads_updates_by_revision_and_deletes(harness: &StoreHarness) {
+        let host = active_profile(harness, None).await;
+        let guest = active_profile(harness, None).await;
+        let now = harness.now();
+        let made = lobby("LOBBAB", &host.id, FORMAT_DUEL, now, now + 900_000);
+        assert!(q!(harness, t => t.lobbies_create(&made)));
+        assert!(!q!(harness, t => t.lobbies_create(&lobby("LOBBAB", &guest.id, FORMAT_COOP, now, now))));
+        assert_eq!(q!(harness, t => t.lobbies_get("LOBBAB")), Some(made.clone()));
+        assert_eq!(q!(harness, t => t.lobbies_get("ZZZZZZ")), None);
+
+        let pick = json!({ "choice": { "mode": "random", "leanSet": "newest" }, "frozen": { "mode": "random", "leanSet": "newest" } });
+        let next: Lobby = from(spread(
+            j(&made),
+            json!({
+                "guest": guest.id,
+                "settings": { "format": "duel", "mode": "random" },
+                "hostPick": pick,
+                "guestPick": pick,
+                "hostReady": true,
+                "guestReady": true,
+                "rev": 1,
+                "expiresAt": now + 1_800_000,
+                "matchId": id(),
+                "startedAt": now + 1_000,
+            }),
+        ));
+        assert!(q!(harness, t => t.lobbies_update(&next, 0)));
+        assert_eq!(q!(harness, t => t.lobbies_get("LOBBAB")), Some(next.clone()));
+        // A write that read revision 0 loses to the one that landed.
+        let stale: Lobby = from(spread(j(&made), json!({ "rev": 1 })));
+        assert!(!q!(harness, t => t.lobbies_update(&stale, 0)));
+        assert_eq!(q!(harness, t => t.lobbies_get("LOBBAB")), Some(next.clone()));
+        // The code, host and creation are not written.
+        let moved: Lobby = from(spread(j(&next), json!({ "rev": 2, "createdAt": now + 5 })));
+        assert!(q!(harness, t => t.lobbies_update(&moved, 1)));
+        assert_eq!(
+            q!(harness, t => t.lobbies_get("LOBBAB")).map(|row| row.created_at),
+            Some(now)
+        );
+
+        assert!(q!(harness, t => t.lobbies_delete("LOBBAB")));
+        assert!(!q!(harness, t => t.lobbies_delete("LOBBAB")));
+        assert_eq!(q!(harness, t => t.lobbies_get("LOBBAB")), None);
+    }
+
+    /// R3730004: a host's open lobbies are counted per format, unstarted and unexpired; a member's
+    /// unexpired lobbies list newest first; the reaper takes the expired.
+    async fn r3730004_counts_lists_and_reaps(harness: &StoreHarness) {
+        let host = active_profile(harness, None).await;
+        let guest = active_profile(harness, None).await;
+        let now = harness.now();
+        for (code, format, at, expires_at) in [
+            ("LOBBCA", FORMAT_DUEL, now - 2_000, now + 900_000),
+            ("LOBBCB", FORMAT_DUEL, now - 1_000, now + 900_000),
+            ("LOBBCC", FORMAT_COOP, now, now + 600_000),
+            ("LOBBCD", FORMAT_DUEL, now - 900_000, now - 1),
+        ] {
+            assert!(q!(harness, t => t.lobbies_create(&lobby(code, &host.id, format, at, expires_at))));
+        }
+        let started: Lobby = from(spread(
+            j(&lobby(
+                "LOBBCB",
+                &host.id,
+                FORMAT_DUEL,
+                now - 1_000,
+                now + 900_000,
+            )),
+            json!({ "guest": guest.id, "rev": 1, "startedAt": now }),
+        ));
+        assert!(q!(harness, t => t.lobbies_update(&started, 0)));
+
+        assert_eq!(
+            q!(harness, t => t.lobbies_count_open_by_host(&host.id, FORMAT_DUEL, now)),
+            1
+        );
+        assert_eq!(
+            q!(harness, t => t.lobbies_count_open_by_host(&host.id, FORMAT_COOP, now)),
+            1
+        );
+        assert_eq!(
+            q!(harness, t => t.lobbies_count_open_by_host(&guest.id, FORMAT_DUEL, now)),
+            0
+        );
+        assert_eq!(
+            q!(harness, t => t.lobbies_count_open_by_host("not-a-uuid", FORMAT_DUEL, now)),
+            0
+        );
+
+        let codes = |lobbies: Vec<Lobby>| lobbies.into_iter().map(|row| row.code).collect::<Vec<_>>();
+        assert_eq!(
+            codes(q!(harness, t => t.lobbies_of_member(&host.id, now))),
+            ["LOBBCC", "LOBBCB", "LOBBCA"]
+        );
+        assert_eq!(
+            codes(q!(harness, t => t.lobbies_of_member(&guest.id, now))),
+            ["LOBBCB"]
+        );
+
+        assert_eq!(q!(harness, t => t.lobbies_reap(now)), 1);
+        assert_eq!(q!(harness, t => t.lobbies_get("LOBBCD")), None);
+        assert_eq!(q!(harness, t => t.lobbies_reap(now + 600_000)), 1);
+        assert_eq!(q!(harness, t => t.lobbies_get("LOBBCC")), None);
+    }
+
+    /// Migration 0090: a deleted profile takes the lobbies it hosts or sits in.
+    async fn r3730000_a_deleted_profile_takes_its_lobbies(harness: &StoreHarness) {
+        let host = active_profile(harness, None).await;
+        let guest = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        assert!(
+            q!(harness, t => t.lobbies_create(&lobby("LOBBDA", &host.id, FORMAT_DUEL, now, now + 900_000)))
+        );
+        assert!(
+            q!(harness, t => t.lobbies_create(&lobby("LOBBDB", &other.id, FORMAT_COOP, now, now + 600_000)))
+        );
+        let seated: Lobby = from(spread(
+            j(&lobby("LOBBDB", &other.id, FORMAT_COOP, now, now + 600_000)),
+            json!({ "guest": guest.id, "rev": 1 }),
+        ));
+        assert!(q!(harness, t => t.lobbies_update(&seated, 0)));
+        assert!(q!(harness, t => t.profiles_remove(&host.id)));
+        assert!(q!(harness, t => t.profiles_remove(&guest.id)));
+        assert_eq!(q!(harness, t => t.lobbies_get("LOBBDA")), None);
+        assert_eq!(q!(harness, t => t.lobbies_get("LOBBDB")), None);
+    }
+
+    both_stores!(
+        r3730000_creates_reads_updates_by_revision_and_deletes,
+        r3730004_counts_lists_and_reaps,
+        r3730000_a_deleted_profile_takes_its_lobbies,
+    );
+}
+
 // The economy (SPEC §14.11; migration 0045)
 
 mod economy {

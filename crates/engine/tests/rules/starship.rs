@@ -74,12 +74,8 @@ fn ship_unit<'a>(side: &'a SideView, id: &str) -> &'a jackioh_engine::wire::Unit
         .unwrap_or_else(|| panic!("the view shows no Starship {id}"))
 }
 
-fn pick(id: &str) -> Value {
-    json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-}
-
 fn bolt_at(s: &mut Scenario, id: &str) {
-    s.play(bolt.id.as_str(), pick(id));
+    s.play(bolt.id.as_str(), pick::targets(pick::id(id)));
 }
 
 fn ship_of(s: &Scenario, player: PlayerId) -> CardInstance {
@@ -557,7 +553,7 @@ mod r1852002_a_stolen_piece {
         s.play(grab.id.as_str(), json!({}));
         assert_eq!(s.card(&piece).controller, P2);
         assert_eq!(s.card(&piece).owner, P1);
-        s.play(bolt.id.as_str(), pick(&piece));
+        s.play(bolt.id.as_str(), pick::targets(pick::id(&piece)));
         // R2618000: it died on p2's side, into p2's graveyard as p2's own card.
         assert_eq!(s.card(&piece).zone, Zone::Graveyard { player: P2 });
         assert_eq!(s.card(&piece).owner, P2);

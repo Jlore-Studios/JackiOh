@@ -156,6 +156,20 @@ mod tests {
     }
 
     #[test]
+    fn r783005_an_enemy_unit_set_face_down_by_its_cloaked_is_not_attacked_and_costs_no_mana() {
+        let mut s = weapon_board(
+            "s72-cloaked",
+            json!({ "field": [{ "def": ID }] }),
+            json!({ "hand": [crate::CLOAKED_UNIT], "mana": 10 }),
+        );
+        s.end_turn();
+        let set = crate::set_cloaked(&mut s, P2, crate::CLOAKED_UNIT, 1);
+        assert!(forced_attackers(s.events()).is_empty());
+        s.expect_in_zone(set.as_str(), "field");
+        assert_eq!(s.state().players[P1].mana.next_turn_mod, 0);
+    }
+
+    #[test]
     fn r3550000_its_own_summons_are_not_attacked() {
         let mut s = weapon_board(
             "s72-own",

@@ -55,10 +55,6 @@ fn recasts_core(events: &[GameEvent]) -> bool {
         .is_some_and(|def_id| def_id == CHAOS)
 }
 
-fn at_p2() -> Value {
-    json!([{ "pick": "hero", "player": "p2" }])
-}
-
 fn with_fillers(head: &[&'static str], count: usize) -> Vec<&'static str> {
     head.iter()
         .copied()
@@ -78,7 +74,7 @@ mod r4_a_card_a_full_hand_burns_keeps_its_cost_without_the_price_of_a_return_it_
         }));
         let equation = g.card(KY_MATH).clone();
 
-        g.play(&equation.id, json!({ "targets": at_p2() }));
+        g.play(&equation.id, json!({ "targets": pick::hero("p2") }));
         g.play(STOCKPILE, json!({})); // hand 8 → draws 2 → 10: the hand is full when the turn ends
         assert_eq!(g.hand(P1).len(), 10);
 
@@ -467,7 +463,7 @@ mod r766_r429_only_kys_math_equations_own_return_gives_back_a_price_its_climb {
         // The one exception is #31's climb, which its own returns give it: a price put on it any other
         // way stays in the graveyard, so it comes back at its printed (1) plus (1).
         assert_eq!(
-            returned_at_a_price_of_2(KY_MATH, json!({ "targets": at_p2() })),
+            returned_at_a_price_of_2(KY_MATH, json!({ "targets": pick::hero("p2") })),
             (1, 2)
         );
     }

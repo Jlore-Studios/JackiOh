@@ -80,10 +80,6 @@ mod tests {
         scenario(opts)
     }
 
-    fn at_enemy_hero() -> Value {
-        json!([{ "pick": "hero", "player": "p2" }])
-    }
-
     mod twisted_sorcerer {
         use super::*;
 
@@ -113,7 +109,7 @@ mod tests {
         #[test]
         fn s8_3_deals_4_to_a_chosen_hero_on_either_side() {
             let mut s = board(json!({ "p1": { "hand": [SOURCERER] } }));
-            s.play(SOURCERER, json!({ "targets": at_enemy_hero() }));
+            s.play(SOURCERER, json!({ "targets": pick::hero("p2") }));
             s.expect_health(P2, 26);
 
             let mut own = board(json!({ "p1": { "hand": [SOURCERER] } }));
@@ -214,11 +210,11 @@ mod tests {
         #[test]
         fn r275_the_radiant_face_still_hits_a_hero_for_8_and_for_16() {
             let mut high = board(json!({ "p1": { "hand": [{ "def": SOURCERER, "radiant": true }] } }));
-            high.play(SOURCERER, json!({ "targets": at_enemy_hero() }));
+            high.play(SOURCERER, json!({ "targets": pick::hero("p2") }));
             high.expect_health(P2, 22);
 
             let mut low = board(json!({ "p1": { "hand": [{ "def": SOURCERER, "radiant": true }], "health": 1 } }));
-            low.play(SOURCERER, json!({ "targets": at_enemy_hero() }));
+            low.play(SOURCERER, json!({ "targets": pick::hero("p2") }));
             low.expect_health(P2, 14);
         }
 
@@ -248,7 +244,7 @@ mod tests {
             } else {
                 crate::degrade_number(&mut s, SOURCERER, key);
             }
-            s.play(SOURCERER, json!({ "targets": at_enemy_hero() }));
+            s.play(SOURCERER, json!({ "targets": pick::hero("p2") }));
             s.expect_health(P2, 30 - dealt);
         }
     }
@@ -265,7 +261,7 @@ mod tests {
                 crate::degrade_number(&mut s, SOURCERER, "threshold")
             };
             assert_eq!(moved, threshold);
-            s.play(SOURCERER, json!({ "targets": at_enemy_hero() }));
+            s.play(SOURCERER, json!({ "targets": pick::hero("p2") }));
             s.expect_health(P2, 30 - dealt);
         }
     }

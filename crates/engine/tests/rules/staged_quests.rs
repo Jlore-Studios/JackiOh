@@ -61,14 +61,6 @@ fn line(s: &Scenario, id: &str) -> QuestMemory {
     quest_memory_of(s.card(id)).unwrap_or_else(|| panic!("{id} has no quest line"))
 }
 
-fn pick(id: &str) -> Value {
-    json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-}
-
-fn hero_pick(player: &str) -> Value {
-    json!({ "targets": [{ "pick": "hero", "player": player }] })
-}
-
 fn id_at(s: &Scenario, player: PlayerId, lane: i32) -> String {
     s.unit(player, lane)
         .unwrap_or_else(|| panic!("no unit at {player:?}'s lane {lane}"))
@@ -220,15 +212,15 @@ mod r1854000_staged_quests {
             json!([{ "def": plain.id, "lane": 1 }]),
         );
         let (first, second) = (id_at(&s, P1, 1), id_at(&s, P1, 2));
-        s.play(smite.id.as_str(), pick(&first));
-        s.play(smite.id.as_str(), pick(&second));
+        s.play(smite.id.as_str(), pick::targets(pick::id(&first)));
+        s.play(smite.id.as_str(), pick::targets(pick::id(&second)));
         assert_eq!(
             line(&s, &quest).stage,
             Some(3),
             "two Acclaimed deaths finish stage 2"
         );
         let enemy = id_at(&s, P2, 1);
-        s.play(thief.id.as_str(), pick(&enemy));
+        s.play(thief.id.as_str(), pick::targets(pick::id(&enemy)));
         assert_eq!(completed(s.last_events(), &quest), strings(&["steal"]));
         let memory = line(&s, &quest);
         assert!(memory.active.is_empty(), "nothing is open after the last stage");
@@ -316,7 +308,7 @@ mod r1854000_staged_quests {
     #[test]
     fn r1854000_leaving_the_field_resets_the_line_and_played_again_it_starts_at_stage_1() {
         let (mut s, quest) = heist_at_stage_two("r1854000-reset", json!([recall.id]), json!([]), json!([]));
-        s.play(recall.id.as_str(), pick(&quest));
+        s.play(recall.id.as_str(), pick::targets(pick::id(&quest)));
         let bounced = s
             .hand(P1)
             .into_iter()
@@ -500,7 +492,7 @@ mod r1854002_goals {
             json!([]),
         );
         let unit = id_at(&s, P1, 1);
-        s.play(glow.id.as_str(), pick(&unit));
+        s.play(glow.id.as_str(), pick::targets(pick::id(&unit)));
         assert!(done(&s, &quest), "an Acclaimed Unit made Radiant on the field");
     }
 
@@ -523,7 +515,7 @@ mod r1854002_goals {
             json!([{ "def": acclaimed.id, "lane": 1 }]),
         );
         let enemy = id_at(&s, P2, 1);
-        s.play(glow.id.as_str(), pick(&enemy));
+        s.play(glow.id.as_str(), pick::targets(pick::id(&enemy)));
         assert!(!done(&s, &quest), "the enemy's Acclaimed Unit is not yours");
     }
 
@@ -541,19 +533,19 @@ mod r1854002_goals {
             id_at(&s, P1, 3),
             id_at(&s, P2, 1),
         );
-        s.play(smite.id.as_str(), pick(&enemy));
-        s.play(smite.id.as_str(), pick(&untagged));
+        s.play(smite.id.as_str(), pick::targets(pick::id(&enemy)));
+        s.play(smite.id.as_str(), pick::targets(pick::id(&untagged)));
         assert_eq!(
             line(&s, &quest).progress.get(ONLY_GOAL),
             Some(&0),
             "the enemy's and an untagged death"
         );
-        s.play(smite.id.as_str(), pick(&first));
+        s.play(smite.id.as_str(), pick::targets(pick::id(&first)));
         assert_eq!(
             progressed(s.last_events(), &quest),
             vec![(ONLY_GOAL.to_string(), 1)]
         );
-        s.play(smite.id.as_str(), pick(&last));
+        s.play(smite.id.as_str(), pick::targets(pick::id(&last)));
         assert!(done(&s, &quest));
     }
 
@@ -566,7 +558,7 @@ mod r1854002_goals {
             json!([{ "def": plain.id, "lane": 1 }]),
         );
         let enemy = id_at(&s, P2, 1);
-        s.play(thief.id.as_str(), pick(&enemy));
+        s.play(thief.id.as_str(), pick::targets(pick::id(&enemy)));
         assert!(done(&s, &quest), "a Steal onto your side");
 
         let (mut s, quest) = with_goal("cardsStolen", json!([pickpocket.id]), json!([]), json!([]));
@@ -665,9 +657,9 @@ mod r1854002_goals {
             json!([]),
             json!([]),
         );
-        s.play(near_hit.id.as_str(), hero_pick("p2"));
+        s.play(near_hit.id.as_str(), pick::targets(pick::hero("p2")));
         assert!(!done(&s, &quest), "11 is not 12");
-        s.play(big_hit.id.as_str(), hero_pick("p2"));
+        s.play(big_hit.id.as_str(), pick::targets(pick::hero("p2")));
         assert!(done(&s, &quest), "12 dealt");
 
         let mut s = board(
@@ -682,12 +674,12 @@ mod r1854002_goals {
         let quest = play_quest(&mut s, &goal_card("damageInstance"));
         s.end_turn();
         let unit = id_at(&s, P1, 1);
-        s.play(big_hit.id.as_str(), pick(&unit));
+        s.play(big_hit.id.as_str(), pick::targets(pick::id(&unit)));
         assert!(
             !done(&s, &quest),
             "12 to a Unit of yours is not your hero taking it"
         );
-        s.play(big_hit.id.as_str(), hero_pick("p1"));
+        s.play(big_hit.id.as_str(), pick::targets(pick::hero("p1")));
         assert!(done(&s, &quest), "12 taken by your hero");
     }
 }
@@ -862,7 +854,7 @@ mod r1854004_hear_back {
         let mut s = mine("r1854004-leave", json!([application.id, recall.id]), json!([]));
         let quest = play_quest(&mut s, &application.id);
         s.activate(quest.as_str(), json!({ "ability": SEND }));
-        s.play(recall.id.as_str(), pick(&quest));
+        s.play(recall.id.as_str(), pick::targets(pick::id(&quest)));
         let again = play_quest(&mut s, &application.id);
         let memory = line(&s, &again);
         assert_eq!((memory.stage, memory.hear_back), (Some(1), None));

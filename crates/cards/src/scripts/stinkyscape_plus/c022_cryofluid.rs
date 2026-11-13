@@ -64,10 +64,6 @@ mod tests {
         }))
     }
 
-    fn on(card: &CardInstance) -> Value {
-        json!({ "targets": pick::instance(card) })
-    }
-
     fn frozen(s: &Scenario, card: &CardInstance) -> bool {
         s.card(card).frozen.is_some()
     }
@@ -104,7 +100,7 @@ mod tests {
         fn the_unit_gains_six_six_deft_and_a_freeze() {
             let mut s = board(false, json!([VANILLA]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(CRYO, on(&unit));
+            s.play(CRYO, pick::targets(pick::instance(&unit)));
             s.expect_stats(&unit, json!({ "attack": 10, "health": 10 }));
             assert_eq!(s.stats(&unit).max_health, 10);
             assert_eq!(keyword_count(&s, &unit, KeywordKind::Deft), 1);
@@ -115,7 +111,7 @@ mod tests {
         fn an_enemy_unit_takes_all_three() {
             let mut s = board(false, json!([VANILLA]), json!([VANILLA]));
             let (mine, theirs) = (s.unit_at(P1, 1), s.unit_at(P2, 1));
-            s.play(CRYO, on(&theirs));
+            s.play(CRYO, pick::targets(pick::instance(&theirs)));
             s.expect_stats(&theirs, json!({ "attack": 10, "health": 10 }));
             assert_eq!(keyword_count(&s, &theirs, KeywordKind::Deft), 1);
             assert!(frozen(&s, &theirs));
@@ -128,7 +124,7 @@ mod tests {
             let mut s = board(false, json!([VANILLA]), json!([]));
             assert_eq!(upgrade_number(&mut s, CRYO, "buff"), 7);
             let unit = s.unit_at(P1, 1);
-            s.play(CRYO, on(&unit));
+            s.play(CRYO, pick::targets(pick::instance(&unit)));
             s.expect_stats(&unit, json!({ "attack": 11, "health": 11 }));
         }
     }
@@ -140,7 +136,7 @@ mod tests {
         fn the_unit_gains_twelve_twelve_deft_and_a_freeze() {
             let mut s = board(true, json!([VANILLA]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(CRYO, on(&unit));
+            s.play(CRYO, pick::targets(pick::instance(&unit)));
             s.expect_stats(&unit, json!({ "attack": 16, "health": 16 }));
             assert_eq!(s.stats(&unit).max_health, 16);
             assert_eq!(keyword_count(&s, &unit, KeywordKind::Deft), 1);
@@ -152,7 +148,7 @@ mod tests {
             let mut s = board(true, json!([VANILLA]), json!([]));
             assert_eq!(upgrade_number(&mut s, CRYO, "buff2"), 13);
             let unit = s.unit_at(P1, 1);
-            s.play(CRYO, on(&unit));
+            s.play(CRYO, pick::targets(pick::instance(&unit)));
             s.expect_stats(&unit, json!({ "attack": 17, "health": 17 }));
         }
     }

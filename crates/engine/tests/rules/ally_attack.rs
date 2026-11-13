@@ -12,11 +12,7 @@ use crate::rules::fixtures::damage_combat::{
     ally_asker, ally_noter, answer, defender, grunt, notes, pawn, playing, recorder, replays_to, round_trip,
     veteran, wall,
 };
-use crate::rules::fixtures::harness::{by, input, put, sink_for, slot};
-
-fn by_id_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
+use crate::rules::fixtures::harness::{by, input, live_mut, put, sink_for, slot};
 
 mod r2199000_ally_attack {
     use super::*;
@@ -92,7 +88,7 @@ mod r2199000_ally_attack {
             slot(P2, Row::Units, 1),
             Default::default(),
         );
-        by_id_mut(&mut state, &target.id).buffs = AttackHealth { attack: 5, health: 0 };
+        live_mut(&mut state, &target.id).buffs = AttackHealth { attack: 5, health: 0 };
         let mut game = recorder(&state);
         game.play(input(json!({
             "type": "attack", "attackerId": striker.id, "targetId": target.id, "playerId": "p1"

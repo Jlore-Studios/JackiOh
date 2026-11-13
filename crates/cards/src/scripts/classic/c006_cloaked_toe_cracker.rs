@@ -13,9 +13,9 @@
 //!
 //! THE RADIANT TRIGGER answers every `cardPlayed` of a Trap or Field Trap by its controller, a cast
 //! included (R70), and gains the card's declared mana (`param(ctx, "mana")`) for this turn (§6.3 Mana).
-//! The played card is read as it stands, so a Cloaked card's face-down play, a Trap play (R783005),
-//! answers it. The `manaChanged` it makes names no card, so a face-down trap stays unnamed to the
-//! opponent (R33, R97).
+//! The play is read as it counts (`played_type_of`), so a Cloaked card's face-down play, a Trap play
+//! (R783005), answers it. The `manaChanged` it makes names no card, so a face-down trap stays unnamed
+//! to the opponent (R33, R97).
 
 use jackioh_engine::effects::gain_mana;
 use jackioh_engine::prelude::*;
@@ -43,22 +43,14 @@ fn aura() -> CostAuraHook {
 /// with nothing.
 fn after_you_play_a_trap() -> TriggerDef {
     TriggerDef::new("toe-cracker-mana", &[GameEventType::CardPlayed], |ctx, event| {
-        let GameEvent::CardPlayed {
-            player,
-            instance_id,
-            def_id,
-            ..
-        } = event
-        else {
+        let GameEvent::CardPlayed { player, .. } = event else {
             return vec![];
         };
         if *player != ctx.controller {
             return vec![];
         }
-        // R783005: the card as it stands, so a card set by its Cloaked is the Trap it was played as.
-        let played = find_instance(ctx.state, instance_id)
-            .map_or_else(|| def_of(Some(&*ctx.state), def_id).type_, |card| card_type_of(ctx.state, card));
-        if !TRAP_TYPES.contains(&played) {
+        // R783005: the play as it counts, so a card set by its Cloaked is the Trap it was played as.
+        if !played_type_of(&*ctx.state, event).is_some_and(|played| TRAP_TYPES.contains(&played)) {
             return vec![];
         }
         vec![gain_mana(json_as(json!({ "amount": param(&*ctx, "mana") })))]

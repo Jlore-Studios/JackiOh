@@ -10,7 +10,7 @@ import {
   SERIES_WINS_NEEDED,
 } from "../../../apps/web/src/wire/serverConfig.ts";
 import { TOKEN_NAMES, tokenId } from "../../support/cards.ts";
-import { INSTALLED_TRIO_NAME, type InstalledLoadout } from "../../support/commands.ts";
+import type { InstalledLoadout } from "../../support/commands.ts";
 import {
   accounts,
   apiUrl,
@@ -26,11 +26,8 @@ import {
   LIVE_GAME_BANNER,
   LIVE_GAME_REJOIN,
   NAV_BACK,
-  PLAY_CREATE_ROOM,
   PLAY_DECK_SELECT,
   PLAY_QUEUE,
-  PLAY_ROOM_CODE,
-  PLAY_ROOM_MODE,
   PLAY_STATUS,
   PLAY_TRIO_SELECT,
   PLAY_VERDICT,
@@ -610,25 +607,32 @@ describe("19 queue modes and series — Best of 1, All random, Conquest and room
     const seed = seedFor("19-room");
     const seatOne = accounts.p1();
     const seatTwo = accounts.p2();
+    let mine: InstalledLoadout | null = null;
     let theirs: InstalledLoadout | null = null;
     let code = "";
     let seriesId = "";
 
-    cy.installLoadout(seatOne, "19-modes-a", { deckIndex: CHOSEN_DECK_INDEX });
+    cy.installLoadout(seatOne, "19-modes-a", { deckIndex: CHOSEN_DECK_INDEX }).then((value) => {
+      mine = value;
+    });
     cy.installLoadout(seatTwo, "19-modes-b").then((value) => {
       theirs = value;
     });
 
-    openLobby(seatOne, "bo3");
-    cy.get(ts(PLAY_TRIO_SELECT), { timeout: timeouts.view }).find("option:selected").should("have.text", INSTALLED_TRIO_NAME);
-    cy.get(ts(PLAY_CREATE_ROOM)).should("not.be.disabled").click();
-    cy.get(ts(PLAY_ROOM_MODE), { timeout: timeouts.view }).should("have.attr", "data-mode", "bo3");
-    cy.get(ts(PLAY_ROOM_CODE))
-      .invoke("text")
-      .then((text) => {
-        code = text.trim();
+    // R3730006: the client makes friend games in a private lobby now; a classic room is an older client's or a
+    // challenge's, so this one is made by its route.
+    cy.then(() => {
+      cy.request<{ code: string; mode: string }>({
+        method: "POST",
+        url: apiUrl("/api/rooms"),
+        headers: bearerHeaders(seatOne.token),
+        body: { mode: "bo3", trioId: installed(mine).trioId },
+      }).should((response) => {
+        expect(response.body.mode, "R264: the room plays the mode it was made with").to.eq("bo3");
+        code = response.body.code;
         expect(code, "R79: a room code").to.have.length(constants.ROOM_CODE_LENGTH);
       });
+    });
 
     cy.then(() => {
       cy.request<ErrorBody>({
@@ -660,8 +664,11 @@ describe("19 queue modes and series — Best of 1, All random, Conquest and room
       });
     });
 
-    landedOn(SERIES_PATH, SERIES_POLL_TIMEOUT_MS).then((id) => {
-      expect(id, "the host lands on the series the join made").to.eq(seriesId);
+    me(seatOne).its("currentSeriesId").should((id) => {
+      expect(id, "the host is in the series the join made").to.eq(seriesId);
+    });
+    cy.then(() => {
+      cy.visitAs(seatOne, routes.series(seriesId));
     });
     cy.get(ts(SERIES_SCREEN), { timeout: timeouts.view }).should("have.attr", "data-status", "picking");
 
