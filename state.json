@@ -21559,7 +21559,7 @@
       }
     },
     "claude-3": {
-      "refused_until": "2026-11-13T20:30:00Z",
+      "refused_until": "2026-11-14T01:40:00Z",
       "spent": [
         {
           "at": "2026-11-06T17:30:31Z",
@@ -23767,10 +23767,11 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-14T01:40:00Z",
-          "utilization": 0.99
+          "utilization": 1.0
         },
-        "observed_at": "2026-11-13T22:03:13Z",
-        "status": "allowed_warning"
+        "observed_at": "2026-11-13T22:23:50Z",
+        "rejected_resets_at": "2026-11-14T01:40:00Z",
+        "status": "rejected"
       }
     },
     "claude-4": {
@@ -36432,6 +36433,11 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-13T22:08:34Z,claude-3,refusal,call,43516525743,100,2026-11-14T01:40:00Z,,,rejected,,,2026-11-14T01:40:00Z"
+    ]
   },
   "version": 1
 }
