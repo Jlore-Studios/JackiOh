@@ -54,9 +54,7 @@ mod tests {
         events
             .iter()
             .filter_map(|event| match event {
-                GameEvent::CardPlayed {
-                    instance_id, def_id, ..
-                } => Some((instance_id.clone(), def_id.clone())),
+                GameEvent::CardPlayed { instance_id, def_id, .. } => Some((instance_id.clone(), def_id.clone())),
                 _ => None,
             })
             .collect()
@@ -116,10 +114,7 @@ mod tests {
                 let Some((_, def)) = made.first() else { continue };
                 assert!(pool.contains(def));
                 let kind = catalog::def_of(None, def).type_;
-                assert!(
-                    s.state().pending.is_none() || s.state().result.is_some(),
-                    "{def} left a prompt open"
-                );
+                assert!(s.state().pending.is_none() || s.state().result.is_some(), "{def} left a prompt open");
                 if !seen.contains(&kind) {
                     seen.push(kind);
                 }

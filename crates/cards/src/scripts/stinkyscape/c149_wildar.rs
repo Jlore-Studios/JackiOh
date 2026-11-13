@@ -113,10 +113,7 @@ mod tests {
     }
 
     fn gained(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
-        s.hand(player)
-            .into_iter()
-            .filter(|card| card.def_id != ANCHOR)
-            .collect()
+        s.hand(player).into_iter().filter(|card| card.def_id != ANCHOR).collect()
     }
 
     fn cost_of(s: &Scenario, card: &CardInstance) -> i32 {
@@ -148,10 +145,7 @@ mod tests {
         let view = s.view(P1);
         assert_eq!(js(&view.opponent.hand), json!({ "count": 2 }));
         let seen = serde_json::to_string(&view.events).unwrap_or_default();
-        assert!(
-            !seen.contains(&theirs[0].id),
-            "the caster reads the opponent's card"
-        );
+        assert!(!seen.contains(&theirs[0].id), "the caster reads the opponent's card");
     }
 
     #[test]
@@ -168,14 +162,8 @@ mod tests {
             mine.push(b);
         }
         for edition in SHIPPED_EDITIONS {
-            assert!(
-                theirs.iter().any(|id| id == edition),
-                "{edition} never reached the opponent"
-            );
-            assert!(
-                mine.iter().any(|id| id == edition),
-                "{edition} never reached its caster"
-            );
+            assert!(theirs.iter().any(|id| id == edition), "{edition} never reached the opponent");
+            assert!(mine.iter().any(|id| id == edition), "{edition} never reached its caster");
         }
         assert!(differ, "the two picks never differed");
     }

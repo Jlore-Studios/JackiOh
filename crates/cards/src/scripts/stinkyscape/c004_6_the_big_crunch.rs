@@ -5,10 +5,10 @@
 //!   Radiant: "Cast a Radiant one of each Call to Chaos."
 //!
 //! Engine: one `cast_new` per Call to Chaos edition, in catalog order: the Call to Chaos pool
-//! (`query::call_to_chaos_editions`, R3869001), every card tagged Call to Chaos of the sets that ship.
-//! Today that is Core #95, C+ #73, M #95, the set's own two, Training Grounds #39 and Stinkyscape+ #142,
-//! the seven it named by id through v0.6.0g, in the same order, so no game plays differently, and an
-//! edition a later set prints joins it. Each is a play for
+//! (`query::call_to_chaos_editions`, R3869001), every card tagged Call to Chaos of the sets that ship:
+//! Core #95, C+ #73, M #95, the set's own two, Training Grounds #39 and Stinkyscape+ #142 today, the
+//! seven it named by id through v0.6.0g, in the same order, so no game plays differently, and an edition
+//! a later set prints joins it. Each is a play for
 //! every rule, its choices its caster's (R70), rolling and naming its own effects to both players
 //! (R436), its nested casts held by `CALL_TO_CHAOS_CHAIN_CAP` (R28) and `RANDOM_CAST_CHAIN_CAP`
 
@@ -16,17 +16,9 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-004-6";
 
-/// R3869001: every Call to Chaos edition, in catalog order.
-fn editions() -> Vec<String> {
-    crate::query::query(&crate::query::call_to_chaos_editions())
-        .into_iter()
-        .map(|def| def.id.clone())
-        .collect()
-}
-
 fn crunch(radiant: bool) -> Hook {
     hook(move |_ctx| {
-        editions()
+        crate::query::pool_ids(&crate::query::call_to_chaos_editions())
             .into_iter()
             .map(|def_id| {
                 cast_new(CastNewArgs {
@@ -79,7 +71,8 @@ mod tests {
     #[test]
     fn r3869001_the_call_to_chaos_pool_is_the_seven_it_named_in_the_same_order() {
         crate::register_all();
-        assert_eq!(super::editions(), EDITIONS.map(str::to_string).to_vec());
+        let pool = crate::query::pool_ids(&crate::query::call_to_chaos_editions());
+        assert_eq!(pool, EDITIONS.map(str::to_string).to_vec());
     }
 
     const P1: PlayerId = PlayerId::P1;
@@ -130,9 +123,7 @@ mod tests {
         s.events()
             .iter()
             .filter_map(|event| match event {
-                GameEvent::CardPlayed { def_id, .. } if EDITIONS.contains(&def_id.as_str()) => {
-                    Some(def_id.clone())
-                }
+                GameEvent::CardPlayed { def_id, .. } if EDITIONS.contains(&def_id.as_str()) => Some(def_id.clone()),
                 _ => None,
             })
             .collect()
@@ -151,9 +142,7 @@ mod tests {
     fn plain_seed(prefix: &str, radiant: bool) -> String {
         seed_where(prefix, |seed| {
             let s = played(seed, radiant);
-            s.state().pending.is_none()
-                && s.state().result.is_none()
-                && chaos_plays(&s).len() == EDITIONS.len()
+            s.state().pending.is_none() && s.state().result.is_none() && chaos_plays(&s).len() == EDITIONS.len()
         })
     }
 
@@ -165,16 +154,9 @@ mod tests {
             let s = played(&plain_seed("big-crunch-order", false), false);
             assert_eq!(chaos_plays(&s), EDITIONS.map(str::to_string).to_vec());
             // Each is its own card, landed in its caster's graveyard after it (R87).
-            let graveyard: Vec<String> = s
-                .pile(P1, "graveyard")
-                .into_iter()
-                .map(|card| card.def_id)
-                .collect();
+            let graveyard: Vec<String> = s.pile(P1, "graveyard").into_iter().map(|card| card.def_id).collect();
             for def_id in EDITIONS.iter().chain([&CRUNCH]) {
-                assert!(
-                    graveyard.iter().any(|held| held == def_id),
-                    "{def_id} in the graveyard"
-                );
+                assert!(graveyard.iter().any(|held| held == def_id), "{def_id} in the graveyard");
             }
         }
 
@@ -219,9 +201,9 @@ mod tests {
                 .events()
                 .iter()
                 .filter_map(|event| match event {
-                    GameEvent::CardPlayed {
-                        instance_id, def_id, ..
-                    } if EDITIONS.contains(&def_id.as_str()) => Some(instance_id.clone()),
+                    GameEvent::CardPlayed { instance_id, def_id, .. } if EDITIONS.contains(&def_id.as_str()) => {
+                        Some(instance_id.clone())
+                    }
                     _ => None,
                 })
                 .collect();

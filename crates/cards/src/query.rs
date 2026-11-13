@@ -44,6 +44,12 @@ pub fn pool(own_id: &str, args: &CardQuery) -> Vec<&'static CardDef> {
     ))
 }
 
+/// The ids of `query`'s pool, in its order: for a card that acts on every member of a pool, one of
+/// each (S #4.6 The Big Crunch's editions, S #154 Dice of Doom's Terminus cards).
+pub fn pool_ids(args: &CardQuery) -> Vec<String> {
+    query(args).into_iter().map(|def| def.id.clone()).collect()
+}
+
 /// MD-G1, R1444: "a random Luck-based card" (Meditative #101 Gachaholic): every non-token card that
 /// prints Lucky on either face or flips a coin (`jackioh_engine::catalog::is_luck_based`), from the
 /// sets that ship (R1420).

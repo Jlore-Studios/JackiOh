@@ -25,11 +25,7 @@ pub const ID: &str = "stinkyscape-137";
 const PICKED: &str = "picked";
 
 fn firststrike(radiant: bool) -> Script {
-    let doctrine = if radiant {
-        "a Radiant War Doctrine"
-    } else {
-        "a War Doctrine"
-    };
+    let doctrine = if radiant { "a Radiant War Doctrine" } else { "a War Doctrine" };
     Script {
         cry: Some(hook(move |ctx| {
             let Some(ship) = dormant_starship_of(&*ctx.state, ctx.controller) else {
@@ -38,9 +34,7 @@ fn firststrike(radiant: bool) -> Script {
             let name = &def_of(Some(&*ctx.state), ID).name;
             let prompt = format!("{name}: Discover {doctrine} to cast");
             vec![
-                awaken(json_as(
-                    json!({ "target": { "of": "instance", "instanceId": ship.id } }),
-                )),
+                awaken(json_as(json!({ "target": { "of": "instance", "instanceId": ship.id } }))),
                 discover_from_catalog(json_as(json!({
                     "step": PICKED,
                     "query": crate::query::war_doctrines(),
@@ -85,10 +79,7 @@ mod tests {
     #[test]
     fn r3869001_the_war_doctrine_pool_is_the_four_it_named_in_the_same_order() {
         crate::register_all();
-        let pool: Vec<String> = crate::query::query(&crate::query::war_doctrines())
-            .into_iter()
-            .map(|def| def.id.clone())
-            .collect();
+        let pool = crate::query::pool_ids(&crate::query::war_doctrines());
         assert_eq!(pool, WAR_DOCTRINES.map(str::to_string).to_vec());
     }
     use crate::built_starship;
@@ -128,11 +119,7 @@ mod tests {
         assert!(prompt.starts_with("Starfleet Commander:"), "{prompt}");
         let options = s.prompt_modes();
         assert_eq!(options.len(), 3, "{options:?}");
-        assert!(
-            options
-                .iter()
-                .all(|option| WAR_DOCTRINES.contains(&option.as_str()))
-        );
+        assert!(options.iter().all(|option| WAR_DOCTRINES.contains(&option.as_str())));
         let mut distinct = options.clone();
         distinct.sort();
         distinct.dedup();
@@ -157,10 +144,7 @@ mod tests {
                 .iter()
                 .rposition(|kind| *kind == GameEventType::Buffed)
                 .expect("the Capacitor's When launched");
-            assert!(
-                cast < buffed,
-                "the Doctrine first, then the When launched: {types:?}"
-            );
+            assert!(cast < buffed, "the Doctrine first, then the When launched: {types:?}");
             assert_eq!(s.stats(ship.as_str()).max_health, max_health + 1);
             let doctrine = s
                 .state()
@@ -172,10 +156,7 @@ mod tests {
                 .expect("the Doctrine in the graveyard")
                 .clone();
             assert_eq!(doctrine.radiant, radiant);
-            assert_eq!(
-                s.stats(s.unit_at(P1, 4).id.as_str()).attack,
-                if radiant { 18 } else { 9 }
-            );
+            assert_eq!(s.stats(s.unit_at(P1, 4).id.as_str()).attack, if radiant { 18 } else { 9 });
         }
     }
 
@@ -212,11 +193,7 @@ mod tests {
             kind: ModifierKind::StarshipLaunchCost { cost: 0 },
         });
         s.play(ID, json!({ "zone": 4 }));
-        assert_eq!(
-            s.state().players.p1.mods.len(),
-            1,
-            "the price stays for a later launch"
-        );
+        assert_eq!(s.state().players.p1.mods.len(), 1, "the price stays for a later launch");
     }
 
     #[test]

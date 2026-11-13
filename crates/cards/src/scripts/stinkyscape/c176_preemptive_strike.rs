@@ -21,11 +21,7 @@ pub const ID: &str = "stinkyscape-176";
 const PICKED: &str = "picked";
 
 fn preemptive_strike(radiant: bool) -> Script {
-    let doctrine = if radiant {
-        "a Radiant War Doctrine"
-    } else {
-        "a War Doctrine"
-    };
+    let doctrine = if radiant { "a Radiant War Doctrine" } else { "a War Doctrine" };
     Script {
         cry: Some(hook(move |ctx| {
             let Some(ship) = dormant_starship_of(&*ctx.state, ctx.controller) else {
@@ -34,9 +30,7 @@ fn preemptive_strike(radiant: bool) -> Script {
             let name = &def_of(Some(&*ctx.state), ID).name;
             let prompt = format!("{name}: Discover {doctrine} to cast");
             vec![
-                awaken(json_as(
-                    json!({ "target": { "of": "instance", "instanceId": ship.id } }),
-                )),
+                awaken(json_as(json!({ "target": { "of": "instance", "instanceId": ship.id } }))),
                 discover_from_catalog(json_as(json!({
                     "step": PICKED,
                     "query": crate::query::war_doctrines(),
@@ -131,11 +125,7 @@ mod tests {
             assert!(prompt.starts_with("Preemptive Strike:"), "{prompt}");
             let options = s.prompt_modes();
             assert_eq!(options.len(), DISCOVER_OPTIONS as usize, "{options:?}");
-            assert!(
-                options
-                    .iter()
-                    .all(|option| WAR_DOCTRINES.contains(&option.as_str()))
-            );
+            assert!(options.iter().all(|option| WAR_DOCTRINES.contains(&option.as_str())));
             let mut distinct = options.clone();
             distinct.sort();
             distinct.dedup();
@@ -159,10 +149,7 @@ mod tests {
                 .iter()
                 .rposition(|event| event.event_type() == GameEventType::Buffed)
                 .expect("the Capacitor's When launched");
-            assert!(
-                resolved < buffed,
-                "the Doctrine first, then the When launched: {events:?}"
-            );
+            assert!(resolved < buffed, "the Doctrine first, then the When launched: {events:?}");
             assert_eq!(s.stats(ship.as_str()).max_health, max_health + 1);
             assert!(!cast_doctrine(&s, &pick).radiant);
         }

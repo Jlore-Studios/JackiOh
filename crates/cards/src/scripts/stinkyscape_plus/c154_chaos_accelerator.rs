@@ -56,9 +56,7 @@ mod tests {
         events
             .iter()
             .filter_map(|event| match event {
-                GameEvent::CardPlayed {
-                    instance_id, def_id, ..
-                } => Some((instance_id.clone(), def_id.clone())),
+                GameEvent::CardPlayed { instance_id, def_id, .. } => Some((instance_id.clone(), def_id.clone())),
                 _ => None,
             })
             .collect()
@@ -98,10 +96,7 @@ mod tests {
                 let (s, made) = launched(&format!("r3552000-base-{i}"), false);
                 let (picked, def) = made.first().expect("the launch cast a card");
                 assert!(pool.contains(def), "{def} is no Call to Chaos");
-                assert!(
-                    !s.card(picked.as_str()).radiant,
-                    "the base face casts it as it is"
-                );
+                assert!(!s.card(picked.as_str()).radiant, "the base face casts it as it is");
                 assert!(s.state().pending.is_none() || s.state().result.is_some());
             }
         }
@@ -117,10 +112,7 @@ mod tests {
             let from = s.events().len();
             s.end_turn();
             s.end_turn();
-            assert!(
-                casts(&s.events()[from..]).is_empty(),
-                "nothing is cast before the launch"
-            );
+            assert!(casts(&s.events()[from..]).is_empty(), "nothing is cast before the launch");
             assert!(s.state().active == P1 && !ship.is_empty());
         }
     }
@@ -135,10 +127,7 @@ mod tests {
                 let (s, made) = launched(&format!("r3552000-radiant-{i}"), true);
                 let (picked, def) = made.first().expect("the launch cast a card");
                 assert!(pool.contains(def), "{def} is no Call to Chaos");
-                assert!(
-                    s.card(picked.as_str()).radiant,
-                    "the Radiant face casts it Radiant"
-                );
+                assert!(s.card(picked.as_str()).radiant, "the Radiant face casts it Radiant");
             }
         }
     }

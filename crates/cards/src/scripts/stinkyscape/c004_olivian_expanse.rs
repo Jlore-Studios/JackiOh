@@ -3,11 +3,12 @@
 //!   Base:    "Discover a Terminus card. If your deck is empty, it costs (0)."
 //!   Radiant: "… If this was also the last card in your hand, you win the game when you play it."
 //!
-//! Engine: `discover_from_catalog` over the Terminus pool (`query::terminus_cards`, R3869000): every
-//! card and token tagged Terminus, from the sets that ship, three different options shown to its caster
-//! alone. Core #100 Ceaseless Void (tagged Terminus since R1837000), the set's six Terminus tokens
-//! (R1857002) and, since #3869, the Stinkyscape+ Terminus cards and tokens. The pick reaches the hand on
-//! its base face. Through v0.6.0g the pool named the first seven by id (`script_v0_6_0g`, kept, R767000).
+//! Engine: `discover_from_catalog` over the Terminus pool (`query::terminus_cards`, R3869000), every
+//! card and token tagged Terminus of the sets that ship, three different options shown to its caster
+//! alone: Core #100 Ceaseless Void (tagged Terminus since R1837000), the set's six Terminus tokens
+//! (R1857002) and the Stinkyscape+ set's Terminus cards and tokens. The pick reaches the hand on its
+//! base face. Through v0.6.0g the pool named the first seven by id, as it had to while the set was held
+//! (R1420; `script_v0_6_0g`, kept, R767000).
 
 use jackioh_engine::config::DISCOVER_OPTIONS;
 use jackioh_engine::effects::{WIN_ON_PLAY_KEY, add_to_hand, discover_from_catalog};
@@ -16,8 +17,7 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "stinkyscape-004";
 
 /// R767000: the Terminus cards through v0.6.0g, Core #100 Ceaseless Void and the set's six Terminus
-/// tokens, in catalog order, as `script_v0_6_0g` and Stinkyscape #154 Dice of Doom's kept script name
-/// them.
+/// tokens, in catalog order, which `script_v0_6_0g` and Stinkyscape #154 Dice of Doom's kept script name.
 pub const TERMINUS_CARDS_V0_6_0G: [&str; 7] = [
     "core-100",
     "stinkyscape-004-1",
@@ -34,10 +34,12 @@ const PICKED: &str = "picked";
 const FREE: &str = "free";
 const WINS: &str = "wins";
 
-/// The Discover over `pool`, its step data read as it resolves.
-fn discover_from(ctx: &mut EffectContext<'_>, pool: Value) -> Vec<Effect> {
+/// The Discover; `kept`, the script through v0.6.0g.
+fn discover(ctx: &mut EffectContext<'_>, kept: bool) -> Vec<Effect> {
     let free = zone_count(ctx.state, ctx.controller, OffFieldZone::Library) == 0;
     let wins = ctx.radiant && free && zone_count(ctx.state, ctx.controller, OffFieldZone::Hand) == 0;
+    // R3869000: the Terminus pool; R767000: through v0.6.0g, the seven named by id.
+    let pool = if kept { json!({ "defId": TERMINUS_CARDS_V0_6_0G }) } else { json!(crate::query::terminus_cards()) };
     vec![discover_from_catalog(json_as(json!({
         "step": PICKED,
         "count": DISCOVER_OPTIONS,
@@ -45,16 +47,6 @@ fn discover_from(ctx: &mut EffectContext<'_>, pool: Value) -> Vec<Effect> {
         "prompt": "Discover a Terminus card",
         "data": { FREE: free, WINS: wins },
     })))]
-}
-
-/// R3869000: the Discover over the Terminus pool.
-fn discover(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
-    discover_from(ctx, json!(crate::query::terminus_cards()))
-}
-
-/// R767000: the Discover through v0.6.0g, over the seven Terminus cards named by id.
-fn discover_v0_6_0g(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
-    discover_from(ctx, json!({ "defId": TERMINUS_CARDS_V0_6_0G }))
 }
 
 /// The pick to the hand, on its base face, at (0) and carrying the win as the data says.
@@ -73,10 +65,10 @@ fn picked(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     vec![add_to_hand(json_as(args))]
 }
 
-/// Both faces' script, its Discover `cry`.
-fn faces(cry: fn(&mut EffectContext<'_>) -> Vec<Effect>) -> CardScripts {
+/// Both faces; `kept`, the script through v0.6.0g.
+fn faces(kept: bool) -> CardScripts {
     let base = Script {
-        cry: Some(hook(cry)),
+        cry: Some(hook(move |ctx| discover(ctx, kept))),
         resume: IndexMap::from([(PICKED, hook(picked))]),
         ..Script::default()
     };
@@ -85,15 +77,11 @@ fn faces(cry: fn(&mut EffectContext<'_>) -> Vec<Effect>) -> CardScripts {
     CardScripts { base, radiant }
 }
 
-pub fn script() -> CardScripts {
-    faces(discover)
-}
+pub fn script() -> CardScripts { faces(false) }
 
-/// R767000: through v0.6.0g the Discover offered the seven Terminus cards it named by id;
-/// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_0g() -> CardScripts {
-    faces(discover_v0_6_0g)
-}
+/// R767000: through v0.6.0g the Discover offered the seven Terminus cards it named by id; `KEPT_SCRIPTS`
+/// folds those replays under it.
+pub fn script_v0_6_0g() -> CardScripts { faces(true) }
 
 // S #4 Olivian Expanse — SPEC §8.10 row S 4, BUILD M12 row S 4 (R1870000).
 #[cfg(test)]
@@ -136,16 +124,13 @@ mod tests {
         assert_eq!((pending.kind, pending.player_id), (PromptKind::Discover, P1));
     }
 
-    /// R3869000: the Terminus pool's ids, in pool order.
+    /// R3869000: the Terminus pool's ids, in its order.
     fn terminus() -> Vec<String> {
         crate::register_all();
-        crate::query::query(&crate::query::terminus_cards())
-            .into_iter()
-            .map(|def| def.id.clone())
-            .collect()
+        crate::query::pool_ids(&crate::query::terminus_cards())
     }
 
-    /// Answers the open Discover with a playable pick when one is offered, else the first option.
+    /// Answers the open Discover with a playable pick when one is offered, else with the first option.
     fn pick(s: &mut Scenario) -> Option<CardInstance> {
         assert_discover(s);
         let options = s.prompt_modes();
@@ -158,16 +143,12 @@ mod tests {
         s.hand(P1).into_iter().find(|card| card.def_id == choice)
     }
 
-    /// The first seed `{seed}-{n}` whose Discover offers a playable pick (the pool holds Terminus
-    /// cards this test does not play), the scenario at that Discover.
+    /// The first seed `{seed}-{n}` whose Discover offers a playable pick (the pool holds Terminus cards
+    /// these tests do not play), the scenario at that Discover.
     fn expanse_offering_a_playable(seed: &str, radiant: bool, hand: Value, library: Value) -> Scenario {
         (0..64)
             .map(|n| expanse(&format!("{seed}-{n}"), radiant, hand.clone(), library.clone()))
-            .find(|s| {
-                s.prompt_modes()
-                    .iter()
-                    .any(|offered| PLAYABLE.contains(&offered.as_str()))
-            })
+            .find(|s| s.prompt_modes().iter().any(|offered| PLAYABLE.contains(&offered.as_str())))
             .expect("a seed offers a playable pick")
     }
 
@@ -191,10 +172,7 @@ mod tests {
                 // The other seat sees only that p1 is choosing (§10.8).
                 assert!(matches!(
                     s.view(P2).pending,
-                    Some(PendingView::Elsewhere(PendingElsewhereView {
-                        pending_for: P1,
-                        ..
-                    }))
+                    Some(PendingView::Elsewhere(PendingElsewhereView { pending_for: P1, .. }))
                 ));
             }
         }
@@ -204,10 +182,7 @@ mod tests {
             let mut s = expanse("olivian-free", false, json!([FILLER]), json!([]));
             let card = pick(&mut s).expect("the pick is in hand");
             assert_eq!(card.cost_override, Some(0));
-            assert!(
-                !card.memory.contains_key(WIN_ON_PLAY_KEY),
-                "the base face carries no win"
-            );
+            assert!(!card.memory.contains_key(WIN_ON_PLAY_KEY), "the base face carries no win");
         }
 
         #[test]
@@ -226,19 +201,9 @@ mod tests {
             let options = s.prompt_modes();
             s.answer(json!(options[0]));
             assert_eq!(s.hand(P1).len(), HAND_CAP as usize);
-            assert!(
-                s.hand(P1).iter().all(|card| card.def_id == FILLER),
-                "the pick is not in hand"
-            );
-            let burned: Vec<String> = s
-                .pile(P1, "graveyard")
-                .into_iter()
-                .map(|card| card.def_id)
-                .collect();
-            assert!(
-                burned.len() > graveyard && burned.contains(&options[0]),
-                "it burned: {burned:?}"
-            );
+            assert!(s.hand(P1).iter().all(|card| card.def_id == FILLER), "the pick is not in hand");
+            let burned: Vec<String> = s.pile(P1, "graveyard").into_iter().map(|card| card.def_id).collect();
+            assert!(burned.len() > graveyard && burned.contains(&options[0]), "it burned: {burned:?}");
         }
 
         #[test]
@@ -278,11 +243,7 @@ mod tests {
             s.state_mut().players.p1.hero.health = 0;
             s.play(card.id.as_str(), json!({}));
             let result = s.state().result.expect("the game is over");
-            assert_eq!(
-                result.winner,
-                Winner::P2,
-                "a hero at 0 loses before a win is held"
-            );
+            assert_eq!(result.winner, Winner::P2, "a hero at 0 loses before a win is held");
         }
     }
 
@@ -295,38 +256,23 @@ mod tests {
             for id in TERMINUS_CARDS_V0_6_0G {
                 assert!(pool.contains(&id.to_string()), "{id} is still in it");
             }
-            for id in [
-                "stinkyscapeplus-077",
-                "stinkyscapeplus-080",
-                "stinkyscapeplus-t-supernova",
-            ] {
+            for id in ["stinkyscapeplus-077", "stinkyscapeplus-080", "stinkyscapeplus-t-supernova"] {
                 assert!(pool.contains(&id.to_string()), "{id} joined it with its set");
             }
-            crate::register_all();
             for id in &pool {
-                assert!(
-                    crate::card_def(id).tags.contains(&Tag::Terminus),
-                    "{id} is tagged Terminus"
-                );
+                assert!(crate::card_def(id).tags.contains(&Tag::Terminus), "{id} is tagged Terminus");
             }
-            assert!(
-                !pool.contains(&ID.to_string()),
-                "Olivian Expanse is no Terminus card"
-            );
+            assert!(!pool.contains(&ID.to_string()), "Olivian Expanse is no Terminus card");
         }
 
         #[test]
         fn r3869000_the_discover_can_offer_a_stinkyscape_plus_terminus_card() {
             let offered: Vec<String> = (0..24)
-                .flat_map(|n| {
-                    expanse(&format!("olivian-plus-{n}"), false, json!([]), json!([FILLER])).prompt_modes()
-                })
+                .flat_map(|n| expanse(&format!("olivian-plus-{n}"), false, json!([]), json!([FILLER])).prompt_modes())
                 .collect();
-            assert!(
-                offered.iter().any(|id| id.starts_with("stinkyscapeplus-")),
-                "some seed offers one: {offered:?}"
-            );
-            assert!(offered.iter().all(|id| terminus().contains(id)));
+            assert!(offered.iter().any(|id| id.starts_with("stinkyscapeplus-")), "some seed offers one: {offered:?}");
+            let pool = terminus();
+            assert!(offered.iter().all(|id| pool.contains(id)));
         }
 
         #[test]
