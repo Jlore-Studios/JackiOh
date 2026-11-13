@@ -14284,15 +14284,6 @@
       "failures": 0,
       "feedback_since": "2026-11-13T13:30:49Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-11-13T12:57:41Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "## State\n- Revise #3810 (conflict). Last pass resolved history.rs (main's #3551 S01 kept entries + ours c019_2_jungle_loser v0.5.12ap + `#3802` in doc). Main then moved again (#3831, #3848); the harness merged it cleanly (6e87405436), no markers, no conflicts left.\n- Re-checked on this head: fmt, catalog, patches, spec check, clippy -p jackioh-cards, cargo test -p jackioh-cards (9681 + 1177 passed). Nothing left to change.\n## Log\n- re-verified after second main merge; all green.\n\n## State (pass 2)\nRenamed Jungle Loser kept script v0.5.12ap -> v0.6.0c (newest shipped; v0.6.0, b, c all ran the roll). Pulled main shipped files (v0.6.0c snapshot etc.) via checkout since merge needs git identity. cards tests, fmt, patches/spec/catalog check, clippy green.\n",
-        "provider": "claude-3",
-        "reason": "used its 3 review rounds with this owner; the work is kept for its final audit, another subscription's when one is free",
-        "trail": ""
-      },
       "interruptions": 0,
       "issue": 3802,
       "kind": "revise",
