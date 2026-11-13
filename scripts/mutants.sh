@@ -48,14 +48,14 @@ ROOT=$(pwd)
 # build, since the cards are its tests' dev-dependency and are built again with it, and 2.5 minutes'
 # tests, and the server's 8 to 12 minutes' tests: at 150 and 80 a shard, their first shards on main
 # (2026-11-12) reached about 35 and 25 mutants before the step's five hours ended, so they hold 40 and
-# 25 now. The rest are estimates until a weekly run times them: about a minute in the cards and four
-# in the tools.
+# 20 now, the server's tested one at a time (JOBS_SERVER, below). The rest are estimates until a weekly
+# run times them: about a minute in the cards and four in the tools.
 SIZE_ENGINE=40
 SIZE_CARDS=250
 SIZE_AI=120
 SIZE_RUN=1000
 SIZE_SHARED=250
-SIZE_SERVER=25
+SIZE_SERVER=20
 SIZE_TOOLS=120
 SIZE_WASM=200
 # Source lines per Stryker shard. Stryker runs each mutant against only the tests that cover it, but a
@@ -68,8 +68,10 @@ SIZE_WASM=200
 # (Stryker's `file:a-b`), so one long file never holds a shard past the step. A mutant whose code
 # crosses a cut (a whole function's body, say) falls in neither range.
 SIZE_WEB_LINES=900
-# cargo-mutants' --jobs: mutants tested at once, each in its own copy of the tree.
+# cargo-mutants' --jobs: mutants tested at once, each in its own copy of the tree. The server's one at a
+# time, since its test binary alone takes 4 GB of a runner's 16 (TEST_MEMORY_SERVER, below).
 JOBS=${MUTANTS_JOBS:-2}
+JOBS_SERVER=${MUTANTS_JOBS:-1}
 # The memory, in bytes, one test binary may take: 4 GiB of data (its heap and its other private
 # writable mappings, its threads' stacks among them), set by prlimit as cargo's runner for the host,
 # so only the tests and never rustc or the linker. A mutant that takes a loop's step away (`at += 1`
@@ -79,13 +81,22 @@ JOBS=${MUTANTS_JOBS:-2}
 # allocation past it fails, the test binary aborts, and the mutant is caught. Without prlimit
 # (macOS), no cap.
 TEST_MEMORY=${MUTANTS_TEST_MEMORY:-4294967296}
+# The server's test binary, `server`, runs all of its 1,690 tests in one process (CI splits them four
+# ways), and its data grows to 5.3 GB of address space, 4.0 GB resident, by the end (measured on #3813's
+# branch, 2026-11-13, with the Stinkyscape+ catalog): under the 4 GiB cap every baseline aborted
+# (mutants.yml run 43376574076), so no server mutant could be tested. It takes 8 GiB.
+TEST_MEMORY_SERVER=${MUTANTS_TEST_MEMORY:-8589934592}
 host=
 if command -v prlimit >/dev/null 2>&1; then
   host=$(rustc -vV 2>/dev/null | sed -n 's/^host: //p' | tr 'a-z-' 'A-Z_')
 fi
-if [ -n "$host" ]; then
-  export "CARGO_TARGET_${host}_RUNNER=prlimit --data=$TEST_MEMORY --"
-fi
+# Each test binary runs under prlimit with `$1` bytes of data, as cargo's runner for the host.
+cap_tests() {
+  if [ -n "$host" ]; then
+    export "CARGO_TARGET_${host}_RUNNER=prlimit --data=$1 --"
+  fi
+}
+cap_tests "$TEST_MEMORY"
 # Survivors listed under a summary's row, so a summary stays readable; the report has them all.
 SURVIVORS_SHOWN=200
 
@@ -125,12 +136,17 @@ cards_tree() {
 # FILTER (cargo-mutants' arguments that pick the area's mutants, its tree among them) and SIZE for a
 # Rust area.
 rust_area() {
+  AREA_JOBS=$JOBS
+  cap_tests "$TEST_MEMORY"
   case "$1" in
     engine) FILTER="-p jackioh-engine" SIZE=$SIZE_ENGINE ;;
     ai) FILTER="-p jackioh-ai" SIZE=$SIZE_AI ;;
     run) FILTER="-p jackioh-run" SIZE=$SIZE_RUN ;;
     shared) FILTER="-p jackioh-shared" SIZE=$SIZE_SHARED ;;
-    server) FILTER="-p jackioh-server" SIZE=$SIZE_SERVER ;;
+    server)
+      FILTER="-p jackioh-server" SIZE=$SIZE_SERVER AREA_JOBS=$JOBS_SERVER
+      cap_tests "$TEST_MEMORY_SERVER"
+      ;;
     tools) FILTER="-p jackioh-tools" SIZE=$SIZE_TOOLS ;;
     wasm) FILTER="-p jackioh-wasm -p jackioh-wasm-core -p jackioh-wasm-c" SIZE=$SIZE_WASM ;;
     cards-lib) FILTER="-p jackioh-cards -e crates/cards/src/scripts/**" SIZE=$SIZE_CARDS ;;
@@ -203,7 +219,7 @@ run_rust() {
   printf 'shard=%s\nmutants=%s\nexcluded=%s\n' "$label" "$mine" "$((all - total))" >"$out/area.env"
   echo "mutants: $area shard $label, $mine of the area's $total mutants ($((all - total)) left out)"
   code=0
-  cargo mutants $FILTER $shard --jobs "$JOBS" --output "$out" "$@" || code=$?
+  cargo mutants $FILTER $shard --jobs "$AREA_JOBS" --output "$out" "$@" || code=$?
   case $code in
     0 | 2 | 3) return 0 ;;
     *) return "$code" ;;
@@ -295,6 +311,11 @@ in_diff() {
     return 0
   fi
   dir=
+  # A changed server line is tested by the server's test binary, which takes its own cap (above).
+  if grep -q '^+++ b/crates/server/' "$out/diff.patch"; then
+    JOBS=$JOBS_SERVER
+    cap_tests "$TEST_MEMORY_SERVER"
+  fi
   if grep -q '^+++ b/crates/cards/src/scripts/' "$out/diff.patch"; then
     cards_tree
     dir="--dir $TREE"
