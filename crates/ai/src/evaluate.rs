@@ -36,12 +36,13 @@ use jackioh_engine::{
     attacks_per_turn, awaken_card, backrow_is_public, board_totals, cannot_attack, card_at, card_keywords,
     card_type_of_face, credit_lapsing, death_hook_of, dormant_starship_of, effective_cost, effective_life,
     exit_mark, face_of, find_def, find_instance, find_instance_mut, first_entry_zone, frozen_next_turn,
-    gauntlet_acts, has_keyword, heal_multiplier_of, hero_armor_of, is_extra_turn_card, is_slumbering,
-    is_standing_unit, is_starship_piece, is_temporary_card, launched_starship_of, left_field_after,
-    legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces,
-    pile_at, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of, settle, slots_of,
-    stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back, trigger_holders_with_hook, unit_has,
-    unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold,
+    gauntlet_acts, has_infinite_mana, has_keyword, heal_multiplier_of, hero_armor_of, is_extra_turn_card,
+    is_slumbering, is_standing_unit, is_starship_piece, is_temporary_card, launched_starship_of,
+    left_field_after, legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, override_of,
+    owed_mana_of, own_cost, pierces, pile_at, playable_from_graveyard, printed_cost, query_cost, queue_hook,
+    reset_instance, script_of, settle, slots_of, stats_with_buffs, subsystems, sync_fused_scripts,
+    takes_strike_back, trigger_holders_with_hook, unit_has, unit_view, units_on_field_of,
+    why_sandbox_refused, with_pool_hold,
 };
 use serde::{Deserialize, Serialize};
 
@@ -487,13 +488,23 @@ pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights, price
 
 /// B3.4, R65: the crystals the card's own `costMod` moves its cost by (`own_cost`, floored at 0 as a
 /// price is): +1 for a Degrade's dearer card, −1 for an Upgrade's cheaper one, 0 for an X-cost card.
+/// R3575201: its `costOverride` too, from its printed cost (`printed_cost`): a Mineral added at (0) over
+/// its printed (1) moves it by −1, as an Upgrade does.
 fn cost_shift(state: &GameState, card: &CardInstance) -> i32 {
-    if card.cost_mod == 0 {
+    let overridden = override_of(card).is_some();
+    if card.cost_mod == 0 && !overridden {
         return 0;
     }
     match own_cost(state, card) {
         None => 0,
-        Some(own) => own.max(0) - (own - card.cost_mod).max(0),
+        Some(own) => {
+            let from = if overridden {
+                printed_cost(state, card)
+            } else {
+                own - card.cost_mod
+            };
+            own.max(0) - from.max(0)
+        }
     }
 }
 
@@ -796,6 +807,50 @@ fn slumber_worth(
     share * (unit_worth(state, &awake, w, prices) + w.awaken * awaken_price(state, unit, w, prices))
 }
 
+/// R3575200: the crystals `player`'s infinite mana (R3548004) frees in one turn, each at `unspent_mana`:
+/// its hand's cost past its crystals (`mana.max`), floored at 0. The seat's own hand is read card by card
+/// at what each costs now (`effective_cost`); the enemy's, unseen (R185), at `opponent_hand_cost` a card.
+fn infinite_mana_worth(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights) -> f64 {
+    let side = &state.players[player];
+    let hand_cost = if player == seat {
+        side.hand
+            .iter()
+            .map(|card| f64::from(effective_cost(state, card, CostOptions::default()).max(0)))
+            .sum::<f64>()
+    } else {
+        side.hand.len() as f64 * w.opponent_hand_cost
+    };
+    w.unspent_mana * (hand_cost - f64::from(side.mana.max)).max(0.0)
+}
+
+/// R3575200: the share of one turn of infinite mana (`infinite_mana_worth`) `player` holds: all of it
+/// while it acts with it (`has_infinite_mana`), else the largest slumber share (R2380000, as
+/// `slumber_worth` reads it) of a Dormant card of its on the field whose face carries the flag, which
+/// acts once it wakes; 0 with neither.
+fn infinite_mana_share(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
+    if has_infinite_mana(state, player) {
+        return 1.0;
+    }
+    let side = &state.players[player];
+    units_on_field_of(state, player)
+        .into_iter()
+        .chain(side.backrow.iter().flatten())
+        .filter(|card| card.controller == player && is_slumbering(card))
+        .filter(|card| {
+            script_of(state, *card)
+                .static_flags
+                .as_ref()
+                .and_then(|flags| flags.infinite_mana)
+                == Some(true)
+        })
+        .filter_map(|card| card.slumber.as_ref())
+        .map(|slumber| match slumber.turns {
+            Some(turns) => w.slumber_turn_share.powi(turns.max(0)),
+            None => w.slumber_waiting_share,
+        })
+        .fold(0.0, f64::max)
+}
+
 /// A hero's side of the ledger: its concave life (`effective_life`, R964000) and its armor.
 fn hero_side(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
     hero_value(effective_life(state, player), starting_life(state, player), w)
@@ -839,6 +894,14 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
     // start-of-turn effects (R458) and its closest alternative win (R848).
     value += w.start_of_turn_effect * f64::from(start_of_turn_effects(side));
     value += alt_win_worth(state, player, w);
+    // R3575200: what its infinite mana frees in one turn, at the share it holds (no reading at a zero
+    // weight, the frozen baseline's).
+    if w.infinite_mana != 0.0 {
+        let share = infinite_mana_share(state, player, w);
+        if share != 0.0 {
+            value += w.infinite_mana * share * infinite_mana_worth(state, player, seat, w);
+        }
+    }
     // R1225: on its controller's turn, an unused base-face Jlarna is tributed at end of turn, so it
     // is worth nothing.
     let lapsing: Vec<String> = if state.active == player {

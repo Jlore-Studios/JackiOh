@@ -145,6 +145,11 @@ card with a wake trigger on either field, and each Unit with one in the seat's o
 prices the controller's evaluation after the one wake less after the other, each crystal gained at
 `next_turn_mana`; `slumber_worth` adds `AI_EVAL.awaken` of it for both sides' sleepers, inside the slumber
 share, and `GREEDY_EVAL` keeps 0.
+Infinite mana counts by what one turn of it frees (R3575200): `material` adds `AI_EVAL.infinite_mana` of
+`infinite_mana_worth`, the side's hand's cost past its `mana.max` at `unspent_mana` a crystal (the enemy's
+unseen hand at `opponent_hand_cost` a card), all of it while the side acts with it and a Dormant giver's
+slumber share while it sleeps; `GREEDY_EVAL` keeps 0. A hand card's `costOverride` moves its price from its
+printed cost by `hand_cost_delta` a crystal, as a `costMod` does (`cost_shift`, R3575201).
 A passed line's Float counts toward the seat's own "Float reduces cost" cards (R3695000): the engine's
 `float_cuts_in_hand` reads what the Float took off each of them, and `float_credit` pays
 `AI_EVAL.float_discount` for each crystal that went toward one still above the seat's crystals (its

@@ -29,6 +29,7 @@ pub mod freeze;
 pub mod gauntlet;
 pub mod graveyard_plays;
 pub mod hidden_nerfs;
+pub mod infinite_mana;
 pub mod ky_competition;
 pub mod learned;
 pub mod lethal_hint;

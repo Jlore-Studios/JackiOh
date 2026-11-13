@@ -475,6 +475,10 @@ pub struct EvalWeights {
     /// trigger (`evaluate::awaken_price`) that `slumber_worth` adds, inside its slumber share, the seat's
     /// sleepers and the enemy's alike.
     pub awaken: f64,
+    /// R3575200: the share of what a side's infinite mana (R3548004) frees in one turn (its hand's cost past
+    /// its crystals, each at `unspent_mana`, `evaluate::infinite_mana_worth`) that `material` adds while the
+    /// side acts with it, and inside the slumber share while a Dormant card of its that carries it sleeps.
+    pub infinite_mana: f64,
     /// An unseen hand card is valued as if it cost this.
     pub opponent_hand_cost: f64,
     /// A readable backrow card: backrowBase + backrowPerCost × queryCost(def).
@@ -644,6 +648,10 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // play a lone Imprisoned Ship Smith and plays a Felinor Token over Imprisoned Cosmality. At 1.0 the
     // smoke gate read 20, 19 and 20 of 20; at 0, 20, 19 and 20.
     awaken: 1.0,
+    // R3575200: 1.0, as `awaken`'s: one turn's freed crystals, each at the crystal's own worth
+    // (`unspent_mana`), is what a turn hook's crystals are priced at, and the slumber share already
+    // discounts a Dormant source's wait.
+    infinite_mana: 1.0,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,
@@ -850,6 +858,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     activation: 0.0,
     attack_hook: 0.0,
     awaken: 0.0,
+    infinite_mana: 0.0,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,
