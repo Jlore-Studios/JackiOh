@@ -16181,17 +16181,8 @@
       "waiting_comment": 6837386099
     },
     "3796": {
-      "action": "plan",
-      "asks": [
-        "c:6836343247"
-      ],
-      "build_next": {
-        "from_run": "43331876187",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-13T00:47:39Z",
-        "until": "2026-11-13T01:17:39Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-13T00:47:27Z",
         "difficulty": "medium",
@@ -16210,10 +16201,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3796; ls .bot-plan.md 2>&1; grep -rn \\\"Selection::Mode\\\" crates --include=*.rs | grep -v \\\"^crates/engine/src/[a-z_]*/\\\\?[a-z_]*.rs\\\" | wc -l; grep -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3796; sed -n 1290,1340p crates/engine/src/testkit/scenario.rs; cat crates/engine/src/testkit/pick.rs | head -120; sed -n 940,1060p crates/tools/tests\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3796; sed -n 1060,1330p crates/tools/tests/acceptance.rs; grep -n \\\"pending\\\\|fn pending\\\\|PendingChoice\\\" crates/engine/src/testkit/scenario.rs | he\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3796; for f in classic/c008_pickle.rs:285:310 classic/c081_the_power_to_thrive.rs:95:120 core/c082_kys_trial.rs:120:140 core/c051_kys_private_tutor.r\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3796; grep -rn \\\"Selection::Mode { option } =>\\\" crates/cards crates/ai/tests crates/engine/tests | grep -v \\\"^crates/engine/src\\\"| awk -F: '{print $\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3796; for loc in $(grep -rn \\\"Selection::Mode { option } =>\\\" crates/cards | awk -F: '{print $1\\\":\\\"$2}'); do f=${loc%%:*}; n=${loc##*:}; s=$(awk -v \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3796; for loc in $(grep -rn \\\"Selection::Mode { option } =>\\\" crates/engine/tests crates/ai/tests | awk -F: '{print $1\\\":\\\"$2}'); do f=${loc%%:*}; n=\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3796; grep -rn '\\\"pick\\\": \\\"mode\\\"' crates --include=*.rs | awk -F: '{print $1}' | sort | uniq -c; grep -rn '\\\"pick\\\": \\\"mode\\\"' crates --include=*.r\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3796/crates/cards/src/scripts; grep -n \\\"offered(\\\\|option_ids(\\\" classic_plus/c030_felinor_fuser.rs classic_plus/c029_portal_to_the_past.rs meditati\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3796/crates; cat engine/src/testkit/mod.rs | head -60; grep -n \\\"^use\\\\|^pub use\\\" engine/src/testkit/scenario.rs | head -30; grep -n \\\"mod tests\\\\|^\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3796/crates; sed -n 1985,2030p engine/src/testkit/scenario.rs; grep -n \\\"offered_plans(\\\\|modes(\\\" cards/src/scripts/meditative_plus/c001_bobs_plan.r\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3796/crates; grep -n \\\"fn refusal_of\\\" -B2 -A14 engine/src/testkit/scenario.rs; sed -n 40,80p engine/src/testkit/pick.rs; grep -n \\\"pick::\\\" engine/s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3796/crates; sed -n 59,64p engine/src/testkit/scenario.rs; grep -n \\\"Selection\\\" engine/src/testkit/scenario.rs | head -5; sed -n 3110,3135p engine/s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3796/crates/cards; sed -n 210,235p tests/cross/self_generation.rs; sed -n 1268,1290p tests/cross/hidden_information.rs; sed -n 138,150p src/scripts/c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3796/crates/cards; sed -n 340,360p src/scripts/core/c082_kys_trial.rs; sed -n 1,12p src/scripts/stinkyscape/c079_orca.rs | head -3; grep -n \\\"^ use\\\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3796; grep -rln \\\"pick::unit_at\\\\|pick::instance\\\\|#1826\\\" --include=*.md . 2>/dev/null | grep -v node_modules | head; ls .patches 2>/dev/null | head\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3796; grep -n \\\"pick::\\\\|#1826\\\" crates/engine/README.md docs/ADDING_CARDS.md docs/v0.3.0/SURFACE.md | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3796; echo \\\"Draft: plan for #3796 \\u2014 see final message. Helper: Scenario::prompt_modes + free prompt_modes_of(&PendingChoice) in testkit/scenari\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Test-support helpers in the testkit plus mechanical edits to about 37 test modules; no engine rules, AI, cross-crate design or migration, and under 40 files.\"} --> ## Goal Card tests read an open prompt's Mode options through one testkit helper, and a one-\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-12T23:48:02Z",
       "owner_why": "it plans it",
@@ -16226,12 +16216,14 @@
       "provider": "claude-8",
       "queued_at": "2026-11-12T21:36:50Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43331876187",
+      "run_id": "pending:b3edfb4c-1794530910",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-12T23:48:02Z",
+      "started_at": "2026-11-13T00:49:14Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6836343247"
+      ]
     },
     "3797": {
       "action": "revise",
@@ -17086,9 +17078,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T00:37:36Z",
+    "at": "2026-11-13T00:49:14Z",
     "url": "",
-    "what": "plan #3790 on claude-7"
+    "what": "build #3796 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-13T00:28:29Z",
