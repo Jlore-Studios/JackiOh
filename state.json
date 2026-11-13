@@ -16717,13 +16717,14 @@
       "merge_owner": "claude-8",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-1",
       "queued_at": "2026-11-12T22:54:58Z",
-      "run_id": "43324549034",
+      "run_id": "pending:59edfd63-1794558162",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 230,
-      "started_at": "2026-11-12T22:56:55Z",
+      "started_at": "2026-11-13T08:23:21Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17710,9 +17711,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T08:22:27Z",
+    "at": "2026-11-13T08:23:21Z",
     "url": "",
-    "what": "revise #3814 on claude-6"
+    "what": "spot-check #3809 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-13T07:54:03Z",
@@ -36826,7 +36827,15 @@
         "n": 230,
         "pr": 3809,
         "queued_at": "2026-11-13T06:41:30Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "run_id": "pending:59edfd63-1794558162",
         "sha": "d412e3fd9fc32d7c2b86f10c329de8101cf00582",
+        "started_at": "2026-11-13T08:23:21Z",
         "status": "queued",
         "title": "Patch: a queued player is told when the server can't be reached, instead of reading that they are in the queue through the outage",
         "tries": 0
