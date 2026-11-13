@@ -303,6 +303,24 @@ mod tests {
             assert_eq!(s.unit(P1, 1).map(|card| card.def_id).as_deref(), Some(RUSH));
         }
 
+        /// R409: a kill remembered on an earlier turn and a kill in the pass of its own death are two Units
+        /// it destroyed, so its Death summons a copy of each.
+        #[test]
+        fn r409_a_remembered_kill_and_a_kill_in_the_pass_of_its_own_death_each_give_a_copy() {
+            let mut s = played(false, 1, json!({}), json!({ "field": [TOKENS, RUSH] }));
+            let id = spatula_id(&s);
+            let first = s.unit(P2, 1).map(|card| card.id).unwrap_or_default();
+            s.attack(SPATULA, &first); // takes 1 damage, remembers the kill
+            assert_eq!(s.card(&id).memory.get("kills").and_then(Value::as_array).map(Vec::len), Some(1));
+            s.end_turn().end_turn();
+            let rush = s.unit(P2, 2).map(|card| card.id).unwrap_or_default();
+            s.attack(SPATULA, &rush); // 7 kills the 3/3; the 3/3 kills the 7/2
+            s.expect_in_zone(&id, "gone");
+            let mut copies: Vec<String> = (1..=5).filter_map(|lane| s.unit(P1, lane)).map(|unit| unit.def_id).collect();
+            copies.sort();
+            assert_eq!(copies, vec![TOKENS.to_string(), RUSH.to_string()]);
+        }
+
         #[test]
         fn r409_the_copies_go_in_until_your_board_is_full() {
             let mut s = played(

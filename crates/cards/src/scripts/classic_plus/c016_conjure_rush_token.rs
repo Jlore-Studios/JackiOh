@@ -230,6 +230,31 @@ mod tests {
             assert!(turned, "Lucky 2 turned a tails to heads on some seed");
         }
 
+        /// R3140002, R987: its controller's Luck flips that many more coins beside the card's own Lucky.
+        /// No card gives Luck since R3140000, so Feng Shui's kept v0.5.11r script, "You have Luck 1",
+        /// lends it: Luck 1 and a given Lucky 1 flip three coins, one batch.
+        #[test]
+        fn r3140002_its_controllers_luck_flips_more_coins_beside_its_own_lucky() {
+            const FENG_SHUI: &str = "meditative-040"; // Feng Shui: "You have Luck 1" through v0.5.11r
+            crate::under_kept(FENG_SHUI, crate::scripts::meditative::c040_feng_shui::script_v0_5_11o(), || {
+                let mut s = scenario(json!({
+                    "seed": "c16-luck",
+                    "p1": { "hand": [CARD, FILLER], "backrow": [FENG_SHUI] },
+                    "p2": { "hand": [FILLER] },
+                }));
+                crate::give_lucky(&mut s, CARD, 1);
+                s.play(CARD, json!({}));
+                let faces: Vec<usize> = coins(&s)
+                    .iter()
+                    .map(|event| match event {
+                        GameEvent::Rolled { rolls, .. } => rolls.iter().map(|roll| roll.faces.len()).sum(),
+                        _ => 0,
+                    })
+                    .collect();
+                assert_eq!(faces, vec![3]);
+            });
+        }
+
         #[test]
         fn r64_r129_a_full_board_summons_nothing_and_rolls_no_keywords_though_the_coin_flipped() {
             let mut s = scenario(json!({

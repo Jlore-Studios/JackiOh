@@ -278,4 +278,18 @@ exclude_re = [
   # for, so it never panicked). So its `finished || stopped` guard never holds, and `&&` decides the same, as in
   # duos.rs's.
   'host/duel\.rs:.*replace \|\| with && in DuelHost::end_as_ceiling_draw',
+  # crates/cards (#3517): C+ #6 Wrong-House Attacker is keywords only (spec §8.7 row 6), so both faces are
+  # `Script::default()`, which is exactly what `CardScripts`'s derived Default builds.
+  'c006_wrong_house_attacker\.rs:.*replace script -> CardScripts with Default::default\(\)',
+  # crates/cards (#3517): C+ #12.1 Devour's Radiant Cry heals only for a Health above 0. The Health read is
+  # never below 0 (`.max(0)`), so `>=` differs only at 0, and a heal of 0 is none: the engine's hero heal
+  # returns before any replacement, multiplier or `healed` event for an amount at or below 0 (damage.rs).
+  'c012_1_devour\.rs:.*replace > with >= in script',
+  # crates/cards (#3517): C #9 Income Tax's deferred step hands its own data (the delay's: the firing `event` and
+  # the Radiant `discount`) back to the keep prompt, which `choose_from_hand`'s `resume_self` already merges in
+  # whole but for the engine's bookkeeping keys (`card_data`, `without_prompt_keys`). The deferred run's data
+  # holds none of those (`__run` is rewritten and `__owner` written again by `open_prompt` either way), so the
+  # prompt carries the same data with `Value::Null`. Only in a fused card would it differ, by a `__partDepth`
+  # that routes the answer to the same ingredient, Income Tax being the only card with a `keep` step.
+  'c009_income_tax\.rs:.*replace carried_data -> Value with Default::default\(\)',
 ]
