@@ -18,6 +18,7 @@ Disallow: /match/
 Disallow: /series/
 Disallow: /watch/
 Disallow: /duos/
+Disallow: /lobby/
 Disallow: /daily/
 
 Sitemap: https://staging.jackioh.com/sitemap.xml

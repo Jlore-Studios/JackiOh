@@ -60,10 +60,6 @@ mod tests {
         }))
     }
 
-    fn on(card: &CardInstance) -> Value {
-        json!({ "targets": pick::instance(card) })
-    }
-
     fn keyword_count(s: &Scenario, card: &CardInstance, kind: KeywordKind) -> usize {
         s.stats(card).keywords.iter().filter(|keyword| keyword.kind() == kind).count()
     }
@@ -98,7 +94,7 @@ mod tests {
         fn max_health_up_2_keeping_the_damage_and_a_divine_shield_and_no_attack_change() {
             let mut s = board(false, json!([{ "def": VANILLA, "lane": 1, "damage": 1 }]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(PLASTANIUM, on(&unit));
+            s.play(PLASTANIUM, pick::targets(pick::instance(&unit)));
             s.expect_stats(&unit, json!({ "attack": 4, "health": 5 }));
             assert_eq!(s.stats(&unit).max_health, 6);
             assert_eq!(keyword_count(&s, &unit, KeywordKind::DivineShield), 1);
@@ -108,7 +104,7 @@ mod tests {
         fn an_enemy_unit_takes_both() {
             let mut s = board(false, json!([]), json!([VANILLA]));
             let theirs = s.unit_at(P2, 1);
-            s.play(PLASTANIUM, on(&theirs));
+            s.play(PLASTANIUM, pick::targets(pick::instance(&theirs)));
             assert_eq!(s.stats(&theirs).max_health, 6);
             assert_eq!(keyword_count(&s, &theirs, KeywordKind::DivineShield), 1);
         }
@@ -118,7 +114,7 @@ mod tests {
             let mut s = board(false, json!([SHIELDED]), json!([]));
             let unit = s.unit_at(P1, 1);
             s.card_mut(&unit).divine_shield_spent = Some(true);
-            s.play(PLASTANIUM, on(&unit));
+            s.play(PLASTANIUM, pick::targets(pick::instance(&unit)));
             assert_ne!(s.card(&unit).divine_shield_spent, Some(true));
             assert_eq!(keyword_count(&s, &unit, KeywordKind::DivineShield), 1);
         }
@@ -128,7 +124,7 @@ mod tests {
             let mut s = board(false, json!([VANILLA]), json!([]));
             assert_eq!(upgrade_number(&mut s, PLASTANIUM, "health"), 3);
             let unit = s.unit_at(P1, 1);
-            s.play(PLASTANIUM, on(&unit));
+            s.play(PLASTANIUM, pick::targets(pick::instance(&unit)));
             assert_eq!(s.stats(&unit).max_health, 7);
         }
     }
@@ -140,7 +136,7 @@ mod tests {
         fn max_health_up_6_and_a_divine_shield() {
             let mut s = board(true, json!([{ "def": VANILLA, "lane": 1, "damage": 1 }]), json!([]));
             let unit = s.unit_at(P1, 1);
-            s.play(PLASTANIUM, on(&unit));
+            s.play(PLASTANIUM, pick::targets(pick::instance(&unit)));
             s.expect_stats(&unit, json!({ "attack": 4, "health": 9 }));
             assert_eq!(s.stats(&unit).max_health, 10);
             assert_eq!(keyword_count(&s, &unit, KeywordKind::DivineShield), 1);
@@ -150,7 +146,7 @@ mod tests {
         fn the_shield_eats_the_first_hit() {
             let mut s = board(true, json!([VANILLA]), json!([WALL]));
             let (unit, wall) = (s.unit_at(P1, 1), s.unit_at(P2, 1));
-            s.play(PLASTANIUM, on(&unit));
+            s.play(PLASTANIUM, pick::targets(pick::instance(&unit)));
             s.attack(&unit, &wall);
             assert_eq!(s.card(&unit).damage, 0, "the wall's 1 attack is taken by the shield");
             assert_eq!(s.card(&unit).divine_shield_spent, Some(true));
@@ -162,7 +158,7 @@ mod tests {
             let mut s = board(true, json!([VANILLA]), json!([]));
             assert_eq!(upgrade_number(&mut s, PLASTANIUM, "health"), 7);
             let unit = s.unit_at(P1, 1);
-            s.play(PLASTANIUM, on(&unit));
+            s.play(PLASTANIUM, pick::targets(pick::instance(&unit)));
             assert_eq!(s.stats(&unit).max_health, 11);
         }
     }

@@ -151,10 +151,6 @@ mod tests {
     const CUBE: &str = "core-022"; // Carnivorous Cube: Cry: Tribute one of your other Units.
     const COLLATERAL: &str = "core-034"; // Collateral Damage: Exile target permanent and a random card from their deck.
 
-    fn at_p2() -> Value {
-        json!([{ "pick": "hero", "player": "p2" }])
-    }
-
     fn setup(p1: Value, p2: Value, radiant_face: bool) -> Scenario {
         scenario(json!({
             "p1": merged(
@@ -237,7 +233,7 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), false);
 
-                activate_punish(&mut s, DAMAGE, Some(at_p2()));
+                activate_punish(&mut s, DAMAGE, Some(pick::hero("p2")));
 
                 s.expect_health(P2, 28);
                 s.expect_events(json!(["activated", "damage"]));
@@ -475,14 +471,14 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), false);
 
-                activate_punish(&mut s, DAMAGE, Some(at_p2()));
+                activate_punish(&mut s, DAMAGE, Some(pick::hero("p2")));
                 assert_eq!(activations(&s, P1).len(), 0);
-                s.expect_refused(|s| activate_punish(s, DAMAGE, Some(at_p2())));
+                s.expect_refused(|s| activate_punish(s, DAMAGE, Some(pick::hero("p2"))));
                 s.expect_health(P2, 28);
 
                 to_next_turn(&mut s);
                 assert!(!activations(&s, P1).is_empty());
-                activate_punish(&mut s, DAMAGE, Some(at_p2()));
+                activate_punish(&mut s, DAMAGE, Some(pick::hero("p2")));
                 s.expect_health(P2, 26);
             }
 
@@ -494,7 +490,7 @@ mod tests {
                     "p2": { "hand": [FILLER] },
                 }));
                 assert_eq!(activations(&s, P1).len(), 0);
-                s.expect_refused(|s| activate_punish(s, DAMAGE, Some(at_p2())));
+                s.expect_refused(|s| activate_punish(s, DAMAGE, Some(pick::hero("p2"))));
             }
 
             #[test]
@@ -503,7 +499,7 @@ mod tests {
                 let mut s = setup(json!({}), json!({}), false);
                 let played = s.state().players[P1].turn_log.cards_played;
 
-                activate_punish(&mut s, DAMAGE, Some(at_p2()));
+                activate_punish(&mut s, DAMAGE, Some(pick::hero("p2")));
 
                 assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::CardPlayed));
                 assert_eq!(s.state().players[P1].turn_log.cards_played, played);
@@ -514,7 +510,7 @@ mod tests {
                 crate::register_all();
                 let mut hit = setup(json!({}), json!({}), false);
                 step_param(hit.card_mut(PUNISH), "damage", 1);
-                activate_punish(&mut hit, DAMAGE, Some(at_p2()));
+                activate_punish(&mut hit, DAMAGE, Some(pick::hero("p2")));
                 hit.expect_health(P2, 27);
 
                 let mut two = setup(json!({}), json!({ "hand": [VANILLA, TIMMY, MENACE] }), false);
@@ -534,7 +530,7 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), true);
 
-                activate_punish(&mut s, DAMAGE, Some(at_p2()));
+                activate_punish(&mut s, DAMAGE, Some(pick::hero("p2")));
 
                 s.expect_health(P2, 26);
             }
@@ -661,7 +657,7 @@ mod tests {
                 let mut s = setup(json!({}), json!({}), true);
                 step_param(s.card_mut(PUNISH), "damage", 1);
 
-                activate_punish(&mut s, DAMAGE, Some(at_p2()));
+                activate_punish(&mut s, DAMAGE, Some(pick::hero("p2")));
 
                 s.expect_health(P2, 25);
             }

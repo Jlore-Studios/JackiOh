@@ -228,8 +228,9 @@ function signInThroughForm(email: string): void {
   });
 
   /**
-   * Both accounts in the browser, one after the other since Cypress drives one browser. The host does not
-   * navigate on its own when its room is claimed, so player 1 visits /match/<id> directly.
+   * Both accounts in the browser, one after the other since Cypress drives one browser: player 1 makes a
+   * private lobby (R3730000) and is ready, player 2 enters it and is ready, and player 1's Start opens the
+   * board (R3730002); then player 2 opens the same match.
    */
   it("both accounts reach the real board in the browser", () => {
     let code = "";
@@ -239,22 +240,30 @@ function signInThroughForm(email: string): void {
 
     signInThroughForm(P1);
     cy.visit("/play");
-    cy.get('[data-testid="play-create-room"]').click();
-    cy.get('[data-testid="play-room-code"]', { timeout: 40_000 })
+    cy.get('[data-testid="lobby-create"]', { timeout: 40_000 }).click();
+    cy.get('[data-testid="lobby-code"]', { timeout: 40_000 })
       .invoke("text")
       .then((text) => {
         code = String(text).trim();
-        expect(code, "a 6-character room code (R79)").to.have.length(6);
+        expect(code, "a 6-character lobby code (R79)").to.have.length(6);
       });
+    cy.get('[data-testid="lobby-ready"]', { timeout: 40_000 }).should("not.be.disabled").click();
+    cy.get('[data-testid="lobby-ready"]', { timeout: 40_000 }).should("have.attr", "data-ready", "true");
 
-    // Player 2, a different account in the same browser, claims it through the UI.
+    // Player 2, a different account in the same browser, enters it through the UI and is ready.
     cy.then(() => {
       signInThroughForm(P2);
-      cy.visit("/play");
-      cy.get('[data-testid="play-join-code"]').type(code);
-      cy.get('[data-testid="play-join-submit"]').click();
+      cy.visit(`/lobby/${code}`);
+      cy.get('[data-testid="lobby-enter"]', { timeout: 40_000 }).click();
+      cy.get('[data-testid="lobby-ready"]', { timeout: 40_000 }).should("not.be.disabled").click();
+      cy.get('[data-testid="lobby-ready"]', { timeout: 40_000 }).should("have.attr", "data-ready", "true");
+    });
 
-      // The joiner is the one the client navigates.
+    // Player 1 starts it, and the countdown opens the board.
+    cy.then(() => {
+      signInThroughForm(P1);
+      cy.visit(`/lobby/${code}`);
+      cy.get('[data-testid="lobby-start"]', { timeout: 40_000 }).should("not.be.disabled").click();
       cy.location("pathname", { timeout: 60_000 }).should("match", /^\/match\//);
       cy.location("pathname").then((path) => {
         matchId = path.replace("/match/", "");
@@ -263,9 +272,9 @@ function signInThroughForm(email: string): void {
       cy.get('[data-testid="board"]', { timeout: 60_000 }).should("exist");
     });
 
-    // Player 1 opens the same match and gets their own seat's view.
+    // Player 2 opens the same match and gets their own seat's view.
     cy.then(() => {
-      signInThroughForm(P1);
+      signInThroughForm(P2);
       cy.visit(`/match/${matchId}`);
       cy.get('[data-testid="board"]', { timeout: 60_000 }).should("exist");
     });

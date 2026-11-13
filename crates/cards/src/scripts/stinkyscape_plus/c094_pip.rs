@@ -55,10 +55,6 @@ mod tests {
     const FIGHTER: &str = "stand-in (1) 5/5";
     const PREY: &str = "stand-in (1) 1/1";
 
-    fn pick(id: &str) -> Value {
-        json!({ "targets": [{ "pick": "instance", "instanceId": id }] })
-    }
-
     fn board(radiant: bool) -> Scenario {
         scenario(json!({
             "seed": "pip",
@@ -77,7 +73,7 @@ mod tests {
         let mut s = board(false);
         let fighter = s.unit_at(P1, 1).id;
         let prey = s.unit_at(P2, 1).id;
-        s.play(ID, pick(&fighter));
+        s.play(ID, pick::targets(pick::id(&fighter)));
         s.attack(fighter.as_str(), prey.as_str());
         s.end_turn().end_turn().end_turn();
         s.expect_in_zone(fighter.as_str(), "field");
@@ -89,7 +85,7 @@ mod tests {
         crate::register_all();
         let mut s = board(false);
         let fighter = s.unit_at(P1, 1).id;
-        s.play(ID, pick(&fighter));
+        s.play(ID, pick::targets(pick::id(&fighter)));
         s.end_turn().end_turn().end_turn();
         s.expect_in_zone(fighter.as_str(), "graveyard");
         assert_eq!(coins(&s), 0);
@@ -100,7 +96,7 @@ mod tests {
         crate::register_all();
         let mut s = board(true);
         let fighter = s.unit_at(P1, 1).id;
-        s.play(ID, pick(&fighter));
+        s.play(ID, pick::targets(pick::id(&fighter)));
         s.end_turn().end_turn().end_turn();
         s.expect_in_zone(fighter.as_str(), "graveyard");
         assert_eq!(coins(&s), 3);
@@ -112,7 +108,7 @@ mod tests {
         let mut s = board(false);
         let fighter = s.unit_at(P1, 1).id;
         set_param(s.card_mut(ID), "count", 2);
-        s.play(ID, pick(&fighter));
+        s.play(ID, pick::targets(pick::id(&fighter)));
         s.end_turn().end_turn().end_turn();
         s.expect_in_zone(fighter.as_str(), "field");
         s.end_turn().end_turn();

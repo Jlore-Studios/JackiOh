@@ -118,10 +118,6 @@ mod tests {
 
     use crate::js;
 
-    fn enemy_hero() -> Value {
-        json!([{ "pick": "hero", "player": "p2" }])
-    }
-
     fn hits(s: &Scenario, target_id: &str) -> Vec<Value> {
         s.events()
             .iter()
@@ -207,7 +203,7 @@ mod tests {
                     panic!("two Doctors in hand");
                 };
 
-                s.play(&first, json!({ "targets": enemy_hero() }));
+                s.play(&first, json!({ "targets": pick::hero("p2") }));
                 s.play(&second, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
 
                 s.expect_health(PlayerId::P2, 16);
@@ -261,7 +257,7 @@ mod tests {
             fn with_no_other_token_on_the_field_it_still_deals_1_its_own() {
                 let mut s = scenario(json!({ "p1": { "hand": [DOCTOR, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": [MENACE], "health": 20 } }));
 
-                s.play(DOCTOR, json!({ "targets": enemy_hero() }));
+                s.play(DOCTOR, json!({ "targets": pick::hero("p2") }));
 
                 s.expect_in_zone(DOCTOR, "field");
                 assert_eq!(all_hits(&s), 1);
@@ -279,7 +275,7 @@ mod tests {
                     },
                 }));
 
-                s.play(DOCTOR, json!({ "targets": enemy_hero() }));
+                s.play(DOCTOR, json!({ "targets": pick::hero("p2") }));
 
                 s.expect_health(PlayerId::P2, 18);
             }
@@ -292,7 +288,7 @@ mod tests {
                 s.play("classic-053", json!({}));
                 s.answer(json!(menace));
 
-                s.play(DOCTOR, json!({ "targets": enemy_hero() }));
+                s.play(DOCTOR, json!({ "targets": pick::hero("p2") }));
 
                 s.expect_health(PlayerId::P2, 18);
             }
@@ -304,7 +300,7 @@ mod tests {
                     "p2": { "hand": [ANCHOR], "backrow": [{ "def": PAWN, "faceUp": false, "counters": { "plague": 2 } }], "health": 20 },
                 }));
 
-                s.play(DOCTOR, json!({ "targets": enemy_hero() }));
+                s.play(DOCTOR, json!({ "targets": pick::hero("p2") }));
 
                 s.expect_health(PlayerId::P2, 17);
                 assert!(!js(&s.view(PlayerId::P1)).to_string().contains(PAWN));
@@ -315,7 +311,7 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": [DOCTOR, ANCHOR], "field": [{ "def": VANILLA, "counters": { "plague": 1 } }] }, "p2": { "hand": [ANCHOR], "health": 20 } }));
                 step_param(s.card_mut(DOCTOR), "tokens", 1);
 
-                s.play(DOCTOR, json!({ "targets": enemy_hero() }));
+                s.play(DOCTOR, json!({ "targets": pick::hero("p2") }));
 
                 s.expect_health(PlayerId::P2, 17);
                 assert_eq!(s.card(DOCTOR).counters.plague, Some(2));
@@ -352,7 +348,7 @@ mod tests {
             fn with_no_other_token_on_the_field_it_still_deals_2_its_own() {
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": DOCTOR, "radiant": true }, ANCHOR] }, "p2": { "hand": [ANCHOR], "health": 20 } }));
 
-                s.play(DOCTOR, json!({ "targets": enemy_hero() }));
+                s.play(DOCTOR, json!({ "targets": pick::hero("p2") }));
 
                 s.expect_health(PlayerId::P2, 18);
             }
@@ -361,7 +357,7 @@ mod tests {
             fn its_placement_on_itself_is_one_placement_a_placement_trigger_on_it_answers_once() {
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": DOCTOR, "radiant": true }, ANCHOR] }, "p2": { "hand": [ANCHOR], "health": 20 } }));
 
-                s.play(DOCTOR, json!({ "targets": enemy_hero() }));
+                s.play(DOCTOR, json!({ "targets": pick::hero("p2") }));
 
                 let doctor = s.card(DOCTOR).id.clone();
                 assert_eq!(
@@ -390,11 +386,11 @@ mod tests {
                 step_param(s.card_mut(&up), "tokens", 1);
                 step_param(s.card_mut(&down), "tokens", -1);
 
-                s.play(&up, json!({ "targets": enemy_hero() }));
+                s.play(&up, json!({ "targets": pick::hero("p2") }));
                 assert_eq!(s.card(&up).counters.plague, Some(3));
                 s.expect_health(PlayerId::P2, 16);
 
-                s.play(&down, json!({ "targets": enemy_hero() }));
+                s.play(&down, json!({ "targets": pick::hero("p2") }));
                 assert_eq!(s.card(&down).counters.plague, Some(1));
                 s.expect_health(PlayerId::P2, 11);
             }

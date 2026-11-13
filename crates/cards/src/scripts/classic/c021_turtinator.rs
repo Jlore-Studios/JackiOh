@@ -77,10 +77,6 @@ mod tests {
     const SHEEP: &str = "core-t-sheep"; // Sheep Token: worth 2 Tributes
     const ROCK: &str = "core-066"; // The Rock: Indestructible
 
-    fn enemy_hero() -> Value {
-        json!([{ "pick": "hero", "player": "p2" }])
-    }
-
     fn setup(p1: Value, p2: Value) -> Scenario {
         scenario(json!({
             "p1": merged(json!({ "hand": [FILLER], "library": [FILLER] }), p1),
@@ -131,7 +127,7 @@ mod tests {
                 let mut s = setup(json!({ "field": [TURTLE, SEVEN_SEVEN] }), json!({}));
                 let point = s.card(SEVEN_SEVEN).clone();
 
-                eat(&mut s, SEVEN_SEVEN, enemy_hero(), TURTLE);
+                eat(&mut s, SEVEN_SEVEN, pick::hero("p2"), TURTLE);
 
                 s.expect_in_zone(&point, "graveyard");
                 s.expect_health(P2, 23);
@@ -144,7 +140,7 @@ mod tests {
                 let mut s = setup(json!({ "field": [TURTLE, SEVEN_SEVEN] }), json!({}));
                 let turtle = s.card(TURTLE).clone();
 
-                eat(&mut s, SEVEN_SEVEN, enemy_hero(), TURTLE);
+                eat(&mut s, SEVEN_SEVEN, pick::hero("p2"), TURTLE);
 
                 let hit = s.last_events().iter().find(|event| event.event_type() == GameEventType::Damage).cloned();
                 match hit {
@@ -162,7 +158,7 @@ mod tests {
                 let mut s = setup(json!({ "field": [TURTLE, TIMMY], "backrow": [WEAPONS] }), json!({}));
                 s.expect_stats(TIMMY, json!({ "attack": 5 }));
 
-                eat(&mut s, TIMMY, enemy_hero(), TURTLE);
+                eat(&mut s, TIMMY, pick::hero("p2"), TURTLE);
 
                 s.expect_health(P2, 25);
             }
@@ -174,7 +170,7 @@ mod tests {
                 let turtle = s.card(TURTLE).clone();
 
                 assert_eq!(activations_of(&s, P1, &turtle.id).len(), 0);
-                s.expect_refused(|s| eat(s, TURTLE, enemy_hero(), TURTLE));
+                s.expect_refused(|s| eat(s, TURTLE, pick::hero("p2"), TURTLE));
 
                 s.expect_in_zone(&turtle, "field");
                 s.expect_health(P2, 30);
@@ -185,7 +181,7 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(json!({ "field": [TURTLE, SEVEN_SEVEN] }), json!({}));
 
-                s.expect_refused(|s| s.activate(TURTLE, json!({ "targets": enemy_hero(), "tributes": [] })));
+                s.expect_refused(|s| s.activate(TURTLE, json!({ "targets": pick::hero("p2"), "tributes": [] })));
 
                 s.expect_in_zone(SEVEN_SEVEN, "field");
                 s.expect_health(P2, 30);
@@ -196,7 +192,7 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(json!({ "field": [TURTLE] }), json!({ "field": [SEVEN_SEVEN] }));
 
-                s.expect_refused(|s| eat(s, SEVEN_SEVEN, enemy_hero(), TURTLE));
+                s.expect_refused(|s| eat(s, SEVEN_SEVEN, pick::hero("p2"), TURTLE));
 
                 s.expect_in_zone(SEVEN_SEVEN, "field");
                 s.expect_health(P2, 30);
@@ -208,7 +204,7 @@ mod tests {
                 let mut s = setup(json!({ "field": [TURTLE, TIMMY, SEVEN_SEVEN] }), json!({}));
 
                 s.expect_refused(|s| {
-                    s.activate(TURTLE, json!({ "tributes": [TIMMY, SEVEN_SEVEN], "targets": enemy_hero() }))
+                    s.activate(TURTLE, json!({ "tributes": [TIMMY, SEVEN_SEVEN], "targets": pick::hero("p2") }))
                 });
             }
 
@@ -217,7 +213,7 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(json!({ "field": [TURTLE, SHEEP] }), json!({}));
 
-                eat(&mut s, SHEEP, enemy_hero(), TURTLE);
+                eat(&mut s, SHEEP, pick::hero("p2"), TURTLE);
 
                 s.expect_health(P2, 29);
                 assert!(s.unit(P1, 2).is_none());
@@ -229,7 +225,7 @@ mod tests {
                 let mut s = setup(json!({ "field": [TURTLE, ROCK] }), json!({}));
                 let rock = s.card(ROCK).clone();
 
-                eat(&mut s, ROCK, enemy_hero(), TURTLE);
+                eat(&mut s, ROCK, pick::hero("p2"), TURTLE);
 
                 s.expect_in_zone(&rock, "graveyard");
                 s.expect_health(P2, 20);
@@ -244,7 +240,7 @@ mod tests {
                 );
                 let dormant = s.card(TIMMY).clone();
 
-                s.expect_refused(|s| s.activate(TURTLE, json!({ "tributes": [dormant.id], "targets": enemy_hero() })));
+                s.expect_refused(|s| s.activate(TURTLE, json!({ "tributes": [dormant.id], "targets": pick::hero("p2") })));
 
                 s.expect_in_zone(&dormant, "field");
                 s.expect_health(P2, 30);
@@ -255,7 +251,7 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(json!({ "field": [TURTLE, D_FENDER] }), json!({}));
 
-                eat(&mut s, D_FENDER, enemy_hero(), TURTLE);
+                eat(&mut s, D_FENDER, pick::hero("p2"), TURTLE);
 
                 s.expect_in_zone(D_FENDER, "graveyard");
                 s.expect_health(P2, 30);
@@ -268,7 +264,7 @@ mod tests {
                 let mut s = setup(json!({ "field": [TURTLE, SAINTESS, VANILLA] }), json!({}));
                 let vanilla = s.card(VANILLA).clone();
 
-                eat(&mut s, SAINTESS, enemy_hero(), TURTLE);
+                eat(&mut s, SAINTESS, pick::hero("p2"), TURTLE);
 
                 s.expect_events(json!(["destroyed", "radiantSet"]));
                 assert!(s.card(&vanilla).radiant);
@@ -293,7 +289,7 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(json!({ "field": [TURTLE, TIMMY, VANILLA, SEVEN_SEVEN, D_FENDER] }), json!({}));
 
-                eat(&mut s, TIMMY, enemy_hero(), TURTLE);
+                eat(&mut s, TIMMY, pick::hero("p2"), TURTLE);
 
                 s.expect_health(P2, 27);
             }
@@ -307,15 +303,15 @@ mod tests {
                 );
                 let turtle = s.card(TURTLE).id.clone();
 
-                eat(&mut s, TIMMY, enemy_hero(), TURTLE);
+                eat(&mut s, TIMMY, pick::hero("p2"), TURTLE);
                 s.expect_health(P2, 30 - 3);
                 assert_eq!(activations_of(&s, P1, &turtle).len(), 0);
-                s.expect_refused(|s| eat(s, VANILLA, enemy_hero(), TURTLE));
+                s.expect_refused(|s| eat(s, VANILLA, pick::hero("p2"), TURTLE));
                 s.expect_in_zone(VANILLA, "field");
 
                 s.end_turn();
                 s.end_turn();
-                eat(&mut s, VANILLA, enemy_hero(), TURTLE);
+                eat(&mut s, VANILLA, pick::hero("p2"), TURTLE);
                 s.expect_health(P2, 30 - 3 - 4);
             }
 
@@ -325,7 +321,7 @@ mod tests {
                 let mut s = setup(json!({ "field": [TURTLE, TIMMY] }), json!({}));
                 let played = s.state().players[P1].turn_log.cards_played;
 
-                eat(&mut s, TIMMY, enemy_hero(), TURTLE);
+                eat(&mut s, TIMMY, pick::hero("p2"), TURTLE);
 
                 assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::CardPlayed));
                 assert_eq!(s.state().players[P1].turn_log.cards_played, played);
@@ -336,12 +332,12 @@ mod tests {
                 crate::register_all();
                 let mut up = setup(json!({ "field": [TURTLE, SEVEN_SEVEN] }), json!({}));
                 step_param(up.card_mut(TURTLE), "multiplier", 1);
-                eat(&mut up, SEVEN_SEVEN, enemy_hero(), TURTLE);
+                eat(&mut up, SEVEN_SEVEN, pick::hero("p2"), TURTLE);
                 up.expect_health(P2, 16);
 
                 let mut down = setup(json!({ "field": [TURTLE, SEVEN_SEVEN] }), json!({}));
                 step_param(down.card_mut(TURTLE), "multiplier", -1);
-                eat(&mut down, SEVEN_SEVEN, enemy_hero(), TURTLE);
+                eat(&mut down, SEVEN_SEVEN, pick::hero("p2"), TURTLE);
                 down.expect_health(P2, 23);
             }
         }
@@ -361,7 +357,7 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(json!({ "field": [{ "def": TURTLE, "radiant": true }, SEVEN_SEVEN] }), json!({}));
 
-                eat(&mut s, SEVEN_SEVEN, enemy_hero(), TURTLE);
+                eat(&mut s, SEVEN_SEVEN, pick::hero("p2"), TURTLE);
 
                 s.expect_health(P2, 16);
             }
@@ -373,7 +369,7 @@ mod tests {
                 let turtle = s.card(TURTLE).clone();
 
                 assert_eq!(activations_of(&s, P1, &turtle.id).len(), 0);
-                s.expect_refused(|s| eat(s, TURTLE, enemy_hero(), TURTLE));
+                s.expect_refused(|s| eat(s, TURTLE, pick::hero("p2"), TURTLE));
 
                 s.expect_in_zone(&turtle, "field");
                 s.expect_health(P2, 30);
@@ -385,7 +381,7 @@ mod tests {
                 let mut s = setup(json!({ "field": [{ "def": TURTLE, "radiant": true }, TIMMY] }), json!({}));
                 step_param(s.card_mut(TURTLE), "multiplier", 1);
 
-                eat(&mut s, TIMMY, enemy_hero(), TURTLE);
+                eat(&mut s, TIMMY, pick::hero("p2"), TURTLE);
 
                 s.expect_health(P2, 21);
             }

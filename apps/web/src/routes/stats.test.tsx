@@ -11,7 +11,7 @@ import { SHIPPED_SETS } from "@jackioh/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { readCardPicks } from "../cards/cosmetics.ts";
-import { writeCardSettings } from "../cards/settings.ts";
+import { readCardSettings, writeCardSettings } from "../cards/settings.ts";
 import { cardStatsPath } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
 import { clearReadCache, expireRead, rememberRead } from "../net/readCache.ts";
@@ -25,6 +25,7 @@ import { pressBack } from "../test/history.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { at } from "../test/stubServer.ts";
 import { expectOnePageTitle } from "../test/pageTitle.ts";
+import { CARD_TEXT_KEY, cardTextTestid } from "./cardText.tsx";
 import { SiteFooter, siteFooterTestid } from "./SiteFooter.tsx";
 import StatsRoute from "./stats.tsx";
 
@@ -1891,6 +1892,45 @@ describe("R3324001 the current patch", () => {
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
     expect(screen.getByTestId(statsTestid.currentPatch)).toHaveTextContent(`Current patch ${CATALOG_VERSION}`);
+  });
+});
+
+describe("R3838000 the Statistics page's Show card text button", () => {
+  it("R3838000 pressing it prints the grid's full-art faces with their words, keeps the choice and leaves the setting alone", async () => {
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    await user.click(screen.getByTestId(statsTestid.viewGrid));
+    const grid = await screen.findByTestId(statsTestid.cardsGrid);
+    const pup = (): Element | null => grid.querySelector('[data-card-id="core-001"] .cf');
+    expect(pup()).toHaveAttribute("data-full-art", "true");
+    const toggle = screen.getByTestId(cardTextTestid.toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    // It stands in the header, beside the current patch.
+    expect(screen.getByRole("banner")).toContainElement(toggle);
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(pup()).not.toBeNull();
+    expect(grid.querySelector('.cf[data-full-art="true"]')).toBeNull();
+    expect(window.localStorage.getItem(CARD_TEXT_KEY)).toBe("1");
+    expect(readCardSettings().fullArt).toBe(true);
+  });
+
+  it("R3838000 a breakdown opened while the Almanac left it pressed prints the normal faces, base and Radiant", async () => {
+    window.localStorage.setItem(CARD_TEXT_KEY, "1");
+    holdFetch((url) => url.pathname.startsWith("/api/stats/cards/"));
+    at("/stats?card=core-004");
+    render(<StatsRoute />);
+    const dialog = await screen.findByRole("dialog", undefined, SLOW);
+    expect(screen.getByTestId(cardTextTestid.toggle)).toHaveAttribute("aria-pressed", "true");
+    expect(dialog.querySelector(".stats-drilldown-faces .cf")?.hasAttribute("data-full-art")).toBe(false);
+
+    fireEvent.click(screen.getByTestId(statsTestid.drillDownRadiantToggle));
+    const faces = dialog.querySelectorAll(".stats-drilldown-faces .cf");
+    expect(faces).toHaveLength(2);
+    for (const each of faces) expect(each.hasAttribute("data-full-art")).toBe(false);
+    expect(readCardSettings().fullArt).toBe(true);
   });
 });
 

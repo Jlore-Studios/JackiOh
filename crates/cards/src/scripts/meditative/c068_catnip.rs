@@ -17,14 +17,15 @@ fn catnip() -> Script {
                 vec![animate(json_as(json!({})))]
             })
             .with_when(|ctx, event| {
-                let GameEvent::CardResolved { player, def_id, radiant, .. } = event else {
+                let GameEvent::CardResolved { player, .. } = event else {
                     return false;
                 };
                 // R2179002: a card cast on draw is no play.
                 if *player == ctx.controller || cast_on_draw_event(event) {
                     return false;
                 }
-                if card_type_of_face(ctx.state, def_id, radiant.unwrap_or(false)) != CardType::Spell {
+                // R783005: the play as it counts, so a Spell set face-down under Paranoia is a Trap play.
+                if played_type_of(ctx.state, event) != Some(CardType::Spell) {
                     return false;
                 }
                 !ctx.live_self().is_some_and(|me| is_animated(ctx.state, me))
@@ -56,6 +57,7 @@ mod tests {
     const VANILLA: &str = "core-008";
     const SHEEP: &str = "core-t-sheep";
     const FILLER: &str = "core-010";
+    const PARANOIA: &str = "meditative-099"; // Paranoia: Aura: Your Spells have Cloaked.
 
     fn set_catnip(radiant: bool, lane: i32) -> Value {
         json!({ "def": CATNIP, "radiant": radiant, "faceUp": false, "lane": lane })
@@ -90,6 +92,19 @@ mod tests {
         s.expect_events(json!(["cardPlayed", "cardResolved", "trapFired", "animated"]));
         row_is(&s, "units");
         s.expect_stats(CATNIP, json!({ "attack": 5, "health": 5 }));
+    }
+
+    /// R783005: a Spell set face-down by its Cloaked (lent by Paranoia) is a Trap play, no Spell played.
+    #[test]
+    fn r783005_a_spell_set_face_down_by_paranoia_leaves_catnip_set() {
+        let mut s = scenario(json!({
+            "active": "p2",
+            "p1": { "hand": [FILLER], "backrow": [set_catnip(false, 2)] },
+            "p2": { "hand": [STOCKPILE, FILLER], "field": [{ "def": PARANOIA, "lane": 1 }], "mana": 10 },
+        }));
+        crate::set_cloaked(&mut s, PlayerId::P2, STOCKPILE, 2);
+        assert!(!s.events().iter().any(|event| matches!(event, GameEvent::TrapFired { .. })));
+        row_is(&s, "backrow");
     }
 
     #[test]

@@ -48,9 +48,20 @@ pub fn params_of(state: &GameState, def_id: &str) -> Vec<Param> {
 }
 
 pub fn param_decl_of(state: &GameState, def_id: &str, key: &str) -> Option<Param> {
-    params_of(state, def_id)
+    let own = params_of(state, def_id)
         .into_iter()
-        .find(|param| param.key == key)
+        .find(|param| param.key == key);
+    if own.is_some() {
+        return own;
+    }
+    // R3574001: a past version (R3538002) runs a script newer than its definition when no kept script
+    // covers it, or when the one that does is a later version's, so a number the script reads that the
+    // past definition never declared is read off its card's definition as the catalog has it now.
+    let card = crate::catalog::past_card_of(def_id);
+    if card == def_id {
+        return None;
+    }
+    params_of(state, card).into_iter().find(|param| param.key == key)
 }
 
 /// B3.4 rule 5: how far one Degrade or Upgrade moves a declared number: the `step` it declares, else

@@ -115,14 +115,6 @@
   color: var(--text-dim);
 }
 
-.lobby .lobby-room-mode {
-  padding: 2px 8px;
-  border: 1px solid var(--line-bright);
-  border-radius: 999px;
-  color: var(--text-dim);
-  font-size: 13px;
-}
-
 /* --- the lobby in the tavern (routes/play.tsx) ------------------------------------------------
    /play wears the tavern (auth/tavern.css) like the landing, sign-in and account screens: a hero,
    then numbered panels. Everything below is under `.tavern.play-screen`, one class more specific
@@ -369,16 +361,14 @@
   gap: 6px;
 }
 
-.tavern.play-screen .play-pick label,
-.tavern.play-screen .play-join label {
+.tavern.play-screen .play-pick label {
   color: color-mix(in srgb, var(--tavern-parchment) 80%, transparent);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.03em;
 }
 
-.tavern.play-screen .lobby-select,
-.tavern.play-screen .play-join input {
+.tavern.play-screen .lobby-select {
   width: 100%;
   min-height: 46px;
   padding: 10px 14px;
@@ -391,13 +381,11 @@
   transition: border-color 140ms, box-shadow 140ms;
 }
 
-.tavern.play-screen .lobby-select:hover,
-.tavern.play-screen .play-join input:hover {
+.tavern.play-screen .lobby-select:hover {
   border-color: var(--tavern-brass);
 }
 
-.tavern.play-screen .lobby-select:focus-visible,
-.tavern.play-screen .play-join input:focus-visible {
+.tavern.play-screen .lobby-select:focus-visible {
   outline: none;
   border-color: var(--tavern-gold);
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.65), 0 0 0 3px rgba(243, 201, 105, 0.25);
@@ -552,98 +540,6 @@
 .tavern.play-screen .play-search__text {
   color: var(--tavern-parchment);
   font-weight: 600;
-}
-
-/* --- a room -------------------------------------------------------------------------------- */
-
-.tavern.play-screen .play-room-create {
-  align-self: flex-start;
-}
-
-.tavern.play-screen .play-ticket {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-  padding: 12px 14px;
-  border: 1px dashed var(--tavern-gold);
-  border-radius: 12px;
-  background:
-    radial-gradient(ellipse 80% 80% at 0% 50%, rgba(243, 201, 105, 0.1), transparent 70%),
-    rgba(14, 9, 5, 0.7);
-}
-
-.tavern.play-screen .play-ticket__label {
-  flex-basis: 100%;
-  color: var(--tavern-text-dim);
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.tavern.play-screen .play-ticket__code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  color: var(--tavern-gold-pale);
-  background: none;
-  padding: 0;
-}
-
-.tavern.play-screen .lobby-room-mode {
-  padding: 2px 10px;
-  border: 1px solid rgba(201, 149, 63, 0.5);
-  border-radius: 999px;
-  color: var(--tavern-parchment);
-  font-size: 12px;
-}
-
-.tavern.app-shell.play-screen .play-ticket__copy {
-  margin-left: auto;
-  min-height: 36px;
-  padding: 4px 14px;
-  font-size: 14px;
-}
-
-/* R767: the link's button sits beside Copy, which keeps the auto margin. */
-.tavern.app-shell.play-screen .play-ticket__copy--link {
-  margin-left: 0;
-}
-
-.tavern.play-screen .play-join {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.tavern.play-screen .play-join__row {
-  display: flex;
-  gap: 8px;
-}
-
-.tavern.play-screen .play-join input {
-  flex: 1 1 auto;
-  min-width: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-/* Join is secondary to Find a match: a `button-secondary` (buttons.css), not the gold. */
-.tavern.app-shell.play-screen .play-join button[type="submit"] {
-  flex: 0 0 auto;
-  min-height: 46px;
-  padding: 8px 20px;
-  border-radius: 10px;
-  font-family: var(--tavern-serif);
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.tavern.app-shell.play-screen .play-join button[type="submit"]:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
 }
 
 .tavern.play-screen .play-panel--rank a {
@@ -813,10 +709,6 @@
   color: var(--tavern-gold-pale);
 }
 
-.tavern.play-screen.play-hub .play-panel--room {
-  padding: 14px 16px 16px;
-}
-
 /* A visitor with no account: the online panel is its one sentence and the way in. */
 .tavern.play-screen.play-hub .play-online--signed-out {
   display: flex;
@@ -836,8 +728,8 @@
 
 /* A phone (390x844 and up): everything fits whole, with no scroll inside the hub. The brand and the
    panels' step headings go to screen readers only, the three modes stand side by side, the four ways
-   are one row and the room's explanation goes. The hero holds the brand alone, so it leaves the flow
-   with it: an empty box would still spend the board's gap twice (#3381). A screen shorter than that
+   are one row and the friend panel's explanation goes. The hero holds the brand alone, so it leaves the
+   flow with it: an empty box would still spend the board's gap twice (#3381). A screen shorter than that
    scrolls `.play-layout`, the one scroller, never the setup panel inside it. */
 @media (max-width: 600px) {
   .tavern.play-screen.play-hub {
@@ -846,7 +738,7 @@
 
   .tavern.play-screen.play-hub .play-hero,
   .tavern.play-screen.play-hub .play-panel--queue .play-panel__heading,
-  .tavern.play-screen.play-hub .play-panel--room .play-panel__heading,
+  .tavern.play-screen.play-hub .lobby-panel .play-panel__heading,
   .tavern.play-screen.play-hub .play-panel__heading--sub,
   .tavern.play-screen.play-hub .play-online__heading {
     position: absolute;
@@ -886,9 +778,14 @@
   }
 
   .tavern.play-screen.play-hub .play-panel--setup,
-  .tavern.play-screen.play-hub .play-panel--queue,
-  .tavern.play-screen.play-hub .play-panel--room {
+  .tavern.play-screen.play-hub .play-panel--queue {
     padding: 10px 12px 12px;
+  }
+
+  /* R3730000: "Play a friend", the private lobby's panel, as compact as the other panels. */
+  .tavern.play-screen.play-hub .lobby-panel {
+    gap: var(--space-4);
+    padding: var(--space-5) var(--space-6) var(--space-6);
   }
 
   .tavern.play-screen.play-hub .lobby-modes {
@@ -918,12 +815,11 @@
 
   .tavern.play-screen.play-hub .play-mode-tile .lobby-mode__hint,
   .tavern.play-screen.play-hub .play-mode-tile__waiting,
-  .tavern.play-screen.play-hub .play-panel--room .lobby-note {
+  .tavern.play-screen.play-hub .lobby-panel .lobby-note {
     display: none;
   }
 
-  .tavern.play-screen.play-hub .lobby-select,
-  .tavern.play-screen.play-hub .play-join input {
+  .tavern.play-screen.play-hub .lobby-select {
     min-height: 40px;
   }
 

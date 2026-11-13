@@ -216,4 +216,8 @@ pub trait NodeCounter {
     }
     /// Counts one panic, keeping its message when it is the first.
     fn record_sim_panic(&self, _message: &str) {}
+    /// R3575603: the decision's memo of its expensive steps (`simulate::SimMemo`), if it keeps one.
+    fn sim_memo(&self) -> Option<&crate::simulate::SimMemo> {
+        None
+    }
 }
