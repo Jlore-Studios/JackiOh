@@ -13372,7 +13372,7 @@
       "verdict_rounds": 1
     },
     "3779": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "cleared": {
@@ -13397,9 +13397,9 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3730,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "resolving",
+      "live": "reviewing",
       "merge_owner_gave_up": {
         "at": "2026-11-13T14:01:14Z",
         "provider": "claude-1",
@@ -13407,16 +13407,17 @@
       },
       "merged": true,
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "claude-6",
       "question": "",
       "queued_at": "2026-11-13T12:22:32Z",
       "round_tier": "strong",
-      "run_id": "43424808443",
+      "run_id": "pending:bfcd705d-1794583539",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 240,
-      "started_at": "2026-11-13T12:23:52Z",
+      "started_at": "2026-11-13T15:26:44Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 3,
@@ -15756,9 +15757,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T15:01:38Z",
+    "at": "2026-11-13T15:26:44Z",
     "url": "",
-    "what": "review #3866 on claude-7"
+    "what": "spot-check #3779 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-13T14:55:46Z",
@@ -34944,7 +34945,15 @@
         "n": 240,
         "pr": 3779,
         "queued_at": "2026-11-13T15:21:37Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "run_id": "pending:bfcd705d-1794583539",
         "sha": "44133b263728bd7d699e6233aa44690bfeff2eb3",
+        "started_at": "2026-11-13T15:26:44Z",
         "status": "queued",
         "title": "Patch: a private lobby screen for 1v1 rooms and co-op rooms: seats, invites, each player's deck and Ready, and the host's Start",
         "tries": 0
