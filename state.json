@@ -16158,10 +16158,12 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "at": "2026-11-12T19:25:21Z",
+        "at": "2026-11-13T01:36:56Z",
         "built_by": "claude-6",
         "by": "`claude` (strong)",
-        "sha": "8a8dfa5b618a32fbcf9d1ce00ed2ba13f1d989c8"
+        "carried_from": "8a8dfa5b618a32fbcf9d1ce00ed2ba13f1d989c8",
+        "resolved_by": "`claude` (strong)",
+        "sha": "a7236b3e7031f475585ee40cf27c7994149789ac"
       },
       "died": 0,
       "difficulty": "hard",
