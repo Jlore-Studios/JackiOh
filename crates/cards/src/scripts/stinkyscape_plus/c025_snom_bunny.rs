@@ -29,18 +29,21 @@ fn snom_bunny() -> Script {
             let n = enemies.len() as i32;
             let lucky =
                 ctx.self_.as_ref().map_or(0, |me| lucky_on(state, me)) + luck_of(state, ctx.controller);
-            // `Rng::lucky` with no Lucky makes its one roll and no other, the same draw as `rng.int(n)`.
-            let index = ctx.rng.lucky(
-                lucky,
-                |rng| rng.int(n),
-                |a, b| {
-                    if costs[b as usize] > costs[a as usize] {
-                        b
-                    } else {
-                        a
-                    }
-                },
-            );
+            let index = if lucky > 0 {
+                ctx.rng.lucky(
+                    lucky,
+                    |rng| rng.int(n),
+                    |a, b| {
+                        if costs[b as usize] > costs[a as usize] {
+                            b
+                        } else {
+                            a
+                        }
+                    },
+                )
+            } else {
+                ctx.rng.int(n)
+            };
             vec![steal(json_as(
                 json!({ "instanceId": enemies[index as usize].id.clone() }),
             ))]

@@ -332,4 +332,8 @@ exclude_re = [
   # version's own place in the list, so a key held from an earlier place never equals a later one: `<=` replaces
   # exactly when `<` does.
   'c033_true_conservative\.rs:.*replace < with <= in strongest',
+  # crates/cards (#3517): S+ #25 Snom Bunny's Death at a Lucky of 0: `Rng::lucky(0, roll, keep)` makes its one roll
+  # and no other (its loop runs `x.max(0)` times), the very `rng.int(n)` the other branch draws, from the same
+  # cursor. Pinned to the `lucky > 0` column (34): the cost comparison's `>` (column 46) is held by a test.
+  'c025_snom_bunny\.rs:\d+:34: replace > with >= in snom_bunny',
 ]
