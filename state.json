@@ -15997,11 +15997,6 @@
       "owner": "claude-6",
       "owner_since": "2026-11-13T16:34:01Z",
       "owner_why": "handed off from `claude-1`: `claude-1` is busy: its lanes are all taken",
-      "paused": {
-        "at": "2026-11-13T16:25:34Z",
-        "interrupt": "usage",
-        "provider": "claude-1"
-      },
       "pending_request": false,
       "planned_at": "2026-11-13T15:48:33Z",
       "planned_by": "`claude-1` (claude, `sonnet`, medium)",
