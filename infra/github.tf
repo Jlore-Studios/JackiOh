@@ -174,11 +174,12 @@ import {
 # The runner gate (bot/go/internal/cigate, bot/README.md "The runner gate"): GitHub runs a fixed
 # number of hosted jobs at once for the organization (the Team plan's 60, #3740; the Free plan's 20
 # before), shared with the bots' runs, and takes queued jobs in the order they came with no priority
-# of any kind, so CI and the super run wait in this environment, holding no runner, until the night
-# bot's account, its one required reviewer, approves them, which the status loop does once there is
-# room: merge-queue builds first, then staging's and production's runs, then `main`'s CI and pull
-# requests', each the oldest first. ci.yml's `changes` job (every run but a dispatch) and super.yml's
-# first jobs name it through the variable below; with the variable gone, nothing waits.
+# of any kind, so a pull request's CI, `main`'s and the super run wait in this environment, holding
+# no runner, until the night bot's account, its one required reviewer, approves them, which the
+# status loop does once a run of theirs ends: only a few go at once, counted in pull requests (three
+# of `main`'s and pull requests', two of staging's and production's). The merge queue's builds never
+# wait. ci.yml's `changes` job and super.yml's first jobs name it through the variable below; with
+# the variable gone, nothing waits.
 #
 # The bot approves runs it started itself, so self-review stays allowed. An admin may bypass the
 # rule, approving a waiting run by hand, and deleting `ci_gate_environment` turns the gate off for

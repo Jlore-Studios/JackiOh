@@ -158,15 +158,16 @@ jobs:
   # is set here, not in ci-scope.sh, because a bot-only diff is exactly the one ci-scope.sh answers
   # `full=false` for, and because .github/ is a path the bots may not change. Any doubt says `true`.
   #
-  # The runner gate (bot/go/internal/cigate, bot/README.md "The runner gate"): every run but a
-  # dispatch (a person's) waits here, holding no runner, in the environment the repository variable
+  # The runner gate (bot/go/internal/cigate, bot/README.md "The runner gate"): a pull request's run
+  # and a push to `main` wait here, holding no runner, in the environment the repository variable
   # CI_GATE_ENVIRONMENT names (`ci-runners`, infra/github.tf), until its one required reviewer, the
-  # night bot's account, approves it: the status loop does once GitHub's runners have room, in the
-  # owner's order (2026-11-13): merge-queue builds, then a promotion's pull request (into
-  # `_production`) with super.yml's runs, then the push to `main` and pull requests'. Every other job
-  # of the run needs this one, so the whole run waits. With the variable unset nothing waits: the
-  # name is empty, so the job has no environment. `queue-supersede` needs nothing, so a merge-queue
-  # build cancels its pull request's older builds while it waits.
+  # night bot's account, approves them: the status loop does once a run of theirs ends, so only a
+  # few go at once, counted in pull requests (the owner's order of 2026-11-13: a promotion's pull
+  # request into `_production`, with super.yml's runs, has slots of its own; the push to `main` and
+  # pull requests' share theirs, `main`'s first). Every other job of the run needs this one, so the
+  # whole run waits. A merge-queue build never waits (the queue builds three at once already), nor
+  # a dispatch (a person's). With the variable unset nothing waits: the name is empty, so the job
+  # has no environment.
   changes:
     name: what the change touches
     runs-on: ubuntu-latest
@@ -176,7 +177,7 @@ jobs:
     permissions:
       contents: read
       actions: read
-    environment: ${{ github.event_name != 'workflow_dispatch' && vars.CI_GATE_ENVIRONMENT || '' }}
+    environment: ${{ (github.event_name == 'pull_request' || github.event_name == 'push') && vars.CI_GATE_ENVIRONMENT || '' }}
     outputs:
       full: ${{ steps.scope.outputs.full }}
       db: ${{ steps.scope.outputs.db }}

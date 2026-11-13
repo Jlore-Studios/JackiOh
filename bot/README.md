@@ -1294,67 +1294,52 @@ twenty minutes on and mostly spent waiting for runners. The harness does not wai
 
 GitHub runs a fixed number of hosted jobs at once for the whole organization (60 on the Team plan
 since 2026-11-11, #3740; the Free plan's 20 before), and the bots' own runs hold many of them.
-Every CI run asks for all of its jobs as soon as it can, so when many go at
-once each waits behind all the others at every stage (its scope, its builds, its tests, its
-summary) and none finishes soon: on 2026-11-05 merge-queue builds took 40 to 137 minutes, nearly all
-of it waiting. GitHub gives no job a priority over another (its runners take queued jobs in the
-order they were queued, and no branch protection or ruleset changes that), so the order is made
-before a run asks for its runners: CI and the super run wait before they start, holding no runner,
-and start in the owner's order (2026-11-13), once there is room
-([`go/internal/cigate/`](go/internal/cigate/)): **the merge queue, then staging and production,
-then `main`'s CI and pull requests**.
+Every CI run asks for all of its jobs as soon as it can, and GitHub's runners take queued jobs in
+the order they came (no job has a priority over another, and no branch protection or ruleset
+changes that), so when many runs go at once each shares the runners with all the others at every
+stage (its scope, its builds, its tests, its summary) and none finishes soon: on 2026-11-05
+merge-queue builds took 40 to 137 minutes, nearly all of it waiting. So only a few go at once,
+**counted in pull requests, not runners** (the owner's ask of 2026-11-13), the way the merge queue
+builds only three at once: a run waits before it starts, holding no runner, until a run of its rung
+ends ([`go/internal/cigate/`](go/internal/cigate/)).
 
+- **The rungs**, in the owner's order:
+  - the merge queue's builds never wait: the queue builds `max_entries_to_build` (3) at once already
+    ([`infra/github.tf`](../infra/github.tf));
+  - staging's and production's runs go `ReleaseRuns` (2) at once: super.yml's (production's gate:
+    the daily run on `_staging`, a promotion's pull request) and CI on a promotion's pull request
+    into `_production` (a promotion is two runs, its CI and its super run);
+  - `main`'s CI and pull requests' go `PullRuns` (3) at once together (a pull request's CI is one
+    run, since a newer push replaces its running one): `main`'s first, since the promotions wait on
+    it and the merge queue already ran most of it, then a ready pull request's, whose CI is all that
+    keeps it out of the merge queue, then a draft's, which runs beside its own review run, each the
+    oldest first (the open pull requests are read once a tick, and only when two or more pull
+    requests' runs wait).
+  The slots are apart: a full rung of pull requests holds up no promotion, nor a promotion a pull
+  request. A run that has waited `MaxWaitRelease` (15 minutes) or `MaxWaitPull` (30) goes first of
+  its rung, so a draft never starves behind a stream of ready pull requests; every run it waits on
+  is one the gate started, and each ends.
 - **How it waits.** ci.yml's `changes` job, which every other job of the run needs, runs in the
   environment the repository variable `CI_GATE_ENVIRONMENT` names, `ci-runners`
   ([`infra/github.tf`](../infra/github.tf)), whose one required reviewer is the night bot's account,
-  and so do super.yml's first jobs (each one that needs no other). A job waiting for a reviewer
-  holds no runner. Every CI run names it but a dispatch (a person's, which never waits), and every
-  super run but its schedule's `daily`, which only starts the run; with the variable unset nothing
-  waits. The deploys themselves (`deploy-staging.yml`, the promotions) are a job or two each and
-  never wait.
+  for a pull request's run and a push to `main`, and so do super.yml's first jobs (each one that
+  needs no other) for every run but its schedule's `daily`, which only starts the run. A job
+  waiting for a reviewer holds no runner. A merge-queue build and a dispatch of ci.yml (a person's)
+  never wait, nor the deploys themselves (`deploy-staging.yml`, the promotions, a job or two each);
+  with the variable unset nothing does.
 - **Who starts it.** The status loop, as that reviewer, every 30 seconds (`--gate-every`), and every
   sweep (bot-commands' scheduled one among them), so a stopped loop slows the gate to the sweep's
-  pace rather than stopping CI. A tick counts the jobs queued for one of GitHub's own runners and
-  the runners in use (the jobs queued and going, the bots' own runs among them; the bot's boxes'
-  queues are theirs) and approves, each rung the oldest first:
-  - merge-queue builds first, each while fewer than `QueueLimit` (16) jobs are queued;
-  - then staging's and production's runs: super.yml's (production's gate: the daily run on
-    `_staging`, a promotion's pull request) and CI on a promotion's pull request into `_production`,
-    each while fewer than `ReleaseLimit` (10) are queued and more than `ReleaseFree` (10) of GitHub's
-    `Runners` (60) are free;
-  - then `main`'s CI, a ready pull request's and a draft's, in that order, one a tick
-    (`PullsPerTick`), each while fewer than `PullLimit` (6) are queued and more than `PullFree` (20,
-    one merge-queue build's first ask) are free (`main`'s first since the promotions wait on it and
-    the merge queue already ran most of it; a ready pull request's CI is all that keeps it out of the
-    merge queue, while a draft's runs beside its own review run; the open pull requests are read
-    once a tick, and only when two or more pull requests' runs wait);
-  - each rung's limits are tighter than the one above's, so a run never starts while one above it
-    waits for room, and the runners the lower rungs leave free let a merge-queue build start at
-    once rather than in line behind their jobs, with nothing queued too;
-  - and each rung below the merge queue has only a few runs going at once (approved and not ended):
-    `ReleaseRuns` (2) of staging's and production's, `PullRuns` (3) of `main`'s and pull requests'
-    together, as the merge queue builds only `max_entries_to_build` (3) at once (the owner's ask of
-    2026-11-13): GitHub's runners share themselves among every run going, so many side by side each
-    end late, where a few at a time each end soon, and a pull request reaches the merge queue sooner;
-  - a CI run counts for `RunJobs` (20, the builds and Rust test groups a full run asks for at once)
-    from its approval until its first job (`FirstJob`, `what the change touches`) has finished, on
-    every tick in between: it asks for the rest of its jobs only then, about a minute after it
-    starts, and before #3292's follow-up the gate forgot it after its own tick, so runs approved a
-    tick apart all got in before the first of them asked for its runners. A super run counts for as
-    many on its approval's tick, and for its jobs after;
-  - and any run that has waited `MaxWaitQueue` (10 minutes, a queue build), `MaxWaitRelease` (15,
-    staging's or production's) or `MaxWaitPull` (30, `main`'s or a pull request's) starts whatever
-    is queued, first of its rung once the rung has a run free (the runs it waits on are the gate's
-    own, and each ends), and every waiting run starts when what the runners hold cannot be read: the
-    gate orders and delays CI, and never starves it.
+  pace rather than stopping CI. A tick reads the runs waiting and the runs going (approved, queued
+  or in progress) and approves the waiting ones in order while their rung has a slot; when the runs
+  going cannot be read, it approves every waiting run, so the gate orders and delays CI and never
+  stops it. Each approval's comment says why. Only the reviewer's process approves: Squishy's sweep
+  skips it.
 - **Why not GitHub's own queueing.** A workflow's `concurrency` group runs one run at a time, and
   `queue: max` (May 2026) lets up to 100 wait their turn in order, but only one goes per group, it
   cannot be combined with `cancel-in-progress` (which a pull request's newer push needs to replace
   its running CI), and nothing orders one group before another. A `schedule:` would be the clock,
   but GitHub fires this repository's schedules hours late. So the gate is the queue, the status
-  loop's 30-second tick its clock, and a few at a time per rung its stagger, the way the merge queue
-  staggers its builds.
-  Each approval's comment says why. Only the reviewer's process approves: Squishy's sweep skips it.
+  loop's 30-second tick its clock, and a few at a time per rung its stagger.
 - **The way out.** An admin may approve a waiting run by hand (the environment lets admins bypass
   it). Deleting the `CI_GATE_ENVIRONMENT` variable (Settings -> Secrets and variables -> Actions ->
   Variables, or its resource in `infra/github.tf`) turns the gate off for every run that starts

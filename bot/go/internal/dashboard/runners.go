@@ -13,7 +13,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/cigate"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/events"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
@@ -43,8 +42,8 @@ var Explained = "<!-- jackioh-bot:runners-explained -->"
 
 // HostedRunners is HOSTED_RUNNERS: GitHub's runners the organization may hold at once, its every
 // repository's jobs together (the Team plan's 60 since 2026-11-11, #3740; the Free plan's 20
-// before, #1455): the runner gate's `cigate.Runners`.
-var HostedRunners = cigate.Runners
+// before, #1455).
+var HostedRunners = 60
 
 // RunnerRuns is RUNNER_RUNS: the runs going or queued whose jobs the section reads, the oldest
 // first: a call each, which costs no rate limit while the run's jobs are as they were at the last
