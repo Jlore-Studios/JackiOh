@@ -15996,6 +15996,13 @@
     "3790": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-13T00:31:34Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "Rule 1: it adds an engine read in crates/engine/src/query.rs and changes how 17 cards answer plays, so the rules change; it is under 40 files."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
