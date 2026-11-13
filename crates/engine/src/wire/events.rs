@@ -35,6 +35,14 @@ string_union! {
         Plague = "plague",
         Grade = "grade",
         Brittle = "brittle",
+        /// R3540000: a Unit's or a hero's Burn.
+        Burn = "burn",
+        /// R3540000: a Unit's or a hero's Toxic.
+        Toxic = "toxic",
+        /// R3548000: a player's Tipsy counter.
+        Tipsy = "tipsy",
+        /// R3548002: the game-wide worth of every Warhero Token.
+        Warhero = "warhero",
     }
 }
 
@@ -523,6 +531,11 @@ pub enum GameEvent {
         instance_id: String,
         def_id: String,
         owner: PlayerId,
+        /// R3536001: Temporary discarded it (`temporary::discard_temporary_cards`). Only ever
+        /// `Some(true)`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        by_temporary: Option<bool>,
     },
     /// `turnDraw` (B5 E4, R457): this draw's number among `player`'s draws this turn, whoever's turn it
     /// is (1 for the first; a fatigue draw counts, a limited one does not). Public: the hand count and
@@ -581,7 +594,9 @@ pub enum GameEvent {
     },
     /// `brittle` is B3.3's count (R385). `placed` (B5 E19) is how many Plague Counters one placement put
     /// on the card — set on a placement only, so "whenever Plague Counters are placed on this" answers the
-    /// placement once however many tokens it placed, and never a removal.
+    /// placement once however many tokens it placed, and never a removal. R3540000: for `burn` and
+    /// `toxic`, `instance_id` may be `hero-<player>` (a hero holds them too), and `placed` is the amount a
+    /// gain added; a tick's drop and a Vanilla's clearing carry none.
     CounterChanged {
         instance_id: String,
         counter: CounterKind,
@@ -1053,6 +1068,15 @@ pub enum GameEvent {
         player: PlayerId,
         cells: Vec<ZoneRef>,
     },
+    /// R3554005 (S+ #109 Lancer, #126 Vela, #127 Corvus): the line was drawn for `player`: the
+    /// source's zone first, then the lattice cells to the tile. Public: board positions only.
+    LineDrawn {
+        player: PlayerId,
+        cells: Vec<ZoneRef>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        laser: Option<bool>,
+    },
     /// R1183002 (Meditative+ #18 Cognitive Offloading): the engine plays the rest of `player`'s
     /// turn `turn` (the autopilot); the actions it takes follow as their own events. Public: a player
     /// and a number.
@@ -1064,6 +1088,14 @@ pub enum GameEvent {
     /// out at the start of their turn, or an effect awakened it — and is a Unit for every rule from now
     /// on; its own "When this awakens" answers this (§6.2). Public: the card was face-up on the field.
     Awakened {
+        player: PlayerId,
+        instance_id: String,
+        def_id: String,
+    },
+    /// R3536000, R3536005: `player`'s card evolved — its `evolved` mark landed — and its Evolve text
+    /// runs next (inline, or queued behind extra runs). Public: the card was acting on the field or
+    /// lying in a graveyard its viewer may read.
+    Evolved {
         player: PlayerId,
         instance_id: String,
         def_id: String,
@@ -1369,8 +1401,10 @@ string_union! {
         SecretRevealed = "secretRevealed",
         Predicted = "predicted",
         CurveDrawn = "curveDrawn",
+        LineDrawn = "lineDrawn",
         AutopilotEngaged = "autopilotEngaged",
         Awakened = "awakened",
+        Evolved = "evolved",
         Traded = "traded",
         MarketCreditsChanged = "marketCreditsChanged",
         MarketBought = "marketBought",
@@ -1634,8 +1668,10 @@ impl GameEvent {
             GameEvent::SecretRevealed { .. } => GameEventType::SecretRevealed,
             GameEvent::Predicted { .. } => GameEventType::Predicted,
             GameEvent::CurveDrawn { .. } => GameEventType::CurveDrawn,
+            GameEvent::LineDrawn { .. } => GameEventType::LineDrawn,
             GameEvent::AutopilotEngaged { .. } => GameEventType::AutopilotEngaged,
             GameEvent::Awakened { .. } => GameEventType::Awakened,
+            GameEvent::Evolved { .. } => GameEventType::Evolved,
             GameEvent::Traded { .. } => GameEventType::Traded,
             GameEvent::MarketCreditsChanged { .. } => GameEventType::MarketCreditsChanged,
             GameEvent::MarketBought { .. } => GameEventType::MarketBought,
@@ -1740,8 +1776,9 @@ mod tests {
         // three, `voteCast`, `votedOut` and `fled` (R1843000, R1843002); the starscape map one,
         // `starscapeTravelled` (R1847001); #1850's one, `held` (R1850003); the Marketplace's two,
         // `marketBought` and `marketSold` (R1853003); and #1855's `boardReplaced` (R1855000); and
-        // #2652's `rolled` (R2652001); and #2783's `hookResolving` (R2783000).
-        assert_eq!(GAME_EVENT_TYPES.len(), 93);
+        // #2652's `rolled` (R2652001); and #2783's `hookResolving` (R2783000); and Stinkyscape+'s
+        // `evolved` (R3536005); and E7's `lineDrawn` (R3554005).
+        assert_eq!(GAME_EVENT_TYPES.len(), 95);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

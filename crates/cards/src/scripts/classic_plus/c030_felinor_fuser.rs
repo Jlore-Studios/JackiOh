@@ -152,8 +152,8 @@ mod tests {
     /// #25, #30, #67, #87 (all tribes), #93, #94 and #102 (whose card the catalog does not hold yet),
     /// Stinkyscape's #87 Siva 1 (#1884), and Training Grounds' (#2204) #17, #22, #23, #33 and the
     /// snapshots #44 (of Core #12) and #51 (of Core #43), which a Discover never offers beside their Core
-    /// card (R2204001).
-    const FELINOR_UNITS: [&str; 19] = [
+    /// card (R2204001), and Stinkyscape+'s #4 Profe Yates (#3573).
+    const FELINOR_UNITS: [&str; 20] = [
         "core-012",
         "core-043",
         "core-086",
@@ -173,9 +173,10 @@ mod tests {
         "traininggrounds-033",
         "traininggrounds-044",
         "traininggrounds-051",
+        "stinkyscapeplus-004",
     ];
-    /// The two of `FELINOR_UNITS` that cost (4), which the faces' "(2) or less" and "(3) or less" leave out.
-    const COSTING_4: [&str; 3] = ["core-043", "meditative-094", "traininggrounds-051"];
+    /// The four of `FELINOR_UNITS` that cost (4), which the faces' "(2) or less" and "(3) or less" leave out.
+    const COSTING_4: [&str; 4] = ["core-043", "meditative-094", "traininggrounds-051", "stinkyscapeplus-004"];
     /// #11 Tempo Timmy: a non-Felinor on the enemy side, which #43 Big Felinor's Cry would destroy.
     const TIMMY: &str = "core-011";
     const FILLER: &str = "core-005";

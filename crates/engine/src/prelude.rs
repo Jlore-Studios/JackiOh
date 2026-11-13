@@ -15,16 +15,21 @@ pub use crate::cast_on_draw_now::*;
 // `catalog` but its `register_catalog`, which is `jackioh_cards::register_all`'s to call (by path) and
 // whose test twin the testkit exports: a card's `mod tests` globs both the prelude and the testkit.
 pub use crate::catalog::{
-    CatalogQueryArgs, FUSED_DIGEST_MARK, GlitchOdds, RADIANT_INGREDIENT_MARK, TransientHolder,
-    catalog_version, def_by_index, def_of, excluding_def_id, find_def, fused_id_parts, fused_id_specs,
-    glitch_or_not, held_out, is_digest_id, pick_generated, query, query_cost, registered_catalog, roll_grape,
-    roll_weighted, self_def_ids,
+    CatalogQueryArgs, DrawTally, FUSED_DIGEST_MARK, GlitchOdds, PAST_ID_MARK, PastPool, PastVersions,
+    RADIANT_INGREDIENT_MARK, TransientHolder, catalog_version, def_by_index, def_of, excluding_def_id,
+    find_def, fused_id_parts, fused_id_specs, glitch_or_not, held_out, is_digest_id, past_card_of, past_def,
+    past_ids_of, pick_generated, pick_generated_unique, pick_unique, query, query_cost,
+    register_past_versions, registered_catalog, roll_grape, roll_weighted, self_def_ids, split_past_id,
 };
 pub use crate::combat::*;
 pub use crate::config::*;
 pub use crate::cost_rules::*;
 pub use crate::faces::*;
 pub use crate::float::*;
+pub use crate::geometry::{
+    chain_members, half_of_card, half_of_lane, in_hole, is_void, lane_in_half, reaches,
+};
+pub use crate::giga::{enters_giga, is_giga, lanes_of, occupant_at};
 pub use crate::grants::*;
 pub use crate::graveyard_play::*;
 pub use crate::kill_credit::*;
@@ -46,8 +51,9 @@ pub use crate::slumber::{is_slumbering, slumber_turns_of, when_this_awakens};
 // R1852000–R1852007: the Starship's reads and its "When launched" (the launch price is the effects');
 // R1859001, R1859003: a fused piece's numbers on its face, and whether a card is a piece now.
 pub use crate::starship::{
-    STARSHIP_LAUNCH_ABILITY, building_a_ship, dormant_starship_of, is_dormant_starship, is_launched_starship,
-    is_starship_piece, launch_cost, launched_starship_of, piece_number, starship_pieces_of, when_launched,
+    STARSHIP_LAUNCH_ABILITY, building_a_ship, dormant_starship_of, dormant_starships_of, hand_launch_cost,
+    hull_def_of, is_dormant_starship, is_launched_starship, is_starship_piece, launch_cost,
+    launched_starship_of, piece_number, starship_pieces_of, when_launched,
 };
 pub use crate::state::*;
 pub use crate::times_played::*;

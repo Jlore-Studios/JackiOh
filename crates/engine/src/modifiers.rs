@@ -401,6 +401,25 @@ pub fn add_death_watch(
     )
 }
 
+/// R3570004: Call to Chaos (Mindustrial-Swarm Edition)'s launch watcher — a `never` modifier on `player`
+/// that answers each of their own Starship launches (Stinkyscape+ #142, entry 8).
+pub fn add_launch_watch(
+    sink: &mut EngineSink<'_>,
+    player: PlayerId,
+    resume: Resume,
+    label: &str,
+) -> PlayerModifier {
+    add_modifier(
+        sink,
+        player,
+        ModifierExpiry::Never,
+        ModifierKind::LaunchWatch {
+            resume,
+            label: label.to_string(),
+        },
+    )
+}
+
 /// B5 E28, R458: "For the rest of the game: at the start of your turn, …" — a `never` modifier on
 /// `player` that re-enters `resume` at each start of their turn (`turn.rs`'s delayed stage), or with
 /// `at_end` at each end of their turn (R1861002). Its `seq` is the one its id is numbered from

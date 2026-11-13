@@ -143,6 +143,13 @@ card with a wake trigger on either field, and each Unit with one in the seat's o
 prices the controller's evaluation after the one wake less after the other, each crystal gained at
 `next_turn_mana`; `slumber_worth` adds `AI_EVAL.awaken` of it for both sides' sleepers, inside the slumber
 share, and `GREEDY_EVAL` keeps 0.
+A passed line's Float counts toward the seat's own "Float reduces cost" cards (R3695000): the engine's
+`float_cuts_in_hand` reads what the Float took off each of them, and `float_credit` pays
+`AI_EVAL.float_discount` for each crystal that went toward one still above the seat's crystals (its
+`mana.max`, never the handicap's), in `passed_score` and `replied_score` alike; `GREEDY_EVAL` keeps 0.
+A card beneath one of the seat's own Stack piles counts `AI_EVAL.dormant_share`, a half, of its
+`unit_worth` (`dormant_worth`, R3695001), so the Drone Battleship counts its two lower layers; the
+enemy's count `dormant_card` each, and `GREEDY_EVAL` keeps 0.
 A card in either graveyard that its owner may still play from there (`playable_from_graveyard`: its own
 Flashback, R783012, Sanctum's lent one, R1869003, or a field permission such as Second Wind's, R454)
 counts `AI_EVAL.graveyard_playable` of its hand price, the enemy's too, since a graveyard is public; a
@@ -284,7 +291,8 @@ A player's random deck passes `Some(vec![])` beside `banned: Some(vec![])`; an `
 gated card in by name. Emptying the list lifts the gate and deals every deck as before it, which issue
 #732 did once it had measured the AI on the Meditative set, the list's one set until then. It held the
 Stinkyscape set from its release (issue #1884) until issue #1885 measured the AI on it: gating a set that
-ships before the AI is trained on it is listing it there. `shape`
+ships before the AI is trained on it is listing it there. It lists the Stinkyscape+ set from its release
+(issue #3573) until fullsend 2's sweep (#3574) measures the AI on it. `shape`
 (R976000) multiplies each card's weight by `shaped_weight`, the unban lane's dealt-quality table in
 `src/shadow_ban.rs`; it is off unless a caller sets it, whatever `banned` holds, and no caller does, so
 practice, the quality gates and both seats of an arena or a promotion deal unshaped. The mulligan still

@@ -191,6 +191,18 @@ mod tests {
         assert_eq!(plain_words(&spans), "You did {what}");
     }
 
+    /// As `i18n.ts`'s `fill` read a token (`\{(\w+)\}`): a brace pair with no name between, or a name whose
+    /// brace never closes, at the end or before a space, is no token, so it stays as written whatever the parts
+    /// name.
+    #[test]
+    fn an_empty_or_unclosed_brace_is_no_token() {
+        let parts = [("", Part::from("nothing")), ("card", Part::from("Pointmaster"))];
+        let said = |template: &str| plain_words(&sentence(Words::new(Locale::En), template, &parts));
+        assert_eq!(said("{} hit"), "{} hit");
+        assert_eq!(said("Hit {card"), "Hit {card");
+        assert_eq!(said("{card hit"), "{card hit");
+    }
+
     #[test]
     fn a_term_stands_as_its_own_span() {
         let term = vec![Span::Text { text: "Taunt".into() }];

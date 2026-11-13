@@ -1,29 +1,66 @@
-//! C+ #49 Jay Fungus (SPEC §8.7 row 49). (2) Unit, Rare, 3/6 → 6/12.
-//!   Base:    "Taunt. End of turn: A random card in your hand costs ({discount}) less." — discount 2
-//!   Radiant: the same text, discount 20.
+//! C+ #49 Jay Fungus (SPEC §8.7 row 49). (2) Unit, Rare, 3/6 → 6/12, tag Swarm.
+//!   Base:    "Taunt. End of turn: A random card in your hand costs ({discount}) less. Evolves when
+//!            your hand has at least {zeroes|(0) Cost card|(0) Cost cards}. Evolve: Gain Poisonous."
+//!            — discount 2, zeroes 3.
+//!   Radiant: the same text, discount 20, zeroes 1.
 //!   Engine:  "`costMod` −2 (Radiant −20) on a random card in your hand it can make cheaper: current cost
 //!            above 0 and not an X-cost card (R65: modifiers never reach X); with none, nothing. The cost
 //!            floors at 0 (§2.3). Tunes: discount 2 ↑."
 //!
 //! "End of turn" is its controller's (§6.2), so the opponent's turn end does nothing. The pick and the
 //! R129 rule that an empty choice draws nothing are `discount_random_in_hand`'s.
+//!
+//! R3551000: `evolves_when` counts the hand cards at their cost now (R65, X cards included), and the
+//! condition is read at the settled state check (R3536001). `evolve` grants Poisonous, as S #91 the
+//! Propagation's Wasp's does Flying.
 
 use jackioh_engine::effects::discount_random_in_hand;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-049";
 
+/// R3551000: how many of its controller's hand cards cost (0) now (R65: X cards count, at 0).
+fn zero_cost_in_hand(state: &GameState, player: PlayerId) -> usize {
+    zone_cards(state, player, OffFieldZone::Hand)
+        .iter()
+        .filter(|card| effective_cost(state, card, CostOptions::default()) == 0)
+        .count()
+}
+
 pub fn script() -> CardScripts {
+    let base = Script {
+        end_of_turn: Some(hook(|ctx| {
+            vec![discount_random_in_hand(json_as(json!({ "amount": param(&*ctx, "discount") })))]
+        })),
+        // R3551000: Evolves when its controller's hand holds at least the declared `zeroes` (3,
+        // Radiant 1) cards costing (0).
+        evolves_when: Some(read_hook(|a| {
+            zero_cost_in_hand(a.state, a.self_.controller) >= param(&a, "zeroes") as usize
+        })),
+        evolve: Some(hook(|_ctx| {
+            vec![grant_keyword(json_as(
+                json!({ "target": { "of": "self" }, "keyword": { "kind": "Poisonous" } }),
+            ))]
+        })),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's 20 is its declared `discount` (and its 1 its `zeroes`),
+    // which `param` reads.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
+
+/// R767000: through v0.5.13g the Fungus never evolved; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_13g() -> CardScripts {
     let base = Script {
         end_of_turn: Some(hook(|ctx| {
             vec![discount_random_in_hand(json_as(json!({ "amount": param(&*ctx, "discount") })))]
         })),
         ..Script::default()
     };
-
-    // The same script: the Radiant face's 20 is its declared `discount`, which `param` reads.
     let radiant = base.clone();
-
     CardScripts { base, radiant }
 }
 
@@ -235,6 +272,129 @@ mod tests {
             step_param(down.card_mut(FUNGUS), "discount", -5);
             down.end_turn();
             assert_eq!(down.card(THREE).cost_mod, -1);
+        }
+    }
+
+    mod evolves_r3551000 {
+        use super::*;
+
+        /// The Fungus on the field, evolved exactly when its controller's hand holds enough (0)s.
+        fn evolved(s: &Scenario) -> bool {
+            s.card(FUNGUS).evolved == Some(true)
+        }
+
+        /// How many times P1's cards evolved this game (R3536004). The setup's state check evolves a
+        /// Fungus whose hand already holds its (0)s, and that Evolved event stays in setup, which the
+        /// log does not keep (R3536001), so the count is the controller's, not the log's.
+        fn evolved_events(s: &Scenario) -> usize {
+            evolutions_of(s.state(), P1) as usize
+        }
+
+        fn poisonous(s: &Scenario) -> bool {
+            has_keyword(&s.stats(FUNGUS).keywords, KeywordKind::Poisonous)
+        }
+
+        #[test]
+        fn r3551000_three_zero_cost_cards_evolve_it_into_poisonous() {
+            crate::register_all();
+            let mut s = grown(Grown {
+                hand: Some(vec![FREE, FREE, FREE]),
+                ..Grown::default()
+            });
+            // The state check after an action settles the standing condition (R3536001).
+            s.end_turn();
+            s.end_turn();
+            assert!(evolved(&s));
+            assert!(poisonous(&s));
+            assert_eq!(evolved_events(&s), 1);
+            assert!(s.stats(FUNGUS).keywords.contains(&Keyword::Taunt));
+            // R65: at their cost now: the discount it dealt this end of turn counts (still (0)s).
+            assert_eq!(effective_cost(s.state(), s.card(FREE), Default::default()), 0);
+        }
+
+        #[test]
+        fn r3551000_two_evolve_nothing() {
+            crate::register_all();
+            let mut s = grown(Grown {
+                hand: Some(vec![FREE, FREE, THREE]),
+                ..Grown::default()
+            });
+            s.end_turn();
+            s.end_turn();
+            assert!(!evolved(&s));
+            assert!(!poisonous(&s));
+            assert_eq!(evolved_events(&s), 0);
+        }
+
+        #[test]
+        fn r3551000_radiant_evolves_at_one() {
+            crate::register_all();
+            let mut s = grown(Grown {
+                radiant: true,
+                hand: Some(vec![FREE, THREE, THREE]),
+                ..Grown::default()
+            });
+            s.end_turn();
+            s.end_turn();
+            assert!(evolved(&s));
+            assert!(poisonous(&s));
+            assert_eq!(evolved_events(&s), 1);
+        }
+
+        #[test]
+        fn r3551000_it_evolves_once() {
+            crate::register_all();
+            let mut s = grown(Grown {
+                hand: Some(vec![FREE, FREE, FREE]),
+                ..Grown::default()
+            });
+            s.end_turn();
+            s.end_turn();
+            assert!(evolved(&s));
+            // Later settled checks evolve it no more (R3536000).
+            s.end_turn();
+            s.end_turn();
+            assert!(evolved(&s));
+            assert!(poisonous(&s));
+            assert_eq!(evolved_events(&s), 1);
+        }
+
+        #[test]
+        fn r3551000_an_x_card_counts_at_its_cost_now_of_0() {
+            crate::register_all();
+            let mut s = grown(Grown {
+                hand: Some(vec![X_SPELL, FREE, FREE]),
+                ..Grown::default()
+            });
+            s.end_turn();
+            s.end_turn();
+            assert!(evolved(&s), "an X card is (0) out of play (R65)");
+        }
+
+        #[test]
+        fn r767000_the_kept_v0_5_13g_script_never_evolves() {
+            crate::under_kept(FUNGUS, script_v0_5_13g(), || {
+                let mut s = grown(Grown {
+                    hand: Some(vec![FREE, FREE, FREE]),
+                    ..Grown::default()
+                });
+                s.end_turn();
+                s.end_turn();
+                assert!(!evolved(&s));
+                assert!(!poisonous(&s));
+                assert_eq!(evolved_events(&s), 0);
+            });
+        }
+
+        #[test]
+        fn swarm_on_both_faces() {
+            crate::register_all();
+            let def = crate::card_def(ID);
+            assert!(def.tags.contains(&Tag::Swarm));
+            for face in [&def.base, &def.radiant] {
+                assert!(face.text.contains("Evolve: Gain Poisonous."));
+                assert!(face.text.contains("(0) Cost cards}."));
+            }
         }
     }
 

@@ -12,8 +12,10 @@
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
+use jackioh_engine::config::GIGA_LANES;
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::P1;
+use jackioh_engine::zones::row_size;
 
 use super::scenario;
 
@@ -74,6 +76,12 @@ fn zones_at(plays: &[(Option<ZoneChoice>, Option<bool>)], embiggened: bool) -> V
         .collect()
 }
 
+/// R3546000: whether a GIGA card anchored at `zone` has its second lane in the row (`None`, a card with
+/// no zone to choose, has no span to fit).
+fn spans_fit(zone: Option<ZoneChoice>) -> bool {
+    zone.is_none_or(|zone| zone.lane + GIGA_LANES - 1 <= row_size(zone.row))
+}
+
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
 /// The modes of the first play `legalActions` lists for p1's hand card, so a card that declares one
@@ -90,6 +98,20 @@ fn listed_modes(g: &Scenario, card: &str) -> Option<Vec<String>> {
         .flatten()
 }
 
+/// The targets of the first play `legalActions` lists for p1's hand card, so a card that declares one
+/// (Stinkyscape+ #24 Forced Propagation's pick, R3557001) is played with a pick it is offered.
+fn listed_targets(g: &Scenario, card: &str) -> Option<Vec<Selection>> {
+    legal_actions(g.state(), P1)
+        .into_iter()
+        .find_map(|action| match action {
+            ActionBody::Play {
+                instance_id, targets, ..
+            } if instance_id == card => Some(targets),
+            _ => None,
+        })
+        .flatten()
+}
+
 fn play(g: &Scenario, card: &str, zone: Option<ZoneChoice>, embiggen: bool) -> ReduceResult {
     let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
     let body = ActionBody::Play {
@@ -99,12 +121,20 @@ fn play(g: &Scenario, card: &str, zone: Option<ZoneChoice>, embiggen: bool) -> R
         embiggen: Some(embiggen),
         equip: None,
         tributes: None,
-        targets: None,
+        targets: listed_targets(g, card),
         modes: listed_modes(g, card),
         plague: None,
         face_down: None,
     };
     reduce(g.state(), &Action::new(body, P1, format!("embiggen-{nonce}")))
+}
+
+/// Whether playing `card` embiggened at `zone` lands it GIGA (R3546002: lent by an embiggened conditional
+/// keyword, as S+ #64 to #67 do, R3555001).
+fn embiggens_into_giga(g: &Scenario, card: &str, zone: Option<ZoneChoice>) -> bool {
+    let result = play(g, card, zone, true);
+    result.error.is_none()
+        && find_instance(&result.state, card).is_some_and(|instance| instance.giga == Some(true))
 }
 
 fn paid(result: &ReduceResult) -> Option<(i32, Option<bool>)> {
@@ -135,9 +165,20 @@ fn r81_with_mana_for_the_embiggen_price_every_embiggen_card_is_offered_at_both_p
                 let bigger = zones_at(&plays, true);
                 let what = format!("{id} (radiant {radiant}) with {mana} mana");
                 assert!(!normal.is_empty(), "{what}: the normal price is offered");
+                // R3546002, R3555001: a card that turns GIGA when embiggened fills four zones, so its
+                // embiggen price is offered only where that span fits (not at its row's last lane);
+                // every other card's is offered for every zone the normal one is.
+                let giga = bigger
+                    .first()
+                    .is_some_and(|zone| embiggens_into_giga(&g, &card, *zone));
+                let expected: Vec<Option<ZoneChoice>> = normal
+                    .iter()
+                    .copied()
+                    .filter(|zone| !giga || spans_fit(*zone))
+                    .collect();
                 assert_eq!(
-                    normal, bigger,
-                    "{what}: the embiggen price is offered for every zone the normal one is"
+                    bigger, expected,
+                    "{what}: the embiggen price is offered for every zone the normal one is (GIGA: {giga})"
                 );
                 assert_eq!(
                     plays.len(),
