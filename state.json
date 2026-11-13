@@ -18089,23 +18089,17 @@
     "what": "revise #3849 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-13T10:20:38Z",
+    "at": "2026-11-13T10:38:14Z",
     "notes": [
-      "#3837 is held for `claude-4` until 04:30 (5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%))",
-      "#3779: green and waiting for a person to merge it, so `claude-1` gives up its claim on it",
-      "delivered review #3798 on claude-1 (run 43406005345): interrupted",
-      "delivered build #3735 on claude-4 (run 43396295908): built",
-      "delivered review #3818 on claude-7 (run 43387220944): infra",
-      "started review #3851 on claude-4 (run 43408988202)",
-      "started plan #3837 on claude-4 (run 43409085780)",
-      "started revise #3810 on claude-3 (run 43409189235)",
-      "started build #3846 on claude-6 (run 43409290433)",
-      "started review #3818 on claude-3 (run 43409392461)",
-      "started plan #3822 on claude-3 (run 43409504034)",
-      "started plan #3827 on claude-3 (run 43409624885)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` its last run could not work (the claude CLI could not run: Failed to authenticate. API Error: 403 Attention Required! | Cloudflare); it is left alone until 2026-11-13T11:14:06Z; `claude-8` its last run could not work (the claude CLI could not run: Failed to authenticate. API Error: 403 Attention Required! | Cloudflare); it is left alone until 2026-11-13T10:49:41Z; `claude-1` 5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-13T11:20:00Z; it can start a build or a plan again in 48m; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 64%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-16T09:00:00Z; it can start a build or a plan again in 60h 28m; `muse` it refused a call; its limit resets at 2026-11-16T00:00:00Z; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-14T05:00:00Z; it can start a build or a plan again in 18h 28m; waiting for their owners: #3733 held for `claude-1` until 05:20 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%)); #3798 held for `claude-1` until 05:20 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))",
-      "pruned 2 plan file(s) older than 7 days",
-      "runner gate: started 0 of 3 waiting run(s); 3 wait for a slot"
+      "#3798 is held for `claude-1` until 05:20 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))",
+      "#3733 is held for `claude-1` until 05:20 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))",
+      "delivered review #3818 on claude-3 (run 43409392461): reviewed",
+      "delivered review #3851 on claude-4 (run 43408988202): interrupted",
+      "started review #3851 on claude-4 (run 43411080561)",
+      "started revise #3849 on claude-3 (run 43411209981)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` its last run could not work (the claude CLI could not run: Failed to authenticate. API Error: 403 Attention Required! | Cloudflare); it is left alone until 2026-11-13T11:14:06Z; `claude-8` its last run could not work (the claude CLI could not run: Failed to authenticate. API Error: 403 Attention Required! | Cloudflare); it is left alone until 2026-11-13T10:49:41Z; `claude-1` 5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-13T11:20:00Z; it can start a build or a plan again in 36m; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 64%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-16T09:00:00Z; it can start a build or a plan again in 60h 16m; `muse` it refused a call; its limit resets at 2026-11-16T00:00:00Z; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-14T05:00:00Z; it can start a build or a plan again in 18h 16m; waiting for their owners: #3733 held for `claude-1` until 05:20 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%)); #3798 held for `claude-1` until 05:20 (5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%))",
+      "pruned 1 plan file(s) older than 7 days",
+      "runner gate: started 0 of 2 waiting run(s); 2 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18811,7 +18805,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-13T10:20:38Z",
+  "loop_tick": "2026-11-13T10:38:14Z",
   "machine_disk": {
     "issue": null,
     "reading": {
