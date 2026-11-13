@@ -157,6 +157,12 @@ Flashback, R783012, Sanctum's lent one, R1869003, or a field permission such as 
 counts `AI_EVAL.graveyard_playable` of its hand price, the enemy's too, since a graveyard is public; a
 spent Flashback counts nothing (R783013). `keyword.flashback` stays 0, so the play is priced once, and
 `GREEDY_EVAL` keeps 0 (#2928).
+An own hand card's set price (`costOverride`) moves its hand price as a `costMod` does, `AI_EVAL.hand_cost_delta`
+a crystal off its printed cost (`cost_shift`, R3575500), so a fusion laid in the hand at (2) counts cheaper than the
+(4) it is printed as (R77). An own Created hand Unit (R943) counts at least `slumber_turn_share` of its body
+(`face_worth` of its face with buffs and its own keywords) less its crystals at `unspent_mana` and the worth of the
+cheapest own units its Tribute would destroy, R3565000's rider read (`created_unit_floor`, R3575501): a dealt card and
+a Spell keep the cost price, so does a card whose Tribute the seat's units cannot pay, and `GREEDY_EVAL` reads none.
 It re-plans after every action, so a
 lethal the solver proves is played trimmed to the actions it needs
 (`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action
