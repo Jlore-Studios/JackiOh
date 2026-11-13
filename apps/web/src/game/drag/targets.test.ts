@@ -99,10 +99,82 @@ describe("targetFromElement", () => {
     expect(targetFromElement(missing)).toBeNull();
   });
 
+  it("R384 R510 reads no activation from an empty attribute: no card, no ability and no Heroic Power", () => {
+    const hand = element("div", { "data-testid": "hand-card-abc", "data-activate-for": "" });
+    expect(targetFromElement(hand)).toEqual({ target: { on: "hand", instanceId: "abc" }, testid: "hand-card-abc" });
+    const bare = element("button", {
+      "data-testid": "other",
+      "data-activate-for": "card-2",
+      "data-activate-ability": "",
+    });
+    expect(targetFromElement(bare)).toStrictEqual({
+      target: { on: "activate", instanceId: "card-2" },
+      testid: "other",
+    });
+    const power = element("div", { "data-testid": "power", "data-instance-id": "" });
+    expect(targetFromElement(power)).toBeNull();
+  });
+
+  it("reads nothing from an element with no testid, whatever else it carries", () => {
+    const el = element("span", { "data-activate-for": "card-1", "data-instance-id": "hero-1" });
+    expect(targetFromElement(el)).toBeNull();
+  });
+
+  it("finds a card's zone past the wrappers between them", () => {
+    const zoneEl = zone("you", "units", "2");
+    const wrapper = element("div", {}, zoneEl);
+    const el = element("div", { "data-testid": "card-abc" }, wrapper);
+    expect(targetFromElement(el)?.target).toEqual({ on: "unit", instanceId: "abc", side: "you", lane: 2 });
+  });
+
+  it("looks past a testid that names nothing to the target above it", () => {
+    const hand = element("div", { "data-testid": "hand-card-abc" });
+    const art = element("div", { "data-testid": "art-frame" }, hand);
+    expect(targetFromElement(art)).toEqual({ target: { on: "hand", instanceId: "abc" }, testid: "hand-card-abc" });
+  });
+
+  it("reads a testid only whole: a name with anything before or after it names nothing", () => {
+    expect(targetFromElement(element("div", { "data-testid": "xhand-card-1" }))).toBeNull();
+    for (const testid of ["superpower", "powerful"]) {
+      const el = element("div", { "data-testid": testid, "data-instance-id": "hero-1" });
+      expect(targetFromElement(el), testid).toBeNull();
+    }
+    for (const testid of ["xzone-you-units-1", "zone-you-units-1x"]) {
+      const el = element("div", { "data-testid": testid, "data-side": "you", "data-row": "units", "data-lane": "1" });
+      expect(targetFromElement(el), testid).toBeNull();
+    }
+    const zoneEl = zone("you", "units", "5");
+    expect(targetFromElement(element("div", { "data-testid": "xcard-1" }, zoneEl))?.target).toEqual({
+      on: "zone",
+      side: "you",
+      row: "units",
+      lane: 5,
+    });
+  });
+
+  it("R510 reads a Heroic Power under any power- testid, and a zone of a two-digit lane", () => {
+    const power = element("div", { "data-testid": "power-ab", "data-instance-id": "hero-1" });
+    expect(targetFromElement(power)?.target).toEqual({ on: "activate", instanceId: "hero-1" });
+    expect(targetFromElement(zone("you", "units", "12"))?.target).toEqual({
+      on: "zone",
+      side: "you",
+      row: "units",
+      lane: 12,
+    });
+  });
+
+  it("refuses a zone testid whose zone attributes are missing", () => {
+    expect(targetFromElement(element("div", { "data-testid": "zone-you-units-1" }))).toBeNull();
+  });
+
   it("reads a hero and a zone", () => {
     expect(targetFromElement(element("div", { "data-testid": "hero-opponent" }))).toEqual({
       target: { on: "hero", side: "opponent" },
       testid: "hero-opponent",
+    });
+    expect(targetFromElement(element("div", { "data-testid": "hero-you" }))).toEqual({
+      target: { on: "hero", side: "you" },
+      testid: "hero-you",
     });
     const zoneEl = zone("you", "backrow", "1");
     expect(targetFromElement(zoneEl)).toEqual({
@@ -117,6 +189,22 @@ describe("targetFromElement", () => {
     const inner = element("span", {}, button);
     expect(targetFromElement(inner)).toBeNull();
     expect(targetFromElement(hand)).not.toBeNull();
+  });
+
+  it("counts a button, an input and a role=button as controls, and nothing else", () => {
+    const hand = element("div", { "data-testid": "hand-card-abc" });
+    const span = element("span", {}, hand);
+    expect(targetFromElement(span)?.target).toEqual({ on: "hand", instanceId: "abc" });
+    expect(targetFromElement(element("input", {}, hand))).toBeNull();
+    expect(targetFromElement(element("div", { role: "button" }, hand))).toBeNull();
+  });
+
+  it("treats a press on a control inside a card on the board as a press, never a drag source", () => {
+    const zoneEl = zone("you", "units", "1");
+    const card = element("div", { "data-testid": "card-abc" }, zoneEl);
+    const button = element("button", {}, card);
+    expect(targetFromElement(button)).toBeNull();
+    expect(targetFromElement(card)).not.toBeNull();
   });
 
   it("answers null where nothing names a target", () => {
@@ -169,6 +257,10 @@ describe("lockedZoneAt", () => {
     expect(
       lockedZoneAt([zoneEl], { kind: "attack" as const, dropTestids: new Set() }),
     ).toBeNull();
+    // Even with another zone of its row offered, which would report it for a play.
+    expect(
+      lockedZoneAt([zoneEl], { kind: "attack" as const, dropTestids: new Set(["zone-you-units-1"]) }),
+    ).toBeNull();
   });
 
   it("reports a locked zone only while another zone in its row is offered", () => {
@@ -177,6 +269,16 @@ describe("lockedZoneAt", () => {
     locked.setAttribute("data-locked", "true");
     expect(lockedZoneAt([locked], plan(["zone-you-units-1"]))?.testid).toBe("zone-you-units-2");
     expect(lockedZoneAt([locked], plan(["zone-you-backrow-1"]))).toBeNull();
+    // One zone of its row among others is enough.
+    expect(lockedZoneAt([locked], plan(["zone-you-units-1", "zone-you-backrow-1"]))?.testid).toBe(
+      "zone-you-units-2",
+    );
+  });
+
+  it("never reports the opponent's locked zone", () => {
+    const theirs = zone("opponent", "units", "2");
+    theirs.setAttribute("data-locked", "true");
+    expect(lockedZoneAt([theirs], plan(["zone-you-units-1"]))).toBeNull();
   });
 
   it("stays silent for an offered zone and an unlocked one", () => {
