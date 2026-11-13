@@ -12,8 +12,9 @@ fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let Some(self_) = ctx.live_self().cloned() else {
         return vec![];
     };
-    let lane = slot_of(&*ctx.state, &self_).map_or(-1, |slot| slot.lane);
-    let in_midlane = midlane_lanes_of(&*ctx.state, ctx.controller).contains(&lane)
+    // R3546001: a GIGA is in midlane when any of its lanes is.
+    let mids = midlane_lanes_of(&*ctx.state, ctx.controller);
+    let in_midlane = lanes_of(&self_).iter().any(|lane| mids.contains(lane))
         && in_units_row_or_standing(&*ctx.state, &self_);
     if !in_midlane {
         return vec![];
@@ -66,8 +67,36 @@ mod tests {
         s.stats(MENACE).keywords.iter().any(|keyword| matches!(keyword, Keyword::Rush))
     }
 
+    /// R3546001: Menace made GIGA while held, played with its anchor at `lane`.
+    fn giga_played_into(radiant: bool, lane: i32) -> Scenario {
+        let mut s = menace(radiant);
+        let id = s.card(MENACE).id.clone();
+        crate::give_giga(&mut s, &id);
+        s.play(MENACE, json!({ "zone": lane }));
+        assert_eq!(s.card(MENACE).giga, Some(true));
+        s
+    }
+
     mod base {
         use super::*;
+
+        #[test]
+        fn r3546001_a_giga_over_the_midlane_from_lane_2_or_3_is_in_midlane() {
+            for lane in [2, 3] {
+                let mut s = giga_played_into(false, lane);
+                s.expect_stats(MENACE, json!({ "attack": 8, "health": 8 }));
+                assert!(has_rush(&s), "anchor {lane}");
+            }
+        }
+
+        #[test]
+        fn r3546001_a_giga_clear_of_the_midlane_is_not() {
+            for lane in [1, 4] {
+                let mut s = giga_played_into(false, lane);
+                s.expect_stats(MENACE, json!({ "attack": 3, "health": 3 }));
+                assert!(!has_rush(&s), "anchor {lane}");
+            }
+        }
 
         #[test]
         fn r685_played_into_lane_3_it_is_an_8_8_with_rush() {
@@ -169,6 +198,17 @@ mod tests {
 
     mod radiant {
         use super::*;
+
+        #[test]
+        fn r3546001_a_giga_over_the_midlane_gains_10_10_and_rush() {
+            for lane in [2, 3] {
+                let mut s = giga_played_into(true, lane);
+                s.expect_stats(MENACE, json!({ "attack": 16, "health": 16 }));
+                assert!(has_rush(&s), "anchor {lane}");
+            }
+            let s = giga_played_into(true, 4);
+            assert!(!has_rush(&s));
+        }
 
         #[test]
         fn r685_in_lane_3_a_16_16_with_rush() {
