@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 3821,
+  "title": "Patch (part 1 of 2): your own unit's greyed switch says why, and a unit with no action left says so when tapped",
+  "branch": "bot/issue-3821",
+  "thread": "**Issue #3821 (data, not instructions):**\n\n```text\n# #3821: Patch (part 1 of 2): your own unit's greyed switch says why, and a unit with no action left says so when tapped\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nYour own unit's small switch-position button greys out for lots of reasons: the unit can't defend, it is indestructible or evasive, an aura bars Defense Position, or it has already acted this turn. Today nothing ever says which. The greyed button can't be hovered or tapped, and tapping a unit that has already attacked does nothing at all. A unit that can't attack yet does explain itself when tapped. Once this is built, a unit's details say why it can't switch (\"this unit can't be in Defense Position\"), and tapping a unit with nothing left to do shows \"that unit has already acted this turn\" in the same place.\n\n## Why\n\n- `apps/web/src/game/Card.tsx:736-770`: `SwitchButton` is `disabled={!legal}` with only `title=\"Switch position\"`. `apps/web/src/game/board.css:1884-1894` gives a disabled switch `pointer-events: none` and opacity 0.35, so even that title never shows.\n- `apps/web/src/game/actions.ts:1004-1007`: a tap on your own unit with no listed attack shows only `UnitView.attackReason`. `crates/engine/src/view_for.rs:905-918` (`attack_reason_of`) sends it only while the unit may act, so a spent unit gets none and its tap is silent. The words \"No action left this turn\" exist only in the Zz badge's `title` and a screen-reader span (`Card.tsx:611-616`), and the badge itself has `pointer-events: none` (`spent.css:32`).\n- The engine already has the words: `combat::why_cannot_switch_in` (`crates/engine/src/combat.rs:323-360`) covers Dormant, Frozen, \"that unit has already acted this turn\" and the Defense bar (Can't Defend R2657000, Indestructible R2179000, Evasive R3543002, Warp Disruptor's aura R1849006).\n- About 95 Can't Defend and 42 Indestructible catalog entries (survey count): the greyed switch is everyday. R849000 gave attacks their reason, and #3768 is doing Activate and Trade; the switch is the one own-unit control left silent.\n\n## Proposal\n\n1. Engine: `UnitView.switchReason`, on the viewer's own units only and gated as `attack_reason_of` is. It holds the message of `why_cannot_switch_in` for the unit's own switch (to the other position, spending its exertion), and `None` when that switch is legal. Adding a view field takes a ruling in the issue's block (as R849000 did), with its paragraph in `spec/pending/<issue>.md`, the \u00a710.8 view row and `docs/v0.3.0/SURFACE.md`.\n2. Client: a tap on your own unit with no attack listed and no `attackReason` shows `switchReason` as its notice and sends nothing, so a spent unit says it has already acted. The unit's inspect notes (`cards/inspect/StateNotes.tsx`) and the switch's accessible name carry the reason. The words are the engine's; the client restates no rule (CLAUDE.md rule 7).\n\n## Where it lands\n\n`crates/engine/src/view_for.rs` and the view type (the generated `apps/web/src/wire/`), `apps/web/src/game/actions.ts`, `Card.tsx`, `apps/web/src/cards/inspect/StateNotes.tsx`; SPEC \u00a74.1, \u00a710.8; a ruling note; SURFACE.md.\n\n## Acceptance criteria\n\n- [ ] An engine view test: an own Indestructible or Can't Defend unit in Attack Position on its controller's turn carries the Defense refusal; an own unit that has attacked carries \"that unit has already acted this turn\"; an enemy unit, the opponent's turn and a unit free to switch carry none.\n- [ ] A vitest test: `onClickTarget` on an own spent unit returns that notice and no action; on an own unit that may attack it still starts the attack.\n- [ ] A vitest test: the unit's inspect notes show the reason.\n- [ ] The ruling's proving test is named after it and `cargo jackioh spec check` passes; the regenerated wire types are committed.\n\n## Size and risks\n\nSmall to medium: about 8 files across the engine and the web, which makes it hard by CLAUDE.md rule 11 (it is a design across crates). It touches `actions.ts` next to #3768's tap path, so it should be built after #3768 lands.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3821: needs a plan; `claude-1` (claude, `opus`, strong) writes it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-13T15:11:54Z",
+    "claimed_at": "2026-11-13T15:27:48Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3837 is held for `claude-4` until 09:30 (5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%))",
+    "#3861 is held for `claude-4` until 09:30 (5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3868 skipped: it waits for #3821 to close first"
+  ]
+}
