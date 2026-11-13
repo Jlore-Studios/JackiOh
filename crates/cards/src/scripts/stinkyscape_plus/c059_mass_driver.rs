@@ -1,15 +1,12 @@
-//! SPEC §8.12 S+ #59 Mass Driver (R3556007; R62, R1181000, R1420, R1840002, R3543001, R3549001):
+//! SPEC §8.12 S+ #59 Mass Driver (R3556007; R62, R1181000, R1420, R1840002, R3549001, R3828000):
 //! (2) Field Spell, Mindustrial, Epic, a card of the Stinkyscape+ set.
-//!   Base:    "Flexible
-//!            0/6
-//!            Activate: In {count|turn|turns} add two Minerals that cost (0) and a Resource to your hand."
-//!   Radiant: "Flexible
-//!            0/12
-//!            Activate: In {count|turn|turns} add two Radiant Minerals that cost (0) and a Radiant
+//!   Base:    "Activate: In {count|turn|turns} add two Minerals that cost (0) and a Resource to your hand."
+//!   Radiant: "Activate: In {count|turn|turns} add two Radiant Minerals that cost (0) and a Radiant
 //!            Resource to your hand."
 //!
-//! Flexible with stats 0/6 (0/12 Radiant): played into a unit zone it is a 0/6 Unit, and its text
-//! keeps working (R3543001). The Activate queues an unwatched `delay` (R1181000): at the start of
+//! It printed Flexible and 0/6 (0/12 Radiant) until issue #3828, which made Flexible a Unit's keyword
+//! alone (R3828000): it keeps to its backrow and has no stats. The Activate queues an unwatched
+//! `delay` (R1181000): at the start of
 //! its controller's Nth own turn it delivers two random S+ Minerals at (0)
 //! (`add_random_from_catalog`, as S+ #53 Laser Drill's) and a Resource (`gain_resources`,
 //! R1840002) — Radiant ones on the Radiant face (R3549001). It lands if the Driver is gone
@@ -89,7 +86,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S+ #59 Mass Driver — SPEC §8.12 row S+ 59 (R3556007; R62, R1181000, R1840002, R3543001, R3549001).
+// S+ #59 Mass Driver — SPEC §8.12 row S+ 59 (R3556007; R62, R1181000, R1840002, R3549001, R3828000).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -176,9 +173,9 @@ mod tests {
         }
 
         #[test]
-        fn r3556007_played_into_a_unit_zone_it_is_a_0_6_unit() {
+        fn r3828000_it_is_offered_no_unit_zone_and_keeps_to_its_backrow() {
             let mut s = weapon_board(
-                "s59-unit",
+                "s59-backrow",
                 json!({
                     "mana": 10,
                     "hand": [ID, FILLER],
@@ -189,23 +186,27 @@ mod tests {
                     "library": filler(6),
                 }),
             );
-            s.play(ID, json!({ "zone": 1, "row": "units" }));
+            // No Flexible, no stats: a unit zone is refused it (R3828000).
+            s.expect_refused_with(
+                |s| s.play(ID, json!({ "zone": 1, "row": "units" })),
+                "goes in the backrow row",
+            );
+            s.play(ID, json!({ "zone": 1 }));
             let played = s.card(ID);
             assert!(
-                matches!(played.zone, Zone::Field { row: Row::Units, .. }),
-                "it lands in the unit zone"
+                matches!(played.zone, Zone::Field { row: Row::Backrow, lane: 1, .. }),
+                "it lands in backrow lane 1: {:?}",
+                played.zone
             );
             assert_eq!(
                 jackioh_engine::faces::card_type_of(s.state(), played),
-                CardType::Unit,
-                "a Unit there"
+                CardType::FieldSpell,
+                "a Field Spell there"
             );
-            s.expect_stats(ID, json!({ "health": 6, "maxHealth": 6 }));
-            // Its text keeps working there: the delivery lands.
-            s.activate(ID, json!({ "ability": DRIVE }));
-            next_turn_of(&mut s, P1);
-            next_turn_of(&mut s, P1);
-            assert_eq!(delivered(&s).len(), (MINERALS + RESOURCES) as usize);
+            assert!(
+                !jackioh_engine::layers::has_stat_line(s.state(), played),
+                "with no stat line"
+            );
         }
     }
 
@@ -213,9 +214,12 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r3556007_radiant_all_radiant_and_0_12() {
+        fn r3556007_radiant_all_radiant() {
             let mut s = driver(true, "s59-radiant");
-            s.expect_stats(ID, json!({ "health": 12, "maxHealth": 12 }));
+            assert!(
+                !jackioh_engine::layers::has_stat_line(s.state(), s.card(ID)),
+                "no 0/12 since R3828000"
+            );
             next_turn_of(&mut s, P1);
             next_turn_of(&mut s, P1);
             let cards = delivered(&s);

@@ -1,11 +1,10 @@
-//! SPEC §8.12 S+ #40 Mender (R3556002; R62, R1420, R3543001):
+//! SPEC §8.12 S+ #40 Mender (R3556002; R62, R1420, R3828000):
 //! (1) Field Spell, Mindustrial, Common, a card of the Stinkyscape+ set.
-//!   Base:    "Flexible
-//!            End of turn: Heal adjacent units to full."
-//!   Radiant: "Flexible
-//!            End of turn: Heal adjacent units to full & give them Divine Shield."
+//!   Base:    "End of turn: Heal adjacent units to full."
+//!   Radiant: "End of turn: Heal adjacent units to full & give them Divine Shield."
 //!
-//! Flexible with no stats keeps to its backrow (R3543001). At the end of its controller's turn (R62)
+//! It printed Flexible until issue #3828, which made Flexible a Unit's keyword alone (R3828000), so it
+//! keeps to its backrow as any Field Spell does. At the end of its controller's turn (R62)
 //! it heals the adjacent Units — its controller's Units standing in its lane or a lane beside it
 //! (R3556002) — to full (`heal` with `toFull`); the Radiant face then grants each of them Divine
 //! Shield (as S+ #13 Shield Repairer's).
@@ -62,7 +61,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S+ #40 Mender — SPEC §8.12 row S+ 40 (R3556002; R62, R3543001).
+// S+ #40 Mender — SPEC §8.12 row S+ 40 (R3556002; R62, R3828000).
 #[cfg(test)]
 mod tests {
     use super::*;

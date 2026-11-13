@@ -1083,24 +1083,6 @@ describe("R3543000 a Flexible play lights both rows", () => {
 
     expect(result.action).toEqual(backrow);
   });
-
-  it("R3543001 a Field Spell offered a unit zone lights it", () => {
-    const units = { type: "play", instanceId: "h2", zone: { row: "units", lane: 2 } } as const;
-    const legal: ActionBody[] = [
-      units,
-      { type: "play", instanceId: "h2", zone: { row: "backrow", lane: 4 } },
-    ];
-    const playing = onClickTarget(view, legal, IDLE, { on: "hand", instanceId: "h2" }).interaction;
-
-    const { legal: lit } = highlightFor(view, legal, playing);
-
-    expect(lit.has(testid.zone("you", "units", 2))).toBe(true);
-    expect(lit.has(testid.zone("you", "backrow", 4))).toBe(true);
-
-    const result = onClickTarget(view, legal, playing, { on: "zone", side: "you", row: "units", lane: 2 });
-
-    expect(result.action).toEqual(units);
-  });
 });
 
 describe("R1086 Equip plays (issue #532)", () => {
