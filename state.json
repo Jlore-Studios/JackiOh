@@ -17277,6 +17277,8 @@
       }
     },
     "3817": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-13T00:35:25Z",
@@ -17290,8 +17292,11 @@
         "trail": "grep -f \\\"ca\u2026\n- ToolSearch: {\"query\": \"select:TaskStop\", \"max_results\": 1}\n- TaskStop: {\"task_id\": \"bhe2efgad\"}\n- TaskStop: {\"task_id\": \"bmqe2wxjj\"}\n- TaskStop: {\"task_id\": \"bbvaless4\"}\n- said: The workspace test run hit the 10-minute background limit and was killed after 16 binaries, none failing. I'm restarting it detached with a 2-hour limit.\n- Bash: {\"command\": \"cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts > /tmp/ws-test.txt 2>&1; echo \\\"ws exit $?\\\"; grep -c '^test result' /tmp/ws-test.txt; grep -E \\\"test result: F\u2026\n- Write: {\"file_path\": \"/tmp/r3806-pr.md\", \"content\": \"draft\\n\"}\n- Bash: {\"command\": \"until grep -q \\\"ws exit\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-3806/1dc0fd55-708a-4b22-ad46-2330ce1b09b0/tasks/by7rwar6k.output || grep -q \\\"test result: FAILED\\\" /tmp/ws-t\u2026\n- said: The workspace run is going; I'll pick up when it reports.\n- Bash: {\"command\": \"grep -c '^test result' /tmp/ws-test.txt; grep -E \\\"test result: FAILED|panicked at\\\" /tmp/ws-test.txt | head -3\", \"description\": \"Check workspace test progress\"}\n- Bash: {\"command\": \"until [ \\\"$(grep -c '^test result' /tmp/ws-test.txt)\\\" -ge 12 ] || grep -q \\\"ws exit\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-3806/1dc0fd55-708a-4b22-ad46-2330ce1b09b0/tasks/\u2026\n- Bash: {\"command\": \"until [ \\\"$(grep -c '^test result' /tmp/ws-test.txt)\\\" -ge 30 ] || grep -q \\\"ws exit\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-3806/1dc0fd55-708a-4b22-ad46-2330ce1b09b0/tasks/\u2026\n- Bash: {\"command\": \"until grep -q \\\"ws exit\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-3806/1dc0fd55-708a-4b22-ad46-2330ce1b09b0/tasks/by7rwar6k.output; do sleep 15; done; cat /tmp/claude-1001/-ho\u2026\n- Bash: {\"command\": \"git diff apps/web/src/wire/generated/SetAs.ts; ls -la --time-style=+%H:%M apps/web/src/wire/generated/SetAs.ts\", \"description\": \"Check the regenerated SetAs.ts\"}\n- said: Workspace tests pass (64 binaries, exit 0), and the regenerated `SetAs.ts` matches my edit. Now the full clippy, fmt and spec check.\n- Bash: {\"command\": \"echo \\\"- workspace tests (ts+testkit) pass: 64 binaries, exit 0; SetAs.ts regenerated identical.\\\" >> .bot-notes.md; cargo fmt --check > /tmp/fmt.txt 2>&1; echo \\\"fmt exit $?\\\"; head -5 \u2026\n- Bash: {\"command\": \"until grep -q \\\"clippy exit\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-3806/1dc0fd55-708a-4b22-ad46-2330ce1b09b0/tasks/bw3pj06mf.output; do sleep 10; done; cat /tmp/claude-1001\u2026\n- Bash: {\"command\": \"cargo fmt && cargo fmt --check && echo \\\"fmt clean\\\"; git diff --stat | tail -1; cargo jackioh spec check 2>&1 | tail -2\", \"description\": \"Apply fmt, recheck, and run spec check\", \"timeo\u2026\n- Bash: {\"command\": \"sh scripts/build-wasm.sh > /tmp/wasm2.log 2>&1; echo \\\"wasm exit $?\\\"; pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exc\u2026\n- Bash: {\"command\": \"echo \\\"- full workspace clippy exit 0; fmt clean (re-run fmt on cloaked.rs import); spec check ok (1915 rulings). Web vitest --changed running.\\\" >> .bot-notes.md; until grep -q \\\"vitest\u2026\n- TaskStop: {\"task_id\": \"b029gy4jy\"}\n- Bash: {\"command\": \"tail -2 /tmp/wasm2.log; tail -5 /tmp/vitest.txt 2>/dev/null | cut -c1-200; grep -cE \\\"\\u2713|\\u2717|\\u00d7\\\" /tmp/vitest.txt 2>/dev/null\", \"description\": \"Check wasm and vitest progress\"}\n- said: The web tests (the harness's `vitest --changed` set) are still running; the wasm rebuild finished.\n- Bash: {\"command\": \"until grep -q \\\"vitest exit\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-3806/1dc0fd55-708a-4b22-ad46-2330ce1b09b0/tasks/b55h3lkqm.output; do sleep 10; done; cat /tmp/claude-1001\u2026\n- said: Found a real failure: Paranoia's new text is over the card-face text limit (R1017000). Looking at how the limit and its \"short form\" work.\n- Bash: {\"command\": \"grep -n \\\"R1017000\\\" -B3 -A30 apps/web/src/cards/textLimit.test.ts | head -70; grep -A25 \\\"AssertionError\\\\|Expected\\\\|meditative-099\\\" /tmp/vitest.txt | head -40\", \"description\": \"Read \u2026\n- Bash: {\"command\": \"grep -n \\\"export function faceLines\\\" -A25 apps/web/src/cards/fit.ts; grep -n \\\"FACE_TEXT_LIMIT\\\" -A4 apps/web/src/cards/constants.ts | head -12\", \"description\": \"Read faceLines and the \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\ndef lines(t,c=28):\\n n=0\\n for line in t.split('\\\\n'):\\n w=0;n+=1\\n for word in line.split(' '):\\n if w==0: w=len(word)\\n elif w+1+len(word)<=c: w+=1+len(word)\\n else:\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\ndef lines(t,c=28):\\n n=0\\n for line in t.split('\\\\n'):\\n w=0;n+=1\\n for word in line.split(' '):\\n if w==0: w=len(word)\\n elif w+1+len(word)<=c: w+=1+len(word)\\n else:\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\ndef show(t,c=28):\\n out=[]\\n for line in t.split('\\\\n'):\\n cur=''\\n for word in line.split(' '):\\n if not cur: cur=word\\n elif len(cur)+1+len(word)<=c: cur+=' '+word\\n\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\nOLD=\\\"Spells you set face-down resolve as you set them and again as you reveal them.\\\"\\nNEW=\\\"Spells you set face-down resolve when set and when revealed.\\\"\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='spec/rulings/R3806000.md'\\ns=open(p).read()\\nold=\\\"so the card says it shorter. A Spell set by its Cloaked while a Paranoia\\\\n\\\"\\nassert s.count(old)==1\\ns=s.replac\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/cards/src/scripts/meditative/c099_paranoia.rs'\\ns=open(p).read()\\nold=''' \\\"Aura: Your Spells have Cloaked. Spells you set face-down resolve when set and whe\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-tools --test export_card_text 2>&1 | grep -E \\\"test result|FAILED|panicked\\\" -A3 | head; grep -A3 '\\\"meditative-099\\\"' crates/cards/chinese.json | head -5\", \"descri\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-cards c099_paranoia 2>&1 | grep -E \\\"^test result: .*[1-9][0-9]* passed|FAILED|panicked\\\" | head -5; for c in \\\"catalog check\\\" \\\"names --check\\\" \\\"patches check\\\" \u2026\n- tool error: Exit code 137 test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 8497 filtered out; finished in 0.01s"
       },
       "issue": 3806,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-13T04:11:14Z",
         "from_run": "43338265739",
         "gates": [
           {
@@ -17383,7 +17388,11 @@
         "source": "build",
         "until": "2026-11-13T04:39:41Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-13T04:09:41Z",
+      "run_id": "pending:e6e1a6a5-1794543028",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17402,6 +17411,9 @@
         "provider": "claude-8",
         "run": "43338265739"
       },
+      "started_at": "2026-11-13T04:11:14Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17415,9 +17427,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-13T03:30:12Z",
+    "at": "2026-11-13T04:11:14Z",
     "url": "",
-    "what": "suggestions on claude-3"
+    "what": "review #3817 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-13T03:47:17Z",
