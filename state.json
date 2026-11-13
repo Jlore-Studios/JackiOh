@@ -15475,6 +15475,13 @@
     "3856": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-13T20:53:48Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "Server-only change (one crate, about 8 files, tests and docs included): no engine rules, AI, migration or cross-crate contract, and well under 40 files."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
