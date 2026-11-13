@@ -124,7 +124,6 @@ func TestScenario(t *testing.T) {
 	out.Set("pin", ghErr(func() { gh.PinIssue("d") }))
 	gh.Commits = []*pyjson.Object{pyjson.New("sha", "a", "author", pyjson.New("login", "jgoetzmann-bot")),
 		pyjson.New("sha", "b", "author", nil), pyjson.New("sha", "c")}
-	gh.Gists = map[string]*pyjson.Object{"g1": pyjson.New("files", pyjson.New("x", pyjson.New("content", "1")))}
 	gh.ArtifactZips[1] = []byte("zip")
 
 	labelNames := []string{}
@@ -224,7 +223,6 @@ func TestScenario(t *testing.T) {
 		"repo_info", gh.RepoInfo(), "viewer", gh.Viewer(), "pinned", gh.Pinned,
 		"list_commits", objs(gh.ListCommits("jgoetzmann-bot", 1000)),
 		"list_commits_all", objs(gh.ListCommits("", 2)),
-		"gist", gh.GetGist("g1", false),
 		"artifact", string(gh.DownloadArtifact("1")),
 		"branch_sha", []any{gh.BranchSHA("main"), nope},
 		"required_checks", required,

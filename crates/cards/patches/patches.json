@@ -24973,5 +24973,85 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.6.0c",
+    "date": "2026-11-13",
+    "title": "Patch: Flexible is a Unit keyword, so Mender and Mass Driver lose it",
+    "source": "#3828",
+    "notes": "Issue #3828 (R3828000, superseding R3543001): Flexible is read on Units alone. S+ #40 Mender and S+ #59 Mass Driver lose Flexible, and Mass Driver its 0/6 (0/12 Radiant) stat line; the engine no longer offers a Field Spell a unit zone, and catalog check refuses Flexible on a non-Unit face. The plays are the families whose golden games deal Mender or Mass Driver and diverge with them.",
+    "player": {
+      "title": "Flexible is for Units only",
+      "new": [],
+      "balance": [
+        "Mass Driver no longer has stats: it is a Field Spell with no 0/6 (0/12 Radiant)."
+      ],
+      "changes": [
+        "Flexible belongs to Units alone. Mender and Mass Driver lose it, so neither can be played into a unit zone, and a Flexible Unit played into the backrow counts as a Unit played for every card."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "be9a6505cee0b6996bb711c31852a5e57ed93c35"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classicplus-031",
+      "classicplus-058",
+      "classicplus-077",
+      "core-003",
+      "meditative-004",
+      "meditative-033",
+      "meditative-069",
+      "stinkyscape-007",
+      "stinkyscape-048",
+      "stinkyscape-054",
+      "stinkyscape-099",
+      "stinkyscape-103",
+      "stinkyscape-112",
+      "stinkyscape-117",
+      "stinkyscape-173",
+      "stinkyscape-t-korrelite",
+      "stinkyscapeplus-001",
+      "stinkyscapeplus-032",
+      "stinkyscapeplus-040",
+      "stinkyscapeplus-059",
+      "stinkyscapeplus-142",
+      "stinkyscapeplus-154",
+      "stinkyscapeplus-156",
+      "traininggrounds-007",
+      "traininggrounds-036",
+      "traininggrounds-041"
+    ],
+    "changes": [
+      {
+        "id": "stinkyscapeplus-040",
+        "name": "Mender",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-059",
+        "name": "Mass Driver",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      }
+    ]
   }
 ]

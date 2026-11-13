@@ -11,6 +11,7 @@ import {
   answerPlaguePlacement,
   attackTargetTestid,
   heroTargetId,
+  hiddenTargetZone,
   highlightFor,
   isPlaguePlacementPrompt,
   onClickTarget,
@@ -24,7 +25,7 @@ import {
   type Interaction,
 } from "./actions.ts";
 import { NOT_NOW, testid, type ClickTarget } from "./contract.ts";
-import { baseView, card, emptySide, faceUpBackrow, pendingFor, unit, waitingPending } from "../test/fixtures.ts";
+import { baseView, card, emptySide, faceDownBackrow, faceUpBackrow, pendingFor, unit, waitingPending } from "../test/fixtures.ts";
 
 function seatedView(over: Partial<PlayerView> = {}): PlayerView {
   return baseView({
@@ -1083,24 +1084,6 @@ describe("R3543000 a Flexible play lights both rows", () => {
 
     expect(result.action).toEqual(backrow);
   });
-
-  it("R3543001 a Field Spell offered a unit zone lights it", () => {
-    const units = { type: "play", instanceId: "h2", zone: { row: "units", lane: 2 } } as const;
-    const legal: ActionBody[] = [
-      units,
-      { type: "play", instanceId: "h2", zone: { row: "backrow", lane: 4 } },
-    ];
-    const playing = onClickTarget(view, legal, IDLE, { on: "hand", instanceId: "h2" }).interaction;
-
-    const { legal: lit } = highlightFor(view, legal, playing);
-
-    expect(lit.has(testid.zone("you", "units", 2))).toBe(true);
-    expect(lit.has(testid.zone("you", "backrow", 4))).toBe(true);
-
-    const result = onClickTarget(view, legal, playing, { on: "zone", side: "you", row: "units", lane: 2 });
-
-    expect(result.action).toEqual(units);
-  });
 });
 
 describe("R1086 Equip plays (issue #532)", () => {
@@ -1253,6 +1236,60 @@ describe("R821000 a Plague Counter placement is answered on the board", () => {
     expect(click({ on: "unit", instanceId: "e1", side: "opponent", lane: 1 }, target)).toBeNull();
     expect(click({ on: "unit", instanceId: "e1", side: "opponent", lane: 1 }, waitingPending)).toBeNull();
     expect(click({ on: "unit", instanceId: "e1", side: "opponent", lane: 1 }, null)).toBeNull();
+  });
+});
+
+describe("R3777001 a face-down enemy backrow card is a play's target by the zone its back lies in", () => {
+  const hiddenTargets: NonNullable<PlayerView["hiddenTargets"]> = [
+    { instanceId: "t1", zone: { player: "p2", row: "backrow", lane: 2 } },
+  ];
+  // Their lane 2 is a back with no id (R33); their lane 4 is a public Field Spell.
+  const backrow = [null, faceDownBackrow, null, faceUpBackrow("p2", { instanceId: "b1" }), null];
+  const view = (withHidden = true): PlayerView => {
+    const seated = seatedView();
+    return {
+      ...seated,
+      opponent: { ...seated.opponent, backrow },
+      ...(withHidden ? { hiddenTargets } : {}),
+    };
+  };
+  const aimed = (instanceId: string): ActionBody => ({
+    type: "play",
+    instanceId: "h1",
+    targets: [{ pick: "instance", instanceId }],
+  });
+  const legal: ActionBody[] = [aimed("t1"), aimed("b1"), { type: "endTurn" }];
+  const building = (shown: PlayerView): Interaction => onClickTarget(shown, legal, IDLE, { on: "hand", instanceId: "h1" }).interaction;
+
+  it("R3777001 names the zone of the hidden target, and nothing for an id it does not list", () => {
+    expect(hiddenTargetZone(view(), "t1")).toEqual({ side: "opponent", row: "backrow", lane: 2 });
+    expect(hiddenTargetZone(view(), "b1")).toBeNull();
+    expect(hiddenTargetZone(view(false), "t1")).toBeNull();
+    expect(selectionTestid(view(), { pick: "instance", instanceId: "t1" })).toBe(testid.zone("opponent", "backrow", 2));
+    expect(selectionTestid(view(), { pick: "instance", instanceId: "b1" })).toBe(testid.card("b1"));
+  });
+
+  it("R3777001 lights the zone of the face-down target while the play is built", () => {
+    const shown = view();
+    const lit = highlightFor(shown, legal, building(shown));
+    expect(lit.legal.has(testid.zone("opponent", "backrow", 2))).toBe(true);
+    expect(lit.glow?.has(testid.zone("opponent", "backrow", 2))).toBe(true);
+    expect(lit.legal.has(testid.card("b1"))).toBe(true);
+    // Without the view's word for it, the back's zone is not lit: nothing says which id lies there.
+    const bare = view(false);
+    expect(highlightFor(bare, legal, building(bare)).legal.has(testid.zone("opponent", "backrow", 2))).toBe(false);
+  });
+
+  it("R3777001 a click on that zone sends the play naming the hidden id, and no other zone sends anything", () => {
+    const shown = view();
+    const lane = (side: "you" | "opponent", at: number): ClickTarget => ({ on: "zone", side, row: "backrow", lane: at });
+    expect(onClickTarget(shown, legal, building(shown), lane("opponent", 2)).action).toEqual(aimed("t1"));
+    expect(onClickTarget(shown, legal, building(shown), lane("opponent", 3)).action).toBeUndefined();
+    expect(onClickTarget(shown, legal, building(shown), lane("you", 2)).action).toBeUndefined();
+    const bare = view(false);
+    expect(onClickTarget(bare, legal, building(bare), lane("opponent", 2)).action).toBeUndefined();
+    // Not building a play, the zone's click is nothing at all.
+    expect(onClickTarget(shown, legal, IDLE, lane("opponent", 2)).action).toBeUndefined();
   });
 });
 

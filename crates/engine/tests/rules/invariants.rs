@@ -7,6 +7,10 @@
 //! at `FATIGUE_DAMAGE` of its count, and each seat's `fatigue_count` moves only with one (§2.4, R3, R315;
 //! #1902). Each check is proved by tampering with one payload of a real action's events; the untampered
 //! events are clean.
+//!
+//! And its I17 (#3773): what the state check leaves on a settled state (no unit at 0 health but R69's or
+//! R3539003's, no hero at 0 that can lose, R2201000) and, on every state, no mana or card damage below 0
+//! and no `damage` event of 0 or less (§2.3, §4.5, R63).
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -1010,4 +1014,158 @@ fn i16_a_library_card_owned_by_the_other_seat_is_one_owner_drift() {
     state.players[P1].library[0].owner = P2;
     let id = state.players[P1].library[0].id.clone();
     only(&i16(&state), &id, &["owner drift", "R747"]);
+}
+
+// I17: the state check ran and the numbers are in range (§2.3, §4.4, §4.5, R63, R69, R2201000)
+fn i17(state: &GameState, events: &[GameEvent]) -> Vec<String> {
+    invariant("I17", create_invariant_monitor(state).after(events, state))
+}
+
+/// p1's first main phase with a 2/2 `fx-1` in p1's unit zone 1 holding `taken` damage, and its id.
+fn hurt(seed: &str, taken: i32) -> (GameState, String) {
+    let mut state = playing(seed);
+    let unit = put(&mut state, "fx-1", slot(P1, Row::Units, 1), json!({}));
+    find_instance_mut(&mut state, &unit.id).expect("the unit").damage = taken;
+    (state, unit.id)
+}
+
+/// p1's mulligan prompt left open in `pending` (§10.6), as I7's test opens one.
+fn open_prompt(state: &mut GameState, seed: &str) {
+    let begun = begin_game(&new_game(seed, None)).state;
+    state.pending = Some(
+        begun.mulligan.as_ref().expect("the mulligans are open")[P1]
+            .prompt
+            .clone(),
+    );
+}
+
+fn damage_event(target_id: &str, amount: i32) -> GameEvent {
+    json_as(json!({
+        "type": "damage",
+        "sourceId": null,
+        "targetId": target_id,
+        "amount": amount,
+        "combat": false,
+    }))
+}
+
+#[test]
+fn i17_a_settled_board_with_a_hurt_unit_no_mana_left_and_a_hit_of_1_is_clean() {
+    let (mut state, _) = hurt("i17-clean", 1);
+    state.players[P1].mana.current = 0;
+    assert_eq!(i17(&state, &[damage_event("hero-p2", 1)]), Vec::<String>::new());
+    // A real action's state and events.
+    let (_, result) = ended("i17-clean");
+    assert_eq!(i17(&result.state, &result.events), Vec::<String>::new());
+}
+
+#[test]
+fn i17_a_unit_at_0_health_or_less_on_a_settled_board_is_one_dead_unit_left_standing() {
+    for taken in [2, 3] {
+        let (state, id) = hurt("i17-dead", taken);
+        only(&i17(&state, &[]), &id, &["dead unit left standing", "§4.5"]);
+    }
+}
+
+#[test]
+fn i17_an_indestructible_unit_at_0_health_stands_while_its_max_health_is_above_0() {
+    let (mut state, id) = hurt("i17-indestructible", 2);
+    find_instance_mut(&mut state, &id)
+        .expect("the unit")
+        .granted_keywords = vec![json_as::<Keyword>(json!({ "kind": "Indestructible" }))];
+    assert_eq!(i17(&state, &[]), Vec::<String>::new());
+    // R69: at max health 0 even an Indestructible unit dies.
+    find_instance_mut(&mut state, &id).expect("the unit").buffs = AttackHealth {
+        attack: 0,
+        health: -2,
+    };
+    only(&i17(&state, &[]), &id, &["dead unit left standing", "R69"]);
+}
+
+/// R3539003: no health judges a Dormant card, so a 0/0 hull stands on a settled board.
+#[test]
+fn i17_a_dormant_unit_at_0_health_stands() {
+    let (mut state, id) = hurt("i17-dormant", 2);
+    find_instance_mut(&mut state, &id).expect("the unit").slumber = Some(Slumber { turns: None });
+    assert_eq!(i17(&state, &[]), Vec::<String>::new());
+    find_instance_mut(&mut state, &id).expect("the unit").slumber = None;
+    only(&i17(&state, &[]), &id, &["dead unit left standing"]);
+}
+
+#[test]
+fn i17_a_dead_unit_waits_for_an_open_prompt_the_mulligans_and_a_game_over() {
+    // A prompt in `pending` (§10.6): the state check runs once it is answered.
+    let (mut prompted, _) = hurt("i17-wait", 2);
+    open_prompt(&mut prompted, "i17-wait");
+    assert_eq!(i17(&prompted, &[]), Vec::<String>::new());
+
+    // The mulligans are open (§10.6, R265).
+    let mut mulligan = begin_game(&new_game("i17-wait", None)).state;
+    assert!(mulligan.mulligan.is_some());
+    let unit = put(&mut mulligan, "fx-1", slot(P1, Row::Units, 1), json!({}));
+    find_instance_mut(&mut mulligan, &unit.id)
+        .expect("the unit")
+        .damage = 2;
+    assert_eq!(i17(&mulligan, &[]), Vec::<String>::new());
+
+    // A game over (§2.5): nothing is checked after it.
+    let (mut over, _) = hurt("i17-wait", 2);
+    over.result = Some(GameResult {
+        winner: Winner::P1,
+        reason: GameOverReason::Concede,
+    });
+    assert_eq!(i17(&over, &[]), Vec::<String>::new());
+}
+
+#[test]
+fn i17_a_hero_at_0_that_can_lose_is_one_live_hero_and_a_floored_one_is_not() {
+    let mut state = playing("i17-hero");
+    state.players[P2].hero.health = 0;
+    only(&i17(&state, &[]), "p2's hero", &["live hero at 0", "R2201000"]);
+
+    // R2201000: a seat held at a floor cannot lose.
+    state.players[P2].handicap = Some(TUTORIAL_HUMAN);
+    assert!(!state::can_lose(&state, P2));
+    for health in [TUTORIAL_HERO_FLOOR, 0] {
+        state.players[P2].hero.health = health;
+        assert_eq!(i17(&state, &[]), Vec::<String>::new());
+    }
+
+    // A prompt in `pending`: the hero check waits for it, as the dead-unit check does.
+    let mut prompted = playing("i17-hero");
+    prompted.players[P1].hero.health = 0;
+    open_prompt(&mut prompted, "i17-hero");
+    assert_eq!(i17(&prompted, &[]), Vec::<String>::new());
+}
+
+#[test]
+fn i17_mana_below_0_and_a_card_with_negative_damage_are_flagged_on_every_state() {
+    let mut state = playing("i17-mana");
+    let mana = state.players[P1].mana;
+    state.players[P1].mana.current = -1;
+    only(&i17(&state, &[]), "p1", &["negative mana", "§2.3"]);
+    state.players[P1].mana = mana;
+    state.players[P1].mana.max = -1;
+    only(&i17(&state, &[]), "p1", &["negative mana", "§2.3"]);
+    state.players[P1].mana = mana;
+    // Behind an open prompt too: no step may leave mana below 0.
+    state.players[P2].mana.current = -1;
+    open_prompt(&mut state, "i17-mana");
+    only(&i17(&state, &[]), "p2", &["negative mana"]);
+
+    // A 2/2 holding damage -1 is at 3 health: only the damage is wrong.
+    let (state, id) = hurt("i17-damage", -1);
+    only(&i17(&state, &[]), &id, &["negative damage", "§4.4"]);
+}
+
+#[test]
+fn i17_a_damage_event_of_0_or_less_is_one_empty_damage() {
+    let state = playing("i17-event");
+    for amount in [0, -1] {
+        only(
+            &i17(&state, &[damage_event("hero-p2", amount)]),
+            "hero-p2",
+            &["empty damage", "R63"],
+        );
+    }
 }
