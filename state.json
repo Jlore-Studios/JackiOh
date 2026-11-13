@@ -17530,16 +17530,26 @@
     "what": "plan #3824 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-13T05:37:35Z",
+    "at": "2026-11-13T06:16:07Z",
     "notes": [
-      "delivered revise #3798 on claude-1 (run 43366031540): interrupted",
-      "delivered review #3816 on claude-8 (run 43351915838): approved",
-      "started suggest on claude-3 (run 43373785976)",
-      "started revise #3812 on claude-4 (run 43373899802)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is idle, but nothing queued is for it; `claude-8` is idle, but nothing queued is for it; `claude-1` it refused a call; its limit resets at 2026-11-13T06:20:00Z; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 64%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-16T09:00:00Z; it can start a build or a plan again in 65h 15m; `muse` it refused a call; its limit resets at 2026-11-16T00:00:00Z; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-14T05:00:00Z; it can start a build or a plan again in 23h 15m; waiting for their owners: #3798 held for `claude-1` until Fri 00:20 (it refused a call)",
-      "pruned 2 plan file(s) older than 7 days",
-      "#3761: auto-merge is off and it is out of the merge queue, so `bot:merging` is off",
-      "runner gate: started 0 of 4 waiting run(s); 4 wait for room"
+      "answered a comment on #3827 that was never answered",
+      "CI on #3818: #3818: queued a CI fix",
+      "#3822 needs a plan",
+      "#3824 needs a plan",
+      "#3827 needs a plan",
+      "#3798 is held for `claude-1` until 00:20 (it refused a call)",
+      "delivered suggest on claude-3 (run 43373785976): interrupted",
+      "delivered revise #3779 on claude-1 (run 43358035197): interrupted",
+      "started revise #3779 on claude-1 (run 43378053380)",
+      "started revise #3798 on claude-1 (run 43378160805)",
+      "started revise #3818 on claude-7 (run 43378278514)",
+      "started revise #3811 on claude-7 (run 43378388906)",
+      "started plan #3824 on claude-8 (run 43378497289)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-13T10:00:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 64%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-16T09:00:00Z; it can start a build or a plan again in 64h 34m; `muse` it refused a call; its limit resets at 2026-11-16T00:00:00Z; `agy` it refused a call; its limit resets at 2026-11-14T00:03:56Z; `gpt` it refused a call; its limit resets at 2026-11-15T10:07:24Z; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-14T05:00:00Z; it can start a build or a plan again in 22h 34m",
+      "pruned 3 plan file(s) older than 7 days",
+      "#3801: closed, so `bot:merging` is off",
+      "#3783: closed, so `bot:merging` is off",
+      "runner gate: started 1 of 4 waiting run(s) (run 43375243536 on claude/sharp-carson-prrm3j); 2 wait for room; queue build 43378274611: it waits on nothing this account may approve"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18245,7 +18255,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-13T05:37:35Z",
+  "loop_tick": "2026-11-13T06:16:07Z",
   "machine_disk": {
     "issue": null,
     "reading": {
