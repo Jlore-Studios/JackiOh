@@ -1011,6 +1011,46 @@ Test ids, mirrored in `e2e/support/testids.ts`: `together-add-input`,
 `duos-own-hp`, `duos-teammate-strip`, `duos-ping-wheel`, `duos-ping-<kind>`, `duos-ping-marker`,
 `sideline-strip`, `sideline-emote`, `sideline-menu` and `sideline-mute`.
 
+## Daily games
+
+Daily games (SPEC §9.13, #3727) are a 1v1 game played a move every 1, 3, 7 or 14 days, by a challenge to
+any friend or the daily queue. The browser runs no engine and opens no socket for one: every read and
+action is one HTTPS request (`crates/server/README.md`, Daily games), and who holds the move, until when,
+what is legal and every refusal are the server's (rule 7). The times per move, the urgent hours and the
+list's sizes are `crates/shared`'s, read from the WebAssembly module (`wasm/index.ts` `dailyConstants`).
+
+```
+routes (net/navigate.ts paths, public/_redirects, behind the gate as /together is):
+  /daily                 daily/DailyRoute.tsx: Your move (least time left first), Their move, the
+                         challenges in and out, the seeks, the games that ended (daily/order.ts); each
+                         game one row (opponent and portrait, mode, turn, both lives, "Your move · 1d 4h
+                         left", urgent under DAILY_URGENT_HOURS); New daily game; the notifications
+                         (email on or off, push on this device, Add to Home Screen on an iPhone or iPad
+                         outside it); the tab reads "Your move (n)"; read again when the social read's
+                         dailyWaiting changes
+  /daily/:matchId        daily/DailyBoard.tsx: Game.tsx on the server's view and legal; each action one
+                         POST sent after the seq it read, under a fresh nonce; End turn says it sends the
+                         move; the clock pill in days and hours (daily/DailyClockPill.tsx); Next game to the
+                         next game waiting once the move has passed; "Lost on time" and "Won on time"; a
+                         notice when the game plays on an older card version; once it ends, Rematch (a new
+                         daily challenge to the opponent at its mode and time, NewDailyDialog's rematch)
+net/daily.ts             fetch wrappers for every daily route, typed
+daily/NewDailyDialog.tsx challenge any friend (online or not) or find an opponent, with daily/DailyFields.tsx:
+                         the mode, its deck or lean, and the time per move on the segmented toggle; as a
+                         rematch, only the deck or lean, to the finished game's opponent
+daily/DailyBadge.tsx     the count of games waiting on the player (the social read's dailyWaiting), on
+                         the Play hub's Daily games
+daily/push.ts            this device's push subscription from GET /api/daily/settings's vapidPublicKey,
+                         kept at POST /api/daily/push; dropped at sign-out (routes/account.tsx)
+public/sw.js             the service worker: shows a push and opens its game; caches nothing
+public/manifest.webmanifest  the web app manifest, so iOS and iPadOS deliver web push once the site is
+                         added to the Home Screen
+```
+
+The friends panel's and /together's Challenge (`together/ChallengeDialog.tsx`) offers Live (an online, idle
+friend, as before) or Daily (any friend). Test ids are `daily/testids.ts`'s, mirrored in
+`e2e/support/testids.ts`.
+
 ## Practice
 
 `/practice` (SPEC §9.9, R187) is a game against the AI with no account and no server. The practice

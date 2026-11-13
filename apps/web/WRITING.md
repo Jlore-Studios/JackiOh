@@ -80,6 +80,7 @@ Each page has exactly one name, shared across its heading (`PageTitle`), the com
 | `/ai` | How JackiOh uses AI |
 | `/dungeon` | Dungeon run |
 | `/play` | Play |
+| `/daily` | Daily games |
 
 ### Verbs and actions
 

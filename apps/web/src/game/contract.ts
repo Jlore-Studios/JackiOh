@@ -317,6 +317,8 @@ export type BoardProps = {
   animated?: readonly AnimationFrames[];
   /** A route's server-synchronised clock, mounted in the physical End Turn housing. */
   turnClock?: ReactNode;
+  /** #3727: End turn's words on a route whose turn end is sent on (a daily game's "End turn and send"); absent, "End turn". */
+  endTurnLabel?: string;
   /** A route status line, mounted on the board rail rather than a floating match bar. */
   matchStatus?: ReactNode;
   /** Route chrome carved into the same physical side rail as the controls. */
