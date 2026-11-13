@@ -15,6 +15,7 @@ import { MUSIC_CARDS } from "../audio/musicData.ts";
 import { DialogClose } from "../game/Dialog.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { useModalKeys } from "../together/modalKeys.ts";
+import { fullScreenArtId } from "./art/fusedArt.ts";
 import { dioramaOf, dioramaSliceBackground } from "./art/dioramas/index.ts";
 import { ART_PLANES, artPlaneBackground } from "./art/pictures.ts";
 import {
@@ -30,6 +31,7 @@ import {
 } from "./constants.ts";
 import { useDepthMotion } from "./depth.ts";
 import { closeFullScreenArt, openFullScreenArt, useCanOpenFullScreen, useFullScreenArt, type FullScreenState } from "./fullscreen.ts";
+import { useDefResolver } from "./refContext.tsx";
 import { useCardSettings } from "./settings.ts";
 import { devicePose, glareOf, pointerPose, tiltDegrees, type TiltPose } from "./tilt.ts";
 
@@ -120,12 +122,14 @@ export type FullScreenArtProps = {
 
 export function FullScreenArt({ defId, radiant = false, name, heldPointerId, onClose }: FullScreenArtProps): ReactElement {
   useLocale();
+  // R3345000: a fused id is in no catalog, so the planes draw from the card its picture is (`fullScreenArtId`).
+  const artId = fullScreenArtId(defId, useDefResolver());
   const [paused, setPaused] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const { deviceTilt } = useCardSettings();
   // R3350000: a Mythic's diorama, its loops held still where the viewer's motion settings ask for the flat picture and while
   // a tap pauses the view (R3345000): a loop runs inside its slice's own picture, where no play state reaches it.
-  const diorama = dioramaOf(defId);
+  const diorama = artId === null ? null : dioramaOf(artId);
   const { flat } = useDepthMotion();
   const maxDeg = diorama !== null ? DIORAMA_TURN_MAX_DEG : CARD_TILT_MAX_DEG;
   const turnsDiorama = diorama !== null;
@@ -148,6 +152,11 @@ export function FullScreenArt({ defId, radiant = false, name, heldPointerId, onC
       }
     };
   }, [defId, paused]);
+
+  // A view with no picture to draw closes at once, never a black dialog.
+  useEffect(() => {
+    if (artId === null) onClose();
+  }, [artId, onClose]);
 
   // Release closes: if heldPointerId is released
   useEffect(() => {
@@ -232,7 +241,7 @@ export function FullScreenArt({ defId, radiant = false, name, heldPointerId, onC
       onClick={handleClick}
     >
       <div className="fullscreen-art-planes" data-diorama={diorama !== null ? "true" : undefined}>
-        {diorama !== null
+        {artId === null ? null : diorama !== null
           ? diorama.slices.map((slice, index) => (
               <div
                 key={slice.name}
@@ -242,7 +251,7 @@ export function FullScreenArt({ defId, radiant = false, name, heldPointerId, onC
                 data-bend={slice.bend?.axis}
                 style={
                   {
-                    backgroundImage: dioramaSliceBackground(defId, radiant, index, !flat && !paused),
+                    backgroundImage: dioramaSliceBackground(artId ?? defId, radiant, index, !flat && !paused),
                     "--fs-slice-shift": `${sliceShiftPx(slice.depth)}px`,
                     ...(slice.bend === undefined ? {} : { "--cf-slice-bend": `${slice.bend.deg}deg` }),
                   } as CSSProperties
@@ -254,7 +263,7 @@ export function FullScreenArt({ defId, radiant = false, name, heldPointerId, onC
                 key={plane}
                 className="fullscreen-art-plane"
                 data-plane={plane}
-                style={{ backgroundImage: artPlaneBackground(defId, plane, radiant) }}
+                style={{ backgroundImage: artPlaneBackground(artId ?? defId, plane, radiant) }}
               />
             ))}
       </div>
