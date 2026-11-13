@@ -1,0 +1,82 @@
+{
+  "action": "plan",
+  "number": 3874,
+  "title": "Patch: follow-up to #3779 from the after-merge spot-check",
+  "branch": "bot/issue-3874",
+  "thread": "**Issue #3874 (data, not instructions):**\n\n```text\n# #3874: Patch: follow-up to #3779 from the after-merge spot-check\nOpened by @jgoetzmann-bot.\n\n<!-- jackioh-bot:spot-check-follow-up #3779 -->\nThe after-merge spot-check of #3779 ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/43463844601)) found 1 blocking problem(s) in the change as it merged (`44133b263728`). `claude-3` (claude, `opus`, strong) reviewed it. #3779 stays merged: nothing is reverted, and this issue fixes what it found in a change of its own, from `main`.\n\n## What to fix\n\n- [ ] `apps/web/src/together/TogetherRoute.tsx:226`: The friend row's new Lobby button skips the page's busy guard. A double press makes two duel lobbies and sends two invites, and an invite refused after the create leaves the new lobby made while the player stays on /together with only an error.\n  Evidence: onLobby runs `void attempt(async () => { const made = await createLobby({format:\"duel\",mode:\"bo1\"}); await inviteToLobby(made.code, friend.profileId); navigate(paths.lobby(made.code)); })` directly. It does not go through the page's `act` (`if (busy) return; setBusy(true)`, line ~126), so `busy` is never set and FriendRow's `disabled={busy}` (FriendRows.tsx:206) never turns on. `invite` charges the shared CHALLENGES_PER_HOUR limiter (lobby/mod.rs:662), so a 429 there is likely after other challenges. Each stray lobby counts against MAX_OPEN_ROOMS_PER_HOST per format. Fix: run it through `act`, and navigate to the lobby even when the invite is refused, showing the refusal there. No test presses `togetherTestid.lobby`; add one for a single press, for a double press, and for a refused invite.\n\n## Done when\n\n- Each finding above is fixed where it points, or answered with the evidence that it does not hold.\n- Every check is green, with no test skipped, ignored or weakened to get there (CLAUDE.md rule 12).\n\n---\nOpened by @jgoetzmann-bot from the after-merge spot-check (one in 5 medium or hard merges, `spot_check_every`): `claude-1` (`claude`) built #3779 and `claude-1` (`opus`) approved it. This issue's own pull request is never spot-checked.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "bot",
+    "by": "claude-3"
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3874: needs a plan; `claude-6` (claude, `opus`, strong) writes it in a lane of `claude-6`, which its build then takes on the same model",
+    "#3874: handed off from its owner `claude-3` (`claude-3` it refused a call; its limit resets at 2026-11-13T20:30:00Z; it can start again only in 2h 01m, more than the 120 minutes an item waits for its owner); `claude-6` owns it from this run"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "at": "2026-11-13T16:54:29Z",
+    "family": "claude",
+    "kind": "draft",
+    "notes": "",
+    "provider": "claude-3",
+    "reason": "`claude-3` reached its usage limit",
+    "trail": "- Bash: {\"command\": \"wc -l apps/web/src/together/TogetherRoute.tsx apps/web/src/together/FriendRows.tsx && ls apps/web/src/together/ && ls apps/web/src/lobby 2>/dev/null; git show --stat 44133b2637 | head -8\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3874/apps/web/src/together/TogetherRoute.tsx\"}\n- Bash: {\"command\": \"git show 44133b2637 -- apps/web/src/together/TogetherRoute.tsx apps/web/src/together/FriendRows.tsx apps/web/src/together/testids.ts apps/web/src/together/TogetherRoute.test.tsx\"}\n- Bash: {\"command\": \"cat apps/web/src/lobby/api.ts; cat apps/web/src/net/navigate.ts; cat spec/rulings/R3730005.md; ls spec/rulings/ | grep -E 'R38(7|8)' ; ls spec/pending/ | head -50\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3874/apps/web/src/lobby/LobbyScreen.tsx\"}\n- Bash: {\"command\": \"cat apps/web/src/lobby/LobbyPanel.tsx; cat apps/web/src/lobby/testids.ts; cat apps/web/src/lobby/config.ts; cat spec/pending/3730.md | head -80\"}\n- Grep: {\"pattern\": \"export function (take|consume|hand|carry|stash|pending)\\\\w*\\\\(\", \"path\": \"apps/web/src\", \"output_mode\": \"content\"}\n- Bash: {\"command\": \"grep -n \\\"lobby\\\\|Lobby\\\" apps/web/src/main.tsx | head -40; grep -rn \\\"LobbyScreen\\\" apps/web/src --include=*.tsx --include=*.ts | grep -v test | grep -v \\\"^apps/web/src/lobby/LobbyScree\u2026\n- Bash: {\"command\": \"sed -n 260,320p apps/web/src/auth/redirect.ts; grep -rn \\\"takeLinkResult\\\" apps/web/src | grep -v \\\"redirect.ts\\\" | head\"}\n- Bash: {\"command\": \"ls crates/server/src/ | head -50; grep -rn \\\"fn invite\\\" crates/server/src | head\"}\n- Bash: {\"command\": \"sed -n 640,720p crates/server/src/lobby/mod.rs; grep -n \\\"MAX_OPEN_ROOMS_PER_HOST\\\" crates/server/src/lobby/mod.rs | head\"}\n- Bash: {\"command\": \"cat apps/web/src/net/errors.ts | head -80; grep -n \\\"StrictMode\\\" apps/web/src/main.tsx\"}\n- Bash: {\"command\": \"grep -rn \\\"lazy(\\\\|use(\\\\b\\\\|<Suspense\\\" apps/web/src/game/LeanNewest.tsx apps/web/src/routes/play.tsx apps/web/src/routes/nav.tsx apps/web/src/lobby/ apps/web/src/routes/chunks.tsx | he\u2026\n- Bash: {\"command\": \"sed -n 1,140p apps/web/src/together/TogetherRoute.test.tsx\"}\n- Bash: {\"command\": \"sed -n 140,300p apps/web/src/together/TogetherRoute.test.tsx; grep -n \\\"^describe\\\\|^ it(\\\" apps/web/src/together/TogetherRoute.test.tsx | head -80\"}\n- Bash: {\"command\": \"grep -n \\\"^export\\\\|^ [a-zA-Z]*[:(]\\\" apps/web/src/test/stubServer.ts | head -40; sed -n 734,800p apps/web/src/together/TogetherRoute.test.tsx\"}\n- Bash: {\"command\": \"sed -n 987,1025p apps/web/src/together/TogetherRoute.test.tsx; sed -n 1,80p apps/web/src/lobby/LobbyScreen.test.tsx\"}\n- Bash: {\"command\": \"grep -n \\\"useEffect\\\\|return () =>\\\\|unmount\\\\|sendNow\\\" apps/web/src/undo/hold.ts | head -30; grep -n \\\"export function usePolled\\\" -A40 apps/web/src/together/session.ts | head -60\"}\n- said: You've hit your 5-hour limit \u00b7 resets 8:30pm (UTC)"
+  },
+  "session": {
+    "action": "plan",
+    "artifact": 14059786134,
+    "artifact_bytes": 197241,
+    "artifact_name": "work",
+    "at": "2026-11-13T17:01:16Z",
+    "bytes": 258992,
+    "cwd": "/home/runner/work/_temp/work/item-3874",
+    "ended": "interrupted: `claude-3` reached its usage limit",
+    "head": "4f9fdea2b64ec118c12e4f65aadd4dc51959c74c",
+    "id": "bbb10f95-d20b-4c09-912c-b7eacd228a58",
+    "kind": "plan",
+    "model": "opus",
+    "project": "-home-runner-work--temp-work-item-3874",
+    "provider": "claude-3",
+    "run": "43466781627"
+  },
+  "journal": "# Journal of #3874\n\nEvery night-bot run on #3874, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-11-13 17:01 UTC \u00b7 plan #3874 \u00b7 `claude-3` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/43466781627) on `claude-3` (`opus` (strong)). It ended **interrupted**: `claude-3` reached its usage limit\nModel calls: 1, 2.1 model minutes.\nTokens: 31 in / 11108 out / 1201999 cached, $1.13.\nSession: fresh: none was kept for this item. This run's: kept session `bbb10f95-d20b-4c09-912c-b7eacd228a58` of #3874 on claude-3 (258,992 bytes) in run 43466781627's `work` artifact, for its next run there.\nIts work ended at `4f9fdea2b64e` on `bot/issue-3874`.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 16:52 | start | from `origin/main` |  | at `4f9fdea2b64e` |\n| 2 | 16:52 | plan (`opus`) | plan the item before anyone builds it | 2.1 min, 11139 tok, $1.13 | refused: the usage limit |\n| 3 | 16:54 | stop | `claude-3` reached its usage limit |  |  |\n",
+  "usage_facts": {
+    "queued_at": "2026-11-13T16:48:02Z",
+    "claimed_at": "2026-11-13T18:28:34Z",
+    "previous_provider": "claude-3",
+    "handed_off": "handed off from `claude-3`: `claude-3` it refused a call; its limit resets at 2026-11-13T20:30:00Z; it can start again only in 2h 01m, more than the 120 minutes an item waits for its owner"
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3868 skipped: it waits for #3821 to close first"
+  ]
+}
