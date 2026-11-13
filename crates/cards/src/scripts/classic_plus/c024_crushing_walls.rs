@@ -1,5 +1,5 @@
 //! C+ #24 Crushing Walls (SPEC §8.7 row 24): destroy the top card of every zone in lanes 1 and 5, both
-//! rows (Radiant: the enemy's only); a Unit standing on an Ivory Tower while its play resolves is passed
+//! rows (Radiant: the enemy's only), a GIGA covering lane 1 or 5 among them (R3546001); a Unit standing on an Ivory Tower while its play resolves is passed
 //! by (R446, R653), and the Tower is destroyed whatever it has fused (R418).
 
 use jackioh_engine::prelude::*;
@@ -17,8 +17,12 @@ fn walls(side: ScopeSide) -> Script {
                 if is_carried(&*ctx.state, &card) {
                     return None;
                 }
-                let at = slot_of(&*ctx.state, &card)?;
-                if WALL_LANES.contains(&at.lane) { Some(card.id.clone()) } else { None }
+                // R3546001: a GIGA is in both its lanes, so one covering lane 1 or 5 is in the wall.
+                if lanes_of(&card).iter().any(|lane| WALL_LANES.contains(lane)) {
+                    Some(card.id.clone())
+                } else {
+                    None
+                }
             })
             .collect()
     };
@@ -63,6 +67,20 @@ mod tests {
     const FROST: &str = "classicplus-012-8"; // Frostspatula: a Field Spell, Animated on your turn
     const TOWER: &str = "classicplus-033"; // Ivory Tower: the first Unit stacked onto it is fused into it
     const FILLER: &str = "core-005";
+    const GIGA_BODY: &str = "stand-in (1) 4/4 GIGA R12/12";
+    const AIRBLAST_DRILL: &str = "stinkyscapeplus-052"; // a printed GIGA Field Spell
+
+    /// p1 plays Walls; each side holds a GIGA stand-in anchored at the given units lane.
+    fn gigas(radiant_face: bool, p1_anchor: Option<i32>, p2_anchor: i32) -> Scenario {
+        let mut p1 = json!({ "hand": [{ "def": WALLS, "radiant": radiant_face }, FILLER] });
+        if let Some(lane) = p1_anchor {
+            p1["field"] = json!([{ "def": GIGA_BODY, "lane": lane }]);
+        }
+        scenario(json!({
+            "p1": p1,
+            "p2": { "hand": [FILLER], "field": [{ "def": GIGA_BODY, "lane": p2_anchor }] },
+        }))
+    }
 
     fn walls(radiant_face: bool) -> Scenario {
         scenario(json!({
@@ -121,6 +139,46 @@ mod tests {
                     occupied(&s, P2),
                     rows([false, true, false, false, false], [false, false, false, true, false])
                 );
+            }
+
+            #[test]
+            fn r3546001_a_giga_anchored_in_lane_4_dies_to_the_walls_in_both_rows() {
+                let mut s = gigas(false, None, 4);
+                let giga = s.unit(P2, 4).expect("setup").id;
+                s.play(WALLS, json!({}));
+                s.expect_in_zone(&giga, "graveyard");
+                assert!(s.unit(P2, 4).is_none() && s.unit(P2, 5).is_none());
+                // The backrow row: a GIGA Field Spell anchored at lane 4.
+                let mut s = scenario(json!({
+                    "p1": { "hand": [WALLS, FILLER] },
+                    "p2": { "hand": [FILLER], "backrow": [{ "def": AIRBLAST_DRILL, "lane": 4 }] },
+                }));
+                let drill = s.backrow(P2, 4).expect("setup").id;
+                s.play(WALLS, json!({}));
+                s.expect_in_zone(&drill, "graveyard");
+                assert!(s.backrow(P2, 4).is_none() && s.backrow(P2, 5).is_none());
+            }
+
+            #[test]
+            fn r3546001_a_giga_covering_lane_1_dies_and_is_destroyed_once() {
+                let mut s = gigas(false, None, 1);
+                let giga = s.unit(P2, 1).expect("setup").id;
+                s.play(WALLS, json!({}));
+                s.expect_in_zone(&giga, "graveyard");
+                let hits = s
+                    .last_events()
+                    .iter()
+                    .filter(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == giga))
+                    .count();
+                assert_eq!(hits, 1);
+            }
+
+            #[test]
+            fn r3546001_a_giga_in_lanes_3_and_4_survives() {
+                let mut s = gigas(false, None, 3);
+                let giga = s.unit(P2, 3).expect("setup").id;
+                s.play(WALLS, json!({}));
+                s.expect_in_zone(&giga, "field");
             }
 
             #[test]
@@ -270,6 +328,16 @@ mod tests {
 
         mod radiant {
             use super::*;
+
+            #[test]
+            fn r3546001_destroys_only_the_enemy_giga() {
+                let mut s = gigas(true, Some(4), 4);
+                let mine = s.unit(P1, 4).expect("setup").id;
+                let theirs = s.unit(P2, 4).expect("setup").id;
+                s.play(WALLS, json!({}));
+                s.expect_in_zone(&mine, "field");
+                s.expect_in_zone(&theirs, "graveyard");
+            }
 
             #[test]
             fn destroys_only_the_enemy_s_four_zones_in_lanes_1_and_5() {
