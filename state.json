@@ -12464,7 +12464,8 @@
       "started_at": "2026-11-13T18:27:33Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 0,
+      "waiting_comment": 6862875702
     },
     "3732": {
       "action": "plan",
