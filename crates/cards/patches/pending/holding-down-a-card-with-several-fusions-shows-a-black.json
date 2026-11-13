@@ -1,0 +1,17 @@
+{
+  "title": "Patch: holding down a card with several fusions shows a black screen",
+  "sources": "#3863, #3885",
+  "notes": "Issue #3863: holding a fused card (a single fusion or a fusion of fusions, R179) opened the full-screen art view over an id in no catalog, so every plane drew url(\"\") and the screen was black. fullScreenArtId (cards/art/fusedArt.ts) picks the catalog card the view draws (the host of a Miner or Weapon fusion, R3045000, else the Dormant Starship hull or the last ingredient the catalog knows); useCanOpenFullScreen refuses a fusion no art resolves for (a digest id, R468), and FullScreenArt draws from the resolved id (R3345000). How cards play is unchanged.",
+  "player": {
+    "title": "Holding a fused card shows its art",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "Holding down a card with one or more fusions on it opens its full-screen art instead of a black screen."
+    ]
+  },
+  "cards": [],
+  "visual": true
+}
