@@ -17474,6 +17474,13 @@
     "3824": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-13T06:34:06Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "Only crates/cards scripts, their tests and one pending fragment change (about 10 files); no engine rules (rule 1), AI, cross-crate design, migration or 40-file spread, because R3546001 already decides the rule and the engine readers exist."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
