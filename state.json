@@ -17876,16 +17876,12 @@
     "what": "revise #3896 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-14T06:07:06Z",
+    "at": "2026-11-14T06:22:15Z",
     "notes": [
-      "delivered suggest on claude-1 (run 43562987496): suggested",
-      "#3914: typed it Task",
-      "#3913: typed it Task",
-      "#3912: typed it Task",
-      "#3911: typed it Feature",
-      "#3910: typed it Task",
-      "#3909: typed it Task",
-      "#3908: typed it Task"
+      "started review #3901 on claude-8 (run 43566123196)",
+      "started revise #3896 on claude-6 (run 43566182444)",
+      "nothing more to start: nothing is queued",
+      "pruned 4 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18591,7 +18587,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-14T06:07:06Z",
+  "loop_tick": "2026-11-14T06:22:15Z",
   "machine_disk": {
     "issue": null,
     "reading": {
