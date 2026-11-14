@@ -16203,10 +16203,12 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "at": "2026-11-13T20:05:07Z",
-        "built_by": "claude-1",
+        "at": "2026-11-14T12:46:09Z",
+        "built_by": "claude-6",
         "by": "`claude` (strong)",
-        "sha": "5d99bf6c7a7aec790bfa1b827923b7d9e3cd50d4"
+        "carried_from": "5d99bf6c7a7aec790bfa1b827923b7d9e3cd50d4",
+        "resolved_by": "`claude` (strong)",
+        "sha": "ee16a95c4a91042109d587e22224260ea962c727"
       },
       "cross_rounds": 0,
       "died": 0,
