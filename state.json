@@ -17708,7 +17708,7 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-8",
-      "run_id": "pending:3f66ca98-1794650687",
+      "run_id": "43583589447",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-14T10:05:13Z",
       "stop_requested": false,
