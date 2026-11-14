@@ -17573,11 +17573,10 @@
       "kind": "revise",
       "last_findings": [],
       "live": "resolving",
-      "merge_owner": "claude-1",
       "merge_owner_gave_up": {
-        "at": "2026-11-14T05:35:13Z",
+        "at": "2026-11-14T10:35:15Z",
         "provider": "claude-1",
-        "sha": "4a6725a84389bc1f9965d1bca775439a0e3fb54f"
+        "sha": "9574f4c8fe23406d8582415018ea0938b5bd9a48"
       },
       "pending_request": false,
       "provider": "claude-1",
