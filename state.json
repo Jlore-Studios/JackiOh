@@ -14386,9 +14386,11 @@
         "by": "`gemini` (medium)",
         "sha": "bd9cd0da2ad5a7908b95005bf26fa208bacd2fed"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-14T13:36:05Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-14T14:03:19Z",
         "family": "gemini",
@@ -14398,6 +14400,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- said: Waiting for `cargo jackioh` check commands to finish compiling and executing.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"1331366e-d07d-4e99-9885-9ce026d917bc/task-459\"}\n- said: Waiting for compilation to complete.\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"1331366e-d07d-4e99-9885-9ce026d917bc/task-459\"}\n- said: \n- run_command: ps aux | grep cargo\n- said: \n- run_command: ps -ef --forest | grep -A 5 6963\n- said: \n- schedule: {\"DurationSeconds\": 30, \"Prompt\": \"Check rustc ThinLTO finishing\"}\n- said: Waiting for rustc ThinLTO linking of `cargo-jackioh` to complete.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"1331366e-d07d-4e99-9885-9ce026d917bc/task-459\"}\n- said: Waiting for cargo-jackioh linking to complete.\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"1331366e-d07d-4e99-9885-9ce026d917bc/task-459\"}\n- said: \n- run_command: ps -ef --forest | grep -A 5 6963\n- said: \n- schedule: {\"DurationSeconds\": 45, \"Prompt\": \"Check rustc after 45s\"}\n- said: Waiting for cargo-jackioh to complete compilation.\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"1331366e-d07d-4e99-9885-9ce026d917bc/task-459\"}\n- said: \n- run_command: ps -ef --forest | grep -A 5 6963\n- said: \n- schedule: {\"DurationSeconds\": 60, \"Prompt\": \"Check rustc after 60s\"}\n- said: Waiting for rustc ThinLTO compilation to complete.\n- said: \n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3868 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3868 && git diff\n- said: \n- read_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3868/.bot-notes.md\"}\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3868/.bot-notes.md\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3868 && git status\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: board notices draw in an overlay over the board, not in the control rail's flow\"} --> ## Summary This change moves transient in-game board notices (`action-error`, `attack-reason`, `lethal-hint`, `DrawOfferNotice`, match-gone / read-only, and practice-u\u2026"
       },
+      "interruptions": 0,
       "issue": 3868,
       "kind": "review",
       "live": "reviewing",
