@@ -16379,7 +16379,7 @@
     "3881": {
       "action": "revise",
       "asks": [],
-      "audit_tier": "strong",
+      "audit_tier": "",
       "ci_early": true,
       "ci_fixed_head": "059bc2a05bf7b8607639efe876ae458578e9fbc9",
       "ci_fixes": 1,
@@ -16390,19 +16390,12 @@
       "died": 1,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-13T20:08:05Z",
+      "feedback_since": "2026-11-14T01:09:59Z",
       "forced": false,
       "interruptions": 0,
       "issue": 3837,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "The issue asks that any spec text saying Portal to the Past gives nothing on an empty board be changed along with it, but two ruling notes still say C+ #29 fizzles there, which now contradicts R3837003.",
-          "evidence": "R0508.md:11 reads \"The AI's seat never has a last board ... so the AI's C+ #29 fizzles.\" R2706000.md:10 reads \"it brings no last board and leaves none ([[R508]]), and C+ #29 cast in it fizzles.\" Both seats now fall back through `portal(true)` in c029_portal_to_the_past.rs. The diff changes R0417's matching sentence to \"falls back ([[R3837003]])\" but leaves these two alone. Fix: give each the same one-sentence amendment, e.g. \"so the AI's C+ #29 falls back ([[R3837003]])\" and \"and C+ #29 cast in it falls back ([[R3837003]])\".",
-          "severity": "blocking",
-          "where": "spec/rulings/R0508.md:11"
-        }
-      ],
+      "last_findings": [],
       "live": "revising",
       "pending_request": false,
       "provider": "claude-8",
@@ -16432,7 +16425,7 @@
         "provider": "claude-8",
         "run": "43498714409"
       },
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-11-14T01:09:59Z",
       "stop_requested": false,
       "taken_asks": [],
