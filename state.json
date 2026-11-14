@@ -17674,13 +17674,9 @@
     "what": "spot-check #3896 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-14T08:02:31Z",
+    "at": "2026-11-14T08:11:34Z",
     "notes": [
-      "#3884: approved and green, so its strikes are cleared",
-      "started revise #3902 on claude-6 (run 43574043885)",
-      "started review #3896 on claude-3 (run 43574096114)",
-      "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days"
+      "delivered review #3896 on claude-3 (run 43574096114): reviewed"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18386,7 +18382,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-14T08:02:31Z",
+  "loop_tick": "2026-11-14T08:11:34Z",
   "machine_disk": {
     "issue": null,
     "reading": {
