@@ -13965,14 +13965,14 @@
       "cleared": {
         "approver": {
           "family": "claude",
-          "model": "sonnet",
+          "model": "opus",
           "provider": "claude-4",
-          "tier": "medium"
+          "tier": "strong"
         },
-        "at": "2026-11-14T11:45:44Z",
-        "built_by": "agy",
-        "by": "`claude` (medium)",
-        "sha": "df9970f4fe0a8d18de1dffc7bd2d921d9663da7d"
+        "at": "2026-11-14T15:27:32Z",
+        "built_by": "claude-4",
+        "by": "`claude` (strong)",
+        "sha": "f2ca92ff93eed56a84a6e72451ff5abb4aa57cfc"
       },
       "cross_rounds": 0,
       "died": 0,
