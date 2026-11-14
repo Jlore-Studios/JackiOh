@@ -2184,3 +2184,4 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-14T16:16:04Z,43603399675,agy,gemini-3.8-flash-high,review,3922,medium,approved,,125.5,1242777,100781,0,,29,11,20,27,1.4,,none,,4
 2026-11-14T16:56:48Z,43604667428,claude-3,opus,plan,3920,hard,failed,,150,302,107382,49434589,20.7094,5,50,,,114.1,claude-1,fresh,cap,1
 2026-11-14T17:13:00Z,43618949283,claude-3,opus,plan,3920,hard,planned,,7.4,38,18649,9673344,28.2858,51,54,,,273.1,claude-3,resumed,,1
+2026-11-14T19:28:00Z,43620242344,claude-3,opus,build,3920,hard,infra,infra,,,,,,,,,,287,claude-3,none,,
