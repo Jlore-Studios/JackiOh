@@ -17025,6 +17025,7 @@
       "planned_at": "2026-11-14T03:11:44Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
       "planned_by_id": "agy",
+      "planned_model": "gemini-3.8-flash-high",
       "planned_tier": "medium",
       "provider": "agy",
       "queued_at": "2026-11-13T23:39:24Z",
