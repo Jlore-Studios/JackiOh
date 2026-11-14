@@ -1,7 +1,7 @@
 // A token's claims, decoded without verifying them (the server alone verifies a token).
 // It imports nothing, so `net/readCache.ts` can read `sub` without an import cycle (`net/auth.ts` imports `net/api.ts`).
 
-function claimsOf(token: string): Record<string, unknown> | null {
+export function claimsOf(token: string): Record<string, unknown> | null {
   const parts = token.split(".");
   const payload = parts[1];
   if (payload === undefined || payload.length === 0) return null;

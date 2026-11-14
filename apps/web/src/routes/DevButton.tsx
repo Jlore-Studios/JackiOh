@@ -9,6 +9,7 @@ import { useCallback, useId, useRef, useState, useSyncExternalStore, type ReactE
 import { createPortal } from "react-dom";
 
 import { Dialog } from "../game/Dialog.tsx";
+import { queryList, subscribeTo } from "../game/mediaQuery.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import type { Account } from "../net/gate.ts";
 import DevTools from "./DevTools.tsx";
@@ -23,28 +24,13 @@ export const devButtonTestid = {
   close: "dev-panel-close",
 } as const;
 
-// It caches no `MediaQueryList`: a test swaps `window.matchMedia` between renders.
-function queryList(): MediaQueryList | null {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return null;
-  try {
-    return window.matchMedia(DEV_PANEL_HIDDEN_QUERY);
-  } catch {
-    return null;
-  }
-}
-
 function subscribe(onChange: () => void): () => void {
-  const query = queryList();
-  if (query === null || typeof query.addEventListener !== "function") return () => undefined;
-  query.addEventListener("change", onChange);
-  return () => {
-    query.removeEventListener("change", onChange);
-  };
+  return subscribeTo(DEV_PANEL_HIDDEN_QUERY, onChange);
 }
 
 /** A host with no media queries shows no button: it cannot say it is a computer. */
 function onComputer(): boolean {
-  const list = queryList();
+  const list = queryList(DEV_PANEL_HIDDEN_QUERY);
   return list !== null && !list.matches;
 }
 

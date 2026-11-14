@@ -4,6 +4,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { readCodeInput } from "@jackioh/shared";
 import {
   CODE_ALPHABET,
   INVITE_CODE_GROUP_SIZE,
@@ -11,7 +12,7 @@ import {
   INVITE_CODE_SEPARATOR,
   REDEMPTION_IDENTICAL_ERROR,
 } from "@jackioh/server-config";
-import { INVITE_CODE_PLACEHOLDER } from "../auth/codeInput.ts";
+import { INVITE_CODE_FORMAT, INVITE_CODE_PLACEHOLDER } from "../auth/codeInput.ts";
 import { codeFieldTestid, inviteTestid } from "../auth/testids.ts";
 import { ApiRequestError, getCodeStatus, getMe, redeemCode } from "../net/api.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
@@ -22,7 +23,6 @@ import InviteRoute, {
   INVITE_NOT_NEEDED,
   INVITE_PAUSED,
   INVITE_SUBMIT,
-  formatInviteCode,
 } from "./invite.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
@@ -37,8 +37,11 @@ vi.mock("../net/api.ts", async (importOriginal) => {
 
 const TOKEN = "e2e-token-pending";
 
+/** What the code field shows for `raw`: R191's reading, grouped and separated per §9.4. */
+const formatCode = (raw: string): string => readCodeInput(raw, INVITE_CODE_FORMAT).formatted;
+
 /** A well-formed code over R104's alphabet, built rather than spelled. */
-const GOOD_CODE = formatInviteCode(
+const GOOD_CODE = formatCode(
   Array.from({ length: INVITE_CODE_LENGTH }, (_unused, index) =>
     CODE_ALPHABET[index % CODE_ALPHABET.length],
   ).join(""),
@@ -79,14 +82,14 @@ describe("the code format is §9.4's, read from crates/server/src/config.rs", ()
   it("R104 normalizes to upper case, and refuses an excluded character rather than dropping it", async () => {
     // R104 normalizes lowercase `l` to `L`; R191 refuses ambiguous look-alikes rather than mapping them.
     // Refusal stops reading rather than dropping a character and shifting the submitted code.
-    expect(formatInviteCode("abcd")).toBe("ABCD");
-    expect(formatInviteCode("l")).toBe("L");
+    expect(formatCode("abcd")).toBe("ABCD");
+    expect(formatCode("l")).toBe("L");
     for (const excluded of ["0", "O", "1", "I", "o", "i"]) {
       expect(
         CODE_ALPHABET.includes(excluded.toUpperCase()),
         `${excluded} is outside R104's alphabet`,
       ).toBe(false);
-      expect(formatInviteCode(`AB${excluded}CD`), `${excluded} stops the reading`).toBe("AB");
+      expect(formatCode(`AB${excluded}CD`), `${excluded} stops the reading`).toBe("AB");
     }
     expect(CODE_ALPHABET.includes("L"), "R104 keeps L; SPEC excludes only lowercase l").toBe(true);
 
@@ -109,7 +112,7 @@ describe("the code format is §9.4's, read from crates/server/src/config.rs", ()
 
   it("groups the characters the way §9.4 formats them", () => {
     const bare = Array.from({ length: INVITE_CODE_LENGTH }, () => "A").join("");
-    const formatted = formatInviteCode(bare);
+    const formatted = formatCode(bare);
     const groups = formatted.split(INVITE_CODE_SEPARATOR);
     expect(groups).toHaveLength(INVITE_CODE_LENGTH / INVITE_CODE_GROUP_SIZE);
     for (const group of groups) expect(group).toHaveLength(INVITE_CODE_GROUP_SIZE);
@@ -117,7 +120,7 @@ describe("the code format is §9.4's, read from crates/server/src/config.rs", ()
 
   it("never accepts more than INVITE_CODE_LENGTH characters", () => {
     const tooLong = Array.from({ length: INVITE_CODE_LENGTH * 2 }, () => "A").join("");
-    expect(formatInviteCode(tooLong).replaceAll(INVITE_CODE_SEPARATOR, "")).toHaveLength(
+    expect(formatCode(tooLong).replaceAll(INVITE_CODE_SEPARATOR, "")).toHaveLength(
       INVITE_CODE_LENGTH,
     );
   });

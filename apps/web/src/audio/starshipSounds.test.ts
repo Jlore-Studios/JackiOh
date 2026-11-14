@@ -18,7 +18,7 @@ import { HIDDEN_DEF_ID } from "./constants.ts";
 import { cuesFor, type CueContext } from "./cues.ts";
 import { createSoundDirector } from "./director.ts";
 import { SFX } from "./sfx.ts";
-import { BROADSIDE_SOUNDS, starshipBed } from "./starshipSounds.ts";
+import { BROADSIDE_SOUNDS, starshipSounds } from "./starshipSounds.ts";
 import { FakeAudio } from "./test/fakeAudio.ts";
 import type { CardHook, PlayableLineKind, SfxId, SfxParams, SoundCue, SoundSink } from "./types.ts";
 import { cueCard } from "./useGameAudio.ts";
@@ -104,7 +104,7 @@ function voicedStill(view: PlayerView, events: GameEvent[]): Sent[] {
   director.onView(after);
   for (const entry of planEntries(newEventsSince(before.events, after.events), before, true, createPlayTracker())) {
     expect(entry.durationMs).toBe(0);
-    expect(starshipBed(entry, entry.view)).toEqual([]);
+    expect(starshipSounds(entry, entry.view).cues).toEqual([]);
   }
   director.onIdle();
   expect(director.owedCount()).toBe(0);
@@ -149,7 +149,7 @@ describe("R3334000 a docking piece's clank", () => {
     const { entry, sent } = voicedOne(view, [...fusion("a", BEAM, 2), ...fusion("b", CANNON, 3), ...fusion("c", FLAK, 4)], (e) => e.fuse !== undefined);
     expect(entry.fuse?.pieces).toHaveLength(3);
     const D = entry.durationMs;
-    const bed = starshipBed(entry, entry.view);
+    const bed = starshipSounds(entry, entry.view).cues;
     // One clank for each piece as it docks, naming the pieces the ship then holds: 2, 3, then 4.
     expect(bed).toEqual([0, 1, 2].map((k) => ({ kind: "sfx", id: "starshipDock", params: { amount: k + 2 }, delayMs: starshipFuseLandMs(k, 3, D) })));
     const delays = bed.map((cue) => cue.delayMs);
@@ -171,8 +171,8 @@ describe("R3334000 a docking piece's clank", () => {
     // A run the seat cannot place (R97's sentinel) docks nothing, nor an entry of no duration (Reduce Motion).
     const fuse = entry.fuse;
     if (fuse === undefined) throw new Error("no fuse run");
-    expect(starshipBed({ ...entry, fuse: { ...fuse, anchor: null } }, entry.view)).toEqual([]);
-    expect(starshipBed({ ...entry, durationMs: 0 }, entry.view)).toEqual([]);
+    expect(starshipSounds({ ...entry, fuse: { ...fuse, anchor: null } }, entry.view).cues).toEqual([]);
+    expect(starshipSounds({ ...entry, durationMs: 0 }, entry.view).cues).toEqual([]);
   });
 });
 
@@ -190,7 +190,7 @@ describe("R3334002 a broadside's weapons", () => {
     const expected = [...kinds]
       .sort((a, b) => first(a) - first(b))
       .map((fire) => ({ kind: "sfx", id: BROADSIDE_SOUNDS[fire], delayMs: broadsideFireMs(first(fire), guns.length, D) }));
-    const bed = starshipBed(entry, entry.view);
+    const bed = starshipSounds(entry, entry.view).cues;
     expect(bed).toEqual(expected);
     expect(new Set(bed.map((cue) => (cue.kind === "sfx" ? cue.id : ""))).size).toBe(kinds.length);
     for (const cue of bed) expect(cue.delayMs).toBeLessThanOrEqual(D);
@@ -205,18 +205,18 @@ describe("R3334002 a broadside's weapons", () => {
     const unarmed = board(launched([ENGINE]));
     expect(starshipBroadside(unarmed, "ship")).toEqual([]);
     const ram = voicedOne(unarmed, [attack("ship")], (e) => e.events[0]?.type === "attackDeclared");
-    expect(starshipBed(ram.entry, ram.entry.view)).toEqual([{ kind: "sfx", id: "starshipRam", delayMs: Math.round(FX_LUNGE_CONTACT_AT * ram.entry.durationMs) }]);
+    expect(starshipSounds(ram.entry, ram.entry.view).cues).toEqual([{ kind: "sfx", id: "starshipRam", delayMs: Math.round(FX_LUNGE_CONTACT_AT * ram.entry.durationMs) }]);
     expect(sfxIds(ram.sent)).toEqual(["starshipRam"]);
     expect(rowCues(attack("ship"), unarmed, true)).toEqual([]);
 
     // Any other attacker swings as ever, with no broadside, and so does R97's sentinel.
     const plain = board(unit("p1", { instanceId: "ship" }));
     const swing = voicedOne(plain, [attack("ship")], (e) => e.events[0]?.type === "attackDeclared");
-    expect(starshipBed(swing.entry, swing.entry.view)).toEqual([]);
+    expect(starshipSounds(swing.entry, swing.entry.view).cues).toEqual([]);
     expect(sfxIds(swing.sent)).toEqual(["attack"]);
-    expect(starshipBed({ ...entry, events: [attack(HIDDEN_DEF_ID)] }, entry.view)).toEqual([]);
+    expect(starshipSounds({ ...entry, events: [attack(HIDDEN_DEF_ID)] }, entry.view).cues).toEqual([]);
     expect(rowSfx(attack(HIDDEN_DEF_ID), view)).toEqual(["attack"]);
-    expect(starshipBed({ ...entry, durationMs: 0 }, entry.view)).toEqual([]);
+    expect(starshipSounds({ ...entry, durationMs: 0 }, entry.view).cues).toEqual([]);
   });
 
   it("R3334002 under Reduce Motion a launched Starship's attack, armed or not, still swings", () => {
@@ -232,7 +232,7 @@ describe("R3334003 a wreck's groan", () => {
     for (const ship of [launched([BEAM, CANNON]), dormantStarship("p1", [ENGINE], { instanceId: "ship" })]) {
       const view = board(ship);
       const { entry, sent } = voicedOne(view, [destroyed("ship")], (e) => e.events.some((event) => event.type === "destroyed"));
-      const bed = starshipBed(entry, entry.view);
+      const bed = starshipSounds(entry, entry.view).cues;
       expect(bed).toEqual([{ kind: "sfx", id: "starshipWreck", delayMs: Math.round(STARSHIP_WRECK.breakAt * entry.durationMs) }]);
       // The groan stands in for the death sting once the director has sent it; the hull's death line still speaks.
       expect(rowSfx(destroyed("ship"), view, true)).toEqual([]);
@@ -241,18 +241,18 @@ describe("R3334003 a wreck's groan", () => {
       expect(sent).toContainEqual(expect.objectContaining({ kind: "voice", defId: HULL, line: "death" }));
 
       // Inside a wipe its set piece swallows the ship: no groan.
-      expect(starshipBed({ ...entry, wipe: { by: "core-088", sourceId: "nx", sides: ["you"], anchor: null } }, entry.view)).toEqual([]);
-      expect(starshipBed({ ...entry, durationMs: 0 }, entry.view)).toEqual([]);
+      expect(starshipSounds({ ...entry, wipe: { by: "core-088", sourceId: "nx", sides: ["you"], anchor: null } }, entry.view).cues).toEqual([]);
+      expect(starshipSounds({ ...entry, durationMs: 0 }, entry.view).cues).toEqual([]);
     }
 
     // Any other death keeps its sting, and R97's sentinel sounds as ever, with no groan.
     const plain = board(unit("p1", { instanceId: "ship", defId: "core-004" }));
     const death = voicedOne(plain, [destroyed("ship", "core-004")], (e) => e.events.some((event) => event.type === "destroyed"));
-    expect(starshipBed(death.entry, death.entry.view)).toEqual([]);
+    expect(starshipSounds(death.entry, death.entry.view).cues).toEqual([]);
     expect(sfxIds(death.sent)).toEqual(["death"]);
     const view = board(launched([BEAM]));
     const hidden = destroyed(HIDDEN_DEF_ID);
-    expect(starshipBed({ events: [hidden], type: "destroyed", durationMs: 600, frames: new Map(), view }, view)).toEqual([]);
+    expect(starshipSounds({ events: [hidden], type: "destroyed", durationMs: 600, frames: new Map(), view }, view).cues).toEqual([]);
     expect(rowSfx(hidden, view)).toEqual(["death"]);
   });
 

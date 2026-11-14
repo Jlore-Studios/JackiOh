@@ -28,10 +28,9 @@ use serde_json::{Value, json};
 use crate::actor::contracts::one_tx;
 use crate::actor::rooms::start_lobby_room;
 use crate::api::collection::caller_profile;
-use crate::api::crypto::{is_well_formed_code, normalize_code, random_code};
+use crate::api::crypto::random_code;
 use crate::api::decks::{
-    FrozenChoice, ModeChoiceInput, already_in_match, assert_free_to_play, freeze_choice, in_game,
-    read_mode_choice,
+    FrozenChoice, already_in_match, assert_free_to_play, freeze_choice, in_game, read_mode_choice,
 };
 use crate::api::http::{
     ApiError, ApiErrorCode, ApiResult, Req, account_key, bad_request, json as json_response, ok,
@@ -42,7 +41,7 @@ use crate::app::{App, now_ms};
 use crate::config::{DUOS_ROOM_TTL_MS, MAX_OPEN_ROOMS_PER_HOST, ROOM_CODE_LENGTH, ROOM_CODE_TTL_SECONDS};
 use crate::db::store::QueueMode;
 use crate::duos::rooms::{
-    CoopStart, CoopStartOutcome, duos_choice_of, read_choice, read_difficulty, start_coop_match,
+    CoopStart, CoopStartOutcome, code_of, duos_choice_of, read_choice, read_difficulty, start_coop_match,
 };
 use crate::seats::Taken;
 use crate::social::friends::are_friends;
@@ -55,12 +54,6 @@ use store::{Lobby, LobbyPick, LobbySettings};
 const CODE_ATTEMPTS: usize = 8;
 
 // Reading a request and a lobby
-
-/// The code a path names, normalized, or none when it could never be a code.
-fn code_of(req: &Req) -> Option<String> {
-    let code = normalize_code(req.params.get("code").map(String::as_str).unwrap_or(""));
-    is_well_formed_code(&code, ROOM_CODE_LENGTH).then_some(code)
-}
 
 /// Missing, expired, blocked and (to anyone not in it) started or full are one answer (§9.4).
 fn not_open() -> ApiError {
@@ -120,15 +113,6 @@ fn read_mode(body: &Value) -> Result<QueueMode, ApiError> {
         Some("bo3") => Ok(QueueMode::Bo3),
         Some("random") => Ok(QueueMode::Random),
         _ => Err(bad_request(r#""mode" must be "bo1", "bo3" or "random""#)),
-    }
-}
-
-/// The mode a 1v1 pick asks for.
-fn choice_mode(choice: &ModeChoiceInput) -> QueueMode {
-    match choice {
-        ModeChoiceInput::Bo1 { .. } => QueueMode::Bo1,
-        ModeChoiceInput::Bo3 { .. } => QueueMode::Bo3,
-        ModeChoiceInput::Random { .. } => QueueMode::Random,
     }
 }
 
@@ -595,7 +579,7 @@ pub async fn pick(app: &Arc<App>, req: Req) -> ApiResult {
     let choice = match lobby.settings {
         LobbySettings::Duel { mode } => {
             let choice = read_mode_choice(&req.body)?;
-            if choice_mode(&choice) != mode {
+            if choice.mode() != mode {
                 return Err(mode_refusal(mode));
             }
             choice

@@ -659,6 +659,148 @@ describe("a half-built play or attack is dropped at the turn change (#2924)", ()
   });
 });
 
+// #3899 (`docs/implicit-states.md`, state 6): the board's layers at once — a burst holding the newest
+// view back, a selection, a prompt and a hotseat hand-over. Each burst is built as "the board's moves
+// wait for the board" builds one: a view whose window adds an event the runner animates.
+describe("layer states 3899", () => {
+  const AGAIN: GameEvent = { type: "damage", sourceId: null, targetId: "hero-p1", amount: 2, combat: false };
+  const attacker = (over: Partial<PlayerView> = {}): PlayerView =>
+    baseView({
+      you: emptySide("p1", { units: [unit("p1", { instanceId: "u1" }), null, null, null, null] }),
+      opponent: emptySide("p2", { units: [unit("p2", { instanceId: "e1" }), null, null, null, null] }),
+      ...over,
+    });
+  const attack: ActionBody = { type: "attack", attackerId: "u1", targetId: "e1" };
+  const asking = (): PlayerView =>
+    baseView({
+      pending: pendingFor(
+        "answer",
+        ["A", "B"].map((label) => ({ key: `mode:${label}`, label })),
+        { prompt: "Pick one" },
+      ),
+    });
+  const answerB: ActionBody = { type: "answer", choiceId: "ch1", selection: [{ pick: "mode", option: "B" }] };
+  const drain = (): void => {
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+  };
+
+  it("a second burst queues behind the first and a fresh copy of the newest view adds nothing", () => {
+    const onAction = vi.fn();
+    const { rerender } = render(<Game view={withEvents(baseView(), START)} legal={[END_TURN]} onAction={onAction} />);
+    rerender(<Game view={withEvents(baseView(), [...START, HIT])} legal={[END_TURN]} onAction={onAction} />);
+    const newest = withEvents(baseView(), [...START, HIT, AGAIN]);
+    rerender(<Game view={newest} legal={[END_TURN]} onAction={onAction} />);
+    expect(screen.getByTestId("animation-queue")).toHaveAttribute("data-animating", "damage");
+
+    act(() => {
+      vi.advanceTimersByTime(ANIMATIONS.damage.durationMs);
+    });
+    expect(screen.getByTestId("animation-queue"), "the second burst plays after the first").toHaveAttribute(
+      "data-animating",
+      "damage",
+    );
+    expect(screen.getByTestId("end-turn")).toBeDisabled();
+
+    // The same view again, as fresh JSON (a reconnect's resend, a second poll): nothing new to play.
+    rerender(<Game view={structuredClone(newest)} legal={[END_TURN]} onAction={onAction} />);
+    act(() => {
+      vi.advanceTimersByTime(ANIMATIONS.damage.durationMs);
+    });
+    expect(screen.queryByTestId("animation-queue")).toBeNull();
+    expect(screen.getByTestId("end-turn")).not.toBeDisabled();
+  });
+
+  it("an animated turn change keeps a selection through the burst and drops it once the board shows the turn", () => {
+    const onAction = vi.fn();
+    const u1 = () => screen.getByTestId(testid.card("u1"));
+    const { rerender } = render(<Game view={withEvents(attacker(), START)} legal={[attack]} onAction={onAction} />);
+    fireEvent.click(u1());
+    expect(u1()).toHaveAttribute("data-selected", "true");
+
+    // A burst of the same turn: the board lights nothing while it plays, and the selection is back after it.
+    rerender(<Game view={withEvents(attacker(), [...START, HIT])} legal={[attack]} onAction={onAction} />);
+    expect(screen.getByTestId("animation-queue")).toBeInTheDocument();
+    expect(u1()).not.toHaveAttribute("data-selected");
+    drain();
+    expect(u1()).toHaveAttribute("data-selected", "true");
+
+    // A burst that carries the board on to the viewer's next turn: the selection goes once it shows it.
+    rerender(<Game view={withEvents(attacker({ turn: 5 }), [...START, HIT, AGAIN])} legal={[attack]} onAction={onAction} />);
+    expect(screen.getByTestId("animation-queue")).toBeInTheDocument();
+    drain();
+    expect(screen.queryByTestId("animation-queue")).toBeNull();
+    expect(u1()).not.toHaveAttribute("data-selected");
+    expect(screen.getByTestId(testid.card("e1"))).not.toHaveAttribute("data-glow");
+    fireEvent.click(screen.getByTestId(testid.card("e1")));
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it("a prompt inside a burst opens once the board shows it and one tap answers once", () => {
+    const onAction = vi.fn();
+    const board = (view: PlayerView) => (
+      <CatalogContext.Provider value={lookupFromDefs(CATALOG)}>
+        <Game view={view} legal={[]} onAction={onAction} />
+      </CatalogContext.Provider>
+    );
+    const { rerender } = render(board(withEvents(baseView(), START)));
+    rerender(board(withEvents(asking(), [...START, HIT])));
+    expect(screen.getByTestId("animation-queue")).toBeInTheDocument();
+    expect(screen.queryByTestId("prompt-modal"), "the board still shows the view before the question").toBeNull();
+
+    drain();
+    expect(screen.getByTestId("prompt-modal")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("prompt-option-mode:B"));
+    fireEvent.click(screen.getByTestId("prompt-option-mode:B"));
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith(answerB);
+  });
+
+  it("a hotseat hand-over mid-burst drains it and replays nothing", () => {
+    const { rerender } = render(<Game view={withEvents(baseView(), START)} legal={[]} onAction={vi.fn()} />);
+    rerender(<Game view={withEvents(baseView(), [...START, HIT])} legal={[]} onAction={vi.fn()} />);
+    expect(screen.getByTestId("animation-queue")).toBeInTheDocument();
+
+    const theirs = withEvents(
+      baseView({ viewer: "p2", active: "p2", turn: 4, you: emptySide("p2"), opponent: emptySide("p1", { hand: { count: 4 } }) }),
+      [...START, HIT, { type: "turnStarted", player: "p2", turn: 4 }],
+    );
+    rerender(<Game view={theirs} legal={[END_TURN]} onAction={vi.fn()} />);
+    expect(screen.queryByTestId("animation-queue"), "the arriving seat sees no history").toBeNull();
+    expect(screen.getByTestId("end-turn")).not.toBeDisabled();
+    act(() => {
+      vi.advanceTimersByTime(ANIMATIONS.damage.durationMs);
+    });
+    expect(screen.queryByTestId("animation-queue")).toBeNull();
+  });
+
+  // Unspecified (named for a person): R3060000 drops a repeat against the view it was sent against, and
+  // the answer's own view is newer, so a second tap while the answered prompt fades out sends again.
+  it("a second tap while the answered prompt fades sends the answer again", () => {
+    const onAction = vi.fn();
+    const board = (view: PlayerView) => (
+      <CatalogContext.Provider value={lookupFromDefs(CATALOG)}>
+        <Game view={view} legal={[]} onAction={onAction} />
+      </CatalogContext.Provider>
+    );
+    const { rerender } = render(board(withEvents(asking(), START)));
+    fireEvent.click(screen.getByTestId("prompt-option-mode:B"));
+    expect(onAction).toHaveBeenCalledTimes(1);
+
+    rerender(board(withEvents(baseView(), [...START, { type: "promptAnswered", player: "p1", choiceId: "ch1" }])));
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-animating", "promptAnswered");
+    fireEvent.click(screen.getByTestId("prompt-option-mode:B"));
+    expect(onAction).toHaveBeenCalledTimes(2);
+    expect(onAction).toHaveBeenLastCalledWith(answerB);
+
+    act(() => {
+      vi.advanceTimersByTime(ANIMATIONS.promptAnswered.durationMs);
+    });
+    expect(screen.queryByTestId("prompt-modal")).toBeNull();
+  });
+});
+
 describe("R3060000 a repeat of one intent against one view is sent once", () => {
   const clickEndTurn = () => fireEvent.click(screen.getByTestId("end-turn"));
 

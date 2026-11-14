@@ -234,6 +234,8 @@ struct Core {
     /// By `HUMAN_SEATS`: pending Hello socket generation to absorb duplicates (R835001).
     hello_pending: [Option<u64>; 2],
     socket_generation: [u64; 2],
+    /// R3694000: the close `halt_with` gave its sockets; a socket handed to the stopped actor gets it too.
+    halted_with: Option<(u16, &'static str)>,
     /// By `HUMAN_SEATS`: whether daily Jlore cap held back pay (R1483000).
     jlore_capped: [bool; 2],
     /// By `HUMAN_SEATS`: payout per player answered by result write (#1657); `None`, nothing told.
@@ -324,6 +326,7 @@ pub fn create_duos_actor(app: Arc<App>, input: DuosActorInput) -> DuosActor {
         pings: [VecDeque::new(), VecDeque::new()],
         hello_pending: [None, None],
         socket_generation: [0, 0],
+        halted_with: None,
         jlore_capped: [false, false],
         economy: [None, None],
         spectate: DuosSpectate::default(),
@@ -1043,7 +1046,9 @@ impl DuosActor {
         let previous = {
             let mut core = self.lock();
             if core.host.is_stopped() {
-                None
+                Err(core
+                    .halted_with
+                    .unwrap_or((CLOSE_GOING_AWAY, "the actor is going away")))
             } else {
                 // R835001: new socket generation so hello is never absorbed by older one.
                 core.socket_generation[index] += 1;
@@ -1051,13 +1056,18 @@ impl DuosActor {
                 // R744: the person is here, so no grace is started for it as the queue runs.
                 let outputs = self.step_in(&mut core, DuosHostEvent::Connected { seat });
                 self.exec_now(&mut core, outputs);
-                Some(previous)
+                Ok(previous)
             }
         };
-        let Some(previous) = previous else {
-            // Actor stopping; client reconnects.
-            socket.close(Some(CLOSE_GOING_AWAY), Some("the actor is going away"));
-            return;
+        let previous = match previous {
+            Ok(previous) => previous,
+            Err((code, reason)) => {
+                // Actor stopping: closed as `halt_with` closed the sockets it held: 1001, which the
+                // client reconnects on, or the reaper's `MATCH_OVER_CLOSE_CODE`, which it does not
+                // (R3694000).
+                socket.close(Some(code), Some(reason));
+                return;
+            }
         };
         let on_message = Arc::downgrade(&self.shared);
         let on_close = on_message.clone();
@@ -1173,9 +1183,12 @@ impl DuosActor {
     }
 
     /// `halt`, its sockets closed with `code` and `reason`.
-    fn halt_with(&self, code: u16, reason: &str) {
+    fn halt_with(&self, code: u16, reason: &'static str) {
         let sockets = {
             let mut core = self.lock();
+            // R3694000: kept under the lock that stops the machine, for a socket `attach` is handed later;
+            // a second stop finds no socket left to close, so the first close is the one kept.
+            core.halted_with.get_or_insert((code, reason));
             // The machine stops its clocks and takes their timers back.
             let outputs = self.step_in(&mut core, DuosHostEvent::Stop);
             self.exec_now(&mut core, outputs);

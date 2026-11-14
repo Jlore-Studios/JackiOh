@@ -18,10 +18,6 @@ export type DailyMode = "bo1" | "random";
 
 export const DAILY_MODES: readonly DailyMode[] = ["bo1", "random"];
 
-export function isDailyMode(value: unknown): value is DailyMode {
-  return value === "bo1" || value === "random";
-}
-
 /** One game as the Daily screen lists it, from the caller's side (`me`, `them`). */
 export type DailyGameSummary = {
   matchId: string;

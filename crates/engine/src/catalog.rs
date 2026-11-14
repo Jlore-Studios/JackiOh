@@ -200,9 +200,6 @@ pub fn catalog_version() -> &'static str {
     }
 }
 
-/// What holds the transient definitions: the state.
-pub type TransientHolder = GameState;
-
 /// A definition by id: the state's transient ones first, then the catalog every reader searches, then,
 /// under `testkit`, the stand-in card the id spells out (#3486). No `query`, pool or `registered()`
 /// reader ever reaches a stand-in.

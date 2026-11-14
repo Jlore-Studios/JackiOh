@@ -57,11 +57,6 @@ export function dailySections(list: DailyList, now: number): DailySections {
   };
 }
 
-/** The game the board's Next game opens: the first of Your move, or none. */
-export function nextYourMove(list: DailyList, now: number, except: string | null = null): DailyGameSummary | null {
-  return dailySections(list, now).yourMove.find((game) => game.matchId !== except) ?? null;
-}
-
 /** How long a move has left, in days and hours: "1d 4h left", "5h left", "Under 1h left", "Out of time". */
 export function timeLeftText(ms: number): string {
   const { MS_PER_DAY, MS_PER_HOUR } = dailyConstants();

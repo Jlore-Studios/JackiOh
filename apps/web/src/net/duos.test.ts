@@ -4,14 +4,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiRequestError } from "./api.ts";
-import { cancelDuosRoom, createDuosRoom, getDuosLive, getDuosReplay, getDuosRoom, joinDuosRoom } from "./duos.ts";
+import { createDuosRoom, getDuosLive, getDuosReplay, joinDuosRoom } from "./duos.ts";
 import { clearSession, writeSession } from "./session.ts";
 import { must, refusal, stubServer, type Call, type Reply } from "../test/stubServer.ts";
 
 const TOKEN = "tok-duos-1";
-
-const HOST = { profileId: "p-me", username: "Me#1" };
-const GUEST = { profileId: "f-ann", username: "Ann#2" };
 
 beforeEach(() => {
   writeSession({ accessToken: TOKEN });
@@ -85,25 +82,6 @@ describe("B33 B34 co-op rooms", () => {
     expect(error.code).toBe("account_pending");
   });
 
-  it("B33 getDuosRoom reads GET /api/duos/rooms/:code and resolves with the room", async () => {
-    const room = { code: "HJK234", difficulty: "medium", host: HOST, guest: null, matchId: null };
-    const { call, result } = await sent(() => getDuosRoom("HJK234"), { status: 200, body: room });
-    expect(call.method).toBe("GET");
-    expect(call.path).toBe("/api/duos/rooms/HJK234");
-    expect(result).toEqual(room);
-  });
-
-  it("B33 getDuosRoom resolves with the guest and the match once the guest has joined", async () => {
-    const room = { code: "HJK234", difficulty: "medium", host: HOST, guest: GUEST, matchId: "dm-1" };
-    const { result } = await sent(() => getDuosRoom("HJK234"), { status: 200, body: room });
-    expect(result).toEqual(room);
-  });
-
-  it("B34 an unknown or expired room rejects with 404", async () => {
-    const error = await refused(() => getDuosRoom("ZZZ999"), refusal(404, "not_found", "No such room."));
-    expect(error.status).toBe(404);
-  });
-
   it("B33 joinDuosRoom posts its body to /api/duos/rooms/:code/join and resolves with the match", async () => {
     const body = { deckId: "d-control" };
     const { call, result } = await sent(() => joinDuosRoom("HJK234", body), { status: 200, body: { matchId: "dm-1" } });
@@ -128,18 +106,6 @@ describe("B33 B34 co-op rooms", () => {
   it("B34 joining a room that does not exist (or expired) rejects with 404", async () => {
     const error = await refused(() => joinDuosRoom("ZZZ999", { random: true }), refusal(404, "not_found", "No such room."));
     expect(error.status).toBe(404);
-  });
-
-  it("B34 cancelDuosRoom deletes /api/duos/rooms/:code", async () => {
-    const { call, result } = await sent(() => cancelDuosRoom("HJK234"), { status: 204 });
-    expect(call.method).toBe("DELETE");
-    expect(call.path).toBe("/api/duos/rooms/HJK234");
-    expect(result).toBeFalsy();
-  });
-
-  it("B34 canceling a room once a guest has joined (or not the host) rejects with the server's status", async () => {
-    const error = await refused(() => cancelDuosRoom("HJK234"), refusal(409, "conflict", "The match has started."));
-    expect(error.status).toBe(409);
   });
 });
 
