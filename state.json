@@ -33870,7 +33870,9 @@
           "provider": "claude-4"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-14T16:12:20Z",
         "every": 5,
+        "findings": 0,
         "head": "f2ca92ff93eed56a84a6e72451ff5abb4aa57cfc",
         "issue": 3729,
         "merged_at": "2026-11-14T15:55:58Z",
@@ -33883,12 +33885,13 @@
           "provider": "claude-7",
           "tier": "strong"
         },
-        "run_id": "pending:613554e0-1794671947",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/43613107815",
         "sha": "88b1df6f055036f89432a83f6c2d32350fb36242",
         "started_at": "2026-11-14T15:59:22Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: a Play hub that explains every way to play, and one inbox for everything waiting on you",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 260
