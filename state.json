@@ -13948,7 +13948,7 @@
       "verdict_rounds": 1
     },
     "3902": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
@@ -13986,11 +13986,13 @@
       },
       "interruptions": 0,
       "issue": 3729,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "fixing-ci",
+      "live": "reviewing",
       "merge_owner": "claude-4",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-14T14:10:04Z",
         "from_run": "43592340791",
         "gates": [
           {
@@ -14090,7 +14092,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "43592340791",
+      "run_id": "pending:e6faa59d-1794665389",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -14111,7 +14113,7 @@
         "run": "43592340791"
       },
       "source": "",
-      "started_at": "2026-11-14T11:55:58Z",
+      "started_at": "2026-11-14T14:10:04Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -14544,9 +14546,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-14T14:09:37Z",
+    "at": "2026-11-14T14:10:04Z",
     "url": "",
-    "what": "review #3922 on agy"
+    "what": "review #3902 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-14T14:01:08Z",
