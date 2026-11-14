@@ -17332,6 +17332,11 @@
       "action": "revise",
       "asks": [],
       "audit_tier": "",
+      "ci_early": false,
+      "ci_fixes": 1,
+      "ci_on_head": true,
+      "ci_run_id": 43580504862,
+      "ci_sha": "15dae100d5422b42474bb78b1aab66f6bc58d15c",
       "cleared": {
         "approver": {
           "family": "claude",
@@ -17359,7 +17364,8 @@
       "pending_request": false,
       "provider": "claude-6",
       "question": "",
-      "queued_at": "2026-11-14T08:03:58Z",
+      "queued_at": "2026-11-14T09:39:38Z",
+      "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
@@ -17383,7 +17389,7 @@
         "provider": "claude-6",
         "run": "43574043885"
       },
-      "source": "",
+      "source": "ci",
       "started_at": "2026-11-14T08:04:20Z",
       "stop_requested": false,
       "taken_asks": [],
