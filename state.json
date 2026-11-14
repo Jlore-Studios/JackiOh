@@ -16977,6 +16977,7 @@
       "ci_on_head": true,
       "ci_run_id": 43532555198,
       "ci_sha": "1a94335ce714322742d8f815e7054ea857365864",
+      "died": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-14T01:33:27Z",
