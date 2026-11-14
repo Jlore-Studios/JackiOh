@@ -20470,3 +20470,6 @@ observed_at,subscription,source,during,run_id,util_5h,resets_5h,util_7d,resets_7
 2026-11-13T22:28:25Z,claude-6,stream,call,43509887483,13,2026-11-14T00:30:00Z,,,allowed,50,,
 2026-11-13T23:20:08Z,claude-6,stream,call,43509887483,15,2026-11-14T00:30:00Z,,,allowed,50,,
 2026-11-13T23:20:53Z,claude-6,stream,call,43509887483,16,2026-11-14T00:30:00Z,,,allowed,50,,
+2026-11-13T23:31:19Z,claude-6,ping,before,43527468678,17,2026-11-14T00:30:00Z,,,allowed,100,,
+2026-11-13T23:44:11Z,claude-6,ping,before,43528998925,19,2026-11-14T00:30:00Z,,,allowed,100,,
+2026-11-13T23:44:29Z,claude-6,stream,call,43528998925,20,2026-11-14T00:30:00Z,,,allowed,100,,
