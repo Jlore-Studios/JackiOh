@@ -17026,9 +17026,9 @@
       "queued_at": "2026-11-13T23:39:24Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "",
-      "run_id": "43532800088",
+      "run_id": "pending:96ccd924-1794625030",
       "runs_on": "night-vm-agy",
-      "started_at": "2026-11-14T00:14:09Z",
+      "started_at": "2026-11-14T02:57:35Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on gemini-3.8-flash-high wrote no plan: timed out after 9000s"
@@ -17221,9 +17221,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-14T02:35:24Z",
+    "at": "2026-11-14T02:57:35Z",
     "url": "",
-    "what": "plan #3899 on claude-3"
+    "what": "plan #3893 on agy"
   },
   "last_sweep": {
     "at": "2026-11-14T02:55:10Z",
