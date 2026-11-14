@@ -14327,8 +14327,14 @@
     "what": "plan #3921 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-14T13:21:03Z",
-    "notes": [],
+    "at": "2026-11-14T13:27:22Z",
+    "notes": [
+      "#3921 needs a plan",
+      "started plan #3921 on claude-3 (run 43599911042)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days",
+      "#3921: typed it Bug"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15033,7 +15039,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-14T13:21:03Z",
+  "loop_tick": "2026-11-14T13:27:22Z",
   "machine_disk": {
     "issue": null,
     "reading": {
