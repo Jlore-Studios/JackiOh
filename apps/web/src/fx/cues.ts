@@ -515,16 +515,19 @@ const impact: Recipe = (event, p) => {
   return [...cues, ...impactTail(event, p, p.D, look.particle)];
 };
 
-/** R1363: the Armor took the whole hit (`damageAbsorbed`). R2803000 folds `ward` into the rows: the full shield in Holy, landing with the hit. */
+/**
+ * R1363: the Armor took the whole hit (`damageAbsorbed`). R2803000 folds `ward` into the rows: the full shield in Holy, landing with the hit.
+ * R3857000: a hero's kept Armor gain (`armorGained`) blooms the same shield over the hero, with no shake.
+ */
 const armor: Recipe = (event, p) => {
-  if (event.type !== "damageAbsorbed") return [];
+  if (event.type !== "damageAbsorbed" && event.type !== "armorGained") return [];
   const at = anchor(p.tgt);
   const land = frac(FX_MOTIF_PHASES.land, p.D);
   const cues: FxCue[] = [];
   for (const cue of shieldCues("full", at, p.D, land, p.env.intensity)) {
     cues.push(cue.kind === "burst" ? { ...cue, colors: FLAVOR_LOOKS.Holy.colors } : cue);
   }
-  pushShake(cues, p.env.intensity, FX_ARMOR_TRAUMA, land);
+  if (event.type === "damageAbsorbed") pushShake(cues, p.env.intensity, FX_ARMOR_TRAUMA, land);
   return cues;
 };
 

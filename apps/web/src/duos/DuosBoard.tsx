@@ -12,7 +12,9 @@
 // PINGS (B64): a ping marks its place for PING_SHOW_MS on the board showing its duel; one on the other
 // flashes the portal. REPLAY (#965): `replay` draws a finished game's step for `DuosReplay.tsx`, both Games
 // read-only. #1755: "View the board" folds the team's result panel to the rail's "Result". R2092000: the
-// panel draws the chrome's `playAgain` and decides nothing.
+// panel draws the chrome's `playAgain` and decides nothing. R3731002: every part reads the seat, its team
+// and its teammate off `view.seat`, so a 2v2's team B person sees their own duel as its Player 2, their
+// team first.
 
 import {
   useCallback,
@@ -215,10 +217,11 @@ function resultWords(result: DuosResult, view: DuosView): { outcome: "win" | "lo
   }
 }
 
-/** R2092000: the Play again line, from the route's last read and the last offer's refusal. */
+/** R2092000: the Play again line, from the route's last read and the last offer's refusal; none for a 2v2 (R3731003). */
 function againLine(again: DuosPlayAgain | undefined): { words: string; alert: boolean } | null {
   if (again === undefined) return null;
   const status = again.status;
+  if (status?.unavailable === true) return null;
   if (status !== null && !status.teammateHere) return { words: t("Your teammate has left"), alert: false };
   if (again.refusal !== null) return { words: t(again.refusal), alert: true };
   if (status === null || status.matchId !== null) return null;
@@ -316,7 +319,8 @@ function ResultPanel({
             {t("Watch the replay")}
           </button>
         )}
-        {playAgain === undefined || playAgain.status?.teammateHere !== true ? null : (
+        {/* R3731003: a 2v2 offers no Play again. */}
+        {playAgain === undefined || playAgain.status?.teammateHere !== true || playAgain.status.unavailable === true ? null : (
           <button
             type="button"
             className="button-primary"

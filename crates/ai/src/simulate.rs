@@ -9,10 +9,11 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::subsystems::ky_competition::worked_answer;
 use jackioh_engine::{
-    ANSWER_KEY, ANSWER_STOP_KEY, Action, ActionBody, CardInstance, GameEvent, GameState, KY_COMPETITION_MAX,
-    PLAYER_IDS, Phase, PlayerId, PromptKind, ReduceResult, Rng, Selection, TurnLog, active_units_of,
-    effective_life, find_instance, is_sick, legal_actions, max_mana_for, opponent_of, owed_mana_of,
-    reduce_unpiloted, self_def_ids, slot_of, stop_answer, subsystems, unit_view, units_on_field_of,
+    ANSWER_KEY, ANSWER_STOP_KEY, Action, ActionBody, AppliedAction, CardInstance, GameEvent, GameState,
+    KY_COMPETITION_MAX, NONCE_HISTORY, PLAYER_IDS, Phase, PlayerId, PromptKind, ReduceResult, Rng, Selection,
+    TurnLog, active_units_of, effective_life, find_instance, is_sick, legal_actions, max_mana_for,
+    opponent_of, owed_mana_of, reduce_unpiloted, self_def_ids, slot_of, stop_answer, subsystems, unit_view,
+    units_on_field_of,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -55,6 +56,7 @@ enum CounterKind<'a> {
         sim_errors: Cell<usize>,
         sim_panics: Cell<usize>,
         first_sim_panic: OnceCell<String>,
+        memo: SimMemo,
     },
     Sub {
         parent: &'a dyn NodeCounter,
@@ -245,6 +247,107 @@ impl NodeCounter for CountingNodeCounter<'_> {
             CounterKind::Sub { parent, .. } => parent.record_sim_panic(message),
         }
     }
+
+    fn sim_memo(&self) -> Option<&SimMemo> {
+        match &self.kind {
+            CounterKind::Root { memo, .. } => Some(memo),
+            CounterKind::Sub { parent, .. } => parent.sim_memo(),
+        }
+    }
+}
+
+/// R3575603: one step a decision simulated and found expensive (`is_expensive_step`): the state it
+/// stepped from, the seat and the action, and the engine's answer.
+struct MemoEntry {
+    state: GameState,
+    seat: PlayerId,
+    action: ActionBody,
+    stepped: ReduceResult,
+}
+
+/// R3575603: the expensive steps one decision has simulated, at most `AI_SEARCH.memo_steps`, so the
+/// same step from the same state (the lethal solver's and the beam's on one world, a line scored again,
+/// the same play reached by two orders) is answered by the engine once. A step is a function of its
+/// state and action: its random draws read the state's seed and cursor (CLAUDE.md rule 4), and nothing
+/// it does reads the nonces of the steps before it (`GameState.applied`), which only the dedupe asks.
+/// So two states are the same step's input when they differ in those nonces alone, and the answer is
+/// the one a second run would give, its record of nonces rebuilt as the engine's `remember_nonce` builds
+/// it: the input's, then this step's nonce with the events it produced, the oldest dropped past
+/// `NONCE_HISTORY`.
+#[derive(Default)]
+pub struct SimMemo {
+    entries: Cell<Vec<MemoEntry>>,
+}
+
+/// Whether `a` and `b` are the same state but for their nonce records (`GameState.applied`).
+fn same_but_nonces(a: &GameState, b: &GameState) -> bool {
+    if a.applied == b.applied {
+        return a == b;
+    }
+    let mut other = b.clone();
+    other.applied.clone_from(&a.applied);
+    *a == other
+}
+
+impl SimMemo {
+    /// The steps kept.
+    pub fn len(&self) -> usize {
+        let entries = self.entries.take();
+        let len = entries.len();
+        self.entries.set(entries);
+        len
+    }
+
+    /// Whether no step is kept.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    fn find(
+        &self,
+        state: &GameState,
+        seat: PlayerId,
+        action: &ActionBody,
+        nonce: &str,
+    ) -> Option<ReduceResult> {
+        let entries = self.entries.take();
+        let found = entries
+            .iter()
+            .find(|entry| {
+                entry.seat == seat && entry.action == *action && same_but_nonces(&entry.state, state)
+            })
+            .map(|entry| entry.stepped.clone());
+        self.entries.set(entries);
+        let mut stepped = found?;
+        let mut applied = state.applied.clone();
+        applied.push(AppliedAction {
+            nonce: nonce.to_string(),
+            events: stepped.events.clone(),
+        });
+        let excess = applied.len().saturating_sub(NONCE_HISTORY);
+        applied.drain(0..excess);
+        stepped.state.applied = applied;
+        Some(stepped)
+    }
+
+    fn keep(&self, state: &GameState, seat: PlayerId, action: &ActionBody, stepped: &ReduceResult) {
+        let mut entries = self.entries.take();
+        if entries.len() < AI_SEARCH.memo_steps.max(0) as usize {
+            entries.push(MemoEntry {
+                state: state.clone(),
+                seat,
+                action: action.clone(),
+                stepped: stepped.clone(),
+            });
+        }
+        self.entries.set(entries);
+    }
+}
+
+/// R3575603: whether the step `action` took from `state` to `stepped` is one the search pays more than
+/// its node for (`surcharge_nodes`, `announced_surcharge_nodes`): the only steps `SimMemo` keeps.
+fn is_expensive_step(state: &GameState, seat: PlayerId, action: &ActionBody, stepped: &ReduceResult) -> bool {
+    surcharge_nodes(state, seat, action) > 0 || announced_surcharge_nodes(state, action, stepped) > 0
 }
 
 pub fn create_node_counter<'a>(
@@ -260,6 +363,7 @@ pub fn create_node_counter<'a>(
             sim_errors: Cell::new(0),
             sim_panics: Cell::new(0),
             first_sim_panic: OnceCell::new(),
+            memo: SimMemo::default(),
         },
     }
 }
@@ -666,10 +770,22 @@ fn simulate_answering(
         }
     }
     let run = catch_unwind(AssertUnwindSafe(|| -> Option<SimStep> {
-        let first = reduce_unpiloted(
-            state,
-            &Action::new(action.clone(), seat, format!("sim:{}", counter.used())),
-        );
+        // R3575603: an expensive step this decision already took from this state is answered again.
+        let nonce = format!("sim:{}", counter.used());
+        let memo = counter.sim_memo();
+        let first = match memo.and_then(|memo| memo.find(state, seat, action, &nonce)) {
+            Some(stepped) => stepped,
+            None => {
+                let stepped = reduce_unpiloted(state, &Action::new(action.clone(), seat, nonce));
+                if let Some(memo) = memo
+                    && stepped.error.is_none()
+                    && is_expensive_step(state, seat, action, &stepped)
+                {
+                    memo.keep(state, seat, action, &stepped);
+                }
+                stepped
+            }
+        };
         if let Some(error) = first.error {
             note_sim_error(counter);
             return Some(Err(error));

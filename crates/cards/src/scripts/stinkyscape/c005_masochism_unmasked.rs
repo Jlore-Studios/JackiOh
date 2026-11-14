@@ -170,6 +170,26 @@ mod tests {
             assert_eq!(crate::preview_seen(&s, P2, &trap), left);
         }
 
+        /// R1875000: set, it answers a hit on its controller's hero on its controller's turn alone: one
+        /// on the opponent's turn leaves it set, and that hit is taken.
+        #[test]
+        fn r1875000_set_it_answers_no_hit_on_the_opponents_turn() {
+            let mut s = crate::scenario(json!({
+                "seed": "masochism-theirs-set",
+                "active": "p2",
+                "p1": { "backrow": [{ "def": ID, "faceUp": false, "lane": 1 }], "library": crate::filler(6) },
+                "p2": { "hand": [SORCERER, "core-005"], "mana": 10, "library": crate::filler(6) },
+            }));
+            s.play(
+                SORCERER,
+                json!({ "zone": 1, "targets": [{ "pick": "hero", "player": "p1" }] }),
+            );
+            s.expect_health(P1, HERO_HEALTH - SORCERER_HIT);
+            s.expect_health(P2, HERO_HEALTH);
+            assert_eq!(s.count("trapFired"), 0);
+            assert_ne!(s.backrow(P1, 1).expect("the trap").face_up, Some(true));
+        }
+
         #[test]
         fn r1875000_face_up_it_answers_no_hit_again() {
             let mut s = board(false, true, sorcerers(false, 1));

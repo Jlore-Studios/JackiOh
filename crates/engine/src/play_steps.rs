@@ -76,8 +76,9 @@ use crate::triggers::{
     run_queued_trigger, settle, trigger_holder_for, trigger_holders_with_hook,
 };
 use crate::wire::{
-    CardCost, CardType, CounterKind, FengShuiOutcome, GameEvent, ManaSpentFor, PLAYER_IDS, PlagueSpend,
-    PlayedFrom, PlayerId, PromptKind, RevealAt, Row, Selection, TargetAim, TargetDecl, Zone, opponent_of,
+    CardCost, CardType, CounterKind, FengShuiOutcome, GameEvent, ManaSpentFor, PLAYER_IDS, Phase,
+    PlagueSpend, PlayedFrom, PlayerId, PromptKind, RevealAt, Row, Selection, TargetAim, TargetDecl, Zone,
+    opponent_of,
 };
 use crate::work::{begin_work_cascade, drain_work, drop_work, paused, paused_of, push_work};
 use crate::zones::{
@@ -822,16 +823,19 @@ fn tributes_an_enemy(state: &GameState, run: &PlayRun) -> bool {
     })
 }
 
-/// R360: where #55's base face lands when its Tribute took an opposing unit: the opponent's zone in
-/// the named lane if open, else their leftmost open unit zone (R15). With none it stays where named,
-/// as a steal with no zone does (R15). A Flying Golem named into the backrow goes to the unit row
-/// (R1081000).
+/// Where a played card that is summoned for the opponent lands, if it is. R3837000: one that always
+/// is (§8 #52's base face) takes the opponent's leftmost open unit zone (R64); with none it stays where
+/// named (R3837001). R360: #55's base face, when its Tribute took an opposing unit, takes the
+/// opponent's zone in the named lane if open, else their leftmost open unit zone (R15); with none it
+/// stays where named, as a steal with no zone does (R15). A Flying Golem named into the backrow goes
+/// to the unit row (R1081000).
 fn handed_over_zone(state: &GameState, run: &PlayRun, card: &CardInstance) -> Option<ZoneSlot> {
-    if run.enemy_tributed != Some(true) {
-        return None;
-    }
     let zone = run.zone?;
-    if crate::scripts::flags_of(state, card).enemy_tribute_hands_over != Some(true) {
+    let flags = crate::scripts::flags_of(state, card);
+    if flags.summon_for_opponent == Some(true) {
+        return first_free_zone(state, opponent_of(run.player), Row::Units);
+    }
+    if run.enemy_tributed != Some(true) || flags.enemy_tribute_hands_over != Some(true) {
         return None;
     }
     let opponent = opponent_of(run.player);
@@ -1696,7 +1700,13 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     // R2179002: a cast on draw is a cast and no play, so none of a play's counts and records takes it.
     if !cast_on_draw(run) {
         {
+            let in_the_end = sink.state.phase == Phase::End;
             let side = &mut sink.state.players[run.player];
+            // R3800003: the first play the end of turn makes marks how many came before the end began,
+            // so a game with none in its end hashes as it did (R767000).
+            if in_the_end && side.turn_log.played_before_end.is_none() {
+                side.turn_log.played_before_end = i32::try_from(side.turn_log.played_ids.len()).ok();
+            }
             side.turn_log.played_ids.push(card.id.clone());
             side.turn_log.cards_played += 1;
             // R213: what this play paid, which the next play's Gifted Program check counts (R56, R70).
@@ -2051,6 +2061,9 @@ fn resolve_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
         match part {
             ResolvePart::Quickstriker => quickstriker_combo(sink, run, &card),
             ResolvePart::ComboDraw => combo_draw_step(sink, run),
+            // R783004, R3806000: a card played face-down as a Trap runs no Cry at its play, its text
+            // dormant; only a Spell set under Paranoia resolves its text now, and stays set.
+            ResolvePart::Script if card.set_as.is_some() => crate::alt_play::resolve_at_set(sink, &card),
             ResolvePart::Script => {
                 // B5 E14, R399: a copier resolves the copied Spell's script, itself as "this".
                 let face = text_face_of(sink.state, &card);

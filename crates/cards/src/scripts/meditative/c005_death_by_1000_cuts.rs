@@ -376,5 +376,24 @@ mod tests {
                 assert_eq!(damage_amounts(&s), vec![1, 1, 1]);
             });
         }
+
+        #[test]
+        fn r802_r767000_the_kept_script_multiplies_echo_by_a_max_mana_above_1() {
+            crate::under_kept(CUTS, script_v0_5_11o(), || {
+                let mut s = scenario(json!({
+                    "seed": "meditative-005-kept-max-mana",
+                    "p1": { "hand": [CUTS, FILLER], "mana": 9, "field": [MENACE] },
+                    "p2": { "hand": [FILLER], "field": [MENACE, MENACE] },
+                }));
+                assert_eq!(s.state().players.p1.mana.max, MAX_MANA);
+                let ids = p2_units(&s);
+                s.play(CUTS, json!({ "targets": pick::id(&ids[0]) }));
+
+                // X = 2 × MAX_MANA, 8: the play plus 8 repeats, each asking a fresh target.
+                let x = (2 * MAX_MANA) as usize;
+                assert_eq!(answer_all(&mut s, &ids), x);
+                assert_eq!(damage_amounts(&s), vec![1; x + 1]);
+            });
+        }
     }
 }

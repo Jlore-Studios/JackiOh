@@ -48,7 +48,7 @@ mod tests {
     const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself
     const VANILLA: &str = "core-008"; // Mr. Vanilla
     const MENACE: &str = "core-019"; // Midrange Menace: Taunt
-    const SHREDDER: &str = "core-013"; // Jlockeed Shredder-10: lives through a strike back of 9, not one of 11
+    const SHREDDER: &str = "stand-in (3) 6/8 R12/16"; // lives through a strike back of 9, not one of 11
     const MOTHS: &str = "core-009"; // Moths to the Flame: at its controller's start of turn every enemy Unit attacks it.
     const TRAITOROUS_BLOOD: &str = "meditative-064"; // Traitorous Blood: re-aims an attack at the attacker's neighbour
 

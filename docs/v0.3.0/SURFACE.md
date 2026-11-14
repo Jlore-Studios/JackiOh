@@ -489,7 +489,10 @@ hidden_from }` marks each first run of a Cry, Death, start-of-turn or end-of-tur
 trigger and Activate just before its effects (`hook_marks.rs`). Neither reaches the trigger loop
 (`as_rules_read`, `triggers::withhold_report`), so no rule reads them and no hash moves; `view_for`
 withholds a marker from a seat that could not read its card and never forwards `hiddenFrom`, and the
-golden texts leave both out (R2783000, R2783001).
+golden texts leave both out (R2783000, R2783001). Since #3857 `GameEvent::ArmorGained { player, amount,
+armor }` reports a hero's kept Armor gain (`effects::gain_hero_armor`), `armor` being `hero_armor_of`
+after it. It is withheld from the trigger loop, public, takes no room in R168's floor and is left out
+of the golden texts (R3857000).
 
 ### 6.5 Mutation convention and the per-call sink
 
@@ -923,8 +926,8 @@ daily/<x>.rs   (#3727, SPEC §9.13) daily games over plain HTTPS, no actor: game
 ```
 
 A daily game's boundary (#3727) is plain HTTPS, so a client with no socket and no engine (a Roblox
-server, later) can play one: the caller's `view_for` and legal actions under the game's catalog, the
-`seq` an action is sent `after`, and the clock as `jackioh_shared::host::daily`'s `DailyHold`s
+server, later) can play one: the caller's `view_for`, legal actions and the forecast of its attacks (R3855000)
+under the game's catalog, the `seq` an action is sent `after`, and the clock as `jackioh_shared::host::daily`'s `DailyHold`s
 (`apps/web/src/wire/generated/DailyHold.ts`). The routes are `crates/server/README.md`'s "Daily games".
 
 ### 11.2 The shared shapes (frozen)

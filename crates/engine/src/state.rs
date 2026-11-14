@@ -471,8 +471,9 @@ pub struct CardInstance {
 
 /// R783004, R1040, R1044: what a card played face-down as a Trap carries until it has revealed — how
 /// it reveals (`cloaked`, by its Reveal; the three timings are from before patch v0.3.7), the turn it
-/// was set in, the Echo stamped as it was set (none since then, R1045), and, once a set Spell has
-/// turned face-up, that its own text now resolves (`revealing`).
+/// was set in, the Echo stamped as it was set (none since then, R1045), and that a set Spell's own text
+/// resolves now (`revealing`): once it has turned face-up as it reveals, or (R3806000) still face-down
+/// as it is set under Meditative #99 Paranoia.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "ts",
@@ -488,7 +489,8 @@ pub struct SetAs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub echo: Option<i32>,
-    /// R1044: a set Spell has fired and its Spell text is resolving now. Only ever `Some(true)`.
+    /// R1044: a set Spell's Spell text is resolving now, as it reveals or (R3806000) as it is set under
+    /// Paranoia. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub revealing: Option<bool>,
@@ -1129,6 +1131,14 @@ pub struct TurnLog {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub mana_locked: Option<i32>,
+    /// R3800003: how many entries `playedIds` held as this turn's end began (§2.2), set on a player's log
+    /// by the first card it plays or casts during the end (absent, every play came before it, so a game
+    /// with none hashes as before, R767000): Classic+ #37 Wardrum's end of turn casts from the plays
+    /// before it, so what the end of turn itself plays or casts (another Wardrum's copies) joins no pool.
+    /// `startTurn` rebuilds the log, which clears it, and a game over clears it too.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub played_before_end: Option<i32>,
 }
 
 /// `PlayerState.hero`.

@@ -506,6 +506,10 @@ pub struct StaticFlags {
     /// (§8 #55's base face: "If opposing Units are used, summon for your opponent").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub enemy_tribute_hands_over: Option<bool>,
+    /// R3837000: every play of this card summons it for the opponent, Tribute or none (§8 #52's base
+    /// face: "Summon this for your opponent").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub summon_for_opponent: Option<bool>,
     /// Anti-oneshot Armor: caps each hit on this player's hero at ANTI_ONESHOT_CAP (§4.4 step 3).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub anti_oneshot: Option<bool>,
@@ -1164,6 +1168,10 @@ pub struct Script {
     /// E11, R454: the permissions this card gives its controller to play cards from their graveyard.
     pub graveyard_play: Option<GraveyardPlayHook>,
     pub reveal_echo: Option<RevealEchoHook>,
+    /// R3806000 (Meditative #99 Paranoia): while this card acts on its controller's field, a Spell they
+    /// set face-down resolves its Spell text as it is set, and again as it reveals
+    /// (`alt_play::resolve_at_set`). A fusion has it when an ingredient does.
+    pub resolves_set_spells: bool,
     /// B5 E5, Classic #89 Paul Allen's Ghost: "to target this with anything but an attack, a player must
     /// also discard N cards", 0 or absent none. Random at pay time (R682), so no action carries them: a play
     /// (§10.5 step 2), activation or prompt answer pays them (`targeting.rs`, `targeting_point.rs`).

@@ -59,8 +59,8 @@
 //!   I16 every card's own record agrees with the pile that holds it (§3.2, R78, R766): `zone` names the pile
 //!      (a field slot's side, row and lane too), a field card's `controller` is its side, a hand, library,
 //!      graveyard or exile card is owned and controlled by its side (R747, R2618000, R73, R12), a card off
-//!      the field holds none of R78's field-only state, nor a graveyard or exile card R766's price
-//!      (`field_state_held`).
+//!      the field holds nothing `zones::reset_instance` (R78's reset) would clear, bar the keeps its pile
+//!      lawfully allows (`field_state_held`), nor a graveyard or exile card R766's price.
 //!   I17 the state check ran (§4.5): on I7's settled state no field unit at layered health 0 or less but
 //!      an Indestructible one with max health above 0 (R69) or a Dormant one (R3539003), and no seat that
 //!      `can_lose` (R2201000) at hero health 0 or less (a Duos seat's is its pool's, §13.4); on every state
@@ -84,10 +84,10 @@ use crate::reduce::ReduceResult;
 use crate::state::{CardInstance, GameState, PendingChoice, find_instance};
 use crate::subsystems::activate::ActivateAction;
 use crate::wire::{
-    Action, ActionBody, ActivationView, AttackHealth, BackrowView, CardType, CardView, Counters, DUOS_DUELS,
-    DUOS_SEATS, DuosActionBody, DuosEvent, DuosSeat, DuosView, Enchantment, GameEvent, GameResult, HandView,
-    KeywordKind, PLAYER_IDS, PerPlayer, Phase, PlagueSpend, PlayerId, PlayerView, PromptKind, RedirectWhat,
-    RevealAt, Row, Selection, Team, TuningChange, Zone, ZoneChoice, ZoneName, has_keyword, opponent_of,
+    Action, ActionBody, ActivationView, BackrowView, CardType, CardView, DUOS_DUELS, DUOS_SEATS,
+    DuosActionBody, DuosEvent, DuosSeat, DuosView, Enchantment, GameEvent, GameResult, HandView, KeywordKind,
+    PLAYER_IDS, PerPlayer, Phase, PlagueSpend, PlayerId, PlayerView, PromptKind, RedirectWhat, RevealAt, Row,
+    Selection, Team, TuningChange, Zone, ZoneChoice, ZoneName, has_keyword, opponent_of,
 };
 
 /// I6 under the 1,000-seed gate: every this-many-th state, setup's and the last always (the monitor
@@ -578,64 +578,68 @@ fn held_names(checks: &[(bool, &'static str)]) -> Vec<&'static str> {
         .collect()
 }
 
-/// R78's reset of a card leaving the field, read on a card off it (I16): the field-only state it still
-/// holds, by field name. A hand or a library card may lawfully hold a Buff's and a grant's state, which
-/// rides it onto the field (`effects/buff.rs`, B5 E38) and which R215 takes as it reaches a graveyard or
-/// an exile pile, so `buffs`, `grantedKeywords`, `grants`, `vanilla` and `counters` are read there alone.
-/// A copy carries its source's `statsOverride` and `armorOverride` into a hand or a library (R57, R1242,
-/// R2198001; `add_to_hand.rs`'s `copy_riders`, `library_copies.rs`), and R175 reads them before R78's reset
-/// takes them as it reaches a graveyard or an exile pile, so those two are read there alone as well.
-/// Left out because a card off the field may lawfully hold them: `memory` (R1841003's `tributeLowered`
-/// rides a hand or a deck; a graveyard card keeps R429's `@returnPrice`, R766, and R178's
-/// `@exileOnLanding`), and what stays in every zone by R78 and R766: `radiant`, `tuning`, `brittle`,
-/// `temporary`, `enchantments` (R385, R386, R410, R2179001), `grantedTags`, `chinese`, `knownAs`,
-/// `timesPlayed`, `flashbackSpent`, `awakened`, `hiddenNerfs`, `created` (R923, R1300, R311, R429,
-/// R783013, R3039000, R1845000, R943).
-fn field_state_held(card: &CardInstance, in_graveyard_or_exile: bool) -> Vec<&'static str> {
-    let exertion = &card.exertion;
-    let mut held = held_names(&[
-        (card.damage != 0, "damage"),
-        (card.position.is_some(), "position"),
-        (card.summoned_turn.is_some(), "summonedTurn"),
-        (
-            exertion.attacked || exertion.switched || exertion.attacks.is_some(),
-            "exertion",
-        ),
-        (card.taunt_suppressed_turn.is_some(), "tauntSuppressedTurn"),
-        (card.face_up.is_some(), "faceUp"),
-        (card.revealed.is_some(), "revealed"),
-        (card.last_damaged_by.is_some(), "lastDamagedBy"),
-        (card.divine_shield_spent.is_some(), "divineShieldSpent"),
-        (card.marked_destroyed.is_some(), "markedDestroyed"),
-        (card.marked_exiled.is_some(), "markedExiled"),
-        (card.reborn_spent.is_some(), "rebornSpent"),
-        (card.berserk.is_some(), "berserk"),
-        (card.frozen.is_some(), "frozen"),
-        (card.slumber.is_some(), "slumber"),
-        (card.starship.is_some(), "starship"),
-        (card.set_as.is_some(), "setAs"),
-        (card.x.is_some(), "x"),
-        (card.embiggened.is_some(), "embiggened"),
-    ]);
-    if in_graveyard_or_exile {
-        // R3566004: a card evolved in its graveyard (leaving the field clears `evolved`, R3536000, so one
-        // that holds it there evolved there) keeps what its Evolve gave it, its buff, keywords and stat
-        // line, for the Flashback play that brings it back (S+ #6.2 Stinky Cheese).
-        let evolved_here = card.evolved == Some(true);
-        held.extend(held_names(&[
-            (card.buffs != AttackHealth::default() && !evolved_here, "buffs"),
-            (
-                !card.granted_keywords.is_empty() && !evolved_here,
-                "grantedKeywords",
-            ),
-            (card.grants.is_some(), "grants"),
-            (card.vanilla, "vanilla"),
-            (card.counters != Counters::default(), "counters"),
-            (card.stats_override.is_some() && !evolved_here, "statsOverride"),
-            (card.armor_override.is_some(), "armorOverride"),
-        ]));
+/// What R78's reset changes and a card off the field may hold in every pile (I16), by field name:
+/// `controller` (I16's owner check holds it to the pile's side on its own), `memory` (R1841003's
+/// `tributeLowered` rides a hand or a deck; a graveyard card keeps R429's `@returnPrice`, R766, and R178's
+/// `@exileOnLanding`) and `brittle` (R385, R441: the count rides every zone; the reset drops a spent one).
+const KEPT_IN_EVERY_PILE: [&str; 3] = ["controller", "memory", "brittle"];
+
+/// What a hand or a library card may hold and a graveyard or an exile card may not: a Buff's and a grant's
+/// state, which rides it onto the field (`effects/buff.rs`, B5 E38) and which R215 takes as it reaches a
+/// graveyard or an exile pile (`buffs`, `grantedKeywords`, `grants`, `vanilla`, `counters`); a copy's
+/// `statsOverride` and `armorOverride` (R57, R1242, R2198001; R175 reads them before R78's reset takes
+/// them); and the `tipsy` stamp (R3548001) a card is given as it is drawn (`draw.rs`), which only a hand
+/// or the field reads (`tipsy::blur_for`) and a hand card carries into a library.
+const KEPT_IN_HAND_OR_LIBRARY: [&str; 8] = [
+    "buffs",
+    "grantedKeywords",
+    "grants",
+    "vanilla",
+    "counters",
+    "statsOverride",
+    "armorOverride",
+    "tipsy",
+];
+
+/// What a graveyard or an exile card that evolved there may hold: R3566004's Stinky Cheese keeps what its
+/// Evolve gave it, for the Flashback play that brings it back (S+ #6.2). Leaving the field clears `evolved`
+/// (R3536000), so a card that holds it off the field evolved there.
+const KEPT_BY_AN_EVOLVE: [&str; 4] = ["evolved", "buffs", "grantedKeywords", "statsOverride"];
+
+/// A card's fields as JSON, by name: each optional field is absent when unset.
+fn card_fields(card: &CardInstance) -> Map<String, Value> {
+    match serde_json::to_value(card).expect("a CardInstance serializes") {
+        Value::Object(fields) => fields,
+        other => panic!("a CardInstance serializes as an object, not {other}"),
     }
-    held
+}
+
+/// R78's reset of a card leaving the field, read on a card off it in `zone` (I16): the field-only state it
+/// still holds, by field name. The fields are `zones::reset_instance`'s own, not a list kept here: the card
+/// is cloned, reset and both serialized, and every field that differs is held, but for what `zone` lawfully
+/// keeps (the constants above). A field a later set gives the reset is checked from the day it lands; one a
+/// card may lawfully keep in a pile is named above, with its ruling, once a wave reports it.
+fn field_state_held(card: &CardInstance, zone: &Zone) -> Vec<String> {
+    let mut reset = card.clone();
+    crate::zones::reset_instance(&mut reset);
+    // Nearly every card off the field holds nothing the reset takes: no serializing for those.
+    if reset == *card {
+        return Vec::new();
+    }
+    let (held, clean) = (card_fields(card), card_fields(&reset));
+    let in_hand_or_library = matches!(zone, Zone::Hand { .. } | Zone::Library { .. });
+    let evolved_here =
+        matches!(zone, Zone::Graveyard { .. } | Zone::Exile { .. }) && card.evolved == Some(true);
+    let lawful = |field: &str| {
+        KEPT_IN_EVERY_PILE.contains(&field)
+            || (in_hand_or_library && KEPT_IN_HAND_OR_LIBRARY.contains(&field))
+            || (evolved_here && KEPT_BY_AN_EVOLVE.contains(&field))
+    };
+    held.keys()
+        .chain(clean.keys().filter(|field| !held.contains_key(*field)))
+        .filter(|field| held.get(*field) != clean.get(*field) && !lawful(field))
+        .cloned()
+        .collect()
 }
 
 /// R766's price on a card in a graveyard or an exile pile (I16), by field name. `@returnPrice`, the climb
@@ -690,7 +694,7 @@ fn card_record_findings(state: &GameState) -> Vec<String> {
                     ));
                 }
                 let gone = matches!(zone, Zone::Graveyard { .. } | Zone::Exile { .. });
-                let state_held = field_state_held(card, gone);
+                let state_held = field_state_held(card, zone);
                 if !state_held.is_empty() {
                     found.push(format!(
                         "I16 field state off the field: {named} in {slot} still holds {} on turn {turn} (R78)",
@@ -1115,6 +1119,19 @@ fn drop_launched_pieces(shown: &mut Value, launched: &[String]) {
     }
 }
 
+/// R1852000, R1852005: a fusion names its dead piece with the definition it died as, face up, the public
+/// memory of a public death whatever has become of the piece's card or its Starship since (a Classic+ #35
+/// Rollback that took the Starship back to its owner's hand while a copy of the piece waits in that
+/// owner's library: fuzz seed 5912, issue #3800). The definition the engine's own event named is taken out
+/// of the view's copy of it, as a launch's pieces are; the piece's id is still scanned.
+fn drop_fused_piece(shown: &mut Value, piece_def: &str) {
+    if let Some(object) = shown.as_object_mut()
+        && object.get("defId").and_then(Value::as_str) == Some(piece_def)
+    {
+        object.remove("defId");
+    }
+}
+
 /// Every string and object inside `value`, with the path it was found at. Values only, never keys.
 fn walk(
     value: &Value,
@@ -1225,6 +1242,9 @@ pub fn hidden_information_violations(
         let mut shown = serde_json::to_value(event).expect("a GameEvent serializes");
         if let Some(GameEvent::StarshipLaunched { pieces, .. }) = source {
             drop_launched_pieces(&mut shown, pieces);
+        }
+        if let Some(GameEvent::StarshipFused { def_id, .. }) = source {
+            drop_fused_piece(&mut shown, def_id);
         }
         events.push(shown);
     }
@@ -2183,6 +2203,12 @@ pub struct InvariantMonitor {
     /// R636, R781004: the units `note_drawn_windfury` read as maybe Windfury, whose drawn keywords a
     /// change of control keeps (the card stays on the field).
     drawn_windfury: IndexSet<String>,
+    /// R3543003: the stint in which each field unit was seen with Frenzy as the action began, read by
+    /// `before`. A kill inside the action is answered by the Frenzy its attacker had then, though the
+    /// state the action leaves no longer shows it: the autopilot's whole turn kills, attacks again and
+    /// loses the attacker to a trap's exile or a counter-hit, which resets the keywords a Drone Corvette
+    /// drew (R78, R781004; fuzz seeds 8022 and 7429, issue #3800).
+    frenzy: IndexMap<String, i32>,
     /// The cards that fired as traps this turn: one animates as its firing's last step, not at the
     /// start of the turn, and that is an entry even on its controller's turn (R383, R1062).
     fired: IndexSet<String>,
@@ -2231,6 +2257,7 @@ impl InvariantMonitor {
             chosen_exertion: None,
             windfury: IndexMap::new(),
             carried_windfury: IndexSet::new(),
+            frenzy: IndexMap::new(),
             drawn_windfury: IndexSet::new(),
             fired: IndexSet::new(),
             readied: IndexSet::new(),
@@ -2253,6 +2280,17 @@ impl InvariantMonitor {
             if crate::layers::unit_has(state, card, KeywordKind::Windfury) {
                 let stint = self.stint_of(&card.id);
                 self.windfury.insert(card.id.clone(), stint);
+            }
+        }
+    }
+
+    /// R3543003: the field units with Frenzy as the action begins, each in its stint (`frenzy`).
+    fn note_frenzy(&mut self, state: &GameState) {
+        self.frenzy.clear();
+        for card in field_cards(state) {
+            if crate::layers::unit_has(state, card, KeywordKind::Frenzy) {
+                let stint = self.stint_of(&card.id);
+                self.frenzy.insert(card.id.clone(), stint);
             }
         }
     }
@@ -2454,10 +2492,14 @@ impl InvariantMonitor {
     /// (R212): a card dormant in the last state read that acts now (not on a side a `rolledBack` restored,
     /// R566, nor a fusion's kept card, R77, R1086), on the turn `summonedTurn` names from `began_on`, else
     /// the last. One uncovered unseen (dormant, or in a zone R14 names) takes `summonedTurn`'s word only for
-    /// a turn of the action.
+    /// a turn of the action. So does a card the action's own `summoned` or `controlChanged` named, wherever it
+    /// stands now: the hole's pull at a turn's start moves a pile one lane and no event says so (R3554001),
+    /// so a Drone Battleship's layer summoned beneath its Shield, uncovered on a later turn of the one action
+    /// and pulled on, stands in no zone an event named (fuzz handicap seed 6708, issue #3800).
     fn note_uncoverings(&mut self, events: &[GameEvent], state: &GameState, began_on: i32) {
         let mut restored: Vec<PlayerId> = Vec::new();
         let mut landed: Vec<(PlayerId, Row, i32)> = Vec::new();
+        let mut arrived: Vec<&str> = Vec::new();
         let mut kept: Vec<&str> = Vec::new();
         // §8 #52: the rotating player is the one whose card played (`RotationArgs.perspective`).
         let mut playing: Option<PlayerId> = None;
@@ -2480,14 +2522,25 @@ impl InvariantMonitor {
                 }
                 GameEvent::RolledBack { sides, .. } => restored.extend(sides.iter().copied()),
                 GameEvent::Summoned {
-                    player, row, lane, ..
-                } => landed.push((*player, *row, *lane)),
+                    player,
+                    row,
+                    lane,
+                    instance_id,
+                    ..
+                } => {
+                    landed.push((*player, *row, *lane));
+                    arrived.push(instance_id);
+                }
                 GameEvent::ControlChanged {
                     controller,
                     row,
                     lane,
+                    instance_id,
                     ..
-                } => landed.push((*controller, *row, *lane)),
+                } => {
+                    landed.push((*controller, *row, *lane));
+                    arrived.push(instance_id);
+                }
                 GameEvent::Animated {
                     player, unit_lane, ..
                 } => landed.push((*player, Row::Units, *unit_lane)),
@@ -2520,7 +2573,8 @@ impl InvariantMonitor {
                 && !restored.contains(&player)
                 && !kept.contains(&card.id.as_str())
                 && crate::zones::acts_on_field(state, card);
-            let may_have_been = was_dormant || landed.contains(&(player, row, lane));
+            let may_have_been =
+                was_dormant || landed.contains(&(player, row, lane)) || arrived.contains(&card.id.as_str());
             let during = card.summoned_turn.filter(|turn| (began_on..=now).contains(turn));
             let at = match during {
                 Some(turn) if may_have_been => Some(turn),
@@ -2677,6 +2731,7 @@ impl InvariantMonitor {
             })
         });
         self.note_windfury(state);
+        self.note_frenzy(state);
         self.carried_windfury = PLAYER_IDS
             .into_iter()
             .flat_map(|player| {
@@ -2940,10 +2995,14 @@ impl InvariantMonitor {
                         // R1869002: a kill readies its attacker only through its own `afterAttack` text;
                         // R3543003: or its Frenzy, which answers the same kill.
                         let attacker_id = attack.attacker_id.clone();
-                        let answers = find_instance(state, &attacker_id).is_some_and(|attacker| {
-                            crate::scripts::script_of(state, attacker).after_attack.is_some()
-                                || crate::layers::unit_has(state, attacker, KeywordKind::Frenzy)
-                        });
+                        // R3543003: the Frenzy it began the action with, in the stint it still attacks in.
+                        let began_frenzied =
+                            self.frenzy.get(&attacker_id) == Some(&self.stint_of(&attacker_id));
+                        let answers = began_frenzied
+                            || find_instance(state, &attacker_id).is_some_and(|attacker| {
+                                crate::scripts::script_of(state, attacker).after_attack.is_some()
+                                    || crate::layers::unit_has(state, attacker, KeywordKind::Frenzy)
+                            });
                         if answers {
                             self.credit_kill(&attacker_id);
                         }

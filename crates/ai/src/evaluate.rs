@@ -33,24 +33,25 @@ use jackioh_engine::{
     EngineSink, GameEvent, GameEventType, GameState, Grant, HookName, Keyword, KeywordKind, ModifierKind,
     PLAYER_IDS, Phase, PlayerId, PlayerState, Position, Rng, Row, SandboxOp, SeatOutcome, SettleOptions,
     Slumber, SpawnZone, Tag, TriggerHolder, TriggerZone, UnitView, ZoneName, acting_with_flag,
-    active_brittle_count, active_units_of, animated_with_stats, armor_of, attack_restriction,
+    active_brittle_count, active_units_of, acts_to_awaken, animated_with_stats, armor_of, attack_restriction,
     attacks_per_turn, awaken_card, backrow_is_public, board_totals, brittle_due_by, burn_on, cannot_attack,
     card_at, card_keywords, card_type_of_face, credit_lapsing, death_hook_of, dormant_starship_of,
     effective_cost, effective_life, exit_mark, face_of, find_def, find_instance, find_instance_mut,
-    first_entry_zone, frozen_next_turn, gauntlet_acts, has_keyword, heal_multiplier_of, hero_armor_of,
-    hero_burn_of, hero_toxic_of, is_extra_turn_card, is_slumbering, is_standing_unit, is_starship_piece,
-    is_temporary_card, launched_starship_of, left_field_after, legal_actions, lost_refreshes_left,
-    modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces, pile_at, playable_from_graveyard,
-    query_cost, queue_hook, reset_instance, script_of, settle, slots_of, stats_with_buffs, subsystems,
-    sync_fused_scripts, takes_strike_back, toxic_on, trigger_holders_with_hook, unit_damage_cap, unit_has,
-    unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold,
+    first_entry_zone, flags_of, frozen_next_turn, gauntlet_acts, has_keyword, heal_multiplier_of,
+    hero_armor_of, hero_burn_of, hero_toxic_of, is_dormant_starship, is_extra_turn_card, is_slumbering,
+    is_standing_unit, is_starship_piece, is_temporary_card, launched_starship_of, left_field_after,
+    legal_actions, lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces,
+    pile_at, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of, settle, slots_of,
+    stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back, toxic_on, trigger_holders_with_hook,
+    unit_damage_cap, unit_has, unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold,
+    yard_at_turn_start,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::candidates::{Side, blow, cleaved_neighbours, side_of};
 use crate::config::{
     AI_ACTIVATION_PROBE_NODES, AI_AFFLICTION_TICKS, AI_ATTACK_HOOK_PROBE_NODES, AI_AWAKEN_PROBE_NODES,
-    AI_DEATH_PROBE_NODES, AI_EVAL, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
+    AI_DEATH_PROBE_NODES, AI_EVAL, AI_HAND_ACTIVATION_PROBE_NODES, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
 };
 use crate::reply::{Known, hidden_card_ids, visible_activation};
 use crate::simulate::{create_sub_counter, note_sim_panic, simulate};
@@ -888,7 +889,32 @@ fn slumber_worth(
     }
     let mut awake = unit.clone();
     awake.slumber = None;
+    // R3575404: the use that wakes it was priced from the sleeping card, so its price already reads the
+    // wait; `unit_worth` of the awake copy counts it inside the share, and the rest of it is put back.
+    let waking = if acts_to_awaken(state, unit) {
+        (1.0 - share) * brittle_share(unit, w) * w.activation * activation_price(state, unit, w, prices)
+    } else {
+        0.0
+    };
     share * (unit_worth(state, &awake, w, prices) + w.awaken * awaken_price(state, unit, w, prices))
+        + w.turn_hook * yard_price(state, unit, w, prices)
+        + waking
+}
+
+/// R3575402: what one turn start's fuse gives a shipyard's controller (`yard_probe`), by `prices`, while
+/// it lies Dormant as a Starship (`yard_fires`). It is no hook of its text (`has_turn_hook`), so
+/// `turn_hook_price` never counts it, and it fuses while the card sleeps, so `slumber_worth` adds it
+/// outside the slumber share: the probe's own evaluation already reads the hull at that share. 0 where
+/// `prices` has no entry and at a zero `turn_hook` weight.
+fn yard_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, prices: &Prices) -> f64 {
+    if w.turn_hook == 0.0 || !yard_fires(state, unit) || has_turn_hook(state, unit) {
+        return 0.0;
+    }
+    prices
+        .turn_hooks
+        .iter()
+        .find(|entry| entry.is_for(unit))
+        .map_or(0.0, |entry| entry.price)
 }
 
 /// R3822000: the life `player`'s hero will lose to its Burn and Toxic over their next `AI_AFFLICTION_TICKS`
@@ -1688,7 +1714,7 @@ fn spawned_turn_hook_probe(
             let Some((placed, unit)) = spawn_hand_unit(world, seat, card, counter)? else {
                 return Some(None);
             };
-            turn_hook_probe(&placed, seat, &unit.id, counter)
+            turn_and_yard_probe(&placed, seat, &unit.id, counter)
         }
         CardType::FieldSpell => {
             let Some((placed, set)) = spawn_hand_field_spell(world, seat, card, counter)? else {
@@ -1698,6 +1724,79 @@ fn spawned_turn_hook_probe(
         }
         _ => Some(None),
     }
+}
+
+/// R3575402: whether `card` is a shipyard (`StaticFlags.starship_yard`, R3539004): a hull that fuses in a
+/// random Starship Piece at each start of its controller's turn while it lies Dormant. Read off its
+/// definition (`flags_of`), so a shipyard in a hand is one too.
+fn is_shipyard(state: &GameState, card: &CardInstance) -> bool {
+    flags_of(state, card).starship_yard == Some(true)
+}
+
+/// R3575402: whether `card`'s yard fuses a piece into it at its controller's next turn start
+/// (`yard_at_turn_start`): a shipyard lying Dormant as a Starship on the field.
+fn yard_fires(state: &GameState, card: &CardInstance) -> bool {
+    is_dormant_starship(card) && is_shipyard(state, card)
+}
+
+/// R3575402, R3539004: what one turn start's fuse of a random Starship Piece into `owner`'s shipyard
+/// `instance_id` gives `owner` on `before`, a sandbox (R923000): `owner`'s evaluation after the engine's
+/// own yard step (`yard_at_turn_start`, which fuses one piece into each of `owner`'s shipyards) less
+/// before, shared among those shipyards. One node of `counter`: `None` when the counter refuses it;
+/// `Some(None)` when the card is no firing shipyard, or the step panics, leaves a prompt open or ends the
+/// game.
+fn yard_probe(
+    before: &GameState,
+    owner: PlayerId,
+    instance_id: &str,
+    counter: &dyn NodeCounter,
+) -> Option<Option<f64>> {
+    let yards: Vec<&CardInstance> = units_on_field_of(before, owner)
+        .into_iter()
+        .filter(|card| yard_fires(before, card))
+        .collect();
+    if !yards.iter().any(|card| card.id == instance_id) {
+        return Some(None);
+    }
+    if !counter.take() {
+        return None;
+    }
+    let after = match catch_unwind(AssertUnwindSafe(|| {
+        settled_after(before, |sink| yard_at_turn_start(sink, owner))
+    })) {
+        Ok(after) => after,
+        Err(payload) => {
+            note_sim_panic(counter, payload.as_ref());
+            return Some(None);
+        }
+    };
+    if after.pending.is_some() || after.result.is_some() {
+        return Some(None);
+    }
+    let gained = evaluate(&after, owner, NextSwing::Enemy, &AI_EVAL)
+        - evaluate(before, owner, NextSwing::Enemy, &AI_EVAL);
+    Some(Some(gained / yards.len() as f64))
+}
+
+/// R2477000, R3575402: `turn_hook_probe` on `before`, with the yard's turn-start fuse (`yard_probe`) added
+/// to its start-of-turn and end-of-turn prices: a shipyard's "Start of turn: Fuse a random Starship Piece
+/// into this" is the engine's step, not a hook, yet it is the card's own turn text. `None` when the
+/// counter is spent; `Some(None)` when neither is priced.
+fn turn_and_yard_probe(
+    before: &GameState,
+    owner: PlayerId,
+    instance_id: &str,
+    counter: &dyn NodeCounter,
+) -> Option<Option<(f64, f64)>> {
+    let hooks = turn_hook_probe(before, owner, instance_id, counter)?;
+    let yard = yard_probe(before, owner, instance_id, counter)?;
+    Some(match (hooks, yard) {
+        (None, None) => None,
+        (hooks, yard) => {
+            let (own, opponent) = hooks.unwrap_or((0.0, 0.0));
+            Some((own + yard.unwrap_or(0.0), opponent))
+        }
+    })
 }
 
 /// R2477000, R2565000, R2689000: the turn-hook prices a decision of `seat`'s passes (`Prices`), probed on
@@ -1723,16 +1822,24 @@ pub fn turn_hook_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCou
             _ => false,
         })
         .map(|holder| (holder.controller, holder.card))
+        // R3575402: then each shipyard lying Dormant on either field, whose turn-start fuse is no hook.
+        .chain([seat, seat.opponent()].into_iter().flat_map(|owner| {
+            units_on_field_of(world, owner)
+                .into_iter()
+                .filter(|card| yard_fires(world, card))
+                .map(move |card| (owner, card.clone()))
+        }))
         .collect();
     let hand = world.players[seat]
         .hand
         .iter()
-        .filter(|card| {
-            matches!(
-                card_type_of_face(world, &card.def_id, card.radiant),
-                CardType::Unit | CardType::FieldSpell
-            ) && has_turn_hook(world, card)
-        })
+        .filter(
+            |card| match card_type_of_face(world, &card.def_id, card.radiant) {
+                CardType::Unit => has_turn_hook(world, card) || is_shipyard(world, card),
+                CardType::FieldSpell => has_turn_hook(world, card),
+                _ => false,
+            },
+        )
         .map(|card| (seat, card, true));
     let mut candidates: Vec<(TurnHookPrice, PlayerId, &CardInstance, bool)> = Vec::new();
     for (owner, card, in_hand) in board
@@ -1758,7 +1865,7 @@ pub fn turn_hook_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCou
         let probed = if in_hand {
             spawned_turn_hook_probe(&sandbox, seat, card, &probes)
         } else {
-            turn_hook_probe(&sandbox, owner, &card.id, &probes)
+            turn_and_yard_probe(&sandbox, owner, &card.id, &probes)
         };
         match probed {
             None => break,
@@ -1796,7 +1903,11 @@ fn use_price(turn: &GameState, after: &GameState, unit: &CardInstance) -> Option
     if after.pending.is_some() || after.result.is_some() {
         return None;
     }
-    if !find_instance(after, &unit.id).is_some_and(|card| card.zone.z() == ZoneName::Field) {
+    // R3575404: a Dormant card's one ability is its awakening (R1839002), whose whole point is that the
+    // card changes: a shipyard's launch exiles the hull and stands a Starship in its place (R3539004).
+    // So the card it leaves is what the evaluation reads, not the instance that used it.
+    let wakes = acts_to_awaken(turn, unit);
+    if !wakes && !find_instance(after, &unit.id).is_some_and(|card| card.zone.z() == ZoneName::Field) {
         return None;
     }
     let owner = unit.controller;
@@ -1858,6 +1969,14 @@ fn price_uses(
 /// standing there, which is one of its units already (R1081000).
 fn activate_sources(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
     let mut cards = active_units_of(state, player);
+    // R3575404: then each Dormant card acting for its awakening alone (`acts_to_awaken`, R1839002): the
+    // launch of a Dormant Starship (R1852003) and the `wakesBy` ability a hull's text names (R3539000),
+    // which `active_units_of` leaves out with every other Dormant card (R1839000).
+    cards.extend(
+        units_on_field_of(state, player)
+            .into_iter()
+            .filter(|card| acts_to_awaken(state, card)),
+    );
     cards.extend(
         state.players[player]
             .backrow
@@ -1950,7 +2069,7 @@ pub fn activation_prices(
     seat: PlayerId,
     counter: &dyn NodeCounter,
 ) -> Vec<ActivationPrice> {
-    root_prices(
+    let mut priced = root_prices(
         world,
         seat,
         counter,
@@ -1958,7 +2077,115 @@ pub fn activation_prices(
         has_activate_card,
         AI_ACTIVATION_PROBE_NODES,
         price_uses,
-    )
+    );
+    rekeyed_activation_prices(world, seat, counter, &mut priced);
+    priced
+}
+
+/// R3575400, R923001: adds to `priced` one use of the Activate of each Unit and Field Spell in `seat`'s
+/// own hand with one (`abilities_of`) whose card it has no price for, as `probe_turns` prices a card
+/// already on the field: on a sandbox copy of `world` the card is spawned where a play would put it
+/// (`spawn_hand_unit`, `spawn_hand_field_spell`), the seat ends its turn and then the enemy (`next_turn`),
+/// and its uses are tried at the start of the seat's next turn (`price_uses`, every other card of the
+/// seat's already tried). So a play whose worth is the Activate it leaves reads it as soon as the play is
+/// made, not only once the card has stood through a turn. Nothing is priced at a zero `activation`
+/// weight, while a prompt is open, once the game is over or outside the seat's own main phase, as
+/// `root_prices`; at most `AI_HAND_ACTIVATION_PROBE_NODES` nodes of `counter`. It never reads the enemy's
+/// hand.
+fn rekeyed_activation_prices(
+    world: &GameState,
+    seat: PlayerId,
+    counter: &dyn NodeCounter,
+    priced: &mut Vec<ActivationPrice>,
+) {
+    if AI_EVAL.activation == 0.0
+        || world.pending.is_some()
+        || world.result.is_some()
+        || world.active != seat
+        || world.phase != Phase::Main
+    {
+        return;
+    }
+    // R3575404: the seat's own Dormant cards acting for their awakening, whose definition the probe's
+    // two turns may change under them (a shipyard fuses a piece in, R3539004), then R3575400's hand
+    // cards. Both are priced here, not by `price_uses`'s own key, because the card the decision's lines
+    // hold is the card as it stands now.
+    let sleepers = units_on_field_of(world, seat)
+        .into_iter()
+        .filter(|card| acts_to_awaken(world, card));
+    let mut cards: Vec<&CardInstance> = Vec::new();
+    for card in sleepers.chain(world.players[seat].hand.iter().filter(|card| {
+        matches!(
+            card_type_of_face(world, &card.def_id, card.radiant),
+            CardType::Unit | CardType::FieldSpell
+        )
+    })) {
+        if !subsystems::abilities_of(world, card).is_empty()
+            && !priced.iter().any(|entry| entry.is_for(card))
+            && !cards.iter().any(|seen| ActivationPrice::key(seen).is_for(card))
+        {
+            cards.push(card);
+        }
+    }
+    if cards.is_empty() {
+        return;
+    }
+    let mut sandbox = world.clone();
+    sandbox.sandbox = Some(true);
+    for player in PLAYER_IDS {
+        sandbox.players[player].auto_end_turn = Some(false);
+    }
+    let hidden = hidden_card_ids(world, seat);
+    let probes = create_sub_counter(counter, AI_HAND_ACTIVATION_PROBE_NODES);
+    for card in cards {
+        // A card already on the field is probed where it stands; a hand card is spawned first (R923001).
+        let spawned = if card.zone.z() == ZoneName::Field {
+            Some(Some((sandbox.clone(), card.clone())))
+        } else {
+            match card_type_of_face(world, &card.def_id, card.radiant) {
+                CardType::Unit => spawn_hand_unit(&sandbox, seat, card, &probes),
+                _ => spawn_hand_field_spell(&sandbox, seat, card, &probes),
+            }
+        };
+        let Some(spawned) = spawned else {
+            return;
+        };
+        let Some((placed, unit)) = spawned else {
+            continue;
+        };
+        let Some(enemy_turn) = next_turn(&placed, seat, &probes) else {
+            return;
+        };
+        let Some(enemy_turn) = enemy_turn else {
+            continue;
+        };
+        let Some(own_turn) = next_turn(&enemy_turn, seat.opponent(), &probes) else {
+            return;
+        };
+        let Some(own_turn) = own_turn else {
+            continue;
+        };
+        // Only the spawned card is tried: every other card of the seat's is marked tried.
+        let mut tried: Vec<ActivationPrice> = activate_sources(&own_turn, seat)
+            .into_iter()
+            .filter(|other| other.id != unit.id)
+            .map(ActivationPrice::key)
+            .collect();
+        let mut fresh: Vec<ActivationPrice> = Vec::new();
+        let cut = !price_uses(&own_turn, seat, &hidden, &probes, &mut tried, &mut fresh);
+        // R3575400: the price is the hand card's, keyed by the card as the seat would play it: by its
+        // own definition, never the one the probe's two turns made of it (a shipyard that fused a piece
+        // in, R3539004), which no line of this decision holds.
+        if let Some(price) = fresh.into_iter().map(|entry| entry.price).reduce(f64::max) {
+            priced.push(ActivationPrice {
+                price,
+                ..ActivationPrice::key(card)
+            });
+        }
+        if cut {
+            return;
+        }
+    }
 }
 
 /// R2688000: `turn` with `unit` as its hookless twin, and the keywords it prints: the twin is Vanilla

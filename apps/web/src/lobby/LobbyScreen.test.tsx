@@ -15,7 +15,8 @@ import { setSocialSocketFactory } from "../together/socialSocket.ts";
 import type { LobbyRead, LobbySeat, LobbyView } from "./api.ts";
 import { LOBBY_POLL_MS } from "./config.ts";
 import { COOP_DECK_KEY } from "./coopDeck.ts";
-import { LobbyScreen } from "./LobbyScreen.tsx";
+import { holdInviteRefusal, takeInviteRefusal } from "./inviteRefusal.ts";
+import { LobbyScreen, boardOf } from "./LobbyScreen.tsx";
 import { lobbyTestid } from "./testids.ts";
 
 const SLOW = { timeout: 4000 };
@@ -342,6 +343,82 @@ describe("the lobby screen", () => {
     expect(window.localStorage.getItem(COOP_DECK_KEY)).toBe("random");
   });
 
+  it("R3731000 a guest switches team and the host moves a player across", async () => {
+    const KAI = { profileId: "p-kai", username: "Kai#3", status: "online" as const };
+    const DEE = { profileId: "p-dee", username: "Dee#4", status: "online" as const };
+    const twoVTwo = (you: LobbyView["you"], players: readonly (LobbySeat["player"])[]): LobbyView =>
+      lobby({
+        settings: { format: "2v2" },
+        you,
+        seats: (["host", "guest", "guest2", "guest3"] as const).map((role, index) => seat({ role, player: players[index] ?? null })),
+      });
+    const teamNames = (): (string | null)[] => screen.getAllByTestId(lobbyTestid.team).map((team) => team.getAttribute("aria-label"));
+
+    // A guest on the host's team: the teams from their seat, a 2v2's words for the format, and Switch team.
+    const guest = serve([twoVTwo("guest", [ANA, BO, null, KAI]), twoVTwo("guest3", [ANA, DEE, KAI, BO])]);
+    show();
+    const switchTeam = await screen.findByTestId(lobbyTestid.switchTeam, undefined, SLOW);
+    expect(screen.getAllByTestId(lobbyTestid.team).map((team) => team.getAttribute("data-team"))).toEqual(["1", "2"]);
+    expect(teamNames()).toEqual(["Your team", "Other team"]);
+    expect(screen.getByTestId(lobbyTestid.settings)).toHaveTextContent("2v2 · two teams of two · unranked");
+    expect(screen.queryAllByTestId(lobbyTestid.move)).toHaveLength(0);
+    expect(screen.queryByTestId(lobbyTestid.start)).toBeNull();
+    fireEvent.click(switchTeam);
+    await waitFor(() => {
+      expect(guest.to("POST", `/api/lobbies/${CODE}/team`).map((call) => call.body)).toEqual([{}]);
+    }, SLOW);
+    // Read again on the other team, whose seat the host's team now fills: Switch team waits for a seat.
+    await waitFor(() => {
+      expect(teamNames()).toEqual(["Host's team", "Your team"]);
+    }, SLOW);
+    expect(screen.getByTestId(lobbyTestid.switchTeam)).toBeDisabled();
+    cleanup();
+
+    // The host: no Switch team, a Move on every seat but their own, and a seat dragged onto another.
+    const hosting = serve([twoVTwo("host", [ANA, BO, KAI, DEE])]);
+    show();
+    await screen.findAllByTestId(lobbyTestid.move, undefined, SLOW);
+    expect(screen.queryByTestId(lobbyTestid.switchTeam)).toBeNull();
+    const seatOf = (role: string): HTMLElement => must(screen.getAllByTestId(lobbyTestid.seat).find((each) => each.getAttribute("data-seat") === role), role);
+    expect(within(seatOf("host")).queryByTestId(lobbyTestid.move)).toBeNull();
+    const moves = (): unknown[] => hosting.to("POST", `/api/lobbies/${CODE}/move`).map((call) => call.body);
+    // The other team is full, so Kai's Move swaps them onto the host's team's seat.
+    fireEvent.click(within(seatOf("guest2")).getByTestId(lobbyTestid.move));
+    await waitFor(() => {
+      expect(moves()).toEqual([{ profileId: "p-kai", seat: "guest" }]);
+    }, SLOW);
+    await waitFor(() => {
+      expect(within(seatOf("guest3")).getByTestId(lobbyTestid.move)).toBeEnabled();
+    }, SLOW);
+    const held = new Map<string, string>();
+    const transfer = {
+      setData: (type: string, value: string) => {
+        held.set(type, value);
+      },
+      getData: (type: string) => held.get(type) ?? "",
+      get types() {
+        return [...held.keys()];
+      },
+      effectAllowed: "none",
+      dropEffect: "none",
+    };
+    fireEvent.dragStart(seatOf("guest3"), { dataTransfer: transfer });
+    // The host's own seat takes no drop, and a seat dropped on itself moves nobody.
+    fireEvent.dragOver(seatOf("host"), { dataTransfer: transfer });
+    fireEvent.drop(seatOf("host"), { dataTransfer: transfer });
+    fireEvent.drop(seatOf("guest3"), { dataTransfer: transfer });
+    fireEvent.dragOver(seatOf("guest"), { dataTransfer: transfer });
+    fireEvent.drop(seatOf("guest"), { dataTransfer: transfer });
+    await waitFor(() => {
+      expect(moves()).toEqual([
+        { profileId: "p-kai", seat: "guest" },
+        { profileId: "p-dee", seat: "guest" },
+      ]);
+    }, SLOW);
+    // A started 2v2 opens the Duos board, as a co-op lobby does.
+    expect(boardOf({ ...twoVTwo("guest", [ANA, BO, KAI, DEE]), startedAt: 1, matchId: "dm-2" })).toBe("/duos/dm-2");
+  });
+
   it("R3730000 a seat's presence is in the player's words, as the friends list says it", async () => {
     await setLocale("zh-CN");
     serve([lobby({ seats: [seat(), seat({ role: "guest", player: { ...BO, status: "inMatch" } })] })]);
@@ -403,5 +480,36 @@ describe("#1568 decks that could not be read", () => {
       expect(count.decks).toBe(1);
     }, SLOW);
     expect(screen.queryByTestId(lobbyTestid.decksRetry)).toBeNull();
+  });
+});
+
+describe("R3874000 an invite refused on Play together", () => {
+  const MESSAGE = "too many invites; try again later";
+
+  it("R3874000 the lobby it opened says the refusal once, in the server's words, until the next request", async () => {
+    holdInviteRefusal(CODE, MESSAGE);
+    serve([lobby()]);
+    show();
+    expect(await screen.findByTestId(lobbyTestid.error, undefined, SLOW)).toHaveTextContent(MESSAGE);
+    fireEvent.change(screen.getByTestId(lobbyTestid.settings), { target: { value: "bo1" } });
+    await waitFor(() => {
+      expect(screen.queryByTestId(lobbyTestid.error)).toBeNull();
+    }, SLOW);
+    cleanup();
+
+    // A reload of the lobby says nothing again.
+    serve([lobby()]);
+    show();
+    await screen.findByTestId(lobbyTestid.code, undefined, SLOW);
+    expect(screen.queryByTestId(lobbyTestid.error)).toBeNull();
+  });
+
+  it("R3874000 a refusal held for another lobby is not said here", async () => {
+    holdInviteRefusal("OTHER2", MESSAGE);
+    serve([lobby()]);
+    show();
+    await screen.findByTestId(lobbyTestid.code, undefined, SLOW);
+    expect(screen.queryByTestId(lobbyTestid.error)).toBeNull();
+    expect(takeInviteRefusal("OTHER2")).toBe(MESSAGE);
   });
 });

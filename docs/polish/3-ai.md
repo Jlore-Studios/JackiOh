@@ -543,7 +543,8 @@ enemy controls (the enemy hero's first) and the rest, enemy first (#1062), and i
 
 Tiers 0, 1 and 1b are ranked together by the static trader's values (crates/ai/src/reply.rs), best
 first, ties in the order above (#2825): an attack on the enemy hero by `face_value` (`reply_face_value`
-of its `projected_hero_damage`), a kill by `trade_value`. While the seat's ready attacks reach the face
+of its `projected_hero_damage`, plus a Lifesteal attacker's heal of it unless the hit is lethal, #3858),
+a kill by `trade_value`. While the seat's ready attacks reach the face
 together (`ready_gap` at most 0), every attack on the hero is worth `AI_EVAL.win` and so stays first.
 
 #### `src/simulate.ts` (B1)
@@ -724,7 +725,9 @@ The rule, one step at a time, each step one `reduce` (one node):
    positive: an attack that kills the seat's hero is worth `AI_EVAL.win`; so is every attack on the
    hero while the attacks the opponent has left would reach it together past the seat's Taunts
    (`readyGap` at most zero; #1634, behind `AI_REPLY.openLethal`, switched off until a screen keeps
-   it); one on the hero is worth `facePerDamage` per point of `projectedHeroDamage`; one on a unit
+   it); one on the hero is worth `facePerDamage` per point of `projectedHeroDamage`, and a Lifesteal
+   attacker's also what healing its own hero by that much is worth on the hero curve unless the hit is
+   lethal (§4.4 step 8, #3858); one on a unit
    is worth the target's `unitWorth` if it dies (First Strike deciding who strikes first, Divine
    Shield popped for its keyword weight, Poisonous killing), less the `unitWorth` of the body it
    comes back as while its Reborn is unspent (§4.5 step 4, #1796), `chipPerDamage` per point

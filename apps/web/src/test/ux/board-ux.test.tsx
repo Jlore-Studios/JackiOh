@@ -840,8 +840,9 @@ describe("B44 the picker says which route opened it", () => {
     const text = css("prompt.css");
     const portrait = text.slice(text.lastIndexOf("@media (max-width: 600px) {"));
 
-    expect(portrait).toContain('.game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:is(');
-    expect(portrait).toMatch(/> :is\(\.prompt-count, \.prompt-zones, \.prompt-list, \.prompt-board-note\) \{\s*display: none;/);
+    // #3864: a one-zone pick is the hint pill at any width, so the bar leaves it out.
+    expect(portrait).toContain('.game[data-drag][data-drag="on"] .prompt[data-prompt-source="play"]:not([data-board-pick]):is(');
+    expect(portrait).toMatch(/> :is\(\.prompt-count, \.prompt-list, \.prompt-board-note\) \{\s*display: none;/);
   });
 
   it("Confirm sticks to the modal's visible bottom, so no menu pushes it off-screen", () => {

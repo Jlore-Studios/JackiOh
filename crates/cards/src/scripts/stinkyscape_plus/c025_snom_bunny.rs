@@ -63,6 +63,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use jackioh_engine::testkit::cursor_where;
 
     use crate::{filler, scenario, weapon_board};
 
@@ -98,6 +99,66 @@ mod tests {
             .filter_map(|lane| s.unit(P1, lane))
             .find(|unit| unit.def_id == CHEAP || unit.def_id == DEAR)
             .map(|unit| unit.def_id)
+    }
+
+    /// `death_takes` against `enemies` in lanes 1 and 2, with p1's `backrow` beside the Bunny and the
+    /// match rng set so that the Death's next two draws over the two would be `draws`: the def it took.
+    fn death_takes_drawing(
+        radiant: bool,
+        backrow: Value,
+        enemies: [&str; 2],
+        draws: (i32, i32),
+    ) -> Option<String> {
+        let mut s = weapon_board(
+            "s025-drawn",
+            json!({
+                "mana": 10,
+                "hand": [HIT_JOB],
+                "field": [{ "def": ID, "radiant": radiant }],
+                "backrow": backrow,
+                "library": filler(4),
+            }),
+            json!({ "field": enemies, "library": filler(4) }),
+        );
+        let seed = s.state().seed.clone();
+        let cursor = cursor_where(&seed, |cursor| {
+            let mut rng = Rng::new(&seed, cursor);
+            (rng.int(2), rng.int(2)) == draws
+        });
+        s.state_mut().rng_cursor = cursor;
+        let bunny = s.unit_at(P1, 1).id;
+        s.play(
+            HIT_JOB,
+            json!({ "targets": [{ "pick": "instance", "instanceId": bunny }] }),
+        );
+        assert_eq!(s.state().rng_cursor, cursor + 2, "the Death's two draws and no other");
+        (1..=5)
+            .filter_map(|lane| s.unit(P1, lane))
+            .find(|unit| enemies.contains(&unit.def_id.as_str()))
+            .map(|unit| unit.def_id)
+    }
+
+    #[test]
+    fn r3567005_on_a_tie_of_cost_the_radiant_death_keeps_the_earlier_draw() {
+        // Two enemies of the same cost: the first draw stands, whichever lane it named.
+        const FIRST: &str = "stand-in (1) 1/1";
+        const SECOND: &str = "stand-in (1) 2/2";
+        for (draws, kept) in [((0, 1), FIRST), ((1, 0), SECOND)] {
+            let taken = death_takes_drawing(true, json!([]), [FIRST, SECOND], draws);
+            assert_eq!(taken, Some(kept.to_string()), "draws {draws:?}");
+        }
+    }
+
+    /// R3567005, R987: its controller's Luck draws that many more times beside the card's own Lucky, so the
+    /// base face too keeps the dearer permanent. No card gives Luck since R3140000, so Feng Shui's kept
+    /// v0.5.11r script, "You have Luck 1", lends it.
+    #[test]
+    fn r3567005_its_controllers_luck_draws_again_and_keeps_the_dearer_permanent() {
+        const FENG_SHUI: &str = "meditative-040"; // Feng Shui: "You have Luck 1" through v0.5.11r
+        crate::under_kept(FENG_SHUI, crate::scripts::meditative::c040_feng_shui::script_v0_5_11o(), || {
+            let taken = death_takes_drawing(false, json!([FENG_SHUI]), [CHEAP, DEAR], (0, 1));
+            assert_eq!(taken, Some(DEAR.to_string()), "the second draw, the dearer, is kept");
+        });
     }
 
     #[test]

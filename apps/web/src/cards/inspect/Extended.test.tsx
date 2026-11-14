@@ -63,7 +63,7 @@ describe("R1017000 the extended description", () => {
   });
 
   it("R1017000 a face that prints its whole text has no extended description", () => {
-    render(<HoverPreview face={collection("core-052")} anchor={ANCHOR} />);
+    render(<HoverPreview face={collection("meditative-009")} anchor={ANCHOR} />);
     expect(screen.queryByTestId(INSPECT_EXTENDED)).toBeNull();
   });
 
@@ -106,7 +106,7 @@ describe("R1017000 the extended description", () => {
 
   it("R1017000 in the Almanac's and the deck builder's grid, resting on a card that prints less opens its preview, and only then", () => {
     vi.useFakeTimers();
-    const ids = ["meditative-022-1", "core-052"];
+    const ids = ["meditative-022-1", "meditative-009"];
     render(<PoolGrid ids={ids} catalog={{ version: "test", cards: CATALOG }} onInspect={() => undefined} />);
     const rest = (id: string): void => {
       fireEvent.pointerEnter(screen.getByTestId(poolCardId(id)), { pointerType: "mouse", clientX: 40, clientY: 40, pointerId: 1, isPrimary: true });
@@ -114,7 +114,7 @@ describe("R1017000 the extended description", () => {
         vi.advanceTimersByTime(HOVER_DELAY_MS * 2);
       });
     };
-    rest("core-052");
+    rest("meditative-009");
     expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
     rest("meditative-022-1");
     expect(within(screen.getByTestId(INSPECT_HOVER)).getByTestId(INSPECT_EXTENDED).textContent).toContain("Defend:");

@@ -62,11 +62,11 @@ pub struct SeriesSeats {
     pub games: Vec<String>,
 }
 
-/// A live co-op match, as the record holds it: its two people.
+/// A live co-op match, as the record holds it: its people, two or a 2v2's four (R3731002).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DuosSeats {
     pub id: String,
-    pub people: [String; 2],
+    pub people: Vec<String>,
 }
 
 /// The ledger, one per `App` (`App::seats`), and the epoch its claims fence on.
@@ -462,10 +462,8 @@ async fn read_record(app: &App) -> Result<IndexMap<String, Seat>, StoreError> {
     let mut duos = Vec::new();
     for match_id in tx.duos_matches_live().await? {
         if let Some(row) = tx.duos_matches_get(&match_id).await? {
-            duos.push(DuosSeats {
-                id: row.id,
-                people: [row.a1, row.a2],
-            });
+            let people = row.people().into_iter().map(|(_, id)| id.to_string()).collect();
+            duos.push(DuosSeats { id: row.id, people });
         }
     }
     tx.commit().await?;
@@ -864,7 +862,7 @@ mod tests {
             ],
             &[DuosSeats {
                 id: "d1".to_string(),
-                people: ["both".to_string(), "duo".to_string()],
+                people: vec!["both".to_string(), "duo".to_string()],
             }],
         );
         let expected: IndexMap<String, Seat> = [

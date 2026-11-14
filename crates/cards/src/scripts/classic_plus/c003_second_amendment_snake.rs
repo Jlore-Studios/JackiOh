@@ -257,7 +257,7 @@ mod tests {
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "hand": [FILLER], "field": [{ "def": SNAKE, "counters": { "plague": 2 } }] },
-                "p2": { "hand": [FILLER], "field": [{ "def": "core-013" }] }, // Jlockeed Shredder-10
+                "p2": { "hand": [FILLER], "field": [{ "def": "stand-in (3) 6/8 R12/16" }] },
             }));
             let snake = s.card(SNAKE).clone();
 

@@ -185,10 +185,10 @@ mod b3_4_params_the_numbers_a_card_declares {
             &first_param("classic-038"),
             &json!({ "key": "plays", "base": 3, "radiant": 2, "better": "down", "min": 2 })
         ));
-        // A percentage: step 10, never above 100, at its bound on both faces (#1828).
+        // A percentage: step 10, never above 100, at its bound on the Radiant face.
         assert!(matches_object(
-            &first_param("classicplus-019-2"),
-            &json!({ "key": "chance", "base": 100, "radiant": 100, "step": 10, "max": 100 })
+            &first_param("core-042"),
+            &json!({ "key": "chance", "base": 50, "radiant": 100, "step": 10, "max": 100 })
         ));
     }
 
@@ -595,6 +595,8 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("classic-004", PRICE),
         ("classic-032", PRICE),
         ("classic-035", PRICE),
+        // R3837004: the fallback pool's "(3) or (4)" Cost.
+        ("classicplus-029", PRICE),
         ("classicplus-036", PRICE),
         ("classicplus-042-1", PRICE),
         ("classicplus-043", PRICE),

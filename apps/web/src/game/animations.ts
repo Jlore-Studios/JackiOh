@@ -113,7 +113,9 @@ export function locateInstance(view: PlayerView, instanceId: string): string | n
       if (unit !== null && unit.instanceId === instanceId) return testid.card(instanceId);
     }
     for (const slot of sv.backrow) {
-      if (slot !== null && slot.faceDown === false && slot.instanceId === instanceId) {
+      // One guard for an empty zone and a face-down card (#3490): a face-down card has no `instanceId`, so a
+      // guard against it alone could never change the answer.
+      if (slot?.faceDown === false && slot.instanceId === instanceId) {
         return testid.card(instanceId);
       }
     }
@@ -739,6 +741,15 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
       const side = heroSide(view, e.targetId);
       return side !== null ? testid.hero(side) : locateInstance(view, e.targetId);
     },
+  },
+  // R3857000: a hero kept Armor; its Armor badge ticks and the effects layer blooms a full shield
+  // over the hero (fx/shield.ts), with no shake, since nothing struck it.
+  armorGained: {
+    animation: "jk-badge-tick",
+    durationMs: 300,
+    testid: "hero-<side>",
+    fx: { recipe: "armor" },
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
   },
   // R961 (Meditative #39.2): the Jade Counter rose; the hero's Jade badge ticks, no fx.
   jadeChanged: {

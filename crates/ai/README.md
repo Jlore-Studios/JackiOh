@@ -85,7 +85,8 @@ R1563005); the greedy baseline's simulation does not.
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
 it can see on the field, then its attacks, a kill priced at what it removes (a unit with Reborn unspent
 less the body it comes back as, #1796, and less what its Death leaves behind, R2424000; plus a Trample
-attacker's excess on the hero and a Lifesteal attacker's heal, #1820), and once none is worth making the switches to Defense Position its own
+attacker's excess on the hero and a Lifesteal attacker's heal, #1820, which its hit on the hero counts
+too, #3858), and once none is worth making the switches to Defense Position its own
 evaluation prefers) on every determinization, and plays the first action of the best mean. When none
 of the lines `shortlist_lines` takes for the reply hands the turn over with an effect of the seat's own
 waiting that the root did not hold (a countdown, a next-turn reward), the best line that does is replied
@@ -135,7 +136,18 @@ A unit's Activate counts by one use (R2564000), and so does a face-up backrow ca
 then its face-up backrow cards' (`activate_sources`), as the reply does (`visible_activation`), and
 prices the best as the controller's evaluation after less before, each crystal at `next_turn_mana`;
 `unit_worth` adds `AI_EVAL.activation` of it for both sides' units, and `material` for each readable
-backrow card, inside its Brittle share.
+backrow card, inside its Brittle share. `activate_sources` lists each Dormant card acting for its
+awakening alone too (R3575404, R1839002: a Dormant Starship's launch, and the `wakesBy` ability a hull's
+text names, R3539000), and for that use alone the card need not be the instance left standing, since a
+shipyard's launch exiles the hull and stands a fresh Starship in its place. Then, within
+`AI_HAND_ACTIVATION_PROBE_NODES` of its own, each Unit and Field Spell in the seat's own hand with an
+ability, and each Dormant card of the seat's acting to awaken, is priced the same way and keyed by the
+card as the seat holds it now (R3575400, R923001: a hand card is spawned where a play would put it
+first), so a play worth the Activate it leaves reads it the moment it lands, not a turn later; the
+enemy's hand is never probed. A shipyard's turn-start fuse (R3539004) is no hook of its script, so
+`turn_hook_prices` prices it by one run of the engine's own yard step, for each Dormant shipyard on
+either field and each in the seat's hand, and `slumber_worth` adds `AI_EVAL.turn_hook` of it outside the
+slumber share, which that probe's own evaluation already applied (R3575402).
 A unit's "when this attacks" and "after this attacks" hooks count by one attack (R2688000):
 `attack_hook_prices` walks the same two turns, within `AI_ATTACK_HOOK_PROBE_NODES`; at the start of each
 player's next turn it plays each of that player's units with a hook at the enemy hero, or at the first
@@ -180,7 +192,8 @@ could otherwise open the same lethal at every decision. Each line tries its move
 (its target, or with Cleave a neighbour, #1821) at an even trade or better by the opponent model's own
 read (`reply.rs`'s `trade_value`, #1779), these three ranked together by that model's values, best
 first, ties in that order (#2825): a kill by `trade_value`, a hit on the hero by `face_value`
-(`reply_face_value` of what it deals through the hero's Armor), and every hit on the hero first while
+(`reply_face_value` of what it deals through the hero's Armor, plus a Lifesteal attacker's heal of it
+unless the hit is lethal, #3858), and every hit on the hero first while
 the seat's ready attacks reach the face together (`ready_gap`); then the plays round-robin, answers, the
 Trades of Tradable hand cards (R1838003: on a determinized copy, so the card one would draw never steers it), the
 buys and sales at the Marketplace (R1853004), the other attacks, position switches and End Turn; the root expands its first `root_branching` and each deeper step
@@ -271,6 +284,10 @@ included, or one turn hook its root fires (R2477000, R2565000). A step whose `re
 card holding either, and a play the other side's Pareto Optimality judges, per card held; #1240),
 and once a step has run, for each such card it cast without playing it, from a graveyard or at random
 (`announced_surcharge_nodes`, read off its `cardAnnounced` events; #1347).
+Such a step, once run, is kept for the rest of its decision (`SimMemo` on the root counter, at most
+`AI_SEARCH.memo_steps`), and the same step from the same state, nonce records aside, is answered from
+it without the engine, its nonce record rebuilt as the engine builds it and its nodes charged as before,
+so the search and its decision are unchanged and only the time it takes falls (R3575603).
 A prompt answered ahead inside a simulation (`best_auto_answer`: the other seat's in a step, the
 reply's, and the beam's look past the seat's own; #891, #1112), but the seat's own question it works
 out (`worked_step`, #2929), tries at most

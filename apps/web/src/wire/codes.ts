@@ -31,8 +31,13 @@ export type CodeInputReading = {
 /** Code separators, including U+FE58/U+FE63 dashes and invisible characters introduced by mail or chat. */
 const SEPARATOR_CLASS =
   "[\\s\\-\\u2010-\\u2015\\u2212\\uFE58\\uFE63\\uFF0D\\u00AD\\u200B-\\u200D\\u2060\\uFEFF]";
-const SEPARATOR = new RegExp(`^${SEPARATOR_CLASS}$`, "u");
+const SEPARATOR = new RegExp(
+  `^${SEPARATOR_CLASS}$`,
+  // Stryker disable next-line StringLiteral: every character tested is one code point and the class holds only characters of the Basic Multilingual Plane, so the pattern matches the same characters with or without the "u" flag.
+  "u",
+);
 
+// Stryker disable next-line Regex: every string tested is one code point (normalizeCodeText's characters, and chainsIn's `read`, which keeps the character itself when its upper case is longer), so dropping either anchor matches the same strings (the negated class, which this also covers, fails the whole table).
 const ASCII_LETTER_OR_DIGIT = /^[0-9A-Z]$/u;
 const ASCII_LETTERS_AND_DIGITS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
@@ -129,9 +134,12 @@ function letterCaseOf(original: string): LetterCase {
     if (isUpper) upper = true;
     else lower = true;
     if (letters === 0 ? !isUpper : isUpper) sentence = false;
+    // Stryker disable next-line AssignmentOperator: only `letters === 0` is read, and counting down leaves the count non-zero after the first letter as counting up does.
     letters += 1;
   }
+  // Stryker disable next-line StringLiteral: "mixed" is only compared for equality with the other cases, and "" names no other case, so the empty name chains words exactly as "mixed" does (the sentence-case tests hold "sentence").
   if (upper && lower) return sentence ? "sentence" : "mixed";
+  // Stryker disable next-line StringLiteral: "upper" is only compared for equality with the other cases, and "" names no other case, so the empty name chains words exactly as "upper" does.
   if (upper) return "upper";
   if (lower) return "lower";
   return "none";
@@ -148,6 +156,7 @@ function sameCase(a: LetterCase, b: LetterCase, loose: boolean): boolean {
 function chainsIn(text: string, loose: boolean): Chain[] {
   const chains: Chain[] = [];
   let words: Word[] = [];
+  // Stryker disable next-line ArrayDeclaration: the first word ends with no word before it, so endWord's else branch sets joins to [] before anything reads it.
   let joins: string[] = [];
   let original = "";
   let characters = "";
@@ -158,10 +167,12 @@ function chainsIn(text: string, loose: boolean): Chain[] {
     if (characters.length === 0) return;
     const word: Word = { characters, letterCase: letterCaseOf(original) };
     const last = words[words.length - 1];
+    // Stryker disable next-line ConditionalExpression: join is null until the first word ends and words is empty only until then, so `last !== undefined` holds whenever `join !== null` does; the tests hold the rest of the condition.
     if (last !== undefined && join !== null && sameCase(last.letterCase, word.letterCase, loose)) {
       joins.push(join);
       words.push(word);
     } else {
+      // Stryker disable next-line ConditionalExpression,EqualityOperator: words is empty only before the first word, and an empty chain reads as "", which is a code only of a format of length 0.
       if (words.length > 0) chains.push({ words, joins });
       words = [word];
       joins = [];
@@ -173,6 +184,7 @@ function chainsIn(text: string, loose: boolean): Chain[] {
 
   for (const character of text.normalize("NFKC")) {
     const upper = character.toUpperCase();
+    // Stryker disable next-line ConditionalExpression: a character whose upper case is longer than one code point is no ASCII letter or digit either way, and `read` counts only once it passes that test.
     const read = Array.from(upper).length === 1 ? upper : character;
     if (ASCII_LETTER_OR_DIGIT.test(read)) {
       original += character;
@@ -187,6 +199,7 @@ function chainsIn(text: string, loose: boolean): Chain[] {
     }
   }
   endWord();
+  // Stryker disable next-line ConditionalExpression,EqualityOperator: a text with no word leaves words empty, and an empty chain reads as "", which is a code only of a format of length 0.
   if (words.length > 0) chains.push({ words, joins });
   return chains;
 }
@@ -199,6 +212,7 @@ function couldBelongToCode(word: Word, format: CodeFormat): boolean {
     if (!format.alphabet.includes(character)) return false;
   }
   const size = Math.max(1, format.groupSize);
+  // Stryker disable next-line EqualityOperator: a word exactly one group long passes `length % size === 0` too, so `<` for `<=` changes no answer.
   return length <= size || length % size === 0;
 }
 
@@ -209,6 +223,7 @@ function couldBelongToCode(word: Word, format: CodeFormat): boolean {
 function codesInChain(chain: Chain, format: CodeFormat): string[] {
   let text = "";
   chain.words.forEach((word, index) => {
+    // Stryker disable next-line ConditionalExpression,StringLiteral: joins is one shorter than words, so the first word's joins[-1] is undefined and reads "" as the first branch does, and every later word has its join; the input-cap test holds the rest of this line.
     text += (index === 0 ? "" : (chain.joins[index - 1] ?? "")) + word.characters;
   });
   const whole = canonicalCode(text, format);
@@ -217,21 +232,27 @@ function codesInChain(chain: Chain, format: CodeFormat): string[] {
   const size = Math.max(1, format.groupSize);
   const found: string[] = [];
   const count = chain.words.length;
+  // Stryker disable next-line EqualityOperator: a run that starts at count holds no word, so its inner loop never runs.
   for (let start = 0; start < count; start += 1) {
     const internal = chain.joins[start];
     let characters = "";
+    // Stryker disable next-line EqualityOperator: a run reaches end = count only while shorter than a code, and that pass reads no word and adds nothing, so the run ends as it would have.
     for (let end = start; end < count; end += 1) {
       if (end > start) {
         if (chain.joins[end - 1] !== internal || characters.length % size !== 0) break;
       }
+      // Stryker disable next-line StringLiteral,OptionalChaining: end < count, so words[end] is always a word.
       characters += chain.words[end]?.characters ?? "";
       if (characters.length < format.length) continue;
+      // Stryker disable next-line ConditionalExpression: a run longer than a code reaches this line only for canonicalCode to refuse it as too long, so `characters.length === format.length` as true changes no answer; the lone-word test holds `end > start`.
       if (characters.length === format.length && end > start) {
         const leftWord = chain.words[start - 1];
         const rightWord = chain.words[end + 1];
         const leftBlocks =
+          // Stryker disable next-line ConditionalExpression: leftWord is undefined only at start 0, whose joins[-1] is undefined and never equals internal, a join inside the run; the tests hold the rest of the condition.
           leftWord !== undefined && chain.joins[start - 1] === internal && couldBelongToCode(leftWord, format);
         const rightBlocks =
+          // Stryker disable next-line ConditionalExpression: rightWord is undefined only past the last word, whose joins[end] is undefined and never equals internal, a join inside the run; the tests hold the rest of the condition.
           rightWord !== undefined && chain.joins[end] === internal && couldBelongToCode(rightWord, format);
         const code = !leftBlocks && !rightBlocks ? canonicalCode(characters, format) : null;
         if (code !== null) found.push(code);
@@ -247,6 +268,7 @@ function codesInText(text: string, format: CodeFormat, loose: boolean): Set<stri
   for (const chain of chainsIn(text, loose)) {
     for (const code of codesInChain(chain, format)) {
       found.add(code);
+      // Stryker disable next-line ConditionalExpression: the set only grows, so once it holds two codes findCodeInText answers null whether the search stops here or runs on.
       if (found.size > 1) return found;
     }
   }
@@ -267,6 +289,7 @@ export function findCodeInText(text: string, format: CodeFormat): string | null 
 
 /** R104: sorted ASCII alphanumerics excluded by the format. */
 export function excludedCharacters(format: CodeFormat): readonly string[] {
+  // Stryker disable next-line MethodExpression: ASCII_LETTERS_AND_DIGITS is written in sorted order and the filter keeps it, so the sort changes nothing.
   return Array.from(ASCII_LETTERS_AND_DIGITS)
     .filter((character) => !format.alphabet.includes(character))
     .sort();
