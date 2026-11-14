@@ -17474,14 +17474,14 @@
       "cleared": {
         "approver": {
           "family": "claude",
-          "model": "sonnet",
+          "model": "opus",
           "provider": "claude-8",
-          "tier": "medium"
+          "tier": "strong"
         },
-        "at": "2026-11-14T04:41:39Z",
-        "built_by": "claude-4",
-        "by": "`claude` (medium)",
-        "sha": "9430170f3cd7a6f0a7a9a1dc9d177aa7d5733c9d"
+        "at": "2026-11-14T06:52:57Z",
+        "built_by": "claude-8",
+        "by": "`claude` (strong)",
+        "sha": "44d73299a1fda01309f1fd906f66719721cf621c"
       },
       "cross_rounds": 0,
       "died": 0,
