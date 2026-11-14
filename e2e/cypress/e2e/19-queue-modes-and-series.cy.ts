@@ -11,6 +11,7 @@ import {
 } from "../../../apps/web/src/wire/serverConfig.ts";
 import { TOKEN_NAMES, tokenId } from "../../support/cards.ts";
 import type { InstalledLoadout } from "../../support/commands.ts";
+import { openQueuePanel } from "../../support/play.ts";
 import {
   accounts,
   apiUrl,
@@ -235,8 +236,7 @@ function openLobby(account: E2EAccount, mode: QueueMode): void {
     const shown = $body.find(ts(playModeId(mode))).length > 0;
     expect(shown, `the lobby's ${mode} chip; the page shows: ${$body.text().replace(/\s+/gu, " ").slice(0, 400)}`).to.eq(true);
   });
-  cy.get(ts(playModeId(mode)), { timeout: timeouts.view }).check();
-  cy.get(ts(playModeId(mode))).should("be.checked");
+  openQueuePanel(mode);
 }
 
 /** Queue browser first and pin seat two to p2, so R1989000's coin leaves the browser as series seat p1 and R335's alternation runs from there. */

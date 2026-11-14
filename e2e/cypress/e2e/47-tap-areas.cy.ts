@@ -22,7 +22,7 @@ import {
   COLLECTION_GRID,
   COLLECTION_JLORE,
   COLLECTION_SCREEN,
-  PLAY_QUEUE,
+  PLAY_HUB,
   PLAY_SIGN_IN,
   PRACTICE_HUD,
   PROMPT_SUBMIT,
@@ -404,7 +404,7 @@ describe(`47 — every control under a finger takes a tap across ${String(HIT_MI
 
         it("R2122000 /play", () => {
           cy.visitAs(SIGNED_IN(), routes.play());
-          cy.get(ts(PLAY_QUEUE), { timeout: timeouts.view }).should("be.visible");
+          cy.get(ts(PLAY_HUB), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
 

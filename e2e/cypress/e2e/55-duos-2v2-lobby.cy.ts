@@ -29,6 +29,8 @@ import {
   LOBBY_SETTINGS,
   LOBBY_START,
   LOBBY_TEAM,
+  PLAY_LOBBY,
+  PLAY_LOBBY_DIALOG,
   heroId,
   ts,
 } from "../../support/testids.ts";
@@ -109,7 +111,10 @@ describe("55 2v2 lobby — four people in two teams from Create to the board", (
     endLiveDuos(host, third);
 
     // R3731000: the co-op panel, on /play under the duel's (R3732002), makes a 2v2 lobby, which has nothing to set.
+    // R3729000: the panels open from Play's Private lobby card.
     cy.visitAs(host, routes.play());
+    cy.get(ts(PLAY_LOBBY), { timeout: timeouts.view }).should("not.be.disabled").click();
+    cy.get(ts(PLAY_LOBBY_DIALOG), { timeout: timeouts.view }).should("be.visible");
     cy.get(`${ts(LOBBY_PANEL)}[data-format="coop"]`, { timeout: timeouts.view })
       .find(ts(LOBBY_CREATE_2V2))
       .should("not.be.disabled")

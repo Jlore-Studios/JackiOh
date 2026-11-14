@@ -1,13 +1,14 @@
-// #1578, R1578000: the Play hub is one screen. jsdom cannot measure layout, so this mounts the route in
-// a browser at a desktop and a phone size, with the reads it makes served from fixtures.
+// #1578, R1578000, #3729, R3729000: the Play hub is one screen, four groups of cards. jsdom cannot measure
+// layout, so this mounts the route in a browser at a desktop and a phone size, with the reads it makes served
+// from fixtures. The page never scrolls: the hub's own region does, and an Online card opens one panel in view.
 
 import { CATALOG, CATALOG_VERSION } from "@jackioh/cards";
 import { DECK_SIZE } from "@jackioh/engine/config";
 import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 
 import type { DecksResponse } from "../../../apps/web/src/net/api.ts";
-import { lobbyTestid } from "../../../apps/web/src/lobby/testids.ts";
 import PlayRoute, { playTestid } from "../../../apps/web/src/routes/play.tsx";
+import { playGroupTestid } from "../../../apps/web/src/routes/playTestids.ts";
 import { setShips } from "../../../apps/web/src/wire/catalog.ts";
 import { loadWasm } from "../../../apps/web/src/wasm/index.ts";
 
@@ -116,36 +117,28 @@ function expectInView(viewport: Viewport, testids: readonly string[]): void {
   });
 }
 
-/** No region in the hub has more to show than its box. */
-function expectNoHubScroll(): void {
-  cy.get(".play-layout").should(($layout) => {
-    const layout = $layout[0] as HTMLElement;
-    expect(layout.scrollHeight, "the hub's region has nothing below the fold").to.be.at.most(layout.clientHeight);
-  });
-  cy.get(byTestid(playTestid.online)).find(".play-panel--setup").should(($setup) => {
-    const setup = $setup[0] as HTMLElement;
-    expect(setup.scrollHeight, "the setup panel is not a scroller").to.be.at.most(setup.clientHeight);
+/** The hub's one scroller is its own region, never the page (R1581000). */
+function expectHubRegionScrolls(): void {
+  cy.get(".play-body").should(($region) => {
+    expect(getComputedStyle($region[0] as HTMLElement).overflowY, "the hub's region is the one scroller").to.eq("auto");
   });
 }
 
-/** The online panel starts at or before the ways beside it (left of them) or under it (above them). */
-function expectOnlineFirst(): void {
-  cy.window({ log: false }).should((win) => {
-    const online = win.document.querySelector(byTestid(playTestid.online));
-    const ways = win.document.querySelector(byTestid(playTestid.ways));
-    expect(online, "the online panel is on the page").not.to.eq(null);
-    expect(ways, "the ways to play are on the page").not.to.eq(null);
-    const first = (online as HTMLElement).getBoundingClientRect();
-    const second = (ways as HTMLElement).getBoundingClientRect();
-    expect(first.top, "online play starts no lower").to.be.at.most(second.top + EDGE_SLACK_PX);
-    expect(first.left, "online play starts no further right").to.be.at.most(second.left + EDGE_SLACK_PX);
-    expect(first.width * first.height, "online play is the bigger panel").to.be.greaterThan(second.width * second.height);
-  });
-}
+const ONLINE = [playTestid.modeBo1, playTestid.modeBo3, playTestid.modeRandom] as const;
 
-const WAYS = [playTestid.practice, playTestid.dungeon, playTestid.together, playTestid.replays] as const;
+/** Every other card, reached by scrolling the hub's region. */
+const OTHER_CARDS = [
+  playTestid.daily,
+  playTestid.lobby,
+  playTestid.challenge,
+  playTestid.practice,
+  playTestid.dungeon,
+  playTestid.tutorial,
+  playTestid.replays,
+  playTestid.together,
+] as const;
 
-describe("#1578 the Play hub is one screen", () => {
+describe("#1578 #3729 the Play hub is one screen", () => {
   // The validator and the catalog are Rust WebAssembly (docs/v0.3.0/SURFACE.md §10.3); load them first.
   before(() => {
     cy.wrap(loadWasm(), { timeout: 30_000 });
@@ -154,29 +147,40 @@ describe("#1578 the Play hub is one screen", () => {
   for (const viewport of VIEWPORTS) {
     const size = `${viewport.label} ${String(viewport.width)}x${String(viewport.height)}`;
 
-    it(`R1578000 signed in at ${size}: no page scroll, online first, every way to play reachable`, () => {
+    it(`R3729000 signed in at ${size}: no page scroll, four groups, the Online cards in view, and one panel from a card to Find a match`, () => {
       cy.viewport(viewport.width, viewport.height);
       serveFixtures();
       cy.mount(<PlayRoute token="token-1" />);
 
+      cy.get(byTestid(playTestid.hub)).should("exist");
+      for (const group of ["online", "daily", "friends", "solo"] as const) cy.get(byTestid(playGroupTestid(group))).should("exist");
+      expectNoPageScroll(viewport);
+      expectHubRegionScrolls();
+      expectInView(viewport, ONLINE);
+      for (const testid of OTHER_CARDS) cy.get(byTestid(testid)).scrollIntoView().should("be.visible");
+      expectNoPageScroll(viewport);
+
+      // R3729000: a card opens its panel, with the picker, the rank and Find a match in view.
+      cy.get(byTestid(playTestid.modeBo1)).scrollIntoView().click();
+      cy.get(byTestid(playTestid.queuePanel)).should("be.visible");
       cy.get(byTestid(playTestid.deckSelect)).should("exist");
       cy.get(byTestid(playTestid.rank)).should("exist");
-      expectNoPageScroll(viewport);
-      expectOnlineFirst();
       expectInView(viewport, [playTestid.queue, playTestid.deckSelect, playTestid.rank]);
-      // R3730000: "Play a friend" is the private lobby's panel.
-      expectInView(viewport, [...WAYS, lobbyTestid.create, lobbyTestid.joinInput, lobbyTestid.joinSubmit]);
-      expectNoHubScroll();
+      expectNoPageScroll(viewport);
     });
 
-    it(`R1578000 signed out at ${size}: no page scroll, sign-in in the online panel, every way in view`, () => {
+    it(`R3729000 signed out at ${size}: no page scroll, sign-in above the solo cards, and no Online card`, () => {
       cy.viewport(viewport.width, viewport.height);
       cy.mount(<PlayRoute token={null} />);
 
       cy.get(byTestid(playTestid.signIn)).should("be.visible");
       expectNoPageScroll(viewport);
-      expectOnlineFirst();
-      expectInView(viewport, [playTestid.signIn, ...WAYS]);
+      expectHubRegionScrolls();
+      expectInView(viewport, [playTestid.signIn]);
+      for (const testid of [playTestid.practice, playTestid.dungeon, playTestid.tutorial, playTestid.replays, playTestid.together]) {
+        cy.get(byTestid(testid)).scrollIntoView().should("be.visible");
+      }
+      for (const group of ["online", "daily", "friends"] as const) cy.get(byTestid(playGroupTestid(group))).should("not.exist");
     });
   }
 });
