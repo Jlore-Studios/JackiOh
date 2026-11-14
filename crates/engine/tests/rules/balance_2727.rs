@@ -305,26 +305,23 @@ mod r2727000_a_buff_in_a_hand_may_give_cloaked {
     }
 
     #[test]
-    fn r2727000_a_buff_never_cloaks_a_card_in_a_deck_or_on_the_field() {
+    fn r2727000_a_buff_never_cloaks_a_card_on_the_field_and_may_in_a_deck() {
         let mut state = playing("r2727000-deck-field");
-        let mut cards = set_library(
+        let deck = set_library(
             &mut state,
             P1,
             &[plain_unit().id, plain_spell().id, quiet_field().id],
         );
-        cards.push(put(
-            &mut state,
-            &plain_unit().id,
-            slot(P1, Row::Units, 1),
-            json!({}),
-        ));
-        cards.push(put(
-            &mut state,
-            &quiet_field().id,
-            slot(P1, Row::Backrow, 2),
-            json!({}),
-        ));
-        for card in &cards {
+        let field = [
+            put(&mut state, &plain_unit().id, slot(P1, Row::Units, 1), json!({})),
+            put(
+                &mut state,
+                &quiet_field().id,
+                slot(P1, Row::Backrow, 2),
+                json!({}),
+            ),
+        ];
+        for card in &field {
             for tuned in tuned_each(&state, &card.id, TuneDirection::Upgrade) {
                 let kinds = own_kinds(&tuned, &card.id);
                 assert!(
@@ -333,6 +330,16 @@ mod r2727000_a_buff_in_a_hand_may_give_cloaked {
                     card.def_id
                 );
             }
+        }
+        // R3888000: a deck card reaches a hand, where Cloaked acts, so it is live there as in a hand.
+        for card in &deck {
+            assert!(
+                tuned_each(&state, &card.id, TuneDirection::Upgrade)
+                    .iter()
+                    .any(|tuned| tuning_adds(tuned, &card.id, KeywordKind::Cloaked)),
+                "{}",
+                card.def_id
+            );
         }
     }
 
@@ -572,21 +579,18 @@ mod r2727001_a_buff_in_a_hand_may_take_crater_off {
     }
 
     #[test]
-    fn r2727001_a_buff_leaves_crater_in_a_deck_and_on_the_field_and_a_nerf_never_takes_it_off() {
+    fn r2727001_a_buff_leaves_crater_on_the_field_takes_it_off_in_a_deck_and_a_nerf_never_takes_it_off() {
         let mut state = playing("r2727001-deck-field");
-        let mut cards = set_library(&mut state, P1, &[crater_unit().id, crater_trap().id]);
-        cards.push(put(
-            &mut state,
-            &crater_unit().id,
-            slot(P1, Row::Units, 1),
-            json!({}),
-        ));
-        cards.push(put(
-            &mut state,
-            &crater_field().id,
-            slot(P1, Row::Backrow, 2),
-            json!({}),
-        ));
+        let deck = set_library(&mut state, P1, &[crater_unit().id, crater_trap().id]);
+        let mut cards = vec![
+            put(&mut state, &crater_unit().id, slot(P1, Row::Units, 1), json!({})),
+            put(
+                &mut state,
+                &crater_field().id,
+                slot(P1, Row::Backrow, 2),
+                json!({}),
+            ),
+        ];
         let held = in_hand(&mut state, &crater_unit().id, P1);
         for card in &cards {
             for tuned in tuned_each(&state, &card.id, TuneDirection::Upgrade) {
@@ -594,6 +598,17 @@ mod r2727001_a_buff_in_a_hand_may_take_crater_off {
                 assert!(kinds.contains(&KeywordKind::Crater), "{}: {kinds:?}", card.def_id);
             }
         }
+        // R3888000: a deck card's Crater has still to act, as a hand card's has.
+        for card in &deck {
+            assert!(
+                tuned_each(&state, &card.id, TuneDirection::Upgrade)
+                    .iter()
+                    .any(|tuned| !own_kinds(tuned, &card.id).contains(&KeywordKind::Crater)),
+                "{}",
+                card.def_id
+            );
+        }
+        cards.extend(deck);
         cards.push(held);
         for card in &cards {
             for tuned in tuned_each(&state, &card.id, TuneDirection::Degrade) {

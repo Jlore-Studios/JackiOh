@@ -681,7 +681,8 @@ pub fn compile_crafted_def(recipe: &CraftRecipe) -> CardDef {
                 max: None,
                 tuned_on: None,
                 power: None,
-                cry: None,
+                read: None,
+                read_on: None,
             }
         })
         .collect();

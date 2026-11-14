@@ -140,7 +140,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "perHeads",
@@ -149,7 +149,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "perTails",
@@ -158,7 +158,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 13,
@@ -265,7 +265,7 @@
         "step": 1,
         "min": 1,
         "tunedOn": "radiant",
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 29,
@@ -364,7 +364,8 @@
         "radiant": 3,
         "better": "down",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "read": "combo"
       },
       {
         "key": "draw",
@@ -372,7 +373,8 @@
         "radiant": 6,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "read": "combo"
       }
     ],
     "loc": 15,
@@ -548,7 +550,7 @@
         "step": 1,
         "min": 1,
         "tunedOn": "radiant",
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 11,
@@ -751,7 +753,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "read": "castOnDraw"
       },
       {
         "key": "discards",
@@ -760,7 +763,8 @@
         "better": "down",
         "step": 1,
         "min": 1,
-        "tunedOn": "base"
+        "tunedOn": "base",
+        "read": "castOnDraw"
       }
     ],
     "loc": 15,
@@ -969,7 +973,8 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "tunedOn": "radiant"
+        "tunedOn": "radiant",
+        "read": "castOnDraw"
       },
       {
         "key": "loss",
@@ -977,7 +982,8 @@
         "radiant": 7,
         "better": "down",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "read": "castOnDraw"
       }
     ],
     "loc": 13,
@@ -1457,7 +1463,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 8,
@@ -1830,7 +1836,7 @@
         "better": "up",
         "step": 8,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 15,
@@ -1866,7 +1872,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "setCost",
@@ -1875,7 +1881,7 @@
         "better": "down",
         "step": 1,
         "min": 0,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 16,
@@ -2445,7 +2451,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "lowDamage",
@@ -2454,7 +2460,7 @@
         "better": "up",
         "step": 2,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "threshold",
@@ -2463,7 +2469,7 @@
         "better": "up",
         "step": 2,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 24,
@@ -2658,7 +2664,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "cap",
@@ -2773,7 +2779,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 37,
@@ -2831,7 +2837,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 19,
@@ -3302,7 +3308,8 @@
         "radiant": 2,
         "better": "down",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "read": "castOnDraw"
       },
       {
         "key": "copies",
@@ -3310,7 +3317,8 @@
         "radiant": 3,
         "better": "down",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "read": "castOnDraw"
       }
     ],
     "loc": 26,
@@ -4110,7 +4118,7 @@
         "step": 1,
         "min": 1,
         "tunedOn": "base",
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "setCost",
@@ -4120,7 +4128,7 @@
         "step": 1,
         "min": 0,
         "tunedOn": "radiant",
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 8,
@@ -4326,7 +4334,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 38,
@@ -4909,7 +4917,7 @@
         "better": "down",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "bounces",
@@ -4918,7 +4926,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 32,
@@ -4957,7 +4965,7 @@
         "better": "down",
         "step": 167,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 30,
@@ -5249,7 +5257,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "units",
@@ -5258,7 +5266,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 8,
@@ -5595,7 +5603,7 @@
         "better": "down",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 36,
@@ -5859,7 +5867,8 @@
         "better": "down",
         "step": 1,
         "min": 0,
-        "tunedOn": "radiant"
+        "tunedOn": "radiant",
+        "read": "graveyard"
       }
     ],
     "loc": 16,
@@ -6064,7 +6073,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "draw",
@@ -6175,7 +6184,7 @@
         "step": 1,
         "min": 1,
         "tunedOn": "base",
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 26,
@@ -6269,7 +6278,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 25,
@@ -6328,7 +6337,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "draw",
@@ -6337,7 +6346,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 7,
@@ -6796,7 +6805,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "usesPlague": true,
@@ -6862,7 +6871,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "draw",
@@ -6871,7 +6880,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 5,
@@ -7259,7 +7268,7 @@
         "step": 1,
         "min": 1,
         "tunedOn": "radiant",
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 7,
@@ -7702,7 +7711,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "usesPlague": true,
@@ -8537,7 +8546,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "tails",
@@ -8546,7 +8555,7 @@
         "better": "down",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "oppMana",
@@ -8555,7 +8564,7 @@
         "better": "down",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 18,
@@ -8697,7 +8706,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 13,
@@ -8894,7 +8903,8 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "tunedOn": "radiant"
+        "tunedOn": "radiant",
+        "read": "castOnDraw"
       },
       {
         "key": "per",
@@ -8903,7 +8913,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 12,
@@ -9353,7 +9363,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "read": "castOnDraw"
       }
     ],
     "dealsDamage": true,
@@ -9388,7 +9399,8 @@
         "radiant": 3,
         "better": "down",
         "step": 1,
-        "min": 2
+        "min": 2,
+        "read": "handOrDeck"
       }
     ],
     "loc": 61,
@@ -9477,7 +9489,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 8,
@@ -9928,7 +9940,8 @@
         "radiant": 1,
         "better": "down",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "read": "evolve"
       }
     ],
     "loc": 5,
@@ -9971,7 +9984,8 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "read": "castOnDraw"
       },
       {
         "key": "debuff",
@@ -9979,7 +9993,8 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "read": "castOnDraw"
       }
     ],
     "loc": 24,
@@ -10869,7 +10884,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "setCost",
@@ -10879,7 +10894,7 @@
         "step": 1,
         "min": 0,
         "tunedOn": "radiant",
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 11,
@@ -11189,7 +11204,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 9,
@@ -11227,7 +11242,8 @@
         "radiant": 5,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "read": "castOnDraw"
       },
       {
         "key": "setCost",
@@ -11236,7 +11252,8 @@
         "better": "down",
         "step": 1,
         "min": 0,
-        "tunedOn": "radiant"
+        "tunedOn": "radiant",
+        "read": "castOnDraw"
       }
     ],
     "loc": 17,
@@ -11669,7 +11686,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "mana",
@@ -11679,7 +11696,7 @@
         "step": 1,
         "min": 1,
         "tunedOn": "radiant",
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 21,
@@ -12150,7 +12167,7 @@
         "step": 1,
         "min": 1,
         "tunedOn": "radiant",
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 15,
@@ -12273,7 +12290,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 19,
@@ -12921,7 +12938,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 19,
@@ -12959,7 +12976,8 @@
         "radiant": 7,
         "better": "down",
         "step": 2,
-        "min": 1
+        "min": 1,
+        "read": "castOnDraw"
       }
     ],
     "loc": 21,
@@ -13000,7 +13018,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "curses",
@@ -13073,7 +13091,8 @@
         "radiant": 14,
         "better": "up",
         "step": 2,
-        "min": 1
+        "min": 1,
+        "read": "castOnDraw"
       }
     ],
     "loc": 21,
@@ -13329,7 +13348,8 @@
         "better": "down",
         "step": 1,
         "min": 1,
-        "tunedOn": "base"
+        "tunedOn": "base",
+        "read": "castOnDraw"
       },
       {
         "key": "setCost",
@@ -13338,7 +13358,8 @@
         "better": "down",
         "step": 1,
         "min": 0,
-        "tunedOn": "radiant"
+        "tunedOn": "radiant",
+        "read": "castOnDraw"
       }
     ],
     "loc": 23,
@@ -13793,7 +13814,7 @@
         "step": 1,
         "min": 1,
         "tunedOn": "radiant",
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 41,
@@ -13840,7 +13861,7 @@
         "step": 1,
         "min": 1,
         "max": 5,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 48,
@@ -14018,7 +14039,7 @@
         "min": 1,
         "max": 5,
         "tunedOn": "base",
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "datacenters",
@@ -14027,7 +14048,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "glitches",
@@ -14036,7 +14057,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "setCost",
@@ -14045,7 +14066,7 @@
         "better": "down",
         "step": 1,
         "min": 0,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "nerfs",
@@ -14054,7 +14075,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "viruses",
@@ -14064,7 +14085,7 @@
         "step": 1,
         "min": 1,
         "tunedOn": "radiant",
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 149,
@@ -14436,7 +14457,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 43,
@@ -15075,7 +15096,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 14,
@@ -15266,7 +15287,7 @@
         "step": 1,
         "min": 11,
         "max": 14,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "draw",
@@ -15275,7 +15296,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 22,
@@ -15405,7 +15426,7 @@
         "step": 1,
         "min": 1,
         "tunedOn": "radiant",
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 17,
@@ -15624,7 +15645,7 @@
         "better": "down",
         "step": 1,
         "min": 0,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 51,
@@ -16256,7 +16277,8 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "tunedOn": "radiant"
+        "tunedOn": "radiant",
+        "read": "castOnDraw"
       }
     ],
     "loc": 41,
@@ -16786,7 +16808,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "echo",
@@ -16856,7 +16878,8 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": "base"
+        "read": "cry",
+        "readOn": "base"
       }
     ],
     "loc": 29,
@@ -17509,7 +17532,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 24,
@@ -17813,7 +17836,8 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "read": "castOnDraw"
       },
       {
         "key": "draw",
@@ -17821,7 +17845,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "read": "castOnDraw"
       }
     ],
     "loc": 23,
@@ -18075,7 +18100,7 @@
         "better": "down",
         "step": 1,
         "min": 0,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 85,
@@ -19118,7 +19143,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 46,
@@ -19367,7 +19392,8 @@
         "radiant": 20,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "read": "awaken"
       }
     ],
     "loc": 20,
@@ -20115,7 +20141,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "damage",
@@ -20200,7 +20226,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 19,
@@ -21468,7 +21494,7 @@
         "step": 1,
         "min": 1,
         "tunedOn": "radiant",
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 44,
@@ -21867,7 +21893,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 19,
@@ -21903,7 +21929,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 19,
@@ -21949,7 +21975,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 19,
@@ -22043,7 +22069,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 24,
@@ -22079,7 +22105,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 26,
@@ -22458,7 +22484,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "read": "castOnDraw"
       },
       {
         "key": "resources",
@@ -22466,7 +22493,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "read": "castOnDraw"
       }
     ],
     "dealsDamage": true,
@@ -23499,7 +23527,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 24,
@@ -24878,7 +24906,7 @@
         "step": 1,
         "min": 1,
         "tunedOn": "radiant",
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 26,
@@ -26863,7 +26891,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 19,
@@ -26971,7 +26999,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 25,
@@ -27436,7 +27464,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 19,
@@ -27615,7 +27643,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 36,
@@ -27653,7 +27681,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 13,
@@ -27990,7 +28018,7 @@
         "better": "up",
         "step": 2,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ],
     "loc": 11,
@@ -29029,7 +29057,8 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "tunedOn": "base"
+        "tunedOn": "base",
+        "read": "evolve"
       },
       {
         "key": "buff2",
@@ -29038,7 +29067,8 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "tunedOn": "radiant"
+        "tunedOn": "radiant",
+        "read": "evolve"
       }
     ]
   },
@@ -29245,7 +29275,8 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "tunedOn": "base"
+        "tunedOn": "base",
+        "read": "evolve"
       },
       {
         "key": "buff2",
@@ -29254,7 +29285,8 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "tunedOn": "radiant"
+        "tunedOn": "radiant",
+        "read": "evolve"
       }
     ]
   },
@@ -31163,7 +31195,7 @@
         "better": "down",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "mana2",
@@ -31172,7 +31204,7 @@
         "better": "down",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "dormant",
@@ -31310,7 +31342,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ]
   },
@@ -31794,7 +31826,8 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "read": "castOnDraw"
       }
     ]
   },
@@ -32062,7 +32095,8 @@
         "radiant": 5,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "read": "castOnDraw"
       }
     ]
   },
@@ -32443,7 +32477,8 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "tunedOn": "radiant"
+        "tunedOn": "radiant",
+        "read": "evolve"
       }
     ]
   },
@@ -32484,7 +32519,8 @@
         "radiant": 4,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "read": "evolve"
       }
     ]
   },
@@ -32522,7 +32558,8 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "tunedOn": "radiant"
+        "tunedOn": "radiant",
+        "read": "evolve"
       }
     ]
   },
@@ -32710,7 +32747,8 @@
         "radiant": 4,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "read": "evolve"
       }
     ],
     "refs": [
@@ -33051,7 +33089,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "read": "combo"
       }
     ]
   },
@@ -34175,7 +34214,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       },
       {
         "key": "toxic",
@@ -35475,7 +35514,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ]
   },
@@ -36349,7 +36388,7 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "cry": true
+        "read": "cry"
       }
     ]
   },

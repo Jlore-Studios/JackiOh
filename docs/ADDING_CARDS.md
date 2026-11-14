@@ -81,8 +81,8 @@ Its cards still need their own files, row by row above: the catalog entries, the
 ## 2. Templates
 
 **Catalog entry** (C+ #6). `loc` is the script's lines of code, from `cargo jackioh catalog loc <script path>` once the script is written
-([§3](#3-the-patch-and-its-order)); text is the printed text, with `{key}` where a number is declared in `params`, marked `"cry": true` when only the card's Cry
-writes it (R1748000), or `"cry": "base"` (`"radiant"`) when only that face's Cry does and the other face's lasting text writes it too (R2261001). A Spell or a Field Spell declares every number it prints unless `tests/cross/params.rs` names why it is fixed
+([§3](#3-the-patch-and-its-order)); text is the printed text, with `{key}` where a number is declared in `params`, marked `"read"` when every line that
+writes it reads it at one time or in one place: `"cry"`, `"combo"`, `"castOnDraw"`, `"awaken"` ("When this awakens"), `"evolve"` ("Evolve:" or "Evolves when"), `"handOrDeck"` or `"graveyard"` (R1748000, R3888001), with `"readOn": "base"` (`"radiant"`) when only that face's such lines do and the other face's lasting text writes it too (R2261001); `catalog check` holds the mark to the text. A Spell or a Field Spell declares every number it prints unless `tests/cross/params.rs` names why it is fixed
 (R1748003); one that deals damage carries `"dealsDamage": true` (R1748001), and a Field Spell that uses its own Plague Counters
 `"usesPlague": true` (R1748002). A token has
 `"token": true`, `"rarity": "Token"` and the `Token` tag. A new entry, a token's too, carries a `flavor` (§1 row 2).

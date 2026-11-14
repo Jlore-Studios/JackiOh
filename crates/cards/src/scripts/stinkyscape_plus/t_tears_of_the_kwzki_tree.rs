@@ -160,7 +160,9 @@ mod tests {
             s.end_turn();
             let at_p1_end = buffed(&s, from);
             // Both sides, every zone: p1's library and p2's library are hidden piles (cued whole),
-            // the Units on the field and in the graveyards and exile piles are public ones.
+            // the Units on the field and in the graveyards and exile piles are public ones. R3888000: a
+            // graveyard Unit no play may take from there is Buffed only with Flashback, and an exiled
+            // one has no live change, so it is left alone with no draw (R129).
             let p1_library: Vec<String> = s.pile(P1, "library").iter().map(|card| card.id.clone()).collect();
             let p2_library: Vec<String> = s.pile(P2, "library").iter().map(|card| card.id.clone()).collect();
             assert!(p1_library.iter().any(|id| at_p1_end.contains(id)), "p1's library");
@@ -171,7 +173,7 @@ mod tests {
                     .into_iter()
                     .find(|card| card.def_id.starts_with("stand-in"));
                 let unit = unit.unwrap_or_else(|| panic!("{player:?}'s {pile} holds its Unit"));
-                assert!(at_p1_end.contains(&unit.id), "{player:?}'s {pile}");
+                assert_eq!(at_p1_end.contains(&unit.id), pile == "graveyard", "{player:?}'s {pile}");
             }
             for player in [P1, P2] {
                 assert!(at_p1_end.contains(&s.unit_at(player, 1).id), "{player:?}'s Unit");

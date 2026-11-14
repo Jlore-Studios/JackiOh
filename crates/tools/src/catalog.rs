@@ -493,10 +493,183 @@ fn validate_face(
     }
 }
 
+/// R3888001: the line openings that say when the number a line writes is read, each with its `read`
+/// mark. "Combo N:" is a Combo too (`read_of_line`).
+const READ_OPENINGS: &[(&str, &str)] = &[
+    ("Cry:", "cry"),
+    ("Combo:", "combo"),
+    ("Cast on draw:", "castOnDraw"),
+    ("When awoken:", "awaken"),
+    ("When this awakens:", "awaken"),
+    ("Evolve:", "evolve"),
+    ("Evolves when", "evolve"),
+    ("While in your hand or deck:", "handOrDeck"),
+    ("In your hand or deck:", "handOrDeck"),
+    ("While this is in your hand:", "handOrDeck"),
+    ("While in your deck:", "handOrDeck"),
+    ("While this is in your graveyard:", "graveyard"),
+];
+
+/// R3888001: the sentence openings inside a line that say the same, for a line that opens otherwise
+/// (S #19 Imprisoned Cosmality's "Dormant for 2 turns. When this awakens, deal {damage} damage …").
+const READ_SENTENCE_OPENINGS: &[(&str, &str)] = &[("When this awakens", "awaken")];
+
+/// R3888001: every `read` mark, with the article and the noun a failure names its lines by.
+const READ_MARKS: &[(&str, &str, &str)] = &[
+    ("cry", "a", "Cry"),
+    ("combo", "a", "Combo"),
+    ("castOnDraw", "a", "Cast on draw line"),
+    ("awaken", "an", "awakening"),
+    ("evolve", "an", "Evolve line"),
+    ("handOrDeck", "a", "hand-or-deck line"),
+    ("graveyard", "a", "graveyard line"),
+];
+
+/// Whether `text` writes `{key}`.
+fn writes_key(text: &str, key: &str) -> bool {
+    param_placeholders(text)
+        .iter()
+        .any(|placeholder| placeholder.key == key)
+}
+
+/// R3888001: the `read` mark of one line that writes `{key}`: its opening's, a "Combo N:" line's, or the
+/// one every sentence of it writing `{key}` opens with; `None` for a lasting line.
+fn read_of_line(line: &str, key: &str) -> Option<&'static str> {
+    if let Some((_, mark)) = READ_OPENINGS
+        .iter()
+        .find(|(opening, _)| line.starts_with(opening))
+    {
+        return Some(mark);
+    }
+    if let Some((head, _)) = line.split_once(':')
+        && head
+            .strip_prefix("Combo ")
+            .is_some_and(|word| !word.is_empty() && !word.contains(' '))
+    {
+        return Some("combo");
+    }
+    let marks: Vec<Option<&'static str>> = line
+        .split(". ")
+        .filter(|sentence| writes_key(sentence, key))
+        .map(|sentence| {
+            READ_SENTENCE_OPENINGS
+                .iter()
+                .find(|(opening, _)| sentence.trim_start().starts_with(opening))
+                .map(|(_, mark)| *mark)
+        })
+        .collect();
+    match marks.first() {
+        Some(Some(first)) if marks.iter().all(|mark| *mark == Some(*first)) => Some(first),
+        _ => None,
+    }
+}
+
+/// R3888001: one face's reading of `{key}`: `None` when it never writes it, `Some(Some(mark))` when
+/// every line writing it has that mark, `Some(None)` otherwise.
+fn face_reading(text: &str, key: &str) -> Option<Option<&'static str>> {
+    let marks: Vec<Option<&'static str>> = text
+        .lines()
+        .map(str::trim)
+        .filter(|line| writes_key(line, key))
+        .map(|line| read_of_line(line, key))
+        .collect();
+    let first = *marks.first()?;
+    Some(first.filter(|first| marks.iter().all(|mark| *mark == Some(*first))))
+}
+
+/// R3888001: what is wrong with a param's `read` and `readOn` against the faces' texts, if anything.
+fn read_mark_failure(param: &Object, key: &str, texts: &[String]) -> Option<String> {
+    let read = param.get("read");
+    let read_on = param.get("readOn");
+    let noun = |mark: &str| {
+        READ_MARKS
+            .iter()
+            .find(|(name, _, _)| *name == mark)
+            .map_or(String::new(), |(_, _, noun)| noun.to_string())
+    };
+    let words = |mark: &str| {
+        READ_MARKS
+            .iter()
+            .find(|(name, _, _)| *name == mark)
+            .map_or(String::new(), |(_, article, noun)| format!("{article} {noun}"))
+    };
+    let face_name = |face: &str| if face == "radiant" { "Radiant" } else { "base" };
+    let marked = match read {
+        None => None,
+        Some(Json::String(mark)) if READ_MARKS.iter().any(|(name, _, _)| name == mark) => Some(mark.as_str()),
+        Some(_) => {
+            let marks: Vec<String> = READ_MARKS
+                .iter()
+                .map(|(name, _, _)| format!("\"{name}\""))
+                .collect();
+            return Some(format!(
+                "`read` is one of {} when present (got {})",
+                marks.join(", "),
+                describe(read)
+            ));
+        }
+    };
+    let marked_on = match read_on {
+        None => None,
+        Some(Json::String(face)) if matches!(face.as_str(), "base" | "radiant") => Some(face.as_str()),
+        Some(_) => {
+            return Some(format!(
+                "`readOn` is \"base\" or \"radiant\" when present (got {})",
+                describe(read_on)
+            ));
+        }
+    };
+    if marked.is_none() && marked_on.is_some() {
+        return Some("`readOn` names the face `read` holds on, so it needs `read`".to_string());
+    }
+    let wanted: Option<(&str, Option<&str>)> = match (
+        face_reading(&texts[0], key),
+        face_reading(&texts[1], key),
+    ) {
+        (Some(Some(base)), Some(Some(radiant))) if base != radiant => {
+            return Some(format!(
+                "the faces read {{{key}}} at different times ({} on the base face, {} on the Radiant face)",
+                words(base),
+                words(radiant)
+            ));
+        }
+        (Some(Some(mark)), Some(None)) => Some((mark, Some("base"))),
+        (Some(None), Some(Some(mark))) => Some((mark, Some("radiant"))),
+        (Some(Some(mark)), _) | (_, Some(Some(mark))) => Some((mark, None)),
+        _ => None,
+    };
+    let marked: Option<(&str, Option<&str>)> = marked.map(|mark| (mark, marked_on));
+    if wanted == marked {
+        return None;
+    }
+    Some(match (wanted, marked) {
+        (Some((mark, None)), _) => format!(
+            "every line that writes {{{key}}} is {}, so it is `read: \"{mark}\"`",
+            words(mark)
+        ),
+        (Some((mark, Some(face))), _) => format!(
+            "only the {} face's {} reads {{{key}}}, so it is `read: \"{mark}\"` with `readOn: \"{face}\"`",
+            face_name(face),
+            noun(mark)
+        ),
+        (None, Some((mark, None))) => format!(
+            "`read: \"{mark}\"`, but a line that writes {{{key}}} is no {}",
+            noun(mark)
+        ),
+        (None, Some((mark, Some(face)))) => format!(
+            "`read: \"{mark}\"` with `readOn: \"{face}\"`, but the {} face's {} alone does not read {{{key}}}",
+            face_name(face),
+            noun(mark)
+        ),
+        (None, None) => return None,
+    })
+}
+
 /// B3.4 rule 5: `params` holds distinct camelCase keys, integer values within [min, max], a direction
 /// and a positive step, each written `{key}` in some face's text, and every `{key}` a text writes is
 /// declared. A number one face alone writes is tuned on that face only (`tunedOn`, R749, R1431,
-/// R824000); one that belongs to a power names its Activate ability's id (`power`, R1430).
+/// R824000); one that belongs to a power names its Activate ability's id (`power`, R1430); one read at
+/// one time or in one place says so (`read`, `readOn`, R3888001).
 fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
     let params = value.get("params");
     let texts: Vec<String> = ["base", "radiant"]
@@ -665,57 +838,12 @@ fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
                     ),
                 );
             }
-            // R1748000: a number only the card's Cry reads is `cry: true`, and only such a number is;
-            // R2261001: one only one face's Cry reads, while the other face's lasting text reads it
-            // too, is marked with that face.
-            let cry = param.get("cry");
-            let marked = match cry {
-                None => Some(None),
-                Some(Json::Bool(true)) => Some(Some("true")),
-                Some(Json::String(face)) if matches!(face.as_str(), "base" | "radiant") => {
-                    Some(Some(face.as_str()))
-                }
-                Some(_) => None,
-            };
-            // Per face: None when it never writes the number, else whether every line writing it is a Cry.
-            let cry_only = |text: &str| -> Option<bool> {
-                let writing: Vec<&str> = text
-                    .lines()
-                    .map(str::trim)
-                    .filter(|line| writes(line, key))
-                    .collect();
-                (!writing.is_empty()).then(|| writing.iter().all(|line| line.starts_with("Cry:")))
-            };
-            let wanted = match (cry_only(&texts[0]), cry_only(&texts[1])) {
-                (Some(true), Some(false)) => Some("base"),
-                (Some(false), Some(true)) => Some("radiant"),
-                (Some(true), _) | (_, Some(true)) => Some("true"),
-                _ => None,
-            };
-            let face_name = |face: &str| if face == "radiant" { "Radiant" } else { "base" };
-            let message = match (wanted, marked) {
-                (_, None) => Some(format!(
-                    "`cry` is `true`, \"base\" or \"radiant\" when present (got {})",
-                    describe(cry)
-                )),
-                (wanted, Some(marked)) if wanted == marked => None,
-                (Some("true"), _) => Some(format!(
-                    "every line that writes {{{key}}} is a Cry, so it is `cry: true`"
-                )),
-                (Some(face), _) => Some(format!(
-                    "only the {} face's Cry reads {{{key}}}, so it is `cry: \"{face}\"`",
-                    face_name(face)
-                )),
-                (None, Some(Some("true"))) => {
-                    Some(format!("`cry: true`, but a line that writes {{{key}}} is no Cry"))
-                }
-                (None, Some(Some(face))) => Some(format!(
-                    "`cry: \"{face}\"`, but the {} face's Cry alone does not read {{{key}}}",
-                    face_name(face)
-                )),
-                (None, Some(None)) => None,
-            };
-            if let Some(message) = message {
+            // R3888001 (after R1748000 and R2261001): a number every line writing it reads at one time
+            // (a Cry, a Combo, a Cast on draw, an awakening, an Evolve) or in one place (a hand or a
+            // deck, a graveyard) is marked `read` with it, and only such a number is; one only one
+            // face's such lines read, while the other face's lasting text reads it too, also names that
+            // face (`readOn`).
+            if let Some(message) = read_mark_failure(param, key, &texts) {
                 fail(failures, &p_at, &format!("{key}: {message}"));
             }
             let extra: Vec<&str> = param
@@ -723,7 +851,8 @@ fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
                 .map(String::as_str)
                 .filter(|k| {
                     ![
-                        "key", "base", "radiant", "better", "step", "min", "max", "tunedOn", "power", "cry",
+                        "key", "base", "radiant", "better", "step", "min", "max", "tunedOn", "power", "read",
+                        "readOn",
                     ]
                     .contains(k)
                 })
@@ -2447,7 +2576,8 @@ mod tests {
 
     #[test]
     fn r1748000_a_number_only_a_cry_writes_is_cry_and_a_cry_number_is_written_only_by_a_cry() {
-        let marked = r#"[{"key":"draw","base":1,"radiant":2,"better":"up","cry":true}]"#;
+        // R3888001: `cry: true` is `read: "cry"` since issue #3888.
+        let marked = r#"[{"key":"draw","base":1,"radiant":2,"better":"up","read":"cry"}]"#;
         let unmarked = r#"[{"key":"draw","base":1,"radiant":2,"better":"up"}]"#;
         let (cry, cry_radiant) = ("Cry: Draw {draw}.", "Rush\\nCry: Draw {draw}.");
         let lasting = "Start of turn: Draw {draw}.";
@@ -2455,7 +2585,7 @@ mod tests {
         assert_eq!(params_failures(marked, cry, cry_radiant), Vec::<String>::new());
         assert_eq!(
             params_failures(unmarked, cry, cry_radiant),
-            ["x.params[0]: draw: every line that writes {draw} is a Cry, so it is `cry: true`"]
+            ["x.params[0]: draw: every line that writes {draw} is a Cry, so it is `read: \"cry\"`"]
         );
         // A line that is no Cry writes it on each face, beside a Cry or not: unmarked, it passes;
         // marked, it is refused. (A Cry on one face beside a lasting text on the other is R2261001's.)
@@ -2463,16 +2593,26 @@ mod tests {
         assert_eq!(params_failures(unmarked, both, both), Vec::<String>::new());
         assert_eq!(
             params_failures(marked, both, lasting),
-            ["x.params[0]: draw: `cry: true`, but a line that writes {draw} is no Cry"]
+            ["x.params[0]: draw: `read: \"cry\"`, but a line that writes {draw} is no Cry"]
         );
-        // `cry` is `true`, a face (R2261001) or absent.
+        // `read` is one of its marks or absent, and the old `cry` is no field.
         assert_eq!(
             params_failures(
-                r#"[{"key":"draw","base":1,"radiant":2,"better":"up","cry":false}]"#,
+                r#"[{"key":"draw","base":1,"radiant":2,"better":"up","read":false}]"#,
                 cry,
                 cry_radiant
             ),
-            ["x.params[0]: draw: `cry` is `true`, \"base\" or \"radiant\" when present (got false)"]
+            [
+                "x.params[0]: draw: `read` is one of \"cry\", \"combo\", \"castOnDraw\", \"awaken\", \"evolve\", \"handOrDeck\", \"graveyard\" when present (got false)"
+            ]
+        );
+        assert_eq!(
+            params_failures(
+                r#"[{"key":"draw","base":1,"radiant":2,"better":"up","read":"cry","cry":true}]"#,
+                cry,
+                cry_radiant
+            ),
+            ["x.params[0]: unknown param field(s) cry"]
         );
     }
 
@@ -2483,35 +2623,153 @@ mod tests {
         let activate = "Activate: Give it Lucky {lucky}.";
         // Meditative #101 Gachaholic's shape: the base face's Cry and the Radiant face's Activate.
         assert_eq!(
-            params_failures(&on(r#","cry":"base""#), cry, activate),
+            params_failures(&on(r#","read":"cry","readOn":"base""#), cry, activate),
             Vec::<String>::new()
         );
         assert_eq!(
-            params_failures(&on(r#","cry":"radiant""#), activate, cry),
+            params_failures(&on(r#","read":"cry","readOn":"radiant""#), activate, cry),
             Vec::<String>::new()
         );
+        let base_cry = "x.params[0]: lucky: only the base face's Cry reads {lucky}, so it is `read: \"cry\"` with `readOn: \"base\"`";
+        assert_eq!(params_failures(&on(""), cry, activate), [base_cry]);
         assert_eq!(
-            params_failures(&on(""), cry, activate),
-            ["x.params[0]: lucky: only the base face's Cry reads {lucky}, so it is `cry: \"base\"`"]
-        );
-        assert_eq!(
-            params_failures(&on(r#","cry":true"#), cry, activate),
-            ["x.params[0]: lucky: only the base face's Cry reads {lucky}, so it is `cry: \"base\"`"]
+            params_failures(&on(r#","read":"cry""#), cry, activate),
+            [base_cry]
         );
         // The other face, every face's Cry, or no face's Cry alone: not that face.
         assert_eq!(
-            params_failures(&on(r#","cry":"radiant""#), cry, activate),
-            ["x.params[0]: lucky: only the base face's Cry reads {lucky}, so it is `cry: \"base\"`"]
+            params_failures(&on(r#","read":"cry","readOn":"radiant""#), cry, activate),
+            [base_cry]
         );
         assert_eq!(
-            params_failures(&on(r#","cry":"base""#), cry, cry),
-            ["x.params[0]: lucky: every line that writes {lucky} is a Cry, so it is `cry: true`"]
+            params_failures(&on(r#","read":"cry","readOn":"base""#), cry, cry),
+            ["x.params[0]: lucky: every line that writes {lucky} is a Cry, so it is `read: \"cry\"`"]
         );
         assert_eq!(
-            params_failures(&on(r#","cry":"radiant""#), activate, activate),
+            params_failures(&on(r#","read":"cry","readOn":"radiant""#), activate, activate),
             [
-                "x.params[0]: lucky: `cry: \"radiant\"`, but the Radiant face's Cry alone does not read {lucky}"
+                "x.params[0]: lucky: `read: \"cry\"` with `readOn: \"radiant\"`, but the Radiant face's Cry alone does not read {lucky}"
             ]
+        );
+        // R3888001: `readOn` is a face, and only beside `read`.
+        assert_eq!(
+            params_failures(&on(r#","readOn":"base""#), activate, activate),
+            ["x.params[0]: lucky: `readOn` names the face `read` holds on, so it needs `read`"]
+        );
+        assert_eq!(
+            params_failures(&on(r#","read":"cry","readOn":"both""#), cry, activate),
+            ["x.params[0]: lucky: `readOn` is \"base\" or \"radiant\" when present (got \"both\")"]
+        );
+    }
+
+    #[test]
+    fn r3888001_each_one_time_line_opening_wants_its_read_mark() {
+        let unmarked = r#"[{"key":"n","base":1,"radiant":1,"better":"up"}]"#;
+        let marked =
+            |mark: &str| format!(r#"[{{"key":"n","base":1,"radiant":1,"better":"up","read":"{mark}"}}]"#);
+        for (line, mark, words) in [
+            ("Cry: Draw {n}.", "cry", "a Cry"),
+            ("Combo: Draw {n}.", "combo", "a Combo"),
+            ("Combo 2: Draw {n}.", "combo", "a Combo"),
+            ("Combo {n}: Draw a card.", "combo", "a Combo"),
+            ("Cast on draw: Draw {n}.", "castOnDraw", "a Cast on draw line"),
+            ("When awoken: Draw {n}.", "awaken", "an awakening"),
+            (
+                "Dormant for 2 turns. When this awakens, draw {n}.",
+                "awaken",
+                "an awakening",
+            ),
+            ("Evolve: Gain +{n}/+{n}.", "evolve", "an Evolve line"),
+            (
+                "Evolves when your hand has at least {n} cards.",
+                "evolve",
+                "an Evolve line",
+            ),
+            (
+                "While in your hand or deck: After you play {n} Spells, summon this.",
+                "handOrDeck",
+                "a hand-or-deck line",
+            ),
+            (
+                "In your hand or deck: Draw {n}.",
+                "handOrDeck",
+                "a hand-or-deck line",
+            ),
+            (
+                "While this is in your hand: Draw {n}.",
+                "handOrDeck",
+                "a hand-or-deck line",
+            ),
+            (
+                "While in your deck: Draw {n}.",
+                "handOrDeck",
+                "a hand-or-deck line",
+            ),
+            (
+                "While this is in your graveyard: It costs ({n}).",
+                "graveyard",
+                "a graveyard line",
+            ),
+        ] {
+            assert_eq!(
+                params_failures(&marked(mark), line, line),
+                Vec::<String>::new(),
+                "{line}"
+            );
+            assert_eq!(
+                params_failures(unmarked, line, line),
+                [format!(
+                    "x.params[0]: n: every line that writes {{n}} is {words}, so it is `read: \"{mark}\"`"
+                )],
+                "{line}"
+            );
+        }
+        // A lasting line beside one, or a sentence that opens otherwise, wants no mark.
+        for line in [
+            "Cry: Draw {n}.\\nEnd of turn: Draw {n}.",
+            "Cry and when this attacks: Draw {n}.",
+            "Cry & Death: Draw {n}.",
+            "Dormant for 2 turns. Deal {n} damage.",
+            "Combo two cards: Draw {n}.",
+        ] {
+            assert_eq!(
+                params_failures(unmarked, line, line),
+                Vec::<String>::new(),
+                "{line}"
+            );
+        }
+        assert_eq!(
+            params_failures(&marked("evolve"), "Cry: Draw {n}.", "Cry: Draw {n}."),
+            ["x.params[0]: n: every line that writes {n} is a Cry, so it is `read: \"cry\"`"]
+        );
+    }
+
+    #[test]
+    fn r3888001_two_faces_reading_a_number_at_different_times_fail() {
+        let unmarked = r#"[{"key":"n","base":1,"radiant":1,"better":"up"}]"#;
+        assert_eq!(
+            params_failures(unmarked, "Cry: Draw {n}.", "Evolve: Draw {n}."),
+            [
+                "x.params[0]: n: the faces read {n} at different times (a Cry on the base face, an Evolve line on the Radiant face)"
+            ]
+        );
+        // One face's mark and the other face's lasting text: that face's, as R2261001's Cry is.
+        assert_eq!(
+            params_failures(unmarked, "End of turn: Draw {n}.", "Cast on draw: Draw {n}."),
+            [
+                "x.params[0]: n: only the Radiant face's Cast on draw line reads {n}, so it is `read: \"castOnDraw\"` with `readOn: \"radiant\"`"
+            ]
+        );
+        // A face that never writes it leaves the other face's mark whole.
+        let tuned =
+            r#"[{"key":"n","base":1,"radiant":1,"better":"up","tunedOn":"radiant","read":"graveyard"}]"#;
+        assert_eq!(
+            params_failures(
+                tuned,
+                "Cry: Draw a card.",
+                "While this is in your graveyard: It costs ({n})."
+            ),
+            Vec::<String>::new()
         );
     }
 

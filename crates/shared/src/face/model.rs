@@ -598,7 +598,8 @@ fn with_view_params(def: Option<CardDef>, values: Option<&IndexMap<String, i32>>
                 max: None,
                 tuned_on: None,
                 power: None,
-                cry: None,
+                read: None,
+                read_on: None,
             })
             .collect(),
     );
