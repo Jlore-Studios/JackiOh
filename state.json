@@ -17739,6 +17739,13 @@
     },
     "3907": {
       "action": "plan",
+      "archived": {
+        "at": "2026-11-14T05:43:42Z",
+        "branch": "",
+        "head": "",
+        "pr": null,
+        "why": "Open the failed run, <https://github.com/Jlore-Studios/JackiOh/actions/runs/43560136871>, and read the log of the failed step in the `publish the releases` job. If it is a transient failure (a download, a 5xx or a rate limit), re-run it from Actions \u2192 releases \u2192 Run workflow, and the run's `report` job closes this issue. If the log shows an auth error (HTTP 401, 403 or \"Bad credentials\"), rotate the `BOT_GITHUB_TOKEN` repository secret. If it names a fault in `.github/workflows/releases.yml`, a person must edit that file, because the night bot may not touch it. Each case is detailed under **Open questions**."
+      },
       "asks": [],
       "difficulty_by": {
         "at": "2026-11-14T05:43:29Z",
@@ -17747,22 +17754,17 @@
         "tier": "medium",
         "why": "No line of the rule holds: no engine, AI, cross-crate, migration or large change; the work is reading a CI log and, at most, a one-file workflow fix or a token rotation, both under a person's hands."
       },
-      "in_lane": true,
-      "kind": "build",
       "live": "planning",
-      "owner": "claude-4",
-      "owner_since": "2026-11-14T05:27:53Z",
-      "owner_why": "it plans it",
-      "pending_request": false,
+      "owner": "",
       "planned_at": "2026-11-14T05:43:32Z",
       "planned_by": "`claude-4` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-4",
       "planned_tier": "medium",
       "provider": "claude-4",
+      "question": "Open the failed run, <https://github.com/Jlore-Studios/JackiOh/actions/runs/43560136871>, and read the log of the failed step in the `publish the releases` job. If it is a transient failure (a download, a 5xx or a rate limit), re-run it from Actions \u2192 releases \u2192 Run workflow, and the run's `report` job closes this issue. If the log shows an auth error (HTTP 401, 403 or \"Bad credentials\"), rotate the `BOT_GITHUB_TOKEN` repository secret. If it names a fault in `.github/workflows/releases.yml`, a person must edit that file, because the night bot may not touch it. Each case is detailed under **Open questions**.",
       "run_id": "43561652127",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-14T05:27:53Z",
-      "stop_requested": false,
       "taken_asks": []
     }
   },
