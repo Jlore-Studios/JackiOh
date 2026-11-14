@@ -14475,12 +14475,8 @@
     "what": "spot-check #3902 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-14T15:58:39Z",
-    "notes": [
-      "started review #3902 on claude-7 (run 43613107815)",
-      "nothing more to start: nothing is queued",
-      "pruned 14 plan file(s) older than 7 days"
-    ],
+    "at": "2026-11-14T16:05:38Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15185,7 +15181,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-14T15:58:39Z",
+  "loop_tick": "2026-11-14T16:05:38Z",
   "machine_disk": {
     "issue": null,
     "reading": {
