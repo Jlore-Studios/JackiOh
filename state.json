@@ -17253,13 +17253,13 @@
       "feedback_since": "2026-11-14T09:41:09Z",
       "forced": false,
       "handoff": {
-        "at": "2026-11-14T10:32:50Z",
+        "at": "2026-11-14T10:51:38Z",
         "family": "claude",
         "kind": "work",
         "notes": "\n## State (CI revise)\nCI web unit 2/8 failed helpers.test #2215: GameBanner.test.tsx had its own settle. Replaced with test/settle.ts import. Tests, eslint, typecheck pass.\n",
         "provider": "claude-6",
-        "reason": "built and checked; its own review run, on this subscription, reviews it next",
-        "trail": "- Bash: {\"command\": \"sed -n 120,160p apps/web/src/routes/GameBanner.test.tsx; sed -n 1,40p apps/web/src/test/settle.ts; sed -n 60,90p apps/web/src/test/helpers.test.ts; git log --oneline -1 origin/main 2>/de\u2026\n- Bash: {\"command\": \"cd apps/web/src/routes && python3 - <<'EOF'\\ns=open(\\\"GameBanner.test.tsx\\\").read()\\na=s.index(\\\" /** Let a read that failed\\\")\\nb=s.index(\\\" it(\\\\\\\"R3729001 names the seat\\\")\\ns=s[:a]+s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3902/apps/web && grep -n \\\"\\\\bact(\\\" src/routes/GameBanner.test.tsx | head -3; sed -i 's#^import { refusal, signIn, stubServer, type Reply } from \\\".\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3902 && sed -i '4s/{ act, cleanup/{ cleanup/' apps/web/src/routes/GameBanner.test.tsx && (sh scripts/build-wasm.sh 2>&1 | tail -3) && cd apps/web && \u2026\n- Bash: {\"command\": \"pnpm exec vitest run --project web src/routes/GameBanner.test.tsx src/test/helpers.test.ts 2>&1 | grep -E \\\"Test Files|Tests \\\"; cd ../.. && git status --short; cat >> .bot-notes.md <<'E\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a Play hub that explains every way to play, and one inbox for everything waiting on you\"} --> The CI failure was real and is fixed, and I did not run the rest of the web sweep. The failing check was `web (unit 2/8)`, which failed on `src/test/helpers.te\u2026"
+        "reason": "used its 3 review rounds with this owner; the work is kept for its final audit, another subscription's when one is free",
+        "trail": ""
       },
       "interruptions": 0,
       "issue": 3729,
