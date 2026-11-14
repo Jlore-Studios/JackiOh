@@ -17713,15 +17713,8 @@
     "what": "plan #3917 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-14T09:39:23Z",
-    "notes": [
-      "#3917 needs a plan",
-      "started revise #3902 on claude-6 (run 43581723527)",
-      "started plan #3917 on claude-8 (run 43581778259)",
-      "nothing more to start: nothing is queued",
-      "pruned 6 plan file(s) older than 7 days",
-      "#3917: typed it Bug"
-    ],
+    "at": "2026-11-14T09:48:31Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -18426,7 +18419,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-14T09:39:23Z",
+  "loop_tick": "2026-11-14T09:48:31Z",
   "machine_disk": {
     "issue": null,
     "reading": {
