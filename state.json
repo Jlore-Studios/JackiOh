@@ -14372,6 +14372,8 @@
     "3922": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "bd9cd0da2ad5a7908b95005bf26fa208bacd2fed",
+      "ci_fixes": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-14T13:36:05Z",
