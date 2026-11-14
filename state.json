@@ -19703,7 +19703,7 @@
           "resets_at": "2026-11-14T15:59:08Z",
           "utilization": 0.1
         },
-        "observed_at": "2026-11-14T11:09:12Z",
+        "observed_at": "2026-11-14T11:36:13Z",
         "seven_day": {
           "resets_at": "2026-11-21T00:22:39Z",
           "utilization": 0.15
@@ -37603,6 +37603,11 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-14T11:28:40Z,agy,usage-command,before,43590176404,10,2026-11-14T15:59:08Z,15,2026-11-21T00:22:39Z,allowed,100,100,"
+    ]
   },
   "version": 1
 }
