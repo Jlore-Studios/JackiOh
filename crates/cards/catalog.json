@@ -8482,17 +8482,6 @@
     "refs": [
       "classicplus-019-5"
     ],
-    "params": [
-      {
-        "key": "chance",
-        "base": 100,
-        "radiant": 100,
-        "better": "up",
-        "step": 10,
-        "min": 1,
-        "max": 100
-      }
-    ],
     "loc": 37,
     "base": {
       "attack": 4,
@@ -8502,7 +8491,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Can't attack\nEnd of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser goes Berserk."
+      "text": "Can't attack\nEnd of turn: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser goes Berserk."
     },
     "radiant": {
       "attack": 8,
@@ -8512,7 +8501,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Can't attack\nEnd of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser gets the kill instead."
+      "text": "Can't attack\nEnd of turn: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser gets the kill instead."
     }
   },
   "classicplus-019-3": {
