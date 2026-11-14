@@ -368,6 +368,7 @@ const SAMPLE_TARGETS: Record<GameEventType, string> = {
   translated: testid.card("u6"),
   discardPrevented: animTestid.hand("opponent"),
   damageAbsorbed: testid.card("u6"),
+  armorGained: testid.hero("opponent"),
   jadeChanged: testid.hero("you"),
   secretChosen: testid.hero("you"),
   secretRevealed: testid.hero("you"),
