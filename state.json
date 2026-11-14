@@ -17383,7 +17383,16 @@
       "feedback_since": "2026-11-14T01:43:08Z",
       "issue": 3859,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-4",
+        "rejections": [],
+        "reviews": [],
+        "sha": "9430170f3cd7a6f0a7a9a1dc9d177aa7d5733c9d",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "fce3910f5abefcbe",
