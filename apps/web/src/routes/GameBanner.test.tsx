@@ -1,12 +1,13 @@
 // R765: the one banner the menus show while the player has a game to go back to (GameBanner.tsx),
 // and the "Match found!" notice a pairing shows on any screen; R3729001: that notice names the opponent and their rank.
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DISCONNECT_GRACE_SECONDS } from "@jackioh/server-config";
 import { MATCH_FOUND_STATUS } from "../net/liveGame.ts";
 import { navigate, paths } from "../net/navigate.ts";
+import { settle } from "../test/settle.ts";
 import { refusal, signIn, stubServer, type Reply } from "../test/stubServer.ts";
 import { GameBanner, LiveGameBanner, OpponentLine, QueueFound, gameBannerTestid } from "./GameBanner.tsx";
 
@@ -131,13 +132,6 @@ describe("R3729001 the reveal names the opponent and their rank", () => {
   function serve(reply: Reply) {
     signIn("tok-reveal");
     return stubServer((call) => (call.method === "GET" && call.path === RANKS_PATH ? reply : undefined));
-  }
-
-  /** Let a read that failed or answered something unusable settle: nothing appears to wait for. */
-  async function settle(): Promise<void> {
-    await act(async () => {
-      for (let i = 0; i < 20; i += 1) await Promise.resolve();
-    });
   }
 
   it("R3729001 names the seat that is not the player's, with its rank, whichever seat it holds", async () => {
