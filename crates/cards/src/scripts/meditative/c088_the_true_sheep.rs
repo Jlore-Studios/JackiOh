@@ -140,14 +140,15 @@ mod tests {
             }
 
             #[test]
-            fn r1221_the_tribute_query_holds_the_thirty_four_shipped_tribute_cost_cards() {
+            fn r1221_the_tribute_query_holds_the_thirty_five_shipped_tribute_cost_cards() {
                 crate::register_all();
                 // A pool that names no set draws from the sets that ship (R1420), as SPEC §8.8 row 88
-                // lists them, M #25 and #91, S #74, #80, #85, #86, #113 and #115 (#1884), TG #25 and #54
-                // (Core #66's snapshot, #2204), and S+ #21, #52, #72, #112 to #114, #117 to #119, #122 to
-                // #127, #130, #131, #159 and #160 (#3573). Turtinator's Tribute is an Activate's cost, not a
-                // play cost, M #97's Tribute buildings are tokens, and S+ #129's, #138's and #139's "Tribute"
-                // is the one a card they add has or lacks, so none of them is one of them.
+                // lists them, M #25 and #91, S #74, #80, #85, #86, #113 and #115 (#1884), S #96 (#3837),
+                // TG #25 and #54 (Core #66's snapshot, #2204), and S+ #21, #52, #72, #112 to #114, #117 to
+                // #119, #122 to #127, #130, #131, #159 and #160 (#3573). Turtinator's Tribute is an
+                // Activate's cost, not a play cost, M #97's Tribute buildings are tokens, and S+ #129's,
+                // #138's and #139's "Tribute" is the one a card they add has or lacks, so none of them is
+                // one of them.
                 // Read as it is, not as the pool probe (#3117) rotates it: this tests its content and order.
                 let pool: Vec<&str> = jackioh_engine::testkit::with_pool_shift(0, || {
                     jackioh_engine::catalog::query(&CatalogQueryArgs {
@@ -172,6 +173,7 @@ mod tests {
                         "stinkyscape-080",
                         "stinkyscape-085",
                         "stinkyscape-086",
+                        "stinkyscape-096",
                         "stinkyscape-113",
                         "stinkyscape-115",
                         "traininggrounds-025",

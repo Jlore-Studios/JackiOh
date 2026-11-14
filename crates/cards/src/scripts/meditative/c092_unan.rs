@@ -1,7 +1,8 @@
-//! M #92 Unan (SPEC §8.8 row 92): (3) Unit, Rare, 3/13 with Armor 3 → 6/26 with Armor 6.
+//! M #92 Unan (SPEC §8.8 row 92): (3) Unit, Rare, 3/13 with Armor 2 → 6/26 with Armor 4 (Armor 3 →
+//! Armor 6 until issue #3837).
 //!
-//! Base:    "Armor 3\nLethal damage your hero or your other Units would take is redirected to this."
-//! Radiant: "Armor 6\nLethal damage your hero or your other Units would take is redirected to this."
+//! Base:    "Armor 2\nLethal damage your hero or your other Units would take is redirected to this."
+//! Radiant: "Armor 4\nLethal damage your hero or your other Units would take is redirected to this."
 //! Engine: `ReplacementDef { id: "92-lethal-guard", on: LethalHit, instead: redirect SelfCard }`
 //! (ME-LETHALGUARD, R1204): §4.4 step 4a opens for Units too, so a fatal hit on a friendly ally
 //! goes to Unan through Unan's own Armor, each Unan catching a given hit once. Armor is catalog
@@ -81,7 +82,7 @@ mod tests {
                 s.end_turn();
                 s.attack(STRIKER, ALLY);
                 assert_eq!(s.stats(ALLY).health, 3, "the ally is untouched");
-                assert_eq!(s.stats(UNAN).health, 13 - 6);
+                assert_eq!(s.stats(UNAN).health, 13 - 7);
                 assert!(
                     s.events()
                         .iter()
@@ -131,10 +132,10 @@ mod tests {
                 );
                 s.attack(HEAVY, "hero");
                 s.expect_health(P1, 13);
-                assert_eq!(s.stats(UNAN).health, 13 - 11);
+                assert_eq!(s.stats(UNAN).health, 13 - 12);
             }
             #[test]
-            fn r1204_ten_damage_aimed_at_a_4_health_unit_reaches_unan_as_7() {
+            fn r1204_ten_damage_aimed_at_a_4_health_unit_reaches_unan_as_8() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [UNAN, VANILLA] },
                     "p2": { "hand": [FILLER], "field": [GOLEM] },
@@ -142,7 +143,7 @@ mod tests {
                 s.end_turn();
                 s.attack(GOLEM, VANILLA);
                 assert_eq!(s.card(VANILLA).damage, 0, "the 4/4 is untouched");
-                assert_eq!(s.stats(UNAN).health, 13 - 7, "10 through Armor 3");
+                assert_eq!(s.stats(UNAN).health, 13 - 8, "10 through Armor 2");
             }
 
             #[test]
@@ -185,7 +186,7 @@ mod tests {
                 }));
                 let unan = s.card(UNAN).id.clone();
                 s.end_turn();
-                // 9 on the 3/3 ally is caught: 6 through Armor 3 on Unan's 3 left kills it.
+                // 9 on the 3/3 ally is caught: 7 through Armor 2 on Unan's 3 left kills it.
                 s.attack(STRIKER, ALLY);
                 assert_eq!(s.card(ALLY).damage, 0, "the ally is untouched");
                 s.expect_in_zone(&unan, "graveyard");
@@ -200,14 +201,14 @@ mod tests {
                 let first = s.unit(P1, 1).unwrap().id;
                 let second = s.unit(P1, 2).unwrap().id;
                 s.end_turn();
-                // The ally's lethal 9 would reach the first Unan as 6, lethal to its 3 left, so the
-                // second catches the hit: a new instance of the 9 through its own Armor 3, 6.
+                // The ally's lethal 9 would reach the first Unan as 7, lethal to its 3 left, so the
+                // second catches the hit: a new instance of the 9 through its own Armor 2, 7.
                 s.attack(STRIKER, ALLY);
                 assert_eq!(redirects(&s), 2, "two redirects, then the cap: each Unan once");
                 assert_eq!(s.card(ALLY).damage, 0);
                 s.expect_in_zone(&first, "field");
                 assert_eq!(s.card(first.as_str()).damage, 10);
-                assert_eq!(s.stats(second.as_str()).health, 13 - 6);
+                assert_eq!(s.stats(second.as_str()).health, 13 - 7);
             }
 
             #[test]
@@ -267,13 +268,13 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r1204_radiant_is_6_26_with_armor_6_and_guards_through_it() {
+            fn r1204_radiant_is_6_26_with_armor_4_and_guards_through_it() {
                 crate::register_all();
                 let def = crate::card_def(ID);
-                assert_eq!(def.radiant.keywords, vec![Keyword::Armor { n: 6 }]);
+                assert_eq!(def.radiant.keywords, vec![Keyword::Armor { n: 4 }]);
                 assert_eq!(
                     def.radiant.text,
-                    "Armor 6\nLethal damage your hero or your other Units would take is redirected to this."
+                    "Armor 4\nLethal damage your hero or your other Units would take is redirected to this."
                 );
                 assert_eq!(
                     registered_scripts()[ID].radiant.replacements.len(),
@@ -287,7 +288,7 @@ mod tests {
                 s.end_turn();
                 s.attack(STRIKER, ALLY);
                 assert_eq!(s.stats(ALLY).health, 3, "the ally is untouched");
-                assert_eq!(s.stats(UNAN).health, 26 - (9 - 6));
+                assert_eq!(s.stats(UNAN).health, 26 - (9 - 4));
             }
         }
     }

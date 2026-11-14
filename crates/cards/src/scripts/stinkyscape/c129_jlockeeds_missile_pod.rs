@@ -1,5 +1,5 @@
 //! Stinkyscape #129 Jlockeed's Missile Pod (SPEC §8.10 row 129). (1, Embiggened 2) Unit, Jlockeed, Epic;
-//! 2/1 → 4/2.
+//! 1/1 → 2/2 (2/1 → 4/2 until issue #3837).
 //!   Base:    "End of turn: Deal damage equal to its Attack divided by {divisor}, rounded up, to all
 //!            enemies. / Embiggened (2): Starship Piece and Equip." — divisor 4
 //!   Radiant: the same words — divisor 3
@@ -44,7 +44,7 @@ fn missile_pod(round_up: bool) -> CardScripts {
         conditional_keywords: Some(read_hook(embiggened_piece_and_equip)),
         ..Script::default()
     };
-    // One script: the Radiant face's 4/2 and divisor 3 are catalog data.
+    // One script: the Radiant face's 2/2 and divisor 3 are catalog data.
     CardScripts {
         radiant: base.clone(),
         base,
@@ -102,7 +102,7 @@ mod tests {
     }
 
     #[test]
-    fn r1878002_at_2_attack_its_quarter_rounded_up_is_1_so_each_enemy_takes_1() {
+    fn r1878002_at_1_attack_its_quarter_rounded_up_is_1_so_each_enemy_takes_1() {
         let mut s = standing(false);
         s.end_turn();
         let hits = hits(&s);
@@ -114,7 +114,7 @@ mod tests {
     fn r63_at_0_attack_its_hit_is_0_and_nothing_is_hit() {
         let mut s = standing(false);
         let id = pod(&s);
-        s.card_mut(id.as_str()).buffs.attack = -2;
+        s.card_mut(id.as_str()).buffs.attack = -1;
         assert_eq!(s.stats(id.as_str()).attack, 0);
         s.end_turn();
         assert_eq!(hits(&s), Vec::<(String, i32)>::new());
@@ -125,7 +125,7 @@ mod tests {
     fn r1878002_at_5_attack_its_quarter_rounded_up_is_2() {
         let mut s = standing(false);
         let id = pod(&s);
-        s.card_mut(id.as_str()).buffs.attack = 3;
+        s.card_mut(id.as_str()).buffs.attack = 4;
         s.end_turn();
         let hits = hits(&s);
         assert_eq!(hits.iter().map(|hit| hit.1).collect::<Vec<_>>(), vec![2, 2, 2], "{hits:?}");
@@ -134,7 +134,7 @@ mod tests {
 
     /// R767000: through v0.5.11r the quotient was rounded down.
     #[test]
-    fn r1878002_r767000_the_kept_script_rounds_down_so_a_2_attack_pod_hits_nothing_and_a_5_attack_one_for_1() {
+    fn r1878002_r767000_the_kept_script_rounds_down_so_a_1_attack_pod_hits_nothing_and_a_5_attack_one_for_1() {
         crate::under_kept(ID, script_v0_5_11o(), || {
             let mut s = standing(false);
             s.end_turn();
@@ -143,7 +143,7 @@ mod tests {
 
             let mut s = standing(false);
             let id = pod(&s);
-            s.card_mut(id.as_str()).buffs.attack = 3;
+            s.card_mut(id.as_str()).buffs.attack = 4;
             s.end_turn();
             let hits = hits(&s);
             assert_eq!(hits.iter().map(|hit| hit.1).collect::<Vec<_>>(), vec![1, 1, 1], "{hits:?}");
@@ -154,7 +154,7 @@ mod tests {
     fn r1878002_at_4_attack_the_enemy_hero_and_every_enemy_unit_take_1_at_its_controllers_end_of_turn() {
         let mut s = standing(false);
         let id = pod(&s);
-        s.card_mut(id.as_str()).buffs.attack = 2;
+        s.card_mut(id.as_str()).buffs.attack = 3;
         s.end_turn();
         let hits = hits(&s);
         assert_eq!(hits.iter().map(|hit| hit.1).collect::<Vec<_>>(), vec![1, 1, 1], "{hits:?}");
@@ -205,20 +205,20 @@ mod tests {
         let host = s.unit(P1, 1).expect("the host").id;
         s.expect_refused(|s| s.play(POD, json!({ "zone": 1, "equip": true, "embiggen": false })));
         s.play(POD, json!({ "zone": 1, "equip": true, "embiggen": true }));
-        // The host keeps its zone and takes the Pod's 2/1: 6/5, no Starship Piece (R1852001).
+        // The host keeps its zone and takes the Pod's 1/1: 5/5, no Starship Piece (R1852001).
         assert_eq!(s.unit(P1, 1).expect("the fused host").id, host);
-        s.expect_stats(host.as_str(), json!({ "attack": 6, "health": 5 }));
+        s.expect_stats(host.as_str(), json!({ "attack": 5, "health": 5 }));
         assert!(!has_keyword(&s.stats(host.as_str()).keywords, KeywordKind::StarshipPiece));
         s.end_turn();
-        // The host's 6 Attack ÷ 4, rounded up, is 2.
+        // The host's 5 Attack ÷ 4, rounded up, is 2.
         s.expect_health(PlayerId::P2, 28);
     }
 
     #[test]
-    fn radiant_4_attack_divided_by_3_rounded_up_hits_each_enemy_for_2() {
+    fn radiant_2_attack_divided_by_3_rounded_up_hits_each_enemy_for_1() {
         let mut s = standing(true);
         s.end_turn();
         let hits = hits(&s);
-        assert_eq!(hits.iter().map(|hit| hit.1).collect::<Vec<_>>(), vec![2, 2, 2], "{hits:?}");
+        assert_eq!(hits.iter().map(|hit| hit.1).collect::<Vec<_>>(), vec![1, 1, 1], "{hits:?}");
     }
 }

@@ -4164,6 +4164,14 @@
   "Choosing a deck…": "正在选择卡组…",
   "Deck chosen": "已选卡组",
   "Lobby": "大厅",
+  "{name} invites you to a 2v2 lobby": "{name} 邀请你加入 2v2 大厅",
+  "2v2": "2v2",
+  "Create a 2v2 lobby": "创建 2v2 大厅",
+  "2v2 · two teams of two · unranked": "2v2 · 两队各两人 · 非排位",
+  "Host's team": "房主的队伍",
+  "Other team": "另一队",
+  "Switch team": "换队",
+  "Move to the other team": "移到另一队",
   "Out of time": "时间已到",
   "Under 1h left": "剩余不到 1 小时",
   "{hours}h left": "剩余 {hours} 小时",
@@ -4302,5 +4310,8 @@
   "In a game · turn {turn}": "对局中 · 第 {turn} 回合",
   "In a series": "系列赛中",
   "In a lobby": "在大厅里",
-  "Last seen {when}": "最后在线：{when}"
+  "Last seen {when}": "最后在线：{when}",
+  "Plain text": "纯文本",
+  "Every card prints as plain text, with no face": "每张卡牌都以纯文本显示，不显示牌面",
+  "Reference cards": "相关卡牌"
 }

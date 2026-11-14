@@ -1,4 +1,4 @@
-// 55 — the Play hub (issue #3729, R3729000, R3729001): /play is four groups of cards, an Online card opens
+// 56 — the Play hub (issue #3729, R3729000, R3729001): /play is four groups of cards, an Online card opens
 // one panel from the hub to Find a match, and the search shows in the shell's banner on every menu screen
 // until it is cancelled, from Play or from Collection. At 1440x900 and 820x1180 (a desktop and an iPad held
 // upright) the spec queues All random from the card, follows the banner to Collection and cancels there,
@@ -36,7 +36,7 @@ function cancelFromBanner(): void {
   cy.get(ts(menuShellTestid.queue), { timeout: timeouts.view }).should("not.exist");
 }
 
-describe("55 — the Play hub (issue #3729)", () => {
+describe("56 — the Play hub (issue #3729)", () => {
   before(() => {
     cy.freeAccount(ACCOUNT());
     // A queue an earlier run left on the server would pair the first Find a match at once.

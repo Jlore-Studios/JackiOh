@@ -118,6 +118,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
+    const SHREDDER: &str = "stand-in (3) 6/8 R12/16";
+
     fn permanents_of(state: &GameState) -> Vec<CardInstance> {
         let side = &state.players.p1;
         let mut cards: Vec<CardInstance> = side.units.iter().flatten().filter_map(|pile| pile.first().cloned()).collect();
@@ -129,7 +131,7 @@ mod tests {
         scenario(json!({
             "p1": {
                 "hand": [{ "def": "core-029", "radiant": radiant }, "core-005", "core-016", "core-010"],
-                "field": [{ "def": "core-013", "damage": 2 }, "core-025"],
+                "field": [{ "def": SHREDDER, "damage": 2 }, "core-025"],
                 "backrow": ["core-006"],
                 "library": ["core-043"],
                 "mana": mana,
@@ -258,7 +260,7 @@ mod tests {
 
             s.play("core-029", json!({}));
 
-            // #13 Jlockeed Shredder-10 is 6/8 → 12/16; the 2 damage stays, and no Cry re-fires: setting
+            // The stand-in is 6/8 → 12/16; the 2 damage stays, and no Cry re-fires: setting
             // a flag is not an entry to the field.
             s.expect_stats(&unit_id, json!({ "attack": 12, "maxHealth": 16, "health": 14 }));
             assert_eq!(

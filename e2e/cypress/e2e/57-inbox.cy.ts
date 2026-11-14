@@ -1,4 +1,4 @@
-// 56 — the inbox (issue #3729, R3729002): what waits on a player is in the bell's panel, so nothing depends on
+// 57 — the inbox (issue #3729, R3729002): what waits on a player is in the bell's panel, so nothing depends on
 // catching a toast. Seat two challenges seat one, who sends its toast away with Later on Collection and then
 // accepts the challenge from the bell, landing on the board; and a friend request from seat two is accepted
 // from the bell at every one of `MENU_SIZES`, each shooting the open inbox for the pull request
@@ -75,7 +75,7 @@ function openInbox(): void {
   cy.get(ts(inboxTestid.panel), { timeout: timeouts.view }).should("be.visible");
 }
 
-describe("56 — the inbox (issue #3729)", () => {
+describe("57 — the inbox (issue #3729)", () => {
   const one = accounts.p1;
   const two = accounts.p2;
   let oneId = "";

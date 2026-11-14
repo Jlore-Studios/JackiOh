@@ -573,6 +573,22 @@ describe("R3729002 the other kinds in the inbox", () => {
   );
 
   it(
+    "R3729002 a 2v2 lobby invite is worded as one, not as a 1v1",
+    async () => {
+      signIn("tok-inbox");
+      serve(world());
+      shell();
+      await bell();
+      act(() => {
+        noteInvite({ code: "TWOVTW", format: "2v2", from: ANN });
+      });
+      const panel = await openPanel();
+      expect(row(panel, "invite")).toHaveTextContent("Ann#2 invites you to a 2v2 lobby");
+    },
+    TEST_MS,
+  );
+
+  it(
     "R3729002 a daily game on the player's move shows its time left and Play opens the game; a daily challenge opens the Daily screen and declines inline",
     async () => {
       signIn("tok-inbox");

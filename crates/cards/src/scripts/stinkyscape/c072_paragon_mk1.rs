@@ -1,5 +1,5 @@
 //! SPEC §8.10 Stinkyscape 72 Paragon Mk1, a card of the Stinkyscape set.
-//! (3) Unit, Epic, 6/1 → 12/2: Charge, Flying, Ranged.
+//! (3) Unit, Epic, 5/1 → 10/2 (6/1 → 12/2 until issue #3837): Charge, Flying, Ranged.
 //! Radiant: Charge, Flying, Ranged, Pierce.
 //!
 //! Keywords only (§6.1): its script is empty. Since #2521 it is no Starship Piece: its death fuses
@@ -38,13 +38,13 @@ mod tests {
             "p2": { "hand": [ANCHOR], "field": [MENACE], "library": filler(4) },
         }));
         s.play(PARAGON, json!({ "zone": 1 }));
-        // R783000: the 9/9 without Ranged strikes back nothing, so the 6/1 stands undamaged.
+        // R783000: the 9/9 without Ranged strikes back nothing, so the 5/1 stands undamaged.
         s.attack(PARAGON, MENACE);
 
         s.expect_in_zone(PARAGON, "field");
         assert_eq!(s.card(PARAGON).damage, 0);
         s.expect_health(PlayerId::P2, 30);
-        assert_eq!(s.card(MENACE).damage, 6);
+        assert_eq!(s.card(MENACE).damage, 5);
     }
 
     #[test]
@@ -69,7 +69,7 @@ mod tests {
             "p2": { "hand": [ANCHOR], "field": [ARMORED], "library": filler(4) },
         }));
         s.play(PARAGON, json!({ "zone": 1 }));
-        // R346: the 12-attack hit ignores the 7 Armor, so the 7/7 takes 12.
+        // R346: the 10-attack hit ignores the 7 Armor, so the 7/7 takes 10.
         s.attack(PARAGON, ARMORED);
 
         s.expect_in_zone(ARMORED, "graveyard");

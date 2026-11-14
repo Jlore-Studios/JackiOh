@@ -155,7 +155,12 @@ function ChallengeRow({
 
 function InviteRow({ item, onClose }: { item: Item<"invite">; onClose: () => void }): ReactElement {
   const { invite } = item;
-  const sentence = invite.format === "coop" ? t("{name} invites you to a co-op lobby") : t("{name} invites you to a 1v1 lobby");
+  const sentence =
+    invite.format === "coop"
+      ? t("{name} invites you to a co-op lobby")
+      : invite.format === "2v2"
+        ? t("{name} invites you to a 2v2 lobby")
+        : t("{name} invites you to a 1v1 lobby");
   return (
     <Row item={item}>
       <span className="inbox-row__text">

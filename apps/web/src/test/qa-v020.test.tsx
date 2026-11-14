@@ -309,7 +309,7 @@ describe("QA v0.2.0, Global Cosmetic", () => {
     expect(faceDownLabel(2)).toBe("Face-down trap, (2) Cost");
     expect(costPhrase(0)).toBe("(0) Cost");
 
-    render(<ManaCurve cardIds={["core-002", "core-019"]} catalog={{ version: "v", cards: CATALOG }} />);
+    render(<ManaCurve cardIds={["core-001", "core-019"]} catalog={{ version: "v", cards: CATALOG }} />);
     const curve = screen.getByRole("img", { name: /^Mana curve/ });
     expect(curve.getAttribute("aria-label")).toContain("(2) Cost: 1");
     expect(curve.getAttribute("aria-label")).toContain("(3) Cost: 1");

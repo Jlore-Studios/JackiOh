@@ -5,9 +5,9 @@
 //! Engine: S #22 Gatinsir's chance to reveal (`revealChance`, R1849009) on an attack an enemy Unit
 //! declares, never a forced one (R121, R1875002): a hit fires it in §4.2 step 4's trap window, before
 //! the combat. It summons an S #23 Warp Disruptor into its controller's open backrow zone, then
-//! {paragons} S #72 Paragon Mk1s (6/1 Units with Charge, Flying and Ranged) into open unit zones
+//! {paragons} S #72 Paragon Mk1s (5/1 Units with Charge, Flying and Ranged) into open unit zones
 //! (R64), as many as fit, no Cry (R1); the attack then goes on as declared (ST9's AMBUSH, R1875002).
-//! Radiant: all six Radiant (Paragon Mk1 12/2 with Pierce). Tunes: chance 30 ↑ (step 10, max 100),
+//! Radiant: all six Radiant (Paragon Mk1 10/2 with Pierce). Tunes: chance 30 ↑ (step 10, max 100),
 //! paragons 5 ↑.
 
 use jackioh_engine::effects::summon;
@@ -250,7 +250,7 @@ mod tests {
             assert_eq!(disruptors(&s), vec![true]);
             assert_eq!(paragons(&s), vec![true; PARAGONS]);
             let paragon = s.unit_at(P2, 1);
-            s.expect_stats(&paragon, json!({ "attack": 12 + DISRUPTOR_ATTACK, "health": 2 }));
+            s.expect_stats(&paragon, json!({ "attack": 10 + DISRUPTOR_ATTACK, "health": 2 }));
         }
 
         #[test]
