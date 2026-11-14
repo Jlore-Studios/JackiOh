@@ -17249,15 +17249,6 @@
       "failures": 0,
       "feedback_since": "2026-11-14T09:41:09Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-11-14T10:51:38Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "\n## State (CI revise)\nCI web unit 2/8 failed helpers.test #2215: GameBanner.test.tsx had its own settle. Replaced with test/settle.ts import. Tests, eslint, typecheck pass.\n",
-        "provider": "claude-6",
-        "reason": "used its 3 review rounds with this owner; the work is kept for its final audit, another subscription's when one is free",
-        "trail": ""
-      },
       "interruptions": 0,
       "issue": 3729,
       "kind": "review",
