@@ -64,6 +64,19 @@ describe("R1363 the shield flash", () => {
     expect(hero.map((cue) => cue.at)).toEqual([{ kind: "testid", testid: testid.hero("you") }]);
   });
 
+  it("R3857000 a hero's kept Armor gain blooms the full shield over the hero, and nothing shakes", () => {
+    expect(ANIMATIONS.armorGained.fx).toEqual({ recipe: "armor" });
+    const D = ANIMATIONS.armorGained.durationMs;
+    const land = Math.round(FX_MOTIF_PHASES.land * D);
+    const cues = plan([{ type: "armorGained", player: "p2", amount: 2, armor: 2 }]);
+    expect(shields(cues)).toEqual([
+      { kind: "shield", size: "full", at: { kind: "testid", testid: testid.hero("opponent") }, delayMs: land, durationMs: D - land + FX_SHIELD_TAIL_MS },
+    ]);
+    expect(cues.some((cue) => cue.kind === "shake")).toBe(false);
+    // A hit Armor took whole still shakes.
+    expect(plan([whole(3)]).some((cue) => cue.kind === "shake")).toBe(true);
+  });
+
   it("R1363 R200 under Reduce motion (the layer at intensity 0) nothing is drawn, the shield included", () => {
     expect(plan([whole(3)], 0)).toEqual([]);
     expect(plan([hit(2, 2)], 0)).toEqual([]);

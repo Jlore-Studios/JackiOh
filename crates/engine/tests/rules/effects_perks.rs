@@ -5,13 +5,15 @@
 use jackioh_engine::testkit::*;
 
 use jackioh_engine::damage::hero_hit_amount;
+use jackioh_engine::effects::player_mods::add_player_modifier;
 use jackioh_engine::effects::{discount_random_in_hand, gain_hero_armor};
 use jackioh_engine::mana::effective_cost;
 use jackioh_engine::script::Effect;
 use jackioh_engine::state::{CardInstance, GameState};
+use jackioh_engine::testkit::golden::{events_text, view_texts};
 
 use super::fixtures::catalog::{spell_def, unit_def, vanilla_catalog};
-use super::fixtures::harness::{events_json, in_hand, live, new_game, run_effect};
+use super::fixtures::harness::{by, events_json, in_hand, live, new_game, run_effect, run_on_sink};
 
 fn free() -> CardDef {
     unit_def(801, json!({ "cost": 0 }))
@@ -71,6 +73,140 @@ mod gain_hero_armor_c_plus_c46 {
         run(&mut state, gain_hero_armor(json_as(json!({ "amount": -3 }))));
         assert_eq!(state.players.p2.hero.armor, 2);
         assert_eq!(state.players.p1.hero.armor, 0);
+    }
+
+    /// R3857000: each gain above 0 reports `armorGained`, its amount and the hero's Armor after it.
+    #[test]
+    fn r3857000_a_gain_reports_its_amount_and_the_heros_armor_after() {
+        let mut state = game("r3857000-gain");
+        let events = run(&mut state, gain_hero_armor(json_as(json!({ "amount": 1 }))));
+        assert_eq!(
+            events_json(&events, GameEventType::ArmorGained),
+            vec![json!({ "type": "armorGained", "player": "p1", "amount": 1, "armor": 1 })]
+        );
+        let events = run(&mut state, gain_hero_armor(json_as(json!({ "amount": 2 }))));
+        assert_eq!(
+            events_json(&events, GameEventType::ArmorGained),
+            vec![json!({ "type": "armorGained", "player": "p1", "amount": 2, "armor": 3 })]
+        );
+    }
+
+    /// R3857000: a gain of 0 or less changes nothing and reports nothing; `player: enemy` names the
+    /// other hero.
+    #[test]
+    fn r3857000_none_for_zero_or_less_and_player_enemy_names_the_other_hero() {
+        let mut state = game("r3857000-none");
+        for amount in [0, -3] {
+            let events = run(&mut state, gain_hero_armor(json_as(json!({ "amount": amount }))));
+            assert_eq!(
+                events_json(&events, GameEventType::ArmorGained),
+                Vec::<Value>::new()
+            );
+        }
+        let events = run(
+            &mut state,
+            gain_hero_armor(json_as(json!({ "amount": 2, "player": "enemy" }))),
+        );
+        assert_eq!(
+            events_json(&events, GameEventType::ArmorGained),
+            vec![json!({ "type": "armorGained", "player": "p2", "amount": 2, "armor": 2 })]
+        );
+    }
+
+    /// R3857000: `armor` is the Armor the view shows (`hero_armor_of`, §10.8), Armor Up's modifier
+    /// counted, not the stored field alone.
+    #[test]
+    fn r3857000_the_armor_after_counts_armor_up_s_modifier() {
+        let mut state = game("r3857000-modifier");
+        run(
+            &mut state,
+            add_player_modifier(json_as(json!({
+                "mod": { "kind": "heroArmor", "amount": 2, "expiry": { "until": "never" } }
+            }))),
+        );
+        let events = run(&mut state, gain_hero_armor(json_as(json!({ "amount": 3 }))));
+        assert_eq!(
+            events_json(&events, GameEventType::ArmorGained),
+            vec![json!({ "type": "armorGained", "player": "p1", "amount": 3, "armor": 5 })]
+        );
+        assert_eq!(state.players.p1.hero.armor, 3);
+    }
+
+    /// R3857000: nothing answers the report, so the trigger loop never takes it and it takes no
+    /// number from `state.next_seq` (R68), which keeps a recorded game's hash (R768).
+    #[test]
+    fn r3857000_the_report_takes_no_number_in_r68_s_order() {
+        let mut state = game("r3857000-seq");
+        let seq = state.next_seq;
+        let ((), events) = run_on_sink(&mut state, |sink| {
+            (gain_hero_armor(json_as(json!({ "amount": 2 }))).apply)(&mut make_context(
+                sink,
+                None,
+                by(PlayerId::P1),
+            ));
+            settle(sink, SettleOptions::default());
+            assert!(sink.state.dispatch.is_empty());
+        });
+        assert_eq!(state.next_seq, seq);
+        assert_eq!(events_json(&events, GameEventType::ArmorGained).len(), 1);
+    }
+
+    /// R3857000: the report takes no room in R168's floor, so the view's window holds what it held
+    /// before the report existed, the reports among it; and the golden texts leave it out, so a trace
+    /// recorded before it replays as it did (R2783000's way, R1956001).
+    #[test]
+    fn r3857000_takes_no_room_in_the_views_window_and_the_golden_texts_leave_it_out() {
+        let gain = GameEvent::ArmorGained {
+            player: PlayerId::P1,
+            amount: 2,
+            armor: 2,
+        };
+        let mut state = game("r3857000-window");
+        let older: Vec<GameEvent> = (0..VIEW_EVENT_LIMIT)
+            .flat_map(|turn| {
+                [
+                    gain.clone(),
+                    GameEvent::TurnStarted {
+                        player: PlayerId::P2,
+                        turn: turn as i32,
+                        extra: None,
+                    },
+                ]
+            })
+            .collect();
+        let newest = vec![GameEvent::DrawOffered { player: PlayerId::P1 }, gain.clone()];
+        let mut bare = state.clone();
+        for (nonce, events) in [("older", older), ("newest", newest)] {
+            bare.applied.push(AppliedAction {
+                nonce: nonce.into(),
+                events: events
+                    .iter()
+                    .filter(|event| !matches!(event, GameEvent::ArmorGained { .. }))
+                    .cloned()
+                    .collect(),
+            });
+            state.applied.push(AppliedAction {
+                nonce: nonce.into(),
+                events,
+            });
+        }
+
+        for viewer in [PlayerId::P1, PlayerId::P2] {
+            let all = view_for(&state, viewer).events;
+            let without: Vec<GameEvent> = all
+                .iter()
+                .filter(|event| !matches!(event, GameEvent::ArmorGained { .. }))
+                .cloned()
+                .collect();
+            assert_eq!(without, view_for(&bare, viewer).events);
+            assert_eq!(without.len(), VIEW_EVENT_LIMIT);
+            assert_eq!(all.last(), Some(&gain));
+        }
+        assert_eq!(view_texts(&state), view_texts(&bare));
+        assert_eq!(
+            events_text(&[gain.clone(), GameEvent::DrawOffered { player: PlayerId::P1 }]),
+            events_text(&[GameEvent::DrawOffered { player: PlayerId::P1 }])
+        );
     }
 }
 

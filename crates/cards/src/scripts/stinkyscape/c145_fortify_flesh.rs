@@ -105,6 +105,29 @@ mod tests {
             assert_eq!(armor_of(&s, P1), armor, "Armor stays");
         }
 
+        /// R3857000: the gain is reported on the caster's hero, its roll and the Armor after it, to
+        /// both seats.
+        #[test]
+        fn r3857000_the_gain_is_reported_on_the_casters_hero() {
+            let mut s = scenario(json!({
+                "seed": "fortify-reported",
+                "p1": { "hand": [FORTIFY, FILLER], "armor": 2 },
+                "p2": { "hand": [FILLER] },
+            }));
+            s.play(FORTIFY, json!({}));
+            let armor = armor_of(&s, P1);
+            let gained = GameEvent::ArmorGained {
+                player: P1,
+                amount: armor - 2,
+                armor,
+            };
+            assert!((3..=5).contains(&(armor - 2)), "a roll of 3 to 5: {armor}");
+            assert_eq!(s.events_of(GameEventType::ArmorGained), vec![gained.clone()]);
+            for viewer in [P1, P2] {
+                assert!(s.view(viewer).events.contains(&gained), "{viewer:?} sees the gain");
+            }
+        }
+
         #[test]
         fn r1867008_a_lift_of_the_low_end_past_the_high_one_rolls_between_the_two() {
             for seed in 0..40 {

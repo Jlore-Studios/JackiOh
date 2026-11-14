@@ -2499,6 +2499,8 @@ fn redact_event(
         | GameEventType::GameOver
         // R961: the Jade Counter is public, a player and a number.
         | GameEventType::JadeChanged
+        // R3857000: a hero's Armor is public, a player and two numbers.
+        | GameEventType::ArmorGained
         // R860, R864: a kept secret names only its player and id, and a reveal and a prediction
         // are public once they happen.
         | GameEventType::SecretChosen
@@ -2865,8 +2867,14 @@ fn recent_events(state: &GameState, viewer: PlayerId) -> Vec<GameEvent> {
     let newest_from = all.len() - state.applied.last().map_or(0, |entry| entry.events.len());
     // R2783000: a `hookResolving` marker takes no room in R168's floor, so the window holds the events
     // it would had no hook been marked, each marker among them beside them, and the markers just before
-    // its first event with it (a hook's marker comes before its first effect).
-    let marker = |at: &usize| matches!(all[*at], GameEvent::HookResolving { .. });
+    // its first event with it (a hook's marker comes before its first effect). R3857000: an `armorGained`
+    // report likewise takes none, so the window holds what it held before the report existed.
+    let marker = |at: &usize| {
+        matches!(
+            all[*at],
+            GameEvent::HookResolving { .. } | GameEvent::ArmorGained { .. }
+        )
+    };
     let counted: Vec<usize> = read.iter().copied().filter(|at| !marker(at)).collect();
     let newest = counted.iter().filter(|at| **at >= newest_from).count();
     let window = VIEW_EVENT_LIMIT.max(newest);
