@@ -14433,7 +14433,16 @@
       "feedback_since": "2026-11-14T19:28:37Z",
       "issue": 3920,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-8",
+        "rejections": [],
+        "reviews": [],
+        "sha": "449141434d606120804defd5f671fbd904b7fc75",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "fce3910f5abefcbe",
