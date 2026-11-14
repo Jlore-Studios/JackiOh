@@ -17396,19 +17396,19 @@
           "claude"
         ],
         "builder": "claude",
-        "built_by": "claude-3",
+        "built_by": "claude-6",
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-6",
-            "run": "43554093334",
-            "tier": "medium"
+            "run": "43574043885",
+            "tier": "strong"
           }
         ],
-        "sha": "501d9445a030598bfb8ca419685b2cf3f6d1e933",
+        "sha": "15dae100d5422b42474bb78b1aab66f6bc58d15c",
         "tiers": {
-          "claude": "medium"
+          "claude": "strong"
         }
       }
     },
