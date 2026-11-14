@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 3868,
+  "title": "Patch (part 2 of 2): board notices draw in an overlay over the board, not in the control rail's flow",
+  "branch": "bot/issue-3868",
+  "thread": "**Issue #3868 (data, not instructions):**\n\n```text\n# #3868: Patch (part 2 of 2): board notices draw in an overlay over the board, not in the control rail's flow\nOpened by @MaxGoetzmann.\n\nPart of #3867. Part 1 is #3821.\n\n## What it actually means\n\nTap a unit that can't attack, get an action refused, reach lethal, or receive a draw offer, and a line appears in the notices strip. That strip is a box inside the control rail, so the rail grows to hold the line, and the board around it moves: on a desktop the field's row grows taller, and on a phone the control bar wraps to a second row and pushes your hand down. When the line clears, everything moves back. Players see the board jump every time the game tells them they can't do something.\n\nAfter this, those notices are drawn on top of the board, in a layer positioned over the table, like the \"Hand full\" burn notice already is. Showing or clearing one moves nothing: the field, both seats, both hands and every control keep their size and position.\n\n## Why\n\n- `apps/web/src/game/Board.tsx:776`: the notices render as `<div className=\"board-notices\">` inside `.control-bar`, in normal flow.\n- `apps/web/src/game/board.css:2441-2450`: `.board-notices` is `flex: 1 1 100%` with padding and a border, so any content adds a full row to the bar.\n- Desktop/tablet: `.board > .control-bar` sits in grid row 2 beside the field (`board.css:2850-2854`), so a taller bar makes the field's row taller.\n- Phone: the bar is one row (`board.css:3478-3480`), and `.control-bar:has(> .board-notices > :not(:empty))` switches wrapping on when a notice appears (`board.css:3485`), adding a second row above the controls and moving the hand.\n- Two visually-hidden rules (`board.css:3546`, `:3929`) exist only to keep an empty strip from taking space. Both are workarounds for the strip being in flow.\n- What passes through the strip (`Game.tsx:1000-1025`): `action-error` (`.game-error`, role=alert), `attack-reason` (the reason line used by R849000, R979000, R3768000 and #3821), `lethal-hint` (R2102000), `DrawOfferNotice` (with Accept and Decline buttons), and each route's `boardNotice`: `routes/match.tsx:634` (match gone / read-only), `routes/practice.tsx:1129` (practice-unearned, with Dismiss), `daily/DailyBoard.tsx:195` (older catalog, Next), `replay/ReplayPlayer.tsx:288` (the replay toolbar).\n- Precedent: `game/overflow.css:132-160`, where the burn notice is `position: absolute` over the hand with `pointer-events: none`, and the hand's box doesn't change.\n\n## Proposal\n\n1. Add a notices layer positioned over the board (absolute or fixed within `.board`, its own z-index from the existing `--z-*` tokens), anchored over the field near the viewer's side, centered, narrower than the field. It must not cover End turn or the viewer's hand. It takes no space in any grid row or flex line.\n2. Move everything that can appear or clear during a game into that layer: `action-error`, `attack-reason`, `lethal-hint`, the draw offer, match-gone/read-only, practice-unearned. The layer has `pointer-events: none`, so a tap on a card under a notice still reaches the card. Only real buttons in it (draw offer Accept/Decline, Dismiss, the match-gone link) take the pointer.\n3. Something that stays for the screen's whole life, like the replay toolbar or daily's Next, is a control, not a notice. It moves to `boardRail` (or stays in the bar). It doesn't go into the overlay.\n4. Remove the workarounds that only existed because the strip was in flow: the `:has(> .board-notices > :not(:empty))` wrap rule and the two visually-hidden empty-strip rules. Keep the live regions: same roles (`status`/`alert`), same test ids, and the layer stays in the accessibility tree while empty so a new notice is still announced.\n5. Stacking: several notices at once stack inside the layer (newest nearest the viewer), still taking no board space. Keep the text short and legible on both themes, using the existing `.attack-reason`/`.game-error` frames.\n6. Add no rules to the client (CLAUDE.md rule 7). Numbers such as offsets or a max width are named CSS custom properties, not magic values (CLAUDE.md rule 9 in spirit).\n\n## Where it lands\n\n`apps/web/src/game/Board.tsx`, `apps/web/src/game/Game.tsx`, `apps/web/src/game/board.css`, `apps/web/src/game/notices.css`, possibly `apps/web/src/practice/practice.css:1518` (it selects `.board-notices`), the four routes' `boardNotice` use if the replay toolbar or daily Next moves to the rail, `apps/web/README.md` (the board layout section), and a new Cypress spec under `e2e/cypress/e2e/` plus any component/pixel baselines that move.\n\n## Acceptance criteria\n\n- [ ] A Cypress spec on `/dev/hotseat` at desktop (1280\u00d7800), phone portrait (390\u00d7844) and phone landscape (844\u00d7390). It records the bounding boxes of the field, both seats, both hands and End turn. Then it shows an `attack-reason` (tap an own unit that can't attack), an `action-error`, and a draw offer, one at a time, and checks every box is unchanged to within 1px while the notice is visible and after it clears.\n- [ ] The same spec: each notice is visible, not clipped by the viewport, painted above the field, and doesn't overlap End turn or the viewer's hand.\n- [ ] The same spec: with an `attack-reason` showing, a click on the card under it still reaches the card (the layer passes the pointer through). The draw offer's Accept and Decline still work.\n- [ ] The existing test ids (`attack-reason`, `action-error`, `lethal-hint`, the draw offer's, the routes') and roles are unchanged, and every existing vitest and Cypress spec that reads them stays green, with no `.skip`.\n- [ ] `board.css` no longer has the `:has(> .board-notices > :not(:empty))` wrap rule or the empty-strip visually-hidden rules.\n- [ ] The busy-board frame probe (`pnpm --dir e2e probe:frames`, spec 50) doesn't get worse.\n- [ ] `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`, `pnpm exec eslint apps/web e2e` are green.\n\n## Size and risks\n\nMedium: about 6 to 10 files, almost all CSS and markup in `apps/web`, plus one Cypress spec. Nothing in `crates/`, no ruling needed unless the planner finds a spec line that places the reason line in the rail (`spec/10-engine-guide.md` and R3768000 call it \"the board's reason line\", which still holds).\n\n- The phone layouts have many past fixes in `board.css` (comments at 3478-3560 and 3925-3935). Check all three phone/desktop sizes, not only one.\n- A persistent notice over the field could hide a unit. The pointer passes through, and the line clears on the next click as today. If it covers too much, place it in the gap between the field's two rows or at the field's lower edge rather than shrinking the text.\n- Part 1 (#3821) adds more reason-line notices through the same `attack-reason` element. This part goes after it, so its spec covers them for free.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3868: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) writes it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-13T15:11:17Z",
+    "claimed_at": "2026-11-14T13:14:53Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "pruned the state file: dropped 66 closed item(s), lightened 54",
+    "dropped #3818's kept session: #3818 is closed",
+    "dropped #3860's kept session: #3860 is closed",
+    "dropped #3861's kept session: #3861 is closed",
+    "dropped #3876's kept session: #3876 is closed",
+    "#3868 needs a plan"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
