@@ -17751,13 +17751,12 @@
     "what": "revise #3906 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-14T07:22:25Z",
+    "at": "2026-11-14T07:31:02Z",
     "notes": [
-      "#3884: `claude-1` can start again, so its hold is lifted",
-      "#3881: approved and green, so its strikes are cleared",
-      "started review #3884 on claude-1 (run 43570949301)",
+      "delivered revise #3896 on claude-6 (run 43566182444): approved",
+      "started revise #3906 on claude-1 (run 43571675417)",
       "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days"
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18463,7 +18462,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-14T07:22:25Z",
+  "loop_tick": "2026-11-14T07:31:02Z",
   "machine_disk": {
     "issue": null,
     "reading": {
