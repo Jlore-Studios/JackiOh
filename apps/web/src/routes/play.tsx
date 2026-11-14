@@ -612,7 +612,7 @@ function waysToPlay(dailyWaiting: number): readonly Way[] {
     {
       href: paths.together,
       testid: playTestid.together,
-      name: t("Play together"),
+      name: t("Friends"),
     },
     {
       href: paths.daily,
@@ -1123,6 +1123,8 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
           <WaysNav />
 
           <LobbyPanel format="duel" mode={mode} />
+          {/* R3732002: the co-op lobby panel left the Friends page; it makes and joins co-op lobbies here. */}
+          <LobbyPanel format="coop" />
         </div>
       </div>
     </div>

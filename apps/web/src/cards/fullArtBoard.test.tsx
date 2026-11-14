@@ -27,6 +27,7 @@ import {
   isFullArtCard,
   type FullArtOwnership,
 } from "./fullArt.ts";
+import { flushFits } from "./fit.ts";
 import { MinionFace } from "./MinionFace.tsx";
 import { ownedCardCosmetics } from "./ownedFullArt.ts";
 import { faceModel } from "./model.ts";
@@ -559,6 +560,63 @@ describe("R3339000 art-first cards in play", () => {
       expect(bcf.querySelector(".cf-art--full"), id).not.toBeNull();
       cleanup();
     }
+  });
+
+  it("R3339000 B15 a hover plate fits its name again when the name it prints changes", () => {
+    // jsdom has no layout (CardFace.test.tsx B15): a box of its own on every element lets a fit run and write --cf-fit.
+    const width = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(100);
+    const height = vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(20);
+    try {
+      const [first, second] = DEFS.filter((d) => (d.rarity === "Legendary" || d.rarity === "Mythic") && d.type !== "Unit" && !isFullArtCard(d.id));
+      if (first === undefined || second === undefined) throw new Error("two art-first backrow cards");
+      const compact = (id: string): ReactElement => (
+        <FullArtOwned owned="every">
+          <CardFace face={faceModel({ defId: id, def: defOf(id), radiant: false })} layout="compact" worn onBoard />
+        </FullArtOwned>
+      );
+      const { container, rerender } = render(compact(first.id));
+      flushFits();
+      const plate = container.querySelector<HTMLElement>(HOVER_PLATE);
+      expect(plate?.textContent).toBe(first.name);
+      expect(plate?.style.getPropertyValue("--cf-fit")).toBe("1");
+      plate?.style.removeProperty("--cf-fit");
+      // The same plate, another name (another card in its slot, or its words in another language): it is fitted again.
+      rerender(compact(second.id));
+      flushFits();
+      expect(container.querySelector(HOVER_PLATE)).toBe(plate);
+      expect(plate?.textContent).toBe(second.name);
+      expect(plate?.style.getPropertyValue("--cf-fit")).toBe("1");
+    } finally {
+      width.mockRestore();
+      height.mockRestore();
+    }
+  });
+
+  it("R3340000 a hovered backrow face of a normal look answers in its art's layers, and draws it whole once the pointer leaves", () => {
+    // A Common Spell: no depth planes (R3344000), so its moving window is the one the three layers split.
+    const spell = DEFS.find((d) => d.rarity === "Common" && d.type === "Spell" && !d.token && !isFullArtCard(d.id))!;
+    const { container } = render(
+      <FullArtOwned owned="every">
+        <div className="card cf-host">
+          <CardFace face={faceModel({ defId: spell.id, def: spell, radiant: false })} layout="compact" worn onBoard />
+        </div>
+      </FullArtOwned>,
+    );
+    const cf = container.querySelector<HTMLElement>(".cf--compact") as HTMLElement;
+    const host = container.querySelector<HTMLElement>(".cf-host") as HTMLElement;
+    expect(cf.hasAttribute("data-depth")).toBe(false);
+    expect(cf.hasAttribute("data-art-response")).toBe(false);
+    expect(cf.querySelector("[data-art-live]")).toBeNull();
+    act(() => {
+      host.dispatchEvent(new MouseEvent("pointerenter", { bubbles: true }));
+    });
+    expect(cf.getAttribute("data-art-motion")).toBe("animated");
+    expect(cf.getAttribute("data-art-response")).toBe("true");
+    expect(cf.querySelector('.cf-art-frame > .cf-art[data-art-live="true"] .cf-art-subject')).not.toBeNull();
+    act(() => {
+      host.dispatchEvent(new MouseEvent("pointerleave", { bubbles: true }));
+    });
+    expect(cf.querySelector("[data-art-live]")).toBeNull();
   });
 
   it("R3339000 a Common Unit keeps its name plate, smaller and translucent over the art's foot", () => {

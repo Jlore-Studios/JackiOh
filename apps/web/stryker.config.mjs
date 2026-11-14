@@ -33,6 +33,8 @@ export default {
     "!src/wire/engineConfig.ts",
     "!src/wire/serverConfig.ts",
     "!src/wasm/pkg/**",
+    // The cards' procedural art draws a picture, which no unit test judges (scripts/mutants.sh).
+    "!src/cards/art/**",
   ],
   // A module-level value runs once for a whole test file, so each such mutant would run every test
   // again; left out (and counted as Ignored).

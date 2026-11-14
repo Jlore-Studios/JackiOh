@@ -62,6 +62,13 @@ exclude_globs = [
   # reach (crates/tools: every `cargo jackioh` command; crates/server: the server's boot).
   "crates/tools/src/main.rs",
   "crates/server/src/main.rs",
+  # The cards' code-line counter, which crates/cards/build.rs `#[path]`-includes (R1846000), so each of
+  # its mutants also runs inside the build script, outside scripts/mutants.sh's cap on a test binary's
+  # memory: a mutant that loops while it allocates fills the runner's memory long before the build
+  # timeout. cards-lib's shard 0 lost its runner three times so (mutants.yml runs 43378307697,
+  # 43405250294 and 43444553828, 2026-11-13). Its tests and the tools' hold it; mutating it waits for a
+  # memory cap on build scripts (#3836).
+  "crates/cards/src/code_lines.rs",
 ]
 
 exclude_re = [
@@ -72,6 +79,14 @@ exclude_re = [
   # compiled out, so no test can see them. Their testkit twins share their names and only reach the
   # harness (above).
   'replace (test_override|shipped_override|previewed|override_map) -> ',
+  # crates/engine (#3514): Burn and Toxic's tick (R3540001), tick_at_turn_start's four `> 0`. A count is
+  # never below 0 (`burn_on`, `toxic_on` and `counter_on` floor it there), so `>= 0` lets every acting Unit
+  # into the targets and runs both hits at a count of 0. A hit of 0 is no damage instance (deal_damage
+  # returns before step 1, R63) and Burn's drop from 0 is to 0, a change `set_counter` neither stores nor
+  # reports; and a Unit that carried neither count at the read gains none inside the tick: its hits have no
+  # source for a rider or a conversion (R3540002, R3540003), no state check runs (R59), and a replacement's
+  # follow-up waits as work.
+  'afflictions\.rs:.*replace > with >= in tick_at_turn_start',
   # crates/run (#3513): a boss card's slot is the last, Anything, and `run_check_setup` only asks
   # whether a card's slot is at or above each rank, so any index at or past the last fits the same
   # slots (`len - 1`, `len + 1` and `len / 1` alike).
@@ -222,6 +237,11 @@ exclude_re = [
   # after a lost write or a search that threw, and has it decide again before its retry or a newer state, which no
   # rule asks for.
   'host/duos\.rs:.*replace match guard (owes_mulligan\(&self\.game, seat\)|held_prompt\(&self\.game, seat\)\.as_deref\(\) == Some\(choice\.as_str\(\)\)) with true in DuosHost::ai_mode',
+  # crates/shared (#3513): duel.rs's end_stale_hovers runs after a written row (after_change). While a seat's prompt
+  # is open the only rows are its answer, a concede (`end_game` clears `pending`) and the clock's, which answers it:
+  # each closes or replaces the prompt, so a hover whose prompt is still the open one never reaches it, and ending
+  # every hover there changes nothing a seat is sent.
+  'host/duel\.rs:.*replace && with \|\| in DuelHost::end_stale_hovers',
   # crates/shared (#3513): curve.rs's `fraction` reduces by `gcd(num, den) * den.signum()`, and a signum is 1 or -1,
   # which a number is multiplied or divided by alike; at 0 (two cells of one column, a Lagrange denominator of 0)
   # both divide by 0.
@@ -234,4 +254,93 @@ exclude_re = [
   # that fallback finds the same words. A clause two editions spell differently makes this killable (a test of
   # each edition's words), and then this line goes.
   'log/chaos\.rs:.*replace own -> ',
+  # crates/ai (#3515): candidates.rs's zone_group_key blanks every play's lane to one constant, -1, and its key is
+  # only ever compared with another play's blanked key (collapse_zones' maps), never with a play itself: any one
+  # constant, 1 as well, groups the same plays.
+  'candidates\.rs:.*delete - in zone_group_key',
+  # crates/ai (#3515): baselines.rs's greedy_action returns the best answer, or the first candidate, while the seat
+  # answers its own prompt (`answering`), before it looks for endTurn among the candidates; past it, finding none, it
+  # returns the same. While the seat's prompt is open legal_actions offers only the prompt's answers and concede
+  # (R211), never endTurn (tests/ai/search.rs, b14's seat answering its own prompt), and a prompt of the other seat's
+  # never reaches the line (ai_to_act owes that seat only a draw offer's answer, which greedy_action gives first). So
+  # `pending.player_id != seat` returns the same action. The column (50) holds the entry to that `==`.
+  'baselines\.rs:\d+:50: replace == with != in greedy_action',
+  # crates/server (#3516): app.rs's init_logging and serve are the process's boot, which main.rs calls (excluded
+  # above): init_logging installs the process-wide tracing subscriber, a JSON line per event on stdout, and serve
+  # opens the season, binds $PORT and serves until the process gets SIGTERM or Ctrl-C. Neither is equivalent; a
+  # test could see them only from a process of its own (a test binary or a child process that watches stdout and
+  # the port), never inside tests/server.rs, whose support/deps.rs holds its own process-wide subscriber so each
+  # test can record its logs, and whose tests serve on a port of their own through serve_until (the graceful
+  # shutdown's). What serve calls is tested piece by piece: build, router, seats::boot, open_season, serve_until.
+  'server/src/app\.rs:.*replace (init_logging with \(\)|serve -> anyhow::Result<\(\)> with Ok\(\(\)\))',
+  # crates/shared (#3513): duel.rs's on_expire guards on `stopped || finished` and then hands its run to
+  # advance_run, whose first check is the same `stopped || finished` (beside an empty queue), before anything is
+  # sent, noted or reduced: with either alone, `&&` lets on_expire set the run, which advance_run clears at once.
+  'host/duel\.rs:.*replace \|\| with && in DuelHost::on_expire',
+  # crates/shared (#3513): advance_run goes on to the run's next server action when resolve says it may, and with
+  # `!` deleted it stops there instead, and goes on where resolve says stop. resolve says stop only after clearing
+  # the run (a panic, an internal answer), so going on meets no run and returns. It says go on for an answer that
+  # begin_apply gives at once only on an Ack, a MatchOver or an Illegal: an Ack only for a nonce the log holds (the
+  # run's nonce names the seq its row would take), a MatchOver only once finished (advance_run checked it), an
+  # Illegal only for a server action the engine refuses. Only the mulligan clock's run holds two actions, and the
+  # engine takes a Timeout while the mulligans are open (R268's MULLIGAN_OPEN_ACTION_TYPES); a run of one that
+  # stops there leaves its emptied queue in `run`, which nothing reads but the next advance_run, which clears it,
+  # and on_expire, which replaces it.
+  'host/duel\.rs:.*delete ! in DuelHost::advance_run',
+  # crates/shared (#3513): duel.rs's end_as_ceiling_draw is reached only from resolve's clock arm on a nonce whose
+  # reduce panicked, which only begin_apply inside advance_run's loop records for a clock action, just after that
+  # loop checked `stopped || finished` with nothing setting either in between (on_logged's nonce had its row asked
+  # for, so it never panicked). So its `finished || stopped` guard never holds, and `&&` decides the same, as in
+  # duos.rs's.
+  'host/duel\.rs:.*replace \|\| with && in DuelHost::end_as_ceiling_draw',
+  # crates/cards (#3517): C+ #6 Wrong-House Attacker is keywords only (spec §8.7 row 6), so both faces are
+  # `Script::default()`, which is exactly what `CardScripts`'s derived Default builds.
+  'c006_wrong_house_attacker\.rs:.*replace script -> CardScripts with Default::default\(\)',
+  # crates/cards (#3517): C+ #12.1 Devour's Radiant Cry heals only for a Health above 0. The Health read is
+  # never below 0 (`.max(0)`), so `>=` differs only at 0, and a heal of 0 is none: the engine's hero heal
+  # returns before any replacement, multiplier or `healed` event for an amount at or below 0 (damage.rs).
+  'c012_1_devour\.rs:.*replace > with >= in script',
+  # crates/cards (#3517): C #9 Income Tax's deferred step hands its own data (the delay's: the firing `event` and
+  # the Radiant `discount`) back to the keep prompt, which `choose_from_hand`'s `resume_self` already merges in
+  # whole but for the engine's bookkeeping keys (`card_data`, `without_prompt_keys`). The deferred run's data
+  # holds none of those (`__run` is rewritten and `__owner` written again by `open_prompt` either way), so the
+  # prompt carries the same data with `Value::Null`. Only in a fused card would it differ, by a `__partDepth`
+  # that routes the answer to the same ingredient, Income Tax being the only card with a `keep` step.
+  'c009_income_tax\.rs:.*replace carried_data -> Value with Default::default\(\)',
+  # crates/cards (#3517): TG #1 Spikey Steven and TG #8 Clobberer are vanilla, TG #4 Boulder Fist Ogre, TG #6
+  # Chosen by the Sun and TG #7 Chosen by the Moon keywords only (spec §8.11 rows 1, 4, 6, 7 and 8): their
+  # stats and keywords are catalog data, so both faces are `Script::default()`, which is exactly what
+  # `CardScripts`'s derived Default builds.
+  'training_grounds/(c001_spikey_steven|c004_boulder_fist_ogre|c006_chosen_by_the_sun|c007_chosen_by_the_moon|c008_clobberer)\.rs:.*replace script -> CardScripts with Default::default\(\)',
+  # crates/cards (#3517): TG #5 Midlane Menace's lane `-1` stands in only when `slot_of` finds no field zone, and
+  # then `in_units_row_or_standing`, which reads the same card's zone, is false too, so the `&&` decides
+  # "not in midlane" whatever lane the sentinel is (`1` included, midlane on a board of one or two lanes).
+  'training_grounds/c005_midlane_menace\.rs:.*delete - in cry',
+  # crates/cards (#3517): Core #8 Mr. Vanilla is vanilla, Core #11 Tempo Timmy, Core #20 Pointmaster, Core #25 4-mana
+  # 7/7 and M+ #8 Arch Mage keywords only (spec §8.1 rows 8, 11 and 20, §8.2 row 25, §8.9 row 8): their stats and
+  # keywords are catalog data, so both faces are `Script::default()`, which is exactly what `CardScripts`'s derived
+  # Default builds.
+  '(core/(c008_mr_vanilla|c011_tempo_timmy|c020_pointmaster|c025_4_mana_7_7)|meditative_plus/c008_arch_mage)\.rs:.*replace script -> CardScripts with Default::default\(\)',
+  # crates/cards (#3517): S #5 Masochism Unmasked's `declared_cap` reads the `cap` the face declares off the build's
+  # catalog (`crate::card_def`, never a folded version's), and catalog.json declares 20 on both faces, so the guard
+  # forced either way gives the same 20. The engine then reads the card's own `cap` over it (R386:
+  # flag + tuned - printed), the same either way, so only a patch to one face's cap could tell them apart.
+  'stinkyscape/c005_masochism_unmasked\.rs:.*replace match guard radiant with (true|false) in declared_cap',
+  # crates/cards (#3517): S+ #12 Shield Booster, S+ #16 Servo Surge, S+ #26.1 Conscript, S+ #27.1 Imp and S+ #36 Duo
+  # are keywords only (spec §8.12 rows 12, 16, 26.1, 27.1 and 36): their stats and keywords are catalog data, so
+  # both faces are `Script::default()`, which is exactly what `CardScripts`'s derived Default builds.
+  'stinkyscape_plus/(c012_shield_booster|c016_servo_surge|c026_1_conscript|c027_1_imp|c036_duo)\.rs:.*replace script -> CardScripts with Default::default\(\)',
+  # crates/cards (#3517): M #14 Prime Time's trial division. For a divisor of 2 or more `d + d <= d * d`, so the
+  # mutant's loop tries every divisor the real one does, in the same order, and then more, each above the square
+  # root of `n` and at most `n / 2`. A composite `n` has a divisor at or below its square root, which both loops
+  # reach first; a prime has no divisor in either range. Both answer the same for every `n`.
+  'c014_prime_time\.rs:.*replace \* with \+ in is_prime',
+  # crates/cards (#3517): S+ #33 True Conservative's `strongest` ranks (total, cost, index) keys, the index each past
+  # version's own place in the list, so a key held from an earlier place never equals a later one: `<=` replaces
+  # exactly when `<` does.
+  'c033_true_conservative\.rs:.*replace < with <= in strongest',
+  # crates/cards (#3517): S+ #25 Snom Bunny's Death at a Lucky of 0: `Rng::lucky(0, roll, keep)` makes its one roll
+  # and no other (its loop runs `x.max(0)` times), the very `rng.int(n)` the other branch draws, from the same
+  # cursor. Pinned to the `lucky > 0` column (34): the cost comparison's `>` (column 46) is held by a test.
+  'c025_snom_bunny\.rs:\d+:34: replace > with >= in snom_bunny',
 ]

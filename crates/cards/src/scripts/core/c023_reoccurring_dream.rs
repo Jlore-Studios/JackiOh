@@ -223,8 +223,43 @@ mod tests {
         fn r1748003_r767000_the_v0_4_4b_kept_script_keeps_its_printed_chance() {
             crate::under_kept(DREAM, super::super::script_v0_4_4b(), || {
                 // Seven Buffs move the declared number, which the kept script never reads: it rolls
-                // its printed 30%, and some seed misses.
-                assert!(SEEDS.iter().any(|seed| radiants_buffed(seed, 7) == 0));
+                // its printed 30%, so some seed misses and some seed hits.
+                let rolls: Vec<usize> = SEEDS.iter().map(|seed| radiants_buffed(seed, 7)).collect();
+                assert!(rolls.contains(&0));
+                assert!(rolls.contains(&1));
+            });
+        }
+
+        /// R987, R767000: a game folded under v0.5.11r or before, where Feng Shui's kept script gave its
+        /// controller Luck 1 (R3140000), rolls the Dream once more for it, as a Lucky 1 given to the card
+        /// does: the same hand cards turn Radiant on the same draws, on either face.
+        #[test]
+        fn r987_r767000_its_controllers_luck_rolls_as_a_lucky_given_to_it_does() {
+            const FENG_SHUI: &str = "meditative-040"; // Feng Shui: "You have Luck 1" through v0.5.11r
+            crate::under_kept(FENG_SHUI, crate::scripts::meditative::c040_feng_shui::script_v0_5_11o(), || {
+                let cast = |seed: &str, radiant: bool, luck: bool| -> (Vec<String>, u32) {
+                    let mut hand = vec![json!({ "def": DREAM, "radiant": radiant })];
+                    hand.extend(OTHERS.iter().map(|def| json!(def)));
+                    let backrow = if luck { json!([FENG_SHUI]) } else { json!([]) };
+                    let mut s = crate::scenario(json!({
+                        "seed": seed,
+                        "p1": { "hand": hand, "backrow": backrow },
+                        "p2": { "hand": ["core-005"] },
+                    }));
+                    if !luck {
+                        crate::give_lucky(&mut s, DREAM, 1);
+                    }
+                    assert_eq!(luck_of(s.state(), P1), i32::from(luck));
+                    s.play(DREAM, json!({}));
+                    let flagged = s.hand(P1).into_iter().filter(|card| card.radiant).map(|card| card.id);
+                    (flagged.collect(), s.state().rng_cursor)
+                };
+                for radiant in [false, true] {
+                    for seed in &SEEDS {
+                        let (luck, lucky) = (cast(seed, radiant, true), cast(seed, radiant, false));
+                        assert_eq!(luck, lucky, "{seed}, radiant {radiant}");
+                    }
+                }
             });
         }
 
@@ -309,6 +344,32 @@ mod tests {
 
                 s.expect_in_zone(&dream, "graveyard");
                 s.expect_events(json!(["burned"]));
+            }
+
+            /// R77, §5.1: fused onto a Unit, the Dream's end-of-turn text runs on the field, and it
+            /// returns the card only on the turn it was played: a Unit already on the field stays.
+            #[test]
+            fn r77_fused_onto_a_unit_already_on_the_field_it_returns_nothing_at_the_end_of_the_turn() {
+                const BODY: &str = "stand-in (1) 2/2";
+                let mut s = crate::scenario(json!({
+                    "seed": "dream-fused",
+                    "p1": { "hand": [DREAM, "core-005"], "field": [BODY], "library": ["core-005"] },
+                    "p2": { "hand": ["core-005"], "library": ["core-005"] },
+                }));
+                let body = s.card(BODY).clone();
+                let dream = s.card(DREAM).clone();
+                let mut rng = Rng::new(&s.state().seed.clone(), s.state().rng_cursor);
+                let mut events: Vec<GameEvent> = Vec::new();
+                let fused = {
+                    let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+                    let args = json!({ "ingredients": [dream], "target": body });
+                    subsystems::fuse::fuse(&mut sink, json_as(args))
+                };
+                assert_eq!(fused.map(|card| card.id), Some(body.id.clone()));
+
+                s.end_turn();
+
+                s.expect_in_zone(&body, "field");
             }
         }
 

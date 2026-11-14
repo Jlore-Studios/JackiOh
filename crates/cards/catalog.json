@@ -8482,17 +8482,6 @@
     "refs": [
       "classicplus-019-5"
     ],
-    "params": [
-      {
-        "key": "chance",
-        "base": 100,
-        "radiant": 100,
-        "better": "up",
-        "step": 10,
-        "min": 1,
-        "max": 100
-      }
-    ],
     "loc": 37,
     "base": {
       "attack": 4,
@@ -8502,7 +8491,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Can't attack\nEnd of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser goes Berserk."
+      "text": "Can't attack\nEnd of turn: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser goes Berserk."
     },
     "radiant": {
       "attack": 8,
@@ -8512,7 +8501,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Can't attack\nEnd of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser gets the kill instead."
+      "text": "Can't attack\nEnd of turn: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser gets the kill instead."
     }
   },
   "classicplus-019-3": {
@@ -16801,11 +16790,11 @@
     "loc": 29,
     "base": {
       "keywords": [],
-      "text": "Aura: Your Spells have Cloaked.\nCry: Draw {draw}."
+      "text": "Aura: Your Spells have Cloaked. Spells you set face-down resolve when set and when revealed.\nCry: Draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Your Spells have Cloaked. Spells you reveal have Echo +{echo}.\nCry: Draw {draw}."
+      "text": "Aura: Your Spells have Cloaked. Spells you set face-down resolve when set and when revealed. Spells you reveal have Echo +{echo}.\nCry: Draw {draw}."
     },
     "tags": []
   },
@@ -30246,11 +30235,11 @@
     "loc": 48,
     "base": {
       "keywords": [],
-      "text": "Cry: Look at your opponent's hand and choose a card secretly.\nReveals if your opponent plays the chosen card before any of the other cards you saw. Take control of that card instead. Otherwise, Tribute this Trap."
+      "text": "When played face down: Look at your opponent's hand and choose a card secretly.\nReveals if your opponent plays the chosen card before any of the other cards you saw. Take control of that card instead. Otherwise, Tribute this Trap."
     },
     "radiant": {
       "keywords": [],
-      "text": "Cry: Look at your opponent's hand and choose a card secretly.\nReveals if your opponent plays the chosen card. Take control of that card instead."
+      "text": "When played face down: Look at your opponent's hand and choose a card secretly.\nReveals if your opponent plays the chosen card. Take control of that card instead."
     }
   },
   "stinkyscapeplus-032": {

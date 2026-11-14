@@ -149,6 +149,89 @@ fn a_hidden_card_that_was_buffed_is_not_given_a_size_and_a_public_buff_is_named_
 }
 
 #[test]
+fn a_buff_that_lowers_a_units_stats_says_it_got_the_signed_change_with_a_real_minus() {
+    let view = board(json!([
+        { "type": "buffed", "instanceId": "u1", "attack": -5, "health": 0 },
+        { "type": "buffed", "instanceId": "u1", "attack": -2, "health": -2 },
+        { "type": "buffed", "instanceId": "u1", "attack": 2, "health": -1 },
+        { "type": "buffed", "instanceId": "u1", "attack": 0, "health": -3 },
+    ]));
+    let lines = english(&view);
+    let n = name_of("core-032");
+    assert_eq!(
+        lines,
+        vec![
+            format!("{n} got \u{2212}5/+0"),
+            format!("{n} got \u{2212}2/\u{2212}2"),
+            format!("{n} got +2/\u{2212}1"),
+            format!("{n} got +0/\u{2212}3"),
+        ]
+    );
+    let joined = lines.join("\n");
+    assert!(!joined.contains("+-") && !joined.contains("+\u{2212}"));
+}
+
+#[test]
+fn a_gain_still_reads_gained_with_plus_signs_and_a_hidden_buff_stays_hidden() {
+    let view = board(json!([
+        { "type": "buffed", "instanceId": "u1", "attack": 2, "health": 1 },
+        { "type": "buffed", "instanceId": "u1", "attack": 0, "health": 3 },
+        { "type": "buffed", "instanceId": "hidden", "attack": 0, "health": 0 },
+    ]));
+    let n = name_of("core-032");
+    assert_eq!(
+        english(&view),
+        vec![
+            format!("{n} gained +2/+1"),
+            format!("{n} gained +0/+3"),
+            "A hidden card was buffed".to_string(),
+        ]
+    );
+}
+
+#[test]
+fn a_reader_of_chinese_reads_a_loss_in_chinese() {
+    let view = board(json!([
+        { "type": "buffed", "instanceId": "u1", "attack": -5, "health": 0 },
+    ]));
+    assert_eq!(
+        said(&view, Locale::ZhCn),
+        vec![format!("{}的属性变化：\u{2212}5/+0", chinese_name_of("core-032"))]
+    );
+}
+
+#[test]
+fn a_real_secure_system_sends_a_negative_buff_through_the_engine_to_the_log() {
+    use jackioh_engine::PlayerId::P1;
+    use jackioh_engine::testkit::scenario;
+
+    ready();
+    let mut s = scenario(json!({
+        "seed": "r3865",
+        "active": "p1",
+        "p1": {
+            "hand": ["stinkyscape-118"],
+            "field": ["core-011"],
+            "mana": 10,
+            "library": ["core-005", "core-005", "core-005", "core-005"],
+        },
+        "p2": { "hand": ["core-005"], "library": ["core-005", "core-005", "core-005", "core-005"] },
+    }));
+    let unit = s.unit_at(P1, 1);
+    let attack = s.stats(&unit).attack;
+    assert!(attack > 0);
+
+    s.play("stinkyscape-118", json!({}));
+
+    let lines = english(&s.view(P1));
+    assert!(
+        lines.contains(&format!("{} got \u{2212}{attack}/+0", name_of("core-011"))),
+        "{lines:?}"
+    );
+    assert!(!lines.join("\n").contains("+-"));
+}
+
+#[test]
 fn an_opponents_trap_the_viewer_may_not_read_fires_as_a_face_down_trap() {
     let view = bare(json!([
         { "type": "trapFired", "instanceId": "hidden", "defId": "hidden", "controller": "p2", "row": "backrow", "lane": 2 }

@@ -345,5 +345,40 @@ mod tests {
             s.end_turn();
             assert_eq!(s.card(hand.as_str()).cost_mod, 0);
         }
+
+        /// R767000, R2657002: a game folded under v0.5.9f or before ran the deck trigger too, so a Float
+        /// lowers the deck copy's cost beside the hand copy's, on either face.
+        #[test]
+        fn r767000_r2657002_under_v0_5_9f_a_float_lowers_its_cost_in_the_deck_too() {
+            crate::under_kept("core-029", super::super::script_v0_5_9f(), || {
+                for radiant in [false, true] {
+                    let (mut s, hand, deck) = floating(3, radiant);
+                    s.end_turn();
+                    assert_eq!(s.card(hand.as_str()).cost_mod, -3, "radiant {radiant}");
+                    assert_eq!(s.card(deck.as_str()).cost_mod, -3, "radiant {radiant}");
+                }
+            });
+        }
+
+        /// R767000, R1563000: a game folded under v0.4.0f or before had no Float discount, and the card
+        /// still made the hand Radiant, and on its Radiant face the permanents too.
+        #[test]
+        fn r767000_r1563000_under_v0_4_0f_a_float_lowers_nothing_and_it_still_makes_cards_radiant() {
+            crate::under_kept("core-029", super::super::script_v0_4_0f(), || {
+                for radiant in [false, true] {
+                    let (mut s, hand, _) = floating(3, radiant);
+                    s.end_turn();
+                    assert_eq!(s.card(hand.as_str()).cost_mod, 0, "radiant {radiant}");
+
+                    let mut s = giga(6, radiant);
+                    let hand_ids = other_hand_ids(s.state());
+                    let permanents: Vec<String> =
+                        permanents_of(s.state()).into_iter().map(|card| card.id).collect();
+                    s.play("core-029", json!({}));
+                    assert!(hand_ids.iter().all(|id| s.card(id).radiant), "radiant {radiant}");
+                    assert!(permanents.iter().all(|id| s.card(id).radiant == radiant), "radiant {radiant}");
+                }
+            });
+        }
     }
 }

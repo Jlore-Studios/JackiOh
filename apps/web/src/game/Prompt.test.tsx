@@ -171,9 +171,7 @@ describe("prompt-driven pickers answer the open PendingChoice (§10.6)", () => {
 // The five R81 kinds: no prompt is open, and each submits a `play`.
 
 describe("R81 inline pickers submit a play with no PendingChoice at all", () => {
-  it("zone shows a grid of the zones the candidates name", () => {
-    const onAction = vi.fn();
-    const onInteraction = vi.fn();
+  it("R3864000 zone opens no grid: the hint and Cancel, and the board answers (PromptBoardZone.test.tsx)", () => {
     const view = viewWith();
     const interaction = playing([
       { type: "play", instanceId: "h1", zone: { row: "units", lane: 3 } },
@@ -185,23 +183,15 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
         view={view}
         interaction={interaction}
         legal={interaction.stage === "playing" ? interaction.candidates : []}
-        onAction={onAction}
-        onInteraction={onInteraction}
+        onAction={vi.fn()}
+        onInteraction={vi.fn()}
       />,
     );
 
     expect(view.pending).toBeNull();
     expect(kindOfModal()).toBe("zone");
-    expect(optionTestids()).toEqual(["prompt-option-units:3", "prompt-option-units:5"]);
-
-    fireEvent.click(screen.getByTestId("prompt-option-units:5"));
-
-    expect(onAction).toHaveBeenCalledWith({
-      type: "play",
-      instanceId: "h1",
-      zone: { row: "units", lane: 5 },
-    });
-    expect(onInteraction).toHaveBeenCalledWith(IDLE);
+    expect(optionTestids()).toEqual([]);
+    expect(document.querySelector(".prompt-zones")).toBeNull();
   });
 
   it("tribute is a multi-select gated by min and max", () => {
@@ -524,7 +514,7 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
       cleanup();
     }
 
-    // An engine prompt keeps its sheet on every layout, so it has no hint.
+    // R3864000: an engine zone prompt of one zone is a board pick too, so it has the hint.
     render(
       <Prompt
         view={viewWith({
@@ -533,7 +523,7 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
         onAction={vi.fn()}
       />,
     );
-    expect(hint()).toBeNull();
+    expect(hint()).toBe("Tap a highlighted zone on the board.");
   });
 
   it("renders nothing when the play in flight needs no further choice", () => {
@@ -555,7 +545,6 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
 
 describe("the R81 kinds render the same picker when the engine does open them as prompts", () => {
   const cases: [string, Parameters<typeof pendingFor>[1], string][] = [
-    ["zone", [{ key: "zone:p1:units:1", label: "Unit lane 1", player: "p1", row: "units", lane: 1 }], "prompt-option-zone:p1:units:1"],
     ["tribute", [{ key: "instance:u1", label: "One", instanceId: "u1" }], "prompt-option-instance:u1"],
     ["direction", [{ key: "mode:left", label: "left" }, { key: "mode:right", label: "right" }], "direction-left"],
     // More X values than the card picker takes keep the stepper; a few are cards (#492, below).
@@ -577,18 +566,19 @@ describe("the R81 kinds render the same picker when the engine does open them as
     });
   }
 
+  it("R3864000 zone is a board pick: its data-prompt-kind and no list", () => {
+    const view = viewWith({
+      pending: pendingFor("zone", [{ key: "zone:p1:units:1", label: "Unit lane 1", player: "p1", row: "units", lane: 1 }]),
+    });
+    render(<Prompt view={view} onAction={vi.fn()} />);
+    expect(kindOfModal()).toBe("zone");
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-board-pick", "true");
+    expect(optionTestids()).toEqual([]);
+  });
+
   // Each of the five answers its PendingChoice: the picker's answer is the `answer` action, with the
   // selection the engine stored for the option picked (`selectionForOption`).
   const answers: [string, Parameters<typeof pendingFor>[1], () => void, ActionBody][] = [
-    [
-      "zone",
-      [
-        { key: "zone:p1:units:1", label: "Unit lane 1", player: "p1", row: "units", lane: 1 },
-        { key: "zone:p1:units:2", label: "Unit lane 2", player: "p1", row: "units", lane: 2 },
-      ],
-      () => fireEvent.click(screen.getByTestId("prompt-option-zone:p1:units:2")),
-      { type: "answer", choiceId: "ch1", selection: [{ pick: "zone", player: "p1", row: "units", lane: 2 }] },
-    ],
     [
       "tribute",
       [
@@ -1266,13 +1256,7 @@ describe("R2211000 a read-only prompt, a replay's", () => {
         { prompt: "482 − 197 = ?", streak: 1 },
       ),
     ],
-    [
-      "cell",
-      pendingFor("cell", [
-        { key: "zone:p2:units:2", label: "p2 units 2", player: "p2", row: "units", lane: 2 },
-        { key: "none", label: "Done" },
-      ]),
-    ],
+    // R3864000: a one-zone `cell` is a board pick: no peek, the title stays (PromptBoardZone.test.tsx).
     [
       "reward",
       pendingFor(

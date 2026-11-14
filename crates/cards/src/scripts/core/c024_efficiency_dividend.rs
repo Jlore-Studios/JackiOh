@@ -418,5 +418,50 @@ mod tests {
             assert!(!crate::can_upgrade_number(&s, DIVIDEND, "damage"));
             assert!(!crate::can_degrade_number(&s, DIVIDEND, "damage"));
         }
+
+        /// R77: p1's hand Dividend fused onto `kept`, the Unit on the field the fusion keeps.
+        fn fuse_onto(s: &mut Scenario, kept: &CardInstance) {
+            let dividend = s.card(DIVIDEND).clone();
+            let mut rng = Rng::new(&s.state().seed.clone(), s.state().rng_cursor);
+            let mut events: Vec<GameEvent> = Vec::new();
+            let fused = {
+                let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+                let args = json!({ "ingredients": [dividend], "target": kept });
+                subsystems::fuse::fuse(&mut sink, json_as(args))
+            };
+            assert_eq!(fused.map(|card| card.id), Some(kept.id.clone()));
+        }
+
+        /// R77, §5.1: fused onto a Unit, "End of turn: returns to hand" runs on the field, on the turn
+        /// the card was played alone: a Unit already on the field stays.
+        #[test]
+        fn r77_fused_onto_a_unit_already_on_the_field_it_returns_nothing_at_the_end_of_the_turn() {
+            crate::register_all();
+            let mut s = dividend_in("dividend-fused", false, None);
+            let body = s.card(TIMMY).clone();
+            fuse_onto(&mut s, &body);
+
+            s.end_turn();
+
+            s.expect_in_zone(&body, "field");
+        }
+
+        /// R77, §5.1: fused onto a Unit played this turn, it returns that Unit to its hand at the end of
+        /// the turn, with no graveyard flag to read (R155 flags a Spell alone).
+        #[test]
+        fn r77_fused_onto_a_unit_played_this_turn_it_returns_it_to_hand_at_the_end_of_the_turn() {
+            let mut s = crate::scenario(json!({
+                "seed": "dividend-fused-played",
+                "p1": { "hand": [DIVIDEND, TIMMY, FILLER] },
+                "p2": { "hand": [FILLER], "field": ["core-008"] },
+            }));
+            s.play(TIMMY, json!({}));
+            let body = s.card(TIMMY).clone();
+            fuse_onto(&mut s, &body);
+
+            s.end_turn();
+
+            s.expect_in_zone(&body, "hand");
+        }
     }
 }

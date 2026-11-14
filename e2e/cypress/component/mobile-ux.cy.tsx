@@ -774,21 +774,23 @@ describe("B44 a play's board pick on a phone held upright", () => {
     localStorage.clear();
   });
 
-  it("B44 with drag to play on, a tap on a playable card opens a slim bar that covers neither that card nor the hand", () => {
+  it("B44 a tap on a playable card opens a slim hint pill with no zone list, clear of the field", () => {
     cy.viewport(390, 844);
     mountGame(tapView(), TAP_LEGAL);
 
     cy.get(ts("hand-card-t1")).click();
     cy.get(ts("zone-you-units-2")).should("have.attr", "data-glow", "ready");
-    cy.get(ts("prompt-modal")).should("have.attr", "data-prompt-source", "play").find(".prompt-zones").should("not.be.visible");
+    cy.get(ts("prompt-modal")).should("have.attr", "data-prompt-source", "play").find(".prompt-zones").should("not.exist");
     settledBox("hand-card-t1", () => undefined);
     cy.get(ts("prompt-modal")).should(($bar) => {
       const bar = rectOf($bar[0] as Element);
+      const field = rectOf($bar[0]?.ownerDocument.querySelector(`${BOARD} .field`) as Element);
       const hand = rectOf($bar[0]?.ownerDocument.querySelector(ts("hand-you")) as Element);
       const lifted = rectOf($bar[0]?.ownerDocument.querySelector(ts("hand-card-t1")) as Element);
-      expect(bar.height, "a bar, not a sheet").to.be.at.most(72);
+      expect(bar.height, "a pill, not a sheet").to.be.at.most(72);
       expect(bar.top, "below the hand").to.be.at.least(hand.bottom - EPSILON);
       expect(bar.top, "below the card that was tapped").to.be.at.least(lifted.bottom - EPSILON);
+      expect(bar.top, "below the field").to.be.at.least(field.bottom - EPSILON);
     });
     cy.get(ts("prompt-modal"))
       .find(".prompt-board-hint")
@@ -803,7 +805,7 @@ describe("B44 a play's board pick on a phone held upright", () => {
     cy.get(ts("prompt-modal")).should("not.exist");
   });
 
-  it("B44 with drag to play off, the same tap opens the full picker sheet", () => {
+  it("B44 with drag to play off, the same tap opens the same hint pill, no list", () => {
     cy.viewport(390, 844);
     cy.then(() => {
       writeSettings({ dragToPlay: false });
@@ -811,8 +813,8 @@ describe("B44 a play's board pick on a phone held upright", () => {
     mountGame(tapView(), TAP_LEGAL);
 
     cy.get(ts("hand-card-t1")).click();
-    cy.get(ts("prompt-modal")).find(".prompt-zones").should("be.visible");
-    cy.get(ts("prompt-modal")).find(".prompt-board-hint").should("not.be.visible");
+    cy.get(ts("prompt-modal")).find(".prompt-zones").should("not.exist");
+    cy.get(ts("prompt-modal")).find(".prompt-board-hint").should("be.visible");
   });
 });
 

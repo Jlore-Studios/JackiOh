@@ -19,6 +19,8 @@
 // focus as it changes (`choiceHover`), and the backs outline the one the opponent's is on.
 // #2757: a Choose one of lanes (`lane-<n>`, Showdown) is no picker at all: LanePick.tsx lights each lane on the
 // board and R514's board answer picks it, so the modal is only its hint and a play's Cancel.
+// #3864: a choice of one board zone (a play's zone, a `cell` prompt, a declared zone target) is the same: a
+// hint and Cancel, answered on the board (`Picker.boardOnly`); only an option naming no cell stays a button.
 
 import {
   Fragment,
@@ -225,6 +227,8 @@ type Picker = {
   boardKeys?: ReadonlyMap<string, string>;
   /** #2757: a Choose one of lanes, its lanes in board order: drawn on the board (`LanePick.tsx`), answered by `boardKeys`. */
   lanes?: readonly LaneChoice[];
+  /** #3864: a choice of one board zone, answered on the board alone (`BoardHint`, plus any option naming no cell). */
+  boardOnly?: true;
   /** R1184000: a sequence question's right answers so far, as the view carries them. */
   streak?: number;
   /** R1563006: the sequence question's choice id, which its countdown keys on. */
@@ -491,13 +495,15 @@ function pickerForPending(
     picker.lanes = answers.lanes;
     picker.boardKeys = answers.boardKeys;
   }
-  if (pending.kind === "cell") {
+  if (pending.kind === "cell" || pending.kind === "zone") {
     picker.boardKeys = new Map(
       pending.options.flatMap((option) => {
         const where = option.row === undefined ? null : selectionTestid(view, selectionForOption(option));
         return where === null ? [] : [[where, option.key] as const];
       }),
     );
+    // #3864: one cell or zone is a tap on the board; a choice of several, or of none, keeps its list (and Confirm).
+    if (pending.min >= 1 && pending.max <= 1) picker.boardOnly = true;
   }
   return picker;
 }
@@ -588,6 +594,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       return {
         ...common,
         chrome: "zone",
+        boardOnly: true,
         title: t("Choose a zone"),
         items: zonesInBoardOrder(need.zones).map((zone) => ({
           key: zoneKey(zone),
@@ -672,8 +679,12 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       // R81: a declared `target` pick whose selections are all hand cards is rendered with the hand
       // chrome, so the player sees the pick where the cards are; e2e spec 02 asserts it.
       const inHand = isHandPick(need, view);
+      // #3864: one zone, or none, out of zones alone is a tap on the board. Cards and heroes keep their list.
+      const zonesOnly =
+        !inHand && need.min >= 1 && need.max <= 1 && need.selections.length > 0 && need.selections.every((s) => s.pick === "zone");
       return {
         ...common,
+        ...(zonesOnly ? { boardOnly: true as const } : {}),
         chrome: inHand ? "hand" : "target",
         title: inHand ? t("Choose a card in your hand") : t("Choose a target"),
         items: need.selections.map((selection) => {
@@ -1084,8 +1095,9 @@ function useAskLabel(picker: Picker): string {
 }
 
 /**
- * A board pick's hint. On an upright phone with drag to play on, a play's zone, target and Tribute picks fold
- * to a bar with no options (prompt.css): the answers glow on the board and are tapped there, and this says so.
+ * A board pick's hint. A choice of one board zone (#3864) is this hint and Cancel at any width. On an upright
+ * phone with drag to play on, a play's target and Tribute picks also fold to a bar with no options
+ * (prompt.css): the answers glow on the board and are tapped there, and this says so.
  */
 const BOARD_HINTS: Partial<Record<PromptKind, string>> = {
   zone: "Tap a highlighted zone on the board.",
@@ -1305,9 +1317,18 @@ function PromptModal(props: {
 
   const pressed = (key: string): boolean => selected.includes(key);
 
+  const live = useRef({ pick, keys: picker.boardKeys, lanes: picker.lanes, boardOnly: picker.boardOnly === true });
+  live.current = { pick, keys: picker.boardKeys, lanes: picker.lanes, boardOnly: picker.boardOnly === true };
   useEffect(() => {
     if (readOnly || !FOCUS_ON_OPEN.has(picker.chrome)) return;
-    const first = panel.current?.querySelector<HTMLElement>('[data-testid^="prompt-option-"]:not([aria-disabled="true"])');
+    // #3864: a board-only cell prompt has no list to focus: its first lit zone takes the focus, and Tab walks the rest.
+    const litZone = live.current.boardOnly
+      ? [...(live.current.keys?.keys() ?? [])]
+          .map((id) => document.querySelector<HTMLElement>(`[data-testid="${id}"]`))
+          .find((element) => element !== null && element !== undefined)
+      : undefined;
+    const first =
+      litZone ?? panel.current?.querySelector<HTMLElement>('[data-testid^="prompt-option-"]:not([aria-disabled="true"])');
     first?.focus({ preventScroll: true });
   }, [picker.chrome, readOnly]);
 
@@ -1315,8 +1336,6 @@ function PromptModal(props: {
   // cell (#2757: or a lane pick's lane, from any of its four zones). The board's own handler builds nothing from a zone while a prompt is open, so this is the
   // one answer. maxi-tail: document listeners for the one board-answered prompt kind; move them into
   // `onClickTarget` (actions.ts) if target prompts are ever answered on the board too.
-  const live = useRef({ pick, keys: picker.boardKeys, lanes: picker.lanes });
-  live.current = { pick, keys: picker.boardKeys, lanes: picker.lanes };
   const answersOnBoard = picker.boardKeys !== undefined && !readOnly;
   useEffect(() => {
     if (!answersOnBoard) return;
@@ -1537,6 +1556,7 @@ function PromptModal(props: {
       );
     }
 
+    // #3864: a one-zone choice never gets here (`boardOnly`); this is the list of a choice of several zones, or of none.
     if (picker.chrome === "zone" || picker.chrome === "cell") {
       const groups = [...new Set(items.map((item) => item.group ?? ""))];
       return (
@@ -1601,12 +1621,17 @@ function PromptModal(props: {
     );
   }
 
-  // #2757: a lane pick is its lanes on the board: no panel, list, count or Confirm. R514's effect above answers
-  // it. The modal is the hint (a replay's title, where nothing answers) and a play's Cancel.
-  if (picker.lanes !== undefined) {
+  // #2757: a lane pick is its lanes on the board, and #3864: so is a choice of one board zone: no panel, list,
+  // count or Confirm. A play's zone and a zone target answer through the board's own click (`onClickTarget`),
+  // a lane pick and a cell prompt through R514's effect above. The modal is the hint (a replay's title, where
+  // nothing answers), any option naming no cell ("Done": nowhere on the board to tap for it) and a play's Cancel.
+  if (picker.lanes !== undefined || picker.boardOnly === true) {
+    const named = new Set(picker.boardKeys?.values() ?? []);
+    const extras = picker.lanes === undefined && picker.boardKeys !== undefined ? picker.items.filter((item) => !named.has(item.key)) : [];
+    const cancels = !readOnly && props.onCancel !== undefined;
     return (
       <div className="prompt-scrim" data-testid="prompt-scrim" data-read-only={readOnly ? "true" : undefined}>
-        <LanePick lanes={picker.lanes} readOnly={readOnly} />
+        {picker.lanes === undefined ? null : <LanePick lanes={picker.lanes} readOnly={readOnly} />}
         <div
           ref={panel}
           className={`prompt prompt-${picker.chrome}`}
@@ -1616,7 +1641,8 @@ function PromptModal(props: {
           data-animating={props.animating}
           data-board-testids={props.boardTestids.join(" ")}
           data-read-only={readOnly ? "true" : undefined}
-          data-lane-pick="true"
+          data-lane-pick={picker.lanes === undefined ? undefined : "true"}
+          data-board-pick="true"
           role="dialog"
           aria-modal={false}
           aria-label={askLabel}
@@ -1624,13 +1650,18 @@ function PromptModal(props: {
           {readOnly ? (
             <PickerTitle title={picker.title} sourceDefId={picker.sourceDefId} sourceCard={picker.sourceCard} />
           ) : (
-            <BoardHint chrome={picker.chrome} lane />
+            <BoardHint chrome={picker.lanes === undefined ? "zone" : picker.chrome} lane={picker.lanes !== undefined} />
           )}
-          {readOnly || props.onCancel === undefined ? null : (
+          {extras.length === 0 && !cancels ? null : (
             <div className="prompt-actions">
-              <button type="button" data-testid="prompt-cancel" onClick={props.onCancel}>
-                {t("Cancel")}
-              </button>
+              {extras.map((item) => (
+                <PlainOption key={item.key} item={item} pressed={pressed(item.key)} readOnly={readOnly} onPick={() => pick(item.key)} />
+              ))}
+              {cancels ? (
+                <button type="button" data-testid="prompt-cancel" onClick={props.onCancel}>
+                  {t("Cancel")}
+                </button>
+              ) : null}
             </div>
           )}
         </div>
