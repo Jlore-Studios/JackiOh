@@ -17766,14 +17766,11 @@
     "what": "revise #3902 on agy"
   },
   "last_sweep": {
-    "at": "2026-11-14T11:08:02Z",
+    "at": "2026-11-14T11:26:44Z",
     "notes": [
-      "delivered review #3902 on agy (run 43587462407): reviewed",
-      "delivered revise #3884 on claude-1 (run 43583645292): approved",
-      "delivered build #3917 on claude-8 (run 43583589447): built",
-      "started review #3918 on claude-8 (run 43588932488)",
+      "started revise #3902 on agy (run 43590176404)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "pruned 4 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18479,7 +18476,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-14T11:08:02Z",
+  "loop_tick": "2026-11-14T11:26:44Z",
   "machine_disk": {
     "issue": null,
     "reading": {
