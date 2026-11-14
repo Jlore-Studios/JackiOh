@@ -17297,8 +17297,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-1",
-      "owner_since": "2026-11-14T03:29:45Z",
-      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
+      "owner_since": "2026-11-14T07:27:42Z",
+      "owner_why": "its turn came (it waited 120 minutes for #3896, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-14T03:24:27Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -17672,7 +17672,7 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3899,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner_gave_up": {
         "at": "2026-11-14T05:35:13Z",
@@ -17681,7 +17681,7 @@
       },
       "pending_request": false,
       "provider": "claude-1",
-      "queued_at": "2026-11-14T05:06:48Z",
+      "queued_at": "2026-11-14T07:27:42Z",
       "run_id": "43560011135",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -17702,9 +17702,17 @@
         "provider": "claude-1",
         "run": "43551918031"
       },
+      "source": "conflict",
       "started_at": "2026-11-14T05:07:45Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "opus",
+        "provider": "claude-1",
+        "since": "2026-11-14T07:27:42Z",
+        "until": "2026-11-14T07:57:42Z",
+        "why": "it waited 120 minutes for #3896, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
+      },
       "votes": {
         "approvals": [
           "claude"
@@ -17724,17 +17732,6 @@
         "tiers": {
           "claude": "strong"
         }
-      },
-      "waiting_turn": {
-        "behind": [
-          3896
-        ],
-        "ends": "2026-11-14T07:26:58Z",
-        "from_run": "43560011135",
-        "head": "4a6725a84389bc1f9965d1bca775439a0e3fb54f",
-        "model": "opus",
-        "provider": "claude-1",
-        "since": "2026-11-14T05:26:58Z"
       }
     },
     "3907": {
