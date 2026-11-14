@@ -17213,7 +17213,7 @@
       }
     },
     "3902": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
@@ -17244,7 +17244,7 @@
       "issue": 3729,
       "kind": "revise",
       "last_findings": [],
-      "live": "reviewing",
+      "live": "fixing-ci",
       "merge_owner": "claude-4",
       "pending_request": false,
       "provider": "claude-4",
@@ -17254,7 +17254,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "",
-      "run_id": "43590932207",
+      "run_id": "pending:0d2bd100-1794657330",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17275,7 +17275,7 @@
         "run": "43581723527"
       },
       "source": "ci",
-      "started_at": "2026-11-14T11:37:39Z",
+      "started_at": "2026-11-14T11:55:58Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -17678,9 +17678,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-14T11:47:47Z",
+    "at": "2026-11-14T11:55:58Z",
     "url": "",
-    "what": "revise #3880 on claude-6"
+    "what": "revise #3902 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-14T11:44:27Z",
