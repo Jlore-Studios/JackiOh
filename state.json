@@ -13986,19 +13986,20 @@
       "merge_owner": "claude-4",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-7",
       "question": "",
       "queued_at": "2026-11-14T14:08:55Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "43603441185",
+      "run_id": "pending:613554e0-1794671947",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 260,
-      "started_at": "2026-11-14T14:10:04Z",
+      "started_at": "2026-11-14T15:59:22Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -14469,9 +14470,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-14T14:24:01Z",
+    "at": "2026-11-14T15:59:22Z",
     "url": "",
-    "what": "plan #3920 on claude-3"
+    "what": "spot-check #3902 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-14T15:52:05Z",
@@ -33881,7 +33882,15 @@
         "n": 260,
         "pr": 3902,
         "queued_at": "2026-11-14T15:55:58Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "run_id": "pending:613554e0-1794671947",
         "sha": "88b1df6f055036f89432a83f6c2d32350fb36242",
+        "started_at": "2026-11-14T15:59:22Z",
         "status": "queued",
         "title": "Patch: a Play hub that explains every way to play, and one inbox for everything waiting on you",
         "tries": 0
