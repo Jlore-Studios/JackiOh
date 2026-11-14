@@ -16751,6 +16751,7 @@
         "question": "How should the Radiant world + Right-house defender + Warp Disruptor II loop be ended, so that fuzz seed 16 (and the perf corpus) settle?",
         "why": "it follows the precedent already set for the same Warp Disruptor II loop (R2197004, REVIEW A3.6's demand that a self-recursive Death have a terminator) and changes only the looping chain, leaving the Radiant world and Warp Disruptor II as they are"
       },
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
