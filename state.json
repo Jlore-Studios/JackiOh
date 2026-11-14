@@ -16950,6 +16950,7 @@
       "ci_on_head": true,
       "ci_run_id": 43523005338,
       "ci_sha": "b214998ce6bfb9b609b9ffc4e500c1adfd55be51",
+      "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
