@@ -394,14 +394,18 @@ mod tests {
         }
 
         #[test]
-        fn r841_level_6_does_nothing() {
+        fn r841_levels_6_to_9_do_nothing_and_win_nothing() {
             crate::register_all();
-            let mut s = board(BoardOptions { times_played: Some(6), ..Default::default() });
-            let health = s.state().players.p1.hero.health;
-            let hand = s.hand(P1).len();
-            s.play(SUMMIT, json!({}));
-            assert_eq!(s.state().players.p1.hero.health, health);
-            assert_eq!(s.hand(P1).len(), hand - 1);
+            for level in 6..=9 {
+                let mut s = board(BoardOptions { times_played: Some(level), ..Default::default() });
+                let health = s.state().players.p1.hero.health;
+                let hand = s.hand(P1).len();
+                s.play(SUMMIT, json!({}));
+                assert_eq!(s.state().players.p1.hero.health, health);
+                assert_eq!(s.hand(P1).len(), hand - 1);
+                // Only Ascent 10 wins the game.
+                assert_eq!(s.state().result, None, "Ascent {level}");
+            }
         }
 
         #[test]
@@ -543,6 +547,34 @@ mod tests {
             assert_eq!(preview_of(&s, SUMMIT), Some(0));
             let s = board(BoardOptions { times_played: Some(4), ..Default::default() });
             assert_eq!(preview_of(&s, SUMMIT), Some(4));
+        }
+
+        #[test]
+        fn r640_both_faces_are_quickdraw_so_setup_deals_it_in_the_opening_hand() {
+            crate::register_all();
+            // R640: `setup` deals every library card carrying `quickdraw` into the opening hand.
+            let scripts = script();
+            assert_eq!(scripts.base.flags().quickdraw, Some(true));
+            assert_eq!(scripts.radiant.flags().quickdraw, Some(true));
+            // Plain Core cards, then the Summit: one copy of each (§2.6 L3).
+            let others = [
+                "core-002", "core-005", "core-006", "core-008", "core-011", "core-012", "core-013",
+                "core-015", "core-016", "core-019", "core-020", "core-025", "core-026", "core-032",
+                "core-036", "core-043", "core-044", "core-053", "core-055", "core-001", "core-003",
+                "core-004", "core-009", "core-010",
+            ];
+            let mut deck: Vec<String> = others.iter().map(|id| id.to_string()).collect();
+            deck.push(SUMMIT.to_string());
+            let created = create_game(&CreateGameOptions {
+                seed: "summit-quickdraw".to_string(),
+                decks: (deck.clone(), deck),
+                ..CreateGameOptions::default()
+            });
+            let state = begin_game(&created).state;
+            for side in [&state.players.p1, &state.players.p2] {
+                assert!(side.hand.iter().any(|card| card.def_id == SUMMIT));
+                assert!(side.library.iter().all(|card| card.def_id != SUMMIT));
+            }
         }
 
         #[test]

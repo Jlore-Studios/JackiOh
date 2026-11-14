@@ -513,31 +513,24 @@
     },
     {
       "type": "attack",
-      "attackerId": "c22",
+      "attackerId": "c1",
       "targetId": "hero-p2",
       "playerId": "p1",
       "nonce": "a38"
     },
     {
       "type": "attack",
-      "attackerId": "c1",
+      "attackerId": "c20",
       "targetId": "hero-p2",
       "playerId": "p1",
       "nonce": "a39"
     },
     {
       "type": "attack",
-      "attackerId": "c20",
-      "targetId": "hero-p2",
-      "playerId": "p1",
-      "nonce": "a40"
-    },
-    {
-      "type": "attack",
       "attackerId": "c14",
       "targetId": "hero-p2",
       "playerId": "p1",
-      "nonce": "a41"
+      "nonce": "a40"
     }
   ]
 }

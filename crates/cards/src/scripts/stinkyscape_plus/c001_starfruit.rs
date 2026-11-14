@@ -130,4 +130,39 @@ mod tests {
         s.expect_stats(&second, json!({ "health": 3 }));
         s.expect_stats(&third, json!({ "health": 4 }));
     }
+
+    /// R399: C #57 Echo has the text of the last Spell played, here a Starfruit on `radiant`'s face,
+    /// keywords and all, though Echo itself prints none of them: p1 plays the Starfruit at lane 1, then
+    /// Echo at lane 4 of p2's four armoured Units.
+    fn echoed(radiant: bool) -> Scenario {
+        const ECHO: &str = "classic-057"; // Echo: has the text of the last Spell either player played.
+        let mut s = scenario(json!({
+            "p1": { "hand": [{ "def": ID, "radiant": radiant }, ECHO, FILLER], "health": 10 },
+            "p2": { "hand": [FILLER], "field": [ARMORED, ARMORED, ARMORED, ARMORED] },
+        }));
+        let (first, fourth) = (s.unit_at(P2, 1), s.unit_at(P2, 4));
+        s.play(ID, json!({ "targets": pick::instance(&first) }));
+        s.play(ECHO, json!({ "targets": pick::instance(&fourth) }));
+        s
+    }
+
+    #[test]
+    fn r399_r346_an_echo_with_its_text_pierces_the_armour_of_the_pick_and_its_neighbour() {
+        let mut s = echoed(false);
+        let (third, fourth) = (s.unit_at(P2, 3), s.unit_at(P2, 4));
+
+        s.expect_stats(&third, json!({ "health": 3 }));
+        s.expect_stats(&fourth, json!({ "health": 3 }));
+    }
+
+    #[test]
+    fn r399_r85_an_echo_with_the_radiant_text_heals_for_every_hit() {
+        let mut s = echoed(true);
+        let (third, fourth) = (s.unit_at(P2, 3), s.unit_at(P2, 4));
+
+        s.expect_stats(&third, json!({ "health": 2 }));
+        s.expect_stats(&fourth, json!({ "health": 2 }));
+        // The Starfruit's two hits and Echo's two, 2 each, every one healing p1.
+        s.expect_health(P1, 10 + 4 * 2);
+    }
 }

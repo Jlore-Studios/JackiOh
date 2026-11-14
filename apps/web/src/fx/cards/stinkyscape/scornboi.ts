@@ -21,7 +21,7 @@
 // on the board, and the glint only to the Units it shows face up. No cue names a card. He stands at his card
 // while the view shows it, else in the zone his `summoned` named, else at his hero.
 
-import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
+import type { GameEvent, PlayerId, PlayerView, UnitView } from "@jackioh/shared";
 
 import { HIDDEN_ID, locateInstance } from "../../../game/animations.ts";
 import { sideOf, testid } from "../../../game/contract.ts";
@@ -73,6 +73,7 @@ function boardCard(view: PlayerView, instanceId: string): string | null {
  * the view after the action still shows (with none, every one not exiled yet).
  */
 function spared(p: CardFxPlan, play: FxPlay): FxAnchor[] {
+  // Stryker disable next-line ArrayDeclaration: no Unit's id is Stryker's "Stryker was here", and the fallback is never read either: his sweep keys on an `exiled`, a hit, so its play's hits always hold it
   const gone = new Set(play.hits ?? []);
   const next = p.env.next;
   return (["you", "opponent"] as const).flatMap((side) =>
@@ -112,7 +113,12 @@ export const scornSweep: CardRecipe = (event, p, play) => {
   const at = tid(target);
   const leave = frac(T.beamAt, p.D);
   const land = leave + frac(T.beamFor, p.D);
-  const cues: FxCue[] = [motifShot(spec, "beam", standing(p, play), at, leave, land - leave), ringCue(p.D, "void", at, land), motifBurst(spec, at, "ring", land, TUNING.hatch, "void")];
+  const cues: FxCue[] = [
+    // Stryker disable next-line StringLiteral: motifShot draws a bolt for "bolt" and a beam for any other motion, so "" draws the same beam
+    motifShot(spec, "beam", standing(p, play), at, leave, land - leave),
+    ringCue(p.D, "void", at, land),
+    motifBurst(spec, at, "ring", land, TUNING.hatch, "void"),
+  ];
   // The first exile of his play: the spared glint.
   if ((play.seen.exiled ?? 0) - p.entry.events.filter((candidate) => candidate.type === "exiled").length === 0 && p.entry.events.find((candidate) => candidate.type === "exiled") === event) {
     const glint = frac(T.glintAt, p.D);
@@ -124,6 +130,6 @@ export const scornSweep: CardRecipe = (event, p, play) => {
 /** R3407000: his aura exiles the first face-up Unit of the other side (one exile stands for each, so the run fits its ceiling). */
 export function scornSweepFixture(view: PlayerView, _instanceId: string, player: PlayerId): GameEvent[] {
   const enemy = otherPlayer(player) === view.viewer ? view.you : view.opponent;
-  const foe = enemy.units.find((unit) => unit !== null && unit.defId !== HIDDEN_ID);
-  return foe === undefined || foe === null ? [] : [{ type: "exiled", instanceId: foe.instanceId, defId: foe.defId, owner: foe.owner }];
+  const foe = enemy.units.find((unit): unit is UnitView => unit !== null && unit.defId !== HIDDEN_ID);
+  return foe === undefined ? [] : [{ type: "exiled", instanceId: foe.instanceId, defId: foe.defId, owner: foe.owner }];
 }

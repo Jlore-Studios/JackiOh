@@ -642,7 +642,7 @@ pub async fn act(app: &Arc<App>, req: Req) -> ApiResult {
     // R3214000: both badges move; §9.13: whoever the move passed to is told.
     let (a, b) = (loaded.daily.players.0.clone(), loaded.daily.players.1.clone());
     push_social(app, &[&a, &b]).await;
-    crate::daily::notify::after_move(app, &[&a, &b], now).await;
+    crate::daily::notify::after_move(app, &[&a, &b]);
     // R677, CLAUDE.md rule 7: the seat the caller plays after the action, which a Glitch's swap
     // changes, so the answer is never the view of the seat the opponent now plays.
     let seat = loaded.seat_of(&me).unwrap_or(seat);

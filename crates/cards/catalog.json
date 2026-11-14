@@ -16801,11 +16801,11 @@
     "loc": 29,
     "base": {
       "keywords": [],
-      "text": "Aura: Your Spells have Cloaked.\nCry: Draw {draw}."
+      "text": "Aura: Your Spells have Cloaked. Spells you set face-down resolve when set and when revealed.\nCry: Draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Your Spells have Cloaked. Spells you reveal have Echo +{echo}.\nCry: Draw {draw}."
+      "text": "Aura: Your Spells have Cloaked. Spells you set face-down resolve when set and when revealed. Spells you reveal have Echo +{echo}.\nCry: Draw {draw}."
     },
     "tags": []
   },
@@ -30246,11 +30246,11 @@
     "loc": 48,
     "base": {
       "keywords": [],
-      "text": "Cry: Look at your opponent's hand and choose a card secretly.\nReveals if your opponent plays the chosen card before any of the other cards you saw. Take control of that card instead. Otherwise, Tribute this Trap."
+      "text": "When played face down: Look at your opponent's hand and choose a card secretly.\nReveals if your opponent plays the chosen card before any of the other cards you saw. Take control of that card instead. Otherwise, Tribute this Trap."
     },
     "radiant": {
       "keywords": [],
-      "text": "Cry: Look at your opponent's hand and choose a card secretly.\nReveals if your opponent plays the chosen card. Take control of that card instead."
+      "text": "When played face down: Look at your opponent's hand and choose a card secretly.\nReveals if your opponent plays the chosen card. Take control of that card instead."
     }
   },
   "stinkyscapeplus-032": {

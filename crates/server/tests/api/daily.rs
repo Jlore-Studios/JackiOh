@@ -6,6 +6,7 @@
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
+use std::time::Duration;
 
 use axum::Router;
 use axum::extract::State;
@@ -16,6 +17,7 @@ use indexmap::IndexMap;
 use ring::rand::{SecureRandom, SystemRandom};
 use ring::{agreement, signature};
 use serde_json::{Value, json};
+use tokio::sync::Semaphore;
 
 use jackioh_engine::testkit::{clear_overrides, register_catalog, register_shipped};
 use jackioh_engine::{CardCost, CardDefs, ShippedCatalog};
@@ -23,7 +25,7 @@ use jackioh_server::api::catalog::{LoadCatalogOptions, load_catalog};
 use jackioh_server::api::queue::try_pair;
 use jackioh_server::app::App;
 use jackioh_server::config::{DAILY_MAX_ACTIVE_GAMES, MS_PER_DAY};
-use jackioh_server::db::store::{MatchStatus, PushSubRow};
+use jackioh_server::db::store::{DailyNotifyRow, MatchStatus, PushSubRow};
 
 use crate::support::deps::{
     TestAppOptions, add_user, call, json_request, send as send_request, test_app_with,
@@ -280,6 +282,68 @@ async fn fake_service(status: StatusCode) -> (String, Arc<StdMutex<Vec<(String, 
     let address = listener.local_addr().expect("its address");
     tokio::spawn(async move { axum::serve(listener, router).await });
     (format!("http://{address}"), seen)
+}
+
+/// What a fake service saw: each request's path, headers and body.
+type Requests = Arc<StdMutex<Vec<(String, HeaderMap, Vec<u8>)>>>;
+
+/// A fake HTTP service that records every request, then holds it until the returned gate is opened
+/// (`add_permits(1)`: each request gives the permit back, so one opens it for good), and answers
+/// `status` on every path.
+async fn held_service(status: StatusCode) -> (String, Requests, Arc<Semaphore>) {
+    type Held = (Requests, StatusCode, Arc<Semaphore>);
+    async fn take(
+        State((seen, status, gate)): State<Held>,
+        uri: Uri,
+        headers: HeaderMap,
+        body: axum::body::Bytes,
+    ) -> StatusCode {
+        seen.lock()
+            .expect("the requests")
+            .push((uri.path().to_string(), headers, body.to_vec()));
+        let _held = gate.acquire().await;
+        status
+    }
+    let seen: Requests = Arc::new(StdMutex::new(Vec::new()));
+    let gate = Arc::new(Semaphore::new(0));
+    let router = Router::new()
+        .route("/{*rest}", axum::routing::post(take))
+        .with_state((Arc::clone(&seen), status, Arc::clone(&gate)));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("a local port");
+    let address = listener.local_addr().expect("its address");
+    tokio::spawn(async move { axum::serve(listener, router).await });
+    (format!("http://{address}"), seen, gate)
+}
+
+/// How long a move may take to answer while a mail or push service holds its answer: under the 10 s a
+/// send waits (`PLAYER_EMAIL_TIMEOUT_MS`, `PUSH_TIMEOUT_MS`), so a move that waited on a send fails it.
+const ANSWERS_WITHIN: Duration = Duration::from_secs(5);
+
+/// `future` (a request), failing the test when it waits on a held service instead of answering.
+async fn answers_at_once<T>(what: &str, future: impl std::future::Future<Output = T>) -> T {
+    tokio::time::timeout(ANSWERS_WITHIN, future)
+        .await
+        .unwrap_or_else(|_| panic!("{what} waited on the held service"))
+}
+
+/// Polls `done` until it holds, which the notifier's task makes happen after a move has answered.
+async fn eventually(what: &str, mut done: impl FnMut() -> bool) {
+    for _ in 0..1000 {
+        if done() {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    panic!("never: {what}");
+}
+
+/// Waits for the notifier's task to decide for every profile a move queued (§9.13).
+async fn notifier_idle(app: &Arc<App>) {
+    tokio::time::timeout(Duration::from_secs(20), app.daily.notifier.idle())
+        .await
+        .expect("the notifier goes idle");
 }
 
 // The game: played over HTTPS, rebuilt from the store between moves
@@ -1356,6 +1420,7 @@ async fn a_push_subscription_answered_410_is_deleted() {
 
     // The game starts waiting on Ada: both devices are pushed, and the one gone is deleted.
     daily_game(&app, &bo, &ada, 1).await;
+    notifier_idle(&app).await;
     let pushed: Vec<(String, HeaderMap)> = seen
         .lock()
         .expect("the requests")
@@ -1490,9 +1555,168 @@ async fn a_push_follows_no_redirect() {
     // The game starts waiting on Ada: her device is pushed, and the redirect it is answered is not
     // followed. A redirect is no 404 or 410, so the subscription stays.
     daily_game(&app, &bo, &ada, 1).await;
+    notifier_idle(&app).await;
     assert_eq!(hops.load(Ordering::SeqCst), 1, "the push service is asked");
     assert!(seen.lock().expect("the requests").is_empty());
     assert_eq!(push_endpoints(&app, &ada).await, vec![hop]);
+}
+
+/// Adds a push subscription of `who`'s at `endpoint`.
+async fn subscribe(app: &Arc<App>, who: &Account, n: i64, endpoint: String) {
+    let (p256dh, auth) = browser_keys();
+    let mut tx = app.db.begin(None).await.expect("a transaction");
+    tx.push_subs_add(&PushSubRow {
+        id: format!("sub-{n}"),
+        profile_id: who.id.clone(),
+        endpoint,
+        p256dh,
+        auth,
+        created_at: n,
+    })
+    .await
+    .expect("a subscription");
+    tx.commit().await.expect("commit");
+}
+
+/// `who`'s notification settings and when each channel last went.
+async fn notify_row(app: &Arc<App>, who: &Account) -> DailyNotifyRow {
+    let mut tx = app.db.begin(None).await.expect("a transaction");
+    let row = tx.daily_notify_get(&who.id).await.expect("a read");
+    tx.commit().await.expect("commit");
+    row
+}
+
+/// §9.13: a move is answered before its email goes, and the email still arrives.
+#[tokio::test]
+async fn a_move_is_answered_before_its_email_goes_and_the_email_still_arrives() {
+    let (mail_api, seen, gate) = held_service(StatusCode::OK).await;
+    let app = app_with(
+        None,
+        TestAppOptions {
+            mail_api: Some(format!("{mail_api}/emails")),
+            ..TestAppOptions::default()
+        },
+    )
+    .await;
+    let ada = person(&app, 1, "Ada").await;
+    let bo = person(&app, 2, "Bo").await;
+    befriend(&app, &ada, &bo).await;
+
+    // The accept answers with the first mail held; both players owe a mulligan, so both are mailed.
+    let match_id = answers_at_once("the accept", daily_game(&app, &ada, &bo, 1)).await;
+    eventually("the first mail reached the service", || {
+        seen.lock().expect("the requests").len() == 1
+    })
+    .await;
+    // The mulligans and the turn's end each answer while that mail is still held, and the one task
+    // sends one mail at a time.
+    answers_at_once("the moves", async {
+        past_the_mulligan(&app, [&ada, &bo], &match_id).await;
+        one_move(&app, [&ada, &bo], &match_id, 1).await;
+    })
+    .await;
+    assert_eq!(seen.lock().expect("the requests").len(), 1);
+
+    gate.add_permits(1);
+    notifier_idle(&app).await;
+    // Bo's mail, held since the mulligan when both owed a move, and the mail of whoever holds the move
+    // now: the task reaches Ada only after the turn has passed, so it decides for the state it finds,
+    // and she is mailed only when the move passed to her. The 6 hour gap holds back any repeat.
+    let (holding, _) = holder(&app, [&ada, &bo], &match_id).await;
+    let mailed = [&bo, holding];
+    let mut expected: Vec<String> = mailed
+        .iter()
+        .map(|who| format!("{}@example.test", who.id))
+        .collect();
+    expected.sort();
+    expected.dedup();
+    let mut to: Vec<String> = seen
+        .lock()
+        .expect("the requests")
+        .iter()
+        .map(|(_, _, body)| {
+            let mail: Value = serde_json::from_slice(body).expect("a JSON mail");
+            mail["to"][0].as_str().unwrap_or_default().to_string()
+        })
+        .collect();
+    to.sort();
+    assert_eq!(to, expected);
+    for who in mailed {
+        assert!(notify_row(&app, who).await.last_email_at.is_some());
+    }
+}
+
+/// §9.13: with the push service failing, the player a game waits on is not held up by it on any
+/// action: each used to push inline, since a failed push is never marked.
+#[tokio::test]
+async fn a_failing_push_service_never_holds_the_actions_of_the_player_it_waits_on() {
+    let (push_api, seen, gate) = held_service(StatusCode::INTERNAL_SERVER_ERROR).await;
+    let app = app_with(
+        None,
+        TestAppOptions {
+            push_keys: Some(vapid_pair()),
+            ..TestAppOptions::default()
+        },
+    )
+    .await;
+    let ada = person(&app, 1, "Ada").await;
+    let bo = person(&app, 2, "Bo").await;
+    befriend(&app, &ada, &bo).await;
+    subscribe(&app, &ada, 1, format!("{push_api}/push/1/ada")).await;
+
+    // The first game starts waiting on Ada, and her push is held. Each start answers at once.
+    answers_at_once("the first accept", daily_game(&app, &bo, &ada, 1)).await;
+    eventually("Ada's push reached the service", || {
+        seen.lock().expect("the requests").len() == 1
+    })
+    .await;
+    let second = answers_at_once("the second accept", daily_game(&app, &bo, &ada, 3)).await;
+    let third = answers_at_once("the third accept", daily_game(&app, &bo, &ada, 7)).await;
+    // The first game still waits on Ada, so her push stays due at each action in the others.
+    answers_at_once("Ada's first action", one_move(&app, [&ada, &bo], &second, 1)).await;
+    answers_at_once("Ada's second action", one_move(&app, [&ada, &bo], &third, 2)).await;
+
+    gate.add_permits(1);
+    notifier_idle(&app).await;
+    // A push the service refused is not marked, so the sweep sends it.
+    assert_eq!(notify_row(&app, &ada).await.last_push_at, None);
+}
+
+/// §9.13: a profile waiting for the notifier's task is not queued again, so two moves before the
+/// task reaches it decide for it once.
+#[tokio::test]
+async fn a_profile_queued_twice_before_the_task_reaches_it_is_notified_once() {
+    let (push_api, seen, gate) = held_service(StatusCode::INTERNAL_SERVER_ERROR).await;
+    let app = app_with(
+        None,
+        TestAppOptions {
+            push_keys: Some(vapid_pair()),
+            ..TestAppOptions::default()
+        },
+    )
+    .await;
+    let ada = person(&app, 1, "Ada").await;
+    let bo = person(&app, 2, "Bo").await;
+    befriend(&app, &ada, &bo).await;
+    subscribe(&app, &ada, 1, format!("{push_api}/push/1/ada")).await;
+
+    // The accept queues Ada and Bo; the task takes Ada, whose push is held, and Bo waits.
+    let first = answers_at_once("the first accept", daily_game(&app, &bo, &ada, 1)).await;
+    eventually("Ada's push reached the service", || {
+        seen.lock().expect("the requests").len() == 1
+    })
+    .await;
+    // Bo's move queues Ada again (the task has taken her off) and not Bo, who still waits; the
+    // second game's start and its move queue neither.
+    answers_at_once("Bo's move", one_move(&app, [&bo, &ada], &first, 1)).await;
+    let second = answers_at_once("the second accept", daily_game(&app, &bo, &ada, 3)).await;
+    answers_at_once("Bo's second move", one_move(&app, [&bo, &ada], &second, 2)).await;
+
+    gate.add_permits(1);
+    notifier_idle(&app).await;
+    // The push that was held and one decision for Ada, which still has games waiting on her; each of
+    // the four moves queueing her afresh would have made four.
+    assert_eq!(seen.lock().expect("the requests").len(), 2);
 }
 
 #[tokio::test]

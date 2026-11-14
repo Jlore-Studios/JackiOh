@@ -85,7 +85,8 @@ R1563005); the greedy baseline's simulation does not.
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
 it can see on the field, then its attacks, a kill priced at what it removes (a unit with Reborn unspent
 less the body it comes back as, #1796, and less what its Death leaves behind, R2424000; plus a Trample
-attacker's excess on the hero and a Lifesteal attacker's heal, #1820), and once none is worth making the switches to Defense Position its own
+attacker's excess on the hero and a Lifesteal attacker's heal, #1820, which its hit on the hero counts
+too, #3858), and once none is worth making the switches to Defense Position its own
 evaluation prefers) on every determinization, and plays the first action of the best mean. When none
 of the lines `shortlist_lines` takes for the reply hands the turn over with an effect of the seat's own
 waiting that the root did not hold (a countdown, a next-turn reward), the best line that does is replied
@@ -191,7 +192,8 @@ could otherwise open the same lethal at every decision. Each line tries its move
 (its target, or with Cleave a neighbour, #1821) at an even trade or better by the opponent model's own
 read (`reply.rs`'s `trade_value`, #1779), these three ranked together by that model's values, best
 first, ties in that order (#2825): a kill by `trade_value`, a hit on the hero by `face_value`
-(`reply_face_value` of what it deals through the hero's Armor), and every hit on the hero first while
+(`reply_face_value` of what it deals through the hero's Armor, plus a Lifesteal attacker's heal of it
+unless the hit is lethal, #3858), and every hit on the hero first while
 the seat's ready attacks reach the face together (`ready_gap`); then the plays round-robin, answers, the
 Trades of Tradable hand cards (R1838003: on a determinized copy, so the card one would draw never steers it), the
 buys and sales at the Marketplace (R1853004), the other attacks, position switches and End Turn; the root expands its first `root_branching` and each deeper step
