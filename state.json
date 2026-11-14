@@ -17742,11 +17742,13 @@
     "what": "plan #3907 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-14T04:57:34Z",
+    "at": "2026-11-14T05:25:41Z",
     "notes": [
-      "started revise #3884 on claude-1 (run 43559279552)",
+      "#3907 needs a plan",
+      "delivered review #3906 on claude-1 (run 43560011135): approved",
+      "started plan #3907 on claude-4 (run 43561652127)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "pruned 7 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18452,7 +18454,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-14T04:57:34Z",
+  "loop_tick": "2026-11-14T05:25:41Z",
   "machine_disk": {
     "issue": null,
     "reading": {
