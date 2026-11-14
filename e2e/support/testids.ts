@@ -755,9 +755,30 @@ export const TOGETHER_ERROR = "together-error";
 /** One per friend: `data-profile-id`, `data-status` (`offline|online|inMatch`), `data-watchable`. */
 export const TOGETHER_FRIEND_ROW = "together-friend-row";
 export const TOGETHER_NO_FRIENDS = "together-no-friends";
+/** R3732002: a row's Challenge or Daily, the one primary button of an online or an offline friend: `data-action` (`challenge|daily`). */
 export const TOGETHER_CHALLENGE = "together-challenge";
+/** R3732002: the primary Watch of a friend in a game that can be watched, and Join of one with a lobby open (`data-route`). */
 export const TOGETHER_WATCH = "together-watch";
+export const TOGETHER_JOIN = "together-join";
+/** R3732002: a row's ⋯ menu button, and its items: Chat, Daily challenge, Invite to lobby, Watch, Remove, Block. */
+export const TOGETHER_MENU = "together-menu";
+export const TOGETHER_MENU_UNREAD = "together-menu-unread";
 export const TOGETHER_CHAT_OPEN = "together-chat-open";
+export const TOGETHER_DAILY = "together-daily";
+export const TOGETHER_LOBBY = "together-lobby";
+export const TOGETHER_WATCH_ITEM = "together-watch-item";
+/** R3732002: the search over the list, a group (`data-group`: `requests|inGame|online|offline`) and Offline's toggle. */
+export const TOGETHER_SEARCH = "together-search";
+export const TOGETHER_GROUP = "together-group";
+export const TOGETHER_OFFLINE_TOGGLE = "together-offline-toggle";
+/** R3732000: Recently played's rows (`data-profile-id`) and each one's Add friend. */
+export const TOGETHER_RECENT_ROW = "together-recent-row";
+export const TOGETHER_RECENT_ADD = "together-recent-add";
+
+/** R3732002: a tab of the Friends page, by section (`friends|requests|recent|blocked|shared`). */
+export function togetherTabId(section: string): string {
+  return `together-tab-${section}`;
+}
 export const TOGETHER_UNREAD = "together-unread";
 export const TOGETHER_REMOVE = "together-remove";
 export const TOGETHER_BLOCK = "together-block";
