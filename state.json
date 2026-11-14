@@ -37009,7 +37009,9 @@
           "provider": "claude-6"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-14T08:12:50Z",
         "every": 5,
+        "findings": 0,
         "head": "90f8779b8b181cc2d45e3039108d4575e6b9d995",
         "issue": 3731,
         "merged_at": "2026-11-14T08:00:14Z",
@@ -37022,12 +37024,13 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:19831e05-1794643474",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/43574096114",
         "sha": "9889adcf9b1b1c8a39fb6494f1d4d9040b8bf476",
         "started_at": "2026-11-14T08:05:00Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: 2v2 between people in a private lobby: Duos with team B played by two players instead of the AI team",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 255
