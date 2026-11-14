@@ -19175,6 +19175,10 @@
         {
           "at": "2026-11-14T05:35:28Z",
           "minutes": 22.0
+        },
+        {
+          "at": "2026-11-14T11:09:12Z",
+          "minutes": 7.0
         }
       ],
       "tokens_spent": [
@@ -19527,17 +19531,24 @@
           "cost": 0.0,
           "input": 222000,
           "output": 9918
+        },
+        {
+          "at": "2026-11-14T11:09:12Z",
+          "cache": 0,
+          "cost": 0.0,
+          "input": 352435,
+          "output": 25201
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-14T10:22:39Z",
-          "utilization": 0.0
+          "resets_at": "2026-11-14T15:59:08Z",
+          "utilization": 0.1
         },
-        "observed_at": "2026-11-14T05:35:28Z",
+        "observed_at": "2026-11-14T11:09:12Z",
         "seven_day": {
           "resets_at": "2026-11-21T00:22:39Z",
-          "utilization": 0.14
+          "utilization": 0.15
         },
         "status": "allowed"
       }
@@ -37434,6 +37445,12 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-14T10:59:01Z,agy,usage-command,before,43587462407,0,2026-11-14T15:59:01Z,11,2026-11-21T00:22:39Z,allowed,100,100,",
+      "2026-11-14T11:06:07Z,agy,usage-command,after,43587462407,10,2026-11-14T15:59:08Z,15,2026-11-21T00:22:39Z,allowed,100,100,"
+    ]
   },
   "version": 1
 }
