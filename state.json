@@ -14121,7 +14121,7 @@
       "started_at": "2026-11-14T14:10:04Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [],
         "builder": "claude",
