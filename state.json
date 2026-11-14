@@ -14317,23 +14317,25 @@
     },
     "3921": {
       "action": "plan",
+      "archived": {
+        "at": "2026-11-14T13:42:55Z",
+        "branch": "",
+        "head": "",
+        "pr": null,
+        "why": "close issue #3921 by hand (GitHub, Jlore-Studios/JackiOh). The one test that is red on promotion #3919, `history::tests::r3538002_past_ids_are_play_alike_runs_before_the_reference`, was already fixed on `main` by #3918 (8c533c6456, for #3917). #3918 merged at 11:46 UTC, 30 minutes after #3919 shipped from `main` at 72dc211abd. Closing #3921 lets the watch in `.github/workflows/patches-ship.yml` ship again from the newer `main`. If no new promotion opens within about an hour, run Actions \u2192 patches ship \u2192 Run workflow on `main`. The bot has no code to change and cannot close an issue or start a workflow."
+      },
       "asks": [],
-      "in_lane": true,
-      "kind": "build",
       "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-14T13:28:11Z",
-      "owner_why": "it plans it",
-      "pending_request": false,
+      "owner": "",
       "planned_at": "2026-11-14T13:42:46Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
       "provider": "claude-3",
+      "question": "close issue #3921 by hand (GitHub, Jlore-Studios/JackiOh). The one test that is red on promotion #3919, `history::tests::r3538002_past_ids_are_play_alike_runs_before_the_reference`, was already fixed on `main` by #3918 (8c533c6456, for #3917). #3918 merged at 11:46 UTC, 30 minutes after #3919 shipped from `main` at 72dc211abd. Closing #3921 lets the watch in `.github/workflows/patches-ship.yml` ship again from the newer `main`. If no new promotion opens within about an hour, run Actions \u2192 patches ship \u2192 Run workflow on `main`. The bot has no code to change and cannot close an issue or start a workflow.",
       "run_id": "43599911042",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-14T13:28:11Z",
-      "stop_requested": false,
       "taken_asks": []
     }
   },
