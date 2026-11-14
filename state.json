@@ -14444,6 +14444,8 @@
       "taken_asks": []
     },
     "3922": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-14T13:36:05Z",
@@ -14457,8 +14459,11 @@
         "trail": "- said: Waiting for `cargo jackioh` check commands to finish compiling and executing.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"1331366e-d07d-4e99-9885-9ce026d917bc/task-459\"}\n- said: Waiting for compilation to complete.\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"1331366e-d07d-4e99-9885-9ce026d917bc/task-459\"}\n- said: \n- run_command: ps aux | grep cargo\n- said: \n- run_command: ps -ef --forest | grep -A 5 6963\n- said: \n- schedule: {\"DurationSeconds\": 30, \"Prompt\": \"Check rustc ThinLTO finishing\"}\n- said: Waiting for rustc ThinLTO linking of `cargo-jackioh` to complete.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"1331366e-d07d-4e99-9885-9ce026d917bc/task-459\"}\n- said: Waiting for cargo-jackioh linking to complete.\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"1331366e-d07d-4e99-9885-9ce026d917bc/task-459\"}\n- said: \n- run_command: ps -ef --forest | grep -A 5 6963\n- said: \n- schedule: {\"DurationSeconds\": 45, \"Prompt\": \"Check rustc after 45s\"}\n- said: Waiting for cargo-jackioh to complete compilation.\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"1331366e-d07d-4e99-9885-9ce026d917bc/task-459\"}\n- said: \n- run_command: ps -ef --forest | grep -A 5 6963\n- said: \n- schedule: {\"DurationSeconds\": 60, \"Prompt\": \"Check rustc after 60s\"}\n- said: Waiting for rustc ThinLTO compilation to complete.\n- said: \n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3868 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3868 && git diff\n- said: \n- read_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3868/.bot-notes.md\"}\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3868/.bot-notes.md\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3868 && git status\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: board notices draw in an overlay over the board, not in the control rail's flow\"} --> ## Summary This change moves transient in-game board notices (`action-error`, `attack-reason`, `lethal-hint`, `DrawOfferNotice`, match-gone / read-only, and practice-u\u2026"
       },
       "issue": 3868,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-14T14:09:37Z",
         "from_run": "43600592130",
         "gates": [
           {
@@ -14517,8 +14522,15 @@
         "source": "build",
         "until": "2026-11-14T14:38:14Z"
       },
+      "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-14T14:08:14Z",
+      "run_id": "pending:aeb0d422-1794665361",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "started_at": "2026-11-14T14:09:37Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "gemini",
@@ -14532,9 +14544,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-14T13:36:05Z",
+    "at": "2026-11-14T14:09:37Z",
     "url": "",
-    "what": "build #3868 on agy"
+    "what": "review #3922 on agy"
   },
   "last_sweep": {
     "at": "2026-11-14T14:01:08Z",
