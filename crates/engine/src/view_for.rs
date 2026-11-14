@@ -29,8 +29,9 @@
 //!   - R169: the player modifiers (§10.1 `mods`) travel on both seats as `{ id, label }`.
 //!   - R434: once the game is over the opponent's hand travels in full; the rest stays hidden.
 //!   - R437: a mark (#50's pending steal) rides every view of the card in both seats, a back included.
-//!   - R195, R280, R667, #492, #992, R1844001, R2268000, R849000, R979000, R1571000: what the engine works
-//!     out for a card rides the viewer's own cards only, except `preview` and `sick` (every unit).
+//!   - R195, R280, R667, #492, #992, R1844001, R2268000, R849000, R979000, R1571000, R3821000: what the
+//!     engine works out for a card rides the viewer's own cards only, except `preview` and `sick` (every
+//!     unit).
 //!
 //! Stats are recomputed on read (`layers.unitView`, §10.4), so no stored total reaches the client. The
 //! boundary is SURFACE §4.1, §6.1, §6.4 and §6.6; `VIEW_EVENT_LIMIT` lives in `crate::config`.
@@ -41,7 +42,10 @@ use serde_json::{Map, Value};
 use crate::animated::is_animated;
 use crate::announce::announced_face_down_to;
 use crate::catalog::{find_def, registered_catalog};
-use crate::combat::{ExertionKind, has_exertion_in, is_asleep, why_cannot_declare_in};
+use crate::combat::{
+    ExertionKind, has_exertion_in, is_asleep, position_after_switch, why_cannot_declare_in,
+    why_cannot_switch_in,
+};
 use crate::condition::condition_active;
 use crate::config::{DRAW_OFFER_BLOCK_TURNS, PROMPT_CARD_OPTION_LIMIT, VIEW_EVENT_LIMIT};
 use crate::cost_rules::{cost_rule_text, enchant_next_spell_label};
@@ -947,6 +951,7 @@ fn unit_view_of(
         // R3548001: the field card's blur, if its stamp blurs it for this viewer.
         tipsy_blur: card.tipsy_blur,
         attack_reason: attack_reason_of(state, auras, top, viewer),
+        switch_reason: switch_reason_of(state, auras, top, viewer),
         // R2321000: the counts cards on the field the viewer may read keep on it.
         tallies: crate::preview::tallies_on(state, top, viewer),
     })
@@ -966,6 +971,23 @@ fn attack_reason_of(
         return None;
     }
     why_cannot_declare_in(auras, top).err().map(|error| error.message)
+}
+
+/// R3821000: why the viewer's own unit cannot make its own switch now, in the words `switch_position`
+/// refuses with (`reduce::can_switch` lists the switch by the same call). Gated by `turn_open_to`
+/// alone, not `can_act`, so a unit with no exertion left says it has already acted.
+fn switch_reason_of(
+    state: &GameState,
+    auras: &AuraTable<'_>,
+    top: &CardInstance,
+    viewer: PlayerId,
+) -> Option<String> {
+    if top.controller != viewer || !turn_open_to(state, top) {
+        return None;
+    }
+    why_cannot_switch_in(auras, top, position_after_switch(top), true)
+        .err()
+        .map(|error| error.message)
 }
 
 /// MD-D5, R1121: the yellow a dragged attack paints, the enemy Units an `attack_mods` entry would

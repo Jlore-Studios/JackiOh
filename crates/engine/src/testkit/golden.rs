@@ -113,9 +113,10 @@ pub fn hashed_state_text(state: &GameState) -> String {
 /// (R1956001), a prompt's asking card (`sourceDefId`, `sourceRadiant`, R2646000), the `hookResolving`
 /// markers (R2783000) and the `armorGained` reports (R3857000), an event's `via` (R2783001), the
 /// other seat's count of a card picker's options (`optionCount`, R2739000), the card an ability is
-/// printed on (`printedOn`, R3291000) or the zones of
+/// printed on (`printedOn`, R3291000), the zones of
 /// the viewer's hidden targets (`hiddenTargets`, R3777001, read off `legal_actions`, which `legal_text`
-/// records): each dresses the view and plays no part in the game, as `hash_state`
+/// records) or a unit's switch refusal (`switchReason`, R3821000, read off the state `legal_actions`
+/// reads): each dresses the view and plays no part in the game, as `hash_state`
 /// leaves its `generators` out, so a trace recorded before it was sent replays as it did, and one
 /// recorded on this build replays on the build before it.
 pub fn view_texts(state: &GameState) -> [String; 2] {
@@ -131,6 +132,7 @@ pub fn view_texts(state: &GameState) -> [String; 2] {
         strip_key(&mut value, "optionCount");
         strip_key(&mut value, "printedOn");
         strip_key(&mut value, "hiddenTargets");
+        strip_key(&mut value, "switchReason");
         canonical(&value)
     })
 }
