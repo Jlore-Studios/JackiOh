@@ -21099,3 +21099,6 @@ observed_at,subscription,source,during,run_id,util_5h,resets_5h,util_7d,resets_7
 2026-11-14T11:50:08Z,claude-6,stream,call,43591716921,1,2026-11-14T16:40:00Z,,,allowed,70,,
 2026-11-14T12:08:19Z,claude-6,stream,call,43591716921,2,2026-11-14T16:40:00Z,,,allowed,70,,
 2026-11-14T12:43:06Z,claude-6,stream,call,43591716921,3,2026-11-14T16:40:00Z,,,allowed,70,,
+2026-11-14T13:19:00Z,agy,usage-command,before,43598797997,8,2026-11-14T15:59:08Z,13,2026-11-21T00:22:39Z,allowed,100,100,
+2026-11-14T13:29:06Z,agy,usage-command,call,43598797997,12,2026-11-14T15:59:08Z,15,2026-11-21T00:22:39Z,allowed,100,100,
+2026-11-14T13:33:29Z,agy,usage-command,after,43598797997,15,2026-11-14T15:59:08Z,16,2026-11-21T00:22:39Z,allowed,100,100,
