@@ -19249,6 +19249,10 @@
         {
           "at": "2026-11-14T03:11:35Z",
           "minutes": 12.1
+        },
+        {
+          "at": "2026-11-14T03:51:07Z",
+          "minutes": 24.3
         }
       ],
       "tokens_spent": [
@@ -19580,17 +19584,24 @@
           "cost": 0.0,
           "input": 330153,
           "output": 46056
+        },
+        {
+          "at": "2026-11-14T03:51:07Z",
+          "cache": 0,
+          "cost": 0.0,
+          "input": 621676,
+          "output": 57966
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-14T05:22:39Z",
-          "utilization": 0.11
+          "utilization": 0.23
         },
-        "observed_at": "2026-11-14T03:11:35Z",
+        "observed_at": "2026-11-14T03:51:07Z",
         "seven_day": {
           "resets_at": "2026-11-21T00:22:39Z",
-          "utilization": 0.05
+          "utilization": 0.09
         },
         "status": "allowed"
       }
@@ -37422,7 +37433,11 @@
     "readings": [
       "2026-11-14T03:31:35Z,claude-3,stream,call,43551822957,93,2026-11-14T06:40:00Z,,,allowed_warning,,,",
       "2026-11-14T03:32:35Z,claude-3,stream,call,43551822957,94,2026-11-14T06:40:00Z,,,allowed_warning,,,",
-      "2026-11-14T03:41:36Z,claude-3,stream,call,43551822957,96,2026-11-14T06:40:00Z,,,allowed_warning,,,"
+      "2026-11-14T03:41:36Z,claude-3,stream,call,43551822957,96,2026-11-14T06:40:00Z,,,allowed_warning,,,",
+      "2026-11-14T03:24:19Z,agy,usage-command,before,43551311369,11,2026-11-14T05:22:39Z,5,2026-11-21T00:22:39Z,allowed,100,100,",
+      "2026-11-14T03:34:36Z,agy,usage-command,call,43551311369,17,2026-11-14T05:22:39Z,8,2026-11-21T00:22:39Z,allowed,100,100,",
+      "2026-11-14T03:44:43Z,agy,usage-command,call,43551311369,21,2026-11-14T05:22:39Z,9,2026-11-21T00:22:39Z,allowed,100,100,",
+      "2026-11-14T03:48:55Z,agy,usage-command,after,43551311369,23,2026-11-14T05:22:39Z,9,2026-11-21T00:22:39Z,allowed,100,100,"
     ],
     "runs": [
       "2026-11-14T03:41:58Z,43551822957,claude-3,sonnet+opus,review,3900,medium,approved,,10.6,67,12317,2917478,1.4737,93,96,,,3.3,,none,,1"
