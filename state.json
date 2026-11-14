@@ -16257,17 +16257,25 @@
           "claude"
         ],
         "builder": "claude",
-        "built_by": "claude-1",
+        "built_by": "claude-6",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/engine/src/testkit/golden.rs"
+          ],
+          "from": "5d99bf6c7a7aec790bfa1b827923b7d9e3cd50d4",
+          "main": "fa6d2f2f88116d6a01ff2c53f852dba545166ce1"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-6",
-            "run": "43496760997",
+            "run": "43591716921",
             "tier": "strong"
           }
         ],
-        "sha": "5d99bf6c7a7aec790bfa1b827923b7d9e3cd50d4",
+        "sha": "ee16a95c4a91042109d587e22224260ea962c727",
         "tiers": {
           "claude": "strong"
         }
