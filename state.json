@@ -16717,6 +16717,40 @@
     "3888": {
       "action": "build",
       "asks": [],
+      "decision": {
+        "asked_at": "2026-11-14T02:55:52Z",
+        "assigned": [
+          "jgoetzmann",
+          "MaxGoetzmann"
+        ],
+        "default": 1,
+        "ends": "2026-11-15T02:55:52Z",
+        "hours": 24,
+        "kind": "build",
+        "model": "opus",
+        "options": [
+          {
+            "change": "R2197004's shape for core-003: the defender a Right-house defender's Death summons carries a chain mark for the turn, and its Reborn return keeps it (a carve-out in R78's memory reset for that key, or a mark the reset keeps). A marked defender's Death summons nothing that turn. This needs a new ruling, a core-003 script change with tests, and a --plays core-003 claim in this PR's fragment.",
+            "tradeoff": "It touches only this card's chains, and only where the copy it summons turns Radiant. It does need a small engine exception to R78's memory reset."
+          },
+          {
+            "change": "Amend R3569000 so the Radiant world leaves on its base face a card that an effect summons as 'base' by name. The defender's own terminator then holds again.",
+            "tradeoff": "This changes every explicit 'base' summon under Tears of the Kwzki Tree or Horizon Breaker, not just this card, and needs a new per-instance flag."
+          },
+          {
+            "change": "A numbered cap (a new config constant) on how many defenders one side's Right-house defender Deaths can summon in a turn.",
+            "tradeoff": "R2197004 rejected a numbered cap where a structural bound would do, and the cap's size is arbitrary."
+          },
+          {
+            "change": "Limit Warp Disruptor II: a Unit stops answering arrivals once it has attacked through the disruptor this turn, or a forced attack spends its exertion.",
+            "tradeoff": "This changes Warp Disruptor II in every game (R1849007), well beyond the loop, and the loop can come back with other attackers."
+          }
+        ],
+        "problem": "The issue is built: the zone table, the read marks, the catalog check, the Patch notes diff, the tests, the sweep, the rulings and the patch fragment. Every check passes except one. Fuzz seed 16 (also golden game 16, which the perf corpus plays) now loops forever: the resolution loop never settles and the engine panics.\n\nThis issue did not create the loop. Three existing cards cause it. Under a Radiant world (S+ #156 Horizon Breaker, R3569000), a Radiant Right-house defender (core-003) dies and its Death summons a base Right-house defender. The Radiant world flips that copy Radiant at the next state check, so it has the same Death. A Radiant Warp Disruptor II (S #24) then forces First Strike attacks onto each copy as it arrives, so every copy dies and summons the next. The cards can reach this loop on main too. Seed 16 passes on main only because this rule change moves the rng draws, and this game now gets there. It is the only failure: 199 of the 200 fuzz seeds pass, as do the changed-card wave (100 of 100) and 598 fused pairs.\n\nThe same Warp Disruptor II loop was fixed once before for Trigor, with a structural terminator (R2197004). That fix does not carry over directly. It marks the summoned body in its memory 'this turn', but the defender has Reborn, and the Reborn body comes back with its memory reset (R78), so the chain goes on. Choosing how to end this loop is a card or engine design decision beyond this issue, so I'm asking before I make it.",
+        "provider": "claude-6",
+        "question": "How should the Radiant world + Right-house defender + Warp Disruptor II loop be ended, so that fuzz seed 16 (and the perf corpus) settle?",
+        "why": "it follows the precedent already set for the same Warp Disruptor II loop (R2197004, REVIEW A3.6's demand that a self-recursive Death have a terminator) and changes only the looping chain, leaving the Radiant world and Warp Disruptor II as they are"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -16741,6 +16775,7 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-6",
+      "question": "How should the Radiant world + Right-house defender + Warp Disruptor II loop be ended, so that fuzz seed 16 (and the perf corpus) settle?",
       "queued_at": "2026-11-13T22:20:03Z",
       "requested_by": "jgoetzmann",
       "run_id": "43534217032",
