@@ -1399,25 +1399,34 @@ mod tests {
 
     #[test]
     fn r3538002_past_ids_are_play_alike_runs_before_the_reference() {
-        // Core #13 Jlockeed Shredder-10 played three ways since v0.3.0c: two past versions.
-        let ids = past_ids("core-013", crate::CATALOG_VERSION);
+        // Core #13 Jlockeed Shredder-10 played three ways from v0.3.0c through v0.6.2b: two past
+        // versions before v0.6.2b. The reference is a shipped version, not the build's own, so the
+        // count holds on every history a promotion appends (#3917: Stinkyscape Balance Changes V
+        // changed the card again, a third past version before the build's).
+        let reference = "v0.6.2b";
+        let ids = past_ids("core-013", reference);
         assert_eq!(ids.len(), 2, "{ids:?}");
         assert!(
             ids.windows(2).all(|pair| pair[0] < pair[1]),
             "oldest first: {ids:?}"
         );
-        let now = crate::card_def("core-013");
+        let reference_def = catalog_defs_at(reference)
+            .and_then(|defs| defs.get("core-013"))
+            .expect("v0.6.2b carries Core #13");
         for id in &ids {
             let past = past_def(id).expect("a past definition");
             assert!(past.id == *id, "its id is the past id");
-            assert!(!plays_alike(past, &now), "{id} plays differently from today's");
+            assert!(
+                !plays_alike(past, reference_def),
+                "{id} plays differently from {reference}'s"
+            );
         }
-        // At an older version only the runs before it show, a subset of today's.
+        // At an older version only the runs before it show, a subset of the reference's.
         let then = past_ids("core-013", "v0.4.0");
         assert_eq!(then.len(), 1, "{then:?}");
         assert!(then.iter().all(|id| ids.contains(id)), "{then:?} of {ids:?}");
         // A held card never shipped: no past. Neither has a version the history does not hold.
-        assert!(past_ids("stinkyscapeplus-033", crate::CATALOG_VERSION).is_empty());
+        assert!(past_ids("stinkyscapeplus-033", reference).is_empty());
         assert!(past_ids("core-013", "v0.0.0-unknown").is_empty());
         assert!(past_def("core-013@v0.0.0-unknown").is_none());
     }
