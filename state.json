@@ -12491,9 +12491,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-8",
-      "owner_since": "2026-11-14T06:23:56Z",
-      "owner_why": "its turn came (it waited 120 minutes for #3902, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway), and the lane that approved it resolves it",
+      "owner": "claude-6",
+      "owner_since": "2026-11-14T06:24:24Z",
+      "owner_why": "handed off from `claude-8`: `claude-8` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-13T18:21:04Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -17178,7 +17178,7 @@
       "verdict_rounds": 2
     },
     "3896": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
@@ -17208,15 +17208,15 @@
       "issue": 3731,
       "kind": "revise",
       "last_findings": [],
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-8",
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-6",
       "question": "",
       "queued_at": "2026-11-14T06:23:56Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "43547095438",
+      "run_id": "pending:a7b7a40b-1794637432",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17237,16 +17237,9 @@
         "run": "43547095438"
       },
       "source": "conflict",
-      "started_at": "2026-11-14T02:34:47Z",
+      "started_at": "2026-11-14T06:24:24Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-14T06:23:56Z",
-        "until": "2026-11-14T06:53:56Z",
-        "why": "it waited 120 minutes for #3902, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
-      },
       "verdict_rounds": 2,
       "votes": {
         "approvals": [
@@ -17878,9 +17871,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-14T06:23:40Z",
+    "at": "2026-11-14T06:24:24Z",
     "url": "",
-    "what": "review #3901 on claude-8"
+    "what": "revise #3896 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-14T06:07:06Z",
