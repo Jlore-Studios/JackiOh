@@ -17268,15 +17268,15 @@
       "live": "reviewing",
       "merge_owner": "claude-6",
       "pending_request": false,
-      "provider": "claude-6",
+      "provider": "agy",
       "question": "",
       "queued_at": "2026-11-14T10:53:13Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "43586138203",
-      "runs_on": "ubuntu-latest",
+      "run_id": "pending:997c667f-1794653628",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
       "session": {
         "action": "revise",
@@ -17296,7 +17296,7 @@
         "run": "43581723527"
       },
       "source": "",
-      "started_at": "2026-11-14T10:37:03Z",
+      "started_at": "2026-11-14T10:54:16Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 3,
@@ -17607,9 +17607,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-14T10:37:03Z",
+    "at": "2026-11-14T10:54:16Z",
     "url": "",
-    "what": "review #3902 on claude-6"
+    "what": "review #3902 on agy"
   },
   "last_sweep": {
     "at": "2026-11-14T10:43:39Z",
