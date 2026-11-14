@@ -6,9 +6,7 @@
 import { socketProtocols } from "../../apps/web/src/net/socketProtocols.ts";
 import { apiUrl, bearerHeaders, server, timeouts, type E2EAccount } from "./config.ts";
 
-/** S8's paths; support/config.ts's `routes` predate them. */
-export const TOGETHER_PATH = "/together";
-
+/** S8's path; support/config.ts's `routes` predate it. */
 export function duosPath(matchId: string): string {
   return `/duos/${matchId}`;
 }

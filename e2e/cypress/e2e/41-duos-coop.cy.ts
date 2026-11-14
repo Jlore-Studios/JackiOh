@@ -6,8 +6,8 @@
 // S6's room takes no seed, so the deal is not fixed: every assertion holds for any deal.
 
 import { ROOM_CODE_LENGTH } from "../../../apps/web/src/wire/serverConfig.ts";
-import { accounts, apiUrl, bearerHeaders, timeouts } from "../../support/config.ts";
-import { DuosSocket, TOGETHER_PATH, duosPath, endLiveDuos, type DuosViewLike, type Frame, type PlayerViewLike } from "../../support/duos.ts";
+import { accounts, apiUrl, bearerHeaders, routes, timeouts } from "../../support/config.ts";
+import { DuosSocket, duosPath, endLiveDuos, type DuosViewLike, type Frame, type PlayerViewLike } from "../../support/duos.ts";
 import {
   DUOS_BOARD,
   DUOS_CARD_ACTIONS,
@@ -29,6 +29,7 @@ import {
   LOBBY_COUNTDOWN,
   LOBBY_CREATE,
   LOBBY_DECK_SELECT,
+  LOBBY_PANEL,
   LOBBY_READY,
   LOBBY_SETTINGS,
   LOBBY_START,
@@ -120,8 +121,12 @@ describe("41 duos co-op — two players against the Easy AI", () => {
     endLiveDuos(host, guestAccount);
 
     // B60, R3730000: the host's co-op panel makes a co-op lobby, set to Easy, and the host takes a random deck.
-    cy.visitAs(host, TOGETHER_PATH);
-    cy.get(ts(LOBBY_CREATE), { timeout: timeouts.view }).should("not.be.disabled").click();
+    // R3732002: the co-op panel is on /play, under the duel's, and left the Friends page.
+    cy.visitAs(host, routes.play());
+    cy.get(`${ts(LOBBY_PANEL)}[data-format="coop"]`, { timeout: timeouts.view })
+      .find(ts(LOBBY_CREATE))
+      .should("not.be.disabled")
+      .click();
     cy.location("pathname", { timeout: timeouts.view }).should("match", /^\/lobby\/[^/]+$/);
     cy.get(ts(LOBBY_CODE), { timeout: timeouts.view })
       .invoke("text")

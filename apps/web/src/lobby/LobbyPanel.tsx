@@ -26,7 +26,7 @@ function lobbyWords(lobby: MyLobby): string {
   return lobby.settings.format === "2v2" ? t("2v2") : t("Co-op");
 }
 
-/** The screen a panel stands on: Play's 1v1 or Play together's co-op, which makes 2v2 lobbies too (R3731000). */
+/** The screen a panel stands on: Play's 1v1 or its co-op one (R3732002), which makes 2v2 lobbies too (R3731000). */
 export type LobbyPanelFormat = "duel" | "coop";
 
 export type LobbyPanelProps = {

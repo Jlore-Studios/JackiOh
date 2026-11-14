@@ -150,7 +150,7 @@ for contract reasons rather than rules reasons.
    two fixture accounts, spec 41 a Duos co-op game of those two against the AI team, started from a
    co-op lobby, spec 54 a 1v1 private lobby from Create on `/play` to both players on the board
    (R3730000 to R3730002), and spec 55 a 2v2 lobby of four fixture accounts (`e2e-p1` to `e2e-p4`)
-   from Create on `/together`, through a team switch and the host's move, to each seat on its own
+   from Create on `/play`, through a team switch and the host's move, to each seat on its own
    Duos board and a team's concede with no Play again (R3731000, R3731002, R3731003); the other
    seats of 41 and 55 are `support/duos.ts`'s sockets. The component spec `lobby-screen.cy.tsx`
    shoots the lobby, a 2v2's among them, at each of `MENU_SIZES`. All but the component spec are networked, so the server must be up. Their test ids

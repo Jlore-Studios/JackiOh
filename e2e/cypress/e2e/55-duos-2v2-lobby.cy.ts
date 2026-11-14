@@ -1,5 +1,5 @@
 // #3731 55: a 2v2 private lobby from Create to the board, four people in two teams (SPEC §9.5, §13.9;
-// R3731000, R3731002, R3731003). Cypress drives the host's browser on /together; the other three enter,
+// R3731000, R3731002, R3731003). Cypress drives the host's browser from /play; the other three enter,
 // pick and ready by the lobby's routes, as spec 54's guest does, and two of them open their seats over
 // `/ws/duos` (`support/duos.ts`), as spec 41's guest does. The second person switches team and the host
 // moves the third across, so the teams end as the host and the third against the fourth and the second.
@@ -9,8 +9,8 @@
 // nobody needs a saved one.
 
 import { ROOM_CODE_LENGTH } from "../../../apps/web/src/wire/serverConfig.ts";
-import { accounts, apiUrl, bearerHeaders, timeouts, type E2EAccount } from "../../support/config.ts";
-import { DuosSocket, TOGETHER_PATH, duosPath, endLiveDuos, type Frame } from "../../support/duos.ts";
+import { accounts, apiUrl, bearerHeaders, routes, timeouts, type E2EAccount } from "../../support/config.ts";
+import { DuosSocket, duosPath, endLiveDuos, type Frame } from "../../support/duos.ts";
 import {
   DUOS_BOARD,
   DUOS_CONCEDE,
@@ -23,6 +23,7 @@ import {
   LOBBY_CREATE_2V2,
   LOBBY_DECK_SELECT,
   LOBBY_MOVE,
+  LOBBY_PANEL,
   LOBBY_READY,
   LOBBY_SEAT,
   LOBBY_SETTINGS,
@@ -107,9 +108,12 @@ describe("55 2v2 lobby — four people in two teams from Create to the board", (
     // A run cut short after its Start left the host's team's game live: the host and the third end it.
     endLiveDuos(host, third);
 
-    // R3731000: Play together's co-op panel makes a 2v2 lobby, which has nothing to set.
-    cy.visitAs(host, TOGETHER_PATH);
-    cy.get(ts(LOBBY_CREATE_2V2), { timeout: timeouts.view }).should("not.be.disabled").click();
+    // R3731000: the co-op panel, on /play under the duel's (R3732002), makes a 2v2 lobby, which has nothing to set.
+    cy.visitAs(host, routes.play());
+    cy.get(`${ts(LOBBY_PANEL)}[data-format="coop"]`, { timeout: timeouts.view })
+      .find(ts(LOBBY_CREATE_2V2))
+      .should("not.be.disabled")
+      .click();
     cy.location("pathname", { timeout: timeouts.view }).should("match", /^\/lobby\/[^/]+$/);
     cy.get(ts(LOBBY_CODE), { timeout: timeouts.view })
       .invoke("text")
