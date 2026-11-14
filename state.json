@@ -17338,6 +17338,8 @@
       "taken_asks": []
     },
     "3900": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-14T01:52:04Z",
@@ -17351,8 +17353,11 @@
         "trail": " test first.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887/apps/web/src; python3 - <<'EOF'\\np='stats/CreatedPanel.test.tsx'\\ns=open(p).read()\\nold=''' expect(screen.queryByTestId(statsTestid.createdPanel\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; grep -rn 'export' crates/cards/index.ts 2>/dev/null | head; ls crates/cards | head -20; grep -n '\\\"@jackioh/cards\\\"' -r apps/web/package.json a\u2026\n- said: Now the stats.test.tsx additions.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887/apps/web/src/routes; python3 - <<'EOF'\\np='stats.test.tsx'\\ns=open(p).read()\\ndef rep(old,new):\\n global s\\n assert s.count(old)==1, old\\n s=s.r\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; python3 - <<'EOF'\\np='apps/web/src/routes/stats.test.tsx'\\ns=open(p).read()\\nold=' expect(entry).toHaveTextContent(facesOf(id).base.text.full);\u2026\n- said: Meanwhile, I can run the spec check (it needs the tools binary build, which may compete with the wasm build \u2014 let me check eslint first, which is cheap).\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; timeout 500 pnpm exec eslint apps/web/src/stats apps/web/src/routes/stats.tsx apps/web/src/routes/stats.test.tsx 2>&1 | tail -30\", \"description\u2026\n- Bash: {\"command\": \"tail -3 /tmp/wasm-build.log | cut -c1-200; ls /home/runner/work/_temp/work/item-3887/apps/web/src/wasm/pkg 2>&1 | head -3\", \"description\": \"Check wasm build status\"}\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"^exit \\\" /tmp/wasm-build.log; do sleep 5; done'; tail -3 /tmp/wasm-build.log | cut -c1-200\", \"description\": \"Wait for wasm build\", \"timeout\": 600000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; (pnpm --dir apps/web typecheck 2>&1 | tail -15); git status --short\", \"description\": \"Typecheck the web app\", \"timeout\": 500000}\n- said: Typecheck is clean. Now the tests.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; timeout 580 pnpm --dir apps/web exec vitest run src/routes/stats.test.tsx src/stats/CreatedPanel.test.tsx src/i18n/i18n.test.ts 2>&1 | tail -80\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; timeout 580 pnpm --dir apps/web exec vitest run src/routes/stats.test.tsx src/stats/CreatedPanel.test.tsx -t R3887000 --reporter=verbose 2>&1 |\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; python3 - <<'EOF'\\np='apps/web/src/routes/stats.test.tsx'\\ns=open(p).read()\\ndef rep(old,new):\\n global s\\n assert s.count(old)==1, old\\n s=s.r\u2026\n- said: Now the CSS ratchets and the rest of the web test files that read CSS or testids.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; timeout 580 pnpm --dir apps/web exec vitest run src/typescale.test.ts src/spacing.test.ts src/palette.test.ts src/buttons.test.ts src/breakpoin\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; git fetch -q origin main 2>&1 | tail -1; git rev-parse --verify -q origin/main | head -1; timeout 590 pnpm exec vitest run --project web --chan\u2026\n- tool error: Exit code 143 656a2238acf5ec59f2093aa4d13609437f2611e7 Terminated timeout 590 pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/conve\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; echo \\\"$(date -u +%H:%M) started cargo jackioh spec check (builds tools), then classify\\\" >> .bot-notes.md; timeout 590 cargo jackioh spec chec\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; cargo fmt --check 2>&1 | tail -3; echo \\\"fmt $?\\\"; cargo jackioh catalog check 2>&1 | tail -3; cargo jackioh patches check 2>&1 | tail -3; carg\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; cargo jackioh classify --base origin/main --claims >/dev/null 2>&1; echo \\\"classify exit $?\\\"; tail -3 /tmp/web-changed.log | cut -c1-200\", \"de\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887/apps/web/src; sed -n 156,176p routes/stats.css; grep -rn '^button\\\\b' --include=*.css . | head -5; grep -n 'font: inherit\\\\|font-family: inherit\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887/apps/web/src; sed -n 120,131p index.css; sed -n 36,70p buttons.css\", \"description\": \"Inspect global button styles\"}\n- Skill: {\"skill\": \"ui-walkthrough\"}\n- Bash: {\"command\": \"grep -E 'Test Files|Tests |FAIL|^exit' /tmp/web-changed.log | head; tail -c 300 /tmp/web-changed.log\", \"description\": \"Check changed web tests progress\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; grep -rln 'Show card text\\\\|R3838000' --include=*.md --include=*.ts --include=*.tsx --include=*.json --include=*.sh . 2>/dev/null | grep -v nod\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; grep -n 'R3838000' spec/10-engine-guide.md | cut -c1-600\", \"description\": \"Look at R3838000 mention in spec 10\"}\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"^exit \\\" /tmp/web-changed.log; do sleep 10; done'; grep -E 'Test Files|Tests |FAIL|^exit' /tmp/web-changed.log | head\", \"description\": \"Wait for chan\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; grep -n 'FAIL' -A25 /tmp/web-changed.log | head -50; timeout 300 pnpm --dir apps/web exec vitest run src/together/FriendsButton.test.tsx 2>&1 |\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; git status --short; git diff --stat | tail -3; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## State'); j=s.index('**Goal\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a Plain text button on the Statistics page that shows each card, and the cards it references, as readable text\"} --> ## What changed The Statistics page's Cards tab has a **Plain text** on/off button. With it on, every listed card prints as text instead\u2026"
       },
       "issue": 3887,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-14T03:28:33Z",
         "from_run": "43543102057",
         "gates": [
           {
@@ -17444,7 +17449,11 @@
         "source": "build",
         "until": "2026-11-14T03:55:15Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-14T03:25:15Z",
+      "run_id": "pending:d328da08-1794626888",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17463,6 +17472,9 @@
         "provider": "claude-3",
         "run": "43543102057"
       },
+      "started_at": "2026-11-14T03:28:33Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17612,9 +17624,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-14T03:27:55Z",
+    "at": "2026-11-14T03:28:33Z",
     "url": "",
-    "what": "review #3881 on claude-8"
+    "what": "review #3900 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-14T03:04:05Z",
