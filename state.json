@@ -14355,10 +14355,8 @@
     "what": "build #3868 on agy"
   },
   "last_sweep": {
-    "at": "2026-11-14T13:42:09Z",
-    "notes": [
-      "delivered plan #3921 on claude-3 (run 43599911042): blocked"
-    ],
+    "at": "2026-11-14T13:48:51Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15063,7 +15061,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-14T13:42:09Z",
+  "loop_tick": "2026-11-14T13:48:51Z",
   "machine_disk": {
     "issue": null,
     "reading": {
