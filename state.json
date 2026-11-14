@@ -14488,10 +14488,8 @@
     "what": "plan #3920 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-14T15:45:53Z",
-    "notes": [
-      "#3902: approved and green, so its strikes are cleared"
-    ],
+    "at": "2026-11-14T15:52:05Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15196,7 +15194,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-14T15:45:53Z",
+  "loop_tick": "2026-11-14T15:52:05Z",
   "machine_disk": {
     "issue": null,
     "reading": {
