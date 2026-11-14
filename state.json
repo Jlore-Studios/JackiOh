@@ -37559,6 +37559,9 @@
     "readings": [
       "2026-11-14T06:27:04Z,claude-6,ping,before,43566182444,0,2026-11-14T11:20:00Z,,,allowed,50,,",
       "2026-11-14T07:24:33Z,claude-6,stream,call,43566182444,1,2026-11-14T11:20:00Z,,,allowed,50,,"
+    ],
+    "runs": [
+      "2026-11-14T07:25:16Z,43566182444,claude-6,opus,revise,3896,hard,approved,,0.9,14,2879,542322,0.7012,0,1,,,0.5,claude-8,none,other,1"
     ]
   },
   "version": 1
