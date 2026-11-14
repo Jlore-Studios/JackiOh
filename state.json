@@ -16950,6 +16950,18 @@
       "ci_on_head": true,
       "ci_run_id": 43523005338,
       "ci_sha": "b214998ce6bfb9b609b9ffc4e500c1adfd55be51",
+      "cleared": {
+        "approver": {
+          "family": "claude",
+          "model": "sonnet",
+          "provider": "claude-8",
+          "tier": "medium"
+        },
+        "at": "2026-11-14T01:24:07Z",
+        "built_by": "claude-6",
+        "by": "`claude` (medium)",
+        "sha": "e742ac99094d7e4d1deffcc807a95db4bddad6ec"
+      },
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
@@ -16970,6 +16982,7 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
+      "merge_owner": "claude-8",
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
