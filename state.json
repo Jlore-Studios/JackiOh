@@ -17298,13 +17298,24 @@
       "taken_asks": [],
       "verdict_rounds": 3,
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "gemini"
+        ],
         "builder": "claude",
         "built_by": "claude-6",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "gemini",
+            "provider": "agy",
+            "run": "43587462407",
+            "tier": "medium"
+          }
+        ],
         "sha": "a44297035b17cafc7cf5290742a6f49308adfe84",
-        "tiers": {}
+        "tiers": {
+          "gemini": "medium"
+        }
       }
     },
     "3903": {
