@@ -44,7 +44,7 @@ import DragLayer from "./drag/DragLayer.tsx";
 import OpponentAim from "./aim/OpponentAim.tsx";
 import { useAimEmitter } from "./aim/useAimEmitter.ts";
 import type { DragPlan } from "./drag/model.ts";
-import { IDLE, answerPlaguePlacement, highlightFor, onClickTarget, onControl, type Interaction } from "./actions.ts";
+import { IDLE, answerPlaguePlacement, boardKeyOf, highlightFor, onClickTarget, onControl, type Interaction } from "./actions.ts";
 import { attackOutcomes, hoveredAttack, withOutcomes, type HoveredAttack } from "./attackOutcome.ts";
 import {
   HIDDEN_ID,
@@ -803,7 +803,7 @@ export default function Game({
   // Keyed on the remembered shown key, never `shown` vs `view`: while an animation holds the
   // board back, `shown` is old and `view` is new, and comparing them would drop the selection
   // mid-animation on every animated turn change.
-  const shownKey = `${String(shown.turn)}:${shown.active}:${shown.viewer}`;
+  const shownKey = boardKeyOf(shown);
   if (selectionKey !== shownKey) {
     setSelectionKey(shownKey);
     if (interaction.stage !== "idle") setInteraction(IDLE);

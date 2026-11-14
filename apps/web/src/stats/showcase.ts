@@ -157,7 +157,7 @@ function byId(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
-/** The showable cards with a count above 0, the most first, a tie going to the lower id (`topCards`'s order). */
+/** The showable cards with a count above 0, the most first, a tie going to the lower id. */
 function ranked(counts: Readonly<Record<string, number>>): CardTally[] {
   return Object.entries(counts)
     .filter(([id, count]) => count > 0 && showable(id))

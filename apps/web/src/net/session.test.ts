@@ -81,6 +81,19 @@ describe("R632 a session belongs to its tab", () => {
     expect(readSession()).toEqual(TAB);
   });
 
+  // #3899 (`docs/implicit-states.md`, state 4, W7): an older build's copy and the fixtures' session, no tab one.
+  it("R632 an older build's session moves into the tab ahead of the fixtures' session, which stays", () => {
+    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(OLDER));
+    window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify(FIXTURE));
+
+    expect(readSession()).toEqual(OLDER);
+
+    expect(JSON.parse(tabRaw() ?? "null")).toEqual(OLDER);
+    expect(sharedRaw(SESSION_STORAGE_KEY)).toBeNull();
+    expect(JSON.parse(sharedRaw(E2E_SESSION_STORAGE_KEY) ?? "null")).toEqual(FIXTURE);
+    expect(readSession()).toEqual(OLDER);
+  });
+
   it("R632 a sign-out clears the tab's session, any copy in localStorage and the fixtures' session", () => {
     window.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(TAB));
     window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(OLDER));

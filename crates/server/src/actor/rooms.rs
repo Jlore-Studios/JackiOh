@@ -16,8 +16,8 @@ use jackioh_engine::{LeanPick, PlayerId, pick_portrait_from_seed};
 use crate::actor::engine::{deal_random_deck, lean_of};
 use crate::api::crypto::{is_well_formed_code, normalize_code, random_code};
 use crate::api::decks::{
-    FrozenChoice, ModeChoiceInput, already_in_match, assert_free_to_play, freeze_choice, host_busy,
-    join_refusal, read_mode_choice,
+    FrozenChoice, already_in_match, assert_free_to_play, freeze_choice, host_busy, join_refusal,
+    read_mode_choice,
 };
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, caller_of, json as json_response};
 use crate::api::queue::{new_seed, new_uuid, seat_coin_p1_first, seat_override_of, seed_override_of};
@@ -141,15 +141,6 @@ fn mode_refusal(mode: QueueMode) -> &'static str {
         QueueMode::Bo1 => "This room plays Best of 1: pick one of your decks.",
         QueueMode::Bo3 => "This room plays Conquest: pick one of your trios.",
         QueueMode::Random => "This room plays All Random: join it without a deck.",
-    }
-}
-
-/// The mode a request's choice asks for.
-fn choice_mode(choice: &ModeChoiceInput) -> QueueMode {
-    match choice {
-        ModeChoiceInput::Bo1 { .. } => QueueMode::Bo1,
-        ModeChoiceInput::Bo3 { .. } => QueueMode::Bo3,
-        ModeChoiceInput::Random { .. } => QueueMode::Random,
     }
 }
 
@@ -478,7 +469,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     // B49: a challenge's room is the challenged friend's to join.
     crate::social::challenges::assert_may_join(app, &room.code, &profile_id).await?;
     // R264: mode checked before the deck, so the refusal is the useful one.
-    if choice_mode(&choice) != room.mode {
+    if choice.mode() != room.mode {
         return Err(ApiError::with_details(
             ApiErrorCode::Conflict,
             mode_refusal(room.mode),

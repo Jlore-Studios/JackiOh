@@ -29,7 +29,6 @@ serde_json = { workspace = true, features = ["float_roundtrip"] }
 indexmap = { workspace = true }
 axum = { workspace = true }
 tokio = { workspace = true }
-tower = { workspace = true }
 sqlx = { workspace = true }
 jsonwebtoken = { workspace = true }
 reqwest = { workspace = true }
@@ -55,6 +54,7 @@ unicode-segmentation = { workspace = true }
 
 [dev-dependencies]
 jackioh-engine = { workspace = true, features = ["testkit"] }
+tower = { workspace = true }
 
 # Two integration-test binaries (SURFACE §1, §11.2): `server` owns `api`, `actor`, `bots` and `loops`,
 # `server_store` owns `store`, so that the Postgres job (tests/db/run.sh) links only the store's tests.

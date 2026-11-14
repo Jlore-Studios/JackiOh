@@ -2,7 +2,7 @@
 // jsdom's `elementsFromPoint` is stubbed; presses target elements and moves/releases target `window`.
 // S9 must not need `isPrimary` or `pointerType`; expected bodies from `legal` are compared with click-click.
 
-import type { ActionBody, PlayerView } from "@jackioh/shared";
+import type { ActionBody, GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -15,7 +15,7 @@ import { DRAG_RETURN_MS, DRAG_TILT_MAX_DEG, DRAG_TILT_SETTLE_MS } from "../../ga
 import { HAPTIC_PATTERNS, resetSharedHapticsForTests } from "../../haptics/haptics.ts";
 import { resetHapticsSettingsForTests, writeHapticsSettings } from "../../haptics/settings.ts";
 import { __resetSettingsForTests, writeSettings } from "../../settings/index.ts";
-import { baseView, card, emptySide, unit } from "../fixtures.ts";
+import { baseView, card, emptySide, pendingFor, unit, withEvents } from "../fixtures.ts";
 
 /** h1 plays in lanes 3 or 4; s1 has one candidate; n1 has no play; u1 attacks e1 or the hero; u2 only switches. */
 function dragView(): PlayerView {
@@ -914,5 +914,136 @@ describe("#3347 a drag with weight", () => {
     move(420, 180);
     release(420, 180);
     expect(document.querySelector("[data-drag-over]")).toBeNull();
+  });
+});
+
+// #3899 (`docs/implicit-states.md`, state 6): a drag held while the board's view, its burst or a prompt
+// moves under it. Each burst is built as Game.test.tsx's "the board's moves wait for the board" builds
+// one: a view whose window adds an event the runner animates.
+describe("layer states 3899", () => {
+  const OPENING: GameEvent[] = [{ type: "turnStarted", player: "p1", turn: 3 }];
+  /** A hit on the viewer's hero: the runner animates it, so it holds the newest view back. */
+  const HIT: GameEvent = { type: "damage", sourceId: null, targetId: "hero-p1", amount: 3, combat: false };
+  const ANSWER: ActionBody = { type: "answer", choiceId: "ch1", selection: [{ pick: "mode", option: "A" }] };
+  const asking = (): PlayerView => ({
+    ...dragView(),
+    pending: pendingFor("answer", [{ key: "mode:A", label: "A" }], { prompt: "Pick one" }),
+  });
+
+  /** Drags u1 onto the enemy hero and lets go there. */
+  function releaseOnHero(): void {
+    over(el("hero-opponent"));
+    move(600, 60);
+    release(600, 60);
+  }
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("a fresh view of the same turn mid-drag keeps the drag and its release attacks", () => {
+    const { onAction, rerender } = renderGame();
+    lift(el("card-u1"));
+    rerender(<Game view={{ ...dragView(), clockMs: 59_000 }} legal={LEGAL} onAction={onAction} />);
+    expect(el("drag-layer")).toHaveAttribute("data-kind", "attack");
+
+    releaseOnHero();
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith(U1_HERO);
+    expectNoDrag();
+  });
+
+  it("a turn that ends mid-drag sends nothing on its release and leaves the board idle", () => {
+    const { onAction, rerender } = renderGame();
+    lift(el("card-u1"));
+    rerender(<Game view={{ ...dragView(), active: "p2", turn: dragView().turn + 1 }} legal={[]} onAction={onAction} />);
+
+    releaseOnHero();
+    expect(onAction).not.toHaveBeenCalled();
+    expectNoDrag();
+    expectBoardIdle();
+  });
+
+  it("a press while a burst holds the board lifts nothing, and lifts once it catches up", () => {
+    vi.useFakeTimers();
+    const onAction = vi.fn();
+    const { rerender } = render(<Game view={withEvents(dragView(), OPENING)} legal={LEGAL} onAction={onAction} />);
+    rerender(<Game view={withEvents(dragView(), [...OPENING, HIT])} legal={LEGAL} onAction={onAction} />);
+    expect(el("animation-queue")).toBeInTheDocument();
+
+    lift(el("card-u1"));
+    expectNoDrag();
+    release();
+
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(screen.queryByTestId("animation-queue")).toBeNull();
+    lift(el("card-u1"));
+    expect(el("drag-layer")).toHaveAttribute("data-kind", "attack");
+  });
+
+  it("a hand card pressed under an open prompt lifts nothing", () => {
+    const onAction = vi.fn();
+    render(<Game view={asking()} legal={[ANSWER, { type: "concede" }]} onAction={onAction} />);
+    expect(el("prompt-modal")).toBeInTheDocument();
+
+    lift(el("hand-card-h1"));
+    expectNoDrag();
+    release();
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  // Unspecified (named for a person): a move the shown board offered, released while a burst holds the
+  // newest view back. The board lights nothing then (`legal` is empty until it catches up), so a click
+  // on the hero lands on nothing; the drop, which reads the targets it was lifted with, still attacks.
+  it("a drag released while a burst holds the board still sends its attack, where a click then sends nothing", () => {
+    vi.useFakeTimers();
+    const clicks = vi.fn();
+    const first = render(<Game view={withEvents(dragView(), OPENING)} legal={LEGAL} onAction={clicks} />);
+    fireEvent.click(el("card-u1"));
+    first.rerender(<Game view={withEvents(dragView(), [...OPENING, HIT])} legal={LEGAL} onAction={clicks} />);
+    expect(el("animation-queue")).toBeInTheDocument();
+    expect(el("hero-opponent")).toHaveAttribute("data-legal", "false");
+    fireEvent.click(el("hero-opponent"));
+    expect(clicks).not.toHaveBeenCalled();
+    first.unmount();
+
+    const onAction = vi.fn();
+    const { rerender } = render(<Game view={withEvents(dragView(), OPENING)} legal={LEGAL} onAction={onAction} />);
+    lift(el("card-u1"));
+    rerender(<Game view={withEvents(dragView(), [...OPENING, HIT])} legal={LEGAL} onAction={onAction} />);
+    expect(el("animation-queue")).toBeInTheDocument();
+    releaseOnHero();
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith(U1_HERO);
+  });
+
+  // Unspecified (named for a person): a prompt that opens in the same turn while an attack is being
+  // built. The selection is kept (#2924 keys on the turn), so the drag does what the click does: both
+  // still send the attack the board lit.
+  it("a drag released after a prompt opened in the same turn sends its attack, as a click does then", () => {
+    const clicks = vi.fn();
+    const first = render(<Game view={dragView()} legal={LEGAL} onAction={clicks} />);
+    fireEvent.click(el("card-u1"));
+    first.rerender(<Game view={asking()} legal={[ANSWER]} onAction={clicks} />);
+    expect(el("prompt-modal")).toBeInTheDocument();
+    fireEvent.click(el("hero-opponent"));
+    expect(clicks).toHaveBeenCalledWith(U1_HERO);
+    first.unmount();
+
+    const onAction = vi.fn();
+    const { rerender } = render(<Game view={dragView()} legal={LEGAL} onAction={onAction} />);
+    // The prompt takes the focus as it opens. With the focus on the document, as the last board's
+    // prompt left it, jsdom then fires a blur on the window, which a browser does not for a move inside
+    // the page, and the drag layer reads that blur as the tab losing the pointer: so the focus starts
+    // on the board.
+    el("end-turn").focus();
+    lift(el("card-u1"));
+    rerender(<Game view={asking()} legal={[ANSWER]} onAction={onAction} />);
+    expect(el("prompt-modal")).toBeInTheDocument();
+    releaseOnHero();
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith(U1_HERO);
   });
 });

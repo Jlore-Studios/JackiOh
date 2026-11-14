@@ -198,10 +198,6 @@ export function isTutorialHidden(progress: TutorialProgress): boolean {
   return progress.hiddenChoice?.hidden === true;
 }
 
-export function resetTutorialProgress(): TutorialProgress {
-  return commit(EMPTY);
-}
-
 export type TutorialProgressLike = {
   readonly completed: readonly string[];
   readonly hiddenChoice: TutorialHiddenChoice | null;

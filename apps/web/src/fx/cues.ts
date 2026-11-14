@@ -13,7 +13,7 @@ import type { GameEvent, PlayerView } from "@jackioh/shared";
 
 import { GLITCH_WORDS } from "../cards/glitch.ts";
 import { animationRow, animTestid, locateInstance, pileTestid, targetFor, type AnimationEntry, type EntrySlam } from "../game/animations.ts";
-import { sideOf, testid, type Side } from "../game/contract.ts";
+import { defIdOfInstance, sideOf, testid, type Side } from "../game/contract.ts";
 import { armorTookHalf, damageFeel, damageTier, playTier, UNIT_SLAM, type PlayTier } from "../game/damageFeel.ts";
 import { seatOutcome } from "../game/outcome.ts";
 import { brandCues } from "./brand.ts";
@@ -976,32 +976,6 @@ const line: Recipe = (event, p) => {
 /** The public facts of a readable defId; undefined for R97's sentinel or an unknown id (R202). */
 function factsOf(defId: string, env: FxPlanEnv): FxCardFacts | undefined {
   return defId === HIDDEN_ID ? undefined : env.card(defId);
-}
-
-/** The defId the view reads on `instanceId`, or undefined when it shows the card nowhere. */
-function defIdOfInstance(view: PlayerView, instanceId: string): string | undefined {
-  for (const side of SIDES) {
-    const sv = side === "you" ? view.you : view.opponent;
-    for (const unit of sv.units) {
-      if (unit !== null && unit.instanceId === instanceId) return unit.defId;
-    }
-    for (const unit of sv.carried ?? []) {
-      if (unit !== null && unit.instanceId === instanceId) return unit.defId;
-    }
-    for (const slot of sv.backrow) {
-      if (slot !== null && !slot.faceDown && slot.instanceId === instanceId) return slot.defId;
-    }
-    for (const card of sv.resolving) {
-      if (card.instanceId === instanceId) return card.defId;
-    }
-  }
-  const hand = view.you.hand;
-  if (Array.isArray(hand)) {
-    for (const card of hand) {
-      if (card.instanceId === instanceId) return card.defId;
-    }
-  }
-  return undefined;
 }
 
 /** The public facts of the card a non-combat hit's source instance is (R202: undefined when hidden). */

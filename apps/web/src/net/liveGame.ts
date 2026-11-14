@@ -161,6 +161,8 @@ export function useQueueFollow(path: string, read: (token: string) => Promise<Me
 
   useEffect(() => {
     if (!watching) return;
+    // R897000: each wait counts its own reads in a row from nothing, as /play's watch does.
+    endedReads.current = 0;
     let canceled = false;
     let reading = false;
     const check = (): void => {

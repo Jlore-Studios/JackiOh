@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LIVE_GAME_POLL_SECONDS, MATCH_FOUND_NAV_DELAY_MS, SERIES_POLL_SECONDS } from "@jackioh/server-config";
 import type { MeResponse } from "./api.ts";
-import type { Account } from "./gate.ts";
+import { callWithRenewal, type Account } from "./gate.ts";
 import {
   MATCH_FOUND_STATUS,
   QUEUE_STORAGE_KEY,
@@ -26,6 +26,11 @@ import { resetVisibility, setVisibility } from "../test/setup.ts";
 vi.mock("./navigate.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./navigate.ts")>();
   return { ...actual, navigate: vi.fn() };
+});
+// The real renewal, which a test may have answer once as signed out.
+vi.mock("./gate.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./gate.ts")>();
+  return { ...actual, callWithRenewal: vi.fn(actual.callWithRenewal) };
 });
 
 /** The queue follow's pace (R897000). */
@@ -237,6 +242,22 @@ describe("R765 the live game an account read names", () => {
     expect(read).toHaveBeenCalledTimes(1);
     await advance(BANNER_MS);
     expect(read).toHaveBeenCalledTimes(2);
+  });
+
+  // #3899 (`docs/implicit-states.md`, state 5, B4): the poll's answer belongs to the account read it
+  // followed, so a newer account read is shown, never the older poll's.
+  it("R765 a fresh account read wins over the last poll's answer", async () => {
+    vi.useFakeTimers();
+    const read = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue(me(null));
+    const { result, rerender } = renderHook(({ account }: { account: Account }) => useLiveGame(account, read), {
+      initialProps: { account: ready(me("m-1")) },
+    });
+    await advance(BANNER_MS);
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(result.current, "the poll said the game ended").toBeNull();
+
+    rerender({ account: ready(me("m-2")) });
+    expect(result.current?.path).toBe("/match/m-2");
   });
 
   it("R765 an account with no live game is not polled", async () => {
@@ -501,6 +522,68 @@ describe("R765 a pairing takes the player to the game from any screen", () => {
     await advance(POLL_MS * 3);
     expect(silent).toHaveBeenCalled();
     expect(readQueued()).toBe("random");
+  });
+
+  // #3899 (`docs/implicit-states.md`, state 5, L10): the count of gone reads belongs to one wait.
+  it("R897000 a new wait counts its own reads: a gone read the last wait left never ends it early", async () => {
+    vi.useFakeTimers();
+    signIn();
+    rememberQueued("bo1");
+    const read = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue({ ...me(null), queued: false });
+    const { rerender } = render(<Follower path={paths.decks} read={read} />);
+    await flush();
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(readQueued()).toBe("bo1");
+
+    // On /play, which watches for itself, the person leaves the queue and joins it again.
+    rerender(<Follower path={paths.play} read={read} />);
+    act(() => {
+      forgetQueued();
+      rememberQueued("bo1");
+    });
+    rerender(<Follower path={paths.decks} read={read} />);
+    await flush();
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(readQueued(), "the new wait's first gone read is its first").toBe("bo1");
+
+    await advance(POLL_MS);
+    expect(readQueued(), "its second in a row ends it").toBeNull();
+  });
+
+  // #3899 (state 5, L11): as `/play`'s watch, a read that never came back neither counts nor breaks the row.
+  it("R897000 a failed read between two gone reads does not break the row", async () => {
+    vi.useFakeTimers();
+    signIn();
+    rememberQueued("bo1");
+    const read = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue({ ...me(null), queued: false });
+    render(<Follower path={paths.decks} read={read} />);
+    await flush();
+    expect(readQueued()).toBe("bo1");
+
+    read.mockRejectedValueOnce(new Error("network down"));
+    await advance(POLL_MS);
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(readQueued(), "a failed read keeps the wait").toBe("bo1");
+
+    await advance(POLL_MS);
+    expect(read).toHaveBeenCalledTimes(3);
+    expect(readQueued()).toBeNull();
+  });
+
+  // #3899 (state 5, L12): a renewal that finds the account signed out ends the wait, as no session does.
+  it("R765 a read answered signed out forgets the queue", async () => {
+    vi.useFakeTimers();
+    signIn();
+    rememberQueued("bo1");
+    const read = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue(me("m-1"));
+    vi.mocked(callWithRenewal).mockResolvedValueOnce({ kind: "signedOut", expired: true });
+    render(<Follower path={paths.decks} read={read} />);
+    await flush();
+    expect(readQueued()).toBeNull();
+
+    await advance(POLL_MS * 3);
+    expect(read).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it("R765 a read that fails is ignored and retried; a tab with no session forgets the queue", async () => {
