@@ -17515,8 +17515,11 @@
       "asks": [],
       "ci_early": false,
       "ci_fixed_head": "0b9dc01a85e99b2a6cf36031b1ca6934afe539e5",
-      "ci_fixes": 2,
+      "ci_fixes": 1,
       "ci_on_head": true,
+      "ci_reruns": {
+        "0b9dc01a85e99b2a6cf36031b1ca6934afe539e5": 1
+      },
       "ci_run_id": 43558580013,
       "ci_sha": "0b9dc01a85e99b2a6cf36031b1ca6934afe539e5",
       "cleared": {
