@@ -17029,10 +17029,10 @@
       "votes": {
         "approvals": [],
         "builder": "claude",
-        "built_by": "claude-4",
+        "built_by": "claude-8",
         "rejections": [],
         "reviews": [],
-        "sha": "1a94335ce714322742d8f815e7054ea857365864",
+        "sha": "46964251e0b33f1ec026be0e3e8aee030f68d76a",
         "tiers": {}
       },
       "waiting_comment": 6868261463
