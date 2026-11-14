@@ -70,7 +70,7 @@ export function commandPages(): CommandEntry[] {
     { id: "page-stats", kind: "page", label: t("Statistics"), path: paths.stats },
     { id: "page-leaderboard", kind: "page", label: t("Leaderboard"), path: paths.leaderboard },
     { id: "page-replays", kind: "page", label: t("Replays"), path: paths.replays },
-    { id: "page-together", kind: "page", label: t("Play together"), path: paths.together },
+    { id: "page-together", kind: "page", label: t("Friends"), path: paths.together },
     { id: "page-daily", kind: "page", label: t("Daily games"), path: paths.daily },
     { id: "page-account", kind: "page", label: t("Account"), path: paths.account },
     { id: "page-privacy", kind: "page", label: t("Privacy policy"), path: paths.privacy },

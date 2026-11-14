@@ -34,10 +34,11 @@ use crate::scripts::classic::{
     c088_siphon_squad, c090_in_too_deep,
 };
 use crate::scripts::classic_plus::{
-    c007_the_house, c011_anime_armor, c016_conjure_rush_token, c019_1_top_loser, c023_dropshipping,
-    c030_felinor_fuser, c033_ivory_tower, c037_wardrum, c040_appropriations, c042_kys_test, c043_ai_slop,
-    c047_joggs_box, c048_jlockeeds_lobbyist, c049_jay_fungus, c051_jlockeeds_j15_fighter,
-    c053_book_of_tokens, c062_kys_papaya, c071_book_of_buff, c073_1_classic_golem, c078_claudes_datacenter,
+    c007_the_house, c011_anime_armor, c016_conjure_rush_token, c019_1_top_loser, c019_2_jungle_loser,
+    c023_dropshipping, c030_felinor_fuser, c033_ivory_tower, c037_wardrum, c040_appropriations,
+    c042_kys_test, c043_ai_slop, c047_joggs_box, c048_jlockeeds_lobbyist, c049_jay_fungus,
+    c051_jlockeeds_j15_fighter, c053_book_of_tokens, c062_kys_papaya, c071_book_of_buff,
+    c073_1_classic_golem, c078_claudes_datacenter,
 };
 use crate::scripts::core::{
     c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c032_prem_panther, c042_eugenics,
@@ -54,21 +55,22 @@ use crate::scripts::meditative::{
     c053_prestige, c054_money_machine, c063_skull_of_jnari, c065_keymaster_keenus, c074_montana_giant,
     c080_aluneth, c081_deadmans_hand, c085_playtester, c090_spell_basket, c093_1_growing_felinor_sr,
     c093_2_growing_felinor_sr_sr, c093_3_growing_felinor_super_senior, c093_growing_felinor,
-    c094_shrinking_felinor, c095_1_cn_golem, c097_2_wishing_well, c097_8_prison, c102_catboy_maid_ssr,
+    c094_shrinking_felinor, c095_1_cn_golem, c097_2_wishing_well, c097_8_prison, c099_paranoia,
+    c102_catboy_maid_ssr,
 };
 use crate::scripts::meditative_plus::{
     c001_bobs_plan, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves, c022_mountaintop_garden,
 };
 use crate::scripts::stinkyscape::{
-    c013_asphyxiants_cloud, c016_rod_of_ages, c018_1_melchior, c026_zolarketh, c033_drone_core_vii,
-    c034_drone_core_viii, c035_drone_core_ix, c036_drone_core_x, c045_drone_commander, c050_beam_v3,
-    c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4, c055_repeater_v4, c056_cannon_v4,
-    c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5, c061_flak_v5, c074_paragon_x,
-    c086_prototype_x2, c094_tmack_trav, c109_xxfreshjack, c111_shockwave447, c115_scornboi, c116_megabase,
-    c129_jlockeeds_missile_pod, c140_rush_token_launcher, c143_book_launcher, c149_wildar, c153_stimmycheck,
-    c163_swear_loyalities, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid,
-    c172_huge_asteroid, c173_abandoned_spice_tower, t_drone_corvette, t_drone_interceptor, t_narcor,
-    t_red_narcor,
+    c013_asphyxiants_cloud, c016_rod_of_ages, c018_1_melchior, c023_warp_disruptor, c024_warp_disruptor_ii,
+    c026_zolarketh, c033_drone_core_vii, c034_drone_core_viii, c035_drone_core_ix, c036_drone_core_x,
+    c045_drone_commander, c050_beam_v3, c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4,
+    c055_repeater_v4, c056_cannon_v4, c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5,
+    c061_flak_v5, c074_paragon_x, c086_prototype_x2, c094_tmack_trav, c109_xxfreshjack, c111_shockwave447,
+    c115_scornboi, c116_megabase, c129_jlockeeds_missile_pod, c140_rush_token_launcher, c143_book_launcher,
+    c149_wildar, c153_stimmycheck, c163_swear_loyalities, c168_drone_hanger, c169_tiny_asteroid,
+    c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid, c173_abandoned_spice_tower,
+    t_drone_corvette, t_drone_interceptor, t_narcor, t_red_narcor,
 };
 use crate::scripts::stinkyscape_plus::c104_tireless_cultivation;
 use crate::scripts::training_grounds::{
@@ -88,8 +90,8 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// #2179 (R1161, R920, R580, R2179003), #2396 (R2396000), #2521 and #2657 (R2657000 with
 /// `never_defense_kept`, R2657001, R2657002, R2657004), and #3000's parts (#3038, #3040, #3041, #3042,
 /// #3044, #3048), #3128's (#3134, #3135, #3139, #3140, #3142),
-/// #3551's S01 (R3551000, R3551001, R3551002, R3551003, R3551004), #3778 (R3778000) and #3800 (R3800003,
-/// S+ #104).
+/// #3551's S01 (R3551000, R3551001, R3551002, R3551003, R3551004), #3778 (R3778000), #3802 and #3800
+/// (R3800003, R3800004, S+ #104).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -699,12 +701,31 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.5.12ap",
         c073_1_classic_golem::script_v0_5_13g,
     ),
-    // Issue #3800 (R3800003, S+ #104): the last scripts before its fix, kept under v0.6.0g.
-    (c037_wardrum::ID, "v0.6.0g", c037_wardrum::script_v0_6_0g),
+    // #3802: Jungle Loser's roll, through v0.6.0g, the newest shipped version that ran it.
+    (
+        c019_2_jungle_loser::ID,
+        "v0.6.0g",
+        c019_2_jungle_loser::script_v0_6_0g,
+    ),
+    (c099_paranoia::ID, "v0.6.0g", c099_paranoia::script_v0_6_0g),
+    // Issue #3800 (R3800003, S+ #104): the last scripts before its fix, kept under v0.6.1b, the newest
+    // shipped version that ran them.
+    (c037_wardrum::ID, "v0.6.1b", c037_wardrum::script_v0_6_1b),
     (
         c104_tireless_cultivation::ID,
-        "v0.6.0g",
-        c104_tireless_cultivation::script_v0_6_0g,
+        "v0.6.1b",
+        c104_tireless_cultivation::script_v0_6_1b,
+    ),
+    // Issue #3800 (R3800004): Warp Disruptor's and Warp Disruptor II's answer before its once-a-turn end.
+    (
+        c023_warp_disruptor::ID,
+        "v0.6.1b",
+        c023_warp_disruptor::script_v0_6_1b,
+    ),
+    (
+        c024_warp_disruptor_ii::ID,
+        "v0.6.1b",
+        c024_warp_disruptor_ii::script_v0_6_1b,
     ),
 ];
 
@@ -1178,6 +1199,18 @@ mod tests {
         assert_eq!(at("v2", "b"), None);
         assert_eq!(at("v1", "c"), None);
         assert_eq!(at("v0", "a"), None, "a version the order does not hold");
+    }
+
+    #[test]
+    fn r767000_jungle_loser_roll_is_kept_through_the_newest_version_that_ran_it() {
+        crate::register_all();
+        let id = c019_2_jungle_loser::ID;
+        for version in ["v0.5.12ap", "v0.6.0b", "v0.6.0d", "v0.6.0e", "v0.6.0f", "v0.6.0g"] {
+            assert!(
+                covering(&HISTORY.order, KEPT_SCRIPTS, version, id).is_some(),
+                "{version} ran the roll: its replays need the kept script"
+            );
+        }
     }
 
     #[test]

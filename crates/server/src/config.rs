@@ -1298,6 +1298,13 @@ pub const CHAT_PAGE: i64 = 50;
 /// B52 (#1825): the most shares one `GET /api/replays/shared` lists, newest first, so that list is
 /// bounded like the friends (`MAX_FRIENDS`) and a chat page (`CHAT_PAGE`); fifty is a chat page's.
 pub const SHARED_REPLAYS_LIST_MAX: i64 = 50;
+/// R3732000: the most opponents `GET /api/friends/recent` lists, newest first: twenty, a screen of
+/// rows, so Recently played stays a glance and not a history.
+pub const RECENT_OPPONENTS_MAX: usize = 20;
+/// R3732000: the newest games `GET /api/friends/recent` reads to find them, ranked ones included
+/// (which it then leaves out): fifty, a page of the replay list's order of magnitude, so the read is
+/// one bounded query whatever the account's history.
+pub const RECENT_OPPONENTS_SCAN: i64 = 50;
 /// B58: how often an open chat panel reads its conversation again, while the tab's `/ws/social` is
 /// down (R3214000).
 pub const CHAT_POLL_MS: i64 = 4_000;
@@ -1595,6 +1602,9 @@ pub const PLAYER_EMAIL_FROM: &str = "JackiOh <no-reply@jackioh.com>";
 /// §9.13: how long a send to Resend may take before it is given up, in milliseconds; the next sweep
 /// tries again, since nothing was marked sent.
 pub const PLAYER_EMAIL_TIMEOUT_MS: u64 = 10_000;
+/// §9.13: how many profiles wait for the notifier's task (`daily::notify::NotifyQueue`) before a new
+/// one is dropped; the next sweep decides for it, since nothing unsent is ever marked sent.
+pub const DAILY_NOTIFY_QUEUE: usize = 256;
 /// RFC 8030's `TTL`: how long a push service keeps a "your move" push for a device that is offline,
 /// in seconds (a day: the next one says it again).
 pub const PUSH_TTL_SECONDS: u64 = 86_400;

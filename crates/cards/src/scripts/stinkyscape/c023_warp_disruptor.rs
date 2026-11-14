@@ -5,8 +5,11 @@
 //!   Radiant: the same, and "Your Units have First Strike."
 //! Stack, Brittle 3 (§6.1, R638). unitsNeverDefense keeps units out of Defense (R1849006); +attack aura (§10.4, R1875003).
 //! Forced attack on opponent summons (C #5, R1875003, R1849007, R53). Radiant grants First Strike.
+//! The end (REVIEW A3.6, R3800004): it answers each card once a turn, remembering whom under the turn's
+//! number, so a body that resummons itself as it dies (S #112 Job Application's Death, fused) and dies to
+//! the attack it answered returns once and stays.
 
-use jackioh_engine::effects::forced_attacks;
+use jackioh_engine::effects::{forced_attacks, remember};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-023";
@@ -73,21 +76,65 @@ fn disruptor_aura(radiant: bool) -> AuraHook {
     })
 }
 
-fn disruptor(radiant: bool) -> Script {
+/// R3800004: what a Warp Disruptor keeps of the cards it has answered: `{ "turn", "ids" }`, this turn's
+/// alone counting, so a memory from another turn or another stay (R78) holds no one.
+const ANSWERED: &str = "answered";
+
+/// R3800004: the cards this Warp Disruptor has answered this turn (S #24's too).
+pub fn answered_this_turn(ctx: &EffectContext<'_>) -> Vec<String> {
+    let Some(memory) = recalled(ctx, ANSWERED) else {
+        return Vec::new();
+    };
+    if memory.get("turn").and_then(Value::as_i64) != Some(i64::from(ctx.state.turn)) {
+        return Vec::new();
+    }
+    memory
+        .get("ids")
+        .and_then(Value::as_array)
+        .map(|ids| ids.iter().filter_map(Value::as_str).map(String::from).collect())
+        .unwrap_or_default()
+}
+
+/// R3800004: the arrival a Warp Disruptor answers, `arrival`'s unless it has answered that card this turn.
+pub fn unanswered(ctx: &EffectContext<'_>, arrival: Option<String>) -> Option<String> {
+    arrival.filter(|id| !answered_this_turn(ctx).contains(id))
+}
+
+/// R3800004: the memory that marks `target` answered this turn, before the forced attack it answers with.
+pub fn remember_answered(ctx: &EffectContext<'_>, target: &str) -> Effect {
+    let mut ids = answered_this_turn(ctx);
+    ids.push(target.to_string());
+    remember(json_as(json!({
+        "key": ANSWERED,
+        "value": { "turn": ctx.state.turn, "ids": ids },
+    })))
+}
+
+/// The answer: `once` (R3800004) lets it answer each card once a turn; without it, as through v0.6.1b.
+fn disruptor_with(radiant: bool, once: bool) -> Script {
     let answer = TriggerDef::new(
         "warp-disruptor",
         &[GameEventType::Summoned, GameEventType::CardResolved],
-        |ctx, event| {
-            let Some(target) = arrival(ctx, event) else {
+        move |ctx, event| {
+            let found = arrival(ctx, event);
+            let Some(target) = (if once { unanswered(ctx, found) } else { found }) else {
                 return Vec::new();
             };
-            vec![forced_attacks(json_as(json!({
+            let attack = forced_attacks(json_as(json!({
                 "attackers": { "side": "self", "random": true },
                 "target": { "instanceId": target },
-            })))]
+            })));
+            if once {
+                vec![remember_answered(ctx, &target), attack]
+            } else {
+                vec![attack]
+            }
         },
     )
-    .with_when(|ctx, event| arrival(ctx, event).is_some());
+    .with_when(move |ctx, event| {
+        let found = arrival(ctx, event);
+        if once { unanswered(ctx, found) } else { found }.is_some()
+    });
     Script {
         static_flags: Some(StaticFlags {
             units_never_defense: Some(true),
@@ -99,10 +146,23 @@ fn disruptor(radiant: bool) -> Script {
     }
 }
 
+fn disruptor(radiant: bool) -> Script {
+    disruptor_with(radiant, true)
+}
+
 pub fn script() -> CardScripts {
     CardScripts {
         base: disruptor(false),
         radiant: disruptor(true),
+    }
+}
+
+/// R767000, R3800004: through v0.6.1b it answered every arrival, a card it had answered this turn
+/// included; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_1b() -> CardScripts {
+    CardScripts {
+        base: disruptor_with(false, false),
+        radiant: disruptor_with(true, false),
     }
 }
 
@@ -310,6 +370,67 @@ mod tests {
             s.play(VANILLA, json!({ "zone": 1 }));
             s.expect_in_zone(VANILLA, "graveyard");
             s.expect_stats(mine.as_str(), json!({ "health": 7 }));
+        }
+    }
+
+    /// R3800004: the end of the loop daily fuzz seed 9999 found: a Unit of the opponent's with S #112 Job
+    /// Application's "Death: Resummon this at Stage 1" fused in died to a Radiant Warp Disruptor's forced
+    /// attack, which its First Strike made safe, and every return was answered again.
+    mod r3800004_it_answers_each_card_once_a_turn {
+        use super::*;
+
+        const JOB_APPLICATION: &str = "stinkyscape-112";
+
+        /// P2's Unit with Job Application fused in, as `fuseCards` makes it.
+        fn self_resummoning(s: &mut Scenario) -> String {
+            let id = s.unit_at(P2, 1).id;
+            crate::run_as(
+                s,
+                jackioh_engine::effects::fuse_cards(json_as(json!({
+                    "instanceIds": [id],
+                    "defIds": [JOB_APPLICATION],
+                    "targetInstanceId": id,
+                }))),
+                P2,
+            );
+            assert!(s.card(id.as_str()).def_id.starts_with("t-"), "fused");
+            id
+        }
+
+        fn deaths_of(s: &Scenario, id: &str) -> usize {
+            s.last_events()
+                .iter()
+                .filter(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if instance_id == id))
+                .count()
+        }
+
+        /// Kills the body with an attack of P1's: it returns, is answered once, dies again and returns.
+        fn kill(s: &mut Scenario, mine: &str, body: &str) {
+            s.attack(mine, body);
+            assert_eq!(deaths_of(s, body), 2, "it died to the attack and to the one answer");
+            assert_eq!(forced(s), vec![(mine.to_string(), body.to_string())]);
+            s.expect_in_zone(body, "field");
+            assert!(s.state().result.is_none());
+        }
+
+        #[test]
+        fn r3800004_a_self_resummoning_unit_it_kills_is_answered_once_and_stays() {
+            let mut s = played(true, json!([GREASER]), json!([VANILLA]), json!([FILLER]));
+            let mine = s.unit_at(P1, 1).id;
+            let body = self_resummoning(&mut s);
+            kill(&mut s, &mine, &body);
+            s.expect_stats(mine.as_str(), json!({ "health": 7 }));
+        }
+
+        #[test]
+        fn r3800004_a_card_answered_on_an_earlier_turn_is_answered_again() {
+            let mut s = played(true, json!([GREASER]), json!([VANILLA]), json!([FILLER]));
+            let mine = s.unit_at(P1, 1).id;
+            let body = self_resummoning(&mut s);
+            kill(&mut s, &mine, &body);
+            s.end_turn();
+            s.end_turn();
+            kill(&mut s, &mine, &body);
         }
     }
 }

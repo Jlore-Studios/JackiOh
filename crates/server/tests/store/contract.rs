@@ -9475,6 +9475,63 @@ mod lobbies {
         assert_eq!(q!(harness, t => t.lobbies_get("LOBBCC")), None);
     }
 
+    /// R3732001: the lobbies of a set of hosts that a friend may still enter, newest first: unstarted,
+    /// unexpired and with the guest seat empty; a host outside the set, a started, a seated and an
+    /// expired lobby are left out, and an empty set or a name that is no id reads nothing.
+    async fn r3732001_lists_open_lobbies_of_hosts(harness: &StoreHarness) {
+        let host = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let outside = active_profile(harness, None).await;
+        let guest = active_profile(harness, None).await;
+        let now = harness.now();
+        for (code, owner, at, expires_at) in [
+            ("LOBBEA", &host.id, now - 2_000, now + 900_000),
+            ("LOBBEB", &host.id, now - 1_000, now + 900_000),
+            ("LOBBEC", &other.id, now - 3_000, now + 600_000),
+            ("LOBBED", &host.id, now - 4_000, now + 900_000),
+            ("LOBBEE", &host.id, now - 5_000, now + 900_000),
+            ("LOBBEF", &host.id, now - 900_000, now - 1),
+            ("LOBBEG", &outside.id, now, now + 900_000),
+        ] {
+            assert!(q!(harness, t => t.lobbies_create(&lobby(code, owner, FORMAT_DUEL, at, expires_at))));
+        }
+        let seated: Lobby = from(spread(
+            j(&lobby(
+                "LOBBED",
+                &host.id,
+                FORMAT_DUEL,
+                now - 4_000,
+                now + 900_000,
+            )),
+            json!({ "guest": guest.id, "rev": 1 }),
+        ));
+        assert!(q!(harness, t => t.lobbies_update(&seated, 0)));
+        let started: Lobby = from(spread(
+            j(&lobby(
+                "LOBBEE",
+                &host.id,
+                FORMAT_DUEL,
+                now - 5_000,
+                now + 900_000,
+            )),
+            json!({ "rev": 1, "startedAt": now }),
+        ));
+        assert!(q!(harness, t => t.lobbies_update(&started, 0)));
+
+        let codes = |lobbies: Vec<Lobby>| lobbies.into_iter().map(|row| row.code).collect::<Vec<_>>();
+        let hosts = vec![host.id.clone(), other.id.clone(), "not-a-uuid".to_string()];
+        assert_eq!(
+            codes(q!(harness, t => t.lobbies_open_of_hosts(&hosts, now))),
+            ["LOBBEB", "LOBBEA", "LOBBEC"]
+        );
+        assert_eq!(
+            codes(q!(harness, t => t.lobbies_open_of_hosts(std::slice::from_ref(&outside.id), now))),
+            ["LOBBEG"]
+        );
+        assert!(q!(harness, t => t.lobbies_open_of_hosts(&[], now)).is_empty());
+        assert!(q!(harness, t => t.lobbies_open_of_hosts(&["not-a-uuid".to_string()], now)).is_empty());
+    }
+
     /// Migration 0090: a deleted profile takes the lobbies it hosts or sits in.
     async fn r3730000_a_deleted_profile_takes_its_lobbies(harness: &StoreHarness) {
         let host = active_profile(harness, None).await;
@@ -9501,6 +9558,7 @@ mod lobbies {
     both_stores!(
         r3730000_creates_reads_updates_by_revision_and_deletes,
         r3730004_counts_lists_and_reaps,
+        r3732001_lists_open_lobbies_of_hosts,
         r3730000_a_deleted_profile_takes_its_lobbies,
     );
 }

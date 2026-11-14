@@ -35,7 +35,8 @@ describe("54 private lobby — a 1v1 lobby from Create to the board", () => {
     // R3730000: Play's "Play a friend" makes a lobby in the mode Play has chosen.
     cy.visitAs(host, routes.play());
     cy.get(ts(playModeId("random")), { timeout: timeouts.view }).check();
-    cy.get(ts(LOBBY_PANEL)).find(ts(LOBBY_CREATE)).should("not.be.disabled").click();
+    // R3732002: /play holds two lobby panels, the duel's and the co-op one's; this is the duel's.
+    cy.get(`${ts(LOBBY_PANEL)}[data-format="duel"]`).find(ts(LOBBY_CREATE)).should("not.be.disabled").click();
     cy.location("pathname", { timeout: timeouts.view }).should("match", /^\/lobby\/[^/]+$/);
     cy.get(ts(LOBBY_CODE), { timeout: timeouts.view })
       .invoke("text")
