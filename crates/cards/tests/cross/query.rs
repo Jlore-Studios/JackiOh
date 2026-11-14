@@ -1116,9 +1116,14 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
     ];
 
     /// The Stinkyscape set's printed 1/1 Units (§8.10: #38 Shield Amplifier, #81 Radix since #2657 made
-    /// it 1/1, and #98 Hull Booster; none of its tokens prints 1/1), which the pool takes since its
-    /// release (#1884, R1857000).
-    const STINKYSCAPE_ONE_ONES: &[&str] = &["stinkyscape-038", "stinkyscape-081", "stinkyscape-098"];
+    /// it 1/1, #98 Hull Booster, and #129 Jlockeed's Missile Pod since #3837 made it 1/1; none of its
+    /// tokens prints 1/1), which the pool takes since its release (#1884, R1857000).
+    const STINKYSCAPE_ONE_ONES: &[&str] = &[
+        "stinkyscape-038",
+        "stinkyscape-081",
+        "stinkyscape-098",
+        "stinkyscape-129",
+    ];
     /// The Stinkyscape+ release (#3573): its printed 1/1 Units, its two tokens (#26.1 Conscript and #27.1
     /// Imp) among them, last in the catalog order.
     const STINKYSCAPE_PLUS_ONE_ONES: &[&str] = &[

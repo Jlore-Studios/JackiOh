@@ -73,13 +73,13 @@ mod tests {
     const GOLIATH: &str = super::ID;
     // p1's hand, (1) to (5).
     const ONE: &str = "core-008";
-    const TWO: &str = "core-002";
+    const TWO: &str = "stand-in (2) 4/1 R8/2";
     const THREE: &str = "core-053";
     const FOUR: &str = "core-043";
     
     // p2's plays.
     const VANILLA: &str = "core-008"; // Mr. Vanilla
-    const SPECIESIST: &str = "core-002"; // Speciesist
+    const TWO_UNIT: &str = "stand-in (2) 4/1 R8/2";
     const BIG_FELINOR: &str = "core-043"; // Big Felinor
     const TRUE_STRIKE: &str = "core-044"; // True Strike: a Spell
     const TOKEN_MAKER: &str = "core-015"; // Me and Mr Token: Cry: summon a Rush Token
@@ -143,9 +143,9 @@ mod tests {
                     "hand": [ONE, FOUR, { "def": TWO, "costOverride": 5 }, { "def": THREE, "costOverride": 5 }],
                     "backrow": [{ "def": GOLIATH, "faceUp": false, "lane": 1 }],
                 },
-                "p2": { "hand": [SPECIESIST, { "def": BIG_FELINOR, "costMod": 1 }, HIT_JOB], "mana": 20 },
+                "p2": { "hand": [TWO_UNIT, { "def": BIG_FELINOR, "costMod": 1 }, HIT_JOB], "mana": 20 },
             }));
-            s.play(SPECIESIST, json!({ "zone": 1 }));
+            s.play(TWO_UNIT, json!({ "zone": 1 }));
             assert_eq!(costs(&s), vec![0, 4, 5, 5]);
 
             // A (5) Unit fires it a second time: the (4) costs (0) now, the (5)s do not.
@@ -226,12 +226,12 @@ mod tests {
 
         #[test]
         fn r2199005_a_1_unit_leaves_it_set_a_2_unit_fires_it() {
-            let mut s = setup(true, json!([VANILLA, SPECIESIST]));
+            let mut s = setup(true, json!([VANILLA, TWO_UNIT]));
             s.play(VANILLA, json!({ "zone": 1 }));
             assert_eq!(s.count(GameEventType::TrapFired), 0);
             assert_eq!(s.backrow(P1, 1).unwrap().face_up, Some(false));
 
-            s.play(SPECIESIST, json!({ "zone": 2 }));
+            s.play(TWO_UNIT, json!({ "zone": 2 }));
             assert_eq!(s.count(GameEventType::TrapFired), 1);
         }
 

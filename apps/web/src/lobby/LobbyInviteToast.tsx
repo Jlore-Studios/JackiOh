@@ -32,7 +32,9 @@ export function LobbyInviteToast(): ReactElement | null {
           <p>
             {invite.format === "coop"
               ? t("{name} invites you to a co-op lobby", { name: invite.from.username })
-              : t("{name} invites you to a 1v1 lobby", { name: invite.from.username })}
+              : invite.format === "2v2"
+                ? t("{name} invites you to a 2v2 lobby", { name: invite.from.username })
+                : t("{name} invites you to a 1v1 lobby", { name: invite.from.username })}
           </p>
           <div className="lobby-invite-toast__actions">
             <button

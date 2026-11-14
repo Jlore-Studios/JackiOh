@@ -213,8 +213,8 @@ function PoolItem({ cardId, def, deck, fresh, area, onInspect }: PoolItemProps):
     {
       hover: showsFullText(face, undefined, fullArtOn, alwaysText),
       holdAnyPointer: isFs ? true : undefined,
-      onLongPress: (pointerId) => {
-        if (isFs) {
+      onLongPress: (pointerId, pointerType) => {
+        if (isFs && pointerType !== "touch") {
           openFullScreenArt({
             defId: cardId,
             radiant: face.radiant,

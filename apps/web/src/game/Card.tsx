@@ -322,6 +322,7 @@ function Card(props: CardProps): ReactElement {
     prefer: form === "full" ? "above" : "beside",
     showLoc: false,
     keyHint: SHORTCUTS.inspect,
+    touchSheet: canFullScreen,
     holdAnyPointer: canFullScreen ? true : undefined,
     onLongPress: canFullScreen
       ? (pointerId) => {

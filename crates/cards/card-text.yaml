@@ -506,8 +506,8 @@ core-052: # Silly Silas
     death: So... dizzy...
   zh:
     name: 憨憨塞拉斯
-    base: "陨坑\n战吼：选择向左或向右。将场上的每张牌朝该方向轮转一格。跨到另一侧的牌改变控制者。"
-    radiant: "陨坑\n战吼：选择向左或向右。将场上的每张牌朝该方向轮转一格。原本会跨到你对手一侧的牌改为被弹回，且其法力值消耗为(0)。"
+    base: "为你的对手召唤此单位。\n战吼：选择向左或向右。将场上的每张牌朝该方向轮转一格。跨到另一侧的牌改变控制者。"
+    radiant: 战吼：选择向左或向右。将场上的每张牌朝该方向轮转一格。原本会跨到你对手一侧的牌改为被弹回，且其法力值消耗为(0)。
 core-053: # Reno
   flavour: Bring it back. Bring it all back.
   voice:
@@ -2212,8 +2212,8 @@ classicplus-029: # Portal to the Past
     cast: Step through. Remember yesterday.
   zh:
     name: 往昔传送门
-    base: 从你上一局对战结束时的场面上发现一张牌。其法力值消耗为({setCost})。
-    radiant: 将你上一局对战结束时的场面上的{cards}张随机牌置入你的手牌。每张牌的法力值消耗为({setCost})。
+    base: 从你上一局对战结束时的场面上发现一张牌，若没有则发现一张法力值消耗为(3)或(4)的单位牌或场地法术牌。其法力值消耗为({setCost})。
+    radiant: 将你上一局对战结束时的场面上的{cards}张随机牌置入你的手牌，若没有则改为法力值消耗为(3)或(4)的随机单位牌或场地法术牌。每张牌的法力值消耗为({setCost})。
     previews:
       the board your last game ended with: 你上一局对战结束时的场面
 classicplus-030: # Felinor Fuser
@@ -3327,8 +3327,8 @@ meditative-044: # CN Jade Well
     cast: Drink from the deep green.
   zh:
     name: 玉之井
-    base: 回合开始时：将一张鸿运石置入你的手牌。
-    radiant: 回合开始时：将一张光辉鸿运石置入你的手牌。
+    base: 激活：将一张鸿运石置入你的手牌。
+    radiant: 激活：将一张光辉鸿运石置入你的手牌。
 meditative-045: # Knowledge Breaker
   flavour: Sit still. What you know is about to leave you.
   voice:
@@ -3781,8 +3781,8 @@ meditative-087: # Tatches the Totem
     death: The totem topples.
   zh:
     name: 塔切斯图腾
-    base: "当这张牌在你的牌库中时：在你使用一张具有部落标签的牌后，召唤这张牌。\n回合结束时：强化你手牌或牌库中的{cards}张随机牌。"
-    radiant: "当这张牌在你的牌库中时：在你使用一张具有部落标签的牌后，召唤这张牌。\n回合结束时：强化你手牌或牌库中的{cards}张随机牌。然后强化与这张牌相邻的每个单位。"
+    base: "当这张牌在你的牌库中时：在你使用一张具有部落标签的牌后，召唤这张牌。\n回合结束时：强化你手牌中的{cards}张随机牌。"
+    radiant: "当这张牌在你的牌库中时：在你使用一张具有部落标签的牌后，召唤这张牌。\n回合结束时：强化你手牌中的{cards}张随机牌。然后强化与这张牌相邻的每个单位。"
 meditative-088: # The True Sheep
   flavour: It insists it is the one. The flock disagrees.
   voice:
@@ -3837,8 +3837,8 @@ meditative-092: # Unan
     death: I held the line.
   zh:
     name: 乌南
-    base: "护甲3\n你的英雄或其他单位将受到的致命伤害改为由它承担。"
-    radiant: "护甲6\n你的英雄或其他单位将受到的致命伤害改为由它承担。"
+    base: "护甲2\n你的英雄或其他单位将受到的致命伤害改为由它承担。"
+    radiant: "护甲4\n你的英雄或其他单位将受到的致命伤害改为由它承担。"
 meditative-093: # Growing Felinor
   flavour: Every kitten thinks it's a lion. This one is working on it.
   voice:
@@ -5411,8 +5411,8 @@ stinkyscape-096: # Ocean Tsunami
     death: Low tide, at last.
   zh:
     name: 海洋海啸
-    base: 战吼：弃掉你的手牌。用随机臭臭星景资源填满你的手牌。
-    radiant: 战吼：弃掉你的手牌。用随机光辉臭臭星景资源填满你的手牌。
+    base: "献祭1\n战吼：弃掉你的手牌。用随机臭臭星景资源填满你的手牌。"
+    radiant: "献祭1\n战吼：弃掉你的手牌。用随机光辉臭臭星景资源填满你的手牌。"
 stinkyscape-097: # Asteroid Field
   flavour: Nobody flies into an asteroid field on purpose. Nobody flies out empty-handed, either.
   voice:
@@ -6773,8 +6773,8 @@ traininggrounds-035: # Corpse Recycler
     cast: Waste not, want not.
   zh:
     name: 尸体回收站
-    base: 在一个非衍生物单位死亡后，为其控制者召唤一个突袭衍生物。
-    radiant: 在一个非衍生物单位死亡后，为其控制者召唤一个光辉突袭衍生物。
+    base: 在一个非衍生物单位死亡后，为你召唤一个突袭衍生物。
+    radiant: 在一个非衍生物单位死亡后，为你召唤一个光辉突袭衍生物。
 traininggrounds-036: # Training Dummy
   flavour: Takes every hit and gives back a lesson.
   voice:

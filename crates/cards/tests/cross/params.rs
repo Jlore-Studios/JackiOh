@@ -595,6 +595,8 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("classic-004", PRICE),
         ("classic-032", PRICE),
         ("classic-035", PRICE),
+        // R3837004: the fallback pool's "(3) or (4)" Cost.
+        ("classicplus-029", PRICE),
         ("classicplus-036", PRICE),
         ("classicplus-042-1", PRICE),
         ("classicplus-043", PRICE),

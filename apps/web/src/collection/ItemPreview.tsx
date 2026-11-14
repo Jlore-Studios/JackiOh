@@ -30,11 +30,21 @@ export type PreviewHold = {
 const NO_OVERLAY = (): null => null;
 
 /** R2730000: a hold (LONG_PRESS_MS, any pointer) or the inspect key calls `onPreview`; the hold's click is swallowed. */
-export function usePreviewHold(key: string, onPreview: (pointerId?: number | null) => void): PreviewHold {
+export function usePreviewHold(
+  key: string,
+  onPreview: (pointerId?: number | null, pointerType?: string) => void,
+): PreviewHold {
   const pressed = useRef<HTMLElement | null>(null);
   const { handlers } = useInspectTrigger(
     { key: `collection-preview-${key}`, render: NO_OVERLAY },
-    { hover: false, holdAnyPointer: true, onLongPress: (pointerId) => { pressed.current?.focus({ preventScroll: true }); onPreview(pointerId); } },
+    {
+      hover: false,
+      holdAnyPointer: true,
+      onLongPress: (pointerId, pointerType) => {
+        pressed.current?.focus({ preventScroll: true });
+        onPreview(pointerId, pointerType);
+      },
+    },
   );
   return {
     onPointerDown: (event) => { pressed.current = event.currentTarget; handlers.onPointerDown(event); },

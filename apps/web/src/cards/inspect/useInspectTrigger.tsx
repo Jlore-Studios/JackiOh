@@ -36,7 +36,12 @@ export type InspectOptions = {
   longPress?: boolean;
   /** Default false. True: a mouse's or pen's main button held as long counts too (the hero portrait, R1449). */
   holdAnyPointer?: boolean;
-  onLongPress?: (pointerId?: number | null) => void;
+  /**
+   * R3893000: on touch devices, a hold opens the inspect sheet directly with full text,
+   * bypassing onLongPress and hover previews, while mouse click-and-hold calls onLongPress.
+   */
+  touchSheet?: boolean;
+  onLongPress?: (pointerId?: number | null, pointerType?: string) => boolean | void;
   /** A mouse right-click calls it and prevents the native menu. The deck builder's, and the hero
       portrait's, which acts only while nothing is targeted (R1449): the board's cards leave
       right-click to the drag cancel. */
@@ -70,7 +75,7 @@ export type InspectBindings = {
 
 type Timer = ReturnType<typeof setTimeout>;
 
-type Press = { x: number; y: number; pointerId: number };
+type Press = { x: number; y: number; pointerId: number; pointerType: string };
 
 /** R3339000: whether the active device uses a coarse pointer (phone, touchscreen). */
 export function isCoarsePointer(): boolean {
@@ -199,7 +204,7 @@ export function useInspectTrigger(
         if (startsOnTermTip(event.target)) return;
         const element = event.currentTarget;
         const pressKey = current.key;
-        press.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
+        press.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId, pointerType: event.pointerType };
         pressState.current = "pending";
         t.press = setTimeout(() => {
           t.press = null;
@@ -210,12 +215,18 @@ export function useInspectTrigger(
             return;
           }
           const onLongPress = now.options.onLongPress;
-          // R2617000, R3339000: a hold is the hover; with previews off it opens the sheet.
-          const previewHold = onLongPress === undefined && hoverAllowed();
+          const pointerType = press.current?.pointerType ?? "";
+          const isTouch = pointerType === "touch" || (pointerType === "" && isCoarsePointer());
+          const effectivePointerType = isTouch ? "touch" : (pointerType || "mouse");
           pressState.current = "fired";
           armSuppressor();
-          if (onLongPress !== undefined) onLongPress(press.current?.pointerId ?? null);
-          else if (previewHold) {
+          if (onLongPress !== undefined && (!isTouch || !now.options.touchSheet)) {
+            const handled = onLongPress(press.current?.pointerId ?? null, effectivePointerType);
+            if (handled !== false) return;
+          }
+          // R2617000, R3339000, R3893000: a hold is the hover; with previews off or touchSheet on it opens the sheet.
+          const previewHold = !now.options.touchSheet && onLongPress === undefined && hoverAllowed();
+          if (previewHold) {
             // `press` keeps the start point, so a drift past the slop still ends the look.
             holdPreview.current = pressKey;
             openInspect({ key: pressKey, mode: "hover", anchor: rectOf(element) });

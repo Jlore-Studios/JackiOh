@@ -1248,3 +1248,155 @@ describe("#3697 the result panel names the board whose duel decided a duelResult
     expect(await reasonLine(decided({ winner: "p1", reason: "alt-win" }, null))).toBe("你的棋盘上：你达成了胜利条件。");
   });
 });
+
+// R3731002, R3731003: a 2v2's team B played by people
+describe("R3731002 a team B person's board in a 2v2", () => {
+  /** B1's own duel (duel 0) from B1's seat, its Player 2: two hand cards, A1's unit in lane index 2. */
+  function teamBOwnDuel(): PlayerView {
+    return baseView({
+      viewer: "p2",
+      active: "p2",
+      turn: 6,
+      autoEndTurn: false,
+      you: emptySide("p2", {
+        hero: hero(OWN_HP, { pool: TEAM_POOL, poolCap: POOL_CAP, spent: false }),
+        mana: { current: 5, max: 5 },
+        hand: [card({ instanceId: "h1", defId: "core-002", cost: 1 }), card({ instanceId: "h2", defId: "core-019", cost: 3 })],
+      }),
+      opponent: emptySide("p1", {
+        hero: hero(ACROSS_HP, { pool: ENEMY_POOL, poolCap: POOL_CAP, spent: false }),
+        hand: { count: 4 },
+        units: [null, null, unit("p1", { instanceId: "e1", defId: "core-008" }), null, null],
+      }),
+    });
+  }
+
+  /** B2's duel (duel 1) from B2's own seat: their three hand cards, A2's unit in lane index 0. */
+  function teamBTeammateDuel(): PlayerView {
+    return baseView({
+      viewer: "p2",
+      active: "p2",
+      turn: 6,
+      autoEndTurn: false,
+      you: emptySide("p2", {
+        hero: hero(TEAMMATE_HP, { pool: TEAM_POOL, poolCap: POOL_CAP, spent: false }),
+        mana: { current: TEAMMATE_MANA, max: 6 },
+        hand: [
+          card({ instanceId: "t1", defId: "core-055", cost: 0 }),
+          card({ instanceId: "t2", defId: "core-005", cost: 2 }),
+          card({ instanceId: "t3", defId: "core-007", cost: 4 }),
+        ],
+      }),
+      opponent: emptySide("p1", {
+        hero: hero(B2_HP, { pool: ENEMY_POOL, poolCap: POOL_CAP, spent: false }),
+        hand: { count: 5 },
+        units: [unit("p1", { instanceId: "e2", defId: "core-013" }), null, null, null, null],
+      }),
+    });
+  }
+
+  /** B1's DuosView in round 3, team B's round in both duels: its team is "b", the enemy "a". */
+  function teamBView(): DuosView {
+    return {
+      seat: "b1",
+      own: teamBOwnDuel(),
+      teammate: teamBTeammateDuel(),
+      team: {
+        team: "b",
+        pool: TEAM_POOL,
+        poolCap: POOL_CAP,
+        sides: [
+          { own: OWN_HP, spent: false },
+          { own: TEAMMATE_HP, spent: false },
+        ],
+        ended: [false, false],
+        passesLeft: [PASSES_LEFT, 10],
+        passCost: PASS_COST,
+      },
+      enemy: {
+        team: "a",
+        pool: ENEMY_POOL,
+        poolCap: POOL_CAP,
+        sides: [
+          { own: ACROSS_HP, spent: false },
+          { own: B2_HP, spent: false },
+        ],
+        ended: [false, false],
+        passesLeft: [0, 0],
+        passCost: PASS_COST,
+      },
+      round: 3,
+      roundSeats: ["b1", "b2"],
+      concedeOfferedBy: null,
+      result: null,
+    };
+  }
+
+  const HERE = { youOffered: false, teammateOffered: false, teammateHere: true, matchId: null };
+
+  it("R3731002 a team B seat's board is its own duel as Player 2, its team first", () => {
+    const board = renderDuosBoard({ view: teamBView() });
+    expect(screen.getByTestId("duos-board")).toHaveAttribute("data-seat", "b1");
+    expect(screen.getByTestId("duos-board")).toHaveAttribute("data-duel", "0");
+    // Its own duel: its own hand, not the teammate's.
+    expect(screen.getByTestId(testid.handCard("h1"))).toBeInTheDocument();
+    expect(screen.queryByTestId(testid.handCard("t1"))).toBeNull();
+
+    // Its team first in the life strip, the seat itself first in its team; the enemy is team A.
+    const teams = within(screen.getByTestId(ID.lifeStrip)).getAllByRole("group");
+    expect(teams.map((team) => [team.getAttribute("data-team"), team.getAttribute("data-side"), team.getAttribute("aria-label")])).toEqual([
+      ["b", "team", "Your team"],
+      ["a", "enemy", "Enemy team"],
+    ]);
+    const hp = screen.getAllByTestId(ID.ownHp);
+    expect(hp.map((each) => each.getAttribute("data-seat"))).toEqual(["b1", "b2", "a1", "a2"]);
+    expect(hp[0]).toHaveAttribute("data-you", "true");
+    expect(anyShows(ID.ownHp, OWN_HP)).toBe(true);
+    expect(screen.getAllByTestId(ID.pool).map((each) => each.getAttribute("data-team"))).toEqual(["b", "a"]);
+    expect(screen.getByTestId(ID.round)).toHaveTextContent(/your team's turn/i);
+    expect(screen.getByTestId(ID.round)).toHaveTextContent("You are B1");
+    expect(screen.getByTestId(ID.teammateStrip)).toHaveAttribute("data-seat", "b2");
+    expect(screen.getByTestId(ID.teammateStrip)).toHaveAttribute("data-hand", String(TEAMMATE_HAND));
+
+    // As Player 2: a ping on its own hand names its side, p2, and one on the enemy's unit names A1's, p1.
+    const own = must(reveal(screen.getByTestId(testid.handCard("h2")), ID.pingWheel), "the ping wheel on h2");
+    fireEvent.click(within(own).getByTestId(ID.ping("thumbsUp")));
+    expect(board.onPing).toHaveBeenLastCalledWith("thumbsUp", { duel: 0, at: "hand", side: "p2", index: 1 });
+    closeInspect();
+    const enemy = must(reveal(screen.getByTestId(testid.card("e1")), ID.pingWheel), "the ping wheel on e1");
+    fireEvent.click(within(enemy).getByTestId(ID.ping("killThis")));
+    expect(board.onPing).toHaveBeenLastCalledWith("killThis", { duel: 0, at: "unit", side: "p1", lane: 2 });
+    cleanup();
+
+    // The teammate's ping on their own duel marks their card through the portal.
+    renderDuosBoard({ view: teamBView(), pings: [{ from: "b2", ping: "careful", target: { duel: 1, at: "unit", side: "p1", lane: 0 }, at: Date.now() }] });
+    expect(screen.getByTestId(ID.portal)).toHaveAttribute("data-flash", "ping");
+    flipPortal();
+    expect(screen.getByTestId(testid.card("e2"))).toBeInTheDocument();
+    expect(screen.getByTestId(ID.pingMarker)).toBeInTheDocument();
+    cleanup();
+
+    // Team B's win is the seat's team's.
+    renderDuosBoard({ view: { ...teamBView(), result: { outcome: "win", winner: "b", reason: "concede" } } });
+    expect(screen.getByTestId("duos-result")).toHaveAttribute("data-outcome", "win");
+    expect(screen.getByTestId("duos-result")).toHaveTextContent("Your team won");
+    expect(screen.getByTestId("duos-result")).toHaveTextContent("The enemy team conceded.");
+  });
+
+  it("R3731003 a 2v2 result offers no Play again", () => {
+    const lost: DuosView = { ...teamBView(), result: { outcome: "win", winner: "a", reason: "concede" } };
+    const offer = vi.fn<() => void>();
+    const playAgain: DuosPlayAgain = { status: { ...HERE, unavailable: true }, offering: false, refusal: null, offer };
+    renderDuosBoard({ view: lost }, { onWatchReplay: vi.fn(), onLeave: vi.fn(), playAgain });
+    const panel = screen.getByTestId("duos-result");
+    expect(panel).toHaveAttribute("data-outcome", "loss");
+    expect(within(panel).getAllByRole("button").map((button) => button.getAttribute("data-testid"))).toEqual([
+      "duos-result-board",
+      "duos-result-replay",
+      "duos-result-back",
+    ]);
+    expect(screen.queryByTestId("duos-result-again")).toBeNull();
+    expect(screen.queryByTestId("duos-result-again-status")).toBeNull();
+    expect(offer).not.toHaveBeenCalled();
+  });
+});

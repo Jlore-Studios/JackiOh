@@ -1008,6 +1008,85 @@ fn r3566004_i16_a_card_evolved_in_its_graveyard_keeps_what_its_evolve_gave() {
     only(&i16(&state), &id, &["R78", "damage"]);
 }
 
+/// One field of R78's reset, given to a card.
+type Give = fn(&mut CardInstance);
+
+/// R78's reset clears these too (R3546000, R3554003, R3554007, R3536000), so a hand card holds none of them.
+#[test]
+fn i16_a_hand_card_holding_giga_a_half_a_damage_chain_or_evolved_is_one_leftover_each() {
+    let cases: [(&str, Give); 5] = [
+        ("giga", |card| card.giga = Some(true)),
+        ("half", |card| card.half = Some(Half::Left)),
+        ("sharedChain", |card| card.shared_chain = Some(1)),
+        ("splitChain", |card| card.split_chain = Some(1)),
+        ("evolved", |card| card.evolved = Some(true)),
+    ];
+    for (name, give) in cases {
+        let mut state = playing("i16-missed");
+        give(&mut state.players[P1].hand[0]);
+        let id = state.players[P1].hand[0].id.clone();
+        let found = i16(&state);
+        only(&found, &id, &["R78", "p1's hand"]);
+        assert!(
+            found[0].contains(&format!("still holds {name} on turn")),
+            "{}",
+            found[0]
+        );
+    }
+}
+
+/// R3548001: a card drawn while Tipsy is up is stamped before it reaches the hand and may carry the stamp
+/// into a library, where nothing reads it; R78's reset takes it as the card leaves the field or reaches a
+/// graveyard or an exile pile.
+#[test]
+fn i16_a_hand_or_library_card_may_hold_a_tipsy_stamp_but_a_graveyard_or_exile_card_may_not() {
+    let stamp = TipsyStamp {
+        player: P1,
+        level: 2,
+        turn: 1,
+    };
+    let mut state = playing("i16-tipsy");
+    state.players[P1].hand[0].tipsy = Some(stamp);
+    state.players[P2].library[0].tipsy = Some(stamp);
+    assert_eq!(i16(&state), Vec::<String>::new());
+    for zone in [Zone::Graveyard { player: P1 }, Zone::Exile { player: P1 }] {
+        let mut state = playing("i16-tipsy-gone");
+        let mut gone = new_instance(&mut state, "fx-2", P1, zone.clone());
+        gone.tipsy = Some(stamp);
+        let id = gone.id.clone();
+        match zone {
+            Zone::Graveyard { .. } => state.players[P1].graveyard.push(gone),
+            _ => state.players[P1].exile.push(gone),
+        }
+        let found = i16(&state);
+        only(&found, &id, &["R78"]);
+        assert!(found[0].contains("still holds tipsy on turn"), "{}", found[0]);
+    }
+}
+
+/// What R78's reset changes and a card off the field may keep in every pile: `memory` (a hand's R1841003
+/// `tributeLowered`, a graveyard's R429 `@returnPrice`) and a spent Brittle count, which the reset alone drops.
+#[test]
+fn i16_a_card_off_the_field_may_keep_its_memory_and_a_spent_brittle_count() {
+    let mut state = playing("i16-kept");
+    let mut dead = new_instance(&mut state, "fx-2", P1, Zone::Graveyard { player: P1 });
+    dead.memory.insert("@returnPrice".to_string(), json!(2));
+    dead.brittle = Some(BrittleCounter {
+        count: 0,
+        since: 1,
+        printed: None,
+    });
+    state.players[P1].graveyard.push(dead);
+    let hand = &mut state.players[P2].hand[0];
+    hand.memory.insert("tributeLowered".to_string(), json!(1));
+    hand.brittle = Some(BrittleCounter {
+        count: 0,
+        since: 1,
+        printed: None,
+    });
+    assert_eq!(i16(&state), Vec::<String>::new());
+}
+
 #[test]
 fn i16_a_library_card_owned_by_the_other_seat_is_one_owner_drift() {
     let mut state = playing("i16-owner");

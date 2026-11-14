@@ -80,6 +80,9 @@ mod tests {
 
     use crate::scenario;
 
+    /// The enemy Unit the allies meet, a 4/1.
+    const ENEMY: &str = "stand-in (2) 4/1 R8/2";
+
     fn lane(s: &Scenario, player: PlayerId, at: i32) -> CardInstance {
         match s.unit(player, at) {
             Some(unit) => unit,
@@ -97,34 +100,34 @@ mod tests {
             fn gives_allied_units_4_attack_while_it_is_on_the_field() {
                 let mut s = scenario(json!({
                     "p1": { "backrow": ["traininggrounds-045"], "field": ["core-008"], "hand": ["core-005"], "library": ["core-005"] },
-                    "p2": { "field": ["core-002"], "hand": ["core-005"], "library": ["core-005"] }
+                    "p2": { "field": [ENEMY], "hand": ["core-005"], "library": ["core-005"] }
                 }));
 
                 // Mr. Vanilla is printed 4/4.
                 s.expect_stats("core-008", json!({ "attack": 8, "health": 4, "maxHealth": 4 }));
-                // "Your units": the enemy's Speciesist (4/1) is untouched.
-                s.expect_stats("core-002", json!({ "attack": 4, "health": 1, "maxHealth": 1 }));
+                // "Your units": the enemy 4/1 is untouched.
+                s.expect_stats(ENEMY, json!({ "attack": 4, "health": 1, "maxHealth": 1 }));
             }
 
             /// Issue #3139: "Rush" is the only keyword left, so the exchange is simultaneous (§4.3) and
-            /// Speciesist's 4 kills the 4-health ally it dies to.
+            /// the enemy 4/1's 4 kills the 4-health ally it dies to.
             #[test]
-            fn grants_rush_and_no_first_strike_so_a_4_health_ally_trades_with_speciesist_s4_3() {
+            fn grants_rush_and_no_first_strike_so_a_4_health_ally_trades_with_a_4_1_s4_3() {
                 let mut s = scenario(json!({
                     "p1": { "backrow": ["traininggrounds-045"], "field": ["core-008"], "hand": ["core-005"], "library": ["core-005"] },
-                    "p2": { "field": ["core-002"], "hand": ["core-005"], "library": ["core-005"] }
+                    "p2": { "field": [ENEMY], "hand": ["core-005"], "library": ["core-005"] }
                 }));
                 let kinds = |s: &Scenario| -> Vec<KeywordKind> {
                     s.stats("core-008").keywords.iter().map(|keyword| keyword.kind()).collect()
                 };
                 assert!(kinds(&s).contains(&KeywordKind::Rush));
                 assert!(!kinds(&s).contains(&KeywordKind::FirstStrike));
-                let speciesist = s.card("core-002").clone();
+                let enemy = s.card(ENEMY).clone();
                 let ally = s.card("core-008").clone();
 
-                s.attack("core-008", "core-002");
+                s.attack("core-008", ENEMY);
 
-                s.expect_in_zone(&speciesist, "graveyard");
+                s.expect_in_zone(&enemy, "graveyard");
                 s.expect_in_zone(&ally, "graveyard");
             }
 
@@ -132,7 +135,7 @@ mod tests {
             fn covers_a_unit_summoned_after_it_rush_included_s10_4_layer_5_r83() {
                 let mut s = scenario(json!({
                     "p1": { "backrow": ["traininggrounds-045"], "hand": ["core-015", "core-005"], "library": ["core-005"] },
-                    "p2": { "field": ["core-002"], "hand": ["core-005"], "library": ["core-005"] }
+                    "p2": { "field": [ENEMY], "hand": ["core-005"], "library": ["core-005"] }
                 }));
 
                 // #15 Me and Mr Token is printed 1/1 and its Cry summons a 3/3 Rush Token: both land
@@ -144,11 +147,11 @@ mod tests {
                 s.expect_stats(&second, json!({ "attack": 7, "health": 3 }));
 
                 // Summoning sick this turn, and it attacks a unit anyway: that is the granted Rush.
-                let speciesist = s.card("core-002").clone();
-                s.attack("core-015", "core-002");
+                let enemy = s.card(ENEMY).clone();
+                s.attack("core-015", ENEMY);
 
-                s.expect_in_zone(&speciesist, "graveyard");
-                // And with no First Strike granted it takes Speciesist's 4 back, so it dies with it.
+                s.expect_in_zone(&enemy, "graveyard");
+                // And with no First Strike granted it takes the enemy's 4 back, so it dies with it.
                 s.expect_in_zone(&first, "graveyard");
             }
 
@@ -161,7 +164,7 @@ mod tests {
                         "hand": ["core-036", "core-005"],
                         "library": ["core-005"]
                     },
-                    "p2": { "field": ["core-002"], "hand": ["core-005"], "library": ["core-005"] }
+                    "p2": { "field": [ENEMY], "hand": ["core-005"], "library": ["core-005"] }
                 }));
                 let weapons = s.card("traininggrounds-045").clone();
                 s.expect_stats("core-008", json!({ "attack": 8 }));
@@ -172,9 +175,9 @@ mod tests {
                 s.expect_in_zone(&weapons, "graveyard");
                 s.expect_stats("core-008", json!({ "attack": 4, "health": 4, "maxHealth": 4 }));
                 // The keywords went with it: the ally is summoning-sick-free but has no First Strike, so
-                // Speciesist's 4 now kills it in the simultaneous step.
+                // the enemy's 4 now kills it in the simultaneous step.
                 let ally = s.card("core-008").clone();
-                s.attack("core-008", "core-002");
+                s.attack("core-008", ENEMY);
                 s.expect_in_zone(&ally, "graveyard");
             }
         }
@@ -191,7 +194,7 @@ mod tests {
                         "hand": ["core-005"],
                         "library": ["core-005"]
                     },
-                    "p2": { "field": ["core-002"], "hand": ["core-005"], "library": ["core-005"] }
+                    "p2": { "field": [ENEMY], "hand": ["core-005"], "library": ["core-005"] }
                 }));
 
                 s.expect_stats("core-008", json!({ "attack": 12, "health": 4, "maxHealth": 4 }));
@@ -200,11 +203,11 @@ mod tests {
                 assert!(kinds.contains(&KeywordKind::Rush));
                 assert!(!kinds.contains(&KeywordKind::FirstStrike));
 
-                let speciesist = s.card("core-002").clone();
+                let enemy = s.card(ENEMY).clone();
                 let ally = s.card("core-008").clone();
-                s.attack("core-008", "core-002");
+                s.attack("core-008", ENEMY);
 
-                s.expect_in_zone(&speciesist, "graveyard");
+                s.expect_in_zone(&enemy, "graveyard");
                 s.expect_in_zone(&ally, "graveyard"); // no First Strike: the exchange is simultaneous
             }
 
@@ -216,7 +219,7 @@ mod tests {
                         "hand": ["core-015", "core-005"],
                         "library": ["core-005"]
                     },
-                    "p2": { "field": ["core-002"], "hand": ["core-005"], "library": ["core-005"] }
+                    "p2": { "field": [ENEMY], "hand": ["core-005"], "library": ["core-005"] }
                 }));
 
                 s.play("core-015", json!({}));
@@ -225,9 +228,9 @@ mod tests {
                 let second = lane(&s, PlayerId::P1, 2);
                 s.expect_stats(&first, json!({ "attack": 9, "health": 1 }));
                 s.expect_stats(&second, json!({ "attack": 11, "health": 3 }));
-                let speciesist = s.card("core-002").clone();
-                s.attack("core-015", "core-002");
-                s.expect_in_zone(&speciesist, "graveyard");
+                let enemy = s.card(ENEMY).clone();
+                s.attack("core-015", ENEMY);
+                s.expect_in_zone(&enemy, "graveyard");
                 assert!(s.unit(PlayerId::P2, 1).is_none());
             }
         }
@@ -288,16 +291,16 @@ mod tests {
         crate::under_kept("traininggrounds-045", script_v0_5_11o(), || {
             let mut s = scenario(json!({
                 "p1": { "backrow": ["traininggrounds-045"], "field": ["core-008"], "hand": ["core-005"], "library": ["core-005"] },
-                "p2": { "field": ["core-002"], "hand": ["core-005"], "library": ["core-005"] }
+                "p2": { "field": [ENEMY], "hand": ["core-005"], "library": ["core-005"] }
             }));
             let kinds: Vec<KeywordKind> =
                 s.stats("core-008").keywords.iter().map(|keyword| keyword.kind()).collect();
             assert!(kinds.contains(&KeywordKind::Rush));
             assert!(kinds.contains(&KeywordKind::FirstStrike));
-            // First Strike: the 4-health ally kills Speciesist and takes nothing back.
-            let speciesist = s.card("core-002").clone();
-            s.attack("core-008", "core-002");
-            s.expect_in_zone(&speciesist, "graveyard");
+            // First Strike: the 4-health ally kills the 4/1 and takes nothing back.
+            let enemy = s.card(ENEMY).clone();
+            s.attack("core-008", ENEMY);
+            s.expect_in_zone(&enemy, "graveyard");
             s.expect_stats("core-008", json!({ "health": 4 }));
         });
     }
