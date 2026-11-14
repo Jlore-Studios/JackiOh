@@ -17781,12 +17781,9 @@
     "what": "suggestions on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-14T05:42:20Z",
+    "at": "2026-11-14T05:51:05Z",
     "notes": [
-      "delivered plan #3907 on claude-4 (run 43561652127): blocked",
-      "started suggest on claude-1 (run 43562987496)",
-      "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days"
+      "#3903: approved and green, so its strikes are cleared"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18492,7 +18489,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-14T05:42:20Z",
+  "loop_tick": "2026-11-14T05:51:05Z",
   "machine_disk": {
     "issue": null,
     "reading": {
