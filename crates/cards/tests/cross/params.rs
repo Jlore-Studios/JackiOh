@@ -185,10 +185,10 @@ mod b3_4_params_the_numbers_a_card_declares {
             &first_param("classic-038"),
             &json!({ "key": "plays", "base": 3, "radiant": 2, "better": "down", "min": 2 })
         ));
-        // A percentage: step 10, never above 100, at its bound on both faces (#1828).
+        // A percentage: step 10, never above 100, at its bound on the Radiant face.
         assert!(matches_object(
-            &first_param("classicplus-019-2"),
-            &json!({ "key": "chance", "base": 100, "radiant": 100, "step": 10, "max": 100 })
+            &first_param("core-042"),
+            &json!({ "key": "chance", "base": 50, "radiant": 100, "step": 10, "max": 100 })
         ));
     }
 

@@ -8474,17 +8474,6 @@
     "refs": [
       "classicplus-019-5"
     ],
-    "params": [
-      {
-        "key": "chance",
-        "base": 100,
-        "radiant": 100,
-        "better": "up",
-        "step": 10,
-        "min": 1,
-        "max": 100
-      }
-    ],
     "loc": 37,
     "base": {
       "attack": 4,
@@ -8494,7 +8483,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Can't attack\nEnd of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser goes Berserk."
+      "text": "Can't attack\nEnd of turn: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser goes Berserk."
     },
     "radiant": {
       "attack": 8,
@@ -8504,7 +8493,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Can't attack\nEnd of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser gets the kill instead."
+      "text": "Can't attack\nEnd of turn: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser gets the kill instead."
     }
   },
   "classicplus-019-3": {
@@ -16921,6 +16910,8 @@
       "meditative-008",
       "meditativeplus-001-5",
       "stinkyscape-148",
+      "core-075",
+      "stinkyscapeplus-079",
       "meditativeplus-001-2",
       "meditative-020",
       "meditativeplus-001-3",
@@ -16929,11 +16920,11 @@
     "loc": 38,
     "base": {
       "keywords": [],
-      "text": "Add a random Wincon card to your hand, and its plan: a Base Camp for Reach the Summit; a Star Chart for Alteran Reach; for Aestheticize the Game, Discover a Spa Day, a Garage Sale or a Leg Day."
+      "text": "Add a random Wincon card to your hand, and its plan: a Base Camp for Reach the Summit; a Star Chart for Alteran Reach; an Infinite Reserves for A Glimpse into the Endless Sea; for Aestheticize the Game, Discover a Spa Day, a Garage Sale or a Leg Day."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add a random Radiant Wincon card to your hand, and its Radiant plan: a Radiant Base Camp for Reach the Summit; a Radiant Star Chart for Alteran Reach; for Aestheticize the Game, Discover a Radiant Spa Day, Garage Sale or Leg Day."
+      "text": "Add a random Radiant Wincon card to your hand, and its Radiant plan: a Radiant Base Camp for Reach the Summit; a Radiant Star Chart for Alteran Reach; a Radiant Infinite Reserves for A Glimpse into the Endless Sea; for Aestheticize the Game, Discover a Radiant Spa Day, Garage Sale or Leg Day."
     }
   },
   "meditativeplus-001-1": {
