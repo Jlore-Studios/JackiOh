@@ -17015,6 +17015,7 @@
       "provider": "agy",
       "queued_at": "2026-11-13T23:39:24Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "",
       "run_id": "43532800088",
       "runs_on": "night-vm-agy",
       "started_at": "2026-11-14T00:14:09Z",
@@ -17023,7 +17024,8 @@
         "the run failed: RuntimeError: the planner on gemini-3.8-flash-high wrote no plan: timed out after 9000s"
       ],
       "strikes": 1,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "3896": {
       "action": "review",
