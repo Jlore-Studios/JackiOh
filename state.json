@@ -12383,11 +12383,6 @@
       "owner": "claude-3",
       "owner_since": "2026-11-13T15:35:49Z",
       "owner_why": "it plans it",
-      "paused": {
-        "at": "2026-11-13T22:26:59Z",
-        "interrupt": "usage",
-        "provider": "claude-3"
-      },
       "pending_request": false,
       "planned_at": "2026-11-13T17:01:53Z",
       "planned_by": "`claude-3` (claude, `sonnet`, medium)",
