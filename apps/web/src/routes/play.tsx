@@ -583,7 +583,7 @@ type Panel = QueueMode | "lobby" | null;
 
 function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }): ReactElement {
   useLocale();
-  /** R3729001: inside the menus' shell the banner shows the search, so this screen draws none of its own. */
+  /** R3729001: inside the menus' shell the banner shows the search, so this screen draws none of its own while the tab remembers the queue. */
   const shell = useMenuShell();
   /** R765 resumes a queue left from another screen. */
   const [rejoined] = useState(readQueued);
@@ -649,6 +649,8 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
   // tab remembers (R765) can end.
   const queued = useQueued();
   const queueWait = queued !== null;
+  /** The banner draws from the tab's memory of the queue: with storage blocked it never shows, and this screen leaves the queue itself. */
+  const ownSearch = shell === null || !queueWait;
   const onQueueEnded = useCallback((): void => {
     ownForget.current = true;
     forgetQueued();
@@ -817,7 +819,7 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
       ) : null}
       {panel === null ? refusal : null}
       <div className="play-body">
-        {searching && shell === null ? (
+        {searching && ownSearch ? (
           <section className="play-searching" aria-label={t("Find a match")}>
             <Searching mode={mode} />
             <button

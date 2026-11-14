@@ -1171,6 +1171,37 @@ describe("the lobby's queue state", () => {
     expect(screen.getByTestId(playModeTestid("bo1"))).not.toBeDisabled();
   });
 
+  it("R3729001 inside the shell with storage blocked, no banner can show, so this screen keeps its own Leave the queue", async () => {
+    vi.mocked(enqueue).mockResolvedValue(openTicket("bo1"));
+    vi.mocked(dequeue).mockResolvedValue({ cancelled: true, ticketId: "tk-1" });
+    const getItem = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    try {
+      render(
+        <MenuShellContext.Provider value={{ status: null }}>
+          <PlayRoute token={TOKEN} />
+        </MenuShellContext.Provider>,
+      );
+      await screen.findByTestId(playTestid.hub);
+      pickMode("bo1");
+      await screen.findByTestId(playTestid.deckSelect);
+      fireEvent.click(screen.getByTestId(playTestid.queue));
+      await screen.findByTestId(playTestid.searching);
+      // The tab remembers no queue, so the shell shows no banner: Leave is this screen's.
+      expect(readQueued()).toBeNull();
+      fireEvent.click(screen.getByTestId(playTestid.leaveQueue));
+      await screen.findByText("Left the queue.");
+      expect(vi.mocked(dequeue)).toHaveBeenCalledTimes(1);
+    } finally {
+      getItem.mockRestore();
+      setItem.mockRestore();
+    }
+  });
+
   it("R3729001 Leave on this screen ends its own wait once, and the banner's Cancel path adds no second line", async () => {
     vi.mocked(enqueue).mockResolvedValue(openTicket("bo1"));
     vi.mocked(dequeue).mockResolvedValue({ cancelled: true, ticketId: "tk-1" });
