@@ -16763,15 +16763,8 @@
       "waiting_comment": 6867742676
     },
     "3888": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43530480410",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-14T00:25:02Z",
-        "until": "2026-11-14T00:55:02Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -16783,10 +16776,9 @@
         "reason": "planned on opus",
         "trail": "s/rules/fixtures/ | head -50; grep -n \\\"pub fn instance_game\\\" -A30 crates/engine/tests/rules/fixtures/instance_data.rs | head -50\", \"description\": \"Look at engine r\u2026\n- Bash: {\"command\": \"sed -n 1,120p crates/engine/tests/rules/balance_2727.rs\", \"description\": \"Read balance_2727 test fixture pattern\"}\n- Bash: {\"command\": \"grep -n \\\"^pub fn\\\" crates/engine/tests/rules/fixtures/catalog.rs | head -20; grep -n \\\"BUILD \\u00a70\\\\|fx-\\\" BUILD.md | head -5\", \"description\": \"Fixture def helpers and index conventio\u2026\n- Bash: {\"command\": \"git show be314c9dea -- BUILD.md | tail -8 | cut -c1-600\", \"description\": \"See BUILD.md line added by #2727\"}\n- Bash: {\"command\": \"awk 'NR>=118 && NR<=251 {print NR\\\": \\\"substr($0,1,140)}' spec/06-keywords.md | grep -v \\\"^[0-9]*: | \\\" | head -30\", \"description\": \"Show non-table lines in \\u00a76.3 onward\"}\n- Bash: {\"command\": \"grep -n -o \\\".\\\\{150\\\\}\\\\`cry\\\\`.\\\\{150\\\\}\\\" spec/08-catalog.md spec/05-card-types.md | head; grep -n -o \\\".\\\\{100\\\\}cry: \\\\\\\".\\\\{100\\\\}\\\" spec/08-catalog.md | head -3; grep -rn \\\"R17480\u2026\n- Bash: {\"command\": \"ls spec/pending/ | head; git show be314c9dea:spec/pending/2727.md | cut -c1-800; grep -n \\\"Adding a ruling\\\" -A30 spec/README.md | cut -c1-400 | head -40\", \"description\": \"Read pending p\u2026\n- Bash: {\"command\": \"grep -n \\\"pub fn\\\\|pub(crate) fn\\\" crates/engine/src/graveyard_play.rs | head -20; grep -rn \\\"fn has_flashback\\\\|fn flashback_\\\" crates/engine/src --include=*.rs | head\", \"description\": \u2026\n- Bash: {\"command\": \"sed -n 75,145p crates/engine/src/graveyard_play.rs\", \"description\": \"Read has_flashback and playable_from_graveyard\"}\n- Bash: {\"command\": \"grep -n \\\"pub enum KeywordKind\\\" -A80 crates/engine/src/wire/*.rs | grep -E \\\"^\\\\S+-\\\\s+[A-Z][A-Za-z]+( =|,)\\\" | head -80 | awk '{print $2}' | tr '\\\\n' ' '\", \"description\": \"List Keyword\u2026\n- Bash: {\"command\": \"sed -n 140,170p apps/web/src/patches/diff.ts; sed -n 205,245p apps/web/src/patches/diff.test.ts\", \"description\": \"Read diff.ts param description and tests\"}\n- Bash: {\"command\": \"grep -n \\\"^| \\\\`patches\\\\|^| \\\\`classify\\\" crates/tools/README.md | cut -c1-1800\", \"description\": \"Read patches and classify command docs\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn casts_on_draw\\\\|pub(crate) fn casts_on_draw\\\" crates/engine/src/draw.rs; grep -n \\\"fn is_sick\\\" crates/engine/src/combat.rs; grep -n \\\"pub fn is_slumbering\\\" crates/engi\u2026\n- Bash: {\"command\": \"grep -n \\\"TUNE_BUFF_HAND_KEYWORDS\\\\|TUNE_PLAGUE_STEP\\\\|TUNE_FIELD_SPELL\\\" BUILD.md | cut -c1-80; grep -n \\\"TUNE_BUFF_HAND_REMOVES\\\\|TUNE_FIELD_SPELL_KEYWORDS\\\" crates/engine/src/config.r\u2026\n- Bash: {\"command\": \"sed -n 239,330p crates/engine/tests/rules/stinkyscape_plus_s22.rs\", \"description\": \"Read Tears graveyard tests\"}\n- Bash: {\"command\": \"sed -n 517p spec/08-catalog.md | grep -o \\\".\\\\{80\\\\}cry.\\\\{80\\\\}\\\"; grep -n \\\"R1845001\\\\|hidden Nerf\\\" spec/06-keywords.md spec/10*.md | cut -c1-160 | head -5; ls spec/ | head -30\", \"des\u2026\n- Bash: {\"command\": \"sed -n 201p spec/06-keywords.md | cut -c1-1200; grep -n \\\"Nerf\\\\|Buff\\\" spec/01-overview.md | cut -c1-200 | head -5\", \"description\": \"Read Hidden Nerf row and overview mentions\"}\n- Bash: {\"command\": \"sed -n 105,140p crates/cards/src/scripts/meditative/c101_gachaholic.rs; grep -rn \\\"\\\\.cry\\\\b\\\\|ParamCry\\\\|cry_only_on\\\" crates/cards crates/tools crates/shared crates/server crates/ai cr\u2026\n- Bash: {\"command\": \"grep -n \\\"cry\\\\|Cry\\\" crates/cards/tests/cross/params.rs | head -10; grep -n \\\"cry\\\\|Cry\\\\|tunedOn\\\\|tuned_on\\\" crates/shared/src/face/model.rs | head\", \"description\": \"Check cross param\u2026\n- Bash: {\"command\": \"grep -n \\\"pub mod tune\\\\b\\\\|pub mod tributes\\\\|pub mod trigger_stays\\\\|pub mod turn_clock\\\" crates/engine/tests/rules/mod.rs crates/cards/tests/cross/mod.rs; grep -n \\\"^pub mod t\\\" crate\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3888/.bot-plan.md\", \"content\": \"## Goal\\n\\nSPEC \\u00a76.3 gets one zone table (ruling R3888000) that says, for every kind of Buff or Nerf change, whet\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count plan words and characters\"}\n- Bash: {\"command\": \"tr -s '[:space:]' '\\\\n' < .bot-plan.md | grep -c '[A-Za-z0-9]'\", \"description\": \"Count tokens containing letters or digits\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3888/.bot-plan.md\", \"content\": \"## Goal\\n\\nSPEC \\u00a76.3 gets one zone table (ruling R3888000). For every kind of Buff or Nerf change, it says whethe\u2026\n- Bash: {\"command\": \"tr -s '[:space:]' '\\\\n' < .bot-plan.md | grep -c '[A-Za-z0-9]'; wc -c .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3888/.bot-plan.md\", \"old_string\": \"Leave alone: `.github/`, `.harness/`, `.squishy/`, `bot/`, `.claude/`, `spec/11-rulings.md`, \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3888/.bot-plan.md\", \"old_string\": \"SPEC \\u00a76.3 gets one zone table (ruling R3888000). For every kind of Buff or Nerf change, \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3888/.bot-plan.md\", \"old_string\": \"**`crates/engine/tests/rules/tune_live.rs`.** Each test reads `menu_offers` or `applicable_ch\u2026\n- Bash: {\"command\": \"tr -s '[:space:]' '\\\\n' < .bot-plan.md | grep -c '[A-Za-z0-9]'; wc -c .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3888/.bot-plan.md\", \"old_string\": \"- **Replays.** The rng draws move: an earlier replay that Buffed or Nerfed a card ends on ano\u2026\n- Bash: {\"command\": \"tr -s '[:space:]' '\\\\n' < .bot-plan.md | grep -c '[A-Za-z0-9]'; cat .bot-plan.md\", \"description\": \"Recount and print final plan\"}\n- said: ## Goal SPEC \u00a76.3 gets one zone table (R3888000) saying, for every kind of Buff or Nerf change, whether it is live in the deck, the hand, being played (\u00a710.5 step 3), the field face-up, face-down, Dormant, the graveyard and exile. The engine reads it from one module, `effects/tune_live.rs`, in ever\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-13T23:54:03Z",
       "owner_why": "it plans it",
@@ -16799,9 +16791,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-13T22:20:03Z",
       "requested_by": "jgoetzmann",
-      "run_id": "43530480410",
+      "run_id": "pending:27cf5eb7-1794615951",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-13T23:54:03Z",
+      "started_at": "2026-11-14T00:26:32Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -17060,9 +17052,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-14T00:15:08Z",
+    "at": "2026-11-14T00:26:32Z",
     "url": "",
-    "what": "spot-check #3885 on claude-4"
+    "what": "build #3888 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-14T00:01:42Z",
