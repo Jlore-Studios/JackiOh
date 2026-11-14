@@ -17779,7 +17779,16 @@
       "feedback_since": "2026-11-14T02:26:22Z",
       "issue": 3886,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-7",
+        "rejections": [],
+        "reviews": [],
+        "sha": "96f4e027948597064ff0c20f26bddcf11465b299",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "fce3910f5abefcbe",
