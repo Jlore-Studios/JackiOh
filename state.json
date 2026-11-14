@@ -14435,7 +14435,7 @@
     "what": "build #3920 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-14T20:59:28Z",
+    "at": "2026-11-14T21:05:54Z",
     "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15141,7 +15141,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-14T20:59:28Z",
+  "loop_tick": "2026-11-14T21:05:54Z",
   "machine_disk": {
     "issue": null,
     "reading": {
