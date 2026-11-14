@@ -14551,15 +14551,8 @@
     "what": "review #3902 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-14T14:07:21Z",
-    "notes": [
-      "delivered build #3868 on agy (run 43600592130): built",
-      "delivered revise #3902 on claude-4 (run 43592340791): built",
-      "started review #3922 on agy (run 43603399675)",
-      "started review #3902 on claude-4 (run 43603441185)",
-      "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days"
-    ],
+    "at": "2026-11-14T14:16:11Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15264,7 +15257,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-14T14:07:21Z",
+  "loop_tick": "2026-11-14T14:16:11Z",
   "machine_disk": {
     "issue": null,
     "reading": {
