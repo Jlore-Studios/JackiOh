@@ -16569,14 +16569,6 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3884; git log --oneline -3; sed -n 180,236p apps/web/src/motion.test.ts; git log --oneline -3 -- apps/web/src/motion.test.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3884; grep -n \\\"ANIM_SCALED\\\" -A16 apps/web/src/motion.test.ts | head -30; git diff 656a2238acf5ec59f2093aa4d13609437f2611e7 HEAD -- apps/web/src/gam\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3884; sed -n 55,66p apps/web/src/motion.test.ts; git show origin/main:apps/web/src/game/animations.css | grep -c \\\"var(--anim-scale\\\"; grep -c \\\"var(\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3884; git log -p -3 --format='%h %s' -- apps/web/src/motion.test.ts | grep -E '^[0-9a-f]{10} |^[-+].*\\\"game/animations.css\\\"' | head\"}\n- said: #3786 bumped the same count from 67 to 68 for a new row, so 68 \u2192 69 follows that precedent.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3884; sed -i '68s/\\\"game\\\\/animations.css\\\": 68,/\\\"game\\\\/animations.css\\\": 69,/' apps/web/src/motion.test.ts; sed -n 68p apps/web/src/motion.test.ts\u2026\n- said: Now I'll rebuild the wasm module for the merged head and run `motion.test.ts`, every test that reads `animations.css`, and the touched files.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3884; grep -rln \\\"animations.css\\\" apps/web/src --include=*.test.ts --include=*.test.tsx | tr '\\\\n' ' '; echo; grep -n \\\"vitest\\\" .github/workflows/c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3884; sh scripts/build-wasm.sh >/tmp/wasm.log 2>&1; echo wasm $?; cd apps/web && pnpm exec vitest run src/cards/TermTip.test.tsx src/settings/wiring.\u2026\n- said: All 18 files pass (472/472). The newest merge from `main` (#3886) came in after that CI run, so I'll also run the web's full unit suite as CI runs it (all three projects), plus the typecheck.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3884; pnpm --dir apps/web typecheck 2>&1 | tail -3; echo tc $?; pnpm exec vitest run --project web --project edge --project admin > /tmp/vitest-full.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3884; python3 - <<'EOF'\\nimport re\\np='.bot-notes.md'\\ns=open(p).read()\\ns=re.sub(r'## State\\\\n.*?\\\\n## Log', '''## State\\nPass 3 (CI fix). Pass 2 ad\u2026\n- said: The full suite is running; I'll wait for its notice.\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-3884/117f8cd8-a903-42cc-9822-23e98d6fffed/tasks/bx3scz21a.output\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3884; echo \\\"- full vitest web+edge+admin: 760 files passed, 13747 tests passed, 151 skipped (daily). typecheck clean. Done.\\\" >> .bot-notes.md; sed \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a hero's Armor gain is announced with an event, a game-log line and a cue, so Tank Up and the cards that give Armor no longer change the badge in silence\"} --> Closes #3857 When a hero gains Armor it keeps, the engine now sends a public `armorGained` ev\u2026"
       },
-      "hold": {
-        "ends": "2026-11-14T08:37:17Z",
-        "lifted": "2026-11-14T07:23:03Z",
-        "owner": "claude-1",
-        "since": "2026-11-14T06:37:17Z",
-        "until": "2026-11-14T07:20:00Z",
-        "why": "5-hour usage is 101%, too close to its 100% cap to start a long run (it starts under 95%)"
-      },
       "interruptions": 0,
       "issue": 3857,
       "kind": "review",
@@ -16584,7 +16576,8 @@
       "live": "reviewing",
       "merge_owner": "claude-1",
       "own_review": {
-        "claimed_at": "2026-11-14T06:32:55Z",
+        "claimed": true,
+        "claimed_at": "2026-11-14T07:24:19Z",
         "from_run": "43559279552",
         "gates": [
           {
@@ -16685,7 +16678,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "",
-      "run_id": "43566878210",
+      "run_id": "pending:8e9d820a-1794641029",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16706,7 +16699,7 @@
         "run": "43559279552"
       },
       "source": "",
-      "started_at": "2026-11-14T06:32:55Z",
+      "started_at": "2026-11-14T07:24:19Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -17786,7 +17779,7 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-14T06:32:55Z",
+    "at": "2026-11-14T07:24:19Z",
     "url": "",
     "what": "review #3884 on claude-1"
   },
