@@ -4,7 +4,7 @@
 // draws the server's answer; nothing here is a rule (CLAUDE.md rule 7), and every refusal is in the server's
 // words.
 
-import { useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 
 import { AccountError } from "../auth/AccountError.tsx";
 import Username from "../auth/Username.tsx";
@@ -242,10 +242,28 @@ export function BlockedTab({ list, actions }: { list: FriendsList | null; action
   );
 }
 
-/** "Shared with me": the replays friends have shared; `onOpen` takes the player to one. */
-export function SharedTab({ onOpen }: { onOpen: (replay: SharedReplay) => void }): ReactElement {
+/**
+ * "Shared with me": the replays friends have shared; `onOpen` takes the player to one. R3729002: `wanted`, the
+ * match a link asked to watch, is opened once the list has been read, as Watch on its row would; the replay is
+ * the list's, not the link's, so a match the list does not hold opens nothing.
+ */
+export function SharedTab({ onOpen, wanted = null }: { onOpen: (replay: SharedReplay) => void; wanted?: string | null }): ReactElement {
   useLocale();
   const [shared, reloadShared] = usePolled(getSharedReplays, null);
+  const opened = useRef<string | null>(null);
+  const open = useRef(onOpen);
+  open.current = onOpen;
+  useEffect(() => {
+    if (wanted === null) {
+      opened.current = null;
+      return;
+    }
+    if (shared.kind !== "ready" || opened.current === wanted) return;
+    const replay = shared.value.shared.find((entry) => entry.matchId === wanted);
+    if (replay === undefined) return;
+    opened.current = wanted;
+    open.current(replay);
+  }, [wanted, shared]);
   return (
     <section className="lobby-card together-panel" id={SHARED_ANCHOR} aria-label={t("Shared with me")}>
       {shared.kind === "loading" ? <Skeleton variant="rows" label={t("Loading…")} /> : null}

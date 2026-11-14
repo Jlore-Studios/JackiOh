@@ -348,6 +348,8 @@ function signInThroughForm(email: string): void {
 
     signInThroughForm(P1);
     cy.visit("/play");
+    // R3729000: the mode's card opens the panel that holds Find a match.
+    cy.get('[data-testid="play-mode-bo1"]').click();
     cy.get('[data-testid="play-queue"]').click();
     // Queued, with nobody to pair against.
     cy.get('[data-testid="play-status"]', { timeout: 30_000 }).should("exist");

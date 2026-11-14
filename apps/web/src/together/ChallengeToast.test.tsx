@@ -19,6 +19,9 @@ import { settle } from "../test/settle.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { at, meBody, must, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { CHALLENGE_CHOICE_KEY, readChallengeChoice } from "./challengeChoice.ts";
+import { InboxBell } from "../inbox/InboxBell.tsx";
+import { inboxTestid } from "../inbox/testids.ts";
+import { resetInboxForTests } from "../inbox/store.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
 import { SOCIAL_POLL_MS } from "./config.ts";
 import { challengeToastTestid } from "./testids.ts";
@@ -133,6 +136,7 @@ function releaseDecks(): void {
 beforeEach(() => {
   window.localStorage.clear();
   forgetRoomLink();
+  resetInboxForTests();
   resetUsernamePromptForTests();
   at("/decks");
   heldDecks = [];
@@ -531,6 +535,68 @@ describe("R2031000 an All random challenge's more cards from", () => {
         expect(window.location.pathname).toBe(`/match/${JOINED_MATCH}`);
       }, SOON);
       expect(server.to("POST", `/api/rooms/${INCOMING.roomCode}/join`)[0]?.body).toEqual({ mode: "bo1", deckId: "d-aggro" });
+    },
+    TEST_MS,
+  );
+});
+
+describe("R3729002 Later and the inbox", () => {
+  it(
+    "R3729002 Later sends only the toast away: no decline is sent, the next read does not bring it back, and the inbox still lists the challenge",
+    async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+      signIn("tok-toast");
+      const server = serve({ incoming: [INCOMING], outgoing: [] });
+      render(
+        <>
+          <ChallengeToast />
+          <InboxBell />
+        </>,
+      );
+      const later = await screen.findByTestId(challengeToastTestid.later, undefined, SOON);
+      expect(later).toHaveTextContent("Later");
+      fireEvent.click(later);
+      expect(screen.queryAllByTestId(challengeToastTestid.toast)).toHaveLength(0);
+      expect(server.to("POST", "/api/challenges/ch-1/decline")).toHaveLength(0);
+
+      // The social poll reads again and the challenge is still open: its toast stays away.
+      const reads = server.to("GET", "/api/social").length;
+      await settle({ advance: SOCIAL_POLL_MS + 1 });
+      expect(server.to("GET", "/api/social").length).toBeGreaterThan(reads);
+      expect(screen.queryAllByTestId(challengeToastTestid.toast)).toHaveLength(0);
+
+      // The bell counts it and the panel lists it, with its answers.
+      expect(screen.getByTestId(inboxTestid.badge)).toHaveTextContent("1");
+      fireEvent.click(screen.getByTestId(inboxTestid.bell));
+      const item = await screen.findByTestId(inboxTestid.item, undefined, SOON);
+      expect(item).toHaveAttribute("data-kind", "challenge");
+      expect(item).toHaveAttribute("data-key", "challenge:ch-1");
+      expect(item).toHaveTextContent(`${ANN.username} challenges you to Best of 1.`);
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R3729002 Later is one challenge's: another challenge's toast still shows, and Decline in the toast still declines",
+    async () => {
+      signIn("tok-toast");
+      const second: Challenge = { ...INCOMING, challengeId: "ch-3", roomCode: "QRS890", from: BOB };
+      const server = serve({ incoming: [INCOMING, second], outgoing: [] });
+      render(<ChallengeToast />);
+      await waitFor(() => {
+        expect(screen.getAllByTestId(challengeToastTestid.toast)).toHaveLength(2);
+      }, SOON);
+      const [first] = screen.getAllByTestId(challengeToastTestid.toast);
+      fireEvent.click(within(first as HTMLElement).getByTestId(challengeToastTestid.later));
+      const left = screen.getAllByTestId(challengeToastTestid.toast);
+      expect(left).toHaveLength(1);
+      expect(left[0]).toHaveAttribute("data-challenge-id", "ch-3");
+
+      fireEvent.click(within(left[0] as HTMLElement).getByTestId(challengeToastTestid.decline));
+      await waitFor(() => {
+        expect(server.to("POST", "/api/challenges/ch-3/decline")).toHaveLength(1);
+      }, SOON);
+      expect(server.to("POST", "/api/challenges/ch-1/decline")).toHaveLength(0);
     },
     TEST_MS,
   );

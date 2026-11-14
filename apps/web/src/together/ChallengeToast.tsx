@@ -7,6 +7,8 @@
 // pick (R2031000), shown once the engine is in (#778). Accept joins the room by its code, which accepts the
 // challenge (B49), in one press (R1831000). A screen holding unsaved work asks first (R1754000). A
 // refused join is shown in the server's words, with "Open in lobby", which opens the room's `/lobby/:code` (R3730006).
+// R3729002: "Later" hides the toast alone; the challenge stays in the bell's inbox (`inbox/`) until it is
+// answered or lapses, and the toast comes back for a challenge only when it is a new one.
 //
 // AN OUTGOING CHALLENGE is followed: a challenge is a room, so the challenger's game starts when the
 // friend joins it, wherever the challenger is. While one is open (`follow.ts`), each read also asks
@@ -24,10 +26,10 @@ import type { LeanPick } from "@jackioh/shared";
 import { LeanSetPickerLazy } from "../game/LeanSetPickerLazy.tsx";
 import { readPlayLean, writePlayLean } from "../game/playLean.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
-import { getDecks, getMe, joinRoom, type ModeChoice, type SavedDeck, type SavedTrio } from "../net/api.ts";
+import { getDecks, getMe, joinRoom, type ModeChoice } from "../net/api.ts";
 import { withSession } from "../net/gate.ts";
 import { liveGameOf, type LiveGame } from "../net/liveGame.ts";
-import { currentPath, leaveFirst, navigate, paths } from "../net/navigate.ts";
+import { currentPath, leaveFirst, navigate } from "../net/navigate.ts";
 import { lobbyLinkPath } from "../net/roomLink.ts";
 import { declineChallenge, type Challenge } from "../net/social.ts";
 import { QueueFound } from "../routes/GameBanner.tsx";
@@ -39,6 +41,7 @@ import {
   readChallengeChoice,
   rememberChallengeChoice,
 } from "./challengeChoice.ts";
+import { gameAfterJoin, type SavedPicks } from "./challengeAnswer.ts";
 import { followingChallenge, stopFollowingChallenge } from "./follow.ts";
 import { reloadSocial, useSocialPoll } from "./socialPoll.ts";
 import { challengeToastTestid } from "./testids.ts";
@@ -47,8 +50,6 @@ import { messageOf } from "../net/errors.ts";
 
 import "./together.css";
 
-type Saved = { decks: readonly SavedDeck[]; trios: readonly SavedTrio[] };
-
 /** Adds `id` to a set without changing the one React holds. */
 function including(ids: ReadonlySet<string>, id: string): ReadonlySet<string> {
   const next = new Set(ids);
@@ -56,17 +57,13 @@ function including(ids: ReadonlySet<string>, id: string): ReadonlySet<string> {
   return next;
 }
 
-function gameAfterJoin(answer: { matchId: string | null; seriesId: string | null }): string {
-  if (typeof answer.matchId === "string" && answer.matchId.length > 0) return paths.match(answer.matchId);
-  if (typeof answer.seriesId === "string" && answer.seriesId.length > 0) return paths.series(answer.seriesId);
-  return paths.play;
-}
-
 export function ChallengeToast(): ReactElement {
   useLocale();
   const social = useSocialPoll();
   /** Challenges this tab has answered: gone from the toast before the server's next read says so. */
   const [answered, setAnswered] = useState<ReadonlySet<string>>(() => new Set());
+  /** R3729002: challenges whose toast the player sent away with Later; the inbox still lists them. */
+  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
   const [declining, setDeclining] = useState<string | null>(null);
   const [joining, setJoining] = useState<string | null>(null);
   /** The challenge whose join the server refused, whose `error` it is. */
@@ -74,7 +71,7 @@ export function ChallengeToast(): ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [found, setFound] = useState<LiveGame | null>(null);
   /** The player's decks and trios; null until read. */
-  const [saved, setSaved] = useState<Saved | "failed" | null>(null);
+  const [saved, setSaved] = useState<SavedPicks | "failed" | null>(null);
   /** The deck or trio picked in a toast, by challenge; until then the one last used. */
   const [picks, setPicks] = useState<Readonly<Record<string, string>>>({});
   /** R2031000: the "More cards from" pick made in a toast, by challenge; until then the device's online pick. */
@@ -82,7 +79,7 @@ export function ChallengeToast(): ReactElement {
   /** The last read held an open challenge of the player's own. */
   const hadOutgoing = useRef(false);
 
-  const shown = social.incoming.filter((challenge) => !answered.has(challenge.challengeId));
+  const shown = social.incoming.filter((challenge) => !answered.has(challenge.challengeId) && !hidden.has(challenge.challengeId));
   const needsDecks = shown.some((challenge) => challenge.mode !== "random");
 
   // A toast that needs a deck reads the player's decks as it appears, and again for the next one.
@@ -321,6 +318,17 @@ export function ChallengeToast(): ReactElement {
                   }}
                 >
                   {t("Decline")}
+                </button>
+                <button
+                  type="button"
+                  className="link-button"
+                  data-testid={challengeToastTestid.later}
+                  disabled={busy}
+                  onClick={() => {
+                    setHidden((ids) => including(ids, id));
+                  }}
+                >
+                  {t("Later")}
                 </button>
               </div>
             </section>

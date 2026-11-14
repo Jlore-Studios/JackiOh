@@ -9,25 +9,27 @@
 //   navigation away while it is up, and the screen stays mounted: the screen's column comes first, so a board
 //   appearing changes nothing before it, and Tab reaches the screen's Back before the navigation.
 // - R3728001: Friends opens the friends panel as a drawer down the right edge (`FriendsButton`'s `rail`).
-// - R3728002: the status row (`context.ts`): the live game to go back to, else this tab's queue search with
-//   Leave the queue, which the top bar draws under itself (`routes/nav.tsx`) and Home under its corner.
+// - R3728002: the status row (`context.ts`): the live game to go back to, else this tab's queue search, which
+//   the top bar draws under itself (`routes/nav.tsx`) and Home under its corner. R3729001: the search shows on
+//   every menu screen, `/play` included, with its mode, the time waited, the expected wait and Cancel
+//   (`QueueBanner.tsx`); a pairing's reveal names the opponent and their rank (`routes/GameBanner.tsx`).
 //
 // CLAUDE.md rule 7: nothing here is a rule. The live game is what `GET /api/auth/me` said (`net/liveGame.ts`),
 // the queue what this tab remembers, and the server still refuses whatever it would.
 
-import { useState, type ReactElement, type ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 
 import { useBoardShown } from "../game/boardShown.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
-import { dequeue, type QueueMode } from "../net/api.ts";
+import type { QueueMode } from "../net/api.ts";
 import { useAccount } from "../net/gate.ts";
-import { MODE_LABEL, forgetQueued, useLiveGame, useQueued, type LiveGame } from "../net/liveGame.ts";
+import { useLiveGame, useQueued, type LiveGame } from "../net/liveGame.ts";
 import { isBoardPath, paths, seriesIdOf } from "../net/navigate.ts";
-import { GameBanner, LiveGameBanner } from "../routes/GameBanner.tsx";
+import { LiveGameBanner } from "../routes/GameBanner.tsx";
 import { followInApp } from "../routes/nav.tsx";
 import { FriendsButton, FriendsIcon } from "../together/FriendsButton.tsx";
-import { attempt } from "../net/errors.ts";
 import { MenuShellContext } from "./context.ts";
+import { QueueBanner } from "./QueueBanner.tsx";
 import { menuShellTestid } from "./testids.ts";
 
 import "./menu-shell.css";
@@ -132,32 +134,7 @@ function ShellNav({ path }: { path: string }): ReactElement {
   );
 }
 
-/** R3728002: this tab's queue search, off `/play`, and the way out of it, as `/play`'s Leave the queue. */
-function QueueBanner({ mode, token }: { mode: QueueMode; token: string }): ReactElement {
-  const [leaving, setLeaving] = useState(false);
-  const onPress = (): void => {
-    if (leaving) return;
-    setLeaving(true);
-    // A refusal keeps the search on screen, its button pressable again; `/play` says why.
-    attempt(() => dequeue(token))
-      .then(forgetQueued, () => undefined)
-      .finally(() => {
-        setLeaving(false);
-      });
-  };
-  return (
-    <GameBanner
-      testId={menuShellTestid.queue}
-      title="You're in the queue"
-      action={{ label: "Leave the queue", testId: menuShellTestid.queueLeave, onPress }}
-      data={{ mode }}
-    >
-      {t("Looking for a {mode} opponent…", { mode: t(MODE_LABEL[mode]) })}
-    </GameBanner>
-  );
-}
-
-/** R3728002: the live game, unless this is its own screen; else the queue search, unless this is `/play`, which shows its own. */
+/** R3728002: the live game, unless this is its own screen; else the queue search, on every menu screen (R3729001). */
 function ShellStatus({
   game,
   queued,
@@ -170,7 +147,7 @@ function ShellStatus({
   path: string;
 }): ReactElement | null {
   if (game !== null && game.path !== path) return <LiveGameBanner game={game} />;
-  if (queued !== null && token !== null && path !== paths.play) return <QueueBanner mode={queued} token={token} />;
+  if (queued !== null && token !== null) return <QueueBanner mode={queued} token={token} />;
   return null;
 }
 

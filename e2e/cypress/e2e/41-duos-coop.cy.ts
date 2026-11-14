@@ -33,6 +33,8 @@ import {
   LOBBY_READY,
   LOBBY_SETTINGS,
   LOBBY_START,
+  PLAY_LOBBY,
+  PLAY_LOBBY_DIALOG,
   REPLAY_BACK,
   REPLAY_BACK_STEP,
   REPLAY_END,
@@ -122,7 +124,10 @@ describe("41 duos co-op — two players against the Easy AI", () => {
 
     // B60, R3730000: the host's co-op panel makes a co-op lobby, set to Easy, and the host takes a random deck.
     // R3732002: the co-op panel is on /play, under the duel's, and left the Friends page.
+    // R3729000: the panels open from Play's Private lobby card.
     cy.visitAs(host, routes.play());
+    cy.get(ts(PLAY_LOBBY), { timeout: timeouts.view }).should("not.be.disabled").click();
+    cy.get(ts(PLAY_LOBBY_DIALOG), { timeout: timeouts.view }).should("be.visible");
     cy.get(`${ts(LOBBY_PANEL)}[data-format="coop"]`, { timeout: timeouts.view })
       .find(ts(LOBBY_CREATE))
       .should("not.be.disabled")

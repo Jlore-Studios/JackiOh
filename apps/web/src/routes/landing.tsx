@@ -18,6 +18,7 @@ import { readerName } from "../cards/chinese.ts";
 import { useCardSettings } from "../cards/settings.ts";
 import JlorePill from "../economy/JlorePill.tsx";
 import LanguageButton from "../i18n/LanguageButton.tsx";
+import { InboxBell } from "../inbox/InboxBell.tsx";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import { useAccount, type Account } from "../net/gate.ts";
 import { BackLayer } from "../net/backLayers.ts";
@@ -665,6 +666,8 @@ export default function LandingRoute({ random = Math.random, economyLive = ECONO
             <DevButton account={account} />
             <Corner account={account} />
             <JlorePill />
+            {/* R3729002: the inbox's bell, for a signed-in account, after the pill. */}
+            <InboxBell />
             <LanguageButton placement="nav" />
             <SettingsButton placement="nav" />
           </div>

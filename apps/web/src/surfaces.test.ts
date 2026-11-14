@@ -90,7 +90,7 @@ const UNTOKENED_SURFACES: Record<string, number> = {
   "routes/entry-card.css": 3,
   "routes/game-banner.css": 7,
   "routes/landing.css": 61,
-  "routes/lobby.css": 32,
+  "routes/lobby.css": 29,
   "routes/replays.css": 1,
   "routes/site-footer.css": 1,
   "routes/stats.css": 10,

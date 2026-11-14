@@ -6,13 +6,15 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { QUEUE_POPULATION_POLL_SECONDS } from "@jackioh/server-config";
 import { over, upTo } from "../breakpoints.ts";
 import { useMarkBoardShown } from "../game/boardShown.ts";
 import { forgetQueued, readQueued, rememberQueued } from "../net/liveGame.ts";
+import { waitWords } from "../net/queueReadout.ts";
 import { currentPath, paths } from "../net/navigate.ts";
 import { clearReadCache } from "../net/readCache.ts";
 import { forgetRoomLink } from "../net/roomLink.ts";
@@ -21,6 +23,7 @@ import { at, meBody, must, signIn, stubServer, type StubServer } from "../test/s
 import { friendsTestid } from "../together/testids.ts";
 import { useMenuShell } from "./context.ts";
 import { MenuShell, menuShellOn } from "./MenuShell.tsx";
+import { QUEUE_CLOCK_TICK_MS, QueueBanner, queueClock } from "./QueueBanner.tsx";
 import { menuShellTestid } from "./testids.ts";
 
 const { App, resetUsernamePromptForTests } = await import("../main.tsx");
@@ -293,7 +296,7 @@ describe("R3728002 the status row", () => {
   );
 
   it(
-    "R3728002 the queue search shows off /play and Leave the queue dequeues and forgets it",
+    "R3728002 R3729001 the queue search shows on every menu screen, /play included, and Cancel dequeues and forgets it",
     async () => {
       signIn("tok-queue");
       const server = serve();
@@ -306,11 +309,14 @@ describe("R3728002 the status row", () => {
       expect(banner).toHaveTextContent("You're in the queue");
       expect(banner).toHaveTextContent("Looking for a Best of 1 opponent…");
       expect(banner.closest(".screen-nav__status")).not.toBeNull();
+      expect(within(banner).getByTestId(menuShellTestid.queueLeave)).toHaveTextContent("Cancel");
 
-      // /play shows its own search; the shell's row does not repeat it, and shows it again off /play.
+      // R3729001: /play shows the same search in the same row, one banner and no second one.
       fireEvent.click(screen.getByTestId(menuShellTestid.play));
       expect(currentPath()).toBe(paths.play);
-      expect(screen.queryByTestId(menuShellTestid.queue)).toBeNull();
+      const onPlay = await screen.findByTestId(menuShellTestid.queue, undefined, SLOW);
+      expect(onPlay.closest(".screen-nav__status")).not.toBeNull();
+      expect(screen.getAllByTestId(menuShellTestid.queue)).toHaveLength(1);
       fireEvent.click(screen.getByTestId(menuShellTestid.home));
       const onHome = await screen.findByTestId(menuShellTestid.queue, undefined, SLOW);
       expect(onHome.closest(".landing-banners")).not.toBeNull();
@@ -341,6 +347,154 @@ describe("R3728002 the status row", () => {
     expect(block(css, shelled, css.indexOf(`@media ${upTo("phone")} {`))).toContain(
       "bottom: calc(var(--shell-tabbar-h) + env(safe-area-inset-bottom, 0px) + var(--space-7));",
     );
+  });
+});
+
+/** What a screen's bar draws: the shell's status row, as `routes/nav.tsx` does. */
+function StatusRow(): ReactElement {
+  return <div data-testid="status-row">{useMenuShell()?.status}</div>;
+}
+
+describe("R3729001 the queue banner", () => {
+  const POPULATION = { gamesLastHour: 12, expectedWaitSeconds: { bo1: 45, bo3: null, random: 130 } } as const;
+
+  function serveQueue(population: unknown = POPULATION): StubServer {
+    return stubServer((call) => {
+      if (call.path === "/api/auth/me") return { status: 200, body: meBody({}) };
+      if (call.method === "DELETE" && call.path === "/api/queue") return { status: 200, body: { cancelled: true } };
+      if (call.method === "GET" && call.path === "/api/queue/population") return { status: 200, body: population };
+      return undefined;
+    });
+  }
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it.each([paths.play, paths.collection, paths.landing, paths.replays])(
+    "R3729001 %s shows the search with its mode, the time waited and the expected wait, and Cancel sends DELETE /api/queue",
+    async (path) => {
+      signIn("tok-banner");
+      const server = serveQueue();
+      rememberQueued("random");
+      render(
+        <MenuShell path={path}>
+          <StatusRow />
+        </MenuShell>,
+      );
+      const banner = await screen.findByTestId(menuShellTestid.queue, undefined, SLOW);
+      expect(banner).toHaveAttribute("data-mode", "random");
+      expect(banner).toHaveTextContent("Looking for a All random opponent…");
+      expect(within(banner).getByTestId(menuShellTestid.queueClock).textContent).toMatch(/^\d+:\d{2}$/);
+      // 130 seconds are "under 3 minutes": the tile's own words (R640002), for this tab's mode alone.
+      await waitFor(() => {
+        expect(within(banner).getByTestId(menuShellTestid.queueWait)).toHaveTextContent(waitWords(130));
+      }, SLOW);
+      expect(within(banner).getByTestId(menuShellTestid.queueWait)).toHaveTextContent("Usually under 3 min");
+
+      fireEvent.click(within(banner).getByTestId(menuShellTestid.queueLeave));
+      await waitFor(() => {
+        expect(screen.queryByTestId(menuShellTestid.queue)).toBeNull();
+      }, SLOW);
+      expect(server.to("DELETE", "/api/queue")).toHaveLength(1);
+      expect(readQueued()).toBeNull();
+    },
+    TEST_MS,
+  );
+
+  it("R3729001 a mode the server has counted no wait for shows no wait, and a refused Cancel keeps the search on screen", async () => {
+    signIn("tok-refused");
+    const server = stubServer((call) => {
+      if (call.path === "/api/auth/me") return { status: 200, body: meBody({}) };
+      if (call.method === "GET" && call.path === "/api/queue/population") return { status: 200, body: POPULATION };
+      if (call.method === "DELETE" && call.path === "/api/queue") return { status: 409, body: { code: "busy", message: "Not now." } };
+      return undefined;
+    });
+    rememberQueued("bo3");
+    render(
+      <MenuShell path={paths.shop}>
+        <StatusRow />
+      </MenuShell>,
+    );
+    const banner = await screen.findByTestId(menuShellTestid.queue, undefined, SLOW);
+    await waitFor(() => {
+      expect(server.to("GET", "/api/queue/population")).toHaveLength(1);
+    }, SLOW);
+    expect(within(banner).queryByTestId(menuShellTestid.queueWait)).toBeNull();
+    expect(within(banner).getByTestId(menuShellTestid.queueClock)).toBeInTheDocument();
+
+    fireEvent.click(within(banner).getByTestId(menuShellTestid.queueLeave));
+    await waitFor(() => {
+      expect(server.to("DELETE", "/api/queue")).toHaveLength(1);
+    }, SLOW);
+    expect(screen.getByTestId(menuShellTestid.queue)).toBeInTheDocument();
+    expect(readQueued()).toBe("bo3");
+  });
+
+  it("R3729001 the clock reads the time waited in m:ss, floored, never below zero", () => {
+    expect(queueClock(0)).toBe("0:00");
+    expect(queueClock(999)).toBe("0:00");
+    expect(queueClock(1_000)).toBe("0:01");
+    expect(queueClock(59_999)).toBe("0:59");
+    expect(queueClock(65_000)).toBe("1:05");
+    expect(queueClock(3_725_000)).toBe("62:05");
+    expect(queueClock(-4_000)).toBe("0:00");
+  });
+
+  /** Let what a timer set off settle, inside `act`. */
+  async function advance(ms: number): Promise<void> {
+    await act(async () => {
+      vi.advanceTimersByTime(ms);
+      for (let i = 0; i < 10; i += 1) await Promise.resolve();
+    });
+  }
+
+  it("R3729001 the clock counts from when the tab queued and advances every tick", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_800_000_000_000);
+    serveQueue();
+    // Queued 65 seconds ago, as a tab that went to another screen and came back would find it.
+    rememberQueued("bo1", Date.now() - 65_000);
+    render(<QueueBanner mode="bo1" token="tok-clock" />);
+    await advance(0);
+    const clock = screen.getByTestId(menuShellTestid.queueClock);
+    expect(clock).toHaveTextContent("1:05");
+    await advance(QUEUE_CLOCK_TICK_MS);
+    expect(clock).toHaveTextContent("1:06");
+    await advance(QUEUE_CLOCK_TICK_MS * 4);
+    expect(clock).toHaveTextContent("1:10");
+    await advance(QUEUE_CLOCK_TICK_MS * 55);
+    expect(clock).toHaveTextContent("2:05");
+    // The 45 seconds the server counted for Best of 1 arrived with the first read.
+    expect(screen.getByTestId(menuShellTestid.queueWait)).toHaveTextContent("Usually under 45 s");
+  });
+
+  it("R3729001 with no moment kept the clock counts from when the banner first showed", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_800_000_000_000);
+    serveQueue();
+    rememberQueued("bo1");
+    window.sessionStorage.removeItem("jackioh.play.queuedSince");
+    render(<QueueBanner mode="bo1" token="tok-fallback" />);
+    await advance(0);
+    const clock = screen.getByTestId(menuShellTestid.queueClock);
+    expect(clock).toHaveTextContent("0:00");
+    await advance(QUEUE_CLOCK_TICK_MS * 3);
+    expect(clock).toHaveTextContent("0:03");
+  });
+
+  it("R3729001 the expected wait is read again while the banner is up, at the population's own pace", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_800_000_000_000);
+    const server = serveQueue();
+    rememberQueued("bo1");
+    render(<QueueBanner mode="bo1" token="tok-poll" />);
+    await advance(0);
+    expect(server.to("GET", "/api/queue/population")).toHaveLength(1);
+    await advance(QUEUE_POPULATION_POLL_SECONDS * 1000);
+    expect(server.to("GET", "/api/queue/population")).toHaveLength(2);
+    await advance(QUEUE_POPULATION_POLL_SECONDS * 1000);
+    expect(server.to("GET", "/api/queue/population")).toHaveLength(3);
   });
 });
 

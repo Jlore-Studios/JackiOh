@@ -21,7 +21,7 @@ import {
   COLLECTION_GRID,
   COLLECTION_JLORE,
   COLLECTION_SCREEN,
-  PLAY_QUEUE,
+  PLAY_HUB,
   PLAY_SIGN_IN,
   REPLAYS_ROOT,
   SERIES_SCORE,
@@ -267,7 +267,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
 
         it("R1581000 R3218000 /play", () => {
           cy.visitAs(accounts.p1(), routes.play());
-          cy.get(ts(PLAY_QUEUE), { timeout: timeouts.view }).should("be.visible");
+          cy.get(ts(PLAY_HUB), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);

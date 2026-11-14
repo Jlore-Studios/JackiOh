@@ -107,6 +107,9 @@ export function useLiveGame(account: Account, read: (token: string) => Promise<M
 /** Where this tab remembers the mode it queued in, while it waits to be paired. */
 export const QUEUE_STORAGE_KEY = "jackioh.play.queued";
 
+/** R3729001: where this tab remembers when it queued, in epoch milliseconds, for the banner's clock. */
+export const QUEUE_SINCE_KEY = "jackioh.play.queuedSince";
+
 /** Fired for this tab's writes, which `storage` events do not cover. */
 const QUEUE_CHANGED = "jackioh:queue-changed";
 
@@ -120,15 +123,27 @@ function changed(): void {
   window.dispatchEvent(new Event(QUEUE_CHANGED));
 }
 
-/** R765: remember this tab's queue so a pairing can follow it. */
-export function rememberQueued(mode: QueueMode): void {
+/** R3729001: the moment this tab queued (`QUEUE_SINCE_KEY`), or null when none is kept or the value is no moment. */
+export function readQueuedSince(): number | null {
+  const raw = getStored(QUEUE_SINCE_KEY, sessionStorageOrNull());
+  if (raw === null || !/^\d+$/u.test(raw)) return null;
+  const since = Number(raw);
+  return Number.isSafeInteger(since) ? since : null;
+}
+
+/** R765: remember this tab's queue, and when it began (R3729001), so a pairing can follow it. */
+export function rememberQueued(mode: QueueMode, now: number = Date.now()): void {
   // Blocked storage: only `/play` follows the queue (R765).
-  setStored(QUEUE_STORAGE_KEY, mode, sessionStorageOrNull());
+  const store = sessionStorageOrNull();
+  setStored(QUEUE_STORAGE_KEY, mode, store);
+  setStored(QUEUE_SINCE_KEY, String(Math.trunc(now)), store);
   changed();
 }
 
 export function forgetQueued(): void {
-  removeStored(QUEUE_STORAGE_KEY, sessionStorageOrNull());
+  const store = sessionStorageOrNull();
+  removeStored(QUEUE_STORAGE_KEY, store);
+  removeStored(QUEUE_SINCE_KEY, store);
   changed();
 }
 

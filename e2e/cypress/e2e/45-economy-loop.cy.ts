@@ -24,6 +24,7 @@ import {
   STARTER_CARDS,
   XP_WIN_BONUS,
 } from "../../../apps/web/src/wire/serverConfig.ts";
+import { openQueuePanel } from "../../support/play.ts";
 import {
   E2E_RESEED_PATH,
   FULL_ART_GATED_KEY,
@@ -73,7 +74,6 @@ import {
   packSlotId,
   packSlotOutcomeId,
   packsOpenId,
-  playModeId,
   poolCardId,
   shopBuyId,
   ts,
@@ -309,8 +309,7 @@ function winALadderGame(loop: Loop): void {
   });
 
   cy.visitAs(econ(), routes.play());
-  cy.get(ts(playModeId("bo1")), { timeout: timeouts.view }).check();
-  cy.get(ts(playModeId("bo1"))).should("be.checked");
+  openQueuePanel("bo1");
   cy.then(() => {
     cy.get(ts(PLAY_DECK_SELECT), { timeout: timeouts.view }).select(loop.deckId);
     cy.get(ts(PLAY_DECK_SELECT)).should("have.value", loop.deckId);

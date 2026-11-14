@@ -9,11 +9,13 @@ import type { MeResponse } from "./api.ts";
 import type { Account } from "./gate.ts";
 import {
   MATCH_FOUND_STATUS,
+  QUEUE_SINCE_KEY,
   QUEUE_STORAGE_KEY,
   bannerGameOf,
   forgetQueued,
   liveGameOf,
   readQueued,
+  readQueuedSince,
   rememberQueued,
   useLiveGame,
   useQueueFollow,
@@ -257,6 +259,32 @@ describe("R765 the queue this tab joined", () => {
     expect(window.localStorage.getItem(QUEUE_STORAGE_KEY), "never shared with other tabs").toBeNull();
     forgetQueued();
     expect(readQueued()).toBeNull();
+  });
+
+  it("R3729001 the moment the queue began is written with the mode, read back and cleared with it", () => {
+    expect(readQueuedSince()).toBeNull();
+    rememberQueued("bo1", 1_700_000_000_000);
+    expect(readQueuedSince()).toBe(1_700_000_000_000);
+    expect(window.sessionStorage.getItem(QUEUE_SINCE_KEY)).toBe("1700000000000");
+    expect(window.localStorage.getItem(QUEUE_SINCE_KEY), "never shared with other tabs").toBeNull();
+    // One argument still queues, from now.
+    vi.useFakeTimers();
+    vi.setSystemTime(1_800_000_000_000);
+    rememberQueued("random");
+    expect(readQueuedSince()).toBe(1_800_000_000_000);
+    forgetQueued();
+    expect(readQueuedSince()).toBeNull();
+    expect(window.sessionStorage.getItem(QUEUE_SINCE_KEY)).toBeNull();
+    expect(readQueued()).toBeNull();
+  });
+
+  it("R3729001 a missing or malformed moment reads as none", () => {
+    for (const bad of ["", "soon", "-5", "12.5", "1e9", "99999999999999999999"]) {
+      window.sessionStorage.setItem(QUEUE_SINCE_KEY, bad);
+      expect(readQueuedSince(), JSON.stringify(bad)).toBeNull();
+    }
+    window.sessionStorage.setItem(QUEUE_SINCE_KEY, "42");
+    expect(readQueuedSince()).toBe(42);
   });
 
   it("R765 anything else in storage is no queue, and storage that throws costs nothing", () => {

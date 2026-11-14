@@ -10,6 +10,8 @@
 // and every refusal is shown in the server's words.
 // R2119000: Remove asks nothing: the friend leaves the list at once and the unfriend waits behind
 // "Friend removed · Undo" (`undo/hold.ts`), so Undo sends nothing.
+// R3729002: `?replay=<matchId>` (the inbox's Watch, `anchors.ts`) opens that match's shared replay once the
+// Shared with me list has been read, as Watch on its row does; a match the list does not hold opens nothing.
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
 
@@ -27,7 +29,7 @@ import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { Tabs } from "../tabs/Tabs.tsx";
 import type { UndoTimer } from "../undo/hold.ts";
 import { UndoToast } from "../undo/UndoToast.tsx";
-import { FRIENDS_SECTIONS, friendsSectionOf, friendsSectionPath, type FriendsSection } from "./anchors.ts";
+import { FRIENDS_SECTIONS, REPLAY_PARAM, friendsSectionOf, friendsSectionPath, sharedWithMePath, type FriendsSection } from "./anchors.ts";
 import { useCatalogLookup } from "./catalog.ts";
 import { ChallengeDialog } from "./ChallengeDialog.tsx";
 import { ChatPanel } from "./ChatPanel.tsx";
@@ -63,7 +65,10 @@ function sectionLabel(section: FriendsSection): string {
 /** `undoTimer`: the undo window's timers (R2119000); a test hands a manual one. */
 export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): ReactElement {
   useLocale();
-  const section = friendsSectionOf(useSearch(), window.location.hash);
+  const search = useSearch();
+  const section = friendsSectionOf(search, window.location.hash);
+  /** R3729002: the match a link asks to watch. */
+  const wanted = new URLSearchParams(search).get(REPLAY_PARAM);
   const [friends, reloadFriends] = usePolled(getFriends, FRIENDS_POLL_MS, cachedFriends);
   const list = friends.kind === "ready" ? friends.value : null;
   const actions = useFriendActions({ friends: list, reloadFriends, undoTimer });
@@ -102,6 +107,8 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
           load={() => withSession((token) => openOnlineMatchReplay(token, watching.matchId))}
           onLeave={() => {
             setWatching(null);
+            // R3729002: a replay a link opened is done with the link, so a second Watch for it opens it again.
+            if (wanted !== null) navigate(sharedWithMePath(), { replace: true, force: true });
           }}
         />
       </CatalogContext.Provider>
@@ -154,6 +161,7 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
       case "shared":
         return (
           <SharedTab
+            wanted={wanted}
             onOpen={(replay) => {
               // R2119000: the replay leaves this screen, so a held Remove goes now.
               actions.sendNow();
