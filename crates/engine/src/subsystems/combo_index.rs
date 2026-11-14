@@ -19,7 +19,7 @@ use crate::prelude::json_as;
 use crate::query::cards_played_this_turn;
 use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut};
-use crate::wire::{CounterKind, GameEvent, PlayerId, Selection, opponent_of};
+use crate::wire::{CounterKind, GameEvent, PlayerId, Selection, ZoneName, opponent_of};
 
 /// §8 #93: a grade's letter, by hand: `wire::string_union!` would export a client type the wire does
 /// not have (the view carries the letter as a string).
@@ -124,6 +124,11 @@ pub fn grade_rises(state: &GameState, instance: &CardInstance) -> bool {
 
 /// Writes the grade on the card in the state, by id. The event names the card even when it is nowhere now.
 fn write_grade(ctx: &mut EffectContext<'_>, card: &CardInstance, next: i32) {
+    // R3800001: the grade counter is field state (R78): a Combo-Index text run once its card has left the
+    // field (a fused ingredient's Cry after an earlier one exiled it) writes none.
+    if card.zone.z() != ZoneName::Field {
+        return;
+    }
     let value = clamp_grade(next);
     if value == grade_of(card) && card.counters.grade.is_some() {
         return;
