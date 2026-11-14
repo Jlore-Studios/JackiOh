@@ -37507,21 +37507,5 @@
     "issue": 2890,
     "pinned": true
   },
-  "usage_spool": {
-    "readings": [
-      "2026-11-14T11:28:40Z,agy,usage-command,before,43590176404,10,2026-11-14T15:59:08Z,15,2026-11-21T00:22:39Z,allowed,100,100,",
-      "2026-11-14T11:40:22Z,claude-4,ping,before,43590932207,0,2026-11-14T16:40:00Z,,,allowed,70,,",
-      "2026-11-14T11:40:41Z,claude-4,stream,call,43590932207,1,2026-11-14T16:40:00Z,,,allowed,70,,",
-      "2026-11-14T11:41:26Z,claude-4,stream,call,43590932207,2,2026-11-14T16:40:00Z,,,allowed,70,,",
-      "2026-11-14T11:15:09Z,claude-8,ping,before,43588932488,8,2026-11-14T14:40:00Z,,,allowed,85,,",
-      "2026-11-14T11:23:03Z,claude-8,stream,call,43588932488,9,2026-11-14T14:40:00Z,,,allowed,85,,",
-      "2026-11-14T11:37:20Z,claude-8,stream,call,43588932488,9,2026-11-14T14:40:00Z,,,allowed,85,,"
-    ],
-    "runs": [
-      "2026-11-14T11:28:53Z,43590176404,agy,gemini-3.8-flash-high,revise,3902,medium,built,,0,0,0,0,,10,10,15,15,8.3,agy,none,,0",
-      "2026-11-14T11:42:08Z,43590932207,claude-4,opus+sonnet,review,3902,medium,reviewed,,1.7,48,10806,2749255,0.9063,0,2,,,0.9,agy,none,,1",
-      "2026-11-14T11:37:26Z,43588932488,claude-8,opus,review,3918,hard,approved,,22,6,701,131802,0.7954,8,9,,,1.1,,none,,1"
-    ]
-  },
   "version": 1
 }
