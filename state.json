@@ -14533,13 +14533,13 @@
         "approver": {
           "family": "claude",
           "model": "opus",
-          "provider": "claude-4",
+          "provider": "claude-7",
           "tier": "strong"
         },
-        "at": "2026-11-13T05:17:50Z",
-        "built_by": "claude-4",
+        "at": "2026-11-14T10:45:13Z",
+        "built_by": "claude-7",
         "by": "`claude` (strong)",
-        "sha": "f334c1b5d000539c822b43911bd9e453f4991a28"
+        "sha": "12c22ee2f28e90c799291a4bdd12098e39f556f5"
       },
       "died": 0,
       "difficulty": "hard",
@@ -14560,7 +14560,7 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
-      "merge_owner": "claude-4",
+      "merge_owner": "claude-7",
       "pending_request": false,
       "provider": "claude-7",
       "question": "",
