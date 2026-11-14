@@ -16642,14 +16642,14 @@
       "merge_owner": "claude-6",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-8",
       "queued_at": "2026-11-13T21:19:13Z",
-      "run_id": "43532919718",
+      "run_id": "pending:b972f916-1794619475",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "spot_check": true,
       "spot_check_n": 245,
-      "started_at": "2026-11-14T00:15:08Z",
+      "started_at": "2026-11-14T01:25:00Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17109,9 +17109,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-14T01:10:40Z",
+    "at": "2026-11-14T01:25:00Z",
     "url": "",
-    "what": "review #3891 on claude-8"
+    "what": "spot-check #3885 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-14T01:07:35Z",
@@ -36342,12 +36342,12 @@
         "reviewer": {
           "family": "claude",
           "model": "opus",
-          "provider": "claude-4",
+          "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "",
+        "run_id": "pending:b972f916-1794619475",
         "sha": "dc91028185efb8afb079aa221025da98a4f43e6d",
-        "started_at": "2026-11-14T00:15:08Z",
+        "started_at": "2026-11-14T01:25:00Z",
         "status": "queued",
         "title": "Patch: holding down a card with several fusions shows a black screen",
         "tries": 0
