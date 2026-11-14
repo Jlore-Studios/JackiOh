@@ -16755,7 +16755,7 @@
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
-      "round_tier": "strong",
+      "round_tier": "",
       "run_id": "43566878210",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -16780,7 +16780,7 @@
       "started_at": "2026-11-14T06:32:55Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [],
         "builder": "claude",
