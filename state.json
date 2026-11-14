@@ -17609,12 +17609,9 @@
     "what": "review #3902 on agy"
   },
   "last_sweep": {
-    "at": "2026-11-14T10:51:42Z",
+    "at": "2026-11-14T11:00:46Z",
     "notes": [
-      "delivered review #3902 on claude-6 (run 43586138203): built",
-      "started review #3902 on agy (run 43587462407)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "#3811: approved and green, so its strikes are cleared"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18320,7 +18317,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-14T10:51:42Z",
+  "loop_tick": "2026-11-14T11:00:46Z",
   "machine_disk": {
     "issue": null,
     "reading": {
