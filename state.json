@@ -14346,6 +14346,14 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-14T13:28:11Z",
       "taken_asks": []
+    },
+    "3922": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-14T13:36:05Z",
+      "issue": 3868,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
