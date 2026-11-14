@@ -14317,6 +14317,7 @@
       "owner_why": "handed off from `claude-1`: `claude-1` 5-hour usage is 40%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-14T17:30:00Z; it can start again only in 2h 06m, more than the 120 minutes an item waits for its owner",
       "pending_request": false,
       "provider": "claude-3",
+      "round_tier": "",
       "run_id": "43604667428",
       "runs_on": "ubuntu-latest",
       "session": {
@@ -14342,7 +14343,8 @@
         "the run failed: RuntimeError: the planner on opus wrote no plan: timed out after 9000s"
       ],
       "strikes": 1,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "3921": {
       "action": "plan",
