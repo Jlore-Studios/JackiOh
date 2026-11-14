@@ -17573,9 +17573,11 @@
         "sha": "501d9445a030598bfb8ca419685b2cf3f6d1e933"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-14T01:41:58Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-14T03:45:45Z",
         "family": "claude",
@@ -17585,6 +17587,7 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": ""
       },
+      "interruptions": 0,
       "issue": 3729,
       "kind": "review",
       "live": "reviewing",
