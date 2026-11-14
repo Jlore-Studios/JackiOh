@@ -17570,6 +17570,7 @@
         "by": "`claude` (medium)",
         "sha": "96f4e027948597064ff0c20f26bddcf11465b299"
       },
+      "closed_at": "2026-11-14T04:37:14Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
@@ -17581,6 +17582,7 @@
       "kind": "review",
       "live": "reviewing",
       "merge_owner": "claude-6",
+      "merged": true,
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-11-14T03:54:57Z",
