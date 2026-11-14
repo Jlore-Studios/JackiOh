@@ -17617,22 +17617,16 @@
         ],
         "builder": "claude",
         "built_by": "claude-1",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [],
-          "from": "4a6725a84389bc1f9965d1bca775439a0e3fb54f",
-          "main": "fb2399404dee5812b5895a941fa4fff306381414"
-        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-1",
-            "run": "43571675417",
+            "run": "43576597515",
             "tier": "strong"
           }
         ],
-        "sha": "81ffe764fed2d83af8d2813652d824bf76384d78",
+        "sha": "9574f4c8fe23406d8582415018ea0938b5bd9a48",
         "tiers": {
           "claude": "strong"
         }
