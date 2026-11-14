@@ -36820,24 +36820,5 @@
     "issue": 2890,
     "pinned": true
   },
-  "usage_spool": {
-    "readings": [
-      "2026-11-13T23:30:54Z,claude-8,ping,before,43527351931,8,2026-11-14T04:00:00Z,,,allowed,85,,",
-      "2026-11-13T23:31:29Z,claude-8,stream,call,43527351931,9,2026-11-14T04:00:00Z,,,allowed,85,,",
-      "2026-11-13T23:41:30Z,claude-8,stream,call,43527351931,12,2026-11-14T04:00:00Z,,,allowed,85,,",
-      "2026-11-14T00:37:04Z,claude-8,stream,call,43527351931,13,2026-11-14T04:00:00Z,,,allowed,85,,",
-      "2026-11-14T00:37:49Z,claude-8,stream,call,43527351931,14,2026-11-14T04:00:00Z,,,allowed,85,,",
-      "2026-11-14T01:04:32Z,claude-8,stream,call,43527351931,14,2026-11-14T04:00:00Z,,,allowed,85,,",
-      "2026-11-14T01:13:19Z,claude-8,ping,before,43538975629,16,2026-11-14T04:00:00Z,,,allowed,85,,",
-      "2026-11-14T01:13:38Z,claude-8,stream,call,43538975629,17,2026-11-14T04:00:00Z,,,allowed,85,,",
-      "2026-11-14T01:13:53Z,claude-8,stream,call,43538975629,18,2026-11-14T04:00:00Z,,,allowed,85,,",
-      "2026-11-14T01:14:08Z,claude-8,stream,call,43538975629,19,2026-11-14T04:00:00Z,,,allowed,85,,",
-      "2026-11-14T01:14:38Z,claude-8,stream,call,43538975629,20,2026-11-14T04:00:00Z,,,allowed,85,,"
-    ],
-    "runs": [
-      "2026-11-14T01:04:34Z,43527351931,claude-8,sonnet+opus,revise,3810,medium,approved,,39.6,50,9333,1904807,1.9953,8,14,,,1.6,claude-8,resumed,,2",
-      "2026-11-14T01:14:59Z,43538975629,claude-8,opus+sonnet,review,3891,medium,reviewed,,1.6,41,10495,2118078,0.792,16,20,,,21.5,claude-6,none,,1"
-    ]
-  },
   "version": 1
 }
