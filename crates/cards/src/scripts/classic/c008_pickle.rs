@@ -424,6 +424,22 @@ mod tests {
             }
 
             #[test]
+            fn r767000_a_game_on_v0_3_15_answers_through_the_kept_chosen_step_you_draw_and_the_second_question_opens() {
+                crate::register_all();
+                let shipped = crate::shipped_catalog("v0.4.0").expect("v0.4.0 is carried");
+                jackioh_engine::with_shipped(Some(shipped), || {
+                    let mut s = pickle(false, Piles::default());
+                    s.play(PICKLE, json!({}));
+                    s.answer(json!("draw"));
+                    assert_eq!(def_ids(&s.pile(P1, "hand")), vec![FILLER, MY_DECK[0]]);
+                    let second = open(&s);
+                    assert_eq!(second.player_id, P2);
+                    assert_eq!(second.prompt, "Pickle: your choice (2 of 3)");
+                    assert_modes(&s, &["discard", "exile", "draw"]);
+                });
+            }
+
+            #[test]
             fn r800_r767000_a_game_on_v0_3_15_filters_discard_for_a_guarded_hand_answering_off_turn() {
                 crate::register_all();
                 let shipped = crate::shipped_catalog("v0.4.0").expect("v0.4.0 is carried");
@@ -675,6 +691,25 @@ mod tests {
                 assert!(picked.error.is_none());
                 assert!(picked.state.pending.is_none());
                 assert!(picked.state.work.is_empty());
+            }
+
+            /// §10.6: the chain's numbers ride the prompt's data as JSON and come back narrowed, never cast
+            /// (SURFACE §4.4 item 10): a question number that is not a whole number is no chain, so the
+            /// answer runs nothing and asks nothing more.
+            #[test]
+            fn s10_6_a_carried_question_number_that_is_not_whole_ends_the_chain_unanswered() {
+                crate::register_all();
+                let mut s = pickle(false, Piles::default());
+                s.play(PICKLE, json!({}));
+                s.end_turn();
+                let hand = def_ids(&s.pile(P1, "hand"));
+                let Some(pending) = s.state_mut().pending.as_mut() else {
+                    panic!("the first question is open");
+                };
+                pending.resume.data.insert("n".to_string(), json!(1.5));
+                s.answer(json!("draw"));
+                assert!(s.state().pending.is_none());
+                assert_eq!(def_ids(&s.pile(P1, "hand")), hand);
             }
 
             #[test]

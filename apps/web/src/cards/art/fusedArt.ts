@@ -8,7 +8,8 @@
 
 import type { Tag } from "@jackioh/shared";
 
-import { fusedParts, type DefOf } from "../fused.ts";
+import { CATALOG } from "../../wire/cards.ts";
+import { DORMANT_STARSHIP_ID, fusedParts, type DefOf } from "../fused.ts";
 import { STINKYSCAPE_PREFIX } from "./stinkyscape.ts";
 
 /** What an art window is drawn from: a card's id, its (English) name and its tags. */
@@ -40,4 +41,24 @@ export function artSubjectOf(subject: ArtSubject, defOf: DefOf | null): ArtSubje
   if (!parts.some(gear)) return subject;
   const host = parts.findLast((part) => !gear(part));
   return host?.def === undefined ? subject : { defId: host.id, name: host.def.name, tags: host.def.tags };
+}
+
+/**
+ * R3345000, R3045000, R179: the catalog card whose picture the full-screen view draws for `defId`, or null when none
+ * can be found. A fused id (`t-N:(a+b)`, nested for a fusion of fusions) is in no catalog, so its planes would all
+ * be `url("")` and the view a black screen. A catalog card draws as itself; a fusion holding a Miner or a Weapon
+ * draws the host it was equipped on (`artSubjectOf`); any other fusion draws its Dormant Starship hull, else its last
+ * ingredient the catalog knows. An id that is no fusion is left as it is. A digest id (R468) hides its ingredients,
+ * so it has no art: null.
+ */
+export function fullScreenArtId(defId: string, defOf: DefOf | null): string | null {
+  if (CATALOG[defId] !== undefined) return defId;
+  const lookup: DefOf = (id) => defOf?.(id) ?? CATALOG[id];
+  const parts = fusedParts(defId, lookup);
+  if (parts === null) return null;
+  if (parts.length < 2) return defId;
+  const host = artSubjectOf({ defId, name: undefined, tags: [] }, lookup).defId;
+  if (host !== defId && CATALOG[host] !== undefined) return host;
+  if (parts.includes(DORMANT_STARSHIP_ID)) return DORMANT_STARSHIP_ID;
+  return parts.findLast((id) => CATALOG[id] !== undefined) ?? null;
 }

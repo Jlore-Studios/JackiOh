@@ -787,9 +787,13 @@ open; a seek's claim commits first, and a start that fails puts the claimed seek
 **Telling a player.** What to send is `jackioh_shared::notify::decide_notify`'s (a game newly waiting, and
 once `DAILY_REMINDER_HOURS` before a deadline; an email at most every `DAILY_EMAIL_MIN_GAP_HOURS`, and none
 to an account with the setting off or no address). The sweep decides for every player a game waits on, and
-each move decides for both players. An email goes through Resend under `PLAYER_RESEND_API_KEY`, one per
-decision, listing every game waiting with a link to its board, with `List-Unsubscribe` and
-`List-Unsubscribe-Post`; Resend's free plan's 100 a day is shared with the alerts and the sign-in mail.
+each move decides for both players. A move is answered first: `daily::notify::after_move` queues both players for
+one task (`NotifyQueue`, `DAILY_NOTIFY_QUEUE` deep, a profile already waiting is not queued twice) that decides
+for each in turn, so a slow mail or push service never holds a move; a profile the full queue refused, or the
+server dropped at a stop, is decided for by the next sweep (#3856). An email goes through Resend under
+`PLAYER_RESEND_API_KEY`, one per decision, listing every game waiting with a link to its board, with
+`List-Unsubscribe` and `List-Unsubscribe-Post`; Resend's free plan's 100 a day is shared with the alerts and
+the sign-in mail.
 A push goes to each of the account's subscriptions (`daily::webpush`: RFC 8291's aes128gcm and RFC 8292's
 VAPID, with `ring`), and a subscription its push service answers 404 or 410 is deleted. A subscription is
 kept only at a browser's push service (`webpush::is_push_service`, `PUSH_SERVICE_HOSTS`), and the push

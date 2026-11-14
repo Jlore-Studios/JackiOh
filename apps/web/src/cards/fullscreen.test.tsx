@@ -9,12 +9,15 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
+import type { CardDef } from "@jackioh/shared";
 
 import Card from "../game/Card.tsx";
+import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import { WearerProvider } from "../game/wearer.ts";
-import { card as cardView, unit as unitView } from "../test/fixtures.ts";
+import { card as cardView, fusedDef, unit as unitView } from "../test/fixtures.ts";
+import { CardDefsProvider } from "./refContext.tsx";
 import { LONG_PRESS_MS } from "./inspect/constants.ts";
-import { ART_PLANES } from "./art/index.ts";
+import { ART_PLANES, artPlaneBackground, type ArtPlane } from "./art/index.ts";
 import { dioramaOf, dioramaSliceBackground } from "./art/dioramas/index.ts";
 import {
   CARD_TILT_MAX_DEG,
@@ -614,5 +617,106 @@ describe("R3345000 a board card's full-screen hold follows the animation queue",
     );
     pressAndHold(screen.getByTestId("hand-card-mythic-hand"));
     expect(screen.getByTestId("fullscreen-art")).toBeInTheDocument();
+  });
+});
+
+describe("R3345000 a fused card's full-screen hold", () => {
+  const MYTHIC = "core-100";
+  const WEAPON = "stinkyscape-050";
+  const MINER = "stinkyscape-063";
+
+  function def(id: string): CardDef {
+    const found = CATALOG[id];
+    if (found === undefined) throw new Error(`the catalog has no ${id}`);
+    return found;
+  }
+
+  function pressAndHold(element: HTMLElement): void {
+    fireEvent.pointerDown(element, { pointerId: 1, pointerType: "touch", button: 0, clientX: 10, clientY: 10 });
+    act(() => {
+      vi.advanceTimersByTime(LONG_PRESS_MS + 50);
+    });
+  }
+
+  function lift(element: HTMLElement): void {
+    fireEvent.pointerUp(element, { pointerId: 1, pointerType: "touch", button: 0, clientX: 10, clientY: 10 });
+  }
+
+  // `hostAtRoot`: the app's leading host is mounted at its root (`main.tsx`), outside the board's definitions.
+  function Board({ fusion, hostAtRoot = false }: { fusion: CardDef; hostAtRoot?: boolean }) {
+    const unit = unitView("p1", { instanceId: "fused-unit", defId: fusion.id });
+    const defs = { ...CATALOG, [fusion.id]: fusion };
+    return (
+      <>
+        {hostAtRoot ? <FullScreenArtHost /> : null}
+        <CatalogContext.Provider value={lookupFromDefs(defs)}>
+          <CardDefsProvider defs={defs}>
+            <WearerProvider seat="p1" viewer="p1">
+              <Card testId="card-fused-unit" card={unit} unit={unit} onField />
+              {hostAtRoot ? null : <FullScreenArtHost />}
+            </WearerProvider>
+          </CardDefsProvider>
+        </CatalogContext.Provider>
+      </>
+    );
+  }
+
+  function planesDrawFrom(hostId: string): void {
+    const planes = Array.from(document.querySelectorAll<HTMLElement>(".fullscreen-art-plane"));
+    expect(planes.length).toBeGreaterThan(0);
+    for (const plane of planes) {
+      expect(plane.style.backgroundImage).not.toBe("");
+      expect(plane.style.backgroundImage).not.toBe('url("")');
+      const slice = plane.dataset.slice;
+      const drawn =
+        slice === undefined
+          ? [artPlaneBackground(hostId, plane.dataset.plane as ArtPlane)]
+          : [true, false].map((moving) => dioramaSliceBackground(hostId, false, Number(slice), moving));
+      expect(drawn).toContain(plane.style.backgroundImage);
+    }
+  }
+
+  it("R3345000 holding your own fusion of fusions opens the view drawn from its host, not a blank", () => {
+    const inner = fusedDef([def(MINER), def(MYTHIC)], 1);
+    const outer = fusedDef([def(WEAPON), inner], 2);
+    render(<Board fusion={outer} />);
+    pressAndHold(screen.getByTestId("card-fused-unit"));
+    expect(screen.getByTestId("fullscreen-art")).toBeInTheDocument();
+    planesDrawFrom(MYTHIC);
+  });
+
+  it("R3345000 holding a single fusion draws the host's planes", () => {
+    render(<Board fusion={fusedDef([def(WEAPON), def(MYTHIC)])} />);
+    pressAndHold(screen.getByTestId("card-fused-unit"));
+    expect(screen.getByTestId("fullscreen-art")).toBeInTheDocument();
+    planesDrawFrom(MYTHIC);
+  });
+
+  it("R3345000 releasing the held fusion closes the view", () => {
+    render(<Board fusion={fusedDef([def(WEAPON), def(MYTHIC)])} />);
+    pressAndHold(screen.getByTestId("card-fused-unit"));
+    lift(screen.getByTestId("card-fused-unit"));
+    expect(screen.queryByTestId("fullscreen-art")).toBeNull();
+  });
+
+  it("R3345000 a digest id's hold draws the host's planes under a host outside the board's definitions", () => {
+    // R468: a digest id (`t-N:#hex`) is readable only through the board's defs, which list its ingredients.
+    const digest = { ...fusedDef([def(WEAPON), def(MYTHIC)]), id: "t-9:#0123456789abcdef" };
+    render(<Board fusion={digest} hostAtRoot />);
+    pressAndHold(screen.getByTestId("card-fused-unit"));
+    expect(screen.getByTestId("fullscreen-art")).toBeInTheDocument();
+    planesDrawFrom(MYTHIC);
+  });
+
+  it("R3345000 a fusion no art resolves for does not open by a hold", () => {
+    render(<Board fusion={{ ...fusedDef([def(WEAPON), def(MYTHIC)]), id: "t-9:#abc", ingredients: undefined }} />);
+    pressAndHold(screen.getByTestId("card-fused-unit"));
+    expect(screen.queryByTestId("fullscreen-art")).toBeNull();
+  });
+
+  it("R3345000 FullScreenArt over an unresolvable id closes itself", () => {
+    const onClose = vi.fn();
+    render(<FullScreenArt defId="t-9:#abc" onClose={onClose} />);
+    expect(onClose).toHaveBeenCalled();
   });
 });

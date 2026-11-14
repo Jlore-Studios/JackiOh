@@ -826,6 +826,24 @@ mod r2478000_upgrades_count_against_the_accounts_budget {
     }
 }
 
+mod a_socket_paths_plain_request_is_the_apis {
+    //! SURFACE §11.2: only a WebSocket handshake (`Upgrade: websocket`) on a socket's path reaches the
+    //! socket; anything else there is an ordinary request for the API, which serves no route there.
+    use super::*;
+    use jackioh_server::actor::ws_server::{SOCIAL_PATH, WATCH_PATH, WS_DUOS_PATH};
+
+    #[tokio::test]
+    async fn a_get_with_no_upgrade_on_each_socket_path_answers_as_a_path_nobody_serves() {
+        let app = test_app().await;
+        let (_, _, unknown) = call(&app, "GET", "/api/no-such-route", None, Value::Null).await;
+        assert_eq!(unknown["error"]["code"], json!("not_found"));
+        for path in [WS_PATH, WATCH_PATH, SOCIAL_PATH, WS_DUOS_PATH] {
+            let (status, _, body) = call(&app, "GET", path, None, Value::Null).await;
+            assert_eq!((status, &body), (404, &unknown), "{path}");
+        }
+    }
+}
+
 mod the_graceful_shutdown {
     //! SIGTERM graceful shutdown (#861): in-flight requests complete, sockets close with 1001, and tasks drain.
     use super::*;

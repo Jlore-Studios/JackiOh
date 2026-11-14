@@ -55,7 +55,7 @@ use crate::scripts::meditative::{
     c074_montana_giant, c080_aluneth, c081_deadmans_hand, c085_playtester, c087_tatches_the_totem,
     c090_spell_basket, c093_1_growing_felinor_sr, c093_2_growing_felinor_sr_sr,
     c093_3_growing_felinor_super_senior, c093_growing_felinor, c094_shrinking_felinor, c095_1_cn_golem,
-    c097_2_wishing_well, c097_8_prison, c102_catboy_maid_ssr,
+    c097_2_wishing_well, c097_8_prison, c099_paranoia, c102_catboy_maid_ssr,
 };
 use crate::scripts::meditative_plus::{
     c001_bobs_plan, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves, c022_mountaintop_garden,
@@ -699,32 +699,33 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.5.12ap",
         c073_1_classic_golem::script_v0_5_13g,
     ),
+    (c099_paranoia::ID, "v0.6.0g", c099_paranoia::script_v0_6_0g),
     // #3837 (R3837000, R3837003, R3837005): the last scripts before Stinkyscape Balance Changes V.
-    (c052_silly_silas::ID, "v0.6.0g", c052_silly_silas::script_v0_6_0g),
+    (c052_silly_silas::ID, "v0.6.1b", c052_silly_silas::script_v0_6_1b),
     (
         c029_portal_to_the_past::ID,
-        "v0.6.0g",
-        c029_portal_to_the_past::script_v0_6_0g,
+        "v0.6.1b",
+        c029_portal_to_the_past::script_v0_6_1b,
     ),
     (
         c044_cn_jade_well::ID,
-        "v0.6.0g",
-        c044_cn_jade_well::script_v0_6_0g,
+        "v0.6.1b",
+        c044_cn_jade_well::script_v0_6_1b,
     ),
     (
         c087_tatches_the_totem::ID,
-        "v0.6.0g",
-        c087_tatches_the_totem::script_v0_6_0g,
+        "v0.6.1b",
+        c087_tatches_the_totem::script_v0_6_1b,
     ),
     (
         c035_corpse_recycler::ID,
-        "v0.6.0g",
-        c035_corpse_recycler::script_v0_6_0g,
+        "v0.6.1b",
+        c035_corpse_recycler::script_v0_6_1b,
     ),
     (
         c096_ocean_tsunami::ID,
-        "v0.6.0g",
-        c096_ocean_tsunami::script_v0_6_0g,
+        "v0.6.1b",
+        c096_ocean_tsunami::script_v0_6_1b,
     ),
 ];
 

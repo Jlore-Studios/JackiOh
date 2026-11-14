@@ -1552,3 +1552,18 @@ impl Auth {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::iso_of;
+
+    /// The cached confirmation's `email_confirmed_at` (`authoritative_user`): RFC 3339 of its epoch
+    /// ms, and the ms themselves for an instant no date holds, so it is never empty, which is all
+    /// `is_email_confirmed` asks of it.
+    #[test]
+    fn iso_of_writes_epoch_ms_as_rfc_3339_and_never_an_empty_text() {
+        assert_eq!(iso_of(1_700_000_000_123), "2023-11-14T22:13:20.123Z");
+        assert_eq!(iso_of(0), "1970-01-01T00:00:00Z");
+        assert_eq!(iso_of(i64::MAX), i64::MAX.to_string());
+    }
+}

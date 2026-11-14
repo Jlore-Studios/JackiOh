@@ -31,6 +31,7 @@ import {
   TermTips,
   UNREVEALED_NOTE,
   useCanOpenFullScreen,
+  useFullScreenArtId,
   faceDownLabel,
   isHeld,
   isInspectKey,
@@ -307,6 +308,7 @@ function Card(props: CardProps): ReactElement {
   // is subscribed, so the hold follows the queue, and the callback asks again as the hold fires.
   const inHand = props.inOwnHand === true;
   const opensFullScreen = useCanOpenFullScreen(card === null ? null : face, card?.defId ?? "", worn);
+  const fullScreenArt = useFullScreenArtId(card?.defId ?? "");
   // #3633: only a worn unit of the viewer's that could open full screen reads the hold, so the queue
   // starting or stopping draws no other card again.
   const draining = useIsHeld(card !== null && opensFullScreen && !inHand && unit !== undefined && unit !== null && worn);
@@ -329,6 +331,7 @@ function Card(props: CardProps): ReactElement {
             radiant: card.radiant,
             name: face.name,
             heldPointerId: pointerId,
+            artId: fullScreenArt ?? undefined,
           });
         }
       : undefined,
