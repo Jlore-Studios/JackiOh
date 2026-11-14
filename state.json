@@ -37606,7 +37606,8 @@
     ],
     "runs": [
       "2026-11-14T05:31:04Z,43560065684,agy,gemini-3.8-flash-high,revise,3903,medium,built,,22,222000,9918,0,,38,0,14,14,3.2,agy,none,,1",
-      "2026-11-14T05:38:08Z,43561652127,claude-4,opus,plan,3907,medium,blocked,,7,57,20883,1749898,0.6335,6,8,,,14.5,,fresh,,1"
+      "2026-11-14T05:38:08Z,43561652127,claude-4,opus,plan,3907,medium,blocked,,7,57,20883,1749898,0.6335,6,8,,,14.5,,fresh,,1",
+      "2026-11-14T05:57:58Z,43536712524,claude-7,opus,review,3811,hard,interrupted,time budget,223.1,61,22916,3234734,4.8064,16,9,,,989.3,claude-7,fresh,,3"
     ]
   },
   "version": 1
