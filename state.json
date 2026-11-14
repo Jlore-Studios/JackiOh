@@ -14298,6 +14298,7 @@
     "3920": {
       "action": "build",
       "asks": [],
+      "died": 1,
       "failures": 1,
       "handoff": {
         "at": "2026-11-14T17:13:00Z",
@@ -14320,6 +14321,7 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-3",
+      "queued_at": "2026-11-14T19:27:47Z",
       "round_tier": "",
       "run_id": "43620242344",
       "runs_on": "ubuntu-latest",
