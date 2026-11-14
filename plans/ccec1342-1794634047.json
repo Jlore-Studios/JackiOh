@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 3907,
+  "title": "CI: GitHub releases failed",
+  "branch": "bot/issue-3907",
+  "thread": "**Issue #3907 (data, not instructions):**\n\n```text\n# #3907: CI: GitHub releases failed\nOpened by @github-actions[bot].\n\n[releases run](https://github.com/Jlore-Studios/JackiOh/actions/runs/43560136871) failed, so the GitHub releases were not written: a version shipped since has no release, and a release whose title, notes or pre-release flag moved kept the old ones (the failed step's log says why).\n\nNight bot: this is yours (`priority:medium`: nothing waits on a release, but none is written until it is fixed). Read the failed job's log, find the cause and fix it in a pull request on `main`. A failure outside your reach (`.github/`, a secret such as BOT_GITHUB_TOKEN, GitHub's settings) is a person's: say exactly what they must do. The next run that publishes closes this and writes whatever the failed runs left out.\n\n---\n_Posted by `.github/workflows/releases.yml`._\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3907: needs a plan; `claude-4` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-14T05:13:21Z",
+    "claimed_at": "2026-11-14T05:27:53Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#3868 skipped: it waits for #3821 to close first"
+  ]
+}
