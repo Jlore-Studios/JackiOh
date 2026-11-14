@@ -17606,6 +17606,8 @@
       "verdict_rounds": 0
     },
     "3918": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-14T10:05:13Z",
@@ -17619,8 +17621,11 @@
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -80; echo ----; ls -la .bot-journal.md; git log --oneline -1\", \"description\": \"Read bot notes and check journal\"}\n- Bash: {\"command\": \"grep -n '^## ' .bot-notes.md; wc -l .bot-notes.md; grep -n '^#' .bot-journal.md | head -30\", \"description\": \"List sections in notes and journal\"}\n- Bash: {\"command\": \"sed -n 1,21p .bot-journal.md; sed -n 100,140p .bot-journal.md\", \"description\": \"Read journal run summary and notes\"}\n- said: Nothing has been built yet. Let me read the test as it stands.\n- Bash: {\"command\": \"grep -n 'fn r3538002_past_ids_are_play_alike_runs_before_the_reference' crates/cards/src/history.rs\", \"description\": \"Locate the failing test\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3917/crates/cards/src/history.rs\", \"offset\": 1385, \"limit\": 50}\n- Bash: {\"command\": \"grep -n 'fn past_ids\\\\|fn catalog_defs_at\\\\|fn plays_alike\\\\|fn past_def\\\\b\\\\|fn past_def(' crates/cards/src/*.rs; grep -rn 'stinkyscapeplus-033' crates/cards/src/history.rs | head\", \"de\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3917/crates/cards/src/history.rs\", \"offset\": 870, \"limit\": 230}\n- said: The code matches the plan. Applying steps 1 and 2.\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3917/crates/cards/src/history.rs\", \"old_string\": \" // Core #13 Jlockeed Shredder-10 played three ways since v0.3.0c: two past ve\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3917/crates/cards/src/history.rs\", \"old_string\": \" assert!(past_ids(\\\"stinkyscapeplus-033\\\", crate::CATALOG_VERSION).is_empty())\u2026\n- said: Now I'll update the notes, then run the history tests here and set up the scratch worktree for the promotion's history.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstate='''## State\\n\\n- Build run (opus), 2026-11-14: steps 1 and 2 of the plan applied to `crates/cards/src/history.rs` (the one t\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-cards --lib history:: 2>&1 | tail -25\", \"description\": \"Run cards history tests on main's history\", \"timeout\": 600000}\n- said: Passes on main's history. Now the scratch worktree for the promotion's history.\n- Bash: {\"command\": \"echo \\\"CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-unset}\\\"; sed -n 1,40p scripts/worktree.sh\", \"description\": \"Check target dir setting and worktree script\"}\n- said: The target dir is shared (`CARGO_TARGET_DIR`), so the scratch worktree reuses dependency builds. Creating it and running `patches ship` there:\n- Bash: {\"command\": \"sh scripts/worktree.sh ship-3917 2>&1 | tail -5; cd ../jackioh-wt/ship-3917 && git log --oneline -1 && git status --short | head\", \"description\": \"Create scratch worktree from base\", \"ti\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/ship-3917 && cargo run --release -q -p jackioh-tools -- patches ship 2>&1 | tail -15; git status --short | head -30\", \"description\": \"Run patch\u2026\n- said: Shipped v0.6.2c and v0.6.3, as the promotion does. First, with the original test, see it fail on that history:\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/jackioh-wt/ship-3917 && cargo test -p jackioh-cards --lib --config profile.test.package.jackioh-engine.opt-level=1 --config profile.test.package.jackioh-c\u2026\n- said: Reproduced: the same failure as #3916's CI. Now I'll copy in the fix and run the whole cards lib suite on the shipped tree:\n- Bash: {\"command\": \"cp crates/cards/src/history.rs ../jackioh-wt/ship-3917/crates/cards/src/history.rs && cd /home/runner/work/_temp/work/jackioh-wt/ship-3917 && git diff --stat -- crates/cards/src && cargo\u2026\n- said: 9,813 pass, 0 fail on the shipped history. Removing the scratch worktree and its branch, then running the remaining checks here:\n- Bash: {\"command\": \"git worktree remove --force ../jackioh-wt/ship-3917 && git branch -D wt/ship-3917 && git worktree list | grep -c ship-3917; ls ../jackioh-wt/ 2>&1; git status --short\", \"description\": \"R\u2026\n- Bash: {\"command\": \"echo \\\"- Original test fails on shipped tree (3 vs 2 at history.rs:1404); fixed one passes there, 9813/9813 cards lib. Scratch worktree + branch removed. Running fmt/clippy/classify/spec\u2026\n- Bash: {\"command\": \"git fetch -q origin main 2>/dev/null; git rev-parse --short origin/main; for c in \\\"catalog check\\\" \\\"patches check\\\" \\\"spec check\\\" \\\"classify --base origin/main --claims\\\"; do echo \\\"=\u2026\n- said: Everything is green. Updating the notes' State:\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstart=s.index('## State'); end=s.index('## Log')\\nnew='''## State\\n\\n- DONE (build run, opus, 2026-11-14): the plan's steps 1 and \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"CI: a patches promotion or log is stuck\"} --> This fixes the one test that kept promotion #3916 (`patches ship`: v0.6.2c, then v0.6.3) from merging itself. Closes #3917. Once this merges, the watch in `patches-ship.yml` ships again from the newer `main`, and t\u2026"
       },
       "issue": 3917,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-14T11:12:29Z",
         "from_run": "43583589447",
         "gates": [
           {
@@ -17712,7 +17717,11 @@
         "source": "build",
         "until": "2026-11-14T11:41:21Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-14T11:11:21Z",
+      "run_id": "pending:649c1769-1794654719",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17731,6 +17740,9 @@
         "provider": "claude-8",
         "run": "43583589447"
       },
+      "started_at": "2026-11-14T11:12:29Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17744,9 +17756,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-14T10:54:16Z",
+    "at": "2026-11-14T11:12:29Z",
     "url": "",
-    "what": "review #3902 on agy"
+    "what": "review #3918 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-14T11:00:46Z",
