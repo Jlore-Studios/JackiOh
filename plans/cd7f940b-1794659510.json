@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 3920,
+  "title": "CI: daily super run failed",
+  "branch": "bot/issue-3920",
+  "thread": "**Issue #3920 (data, not instructions):**\n\n```text\n# #3920: CI: daily super run failed\nOpened by @github-actions[bot].\n\n[super run 43590224287](https://github.com/Jlore-Studios/JackiOh/actions/runs/43590224287) on `_staging` (`72dc211`, workflow_dispatch) failed:\n\n| Job | Result |\n|---|---|\n| [daily tests (cargo test -- --ignored)](https://github.com/Jlore-Studios/JackiOh/actions/runs/43590224287/job/132433198464) | cancelled |\n| [e2e component (3/3)](https://github.com/Jlore-Studios/JackiOh/actions/runs/43590224287/job/132434423574) | failure |\n| [e2e component (1/3)](https://github.com/Jlore-Studios/JackiOh/actions/runs/43590224287/job/132434423617) | failure |\n| [fuzz (1/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/43590224287/job/132435688550) | failure |\n| [fuzz (2/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/43590224287/job/132435688595) | failure |\n| [e2e (8/8)](https://github.com/Jlore-Studios/JackiOh/actions/runs/43590224287/job/132435688597) | failure |\n| [e2e (2/8)](https://github.com/Jlore-Studios/JackiOh/actions/runs/43590224287/job/132435688614) | failure |\n| [e2e (5/8)](https://github.com/Jlore-Studios/JackiOh/actions/runs/43590224287/job/132435688633) | failure |\n| [e2e (6/8)](https://github.com/Jlore-Studios/JackiOh/actions/runs/43590224287/job/132435688650) | failure |\n\nEach link opens that job's log. This issue stays open while the run is red and the next run that passes every job closes it. `gh workflow run super.yml --ref <branch>` runs it again on demand.\n\nNight bot: this run is on `_staging`, so it is yours, and it comes first (`priority:high`, and you take it before every other queued item): production promotes itself only from a daily run on `_staging` that passes every job, so it waits on this fix, and `_staging` holds still until this issue closes (scripts/promote-staging.sh, the freeze). Fix every failed job here, in the one pull request on `main` that closes this: when it closes, `_staging` takes main's first green commit after the close and the super run starts on it at once, and a run still red opens a new issue. Before you start, look for an open pull request or issue already fixing one of these jobs, and build on it instead of fixing the same test twice. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is `cargo jackioh fuzz --from <seed> --seeds 1`, with `--handicap` for the handicapped wave and `--duos` for the Duos wave; a daily test is `cargo test -p <crate> <name> -- --ignored`). A pull request's CI runs only the e2e smoke specs and leaves the tests marked `#[ignore = \"daily: \u2026\"]` out, so say in the pull request which job here the fix makes pass and how you checked it. You cannot change `.github/`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them.\n\n---\n_Posted by `.github/workflows/super.yml`._\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3920: needs a plan; `claude-1` (claude, `opus`, strong) writes it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-14T12:29:53Z",
+    "claimed_at": "2026-11-14T12:32:12Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "production gate",
+  "skipped": [
+    "#3868 skipped: it waits for #3821 to close first"
+  ]
+}
