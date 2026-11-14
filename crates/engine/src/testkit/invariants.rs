@@ -1119,6 +1119,19 @@ fn drop_launched_pieces(shown: &mut Value, launched: &[String]) {
     }
 }
 
+/// R1852000, R1852005: a fusion names its dead piece with the definition it died as, face up, the public
+/// memory of a public death whatever has become of the piece's card or its Starship since (a Classic+ #35
+/// Rollback that took the Starship back to its owner's hand while a copy of the piece waits in that
+/// owner's library: fuzz seed 5912, issue #3800). The definition the engine's own event named is taken out
+/// of the view's copy of it, as a launch's pieces are; the piece's id is still scanned.
+fn drop_fused_piece(shown: &mut Value, piece_def: &str) {
+    if let Some(object) = shown.as_object_mut()
+        && object.get("defId").and_then(Value::as_str) == Some(piece_def)
+    {
+        object.remove("defId");
+    }
+}
+
 /// Every string and object inside `value`, with the path it was found at. Values only, never keys.
 fn walk(
     value: &Value,
@@ -1229,6 +1242,9 @@ pub fn hidden_information_violations(
         let mut shown = serde_json::to_value(event).expect("a GameEvent serializes");
         if let Some(GameEvent::StarshipLaunched { pieces, .. }) = source {
             drop_launched_pieces(&mut shown, pieces);
+        }
+        if let Some(GameEvent::StarshipFused { def_id, .. }) = source {
+            drop_fused_piece(&mut shown, def_id);
         }
         events.push(shown);
     }
@@ -2187,6 +2203,12 @@ pub struct InvariantMonitor {
     /// R636, R781004: the units `note_drawn_windfury` read as maybe Windfury, whose drawn keywords a
     /// change of control keeps (the card stays on the field).
     drawn_windfury: IndexSet<String>,
+    /// R3543003: the stint in which each field unit was seen with Frenzy as the action began, read by
+    /// `before`. A kill inside the action is answered by the Frenzy its attacker had then, though the
+    /// state the action leaves no longer shows it: the autopilot's whole turn kills, attacks again and
+    /// loses the attacker to a trap's exile or a counter-hit, which resets the keywords a Drone Corvette
+    /// drew (R78, R781004; fuzz seeds 8022 and 7429, issue #3800).
+    frenzy: IndexMap<String, i32>,
     /// The cards that fired as traps this turn: one animates as its firing's last step, not at the
     /// start of the turn, and that is an entry even on its controller's turn (R383, R1062).
     fired: IndexSet<String>,
@@ -2235,6 +2257,7 @@ impl InvariantMonitor {
             chosen_exertion: None,
             windfury: IndexMap::new(),
             carried_windfury: IndexSet::new(),
+            frenzy: IndexMap::new(),
             drawn_windfury: IndexSet::new(),
             fired: IndexSet::new(),
             readied: IndexSet::new(),
@@ -2257,6 +2280,17 @@ impl InvariantMonitor {
             if crate::layers::unit_has(state, card, KeywordKind::Windfury) {
                 let stint = self.stint_of(&card.id);
                 self.windfury.insert(card.id.clone(), stint);
+            }
+        }
+    }
+
+    /// R3543003: the field units with Frenzy as the action begins, each in its stint (`frenzy`).
+    fn note_frenzy(&mut self, state: &GameState) {
+        self.frenzy.clear();
+        for card in field_cards(state) {
+            if crate::layers::unit_has(state, card, KeywordKind::Frenzy) {
+                let stint = self.stint_of(&card.id);
+                self.frenzy.insert(card.id.clone(), stint);
             }
         }
     }
@@ -2458,10 +2492,14 @@ impl InvariantMonitor {
     /// (R212): a card dormant in the last state read that acts now (not on a side a `rolledBack` restored,
     /// R566, nor a fusion's kept card, R77, R1086), on the turn `summonedTurn` names from `began_on`, else
     /// the last. One uncovered unseen (dormant, or in a zone R14 names) takes `summonedTurn`'s word only for
-    /// a turn of the action.
+    /// a turn of the action. So does a card the action's own `summoned` or `controlChanged` named, wherever it
+    /// stands now: the hole's pull at a turn's start moves a pile one lane and no event says so (R3554001),
+    /// so a Drone Battleship's layer summoned beneath its Shield, uncovered on a later turn of the one action
+    /// and pulled on, stands in no zone an event named (fuzz handicap seed 6708, issue #3800).
     fn note_uncoverings(&mut self, events: &[GameEvent], state: &GameState, began_on: i32) {
         let mut restored: Vec<PlayerId> = Vec::new();
         let mut landed: Vec<(PlayerId, Row, i32)> = Vec::new();
+        let mut arrived: Vec<&str> = Vec::new();
         let mut kept: Vec<&str> = Vec::new();
         // §8 #52: the rotating player is the one whose card played (`RotationArgs.perspective`).
         let mut playing: Option<PlayerId> = None;
@@ -2484,14 +2522,25 @@ impl InvariantMonitor {
                 }
                 GameEvent::RolledBack { sides, .. } => restored.extend(sides.iter().copied()),
                 GameEvent::Summoned {
-                    player, row, lane, ..
-                } => landed.push((*player, *row, *lane)),
+                    player,
+                    row,
+                    lane,
+                    instance_id,
+                    ..
+                } => {
+                    landed.push((*player, *row, *lane));
+                    arrived.push(instance_id);
+                }
                 GameEvent::ControlChanged {
                     controller,
                     row,
                     lane,
+                    instance_id,
                     ..
-                } => landed.push((*controller, *row, *lane)),
+                } => {
+                    landed.push((*controller, *row, *lane));
+                    arrived.push(instance_id);
+                }
                 GameEvent::Animated {
                     player, unit_lane, ..
                 } => landed.push((*player, Row::Units, *unit_lane)),
@@ -2524,7 +2573,8 @@ impl InvariantMonitor {
                 && !restored.contains(&player)
                 && !kept.contains(&card.id.as_str())
                 && crate::zones::acts_on_field(state, card);
-            let may_have_been = was_dormant || landed.contains(&(player, row, lane));
+            let may_have_been =
+                was_dormant || landed.contains(&(player, row, lane)) || arrived.contains(&card.id.as_str());
             let during = card.summoned_turn.filter(|turn| (began_on..=now).contains(turn));
             let at = match during {
                 Some(turn) if may_have_been => Some(turn),
@@ -2681,6 +2731,7 @@ impl InvariantMonitor {
             })
         });
         self.note_windfury(state);
+        self.note_frenzy(state);
         self.carried_windfury = PLAYER_IDS
             .into_iter()
             .flat_map(|player| {
@@ -2944,10 +2995,14 @@ impl InvariantMonitor {
                         // R1869002: a kill readies its attacker only through its own `afterAttack` text;
                         // R3543003: or its Frenzy, which answers the same kill.
                         let attacker_id = attack.attacker_id.clone();
-                        let answers = find_instance(state, &attacker_id).is_some_and(|attacker| {
-                            crate::scripts::script_of(state, attacker).after_attack.is_some()
-                                || crate::layers::unit_has(state, attacker, KeywordKind::Frenzy)
-                        });
+                        // R3543003: the Frenzy it began the action with, in the stint it still attacks in.
+                        let began_frenzied =
+                            self.frenzy.get(&attacker_id) == Some(&self.stint_of(&attacker_id));
+                        let answers = began_frenzied
+                            || find_instance(state, &attacker_id).is_some_and(|attacker| {
+                                crate::scripts::script_of(state, attacker).after_attack.is_some()
+                                    || crate::layers::unit_has(state, attacker, KeywordKind::Frenzy)
+                            });
                         if answers {
                             self.credit_kill(&attacker_id);
                         }
