@@ -17377,6 +17377,7 @@
       "run_id": "43551822957",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 250,
       "started_at": "2026-11-14T03:28:33Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -37006,9 +37007,33 @@
         "title": "Patch: holding down a card with several fusions shows a black screen",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-3"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "ec8809f7fd8c35100350d0f9f161cadf05350680",
+        "issue": 3887,
+        "merged_at": "2026-11-14T03:58:26Z",
+        "n": 250,
+        "pr": 3900,
+        "queued_at": "2026-11-14T03:58:26Z",
+        "sha": "e1787794d902f0ffe9d9cefcc3e0309c94fa4d70",
+        "status": "queued",
+        "title": "Patch: a Plain text button on the Statistics page that shows each card, and the cards it references, as readable text",
+        "tries": 0
       }
     ],
-    "count": 249
+    "count": 250
   },
   "statistics": {
     "at": "2026-11-14T03:53:11Z"
