@@ -17144,6 +17144,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 255,
       "started_at": "2026-11-14T06:24:24Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -36994,9 +36995,33 @@
         "title": "Patch: a Plain text button on the Statistics page that shows each card, and the cards it references, as readable text",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-6"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "90f8779b8b181cc2d45e3039108d4575e6b9d995",
+        "issue": 3731,
+        "merged_at": "2026-11-14T08:00:14Z",
+        "n": 255,
+        "pr": 3896,
+        "queued_at": "2026-11-14T08:00:14Z",
+        "sha": "9889adcf9b1b1c8a39fb6494f1d4d9040b8bf476",
+        "status": "queued",
+        "title": "Patch: 2v2 between people in a private lobby: Duos with team B played by two players instead of the AI team",
+        "tries": 0
       }
     ],
-    "count": 254
+    "count": 255
   },
   "statistics": {
     "at": "2026-11-14T07:57:49Z"
