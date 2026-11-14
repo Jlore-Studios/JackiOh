@@ -37463,7 +37463,8 @@
       "2026-11-14T11:03:31Z,claude-1,stream,call,43583645292,19,2026-11-14T12:20:00Z,,,allowed,100,,"
     ],
     "runs": [
-      "2026-11-14T11:06:07Z,43587462407,agy,gemini-3.8-flash-high,review,3902,medium,reviewed,,7,352435,25201,0,,0,10,11,15,1.1,claude-6,none,,1"
+      "2026-11-14T11:06:07Z,43587462407,agy,gemini-3.8-flash-high,review,3902,medium,reviewed,,7,352435,25201,0,,0,10,11,15,1.1,claude-6,none,,1",
+      "2026-11-14T11:04:16Z,43583645292,claude-1,opus,revise,3884,hard,approved,,1,18,4119,689019,0.7329,16,19,,,2.9,claude-1,none,,1"
     ]
   },
   "version": 1
