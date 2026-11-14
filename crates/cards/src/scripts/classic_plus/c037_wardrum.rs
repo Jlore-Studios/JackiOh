@@ -1,5 +1,5 @@
-//! C+ #37 Wardrum (SPEC §8.7 row 37): (4) Unit ((5) until issue #3138), Quickdraw, Legendary, 5/5 → 10/10,
-//! Divine Shield on both faces (issue #3138).
+//! C+ #37 Wardrum (SPEC §8.7 row 37): (3) Unit ((4) until issue #3837, (5) until issue #3138), Quickdraw,
+//! Legendary, 5/5 → 10/10, Divine Shield on both faces (issue #3138).
 //!   Base:    "Divine Shield. While in your hand or deck: After you play {threshold} non-Units in a turn, summon this.
 //!            End of turn: Cast a copy of a random non-Unit you played this turn."
 //!   Radiant: "… End of turn: Cast a copy of each non-Unit you played this turn."
@@ -245,17 +245,17 @@ mod tests {
         s.stats(card).keywords.iter().any(|keyword| keyword.kind() == KeywordKind::DivineShield)
     }
 
-    /// Issue #3138: it costs (4), from (5), on both faces: refused with 3 mana, played with 4, as a 5/5
-    /// (Radiant 10/10) that has the Divine Shield from the first moment.
+    /// Issue #3837: it costs (3), from (4) ((5) until issue #3138), on both faces: refused with 2 mana,
+    /// played with 3, as a 5/5 (Radiant 10/10) that has the Divine Shield from the first moment.
     #[test]
-    fn issue_3138_it_costs_4_and_enters_the_field_with_its_divine_shield_on_both_faces() {
+    fn issue_3837_it_costs_3_and_enters_the_field_with_its_divine_shield_on_both_faces() {
         for (radiant, health) in [(false, 5), (true, 10)] {
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": WARDRUM, "radiant": radiant }, FILLER], "library": LIBRARY },
                 "p2": { "hand": [FILLER] },
             }));
-            crate::expect_costs(&mut s, WARDRUM, 4, json!({}));
-            s.state_mut().players.p1.mana.current = 4;
+            crate::expect_costs(&mut s, WARDRUM, 3, json!({}));
+            s.state_mut().players.p1.mana.current = 3;
             s.play(WARDRUM, json!({}));
             s.expect_mana(P1, 0);
             s.expect_stats(WARDRUM, json!({ "attack": health, "health": health, "maxHealth": health }));

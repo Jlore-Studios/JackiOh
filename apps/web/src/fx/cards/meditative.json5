@@ -66,7 +66,7 @@
   "meditative-041": { trigger: { motif: "deal", palette: "Hustle/jade" } }, // CN Smuggler
   "meditative-042": { bespoke: "fleaMarket", signature: true }, // CN Flea Market
   "meditative-043": { cast: { motif: "deal", palette: "Hustle/jade" } }, // CN Jade Market
-  "meditative-044": { cast: { motif: "deal", palette: "Hustle/jade" }, trigger: { motif: "deal", palette: "Hustle/jade" }, aura: { look: "frost", palette: "Hustle/jade", scope: "zone" } }, // CN Jade Well
+  "meditative-044": { cast: { motif: "deal", palette: "Hustle/jade" }, activate: { motif: "deal", palette: "Hustle/jade" }, aura: { look: "frost", palette: "Hustle/jade", scope: "zone" } }, // CN Jade Well
   "meditative-045": { bespoke: "knowledgeBreaker", entrance: "chalkMask", aura: { look: "chalk", scope: "tile" }, signature: true }, // Knowledge Breaker
   "meditative-045-1": { bespoke: "breakerPrime", entrance: "maskSplit", aura: { look: "storm", palette: "Nerd/chalk", scope: "tile" }, signature: true }, // Knowledge Breaker Prime
   "meditative-046": { cast: { motif: "deal", palette: "Nerd/ink" } }, // Conjure Intellect

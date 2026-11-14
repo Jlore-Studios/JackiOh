@@ -7,7 +7,7 @@ import { at } from "../test/stubServer.ts";
 import { LobbyInviteToast } from "./LobbyInviteToast.tsx";
 import { lobbyTestid } from "./testids.ts";
 
-const listeners: ((invite: { code: string; format: "duel" | "coop"; from: { profileId: string; username: string } }) => void)[] = [];
+const listeners: ((invite: { code: string; format: "duel" | "coop" | "2v2"; from: { profileId: string; username: string } }) => void)[] = [];
 
 vi.mock("../together/socialPoll.ts", () => ({
   onLobbyInvitePush: (listener: (typeof listeners)[number]) => {
@@ -18,7 +18,7 @@ vi.mock("../together/socialPoll.ts", () => ({
   },
 }));
 
-function invite(code: string, format: "duel" | "coop"): void {
+function invite(code: string, format: "duel" | "coop" | "2v2"): void {
   act(() => {
     for (const listener of [...listeners]) listener({ code, format, from: { profileId: "p-ana", username: "Ana#1" } });
   });
@@ -48,5 +48,11 @@ describe("the lobby invite toast", () => {
     fireEvent.click(screen.getByTestId(lobbyTestid.inviteOpen));
     expect(window.location.pathname).toBe("/lobby/K7Q2XM");
     expect(screen.queryByTestId(lobbyTestid.inviteToast)).toBeNull();
+  });
+
+  it("#3731 an invite to a 2v2 lobby says so", () => {
+    render(<LobbyInviteToast />);
+    invite("TWOVTW", "2v2");
+    expect(screen.getByTestId(lobbyTestid.inviteToast)).toHaveTextContent("Ana#1 invites you to a 2v2 lobby");
   });
 });

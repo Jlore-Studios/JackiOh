@@ -1,5 +1,5 @@
-//! Meditative #40 Feng Shui (SPEC §8.8 row 40, R980–R987, R3140000, BUILD M10 row M 40). (3) Field
-//! Spell, CN, Legendary.
+//! Meditative #40 Feng Shui (SPEC §8.8 row 40, R980–R987, R3140000, BUILD M10 row M 40). (2) Field
+//! Spell ((3) until issue #3837), CN, Legendary.
 //!   Base:    "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui is rewarded, bad punished.
 //!            Activate: Add an Auspicious Rock to your hand. / Your last element, your opponent's last
 //!            element."
@@ -167,10 +167,10 @@ mod tests {
     }
 
     #[test]
-    fn r985_r986_a_3_cost_legendary_cn_field_spell_that_declares_no_number() {
+    fn r985_r986_a_2_cost_legendary_cn_field_spell_that_declares_no_number() {
         crate::register_all();
         let def = crate::card_def(ID);
-        assert_eq!(def.cost, CardCost::Fixed(3));
+        assert_eq!(def.cost, CardCost::Fixed(2));
         assert_eq!(def.type_, CardType::FieldSpell);
         assert_eq!(def.tags, vec![Tag::Cn]);
         assert_eq!(def.rarity, Rarity::Legendary);

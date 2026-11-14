@@ -506,6 +506,10 @@ pub struct StaticFlags {
     /// (§8 #55's base face: "If opposing Units are used, summon for your opponent").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub enemy_tribute_hands_over: Option<bool>,
+    /// R3837000: every play of this card summons it for the opponent, Tribute or none (§8 #52's base
+    /// face: "Summon this for your opponent").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub summon_for_opponent: Option<bool>,
     /// Anti-oneshot Armor: caps each hit on this player's hero at ANTI_ONESHOT_CAP (§4.4 step 3).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub anti_oneshot: Option<bool>,

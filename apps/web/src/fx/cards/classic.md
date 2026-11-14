@@ -98,7 +98,7 @@ gallery plays every entry.
 | `classic-072` | Grand Counterspell | Trap | cast negate | 1.28 | negate | cast: the census agrees (negate) |
 | `classic-073` | Nurse Cleaver | Unit | none: vanilla | — | none: vanilla | the census agrees: keywords only, which the keyword beats draw |
 | `classic-074` | Corpse Plantation | Field Spell | cast tally; activate rise; aura bloom zone | 1.45 | bolt | cast: the census's bolt is noise; it places counters, which tally (#2786) reads; activate: it raises a Unit, which rise draws |
-| `classic-075` | Argusland | Field Spell | cast bless; aura holy side | 1.36 | none: vanilla | cast: its standing guard draws in the rows; ward folded into the rows (R2803000), so cast names bless, its nearest motif |
+| `classic-075` | Argusland | Field Spell | cast bless; aura holy side | 1.28 | none: vanilla | cast: its standing guard draws in the rows; ward folded into the rows (R2803000), so cast names bless, its nearest motif |
 | `classic-076` | Plague Bringer | Unit | cry tally | 1.28 | bolt | cry: it places counters, which tally (#2786) reads |
 | `classic-077` | Anti-Magic Monkey | Unit | none: vanilla | — | bolt | the census's bolt is one stray damage; its Aura taxes Spells, with no moment to draw |
 | `classic-078` | Mutate Spell | Field Spell | cast vanish; activate vanish; aura arcane zone | 1.19 | vanish | cast and activate: the census agrees (vanish) |
