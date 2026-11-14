@@ -49,8 +49,9 @@ export function precompressedModule(stored: Response): Response {
   headers.set("Content-Type", "application/wasm");
   headers.set("Content-Encoding", "br");
   if (!headers.has("Cache-Control")) headers.set("Cache-Control", MODULE_CACHE_CONTROL);
-  // Stryker disable next-line StringLiteral: `manual` is a Workers-runtime-only body hint with no
-  // observable accessor, so no unit test here can tell it from any other string.
+  // `manual` is a Workers-runtime-only body hint with no observable accessor, so no unit test here can
+  // tell it from any other string. A disable covers only the line after it, so it stands last.
+  // Stryker disable next-line StringLiteral: a Workers-only body hint no test can read (above)
   return new Response(stored.body, { status: 200, headers, encodeBody: "manual" });
 }
 

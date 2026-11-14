@@ -6,10 +6,11 @@
 // names a card (R202). The card motif of whichever card laid it yields to it.
 
 import type { GameEvent, PlayerId, PlayerView, UnitView } from "@jackioh/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { ANOMALIES, ANOMALY_CODES, type AnomalyCode } from "../cards/anomalies.ts";
 import { anomalyMarkup } from "../cards/art/svg.ts";
+import { FLAVOR_FALLBACK } from "../cards/flavor.ts";
 import {
   ANOMALY_LAND_MS,
   ANOMALY_RIFT_HOLD_MS,
@@ -26,19 +27,30 @@ import { endOf } from "../test/signatures.ts";
 import {
   ANOMALY_FLARE_AT,
   ANOMALY_FX,
+  ANOMALY_LAND_FLIGHT,
+  ANOMALY_LAND_SPREAD,
+  ANOMALY_LAND_STAGGER_MS,
+  ANOMALY_LAND_TRAUMA,
   ANOMALY_STAMP_AT,
   ANOMALY_STILL_MS,
+  ANOMALY_TAIL_MS,
   ANOMALY_TEAR_AT,
+  ANOMALY_TITLE_LINGER_AT,
+  ANOMALY_TRAUMA,
+  ANOMALY_TUNING,
   anomalyClaim,
   planAnomaly,
   planAnomalyStill,
 } from "./anomaly.ts";
+import { raysCue, ringCue, tunedBurst } from "./build.ts";
 import { planCardMotif } from "./cardFx.ts";
-import { FX_CENTER, FX_INTENSITY_SCALE, FX_MAX_TAIL_MS, FX_MOTIF_CENTER_LANE } from "./constants.ts";
+import { FX_CENTER, FX_HOLD_MAX_MS, FX_INTENSITY_SCALE, FX_MAX_TAIL_MS, FX_MOTIF_CENTER_LANE } from "./constants.ts";
 import { planFx } from "./cues.ts";
+import { FLAVOR_LOOKS, paletteLook } from "./flavors.ts";
 import { createFxMemory } from "./memory.ts";
+import { tintOf } from "./setPieces.ts";
 import { planStage } from "./stage.ts";
-import type { FxCue, FxPlanEnv } from "./types.ts";
+import type { FxAnchor, FxCue, FxPlanEnv } from "./types.ts";
 
 const ANOMALY_FOUND = "stinkyscape-t-anomaly-found";
 const CHAOS_SCAPE = "stinkyscape-151";
@@ -180,5 +192,156 @@ describe("R3337003 an Anomaly's set piece", () => {
     const cues = planFx(held as AnimationEntry, view, env());
     expect(cues.some((cue) => cue.kind === "rift")).toBe(true);
     expect(cues.some((cue) => cue.kind === "ring" && cue.at.kind === "testid" && cue.at.testid === testid.board)).toBe(false);
+  });
+});
+
+const at = (value: string): FxAnchor => ({ kind: "testid", testid: value });
+const CENTRE = at(testid.zone("you", "units", FX_MOTIF_CENTER_LANE));
+const I = FX_INTENSITY_SCALE.normal;
+
+/** `code`'s rift entry laying `landings` units, held `H` and landing over `M` after it (the effects speed's share, R201). */
+function heldRift(code: AnomalyCode, H: number, M: number, landings = 3): { entry: AnimationEntry; view: PlayerView } {
+  const { entry, view } = riftEntry(code, H, landings);
+  return { entry: { ...entry, durationMs: H + M }, view };
+}
+
+/** The ghost each landing flies out of the rift, `start` after its entry starts, for `flight`. */
+const ghostOf = (lane: number, start: number, flight: number, spin: boolean): FxCue => ({
+  kind: "ghost",
+  from: CENTRE,
+  to: at(testid.zone("you", "units", lane)),
+  delayMs: start,
+  durationMs: flight,
+  ...(spin ? { spin: true as const } : {}),
+});
+
+/** The title card of `code`, its name over its picture in its palette's tint. */
+function titleOf(code: AnomalyCode, palette: string, delayMs: number, durationMs: number): FxCue {
+  const look = paletteLook(palette);
+  if (look === undefined) throw new Error(palette);
+  return { kind: "anomalyTitle", at: { kind: "viewport", at: FX_CENTER }, text: ANOMALIES[code].name, picture: anomalyMarkup(code, ANOMALIES[code].rich), tint: tintOf(look), delayMs, durationMs };
+}
+
+describe("R3337003 an Anomaly's set piece, beat by beat", () => {
+  it("R3337003 held in full, the Wormhole tears, flares, stamps its title card to its linger and powers each card on in turn", () => {
+    const H = ANOMALY_RIFT_HOLD_MS;
+    const { entry, view } = heldRift("WH", H, ANOMALY_LAND_MS);
+    const D = entry.durationMs;
+    const M = ANOMALY_LAND_MS;
+    // The Wormhole's palette names a look of its own, not the fallback flavor's.
+    const look = paletteLook("Tech/starfield");
+    if (look === undefined) throw new Error("Tech/starfield");
+    expect(look.colors).not.toEqual(FLAVOR_LOOKS[FLAVOR_FALLBACK].colors);
+    const tint = tintOf(look);
+    const flare = Math.round(ANOMALY_FLARE_AT * H);
+    const stamp = Math.round(ANOMALY_STAMP_AT * H);
+    const linger = H + Math.round(ANOMALY_TITLE_LINGER_AT * M);
+    // Three cards over half the landing would stand M / 4 apart, more than the most one waits: each waits that most.
+    expect((M * ANOMALY_LAND_SPREAD) / 2).toBeGreaterThan(ANOMALY_LAND_STAGGER_MS);
+    const flight = Math.round(ANOMALY_LAND_FLIGHT * M);
+    const landings = [1, 2, 3].flatMap((lane, k) => {
+      const start = H + k * ANOMALY_LAND_STAGGER_MS;
+      const zone = at(testid.zone("you", "units", lane));
+      return [
+        ghostOf(lane, start, flight, false),
+        ringCue(D, "spark", zone, start + flight),
+        { ...tunedBurst(I, "spark", zone, "point", start + flight, ANOMALY_TUNING.spark), colors: look.colors },
+      ];
+    });
+    expect(planAnomaly(entry, view, env())?.cues).toEqual([
+      { kind: "rift", at: CENTRE, side: "you", tint, tearMs: Math.round(ANOMALY_TEAR_AT * H), flareMs: flare, delayMs: 0, durationMs: D + ANOMALY_TAIL_MS },
+      { kind: "pull", testid: testid.card("a"), to: CENTRE, delayMs: 0, durationMs: FX_HOLD_MAX_MS },
+      { kind: "conceal", testid: testid.card("a"), mode: "after", delayMs: flare, durationMs: FX_HOLD_MAX_MS },
+      { kind: "pull", testid: testid.card("b"), to: CENTRE, delayMs: 0, durationMs: FX_HOLD_MAX_MS },
+      { kind: "conceal", testid: testid.card("b"), mode: "after", delayMs: flare, durationMs: FX_HOLD_MAX_MS },
+      raysCue(D, "radiant", CENTRE, flare),
+      { ...tunedBurst(I, "prismatic", CENTRE, "area", flare, ANOMALY_TUNING.flare), colors: look.colors },
+      ringCue(D, "void", CENTRE, flare),
+      { kind: "shake", trauma: Math.min(1, ANOMALY_TRAUMA * I), delayMs: flare },
+      titleOf("WH", "Tech/starfield", stamp, linger - stamp),
+      ...landings,
+    ]);
+  });
+
+  it("R3337003 short, an Asteroid Field's title card stands from the start to its linger, the old side goes at once and its rocks tumble in with dust and a shake", () => {
+    const H = SET_PIECE_SHORT_HOLD_MS;
+    const M = ANOMALY_LAND_MS;
+    const { entry, view } = heldRift("AL", H, M);
+    const flight = Math.round(ANOMALY_LAND_FLIGHT * M);
+    const landings = [1, 2, 3].flatMap((lane, k) => {
+      const land = H + k * ANOMALY_LAND_STAGGER_MS + flight;
+      const zone = at(testid.zone("you", "units", lane));
+      return [ghostOf(lane, land - flight, flight, true), tunedBurst(I, "dust", zone, "area", land, ANOMALY_TUNING.dust), { kind: "shake", trauma: Math.min(1, ANOMALY_LAND_TRAUMA * I), delayMs: land }];
+    });
+    expect(planAnomaly(entry, view, env())?.cues).toEqual([
+      titleOf("AL", "Hustle/ore", 0, H + Math.round(ANOMALY_TITLE_LINGER_AT * M)),
+      { kind: "conceal", testid: testid.card("a"), mode: "now", delayMs: 0, durationMs: FX_HOLD_MAX_MS },
+      { kind: "conceal", testid: testid.card("b"), mode: "now", delayMs: 0, durationMs: FX_HOLD_MAX_MS },
+      ...landings,
+    ]);
+  });
+
+  it("R3337003 the Frontier Outpost's lights come up on each card it lands; unheld, its title card stands over the entry and the old side goes at once", () => {
+    const H = ANOMALY_RIFT_HOLD_MS;
+    const M = ANOMALY_LAND_MS;
+    const { entry, view } = heldRift("FO", H, M, 1);
+    const look = paletteLook("Tech/laser");
+    if (look === undefined) throw new Error("Tech/laser");
+    const flight = Math.round(ANOMALY_LAND_FLIGHT * M);
+    const zone = at(testid.zone("you", "units", 1));
+    expect(planAnomaly(entry, view, env())?.cues.slice(-2)).toEqual([ghostOf(1, H, flight, false), { ...tunedBurst(I, "sparkle", zone, "point", H + flight, ANOMALY_TUNING.lights), colors: look.colors }]);
+
+    const { entry: off } = riftEntry("FO", 0);
+    expect(planAnomaly(off, view, env())?.cues).toEqual([
+      titleOf("FO", "Tech/laser", 0, off.durationMs),
+      { kind: "conceal", testid: testid.card("a"), mode: "now", delayMs: 0, durationMs: FX_HOLD_MAX_MS },
+      { kind: "conceal", testid: testid.card("b"), mode: "now", delayMs: 0, durationMs: FX_HOLD_MAX_MS },
+    ]);
+  });
+
+  it("R3337003 a short landing spreads its cards over half of it; one card lands as the hold ends, even with no landing left", () => {
+    const H = ANOMALY_RIFT_HOLD_MS;
+    const M = 200;
+    // Three cards over half of 200 ms stand 50 ms apart, under the most one waits.
+    const step = (M * ANOMALY_LAND_SPREAD) / 2;
+    expect(step).toBeLessThan(ANOMALY_LAND_STAGGER_MS);
+    const flight = Math.round(ANOMALY_LAND_FLIGHT * M);
+    const { entry, view } = heldRift("WH", H, M);
+    const ghosts = (planAnomaly(entry, view, env())?.cues ?? []).filter((cue) => cue.kind === "ghost");
+    expect(ghosts).toEqual([ghostOf(1, H, flight, false), ghostOf(2, H + step, flight, false), ghostOf(3, H + 2 * step, flight, false)]);
+    // An entry all hold: its one card still flies at the hold's end.
+    const { entry: bare } = heldRift("WH", H, 0, 1);
+    expect((planAnomaly(bare, view, env())?.cues ?? []).filter((cue) => cue.kind === "ghost")).toEqual([ghostOf(1, H, 0, false)]);
+  });
+
+  it("R3337003 the set piece draws only the replacement's, the exiles' and the landings' rows in their place", () => {
+    const { view, a, b } = board();
+    const draw: GameEvent = { type: "drawn", player: "p1", instanceId: "d1", defId: "core-021" };
+    const events: GameEvent[] = [{ type: "boardReplaced", player: "p1", anomaly: "MT" }, exiled(a), exiled(b), laid("new-0", 1), draw];
+    const [entry] = planEntries(events, view, false, createPlayTracker());
+    expect(entry?.events).toEqual(events);
+    const replaces = entry === undefined ? undefined : planAnomaly(entry, view, env())?.replaces;
+    expect([...(replaces ?? [])]).toEqual(events.slice(0, 4));
+  });
+});
+
+describe("R3337003 every Anomaly's look as a page load builds it", () => {
+  it("R3337003 each board's palette, landing and backdrop: the Asteroid Fields tumble over drift, the drones and hulls power on, the outpost's lights come up over holy motes", async () => {
+    // Built as the module loads: read from a module loaded inside the test, as cards/settings.test.ts does.
+    vi.resetModules();
+    const fresh = await import("./anomaly.ts");
+    expect(fresh.ANOMALY_FX).toEqual({
+      WH: { palette: "Tech/starfield", landing: "power", backdrop: "void" },
+      BF: { palette: "Fire", landing: "power", backdrop: "ember" },
+      AL: { palette: "Hustle/ore", landing: "tumble", backdrop: "drift" },
+      AT: { palette: "Hustle/ore", landing: "tumble", backdrop: "drift" },
+      SP: { palette: "Fire", landing: "power", backdrop: "toxic" },
+      MT: { palette: "Hustle/ore", landing: "tumble", backdrop: "drift" },
+      DH: { palette: "Tech/hologram", landing: "power", backdrop: "arcane" },
+      FO: { palette: "Tech/laser", landing: "lights", backdrop: "holy" },
+      AN: { palette: "Dark/blood", landing: "tumble", backdrop: "drift" },
+      AA: { palette: "Hustle/ore", landing: "tumble", backdrop: "drift" },
+    });
+    for (const code of ANOMALY_CODES) expect(paletteLook(fresh.ANOMALY_FX[code].palette), code).toBeDefined();
   });
 });

@@ -143,12 +143,9 @@ pub fn cloak_hand_aura(type_: CardType) -> AuraHook {
 pub fn reveal_echo_bonus(state: &GameState, player: PlayerId) -> i32 {
     let mut out = 0;
     for source in crate::zones::acting_on(state, player, crate::zones::StandingAt::ItsLane) {
-        // R1487000: a face-down card's text sleeps until it is revealed or face-up.
-        if source.controller != player
-            || source.vanilla
-            || is_dormant(source)
-            || crate::preview::lasting_text_off(state, source)
-        {
+        // R1487000: a face-down card's text sleeps until it is revealed or face-up. A Vanilla card and a
+        // set card not yet revealing (`is_dormant`) have no script to ask (`scripts::script_of`).
+        if source.controller != player || crate::preview::lasting_text_off(state, source) {
             continue;
         }
         let script = crate::scripts::script_of(state, source);

@@ -7,13 +7,13 @@ use std::panic::catch_unwind;
 
 use indexmap::IndexMap;
 use jackioh_ai::{
-    AI_EVAL, AI_GATE, AI_GATE_BUDGET, AI_MULLIGAN, AiOptions, MatchConfig, MatchHooks, MatchRecord,
-    MatchSetup, Matchup, NextSwing, Prices, SeatController, action_key, candidate_actions, decide, evaluate,
-    game_config, greedy_action, play_match, random_action,
+    AI_EVAL, AI_GATE, AI_GATE_BUDGET, AI_MULLIGAN, AI_SEARCH, AiOptions, GREEDY_EVAL, MatchConfig,
+    MatchHooks, MatchRecord, MatchSetup, Matchup, NextSwing, Prices, SeatController, action_key,
+    candidate_actions, decide, evaluate, game_config, greedy_action, play_match, random_action,
 };
 use jackioh_engine::testkit::{
     AI_DIFFICULTY, Action, ActionBody, ActionType, DECK_SIZE, FoldArgs, GameState, PerPlayer, PerPlayerOpt,
-    PlayerId, Rng, Value, create_rng, def_of, fold, hash_state, json, json_as, query_cost, reduce,
+    PlayerId, Rng, Selection, Value, create_rng, def_of, fold, hash_state, json, json_as, query_cost, reduce,
     seat_to_act, subsystems,
 };
 
@@ -318,6 +318,95 @@ mod the_baselines_b27 {
             greedy_action(&state, AI, &mut create_rng("match-greedy-only", 0)),
             Some(ActionBody::EndTurn)
         );
+    }
+
+    fn greedy_eval(state: &GameState) -> f64 {
+        evaluate(state, AI, NextSwing::Enemy, &GREEDY_EVAL)
+    }
+
+    /// Mr. Vanilla on an empty row is offered in two lanes that score alike (nothing the evaluation
+    /// reads tells them apart), and a tie keeps the earlier candidate in move order.
+    #[test]
+    fn b27_greedy_action_keeps_the_earlier_of_two_candidates_that_tie() {
+        let state = open_board(json!({ "hand": ["core-008"] }), json!({}));
+        let plays: Vec<ActionBody> = candidate_actions(&state, AI, Prices::NONE)
+            .into_iter()
+            .filter(|action| action.action_type() == ActionType::Play)
+            .collect();
+        assert_eq!(plays.len(), 2, "{plays:?}");
+        assert_ne!(plays[0], plays[1]);
+        let scores: Vec<f64> = plays
+            .iter()
+            .map(|play| greedy_eval(&act(&state, AI, play)))
+            .collect();
+        assert_eq!(scores[0], scores[1]);
+        assert!(scores[0] > greedy_eval(&state));
+        assert_eq!(
+            greedy_action(&state, AI, &mut create_rng("match-greedy-tie", 0)),
+            Some(plays[0].clone())
+        );
+    }
+
+    /// M #53 Prestige, a (1) Tradable Spell.
+    const PRESTIGE: &str = "meditative-053";
+
+    /// R1838000: with no mana, a Trade (at no mana) of the only hand card for a draw from a library of
+    /// nothing but more copies of it changes nothing the evaluation reads. A candidate that only ties
+    /// standing still does not beat it, so greedy ends the turn.
+    #[test]
+    fn b27_greedy_action_ends_the_turn_when_its_best_candidate_only_ties_standing_still() {
+        let mut state = open_board(
+            json!({ "hand": [PRESTIGE], "library": [PRESTIGE, PRESTIGE], "mana": 0 }),
+            json!({}),
+        );
+        // R345: the turn does not end by itself once the Trade leaves nothing else to do (R82).
+        state.players[AI].auto_end_turn = Some(false);
+        let candidates = candidate_actions(&state, AI, Prices::NONE);
+        assert_eq!(candidates.len(), 2, "{candidates:?}");
+        assert_eq!(candidates[0].action_type(), ActionType::Trade);
+        assert_eq!(candidates[1], ActionBody::EndTurn);
+        let traded = act(&state, AI, &candidates[0]);
+        assert_eq!(greedy_eval(&traded), greedy_eval(&state));
+        assert_eq!(
+            greedy_action(&state, AI, &mut create_rng("match-greedy-trade", 0)),
+            Some(ActionBody::EndTurn)
+        );
+    }
+
+    /// Every candidate gets its one simulation, its surcharge included: while the enemy's Pareto
+    /// Optimality (M #71) judges the AI's plays, each play pays `AI_SEARCH.judged_card_nodes` per hand
+    /// card beyond its own node (#1240). Flood, Twisting Nether and Genn's Greed, each (4) with one
+    /// variant, come ahead of the (1) True Strike in move order, and True Strike's first variant, on
+    /// the enemy hero at 4 health, wins, but fits only the whole budget, `1 + max_auto_answers` nodes
+    /// per candidate.
+    #[test]
+    fn b27_greedy_action_simulates_every_candidate_on_its_budget_surcharges_included() {
+        let state = open_board(
+            json!({ "hand": ["core-017", "core-088", "core-094", "core-044"], "mana": 4 }),
+            json!({ "health": 4, "backrow": [{ "def": "meditative-071", "faceUp": true }] }),
+        );
+        assert!(subsystems::watching(&state, AI));
+        let candidates = candidate_actions(&state, AI, Prices::NONE);
+        let hand = state.players[AI].hand.len();
+        let per_play = 1 + AI_SEARCH.judged_card_nodes as usize * hand;
+        let budget = candidates.len() * (1 + AI_SEARCH.max_auto_answers as usize);
+        // True Strike on the enemy hero is the fourth play simulated: within the budget, and not within
+        // one node fewer per candidate.
+        assert_eq!(candidates.len(), 6, "{candidates:?}");
+        assert!(4 * per_play <= budget);
+        assert!(4 * per_play > candidates.len() * AI_SEARCH.max_auto_answers as usize);
+        let strike = candidates[3].clone();
+        assert!(
+            matches!(&strike, ActionBody::Play { targets: Some(targets), .. }
+                if targets.first() == Some(&Selection::Hero { player: HUMAN })),
+            "{strike:?}"
+        );
+        assert_eq!(
+            greedy_action(&state, AI, &mut create_rng("match-greedy-budget", 0)),
+            Some(strike.clone())
+        );
+        let won = act(&state, AI, &strike);
+        assert_eq!(won.result.and_then(|result| result.winner.player()), Some(AI));
     }
 
     #[test]

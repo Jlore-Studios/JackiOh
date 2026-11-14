@@ -6,20 +6,40 @@ import type { CardDef, CardDefs, GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ANIMATIONS, BURST_BUDGET_MS, animTestid, SET_PIECE_HOLD_MS, STARSHIP_SET_PIECE, createAnimationQueue, type AnimationQueue } from "../game/animations.ts";
+import {
+  ANIMATIONS,
+  BURST_BUDGET_MS,
+  animTestid,
+  SET_PIECE_HOLD_MS,
+  STARSHIP_SET_PIECE,
+  createAnimationQueue,
+  type AnimationEntry,
+  type AnimationQueue,
+  type RunnerSignal,
+} from "../game/animations.ts";
 import { CatalogContext, lookupFromDefs, type CardLookup } from "../game/catalog.ts";
 import Game from "../game/Game.tsx";
 import { resultRevealMs } from "../game/Result.tsx";
-import { baseView, dormantStarship, emptySide, fullBoardView, withEvents } from "../test/fixtures.ts";
+import { baseView, dormantStarship, emptySide, fullBoardView, pendingFor, waitingPending, withEvents } from "../test/fixtures.ts";
 import { setReducedMotion } from "../test/setup.ts";
-import { FX_CALLOUT_MS, FX_STACK_LAND, FX_STARSHIP_STILL_MS, FX_TEXT } from "./constants.ts";
-import FxLayer, { FX_BANNER_MARK, FX_HOLD_MARK, FX_LAYER_MARK, type FxSeams } from "./FxLayer.tsx";
-import { resetFxSettingsForTests, setFxSettings } from "./settings.ts";
+import { FX_CALLOUT_MS, FX_MOBILE_WIDTH, FX_NEXT_REFRESH_MODIFIER_ID, FX_STACK_LAND, FX_STARSHIP_STILL_MS, FX_TEXT } from "./constants.ts";
+import FxLayer, {
+  FX_BANNER_MARK,
+  FX_HOLD_MARK,
+  FX_LAYER_MARK,
+  catalogFacts,
+  defaultFrames,
+  defaultVisibility,
+  type FxSeams,
+} from "./FxLayer.tsx";
+import { HINDERED_ATTR, applyManaMarks, manaMarks } from "./manaMarks.ts";
+import { resetFxSettingsForTests, setFxSettings, useFxSettings } from "./settings.ts";
+import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { resetShedForTests, shedPointer, subscribeShed } from "./shed.ts";
 import { starshipClaim } from "./starship.ts";
 import type { FxSurface } from "./surface.ts";
 import type { FxAnchor, FxBox, FxFrameSource, FxShakeSink, FxVisibility } from "./types.ts";
-import { readRootVar } from "../game/rootVars.ts";
+import { ROOT_VARS_ATTRIBUTE, readRootVar } from "../game/rootVars.ts";
 
 beforeEach(() => {
   localStorage.clear();
@@ -1272,6 +1292,866 @@ describe("R3351000 — the shed pointer is followed once an animation frame (#36
     } finally {
       Object.defineProperty(window, "requestAnimationFrame", { value: frame, configurable: true, writable: true });
       timer.mockRestore();
+    }
+  });
+});
+
+// The mutation audit (#3490): what the tests above left unheld, by the layer's parts.
+
+describe("S9 — the layer's default seams and catalog facts", () => {
+  it("R200 defaultFrames hands requestAnimationFrame's handles to its cancel, and where there is none it never fires: every handle 0", () => {
+    const cancel = vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => undefined);
+    const frame = window.requestAnimationFrame;
+    try {
+      defaultFrames().cancel(7);
+      expect(cancel).toHaveBeenCalledWith(7);
+      Object.defineProperty(window, "requestAnimationFrame", { value: undefined, configurable: true, writable: true });
+      const never = defaultFrames();
+      expect(never.request(() => undefined)).toBe(0);
+    } finally {
+      Object.defineProperty(window, "requestAnimationFrame", { value: frame, configurable: true, writable: true });
+      cancel.mockRestore();
+    }
+  });
+
+  it("R200 defaultVisibility reads document.hidden and hears visibilitychange until it unsubscribes", () => {
+    const visibility = defaultVisibility();
+    expect(visibility.hidden()).toBe(false);
+    Object.defineProperty(document, "hidden", { configurable: true, get: () => true });
+    try {
+      expect(visibility.hidden()).toBe(true);
+    } finally {
+      delete (document as { hidden?: boolean }).hidden;
+    }
+    const heard = vi.fn();
+    const stop = visibility.subscribe(heard);
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(heard).toHaveBeenCalledTimes(1);
+    stop();
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(heard).toHaveBeenCalledTimes(1);
+  });
+
+  it("R202 S9 catalogFacts asks nothing for a hidden card or with no catalog, and maps a card's base face", () => {
+    const answers = vi.fn<CardLookup>(() => lookupFromDefs(DEFS)("core-019", false));
+    expect(catalogFacts(answers, "hidden")).toBeUndefined();
+    expect(answers).not.toHaveBeenCalled();
+    expect(catalogFacts(null, "core-019")).toBeUndefined();
+    expect(catalogFacts(lookupFromDefs(DEFS), "core-022")).toEqual({ rarity: "Common", attack: 6, health: 6, type: "Unit", tags: [] });
+  });
+
+  it("R3334001 a phone-wide viewport throws fewer cinematic sparks; with no viewport seam the layer reads window.innerWidth", () => {
+    const sparks = (viewportWidth: FxSeams["viewportWidth"] | undefined): number => {
+      const view = shipView();
+      const fx = fakeSeams();
+      const queue = createAnimationQueue({ schedule: fakeSchedule().schedule, reducedMotion: false, setPieceOf: starshipClaim });
+      const { container } = render(
+        <div className="game">
+          <FxLayer queue={queue} view={view} seams={{ ...fx.seams, viewportWidth }} />
+        </div>,
+      );
+      act(() => queue.enqueue([SHIP_LAUNCH], view));
+      fx.pump(50);
+      const count = container.querySelectorAll('[data-fx="cinematic"] .fx-cinematic-spark').length;
+      cleanup();
+      return count;
+    };
+    const wide = sparks(() => FX_MOBILE_WIDTH);
+    expect(wide).toBeGreaterThan(0);
+    expect(sparks(() => FX_MOBILE_WIDTH - 1)).toBeLessThan(wide);
+    expect(window.innerWidth).toBeGreaterThanOrEqual(FX_MOBILE_WIDTH);
+    expect(sparks(undefined)).toBe(wide);
+  });
+
+  it("R201 R200 a freshly loaded layer writes --anim-squeeze and --anim-scale under their own names", async () => {
+    // Module-level names: loaded afresh inside the test, so a mutation of them is live when they are built.
+    vi.resetModules();
+    const { default: Fresh } = await import("./FxLayer.tsx");
+    const { readRootVar: read } = await import("../game/rootVars.ts");
+    const fresh = await import("./settings.ts");
+    const view = fullBoardView();
+    const queue = queueWith(fakeSchedule());
+    const { container } = render(
+      <div className="game">
+        <Fresh queue={queue} view={view} seams={fakeSeams().seams} />
+      </div>,
+    );
+    const game = container.firstElementChild as HTMLElement;
+    act(() => queue.enqueue([HIT], view));
+    expect(read(game, "--anim-squeeze")).toBe("1.000");
+    act(() => {
+      fresh.setFxSettings({ motion: "reduce" });
+    });
+    expect(game.style.getPropertyValue("--anim-scale")).toBe("0");
+    fresh.resetFxSettingsForTests();
+  });
+
+  it("R200 the panel's Reduce motion turns the layer still and zeroes --anim-scale, live", () => {
+    try {
+      const m = mountLayer(queueWith(fakeSchedule()), fullBoardView(), fakeSeams());
+      expect(m.layer()?.getAttribute("data-fx")).toBe("on");
+      act(() => {
+        writeSettings({ reduceMotion: true });
+      });
+      expect(m.layer()?.getAttribute("data-fx")).toBe("off");
+      expect(m.fxDom()?.getAttribute("data-still")).toBe("true");
+      expect(m.game.style.getPropertyValue("--anim-scale")).toBe("0");
+      act(() => {
+        writeSettings({ reduceMotion: false });
+      });
+      expect(m.layer()?.getAttribute("data-fx")).toBe("on");
+      expect(m.game.style.getPropertyValue("--anim-scale")).toBe("");
+    } finally {
+      __resetSettingsForTests();
+    }
+  });
+});
+
+describe("S9 — the director's lifetime, its pause and its marks", () => {
+  it("S9 the director lives exactly as long as the layer draws: one visibility subscription while on or still, none while off", () => {
+    let live = 0;
+    const visibility: FxVisibility = {
+      hidden: () => false,
+      subscribe: () => {
+        live += 1;
+        return () => {
+          live -= 1;
+        };
+      },
+    };
+    setFxSettings({ intensity: "off" });
+    const fx = fakeSeams();
+    mountLayer(queueWith(fakeSchedule()), fullBoardView(), { ...fx, seams: { ...fx.seams, visibility } });
+    expect(live).toBe(0);
+    act(() => {
+      setFxSettings({ intensity: "normal" });
+    });
+    expect(live).toBe(1);
+    // R2789000: still, a director of its own.
+    act(() => {
+      setFxSettings({ motion: "reduce" });
+    });
+    expect(live).toBe(1);
+    act(() => {
+      setFxSettings({ intensity: "off" });
+    });
+    expect(live).toBe(0);
+    act(() => {
+      setFxSettings({ intensity: "normal", motion: "system" });
+    });
+    expect(live).toBe(1);
+    cleanup();
+    expect(live).toBe(0);
+  });
+
+  it("R2789000 a still layer has no canvas and asks the surface seam for nothing", () => {
+    setReducedMotion(true);
+    const fx = fakeSeams();
+    const surface = vi.fn((canvas: HTMLCanvasElement) => stubSurface(canvas));
+    const m = mountLayer(queueWith(fakeSchedule()), fullBoardView(), { ...fx, seams: { ...fx.seams, surface } });
+    expect(m.fxDom()?.getAttribute("data-still")).toBe("true");
+    expect(surface).not.toHaveBeenCalled();
+  });
+
+  it("Game's hit-stop freezes the effects on screen and marks the layer data-paused; letting go plays them out", () => {
+    const fx = fakeSeams();
+    const queue = queueWith(fakeSchedule());
+    const view = fullBoardView();
+    const tree = (paused: boolean) => (
+      <div className="game">
+        <FxLayer queue={queue} view={view} paused={paused} seams={fx.seams} />
+      </div>
+    );
+    const utils = render(tree(false));
+    const layer = (): Element | null => utils.container.querySelector('[data-testid="fx-layer"]');
+    const splats = (): number => utils.container.querySelectorAll('[data-fx="splat"]').length;
+    expect(layer()).not.toHaveAttribute("data-paused");
+    act(() => queue.enqueue([HIT], view));
+    fx.pump(50);
+    expect(splats()).toBe(1);
+    utils.rerender(tree(true));
+    expect(layer()?.getAttribute("data-paused")).toBe("true");
+    fx.pump(5_000, 50);
+    expect(splats()).toBe(1);
+    utils.rerender(tree(false));
+    expect(layer()).not.toHaveAttribute("data-paused");
+    fx.pump(5_000, 50);
+    expect(splats()).toBe(0);
+  });
+
+  it("S9 with no director (the effects off) a hit-stop, a prompt for the viewer, a skip and a drain throw nothing", () => {
+    const sched = fakeSchedule();
+    const queue = createAnimationQueue({
+      schedule: sched.schedule,
+      reducedMotion: false,
+      setPieceOf: (entry) => (entry.type === "damage" ? { key: "fixture", holdMs: SET_PIECE_HOLD_MS } : null),
+    });
+    const fx = fakeSeams();
+    const view = fullBoardView();
+    const tree = (shown: PlayerView, paused: boolean) => (
+      <div className="game">
+        <FxLayer queue={queue} view={shown} paused={paused} seams={fx.seams} />
+      </div>
+    );
+    const utils = render(tree(view, false));
+    // A set piece in flight when the effects go off (R2785000): its skip finds no director to cut.
+    act(() => queue.enqueue([HIT, HIT], view));
+    expect(queue.inFlight()?.setPiece?.key).toBe("fixture");
+    act(() => {
+      setFxSettings({ intensity: "off" });
+    });
+    let skipped = false;
+    act(() => {
+      skipped = queue.skip();
+    });
+    expect(skipped).toBe(true);
+    act(() => queue.drain());
+    utils.rerender(tree(fullBoardView({ pending: pendingFor("target", []) }), true));
+    const layer = utils.container.querySelector('[data-testid="fx-layer"]');
+    expect(layer?.getAttribute("data-fx")).toBe("off");
+    expect(layer?.getAttribute("data-paused")).toBe("true");
+  });
+
+  it("#3633 the marks follow the settings: no layer mark while the effects are off, and the new effects root is read once they are back", async () => {
+    setFxSettings({ intensity: "off" });
+    const m = mountLayer(queueWith(fakeSchedule()), fullBoardView(), fakeSeams());
+    expect(m.game).not.toHaveAttribute(FX_LAYER_MARK);
+    act(() => {
+      setFxSettings({ intensity: "normal" });
+    });
+    expect(m.game).toHaveAttribute(FX_LAYER_MARK, "on");
+    const banner = document.createElement("div");
+    banner.setAttribute("data-fx", "banner");
+    await act(async () => {
+      m.fxDom()?.append(banner);
+      await Promise.resolve();
+    });
+    expect(m.game).toHaveAttribute(FX_BANNER_MARK);
+    act(() => {
+      setFxSettings({ intensity: "off" });
+    });
+    expect(m.game).not.toHaveAttribute(FX_LAYER_MARK);
+    expect(m.game).not.toHaveAttribute(FX_BANNER_MARK);
+  });
+
+  it("#3633 a hold deep in the root marks the game, the marks are read again as the layer turns still, and unmounting lets go of every mark", async () => {
+    const m = mountLayer(queueWith(fakeSchedule()), fullBoardView(), fakeSeams());
+    expect(m.game).toHaveAttribute(ROOT_VARS_ATTRIBUTE);
+    const fxDom = m.fxDom();
+    if (fxDom === null) throw new Error("no effects root");
+    const wrapper = document.createElement("div");
+    await act(async () => {
+      fxDom.append(wrapper);
+      await Promise.resolve();
+    });
+    const hold = document.createElement("div");
+    hold.className = "fx-hold";
+    const banner = document.createElement("div");
+    banner.setAttribute("data-fx", "banner");
+    await act(async () => {
+      wrapper.append(hold, banner);
+      await Promise.resolve();
+    });
+    expect(m.game).toHaveAttribute(FX_HOLD_MARK);
+    expect(m.game).toHaveAttribute(FX_BANNER_MARK);
+    // R2789000: the layer turns still; its root stays, with what it holds, and is read again.
+    act(() => {
+      setFxSettings({ motion: "reduce" });
+    });
+    expect(m.fxDom()).toBe(fxDom);
+    expect(m.game).toHaveAttribute(FX_HOLD_MARK);
+    expect(m.game).toHaveAttribute(FX_BANNER_MARK);
+    cleanup();
+    expect(m.game).not.toHaveAttribute(FX_BANNER_MARK);
+    expect(m.game).not.toHaveAttribute(FX_HOLD_MARK);
+    // It lets go of the game's variables (game/rootVars.ts) and watches the old root no more.
+    expect(m.game).not.toHaveAttribute(ROOT_VARS_ATTRIBUTE);
+    await act(async () => {
+      fxDom.append(document.createElement("div"));
+      await Promise.resolve();
+    });
+    expect(m.game).not.toHaveAttribute(FX_BANNER_MARK);
+  });
+
+  it("#3633 a layer with no parent element marks nothing, writes no variable and throws nothing", () => {
+    for (const motion of ["system", "reduce"] as const) {
+      setFxSettings({ motion });
+      const fragment = document.createDocumentFragment();
+      const queue = queueWith(fakeSchedule());
+      const fx = fakeSeams();
+      const view = fullBoardView();
+      render(<FxLayer queue={queue} view={view} seams={fx.seams} />, { container: fragment as unknown as HTMLElement });
+      const layer = fragment.querySelector('[data-testid="fx-layer"]');
+      expect(layer?.parentElement, motion).toBeNull();
+      expect(layer?.getAttribute("data-fx"), motion).toBe(motion === "reduce" ? "off" : "on");
+      act(() => queue.enqueue([HIT], view));
+      fx.pump(50);
+      expect(fragment.querySelector('[data-testid="fx-layer"]'), motion).toBe(layer);
+      cleanup();
+    }
+  });
+});
+
+/** A queue whose signals the test can also send by hand, to the listener the layer subscribed. */
+function tapped(queue: AnimationQueue): { queue: AnimationQueue; send: (signal: RunnerSignal) => void } {
+  let heard: ((signal: RunnerSignal) => void) | null = null;
+  return {
+    queue: {
+      ...queue,
+      subscribeSignals: (listener) => {
+        heard = listener;
+        return queue.subscribeSignals(listener);
+      },
+    },
+    send: (signal) => {
+      act(() => {
+        heard?.(signal);
+      });
+    },
+  };
+}
+
+const SPELL_CAST: GameEvent = { type: "cardPlayed", player: "p2", instanceId: "s1", defId: "core-050", costPaid: 2 };
+const SPELL_HIT: GameEvent = { type: "damage", sourceId: "s1", targetId: "u1", amount: 3, combat: false };
+/** R3407002: IN33DH3's Death marker, and the shuffle its entry draws its recipe on (out of his graveyard pile). */
+const DEATH_MARKER: GameEvent = { type: "hookResolving", sourceId: "gone", defId: "stinkyscape-147", controller: "p1", hook: "death" };
+const DEATH_SHUFFLE: GameEvent = { type: "shuffledIn", player: "p1", instanceId: "prime", defId: "stinkyscape-147-1", position: 0 };
+const CLEAVE: GameEvent = { type: "damage", sourceId: "u1", targetId: "u7", amount: 1, combat: true, via: "Cleave" };
+
+type Shot = { events: GameEvent[] | null; thrown?: unknown };
+
+/**
+ * Enqueues `shot.events` as it renders after the layer in one pass: the layer has rendered a settings change
+ * React has not committed. What the enqueue throws is kept in `shot.thrown` (React would retry the render).
+ */
+function Midway({ queue, view, shot }: { queue: AnimationQueue; view: PlayerView; shot: Shot }): null {
+  useFxSettings();
+  const events = shot.events;
+  if (events !== null) {
+    shot.events = null;
+    try {
+      queue.enqueue(events, view);
+    } catch (error) {
+      shot.thrown = error;
+    }
+  }
+  return null;
+}
+
+describe("B36 — the runner's signals, signal by signal", () => {
+  it("issue #769 a start whose type has no row takes the squeeze off, and a skip takes it off at once", () => {
+    setFxSettings({ intensity: "off" });
+    const { queue, send } = tapped(queueWith(fakeSchedule()));
+    const view = fullBoardView();
+    const m = mountLayer(queue, view, fakeSeams());
+    act(() => queue.enqueue([HIT], view));
+    const entry = queue.inFlight();
+    if (entry === null) throw new Error("nothing in flight");
+    expect(m.squeeze()).toBe("1.000");
+    send({ kind: "start", entry: { ...entry, type: "fromANewerPatch" as unknown as AnimationEntry["type"] } });
+    expect(m.squeeze()).toBe("");
+    send({ kind: "start", entry });
+    expect(m.squeeze()).toBe("1.000");
+    send({ kind: "skip", entry });
+    expect(m.squeeze()).toBe("");
+  });
+
+  it("B36 a new queue: the layer drops the old one's squeeze and follows the new one alone", () => {
+    const fx = fakeSeams();
+    const view = fullBoardView();
+    const first = queueWith(fakeSchedule());
+    const second = queueWith(fakeSchedule());
+    const tree = (queue: AnimationQueue) => (
+      <div className="game">
+        <FxLayer queue={queue} view={view} seams={fx.seams} />
+      </div>
+    );
+    const utils = render(tree(first));
+    const game = utils.container.firstElementChild as HTMLElement;
+    act(() => first.enqueue([HIT], view));
+    expect(readRootVar(game, "--anim-squeeze")).toBe("1.000");
+    utils.rerender(tree(second));
+    expect(readRootVar(game, "--anim-squeeze")).toBe("");
+    act(() => {
+      first.reset();
+      first.enqueue([HIT], view);
+    });
+    expect(readRootVar(game, "--anim-squeeze")).toBe("");
+    act(() => second.enqueue([HIT], view));
+    expect(readRootVar(game, "--anim-squeeze")).toBe("1.000");
+  });
+
+  it("B36 the layer remembers a caster across a re-render of the same view", () => {
+    const sched = fakeSchedule();
+    const queue = queueWith(sched);
+    const fx = fakeSeams();
+    const view = fullBoardView();
+    const m = mountLayer(queue, view, fx);
+    act(() => queue.enqueue([SPELL_CAST], view));
+    fx.pump(50);
+    act(() => sched.flush());
+    m.show(view);
+    act(() => queue.enqueue([SPELL_HIT], view));
+    fx.pump(100);
+    expect(fx.testids()).toContain("hero-opponent");
+  });
+
+  it("B36 a newer view after a drain brings back nothing the drain forgot", () => {
+    const queue = queueWith(fakeSchedule());
+    const fx = fakeSeams();
+    const view = fullBoardView();
+    const m = mountLayer(queue, view, fx);
+    act(() => queue.enqueue([SPELL_CAST], view));
+    fx.pump(50);
+    act(() => queue.drain());
+    m.show({ ...view, turn: view.turn + 1 });
+    act(() => queue.enqueue([SPELL_HIT], view));
+    fx.pump(300);
+    expect(fx.testids()).toContain("card-u1");
+    expect(fx.testids()).not.toContain("hero-opponent");
+  });
+
+  it("R2785000 a skip forgets nothing the layer remembered: the spell after the cut set piece flies from its caster", () => {
+    const sched = fakeSchedule();
+    const queue = createAnimationQueue({
+      schedule: sched.schedule,
+      reducedMotion: false,
+      setPieceOf: (entry) => (entry.type === "damage" ? { key: "fixture", holdMs: SET_PIECE_HOLD_MS } : null),
+    });
+    const fx = fakeSeams();
+    const view = fullBoardView();
+    mountLayer(queue, view, fx);
+    act(() => queue.enqueue([SPELL_CAST], view));
+    fx.pump(50);
+    act(() => sched.flush());
+    act(() => queue.enqueue([HIT, SPELL_HIT], view));
+    expect(queue.inFlight()?.setPiece?.key).toBe("fixture");
+    fx.pump(50);
+    fx.measured.length = 0;
+    act(() => {
+      queue.skip();
+    });
+    expect(queue.inFlight()?.events).toEqual([SPELL_HIT]);
+    fx.pump(100);
+    expect(fx.testids()).toContain("hero-opponent");
+  });
+
+  it("R318 a drain keeps the entries its burst already played: a lethal fatigue hit replays out of its empty library", () => {
+    const sched = fakeSchedule();
+    const queue = queueWith(sched);
+    const fx = fakeSeams();
+    const view = fullBoardView();
+    const m = mountLayer(queue, view, fx);
+    act(() =>
+      queue.enqueue(
+        [
+          { type: "fatigue", player: "p1", count: 7, amount: 7 },
+          { type: "damage", sourceId: null, targetId: "hero-p1", amount: 7, combat: false },
+        ],
+        view,
+      ),
+    );
+    act(() => sched.tick());
+    expect(queue.inFlight()?.type).toBe("damage");
+    act(() => queue.drain());
+    fx.measured.length = 0;
+    m.show({ ...view, result: { winner: "p2", reason: "hero-death" } });
+    fx.pump(0);
+    expect(fx.testids()).toContain(animTestid.library("you"));
+  });
+
+  it("R200 a spell's killing blow the drain cut flies again from the caster the drained entries name", () => {
+    const queue = queueWith(fakeSchedule());
+    const fx = fakeSeams();
+    const view = fullBoardView();
+    const m = mountLayer(queue, view, fx);
+    act(() =>
+      queue.enqueue(
+        [
+          { type: "cardPlayed", player: "p2", instanceId: "s9", defId: "classicplus-015", costPaid: 3 },
+          { type: "damage", sourceId: "s9", targetId: "hero-p1", amount: 6, combat: false },
+        ],
+        view,
+      ),
+    );
+    act(() => queue.drain());
+    fx.measured.length = 0;
+    m.show({ ...view, result: { winner: "p2", reason: "hero-death" } });
+    fx.pump(0);
+    expect(m.count("result")).toBe(0);
+    expect(fx.testids()).toContain("hero-opponent");
+  });
+
+  it("R200 a killing blow replays after an earlier burst played out, after a drain and after a reset; a reset forgets what a drain kept", () => {
+    const lethal: GameEvent[] = [
+      { type: "attackDeclared", attackerId: "u1", targetId: "hero-p2", forced: false },
+      { type: "damage", sourceId: "u1", targetId: "hero-p2", amount: 5, combat: true },
+    ];
+    const view = fullBoardView();
+    const won: PlayerView = { ...view, result: { winner: "p1", reason: "hero-death" } };
+    /** The splats and the result a finished view draws after `before`. */
+    const finish = (before: (queue: AnimationQueue, sched: ReturnType<typeof fakeSchedule>) => void): { splats: number; results: number } => {
+      const sched = fakeSchedule();
+      const queue = queueWith(sched);
+      const fx = fakeSeams();
+      const m = mountLayer(queue, view, fx);
+      before(queue, sched);
+      m.show(won);
+      fx.pump(ANIMATIONS.damage.durationMs);
+      const drawn = { splats: m.count("splat"), results: m.count("result") };
+      cleanup();
+      return drawn;
+    };
+    const blowAfter = (first: (queue: AnimationQueue, sched: ReturnType<typeof fakeSchedule>) => void) =>
+      finish((queue, sched) => {
+        first(queue, sched);
+        act(() => queue.enqueue(lethal, view));
+        act(() => queue.drain());
+      });
+    const replayed = { splats: 1, results: 1 };
+    expect(blowAfter((queue, sched) => {
+      act(() => queue.enqueue([HIT], view));
+      act(() => sched.flush());
+    }), "after an idle runner").toEqual(replayed);
+    expect(blowAfter((queue) => {
+      act(() => queue.enqueue([HIT], view));
+      act(() => queue.drain());
+    }), "after a drain").toEqual(replayed);
+    expect(blowAfter((queue) => act(() => queue.reset())), "after a reset").toEqual(replayed);
+    expect(finish((queue) => {
+      act(() => queue.enqueue(lethal, view));
+      act(() => queue.drain());
+      act(() => queue.reset());
+    }), "a reset after the drain").toEqual({ splats: 0, results: 1 });
+  });
+
+  it("R3407002 a hook's marker opens its entry on a still layer, but not on one that is off, nor in the render that turns it on or off", () => {
+    const graveyard = animTestid.graveyard("you");
+    const view = fullBoardView();
+    /** Whether a shuffle after `before`, with the effects on, draws IN33DH3's Death recipe. */
+    const opens = (before: (queue: AnimationQueue, shot: Shot) => void): boolean => {
+      resetFxSettingsForTests();
+      const sched = fakeSchedule();
+      const queue = queueWith(sched);
+      const fx = fakeSeams();
+      const shot: Shot = { events: null };
+      render(
+        <div className="game">
+          <FxLayer queue={queue} view={view} seams={fx.seams} />
+          <Midway queue={queue} view={view} shot={shot} />
+        </div>,
+      );
+      before(queue, shot);
+      act(() => sched.flush());
+      act(() => {
+        setFxSettings({ intensity: "normal", motion: "system" });
+      });
+      fx.measured.length = 0;
+      act(() => queue.enqueue([DEATH_SHUFFLE], view));
+      fx.pump(50);
+      const drawn = fx.testids().includes(graveyard);
+      expect(shot.thrown).toBeUndefined();
+      cleanup();
+      return drawn;
+    };
+    const set = (patch: Parameters<typeof setFxSettings>[0]): void => {
+      act(() => {
+        setFxSettings(patch);
+      });
+    };
+    expect(opens((queue) => act(() => queue.enqueue([DEATH_MARKER], view))), "on").toBe(true);
+    expect(
+      opens((queue) => {
+        set({ motion: "reduce" });
+        act(() => queue.enqueue([DEATH_MARKER], view));
+      }),
+      "still",
+    ).toBe(true);
+    expect(
+      opens((queue) => {
+        set({ intensity: "off" });
+        act(() => queue.enqueue([DEATH_MARKER], view));
+      }),
+      "off",
+    ).toBe(false);
+    expect(
+      opens((_queue, shot) => {
+        set({ intensity: "off" });
+        shot.events = [DEATH_MARKER];
+        set({ intensity: "normal" });
+      }),
+      "turning on",
+    ).toBe(false);
+    expect(
+      opens((_queue, shot) => {
+        shot.events = [DEATH_MARKER];
+        set({ intensity: "off" });
+      }),
+      "turning off",
+    ).toBe(false);
+  });
+
+  it("S9 a start or a still entry in the render that turns the layer on plays nothing and throws nothing: its director is not built yet", () => {
+    for (const reduced of [false, true]) {
+      setReducedMotion(reduced);
+      setFxSettings({ intensity: "off" });
+      const fx = fakeSeams();
+      const view = fullBoardView();
+      const queue = createAnimationQueue({ schedule: fakeSchedule().schedule, reducedMotion: reduced });
+      const shot: Shot = { events: null };
+      const { container } = render(
+        <div className="game">
+          <FxLayer queue={queue} view={view} seams={fx.seams} />
+          <Midway queue={queue} view={view} shot={shot} />
+        </div>,
+      );
+      shot.events = [reduced ? CLEAVE : HIT];
+      act(() => {
+        setFxSettings({ intensity: "normal" });
+      });
+      expect(shot.events, "sent").toBeNull();
+      expect(shot.thrown, `reduced ${String(reduced)}`).toBeUndefined();
+      fx.pump(50);
+      const layer = container.querySelector('[data-testid="fx-layer"]');
+      expect(layer, `reduced ${String(reduced)}`).not.toBeNull();
+      expect(container.querySelector('[data-testid="fx-dom"]')?.childElementCount, `reduced ${String(reduced)}`).toBe(0);
+      cleanup();
+      resetFxSettingsForTests();
+    }
+  });
+
+  it("R2789000 a still layer remembers each still entry: a Windfury unit's second attack of the turn calls out Windfury, its first does not", () => {
+    setReducedMotion(true);
+    const view = fullBoardView();
+    const fx = fakeSeams();
+    const queue = createAnimationQueue({ schedule: fakeSchedule().schedule, reducedMotion: true });
+    const m = mountLayer(queue, view, fx);
+    const callouts = (): (string | null)[] => [...m.game.querySelectorAll('[data-fx="callout"]')].map((el) => el.getAttribute("data-callout"));
+    act(() => queue.enqueue([{ type: "attackDeclared", attackerId: "u2", targetId: "u6", forced: false }], view));
+    fx.pump(50);
+    expect(callouts()).not.toContain("Windfury");
+    fx.pump(FX_CALLOUT_MS + 100);
+    act(() => queue.enqueue([{ type: "attackDeclared", attackerId: "u2", targetId: "u7", forced: false }], view));
+    fx.pump(50);
+    expect(callouts()).toContain("Windfury");
+  });
+
+  it("R2789000 a still entry the runner hands a moving layer draws no still callout", () => {
+    const view = fullBoardView();
+    const fx = fakeSeams();
+    const queue = createAnimationQueue({ schedule: fakeSchedule().schedule, reducedMotion: true });
+    const m = mountLayer(queue, view, fx);
+    expect(m.layer()?.getAttribute("data-fx")).toBe("on");
+    act(() => queue.enqueue([CLEAVE], view));
+    fx.pump(50);
+    expect(m.count("callout")).toBe(0);
+  });
+
+  it("R2789000 a still layer plays no result sequence and no hand-over banner", () => {
+    setReducedMotion(true);
+    const fx = fakeSeams();
+    const view = fullBoardView();
+    const m = mountLayer(queueWith(fakeSchedule()), view, fx);
+    m.show(p2View());
+    fx.pump(200);
+    m.show(p2View({ result: { winner: "p2", reason: "hero-death" } }));
+    fx.pump(200);
+    expect(m.count("banner")).toBe(0);
+    expect(m.count("result")).toBe(0);
+  });
+});
+
+describe("B38 — what takes the turn banner away", () => {
+  it("B38 the first pointer down takes the banner away, in the capture phase, so a control that stops the event still does", () => {
+    const fx = fakeSeams();
+    const m = mountLayer(queueWith(fakeSchedule()), fullBoardView(), fx);
+    m.show(p2View());
+    fx.pump(50);
+    expect(m.count("banner")).toBe(1);
+    const control = document.createElement("button");
+    control.addEventListener("pointerdown", (event) => {
+      event.stopPropagation();
+    });
+    document.body.append(control);
+    try {
+      act(() => {
+        control.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+      });
+      expect(m.count("banner")).toBe(0);
+    } finally {
+      control.remove();
+    }
+  });
+
+  it("B38 unmounting removes the capture listener it added", () => {
+    const add = vi.spyOn(document, "addEventListener");
+    const remove = vi.spyOn(document, "removeEventListener");
+    try {
+      mountLayer(queueWith(fakeSchedule()), fullBoardView(), fakeSeams());
+      const ours = add.mock.calls.find(([type, , options]) => type === "pointerdown" && options === true);
+      expect(ours).toBeDefined();
+      cleanup();
+      expect(remove).toHaveBeenCalledWith("pointerdown", ours?.[1], true);
+    } finally {
+      add.mockRestore();
+      remove.mockRestore();
+    }
+  });
+
+  it("B38 a prompt opening for the viewer takes the banner away; one for the other seat, or one closing, leaves it", () => {
+    const fx = fakeSeams();
+    const m = mountLayer(queueWith(fakeSchedule()), fullBoardView(), fx);
+    m.show(p2View());
+    fx.pump(50);
+    expect(m.count("banner")).toBe(1);
+    m.show(p2View({ pending: waitingPending }));
+    fx.pump(50);
+    expect(m.count("banner"), "the other seat's prompt").toBe(1);
+    m.show(p2View({ pending: pendingFor("target", []) }));
+    fx.pump(50);
+    expect(m.count("banner"), "the viewer's prompt").toBe(0);
+    // The seat changes back with the prompt still open: its banner plays, and the prompt closing leaves it.
+    m.show(fullBoardView({ pending: pendingFor("target", []) }));
+    fx.pump(50);
+    expect(m.count("banner"), "the hand-over").toBe(1);
+    m.show(fullBoardView());
+    fx.pump(50);
+    expect(m.count("banner"), "the prompt closed").toBe(1);
+  });
+});
+
+describe("R502 — the layer's marks on the board's mana trays", () => {
+  /** Both seats' trays, as Board.tsx draws them: `count` crystals each. */
+  function trays(count = 4): () => void {
+    const made = (["you", "opponent"] as const).map((side) => {
+      const tray = document.createElement("div");
+      tray.setAttribute("data-testid", `mana-${side}`);
+      for (let k = 0; k < count; k += 1) {
+        const crystal = document.createElement("span");
+        crystal.className = "mana-crystal";
+        tray.append(crystal);
+      }
+      document.body.append(tray);
+      return tray;
+    });
+    return () => {
+      for (const tray of made) tray.remove();
+    };
+  }
+  const marked = (side: "you" | "opponent"): number => document.querySelectorAll(`[data-testid="mana-${side}"] .mana-crystal[${HINDERED_ATTR}]`).length;
+  const rider = (lower: number) => ({ mana: { current: 1, max: 3 }, modifiers: [{ id: FX_NEXT_REFRESH_MODIFIER_ID, label: `Next refresh −${String(lower)} mana` }] });
+  const plain = (): PlayerView => baseView({ you: emptySide("p1", { mana: { current: 1, max: 3 } }) });
+  const LAYS: GameEvent = { type: "modifierChanged", player: "p1", modifierId: FX_NEXT_REFRESH_MODIFIER_ID, added: true };
+
+  function mountRider(queue: AnimationQueue, shown: PlayerView, latest: PlayerView) {
+    const tree = (s: PlayerView, l: PlayerView) => (
+      <div className="game">
+        <FxLayer queue={queue} view={s} latest={l} seams={fakeSeams().seams} />
+      </div>
+    );
+    const utils = render(tree(shown, latest));
+    return { show: (s: PlayerView, l: PlayerView) => utils.rerender(tree(s, l)) };
+  }
+
+  it("R502 only the rider's own modifierChanged marks the newest view's crystals early; any other start touches no tray", () => {
+    const untray = trays();
+    try {
+      const sched = fakeSchedule();
+      const queue = queueWith(sched);
+      mountRider(queue, plain(), baseView({ you: emptySide("p1", rider(2)) }));
+      act(() =>
+        queue.enqueue(
+          [
+            { type: "manaChanged", player: "p1", current: 2, max: 3 },
+            { type: "modifierChanged", player: "p1", modifierId: "m1", added: true },
+            LAYS,
+          ],
+          plain(),
+        ),
+      );
+      expect(queue.inFlight()?.events[0]?.type).toBe("manaChanged");
+      expect(marked("you")).toBe(0);
+      act(() => sched.tick());
+      expect(queue.inFlight()?.events[0]?.type).toBe("modifierChanged");
+      expect(marked("you"), "another modifier").toBe(0);
+      act(() => sched.tick());
+      expect(queue.inFlight()?.events[0]).toBe(LAYS);
+      expect(marked("you")).toBe(2);
+      cleanup();
+      // A start that lays no rider writes nothing on the trays, whatever they show.
+      const shown = baseView({ you: emptySide("p1", rider(1)) });
+      const later = fakeSchedule();
+      const again = queueWith(later);
+      mountRider(again, shown, shown);
+      expect(marked("you")).toBe(1);
+      applyManaMarks(document, manaMarks(baseView()));
+      act(() =>
+        again.enqueue(
+          [
+            { type: "manaChanged", player: "p2", current: 2, max: 2 },
+            { type: "modifierChanged", player: "p1", modifierId: "m1", added: true },
+          ],
+          shown,
+        ),
+      );
+      expect(marked("you")).toBe(0);
+      act(() => later.tick());
+      expect(again.inFlight()?.events[0]?.type).toBe("modifierChanged");
+      expect(marked("you"), "another modifier").toBe(0);
+    } finally {
+      untray();
+    }
+  });
+
+  it("R502 a newer shown view forgets the riders the last burst reached", () => {
+    const untray = trays();
+    try {
+      const sched = fakeSchedule();
+      const queue = queueWith(sched);
+      const m = mountRider(queue, plain(), baseView({ you: emptySide("p1", rider(2)) }));
+      act(() => queue.enqueue([LAYS], plain()));
+      expect(marked("you")).toBe(2);
+      act(() => sched.flush());
+      m.show(plain(), baseView({ you: emptySide("p1", rider(1)) }));
+      expect(marked("you")).toBe(0);
+    } finally {
+      untray();
+    }
+  });
+
+  it("R502 unmounting takes the marks off both trays", () => {
+    const untray = trays();
+    try {
+      const both = baseView({ you: emptySide("p1", rider(1)), opponent: emptySide("p2", rider(2)) });
+      mountRider(queueWith(fakeSchedule()), both, both);
+      expect(marked("you")).toBe(1);
+      expect(marked("opponent")).toBe(2);
+      cleanup();
+      expect(marked("you")).toBe(0);
+      expect(marked("opponent")).toBe(0);
+    } finally {
+      untray();
+    }
+  });
+});
+
+describe("R3351000 — the layer's pointer listener", () => {
+  it("R3351000 the pointer is followed by one passive listener, and unmounting leaves no pointer", () => {
+    resetShedForTests();
+    const add = vi.spyOn(window, "addEventListener");
+    try {
+      const fx = fakeSeams();
+      mountLayer(queueWith(fakeSchedule()), fullBoardView(), fx);
+      expect(add).toHaveBeenCalledWith("pointermove", expect.any(Function), { passive: true });
+      act(() => {
+        window.dispatchEvent(new MouseEvent("pointermove", { clientX: 640, clientY: 360 }));
+      });
+      fx.pump(0);
+      expect(shedPointer()).toEqual({ x: 640, y: 360 });
+      cleanup();
+      expect(shedPointer()).toBeNull();
+    } finally {
+      add.mockRestore();
     }
   });
 });

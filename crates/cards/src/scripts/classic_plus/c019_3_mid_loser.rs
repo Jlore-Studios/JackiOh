@@ -203,6 +203,31 @@ mod tests {
                 assert_eq!(flips(true), 2);
             }
 
+            /// R987, R767000: a game played through v0.5.11r folds Feng Shui under its kept script, "You have
+            /// Luck 1", and Mid Loser under its own: on its controller's side the coin flips once more.
+            #[test]
+            fn r987_r767000_a_game_on_v0_5_11r_with_feng_shui_flips_its_coin_once_more() {
+                crate::register_all();
+                const FENG_SHUI: &str = "meditative-040"; // Feng Shui: "You have Luck 1" through v0.5.11r
+                let shipped = crate::shipped_catalog("v0.5.11r").expect("v0.5.11r is carried");
+                jackioh_engine::with_shipped(Some(shipped), || {
+                    let flips = |side: Option<PlayerId>| -> u32 {
+                        let backrow = |player: PlayerId| if side == Some(player) { json!([FENG_SHUI]) } else { json!([]) };
+                        let mut s = scenario(json!({
+                            "seed": "mid-loser-feng-shui",
+                            "p1": { "hand": [MID, FILLER], "backrow": backrow(P1), "library": DECK },
+                            "p2": { "hand": [FILLER], "backrow": backrow(P2), "library": DECK },
+                        }));
+                        let cursor = s.state().rng_cursor;
+                        s.play(MID, json!({}));
+                        s.state().rng_cursor - cursor
+                    };
+                    assert_eq!(flips(None), 1);
+                    assert_eq!(flips(Some(P1)), 2);
+                    assert_eq!(flips(Some(P2)), 1);
+                });
+            }
+
             #[test]
             fn r1_played_from_a_hand_tails_2_2_permanently_and_the_opponent_s_next_refresh_is_1_higher() {
                 let mut s = seeded(from_hand(false), |each| next_flip(each, 0) == Flip::Tails);

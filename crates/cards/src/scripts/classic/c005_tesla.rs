@@ -122,6 +122,7 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // Hit Job: Destroy target Unit.
     const FEELINGS: &str = "classic-032"; // Felinor Feelings: Steal an enemy permanent in a lane where you control a Unit
     const FILLER: &str = "core-010";
+    const FIELD_SPELL: &str = "stand-in (1) Field Spell";
 
     use crate::js;
 
@@ -314,6 +315,22 @@ mod tests {
 
                 assert_eq!(s.count("trapFired"), 0);
                 assert_eq!(s.card(TESLA).face_up, Some(false));
+            }
+
+            /// §8.6 row 5: "when your opponent summons a Unit". A Field Spell the opponent plays stays on
+            /// the field as a permanent too, and is no Unit: it leaves Tesla set.
+            #[test]
+            fn s8_6_an_opponents_field_spell_resolving_into_play_is_no_unit_and_leaves_it_set() {
+                crate::register_all();
+                let mut s = setup(json!({ "hand": [FIELD_SPELL, FILLER] }), json!({}), false);
+                let field_spell = s.card(FIELD_SPELL).clone();
+
+                s.play(&field_spell, json!({ "zone": 2 }));
+
+                s.expect_in_zone(&field_spell, "field");
+                assert_eq!(s.count("trapFired"), 0);
+                assert_eq!(s.card(TESLA).face_up, Some(false));
+                assert!(matches_object(&js(&s.card(TESLA).zone), &json!({ "row": "backrow", "lane": 3 })));
             }
 
             #[test]

@@ -113,7 +113,9 @@ export function locateInstance(view: PlayerView, instanceId: string): string | n
       if (unit !== null && unit.instanceId === instanceId) return testid.card(instanceId);
     }
     for (const slot of sv.backrow) {
-      if (slot !== null && slot.faceDown === false && slot.instanceId === instanceId) {
+      // One guard for an empty zone and a face-down card (#3490): a face-down card has no `instanceId`, so a
+      // guard against it alone could never change the answer.
+      if (slot?.faceDown === false && slot.instanceId === instanceId) {
         return testid.card(instanceId);
       }
     }

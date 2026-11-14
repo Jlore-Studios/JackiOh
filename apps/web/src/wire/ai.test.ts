@@ -3,8 +3,9 @@
 // loads; `decide`, `aiToAct` and `buildAiDeck` only forward. The games that prove the AI
 // are `practice/driver.test.ts`; here the door's own values are pinned.
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { aiConstants, type AiDeckRequest, type DecideRequest, type DecideResult } from "../wasm/index.ts";
 import { DECK_SIZE } from "./engineConfig.ts";
 import { createRng } from "./rng.ts";
 import {
@@ -16,8 +17,11 @@ import {
   aiToAct,
   buildAiDeck,
   lethalHint,
+  type Decision,
 } from "./ai.ts";
 import { beginGame, createGame } from "./engine.ts";
+import type { GameState } from "./generated/GameState.ts";
+import type { PlayerId } from "./index.ts";
 
 describe("budgets and bans", () => {
   it("reads the practice budget from the module", () => {
@@ -57,5 +61,63 @@ describe("aiToAct and lethalHint", () => {
     const state = beginGame(createGame({ seed: "ai-act-seed", decks: [d1, d2] })).state;
     expect(typeof aiToAct(state, "p1")).toBe("boolean");
     expect(typeof lethalHint(state, "p1")).toBe("boolean");
+  });
+});
+
+// What the door hands the module, against a stand-in for it (`vi.doMock`, then `./ai.ts` imported
+// afresh): each entry point's arguments as they cross, and the caller's stream drawn forward to the
+// cursor the module stopped at, so `rng.cursor` reads as the module left it (the practice save keeps
+// it, R668).
+describe("what the door hands the module", () => {
+  const WASM = "../wasm/index.ts";
+  const state = { seed: "door" } as unknown as GameState;
+
+  /** `./ai.ts` imported afresh over a module that answers with `bindings`. */
+  async function door(bindings: Record<string, unknown>): Promise<typeof import("./ai.ts")> {
+    const constants = aiConstants();
+    vi.resetModules();
+    vi.doMock(WASM, () => ({ aiConstants: () => constants, whenWasmLoaded: (run: () => void) => run(), ...bindings }));
+    return await import("./ai.ts");
+  }
+
+  afterEach(() => {
+    vi.doUnmock(WASM);
+    vi.resetModules();
+  });
+
+  it("lethalHint passes its deadline on, and 0, no clock, without one", async () => {
+    const lethalHintBinding = vi.fn((_state: GameState, _seat: PlayerId, _deadlineMs: number) => true);
+    const ai = await door({ lethalHint: lethalHintBinding });
+    expect(ai.lethalHint(state, "p1", 12_345)).toBe(true);
+    expect(ai.lethalHint(state, "p2")).toBe(true);
+    expect(lethalHintBinding.mock.calls).toStrictEqual([
+      [state, "p1", 12_345],
+      [state, "p2", 0],
+    ]);
+  });
+
+  it("decide hands the module the caller's stream, and a budget only when the caller gives one", async () => {
+    const decision = { reason: "search" } as unknown as Decision;
+    const decideBinding = vi.fn(
+      (_state: GameState, _seat: PlayerId, _request: DecideRequest, _deadlineMs: number): DecideResult => ({ decision, rngCursor: 7 }),
+    );
+    const ai = await door({ decide: decideBinding });
+    const rng = createRng("door-ai", 2);
+    expect(ai.decide(state, "p2", { rng, budget: AI_BUDGET, deadlineMs: 99 })).toBe(decision);
+    expect(rng.cursor).toBe(7);
+    expect(ai.decide(state, "p2", { rng })).toBe(decision);
+    expect(decideBinding.mock.calls).toStrictEqual([
+      [state, "p2", { rngSeed: "door-ai", rngCursor: 2, budget: AI_BUDGET }, 99],
+      [state, "p2", { rngSeed: "door-ai", rngCursor: 7 }, 0],
+    ]);
+  });
+
+  it("buildAiDeck hands the module the stream, the size and the options, and draws the stream to where it stopped", async () => {
+    const buildAiDeckBinding = vi.fn((_request: AiDeckRequest) => ({ deck: ["c001"], rngCursor: 5 }));
+    const ai = await door({ buildAiDeck: buildAiDeckBinding });
+    const rng = createRng("door-deck");
+    expect(ai.buildAiDeck(rng, 1, { banned: [] })).toEqual(["c001"]);
+    expect(rng.cursor).toBe(5);
+    expect(buildAiDeckBinding.mock.calls).toStrictEqual([[{ rngSeed: "door-deck", rngCursor: 0, size: 1, banned: [] }]]);
   });
 });

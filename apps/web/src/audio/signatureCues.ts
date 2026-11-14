@@ -221,12 +221,16 @@ const NONE: readonly SoundCue[] = [];
 
 /** R3400001, R3405000, R3407001: the signature sound `event` starts, or none: another event or row, another card, or a card the viewer cannot read. */
 export function signatureCues(event: GameEvent): readonly SoundCue[] {
+  // Stryker disable next-line ConditionalExpression: TypeScript's narrowing; an event of another type that went on would sound nothing all the same, since every row's `on` is one of these three and a row sounds only on its own type (below)
   if (event.type !== "cardPlayed" && event.type !== "summoned" && event.type !== "trapFired") return NONE;
+  // Stryker disable next-line ConditionalExpression: HIDDEN_DEF_ID names no row of the table, so a hidden card that went on would find no row and sound nothing all the same
   if (event.defId === HIDDEN_DEF_ID) return NONE;
   // R3402001: a firing again has sounded its signature already (R2657001); a set face down is a set (R227).
   if (event.type === "trapFired" ? event.again === true : event.formerId !== undefined) return NONE;
+  // Stryker disable next-line ConditionalExpression: without the own-property test an id that names no row reads undefined or one of Object.prototype's members, none of which has an `on`, so the next line answers none for it all the same
   const own = Object.prototype.hasOwnProperty.call(SIGNATURE_SFX, event.defId) ? SIGNATURE_SFX[event.defId] : undefined;
   if (own === undefined || own.on !== event.type) return NONE;
+  // Stryker disable next-line ConditionalExpression,LogicalOperator: past the line above the row's `on` is the event's type, so its two "summoned" tests (one narrowing each for TypeScript) are one test, and either taken as true, or the two joined by ||, answers alike
   if (own.on === "summoned" && event.type === "summoned" && own.row !== event.row) return NONE;
   return [{ kind: "sfx", id: own.sfx, delayMs: 0 }];
 }

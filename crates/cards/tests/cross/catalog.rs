@@ -22,11 +22,11 @@
 use std::collections::BTreeMap;
 
 use indexmap::IndexMap;
-use jackioh_cards::census::{CENSUS, SetCensus};
+use jackioh_cards::census::{CENSUS, SetCensus, tag_count};
 use jackioh_cards::{CATALOG, chinese_json};
 use jackioh_engine::{
-    CardCost, CardDef, CardFace, CardType, FaceKind, GLITCH_DEF_ID, KeywordKind, Rarity, SetName, Tag,
-    fill_params, set_ships,
+    CardCost, CardDef, CardFace, CardType, FaceKind, GLITCH_DEF_ID, KeywordKind, Rarity, SINGLE_PLAYER_SETS,
+    SetName, Tag, fill_params, set_ships,
 };
 use serde_json::Value;
 
@@ -10911,6 +10911,52 @@ mod tag_vocabulary_build_m4_t1_b2_4 {
             }
         }
         assert_eq!(wrong, Vec::<String>::new(), "tags outside the allowed vocabulary");
+    }
+
+    /// §5, §7, §8, B2.4, R1420: each tag's count in the census (`census::tag_count`, the number
+    /// `cargo jackioh catalog check` holds the file to) is how many entries of the sets that ship carry
+    /// it, tokens included; an entry of a set that does not ship counts toward no tag.
+    #[test]
+    fn r1420_each_tag_s_census_count_is_the_shipped_entries_that_carry_it() {
+        let wrong: Vec<String> = Tag::ALL
+            .iter()
+            .filter_map(|tag| {
+                let carried = shipped_entries()
+                    .into_iter()
+                    .filter(|entry| entry.tags.contains(tag))
+                    .count();
+                let counted = tag_count(*tag);
+                (carried != counted).then(|| {
+                    format!(
+                        "{}: the census counts {counted}, the shipped entries carry it {carried} times",
+                        tag.as_str()
+                    )
+                })
+            })
+            .collect();
+        assert_eq!(wrong, Vec::<String>::new(), "tag counts");
+    }
+
+    /// R1420: a set's census ships exactly when its set does (`set_ships`), so the census of a set
+    /// that does not counts toward no total and no tag. Every set `CENSUS` holds ships, so a stand-in
+    /// census of each single-player set, which never ships (R1846001), is the one that does not.
+    #[test]
+    fn r1420_a_census_ships_exactly_when_its_set_does() {
+        for census in CENSUS {
+            assert_eq!(census.ships(), ships(census.set), "{}", census.set);
+        }
+        for set in SINGLE_PLAYER_SETS {
+            let stand_in = SetCensus {
+                set: set.as_str(),
+                segment: "",
+                cards: 0,
+                shared_cards: &[],
+                card_defined_tokens: &[],
+                shared_tokens: &[],
+                rarities: &[],
+            };
+            assert!(!stand_in.ships(), "{set}");
+        }
     }
 }
 

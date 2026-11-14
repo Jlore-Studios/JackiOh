@@ -15,12 +15,14 @@ import { card, fusedDef, unit } from "../test/fixtures.ts";
 import { must } from "../test/stubServer.ts";
 import { CardFace } from "./CardFace.tsx";
 import { CHINESE, CHINESE_TERMS, chineseDef, chineseName } from "./chinese.ts";
+import { resetCosmeticsForTests, writeCardLevel } from "./cosmetics.ts";
 import { DORMANT_STARSHIP_ID } from "./fused.ts";
 import { Glossary } from "./inspect/Glossary.tsx";
 import { MinionFace } from "./MinionFace.tsx";
 import { faceModel, type FaceModel } from "./model.ts";
 import { CardDefsProvider } from "./refContext.tsx";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
+import { VERSION_IMMERSIVE_ID, VERSION_OUT_OF_FRAME_ID } from "./versions.ts";
 import { GLOSSARY, legacyText, markedText } from "../test/faceData.ts";
 
 /** The glossary entries a face names (jackioh-shared `face/glossary.rs`). */
@@ -33,6 +35,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  resetCosmeticsForTests();
   writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
 });
 
@@ -246,5 +249,23 @@ describe("R1301 a Chinese card in a match", () => {
     // Its name plate is Chinese, and its art keeps the English name's motif.
     expect(text(minion, ".card-name")).toBe(zh("core-002").name);
     expect(face.englishName).toBe(def("core-002").name);
+  });
+
+  it("R1301 R2943001 R2944001 a Chinese face's cut-out subject and near layer keep the English name's motif too", () => {
+    const id = "classic-080"; // BOOM! Big Max: its English name draws a bomb (R503), and it is offered both looks.
+    const looks = [
+      [VERSION_OUT_OF_FRAME_ID, ".cf-art-frame > .cf-art--cutout"],
+      [VERSION_IMMERSIVE_ID, ".cf-art-frame > .cf-immersive > .cf-art--near"],
+    ] as const;
+    for (const [version, selector] of looks) {
+      writeCardLevel(id, version);
+      const face = faceModel({ defId: id, def: def(id), radiant: false, chinese: true, inPlay: {} });
+      expect(face.name, version).toBe(zh(id).name);
+      expect(face.englishName, version).toBe(def(id).name);
+      const root = render(<CardFace face={face} layout="full" worn />).container;
+      expect(root.querySelector(".cf")?.getAttribute("data-version"), version).toBe(version);
+      expect(root.querySelector(selector)?.getAttribute("data-art-motif"), version).toBe("bomb");
+      cleanup();
+    }
   });
 });

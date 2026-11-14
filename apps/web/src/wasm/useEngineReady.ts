@@ -14,11 +14,14 @@ export function useEngineReady(): boolean {
     let live = true;
     loadWasm().then(
       () => {
+        // Stryker disable next-line ConditionalExpression: React 19 drops a state update on an unmounted component without a word, so setting ready after the cleanup shows nothing.
         if (live) setReady(true);
       },
       () => undefined,
     );
+    // Stryker disable next-line BlockStatement: React 19 drops a state update on an unmounted component without a word, so a cleanup that leaves live true shows nothing.
     return () => {
+      // Stryker disable next-line BooleanLiteral: React 19 drops a state update on an unmounted component without a word, so leaving live true shows nothing.
       live = false;
     };
   }, [ready]);

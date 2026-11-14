@@ -4,7 +4,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { GAME_EVENT_TYPES, type GameEvent, type GameEventType, type PlayerView } from "@jackioh/shared";
+import { GAME_EVENT_TYPES, type GameEvent, type GameEventType, type PlayerId, type PlayerView, type Zone } from "@jackioh/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -287,6 +287,122 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
 
 const ALL_SAMPLES: GameEvent[] = GAME_EVENT_TYPES.map((t) => SAMPLES[t]);
 
+/**
+ * Where each row's `target` puts its `SAMPLES` event on `fullBoardView()`, whose viewer is p1: its units are u1 to
+ * u5 against u6 to u10 and its hand c11 to c14, and c1, b5 and c7 are rendered nowhere, so those rows fall back to
+ * their pile or region.
+ */
+const SAMPLE_TARGETS: Record<GameEventType, string> = {
+  cardPlayed: testid.handCard("c1"),
+  cardResolved: animTestid.graveyard("you"),
+  summoned: testid.zone("you", "units", 2),
+  damage: testid.hero("opponent"),
+  healthLost: testid.hero("you"),
+  healed: testid.hero("you"),
+  divineShieldLost: testid.card("u6"),
+  destroyed: testid.card("u1"),
+  enteredGraveyard: animTestid.graveyard("you"),
+  exiled: testid.card("u2"),
+  bounced: testid.card("u3"),
+  burned: animTestid.hand("opponent"),
+  fatigue: animTestid.library("you"),
+  libraryOverflow: animTestid.library("opponent"),
+  discarded: testid.handCard("c11"),
+  drawn: animTestid.library("you"),
+  addedToHand: animTestid.hand("opponent"),
+  shuffledIn: animTestid.library("you"),
+  buffed: testid.card("u2"),
+  keywordGranted: testid.card("u2"),
+  counterChanged: testid.card("u2"),
+  costChanged: testid.handCard("c11"),
+  modifierChanged: animTestid.modifiers("opponent"),
+  radiantSet: testid.card("u3"),
+  deradianted: testid.card("u3"),
+  transformed: testid.card("u3"),
+  fused: testid.card("u1"),
+  positionSwitched: testid.card("u3"),
+  controlChanged: testid.zone("you", "units", 4),
+  rotated: testid.board,
+  swapped: testid.board,
+  locked: testid.zone("opponent", "backrow", 1),
+  trapFired: testid.zone("you", "backrow", 3),
+  attackDeclared: testid.card("u1"),
+  attackCancelled: testid.card("u1"),
+  manaChanged: animTestid.mana("you"),
+  manaSpent: animTestid.mana("you"),
+  turnStarted: testid.banner,
+  turnEnded: testid.endTurn,
+  turnAutoEnded: testid.banner,
+  promptOpened: animTestid.prompt,
+  promptAnswered: animTestid.prompt,
+  drawOffered: animTestid.drawToast,
+  drawAnswered: animTestid.drawToast,
+  emoted: testid.hero("you"),
+  gameOver: testid.result,
+  cardAnnounced: animTestid.hand("you"),
+  countered: animTestid.graveyard("you"),
+  stolen: animTestid.hand("you"),
+  unlocked: testid.zone("opponent", "backrow", 1),
+  activated: testid.card("u1"),
+  animated: testid.zone("you", "units", 3),
+  deanimated: testid.zone("you", "backrow", 3),
+  crumbled: testid.card("u2"),
+  degraded: testid.card("u2"),
+  upgraded: testid.card("u2"),
+  numberChanged: testid.card("u2"),
+  redirected: testid.hero("opponent"),
+  healthSet: testid.hero("opponent"),
+  questProgressed: animTestid.backrow("you"),
+  questCompleted: animTestid.backrow("you"),
+  rolledBack: testid.board,
+  chaosRolled: testid.banner,
+  flickered: testid.zone("you", "units", 2),
+  drawLimited: animTestid.library("opponent"),
+  turnCutShort: testid.banner,
+  marked: testid.card("u6"),
+  glitched: testid.banner,
+  fengShui: testid.banner,
+  translated: testid.card("u6"),
+  discardPrevented: animTestid.hand("opponent"),
+  damageAbsorbed: testid.card("u6"),
+  jadeChanged: testid.hero("you"),
+  secretChosen: testid.hero("you"),
+  secretRevealed: testid.hero("you"),
+  predicted: testid.hero("opponent"),
+  curveDrawn: testid.board,
+  lineDrawn: testid.board,
+  autopilotEngaged: testid.banner,
+  awakened: testid.card("u1"),
+  evolved: testid.card("u1"),
+  traded: animTestid.library("you"),
+  marketCreditsChanged: testid.hero("you"),
+  marketBought: animTestid.hand("you"),
+  marketSold: animTestid.hand("you"),
+  starshipFused: testid.card("u1"),
+  starshipLaunched: testid.card("u1"),
+  voteCast: animTestid.backrow("opponent"),
+  votedOut: testid.banner,
+  fled: testid.hero("you"),
+  starscapeTravelled: testid.hero("you"),
+  held: testid.card("u6"),
+  boardReplaced: testid.board,
+  rolled: testid.banner,
+  hookResolving: testid.hero("you"),
+};
+
+type AnimationsModule = typeof import("./animations.ts");
+
+/**
+ * The module as a page load builds it, inside the test that reads it (`vi.resetModules()`): the table's rows and
+ * their `target` arrows, `animTestid` and the hero id's pattern are built as the module loads, and Stryker turns a
+ * mutant on only after a test file has loaded its imports, so one built wrong fails only in a module imported
+ * afresh (#3490).
+ */
+async function freshAnimations(): Promise<AnimationsModule> {
+  vi.resetModules();
+  return import("./animations.ts");
+}
+
 function longStream(rounds: number): GameEvent[] {
   const out: GameEvent[] = [];
   for (let i = 0; i < rounds; i += 1) out.push(...ALL_SAMPLES);
@@ -495,6 +611,14 @@ describe("target resolution", () => {
     );
   });
 
+  it("damage reads a hero only from the engine's whole hero-<playerId> id, on a module imported afresh", async () => {
+    const fresh = await freshAnimations();
+    // An id that merely holds `hero-p1` or `hero-p2` names no hero, and this fixture renders no such card.
+    for (const targetId of ["xhero-p1", "hero-p2x"]) {
+      expect(fresh.targetFor({ type: "damage", sourceId: null, targetId, amount: 1, combat: false }, view), targetId).toBeNull();
+    }
+  });
+
   it("damage on a unit resolves to card-<targetId>", () => {
     expect(targetFor({ type: "damage", sourceId: null, targetId: ENEMY_UNIT, amount: 1, combat: false }, view)).toBe(
       testid.card(ENEMY_UNIT),
@@ -506,6 +630,15 @@ describe("target resolution", () => {
   it("healed on a hero resolves to hero-<side>", () => {
     expect(targetFor({ type: "healed", targetId: "hero-p2", amount: 5 }, view)).toBe(testid.hero("opponent"));
     expect(targetFor({ type: "healed", targetId: YOUR_UNIT_1, amount: 5 }, view)).toBe(testid.card(YOUR_UNIT_1));
+  });
+
+  it("B5 E9 a redirect and R1363 a hit the Armor took whole resolve a hero to hero-<side> and a unit to its card", () => {
+    const redirect = { type: "redirected", what: "damage", fromId: "hero-p2", byInstanceId: "b5" } as const;
+    expect(targetFor({ ...redirect, toId: "hero-p1" }, view)).toBe(testid.hero("you"));
+    expect(targetFor({ ...redirect, toId: ENEMY_UNIT }, view)).toBe(testid.card(ENEMY_UNIT));
+    const absorbed = { type: "damageAbsorbed", sourceId: ENEMY_UNIT, absorbed: 2, combat: true } as const;
+    expect(targetFor({ ...absorbed, targetId: "hero-p1" }, view)).toBe(testid.hero("you"));
+    expect(targetFor({ ...absorbed, targetId: YOUR_UNIT }, view)).toBe(testid.card(YOUR_UNIT));
   });
 
   it("summoned resolves to the landing zone", () => {
@@ -582,6 +715,21 @@ describe("target resolution", () => {
     ).toBe(animTestid.hand("opponent"));
   });
 
+  it("B5 E1 an announced card lifts the viewer's hand card, its hand while unrendered, and the opponent's hand region", () => {
+    const announced = (player: PlayerId, instanceId: string): GameEvent => ({
+      type: "cardAnnounced",
+      player,
+      instanceId,
+      defId: "core-035",
+      cardType: "Spell",
+      costPaid: 1,
+      targets: [],
+    });
+    expect(targetFor(announced("p1", HAND_CARD), view)).toBe(testid.handCard(HAND_CARD));
+    expect(targetFor(announced("p1", "gone"), view)).toBe(animTestid.hand("you"));
+    expect(targetFor(announced("p2", "hidden"), view)).toBe(animTestid.hand("opponent"));
+  });
+
   it("R227 a trap set face-down animates its hand card, found by the id it had (formerId)", () => {
     expect(
       targetFor(
@@ -610,6 +758,24 @@ describe("target resolution", () => {
     expect(targetFor({ type: "modifierChanged", player: "p2", modifierId: "m1", added: true }, view)).toBe(
       animTestid.modifiers("opponent"),
     );
+  });
+
+  it("B5 E1 a countered card goes to the pile it is sent to when it is not rendered", () => {
+    const countered = { type: "countered", defId: "core-035", byInstanceId: "b5" } as const;
+    expect(targetFor({ ...countered, player: "p1", instanceId: "gone", to: "exile" }, view)).toBe(animTestid.exile("you"));
+    expect(targetFor({ ...countered, player: "p2", instanceId: "gone", to: "hand" }, view)).toBe(animTestid.hand("opponent"));
+    expect(targetFor({ ...countered, player: "p1", instanceId: "gone", to: "graveyard" }, view)).toBe(
+      animTestid.graveyard("you"),
+    );
+    expect(targetFor({ ...countered, player: "p1", instanceId: HAND_CARD, to: "exile" }, view)).toBe(testid.handCard(HAND_CARD));
+  });
+
+  it("§10.5 step 7, R17 a resolved permanent cues on its card while it is in play, anything else on its graveyard", () => {
+    const resolved = { type: "cardResolved", player: "p1", defId: "core-084", costPaid: 1 } as const;
+    expect(targetFor({ ...resolved, instanceId: YOUR_UNIT, permanent: true }, view)).toBe(testid.card(YOUR_UNIT));
+    expect(targetFor({ ...resolved, instanceId: "gone", permanent: true }, view)).toBe(animTestid.graveyard("you"));
+    // A Trap that fired still stands face-up in the backrow of the view before it, on its way to the graveyard.
+    expect(targetFor({ ...resolved, instanceId: YOUR_TRAP, permanent: false }, view)).toBe(animTestid.graveyard("you"));
   });
 
   it("trapFired animates the trap's own card, and its zone when the viewer may not identify it", () => {
@@ -673,6 +839,19 @@ describe("target resolution", () => {
         view,
       ),
     ).toBe(animTestid.graveyard("you"));
+    // A field card the board does not render pulses its zone, the viewer's own hand card itself, the other piles
+    // their pile, and a card mid-resolution or gone the board.
+    const zones: readonly (readonly [Zone, string, string])[] = [
+      [{ z: "field", player: "p2", row: "backrow", lane: 2 }, "hidden", testid.zone("opponent", "backrow", 2)],
+      [{ z: "hand", player: "p1" }, HAND_CARD, testid.handCard(HAND_CARD)],
+      [{ z: "library", player: "p2" }, "hidden", animTestid.library("opponent")],
+      [{ z: "exile", player: "p1" }, "hidden", animTestid.exile("you")],
+      [{ z: "resolving", player: "p1" }, "hidden", testid.board],
+      [{ z: "gone", player: "p2" }, "hidden", testid.board],
+    ];
+    for (const [zone, instanceId, expected] of zones) {
+      expect(targetFor({ type: "radiantSet", instanceId, defId: "core-011", zone }, view), zone.z).toBe(expected);
+    }
   });
 
   it("fused animates the first merging card that is on the board", () => {
@@ -709,32 +888,20 @@ describe("target resolution", () => {
   // NOT THE ASSERTION THAT MATTERS: nothing here renders, so this cannot prove a row's string names
   // an element (`modifierChanged` passed it while #77 Professor Curvature and #78 /fullsend were
   // invisible). The real assertion lives in `animation-targets.test.tsx`.
-  it("resolves a target for every event type without throwing, and only the documented rows go dark", () => {
-    // Rows that resolve to nothing on a seat that shows nothing (§10.6), plus the rows whose
-    // `SAMPLES` entry names a card this fixture does not render at all.
-    const mayBeNull = new Set<GameEventType>([
-      "promptOpened",
-      "promptAnswered",
-      "drawOffered",
-      "damage",
-      "healed",
-      "divineShieldLost",
-      "buffed",
-      "keywordGranted",
-      "counterChanged",
-      "costChanged",
-      "transformed",
-      "fused",
-      "positionSwitched",
-      "attackDeclared",
-      "attackCancelled",
-    ]);
+  it("resolves every event type's sample to its element, on a module imported afresh", async () => {
+    const fresh = await freshAnimations();
+    const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, fresh.targetFor(SAMPLES[t], view)]));
+    expect(actual).toStrictEqual(SAMPLE_TARGETS);
+  });
 
-    for (const type of GAME_EVENT_TYPES) {
-      expect(() => targetFor(SAMPLES[type], view), type).not.toThrow();
-      if (mayBeNull.has(type)) continue;
-      expect(targetFor(SAMPLES[type], view), `${type} must resolve to an element`).not.toBeNull();
+  it("names each region <region>-<side>, the prompt modal and the draw toast, on a module imported afresh", async () => {
+    const { animTestid: ids } = await freshAnimations();
+    const regions = ["hand", "library", "graveyard", "exile", "mana", "modifiers", "backrow"] as const;
+    for (const side of ["you", "opponent"] as const) {
+      expect(regions.map((region) => ids[region](side))).toEqual(regions.map((region) => `${region}-${side}`));
     }
+    expect(ids.prompt).toBe("prompt-modal");
+    expect(ids.drawToast).toBe("draw-toast");
   });
 });
 
