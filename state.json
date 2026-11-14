@@ -37596,6 +37596,9 @@
   "usage_spool": {
     "readings": [
       "2026-11-14T11:28:40Z,agy,usage-command,before,43590176404,10,2026-11-14T15:59:08Z,15,2026-11-21T00:22:39Z,allowed,100,100,"
+    ],
+    "runs": [
+      "2026-11-14T11:28:53Z,43590176404,agy,gemini-3.8-flash-high,revise,3902,medium,built,,0,0,0,0,,10,10,15,15,8.3,agy,none,,0"
     ]
   },
   "version": 1
