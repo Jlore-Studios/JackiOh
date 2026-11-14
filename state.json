@@ -14296,15 +14296,8 @@
       "stop_requested": false
     },
     "3920": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43618949283",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-14T17:16:16Z",
-        "until": "2026-11-14T17:46:16Z"
-      },
       "failures": 1,
       "handoff": {
         "at": "2026-11-14T17:13:00Z",
@@ -14315,9 +14308,8 @@
         "reason": "planned on opus",
         "trail": "- Bash: {\"command\": \"ls /tmp/dbg-target/debug/deps/jackioh-156d4d4b0044d636 /tmp/plan-final.md 2>&1; git -C /home/runner/work/_temp/work/item-3920 log --oneline -1; uptime\", \"description\": \"Check the test bi\u2026\n- Bash: {\"command\": \"git log --oneline 3643877e46..HEAD | head -20; git diff --stat 3643877e46 HEAD | tail -3; ls -la .bot-plan.md\", \"description\": \"See what main added since the plan's base\"}\n- Bash: {\"command\": \"for f in crates/engine/src/layers.rs crates/engine/src/testkit/invariants.rs crates/engine/src/zones.rs crates/engine/src/play_steps.rs crates/engine/src/resolve.rs crates/engine/src/dec\u2026\n- Bash: {\"command\": \"(pnpm install --frozen-lockfile > /tmp/pnpm-install.log 2>&1; echo \\\"exit $?\\\" >> /tmp/pnpm-install.log; sh scripts/build-wasm.sh > /tmp/build-wasm.log 2>&1; echo \\\"exit $?\\\" >> /tmp/bui\u2026\n- Bash: {\"command\": \"git show --stat 88b1df6f05 | grep -E \\\"apps/web|e2e|spec/\\\" | head -40; grep -n \\\"FRIENDS_PANEL\\\" -B1 -A2 e2e/cypress/e2e/38-accessibility.cy.ts | head -12\", \"description\": \"Survey the P\u2026\n- Bash: {\"command\": \"grep -rn \\\"LobbyPanel\\\" apps/web/src/routes/*.tsx | grep -v test | head; grep -n \\\"it(\\\\|expectNoHubScroll\\\\|duos/live\\\\|E2E_SESSION\\\\|serveFixtures\\\\|play-layout\\\" e2e/cypress/component\u2026\n- Bash: {\"command\": \"sed -n 1,30p e2e/cypress/component/play-screen.cy.tsx | head -30; sed -n 95,200p e2e/cypress/component/play-screen.cy.tsx; sed -n 840,880p apps/web/src/routes/play.tsx\", \"description\": \"\u2026\n- Bash: {\"command\": \"grep -n 'describe(\\\"B26\\\\|function slotOf\\\\|^import' apps/web/src/test/ux/board-ux.test.tsx | head -24; grep -n \\\"FRIENDS_PANEL\\\\|SKELETON\\\" e2e/support/testids.ts | head; git show --sta\u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Run 3 (2026-11-14 17:05, fresh machine; base moved to b91f8a80ee)\\n- main added #3902 (Play hub rework: PlayHub.tsx, play-hub.css, lobby panels now in a\u2026\n- Bash: {\"command\": \"awk 'NR>1 && /^---$/ {exit} NR>1 {print}' .bot-plan.md > /tmp/plan-final.md; wc -w /tmp/plan-final.md; head -3 /tmp/plan-final.md | cut -c1-120; tail -4 /tmp/plan-final.md | cut -c1-120\"\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/tmp/plan-final.md'\\ns=open(p).read()\\nrep=[\\n(\\\"In release that is 13.6 + 10.6 min on this 4-core runner under load, and the job builds the test profile (`crate\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/build-wasm.log; do sleep 5; done; tail -1 /tmp/build-wasm.log; cd e2e && timeout 1200 pnpm exec cypress run --component --browser chrome --spec \\\"cypress/com\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3920 && python3 -I - <<'EOF'\\nimport re\\np='/tmp/plan-final.md'\\ns=open(p).read()\\n# remove table rows\\nfor row in [\\\"| `apps/web/src/routes/lobby.cs\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/tmp/plan-final.md'\\ns=open(p).read()\\nfor old,new in [\\n(\\\"src/cards/textLimit.test.ts src/test/ux/board-ux.test.tsx src/i18n src/lobby src/together\\\",\\\"src/car\u2026\n- Bash: {\"command\": \"grep -n \\\"Evolved\\\\*\\\\* marks\\\" spec/03-zones.md | cut -c1-60; grep -n \\\"| Cast from the deck |\\\" spec/06-keywords.md | cut -c1-60; grep -n \\\"zoneId(\\\\\\\"you\\\\\\\", \\\\\\\"units\\\\\\\", 3))).find\u2026\n- Bash: {\"command\": \"sed -n 95,140p /tmp/plan-final.md; wc -w /tmp/plan-final.md\", \"description\": \"Proofread the plan's later steps and sections\"}\n- Bash: {\"command\": \"ls crates/cards/patches/pending/; grep -c \\\"\\\" /dev/null\", \"description\": \"List the pending patch fragments on the new base\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/tmp/plan-final.md'\\ns=open(p).read()\\nfor old,new in [\\n(\\\"cypress/component/card-fullscreen.cy.tsx\\\\\\\" (play-screen as a control)`.\\\",\\\"cypress/component/card-\u2026\n- Bash: {\"command\": \"cat /tmp/plan-final.md\", \"description\": \"Print the final plan\"}\n- said: **Goal.** One PR on `main` that turns every failed job of super run 43590224287 green. Each failure was reproduced on `3643877`, play-screen and friends-screen again on `b91f8a8`. Each fix below was run in a scratch copy of the tree. - **fuzz 1/4, 2/4:** seeds 1596 and 2217 (I2 under a Windfury aur\u2026"
       },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-14T14:24:01Z",
       "owner_why": "handed off from `claude-1`: `claude-1` 5-hour usage is 40%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-14T17:30:00Z; it can start again only in 2h 06m, more than the 120 minutes an item waits for its owner",
@@ -14329,9 +14321,9 @@
       "planned_tier": "strong",
       "provider": "claude-3",
       "round_tier": "",
-      "run_id": "43618949283",
+      "run_id": "pending:6ef61147-1794676601",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-14T17:03:00Z",
+      "started_at": "2026-11-14T17:16:55Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: timed out after 9000s"
@@ -14435,9 +14427,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-14T17:03:00Z",
+    "at": "2026-11-14T17:16:55Z",
     "url": "",
-    "what": "plan #3920 on claude-3"
+    "what": "build #3920 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-14T17:09:22Z",
