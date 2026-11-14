@@ -17233,15 +17233,15 @@
       "ci_sha": "15dae100d5422b42474bb78b1aab66f6bc58d15c",
       "cleared": {
         "approver": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-6",
-          "tier": "strong"
+          "family": "gemini",
+          "model": "gemini-3.8-flash-high",
+          "provider": "agy",
+          "tier": "medium"
         },
-        "at": "2026-11-14T09:25:51Z",
+        "at": "2026-11-14T11:09:29Z",
         "built_by": "claude-6",
-        "by": "`claude` (strong)",
-        "sha": "15dae100d5422b42474bb78b1aab66f6bc58d15c"
+        "by": "`gemini` (medium)",
+        "sha": "a44297035b17cafc7cf5290742a6f49308adfe84"
       },
       "cross_rounds": 0,
       "died": 0,
@@ -17263,7 +17263,7 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
-      "merge_owner": "claude-6",
+      "merge_owner": "agy",
       "pending_request": false,
       "provider": "agy",
       "question": "",
