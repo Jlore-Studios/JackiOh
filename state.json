@@ -14662,7 +14662,7 @@
         "provider": "claude-7",
         "round_tier": "strong",
         "rounds_on": 3811,
-        "rounds_used": 2,
+        "rounds_used": 6,
         "since": "2026-11-13T08:20:09Z",
         "source": "ci",
         "until": "2026-11-14T00:47:48Z"
