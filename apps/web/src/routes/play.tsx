@@ -809,7 +809,12 @@ function OnlinePlay({ token, me }: { token: string; me: MeResponse | undefined }
           role="status"
         >
           {statusWords(status)}
-          {status.kind === "found" && foundMatch !== null ? <OpponentLine matchId={foundMatch} /> : null}
+          {status.kind === "found" && foundMatch !== null ? (
+            <>
+              {" "}
+              <OpponentLine matchId={foundMatch} />
+            </>
+          ) : null}
         </p>
       ) : null}
       {unreachable ? (

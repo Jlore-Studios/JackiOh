@@ -4,7 +4,7 @@
 // (`ModeChoice`) and relays what the server said; its verdict is the shared validator's, as UX.
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import { DECK_SIZE } from "@jackioh/engine/config";
 import { LEAN_NEWEST, newestShippedSet, type CardDef, type CardDefs } from "@jackioh/shared";
@@ -29,6 +29,7 @@ import {
   enqueue,
   getCollection,
   getDecks,
+  getMatchRanks,
   getMe,
   getOwnRank,
   getPopulation,
@@ -76,6 +77,7 @@ vi.mock("../net/api.ts", async (importOriginal) => {
     getCollection: vi.fn(),
     getPopulation: vi.fn(),
     getOwnRank: vi.fn(),
+    getMatchRanks: vi.fn(),
   };
 });
 vi.mock("../lobby/api.ts", async (importOriginal) => {
@@ -1027,6 +1029,26 @@ describe("the lobby's queue state", () => {
     }
     // ...but never traps the player: Leave stays lit.
     expect(screen.getByTestId(playTestid.leaveQueue)).not.toBeDisabled();
+  });
+
+  it("R3729001 the found notice reads the status, a space, then the opponent", async () => {
+    writeSession({ accessToken: TOKEN });
+    onTestFinished(() => {
+      clearSession();
+    });
+    vi.mocked(getMe).mockResolvedValue(me("match-42"));
+    vi.mocked(getMatchRanks).mockResolvedValue({
+      ranked: false,
+      ladder: "constructed",
+      seats: {
+        p1: { profileId: "1", username: "Ana", rank: null, streak: 0, you: true },
+        p2: { profileId: "2", username: "Max", rank: null, streak: 0, you: false },
+      },
+    } as never);
+    render(<PlayRoute token={TOKEN} />);
+    await waitFor(() => {
+      expect(screen.getByTestId(playTestid.status).textContent).toBe(`${MATCH_FOUND_STATUS} You face Max.`);
+    });
   });
 
   it("announces the pairing before navigating to it", async () => {

@@ -1,13 +1,14 @@
 // A friend's lobby invite (R3730005), mounted once beside the challenge toast (`main.tsx`): the social
 // socket's `lobbyInvite` frame shows a toast with Open, which opens the lobby, and Dismiss. R3729002: the tab
-// keeps each invite in `inbox/invites.ts`, so Open and Dismiss only send the toast away and the bell's inbox
-// still lists the invite (Join, Dismiss there) until it is answered or `INBOX_INVITE_KEEP_MS` has passed; the
+// keeps each invite in `inbox/invites.ts`, so Dismiss only sends the toast away and the bell's inbox
+// still lists the invite (Join, Dismiss there) until `INBOX_INVITE_KEEP_MS` has passed; Open is a join, so it
+// drops the invite as the inbox's Join does (and only hides the toast when a leave guard holds the move); the
 // server sends the frame once, so a tab with no socket open still misses it. CLAUDE.md rule 7: Open only goes
 // to the lobby; the lobby's own screen enters it, and the server decides.
 
 import { useEffect, type ReactElement } from "react";
 
-import { hideInviteToast, noteInvite, useInvites } from "../inbox/invites.ts";
+import { dropInvite, hideInviteToast, noteInvite, useInvites } from "../inbox/invites.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { onLobbyInvitePush } from "../together/socialPoll.ts";
@@ -36,8 +37,8 @@ export function LobbyInviteToast(): ReactElement | null {
               className="button-primary"
               data-testid={lobbyTestid.inviteOpen}
               onClick={() => {
-                hideInviteToast(invite.code);
-                navigate(paths.lobby(invite.code));
+                if (navigate(paths.lobby(invite.code))) dropInvite(invite.code);
+                else hideInviteToast(invite.code);
               }}
             >
               {t("Open")}

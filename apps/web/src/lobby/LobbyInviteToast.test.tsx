@@ -65,7 +65,7 @@ describe("the lobby invite toast", () => {
     expect(screen.queryByTestId(lobbyTestid.inviteToast)).toBeNull();
   });
 
-  it("R3729002 Dismiss hides the toast and the store keeps the invite for the inbox; Open hides it and goes", () => {
+  it("R3729002 Dismiss hides the toast and the store keeps the invite for the inbox; Open joins and drops it", () => {
     render(
       <>
         <LobbyInviteToast />
@@ -86,13 +86,14 @@ describe("the lobby invite toast", () => {
     fireEvent.click(screen.getByTestId(lobbyTestid.inviteOpen));
     expect(window.location.pathname).toBe("/lobby/COOPCD");
     expect(screen.queryByTestId(lobbyTestid.inviteToast)).toBeNull();
-    expect(screen.getAllByTestId("held-invite")).toHaveLength(2);
+    // Open is a join: the invite leaves the inbox as it does after the inbox's own Join. Dismiss kept the other.
+    expect(screen.getAllByTestId("held-invite").map((held) => held.getAttribute("data-code"))).toEqual(["K7Q2XM"]);
 
     // The inbox's own answers drop an invite for good; a second frame for the same lobby shows its toast again.
     act(() => {
       dropInvite("K7Q2XM");
     });
-    expect(screen.getAllByTestId("held-invite").map((held) => held.getAttribute("data-code"))).toEqual(["COOPCD"]);
+    expect(screen.queryAllByTestId("held-invite")).toHaveLength(0);
     invite("COOPCD", "coop");
     expect(screen.getAllByTestId(lobbyTestid.inviteToast)).toHaveLength(1);
   });
