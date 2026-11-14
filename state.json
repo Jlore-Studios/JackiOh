@@ -17762,9 +17762,14 @@
     "what": "review #3918 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-14T11:00:46Z",
+    "at": "2026-11-14T11:08:02Z",
     "notes": [
-      "#3811: approved and green, so its strikes are cleared"
+      "delivered review #3902 on agy (run 43587462407): reviewed",
+      "delivered revise #3884 on claude-1 (run 43583645292): approved",
+      "delivered build #3917 on claude-8 (run 43583589447): built",
+      "started review #3918 on claude-8 (run 43588932488)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18470,7 +18475,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-14T11:00:46Z",
+  "loop_tick": "2026-11-14T11:08:02Z",
   "machine_disk": {
     "issue": null,
     "reading": {
