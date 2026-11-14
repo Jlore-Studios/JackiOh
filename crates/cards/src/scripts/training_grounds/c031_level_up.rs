@@ -104,6 +104,7 @@ mod tests {
     const CANCELLER: &str = "stinkyscape-t-ai-04";
     const MOTHS: &str = "core-009"; // Moths to the Flame: start of turn: every enemy Unit attacks this
     const FILLER: &str = "core-010";
+    const PHOENIX: &str = "stand-in (1) 4/1 Reborn";
 
     fn wall() -> Value {
         json!({ "def": VANILLA, "statsOverride": { "attack": 0, "health": 30 } })
@@ -325,6 +326,30 @@ mod tests {
 
             s.expect_in_zone(SPECIESIST, "graveyard");
             assert!(!s.card(SPECIESIST).radiant);
+        }
+
+        #[test]
+        fn r174_a_reborn_body_starts_again_without_the_combat_it_died_in() {
+            // R2199007: a Unit that died in its combat and came back through Reborn is a new arrival
+            // and starts again (R174); R2199000 hands its hook `survived: false`. Radiant face: 2 attacks.
+            let killer = json!({ "def": VANILLA, "statsOverride": { "attack": 5, "health": 30 } });
+            let mut s = board(true, json!({ "field": [PHOENIX] }), json!({ "field": [killer, wall()] }));
+            let phoenix = s.unit(P1, 1).unwrap().id;
+            swing(&mut s, 1);
+            let reborn = s.last_events().iter().any(|e| {
+                matches!(e, GameEvent::Summoned { instance_id, via: Some(KeywordKind::Reborn), .. }
+                    if *instance_id == phoenix)
+            });
+            assert!(reborn, "Reborn brought the same card back");
+            assert_eq!(tallies_seen(&s, P1, 1), None, "the combat it died in is not the new body's");
+            next_round(&mut s);
+            let wall = s.unit(P2, 2).unwrap();
+            s.attack(phoenix.as_str(), &wall);
+            assert!(!radiant_at(&s, 1), "the new body's first attack");
+            assert_eq!(tallies_seen(&s, P1, 1), counted(1, 2));
+            next_round(&mut s);
+            s.attack(phoenix.as_str(), &wall);
+            assert!(radiant_at(&s, 1));
         }
 
         #[test]

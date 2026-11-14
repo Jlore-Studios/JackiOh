@@ -233,7 +233,9 @@ tabs, Cards, Decks, Cosmetics and Progress, each keeping its filters while you s
 └──────┴────────────────────────────────────────────────────────┘
 ```
 
-**The friends drawer.** Grouped: Requests, In a game, Online, Offline (n).
+**The friends drawer.** Grouped: Requests, In a game, Online, Offline (n), each row with one primary
+button and a ⋯ menu for the rest, and a search over the list. Issue #3732 builds what it holds
+([R3732002](../../spec/rulings/R3732002.md)); the sketch below is the shell's.
 
 ```
 ┌────────────────────────────┐
@@ -247,7 +249,7 @@ tabs, Cards, Decks, Cosmetics and Progress, each keeping its filters while you s
 │   Bo             Challenge │
 │ ▸ Offline (12)             │
 ├────────────────────────────┤
-│ Open Play together         │
+│ See all friends            │
 └────────────────────────────┘
 ```
 
@@ -296,6 +298,8 @@ the drawer, screenshots) and 38's axe block over the shell run it.
 - [R3729001](../../spec/rulings/R3729001.md): the queue search in the status row on every menu screen, `/play`
   included, and the match found naming the opponent. It amends [R3728002](../../spec/rulings/R3728002.md).
 - [R3729002](../../spec/rulings/R3729002.md): the bell and the inbox.
+- [R3732002](../../spec/rulings/R3732002.md): what the friends drawer holds, and the Friends page's
+  tabs. It amends [R3728001](../../spec/rulings/R3728001.md).
 
 ## Out of scope
 
@@ -305,5 +309,4 @@ Left to the other issues of #3726:
 - The lobby's status in the status row.
 - An account item ("me") at the rail's foot.
 - Widening `panel--auth`.
-- What the friends drawer holds.
 - Each screen's own redesign. The sketches above are where those issues start.

@@ -160,4 +160,83 @@ mod tests {
         assert_eq!(theirs.len(), 1, "{theirs:?}");
         assert!(past.contains(&theirs[0]), "{theirs:?}");
     }
+
+    /// Core #13's past as `stats`, oldest first, each its base face's `(attack, health)` at its cost,
+    /// in place of the catalog's history (R3538002, the testkit's `register_past_defs`): their ids.
+    fn crafted_past(stats: &[(i32, i32)]) -> Vec<String> {
+        crate::register_all();
+        let defs: Vec<CardDef> = stats
+            .iter()
+            .enumerate()
+            .map(|(at, &(attack, health))| {
+                let mut def = crate::card_def(OLD).clone();
+                def.id = format!("{OLD}{PAST_ID_MARK}v{at}");
+                def.base.attack = Some(attack);
+                def.base.health = Some(health);
+                def
+            })
+            .collect();
+        let ids = defs.iter().map(|def| def.id.clone()).collect();
+        register_past_defs(defs);
+        ids
+    }
+
+    /// The defs p1's three core-013s (lanes 1, 2 and 4) and p2's four (lanes 1 to 4) became.
+    fn turned(radiant: bool, seed: &str) -> (Vec<String>, Vec<String>) {
+        let old = |lane: i32| json!({ "def": OLD, "lane": lane });
+        let mut s = scenario(json!({
+            "seed": seed,
+            "p1": {
+                "hand": [{ "def": ID, "radiant": radiant }, "core-005"],
+                "field": [old(1), old(2), old(4)],
+                "library": ["core-005", "core-005", "core-005", "core-005"],
+                "mana": 4,
+            },
+            "p2": {
+                "hand": ["core-005"],
+                "field": [old(1), old(2), old(3), old(4)],
+                "library": ["core-005", "core-005", "core-005", "core-005"],
+            },
+        }));
+        s.play(ID, json!({ "zone": 3 }));
+        let defs = |player: PlayerId, lanes: &[i32]| -> Vec<String> {
+            lanes.iter().filter_map(|&lane| s.unit(player, lane)).map(|unit| unit.def_id.clone()).collect()
+        };
+        (defs(P1, &[1, 2, 4]), defs(P2, &[1, 2, 3, 4]))
+    }
+
+    #[test]
+    fn r3538003_the_strongest_past_has_the_highest_attack_plus_health_wherever_it_stands() {
+        // A 3/3 then a 1/6, at one cost: 6 against 7, so the later 1/6 (where a product would rank the
+        // 3/3's 9 over its 6).
+        let past = crafted_past(&[(3, 3), (1, 6)]);
+        let mut s = board(true, "true-conservative-strongest");
+        s.play(ID, json!({ "zone": 3 }));
+        assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id.clone()), Some(past[1].clone()));
+    }
+
+    #[test]
+    fn r3538003_radiant_gives_only_its_controllers_units_their_strongest_the_enemys_stay_random() {
+        let past = crafted_past(&[(3, 3), (1, 6), (2, 2)]);
+        let mut theirs: IndexSet<String> = IndexSet::new();
+        for n in 0..5 {
+            let (mine, enemy) = turned(true, &format!("true-conservative-sides-{n}"));
+            assert_eq!(mine, vec![past[1].clone(); 3], "yours, the 1/6");
+            assert!(enemy.iter().all(|def| past.contains(def)), "{enemy:?}");
+            theirs.extend(enemy);
+        }
+        assert!(theirs.len() > 1, "the enemy's are random past versions: {theirs:?}");
+    }
+
+    #[test]
+    fn r3538003_the_base_face_turns_its_controllers_units_into_random_past_versions_too() {
+        let past = crafted_past(&[(3, 3), (1, 6), (2, 2)]);
+        let mut yours: IndexSet<String> = IndexSet::new();
+        for n in 0..5 {
+            let (mine, enemy) = turned(false, &format!("true-conservative-base-sides-{n}"));
+            assert!(mine.iter().chain(&enemy).all(|def| past.contains(def)), "{mine:?} {enemy:?}");
+            yours.extend(mine);
+        }
+        assert!(yours.len() > 1, "yours are random past versions, not the strongest: {yours:?}");
+    }
 }

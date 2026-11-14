@@ -108,8 +108,12 @@
   border-radius: var(--radius-md);
   background: var(--bg-raised);
   color: var(--text);
+  align-self: stretch;
   font: inherit;
   font-family: var(--font-text);
+  font-size: var(--type-md);
+  font-weight: 400;
+  line-height: 1.35;
   text-align: start;
   text-decoration: none;
   cursor: var(--cursor-glove-point, pointer);
@@ -183,6 +187,7 @@
 .tavern.play-screen.play-hub .play-card__line {
   color: var(--tavern-text-dim);
   font-size: var(--type-md);
+  font-weight: 400;
   line-height: 1.4;
 }
 

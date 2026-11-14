@@ -192,6 +192,8 @@ beforeEach(() => {
   vi.mocked(getPopulation).mockResolvedValue({ gamesLastHour: 12, expectedWaitSeconds: { bo1: 30, bo3: null, random: 90 } });
   vi.mocked(getOwnRank).mockResolvedValue(rankBody());
   vi.mocked(getMyLobbies).mockResolvedValue({ lobbies: [] });
+  // R3732002: the co-op lobby panel under the duel's asks whether a co-op game is live.
+  vi.mocked(getDuosLive).mockResolvedValue({ matchId: null });
 });
 
 afterEach(() => {
@@ -427,7 +429,7 @@ describe("R1578000 R3729000 the Play hub", () => {
     expect(screen.queryByTestId(playTestid.queuePanel)).toBeNull();
   });
 
-  it("R1578000 a link card opens its screen inside the app, and Replays and Play together sit under the groups", async () => {
+  it("R1578000 a link card opens its screen inside the app, and Replays and Friends sit under the groups", async () => {
     await renderLobby(null);
 
     for (const [testid, href] of LINKS) expect(screen.getByTestId(testid)).toHaveAttribute("href", href);

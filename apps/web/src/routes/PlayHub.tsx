@@ -198,7 +198,9 @@ export function PlayHub({
     return (
       <button
         type="button"
-        className="play-card"
+        // `link-button` keeps tavern.css's size rule for plain buttons (serif, 700, padding) off a card, which
+        // sizes itself (play-hub.css); its underline and gold are overridden there.
+        className="play-card link-button"
         data-testid={card.testid}
         data-card={card.id}
         data-mode={mode ?? undefined}
@@ -230,7 +232,7 @@ export function PlayHub({
           {t("Replays")}
         </a>
         <a href={paths.together} data-testid={playTestid.together} onClick={followInApp(paths.together)}>
-          {t("Play together")}
+          {t("Friends")}
         </a>
       </nav>
     </div>

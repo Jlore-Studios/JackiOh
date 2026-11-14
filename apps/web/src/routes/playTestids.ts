@@ -14,7 +14,7 @@ export const playTestid = {
   online: "play-online",
   /** #3729, R3729000: the hub, the four groups of cards inside it. */
   hub: "play-hub",
-  /** R3729000: Replays and Play together, under the groups. */
+  /** R3729000: Replays and Friends, under the groups. */
   more: "play-more",
   together: "play-together",
   /** #3727: daily games, badged with how many wait on the player. */

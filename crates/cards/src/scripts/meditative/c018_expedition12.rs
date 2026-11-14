@@ -335,4 +335,56 @@ mod tests {
             assert!(!s.card(MENACE).radiant);
         }
     }
+
+    /// R767000: the script kept for the replays of v0.4.0f and before: "Lose all mana next turn"
+    /// (R844's lost refresh), and Echo 1 on the Radiant face.
+    mod v0_4_0f {
+        use super::*;
+
+        #[test]
+        fn r640_r767000_the_kept_script_is_quickdraw_on_both_faces_and_echo_1_on_the_radiant_one() {
+            crate::register_all();
+            let kept = script_v0_4_0f();
+            for face in [&kept.base, &kept.radiant] {
+                assert_eq!(face.flags().quickdraw, Some(true));
+            }
+            assert_eq!(kept.base.flags().echo, None);
+            assert_eq!(kept.radiant.flags().echo, Some(1));
+        }
+
+        #[test]
+        fn r844_r767000_the_kept_base_face_makes_a_non_radiant_pick_radiant_and_loses_next_turns_refresh() {
+            crate::under_kept(EXPEDITION, script_v0_4_0f(), || {
+                let mut s = board(json!([EXPEDITION, FILLER, { "def": VANILLA, "radiant": true }]));
+                assert_eq!(offered(&s), vec![s.card(FILLER).id.clone()], "only the other non-Radiant card");
+                s.play(EXPEDITION, pick::targets(pick::card(&s, FILLER)));
+                assert!(s.card(FILLER).radiant, "the pick becomes Radiant");
+                assert!(s.state().pending.is_none(), "no Echo on the base face");
+                // No next-turn rider: the whole refresh is lost (R844).
+                assert_eq!(s.state().players.p1.mana.next_turn_mod, 0);
+
+                next_turn(&mut s);
+                assert_eq!(s.state().players.p1.mana.current, 0);
+                next_turn(&mut s);
+                let side = &s.state().players.p1;
+                assert_eq!(side.mana.current, side.mana.max);
+            });
+        }
+
+        #[test]
+        fn r767000_the_kept_radiant_face_echoes_once_with_a_fresh_pick_and_no_cleave() {
+            crate::under_kept(EXPEDITION, script_v0_4_0f(), || {
+                let mut s = board(json!([{ "def": EXPEDITION, "radiant": true }, FILLER, MENACE]));
+                s.play(EXPEDITION, pick::targets(pick::card(&s, FILLER)));
+                assert!(s.card(FILLER).radiant);
+                assert!(!s.card(MENACE).radiant, "no Cleave reaches the card beside the pick");
+                // Echo 1: the repeat asks a pick of its own.
+                assert!(s.state().pending.is_some());
+                let menace = s.card(MENACE).id.clone();
+                s.answer(pick::id(&menace));
+                assert!(s.card(MENACE).radiant);
+                assert!(s.state().pending.is_none());
+            });
+        }
+    }
 }

@@ -4,8 +4,9 @@ import type { RevealAt } from "./RevealAt";
 /**
  * R783004, R1040, R1044: what a card played face-down as a Trap carries until it has revealed — how
  * it reveals (`cloaked`, by its Reveal; the three timings are from before patch v0.3.7), the turn it
- * was set in, the Echo stamped as it was set (none since then, R1045), and, once a set Spell has
- * turned face-up, that its own text now resolves (`revealing`).
+ * was set in, the Echo stamped as it was set (none since then, R1045), and that a set Spell's own text
+ * resolves now (`revealing`): once it has turned face-up as it reveals, or (R3806000) still face-down
+ * as it is set under Meditative #99 Paranoia.
  */
 export type SetAs = { reveal: RevealAt, setTurn: number, 
 /**
@@ -14,6 +15,7 @@ export type SetAs = { reveal: RevealAt, setTurn: number,
  */
 echo?: number, 
 /**
- * R1044: a set Spell has fired and its Spell text is resolving now. Only ever `Some(true)`.
+ * R1044: a set Spell's Spell text is resolving now, as it reveals or (R3806000) as it is set under
+ * Paranoia. Only ever `Some(true)`.
  */
 revealing?: true, };

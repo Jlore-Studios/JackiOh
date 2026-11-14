@@ -2051,6 +2051,9 @@ fn resolve_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
         match part {
             ResolvePart::Quickstriker => quickstriker_combo(sink, run, &card),
             ResolvePart::ComboDraw => combo_draw_step(sink, run),
+            // R783004, R3806000: a card played face-down as a Trap runs no Cry at its play, its text
+            // dormant; only a Spell set under Paranoia resolves its text now, and stays set.
+            ResolvePart::Script if card.set_as.is_some() => crate::alt_play::resolve_at_set(sink, &card),
             ResolvePart::Script => {
                 // B5 E14, R399: a copier resolves the copied Spell's script, itself as "this".
                 let face = text_face_of(sink.state, &card);

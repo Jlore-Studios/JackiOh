@@ -47,7 +47,7 @@ export function screenNameFor(path: string): string | null {
     case paths.replays:
       return "Replays";
     case paths.together:
-      return "Play together";
+      return "Friends";
     case paths.daily:
       return "Daily games";
     case paths.collection:

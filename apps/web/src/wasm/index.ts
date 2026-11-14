@@ -141,6 +141,7 @@ function call<T>(name: string, run: () => T): T {
   try {
     return run();
   } catch (cause) {
+    // Stryker disable next-line ConditionalExpression,StringLiteral: the catch runs only once the module is loaded, which takes WebAssembly, so `typeof WebAssembly !== "undefined"` is always true here (and typeof never answers ""); the panic tests in index.test.ts hold the rest of the condition.
     if (typeof WebAssembly !== "undefined" && cause instanceof WebAssembly.RuntimeError) {
       throw new Error(`the engine panicked in ${name} (the console has its message): ${cause.message}`, { cause });
     }

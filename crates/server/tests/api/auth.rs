@@ -1200,6 +1200,49 @@ mod r1443_username_sign_in {
         );
     }
 
+    /// A lifetime the provider gives as zero seconds is no lifetime: the session answers none.
+    #[tokio::test]
+    async fn r1443_a_zero_second_lifetime_from_the_provider_answers_no_lifetime() {
+        let h = Harness::new().await;
+        h.gotrue.answer_grant(GrantReply::Tokens(json!({
+            "access_token": "access-1",
+            "expires_in": 0,
+            "user": { "id": "e2e-p1", "email_confirmed_at": "2026-10-01T00:00:00Z" },
+        })));
+        let app = h.app().await;
+
+        let (status, text) = sign_in(&app, "e2e_p1", "pw").await;
+        assert_eq!(status, 200, "{text}");
+        assert_eq!(
+            body_of(&text)["session"],
+            json!({ "accessToken": "access-1", "refreshToken": null, "expiresIn": null })
+        );
+    }
+
+    /// R665: the code the session still needs is the first factor that is both an authenticator app
+    /// (`totp`) and verified: not a verified factor of another kind, nor an app still unverified.
+    #[tokio::test]
+    async fn r665_the_second_factor_is_the_first_verified_authenticator_app() {
+        let h = Harness::new().await;
+        h.gotrue.answer_grant(GrantReply::Tokens(json!({
+            "access_token": "access-1",
+            "user": {
+                "id": "e2e-p1",
+                "email_confirmed_at": "2026-10-01T00:00:00Z",
+                "factors": [
+                    { "id": "phone-1", "factor_type": "phone", "status": "verified" },
+                    { "id": "app-unverified", "factor_type": "totp", "status": "unverified" },
+                    { "id": "app-verified", "factor_type": "totp", "status": "verified" },
+                ],
+            },
+        })));
+        let app = h.app().await;
+
+        let (status, text) = sign_in(&app, "e2e_p1", "pw").await;
+        assert_eq!(status, 200, "{text}");
+        assert_eq!(body_of(&text)["secondFactor"], json!("app-verified"));
+    }
+
     #[tokio::test]
     async fn r1443_turns_the_providers_refusal_limit_and_outage_into_ours() {
         let h = Harness::new().await;
@@ -1491,6 +1534,28 @@ mod r665_two_step_sign_in_an_account_with_an_authenticator_app_needs_an_aal2_tok
                 .user_id,
             BOB
         );
+    }
+
+    /// R3074000: a verified token's `aal2` is its session's proof of the second factor, which a strict
+    /// server's admin routes ask for; `aal1`, or no `aal` claim, proves none. The same whether the
+    /// provider's session check or its admin lookup answers.
+    #[tokio::test]
+    async fn r665_only_an_aal2_token_says_its_session_proved_the_second_factor() {
+        let looked_up = Harness::new().await;
+        let checked = with_sessions(|_| UserReply::Live(confirmed_user(ALICE))).await;
+        let cases = [
+            (&looked_up, looked_up.token_at(ALICE, "aal2", None), true),
+            (&looked_up, looked_up.token_at(ALICE, "aal1", None), false),
+            (&looked_up, looked_up.token_for(ALICE), false),
+            (&checked, checked.token_at(ALICE, "aal2", Some("s-1")), true),
+            (&checked, checked.token_at(ALICE, "aal1", Some("s-2")), false),
+            (&checked, checked.session_token_for(ALICE, "s-3"), false),
+        ];
+        for (h, token, proved) in cases {
+            let user = h.auth.verify(&token).await.expect("verifies");
+            assert_eq!(user.second_factor, proved, "{token}");
+        }
+        assert_eq!(checked.gotrue.user_calls(), 3);
     }
 
     #[tokio::test]

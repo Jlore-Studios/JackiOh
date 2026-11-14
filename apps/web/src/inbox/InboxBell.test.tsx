@@ -527,8 +527,7 @@ describe("R3729002 the other kinds in the inbox", () => {
       expect(within(row(panel, "replay")).getByText(/Shared by/)).toBeInTheDocument();
       fireEvent.click(within(row(panel, "replay")).getByTestId(inboxTestid.watch));
       expect(window.location.pathname).toBe("/together");
-      expect(window.location.search).toBe("?replay=m-shared-1");
-      expect(window.location.hash).toBe("#shared");
+      expect(window.location.search).toBe("?section=shared&replay=m-shared-1");
       await waitFor(() => {
         expect(screen.queryByTestId(inboxTestid.panel)).toBeNull();
       }, SOON);

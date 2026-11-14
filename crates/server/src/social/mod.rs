@@ -5,6 +5,7 @@
 //! - `presence`: the heartbeat and each friend's status, `offline`, `online` or `inMatch` (B47); every
 //!   signed-in request counts (R3210000).
 //! - `challenges`: a challenge to a friend (B48, B49).
+//! - `recent`: the opponents of a player's unranked games, never a queue's (R3732000).
 //! - `chat`: messages between friends and retention purge (B53).
 //! - `reads`: `GET /api/social`, the social poll's one read (R3210000).
 //! - `live`: `/ws/social`, over which a tab is told what changed instead of polling (R3214000).
@@ -19,6 +20,7 @@ pub mod friends;
 pub mod live;
 pub mod presence;
 pub mod reads;
+pub mod recent;
 pub mod shares;
 pub mod watch;
 

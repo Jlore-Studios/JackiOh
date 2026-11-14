@@ -83,6 +83,7 @@ export function anomalyClaim(entry: AnimationEntry): SetPieceClaim | null {
 /** The hold the entry plays its rift under, and so its form. */
 function formOf(entry: AnimationEntry): { H: number; form: AnomalyForm } {
   const H = entry.setPiece?.key === ANOMALY_SET_PIECE ? entry.setPiece.holdMs : 0;
+  // Stryker disable next-line StringLiteral: planAnomaly, its one reader, tests the form only against "off" and "full", so a short hold's form named "" plays the "short" branch all the same
   return { H, form: H <= 0 ? "off" : H <= SET_PIECE_SHORT_HOLD_MS ? "short" : "full" };
 }
 
