@@ -16694,15 +16694,8 @@
       "waiting_comment": 6867746613
     },
     "3887": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43542091925",
-        "model": "sonnet",
-        "provider": "claude-3",
-        "since": "2026-11-14T01:51:13Z",
-        "until": "2026-11-14T02:21:13Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -16714,10 +16707,9 @@
         "reason": "planned on sonnet",
         "trail": "e-t-rush']; print(json.dumps(d)[:600])\\nfrom\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; ls apps/web/src/i18n; sed -n 1,80p apps/web/src/i18n/i18n.test.ts; for k in '\\\"Attack\\\"' '\\\"Health\\\"' '\\\"Cost\\\"' '\\\"Radiant\\\"' '\\\"Tags\\\"' '\\\"Ty\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; grep -n \\\"zhCN\\\\b\\\" apps/web/src/i18n/i18n.test.ts | head -30; grep -n \\\"Show card text\\\\|Every card prints its text\\\" -B1 -A1 apps/web/src/i18\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; tail -5 apps/web/src/i18n/zh-CN.json | cut -c1-160; sed -n 222,250p apps/web/src/i18n/i18n.test.ts; grep -n \\\"\\\\\\\"Cost\\\\\\\"\\\\|\\\\\\\"Tags\\\\\\\"\\\\|\\\\\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; grep -n \\\"stats-grid\\\\b\\\\|stats-grid-item\\\\|stats-grid-card\\\\|stats-grid-face\\\\|stats-options\\\\|stats-drilldown-tokens\\\\|stats-drilldown-token\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; sed -n 80,200p apps/web/src/routes/stats.css; sed -n 460,600p apps/web/src/routes/stats.css; sed -n 1,40p apps/web/src/stats/CreatedPanel.test.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; cat apps/web/src/cards/refContext.tsx; sed -n 1,60p apps/web/src/cards/CardRef.tsx; cat apps/web/src/cards/index.ts | head -40\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; sed -n 1,70p apps/web/src/cards/TermTip.tsx; sed -n 60,100p apps/web/src/cards/CardRef.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; grep -rn \\\"x_stats\\\\|xStats\\\" crates/shared/src/face/*.rs | head -8; grep -n \\\"face.stats\\\\|stats\\\\.attack\\\\|stats\\\\.health\\\\|\\\\.tagChips\\\\|typ\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; grep -n \\\"stats-\\\\|card-text\\\" e2e/support/testids.ts | head -40; grep -rn \\\"e2e/support/testids\\\" apps/web/src --include=*.ts* -l | head -3; c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; grep -rn \\\"jackioh.cardText\\\\|CARD_TEXT_KEY\\\" --include=* -r . 2>/dev/null --exclude-dir=node_modules --exclude-dir=target --exclude-dir=.git |\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; grep -n \\\"Adding a ruling\\\" -A40 spec/README.md | head -90; cat spec/rulings/R3874000.md\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; git show --stat 8799056f65 | head -40; ls crates/cards/patches | tail -5; git show --stat 376b8ad082 | head -30\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; grep -n \\\"Show card text\\\\|R3838\\\\|stats\\\" apps/web/README.md | head -20; sed -n 232,243p spec/09-architecture.md | cut -c1-400; grep -n \\\"R332\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; ls apps/web/src/*.test.ts | head -30; grep -rln \\\"readFileSync\\\" apps/web/src/*.test.ts | head; sed -n 1,60p apps/web/src/typography.test.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; sed -n 1,30p apps/web/src/typescale.test.ts; sed -n 1,30p apps/web/src/spacing.test.ts; sed -n 1,25p apps/web/src/palette.test.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; ls apps/web/src/*.css | head -20; grep -n \\\"^ --text-\\\\|--space-[0-9]*:\\\" apps/web/src/typescale.css apps/web/src/spacing.css | head -40; grep \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; grep -n \\\"\\\\-\\\\-type-[a-z0-9-]*:\\\" apps/web/src/typescale.css | head -20; grep -n \\\"\\\\-\\\\-text-dim\\\\|\\\\-\\\\-radiant\\\\|\\\\-\\\\-text:\\\\|\\\\-\\\\-line:\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; grep -rn \\\"^\\\\s*--text-dim:\\\\|^\\\\s*--radiant:\\\\|^\\\\s*--line:\\\" apps/web/src --include=*.css | head; grep -n \\\"tavern.css\\\\|stats.css\\\" apps/web\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; python3 -I - <<'EOF'\\nimport json\\ncards=json.load(open('crates/cards/catalog.json'))\\nfor i in ('core-003','core-098','core-041','core-095','c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; grep -n '\\\"Mentions\\\"\\\\|\\\"Related\\\\|related cards\\\\|\\\"Reference' apps/web/src/i18n/zh-CN.json | head; grep -n \\\"export function setLocale\\\\|exp\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; grep -rn \\\"setLocale(\\\\\\\"zh-CN\\\\\\\")\\\" apps/web/src --include=*.test.tsx | head -5; grep -n \\\"resetLocaleForTests\\\" apps/web/src/routes/*.test.t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; sed -n 250,285p apps/web/src/shop/Shop.test.tsx; sed -n 78,90p apps/web/src/routes/almanac.test.tsx; cat >> .bot-plan.md <<'EOF'\\n\\n## Design d\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; grep -rn \\\"cf-mark\\\\|cf-term\\\" apps/web/src --include=*.css | head -12; grep -n \\\"inspect-printed-text\\\" apps/web/src/cards/inspect/inspect.css\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; sed -n 735,780p apps/web/src/cards/cards.css; sed -n 515,545p apps/web/src/cards/inspect/inspect.css; grep -n \\\"cards.css\\\\|inspect.css\\\" apps/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; sed -n 745,790p apps/web/src/routes/stats.test.tsx; sed -n 1401,1426p apps/web/src/routes/stats.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; grep -n \\\"stats-td--name\\\\|stats-card-name-link\\\\|\\\\.stats-td {\\\" -A8 apps/web/src/routes/stats.css | head -60; sed -n 150,200p apps/web/src/ro\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; ls spec/rulings | grep -E '^R(0279|0654|3324003|3838000|1108000)\\\\.md'; ls spec | head -30; grep -n \\\"^### 10.10\\\\|^### 9.11\\\" spec/*.md | head\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3887; cat >> .bot-plan.md <<'EOF'\\n\\n## Status\\nResearch complete; final plan composed in the final message (sections Goal..Open questions). If cut o\u2026\n- said: **Goal.** The Statistics page's Cards tab gets a **Plain text** on/off button (`aria-pressed`, the Segmented's look, R3324003). The device keeps its state, in its own key, and it never writes the Full-art cards setting or touches a game. While it is on, every card the tab lists prints as text inste\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-13T22:05:28Z",
       "owner_why": "it plans it",
@@ -16730,9 +16722,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-13T21:57:47Z",
       "requested_by": "jgoetzmann",
-      "run_id": "43542091925",
+      "run_id": "pending:a474b140-1794621102",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-14T01:41:23Z",
+      "started_at": "2026-11-14T01:52:04Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 6867742676
@@ -17057,9 +17049,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-14T01:43:08Z",
+    "at": "2026-11-14T01:52:04Z",
     "url": "",
-    "what": "build #3859 on claude-4"
+    "what": "build #3887 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-14T01:39:51Z",
