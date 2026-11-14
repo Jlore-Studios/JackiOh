@@ -17226,8 +17226,14 @@
     "what": "plan #3893 on agy"
   },
   "last_sweep": {
-    "at": "2026-11-14T02:55:10Z",
-    "notes": [],
+    "at": "2026-11-14T02:54:50Z",
+    "notes": [
+      "delivered build #3888 on claude-6 (run 43534217032): blocked",
+      "delivered plan #3893 on agy (run 43532800088): failed",
+      "started plan #3893 on agy (run 43549085697)",
+      "nothing more to start: nothing is queued",
+      "pruned 3 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -17932,7 +17938,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-14T02:48:18Z",
+  "loop_tick": "2026-11-14T02:54:50Z",
   "machine_disk": {
     "issue": null,
     "reading": {
