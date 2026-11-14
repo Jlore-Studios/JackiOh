@@ -14015,24 +14015,13 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "gemini",
-        "built_by": "agy",
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-4",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "provider": "claude-4",
-            "run": "43590932207",
-            "tier": "medium"
-          }
-        ],
-        "sha": "df9970f4fe0a8d18de1dffc7bd2d921d9663da7d",
-        "tiers": {
-          "claude": "medium"
-        }
+        "reviews": [],
+        "sha": "e609ecaa107d4f5b2df3413531e0e1972976a78a",
+        "tiers": {}
       }
     },
     "3903": {
