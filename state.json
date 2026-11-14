@@ -37767,15 +37767,5 @@
     "issue": 2890,
     "pinned": true
   },
-  "usage_spool": {
-    "readings": [
-      "2026-11-14T05:01:31Z,claude-1,ping,before,43559279552,52,2026-11-14T07:20:00Z,,,allowed,100,,",
-      "2026-11-14T05:02:05Z,claude-1,stream,call,43559279552,53,2026-11-14T07:20:00Z,,,allowed,100,,",
-      "2026-11-14T05:33:51Z,claude-1,stream,call,43559279552,57,2026-11-14T07:20:00Z,,,allowed,100,,"
-    ],
-    "runs": [
-      "2026-11-14T06:31:07Z,43559279552,claude-1,opus,revise,3884,hard,built,,32.2,8,3261,246519,1.6247,52,57,,,4,claude-1,resumed,,1"
-    ]
-  },
   "version": 1
 }
