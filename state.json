@@ -17311,13 +17311,14 @@
       "merge_owner": "claude-3",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-8",
       "queued_at": "2026-11-14T03:25:15Z",
-      "run_id": "43551822957",
+      "run_id": "pending:98fac5d2-1794630248",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 250,
-      "started_at": "2026-11-14T03:28:33Z",
+      "started_at": "2026-11-14T04:24:34Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -17723,9 +17724,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-14T04:04:20Z",
+    "at": "2026-11-14T04:24:34Z",
     "url": "",
-    "what": "review #3904 on claude-6"
+    "what": "spot-check #3900 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-14T03:52:14Z",
@@ -37021,7 +37022,15 @@
         "n": 250,
         "pr": 3900,
         "queued_at": "2026-11-14T03:58:26Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "run_id": "pending:98fac5d2-1794630248",
         "sha": "e1787794d902f0ffe9d9cefcc3e0309c94fa4d70",
+        "started_at": "2026-11-14T04:24:34Z",
         "status": "queued",
         "title": "Patch: a Plain text button on the Statistics page that shows each card, and the cards it references, as readable text",
         "tries": 0
