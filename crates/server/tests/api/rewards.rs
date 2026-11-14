@@ -1607,8 +1607,8 @@ mod coop {
         finish_paying(app, result, at).await.is_some()
     }
 
-    /// `finish`, answering what the write that landed paid each person (#1657).
-    async fn finish_paying(app: &App, result: &DuosResult, at: i64) -> Option<[Option<GameEconomy>; 2]> {
+    /// `finish`, answering what the write that landed paid each person (#1657), by seat (R3731003).
+    async fn finish_paying(app: &App, result: &DuosResult, at: i64) -> Option<[Option<GameEconomy>; 4]> {
         let mut t = app.db.begin(None).await.expect("a store transaction begins");
         let landed = finish_match(&mut t, app, &coop_match(), result, at)
             .await
@@ -1683,7 +1683,7 @@ mod coop {
         let off = coop_game_on(economy_app(false).await).await;
         assert_eq!(
             finish_paying(&off, &won_by(Team::A), now_ms()).await,
-            Some([None, None])
+            Some([None, None, None, None])
         );
     }
 

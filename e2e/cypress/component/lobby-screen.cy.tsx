@@ -1,7 +1,8 @@
 // #3730, R3730000: the private lobby screen at every menu size (#3728's `MENU_SIZES`), the first component spec
 // for anything on `/together`. jsdom cannot measure layout, so this mounts the screen in a browser with its
-// reads served from fixtures: a 1v1 lobby as its host and as its guest, and a co-op lobby, each with no
-// sideways scroll and every control at least `--hit-min` (44 px), and a screenshot of each for the pull request.
+// reads served from fixtures: a 1v1 lobby as its host and as its guest, a co-op lobby and a 2v2 as its host
+// (#3731: its two teams, a Move on every seat but the host's), each with no sideways scroll and every control at
+// least `--hit-min` (44 px), and a screenshot of each for the pull request.
 
 import { CATALOG, CATALOG_VERSION } from "@jackioh/cards";
 import { DECK_SIZE } from "@jackioh/engine/config";
@@ -27,6 +28,7 @@ const DECKABLE = Object.values(CATALOG).filter((def) => !def.token && !def.tags.
 const CODE = "K7Q2XM";
 const ANA = { profileId: "p-ana", username: "Ana#1234", status: "online" as const };
 const BO = { profileId: "p-bo", username: "Bo#77", status: "online" as const };
+const ED = { profileId: "p-ed", username: "Ed#42", status: "online" as const };
 
 function view(over: Partial<LobbyView>): LobbyView {
   return {
@@ -66,6 +68,18 @@ const KINDS: readonly { label: string; lobby: LobbyView }[] = [
       seats: [
         { role: "host", player: ANA, state: "chosen", deck: null, random: true },
         { role: "guest", player: BO, state: "ready", deck: "Tide Tempo", random: false },
+      ],
+    }),
+  },
+  {
+    label: "2v2",
+    lobby: view({
+      settings: { format: "2v2" },
+      seats: [
+        { role: "host", player: ANA, state: "ready", deck: "Pyre Control", random: false },
+        { role: "guest", player: BO, state: "chosen", deck: "Tide Tempo", random: false },
+        { role: "guest2", player: ED, state: "chosen", deck: null, random: false },
+        { role: "guest3", player: null, state: "choosing", deck: null, random: false },
       ],
     }),
   },
@@ -152,7 +166,7 @@ describe("#3730 the private lobby at every menu size", () => {
         serveFixtures(kind.lobby);
         cy.mount(<LobbyScreen token="token-1" code={CODE} />);
         cy.get(`[data-testid="${lobbyTestid.code}"]`).should("have.text", CODE);
-        cy.get(`[data-testid="${lobbyTestid.seat}"]`).should("have.length.at.least", kind.lobby.settings.format === "coop" ? 4 : 1);
+        cy.get(`[data-testid="${lobbyTestid.seat}"]`).should("have.length.at.least", kind.lobby.settings.format === "coop" ? 4 : kind.lobby.settings.format === "2v2" ? 3 : 1);
         expectFitAndTargets(size);
         cy.screenshot(`lobby-${kind.label}-${String(size.width)}x${String(size.height)}`, { capture: "viewport" });
       });

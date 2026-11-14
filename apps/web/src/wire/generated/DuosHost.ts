@@ -5,6 +5,7 @@ import type { DuosAwaiting } from "./DuosAwaiting";
 import type { DuosForced } from "./DuosForced";
 import type { DuosJob } from "./DuosJob";
 import type { DuosState } from "./DuosState";
+import type { DuosTeamB } from "./DuosTeamB";
 import type { Fx } from "./Fx";
 
 /**
@@ -20,13 +21,21 @@ acks: { [key in string]: DuosAck },
  */
 panicked: Array<string>, awaiting: DuosAwaiting | null, 
 /**
- * By `HUMAN_SEATS`: whether the person's socket is open.
+ * R3731002: who plays team B, which says whose seats are people's (`DuosTeamB::people`).
  */
-connected: [boolean, boolean], 
+teamB: DuosTeamB, 
 /**
- * By `HUMAN_SEATS`: whether the AI plays the person's seat.
+ * By `slot`: whether the person's socket is open (never an AI team's seat).
  */
-aiPlaying: [boolean, boolean], grace: [DuosArmed | null, DuosArmed | null], mulligan: DuosArmed | null, mulliganExpired: boolean, roundClock: [number, DuosArmed] | null, roundExpired: number | null, promptClocks: [[string, DuosArmed] | null, [string, DuosArmed] | null], promptExpired: [string | null, string | null], 
+connected: [boolean, boolean, boolean, boolean], 
+/**
+ * By `slot`: whether the AI plays the person's seat.
+ */
+aiPlaying: [boolean, boolean, boolean, boolean], 
+/**
+ * By `slot`, as every per-seat array below.
+ */
+grace: [DuosArmed | null, DuosArmed | null, DuosArmed | null, DuosArmed | null], mulligan: DuosArmed | null, mulliganExpired: boolean, roundClock: [number, DuosArmed] | null, roundExpired: number | null, promptClocks: [[string, DuosArmed] | null, [string, DuosArmed] | null, [string, DuosArmed] | null, [string, DuosArmed] | null], promptExpired: [string | null, string | null, string | null, string | null], 
 /**
  * R1047000: the hard ceiling's countdown.
  */

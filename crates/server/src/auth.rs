@@ -1285,6 +1285,8 @@ impl SupabaseAuth {
 const E2E_FIXTURE_ACCOUNTS: &[(&str, &str, &str, &str)] = &[
     ("e2e-p1", "e2e-p1@jackioh.test", "e2e-p1-password", "e2e-token-p1"),
     ("e2e-p2", "e2e-p2@jackioh.test", "e2e-p2-password", "e2e-token-p2"),
+    ("e2e-p3", "e2e-p3@jackioh.test", "e2e-p3-password", "e2e-token-p3"),
+    ("e2e-p4", "e2e-p4@jackioh.test", "e2e-p4-password", "e2e-token-p4"),
     (
         "e2e-pending",
         "e2e-pending@jackioh.test",
