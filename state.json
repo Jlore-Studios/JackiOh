@@ -16538,6 +16538,13 @@
       "failures": 0,
       "feedback_since": "2026-11-13T17:38:27Z",
       "forced": false,
+      "hold": {
+        "ends": "2026-11-14T02:37:18Z",
+        "owner": "claude-1",
+        "since": "2026-11-14T00:37:18Z",
+        "until": "2026-11-14T02:20:00Z",
+        "why": "5-hour usage is 51%, too close to its 40% cap outside its hours to start a long run (it starts under 35%)"
+      },
       "interruptions": 0,
       "issue": 3857,
       "kind": "revise",
