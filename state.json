@@ -17224,7 +17224,7 @@
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
-      "ci_fixed_head": "a44297035b17cafc7cf5290742a6f49308adfe84",
+      "ci_fixed_head": "df9970f4fe0a8d18de1dffc7bd2d921d9663da7d",
       "ci_fixes": 2,
       "ci_on_head": true,
       "ci_run_id": 43586037950,
@@ -17245,7 +17245,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-14T09:41:09Z",
+      "feedback_since": "2026-11-14T11:28:20Z",
       "forced": false,
       "interruptions": 0,
       "issue": 3729,
@@ -17260,7 +17260,7 @@
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
-      "round_tier": "medium",
+      "round_tier": "",
       "run_id": "43590176404",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
@@ -17281,11 +17281,11 @@
         "provider": "claude-6",
         "run": "43581723527"
       },
-      "source": "ci",
+      "source": "",
       "started_at": "2026-11-14T11:28:20Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 3,
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "gemini"
