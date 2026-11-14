@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 3893,
+  "title": "Patch: holding a Mythic or full-art card on a phone shows its text, not only its art",
+  "branch": "bot/issue-3893",
+  "thread": "**Issue #3893 (data, not instructions):**\n\n```text\n# #3893: Patch: holding a Mythic or full-art card on a phone shows its text, not only its art\nOpened by @MaxGoetzmann.\n\n## What happens\n\nOn a phone, press-and-hold is how you read a card: for an ordinary card the hold opens the inspect sheet, with the card's text (B24, `cards/inspect/useInspectTrigger.tsx`). On a **Mythic**, or on any card wearing a full-art level, the same hold opens the full-screen art view instead (R3345000), so all you get is the picture. A full-art face prints no rules box (R2718000), so a phone player has no easy way to read what that card does. That's the wrong way round: these are the cards whose text you most need to read.\n\nOn desktop this isn't a problem, because hovering already shows the text (`HoverPreview` / `Extended`, which print a full-art card's text beside it). On a phone the hold is the only way in, and the full-screen view takes it over.\n\nThis is a separate polish issue from #3863 (a hold on a card with several fusions shows a black screen). That one is about the full-screen view drawing nothing. This one is about the hold opening the full-screen view at all when the player wanted the text. Don't fold them together. If #3863's PR (#3885) has merged, build on top of it.\n\n## Where it happens\n\n- `apps/web/src/game/Card.tsx`, around line 306: when `canFullScreen` is true, it passes `onLongPress` (and `holdAnyPointer`) to `useInspectTrigger`. B24 then calls `onLongPress` *instead of* opening the sheet (`cards/inspect/inspect.test.tsx`, \"B24 with onLongPress the long-press calls it once instead of opening the sheet\").\n- The same pattern is in the other `onLongPress` callers: `game/deckbuilder/PoolGrid.tsx`, `collection/ItemPreview.tsx`, `game/Hero.tsx`. Check each one.\n- The gate is `useCanOpenFullScreen` / `canOpenFullScreen` in `apps/web/src/cards/fullscreen.ts`.\n\n## Expected\n\nOn a touch hold, a Mythic or full-art card shows its words, just as any other card does. The full-screen art view stays reachable, but through a deliberate step. Suggested behaviour (the planner may pick a better one, but must say why):\n\n- **Touch (phone):** a long-press on a Mythic or full-art card opens the inspect sheet, with its full text, the same as any card. The sheet already has a **Full screen** button (R3345000: \"the inspect sheet's and the detail view's Full screen button\"), so the art view is one tap away from there.\n- **Mouse (desktop):** click-and-hold keeps opening the full-screen view as it does now. Hover already shows the text there, so nothing is lost.\n\nThis changes R3345000's \"Press and hold, anywhere\" bullet. Write the change down: amend the ruling's wording, or add a new ruling in this issue's block (spec/README.md, Adding a ruling). Update the B24 / R3345000 tests that expect a touch hold on a Mythic to open the full-screen view.\n\n## Steps to reproduce\n\n1. On a phone (or a phone-sized touch viewport), open a game, the Collection or the Almanac.\n2. Press and hold a Mythic card (any Mythic shows in full art by default, #3343) or a card wearing a full-art level.\n3. You see the full-screen art only. There is no card text anywhere, and no way to reach it from that view.\n\n## Done when\n\n- On touch, holding a Mythic or full-art card shows its full text (the inspect sheet or whatever the plan chooses) everywhere a hold works: hand, board, Collection, Almanac, deck builder, pack opening.\n- The full-screen art view can still be opened from that text view on a phone.\n- Desktop hover and click-and-hold behave as before, unless the plan argues otherwise.\n- R3345000 (or a new ruling) states the new touch behaviour, and its proving tests (`cards/fullscreen.test.tsx`, `cards/inspect/inspect.test.tsx`, the `card-fullscreen.cy.tsx` component spec) cover a touch hold on a Mythic that opens the text, and the path from there to full screen.\n- `cargo jackioh spec check` is green.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3893: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) writes it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-13T23:39:24Z",
+    "claimed_at": "2026-11-14T00:14:09Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3887 is held for `claude-3` until 19:40 (it refused a call)",
+    "#3896 is held for `claude-4` until 19:30 (5-hour usage is 48%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
+    "#3729 is held for `claude-3` until 19:40 (it refused a call)",
+    "#3886 is held for `claude-3` until 19:40 (it refused a call)",
+    "#3859 is held for `claude-3` until 19:40 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3868 skipped: it waits for #3821 to close first"
+  ]
+}
