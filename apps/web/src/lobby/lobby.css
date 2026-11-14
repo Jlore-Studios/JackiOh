@@ -98,7 +98,7 @@
 
 /* R3731000: a seat the host may drag onto another. */
 .lobby-seat[draggable="true"] {
-  cursor: grab;
+  cursor: var(--cursor-glove-grab, grab);
 }
 
 .lobby-seat--ai {
