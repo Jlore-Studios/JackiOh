@@ -765,6 +765,9 @@ export default function Board({
                 ))}
               </div>
             ))}
+            <div className="board-notices" aria-label={t("Notices")}>
+              {boardNotices}
+            </div>
           </div>
 
           <Seat view={view} side="you" highlight={highlight} animating={animating} onClick={onClick} onControl={onControl} pops={pops} notices={notices} emotes={emotes} aside={heroAside?.own} />
@@ -773,7 +776,6 @@ export default function Board({
 
         <div className="control-bar" aria-label={t("Controls")}>
           {boardRail === undefined ? null : <div className="board-rail">{boardRail}</div>}
-          {boardNotices === undefined ? null : <div className="board-notices">{boardNotices}</div>}
           {/* Whose turn, above End turn wherever the controls have a column of their own (board.css
               hides it on a phone held upright, where the shell's banner says it). The banner is the
               live region, so this copy stays out of the accessibility tree. */}

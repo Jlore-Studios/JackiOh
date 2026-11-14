@@ -491,6 +491,8 @@ only asks (`ConfirmConcede`) and Offer draw keeps its words, ⋯ wearing a dot w
 it. A press on a row, ⋯, Escape and Back close the menu, and the menu and the shop are never open together.
 Tablets and desktops keep the buttons in the bar.
 
+**Board notices** (#3868). In-game transient notices (`action-error`, `attack-reason`, `lethal-hint`, `DrawOfferNotice`, match-gone / read-only, practice-unearned) render in an overlay layer (`.board-notices`) positioned over the field (`.field`) near the viewer's side, rather than in normal flow in the control rail. Showing, stacking or clearing notices alters zero board dimensions or flow across desktop, phone portrait and phone landscape viewports. The layer container has `pointer-events: none` so clicks pass through to cards underneath, while interactive buttons and links retain `pointer-events: auto`.
+
 **The phone board's top strip and field badges** (#2932). Only on a phone held upright (`@media
 (max-width: 600px)`, `usePhonePortrait` in `game/phoneBar.ts`); wide screens and a phone held sideways
 are unchanged. A route that has a rail (a match's, a replay's, a watch's: `← Back` and the compact rank
@@ -640,7 +642,7 @@ src/replay/
                   and the sentence each reason shows
   sources.ts      the two sources: the practice worker's `replay` requests, the server's replay routes
   steps.ts        the pages fetched so far, by step; load, prefetch, and the turn moves' search; a clip's ends
-  ReplayPlayer.tsx  Game on a step's view with no legal action (`replay`), the seat's own open prompt read-only and folded (`replayPrompt`, R2211000), the controls in its notice slot;
+  ReplayPlayer.tsx  Game on a step's view with no legal action (`replay`), the seat's own open prompt read-only and folded (`replayPrompt`, R2211000), the controls in its rail slot;
                   `start` and `shareOnOpen` for a result screen's two buttons (R768000)
   ReplayToolbar.tsx  the controls both replays share (#2025): step and turn buttons, Play, the scrubber (the board
                   moves when it is let go), the readout and an actions slot; `replayTestid`, `isTyping`

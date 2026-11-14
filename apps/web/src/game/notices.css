@@ -1,14 +1,16 @@
-/* The table talk around the board: the draw offer's notices (DrawOffer.tsx) are inset into the
-   physical control rail; "Concede this game?" draws through `Dialog.tsx`. The notices use the
+/* The table talk around the board: the draw offer's notices (DrawOffer.tsx) draw in the board
+   notices overlay; "Concede this game?" draws through `Dialog.tsx`. The notices use the
    design tokens, so they read on any theme those tokens describe. */
 
 /* ---- the draw offer ----------------------------------------------------------------------- */
 
-/* The live region is inset into the physical control rail. It remains transparent except for its
-   own buttons, so it never intercepts a card or board control gesture. */
+/* The live region sits in the board notices overlay over the field. It remains transparent except
+   for its own buttons, so it never intercepts a card or board control gesture. */
 .board-notices > .draw-notices {
   width: 100%;
   pointer-events: none;
+  display: flex;
+  justify-content: center;
 }
 
 .draw-toast {

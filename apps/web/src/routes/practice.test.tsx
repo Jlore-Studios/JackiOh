@@ -2397,7 +2397,7 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
       "This game won't earn anything: Claim one of your open practice games before starting another.",
     );
     expect(toast.closest(".board-notices")).not.toBeNull();
-    expect(toast.closest(".control-bar")).not.toBeNull();
+    expect(toast.closest(".field")).not.toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(screen.queryByTestId(practiceTestid.unearned)).toBeNull();
