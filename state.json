@@ -17715,8 +17715,15 @@
     "what": "revise #3884 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-14T09:55:29Z",
-    "notes": [],
+    "at": "2026-11-14T10:02:25Z",
+    "notes": [
+      "#3884: its turn came (it waited 120 minutes for #3880, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway)",
+      "delivered plan #3917 on claude-8 (run 43581778259): planned",
+      "started build #3917 on claude-8 (run 43583589447)",
+      "started revise #3884 on claude-1 (run 43583645292)",
+      "nothing more to start: nothing is queued",
+      "pruned 4 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -18421,7 +18428,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-14T09:55:29Z",
+  "loop_tick": "2026-11-14T10:02:25Z",
   "machine_disk": {
     "issue": null,
     "reading": {
