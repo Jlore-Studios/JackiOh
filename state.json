@@ -13997,6 +13997,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 260,
       "started_at": "2026-11-14T14:10:04Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -33857,9 +33858,33 @@
         "title": "Patch: 2v2 between people in a private lobby: Duos with team B played by two players instead of the AI team",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-4"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "f2ca92ff93eed56a84a6e72451ff5abb4aa57cfc",
+        "issue": 3729,
+        "merged_at": "2026-11-14T15:55:58Z",
+        "n": 260,
+        "pr": 3902,
+        "queued_at": "2026-11-14T15:55:58Z",
+        "sha": "88b1df6f055036f89432a83f6c2d32350fb36242",
+        "status": "queued",
+        "title": "Patch: a Play hub that explains every way to play, and one inbox for everything waiting on you",
+        "tries": 0
       }
     ],
-    "count": 259
+    "count": 260
   },
   "statistics": {
     "at": "2026-11-14T15:53:36Z"
