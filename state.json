@@ -37009,7 +37009,9 @@
           "provider": "claude-3"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-14T04:32:33Z",
         "every": 5,
+        "findings": 0,
         "head": "ec8809f7fd8c35100350d0f9f161cadf05350680",
         "issue": 3887,
         "merged_at": "2026-11-14T03:58:26Z",
@@ -37022,12 +37024,13 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:98fac5d2-1794630248",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/43556508900",
         "sha": "e1787794d902f0ffe9d9cefcc3e0309c94fa4d70",
         "started_at": "2026-11-14T04:24:34Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: a Plain text button on the Statistics page that shows each card, and the cards it references, as readable text",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 250
