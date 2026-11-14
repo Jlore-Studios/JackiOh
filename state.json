@@ -14326,9 +14326,10 @@
       "started_at": "2026-11-14T17:16:55Z",
       "stop_requested": false,
       "strike_log": [
-        "the run failed: RuntimeError: the planner on opus wrote no plan: timed out after 9000s"
+        "the run failed: RuntimeError: the planner on opus wrote no plan: timed out after 9000s",
+        "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
       ],
-      "strikes": 1,
+      "strikes": 2,
       "taken_asks": [],
       "verdict_rounds": 0
     },
