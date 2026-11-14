@@ -16434,14 +16434,10 @@
         "approvals": [],
         "builder": "claude",
         "built_by": "claude-8",
-        "rejections": [
-          "claude"
-        ],
+        "rejections": [],
         "reviews": [],
-        "sha": "059bc2a05bf7b8607639efe876ae458578e9fbc9",
-        "tiers": {
-          "claude": "strong"
-        }
+        "sha": "dd2cbeb029336486a63044fd6cb143c9c95975d8",
+        "tiers": {}
       }
     },
     "3883": {
