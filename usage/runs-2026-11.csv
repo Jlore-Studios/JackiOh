@@ -2179,3 +2179,4 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-14T14:03:19Z,43600592130,agy,gemini-3.8-flash-high,build,3868,medium,built,,26.4,820336,71914,0,,15,29,16,20,1344.8,agy,none,,1
 2026-11-14T14:07:24Z,43592340791,claude-4,sonnet+opus,revise,3902,medium,built,,76.4,4,489,136382,1.4471,2,6,,,5.1,claude-4,fresh,,1
 2026-11-14T14:18:34Z,43595314887,claude-1,opus,plan,3920,hard,interrupted,5-hour cap,104.1,287,73790,22557912,8.0534,0,40,,,2.3,,fresh,,1
+2026-11-14T15:21:21Z,43603441185,claude-4,sonnet+opus,review,3902,medium,approved,,15.6,53,15125,2040874,7.1751,6,22,,,1.1,claude-4,fresh,,3
