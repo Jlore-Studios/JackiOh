@@ -276,7 +276,7 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
     ) +
     section(
       "Known gaps",
-      "<ul><li>A card shown as a button, on the home page, in the Almanac's card pool and in a game's " +
+      "<ul><li>A card shown as a button, on the home page, in the Almanac's card pool, in the Collection and in a game's " +
         "prompts, is named by a short summary that names the card, not by all the text on its face.</li>" +
         "<li>Dragging a card to play it needs a mouse or a touch screen. Choosing the card and then where " +
         "it goes does the same, by click or by Enter on each.</li>" +
