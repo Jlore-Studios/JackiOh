@@ -17657,6 +17657,7 @@
           }
         ],
         "head": "501d9445a030598bfb8ca419685b2cf3f6d1e933",
+        "interruptions": 1,
         "kind": "build",
         "model": "sonnet",
         "provider": "claude-3",
