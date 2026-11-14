@@ -708,24 +708,24 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c019_2_jungle_loser::script_v0_6_0g,
     ),
     (c099_paranoia::ID, "v0.6.0g", c099_paranoia::script_v0_6_0g),
-    // Issue #3800 (R3800003, S+ #104): the last scripts before its fix, kept under v0.6.1b, the newest
+    // Issue #3800 (R3800003, S+ #104): the last scripts before its fix, kept under v0.6.2b, the newest
     // shipped version that ran them.
-    (c037_wardrum::ID, "v0.6.1b", c037_wardrum::script_v0_6_1b),
+    (c037_wardrum::ID, "v0.6.2b", c037_wardrum::script_v0_6_2b),
     (
         c104_tireless_cultivation::ID,
-        "v0.6.1b",
-        c104_tireless_cultivation::script_v0_6_1b,
+        "v0.6.2b",
+        c104_tireless_cultivation::script_v0_6_2b,
     ),
     // Issue #3800 (R3800004): Warp Disruptor's and Warp Disruptor II's answer before its once-a-turn end.
     (
         c023_warp_disruptor::ID,
-        "v0.6.1b",
-        c023_warp_disruptor::script_v0_6_1b,
+        "v0.6.2b",
+        c023_warp_disruptor::script_v0_6_2b,
     ),
     (
         c024_warp_disruptor_ii::ID,
-        "v0.6.1b",
-        c024_warp_disruptor_ii::script_v0_6_1b,
+        "v0.6.2b",
+        c024_warp_disruptor_ii::script_v0_6_2b,
     ),
 ];
 

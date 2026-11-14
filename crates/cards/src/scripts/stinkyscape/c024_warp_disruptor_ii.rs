@@ -79,7 +79,7 @@ fn disruptor_aura(radiant: bool) -> AuraHook {
     })
 }
 
-/// The answer: `once` (R3800004) lets it answer each card once a turn; without it, as through v0.6.1b.
+/// The answer: `once` (R3800004) lets it answer each card once a turn; without it, as through v0.6.2b.
 fn disruptor_with(radiant: bool, once: bool) -> Script {
     let answer = TriggerDef::new(
         "warp-disruptor-ii",
@@ -126,9 +126,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000, R3800004: through v0.6.1b it answered every arrival, a card it had answered this turn
+/// R767000, R3800004: through v0.6.2b it answered every arrival, a card it had answered this turn
 /// included; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_1b() -> CardScripts {
+pub fn script_v0_6_2b() -> CardScripts {
     CardScripts {
         base: disruptor_with(false, false),
         radiant: disruptor_with(true, false),

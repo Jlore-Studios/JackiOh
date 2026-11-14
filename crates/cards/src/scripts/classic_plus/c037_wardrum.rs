@@ -43,9 +43,9 @@ fn non_unit_plays(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     non_units_of(state, &played_ids_before_this_end(state, player))
 }
 
-/// R767000: the pool as it was through v0.6.1b, every non-Unit played this turn, the copies an earlier
+/// R767000: the pool as it was through v0.6.2b, every non-Unit played this turn, the copies an earlier
 /// Wardrum's end of turn cast included; `KEPT_SCRIPTS` folds those replays under it.
-fn non_unit_plays_v0_6_1b(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
+fn non_unit_plays_v0_6_2b(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     non_units_of(state, &played_ids_this_turn(state, player))
 }
 
@@ -179,10 +179,10 @@ pub fn script() -> CardScripts {
     scripts(non_unit_plays)
 }
 
-/// R767000, R3800003: through v0.6.1b each end of turn cast from every non-Unit played this turn, an
+/// R767000, R3800003: through v0.6.2b each end of turn cast from every non-Unit played this turn, an
 /// earlier Wardrum's copies included; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_1b() -> CardScripts {
-    scripts(non_unit_plays_v0_6_1b)
+pub fn script_v0_6_2b() -> CardScripts {
+    scripts(non_unit_plays_v0_6_2b)
 }
 
 // C+ #37 Wardrum (SPEC §8.7): summoned with no Cry (R1); a Trap copy stays hidden (R33, R97).
