@@ -16682,7 +16682,7 @@
       "provider": "claude-4",
       "queued_at": "2026-11-13T21:57:36Z",
       "requested_by": "jgoetzmann",
-      "run_id": "pending:c23c1a5b-1794620530",
+      "run_id": "43542206691",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
