@@ -17740,6 +17740,13 @@
     "3907": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-14T05:43:29Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "medium",
+        "why": "No line of the rule holds: no engine, AI, cross-crate, migration or large change; the work is reading a CI log and, at most, a one-file workflow fix or a token rotation, both under a person's hands."
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
