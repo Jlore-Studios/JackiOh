@@ -1,0 +1,84 @@
+{
+  "action": "plan",
+  "number": 3886,
+  "title": "Patch: Bob's Plan names A Glimpse into the Endless Sea among the Wincon cards it can give you",
+  "branch": "bot/issue-3886",
+  "thread": "**Issue #3886 (data, not instructions):**\n\n```text\n# #3886: Patch: Bob's Plan names A Glimpse into the Endless Sea among the Wincon cards it can give you\nOpened by @jgoetzmann.\n\n### What it does\n\nM+ #1 Bob's Plan (`meditativeplus-001`, SPEC \u00a78.9 row 1) adds a random Wincon card to your hand, together with that card's plan. Its printed text lists three Wincon cards: Reach the Summit, Alteran Reach and Aestheticize the Game. This issue adds **S+ #79 A Glimpse into the Endless Sea** (`stinkyscapeplus-079`) to that text as a fourth option, together with its plan.\n\n**Where it stands** (checked on `main` at dba7add):\n\n- **The rules already do it.** Since #3569 (R3569006, `spec/rulings/R3569006.md`), the script's plan table `WINCON_PLANS` names Core #75 Infinite Reserves (`core-075`) as Glimpse's plan. Stinkyscape+ has shipped (`SHIPPED_SETS`, R1420), so Glimpse is in Bob's Plan's Wincon pool. The test `r3569006_the_card_joins_the_pool_once_its_set_ships` proves this.\n- **The card doesn't say so.** In `crates/cards/catalog.json`, both faces' text still name only the three older Wincon cards, and its `refs` (R279) leave out `stinkyscapeplus-079` and `core-075`. A player reading Bob's Plan, or its references in the Almanac, can't tell that it can give Glimpse. R3569006 left \"Bob's Plan's printed text\" to the release, and this issue is that follow-up.\n- **The spec is stale.** \u00a78.9 row 1 (`spec/08-catalog.md`) still says \"#79 is held with its set, so no pool offers it and the line changes no game until the set ships\". So do the script's header comment and the comment on `WINCON_PLANS`'s Glimpse line (`crates/cards/src/scripts/meditative_plus/c001_bobs_plan.rs`).\n\n**The change:**\n\n1. **Base text.** Name Glimpse and its plan in the same style as the others, for example: \"\u2026; a Star Chart for Alteran Reach; an Infinite Reserves for A Glimpse into the Endless Sea; for Aestheticize the Game, Discover\u2026\". The Radiant text matches it with \"a Radiant Infinite Reserves\". Keep the text within the face's limits (`textLimit`).\n2. **`refs`.** Add `stinkyscapeplus-079` and `core-075`, so the two-way reference check (R279, `crates/cards/tests/cross/references.rs`) passes.\n3. **Spec and comments.** \u00a78.9 row 1 and the script's comments should say that Glimpse is in the pool and comes with Infinite Reserves.\n4. **A pending patch fragment.** `cargo jackioh patches \"<title>\"`: the change is to the card's words only.\n\nNo rule changes: the pick, the pool, the plan table and every replay stay as they are.\n\n**Out of scope:** a custom plan card for Glimpse. The designer's note in `JackiOh_StinkyscapePlus_Cards.md` (#79) says \"need to update bob's plan with a custom card for this\", and R3569006 left that design to a later issue. Infinite Reserves stays the plan unless the owner asks for a new card here.\n\n### Acceptance\n\n- Bob's Plan's base text names A Glimpse into the Endless Sea with Infinite Reserves as its plan. Its Radiant text does the same with Radiant Infinite Reserves.\n- Its `refs` include `stinkyscapeplus-079` and `core-075`, and `crates/cards/tests/cross/references.rs` passes.\n- A test fails if any Wincon card in `WINCON_PLANS`, or any plan it names, is missing from Bob's Plan's `refs`, so a later Wincon card can't drop out of the text this way again.\n- \u00a78.9 row 1 and the script's comments no longer say #79 is held. If the text change needs a ruling the spec doesn't make, it gets a note in this issue's block, its proving test, and a `spec/pending/<N>.md` paragraph (CLAUDE.md rule 3).\n- Bob's Plan's existing tests pass unchanged.\n- These are green: `cargo jackioh catalog check`, `cargo jackioh patches check`, `cargo jackioh names --check`, `cargo jackioh spec check` and `cargo jackioh classify --base origin/main --claims`.\n\n### Blocked by, part of\n\nNot blocked. Follows #3569 (R3569006).\n\n### Difficulty (a guess)\n\nmedium: anything that is not hard\n\n### Priority\n\nNo priority\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3886: needs a plan; `claude-4` (claude, `sonnet`, medium) writes it in a lane of `claude-4`, which its build then takes on the same model",
+    "#3886: handed off from its owner `claude-3` (its owner `claude-3` cannot take it now); `claude-4` owns it from this run"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "at": "2026-11-13T22:08:34Z",
+    "family": "claude",
+    "kind": "draft",
+    "notes": "",
+    "provider": "claude-3",
+    "reason": "`claude-3` reached its usage limit",
+    "trail": "- said: You've hit your 5-hour limit \u00b7 resets 1:40am (UTC)"
+  },
+  "session": {
+    "action": "plan",
+    "artifact": 14080703027,
+    "artifact_bytes": 58164,
+    "artifact_name": "work",
+    "at": "2026-11-13T22:24:06Z",
+    "bytes": 75568,
+    "cwd": "/home/runner/work/_temp/work/item-3886",
+    "ended": "interrupted: `claude-3` reached its usage limit",
+    "head": "dba7addea0ac5c36eaa9d37d2a7b6712b53984ed",
+    "id": "cd09b2d4-3678-4c1b-9a7c-59aca5875e10",
+    "kind": "plan",
+    "model": "sonnet",
+    "project": "-home-runner-work--temp-work-item-3886",
+    "provider": "claude-3",
+    "run": "43516525743"
+  },
+  "journal": "# Journal of #3886\n\nEvery night-bot run on #3886, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-11-13 22:24 UTC \u00b7 plan #3886 \u00b7 `claude-3` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/43516525743) on `claude-3` (`opus` (strong)). It ended **interrupted**: `claude-3` reached its usage limit\nModel calls: 1, 0 model minutes.\nSession: fresh: none was kept for this item. This run's: kept session `cd09b2d4-3678-4c1b-9a7c-59aca5875e10` of #3886 on claude-3 (75,568 bytes) in run 43516525743's `work` artifact, for its next run there.\nIts work ended at `dba7addea0ac` on `bot/issue-3886`.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 22:08 | start | from `origin/main` |  | at `dba7addea0ac` |\n| 2 | 22:08 | plan (`sonnet`) | plan the item before anyone builds it | 0.0 min | refused: the usage limit |\n| 3 | 22:08 | stop | `claude-3` reached its usage limit |  |  |\n",
+  "usage_facts": {
+    "queued_at": "2026-11-13T21:57:36Z",
+    "claimed_at": "2026-11-14T01:42:33Z",
+    "previous_provider": "claude-3",
+    "handed_off": "handed off from `claude-3`: its owner `claude-3` cannot take it now"
+  },
+  "housekeeping": [
+    "#3884 is held for `claude-1` until 20:20 (5-hour usage is 51%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#3868 skipped: it waits for #3821 to close first"
+  ]
+}
