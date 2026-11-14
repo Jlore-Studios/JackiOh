@@ -17600,6 +17600,8 @@
       }
     },
     "3903": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-14T03:23:56Z",
@@ -17613,8 +17615,11 @@
         "trail": "- schedule: {\"DurationSeconds\": 30, \"Prompt\": \"Check typecheck task-419\"}\n- said: Typecheck is running with 8GB heap. Waiting for completion.\n- said: \n- read_file: {\"EndLine\": 148, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3893/apps/web/src/cards/fullscreen.ts\", \"StartLine\": 135}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3893/apps/web/src/cards/fullscreen.ts\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3893 && NODE_OPTIONS=\"--max-old-space-size=8192\" pnpm --dir apps/web typecheck\n- said: \n- schedule: {\"DurationSeconds\": 25, \"Prompt\": \"Check typecheck task-441\"}\n- said: Re-running typecheck. Waiting for completion.\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"5134b7ee-0610-491a-b9b2-71da2fe32730/task-441\"}\n- said: \n- run_command: ps aux | grep tsc\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3893 && pnpm --dir apps/web test src/cards/fullscreen.test.tsx\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"5134b7ee-0610-491a-b9b2-71da2fe32730/task-452\"}\n- said: \n- schedule: {\"DurationSeconds\": 5, \"Prompt\": \"Check vitest fullscreen.test.tsx\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3893 && cargo jackioh spec check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3893 && cargo fmt --check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3893 && cargo jackioh catalog check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3893 && cargo jackioh patches check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3893 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3893 && git diff\n- said: \n- read_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3893/.bot-notes.md\"}\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3893/.bot-notes.md\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3893 && git status\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: holding a Mythic or full-art card on a phone shows its text, not only its art\"} --> ## Summary of Changes On touch devices (phones and tablets), pressing and holding a Mythic card or any card wearing a full-art level (`isFullBleed`) now opens its inspec\u2026"
       },
       "issue": 3893,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-14T03:55:08Z",
         "from_run": "43551311369",
         "gates": [
           {
@@ -17673,8 +17678,15 @@
         "source": "build",
         "until": "2026-11-14T04:21:29Z"
       },
+      "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-14T03:51:29Z",
+      "run_id": "pending:652fe5ab-1794628472",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "started_at": "2026-11-14T03:55:08Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "gemini",
@@ -17732,9 +17744,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-14T03:38:25Z",
+    "at": "2026-11-14T03:55:08Z",
     "url": "",
-    "what": "review #3902 on claude-3"
+    "what": "review #3903 on agy"
   },
   "last_sweep": {
     "at": "2026-11-14T03:44:46Z",
