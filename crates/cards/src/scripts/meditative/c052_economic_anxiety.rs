@@ -66,9 +66,9 @@ mod tests {
     const SCARAB: &str = "core-007";
     /// M #25 Blue-Eyes White Felinor, 12/9 Felinor, immune to tribal tag based hate.
     const WHITE_FELINOR: &str = "meditative-025";
-    /// C #61 Plague Bringer Goliath 7/7 Plague, Trample; C #73 Nurse Cleaver 3/6 untagged, Cleave.
+    /// C #61 Plague Bringer Goliath 7/7 Plague, Trample; an untagged 3/4 with Cleave.
     const GOLIATH: &str = "classic-061";
-    const CLEAVER: &str = "classic-073";
+    const CLEAVER: &str = "stand-in (2) 3/4 Rush, Cleave, Lifesteal R6/8 Charge, Cleave, Lifesteal";
 
     /// `SideSetup.backrow` takes no `radiant` flag: flip the instance directly.
     fn make_radiant(s: &mut Scenario, card: &str) {

@@ -9,6 +9,7 @@ import { FULLSCREEN_HOLD_MS, FULLSCREEN_SLOP_PX } from "./constants.ts";
 import { isFullArtCard, useCardLook } from "./fullArt.ts";
 import { useDefResolver } from "./refContext.tsx";
 import { VERSION_FULL_ART_ID, isFullBleed } from "./versions.ts";
+import { isCoarsePointer } from "./inspect/useInspectTrigger.tsx";
 
 export type FullScreenState = {
   defId: string;
@@ -89,6 +90,11 @@ export type FullScreenTriggerOptions = {
   worn?: boolean;
   enabled?: boolean;
   onOpen?: () => void;
+  /**
+   * R3893000: called when held by touch on a touch screen, instead of opening full-screen art directly.
+   * On phone, a touch hold shows the card's text (InspectSheet or CardDetail), where Full screen can be tapped.
+   */
+  onTouchHold?: () => void;
 };
 
 /**
@@ -131,6 +137,12 @@ export function useFullScreenTrigger(
       startRef.current = { x: e.clientX, y: e.clientY, pointerId: e.pointerId };
       timerRef.current = window.setTimeout(() => {
         timerRef.current = null;
+        const pointerType: string = e.pointerType;
+        const isTouch = pointerType === "touch" || (pointerType === "" && isCoarsePointer());
+        if (isTouch && options.onTouchHold) {
+          options.onTouchHold();
+          return;
+        }
         const current = cardRef.current;
         if (current) {
           openFullScreenArt({

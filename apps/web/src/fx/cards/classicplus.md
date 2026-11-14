@@ -72,12 +72,12 @@ window (#2783); the `/dev/fx` gallery plays every entry.
 | `classicplus-032-1` | Execute | Spell | cast bolt | 0.97 | bolt | the census agrees |
 | `classicplus-032-2` | Brawl | Spell | cast wipe | 1.12 | bolt | kept from #2800: a clear of one side takes wipe |
 | `classicplus-032-3` | Blade Storm | Spell | none: token (each Whirlwind it casts draws its nova) | — | none: vanilla | each Whirlwind it casts draws its own nova |
-| `classicplus-033` | Ivory Tower | Field Spell | cast bless; aura holy side | 1.28 | bolt | its Aura grants Flying and Stack (keywordGranted), which bless reads |
+| `classicplus-033` | Ivory Tower | Field Spell | cast bless; aura holy side | 1.19 | bolt | its Aura grants Flying and Stack (keywordGranted), which bless reads |
 | `classicplus-034` | Memory Leak | Field Spell | cast bind; trigger bind; aura frost lane Tech | 1.45 | bolt | the census predates the motifs of #2786 and #2793; bind reads the hook's commonest own event; its aura is R2787000's example |
 | `classicplus-035` | Rollback | Spell | signature; bespoke rollbackSweep | 1.85 | vanish | R3399000: its signature (#3399), its beats and verdict in the Signatures table below |
 | `classicplus-036` | Conjure Bones | Spell | cast send | 1.28 | none: no motif reads shuffledIn | no census family reads addedToHand and shuffledIn, which send (#2793) reads |
 | `classicplus-036-1` | Bone Storm | Spell | cast lance | 0.97 | lance | the census agrees |
-| `classicplus-037` | Wardrum | Unit | signature; entrance drumLeap; bespoke drumBeat; aura warHeartbeat tile Fire | 1.85 | bolt | R3399000: its signature (#3399), its beats and verdict in the Signatures table below |
+| `classicplus-037` | Wardrum | Unit | signature; entrance drumLeap; bespoke drumBeat; aura warHeartbeat tile Fire | 1.74 | bolt | R3399000: its signature (#3399), its beats and verdict in the Signatures table below |
 | `classicplus-038` | Solarius | Unit | death send | 1.45 | none: no motif reads damageAbsorbed | death: no census family reads addedToHand and shuffledIn, which send (#2793) reads; its death plans nothing on the board until the marker of #2783 reaches it, so the gallery plays it |
 | `classicplus-038-1` | Solarius Prime | Unit | none: token (each Spell it casts draws its own) | — | bolt | each Spell it casts draws its own |
 | `classicplus-039` | Book Worm | Unit | death send; trigger tally | 1.08 | bolt | death: no census family reads addedToHand and shuffledIn, which send (#2793) reads; trigger: its start-of-turn Plague Counter is a counterChanged, which tally reads; its death and trigger plan nothing on the board until the marker of #2783 reaches them, so the gallery plays them |

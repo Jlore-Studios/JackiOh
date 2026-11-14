@@ -4,8 +4,9 @@
 //!
 //! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
 //! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
-//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
-//! file's notes, as they stood:
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). Since issue
+//! #3837 its stats are its own, 2/1 → 4/2 (4/1 → 8/2 until then), set by that balance pass apart from
+//! Core #2's, which moved to (3) 7/1 → 14/2 (R2195003). The Core file's notes, as they stood:
 //!
 //! SPEC §8.1 #2 Speciesist — 4/1 → 8/2 Unit, Human, cost 2.
 //! Base: "Cry: destroy target enemy non-Human unit". Radiant: "Cry: destroy all enemy non-Human
@@ -134,18 +135,19 @@ mod tests {
             s.play("traininggrounds-041", json!({}));
             s.expect_in_zone("core-008", "field");
             s.expect_in_zone("core-020", "field");
-            s.expect_stats("traininggrounds-041", json!({ "attack": 8, "maxHealth": 2 }));
+            s.expect_stats("traininggrounds-041", json!({ "attack": 4, "maxHealth": 2 }));
         }
     }
 
-    /// R2195003: the snapshot plays exactly as core-002, on both faces.
+    /// R2195003: the snapshot plays exactly as core-002, on both faces. Each costs (0) here: since issue
+    /// #3837 the two cards' own costs differ ((2) and (3)), and their play is what this compares.
     #[test]
     fn r2195003_plays_exactly_as_core_002() {
         for radiant in [false, true] {
             crate::expect_plays_as(
                 "core-002",
                 super::ID,
-                |id| json!({ "p1": { "hand": [{ "def": id, "radiant": radiant }] }, "p2": { "field": ["core-025", "core-008", "core-012"] } }),
+                |id| json!({ "p1": { "hand": [{ "def": id, "radiant": radiant, "costOverride": 0 }] }, "p2": { "field": ["core-025", "core-008", "core-012"] } }),
                 |s, id| {
                     let t = s.card("core-025").id.clone();
                     let pick = if radiant { json!({}) } else { json!({ "targets": [{ "pick": "instance", "instanceId": t }] }) };
