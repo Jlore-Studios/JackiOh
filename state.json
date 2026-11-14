@@ -36325,7 +36325,9 @@
           "provider": "claude-6"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-14T01:32:30Z",
         "every": 5,
+        "findings": 0,
         "head": "6dcd69fea799ed04969159e8eabe7813fd7c6638",
         "issue": 3863,
         "last_why": "interrupted: `claude-4` stops mid-call: 5-hour usage is 50%, at or over its 50% cap outside its hours; it resets at 2026-11-14T02:30:00Z",
@@ -36339,12 +36341,13 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:b972f916-1794619475",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/43540462932",
         "sha": "dc91028185efb8afb079aa221025da98a4f43e6d",
         "started_at": "2026-11-14T01:25:00Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: holding down a card with several fusions shows a black screen",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 247
