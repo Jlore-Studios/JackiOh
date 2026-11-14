@@ -16,7 +16,8 @@
 //! #52's Radiant face; issue #3140: Meditative #40, #54 and #81 and Meditative+ #22, whose new Activate, Cry and
 //! draw lines put them over; issue #3138: Classic+ #37 Wardrum and Meditative #20 Aestheticize the Game, whose
 //! new keyword line (Divine Shield, Tradable) makes a seventh line; and Meditative #9's Radiant face, whose Cry
-//! and Aura run to seven lines (R3134001).
+//! and Aura run to seven lines (R3134001). Issue #3920: Stinkyscape+ #4 and #121, whose clamp ran past the
+//! 270 px face, take lines instead.
 //!
 //! Only a face printing its catalog text takes a short form (in play #98 prints its rolled power and a Call
 //! to Chaos "???", `power.rs`). In play the Summit prints only its header and the next Ascent line (#814,

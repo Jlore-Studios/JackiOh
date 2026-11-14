@@ -4,10 +4,11 @@
 //! R34 token cards are copied too; R11 lets a unit-token card sit in a library. R57 a copy is a fresh
 //! instance carrying only the radiant flag. R80 a library never takes a copy past `LIBRARY_CAP` (60),
 //! so no cap check here; R316 reports the refusal as `libraryOverflow`, `copyOf` naming the played card.
-//! R70 a cast is a play too, but not a cast on draw (R2179002). R17 it answers `cardResolved` (§10.5
-//! step 7), never `cardPlayed`, or a Stockpile could draw its own copies; the event carries the
-//! resolved face, since #41 Sheepish transforms a played Unit at step 4. R119: a permanent is on the
-//! field before its own `cardResolved` (step 4), so it starts counting from the next play.
+//! R70 a cast is a play too, but not a cast on draw (R2179002) or from the deck (R3920001). R17 it
+//! answers `cardResolved` (§10.5 step 7), never `cardPlayed`, or a Stockpile could draw its own copies;
+//! the event carries the resolved face, since #41 Sheepish transforms a played Unit at step 4. R119: a
+//! permanent is on the field before its own `cardResolved` (step 4), so it starts counting from the next
+//! play.
 //! ENGINE GAP: `shuffleInto` has no `statsOverride`, so a Fused or Crafted body copies at printed stats,
 //! which R57 says it should keep.
 

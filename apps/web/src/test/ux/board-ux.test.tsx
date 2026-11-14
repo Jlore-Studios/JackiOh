@@ -6,12 +6,16 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { CATALOG } from "@jackioh/cards";
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { LONG_PRESS_MS } from "../../cards/inspect/constants.ts";
+import { INSPECT_CLOSE, INSPECT_SHEET } from "../../cards/inspect/testids.ts";
 import Board from "../../game/Board.tsx";
+import { CatalogContext, lookupFromDefs } from "../../game/catalog.ts";
 import Game from "../../game/Game.tsx";
 import { NO_HIGHLIGHT, type Highlight } from "../../game/contract.ts";
 import { offerDrawControlText } from "../../game/DrawOffer.tsx";
@@ -333,6 +337,37 @@ describe("B26 each hand card sits in a slot and a tap lifts it", () => {
     for (const back of backs) fireEvent.click(back);
 
     expect(opponent.querySelectorAll("[data-lifted]")).toHaveLength(0);
+  });
+
+  it("B26 R3893000 a click in the inspect sheet a held Mythic opened neither lifts nor lowers its hand card", () => {
+    vi.useFakeTimers();
+    try {
+      const view = boardView({
+        you: emptySide("p1", {
+          hero: { health: 30, armor: 0, powers: [heroPower], power: heroPower },
+          hand: [card({ instanceId: "h1", defId: "core-100", cost: 10 }), card({ instanceId: "h2", defId: "core-005" })],
+        }),
+      });
+      render(
+        <CatalogContext.Provider value={lookupFromDefs(CATALOG)}>
+          <Board view={view} highlight={NO_HIGHLIGHT} />
+        </CatalogContext.Provider>,
+      );
+      const held = screen.getByTestId("hand-card-h1");
+      const touch = { clientX: 100, clientY: 100, pointerId: 1, isPrimary: true, button: 0, pointerType: "touch" };
+      fireEvent.pointerDown(held, touch);
+      act(() => {
+        vi.advanceTimersByTime(LONG_PRESS_MS);
+      });
+      fireEvent.pointerUp(held, touch);
+      // The sheet is a portal of the hand card's: its Close bubbles through the card's slot in React.
+      fireEvent.click(screen.getByTestId(INSPECT_CLOSE));
+
+      expect(screen.queryByTestId(INSPECT_SHEET)).toBeNull();
+      expect(slotOf("hand-card-h1")).not.toHaveAttribute("data-lifted");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

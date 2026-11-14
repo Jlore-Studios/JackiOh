@@ -1558,7 +1558,12 @@ pub fn move_to_zone(
     let to_graveyard_or_exile = zone == OffFieldZone::Graveyard || zone == OffFieldZone::Exile;
     let pile_to_pile = (from == ZoneName::Hand || from == ZoneName::Library) && to_graveyard_or_exile;
     let landed = from == ZoneName::Resolving;
-    if (was_on_field || pile_to_pile || landed) && options.keep_state != Some(true) {
+    // R3920000: a card that evolved in a pile (R3566004) and goes on to a hand or a library leaves the
+    // Evolve behind: what arrives is the printed card.
+    let evolved_back = (from == ZoneName::Graveyard || from == ZoneName::Exile)
+        && (zone == OffFieldZone::Hand || zone == OffFieldZone::Library)
+        && instance.evolved == Some(true);
+    if (was_on_field || pile_to_pile || landed || evolved_back) && options.keep_state != Some(true) {
         reset_instance(instance);
     }
     // R766 (#473): and a card that reaches a graveyard or an exile pile from elsewhere costs its printed

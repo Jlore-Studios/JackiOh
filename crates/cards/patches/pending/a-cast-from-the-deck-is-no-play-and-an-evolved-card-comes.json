@@ -1,0 +1,26 @@
+{
+  "title": "Patch: a cast from the deck is no play, and an evolved card comes back from the graveyard as printed",
+  "sources": "#3920",
+  "notes": "Issue #3920: engine and card fixes for the daily super run. A card cast from its deck (S+ #89 Animosity) is a cast and no play, as a cast on draw is: nothing that counts or answers plays takes it, so Core #33 Unstable Clone Machine no longer copies it into an endless deck-cast loop (R3920001; handicapped seed 4517). A card that evolved in a graveyard or an exile pile and goes back to a hand or a library comes back as its printed card (R3920000; handicapped seed 2788). Stinkyscape+ #4 Profe Yates and #121 Toxopid print a cut short form instead of a clamp that ran off a 270 px face. No catalog change: the plays are the families classify finds playing differently in its forced and unforced games.",
+  "player": {
+    "title": "Casts from the deck and evolved cards behave",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "A card cast from your deck, such as Animosity, is no longer counted as a card you played, so Unstable Clone Machine no longer shuffles copies of it into your deck for it to cast again and again.",
+      "A card that evolved in your graveyard or exile and goes back to your hand or deck, such as Stinky Cheese returned by Reminisce, now comes back as its printed card.",
+      "Profe Yates and Toxopid show the start of their text on the card, ending in \"…\", rather than text cut off past the card's edge; the full text is in the preview."
+    ]
+  },
+  "cards": [],
+  "plays": [
+    "core-100",
+    "stinkyscape-041",
+    "stinkyscape-058",
+    "stinkyscape-060",
+    "stinkyscape-061",
+    "stinkyscapeplus-t-terminus-starship-vacuum-psalm"
+  ]
+}

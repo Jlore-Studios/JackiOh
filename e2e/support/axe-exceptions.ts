@@ -50,6 +50,7 @@ export const AXE_EXCEPTIONS: readonly AxeException[] = [
   { route: "/almanac", rule: "label-content-name-mismatch", selector: ".db-card", reason: CARD_FACE_LABEL },
   { route: "/decks", rule: "label-content-name-mismatch", selector: ".db-card", reason: CARD_FACE_LABEL },
   { route: "/decks", rule: "label-content-name-mismatch", selector: ".db-tile", reason: DECK_TILE_LABEL },
+  { route: "/collection", rule: "label-content-name-mismatch", selector: ".collection-card", reason: CARD_FACE_LABEL },
   { route: "/practice board", rule: "label-content-name-mismatch", selector: ".prompt-card", reason: CARD_FACE_LABEL },
   { route: "hotseat board, a unit in play", rule: "target-size", selector: ".log .log-card", reason: LOG_LINE_SIZE },
   // At 390x844 (#1561) the same card buttons. The open deck's strips are not among them: a phone
@@ -57,6 +58,7 @@ export const AXE_EXCEPTIONS: readonly AxeException[] = [
   { route: "/ (phone)", rule: "label-content-name-mismatch", selector: ".landing-fan-card", reason: CARD_FACE_LABEL },
   { route: "/almanac (phone)", rule: "label-content-name-mismatch", selector: ".db-card", reason: CARD_FACE_LABEL },
   { route: "/decks (phone)", rule: "label-content-name-mismatch", selector: ".db-card", reason: CARD_FACE_LABEL },
+  { route: "/collection (phone)", rule: "label-content-name-mismatch", selector: ".collection-card", reason: CARD_FACE_LABEL },
   { route: "/practice board (phone)", rule: "label-content-name-mismatch", selector: ".prompt-card", reason: CARD_FACE_LABEL },
   { route: "/practice board (phone)", rule: "target-size", selector: ".pile--browsable", reason: PILE_BAND_SIZE },
   { route: "hotseat board (phone)", rule: "target-size", selector: ".pile--browsable", reason: PILE_BAND_SIZE },

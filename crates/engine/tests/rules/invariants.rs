@@ -1008,6 +1008,42 @@ fn r3566004_i16_a_card_evolved_in_its_graveyard_keeps_what_its_evolve_gave() {
     only(&i16(&state), &id, &["R78", "damage"]);
 }
 
+/// R3920000: a card that evolved in a graveyard or an exile pile and goes on to a hand or a library leaves
+/// its Evolve behind, so what arrives is the printed card and I16 finds nothing (handicapped fuzz seed 2788:
+/// S+ #6.2 Stinky Cheese, evolved in the graveyard, back in the hand by TG #55 Reminisce).
+#[test]
+fn r3920000_a_card_evolved_in_a_pile_reaches_a_hand_or_a_library_as_its_printed_card() {
+    for from in [ZoneName::Graveyard, ZoneName::Exile] {
+        for to in [OffFieldZone::Hand, OffFieldZone::Library] {
+            let mut state = playing("r3920000");
+            let pile = if from == ZoneName::Graveyard {
+                Zone::Graveyard { player: P1 }
+            } else {
+                Zone::Exile { player: P1 }
+            };
+            let mut cheese = new_instance(&mut state, "fx-2", P1, pile);
+            cheese.evolved = Some(true);
+            cheese.buffs = AttackHealth { attack: 5, health: 5 };
+            cheese.granted_keywords = vec![json_as(json!({ "kind": "Flashback" }))];
+            cheese.stats_override = Some(AttackHealth { attack: 0, health: 0 });
+            if from == ZoneName::Graveyard {
+                state.players[P1].graveyard.push(cheese.clone());
+            } else {
+                state.players[P1].exile.push(cheese.clone());
+            }
+            move_to_zone(&mut state, &mut cheese, to, MoveToZoneOptions::default());
+            let arrived = find_instance(&state, &cheese.id).expect("the card");
+            let at = format!("{from:?} to {to:?}");
+            assert_eq!(arrived.zone.z(), to.zone_name(), "{at}");
+            assert_eq!(arrived.evolved, None, "{at}");
+            assert_eq!(arrived.buffs, AttackHealth { attack: 0, health: 0 }, "{at}");
+            assert!(arrived.granted_keywords.is_empty(), "{at}");
+            assert_eq!(arrived.stats_override, None, "{at}");
+            assert_eq!(i16(&state), Vec::<String>::new(), "{at}");
+        }
+    }
+}
+
 /// One field of R78's reset, given to a card.
 type Give = fn(&mut CardInstance);
 

@@ -247,8 +247,8 @@
       "radiant": "clamp"
     },
     "stinkyscapeplus-004": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": 1,
+      "radiant": 1
     },
     "stinkyscapeplus-007": {
       "base": "clamp",
@@ -302,8 +302,8 @@
       "radiant": "clamp"
     },
     "stinkyscapeplus-121": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": 2,
+      "radiant": 2
     },
     "stinkyscapeplus-123": {
       "base": "clamp",

@@ -765,7 +765,8 @@ export default function Board({
                 ))}
               </div>
             ))}
-            <div className="board-notices" aria-label={t("Notices")}>
+            {/* A group, so its name is allowed on a div that may hold no notice (axe aria-prohibited-attr, spec 38). */}
+            <div className="board-notices" role="group" aria-label={t("Notices")}>
               {boardNotices}
             </div>
           </div>

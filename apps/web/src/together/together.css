@@ -34,6 +34,14 @@
   flex: none;
 }
 
+/* R3732002: on a phone the five tabs wrap onto two rows rather than scroll past the screen's edge. */
+@media (max-width: 600px) {
+  .tavern.together-screen .together-tablist {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
 .tavern.together-screen .together-panels {
   flex: 1 1 auto;
   min-height: 0;

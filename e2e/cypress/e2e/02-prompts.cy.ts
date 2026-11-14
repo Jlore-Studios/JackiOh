@@ -364,10 +364,11 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
 
       cy.answerPrompt("zone", { zones: [{ side: "you", row: "units", lane: 2 }] });
 
-      // §3.1 / R14 rotate the unit-zone ring, including Silas.
+      // §3.1 / R14 rotate the unit-zone ring, including Silas: R3837000 lands him in the opponent's lane 1, and
+      // R3837002's "right" carries him across to seat 1's lane 1.
       cy.fieldCardByName("Silly Silas").then((silas) => {
         cy.get(ts(zoneId("you", "units", 2))).find(ts(cardId(timmy))).should("exist");
-        cy.get(ts(zoneId("you", "units", 3))).find(ts(cardId(silas))).should("exist");
+        cy.get(ts(zoneId("you", "units", 1))).find(ts(cardId(silas))).should("exist");
       });
     });
   });

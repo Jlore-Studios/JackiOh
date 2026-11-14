@@ -77,6 +77,18 @@ describe("R1017000 the face text limit", () => {
     }
   });
 
+  it("B15 R1017000 a clamped face's whole text fits the hover preview's limit, so no face clamps at 270 px", () => {
+    // A clamp cuts the text at the rules box's last line, which holds only while the whole text fits
+    // the preview's limit: past it the clamp ran off the 270 px face (issue #3920, Stinkyscape+ #4, #121).
+    for (const [defId, forms] of Object.entries(SHORT_FORMS)) {
+      for (const radiant of FACES) {
+        if ((radiant ? forms.radiant : forms.base) !== "clamp") continue;
+        const where = `${defId} ${radiant ? "radiant" : "base"}`;
+        expect(overLimit(printed(defId, radiant).full, PREVIEW_TEXT_LIMIT), where).toBe(false);
+      }
+    }
+  });
+
   it("B15 R1017000 the premise: the longest texts (Core's #93, #95 and #98, Classic+ #73, five Meditative cards, Meditative+ #1's Radiant face, two Stinkyscape rows, the held Training Grounds #39 and Stinkyscape+ #4, #61.1, #121 and #142) each print a short form", () => {
     const long = DEFS.flatMap((def) =>
       FACES.filter((face) => printed(def.id, face).full.length > TEXT_TIER_MAX.xl).map(

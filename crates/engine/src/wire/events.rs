@@ -315,9 +315,9 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         exits_from: Option<u32>,
-        /// R2179002: the card was cast by the draw that drew it (Cast on draw), a cast that is no play:
-        /// nothing that counts plays counted it, and no trigger answers this event. Public, as the
-        /// cast is. Only ever `Some(true)`.
+        /// R2179002: the card was cast by the draw that drew it (Cast on draw), or from its deck
+        /// (R3920001), a cast that is no play: nothing that counts plays counted it, and no trigger
+        /// answers this event. Public, as the cast is. Only ever `Some(true)`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         on_draw: Option<bool>,
@@ -369,9 +369,9 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         answer: Option<SpellAnswer>,
-        /// R2179002: the card was cast by the draw that drew it, a cast that is no play: a card whose
-        /// text answers a play ("after you play", "when your opponent plays") passes this event by.
-        /// Public, as the cast is. Only ever `Some(true)`.
+        /// R2179002: the card was cast by the draw that drew it, or from its deck (R3920001), a cast
+        /// that is no play: a card whose text answers a play ("after you play", "when your opponent
+        /// plays") passes this event by. Public, as the cast is. Only ever `Some(true)`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         on_draw: Option<bool>,

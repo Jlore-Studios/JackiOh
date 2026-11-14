@@ -653,6 +653,18 @@ fn price_held(card: &CardInstance) -> Vec<&'static str> {
     ])
 }
 
+/// R636, R3556008: whether an aura gives Windfury: a unit gone by an action's end may have attacked
+/// under one that woke inside it (S+ #63 Overdrive Dome, fuzz seeds 1596, 2217).
+fn aura_gives_windfury(state: &GameState) -> bool {
+    crate::layers::aura_entries(state).iter().any(|entry| {
+        entry
+            .mod_
+            .keywords
+            .as_deref()
+            .is_some_and(|keywords| has_keyword(keywords, KeywordKind::Windfury))
+    })
+}
+
 /// I16: each card's own `zone`, `owner` and `controller` agree with the pile or slot that holds it, and a
 /// card off the field holds none of R78's field-only state or, in a graveyard or an exile pile, R766's
 /// price (§3.2). `find_instance` reads the piles and never `zone`, so the two can drift unseen.
@@ -3133,6 +3145,22 @@ impl InvariantMonitor {
                     forced,
                     instead_of,
                 } => {
+                    // R3139004: the attack before this one inside the action, on a Unit it did not kill, readied an attacker
+                    // whose own `afterAttack` answers it (Core #89 Corpse Eater), as the action's end credits it below; read
+                    // here, since its second attack is counted before the end (daily fuzz seed 11162).
+                    if let Some(attack) = self.attack.as_mut().filter(|attack| {
+                        !attack.killed
+                            && !attack.answered
+                            && !attack.target_id.starts_with(HERO_TARGET_PREFIX)
+                    }) {
+                        attack.answered = true;
+                        let previous = attack.attacker_id.clone();
+                        if find_instance(state, &previous).is_some_and(|attacker| {
+                            crate::scripts::script_of(state, attacker).after_attack.is_some()
+                        }) {
+                            self.credit_kill(&previous);
+                        }
+                    }
                     // R53: a forced attack is not a declaration and spends nothing (nor readies a
                     // transform, R424); its kill may still earn a kill credit (R1869002).
                     self.attack = None;
@@ -3208,7 +3236,12 @@ impl InvariantMonitor {
                         },
                     };
                     // R3550001: a Unit that "can attack N times per turn" declares N attacks.
-                    let per_turn = if self.windfury.get(declarer) == Some(&current) {
+                    // R636, R3556008: one gone by the end may have had an aura's Windfury, read where the action left it.
+                    let gone =
+                        find_instance(state, declarer).is_none_or(|card| card.zone.z() != ZoneName::Field);
+                    let per_turn = if self.windfury.get(declarer) == Some(&current)
+                        || (gone && aura_gives_windfury(state))
+                    {
                         WINDFURY_ATTACKS
                     } else {
                         1

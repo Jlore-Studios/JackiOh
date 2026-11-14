@@ -882,6 +882,8 @@ export const CHAT_JOIN = "chat-join";
 export const FRIENDS_BUTTON = "friends-button";
 export const FRIENDS_BADGE = "friends-badge";
 export const FRIENDS_PANEL = "friends-panel";
+/** `skeletonTestid.root` (apps/web/src/skeleton/Skeleton.tsx): a list still loading. */
+export const SKELETON = "skeleton";
 /** The panel's ✕. */
 export const FRIENDS_CLOSE = "friends-close";
 
