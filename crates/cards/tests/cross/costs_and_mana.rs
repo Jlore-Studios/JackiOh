@@ -14,7 +14,7 @@ use jackioh_engine::testkit::*;
 
 const STOCKPILE: &str = "core-005";
 const VANILLA: &str = "core-008";
-const STAB: &str = "core-070"; // Spiteful Stab: a printed Spell (Flood costs 4 since patch v0.2.0)
+const STAB: &str = "stand-in (3) Spell";
 const SHREDDER: &str = "core-013"; // Jlockeed Shredder-10: a printed Unit
 const MENACE: &str = "core-019";
 const RAPID: &str = "core-010";
