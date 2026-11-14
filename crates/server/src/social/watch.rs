@@ -373,7 +373,8 @@ fn revoke(
 
 /// B50's store checks, in one transaction: `viewer_id` and `friend_id` are friends with neither
 /// blocking the other; `match_id` is live, seats `friend_id` and not `viewer_id`. The match is a row
-/// of `matches` (a 1v1 match) or, when it is none, of `duos_matches`, whose people hold a1 and a2,
+/// of `matches` (a 1v1 match) or, when it is none, of `duos_matches`, whose people hold a1 and a2 (and
+/// b1 and b2 in a 2v2),
 /// and then neither blocks the other with the friend's teammate either, whose duel a watcher is
 /// shown (§13.6, R2881000).
 async fn watchable_in(
@@ -391,11 +392,14 @@ async fn watchable_in(
         let Some(row) = tx.duos_matches_get(match_id).await? else {
             return Ok(None);
         };
-        let seated = |id: &str| row.a1 == id || row.a2 == id;
-        if row.ended_at.is_some() || !seated(friend_id) || seated(viewer_id) {
+        // R3731002: a 2v2's team B people may be watched as team A's are.
+        let Some(seat) = row.seat_of(friend_id) else {
+            return Ok(None);
+        };
+        if row.ended_at.is_some() || row.seat_of(viewer_id).is_some() {
             return Ok(None);
         }
-        let teammate = if row.a1 == friend_id { &row.a2 } else { &row.a1 };
+        let teammate = row.profile_at(seat.teammate());
         let blocked = tx.blocks_between(viewer_id, teammate).await?;
         return Ok((!blocked).then_some(Watched::Duos));
     };

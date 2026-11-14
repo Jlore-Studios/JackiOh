@@ -392,18 +392,19 @@ first, which one email lists. Only the server calls either today (a client reads
 
 The co-op host (`crates/server/src/duos/actor.rs`, fullsend SPEC S4 to S6, B35 to B40) is the twin of the
 1v1 one under the same shapes: `step_duos(host, event, now) -> (host, outputs)` over a serializable
-`DuosHost` holding the `DuosState` of two duels and four seats (a1 and a2 are people, b1 and b2 the AI's).
+`DuosHost` holding the `DuosState` of two duels and four seats (a1 and a2 are people, b1 and b2 the AI's, or
+two more people in a 2v2: `DuosSetup.team_b`, `DuosTeamB`, R3731002; its per-seat arrays are by `slot`).
 `DuosHostEvent` (`arm`, `connected` / `attached` / `hello` / `left` / `disconnected`, `action`, `logged`,
 `timerFired`, `decided`, `rowChecked`, `stop`) and `DuosHostOutput` (`send`, `timer`, `append`, `answer`,
 `greeting`, `refused`, `panicked`, `pushed`, `decide`, `record`, `ceilingDraw`, `checkRow`, `letGo`, `note`)
 read like the 1v1 machine's, and its timers are the `duos*` `TimerKey`s. What it decides:
 
 - **The clocks** (S6, B2, B38): the one mulligan clock over the four mulligans (§13.2, R268), the round
-  clock of a round with a person in it, a prompt clock for a prompt a person holds outside its own round,
+  clock of a round with a person in it (every round of a 2v2), a prompt clock for a prompt a person holds outside its own round,
   each person's disconnect grace (R744) and the hard ceiling (R1047000) with its retry (R776000). An expiry
   hands seats to the AI and logs nothing itself: a lapsed mulligan keeps the hand, a lapsed round answers
   the prompts and ends the turn of each round seat, a lapsed prompt answers that prompt alone.
-- **Who plays a seat** (B36 to B38): b1 and b2 always; a person's seat past its grace (until the person is
+- **Who plays a seat** (B36 to B38): the AI team's b1 and b2 always; a person's seat, on either team, past its grace (until the person is
   back, no loss by disconnect) or in the mode an expiry forced. The pause before every AI action
   (`DUOS_AI_STEP_DELAY_MS`), whether the move needs the AI's search at all (a mulligan kept whole or a
   turn simply ended does not), the move it falls back on and R188's forbidden ones, a refused move
