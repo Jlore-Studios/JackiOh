@@ -12367,6 +12367,7 @@
     "3729": {
       "action": "build",
       "asks": [],
+      "failures": 0,
       "handoff": {
         "at": "2026-11-13T22:10:10Z",
         "family": "claude",
@@ -12389,7 +12390,9 @@
       "planned_by_id": "claude-3",
       "planned_model": "sonnet",
       "planned_tier": "medium",
+      "pr": 3902,
       "provider": "claude-3",
+      "question": "",
       "round_tier": "medium",
       "run_id": "43542147723",
       "runs_on": "ubuntu-latest",
