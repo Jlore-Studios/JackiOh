@@ -36256,6 +36256,7 @@
         "every": 5,
         "head": "6dcd69fea799ed04969159e8eabe7813fd7c6638",
         "issue": 3863,
+        "last_why": "interrupted: `claude-4` stops mid-call: 5-hour usage is 50%, at or over its 50% cap outside its hours; it resets at 2026-11-14T02:30:00Z",
         "merged_at": "2026-11-13T23:52:54Z",
         "n": 245,
         "pr": 3885,
@@ -36266,7 +36267,7 @@
           "provider": "claude-4",
           "tier": "strong"
         },
-        "run_id": "pending:82ed223c-1794615265",
+        "run_id": "",
         "sha": "dc91028185efb8afb079aa221025da98a4f43e6d",
         "started_at": "2026-11-14T00:15:08Z",
         "status": "queued",
