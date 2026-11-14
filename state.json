@@ -17784,10 +17784,12 @@
     "what": "suggestions on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-14T05:34:23Z",
+    "at": "2026-11-14T05:42:20Z",
     "notes": [
-      "#3906: green and waiting for a person to merge it, so `claude-1` gives up its claim on it",
-      "delivered revise #3903 on agy (run 43560065684): built"
+      "delivered plan #3907 on claude-4 (run 43561652127): blocked",
+      "started suggest on claude-1 (run 43562987496)",
+      "nothing more to start: nothing is queued",
+      "pruned 3 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18493,7 +18495,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-14T05:34:23Z",
+  "loop_tick": "2026-11-14T05:42:20Z",
   "machine_disk": {
     "issue": null,
     "reading": {
