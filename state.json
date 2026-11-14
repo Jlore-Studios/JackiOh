@@ -14298,6 +14298,13 @@
     "3920": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "43618949283",
+        "model": "opus",
+        "provider": "claude-3",
+        "since": "2026-11-14T17:16:16Z",
+        "until": "2026-11-14T17:46:16Z"
+      },
       "failures": 1,
       "handoff": {
         "at": "2026-11-14T16:56:48Z",
