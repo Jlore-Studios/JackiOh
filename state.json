@@ -17635,6 +17635,8 @@
       }
     },
     "3906": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-14T03:29:45Z",
@@ -17648,8 +17650,11 @@
         "trail": "ub(crate)`): merged\\n```\\n// duos/rooms.rs (before\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-3899/1136245c-7997-4af7-bf70-a3e6c8d5e4da/tasks/blyfwmqz5.output | tail -40; ps aux | grep -c \\\"[v]itest\\\"\", \"description\": \"Check \u2026\n- Bash: {\"command\": \"git status --short; git diff --stat | tail -3\", \"description\": \"List changed files\"}\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-3899/1136245c-7997-4af7-bf70-a3e6c8d5e4da/tasks/blyfwmqz5.output | tail -40\", \"description\": \"Read vitest results\"}\n- Bash: {\"command\": \"cd apps/web && timeout 600 pnpm exec vitest run src/routes/landing.test.tsx 2>&1 | grep -E \\\"Test Files|Tests |FAIL|\\u00d7|timed out\\\" | head\", \"description\": \"Rerun landing.test.tsx alo\u2026\n- Bash: {\"command\": \"cd apps/web && timeout 600 pnpm exec vitest run src/routes/landing.test.tsx -t \\\"R1017002 across a long visit\\\" --reporter=verbose 2>&1 | grep -E \\\"R1017002|Tests \\\" | head\", \"descriptio\u2026\n- Bash: {\"command\": \"cargo fmt --check >/dev/null 2>&1; F=$?; git diff --exit-code Cargo.lock >/dev/null; L=$?; cat >> /tmp/deadcode-evidence.md <<EOF\\n\\n## Checks\\n- \\\\`cargo fmt --check\\\\`: exit $F, no out\u2026\n- Bash: {\"command\": \"git diff crates/server/src/lobby/mod.rs crates/server/src/actor/rooms.rs crates/server/src/api/decks.rs crates/server/src/duos/rooms.rs crates/server/src/db/pg.rs | grep \\\"^[-+]\\\" | grep\u2026\n- said: Nothing failed because of my changes, with one caveat. In the broad web run, one landing test timed out under load. It passes when rerun alone (details under Checks). Three of the 18 Part A items are kept, not deleted, because deleting them would delete a ruling's only proof or tests that cover mor\u2026\n- said: The subagent is done. Before I take its work I'm checking it myself, starting with the parts that look unusual.\n- Bash: {\"command\": \"git diff apps/web/src/routes/invite.test.tsx apps/web/src/routes/invite.tsx | head -80\", \"description\": \"Review the formatInviteCode removal\"}\n- Bash: {\"command\": \"git diff crates/server/src/api/series.rs crates/server/src/api/decks.rs crates/server/src/lobby/mod.rs crates/server/src/actor/rooms.rs crates/server/Cargo.toml crates/engine/src/catalog\u2026\n- Bash: {\"command\": \"git grep -nw \\\"ensure_series_game\\\" -- crates | cut -c1-120 | head; git grep -n \\\"\\\\.engine_state()\\\" -- crates | cut -c1-100 | head -4; git diff --stat | tail -3\", \"description\": \"Verif\u2026\n- Bash: {\"command\": \"cargo jackioh spec check 2>&1 | tail -2; cargo fmt --check && echo FMT-OK; git diff --exit-code --stat Cargo.lock && echo LOCK-UNCHANGED\", \"description\": \"Rerun spec check, fmt and the l\u2026\n- Bash: {\"command\": \"(timeout 3000 cargo clippy --workspace --all-targets -- -D warnings > /tmp/clippy.log 2>&1; echo \\\"EXIT $?\\\" >> /tmp/clippy.log); tail -5 /tmp/clippy.log\", \"description\": \"Run clippy ove\u2026\n- Bash: {\"command\": \"git rev-parse --short origin/main 2>&1; (timeout 2400 pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/card\u2026\n- Bash: {\"command\": \"timeout 1200 pnpm exec eslint apps/edge apps/web e2e 2>&1 | tail -10; echo \\\"ESLINT EXIT ${PIPESTATUS[0]}\\\"; timeout 900 pnpm --dir apps/web typecheck 2>&1 | tail -5; echo \\\"TSC EXIT ${P\u2026\n- said: Lint and typecheck are clean. While the web run goes, I'm running `classify --claims`, which the PR's CI runs as `rust (classify)`.\n- Bash: {\"command\": \"timeout 2400 cargo jackioh classify --base origin/main --claims 2>&1 | tail -25\", \"description\": \"Run the change classifier with its fragment claims\", \"timeout\": 2500000}\n- Bash: {\"command\": \"grep -n \\\"classify\\\" crates/tools/README.md | head -12 | cut -c1-260\", \"description\": \"Read how classify reports its kind\"}\n- Bash: {\"command\": \"sed -n 25p crates/tools/README.md | cut -c1-2500\", \"description\": \"Read the classify command's description\"}\n- Bash: {\"command\": \"sha=$(git stash create \\\"classify-3899\\\"); echo $sha; git stash list | head -3; timeout 2400 cargo jackioh classify --base origin/main --head $sha --claims 2>&1 | tail -15; echo \\\"EXIT $\u2026\n- Bash: {\"command\": \"timeout 600 cargo jackioh classify --base origin/main --head 8a025923d7a0dff1c496a102e47434e57185ad5e 2>&1 | tail -15\", \"description\": \"Run stage 1 of classify on the working tree\", \"tim\u2026\n- Bash: {\"command\": \"until grep -q \\\"^EXIT\\\" /tmp/web-changed.log; do sleep 10; done; grep -E \\\"Test Files|Tests |FAIL|\\u00d7|EXIT\\\" /tmp/web-changed.log | head -20\", \"description\": \"Wait for the changed-fil\u2026\n- said: The harness's web run passes (422 files, 8537 tests). It leaves out `src/audio` and `src/fx`, and the merges touched both, so I'm running those suites separately.\n- Bash: {\"command\": \"cd apps/web && timeout 1500 pnpm exec vitest run src/audio src/fx/cues.test.ts src/fx/cues 2>&1 | grep -E \\\"Test Files|Tests |FAIL|\\u00d7\\\" | head -10\", \"description\": \"Run the audio and\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3899 && git status --short | grep -v \\\"^ M\\\" ; git worktree list | head; git diff --stat | tail -1\", \"description\": \"Check for stray files and extra \u2026\n- Bash: {\"command\": \"for n in createRoom cancelRoom getOpenRooms roomModeOf getDuosRoom cancelDuosRoom roomLinkUrl coopLinkUrl isDailyMode nextYourMove formatInviteCode topCards logIsEmpty resetTutorialProgr\u2026\n- Bash: {\"command\": \"git grep -nw \\\"DuosRoom\\\" -- apps | head -3 | cut -c1-140; git grep -nw \\\"assuranceLevel\\\" -- apps | head -3 | cut -c1-140; git grep -nw \\\"json_text\\\" -- crates | head -3 | cut -c1-140; \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/home/runner/work/_temp/work/item-3899/.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## State'); j=s.index('## Goal')\\nnew='''## State\\n\\nRun 2 (build, opus), 2026-1\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: audit the codebase for dead code, duplicates and zombie routes, 2026-11-14\"} --> This audit fixes four mismatches, each with a test that failed before its fix. It removes 19 dead TypeScript exports and one dead Rust type, merges 8 pairs of duplicated he\u2026"
       },
       "issue": 3899,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-14T05:07:45Z",
         "from_run": "43551918031",
         "gates": [
           {
@@ -17752,7 +17757,11 @@
         "source": "build",
         "until": "2026-11-14T05:36:48Z"
       },
+      "pending_request": false,
+      "provider": "claude-1",
       "queued_at": "2026-11-14T05:06:48Z",
+      "run_id": "pending:05de132d-1794632840",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -17771,6 +17780,9 @@
         "provider": "claude-1",
         "run": "43551918031"
       },
+      "started_at": "2026-11-14T05:07:45Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -17784,9 +17796,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-14T04:59:05Z",
+    "at": "2026-11-14T05:07:45Z",
     "url": "",
-    "what": "revise #3884 on claude-1"
+    "what": "review #3906 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-14T04:57:34Z",
