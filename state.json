@@ -17683,13 +17683,10 @@
     "what": "revise #3902 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-14T11:44:27Z",
+    "at": "2026-11-14T11:54:25Z",
     "notes": [
-      "delivered review #3902 on claude-4 (run 43590932207): reviewed",
-      "delivered review #3918 on claude-8 (run 43588932488): approved",
-      "started revise #3880 on claude-6 (run 43591716921)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "started revise #3902 on claude-4 (run 43592340791)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -18395,7 +18392,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-14T11:44:27Z",
+  "loop_tick": "2026-11-14T11:54:25Z",
   "machine_disk": {
     "issue": null,
     "reading": {
