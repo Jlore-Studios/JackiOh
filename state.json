@@ -14355,7 +14355,7 @@
     "what": "build #3868 on agy"
   },
   "last_sweep": {
-    "at": "2026-11-14T13:48:51Z",
+    "at": "2026-11-14T13:55:00Z",
     "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15061,7 +15061,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-14T13:48:51Z",
+  "loop_tick": "2026-11-14T13:55:00Z",
   "machine_disk": {
     "issue": null,
     "reading": {
