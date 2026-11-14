@@ -12492,8 +12492,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-8",
-      "owner_since": "2026-11-14T01:33:27Z",
-      "owner_why": "it took it up; its own review was handed off to its final audit: `claude-4` is busy: its lanes are all taken",
+      "owner_since": "2026-11-14T06:23:56Z",
+      "owner_why": "its turn came (it waited 120 minutes for #3902, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-13T18:21:04Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -17206,14 +17206,14 @@
       "forced": false,
       "interruptions": 0,
       "issue": 3731,
-      "kind": "review",
+      "kind": "revise",
       "last_findings": [],
       "live": "reviewing",
       "merge_owner": "claude-8",
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
-      "queued_at": "2026-11-14T02:33:51Z",
+      "queued_at": "2026-11-14T06:23:56Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
       "run_id": "43547095438",
@@ -17236,10 +17236,17 @@
         "provider": "claude-8",
         "run": "43547095438"
       },
-      "source": "",
+      "source": "conflict",
       "started_at": "2026-11-14T02:34:47Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-14T06:23:56Z",
+        "until": "2026-11-14T06:53:56Z",
+        "why": "it waited 120 minutes for #3902, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway"
+      },
       "verdict_rounds": 2,
       "votes": {
         "approvals": [
@@ -17261,18 +17268,7 @@
           "claude": "strong"
         }
       },
-      "waiting_comment": 6868261463,
-      "waiting_turn": {
-        "behind": [
-          3902
-        ],
-        "ends": "2026-11-14T06:23:37Z",
-        "from_run": "43547095438",
-        "head": "31f783883afe8637c5767d9b757d912d8de8cf4f",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-14T04:23:37Z"
-      }
+      "waiting_comment": 6868261463
     },
     "3899": {
       "action": "build",
