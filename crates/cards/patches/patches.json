@@ -25584,5 +25584,29 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.6.2c",
+    "date": "2026-11-14",
+    "title": "Patch: holding a Mythic or full-art card on a phone shows its text, not only its art",
+    "source": "#3893",
+    "notes": "On touch devices (phones and tablets), pressing and holding a Mythic card or any card wearing a full-art level opens its inspect sheet or card detail view with its full rules text, glossary, and metadata, rather than directly opening the full-screen art view. The full-screen art view remains reachable via the Full screen button in that text view, while desktop click-and-hold continues to open the full-screen art view directly (R3893000).",
+    "player": {
+      "title": "Holding a Mythic or full-art card on a phone shows its text",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "On a touch screen, holding a Mythic or full-art card opens its inspect sheet or detail view with its full text; its full-screen art view remains reachable from there."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "6e1e76efe77a7b6f9759d59dca1c140145c28966"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]
