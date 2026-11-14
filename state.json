@@ -16377,7 +16377,7 @@
       }
     },
     "3881": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "ci_early": true,
@@ -16403,10 +16403,12 @@
       },
       "interruptions": 0,
       "issue": 3837,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "revising",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-14T03:27:55Z",
         "from_run": "43538902618",
         "gates": [
           {
@@ -16506,7 +16508,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
-      "run_id": "43538902618",
+      "run_id": "pending:5d84fdaf-1794626850",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -16527,7 +16529,7 @@
         "run": "43538902618"
       },
       "source": "",
-      "started_at": "2026-11-14T01:09:59Z",
+      "started_at": "2026-11-14T03:27:55Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -17610,9 +17612,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-14T03:23:56Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/43551311369",
-    "what": "build #3893 on agy"
+    "at": "2026-11-14T03:27:55Z",
+    "url": "",
+    "what": "review #3881 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-14T03:04:05Z",
