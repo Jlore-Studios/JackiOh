@@ -4280,5 +4280,8 @@
   "In a game · turn {turn}": "对局中 · 第 {turn} 回合",
   "In a series": "系列赛中",
   "In a lobby": "在大厅里",
-  "Last seen {when}": "最后在线：{when}"
+  "Last seen {when}": "最后在线：{when}",
+  "Plain text": "纯文本",
+  "Every card prints as plain text, with no face": "每张卡牌都以纯文本显示，不显示牌面",
+  "Reference cards": "相关卡牌"
 }
