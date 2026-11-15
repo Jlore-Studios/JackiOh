@@ -15357,6 +15357,8 @@
       }
     },
     "3991": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-15T20:24:01Z",
@@ -15370,8 +15372,11 @@
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -30; sed -n 425,450p apps/web/src/routes/match.tsx; sed -n 490,520p apps/web/src/routes/match.tsx\"}\n- bash: {\"command\": \"true\"}\n- tool error: <tool_use_error>Error: No such tool available: bash. Tool names are case-sensitive: call Bash instead.</tool_use_error>\n- said: Apply the source edit.\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3933/apps/web/src/routes/match.tsx\", \"old_string\": \" if (watching !== null && view.result !== null) {\\n // #3698: the replay nam\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3933/apps/web/src/routes/match.tsx\", \"old_string\": \" trackStats\\n wearCosmetics\\n deckCosmetics={deckCosmetics}\\n loadouts={load\u2026\n- Bash: {\"command\": \"cat spec/rulings/R3855000.md; ls spec/pending 2>&1 | head; grep -n \\\"The hero each seat plays is a portrait\\\" spec/10-engine-guide.md | cut -c1-80; rg -n 'hero-you|hero-opponent|data-tes\u2026\n- Bash: {\"command\": \"sed -n 100,120p apps/web/src/game/Hero.tsx; sed -n 325,336p apps/web/src/game/Hero.tsx; sed -n 215,235p apps/web/src/game/Hero.tsx; sed -n 140,205p apps/web/src/routes/match.tsx; sed -n \u2026\n- Bash: {\"command\": \"sed -n 957,1012p apps/web/src/routes/match.test.tsx; rg -n '\\\"hero-you\\\"|hero-\\\\$\\\\{' apps/web/src | head -5\"}\n- Bash: {\"command\": \"sed -n 60,99p apps/web/src/game/Hero.tsx; rg -n 'hero-opponent|hero-you' apps/web/src --glob '*.tsx' | head\"}\n- said: Good. Add the tests after the R169 describe.\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3933/apps/web/src/routes/match.test.tsx\", \"old_string\": \"describe(\\\"R2990004 the watchers' emotes at the online table\\\", () => {\u2026\n- Bash: {\"command\": \"mkdir -p spec/pending\\ncat > spec/rulings/R3933000.md <<'EOF'\\n---\\nid: R3933000\\ntitle: \\\"The online 1v1 board's opponent hero reads the opponent's username, as the daily board's and th\u2026\n- Monitor: {\"query\": \"select:Monitor\", \"max_results\": \"1\"}\n- tool error: <tool_use_error>InputValidationError: Monitor failed due to the following issue: The required parameter `description` is missing This tool's schema was not sent to the API \u2014 it was not in the discove\u2026\n- said: That was a wrong call. The test run will notify me when it finishes, so I'll wait for that.\n- Bash: {\"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-3933/57c898e6-e6cc-496c-afd2-3ec022daeae9/tasks/b4gqougns.output ]; do sleep 5; done; tail -30 /tmp/claude-1001/-home-runner\u2026\n- said: All 82 tests pass. Now I'll check that the new test fails without the change, then run the remaining checks.\n- Bash: {\"command\": \"cp apps/web/src/routes/match.tsx /tmp/match.tsx.bak\\nsed -i '/enemyLabel: opponentName/d' apps/web/src/routes/match.tsx\\npnpm --dir apps/web exec vitest run src/routes/match.test.tsx -t \u2026\n- Bash: {\"command\": \"pnpm --dir apps/web typecheck 2>&1 | tail -5; pnpm exec eslint apps/web/src/routes/match.tsx apps/web/src/routes/match.test.tsx 2>&1 | tail; cargo fmt --check 2>&1 | tail -3; cargo jacki\u2026\n- Bash: {\"command\": \"git status --short; git diff apps/web/src/routes/match.tsx | head -40\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the online 1v1 board names the opponent's hero by username, as the daily board and the match's replay already do\"} --> In a live online 1v1 match, the opponent hero's seat label now reads the opponent's username from the ranks read (for example `Bob#12`\u2026"
       },
       "issue": 3933,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-15T21:21:52Z",
         "from_run": "43757863983",
         "gates": [
           {
@@ -15463,7 +15468,11 @@
         "source": "build",
         "until": "2026-11-15T21:50:45Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-15T21:20:45Z",
+      "run_id": "pending:23f5aa20-1794777686",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15482,6 +15491,9 @@
         "provider": "claude-8",
         "run": "43757863983"
       },
+      "started_at": "2026-11-15T21:21:52Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15495,9 +15507,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-15T21:10:22Z",
+    "at": "2026-11-15T21:21:52Z",
     "url": "",
-    "what": "review #3989 on claude-8"
+    "what": "review #3991 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-15T21:07:59Z",
