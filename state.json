@@ -16414,6 +16414,14 @@
         "sha": "50a00143cba3abf814a6a88fee2c1e9954e91134",
         "tiers": {}
       }
+    },
+    "3967": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-15T09:12:51Z",
+      "issue": 3842,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
