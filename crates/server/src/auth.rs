@@ -312,9 +312,7 @@ impl AdminAuthClient {
             .header("apikey", &self.secret_key)
             .header("authorization", format!("Bearer {}", self.secret_key))
             .header("accept", "application/json")
-            .timeout(Duration::from_millis(
-                AUTH_PROVIDER_TIMEOUT_SECONDS as u64 * MS_PER_SECOND as u64,
-            ))
+            .timeout(Duration::from_secs(AUTH_PROVIDER_TIMEOUT_SECONDS as u64))
             .send()
             .await
         {
@@ -351,9 +349,7 @@ impl AdminAuthClient {
             .header("authorization", format!("Bearer {}", self.secret_key))
             .header("accept", "application/json")
             .json(&json!({ "should_soft_delete": false }))
-            .timeout(Duration::from_millis(
-                AUTH_PROVIDER_TIMEOUT_SECONDS as u64 * MS_PER_SECOND as u64,
-            ))
+            .timeout(Duration::from_secs(AUTH_PROVIDER_TIMEOUT_SECONDS as u64))
             .send()
             .await
         {
@@ -962,9 +958,7 @@ impl SupabaseAuth {
             // The session check (R194) sits in front of API requests: a provider that hangs must cost
             // them a bounded wait, `AUTH_SESSION_CHECK_TIMEOUT_SECONDS` and not the sign-in grant's
             // longer one, after which the answer is "unavailable" and the identity stands (R3209000).
-            .timeout(Duration::from_millis(
-                AUTH_SESSION_CHECK_TIMEOUT_SECONDS as u64 * MS_PER_SECOND as u64,
-            ))
+            .timeout(Duration::from_secs(AUTH_SESSION_CHECK_TIMEOUT_SECONDS as u64))
             .send()
             .await
         {
@@ -1220,9 +1214,7 @@ impl SupabaseAuth {
             .header("authorization", format!("Bearer {}", self.secret_key))
             .header("accept", "application/json")
             .json(&json!({ "email": email, "password": password }))
-            .timeout(Duration::from_millis(
-                AUTH_PROVIDER_TIMEOUT_SECONDS as u64 * MS_PER_SECOND as u64,
-            ))
+            .timeout(Duration::from_secs(AUTH_PROVIDER_TIMEOUT_SECONDS as u64))
             .send()
             .await
         {
