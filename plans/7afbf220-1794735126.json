@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3957,
+  "title": "Patch: the account screen fills or drops its empty \"This season\" heading, shows the rank crest, and keeps match history's tap areas apart",
+  "branch": "bot/issue-3957",
+  "thread": "**Issue #3957 (data, not instructions):**\n\n```text\n# #3957: Patch: the account screen fills or drops its empty \"This season\" heading, shows the rank crest, and keeps match history's tap areas apart\nOpened by @squishy-squooby.\n\nA follow-up to the account screen (#3733, merged in #3861), found in its device-size screenshots. Part of the tracker #3726.\n\n### What happens\n\n- **Overview, every size over 600 px:** the \"This season\" heading has nothing under it; \"All time\" follows at once. ([shot](https://raw.githubusercontent.com/Jlore-Studios/JackiOh/89d964e0dc1ba0824859c9a872cf3c54aee47285/3733-account/account-1280x720-desktop.png))\n- **Header, and the Play hub's Online cards (#3729), every size:** the rank crest beside \"Raisin\" is nearly invisible, a dark outline on a dark ground. ([account](https://raw.githubusercontent.com/Jlore-Studios/JackiOh/89d964e0dc1ba0824859c9a872cf3c54aee47285/3733-account/account-1280x720-desktop.png), [Play hub](https://raw.githubusercontent.com/Jlore-Studios/JackiOh/89d964e0dc1ba0824859c9a872cf3c54aee47285/3729-play-inbox/play-1280x720-desktop.png))\n- **Match history, iPad sizes:** the full-width \"All replays\" link's tap area covers the last row's \"Watch replay\".\n- **Match history, 820 and 744:** each row's date wraps onto a second line.\n\nAll 14 shots: https://github.com/Jlore-Studios/JackiOh/pull/3861#issuecomment-6892235451.\n\n### What should happen\n\nAt every device size in #3726: \"This season\" shows this season's record when there is one, and is left out when there is none (as the ranked line already does, `account.test.tsx` around line 421). The rank crest reads clearly on the dark ground wherever it is drawn. No tap area covers another control. A history row's date stays on one line at 820 and 744, or the row lays out so a wrap reads cleanly.\n\n### Where\n\n`apps/web/src/routes/account.tsx`, `accountSections.ts`, `account.css`; the crest is `apps/web/src/rank/RankCrest.tsx` and `rankCrest.css`, shared with `apps/web/src/routes/PlayHub.tsx`.\n\n### Tests\n\nCases that fail without the fix: in `apps/web/src/routes/account.test.tsx`, a player with no games this season sees no \"This season\" heading, and one with games sees it with their record. For the tap areas, a check in the spec that renders the account screen at `MENU_SIZES` (spec 47's `hitAreaProblems` or an overlap check). Keep the existing account tests passing.\n\nI'll take the device-size screenshots for the pull request once it merges.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3957: needs a plan; `claude-7` (claude, `sonnet`, medium) writes it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T09:23:36Z",
+    "claimed_at": "2026-11-15T09:32:23Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
