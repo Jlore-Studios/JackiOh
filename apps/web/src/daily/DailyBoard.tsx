@@ -8,8 +8,9 @@
 // Only the player holding the move sends anything but a concede (§9.13: the server answers anything else
 // `not_your_move`). "End turn automatically" (R345), which `Game.tsx` sends once whenever the setting and the
 // view differ, whoever's turn it is, is held until the move is the player's and sent then if it still differs.
-// It is held through the mulligan too, where both seats hold the move (R3727002): sent then, it would add a row to
-// the game's log under the other seat's keep, which would answer `stale` (#3841).
+// It is held through the mulligan too, where both seats hold the move (R3727002): sent on the board's own, it would
+// add a row to the game's log under the other seat's keep, which would answer `stale`. It goes out just before the
+// player's own keep or mulligan instead, so it is in the game before the mulligan's last answer starts a turn (#3841).
 //
 // The clock pill (`DailyClockPill.tsx`) says who holds the move and how long it has left. Once the move has
 // passed on and another game waits on the player (`nextGame`), Next game opens it. The board reads again
@@ -117,14 +118,31 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
       }
       // One action at a time: the next is sent after the answer, which names the seq it follows.
       if (shown === null || sending.current) return;
+      // #3841: the held setting goes just before the player's own mulligan answer, so it is in the game before the
+      // mulligan's last answer can start a turn that ends itself, and adds no window the answer does not open.
+      const held = action.type === "mulligan" && shown.view.phase === "mulligan" ? heldAutoEndTurn.current : null;
+      const setting = held !== null && (shown.view.autoEndTurn !== false) !== held.enabled ? held : null;
+      if (held !== null) heldAutoEndTurn.current = null;
       sending.current = true;
       setError(null);
-      attempt(() => sendDailyAction(matchId, { after: shown.seq, nonce: nonce(), action }))
+      let after = shown.seq;
+      let settingSent = setting === null;
+      attempt(async () => {
+        if (setting !== null) {
+          const answer = await sendDailyAction(matchId, { after, nonce: nonce(), action: setting });
+          setGame(answer);
+          after = answer.seq;
+          settingSent = true;
+        }
+        return sendDailyAction(matchId, { after, nonce: nonce(), action });
+      })
         .then(
           (answer) => {
             setGame(answer);
           },
           (cause: unknown) => {
+            // The setting did not land, so the next answer's board sends it again; the mulligan was never sent.
+            if (!settingSent) heldAutoEndTurn.current = setting;
             // Behind: the game moved on meanwhile, so the board reads it and says nothing.
             if (!(cause instanceof ApiRequestError && cause.status === 409 && cause.code === "stale")) setError(messageOf(cause));
             if (cause instanceof ApiRequestError) reread();

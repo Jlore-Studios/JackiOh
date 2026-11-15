@@ -18,7 +18,7 @@ import type { DailyGame } from "../net/daily.ts";
 import { clearReadCache } from "../net/readCache.ts";
 import { replayTestid } from "../replay/ReplayPlayer.tsx";
 import { resetSettings, writeSettings } from "../settings/store.ts";
-import { baseView, emptySide, opponentModifiers, unit, yourModifiers } from "../test/fixtures.ts";
+import { baseView, card, emptySide, opponentModifiers, pendingFor, unit, yourModifiers } from "../test/fixtures.ts";
 import { foldedReplaySteps } from "../test/replay.ts";
 import { at, refusal, signIn, stubServer, type Call, type Reply } from "../test/stubServer.ts";
 import { dailyConstants } from "../wasm/index.ts";
@@ -186,6 +186,42 @@ describe("#3727 a daily game's board", () => {
     const actions = server.to("POST", "/api/daily/games/g-1/actions").map((call) => call.body as { after: number; action: ActionBody });
     expect(actions[0]?.action).toEqual(CONCEDE);
     expect(actions[1]).toMatchObject({ after: 9, action: { type: "setAutoEndTurn", enabled: false } });
+  });
+
+  it("#3841 End turn automatically goes out just before the player's own mulligan answer, so it is in the game before the first turn", async () => {
+    writeSettings({ autoEndTurn: false });
+    const hand = [card({ instanceId: "h1", defId: "core-002" }), card({ instanceId: "h2", defId: "core-019" })];
+    const mulliganView = baseView({
+      turn: 0,
+      phase: "mulligan",
+      you: emptySide("p1", { hand }),
+      opponent: emptySide("p2", { hand: { count: 4 } }),
+      pending: pendingFor(
+        "mulligan",
+        hand.map((c) => ({ key: c.instanceId, label: c.defId, instanceId: c.instanceId })),
+        { min: 0, max: hand.length, prompt: "Choose the cards to keep; the rest are returned and redrawn" },
+      ),
+      mulligan: { youReady: false, opponentReady: false },
+    });
+    let seq = 7;
+    const server = serve(
+      () => dailyGame({ seq, view: mulliganView }),
+      (call) => {
+        if (call.method !== "POST") return undefined;
+        seq += 1;
+        return { status: 200, body: dailyGame({ seq, view: mulliganView }) };
+      },
+    );
+    render(<DailyBoard matchId="g-1" />);
+    fireEvent.click(await screen.findByTestId("prompt-submit", undefined, SLOW));
+
+    await waitFor(() => {
+      expect(server.to("POST", "/api/daily/games/g-1/actions")).toHaveLength(2);
+    }, SLOW);
+    const actions = server.to("POST", "/api/daily/games/g-1/actions").map((call) => call.body as { after: number; action: ActionBody });
+    // The setting first, the answer after it: each follows the seq the one before it made.
+    expect(actions[0]).toMatchObject({ after: 7, action: { type: "setAutoEndTurn", enabled: false } });
+    expect(actions[1]).toMatchObject({ after: 8, action: { type: "mulligan", keep: ["h1", "h2"] } });
   });
 
   it("#3727 Next game appears once the move has passed on and another game waits, and opens it", async () => {
