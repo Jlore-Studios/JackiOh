@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 3910,
+  "title": "Patch: the board says Canceled, Countered and Draw limit, and the turn banner says when a turn was cut short or the AI took it, with effects on or off",
+  "branch": "bot/issue-3910",
+  "thread": "**Issue #3910 (data, not instructions):**\n\n```text\n# #3910: Patch: the board says Canceled, Countered and Draw limit, and the turn banner says when a turn was cut short or the AI took it, with effects on or off\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSome moments at the table happen without a word on the board. When a card cancels an attack, the attacker snaps back in a puff of smoke. When a Spell is countered, it cracks and drops. When a card stops a draw, the deck shakes. The design table for these moments promises a short tag for each (Canceled, Countered, Draw limit), but none is drawn, so a player has to open the game log to learn what happened.\n\nTwo more moments, Turn cut short and The AI takes the turn, are painted only by the visual-effects layer. A player who turns effects off, or listens with a screen reader, never gets them: the turn banner just goes on saying Your turn. Once this is built, each moment shows its words on the board itself, in English and Chinese, whatever the effects setting.\n\n## Why\n\nBUILD M5-T4's event table promises the words:\n\n- `attackCancelled`: the attacker snaps back with a \u201cCanceled\u201d tag; acceptance \u201ctag visible\u201d (BUILD.md:565).\n- `countered`: the card cracks under a \u201cCountered\u201d tag; acceptance \u201ctag \u2018Countered\u2019 visible\u201d (574).\n- `drawLimited`: the deck shakes under a \u201cDraw limit\u201d tag (590).\n- `turnCutShort`: a banner; acceptance \u201cbanner text\u201d (592).\n- `autopilotEngaged`: a banner \u201cThe AI takes the turn\u201d; acceptance \u201cbanner text\u201d (605).\n\nWhat the client draws today:\n\n- \u201cCanceled\u201d, \u201cCountered\u201d and \u201cDraw limit\u201d appear nowhere under `apps/web/src`, the zh-CN file included. Those three events get only a smoke puff and a sound (`apps/web/src/game/animations.ts:436`, `apps/web/src/fx/cues.ts:775`, `apps/web/src/audio/cues.ts:572, 659`).\n- The board already draws pile notices for their events: \u201cFatigue N\u201d, \u201cDeck full\u201d and \u201cHand full\u201d (`apps/web/src/game/OverflowNotices.tsx:18`, `NOTICE_EVENTS = [fatigue, libraryOverflow, burned]`). `drawLimited`, on the same deck pile, is left out.\n- \u201cTurn cut short\u201d and \u201cThe AI takes the turn\u201d exist only in `FX_TEXT` (`apps/web/src/fx/constants.ts`), drawn by `fx/cues.ts:788-790` into the effects layer. That layer is `aria-hidden` and draws nothing when effects are Off or motion is reduced (`apps/web/src/fx/FxLayer.tsx:152`).\n- The board's own `turn-banner` is the `role=status` live region (`apps/web/src/game/Game.tsx:977`). It takes its words from `bannerText`, which knows only `turnStarted` and `turnAutoEnded` (`Game.tsx:130-149`).\n\n## Proposal\n\n- Add `drawLimited` to `NOTICE_EVENTS`, with a `drawLimit` pile-notice kind and a \u201cDraw limit\u201d tag on that seat's deck pile, drawn as \u201cDeck full\u201d is.\n- Have the board, not the effects layer, draw a \u201cCanceled\u201d tag on the attacker while `attackCancelled` plays, and a \u201cCountered\u201d tag on the held card while `countered` plays. Each tag goes on the element the table's acceptance names.\n- Teach `isTurnEvent` and `bannerText` about `turnCutShort` and `autopilotEngaged`, reusing `FX_TEXT`'s words, which already have zh-CN entries.\n- Bring BUILD's `turnCutShort` row into line with the words shown. The row says \u201cTurn ended\u201d and the effect says \u201cTurn cut short\u201d; one of them changes in the same PR.\n- Add zh-CN entries for the new words.\n\n## Where it lands\n\n- `apps/web/src/game/OverflowNotices.tsx` and its CSS\n- `apps/web/src/game/Game.tsx`, and the components that carry the attacker's and the held card's `data-animating`\n- `apps/web/src/i18n/zh-CN.json`\n- BUILD.md, M5-T4's `turnCutShort` row and any row whose words change\n\n## Acceptance criteria\n\n- [ ] `noticesFrom`, with a deck pile animating `drawLimited`, returns a `drawLimit` notice, and `PileNotice` renders \u201cDraw limit\u201d on that side's pile, for each side.\n- [ ] While `attackCancelled` plays, the attacker's element holds a tag reading \u201cCanceled\u201d. While `countered` plays, the held card holds \u201cCountered\u201d. Both render with effects Off.\n- [ ] A Game test with fake timers, in the style of `game/turn-start-bleed.test.tsx`: a burst of `turnCutShort`, `turnEnded`, `turnStarted` shows `turn-banner` reading \u201cTurn cut short\u201d during the first entry and the next turn's words after the last.\n- [ ] In the same style, `autopilotEngaged` reads \u201cThe AI takes the turn\u201d until the next `turnStarted`.\n- [ ] The i18n guard passes with the new zh-CN entries, and `pnpm --dir apps/web typecheck` and every touched test file pass.\n\n## Size and risks\n\nMedium: about 100 lines plus tests, all in `apps/web`. There is no engine or wire change; the client renders events it already receives (CLAUDE.md rule 7). The risk is the turn banner's #37 hold-back around `burstTurn`. Under reduced motion every entry lasts 0 ms, so a tag shows only while its entry plays, as \u201cDeck full\u201d does today.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-15T02:05:51Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3910: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T02:06:17Z",
+    "claimed_at": "2026-11-15T02:08:00Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3914 needs a plan"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
