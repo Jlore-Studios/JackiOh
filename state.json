@@ -6591,7 +6591,7 @@
       "provider": "claude-8",
       "queued_at": "2026-11-15T19:50:23Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:5036d124-1794772581",
+      "run_id": "43755227397",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-15T19:56:39Z",
       "stop_requested": false,
