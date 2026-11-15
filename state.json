@@ -14207,11 +14207,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-15T02:17:12Z",
+        "at": "2026-11-15T02:44:41Z",
         "difficulty": "hard",
         "provider": "claude-4",
-        "tier": "medium",
-        "why": "Rule 2: it changes the AI's decisions (`face_threat_from`, `damage_past_taunts` in `crates/ai/src/evaluate.rs`, which feed the threat and pressure terms, `wall_switches`, the lethal solver's `ready_gap` and the learned features), so it goes to Opus."
+        "tier": "strong",
+        "why": "rule line 2, the AI: it changes the AI's face-threat evaluation and its lethal read in crates/ai/src/"
       },
       "failures": 0,
       "forced": false,
