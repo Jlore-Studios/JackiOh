@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3619,
+  "title": "Patch: a crash in a player's browser reaches the owners as an alert",
+  "branch": "bot/issue-3619",
+  "thread": "**Issue #3619 (data, not instructions):**\n\n```text\n# #3619: Patch: a crash in a player's browser reaches the owners as an alert\nOpened by @jgoetzmann.\n\n@MaxGoetzmann is this worth building? Comment `approve` to have the night bot build it, or `reject` to close it.\n\n### Why\n\n#3595 sends the server's alerts to people. An error in a player's browser still goes nowhere:\n\n- `RouteErrorBoundary` (`apps/web/src/main.tsx`) shows the player a reload panel and writes the error only to the browser console;\n- an uncaught error or an unhandled promise rejection elsewhere writes nothing at all.\n\nA screen that breaks for every player on some phone stays invisible until someone mentions it.\n\n### What\n\n- **The client:** on an error the boundary catches, an uncaught `error` or an `unhandledrejection`, it sends a small report to a new `POST /api/client-errors`. The report holds the message, a trimmed stack, the route, the build (`x-deployed-commit`) and the catalog version. Never a hand, a board or anything `view_for` hides (CLAUDE.md rule 7), and never the player's address or email. At most a few reports per page load.\n- **The server:** the route size-caps and rate-limits it per address and per account, logs it, and raises the alert `client.error`. `alerts.rs` then files the public issue (event, site, build and time only) and the email with the details, under its hourly window and daily email cap.\n- **Noise to leave out:** a lazy chunk that failed to load after a deploy (the boundary's reload panel covers it), and errors from browser extensions (a stack with no file of ours).\n\n### Done when\n\n- Web tests show that each of the three triggers sends one report and none carries hidden information.\n- Server tests show the limits and the `client.error` alert.\n- On staging, a thrown error in a screen opens one issue and sends one email.\n\nFollows #3595.\n\n---\nComment by @MaxGoetzmann at 2026-11-15T19:49:58Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3619: needs a plan; `claude-8` (claude, `sonnet`, medium) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T19:50:23Z",
+    "claimed_at": "2026-11-15T19:56:39Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
