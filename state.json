@@ -36325,7 +36325,9 @@
           "provider": "claude-7"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-15T12:43:38Z",
         "every": 5,
+        "findings": 0,
         "head": "0463a42800ca974b98c6f060a54bc5e1ecc657b3",
         "issue": 3957,
         "merged_at": "2026-11-15T12:30:14Z",
@@ -36338,12 +36340,13 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:b651b8d0-1794746166",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/43714715630",
         "sha": "02c6e48aa19144d900a4e3d1fc7548354a28ee5e",
         "started_at": "2026-11-15T12:36:24Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the account screen fills or drops its empty \"This season\" heading, shows the rank crest, and keeps match history's tap areas apart",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 270
