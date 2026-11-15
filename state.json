@@ -36058,7 +36058,8 @@
       "2026-11-15T21:57:03Z,claude-1,stream,call,43747783064,39,2026-11-15T22:30:00Z,,,allowed,100,,"
     ],
     "runs": [
-      "2026-11-15T22:29:33Z,43755025170,agy,gemini-3.8-flash-high,plan,3975,medium,failed,,150.3,270368,35216,0,,0,3,43,44,3.2,,none,,1"
+      "2026-11-15T22:29:33Z,43755025170,agy,gemini-3.8-flash-high,plan,3975,medium,failed,,150.3,270368,35216,0,,0,3,43,44,3.2,,none,,1",
+      "2026-11-15T21:57:03Z,43747783064,claude-1,sonnet+opus,review,3968,medium,died,died,151.6,125,38001,4416170,4.0633,1,39,,,0.8,claude-1,fresh,,4"
     ]
   },
   "version": 1
