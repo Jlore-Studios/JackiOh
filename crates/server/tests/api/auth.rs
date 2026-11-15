@@ -678,6 +678,42 @@ mod r159_how_long_a_verified_email_stays_verified {
         assert_eq!(provider.confirmed_count(), 2);
     }
 
+    /// R159: a remembered yes answers up to a full window and not at it, where the provider is asked
+    /// again (#3836: the read's `<` taken as `<=` lived).
+    #[tokio::test]
+    async fn r159_a_remembered_email_answers_up_to_its_window_and_is_asked_again_at_it() {
+        let h = Harness::new().await;
+        let alice = h.token_for(ALICE);
+        assert!(
+            h.auth
+                .verify(&alice)
+                .await
+                .expect("alice verifies")
+                .email_verified
+        );
+        assert_eq!(h.gotrue.lookups(), counts(&[(ALICE, 1)]));
+
+        h.clock.charge(EMAIL_CONFIRMED_CACHE_TTL_MS - 1).await;
+        assert!(
+            h.auth
+                .verify(&alice)
+                .await
+                .expect("alice verifies")
+                .email_verified
+        );
+        assert_eq!(h.gotrue.lookups(), counts(&[(ALICE, 1)]));
+
+        h.clock.charge(1).await;
+        assert!(
+            h.auth
+                .verify(&alice)
+                .await
+                .expect("alice verifies")
+                .email_verified
+        );
+        assert_eq!(h.gotrue.lookups(), counts(&[(ALICE, 2)]));
+    }
+
     #[tokio::test]
     async fn r159_never_caches_the_no_so_an_account_that_has_just_clicked_its_link_is_unlocked_at_once() {
         let h = Harness::new().await;
@@ -1795,6 +1831,21 @@ mod r1144000_a_failed_key_set_refresh_keeps_the_last_good_keys {
 
         // On the cap, inside the cooldown, it is refused, and nothing is fetched.
         clock.charge(1).await;
+        assert!(auth.verify(&token).await.is_err());
+        assert_eq!(gotrue.jwks_calls(), 2);
+    }
+
+    /// R1144000: a refetch that fails on the cap refuses the stale set: once no fetch is running the
+    /// cache serves it up to its cap and not on it (#3836: `served`'s `<` taken as `<=` lived).
+    #[tokio::test]
+    async fn r1144000_a_refetch_failing_on_the_cap_refuses_the_stale_set() {
+        let (gotrue, clock, auth) = no_secret().await;
+        gotrue.answer_jwks(JwksReply::Serve(es256::jwks_body()));
+        let token = token_for(&gotrue, ALICE);
+        assert!(auth.verify(&token).await.is_ok());
+
+        clock.charge(JWKS_CACHE_MAX_AGE_MS + JWKS_STALE_MAX_MS).await;
+        gotrue.answer_jwks(JwksReply::Fail);
         assert!(auth.verify(&token).await.is_err());
         assert_eq!(gotrue.jwks_calls(), 2);
     }
