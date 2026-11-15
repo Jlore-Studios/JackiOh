@@ -2,8 +2,8 @@
 // `fight`), the page plays it as a practice game against the AI (§9.9, R2706000). The run writes the
 // game's setup (`runFightSetup`: the run deck, its HP and its Radiant and buffed cards against the
 // enemy's deck and strength), the practice worker plays it with the AI as the enemy, whose name the
-// board's rail shows beside the run's timer (B22, B24), and each side's relics sit in a tray beside its
-// hero (B23). There is no Play again: once the game is over the page asks the worker for its report,
+// board's rail shows beside the run's timer and the chip that lists the live modifiers (B22, B24,
+// R3912000), and each side's relics sit in a tray beside its hero (B23). There is no Play again: once the game is over the page asks the worker for its report,
 // the run's `FightOver` (B25), and Continue sends it to the run, which a lost fight ends (B26).
 //
 // The board is the practice route's (`routes/practice.tsx`): the same controller, pacing
@@ -30,6 +30,7 @@ import "../../auth/tavern.css";
 import Game from "../../game/Game.tsx";
 import { reducedMotionNow } from "../../game/animations.ts";
 import { CatalogContext, lookupFromDefs } from "../../game/catalog.ts";
+import { ModifierList } from "../../game/ModifierList.tsx";
 import { t } from "../../i18n/i18n.ts";
 import { PRACTICE_PACING, PRACTICE_PACING_REDUCED, type PracticePacing } from "../../practice/config.ts";
 import { useBoardBusy, useControllerState, useShowcaseHold, useVoiceHold } from "../../practice/aiTable.ts";
@@ -305,13 +306,19 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
       // R2291000: the lethal hint, as in every game against the AI, which the setting turns off.
       lethalHint={lethalOn && snapshot.lethal === true}
       matchStatus={
-        <span className="dungeon-fight__status">
-          <strong className="dungeon-fight__enemy" data-testid={fightTestid.enemy}>
-            {enemy}
-          </strong>
-          <RunTimer elapsedMs={dungeon.elapsedMs} resumedAt={dungeon.resumedAt} />
-          <ThinkIndicator thinking={state.thinking} />
-        </span>
+        <>
+          {/* R3912000: every live modifier in full, as every other table's rail lists them (R169), the
+              enemy's name over its list. Beside the text, not inside it: the chip is 32px tall and the
+              text wraps, so inside it a phone's one-row control bar would grow a line taller. */}
+          <ModifierList view={snapshot.view} opponentLabel={enemy} />
+          <span className="dungeon-fight__status">
+            <strong className="dungeon-fight__enemy" data-testid={fightTestid.enemy}>
+              {enemy}
+            </strong>
+            <RunTimer elapsedMs={dungeon.elapsedMs} resumedAt={dungeon.resumedAt} />
+            <ThinkIndicator thinking={state.thinking} />
+          </span>
+        </>
       }
       heroAside={{
         own: <ArtifactTray side="own" items={ownItems} passives={content.passives} />,
