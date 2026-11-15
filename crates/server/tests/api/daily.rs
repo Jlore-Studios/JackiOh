@@ -1385,9 +1385,10 @@ fn browser_keys() -> (String, String) {
     )
 }
 
-#[tokio::test]
-async fn a_push_subscription_answered_410_is_deleted() {
-    let (push_api, seen) = fake_service(StatusCode::GONE).await;
+/// A device whose push service answers `status`, and one that answers 201, are pushed ("your move").
+/// Returns the service's base URL and the endpoints left, oldest first.
+async fn push_answered(status: StatusCode) -> (String, Vec<String>) {
+    let (push_api, seen) = fake_service(status).await;
     let app = app_with(
         None,
         TestAppOptions {
@@ -1418,7 +1419,7 @@ async fn a_push_subscription_answered_410_is_deleted() {
         tx.commit().await.expect("commit");
     }
 
-    // The game starts waiting on Ada: both devices are pushed, and the one gone is deleted.
+    // The game starts waiting on Ada: both devices are pushed.
     daily_game(&app, &bo, &ada, 1).await;
     notifier_idle(&app).await;
     let pushed: Vec<(String, HeaderMap)> = seen
@@ -1436,16 +1437,44 @@ async fn a_push_subscription_answered_410_is_deleted() {
                 .is_ok_and(|value| value.starts_with("vapid t="))
         );
     }
-    let mut tx = app.db.begin(None).await.expect("a transaction");
-    let left: Vec<String> = tx
-        .push_subs_of(&ada.id)
-        .await
-        .expect("a read")
-        .into_iter()
-        .map(|row| row.endpoint)
-        .collect();
-    tx.commit().await.expect("commit");
+    let left = push_endpoints(&app, &ada).await;
+    (push_api, left)
+}
+
+/// §9.13: a subscription its push service answers 410 is gone, and its row is deleted.
+#[tokio::test]
+async fn a_push_subscription_answered_410_is_deleted() {
+    let (push_api, left) = push_answered(StatusCode::GONE).await;
     assert_eq!(left, vec![format!("{push_api}/push/2/live")]);
+}
+
+/// §9.13, #3844: a subscription its push service answers 403, as it does after the VAPID keys
+/// change, is deleted too, not retried every sweep.
+#[tokio::test]
+async fn a_push_subscription_answered_403_is_deleted() {
+    let (push_api, left) = push_answered(StatusCode::FORBIDDEN).await;
+    assert_eq!(left, vec![format!("{push_api}/push/2/live")]);
+}
+
+/// §9.13: a subscription its push service answers 404 is gone, and its row is deleted.
+#[tokio::test]
+async fn a_push_subscription_answered_404_is_deleted() {
+    let (push_api, left) = push_answered(StatusCode::NOT_FOUND).await;
+    assert_eq!(left, vec![format!("{push_api}/push/2/live")]);
+}
+
+/// §9.13, #3844: a throttled push (429) is retried by the next sweep, so no row goes: only 404, 410
+/// and 403 delete.
+#[tokio::test]
+async fn a_push_subscription_answered_429_is_kept() {
+    let (push_api, left) = push_answered(StatusCode::TOO_MANY_REQUESTS).await;
+    assert_eq!(
+        left,
+        vec![
+            format!("{push_api}/push/1/gone"),
+            format!("{push_api}/push/2/live")
+        ]
+    );
 }
 
 /// The endpoints `who` holds push subscriptions for, oldest first.
