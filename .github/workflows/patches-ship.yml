@@ -185,7 +185,7 @@ jobs:
             cut_line="\`patches cut\` rolled the micros since the newest major or patch into **$cut**, the day's patch (R3944000): their versions in its \`includes\`, their notes merged, the newest one's snapshot. <!-- patches-cut: $CUT_MODE -->"
           fi
           body=$(printf '%s\n' \
-            "Promotes the card patches pending on main at $head (SPEC R646): ${versions:-none}${cut:+, and the day's patch $cut}." \
+            "Promotes the card patches pending on main at $head (SPEC R646): ${versions:-none}${cut:+, and the daily patch $cut}." \
             "" \
             "\`patches ship\` appended the patches in ship order, each snapshot the patch before it with the cards its fragment claims (R1280000), recorded \`shipped.json\`, deleted the fragments and bumped \`CATALOG_VERSION\`. Opened by \`.github/workflows/patches-ship.yml\`; it merges itself once CI passes." \
             "" \
