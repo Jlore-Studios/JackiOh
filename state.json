@@ -13753,6 +13753,13 @@
     "3935": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-15T20:06:17Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "medium",
+        "why": "No line of the hard rule holds: the fix is one card-script helper in crates/cards plus a ruling, a kept script and a fragment, with no change under crates/engine/src, no AI or migration, and about 15 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
