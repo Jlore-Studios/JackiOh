@@ -43,6 +43,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -215,7 +216,7 @@ func setRun(ctx *hctx.Context, planned *pyjson.Object, pending string, runID str
 	change := func(state *pyjson.Object) any {
 		var entry any
 		if planned.Get("action") == "suggest" {
-			entry = state.Obj("suggest")
+			entry = plan.SurveyRecord(state, plan.SurveyLaneOf(planned))
 		} else {
 			entry = state.Obj("items").Get(py.Str(planned.Get("number")))
 		}
@@ -228,10 +229,13 @@ func setRun(ctx *hctx.Context, planned *pyjson.Object, pending string, runID str
 	ctx.Store.Update(change, "run of "+What(planned))
 }
 
+// surveyKey starts the key `Resolve` gives a survey's pending claim: `survey <its lane>`.
+const surveyKey = "survey "
+
 // Resolve puts its run's id on every claim still pending, once GitHub lists the run.
 func Resolve(ctx *hctx.Context) []string {
 	state := ctx.Store.Load()
-	waiting := pyjson.New() // ref -> the item's key in `items`, or "suggest"
+	waiting := pyjson.New() // ref -> the item's key in `items`, or a survey's `survey <lane>`
 	items := state.Obj("items")
 	for _, number := range items.Keys() {
 		entry, ok := items.Get(number).(*pyjson.Object)
@@ -239,9 +243,10 @@ func Resolve(ctx *hctx.Context) []string {
 			waiting.Set(py.SliceFrom(py.Str(entry.Get("run_id")), py.Len(plan.Pending)), number)
 		}
 	}
-	survey := state.Obj("suggest")
-	if strings.HasPrefix(py.OrStr(survey.Get("run_id"), ""), plan.Pending) {
-		waiting.Set(py.SliceFrom(py.Str(survey.Get("run_id")), py.Len(plan.Pending)), "suggest")
+	for _, survey := range plan.Surveys(state) {
+		if runID := py.OrStr(survey.Record.Get("run_id"), ""); strings.HasPrefix(runID, plan.Pending) {
+			waiting.Set(py.SliceFrom(runID, py.Len(plan.Pending)), surveyKey+strconv.Itoa(survey.Lane))
+		}
 	}
 	if waiting.Len() == 0 {
 		return []string{}
@@ -269,8 +274,9 @@ func Resolve(ctx *hctx.Context) []string {
 		for _, ref := range found.Keys() {
 			key := waiting.Str(ref)
 			var entry any
-			if key == "suggest" {
-				entry = state.Get("suggest")
+			if lane, isSurvey := strings.CutPrefix(key, surveyKey); isSurvey {
+				n, _ := strconv.Atoi(lane)
+				entry = plan.SurveyRecord(state, n)
 			} else {
 				entry = state.Obj("items").Get(key)
 			}
@@ -285,8 +291,8 @@ func Resolve(ctx *hctx.Context) []string {
 	var notes []string
 	for _, ref := range found.Keys() {
 		of := "#" + waiting.Str(ref)
-		if waiting.Str(ref) == "suggest" {
-			of = "the survey"
+		if strings.HasPrefix(waiting.Str(ref), surveyKey) {
+			of = "a survey"
 		}
 		notes = append(notes, fmt.Sprintf("found the run of %s: %s", of, found.Str(ref)))
 	}

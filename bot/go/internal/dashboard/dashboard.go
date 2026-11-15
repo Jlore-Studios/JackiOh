@@ -58,6 +58,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
@@ -205,13 +206,14 @@ func windowReading(ctx *hctx.Context, provider *providers.Provider, entry *pyjso
 // `survey`), and since when.
 func doing(state *pyjson.Object, number int) (string, string, time.Time) {
 	record := status.Record(state, number)
-	if number == 0 {
+	if plan.IsSurveyLane(number) {
 		return "surveying", "survey", clock.ParseISOValue(record.Get("last_run"))
 	}
 	return status.DoingOf(record), "#" + strconv.Itoa(number), clock.ParseISOValue(record.Get("started_at"))
 }
 
-// lane is one live lane: the item's number (0 for the suggestion survey) and its provider's id.
+// lane is one live lane: the item's number (0 or less for a suggestion survey, #4026) and its
+// provider's id.
 type lane struct {
 	number   int
 	provider string
@@ -289,8 +291,11 @@ func RunningTable(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object,
 		if !ok {
 			title = ""
 		}
-		if l.number == 0 {
+		if plan.IsSurveyLane(l.number) {
 			item, verb = "—", "suggestion survey"
+			if area := status.Record(state, l.number).Str("area"); area != "" {
+				verb += " of `" + area + "`"
+			}
 		}
 		rows = append(rows, "| "+item+" | "+Cell(title, 50)+" | "+verb+" | `"+l.provider+"`"+model+
 			" ("+where+") | "+started+" |")
@@ -668,7 +673,7 @@ func LanesBoxes(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object,
 	lines = append(lines, "```")
 	planning := map[int]bool{}
 	for _, l := range lanesIn(live) {
-		if l.number != 0 && queue.PlanningPool(status.Record(state, l.number)) { // an in-lane plan holds its own lane (#2903)
+		if !plan.IsSurveyLane(l.number) && queue.PlanningPool(status.Record(state, l.number)) { // an in-lane plan holds its own lane (#2903)
 			planning[l.number] = true
 		}
 	}

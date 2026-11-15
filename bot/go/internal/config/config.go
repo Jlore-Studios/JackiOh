@@ -606,6 +606,13 @@ var LabelPriorityMedium string = "priority:medium"
 // LabelPriorityLow is LABEL_PRIORITY_LOW.
 var LabelPriorityLow string = "priority:low"
 
+// SuggestionArea is one of `suggestions.areas` (#4026): its id, and what a survey of it reads
+// (its directories and concerns), which its prompt names.
+type SuggestionArea struct {
+	ID    string
+	Focus string
+}
+
 // SuggestionClasses are the classes a suggestion survey files each suggestion under
 // (`prompts/suggest.md`, #1409). `suggestions.priorities` maps a class to the `priority:*` level
 // its suggestions open with; a class it leaves out (`feature`, the owner's call) opens with none.
@@ -704,9 +711,12 @@ type Config struct {
 	SuggestionsSpareLanes int
 	// SuggestionPriorities: suggestion class -> the priority level it opens with (#1409).
 	SuggestionPriorities map[string]string
-	Quiet                *Quiet
-	ForbiddenPaths       []string
-	ReviewPaths          []string
+	// SuggestionAreas: the parts of the repository a survey keeps to (#4026), one survey at a time
+	// each, so as many surveys run at once as there are areas. None: one survey, of everything.
+	SuggestionAreas []SuggestionArea
+	Quiet           *Quiet
+	ForbiddenPaths  []string
+	ReviewPaths     []string
 	// MigrationPaths and LockFiles are the paths that merge themselves on a condition (#2986,
 	// `merge.go`): a migration with no data-losing or access-changing statement that changes no
 	// migration `main` has, and a lock that gains no package. The config's `migration_paths` and

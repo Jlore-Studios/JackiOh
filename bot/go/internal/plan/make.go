@@ -355,10 +355,14 @@ func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
 			"finishing; it is back in the queue.")
 		notes = append(notes, fmt.Sprintf("requeued #%d from a dead run", number))
 	}
-	survey := state.Obj("suggest")
-	if survey.Truthy("provider") && RunStatus(ctx, survey.Get("run_id")) == "dead" {
+	for _, survey := range Surveys(state) {
+		if RunStatus(ctx, survey.Record.Get("run_id")) != "dead" {
+			continue
+		}
+		// Its asks wait again, for the next survey (#4026: each survey holds its own).
 		ctx.Store.Update(func(s *pyjson.Object) any {
-			s.Obj("suggest").Update(pyjson.New("provider", nil, "run_id", nil))
+			ended := EndSurvey(s, survey.Lane)
+			asks.Add(s.Obj("suggest"), SurveyAsks(ended))
 			return nil
 		}, "survey ended")
 	}

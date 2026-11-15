@@ -366,7 +366,8 @@ func Step_(job *pyjson.Object, limit int /* = 45 */) string {
 }
 
 // nightItems is _night_items: the night bot's runs its state file names, by run id (or
-// `pending:<ref>`), to the item each works on (0: the suggestion survey), in the state's order.
+// `pending:<ref>`), to the item each works on (0 or less: a suggestion survey's lane, #4026), in
+// the state's order.
 func nightItems(state *pyjson.Object) *pyjson.Object {
 	found := pyjson.New()
 	state.Obj("items").Items(func(number string, v any) bool {
@@ -376,8 +377,13 @@ func nightItems(state *pyjson.Object) *pyjson.Object {
 		}
 		return true
 	})
-	if survey := state.Obj("suggest"); survey.Truthy("run_id") {
+	if survey := state.Obj("suggest"); survey.Truthy("run_id") { // a survey from before #4026
 		found.Set(py.Str(survey.Get("run_id")), 0)
+	}
+	for _, survey := range plan.Surveys(state) {
+		if survey.Lane != 0 && survey.Record.Truthy("run_id") {
+			found.Set(py.Str(survey.Record.Get("run_id")), survey.Lane)
+		}
 	}
 	return found
 }

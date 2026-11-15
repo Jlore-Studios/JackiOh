@@ -12,6 +12,7 @@ import (
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/providers"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
@@ -24,7 +25,7 @@ func nowCell(state *pyjson.Object, now *waiting.Now, runs []int) string {
 	if len(runs) > 0 {
 		var parts []string
 		for _, n := range runs {
-			if n == 0 {
+			if plan.IsSurveyLane(n) {
 				parts = append(parts, "survey")
 				continue
 			}
