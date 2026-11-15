@@ -274,20 +274,43 @@ fn area(path: &str) -> Area {
 /// Whether a file's code changed, all white space removed (so a reflow is no change): for a card
 /// script the lines `catalog loc` counts, so its `use` lines are no code (R1365000); for any other
 /// Rust or TypeScript file the same lines with its `use` declarations kept, since moving an import
-/// can change which code runs (R2050000); any other file byte for byte.
+/// can change which code runs (R2050000); any other file byte for byte. In TypeScript a comma just
+/// before a closing bracket is layout too, the one a formatter adds when it breaks a call or a list
+/// over lines (R3836000).
 pub(crate) fn code_changed(path: &str, before: Option<&str>, after: Option<&str>) -> bool {
     let lines: fn(&str) -> Vec<String> = if area(path) == Area::Script {
         code_lines
     } else {
         code_lines_with_uses
     };
-    let code =
-        |text: Option<&str>| text.map(|text| lines(text).concat().split_whitespace().collect::<String>());
-    if path.ends_with(".rs") || path.ends_with(".ts") || path.ends_with(".tsx") {
+    let typescript = path.ends_with(".ts") || path.ends_with(".tsx");
+    let code = |text: Option<&str>| {
+        text.map(|text| {
+            let joined: String = lines(text).concat().split_whitespace().collect();
+            if typescript {
+                without_trailing_commas(&joined)
+            } else {
+                joined
+            }
+        })
+    };
+    if path.ends_with(".rs") || typescript {
         code(before) != code(after)
     } else {
         before != after
     }
+}
+
+/// R3836000: `code` with each comma that stands just before a `)`, `]` or `}` taken out. In TypeScript
+/// such a comma changes nothing; in Rust `(a,)` is a tuple, so Rust code keeps it.
+fn without_trailing_commas(code: &str) -> String {
+    let chars: Vec<char> = code.chars().collect();
+    chars
+        .iter()
+        .enumerate()
+        .filter(|(at, ch)| !(**ch == ',' && matches!(chars.get(at + 1), Some(')' | ']' | '}'))))
+        .map(|(_, ch)| *ch)
+        .collect()
 }
 
 /// R1365000: a card's family, the card a token counts with (`meditative-097-6` is `meditative-097`).
@@ -1928,6 +1951,25 @@ mod tests {
             Some("fn a() { 1 } // one\n")
         ));
         assert!(code_changed("a.json", Some("{}"), Some("{ }")));
+    }
+
+    /// R3836000: a TypeScript call broken over lines, with the comma a formatter adds and a comment
+    /// between its lines, is the same code; a Rust one is not, and a TypeScript comma before an
+    /// argument, or a bracket changed, still is.
+    #[test]
+    fn r3836000_a_typescript_comma_before_a_closing_bracket_is_layout() {
+        let before = "fit(ref, bare ? \"\" : name);\nconst list = [a, b];\n";
+        let after = "fit(\n  ref,\n  bare\n    ? // why the empty key\n      \"\"\n    : name,\n);\nconst list = [\n  a,\n  b,\n];\n";
+        let path = "apps/web/src/cards/CardFace.tsx";
+        assert!(!code_changed(path, Some(before), Some(after)));
+        assert!(!code_changed("apps/web/src/cards/look.ts", Some(before), Some(after)));
+        assert!(code_changed(path, Some("go(a, b);"), Some("go(a);")));
+        assert!(code_changed(path, Some("go(a);"), Some("go(a)[0];")));
+        assert!(code_changed(path, Some("const x = { a };"), Some("const x = [a];")));
+        // In Rust `(a,)` is a tuple and `(a)` its element.
+        assert!(code_changed("crates/engine/src/a.rs", Some("let x = (a);"), Some("let x = (a,);")));
+        assert_eq!(without_trailing_commas("f(a,);[b,];{c,}"), "f(a);[b];{c}");
+        assert_eq!(without_trailing_commas("f(a,b)"), "f(a,b)");
     }
 
     // R2050000: outside a card script a `use` line is code, so a moved import is checked.
