@@ -216,11 +216,12 @@ mod r2199000_ally_attack {
 mod r3951000_destroyed_enemy {
     use super::*;
 
-    fn swing(seed: &str, target_damage: i32) -> (String, Vec<String>) {
+    /// The grunt (2/2) attacks `target_id`'s fixture with `target_damage` already on it.
+    fn swing(seed: &str, target_id: &str, target_damage: i32) -> (String, Vec<String>) {
         let mut state = playing(seed);
         put(&mut state, &ally_kill_noter.id, slot(P1, Row::Backrow, 1), Default::default());
         let striker = put(&mut state, &grunt.id, slot(P1, Row::Units, 1), Default::default());
-        let target = put(&mut state, &grunt.id, slot(P2, Row::Units, 1), Default::default());
+        let target = put(&mut state, target_id, slot(P2, Row::Units, 1), Default::default());
         live_mut(&mut state, &target.id).damage = target_damage;
         let mut game = recorder(&state);
         game.play(input(json!({
@@ -232,13 +233,14 @@ mod r3951000_destroyed_enemy {
 
     #[test]
     fn r3951000_a_combat_that_destroys_the_defender_reports_it_even_when_the_attacker_dies_too() {
-        let (striker, notes) = swing("ally-kill", 1);
+        let (striker, notes) = swing("ally-kill", &grunt.id, 1);
         assert_eq!(notes, vec![format!("kill:{striker}:true")]);
     }
 
     #[test]
     fn r3951000_a_combat_that_destroys_nothing_reports_none() {
-        let (striker, notes) = swing("ally-no-kill", 0);
+        // The wall (1/8) takes the 2 and stands.
+        let (striker, notes) = swing("ally-no-kill", &wall.id, 0);
         assert_eq!(notes, vec![format!("kill:{striker}:false")]);
     }
 }

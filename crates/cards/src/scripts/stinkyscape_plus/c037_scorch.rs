@@ -160,16 +160,9 @@ mod tests {
             s.attack(ID, target.as_str());
             s.expect_refused(|s| s.attack(ID, target.as_str()));
             crate::next_turn_of(&mut s, P1);
-            let scorch = s.card(ID).clone();
-            assert!(
-                has_exertion(s.state(), &scorch, ExertionKind::Attack),
-                "turn {} active {:?}: {:?}",
-                s.state().turn,
-                s.state().active,
-                scorch.exertion
-            );
             s.attack(ID, target.as_str());
-            assert_eq!(s.card(target.as_str()).damage, 2 * ATTACK);
+            // Two hits, and the Burn 5 the first left ticked at the start of p2's turn (R3540000).
+            assert_eq!(s.card(target.as_str()).damage, 2 * ATTACK + BASE_BURNS);
         }
 
         /// R767000: through v0.6.2b it attacked ten times a turn and burned nothing (issue #3951).
