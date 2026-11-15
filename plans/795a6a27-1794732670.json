@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3936,
+  "title": "Patch: the AI's mulligan counts a Tribute card's units, so it stops keeping opening hands it cannot play",
+  "branch": "bot/issue-3936",
+  "thread": "**Issue #3936 (data, not instructions):**\n\n```text\n# #3936: Patch: the AI's mulligan counts a Tribute card's units, so it stops keeping opening hands it cannot play\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen the practice AI picks which opening cards to keep, it looks only at their mana cost. A card that also needs two or three of its own units sacrificed looks cheap, so the AI keeps it and throws back cards it could actually play. Holding Blue-Eyes White Felinor (1 mana, sacrifice 2 units), Lava Golem (3 mana, sacrifice 3) and Trigor (3 mana, sacrifice 3), the AI keeps all three, and none of them can be played until it has built a board. Its check that a hand has an early play is also satisfied by the 1-mana Felinor, which is no early play at all. Once this is built, the AI treats such a card as dearer the more units it needs, so the hands it keeps are hands it can start playing. Players notice a stronger opening from the AI in every game where it is dealt a Tribute card, which Stinkyscape+ has many of.\n\n## Why\n\n- `crates/ai/src/mulligan.rs:22,55,96,107,121`: every keep rule reads `query_cost(def)`, the mana cost alone (`crates/engine/src/catalog.rs:544`). That includes the bound, the one-drop cap and the early-play check.\n- \u00a76.3 Tribute X (`spec/06-keywords.md`): playing the card also sacrifices X of your units. The engine already offers the number, following Nerfs, Buffs and Floats: `jackioh_engine::play_choices::tribute_cost_of` (`crates/engine/src/play_choices.rs:821`).\n- The catalog holds 37 non-token Tribute cards, and 16 of them cost 3 or less and so pass the bound (`AI_MULLIGAN.keep_max_cost` 3, `crates/ai/src/config.rs:999`). They include Blue-Eyes White Felinor (1, Tribute 2), Windfast (1, T1), Raven (0, T1), Lava Golem and Trigor (3, T3), and Stinkyscape+'s Tribute line: Fortress, Zenith, Scepter, Antumbra, Quad, Sei and Vela.\n- The shadow ban is empty (`crates/ai/src/shadow_ban.rs:58`), so every one of them reaches the AI's decks, and Stinkyscape+'s fullsend deals the AI the whole set.\n\n## Proposal\n\n- In the AI's own keep (`mulligan_keep_curved` and the `mulligan_keep_shaped` it calls), read a card's mulligan cost as the larger of its mana cost and its Tribute plus a named per-unit allowance in `crates/ai/src/config.rs` (for example Tribute + 1).\n- Then a Tribute 3 three-drop falls past the bound, and a 1-mana Tribute 2 card counts neither as a one-drop nor as the early play.\n- Leave `mulligan_keep` itself alone: the frozen greedy baseline calls it (`crates/ai/src/baselines.rs:35`) and must not move.\n- It reads only the AI's own hand (CLAUDE.md, crates/ai: hidden cards never change a decision).\n- Write the reading as a ruling in the issue's block beside R2977000's bound, and update the mulligan paragraph of `crates/ai/README.md`.\n\n## Where it lands\n\n- `crates/ai/src/mulligan.rs`, `crates/ai/src/config.rs`, `crates/ai/README.md`\n- `crates/ai/tests/ai/decide.rs` (`mod the_mulligans_curve`, its `mulligan_with` helper at `:399`)\n- SPEC \u00a79.9 (the practice AI), through `spec/pending/<issue>.md`\n\n## Acceptance criteria\n\n- [ ] A test dealing meditative-025, core-055 and traininggrounds-025 beside cheap plain cards has the AI send back Lava Golem and Trigor and not count Felinor as its early play. It fails today.\n- [ ] A Tribute card whose Tribute a Nerf or Floats brought to 0 is kept by its mana cost alone.\n- [ ] The greedy baseline's mulligan is unchanged and its tests pass.\n- [ ] `cargo test -p jackioh-ai` and `cargo jackioh gate` pass, and `cargo jackioh spec check` is green with the new ruling and its test.\n\n## Size and risks\n\nSmall: one module, a constant, tests, a README line and a ruling. Difficulty hard (the AI). Low risk: only hands holding a Tribute card are kept differently, which may move pinned AI fixtures or gate games that deal one.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-15T08:41:16Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3936: needs a plan; `claude-7` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T08:41:37Z",
+    "claimed_at": "2026-11-15T08:51:26Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
