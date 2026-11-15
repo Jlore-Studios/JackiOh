@@ -14002,17 +14002,8 @@
       "waiting_comment": 6892983344
     },
     "3937": {
-      "action": "plan",
-      "asks": [
-        "c:6900330556"
-      ],
-      "build_next": {
-        "from_run": "43761234429",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-15T21:32:25Z",
-        "until": "2026-11-15T22:02:25Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-15T21:32:12Z",
         "difficulty": "hard",
@@ -14031,10 +14022,9 @@
         "reason": "planned on opus",
         "trail": "stfmt.toml; grep -n \\\"fn takes_strike_back\\\\|pub fn pierces\\\" -A3 crates/engine/src/*.rs | head -10\", \"description\": \"Check rustfmt config and helper signatures\"}\n- Grep: {\"pattern\": \"EvalWeights \\\\{\", \"path\": \"/home/runner/work/_temp/work/item-3937\", \"output_mode\": \"content\", \"glob\": \"*.rs\"}\n- Bash: {\"command\": \"ls e2e/cypress/e2e | grep -i \\\"practice\\\\|ai\\\" | head; grep -rln \\\"practice\\\" e2e/cypress/e2e | head -8\", \"description\": \"Look for e2e specs that pin practice AI behaviour\"}\n- Bash: {\"command\": \"git show 68f1c3dd29 -- e2e/cypress/e2e/46-menus-fit-one-screen.cy.ts | head -60\", \"description\": \"See why #3930 touched e2e specs\"}\n- Bash: {\"command\": \"grep -n \\\"smallest\\\\|ready_gap\\\" crates/ai/README.md | cut -c1-250\", \"description\": \"Find README mentions of the order\"}\n- Bash: {\"command\": \"git show 3292f2ea70:spec/rulings/R3951000.md 2>/dev/null | head -8 || sed -n 1,8p spec/rulings/R3951000.md; grep -rn \\\"R3793000\\\" spec/11-rulings.md | cut -c1-250 | head -2\", \"descriptio\u2026\n- Bash: {\"command\": \"grep -n \\\"^##\\\" spec/04-combat.md | head; grep -n \\\"^### 9.9\\\" spec/09-architecture.md\", \"description\": \"Verify section headings exist\"}\n- Bash: {\"command\": \"grep -n \\\"fn falls_to_first_strike\\\\|^/// \\u00a74.3 step 1 and R93\\\" crates/ai/src/evaluate.rs; grep -n \\\"unbound.extend(bound);\\\\|let dealt = if pierce {\\\\|let Some((attacker, attack, _\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3937/.bot-plan.md\", \"content\": \"## Goal\\n\\n`damage_past_taunts_with` (`crates/ai/src/evaluate.rs`), which feeds `face_threat`, `wall_switches` and `re\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Count words in the plan draft\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3937/.bot-plan.md\", \"content\": \"## Goal\\n\\n`damage_past_taunts_with` (`crates/ai/src/evaluate.rs`, behind `face_threat`, `wall_switches` and `ready_ga\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3937/.bot-plan.md\", \"old_string\": \" The body, with every section and ruling written as a `[[\\u2026]]` link:\\n - **Problem.** [[\\\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3937/.bot-plan.md\", \"old_string\": \"**Departure from the issue (the first plan's, kept).** \\\"Lone breaker first\\\" as the only ord\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3937/.bot-plan.md\", \"old_string\": \"- **The threat moves.** `face_threat` feeds the evaluation, `wall_switches`, `ready_gap` and \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3937/.bot-plan.md\", \"old_string\": \" Add to its doc: \\\"With `w.best_attack_order_past_taunts` (R3937000) an attacker a Taunt woul\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3937/.bot-plan.md\", \"old_string\": \"- [ ] The Armor test (2), the guard board (6) and the wall test pass, and all three fail on `\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3937/.bot-plan.md\", \"old_string\": \"- Add `best_attack_order_past_taunts: false,` to `OFF`.\\n- Change its doc to: \\\"AI_EVAL with \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3937/.bot-plan.md\", \"old_string\": \"Done means:\\n- the pinned Armor test counts 2, and a 3-health Defense guard against 3, 3 and \u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3937/.bot-plan.md\", \"old_string\": \"Do not touch:\\n- `.github/`, `.harness/`, `.squishy/`, `bot/`, or any crate but `crates/ai`;\\\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3937/.bot-plan.md\", \"old_string\": \" Its doc: \\\"`damage_past_taunts_with`'s walk in one order, smallest first or, with `breaker_f\u2026\n- tool error: <tool_use_error>String to replace not found in file. String: Its doc: \"`damage_past_taunts_with`'s walk in one order, smallest first or, with `breaker_first`, each Taunt's smallest lone breaker first\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3937/.bot-plan.md\", \"old_string\": \" While the Taunt stands, the waiting attackers stay bound and are dropped, as before. With th\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Grep: {\"pattern\": \"Its doc:\", \"path\": \"/home/runner/work/_temp/work/item-3937/.bot-plan.md\", \"output_mode\": \"content\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3937/.bot-plan.md\", \"offset\": 49, \"limit\": 1}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3937/.bot-plan.md\", \"old_string\": \"walk in one order, smallest first or, with `breaker_first`, each Taunt's smallest lone breake\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3937/.bot-plan.md\", \"old_string\": \"None of these block the build. For a person to confirm:\\n1. The count takes the larger of two\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; cat .bot-plan.md\", \"description\": \"Recount and print final plan\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3937/.bot-plan.md\", \"old_string\": \"**Departures from the first plan:**\\n- The second pass runs only when the first found a lone \u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule 2, the AI: it changes how crates/ai/src/evaluate.rs counts the threat that every evaluation, wall_switches and ready_gap read\"} --> ## Goal `damage_past_taunts_with` (`crates/ai/src/evaluate.rs`, behind `face_threat`, `wall_switches` and `ready_gap`) co\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-15T19:58:22Z",
       "owner_why": "it plans it",
@@ -14047,12 +14037,14 @@
       "provider": "claude-3",
       "queued_at": "2026-11-15T19:53:18Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43761234429",
+      "run_id": "pending:5ba3d682-1794778538",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-15T21:00:39Z",
+      "started_at": "2026-11-15T21:36:04Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6900330556"
+      ]
     },
     "3938": {
       "action": "review",
@@ -15619,9 +15611,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-15T21:35:24Z",
+    "at": "2026-11-15T21:36:04Z",
     "url": "",
-    "what": "revise #3989 on claude-8"
+    "what": "build #3937 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-15T21:17:32Z",
