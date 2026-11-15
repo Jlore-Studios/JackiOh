@@ -15124,8 +15124,13 @@
     "what": "build #3976 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-15T20:41:30Z",
-    "notes": [],
+    "at": "2026-11-15T20:48:20Z",
+    "notes": [
+      "delivered plan #3976 on claude-6 (run 43758054692): planned",
+      "started build #3976 on claude-6 (run 43760335481)",
+      "nothing more to start: nothing is queued",
+      "pruned 3 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15830,7 +15835,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-15T20:41:30Z",
+  "loop_tick": "2026-11-15T20:48:20Z",
   "machine_disk": {
     "issue": null,
     "reading": {
