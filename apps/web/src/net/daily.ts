@@ -87,6 +87,9 @@ export type DailyGame = {
   nextGame: string | null;
 };
 
+/** R3934000: a finished game whose moves the retention purge took, as its list row from the stored board: no view, legal actions or forecast. */
+export type DailyExpiredGame = DailyGameSummary & { expired: true };
+
 /** `GET`/`PUT /api/daily/settings`: email on or off, and push, which needs the server's public key. */
 export type DailySettings = {
   emailOn: boolean;
@@ -139,14 +142,14 @@ export async function cancelDailySeek(id: string): Promise<void> {
   await daily<null>(`/api/daily/seeks/${part(id)}`, { method: "DELETE" });
 }
 
-/** A board's read. */
-export function getDailyGame(matchId: string): Promise<DailyGame> {
-  return daily<DailyGame>(`/api/daily/games/${part(matchId)}`);
+/** A board's read: the seat as it stands, or (`expired`) the result of a finished game whose moves are no longer kept (R3934000). */
+export function getDailyGame(matchId: string): Promise<DailyGame | DailyExpiredGame> {
+  return daily<DailyGame | DailyExpiredGame>(`/api/daily/games/${part(matchId)}`);
 }
 
 /**
  * One action, sent after the last one the board read (`after`), under a fresh nonce: the same nonce sent
- * again applies once. 409 `stale` (the board is behind) and `time_up`, 422 `not_your_move` and `illegal`.
+ * again applies once. 409 `stale` (the board is behind), `time_up` and `over`, 422 `not_your_move` and `illegal`.
  */
 export function sendDailyAction(matchId: string, body: { after: number; nonce: string; action: ActionBody }): Promise<DailyGame> {
   return daily<DailyGame>(`/api/daily/games/${part(matchId)}/actions`, { method: "POST", body });

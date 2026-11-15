@@ -1091,7 +1091,10 @@ routes (net/navigate.ts paths, public/_redirects, behind the gate as /together i
                          daily challenge to the opponent at its mode and time, NewDailyDialog's rematch)
                          and Watch the replay (the server's replay of it, none for a voided game); read
                          again the same way until the game is over, so an end on the opponent's move
-                         shows (R3840000)
+                         shows (R3840000); a finished game whose moves the retention purge took (its
+                         read says `expired`) shows its result, both heroes' life, when it ended, a line
+                         that its moves are no longer kept and Back to daily games, with no replay or
+                         rematch (R3934000)
 net/daily.ts             fetch wrappers for every daily route, typed
 daily/NewDailyDialog.tsx challenge any friend (online or not) or find an opponent, with daily/DailyFields.tsx:
                          the mode, its deck or lean, and the time per move on the segmented toggle; as a

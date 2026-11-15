@@ -4193,6 +4193,8 @@
   "Lost on time": "超时告负",
   "This daily game didn't load: {message}": "这局每日对局没有加载出来：{message}",
   "Back to daily games": "返回每日对局",
+  "Ended {when}": "结束于 {when}",
+  "This game's moves are no longer kept, so it can't be shown or replayed.": "这局对局的步骤已不再保存，因此无法回看或重播。",
   "Next game": "下一局",
   "End turn and send": "结束回合并发送",
   "This game plays on the card version it started on, an older one than today's.": "这局对局沿用开局时的卡牌版本，比今天的版本旧。",

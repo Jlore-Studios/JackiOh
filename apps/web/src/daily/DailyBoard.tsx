@@ -23,6 +23,10 @@
 // in play (R169), the seat's forecast of its attacks rides the read and draws an aimed attack's outcomes
 // (R3477000), and a finished game's Watch the replay opens the server's replay of it.
 //
+// A finished game whose moves the retention purge took reads `expired` (R3934000): no view, so no board, only its
+// result with both heroes' life, when it ended, a line saying its moves are no longer kept and Back to daily
+// games. It offers no replay (the log is gone) and no Rematch, and it is read no more.
+//
 // CLAUDE.md rule 7: who holds the move, its deadline, what is legal and every refusal are the server's.
 
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
@@ -34,10 +38,10 @@ import { CatalogContext } from "../game/catalog.ts";
 import { ModifierList } from "../game/ModifierList.tsx";
 import { pollWhileVisible } from "../game/net.ts";
 import { outcomeFor } from "../game/Result.tsx";
-import { t, useLocale } from "../i18n/i18n.ts";
+import { formatDateTime, t, useLocale } from "../i18n/i18n.ts";
 import { Loading, ShellPanel } from "../main.tsx";
 import { ApiRequestError } from "../net/api.ts";
-import { getDailyGame, sendDailyAction, type DailyGame } from "../net/daily.ts";
+import { getDailyGame, sendDailyAction, type DailyExpiredGame, type DailyGame } from "../net/daily.ts";
 import { attempt, messageOf } from "../net/errors.ts";
 import { withSession } from "../net/gate.ts";
 import { navigate, paths } from "../net/navigate.ts";
@@ -46,7 +50,7 @@ import { openOnlineMatchReplay } from "../replay/sources.ts";
 import { BackLink } from "../routes/nav.tsx";
 import { useCatalogLookup } from "../together/catalog.ts";
 import { useSocialReads } from "../together/socialPoll.ts";
-import { DailyClockPill, useNow } from "./DailyClockPill.tsx";
+import { DailyClockPill, resultLine, useNow } from "./DailyClockPill.tsx";
 import { DAILY_REREAD_MS } from "./config.ts";
 import { NewDailyDialog } from "./NewDailyDialog.tsx";
 import { dailyTestid } from "./testids.ts";
@@ -67,11 +71,36 @@ function nonce(): string {
   return crypto.randomUUID();
 }
 
+/** R3934000: a finished game whose moves are no longer kept, as its result: the list's row, from the stored board. */
+function ExpiredGame({ game }: { game: DailyExpiredGame }): ReactElement {
+  return (
+    <ShellPanel testId={dailyTestid.expired}>
+      <h2 data-testid={dailyTestid.expiredResult} data-outcome={game.result?.outcome ?? "none"}>
+        {resultLine(game)}
+      </h2>
+      <p>
+        {t("vs {opponent}", { opponent: game.opponent.username })} · {t("Turn {n}", { n: game.turn })}
+      </p>
+      <p>{t("You {me} – {them} Opponent", { me: game.life.me, them: game.life.them })}</p>
+      {game.endedAt === null ? null : <p>{t("Ended {when}", { when: formatDateTime(game.endedAt) })}</p>}
+      <p className="notice" role="note">
+        {t("This game's moves are no longer kept, so it can't be shown or replayed.")}
+      </p>
+      <div className="row">
+        <button type="button" className="button-primary" data-testid={dailyTestid.backToList} data-route={paths.daily} onClick={() => navigate(paths.daily)}>
+          {t("Back to daily games")}
+        </button>
+      </div>
+    </ShellPanel>
+  );
+}
+
 export default function DailyBoard({ matchId }: { matchId: string }): ReactElement {
   useLocale();
   const lookup = useCatalogLookup();
   const now = useNow();
   const [game, setGame] = useState<DailyGame | null>(null);
+  const [expired, setExpired] = useState<DailyExpiredGame | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reads, setReads] = useState(0);
@@ -93,7 +122,14 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
     attempt(() => getDailyGame(matchId)).then(
       (answer) => {
         if (canceled) return;
-        setGame(answer);
+        // R3934000: the board is gone with the moves, so the slow poll, which reads a game not over, has none to read.
+        if ("expired" in answer) {
+          setExpired(answer);
+          setGame(null);
+        } else {
+          setGame(answer);
+          setExpired(null);
+        }
         setLoadError(null);
       },
       (cause: unknown) => {
@@ -178,6 +214,8 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
     heldAutoEndTurn.current = null;
     if ((game.view.autoEndTurn !== false) !== held.enabled) send(held);
   }, [game, sends, send]);
+
+  if (expired !== null) return <ExpiredGame game={expired} />;
 
   if (game === null) {
     if (loadError !== null) {

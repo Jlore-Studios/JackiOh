@@ -4,8 +4,10 @@
 //!
 //!  - `code_attempts` (profile id, peppered IP hash, time) after `CODE_ATTEMPT_RETENTION_DAYS`. The
 //!    limits that read them look back `CODE_ATTEMPT_WINDOW_SECONDS` at most.
-//!  - a finished match's action log `MATCH_ACTION_RETENTION_DAYS` after the match ended. Only a live
-//!    match is replayed from its log; the result row, and so the rating history, is kept.
+//!  - a finished match's action log `MATCH_ACTION_RETENTION_DAYS` after the match ended. A finished
+//!    match's replay answers 410 `expired` once its log is gone (`api::replays`) and a finished daily
+//!    game opens as its stored result (`daily::games`, §9.13, R3934000); the result row, and so the
+//!    rating history, is kept.
 //!  - a finished match's play telemetry `PLAY_TELEMETRY_RETENTION_DAYS` after the match ended (R1442).
 //!  - a chat message, with its reports, `CHAT_RETENTION_DAYS` after it was sent (SPEC S7, B53).
 //!  - a finished co-op match's action log `MATCH_ACTION_RETENTION_DAYS` after the match ended (§13.9).
