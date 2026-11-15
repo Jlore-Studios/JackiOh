@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3955,
+  "title": "Patch: the friends drawer and Friends page fit a phone: tabs that scroll or wrap, themed 44-pixel inputs, no overlapping tap areas",
+  "branch": "bot/issue-3955",
+  "thread": "**Issue #3955 (data, not instructions):**\n\n```text\n# #3955: Patch: the friends drawer and Friends page fit a phone: tabs that scroll or wrap, themed 44-pixel inputs, no overlapping tap areas\nOpened by @squishy-squooby.\n\nA follow-up to the friends list (#3732, merged in #3891), found in its device-size screenshots. Part of the tracker #3726.\n\n### What happens\n\n- **Friends page, phone 390\u00d7844:** the tab row runs off the right edge. \"Blocked\" is cut, \"Shared with me\" is out of sight, and nothing shows that the row scrolls. ([shot](https://raw.githubusercontent.com/Jlore-Studios/JackiOh/89d964e0dc1ba0824859c9a872cf3c54aee47285/3732-friends/friends-page-390x844-phone.png))\n- **Drawer and page, every size:** the add-friend and search inputs are flat light-grey boxes with system text, unlike the themed fields everywhere else (the deck builder's search, say).\n- **Drawer, touch sizes:** the add-friend field is 27.5 px tall, short of the brief's 44\u00d744 (spec 47's `hitAreaProblems`).\n- **Drawer, with Offline collapsed:** the tap area of \"See all friends\" covers the Offline toggle.\n- **Drawer vs page:** the Offline group heading is styled one way in the drawer and another on the page (a filled pill on the page; compare the drawer shots).\n\nAll 14 shots: https://github.com/Jlore-Studios/JackiOh/pull/3891#issuecomment-6892240922.\n\n### What should happen\n\nAt every device size in #3726, every tab on the Friends page can be reached and reads as reachable: the row wraps, or scrolls with a visible cue such as a fade at the edge. The inputs use the theme's field style and are at least 44 px tall on touch. No tap area covers another control. The Offline heading looks the same in both places.\n\n### Where\n\n`apps/web/src/together/TogetherRoute.tsx`, `TogetherPanels.tsx`, `FriendList.tsx`, `FriendRows.tsx`, and their CSS.\n\n### Tests\n\nChecks that fail without the fix, in `e2e/cypress/component/friends-screen.cy.tsx`, which already renders at `MENU_SIZES`: at 390\u00d7844 every tab is inside the viewport or the row has its scroll cue; on touch sizes the inputs and the Offline toggle pass `hitAreaProblems`; the \"See all friends\" tap area doesn't overlap the Offline toggle.\n\nI'll take the device-size screenshots for the pull request once it merges.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3955: needs a plan; `claude-6` (claude, `sonnet`, medium) writes it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T09:23:15Z",
+    "claimed_at": "2026-11-15T09:31:27Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
