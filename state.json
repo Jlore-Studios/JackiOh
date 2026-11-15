@@ -15438,27 +15438,19 @@
     "what": "build #3844 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-15T08:47:14Z",
+    "at": "2026-11-15T08:58:05Z",
     "notes": [
-      "#3839 needs a plan",
-      "#3840 needs a plan",
-      "#3841 needs a plan",
-      "#3842 needs a plan",
-      "#3843 needs a plan",
-      "#3844 needs a plan",
-      "#3932 needs a plan",
-      "#3936 needs a plan",
-      "started plan #3932 on agy (run 43696203237)",
-      "started plan #3842 on claude-3 (run 43696235891)",
-      "started plan #3843 on claude-7 (run 43696271212)",
-      "started plan #3839 on claude-8 (run 43696305323)",
-      "started plan #3840 on claude-4 (run 43696340590)",
-      "started plan #3841 on claude-6 (run 43696378475)",
-      "started plan #3844 on claude-3 (run 43696412048)",
-      "started plan #3936 on claude-7 (run 43696448717)",
+      "delivered plan #3844 on claude-3 (run 43696412048): planned",
+      "delivered plan #3841 on claude-6 (run 43696378475): planned",
+      "delivered plan #3840 on claude-4 (run 43696340590): planned",
+      "delivered plan #3839 on claude-8 (run 43696305323): planned",
+      "started build #3839 on claude-8 (run 43697203347)",
+      "started build #3840 on claude-4 (run 43697241071)",
+      "started build #3841 on claude-6 (run 43697280216)",
+      "started build #3844 on claude-3 (run 43697320674)",
       "nothing more to start: nothing is queued",
-      "pruned 5 plan file(s) older than 7 days",
-      "runner gate: started 2 of 2 waiting run(s) (run 43695750784 on claude/modest-dirac-7k5wf4, run 43695980045 on claude/ecstatic-brown-3zox00)"
+      "pruned 1 plan file(s) older than 7 days",
+      "runner gate: started 0 of 2 waiting run(s); 2 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16164,7 +16156,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-15T08:47:14Z",
+  "loop_tick": "2026-11-15T08:58:05Z",
   "machine_disk": {
     "issue": null,
     "reading": {
