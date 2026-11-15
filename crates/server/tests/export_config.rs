@@ -63,6 +63,14 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("AUTH_SIGN_OUT_WAIT_SECONDS", json!(c::AUTH_SIGN_OUT_WAIT_SECONDS)),
         ("BIRTH_YEAR_EARLIEST", json!(c::BIRTH_YEAR_EARLIEST)),
         ("CATALOG_NUMBER_SET_OFFSETS", catalog_number_set_offsets()),
+        (
+            "CLIENT_ERROR_MESSAGE_MAX_CHARS",
+            json!(c::CLIENT_ERROR_MESSAGE_MAX_CHARS),
+        ),
+        (
+            "CLIENT_ERROR_STACK_MAX_CHARS",
+            json!(c::CLIENT_ERROR_STACK_MAX_CHARS),
+        ),
         ("CODE_ALPHABET", json!(c::CODE_ALPHABET)),
         (
             "CODE_ATTEMPTS_PER_PROFILE_PER_HOUR",
@@ -425,8 +433,9 @@ fn every_name_is_listed_once() {
         // #3694: MATCH_OVER_CLOSE_CODE (R3694000).
         // #3730: LOBBY_START_COUNTDOWN_SECONDS (R3730002).
         // #3767: SEAT_TAKEN_CLOSE_CODE (R3767000).
+        // #3619: CLIENT_ERROR_MESSAGE_MAX_CHARS and CLIENT_ERROR_STACK_MAX_CHARS.
         listed,
-        87 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6 + 6 + 4 + 7 + 2 + 2 + 2 + 1 + 2 + 1 + 1 + 1,
+        87 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6 + 6 + 4 + 7 + 2 + 2 + 2 + 1 + 2 + 1 + 1 + 1 + 2,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
@@ -452,7 +461,8 @@ fn every_name_is_listed_once() {
          QUEUE_POPULATION_POLL_SECONDS and LIVE_GAME_POLL_SECONDS (R3207000, R3207001), and #3212's \
          PACKS_OPEN_ALL_MAX and DECK_SYNC_ITEMS_MAX (R3212000, R3212001), and #3213's \
          POST_GAME_FRAME_VERSION (R3213000), and #3694's MATCH_OVER_CLOSE_CODE (R3694000), and #3730's \
-         LOBBY_START_COUNTDOWN_SECONDS (R3730002), and #3767's SEAT_TAKEN_CLOSE_CODE (R3767000)"
+         LOBBY_START_COUNTDOWN_SECONDS (R3730002), and #3767's SEAT_TAKEN_CLOSE_CODE (R3767000), and #3619's CLIENT_ERROR_MESSAGE_MAX_CHARS and \
+         CLIENT_ERROR_STACK_MAX_CHARS"
     );
 }
 
