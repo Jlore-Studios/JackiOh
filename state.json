@@ -14223,7 +14223,7 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-3",
-      "owner_since": "2026-11-15T04:13:55Z",
+      "owner_since": "2026-11-15T04:52:53Z",
       "owner_why": "its approval shipped `777119be8f00`, and the last approver owns the merge, so it fixes what CI found",
       "pending_request": false,
       "planned_at": "2026-11-15T02:28:24Z",
