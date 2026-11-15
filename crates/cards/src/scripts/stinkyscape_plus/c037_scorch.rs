@@ -9,8 +9,8 @@
 //! declared or forced. "Damage also Burns N" is the rider `burnsOnDamage` (R3540002), N the declared
 //! `burns` per face (R386). Ranged takes it no damage back (R783000) and Pierce ignores Armor (R346).
 //! Issue #3951 made it 1/5 (Radiant 2/10), took away its ten attacks a turn (`attacksPerTurn`) and the
-//! Radiant face's Cloaked, and gave it the Burn; `script_v0_6_2b` keeps the ten attacks for the replays
-//! of v0.6.2b and before (R767000).
+//! Radiant face's Cloaked, and gave it the Burn; `script_v0_6_4b` keeps the ten attacks for the replays
+//! of v0.6.4b and before (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -19,8 +19,8 @@ pub const ID: &str = "stinkyscapeplus-037";
 /// The printed Burns of each face, the catalog's `burns` (R386).
 const BASE_BURNS: i32 = 5;
 const RADIANT_BURNS: i32 = 10;
-/// Through v0.6.2b: "Can attack 10 times per turn", the catalog's `attacks` then, on both faces (R386).
-const ATTACKS_V0_6_2B: i32 = 10;
+/// Through v0.6.4b: "Can attack 10 times per turn", the catalog's `attacks` then, on both faces (R386).
+const ATTACKS_V0_6_4B: i32 = 10;
 
 /// R3550001, R3540002: a face's two flags.
 fn scorch(burns: i32) -> Script {
@@ -41,12 +41,12 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: both faces through v0.6.2b, ten attacks a turn and no Burn (issue #3951). `KEPT_SCRIPTS`
+/// R767000: both faces through v0.6.4b, ten attacks a turn and no Burn (issue #3951). `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_6_2b() -> CardScripts {
+pub fn script_v0_6_4b() -> CardScripts {
     let face = Script {
         static_flags: Some(StaticFlags {
-            attacks_per_turn: Some(ATTACKS_V0_6_2B),
+            attacks_per_turn: Some(ATTACKS_V0_6_4B),
             attacks_only_across: Some(true),
             ..StaticFlags::default()
         }),
@@ -165,13 +165,13 @@ mod tests {
             assert_eq!(s.card(target.as_str()).damage, 2 * ATTACK + BASE_BURNS);
         }
 
-        /// R767000: through v0.6.2b it attacked ten times a turn and burned nothing (issue #3951).
+        /// R767000: through v0.6.4b it attacked ten times a turn and burned nothing (issue #3951).
         #[test]
-        fn r767000_the_script_kept_for_v0_6_2b_attacks_ten_times_and_burns_nothing() {
-            crate::under_kept(ID, script_v0_6_2b(), || {
+        fn r767000_the_script_kept_for_v0_6_4b_attacks_ten_times_and_burns_nothing() {
+            crate::under_kept(ID, script_v0_6_4b(), || {
                 let mut s = board(false, "s037-kept", json!([{ "def": TOUGH, "lane": 2 }]));
                 let target = s.unit_at(P2, 2).id;
-                for _ in 0..ATTACKS_V0_6_2B {
+                for _ in 0..ATTACKS_V0_6_4B {
                     s.attack(ID, target.as_str());
                 }
                 s.expect_refused(|s| s.attack(ID, target.as_str()));

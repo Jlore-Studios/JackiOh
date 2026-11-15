@@ -7,8 +7,8 @@
 //!          End of turn: Buff {cards|random card|random cards} in your hand and each adjacent Unit."
 //! Engine: a hand and a deck trigger (R464, C+ #37 Wardrum's) on `cardResolved` of a `tribal_play`: `summon_this`
 //! into the leftmost open unit zone (R64), no Cry (R1), the first either player sees of it (R97); with
-//! no open zone it stays where it is. Issue #3951 added the hand; through v0.6.2b it summoned itself from
-//! the deck alone, which `script_v0_6_2b` keeps for those replays (R767000). A face-down play is a Trap with no tags until revealed (R448), so
+//! no open zone it stays where it is. Issue #3951 added the hand; through v0.6.4b it summoned itself from
+//! the deck alone, which `script_v0_6_4b` keeps for those replays (R767000). A face-down play is a Trap with no tags until revealed (R448), so
 //! it summons nothing. End of turn: one Buff on a uniform pick over the hand (R440); Radiant, then one
 //! Buff on each Unit `adjacent_to` this (§3.1). Issue #3837 took the deck out of the pick; through
 //! v0.6.1b it was over hand and deck, which `script_v0_6_1b` keeps for those replays (R767000). "All
@@ -96,9 +96,9 @@ pub fn script() -> CardScripts {
     tatches(ZONES, true)
 }
 
-/// R767000: the summon from the deck alone, through v0.6.2b (issue #3951); `KEPT_SCRIPTS` folds those
+/// R767000: the summon from the deck alone, through v0.6.4b (issue #3951); `KEPT_SCRIPTS` folds those
 /// replays under it.
-pub fn script_v0_6_2b() -> CardScripts {
+pub fn script_v0_6_4b() -> CardScripts {
     tatches(ZONES, false)
 }
 
@@ -245,10 +245,10 @@ mod tests {
                 }
             }
 
-            /// R767000: through v0.6.2b only the deck summoned it (issue #3951).
+            /// R767000: through v0.6.4b only the deck summoned it (issue #3951).
             #[test]
-            fn r767000_the_kept_v0_6_2b_script_leaves_it_in_the_hand() {
-                crate::under_kept(TATCHES, script_v0_6_2b(), || {
+            fn r767000_the_kept_v0_6_4b_script_leaves_it_in_the_hand() {
+                crate::under_kept(TATCHES, script_v0_6_4b(), || {
                     let mut s = scenario(json!({
                         "p1": { "mana": 10, "hand": [VANILLA, TATCHES], "library": [FILLER, FILLER] },
                         "p2": { "hand": [FILLER], "library": filler(4) },

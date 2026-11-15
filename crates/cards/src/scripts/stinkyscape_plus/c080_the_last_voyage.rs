@@ -8,7 +8,7 @@
 //! Engine: the board exile reaches Dormant cards (`exile_board`, R3539002) and spares only a card no
 //! effect reaches; the ten Terminus Starships are summoned already holding their fixed loadouts
 //! (`summon_starships`, R3539001; five worth 5 mana of Starship Pieces and five worth 6 since issue #3951,
-//! 5 to 12 through v0.6.2b, which `script_v0_6_2b` keeps for those replays, R767000), sealed against a
+//! 5 to 12 through v0.6.4b, which `script_v0_6_4b` keeps for those replays, R767000), sealed against a
 //! launch by hand (R3539000); one launches at once
 //! and another at the start of each of its caster's turns (`launch_random_starship`, kept by
 //! `for_rest_of_game`, R3539002), a free launch (R1852006). The number summoned is the declared
@@ -64,10 +64,10 @@ pub const TERMINUS_STARSHIPS: [(&str, &[&str]); 10] = [
     (PSALM_ID, PSALM_PIECES),
 ];
 
-/// R767000: the ten Terminus Starships through v0.6.2b, each with the loadout it came holding then, worth
-/// 5 to 12 mana of Starship Pieces (issue #3951 cut eight of them to 5 or 6). `script_v0_6_2b` here and
+/// R767000: the ten Terminus Starships through v0.6.4b, each with the loadout it came holding then, worth
+/// 5 to 12 mana of Starship Pieces (issue #3951 cut eight of them to 5 or 6). `script_v0_6_4b` here and
 /// in `c155_the_far_vagabond` summon from it.
-pub const TERMINUS_STARSHIPS_V0_6_2B: [(&str, &[&str]); 10] = [
+pub const TERMINUS_STARSHIPS_V0_6_4B: [(&str, &[&str]); 10] = [
     (ARK_ID, ARK_PIECES),
     (EMBER_ID, EMBER_PIECES),
     (PILGRIM_ID, &["stinkyscape-108", "stinkyscape-107", "stinkyscape-043", "stinkyscape-122"]),
@@ -168,17 +168,17 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the loadouts of v0.6.2b and before (issue #3951).
-pub fn blueprints_v0_6_2b() -> Vec<StarshipBlueprint> {
-    blueprints_of(&TERMINUS_STARSHIPS_V0_6_2B)
+/// R767000: the loadouts of v0.6.4b and before (issue #3951).
+pub fn blueprints_v0_6_4b() -> Vec<StarshipBlueprint> {
+    blueprints_of(&TERMINUS_STARSHIPS_V0_6_4B)
 }
 
-/// R767000: the scripts through v0.6.2b, summoning the loadouts of then (issue #3951). `KEPT_SCRIPTS`
+/// R767000: the scripts through v0.6.4b, summoning the loadouts of then (issue #3951). `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_6_2b() -> CardScripts {
+pub fn script_v0_6_4b() -> CardScripts {
     CardScripts {
-        base: voyage(false, blueprints_v0_6_2b),
-        radiant: voyage(true, blueprints_v0_6_2b),
+        base: voyage(false, blueprints_v0_6_4b),
+        radiant: voyage(true, blueprints_v0_6_4b),
     }
 }
 

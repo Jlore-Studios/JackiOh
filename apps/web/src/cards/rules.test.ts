@@ -1049,7 +1049,7 @@ describe("R910000: a trigger or verb bolds wherever a card uses it, in every cas
       ["Steal", "core-050", "radiant", "steal"],
       ["Steal", "meditative-076", "base", "steal"],
       ["Exile", "classic-078", "base", "exile"],
-      ["Exile", "classic-028", "base", "exiled"],
+      ["Exile", "classic-050", "base", "exiled"],
       ["Exile", "core-093", "base", "exiles"],
       ["Fuse", "classicplus-033", "base", "fused"],
       ["Transform", "core-041", "base", "transform"],

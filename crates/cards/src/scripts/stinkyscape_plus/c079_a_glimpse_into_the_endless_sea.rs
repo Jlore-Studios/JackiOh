@@ -13,7 +13,7 @@
 //! owner the game before the countdown ends (R3569006; `c001_bobs_plan.rs`). The Radiant face's Armor is
 //! `gain_hero_armor`, the declared `armor` (R386), kept for the rest of the game (R124). Issue #3951 took
 //! the base face's countdown from 10 to 8, a number, and gave the Radiant face its Armor, which
-//! `script_v0_6_2b` leaves out for the replays of v0.6.2b and before (R767000).
+//! `script_v0_6_4b` leaves out for the replays of v0.6.4b and before (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -54,9 +54,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts through v0.6.2b, whose Radiant face gained no Armor (issue #3951). `KEPT_SCRIPTS`
+/// R767000: the scripts through v0.6.4b, whose Radiant face gained no Armor (issue #3951). `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_6_2b() -> CardScripts {
+pub fn script_v0_6_4b() -> CardScripts {
     CardScripts {
         base: glimpse(false),
         radiant: glimpse(false),
@@ -159,10 +159,10 @@ mod tests {
             assert_eq!((turns, winner), (8, Some(Winner::P1)));
         }
 
-        /// R767000: through v0.6.2b neither face gave Armor (issue #3951).
+        /// R767000: through v0.6.4b neither face gave Armor (issue #3951).
         #[test]
-        fn r767000_the_script_kept_for_v0_6_2b_gives_the_radiant_face_no_armor() {
-            crate::under_kept(ID, script_v0_6_2b(), || {
+        fn r767000_the_script_kept_for_v0_6_4b_gives_the_radiant_face_no_armor() {
+            crate::under_kept(ID, script_v0_6_4b(), || {
                 let mut s = game("glimpse-kept", true);
                 s.play(ID, json!({}));
                 assert_eq!(s.state().players[P1].hero.armor, 0);

@@ -274,6 +274,7 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
       "meditativeplus-012",
       "meditativeplus-013",
       "stinkyscape-009",
+      "traininggrounds-031",
       "stinkyscapeplus-031",
       "stinkyscapeplus-072",
       "stinkyscapeplus-073",

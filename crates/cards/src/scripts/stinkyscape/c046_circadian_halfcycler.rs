@@ -9,7 +9,7 @@
 //!   waits for its controller's next turn. End of turn (R62), its controller's: one draw of the match rng
 //!   (R60) picks 1 Drone Interceptor two times in three and 2 one time in three (the designer's ⅔ and ⅓,
 //!   R3951002), each summoned into their leftmost open unit zone (R64); with no open zone nothing.
-//!   Radiant: Radiant Interceptors. Through v0.6.2b it summoned one, which `script_v0_6_2b` keeps for
+//!   Radiant: Radiant Interceptors. Through v0.6.4b it summoned one, which `script_v0_6_4b` keeps for
 //!   those replays (issue #3951, R767000).
 
 use jackioh_engine::prelude::*;
@@ -56,9 +56,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts through v0.6.2b, which summoned one Interceptor (issue #3951). `KEPT_SCRIPTS`
+/// R767000: the scripts through v0.6.4b, which summoned one Interceptor (issue #3951). `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_6_2b() -> CardScripts {
+pub fn script_v0_6_4b() -> CardScripts {
     CardScripts {
         base: face(false, false),
         radiant: face(true, false),
@@ -197,10 +197,10 @@ mod tests {
         assert!((15..=45).contains(&twos), "{twos} twos in {seeds}");
     }
 
-    /// R767000: through v0.6.2b it summoned one (issue #3951).
+    /// R767000: through v0.6.4b it summoned one (issue #3951).
     #[test]
-    fn r767000_the_script_kept_for_v0_6_2b_summons_one() {
-        crate::under_kept(HALFCYCLER, super::script_v0_6_2b(), || {
+    fn r767000_the_script_kept_for_v0_6_4b_summons_one() {
+        crate::under_kept(HALFCYCLER, super::script_v0_6_4b(), || {
             for n in 0..12 {
                 assert_eq!(summoned_on(&format!("halfcycler-kept-{n}"), false).len(), 1, "seed {n}");
             }

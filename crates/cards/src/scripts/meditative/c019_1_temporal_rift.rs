@@ -8,8 +8,8 @@
 //! ME-TURN's extra turns (R845–R847): `take_extra_turn` owes the caster one unless their
 //! once-a-game Rift flag is set, and sets it. A later Rift resolves its other effects and grants no
 //! turn. Both faces gain temporary mana now, the declared `mana` (issue #3951 gave the base face its 1
-//! and the Radiant face 1 more than its 2; through v0.6.2b only the Radiant face gained, which
-//! `script_v0_6_2b` keeps for those replays, R767000); the Radiant face adds #24's next-turn rider
+//! and the Radiant face 1 more than its 2; through v0.6.4b only the Radiant face gained, which
+//! `script_v0_6_4b` keeps for those replays, R767000); the Radiant face adds #24's next-turn rider
 //! (landing on the extra turn) and a draw.
 
 use jackioh_engine::prelude::*;
@@ -40,9 +40,9 @@ pub fn script() -> CardScripts {
     rift(true)
 }
 
-/// R767000: the scripts through v0.6.2b, whose base face gained no mana (issue #3951). `KEPT_SCRIPTS`
+/// R767000: the scripts through v0.6.4b, whose base face gained no mana (issue #3951). `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_6_2b() -> CardScripts {
+pub fn script_v0_6_4b() -> CardScripts {
     rift(false)
 }
 
@@ -94,10 +94,10 @@ mod tests {
             s.expect_mana(P1, 10);
         }
 
-        /// R767000: through v0.6.2b the base face gained no mana (issue #3951).
+        /// R767000: through v0.6.4b the base face gained no mana (issue #3951).
         #[test]
-        fn r767000_the_script_kept_for_v0_6_2b_gains_no_mana_on_the_base_face() {
-            crate::under_kept(RIFT, super::super::script_v0_6_2b(), || {
+        fn r767000_the_script_kept_for_v0_6_4b_gains_no_mana_on_the_base_face() {
+            crate::under_kept(RIFT, super::super::script_v0_6_4b(), || {
                 let mut s = board(json!([RIFT, FILLER]));
                 s.play(RIFT, json!({}));
                 s.expect_mana(P1, 9);

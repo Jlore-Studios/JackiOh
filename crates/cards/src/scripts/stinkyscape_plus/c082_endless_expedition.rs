@@ -9,7 +9,7 @@
 //! `mana` lower at every refresh from now on, an empty crystal being the one lost first and max mana
 //! flooring at 0 (R3569008). The card added is one drawn from the Terminus pool, every Terminus card of
 //! the shipped sets, tokens included (R3552001, R380), through the generator (R387), costing
-//! (`TERMINUS_COST`) whatever it printed (R3569007); (3) through v0.6.2b, which `script_v0_6_2b` keeps for
+//! (`TERMINUS_COST`) whatever it printed (R3569007); (3) through v0.6.4b, which `script_v0_6_4b` keeps for
 //! those replays (issue #3951, R767000). Quickdraw (R640) is a static flag beside the tag.
 
 use jackioh_engine::prelude::*;
@@ -18,8 +18,8 @@ pub const ID: &str = "stinkyscapeplus-082";
 
 /// "It costs (2)": the added card's cost.
 const TERMINUS_COST: i32 = 2;
-/// Through v0.6.2b (issue #3951): "it costs (3)".
-const TERMINUS_COST_V0_6_2B: i32 = 3;
+/// Through v0.6.4b (issue #3951): "it costs (3)".
+const TERMINUS_COST_V0_6_4B: i32 = 3;
 
 fn expedition(radiant: bool, cost: i32) -> Script {
     Script {
@@ -48,12 +48,12 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts through v0.6.2b, whose Terminus card cost (3) (issue #3951). `KEPT_SCRIPTS` folds
+/// R767000: the scripts through v0.6.4b, whose Terminus card cost (3) (issue #3951). `KEPT_SCRIPTS` folds
 /// those replays under it.
-pub fn script_v0_6_2b() -> CardScripts {
+pub fn script_v0_6_4b() -> CardScripts {
     CardScripts {
-        base: expedition(false, TERMINUS_COST_V0_6_2B),
-        radiant: expedition(true, TERMINUS_COST_V0_6_2B),
+        base: expedition(false, TERMINUS_COST_V0_6_4B),
+        radiant: expedition(true, TERMINUS_COST_V0_6_4B),
     }
 }
 
@@ -136,15 +136,15 @@ mod tests {
             }
         }
 
-        /// R767000: through v0.6.2b the card added cost (3) (issue #3951).
+        /// R767000: through v0.6.4b the card added cost (3) (issue #3951).
         #[test]
-        fn r767000_the_script_kept_for_v0_6_2b_adds_a_3_cost_terminus_card() {
-            crate::under_kept(ID, script_v0_6_2b(), || {
+        fn r767000_the_script_kept_for_v0_6_4b_adds_a_3_cost_terminus_card() {
+            crate::under_kept(ID, script_v0_6_4b(), || {
                 let mut s = game("expedition-kept", false);
                 s.play(ID, json!({}));
                 let made = added(&s);
                 assert_eq!(made.len(), 1, "{made:?}");
-                assert_eq!(effective_cost(s.state(), &made[0], Default::default()), TERMINUS_COST_V0_6_2B);
+                assert_eq!(effective_cost(s.state(), &made[0], Default::default()), TERMINUS_COST_V0_6_4B);
             });
         }
 

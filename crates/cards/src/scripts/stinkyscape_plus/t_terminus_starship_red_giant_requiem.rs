@@ -11,7 +11,7 @@ const CANNON: &str = "stinkyscape-060"; // Cannon v5
 const CAPACITOR: &str = "stinkyscape-133"; // Ultra Capacitor
 
 /// R3539001: the fixed loadout it comes holding: 5 mana of Starship Pieces (issue #3951; its loadout
-/// through v0.6.2b is `c080_the_last_voyage::TERMINUS_STARSHIPS_V0_6_2B`'s).
+/// through v0.6.4b is `c080_the_last_voyage::TERMINUS_STARSHIPS_V0_6_4B`'s).
 pub const PIECES: &[&str] = &[CANNON, CAPACITOR];
 
 pub fn script() -> CardScripts {

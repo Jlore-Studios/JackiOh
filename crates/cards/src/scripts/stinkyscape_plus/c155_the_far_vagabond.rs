@@ -5,7 +5,7 @@
 //!
 //! Engine: one Terminus Starship summoned holding its fixed loadout (`summon_starships`, R3539001),
 //! priced for its launch by hand (R3539000): (3), or (0) on the Radiant face. Issue #3951 cut the
-//! loadouts to 5 or 6 mana of Starship Pieces; `script_v0_6_2b` summons those of v0.6.2b and before
+//! loadouts to 5 or 6 mana of Starship Pieces; `script_v0_6_4b` summons those of v0.6.4b and before
 //! (R767000). The two prices are the
 //! PRICE numbers `tests/cross/params.rs` r1748003 lists.
 
@@ -40,12 +40,12 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts through v0.6.2b, summoning the Terminus Starships' loadouts of then (issue
+/// R767000: the scripts through v0.6.4b, summoning the Terminus Starships' loadouts of then (issue
 /// #3951). `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_2b() -> CardScripts {
+pub fn script_v0_6_4b() -> CardScripts {
     CardScripts {
-        base: vagabond(LAUNCH_PRICE, voyage::blueprints_v0_6_2b),
-        radiant: vagabond(RADIANT_LAUNCH_PRICE, voyage::blueprints_v0_6_2b),
+        base: vagabond(LAUNCH_PRICE, voyage::blueprints_v0_6_4b),
+        radiant: vagabond(RADIANT_LAUNCH_PRICE, voyage::blueprints_v0_6_4b),
     }
 }
 

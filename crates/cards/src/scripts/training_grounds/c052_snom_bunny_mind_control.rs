@@ -34,7 +34,7 @@
 //! Since issue #3139 it is its own card in earnest, moving its own way where Core #49 moved another
 //! (R2195003): the base face reads "Steal an enemy Unit. Set its stats to 2/2." (`set_stats` on the stolen
 //! Unit, the number `SET_TO`, a fixed one: whether 2/2 helps hangs on the Unit picked, params.rs; 4/4
-//! through v0.6.2b, issue #3951, which `script_v0_6_2b` keeps for those replays, R767000) and the
+//! through v0.6.4b, issue #3951, which `script_v0_6_4b` keeps for those replays, R767000) and the
 //! Radiant face, literally, "Steal an enemy card.": the target is any enemy permanent as Core #49's is
 //! (R3139002), and it no longer makes the card Radiant. Both effects run in a list, so a steal that finds no
 //! free zone (R15) still sets the Unit's stats, as Core #49's Radiant face still makes it Radiant. `script_v0_5_11o`
@@ -47,8 +47,8 @@ pub const ID: &str = "traininggrounds-052";
 
 /// "Set its stats to 2/2": the Attack and Health the stolen Unit is set to (§6.3 Set stats, R2198000).
 const SET_TO: i32 = 2;
-/// Through v0.6.2b (issue #3951): "Set its stats to 4/4".
-const SET_TO_V0_6_2B: i32 = 4;
+/// Through v0.6.4b (issue #3951): "Set its stats to 4/4".
+const SET_TO_V0_6_4B: i32 = 4;
 
 /// "An enemy Unit": the enemy's Units, never a card of the backrow's other types.
 fn enemy_unit() -> Vec<TargetDecl> {
@@ -89,10 +89,10 @@ pub fn script() -> CardScripts {
     mind_control(SET_TO)
 }
 
-/// R767000: the scripts v0.5.12 to v0.6.2b ran, setting the stolen Unit to 4/4 (issue #3951).
+/// R767000: the scripts v0.5.12 to v0.6.4b ran, setting the stolen Unit to 4/4 (issue #3951).
 /// `KEPT_SCRIPTS` folds those versions' replays under it.
-pub fn script_v0_6_2b() -> CardScripts {
-    mind_control(SET_TO_V0_6_2B)
+pub fn script_v0_6_4b() -> CardScripts {
+    mind_control(SET_TO_V0_6_4B)
 }
 
 /// R767000: the scripts v0.5.11r and every version before it ran: a steal of an enemy Unit, whose Radiant
@@ -119,7 +119,7 @@ pub fn script_v0_5_11o() -> CardScripts {
 // any enemy permanent; props (#25, #20, #45, #11, #8, #15, #41, #14).
 #[cfg(test)]
 mod tests {
-    use super::{script_v0_5_11o, script_v0_6_2b};
+    use super::{script_v0_5_11o, script_v0_6_4b};
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -387,10 +387,10 @@ mod tests {
         }
     }
 
-    /// R767000: from v0.5.12 through v0.6.2b the base face set the stolen Unit to 4/4 (issue #3951).
+    /// R767000: from v0.5.12 through v0.6.4b the base face set the stolen Unit to 4/4 (issue #3951).
     #[test]
-    fn r767000_the_script_kept_for_v0_6_2b_sets_the_stolen_unit_to_4_4() {
-        crate::under_kept(super::ID, script_v0_6_2b(), || {
+    fn r767000_the_script_kept_for_v0_6_4b_sets_the_stolen_unit_to_4_4() {
+        crate::under_kept(super::ID, script_v0_6_4b(), || {
             let mut g = scenario(json!({
                 "p1": { "hand": [MIND_CONTROL] },
                 "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 3 }] },

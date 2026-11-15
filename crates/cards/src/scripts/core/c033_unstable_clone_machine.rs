@@ -9,7 +9,7 @@
 //! resolved face, since #41 Sheepish transforms a played Unit at step 4. R119: a permanent is on the
 //! field before its own `cardResolved` (step 4), so it starts counting from the next play.
 //! Issue #3951 gave both faces "Activate: Draw {draw}." (R384: once a turn, its controller's, no cost), the
-//! declared `draw` (R386); through v0.6.2b it had no Activate, which `script_v0_6_2b` keeps for those
+//! declared `draw` (R386); through v0.6.4b it had no Activate, which `script_v0_6_4b` keeps for those
 //! replays (R767000).
 //! ENGINE GAP: `shuffleInto` has no `statsOverride`, so a Fused or Crafted body copies at printed stats,
 //! which R57 says it should keep.
@@ -140,9 +140,9 @@ pub fn script() -> CardScripts {
     machine(true)
 }
 
-/// R767000: the scripts through v0.6.2b, with no Activate (issue #3951). `KEPT_SCRIPTS` folds those
+/// R767000: the scripts through v0.6.4b, with no Activate (issue #3951). `KEPT_SCRIPTS` folds those
 /// replays under it.
-pub fn script_v0_6_2b() -> CardScripts {
+pub fn script_v0_6_4b() -> CardScripts {
     machine(false)
 }
 
@@ -331,10 +331,10 @@ mod tests {
             }
         }
 
-        /// R767000: through v0.6.2b it had no Activate.
+        /// R767000: through v0.6.4b it had no Activate.
         #[test]
-        fn r767000_the_script_kept_for_v0_6_2b_has_no_activate() {
-            let kept = super::super::script_v0_6_2b();
+        fn r767000_the_script_kept_for_v0_6_4b_has_no_activate() {
+            let kept = super::super::script_v0_6_4b();
             assert!(kept.base.activations.is_empty() && kept.radiant.activations.is_empty());
             let now = super::super::script();
             assert_eq!(now.base.activations.len(), 1);

@@ -733,7 +733,7 @@ pub(crate) fn weapon_board(
 }
 
 /// Issue #3951 made C+ #33 Ivory Tower Indestructible and Tradable: a test of what follows its destruction
-/// (R418, R653, R1194000) runs `run` on its definition through v0.6.2b, which printed neither.
+/// (R418, R653, R1194000) runs `run` on its definition through v0.6.4b, which printed neither.
 #[cfg(test)]
 pub(crate) fn destructible_ivory_tower<T>(run: impl FnOnce() -> T) -> T {
     use jackioh_engine::KeywordKind;

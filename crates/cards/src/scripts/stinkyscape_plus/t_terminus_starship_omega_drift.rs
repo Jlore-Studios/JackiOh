@@ -11,7 +11,7 @@ const BEAM: &str = "stinkyscape-058"; // Beam v5
 const WARPFIELD: &str = "stinkyscape-106"; // Warpfield Amplifier
 
 /// R3539001: the fixed loadout it comes holding: 5 mana of Starship Pieces (issue #3951; its loadout
-/// through v0.6.2b is `c080_the_last_voyage::TERMINUS_STARSHIPS_V0_6_2B`'s).
+/// through v0.6.4b is `c080_the_last_voyage::TERMINUS_STARSHIPS_V0_6_4B`'s).
 pub const PIECES: &[&str] = &[BEAM, WARPFIELD];
 
 pub fn script() -> CardScripts {

@@ -12,7 +12,7 @@ const CAPACITOR: &str = "stinkyscape-133"; // Ultra Capacitor
 const CAPSULE: &str = "stinkyscape-043"; // Healing Capsule
 
 /// R3539001: the fixed loadout it comes holding: 6 mana of Starship Pieces (issue #3951; its loadout
-/// through v0.6.2b is `c080_the_last_voyage::TERMINUS_STARSHIPS_V0_6_2B`'s).
+/// through v0.6.4b is `c080_the_last_voyage::TERMINUS_STARSHIPS_V0_6_4B`'s).
 pub const PIECES: &[&str] = &[REPEATER, CAPACITOR, CAPSULE];
 
 pub fn script() -> CardScripts {

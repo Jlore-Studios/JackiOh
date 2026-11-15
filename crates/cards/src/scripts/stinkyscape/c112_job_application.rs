@@ -63,7 +63,7 @@ const RESUME_WAIT_KEY: &str = "resumeWait";
 const REWARD_FACTOR_KEY: &str = "rewardFactor";
 const HIRED_KEY: &str = "hired";
 
-/// "Hear back in 1 to 4 turns" (2 to 6 through v0.6.2b, issue #3951).
+/// "Hear back in 1 to 4 turns" (2 to 6 through v0.6.4b, issue #3951).
 const SHORTEST_WAIT: i32 = 1;
 const LONGEST_WAIT: i32 = 4;
 /// "Play 3 cards of different costs in one turn".
@@ -118,8 +118,8 @@ const WAITS: Waits = Waits {
     strong: &STRONG_WAITS,
 };
 
-/// Through v0.6.2b: 2 to 6 turns, each table's weights over those five (R767000).
-const WAITS_V0_6_2B: Waits = Waits {
+/// Through v0.6.4b: 2 to 6 turns, each table's weights over those five (R767000).
+const WAITS_V0_6_4B: Waits = Waits {
     shortest: 2,
     longest: 6,
     weak: &[1, 2, 3, 4, 5],
@@ -415,12 +415,12 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: the scripts through v0.6.2b, whose resume heard back in 2 to 6 turns (issue #3951).
+/// R767000: the scripts through v0.6.4b, whose resume heard back in 2 to 6 turns (issue #3951).
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_2b() -> CardScripts {
+pub fn script_v0_6_4b() -> CardScripts {
     CardScripts {
-        base: job_application(WAITS_V0_6_2B),
-        radiant: job_application(WAITS_V0_6_2B),
+        base: job_application(WAITS_V0_6_4B),
+        radiant: job_application(WAITS_V0_6_4B),
     }
 }
 
@@ -767,13 +767,13 @@ mod tests {
         }
     }
 
-    /// R767000: through v0.6.2b a resume heard back in 2 to 6 turns (issue #3951), and the stage said so.
+    /// R767000: through v0.6.4b a resume heard back in 2 to 6 turns (issue #3951), and the stage said so.
     #[test]
-    fn r767000_the_script_kept_for_v0_6_2b_hears_back_in_2_to_6_turns() {
-        let kept = script_v0_6_2b();
+    fn r767000_the_script_kept_for_v0_6_4b_hears_back_in_2_to_6_turns() {
+        let kept = script_v0_6_4b();
         let stage = serde_json::to_value(&kept.base.stages[0]).expect("a stage serializes");
         assert_eq!(stage["reward"]["text"], json!("Hear back in 2 to 6 turns"));
-        for table in [WAITS_V0_6_2B.weak, WAITS_V0_6_2B.solid, WAITS_V0_6_2B.strong] {
+        for table in [WAITS_V0_6_4B.weak, WAITS_V0_6_4B.solid, WAITS_V0_6_4B.strong] {
             assert_eq!(table.len(), 5);
         }
         crate::under_kept(ID, kept, || {

@@ -11,9 +11,9 @@
 //!            its controller's deck and graveyard has Flashback (R783012), so each graveyard card is
 //!            offered once as a play from there at its cost, and a played one's `flashbackSpent` keeps the
 //!            aura off it for good (R783013). With no deck left, every draw is fatigue (§2.4).
-//!   Issue #3951 gave it this text. Through v0.6.2b its Cry exiled the deck and then discarded the
+//!   Issue #3951 gave it this text. Through v0.6.4b its Cry exiled the deck and then discarded the
 //!   hand, and its Aura let its controller play (1)+ Cost cards from their graveyard (`minCost`) any
-//!   number of times, the base face exiling every card of theirs that would go there; `script_v0_6_2b`
+//!   number of times, the base face exiling every card of theirs that would go there; `script_v0_6_4b`
 //!   keeps that for those replays (R767000, R393, R65).
 
 use jackioh_engine::prelude::*;
@@ -54,7 +54,7 @@ fn recalled_on<'a>(card: &'a CardInstance, key: &str) -> Option<&'a Value> {
 /// Both faces' Cry: exile the deck, each card its own exile (R135), then discard the hand (R16: a whole
 /// hand needs no choice). Its discard must land in the graveyard before the Aura starts exiling (R393),
 /// so the Cry marks itself as running (`remember`) around it.
-fn cry_v0_6_2b() -> Hook {
+fn cry_v0_6_4b() -> Hook {
     hook(|_ctx| {
         vec![
             remember(json_as(json!({ "key": CRY_RUNNING, "value": true }))),
@@ -76,12 +76,12 @@ fn graveyard_play() -> GraveyardPlayHook {
     })
 }
 
-/// R767000: the scripts through v0.6.2b (issue #3951): the Cry exiled the deck, then discarded the hand,
+/// R767000: the scripts through v0.6.4b (issue #3951): the Cry exiled the deck, then discarded the hand,
 /// and the Aura let its controller play (`minCost`)+ Cost cards from their graveyard, the base face
 /// exiling their cards that would go there. `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_2b() -> CardScripts {
+pub fn script_v0_6_4b() -> CardScripts {
     let base = Script {
-        cry: Some(cry_v0_6_2b()),
+        cry: Some(cry_v0_6_4b()),
         graveyard_play: Some(graveyard_play()),
         // B5 E5: your cards that would go to a graveyard are exiled, but not while the Cry's mark is on
         // (R393); a Second Wind that arrives without its Cry (a Recruit, a summon) has no mark.
@@ -104,7 +104,7 @@ pub fn script_v0_6_2b() -> CardScripts {
     };
 
     let radiant = Script {
-        cry: Some(cry_v0_6_2b()),
+        cry: Some(cry_v0_6_4b()),
         graveyard_play: Some(graveyard_play()),
         ..Script::default()
     };
@@ -236,19 +236,19 @@ mod tests {
         }
     }
 
-    /// R767000: the scripts kept for v0.6.2b, with the `minCost` they declared then.
-    mod kept_v0_6_2b {
+    /// R767000: the scripts kept for v0.6.4b, with the `minCost` they declared then.
+    mod kept_v0_6_4b {
         use super::*;
 
         fn kept<T>(run: impl FnOnce() -> T) -> T {
             crate::under_kept_as(
                 WIND,
-                script_v0_6_2b(),
+                script_v0_6_4b(),
                 |def| {
                     def.params = serde_json::from_value(json!([
                         { "key": "minCost", "base": 1, "radiant": 1, "better": "down", "step": 1, "min": 1 }
                     ]))
-                    .expect("the v0.6.2b params");
+                    .expect("the v0.6.4b params");
                 },
                 run,
             )

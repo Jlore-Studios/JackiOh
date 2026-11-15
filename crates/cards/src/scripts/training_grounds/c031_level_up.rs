@@ -6,9 +6,9 @@
 //! reaches it (R44). The hook is handed whether the attacker still stands (`survived`, R174) and whether
 //! that combat destroyed a Unit of its opponent with it the killer (`destroyed_enemy`, R42, R3951000): the
 //! base face makes a surviving attacker that destroyed one Radiant, the Radiant face every surviving
-//! attacker (`set_radiant`, R22, R74). Issue #3951 gave it this text; through v0.6.2b it counted each
+//! attacker (`set_radiant`, R22, R74). Issue #3951 gave it this text; through v0.6.4b it counted each
 //! Unit's attacks since it arrived and made it Radiant at the third (Radiant: second), with the counts on
-//! the Units (R2199007, R2321000), which `script_v0_6_2b` keeps for those replays (R767000).
+//! the Units (R2199007, R2321000), which `script_v0_6_4b` keeps for those replays (R767000).
 
 use jackioh_engine::combat::ally_attack_of;
 use jackioh_engine::prelude::*;
@@ -48,10 +48,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// §10.1: where this card kept its counts through v0.6.2b.
+/// §10.1: where this card kept its counts through v0.6.4b.
 const COUNTS: &str = "attacks";
 
-fn level_up_v0_6_2b(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+fn level_up_v0_6_4b(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let Some(facts) = ally_attack_of(ctx) else {
         return vec![];
     };
@@ -113,11 +113,11 @@ fn tallies() -> TallyHook {
     })
 }
 
-/// R767000, R2199007: the scripts through v0.6.2b, which counted each Unit's attacks (issue #3951).
+/// R767000, R2199007: the scripts through v0.6.4b, which counted each Unit's attacks (issue #3951).
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_2b() -> CardScripts {
+pub fn script_v0_6_4b() -> CardScripts {
     let base = Script {
-        ally_attack: Some(hook(level_up_v0_6_2b)),
+        ally_attack: Some(hook(level_up_v0_6_4b)),
         tallies: Some(tallies()),
         ..Script::default()
     };
@@ -132,7 +132,7 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
-    use super::script_v0_6_2b;
+    use super::script_v0_6_4b;
 
     const LEVEL_UP: &str = super::ID;
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
@@ -152,16 +152,16 @@ mod tests {
         json!({ "def": VANILLA, "statsOverride": { "attack": attack, "health": 3 } })
     }
 
-    /// R767000: `run` under the script kept for v0.6.2b, with the `attacks` it declared then (3, Radiant 2).
+    /// R767000: `run` under the script kept for v0.6.4b, with the `attacks` it declared then (3, Radiant 2).
     fn kept<T>(run: impl FnOnce() -> T) -> T {
         crate::under_kept_as(
             LEVEL_UP,
-            script_v0_6_2b(),
+            script_v0_6_4b(),
             |def| {
                 def.params = serde_json::from_value(json!([
                     { "key": "attacks", "base": 3, "radiant": 2, "better": "down", "step": 1, "min": 1 }
                 ]))
-                .expect("the v0.6.2b params");
+                .expect("the v0.6.4b params");
             },
             run,
         )
@@ -324,8 +324,8 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for v0.6.2b, which counted each Unit's attacks (R2199007, R2321000).
-    mod kept_v0_6_2b {
+    /// R767000: the script kept for v0.6.4b, which counted each Unit's attacks (R2199007, R2321000).
+    mod kept_v0_6_4b {
         use super::*;
 
         #[test]

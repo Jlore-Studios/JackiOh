@@ -8,8 +8,8 @@
 //! Produce itself (R387: `addRandomFromCatalog` leaves out the running card's id), repeats allowed
 //! (R60); neither it nor C+ #63 Fruit Tree is a Fruit (R1837000). Each Fruit added costs the declared
 //! `setCost` (R386, less being better). Issue #3951 gave the base face the Radiant face's (0) and the
-//! Radiant face its third Fruit; through v0.6.2b the base face's Fruits kept their cost, which
-//! `script_v0_6_2b` keeps for those replays (R767000).
+//! Radiant face its third Fruit; through v0.6.4b the base face's Fruits kept their cost, which
+//! `script_v0_6_4b` keeps for those replays (R767000).
 //! The aura is Core #64 Gifted Program's static flag at §10.5 step 3 by tag (R213, R214): every Fruit
 //! its controller plays, casts included, resolves on its Radiant face.
 
@@ -46,9 +46,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts through v0.6.2b, whose base face's Fruits kept their cost (issue #3951).
+/// R767000: the scripts through v0.6.4b, whose base face's Fruits kept their cost (issue #3951).
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_2b() -> CardScripts {
+pub fn script_v0_6_4b() -> CardScripts {
     CardScripts {
         base: produce(false),
         radiant: produce(true),
@@ -240,10 +240,10 @@ mod tests {
             assert!(!s.events().iter().any(|event| matches!(event, GameEvent::RadiantSet { .. })));
         }
 
-        /// R767000: through v0.6.2b the base face's Fruit kept its cost (issue #3951).
+        /// R767000: through v0.6.4b the base face's Fruit kept its cost (issue #3951).
         #[test]
-        fn r767000_the_script_kept_for_v0_6_2b_adds_a_fruit_at_its_own_cost() {
-            crate::under_kept(PRODUCE, super::super::script_v0_6_2b(), || {
+        fn r767000_the_script_kept_for_v0_6_4b_adds_a_fruit_at_its_own_cost() {
+            crate::under_kept(PRODUCE, super::super::script_v0_6_4b(), || {
                 let mut s = scenario(json!({ "p1": { "hand": [PRODUCE, FILLER] }, "p2": { "hand": [FILLER] } }));
                 let before = hand_ids(&s);
                 s.play(PRODUCE, json!({ "zone": 1 }));

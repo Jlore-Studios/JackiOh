@@ -11,7 +11,7 @@ const FLAK: &str = "stinkyscape-061"; // Flak v5
 const VAMP: &str = "stinkyscape-122"; // Vamp Rounds
 
 /// R3539001: the fixed loadout it comes holding: 5 mana of Starship Pieces (issue #3951; its loadout
-/// through v0.6.2b is `c080_the_last_voyage::TERMINUS_STARSHIPS_V0_6_2B`'s).
+/// through v0.6.4b is `c080_the_last_voyage::TERMINUS_STARSHIPS_V0_6_4B`'s).
 pub const PIECES: &[&str] = &[FLAK, VAMP];
 
 pub fn script() -> CardScripts {
