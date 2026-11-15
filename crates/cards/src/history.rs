@@ -13,8 +13,9 @@
 //!
 //! R3538000, R3538002: the same frozen history answers what a card's past looked like: `PAST` groups
 //! each card's carried definitions into play-alike runs (`past_ids`, `past_def`), `TABLE_ROWS` reads
-//! the winrate of record (`record_at`), and `past_scripts` runs a past version under the script its
-//! game version kept. Every host computes the same past: the walk starts at `PAST_FROM`, the oldest
+//! the winrate of record (`record_at`: a version's `patches/records/<version>.json`, R3882000, else its
+//! `win_rates/` table; a fold's CN Tech reads only the latter), and `past_scripts` runs a past
+//! version under the script its game version kept. Every host computes the same past: the walk starts at `PAST_FROM`, the oldest
 //! version the browser's module carries (`build.rs`'s `BROWSER_CARRIED_FROM`), so the browser and the
 //! server read the same runs from the same tables.
 
@@ -52,25 +53,27 @@ use crate::scripts::meditative::{
     c018_expedition12, c019_expedition123, c021_api_key_fishing, c030_fickle_e_kitten,
     c032_spiritually_zhongguo, c037_cn_in_a_bottle, c038_h1b_printer, c040_feng_shui, c044_cn_jade_well,
     c045_knowledge_breaker, c047_taotie, c048_tranquility, c049_1_yilegpt_unleashed, c049_3_ai_girlfriend,
-    c049_yilegpt_tamed, c053_prestige, c054_money_machine, c063_skull_of_jnari, c065_keymaster_keenus,
-    c074_montana_giant, c080_aluneth, c081_deadmans_hand, c085_playtester, c087_tatches_the_totem,
-    c090_spell_basket, c093_1_growing_felinor_sr, c093_2_growing_felinor_sr_sr,
+    c049_yilegpt_tamed, c050_cn_tech, c053_prestige, c054_money_machine, c063_skull_of_jnari,
+    c065_keymaster_keenus, c074_montana_giant, c080_aluneth, c081_deadmans_hand, c085_playtester,
+    c087_tatches_the_totem, c090_spell_basket, c093_1_growing_felinor_sr, c093_2_growing_felinor_sr_sr,
     c093_3_growing_felinor_super_senior, c093_growing_felinor, c094_shrinking_felinor, c095_1_cn_golem,
     c097_2_wishing_well, c097_8_prison, c099_paranoia, c102_catboy_maid_ssr,
 };
 use crate::scripts::meditative_plus::{
-    c001_bobs_plan, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves, c022_mountaintop_garden,
+    c001_bobs_plan, c002_na_tech, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves,
+    c022_mountaintop_garden,
 };
 use crate::scripts::stinkyscape::{
-    c013_asphyxiants_cloud, c016_rod_of_ages, c018_1_melchior, c023_warp_disruptor, c024_warp_disruptor_ii,
-    c026_zolarketh, c033_drone_core_vii, c034_drone_core_viii, c035_drone_core_ix, c036_drone_core_x,
-    c045_drone_commander, c050_beam_v3, c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4,
-    c055_repeater_v4, c056_cannon_v4, c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5,
-    c061_flak_v5, c074_paragon_x, c086_prototype_x2, c094_tmack_trav, c096_ocean_tsunami, c109_xxfreshjack,
-    c111_shockwave447, c115_scornboi, c116_megabase, c129_jlockeeds_missile_pod, c140_rush_token_launcher,
-    c143_book_launcher, c149_wildar, c153_stimmycheck, c163_swear_loyalities, c168_drone_hanger,
-    c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid,
-    c173_abandoned_spice_tower, t_drone_corvette, t_drone_interceptor, t_narcor, t_red_narcor,
+    c004_olivian_expanse, c013_asphyxiants_cloud, c016_rod_of_ages, c018_1_melchior, c023_warp_disruptor,
+    c024_warp_disruptor_ii, c026_zolarketh, c033_drone_core_vii, c034_drone_core_viii, c035_drone_core_ix,
+    c036_drone_core_x, c045_drone_commander, c050_beam_v3, c051_repeater_v3, c052_cannon_v3, c053_flak_v3,
+    c054_beam_v4, c055_repeater_v4, c056_cannon_v4, c057_flak_v4, c058_beam_v5, c059_repeater_v5,
+    c060_cannon_v5, c061_flak_v5, c074_paragon_x, c086_prototype_x2, c094_tmack_trav, c096_ocean_tsunami,
+    c109_xxfreshjack, c111_shockwave447, c115_scornboi, c116_megabase, c129_jlockeeds_missile_pod,
+    c140_rush_token_launcher, c143_book_launcher, c149_wildar, c153_stimmycheck, c154_dice_of_doom,
+    c163_swear_loyalities, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid,
+    c172_huge_asteroid, c173_abandoned_spice_tower, t_drone_corvette, t_drone_interceptor, t_narcor,
+    t_red_narcor,
 };
 use crate::scripts::stinkyscape_plus::c104_tireless_cultivation;
 use crate::scripts::training_grounds::{
@@ -91,7 +94,8 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// `never_defense_kept`, R2657001, R2657002, R2657004), and #3000's parts (#3038, #3040, #3041, #3042,
 /// #3044, #3048), #3128's (#3134, #3135, #3139, #3140, #3142),
 /// #3551's S01 (R3551000, R3551001, R3551002, R3551003, R3551004), #3778 (R3778000), #3802, #3837
-/// (R3837000, R3837003, R3837005) and #3800 (R3800003, R3800004, S+ #104).
+/// (R3837000, R3837003, R3837005), #3800 (R3800003, R3800004, S+ #104) and #3869
+/// (R3869000, R3869005).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -754,6 +758,20 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.6.2b",
         c024_warp_disruptor_ii::script_v0_6_2b,
     ),
+    // #3869 (R3869000, R3869005): the Terminus cards before the pool read the tag, and CN Tech and NA
+    // Tech before their fallbacks were random.
+    (
+        c004_olivian_expanse::ID,
+        "v0.6.2b",
+        c004_olivian_expanse::script_v0_6_2b,
+    ),
+    (
+        c154_dice_of_doom::ID,
+        "v0.6.2b",
+        c154_dice_of_doom::script_v0_6_2b,
+    ),
+    (c050_cn_tech::ID, "v0.6.2b", c050_cn_tech::script_v0_6_2b),
+    (c002_na_tech::ID, "v0.6.2b", c002_na_tech::script_v0_6_2b),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
@@ -814,6 +832,10 @@ struct VersionDelta {
     changed: IndexMap<String, usize>,
     #[serde(default, rename = "winRates")]
     win_rates: Option<usize>,
+    /// R3882000: its win rates of record, by index into `History::win_rates`, when it has a
+    /// `records/<version>.json`. Only the record reads them, never a fold's CN Tech (R3049000).
+    #[serde(default)]
+    records: Option<usize>,
     /// R2173000: its lists, by index into `History::card_lists`, when it has a file.
     #[serde(default, rename = "cardLists")]
     card_lists: Option<usize>,
@@ -1136,21 +1158,27 @@ static TABLE_ROWS: LazyLock<Vec<IndexMap<String, (i32, i32)>>> = LazyLock::new(|
 /// `PAST_FROM` on that holds a row for the card with at least `WIN_RATE_RECORD_MIN_GAMES` games.
 /// `None` for a version the history does not hold, or when no table that far back names the card.
 pub fn record_at(card: &str, version: &str) -> Option<(i32, i32)> {
-    let reference = HISTORY
-        .versions
-        .iter()
-        .position(|delta| delta.version == version)?;
-    let from = HISTORY
-        .versions
-        .iter()
-        .position(|delta| delta.version == PAST_FROM)?;
+    record_in(&HISTORY.versions, &TABLE_ROWS, PAST_FROM, card, version)
+}
+
+/// `record_at` over `versions` and their tables' `rows`, walked back to `from`. R3882000: a version's
+/// table is its win rates of record when it ships them, else its `win_rates/` table (R3538000).
+fn record_in(
+    versions: &[VersionDelta],
+    rows: &[IndexMap<String, (i32, i32)>],
+    from: &str,
+    card: &str,
+    version: &str,
+) -> Option<(i32, i32)> {
+    let reference = versions.iter().position(|delta| delta.version == version)?;
+    let from = versions.iter().position(|delta| delta.version == from)?;
     let mut at = reference + 1;
     while at > from {
         at -= 1;
-        let Some(table_at) = HISTORY.versions[at].win_rates else {
+        let Some(table_at) = versions[at].records.or(versions[at].win_rates) else {
             continue;
         };
-        if let Some(&(wins, games)) = TABLE_ROWS[table_at].get(card)
+        if let Some(&(wins, games)) = rows[table_at].get(card)
             && games >= WIN_RATE_RECORD_MIN_GAMES
         {
             return Some((wins, games));
@@ -1558,14 +1586,53 @@ mod tests {
         assert_eq!(record_at("classic-002", "v0.5.12k"), Some((21, 43)));
         // The v0.4.0 file's: an older reference reads the older row.
         assert_eq!(record_at("classic-002", "v0.4.0"), Some((51, 113)));
-        // No table ships after v0.5.12k, so the catalog version reads its row too.
-        assert_eq!(record_at("classic-002", crate::CATALOG_VERSION), Some((21, 43)));
+        // No table ships from v0.5.12l to v0.6.2b, so v0.6.2b reads v0.5.12k's row too. (The
+        // catalog version reads the newest records file's, R3882000, so it is not pinned here.)
+        assert_eq!(record_at("classic-002", "v0.6.2b"), Some((21, 43)));
         // A thin row is no record: v0.5.12k holds classic-001 at 10/16, so the record walks back
         // to an older table with enough games.
         let walked = record_at("classic-001", "v0.5.12k").expect("an older row");
         assert!(walked.1 >= WIN_RATE_RECORD_MIN_GAMES, "{walked:?}");
         assert_ne!(walked, (10, 16), "not the thin row");
         assert!(record_at("core-001", "v0.0.0-unknown").is_none());
+    }
+
+    #[test]
+    fn r3882000_a_versions_records_come_first_and_a_later_file_moves_no_earlier_version() {
+        let delta = |version: &str, win_rates: Option<usize>, records: Option<usize>| VersionDelta {
+            version: version.to_string(),
+            win_rates,
+            records,
+            ..VersionDelta::default()
+        };
+        let versions = [
+            delta("v1", Some(0), None),
+            delta("v2", None, None),
+            delta("v3", Some(0), Some(1)),
+            delta("v4", None, Some(2)),
+        ];
+        let table = |rows: &[(&str, i32, i32)]| -> IndexMap<String, (i32, i32)> {
+            rows.iter()
+                .map(|&(id, wins, games)| (id.to_string(), (wins, games)))
+                .collect()
+        };
+        let rows = [
+            table(&[("a", 10, 40), ("b", 5, 30)]),
+            table(&[("a", 30, 40), ("b", 1, 5)]),
+            table(&[("c", 25, 50)]),
+        ];
+        let record = |from: &str, card: &str, version: &str| record_in(&versions, &rows, from, card, version);
+        // v3's records answer before its `win_rates/` table, and v4's, which lack "a", walk back to them.
+        assert_eq!(record("v1", "a", "v3"), Some((30, 40)));
+        assert_eq!(record("v1", "a", "v4"), Some((30, 40)));
+        assert_eq!(record("v1", "c", "v4"), Some((25, 50)));
+        // A thin row of record is no record: the walk goes on back to v1's table.
+        assert_eq!(record("v1", "b", "v3"), Some((5, 30)));
+        // Records shipped with v3 move nothing at v2 or before, so its games fold as they were played.
+        assert_eq!(record("v1", "a", "v2"), Some((10, 40)));
+        assert_eq!(record("v1", "c", "v3"), None);
+        // The walk stops at `from`.
+        assert_eq!(record("v2", "a", "v2"), None);
     }
 
     #[test]

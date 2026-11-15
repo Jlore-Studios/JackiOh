@@ -67,6 +67,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
     const FILLER: &str = "core-005"; // Stockpile: a Spell (§2.5).
     const UNIT: &str = "stand-in (1) 2/3";
+    const JORO: &str = "classic-033"; // Joro: Indestructible on its Radiant face alone.
 
     fn game(seed: &str, radiant: bool) -> Scenario {
         let mut s = scenario(json!({
@@ -120,6 +121,46 @@ mod tests {
     mod base {
         use super::*;
 
+        /// R3908000 through the real card: the resolution loop's repeat already did this before the
+        /// change, so the rules tests in `stinkyscape_plus_s22.rs` pin the check itself.
+        #[test]
+        fn r3908000_a_base_joro_in_defense_turns_radiant_and_switches_to_attack_in_the_same_step() {
+            let mut s = scenario(json!({
+                "seed": "tears-joro",
+                "p1": {
+                    "hand": [ID],
+                    "library": filler(6),
+                    "field": [{ "def": JORO, "position": "DEF" }],
+                    "mana": 4,
+                },
+                "p2": { "hand": [FILLER], "library": filler(6) },
+            }));
+            for player in [P1, P2] {
+                s.state_mut().players[player].auto_end_turn = Some(false);
+            }
+            let joro = s.unit_at(P1, 1);
+            assert!(!joro.radiant, "Joro starts on its base face");
+            assert_eq!(joro.position, Some(Position::Def));
+            s.play(ID, json!({}));
+            let after = s.unit_at(P1, 1);
+            assert!(after.radiant, "Joro is Radiant");
+            // R2179000: its Radiant face is Indestructible, which is never in Defense Position.
+            assert_eq!(after.position, Some(Position::Atk));
+            let seen: Vec<&str> = s
+                .last_events()
+                .iter()
+                .filter_map(|event| match event {
+                    GameEvent::RadiantSet { instance_id, .. } if *instance_id == joro.id => Some("radiantSet"),
+                    GameEvent::PositionSwitched {
+                        instance_id,
+                        position: Position::Atk,
+                    } if *instance_id == joro.id => Some("positionSwitched"),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(seen, vec!["radiantSet", "positionSwitched"]);
+        }
+
         #[test]
         fn r3569000_every_card_of_both_players_is_radiant_now_and_later() {
             let mut s = game("tears-radiant-world", false);
@@ -160,7 +201,9 @@ mod tests {
             s.end_turn();
             let at_p1_end = buffed(&s, from);
             // Both sides, every zone: p1's library and p2's library are hidden piles (cued whole),
-            // the Units on the field and in the graveyards and exile piles are public ones.
+            // the Units on the field and in the graveyards and exile piles are public ones. R3888000: a
+            // graveyard Unit no play may take from there is Buffed only with Flashback, and an exiled
+            // one has no live change, so it is left alone with no draw (R129).
             let p1_library: Vec<String> = s.pile(P1, "library").iter().map(|card| card.id.clone()).collect();
             let p2_library: Vec<String> = s.pile(P2, "library").iter().map(|card| card.id.clone()).collect();
             assert!(p1_library.iter().any(|id| at_p1_end.contains(id)), "p1's library");
@@ -171,7 +214,7 @@ mod tests {
                     .into_iter()
                     .find(|card| card.def_id.starts_with("stand-in"));
                 let unit = unit.unwrap_or_else(|| panic!("{player:?}'s {pile} holds its Unit"));
-                assert!(at_p1_end.contains(&unit.id), "{player:?}'s {pile}");
+                assert_eq!(at_p1_end.contains(&unit.id), pile == "graveyard", "{player:?}'s {pile}");
             }
             for player in [P1, P2] {
                 assert!(at_p1_end.contains(&s.unit_at(player, 1).id), "{player:?}'s Unit");

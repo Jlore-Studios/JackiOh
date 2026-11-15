@@ -148,7 +148,7 @@ mod tests {
                 js(&scripts.base.targets),
                 json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }]),
             );
-            assert_eq!(def["params"], json!([{ "key": "tokens", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1, "cry": true }]));
+            assert_eq!(def["params"], json!([{ "key": "tokens", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1, "read": "cry" }]));
             assert_eq!(js(&scripts.radiant.targets), js(&scripts.base.targets));
             assert_eq!(scripts.radiant.cry.is_some(), scripts.base.cry.is_some());
             assert_eq!(scripts.radiant.preview.is_some(), scripts.base.preview.is_some());

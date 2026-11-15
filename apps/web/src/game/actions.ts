@@ -103,6 +103,11 @@ export function isBuilding(interaction: Interaction): interaction is Building {
   return interaction.stage === "playing" || interaction.stage === "activating";
 }
 
+/** #2924: the shown turn, seat and viewer a half-built play or attack belongs to. */
+export function boardKeyOf(view: PlayerView): string {
+  return `${String(view.turn)}:${view.active}:${view.viewer}`;
+}
+
 /** What is still unchosen about the play in flight, derived only from the candidates. */
 export type PlayNeed =
   | { kind: "ability"; min: number; max: number; abilities: string[] }

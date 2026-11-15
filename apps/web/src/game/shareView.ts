@@ -13,15 +13,13 @@ import { useRef } from "react";
 
 import type { PlayerView } from "@jackioh/shared";
 
-type Plain = Record<string, unknown>;
+import { isRecord } from "../wire/json.ts";
 
-function isPlain(value: unknown): value is Plain {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
+type Plain = Record<string, unknown>;
 
 /** The instance id an item names itself by, when it is an object that has one. */
 function instanceIdOf(item: unknown): string | undefined {
-  if (!isPlain(item)) return undefined;
+  if (!isRecord(item)) return undefined;
   const id = item["instanceId"];
   return typeof id === "string" ? id : undefined;
 }
@@ -44,7 +42,7 @@ function shareArray(prev: unknown, next: readonly unknown[]): readonly unknown[]
 }
 
 function shareObject(prev: unknown, next: Plain): Plain {
-  if (!isPlain(prev)) return next;
+  if (!isRecord(prev)) return next;
   const keys = Object.keys(next);
   let same = keys.length === Object.keys(prev).length;
   const entries = keys.map((key) => {
@@ -63,7 +61,7 @@ function shareObject(prev: unknown, next: Plain): Plain {
 export function shareEqual<T>(prev: unknown, next: T): T {
   if (Object.is(prev, next)) return next;
   if (Array.isArray(next)) return shareArray(prev, next as readonly unknown[]) as T;
-  if (isPlain(next)) return shareObject(prev, next) as T;
+  if (isRecord(next)) return shareObject(prev, next) as T;
   return next;
 }
 

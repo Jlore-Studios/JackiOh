@@ -13,18 +13,6 @@ import { withSession } from "./gate.ts";
 
 // Rooms and matches (S6)
 
-/** A player named in a room: the profile id keys it, the username is what is shown (R1436). */
-export type DuosRoomPlayer = { profileId: string; username: string };
-
-/** `GET /api/duos/rooms/:code`: the host (A1), the guest (A2) once one joined, and the match it made. */
-export type DuosRoom = {
-  code: string;
-  difficulty: Difficulty;
-  host: DuosRoomPlayer;
-  guest: DuosRoomPlayer | null;
-  matchId: string | null;
-};
-
 /**
  * S6: exactly one of `deckId` and `random: true`; a random deal may carry the player's "More cards
  * from" pick for their own deck (`leanSet`, R924000, R2031000), absent for none.
@@ -36,21 +24,11 @@ export function createDuosRoom(body: { difficulty: Difficulty } & DuosDeckChoice
   return withSession((token) => apiRequest<{ code: string }>("/api/duos/rooms", { method: "POST", token, body }));
 }
 
-/** `GET /api/duos/rooms/:code`: 404 once the room expired (DUOS_ROOM_TTL_MS) or was canceled. */
-export function getDuosRoom(code: string): Promise<DuosRoom> {
-  return withSession((token) => apiRequest<DuosRoom>(`/api/duos/rooms/${encodeURIComponent(code)}`, { token }));
-}
-
 /** `POST /api/duos/rooms/:code/join`: the match it starts, or 404, or 409 `full` / `own_room`. */
 export function joinDuosRoom(code: string, body: DuosDeckChoice): Promise<{ matchId: string }> {
   return withSession((token) =>
     apiRequest<{ matchId: string }>(`/api/duos/rooms/${encodeURIComponent(code)}/join`, { method: "POST", token, body }),
   );
-}
-
-/** `DELETE /api/duos/rooms/:code`: the host takes back a room nobody has joined (204). */
-export async function cancelDuosRoom(code: string): Promise<void> {
-  await withSession((token) => apiRequest<null>(`/api/duos/rooms/${encodeURIComponent(code)}`, { method: "DELETE", token }));
 }
 
 /** `GET /api/duos/live` (B42): the caller's live co-op match, or null. */

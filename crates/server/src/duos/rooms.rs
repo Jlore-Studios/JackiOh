@@ -135,7 +135,7 @@ pub(crate) fn duos_choice_of(frozen: FrozenChoice, catalog_version: &str) -> Res
 }
 
 /// The code a path names, normalized, or none when it could never be a room code.
-fn code_of(req: &Req) -> Option<String> {
+pub(crate) fn code_of(req: &Req) -> Option<String> {
     let code = normalize_code(req.params.get("code").map(String::as_str).unwrap_or(""));
     is_well_formed_code(&code, ROOM_CODE_LENGTH).then_some(code)
 }

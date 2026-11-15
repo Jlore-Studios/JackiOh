@@ -1310,15 +1310,17 @@ describe("the card drill-down dialog", () => {
     const close = screen.getByTestId(statsTestid.drillDownClose);
     const radiant = screen.getByTestId(statsTestid.drillDownRadiantToggle);
     const almanac = screen.getByTestId(statsTestid.drillDownAlmanac);
+    // R3939000: Show card text stands below View in Almanac.
+    const cardText = within(dialog).getByTestId(cardTextTestid.dialog);
     // R3011000: no art buttons come before Show Radiant: the drill-down offers no art choice.
     expect(screen.queryByTestId("stats-drill-down-art")).toBeNull();
     expect(close).toHaveFocus();
 
-    for (const next of [radiant, almanac, retry, close]) {
+    for (const next of [radiant, almanac, cardText, retry, close]) {
       press("Tab");
       expect(next).toHaveFocus();
     }
-    for (const previous of [retry, almanac, radiant, close]) {
+    for (const previous of [retry, cardText, almanac, radiant, close]) {
       press("Tab", { shiftKey: true });
       expect(previous).toHaveFocus();
     }
@@ -2145,6 +2147,32 @@ describe("R3887000 the Chinese reader", () => {
     expect(card).toHaveTextContent(t("Radiant"));
     expect(t("Attack")).not.toBe("Attack");
     expect(screen.getByTestId(statsTestid.plainTextToggle)).toHaveTextContent(t("Plain text"));
+  });
+});
+
+describe("R3939000 Show card text in the card breakdown", () => {
+  it("R3939000 the breakdown holds it below View in Almanac; pressing it prints the faces with their words, and the header's follows", async () => {
+    holdFetch((url) => url.pathname.startsWith("/api/stats/cards/"));
+    at("/stats?card=core-004");
+    render(<StatsRoute />);
+    const dialog = await screen.findByRole("dialog", undefined, SLOW);
+    const inDialog = within(dialog).getByTestId(cardTextTestid.dialog);
+    expect(inDialog).toHaveTextContent("Show card text");
+    expect(inDialog).toHaveAttribute("aria-pressed", "false");
+    expect(inDialog.previousElementSibling).toBe(screen.getByTestId(statsTestid.drillDownAlmanac));
+    expect(inDialog.nextElementSibling).toBeNull();
+    expect(dialog.querySelector(".stats-drilldown-faces .cf")?.getAttribute("data-full-art-tier")).toBe("Epic");
+
+    fireEvent.click(inDialog);
+    expect(inDialog).toHaveAttribute("aria-pressed", "true");
+    expect(dialog.querySelector(".stats-drilldown-faces .cf")?.hasAttribute("data-full-art")).toBe(false);
+    expect(screen.getByTestId(cardTextTestid.toggle)).toHaveAttribute("aria-pressed", "true");
+    expect(window.localStorage.getItem(CARD_TEXT_KEY)).toBe("1");
+    expect(readCardSettings().fullArt).toBe(true);
+
+    fireEvent.click(inDialog);
+    expect(inDialog).toHaveAttribute("aria-pressed", "false");
+    expect(dialog.querySelector(".stats-drilldown-faces .cf")?.getAttribute("data-full-art-tier")).toBe("Epic");
   });
 });
 

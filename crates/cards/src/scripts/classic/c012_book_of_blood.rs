@@ -17,7 +17,8 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "classic-012";
 
 fn targets() -> Vec<TargetDecl> {
-    vec![json_as(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"] } }))]
+    // R3869003: a harmful Book, its aim declared (R656 reads an unset one as harm too).
+    vec![json_as(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"] }, "aim": "harm" }))]
 }
 
 pub fn script() -> CardScripts {

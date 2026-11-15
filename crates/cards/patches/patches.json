@@ -25584,5 +25584,1408 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.6.2c",
+    "date": "2026-11-14",
+    "title": "Patch: holding a Mythic or full-art card on a phone shows its text, not only its art",
+    "source": "#3893",
+    "notes": "On touch devices (phones and tablets), pressing and holding a Mythic card or any card wearing a full-art level opens its inspect sheet or card detail view with its full rules text, glossary, and metadata, rather than directly opening the full-screen art view. The full-screen art view remains reachable via the Full screen button in that text view, while desktop click-and-hold continues to open the full-screen art view directly (R3893000).",
+    "player": {
+      "title": "Holding a Mythic or full-art card on a phone shows its text",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "On a touch screen, holding a Mythic or full-art card opens its inspect sheet or detail view with its full text; its full-screen art view remains reachable from there."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "6e1e76efe77a7b6f9759d59dca1c140145c28966"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.6.3",
+    "date": "2026-11-14",
+    "title": "Patch: Stinkyscape Balance Changes V",
+    "source": "#3837",
+    "notes": "Issue #3837, the designer's fifth Stinkyscape balance pass: new costs, stats and numbers for 22 cards (Miner v2 to v5, Trila 3, Speciesist, Legacy: Speciesist, Nurse Cleaver, Small Card Lobbyist, Ultralight Chassis, Jlockeed's Missile Pod, Paragon Mk1, Jlockeed Shredder-10, Legacy: Jlockeed Shredder-10, Ivory Tower, Feng Shui, Spiteful Stab, Argusland, Wardrum, Unan, Bot Loser, Mid Loser), and new text for six: Ocean Tsunami gains Tribute 1; Silly Silas loses Crater and its base face is summoned for the opponent (R3837000, R3837001, R3837002; the engine's summonForOpponent flag); Tatches the Totem buffs the hand only; Portal to the Past falls back to (3) or (4) Cost Units and Field Spells when the last board gives no card (R3837003, R3837004); CN Jade Well's Start of turn is an Activate and Corpse Recycler's token is its controller's (R3837005). Each of the six keeps its v0.6.1b script in KEPT_SCRIPTS (R767000). Heroic Power is unchanged: its line shipped in #3551. The plays are the families classify finds playing differently in its unforced games against main's build: the random pools that read a cost, a stat or a 1/1 (Speciesist, Wardrum, Missile Pod and the rest moving), the Rush Token Corpse Recycler gives the other side now, the Resources, and S #109 xxFreshJack and #111 Shockwave447, which read the complicated list that Portal to the Past and Tatches the Totem join at more than 60 code lines, their kept scripts counted (R1846000, R2173001). The rule is the deal-time views that show a moved cost (a hand card's cost, a library sorted by cost), which no card explains (R2455000).",
+    "player": {
+      "title": "Stinkyscape Balance Changes V",
+      "new": [],
+      "balance": [
+        "Miner v2 is 0/1 (Radiant 0/2), down from 0/2 (Radiant 0/4).",
+        "Miner v3 is 0/2 (Radiant 0/4), down from 0/4 (Radiant 0/8).",
+        "Miner v4 is 0/3 (Radiant 0/6), down from 0/6 (Radiant 0/12).",
+        "Miner v5 is 0/4 (Radiant 0/8), down from 0/8 (Radiant 0/16).",
+        "Trila 3 is 7/5 (Radiant 14/10), down from 7/7 (Radiant 14/14).",
+        "Speciesist costs (3), up from (2), and is 7/1 (Radiant 14/2), up from 4/1 (Radiant 8/2).",
+        "Legacy: Speciesist is 2/1 (Radiant 4/2), down from 4/1 (Radiant 8/2).",
+        "Nurse Cleaver is 2/4 (Radiant 4/8), down from 3/4 (Radiant 6/8).",
+        "Small Card Lobbyist is 9/12 (Radiant 18/24), down from 11/13 (Radiant 22/26).",
+        "Ultralight Chassis is 3/1 (Radiant 6/2), down from 4/1 (Radiant 8/2).",
+        "Jlockeed's Missile Pod is 1/1 (Radiant 2/2), down from 2/1 (Radiant 4/2).",
+        "Paragon Mk1 is 5/1 (Radiant 10/2), down from 6/1 (Radiant 12/2).",
+        "Jlockeed Shredder-10 is 5/7 (Radiant 10/14), down from 6/8 (Radiant 12/16).",
+        "Legacy: Jlockeed Shredder-10 costs (4), up from (3), and is 8/10 (Radiant 16/20), up from 4/10 (Radiant 8/20).",
+        "Ivory Tower costs (1), down from (2).",
+        "Feng Shui costs (2), down from (3).",
+        "Spiteful Stab costs (2), down from (3).",
+        "Argusland costs (2), down from (3).",
+        "Wardrum costs (3), down from (4).",
+        "Unan has Armor 2 (Radiant Armor 4), down from Armor 3 (Radiant Armor 6).",
+        "Bot Loser gains +2 Attack (Radiant +4) after it destroys a Unit, down from +3 (Radiant +6).",
+        "Mid Loser's heads gives it +3/+3 (Radiant +6/+6), down from +4/+4 (Radiant +10/+10), and its tails takes −3/−3, where it took −2/−2."
+      ],
+      "changes": [
+        "Ocean Tsunami gains Tribute 1.",
+        "Silly Silas loses Crater. Its base face is summoned for your opponent, into their leftmost open unit zone, and you still choose which way its Cry rotates.",
+        "Tatches the Totem's end-of-turn Buff picks a card in your hand only, never your deck.",
+        "Portal to the Past: when your last board gives no card, it Discovers a (3) or (4) Cost Unit or Field Spell instead (Radiant: adds 3 different ones). Each costs (0).",
+        "CN Jade Well's Start of turn is now an Activate: once a turn, add an Auspicious Rock (Radiant: a Radiant one) to your hand.",
+        "Corpse Recycler's Rush Token is always yours, whoever's Unit died."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "fb2399404dee5812b5895a941fa4fff306381414"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-007",
+      "classic-049",
+      "classic-068",
+      "classic-069",
+      "classic-073",
+      "classic-075",
+      "classicplus-010",
+      "classicplus-019",
+      "classicplus-023",
+      "classicplus-027",
+      "classicplus-031",
+      "classicplus-033",
+      "classicplus-037",
+      "classicplus-047",
+      "classicplus-055",
+      "classicplus-062",
+      "classicplus-067",
+      "classicplus-071",
+      "classicplus-072",
+      "classicplus-077",
+      "core-002",
+      "core-013",
+      "core-019",
+      "core-022",
+      "core-052",
+      "core-070",
+      "core-083",
+      "core-t-rush",
+      "meditative-011",
+      "meditative-022",
+      "meditative-040",
+      "meditative-051",
+      "meditative-058",
+      "meditative-059",
+      "meditative-062",
+      "meditative-075",
+      "meditative-077",
+      "meditative-088",
+      "meditative-092",
+      "meditative-099",
+      "stinkyscape-008",
+      "stinkyscape-014",
+      "stinkyscape-023",
+      "stinkyscape-024",
+      "stinkyscape-038",
+      "stinkyscape-048",
+      "stinkyscape-051",
+      "stinkyscape-060",
+      "stinkyscape-063",
+      "stinkyscape-064",
+      "stinkyscape-065",
+      "stinkyscape-066",
+      "stinkyscape-072",
+      "stinkyscape-078",
+      "stinkyscape-089",
+      "stinkyscape-090",
+      "stinkyscape-095",
+      "stinkyscape-108",
+      "stinkyscape-109",
+      "stinkyscape-111",
+      "stinkyscape-129",
+      "stinkyscape-134",
+      "stinkyscape-143",
+      "stinkyscape-155",
+      "stinkyscape-160",
+      "stinkyscape-161",
+      "stinkyscape-166",
+      "stinkyscape-167",
+      "stinkyscape-175",
+      "stinkyscape-t-axnit",
+      "stinkyscape-t-gellium",
+      "stinkyscape-t-korrelite",
+      "stinkyscape-t-narcor",
+      "stinkyscape-t-red-narcor",
+      "stinkyscape-t-reknite",
+      "stinkyscapeplus-061",
+      "stinkyscapeplus-065",
+      "stinkyscapeplus-103",
+      "stinkyscapeplus-105",
+      "stinkyscapeplus-120",
+      "traininggrounds-017",
+      "traininggrounds-040",
+      "traininggrounds-041",
+      "traininggrounds-048"
+    ],
+    "changes": [
+      {
+        "id": "core-002",
+        "name": "Speciesist",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.attack",
+          "radiant.attack"
+        ]
+      },
+      {
+        "id": "core-013",
+        "name": "Jlockeed Shredder-10",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "core-052",
+        "name": "Silly Silas",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-070",
+        "name": "Spiteful Stab",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classic-068",
+        "name": "Small Card Lobbyist",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classic-073",
+        "name": "Nurse Cleaver",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "radiant.attack"
+        ]
+      },
+      {
+        "id": "classic-075",
+        "name": "Argusland",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classicplus-019-3",
+        "name": "Mid Loser",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-019-5",
+        "name": "Bot Loser",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-029",
+        "name": "Portal to the Past",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-033",
+        "name": "Ivory Tower",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classicplus-037",
+        "name": "Wardrum",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-040",
+        "name": "Feng Shui",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "meditative-044",
+        "name": "CN Jade Well",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-087",
+        "name": "Tatches the Totem",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-092",
+        "name": "Unan",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-048",
+        "name": "Ultralight Chassis",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "radiant.attack"
+        ]
+      },
+      {
+        "id": "stinkyscape-063",
+        "name": "Miner v2",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-064",
+        "name": "Miner v3",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-065",
+        "name": "Miner v4",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-066",
+        "name": "Miner v5",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-072",
+        "name": "Paragon Mk1",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "radiant.attack"
+        ]
+      },
+      {
+        "id": "stinkyscape-096",
+        "name": "Ocean Tsunami",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-108",
+        "name": "Trila 3",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-129",
+        "name": "Jlockeed's Missile Pod",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "radiant.attack"
+        ]
+      },
+      {
+        "id": "traininggrounds-035",
+        "name": "Corpse Recycler",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "traininggrounds-041",
+        "name": "Legacy: Speciesist",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "radiant.attack"
+        ]
+      },
+      {
+        "id": "traininggrounds-048",
+        "name": "Legacy: Jlockeed Shredder-10",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.attack",
+          "radiant.attack"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.3b",
+    "date": "2026-11-14",
+    "title": "Patch: fused Spells, Combo-Index grades and KY's Constant off the field",
+    "source": "#3800",
+    "notes": "Issue #3800: engine and card fixes for the daily fuzz. Duos seed 1628's fused Spell, flagged for its end-of-turn return on a Field Spell's end-of-turn text, is fixed by #3806's R3806002, merged from main. A Combo-Index text run after its card left the field writes no grade (R3800001; seed 6091). A cost set on a card in a graveyard or an exile pile changes nothing (R3800002; seed 6140). C+ #37 Wardrum's end of turn casts from the non-Units played before the turn's end began, not another Wardrum's copies (R3800003; seed 5763). S #23 Warp Disruptor and S #24 Warp Disruptor II answer each card once a turn, so a Unit that resummons itself as it dies ends its loop (R3800004; seed 9999). S+ #104 Tireless Cultivation's Radiant face gives its Temporary 2 only to a card that reaches the hand, not one a full hand burned (seed 8687). Flak v3, v4 and v5 keep their `damage` script through v0.5.8b, so a past version from v0.5.8b no longer panics (R767000; seed 5172). No catalog change: the plays are the families `classify` finds playing differently in its forced and unforced games.",
+    "player": {
+      "title": "Fused cards behave off the field",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A Combo-Index card that left the field mid-effect no longer keeps a grade.",
+        "Setting the cost of a card that was just discarded or exiled no longer changes its price.",
+        "Several Radiant Wardrums no longer recast each other's copies at the end of your turn: each casts the Spells, Field Spells and Traps you played before the turn ended.",
+        "A Radiant Tireless Cultivation burned by a full hand no longer keeps its Temporary in your graveyard.",
+        "Warp Disruptor and Warp Disruptor II attack a given card at most once a turn, so a Unit that comes back as it dies no longer locks the game in an endless loop."
+      ]
+    },
+    "commits": [
+      "72dc211abdb6bbe2628a7af10d9fa0d0380391ca"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-047",
+      "classic-067",
+      "classicplus-030",
+      "classicplus-037",
+      "classicplus-048",
+      "core-002",
+      "core-003",
+      "core-004",
+      "core-025",
+      "core-077",
+      "meditative-053",
+      "meditative-067",
+      "meditative-085",
+      "meditative-093",
+      "stinkyscape-023",
+      "stinkyscape-024",
+      "stinkyscape-027",
+      "stinkyscape-035",
+      "stinkyscape-050",
+      "stinkyscape-051",
+      "stinkyscape-055",
+      "stinkyscape-069",
+      "stinkyscape-076",
+      "stinkyscape-077",
+      "stinkyscape-104",
+      "stinkyscape-107",
+      "stinkyscape-109",
+      "stinkyscape-111",
+      "stinkyscape-142",
+      "stinkyscape-168",
+      "stinkyscape-177",
+      "stinkyscape-t-dormant-starship",
+      "stinkyscape-t-drone-interceptor",
+      "stinkyscapeplus-002",
+      "stinkyscapeplus-003",
+      "stinkyscapeplus-010",
+      "stinkyscapeplus-013",
+      "stinkyscapeplus-026",
+      "stinkyscapeplus-035",
+      "stinkyscapeplus-119",
+      "stinkyscapeplus-120",
+      "traininggrounds-017",
+      "traininggrounds-030",
+      "traininggrounds-032",
+      "traininggrounds-047"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.6.3c",
+    "date": "2026-11-15",
+    "title": "Patch: hand-kept card pools become tag queries, and CN Tech and NA Tech fall back to random cards",
+    "source": "#3869",
+    "notes": "Issue #3869 (the audit in #3847): the card pools kept as lists of ids read the catalog. Olivian Expanse and Dice of Doom read the Terminus pool, which since Stinkyscape+ holds sixteen cards and tokens (R3869000). The Big Crunch, Starfleet Commander, Preemptive Strike and Mining Subroutine read the Call to Chaos, War Doctrine and Resource pools (R3869001), Ozark, Orca and Galaxy the Miners by name (R3869002), Book Launcher the Books by the aim their target declares (R3869003; Blood, Flame, Wildfire and Nerf now declare harm), and four Marketplace lots their tags (R3869004): the same cards in the same order. CN Tech and NA Tech fall back to random non-token cards when the table names none, as before #2521 (R3869005). Scripts through v0.6.2b kept (R767000). The cards claimed past the four that changed are classify's stage 2: the switched cards whose forced games diverged and the cards its unforced games' divergences touched (Mining Subroutine, a token no deckable card's refs name, is counted as changed).",
+    "player": {
+      "title": "Every Terminus card counts as a Terminus card",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Olivian Expanse can now Discover the Stinkyscape+ Terminus cards, and Dice of Doom adds them too: on a 67 your hand fills with Terminus cards that cost (0), and the rest burn.",
+        "CN Tech and NA Tech: when no card has enough games to rank, they now give random cards instead of always Lunar Eclipse and Infinite Reserves."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "3f630735cb9034ccfd6e8eb61c299d6c937b8ec9"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-037",
+      "classicplus-047",
+      "core-035",
+      "core-075",
+      "core-t-rush",
+      "meditative-050",
+      "meditativeplus-002",
+      "meditativeplus-021",
+      "stinkyscape-004",
+      "stinkyscape-049",
+      "stinkyscape-079",
+      "stinkyscape-080",
+      "stinkyscape-154",
+      "stinkyscape-t-ai-02"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.6.4",
+    "date": "2026-11-15",
+    "title": "Patch: a Buff or a Nerf draws only a change that still does something where the card is: one table of live targets by zone, and an audit of every card",
+    "source": "#3888",
+    "notes": "R3888000: a Buff or a Nerf draws only a change that is live where the card is, by one table (SPEC §6.3) of deck, hand, being played (§10.5 step 3, where hidden Nerfs land), field face-up, face-down, Dormant, graveyard and exile, read from one place (effects::tune_live) by every menu row and by hidden Nerfs. On the field Rush and Charge past the Unit's entry turn (unless its own Reborn brings it back sick), Echo, Crater, Equip, Stack, GIGA, Tipsy, Flexible, Cloaked, Tradable and Temporary are no longer drawn; a hidden Nerf never draws the Tribute step 2 paid; a face-down Cloaked card's Cry numbers, stats and R21 keywords are drawn, read as the card it is; in a deck Cloaked and Crater are live as in a hand; a face-down Trap may take Crater; in a graveyard only a card a play may take from there changes (any card may take Flashback) and in exile none; a unit token never takes Flashback. R3888001: Param.cry is now Param.read (cry, combo, castOnDraw, awaken, evolve, handOrDeck, graveyard) with readOn for one face, held to the text by catalog check; the 90 cry marks are renamed and 38 numbers on 27 cards newly marked, which is the 95 cards changed: 93 claimed here, and Mid Loser (classicplus-019-3) and Wardrum (classicplus-037), which the pending Stinkyscape Balance Changes V also changes, claimed there, since one card ships in one patch; the Patch notes diff names the reader.",
+    "player": {
+      "title": "Buffs and Nerfs only change what still matters",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "On the field, a Buff or a Nerf no longer gives or removes Rush or Charge after the turn the Unit arrived.",
+        "On the field, a Buff or a Nerf no longer changes Echo, Crater, Cloaked or another keyword that only works as a card is played or from your hand.",
+        "On the field, a Buff or a Nerf no longer changes a number only its Combo, Cast on draw or awakening uses, nor one its Evolve uses once it has evolved.",
+        "A Buff or a Nerf can now change the Cry numbers of a Cloaked card set face-down, which still has its Cry to come.",
+        "Buffs can now give Cloaked to, and take Crater off, cards in your deck, as in your hand.",
+        "Hidden Nerfs no longer raise a Tribute you have just paid.",
+        "In a graveyard, a Buff or a Nerf only changes a card that can be played from there; any card can still gain Flashback.",
+        "Cards in an exile pile are no longer changed by a Buff or a Nerf."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "e573db0d28a48627a389641ee1d386a6c591c9dc"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-002",
+      "classic-007",
+      "classic-022",
+      "classic-023",
+      "classic-031",
+      "classic-040",
+      "classic-047",
+      "classic-053",
+      "classic-056",
+      "classic-059",
+      "classic-061",
+      "classic-074",
+      "classic-076",
+      "classic-085",
+      "classicplus-007",
+      "classicplus-020",
+      "classicplus-026",
+      "classicplus-036",
+      "classicplus-038",
+      "classicplus-049",
+      "classicplus-050",
+      "classicplus-068",
+      "classicplus-075",
+      "core-004",
+      "core-007",
+      "core-010",
+      "core-015",
+      "core-021",
+      "core-027",
+      "core-043",
+      "core-053",
+      "core-054",
+      "core-068",
+      "core-073",
+      "core-075",
+      "core-077",
+      "core-090",
+      "meditative-001",
+      "meditative-012",
+      "meditative-015",
+      "meditative-028",
+      "meditative-029",
+      "meditative-030",
+      "meditative-037",
+      "meditative-045",
+      "meditative-049",
+      "meditative-058",
+      "meditative-073",
+      "meditative-079",
+      "meditative-082",
+      "meditative-088",
+      "meditative-096",
+      "meditative-099",
+      "meditative-101",
+      "meditativeplus-010",
+      "meditativeplus-018",
+      "meditativeplus-024",
+      "stinkyscape-015",
+      "stinkyscape-019",
+      "stinkyscape-040",
+      "stinkyscape-042",
+      "stinkyscape-071",
+      "stinkyscape-081",
+      "stinkyscape-082",
+      "stinkyscape-083",
+      "stinkyscape-085",
+      "stinkyscape-086",
+      "stinkyscape-097",
+      "stinkyscape-123",
+      "stinkyscape-152",
+      "stinkyscapeplus-002",
+      "stinkyscapeplus-006",
+      "stinkyscapeplus-056",
+      "stinkyscapeplus-060",
+      "stinkyscapeplus-070",
+      "stinkyscapeplus-075",
+      "stinkyscapeplus-086",
+      "stinkyscapeplus-087",
+      "stinkyscapeplus-088",
+      "stinkyscapeplus-092",
+      "stinkyscapeplus-102",
+      "stinkyscapeplus-121",
+      "stinkyscapeplus-141",
+      "stinkyscapeplus-159",
+      "traininggrounds-002",
+      "traininggrounds-005",
+      "traininggrounds-017",
+      "traininggrounds-022",
+      "traininggrounds-023",
+      "traininggrounds-033"
+    ],
+    "changes": [
+      {
+        "id": "core-004",
+        "name": "Gary the Gambler",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-007",
+        "name": "Jewelosco Scarab",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-010",
+        "name": "Rapid Replenish",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-015",
+        "name": "Me and Mr Token",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-021",
+        "name": "Hinder",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-027",
+        "name": "Blood Ridden Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-043",
+        "name": "Big Felinor",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-053",
+        "name": "Reno",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-054",
+        "name": "Straaza",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-068",
+        "name": "Twisted Sorcerer",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-073",
+        "name": "Anti-oneshot Armor",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-075",
+        "name": "Infinite Reserves",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-077",
+        "name": "Professor Curvature",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-090-1",
+        "name": "Super-Virus",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-002",
+        "name": "The Trickster",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-007",
+        "name": "InfiniScepter",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-022",
+        "name": "Mid Runner",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-023",
+        "name": "Devil's Pact",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-031",
+        "name": "Cookie Guild",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-040",
+        "name": "MC Tech",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-047",
+        "name": "Recurring Felinor",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-053",
+        "name": "Plague Crawler",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-056",
+        "name": "Spell Tyrant",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-059",
+        "name": "Plague Doctor",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-061",
+        "name": "Plague Bringer Goliath",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-074",
+        "name": "Corpse Plantation",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-076",
+        "name": "Plague Bringer",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-085",
+        "name": "King Wagtoggle",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-007",
+        "name": "The House",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-020",
+        "name": "Mushroom Power",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-026",
+        "name": "Tommy Tempo",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-036-1",
+        "name": "Bone Storm",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-038-1",
+        "name": "Solarius Prime",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-049",
+        "name": "Jay Fungus",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-050",
+        "name": "Adaptive Growth",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-068",
+        "name": "Organic Produce",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-075",
+        "name": "J-lease J-Jungle EX-plorer",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-075-1",
+        "name": "J-lease J-Jungle EX-plorer Pack",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-001",
+        "name": "Disruptive Disruptor",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-012",
+        "name": "Fear Mongerer",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-015",
+        "name": "Smelly Steven",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-028",
+        "name": "Shade-iris",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-028-1",
+        "name": "Ancient Curse",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-029",
+        "name": "Forbiddenous Factory",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-030-1",
+        "name": "Love Bomb",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-037",
+        "name": "CN in a Bottle",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-045",
+        "name": "Knowledge Breaker",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-045-1",
+        "name": "Knowledge Breaker Prime",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-049-1",
+        "name": "YileGPT Prime",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-058",
+        "name": "Permanent Underclassman",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-073",
+        "name": "Plate Packer",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-079",
+        "name": "Touched by KY",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-082",
+        "name": "Medina Outfitter",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-088",
+        "name": "The True Sheep",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-096-1",
+        "name": "Journey Complete",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-099",
+        "name": "Paranoia",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-101",
+        "name": "Gachaholic",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditativeplus-010",
+        "name": "Medina Grifter",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditativeplus-018",
+        "name": "Cognitive Offloading",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditativeplus-024",
+        "name": "Bob, Wisconsin's Strongest Soldier",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscape-015",
+        "name": "Arg Arg Defender",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscape-019",
+        "name": "Imprisoned Cosmality",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscape-040",
+        "name": "Poison Capsule",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscape-042",
+        "name": "Core Researcher",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscape-071",
+        "name": "A'Zoth",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscape-081",
+        "name": "Radix",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscape-082",
+        "name": "Phalanx",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscape-083",
+        "name": "Halo",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscape-085",
+        "name": "Prototype-X1",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscape-086",
+        "name": "Prototype-X2",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscape-097",
+        "name": "Asteroid Field",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscape-123",
+        "name": "Gokugains",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscape-152",
+        "name": "Sanctum",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "traininggrounds-002",
+        "name": "Personal Trainer",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "traininggrounds-005",
+        "name": "Midlane Menace",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "traininggrounds-017",
+        "name": "Flaming Felinor",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "traininggrounds-022",
+        "name": "Right-Hand Felinor",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "traininggrounds-023",
+        "name": "Quadrupling Felinors",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "traininggrounds-033",
+        "name": "Guerilla Felinor",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-002",
+        "name": "Lone Drifter",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-006-2",
+        "name": "Stinky Cheese",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-056",
+        "name": "Impact Reactor",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-060",
+        "name": "Radi",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-070",
+        "name": "Spaceberry",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-075-1",
+        "name": "J-lease S-Space EX-plorer Pack",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-086",
+        "name": "Astrophage",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-087",
+        "name": "Frontier Flora",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-088",
+        "name": "Colony Watcher",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-092",
+        "name": "Crystalline Chiton",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-102",
+        "name": "Cosmic Bard",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-121",
+        "name": "Toxopid",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-141",
+        "name": "Stinky 1x Engineer",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-159",
+        "name": "Raven",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      }
+    ]
   }
 ]

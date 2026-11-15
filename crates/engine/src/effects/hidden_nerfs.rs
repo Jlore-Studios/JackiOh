@@ -6,9 +6,10 @@
 //! so no seat's decision hangs on it (R1845000).
 //!
 //! `land_hidden_nerfs` is §10.5 step 3's: as the card is played or cast, after a replacement, Feng
-//! Shui, Gifted Program and the Garden, its count is spent as that many §6.3 Nerfs from every row but
-//! the cost's (`tune::degrade_sparing_cost`), reported as every Nerf is (R177, R440), so the card's
-//! price is never touched and its Nerfs are seen as it is played (R1845001).
+//! Shui, Gifted Program and the Garden, its count is spent as that many §6.3 Nerfs drawn from the
+//! being-played column of R3888000's table (`tune::degrade_as_played`), reported as every Nerf is
+//! (R177, R440), so neither the card's price nor its Tribute, both paid at step 2, is touched and its
+//! Nerfs are seen as it is played (R1845001).
 
 use indexmap::IndexSet;
 
@@ -19,7 +20,7 @@ use crate::state::{CardInstance, GameState, find_instance_mut};
 use crate::wire::{KeywordKind, TargetAim, ZoneName, has_keyword};
 
 use super::card_scope::{CardScopeOptions, cards_in_card_scope};
-use super::tune::{TuneArgs, degrade_sparing_cost, named_card};
+use super::tune::{TuneArgs, degrade_as_played, named_card};
 
 /// R1845000: a card a hidden Nerf can wait on — one in a hand or a deck, which no Immutable card is
 /// (R23, R386).
@@ -98,6 +99,6 @@ pub fn land_hidden_nerfs(sink: &mut EngineSink<'_>, instance_id: &str) {
         },
     );
     for _ in 0..count.max(0) {
-        degrade_sparing_cost(&mut ctx, &card);
+        degrade_as_played(&mut ctx, &card);
     }
 }

@@ -185,16 +185,8 @@ mod pg {
     use super::{Lobby, LobbyMember, LobbyPick};
     use crate::auth::is_uuid;
     // `db::pg`'s session and row helpers: every method re-stamps its subject first (`run_as`).
-    use crate::db::pg::{PgTx, ms_of, run_as, uuid_text, uuid_text_or_null};
+    use crate::db::pg::{PgTx, json, json_or_null, ms_of, run_as, uuid_text, uuid_text_or_null};
     use crate::db::store::StoreError;
-
-    fn json_text<T: serde::Serialize + ?Sized>(value: &T) -> Result<String, StoreError> {
-        Ok(serde_json::to_string(value)?)
-    }
-
-    fn pick_text(pick: &Option<LobbyPick>) -> Result<Option<String>, StoreError> {
-        pick.as_ref().map(json_text).transpose()
-    }
 
     macro_rules! lobby_columns {
         () => {
@@ -252,7 +244,7 @@ mod pg {
         )
         .bind(lobby.code.as_str())
         .bind(lobby.host.as_str())
-        .bind(json_text(&lobby.settings)?)
+        .bind(json(&lobby.settings)?)
         .bind(lobby.rev)
         .bind(lobby.catalog_version.as_str())
         .bind(lobby.created_at)
@@ -291,9 +283,9 @@ mod pg {
         )
         .bind(next.code.as_str())
         .bind(next.guest.as_deref())
-        .bind(json_text(&next.settings)?)
-        .bind(pick_text(&next.host_pick)?)
-        .bind(pick_text(&next.guest_pick)?)
+        .bind(json(&next.settings)?)
+        .bind(json_or_null(&next.host_pick)?)
+        .bind(json_or_null(&next.guest_pick)?)
         .bind(next.host_ready)
         .bind(next.guest_ready)
         .bind(next.rev)
@@ -305,8 +297,8 @@ mod pg {
         .bind(expected_rev)
         .bind(next.others[0].profile.as_deref())
         .bind(next.others[1].profile.as_deref())
-        .bind(pick_text(&next.others[0].pick)?)
-        .bind(pick_text(&next.others[1].pick)?)
+        .bind(json_or_null(&next.others[0].pick)?)
+        .bind(json_or_null(&next.others[1].pick)?)
         .bind(next.others[0].ready)
         .bind(next.others[1].ready)
         .execute(&mut **t)

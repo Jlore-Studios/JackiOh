@@ -1378,12 +1378,10 @@ export function getPopulation(token: string): Promise<PopulationResponse> {
   return apiRequest<PopulationResponse>("/api/queue/population", { token });
 }
 
-/** `POST /api/rooms` / `POST /api/rooms/:code/join` (§9.5, R264). */
-export type CreateRoomResponse = { code: string; expiresAt: number; mode: QueueMode };
-
 /**
- * A join answers with the match or the series (Conquest) it made. A choice in another mode than the
- * room's is a 409 `conflict` with the room's `details.mode`, so the lobby can ask for the right one.
+ * `POST /api/rooms/:code/join` (§9.5, R264). A join answers with the match or the series (Conquest) it
+ * made. A choice in another mode than the room's is a 409 `conflict` with the room's `details.mode`, so
+ * the lobby can ask for the right one.
  */
 export type JoinRoomResponse = {
   matchId: string | null;
@@ -1393,37 +1391,12 @@ export type JoinRoomResponse = {
   mode: QueueMode;
 };
 
-export function createRoom(token: string, choice: ModeChoice): Promise<CreateRoomResponse> {
-  return apiRequest<CreateRoomResponse>("/api/rooms", { method: "POST", token, body: choice });
-}
-
 export function joinRoom(token: string, code: string, choice: ModeChoice): Promise<JoinRoomResponse> {
   return apiRequest<JoinRoomResponse>(`/api/rooms/${encodeURIComponent(code)}/join`, {
     method: "POST",
     token,
     body: choice,
   });
-}
-
-/** `GET /api/rooms` (R1075000): the caller's rooms nobody has joined yet, newest first. */
-export type OpenRoomsResponse = { rooms: CreateRoomResponse[] };
-
-export function getOpenRooms(token: string): Promise<OpenRoomsResponse> {
-  return apiRequest<OpenRoomsResponse>("/api/rooms", { token });
-}
-
-/** `DELETE /api/rooms/:code`: `cancelled: false` when no unjoined room of the caller's held it. */
-export function cancelRoom(token: string, code: string): Promise<{ cancelled: boolean }> {
-  return apiRequest<{ cancelled: boolean }>(`/api/rooms/${encodeURIComponent(code)}`, { method: "DELETE", token });
-}
-
-/** The room's mode from a mode-mismatch refusal (R264), or null for any other error. */
-export function roomModeOf(error: unknown): QueueMode | null {
-  if (!(error instanceof ApiRequestError) || error.code !== "conflict") return null;
-  const details = error.details;
-  if (typeof details !== "object" || details === null) return null;
-  const mode = (details as { mode?: unknown }).mode;
-  return isQueueMode(mode) ? mode : null;
 }
 
 // The Conquest series (SPEC §9.5, R330–R336). The server's projection for the caller: the other

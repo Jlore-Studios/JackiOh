@@ -50,7 +50,7 @@ import {
   type SavedTrio,
   type WalletResponse,
 } from "./api.ts";
-import { getDuosAgain, getDuosLive, getDuosReplay, getDuosRoom } from "./duos.ts";
+import { getDuosAgain, getDuosLive, getDuosReplay } from "./duos.ts";
 import {
   READ_CACHE_FRESH_MS,
   READ_CACHE_MAX_ENTRIES,
@@ -308,7 +308,6 @@ describe("R2125000 what is never kept", () => {
     await getSeriesForMatch(A1, "m-1");
     await getSeries(A1, "s-1");
     await rematchStatus(A1, "m-1");
-    await getDuosRoom("ROOM01");
     await getDuosLive();
     await getDuosReplay("m-1");
     await getDuosAgain("m-1");

@@ -50,7 +50,10 @@ function headingIds(note: string): string[] {
     .flatMap((line) => /^### (\d+\.\d+) /.exec(line)?.slice(1, 2) ?? []);
 }
 
-/** The first cell of every row of one §6 table: its term names. No other cell is read. */
+/**
+ * The first cell of every row of one §6 table, the section's first: its term names. No other cell is
+ * read, and a later table is no term table (§6.3's table of where a Buff or a Nerf is live, R3888000).
+ */
 function rowNames(section: TableSection): string[] {
   const lines = readFileSync(KEYWORDS_NOTE, "utf8").split("\n");
   const start = lines.findIndex((line) => line.startsWith(`### ${section.slice(1)} `));
@@ -59,6 +62,7 @@ function rowNames(section: TableSection): string[] {
   for (const line of lines.slice(start + 1)) {
     if (line.startsWith("#")) break;
     if (line.startsWith("|")) names.push(line.split("|")[1]?.trim() ?? "");
+    else if (names.length > 0) break;
   }
   // The first two are the header row and its separator.
   return names.slice(2);

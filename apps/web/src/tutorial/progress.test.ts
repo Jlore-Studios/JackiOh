@@ -21,7 +21,6 @@ import {
   nextLessonToPlay,
   parseTutorialProgress,
   readTutorialProgress,
-  resetTutorialProgress,
   setTutorialHidden,
   useTutorialProgress,
 } from "./progress.ts";
@@ -78,7 +77,6 @@ describe("R294 tutorial progress is kept on this device", () => {
 
     readTutorialProgress();
     markLessonComplete(lesson(1).id);
-    resetTutorialProgress();
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(socketSpy).not.toHaveBeenCalled();
@@ -148,20 +146,10 @@ describe("R294 tutorial progress is kept on this device", () => {
       "unlocked",
     ]);
 
-    // Winning a completed lesson again changes nothing; nothing ever un-completes one but a reset.
+    // Winning a completed lesson again changes nothing; nothing ever un-completes one.
     const again = markLessonComplete(one.id);
     expect(again).toBe(progress);
     expect(lessonStatus(again, one)).toBe("completed");
-
-    progress = resetTutorialProgress();
-    expect(TUTORIAL_LESSONS.map((each) => lessonStatus(progress, each))).toEqual([
-      "unlocked",
-      "locked",
-      "locked",
-      "locked",
-      "locked",
-    ]);
-    expect(stored()).toEqual({ v: 1, completed: [] });
   });
 
   it("R294 the parse is tolerant: wrong shapes and versions are no progress, unknown ids are dropped", () => {
@@ -300,7 +288,6 @@ describe("R321 the device's copy merges with the account's, and never steps back
     for (const hiddenChoice of [true, { hidden: 1, at: 2 }, { hidden: true, at: -1 }, { hidden: true, at: 1.5 }, { hidden: true }]) {
       expect(parseTutorialProgress({ v: 1, completed: [], hiddenChoice }).hiddenChoice).toBeNull();
     }
-    expect(resetTutorialProgress().hiddenChoice).toBeNull();
   });
 });
 

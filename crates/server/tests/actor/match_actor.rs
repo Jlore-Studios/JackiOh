@@ -5643,6 +5643,32 @@ mod seat_states_3678 {
         assert_eq!(match_row(&h.app, MATCH_ID).await["clocks"], stored);
     }
 
+    /// S10, R3694000: the reaper lets a finished match go past its rematch window with
+    /// `MATCH_OVER_CLOSE_CODE`. A socket handed to the actor after that, through a handle held across the
+    /// reap (as `Registry::attach` holds one), hears the same close, which no client reconnects on, and is
+    /// never greeted: a 1001 would send it back to the registry, into R1285000's refusal.
+    #[tokio::test(start_paused = true)]
+    async fn r3694000_a_socket_handed_to_an_actor_the_reaper_let_go_hears_the_match_is_over() {
+        use jackioh_server::config::MATCH_OVER_CLOSE_CODE;
+        let h = harness(Options::default()).await;
+        send(&h, &h.p1, "resign", json!({ "type": "concede" })).await;
+        let window_end =
+            h.actor.finished_at().expect("the concede finished the match") + REMATCH_OFFER_TTL_MS;
+        assert_eq!(
+            h.app.matches.reap_finished(window_end + 1).await,
+            vec![MATCH_ID.to_string()]
+        );
+        settle().await;
+        assert_eq!(h.p1.close_code(), Some(MATCH_OVER_CLOSE_CODE));
+
+        let late = Client::new();
+        h.actor.attach(P1, late.socket());
+        h.idle().await;
+        assert_eq!(late.close_code(), Some(MATCH_OVER_CLOSE_CODE));
+        assert_eq!(late.0.close_reason().as_deref(), Some("the match is over"));
+        assert!(views(&late).is_empty());
+    }
+
     /// S12, R3767000: a second socket for one home (a second tab, or another device) takes the seat; the
     /// first is closed with `SEAT_TAKEN_CLOSE_CODE`, which its client does not reconnect on, and, as the
     /// seat was never empty, no grace starts (R744, `on_socket_gone`).

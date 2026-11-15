@@ -3466,6 +3466,32 @@ mod seat_states_3678 {
         assert_eq!(views(&late), 0);
     }
 
+    /// S10, R3694000: once the reaper let a finished co-op game go past its window, a socket handed to
+    /// its actor through a held handle hears `MATCH_OVER_CLOSE_CODE`, as the sockets it held did, and no
+    /// view: a 1001 would send its client back into R1285000's refusal.
+    #[tokio::test(start_paused = true)]
+    async fn r3694000_a_socket_handed_to_a_coop_actor_the_reaper_let_go_hears_the_match_is_over() {
+        use jackioh_server::config::MATCH_OVER_CLOSE_CODE;
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        h.concede_both(&a1, &a2).await;
+        let held = registry(&h.app);
+        let actor = held.get(&h.match_id).expect("the live actor");
+        let ended = actor.finished_at().expect("the concedes finished the game");
+        assert_eq!(
+            held.reap_finished(ended + REMATCH_OFFER_TTL_MS + 1).await,
+            vec![h.match_id.clone()]
+        );
+        assert_eq!(a1.wait_closed(PROMPTLY).await, Some(MATCH_OVER_CLOSE_CODE));
+
+        let late = create_fake_socket();
+        actor.attach(DuosSeat::A1, late.socket());
+        quiet(&actor).await;
+        assert_eq!(late.close_code(), Some(MATCH_OVER_CLOSE_CODE));
+        assert_eq!(views(&late), 0);
+    }
+
     /// S12, R3767000: a second socket for one seat takes it; the first is closed with
     /// `SEAT_TAKEN_CLOSE_CODE`, which its client does not reconnect on, and no grace starts: the seat was
     /// never empty (R744).

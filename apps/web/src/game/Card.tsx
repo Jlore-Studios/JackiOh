@@ -69,6 +69,7 @@ import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlig
 import { COUNTERED_NOTE, conditionAttr, conditionTargetAttr, counteredAttr, countedAttr, glowAttr, paretoAttr } from "./glow.ts";
 import { useSetting } from "../settings/store.ts";
 import { t } from "../i18n/i18n.ts";
+import { EventTag } from "./EventTag.tsx";
 import { SHORTCUTS } from "../shortcuts/shortcuts.ts";
 
 import "./facedown.css";
@@ -569,6 +570,7 @@ function Card(props: CardProps): ReactElement {
       {/* #2267: the hint row takes no pointer event (handHints.css). */}
       {props.hintRow}
       {position !== undefined && <span className="position-tag">{t(position)}</span>}
+      <EventTag host={testId} animating={animatingEvent} />
 
       {counters?.plague !== undefined && (
         <span className="counter counter-plague" data-counter="plague" title={t("Plague counters")}>

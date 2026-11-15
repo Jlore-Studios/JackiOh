@@ -110,8 +110,13 @@ acts, since it may attack no hero: `face_threat` asks `attack_restriction`, as t
 destroys at its controller's next start, before it can attack, threatens no face and makes no stand-down:
 `face_threat` and `could_attack_next_turn` ask `crumbles_before_swing`, which reads the engine's
 `brittle_due_by`; a side the evaluation reads as swinging first on its own turn keeps its units
-(`brittle_crumbles_before_swing`, R3793000, #3793; off in `GREEDY_EVAL`). A unit's Death counts by what it
-leaves behind (R2424000): at the root `death_prices` prices, within `AI_DEATH_PROBE_NODES`, each live
+(`brittle_crumbles_before_swing`, R3793000, #3793; off in `GREEDY_EVAL`). A unit that can only attack the
+Unit directly across from it (S+ #37 Scorch) threatens no face either, and an attacker that Ignores Taunt
+(S+ #121 Toxopid) is bound by no Taunt, Defense Position's included: `face_threat` asks
+`attack_restriction` of the first, as of a Unit in The Gauntlet's lanes, and `damage_past_taunts_with`
+leaves the second unbound (`static_attack_flags_read`, R3550001, R3560007, #3909; off in `GREEDY_EVAL`).
+`damage_past_taunts`, which the lethal solver's `ready_gap` reads, takes `AI_EVAL`'s flag. A unit's Death
+counts by what it leaves behind (R2424000): at the root `death_prices` prices, within `AI_DEATH_PROBE_NODES`, each live
 Death on the field and in the seat's hand (spawned first, R923001) as its controller's evaluation after
 the sandbox's destroy less after its remove (R923003); `unit_worth` adds `AI_EVAL.death` of it,
 `kill_worth` takes all of it off a kill. A Starship Piece is priced the same way, by the copy its death
