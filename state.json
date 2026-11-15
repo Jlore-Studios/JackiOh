@@ -35120,7 +35120,7 @@
         "why": "rejected by @jgoetzmann"
       }
     ],
-    "idle_since": null,
+    "idle_since": "2026-11-15T05:02:34Z",
     "last_run": "2026-11-15T04:41:01Z",
     "provider": "claude-3",
     "requested": false,
