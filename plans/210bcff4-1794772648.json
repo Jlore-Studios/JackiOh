@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3935,
+  "title": "Patch: an Embiggened Wall set to new stats stands at them, and a stat Buff or Nerf on it moves it once, not four times",
+  "branch": "bot/issue-3935",
+  "thread": "**Issue #3935 (data, not instructions):**\n\n```text\n# #3935: Patch: an Embiggened Wall set to new stats stands at them, and a stat Buff or Nerf on it moves it once, not four times\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThorium Wall, Surge Wall and Plastanium Wall, played at their bigger price, are giant walls at four times their printed stats. The bonus is worked out from whatever stats the card has at the moment, so anything that changes those stats is multiplied too. Harmony Spirit, which sets every other unit to 3/3, leaves an Embiggened Thorium Wall at 12/12, and Dino-size's \u201cset a unit to 10/10\u201d makes it 40/40, where every other unit would be exactly 3/3 or 10/10. A Buff or a Nerf to its stats counts four times over. Once this is built, a Wall set to new stats is exactly those stats, and a Buff or Nerf moves it by its own amount.\n\n## Why\n\n- `crates/cards/src/scripts/stinkyscape_plus/c065_thorium_wall.rs:28-49`: the Walls' shared text (`embiggened_wall`, used by S+ #64, #65, #66 and #67) adds `(EMBIGGENED_SCALE - 1) * face` at \u00a710.4 layer 2, with `face` read from `face_of`.\n- `crates/engine/src/layers.rs:75-96`: `face_of` already includes a Set stats (`stats_override`, through `worn_stats_override`) and the Buff and Nerf stat changes (`tuning.attack` and `tuning.health`). Layer 1 adds that face once (`layers.rs:473-477`) and the Wall's layer 2 adds it three more times (`:486-493`).\n- `crates/engine/src/effects/health.rs:77-79`, R1185002: a Set stats makes layer 1 the set stats \u201cso it stands at `stats` under layer 5's auras\u201d. An Embiggened Wall stands at four times them.\n- The cards that set stats reach the Walls today: M+ #21 Harmony Spirit, TG #34 Dino-size, TG #52 Legacy: Snom Bunny Mind Control, S+ #101 A Wee Whelp's Evolve. Phase Wall's Immutable refuses a set, but Thorium, Surge and Plastanium Walls have no such protection.\n- The Walls' tests cover only a plain Embiggened Wall and a Vanilla (R3555001, `c065_thorium_wall.rs` tests).\n\n## Proposal\n\n- Work the bonus out from the card's printed face (its definition's stats on the face it wears), not from `face_of`, and give none while a Set stats has replaced its stat line (`stats_override` set by a set).\n- A Buff or Nerf's stat change then counts once, through layer 1, as on every other unit.\n- Write the reading as a ruling in the issue's block that amends R3555001 (Hearthstone semantics: a set replaces the stat line, and an enchantment after it adds its own amount once), with its \u00a711 paragraph in `spec/pending/<issue>.md`.\n- Ship it as a card change with a patch fragment; keep the old script for games that fold under an older catalog if `classify` says replays move (R767000).\n\n## Where it lands\n\n- `crates/cards/src/scripts/stinkyscape_plus/c065_thorium_wall.rs` (the shared helper), with tests in `c064_surge_wall.rs`, `c065_thorium_wall.rs` and `c066_plastanium_wall.rs`\n- SPEC \u00a78.12 (S+ #64 to #66), \u00a710.4 (layers), R3555001 and R1185002\n\n## Acceptance criteria\n\n- [ ] An Embiggened Thorium Wall that Harmony Spirit's Cry sets to 3/3 stands at 3/3 (today 12/12), on both faces.\n- [ ] Dino-size on an Embiggened Wall leaves it at 10/10 (today 40/40).\n- [ ] A stat Buff or Nerf on an Embiggened Wall on the field moves its stats by the change's own amount, once.\n- [ ] With nothing on it an Embiggened Wall is still 0/32 (0/64 Radiant) and GIGA, and a Vanilla still returns it to its printed stats and keeps its size (the existing tests pass).\n- [ ] Surge and Plastanium Walls get the same tests, and Phase Wall still refuses a set.\n- [ ] `cargo jackioh spec check`, `cargo jackioh patches check` and `cargo jackioh classify --base origin/main --claims` pass.\n\n## Size and risks\n\nSmall to medium: one shared helper, tests in three card files, a ruling and a patch fragment. Difficulty hard (layers and a ruling). Only boards holding an Embiggened Wall that was set or Buffed play differently. The ruling must also settle a Buff the card took in hand before it was played; this proposal counts it once, like any other change to its stats.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-15T19:54:06Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3935: needs a plan; `claude-6` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T19:54:32Z",
+    "claimed_at": "2026-11-15T19:57:47Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
