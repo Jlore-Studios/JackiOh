@@ -14732,6 +14732,18 @@
       "asks": [],
       "ci_fixed_head": "4be837bf77d3c6d7800732a089d5fdf4e4419a44",
       "ci_fixes": 1,
+      "cleared": {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "at": "2026-11-15T04:05:15Z",
+        "built_by": "claude-7",
+        "by": "`claude` (strong)",
+        "sha": "4be837bf77d3c6d7800732a089d5fdf4e4419a44"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-15T02:19:43Z",
@@ -14747,6 +14759,7 @@
       "issue": 3912,
       "kind": "review",
       "live": "reviewing",
+      "merge_owner": "claude-7",
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-11-15T03:09:28Z",
