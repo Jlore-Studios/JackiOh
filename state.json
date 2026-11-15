@@ -34127,7 +34127,10 @@
           "provider": "claude-6"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-15T13:39:07Z",
         "every": 5,
+        "findings": 1,
+        "follow_up": 3977,
         "head": "5e9236fd151db06879d165e8ad1bff9f7b058a2a",
         "issue": 3955,
         "merged_at": "2026-11-15T13:18:23Z",
@@ -34140,12 +34143,13 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:80f32508-1794749515",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/43719501458",
         "sha": "9076a3e245552ccfe62f0c9f1cb5063af7247ce6",
         "started_at": "2026-11-15T13:32:07Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the friends drawer and Friends page fit a phone: tabs that scroll or wrap, themed 44-pixel inputs, no overlapping tap areas",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 276
