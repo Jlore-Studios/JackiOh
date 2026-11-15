@@ -15234,8 +15234,10 @@
     "what": "build #3912 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-15T07:45:56Z",
-    "notes": [],
+    "at": "2026-11-15T07:52:14Z",
+    "notes": [
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15940,7 +15942,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-15T07:45:56Z",
+  "loop_tick": "2026-11-15T07:52:14Z",
   "machine_disk": {
     "issue": null,
     "reading": {
