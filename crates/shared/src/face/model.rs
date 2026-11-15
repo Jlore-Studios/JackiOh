@@ -366,7 +366,12 @@ fn face_in(words: Words, source: &FaceSource, lookup: &Lookup<'_>, chinese: bool
     let form = if text.full.is_empty() || printed_out.is_some() {
         None
     } else {
-        short_form_of(&source.def_id, radiant).map(|form| in_language(form, chinese))
+        short_form_of(&source.def_id, radiant).map(|form| match in_language(form, chinese) {
+            ShortForm::Written { .. } if !prints_the_catalog_text(filled.as_ref(), radiant) => {
+                ShortForm::Clamp
+            }
+            form => form,
+        })
     };
     let short = match form {
         // R3941001: the words written for the face, filled as its whole text is: its numbers the view's (R386),
@@ -761,6 +766,20 @@ fn text_in_play(
         }
     }
     printed_text.clone()
+}
+
+/// R3941001: whether `def` prints the build's own catalog text on the face, the text its written words were
+/// written for. An older face (a shipped patch's on the Patch notes page, a replay folded under an older
+/// catalog) takes the form the words replaced: it clamps.
+fn prints_the_catalog_text(def: Option<&CardDef>, radiant: bool) -> bool {
+    let Some(def) = def else { return false };
+    jackioh_engine::catalog::find_def(None, &def.id).is_some_and(|current| {
+        if radiant {
+            current.radiant.text == def.radiant.text
+        } else {
+            current.base.text == def.base.text
+        }
+    })
 }
 
 /// R3941001: `def` printing each face's written words (`short.rs`) where it has them, and its whole text where

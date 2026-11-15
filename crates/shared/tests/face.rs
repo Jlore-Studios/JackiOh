@@ -1204,6 +1204,21 @@ fn r3941001_a_written_face_prints_its_words_filled_and_keeps_its_whole_text() {
     );
 }
 
+/// R3941001: a face's written words are its catalog text's, so a face printing other text under the same id (a
+/// shipped patch's older face on the Patch notes page, a replay's older catalog) clamps as it did.
+#[test]
+fn r3941001_an_older_text_of_a_written_face_clamps() {
+    let mut older = catalog_def("meditative-081");
+    older.base.text = format!("{} Older.", older.base.text);
+    let face = face_of_def(&older, false, Locale::En, json!({}));
+    assert!(face.clamp && face.short.is_none());
+    assert!(
+        face_of_def(&catalog_def("meditative-081"), false, Locale::En, json!({}))
+            .short
+            .is_some()
+    );
+}
+
 /// R3941001: a face printed in Chinese whose written form has no Chinese words of its own clamps, as it did.
 #[test]
 fn r3941001_a_chinese_face_without_written_words_clamps() {
