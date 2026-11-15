@@ -370,6 +370,13 @@ pub struct EvalWeights {
     /// `unit_worth` is untouched: its Brittle share already discounts the unit. Off, every unit that may
     /// swing counts, as before.
     pub brittle_crumbles_before_swing: bool,
+    /// R3550001, R3560007, #3909: whether `face_threat` and `damage_past_taunts_with` read the two static
+    /// attack flags the engine applies outside the plain Taunt walk. A unit that can only attack the Unit
+    /// directly across (S+ #37 Scorch) never may hit a hero, so `face_threat` asks `attack_restriction` of
+    /// it as of a Unit in The Gauntlet's lanes and its swings land nothing past the Taunts. An attacker
+    /// that Ignores Taunt (S+ #121 Toxopid) is bound by no Taunt, Defense Position's included. Off, both
+    /// count as before.
+    pub static_attack_flags_read: bool,
     /// Per point of unitView.health (current).
     pub health: f64,
     /// Per point of unitView.armor.
@@ -566,6 +573,7 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     deft_defense_attacks: true,
     gauntlet_bars_face_attacks: true,
     brittle_crumbles_before_swing: true,
+    static_attack_flags_read: true,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
@@ -828,7 +836,8 @@ pub const LEARNED_REACH: LearnedReach = LearnedReach::Finalists;
 /// gates were fixed on the seed series `gate:v2`, frozen here, so tuning AI_EVAL changes the AI and never
 /// its yardstick. Every term and keyword AI_EVAL gained after that (R346, #1602, #1886, …) is 0 here, and
 /// each flag that opts into a later reading (`defense_own_taunt_kept`, `deft_defense_attacks`,
-/// `gauntlet_bars_face_attacks`, `standing_unit_priced_once`, `brittle_crumbles_before_swing`) is off.
+/// `gauntlet_bars_face_attacks`, `standing_unit_priced_once`, `brittle_crumbles_before_swing`,
+/// `static_attack_flags_read`) is off.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -842,6 +851,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     deft_defense_attacks: false,
     gauntlet_bars_face_attacks: false,
     brittle_crumbles_before_swing: false,
+    static_attack_flags_read: false,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {

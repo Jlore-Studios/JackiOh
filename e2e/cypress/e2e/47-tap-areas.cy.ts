@@ -60,6 +60,13 @@ const SEED = seedFor("47-tap-areas");
 const SERIES_ID = "00000000-0000-4000-8000-000000002122";
 /** p2, not 46's p1: the smoke shard runs 46 then 47 on one server, and both specs' menus in one minute pass R109's allowance for one account. */
 const SIGNED_IN = accounts.p2;
+/**
+ * The signed-in screens that draw nothing of `SIGNED_IN`'s own sign in as p4 (46's spare is p3), which only
+ * spec 55 uses and which nothing here writes to. R109 refuses an account past 300 requests a minute, and every
+ * signed-in screen also makes the inbox's reads (#3902): fifteen screens a size as p2 spent its minute before
+ * the last of them drew, and the invite screens met a 429. Split, each opens under ten.
+ */
+const SPARE = accounts.p4;
 /** The screens whose testids live in their route's component file, which this project does not type-check. */
 const SCREEN = { accountRank: "account-rank", leaderboardSeason: "leaderboard-season", almanac: "almanac" } as const;
 /** The measure's own probe: this much narrower than the minimum and taller, its ::before no height and this far past each side. */
@@ -187,7 +194,7 @@ function emulateTouch(enabled: boolean): void {
 }
 
 /**
- * A pending account's code and consent screens for `SIGNED_IN`. Spec 10 redeems the pending fixture until
+ * A pending account's code and consent screens for `SPARE`. Spec 10 redeems the pending fixture until
  * the server restarts (R144) and may share this shard, so its own read says pending, plus `owes`: the
  * screens draw only from that read (CLAUDE.md rule 7).
  */
@@ -400,6 +407,7 @@ describe(`47 — every control under a finger takes a tap across ${String(HIT_MI
       describe("signed in", () => {
         before(() => {
           cy.freeAccount(SIGNED_IN());
+          cy.freeAccount(SPARE());
         });
 
         it("R2122000 /play", () => {
@@ -435,7 +443,7 @@ describe(`47 — every control under a finger takes a tap across ${String(HIT_MI
         });
 
         it("R2122000 /leaderboard", () => {
-          cy.visitAs(SIGNED_IN(), "/leaderboard");
+          cy.visitAs(SPARE(), "/leaderboard");
           cy.get(ts(SCREEN.leaderboardSeason), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
@@ -447,7 +455,7 @@ describe(`47 — every control under a finger takes a tap across ${String(HIT_MI
         });
 
         it("R2122000 /together", () => {
-          cy.visitAs(SIGNED_IN(), "/together");
+          cy.visitAs(SPARE(), "/together");
           cy.get(ts(TOGETHER_ROOT), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
@@ -478,28 +486,28 @@ describe(`47 — every control under a finger takes a tap across ${String(HIT_MI
         });
 
         it("R2122000 /shop", () => {
-          cy.visitAs(SIGNED_IN(), routes.shop());
+          cy.visitAs(SPARE(), routes.shop());
           cy.get(ts(SHOP_PANEL), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
 
         it("R2122000 /series, choosing a deck", () => {
           cy.intercept("GET", `**/api/series/${SERIES_ID}`, { statusCode: 200, body: seriesPicking(Date.now()) });
-          cy.visitAs(SIGNED_IN(), routes.series(SERIES_ID));
+          cy.visitAs(SPARE(), routes.series(SERIES_ID));
           cy.get(ts(SERIES_SCORE), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
 
         it("R2122000 /invite, the code screen", () => {
           asPending();
-          cy.visitAs(SIGNED_IN(), routes.invite());
+          cy.visitAs(SPARE(), routes.invite());
           cy.get(ts(inviteTestid.input), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
 
         it("R2122000 /invite, the consent screen", () => {
           asPending({ ageCheckOwed: true, termsOwed: true });
-          cy.visitAs(SIGNED_IN(), routes.invite());
+          cy.visitAs(SPARE(), routes.invite());
           cy.get(ts(consentTestid.birthMonth), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });

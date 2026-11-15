@@ -52,7 +52,6 @@ const BASE_CAMP: &str = "meditativeplus-001-1";
 const AESTHETICIZE_THE_GAME: &str = "meditative-020";
 const CN_TECH: &str = "meditative-050";
 const NA_TECH: &str = "meditativeplus-002";
-const LUNAR_ECLIPSE: &str = "core-035";
 const INFINITE_RESERVES: &str = "core-075";
 const BIG_D_FENDER: &str = "core-001";
 const FRUIT_LAUNCHER: &str = "stinkyscape-141";
@@ -1342,35 +1341,40 @@ fn cn_tech_adds(seed: &str, radiant: bool, rows: &[(&str, i32, i32)]) -> Vec<(St
         .collect()
 }
 
+/// R3869005: whether `id` may stand in for a win-rate card the table cannot name: a non-token card of a
+/// set that ships, never the card `own` that adds it.
+fn a_random_stand_in(id: &str, own: &str) -> bool {
+    let def = card_def(id);
+    !def.is_token() && set_ships(def.set) && id != own
+}
+
 #[test]
-fn b33_cn_tech_with_an_empty_table_adds_lunar_eclipse_on_its_face() {
+fn b33_r3869005_cn_tech_with_an_empty_table_adds_a_random_card_on_its_face() {
     for radiant in [false, true] {
         for seed in ["b33-empty-a", "b33-empty-b", "b33-empty-c"] {
-            assert_eq!(
-                cn_tech_adds(seed, radiant, &[]),
-                vec![(LUNAR_ECLIPSE.to_string(), radiant)],
-                "{seed}, radiant {radiant}: Lunar Eclipse, never a random card"
-            );
+            let added = cn_tech_adds(seed, radiant, &[]);
+            assert_eq!(added.len(), 1, "{seed}: one card: {added:?}");
+            assert!(a_random_stand_in(&added[0].0, CN_TECH), "{seed}: {added:?}");
+            assert_eq!(added[0].1, radiant, "{seed}: on CN Tech's face");
         }
     }
 }
 
 #[test]
-fn b33_cn_tech_with_no_row_of_enough_games_adds_lunar_eclipse() {
+fn b33_r3869005_cn_tech_with_no_row_of_enough_games_adds_a_random_card() {
     let short = [(VANILLA, CN_TECH_MIN_GAMES - 1, CN_TECH_MIN_GAMES - 1)];
-    assert_eq!(
-        cn_tech_adds("b33-short", false, &short),
-        vec![(LUNAR_ECLIPSE.to_string(), false)]
-    );
+    let added = cn_tech_adds("b33-short", false, &short);
+    assert_eq!(added.len(), 1, "{added:?}");
+    assert!(a_random_stand_in(&added[0].0, CN_TECH), "{added:?}");
 }
 
 #[test]
-fn b33_cn_tech_naming_only_itself_adds_lunar_eclipse() {
+fn b33_r3869005_cn_tech_naming_only_itself_adds_a_random_card_never_itself() {
     let itself = [(CN_TECH, CN_TECH_MIN_GAMES, CN_TECH_MIN_GAMES)];
-    assert_eq!(
-        cn_tech_adds("b33-itself", true, &itself),
-        vec![(LUNAR_ECLIPSE.to_string(), true)]
-    );
+    let added = cn_tech_adds("b33-itself", true, &itself);
+    assert_eq!(added.len(), 1, "{added:?}");
+    assert!(a_random_stand_in(&added[0].0, CN_TECH), "{added:?}");
+    assert!(added[0].1, "Radiant on the Radiant face");
 }
 
 #[test]
@@ -1405,27 +1409,33 @@ fn na_tech_ends(seed: &str, radiant: bool, rows: &[(&str, i32, i32)]) -> Vec<Str
 }
 
 #[test]
-fn b34_na_tech_with_an_empty_table_fuses_infinite_reserves_and_lunar_eclipse() {
+fn b34_r3869005_na_tech_with_an_empty_table_fuses_two_different_random_cards() {
     for radiant in [false, true] {
         for seed in ["b34-empty-a", "b34-empty-b", "b34-empty-c"] {
-            assert_eq!(
-                na_tech_ends(seed, radiant, &[]),
-                vec![LUNAR_ECLIPSE.to_string(), INFINITE_RESERVES.to_string()],
-                "{seed}, radiant {radiant}: both fallbacks, never a random card"
-            );
+            let ends = na_tech_ends(seed, radiant, &[]);
+            assert_ne!(ends[0], ends[1], "{seed}: two different cards");
+            for end in &ends {
+                assert!(
+                    a_random_stand_in(end, NA_TECH),
+                    "{seed}, radiant {radiant}: {end}"
+                );
+            }
         }
     }
 }
 
 #[test]
-fn b34_na_tech_falls_back_to_infinite_reserves_for_the_end_the_table_cannot_name() {
+fn b34_r3869005_na_tech_takes_a_random_card_for_the_end_the_table_cannot_name() {
     // One row qualifies: it is the leader, and nothing is left for the trailer.
     let one = [(VANILLA, CN_TECH_MIN_GAMES - 1, CN_TECH_MIN_GAMES)];
     for seed in ["b34-one-a", "b34-one-b"] {
-        assert_eq!(
-            na_tech_ends(seed, false, &one),
-            vec![VANILLA.to_string(), INFINITE_RESERVES.to_string()]
+        let ends = na_tech_ends(seed, false, &one);
+        assert!(
+            ends.contains(&VANILLA.to_string()),
+            "{seed}: the leader: {ends:?}"
         );
+        let other = ends.iter().find(|end| *end != VANILLA).expect("another end");
+        assert!(a_random_stand_in(other, NA_TECH), "{seed}: {other}");
     }
 }
 

@@ -19,7 +19,8 @@ pub const ID: &str = "classic-016";
 
 /// §8 Conventions: any unit or hero, either side.
 fn targets() -> Vec<TargetDecl> {
-    vec![json_as(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }))]
+    // R3869003: a harmful Book, its aim declared (R656 reads an unset one as harm too).
+    vec![json_as(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] }, "aim": "harm" }))]
 }
 
 pub fn script() -> CardScripts {

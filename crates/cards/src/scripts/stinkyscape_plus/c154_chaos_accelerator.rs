@@ -11,7 +11,7 @@
 //! `castRandom`: the card is the Radiant face's Radiant, every choice of the cast is random so nothing
 //! pauses for a prompt, and it counts as a link of the Call to Chaos chain (R28).
 
-use jackioh_engine::effects::{CastRandomArgs, CastRandomCount, CastRandomQuery, cast_random};
+use jackioh_engine::effects::{CastRandomArgs, CastRandomCount, cast_random};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-154";
@@ -24,7 +24,7 @@ fn accelerator(radiant: bool) -> Script {
     Script {
         triggers: vec![when_launched("chaos-accelerator", move |_ctx, _event| {
             vec![cast_random(CastRandomArgs {
-                query: CastRandomQuery::Fixed(json_as(json!({ "tags": ["Call to Chaos"], "withTokens": true }))),
+                query: crate::query::call_to_chaos_editions().into(),
                 count: Some(CastRandomCount::Fixed(CASTS)),
                 radiant: Some(radiant),
                 target_enemies: None,
@@ -79,7 +79,7 @@ mod tests {
     /// The Call to Chaos pool of the shipped sets, tokens included.
     fn pool() -> Vec<String> {
         crate::register_all();
-        catalog::query(&json_as(json!({ "tags": ["Call to Chaos"], "withTokens": true })))
+        crate::query::query(&crate::query::call_to_chaos_editions())
             .into_iter()
             .map(|def| def.id.clone())
             .collect()

@@ -7,7 +7,7 @@
 //!
 //! ```text
 //!   | Row     | Degrade                          | Upgrade                         | Can apply to
-//!   | cost    | `costMod` +1, never above (4)    | −1, never below (0)             | off the field; never X-cost (R65)
+//!   | cost    | `costMod` +1, never above (4)    | −1, never below (0)             | in a deck or a hand; never X-cost (R65)
 //!   | stats   | −4 split, k to attack            | +4 split                        | a Unit or a card with stats
 //!   | keyword | remove one it has                | add one it lacks                | add: see below
 //!   | x       | one numbered keyword or X worse  | one better                      | never below 1
@@ -15,10 +15,13 @@
 //!   | plague  | remove a Plague Counter          | place one                       | a `usesPlague` card on the field
 //! ```
 //!
-//! On the field neither the cost row nor a number only the Cry reads is drawn, both spent (R1748000),
-//! nor a Tribute (R2261000). An Upgrade's keyword is from R21's pool for a Unit, Indestructible or
-//! Immutable for a Field Spell (R2436000), Pierce or Lifesteal for a damaging Spell (R1748001). In a
-//! hand it may also be Cloaked for a Unit, Spell or Field Spell (R2727000), or take Crater off (R2727001).
+//! Every row draws only a change that is live where the card is (R3888000): `tune_live.rs` holds the
+//! one table, by zone, of when each change acts, so a spent cost (R1748000), a paid Tribute
+//! (R2261000), a Cry that has run, a Rush on a Unit past its entry turn or a Cloaked off a hand is
+//! never drawn, and a hidden Nerf reads the being-played column (R1845001). An Upgrade's keyword is
+//! from R21's pool for a Unit, Indestructible or Immutable for a Field Spell (R2436000), Pierce or
+//! Lifesteal for a damaging Spell (R1748001), Flashback for any card (R2657005), and Cloaked for a
+//! Unit, Spell or Field Spell (R2727000); it may take Crater off (R2727001).
 //!
 //! R442: the row is drawn first, uniformly, then the item within it; one choice draws nothing (R129),
 //! and a card no row can change, an Immutable one first (rule 2), is left alone with no draw.
@@ -31,6 +34,7 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
+use crate::alt_play::priced_type_of;
 use crate::brittle_count::active_brittle_count;
 use crate::config::{
     TUNE_ATTACK_FLOOR, TUNE_BUFF_ANY_KEYWORDS, TUNE_BUFF_HAND_KEYWORDS, TUNE_BUFF_HAND_REMOVES,
@@ -38,16 +42,15 @@ use crate::config::{
     TUNE_FIELD_SPELL_KEYWORDS, TUNE_HARMFUL_KEYWORDS, TUNE_HEALTH_FLOOR, TUNE_MULTIPLIER_NONE,
     TUNE_NERF_HAND_KEYWORDS, TUNE_PLAGUE_STEP, TUNE_STAT_TOTAL, TUNE_X_STEP,
 };
-use crate::faces::card_type_of;
 use crate::layers::{
     card_keywords, printed_keywords_of, stats_with_buffs, unclamped_attack, unit_has, unit_view,
 };
 use crate::mana::is_x_cost;
 use crate::numbers::{
-    NumberRef, NumberedKey, current_stats, number_key, number_on, number_ref_id, numbered_keywords_on,
-    numbers_on, own_cost, parse_number_ref,
+    NumberRef, current_stats, number_key, number_on, number_ref_id, numbered_keywords_on, numbers_on,
+    own_cost, parse_number_ref,
 };
-use crate::params::{set_param, step_param, steppable_params_times};
+use crate::params::{set_param, step_param, steppable_params_in};
 use crate::prompts::{OpenPromptArgs, open_prompt, resume_self};
 use crate::script::{Effect, EffectContext};
 use crate::state::{BrittleCounter, CardInstance, GameState, PromptOption, find_instance, find_instance_mut};
@@ -59,6 +62,7 @@ use crate::wire::{
 use super::buff::candidates_beside;
 use super::card_scope::{CardScope, CardScopeOptions, cards_in_card_scope, unreadable_by};
 use super::targets::{TargetSpec, instance_of, instance_on_its_stay, resolve_target};
+use super::tune_live::{TuneActs, TuneZone, is_live, keyword_acts, numbered_acts, tune_zone_of};
 use crate::damage::DamageTarget;
 
 /// Which way a change goes.
@@ -198,15 +202,18 @@ fn pick_one<'a, T>(ctx: &mut EffectContext<'_>, items: &'a [T]) -> &'a T {
     }
 }
 
-/// B3.4 rule 3, cost: `costMod` one step toward (4) or toward (0); never an X-cost card (R65), never
-/// a card on the field, which has paid its price (R1748000), and never one in a graveyard or an exile
-/// pile, which is its printed card, its price included (R766, R3596001: S+ Tears of the Kwzki Tree's
-/// Buff reaches those piles). R1160: `times` steps, clamped.
-fn cost_row(state: &GameState, card: &CardInstance, direction: TuneDirection, times: i32) -> Option<MenuRow> {
-    if matches!(
-        card.zone.z(),
-        ZoneName::Field | ZoneName::Graveyard | ZoneName::Exile
-    ) {
+/// B3.4 rule 3, cost: `costMod` one step toward (4) or toward (0); never an X-cost card (R65), and
+/// only where the price is still to pay (R3888000): never on a card being played or on the field,
+/// which has paid it (R1748000, R1845001), nor in a graveyard or an exile pile, where the card is its
+/// printed card, its price included (R766, R3596001). R1160: `times` steps, clamped.
+fn cost_row(
+    state: &GameState,
+    card: &CardInstance,
+    direction: TuneDirection,
+    times: i32,
+    zone: TuneZone,
+) -> Option<MenuRow> {
+    if !is_live(state, card, zone, TuneActs::Price) {
         return None;
     }
     let own = own_cost(state, card)?;
@@ -227,13 +234,17 @@ fn cost_row(state: &GameState, card: &CardInstance, direction: TuneDirection, ti
 
 /// B3.4 rule 3, stats: a split of `TUNE_STAT_TOTAL`, k to attack and the rest to health. A Degrade's
 /// floors (attack 0, current health 1) lose what they refuse, so it applies only while above one. On
-/// the field the change moves max health, damage staying (B3.4 rule 6).
+/// the field the change moves max health, damage staying (B3.4 rule 6). Stats last (R3888000).
 fn stats_row(
     state: &GameState,
     card: &CardInstance,
     direction: TuneDirection,
     times: i32,
+    zone: TuneZone,
 ) -> Option<MenuRow> {
+    if !is_live(state, card, zone, TuneActs::Lasting) {
+        return None;
+    }
     let stats = current_stats(state, card)?;
     if direction == TuneDirection::Degrade
         && stats.attack <= TUNE_ATTACK_FLOOR
@@ -256,18 +267,21 @@ const HARMFUL: &[KeywordKind] = TUNE_HARMFUL_KEYWORDS;
 /// B3.4 rule 3, keyword. A Degrade removes one keyword the card has of its own, printed or granted, never
 /// one an aura or its position lends it, and never a harmful one (Can't attack, Brittle, Untributable,
 /// Can't Defend, Crater): every entry of the kind goes. Or, R2657005, it adds Crater to a Unit, Field
-/// Spell, Trap or Field Trap in a hand that lacks it (`TUNE_NERF_HAND_KEYWORDS`). An Upgrade adds one R21
+/// Spell, Trap or Field Trap that lacks it (`TUNE_NERF_HAND_KEYWORDS`). An Upgrade adds one R21
 /// keyword a Unit lacks, R1748001 one a Spell or Field Spell lacks (`non_unit_candidates`), R2657005
 /// Flashback to any card (`TUNE_BUFF_ANY_KEYWORDS`), and last, R2727000, Cloaked to a Unit, Spell or Field
-/// Spell in a hand (`buff_hand_candidates`); or it removes a Can't attack or Can't Defend the card has of
-/// its own (`TUNE_BUFF_REMOVES`), and in a hand Crater (`TUNE_BUFF_HAND_REMOVES`, R2727001). A Vanilla
-/// card's text is gone, so nothing is added to one.
+/// Spell (`buff_hand_candidates`); or it removes a Can't attack or Can't Defend the card has of its own
+/// (`TUNE_BUFF_REMOVES`), or Crater (`TUNE_BUFF_HAND_REMOVES`, R2727001). R3888000: each keyword, added
+/// or removed, only where the table calls it live (`tune_live::keyword_acts`). A Vanilla card's text is
+/// gone, so nothing is added to one; a card set face-down is read as the card it is (R783005).
 fn keyword_row(
     state: &GameState,
     card: &CardInstance,
     direction: TuneDirection,
     times: i32,
+    zone: TuneZone,
 ) -> Option<MenuRow> {
+    let live = |kind: KeywordKind| is_live(state, card, zone, keyword_acts(kind));
     let (own, add): (Vec<Keyword>, Vec<Keyword>) = if direction == TuneDirection::Degrade {
         let own: Vec<Keyword> = card_keywords(state, card)
             .into_iter()
@@ -275,19 +289,18 @@ fn keyword_row(
             .collect();
         (own, nerf_candidates(state, card))
     } else {
-        let in_hand = matches!(card.zone, crate::wire::Zone::Hand { .. });
         let own: Vec<Keyword> = card_keywords(state, card)
             .into_iter()
             .filter(|keyword| {
                 TUNE_BUFF_REMOVES.contains(&keyword.kind())
-                    || (in_hand && TUNE_BUFF_HAND_REMOVES.contains(&keyword.kind()))
+                    || TUNE_BUFF_HAND_REMOVES.contains(&keyword.kind())
             })
             .collect();
         let add = if card.vanilla {
             Vec::new()
         } else {
             let held = keywords_now(state, card);
-            let mut add: Vec<Keyword> = if card_type_of(state, card) == CardType::Unit {
+            let mut add: Vec<Keyword> = if priced_type_of(state, card) == CardType::Unit {
                 // R21, R781004: a keyword it lacks from the combat keyword pool, never Taunt beside
                 // Indestructible.
                 candidates_beside(&held)
@@ -300,6 +313,8 @@ fn keyword_row(
         };
         (own, add)
     };
+    let own: Vec<Keyword> = own.into_iter().filter(|keyword| live(keyword.kind())).collect();
+    let add: Vec<Keyword> = add.into_iter().filter(|keyword| live(keyword.kind())).collect();
     let remove: Vec<KeywordKind> = own
         .iter()
         .map(|keyword| keyword.kind())
@@ -330,13 +345,13 @@ fn lacking(held: &[Keyword], kinds: &[KeywordKind]) -> Vec<Keyword> {
 }
 
 /// R2657005: the harmful keywords a Nerf may add — Crater, to a Unit, a Field Spell, a Trap or a Field
-/// Trap while it is in a hand and lacks it (`TUNE_NERF_HAND_KEYWORDS`). Never Can't attack or Can't
-/// Defend, and nothing to a Vanilla card, whose text is gone.
+/// Trap that lacks it (`TUNE_NERF_HAND_KEYWORDS`), where it is live (R3888000, `keyword_row`). Never
+/// Can't attack or Can't Defend, and nothing to a Vanilla card, whose text is gone.
 fn nerf_candidates(state: &GameState, card: &CardInstance) -> Vec<Keyword> {
-    if card.vanilla || !matches!(card.zone, crate::wire::Zone::Hand { .. }) {
+    if card.vanilla {
         return Vec::new();
     }
-    let card_type = card_type_of(state, card);
+    let card_type = priced_type_of(state, card);
     if !matches!(
         card_type,
         CardType::Unit | CardType::FieldSpell | CardType::Trap | CardType::FieldTrap
@@ -346,15 +361,12 @@ fn nerf_candidates(state: &GameState, card: &CardInstance) -> Vec<Keyword> {
     lacking(&keywords_now(state, card), TUNE_NERF_HAND_KEYWORDS)
 }
 
-/// R2727000: the keywords a Buff may add to a Unit, a Spell or a Field Spell while it is in a hand and lacks
-/// them of its own (`TUNE_BUFF_HAND_KEYWORDS`): Cloaked, which acts only from a hand (R2577000). Never
-/// to a Trap or a Field Trap, which no Cloaked sets (R783004).
+/// R2727000: the keywords a Buff may add to a Unit, a Spell or a Field Spell that lacks them of its own
+/// (`TUNE_BUFF_HAND_KEYWORDS`): Cloaked, which acts only from a hand (R2577000), so only in a deck or a
+/// hand (R3888000, `keyword_row`). Never to a Trap or a Field Trap, which no Cloaked sets (R783004).
 fn buff_hand_candidates(state: &GameState, card: &CardInstance, held: &[Keyword]) -> Vec<Keyword> {
-    if !matches!(card.zone, crate::wire::Zone::Hand { .. }) {
-        return Vec::new();
-    }
     if !matches!(
-        card_type_of(state, card),
+        priced_type_of(state, card),
         CardType::Unit | CardType::Spell | CardType::FieldSpell
     ) {
         return Vec::new();
@@ -365,7 +377,7 @@ fn buff_hand_candidates(state: &GameState, card: &CardInstance, held: &[Keyword]
 /// R1748001: the keywords a Buff may add to a card that is no Unit, in this order: a Field Spell's
 /// (R2436000), then a damaging Spell's or Field Spell's, each only while it lacks it.
 fn non_unit_candidates(state: &GameState, card: &CardInstance, held: &[Keyword]) -> Vec<Keyword> {
-    let card_type = card_type_of(state, card);
+    let card_type = priced_type_of(state, card);
     let mut kinds: Vec<KeywordKind> = Vec::new();
     if card_type == CardType::FieldSpell {
         kinds.extend_from_slice(TUNE_FIELD_SPELL_KEYWORDS);
@@ -487,9 +499,16 @@ fn with_x_step(card: &CardInstance, key: &str, delta: i32) -> CardInstance {
 
 /// B3.4 rule 3, X: one numbered keyword or an X-cost card's X, one step (`TUNE_X_STEP`) worse or
 /// better — more is better for all but Tribute, never below 1 (`TUNED_FLOOR`). A Brittle count in force
-/// moves itself (B3.3 rule 5). An X-cost card with no X chosen yet always moves; on the field its X has
-/// resolved (SPEC §8.7 row 69: Classic+ #69 Buff Billy) and a Tribute was paid (R2261000), so neither moves.
-fn x_items(state: &GameState, card: &CardInstance, direction: TuneDirection, times: i32) -> Vec<XItem> {
+/// moves itself (B3.3 rule 5). An X-cost card with no X chosen yet always moves. R3888000: each only
+/// where it is live — an X until it resolves (SPEC §8.7 row 69: Classic+ #69 Buff Billy), a Tribute
+/// until it is paid (R2261000, R1845001), an Echo until the card is played.
+fn x_items(
+    state: &GameState,
+    card: &CardInstance,
+    direction: TuneDirection,
+    times: i32,
+    zone: TuneZone,
+) -> Vec<XItem> {
     let mut items: Vec<XItem> = Vec::new();
     let better = if direction == TuneDirection::Upgrade {
         TUNE_X_STEP * times
@@ -501,7 +520,7 @@ fn x_items(state: &GameState, card: &CardInstance, direction: TuneDirection, tim
         delta,
     };
 
-    if is_x_cost(state, card) && card.zone.z() != ZoneName::Field {
+    if is_x_cost(state, card) && is_live(state, card, zone, TuneActs::AtResolve) {
         match card.x {
             None => items.push(XItem {
                 key: X_KEY.to_string(),
@@ -525,7 +544,7 @@ fn x_items(state: &GameState, card: &CardInstance, direction: TuneDirection, tim
     }
 
     for entry in numbered_keywords_on(state, card) {
-        if entry.key == NumberedKey::Tribute && card.zone.z() == ZoneName::Field {
+        if !is_live(state, card, zone, numbered_acts(entry.key)) {
             continue;
         }
         let key: String = entry.key.as_str().to_string();
@@ -570,8 +589,14 @@ fn x_items(state: &GameState, card: &CardInstance, direction: TuneDirection, tim
     items
 }
 
-fn x_row(state: &GameState, card: &CardInstance, direction: TuneDirection, times: i32) -> Option<MenuRow> {
-    let items = x_items(state, card, direction, times);
+fn x_row(
+    state: &GameState,
+    card: &CardInstance,
+    direction: TuneDirection,
+    times: i32,
+    zone: TuneZone,
+) -> Option<MenuRow> {
+    let items = x_items(state, card, direction, times, zone);
     if items.is_empty() {
         return None;
     }
@@ -581,15 +606,16 @@ fn x_row(state: &GameState, card: &CardInstance, direction: TuneDirection, times
     })
 }
 
-/// B3.4 rule 3, number: one declared number one step worse or better (`params::steppable_params`).
-/// R1160: `times` steps at once (`steppable_params_times`).
+/// B3.4 rule 3, number: one declared number one step worse or better (`params::steppable_params`),
+/// live in `zone` (R3888000). R1160: `times` steps at once (`steppable_params_in`).
 fn number_row(
     state: &GameState,
     card: &CardInstance,
     direction: TuneDirection,
     times: i32,
+    zone: TuneZone,
 ) -> Option<MenuRow> {
-    let items: Vec<(String, i32, i32)> = steppable_params_times(state, card, direction, times)
+    let items: Vec<(String, i32, i32)> = steppable_params_in(state, card, direction, times, zone)
         .into_iter()
         .map(|item| (item.param.key.clone(), item.steps, item.delta))
         .collect();
@@ -603,18 +629,20 @@ fn number_row(
 }
 
 /// R1748002: on the field, a card that uses its own Plague Counters takes `TUNE_PLAGUE_STEP` more from
-/// an Upgrade, and gives one up to a Degrade while it carries any; never a Vanilla card, nor a face-down
-/// one while it sleeps (R1487000). R1160: `times` counters at once.
+/// an Upgrade, and gives one up to a Degrade while it carries any; never a Vanilla card. R3888000: live
+/// on the field face-up or Dormant only, so never on a face-down card, whose text sleeps (R1487000).
+/// R1160: `times` counters at once.
 fn plague_row(
     state: &GameState,
     card: &CardInstance,
     direction: TuneDirection,
     times: i32,
+    zone: TuneZone,
 ) -> Option<MenuRow> {
-    if card.vanilla
+    if !is_live(state, card, zone, TuneActs::Plague)
+        || card.vanilla
         || crate::catalog::def_of(Some(state), &card.def_id).uses_plague != Some(true)
         || !crate::plague::carries_plague(state, card)
-        || crate::preview::lasting_text_dormant(state, card)
     {
         return None;
     }
@@ -757,14 +785,16 @@ fn apply_row(
     }
 }
 
-/// B3.4 rules 1–3: the rows that can change the card now, in the menu's order, plague last. R1160:
-/// `times` scales each row's change. R1845001: no cost row without `with_cost`, as a hidden Nerf lands.
+/// B3.4 rules 1–3: the rows that can change the card now, read in `zone` (R3888000), in the menu's
+/// order, plague last. R1160: `times` scales each row's change. R3047003: no cost row without
+/// `with_cost`, as a Marketplace lot's Nerfs land.
 fn menu_of(
     state: &GameState,
     card: &CardInstance,
     direction: TuneDirection,
     times: i32,
     with_cost: bool,
+    zone: TuneZone,
 ) -> Vec<MenuRow> {
     // Rule 2: an Immutable card is never changed, and nothing is drawn for it.
     if has_keyword(&keywords_now(state, card), KeywordKind::Immutable) {
@@ -772,15 +802,15 @@ fn menu_of(
     }
     [
         if with_cost {
-            cost_row(state, card, direction, times)
+            cost_row(state, card, direction, times, zone)
         } else {
             None
         },
-        stats_row(state, card, direction, times),
-        keyword_row(state, card, direction, times),
-        x_row(state, card, direction, times),
-        number_row(state, card, direction, times),
-        plague_row(state, card, direction, times),
+        stats_row(state, card, direction, times, zone),
+        keyword_row(state, card, direction, times, zone),
+        x_row(state, card, direction, times, zone),
+        number_row(state, card, direction, times, zone),
+        plague_row(state, card, direction, times, zone),
     ]
     .into_iter()
     .flatten()
@@ -790,10 +820,81 @@ fn menu_of(
 /// B3.4 rule 3: the rows that can change the card now, in the menu's order — a pure read, for a
 /// `conditionMet` or a `targetChecks` predicate (a Degrade with nothing to change) and for the tests.
 pub fn applicable_changes(state: &GameState, card: &CardInstance, direction: TuneDirection) -> Vec<TuneRow> {
-    menu_of(state, card, direction, TUNE_MULTIPLIER_NONE, true)
+    let Some(zone) = tune_zone_of(state, card) else {
+        return Vec::new();
+    };
+    menu_of(state, card, direction, TUNE_MULTIPLIER_NONE, true, zone)
         .into_iter()
         .map(|row| row.row)
         .collect()
+}
+
+/// One item a menu row offers (`menu_offers`): a keyword added or removed, an X row's key, or a
+/// declared number's.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TuneItem {
+    Add(KeywordKind),
+    Remove(KeywordKind),
+    X(String),
+    Number(String),
+}
+
+/// One change a menu offers: its row, and the item within it (`None` for the cost, stats and plague
+/// rows, which have one each).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TuneOffer {
+    pub row: TuneRow,
+    pub item: Option<TuneItem>,
+}
+
+/// R3888000: every change the menu offers the card now, one per item, in the menu's order — read as a
+/// hidden Nerf lands (§10.5 step 3, the being-played column) when `as_played`. A pure read, for the
+/// tests and the catalog sweep.
+pub fn menu_offers(
+    state: &GameState,
+    card: &CardInstance,
+    direction: TuneDirection,
+    as_played: bool,
+) -> Vec<TuneOffer> {
+    let zone = if as_played {
+        Some(TuneZone::Played)
+    } else {
+        tune_zone_of(state, card)
+    };
+    let Some(zone) = zone else {
+        return Vec::new();
+    };
+    let mut offers: Vec<TuneOffer> = Vec::new();
+    for row in menu_of(state, card, direction, TUNE_MULTIPLIER_NONE, true, zone) {
+        let offer = |item: Option<TuneItem>| TuneOffer { row: row.row, item };
+        match &row.apply {
+            MenuApply::Cost { .. } | MenuApply::Stats { .. } | MenuApply::Plague { .. } => {
+                offers.push(offer(None));
+            }
+            MenuApply::Keyword { remove, add, .. } => {
+                offers.extend(remove.iter().map(|kind| offer(Some(TuneItem::Remove(*kind)))));
+                offers.extend(
+                    add.iter()
+                        .map(|keyword| offer(Some(TuneItem::Add(keyword.kind())))),
+                );
+            }
+            MenuApply::X { items } => {
+                offers.extend(
+                    items
+                        .iter()
+                        .map(|item| offer(Some(TuneItem::X(item.key.clone())))),
+                );
+            }
+            MenuApply::Number { items } => {
+                offers.extend(
+                    items
+                        .iter()
+                        .map(|(key, _, _)| offer(Some(TuneItem::Number(key.clone())))),
+                );
+            }
+        }
+    }
+    offers
 }
 
 // One application, and the cards a verb reaches
@@ -803,13 +904,32 @@ pub fn applicable_changes(state: &GameState, card: &CardInstance, direction: Tun
 /// cued and never changed (R440). The card is read again by its id, so a second application of it
 /// draws from the menu the first one left.
 pub fn tune_once(ctx: &mut EffectContext<'_>, card: &CardInstance, direction: TuneDirection, matches: bool) {
-    tune_once_with(ctx, card, direction, matches, true);
+    tune_once_with(ctx, card, direction, matches, Landing::Plain);
 }
 
-/// R1845001: one Nerf as a hidden Nerf lands — `tune_once`'s, drawn from every row but the cost's,
-/// and reported as every Nerf is (R177, R440).
+/// How one application reads the card's menu (`tune_once_with`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Landing {
+    /// Every row live where the card is (R3888000).
+    Plain,
+    /// Every row but the cost's: a Marketplace lot's Nerf (R3047003).
+    SparingCost,
+    /// The being-played column, as a hidden Nerf lands at §10.5 step 3 (R1845001, R3888000).
+    AsPlayed,
+}
+
+/// R3047003: one Nerf as a Marketplace lot's lands on the card bought — `tune_once`'s, drawn from every
+/// row but the cost's, so the card keeps costing (0) (R3047001), and reported as every Nerf is (R177,
+/// R440).
 pub(crate) fn degrade_sparing_cost(ctx: &mut EffectContext<'_>, card: &CardInstance) {
-    tune_once_with(ctx, card, TuneDirection::Degrade, true, false);
+    tune_once_with(ctx, card, TuneDirection::Degrade, true, Landing::SparingCost);
+}
+
+/// R1845001, R3888000: one Nerf as a hidden Nerf lands, at §10.5 step 3 — `tune_once`'s, drawn from
+/// the being-played column, so neither the price nor the Tribute just paid is touched and the Cry still
+/// to come is, and reported as every Nerf is (R177, R440).
+pub(crate) fn degrade_as_played(ctx: &mut EffectContext<'_>, card: &CardInstance) {
+    tune_once_with(ctx, card, TuneDirection::Degrade, true, Landing::AsPlayed);
 }
 
 fn tune_once_with(
@@ -817,16 +937,27 @@ fn tune_once_with(
     card: &CardInstance,
     direction: TuneDirection,
     matches: bool,
-    with_cost: bool,
+    landing: Landing,
 ) {
     let card = crate::zones::live_or(ctx.state, card);
     // R177: who could not read the card where it changed, judged before the change moves anything.
     let hidden_from = unreadable_by(ctx.state, &card);
     let times = tune_multiplier_of(ctx.state, &card, direction);
-    let menu = if matches {
-        menu_of(ctx.state, &card, direction, times, with_cost)
+    let zone = if landing == Landing::AsPlayed {
+        Some(TuneZone::Played)
     } else {
-        Vec::new()
+        tune_zone_of(ctx.state, &card)
+    };
+    let menu = match zone {
+        Some(zone) if matches => menu_of(
+            ctx.state,
+            &card,
+            direction,
+            times,
+            landing == Landing::Plain,
+            zone,
+        ),
+        _ => Vec::new(),
     };
     if menu.is_empty() && hidden_from.is_empty() {
         return;

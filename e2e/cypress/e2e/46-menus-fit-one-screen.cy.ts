@@ -71,8 +71,16 @@ function expectOnScreen(viewport: MenuSize, screens: number): void {
 }
 
 /**
- * The code and consent screens as a pending account meets them, drawn for p1. Spec 10 redeems the
- * pending fixture until the server restarts (R144) and may share this shard, so p1's own read of the
+ * The signed-in screens that draw nothing of p1's own (its decks, collection and replays) sign in as p3,
+ * which only spec 55 uses and which nothing here writes to. R109 refuses an account past 300 requests a
+ * minute, and every signed-in screen also makes the inbox's reads (#3902): fifteen screens a size as p1 spent
+ * its minute before the last of them drew, and the invite screens met a 429. Split, each opens under ten.
+ */
+const SPARE = accounts.p3;
+
+/**
+ * The code and consent screens as a pending account meets them, drawn for `SPARE`. Spec 10 redeems the
+ * pending fixture until the server restarts (R144) and may share this shard, so `SPARE`'s own read of the
  * account says pending, `owes` adding what it owes: the screens draw only from it (CLAUDE.md rule 7).
  */
 function asPending(owes: Record<string, boolean> = {}): void {
@@ -263,6 +271,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
       describe("signed in", () => {
         before(() => {
           cy.freeAccount(accounts.p1());
+          cy.freeAccount(SPARE());
         });
 
         it("R1581000 R3218000 /play", () => {
@@ -307,7 +316,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
         });
 
         it("R1581000 R3218000 /leaderboard", () => {
-          cy.visitAs(accounts.p1(), "/leaderboard");
+          cy.visitAs(SPARE(), "/leaderboard");
           cy.get(ts(SCREEN.leaderboardSeason), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           expectShellNav(true);
@@ -323,7 +332,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
         });
 
         it("R1581000 R3218000 /together", () => {
-          cy.visitAs(accounts.p1(), "/together");
+          cy.visitAs(SPARE(), "/together");
           cy.get(ts(TOGETHER_ROOT), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           expectShellNav(true);
@@ -365,7 +374,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
         });
 
         it("R1581000 R3218000 /shop", () => {
-          cy.visitAs(accounts.p1(), routes.shop());
+          cy.visitAs(SPARE(), routes.shop());
           cy.get(ts(SHOP_PANEL), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           expectShellNav(true);
@@ -374,7 +383,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
 
         it("R1581000 R3218000 /series, choosing a deck", () => {
           cy.intercept("GET", `**/api/series/${SERIES_ID}`, { statusCode: 200, body: seriesPicking(Date.now()) });
-          cy.visitAs(accounts.p1(), routes.series(SERIES_ID));
+          cy.visitAs(SPARE(), routes.series(SERIES_ID));
           cy.get(ts(SERIES_SCORE), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           cy.get(ts(menuShellTestid.root)).should("not.exist");
@@ -383,7 +392,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
 
         it("R1581000 R3218000 /invite, the code screen", () => {
           asPending();
-          cy.visitAs(accounts.p1(), routes.invite());
+          cy.visitAs(SPARE(), routes.invite());
           cy.get(ts(inviteTestid.input), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           expectShellNav(true);
@@ -392,7 +401,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
 
         it("R1581000 /invite, the consent screen", () => {
           asPending({ ageCheckOwed: true, termsOwed: true });
-          cy.visitAs(accounts.p1(), routes.invite());
+          cy.visitAs(SPARE(), routes.invite());
           cy.get(ts(consentTestid.birthMonth), { timeout: timeouts.view }).should("be.visible");
           expectOnScreen(viewport, ONE_SCREEN);
         });
