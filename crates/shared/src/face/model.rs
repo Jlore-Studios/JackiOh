@@ -24,7 +24,9 @@ use super::chinese::{
 };
 use super::data::ShortForm;
 use super::diff::radiant_marks;
-use super::fused::{DORMANT_STARSHIP_ID, DORMANT_STARSHIP_NAME, holds_dormant_starship};
+use super::fused::{
+    DORMANT_STARSHIP_ID, DORMANT_STARSHIP_NAME, holds_dormant_starship, with_merged_keyword_lines,
+};
 use super::glitch::{glitch_def, glitch_words};
 use super::glossary::{glossary_for, state_terms};
 use super::power::{
@@ -32,7 +34,7 @@ use super::power::{
 };
 use super::quest::quest_face_text;
 use super::refs::{RADIANT_WORD, find_refs};
-use super::short::{ascent_level_of, cut_text, short_form_of, summit_short_text};
+use super::short::{ascent_level_of, cut_text, in_language, short_form_of, summit_short_text, written_words};
 use super::spans::{Dressing, rich};
 use super::state::{BadgeFacts, state_badges};
 use super::text::{Text, copied_text};
@@ -100,7 +102,8 @@ fn face_in(words: Words, source: &FaceSource, lookup: &Lookup<'_>, chinese: bool
     // R1301: a Chinese card's name and texts are the table's; all else stays the definition's.
     let def: Option<CardDef> = match (&filled, chinese) {
         (Some(filled), true) => Some(chinese_def(filled)),
-        _ => filled.clone(),
+        // R3941002: a fused face prints its ingredients' keyword lines as one; a Chinese face keeps its lines.
+        _ => filled.clone().map(with_merged_keyword_lines),
     };
     let radiant = source.radiant;
     let printed: Option<&CardFace> = def
@@ -363,13 +366,24 @@ fn face_in(words: Words, source: &FaceSource, lookup: &Lookup<'_>, chinese: bool
     let form = if text.full.is_empty() || printed_out.is_some() {
         None
     } else {
-        short_form_of(&source.def_id, radiant)
+        short_form_of(&source.def_id, radiant).map(|form| in_language(form, chinese))
     };
-    let short = form.and_then(|form| cut_text(&text.full, form)).map(|cut| Text {
-        full: cut,
-        marks: text.marks.clone(),
-        tuned: text.tuned.clone(),
-    });
+    let short = match form {
+        // R3941001: the words written for the face, filled as its whole text is: its numbers the view's (R386),
+        // and a Radiant face's marks what its base face's written words lack (R277).
+        Some(ShortForm::Written { .. }) => def.as_ref().map(|def| {
+            text_of(
+                Some(&written_def(def, &source.def_id, chinese)),
+                radiant,
+                in_play.and_then(|play| play.params.as_ref()),
+            )
+        }),
+        _ => form.and_then(|form| cut_text(&text.full, form)).map(|cut| Text {
+            full: cut,
+            marks: text.marks.clone(),
+            tuned: text.tuned.clone(),
+        }),
+    };
 
     // The collection's text beside a face that prints something else is marked as its face is, with no
     // values and no moved numbers (R277, R279).
@@ -746,6 +760,19 @@ fn text_in_play(
         }
     }
     printed_text.clone()
+}
+
+/// R3941001: `def` printing each face's written words (`short.rs`) where it has them, and its whole text where
+/// not, so a written face fills and marks as a face does.
+fn written_def(def: &CardDef, def_id: &str, chinese: bool) -> CardDef {
+    let mut written = def.clone();
+    if let Some(words) = written_words(def_id, false, chinese) {
+        written.base.text = words.to_string();
+    }
+    if let Some(words) = written_words(def_id, true, chinese) {
+        written.radiant.text = words.to_string();
+    }
+    written
 }
 
 /// A face's text with its `{key}` numbers filled in (B3.4 rule 5): printed values, or `values` in play. A

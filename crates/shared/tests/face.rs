@@ -697,6 +697,27 @@ fn r3045000_the_hull_itself_and_every_other_fusion_are_named_as_they_were() {
     assert_eq!(printed("core-020", false, Locale::En).name, "Pointmaster");
 }
 
+/// R3941002 (issue #3941): a fused face prints its ingredients' keyword lines as one, at its head, each keyword
+/// once, and every other line in its place; a card that is no fusion prints its lines as they are.
+#[test]
+fn r3941002_a_fused_face_prints_its_ingredients_keyword_lines_as_one() {
+    let parts = ["core-011", "core-002", "core-003"].map(catalog_def);
+    let mut def = fused(4, &[&parts[0], &parts[1], &parts[2]]);
+    def.base.text = parts
+        .iter()
+        .map(|part| part.base.text.as_str())
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert_eq!(
+        face_of_def(&def, false, Locale::En, json!({})).text.full,
+        "Rush, First Strike, Taunt, Divine Shield, Reborn, Can't Defend\nCry: Destroy an enemy non-Human Unit."
+    );
+    assert_eq!(
+        printed("core-003", false, Locale::En).text.full,
+        "Taunt, Divine Shield, Reborn, Can't Defend"
+    );
+}
+
 #[test]
 fn r3045000_a_chinese_face_names_a_fused_dormant_starship_for_the_hull_in_chinese() {
     let hull = catalog_def(HULL);
@@ -789,20 +810,19 @@ fn r3134001_the_faces_the_balance_pass_put_over_the_limit_clamp() {
         "meditative-081",
         "meditativeplus-022",
     ];
+    // They clamped until issue #3941 wrote each its in-game words (R3941001).
+    let written =
+        |id: &str, radiant: bool| matches!(short_form_of(id, radiant), Some(ShortForm::Written { .. }));
     for id in both {
         for radiant in [false, true] {
-            assert_eq!(
-                short_form_of(id, radiant),
-                Some(ShortForm::Clamp),
-                "{id} {radiant}"
-            );
+            assert!(written(id, radiant), "{id} {radiant}");
         }
     }
-    assert_eq!(short_form_of("meditative-009", true), Some(ShortForm::Clamp));
+    assert!(written("meditative-009", true));
     assert_eq!(short_form_of("meditative-009", false), None);
-    // Issue #3837: Silly Silas's base face gained "Summon this for your opponent." and clamps, and his
+    // Issue #3837: Silly Silas's base face gained "Summon this for your opponent." and clamped, and his
     // Radiant face, Crater gone, fits.
-    assert_eq!(short_form_of("core-052", false), Some(ShortForm::Clamp));
+    assert!(written("core-052", false));
     assert_eq!(short_form_of("core-052", true), None);
     // Training Grounds #38's text is one short line since issue #3139.
     assert_eq!(short_form_of("traininggrounds-038", true), None);
@@ -1144,6 +1164,89 @@ fn a_short_form_is_the_printed_texts_and_only_a_clamped_one_clamps() {
         json!({ "inPlay": { "vanilla": true } }),
     );
     assert!(!vanilla.has_short_form);
-    assert!(printed("core-065", false, Locale::En).clamp);
+    assert!(printed("stinkyscape-116", false, Locale::En).clamp);
+    assert!(!printed("core-065", false, Locale::En).clamp);
     assert!(!printed("core-020", false, Locale::En).clamp);
+}
+
+/// R3941001 (issue #3941): a face over the limit prints words written for it, filled as its whole text is, in the
+/// collection and in play alike, and its whole text stands beside them. A Radiant face marks what its base
+/// face's written words lack (R277).
+#[test]
+fn r3941001_a_written_face_prints_its_words_filled_and_keeps_its_whole_text() {
+    let face = printed("meditative-081", false, Locale::En);
+    assert!(face.has_short_form && !face.clamp);
+    assert_eq!(
+        face.short.as_ref().map(|short| short.full.as_str()),
+        Some(
+            "Shuffle a copy of this and of each card in your hand into your deck. Draw 1 card.\n\
+             Embiggened (1): Copies 25% Radiant."
+        )
+    );
+    assert!(
+        face.text
+            .full
+            .starts_with("Shuffle a copy of each card in your hand, and of this, into your deck."),
+        "{}",
+        face.text.full
+    );
+    // In play, its numbers as printed, it prints the same words (a tuned face prints its whole text, R386).
+    let played = in_play("meditative-081", false, Locale::En, json!({}));
+    assert_eq!(
+        played.short.map(|short| short.full),
+        face.short.map(|short| short.full)
+    );
+    let radiant = printed("stinkyscapeplus-120", true, Locale::En);
+    let spans = radiant.short.expect("a written Radiant face").spans;
+    assert!(
+        marked(&spans).iter().any(|mark| mark.contains("Radiant")),
+        "{spans:?}"
+    );
+}
+
+/// R3941001: a face printed in Chinese whose written form has no Chinese words of its own clamps, as it did.
+#[test]
+fn r3941001_a_chinese_face_without_written_words_clamps() {
+    let face = printed("meditative-081", false, Locale::ZhCn);
+    assert!(face.has_short_form && face.clamp && face.short.is_none());
+}
+
+/// R3941001: a written face prints only the numbers its face declares, so the view fills each one, in either
+/// language.
+#[test]
+fn r3941001_every_written_face_names_only_its_faces_numbers() {
+    use jackioh_shared::face::data::{SHORT_FORMS, ShortForm};
+    ready();
+    let keys = |text: &str| -> Vec<String> {
+        let mut out: Vec<String> = text
+            .split('{')
+            .skip(1)
+            .filter_map(|rest| rest.split(['}', '|']).next())
+            .map(str::to_string)
+            .collect();
+        out.sort();
+        out.dedup();
+        out
+    };
+    let mut written = 0;
+    for (id, (base, radiant)) in SHORT_FORMS {
+        let def = registered_catalog()
+            .get(*id)
+            .unwrap_or_else(|| panic!("{id} is in the catalog"));
+        for (form, face) in [(base, &def.base), (radiant, &def.radiant)] {
+            let Some(ShortForm::Written { en, zh }) = form else {
+                continue;
+            };
+            written += 1;
+            let declared = keys(&face.text);
+            for words in std::iter::once(*en).chain(*zh) {
+                let named = keys(words);
+                assert!(
+                    named.iter().all(|key| declared.contains(key)),
+                    "{id}: {named:?} not all in {declared:?}"
+                );
+            }
+        }
+    }
+    assert!(written > 0, "PREMISE: some face has written words");
 }
