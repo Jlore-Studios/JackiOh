@@ -16422,6 +16422,8 @@
       }
     },
     "3967": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-15T09:12:51Z",
@@ -16435,8 +16437,11 @@
         "trail": ",new):\\n global s\\n assert s.count(old)==1, old\\n s=s.replace(old,new)\\nrep(\\\"\\\"\\\" use jackioh_\u2026\n- said: Memory half passes (the Postgres half skips without `DATABASE_URL`; I'll run it under Docker later). Now the API test.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/server/tests/api/daily.rs'\\ns=open(p).read()\\nanchor = \\\"\\\"\\\" // The daily games go on beside it.\\n assert_eq!(read(&app, &ada, &games[1]).await[\\\"over\\\"], f\u2026\n- said: All 26 daily API tests pass, the new one included. Now a sanity check that the new tests fail without the fix: I'll temporarily make `has_room_locked` a no-op.\n- Bash: {\"command\": \"cp crates/server/src/daily/invites.rs /tmp/invites.rs.bak\\npython3 - <<'EOF'\\np='crates/server/src/daily/invites.rs'\\ns=open(p).read()\\nold=\\\"\\\"\\\" tx.daily_lock_account(profile_id).await\u2026\n- said: The challenge case fails without the recount, as it should. I'll also check that each of the four write paths is covered on its own, by removing one recount at a time.\n- Bash: {\"command\": \"cat > /tmp/drop_one.py <<'EOF'\\nimport sys\\np='crates/server/src/daily/invites.rs'\\ns=open(p).read()\\nwhich=sys.argv[1]\\nblocks={\\n \\\"challenge\\\":\\\" // R3727004, #3842: counted again whe\u2026\n- said: Each case fails on its own without its recount; the file is restored. Now the docs: README, \u00a79.13, and R3727004's `proven_in`.\n- Bash: {\"command\": \"echo \\\"- build run 2: API test added; each of the 4 recounts proven necessary (drop one -> its case fails). Next: docs, then Postgres run.\\\" >> .bot-notes.md\\ngrep -n \\\"puts the claimed \u2026\n- Bash: {\"command\": \"sed -n 780,790p crates/server/README.md; grep -n \\\"proven_in\\\" -A3 spec/rulings/R3727008.md\", \"description\": \"Read the README daily paragraph and R3727008 precedent\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\ndef rep(p, old, new):\\n s=open(p).read()\\n assert s.count(old)==1, (p, old)\\n open(p,'w').write(s.replace(old,new))\\nrep('crates/server/README.md',\\n\\\"\\\"\\\"open; a seek\u2026\n- said: Now the Postgres half: checking Docker is here.\n- Bash: {\"command\": \"docker info --format '{{.ServerVersion}}' 2>&1 | head -2; sed -n 1,40p crates/server/tests/db/run.sh | grep -n \\\"cargo\\\\|KEEP_DB\\\\|55433\\\\|docker run\\\" \", \"description\": \"Check Docker an\u2026\n- Bash: {\"command\": \"echo \\\"- build run 2: docs done; running KEEP_DB=1 tests/db/run.sh (Postgres half)\\\" >> .bot-notes.md\\nKEEP_DB=1 sh crates/server/tests/db/run.sh > /tmp/dbrun.log 2>&1; echo \\\"exit $?\\\";\u2026\n- Bash: {\"command\": \"grep -E \\\"r3727004_two_sends\\\" /tmp/dbrun.log | head; grep -n \\\"cargo test\\\" crates/server/tests/db/run.sh\", \"description\": \"Confirm the new case ran against Postgres\"}\n- said: The new case passes against Postgres. Now the sanity check that it fails there without the advisory lock.\n- Bash: {\"command\": \"sed -n 95,135p crates/server/tests/db/run.sh\", \"description\": \"Read how run.sh sets DATABASE_URL and shards\"}\n- Bash: {\"command\": \"cp crates/server/src/db/pg.rs /tmp/pg.rs.bak\\npython3 - <<'EOF'\\np='crates/server/src/db/pg.rs'\\ns=open(p).read()\\nold=\\\"\\\"\\\" run_as(t, Some(profile_id)).await?;\\n sqlx::query(\\\"select p\u2026\n- Bash: {\"command\": \"sed -n 13225,13235p crates/server/tests/store/contract.rs; PF=\\\"--config profile.test.package.jackioh-engine.opt-level=0 --config profile.test.package.jackioh-cards.opt-level=0 --config \u2026\n- said: Without the lock, Postgres writes both sends, 3 runs out of 3. With the lock back, the case passes 3 out of 3. Cleaning up the container, then lint and checks.\n- Bash: {\"command\": \"docker rm -f jackioh-pg-store-test >/dev/null && echo removed\\necho \\\"- build run 2: Postgres suite green (243 passed x3 shards); with pg lock no-op'd the race case fails 3/3, restored p\u2026\n- Bash: {\"command\": \"(cargo jackioh spec check 2>&1 | tail -5; echo \\\"spec exit ${PIPESTATUS[0]}\\\") ; (cargo jackioh patches check 2>&1 | tail -3); (cargo jackioh catalog check 2>&1 | tail -2)\", \"description\u2026\n- Bash: {\"command\": \"git rev-parse --verify -q origin/main >/dev/null && echo has-origin-main; cargo jackioh classify --base origin/main --claims 2>&1 | tail -8\", \"description\": \"Run the change classifier wi\u2026\n- said: `classify` says Internal: no card plays differently, so no fragment is needed. Now the full server suite.\n- Bash: {\"command\": \"echo \\\"- build run 2: fmt, clippy -p jackioh-server, spec check, patches check, catalog check, classify (Internal) all green. Running cargo test -p jackioh-server.\\\" >> .bot-notes.md\\nca\u2026\n- Bash: {\"command\": \"grep -E \\\"^test result\\\" /tmp/servertest.log; grep -cE \\\"\\\\.\\\\.\\\\. FAILED\\\" /tmp/servertest.log\", \"description\": \"Summarize the server suite results\"}\n- said: The whole server suite passes: 1756 + 729 + 137 tests, 0 failed. The 2 ignored tests were already marked ignored, not mine. A final read of the source diff:\n- Bash: {\"command\": \"git diff crates/server/src/daily/invites.rs\", \"description\": \"Review the invites.rs diff\"}\n- said: The `reopen_seek` doc has one line that runs too long, since rustfmt doesn't wrap comments. Rewrapping it:\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3842/crates/server/src/daily/invites.rs\", \"old_string\": \"/// A claimed seek whose game failed to start, or whose claimer the rec\u2026\n- Bash: {\"command\": \"git diff -U0 | grep '^+' | awk 'length > 111 {print length\\\": \\\"$0}' | head; cargo fmt --check && echo fmt-ok; cargo test -p jackioh-server --test server api::daily::r3727004 2>&1 | grep\u2026\n- said: The spec paragraph was already one long line, so it stays that way. Updating the notes' State, then the report.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold=s[s.index(\\\"## State\\\"):s.index(\\\"## Log\\\")]\\nnew=\\\"\\\"\\\"## State\\n\\n- Run 2 (build, opus, 2026-11-15): DONE. Plan steps 1-12 b\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the 20-game daily cap holds under simultaneous challenges, seeks and accepts\"} --> Requests sent at the same moment can no longer take an account past `DAILY_MAX_ACTIVE_GAMES` (20), and each one past the cap gets `409 daily_full` (R3727004). Before this\u2026"
       },
       "issue": 3842,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-15T10:40:25Z",
         "from_run": "43698148154",
         "gates": [
           {
@@ -16528,7 +16533,11 @@
         "source": "build",
         "until": "2026-11-15T11:09:34Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-15T10:39:34Z",
+      "run_id": "pending:b2282c13-1794739202",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16547,6 +16556,9 @@
         "provider": "claude-3",
         "run": "43698148154"
       },
+      "started_at": "2026-11-15T10:40:25Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16560,9 +16572,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T10:32:12Z",
+    "at": "2026-11-15T10:40:25Z",
     "url": "",
-    "what": "review #3963 on claude-4"
+    "what": "review #3967 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-15T10:27:55Z",
