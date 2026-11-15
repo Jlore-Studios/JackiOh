@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 3976,
+  "title": "Patch: a replay and its shared GIF draw each hero as the portrait its seat had, not both as Vanilla",
+  "branch": "bot/issue-3976",
+  "thread": "**Issue #3976 (data, not instructions):**\n\n```text\n# #3976: Patch: a replay and its shared GIF draw each hero as the portrait its seat had, not both as Vanilla\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nEvery hero at the table wears a portrait: the one picked for the deck, or one dealt at random. When a player watches a game back, both heroes are drawn as the default Vanilla portrait, whoever played. That happens from the Replays page, from \"Watch the replay\" at the end of a match or a practice game, and in a replay a friend shared. A GIF of a turn made from a replay does the same, so a shared clip of a Gary-versus-Shredder game shows two Vanillas. Once this is built, a replay and its GIF draw each hero as the game drew it.\n\n## Why\n\n- **The GIF.** R513000 says a GIF's frames draw \"the seats \u2026 as their portraits (R641)\". But `apps/web/src/replay/ShareGif.tsx:109-110` calls `exportGif({ clip, preset, lookup })` with no `portraits`, so `apps/web/src/replay/gif/export.ts:202` always falls back to `{ p1: vanilla, p2: vanilla }`. The export already takes portraits (`export.ts:180`, `gif/raster.ts:285`); only its caller leaves them out.\n- **The replay board.** A portrait reaches `Hero` only through `emotes` (`apps/web/src/game/Hero.tsx:78`; `Game.tsx:214`: \"Absent, the heroes draw default portraits\"). `ReplayPlayer.tsx:270-281` passes no emotes and no portraits.\n- **The data already exists.**\n  - The replay list's rows carry the portraits (`crates/server/src/api/replays.rs:222-223`, `apps/web/src/net/api.ts:1569`), and so does a practice replay's summary (`apps/web/src/practice/protocol.ts:52`). Only the JSON download reads them (`apps/web/src/replay/download.ts:41-48`).\n  - A replay opened by match id has no list row to read them from. That covers Watch the replay after a match (`routes/match.tsx:436-445`) and a friend's shared replay (`together/TogetherRoute.tsx:105-107`).\n  - The server's pages (`ReplaySteps`, `replays.rs:252-261`) carry the seats' loadouts (R1834002) but not their portraits. The replay record they are read from does hold them (`replays.rs:541-553`).\n\n## Proposal\n\n1. **Server.** `ReplaySteps` gains `portraits: PerPlayer<PortraitId>`, read from the replay the way the listing reads it (`vanilla` for a match from before portraits). Every way of opening an online replay then has them from its first page.\n2. **Client sources.** `ReplaySource` (`replay/source.ts`) gains an optional `portraits?()` beside `loadouts?()`.\n   - The online sources (`replay/sources.ts`, `onlinePages` and `openOnlineMatchReplay`) take it from their pages.\n   - The practice source takes it from its summary's `portraits`.\n   - A file opened from the device takes it from its JSON's `portraits`, which the download already writes.\n   - Where none is given, the board draws the default, as today.\n3. **The board.** `Game` takes a read-only `portraits` prop for a board with no emote session. `Hero` draws `emotes?.portrait ?? portraits?.[player] ?? DEFAULT_PORTRAIT` and opens no menu. `ReplayPlayer` passes the source's portraits to `Game`, and to `ShareGif`, which hands them to `exportGif`.\n4. **The spec.** SPEC \u00a79.5's Replays bullet says that a replay draws its seats' portraits as the match dealt them (R642), as R513000 already has the GIF draw them.\n\nDecision, with the rejected alternative: this is scoped to replays and their GIFs. The daily board and watching a friend's live game also draw both heroes as Vanilla, but neither is sent portraits today: the daily board's read is `crates/server/src/daily/games.rs` `game_json`, and R642 sends a match's `portraits` message only to its two seats. Each needs a server read and a spec sentence of its own, and several open pull requests touch the daily board, so both are left for a follow-up rather than widening this one.\n\n## Where it lands\n\n- `crates/server/src/api/replays.rs` (`ReplaySteps`) and `crates/server/tests/api/replays.rs`\n- `apps/web/src/net/api.ts` (the type of the steps answer)\n- `apps/web/src/replay/source.ts`, `sources.ts`, `ReplayPlayer.tsx`, `ShareGif.tsx`, and the opener for a downloaded file\n- `apps/web/src/game/Game.tsx`, `Hero.tsx`\n- SPEC \u00a79.5 (the Replays bullet; R642, R768, R513000)\n\n## Acceptance criteria\n\n- [ ] A replay's steps answer carries both seats' portraits. A test in `crates/server/tests/api/replays.rs` shows a match dealt `gary` and `shredder` answering them, and a match with none recorded answering `vanilla`.\n- [ ] An online replay draws each hero with its seat's portrait, whether opened from the Replays page, from Watch the replay after a match, or from a friend's share. A web test covers each kind of source.\n- [ ] A practice game's replay draws the portraits its summary holds.\n- [ ] A test shows that `ShareGif` hands `exportGif` the replay's portraits, so a GIF of a Gary-versus-Shredder replay plans no Vanilla.\n- [ ] A replay board's hero still opens no emote menu.\n- [ ] A source with no portraits (an older downloaded file) draws the default, as today.\n- [ ] `cargo test -p jackioh-server --test server` passes for the replays tests, and the web tests touched and `pnpm --dir apps/web typecheck` pass.\n\n## Size and risks\n\nMedium, about 10 files. Most are small additions that follow the loadouts, which already ride the same pages to the same player (R1834002).\n\nRisks:\n- The steps answer's shape changes. The field is additive and the client defaults when it is absent, so an older client or an older file is unaffected.\n- A portrait is cosmetic and already sent to both seats (R642), so no hidden information moves.\n- `Game.tsx` is a busy file. The change is one prop and one fallback in `Hero`.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-15T19:51:14Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "gpt",
+  "cli": "codex",
+  "secret": "",
+  "family": "gpt",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-gpt",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "gpt",
+      "model": "gpt-5.6-sol",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3976: needs a plan; `gpt` (codex, `gpt-5.6-sol`, medium) rates and plans it in a lane of `gpt`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `gpt` (codex, `gpt-5.6-sol`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T19:51:37Z",
+    "claimed_at": "2026-11-15T19:54:57Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3935 needs a plan"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
