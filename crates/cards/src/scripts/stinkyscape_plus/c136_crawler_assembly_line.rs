@@ -1,5 +1,6 @@
 //! SPEC §8.12 S+ #136 Crawler Assembly Line (§6.3 Activate, Summon; R64, R384, R430, R1420, R1751000,
-//! R3535000, R3560000): (2) Field Spell, Mindustrial, Rare, a card of the Stinkyscape+ set.
+//! R3535000, R3560000): (3) Field Spell ((2) until issue #3996), Mindustrial, Rare, a card of the
+//! Stinkyscape+ set.
 //!   Base:    "Activate 1: Summon a Crawler."
 //!   Radiant: "Activate 1: Summon a Radiant Crawler."
 //!

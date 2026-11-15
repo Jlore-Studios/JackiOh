@@ -1,6 +1,7 @@
 //! #98 Heroic Power (SPEC §8.5, §6.2 "Start of Game", Quickdraw, Activate; R43, R103, R352, R752–R761,
-//! R3134002, R3551002). Field Spell, tags Quickdraw, cost (0), Mythic. Base: "Indestructible. Cry:
-//! Discover one of 14 powers, each 'Activate: Spend (X)'" (each power's words are its catalog line).
+//! R3134002, R3551002). Field Spell, tags Quickdraw, cost (1) ((0) until issue #3996), Mythic. Base:
+//! "Indestructible. Cry: Discover one of 14 powers, each 'Activate: Spend (X)'" (each power's words are
+//! its catalog line).
 //! Radiant: every power's Radiant words, Armor Up named Tank Up (R757).
 //! Through v0.5.13g: thirteen powers at (1) more each (`script_v0_5_13g`, kept, R767000); through
 //! v0.5.11r: "Start of game: Gain one of 13 random powers" (`script_v0_5_11o`, kept, R767000).
@@ -300,11 +301,11 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r752_is_a_mythic_field_spell_costing_0_tagged_quickdraw_indestructible_on_both_faces() {
+        fn r752_is_a_mythic_field_spell_costing_1_tagged_quickdraw_indestructible_on_both_faces() {
             crate::register_all();
             let def = def_json(HEROIC);
             assert_eq!(def["type"], "Field Spell");
-            assert_eq!(def["cost"], 0);
+            assert_eq!(def["cost"], 1);
             assert_eq!(def["rarity"], "Mythic");
             assert!(tags_of(HEROIC).contains(&json!("Quickdraw")));
             for face in [&def["base"], &def["radiant"]] {
@@ -474,9 +475,9 @@ mod tests {
             assert_eq!(listed(&s, &now).len(), 1);
             assert_eq!(view_json(&s, P1)["you"]["hero"]["power"]["name"], "rush");
             assert_eq!(view_json(&s, P1)["you"]["hero"]["power"]["x"], 1);
-            s.expect_mana(P1, 8);
-            s.activate(&now, json!({}));
             s.expect_mana(P1, 7);
+            s.activate(&now, json!({}));
+            s.expect_mana(P1, 6);
             assert_eq!(units_of(&s, P1).iter().filter(|unit| unit.def_id == RUSH_TOKEN).count(), 1);
             assert!(listed(&s, &s.backrow(P1, 1).expect("the card")).is_empty());
             s.expect_refused_with(|s| s.activate(&now, json!({})), "already been used this turn");
@@ -604,22 +605,22 @@ mod tests {
 
     // Playing it, and using a power (R752).
 
-    mod n98_heroic_power_costs_0_each_power_an_activate_r752 {
+    mod n98_heroic_power_costs_1_each_power_an_activate_r752 {
         use super::*;
 
         #[test]
-        fn r752_playing_it_costs_0_and_uses_nothing_the_power_is_then_one_activation_a_turn_for_its_x() {
+        fn r752_playing_it_costs_1_the_power_is_then_one_activation_a_turn_for_its_x() {
             let seed = offering_seed("burn", false);
             let mut s = scenario(json!({ "seed": seed, "p1": { "hand": [HEROIC, SPARE], "mana": 8 } }));
             let card = must(s.hand(P1).into_iter().next(), "the Heroic Power");
-            assert_eq!(effective(&s, &card), 0);
+            assert_eq!(effective(&s, &card), 1);
             s.play(&card, json!({ "zone": 1 }));
             s.answer(json!("burn"));
-            s.expect_mana(P1, 8).expect_health(P2, 30);
+            s.expect_mana(P1, 7).expect_health(P2, 30);
             assert!(events_of(&s, "activated").is_empty());
 
             s.activate(&card, json!({}));
-            s.expect_mana(P1, 8).expect_health(P2, 28);
+            s.expect_mana(P1, 7).expect_health(P2, 28);
             assert_eq!(events_of(&s, "activated").len(), 1);
             assert!(listed(&s, &card).is_empty());
             s.expect_refused_with(|s| s.activate(&card, json!({})), "already been used this turn");

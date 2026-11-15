@@ -65,13 +65,13 @@ mod tests {
     /// Three distinct graveyard cards, so a random pick and a Discover are both readable by defId.
     const STOCKPILE: &str = "core-005"; // Stockpile
     const HIT_JOB: &str = "core-016"; // Hit Job
-    const MANA_WELL: &str = "core-006"; // Mana Well
+    const THREE_SPELL: &str = "stand-in (3) Spell";
     /// What the turn's draw puts in hand, so "before the draw" has something to be before.
     const DRAWN: &str = "core-011";
 
     const SEED: &str = "gravedigger-37";
     /// The card that seed picks out of the three-card graveyard; pinned per CLAUDE.md rule 4.
-    const SEEDED_PICK: &str = MANA_WELL;
+    const SEEDED_PICK: &str = THREE_SPELL;
 
     /// `register_all` first: the engine's testkit cannot name the cards crate.
     fn scn(opts: Value) -> Scenario {
@@ -114,7 +114,7 @@ mod tests {
                     "seed": SEED,
                     "p1": {
                         "field": [GRAVEDIGGER],
-                        "graveyard": [STOCKPILE, HIT_JOB, MANA_WELL],
+                        "graveyard": [STOCKPILE, HIT_JOB, THREE_SPELL],
                         "library": [DRAWN],
                     },
                     "p2": { "hand": [STOCKPILE], "library": [STOCKPILE] },
@@ -130,7 +130,7 @@ mod tests {
                 def_ids(&s.hand("p1")).into_iter().filter(|id| id != DRAWN).collect()
             };
 
-            // The seed picks Mana Well; the point is that the outcome is pinned, not which card it is.
+            // The seed picks the (3) Spell; the point is that the outcome is pinned, not which card it is.
             assert_eq!(moved(&first), strings(&[SEEDED_PICK]));
             assert_eq!(moved(&second), strings(&[SEEDED_PICK]));
             // It MOVED: one card left the graveyard rather than being copied out of it (R78, §6.3).
@@ -163,7 +163,7 @@ mod tests {
                 "seed": SEED,
                 "p1": {
                     "field": [{ "def": GRAVEDIGGER, "radiant": true }],
-                    "graveyard": [STOCKPILE, HIT_JOB, MANA_WELL],
+                    "graveyard": [STOCKPILE, HIT_JOB, THREE_SPELL],
                     "library": [DRAWN],
                 },
                 "p2": { "hand": [STOCKPILE], "library": [STOCKPILE] },
@@ -184,9 +184,9 @@ mod tests {
                 assert!(matches!(selection, Selection::Instance { .. }));
             }
 
-            s.answer(json!(MANA_WELL));
+            s.answer(json!(THREE_SPELL));
 
-            let picked = s.card(MANA_WELL).clone();
+            let picked = s.card(THREE_SPELL).clone();
             s.expect_in_zone(&picked, "hand");
             assert_eq!(picked.cost_mod, -1);
             assert_eq!(effective_cost(s.state(), s.card(&picked.id), Default::default()), 2);
@@ -202,17 +202,17 @@ mod tests {
                 "seed": SEED,
                 "p1": {
                     "field": [{ "def": GRAVEDIGGER, "radiant": true }],
-                    "graveyard": [STOCKPILE, HIT_JOB, MANA_WELL],
+                    "graveyard": [STOCKPILE, HIT_JOB, THREE_SPELL],
                     "library": [DRAWN],
                 },
                 "p2": { "hand": [STOCKPILE], "library": [STOCKPILE] },
             }));
 
-            s.start_turn().answer(json!(MANA_WELL));
+            s.start_turn().answer(json!(THREE_SPELL));
 
             assert!(s.state().pending.is_none());
             assert!(s.state().work.is_empty());
-            assert_eq!(sorted(def_ids(&s.hand("p1"))), sorted(strings(&[DRAWN, MANA_WELL])));
+            assert_eq!(sorted(def_ids(&s.hand("p1"))), sorted(strings(&[DRAWN, THREE_SPELL])));
             assert_eq!(s.state().phase, Phase::Main);
             // A subsequence: the Discover opens, is answered and puts its pick in hand, then the turn draws.
             s.expect_events(json!(["promptOpened", "promptAnswered", "addedToHand", "drawn", "addedToHand"]));
@@ -238,7 +238,7 @@ mod tests {
                 "seed": SEED,
                 "p1": {
                     "field": [{ "def": GRAVEDIGGER, "radiant": true }],
-                    "graveyard": [STOCKPILE, HIT_JOB, MANA_WELL],
+                    "graveyard": [STOCKPILE, HIT_JOB, THREE_SPELL],
                     "library": [DRAWN],
                 },
                 "p2": { "hand": [STOCKPILE], "library": [STOCKPILE] },
@@ -247,9 +247,9 @@ mod tests {
             assert_eq!(crate::upgrade_number(&mut s, GRAVEDIGGER, "discount"), 2);
 
             s.start_turn();
-            s.answer(json!(MANA_WELL));
+            s.answer(json!(THREE_SPELL));
 
-            let picked = s.card(MANA_WELL).clone();
+            let picked = s.card(THREE_SPELL).clone();
             assert_eq!(picked.cost_mod, -2);
             assert_eq!(effective_cost(s.state(), s.card(&picked.id), Default::default()), 1);
         }

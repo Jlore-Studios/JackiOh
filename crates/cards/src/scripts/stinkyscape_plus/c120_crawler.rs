@@ -4,14 +4,16 @@
 //! 1/3
 //! **Can’t defend**
 //! After this attack DIE
-//! **Death:** deal 2 damage to the last unit this damaged
+//! **Death:** deal 1 damage to the last unit this damaged
 //! \~\~\~
 //! The first time this game that this enters your board, add a **Radiant Toxopid** to your hand.
 //! May be played from your GY for (1)
 //! 2/6
 //! **Can’t defend**
 //! After this attack DIE
-//! **Death:** deal 4 damage to the last unit this damaged
+//! **Death:** deal 2 damage to the last unit this damaged
+//!
+//! Issue #3996 made it cost (1), from (0), and its Death deal 1 (Radiant 2), from 2 (Radiant 4).
 //!
 //! R3560000: the first arrival each game is one mark per player; any arrival counts, both faces share
 //! it. R3560001: the graveyard play at (1), any number of times. R3560002: after it attacks it is
@@ -236,7 +238,7 @@ mod tests {
             let second = s.unit_at(P2, 2).id;
             s.attack(ID, first.as_str());
             // Its after-attack destroy fired; its Death hit the last Unit it damaged.
-            assert_eq!(s.stats(first.as_str()).health, 10 - 1 - 2);
+            assert_eq!(s.stats(first.as_str()).health, 10 - 1 - 1);
             assert_eq!(s.stats(second.as_str()).health, 10);
         }
 
@@ -253,8 +255,8 @@ mod tests {
             // The big Unit strikes back: the Crawler remembers the striker across turns.
             s.attack(big.as_str(), crawler.as_str());
             s.expect_in_zone(ID, "graveyard");
-            // The Crawler strikes back for its 1, and its Death hits the Unit it damaged for 2.
-            assert_eq!(s.stats(big.as_str()).health, 9 - 1 - 2);
+            // The Crawler strikes back for its 1, and its Death hits the Unit it damaged for 1.
+            assert_eq!(s.stats(big.as_str()).health, 9 - 1 - 1);
         }
 
         #[test]
@@ -274,7 +276,7 @@ mod tests {
             crate::next_turn_of(&mut s, P1);
             let victim = s.unit_at(P2, 1).id;
             s.attack(ID, victim.as_str());
-            assert_eq!(s.stats(victim.as_str()).health, 10 - 1 - 2);
+            assert_eq!(s.stats(victim.as_str()).health, 10 - 1 - 1);
         }
     }
 
@@ -290,7 +292,7 @@ mod tests {
         }
 
         #[test]
-        fn r3560003_radiant_death_deals_4() {
+        fn r3560003_radiant_death_deals_2() {
             let mut s = weapon_board(
                 "s120-radiant-death",
                 json!({ "field": [{ "def": ID, "radiant": true, "lane": 1 }] }),
@@ -299,7 +301,7 @@ mod tests {
             crate::next_turn_of(&mut s, P1);
             let victim = s.unit_at(P2, 1).id;
             s.attack(ID, victim.as_str());
-            assert_eq!(s.stats(victim.as_str()).health, 10 - 2 - 4);
+            assert_eq!(s.stats(victim.as_str()).health, 10 - 2 - 2);
         }
     }
 }

@@ -1,10 +1,11 @@
 //! SPEC §8.12 S+ #107 Fuse (Unit 2/5 → 4/10, Mindustrial, Epic, cost 2), a card of the Stinkyscape+ set (R1420).
-//!   Base:    "Armor 5, Can't Defend, Ranged, Pierce
+//!   Base:    "Armor 3, Can't Defend, Ranged, Pierce
 //!            Deal {sweepLane}x damage to Units in this lane, deals {sweepAdjacent}x damage to Units in
 //!            adjacent lanes." — sweepLane 5, sweepAdjacent 3
-//!   Radiant: "Armor 10, Can't Defend, Ranged, Pierce
+//!   Radiant: "Armor 6, Can't Defend, Ranged, Pierce
 //!            Deal {sweepLane}x damage to Units in this lane, deals {sweepAdjacent}x damage to Units in
 //!            adjacent lanes." — sweepLane 7, sweepAdjacent 4
+//!   Armor 5 (Radiant 10) until issue #3996.
 //!
 //! Its script file and the card's script name say `fuse_unit`, to keep it apart from the Fuse verb (§6.3); its
 //! catalog id is the foundation's, `stinkyscapeplus-107`.

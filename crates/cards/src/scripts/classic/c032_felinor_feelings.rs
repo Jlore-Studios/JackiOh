@@ -1,4 +1,4 @@
-//! C #32 Felinor Feelings (SPEC §8.6 row 32). Spell, Felinor, cost 2, Rare.
+//! C #32 Felinor Feelings (SPEC §8.6 row 32). Spell, Felinor, cost 3 (2 until issue #3996), Rare.
 //!   Base:    "Steal an enemy Unit in a lane where you control a (1) Cost Unit."
 //!   Radiant: "Summon a Felinor Token. Then steal an enemy Unit in a lane where you control a (1) Cost
 //!             Unit."
@@ -272,7 +272,7 @@ mod tests {
             }
 
             #[test]
-            fn costs_2_refused_with_1_mana() {
+            fn costs_3_refused_with_2_mana() {
                 crate::register_all();
                 let mut s = setup(
                     json!({ "field": [{ "def": TIMMY, "lane": 2 }] }),
@@ -280,7 +280,7 @@ mod tests {
                     false,
                 );
                 let vanilla = must_unit(&s, P2, 2);
-                crate::expect_costs(&mut s, FEELINGS, 2, json!({ "targets": pick::instance(&vanilla) }));
+                crate::expect_costs(&mut s, FEELINGS, 3, json!({ "targets": pick::instance(&vanilla) }));
             }
 
             #[test]
@@ -487,10 +487,10 @@ mod tests {
             }
 
             #[test]
-            fn costs_2_refused_with_1_mana() {
+            fn costs_3_refused_with_2_mana() {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({ "field": [{ "def": MENACE, "lane": 1 }] }), true);
-                crate::expect_costs(&mut s, FEELINGS, 2, json!({}));
+                crate::expect_costs(&mut s, FEELINGS, 3, json!({}));
             }
 
             #[test]
