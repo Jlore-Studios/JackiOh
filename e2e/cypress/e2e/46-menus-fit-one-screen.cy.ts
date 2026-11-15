@@ -131,7 +131,13 @@ function seriesPicking(now: number): Record<string, unknown> {
 }
 
 describe("46 — every menu fits one screen (issue #1581)", () => {
-  for (const viewport of MENU_SIZES) {
+  for (const [index, viewport] of MENU_SIZES.entries()) {
+    // The account this size signs in as: p1 and p4, a size each in turn, as 47 does with p2 and p3. R109 allows one
+    // account 300 requests a minute, and a size opens about sixteen screens in under twenty seconds, each with the
+    // inbox bell's reads (#3902) on top of its own. On one account the sizes passed that, so a screen drew a 429
+    // about once a minute and never showed. Two accounts halve each one's rate. p4 is otherwise only 55's, which
+    // frees it first.
+    const signedIn = index % 2 === 0 ? accounts.p1 : accounts.p4;
     describe(`R3728000 ${viewport.label}`, () => {
       beforeEach(() => {
         cy.viewport(viewport.width, viewport.height);
@@ -262,11 +268,11 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
 
       describe("signed in", () => {
         before(() => {
-          cy.freeAccount(accounts.p1());
+          cy.freeAccount(signedIn());
         });
 
         it("R1581000 R3218000 /play", () => {
-          cy.visitAs(accounts.p1(), routes.play());
+          cy.visitAs(signedIn(), routes.play());
           cy.get(ts(PLAY_HUB), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           expectShellNav(true);
@@ -274,7 +280,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
         });
 
         it("R1581000 R3218000 /decks", () => {
-          cy.visitAs(accounts.p1(), routes.deckbuilder());
+          cy.visitAs(signedIn(), routes.deckbuilder());
           cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           expectShellNav(true);
@@ -284,9 +290,9 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
         it("R1581000 R3218000 /decks, a deck open", () => {
           // One full deck, whatever specs ran before this one saved: the open deck's pool is the big
           // list this menu holds.
-          cy.clearDecks(accounts.p1());
-          cy.saveDeck(accounts.p1(), { name: "Fits", cards: allCardIds().slice(0, constants.DECK_SIZE) }).then((deckId) => {
-            cy.visitAs(accounts.p1(), routes.deckbuilder());
+          cy.clearDecks(signedIn());
+          cy.saveDeck(signedIn(), { name: "Fits", cards: allCardIds().slice(0, constants.DECK_SIZE) }).then((deckId) => {
+            cy.visitAs(signedIn(), routes.deckbuilder());
             cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("be.visible");
             // A window narrower than the workshop's split shows the list alone until a deck is opened (a
             // wider one opens it already).
@@ -299,7 +305,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
         });
 
         it("R1581000 R3218000 /account", () => {
-          cy.visitAs(accounts.p1(), "/account");
+          cy.visitAs(signedIn(), "/account");
           cy.get(ts(SCREEN.accountRank), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           expectShellNav(true);
@@ -307,7 +313,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
         });
 
         it("R1581000 R3218000 /leaderboard", () => {
-          cy.visitAs(accounts.p1(), "/leaderboard");
+          cy.visitAs(signedIn(), "/leaderboard");
           cy.get(ts(SCREEN.leaderboardSeason), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           expectShellNav(true);
@@ -315,7 +321,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
         });
 
         it("R1581000 R3218000 /replays", () => {
-          cy.visitAs(accounts.p1(), routes.replays());
+          cy.visitAs(signedIn(), routes.replays());
           cy.get(ts(REPLAYS_ROOT), { timeout: timeouts.view }).find('[role="status"]').should("not.exist");
           expectBackLinkBarOrder();
           expectShellNav(true);
@@ -323,7 +329,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
         });
 
         it("R1581000 R3218000 /together", () => {
-          cy.visitAs(accounts.p1(), "/together");
+          cy.visitAs(signedIn(), "/together");
           cy.get(ts(TOGETHER_ROOT), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           expectShellNav(true);
@@ -333,7 +339,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
         // R3734000: the Collection is four tabs, each one screen tall at every size: the grid, the deck tiles, the
         // equipped looks and the wallet and quests scroll inside the screen, never the page.
         it("R1581000 R3218000 R3734000 /collection, Cards", () => {
-          cy.visitAs(accounts.p1(), routes.collection());
+          cy.visitAs(signedIn(), routes.collection());
           cy.get(ts(COLLECTION_GRID), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           expectShellNav(true);
@@ -341,7 +347,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
         });
 
         it("R1581000 R3218000 R3734000 /collection, Decks", () => {
-          cy.visitAs(accounts.p1(), routes.collectionTab("decks"));
+          cy.visitAs(signedIn(), routes.collectionTab("decks"));
           cy.get(ts(COLLECTION_DECKS), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           expectShellNav(true);
@@ -349,7 +355,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
         });
 
         it("R1581000 R3218000 R3734000 /collection, Cosmetics", () => {
-          cy.visitAs(accounts.p1(), routes.collectionTab("cosmetics"));
+          cy.visitAs(signedIn(), routes.collectionTab("cosmetics"));
           cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           expectShellNav(true);
@@ -357,7 +363,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
         });
 
         it("R1581000 R3218000 R3734000 /collection, Progress", () => {
-          cy.visitAs(accounts.p1(), routes.collectionProgress());
+          cy.visitAs(signedIn(), routes.collectionProgress());
           cy.get(ts(COLLECTION_JLORE), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           expectShellNav(true);
@@ -365,7 +371,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
         });
 
         it("R1581000 R3218000 /shop", () => {
-          cy.visitAs(accounts.p1(), routes.shop());
+          cy.visitAs(signedIn(), routes.shop());
           cy.get(ts(SHOP_PANEL), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           expectShellNav(true);
@@ -374,7 +380,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
 
         it("R1581000 R3218000 /series, choosing a deck", () => {
           cy.intercept("GET", `**/api/series/${SERIES_ID}`, { statusCode: 200, body: seriesPicking(Date.now()) });
-          cy.visitAs(accounts.p1(), routes.series(SERIES_ID));
+          cy.visitAs(signedIn(), routes.series(SERIES_ID));
           cy.get(ts(SERIES_SCORE), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           cy.get(ts(menuShellTestid.root)).should("not.exist");
@@ -383,7 +389,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
 
         it("R1581000 R3218000 /invite, the code screen", () => {
           asPending();
-          cy.visitAs(accounts.p1(), routes.invite());
+          cy.visitAs(signedIn(), routes.invite());
           cy.get(ts(inviteTestid.input), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           expectShellNav(true);
@@ -392,7 +398,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
 
         it("R1581000 /invite, the consent screen", () => {
           asPending({ ageCheckOwed: true, termsOwed: true });
-          cy.visitAs(accounts.p1(), routes.invite());
+          cy.visitAs(signedIn(), routes.invite());
           cy.get(ts(consentTestid.birthMonth), { timeout: timeouts.view }).should("be.visible");
           expectOnScreen(viewport, ONE_SCREEN);
         });
