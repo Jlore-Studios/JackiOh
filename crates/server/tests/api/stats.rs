@@ -2268,6 +2268,80 @@ mod r3022000_tiers {
     }
 }
 
+mod r3945000_play_rate {
+    use super::*;
+
+    const STARSHIP: &str = "stinkyscape-t-dormant-starship";
+
+    fn card<'a>(data: &'a Value, id: &str) -> &'a Value {
+        find(&data["cards"], "id", &json!(id)).expect("the card is listed")
+    }
+
+    /// `count` live All Random games: p1 holds core-001 to core-004, sees `hand`, plays `played`, and
+    /// makes a Dormant Starship it uses (`Some(true)`), one it never uses (`Some(false)`) or none.
+    fn games(
+        tag: &str,
+        hand: &[&'static str],
+        played: &[&'static str],
+        starship: Option<bool>,
+        count: usize,
+    ) -> Vec<Value> {
+        (0..count)
+            .map(|i| {
+                make_game_record(
+                    &format!("play-rate-{tag}-{i}"),
+                    RecordOptions {
+                        source: Some("live"),
+                        mode: Some("random"),
+                        p1_deck: Some(vec!["core-001", "core-002", "core-003", "core-004"]),
+                        p1_hand: Some(hand.to_vec()),
+                        p1_played: Some(played.to_vec()),
+                        p2_deck: Some(vec!["core-005"]),
+                        p2_played: Some(Vec::new()),
+                        p1_created_used: (starship == Some(true))
+                            .then(|| json!([{ "card": STARSHIP, "turn": 5, "radiant": false }])),
+                        p1_created_unused: (starship == Some(false)).then(|| vec![STARSHIP]),
+                        ..RecordOptions::default()
+                    },
+                )
+            })
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn r3945000_a_cards_play_rate_is_its_played_games_over_its_seen_games_in_every_mode() {
+        let app = test_app().await;
+        let mut records = Vec::new();
+        // core-001 is held in 80 games, seen in 40 of them and played in 10 of those. core-002 is seen in
+        // all 80 and never played, and core-004 is never seen. A Dormant Starship is made in 40 games and
+        // used in 30 of them.
+        let seen = ["core-001", "core-002", "core-003"];
+        records.extend(games("played", &seen, &["core-001"], Some(true), 10));
+        records.extend(games("held-used", &seen, &[], Some(true), 20));
+        records.extend(games("held-unused", &seen, &[], Some(false), 10));
+        records.extend(games("unseen", &["core-002", "core-003"], &[], None, 40));
+        insert_records(&app, records).await;
+
+        // All Random counts the 40 seen games (R2777002), and 10 of them played it.
+        let (status, _, random) = get_public(&app, "/api/stats/cards?source=live&mode=random").await;
+        assert_eq!(status, 200);
+        let a = card(&random, "core-001");
+        assert_eq!(a["games"], json!(40));
+        assert_eq!(a["playRate"].as_f64(), Some(0.25));
+        // Every mode counts all 80 decks that held it, and its play rate is still 10 of 40 seen, not 80
+        // held of the 160 seats counted.
+        let (_, _, all) = get_public(&app, "/api/stats/cards?source=live").await;
+        let a = card(&all, "core-001");
+        assert_eq!(a["games"], json!(80));
+        assert_eq!(a["playRate"].as_f64(), Some(0.25));
+        // Seen every game and never played: 0. Never seen: 0, not a share of no games.
+        assert_eq!(card(&all, "core-002")["playRate"].as_f64(), Some(0.0));
+        assert_eq!(card(&all, "core-004")["playRate"].as_f64(), Some(0.0));
+        // A card only a rule makes (R3070000): used in 30 of the 40 games a seat made one.
+        assert_eq!(card(&all, STARSHIP)["playRate"].as_f64(), Some(0.75));
+    }
+}
+
 mod r2777000_adjusted_and_split_card_stats {
     use super::*;
 
@@ -2356,7 +2430,8 @@ mod r2777000_adjusted_and_split_card_stats {
         assert_eq!(a["games"], json!(10));
         assert_eq!(a["winRate"].as_f64(), Some(1.0));
         assert_eq!(a["hasEnoughGames"], json!(false));
-        assert!((a["playRate"].as_f64().unwrap() - 10.0 / 80.0).abs() < 1e-9);
+        // R3945000 amends R2777002's play rate: played over seen, and none of its 10 seen games played it.
+        assert_eq!(a["playRate"].as_f64(), Some(0.0));
         // Best of 1 alone still counts every deck that held it.
         let (_, _, bo1) = get_public(&app, "/api/stats/cards?source=live&mode=bo1").await;
         assert_eq!(card(&bo1, "core-001")["games"], json!(90));

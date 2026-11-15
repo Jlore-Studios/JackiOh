@@ -86,6 +86,7 @@ pub struct PublicCardStat {
     /// R3022000: the card's balance tier (`tier_of` its adjusted rate and range); null below R654's
     /// floor, as its rate is shown only from it.
     pub tier: Option<CardTier>,
+    /// R3945000: how often the card was played when seen (`play_rate_of`), in every mode.
     pub play_rate: f64,
     pub has_enough_games: bool,
     /// R1367000: the card's window and the records its figures count.
@@ -391,6 +392,28 @@ fn made_games(report: &WindowedReport, id: &str) -> Option<Tally> {
         wins: used.wins + unused.wins,
         draws: used.draws + unused.draws,
     })
+}
+
+/// R3945000: a card's play rate, how often it was played when seen: its played games over its seen
+/// games (played, or drawn and never played; the engine's `seen`), in every mode. A card only a rule
+/// makes (R3070000) reads its used Created games over the games a seat made one. 0 when it was never seen.
+fn play_rate_of(report: &WindowedReport, id: &str, stat: Option<&CardStats>, made: Option<&Tally>) -> f64 {
+    let (played, seen_games) = match made {
+        Some(made) => {
+            let used = report
+                .created
+                .iter()
+                .find(|row| row.stats.card == id)
+                .map_or(0, |row| row.stats.created_played.games);
+            (used, made.games)
+        }
+        None => stat.map_or((0, 0), |stat| (stat.played.games, seen(stat).games)),
+    };
+    if seen_games > 0 {
+        f64::from(played) / f64::from(seen_games)
+    } else {
+        0.0
+    }
 }
 
 /// R3022000: what `GET /api/stats/cards`' tiers are read against: the field (`stats_field`) of every card
@@ -1077,8 +1100,8 @@ async fn kept_history(
 /// GET /api/stats/cards: public card win rates (R654, R1367000).
 /// Supports pilot filtering (R1451, R807000, R1452) and match modes (R377).
 /// R2777001: `?mode=constructed` reads Best of 1 and Conquest together. R2777002: under `random` a card's
-/// games, rate, play rate and floor read the decks that saw it. R2777000: each card carries its adjusted
-/// win rate, and the cards are listed by it.
+/// games, rate and floor read the decks that saw it. R3945000: its play rate is its played games over its
+/// seen ones in every mode. R2777000: each card carries its adjusted win rate, and the cards are listed by it.
 pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     let versions = load_patch_versions().await;
     let current_patch = app.catalog.version.clone();
@@ -1171,7 +1194,6 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
 
         let held = report.card(id);
         let stat = held.map(|card| &card.stats);
-        let total_decks = held.map(|card| card.decks).unwrap_or(0);
         let window = kept.window_of(id, request);
         // R3070000: a card only a rule makes, the Dormant Starship (R1857001), is in no deck: its row reads
         // the seats that made one, its Created games (R2089000).
@@ -1182,11 +1204,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         let rate = win_rate(&counted);
         // R2895000: the rate's 95% range, over the same games.
         let rate_range = rate.map(|_| wilson_interval(counted_wins, counted_games));
-        let play_rate = if total_decks > 0 {
-            counted_games as f64 / total_decks as f64
-        } else {
-            0.0
-        };
+        let play_rate = play_rate_of(report, id, stat, made.as_ref());
         let has_enough_games = counted_games >= CARD_STATS_MIN_SAMPLE;
         // R2777000: shrunk by its own games, so it needs no floor of its own; the page shows it from R654's.
         // R3022000: read against the field. R3070000: a card a rule makes, against the average deck.

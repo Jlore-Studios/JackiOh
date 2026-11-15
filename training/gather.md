@@ -67,7 +67,7 @@ until `main` ships another.
 - `cards-<patch>.txt` and `.json`, the patch's card figures from every game held, rewritten each cycle:
   per card, the win rate and the games behind it for the decks that held it (in deck), held it in the
   opening hand, went first or second with it, played it, or drew it and never played it, and the played
-  delta; a card's play rate is its played games over its in-deck games;
+  delta; a card's play rate is its played games over its seen ones (played plus drawn and not played, R3945000);
 - `games-<patch>.txt` and `.json`, the patch's game figures from every game held, rewritten each cycle:
   the games and the draws, how many the first seat won with the 95% interval of that share, a count per
   ending, the turn quartiles, and, over the games whose records carry R1256000's counts, the share with
