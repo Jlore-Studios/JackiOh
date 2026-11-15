@@ -36752,7 +36752,8 @@
       "2026-11-15T10:44:50Z,43700818122,claude-1,sonnet+opus,build,3958,medium,built,,6.1,45,9625,1473823,0.4904,93,96,,,22.2,claude-1,fresh,,1",
       "2026-11-15T10:39:03Z,43700776430,claude-6,sonnet+opus,build,3955,medium,built,,17.8,40,14107,1394712,0.5487,6,9,,,22.2,claude-6,fresh,,1",
       "2026-11-15T10:40:27Z,43700727750,claude-8,sonnet+opus,build,3954,medium,built,,10,27,9311,772336,0.3715,3,4,,,21.8,claude-8,fresh,,1",
-      "2026-11-15T10:54:21Z,43705218122,claude-3,opus,review,3967,hard,approved,,10.7,17,6706,581272,0.692,22,23,,,0.8,,none,,1"
+      "2026-11-15T10:54:21Z,43705218122,claude-3,opus,review,3967,hard,approved,,10.7,17,6706,581272,0.692,22,23,,,0.8,,none,,1",
+      "2026-11-15T10:56:46Z,43700686707,claude-6,sonnet+opus,review,3960,medium,built,,13.3,107,39939,2826268,2.5202,5,14,,,1.4,,fresh,,5"
     ]
   },
   "version": 1
