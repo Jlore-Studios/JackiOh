@@ -14721,9 +14721,10 @@
     "what": "review #3980 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-15T14:35:37Z",
+    "at": "2026-11-15T14:37:26Z",
     "notes": [
-      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
+      "delivered review #3980 on claude-3 (run 43724807096): reviewed",
+      "runner gate: started 1 of 1 waiting run(s) (run 43725069394 on claude/focused-cerf-hg2p1y)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15429,7 +15430,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-15T14:28:49Z",
+  "loop_tick": "2026-11-15T14:37:26Z",
   "machine_disk": {
     "issue": null,
     "reading": {
