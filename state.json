@@ -13207,17 +13207,8 @@
       "verdict_rounds": 1
     },
     "3913": {
-      "action": "plan",
-      "asks": [
-        "c:6900461191"
-      ],
-      "build_next": {
-        "from_run": "43758887239",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-15T20:58:39Z",
-        "until": "2026-11-15T21:28:39Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-15T20:58:26Z",
         "difficulty": "hard",
@@ -13236,28 +13227,29 @@
         "reason": "planned on opus",
         "trail": " \"Read targeted bolt fixture script\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3913; grep -n \\\"in-diff\\\\|mutants\\\" .github/workflows/ci.yml | head -10; sed -n 1,40p scripts/mutants.sh | grep -n \\\"in-diff\\\\|testkit\\\\|exclude\\\\|pa\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3913; grep -rln \\\"mutants.sh\\\" .github/workflows | head; grep -n \\\"testkit\\\" scripts/mutants.sh .cargo/mutants.toml 2>/dev/null | head; ls .cargo\", \"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3913; grep -rn \\\"plays_of(\\\" crates/engine/tests/rules | grep -v \\\"fn plays_of\\\" | awk -F: '{print $1}' | sort | uniq -c; grep -rn \\\"fixtures::play_p\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3913; grep -n \\\"attacks_of(\\\" crates/cards/src/scripts/meditative/c045_knowledge_breaker.rs; grep -n \\\"activations_of(\\\" crates/cards/src/scripts/cla\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3913; f=crates/cards/src/scripts/classic/c021_turtinator.rs; for l in 172 308 371; do sed -n \\\"$((l-12)),$((l))p\\\" $f | grep -n \\\"turtle\\\\|scenario\\\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3913; for d in crates/cards/src/scripts crates/cards/tests crates/engine/tests crates/ai/tests crates/cards; do printf \\\"%s \\\" $d; find $d -name '*.r\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3913; grep -n \\\"prompt_modes\\\\|offered(seat)\\\\|offered(\\\" crates/engine/README.md docs/ADDING_CARDS.md docs/v0.3.0/SURFACE.md | head; \", \"description\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3913; sed -n 712,726p docs/v0.3.0/SURFACE.md\", \"description\": \"Read SURFACE testkit read paragraph\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3913; grep -n \\\"legal_actions\\\\|ActionBody::Play\\\" crates/tools/tests/*.rs | head; grep -rn \\\"fn names_beside\\\\|card_name_comments\\\" crates/tools/src\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3913; sed -n 28,38p crates/engine/tests/rules/pareto.rs; echo ---; sed -n 144,153p crates/cards/src/scripts/classic/c023_devils_pact.rs; echo ---; se\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3913; rg -U -c 'ActionBody::Play\\\\s*\\\\{[^}]*\\\\}\\\\s*\\\\)?\\\\s*if\\\\s+[*&(]*\\\\s*(instance_id\\\\b|id\\\\s*==\\\\s*instance_id\\\\b)' crates --type rust | awk -F: \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3913; grep -rn \\\"pub enum Selection\\\" -A22 crates/engine/src/wire/*.rs | head -30\", \"description\": \"Read Selection enum variants\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3913; grep -n \\\"uncited\\\\|never cited\\\\|not cited\\\\|cited nowhere\\\" -i crates/tools/src/spec*.rs crates/tools/src/spec/*.rs 2>/dev/null | head -8\", \"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3913; grep -rln \\\"fn spec_check\\\\|\\\\\\\"spec\\\\\\\" =>\\\\|spec check\\\" crates/tools/src | head -5; grep -n \\\"proven_in\\\\|cited\\\" crates/tools/README.md | h\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3913; sed -n 64,80p crates/tools/README.md\", \"description\": \"Read spec check rules\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3913/.bot-plan.md\", \"content\": \"# Draft plan #3913 (opus planner, in progress)\\n\\nFindings so far (verified against code at 7ecd0f2c10):\\n- 28 `// Dif\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3913/crates/engine/tests/rules; for f in balance_2727 blueprint cloaked cost_rules crater embiggen_cost flashback graveyard_play graveyard_play_reaso\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3913/crates/cards/tests/cross; for f in $(rg -U -l 'ActionBody::Play\\\\s*\\\\{[^}]*\\\\}\\\\s*\\\\)?\\\\s*if\\\\s+[*&(]*\\\\s*(instance_id\\\\b|id\\\\s*==\\\\s*instance_i\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3913; grep -n \\\"fn sourced_abilities_of\\\" -A30 crates/engine/src/subsystems/activate.rs | sed -n 7,30p; grep -n \\\"mana\\\" crates/engine/src/testkit/sc\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3913/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"Big: about 150 files change (the testkit, the guard, ~107 test files h\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3913; wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count plan words and characters\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3913/.bot-plan.md\", \"old_string\": \"- **Criterion 2 holds over the trees the issue names.** Those are \\\"Where it lands\\\" and its \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3913/.bot-plan.md\", \"old_string\": \" - `crates/engine/README.md` row and SURFACE \\u00a78: after the mention of `prompt_modes_of`,\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3913/.bot-plan.md\", \"old_string\": \"- **Merge conflicts** with open card PRs. Each step is green on its own, so a run that is cut\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3913; wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3913; for f in meditative_plus redact_play_records duos search lethal; do echo \\\"== $f\\\"; grep -n \\\"^use jackioh_engine::testkit\\\\|^ use jackioh_engi\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3913/.bot-plan.md\", \"old_string\": \"| `crates/ai/tests/ai/meditative_plus.rs` | `is_play_of` | delete; import the testkit's |\", \"\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3913/.bot-plan.md\", \"old_string\": \"cargo jackioh classify --base origin/main --claims\\n```\\nThen run the harness's checks once.\"\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3913/.bot-plan.md\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Big: about 150 files change (the testkit, the guard, ~107 test files holding the arm, a fixture's callers and the guard's renames)\"} --> ## Goal Add testkit readers for one card's offered actions: `Scenario::plays_of`, `can_play`, `play_targets`, `activation\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-4",
-      "owner_since": "2026-11-15T20:10:24Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "claude-2",
+      "owner_since": "2026-11-15T21:01:19Z",
+      "owner_why": "handed off from `claude-4`: `claude-4` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-15T20:58:31Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_by_id": "claude-4",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-4",
+      "provider": "claude-2",
       "queued_at": "2026-11-15T20:02:45Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43758887239",
+      "run_id": "pending:e2145843-1794776455",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-15T20:34:50Z",
+      "started_at": "2026-11-15T21:01:19Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6900461191"
+      ]
     },
     "3914": {
       "action": "build",
@@ -15147,9 +15139,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-15T21:00:39Z",
+    "at": "2026-11-15T21:01:19Z",
     "url": "",
-    "what": "plan #3937 on claude-3"
+    "what": "build #3913 on claude-2"
   },
   "last_sweep": {
     "at": "2026-11-15T20:48:20Z",
