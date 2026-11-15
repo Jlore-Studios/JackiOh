@@ -3,8 +3,9 @@
 // game's setup (`runFightSetup`: the run deck, its HP and its Radiant and buffed cards against the
 // enemy's deck and strength), the practice worker plays it with the AI as the enemy, whose name the
 // board's rail shows beside the run's timer and the chip that lists the live modifiers (B22, B24,
-// R3912000), and each side's relics sit in a tray beside its hero (B23). There is no Play again: once the game is over the page asks the worker for its report,
-// the run's `FightOver` (B25), and Continue sends it to the run, which a lost fight ends (B26).
+// R3912000), and each side's relics sit in a tray beside its hero (B23). There is no Play again: once
+// the game is over the page asks the worker for its report, the run's `FightOver` (B25), and Continue
+// sends it to the run, which a lost fight ends (B26).
 //
 // The board is the practice route's (`routes/practice.tsx`): the same controller, pacing
 // (`practice/aiTable.ts`: the AI waits on `data-animating`, `data-showcase` and `data-speaking`, #2925),
