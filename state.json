@@ -12614,15 +12614,8 @@
       "taken_asks": []
     },
     "3843": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43696271212",
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-15T09:10:27Z",
-        "until": "2026-11-15T09:40:27Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -12634,10 +12627,9 @@
         "reason": "planned on opus",
         "trail": "ema_invariants.sql | head -40; grep -n \\\"server's alone\\\\|no policy\\\\|daily_notify\\\\|match_checkpoints\\\" crates/ser\u2026\n- Bash: {\"command\": \"sed -n 58,80p crates/server/tests/sql/01_schema_invariants.sql; sed -n 385,440p crates/server/tests/sql/02_rls_as_client.sql\"}\n- Bash: {\"command\": \"sed -n 1,200p crates/server/migrations/0078_practice_claim_counts.sql | grep -v \\\"^--$\\\" | head -90\"}\n- Bash: {\"command\": \"cat crates/server/tests/sql/44_practice_claim_counts.sql | head -80; grep -n \\\"practice_claim_count\\\" crates/server/src/db/pg.rs | head -5\"}\n- Bash: {\"command\": \"grep -rn \\\"practice_claim_counts\\\" crates/server/src --include=*.rs | head -5\"}\n- Bash: {\"command\": \"grep -n \\\"practice_claim_counts\\\\|PracticeClaimCount\\\" crates/server/src/economy/store.rs | head; grep -n \\\"insert into public.practice_claim_counts\\\" -B6 -A12 crates/server/src/economy/\u2026\n- Bash: {\"command\": \"grep -rln \\\"push_subscriptions\\\\|push_subs\\\" crates/server/tests crates/server/src | sort; grep -rn \\\"push_subscriptions\\\" crates/server/src/db/*.rs crates/server/src/*.rs crates/server/\u2026\n- Bash: {\"command\": \"sed -n 20,75p crates/server/tests/sql/run.sh\"}\n- Bash: {\"command\": \"sed -n 1,25p crates/server/tests/sql/55_two_v_two.sql; which docker; docker info >/dev/null 2>&1 && echo docker-ok\"}\n- Bash: {\"command\": \"grep -n \\\"0091\\\\|migrations/\\\\*\\\\|for f\\\" crates/server/tests/db/run.sh | head; grep -rn \\\"0091_two_v_two\\\\|0091\\\" --include=*.sh --include=*.rs --include=*.md --include=*.yml --include=\u2026\n- Bash: {\"command\": \"grep -rn \\\"0089\\\\b\\\\|0089_daily\\\\|0090_lobbies\\\" --include=*.md . 2>/dev/null | grep -v \\\"^./target\\\\|node_modules\\\\|spec/rulings\\\\|spec/INDEX\\\\|spec/11-rulings\\\" | head; grep -rn \\\"migr\u2026\n- Bash: {\"command\": \"git show --stat 293a3273ec | grep -i \\\"patch\\\\|pending\\\" | head; git log --oneline -30 --stat -- 'patches/pending/*' 2>/dev/null | head -30; ls patches 2>/dev/null | head\"}\n- Bash: {\"command\": \"grep -n \\\"kind\\\\|tier\\\" crates/tools/README.md | grep -i classify | head -10; grep -rn \\\"fn classify\\\\|enum Kind\\\" crates/tools/src/classify*.rs 2>/dev/null | head; ls crates/tools/src |\u2026\n- Bash: {\"command\": \"grep -n \\\"daily_notify\\\\|practice_claim_counts\\\\|0089\\\\|daily.email\\\\|daily.emailed\\\" crates/server/README.md docs/*.md apps/edge/README.md 2>/dev/null | head; grep -n \\\"pub mod daily\\\" \u2026\n- Bash: {\"command\": \"sed -n 150,170p docs/architecture.md; sed -n 1295,1320p crates/server/README.md; grep -n \\\"^## \\\\|^### \\\" crates/server/README.md | sed -n 1,200p | awk -F: '$1>1200 && $1<1400'\"}\n- Bash: {\"command\": \"awk 'NR>1320 && NR<1384 && /^Migration 00(8|9)/ {print NR\\\": \\\"substr($0,1,200)}' crates/server/README.md; grep -n \\\"^Migration 0091\\\\|^Migration 0090\\\\|^Migration 0089\\\" -A8 crates/serv\u2026\n- Bash: {\"command\": \"sed -n 1370,1384p crates/server/README.md; sed -n 95,110p docs/architecture.md | cut -c1-200; grep -n \\\"practice_claim_counts\\\" docs/architecture.md\"}\n- Bash: {\"command\": \"grep -rln \\\"architecture.md\\\" crates/server/tests crates/tools/src 2>/dev/null | head; grep -n \\\"^Migration 0089\\\\|Migration 0089\\\\|0089's\\\\|^Migration 009\\\" crates/server/README.md | he\u2026\n- Bash: {\"command\": \"grep -n \\\"architecture\\\" crates/server/tests/db/run.sh\"}\n- Bash: {\"command\": \"sed -n 585,621p crates/server/tests/sql/53_daily_games.sql; sed -n 80,140p crates/server/tests/sql/44_practice_claim_counts.sql\"}\n- Bash: {\"command\": \"grep -n \\\"macro_rules! q\\\" -A12 crates/server/tests/store/contract.rs | head -16; awk 'NR>12785 && /both_stores!\\\\(/ {f=1} f && NR>12785 {print NR\\\": \\\"$0} /\\\\);/ && f {exit}' crates/ser\u2026\n- Bash: {\"command\": \"grep -n \\\"^fn call\\\\b\\\\|^pub fn call\\\\b\\\\|^fn call(\\\" crates/server/src/db/fake.rs; grep -n \\\"pub fn tables\\\" -A3 crates/server/src/db/fake.rs | head; grep -n \\\"the_sweep_emails_once_per\u2026\n- Bash: {\"command\": \"grep -n \\\"fn call\\\" crates/server/src/db/fake.rs | head -5; grep -n \\\"^use\\\\|^ [A-Za-z_]*,$\\\" crates/server/src/db/fake.rs | head -30 | grep -n \\\"IndexMap\\\\|indexmap\\\"\"}\n- Bash: {\"command\": \"grep -n \\\"pub struct ApiError\\\" -B3 crates/server/src/api/http.rs; grep -n \\\"daily_game\\\\b\\\\|fn daily_game\\\\|now_ms\\\\|daily.now()\\\" crates/server/src/daily/invites.rs | head -8\"}\n- Bash: {\"command\": \"grep -c \\\"create table\\\" crates/server/migrations/0091_two_v_two.sql crates/server/migrations/0090_lobbies.sql; sed -n 104,106p crates/server/tests/sql/01_schema_invariants.sql; git log \u2026\n- Bash: {\"command\": \"sed -n 100,116p crates/server/tests/sql/01_schema_invariants.sql | grep -o \\\"'[a-z_0-9]*'\\\" | wc -l\"}\n- Bash: {\"command\": \"grep -n \\\"fetch_optional(&mut \\\\*\\\\*t)\\\" crates/server/src/db/pg.rs | head -2; grep -n \\\"on conflict.*do update.*where\\\\|do update set.*\\\\n.*where\\\" crates/server/src/db/pg.rs | head -3\"}\n- said: Now I have the full shape. Updating the draft with the plan.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3843/.bot-plan.md\", \"content\": \"# Draft plan #3843 (planner's notes) \\u2014 plan complete, see final message; this is its skeleton\\n\\nFound:\\n- notify\u2026\n- Bash: {\"command\": \"grep -n \\\"DailyState\\\\|Mailer\\\" crates/server/tests/support/test_app.rs crates/server/src/app.rs | head\"}\n- Bash: {\"command\": \"grep -rn \\\"daily\\\\.email\\\\.failed\\\\|daily\\\\.emailed\\\\|daily\\\\.notify\\\\.dropped\\\" --include=*.md --include=*.ts --include=*.rs . 2>/dev/null | grep -v \\\"^./target\\\\|node_modules\\\\|crates/\u2026\n- Bash: {\"command\": \"grep -n \\\"^| Daily\\\\|^| Store\\\\|^| Database\\\" crates/server/README.md | cut -c1-400\"}\n- Bash: {\"command\": \"grep -n \\\"daily/\\\" crates/server/README.md | cut -c1-300 | head\"}\n- Bash: {\"command\": \"grep -n \\\"ALL CHECKS RAN\\\" crates/server/tests/sql/run.sh crates/server/tests/sql/55_two_v_two.sql crates/server/tests/sql/44_practice_claim_counts.sql | head; sed -n 175,215p crates/ser\u2026\n- said: **Note to the person reading:** the decision this issue waited on is made (option 3, by @squishy-squooby on 2026-11-15). Nothing below needs a person. ## Goal The server sends at most `DAILY_PLAYER_EMAILS_PER_DAY` (50) daily-game \"your move\" emails per UTC day. The count is shared by the sweep and \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-15T08:49:08Z",
       "owner_why": "it plans it",
@@ -12650,9 +12642,9 @@
       "provider": "claude-7",
       "queued_at": "2026-11-15T08:45:52Z",
       "requested_by": "squishy-squooby",
-      "run_id": "43696271212",
+      "run_id": "pending:4325891a-1794733983",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-15T08:49:08Z",
+      "started_at": "2026-11-15T09:13:21Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15508,9 +15500,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T09:12:51Z",
+    "at": "2026-11-15T09:13:21Z",
     "url": "",
-    "what": "build #3842 on claude-3"
+    "what": "build #3843 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-15T08:58:05Z",
