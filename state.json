@@ -13838,17 +13838,8 @@
       "taken_asks": []
     },
     "3934": {
-      "action": "plan",
-      "asks": [
-        "c:6900359982"
-      ],
-      "build_next": {
-        "from_run": "43755131803",
-        "model": "sonnet",
-        "provider": "claude-3",
-        "since": "2026-11-15T20:21:27Z",
-        "until": "2026-11-15T20:51:27Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-15T20:21:16Z",
         "difficulty": "medium",
@@ -13867,10 +13858,9 @@
         "reason": "planned on sonnet",
         "trail": "l; grep -rn \\\"getDailyGame\\\" apps/web/src e2e --inclu\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3934/.bot-plan.md\", \"content\": \"# Draft plan #3934 (in progress)\\n\\nFindings so far:\\n- purge deletes match_actions only (matches.status over, ended_a\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; ls spec/pending | head; ls spec/rulings | tail -3; ls spec/rulings | grep -c . ; ls spec/rulings | grep \\\"R39\\\" | head; grep -n \\\"9.13\\\" spec/0\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; grep -n \\\"Adding a ruling\\\" -A40 spec/README.md | head -90; cat spec/rulings/R3941001.md; git log --stat -3 --format=%h%n%s -- spec/pending | h\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; sed -n 265,300p spec/09-architecture.md | cut -c1-1800\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; ls apps/web/src/i18n | head -30; grep -rn \\\"Back to daily games\\\" apps/web/src --include=*.ts --include=*.tsx --include=*.json -l | head; grep \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; grep -n \\\"Won on time\\\\|Back to daily games\\\\|Lost on time\\\\|Rematch\\\\\\\"\\\" apps/web/src/i18n/zh-CN.json; grep -n \\\"zh-CN\\\\|every t(\\\" apps/web/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; sed -n 4170,4215p apps/web/src/i18n/zh-CN.json; grep -n \\\"outcome\\\\|result\\\\|ended\\\\|life\\\\|Won\\\\|Lost\\\" apps/web/src/daily/DailyRoute.tsx | he\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; sed -n 24,135p apps/web/src/daily/DailyRoute.tsx; grep -n \\\"RESULT_WORD\\\" -r apps/web/src | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; sed -n 1,40p apps/web/src/daily/order.ts; sed -n 1,52p apps/web/src/daily/DailyClockPill.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; grep -rn \\\"DailyBoard\\\\|DailyRoute\\\" apps/web/src --include=*.ts --include=*.tsx | grep -v \\\"^apps/web/src/daily/\\\" | head; grep -n \\\"RESULT_WO\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; grep -n \\\"export function ShellPanel\\\" -B3 -A25 apps/web/src/main.tsx; grep -n \\\"export function formatDateTime\\\" -B2 -A6 apps/web/src/i18n/i18\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; grep -n \\\"^ it(\\\\|^describe\\\\|^ describe\\\" apps/web/src/daily/DailyBoard.test.tsx; grep -n \\\"Won on time\\\" -B25 -A12 apps/web/src/daily/DailyBo\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; grep -n \\\"pub async fn fake_lock\\\" -A10 crates/server/tests/support/store.rs; grep -n \\\"fake_lock\\\" crates/server/tests/api/daily.rs | head -5;\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; grep -n '\\\"vs {opponent}\\\"\\\\|\\\"Turn {n}\\\"\\\\|\\\"Win\\\"\\\\|\\\"Loss\\\"\\\\|\\\"Draw\\\"\\\\|\\\"Finished\\\"' apps/web/src/i18n/zh-CN.json; ls spec/rulings/R0768.m\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; ls crates/server/tests | head -30; grep -n \\\"\\\\[\\\\[test\\\\]\\\\]\\\" -A4 crates/server/Cargo.toml | head -30; grep -n \\\"mod daily\\\\|mod retention\\\" \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; grep -n \\\"\\\\-\\\\-rule\\\" docs/issues-and-patches.md | head -8; grep -n \\\"kind\\\" crates/tools/README.md | grep -i classify | head -5\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; grep -rn \\\"daily/games\\\" --include=*.md . 2>/dev/null | grep -v \\\"^./spec/rulings\\\\|^./reviews\\\\|node_modules\\\" | cut -c1-220 | head -20; grep \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; sed -n 311,316p crates/server/README.md\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; grep -rn \\\"DailyBoard\\\\|daily board\\\\|Daily board\\\" --include=*.md apps crates docs e2e 2>/dev/null | cut -c1-200 | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; sed -n 1080,1092p apps/web/README.md | cut -c1-400; sed -n 262,272p docs/roblox-crossplay.md | cut -c1-300\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; sed -n 1092,1100p apps/web/README.md | cut -c1-300; grep -n \\\"R3840000\\\" crates/server/README.md | head -3; sed -n 1,30p crates/server/tests/su\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; grep -n \\\"SHARED_TEST_HELPERS\\\" -A40 crates/tools/tests/acceptance.rs | head -60\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; grep -rn \\\"dailyTestid\\\" --include=*.ts --include=*.tsx -l . 2>/dev/null | grep -v node_modules | head; grep -n \\\"daily-\\\" e2e/support/testids.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; git show 3292f2ea70:spec/pending/3951.md | head -4 | cut -c1-500; echo ----; git show 3292f2ea70 --stat --format=%s | head -20; sed -n 1,12p sp\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; grep -n \\\"MATCH_ACTION_RETENTION_DAYS\\\" spec/*.md | cut -c1-260 | head; grep -n \\\"R768\\\" spec/09-architecture.md | head -3 | cut -c1-200\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; grep -n \\\"^### 9\\\\.\\\\|^## 9\\\" spec/09-architecture.md | head -20; sed -n 3355,3375p crates/server/src/db/fake.rs >/dev/null; grep -n \\\"pub fini\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; grep -n \\\"pub fn daily_games_due\\\" -A25 crates/server/src/db/fake.rs; grep -n \\\"daily_games_due\\\" -B2 -A20 crates/server/src/db/pg.rs | head -5\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934; sed -n 514,577p apps/web/src/daily/DailyBoard.test.tsx; grep -n \\\"export type PortraitId\\\" -r apps/web/src/wire packages 2>/dev/null | head -2\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3934/.bot-plan.md\", \"content\": \"# Draft plan #3934 (final text is the last message; this is the working summary)\\n\\nRating: medium (no engine/AI/migra\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"No line of the hard rule holds: no engine or AI change, no migration, about 15 files; the server and web agree only on one additive `expired` flag on an existing list-row shape.\"} --> ## Goal A finished daily game whose log the retention purge took opens a\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-15T19:55:33Z",
       "owner_why": "it plans it",
@@ -13883,12 +13873,14 @@
       "provider": "claude-3",
       "queued_at": "2026-11-15T19:55:22Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43755131803",
+      "run_id": "pending:3f36b2ef-1794774178",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-15T19:55:33Z",
+      "started_at": "2026-11-15T20:23:22Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6900359982"
+      ]
     },
     "3935": {
       "action": "build",
@@ -15131,9 +15123,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-15T20:10:24Z",
+    "at": "2026-11-15T20:23:22Z",
     "url": "",
-    "what": "plan #3913 on claude-4"
+    "what": "build #3934 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-15T20:05:26Z",
