@@ -16086,16 +16086,24 @@
         ],
         "builder": "claude",
         "built_by": "claude-4",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/daily/DailyBoard.tsx"
+          ],
+          "from": "e59688eb23c125e048d88dfb3b769f401f64b6fc",
+          "main": "b53e5fcabb3f1eca532f09874833d9b5def97ae4"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-4",
-            "run": "43704550580",
+            "run": "43709551809",
             "tier": "strong"
           }
         ],
-        "sha": "e59688eb23c125e048d88dfb3b769f401f64b6fc",
+        "sha": "f1a4efcf81cad511948d5f679e145295c72aae8d",
         "tiers": {
           "claude": "strong"
         }
