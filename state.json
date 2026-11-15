@@ -16135,6 +16135,10 @@
         {
           "at": "2026-11-15T12:09:28Z",
           "minutes": 16.5
+        },
+        {
+          "at": "2026-11-15T14:04:04Z",
+          "minutes": 15.2
         }
       ],
       "tokens_spent": [
@@ -16571,17 +16575,24 @@
           "cost": 0.0,
           "input": 187517,
           "output": 17153
+        },
+        {
+          "at": "2026-11-15T14:04:04Z",
+          "cache": 0,
+          "cost": 0.0,
+          "input": 637615,
+          "output": 37693
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-15T13:54:11Z",
-          "utilization": 0.47
+          "resets_at": "2026-11-15T18:54:11Z",
+          "utilization": 0.05
         },
-        "observed_at": "2026-11-15T12:09:28Z",
+        "observed_at": "2026-11-15T14:04:04Z",
         "seven_day": {
           "resets_at": "2026-11-21T00:22:39Z",
-          "utilization": 0.43
+          "utilization": 0.45
         },
         "status": "allowed"
       }
@@ -34635,7 +34646,10 @@
     "readings": [
       "2026-11-15T13:35:05Z,claude-3,stream,call,43719501458,2,2026-11-15T17:30:00Z,,,allowed,,,",
       "2026-11-15T13:35:50Z,claude-3,stream,call,43719501458,3,2026-11-15T17:30:00Z,,,allowed,,,",
-      "2026-11-15T13:36:58Z,claude-3,stream,call,43719501458,4,2026-11-15T17:30:00Z,,,allowed,,,"
+      "2026-11-15T13:36:58Z,claude-3,stream,call,43719501458,4,2026-11-15T17:30:00Z,,,allowed,,,",
+      "2026-11-15T13:44:00Z,agy,usage-command,before,43720153107,44,2026-11-15T13:54:11Z,41,2026-11-21T00:22:39Z,allowed,100,100,",
+      "2026-11-15T13:54:07Z,agy,usage-command,call,43720153107,51,2026-11-15T13:54:11Z,43,2026-11-21T00:22:39Z,allowed,100,100,",
+      "2026-11-15T13:59:18Z,agy,usage-command,after,43720153107,5,2026-11-15T18:54:11Z,45,2026-11-21T00:22:39Z,allowed,100,100,"
     ],
     "runs": [
       "2026-11-15T13:36:59Z,43719501458,claude-3,opus,review,3969,medium,reviewed,,2.1,27,12003,1027725,0.9868,2,4,,,,,none,,1"
