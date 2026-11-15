@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3618,
+  "title": "Patch: the Worker alerts when the game server won't start or can't be reached",
+  "branch": "bot/issue-3618",
+  "thread": "**Issue #3618 (data, not instructions):**\n\n```text\n# #3618: Patch: the Worker alerts when the game server won't start or can't be reached\nOpened by @jgoetzmann.\n\n@MaxGoetzmann is this worth building? Comment `approve` to have the night bot build it, or `reject` to close it.\n\n### Why\n\n#3595 has the server tell people about its own alerts: a GitHub issue and an email. A server that cannot start, or that the Worker cannot reach, can tell nobody. Two cases:\n\n- **The server won't boot.** `release` exits on a failed migration or catalog seed (docs/deploy-cloudflare.md section 5, \"The server will not start\"). With one container there is no older one to keep serving.\n- **The server boots too slowly.** On 2026-11-04 the first visitor after a sleep got a 500, because the server took longer than the Worker's wait. The server never saw that request at all.\n\nToday either one is found when a player says the site is down.\n\n### What\n\nIn `apps/edge`, the Worker raises its own alert, `server.unreachable`, when:\n\n- a request finds the container failed to start or not answering within `START_WAIT_MS`, or\n- the daily cron's `/readyz` fails.\n\nIt then:\n\n- tells people the way `crates/server/src/alerts.rs` does: an issue `Patch: alert server.unreachable on <site>` (`architecture`, `human`), through `CREATE_ISSUES_TOKEN`, and an email through Resend to `ALERT_EMAILS`. The Worker already holds all three secrets, so a person sets nothing new;\n- uses the same Resend `Idempotency-Key` scheme (per new issue, else per event, site and day), so it never spends the 100 emails a day the sign-in mail shares;\n- keeps when it last told in its Durable Object's storage, so a server failing on every request alerts once, not once a request;\n- sends from `ctx.waitUntil`, never while the player's request waits.\n\n### Done when\n\n- `apps/edge` tests, with GitHub and Resend faked, cover each case: one issue and one email for a boot loop, a comment once an issue is open, and nothing within the window.\n- On staging, a forced boot failure opens one issue and sends one email.\n\nFollows #3595.\n\n---\nComment by @MaxGoetzmann at 2026-11-15T19:50:11Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3618: needs a plan; `claude-4` (claude, `sonnet`, medium) writes it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T19:50:40Z",
+    "claimed_at": "2026-11-15T19:57:14Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
