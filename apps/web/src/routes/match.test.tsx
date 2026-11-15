@@ -1010,6 +1010,66 @@ describe("R169 the modifier list at the online table", () => {
   });
 });
 
+describe("R3933000 the online board's opponent hero", () => {
+  const RANK = { tier: "raisin", placementsPlayed: 2, placementGames: 5 };
+
+  /** A fetch that answers `/ranks` with the body and the catalog with an empty one. */
+  function stubFetch(ranks: unknown): ReturnType<typeof vi.fn> {
+    const fetchMock = vi.fn((url: string) =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        text: () =>
+          Promise.resolve(
+            JSON.stringify(String(url).includes("/ranks") ? ranks : { version: "v1", defs: {} }),
+          ),
+      } as unknown as Response),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  const ranksNaming = (opponent: string): unknown => ({
+    ranked: false,
+    seats: {
+      p1: { profileId: "id-1", username: "Max#3", rank: RANK, you: true },
+      p2: { profileId: "id-2", username: opponent, rank: RANK, you: false },
+    },
+  });
+
+  const seatLabel = (testId: string): HTMLElement | null =>
+    screen.getByTestId(testId).querySelector<HTMLElement>(".hero-seat");
+
+  it("R3933000 the opponent hero reads the opponent's username and your own still reads You", async () => {
+    stubFetch(ranksNaming("Bob#12"));
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    await screen.findByTestId(matchTestid.ranks);
+
+    await waitFor(() => expect(seatLabel("hero-opponent")).toHaveTextContent("Bob#12"));
+    expect(seatLabel("hero-you")).toHaveTextContent("You");
+  });
+
+  it("R3933000 with no ranks read yet the opponent hero reads Opponent", () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new Error("offline"))));
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+
+    expect(seatLabel("hero-opponent")).toHaveTextContent("Opponent");
+    expect(seatLabel("hero-you")).toHaveTextContent("You");
+  });
+
+  it("R3933000 an empty username reads Opponent", async () => {
+    const fetchMock = stubFetch(ranksNaming(""));
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    await screen.findByTestId(matchTestid.ranks);
+
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/ranks"), expect.anything());
+    expect(seatLabel("hero-opponent")).toHaveTextContent("Opponent");
+  });
+});
+
 describe("R2990004 the watchers' emotes at the online table", () => {
   function deliver(frame: Record<string, unknown>): void {
     act(() => {

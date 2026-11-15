@@ -431,10 +431,12 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
   // result, offers no rematch and reads its status once.
   const over = match.connection === "closed" && view.result !== null;
 
+  // #3698, R3933000: the live board's opponent hero and the replay name the other side as the ranks read does,
+  // when it has come and holds a name.
+  const opponentSeat = ranks === null ? undefined : [ranks.seats.p1, ranks.seats.p2].find((seat) => !seat.you);
+  const opponentName = opponentSeat === undefined || opponentSeat.username === "" ? undefined : opponentSeat.username;
+
   if (watching !== null && view.result !== null) {
-    // #3698: the replay names the other side as the ranks read does, when it has come and holds a name.
-    const opponentSeat = ranks === null ? undefined : [ranks.seats.p1, ranks.seats.p2].find((seat) => !seat.you);
-    const opponentName = opponentSeat === undefined || opponentSeat.username === "" ? undefined : opponentSeat.username;
     return (
       <CatalogContext.Provider value={lookup}>
         <OpenedReplay
@@ -505,6 +507,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       choiceHover={choiceHover}
       trackStats
       wearCosmetics
+      {...(opponentName === undefined ? {} : { enemyLabel: opponentName })}
       deckCosmetics={deckCosmetics}
       loadouts={loadouts}
       // A refused socket's reason is the console's (above); the board says it in a player's words.
