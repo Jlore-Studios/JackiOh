@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3937,
+  "title": "Patch: the AI's count of the damage that gets past its Taunts lets a big attacker break a Taunt first, and keeps the attackers a Taunt's Armor would stop",
+  "branch": "bot/issue-3937",
+  "thread": "**Issue #3937 (data, not instructions):**\n\n```text\n# #3937: Patch: the AI's count of the damage that gets past its Taunts lets a big attacker break a Taunt first, and keeps the attackers a Taunt's Armor would stop\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nBefore it ends its turn, the practice AI counts how much damage the opponent's board could deal its hero next turn, so that it can see a lethal coming and switch a unit to Defense Position to block it. That count always sends the opponent's smallest attackers at the AI's guards first, and an attacker that would do nothing to a guard is dropped from the count instead of being kept for the hero. So the AI counts less than a sensible opponent would deal. Example: the AI is at 6 life with one unit guarding in Defense Position at 3 health, and the opponent has units with 3, 3 and 4 attack. The count sends the two 3s into the guard and only the 4 at the hero, 4 damage, so the AI feels safe and leaves its other unit in Attack Position. The opponent sends the 4 into the guard and both 3s at the hero: 6 damage, and the AI is dead. Once this is built, the count lets an attacker that can break a guard alone do it first and keeps the rest for the hero, so the AI sees that lethal and puts up a second guard.\n\n## Why\n\n- `crates/ai/src/evaluate.rs:1164-1170`: `damage_past_taunts` sorts the free attackers smallest first (`free.sort_by_key(|(_, attack, may_hit_hero)| (*may_hit_hero, *attack))`) and spends them on the Taunts in that order.\n- `evaluate.rs:1193-1195` and `:1271-1273`: an attacker that would fall to a First Strike Taunt, or whose hit the Taunt's Armor takes whole (`if dealt <= 0 { continue; }`), is used up from the bound list and never put back. Only the attackers never reached return to the free list (`:1282`).\n- \u00a74.2 step 3 only requires that a standing Taunt be the target (`crates/engine/src/combat.rs:546-560`); the attacking player picks the order. The function's own doc says it counts what the board could deal.\n- A test pins the undercount: `crates/ai/tests/ai/position_model.rs:396-411` asserts 0 for two 1/4s and a 4/4 against a Defense Mr. Vanilla at 1 health with Armor 1, where the 4/4 sent first destroys it and the two 1s then deal 2. Its `played` helper (`:363-386`) also attacks smallest first.\n- The number decides whether the AI looks for a blocking switch at all: `wall_switches` returns nothing while `face_threat` stays below the AI's life (`crates/ai/src/candidates.rs:961-966`, R2976000). It also feeds the evaluation's lethal threat and `ready_gap` (`crates/ai/src/lethal.rs:203`), which the opponent model's lethal reads.\n\n## Proposal\n\n- Keep an attacker that a Taunt would stop whole (Armor, or a First Strike that kills it) for the next Taunt or the hero, instead of discarding it.\n- Before spending small attackers on a Taunt, send the smallest attacker that destroys it alone, when there is one; otherwise go smallest first as now.\n- Keep it one cheap greedy pass, with no search.\n- To keep the frozen greedy baseline still, put the new order behind an evaluation-weights flag, on in the AI's weights and off in the greedy's, as `gauntlet_bars_face_attacks` is (`crates/ai/src/config.rs:366,567,843`).\n- Correct the pinned test to 2 and its `played` helper to play the best order.\n- Update the AI README's sentence on the threat, and add a ruling in the issue's block if the bot finds \u00a79.9 silent.\n\n## Where it lands\n\n- `crates/ai/src/evaluate.rs` (`damage_past_taunts`), `crates/ai/src/config.rs`\n- `crates/ai/tests/ai/position_model.rs`, a `wall_switches` test beside the R2976000 ones\n- SPEC \u00a79.9 and `crates/ai/README.md`\n\n## Acceptance criteria\n\n- [ ] The Armor test above expects 2, and a board with a 3-health Defense guard against 3, 3 and 4 attackers counts 6; both fail today.\n- [ ] On that board with the AI at 6 life and a second unit in Attack Position, `wall_switches` offers switching it to Defense.\n- [ ] A Taunt no single attacker can destroy is still soaked smallest first, and Reborn, Divine Shield, Trample and Poisonous keep their existing tests.\n- [ ] The greedy baseline's weights leave the old order on, and its tests are unchanged.\n- [ ] `cargo test -p jackioh-ai` and `cargo jackioh gate` pass.\n\n## Size and risks\n\nSmall to medium: one function, a flag, tests and a README line. Difficulty hard (the AI). Medium risk: the threat feeds every evaluation and one learned-evaluation input, so pinned AI fixtures and gate games may move. The gate shows whether it plays better or only differently.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-15T19:52:56Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3937: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T19:53:18Z",
+    "claimed_at": "2026-11-15T19:58:22Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
