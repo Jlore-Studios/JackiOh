@@ -15584,15 +15584,16 @@
       "merge_owner": "claude-8",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-4",
       "queued_at": "2026-11-15T22:05:11Z",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "43767370537",
+      "run_id": "pending:9b2d4353-1794782352",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 280,
-      "started_at": "2026-11-15T22:06:06Z",
+      "started_at": "2026-11-15T22:39:38Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -15857,9 +15858,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-15T22:38:58Z",
+    "at": "2026-11-15T22:39:38Z",
     "url": "",
-    "what": "plan #3975 on agy"
+    "what": "spot-check #3995 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-15T22:02:40Z",
@@ -35573,7 +35574,15 @@
         "n": 280,
         "pr": 3995,
         "queued_at": "2026-11-15T22:32:11Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "run_id": "pending:9b2d4353-1794782352",
         "sha": "ff38380a54cf428ad747d5b378b8bed495aef7f9",
+        "started_at": "2026-11-15T22:39:38Z",
         "status": "queued",
         "title": "Patch: a replay and its shared GIF draw each hero as the portrait its seat had, not both as Vanilla",
         "tries": 0
