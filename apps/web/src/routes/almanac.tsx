@@ -7,7 +7,7 @@
 // almanac.css holds only what the browse pane needs without the deck editor's grid around it.
 // R3838000: its "Show card text" button prints every face's words, no full art (cardText.tsx); R3838001: every card
 // with words opens a hover preview with its whole text beside it, and R3838002 a reference's tooltip does too
-// (`AlwaysFullText`). R3939000: the detail view, which covers the header, holds the button in its action row too.
+// (`AlwaysFullText`).
 
 import { useCallback, useMemo, useState, type ReactElement } from "react";
 
@@ -30,7 +30,7 @@ import { useLocale, t } from "../i18n/i18n.ts";
 import { useAccount } from "../net/gate.ts";
 import { navigate, paths, useSearch } from "../net/navigate.ts";
 import { useAlmanacOwnCopies } from "./almanacOwnership.ts";
-import { CardTextButton, CardTextFaces, cardTextTestid, useCardText } from "./cardText.tsx";
+import { CardTextButton, CardTextFaces, useCardText } from "./cardText.tsx";
 import { BackLink } from "./nav.tsx";
 import { PAGE_TITLE_ID } from "./PageTitle.tsx";
 
@@ -120,14 +120,7 @@ export default function AlmanacRoute(): ReactElement {
                 detail={
                   detailCardId === null || detailDef === undefined
                     ? null
-                    : {
-                        cardId: detailCardId,
-                        meta: <span className="db-detail-meta">{almanacMeta(detailDef)}</span>,
-                        // R3939000: the detail view covers the header's Show card text, so its action row holds one too.
-                        actions: (
-                          <CardTextButton shown={cardText.shown} onToggle={cardText.toggle} testid={cardTextTestid.dialog} />
-                        ),
-                      }
+                    : { cardId: detailCardId, meta: <span className="db-detail-meta">{almanacMeta(detailDef)}</span> }
                 }
                 // R654: the deck builder's compact statistics block, from the public card aggregates.
                 showStats

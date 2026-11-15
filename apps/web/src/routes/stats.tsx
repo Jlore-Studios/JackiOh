@@ -1594,13 +1594,6 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                       >
                         {t("Show Radiant")}
                       </button>
-                      {/* R3939000: the dialog covers the header's Show card text, so it holds one of its own, the same choice */}
-                      <CardTextButton
-                        shown={cardText.shown}
-                        onToggle={cardText.toggle}
-                        testid={cardTextTestid.dialog}
-                        className="stats-drilldown-action"
-                      />
                       <a
                         className="stats-drilldown-action button-secondary"
                         data-testid={statsTestid.drillDownAlmanac}
@@ -1609,6 +1602,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                       >
                         {t("View in Almanac")}
                       </a>
+                      {/* R3939000: the dialog covers the header's Show card text, so it holds one of its own below View in Almanac, the same choice */}
+                      <CardTextButton
+                        shown={cardText.shown}
+                        onToggle={cardText.toggle}
+                        testid={cardTextTestid.dialog}
+                        className="stats-drilldown-action"
+                      />
                     </div>
                     {!plain.shown && drillDownTokens.length > 0 && (
                       <section className="stats-drilldown-section stats-drilldown-tokens" data-testid={statsTestid.drillDownTokens}>

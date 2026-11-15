@@ -1310,17 +1310,17 @@ describe("the card drill-down dialog", () => {
     const close = screen.getByTestId(statsTestid.drillDownClose);
     const radiant = screen.getByTestId(statsTestid.drillDownRadiantToggle);
     const almanac = screen.getByTestId(statsTestid.drillDownAlmanac);
-    // R3939000: Show card text stands between Show Radiant and View in Almanac.
+    // R3939000: Show card text stands below View in Almanac.
     const cardText = within(dialog).getByTestId(cardTextTestid.dialog);
     // R3011000: no art buttons come before Show Radiant: the drill-down offers no art choice.
     expect(screen.queryByTestId("stats-drill-down-art")).toBeNull();
     expect(close).toHaveFocus();
 
-    for (const next of [radiant, cardText, almanac, retry, close]) {
+    for (const next of [radiant, almanac, cardText, retry, close]) {
       press("Tab");
       expect(next).toHaveFocus();
     }
-    for (const previous of [retry, almanac, cardText, radiant, close]) {
+    for (const previous of [retry, cardText, almanac, radiant, close]) {
       press("Tab", { shiftKey: true });
       expect(previous).toHaveFocus();
     }
@@ -2151,7 +2151,7 @@ describe("R3887000 the Chinese reader", () => {
 });
 
 describe("R3939000 Show card text in the card breakdown", () => {
-  it("R3939000 the breakdown holds it beside Show Radiant; pressing it prints the faces with their words, and the header's follows", async () => {
+  it("R3939000 the breakdown holds it below View in Almanac; pressing it prints the faces with their words, and the header's follows", async () => {
     holdFetch((url) => url.pathname.startsWith("/api/stats/cards/"));
     at("/stats?card=core-004");
     render(<StatsRoute />);
@@ -2159,7 +2159,8 @@ describe("R3939000 Show card text in the card breakdown", () => {
     const inDialog = within(dialog).getByTestId(cardTextTestid.dialog);
     expect(inDialog).toHaveTextContent("Show card text");
     expect(inDialog).toHaveAttribute("aria-pressed", "false");
-    expect(inDialog.previousElementSibling).toBe(screen.getByTestId(statsTestid.drillDownRadiantToggle));
+    expect(inDialog.previousElementSibling).toBe(screen.getByTestId(statsTestid.drillDownAlmanac));
+    expect(inDialog.nextElementSibling).toBeNull();
     expect(dialog.querySelector(".stats-drilldown-faces .cf")?.getAttribute("data-full-art-tier")).toBe("Epic");
 
     fireEvent.click(inDialog);
