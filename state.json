@@ -13510,6 +13510,8 @@
       "run_id": "43666238812",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-15T02:07:00Z",
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": []
     },
     "3889": {
