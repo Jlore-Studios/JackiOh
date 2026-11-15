@@ -16737,20 +16737,9 @@
     "what": "spot-check #3972 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-15T12:32:45Z",
+    "at": "2026-11-15T12:42:43Z",
     "notes": [
-      "#3968: `claude-1` can start again, so its hold is lifted",
-      "#3936: `claude-1` can start again, so its hold is lifted",
-      "#3969: green and waiting for a person to merge it, so `claude-6` gives up its claim on it",
-      "delivered revise #3963 on claude-4 (run 43709551809): approved",
-      "delivered revise #3966 on claude-7 (run 43709509892): approved",
-      "started review #3968 on claude-1 (run 43714623962)",
-      "started build #3936 on claude-1 (run 43714672245)",
-      "started review #3972 on claude-3 (run 43714715630)",
-      "nothing more to start: nothing is queued",
-      "pruned 6 plan file(s) older than 7 days",
-      "#3967: closed, so `bot:merging` is off",
-      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
+      "delivered review #3972 on claude-3 (run 43714715630): reviewed"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17456,7 +17445,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-15T12:32:45Z",
+  "loop_tick": "2026-11-15T12:42:43Z",
   "machine_disk": {
     "issue": null,
     "reading": {
