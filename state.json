@@ -13519,7 +13519,7 @@
       "question": "How should the Radiant world + Right-house defender + Warp Disruptor II loop be ended, so that fuzz seed 16 (and the perf corpus) settle?",
       "queued_at": "2026-11-15T02:06:17Z",
       "requested_by": "jgoetzmann",
-      "run_id": "pending:f599f562-1794708401",
+      "run_id": "43666238812",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
