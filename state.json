@@ -13692,6 +13692,9 @@
       "verdict_rounds": 0,
       "waiting_comment": 6892983344
     },
+    "3937": {
+      "suggestion": true
+    },
     "3938": {
       "action": "review",
       "ci_fixed_head": "937d0f4179e2f2bac0efba82b75d3f59506dafbd",
