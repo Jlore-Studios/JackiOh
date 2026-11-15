@@ -15541,6 +15541,8 @@
       }
     },
     "3994": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-15T20:24:44Z",
@@ -15554,8 +15556,11 @@
         "trail": "Bash: {\"command\": \"sed -n 80,420p crates/server/tests/loops/failing.rs\", \"description\": \"Read rest of failing.rs\"}\n- Bash: {\"command\": \"cd crates/server; grep -rn '\\\"matches.reapOpen\\\"\\\\|\\\"tutorial.get\\\"\\\\|\\\"profiles.getByUserId\\\"\\\\|\\\"duos.matches.finish\\\"\\\\|\\\"duos.matches.live\\\"\\\\|\\\"tutorial\\\\.' src tests | grep -v \\\"^t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3826/crates/server; grep -n \\\"pub async fn\\\\|fn failure\\\\|Internal\\\\|BadRequest\\\" src/api/tutorial.rs | head -30; grep -n \\\"pub async fn call\\\\b\\\" -A\u2026\n- Bash: {\"command\": \"sed -n 100,170p src/api/tutorial.rs; grep -n \\\"AppHandle\\\" tests/support/deps.rs | head -8; grep -rn \\\"tutorial\\\" tests/api/tutorial.rs | grep -n \\\"call(\\\" | head -8\", \"description\": \"Re\u2026\n- Bash: {\"command\": \"grep -n \\\"API_REQUESTS_PER_MINUTE\\\\|API_RATE_WINDOW\\\\|pub const API_\\\" src/config.rs | head; sed -n 160,200p tests/support/store.rs; grep -n \\\"fn empty_test_app\\\" -A12 tests/support/deps\u2026\n- Bash: {\"command\": \"grep -n \\\"RecordingLogger\\\" -B2 -A40 tests/support/deps.rs | sed -n 1,140p\", \"description\": \"Read RecordingLogger\"}\n- Bash: {\"command\": \"sed -n 261,330p tests/support/deps.rs; grep -rn 'data\\\\[\\\"data\\\"\\\\]' tests | head -5\", \"description\": \"Read FieldVisitor and data usage\"}\n- Bash: {\"command\": \"sed -n 60,150p tests/api/duos_again.rs; sed -n 1020,1125p tests/api/duos_rooms.rs\", \"description\": \"Read duos seed helpers and r1047001 tests\"}\n- Bash: {\"command\": \"grep -n \\\"pub(crate) async fn finish_match\\\\|pub async fn finish_match\\\\|async fn finish_match\\\" -A70 src/duos/mod.rs | head -130\", \"description\": \"Read finish_match\"}\n- Bash: {\"command\": \"sed -n 1,58p tests/api/duos_again.rs; grep -n \\\"pub struct DuosMatch\\\" -B3 -A30 src/duos/store.rs | head -60; grep -n \\\"pub struct DuosOptions\\\" -A25 src/duos/store.rs | head -40\", \"desc\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3826; grep -n \\\"SHARED_TEST_HELPERS\\\" -B3 -A40 crates/tools/tests/acceptance.rs | head -90; grep -n \\\"pub fn playable\\\" -B2 -A8 crates/server/tests/s\u2026\n- Bash: {\"command\": \"sed -n 840,880p crates/server/src/duos/store.rs; grep -n \\\"macro_rules! one_tx\\\" -A25 crates/server/src/actor/contracts.rs | head -40; grep -n \\\"pub async fn duos_actions_append\\\" -A12 c\u2026\n- Bash: {\"command\": \"cd crates/server; grep -n \\\"pub const PROMPTLY\\\\|pub async fn serve\\\\|pub(crate) async fn serve\\\\|fn serve\\\" -B2 -A25 tests/actor/duos.rs | head -80; cat tests/actor/mod.rs | head -60; g\u2026\n- Bash: {\"command\": \"sed -n 1,60p tests/actor/social_live.rs; grep -n \\\"PROMPTLY\\\" tests/actor/duos.rs | head -3; grep -n \\\"fn wait_closed\\\\|fn wait_for\\\\b\\\\|fn wait_for(\\\" -B2 -A12 tests/actor/duos.rs | hea\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='tests/loops/failing.rs'\\ns=open(p).read()\\ndef rep(old,new):\\n global s\\n assert old in s, old\\n s=s.replace(old,new,1)\\n\\nrep('''//! reading falls half an interval\u2026\n- Bash: {\"command\": \"grep -n \\\"pub struct DuosTables\\\" -A8 src/duos/store.rs; grep -n \\\"pub async fn fake_read\\\" -A8 tests/support/store.rs; sed -i 's/data\\\\.duos\\\\.matches\\\\.iter()/data.tables.duos.matches.\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/server/tests/loops/failing.rs'\\ns=open(p).read()\\nold=''' fake_read(app, move |data| {\\n data.tables.duos.matches.iter().any(|row| row.id == id && row.ended_\u2026\n- Bash: {\"command\": \"cat > crates/server/tests/actor/socket_failing.rs <<'EOF'\\n//! #3826: the four socket upgrades (`/ws/match`, `/ws/watch`, `/ws/social`, `/ws/duos`) each keep a run\\n//! of their own in `\u2026\n- Bash: {\"command\": \"grep -rn \\\"in-diff\\\" .github/workflows/*.yml | head -5; cargo fmt --check 2>&1 | head -60\", \"description\": \"Check mutants in CI and rustfmt\"}\n- Bash: {\"command\": \"cargo fmt -p jackioh-server && cargo fmt --check && echo FMT_OK; git status --short\", \"description\": \"Run rustfmt and list changed files\"}\n- said: Now clippy, plus the broader server test suites in the background while I update notes.\n- Bash: {\"command\": \"cargo clippy -p jackioh-server --all-targets -- -D warnings 2>&1 | tail -30\", \"description\": \"Run clippy on server crate\", \"timeout\": 900000}\n- Bash: {\"command\": \"sed -i 's/route_health.answered(\\\\*method, \\\\*pattern)/route_health.answered(method, pattern)/; s/route_health.threw(\\\\*method, \\\\*pattern, /route_health.threw(method, pattern, /' crates\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-server > /tmp/server_tests.log 2>&1; tail -40 /tmp/server_tests.log | cut -c1-200\", \"description\": \"Run the whole server test suite\", \"timeout\": 900000}\n- Bash: {\"command\": \"grep -n \\\"^test result\\\\|FAILED\\\\|failed\\\\|panicked\\\" /tmp/server_tests.log | cut -c1-200 | head -20; cargo jackioh spec check 2>&1 | tail -8\", \"description\": \"Summarize test results and\u2026\n- Bash: {\"command\": \"grep -n \\\"^test result\\\" /tmp/server_tests.log | awk '{print $4,$6}' | sort | uniq -c | head; grep -c \\\"FAILED\\\" /tmp/server_tests.log; grep -n \\\"test result: FAILED\\\\|^failures:\\\" /tmp/\u2026\n- Bash: {\"command\": \"cargo jackioh patches check 2>&1 | tail -3; cargo jackioh catalog check 2>&1 | tail -2; cargo jackioh classify --base origin/main --claims 2>&1 | tail -5\", \"description\": \"Run patches, c\u2026\n- Bash: {\"command\": \"ls crates/tools/tests/; timeout 580 cargo test -p jackioh-tools --test acceptance 2>&1 | tail -15 | cut -c1-250\", \"description\": \"Run tools acceptance tests\", \"timeout\": 600000}\n- Bash: {\"command\": \"git diff crates/server/src/duos crates/server/src/api/results.rs crates/server/src/social | head -200\", \"description\": \"Review source diff for duos, results, social\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\na=s.index('## State'); b=s.index('## Goal')\\nstate='''## State\\n\\nRun 2 (build, sonnet): the whole plan is built and green. Done: \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the server alerts when a route keeps failing, and when a co-op match or an unstarted room keeps refusing its sweep\"} --> The server now raises one alert for each of the three repeated failures the issue names. All of it is in `crates/server`, plus two d\u2026"
       },
       "issue": 3826,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-15T21:47:40Z",
         "from_run": "43757929134",
         "gates": [
           {
@@ -15647,7 +15652,11 @@
         "source": "build",
         "until": "2026-11-15T22:16:35Z"
       },
+      "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-11-15T21:46:35Z",
+      "run_id": "pending:90bea208-1794779235",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15666,6 +15675,9 @@
         "provider": "claude-7",
         "run": "43757929134"
       },
+      "started_at": "2026-11-15T21:47:40Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15679,9 +15691,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-15T21:36:45Z",
+    "at": "2026-11-15T21:47:40Z",
     "url": "",
-    "what": "build #3913 on claude-1"
+    "what": "review #3994 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-15T21:29:25Z",
