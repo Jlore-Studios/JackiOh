@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 3911,
+  "title": "Patch: a banned account drops off the public Players list, as it already drops off the ranked leaderboard",
+  "branch": "bot/issue-3911",
+  "thread": "**Issue #3911 (data, not instructions):**\n\n```text\n# #3911: Patch: a banned account drops off the public Players list, as it already drops off the ranked leaderboard\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe Statistics page has a public Players tab that ranks players by games played. Those numbers come from each player's own browser, so a cheater can send made-up totals and sit at the top. Banning is the moderators' tool, and a ban already takes an account off the ranked leaderboard. It does nothing to the Players tab, though: the banned account keeps its place until someone edits the database by hand. Once this is built, a banned account is left out of the Players tab and its search, and comes back when the ban is lifted.\n\n## Why\n\n- `player_stats_list_public` filters on privacy alone. In Postgres (`crates/server/src/db/pg.rs:6797-6808`) it reads `where ps.is_private = false`, ordered by games, most first. The in-memory store does the same (`crates/server/src/db/fake.rs:3171-3196`, `.filter(|r| !r.is_private)`).\n- `GET /api/stats/players` needs no sign-in (`crates/server/src/app.rs:723`, `AuthLevel::None`).\n- The counts are the client's (R1771000). `whole_count` (`crates/server/src/api/stats.rs:1544-1551`) accepts any whole number up to 2^53\u22121, so one hand-made `PUT /api/stats/player` puts an account at the top.\n- `moderate ban` only sets `profiles.status` (`crates/server/src/cli/moderate.rs:132-136`). That stops the account writing again, since an Active route refuses a banned profile (`crates/server/src/api/http.rs:811`), but the row stays public.\n- R3290000 already keeps a banned account's standing off the public leaderboard, the percentiles and Jlorious (`pg.rs:5718`, `p.status = 'banned' as banned`; `fake.rs:3531`). The Players tab is the one public ranking it doesn't reach.\n\n## Proposal\n\n- The Postgres query adds `and p.status <> 'banned'`, and the in-memory store skips profiles whose status is `ProfileStatus::Banned`.\n- A ruling note in the issue's block extends R3290000 to the Players tab, with its \u00a711 paragraph in `spec/pending/<N>.md`.\n- Unbanning brings the row back. There is no migration, and the stored statistics are untouched.\n\n## Where it lands\n\n- `crates/server/src/db/pg.rs`, `crates/server/src/db/fake.rs`\n- `crates/server/tests/store/contract.rs`, `crates/server/tests/api/stats.rs`\n- `spec/rulings/`, `spec/pending/<N>.md`; SPEC \u00a79.4, \u00a79.12; R3290000, R1771000\n\n## Acceptance criteria\n\n- [ ] A store contract test, run on both stores: a banned profile with public statistics is absent from `player_stats_list_public`, with and without a search term, and is listed again once unbanned (fails today).\n- [ ] An API test: `GET /api/stats/players` leaves the banned profile out.\n- [ ] The ruling note lists its proving tests, and `cargo jackioh spec check` passes.\n- [ ] `cargo test -p jackioh-server` passes, and `sh crates/server/tests/db/run.sh` covers the Postgres query.\n\n## Size and risks\n\nSmall: about 20 lines plus tests and a ruling. Nothing changes for players in good standing. A banned player's own stored copy is kept, so lifting the ban restores their row as it was.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `security` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-15T02:05:24Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3911: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T02:05:45Z",
+    "claimed_at": "2026-11-15T02:07:31Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3912 needs a plan"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
