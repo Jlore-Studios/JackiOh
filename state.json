@@ -15141,6 +15141,8 @@
       }
     },
     "3989": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-15T20:08:20Z",
@@ -15154,8 +15156,11 @@
         "trail": "; sed -n 1170,1180p app.rs; sed -n\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619/crates/server/src; sed -n 1,60p alerts.rs; sed -n 420,445p alerts.rs; grep -n \\\"fn issue_body\\\\|fn comment_of\\\\|fn email_of\\\\|struct Alert\\\" -A1\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619/crates/server/src; python3 - <<'EOF'\\nimport re\\np='config.rs'\\ns=open(p).read()\\nanchor=\\\"pub const ALERT_TIMEOUT_MS: u64 = 10_000;\\\\n\\\"\\nadd=a\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619/crates/server/src; sed -n 546,640p alerts.rs\"}\n- said: Add the unit test, then the handler.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619/crates/server/src; python3 - <<'EOF'\\np='alerts.rs'\\ns=open(p).read()\\nanchor=\\\" #[test]\\\\n fn the_email_key_is_one_per_new_issue\\\"\\nadd=''' #[t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619/crates/server; sed -n 433,450p tests/export_config.rs; ls tests/api | head -30; grep -n \\\"client_address\\\" tests/api/mod.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619/crates/server; sed -n 450,470p tests/export_config.rs; sed -n 8,16p tests/api/mod.rs; cat tests/api/rate_limit.rs | head -80; grep -n \\\"e2e-toke\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619/crates/server; grep -n \\\"pub fn json_request\\\\|pub async fn send\\\\|pub fn record_logs\\\\|pub fn test_app\\\\|pub async fn test_app\\\\|pub fn named\\\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619/crates/server; sed -n 20,102p tests/support/deps.rs; sed -n 320,335p tests/api/account.rs; grep -n \\\"level\\\" tests/support/deps.rs | head; grep \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619/crates/server; sed -n 240,275p tests/support/deps.rs; grep -n \\\"pub static ROUTES\\\\|pub const ROUTES\\\\|pub enum AuthLevel\\\" src/app.rs; grep -n \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619/crates/server; sed -n 85,105p tests/api/admin.rs; sed -n 205,229p src/app.rs; sed -n 185,200p tests/support/deps.rs; sed -n 276,300p tests/suppo\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619/crates/server; sed -n 300,330p tests/support/deps.rs; grep -n \\\"matches!(.*AuthLevel\\\\|AuthLevel::None\\\" tests/api/*.rs | head -3\"}\n- said: Good: `data` is parsed JSON. Write server tests.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619/crates/server; sed -i 's/^pub mod client_address;/&\\\\npub mod client_errors;/' tests/api/mod.rs; sed -n 1,12p tests/api/catalog.rs | grep -n \\\"u\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619/crates/server; python3 - <<'EOF'\\np='tests/api/client_errors.rs'\\ns=open(p).read()\\ns=s.replace(\\\"use jackioh_server::app::{self, AuthLevel};\\\",\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; (cargo test -p jackioh-server --test server client_errors > /tmp/srv.log 2>&1; cargo test -p jackioh-server --lib alerts > /tmp/alerts.log 2>&1\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619/apps/web/src; sed -n 225,300p net/navigate.ts; sed -n 1,30p net/api.ts | head -40; grep -n \\\"interface RequestOptions\\\" -A15 net/api.ts; grep -n\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619/apps/web/src; grep -n \\\"RequestOptions\\\" -B2 -A14 net/api.ts | sed -n 1,50p; grep -ln \\\"wasm/index\\\" net/*.ts | head -3; sed -n 125,140p wasm/in\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619/apps/web/src; grep -n \\\"wasm\\\" main.tsx | head; grep -n \\\"net/\\\" ../README.md | sed -n 1,12p; sed -n 718,730p ../README.md; cat /tmp/srv.log | t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619/apps/web/src; cat > net/clientErrors.ts <<'EOF'\\n// #3619: a crash in this browser, told to the owners. An error `RouteErrorBoundary` caught, an\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619/apps/web/src; python3 - <<'EOF'\\np='main.tsx'\\ns=open(p).read()\\ns=s.replace('import { useAccount, type Account } from \\\"./net/gate.ts\\\";','impo\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619/apps/web/src; grep -n \\\"^export\\\" net/session.ts; grep -n \\\"fetch\\\" net/api.ts | sed -n 1,10p\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619/apps/web/src; cat > net/clientErrors.test.ts <<'EOF'\\n// #3619: a crash in this browser reaches the owners: three triggers, one report each, no \u2026\n- said: The WASM pkg isn't built; build it (also waits on cargo lock from my test run).\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; tail -5 /tmp/srv.log; sh scripts/build-wasm.sh 2>&1 | tail -5\", \"timeout\": 600000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; tail -8 /tmp/alerts.log; cd apps/web; pnpm exec vitest run src/net/clientErrors.test.ts src/routes/client-error-reports.test.tsx src/routes/she\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619/crates/server; grep -n \\\"healthz\\\\|^## Alerts\\\\|bug.found\\\\|api.rejections.unusual\\\" README.md | head -20\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619/crates/server; sed -n 723,730p README.md\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619/crates/server; python3 - <<'EOF'\\ns=open('README.md').read()\\ns=s.replace(\\\"`bug.reports.refused`) and `loops.rs`'s\\\",\\\"`bug.reports.refused`, a\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; python3 - <<'EOF'\\np='apps/web/src/net/clientErrors.ts'\\ns=open(p).read()\\ns=s.replace('''const staticRoutes: ReadonlySet<string> = new Set(\\n \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; cargo fmt --check && echo fmtok; cargo test -p jackioh-server --test server client_errors 2>&1 | tail -4; cargo test -p jackioh-server --test e\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a crash in a player's browser reaches the owners as an alert\"} --> A crash in a player's browser now reaches the owners. The boundary's caught error, an uncaught `error` and an `unhandledrejection` each send one small report to the new `POST /api/client\u2026"
       },
       "issue": 3619,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-15T21:10:22Z",
         "from_run": "43756348816",
         "gates": [
           {
@@ -15247,7 +15252,11 @@
         "source": "build",
         "until": "2026-11-15T21:39:15Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-15T21:09:15Z",
+      "run_id": "pending:a6f4802b-1794776998",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15266,6 +15275,9 @@
         "provider": "claude-8",
         "run": "43756348816"
       },
+      "started_at": "2026-11-15T21:10:22Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15279,9 +15291,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-15T21:01:19Z",
+    "at": "2026-11-15T21:10:22Z",
     "url": "",
-    "what": "build #3913 on claude-2"
+    "what": "review #3989 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-15T20:57:29Z",
