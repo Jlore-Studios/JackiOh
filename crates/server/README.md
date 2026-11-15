@@ -743,8 +743,8 @@ of each, from a tracing layer beside the JSON log, at most once an hour per even
 
 Either alone works. The boot logs `alerts.ready` (`issues`, and how many addresses) or `alerts.off`; a notice
 that fails logs `alert.issue.failed` or `alert.email.failed`, never another alert. The end-to-end server tells
-nobody. A server that cannot boot cannot tell anyone, nor can one the Worker cannot reach: those are #3595's
-next steps, in the Worker.
+nobody. A server that cannot boot cannot tell anyone, nor can one the Worker cannot reach, so the Worker raises
+`server.unreachable` itself, with the same issue and email (`apps/edge/README.md`, #3618).
 
 A sweep that keeps failing (#3770). Each sweep catches its own failure and tries again on the next pass, so
 a step that failed on every pass was a warning an hour or a few seconds apart and nobody told. `loops.rs`'s

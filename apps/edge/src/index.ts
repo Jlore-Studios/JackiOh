@@ -5,10 +5,13 @@
 // crates/server's image, through the `Server` Durable Object, which starts it on the first request and
 // stops it once nothing has reached it for `SLEEP_AFTER`. An open WebSocket counts as a request in
 // flight, so a live match keeps it awake. #3183: the module is the stored file, served with its
-// `Content-Encoding` (routing.ts `precompressedModule`).
+// `Content-Encoding` (routing.ts `precompressedModule`). #3618: a server that cannot start, or that the
+// daily `/readyz` cannot reach, cannot tell people itself, so the Worker raises the alert (alerts.ts), at
+// most once an hour, from `ctx.waitUntil`.
 
 import { Container } from "@cloudflare/containers";
 
+import { ALERT_WINDOW_MS, canTell, tell } from "./alerts.ts";
 import {
   DAILY_SWEEP_CRON,
   DAILY_SWEEP_PATH,
@@ -32,6 +35,12 @@ const SLEEP_AFTER = "5m";
  * the client's `API_REQUEST_TIMEOUT_SECONDS`, so the client hears this answer, not its own timeout.
  */
 export const START_WAIT_MS = 60_000;
+
+/**
+ * #3618: the key in the object's storage that holds when the Worker last told people the server was
+ * unreachable (epoch ms). Prefixed, so it cannot meet the container library's own keys.
+ */
+export const TOLD_AT_KEY = "jackioh:server.unreachable:toldAt";
 
 /** The one instance every request reaches: the server holds every live match in memory. */
 const INSTANCE = "main";
@@ -64,6 +73,10 @@ export class Server extends Container<Env> {
    * passed. Before the first, -Infinity, which no retry interval reaches.
    */
   private imageCheckedAt = Number.NEGATIVE_INFINITY;
+  /** #3618: when the Worker last told people (`TOLD_AT_KEY`'s value once loaded); -Infinity before the first notice. */
+  private toldAt = Number.NEGATIVE_INFINITY;
+  /** The read of `TOLD_AT_KEY` that sets `toldAt`, made once per object. */
+  private toldAtLoad: Promise<void> | undefined;
 
   override async fetch(request: Request): Promise<Response> {
     await this.ensureImageChecked();
@@ -89,6 +102,8 @@ export class Server extends Container<Env> {
   /**
    * Starts a sleeping server and waits up to `START_WAIT_MS` for it to listen. A server that never
    * does is left to `super.fetch`, which tries once more and turns the failure into its own answer.
+   * #3618: the failure is also told to people, from `ctx.waitUntil` so the request never waits for it,
+   * unless the client hung up (its abort ends this wait, and no fault of the server's).
    */
   private async awaitStart(signal: AbortSignal): Promise<void> {
     if (this.ctx.container?.running && (await this.getState()).status === "healthy") return;
@@ -99,7 +114,52 @@ export class Server extends Container<Env> {
       });
     } catch (error) {
       console.warn("server.start_failed", error);
+      if (!signal.aborted) {
+        const message = error instanceof Error ? error.message : String(error);
+        this.ctx.waitUntil(this.tellUnreachable({ cause: "start", message }));
+      }
     }
+  }
+
+  /**
+   * #3618: tells people the server cannot be started or reached, unless it did within `ALERT_WINDOW_MS`
+   * (alerts.ts). Public, since the daily cron calls it over Durable Object RPC; never rejects.
+   */
+  async tellUnreachable(fields: Record<string, string>): Promise<void> {
+    try {
+      if (!canTell(this.env)) return;
+      const now = Date.now();
+      if (!(await this.claimNotice(now))) return;
+      await tell(this.env, { fields, at: now });
+    } catch (error) {
+      console.error("server.alert_failed", error);
+    }
+  }
+
+  /**
+   * Whether a notice may go at `now`, which it then counts as told, in memory and in storage (so a new
+   * object after a restart knows). The in-memory claim comes before the storage write's await: requests
+   * that wait on one failing boot fail together, and two of them must not both read the old time.
+   */
+  private async claimNotice(now: number): Promise<boolean> {
+    // A storage that fails is no reason to tell nobody: an unread time is taken as never told, an unwritten one costs a repeat.
+    this.toldAtLoad ??= this.ctx.storage.get<number>(TOLD_AT_KEY).then(
+      (at) => {
+        this.toldAt = at ?? Number.NEGATIVE_INFINITY;
+      },
+      (error: unknown) => {
+        console.warn("server.alert_state_unreadable", error);
+      },
+    );
+    await this.toldAtLoad;
+    if (now - this.toldAt < ALERT_WINDOW_MS) return false;
+    this.toldAt = now;
+    try {
+      await this.ctx.storage.put(TOLD_AT_KEY, now);
+    } catch (error) {
+      console.warn("server.alert_state_unwritten", error);
+    }
+    return true;
   }
 
   /**
@@ -161,15 +221,29 @@ export default {
     return server(env).fetch(forServer(request));
   },
 
-  /** wrangler.jsonc's daily cron: wakes the server so its hourly loops run and Supabase sees the project in use. */
-  async scheduled(controller, env): Promise<void> {
+  /**
+   * wrangler.jsonc's daily cron: wakes the server so its hourly loops run and Supabase sees the project in use.
+   * #3618: a `/readyz` that fails is told to people, from `ctx.waitUntil`, before the run fails.
+   */
+  async scheduled(controller, env, ctx): Promise<void> {
     // #3727: the hourly cron runs the daily games' sweep; the daily one wakes the server as before.
     if (controller.cron === DAILY_SWEEP_CRON) {
       const swept = await server(env).fetch(new Request(`http://container${DAILY_SWEEP_PATH}`, { method: "POST" }));
       if (!swept.ok) throw new Error(`the server's ${DAILY_SWEEP_PATH} answered ${swept.status}`);
       return;
     }
-    const ready = await server(env).fetch(new Request(`http://container${READY_PATH}`));
-    if (!ready.ok) throw new Error(`the server's ${READY_PATH} answered ${ready.status}`);
+    const stub = server(env);
+    let failure: string | undefined;
+    try {
+      const ready = await stub.fetch(new Request(`http://container${READY_PATH}`));
+      if (!ready.ok) failure = `the server's ${READY_PATH} answered ${ready.status}`;
+    } catch (error) {
+      failure = `the server's ${READY_PATH} failed: ${error instanceof Error ? error.message : String(error)}`;
+    }
+    if (failure !== undefined) {
+      // A start that failed inside that fetch told already (`awaitStart`); the object's window holds this repeat.
+      ctx.waitUntil(stub.tellUnreachable({ cause: "readyz", message: failure }));
+      throw new Error(failure);
+    }
   },
 } satisfies ExportedHandler<Env>;
