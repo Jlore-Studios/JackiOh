@@ -72,6 +72,13 @@ exclude_re = [
   # compiled out, so no test can see them. Their testkit twins share their names and only reach the
   # harness (above).
   'replace (test_override|shipped_override|previewed|override_map) -> ',
+  # crates/engine (#3836): IdHasher::finish's xor-shifts, splitmix64's finaliser: each of its three stages
+  # is `x ^ (x >> k)`, the first two then multiplied. One stage weakened (its `^` as `|` or `&`, its `>>`
+  # as `<<`) leaves the others to mix: a thousand catalog-shaped ids still fill 626 to 654 of 1024 buckets
+  # and all 128 top-seven-bit tags, as the whole finaliser fills 634 and 128 (measured 2026-11-15; the
+  # first and last stages' `&` and the last's `|`, which thin it, fail catalog.rs's spread test). A map
+  # orders by insertion whatever its hasher, so only speed could tell the rest apart.
+  'replace (\^ with (\||&)|>> with <<) in <impl std::hash::Hasher for IdHasher>::finish',
   # crates/engine (#3514): Burn and Toxic's tick (R3540001), tick_at_turn_start's four `> 0`. A count is
   # never below 0 (`burn_on`, `toxic_on` and `counter_on` floor it there), so `>= 0` lets every acting Unit
   # into the targets and runs both hits at a count of 0. A hit of 0 is no damage instance (deal_damage

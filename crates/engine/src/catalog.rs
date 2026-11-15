@@ -55,7 +55,9 @@ impl std::hash::Hasher for IdHasher {
         if !rest.is_empty() {
             let mut eight = [0u8; 8];
             eight[..rest.len()].copy_from_slice(rest);
-            self.mix(u64::from_le_bytes(eight) ^ ((rest.len() as u64) << 56));
+            // The remainder's length in the top byte, which its at most seven bytes leave empty.
+            eight[7] = rest.len() as u8;
+            self.mix(u64::from_le_bytes(eight));
         }
     }
     fn write_u8(&mut self, byte: u8) {
@@ -1494,18 +1496,53 @@ fn every_set_takes(args: &CatalogQueryArgs, set: SetName) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use std::hash::BuildHasher;
+    use std::hash::{BuildHasher, Hash, Hasher};
 
-    use super::IdHash;
+    use super::{IdHash, IdHasher};
 
-    /// The registries' hasher keeps a thousand catalog-shaped ids apart, so a lookup by id stays one
-    /// probe (#3836: a `mix` that dropped its word, or folded it in by `|` or `&`, lived).
+    fn hash_of<T: Hash>(value: T) -> u64 {
+        IdHash::default().hash_one(value)
+    }
+
+    /// The registries' hasher keeps two thousand catalog-shaped ids apart, of every length a word's
+    /// remainder can leave and of whole words, so a lookup by id stays one probe (#3836: a `mix`, a
+    /// `write` or a remainder dropped, or folded in by `|` or `&`, lived).
     #[test]
     fn the_id_hasher_gives_each_catalog_id_a_hash_of_its_own() {
-        let ids: Vec<String> = (0..1000).map(|n| format!("classic-plus-{n:03}")).collect();
-        let mut hashes: Vec<u64> = ids.iter().map(|id| IdHash::default().hash_one(id)).collect();
+        let ids: Vec<String> = (0..1000)
+            .map(|n| format!("classic-plus-{n}"))
+            .chain((0..1000).map(|n| format!("s{n}")))
+            .collect();
+        let mut hashes: Vec<u64> = ids.iter().map(hash_of).collect();
         hashes.sort_unstable();
         hashes.dedup();
         assert_eq!(hashes.len(), ids.len());
+    }
+
+    /// `finish` brings every byte down to the low bits a table indexes by: a thousand ids fill about as
+    /// many of 1024 buckets as a random hash would (632 on average; these fill 634).
+    #[test]
+    fn the_id_hasher_spreads_ids_over_a_tables_low_bits() {
+        let mut buckets: Vec<u64> = (0..1000)
+            .map(|n| hash_of(format!("classic-plus-{n:03}")) & 1023)
+            .collect();
+        buckets.sort_unstable();
+        buckets.dedup();
+        assert!(buckets.len() >= 550, "{} buckets", buckets.len());
+    }
+
+    /// Each of the hasher's writes folds its value in, and a remainder's length is part of it, so
+    /// `ab` and `ab` with a zero byte after it differ.
+    #[test]
+    fn every_write_of_the_id_hasher_folds_its_value_in() {
+        assert_ne!(hash_of(1u8), hash_of(2u8));
+        assert_ne!(hash_of(1usize), hash_of(2usize));
+        assert_ne!(hash_of(1u64), hash_of(2u64));
+        let raw = |bytes: &[u8]| {
+            let mut hasher = IdHasher::default();
+            hasher.write(bytes);
+            hasher.finish()
+        };
+        assert_ne!(raw(b"ab"), raw(b"ab\0"));
     }
 }
