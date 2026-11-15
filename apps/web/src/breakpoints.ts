@@ -6,7 +6,7 @@
 export const BREAKPOINT_PX = {
   /** A phone held upright: the touch rule's and the top bar's (R2122000, R3218000). */
   phone: 600,
-  /** A small tablet held upright: the board's narrow cards, the deck builder's one column. */
+  /** A small tablet held upright: the board's narrow cards. */
   narrow: 760,
   /** A tablet held upright: the menus' two columns, and a landscape tablet's desktop board, start at 900. */
   medium: 899,

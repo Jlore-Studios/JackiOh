@@ -689,7 +689,8 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         a pool card is dragged into the deck by pointer events, so a finger works (DeckDrag.tsx,
                         R3734001: a touch lifts it on a move across, `touch-action: pan-y` leaving a move down to
                         the pool's scroll), and the rail, the pool and the deck sit side by side from 601 px
-                        (workshop.css), taking turns only at 600 px and under
+                        (workshop.css; R3956000: the pool and the deck beside each other from 601 px, the sidebar
+                        232 px up to 760 px), taking turns only at 600 px and under
 routes/play.tsx         /play, the Play hub (R1578000, R3729000): one screen that does not scroll, whose one
                         region (`.play-body`) holds `PlayHub`'s four groups of cards, Online, Daily, With
                         friends and Solo, with Replays and Friends under them; the words, times and
