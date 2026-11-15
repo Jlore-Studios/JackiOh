@@ -2,7 +2,8 @@
 //! memory between moves, lost on time (R3727000), holding no seat (R3727004), pinned to the catalog it
 //! started on (R3727005), its open challenges cancelled by a block (R3727007), holding its accounts
 //! from deletion while it runs (R3727008), and "your move" sent by email and Web Push, to a browser's
-//! push service only.
+//! push service only. A finished game whose moves the retention purge took opens as its stored result
+//! and refuses every move (R3934000).
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
@@ -23,8 +24,11 @@ use jackioh_engine::testkit::{clear_overrides, register_catalog, register_shippe
 use jackioh_engine::{CardCost, CardDefs, ShippedCatalog};
 use jackioh_server::api::catalog::{LoadCatalogOptions, load_catalog};
 use jackioh_server::api::queue::try_pair;
-use jackioh_server::app::App;
-use jackioh_server::config::{DAILY_MAX_ACTIVE_GAMES, DAILY_PLAYER_EMAILS_PER_DAY, MS_PER_DAY};
+use jackioh_server::api::retention::purge_expired;
+use jackioh_server::app::{App, now_ms};
+use jackioh_server::config::{
+    DAILY_MAX_ACTIVE_GAMES, DAILY_PLAYER_EMAILS_PER_DAY, MATCH_ACTION_RETENTION_DAYS, MS_PER_DAY,
+};
 use jackioh_server::daily::notify::sweep;
 use jackioh_server::db::store::{DailyNotifyRow, MatchStatus, PushSubRow};
 use jackioh_shared::economy::rewards::utc_day_bounds;
@@ -681,6 +685,159 @@ async fn r3727000_a_move_after_its_deadline_is_refused_and_lost_on_time() {
         let (_, list) = api(&app, "GET", "/api/daily", &late.token, Value::Null).await;
         assert_eq!(list["games"][0]["result"]["outcome"], "loss", "{list}");
     }
+}
+
+// R3934000: a finished game whose moves the retention purge took
+
+/// Dates the end of `match_id` past the retention window and runs the purge: how many log rows it took.
+/// `finished_at` moves, not the clock, because the purge reads the wall clock, which the daily offset
+/// leaves alone.
+async fn purge_its_log(app: &Arc<App>, match_id: &str) -> i64 {
+    {
+        let mut data = fake_lock(app).await;
+        let row = data
+            .tables
+            .matches
+            .iter_mut()
+            .find(|row| row.id == match_id)
+            .expect("the match row");
+        row.finished_at = Some(now_ms() - (MATCH_ACTION_RETENTION_DAYS + 1) * MS_PER_DAY);
+    }
+    purge_expired(app).await.expect("the purge runs").match_actions
+}
+
+/// How many log rows `match_id` has in the store.
+async fn log_rows(app: &Arc<App>, match_id: &str) -> usize {
+    fake_lock(app)
+        .await
+        .tables
+        .match_actions
+        .iter()
+        .filter(|row| row.match_id == match_id)
+        .count()
+}
+
+#[tokio::test]
+async fn r3934000_a_finished_game_whose_moves_were_purged_opens_as_its_result_and_refuses_every_move() {
+    let (app, ada, bo) = two_friends().await;
+    let cy = person(&app, 3, "Cy").await;
+    let match_id = daily_game(&app, &ada, &bo, 3).await;
+    past_the_mulligan(&app, [&ada, &bo], &match_id).await;
+    let seq = read(&app, &ada, &match_id).await["seq"].as_i64().expect("a seq");
+    let (status, body) = send(
+        &app,
+        &ada,
+        &match_id,
+        seq,
+        "concede",
+        json!({ "type": "concede" }),
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(body["over"], true, "{body}");
+    assert_eq!(match_status(&app, &match_id).await, MatchStatus::Finished);
+
+    // Inside the window the game reads and plays from its log, as before.
+    let inside = read(&app, &bo, &match_id).await;
+    assert_eq!(inside["over"], true, "{inside}");
+    assert!(inside["view"].is_object(), "{inside}");
+    assert!(inside.get("expired").is_none(), "{inside}");
+    let (_, list) = api(&app, "GET", "/api/daily", &bo.token, Value::Null).await;
+    let row = list["games"][0].clone();
+    assert_eq!(row["matchId"], match_id.as_str(), "{list}");
+
+    assert!(purge_its_log(&app, &match_id).await > 0, "the purge took the log");
+    assert_eq!(log_rows(&app, &match_id).await, 0);
+
+    // Each player's read is the result: over, expired, no board.
+    for (who, outcome) in [(&ada, "loss"), (&bo, "win")] {
+        let game = read(&app, who, &match_id).await;
+        assert_eq!(game["over"], true, "{game}");
+        assert_eq!(game["expired"], true, "{game}");
+        assert_eq!(game["result"]["outcome"], outcome, "{game}");
+        assert_eq!(game["result"]["reason"], "concede", "{game}");
+        for hidden in ["view", "legal", "forecast"] {
+            assert!(game.get(hidden).is_none(), "{hidden} in {game}");
+        }
+    }
+    // It is the list's row, from the stored board.
+    let game = read(&app, &bo, &match_id).await;
+    for key in [
+        "matchId",
+        "seat",
+        "opponent",
+        "turn",
+        "life",
+        "result",
+        "endedAt",
+        "mode",
+        "perMoveDays",
+    ] {
+        assert_eq!(game[key], row[key], "{key}: {game} against {row}");
+    }
+
+    // A move, from either seat, is refused as over, never as stale, and writes nothing.
+    for (who, nonce, action) in [
+        (&ada, "after-purge-a", json!({ "type": "endTurn" })),
+        (&bo, "after-purge-b", json!({ "type": "concede" })),
+    ] {
+        let (status, body) = send(&app, who, &match_id, seq + 1, nonce, action).await;
+        assert_eq!((status, code_of(&body)), (409, "over"), "{body}");
+        assert_eq!(body["game"]["expired"], true, "{body}");
+        assert_eq!(body["game"]["over"], true, "{body}");
+    }
+    assert_eq!(log_rows(&app, &match_id).await, 0);
+
+    // It says nothing to an account that does not play it.
+    let (status, body) = api(
+        &app,
+        "GET",
+        &format!("/api/daily/games/{match_id}"),
+        &cy.token,
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, 404, "{body}");
+
+    // The list still shows it with its result.
+    let (status, list) = api(&app, "GET", "/api/daily", &ada.token, Value::Null).await;
+    assert_eq!(status, 200, "{list}");
+    assert_eq!(list["games"][0]["over"], true, "{list}");
+    assert_eq!(list["games"][0]["result"]["outcome"], "loss", "{list}");
+}
+
+#[tokio::test]
+async fn r3934000_a_game_lost_on_time_whose_moves_were_purged_opens_as_won_on_time_and_answers_time_up() {
+    let (app, ada, bo) = two_friends().await;
+    let match_id = daily_game(&app, &ada, &bo, 1).await;
+    past_the_mulligan(&app, [&ada, &bo], &match_id).await;
+    let (late, waiting) = holder(&app, [&ada, &bo], &match_id).await;
+    app.daily.set_offset(MS_PER_DAY);
+    let settled = read(&app, waiting, &match_id).await;
+    assert_eq!(settled["lostOnTime"], true, "{settled}");
+    let seq = settled["seq"].as_i64().expect("a seq");
+
+    assert!(purge_its_log(&app, &match_id).await > 0, "the purge took the log");
+
+    let game = read(&app, waiting, &match_id).await;
+    assert_eq!(game["expired"], true, "{game}");
+    assert_eq!(
+        game["result"],
+        json!({ "outcome": "win", "reason": "disconnect" }),
+        "{game}"
+    );
+    let (status, body) = send(
+        &app,
+        late,
+        &match_id,
+        seq,
+        "too-late",
+        json!({ "type": "endTurn" }),
+    )
+    .await;
+    assert_eq!((status, code_of(&body)), (409, "time_up"), "{body}");
+    assert_eq!(body["game"]["expired"], true, "{body}");
+    assert_eq!(log_rows(&app, &match_id).await, 0);
 }
 
 // R3727004: a daily game holds no seat; the cap bounds them

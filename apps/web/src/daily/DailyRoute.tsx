@@ -19,7 +19,6 @@ import { PortraitArt } from "../emotes/PortraitArt.tsx";
 import { PORTRAIT_DEFS } from "../emotes/portraits.ts";
 import { EmptyState } from "../empty/EmptyState.tsx";
 import { Dialog } from "../game/Dialog.tsx";
-import { RESULT_WORD } from "../game/Result.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import {
   acceptDailyChallenge,
@@ -39,7 +38,7 @@ import { usePolled } from "../together/session.ts";
 import { useSocialPoll } from "../together/socialPoll.ts";
 import { MODE_WORDS, Named } from "../together/words.tsx";
 import { DailyFields, acceptBodyOf, useDailyPick } from "./DailyFields.tsx";
-import { moveLine, useNow } from "./DailyClockPill.tsx";
+import { moveLine, resultLine, useNow } from "./DailyClockPill.tsx";
 import { DAILY_REREAD_MS } from "./config.ts";
 import { NewDailyDialog } from "./NewDailyDialog.tsx";
 import { dailySections, isUrgent, perMoveRowText, yourMoveTitle, type DailySections } from "./order.ts";
@@ -69,14 +68,6 @@ function isPortrait(value: string): value is PortraitId {
 /** A row's mode and time: "All random · 3 days per move". */
 function modeLine(entry: { mode: DailyGameSummary["mode"]; perMoveDays: number }): string {
   return `${t(MODE_WORDS[entry.mode])} · ${perMoveRowText(entry.perMoveDays)}`;
-}
-
-/** A finished game's line: the outcome, on time when the move's time ran out. */
-function resultLine(game: DailyGameSummary): string {
-  const result = game.result;
-  if (result === null) return t("Finished");
-  if (result.reason === "disconnect" && result.outcome !== "draw") return result.outcome === "win" ? t("Won on time") : t("Lost on time");
-  return t(RESULT_WORD[result.outcome]);
 }
 
 function GameRow({ game, now }: { game: DailyGameSummary; now: number }): ReactElement {

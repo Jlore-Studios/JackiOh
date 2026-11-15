@@ -5,6 +5,7 @@
 // every table shows: the opponent's name on the hero, the modifiers in play, an aimed attack's outcomes from
 // the read's forecast, and Watch the replay on a finished game's result. R3840000: a game that ended with the
 // count of games waiting on the player unchanged shows as ended on the slow read and when the tab shows again.
+// R3934000: a finished game whose moves the retention purge took opens as its result, not as a board.
 
 import type { ActionBody, AttackForecast, CombatForecast, PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -15,7 +16,8 @@ import { resetAudioSettingsForTests } from "../audio/settings.ts";
 import { fakeAudioEngine } from "../audio/test/fakeAudio.ts";
 import type { AudioEngine } from "../audio/types.ts";
 import { modifierListTestid } from "../game/ModifierList.tsx";
-import type { DailyGame } from "../net/daily.ts";
+import { formatDateTime } from "../i18n/i18n.ts";
+import type { DailyExpiredGame, DailyGame } from "../net/daily.ts";
 import { clearReadCache } from "../net/readCache.ts";
 import { replayTestid } from "../replay/ReplayPlayer.tsx";
 import { resetSettings, writeSettings } from "../settings/store.ts";
@@ -57,8 +59,31 @@ function dailyGame(over: Partial<DailyGame> = {}): DailyGame {
   };
 }
 
+/** R3934000: what the server reads of a finished game whose moves are no longer kept. */
+function expiredGame(over: Partial<DailyExpiredGame> = {}): DailyExpiredGame {
+  return {
+    expired: true,
+    matchId: "g-1",
+    mode: "random",
+    perMoveDays: 3,
+    seat: "p1",
+    opponent: { profileId: "o-1", username: "Opp#7" },
+    portraits: { me: "vanilla", them: "vanilla" },
+    turn: 12,
+    life: { me: 7, them: 0 },
+    hasMove: false,
+    theirMove: false,
+    deadline: null,
+    over: true,
+    result: { outcome: "win", reason: "concede" },
+    endedAt: Date.UTC(2026, 1, 20, 12),
+    createdAt: Date.UTC(2026, 1, 1),
+    ...over,
+  };
+}
+
 /** The game's reads and actions, each answered by `answer`, else the read. */
-function serve(read: () => DailyGame, answer?: (call: Call) => Reply | undefined) {
+function serve(read: () => DailyGame | DailyExpiredGame, answer?: (call: Call) => Reply | undefined) {
   return stubServer((call) => {
     const special = answer?.(call);
     if (special !== undefined) return special;
@@ -572,6 +597,78 @@ describe("R3840000 the open daily board reads a game that ended", () => {
       setVisibility("visible");
     });
     await screen.findByTestId("result-overlay", undefined, SLOW);
+    expect(server.to("GET", GAME)).toHaveLength(reads + 1);
+  });
+});
+
+describe("R3934000 a finished game whose moves are no longer kept", () => {
+  const GAME = "/api/daily/games/g-1";
+
+  it("R3934000 opens as its result with both heroes' life, when it ended and the moves-gone line, and no board", async () => {
+    const game = expiredGame();
+    const server = serve(() => game);
+    render(<DailyBoard matchId="g-1" />);
+
+    const panel = await screen.findByTestId(dailyTestid.expired, undefined, SLOW);
+    const result = within(panel).getByTestId(dailyTestid.expiredResult);
+    expect(result).toHaveTextContent("Win");
+    expect(result).toHaveAttribute("data-outcome", "win");
+    expect(panel).toHaveTextContent("You 7 – 0 Opponent");
+    expect(panel).toHaveTextContent("vs Opp#7");
+    expect(panel).toHaveTextContent("Turn 12");
+    expect(panel).toHaveTextContent(`Ended ${formatDateTime(game.endedAt ?? 0)}`);
+    expect(panel).toHaveTextContent("This game's moves are no longer kept, so it can't be shown or replayed.");
+    for (const absent of ["result-overlay", "end-turn", dailyTestid.board, dailyTestid.clock, dailyTestid.watchReplay, dailyTestid.rematch]) {
+      expect(screen.queryByTestId(absent)).toBeNull();
+    }
+    expect(server.to("GET", GAME)).toHaveLength(1);
+    expect(server.to("POST", `${GAME}/actions`)).toHaveLength(0);
+  });
+
+  it.each([
+    [{ outcome: "loss", reason: "disconnect" }, "Lost on time"],
+    [{ outcome: "win", reason: "disconnect" }, "Won on time"],
+  ] as const)("R3934000 a game %j says %s", async (result, words) => {
+    serve(() => expiredGame({ result }));
+    render(<DailyBoard matchId="g-1" />);
+
+    const shown = await screen.findByTestId(dailyTestid.expiredResult, undefined, SLOW);
+    expect(shown).toHaveTextContent(words);
+    expect(shown).toHaveAttribute("data-outcome", result.outcome);
+  });
+
+  it("R3934000 Back to daily games returns to the list", async () => {
+    serve(() => expiredGame());
+    render(<DailyBoard matchId="g-1" />);
+
+    fireEvent.click(await screen.findByTestId(dailyTestid.backToList, undefined, SLOW));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/daily");
+    });
+  });
+
+  it("R3934000 a game that reads as expired after it showed a board is read no more", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    let purged = false;
+    const running = dailyGame({ hasMove: false, legal: [CONCEDE], view: baseView({ active: "p2" }), holds: [] });
+    const server = serve(() => (purged ? expiredGame() : running));
+    render(<DailyBoard matchId="g-1" />);
+    await screen.findByTestId("concede", undefined, SLOW);
+    const reads = server.to("GET", GAME).length;
+
+    purged = true;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DAILY_REREAD_MS);
+    });
+    await screen.findByTestId(dailyTestid.expired, undefined, SLOW);
+    expect(screen.queryByTestId("concede")).toBeNull();
+    expect(server.to("GET", GAME)).toHaveLength(reads + 1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2 * DAILY_REREAD_MS);
+    });
+    await flush();
     expect(server.to("GET", GAME)).toHaveLength(reads + 1);
   });
 });

@@ -58,6 +58,10 @@ export const dailyTestid = {
   /** A finished game's Watch the replay. */
   watchReplay: "daily-watch-replay",
   olderCatalog: "daily-older-catalog",
+  /** R3934000: a finished game whose moves are no longer kept, in place of the board. */
+  expired: "daily-expired",
+  /** Its result: `data-outcome` (`win|loss|draw|none`). */
+  expiredResult: "daily-expired-result",
   backToList: "daily-back",
 } as const;
 
