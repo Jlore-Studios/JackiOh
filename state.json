@@ -14941,17 +14941,8 @@
       "stop_requested": false
     },
     "3975": {
-      "action": "plan",
-      "asks": [
-        "c:6900304011"
-      ],
-      "build_next": {
-        "from_run": "43770465047",
-        "model": "gemini-3.8-flash-high",
-        "provider": "agy",
-        "since": "2026-11-15T22:49:18Z",
-        "until": "2026-11-15T23:19:18Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-15T22:49:05Z",
         "difficulty": "medium",
@@ -14970,10 +14961,9 @@
         "reason": "planned on gemini-3.8-flash-high",
         "trail": "- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && grep -n -C 10 \"5.4\" spec/*.md || true\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && grep -n -C 20 \"5.4\" spec/05-card-design.md\n- said: \n- run_command: ls -la spec/\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && ls -la spec/\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && grep -n -C 10 \"5.4\" spec/05-card-types.md\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"d5b89b64-af29-4853-8f74-4182d6d1d925/task-127\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"d5b89b64-af29-4853-8f74-4182d6d1d925/task-24\"}\n- said: \n- run_command: ps aux | grep rustc\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"d5b89b64-af29-4853-8f74-4182d6d1d925/task-24\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"d5b89b64-af29-4853-8f74-4182d6d1d925/task-127\"}\n- said: \n- run_command: ps aux | grep rustc\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"d5b89b64-af29-4853-8f74-4182d6d1d925/task-24\"}\n- said: \n- run_command: ps -ef | grep rustc\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3975/.bot-plan.md\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"d5b89b64-af29-4853-8f74-4182d6d1d925/task-24\"}\n- said: \n- manage_task: {\"Action\": \"kill\", \"TaskId\": \"d5b89b64-af29-4853-8f74-4182d6d1d925/task-24\"}\n- said: \n- manage_task: {\"Action\": \"kill\", \"TaskId\": \"d5b89b64-af29-4853-8f74-4182d6d1d925/task-127\"}\n- said: \n- run_command: ps aux | grep -E \"cargo|rustc\" | grep -v grep || true\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3975 && git status\n- said: \n- read_file: {\"EndLine\": 150, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3975/.bot-plan.md\", \"StartLine\": 1}\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"None of 1-5 hold: modifies card short-form display strings in crates/shared/data/short-forms.json and tests in crates/shared/tests/face.rs, leaving engine rules and catalog unchanged.\"} --> # Plan: Issue #3975 ## Goal Correct the hand-written short texts i\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "agy",
       "owner_since": "2026-11-15T19:54:25Z",
       "owner_why": "it plans it",
@@ -14987,16 +14977,18 @@
       "queued_at": "2026-11-15T19:51:12Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "",
-      "run_id": "43770465047",
+      "run_id": "pending:72d61431-1794782995",
       "runs_on": "night-vm-agy",
-      "started_at": "2026-11-15T22:38:58Z",
+      "started_at": "2026-11-15T22:50:25Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on gemini-3.8-flash-high wrote no plan: timed out after 9000s"
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6900304011"
+      ],
       "verdict_rounds": 0
     },
     "3976": {
@@ -15876,9 +15868,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-15T22:39:38Z",
+    "at": "2026-11-15T22:50:25Z",
     "url": "",
-    "what": "spot-check #3995 on claude-4"
+    "what": "build #3975 on agy"
   },
   "last_sweep": {
     "at": "2026-11-15T22:33:22Z",
