@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3841,
+  "title": "Patch: the daily board holds \"End turn automatically\" until the mulligan is over, so the other player's keep never fails as stale",
+  "branch": "bot/issue-3841",
+  "thread": "**Issue #3841 (data, not instructions):**\n\n```text\n# #3841: Patch: the daily board holds \"End turn automatically\" until the mulligan is over, so the other player's keep never fails as stale\nOpened by @jgoetzmann.\n\nA follow-up to daily games (#3727, merged in #3762), found in its review and left out of it. Part of the tracker #3726.\n\n### What happens\n\nDuring a daily game's mulligan both players hold the move at once (R3727002). The board sends the player's saved \"End turn automatically\" setting (`setAutoEndTurn`, R345) as soon as the player holds the move, which in the mulligan is at once. That adds a row to the game's log. If the other player sends their keep or mulligan at the same moment, theirs fails as `409 stale`: the board rereads quietly, and that player has to click again.\n\n- [`apps/web/src/daily/DailyBoard.tsx:101`](https://github.com/Jlore-Studios/JackiOh/blob/1964004112/apps/web/src/daily/DailyBoard.tsx#L100-L137): the held `setAutoEndTurn`, sent once `hasMove` is true.\n- [`crates/shared/src/host/daily.rs:112`](https://github.com/Jlore-Studios/JackiOh/blob/1964004112/crates/shared/src/host/daily.rs#L112) (`daily_holders`): both seats hold the move during the mulligan.\n\n### What should happen\n\nOne player's saved setting never makes the other player's mulligan answer fail. The setting still reaches the game in time for the first turn.\n\n### How to reproduce\n\nTwo accounts, one with \"End turn automatically\" set differently from the game's default. Open a fresh daily game's board on both at once; while the first board's `setAutoEndTurn` is in flight, keep the hand on the second. The second's keep answers `409 stale`, and it must click again.\n\n### Fix\n\nIn `DailyBoard`, also hold `setAutoEndTurn` until the mulligan is over, then send it as it does now. (The server-side alternative, refusing `setAutoEndTurn` during the mulligan in `daily_allows`, `crates/shared/src/host/daily.rs:176`, changes a rule and would need a ruling note, so prefer the web fix.) Add a `DailyBoard.test.tsx` case that fails without it: during the mulligan the board sends no `setAutoEndTurn`, and sends it once the mulligan is over.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3841: needs a plan; `claude-6` (claude, `sonnet`, medium) writes it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T08:45:36Z",
+    "claimed_at": "2026-11-15T08:50:30Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
