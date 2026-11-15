@@ -14761,7 +14761,7 @@
         "sha": "1b918f835a7aa40f4d6b4b68cfac582c7b098463"
       },
       "died": 0,
-      "difficulty": "medium",
+      "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-15T06:05:53Z",
       "forced": false,
