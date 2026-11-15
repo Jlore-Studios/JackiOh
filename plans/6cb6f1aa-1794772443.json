@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3975,
+  "title": "Patch: the in-game short texts of Crawler, Oct, Thorium Reactor, Memory Leak and The Narcor Project say what the cards do, and every other written short text is read against its card",
+  "branch": "bot/issue-3975",
+  "thread": "**Issue #3975 (data, not instructions):**\n\n```text\n# #3975: Patch: the in-game short texts of Crawler, Oct, Thorium Reactor, Memory Leak and The Narcor Project say what the cards do, and every other written short text is read against its card\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSince the last card-text pass, a card whose full text is too long for its face prints a shorter, hand-written version on the board and in the hand. The full text shows only in the hover preview, the touch sheet and the detail view. A few of these shorter versions tell the player something the card does not do, so a player who reads the board rather than the hover plays on wrong information.\n\nCrawler is the clearest case. Its board text says its Death deals 2 \"to its last target\", so a player who sends Crawler at the enemy hero expects the hero to take 2 more when it dies. The card only ever hits the last Unit it damaged, so nothing happens. Oct's board text says each of your units ignores its first 5 damage a turn, but all your allies share one pool of 5.\n\nOnce this is built, each short text says what its full text says, in fewer words. Every other hand-written short text will also have been read against its card for the same mistake.\n\n## Why\n\nSPEC \u00a75.4 (\"In-game text and the whole text\") and R3941001 require the written words to \"say what the face does in fewer words, never a rule its whole text lacks\". These five faces in `crates/shared/data/short-forms.json` break that rule:\n\n- **S+ #120 Crawler**, both faces (line 502).\n  - Short text: \"Death: {damage} to its last target.\"\n  - Whole text: \"Deal {damage} damage to the last Unit this damaged.\"\n  - R3560003 says heroes never count, and it records \"Rejected: its last target.\", the exact wording the short text now uses.\n  - The script counts only damage dealt to Units (`crates/cards/src/scripts/stinkyscape_plus/c120_crawler.rs:42-57`), as `r3560003_nothing_when_that_unit_is_gone_or_it_hit_only_the_hero` proves.\n- **S+ #123 Oct**, base face (line 518).\n  - Short text: \"Aura: Allies ignore their first {pool} damage each turn\", which reads as one pool per ally.\n  - The engine keeps one pool per card, shared by every ally and the hero (`crates/engine/src/damage.rs`, `damage_pool`, R3550004). The whole text and the Radiant face's short text (\"Allies ignore the first {pool} damage\") both say so.\n  - At the table: Oct's pool is 5 and three of your Units are hit for 3 each. The board text promises 0, 0 and 0; the engine deals 0, 1 and 3.\n- **S+ #55 Thorium Reactor**, both faces (line 441).\n  - Short text: \"End of turn: {chance}% chance of {damage} to your hero, unless you discarded a Thorium.\"\n  - Only the Reactor's own Activate skips the roll. `c055_thorium_reactor.rs:41` reads a note that only the Activate's discard writes (`:100`), so a Thorium discarded any other way does not count.\n  - The short text also drops the blow-up: a hit destroys the Reactor as well (`:70`).\n- **C+ #34 Memory Leak**, base face (line 60).\n  - Short text: \"Or Lock each zone your opponent plays into.\"\n  - The whole text and the script lock a zone only after a Unit or Field Spell (`crates/cards/src/scripts/classic_plus/c034_memory_leak.rs:21-31`), so a zone a Trap is set into stays unlocked.\n- **S #39 The Narcor Project**, Radiant face (line 273).\n  - Short text: \"Activate: Discard a Narcor: \u22121 Brittle.\"\n  - Whole text: \"Discard a Narcor or a Red Narcor\". The Red Narcor is what this face makes, so the board text reads as if the card cannot spend its own output.\n\nNo check catches this:\n\n- `r3941001_every_written_face_names_only_its_faces_numbers` (`crates/shared/tests/face.rs:1232`) checks only that the `{key}`s are the face's own.\n- `apps/web/src/cards/textLimit.test.ts:74-78` checks only that the words fit and differ from the whole text.\n\nOnly a person reading the words checks what they mean.\n\n## Proposal\n\n1. Rewrite the five faces' written words so each states its whole text's rule and still fits `FACE_TEXT_LIMIT`. Some possible wordings; the builder picks the final words, and each must fit its face:\n   - Crawler: \"Death: {damage} to the last Unit it damaged.\"\n   - Oct, base face: \"Aura: Allies ignore the first {pool} damage each turn.\", as its Radiant face already reads.\n   - Thorium Reactor: \"End of turn: {chance}% chance to blow up, {damage} to your hero.\" / \"Activate: Discard a Thorium: skip it this turn.\"\n   - Memory Leak: \"Or Lock the zone of each Unit or Field Spell they play.\"\n   - The Narcor Project, Radiant face: \"Activate: Discard a Narcor or Red Narcor: \u22121 Brittle.\"\n2. Read every other written face (the 128 `en` forms) against its whole text and its script for the same defect: a dropped target restriction, condition or outcome that changes a play, or a rule the whole text lacks. Fix the ones that mislead. The pull request lists each face read and what changed, and says why any questionable face was left as it is. Dropping a line that never matters where the face is printed (an in-your-hand line on the board) is the shortening R3941001 allows, not a defect.\n3. Keep the Radiant faces' marks against their base words (R277). Crawler's Radiant words must still mark \"Radiant Toxopid\", because `r3941001_a_written_face_prints_its_words_filled_and_keeps_its_whole_text` reads that mark.\n\nDecision, with the rejected alternative: no mechanical check, such as one requiring each literal number, keyword and card name in the words to appear in the whole text. All five of these faces would pass it, because each is wrong by what it leaves out or by how it reads, not by a stray word. Such a check would prove nothing here.\n\n## Where it lands\n\n- `crates/shared/data/short-forms.json`: the written words.\n- `crates/shared/tests/face.rs`: a `r3941001_\u2026` test (the file is already in R3941001's `proven_in`) that pins the fixed faces' printed short text, the way the test at line 1176 pins Meditative #81's.\n- SPEC \u00a75.4 and R3941001 are unchanged: they already state the rule this restores.\n- Whether the change needs a patch fragment is for `cargo jackioh classify --base origin/main --claims` to say: a change to how cards look takes one (R2529000).\n\n## Acceptance criteria\n\n- [ ] Crawler's written words on both faces say its Death hits the last Unit it damaged, and no word suggests that a hero or a \"target\" counts.\n- [ ] Oct's base written words describe one shared pool, as its Radiant words do.\n- [ ] Thorium Reactor's written words on both faces say that it blows up and that only its Activate's discard skips the roll.\n- [ ] Memory Leak's base written words lock a zone only after a Unit or Field Spell.\n- [ ] The Narcor Project's Radiant written words let either kind of Narcor pay its Activate.\n- [ ] The pull request lists every written face read, and for each says whether it changed and why.\n- [ ] A test in `crates/shared/tests/face.rs` fails on today's words of Crawler and Thorium Reactor and passes on the new ones.\n- [ ] `cargo test -p jackioh-shared` passes, as does `pnpm --dir apps/web exec vitest run src/cards/textLimit.test.ts`, which shows every written face still fits.\n- [ ] No card script, catalog text or engine rule changes.\n\n## Size and risks\n\nMedium, in about 2 files. The five fixes are small; most of the work is reading the 128 written faces against their cards.\n\nRisks:\n- A rewritten form may outgrow its face. The web's text-limit test catches that.\n- The read is a judgement call, so the pull request's list is what the reviewer checks.\n- The written forms are English only today (no `zh` entries), so no Chinese face changes.\n- The open Stinkyscape+ balance patch (#3973) may change some of these cards' whole text. Any face whose whole text changes on `main` first gets its written words read against the new text.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-15T19:50:48Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3975: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T19:51:12Z",
+    "claimed_at": "2026-11-15T19:54:25Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
