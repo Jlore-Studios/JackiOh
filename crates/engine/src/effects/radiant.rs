@@ -165,10 +165,12 @@ pub fn make_all_radiant() -> Effect {
 /// every card of both sides in every zone but the resolving and the gone turns Radiant, the active
 /// player's side first (R68). It draws nothing (R129). A public pile cues the cards it changes; a hand,
 /// a face-down trap or a library holding any card not yet Radiant cues all of its cards, so the cues
-/// count nothing a player may not read (R97, R177, R440).
-pub(crate) fn radiate_world(sink: &mut EngineSink<'_>) {
+/// count nothing a player may not read (R97, R177, R440). It returns whether any card turned Radiant, so
+/// the state check judges the board the sweep left (R3908000); a hidden pile's cue of a card already
+/// Radiant is no change.
+pub(crate) fn radiate_world(sink: &mut EngineSink<'_>) -> bool {
     if sink.state.radiant_world != Some(true) {
-        return;
+        return false;
     }
     let active = sink.state.active;
     let mut ctx = EffectContext::new(sink.reborrow(), active);
@@ -187,9 +189,11 @@ pub(crate) fn radiate_world(sink: &mut EngineSink<'_>) {
             swept.extend(group.into_iter().filter(|card| whole || !card.radiant).cloned());
         }
     }
+    let mut changed = false;
     for card in &swept {
-        make_radiant(&mut ctx, card);
+        changed |= make_radiant(&mut ctx, card);
     }
+    changed
 }
 
 /// MD-D6 (§5.2's exception, Meditative #53 Prestige): De-Radiant is Make Radiant reversed, reported by
