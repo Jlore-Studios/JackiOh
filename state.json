@@ -14305,12 +14305,13 @@
       },
       "merged": true,
       "pending_request": false,
-      "provider": "claude-6",
+      "provider": "claude-3",
       "queued_at": "2026-11-15T10:50:15Z",
-      "run_id": "43706124017",
+      "run_id": "pending:80f32508-1794749515",
       "runs_on": "ubuntu-latest",
+      "spot_check": true,
       "spot_check_n": 275,
-      "started_at": "2026-11-15T10:51:51Z",
+      "started_at": "2026-11-15T13:32:07Z",
       "stop_requested": false
     },
     "3970": {
@@ -14497,9 +14498,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T13:04:02Z",
+    "at": "2026-11-15T13:32:07Z",
     "url": "",
-    "what": "review #3970 on claude-8"
+    "what": "spot-check #3969 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-15T13:17:36Z",
@@ -34116,7 +34117,15 @@
         "n": 275,
         "pr": 3969,
         "queued_at": "2026-11-15T13:18:23Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "run_id": "pending:80f32508-1794749515",
         "sha": "9076a3e245552ccfe62f0c9f1cb5063af7247ce6",
+        "started_at": "2026-11-15T13:32:07Z",
         "status": "queued",
         "title": "Patch: the friends drawer and Friends page fit a phone: tabs that scroll or wrap, themed 44-pixel inputs, no overlapping tap areas",
         "tries": 0
