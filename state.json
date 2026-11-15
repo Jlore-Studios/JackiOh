@@ -14518,6 +14518,7 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "agy",
       "owner_since": "2026-11-15T13:39:38Z",
@@ -14528,15 +14529,19 @@
       "planned_by_id": "agy",
       "planned_model": "gemini-3.8-flash-high",
       "planned_tier": "medium",
+      "pr": 3979,
       "provider": "agy",
+      "question": "",
       "queued_at": "2026-11-15T13:39:08Z",
       "requested_by": "jgoetzmann-bot",
+      "round_tier": "medium",
       "run_id": "43722376282",
       "runs_on": "night-vm-agy",
       "spot_check_of": 3969,
       "started_at": "2026-11-15T14:04:49Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "3979": {
       "difficulty": "medium",
