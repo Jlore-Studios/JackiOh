@@ -5,8 +5,11 @@
 // a patch has the same style at a patch's scale. Nothing moves: no animation, no style sheet, so the
 // page needs no motion setting for it, and a major's `.svg` and its `-still.svg` are the same bytes
 // (the second is kept for the links published while the art drifted). A micro patch has no art of its
-// own: its notes sit under the patch it follows, so only a micro shipped before
-// `RELEASE_ART_LEGACY_MICRO_LAST` keeps the file its published links name (CLAUDE.md rule 13).
+// own: its notes sit under the patch that holds it, so only a micro shipped before
+// `RELEASE_ART_LEGACY_MICRO_LAST` keeps the file its published links name (CLAUDE.md rule 13). A daily
+// patch (R3944002), whose own snapshot is its last micro's, is drawn from the cards its micros changed
+// (`cardsBasis`): each as its own snapshot holds it, a removed one as the snapshot before its first
+// micro held it.
 //
 // A pure function of the record and its snapshots, so every build and every run of
 // `scripts/github-releases.ts` draws the same bytes: no clock, no random source, no engine or match
@@ -28,7 +31,7 @@ import {
   RELEASE_ART_MAJOR_CARD_SCALE,
   RELEASE_ART_WIDTH,
 } from "./constants.ts";
-import { RELEASES, playerTitle, releaseGroups, tiers, type Release } from "./releases.ts";
+import { RELEASES, cardsBasis, playerTitle, releaseGroups, rollsUp, tiers, type Release } from "./releases.ts";
 import type { Patch, Snapshot } from "./source.ts";
 
 /** R3012001: a major's poster, or a patch's art: the same style at two scales. */
@@ -451,14 +454,15 @@ function inputAt(
   snapshot: (version: string) => Snapshot | null,
   releases: readonly Release[],
 ): ReleaseArtInput {
-  const patch = patches[at];
-  if (patch === undefined) throw new Error(`release art: no patch at ${String(at)}`);
-  const after = snapshot(patch.version);
-  if (after === null) throw new Error(`release art: no snapshot of ${patch.version}`);
-  const previous = patches[at - 1];
-  const release = linesOf(patches, releases).get(patch.version);
-  if (release === undefined) throw new Error(`release art: ${patch.version} sits in no release line`);
-  return { patch, release, kind, before: previous === undefined ? null : snapshot(previous.version), after };
+  const entry = patches[at];
+  if (entry === undefined) throw new Error(`release art: no patch at ${String(at)}`);
+  const after = snapshot(entry.version);
+  if (after === null) throw new Error(`release art: no snapshot of ${entry.version}`);
+  const release = linesOf(patches, releases).get(entry.version);
+  if (release === undefined) throw new Error(`release art: ${entry.version} sits in no release line`);
+  // R3944002: a daily patch is drawn from its micros' cards, against the snapshot before the first of them.
+  const { patch, before } = cardsBasis(patches, entry);
+  return { patch, release, kind, before: before === null ? null : snapshot(before), after };
 }
 
 /**
@@ -466,7 +470,8 @@ function inputAt(
  * file, and for each major its `-still` companion after it, the same bytes. A micro has none, but one
  * up to `legacyMicroLast`. `snapshot` reads one version's catalog snapshot; the previous one is
  * carried forward, so each is read once, in order (micros' too), and a removed card is drawn as its
- * last snapshot held it.
+ * last snapshot held it. A daily patch's cards are its micros' (R3944002), so the snapshot before its
+ * first micro is kept until it is drawn.
  */
 export function releaseArtAssets(
   patches: readonly Patch[],
@@ -477,18 +482,25 @@ export function releaseArtAssets(
   const lines = linesOf(patches, releases);
   const kinds = artKinds(patches, legacyMicroLast);
   const assets: ReleaseArtAsset[] = [];
+  const bases = new Map(patches.filter(rollsUp).map((patch) => [patch.version, cardsBasis(patches, patch)] as const));
+  const keep = new Set([...bases.values()].map((basis) => basis.before));
+  const kept = new Map<string, Snapshot>();
   let before: Snapshot | null = null;
-  patches.forEach((patch, at) => {
-    const after = snapshot(patch.version);
-    if (after === null) throw new Error(`release art: no snapshot of ${patch.version}`);
-    const release = lines.get(patch.version);
-    if (release === undefined) throw new Error(`release art: ${patch.version} sits in no release line`);
+  patches.forEach((entry, at) => {
+    const after = snapshot(entry.version);
+    if (after === null) throw new Error(`release art: no snapshot of ${entry.version}`);
+    const release = lines.get(entry.version);
+    if (release === undefined) throw new Error(`release art: ${entry.version} sits in no release line`);
     const kind = kinds[at] ?? null;
     if (kind !== null) {
-      const svg = releaseArtSvg({ patch, release, kind, before, after });
-      assets.push({ path: releaseArtPath(patch.version), svg });
-      if (kind === "major") assets.push({ path: releaseArtPath(patch.version, "still"), svg });
+      const basis = bases.get(entry.version);
+      const patch = basis?.patch ?? entry;
+      const from = basis === undefined ? before : basis.before === null ? null : (kept.get(basis.before) ?? null);
+      const svg = releaseArtSvg({ patch, release, kind, before: from, after });
+      assets.push({ path: releaseArtPath(entry.version), svg });
+      if (kind === "major") assets.push({ path: releaseArtPath(entry.version, "still"), svg });
     }
+    if (keep.has(entry.version)) kept.set(entry.version, after);
     before = after;
   });
   return assets;
