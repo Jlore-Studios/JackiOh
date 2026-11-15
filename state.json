@@ -15290,6 +15290,13 @@
     "3936": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-15T09:09:41Z",
+        "difficulty": "hard",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "Rule 2: it changes the AI's mulligan decision in crates/ai/src/mulligan.rs, and the change can move AI gate games and pinned AI fixtures."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
