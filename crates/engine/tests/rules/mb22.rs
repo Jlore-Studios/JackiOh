@@ -1001,7 +1001,7 @@ mod r113_a_question_mid_attack_summon_owes_the_rest {
     use crate::rules::fixtures::damage_combat::{self as dc, ally_noter, death_asker};
 
     /// damage_combat's game, its note log among it, with this file's cards registered beside its own.
-    fn both(seed: &str) -> GameState {
+    fn noting(seed: &str) -> GameState {
         let state = dc::playing(seed);
         fx::register();
         state
@@ -1011,7 +1011,7 @@ mod r113_a_question_mid_attack_summon_owes_the_rest {
     /// the question and runs once it is answered.
     #[test]
     fn r1202_r113_a_question_in_the_substitutes_combat_owes_its_bounce() {
-        let mut state = both("mb22-bounce-owed");
+        let mut state = noting("mb22-bounce-owed");
         let windfast = put(&mut state, &fx::windfast.id, slot(P1, Row::Units, 1), json!({}));
         clear_hands(&mut state);
         let offered = in_hand(&mut state, &fx::ally.id, P1, 1).remove(0);
@@ -1036,7 +1036,7 @@ mod r113_a_question_mid_attack_summon_owes_the_rest {
     /// once the question is answered.
     #[test]
     fn r1203_r113_a_joiners_death_question_owes_the_primes_combat() {
-        let mut state = both("mb22-combat-owed");
+        let mut state = noting("mb22-combat-owed");
         let prime = put(&mut state, &fx::prime.id, slot(P1, Row::Units, 1), json!({}));
         clear_hands(&mut state);
         set_library(&mut state, P1, &[] as &[&str]);
@@ -1056,7 +1056,7 @@ mod r113_a_question_mid_attack_summon_owes_the_rest {
     /// backrow, is no substitute, so Windfast attacks itself.
     #[test]
     fn r1202_a_field_spell_in_hand_is_no_substitute() {
-        let mut state = both("mb22-field-spell");
+        let mut state = noting("mb22-field-spell");
         let windfast = put(&mut state, &fx::windfast.id, slot(P1, Row::Units, 1), json!({}));
         clear_hands(&mut state);
         let spell = in_hand(&mut state, &ally_noter.id, P1, 1).remove(0);
