@@ -16514,6 +16514,15 @@
       "failures": 0,
       "feedback_since": "2026-11-15T12:01:04Z",
       "forced": false,
+      "handoff": {
+        "at": "2026-11-15T12:58:54Z",
+        "family": "claude",
+        "kind": "work",
+        "notes": "\n## State (run 3)\nCI failed on the web CSS ratchets (surfaces, spacing, typescale): new raw z-index/gap/font-size/radius in lobby CSS. Fixed with tokens (--z-content, --space-4, --type-sm, --radius-round). All 16 src/*.test.ts and src/lobby tests pass locally.\n",
+        "provider": "claude-8",
+        "reason": "built and checked; its own review run, on this subscription, reviews it next",
+        "trail": "- Bash: {\"command\": \"git status --short | head; sed -n 1,60p apps/web/src/surfaces.test.ts | head -80; grep -n \\\"z-index\\\\|--z-\\\" apps/web/src/surfaces.css | head -20\"}\n- Bash: {\"command\": \"cd apps/web/src; sed -n 1,21p surfaces.css; grep -n \\\"^ --space\\\" spacing.css | head -12; grep -n \\\"^ --text\\\\|^ --fs\\\\|^ --type\\\\|--size\\\" typescale.css | head -20; sed -n 455,475p rout\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3970 && python3 - <<'EOF'\\np='apps/web/src/routes/lobby.css'\\ns=open(p).read()\\ns=s.replace(''' display: flex;\\n align-items: center;\\n gap: 8px;\\n b\u2026\n- Bash: {\"command\": \"pnpm --dir apps/web exec vitest run src/*.test.ts 2>&1 | grep -E \\\"Test Files|Tests|FAIL\\\" ; pnpm exec eslint apps/web/src/lobby 2>&1 | tail -3\", \"timeout\": 900000}\n- Bash: {\"command\": \"cd apps/web && pnpm exec vitest run src/ 2>&1 --reporter=dot -t \\\"\\\" --dir src --testNamePattern \\\"\\\" 2>&1 | tail -0; ls src/*.test.ts | head -30\"}\n- Bash: {\"command\": \"pnpm exec vitest run $(ls src/*.test.ts | tr '\\\\n' ' ') 2>&1 | grep -E \\\"Test Files|Tests |FAIL|Error\\\" | head\", \"timeout\": 600000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3970 && printf '\\\\n## State (run 3)\\\\nCI failed on the web CSS ratchets (surfaces, spacing, typescale): new raw z-index/gap/font-size/radius in lobby\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the private lobby keeps Ready and Start in view on a phone and at 1280\u00d7720, for 1v1, co-op and 2v2\"} --> CI failed on the web's CSS ratchet tests, and this push fixes it. The tests are `surfaces.test.ts`, `spacing.test.ts` and `typescale.test.ts`, and t\u2026"
+      },
       "interruptions": 0,
       "issue": 3954,
       "kind": "revise",
