@@ -13986,6 +13986,13 @@
     "3937": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-15T20:59:23Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "Rule 2: it changes the AI's threat count (`crates/ai/src/evaluate.rs`), which feeds every evaluation, `wall_switches` and the lethal solver's `ready_gap`."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
