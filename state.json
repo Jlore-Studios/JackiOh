@@ -15500,6 +15500,13 @@
     "3954": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "43699615771",
+        "model": "sonnet",
+        "provider": "claude-8",
+        "since": "2026-11-15T09:41:32Z",
+        "until": "2026-11-15T10:11:32Z"
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
