@@ -2238,3 +2238,6 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-15T09:41:23Z,43699734082,claude-7,opus,plan,3957,medium,planned,,6.3,66,49591,3832817,1.4855,21,25,,,8.8,,fresh,,1
 2026-11-15T09:47:51Z,43699697105,claude-4,opus,plan,3956,medium,planned,,13.1,103,102356,7549634,2.6714,6,14,,,8.5,,fresh,,1
 2026-11-15T09:49:09Z,43697203347,claude-8,sonnet+opus,build,3839,medium,built,,7.8,21,5243,494178,0.2474,1,1,,,16,claude-8,fresh,,1
+2026-11-15T10:00:14Z,43701719182,claude-1,opus,build,3936,hard,interrupted,5-hour cap,0,0,0,0,,97,97,,,75.8,claude-1,none,,0
+2026-11-15T09:57:13Z,43697320674,claude-3,sonnet+opus,build,3844,medium,built,,13.3,31,8737,771773,0.3282,16,19,,,17.1,claude-3,fresh,,1
+2026-11-15T10:01:40Z,43697241071,claude-4,sonnet+opus,build,3840,medium,built,,11.2,43,14045,1481073,0.5556,5,6,,,16.4,claude-4,fresh,,1
