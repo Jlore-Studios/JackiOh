@@ -2275,3 +2275,4 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-15T14:35:37Z,43724807096,claude-3,opus,review,3980,hard,reviewed,,1.6,19,8077,741213,0.823,4,5,,,0.5,,none,,1
 2026-11-15T14:51:25Z,43724769712,agy,gemini-3.8-flash-high,review,3979,medium,approved,,19.9,145149,10344,0,,7,9,45,46,1.4,,none,,1
 2026-11-15T14:42:28Z,43714623962,claude-1,sonnet+opus,review,3968,medium,died,died,48.5,261,70400,11780500,5.4472,0,19,,,105.8,,fresh,,4
+2026-11-15T17:34:03Z,43733661153,claude-1,sonnet+opus,review,3968,medium,built,,37.3,85,16287,3762249,1.8043,21,0,,,317.6,claude-1,none,,1
