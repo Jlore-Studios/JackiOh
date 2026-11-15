@@ -2284,3 +2284,5 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-15T20:07:11Z,43755178652,claude-7,opus,plan,3826,medium,planned,,7.8,101,57232,8071220,2.2184,0,6,,,6.3,,fresh,,1
 2026-11-15T20:06:25Z,43755131803,claude-3,opus,plan,3934,medium,planned,,8.6,88,64464,5398830,1.8384,0,8,,,0.2,,fresh,,1
 2026-11-15T20:11:39Z,43755075663,gpt,gpt-5.6-sol,plan,3976,medium,planned,,12.4,6659819,32766,0,,,,7,7,3.3,,none,,1
+2026-11-15T20:19:47Z,43756550831,claude-4,opus,plan,3913,medium,planned,,6.7,63,53650,3044605,1.3679,4,8,,,7.7,,fresh,,1
+2026-11-15T20:43:50Z,43758054692,claude-6,opus,plan,3976,hard,planned,,15.9,223,96882,16584340,7.1086,4,18,,,34.5,gpt,fresh,other,1
