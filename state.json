@@ -13189,7 +13189,7 @@
       "provider": "claude-4",
       "queued_at": "2026-11-15T20:02:45Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:a43e7299-1794773396",
+      "run_id": "43756550831",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-15T20:10:24Z",
       "stop_requested": false,
