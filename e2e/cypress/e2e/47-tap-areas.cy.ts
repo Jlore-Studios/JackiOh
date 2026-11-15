@@ -490,6 +490,17 @@ describe(`47 — every control under a finger takes a tap across ${String(HIT_MI
           cy.get(ts(inboxTestid.bell), { timeout: timeouts.view }).should("be.visible").click();
           cy.get(ts(inboxTestid.play), { timeout: timeouts.view }).should("be.visible");
           cy.get(ts(inboxTestid.open)).should("be.visible");
+          // The hit area alone cannot tell: index.css's ::before band stretches a bare link's tap area to
+          // --hit-min, so the link's own box is held to the button's size and shape as well (#3958).
+          for (const id of [inboxTestid.play, inboxTestid.open]) {
+            cy.get(ts(id)).should(($link) => {
+              const style = $link[0]!.ownerDocument.defaultView!.getComputedStyle($link[0]!);
+              expect($link[0]!.getBoundingClientRect().height, `${id}'s own height`).to.be.at.least(HIT_MIN_PX);
+              expect(style.display, `${id}'s display`).to.eq("inline-flex");
+              expect(parseFloat(style.paddingLeft), `${id}'s padding`).to.be.greaterThan(0);
+              expect(parseFloat(style.borderTopLeftRadius), `${id}'s radius`).to.be.greaterThan(0);
+            });
+          }
           expectHitAreas(size);
         });
 

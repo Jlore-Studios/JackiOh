@@ -490,10 +490,10 @@
   color: var(--tavern-gold-pale);
 }
 
-/* R2122000 under a finger: the dev build's hotseat link is --hit-min tall itself. On a short desktop
-   (1280x720, R3728000's sizes) the doors above it sit closer than half its shortfall, and its band took
-   their taps. */
-@media (pointer: coarse) {
+/* R2122000 under a finger or on a phone: the dev build's hotseat link is --hit-min tall itself. On a short
+   desktop (1280x720, R3728000's sizes) the doors above it sit closer than half its shortfall, and its band
+   took their taps; on a phone the band reached down over the news' bookmark (#3958). */
+@media (pointer: coarse), (max-width: 600px) {
   .landing a.landing-dev-link {
     display: inline-flex;
     align-items: center;
