@@ -15632,7 +15632,7 @@
       "started_at": "2026-11-15T09:45:29Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 2
     },
     "3956": {
       "action": "build",
