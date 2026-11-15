@@ -10,6 +10,7 @@ pub mod challenges;
 pub mod chat;
 pub mod ci_runs;
 pub mod client_address;
+pub mod client_errors;
 pub mod code_input_parity;
 pub mod codes;
 pub mod collection;

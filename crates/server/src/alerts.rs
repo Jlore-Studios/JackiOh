@@ -1,7 +1,7 @@
 //! Alerts told to people (#3595). Not in SPEC, and no R-row: operational, as `bug_reports.rs` is.
 //!
-//! An alert is an error log line with `alert = true`: `api::http::log_alert`'s, and
-//! `loops.rs`'s. Before #3595 one reached only the Worker's log. `AlertLayer`, beside the JSON log
+//! An alert is an error log line with `alert = true`: `api::http::log_alert`'s (a player's browser
+//! crash is one too, `api/client_errors.rs`, #3619), and `loops.rs`'s. Before #3595 one reached only the Worker's log. `AlertLayer`, beside the JSON log
 //! (`app::init_logging`), now hands each to one task, which makes at most one notice per event in
 //! `ALERT_WINDOW_MS` per process (the rest are counted, logged as `alert.held`, and the next notice
 //! says how many) and tells people two ways:
@@ -430,6 +430,11 @@ pub fn meaning(event: &str) -> &'static str {
             "GitHub refused CREATE_ISSUES_TOKEN, so neither bug reports nor alerts can open issues until \
              it is renewed (crates/server/README.md, A match its log does not reproduce)."
         }
+        "client.error" => {
+            "A player's browser crashed: a screen the error boundary caught, an uncaught error or an \
+             unhandled promise rejection (POST /api/client-errors, #3619). The message, a trimmed stack \
+             and the route are in the email; this issue holds none of them."
+        }
         "bug.found" => {
             "A match did not replay from its own log, or the engine panicked on a live action. Its bug \
              report has an issue of its own for the night bot."
@@ -642,6 +647,28 @@ mod tests {
     }
 
     #[test]
+    fn a_client_error_alert_keeps_its_details_out_of_the_public_issue() {
+        let raised = Alert {
+            event: "client.error".to_string(),
+            fields: [("data".to_string(), "TypeError: boom-secret-message".to_string())]
+                .into_iter()
+                .collect(),
+            at: 1_762_776_000_000,
+        };
+        let body = issue_body("jackioh.com", Some("abc1234"), &raised, 0);
+        let comment = comment_of(Some("abc1234"), &raised, 0);
+        for public in [&body, &comment] {
+            assert!(!public.contains("boom-secret-message"), "{public}");
+        }
+        assert!(
+            body.contains("`client.error`") && body.contains("#3619"),
+            "{body}"
+        );
+        let (_, text) = email_of("jackioh.com", None, &raised, 0, &Issue::NotFiled);
+        assert!(text.contains("boom-secret-message"), "{text}");
+    }
+
+    #[test]
     fn the_email_key_is_one_per_new_issue_or_else_one_per_event_site_and_day() {
         let at = 1_794_312_000_000; // 2026-11-10T12:00:00Z
         let raised = alert("bug.reports.refused", at);
@@ -677,6 +704,7 @@ mod tests {
             "game_records.fold_poison",
             "bug.reports.refused",
             "bug.found",
+            "client.error",
         ] {
             assert_ne!(meaning(event), fallback, "{event}");
         }

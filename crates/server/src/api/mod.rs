@@ -5,6 +5,7 @@ pub mod auth;
 pub mod card_picks;
 pub mod catalog;
 pub mod ci_runs;
+pub mod client_errors;
 pub mod codes;
 pub mod collection;
 pub mod consent;

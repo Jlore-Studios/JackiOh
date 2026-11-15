@@ -70,6 +70,8 @@ pub struct App {
     // Social: friends, presence, challenges, chat (#937, #938, #941)
     /// SPEC S7: the friend requests' and chat's own allowances (B43, B53).
     pub social: crate::social::Social,
+    /// #3619: the allowances of `POST /api/client-errors`, per address and per account.
+    pub client_errors: api::client_errors::ClientErrors,
     /// #1035: the setup of the blocking job a whole-log fold runs in (`actor::engine::off_runtime`):
     /// `actor::engine::registered_thread` here; a test's carries its thread's cards over.
     pub engine_thread: actor::engine::EngineThread,
@@ -1173,6 +1175,13 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::None,
         h!(api::e2e::post_daily_clock),
     ),
+    // api/client_errors.rs (#3619): a crash in a player's browser, told to the owners.
+    (
+        "POST",
+        "/api/client-errors",
+        AuthLevel::None,
+        h!(api::client_errors::post_client_error),
+    ),
     // api/health.rs (#861): the Worker reads /healthz's commit, and its daily cron requests /readyz.
     ("GET", "/healthz", AuthLevel::None, h!(api::health::get_healthz)),
     ("GET", "/readyz", AuthLevel::None, h!(api::health::get_readyz)),
@@ -1256,6 +1265,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         // Social: friends, presence, challenges, chat (#937, #938, #941)
         // SPEC S7: B49's sweep that marks lapsed challenges expired.
         social: crate::social::Social::default(),
+        client_errors: Default::default(),
         engine_thread: actor::engine::registered_thread,
         bug_reports,
         ci_runs,

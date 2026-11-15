@@ -720,6 +720,10 @@ inbox/                  R3729002: the bell (`InboxBell`, in the top bar's end gr
                         the tab), daily games on the player's move, daily challenges, friend requests and
                         shared replays, in `order.ts`'s order, each answered inline; `store.ts` reads the
                         daily list, friends and shared replays beside the social read, no new server state
+net/clientErrors.ts     #3619: a crash in this browser told to the owners: the route boundary's error, an
+                        uncaught error and an unhandled rejection each POST one small report (message,
+                        trimmed stack, route pattern, catalog version) to /api/client-errors; never state,
+                        a query or an id; lazy-chunk failures and stacks with no file of ours are left out
 net/roomLink.ts         R767, R3730006: the room link (/play?room=…&mode=…) and the lobby link
                         (/lobby/:code): built for the share sheet or the clipboard, read once off the
                         address bar into this tab, through a sign-in, for the lobby screen

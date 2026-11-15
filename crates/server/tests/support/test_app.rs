@@ -150,6 +150,7 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
         duos_again_offers: jackioh_server::duos::again::DuosAgainOffers::default(),
         seats: jackioh_server::seats::Seats::default(),
         social: jackioh_server::social::Social::default(),
+        client_errors: jackioh_server::api::client_errors::ClientErrors::default(),
         engine_thread: test_engine_thread,
         bug_reports: jackioh_server::bug_reports::BugReports::recording(),
         ci_runs: jackioh_server::api::ci_runs::CiRuns::canned(),
