@@ -14960,7 +14960,7 @@
       "action": "revise",
       "asks": [],
       "ci_early": false,
-      "ci_fixes": 0,
+      "ci_fixes": 1,
       "ci_on_head": true,
       "ci_reruns": {
         "777119be8f009f80896cc2644d3240fd8df8e21a": 1
@@ -15002,7 +15002,7 @@
       "pending_request": false,
       "provider": "claude-3",
       "question": "",
-      "queued_at": "2026-11-15T04:13:53Z",
+      "queued_at": "2026-11-15T04:52:51Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
       "run_id": "43675922221",
@@ -15025,7 +15025,7 @@
         "provider": "claude-3",
         "run": "43675922221"
       },
-      "source": "",
+      "source": "ci",
       "started_at": "2026-11-15T04:14:58Z",
       "stop_requested": false,
       "taken_asks": [],
