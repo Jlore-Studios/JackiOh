@@ -47,6 +47,17 @@ custom domains and Access are `infra/cloudflare.tf`'s.
   (`DAILY_SWEEP_PATH`), which ends the daily games whose move ran out and sends the "your move" emails
   and pushes while nobody else wakes it (SPEC §9.13). The path is outside `/api/*` and `/ws/*`, so
   nobody else reaches it through the Worker. The daily wake-up stays as it was (CLAUDE.md rule 13).
+- **When it cannot reach the server** (#3618). A server that cannot boot, or that the Worker cannot reach,
+  tells nobody itself, so the Worker raises `server.unreachable` (`src/alerts.ts`) when a request's start
+  threw or outran `START_WAIT_MS`, and when the daily `/readyz` fails. It tells people as the server's own
+  alerts do (`crates/server/README.md`, Alerts): an issue `Patch: alert server.unreachable on <site>`
+  (`architecture`, `human`) through `CREATE_ISSUES_TOKEN`, or a comment while one is open, and an email through
+  Resend to `ALERT_EMAILS` with the same `Idempotency-Key` (one per new issue, else one per site a day), so it
+  never spends the 100 emails a day the sign-in mail shares. The `Server` object keeps when it last told in its
+  storage, so a server failing on every request tells once an hour (`ALERT_WINDOW_MS`), not once a request, and
+  a restart does not forget. Every send runs under `ctx.waitUntil`, never while a player's request waits. The
+  issue names no field, since the repository is public: the cause is in the email and the Worker's logs. A
+  request whose client hung up is no alert, and neither is the hourly sweep that fails.
 - **The caller's address.** The Worker replaces `X-Forwarded-For` with the address Cloudflare saw
   (`CF-Connecting-IP`), and `TRUSTED_PROXY_HOPS` is 1 (R190). Calibrate it once after the first
   deploy: the server's `api.forwarded_for` log line shows the entries it received; if the platform
@@ -68,7 +79,8 @@ pnpm exec wrangler secret put CODE_PEPPER --config ../../wrangler.jsonc --env=""
 and the same three with `--env staging`. `CREATE_ISSUES_TOKEN`, `DEV_PROFILE_IDS`, `ALERT_RESEND_API_KEY`
 and `ALERT_EMAILS` are optional. The last two email the server's alerts (#3595, `crates/server/README.md`,
 Alerts): a Resend API key with Sending access for jackioh.com, and the addresses, comma-separated, kept a
-secret since the repository is public. `PLAYER_RESEND_API_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_PUBLIC_KEY`
+secret since the repository is public. The Worker reads `CREATE_ISSUES_TOKEN`, `ALERT_RESEND_API_KEY` and
+`ALERT_EMAILS` itself too, for its own alert when the server cannot be reached (#3618, above). `PLAYER_RESEND_API_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_PUBLIC_KEY`
 are optional too: the daily games' "your move" email and Web Push (#3727, `docs/deploy-cloudflare.md` section 3
 says how to make the VAPID pair); with one unset its channel is off.
 `DATABASE_URL` is Supabase's pooler URI (Connect -> Session pooler), which works over IPv4; the
