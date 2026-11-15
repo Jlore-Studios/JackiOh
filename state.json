@@ -14647,21 +14647,16 @@
     "what": "plan #3909 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-15T02:05:56Z",
+    "at": "2026-11-15T02:16:30Z",
     "notes": [
-      "#3908 needs a plan",
-      "#3909 needs a plan",
-      "#3911 needs a plan",
-      "#3888: @MaxGoetzmann answered its question, so it is queued again with the answer",
-      "started build #3888 on claude-6 (run 43666238812)",
-      "started plan #3911 on agy (run 43666281334)",
-      "started plan #3910 on claude-3 (run 43666318433)",
-      "started plan #3912 on claude-7 (run 43666355951)",
-      "started plan #3908 on claude-1 (run 43666392698)",
-      "started plan #3909 on claude-4 (run 43666428851)",
-      "started plan #3914 on claude-3 (run 43666465890)",
+      "delivered plan #3909 on claude-4 (run 43666428851): planned",
+      "delivered plan #3908 on claude-1 (run 43666392698): planned",
+      "delivered plan #3912 on claude-7 (run 43666355951): planned",
+      "started build #3912 on claude-7 (run 43667262770)",
+      "started plan #3908 on claude-1 (run 43667309804)",
+      "started plan #3909 on claude-4 (run 43667354126)",
       "nothing more to start: nothing is queued",
-      "pruned 37 plan file(s) older than 7 days"
+      "pruned 16 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15367,7 +15362,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-15T02:05:56Z",
+  "loop_tick": "2026-11-15T02:16:30Z",
   "machine_disk": {
     "issue": null,
     "reading": {
