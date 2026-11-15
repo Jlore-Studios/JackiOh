@@ -15859,6 +15859,14 @@
       "queued_at": "2026-11-15T22:30:47Z",
       "requested_by": "jgoetzmann",
       "stop_requested": false
+    },
+    "4028": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-15T21:36:45Z",
+      "issue": 3913,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
