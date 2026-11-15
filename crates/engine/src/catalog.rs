@@ -26,9 +26,8 @@ use crate::rng::Rng;
 use crate::script::CardScripts;
 use crate::state::GameState;
 use crate::wire::{
-    AttackHealth, CATALOG_SETS, CardCost, CardDef, CardDefs, CardTier, CardType, CatalogQuery, CostRange,
-    FusedIngredient, KeywordKind, OneOrMany, Rarity, SetName, Tag, TargetAim, has_keyword, set_ships,
-    string_union,
+    AttackHealth, CATALOG_SETS, CardCost, CardDef, CardDefs, CardTier, CardType, CostRange, FusedIngredient,
+    KeywordKind, OneOrMany, Rarity, SetName, Tag, TargetAim, has_keyword, set_ships, string_union,
 };
 
 /// A hasher for the registries' card ids: short strings looked up thousands of times a turn, where
@@ -720,40 +719,6 @@ fn has_cast_on_draw(def: &CardDef) -> bool {
             .as_ref()
             .is_some_and(|flags| flags.cast_on_draw == Some(true))
     })
-}
-
-impl From<CatalogQuery> for CatalogQueryArgs {
-    fn from(query: CatalogQuery) -> CatalogQueryArgs {
-        CatalogQueryArgs {
-            type_: query.type_,
-            cost: query.cost,
-            cost_range: query.cost_range,
-            tags: query.tags,
-            not_tags: query.not_tags,
-            any_tags: query.any_tags,
-            luck_based: None,
-            embiggen: None,
-            stats: query.stats,
-            rarity: query.rarity,
-            set: query.set,
-            exclude_def_id: query.exclude_def_id,
-            with_tokens: query.with_tokens,
-            def_id: None,
-            token: None,
-            tribute: None,
-            busted: None,
-            complicated: None,
-            every_set: None,
-            deals_damage: None,
-            keywords: None,
-            turn_hook: None,
-            tier: None,
-            past: None,
-            name_contains: None,
-            cast_on_draw: None,
-            aim: None,
-        }
-    }
 }
 
 fn as_list<T: PartialEq>(value: &Option<OneOrMany<T>>) -> &[T] {

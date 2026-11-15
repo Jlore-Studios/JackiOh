@@ -166,6 +166,19 @@ mod r382_the_fruit_pool_holds_the_grapes_and_only_a_pool_that_takes_every_token_
         );
     }
 
+    /// R382: a Fruit token that is no Grape (as S+ #6.1 Fine Fermented Grape and T-AI-1 are) stays out
+    /// of the Fruit pool, beside the Grapes it takes (#3836: the Grape check's `&&` taken as `||` let
+    /// every Fruit token in).
+    #[test]
+    fn r382_a_fruit_token_that_is_no_grape_stays_out_of_the_fruit_pool() {
+        let mut defs = defs();
+        defs.push(token("classicplus-058-1", "Classic+", "58.1", &["Fruit"]));
+        register_catalog(catalog_of(defs));
+        let fruit = pool(json!({ "tags": ["Fruit"] }));
+        assert!(!fruit.contains(&"classicplus-058-1".to_string()), "{fruit:?}");
+        assert!(fruit.contains(&"classicplus-065-1".to_string()), "{fruit:?}");
+    }
+
     #[test]
     fn r382_the_grapes_are_in_no_other_pool_a_plain_query_a_type_pool_and_a_set_pool_leave_them_out() {
         setup();
