@@ -36,8 +36,8 @@ use crate::scripts::classic::{
 };
 use crate::scripts::classic_plus::{
     c007_the_house, c011_anime_armor, c016_conjure_rush_token, c019_1_top_loser, c019_2_jungle_loser,
-    c023_dropshipping, c029_portal_to_the_past, c030_felinor_fuser, c033_ivory_tower, c037_wardrum,
-    c040_appropriations, c042_kys_test, c043_ai_slop, c047_joggs_box, c048_jlockeeds_lobbyist,
+    c019_3_mid_loser, c023_dropshipping, c029_portal_to_the_past, c030_felinor_fuser, c033_ivory_tower,
+    c037_wardrum, c040_appropriations, c042_kys_test, c043_ai_slop, c047_joggs_box, c048_jlockeeds_lobbyist,
     c049_jay_fungus, c051_jlockeeds_j15_fighter, c053_book_of_tokens, c062_kys_papaya, c071_book_of_buff,
     c073_1_classic_golem, c078_claudes_datacenter,
 };
@@ -94,8 +94,8 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// `never_defense_kept`, R2657001, R2657002, R2657004), and #3000's parts (#3038, #3040, #3041, #3042,
 /// #3044, #3048), #3128's (#3134, #3135, #3139, #3140, #3142),
 /// #3551's S01 (R3551000, R3551001, R3551002, R3551003, R3551004), #3778 (R3778000), #3802, #3837
-/// (R3837000, R3837003, R3837005), #3800 (R3800003, R3800004, S+ #104) and #3869
-/// (R3869000, R3869005).
+/// (R3837000, R3837003, R3837005), #3800 (R3800003, R3800004, S+ #104), #3869
+/// (R3869000, R3869005) and #3835 (R1440).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -772,6 +772,9 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     ),
     (c050_cn_tech::ID, "v0.6.2b", c050_cn_tech::script_v0_6_2b),
     (c002_na_tech::ID, "v0.6.2b", c002_na_tech::script_v0_6_2b),
+    // #3835 (R1440): Mid Loser's coin before it read its own Lucky off the field, in a cast's
+    // resolving zone too.
+    (c019_3_mid_loser::ID, "v0.6.2b", c019_3_mid_loser::script_v0_6_2b),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

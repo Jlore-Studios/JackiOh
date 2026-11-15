@@ -1,6 +1,7 @@
 //! C+ #19.3 Mid Loser (SPEC §8.7 row 19.3): Cry flips a coin (Lucky X: X more flips, heads kept): heads
 //! +{heads}/+{heads}; tails −{tails}/−{tails} and the opponent's next refresh is 1 higher. The coin is
-//! reported to both players before its buff, each Lucky flip with it (R2652001). Base heads +3/+3,
+//! reported to both players before its buff, each Lucky flip with it (R2652001). Its own Lucky counts
+//! wherever its Cry runs, a cast's resolving zone included (R1440, #3835). Base heads +3/+3,
 //! tails −3/−3; Radiant (Lucky 1) heads +6/+6, tails −3/−3 (heads +4/+4, tails −2/−2; Radiant heads
 //! +10/+10, tails −2/−2 until issue #3837).
 
@@ -10,21 +11,41 @@ pub const ID: &str = "classicplus-019-3";
 
 // "your opponent gains 1 mana next turn": the declared number `oppMana` (R386), less being better.
 
-/// One coin, Lucky X times more, heads kept if any of them lands heads (R1440's `lucky_coin`), with
-/// every face it drew (R2652001).
-fn coin(ctx: &mut EffectContext<'_>) -> RollResult {
-    // R987: the controller's Luck flips extra times beside the card's own Lucky.
-    let lucky = match ctx.live_self() {
+/// R1440, R1438: the card's own Lucky, printed plus given, wherever its Cry runs: on the field, or in
+/// the resolving zone of a cast that found no open unit zone (R1).
+fn own_lucky(ctx: &EffectContext<'_>) -> i32 {
+    ctx.live_self().map_or(0, |me| lucky_on(&*ctx.state, me))
+}
+
+/// R767000: through v0.6.2b its own Lucky counted only on the field, so a cast with no open unit zone
+/// flipped without it (#3835).
+fn own_lucky_v0_6_2b(ctx: &EffectContext<'_>) -> i32 {
+    match ctx.live_self() {
         Some(me) if me.zone.z() == ZoneName::Field => {
             numbered_sum(&unit_view(&*ctx.state, me).keywords, KeywordKind::Lucky).unwrap_or(0)
         }
         _ => 0,
-    } + luck_of(&*ctx.state, ctx.controller);
+    }
+}
+
+/// One coin, Lucky X times more, heads kept if any of them lands heads (R1440's `lucky_coin`), with
+/// every face it drew (R2652001).
+fn coin(ctx: &mut EffectContext<'_>, own: fn(&EffectContext<'_>) -> i32) -> RollResult {
+    // R987: the controller's Luck flips extra times beside the card's own Lucky.
+    let lucky = own(ctx) + luck_of(&*ctx.state, ctx.controller);
     flip_coin(ctx, lucky)
 }
 
 fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
-    let coin = coin(ctx);
+    cry_with(ctx, own_lucky)
+}
+
+fn cry_v0_6_2b(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    cry_with(ctx, own_lucky_v0_6_2b)
+}
+
+fn cry_with(ctx: &mut EffectContext<'_>, own: fn(&EffectContext<'_>) -> i32) -> Vec<Effect> {
+    let coin = coin(ctx, own);
     // R2652001: the coin is shown before the buff it decided.
     let shown = report_rolls(RollKind::Coin, ROLL_COIN_SIDES, vec![coin.clone()]);
     if coin.heads() {
@@ -48,7 +69,7 @@ fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     ]
 }
 
-pub fn script() -> CardScripts {
+fn scripts(cry: fn(&mut EffectContext<'_>) -> Vec<Effect>) -> CardScripts {
     let base = Script {
         cry: Some(hook(cry)),
         ..Script::default()
@@ -58,6 +79,16 @@ pub fn script() -> CardScripts {
     let radiant = base.clone();
 
     CardScripts { base, radiant }
+}
+
+pub fn script() -> CardScripts {
+    scripts(cry)
+}
+
+/// R767000, #3835: through v0.6.2b the coin read the card's own Lucky only on the field;
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_2b() -> CardScripts {
+    scripts(cry_v0_6_2b)
 }
 
 // C+ #19.3 Mid Loser — SPEC §8.7 row 19.3, BUILD M9 Classic+ row C+ 19.3 (R1, R411).
@@ -451,6 +482,72 @@ mod tests {
             assert_eq!(crate::degrade_number(&mut s, MID, "oppMana"), 2);
             s.play(MID, json!({}));
             assert_eq!(s.state().players[P2].mana.next_turn_mod, 2);
+        }
+    }
+
+    /// #3835: a cast that finds every unit zone full still runs its Cry, from the resolving zone (R1).
+    mod a_cast_onto_a_full_board_r1440 {
+        use super::*;
+
+        /// p1's five unit zones full and a Radiant Mid Loser (Lucky 1) cast: the coin's faces and how
+        /// far the rng moved.
+        fn cast_radiant_onto_a_full_board() -> (Vec<RollResult>, u32) {
+            const UNIT: &str = "stand-in (1) 1/1";
+            let mut s = scenario(json!({
+                "seed": "mid-loser-cast-full",
+                "p1": { "hand": [FILLER], "field": [UNIT, UNIT, UNIT, UNIT, UNIT], "library": DECK },
+                "p2": { "hand": [FILLER], "library": DECK },
+            }));
+            let cursor = s.state().rng_cursor;
+            let mut rng = create_rng(&s.state().seed, s.state().rng_cursor);
+            let mut events: Vec<GameEvent> = Vec::new();
+            {
+                let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+                {
+                    let mut ctx = make_context(
+                        &mut sink,
+                        None,
+                        HookOptions {
+                            controller: Some(P1),
+                            ..HookOptions::default()
+                        },
+                    );
+                    apply_effects(&[cast_new(json_as(json!({ "def": MID, "radiant": true })))], &mut ctx);
+                }
+                settle(&mut sink, SettleOptions::default());
+            }
+            s.state_mut().rng_cursor = rng.cursor();
+            let rolls: Vec<RollResult> = events
+                .iter()
+                .filter_map(|event| match event {
+                    GameEvent::Rolled { rolls, def_id, .. } if def_id == MID => Some(rolls.clone()),
+                    _ => None,
+                })
+                .flatten()
+                .collect();
+            (rolls, s.state().rng_cursor - cursor)
+        }
+
+        /// R1440, R1438: the Lucky is the flipping card's own, printed plus given, wherever its Cry runs, so a
+        /// Radiant one cast with no open unit zone flips its coin twice, as it does from the field.
+        #[test]
+        fn r1440_a_radiant_one_cast_with_every_unit_zone_full_flips_its_coin_twice() {
+            let (rolls, moved) = cast_radiant_onto_a_full_board();
+            assert_eq!(rolls.len(), 1, "one coin");
+            assert_eq!(rolls[0].faces.len(), 2, "the coin and its Lucky flip");
+            assert_eq!(moved, 2);
+        }
+
+        /// R767000: a game played through v0.6.2b folds under the kept script, whose coin read the card's
+        /// own Lucky only on the field: there the same cast flips once.
+        #[test]
+        fn r767000_a_game_on_v0_6_2b_flips_the_cast_s_coin_once() {
+            crate::under_kept(MID, script_v0_6_2b(), || {
+                let (rolls, moved) = cast_radiant_onto_a_full_board();
+                assert_eq!(rolls.len(), 1, "one coin");
+                assert_eq!(rolls[0].faces.len(), 1, "no Lucky flip");
+                assert_eq!(moved, 1);
+            });
         }
     }
 }
