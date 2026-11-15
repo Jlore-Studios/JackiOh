@@ -16742,8 +16742,10 @@
     "what": "spot-check #3972 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-15T12:49:42Z",
-    "notes": [],
+    "at": "2026-11-15T12:56:07Z",
+    "notes": [
+      "#3966: green and waiting for a person to merge it, so `claude-7` gives up its claim on it"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -17448,7 +17450,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-15T12:49:42Z",
+  "loop_tick": "2026-11-15T12:56:07Z",
   "machine_disk": {
     "issue": null,
     "reading": {
