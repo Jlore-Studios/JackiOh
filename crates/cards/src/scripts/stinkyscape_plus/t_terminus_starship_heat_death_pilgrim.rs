@@ -1,20 +1,19 @@
-//! S+ Heat Death Pilgrim, a Terminus Starship (SPEC §8.12; §6.1 Dormant, Starship; R3539001):
-//! 0/0 Unit, Starship Token, Flying, Ranged. "Dormant until it launches. It comes holding Trila 3,
-//! RR-5000, Healing Capsule and Vamp Rounds, and can't be launched by hand." The Last Voyage and The
-//! Far Vagabond summon it holding its loadout; its script is the shared Terminus hull
-//! (`c080_the_last_voyage::terminus_hull`).
+//! S+ Heat Death Pilgrim, a Terminus Starship (SPEC §8.12; §6.1 Dormant, Starship; R3539001): 0/0 Unit, Starship
+//! Token, Flying, Ranged. "Dormant until it launches. It comes holding Trila 3, RR-5000 and Vamp Rounds, and can't
+//! be launched by hand." The Last Voyage and The Far Vagabond summon it holding its loadout; its script is the
+//! shared Terminus hull (`c080_the_last_voyage::terminus_hull`).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-t-terminus-starship-heat-death-pilgrim";
 
-const TRILA: &str = "stinkyscape-108"; // Trila 3 (3)
-const RR_5000: &str = "stinkyscape-107"; // RR-5000 (2)
-const CAPSULE: &str = "stinkyscape-043"; // Healing Capsule (1)
-const VAMP: &str = "stinkyscape-122"; // Vamp Rounds (1)
+const TRILA: &str = "stinkyscape-108"; // Trila 3
+const RR_5000: &str = "stinkyscape-107"; // RR-5000
+const VAMP: &str = "stinkyscape-122"; // Vamp Rounds
 
-/// R3539001: the fixed loadout it comes holding: 7 mana of Starship Pieces.
-pub const PIECES: &[&str] = &[TRILA, RR_5000, CAPSULE, VAMP];
+/// R3539001: the fixed loadout it comes holding: 6 mana of Starship Pieces (issue #3951; its loadout
+/// through v0.6.2b is `c080_the_last_voyage::TERMINUS_STARSHIPS_V0_6_2B`'s).
+pub const PIECES: &[&str] = &[TRILA, RR_5000, VAMP];
 
 pub fn script() -> CardScripts {
     crate::scripts::stinkyscape_plus::c080_the_last_voyage::terminus_hull()

@@ -1168,16 +1168,24 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "draw",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
       }
     ],
     "loc": 26,
     "base": {
       "keywords": [],
-      "text": "After you play a card, shuffle {copies|copy|copies} of it into your deck."
+      "text": "After you play a card, shuffle {copies|copy|copies} of it into your deck.\nActivate: Draw {draw|card|cards}."
     },
     "radiant": {
       "keywords": [],
-      "text": "After you play a card, shuffle {copies|Radiant copy|Radiant copies} of it into your deck."
+      "text": "After you play a card, shuffle {copies|Radiant copy|Radiant copies} of it into your deck.\nActivate: Draw {draw|card|cards}."
     }
   },
   "core-034": {
@@ -5145,24 +5153,22 @@
     "flavor": "Physical",
     "token": false,
     "cost": 0,
-    "params": [
-      {
-        "key": "minCost",
-        "base": 1,
-        "radiant": 1,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 24,
     "base": {
-      "keywords": [],
-      "text": "Cry: Exile your deck and discard your hand.\nAura: You may play ({minCost})+ Cost cards from your graveyard. Cards that would go there are exiled instead."
+      "keywords": [
+        {
+          "kind": "Indestructible"
+        }
+      ],
+      "text": "Indestructible\nCry: Discard your hand and exile your deck.\nAura: Every card in your deck and graveyard has Flashback."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Cry: Exile your deck and discard your hand.\nAura: You may play ({minCost})+ Cost cards from your graveyard."
+      "keywords": [
+        {
+          "kind": "Indestructible"
+        }
+      ],
+      "text": "Indestructible\nCry: Discard your hand and your deck.\nAura: Every card in your deck and graveyard has Flashback."
     }
   },
   "classic-029": {
@@ -5455,8 +5461,8 @@
     "params": [
       {
         "key": "discard",
-        "base": 6,
-        "radiant": 6,
+        "base": 4,
+        "radiant": 4,
         "better": "down",
         "step": 1,
         "min": 1
@@ -9220,12 +9226,26 @@
     "cost": 1,
     "loc": 38,
     "base": {
-      "keywords": [],
-      "text": "The first Unit you stack onto this is fused into it.\nAura: Your Units have Flying and Stack."
+      "keywords": [
+        {
+          "kind": "Indestructible"
+        },
+        {
+          "kind": "Tradable"
+        }
+      ],
+      "text": "Indestructible, Tradable\nThe first Unit you stack onto this is fused into it.\nAura: Your Units have Flying and Stack."
     },
     "radiant": {
-      "keywords": [],
-      "text": "The first Unit you stack onto this becomes Radiant and is fused into it.\nAura: Your Units have Flying and Stack."
+      "keywords": [
+        {
+          "kind": "Indestructible"
+        },
+        {
+          "kind": "Tradable"
+        }
+      ],
+      "text": "Indestructible, Tradable\nThe first Unit you stack onto this becomes Radiant and is fused into it.\nAura: Your Units have Flying and Stack."
     }
   },
   "classicplus-034": {
@@ -9372,7 +9392,7 @@
     "rarity": "Legendary",
     "flavor": "Physical",
     "token": false,
-    "cost": 3,
+    "cost": 2,
     "params": [
       {
         "key": "threshold",
@@ -9386,8 +9406,8 @@
     ],
     "loc": 61,
     "base": {
-      "attack": 5,
-      "health": 5,
+      "attack": 4,
+      "health": 4,
       "keywords": [
         {
           "kind": "Divine Shield"
@@ -9396,8 +9416,8 @@
       "text": "Divine Shield\nWhile in your hand or deck: After you play {threshold} non-Units in a turn, summon this.\nEnd of turn: Cast a copy of a random non-Unit you played this turn."
     },
     "radiant": {
-      "attack": 10,
-      "health": 10,
+      "attack": 8,
+      "health": 8,
       "keywords": [
         {
           "kind": "Divine Shield"
@@ -10861,7 +10881,7 @@
       {
         "key": "fruits",
         "base": 1,
-        "radiant": 2,
+        "radiant": 3,
         "better": "up",
         "step": 1,
         "min": 1,
@@ -10874,14 +10894,13 @@
         "better": "down",
         "step": 1,
         "min": 0,
-        "tunedOn": "radiant",
         "read": "cry"
       }
     ],
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Cry: Add {fruits|random Fruit|random Fruits} to your hand.\nAura: Fruits you play are Radiant."
+      "text": "Cry: Add {fruits|random Fruit|random Fruits} to your hand. Each costs ({setCost}).\nAura: Fruits you play are Radiant."
     },
     "radiant": {
       "keywords": [],
@@ -12118,12 +12137,26 @@
     ],
     "loc": 53,
     "base": {
-      "keywords": [],
-      "text": "The first card you play each turn adds a copy of it to your hand. The copy isn't Radiant and costs ({setCost})."
+      "keywords": [
+        {
+          "kind": "Indestructible"
+        },
+        {
+          "kind": "Tradable"
+        }
+      ],
+      "text": "Indestructible, Tradable\nThe first card you play each turn adds a copy of it to your hand. The copy isn't Radiant and costs ({setCost})."
     },
     "radiant": {
-      "keywords": [],
-      "text": "The first card you play each turn adds a Radiant copy of it to your hand. It costs ({setCost})."
+      "keywords": [
+        {
+          "kind": "Indestructible"
+        },
+        {
+          "kind": "Tradable"
+        }
+      ],
+      "text": "Indestructible, Tradable\nThe first card you play each turn adds a Radiant copy of it to your hand. It costs ({setCost})."
     }
   },
   "meditative-012": {
@@ -12445,12 +12478,11 @@
     "params": [
       {
         "key": "mana",
-        "base": 2,
-        "radiant": 2,
+        "base": 1,
+        "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       },
       {
         "key": "nextMana",
@@ -12474,7 +12506,7 @@
     "loc": 18,
     "base": {
       "keywords": [],
-      "text": "Take an extra turn after this one.\nYou can take only one extra turn from Temporal Rift each game."
+      "text": "Take an extra turn after this one. Gain {mana} mana.\nYou can take only one extra turn from Temporal Rift each game."
     },
     "radiant": {
       "keywords": [],
@@ -15590,13 +15622,13 @@
       "attack": 0,
       "health": 3,
       "keywords": [],
-      "text": "While in your deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand."
+      "text": "While in your hand or deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand."
     },
     "radiant": {
       "attack": 0,
       "health": 6,
       "keywords": [],
-      "text": "While in your deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand and each adjacent Unit."
+      "text": "While in your hand or deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand and each adjacent Unit."
     }
   },
   "meditative-088": {
@@ -15653,7 +15685,7 @@
     "rarity": "Rare",
     "flavor": "Hustle",
     "token": false,
-    "cost": 4,
+    "cost": 3,
     "params": [
       {
         "key": "credit",
@@ -20340,11 +20372,11 @@
     "loc": 21,
     "base": {
       "keywords": [],
-      "text": "Aura: The AI plays the first 3 actions of each of your turns.\nEnd of turn: Summon a Drone Interceptor."
+      "text": "Aura: The AI plays the first 3 actions of each of your turns.\nEnd of turn: Summon 1 to 2 Drone Interceptors."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: The AI plays the first 3 actions of each of your turns.\nEnd of turn: Summon a Radiant Drone Interceptor."
+      "text": "Aura: The AI plays the first 3 actions of each of your turns.\nEnd of turn: Summon 1 to 2 Radiant Drone Interceptors."
     }
   },
   "stinkyscape-047": {
@@ -23075,7 +23107,7 @@
     "loc": 253,
     "base": {
       "keywords": [],
-      "text": "Death: Resummon this at Stage 1.\nQuest: Stage 1, Upload Resume. Activate this to send a card from your hand in as your resume. Reward: Hear back in 2 to 6 turns.\nQuest: Stage 2, The Interview. One of three, drawn at random: play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nQuest: Stage 3, The Offer. Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
+      "text": "Death: Resummon this at Stage 1.\nQuest: Stage 1, Upload Resume. Activate this to send a card from your hand in as your resume. Reward: Hear back in 1 to 4 turns.\nQuest: Stage 2, The Interview. One of three, drawn at random: play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nQuest: Stage 3, The Offer. Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
     },
     "radiant": {
       "keywords": [
@@ -23084,7 +23116,7 @@
           "n": 1
         }
       ],
-      "text": "Lucky 1\nDeath: Resummon this at Stage 1.\nQuest: Stage 1, Upload Resume. Activate this to send a card from your hand in as your resume. Reward: Hear back in 2 to 6 turns.\nQuest: Stage 2, The Interview. One of three, drawn at random: play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nQuest: Stage 3, The Offer. Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
+      "text": "Lucky 1\nDeath: Resummon this at Stage 1.\nQuest: Stage 1, Upload Resume. Activate this to send a card from your hand in as your resume. Reward: Hear back in 1 to 4 turns.\nQuest: Stage 2, The Interview. One of three, drawn at random: play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nQuest: Stage 3, The Offer. Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
     }
   },
   "stinkyscape-112-1": {
@@ -23676,12 +23708,12 @@
     "flavor": "Tech",
     "token": false,
     "cost": {
-      "base": 2,
-      "embiggen": 3
+      "base": 1,
+      "embiggen": 2
     },
     "loc": 14,
     "base": {
-      "attack": 4,
+      "attack": 3,
       "health": 1,
       "keywords": [
         {
@@ -23691,10 +23723,10 @@
           "kind": "Cleave"
         }
       ],
-      "text": "Ranged, Cleave\nEmbiggened (3): Starship Piece."
+      "text": "Ranged, Cleave\nEmbiggened (2): Starship Piece."
     },
     "radiant": {
-      "attack": 8,
+      "attack": 6,
       "health": 2,
       "keywords": [
         {
@@ -23707,7 +23739,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Ranged, Cleave, Rush\nEmbiggened (3): Starship Piece."
+      "text": "Ranged, Cleave, Rush\nEmbiggened (2): Starship Piece."
     }
   },
   "stinkyscape-129": {
@@ -25683,8 +25715,8 @@
     "params": [
       {
         "key": "spices",
-        "base": 3,
-        "radiant": 3,
+        "base": 5,
+        "radiant": 5,
         "better": "up",
         "step": 1,
         "min": 1
@@ -25843,7 +25875,7 @@
     "rarity": "Rare",
     "flavor": "Tech",
     "token": false,
-    "cost": 2,
+    "cost": 1,
     "loc": 6,
     "base": {
       "attack": 2,
@@ -26407,14 +26439,14 @@
     "resource": {
       "rarity": "Epic",
       "base": {
-        "sellMin": 5,
-        "sellMax": 15,
-        "buy": 15
+        "sellMin": 4,
+        "sellMax": 14,
+        "buy": 14
       },
       "radiant": {
-        "sellMin": 10,
-        "sellMax": 30,
-        "buy": 30
+        "sellMin": 8,
+        "sellMax": 28,
+        "buy": 28
       }
     },
     "loc": 29,
@@ -26445,14 +26477,14 @@
     "resource": {
       "rarity": "Legendary",
       "base": {
-        "sellMin": 12,
-        "sellMax": 25,
-        "buy": 25
+        "sellMin": 10,
+        "sellMax": 21,
+        "buy": 21
       },
       "radiant": {
-        "sellMin": 24,
-        "sellMax": 50,
-        "buy": 50
+        "sellMin": 20,
+        "sellMax": 42,
+        "buy": 42
       }
     },
     "loc": 18,
@@ -26501,14 +26533,14 @@
     "resource": {
       "rarity": "Mythic",
       "base": {
-        "sellMin": 20,
-        "sellMax": 40,
-        "buy": 40
+        "sellMin": 16,
+        "sellMax": 32,
+        "buy": 32
       },
       "radiant": {
-        "sellMin": 40,
-        "sellMax": 80,
-        "buy": 80
+        "sellMin": 32,
+        "sellMax": 64,
+        "buy": 64
       }
     },
     "loc": 22,
@@ -27239,8 +27271,8 @@
     "params": [
       {
         "key": "health",
-        "base": 3,
-        "radiant": 6,
+        "base": 5,
+        "radiant": 10,
         "better": "up",
         "step": 1,
         "min": 1
@@ -27933,24 +27965,14 @@
     "flavor": "Holy",
     "token": false,
     "cost": 3,
-    "params": [
-      {
-        "key": "attacks",
-        "base": 3,
-        "radiant": 2,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 68,
     "base": {
       "keywords": [],
-      "text": "After one of your Units has attacked {attacks|time|times} since this arrived, it becomes Radiant."
+      "text": "After one of your Units attacks, if it destroyed an enemy Unit, it becomes Radiant."
     },
     "radiant": {
       "keywords": [],
-      "text": "After one of your Units has attacked {attacks|time|times} since this arrived, it becomes Radiant."
+      "text": "After one of your Units attacks, it becomes Radiant."
     }
   },
   "traininggrounds-032": {
@@ -28660,7 +28682,7 @@
     "loc": 26,
     "base": {
       "keywords": [],
-      "text": "Steal an enemy Unit. Set its stats to 4/4."
+      "text": "Steal an enemy Unit. Set its stats to 2/2."
     },
     "radiant": {
       "keywords": [],
@@ -29919,7 +29941,7 @@
     "rarity": "Epic",
     "flavor": "Chaos",
     "token": false,
-    "cost": 3,
+    "cost": 2,
     "loc": 35,
     "base": {
       "keywords": [],
@@ -30498,7 +30520,7 @@
     "loc": 18,
     "base": {
       "attack": 1,
-      "health": 1,
+      "health": 5,
       "keywords": [
         {
           "kind": "Can't Defend"
@@ -30510,11 +30532,11 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Can't Defend, Ranged, Pierce\nCan attack {attacks|attack|attacks} per turn.\nCan only attack the Unit directly across from this."
+      "text": "Can't Defend, Ranged, Pierce\nCan only attack the Unit directly across from this.\nDamage also Burns {burns}."
     },
     "radiant": {
       "attack": 2,
-      "health": 2,
+      "health": 10,
       "keywords": [
         {
           "kind": "Can't Defend"
@@ -30524,17 +30546,14 @@
         },
         {
           "kind": "Pierce"
-        },
-        {
-          "kind": "Cloaked"
         }
       ],
-      "text": "Can't Defend, Ranged, Pierce, Cloaked\nCan attack {attacks|attack|attacks} per turn.\nCan only attack the Unit directly across from this."
+      "text": "Can't Defend, Ranged, Pierce\nCan only attack the Unit directly across from this.\nDamage also Burns {burns}."
     },
     "params": [
       {
-        "key": "attacks",
-        "base": 10,
+        "key": "burns",
+        "base": 5,
         "radiant": 10,
         "better": "up",
         "step": 1,
@@ -30620,7 +30639,7 @@
     "rarity": "Common",
     "flavor": "Tech",
     "token": false,
-    "cost": 1,
+    "cost": 0,
     "loc": 43,
     "base": {
       "keywords": [],
@@ -30790,11 +30809,11 @@
     "loc": 27,
     "base": {
       "keywords": [],
-      "text": "Give a Unit Immutable and Immune to Spells."
+      "text": "Give a Unit Immutable, Immune to Spells and Divine Shield."
     },
     "radiant": {
       "keywords": [],
-      "text": "Give a Unit Immutable, Immune to Spells, and Can't be Attacked."
+      "text": "Give a Unit Immutable, Immune to Spells, Divine Shield and Can't be Attacked."
     }
   },
   "stinkyscapeplus-047": {
@@ -31104,8 +31123,8 @@
     "params": [
       {
         "key": "mana",
-        "base": 3,
-        "radiant": 3,
+        "base": 4,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1
@@ -31215,11 +31234,11 @@
     "loc": 21,
     "base": {
       "keywords": [],
-      "text": "end of its owner's turn: add a Phase Fabric to your hand."
+      "text": "End of turn: Add a Phase Fabric to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "end of its owner's turn: add a Phase Fabric to your hand, it costs (0)."
+      "text": "End of turn: Add a Phase Fabric to your hand, it costs (0)."
     },
     "refs": [
       "stinkyscapeplus-046"
@@ -31508,10 +31527,10 @@
           "kind": "Can't attack"
         },
         {
-          "kind": "Can't Defend"
+          "kind": "Taunt"
         }
       ],
-      "text": "Can't attack, Can't Defend\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (4): Deal {embiggenedDamage} damage to all enemies instead. GIGA, 0/24."
+      "text": "Can't attack, Taunt\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (4): Deal {embiggenedDamage} damage to all enemies instead. GIGA, 0/24."
     },
     "radiant": {
       "attack": 0,
@@ -31521,7 +31540,7 @@
           "kind": "Can't attack"
         },
         {
-          "kind": "Can't Defend"
+          "kind": "Taunt"
         },
         {
           "kind": "Pierce"
@@ -31531,7 +31550,7 @@
           "n": 2
         }
       ],
-      "text": "Can't attack, Can't Defend, Pierce, Armor 2\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (4): Deal {embiggenedDamage} damage to all enemies instead. GIGA, 0/48."
+      "text": "Can't attack, Taunt, Pierce, Armor 2\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (4): Deal {embiggenedDamage} damage to all enemies instead. GIGA, 0/48."
     },
     "params": [
       {
@@ -31577,10 +31596,10 @@
           "kind": "Can't attack"
         },
         {
-          "kind": "Can't Defend"
+          "kind": "Taunt"
         }
       ],
-      "text": "Can't attack, Can't Defend\nEmbiggened (4): GIGA, 0/32."
+      "text": "Can't attack, Taunt\nEmbiggened (4): GIGA, 0/32."
     },
     "radiant": {
       "attack": 0,
@@ -31590,14 +31609,14 @@
           "kind": "Can't attack"
         },
         {
-          "kind": "Can't Defend"
+          "kind": "Taunt"
         },
         {
           "kind": "Armor",
           "n": 2
         }
       ],
-      "text": "Can't attack, Can't Defend, Armor 2\nEmbiggened (4): GIGA, 0/64."
+      "text": "Can't attack, Taunt, Armor 2\nEmbiggened (4): GIGA, 0/64."
     }
   },
   "stinkyscapeplus-066": {
@@ -31625,10 +31644,10 @@
           "kind": "Can't attack"
         },
         {
-          "kind": "Can't Defend"
+          "kind": "Taunt"
         }
       ],
-      "text": "Can't attack, Can't Defend\nEnd of turn: Gain Divine Shield.\nEmbiggened (4): GIGA, 0/16."
+      "text": "Can't attack, Taunt\nEnd of turn: Gain Divine Shield.\nEmbiggened (4): GIGA, 0/16."
     },
     "radiant": {
       "attack": 0,
@@ -31638,14 +31657,14 @@
           "kind": "Can't attack"
         },
         {
-          "kind": "Can't Defend"
+          "kind": "Taunt"
         },
         {
           "kind": "Armor",
           "n": 2
         }
       ],
-      "text": "Can't attack, Can't Defend, Armor 2\nEnd of turn: Gain Divine Shield.\nEmbiggened (4): GIGA, 0/32."
+      "text": "Can't attack, Taunt, Armor 2\nEnd of turn: Gain Divine Shield.\nEmbiggened (4): GIGA, 0/32."
     }
   },
   "stinkyscapeplus-067": {
@@ -31673,7 +31692,7 @@
           "kind": "Can't attack"
         },
         {
-          "kind": "Can't Defend"
+          "kind": "Taunt"
         },
         {
           "kind": "Immutable"
@@ -31682,7 +31701,7 @@
           "kind": "Immune to Spells"
         }
       ],
-      "text": "Can't attack, Can't Defend, Immutable, Immune to Spells\nEmbiggened (4): GIGA, 0/24."
+      "text": "Can't attack, Taunt, Immutable, Immune to Spells\nEmbiggened (4): GIGA, 0/24."
     },
     "radiant": {
       "attack": 0,
@@ -31692,7 +31711,7 @@
           "kind": "Can't attack"
         },
         {
-          "kind": "Can't Defend"
+          "kind": "Taunt"
         },
         {
           "kind": "Immutable"
@@ -31705,7 +31724,7 @@
           "n": 2
         }
       ],
-      "text": "Can't attack, Can't Defend, Immutable, Immune to Spells, Armor 2\nEmbiggened (4): GIGA, 0/48."
+      "text": "Can't attack, Taunt, Immutable, Immune to Spells, Armor 2\nEmbiggened (4): GIGA, 0/48."
     }
   },
   "stinkyscapeplus-068": {
@@ -32234,20 +32253,29 @@
     "loc": 28,
     "base": {
       "keywords": [],
-      "text": "Exile your deck. Start a {count|turn|turns} countdown. When it ends, win the game."
+      "text": "Exile your deck. Start an {count|turn|turns} countdown. When it ends, win the game."
     },
     "radiant": {
       "keywords": [],
-      "text": "Exile your deck. Start an {count|turn|turns} countdown. When it ends, win the game."
+      "text": "Exile your deck. Your hero gains {armor} Armor. Start an {count|turn|turns} countdown. When it ends, win the game."
     },
     "params": [
       {
         "key": "count",
-        "base": 10,
+        "base": 8,
         "radiant": 8,
         "better": "down",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "armor",
+        "base": 5,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ]
   },
@@ -32325,11 +32353,11 @@
     "loc": 27,
     "base": {
       "keywords": [],
-      "text": "For the rest of the game lose {mana} mana. Add a random Terminus card to your hand, it costs (3)."
+      "text": "For the rest of the game lose {mana} mana. Add a random Terminus card to your hand, it costs (2)."
     },
     "radiant": {
       "keywords": [],
-      "text": "For the rest of the game lose {mana} mana. Add a random Radiant Terminus card to your hand, it costs (3)."
+      "text": "For the rest of the game lose {mana} mana. Add a random Radiant Terminus card to your hand, it costs (2)."
     },
     "params": [
       {
@@ -34663,7 +34691,7 @@
     "rarity": "Rare",
     "flavor": "Tech",
     "token": false,
-    "cost": 3,
+    "cost": 2,
     "loc": 32,
     "base": {
       "keywords": [],
@@ -36886,7 +36914,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding Trila 3, RR-5000, Healing Capsule and Vamp Rounds, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Trila 3, RR-5000 and Vamp Rounds, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -36899,7 +36927,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Trila 3, Radiant RR-5000, Radiant Healing Capsule and Radiant Vamp Rounds, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Trila 3, Radiant RR-5000 and Radiant Vamp Rounds, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -36935,7 +36963,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding Disintegrex, Flak v4, Shield Amplifier and Hull Booster, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Disintegrex and Flak v4, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -36948,7 +36976,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Disintegrex, Radiant Flak v4, Radiant Shield Amplifier and Radiant Hull Booster, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Disintegrex and Radiant Flak v4, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -36984,7 +37012,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding Cannon v5, Trila 3 and Ultra Capacitor, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Cannon v5 and Ultra Capacitor, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -36997,7 +37025,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Cannon v5, Radiant Trila 3 and Radiant Ultra Capacitor, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Cannon v5 and Radiant Ultra Capacitor, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -37032,7 +37060,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding Frost Module, Reflective Plating, Defensive Crystal and Beam v4, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Frost Module, Reflective Plating and Beam v4, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -37045,7 +37073,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Frost Module, Radiant Reflective Plating, Radiant Defensive Crystal and Radiant Beam v4, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Frost Module, Radiant Reflective Plating and Radiant Beam v4, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -37081,7 +37109,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding Beam v5, Warpfield Amplifier, Magic Module and RR-5000, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Beam v5 and Warpfield Amplifier, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -37094,7 +37122,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Beam v5, Radiant Warpfield Amplifier, Radiant Magic Module and Radiant RR-5000, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Beam v5 and Radiant Warpfield Amplifier, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -37130,7 +37158,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding Repeater v5, After Burner, Patcher Nanobots, Ultra Capacitor and Healing Capsule, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Repeater v5, Ultra Capacitor and Healing Capsule, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -37143,7 +37171,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Repeater v5, Radiant After Burner, Radiant Patcher Nanobots, Radiant Ultra Capacitor and Radiant Healing Capsule, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Repeater v5, Radiant Ultra Capacitor and Radiant Healing Capsule, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -37180,7 +37208,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding Flak v5, Cannon v4, Vamp Rounds, Shield Amplifier and Spacemine, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Flak v5 and Vamp Rounds, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -37193,7 +37221,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Flak v5, Radiant Cannon v4, Radiant Vamp Rounds, Radiant Shield Amplifier and Radiant Spacemine, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Flak v5 and Radiant Vamp Rounds, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -37230,7 +37258,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding Cannon v5, Beam v5 and Flak v5, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Cannon v3, Beam v3 and Flak v3, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },
@@ -37243,7 +37271,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Cannon v5, Radiant Beam v5 and Radiant Flak v5, and can't be launched by hand.",
+      "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Cannon v3, Radiant Beam v3 and Radiant Flak v3, and can't be launched by hand.",
       "attack": 0,
       "health": 0
     },

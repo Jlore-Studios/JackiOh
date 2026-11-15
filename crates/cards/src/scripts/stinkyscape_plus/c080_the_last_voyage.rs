@@ -7,7 +7,9 @@
 //!
 //! Engine: the board exile reaches Dormant cards (`exile_board`, R3539002) and spares only a card no
 //! effect reaches; the ten Terminus Starships are summoned already holding their fixed loadouts
-//! (`summon_starships`, R3539001), sealed against a launch by hand (R3539000); one launches at once
+//! (`summon_starships`, R3539001; five worth 5 mana of Starship Pieces and five worth 6 since issue #3951,
+//! 5 to 12 through v0.6.2b, which `script_v0_6_2b` keeps for those replays, R767000), sealed against a
+//! launch by hand (R3539000); one launches at once
 //! and another at the start of each of its caster's turns (`launch_random_starship`, kept by
 //! `for_rest_of_game`, R3539002), a free launch (R1852006). The number summoned is the declared
 //! `starships`.
@@ -47,8 +49,8 @@ use crate::scripts::stinkyscape_plus::t_terminus_starship_vacuum_psalm::{
 
 pub const ID: &str = "stinkyscapeplus-080";
 
-/// R3539001: the ten Terminus Starships, each hull and the fixed loadout it comes holding, worth 5
-/// to 12 mana of Starship Pieces in all.
+/// R3539001: the ten Terminus Starships, each hull and the fixed loadout it comes holding, five worth 5
+/// mana of Starship Pieces and five worth 6 (issue #3951).
 pub const TERMINUS_STARSHIPS: [(&str, &[&str]); 10] = [
     (ARK_ID, ARK_PIECES),
     (EMBER_ID, EMBER_PIECES),
@@ -62,9 +64,30 @@ pub const TERMINUS_STARSHIPS: [(&str, &[&str]); 10] = [
     (PSALM_ID, PSALM_PIECES),
 ];
 
+/// R767000: the ten Terminus Starships through v0.6.2b, each with the loadout it came holding then, worth
+/// 5 to 12 mana of Starship Pieces (issue #3951 cut eight of them to 5 or 6). `script_v0_6_2b` here and
+/// in `c155_the_far_vagabond` summon from it.
+pub const TERMINUS_STARSHIPS_V0_6_2B: [(&str, &[&str]); 10] = [
+    (ARK_ID, ARK_PIECES),
+    (EMBER_ID, EMBER_PIECES),
+    (PILGRIM_ID, &["stinkyscape-108", "stinkyscape-107", "stinkyscape-043", "stinkyscape-122"]),
+    (ENTROPY_ID, &["stinkyscape-105", "stinkyscape-057", "stinkyscape-038", "stinkyscape-098"]),
+    (REQUIEM_ID, &["stinkyscape-060", "stinkyscape-108", "stinkyscape-133"]),
+    (EXODUS_ID, &["stinkyscape-175", "stinkyscape-104", "stinkyscape-132", "stinkyscape-054"]),
+    (DRIFT_ID, &["stinkyscape-058", "stinkyscape-106", "stinkyscape-136", "stinkyscape-107"]),
+    (SHORE_ID, &["stinkyscape-059", "stinkyscape-090", "stinkyscape-093", "stinkyscape-133", "stinkyscape-043"]),
+    (COVENANT_ID, &["stinkyscape-061", "stinkyscape-056", "stinkyscape-122", "stinkyscape-038", "stinkyscape-049"]),
+    (PSALM_ID, &["stinkyscape-060", "stinkyscape-058", "stinkyscape-061"]),
+];
+
 /// The blueprints `summon_starships` picks from.
 pub fn blueprints() -> Vec<StarshipBlueprint> {
-    TERMINUS_STARSHIPS
+    blueprints_of(&TERMINUS_STARSHIPS)
+}
+
+/// The blueprints of a table of hulls and loadouts.
+pub fn blueprints_of(table: &[(&str, &[&str])]) -> Vec<StarshipBlueprint> {
+    table
         .iter()
         .map(|(id, pieces)| StarshipBlueprint {
             def_id: (*id).to_string(),
@@ -102,7 +125,7 @@ pub fn terminus_hull() -> CardScripts {
 /// The badge its caster carries for the rest of the game.
 const BADGE: &str = "Start of turn: Launch a random Terminus Starship.";
 
-fn voyage(radiant: bool) -> Script {
+fn voyage(radiant: bool, blueprints: fn() -> Vec<StarshipBlueprint>) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let starships = param(ctx, "starships");
@@ -140,8 +163,22 @@ fn voyage(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: voyage(false),
-        radiant: voyage(true),
+        base: voyage(false, blueprints),
+        radiant: voyage(true, blueprints),
+    }
+}
+
+/// R767000: the loadouts of v0.6.2b and before (issue #3951).
+pub fn blueprints_v0_6_2b() -> Vec<StarshipBlueprint> {
+    blueprints_of(&TERMINUS_STARSHIPS_V0_6_2B)
+}
+
+/// R767000: the scripts through v0.6.2b, summoning the loadouts of then (issue #3951). `KEPT_SCRIPTS`
+/// folds those replays under it.
+pub fn script_v0_6_2b() -> CardScripts {
+    CardScripts {
+        base: voyage(false, blueprints_v0_6_2b),
+        radiant: voyage(true, blueprints_v0_6_2b),
     }
 }
 

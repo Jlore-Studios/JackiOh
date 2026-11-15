@@ -1,14 +1,16 @@
 //! S #46 Circadian Halfcycler (SPEC §8.10 row 46): (1) Field Spell, Epic, a card of the Stinkyscape set.
 //!   Base:    "Aura: The AI plays the first 3 actions of each of your turns.
-//!             End of turn: Summon a Drone Interceptor."
+//!             End of turn: Summon 1 to 2 Drone Interceptors."
 //!   Radiant: "Aura: The AI plays the first 3 actions of each of your turns.
-//!             End of turn: Summon a Radiant Drone Interceptor."
+//!             End of turn: Summon 1 to 2 Radiant Drone Interceptors."
 //! Engine: the autopilot as an aura (R1844000), `pilotsActions: 3`: each of its controller's turns while
 //!   it stands engages R1183002's autopilot as the turn begins, which plays its first 3 actions (R456's
 //!   plays and attacks, never an answer) and then hands the turn back for good; one that arrives mid-turn
-//!   waits for its controller's next turn. End of turn (R62), its controller's: a summon of the Drone
-//!   Interceptor into their leftmost open unit zone (R64); with no open zone nothing. Radiant: a Radiant
-//!   Interceptor.
+//!   waits for its controller's next turn. End of turn (R62), its controller's: one draw of the match rng
+//!   (R60) picks 1 Drone Interceptor two times in three and 2 one time in three (the designer's ⅔ and ⅓,
+//!   R3951002), each summoned into their leftmost open unit zone (R64); with no open zone nothing.
+//!   Radiant: Radiant Interceptors. Through v0.6.2b it summoned one, which `script_v0_6_2b` keeps for
+//!   those replays (issue #3951, R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -20,14 +22,28 @@ const INTERCEPTOR: &str = "stinkyscape-t-drone-interceptor";
 /// R1844000: "the first 3 actions of each of your turns", the printed count the aura plays.
 const PILOTED_ACTIONS: i32 = 3;
 
-fn face(radiant: bool) -> Script {
+/// R3951002: "1 to 2" Interceptors: one draw over `INTERCEPTOR_ODDS` outcomes, the first of which summons
+/// `MOST_INTERCEPTORS`, the rest `FEWEST_INTERCEPTORS` (a third and two thirds).
+const INTERCEPTOR_ODDS: i32 = 3;
+const FEWEST_INTERCEPTORS: i32 = 1;
+const MOST_INTERCEPTORS: i32 = 2;
+
+/// `rolls`: whether the end of turn rolls 1 to 2 Interceptors (since issue #3951) or summons one.
+fn face(radiant: bool, rolls: bool) -> Script {
     Script {
         static_flags: Some(StaticFlags {
             pilots_actions: Some(PILOTED_ACTIONS),
             ..StaticFlags::default()
         }),
-        end_of_turn: Some(hook(move |_ctx| {
-            vec![summon(json_as(json!({ "defId": INTERCEPTOR, "radiant": radiant })))]
+        end_of_turn: Some(hook(move |ctx| {
+            let count = if rolls && ctx.rng.int(INTERCEPTOR_ODDS) == 0 {
+                MOST_INTERCEPTORS
+            } else {
+                FEWEST_INTERCEPTORS
+            };
+            (0..count)
+                .map(|_| summon(json_as(json!({ "defId": INTERCEPTOR, "radiant": radiant }))))
+                .collect()
         })),
         ..Script::default()
     }
@@ -35,8 +51,17 @@ fn face(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: face(false),
-        radiant: face(true),
+        base: face(false, true),
+        radiant: face(true, true),
+    }
+}
+
+/// R767000: the scripts through v0.6.2b, which summoned one Interceptor (issue #3951). `KEPT_SCRIPTS`
+/// folds those replays under it.
+pub fn script_v0_6_2b() -> CardScripts {
+    CardScripts {
+        base: face(false, false),
+        radiant: face(true, false),
     }
 }
 
@@ -56,7 +81,12 @@ mod tests {
     const FILLER: &str = "core-005";
 
     fn fielded(radiant: bool, active: &str, hand: Value, field: Value) -> Scenario {
+        seeded("halfcycler", radiant, active, hand, field)
+    }
+
+    fn seeded(seed: &str, radiant: bool, active: &str, hand: Value, field: Value) -> Scenario {
         scenario(json!({
+            "seed": seed,
             "active": active,
             "p1": {
                 "hand": hand,
@@ -139,12 +169,42 @@ mod tests {
         assert_eq!(actions(events), 3);
     }
 
-    #[test]
-    fn r62_at_your_end_of_turn_it_summons_a_drone_interceptor() {
-        let mut s = fielded(false, "p1", json!([FILLER]), json!([]));
+    /// p1's end of turn on `seed`: the Interceptors it summoned, each with its Radiant flag.
+    fn summoned_on(seed: &str, radiant: bool) -> Vec<(String, bool)> {
+        let mut s = seeded(seed, radiant, "p1", json!([FILLER]), json!([]));
         s.end_turn();
-        assert_eq!(units(&s, P1), vec![(INTERCEPTOR.to_string(), false)]);
         assert!(units(&s, P2).is_empty());
+        units(&s, P1)
+    }
+
+    /// Issue #3951: "Summon 1 to 2 Drone Interceptors", two a third of the time.
+    #[test]
+    fn r62_r3951002_at_your_end_of_turn_it_summons_1_or_2_drone_interceptors() {
+        let one = seed_where("halfcycler-one", |seed| summoned_on(seed, false).len() == 1);
+        assert_eq!(summoned_on(&one, false), vec![(INTERCEPTOR.to_string(), false)]);
+        let two = seed_where("halfcycler-two", |seed| summoned_on(seed, false).len() == 2);
+        assert_eq!(summoned_on(&two, false), vec![(INTERCEPTOR.to_string(), false); 2]);
+    }
+
+    #[test]
+    fn r3951002_two_come_about_a_third_of_the_time() {
+        let seeds = 90;
+        let twos = (0..seeds)
+            .map(|n| summoned_on(&format!("halfcycler-odds-{n}"), false).len())
+            .inspect(|count| assert!((1..=2).contains(count), "{count}"))
+            .filter(|count| *count == 2)
+            .count();
+        assert!((15..=45).contains(&twos), "{twos} twos in {seeds}");
+    }
+
+    /// R767000: through v0.6.2b it summoned one (issue #3951).
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_2b_summons_one() {
+        crate::under_kept(HALFCYCLER, super::script_v0_6_2b(), || {
+            for n in 0..12 {
+                assert_eq!(summoned_on(&format!("halfcycler-kept-{n}"), false).len(), 1, "seed {n}");
+            }
+        });
     }
 
     #[test]
@@ -155,10 +215,12 @@ mod tests {
     }
 
     #[test]
-    fn radiant_a_radiant_interceptor_and_the_same_3_actions() {
-        let mut s = fielded(true, "p1", json!([FILLER]), json!([]));
-        s.end_turn();
-        assert_eq!(units(&s, P1), vec![(INTERCEPTOR.to_string(), true)]);
+    fn radiant_radiant_interceptors_and_the_same_3_actions() {
+        for n in 0..6 {
+            let made = summoned_on(&format!("halfcycler-radiant-{n}"), true);
+            assert!((1..=2).contains(&made.len()), "{made:?}");
+            assert!(made.iter().all(|unit| *unit == (INTERCEPTOR.to_string(), true)), "{made:?}");
+        }
 
         let mut s = fielded(true, "p2", json!(vec![VANILLA; 4]), json!([]));
         s.end_turn();

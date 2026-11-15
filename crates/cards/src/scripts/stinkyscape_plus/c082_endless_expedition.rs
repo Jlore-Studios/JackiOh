@@ -1,24 +1,27 @@
 //! SPEC §8.12 S+ #82 Endless Expedition (1) Spell, Quickdraw, Mythic, a card of the held Stinkyscape+
 //! set (R1420, R3535000; R3569007, R3569008, R640).
 //!   Base:    "For the rest of the game lose {mana} mana. Add a random Terminus card to your hand, it
-//!            costs (3)."
+//!            costs (2)."
 //!   Radiant: "For the rest of the game lose {mana} mana. Add a random Radiant Terminus card to your
-//!            hand, it costs (3)."
+//!            hand, it costs (2)."
 //!
 //! Engine: `loseMaxMana` lowers the caster's persistent mana modifier (§2.3), so their max mana is
 //! `mana` lower at every refresh from now on, an empty crystal being the one lost first and max mana
 //! flooring at 0 (R3569008). The card added is one drawn from the Terminus pool, every Terminus card of
 //! the shipped sets, tokens included (R3552001, R380), through the generator (R387), costing
-//! (`TERMINUS_COST`) whatever it printed (R3569007). Quickdraw (R640) is a static flag beside the tag.
+//! (`TERMINUS_COST`) whatever it printed (R3569007); (3) through v0.6.2b, which `script_v0_6_2b` keeps for
+//! those replays (issue #3951, R767000). Quickdraw (R640) is a static flag beside the tag.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-082";
 
-/// "It costs (3)": the added card's cost.
-const TERMINUS_COST: i32 = 3;
+/// "It costs (2)": the added card's cost.
+const TERMINUS_COST: i32 = 2;
+/// Through v0.6.2b (issue #3951): "it costs (3)".
+const TERMINUS_COST_V0_6_2B: i32 = 3;
 
-fn expedition(radiant: bool) -> Script {
+fn expedition(radiant: bool, cost: i32) -> Script {
     Script {
         static_flags: Some(StaticFlags {
             quickdraw: Some(true),
@@ -30,7 +33,7 @@ fn expedition(radiant: bool) -> Script {
                 add_random_from_catalog(json_as(json!({
                     "query": crate::query::terminus_cards(),
                     "radiant": radiant,
-                    "costOverride": TERMINUS_COST,
+                    "costOverride": cost,
                 }))),
             ]
         })),
@@ -40,8 +43,17 @@ fn expedition(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: expedition(false),
-        radiant: expedition(true),
+        base: expedition(false, TERMINUS_COST),
+        radiant: expedition(true, TERMINUS_COST),
+    }
+}
+
+/// R767000: the scripts through v0.6.2b, whose Terminus card cost (3) (issue #3951). `KEPT_SCRIPTS` folds
+/// those replays under it.
+pub fn script_v0_6_2b() -> CardScripts {
+    CardScripts {
+        base: expedition(false, TERMINUS_COST_V0_6_2B),
+        radiant: expedition(true, TERMINUS_COST_V0_6_2B),
     }
 }
 
@@ -99,7 +111,7 @@ mod tests {
         }
 
         #[test]
-        fn r3569007_r3569008_expedition_lowers_max_mana_and_adds_a_3_cost_terminus_card() {
+        fn r3569007_r3569008_expedition_lowers_max_mana_and_adds_a_2_cost_terminus_card() {
             let pool = pool();
             for n in 0..6 {
                 let mut s = game(&format!("expedition-base-{n}"), false);
@@ -118,10 +130,22 @@ mod tests {
                 assert_eq!(
                     effective_cost(s.state(), &made[0], Default::default()),
                     TERMINUS_COST,
-                    "{} costs (3)",
+                    "{} costs (2)",
                     made[0].def_id
                 );
             }
+        }
+
+        /// R767000: through v0.6.2b the card added cost (3) (issue #3951).
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_2b_adds_a_3_cost_terminus_card() {
+            crate::under_kept(ID, script_v0_6_2b(), || {
+                let mut s = game("expedition-kept", false);
+                s.play(ID, json!({}));
+                let made = added(&s);
+                assert_eq!(made.len(), 1, "{made:?}");
+                assert_eq!(effective_cost(s.state(), &made[0], Default::default()), TERMINUS_COST_V0_6_2B);
+            });
         }
 
         #[test]

@@ -1,7 +1,8 @@
 //! SPEC §8.12 S+ #79 A Glimpse into the Endless Sea (4) Spell, Wincon, Terminus, Mythic, a card of
 //! the Stinkyscape+ set (R1420, R3535000; R3569005, R3569006).
-//!   Base:    "Exile your deck. Start a {count} turn countdown. When it ends, win the game." (10)
-//!   Radiant: "Exile your deck. Start an {count} turn countdown. When it ends, win the game." (8)
+//!   Base:    "Exile your deck. Start an {count} turn countdown. When it ends, win the game." (8)
+//!   Radiant: "Exile your deck. Your hero gains {armor} Armor. Start an {count} turn countdown. When it
+//!            ends, win the game." (8, Armor 5)
 //!
 //! Engine: the whole library is exiled with no draw, so no fatigue (§2.4), as S+ #80 does. The
 //! countdown is `delay` "in N turns" (R1181000): a badge on its owner's side counts down the turns they
@@ -9,7 +10,10 @@
 //! wins them the game (R850; a hero at 0 still loses first). Only the owner's turns tick it, one made
 //! on the other player's turn counting from their next (R3569005). The card is a Wincon, so Bob's Plan
 //! may pick it: its plan is Core #75 Infinite Reserves, which keeps the empty deck from costing its
-//! owner the game before the countdown ends (R3569006; `c001_bobs_plan.rs`).
+//! owner the game before the countdown ends (R3569006; `c001_bobs_plan.rs`). The Radiant face's Armor is
+//! `gain_hero_armor`, the declared `armor` (R386), kept for the rest of the game (R124). Issue #3951 took
+//! the base face's countdown from 10 to 8, a number, and gave the Radiant face its Armor, which
+//! `script_v0_6_2b` leaves out for the replays of v0.6.2b and before (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -20,20 +24,23 @@ const BADGE: &str = "A Glimpse into the Endless Sea: you win";
 /// The delayed step, which `delayed` runs.
 const STEP: &str = "win";
 
-fn glimpse() -> Script {
+/// `armor`: whether the face gains its hero the declared `armor` (the Radiant face, since issue #3951).
+fn glimpse(armor: bool) -> Script {
     Script {
-        cry: Some(hook(|ctx| {
-            vec![
-                exile_bottom_of_library(json_as(json!({
-                    "count": zone_cards(&*ctx.state, ctx.controller, OffFieldZone::Library).len(),
-                }))),
-                delay(json_as(json!({
-                    "at": { "phase": "start", "player": "self" },
-                    "step": STEP,
-                    "turns": param(ctx, "count"),
-                    "label": BADGE,
-                }))),
-            ]
+        cry: Some(hook(move |ctx| {
+            let mut effects = vec![exile_bottom_of_library(json_as(json!({
+                "count": zone_cards(&*ctx.state, ctx.controller, OffFieldZone::Library).len(),
+            })))];
+            if armor {
+                effects.push(gain_hero_armor(json_as(json!({ "amount": param(ctx, "armor") }))));
+            }
+            effects.push(delay(json_as(json!({
+                "at": { "phase": "start", "player": "self" },
+                "step": STEP,
+                "turns": param(ctx, "count"),
+                "label": BADGE,
+            }))));
+            effects
         })),
         delayed: Some(hook(|_ctx| vec![win_game(json_as(json!({})))])),
         ..Script::default()
@@ -42,8 +49,17 @@ fn glimpse() -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: glimpse(),
-        radiant: glimpse(),
+        base: glimpse(false),
+        radiant: glimpse(true),
+    }
+}
+
+/// R767000: the scripts through v0.6.2b, whose Radiant face gained no Armor (issue #3951). `KEPT_SCRIPTS`
+/// folds those replays under it.
+pub fn script_v0_6_2b() -> CardScripts {
+    CardScripts {
+        base: glimpse(false),
+        radiant: glimpse(false),
     }
 }
 
@@ -110,9 +126,10 @@ mod tests {
             assert!(s.pile(P1, "library").is_empty(), "the deck is exiled");
             assert_eq!(s.pile(P1, "exile").len(), 5);
             assert!(s.pile(P2, "library").len() == 20, "only the owner's deck");
-            // The countdown is 10 of p1's turns; none of the first nine ends it.
+            // The countdown is 8 of p1's turns (10 until issue #3951); none of the first seven ends it.
             let (turns, winner) = turns_to_win(&mut s, 12);
-            assert_eq!((turns, winner), (10, Some(Winner::P1)));
+            assert_eq!((turns, winner), (8, Some(Winner::P1)));
+            assert_eq!(s.state().players[P1].hero.armor, 0, "the base face gives no Armor");
             let result = s.state().result.expect("the game is over");
             assert_eq!(result.reason, GameOverReason::WonByEffect);
         }
@@ -122,14 +139,14 @@ mod tests {
             let mut s = game("glimpse-badge", false);
             s.play(ID, json!({}));
             let at = |turns: i32| vec![format!("{BADGE} in {turns} turns")];
-            assert_eq!(badges(&s, P1), at(10));
-            assert_eq!(badges(&s, P2), at(10), "the other seat reads it too");
+            assert_eq!(badges(&s, P1), at(8));
+            assert_eq!(badges(&s, P2), at(8), "the other seat reads it too");
             // The opponent's turn is no tick of it; p1's own is.
             s.end_turn();
-            assert_eq!(badges(&s, P1), at(10), "the other player's turn does not tick it");
+            assert_eq!(badges(&s, P1), at(8), "the other player's turn does not tick it");
             s.end_turn();
-            assert_eq!(badges(&s, P1), at(9));
-            assert_eq!(badges(&s, P2), at(9));
+            assert_eq!(badges(&s, P1), at(7));
+            assert_eq!(badges(&s, P2), at(7));
         }
 
         #[test]
@@ -139,7 +156,17 @@ mod tests {
             s.play(ID, json!({}));
             let (turns, winner) = turns_to_win(&mut s, 12);
             // With no deck, fatigue (1+2+…) is what the countdown races: 200 health holds.
-            assert_eq!((turns, winner), (10, Some(Winner::P1)));
+            assert_eq!((turns, winner), (8, Some(Winner::P1)));
+        }
+
+        /// R767000: through v0.6.2b neither face gave Armor (issue #3951).
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_2b_gives_the_radiant_face_no_armor() {
+            crate::under_kept(ID, script_v0_6_2b(), || {
+                let mut s = game("glimpse-kept", true);
+                s.play(ID, json!({}));
+                assert_eq!(s.state().players[P1].hero.armor, 0);
+            });
         }
     }
 
@@ -147,10 +174,11 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r3569005_radiant_counts_8() {
+        fn r3569005_radiant_counts_8_and_gives_your_hero_armor_5() {
             let mut s = game("glimpse-radiant", true);
             s.play(ID, json!({}));
             assert!(s.pile(P1, "library").is_empty());
+            assert_eq!(s.state().players[P1].hero.armor, 5);
             let (turns, winner) = turns_to_win(&mut s, 12);
             assert_eq!((turns, winner), (8, Some(Winner::P1)));
         }

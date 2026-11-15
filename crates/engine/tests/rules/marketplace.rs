@@ -351,11 +351,12 @@ fn r1853001_the_same_seed_rolls_the_same_offering() {
 fn r1853002_the_price_rule_and_an_offer_moves_within_a_tenth_as_it_is_rolled() {
     register();
     let price = |id: &str, radiant: bool| market_card_price(def_of(None, id), radiant);
-    assert_eq!(price(FREE, false), 8, "a (0) card (R3047000)");
-    assert_eq!(price(CHAOS, false), 15);
-    assert_eq!(price(FOUR, false), 45);
-    assert_eq!(price(FIVE, false), 60, "(5) is 45 and 15 for the mana past (4)");
-    assert_eq!(price(FIVE, true), 120, "twice that on a Radiant lot");
+    // R3951003: each marked up to 108% of the designer's, to the nearest Credit.
+    assert_eq!(price(FREE, false), 9, "a (0) card's 8 (R3047000)");
+    assert_eq!(price(CHAOS, false), 16, "15");
+    assert_eq!(price(FOUR, false), 49, "45");
+    assert_eq!(price(FIVE, false), 65, "(5) is 45 and 15 for the mana past (4), 60");
+    assert_eq!(price(FIVE, true), 130, "twice that on a Radiant lot");
 
     let state = board("r1853002-rule", "p1", json!({}), json!({}));
     let mut rng = Rng::new("r1853002-rule-rolls", 0);
@@ -986,9 +987,9 @@ fn r3047000_a_turn_rolls_four_offers_of_their_own() {
 }
 
 #[test]
-fn r3047000_the_base_price_at_each_cost_from_0_to_8_within_the_spread() {
+fn r3047000_r3951003_the_base_price_at_each_cost_from_0_to_8_within_the_spread() {
     register();
-    let curve = [8, 15, 25, 35, 45, 60, 75, 90, 105];
+    let curve = [9, 16, 27, 38, 49, 65, 81, 97, 113];
     for (cost, (id, price)) in COST_CARDS.iter().zip(curve).enumerate() {
         let def = def_of(None, id);
         let mana = cost as i32;
@@ -1001,7 +1002,8 @@ fn r3047000_the_base_price_at_each_cost_from_0_to_8_within_the_spread() {
                 + MARKETPLACE_CREDITS_PER_MANA * mana.min(MARKETPLACE_FULL_PRICE_MANA)
                 + MARKETPLACE_CREDITS_PER_MANA_PAST * (mana - MARKETPLACE_FULL_PRICE_MANA).max(0)
         };
-        assert_eq!(price, by_rule, "({mana}) by the rule");
+        let marked_up = (by_rule * MARKETPLACE_MARKUP_PERCENT + PERCENT / 2) / PERCENT;
+        assert_eq!(price, marked_up, "({mana}) by the rule, marked up");
     }
     // Rolled, an untuned offer's base is that price and its price moves within a tenth of it; every
     // cost is offered.

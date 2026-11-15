@@ -28,7 +28,7 @@ use crate::config::{
     MARKETPLACE_NERF_PRICE_PERCENT, MARKETPLACE_OFFER_STOCK, MARKETPLACE_OFFERS_PER_TURN,
     MARKETPLACE_PRICE_BASE, MARKETPLACE_PRICE_SPREAD_DIVISOR, MARKETPLACE_RADIANT_CHANCE,
     MARKETPLACE_RADIANT_PRICE_MULTIPLIER, MARKETPLACE_TABLE, MARKETPLACE_TUNE_MAX,
-    MARKETPLACE_ZERO_COST_PRICE, MarketLot, MarketPool, PERCENT,
+    MARKETPLACE_MARKUP_PERCENT, MARKETPLACE_ZERO_COST_PRICE, MarketLot, MarketPool, PERCENT,
 };
 use crate::effects::tune::{TuneDirection, degrade_sparing_cost, tune_once};
 use crate::resolve::{HookOptions, make_context};
@@ -53,19 +53,21 @@ pub fn marketplace_table() -> &'static [MarketLot] {
     MARKETPLACE_TABLE
 }
 
-/// R1853002, R3047000: the designer's price of a card of cost c, 5 + 10 × min(c, 4) + 15 × max(c − 4, 0)
-/// Credits, a (0) card's `MARKETPLACE_ZERO_COST_PRICE`, and `MARKETPLACE_RADIANT_PRICE_MULTIPLIER` times
-/// that on its Radiant face: 8, 15, 25, 35, 45, 60, 75, 90, 105 for (0) to (8). The cost is the card's
-/// printed one (`query_cost`: an X card's is 0).
+/// R1853002, R3047000, R3951003: the price of a card of cost c: the designer's 5 + 10 × min(c, 4) +
+/// 15 × max(c − 4, 0) Credits, a (0) card's `MARKETPLACE_ZERO_COST_PRICE`, marked up to
+/// `MARKETPLACE_MARKUP_PERCENT` of that and rounded to the nearest Credit, a half up; then
+/// `MARKETPLACE_RADIANT_PRICE_MULTIPLIER` times that on its Radiant face: 9, 16, 27, 38, 49, 65, 81, 97,
+/// 113 for (0) to (8). The cost is the card's printed one (`query_cost`: an X card's is 0).
 pub fn market_card_price(def: &CardDef, radiant: bool) -> i32 {
     let cost = query_cost(def);
-    let price = if cost <= 0 {
+    let designer = if cost <= 0 {
         MARKETPLACE_ZERO_COST_PRICE
     } else {
         MARKETPLACE_PRICE_BASE
             + MARKETPLACE_CREDITS_PER_MANA * cost.min(MARKETPLACE_FULL_PRICE_MANA)
             + MARKETPLACE_CREDITS_PER_MANA_PAST * (cost - MARKETPLACE_FULL_PRICE_MANA).max(0)
     };
+    let price = (designer * MARKETPLACE_MARKUP_PERCENT + PERCENT / 2) / PERCENT;
     if radiant {
         price * MARKETPLACE_RADIANT_PRICE_MULTIPLIER
     } else {

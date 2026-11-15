@@ -16,7 +16,7 @@ pub const ID: &str = "stinkyscape-152";
 
 /// R1869003: "Every card in your deck and graveyard has Flashback": the cards in its controller's
 /// library and graveyard, read off their zone.
-fn flashback_aura() -> AuraHook {
+pub fn flashback_aura() -> AuraHook {
     aura_hook(|args: HookArgs<'_>| {
         let controller = args.self_.controller;
         vec![AuraEntry {

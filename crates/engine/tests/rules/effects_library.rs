@@ -4,7 +4,7 @@
 
 use jackioh_engine::effects::add_to_hand::{add_random_from_catalog, add_to_hand};
 use jackioh_engine::effects::choose::{discover_from_catalog, discover_from_library};
-use jackioh_engine::effects::library::{exile_bottom_of_library, exile_random_from_library};
+use jackioh_engine::effects::library::{discard_library, exile_bottom_of_library, exile_random_from_library};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{events_of_type, ids, in_hand, live, new_game, set_library};
@@ -995,5 +995,29 @@ mod discover_from_library_51_ky_s_private_tutor {
             offered_ids(&state),
             vec![must(theirs.first(), "their spell").id.clone()]
         );
+    }
+}
+
+/// R3951001: "discard your deck": the whole library to the graveyard, top first, no draw and no discard.
+mod r3951001_discard_library {
+    use super::*;
+
+    #[test]
+    fn r3951001_the_whole_library_goes_to_the_graveyard_top_first_with_no_fatigue_or_discard() {
+        let mut state = game("discard-library");
+        let library = set_library(&mut state, PlayerId::P1, &[alpha().id, beta().id, unit_token().id]);
+        let (top, middle) = (must(library.first(), "the top card").id.clone(), must(library.get(1), "the middle card").id.clone());
+        let before = state.players[PlayerId::P1].fatigue_count;
+        let events = run(&mut state, vec![discard_library(json_as(json!({})))], Some(PlayerId::P1), None);
+        assert!(state.players[PlayerId::P1].library.is_empty());
+        // R11: the unit token ceases to exist instead of landing.
+        assert_eq!(ids(&state.players[PlayerId::P1].graveyard), vec![top.clone(), middle.clone()]);
+        assert_eq!(
+            pluck(&events_of_type(&events, GameEventType::EnteredGraveyard), "instanceId"),
+            vec![json!(top), json!(middle)]
+        );
+        assert!(events_of_type(&events, GameEventType::Discarded).is_empty());
+        assert_eq!(state.players[PlayerId::P1].fatigue_count, before);
+        assert!(state.players[PlayerId::P2].graveyard.is_empty(), "only its player's library");
     }
 }
