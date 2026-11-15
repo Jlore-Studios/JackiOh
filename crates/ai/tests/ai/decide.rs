@@ -5,21 +5,22 @@
 //! that owes nothing gets null. B20: the mulligan returns the cards costing more than
 //! AI_MULLIGAN.keepMaxCost plus the seat's mana bonus within its cap (R2977000), keeping at most the
 //! one proven card one dearer the shaped keep allows, and keeps the cheap ones to AI_MULLIGAN_CURVE's
-//! curve (#993).
+//! curve (#993), a Tribute card priced by its units too (R3936000).
 //! B21 and R188: the AI answers an unanswered draw offer at once with a
 //! decline, and never concedes, offers a draw or accepts one.
 
 use jackioh_ai::{
     AI_GATE, AI_GATE_BUDGET, AI_MULLIGAN, AI_MULLIGAN_CURVE, AiMulliganCurve, AiOptions, DEAL_MULLIGAN_KEEP,
     Decision, DecisionReason, GREEDY_MULLIGAN, MatchHooks, Matchup, SeatController, ai_to_act, decide,
-    game_config, mulligan_keep, mulligan_keep_bound, mulligan_keep_curved, mulligan_keep_shaped, play_match,
-    shaped_weight, unanswered_draw_offer,
+    game_config, mulligan_cost, mulligan_keep, mulligan_keep_bound, mulligan_keep_curved,
+    mulligan_keep_shaped, play_match, shaped_weight, unanswered_draw_offer,
 };
+use jackioh_engine::float::TRIBUTE_LOWERED_KEY;
 use jackioh_engine::testkit::{
     AI_DIFFICULTY, AI_TUTORIAL, Action, ActionBody, ActionType, CreateGameOptions, DECK_SIZE, GameEvent,
-    GameState, HUMAN_HANDICAP, Handicap, MAX_MANA, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, begin_game,
-    create_game, create_rng, def_of, json, legal_actions, mulligan_prompt_for, query_cost, reduce,
-    seat_to_act, subsystems,
+    GameState, HUMAN_HANDICAP, Handicap, IndexMap, MAX_MANA, NumberedKey, PerPlayer, PerPlayerOpt, PlayerId,
+    PromptKind, Tuning, begin_game, create_game, create_rng, def_of, json, legal_actions,
+    mulligan_prompt_for, query_cost, reduce, seat_to_act, subsystems, tribute_cost_of,
 };
 
 use super::support::{
@@ -295,12 +296,13 @@ mod the_mulligan_b20 {
                 let plain: Vec<String> = hand
                     .iter()
                     .filter(|card| {
-                        query_cost(def_of(Some(&state), &card.def_id)) <= AI_MULLIGAN.keep_max_cost
+                        mulligan_cost(&state, card, def_of(Some(&state), &card.def_id))
+                            <= AI_MULLIGAN.keep_max_cost
                     })
                     .map(|card| card.id.clone())
                     .collect();
-                // The shaped keep (mulligan.rs): the plain rule plus, at most, the one best card
-                // costing keep_max_cost + 1 whose shaped weight reaches DEAL_MULLIGAN_KEEP.
+                // The shaped keep (mulligan.rs): the plain rule by mulligan cost (R3936000) plus, at most,
+                // the one best card costing keep_max_cost + 1 whose shaped weight reaches DEAL_MULLIGAN_KEEP.
                 let shaped = sorted(mulligan_keep_shaped(&state, seat, AI_MULLIGAN.keep_max_cost));
                 for id in &plain {
                     assert!(shaped.contains(id), "{seed} {seat} {id}");
@@ -827,6 +829,202 @@ mod the_mulligans_curve {
             curved(&on(&state, Some(mana(i32::MAX, i32::MAX)))),
             hand_at(&state, PlayerId::P2, 0..5)
         );
+    }
+
+    // R3936000: a Tribute card's units count toward its mulligan cost.
+
+    const FELINOR: &str = "meditative-025"; // Blue-Eyes White Felinor, 1, Tribute 2
+    const LAVA_GOLEM: &str = "core-055"; // Lava Golem, 3, Tribute 3, shaped weight 3.0
+    const TRIGOR: &str = "traininggrounds-025"; // Trigor, 3, Tribute 3
+    const RAVEN: &str = "stinkyscapeplus-159"; // Raven, 0, Tribute 1
+
+    /// `dearer_costs_hold`, and the shaped weights the R3936000 tests assume: Lava Golem is proven, so
+    /// only the guard keeps the shaped exception off it, and a hand that digs keeps Felinor before a
+    /// three.
+    fn tribute_costs_hold() {
+        dearer_costs_hold();
+        assert!(shaped_weight(LAVA_GOLEM) >= DEAL_MULLIGAN_KEEP);
+        assert!(shaped_weight(FELINOR) > shaped_weight(THREE));
+    }
+
+    /// Each of `seat`'s hand cards as (mana cost, Tribute, mulligan cost).
+    fn priced(state: &GameState, seat: PlayerId) -> Vec<(i32, i32, i32)> {
+        state.players[seat]
+            .hand
+            .iter()
+            .map(|card| {
+                let def = def_of(Some(state), &card.def_id);
+                (
+                    query_cost(def),
+                    tribute_cost_of(state, card),
+                    mulligan_cost(state, card, def),
+                )
+            })
+            .collect()
+    }
+
+    /// The hand card at `at` as if its owner's Floats had taken `lowered` off its Tribute (R1841003).
+    fn floated(state: &mut GameState, seat: PlayerId, at: usize, lowered: i32) {
+        state.players[seat].hand[at]
+            .memory
+            .insert(TRIBUTE_LOWERED_KEY.to_string(), json!(lowered));
+    }
+
+    /// The hand card at `at` as if a Nerf had taken one off its Tribute (R386).
+    fn nerfed(state: &mut GameState, seat: PlayerId, at: usize) {
+        state.players[seat].hand[at].tuning = Some(Tuning {
+            x: Some(IndexMap::from([(NumberedKey::Tribute.as_str().to_string(), -1)])),
+            ..Tuning::default()
+        });
+    }
+
+    /// p1's mulligan, the first seat (so no Coin, R244) on a human's crystals, with two extra opening
+    /// cards making it five, with its hand's defs replaced.
+    fn wide_p1_mulligan_with(seed: &str, def_ids: &[&str]) -> GameState {
+        register_cards();
+        let mut state = begin_game(&create_game(&CreateGameOptions {
+            seed: seed.to_string(),
+            decks: random_decks_sized(seed, (DECK_SIZE, DECK_SIZE)),
+            handicaps: Some(PerPlayerOpt {
+                p1: Some(Handicap {
+                    extra_opening_cards: 2,
+                    ..HUMAN_HANDICAP
+                }),
+                p2: None,
+            }),
+            ..CreateGameOptions::default()
+        }))
+        .state;
+        assert_eq!(state.players.p1.hand.len(), 5, "{seed}");
+        for (at, card) in state.players.p1.hand.iter_mut().enumerate() {
+            card.def_id = def_ids[at % def_ids.len()].to_string();
+        }
+        state
+    }
+
+    #[test]
+    fn r3936000_the_ai_sends_back_lava_golem_and_trigor_beside_cheap_plain_cards_and_felinor_is_not_its_early_play()
+     {
+        tribute_costs_hold();
+        let seed = "decide-r3936000-golem";
+        let state = wide_p1_mulligan_with(seed, &[FELINOR, LAVA_GOLEM, TRIGOR, THREE, THREE]);
+        assert_eq!(
+            priced(&state, PlayerId::P1),
+            [(1, 2, 3), (3, 3, 4), (3, 3, 4), (3, 0, 3), (3, 0, 3)]
+        );
+        // Lava Golem and Trigor go back; Felinor costs three, so the hand has no early play and digs,
+        // keeping Felinor alone.
+        let decision = must_decide(&state, PlayerId::P1, seed);
+        assert_eq!(decision.reason, DecisionReason::Mulligan);
+        assert_eq!(
+            kept(&decision),
+            hand_at(&state, PlayerId::P1, 0..AI_MULLIGAN_CURVE.keep_without_early)
+        );
+        act(&state, PlayerId::P1, &decision.action);
+        // The greedy baseline's frozen mulligan reads mana alone and keeps all five.
+        assert_eq!(
+            sorted(mulligan_keep(&state, PlayerId::P1, GREEDY_MULLIGAN.keep_max_cost)),
+            sorted(hand_ids(&state, PlayerId::P1))
+        );
+        // A real one-drop is the early play: the threes stay beside it, the Tribute threes still go back.
+        let control = wide_p1_mulligan_with(seed, &[ONE, LAVA_GOLEM, TRIGOR, THREE, THREE]);
+        let decision = must_decide(&control, PlayerId::P1, seed);
+        assert_eq!(kept(&decision), hand_at(&control, PlayerId::P1, [0, 3, 4]));
+        act(&control, PlayerId::P1, &decision.action);
+    }
+
+    #[test]
+    fn r3936000_a_one_mana_tribute_two_card_is_neither_a_one_drop_nor_an_early_play() {
+        tribute_costs_hold();
+        // Two one-drops fill the cap; Felinor, at three, takes no one-drop slot and stays as a three.
+        let seed = "decide-r3936000-ones";
+        let ones = seat_mulligan_with(seed, PlayerId::P1, &[ONE, ONE, FELINOR]);
+        assert_eq!(priced(&ones, PlayerId::P1)[2], (1, 2, 3));
+        let decision = must_decide(&ones, PlayerId::P1, seed);
+        assert_eq!(kept(&decision), sorted(hand_ids(&ones, PlayerId::P1)));
+        // Beside two threes it is no early play: the hand digs.
+        let seed = "decide-r3936000-early";
+        let early = seat_mulligan_with(seed, PlayerId::P1, &[FELINOR, THREE, THREE]);
+        let decision = must_decide(&early, PlayerId::P1, seed);
+        assert_eq!(
+            kept(&decision),
+            hand_at(&early, PlayerId::P1, 0..AI_MULLIGAN_CURVE.keep_without_early)
+        );
+    }
+
+    #[test]
+    fn r3936000_a_tribute_card_whose_tribute_floats_or_a_nerf_and_floats_brought_to_zero_is_kept_by_its_mana_cost_alone()
+     {
+        tribute_costs_hold();
+        let seed = "decide-r3936000-zero";
+        let dealt = seat_mulligan_with(seed, PlayerId::P1, &[FELINOR, LAVA_GOLEM, TRIGOR]);
+        // Floats alone.
+        let mut state = dealt.clone();
+        for (at, lowered) in [(0, 2), (1, 3), (2, 3)] {
+            floated(&mut state, PlayerId::P1, at, lowered);
+        }
+        assert_eq!(priced(&state, PlayerId::P1), [(1, 0, 1), (3, 0, 3), (3, 0, 3)]);
+        let decision = must_decide(&state, PlayerId::P1, seed);
+        assert_eq!(kept(&decision), sorted(hand_ids(&state, PlayerId::P1)));
+        // A Nerf, then Floats.
+        let mut state = dealt.clone();
+        nerfed(&mut state, PlayerId::P1, 0);
+        floated(&mut state, PlayerId::P1, 0, 1);
+        nerfed(&mut state, PlayerId::P1, 1);
+        floated(&mut state, PlayerId::P1, 1, 2);
+        floated(&mut state, PlayerId::P1, 2, 3);
+        assert_eq!(priced(&state, PlayerId::P1), [(1, 0, 1), (3, 0, 3), (3, 0, 3)]);
+        let decision = must_decide(&state, PlayerId::P1, seed);
+        assert_eq!(kept(&decision), sorted(hand_ids(&state, PlayerId::P1)));
+        // Brought down but not to zero: each still costs its Tribute plus the allowance.
+        let mut state = dealt.clone();
+        floated(&mut state, PlayerId::P1, 0, 1);
+        nerfed(&mut state, PlayerId::P1, 1);
+        assert_eq!(priced(&state, PlayerId::P1), [(1, 1, 2), (3, 2, 3), (3, 3, 4)]);
+        let decision = must_decide(&state, PlayerId::P1, seed);
+        assert_eq!(kept(&decision), hand_at(&state, PlayerId::P1, [0, 1]));
+        // A free card with Tribute 1 costs two until a Float takes the Tribute off.
+        let mut raven = seat_mulligan_with(seed, PlayerId::P1, &[RAVEN]);
+        assert_eq!(priced(&raven, PlayerId::P1)[0], (0, 1, 2));
+        floated(&mut raven, PlayerId::P1, 0, 1);
+        assert_eq!(priced(&raven, PlayerId::P1)[0], (0, 0, 0));
+    }
+
+    #[test]
+    fn r3936000_the_shaped_exception_never_rescues_a_card_its_tribute_made_dearer() {
+        tribute_costs_hold();
+        // A hand-built bound of 2 (R180's negative bonus), so a printed three is the exception's
+        // bound + 1: a proven Lava Golem, dearer by its Tribute, still goes back.
+        let golems = hard_p2_mulligan_with(
+            "decide-r3936000-exception",
+            &[ONE, TWO, LAVA_GOLEM, LAVA_GOLEM, LAVA_GOLEM],
+        );
+        assert_eq!(
+            curved(&on(&golems, Some(mana(-1, MAX_MANA)))),
+            hand_at(&golems, PlayerId::P2, [0, 1])
+        );
+        // A proven three with no Tribute is the one the exception holds.
+        let proven = hard_p2_mulligan_with(
+            "decide-r3936000-exception",
+            &[ONE, TWO, LAVA_GOLEM, LAVA_GOLEM, PROVEN_THREE],
+        );
+        assert_eq!(
+            curved(&on(&proven, Some(mana(-1, MAX_MANA)))),
+            hand_at(&proven, PlayerId::P2, [0, 1, 4])
+        );
+    }
+
+    #[test]
+    fn r3936000_the_mana_bonus_still_raises_the_bound_the_mulligan_cost_is_read_against() {
+        tribute_costs_hold();
+        let seed = "decide-r3936000-hard";
+        let hard = hard_p2_mulligan_with(seed, &[LAVA_GOLEM, TRIGOR, TRIGOR, ONE, TWO]);
+        // Hard's bound is four (R2977000), so a Tribute 3 three-drop is a keep.
+        let decision = must_decide(&hard, PlayerId::P2, seed);
+        assert_eq!(kept(&decision), hand_at(&hard, PlayerId::P2, 0..5));
+        act(&hard, PlayerId::P2, &decision.action);
+        // On Easy's crystals they go back.
+        assert_eq!(curved(&on(&hard, None)), hand_at(&hard, PlayerId::P2, [3, 4]));
     }
 }
 

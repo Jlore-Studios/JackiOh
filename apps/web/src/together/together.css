@@ -30,8 +30,12 @@
   min-width: 0;
 }
 
+/* R3732002, #3955: the five tabs wrap onto a second row on a phone rather than scroll, so none sits outside the
+   window (tabs.css's `overflow-x: auto` would hide the last ones with no cue). */
 .tavern.together-screen .together-tablist {
   flex: none;
+  flex-wrap: wrap;
+  overflow-x: visible;
 }
 
 .tavern.together-screen .together-panels {
@@ -111,7 +115,8 @@
   text-transform: uppercase;
 }
 
-.together-group__toggle {
+/* Under `.together-group` so it outweighs index.css's `.app-shell button` (padding, weight), which the page is inside. */
+.together-group .together-group__toggle {
   min-height: var(--hit-min);
   padding: 0;
   border: 0;
@@ -120,6 +125,27 @@
   font: inherit;
   letter-spacing: inherit;
   text-transform: inherit;
+  text-align: start;
+}
+
+/* #3955: the theme's field, the deck builder's search without the pill: 44 px tall, sunken, a bright line. */
+.together-field {
+  box-sizing: border-box;
+  min-height: var(--hit-min);
+  padding: var(--space-4) var(--space-6);
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  color: var(--text);
+  font: inherit;
+}
+
+.together-field::placeholder {
+  color: var(--text-dim);
+}
+
+.together-field:focus-visible {
+  border-color: var(--you);
 }
 
 .together-search {
@@ -451,8 +477,12 @@
   font-size: 12px;
 }
 
+/* #3955: 44 px tall, so index.css's hit-area band (for controls under 44 px) is not drawn over the Offline toggle. */
 .friends-panel__all {
   align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--hit-min);
 }
 
 /* --- the challenge toast ----------------------------------------------------------------------- */

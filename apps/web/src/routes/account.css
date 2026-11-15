@@ -216,6 +216,11 @@
   opacity: 0.8;
 }
 
+/* R3957000: the date moves to the next line whole, never breaking inside. */
+.tavern.app-shell.account-screen .account-history__when {
+  white-space: nowrap;
+}
+
 .tavern.app-shell.account-screen .account-section a.button-secondary,
 .tavern.app-shell.account-screen .account-section button {
   min-height: var(--hit-min);

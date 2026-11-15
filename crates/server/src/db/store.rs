@@ -3181,6 +3181,13 @@ impl Tx<'_> {
         dispatch!(self, daily_active_count(profile_id, now))
     }
 
+    /// R3727004, #3842: a lock on the account's daily games, seeks and challenges until the
+    /// transaction ends, so two requests at once count and write one after the other (Postgres: a
+    /// transaction-level advisory lock; the fake runs one transaction at a time). A lock, no row.
+    pub async fn daily_lock_account(&mut self, profile_id: &str) -> StoreResult<()> {
+        dispatch!(self, daily_lock_account(profile_id))
+    }
+
     // daily invites
 
     /// §9.13: writes the open invite. One of the same key (a challenge: the same sender and friend;
@@ -3282,6 +3289,21 @@ impl Tx<'_> {
     /// for a token no row holds, a malformed one among them; true for a known one, off already or not.
     pub async fn daily_notify_unsubscribe(&mut self, token: &str) -> StoreResult<bool> {
         dispatch!(self, daily_notify_unsubscribe(token))
+    }
+
+    // the player mail's days
+
+    /// §9.13, #3843: takes one of the `cap` "your move" emails of the UTC day starting at `day`
+    /// (`utc_day_bounds(..).0`): true when one was left, false once all are taken and for a `cap` of 0
+    /// or below. One statement, so two senders at once never take more than `cap` between them.
+    pub async fn daily_email_claim(&mut self, day: i64, cap: i32) -> StoreResult<bool> {
+        dispatch!(self, daily_email_claim(day, cap))
+    }
+
+    /// §9.13, #3843: gives back one email [`Tx::daily_email_claim`] took on `day`, for a send that
+    /// failed; never below 0.
+    pub async fn daily_email_release(&mut self, day: i64) -> StoreResult<()> {
+        dispatch!(self, daily_email_release(day))
     }
 
     // push subscriptions

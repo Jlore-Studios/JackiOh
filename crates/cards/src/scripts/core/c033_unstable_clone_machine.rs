@@ -8,6 +8,9 @@
 //! step 7), never `cardPlayed`, or a Stockpile could draw its own copies; the event carries the
 //! resolved face, since #41 Sheepish transforms a played Unit at step 4. R119: a permanent is on the
 //! field before its own `cardResolved` (step 4), so it starts counting from the next play.
+//! Issue #3951 gave both faces "Activate: Draw {draw}." (R384: once a turn, its controller's, no cost), the
+//! declared `draw` (R386); through v0.6.4b it had no Activate, which `script_v0_6_4b` keeps for those
+//! replays (R767000).
 //! ENGINE GAP: `shuffleInto` has no `statsOverride`, so a Fused or Crafted body copies at printed stats,
 //! which R57 says it should keep.
 
@@ -98,17 +101,49 @@ fn after_play(all_radiant: bool) -> TriggerDef {
     )
 }
 
-pub fn script() -> CardScripts {
+/// Issue #3951's "Activate: Draw {draw}." (R384): once a turn, no cost, nothing to choose.
+fn draw_activation() -> ActivationDecl {
+    ActivationDecl {
+        id: DRAW_ACTIVATE.to_string(),
+        label: "Draw a card".to_string(),
+        uses: ActivationUses::Count(1),
+        cost: None,
+        targets: vec![],
+        modes: vec![],
+        can_activate: None,
+        has: None,
+        run: hook(|ctx| vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))]),
+    }
+}
+
+/// The Activate's id.
+const DRAW_ACTIVATE: &str = "draw";
+
+/// `activates`: whether the faces carry the Activate (since issue #3951).
+fn machine(activates: bool) -> CardScripts {
+    let activations = || if activates { vec![draw_activation()] } else { vec![] };
     CardScripts {
         base: Script {
             triggers: vec![after_play(false)],
+            activations: activations(),
             ..Script::default()
         },
         radiant: Script {
             triggers: vec![after_play(true)],
+            activations: activations(),
             ..Script::default()
         },
     }
+}
+
+pub fn script() -> CardScripts {
+    machine(true)
+}
+
+/// R767000: the scripts through v0.6.4b, with no Activate (issue #3951). `KEPT_SCRIPTS` folds those
+/// replays under it.
+pub fn script_v0_6_4b() -> CardScripts {
+    machine(false)
 }
 
 // #33 Unstable Clone Machine — SPEC §8.2 row 33, BUILD M4-T4 must-pass row 33 (R34, R80).
@@ -274,6 +309,36 @@ mod tests {
 
             assert_eq!(s.pile("p1", "library").len(), 0);
             assert_eq!(s.pile("p2", "library").len(), 0);
+        }
+    }
+
+    /// Issue #3951: "Activate: Draw {draw}." on both faces, once a turn (R384).
+    mod activate {
+        use super::*;
+
+        #[test]
+        fn r384_both_faces_activate_once_a_turn_to_draw_1() {
+            for radiant in [false, true] {
+                let mut s = scn(json!({
+                    "seed": "clone-activate",
+                    "p1": { "backrow": [{ "def": "33", "radiant": radiant }], "library": ["5", "5", "5"] },
+                }));
+                let (hand, library) = (s.hand("p1").len(), s.pile("p1", "library").len());
+                s.activate("33", json!({}));
+                assert_eq!(s.hand("p1").len(), hand + 1, "radiant {radiant}");
+                assert_eq!(s.pile("p1", "library").len(), library - 1, "radiant {radiant}");
+                s.expect_refused(|s| s.activate("33", json!({})));
+            }
+        }
+
+        /// R767000: through v0.6.4b it had no Activate.
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_4b_has_no_activate() {
+            let kept = super::super::script_v0_6_4b();
+            assert!(kept.base.activations.is_empty() && kept.radiant.activations.is_empty());
+            let now = super::super::script();
+            assert_eq!(now.base.activations.len(), 1);
+            assert_eq!(now.radiant.activations.len(), 1);
         }
     }
 

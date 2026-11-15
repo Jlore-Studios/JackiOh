@@ -8,11 +8,16 @@
 // Only the player holding the move sends anything but a concede (§9.13: the server answers anything else
 // `not_your_move`). "End turn automatically" (R345), which `Game.tsx` sends once whenever the setting and the
 // view differ, whoever's turn it is, is held until the move is the player's and sent then if it still differs.
+// It is held through the mulligan too, where both seats hold the move (R3727002): sent on the board's own, it would
+// add a row to the game's log under the other seat's keep, which would answer `stale`. It goes out just before the
+// player's own keep or mulligan instead, so it is in the game before the mulligan's last answer starts a turn (#3841).
 //
 // The clock pill (`DailyClockPill.tsx`) says who holds the move and how long it has left. Once the move has
 // passed on and another game waits on the player (`nextGame`), Next game opens it. The board reads again
-// when the social read says the games waiting on the player changed (the opponent moved). Once the game is
-// over, Rematch sends its opponent a new daily challenge at the same mode and time per move (§9.13).
+// when the social read says the games waiting on the player changed (the opponent moved), and every
+// `DAILY_REREAD_MS` while the tab shows and when it shows again, which shows an end the count does not
+// (R3840000). Once the game is over, Rematch sends its opponent a new daily challenge at the same mode and time per move (§9.13).
+// A KY's Competition question shows no 60-second countdown here (R3727003): the move's deadline is its window.
 //
 // The board shows what every table shows (R3855000): its hero names the opponent, its rail lists the modifiers
 // in play (R169), the seat's forecast of its attacks rides the read and draws an aimed attack's outcomes
@@ -27,6 +32,7 @@ import type { ActionBody } from "@jackioh/shared";
 import Game from "../game/Game.tsx";
 import { CatalogContext } from "../game/catalog.ts";
 import { ModifierList } from "../game/ModifierList.tsx";
+import { pollWhileVisible } from "../game/net.ts";
 import { outcomeFor } from "../game/Result.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { Loading, ShellPanel } from "../main.tsx";
@@ -41,6 +47,7 @@ import { BackLink } from "../routes/nav.tsx";
 import { useCatalogLookup } from "../together/catalog.ts";
 import { useSocialReads } from "../together/socialPoll.ts";
 import { DailyClockPill, useNow } from "./DailyClockPill.tsx";
+import { DAILY_REREAD_MS } from "./config.ts";
 import { NewDailyDialog } from "./NewDailyDialog.tsx";
 import { dailyTestid } from "./testids.ts";
 
@@ -106,23 +113,51 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
     if (current.current !== null && !current.current.hasMove) reread();
   }, [dailyWaiting, reread]);
 
+  // R3840000: a game can end on the opponent's move, or while the move is the player's, with the count of games waiting on the player unchanged,
+  // so the board also reads on a slow period and when the tab shows again (R3205000: a hidden tab reads nothing). Nothing changes once over.
+  useEffect(
+    () =>
+      pollWhileVisible(() => {
+        const shown = current.current;
+        if (shown !== null && !shown.over && !sending.current) reread();
+      }, DAILY_REREAD_MS),
+    [reread],
+  );
+
   const send = useCallback(
     (action: ActionBody): void => {
       const shown = current.current;
-      if (action.type === "setAutoEndTurn" && (shown === null || !shown.hasMove || sending.current)) {
+      if (action.type === "setAutoEndTurn" && (shown === null || !shown.hasMove || shown.view.phase === "mulligan" || sending.current)) {
         heldAutoEndTurn.current = action;
         return;
       }
       // One action at a time: the next is sent after the answer, which names the seq it follows.
       if (shown === null || sending.current) return;
+      // #3841: the held setting goes just before the player's own mulligan answer, so it is in the game before the
+      // mulligan's last answer can start a turn that ends itself, and adds no window the answer does not open.
+      const held = action.type === "mulligan" && shown.view.phase === "mulligan" ? heldAutoEndTurn.current : null;
+      const setting = held !== null && (shown.view.autoEndTurn !== false) !== held.enabled ? held : null;
+      if (held !== null) heldAutoEndTurn.current = null;
       sending.current = true;
       setError(null);
-      attempt(() => sendDailyAction(matchId, { after: shown.seq, nonce: nonce(), action }))
+      let after = shown.seq;
+      let settingSent = setting === null;
+      attempt(async () => {
+        if (setting !== null) {
+          const answer = await sendDailyAction(matchId, { after, nonce: nonce(), action: setting });
+          setGame(answer);
+          after = answer.seq;
+          settingSent = true;
+        }
+        return sendDailyAction(matchId, { after, nonce: nonce(), action });
+      })
         .then(
           (answer) => {
             setGame(answer);
           },
           (cause: unknown) => {
+            // The setting did not land, so the next answer's board sends it again; the mulligan was never sent.
+            if (!settingSent) heldAutoEndTurn.current = setting;
             // Behind: the game moved on meanwhile, so the board reads it and says nothing.
             if (!(cause instanceof ApiRequestError && cause.status === 409 && cause.code === "stale")) setError(messageOf(cause));
             if (cause instanceof ApiRequestError) reread();
@@ -139,7 +174,7 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
   // The held "End turn automatically", once the move is the player's and nothing is in flight.
   useEffect(() => {
     const held = heldAutoEndTurn.current;
-    if (held === null || game === null || game.over || !game.hasMove || sending.current) return;
+    if (held === null || game === null || game.over || !game.hasMove || game.view.phase === "mulligan" || sending.current) return;
     heldAutoEndTurn.current = null;
     if ((game.view.autoEndTurn !== false) !== held.enabled) send(held);
   }, [game, sends, send]);
@@ -213,6 +248,7 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
           wearCosmetics
           trackStats
           endTurnLabel={t("End turn and send")}
+          sequenceClock={false}
           resultReason={onTimeWords(game)}
           turnClock={game.over ? undefined : <DailyClockPill holds={game.holds} seat={game.seat} now={now} />}
           phoneRailTop

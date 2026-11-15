@@ -4966,13 +4966,15 @@ use crate::db::store::{
 };
 use jackioh_shared::host::daily::{DailyBoard, DailyClock, is_daily_time};
 
-/// The tables migration 0089 adds.
+/// The tables migrations 0089 and 0092 add.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct DailyTables {
     pub games: Vec<DailyGameRow>,
     pub invites: Vec<DailyInviteRow>,
     pub notify: Vec<DailyNotifyRow>,
     pub push_subs: Vec<PushSubRow>,
+    /// Migration 0092's `daily_email_days`: the player emails taken each UTC day, by its start (#3843).
+    pub email_days: IndexMap<i64, i32>,
 }
 
 /// Every daily row naming the profile, as 0089's `on delete cascade` takes them.
@@ -5230,6 +5232,13 @@ pub fn daily_active_count(f: &mut FakeTx<'_>, profile_id: &str, now: i64) -> Res
     Ok((games + invites) as i64)
 }
 
+/// Every fake transaction runs alone (it holds the store's one lock until it ends), so it holds the
+/// account's daily lock already; charged to the hooks like every call.
+pub fn daily_lock_account(f: &mut FakeTx<'_>, _profile_id: &str) -> Result<(), StoreError> {
+    call(f, "daily.lock")?;
+    Ok(())
+}
+
 // daily invites
 
 /// The two partial unique keys are on the open rows, so a lapsed open row of the key is marked expired
@@ -5458,6 +5467,29 @@ pub fn daily_notify_unsubscribe(f: &mut FakeTx<'_>, token: &str) -> Result<bool,
     };
     row.email_on = false;
     Ok(true)
+}
+
+// the player mail's days
+
+/// 0092's one-statement claim: one more on the day's count while it is under `cap`.
+pub fn daily_email_claim(f: &mut FakeTx<'_>, day: i64, cap: i32) -> Result<bool, StoreError> {
+    call(f, "dailyEmail.claim")?;
+    let days = &mut f.tables().daily.email_days;
+    let sent = days.get(&day).copied().unwrap_or(0);
+    if sent >= cap {
+        return Ok(false);
+    }
+    days.insert(day, sent + 1);
+    Ok(true)
+}
+
+/// One back on the day's count, never below 0.
+pub fn daily_email_release(f: &mut FakeTx<'_>, day: i64) -> Result<(), StoreError> {
+    call(f, "dailyEmail.release")?;
+    if let Some(sent) = f.tables().daily.email_days.get_mut(&day) {
+        *sent = (*sent - 1).max(0);
+    }
+    Ok(())
 }
 
 // push subscriptions

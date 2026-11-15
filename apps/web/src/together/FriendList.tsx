@@ -116,7 +116,7 @@ export function FriendList({
         <>
           <input
             type="search"
-            className="together-search"
+            className="together-field together-search"
             data-testid={togetherTestid.search}
             value={query}
             autoComplete="off"

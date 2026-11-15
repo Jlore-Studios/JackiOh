@@ -1,20 +1,18 @@
-//! S+ Omega Drift, a Terminus Starship (SPEC §8.12; §6.1 Dormant, Starship; R3539001): 0/0
-//! Unit, Starship Token, Flying, Ranged. "Dormant until it launches. It comes holding Beam v5,
-//! Warpfield Amplifier, Magic Module and RR-5000, and can't be launched by hand." The Last Voyage and
-//! The Far Vagabond summon it holding its loadout; its script is the shared Terminus hull
-//! (`c080_the_last_voyage::terminus_hull`).
+//! S+ Omega Drift, a Terminus Starship (SPEC §8.12; §6.1 Dormant, Starship; R3539001): 0/0 Unit, Starship Token,
+//! Flying, Ranged. "Dormant until it launches. It comes holding Beam v5 and Warpfield Amplifier, and can't be
+//! launched by hand." The Last Voyage and The Far Vagabond summon it holding its loadout; its script is the shared
+//! Terminus hull (`c080_the_last_voyage::terminus_hull`).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-t-terminus-starship-omega-drift";
 
-const BEAM: &str = "stinkyscape-058"; // Beam v5 (4)
-const WARPFIELD: &str = "stinkyscape-106"; // Warpfield Amplifier (1)
-const MAGIC: &str = "stinkyscape-136"; // Magic Module (2)
-const RR_5000: &str = "stinkyscape-107"; // RR-5000 (2)
+const BEAM: &str = "stinkyscape-058"; // Beam v5
+const WARPFIELD: &str = "stinkyscape-106"; // Warpfield Amplifier
 
-/// R3539001: the fixed loadout it comes holding: 9 mana of Starship Pieces.
-pub const PIECES: &[&str] = &[BEAM, WARPFIELD, MAGIC, RR_5000];
+/// R3539001: the fixed loadout it comes holding: 5 mana of Starship Pieces (issue #3951; its loadout
+/// through v0.6.4b is `c080_the_last_voyage::TERMINUS_STARSHIPS_V0_6_4B`'s).
+pub const PIECES: &[&str] = &[BEAM, WARPFIELD];
 
 pub fn script() -> CardScripts {
     crate::scripts::stinkyscape_plus::c080_the_last_voyage::terminus_hull()

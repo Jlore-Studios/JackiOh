@@ -12,7 +12,9 @@
 //!   `DELETE /api/daily/seeks/:id` cancels it.
 //!
 //! An account holds at most `DAILY_MAX_ACTIVE_GAMES` running games, open seeks and sent challenges
-//! together (`daily_full`), and none of them is a seat of R1523000's ledger (R3727004).
+//! together (`daily_full`), and none of them is a seat of R1523000's ledger (R3727004). Each is
+//! counted again in the transaction that writes it, under the account's daily lock
+//! (`Tx::daily_lock_account`), so requests at once never pass the cap (#3842).
 
 use std::sync::Arc;
 
@@ -26,7 +28,7 @@ use crate::api::queue::{new_seed, new_uuid, seat_coin_p1_first};
 use crate::app::App;
 use crate::config::{DAILY_CHALLENGE_TTL_DAYS, DAILY_MAX_ACTIVE_GAMES, DAILY_SEEK_TTL_DAYS, MS_PER_DAY};
 use crate::daily::games::{NewDaily, prepare_daily};
-use crate::db::store::{DailyInviteKind, DailyInviteRow, DailyInviteState, QueueMode};
+use crate::db::store::{DailyInviteKind, DailyInviteRow, DailyInviteState, QueueMode, Tx};
 use crate::social::friends::are_friends;
 use crate::social::live::push_social;
 use crate::social::{created, no_content, not_found, param, refused};
@@ -79,11 +81,22 @@ fn asked(body: &Value, timed: bool) -> Result<Result<Asked, ApiResult>, ApiError
     Ok(Ok((choice, mode, days)))
 }
 
-/// R3727004: whether `profile_id` may hold one daily game, seek or challenge more.
+/// R3727004: whether `profile_id` may hold one daily game, seek or challenge more, read before the
+/// choice is frozen or the game prepared, so a full account is refused cheaply; the write's
+/// transaction counts again ([`has_room_locked`]).
 async fn has_room(app: &App, profile_id: &str, now: i64) -> Result<bool, ApiError> {
     let mut tx = app.db.begin(Some(profile_id)).await?;
     let held = tx.daily_active_count(profile_id, now).await?;
     tx.commit().await?;
+    Ok(held < i64::from(DAILY_MAX_ACTIVE_GAMES))
+}
+
+/// R3727004, #3842: the same question in `tx`, the transaction that writes the challenge, seek or
+/// game, under the account's daily lock: requests at once take it in turn, each counting what those
+/// before it wrote.
+async fn has_room_locked(tx: &mut Tx<'_>, profile_id: &str, now: i64) -> Result<bool, ApiError> {
+    tx.daily_lock_account(profile_id).await?;
+    let held = tx.daily_active_count(profile_id, now).await?;
     Ok(held < i64::from(DAILY_MAX_ACTIVE_GAMES))
 }
 
@@ -126,9 +139,10 @@ async fn prepare_between(
     prepare_daily(app, match_id, seed, seats, invite.mode, invite.per_move_days, now).await
 }
 
-/// A claimed seek whose game failed to start goes back to the queue where it stood (its own
-/// `created_at`), under a new id: the claim committed on its own, and a failure after it must not
-/// lose the other player's seek without a word. Logged, never the caller's failure.
+/// A claimed seek whose game failed to start, or whose claimer the recount found full (R3727004),
+/// goes back to the queue where it stood (its own `created_at`), under a new id: the claim committed
+/// on its own, and a failure after it must not lose the other player's seek without a word. Logged,
+/// never the caller's failure.
 async fn reopen_seek(app: &Arc<App>, claimed: &DailyInviteRow, now: i64) {
     let row = DailyInviteRow {
         id: new_uuid(),
@@ -202,6 +216,11 @@ pub async fn challenge(app: &Arc<App>, req: Req) -> ApiResult {
         tx.commit().await?;
         return Err(not_found("that player is not your friend"));
     }
+    // R3727004, #3842: counted again where the challenge is written, under the account's lock.
+    if !has_room_locked(&mut tx, &me, now).await? {
+        tx.commit().await?;
+        return full();
+    }
     if !tx.daily_invites_create(&row, now).await? {
         tx.commit().await?;
         return refused(
@@ -263,6 +282,12 @@ pub async fn accept(app: &Arc<App>, req: Req) -> ApiResult {
     if !are_friends(&mut tx, &me, &invite.from_profile).await? {
         tx.commit().await?;
         return Err(not_found("no such daily challenge"));
+    }
+    // R3727004, #3842: counted again where the game is written, under the account's lock; a refusal
+    // leaves the challenge open.
+    if !has_room_locked(&mut tx, &me, now).await? {
+        tx.commit().await?;
+        return full();
     }
     // One accept wins: a cancel, a decline or a second accept meanwhile finds it closed.
     let closed = tx
@@ -344,18 +369,28 @@ pub async fn seek(app: &Arc<App>, req: Req) -> ApiResult {
     let claimed = tx.daily_seek_claim(mode, days, &me, &match_id, now).await?;
     tx.commit().await?;
     if let Some(other) = claimed {
-        // The claim names the game written next; a start that fails puts the other's seek back.
+        // The claim names the game written next; a start that fails, or finds the account full, puts
+        // the other's seek back.
         let started = async {
             let game = prepare_between(app, &other, match_id, &me, &frozen, now).await?;
             let mut tx = app.db.begin(None).await?;
+            // R3727004, #3842: counted again where the game is written, under the account's lock.
+            if !has_room_locked(&mut tx, &me, now).await? {
+                tx.commit().await?;
+                return Ok(None);
+            }
             game.create(&mut tx).await?;
             tx.commit().await?;
             game.started();
-            Ok::<String, ApiError>(game.match_id().to_string())
+            Ok::<Option<String>, ApiError>(Some(game.match_id().to_string()))
         }
         .await;
         let match_id = match started {
-            Ok(match_id) => match_id,
+            Ok(Some(match_id)) => match_id,
+            Ok(None) => {
+                reopen_seek(app, &other, now).await;
+                return full();
+            }
             Err(error) => {
                 reopen_seek(app, &other, now).await;
                 return Err(error);
@@ -379,6 +414,11 @@ pub async fn seek(app: &Arc<App>, req: Req) -> ApiResult {
         expires_at: now + DAILY_SEEK_TTL_DAYS * MS_PER_DAY,
     };
     let mut tx = app.db.begin(Some(&me)).await?;
+    // R3727004, #3842: counted again where the seek is written, under the account's lock.
+    if !has_room_locked(&mut tx, &me, now).await? {
+        tx.commit().await?;
+        return full();
+    }
     let opened = tx.daily_invites_create(&row, now).await?;
     tx.commit().await?;
     if !opened {

@@ -278,7 +278,9 @@ the drawer, screenshots) and 38's axe block over the shell run it.
 - A board that appears on a menu path takes the navigation away.
 - The workshop's three-column split starts at 601 px, the rail, the pool and the deck all drawn on an
   upright iPad (issue #3734, [R3734001](../../spec/rulings/R3734001.md)): its rail is 208 px, and 148 px
-  from 601 to 1024 px. At 600 px and under the list and the editor take turns. A card is dragged from
+  from 601 to 1024 px. At 600 px and under the list and the editor take turns. The pool and the deck sit
+  beside each other from 601 px too ([R3956000](../../spec/rulings/R3956000.md)), the sidebar 232 px up to
+  760 px, a deck's name wrapping in the rail rather than cut. A card is dragged from
   the pool to the deck by pointer events, so a finger works.
 - On nested screens the top bar keeps Back top left and the gear top right (R3218000), with the title
   treatment of #3223 (R3223000).

@@ -884,6 +884,8 @@ export const FRIENDS_BADGE = "friends-badge";
 export const FRIENDS_PANEL = "friends-panel";
 /** The panel's ✕. */
 export const FRIENDS_CLOSE = "friends-close";
+/** The drawer's "See all friends" link. */
+export const FRIENDS_ALL = "friends-all";
 
 /** One per incoming challenge: `data-challenge-id`, `data-room-code`, `data-mode`. */
 export const CHALLENGE_TOAST = "challenge-toast";

@@ -1112,6 +1112,15 @@
 
 }
 
+/* R3956000: an iPad mini held upright (744 px) splits too. The shell's 80 px icon rail, the workshop's
+   148 px rail and the page's padding leave 478 px there, so the sidebar is 232 px and the pool keeps
+   two columns of about 100 px, not the 184 px a 280 px sidebar would leave it. */
+@media (min-width: 601px) and (max-width: 760px) {
+  .db-layout {
+    grid-template-columns: minmax(0, 1fr) 232px;
+  }
+}
+
 /* A phone on its side is only about 390 px tall, where a 200 px card is 280 px of it: the pool
    takes three narrower cards to a row, so a whole row shows at once. */
 @media (min-width: 761px) and (max-height: 500px) {
@@ -1146,8 +1155,9 @@
    beside it stays in view, without anything being sticky. (A max-height from the viewport ran the
    pool 90 px past a 720 px screen's foot, under the filters' height.) The deck list fills what
    the sidebar has left. A screen under 501 px tall keeps one page scroll instead: an inner
-   scroller there would show a row of cards at most. */
-@media (min-width: 761px) and (min-height: 501px) {
+   scroller there would show a row of cards at most. From 601 px, as the pool and the deck sit side by side
+   from there (R3956000). */
+@media (min-width: 601px) and (min-height: 501px) {
   .deckbuilder.app-shell {
     box-sizing: border-box;
     height: 100vh;
@@ -1209,16 +1219,17 @@
 /* R1581000: the phone's builder is one screen too. The page is the window's height, and the pool
    scrolls inside the workshop's or the almanac's one region (workshop.css, routes/almanac.css),
    not the page, as a desktop's does. */
-@media (max-width: 760px) and (min-height: 501px) {
+@media (max-width: 600px) and (min-height: 501px) {
   .deckbuilder.app-shell {
     height: 100vh;
     height: var(--shell-screen-h, 100dvh);
   }
 }
 
-/* Phone and narrow tablet: one column, the sidebar first. The pool drops its frame so two
-   columns fit in a 390 px viewport even with a classic scrollbar. */
-@media (max-width: 760px) {
+/* Phone: one column, the sidebar first (R3956000: from 601 px the pool and the deck sit side by side,
+   an iPad mini's 744 px too). The pool drops its frame so two columns fit in a 390 px viewport even
+   with a classic scrollbar. */
+@media (max-width: 600px) {
   .db-layout {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
@@ -1282,7 +1293,7 @@
    cost chips), so a first screen still reaches the pool: the Cost label goes (the crystals say what
    they are), the Sort label and the result count are kept for a screen reader only (the label is
    the select's name, #1561), and the eight cost chips share one row. */
-@media (max-width: 760px) {
+@media (max-width: 600px) {
   .db-filter-row--cost .db-group-label {
     display: none;
   }

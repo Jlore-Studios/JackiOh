@@ -14,7 +14,7 @@ use super::fixtures::card_on_card::{
 };
 use super::fixtures::card_on_card::{apply, at, destroy, instance, on_field, pass, play, playing, top};
 use super::fixtures::combat::stacker;
-use super::fixtures::harness::{act_ok, events_of_type, in_hand, json_of, put, slot};
+use super::fixtures::harness::{act_ok, events_of_type, in_hand, json_of, put, sink_for, slot};
 
 /// The board settled with nothing applied: a state check, as after any effect.
 fn check(state: &mut GameState) -> Vec<GameEvent> {
@@ -362,6 +362,22 @@ mod r1850002_exile_auras {
         assert_eq!(exiled(&check(&mut state)), vec![theirs.id.clone()]);
         assert!(on_field(&state, &asleep.id));
     }
+
+    /// R1850002: a source exiles every card it reaches before the walk comes to the next source: the
+    /// cheap exiler's two cards go, then the tag exiler, which reaches no Human, takes the cheap
+    /// exiler (#3836: a walk that exiled one card a source and left the rest to the next pass lived).
+    #[test]
+    fn r1850002_a_source_exiles_all_it_reaches_before_the_walk_comes_to_the_next() {
+        let mut state = playing("walk");
+        let exiler = put(&mut state, &cheap_exiler().id, slot(P1, Row::Units, 1), json!({}));
+        put(&mut state, &tag_exiler().id, slot(P1, Row::Units, 2), json!({}));
+        let first = put(&mut state, &cheap().id, slot(P2, Row::Units, 1), json!({}));
+        let second = put(&mut state, &cheap().id, slot(P2, Row::Units, 2), json!({}));
+        assert_eq!(
+            exiled(&check(&mut state)),
+            vec![first.id.clone(), second.id.clone(), exiler.id.clone()]
+        );
+    }
 }
 
 mod r1850003_hold_beneath {
@@ -699,6 +715,60 @@ mod r1850003_hold_beneath {
         let (_, events) = ticketed(&mut state, &trap.id);
         assert!(events_of_type(&events, GameEventType::Held).is_empty());
         assert!(on_field(&state, &trap.id));
+    }
+
+    /// R1850003: a holder that found no zone to land in holds nothing, so the same state check gives
+    /// the card back: here for the Sack's controller, whose zones are full, so it is exiled (#3836: a
+    /// holder had to have left the field as well as be off it).
+    #[test]
+    fn r1850003_a_card_whose_holder_found_no_zone_comes_back_at_once() {
+        let mut state = playing("no-sack-zone");
+        for lane in 1..=5 {
+            put(&mut state, &dear().id, slot(P1, Row::Units, lane), json!({}));
+        }
+        let held = put(&mut state, &cheap().id, slot(P2, Row::Units, 1), json!({}));
+        let played = play(
+            &state,
+            P1,
+            &sacker().id,
+            true,
+            json!({ "targets": [{ "pick": "instance", "instanceId": held.id }] }),
+        );
+        assert_eq!(events_of_type(&played.events, GameEventType::Held).len(), 1);
+        assert_eq!(played.state.held, None);
+        assert!(
+            played
+                .state
+                .players
+                .p2
+                .exile
+                .iter()
+                .any(|card| card.id == held.id)
+        );
+    }
+
+    /// R1850003: a card comes back by the standing rule, no seat's effect, so its summon names no
+    /// creator (R2089000's record), though it comes back for the seat not on turn (#3836).
+    #[test]
+    fn r1850003_a_card_back_for_the_seat_not_on_turn_names_no_creator() {
+        let mut state = playing("creator");
+        let held = put(&mut state, &cheap().id, slot(P2, Row::Units, 1), json!({}));
+        let (holder, _) = ticketed(&mut state, &held.id);
+        assert_eq!(state.active, P1);
+        let events = destroy(&mut state, &holder);
+        let creators: Vec<(PlayerId, Option<PlayerId>)> = events
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Summoned {
+                    instance_id,
+                    player,
+                    creator,
+                    ..
+                } if *instance_id == held.id => Some((*player, *creator)),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(creators, vec![(P2, None)]);
     }
 }
 
@@ -1174,6 +1244,22 @@ mod r1850005_radiant_at_n_keywords {
         assert!(!find_instance(&state, &card.id).expect("the rod").radiant);
         let events = grant(&mut state, &card.id, json!({ "kind": "Indestructible" }));
         assert_eq!(events_of_type(&events, GameEventType::RadiantSet).len(), 1);
+        assert!(find_instance(&state, &card.id).expect("the rod").radiant);
+    }
+
+    /// R1850005: making a card Radiant is a change, after which the state check starts over
+    /// (`standing_text` answers true); the board then has nothing to raise (#3836).
+    #[test]
+    fn r1850005_raising_a_card_is_a_change_the_state_check_starts_over_after() {
+        let mut state = playing("rod-step");
+        let card = put(&mut state, &rod().id, slot(P1, Row::Units, 1), json!({}));
+        find_instance_mut(&mut state, &card.id)
+            .expect("the rod")
+            .granted_keywords
+            .push(Keyword::DivineShield);
+        let mut sink = sink_for(&mut state);
+        assert!(jackioh_engine::card_on_card::standing_text(&mut sink));
+        assert!(!jackioh_engine::card_on_card::standing_text(&mut sink));
         assert!(find_instance(&state, &card.id).expect("the rod").radiant);
     }
 }

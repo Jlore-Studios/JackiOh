@@ -1564,6 +1564,9 @@ pub const MARKETPLACE_CREDITS_PER_MANA_PAST: i32 = 15;
 pub const MARKETPLACE_PRICE_BASE: i32 = 5;
 /// R1853002, R3047000: the price of a (0) card.
 pub const MARKETPLACE_ZERO_COST_PRICE: i32 = 8;
+/// R3951003: every card the Marketplace rolls asks this percent of its designer's price above, rounded to
+/// the nearest Credit (issue #3951's "~8% more").
+pub const MARKETPLACE_MARKUP_PERCENT: i32 = 108;
 /// R3047001: the cost a card bought at the Marketplace has, whatever it printed (a cost override,
 /// R65): it is paid for in Credits already.
 pub const MARKETPLACE_BOUGHT_COST: i32 = 0;

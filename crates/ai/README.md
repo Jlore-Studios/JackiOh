@@ -25,7 +25,7 @@ for (`unknown_root`, R3479000); a call outside a decision passes `Prices::NONE` 
 module, the `jackioh` tools, and this crate's tests (dev-dependency).
 
 Every AI number is a named constant (CLAUDE.md rule 9): `AI_BUDGET`, `AI_GATE_BUDGET`, `AI_SEARCH`,
-`AI_DETERMINIZE`, `AI_MULLIGAN`, `AI_MULLIGAN_CURVE`, `AI_DEATH_PROBE_NODES`, `AI_TURN_HOOK_PROBE_NODES`
+`AI_DETERMINIZE`, `AI_MULLIGAN`, `AI_MULLIGAN_CURVE`, `AI_MULLIGAN_TRIBUTE_ALLOWANCE`, `AI_DEATH_PROBE_NODES`, `AI_TURN_HOOK_PROBE_NODES`
 and `AI_ACTIVATION_PROBE_NODES` in `src/config.rs`, and
 the deck, gate, sweep and development-run numbers in their modules (`AI_DECK` in `deck.rs`, `AI_GATE` in `gate.rs`,
 `AI_SWEEP` in `sweep.rs`, `AI_DEV_RUN` in `dev_run.rs`), with the Duos gate's `DUOS_GATE_GAMES_SMOKE`,
@@ -68,7 +68,12 @@ every card costing more than `mulligan_keep_bound`, `AI_MULLIGAN.keep_max_cost` 
 bonus within its mana cap (R2977000), except the one proven card one dearer the shaped keep holds,
 and keeps the cheap ones to `AI_MULLIGAN_CURVE` (#993): at most two one-drops, and only
 the cheapest card when none is an early play, counted in the seat's crystals (its mana bonus and,
-going second, The Coin). Nothing here reads a difficulty, and a handicap only as the seat's mana (the
+going second, The Coin). A card's cost there is its `mulligan_cost` (R3936000): its mana cost, or,
+while it has Tribute X (`tribute_cost_of`, Nerfs, Buffs and Floats counted), the larger of that and X
+plus `AI_MULLIGAN_TRIBUTE_ALLOWANCE`, so a Tribute 3 three-drop goes back and a one-mana Tribute 2
+card is neither a one-drop nor an early play. The shaped exception, read off the printed cost, never
+takes a card its Tribute made dearer, and the greedy baseline's `mulligan_keep` reads mana alone.
+Nothing here reads a difficulty, and a handicap only as the seat's mana (the
 mulligan's bonus and cap): the tiers change the AI seat's resources only (R180), and the tutorial's
 opponent is the same AI on `AI_TUTORIAL` with the lesson's fixed deck (R290, R291).
 
@@ -187,6 +192,17 @@ smaller. `coming_hero_ticks` reads a hero's ticks through `projected_hero_damage
 life, and `hero_side` loses `hero_affliction` of that life's cost on the hero curve; the enemy's also counts
 at `enemy_health`. The reply already plays one tick a side. `GREEDY_EVAL` keeps all three at 0, and the
 learned features leave both counters out until a refit (R3535002).
+While a Feng Shui acts on either side (Meditative #40, R984), the seat's next face-up play counts by the
+verdict its last element gives it (R3951100): `feng_shui_outlook` takes, of the cards in the seat's own hand
+a Feng Shui would judge, the best verdict `subsystems::feng_shui::verdicts` gives one now, a reward at what
+the card would gain in hand as Radiant (`hand_card_value` of its Radiant copy less its own) and a punishment
+at every judge's hit on the hero curve, life held at 1 or more, and `material` adds `AI_EVAL.feng_shui_outlook`
+of it. The best alone, since only the first play is judged by that element, so a hand of rewarded cards is no
+reason to hold them back; the turn's own verdicts the search already plays through `reduce`. In tier 2 of the
+move order a play its card would be rewarded for comes first and one it would be punished for last, each group
+by cost (`Auspice`), so a level's `branching` cut keeps the play that chains the elements, and the seat's last
+element is part of `search_signature`, so two orders of the same plays that end on different elements stay
+two positions; with no Feng Shui acting neither changes. `GREEDY_EVAL` keeps 0.
 It re-plans after every action, so a
 lethal the solver proves is played trimmed to the actions it needs
 (`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action

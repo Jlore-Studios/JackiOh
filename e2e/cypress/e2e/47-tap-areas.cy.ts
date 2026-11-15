@@ -8,13 +8,14 @@
 // Per pull request: SMOKE holds 47. Networked as 46.
 
 import { consentTestid, inviteTestid, landingTestid, loginTestid, resetTestid, shellTestid } from "../../../apps/web/src/auth/testids.ts";
-import { BREAKPOINT_PX, COARSE_POINTER_QUERY, upTo } from "../../../apps/web/src/breakpoints.ts";
+import { BREAKPOINT_PX } from "../../../apps/web/src/breakpoints.ts";
 import { inboxTestid } from "../../../apps/web/src/inbox/testids.ts";
 import { patchTestid } from "../../../apps/web/src/patches/testids.ts";
 import { practiceTestid } from "../../../apps/web/src/practice/testids.ts";
 import { SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED } from "../../../apps/web/src/wire/serverConfig.ts";
 import { allCardIds, cardId } from "../../support/cards.ts";
-import { MENU_SIZES, accounts, constants, routes, seedFor, timeouts, viewports, type MenuSize, type MenuViewport } from "../../support/config.ts";
+import { MENU_SIZES, accounts, constants, routes, seedFor, timeouts, viewports } from "../../support/config.ts";
+import { HIT_MIN_PX, PX_DIGITS, emulateTouch, expectHitAreas, hitAreaProblems } from "../../support/hitAreas.ts";
 import { visitStatsFigures } from "../../support/stats.ts";
 import {
   BOARD,
@@ -38,23 +39,10 @@ import {
 } from "../../support/testids.ts";
 import { SETTINGS_OPEN_NAV, SETTINGS_PANEL } from "../../support/ux.ts";
 
-/** R2122000: the least a control's hit area spans in either dimension; index.css's `--hit-min`. */
-const HIT_MIN_PX = 44;
-/** A box may fall this far short (a sub-pixel border, a rounded width) and still be at its mark. */
-const SLACK_PX = 0.5;
-/** A failure names a control with no testid by this much of its text, and sizes in this many decimals. */
-const NAME_CHARS = 30;
-const PX_DIGITS = 1;
-/** The interactive elements #2122 names. */
-const CONTROLS = 'button, a[href], [role="button"], input, select, [tabindex="0"]';
-/** R2122000's exemptions, never measured but still neighbours: a link in running text, and a card. */
-const EXEMPT = ":is(p, label) a, .card";
 /** The practice worker loads the engine, the card scripts and the AI before its first answer. */
 const BOOT_TIMEOUT = 60_000;
 /** The card pool of a big list takes a while to draw its first cards on a cold browser. */
 const CARD_POOL_TIMEOUT = 30_000;
-/** One pass over a screen of several hundred controls, retried until the layout has settled. */
-const MEASURE_TIMEOUT = 10_000;
 const MS_PER_SECOND = 1000;
 const SEED = seedFor("47-tap-areas");
 /** The series the intercept answers, as spec 46's: a v4 UUID's shape, nothing the server holds. */
@@ -129,130 +117,38 @@ const NEWS_LIST = {
   ],
 };
 /** The screens whose testids live in their route's component file, which this project does not type-check. */
-const SCREEN = { accountRank: "account-rank", leaderboardSeason: "leaderboard-season", almanac: "almanac" } as const;
+const SCREEN = {
+  accountRank: "account-rank",
+  accountHistoryAll: "account-history-all",
+  leaderboardSeason: "leaderboard-season",
+  almanac: "almanac",
+} as const;
+/** When the faked match history's games ended, a fixed moment so each row's date is the same width on every run. */
+const HISTORY_GAME_ENDED_AT = Date.UTC(2026, 10, 1, 18);
+/** What `GET /api/replays` answers for `/account`'s Match history (R3957000): three games, so "All replays" sits under a last row with a "Watch replay". */
+const HISTORY_REPLAYS = {
+  replays: (
+    [
+      ["h1", "bo1", "win"],
+      ["h2", "random", "loss"],
+      ["h3", null, "draw"],
+    ] as const
+  ).map(([matchId, mode, result]) => ({
+    matchId,
+    mode,
+    endedAt: HISTORY_GAME_ENDED_AT,
+    seat: "p1",
+    result,
+    turns: 7,
+    steps: 40,
+    portraits: { p1: "gary", p2: "timmy" },
+    opponent: { profileId: "p2", username: "Grape#12" },
+  })),
+  nextOffset: null,
+};
 /** The measure's own probe: this much narrower than the minimum and taller, its ::before no height and this far past each side. */
 const PROBE_PX = 14;
 const PROBE_TESTID = "tap-probe";
-/** R2122000's media, index.css's: where the bands are drawn. */
-const HIT_AREA_MEDIA = `${COARSE_POINTER_QUERY}, ${upTo("phone")}`;
-/** An iPad's `navigator.maxTouchPoints`, for the touch the wider sizes emulate. */
-const TOUCH_POINTS = 5;
-
-type Box = { left: number; top: number; right: number; bottom: number };
-type Control = { el: Element; name: string; own: Box; shown: Box; hit: Box; exempt: boolean };
-
-const boxOf = (el: Element): Box => {
-  const { left, top, right, bottom } = el.getBoundingClientRect();
-  return { left, top, right, bottom };
-};
-const union = (a: Box, b: Box): Box => ({ left: Math.min(a.left, b.left), top: Math.min(a.top, b.top), right: Math.max(a.right, b.right), bottom: Math.max(a.bottom, b.bottom) });
-/** How far two boxes overlap across and down (negative: the gap between them). */
-const overlap = (a: Box, b: Box) => ({ x: Math.min(a.right, b.right) - Math.max(a.left, b.left), y: Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) });
-
-/** A checkbox's or a radio's labels, which toggle it. The tag, not `instanceof`: the page is another window. */
-function labelsOf(el: Element): Element[] {
-  const input = el as HTMLInputElement;
-  return el.tagName === "INPUT" && (input.type === "checkbox" || input.type === "radio") && input.labels !== null ? Array.from(input.labels) : [];
-}
-
-/** `el`'s box, its labels' and each ::before and ::after that takes taps where its overflow leaves room; one with no width or no height takes none. */
-function hitBox(win: Window, el: Element): Box {
-  const style = win.getComputedStyle(el);
-  let hit = boxOf(el);
-  const origin = { x: hit.left + parseFloat(style.borderLeftWidth), y: hit.top + parseFloat(style.borderTopWidth) };
-  for (const which of ["::before", "::after"]) {
-    const p = win.getComputedStyle(el, which);
-    if (p.content === "none" || p.content === "normal" || p.position !== "absolute" || style.position === "static" || p.pointerEvents === "none") continue;
-    // A centering translate (inspectable.css's pile band) shifts the box; the rest of a transform is ignored.
-    const shift = new DOMMatrixReadOnly(p.transform === "none" ? undefined : p.transform);
-    const [x, y, w, h] = [parseFloat(p.left) + shift.e, parseFloat(p.top) + shift.f, parseFloat(p.width), parseFloat(p.height)];
-    if (![x, y, w, h].every(Number.isFinite) || w <= SLACK_PX || h <= SLACK_PX || style.clipPath !== "none") continue;
-    if (style.overflowX === "visible") hit = { ...hit, left: Math.min(hit.left, origin.x + x), right: Math.max(hit.right, origin.x + x + w) };
-    if (style.overflowY === "visible") hit = { ...hit, top: Math.min(hit.top, origin.y + y), bottom: Math.max(hit.bottom, origin.y + y + h) };
-  }
-  return labelsOf(el).reduce((sum, label) => union(sum, hitBox(win, label)), hit);
-}
-
-/** The part of `el` the window and its clipping ancestors show; null when none is (scrolled out of its region). */
-function shownBox(win: Window, el: Element): Box | null {
-  let shown = { ...boxOf(el) };
-  shown = { left: Math.max(shown.left, 0), top: Math.max(shown.top, 0), right: Math.min(shown.right, win.innerWidth), bottom: Math.min(shown.bottom, win.innerHeight) };
-  for (let up = el.parentElement; up !== null; up = up.parentElement) {
-    const style = win.getComputedStyle(up);
-    const clip = boxOf(up);
-    if (style.overflowX !== "visible") shown = { ...shown, left: Math.max(shown.left, clip.left), right: Math.min(shown.right, clip.right) };
-    if (style.overflowY !== "visible") shown = { ...shown, top: Math.max(shown.top, clip.top), bottom: Math.min(shown.bottom, clip.bottom) };
-  }
-  return shown.right - shown.left > SLACK_PX && shown.bottom - shown.top > SLACK_PX ? shown : null;
-}
-
-function nameOf(el: Element): string {
-  const own = el.getAttribute("data-testid");
-  if (own !== null) return own;
-  const what = `<${el.tagName.toLowerCase()}> "${(el.getAttribute("aria-label") ?? el.textContent ?? "").trim().slice(0, NAME_CHARS)}"`;
-  const holder = el.parentElement?.closest("[data-testid]")?.getAttribute("data-testid");
-  return holder === undefined || holder === null ? what : `${what} in ${holder}`;
-}
-
-/** The controls a tap reaches: shown, taking pointer events, inside the topmost open modal if any. */
-function controlsOf(win: Window): Control[] {
-  const modal = Array.from(win.document.querySelectorAll('[aria-modal="true"]')).filter((m) => m.getClientRects().length > 0).at(-1);
-  const controls: Control[] = [];
-  for (const el of win.document.querySelectorAll(CONTROLS)) {
-    const style = win.getComputedStyle(el);
-    const shown = shownBox(win, el);
-    if ((modal !== undefined && !modal.contains(el)) || style.visibility === "hidden" || style.pointerEvents === "none" || shown === null) continue;
-    const own = labelsOf(el).reduce((sum, label) => union(sum, boxOf(label)), boxOf(el));
-    controls.push({ el, name: nameOf(el), own, shown, hit: hitBox(win, el), exempt: el.matches(EXEMPT) });
-  }
-  return controls;
-}
-
-/**
- * R2122000: a hit area reaches `HIT_MIN_PX / 2` past its center each way, or halfway to a nearer
- * neighbour (another control, neither holding the other, not overlapping it), and covers no neighbour.
- */
-function hitAreaProblems(win: Window): string[] {
-  const controls = controlsOf(win);
-  const problems: string[] = [];
-  for (const c of controls) {
-    const others = controls.filter((n) => {
-      const o = overlap(c.own, n.own);
-      return n !== c && !n.el.contains(c.el) && !c.el.contains(n.el) && (o.x <= SLACK_PX || o.y <= SLACK_PX);
-    });
-    const half = HIT_MIN_PX / 2;
-    const [cx, cy] = [(c.own.left + c.own.right) / 2, (c.own.top + c.own.bottom) / 2];
-    const reach = { left: cx - half, top: cy - half, right: cx + half, bottom: cy + half };
-    for (const n of others) {
-      const o = overlap(c.own, n.own);
-      if (o.y > 0 && n.own.right <= c.own.left + SLACK_PX) reach.left = Math.max(reach.left, (n.own.right + c.own.left) / 2);
-      if (o.y > 0 && n.own.left >= c.own.right - SLACK_PX) reach.right = Math.min(reach.right, (n.own.left + c.own.right) / 2);
-      if (o.x > 0 && n.own.bottom <= c.own.top + SLACK_PX) reach.top = Math.max(reach.top, (n.own.bottom + c.own.top) / 2);
-      if (o.x > 0 && n.own.top >= c.own.bottom - SLACK_PX) reach.bottom = Math.min(reach.bottom, (n.own.top + c.own.bottom) / 2);
-      const covered = overlap(c.hit, n.shown);
-      if (covered.x > SLACK_PX && covered.y > SLACK_PX) problems.push(`${c.name}: its hit area covers ${n.name}`);
-    }
-    const size = `${(c.hit.right - c.hit.left).toFixed(PX_DIGITS)}x${(c.hit.bottom - c.hit.top).toFixed(PX_DIGITS)} px`;
-    const short = (axis: string) => problems.push(`${c.name}: its hit area is ${size}, short of ${String(HIT_MIN_PX)} px ${axis}`);
-    if (!c.exempt && (c.hit.left > reach.left + SLACK_PX || c.hit.right < reach.right - SLACK_PX)) short("across");
-    if (!c.exempt && (c.hit.top > reach.top + SLACK_PX || c.hit.bottom < reach.bottom - SLACK_PX)) short("down");
-  }
-  return problems;
-}
-
-/** R2122000 at `size`, under its media, retried until the screen has settled. */
-function expectHitAreas(size: MenuSize | MenuViewport): void {
-  cy.window({ timeout: MEASURE_TIMEOUT }).should((win) => {
-    expect([win.innerWidth, win.innerHeight], "the viewport asked for").to.deep.eq([size.width, size.height]);
-    expect(win.matchMedia(HIT_AREA_MEDIA).matches, `${HIT_AREA_MEDIA} holds`).to.eq(true);
-    expect(hitAreaProblems(win), "controls whose hit area falls short or covers another").to.deep.eq([]);
-  });
-}
-
-/** A coarse pointer (and no hover) for every page until turned off: the wider sizes are held under a finger. */
-function emulateTouch(enabled: boolean): void {
-  cy.then(() => Cypress.automation("remote:debugger:protocol", { command: "Emulation.setTouchEmulationEnabled", params: { enabled, maxTouchPoints: TOUCH_POINTS } }));
-}
 
 /**
  * A pending account's code and consent screens for `SPARE`. Spec 10 redeems the pending fixture until
@@ -527,6 +423,15 @@ describe(`47 — every control under a finger takes a tap across ${String(HIT_MI
         it("R2122000 /account", () => {
           cy.visitAs(SIGNED_IN(), "/account");
           cy.get(ts(SCREEN.accountRank), { timeout: timeouts.view }).should("be.visible");
+          expectHitAreas(size);
+        });
+
+        // R3957000: "All replays" is a 44 px button under the last row's "Watch replay", so no band covers it. The history is
+        // faked, as SIGNED_IN (p2) is near R109's per-minute allowance.
+        it("R2122000 R3957000 /account, Match history", () => {
+          cy.intercept({ method: "GET", pathname: "/api/replays" }, { statusCode: 200, body: HISTORY_REPLAYS });
+          cy.visitAs(SPARE(), "/account?section=history");
+          cy.get(ts(SCREEN.accountHistoryAll), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
 

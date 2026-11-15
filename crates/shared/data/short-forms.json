@@ -1,19 +1,29 @@
 {
   "forms": {
     "core-052": {
-      "base": "clamp"
+      "base": {
+        "en": "Summon this for your opponent.\nCry: Rotate every card on the field one step left or right. Crossing sides changes control."
+      }
     },
     "core-093": {
       "base": 2,
       "radiant": 2
     },
     "core-065": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Start of turn: Choose one: exile your deck's bottom card, lose {loss} health or summon a Spikey Pillow.\nAfter {downsides|downside|downsides}, make your hand Radiant."
+      },
+      "radiant": {
+        "en": "Start of turn: Choose twice: nothing, exile your deck's bottom card, lose {loss} health or a Spikey Pillow.\nAfter {downsides|downside|downsides}, make your hand Radiant."
+      }
     },
     "core-089": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Rush, Brittle 1\nIn your hand, gains the stats of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
+      },
+      "radiant": {
+        "en": "Rush, Divine Shield, Brittle 3\nIn hand: gains twice each dead Unit's stats.\nMay attack again after attacking a Unit."
+      }
     },
     "core-095": {
       "base": "colon",
@@ -28,23 +38,37 @@
       "radiant": 2
     },
     "classic-023": {
-      "base": "clamp"
+      "base": {
+        "en": "Indestructible, Spell Damage +1\nCry: Discard {discards|random card|random cards}.\nActivate: Your plays this turn become Books of Flame."
+      }
     },
     "classicplus-007": {
-      "radiant": "clamp"
+      "radiant": {
+        "en": "Cry: Place {tokens|Plague Counter|Plague Counters} on this.\nActivate: Spend one to summon a Radiant Right-house defender or Wrong-House Attacker."
+      }
     },
     "classicplus-019-2": {
-      "radiant": "clamp"
+      "radiant": {
+        "en": "Can't attack\nEnd of turn: Attack a random enemy Unit. A kill across from your Bot Loser is its kill."
+      }
     },
     "classicplus-042-1": {
-      "radiant": "clamp"
+      "radiant": {
+        "en": "Activate: Gain {mana} mana. Heal your hero {heal}. Your opponent discards {discards}. Add a Radiant Book, KY, Legendary and (4) Cost card at ({setCost})."
+      }
     },
     "classicplus-034": {
-      "base": "clamp"
+      "base": {
+        "en": "Crater\nChoose one.\nEnd of turn: Lock a random enemy zone.\nOr Lock each zone your opponent plays into."
+      }
     },
     "classicplus-037": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Divine Shield\nIn hand or deck, summoned after {threshold} non-Units in a turn.\nEnd of turn: Recast a random non-Unit you played this turn."
+      },
+      "radiant": {
+        "en": "Divine Shield\nIn hand or deck, summoned after {threshold} non-Units in a turn.\nEnd of turn: Recast each non-Unit you played this turn."
+      }
     },
     "classicplus-073": {
       "base": "colon",
@@ -55,11 +79,17 @@
       "radiant": 2
     },
     "meditative-009": {
-      "radiant": "clamp"
+      "radiant": {
+        "en": "Cry: Add a random Start of turn card and a random End of turn card to your hand.\nAura: Your turn effects trigger {extra|extra time|extra times}."
+      }
     },
     "meditative-020": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Tradable\nChoose one. You also win while it holds: hero {health}+ Health; graveyard {graveyard}+ cards; or Units {board}+/{board}+."
+      },
+      "radiant": {
+        "en": "Tradable\nChoose one. You also win while it holds: hero {health}+ Health; graveyard {graveyard}+ cards; or Units {board}+/{board}+. Draw {draw}."
+      }
     },
     "meditative-022": {
       "base": 1,
@@ -74,31 +104,57 @@
       "radiant": 3
     },
     "meditative-040": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Aura: Good feng shui is rewarded, bad punished.\nActivate: Add an Auspicious Rock.\nYour last element, your opponent's last element."
+      },
+      "radiant": {
+        "en": "Aura: Good feng shui helps you, bad hurts them.\nActivate: Add a Radiant Auspicious Rock.\nYour last element, your opponent's last element."
+      }
     },
     "meditative-045": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Cry: Nerf other CN and KY cards in play and hands.\nAura: Your Units are Cloaked.\nDeath: Shuffle in its Prime."
+      },
+      "radiant": {
+        "en": "Divine Shield\nCry: Nerf other CN and KY cards in play and hands {times|time|times}.\nAura: Cloaks your Units.\nDeath: Shuffle in a Prime."
+      }
     },
     "meditative-049-1": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Float reduces cost.\nCry: Do {picks} at random: Datacenters, Glitches, an AI Girlfriend, Viruses for them, or Nerf their cards."
+      },
+      "radiant": {
+        "en": "Armor 5\nFloat reduces cost.\nCry: Datacenters, Glitches, an AI Girlfriend, Viruses for them, and Nerf their cards."
+      }
     },
     "meditative-049-2": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Can't attack\nStart of turn: Deal {damage} damage to your hero and adjacent non-Viruses.\nActivate: Destroy this.\nDeath: Discard {discards}."
+      },
+      "radiant": {
+        "en": "Can't attack\nStart of turn: Deal {damage} damage to your hero and adjacent non-Viruses.\nActivate: Destroy this.\nDeath: Discard {discards}."
+      }
     },
     "meditative-054": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Cry: Print The Coin or Warhero Tokens.\nEnd of turn: Shuffle it into both decks; heads, yours to your hand."
+      },
+      "radiant": {
+        "en": "Lucky 1\nCry: Print a Radiant The Coin or Warhero Token.\nEnd of turn: Shuffle it into both decks; heads, yours to your hand."
+      }
     },
     "meditative-081": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Shuffle a copy of this and of each card in your hand into your deck. Draw {draw|card|cards}.\nEmbiggened (1): Copies {chance}% Radiant."
+      },
+      "radiant": {
+        "en": "Shuffle a copy of this and of each card in your hand into your deck. Draw {draw|card|cards}.\nEmbiggened (1): Copies {chance}% Radiant."
+      }
     },
     "meditative-091": {
-      "radiant": "clamp"
+      "radiant": {
+        "en": "Tribute 1, Rush, Windfury\nA random hand Unit is summoned to make each attack.\nDeath: Shuffle in a Radiant Windfurious Prime."
+      }
     },
     "meditative-095": {
       "base": "colon",
@@ -109,73 +165,131 @@
       "radiant": 1
     },
     "meditative-098": {
-      "radiant": "clamp"
+      "radiant": {
+        "en": "Tradable\nChoose an empty lane. Lock the rest until your next turn. This turn, cast Book of Buff on each card put there."
+      }
     },
     "meditativeplus-001": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Add a random Wincon card to your hand, and a card that helps it win: its plan."
+      },
+      "radiant": {
+        "en": "Add a random Radiant Wincon card to your hand, and its Radiant plan: a card that helps it win."
+      }
     },
     "meditativeplus-004": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Choose one: in {turns|turn|turns}, deal {damage} Pierce Lifesteal damage to each enemy; or add {cards} Radiant Jlockeed cards at ({suppliesCost}).\nEmbiggened (4): Bigger, later."
+      },
+      "radiant": {
+        "en": "Choose one: in {turns|turn|turns}, deal {damage} Pierce Lifesteal damage to each enemy; or add {cards} Radiant Jlockeed cards at ({suppliesCost}).\nEmbiggened (4): Bigger, later."
+      }
     },
     "meditativeplus-020": {
-      "radiant": "clamp"
+      "radiant": {
+        "en": "Answer sums until you stop, miss or 60 seconds pass. Summon a Radiant Lil' Kenny, 2X/2X for X right answers."
+      }
     },
     "meditativeplus-022": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Cry: Add a random Embiggen card.\nAura: Embiggened versions cost their normal price. Any card may be played Radiant for ({premium}) more."
+      },
+      "radiant": {
+        "en": "Cry: Add a random Embiggen card. It costs (0).\nAura: Embiggened versions cost their normal price. Play cards Radiant for ({premium}) more."
+      }
     },
     "meditativeplus-024": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Cry: Choose one: Freeze enemy Units; take an enemy Unit, they get {coins|Coin|Coins}; Discover a Radiant Unit; or fill your hand with copies of a draw."
+      },
+      "radiant": {
+        "en": "Cry: In order: Freeze enemy Units; take an enemy Unit, they get {coins|Coin|Coins}; Discover a Radiant Unit; fill your hand with copies of a draw."
+      }
     },
     "stinkyscape-004-4": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Reveals when your hero would take lethal damage: Prevent it. Take the next turn, your Units with Charge, then lose."
+      },
+      "radiant": {
+        "en": "Reveals when your hero would take lethal damage: Prevent it. Take the next turn with {mana} mana and Charge, then lose."
+      }
     },
     "stinkyscape-004-5": {
       "base": "colon",
-      "radiant": "clamp"
+      "radiant": {
+        "en": "Reveals when your opponent's turn ends: Lock all lanes but one. Heroes go to 1 health. Spells in hands are discarded. Fill your hand with free Book of Buffs."
+      }
     },
     "stinkyscape-007": {
       "radiant": "clamp"
     },
     "stinkyscape-016": {
-      "base": "clamp"
+      "base": {
+        "en": "Animated\nThe first Unit played onto this is Equipped into it.\nEnd of turn: Gain {keywords|random combat keyword|random combat keywords}.\nRadiant at 12 keywords."
+      }
     },
     "stinkyscape-018-1": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Indestructible\nStart of turn: Vote you out if they have more Units.\nActivate: Give your Units {keywords|random combat keyword|random combat keywords}."
+      },
+      "radiant": {
+        "en": "Indestructible\nStart of turn: Vote you out if they have more Units.\nActivate: Give your Units {keywords|random combat keyword|random combat keywords}."
+      }
     },
     "stinkyscape-018-2": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Indestructible\nStart of turn: Vote you out below half health.\nActivate: Add a copy of the last card you played, at ({surcharge}) more."
+      },
+      "radiant": {
+        "en": "Indestructible\nStart of turn: Vote you out below half health.\nActivate: Add a Radiant copy of the last card you played, at ({surcharge}) more."
+      }
     },
     "stinkyscape-018-3": {
-      "radiant": "clamp"
+      "radiant": {
+        "en": "Indestructible\nStart of turn: Vote you out if you Floated on your last turn.\nActivate: Allure a random enemy Unit and hand Unit."
+      }
     },
     "stinkyscape-023": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Stack, Brittle 3\nAura: Units have Can't Defend and +{attack} Attack.\nWhen your opponent summons a Unit, a random Unit of yours attacks it."
+      },
+      "radiant": {
+        "en": "Stack, Brittle 3\nAura: Units have Can't Defend and +{attack} Attack; yours First Strike.\nYour random Unit attacks each Unit they summon."
+      }
     },
     "stinkyscape-024": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Stack, Brittle 5\nAura: Units have Can't Defend and +{attack} Attack.\nWhen your opponent summons a Unit, each Unit of yours attacks it."
+      },
+      "radiant": {
+        "en": "Stack, Brittle 5\nAura: Units have Can't Defend and +{attack} Attack; yours First Strike.\nEach Unit of yours attacks each Unit they summon."
+      }
     },
     "stinkyscape-025": {
-      "base": "clamp"
+      "base": {
+        "en": "Choose a zone. Its Jacobian stretches a unit square: summon a random Starship Piece in each zone it covers, for that zone's player."
+      }
     },
     "stinkyscape-039": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Brittle 4\nEnd of turn: Gain a Narcor.\nActivate: Discard a Narcor: −1 Brittle.\nDeath: If by Brittle, 2 Narcors a turn."
+      },
+      "radiant": {
+        "en": "Brittle 4\nEnd of turn: +1 Red Narcor.\nActivate: Discard a Narcor: −1 Brittle.\nDeath: If by Brittle, 2 Red Narcors a turn."
+      }
     },
     "stinkyscape-077": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Flying\nCry: Next turn, make your opponent a trade offer: you give a card from your hand, they Discover one of theirs for you."
+      },
+      "radiant": {
+        "en": "Flying, Lucky 1\nCry: Next turn, make your opponent a trade offer: you give a card from your hand, they Discover one of theirs for you."
+      }
     },
     "stinkyscape-087": {
-      "radiant": "clamp"
+      "radiant": {
+        "en": "Tradable\nCry: Allure a random enemy Acclaimed Unit. With none, summon one for your opponent, Frozen, and Allure it."
+      }
     },
     "stinkyscape-112": {
       "base": "clamp",
@@ -186,19 +300,33 @@
       "radiant": "clamp"
     },
     "stinkyscape-139": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Reveals when your opponent aims a Spell only at their own side: Counter it and cast it for yourself, at your side."
+      },
+      "radiant": {
+        "en": "Reveals when your opponent aims a Spell only at their own side: Counter it and cast it Radiant for yourself, at your side."
+      }
     },
     "stinkyscape-143": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Starship Piece, Equip\nActivate: Cast a random harmful Book on an enemy, or a random helpful Book on an ally."
+      },
+      "radiant": {
+        "en": "Starship Piece, Equip\nActivate: Cast a random Radiant harmful Book on an enemy, or a helpful one on an ally."
+      }
     },
     "stinkyscape-147": {
-      "radiant": "clamp"
+      "radiant": {
+        "en": "Cry: For the rest of your turn, an AI helps you make the Pareto Optimal plays.\nDeath: Shuffle in a Radiant IN33DH3 Prime."
+      }
     },
     "stinkyscape-148": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Indestructible\nActivate ♾️: Pay (1) to travel one node of your starscape map for its reward. Node 20 adds an Edge of the Universe."
+      },
+      "radiant": {
+        "en": "Indestructible\nYour first travel a turn is free.\nActivate ♾️: Pay (1) to travel a node. Node 20 is the edge."
+      }
     },
     "stinkyscape-150": {
       "base": "colon",
@@ -209,156 +337,248 @@
       "radiant": "colon"
     },
     "stinkyscape-153": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Gain {mana} mana. Inflation: your hand and deck each {chance}% chance to cost (1) more.\nEnd of turn: Return this, +5% Inflation."
+      },
+      "radiant": {
+        "en": "Lucky 1\nGain {mana} mana. Inflation: your hand and deck each {chance}% chance to cost (1) more.\nEnd of turn: Radiant return, +5%."
+      }
     },
     "stinkyscape-154": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Roll a d100. On 67, add every Terminus card at (0).\nEnd of turn: Return to hand.\nEmbiggened (1): Also gains Lucky +1 for good."
+      },
+      "radiant": {
+        "en": "Roll a d80 twice. On a 67, add every Terminus card at (0).\nEnd of turn: Return to hand.\nEmbiggened (1): Also gains Lucky +1 for good."
+      }
     },
     "stinkyscape-157": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Brittle 3\nGauntlet: Units in lanes 2–4 fight only each other."
+      },
+      "radiant": {
+        "en": "Brittle 3\nGauntlet: Units in lanes 2–4 fight only each other.\nActivate: +{brittleGain} Brittle, or Tribute this."
+      }
     },
     "stinkyscape-164": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Tradable\nAura: Cards in your hand have Tradable.\nA traded card: {exileChance}% exiled, {radiantChance}% Radiant."
+      },
+      "radiant": {
+        "en": "Tradable\nAura: Cards in your hand have Tradable.\nA traded card: {exileChance}% exiled, {radiantChance}% Radiant."
+      }
     },
     "stinkyscape-166": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "5% chance: a Radiant Anomaly Found!\n20% chance: an Anomaly Found!\nElse +1% and +4% next time."
+      },
+      "radiant": {
+        "en": "Lucky 1\n5% chance: a Radiant Anomaly Found!\n20% chance: an Anomaly Found!\nElse +1% and +4% next time."
+      }
     },
     "stinkyscape-167": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Lucky 1\n5% chance: a Radiant Anomaly Found!\n20% chance: an Anomaly Found!\nElse +1% and +4% next time."
+      },
+      "radiant": {
+        "en": "Lucky 3\n5% chance: a Radiant Anomaly Found!\n20% chance: an Anomaly Found!\nElse +1% and +4% next time."
+      }
     },
     "stinkyscape-t-anomaly-found": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Replace your side of the field with a random Anomaly's board. Every Cry on it fires, at random."
+      },
+      "radiant": {
+        "en": "Replace your side of the field with a random rich Anomaly's board. Every Cry on it fires, at random."
+      }
     },
     "traininggrounds-016": {
-      "radiant": "clamp"
+      "radiant": {
+        "en": "Divine Shield, Taunt, Armor 6\nCry: Summon a Radiant Chosen by the Sun to the left and a Radiant Chosen by the Moon to the right."
+      }
     },
     "traininggrounds-039": {
       "base": "colon",
       "radiant": "colon"
     },
     "classicplus-049": {
-      "radiant": "clamp"
+      "radiant": {
+        "en": "Taunt\nEnd of turn: A random hand card costs ({discount}) less.\nEvolves at {zeroes|(0) Cost card|(0) Cost cards} in hand.\nEvolve: Poisonous."
+      }
     },
     "stinkyscapeplus-004": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Cry: Exile every card with M, O, U, S or E in its name, but CN cards. Summon two random Traps. Choose an Activate: Overwhelm, Wolf's Maw or Iron Mandate."
+      },
+      "radiant": {
+        "en": "Cry: Exile every card with M, O, U, S or E in its name, but CN cards. Summon three Radiant Traps. Choose an Activate: Overwhelm, Wolf's Maw or Iron Mandate."
+      }
     },
     "stinkyscapeplus-007": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Armor 4\nCry: Choose one: chain enemy Units, so damage to one hits all; or chain friendly Units, so damage is split among them."
+      },
+      "radiant": {
+        "en": "Armor 8\nCry: Choose one: chain enemy Units, so damage to one hits all; or chain friendly Units, so damage is split among them."
+      }
     },
     "stinkyscapeplus-024": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Shuffle {copy|copy|copies} of a non-fused card in your hand or field into your deck, as printed.\nEmbiggened (3): {copy2|copy|copies}."
+      },
+      "radiant": {
+        "en": "Shuffle {copy|copy|copies} of a non-fused card in your hand or field into your deck, as printed, then Buff them.\nEmbiggened (3): {copy2}."
+      }
     },
     "stinkyscapeplus-031": {
-      "base": "clamp",
-      "radiant": "clamp"
-    },
-    "stinkyscapeplus-038": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Set: Secretly pick a card in their hand.\nReveals if they play it before the other cards you saw: Take control of it. Otherwise, Tribute this."
+      },
+      "radiant": {
+        "en": "Set: Secretly pick a card in their hand.\nReveals if they play it: Take control of it."
+      }
     },
     "stinkyscapeplus-055": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Start of turn: Gain {mana} mana, draw {card|card|cards}.\nEnd of turn: {chance}% chance of {damage} to your hero, unless you discarded a Thorium."
+      },
+      "radiant": {
+        "en": "Lucky 1\nStart of turn: Gain {mana} mana, draw {card|card|cards}.\nEnd of turn: {chance}% chance of {damage} to your hero, unless you discarded a Thorium."
+      }
     },
     "stinkyscapeplus-061-1": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "End of turn: Every Unit eats a Shawarma: 1st, +{health} Health; 2nd, Can't attack; 3rd, Can't Defend and Brittle {brittle2}; then Freeze."
+      },
+      "radiant": {
+        "en": "End of turn: Every Unit eats a Shawarma: 1st, +{health} Health; 2nd, Can't attack; 3rd, Can't Defend and Brittle {brittle2}; then Freeze. Yours eat one."
+      }
     },
     "stinkyscapeplus-064": {
-      "radiant": "clamp"
+      "radiant": {
+        "en": "Can't attack, Taunt, Pierce, Armor 2\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (4): {embiggenedDamage} damage, GIGA, 0/48."
+      }
     },
     "stinkyscapeplus-072": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Tribute 5, Indestructible, Can't attack, Can't Defend, Immutable, Immune to Spells, Flexible, Ranged\nAttacks each summoned enemy; lose {mana} mana next turn."
+      },
+      "radiant": {
+        "en": "Tribute 5, Indestructible, Can't Defend, Immutable, Immune to Spells, Flexible, Ranged\nAttacks each summoned enemy; lose {mana} mana next turn."
+      }
     },
     "stinkyscapeplus-080": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Exile your hand, deck and board. Summon {starships|random Terminus Starship|random Terminus Starships}, not launched by hand. Launch one now and each turn."
+      },
+      "radiant": {
+        "en": "Exile your hand, deck and both boards. Summon {starships|random Terminus Starship|random Terminus Starships}, not launched by hand. Launch one now and each turn."
+      }
     },
     "stinkyscapeplus-087": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Animated\nEvolves when a Starship launches.\nEvolve: {counters|Plague Counter|Plague Counters}.\nAura: 3X/3X, X its Plague Counters."
+      },
+      "radiant": {
+        "en": "Animated\nEvolves when a Starship launches.\nEvolve: {counters|Plague Counter|Plague Counters}.\nAura: 3X/3X, X its Plague Counters."
+      }
     },
     "stinkyscapeplus-089": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Starts on the bottom of your deck.\nCast from your deck once your exile has {card|card|cards}.\nAdd a random Terminus card to your hand."
+      },
+      "radiant": {
+        "en": "Starts on the bottom of your deck.\nCast from your deck once your exile has {card|card|cards}.\nAdd a random Radiant Terminus card."
+      }
     },
     "stinkyscapeplus-098": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Add a random pair to your hand's two ends: iKwzki and Shockwave447, Shadiris and xxFreshJack, or Tylannt and Siva 1. Meeting, both become Radiant."
+      },
+      "radiant": {
+        "en": "Add a random pair to your hand's two ends: iKwzki and Shockwave447, Shadiris and xxFreshJack, or Tylannt and Siva 1. Meeting, both go Radiant at (0)."
+      }
     },
     "stinkyscapeplus-120": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Can't Defend\nFirst time in play each game: add a Toxopid.\nPlay from graveyard: (1).\nDies after attacking.\nDeath: {damage} to its last target."
+      },
+      "radiant": {
+        "en": "Can't Defend\nFirst time in play each game: add a Radiant Toxopid.\nPlay from graveyard: (1).\nDies after attacking.\nDeath: {damage} to its last target."
+      }
     },
     "stinkyscapeplus-121": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Crater, Immutable, Rush\nCry: Summon {legs|Leg|Legs}.\nIndestructible with Legs.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
+      },
+      "radiant": {
+        "en": "Crater, Immutable, Rush\nCry: Summon {legs|Leg|Legs} for them.\nIndestructible with Legs.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
+      }
     },
     "stinkyscapeplus-123": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Tribute 3, Can't attack, Can't Defend, Flying\nEnd of turn: Heal allies {heal}.\nAura: Allies ignore their first {pool} damage each turn."
+      },
+      "radiant": {
+        "en": "Tribute 3, Can't attack, Can't Defend, Flying, Armor 2\nEnd of turn: Heal allies {heal}.\nAura: Allies ignore the first {pool} damage each turn."
+      }
     },
     "stinkyscapeplus-132": {
-      "radiant": "clamp"
+      "radiant": {
+        "en": "Choose one: α or β.\nAdd a Radiant Dagger/Flare. The first play of each cost of Automa-α/β adds the next cost's, Radiant."
+      }
     },
     "stinkyscapeplus-133": {
-      "radiant": "clamp"
+      "radiant": {
+        "en": "Add a Radiant Dagger and Flare. The first play of each cost of Radiant Automa-ζ adds the next cost's, Radiant."
+      }
     },
     "stinkyscapeplus-133-5": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "base": {
+        "en": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 4, Flying, Can't Defend, Crater, Armor 3\nDamage Burns {damage} and {burns}."
+      },
+      "radiant": {
+        "en": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Rush, Cleave, Armor 4, Flying, Can't Defend, Crater, Armor 3\nDamage Burns {damage} and {burns}."
+      }
     },
     "stinkyscapeplus-137": {
-      "radiant": "clamp"
+      "radiant": {
+        "en": "Add a Radiant Automa-δ and its Radiant Automa-Ω pair: Scepter and Reign, Antumbra and Eclipse, Quad and Oct, Sei and Omura, Vela and Corvus."
+      }
     },
     "stinkyscapeplus-142": {
       "base": "colon",
       "radiant": "colon"
     },
     "stinkyscapeplus-157": {
-      "radiant": "clamp"
+      "radiant": {
+        "en": "Start of turn: Fuse a random Radiant Starship Piece into this.\nDormant until launched.\nActivate 3: Launch this as a Starship."
+      }
     },
     "stinkyscapeplus-t-terminus-starship-ark-of-ashes": {
-      "radiant": "clamp"
+      "radiant": {
+        "en": "Flying, Ranged\nDormant until launched, never by hand. Holds Radiant Patcher Nanobots, Defensive Crystal and Hull Booster."
+      }
     },
     "stinkyscapeplus-t-terminus-starship-dying-ember": {
-      "radiant": "clamp"
+      "radiant": {
+        "en": "Flying, Ranged\nDormant until launched, never by hand. Holds Radiant After Burner, Ultralight Chassis, Spacemine, AP Rounds."
+      }
     },
-    "stinkyscapeplus-t-terminus-starship-heat-death-pilgrim": {
-      "radiant": "clamp"
-    },
-    "stinkyscapeplus-t-terminus-starship-entropys-wake": {
-      "base": "clamp",
-      "radiant": "clamp"
-    },
-    "stinkyscapeplus-t-terminus-starship-red-giant-requiem": {
-      "radiant": "clamp"
+    "meditative-087": {
+      "radiant": {
+        "en": "In hand or deck, summoned after you play a tribal card.\nEnd of turn: Buff {cards|random card|random cards} in your hand and each adjacent Unit."
+      }
     },
     "stinkyscapeplus-t-terminus-starship-cold-exodus": {
-      "base": "clamp",
-      "radiant": "clamp"
-    },
-    "stinkyscapeplus-t-terminus-starship-omega-drift": {
-      "radiant": "clamp"
+      "radiant": {
+        "en": "Flying, Ranged\nDormant until launched, never by hand. Holds Radiant Frost Module, Reflective Plating and Beam v4."
+      }
     },
     "stinkyscapeplus-t-terminus-starship-farthest-shore": {
-      "base": "clamp",
-      "radiant": "clamp"
-    },
-    "stinkyscapeplus-t-terminus-starship-nightfall-covenant": {
-      "base": "clamp",
-      "radiant": "clamp"
+      "radiant": {
+        "en": "Flying, Ranged\nDormant until launched, never by hand. Holds Radiant Repeater v5, Ultra Capacitor and Healing Capsule."
+      }
     }
   },
   "long": [

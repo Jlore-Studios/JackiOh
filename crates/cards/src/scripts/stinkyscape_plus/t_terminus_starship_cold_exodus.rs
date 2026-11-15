@@ -1,20 +1,19 @@
-//! S+ Cold Exodus, a Terminus Starship (SPEC §8.12; §6.1 Dormant, Starship; R3539001): 0/0
-//! Unit, Starship Token, Flying, Ranged. "Dormant until it launches. It comes holding Frost Module,
-//! Reflective Plating, Defensive Crystal and Beam v4, and can't be launched by hand." The Last Voyage
-//! and The Far Vagabond summon it holding its loadout; its script is the shared Terminus hull
-//! (`c080_the_last_voyage::terminus_hull`).
+//! S+ Cold Exodus, a Terminus Starship (SPEC §8.12; §6.1 Dormant, Starship; R3539001): 0/0 Unit, Starship Token,
+//! Flying, Ranged. "Dormant until it launches. It comes holding Frost Module, Reflective Plating and Beam v4, and
+//! can't be launched by hand." The Last Voyage and The Far Vagabond summon it holding its loadout; its script is
+//! the shared Terminus hull (`c080_the_last_voyage::terminus_hull`).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-t-terminus-starship-cold-exodus";
 
-const FROST: &str = "stinkyscape-175"; // Frost Module (1)
-const PLATING: &str = "stinkyscape-104"; // Reflective Plating (2)
-const CRYSTAL: &str = "stinkyscape-132"; // Defensive Crystal (2)
-const BEAM: &str = "stinkyscape-054"; // Beam v4 (3)
+const FROST: &str = "stinkyscape-175"; // Frost Module
+const PLATING: &str = "stinkyscape-104"; // Reflective Plating
+const BEAM: &str = "stinkyscape-054"; // Beam v4
 
-/// R3539001: the fixed loadout it comes holding: 8 mana of Starship Pieces.
-pub const PIECES: &[&str] = &[FROST, PLATING, CRYSTAL, BEAM];
+/// R3539001: the fixed loadout it comes holding: 6 mana of Starship Pieces (issue #3951; its loadout
+/// through v0.6.4b is `c080_the_last_voyage::TERMINUS_STARSHIPS_V0_6_4B`'s).
+pub const PIECES: &[&str] = &[FROST, PLATING, BEAM];
 
 pub fn script() -> CardScripts {
     crate::scripts::stinkyscape_plus::c080_the_last_voyage::terminus_hull()

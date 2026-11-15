@@ -172,6 +172,17 @@ fn main() {
         Some(Value::Number(n)) => format!("Some(ShortForm::Lines({}))", n.as_u64().expect("a line count")),
         Some(Value::String(s)) if s == "colon" => "Some(ShortForm::Colon)".to_string(),
         Some(Value::String(s)) if s == "clamp" => "Some(ShortForm::Clamp)".to_string(),
+        Some(Value::Object(written)) => format!(
+            "Some(ShortForm::Written {{ en: {}, zh: {} }})",
+            lit(written
+                .get("en")
+                .and_then(Value::as_str)
+                .expect("a written short form's English words")),
+            written
+                .get("zh")
+                .and_then(Value::as_str)
+                .map_or_else(|| "None".to_string(), |zh| format!("Some({})", lit(zh)))
+        ),
         Some(other) => panic!("not a short form: {other}"),
     };
     let mut forms: Vec<(&String, &Value)> = object(&short["forms"]).iter().collect();

@@ -2505,12 +2505,12 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "37",
         "Wardrum",
-        c(3),
+        c(2),
         T::Unit,
         &[G::Quickdraw, G::Acclaimed],
         R::Legendary,
-        st(5, 5),
-        st(10, 10),
+        st(4, 4),
+        st(8, 8),
     ),
     row(
         "38",
@@ -4171,7 +4171,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "89",
         "Jlarna",
-        c(4),
+        c(3),
         T::FieldSpell,
         &[],
         R::Rare,
@@ -6113,12 +6113,12 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "128",
         "Jlockeed's Yamato Cannon",
-        emb(2, 3),
+        emb(1, 2),
         T::Unit,
         &[G::Jlockeed],
         R::Rare,
-        st(4, 1),
-        st(8, 2),
+        st(3, 1),
+        st(6, 2),
     ),
     row(
         "129",
@@ -6666,7 +6666,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "177",
         "Cloaking Module",
-        c(2),
+        c(1),
         T::Unit,
         &[],
         R::Rare,
@@ -7749,7 +7749,7 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
         NO_STATS,
         NO_STATS,
     ),
-    row("23", "GIGA-ify", c(3), T::Spell, &[], R::Epic, NO_STATS, NO_STATS),
+    row("23", "GIGA-ify", c(2), T::Spell, &[], R::Epic, NO_STATS, NO_STATS),
     row(
         "24",
         "Forced Propagation",
@@ -7898,8 +7898,8 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Mindustrial],
         R::Common,
-        st(1, 1),
-        st(2, 2),
+        st(1, 5),
+        st(2, 10),
     ),
     row(
         "38",
@@ -7924,7 +7924,7 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     row(
         "40",
         "Mender",
-        c(1),
+        c(0),
         T::FieldSpell,
         &[G::Mindustrial],
         R::Common,
@@ -8837,7 +8837,7 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     row(
         "129",
         "Multiplicative Reconstructor",
-        c(3),
+        c(2),
         T::FieldSpell,
         &[G::Mindustrial],
         R::Rare,

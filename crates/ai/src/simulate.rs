@@ -22,7 +22,7 @@ use crate::candidates::action_key;
 use crate::config::{
     AI_EVAL, AI_KY_COMPETITION_EXPECTED_STREAK, AI_KY_COMPETITION_RADIANT_EXPECTED_STREAK, AI_SEARCH,
 };
-use crate::evaluate::{NextSwing, Prices, evaluate_priced, float_credit};
+use crate::evaluate::{NextSwing, Prices, evaluate_priced, feng_shui_acts, float_credit};
 use crate::learned::{line_score, open_score};
 use crate::types::{NodeCounter, StoppedBy};
 
@@ -1216,6 +1216,14 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
                 .map(|offer| offer.bought[seat])
                 .collect::<Vec<_>>()
         ));
+    }
+    // R3951100: while a Feng Shui acts, the seat's last element judges its next play and the evaluation
+    // reads it (`feng_shui_outlook`), so two orders of the same plays that end on different elements are
+    // two positions; said only then, so every other signature stays as it was.
+    if feng_shui_acts(state)
+        && let Some(element) = subsystems::feng_shui::last_element(state, seat)
+    {
+        parts.push(format!("E{}", element.as_str()));
     }
     parts.join("|")
 }

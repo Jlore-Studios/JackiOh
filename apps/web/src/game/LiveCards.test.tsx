@@ -100,7 +100,8 @@ describe("R243 a fused card says what it is: name, text, tags, keywords and stat
     expect(text(root, ".card-name")).toBe("Tempo Timmy + Corpse Eater");
     const rules = text(root, ".card-text");
     expect(rules).toContain(def("core-011").base.text);
-    expect(rules).toContain(def("core-089").base.text);
+    // R3941002: the ingredients' keyword lines print as one, every other line as written.
+    expect(rules).toContain(def("core-089").base.text.split("\n").slice(1).join("\n"));
     expect([...root.querySelectorAll(".cf-tag")].map((tag) => tag.textContent)).toEqual(["Human"]);
     expect(root.querySelector("[data-face-attack]")).toHaveAttribute("data-face-attack", "5");
     expect(root.querySelector("[data-face-health]")).toHaveAttribute("data-face-health", "5");
@@ -148,7 +149,9 @@ describe("R243 a fused card says what it is: name, text, tags, keywords and stat
     const { rerender } = render(withCatalog(<CardShowcase view={before} />));
     rerender(withCatalog(<CardShowcase view={withEvents(view, [...before.events, playedFused])} />));
     expect(text(screen.getByTestId(showcaseTestid.face), ".card-name")).toBe("Tempo Timmy + Corpse Eater");
-    expect(text(screen.getByTestId(showcaseTestid.face), ".card-text")).toContain(def("core-089").base.text);
+    expect(text(screen.getByTestId(showcaseTestid.face), ".card-text")).toContain(
+      def("core-089").base.text.split("\n").slice(1).join("\n"),
+    );
     cleanup();
 
     render(withCatalog(<Log view={withEvents(view, [playedFused])} />));

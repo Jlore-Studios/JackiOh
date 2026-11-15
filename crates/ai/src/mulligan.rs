@@ -3,16 +3,21 @@
 //! R2977000), and keep the cheap ones to AI_MULLIGAN_CURVE's curve (#993, `mulligan_keep_curved`).
 //! The answer is R9-shaped — the ids kept — so `reduce` draws the replacements before the returned
 //! cards are shuffled back in, exactly as for a human.
+//! A card's cost here is its `mulligan_cost`, which counts a Tribute card's units (R3936000); the greedy
+//! baseline's `mulligan_keep` reads mana alone.
 
 use jackioh_engine::config::OPENING_COINS;
-use jackioh_engine::{GameState, PlayerId, find_def, handicap_of, query_cost};
+use jackioh_engine::{
+    CardDef, CardInstance, GameState, PlayerId, find_def, handicap_of, query_cost, tribute_cost_of,
+};
 
-use crate::config::AiMulliganCurve;
+use crate::config::{AI_MULLIGAN_TRIBUTE_ALLOWANCE, AiMulliganCurve};
 use crate::shadow_ban::{DEAL_MULLIGAN_KEEP, shaped_weight};
 
-/// R9-shaped: the instance ids to keep; returns every hand card with queryCost <= keepMaxCost
-/// (`mulligan_keep_curved` passes `mulligan_keep_bound`'s, R2977000; the greedy baseline passes its
-/// own frozen GREEDY_MULLIGAN's, which no mana bonus raises).
+/// R9-shaped: the instance ids to keep; returns every hand card with queryCost <= keepMaxCost, mana
+/// alone: the greedy baseline's keep, at its own frozen GREEDY_MULLIGAN's bound, which no mana bonus
+/// raises (R2977000) and no Tribute moves (R3936000: the AI's own keep, `mulligan_keep_shaped`, reads
+/// `mulligan_cost`).
 pub fn mulligan_keep(state: &GameState, seat: PlayerId, keep_max_cost: i32) -> Vec<String> {
     let mut keep: Vec<String> = Vec::new();
     for card in &state.players[seat].hand {
@@ -38,21 +43,47 @@ pub fn mulligan_keep_bound(state: &GameState, seat: PlayerId, keep_max_cost: i32
         .max(0)
 }
 
-/// `mulligan_keep` plus, at most, the one best card costing exactly `keep_max_cost + 1` whose
-/// `shaped_weight` reaches DEAL_MULLIGAN_KEEP: a deck the lane's shaping dealt is deep enough that a
-/// proven card one dearer than the bound is worth a slot the plain rule would send back. A seat whose
-/// mana cap can never reach the card (the tutorial's three, R290) keeps nothing extra: the card would
-/// be dead weight. It takes the bound as given; `mulligan_keep_curved` raises it first, so the
-/// exception moves up with it (R2977000).
+/// R3936000: what a hand card costs the AI's mulligan: its mana cost, or, while it asks for X units to
+/// sacrifice (§6.3 Tribute X, as Nerfs, Buffs and Floats left it, R386, R1841003), the larger of that and
+/// X plus AI_MULLIGAN_TRIBUTE_ALLOWANCE. It reads only the card, one of the seat's own.
+pub fn mulligan_cost(state: &GameState, card: &CardInstance, def: &CardDef) -> i32 {
+    let cost = query_cost(def);
+    let tribute = tribute_cost_of(state, card);
+    if tribute <= 0 {
+        return cost;
+    }
+    cost.max(tribute.saturating_add(AI_MULLIGAN_TRIBUTE_ALLOWANCE))
+}
+
+/// Every hand card whose `mulligan_cost` is at most `keep_max_cost`, plus, at most, the one best card
+/// printed at exactly `keep_max_cost + 1` whose `shaped_weight` reaches DEAL_MULLIGAN_KEEP: a deck the
+/// lane's shaping dealt is deep enough that a proven card one dearer than the bound is worth a slot the
+/// plain rule would send back. A seat whose mana cap can never reach the card (the tutorial's three,
+/// R290) keeps nothing extra: the card would be dead weight. It takes the bound as given;
+/// `mulligan_keep_curved` raises it first, so the exception moves up with it (R2977000). R3936000: the
+/// exception reads the printed cost and never takes a card its Tribute made dearer: read off the
+/// mulligan cost, it would keep Lava Golem (Tribute 3, shaped weight 3.0) at the bound of 3.
 pub fn mulligan_keep_shaped(state: &GameState, seat: PlayerId, keep_max_cost: i32) -> Vec<String> {
-    let mut keep = mulligan_keep(state, seat, keep_max_cost);
+    let mut keep: Vec<String> = Vec::new();
+    for card in &state.players[seat].hand {
+        let Some(def) = find_def(Some(state), &card.def_id) else {
+            continue;
+        };
+        if mulligan_cost(state, card, def) <= keep_max_cost {
+            keep.push(card.id.clone());
+        }
+    }
     let mana_cap = handicap_of(&state.players[seat]).mana_cap;
     let mut best: Option<(f64, &str)> = None;
     for card in &state.players[seat].hand {
         let Some(def) = find_def(Some(state), &card.def_id) else {
             continue;
         };
-        if query_cost(def) != keep_max_cost.saturating_add(1) || query_cost(def) > mana_cap {
+        let cost = query_cost(def);
+        if cost != keep_max_cost.saturating_add(1)
+            || cost > mana_cap
+            || mulligan_cost(state, card, def) > cost
+        {
             continue;
         }
         let weight = shaped_weight(&card.def_id);
@@ -69,7 +100,8 @@ pub fn mulligan_keep_shaped(state: &GameState, seat: PlayerId, keep_max_cost: i3
     keep
 }
 
-/// #993: filters `mulligan_keep_shaped` cheap cards to `curve` by `shaped_weight`:
+/// #993: filters `mulligan_keep_shaped` cheap cards, priced by `mulligan_cost` (R3936000), to `curve` by
+/// `shaped_weight`:
 /// caps first-turn plays and requires early curve targets accounting for bonus mana (R181)
 /// and The Coin (R244). `keep_max_cost` is a seat with no bonus's bound: `mulligan_keep_bound` raises
 /// it by the seat's mana bonus before anything reads it (R2977000).
@@ -93,7 +125,7 @@ pub fn mulligan_keep_curved(
         let Some(def) = find_def(Some(state), &card.def_id) else {
             continue;
         };
-        let cost = query_cost(def);
+        let cost = mulligan_cost(state, card, def);
         if cost <= keep_max_cost {
             cheap.push((card.id.as_str(), cost, shaped_weight(&card.def_id)));
         }

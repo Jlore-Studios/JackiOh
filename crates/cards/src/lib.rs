@@ -732,6 +732,46 @@ pub(crate) fn weapon_board(
     s
 }
 
+/// Issue #3951 made C+ #33 Ivory Tower Indestructible and Tradable: a test of what follows its destruction
+/// (R418, R653, R1194000) runs `run` on its definition through v0.6.4b, which printed neither.
+#[cfg(test)]
+pub(crate) fn destructible_ivory_tower<T>(run: impl FnOnce() -> T) -> T {
+    use jackioh_engine::KeywordKind;
+    let id = scripts::classic_plus::c033_ivory_tower::ID;
+    under_kept_as(
+        id,
+        scripts::classic_plus::c033_ivory_tower::script(),
+        |def| {
+            for face in [&mut def.base, &mut def.radiant] {
+                face.keywords.retain(|keyword| {
+                    !matches!(
+                        keyword.kind(),
+                        KeywordKind::Indestructible | KeywordKind::Tradable
+                    )
+                });
+            }
+        },
+        run,
+    )
+}
+
+/// Issue #3951: M #87 Tatches the Totem leaves its owner's hand for the field after a tribal play, the play
+/// that put it in the hand included, so a test counting what a tribal card added to the hand reads `player`'s
+/// hand and every Tatches on their field.
+#[cfg(test)]
+pub(crate) fn hand_and_summoned_tatches(
+    s: &jackioh_engine::testkit::Scenario,
+    player: jackioh_engine::PlayerId,
+) -> Vec<jackioh_engine::CardInstance> {
+    let mut cards = s.hand(player);
+    cards.extend(
+        (1..=jackioh_engine::config::UNIT_ZONES)
+            .filter_map(|lane| s.unit(player, lane))
+            .filter(|unit| unit.def_id == scripts::meditative::c087_tatches_the_totem::ID),
+    );
+    cards
+}
+
 /// Ends turns until it is `player`'s again: their next turn.
 #[cfg(test)]
 pub(crate) fn next_turn_of(s: &mut jackioh_engine::testkit::Scenario, player: jackioh_engine::PlayerId) {

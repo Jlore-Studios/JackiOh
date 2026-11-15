@@ -298,7 +298,8 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
     <div className="ws-editor-head">
       <button type="button" className="ws-back" data-testid={WORKSHOP_BACK} onClick={onBack}>
         <ArrowIcon direction="back" />
-        {t("Back to decks")}
+        {/* R3956000: a phone shows the arrow alone, so the name field has the width; the words stay for a reader. */}
+        <span className="ws-back-label">{t("Back to decks")}</span>
       </button>
       {/* Issue §8: the deck's portrait. The picker holds the portraits the account owns (R1827000)
           and the previews; picking one saves like any edit. `null` in the store reads `vanilla` (R641). */}

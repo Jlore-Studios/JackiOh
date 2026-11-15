@@ -423,6 +423,52 @@ describe("the account screen", () => {
     expect(screen.getByTestId(accountTestid.winRate)).toHaveTextContent("70%");
   });
 
+  it("R3957000 Overview has no 'This season' heading while neither ladder has a season game", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    vi.mocked(getOwnRank).mockResolvedValue(rankBody({ record: { games: 0, wins: 0, losses: 0, draws: 0 } }));
+    render(<AccountRoute token={TOKEN} />);
+
+    await screen.findByTestId(accountTestid.randomRank);
+    expect(screen.queryByRole("heading", { name: "This season" })).toBeNull();
+    expect(screen.queryByTestId(accountTestid.overviewSeasonRecord)).toBeNull();
+    expect(screen.queryByTestId(accountTestid.overviewRandomSeasonRecord)).toBeNull();
+    expect(screen.getByRole("heading", { name: "All time" })).toBeInTheDocument();
+  });
+
+  it("R3957000 Overview's 'This season' heading sits over the record of a ladder that has season games", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    vi.mocked(getOwnRank).mockImplementation(async (_token, ladder = "constructed") =>
+      ladder === "random"
+        ? rankBody({ ladder: "random", record: { games: 0, wins: 0, losses: 0, draws: 0 } })
+        : rankBody({ record: { games: 24, wins: 14, losses: 9, draws: 1 } }),
+    );
+    render(<AccountRoute token={TOKEN} />);
+
+    await screen.findByTestId(accountTestid.randomRank);
+    const heading = screen.getByRole("heading", { name: "This season" });
+    const record = screen.getByTestId(accountTestid.overviewSeasonRecord);
+    expect(heading.nextElementSibling).toBe(record);
+    expect(record).toHaveTextContent("Constructed: 14–9–1");
+    expect(screen.queryByTestId(accountTestid.overviewRandomSeasonRecord)).toBeNull();
+  });
+
+  it("R3957000 Overview's 'This season' heading is kept when only All random has season games", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    vi.mocked(getOwnRank).mockImplementation(async (_token, ladder = "constructed") =>
+      ladder === "random"
+        ? rankBody({ ladder: "random", record: { games: 3, wins: 3, losses: 0, draws: 0 } })
+        : rankBody({ record: { games: 0, wins: 0, losses: 0, draws: 0 } }),
+    );
+    render(<AccountRoute token={TOKEN} />);
+
+    await screen.findByTestId(accountTestid.randomRank);
+    const heading = screen.getByRole("heading", { name: "This season" });
+    const record = screen.getByTestId(accountTestid.overviewRandomSeasonRecord);
+    expect(heading.nextElementSibling).toBe(record);
+    expect(record).toHaveTextContent("All random: 3–0–0");
+    expect(screen.queryByTestId(accountTestid.overviewSeasonRecord)).toBeNull();
+  });
+
   it("R3733000 a failed ranked read (amending R2255000 and R2778000) leaves no rank, season record, badges or Rank heading, and Overview's All time alone", async () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
     vi.mocked(getOwnRank).mockRejectedValue(new Error("the ladder is down"));

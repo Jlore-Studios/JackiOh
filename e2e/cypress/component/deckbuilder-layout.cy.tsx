@@ -20,15 +20,19 @@ import {
   DB_DETAIL_ADD,
   DB_FILTERS,
   DB_SIDEBAR,
+  DECK_CARDS,
   DECK_COSMETICS_BUTTON,
   DECK_EDITOR,
+  DECK_NAME_INPUT,
   DECK_VERDICT,
   INSPECT_CLOSE,
   INSPECT_DETAIL,
   INSPECT_FACE_BASE,
   INSPECT_FACE_RADIANT,
   LOADOUT_ERRORS,
+  NAV_BACK,
   WORKSHOP,
+  deckRowId,
   poolCardId,
   ts,
 } from "../../support/testids.ts";
@@ -54,12 +58,15 @@ const DECK_IDS = [
 ] as const;
 const TRIO_ID = "00000000-0000-4000-8000-000000000004";
 
-function decksResponse(decks: readonly (readonly string[])[]): DecksResponse {
+/** R3956000: names of the length a player gives a deck, short of DECK_NAME_MAX_LENGTH, as the rail must show them whole. */
+const DECK_NAMES = ["Pyre Control", "Tide Pool", "Quick Draw"] as const;
+
+function decksResponse(decks: readonly (readonly string[])[], names: readonly string[] = []): DecksResponse {
   return {
     catalogVersion: CATALOG_VERSION,
     decks: decks.map((cards, at) => ({
       id: DECK_IDS[at] ?? DECK_IDS[0],
-      name: `Deck ${String(at + 1)}`,
+      name: names[at] ?? `Deck ${String(at + 1)}`,
       cards: [...cards],
       portrait: null,
       catalogVersion: CATALOG_VERSION,
@@ -78,7 +85,7 @@ const FULL_DECKS: string[][] = [0, 1, 2].map((deck) =>
   DECKABLE.slice(deck * DECK_SIZE, (deck + 1) * DECK_SIZE).map((def) => def.id),
 );
 
-function mountWorkshop(decks: readonly (readonly string[])[]): void {
+function mountWorkshop(decks: readonly (readonly string[])[], names: readonly string[] = []): void {
   const open: WorkshopOpen = { kind: "deck", id: DECK_IDS[0] };
   const api = {
     // R3212001: every item of a sync lands.
@@ -98,7 +105,7 @@ function mountWorkshop(decks: readonly (readonly string[])[]): void {
     <DeckWorkshop
       catalog={{ version: CATALOG_VERSION, cards: CATALOG }}
       collection={COLLECTION}
-      data={decksResponse(decks)}
+      data={decksResponse(decks, names)}
       profileId="component-spec"
       api={api}
       storage={null}
@@ -417,8 +424,10 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
   }
 
   // R3734001: the rail, the pool and the deck sit side by side from 601 px, so an upright iPad shows a whole builder.
+  // R3956000: an iPad mini held upright (744 px) splits too.
   for (const viewport of [
     { label: "upright iPad", width: 820, height: 1180 },
+    { label: "iPad mini upright", width: 744, height: 1133 },
     { label: "iPad on its side", width: 1180, height: 820 },
   ] as const) {
     const where = `${viewport.label} ${String(viewport.width)}x${String(viewport.height)}`;
@@ -463,6 +472,99 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     cy.viewport(600, 900);
     cy.get(".ws-rail").should("not.be.visible");
     cy.get(ts(DB_SIDEBAR)).should("be.visible");
+  });
+
+  // R3956000: the editor's pool and deck sit side by side from 601 px, so the deck's list is not folded behind "Show list".
+  it("R3956000 at 744x1133 the deck list and the pool are both visible, side by side, and no list fold is drawn", () => {
+    cy.viewport(744, 1133);
+    cy.get(ts(DECK_CARDS)).should("be.visible");
+    cy.get(ts(CARD_POOL)).should("be.visible");
+    cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);
+    cy.document().should((doc) => {
+      const list = doc.querySelector(ts(DECK_CARDS))?.getBoundingClientRect();
+      const pool = doc.querySelector(ts(CARD_POOL))?.getBoundingClientRect();
+      expect(list, "the deck's list").to.not.eq(undefined);
+      expect(pool, "the pool").to.not.eq(undefined);
+      if (list === undefined || pool === undefined) return;
+      expect(pool.right, "the pool ends before the deck's list begins").to.be.at.most(list.left + 1);
+      expect(Math.min(pool.bottom, list.bottom), "they share rows of the screen").to.be.greaterThan(Math.max(pool.top, list.top));
+      const fold = doc.querySelector(".db-deck-fold");
+      if (fold !== null) expect(getComputedStyle(fold).display, "no list fold is drawn").to.eq("none");
+    });
+  });
+
+  // R3956000: a deck's name is whole in the rail (wrapped when the column is narrow), never cut to a few letters.
+  for (const viewport of [
+    { label: "upright iPad", width: 820, height: 1180 },
+    { label: "iPad mini upright", width: 744, height: 1133 },
+  ] as const) {
+    const where = `${viewport.label} ${String(viewport.width)}x${String(viewport.height)}`;
+    it(`R3956000 the rail shows each deck's whole name, no ellipsis, at ${where}`, () => {
+      cy.viewport(viewport.width, viewport.height);
+      mountWorkshop(FULL_DECKS, DECK_NAMES);
+      cy.get(".ws-rail").should("be.visible");
+      cy.document().should((doc) => {
+        for (const [at, name] of DECK_NAMES.entries()) {
+          const label = doc.querySelector<HTMLElement>(`${ts(deckRowId(DECK_IDS[at] ?? DECK_IDS[0]))} .ws-row-name`);
+          expect(label, `${name}'s name in the rail`).to.not.eq(null);
+          if (label === null) continue;
+          expect(label.textContent, "the name drawn").to.eq(name);
+          expect(label.scrollWidth, `${name} is not cut across at ${where}`).to.be.at.most(label.clientWidth + 1);
+          expect(label.scrollHeight, `${name} is not cut down at ${where}`).to.be.at.most(label.clientHeight + 1);
+        }
+      });
+    });
+  }
+
+  // R3956000: from 601 to 1024 px the bar's title sits beside Back, the extras (Undo, Redo, History, the save status) on the row under.
+  for (const viewport of [
+    { label: "upright iPad", width: 820, height: 1180 },
+    { label: "iPad mini upright", width: 744, height: 1133 },
+  ] as const) {
+    const where = `${viewport.label} ${String(viewport.width)}x${String(viewport.height)}`;
+    it(`R3956000 the title sits beside Back, not above it, at ${where}`, () => {
+      cy.viewport(viewport.width, viewport.height);
+      cy.get(".screen-nav .page-title").should("be.visible");
+      cy.document().should((doc) => {
+        const box = (selector: string): DOMRect => {
+          const found = doc.querySelector(selector)?.getBoundingClientRect();
+          expect(found, selector).to.not.eq(undefined);
+          return found ?? new DOMRect();
+        };
+        const back = box(`.screen-nav ${ts(NAV_BACK)}`);
+        const title = box(".screen-nav .page-title");
+        expect(Math.min(back.bottom, title.bottom), `the title is on Back's row at ${where}`).to.be.greaterThan(Math.max(back.top, title.top));
+        expect(title.left, `the title starts after Back's right edge at ${where}`).to.be.at.least(back.right - 1);
+        const extras = box(".screen-nav .screen-nav__extra");
+        expect(extras.top, `the extras are on the row under the title at ${where}`).to.be.at.least(title.bottom - 1);
+      });
+    });
+  }
+
+  // R3956000: "Back to decks" shows its arrow alone on a phone, so the name field has the room.
+  it("R3956000 at 390x844 the name field shows the whole name", () => {
+    cy.viewport(390, 844);
+    mountWorkshop(FULL_DECKS, DECK_NAMES);
+    cy.get(ts(DECK_NAME_INPUT)).should(($input) => {
+      const input = $input[0] as HTMLInputElement;
+      expect(input.value, "the name held").to.eq("Pyre Control");
+      expect(input.scrollWidth, "the name is not cut").to.be.at.most(input.clientWidth);
+    });
+  });
+
+  // R3956000: the deck keeps room for a tile or two, so the sidebar's last action row is on a 720 px screen and it does not scroll.
+  it("R3956000 at 1280x720 the editor's actions end on screen and the sidebar does not scroll", () => {
+    cy.viewport(1280, 720);
+    cy.get(".ws-actions").should("be.visible");
+    cy.document().should((doc) => {
+      const actions = doc.querySelector(".ws-actions")?.getBoundingClientRect();
+      const sidebar = doc.querySelector(ts(DB_SIDEBAR));
+      expect(actions, "the actions").to.not.eq(undefined);
+      expect(sidebar, "the sidebar").to.not.eq(null);
+      if (actions === undefined || sidebar === null) return;
+      expect(Math.ceil(actions.bottom), "the actions end on screen").to.be.at.most(720);
+      expect(sidebar.scrollHeight, "the sidebar does not scroll").to.be.at.most(sidebar.clientHeight + 1);
+    });
   });
 
   it("B39 shows at least two pool columns at 390 px", () => {

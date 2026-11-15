@@ -395,7 +395,9 @@ mod tests {
                         saw[effect as usize] = true;
                         s.play(SPIRITUALLY, json!({}));
                         let transformed = s.events().iter().any(|event| event.event_type() == GameEventType::Transformed);
-                        let summoned = !units_of(&s).is_empty();
+                        // Issue #3951: a hand transformed into Tatches the Totem summons itself after this CN
+                        // play resolves, which is no summon of this card's.
+                        let summoned = units_of(&s).iter().any(|unit| unit.def_id != crate::scripts::meditative::c087_tatches_the_totem::ID);
                         let learned = s.hand(P2).iter().all(|card| card.chinese == Some(true));
                         assert_eq!((learned, transformed, summoned), (effect == 0, effect == 1, effect == 2), "{seed}");
                     }
