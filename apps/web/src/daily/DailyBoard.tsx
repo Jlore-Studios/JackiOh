@@ -11,8 +11,9 @@
 //
 // The clock pill (`DailyClockPill.tsx`) says who holds the move and how long it has left. Once the move has
 // passed on and another game waits on the player (`nextGame`), Next game opens it. The board reads again
-// when the social read says the games waiting on the player changed (the opponent moved). Once the game is
-// over, Rematch sends its opponent a new daily challenge at the same mode and time per move (§9.13).
+// when the social read says the games waiting on the player changed (the opponent moved), and every
+// `DAILY_REREAD_MS` while the tab shows and when it shows again, which shows an end the count does not
+// (R3840000). Once the game is over, Rematch sends its opponent a new daily challenge at the same mode and time per move (§9.13).
 //
 // The board shows what every table shows (R3855000): its hero names the opponent, its rail lists the modifiers
 // in play (R169), the seat's forecast of its attacks rides the read and draws an aimed attack's outcomes
@@ -27,6 +28,7 @@ import type { ActionBody } from "@jackioh/shared";
 import Game from "../game/Game.tsx";
 import { CatalogContext } from "../game/catalog.ts";
 import { ModifierList } from "../game/ModifierList.tsx";
+import { pollWhileVisible } from "../game/net.ts";
 import { outcomeFor } from "../game/Result.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { Loading, ShellPanel } from "../main.tsx";
@@ -41,6 +43,7 @@ import { BackLink } from "../routes/nav.tsx";
 import { useCatalogLookup } from "../together/catalog.ts";
 import { useSocialReads } from "../together/socialPoll.ts";
 import { DailyClockPill, useNow } from "./DailyClockPill.tsx";
+import { DAILY_REREAD_MS } from "./config.ts";
 import { NewDailyDialog } from "./NewDailyDialog.tsx";
 import { dailyTestid } from "./testids.ts";
 
@@ -105,6 +108,17 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
     waitingSeen.current = dailyWaiting;
     if (current.current !== null && !current.current.hasMove) reread();
   }, [dailyWaiting, reread]);
+
+  // R3840000: a game can end on the opponent's move, or while the move is the player's, with the count of games waiting on the player unchanged,
+  // so the board also reads on a slow period and when the tab shows again (R3205000: a hidden tab reads nothing). Nothing changes once over.
+  useEffect(
+    () =>
+      pollWhileVisible(() => {
+        const shown = current.current;
+        if (shown !== null && !shown.over && !sending.current) reread();
+      }, DAILY_REREAD_MS),
+    [reread],
+  );
 
   const send = useCallback(
     (action: ActionBody): void => {

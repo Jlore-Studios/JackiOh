@@ -1078,7 +1078,8 @@ routes (net/navigate.ts paths, public/_redirects, behind the gate as /together i
                          left", urgent under DAILY_URGENT_HOURS); New daily game; the notifications
                          (email on or off, push on this device, Add to Home Screen on an iPhone or iPad
                          outside it); the tab reads "Your move (n)"; read again when the social read's
-                         dailyWaiting changes
+                         dailyWaiting changes, every DAILY_REREAD_MS while the tab shows and when it
+                         shows again (R3840000)
   /daily/:matchId        daily/DailyBoard.tsx: Game.tsx on the server's view, legal and forecast (the
                          opponent's name on its hero, the modifiers in its rail, an aimed attack's
                          outcomes, R3855000); each action one
@@ -1087,7 +1088,9 @@ routes (net/navigate.ts paths, public/_redirects, behind the gate as /together i
                          next game waiting once the move has passed; "Lost on time" and "Won on time"; a
                          notice when the game plays on an older card version; once it ends, Rematch (a new
                          daily challenge to the opponent at its mode and time, NewDailyDialog's rematch)
-                         and Watch the replay (the server's replay of it, none for a voided game)
+                         and Watch the replay (the server's replay of it, none for a voided game); read
+                         again the same way until the game is over, so an end on the opponent's move
+                         shows (R3840000)
 net/daily.ts             fetch wrappers for every daily route, typed
 daily/NewDailyDialog.tsx challenge any friend (online or not) or find an opponent, with daily/DailyFields.tsx:
                          the mode, its deck or lean, and the time per move on the segmented toggle; as a
