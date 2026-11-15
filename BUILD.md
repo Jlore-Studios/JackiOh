@@ -589,7 +589,7 @@ A table `eventType → { animation, durationMs, testid }` with exactly one row p
 | `flickered` | The card blinks out and back into its zone, reset | 300 ms | the card's testid stays in its zone; its stats equal the view | `smoke`: smoke puff and a summon ring |
 | `drawLimited` | The deck pile shakes once under a "Draw limit" tag; nothing moves | 300 ms | the library pile gains `data-animating="drawLimited"`; hand and deck counts are unchanged (§2.4) | `fizzle`: smoke puff at the pile |
 | `discardPrevented` | The hand shakes once; nothing leaves it | 300 ms | the hand gains `data-animating="discardPrevented"`; the hand count is unchanged (R800) | `fizzle`: smoke puff over the hand |
-| `turnCutShort` | Banner "Turn ended" on both seats | 600 ms | banner text; `end-turn` disabled (§6.3 End the turn) | `banner`: muted "Turn ended" |
+| `turnCutShort` | Banner "Turn cut short" on both seats | 600 ms | banner text; `end-turn` disabled (§6.3 End the turn) | `banner`: muted "Turn cut short" |
 | `marked` | The marked card takes its mark: a corruption sparkle in the mark's color, purple for #50's pending steal (R437) | 400 ms | the card carries `data-mark`; a face-down card's back carries it | `radiant`-style pulse in the mark's color |
 | `glitched` | A Glitch resolved (issue #170): a glitch banner names its outcome — the match resets, the seats swap, other games' boards appear, or the match never happened (R676–R679) | 600 ms | the board carries the banner | `banner` fx; static under Reduce motion |
 | `fengShui` | A Feng Shui judged a play (R983): the turn banner shows 吉 or 凶 | 600 ms | the board carries the banner | `banner` fx; static under Reduce motion |

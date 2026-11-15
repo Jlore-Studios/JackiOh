@@ -126,9 +126,19 @@ function sameHoveredAttack(a: HoveredAttack | undefined, b: HoveredAttack | unde
   return a.attacker === b.attacker && a.target === b.target && a.strikesBack === b.strikesBack;
 }
 
-/** The turn banner, which `Board` does not render: one `turn-banner` (M5-T4, `e2e/support/testids.ts` BANNER). */
-function isTurnEvent(event: GameEvent): event is Extract<GameEvent, { type: "turnStarted" | "turnAutoEnded" }> {
-  return event.type === "turnStarted" || event.type === "turnAutoEnded";
+/**
+ * The turn banner, which `Board` does not render: one `turn-banner` (M5-T4, `e2e/support/testids.ts` BANNER). R3910000: the
+ * events it speaks for are the turn's start, its end by no moves left, its being cut short and the AI's taking it.
+ */
+function isTurnEvent(
+  event: GameEvent,
+): event is Extract<GameEvent, { type: "turnStarted" | "turnAutoEnded" | "turnCutShort" | "autopilotEngaged" }> {
+  return (
+    event.type === "turnStarted" ||
+    event.type === "turnAutoEnded" ||
+    event.type === "turnCutShort" ||
+    event.type === "autopilotEngaged"
+  );
 }
 
 function bannerText(
@@ -139,6 +149,9 @@ function bannerText(
 ): string | null {
   if (view.result !== null) return t("Game over");
   if (lastType === "turnAutoEnded") return t("No moves left. Turn ended.");
+  // R3910000: the words the effects layer paints (fx/constants.ts), said by the board so they reach a player with the effects Off.
+  if (lastType === "turnCutShort") return t("Turn cut short");
+  if (lastType === "autopilotEngaged") return t("The AI takes the turn");
   // #37: while a `turnStarted` entry plays, the board is still the view from before the turn began,
   // so its banner names the turn that is starting. R845: an extra turn's banner says so.
   if (startedFor !== undefined) {
@@ -908,7 +921,10 @@ export default function Game({
   // The newest turn event the burst has reached: the banner must not fall back to the held-back
   // view's turn before the board catches up (#37).
   const burstTurn = burst.flatMap((entry) => entry.events).findLast(isTurnEvent);
-  const lastTurnEvent = burstTurn ?? [...shown.events].reverse().find(isTurnEvent);
+  // The standing view's window spans several actions: an autopilotEngaged in it may be long past (an aura hands the turn
+  // back, R1844000), so only the burst's own entries say the AI plays now (R3910000).
+  const standingTurn = [...shown.events].reverse().find((event) => isTurnEvent(event) && event.type !== "autopilotEngaged");
+  const lastTurnEvent = burstTurn ?? standingTurn;
   const banner = bannerText(
     shown,
     lastTurnEvent?.type,
