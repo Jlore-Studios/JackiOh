@@ -3214,9 +3214,85 @@ mod player_stats {
         assert_eq!(profile_ids(&page_2), vec![json!(p1.id)]);
     }
 
+    async fn r3911000_list_public_excludes_banned_profile_and_restores_on_unban(harness: &StoreHarness) {
+        let p1 = active_profile(harness, None).await;
+        let p2 = active_profile(harness, None).await;
+        let now = harness.now();
+
+        for (profile, name) in [(&p1, "Alice_Banned"), (&p2, "Bob_Active")] {
+            let claim = UsernameClaim {
+                profile_id: profile.id.clone(),
+                base: name.to_string(),
+                key: username_key(name),
+                expected_tag: None,
+                at: now,
+                cooldown_ms: USERNAME_CHANGE_COOLDOWN_MS,
+            };
+            q!(harness, t => t.profiles_claim_username(&claim));
+        }
+
+        let stats_1 = bag(json!({ "games": 200, "wins": 150, "losses": 50, "draws": 0 }));
+        let stats_2 = bag(json!({ "games": 100, "wins": 60, "losses": 40, "draws": 0 }));
+        q!(harness, t => t.player_stats_put(&p1.id, &stats_1, false, now));
+        q!(harness, t => t.player_stats_put(&p2.id, &stats_2, false, now + 500));
+
+        let profile_ids =
+            |rows: &[Value]| -> Vec<Value> { rows.iter().map(|row| row["profileId"].clone()).collect() };
+
+        // Initially both appear
+        let initial: Vec<Value> =
+            q!(harness, t => t.player_stats_list_public(&list_options(json!({ "limit": 10, "offset": 0 }))))
+                .iter()
+                .map(j)
+                .collect();
+        assert_eq!(profile_ids(&initial), vec![json!(p1.id), json!(p2.id)]);
+
+        // Ban p1
+        q!(harness, t => t.profiles_set_status(&p1.id, status("banned")));
+
+        // p1 is excluded from public list
+        let while_banned: Vec<Value> =
+            q!(harness, t => t.player_stats_list_public(&list_options(json!({ "limit": 10, "offset": 0 }))))
+                .iter()
+                .map(j)
+                .collect();
+        assert_eq!(profile_ids(&while_banned), vec![json!(p2.id)]);
+
+        // p1 is excluded from search
+        let search_banned: Vec<Value> =
+            q!(harness, t => t.player_stats_list_public(&list_options(json!({ "search": "Alice", "limit": 10, "offset": 0 }))))
+                .iter()
+                .map(j)
+                .collect();
+        assert!(
+            search_banned.is_empty(),
+            "{}: banned profile should not appear in search",
+            harness.name
+        );
+
+        // Stored stats remain intact
+        let stored_p1 = q!(harness, t => t.player_stats_get(&p1.id));
+        assert!(
+            stored_p1.is_some(),
+            "stored stats must remain intact while banned"
+        );
+
+        // Unban p1
+        q!(harness, t => t.profiles_set_status(&p1.id, status("active")));
+
+        // p1 is restored to public list
+        let after_unban: Vec<Value> =
+            q!(harness, t => t.player_stats_list_public(&list_options(json!({ "limit": 10, "offset": 0 }))))
+                .iter()
+                .map(j)
+                .collect();
+        assert_eq!(profile_ids(&after_unban), vec![json!(p1.id), json!(p2.id)]);
+    }
+
     both_stores!(
         r654_holds_no_row_before_the_first_write_and_put_creates_or_updates_a_row,
         r654_list_public_excludes_private_players_respects_search_and_sorts_by_games_descending,
+        r3911000_list_public_excludes_banned_profile_and_restores_on_unban,
     );
 }
 
