@@ -36070,9 +36070,9 @@
     ],
     "idle_since": null,
     "last_run": "2026-11-15T22:05:24Z",
-    "provider": "claude-3",
+    "provider": null,
     "requested": false,
-    "run_id": "43767298089",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": null,
