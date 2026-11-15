@@ -9,7 +9,8 @@
 //! events are clean.
 //!
 //! And its I17 (#3773): what the state check leaves on a settled state (no unit at 0 health but R69's or
-//! R3539003's, no hero at 0 that can lose, R2201000) and, on every state, no mana or card damage below 0
+//! R3539003's, no unit in Defense Position that R2179000, R2657000, R3543002 or R1849006 switches out of
+//! it, no hero at 0 that can lose, R2201000) and, on every state, no mana or card damage below 0
 //! and no `damage` event of 0 or less (§2.3, §4.5, R63).
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -17,6 +18,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::{spell_def, vanilla_deck};
 use crate::rules::fixtures::harness::{both, new_game, put, setup_catalog, slot};
+use crate::rules::fixtures::stinkyscape_verbs::{WARP, register_stinkyscape_verbs};
 
 /// Past both mulligans, in the main phase of p1's first turn: nothing owed, no prompt open.
 fn playing(seed: &str) -> GameState {
@@ -1247,4 +1249,46 @@ fn i17_a_damage_event_of_0_or_less_is_one_empty_damage() {
             &["empty damage", "R63"],
         );
     }
+}
+
+/// `hurt`'s unit, unhurt, standing in Defense Position, granted `keyword` when one is named.
+fn defending(seed: &str, keyword: Option<&str>) -> (GameState, String) {
+    let (mut state, id) = hurt(seed, 0);
+    let unit = find_instance_mut(&mut state, &id).expect("the unit");
+    unit.position = Some(Position::Def);
+    if let Some(kind) = keyword {
+        unit.granted_keywords = vec![json_as::<Keyword>(json!({ "kind": kind }))];
+    }
+    (state, id)
+}
+
+#[test]
+fn i17_an_indestructible_can_t_defend_or_evasive_unit_in_defense_on_a_settled_board_is_one_forbidden_defense()
+{
+    for (kind, rule) in [
+        ("Indestructible", "R2179000"),
+        ("Can't Defend", "R2657000"),
+        ("Evasive", "R3543002"),
+    ] {
+        let (state, id) = defending("i17-defense", Some(kind));
+        only(&i17(&state, &[]), &id, &["forbidden Defense", rule]);
+    }
+}
+
+#[test]
+fn i17_a_unit_in_defense_while_an_aura_bars_it_is_one_forbidden_defense() {
+    let (mut state, id) = defending("i17-defense-warp", None);
+    // After `playing`: registering re-runs `setup_catalog`, and adds the Warp fixture to it.
+    register_stinkyscape_verbs();
+    put(&mut state, WARP, slot(P1, Row::Backrow, 1), json!({}));
+    only(&i17(&state, &[]), &id, &["forbidden Defense", "R1849006"]);
+}
+
+#[test]
+fn i17_a_unit_in_defense_that_may_stand_there_or_waits_for_an_open_prompt_is_clean() {
+    let (state, _) = defending("i17-defense-clean", None);
+    assert_eq!(i17(&state, &[]), Vec::<String>::new());
+    let (mut prompted, _) = defending("i17-defense-prompt", Some("Indestructible"));
+    open_prompt(&mut prompted, "i17-defense-prompt");
+    assert_eq!(i17(&prompted, &[]), Vec::<String>::new());
 }
