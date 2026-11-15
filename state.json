@@ -15939,9 +15939,12 @@
     "what": "suggestions on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-15T23:07:19Z",
+    "at": "2026-11-15T23:15:10Z",
     "notes": [
-      "runner gate: started 0 of 1 waiting run(s); run 43772382662 on claude/parallel-surveys-4026: it waits on nothing this account may approve"
+      "delivered review #3998 on claude-6 (run 43770404137): blocked",
+      "started suggest on claude-3 (run 43774017122)",
+      "nothing more to start: nothing is queued",
+      "pruned 4 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16647,7 +16650,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-15T23:07:19Z",
+  "loop_tick": "2026-11-15T23:15:10Z",
   "machine_disk": {
     "issue": null,
     "reading": {
