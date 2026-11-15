@@ -14252,6 +14252,13 @@
     "3910": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-15T02:28:21Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "No line of the hard rule holds: the change is apps/web (board components, CSS, i18n) plus a ruling note and BUILD.md, about 15 files, with no engine, AI, migration or cross-crate change."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
