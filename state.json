@@ -15845,6 +15845,8 @@
       "stop_requested": false
     },
     "4028": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-15T21:36:45Z",
@@ -15858,8 +15860,11 @@
         "trail": "0, \"run_in_background\": true}\n- ToolSearch: {\"query\": \"select:TaskStop\", \"max_results\": 1}\n- TaskStop: {\"task_id\": \"brviroy5n\"}\n- Bash: {\"command\": \"rg -U -n 'ActionBody::Play\\\\s*\\\\{[^}]*instance_id[^}]*\\\\}\\\\s*\\\\)?\\\\s*if' crates/cards crates/engine/tests | head -20\", \"description\": \"Broader search for remaining play filters\"}\n- Bash: {\"command\": \"sed -n 1078,1096p crates/cards/tests/cross/hidden_information.rs; echo ----; sed -n 188,210p crates/cards/src/scripts/classic_plus/c035_rollback.rs\", \"description\": \"Read the two Option-\u2026\n- Bash: {\"command\": \"grep -n '^use\\\\|^ use' crates/cards/tests/cross/hidden_information.rs | head; grep -n 'power' crates/cards/tests/cross/hidden_information.rs | sed -n 1,20p | grep -n '10[89][0-9]\\\\|11[0-\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3913/crates/cards/tests/cross/hidden_information.rs\", \"old_string\": \" let play = legal_actions(&state, PlayerId::P2).into_iter()\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3913/crates/cards/src/scripts/classic_plus/c035_rollback.rs\", \"old_string\": \" legal_actions(s.state(), P1)\\n .into_iter()\\n .fil\u2026\n- Bash: {\"command\": \"grep -n 'legal_actions' crates/cards/tests/cross/hidden_information.rs crates/cards/src/scripts/classic_plus/c035_rollback.rs | head\", \"description\": \"Check remaining legal_actions uses\"}\n- Bash: {\"command\": \"sed -n 1030,1050p crates/cards/src/scripts/classic_plus/c035_rollback.rs\", \"description\": \"Read Rollback line 1038 site\"}\n- Bash: {\"command\": \"echo \\\"- run2: migrated two Option-compared play filters the plan's rg missed (cross/hidden_information.rs ~1088, classic_plus/c035_rollback.rs r81 test) to plays_in; need cards rerun\\\" \u2026\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/test1.log; do sleep 10; done; tail -1 /tmp/test1.log; grep -E '^test result' /tmp/test1.log | awk '{print $4, $6, $8}' | sort | uniq -c | head; grep -E 'FAILE\u2026\n- Bash: {\"command\": \"grep -E 'Running|Doc-tests|^test result' /tmp/test1.log | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | cut -c1-140\", \"description\": \"List test binaries and their results\"}\n- Bash: {\"command\": \"echo \\\"- run2: tests engine(lib 237, rules 2841+650+789)+cards(lib 9836, cross 1194)+ai(46+898+103): all pass\\\" >> .bot-notes.md; (cargo clippy -p jackioh-cards --all-targets -- -D warni\u2026\n- Bash: {\"command\": \"cat rustfmt.toml 2>/dev/null; cargo fmt --check 2>&1 | head -20; echo fmt_rc=$?\", \"description\": \"Check rustfmt config and formatting\"}\n- Bash: {\"command\": \"git diff 51b12424e2 | grep -E '^-\\\\s*(pub )?fn [a-z0-9_]+' | sed -E 's/^-\\\\s*(pub )?fn ([a-z0-9_]+).*/\\\\2/' | sort > /tmp/removed_fns; git diff 51b12424e2 | grep -E '^\\\\+\\\\s*(pub )?fn [a\u2026\n- Bash: {\"command\": \"git diff 51b12424e2 -- crates | grep -E '^-' | grep -E '\\\\bR[0-9]+' | head; echo ---; git diff 51b12424e2 -- crates | grep -E '^-\\\\s*//' | grep -v 'Differs from Scenario::offered' | head\u2026\n- Bash: {\"command\": \"git diff 51b12424e2 -- crates | grep -n -B3 -A12 '^-\\\\s*// One play is offered per open zone' | head -40\", \"description\": \"Inspect removed per-zone comment context\"}\n- Bash: {\"command\": \"git diff 51b12424e2 -- crates | grep -n -B3 -A6 '^-\\\\s*/// The picks `spell`' \", \"description\": \"Inspect removed picks doc context\"}\n- Bash: {\"command\": \"grep -n -B4 -A6 'collect::<IndexSet<String>>' crates/cards/src/scripts/training_grounds/c002_personal_trainer.rs\", \"description\": \"Read Personal Trainer helper now\"}\n- Bash: {\"command\": \"git rev-parse origin/main 2>&1; git merge-base HEAD origin/main 2>&1\", \"description\": \"Check origin/main ref availability\"}\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/test2.log; do sleep 10; done; cat /tmp/test2.log\", \"description\": \"Wait for cards re-check results\", \"timeout\": 600000}\n- Bash: {\"command\": \"echo \\\"- run2: cards clippy clean after the 2 extra edits; c035_rollback 34 pass, hidden_information 57 pass. Next: tools acceptance, spec check, classify\\\" >> .bot-notes.md; (cargo test\u2026\n- Bash: {\"command\": \"rg -n 'fn (plays_in|is_play_of|plays_of|can_play|play_targets|instance_ids)\\\\b' crates --glob '!crates/engine/src/testkit/**' --glob '!crates/engine/tests/**' | head\", \"description\": \"Fi\u2026\n- Bash: {\"command\": \"git diff 51b12424e2 --shortstat; git diff --shortstat\", \"description\": \"Show overall diff size\"}\n- Bash: {\"command\": \"until grep -q '^exit=' /tmp/test3.log; do sleep 10; done; cat /tmp/test3.log | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | cut -c1-300\", \"description\": \"Wait for acceptance, spec and classify\", \"timeo\u2026\n- Bash: {\"command\": \"f=crates/cards/tests/cross/hidden_information.rs; cp $f /tmp/hi_backup.rs; printf '\\\\nfn plays_of() {}\\\\n' >> $f; cargo test -p jackioh-tools --test acceptance helpers_each_test 2>&1 | g\u2026\n- Bash: {\"command\": \"tail -3 crates/cards/tests/cross/hidden_information.rs; rm /tmp/hi_backup.rs; git status --short\", \"description\": \"Confirm the probe was reverted\"}\n- Bash: {\"command\": \"cargo clippy -p jackioh-tools --all-targets -- -D warnings 2>&1 | grep -E '^(warning|error)|Finished' -A6 | head -30\", \"description\": \"Run clippy on tools crate\", \"timeout\": 1800000}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## Log')\\nstate='''## State\\n\\n- DONE. Build run 1 (claude-2) made the edits (WIP fb77ae276f); run 2 verified and finis\u2026\n- Bash: {\"command\": \"rg -n \\\"Differs from Scenario::offered\\\" crates; rg -U -n 'ActionBody::Play\\\\s*\\\\{[^}]*\\\\}\\\\s*\\\\)?\\\\s*if\\\\s+[*&(]*\\\\s*(Some\\\\()?&?\\\\s*(instance_id\\\\b|id\\\\s*==\\\\s*instance_id\\\\b)' crates \u2026\n- Bash: {\"command\": \"rg -U -c 'ActionBody::Play\\\\s*\\\\{[^}]*\\\\}\\\\s*\\\\)?\\\\s*if\\\\s+[*&(]*\\\\s*(Some\\\\()?&?\\\\s*(instance_id\\\\b|id\\\\s*==\\\\s*instance_id\\\\b)' crates --glob '!crates/engine/src/testkit/**' | awk -F: \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: card tests read one card's offered plays and targets through testkit helpers, in place of 28 local copies and 130-odd hand-written filters\"} --> ## What changed Card and rules tests now get one card's offered plays, targets, activations and attacks from\u2026"
       },
       "issue": 3913,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-15T22:59:53Z",
         "from_run": "43764652592",
         "gates": [
           {
@@ -15951,7 +15956,11 @@
         "source": "build",
         "until": "2026-11-15T23:28:41Z"
       },
+      "pending_request": false,
+      "provider": "claude-1",
       "queued_at": "2026-11-15T22:58:41Z",
+      "run_id": "pending:90ddd159-1794783565",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15970,6 +15979,9 @@
         "provider": "claude-1",
         "run": "43764652592"
       },
+      "started_at": "2026-11-15T22:59:53Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15983,9 +15995,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-15T22:50:25Z",
+    "at": "2026-11-15T22:59:53Z",
     "url": "",
-    "what": "build #3975 on agy"
+    "what": "review #4028 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-15T22:47:12Z",
