@@ -1777,6 +1777,28 @@ mod r1144000_a_failed_key_set_refresh_keeps_the_last_good_keys {
         assert_eq!(gotrue.jwks_calls(), before + 1);
     }
 
+    /// R1144000: inside a failed refetch's cooldown the stale set answers up to its cap and not on it:
+    /// at `JWKS_CACHE_MAX_AGE_MS + JWKS_STALE_MAX_MS` it is refused, and the cooldown fetches nothing
+    /// (#3836: the cap's `<` taken as `<=`, its `+` as `*`, or its `&&` as `||` lived).
+    #[tokio::test]
+    async fn r1144000_inside_the_cooldown_the_stale_set_ends_at_its_cap() {
+        let (gotrue, clock, auth) = no_secret().await;
+        gotrue.answer_jwks(JwksReply::Serve(es256::jwks_body()));
+        let token = token_for(&gotrue, ALICE);
+        assert!(auth.verify(&token).await.is_ok());
+
+        // A refetch fails a moment before the cap: the stale set still answers.
+        clock.charge(JWKS_CACHE_MAX_AGE_MS + JWKS_STALE_MAX_MS - 1).await;
+        gotrue.answer_jwks(JwksReply::Fail);
+        assert!(auth.verify(&token).await.is_ok());
+        assert_eq!(gotrue.jwks_calls(), 2);
+
+        // On the cap, inside the cooldown, it is refused, and nothing is fetched.
+        clock.charge(1).await;
+        assert!(auth.verify(&token).await.is_err());
+        assert_eq!(gotrue.jwks_calls(), 2);
+    }
+
     #[tokio::test(start_paused = true)]
     async fn r1144000_ten_concurrent_verifications_make_one_fetch_while_the_route_hangs() {
         let (gotrue, _clock, auth) = no_secret().await;
