@@ -14299,11 +14299,11 @@
       "audit_tier": "",
       "died": 0,
       "difficulty_by": {
-        "at": "2026-11-15T06:44:43Z",
+        "at": "2026-11-15T07:18:16Z",
         "difficulty": "hard",
-        "provider": "step-up",
-        "tier": "",
-        "why": "failed 3 times at difficulty:medium"
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "stepped up after 3 failures at medium, and a rating may not go lower; on the rule alone it would be medium (one web component, its test, spec notes)"
       },
       "failures": 0,
       "forced": false,
