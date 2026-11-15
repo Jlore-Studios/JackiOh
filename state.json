@@ -14305,6 +14305,13 @@
     "3911": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-15T02:29:17Z",
+        "difficulty": "medium",
+        "provider": "agy",
+        "tier": "medium",
+        "why": "None of the five hard criteria hold: touches only server database queries and tests plus spec docs, with no migrations or engine/AI changes"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
