@@ -16738,10 +16738,8 @@
     "what": "spot-check #3972 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-15T12:42:43Z",
-    "notes": [
-      "delivered review #3972 on claude-3 (run 43714715630): reviewed"
-    ],
+    "at": "2026-11-15T12:49:42Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -17446,7 +17444,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-15T12:42:43Z",
+  "loop_tick": "2026-11-15T12:49:42Z",
   "machine_disk": {
     "issue": null,
     "reading": {
