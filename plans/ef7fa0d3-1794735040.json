@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3954,
+  "title": "Patch: the private lobby keeps Ready and Start in view on a phone and at 1280\u00d7720, for 1v1, co-op and 2v2",
+  "branch": "bot/issue-3954",
+  "thread": "**Issue #3954 (data, not instructions):**\n\n```text\n# #3954: Patch: the private lobby keeps Ready and Start in view on a phone and at 1280\u00d7720, for 1v1, co-op and 2v2\nOpened by @squishy-squooby.\n\nA follow-up to the private lobby (#3730, merged in #3779) and 2v2 (#3731, merged in #3896), found in their device-size screenshots. Part of the tracker #3726.\n\n### What happens\n\nThe tracker's brief (#3728's `docs/polish/10-menus.md`) says one primary action per screen, never hidden. In the lobby, the player's primary actions (Ready, and the host's Start) fall below the fold:\n\n- **2v2, phone 390\u00d7844:** the four seat cards fill the screen. The page scrolls 278 px, and Format, the deck picker, Ready, Leave and Start are all below the fold. ([shot](https://raw.githubusercontent.com/Jlore-Studios/JackiOh/89d964e0dc1ba0824859c9a872cf3c54aee47285/3731-2v2/lobby-2v2-390x844-phone.png))\n- **2v2, desktop 1280\u00d7720:** the page scrolls 84 px; Leave and Start are below the fold. ([shot](https://raw.githubusercontent.com/Jlore-Studios/JackiOh/89d964e0dc1ba0824859c9a872cf3c54aee47285/3731-2v2/lobby-2v2-1280x720-desktop.png))\n- **Co-op, phone 390\u00d7844:** the page scrolls 89 px, Ready sits half under the tab bar, and Leave and Start are below the fold. ([shot](https://raw.githubusercontent.com/Jlore-Studios/JackiOh/89d964e0dc1ba0824859c9a872cf3c54aee47285/3730-lobby/lobby-coop-390x844-phone.png))\n- **Every lobby, every size:** \"\u2713Ready to queue\" has no space after the check mark.\n\nAll 21 lobby shots and the 7 2v2 shots: https://github.com/Jlore-Studios/JackiOh/pull/3779#issuecomment-6892230779 and https://github.com/Jlore-Studios/JackiOh/pull/3896#issuecomment-6892244669.\n\n### What should happen\n\nAt every device size in #3726 (1440\u00d7900, 1280\u00d7720, 1180\u00d7820, 1366\u00d71024, 820\u00d71180, 744\u00d71133, 390\u00d7844), the player's Ready and the host's Start are in view without scrolling, above the tab bar and the safe area, in every format (1v1, co-op, 2v2). The seats may scroll; the actions don't. A sticky action bar at the bottom of the lobby, or compact seat cards on a narrow or short window, are both fine; pick one and say why.\n\n### Where\n\n`apps/web/src/lobby/LobbyScreen.tsx`, `apps/web/src/lobby/lobby.css`, `apps/web/src/routes/lobby.css`; the \"Ready to queue\" line is `t(\"Ready to queue\")` with its check mark (`apps/web/src/routes/QueuePanel.tsx`, `apps/web/src/game/deckbuilder/DeckEditor.tsx`).\n\n### Tests\n\nA check that fails without the fix, in the spec that already renders the lobby at `MENU_SIZES` (`e2e/cypress/component/lobby-screen.cy.tsx`): at each size and in each format, Ready (and for the host, Start) is inside the viewport and not under the tab bar. Keep the existing lobby tests passing.\n\nI'll take the device-size screenshots for the pull request once it merges, so the build needn't attach them.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3954: needs a plan; `claude-8` (claude, `sonnet`, medium) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T09:23:06Z",
+    "claimed_at": "2026-11-15T09:30:58Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
