@@ -14700,8 +14700,15 @@
     "what": "review #3980 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-15T14:22:51Z",
-    "notes": [],
+    "at": "2026-11-15T14:28:49Z",
+    "notes": [
+      "delivered build #3977 on agy (run 43722376282): built",
+      "delivered build #3936 on claude-1 (run 43714672245): built",
+      "started review #3979 on agy (run 43724769712)",
+      "started review #3980 on claude-3 (run 43724807096)",
+      "nothing more to start: nothing is queued",
+      "pruned 6 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15406,7 +15413,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-15T14:22:51Z",
+  "loop_tick": "2026-11-15T14:28:49Z",
   "machine_disk": {
     "issue": null,
     "reading": {
