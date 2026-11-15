@@ -6602,7 +6602,7 @@
       "provider": "claude-4",
       "queued_at": "2026-11-15T19:50:40Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:aaf72f1d-1794774297",
+      "run_id": "43757992916",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-15T20:25:23Z",
       "stop_requested": false,
