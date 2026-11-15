@@ -16680,9 +16680,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T11:35:07Z",
+    "at": "2026-11-15T11:43:29Z",
     "url": "",
-    "what": "plan #3971 on gpt"
+    "what": "suggestions on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-15T11:29:36Z",
@@ -36702,11 +36702,11 @@
         "why": "rejected by @jgoetzmann"
       }
     ],
-    "idle_since": "2026-11-15T11:43:04Z",
-    "last_run": "2026-11-15T04:41:01Z",
-    "provider": null,
+    "idle_since": "2026-11-15T11:43:29Z",
+    "last_run": "2026-11-15T11:43:29Z",
+    "provider": "claude-3",
     "requested": false,
-    "run_id": null,
+    "run_id": "pending:17ac5550-1794742988",
     "taken_asks": []
   },
   "usage": null,
