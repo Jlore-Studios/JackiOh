@@ -16607,6 +16607,7 @@
       "run_id": "43709463826",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 270,
       "started_at": "2026-11-15T11:32:58Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -36277,9 +36278,33 @@
         "title": "Patch: the AI's count of next turn's damage to its hero leaves out Scorch's swings, which can never hit a hero, and lets no Taunt wall Toxopid",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-7"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "0463a42800ca974b98c6f060a54bc5e1ecc657b3",
+        "issue": 3957,
+        "merged_at": "2026-11-15T12:30:14Z",
+        "n": 270,
+        "pr": 3972,
+        "queued_at": "2026-11-15T12:30:14Z",
+        "sha": "02c6e48aa19144d900a4e3d1fc7548354a28ee5e",
+        "status": "queued",
+        "title": "Patch: the account screen fills or drops its empty \"This season\" heading, shows the rank crest, and keeps match history's tap areas apart",
+        "tries": 0
       }
     ],
-    "count": 269
+    "count": 270
   },
   "statistics": {
     "at": "2026-11-15T11:59:32Z"
