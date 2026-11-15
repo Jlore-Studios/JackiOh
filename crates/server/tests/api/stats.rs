@@ -2268,7 +2268,7 @@ mod r3022000_tiers {
     }
 }
 
-mod r3945000_play_rate {
+mod r3950000_play_rate {
     use super::*;
 
     const STARSHIP: &str = "stinkyscape-t-dormant-starship";
@@ -2309,7 +2309,7 @@ mod r3945000_play_rate {
     }
 
     #[tokio::test]
-    async fn r3945000_a_cards_play_rate_is_its_played_games_over_its_seen_games_in_every_mode() {
+    async fn r3950000_a_cards_play_rate_is_its_played_games_over_its_seen_games_in_every_mode() {
         let app = test_app().await;
         let mut records = Vec::new();
         // core-001 is held in 80 games, seen in 40 of them and played in 10 of those. core-002 is seen in
@@ -2430,7 +2430,7 @@ mod r2777000_adjusted_and_split_card_stats {
         assert_eq!(a["games"], json!(10));
         assert_eq!(a["winRate"].as_f64(), Some(1.0));
         assert_eq!(a["hasEnoughGames"], json!(false));
-        // R3945000 amends R2777002's play rate: played over seen, and none of its 10 seen games played it.
+        // R3950000 amends R2777002's play rate: played over seen, and none of its 10 seen games played it.
         assert_eq!(a["playRate"].as_f64(), Some(0.0));
         // Best of 1 alone still counts every deck that held it.
         let (_, _, bo1) = get_public(&app, "/api/stats/cards?source=live&mode=bo1").await;

@@ -401,7 +401,7 @@ Each row of the report is a card: the win rate, with the games behind it, of the
 (in deck), held it in the opening hand, went first or second with it, played it, or drew it and never
 played it, the decks that never drew it, and its drawn delta (the drawn win rate less the never-drawn one, in points). A
 card's play rate is how often it was played when seen: its played games over its seen ones (played plus drawn and
-not played), each printed in the row, as `/stats` reads it (R3945000). `--json` has the
+not played), each printed in the row, as `/stats` reads it (R3950000). `--json` has the
 same figures as numbers, and `stats-cards --source=all` reads both sources at once. Development and
 live games are never added together unless asked (R378, R1451).
 

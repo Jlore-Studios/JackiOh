@@ -86,7 +86,7 @@ pub struct PublicCardStat {
     /// R3022000: the card's balance tier (`tier_of` its adjusted rate and range); null below R654's
     /// floor, as its rate is shown only from it.
     pub tier: Option<CardTier>,
-    /// R3945000: how often the card was played when seen (`play_rate_of`), in every mode.
+    /// R3950000: how often the card was played when seen (`play_rate_of`), in every mode.
     pub play_rate: f64,
     pub has_enough_games: bool,
     /// R1367000: the card's window and the records its figures count.
@@ -394,7 +394,7 @@ fn made_games(report: &WindowedReport, id: &str) -> Option<Tally> {
     })
 }
 
-/// R3945000: a card's play rate, how often it was played when seen: its played games over its seen
+/// R3950000: a card's play rate, how often it was played when seen: its played games over its seen
 /// games (played, or drawn and never played; the engine's `seen`), in every mode. A card only a rule
 /// makes (R3070000) reads its used Created games over the games a seat made one. 0 when it was never seen.
 fn play_rate_of(report: &WindowedReport, id: &str, stat: Option<&CardStats>, made: Option<&Tally>) -> f64 {
@@ -1100,7 +1100,7 @@ async fn kept_history(
 /// GET /api/stats/cards: public card win rates (R654, R1367000).
 /// Supports pilot filtering (R1451, R807000, R1452) and match modes (R377).
 /// R2777001: `?mode=constructed` reads Best of 1 and Conquest together. R2777002: under `random` a card's
-/// games, rate and floor read the decks that saw it. R3945000: its play rate is its played games over its
+/// games, rate and floor read the decks that saw it. R3950000: its play rate is its played games over its
 /// seen ones in every mode. R2777000: each card carries its adjusted win rate, and the cards are listed by it.
 pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     let versions = load_patch_versions().await;
