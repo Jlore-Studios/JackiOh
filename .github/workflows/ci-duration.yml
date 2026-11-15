@@ -30,7 +30,11 @@
 # (`Run actions/upload-artifact@v4`): that is GitHub's artifact service, which no split speeds up.
 # Such a step takes seconds, but on 2026-11-11 the service answered with error pages for half an hour
 # and each of its five attempts waited two minutes, so four jobs whose other steps took under four
-# minutes were reported at 12–14 (#3737).
+# minutes were reported at 12–14 (#3737). Nor the unnamed checkout (`Run actions/checkout@v4`), for
+# the same reason: that is GitHub's git service, and each job of a split checks out again, so no split
+# speeds it up. It takes 6–10 seconds (a minute or two with all of history), but on 2026-11-12 one
+# job's checkout stalled for 10m 56s while the run's 48 others took 6–94, so `rust (test server)`,
+# whose other steps took 3m 36s, was reported at 14m 32s (#3815).
 #
 # The alert sits above the target on purpose. A job that drifts between the two is left alone, so a
 # few seconds of runner noise never costs a re-split; a job that does trip the alert is split back
@@ -93,10 +97,10 @@ jobs:
             | (([.steps[]?.started_at | values] | min) // .started_at | fromdateiso8601) as $from
             | (([.steps[]?.completed_at | values] | max) // .completed_at | fromdateiso8601) as $to
             | ([.steps[]?
-                | select(.name | test("^Run actions/(upload|download)-artifact@"))
+                | select(.name | test("^Run actions/((upload|download)-artifact|checkout)@"))
                 | select(.started_at != null and .completed_at != null)
-                | (.completed_at | fromdateiso8601) - (.started_at | fromdateiso8601)] | add // 0) as $artifacts
-            | ($to - $from - $artifacts) as $s
+                | (.completed_at | fromdateiso8601) - (.started_at | fromdateiso8601)] | add // 0) as $github
+            | ($to - $from - $github) as $s
             | select($s > (env.LIMIT_SECONDS | tonumber))
             | "| [\(.name | gsub("\\|"; "\\|"))](\(.html_url)) | \($s / 60 | floor)m \($s % 60)s | \(.conclusion) |"')
           if [ -z "$slow" ]; then
