@@ -15221,6 +15221,8 @@
       }
     },
     "3990": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-15T20:25:23Z",
@@ -15234,8 +15236,11 @@
         "trail": ".json apps/edge/tsconfig.json\", \"description\": \"Read routing.ts and package config\"}\n- Bash: {\"command\": \"grep -n '^## ' .bot-notes.md .bot-journal.md; cat apps/edge/src/index.test.ts\", \"description\": \"Section headings and index.test.ts\"}\n- Bash: {\"command\": \"cat crates/server/src/alerts.rs | head -400\", \"description\": \"Read alerts.rs\"}\n- Bash: {\"command\": \"sed -n 400,560p crates/server/src/alerts.rs; grep -n \\\"parse_alert_emails\\\" -A30 crates/server/src/env.rs | head -60; grep -n \\\"ALERT_\\\\|BUG_REPORT\\\" crates/server/src/config.rs\", \"descr\u2026\n- Bash: {\"command\": \"grep -n \\\"pub fn github\\\\b\\\" -B3 -A15 crates/server/src/bug_reports.rs; ls node_modules/.bin | grep -E \\\"vitest|tsc|eslint\\\" | head; cat vitest.config.ts 2>/dev/null | head -50; cat apps\u2026\n- Bash: {\"command\": \"grep -n \\\"fn github\\\" -B3 -A15 crates/server/src/bug_reports.rs | head -50; grep -n \\\"fn js_trim\\\" -A8 crates/server/src/env.rs; grep -n \\\"alerts\\\\|Alerts\\\" apps/edge/README.md | head; s\u2026\n- Bash: {\"command\": \"cd apps/edge && grep -n \\\"interface DurableObjectState\\\" -A20 node_modules/@cloudflare/workers-types/index.d.ts | head -40; sed -n 55,85p README.md; grep -n \\\"How it behaves\\\" -A30 READM\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3618/apps/edge/src/alerts.ts\", \"content\": \"// #3618: what the Worker tells people when it cannot reach the game server. It is `crates/server/src/alert\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3618/apps/edge/src/alerts.ts\", \"old_string\": \" const issueLine = {\\n opened: `Issue: ${issue.kind === \\\"opened\\\" ? issue.url : \\\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-3618/apps/edge/src/alerts.ts\", \"old_string\": \"/** The email, `{ subject, text }`: private, so it holds every field of the alert.\u2026\n- said: Now `index.ts`.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3618 && python3 - <<'EOF'\\nimport re\\np='apps/edge/src/index.ts'\\ns=open(p).read()\\n\\ns=s.replace(\\\"\\\"\\\"// flight, so a live match keeps it awake. #3\u2026\n- Bash: {\"command\": \"cat apps/edge/stryker.config.mjs; grep -n \\\"edge\\\" scripts/ci-scope.sh | head\", \"description\": \"Check stryker config and ci-scope for edge\"}\n- Bash: {\"command\": \"cat > apps/edge/src/network.fake.ts <<'EOF'\\n// A stand-in for GitHub's and Resend's APIs, for the Worker's alert tests (#3618): `vi.stubGlobal(\\\"fetch\\\",\\n// network.fetch)` answers the\u2026\n- Bash: {\"command\": \"grep -n \\\"readdir\\\\|src/\\\" apps/edge/src/config.test.ts | head; python3 - <<'EOF'\\np='apps/edge/src/index.ts'\\ns=open(p).read()\\nold=\\\"\\\"\\\" this.toldAtLoad ??= this.ctx.storage.get<numbe\u2026\n- said: Now `alerts.test.ts`.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3618/apps/edge/src/alerts.test.ts\", \"content\": \"// Holds what the Worker tells people when it cannot reach the server (#3618), with GitHub and Resend \u2026\n- Bash: {\"command\": \"pnpm exec vitest run --project edge src/alerts.test.ts 2>&1 | tail -60\", \"description\": \"Run alerts tests\", \"timeout\": 180000}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/edge/src/index.test.ts'\\ns=open(p).read()\\n\\n# helpers\\nold=\\\"\\\"\\\"function serverWith(running: boolean): Server {\\n const ctx = { container: { running } };\\n c\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/edge/src/index.test.ts'\\ns=open(p).read()\\n\\nold=\\\"\\\"\\\" function scheduledEnv(status: number): { env: Env; fetch: ReturnType<typeof vi.fn> } {\\n const fetch = \u2026\n- Bash: {\"command\": \"cp apps/edge/src/index.ts /tmp/index.ts.bak\\nsed -i 's/^ this.toldAt = now;$/ \\\\/\\\\/ MUTATED/' apps/edge/src/index.ts\\npnpm exec vitest run --project edge src/index.test.ts 2>&1 | grep -\u2026\n- Bash: {\"command\": \"pnpm --dir apps/edge typecheck 2>&1 | tail -20; pnpm exec eslint apps/edge 2>&1 | tail -40; echo \\\"eslint exit: $?\\\"\", \"description\": \"Typecheck and lint edge\", \"timeout\": 300000}\n- Bash: {\"command\": \"pnpm exec eslint apps/edge; echo \\\"exit $?\\\"\", \"description\": \"Run eslint for exit code\", \"timeout\": 300000}\n- said: Code, typecheck and lint are green. Now the docs.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/edge/README.md'\\ns=open(p).read()\\nold=\\\"\\\"\\\"- **The caller's address.**\\\"\\\"\\\"\\nnew=\\\"\\\"\\\"- **When it cannot reach the server** (#3618). A server that cannot b\u2026\n- Bash: {\"command\": \"grep -rln \\\"apps/edge\\\" --include=*.ts --include=*.go --include=*.py --include=*.rs --include=*.sh --include=*.json . 2>/dev/null | grep -v node_modules | grep -v \\\"^./target\\\" | head -2\u2026\n- Bash: {\"command\": \"grep -n \\\"apps/edge\\\" apps/web/src/net/cloudflare-config.test.ts apps/web/src/net/ci-scope.test.ts apps/web/src/net/server-image.test.ts | head -30; grep -rn \\\"README\\\" apps/web/src/net/\u2026\n- Bash: {\"command\": \"grep -rn \\\"next steps, in the Worker\\\\|3595's next\\\" --include=* . 2>/dev/null | grep -v \\\"node_modules\\\\|^./target\\\\|^./.bot\\\\|\\\\.git/\\\" | head; git diff crates/server/README.md docs/de\u2026\n- Bash: {\"command\": \"pnpm exec vitest run --project web apps/web/src/net/cloudflare-config.test.ts apps/web/src/net/ci-scope.test.ts 2>&1 | tail -15; pnpm exec vitest run --project edge 2>&1 | tail -6; cargo\u2026\n- Bash: {\"command\": \"pnpm exec vitest run --project web apps/web/src/net/cloudflare-config.test.ts 2>&1 | grep -iE \\\"error|failed to resolve|wasm\\\" | head -5\", \"description\": \"See why web tests fail to load\"\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstate=\\\"\\\"\\\"## State\\n\\nBuilt by run 2 (sonnet), following the plan below. Done: `apps/edge/src/alerts.ts` (+ `alerts.test.ts`), `\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/edge/src/index.ts'\\ns=open(p).read()\\nold=\\\"\\\"\\\"`Content-Encoding` (routing.ts `precompressedModule`). #3618: a server that fails to start, or that\\n// the dai\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the Worker alerts when the game server won't start or can't be reached\"} --> The Worker now raises `server.unreachable` itself. It fires when a request's container start throws or outruns `START_WAIT_MS`, and when the daily cron's `/readyz` fails. The e\u2026"
       },
       "issue": 3618,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-15T21:22:32Z",
         "from_run": "43757992916",
         "gates": [
           {
@@ -15327,7 +15332,11 @@
         "source": "build",
         "until": "2026-11-15T21:49:42Z"
       },
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-15T21:19:42Z",
+      "run_id": "pending:502dacda-1794777726",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15346,6 +15355,9 @@
         "provider": "claude-4",
         "run": "43757992916"
       },
+      "started_at": "2026-11-15T21:22:32Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15507,9 +15519,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-15T21:21:52Z",
+    "at": "2026-11-15T21:22:32Z",
     "url": "",
-    "what": "review #3991 on claude-8"
+    "what": "review #3990 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-15T21:07:59Z",
