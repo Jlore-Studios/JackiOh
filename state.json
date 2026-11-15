@@ -15220,14 +15220,9 @@
     "what": "build #3912 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-15T07:17:34Z",
+    "at": "2026-11-15T07:25:53Z",
     "notes": [
-      "delivered plan #3912 on claude-7 (run 43687362253): planned",
-      "delivered revise #3929 on claude-3 (run 43678846456): blocked",
-      "started build #3912 on claude-7 (run 43689444401)",
-      "nothing more to start: nothing is queued",
-      "pruned 8 plan file(s) older than 7 days",
-      "runner gate: started 1 of 1 waiting run(s) (run 43689477240 on claude/zen-dijkstra-b899vg)"
+      "delivered review #3930 on claude-4 (run 43683295259): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15933,7 +15928,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-15T07:17:34Z",
+  "loop_tick": "2026-11-15T07:25:53Z",
   "machine_disk": {
     "issue": null,
     "reading": {
