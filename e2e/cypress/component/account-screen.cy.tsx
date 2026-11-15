@@ -143,5 +143,21 @@ describe("R3733000 the account screen at every menu size", () => {
       }
       expectFits(size);
     });
+
+    it(`R3957000 ?section=history keeps a row's date on one line at ${size.label}`, () => {
+      mountAt(size, "?section=history");
+
+      cy.get(byTestid(accountTestid.historyRow("m1"))).should("be.visible");
+      cy.get(`${byTestid(accountTestid.historyRow("m1"))} .account-history__when`).should(($when) => {
+        const date = $when[0];
+        const row = $when.closest(byTestid(accountTestid.historyRow("m1")))[0];
+        expect(date, "the date's element").to.not.eq(undefined);
+        expect(row, "the row").to.not.eq(undefined);
+        if (date === undefined || row === undefined) return;
+        expect(date.getClientRects().length, `the date is on one line at ${size.label}`).to.eq(1);
+        expect(date.getBoundingClientRect().right, "the date stays inside its row").to.be.at.most(row.getBoundingClientRect().right + 0.5);
+      });
+      expectFits(size);
+    });
   }
 });
