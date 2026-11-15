@@ -3177,9 +3177,11 @@ pub fn player_stats_list_public(
     let term = username_key(options.search.clone().unwrap_or_default().trim());
     let all = f.tables();
     // Each profile's username as shown, and what a search reads of it.
+    // R3911000: banned profiles drop off the public players list and its search.
     let profile_map: IndexMap<&str, (String, String)> = all
         .profiles
         .iter()
+        .filter(|p| p.status != ProfileStatus::Banned)
         .map(|p| {
             let searched = match p.username_tag {
                 Some(tag) => format!("{}#{tag}", p.username_key),
