@@ -11213,6 +11213,13 @@
     "3826": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-15T20:20:22Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "Server-crate only (about 12 files with tests and docs): no engine rules, no AI, no migration, no cross-crate contract, well under 40 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
