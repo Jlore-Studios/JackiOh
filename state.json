@@ -36695,6 +36695,9 @@
     "readings": [
       "2026-11-15T11:04:04Z,agy,usage-command,before,43706863359,32,2026-11-15T13:54:11Z,38,2026-11-21T00:22:39Z,allowed,100,100,",
       "2026-11-15T11:09:51Z,agy,usage-command,after,43706863359,33,2026-11-15T13:54:11Z,38,2026-11-21T00:22:39Z,allowed,100,100,"
+    ],
+    "runs": [
+      "2026-11-15T11:09:51Z,43706863359,agy,gemini-3.8-flash-high,review,3960,medium,reviewed,,5.7,137447,38779,0,,32,33,38,38,0.8,claude-6,none,,1"
     ]
   },
   "version": 1
