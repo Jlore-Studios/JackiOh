@@ -64,6 +64,21 @@ pub static brittle_trap: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
+/// The same as a plain Trap: printing Brittle 3, set face-down it starts no count until it reveals
+/// (R687), as a Field Trap does.
+pub static brittle_set_trap: LazyLock<CardDef> = LazyLock::new(|| {
+    def(
+        "brittle-set-trap",
+        4470,
+        json!({
+            "type": "Trap",
+            "cost": 2,
+            "base": { "keywords": [{ "kind": "Brittle", "n": 3 }], "text": "Brittle 3" },
+            "radiant": { "keywords": [{ "kind": "Brittle", "n": 6 }], "text": "Brittle 6" },
+        }),
+    )
+});
+
 /// A plain 3/4 with no keywords, cost 2: every menu row but the keyword add has room on it.
 pub static body: LazyLock<CardDef> = LazyLock::new(|| {
     def(
@@ -460,6 +475,7 @@ pub static INSTANCE_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     vec![
         brittle_unit.clone(),
         brittle_trap.clone(),
+        brittle_set_trap.clone(),
         body.clone(),
         asker.clone(),
         numbered_body.clone(),

@@ -652,6 +652,24 @@ mod r671_a_book_swaps_in_hand_at_its_controllers_end_of_turn {
                 radiant: swap,
             },
         );
+        // Each other Book prints a hand trigger of its own, which the swap it is granted joins (R671).
+        let own = Script {
+            hand_triggers: vec![TriggerDef::new(
+                "bs-own",
+                &[GameEventType::TurnEnded],
+                |_ctx, _event| vec![],
+            )],
+            ..Script::default()
+        };
+        for id in [BOOK_A, BOOK_B] {
+            scripts.insert(
+                id.to_string(),
+                CardScripts {
+                    base: own.clone(),
+                    radiant: own.clone(),
+                },
+            );
+        }
         register_scripts(scripts);
         let mut s = scenario(json!({ "seed": "book-swap", "p1": { "hand": [WILDFIRE] }, "p2": {} }));
         for player in [P1, P2] {

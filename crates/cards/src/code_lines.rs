@@ -156,28 +156,26 @@ pub fn without_comments(source: &str) -> Vec<String> {
                 i += 1;
                 continue;
             }
-            let raw_start = (ch == 'r' || (ch == 'b' && next == Some('r')))
-                && !(i > 0 && (chars[i - 1].is_alphanumeric() || chars[i - 1] == '_'));
-            if raw_start {
-                let after_r = if ch == 'b' { i + 2 } else { i + 1 };
-                let hashes = chars[after_r.min(chars.len())..]
-                    .iter()
-                    .take_while(|c| **c == '#')
-                    .count();
-                if chars.get(after_r + hashes) == Some(&'"') {
-                    code.extend(&chars[i..=after_r + hashes]);
+            // A raw string, `r"…"` or `r#"…"#`; a `br` or `cr` one's `b` or `c` is read as code
+            // first. Since Rust 2021 a name run into a quote or a `#` is reserved, so in code that
+            // compiles no `r` ending a name meets one (#3836).
+            if ch == 'r' {
+                let hashes = chars[i + 1..].iter().take_while(|c| **c == '#').count();
+                if chars.get(i + 1 + hashes) == Some(&'"') {
+                    code.extend(&chars[i..=i + 1 + hashes]);
                     quote = Some(hashes + 1);
-                    i = after_r + hashes + 1;
+                    i += 2 + hashes;
                     continue;
                 }
             }
             if ch == '\'' {
                 // A character literal (`'x'`, `'\n'`) is one token; a lifetime is a quote and a name.
+                // An escaped one closes after its escaped character, which may be a quote (`'\''`).
                 let length = if next == Some('\\') {
-                    chars[i + 2..]
-                        .iter()
-                        .position(|c| *c == '\'')
-                        .map_or(1, |at| at + 3)
+                    chars
+                        .get(i + 3..)
+                        .and_then(|rest| rest.iter().position(|c| *c == '\''))
+                        .map_or(1, |at| at + 4)
                 } else if chars.get(i + 2) == Some(&'\'') {
                     3
                 } else {
