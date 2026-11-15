@@ -6599,17 +6599,8 @@
       ]
     },
     "3619": {
-      "action": "plan",
-      "asks": [
-        "c:6900293850"
-      ],
-      "build_next": {
-        "from_run": "43755227397",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-15T20:07:13Z",
-        "until": "2026-11-15T20:37:13Z"
-      },
+      "action": "build",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -6621,10 +6612,9 @@
         "reason": "planned on sonnet",
         "trail": "deployed\\\\|DEPLOYED\\\" apps/edge/src/index.ts apps/edge/src/routing.ts | head -20; sed -n 1,80p apps/edge/src/routing.ts; grep -n \\\"x-\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; cat crates/server/src/api/health.rs | head -80; sed -n 1,80p apps/web/src/net/api.ts; grep -n \\\"x-deployed\\\\|deployedCommit\\\\|DEPLOYED\\\" -r app\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; grep -rn \\\"COMMIT\\\\|commit\\\" apps/web/vite.config.ts apps/web/src/vite-env.d.ts 2>/dev/null | head; grep -rn \\\"x-deployed-commit\\\\|DEPLOYED_COM\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; grep -n \\\"async function request\\\\|function request\\\\|export async function\\\\|export function\\\" apps/web/src/net/api.ts | head -40; ls crates/s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; sed -n 225,400p apps/web/src/net/api.ts; grep -rn \\\"alerts\\\" crates/server/tests --include=*.rs -l; ls crates/server/tests/api | tail -30; sed \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; grep -n \\\"alert\\\" crates/server/tests/api/rate_limit.rs crates/server/tests/api/codes.rs | head -20; grep -rn \\\"sign_in_limiter\\\" crates/server\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; grep -n \\\"client-errors\\\\|client_errors\\\\|clientError\\\" -r crates apps docs spec e2e --include=* -l 2>/dev/null | grep -v node_modules | head; \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; sed -n 715,745p docs/architecture.md; grep -n \\\"alert\\\" crates/server/README.md | head -20; sed -n 100,135p crates/server/src/api/auth.rs; sed \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; sed -n 100,224p apps/web/src/net/api.ts; grep -n \\\"meaning\\\" crates/server/src/alerts.rs crates/server/tests -r | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; sed -n 660,700p crates/server/src/alerts.rs; grep -n \\\"pub fn send\\\\|pub async fn send\\\\|pub async fn test_app\\\\|pub fn record_logs\\\\|pub async\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; sed -n 720,750p crates/server/README.md; grep -n \\\"api/tutorial\\\\|/api/stats\\\" crates/server/README.md | head -5; ls apps/web/src/net | head -8\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; grep -rn \\\"catalog_version\\\\|catalogVersion()\\\" apps/web/src --include=*.ts --include=*.tsx -l | head; grep -n \\\"define\\\\|COMMIT\\\\|GITHUB_SHA\\\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; grep -n \\\"catalogVersion\\\\|catalog_version\\\" apps/web/src/wasm/index.ts apps/web/src/game/currentCatalog.ts | head; sed -n 1,60p apps/web/src/g\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; sed -n 190,260p crates/server/src/api/catalog.rs; grep -n \\\"catalog/version\\\\|get_catalog_version\\\" -r crates/server/src apps/web/src --include\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; grep -n \\\"GATE_SLOW_NOTICE_SECONDS\\\" -r crates apps/web/src --include=*.rs --include=*.ts | grep -v \\\"tsx\\\" | head; sed -n 1,60p crates/server/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; grep -n \\\"fn \\\\|sort\\\\|assert\\\" crates/server/tests/export_config.rs | tail -30; sed -n 60,70p crates/server/tests/export_config.rs; sed -n 108\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; grep -n \\\"export const paths\\\" -A45 apps/web/src/net/navigate.ts; grep -n \\\"export function currentPath\\\" -A8 apps/web/src/net/navigate.ts; gre\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; grep -rn \\\"unhandledrejection\\\\|addEventListener(\\\\\\\"error\\\\\\\"\\\\|window.onerror\\\" apps/web/src --include=*.ts --include=*.tsx | grep -v test | \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; sed -n 1,80p apps/web/src/routes/shell-load-failed.test.tsx; cat apps/web/README.md | grep -n \\\"net/\\\\|errors\\\" | head -20; sed -n 1,60p apps/w\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; grep -rln \\\"ROUTES\\\" crates/server/tests crates/server/src | head; grep -rn \\\"ROUTES\\\" crates/server/tests/api/*.rs | head -10; grep -n \\\"trust\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; sed -n 505,560p crates/server/tests/api/catalog.rs; sed -n 1,80p crates/server/tests/api/health.rs; sed -n 130,230p crates/server/tests/support\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; sed -n 1,110p crates/server/tests/api/rate_limit.rs; grep -n \\\"pub fn json_request\\\" -A25 crates/server/tests/support/deps.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; grep -rn \\\"e2e-token-\\\" crates/server/src/auth.rs crates/server/src/api/e2e.rs | head -8; grep -n \\\"pub async fn sign_in\\\\|pub fn add_user\\\\|pu\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; grep -rn \\\"App {$\\\" crates --include=*.rs | head; sed -n 940,1075p crates/server/src/api/http.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; sed -n 129,134p crates/server/tests/api/codes.rs; sed -n 108,114p crates/server/tests/api/e2e.rs; sed -n 944,950p crates/server/tests/api/e2e.r\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; sed -n 274,330p apps/web/src/net/navigate.ts; grep -n \\\"export function \\\\(matchIdOf\\\\|seriesIdOf\\\\|lobbyCodeOf\\\\|duosIdOf\\\\|dailyIdOf\\\\|watchI\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3619; sed -n 396,482p crates/server/tests/export_config.rs; grep -n \\\"GATE_SLOW\\\\|DECK_NAME_MAX_LENGTH\\\\|CODE_ATTEMPTS\\\" apps/web/src/wire/serverConf\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3619/.bot-plan.md\", \"content\": \"# Draft (planner, #3619)\\nFindings: alerts.rs already limits per event per process (ALERT_WINDOW_MS) and emails under \u2026\n- said: ## Goal A crash in a player's browser reaches the owners. The client sends one small report to a new `POST /api/client-errors` for each of the three triggers: an error `RouteErrorBoundary` catches, an uncaught `error` event and an `unhandledrejection`. At most 3 reports go out per page load. Lazy-c\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-15T19:56:39Z",
       "owner_why": "it plans it",
@@ -6637,12 +6627,14 @@
       "provider": "claude-8",
       "queued_at": "2026-11-15T19:50:23Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43755227397",
+      "run_id": "pending:eb14687f-1794773272",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-15T19:56:39Z",
+      "started_at": "2026-11-15T20:08:20Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6900293850"
+      ]
     },
     "3621": {
       "action": "review",
@@ -14999,9 +14991,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-15T19:58:22Z",
+    "at": "2026-11-15T20:08:20Z",
     "url": "",
-    "what": "plan #3937 on claude-3"
+    "what": "build #3619 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-15T19:53:23Z",
