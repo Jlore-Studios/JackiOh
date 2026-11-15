@@ -261,8 +261,9 @@ describe("R3728000 the shell's widths and insets", () => {
     const widths = [deckbuilder, sheet("game/deckbuilder/workshop.css")].flatMap((code) =>
       [...code.matchAll(/\.db-deck-status\s*\{([^}]*)\}/g)].flatMap((rule) => [...(rule[1] ?? "").matchAll(/max-width:\s*([^;]+);/g)]),
     );
-    // The editor's, the workshop's over 1024 px and its own from 601 to 1024 px (R3734001, the rail 148 px there).
-    expect(widths).toHaveLength(5);
+    // The editor's, the workshop's over 1024 px, its own from 601 to 1024 px (R3734001, the rail 148 px there) and its
+    // own from 601 to 760 px (R3956000, the sidebar 232 px there).
+    expect(widths).toHaveLength(6);
     for (const width of widths) expect(width[1]).toMatch(/^calc\(100vw - var\(--shell-start, 0px\) - \d+px\)$/);
 
     // The undo toast (R2119000, on the workshop and Play together) is over the bar's layer, so it took the middle tabs' taps.

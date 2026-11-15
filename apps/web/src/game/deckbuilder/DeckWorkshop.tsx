@@ -332,7 +332,7 @@ function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, atC
         <span className="ws-row-words">
           {unsynced ? t("{deck}, {count} of {size} cards, {status}, not saved yet", words) : t("{deck}, {count} of {size} cards, {status}", words)}
         </span>
-        <span className="ws-row-name" aria-hidden="true">
+        <span className="ws-row-name" aria-hidden="true" title={label}>
           {label}
         </span>
         <span className="ws-row-meta" aria-hidden="true">
@@ -391,7 +391,7 @@ function TrioRow({ trio, decks, catalog, collection, nameLength, current, unsync
         <span className="ws-row-words">
           {unsynced ? t("{trio}, {count} of {size} decks, {status}, not saved yet", words) : t("{trio}, {count} of {size} decks, {status}", words)}
         </span>
-        <span className="ws-row-name" aria-hidden="true">
+        <span className="ws-row-name" aria-hidden="true" title={label}>
           {label}
         </span>
         <span className="ws-row-meta" aria-hidden="true">
