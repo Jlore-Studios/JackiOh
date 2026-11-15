@@ -159,6 +159,7 @@ the policy in the third column. `service_role` bypasses RLS and is the only writ
 | `daily_games` | rows you play in | `app.current_profile_id() in (p1_profile_id, p2_profile_id)` | none — a daily game's clock and its public board (turn, both heroes' life, result); its seed, decks and log stay in `matches` and `match_actions` (SPEC §9.13, #3727) |
 | `daily_invites` | rows you sent or received, every column but `choice` | `app.current_profile_id() in (from_profile, to_profile)` | none — `choice` is the sender's frozen deck, hidden from the friend it challenges (§3.1), so the column grant leaves it out |
 | `daily_notify` | **none** | no policy | none — the email setting, its unsubscribe token and when each channel was last sent |
+| `daily_email_days` | **none** | no policy | none — how many "your move" emails the server took each UTC day, held to `DAILY_PLAYER_EMAILS_PER_DAY` (#3843) |
 | `push_subscriptions` | **none** | no policy | none — each device's push endpoint and keys, which anyone holding them could push to |
 
 Three Supabase-specific traps this schema avoids on purpose:

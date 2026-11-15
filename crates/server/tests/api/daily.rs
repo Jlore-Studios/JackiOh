@@ -24,11 +24,13 @@ use jackioh_engine::{CardCost, CardDefs, ShippedCatalog};
 use jackioh_server::api::catalog::{LoadCatalogOptions, load_catalog};
 use jackioh_server::api::queue::try_pair;
 use jackioh_server::app::App;
-use jackioh_server::config::{DAILY_MAX_ACTIVE_GAMES, MS_PER_DAY};
+use jackioh_server::config::{DAILY_MAX_ACTIVE_GAMES, DAILY_PLAYER_EMAILS_PER_DAY, MS_PER_DAY};
+use jackioh_server::daily::notify::sweep;
 use jackioh_server::db::store::{DailyNotifyRow, MatchStatus, PushSubRow};
+use jackioh_shared::economy::rewards::utc_day_bounds;
 
 use crate::support::deps::{
-    TestAppOptions, add_user, call, json_request, send as send_request, test_app_with,
+    TestAppOptions, add_user, call, json_request, record_logs, send as send_request, test_app_with,
 };
 use crate::support::engine::{TEST_GLITCH_VOID, fake_deck, install_test_cards};
 use crate::support::store::{Account, account, befriend, fail_on, fake, fake_lock, stop_failing};
@@ -1717,6 +1719,152 @@ async fn a_profile_queued_twice_before_the_task_reaches_it_is_notified_once() {
     // The push that was held and one decision for Ada, which still has games waiting on her; each of
     // the four moves queueing her afresh would have made four.
     assert_eq!(seen.lock().expect("the requests").len(), 2);
+}
+
+/// Takes `n` of the player emails of the UTC day starting at `day`, as that many sends would (#3843).
+async fn spend_emails(app: &Arc<App>, day: i64, n: i32) {
+    let mut tx = app.db.begin(None).await.expect("a transaction");
+    for k in 1..=n {
+        assert!(
+            tx.daily_email_claim(day, DAILY_PLAYER_EMAILS_PER_DAY)
+                .await
+                .expect("a claim"),
+            "email {k} of {n} was free"
+        );
+    }
+    tx.commit().await.expect("commit");
+}
+
+/// How many of `seen`'s requests went to `path`.
+fn requests_to(seen: &Requests, path: &str) -> usize {
+    seen.lock()
+        .expect("the requests")
+        .iter()
+        .filter(|(at, _, _)| at == path)
+        .count()
+}
+
+/// §9.13, #3843: once the UTC day's `DAILY_PLAYER_EMAILS_PER_DAY` are spent, a restarted server's
+/// sweep sends no email and still pushes, logs the cap once and not once a player, and marks no email
+/// sent, so the next day's sweep sends both.
+#[tokio::test]
+async fn past_the_days_player_email_cap_the_sweep_still_pushes_and_the_next_day_emails() {
+    let (quiet, ada, bo) = two_friends().await;
+    // Both owe the mulligan, so the game waits on both.
+    daily_game(&quiet, &ada, &bo, 3).await;
+    notifier_idle(&quiet).await;
+    let (service, seen) = fake_service(StatusCode::OK).await;
+    subscribe(&quiet, &ada, 1, format!("{service}/push/1/ada")).await;
+    subscribe(&quiet, &bo, 2, format!("{service}/push/2/bo")).await;
+    let now = quiet.daily.now();
+    let today = utc_day_bounds(now).0;
+    spend_emails(&quiet, today, DAILY_PLAYER_EMAILS_PER_DAY).await;
+
+    // A restart over the spent count: the cap is the store's, not the process's.
+    let app = app_with(
+        Some(quiet.db.clone()),
+        TestAppOptions {
+            mail_api: Some(format!("{service}/emails")),
+            push_keys: Some(vapid_pair()),
+            ..TestAppOptions::default()
+        },
+    )
+    .await;
+    let logs = record_logs();
+    let swept = sweep(&app, now).await.expect("a sweep");
+    assert_eq!((swept.emailed, swept.pushed), (0, 2));
+    assert_eq!(requests_to(&seen, "/emails"), 0);
+    assert_eq!(logs.named("daily.email.capped").len(), 1, "{:?}", logs.entries());
+    for who in [&ada, &bo] {
+        let row = notify_row(&app, who).await;
+        assert_eq!((row.last_email_at, row.last_push_at), (None, Some(now)));
+    }
+
+    // The next UTC day has its own count: the emails held back go, and the pushes, sent, wait.
+    let tomorrow = now + MS_PER_DAY;
+    let swept = sweep(&app, tomorrow).await.expect("a sweep");
+    assert_eq!((swept.emailed, swept.pushed), (2, 0));
+    assert_eq!(requests_to(&seen, "/emails"), 2);
+    for who in [&ada, &bo] {
+        assert_eq!(notify_row(&app, who).await.last_email_at, Some(tomorrow));
+    }
+    assert_eq!(logs.named("daily.email.capped").len(), 1);
+}
+
+/// §9.13, #3843: the after-move task and the sweep take from one count: with one email of the day
+/// left, a start that waits on both players emails one, and the sweep after it emails nobody.
+#[tokio::test]
+async fn the_after_move_queue_and_the_sweep_share_the_days_player_email_cap() {
+    let (service, seen) = fake_service(StatusCode::OK).await;
+    let app = app_with(
+        None,
+        TestAppOptions {
+            mail_api: Some(format!("{service}/emails")),
+            ..TestAppOptions::default()
+        },
+    )
+    .await;
+    // Noon UTC, so the day cannot turn between the start and the sweep.
+    let real = app.daily.now();
+    app.daily
+        .set_offset(utc_day_bounds(real).0 + MS_PER_DAY / 2 - real);
+    let ada = person(&app, 1, "Ada").await;
+    let bo = person(&app, 2, "Bo").await;
+    befriend(&app, &ada, &bo).await;
+    spend_emails(
+        &app,
+        utc_day_bounds(app.daily.now()).0,
+        DAILY_PLAYER_EMAILS_PER_DAY - 1,
+    )
+    .await;
+
+    // Both owe the mulligan, so the start queues both, and only one email of the day is left.
+    daily_game(&app, &ada, &bo, 3).await;
+    notifier_idle(&app).await;
+    assert_eq!(seen.lock().expect("the requests").len(), 1);
+    let mut emailed = 0;
+    for who in [&ada, &bo] {
+        emailed += usize::from(notify_row(&app, who).await.last_email_at.is_some());
+    }
+    assert_eq!(emailed, 1);
+
+    // The one the queue held back is not emailed by the sweep either.
+    let swept = sweep(&app, app.daily.now()).await.expect("a sweep");
+    assert_eq!(swept.emailed, 0);
+    assert_eq!(seen.lock().expect("the requests").len(), 1);
+}
+
+/// §9.13, #3843: an email the mail service refused gives its place back, so an outage spends none of
+/// the day's `DAILY_PLAYER_EMAILS_PER_DAY`.
+#[tokio::test]
+async fn an_email_the_mail_service_refused_spends_none_of_the_days_cap() {
+    let (quiet, ada, bo) = two_friends().await;
+    daily_game(&quiet, &ada, &bo, 3).await;
+    notifier_idle(&quiet).await;
+    let (service, seen) = fake_service(StatusCode::INTERNAL_SERVER_ERROR).await;
+    let app = app_with(
+        Some(quiet.db.clone()),
+        TestAppOptions {
+            mail_api: Some(format!("{service}/emails/gone")),
+            ..TestAppOptions::default()
+        },
+    )
+    .await;
+    let now = app.daily.now();
+    let swept = sweep(&app, now).await.expect("a sweep");
+    assert_eq!(swept.emailed, 0);
+    assert_eq!(requests_to(&seen, "/emails/gone"), 2);
+
+    // Every one of the day's emails is still free, and none past them.
+    let today = utc_day_bounds(now).0;
+    spend_emails(&app, today, DAILY_PLAYER_EMAILS_PER_DAY).await;
+    let mut tx = app.db.begin(None).await.expect("a transaction");
+    assert!(
+        !tx.daily_email_claim(today, DAILY_PLAYER_EMAILS_PER_DAY)
+            .await
+            .expect("a claim")
+    );
+    tx.commit().await.expect("commit");
 }
 
 #[tokio::test]

@@ -1602,6 +1602,12 @@ pub const PLAYER_EMAIL_FROM: &str = "JackiOh <no-reply@jackioh.com>";
 /// §9.13: how long a send to Resend may take before it is given up, in milliseconds; the next sweep
 /// tries again, since nothing was marked sent.
 pub const PLAYER_EMAIL_TIMEOUT_MS: u64 = 10_000;
+/// §9.13, #3843: the most "your move" emails the server sends in one UTC day, across every account,
+/// the sweep's and the after-move queue's together, counted in the store (migration 0092's
+/// `daily_email_days`) so a restart starts none afresh. Half of Resend's free plan's 100 a day, which
+/// leaves the rest to the sign-in, password-reset and alert mail sent from the same account. Past it
+/// no email goes for the rest of the day; push still does. An `i32`, as the column is.
+pub const DAILY_PLAYER_EMAILS_PER_DAY: i32 = 50;
 /// §9.13: how many profiles wait for the notifier's task (`daily::notify::NotifyQueue`) before a new
 /// one is dropped; the next sweep decides for it, since nothing unsent is ever marked sent.
 pub const DAILY_NOTIFY_QUEUE: usize = 256;

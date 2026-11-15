@@ -477,7 +477,7 @@ fn unreadable_game_record_detail(id: &str) -> Value {
 /// leaves nothing behind.
 pub const TRUNCATE: &str = "truncate
   public.game_records, public.record_totals, public.card_totals, public.decklist_totals, public.game_totals,
-  public.practice_claim_counts,
+  public.practice_claim_counts, public.daily_email_days,
   public.tutorial_progress, public.player_settings,
   public.rated_games, public.bot_ratings, public.season_ranks, public.seasons,
   public.series, public.results, public.match_checkpoints, public.match_actions, public.tickets,
@@ -13686,6 +13686,63 @@ mod daily {
         assert!(q!(harness, t => t.daily_games_running()).is_empty());
     }
 
+    /// #3843: migration 0092's count of the player mail. Each UTC day takes `cap` claims and refuses
+    /// the next, counts on its own, takes one more after a release, never goes below 0 however many
+    /// releases, and a cap of 0 takes none.
+    async fn s913_daily_email_claims_stop_at_each_days_cap(harness: &StoreHarness) {
+        let today = 20_000 * MS_PER_DAY;
+        let tomorrow = today + MS_PER_DAY;
+        let claims = [
+            (today, 2, true, "the first of two"),
+            (today, 2, true, "the second of two"),
+            (today, 2, false, "a third past the cap"),
+            (tomorrow, 2, true, "each day counts its own"),
+        ];
+        for (day, cap, taken, what) in claims {
+            assert_eq!(
+                q!(harness, t => t.daily_email_claim(day, cap)),
+                taken,
+                "{}: {what}",
+                harness.name
+            );
+        }
+        q!(harness, t => t.daily_email_release(today));
+        assert!(
+            q!(harness, t => t.daily_email_claim(today, 2)),
+            "{}: one given back is taken again",
+            harness.name
+        );
+        assert!(
+            !q!(harness, t => t.daily_email_claim(today, 2)),
+            "{}: and the day is full again",
+            harness.name
+        );
+
+        let after = tomorrow + MS_PER_DAY;
+        assert!(
+            q!(harness, t => t.daily_email_claim(after, 1)),
+            "{}",
+            harness.name
+        );
+        q!(harness, t => t.daily_email_release(after));
+        q!(harness, t => t.daily_email_release(after));
+        assert!(
+            q!(harness, t => t.daily_email_claim(after, 1)),
+            "{}: two releases of one claim",
+            harness.name
+        );
+        assert!(
+            !q!(harness, t => t.daily_email_claim(after, 1)),
+            "{}: the count never went below 0",
+            harness.name
+        );
+        assert!(
+            !q!(harness, t => t.daily_email_claim(after + MS_PER_DAY, 0)),
+            "{}: a cap of 0 takes none",
+            harness.name
+        );
+    }
+
     both_stores!(
         s913_daily_games_round_trip_list_and_end,
         s913_daily_games_due_by_deadline_and_left_out_of_the_live_matches,
@@ -13697,5 +13754,6 @@ mod daily {
         s913_a_deleted_profile_takes_its_daily_rows,
         r3727008_a_profile_seated_in_a_running_daily_game_is_not_deleted,
         s913_a_voided_match_takes_its_daily_game,
+        s913_daily_email_claims_stop_at_each_days_cap,
     );
 }
