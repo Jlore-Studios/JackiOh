@@ -9,6 +9,7 @@ import {
   SERIES_POLL_SECONDS,
 } from "../../../apps/web/src/wire/serverConfig.ts";
 import { type InstalledLoadout } from "../../support/commands.ts";
+import { openQueuePanel } from "../../support/play.ts";
 import {
   accounts,
   apiUrl,
@@ -31,7 +32,6 @@ import {
   SERIES_BANNER,
   SERIES_BANNER_CONTINUE,
   heroId,
-  playModeId,
   ts,
   type QueueMode,
 } from "../../support/testids.ts";
@@ -318,8 +318,7 @@ describe("37 rematch — offers after a finished match (§9.5, R672)", () => {
     });
 
     cy.visitAs(seatOne, routes.play());
-    cy.get(ts(playModeId("bo1")), { timeout: timeouts.view }).check();
-    cy.get(ts(playModeId("bo1"))).should("be.checked");
+    openQueuePanel("bo1");
     cy.then(() => {
       const chosen = installed(mine).deckIds[FIXTURE_DECK] ?? "";
       cy.get(ts(PLAY_DECK_SELECT), { timeout: timeouts.view }).select(chosen);

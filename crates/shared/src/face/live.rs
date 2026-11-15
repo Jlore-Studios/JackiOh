@@ -143,6 +143,9 @@ pub struct LiveCard {
     pub attack_reason: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
+    pub switch_reason: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
     pub tallies: Option<Vec<TallyView>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -220,6 +223,7 @@ impl From<&UnitView> for LiveCard {
             starship: unit.starship.clone(),
             grants: unit.grants.clone(),
             attack_reason: unit.attack_reason.clone(),
+            switch_reason: unit.switch_reason.clone(),
             tallies: unit.tallies.clone(),
             ..LiveCard::default()
         }
@@ -386,6 +390,12 @@ pub fn live_source(
         in_play.grants = card.grants.clone().filter(|list| !list.is_empty());
         // R849000: the inspect notes spell it out.
         in_play.attack_reason = card.attack_reason.clone();
+        // R3821000: and why it cannot switch now, said once where it repeats the attack reason (a Frozen
+        // unit's is both).
+        in_play.switch_reason = card
+            .switch_reason
+            .clone()
+            .filter(|reason| card.attack_reason.as_ref() != Some(reason));
     }
     // R2321000: and the counts the field keeps on the unit.
     in_play.tallies = facts.tallies.clone().filter(|list| !list.is_empty());
@@ -724,6 +734,7 @@ mod tests {
             "starship": { "pieces": [] },
             "grants": ["g"],
             "attackReason": "why",
+            "switchReason": "why not",
             "tallies": [{ "defId": "trainingground-031", "value": 1, "goal": 3 }],
         })));
         let unit_keys = [
@@ -737,6 +748,7 @@ mod tests {
             "starship",
             "grants",
             "attackReason",
+            "switchReason",
             "tallies",
         ];
         carries(
@@ -810,6 +822,54 @@ mod tests {
         assert_eq!(in_play.grants, Some(vec!["g".to_string()]));
         assert!(in_play.preview.is_none() && in_play.enchantments.is_none());
         assert!(in_play.marks.is_none() && in_play.tallies.is_none());
+    }
+
+    /// R3821000: a unit's switch refusal reaches its face for the inspect notes, said once: where it is the
+    /// attack reason word for word (a Frozen unit's is both) only the attack reason stands. A card off the field
+    /// carries none.
+    #[test]
+    fn r3821000_a_units_switch_reason_reaches_its_face_unless_it_repeats_its_attack_reason() {
+        let in_play_of = |card: &LiveCard| {
+            live_source(card, None, None, &LiveFacts::default())
+                .in_play
+                .expect("in play")
+        };
+        let unit = |attack_reason: Option<&str>, switch_reason: Option<&str>| LiveCard {
+            max_health: Some(4),
+            keywords: Some(Vec::new()),
+            attack_reason: attack_reason.map(str::to_string),
+            switch_reason: switch_reason.map(str::to_string),
+            ..LiveCard::default()
+        };
+        const ACTED: &str = "that unit has already acted this turn";
+        const NO_DEFENSE: &str = "that unit cannot be in Defense Position";
+        const ASLEEP: &str = "that unit is summoning sick";
+        const FROZEN: &str = "that Unit is Frozen";
+
+        let alone = in_play_of(&unit(None, Some(ACTED)));
+        assert_eq!(
+            (alone.attack_reason.as_deref(), alone.switch_reason.as_deref()),
+            (None, Some(ACTED))
+        );
+
+        let both = in_play_of(&unit(Some(ASLEEP), Some(NO_DEFENSE)));
+        assert_eq!(
+            (both.attack_reason.as_deref(), both.switch_reason.as_deref()),
+            (Some(ASLEEP), Some(NO_DEFENSE))
+        );
+
+        let frozen = in_play_of(&unit(Some(FROZEN), Some(FROZEN)));
+        assert_eq!(
+            (frozen.attack_reason.as_deref(), frozen.switch_reason.as_deref()),
+            (Some(FROZEN), None)
+        );
+
+        let off_the_field = LiveCard {
+            keywords: Some(Vec::new()),
+            switch_reason: Some(ACTED.to_string()),
+            ..LiveCard::default()
+        };
+        assert_eq!(in_play_of(&off_the_field).switch_reason, None);
     }
 
     /// R243, #2437, R979000: a card off the field (keywords but no max health) wears a hand card's facts, its stats

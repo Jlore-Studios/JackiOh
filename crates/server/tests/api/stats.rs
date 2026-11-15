@@ -963,6 +963,70 @@ mod r654_public_card_and_player_stats {
         let (_, _, found) = get_public(&app, "/api/stats/players?search=alicia").await;
         assert_eq!(rows(&found), vec![json!([alice_id, "Alicia", 1000])]);
     }
+
+    /// R3911000: a banned account drops off GET /api/stats/players and its search,
+    /// and is restored when unbanned without modifying stored stats.
+    #[tokio::test]
+    async fn r3911000_get_api_stats_players_excludes_banned_profile_and_restores_when_unbanned() {
+        let app = test_app().await;
+        let alice_id = seed_profile(&app, "u-alice-banned", "Alice_Banned").await;
+        let bob_id = seed_profile(&app, "u-bob-active", "Bob_Active").await;
+
+        put_player_stats(&app, &alice_id, json!({ "games": 200, "wins": 150 }), false, 1000).await;
+        put_player_stats(&app, &bob_id, json!({ "games": 100, "wins": 70 }), false, 2000).await;
+
+        let (status, _, data) = get_public(&app, "/api/stats/players").await;
+        assert_eq!(status, 200);
+        let ids: Vec<&str> = data["players"]
+            .as_array()
+            .expect("players list")
+            .iter()
+            .map(|p| p["profileId"].as_str().unwrap_or_default())
+            .collect();
+        assert_eq!(ids, [alice_id.as_str(), bob_id.as_str()]);
+
+        // Ban Alice
+        {
+            let mut tx = app.db.begin(Some(&alice_id)).await.expect("tx");
+            tx.profiles_set_status(&alice_id, from(json!("banned")))
+                .await
+                .expect("set banned");
+            tx.commit().await.expect("commit");
+        }
+
+        // Alice is excluded from /api/stats/players
+        let (_, _, banned_data) = get_public(&app, "/api/stats/players").await;
+        let banned_ids: Vec<&str> = banned_data["players"]
+            .as_array()
+            .expect("players list")
+            .iter()
+            .map(|p| p["profileId"].as_str().unwrap_or_default())
+            .collect();
+        assert_eq!(banned_ids, [bob_id.as_str()]);
+
+        // Alice is excluded from search
+        let (_, _, search_data) = get_public(&app, "/api/stats/players?search=Alice").await;
+        assert_eq!(search_data["players"], json!([]));
+
+        // Unban Alice
+        {
+            let mut tx = app.db.begin(Some(&alice_id)).await.expect("tx");
+            tx.profiles_set_status(&alice_id, from(json!("active")))
+                .await
+                .expect("set active");
+            tx.commit().await.expect("commit");
+        }
+
+        // Alice is restored
+        let (_, _, restored_data) = get_public(&app, "/api/stats/players").await;
+        let restored_ids: Vec<&str> = restored_data["players"]
+            .as_array()
+            .expect("players list")
+            .iter()
+            .map(|p| p["profileId"].as_str().unwrap_or_default())
+            .collect();
+        assert_eq!(restored_ids, [alice_id.as_str(), bob_id.as_str()]);
+    }
 }
 
 /// R1771000: the server keeps the account copy in R1142000's shape, whatever the PUT holds.

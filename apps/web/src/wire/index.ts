@@ -188,6 +188,8 @@ export const GAME_EVENT_TYPES = [
   "deradianted",
   "manaSpent",
   "damageAbsorbed",
+  // Issue #3857: a hero kept Armor (R3857000).
+  "armorGained",
   "jadeChanged",
   "secretChosen",
   "secretRevealed",

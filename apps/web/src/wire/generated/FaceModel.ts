@@ -180,6 +180,10 @@ englishText?: string,
  */
 attackReason?: string, 
 /**
+ * R3821000: in play, why the viewer's own unit cannot switch now.
+ */
+switchReason?: string, 
+/**
  * R2321000: in play, the counts cards on the field keep on the unit.
  */
 tallies?: Array<NamedTally>, 

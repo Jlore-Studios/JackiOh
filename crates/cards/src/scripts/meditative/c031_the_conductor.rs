@@ -215,7 +215,6 @@ mod tests {
     #[test]
     fn r944_radiant_shuffles_in_a_prime_card_and_draws_it() {
         let mut s = conducting("conductor-prime", true, json!([FILLER, FILLER]));
-        let mark = s.events().len();
         s.play(CONDUCTOR, json!({}));
         // The shuffled-in Prime is Created, so the same Cry draws it.
         let hand = s.hand(P1);
@@ -224,7 +223,6 @@ mod tests {
             .find(|card| tags_of(s.state(), card).contains(&Tag::Prime));
         assert!(prime.is_some(), "a Prime card was shuffled in and drawn");
         assert_eq!(prime.expect("drawn").created, Some(true), "it is Created");
-        let _ = mark;
     }
 
     #[test]

@@ -1,11 +1,13 @@
 // R3218000: BackLink's DOM is the top bar's one layout, in the order routes/top-bar.css draws it: Back, the
 // line (the screen's title, then its extras), the end group (the Jlore pill, Friends, language, the gear), and
-// inside the menus' shell its status row (R3728002), Friends being the shell's navigation's (R3728000). jsdom
-// ignores the cascade, so top-bar.test.ts proves the sheet and e2e spec 46 the drawn geometry.
+// inside the menus' shell its status row (R3728002), Friends being the shell's navigation's (R3728000) and the
+// inbox's bell (R3729002) standing after the pill. jsdom ignores the cascade, so top-bar.test.ts proves the
+// sheet and e2e spec 46 the drawn geometry.
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { inboxTestid } from "../inbox/testids.ts";
 import { MenuShellContext } from "../shell/context.ts";
 import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { settle } from "../test/settle.ts";
@@ -126,7 +128,7 @@ describe("R3728002 the bar inside the menus' shell", () => {
         </MenuShellContext.Provider>
       </>,
     );
-    await settle({ macrotasks: 5 });
+    await screen.findByTestId(inboxTestid.bell, undefined, { timeout: 5_000 });
     const bar = screen.getByRole("navigation");
     const slots = Array.from(bar.children);
     expect(slots.map((node) => node.className.split(" ").pop())).toEqual([
@@ -139,7 +141,7 @@ describe("R3728002 the bar inside the menus' shell", () => {
     expect(screen.queryByTestId(friendsTestid.button)).toBeNull();
     expect(
       Array.from((slots[2] as HTMLElement).querySelectorAll("[data-testid]")).map((node) => node.getAttribute("data-testid")),
-    ).toEqual(["language-nav", "settings-open-nav"]);
+    ).toEqual([inboxTestid.bell, "language-nav", "settings-open-nav"]);
 
     // Nothing to show: the row is empty (top-bar.css hides it).
     rerender(
@@ -151,5 +153,73 @@ describe("R3728002 the bar inside the menus' shell", () => {
       </>,
     );
     expect(must(bar.querySelector(".screen-nav__status"), "the status row")).toBeEmptyDOMElement();
+  });
+});
+
+describe("R3729002 the inbox's bell in the bar", () => {
+  function serveSocial(): void {
+    stubServer((call) =>
+      call.path === "/api/social" ? { status: 200, body: { incoming: [], outgoing: [], unread: {} } } : undefined,
+    );
+  }
+
+  it("R3729002 inside the shell the bell sits in the end group, after where the pill stands and before the language button and the gear", async () => {
+    signIn("tok-nav");
+    serveSocial();
+    render(
+      <>
+        <ChallengeToast />
+        <MenuShellContext.Provider value={{ status: null }}>
+          <BackLink title="Screen" />
+        </MenuShellContext.Provider>
+      </>,
+    );
+    const bell = await screen.findByTestId(inboxTestid.bell, undefined, { timeout: 5_000 });
+    const end = must(bell.closest(".screen-nav__end"), "the end group");
+    expect(Array.from(end.children).map((node) => node.getAttribute("data-testid"))).toEqual([
+      inboxTestid.bell,
+      "language-nav",
+      "settings-open-nav",
+    ]);
+    // Nothing waits, so the bell has no badge.
+    expect(screen.queryByTestId(inboxTestid.badge)).toBeNull();
+  });
+
+  it("R3729002 off the shell the bar has no bell (Friends carries it), and a bar with no wallet has none either", async () => {
+    signIn("tok-nav");
+    serveSocial();
+    const { rerender } = render(
+      <>
+        <ChallengeToast />
+        <BackLink title="Screen" />
+      </>,
+    );
+    await screen.findByTestId(friendsTestid.button, undefined, { timeout: 5_000 });
+    expect(screen.queryByTestId(inboxTestid.bell)).toBeNull();
+
+    rerender(
+      <>
+        <ChallengeToast />
+        <MenuShellContext.Provider value={{ status: null }}>
+          <BackLink title="Screen" showWallet={false} />
+        </MenuShellContext.Provider>
+      </>,
+    );
+    await settle({ macrotasks: 5 });
+    expect(screen.queryByTestId(inboxTestid.bell)).toBeNull();
+  });
+
+  it("R3729002 signed out, the shell's bar has no bell", async () => {
+    serveSocial();
+    render(
+      <>
+        <ChallengeToast />
+        <MenuShellContext.Provider value={{ status: null }}>
+          <BackLink title="Screen" />
+        </MenuShellContext.Provider>
+      </>,
+    );
+    await settle({ macrotasks: 5 });
+    expect(screen.queryByTestId(inboxTestid.bell)).toBeNull();
   });
 });

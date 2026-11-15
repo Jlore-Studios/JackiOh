@@ -7,6 +7,9 @@ import { paths } from "../net/navigate.ts";
 /** The id of the "Shared with me" list, and the fragment that opens the page at it. */
 export const SHARED_ANCHOR = "shared";
 
+/** The query that opens the shared replay of one match on Play together (R3729002); the inbox's Watch sends it. */
+export const REPLAY_PARAM = "replay";
+
 /** The page's tabs, in order: the friends, the requests in and out, who the player lately played, the blocked, the shared replays. */
 export const FRIENDS_SECTIONS = ["friends", "requests", "recent", "blocked", "shared"] as const;
 export type FriendsSection = (typeof FRIENDS_SECTIONS)[number];
@@ -22,10 +25,13 @@ export function friendsSectionOf(search: string, hash = ""): FriendsSection {
   return hash === `#${SHARED_ANCHOR}` ? "shared" : "friends";
 }
 
+/** Play together at one tab. */
 export function friendsSectionPath(section: FriendsSection): string {
   return `${paths.together}?section=${section}`;
 }
 
-export function sharedWithMePath(): string {
-  return friendsSectionPath("shared");
+/** Play together at its "Shared with me" list; with `matchId`, that match's shared replay opens as the page loads (R3729002). */
+export function sharedWithMePath(matchId?: string): string {
+  const path = friendsSectionPath("shared");
+  return matchId === undefined ? path : `${path}&${REPLAY_PARAM}=${encodeURIComponent(matchId)}`;
 }
