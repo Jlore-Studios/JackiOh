@@ -36151,7 +36151,8 @@
       "2026-11-15T23:23:00Z,claude-3,refusal,call,43774017122,100,2026-11-16T00:50:00Z,,,rejected,,,2026-11-16T00:50:00Z"
     ],
     "runs": [
-      "2026-11-15T23:09:43Z,43770404137,claude-6,sonnet+opus,review,3998,medium,blocked,,29,84,23308,3361415,1.8755,1,6,,,23.1,,fresh,,2"
+      "2026-11-15T23:09:43Z,43770404137,claude-6,sonnet+opus,review,3998,medium,blocked,,29,84,23308,3361415,1.8755,1,6,,,23.1,,fresh,,2",
+      "2026-11-15T23:23:00Z,43774017122,claude-3,opus,suggest,,,interrupted,refusal,2.7,0,0,0,4.891,88,100,,,,,none,,1"
     ]
   },
   "version": 1
