@@ -2220,3 +2220,8 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-15T08:09:10Z,43692923250,claude-3,opus,review,3930,hard,reviewed,,1,18,5165,544180,0.6386,4,4,,,,,none,,1
 2026-11-15T08:15:55Z,43689444401,claude-7,opus,build,3912,hard,built,,15.8,38,10144,1098517,0.8353,0,2,,,34.7,claude-7,fresh,,1
 2026-11-15T08:17:42Z,43683324451,claude-1,opus,review,3938,hard,approved,,94.3,64,19252,2659066,3.0169,21,45,,,1.2,,fresh,,3
+2026-11-15T08:33:30Z,43694107314,claude-7,opus,review,3949,hard,approved,,9.5,15,3666,471436,0.5568,2,3,,,1.4,,none,,1
+2026-11-15T08:54:53Z,43696412048,claude-3,opus,plan,3844,medium,planned,,1.6,25,12011,699528,0.4165,7,9,,,5.2,,fresh,,1
+2026-11-15T08:53:51Z,43696378475,claude-6,opus,plan,3841,medium,planned,,0.6,14,4468,267049,0.1909,1,2,,,4.9,,fresh,,1
+2026-11-15T08:56:48Z,43696340590,claude-4,opus,plan,3840,medium,planned,,4.4,55,34000,2641770,1.1139,1,4,,,4.6,,fresh,,1
+2026-11-15T08:52:33Z,43696305323,claude-8,opus,plan,3839,medium,planned,,0.8,18,6423,421759,0.2795,0,1,,,4.3,,fresh,,1
