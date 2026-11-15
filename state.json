@@ -14589,18 +14589,29 @@
       "stop_requested": false
     },
     "3975": {
-      "asks": [
-        "c:6900304011"
-      ],
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "agy",
+      "owner_since": "2026-11-15T19:54:25Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-15T19:51:12Z",
       "requested_by": "MaxGoetzmann",
+      "run_id": "pending:6cb6f1aa-1794772443",
+      "runs_on": "night-vm-agy",
+      "started_at": "2026-11-15T19:54:25Z",
       "stop_requested": false,
-      "suggestion": true
+      "suggestion": true,
+      "taken_asks": [
+        "c:6900304011"
+      ]
     },
     "3976": {
       "asks": [
@@ -14788,9 +14799,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-15T18:37:11Z",
+    "at": "2026-11-15T19:54:25Z",
     "url": "",
-    "what": "review #3968 on claude-1"
+    "what": "plan #3975 on agy"
   },
   "last_sweep": {
     "at": "2026-11-15T19:46:32Z",
