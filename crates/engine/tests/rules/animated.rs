@@ -790,6 +790,32 @@ mod r383_b3_1_animated_field_spells_and_animated_on_your_turn {
         }
         assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
     }
+
+    /// B3.1 rule 4: of the plain Animated cards only a Field Spell animates as it enters. A face-up
+    /// Animated Field Trap that enters a backrow zone, with its stats, stays a backrow card: it animates
+    /// only as its firing's last step (rules 3 and 8).
+    #[test]
+    fn r383_rule_4_a_face_up_animated_field_trap_entering_the_backrow_does_not_animate() {
+        let mut state = playing("animated-entry-field-trap");
+        let card = put(
+            &mut state,
+            &tesla.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        live_mut(&mut state, &card.id).face_up = Some(true);
+        let mut sink = sink_for(&mut state);
+        let now = live(sink.state, &card.id);
+        assert!(has_stat_line(sink.state, &now));
+        assert_eq!(animated_kind_of(sink.state, &now), Some(AnimatedKind::Animated));
+        assert!(!animate_on_entry(&mut sink, &now));
+        assert_eq!(
+            id_at(sink.state, slot(P1, Row::Backrow, 2)),
+            Some(card.id.clone())
+        );
+        assert!(card_at(sink.state, slot(P1, Row::Units, 2)).is_none());
+        assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
+    }
 }
 
 mod r1062_animated_on_your_turn_at_start_of_turn_after_an_earlier_entry {
@@ -1584,5 +1610,74 @@ mod r3542000_a_card_whose_text_gives_it_stats_by_its_plague_counters {
         remove_plague(&mut make_context(&mut sink, None, by(P1)), &held, 1);
         state_check(&mut sink);
         assert!(card_at(sink.state, slot(P1, Row::Units, 2)).is_none());
+    }
+}
+
+// R1839000, B3.1 rules 4 and 6: a Dormant card acts only to awaken, so its Animated text neither steps it
+// into its unit zone nor sends it home; and only an animated card goes home.
+mod r1839000_b3_1_a_dormant_card_neither_animates_nor_goes_home {
+    use super::*;
+
+    fn dormant(state: &mut GameState, id: &str) {
+        live_mut(state, id).slumber = Some(Slumber { turns: None });
+    }
+
+    #[test]
+    fn r1839000_a_dormant_on_your_turn_card_stays_in_its_backrow_zone() {
+        let mut state = playing("animated-dormant-stays");
+        let card = put(
+            &mut state,
+            &spatula.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        dormant(&mut state, &card.id);
+        let mut sink = sink_for(&mut state);
+        let now = live(sink.state, &card.id);
+        assert!(!animate_card(&mut sink, &now, Default::default()));
+        assert_eq!(
+            id_at(sink.state, slot(P1, Row::Backrow, 2)),
+            Some(card.id.clone())
+        );
+        assert!(card_at(sink.state, slot(P1, Row::Units, 2)).is_none());
+        assert!(events_of_type(sink.events, GameEventType::Animated).is_empty());
+    }
+
+    /// A Dormant animated card that changed sides does not go home, and the home it held on the side it
+    /// left stays held: nothing about it moves until it acts again (R383 rule 6).
+    #[test]
+    fn r1839000_a_dormant_animated_card_that_changed_sides_does_not_go_home_and_its_old_home_stays_held() {
+        let mut state = playing("animated-dormant-stolen");
+        let card = put(
+            &mut state,
+            &spatula.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        let mut sink = sink_for(&mut state);
+        animate_at_turn_start(&mut sink, P1);
+        (steal(json_as(
+            json!({ "target": { "of": "instance", "instanceId": card.id } }),
+        ))
+        .apply)(&mut make_context(&mut sink, None, by(P2)));
+        assert_eq!(live(sink.state, &card.id).controller, P2);
+        dormant(sink.state, &card.id);
+        let now = live(sink.state, &card.id);
+        assert!(!return_home(&mut sink, &now));
+        assert_eq!(live(sink.state, &card.id).zone, now.zone);
+        assert!(is_reserved(sink.state, slot(P1, Row::Backrow, 2)));
+        assert!(events_of_type(sink.events, GameEventType::Deanimated).is_empty());
+    }
+
+    #[test]
+    fn r383_rule_6_only_an_animated_card_goes_home_a_plain_unit_stays_in_its_unit_zone() {
+        let mut state = playing("animated-plain-home");
+        let unit = put(&mut state, &plain.id, slot(P1, Row::Units, 2), Default::default());
+        let mut sink = sink_for(&mut state);
+        let now = live(sink.state, &unit.id);
+        assert!(!is_animated(sink.state, &now));
+        assert!(!return_home(&mut sink, &now));
+        assert_eq!(id_at(sink.state, slot(P1, Row::Units, 2)), Some(unit.id.clone()));
+        assert!(events_of_type(sink.events, GameEventType::Deanimated).is_empty());
     }
 }

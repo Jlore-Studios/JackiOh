@@ -605,3 +605,84 @@ fn r3558008_each_cast_asks_its_own_target_first_resolving_before_the_second_asks
     assert!(s.unit(P2, 1).is_none(), "the unit took the second 1");
     assert_eq!(hero_health(s.state(), P2), p2_before - 1);
 }
+
+// R671 (Classic #55 Book of Wildfire's shape): the card in its owner's hand becomes a different Book at
+// the end of its controller's turn, never at the end of the opponent's, and goes on swapping.
+mod r671_a_book_swaps_in_hand_at_its_controllers_end_of_turn {
+    use super::*;
+    use jackioh_engine::effects::transform::book_swap_source_of;
+
+    const WILDFIRE: &str = "bs-wildfire";
+    const BOOK_A: &str = "bs-book-a";
+    const BOOK_B: &str = "bs-book-b";
+
+    fn book(index: u32, id: &str) -> CardDef {
+        json_as(json!({
+            "id": id,
+            "index": index.to_string(),
+            "name": format!("{id} (book swap fixture)"),
+            "set": "Core",
+            "type": "Spell",
+            "tags": ["Book"],
+            "rarity": "Common",
+            "token": false,
+            "cost": 1,
+            "base": { "keywords": [], "text": id },
+            "radiant": { "keywords": [], "text": id },
+        }))
+    }
+
+    /// The e8 catalog with three Books, the first printing the swap's hand trigger.
+    fn board() -> Scenario {
+        register_e8_fixtures();
+        let mut catalog: CardDefs = registered_catalog().clone();
+        for def in [book(36710, WILDFIRE), book(36711, BOOK_A), book(36712, BOOK_B)] {
+            catalog.insert(def.id.clone(), def);
+        }
+        register_catalog(catalog);
+        let swap = Script {
+            hand_triggers: vec![book_swap_trigger()],
+            ..Script::default()
+        };
+        let mut scripts = registered_scripts().clone();
+        scripts.insert(
+            WILDFIRE.to_string(),
+            CardScripts {
+                base: swap.clone(),
+                radiant: swap,
+            },
+        );
+        register_scripts(scripts);
+        let mut s = scenario(json!({ "seed": "book-swap", "p1": { "hand": [WILDFIRE] }, "p2": {} }));
+        for player in [P1, P2] {
+            s.state_mut().players[player].auto_end_turn = Some(false);
+        }
+        s
+    }
+
+    /// The Book the swap started on: Wildfire itself, or the Book carrying the swap Wildfire started.
+    fn the_book(s: &Scenario) -> String {
+        s.hand(P1)
+            .iter()
+            .find(|card| card.def_id == WILDFIRE || book_swap_source_of(card).as_deref() == Some(WILDFIRE))
+            .map(|card| card.def_id.clone())
+            .expect("the swapping Book is in p1's hand")
+    }
+
+    #[test]
+    fn r671_it_swaps_at_its_controllers_end_of_turn_never_at_the_opponents() {
+        let mut s = board();
+        assert_eq!(the_book(&s), WILDFIRE);
+        s.end_turn();
+        let first = the_book(&s);
+        assert_ne!(first, WILDFIRE, "a different Book at p1's end of turn");
+        s.end_turn();
+        assert_eq!(the_book(&s), first, "nothing at p2's end of turn");
+        s.end_turn();
+        let second = the_book(&s);
+        assert!(
+            second != first && second != WILDFIRE,
+            "a different Book again: {second}"
+        );
+    }
+}
