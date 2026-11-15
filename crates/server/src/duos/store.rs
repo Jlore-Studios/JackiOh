@@ -353,12 +353,8 @@ mod pg {
     use crate::auth::is_uuid;
     // `db::pg`'s session and row helpers: every method re-stamps its subject first (`run_as`), so it
     // runs as `service_role` with `request.jwt.claim.sub` the profile the call is about (or none).
-    use crate::db::pg::{PgTx, ms_of, run_as, uuid_text, uuid_text_or_null};
+    use crate::db::pg::{PgTx, json, ms_of, run_as, uuid_text, uuid_text_or_null};
     use crate::db::store::StoreError;
-
-    fn json_text<T: serde::Serialize + ?Sized>(value: &T) -> Result<String, StoreError> {
-        Ok(serde_json::to_string(value)?)
-    }
 
     fn difficulty_of(text: &str) -> Result<Difficulty, StoreError> {
         text.parse::<Difficulty>().map_err(StoreError::Other)
@@ -424,7 +420,7 @@ mod pg {
         .bind(room.code.as_str())
         .bind(room.host.as_str())
         .bind(room.difficulty.as_str())
-        .bind(json_text(&room.host_choice)?)
+        .bind(json(&room.host_choice)?)
         .bind(room.created_at)
         .bind(room.expires_at)
         .execute(&mut **t)
@@ -490,7 +486,7 @@ mod pg {
         ))
         .bind(code)
         .bind(guest)
-        .bind(json_text(guest_choice)?)
+        .bind(json(guest_choice)?)
         .bind(match_id)
         .bind(at)
         .fetch_optional(&mut **t)
@@ -573,7 +569,7 @@ mod pg {
         .bind(Some(row.b1.as_str()).filter(|id| !id.is_empty()))
         .bind(Some(row.b2.as_str()).filter(|id| !id.is_empty()))
         .bind(row.difficulty.as_str())
-        .bind(json_text(&row.options)?)
+        .bind(json(&row.options)?)
         .bind(row.created_at)
         .execute(&mut **t)
         .await?;
@@ -640,7 +636,7 @@ mod pg {
               where id = $1::uuid and ended_at is null",
         )
         .bind(match_id)
-        .bind(json_text(result)?)
+        .bind(json(result)?)
         .bind(at)
         .execute(&mut **t)
         .await?;
@@ -658,7 +654,7 @@ mod pg {
         .bind(row.match_id.as_str())
         .bind(row.seq)
         .bind(row.nonce.as_str())
-        .bind(json_text(&row.action)?)
+        .bind(json(&row.action)?)
         .bind(row.at)
         .execute(&mut **t)
         .await?;

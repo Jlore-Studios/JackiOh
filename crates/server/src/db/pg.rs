@@ -330,11 +330,11 @@ fn stake_of<T: DeserializeOwned>(value: i16) -> Result<T, StoreError> {
     )))
 }
 
-fn json<T: Serialize + ?Sized>(value: &T) -> Result<String, StoreError> {
+pub(crate) fn json<T: Serialize + ?Sized>(value: &T) -> Result<String, StoreError> {
     serde_json::to_string(value).map_err(|error| StoreError::from(error.to_string()))
 }
 
-fn json_or_null<T: Serialize>(value: &Option<T>) -> Result<Option<String>, StoreError> {
+pub(crate) fn json_or_null<T: Serialize>(value: &Option<T>) -> Result<Option<String>, StoreError> {
     value.as_ref().map(json).transpose()
 }
 

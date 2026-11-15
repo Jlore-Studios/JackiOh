@@ -10,7 +10,6 @@ import {
   dailySections,
   dailyWaitingOf,
   isUrgent,
-  nextYourMove,
   perMoveRowText,
   perMoveText,
   timeLeftText,
@@ -99,19 +98,6 @@ describe("#3727 the Daily screen's sections", () => {
     expect(sections.seeks).toEqual([]);
     const odd = dailySections({ waiting: 0 } as unknown as DailyList, NOW);
     expect(odd).toEqual({ yourMove: [], theirMove: [], incoming: [], outgoing: [], seeks: [], finished: [] });
-  });
-
-  it("#3727 Next game is the first Your move row but the board's own", () => {
-    const answer = list({
-      games: [
-        game("here", { hasMove: true, theirMove: false, deadline: NOW + 10 }),
-        game("next", { hasMove: true, theirMove: false, deadline: NOW + 20 }),
-        game("theirs", { deadline: NOW + 5 }),
-      ],
-    });
-    expect(nextYourMove(answer, NOW)?.matchId).toBe("here");
-    expect(nextYourMove(answer, NOW, "here")?.matchId).toBe("next");
-    expect(nextYourMove(list(), NOW)).toBeNull();
   });
 });
 

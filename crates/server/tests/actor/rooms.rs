@@ -609,7 +609,7 @@ mod r264_rooms_carry_a_mode {
         let h = harness(false).await;
         let (_, body) = create(&h.app, &h.host, json!({ "mode": "bo1", "deckId": uuid(1) })).await;
         let room = h.rooms().await.remove(0);
-        // `CreateRoomResponse` in apps/web's api.ts, exactly.
+        // The room's code, expiry and mode, exactly.
         assert_eq!(
             body,
             json!({ "code": room["code"], "expiresAt": room["expiresAt"], "mode": "bo1" })

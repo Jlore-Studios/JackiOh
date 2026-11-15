@@ -49,11 +49,6 @@ export const INVITE_PAUSED = inviteTestid.paused;
 /** An active account reached the code screen; redemption is not for it. */
 export const INVITE_NOT_NEEDED = inviteTestid.notNeeded;
 
-/** What the input shows for `raw`: R191's reading, grouped and separated per §9.4. */
-export function formatInviteCode(raw: string): string {
-  return readCodeInput(raw, INVITE_CODE_FORMAT).formatted;
-}
-
 /** `setTimeout`'s own ceiling (a signed 32-bit millisecond count); a longer wait fires at once. */
 const LONGEST_TIMER_MS = 2_147_483_647;
 /** Unit conversions, not configuration. */

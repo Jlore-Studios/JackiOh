@@ -199,6 +199,32 @@ export function sideView(view: PlayerView, side: Side) {
   return side === "you" ? view.you : view.opponent;
 }
 
+/** R1088: the defId the view reads on `instanceId`, or undefined when it shows the card nowhere. */
+export function defIdOfInstance(view: PlayerView, instanceId: string): string | undefined {
+  for (const side of ["you", "opponent"] as const) {
+    const sv = side === "you" ? view.you : view.opponent;
+    for (const unit of sv.units) {
+      if (unit !== null && unit.instanceId === instanceId) return unit.defId;
+    }
+    for (const unit of sv.carried ?? []) {
+      if (unit !== null && unit.instanceId === instanceId) return unit.defId;
+    }
+    for (const slot of sv.backrow) {
+      if (slot !== null && !slot.faceDown && slot.instanceId === instanceId) return slot.defId;
+    }
+    for (const card of sv.resolving) {
+      if (card.instanceId === instanceId) return card.defId;
+    }
+  }
+  const hand = view.you.hand;
+  if (Array.isArray(hand)) {
+    for (const card of hand) {
+      if (card.instanceId === instanceId) return card.defId;
+    }
+  }
+  return undefined;
+}
+
 /**
  * Something the player clicked, dragged to, or dropped on. Never a decision, only a report.
  *

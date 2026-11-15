@@ -141,15 +141,16 @@ pub async fn start_series(
 
 // Starting a game
 
-/// Starts the game `series.next_match_id` names when the series is `playing` and that match is
-/// neither running in this process nor written to the store (R263). Safe to call from several
-/// places at once (the pick request, the result whose automatic picks began the game (R332), the
-/// sweeper): a start that loses finds the row the winner wrote and stops.
+/// `start_series_game` without its answer, for the server's tests.
 pub async fn ensure_series_game(app: &Arc<App>, series: &SeriesRow) -> Result<(), SeriesError> {
     start_series_game(app, series).await.map(|_| ())
 }
 
-/// `ensure_series_game`, answering whether this call is the one that started the match.
+/// Starts the game `series.next_match_id` names when the series is `playing` and that match is
+/// neither running in this process nor written to the store (R263), answering whether this call is
+/// the one that started the match. Safe to call from several places at once (the pick request, the
+/// result whose automatic picks began the game (R332), the sweeper): a start that loses finds the row
+/// the winner wrote and stops.
 async fn start_series_game(app: &Arc<App>, series: &SeriesRow) -> Result<bool, SeriesError> {
     if !matches!(series.status, SeriesStatus::Playing) {
         return Ok(false);
