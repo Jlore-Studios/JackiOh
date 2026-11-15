@@ -1962,12 +1962,24 @@ mod tests {
         let after = "fit(\n  ref,\n  bare\n    ? // why the empty key\n      \"\"\n    : name,\n);\nconst list = [\n  a,\n  b,\n];\n";
         let path = "apps/web/src/cards/CardFace.tsx";
         assert!(!code_changed(path, Some(before), Some(after)));
-        assert!(!code_changed("apps/web/src/cards/look.ts", Some(before), Some(after)));
+        assert!(!code_changed(
+            "apps/web/src/cards/look.ts",
+            Some(before),
+            Some(after)
+        ));
         assert!(code_changed(path, Some("go(a, b);"), Some("go(a);")));
         assert!(code_changed(path, Some("go(a);"), Some("go(a)[0];")));
-        assert!(code_changed(path, Some("const x = { a };"), Some("const x = [a];")));
+        assert!(code_changed(
+            path,
+            Some("const x = { a };"),
+            Some("const x = [a];")
+        ));
         // In Rust `(a,)` is a tuple and `(a)` its element.
-        assert!(code_changed("crates/engine/src/a.rs", Some("let x = (a);"), Some("let x = (a,);")));
+        assert!(code_changed(
+            "crates/engine/src/a.rs",
+            Some("let x = (a);"),
+            Some("let x = (a,);")
+        ));
         assert_eq!(without_trailing_commas("f(a,);[b,];{c,}"), "f(a);[b];{c}");
         assert_eq!(without_trailing_commas("f(a,b)"), "f(a,b)");
     }
