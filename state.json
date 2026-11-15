@@ -15595,6 +15595,7 @@
     "3995": {
       "action": "review",
       "asks": [],
+      "cross_rounds": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-15T20:50:42Z",
