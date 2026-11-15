@@ -14942,9 +14942,7 @@
     },
     "3975": {
       "action": "plan",
-      "asks": [
-        "c:6900304011"
-      ],
+      "asks": [],
       "failures": 1,
       "forced": false,
       "handoff": {
@@ -14969,16 +14967,18 @@
       "queued_at": "2026-11-15T19:51:12Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "",
-      "run_id": "43755025170",
+      "run_id": "pending:c87f2e15-1794782311",
       "runs_on": "night-vm-agy",
-      "started_at": "2026-11-15T19:54:25Z",
+      "started_at": "2026-11-15T22:38:58Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on gemini-3.8-flash-high wrote no plan: timed out after 9000s"
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6900304011"
+      ],
       "verdict_rounds": 0
     },
     "3976": {
@@ -15857,9 +15857,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-15T22:38:17Z",
+    "at": "2026-11-15T22:38:58Z",
     "url": "",
-    "what": "review #3998 on claude-6"
+    "what": "plan #3975 on agy"
   },
   "last_sweep": {
     "at": "2026-11-15T22:02:40Z",
