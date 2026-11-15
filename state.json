@@ -14115,11 +14115,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-15T02:17:55Z",
+        "at": "2026-11-15T03:55:14Z",
         "difficulty": "hard",
         "provider": "claude-1",
-        "tier": "medium",
-        "why": "Rule 1: it changes the engine's state-check resolution loop (crates/engine/src/state_check.rs), which is a rules change."
+        "tier": "strong",
+        "why": "Engine rules: it changes the state check's pass loop in crates/engine/src/state_check.rs and effects/radiant.rs"
       },
       "failures": 0,
       "forced": false,
