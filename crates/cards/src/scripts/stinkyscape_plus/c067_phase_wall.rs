@@ -26,10 +26,19 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S+ #67 Phase Wall — SPEC §8.12 row S+ 67 (R23, R781001, R3555001).
+/// R767000: the scripts through v0.6.4d, whose Walls' bonus a set or a Buff multiplied (issue #3935).
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_4d() -> CardScripts {
+    let base = super::c065_thorium_wall::embiggened_wall_v0_6_4d();
+    let radiant = super::c065_thorium_wall::embiggened_wall_v0_6_4d();
+    CardScripts { base, radiant }
+}
+
+// S+ #67 Phase Wall — SPEC §8.12 row S+ 67 (R23, R781001, R3555001, R3935000).
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::super::c065_thorium_wall::fixture;
 
     use crate::weapon_board;
 
@@ -80,6 +89,26 @@ mod tests {
             let spell = s.card("stand-in (0) Spell").clone();
             assert!(immune_to_spells(s.state(), &card), "radiant {radiant}");
             assert!(spell_cannot_reach(s.state(), Some(&spell), &card), "radiant {radiant}");
+        }
+    }
+
+    #[test]
+    fn r3935000_phase_wall_still_refuses_a_set() {
+        for radiant in [false, true] {
+            let mut s = fixture::embiggened(ID, radiant, &format!("s67-set-{radiant}"));
+            fixture::set_all(&mut s, 3, 3);
+            let health = if radiant { 48 } else { 24 };
+            s.expect_stats(ID, json!({ "attack": 0, "maxHealth": health }));
+        }
+    }
+
+    #[test]
+    fn r3935000_a_buff_counts_once() {
+        for radiant in [false, true] {
+            let mut s = fixture::embiggened(ID, radiant, &format!("s67-buff-{radiant}"));
+            fixture::tune(&mut s, ID, json!({ "health": 5 }));
+            let health = if radiant { 53 } else { 29 };
+            s.expect_stats(ID, json!({ "attack": 0, "maxHealth": health }));
         }
     }
 

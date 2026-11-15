@@ -21,7 +21,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-064";
 
-fn surge_wall() -> Script {
+fn surge_wall(text: Script) -> Script {
     Script {
         end_of_turn: Some(hook(|ctx| {
             let key = if ctx.live_self().and_then(|me| me.embiggened) == Some(true) {
@@ -35,19 +35,28 @@ fn surge_wall() -> Script {
                 "heroes": true,
             })))]
         })),
-        ..super::c065_thorium_wall::embiggened_wall()
+        ..text
     }
 }
 
 pub fn script() -> CardScripts {
     // Pierce and Armor 2 on the Radiant face are catalog data.
     CardScripts {
-        base: surge_wall(),
-        radiant: surge_wall(),
+        base: surge_wall(super::c065_thorium_wall::embiggened_wall()),
+        radiant: surge_wall(super::c065_thorium_wall::embiggened_wall()),
     }
 }
 
-// S+ #64 Surge Wall — SPEC §8.12 row S+ 64 (R62, R346, R3555001).
+/// R767000: the scripts through v0.6.4d, whose Walls' bonus a set or a Buff multiplied (issue #3935).
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_4d() -> CardScripts {
+    CardScripts {
+        base: surge_wall(super::c065_thorium_wall::embiggened_wall_v0_6_4d()),
+        radiant: surge_wall(super::c065_thorium_wall::embiggened_wall_v0_6_4d()),
+    }
+}
+
+// S+ #64 Surge Wall — SPEC §8.12 row S+ 64 (R62, R346, R3555001, R3935000).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -76,6 +85,16 @@ mod tests {
             json!({ "hand": [{ "def": ID, "radiant": radiant }], "mana": 10 }),
             json!({}),
         )
+    }
+
+    #[test]
+    fn r3935000_a_set_stands_at_the_stats_it_sets() {
+        super::super::c065_thorium_wall::fixture::assert_a_set_stands_at_its_stats(ID);
+    }
+
+    #[test]
+    fn r3935000_a_buff_counts_once() {
+        super::super::c065_thorium_wall::fixture::assert_a_buff_counts_once(ID, [6, 12]);
     }
 
     mod base {

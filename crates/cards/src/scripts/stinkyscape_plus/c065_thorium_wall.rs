@@ -10,11 +10,14 @@
 //! **Armor 2**  
 //! **Embiggen: GIGA**
 //!
-//! An embiggened Wall is GIGA at four times its face stats (R3555001): `conditional_keywords` lends
-//! GIGA to the card stamped embiggened (R1878001, R3546002), and `set_stat` adds three times the face
-//! (§10.4 layer 2, read off `face_of`, never `unit_view`, or the layers recurse). A Vanilla takes both
-//! back to the printed stats (R115) while the size stays (R3546002). Armor 2 on the Radiant face is
-//! catalog data.
+//! An embiggened Wall is GIGA at four times its printed face stats (R3555001): `conditional_keywords`
+//! lends GIGA to the card stamped embiggened (R1878001, R3546002), and `set_stat` adds three times the
+//! printed face (§10.4 layer 2, read off the definition, never `face_of` or `unit_view`, or the layers
+//! recurse), none once a Set stats has replaced the stat line (R3935000), so a set stands at exactly its
+//! stats and a Buff or Nerf counts once, through layer 1. A Vanilla takes both back to the printed stats
+//! (R115) while the size stays (R3546002). Armor 2 on the Radiant face is catalog data. Through v0.6.4d
+//! the bonus was three times `face_of`, which a set or a Buff multiplied (issue #3935); `script_v0_6_4d`
+//! keeps that for those replays (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -23,17 +26,32 @@ pub const ID: &str = "stinkyscapeplus-065";
 /// "Embiggened (4): GIGA, 0/32": the embiggened stats are this many times the face.
 pub const EMBIGGENED_SCALE: i32 = 4;
 
-/// R3555001: the Walls' shared text. Embiggened, the card is GIGA at `EMBIGGENED_SCALE` times its face
-/// stats; played at its base price it is neither.
+/// R3555001: the Walls' shared text. Embiggened, the card is GIGA at `EMBIGGENED_SCALE` times its printed
+/// face stats; played at its base price it is neither. R3935000: no bonus once a Set stats has replaced
+/// its stat line, and a Buff or Nerf counts once, at layer 1.
 pub fn embiggened_wall() -> Script {
     Script {
-        conditional_keywords: Some(read_hook(|a| {
-            if a.self_.embiggened == Some(true) {
-                vec![Keyword::Giga]
-            } else {
-                vec![]
+        conditional_keywords: embiggened_giga(),
+        set_stat: Some(read_hook(|a| {
+            if a.self_.embiggened != Some(true) || a.self_.stats_override.is_some() {
+                return SetStat::default();
+            }
+            let def = def_of(Some(a.state), &a.self_.def_id);
+            let face = if a.self_.radiant { &def.radiant } else { &def.base };
+            SetStat {
+                attack: Some((EMBIGGENED_SCALE - 1) * face.attack.unwrap_or(0)),
+                max_health: Some((EMBIGGENED_SCALE - 1) * face.health.unwrap_or(0)),
             }
         })),
+        ..Script::default()
+    }
+}
+
+/// R767000: the Walls' shared text through v0.6.4d: three times `face_of`, which a set or a Buff
+/// multiplied (issue #3935).
+pub fn embiggened_wall_v0_6_4d() -> Script {
+    Script {
+        conditional_keywords: embiggened_giga(),
         set_stat: Some(read_hook(|a| {
             if a.self_.embiggened != Some(true) {
                 return SetStat::default();
@@ -48,6 +66,17 @@ pub fn embiggened_wall() -> Script {
     }
 }
 
+/// R1878001, R3546002: GIGA for the card stamped embiggened.
+fn embiggened_giga() -> Option<ConditionalKeywordsHook> {
+    Some(read_hook(|a| {
+        if a.self_.embiggened == Some(true) {
+            vec![Keyword::Giga]
+        } else {
+            vec![]
+        }
+    }))
+}
+
 pub fn script() -> CardScripts {
     // Armor 2 on the Radiant face is catalog data.
     let base = embiggened_wall();
@@ -55,7 +84,74 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S+ #65 Thorium Wall — SPEC §8.12 row S+ 65 (R115, R1878001, R3546002, R3555001).
+/// R767000: the scripts through v0.6.4d, whose bonus a set or a Buff multiplied (issue #3935).
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_4d() -> CardScripts {
+    CardScripts {
+        base: embiggened_wall_v0_6_4d(),
+        radiant: embiggened_wall_v0_6_4d(),
+    }
+}
+
+/// The Walls' tests share these: the wall `id` played embiggened from p1's hand, a Set stats on every
+/// Unit, and a tuning (a Buff or Nerf's stat change) laid on a card.
+#[cfg(test)]
+pub(super) mod fixture {
+    use jackioh_engine::effects::set_stats_all;
+    use jackioh_engine::testkit::*;
+
+    use crate::weapon_board;
+
+    pub fn embiggened(id: &str, radiant: bool, seed: &str) -> Scenario {
+        let mut s = weapon_board(
+            seed,
+            json!({ "hand": [{ "def": id, "radiant": radiant }], "mana": 10 }),
+            json!({}),
+        );
+        s.play(id, json!({ "zone": 1, "embiggen": true }));
+        s
+    }
+
+    pub fn set_all(s: &mut Scenario, attack: i32, health: i32) {
+        crate::run_as(
+            s,
+            set_stats_all(json_as(json!({ "side": "any", "attack": attack, "health": health }))),
+            PlayerId::P1,
+        );
+    }
+
+    pub fn tune(s: &mut Scenario, id: &str, tuning: Value) {
+        s.card_mut(id).tuning = Some(json_as(tuning));
+    }
+
+    /// R3935000: a set stands at the stats it sets, whatever the card's size.
+    pub fn assert_a_set_stands_at_its_stats(id: &str) {
+        for radiant in [false, true] {
+            let mut s = embiggened(id, radiant, &format!("{id}-set-{radiant}"));
+            for stats in [3, 10] {
+                set_all(&mut s, stats, stats);
+                s.expect_stats(id, json!({ "attack": stats, "maxHealth": stats }));
+                assert_eq!(s.stats(id).health, stats, "radiant {radiant}");
+                assert_eq!(s.card(id).giga, Some(true), "radiant {radiant}");
+            }
+        }
+    }
+
+    /// R3935000: a Buff counts once, on the field or taken in hand first.
+    pub fn assert_a_buff_counts_once(id: &str, faces: [i32; 2]) {
+        for (radiant, face) in [(false, faces[0]), (true, faces[1])] {
+            let mut s = embiggened(id, radiant, &format!("{id}-buff-{radiant}"));
+            tune(&mut s, id, json!({ "attack": 2, "health": 5 }));
+            let health = 4 * face + 5;
+            s.expect_stats(id, json!({ "attack": 2, "maxHealth": health }));
+            set_all(&mut s, 3, 3);
+            tune(&mut s, id, json!({ "attack": 2, "health": 1 }));
+            s.expect_stats(id, json!({ "attack": 5, "maxHealth": 4 }));
+        }
+    }
+}
+
+// S+ #65 Thorium Wall — SPEC §8.12 row S+ 65 (R115, R1878001, R3546002, R3555001, R3935000).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -156,6 +252,47 @@ mod tests {
                 "{row} {lane} is still filled"
             );
         }
+    }
+
+    #[test]
+    fn r3935000_a_set_stands_at_the_stats_it_sets() {
+        fixture::assert_a_set_stands_at_its_stats(ID);
+    }
+
+    #[test]
+    fn r3935000_a_buff_counts_once() {
+        fixture::assert_a_buff_counts_once(ID, [8, 16]);
+    }
+
+    #[test]
+    fn r3935000_a_nerf_counts_once() {
+        for radiant in [false, true] {
+            let mut s = fixture::embiggened(ID, radiant, &format!("s65-nerf-{radiant}"));
+            fixture::tune(&mut s, ID, json!({ "health": -4 }));
+            let health = if radiant { 60 } else { 28 };
+            s.expect_stats(ID, json!({ "attack": 0, "maxHealth": health }));
+        }
+    }
+
+    #[test]
+    fn r3935000_a_buff_taken_in_hand_counts_once() {
+        for radiant in [false, true] {
+            let mut s = holding(radiant, &format!("s65-hand-{radiant}"));
+            fixture::tune(&mut s, ID, json!({ "attack": 1, "health": 2 }));
+            s.play(ID, json!({ "zone": 1, "embiggen": true }));
+            let health = if radiant { 66 } else { 34 };
+            s.expect_stats(ID, json!({ "attack": 1, "maxHealth": health }));
+        }
+    }
+
+    /// R767000: through v0.6.4d a set was multiplied by the size (issue #3935).
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_4d_multiplies_a_set() {
+        crate::under_kept(ID, script_v0_6_4d(), || {
+            let mut s = fixture::embiggened(ID, false, "s65-kept");
+            fixture::set_all(&mut s, 3, 3);
+            s.expect_stats(ID, json!({ "attack": 12, "maxHealth": 12 }));
+        });
     }
 
     #[test]

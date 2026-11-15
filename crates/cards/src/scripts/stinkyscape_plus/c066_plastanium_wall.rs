@@ -20,7 +20,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-066";
 
-fn plastanium_wall() -> Script {
+fn plastanium_wall(text: Script) -> Script {
     Script {
         end_of_turn: Some(hook(|_ctx| {
             vec![grant_keyword(json_as(json!({
@@ -28,19 +28,28 @@ fn plastanium_wall() -> Script {
                 "keyword": { "kind": "Divine Shield" },
             })))]
         })),
-        ..super::c065_thorium_wall::embiggened_wall()
+        ..text
     }
 }
 
 pub fn script() -> CardScripts {
     // Armor 2 on the Radiant face is catalog data.
     CardScripts {
-        base: plastanium_wall(),
-        radiant: plastanium_wall(),
+        base: plastanium_wall(super::c065_thorium_wall::embiggened_wall()),
+        radiant: plastanium_wall(super::c065_thorium_wall::embiggened_wall()),
     }
 }
 
-// S+ #66 Plastanium Wall — SPEC §8.12 row S+ 66 (R62, R3555001).
+/// R767000: the scripts through v0.6.4d, whose Walls' bonus a set or a Buff multiplied (issue #3935).
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_4d() -> CardScripts {
+    CardScripts {
+        base: plastanium_wall(super::c065_thorium_wall::embiggened_wall_v0_6_4d()),
+        radiant: plastanium_wall(super::c065_thorium_wall::embiggened_wall_v0_6_4d()),
+    }
+}
+
+// S+ #66 Plastanium Wall — SPEC §8.12 row S+ 66 (R62, R3555001, R3935000).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -63,6 +72,16 @@ mod tests {
             json!({ "field": [{ "def": ID, "radiant": radiant }] }),
             json!({ "field": [TOUGH] }),
         )
+    }
+
+    #[test]
+    fn r3935000_a_set_stands_at_the_stats_it_sets() {
+        super::super::c065_thorium_wall::fixture::assert_a_set_stands_at_its_stats(ID);
+    }
+
+    #[test]
+    fn r3935000_a_buff_counts_once() {
+        super::super::c065_thorium_wall::fixture::assert_a_buff_counts_once(ID, [4, 8]);
     }
 
     mod base {

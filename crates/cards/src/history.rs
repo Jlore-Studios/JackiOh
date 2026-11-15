@@ -77,8 +77,9 @@ use crate::scripts::stinkyscape::{
     t_drone_corvette, t_drone_interceptor, t_narcor, t_red_narcor,
 };
 use crate::scripts::stinkyscape_plus::{
-    c037_scorch, c046_phase_fabric, c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage,
-    c082_endless_expedition, c104_tireless_cultivation, c155_the_far_vagabond,
+    c037_scorch, c046_phase_fabric, c064_surge_wall, c065_thorium_wall, c066_plastanium_wall,
+    c067_phase_wall, c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage, c082_endless_expedition,
+    c104_tireless_cultivation, c155_the_far_vagabond,
 };
 use crate::scripts::training_grounds::{
     c031_level_up, c035_corpse_recycler, c036_training_dummy, c038_tutorial_master, c045_jlockeeds_weapons,
@@ -99,7 +100,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// #3044, #3048), #3128's (#3134, #3135, #3139, #3140, #3142),
 /// #3551's S01 (R3551000, R3551001, R3551002, R3551003, R3551004), #3778 (R3778000), #3802, #3837
 /// (R3837000, R3837003, R3837005), #3800 (R3800003, R3800004, S+ #104), #3869
-/// (R3869000, R3869005), #3835 (R1440) and #3951 (R3951000, R3951001, R3951002).
+/// (R3869000, R3869005), #3835 (R1440), #3951 (R3951000, R3951001, R3951002) and #3935 (R3935000).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
@@ -843,6 +844,18 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.6.4b",
         c155_the_far_vagabond::script_v0_6_4b,
     ),
+    (c064_surge_wall::ID, "v0.6.4d", c064_surge_wall::script_v0_6_4d),
+    (
+        c065_thorium_wall::ID,
+        "v0.6.4d",
+        c065_thorium_wall::script_v0_6_4d,
+    ),
+    (
+        c066_plastanium_wall::ID,
+        "v0.6.4d",
+        c066_plastanium_wall::script_v0_6_4d,
+    ),
+    (c067_phase_wall::ID, "v0.6.4d", c067_phase_wall::script_v0_6_4d),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
