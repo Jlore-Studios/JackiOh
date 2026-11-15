@@ -14496,15 +14496,8 @@
       "stop_requested": false
     },
     "3977": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43720153107",
-        "model": "gemini-3.8-flash-high",
-        "provider": "agy",
-        "since": "2026-11-15T14:04:16Z",
-        "until": "2026-11-15T14:34:16Z"
-      },
       "difficulty_by": {
         "at": "2026-11-15T13:39:08Z",
         "difficulty": "medium",
@@ -14523,10 +14516,9 @@
         "reason": "planned on gemini-3.8-flash-high",
         "trail": "- said: Waiting for task-190.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0b4a8b5d-d7d0-48d3-8aca-7781da6dca4f/task-190\"}\n- said: Waiting for task-190.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0b4a8b5d-d7d0-48d3-8aca-7781da6dca4f/task-190\"}\n- said: Waiting for task-190.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0b4a8b5d-d7d0-48d3-8aca-7781da6dca4f/task-190\"}\n- said: Waiting for task-190.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0b4a8b5d-d7d0-48d3-8aca-7781da6dca4f/task-190\"}\n- said: Waiting for task-190.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0b4a8b5d-d7d0-48d3-8aca-7781da6dca4f/task-190\"}\n- said: \n- schedule: {\"DurationSeconds\": 20, \"Prompt\": \"Check task-190 after 20s\"}\n- said: Waiting for task-190.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0b4a8b5d-d7d0-48d3-8aca-7781da6dca4f/task-190\"}\n- said: Waiting for task-190.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0b4a8b5d-d7d0-48d3-8aca-7781da6dca4f/task-190\"}\n- said: Waiting for task-190.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0b4a8b5d-d7d0-48d3-8aca-7781da6dca4f/task-190\"}\n- said: Waiting for task-190.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0b4a8b5d-d7d0-48d3-8aca-7781da6dca4f/task-190\"}\n- said: Waiting for task-190.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0b4a8b5d-d7d0-48d3-8aca-7781da6dca4f/task-190\"}\n- said: Waiting for task-190.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0b4a8b5d-d7d0-48d3-8aca-7781da6dca4f/task-190\"}\n- said: Waiting for task-190.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0b4a8b5d-d7d0-48d3-8aca-7781da6dca4f/task-190\"}\n- said: \n- schedule: {\"DurationSeconds\": 5, \"Prompt\": \"Check task-190 completion\"}\n- said: Waiting for task-190.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0b4a8b5d-d7d0-48d3-8aca-7781da6dca4f/task-190\"}\n- said: \n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3977 && grep -rn \"R3732002\" spec/\n- said: \n- read_file: {\"EndLine\": 50, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3977/spec/rulings/R3732002.md\", \"StartLine\": 1}\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-3977/.bot-plan.md\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-3977 && git status\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Lines 1-5 do not hold: only web CSS in apps/web and a Cypress component test in e2e are touched\"} --> ## Goal Restore the radiant focus outline on `.together-field` inputs by deleting `outline: none;` from `.together-field:focus-visible` in `together.css`,\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "agy",
       "owner_since": "2026-11-15T13:39:38Z",
       "owner_why": "it plans it",
@@ -14539,19 +14531,19 @@
       "provider": "agy",
       "queued_at": "2026-11-15T13:39:08Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "43720153107",
+      "run_id": "pending:d3586cd0-1794751477",
       "runs_on": "night-vm-agy",
       "spot_check_of": 3969,
-      "started_at": "2026-11-15T13:39:38Z",
+      "started_at": "2026-11-15T14:04:49Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T13:39:38Z",
+    "at": "2026-11-15T14:04:49Z",
     "url": "",
-    "what": "plan #3977 on agy"
+    "what": "build #3977 on agy"
   },
   "last_sweep": {
     "at": "2026-11-15T13:57:40Z",
