@@ -203,7 +203,9 @@ fn step_into_units(
     let Some(from) = slot_of(sink.state, &card) else {
         return false;
     };
-    if from.row != Row::Backrow || !acts_on_field(sink.state, &card) || is_carried(sink.state, &card) {
+    // `step_into_unit_zone` moves only a card in a backrow zone whose text acts; a carried Unit stays on
+    // its carrier (R446).
+    if is_carried(sink.state, &card) {
         return false;
     }
     let Some(to) = unit_zone_for(sink.state, from.player, from.lane) else {
