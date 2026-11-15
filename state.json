@@ -14834,6 +14834,7 @@
         "why": "Please rerun the two failed jobs, `e2e smoke (1/4)` and `e2e smoke (2/4)`, of run https://github.com/Jlore-Studios/JackiOh/actions/runs/43672725714. If they fail again, post the Cypress failure lines or the screenshots from artifacts 14144944175 (shard 1) and 14144849432 (shard 2) on the pull request with `/harness revise`, so the next pass can fix the test they name. If the rerun is green, nothing on the branch needs to change."
       },
       "asks": [],
+      "closed_at": "2026-11-15T08:02:27Z",
       "died": 0,
       "difficulty": "hard",
       "feedback_since": "2026-11-15T02:07:00Z",
@@ -14850,6 +14851,7 @@
       "interruptions": 0,
       "issue": 3888,
       "live": "reviewing",
+      "merged": true,
       "pending_request": false,
       "provider": "claude-6",
       "question": "Please rerun the two failed jobs, `e2e smoke (1/4)` and `e2e smoke (2/4)`, of run https://github.com/Jlore-Studios/JackiOh/actions/runs/43672725714. If they fail again, post the Cypress failure lines or the screenshots from artifacts 14144944175 (shard 1) and 14144849432 (shard 2) on the pull request with `/harness revise`, so the next pass can fix the test they name. If the rerun is green, nothing on the branch needs to change.",
