@@ -14250,17 +14250,8 @@
       ]
     },
     "3910": {
-      "action": "plan",
-      "asks": [
-        "c:6887706588"
-      ],
-      "build_next": {
-        "from_run": "43666318433",
-        "model": "sonnet",
-        "provider": "claude-3",
-        "since": "2026-11-15T02:28:31Z",
-        "until": "2026-11-15T02:58:31Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-15T02:28:21Z",
         "difficulty": "medium",
@@ -14279,10 +14270,9 @@
         "reason": "planned on sonnet",
         "trail": "tack was\\\\|canceled\\\\|cancelled\\\" i18n/zh-CN.json | head -20; grep -rn \\\"drawLimited\\\\|attackCancelled\\\\|c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3910 && grep -n \\\"AttackCancelled\\\\|DrawLimited\\\\|Countered {\\\" -A 6 crates/shared/src/log/lines.rs | head -50; grep -n \\\"\\u62bd\\u724c\\u4e0a\\u9650\\\\|\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3910/.bot-plan.md\", \"content\": \"# Draft plan #3910 (planner notes)\\n\\nFindings so far (all verified by reading code):\\n- OverflowNotices.tsx: NOTICE_E\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3910/apps/web/src/game && sed -n 440,520p Board.tsx; grep -n \\\"sameCardProps\\\" -A 40 Card.tsx | head -80\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3910/apps/web/src && grep -rn \\\"libraryFull\\\\|PileNoticeModel\\\\|kind === \\\\\\\"fatigue\\\\\\\"\\\" --include=*.ts --include=*.tsx --include=*.css . | grep -v\u2026\n- Bash: {\"command\": \"sed -n 1885,1930p game/animations.css; sed -n 120,145p wording.test.ts; grep -n \\\"cancel\\\" game/*.test.* | head\"}\n- Bash: {\"command\": \"grep -rn \\\"ancell\\\\|anceled\\\" wording.test.ts | head -5; grep -n \\\"describe(\\\\| it(\\\" wording.test.ts | head -30; grep -rn \\\"ancelled\\\" --include=*.tsx --include=*.ts . | grep -v test | \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3910 && grep -n \\\"EVENT_WINDOW\\\\|event_window\\\\|EVENTS_WINDOW\\\" -r crates/engine/src/config.rs crates/engine/src/view_for.rs | head; grep -n \\\"newEve\u2026\n- Bash: {\"command\": \"grep -n \\\"export function newEventsSince\\\" -B6 -A 25 apps/web/src/game/animations.ts | head -60; grep -rn \\\"events:\\\" crates/engine/src/view_for.rs | head -5; grep -n \\\"RECENT_EVENTS\\\\|E\u2026\n- Bash: {\"command\": \"grep -n \\\"fn recent_events\\\" -A 25 crates/engine/src/view_for.rs | head -45; grep -rn \\\"VIEW_EVENT\\\\|RECENT_EVENT\\\" crates/engine/src/config.rs | head\"}\n- Bash: {\"command\": \"cd apps/web/src && grep -n \\\"export function setLocale\\\\|export function resetLocaleForTests\\\\|export type Locale\\\" -A 6 i18n/i18n.ts | head -40; grep -rln \\\"setLocale\\\" game/*.test.tsx \u2026\n- Bash: {\"command\": \"cd apps/web/src && sed -n 1,60p test/fixtures.ts | head -90; grep -n \\\"export function withEvents\\\\|export function baseView\\\\|export function emptySide\\\\|export function card(\\\" -A 12 t\u2026\n- Bash: {\"command\": \"sed -n 44,96p test/fixtures.ts; grep -n \\\"setLocale\\\" game/Board.render.test.tsx | head -5; grep -n \\\"attackCancelled\\\\|unit(\\\" game/animation-targets.test.tsx | head\"}\n- Bash: {\"command\": \"grep -rln \\\"\\\\.css\\\" --include=*.test.ts --include=*.test.tsx . | head -30; grep -n \\\"^\\\\.pile {\\\" -A 22 game/board.css | head -40\"}\n- Bash: {\"command\": \"sed -n 1,50p motion.test.ts; grep -n \\\"readdirSync\\\\|\\\\.css\\\" surfaces.test.ts spacing.test.ts typescale.test.ts typography.test.ts | head -20\"}\n- Bash: {\"command\": \"sed -n 50,140p motion.test.ts\"}\n- Bash: {\"command\": \"grep -n \\\"ANIM_SCALED\\\\|KEEP\\\\b\\\" motion.test.ts | sed -n 1,20p; grep -n \\\"ANIM_SCALED\\\\[\\\" -B6 -A12 motion.test.ts | head -60\"}\n- Bash: {\"command\": \"sed -n 140,240p motion.test.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3910 && ls apps/web/src/wasm 2>/dev/null | head; grep -n \\\"\\\\\\\"test\\\\\\\"\\\\|\\\\\\\"typecheck\\\\\\\"\\\" apps/web/package.json; grep -n \\\"z-overlay\\\\|--z-overfl\u2026\n- Bash: {\"command\": \"timeout 280 pnpm --dir apps/web exec vitest run src/game/overflow.test.tsx src/game/turn-start-bleed.test.tsx 2>&1 | tail -15\", \"timeout\": 300000}\n- Bash: {\"command\": \"timeout 120 pnpm --dir apps/web exec vitest run src/game/turn-start-bleed.test.tsx 2>&1 | grep -i \\\"error\\\\|Failed to resolve\\\" | head -5\", \"timeout\": 130000}\n- Bash: {\"command\": \"grep -rn \\\"BUILD.md\\\" apps/web/src crates/tools/src --include=*.ts --include=*.tsx --include=*.rs -l | head; grep -rn \\\"\\\\\\\"Turn ended\\\\\\\"\\\\|Turn ended\\\" apps/web/src e2e --include=*.ts \u2026\n- Bash: {\"command\": \"grep -n -i \\\"OverflowNotices\\\\|pile-notice\\\\|turn-banner\\\\|Fatigue\\\\|Deck full\\\\|bannerText\\\" apps/web/README.md | head; grep -n \\\"#3922\\\" apps/web/README.md | head -3; ls e2e/cypress/e2\u2026\n- Bash: {\"command\": \"sed -n 108,135p docs/issues-and-patches.md\"}\n- Bash: {\"command\": \"sed -n 1,25p spec/rulings/R2529000.md | cut -c1-900\"}\n- Bash: {\"command\": \"cd apps/web/src/game && grep -n \\\"AnimatingMap\\\\|AnimationFrames\\\" contract.ts | head; sed -n 1,30p contract.ts | head -50; grep -n \\\"import.*OverflowNotices\\\\|from \\\\\\\"./OverflowNotices\u2026\n- Bash: {\"command\": \"cd apps/web/src/game && grep -n \\\"^import\\\" faces.ts catalog.ts | head -20; grep -n \\\"^import.*\\\\./\\\" Card.tsx | head -50\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3910 && c=$(git log --oneline --diff-filter=A -n1 --format=%h -- 'spec/pending/*.md'); echo $c; git show $c --stat | head -12; f=$(git show $c --name\u2026\n- Bash: {\"command\": \"grep -c \\\"(\\\\[\\\\[R318\\\\]\\\\]). Keep a table\\\" spec/10-engine-guide.md; grep -rn \\\"R318\\\" spec/*.md | grep -v \\\"rulings/\\\" | cut -c1-80 | head; ls spec/pending 2>&1 | head -2; grep -n \\\"sp\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3910/apps/web/src && sed -n 255,300p i18n/i18n.ts; sed -n 140,170p game/Board.render.test.tsx\"}\n- Bash: {\"command\": \"grep -o \\\"var(--anim-scale\\\" game/animations.css | wc -l; grep -n \\\"z-overlay\\\\|--bg-sunken:\\\\|--line-bright:\\\" surfaces.css index.css | head -5; grep -rn \\\"data-kind=\\\\\\\"libraryFull\\\\\\\"\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3910/.bot-plan.md\", \"content\": \"# Draft plan #3910 (planner notes) - design settled, final message being written\\n\\nRating: medium (apps/web only + sp\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3910/apps/web/src/game && grep -n \\\" card: (\\\\| handCard: (\\\\| banner:\\\" contract.ts; grep -n \\\"withCatalog\\\" ../test/board.tsx | head -3; grep -n \\\"\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"No line of the hard rule holds: the change is apps/web (board components, CSS, i18n) plus a ruling note and BUILD.md, about 15 files, with no engine, AI, migration or cross-crate change.\"} --> ## Goal The board says its words on five moments, in English an\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-15T02:08:00Z",
       "owner_why": "it plans it",
@@ -14295,12 +14285,14 @@
       "provider": "claude-3",
       "queued_at": "2026-11-15T02:06:17Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43666318433",
+      "run_id": "pending:e94e1c31-1794709832",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-15T02:08:00Z",
+      "started_at": "2026-11-15T02:30:50Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6887706588"
+      ]
     },
     "3911": {
       "action": "build",
@@ -14690,9 +14682,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T02:30:19Z",
+    "at": "2026-11-15T02:30:50Z",
     "url": "",
-    "what": "build #3911 on agy"
+    "what": "build #3910 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-15T02:16:30Z",
