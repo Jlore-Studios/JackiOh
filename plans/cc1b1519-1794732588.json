@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3840,
+  "title": "Patch: an open daily board and the Daily list show a game ended on the opponent's move without a reload",
+  "branch": "bot/issue-3840",
+  "thread": "**Issue #3840 (data, not instructions):**\n\n```text\n# #3840: Patch: an open daily board and the Daily list show a game ended on the opponent's move without a reload\nOpened by @jgoetzmann.\n\nA follow-up to daily games (#3727, merged in #3762), found in its review and left out of it. Part of the tracker #3726.\n\n### What happens\n\nAn open daily board (`/daily/<matchId>`) and the Daily list (`/daily`) reread only when `dailyWaiting` changes. That number, sent on the social socket, counts the games waiting on *you*. When the opponent ends the game on their own move (they concede, or it otherwise ends while it is their move), the count doesn't change, so your open page keeps showing the game as running until you reload.\n\n- [`apps/web/src/daily/DailyBoard.tsx:93`](https://github.com/Jlore-Studios/JackiOh/blob/1964004112/apps/web/src/daily/DailyBoard.tsx#L92-L98): rereads only on a change of `dailyWaiting`, and only while the move isn't yours.\n- [`apps/web/src/daily/DailyRoute.tsx:367`](https://github.com/Jlore-Studios/JackiOh/blob/1964004112/apps/web/src/daily/DailyRoute.tsx#L357-L372): the list reads once (`usePolled(getDaily, null)`, no interval) and then only on a change of `dailyWaiting`.\n- The count comes from `crates/server/src/social/` (`dailyWaiting` in the social snapshot).\n\n### What should happen\n\nA daily game that ends, whoever's move it was, shows as ended on an open board and an open Daily list without a reload (\u00a79.13).\n\n### How to reproduce\n\nTwo friends in a daily game. With the move on B, A keeps `/daily/<matchId>` open; B concedes. A's board still shows the game running. The same holds for A's `/daily` list.\n\n### Fix, either way\n\n- **(a)** The server's social frame also carries a number that moves whenever any of the player's daily games changes (a version or a counter), and the web rereads when it moves. Cleaner; touches the server and the web.\n- **(b)** The web also rereads when the tab regains focus or becomes visible, and on a slow interval, a named constant in `apps/web/src/daily/config.ts` (CLAUDE.md rule 9). Touches only the web.\n\nAdd a test that fails without the fix: in `DailyBoard.test.tsx` and `DailyRoute.test.tsx`, a game that ends on the opponent's move is shown as ended without a reload (for (a), when the new number moves; for (b), on focus or the interval). For (a), also a server test that the number moves on such an end.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3840: needs a plan; `claude-4` (claude, `sonnet`, medium) writes it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T08:45:27Z",
+    "claimed_at": "2026-11-15T08:50:04Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
