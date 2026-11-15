@@ -16205,6 +16205,14 @@
         "sha": "e8d56e23bd7a86056dda626a884be69669d5c625",
         "tiers": {}
       }
+    },
+    "3963": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-15T09:01:49Z",
+      "issue": 3840,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
