@@ -14982,6 +14982,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 265,
       "started_at": "2026-11-15T05:57:46Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -34681,9 +34682,33 @@
         "title": "Patch: a Play hub that explains every way to play, and one inbox for everything waiting on you",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-4"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "d6f5e6bc7e7895310bea5066e1a5f8a1ee7cd54a",
+        "issue": 3909,
+        "merged_at": "2026-11-15T08:00:04Z",
+        "n": 265,
+        "pr": 3930,
+        "queued_at": "2026-11-15T08:00:04Z",
+        "sha": "68f1c3dd29554cecdfdded2fc29ea954363fbc93",
+        "status": "queued",
+        "title": "Patch: the AI's count of next turn's damage to its hero leaves out Scorch's swings, which can never hit a hero, and lets no Taunt wall Toxopid",
+        "tries": 0
       }
     ],
-    "count": 264
+    "count": 265
   },
   "statistics": {
     "at": "2026-11-15T07:52:42Z"
