@@ -14906,11 +14906,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-15T20:22:13Z",
+        "at": "2026-11-15T20:49:20Z",
         "difficulty": "hard",
-        "provider": "gpt",
-        "tier": "medium",
-        "why": "Rule 3 applies: the server replay-page contract and the web replay-source/rendering contract must agree on a new portraits field across a crate and an app."
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "Design across crates: crates/server's ReplaySteps answer and apps/web's sources, board and practice start config must agree on a new field, with a new ruling"
       },
       "failures": 0,
       "forced": false,
