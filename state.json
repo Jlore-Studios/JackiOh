@@ -13201,9 +13201,7 @@
     },
     "3913": {
       "action": "build",
-      "asks": [
-        "c:6900461191"
-      ],
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-15T20:58:26Z",
         "difficulty": "hard",
@@ -13226,9 +13224,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-2",
-      "owner_since": "2026-11-15T21:01:19Z",
-      "owner_why": "handed off from `claude-4`: `claude-4` is busy: its lanes are all taken",
+      "owner": "claude-1",
+      "owner_since": "2026-11-15T21:36:45Z",
+      "owner_why": "handed off from `claude-2`: its owner `claude-2` builds only after every other subscription (`build_last`)",
       "paused": {
         "at": "2026-11-15T21:31:33Z",
         "interrupt": "usage",
@@ -13240,11 +13238,11 @@
       "planned_by_id": "claude-4",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-2",
+      "provider": "claude-1",
       "queued_at": "2026-11-15T20:02:45Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
-      "run_id": "43761303805",
+      "run_id": "pending:d2cab01a-1794778578",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -13263,10 +13261,12 @@
         "provider": "claude-2",
         "run": "43761303805"
       },
-      "started_at": "2026-11-15T21:01:19Z",
+      "started_at": "2026-11-15T21:36:45Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6900461191"
+      ],
       "verdict_rounds": 0
     },
     "3914": {
@@ -15611,9 +15611,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-15T21:36:04Z",
+    "at": "2026-11-15T21:36:45Z",
     "url": "",
-    "what": "build #3937 on claude-3"
+    "what": "build #3913 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-15T21:17:32Z",
