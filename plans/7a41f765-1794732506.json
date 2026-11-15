@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3842,
+  "title": "Patch: the 20-game daily cap holds under simultaneous challenges, seeks and accepts",
+  "branch": "bot/issue-3842",
+  "thread": "**Issue #3842 (data, not instructions):**\n\n```text\n# #3842: Patch: the 20-game daily cap holds under simultaneous challenges, seeks and accepts\nOpened by @jgoetzmann.\n\nA follow-up to daily games (#3727, merged in #3762), found in its review and left out of it. Part of the tracker #3726.\n\n### What happens\n\nA player may hold at most `DAILY_MAX_ACTIVE_GAMES` (20) running games, open seeks and open challenges together (R3727004). [`has_room`](https://github.com/Jlore-Studios/JackiOh/blob/1964004112/crates/server/src/daily/invites.rs#L82-L88) (`crates/server/src/daily/invites.rs:83`) counts them in one database transaction and commits it; the new challenge, seek or game is written in a later one ([lines 180](https://github.com/Jlore-Studios/JackiOh/blob/1964004112/crates/server/src/daily/invites.rs#L180), [254](https://github.com/Jlore-Studios/JackiOh/blob/1964004112/crates/server/src/daily/invites.rs#L254) and [338](https://github.com/Jlore-Studios/JackiOh/blob/1964004112/crates/server/src/daily/invites.rs#L338)). Several requests sent at the same moment each see 19, and all succeed, so a player can go past 20.\n\n### What should happen\n\nHowever many requests arrive at once, a player never holds more than `DAILY_MAX_ACTIVE_GAMES`; the ones past it answer `409 daily_full`.\n\n### How to reproduce\n\nWith 19 held, send several challenge (or seek, or accept) requests in parallel. More than one succeeds, and the count goes past 20.\n\n### Fix\n\nCount and insert in the same transaction while holding a per-player lock, for example `select \u2026 from public.profiles where id = $1 for update` or `pg_advisory_xact_lock`, in `crates/server/src/db/pg.rs`. Keep the in-memory fake (`crates/server/src/db/fake.rs`) matching, and add a case to `crates/server/tests/store/contract.rs` that fails without it (two transactions racing for the twentieth place: one wins, one is refused).\n\nIf it needs a migration (a trigger, say), take the next free number after `0089` and register it in `crates/server/src/db/migrate.rs`, `crates/server/tests/store/migrations_pinned.rs` (the test prints the checksum to pin) and both lists in `crates/server/tests/sql/run.sh`.\n\nRated hard: concurrency in the store, the Postgres store and the fake kept in step, and possibly a migration.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3842: needs a plan; `claude-3` (claude, `opus`, strong) writes it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T08:45:32Z",
+    "claimed_at": "2026-11-15T08:48:41Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
