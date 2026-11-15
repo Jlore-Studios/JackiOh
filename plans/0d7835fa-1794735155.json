@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3958,
+  "title": "Patch: the inbox's Play and Open look like buttons, Home's bookmarks are 44 pixels across, and the Play hub shows its Solo row at 1280\u00d7720",
+  "branch": "bot/issue-3958",
+  "thread": "**Issue #3958 (data, not instructions):**\n\n```text\n# #3958: Patch: the inbox's Play and Open look like buttons, Home's bookmarks are 44 pixels across, and the Play hub shows its Solo row at 1280\u00d7720\nOpened by @squishy-squooby.\n\nA follow-up to the Play hub and inbox (#3729, merged in #3902) and the app shell (#3728, merged in #3750), found in their device-size screenshots. Part of the tracker #3726.\n\n### What happens\n\n- **Inbox, every size:** the daily rows' Play and Open read as highlighted words, not buttons, though each is the row's one action. ([shot](https://raw.githubusercontent.com/Jlore-Studios/JackiOh/89d964e0dc1ba0824859c9a872cf3c54aee47285/3729-play-inbox/inbox-1180x820-ipad-landscape.png))\n- **Home, every touch size:** the Quests and News bookmarks are 36\u00d754, short across of the brief's 44\u00d744 (spec 47's `hitAreaProblems`). ([shot](https://raw.githubusercontent.com/Jlore-Studios/JackiOh/89d964e0dc1ba0824859c9a872cf3c54aee47285/3728-shell/home-820x1180-ipad-portrait.png))\n- **Play hub, desktop 1280\u00d7720:** the Solo cards are cut to their titles at the window's bottom, and the Replays and Friends links are out of view in the hub's scroll region, with nothing to show there is more. ([shot](https://raw.githubusercontent.com/Jlore-Studios/JackiOh/89d964e0dc1ba0824859c9a872cf3c54aee47285/3729-play-inbox/play-1280x720-desktop.png))\n\nAll shots: https://github.com/Jlore-Studios/JackiOh/pull/3902#issuecomment-6892253299 and https://github.com/Jlore-Studios/JackiOh/pull/3750#issuecomment-6892216580.\n\n### What should happen\n\nAt every device size in #3726: an inbox row's action looks and sizes like the theme's other buttons, at least 44\u00d744 on touch. Home's bookmarks are at least 44 px in both directions on touch. At 1280\u00d7720 the Play hub shows every section's cards, or makes clear the rest is below: the cards tighten at short heights, or a fade or cue shows the region scrolls.\n\n### Where\n\n`apps/web/src/inbox/InboxPanel.tsx` and `inbox.css`; `apps/web/src/routes/PlayHub.tsx` and `play-hub.css`; Home's bookmarks under `apps/web/src/shell/` or `apps/web/src/routes/` (grep `Quests`).\n\n### Tests\n\nChecks that fail without the fix: the inbox rows' actions and Home's bookmarks pass `hitAreaProblems` at the touch sizes, in the specs that already render them at `MENU_SIZES` (spec 56 for the inbox, spec 51 for Home). Keep the existing hub and inbox tests passing.\n\nI'll take the device-size screenshots for the pull request once it merges.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3958: needs a plan; `claude-1` (claude, `sonnet`, medium) writes it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T09:23:46Z",
+    "claimed_at": "2026-11-15T09:32:52Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
