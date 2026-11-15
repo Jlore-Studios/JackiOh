@@ -15827,10 +15827,12 @@
           "provider": "agy",
           "tier": "medium"
         },
-        "at": "2026-11-15T11:30:45Z",
-        "built_by": "claude-6",
+        "at": "2026-11-15T12:09:44Z",
+        "built_by": "agy",
         "by": "`gemini` (medium)",
-        "sha": "e10027bfa7586c33086a5ebce101303d99ff87c8"
+        "carried_from": "e10027bfa7586c33086a5ebce101303d99ff87c8",
+        "resolved_by": "`gemini` (medium)",
+        "sha": "a74c89ec068e905b14f3f21cca5c0ff70b720591"
       },
       "cross_rounds": 0,
       "died": 0,
