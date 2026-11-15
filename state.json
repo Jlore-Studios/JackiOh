@@ -14016,11 +14016,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-15T20:59:23Z",
+        "at": "2026-11-15T21:32:12Z",
         "difficulty": "hard",
         "provider": "claude-3",
-        "tier": "medium",
-        "why": "Rule 2: it changes the AI's threat count (`crates/ai/src/evaluate.rs`), which feeds every evaluation, `wall_switches` and the lethal solver's `ready_gap`."
+        "tier": "strong",
+        "why": "Rule 2, the AI: it changes how crates/ai/src/evaluate.rs counts the threat that every evaluation, wall_switches and ready_gap read"
       },
       "failures": 0,
       "forced": false,
