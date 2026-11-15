@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3908,
+  "title": "Patch: the state check judges the board again after Tears of the Kwzki Tree turns every card Radiant, and the fuzz monitor checks that no settled unit stands in a Defense it can't hold",
+  "branch": "bot/issue-3908",
+  "thread": "**Issue #3908 (data, not instructions):**\n\n```text\n# #3908: Patch: the state check judges the board again after Tears of the Kwzki Tree turns every card Radiant, and the fuzz monitor checks that no settled unit stands in a Defense it can't hold\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nOnce Tears of the Kwzki Tree has been cast, every card in the game turns Radiant each time the board settles. A Radiant face can carry something the base face lacks, such as Indestructible. The rules say an Indestructible unit can never stand in Defense Position: it switches to Attack at once. Today the game stops looking at the board right after the sweep, so that switch, and anything else the new faces change, waits for the next action.\n\nExample: Joro, whose base face has no keywords, stands in Defense when Tears resolves. It turns Radiant and gains Indestructible, but it stays in Defense, where the rules say it can never be, until someone does something else. Once this is built, the game looks again right after the sweep and Joro switches to Attack in the same moment. The automatic random-game tester also learns to flag any unit left in a position the rules forbid, so a slip like this can't come back unnoticed.\n\n## Why\n\n- SPEC \u00a74.5 step 5: the state check repeats until nothing changes. In `crates/engine/src/state_check.rs:1071-1090`, once a pass finds nothing dying, it runs `radiate_world` (line 1079, R3569000), which flips cards through `make_radiant` (`crates/engine/src/effects/radiant.rs:61-88, 169-193`), and then returns. Steps 1 to 5 never judge the board the sweep left. The other steps that change the board start the pass over (`release_held` \u2026 `swallow_standing`, lines 1025-1031, `continue`).\n- R2179000: an Indestructible unit in Defense switches to Attack at the state check. R2657000 (Can't Defend), R3543002 (Evasive) and R1849006 (an aura that bars Defense) do the same. That switch is `leave_defense` (`state_check.rs:184-208`), which runs only at the top of a pass.\n- C #33 Joro (`crates/cards/src/scripts/classic/c033_joro.rs`, SPEC \u00a78) is 1/1 with no keyword on its base face and adds Indestructible on its Radiant face. So a base Joro in Defense when Tears resolves is left Indestructible in Defense. R2179000 says the switch is never listed for such a unit, so its owner can neither switch it nor attack with it until another action runs a check. A Radiant face that lowered health or added a harmful aura would leave a dead unit standing the same way.\n- The fuzz monitor's I17 (`crates/engine/src/testkit/invariants.rs:752-782`) checks a settled board only for dead units and a hero at 0. Nothing in `invariants.rs` reads `Position::Def`, `defense_barred`, Can't Defend or Evasive. The engine lists and accepts the same moves it would leave, so I8 and I14 cannot see this kind of slip either.\n\n## Proposal\n\n1. `radiate_world` returns whether it made any card Radiant. When it did, `state_check` continues its pass loop, as it does after `swallow_standing`, so steps 1 to 5 judge the swept board. The next pass finds nothing left to sweep, so the loop ends. The Evolve texts, hand syncs, deck casts and quests still come after the sweep, keeping R3569000's order (after the Deaths, before the Evolve texts). A ruling note in the issue's block records the decision, with its \u00a711 paragraph in `spec/pending/<N>.md`.\n2. I17 also holds, on a settled state (behind its existing guard: no result, no prompt, no mulligan): no unit is in Defense Position while it is Indestructible, Can't Defend or Evasive, or while `defense_barred` holds. A failure reads `I17 forbidden Defense` and names the unit and its rule.\n3. The I17 text in `crates/tools/README.md` says so.\n\n## Where it lands\n\n- `crates/engine/src/state_check.rs`, `crates/engine/src/effects/radiant.rs`\n- `crates/engine/src/testkit/invariants.rs` (I17 and the header's list), `crates/tools/README.md`\n- `crates/cards/src/scripts/stinkyscape_plus/t_tears_of_the_kwzki_tree.rs` (a card test), `crates/engine/tests/rules/stinkyscape_plus_s22.rs` (a rules test)\n- `spec/rulings/`, `spec/pending/<N>.md`; SPEC \u00a74.1, \u00a74.5, \u00a75.2; R2179000, R3569000\n\n## Acceptance criteria\n\n- [ ] Card test: a base Joro in Defense, then Tears of the Kwzki Tree resolves. Afterwards Joro is Radiant and in Attack, and a `positionSwitched` follows its `radiantSet` in the same step (fails today).\n- [ ] Rules test with a fixture unit whose Radiant face's max health is below its damage: once the world turns Radiant, the unit is destroyed in the same state check (fails today).\n- [ ] I17 unit tests on forged settled states report an Indestructible unit in Defense, an Evasive unit in Defense and a unit in Defense under a barring aura. A clean state reports nothing, and so does the same state with a prompt open.\n- [ ] The new ruling note lists its proving tests, and `cargo jackioh spec check` passes.\n- [ ] `cargo jackioh fuzz --seeds 200`, `cargo jackioh fuzz --duos` and `cargo jackioh golden check` stay green, and `cargo jackioh classify --base origin/main --claims` passes.\n\n## Size and risks\n\nHard (engine rules): about 20 lines in the engine and 50 in the monitor, plus tests and a ruling. It changes what a game with Tears in force does at the sweep, so `classify` may call it a rule change for that card. A recorded game in which the sweep left something to judge would fold differently, and the golden fold shows whether any does. If the new monitor check finds another path that leaves a forbidden Defense, that is a bug to fix, not to exempt.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-15T02:05:05Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3908: needs a plan; `claude-1` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T02:05:26Z",
+    "claimed_at": "2026-11-15T02:08:57Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
