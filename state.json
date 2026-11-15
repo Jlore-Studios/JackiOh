@@ -14319,7 +14319,7 @@
       "planned_at": "2026-11-15T07:18:18Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_by_id": "claude-7",
-      "planned_model": "sonnet",
+      "planned_model": "opus",
       "planned_tier": "strong",
       "previous_branch": "bot/old/issue-3912-20261115-0644",
       "previous_pr": 3927,
