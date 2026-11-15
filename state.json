@@ -13237,11 +13237,6 @@
       "owner": "claude-1",
       "owner_since": "2026-11-15T21:36:45Z",
       "owner_why": "handed off from `claude-2`: its owner `claude-2` builds only after every other subscription (`build_last`)",
-      "paused": {
-        "at": "2026-11-15T21:31:33Z",
-        "interrupt": "usage",
-        "provider": "claude-2"
-      },
       "pending_request": false,
       "planned_at": "2026-11-15T20:58:31Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
