@@ -2470,6 +2470,8 @@ pub fn cut_patch(repo_root: &Path, production: Option<&str>) -> anyhow::Result<C
         blob: git_blob_hash(&raw),
         win_rates_blob: None,
         card_metrics_blob,
+        // R3882000: the cut ships no win rates of record of its own; the micros it rolls up shipped theirs.
+        records_blob: None,
     });
     write_json(&paths.patches_json, &patches)?;
     write_json(&paths.shipped_json, &shipped)?;
