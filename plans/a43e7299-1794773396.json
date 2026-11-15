@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3913,
+  "title": "Patch: card tests read one card's offered plays and targets through testkit helpers, in place of 28 local copies and 130-odd hand-written filters",
+  "branch": "bot/issue-3913",
+  "thread": "**Issue #3913 (data, not instructions):**\n\n```text\n# #3913: Patch: card tests read one card's offered plays and targets through testkit helpers, in place of 28 local copies and 130-odd hand-written filters\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nEvery card has its own tests, and many of them ask the same question: which targets does the game offer for playing this card right now? Each test file answers it with its own few lines, and 28 of them keep a small private helper with a note saying how it differs from the shared one. Once this is built, those tests ask a shared helper instead. There is less test code to read, and a change to how the game lists plays is followed in one place instead of a hundred. Nobody at the table notices; the maintainer and the bot do.\n\n## Why\n\n- 28 card scripts keep a local helper marked \u201cDiffers from Scenario::offered\u201d. Among them: `crates/cards/src/scripts/training_grounds/c034_dino_size.rs:64-74`, `core/c056_jilliax.rs:217-227`, `classic_plus/c057_book_of_stats.rs`, `classic/c032_felinor_feelings.rs`, `core/c063_plastic_surgery.rs` and `training_grounds/c002_personal_trainer.rs`. Each takes `legal_actions(s.state(), P1)` and matches `ActionBody::Play { instance_id, targets, .. } if instance_id == X` to unwrap the targets.\n- The same narrowing of the legal list to one card's plays, a match arm `ActionBody::Play { \u2026 } if instance_id == \u2026`, appears at 134 sites in 102 files under `crates/`. Beside it sit the same narrowing for one card's activations and one attacker's attacks, and hand-written `Selection::Instance` unpacking.\n- `Scenario::offered` (`crates/engine/src/testkit/scenario.rs:1354`) returns the seat's whole list, and nothing narrows it to one card. So the copy guard (`crates/tools/tests/acceptance.rs`, `SHARED_TEST_HELPERS`) meets same-named local helpers, and each had to say how it differs.\n- The engine's own `play_actions_for` (`crates/engine/src/play_choices.rs:1898`) is called by no card test.\n- The maintainer has taken this shape twice already: prompt Mode options (#3796), and one-target picks, hero picks and card lookups (#3827).\n\n## Proposal\n\n- Add to the testkit's `Scenario`:\n  - `plays_of(card) -> Vec<ActionBody>`: the owner's offered plays of that card;\n  - `can_play(card) -> bool`;\n  - `play_targets(card) -> Vec<Selection>`: the plays' targets, flattened in offer order;\n  - `activations_of(card)` and `attacks_of(card)`, in the same shape.\n- Add `pick::instance_ids(&[Selection]) -> Vec<String>`.\n- Move the 28 local helpers and the hand-written filters onto them. A helper that groups or dedups keeps a one-line map or `.dedup()` on top.\n- Register the new names in `SHARED_TEST_HELPERS`, so a new local copy fails the copy guard.\n\n## Where it lands\n\n- `crates/engine/src/testkit/scenario.rs`, `crates/engine/src/testkit/pick.rs`\n- `crates/tools/tests/acceptance.rs`\n- About 100 test modules under `crates/cards/src/scripts/`, `crates/cards/tests/cross/` and `crates/engine/tests/rules/`\n\n## Acceptance criteria\n\n- [ ] \u201cDiffers from Scenario::offered\u201d matches nothing under `crates/`.\n- [ ] A match arm of the form `ActionBody::Play { \u2026 } if instance_id ==` appears only in the testkit.\n- [ ] Every test keeps its name, so no ruling's proving test moves, and `cargo jackioh spec check` passes.\n- [ ] `cargo test -p jackioh-cards`, `cargo test -p jackioh-engine --features testkit --test 'rules*'` and `cargo test -p jackioh-tools --test acceptance` pass.\n- [ ] Behaviour-neutral: nothing outside test code and the testkit changes.\n\n## Size and risks\n\nHard by size (about 100 files) but mechanical: roughly 600 lines out and 60 in. The risk is merge conflicts with open card pull requests that touch the same test modules. It can be split by set, as parts n of m, if that suits the queue. A helper of a different shape, such as Jilliax's embiggen and equip flags, builds on `plays_of` and maps the result locally.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-15T20:02:22Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3913: needs a plan; `claude-4` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T20:02:45Z",
+    "claimed_at": "2026-11-15T20:10:24Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
