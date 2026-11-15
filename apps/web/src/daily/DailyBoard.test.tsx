@@ -162,6 +162,32 @@ describe("#3727 a daily game's board", () => {
     expect(actions[1]).toMatchObject({ after: 9, action: { type: "setAutoEndTurn", enabled: false } });
   });
 
+  it("#3841 End turn automatically waits for the mulligan to be over: none is sent during it, and it is sent once it is", async () => {
+    writeSettings({ autoEndTurn: false });
+    let over = false;
+    const server = serve(
+      () => (over ? dailyGame({ seq: 9 }) : dailyGame({ view: baseView({ phase: "mulligan" }) })),
+      // The concede below meets a game that moved on: the mulligan is over.
+      (call) => {
+        if (call.method !== "POST" || (call.body as { action: ActionBody }).action.type !== "concede") return undefined;
+        over = true;
+        return refusal(409, "stale", "The game moved on.");
+      },
+    );
+    render(<DailyBoard matchId="g-1" />);
+    fireEvent.click(await screen.findByTestId("concede", undefined, SLOW));
+    // The player holds the move and the setting differs, but both seats hold the move in the mulligan.
+    expect(server.to("POST", "/api/daily/games/g-1/actions")).toHaveLength(0);
+    fireEvent.click(await screen.findByTestId("concede-confirm", undefined, SLOW));
+
+    await waitFor(() => {
+      expect(server.to("POST", "/api/daily/games/g-1/actions")).toHaveLength(2);
+    }, SLOW);
+    const actions = server.to("POST", "/api/daily/games/g-1/actions").map((call) => call.body as { after: number; action: ActionBody });
+    expect(actions[0]?.action).toEqual(CONCEDE);
+    expect(actions[1]).toMatchObject({ after: 9, action: { type: "setAutoEndTurn", enabled: false } });
+  });
+
   it("#3727 Next game appears once the move has passed on and another game waits, and opens it", async () => {
     const after = dailyGame({ seq: 8, hasMove: false, legal: [CONCEDE], view: baseView({ active: "p2" }), nextGame: "g-2" });
     serve(dailyGame, (call) => (call.method === "POST" ? { status: 200, body: after } : undefined));

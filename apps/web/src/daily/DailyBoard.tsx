@@ -8,6 +8,8 @@
 // Only the player holding the move sends anything but a concede (§9.13: the server answers anything else
 // `not_your_move`). "End turn automatically" (R345), which `Game.tsx` sends once whenever the setting and the
 // view differ, whoever's turn it is, is held until the move is the player's and sent then if it still differs.
+// It is held through the mulligan too, where both seats hold the move (R3727002): sent then, it would add a row to
+// the game's log under the other seat's keep, which would answer `stale` (#3841).
 //
 // The clock pill (`DailyClockPill.tsx`) says who holds the move and how long it has left. Once the move has
 // passed on and another game waits on the player (`nextGame`), Next game opens it. The board reads again
@@ -109,7 +111,7 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
   const send = useCallback(
     (action: ActionBody): void => {
       const shown = current.current;
-      if (action.type === "setAutoEndTurn" && (shown === null || !shown.hasMove || sending.current)) {
+      if (action.type === "setAutoEndTurn" && (shown === null || !shown.hasMove || shown.view.phase === "mulligan" || sending.current)) {
         heldAutoEndTurn.current = action;
         return;
       }
@@ -139,7 +141,7 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
   // The held "End turn automatically", once the move is the player's and nothing is in flight.
   useEffect(() => {
     const held = heldAutoEndTurn.current;
-    if (held === null || game === null || game.over || !game.hasMove || sending.current) return;
+    if (held === null || game === null || game.over || !game.hasMove || game.view.phase === "mulligan" || sending.current) return;
     heldAutoEndTurn.current = null;
     if ((game.view.autoEndTurn !== false) !== held.enabled) send(held);
   }, [game, sends, send]);
