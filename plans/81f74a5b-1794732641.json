@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3844,
+  "title": "Patch: a push subscription its push service answers 403, as after a VAPID key change, is deleted",
+  "branch": "bot/issue-3844",
+  "thread": "**Issue #3844 (data, not instructions):**\n\n```text\n# #3844: Patch: a push subscription its push service answers 403, as after a VAPID key change, is deleted\nOpened by @jgoetzmann.\n\nA follow-up to daily games (#3727, merged in #3762), found in its review and left out of it. Part of the tracker #3726.\n\n### What happens\n\nWhen a push service answers 404 or 410, the server deletes that subscription (\u00a79.13). After the VAPID key pair changes, push services answer **403** to every old subscription instead. Those are logged as `daily.push.failed`, retried every hourly sweep, and never removed.\n\n- [`crates/server/src/daily/webpush.rs:281`](https://github.com/Jlore-Studios/JackiOh/blob/1964004112/crates/server/src/daily/webpush.rs#L281): only 404 and 410 count as gone.\n- [`crates/server/src/daily/notify.rs:237`](https://github.com/Jlore-Studios/JackiOh/blob/1964004112/crates/server/src/daily/notify.rs#L230-L246): where a gone subscription is deleted.\n\n### What should happen\n\nA subscription that can no longer be delivered to, as after a key change, is deleted instead of being retried forever.\n\n### How to reproduce\n\nSubscribe a device, change `VAPID_PRIVATE_KEY` and `VAPID_PUBLIC_KEY`, and let a push go out: the push service answers 403, the log says `daily.push.failed`, and the row stays for the next sweep.\n\n### Fix\n\nTreat 403 as gone too, or as gone after a few in a row (a named constant, CLAUDE.md rule 9). Update the module comments and \u00a79.13 if they list the statuses. Add a test next to `a_push_subscription_answered_410_is_deleted` in `crates/server/tests/api/daily.rs` (line 1233) that fails without the fix.\n\nUntil it's fixed, don't rotate the VAPID keys.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3844: needs a plan; `claude-3` (claude, `sonnet`, medium) writes it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T08:45:44Z",
+    "claimed_at": "2026-11-15T08:50:57Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
