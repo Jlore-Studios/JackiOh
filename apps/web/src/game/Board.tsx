@@ -53,6 +53,7 @@ import { getAudioEngine } from "../audio/engine.ts";
 import LanguageButton from "../i18n/LanguageButton.tsx";
 import { FriendsButton } from "../together/FriendsButton.tsx";
 import { formatSeconds, t } from "../i18n/i18n.ts";
+import { EventTag } from "./EventTag.tsx";
 import { ActingProvider } from "./spent.ts";
 import { KeywordLossProvider, keywordLossesFrom } from "./keywordLoss.ts";
 import { AwakeningProvider, awakeningsFrom } from "./awakening.ts";
@@ -392,6 +393,7 @@ function Pile({
           </span>
         ) : null}
         {children}
+        <EventTag host={regionId} animating={animating?.get(regionId)} />
       </span>
       {inspect.overlay}
     </>

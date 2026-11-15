@@ -312,7 +312,8 @@
   animation-duration: calc(350ms * var(--anim-scale) * var(--anim-squeeze, 1));
 }
 
-[data-animating="attackCancelled"] .cancel-tag {
+[data-animating="attackCancelled"] .cancel-tag,
+[data-animating="countered"] .counter-tag {
   animation-name: jk-fade-in;
   animation-duration: calc(350ms * var(--anim-scale) * var(--anim-squeeze, 1));
 }
@@ -938,6 +939,14 @@
 .pile-notice[data-kind="libraryFull"][data-playing="true"] > .pile-notice-tag {
   animation-name: jk-library-full-tag;
   animation-duration: calc(500ms * var(--anim-scale) * var(--anim-squeeze, 1));
+  animation-timing-function: var(--ease-out);
+  animation-fill-mode: both;
+}
+
+/* R3910000: the draw limit's tag, in the Deck-full tag's entrance. */
+.pile-notice[data-kind="drawLimit"][data-playing="true"] > .pile-notice-tag {
+  animation-name: jk-library-full-tag;
+  animation-duration: calc(300ms * var(--anim-scale) * var(--anim-squeeze, 1));
   animation-timing-function: var(--ease-out);
   animation-fill-mode: both;
 }

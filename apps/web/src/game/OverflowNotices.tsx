@@ -1,4 +1,5 @@
 // Notices for §2.4's overflows (SPEC §10.10, R318) use the runner's entries: the newest wins per pile or hand.
+// R3910000 adds the draw limit's "Draw limit" on that Deck pile, drawn as "Deck full" is.
 // #33 Unstable Clone Machine is the library-overflow fixture.
 // `data-playing="true"` follows its entry; reduced motion starts none.
 // No rule lives here (CLAUDE.md rule 7); only redacted event data is read (R97, R202), showing a back for the sentinel.
@@ -15,13 +16,14 @@ import { sideOf, type AnimatingMap, type AnimationFrames, type Side } from "./co
 import { HIDDEN_CARD, namedFace } from "./faces.ts";
 import "./overflow.css";
 
-const NOTICE_EVENTS: readonly GameEventType[] = ["fatigue", "libraryOverflow", "burned"];
+const NOTICE_EVENTS: readonly GameEventType[] = ["fatigue", "libraryOverflow", "burned", "drawLimited"];
 
 /** Event card data preserves the R97 sentinel; R316 radiant status accompanies viewer-readable cards. */
 export type NoticeCard = { instanceId: string; defId: string; radiant?: boolean };
 
 export type PileNoticeModel =
   | { kind: "fatigue"; count: number; playing: boolean; entry: number }
+  | { kind: "drawLimit"; playing: boolean; entry: number }
   | { kind: "libraryFull"; card: NoticeCard; outcome: LibraryOverflowOutcome; playing: boolean; entry: number };
 
 export type BurnNoticeModel = { card: NoticeCard; playing: boolean; entry: number };
@@ -44,7 +46,7 @@ export const noticeTestid = {
 } as const;
 
 function regionOf(view: PlayerView, event: GameEvent): { side: Side; region: string } | null {
-  if (event.type === "fatigue" || event.type === "libraryOverflow") {
+  if (event.type === "fatigue" || event.type === "libraryOverflow" || event.type === "drawLimited") {
     const side = sideOf(view, event.player);
     return { side, region: animTestid.library(side) };
   }
@@ -78,6 +80,7 @@ export function noticesFrom(
       if (at === null) continue;
       const entry = index;
       if (event.type === "fatigue") pile.set(at.side, { kind: "fatigue", count: event.count, playing, entry });
+      if (event.type === "drawLimited") pile.set(at.side, { kind: "drawLimit", playing, entry });
       if (event.type === "libraryOverflow") {
         pile.set(at.side, {
           kind: "libraryFull",
@@ -141,6 +144,13 @@ export function PileNotice({
     return (
       <span className="pile-notice" data-testid={noticeTestid.pile(side)} data-kind="fatigue" data-side={side} data-playing={playing}>
         <span className="pile-notice-tag">{t("Fatigue {count}", { count: notice.count })}</span>
+      </span>
+    );
+  }
+  if (notice.kind === "drawLimit") {
+    return (
+      <span className="pile-notice" data-testid={noticeTestid.pile(side)} data-kind="drawLimit" data-side={side} data-playing={playing}>
+        <span className="pile-notice-tag">{t("Draw limit")}</span>
       </span>
     );
   }
