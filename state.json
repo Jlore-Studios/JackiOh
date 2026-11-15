@@ -13691,6 +13691,9 @@
       "suggestion": true,
       "verdict_rounds": 1
     },
+    "3933": {
+      "suggestion": true
+    },
     "3934": {
       "action": "plan",
       "asks": [],
