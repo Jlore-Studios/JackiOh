@@ -1561,7 +1561,7 @@ pub fn patch_paths(repo_root: &Path) -> PatchPaths {
 }
 
 /// `catalog.json` as a patch sees it: its shipped view (R1420), without its flavors (R1437000).
-fn read_catalog(path: &Path) -> anyhow::Result<Catalog> {
+pub(crate) fn read_catalog(path: &Path) -> anyhow::Result<Catalog> {
     let text = fs::read_to_string(path).with_context(|| format!("{} cannot be read", path.display()))?;
     let catalog: Catalog =
         serde_json::from_str(&text).with_context(|| format!("{} is not a catalog", path.display()))?;
