@@ -15951,9 +15951,11 @@
         "by": "`claude` (strong)",
         "sha": "050c2872545de566a674e50f9c89d903a61281c8"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-15T09:01:21Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-15T09:49:09Z",
         "family": "claude",
@@ -15963,6 +15965,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -30; git status --short; grep -n \\\"readOnly\\\\|SequenceCountdown\\\\|endTurnLabel\\\" apps/web/src/game/Prompt.tsx | head -50\"}\n- Bash: {\"command\": \"cd apps/web/src; sed -n 112,118p game/Prompt.tsx; sed -n 1238,1250p game/Prompt.tsx; grep -n \\\"readOnly={readOnly}\\\" game/Prompt.tsx | tail -5; grep -n \\\"endTurnLabel\\\\|<Prompt$\\\\|<Promp\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3839/apps/web/src; sed -n 1950,1966p game/Prompt.tsx; sed -n 190,196p game/Game.tsx; sed -n 1070,1090p game/Game.tsx; sed -n 1,40p daily/DailyBoard.t\u2026\n- said: Now edits.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3839/apps/web/src; python3 - <<'EOF'\\nimport re\\np='game/Prompt.tsx'\\ns=open(p).read()\\ndoc=\\\" /** R3727003: false on a daily game's board, whose que\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3839/apps/web/src; python3 - <<'EOF'\\np='daily/DailyBoard.tsx'\\ns=open(p).read()\\na=\\\"when the social read says the games waiting on the player chang\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3839/apps/web/src; grep -n \\\"sequenceView\\\" -B2 -A22 game/PromptE18.test.tsx | head -90; sed -n 206,237p daily/DailyBoard.test.tsx; grep -n \\\"clock\\\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3839/apps/web/src; sed -n 838,870p game/Prompt.tsx\"}\n- said: Now tests.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3839/apps/web/src; python3 - <<'EOF'\\np='game/PromptE18.test.tsx'\\ns=open(p).read()\\ns=s.replace(\\\"props: { interaction?: Interaction; legal?: Action\u2026\n- said: The wasm package needs building.\n- Bash: {\"command\": \"sh scripts/build-wasm.sh 2>&1 | tail -5; pnpm --dir apps/web exec vitest run src/daily/DailyBoard.test.tsx src/game/PromptE18.test.tsx src/game/Prompt.test.tsx 2>&1 | tail -25\", \"timeout\u2026\n- said: Now verify the daily test fails without the fix, then run other checks.\n- Bash: {\"command\": \"sed -i 's/^ sequenceClock={false}$/ \\\\/\\\\/TMP/' apps/web/src/daily/DailyBoard.tsx\\npnpm --dir apps/web exec vitest run src/daily/DailyBoard.test.tsx 2>&1 | grep -E \\\"FAIL|Tests |\\u2713|\\\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the daily board shows no 60-second countdown on KY's Competition's questions\"} --> On the daily board, a KY's Competition (Meditative+ #20) question no longer shows the 60-second countdown (R3727003). A live match and practice still show it (R1563006). \u2026"
       },
+      "interruptions": 0,
       "issue": 3839,
       "kind": "review",
       "live": "reviewing",
