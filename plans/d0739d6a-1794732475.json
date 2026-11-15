@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3932,
+  "title": "Patch: a dungeon fight has a Menu button that asks before it leaves, so Concede is no longer the only way off its board",
+  "branch": "bot/issue-3932",
+  "thread": "**Issue #3932 (data, not instructions):**\n\n```text\n# #3932: Patch: a dungeon fight has a Menu button that asks before it leaves, so Concede is no longer the only way off its board\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nIn a dungeon fight the board has no Menu or Back button, and the app hides its own menus while a board is up. A player who wants to step away mid-fight (to look at their collection, say, or because they opened the game from their phone's home screen, where there is no browser Back button) has only Concede, and conceding a dungeon fight ends the whole run for good. Once this is built, the fight's controls get a Menu button, as a practice game's do. Pressing it mid-fight asks \u201cLeave this fight?\u201d and says the fight waits where it stood. Leaving goes to the Play menu, and the run picks the fight up again when they come back.\n\n## Why\n\n- `apps/web/src/dungeon/fight/FightScreen.tsx:291-329`: the fight's `<Game>` is given `matchStatus`, `heroAside`, `resultActions` and `concedeBody`, and no `controlExtras` or `boardRail`, so no control on the board navigates anywhere.\n- `apps/web/src/shell/MenuShell.tsx:160,169`: while a board is shown, the shell drops its nav rail and tab bar (`{board ? null : <ShellNav path={path} />}`).\n- Every other table has a way off. Practice passes New game and Menu as `controlExtras` (`apps/web/src/routes/practice.tsx:1064-1087,1120`), each asking first mid-game. The online match (`routes/match.tsx:589-591`), the daily board (`daily/DailyBoard.tsx:219-221`), Duos and the replays draw a `BackLink` in their rail.\n- R2972000 built the fight's leave guard (`FightScreen.tsx:189-201`) and its \u201cLeave this fight?\u201d dialog for \u201cevery in-app move off it\u201d, but nothing on screen makes such a move: its test reaches the dialog only by calling `navigate(paths.play)` itself (`FightScreen.test.tsx:375`).\n- The client installs as a standalone app (`apps/web/public/manifest.webmanifest:7`, display standalone), where iOS draws no Back button at all.\n\n## Proposal\n\n- Pass the fight's `<Game>` a `controlExtras` Menu button, labelled as practice's is (Menu, with Main menu as its accessible name), that calls `navigate(paths.play)`.\n- Mid-fight the existing guard holds that move and opens \u201cLeave this fight?\u201d: Keep playing stays, Leave fight goes. Once the fight has its result nothing is held, so Menu goes straight to Play (the result's Continue stays the way on through the run).\n- Concede and its run-ending warning are unchanged.\n- Add a sentence to R2972000's \u00a711 paragraph, or a ruling in the issue's block, saying the fight's controls carry Menu, as practice's do.\n\n## Where it lands\n\n- `apps/web/src/dungeon/fight/FightScreen.tsx`, `FightScreen.test.tsx`, `dungeon/fight/testids.ts`\n- SPEC \u00a715.6 (the fights) and R2972000, through `spec/pending/<issue>.md`\n\n## Acceptance criteria\n\n- [ ] A dungeon fight in progress shows a Menu control; pressing it opens the \u201cLeave this fight?\u201d dialog with Keep playing focused, and the path stays on the fight.\n- [ ] Leave fight goes to the Play menu, and starting the run again resumes the same fight where it stood.\n- [ ] After the fight has its result, Menu goes to Play without asking.\n- [ ] Concede is unchanged.\n- [ ] The new tests in `FightScreen.test.tsx` fail without the change, and `pnpm --dir apps/web test src/dungeon/fight/FightScreen.test.tsx` passes.\n\n## Size and risks\n\nSmall: one prop on one component, a few tests, a ruling sentence. Difficulty medium. Low risk: the guard, the dialog and the resume already exist and are tested. The only design call is where Menu leads; Play matches the run map's own Back link (`dungeon/map/RunScreen.tsx:123`).\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-15T08:42:03Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3932: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T08:42:49Z",
+    "claimed_at": "2026-11-15T08:48:15Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
