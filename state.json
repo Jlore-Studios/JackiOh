@@ -12509,15 +12509,8 @@
       "taken_asks": []
     },
     "3840": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43696340590",
-        "model": "sonnet",
-        "provider": "claude-4",
-        "since": "2026-11-15T09:00:04Z",
-        "until": "2026-11-15T09:30:04Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -12529,10 +12522,9 @@
         "reason": "planned on sonnet",
         "trail": "/web/src/daily/DailyRoute.tsx\", \"offset\": 280}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3840/apps/web/src/daily/DailyRoute.tsx\", \"offset\": 1, \"limit\": 280}\n- Bash: {\"command\": \"cat apps/web/src/together/session.ts | head -150; echo ------; cat apps/web/src/together/socialPoll.ts\"}\n- Bash: {\"command\": \"grep -n \\\"daily\\\\|Daily\\\" crates/server/src/social/live.rs crates/server/src/social/reads.rs | head -80; wc -l crates/server/src/social/*.rs\"}\n- Bash: {\"command\": \"grep -n \\\"dailyWaiting\\\\|daily\\\" crates/server/README.md | head -40; grep -n \\\"dailyWaiting\\\" apps/web/README.md\"}\n- Bash: {\"command\": \"sed -n 1,120p crates/server/src/social/live.rs; cat crates/server/src/social/reads.rs\"}\n- Bash: {\"command\": \"sed -n 120,359p crates/server/src/social/live.rs\"}\n- Bash: {\"command\": \"grep -rn \\\"push_social\\\\|social.push\\\\|push_daily\\\\|\\\\.live\\\\.push\\\\|fn push\\\" crates/server/src --include=*.rs | grep -v \\\"^crates/server/src/social/live.rs\\\" | head -40\"}\n- Bash: {\"command\": \"sed -n 330,400p crates/server/src/daily/notify.rs; grep -n \\\"after_move\\\\|after_end\\\\|fn \\\\|push_social\\\" crates/server/src/daily/notify.rs | head -60\"}\n- Bash: {\"command\": \"grep -n \\\"after_move\\\\|notify::\\\\|settle\\\\|push_social\\\" crates/server/src/daily/*.rs | grep -v \\\"^crates/server/src/daily/notify.rs\\\" | head -50\"}\n- Bash: {\"command\": \"grep -n \\\"waiting_count\\\" -B3 -A40 crates/server/src/daily/games.rs | sed -n 1,140p\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn pollWhileVisible\\\\|export function pollWhileVisible\\\" -B12 -A40 apps/web/src/game/net.ts\"}\n- Bash: {\"command\": \"sed -n 100,146p apps/web/src/game/net.ts; grep -n \\\"daily_games_of\\\" crates/server/src/db/*.rs | head; grep -n \\\"pub struct DailyGameRow\\\" -A40 crates/server/src/db/*.rs | head -70\"}\n- Bash: {\"command\": \"grep -rn \\\"dailyWaiting\\\" spec/ --include=*.md | head -20; ls spec | head -80\"}\n- Bash: {\"command\": \"sed -n 1,140p apps/web/src/daily/DailyBoard.test.tsx\"}\n- Bash: {\"command\": \"sed -n 140,300p apps/web/src/daily/DailyBoard.test.tsx\"}\n- Bash: {\"command\": \"cat apps/web/src/test/stubServer.ts | head -150; grep -n \\\"dailyWaiting\\\\|socialSocket\\\\|useSocial\\\\|vi.mock\\\" apps/web/src/daily/DailyBoard.test.tsx apps/web/src/daily/DailyRoute.test.t\u2026\n- Bash: {\"command\": \"sed -n 1,135p apps/web/src/daily/DailyRoute.test.tsx; sed -n 176,205p apps/web/src/daily/DailyRoute.test.tsx\"}\n- Bash: {\"command\": \"cat apps/web/src/together/config.ts | grep -n \\\"SOCIAL_POLL_MS\\\\|HIDDEN_QUIET\\\" ; grep -rn \\\"visibilityState\\\\|useFakeTimers\\\" apps/web/src --include=*.test.tsx -l | head -10\"}\n- Bash: {\"command\": \"grep -rn \\\"advanceTimersByTimeAsync\\\\|visibilityState\\\" apps/web/src --include=*.test.tsx | head -20; grep -rn \\\"usePolled(\\\" apps/web/src --include=*.tsx | grep -v test | head\"}\n- Bash: {\"command\": \"sed -n 150,215p apps/web/src/economy/JlorePill.test.tsx; sed -n 95,135p apps/web/src/together/WatchRoute.test.tsx\"}\n- Bash: {\"command\": \"cat apps/web/src/daily/DailyClockPill.tsx | sed -n 1,52p; sed -n 1,80p apps/web/src/net/daily.ts | head -120; grep -n \\\"FRIENDS_POLL_MS\\\" apps/web/src/together/config.ts\"}\n- Bash: {\"command\": \"grep -n \\\"export async function getDaily\\\\b\\\\|export function getDaily\\\\b\\\\|getDailyGame\\\\|export async function getDaily\\\" -A14 apps/web/src/net/daily.ts | head -60; sed -n 1,60p apps/w\u2026\n- Bash: {\"command\": \"sed -n 84,110p apps/web/src/net/daily.ts; grep -n \\\"keep\\\\|freshRead\\\\|KEPT\\\\|kept\\\" apps/web/src/net/api.ts | head -50\"}\n- Bash: {\"command\": \"sed -n 262,300p apps/web/src/net/api.ts; grep -n \\\"R3205000\\\" spec/rulings/*.md | head -5; ls spec/rulings | grep -E \\\"R3205|R3727|R3855\\\" \"}\n- Bash: {\"command\": \"grep -n \\\"9.13\\\" spec/09-architecture.md | head; grep -rn \\\"dailyWaiting\\\\|reads again\\\\|read again\\\" spec/rulings/R3727*.md | head\"}\n- Bash: {\"command\": \"sed -n 264,300p spec/09-architecture.md | cut -c1-1800; cat spec/rulings/R3205000.md | head -30; ls spec/pending | head\"}\n- Bash: {\"command\": \"grep -n \\\"Adding a ruling\\\" -A45 spec/README.md | head -90; cat spec/pending/3912.md | head -20; cat spec/rulings/R3855000.md | head -20\"}\n- Bash: {\"command\": \"grep -n \\\"daily/\\\\|Daily\\\" apps/web/README.md | head -30\"}\n- Bash: {\"command\": \"cat > /tmp/probe.txt <<'EOF'\\nEOF\\ngit log --oneline -3 -- apps/web/src/daily/DailyBoard.tsx; grep -rn \\\"DailyBoard\\\\|DailyRoute\\\" apps/web/src --include=*.ts --include=*.tsx -l | head; \u2026\n- Bash: {\"command\": \"sed -n 1065,1104p apps/web/README.md; ls e2e/cypress/e2e | grep -i daily; ls docs/*.md | head -30; grep -n \\\"patch\\\\|Patch\\\" docs/issues-and-patches.md | head -30\"}\n- Bash: {\"command\": \"grep -n \\\"intercept\\\\|dailyWaiting\\\\|reload\\\" e2e/cypress/e2e/52-daily-challenge.cy.ts e2e/cypress/e2e/53-daily-time-up.cy.ts | head -20; grep -n \\\"pollWhileVisible\\\" apps/web/src --incl\u2026\n- Bash: {\"command\": \"sed -n 405,470p apps/web/src/duos/DuosRoute.test.tsx; grep -n \\\"useFakeTimers\\\\|useRealTimers\\\" apps/web/src/duos/DuosRoute.test.tsx | head\"}\n- Bash: {\"command\": \"grep -n \\\"function flush\\\\|setVisibility\\\\|resetVisibility\\\" -A10 apps/web/src/duos/DuosRoute.test.tsx | head -60; sed -n 285,300p apps/web/src/duos/DuosRoute.test.tsx\"}\n- Bash: {\"command\": \"grep -n \\\"setVisibility\\\\|resetVisibility\\\" -B2 -A14 apps/web/src/test/setup.ts | head -50; grep -n \\\"baseView\\\" -A25 apps/web/src/test/fixtures.ts | head -50\"}\n- Bash: {\"command\": \"ls spec/rulings | grep -E \\\"^R(109|3840)\\\"; sed -n 1,12p spec/rulings/R0109.md | cut -c1-600; grep -c \\\"The Play hub's Daily entry and the screen's title count the games waiting on the p\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3840/.bot-plan.md\", \"content\": \"# Draft plan #3840 (planner notes)\\n\\nFindings:\\n- Server already pushes a `social` frame to both players after every \u2026\n- said: ## Goal A daily game that ends shows as ended on an open board (`/daily/<matchId>`) and on an open Daily list (`/daily`) without a reload. This holds whoever's move it was: the opponent concedes on their move, the opponent concedes while the move is the player's, or a deadline passes. The fix is op\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-15T08:50:04Z",
       "owner_why": "it plans it",
@@ -12545,9 +12537,9 @@
       "provider": "claude-4",
       "queued_at": "2026-11-15T08:45:27Z",
       "requested_by": "squishy-squooby",
-      "run_id": "43696340590",
+      "run_id": "pending:7430d096-1794733292",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-15T08:50:04Z",
+      "started_at": "2026-11-15T09:01:49Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15457,9 +15449,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T09:01:21Z",
+    "at": "2026-11-15T09:01:49Z",
     "url": "",
-    "what": "build #3839 on claude-8"
+    "what": "build #3840 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-15T08:47:14Z",
