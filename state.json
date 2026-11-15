@@ -15863,12 +15863,25 @@
     "what": "spot-check #3995 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-15T22:02:40Z",
+    "at": "2026-11-15T22:33:22Z",
     "notes": [
-      "delivered build #3976 on claude-6 (run 43760335481): built",
-      "started suggest on claude-3 (run 43767298089)",
-      "started review #3995 on claude-8 (run 43767370537)",
-      "nothing more to start: nothing is queued"
+      "answered a comment on #3968 that was never answered",
+      "delivered suggest on claude-3 (run 43767298089): suggested",
+      "delivered review #3994 on claude-7 (run 43765647729): approved",
+      "delivered plan #3975 on agy (run 43755025170): failed",
+      "delivered review #3968 on claude-1 (run 43747783064): interrupted",
+      "started review #3998 on claude-6 (run 43770404137)",
+      "started plan #3975 on agy (run 43770465047)",
+      "started review #3995 on claude-4 (run 43770521940)",
+      "nothing more to start: nothing is queued",
+      "pruned 7 plan file(s) older than 7 days",
+      "#4025: typed it Task",
+      "#4024: typed it Task",
+      "#4023: typed it Task",
+      "#4022: typed it Task",
+      "#4021: typed it Bug",
+      "#4020: typed it Task",
+      "#4019: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16574,7 +16587,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-15T22:02:40Z",
+  "loop_tick": "2026-11-15T22:33:22Z",
   "machine_disk": {
     "issue": null,
     "reading": {
