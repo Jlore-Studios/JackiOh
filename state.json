@@ -15206,15 +15206,6 @@
       "failures": 0,
       "feedback_since": "2026-11-15T21:35:24Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-11-15T23:27:06Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "## State\nPass 2: both reds (duos r3731002 four-sockets, writing.test.ts hook timeout) pass locally with no code change; judged load flakes. No edits.\n## Log\n- ran failing server test 3x alone and whole server suite: pass. writing.test.ts: pass in 7s (hook budget 10s).\n",
-        "provider": "claude-8",
-        "reason": "built and checked; its own review run, on this subscription, reviews it next",
-        "trail": "- Bash: {\"command\": \"cat .bot-notes.md 2>/dev/null | head -30; grep -rn \\\"r3731002_four_sockets\\\" crates/server/tests | head\"}\n- Bash: {\"command\": \"sed -n 3640,3800p crates/server/tests/actor/duos.rs\"}\n- Bash: {\"command\": \"cd crates/server && for i in 1 2 3; do timeout 1500 cargo test -p jackioh-server --test server r3731002_four_sockets 2>&1 | tail -5; done\", \"timeout\": 600000, \"run_in_background\": true}\n- Bash: {\"command\": \"cd apps/web && time pnpm exec vitest run src/writing.test.ts 2>&1 | tail -15\", \"timeout\": 600000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3989 && sleep 400; cat /tmp/claude-1001/-home-runner-work--temp-work-item-3989/e84b2962-bd47-418e-8e88-922573c365dd/tasks/b44o11l07.output\", \"timeout\u2026\n- Bash: {\"command\": \"timeout 590 cargo test -p jackioh-server --test server 2>&1 | tail -8\", \"timeout\": 600000}\n- Bash: {\"command\": \"cargo fmt --check && git status --porcelain | head; printf '## State\\\\nPass 2: both reds (duos r3731002 four-sockets, writing.test.ts hook timeout) pass locally with no code change; judg\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a crash in a player's browser reaches the owners as an alert\"} --> ## What this change does A crash in a player's browser now reaches the owners. The error boundary's caught error, an uncaught `error` and an `unhandledrejection` each send one small repo\u2026"
-      },
       "interruptions": 0,
       "issue": 3619,
       "kind": "review",
