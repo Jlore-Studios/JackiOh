@@ -13785,17 +13785,8 @@
       "verdict_rounds": 1
     },
     "3933": {
-      "action": "plan",
-      "asks": [
-        "c:6900427024"
-      ],
-      "build_next": {
-        "from_run": "43756479494",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-15T20:18:47Z",
-        "until": "2026-11-15T20:48:47Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-15T20:18:35Z",
         "difficulty": "medium",
@@ -13814,10 +13805,9 @@
         "reason": "planned on sonnet",
         "trail": "- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3933/apps/web/src/routes/match.tsx\", \"offset\": 160, \"limit\": 60}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3933/apps/web/src/routes/match.tsx\", \"offset\": 400, \"limit\": 230}\n- Grep: {\"pattern\": \"enemyLabel\", \"path\": \"/home/runner/work/_temp/work/item-3933/apps/web/src\", \"output_mode\": \"content\", \"glob\": \"!*.test.*\"}\n- Grep: {\"pattern\": \"R169|3698|Bob#12|ranks\", \"path\": \"/home/runner/work/_temp/work/item-3933/apps/web/src/routes/match.test.tsx\", \"output_mode\": \"content\", \"head_limit\": 80}\n- Bash: {\"command\": \"cat spec/rulings/R3855000.md | head -40; ls spec/pending | head; grep -rn \\\"R3855000\\\" apps/web/src --include=*.ts* | head\"}\n- Bash: {\"command\": \"grep -rln \\\"3698\\\" spec/rulings | head; grep -n \\\"opponent's username\\\\|hero.*reads\\\\|seat label\\\" spec/10-*.md | head -20; ls spec | head -50; sed -n 1950,2000p apps/web/src/routes/matc\u2026\n- Bash: {\"command\": \"grep -rln \\\"3698\\\" spec/ docs/issues-and-patches.md 2>/dev/null | head; grep -rl \\\"hero reads\\\\|names the opponent\\\" spec/rulings | head; sed -n 215,240p apps/web/src/game/Hero.tsx; sed \u2026\n- Bash: {\"command\": \"grep -n \\\"opponent\\\" spec/rulings/R3837000.md spec/rulings/R3729001.md | head -5; grep -n -i \\\"pending\\\" spec/README.md | head -20; ls spec/rulings | tail -3; git show --stat HEAD~5 -- s\u2026\n- Bash: {\"command\": \"git show 7706b22f3b --stat | grep pending | head -3; git show 7706b22f3b^:spec/pending/3954.md 2>/dev/null | head -c 700; echo; grep -n \\\"\\u00a710.10\\\\|^## 10.10\\\\|10\\\\.10\\\" spec/10-engi\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3933/.bot-plan.md\", \"content\": \"Plan draft #3933: lift opponentName in apps/web/src/routes/match.tsx above replay branch (line ~434), pass enemyLabel \u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"None of the five hard lines holds: the change is a few lines in one web route plus one test, a ruling note and a spec sentence, and no engine, AI, cross-crate contract or migration is touched.\"} --> ## Goal In a live online 1v1 match, the opponent hero's s\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-15T20:09:42Z",
       "owner_why": "it plans it",
@@ -13830,12 +13820,14 @@
       "provider": "claude-8",
       "queued_at": "2026-11-15T20:00:13Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43756479494",
+      "run_id": "pending:5ae2e35c-1794774216",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-15T20:09:42Z",
+      "started_at": "2026-11-15T20:24:01Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6900427024"
+      ]
     },
     "3934": {
       "action": "build",
@@ -15123,9 +15115,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-15T20:23:22Z",
+    "at": "2026-11-15T20:24:01Z",
     "url": "",
-    "what": "build #3934 on claude-3"
+    "what": "build #3933 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-15T20:05:26Z",
