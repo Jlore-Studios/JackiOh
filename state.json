@@ -16590,6 +16590,13 @@
     },
     "3971": {
       "action": "plan",
+      "archived": {
+        "at": "2026-11-15T11:50:53Z",
+        "branch": "",
+        "head": "",
+        "pr": null,
+        "why": "Open the failed `releases` run <https://github.com/Jlore-Studios/JackiOh/actions/runs/43707111833>, read the first red step in `publish the releases`, and either re-run the workflow for a transient failure, repair `BOT_GITHUB_TOKEN`/the repository release settings, or make the indicated `.github/workflows/releases.yml` fix. The night bot cannot read the run log or use the GitHub account, secret, settings, or protected `.github/` path, and the repository provides no evidence for an editable application-code fix."
+      },
       "asks": [],
       "difficulty_by": {
         "at": "2026-11-15T11:50:42Z",
@@ -16598,22 +16605,17 @@
         "tier": "medium",
         "why": "No hard-case rule applies: this is a single release-publishing workflow/account diagnosis, not engine rules, AI, cross-crate design, a migration, or roughly 40 files."
       },
-      "in_lane": true,
-      "kind": "build",
       "live": "planning",
-      "owner": "gpt",
-      "owner_since": "2026-11-15T11:35:07Z",
-      "owner_why": "it plans it",
-      "pending_request": false,
+      "owner": "",
       "planned_at": "2026-11-15T11:50:45Z",
       "planned_by": "`gpt` (codex, `gpt-5.6-sol`, medium)",
       "planned_by_id": "gpt",
       "planned_tier": "medium",
       "provider": "gpt",
+      "question": "Open the failed `releases` run <https://github.com/Jlore-Studios/JackiOh/actions/runs/43707111833>, read the first red step in `publish the releases`, and either re-run the workflow for a transient failure, repair `BOT_GITHUB_TOKEN`/the repository release settings, or make the indicated `.github/workflows/releases.yml` fix. The night bot cannot read the run log or use the GitHub account, secret, settings, or protected `.github/` path, and the repository provides no evidence for an editable application-code fix.",
       "run_id": "43709639534",
       "runs_on": "night-vm-gpt",
       "started_at": "2026-11-15T11:35:07Z",
-      "stop_requested": false,
       "taken_asks": []
     },
     "3972": {
