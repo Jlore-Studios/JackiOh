@@ -1,7 +1,7 @@
 {
   "title": "Patch: a Buff or a Nerf draws only a change that still does something where the card is: one table of live targets by zone, and an audit of every card",
   "sources": "#3888",
-  "notes": "R3888000: a Buff or a Nerf draws only a change that is live where the card is, by one table (SPEC §6.3) of deck, hand, being played (§10.5 step 3, where hidden Nerfs land), field face-up, face-down, Dormant, graveyard and exile, read from one place (effects::tune_live) by every menu row and by hidden Nerfs. On the field Rush and Charge past the Unit's entry turn (unless its own Reborn brings it back sick), Echo, Crater, Equip, Stack, GIGA, Tipsy, Flexible, Cloaked, Tradable and Temporary are no longer drawn; a hidden Nerf never draws the Tribute step 2 paid; a face-down Cloaked card's Cry numbers, stats and R21 keywords are drawn, read as the card it is; in a deck Cloaked and Crater are live as in a hand; a face-down Trap may take Crater; in a graveyard only a card a play may take from there changes (any card may take Flashback) and in exile none; a unit token never takes Flashback. R3888001: Param.cry is now Param.read (cry, combo, castOnDraw, awaken, evolve, handOrDeck, graveyard) with readOn for one face, held to the text by catalog check; the 90 cry marks are renamed and 38 numbers on 27 cards newly marked, which is the 95 cards claimed; the Patch notes diff names the reader.",
+  "notes": "R3888000: a Buff or a Nerf draws only a change that is live where the card is, by one table (SPEC §6.3) of deck, hand, being played (§10.5 step 3, where hidden Nerfs land), field face-up, face-down, Dormant, graveyard and exile, read from one place (effects::tune_live) by every menu row and by hidden Nerfs. On the field Rush and Charge past the Unit's entry turn (unless its own Reborn brings it back sick), Echo, Crater, Equip, Stack, GIGA, Tipsy, Flexible, Cloaked, Tradable and Temporary are no longer drawn; a hidden Nerf never draws the Tribute step 2 paid; a face-down Cloaked card's Cry numbers, stats and R21 keywords are drawn, read as the card it is; in a deck Cloaked and Crater are live as in a hand; a face-down Trap may take Crater; in a graveyard only a card a play may take from there changes (any card may take Flashback) and in exile none; a unit token never takes Flashback. R3888001: Param.cry is now Param.read (cry, combo, castOnDraw, awaken, evolve, handOrDeck, graveyard) with readOn for one face, held to the text by catalog check; the 90 cry marks are renamed and 38 numbers on 27 cards newly marked, which is the 95 cards changed: 93 claimed here, and Mid Loser (classicplus-019-3) and Wardrum (classicplus-037), which the pending Stinkyscape Balance Changes V also changes, claimed there, since one card ships in one patch; the Patch notes diff names the reader.",
   "player": {
     "title": "Buffs and Nerfs only change what still matters",
     "new": [],
@@ -49,11 +49,9 @@
     "classic-076",
     "classic-085",
     "classicplus-007",
-    "classicplus-019-3",
     "classicplus-020",
     "classicplus-026",
     "classicplus-036-1",
-    "classicplus-037",
     "classicplus-038-1",
     "classicplus-049",
     "classicplus-050",
