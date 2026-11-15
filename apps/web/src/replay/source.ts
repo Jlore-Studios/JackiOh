@@ -2,10 +2,13 @@
 // log, a seed or a state (CLAUDE.md rule 7); a step is the view the seat held at that point, and its turn.
 
 import type { ReplayRefusal, ReplayStep } from "@jackioh/engine";
+import { isPortraitId } from "@jackioh/shared";
 
 import type { SeatLoadouts } from "../cards/loadouts.ts";
+import type { SeatPortraits } from "../game/contract.ts";
 import { t } from "../i18n/i18n.ts";
 import { messageOf } from "../net/errors.ts";
+import { isRecord } from "../wire/json.ts";
 
 /**
  * One replay, a page of steps at a time. `total` is the listing's `steps`: step 0 and one per accepted
@@ -13,17 +16,31 @@ import { messageOf } from "../net/errors.ts";
  * viewer, or the engine's page ended early) the next page starts at `from + length`. A failed page
  * rejects with a `ReplayFailure`. R1834003: an online match's source also answers both seats' frozen
  * loadouts (R1834002) as the pages fetched so far merged them, null before the first; others have none.
+ * R3976000: a source answers both seats' portraits as the game dealt them (an online match's from its
+ * pages, a practice game's from its summary, a file's from the file), null where it holds none, and the
+ * board then draws the default.
  */
 export type ReplaySource = {
   readonly total: number;
   page(from: number, count: number): Promise<readonly ReplayStep[]>;
   loadouts?(): SeatLoadouts | null;
+  portraits?(): SeatPortraits | null;
 };
 
-/** A source over steps already held in memory (#1160): a file opened from the player's own device. */
-export function memoryReplaySource(steps: readonly ReplayStep[]): ReplaySource {
+/** A source over steps already held in memory (#1160): a file opened from the player's own device, with the portraits it holds (R3976000). */
+export function memoryReplaySource(steps: readonly ReplayStep[], portraits: SeatPortraits | null = null): ReplaySource {
   const held = [...steps];
-  return { total: held.length, page: (from, count) => Promise.resolve(held.slice(from, from + count)) };
+  return {
+    total: held.length,
+    page: (from, count) => Promise.resolve(held.slice(from, from + count)),
+    portraits: () => portraits,
+  };
+}
+
+/** R3976000: both seats' portraits from a page, a summary or a file, read as untrusted: null unless each names a known one. */
+export function seatPortraitsOf(value: unknown): SeatPortraits | null {
+  if (!isRecord(value) || !isPortraitId(value.p1) || !isPortraitId(value.p2)) return null;
+  return { p1: value.p1, p2: value.p2 };
 }
 
 /**
