@@ -12544,15 +12544,8 @@
       "taken_asks": []
     },
     "3841": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43696378475",
-        "model": "sonnet",
-        "provider": "claude-6",
-        "since": "2026-11-15T08:59:29Z",
-        "until": "2026-11-15T09:29:29Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -12564,10 +12557,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"sed -n 1,200p apps/web/src/daily/DailyBoard.tsx; ls apps/web/src/daily\"}\n- Bash: {\"command\": \"cd apps/web/src; grep -n -i \\\"mulligan\\\" daily/*.ts* net/daily.ts game/Game.tsx | head -30; grep -n \\\"AutoEndTurn\\\\|hasMove\\\" daily/DailyBoard.test.tsx | head -40; sed -n 100,140p ../../\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3841/apps/web/src; sed -n 1,80p daily/DailyBoard.test.tsx; sed -n 125,165p daily/DailyBoard.test.tsx; grep -n \\\"phase\\\" wire/*.ts | head -10; grep -r\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3841/apps/web/src; grep -n \\\"phase\\\" test/fixtures.ts | head; grep -n \\\"phase\\\" wire/PlayerView.ts wire/Phase.ts 2>/dev/null | head; grep -n \\\"phase\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3841/apps/web/src; sed -n 470,495p game/Game.tsx; grep -n \\\"phase\\\" ../../../crates/engine/src/wire/view.rs | head -5; grep -n \\\"autoEndTurn\\\" ../../\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3841/apps/web/src; grep -rn \\\"data-testid\\\\|testid\\\" game/Mulligan*.tsx | head; grep -n \\\"mulligan\\\" test/fixtures.ts ../../../apps/web/src/game/*.te\u2026\n- said: ## Goal During a daily game's mulligan, `DailyBoard` sends no `setAutoEndTurn`, so one player's saved setting can no longer make the other player's keep or mulligan answer `409 stale`. Once the mulligan is over (`view.phase !== \"mulligan\"`), the board sends the held setting exactly as it does now, \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-15T08:50:30Z",
       "owner_why": "it plans it",
@@ -12580,9 +12572,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-15T08:45:36Z",
       "requested_by": "squishy-squooby",
-      "run_id": "43696378475",
+      "run_id": "pending:7e59e91d-1794733320",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-15T08:50:30Z",
+      "started_at": "2026-11-15T09:02:19Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15449,9 +15441,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T09:01:49Z",
+    "at": "2026-11-15T09:02:19Z",
     "url": "",
-    "what": "build #3840 on claude-4"
+    "what": "build #3841 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-15T08:47:14Z",
