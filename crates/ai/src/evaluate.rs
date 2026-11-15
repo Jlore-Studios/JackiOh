@@ -1086,12 +1086,14 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
 
 /// The face damage `attacker`'s board could deal the other hero next turn: units with attack > 0 that may swing
 /// (`can_swing`; with `w.deft_defense_attacks` a Deft unit in Defense Position too, R49), ascending by attack.
-/// Taunts soak the smallest first (`damage_past_taunts`); each remaining attack goes through
+/// Taunts soak the smallest first (`damage_past_taunts_with`); each remaining attack goes through
 /// `subsystems::projected_hero_damage` (armor, which a Pierce hit skips, R346, and the Anti-oneshot cap), summed.
 /// With `w.gauntlet_bars_face_attacks`, an attack `attack_restriction` bars from the hero (a Unit inside The
 /// Gauntlet, R1849005) lands nothing past the Taunts. With `w.brittle_crumbles_before_swing`, a unit its own
 /// Brittle tick destroys first counts none (`crumbles_before_swing`, R3793000), read as at the end of the turn
-/// under way: the player on turn has made this turn's attacks.
+/// under way: the player on turn has made this turn's attacks. With `w.static_attack_flags_read`, a unit that
+/// can only attack the Unit across lands nothing on a hero (R3550001), and one that Ignores Taunt is bound by no
+/// Taunt (R3560007).
 pub fn face_threat_with(state: &GameState, attacker: PlayerId, w: &EvalWeights) -> i32 {
     face_threat_from(state, attacker, w, false)
 }
@@ -1122,12 +1124,16 @@ fn face_threat_from(state: &GameState, attacker: PlayerId, w: &EvalWeights, on_t
         }
         // R636: the unit's next turn starts with its exertion reset, so a Windfury unit swings twice.
         // Nor is it summoning sick then, so only a restriction (`may_hit_hero`) keeps a swing off the hero.
-        let may_hit_hero = !gauntlet || attack_restriction(state, unit, &hero).is_ok();
+        // R3550001, #3909: a unit that can only attack the Unit across never hits a hero. Its flag is read
+        // first, so a board with no such unit asks `attack_restriction` nothing more than before.
+        let across_only =
+            w.static_attack_flags_read && flags_of(state, unit).attacks_only_across == Some(true);
+        let may_hit_hero = !(gauntlet || across_only) || attack_restriction(state, unit, &hero).is_ok();
         for _ in 0..attacks_per_turn(state, unit) {
             attacks.push((unit, view.attack, may_hit_hero));
         }
     }
-    damage_past_taunts(state, attacker.opponent(), &attacks)
+    damage_past_taunts_with(state, attacker.opponent(), &attacks, w)
 }
 
 /// §4.5 step 4: a Reborn unit comes back at 1 health.
@@ -1155,16 +1161,27 @@ impl TauntStand {
     }
 }
 
+/// `damage_past_taunts_with` at `AI_EVAL`'s weights: what the lethal solver's `ready_gap` reads.
+pub fn damage_past_taunts(
+    state: &GameState,
+    defender: PlayerId,
+    attacks: &[(&CardInstance, i32, bool)],
+) -> i32 {
+    damage_past_taunts_with(state, defender, attacks, &AI_EVAL)
+}
+
 /// What `attacks` (attacker, its attack, whether it may hit the hero once no Taunt walls it) deal
 /// `defender`'s hero once its Taunts have soaked the attackers they bind (those that may not hit the hero
 /// first, then the smallest). §4.2 step 3: a Taunt binds only attackers `attack_restriction` lets attack
 /// it (R783002, R783003). Each bound attacker is one §4.4 hit on it (#898, R346, R63), a destroyed Reborn
 /// Taunt returning; lane strike (R94) and combat-only bonuses (R1120) stay out. A hit that may not hit the
-/// hero (R1849005, #1823) lands nothing past the Taunts.
-pub fn damage_past_taunts(
+/// hero (R1849005, #1823) lands nothing past the Taunts. With `w.static_attack_flags_read`, an attacker that
+/// Ignores Taunt (R3560007) is bound by none, Defense Position's included.
+pub fn damage_past_taunts_with(
     state: &GameState,
     defender: PlayerId,
     attacks: &[(&CardInstance, i32, bool)],
+    w: &EvalWeights,
 ) -> i32 {
     let mut free: Vec<(&CardInstance, i32, bool)> = attacks.to_vec();
     free.sort_by_key(|(_, attack, may_hit_hero)| (*may_hit_hero, *attack));
@@ -1181,9 +1198,11 @@ pub fn damage_past_taunts(
         let target = AttackTarget::Unit {
             instance: stands[i].unit.clone(),
         };
-        let (bound, mut unbound): (Vec<_>, Vec<_>) = free
-            .into_iter()
-            .partition(|(attacker, _, _)| attack_restriction(state, attacker, &target).is_ok());
+        // R3560007, #3909: an attacker that Ignores Taunt is bound by no Taunt (§4.2 step 3 skips it).
+        let (bound, mut unbound): (Vec<_>, Vec<_>) = free.into_iter().partition(|(attacker, _, _)| {
+            !(w.static_attack_flags_read && flags_of(state, attacker).ignores_taunt == Some(true))
+                && attack_restriction(state, attacker, &target).is_ok()
+        });
         let mut bound = bound.into_iter();
         let mut poisoned = false;
         while stands[i].health > 0 && !poisoned {
