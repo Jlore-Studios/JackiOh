@@ -14643,7 +14643,7 @@
       "provider": "gpt",
       "queued_at": "2026-11-15T19:51:37Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:af0a6014-1794772478",
+      "run_id": "43755075663",
       "runs_on": "night-vm-gpt",
       "started_at": "2026-11-15T19:54:57Z",
       "stop_requested": false,
