@@ -14556,6 +14556,9 @@
       "started_at": "2026-11-15T11:53:04Z",
       "stop_requested": false
     },
+    "3975": {
+      "suggestion": true
+    },
     "3977": {
       "action": "build",
       "asks": [],
