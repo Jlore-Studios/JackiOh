@@ -5230,6 +5230,13 @@ pub fn daily_active_count(f: &mut FakeTx<'_>, profile_id: &str, now: i64) -> Res
     Ok((games + invites) as i64)
 }
 
+/// Every fake transaction runs alone (it holds the store's one lock until it ends), so it holds the
+/// account's daily lock already; charged to the hooks like every call.
+pub fn daily_lock_account(f: &mut FakeTx<'_>, _profile_id: &str) -> Result<(), StoreError> {
+    call(f, "daily.lock")?;
+    Ok(())
+}
+
 // daily invites
 
 /// The two partial unique keys are on the open rows, so a lapsed open row of the key is marked expired
