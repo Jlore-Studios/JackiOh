@@ -67,7 +67,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
     const FILLER: &str = "core-005"; // Stockpile: a Spell (§2.5).
     const UNIT: &str = "stand-in (1) 2/3";
-    const JORO: &str = "classic-033"; // C #33 Joro: 1/1, its Radiant face 2/2 Indestructible.
+    const JORO: &str = "classic-033"; // Joro: Indestructible on its Radiant face alone.
 
     fn game(seed: &str, radiant: bool) -> Scenario {
         let mut s = scenario(json!({
