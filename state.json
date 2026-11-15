@@ -14519,8 +14519,10 @@
     "what": "review #3924 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-15T01:47:36Z",
-    "notes": [],
+    "at": "2026-11-15T01:53:42Z",
+    "notes": [
+      "#3924: `e2e smoke (2/4)` red in CI run 43664267572; its other early jobs have until 2026-11-15T01:56:45Z to report"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15225,7 +15227,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-15T01:47:36Z",
+  "loop_tick": "2026-11-15T01:53:42Z",
   "machine_disk": {
     "issue": null,
     "reading": {
