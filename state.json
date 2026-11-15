@@ -36367,19 +36367,10 @@
   },
   "usage_spool": {
     "readings": [
-      "2026-11-15T09:06:36Z,claude-3,stream,call,43697320674,16,2026-11-15T12:10:00Z,,,allowed,,,",
-      "2026-11-15T09:19:36Z,claude-3,stream,call,43697320674,19,2026-11-15T12:10:00Z,,,allowed,,,",
-      "2026-11-15T09:04:27Z,claude-4,ping,before,43697241071,5,2026-11-15T12:20:00Z,,,allowed,70,,",
-      "2026-11-15T09:05:44Z,claude-4,stream,call,43697241071,6,2026-11-15T12:20:00Z,,,allowed,70,,",
-      "2026-11-15T09:15:55Z,claude-4,stream,call,43697241071,6,2026-11-15T12:20:00Z,,,allowed,70,,",
       "2026-11-15T09:58:53Z,claude-8,ping,before,43701600580,4,2026-11-15T13:50:00Z,,,allowed,85,,",
       "2026-11-15T09:59:13Z,claude-8,stream,call,43701600580,5,2026-11-15T13:50:00Z,,,allowed,85,,"
     ],
-    "runs": [
-      "2026-11-15T10:00:14Z,43701719182,claude-1,opus,build,3936,hard,interrupted,5-hour cap,0,0,0,0,,97,97,,,75.8,claude-1,none,,0",
-      "2026-11-15T09:57:13Z,43697320674,claude-3,sonnet+opus,build,3844,medium,built,,13.3,31,8737,771773,0.3282,16,19,,,17.1,claude-3,fresh,,1",
-      "2026-11-15T10:01:40Z,43697241071,claude-4,sonnet+opus,build,3840,medium,built,,11.2,43,14045,1481073,0.5556,5,6,,,16.4,claude-4,fresh,,1"
-    ]
+    "runs": []
   },
   "version": 1
 }
