@@ -187,9 +187,10 @@ mod tests {
                 break;
             }
             let s = found.expect("some seed survives the first roll");
-            // Start of turn: the refresh, then 3 mana gained, a natural draw and the Reactor's draw.
+            // Start of turn: the refresh, then 4 mana gained (3 until issue #3951), a natural draw and the
+            // Reactor's draw.
             let mana = &s.state().players[P1].mana;
-            assert_eq!(mana.current, mana.max + 3, "3 mana gained past the refresh");
+            assert_eq!(mana.current, mana.max + 4, "4 mana gained past the refresh");
             assert_eq!(s.hand(P1).len(), 3, "the natural draw and the Reactor's draw");
         }
 

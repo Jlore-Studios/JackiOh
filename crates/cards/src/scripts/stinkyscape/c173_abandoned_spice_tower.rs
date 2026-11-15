@@ -106,7 +106,7 @@ mod tests {
         s.expect_health(P1, 26);
         s.expect_in_zone(ID, "graveyard");
         let added = spices(&s);
-        assert_eq!(added.len(), 3);
+        assert_eq!(added.len(), 5);
         assert!(added.iter().all(|card| !card.radiant));
         assert!(crate::resources_in_hand(&s, P1).is_empty(), "hand cards, never Resources");
     }
@@ -121,7 +121,7 @@ mod tests {
             .iter()
             .filter(|card| card.def_id == SPICE)
             .count();
-        assert_eq!(burned, 2);
+        assert_eq!(burned, 4);
     }
 
     #[test]
@@ -149,7 +149,7 @@ mod tests {
         s.activate(ID, json!({ "ability": MINE }));
         s.expect_health(P1, 26);
         let added = spices(&s);
-        assert_eq!(added.len(), 3);
+        assert_eq!(added.len(), 5);
         assert!(added.iter().all(|card| card.radiant));
     }
 }

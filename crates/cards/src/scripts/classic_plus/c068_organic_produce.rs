@@ -1,20 +1,21 @@
 //! C+ #68 Organic Produce (SPEC §8.7 row 68; BUILD M9 row C+ 68). (4) Field Spell, Epic (a Fruit until
 //! #1837, R1837000).
-//!   Base:    "Cry: Add {fruits|random Fruit|random Fruits} to your hand. / Aura: Fruits you play are Radiant." — fruits 1
-//!   Radiant: "Cry: Add {fruits|…} to your hand. Each costs (0). / (the same aura)" — fruits 2
+//!   Base:    "Cry: Add {fruits|random Fruit|random Fruits} to your hand. Each costs ({setCost}). / Aura:
+//!            Fruits you play are Radiant." — fruits 1
+//!   Radiant: the same — fruits 3
 //!
 //! The Cry's pool is the Fruit pool (R382: the non-token Fruits and the five Grapes), never Organic
 //! Produce itself (R387: `addRandomFromCatalog` leaves out the running card's id), repeats allowed
-//! (R60); neither it nor C+ #63 Fruit Tree is a Fruit (R1837000).
+//! (R60); neither it nor C+ #63 Fruit Tree is a Fruit (R1837000). Each Fruit added costs the declared
+//! `setCost` (R386, less being better). Issue #3951 gave the base face the Radiant face's (0) and the
+//! Radiant face its third Fruit; through v0.6.4b the base face's Fruits kept their cost, which
+//! `script_v0_6_4b` keeps for those replays (R767000).
 //! The aura is Core #64 Gifted Program's static flag at §10.5 step 3 by tag (R213, R214): every Fruit
 //! its controller plays, casts included, resolves on its Radiant face.
 
-use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-068";
-
-// The Radiant face's "Each costs (0).": the declared number `setCost` (R386), less being better.
 
 fn static_flags() -> StaticFlags {
     StaticFlags {
@@ -23,28 +24,35 @@ fn static_flags() -> StaticFlags {
     }
 }
 
+/// `priced`: whether the Fruits added cost the declared `setCost`.
+fn produce(priced: bool) -> Script {
+    Script {
+        static_flags: Some(static_flags()),
+        cry: Some(hook(move |ctx| {
+            let mut args = json!({ "query": { "tags": ["Fruit"] }, "count": param(ctx, "fruits") });
+            if priced {
+                args["costOverride"] = json!(param(ctx, "setCost"));
+            }
+            vec![add_random_from_catalog(json_as(args))]
+        })),
+        ..Script::default()
+    }
+}
+
 pub fn script() -> CardScripts {
-    let base = Script {
-        static_flags: Some(static_flags()),
-        cry: Some(hook(|ctx| {
-            vec![add_random_from_catalog(json_as(json!({ "query": { "tags": ["Fruit"] }, "count": param(ctx, "fruits") })))]
-        })),
-        ..Script::default()
-    };
+    CardScripts {
+        base: produce(true),
+        radiant: produce(true),
+    }
+}
 
-    let radiant = Script {
-        static_flags: Some(static_flags()),
-        cry: Some(hook(|ctx| {
-            vec![add_random_from_catalog(json_as(json!({
-                "query": { "tags": ["Fruit"] },
-                "count": param(ctx, "fruits"),
-                "costOverride": param(ctx, "setCost")
-            })))]
-        })),
-        ..Script::default()
-    };
-
-    CardScripts { base, radiant }
+/// R767000: the scripts through v0.6.4b, whose base face's Fruits kept their cost (issue #3951).
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_4b() -> CardScripts {
+    CardScripts {
+        base: produce(false),
+        radiant: produce(true),
+    }
 }
 
 // C+ #68 Organic Produce — SPEC §8.7 row 68, BUILD M9 row C+ 68 (R177).
@@ -228,8 +236,22 @@ mod tests {
             assert!(!s.card(&second).radiant);
             let fruits: Vec<CardInstance> = s.hand(P1).into_iter().filter(|card| !before.contains(&card.id)).collect();
             assert_eq!(fruits.len(), 1);
-            assert_eq!(fruits[0].cost_override, None);
+            assert_eq!(fruits[0].cost_override, Some(0), "issue #3951: the base face's Fruit costs (0) too");
             assert!(!s.events().iter().any(|event| matches!(event, GameEvent::RadiantSet { .. })));
+        }
+
+        /// R767000: through v0.6.4b the base face's Fruit kept its cost (issue #3951).
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_4b_adds_a_fruit_at_its_own_cost() {
+            crate::under_kept(PRODUCE, super::super::script_v0_6_4b(), || {
+                let mut s = scenario(json!({ "p1": { "hand": [PRODUCE, FILLER] }, "p2": { "hand": [FILLER] } }));
+                let before = hand_ids(&s);
+                s.play(PRODUCE, json!({ "zone": 1 }));
+                let fruits: Vec<CardInstance> =
+                    s.hand(P1).into_iter().filter(|card| !before.contains(&card.id)).collect();
+                assert_eq!(fruits.len(), 1);
+                assert_eq!(fruits[0].cost_override, None);
+            });
         }
 
         #[test]
@@ -320,19 +342,19 @@ mod tests {
         use super::*;
 
         #[test]
-        fn its_cry_adds_2_random_fruits_that_cost_0() {
+        fn its_cry_adds_3_random_fruits_that_cost_0() {
             let mut s = scenario(json!({ "p1": { "hand": [{ "def": PRODUCE, "radiant": true }, FILLER] }, "p2": { "hand": [FILLER] } }));
             let before = hand_ids(&s);
             s.play(PRODUCE, json!({ "zone": 1 }));
             let fruits: Vec<CardInstance> = s.hand(P1).into_iter().filter(|card| !before.contains(&card.id)).collect();
-            assert_eq!(fruits.len(), 2);
+            assert_eq!(fruits.len(), 3);
             let pool = fruit_pool();
             assert!(fruits.iter().all(|card| pool.contains(&card.def_id)));
             let costs: Vec<i32> = fruits
                 .iter()
                 .map(|card| jackioh_engine::mana::effective_cost(s.state(), card, Default::default()))
                 .collect();
-            assert_eq!(costs, vec![0, 0]);
+            assert_eq!(costs, vec![0, 0, 0]);
         }
 
         #[test]
@@ -375,12 +397,12 @@ mod tests {
         }
 
         #[test]
-        fn r386_an_upgrade_of_fruits_adds_three() {
+        fn r386_an_upgrade_of_fruits_adds_four() {
             let mut s = scenario(json!({ "p1": { "hand": [{ "def": PRODUCE, "radiant": true }, FILLER] }, "p2": { "hand": [FILLER] } }));
             step_param(s.card_mut(PRODUCE), "fruits", 1);
             let before = hand_ids(&s);
             s.play(PRODUCE, json!({ "zone": 1 }));
-            assert_eq!(s.hand(P1).into_iter().filter(|card| !before.contains(&card.id)).count(), 3);
+            assert_eq!(s.hand(P1).into_iter().filter(|card| !before.contains(&card.id)).count(), 4);
         }
 
         #[test]
@@ -391,7 +413,7 @@ mod tests {
             let before = hand_ids(&s);
             s.play(PRODUCE, json!({ "zone": 1 }));
             let made: Vec<CardInstance> = s.hand(P1).into_iter().filter(|card| !before.contains(&card.id)).collect();
-            assert_eq!(made.len(), 2);
+            assert_eq!(made.len(), 3);
             assert!(made.iter().all(|card| card.cost_override == Some(1)));
         }
     }

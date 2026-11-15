@@ -1,20 +1,20 @@
-//! Stinkyscape #128 Jlockeed's Yamato Cannon (SPEC §8.10 row 128). (2, Embiggened 3) Unit, Jlockeed, Rare;
-//! 4/1 → 8/2.
-//!   Base:    "Ranged, Cleave / Embiggened (3): Starship Piece."
-//!   Radiant: "Ranged, Cleave, Rush / Embiggened (3): Starship Piece."
+//! Stinkyscape #128 Jlockeed's Yamato Cannon (SPEC §8.10 row 128). (1, Embiggened 2) Unit, Jlockeed, Rare;
+//! 3/1 → 6/2 (4/1 → 8/2, (2) embiggen (3), until issue #3951).
+//!   Base:    "Ranged, Cleave / Embiggened (2): Starship Piece."
+//!   Radiant: "Ranged, Cleave, Rush / Embiggened (2): Starship Piece."
 //!
 //! Ranged (R783000) and Cleave (§6.1, R63) are printed keywords the engine plays: it takes no strike back
 //! from a defender without Ranged, and its attack splashes the Units beside its target, which never
 //! strike back. R1878001: the Embiggened version is a Starship Piece, lent by its text to the card stamped
 //! embiggened, as S #127's, so its death fuses it into its owner's Dormant Starship (R1852000). The
-//! Radiant face's 8/2 and, since #2521, its Rush (§6.1: it may attack a Unit, never the hero, the turn it
+//! Radiant face's 6/2 and, since #2521, its Rush (§6.1: it may attack a Unit, never the hero, the turn it
 //! lands) are catalog data.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-128";
 
-/// R1878001: "Embiggened (3): Starship Piece.": the keyword holds only on a card stamped embiggened.
+/// R1878001: "Embiggened (2): Starship Piece.": the keyword holds only on a card stamped embiggened.
 fn embiggened_piece(args: HookArgs<'_>) -> Vec<Keyword> {
     if args.self_.embiggened == Some(true) { vec![Keyword::StarshipPiece] } else { Vec::new() }
 }
@@ -24,7 +24,7 @@ pub fn script() -> CardScripts {
         conditional_keywords: Some(read_hook(embiggened_piece)),
         ..Script::default()
     };
-    // One script: the Radiant face's 8/2 and Rush are catalog data.
+    // One script: the Radiant face's 6/2 and Rush are catalog data.
     CardScripts {
         radiant: base.clone(),
         base,
@@ -82,7 +82,8 @@ mod tests {
                     "hand": [FILLER],
                     "field": [
                         { "def": VANILLA, "lane": 2, "damage": 2 },
-                        { "def": VANILLA, "lane": 3 },
+                        // 3 health left: the base face's 3 (4 until issue #3951) takes it.
+                        { "def": VANILLA, "lane": 3, "damage": 1 },
                         { "def": VANILLA, "lane": 4, "damage": 2 },
                     ],
                     "library": filler(6),

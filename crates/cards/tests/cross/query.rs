@@ -1125,13 +1125,12 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
         "stinkyscape-129",
     ];
     /// The Stinkyscape+ release (#3573): its printed 1/1 Units, its two tokens (#26.1 Conscript and #27.1
-    /// Imp) among them, last in the catalog order.
+    /// Imp) among them, last in the catalog order. S+ #37 Scorch left it as a 1/5 (issue #3951).
     const STINKYSCAPE_PLUS_ONE_ONES: &[&str] = &[
         "stinkyscapeplus-011",
         "stinkyscapeplus-012",
         "stinkyscapeplus-026-1",
         "stinkyscapeplus-027-1",
-        "stinkyscapeplus-037",
         "stinkyscapeplus-060",
         "stinkyscapeplus-101",
         "stinkyscapeplus-115",

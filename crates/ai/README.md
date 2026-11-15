@@ -192,6 +192,17 @@ smaller. `coming_hero_ticks` reads a hero's ticks through `projected_hero_damage
 life, and `hero_side` loses `hero_affliction` of that life's cost on the hero curve; the enemy's also counts
 at `enemy_health`. The reply already plays one tick a side. `GREEDY_EVAL` keeps all three at 0, and the
 learned features leave both counters out until a refit (R3535002).
+While a Feng Shui acts on either side (Meditative #40, R984), the seat's next face-up play counts by the
+verdict its last element gives it (R3951100): `feng_shui_outlook` takes, of the cards in the seat's own hand
+a Feng Shui would judge, the best verdict `subsystems::feng_shui::verdicts` gives one now, a reward at what
+the card would gain in hand as Radiant (`hand_card_value` of its Radiant copy less its own) and a punishment
+at every judge's hit on the hero curve, life held at 1 or more, and `material` adds `AI_EVAL.feng_shui_outlook`
+of it. The best alone, since only the first play is judged by that element, so a hand of rewarded cards is no
+reason to hold them back; the turn's own verdicts the search already plays through `reduce`. In tier 2 of the
+move order a play its card would be rewarded for comes first and one it would be punished for last, each group
+by cost (`Auspice`), so a level's `branching` cut keeps the play that chains the elements, and the seat's last
+element is part of `search_signature`, so two orders of the same plays that end on different elements stay
+two positions; with no Feng Shui acting neither changes. `GREEDY_EVAL` keeps 0.
 It re-plans after every action, so a
 lethal the solver proves is played trimmed to the actions it needs
 (`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action

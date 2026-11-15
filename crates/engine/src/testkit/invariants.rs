@@ -2374,13 +2374,25 @@ impl InvariantMonitor {
     }
 
     /// R636: a unit that just entered and carries Windfury, as it was before the action
-    /// (`carried_windfury`) or as the action left it, has it in this stint.
+    /// (`carried_windfury`) or as the action left it, has it in this stint. One gone from the field by
+    /// the action's end is also read standing in its controller's unit row, so an aura still acting
+    /// there (S+ #62 Overdrive Projector's "All Units gain Windfury") gives it the Windfury it had while
+    /// it stood: played, swinging twice and destroyed in one autopilot turn (fuzz seed 160).
     fn note_entry_windfury(&mut self, id: &str, state: &GameState) {
         let left_with = find_instance(state, id).is_some_and(|card| {
             let keywords = if card.zone.z() == ZoneName::Field {
                 crate::layers::keywords_of(state, card)
             } else {
-                crate::layers::card_keywords(state, card)
+                let mut standing = card.clone();
+                standing.zone = Zone::Field {
+                    player: card.controller,
+                    row: Row::Units,
+                    lane: 1,
+                };
+                let mut keywords = crate::layers::card_keywords(state, card);
+                // R89: as a dead card's snapshot is read, no pile's top holds the auras off it.
+                keywords.extend(crate::layers::unit_view_as_it_died(state, &standing).keywords);
+                keywords
             };
             has_keyword(&keywords, KeywordKind::Windfury)
         });

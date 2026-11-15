@@ -700,7 +700,8 @@ mod r1370_a_deck_that_leans_on_a_set {
         // the themed pin only, #2521 the human and themed pins, #3042 the hard, human and themed pins, #3139 and
         // #3138 the human, easy and hard pins: Living Bomb costs (2), Snom Bunny Mind Control (5) and a dozen
         // Meditative and Classic+ cards move cost, which moves the curve's buckets; #3837 every pin:
-        // Speciesist costs (3), Spiteful Stab, Argusland and Wardrum one less, and Ivory Tower (1)).
+        // Speciesist costs (3), Spiteful Stab, Argusland and Wardrum one less, and Ivory Tower (1); #3951
+        // every pin: Wardrum, Jlarna, Jlockeed's Yamato Cannon and Cloaking Module cost one less).
         let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
             (
                 "r1370-pin:human",
@@ -725,9 +726,9 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "core-007",
                     "core-053",
                     "classicplus-004",
-                    "classicplus-028",
+                    "classicplus-034",
                     "core-073",
-                    "classicplus-003",
+                    "classicplus-029",
                 ],
             ),
             (
@@ -793,7 +794,7 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classic-010",
                     "classic-009",
                     "classic-005",
-                    "classicplus-019",
+                    "classicplus-007",
                 ],
             ),
             (
@@ -814,14 +815,14 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classic-077",
                     "classic-066",
                     "classicplus-037",
-                    "core-001",
-                    "core-077",
-                    "core-068",
+                    "core-002",
+                    "core-086",
+                    "core-066",
                     "core-078",
-                    "classicplus-059",
-                    "core-079",
-                    "classic-061",
-                    "classicplus-024",
+                    "classicplus-063",
+                    "core-090",
+                    "classic-071",
+                    "classicplus-026",
                 ],
             ),
         ];

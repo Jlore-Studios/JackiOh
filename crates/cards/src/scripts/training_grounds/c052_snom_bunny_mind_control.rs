@@ -32,8 +32,9 @@
 //! (R2195003): it steals an enemy Unit only.
 //!
 //! Since issue #3139 it is its own card in earnest, moving its own way where Core #49 moved another
-//! (R2195003): the base face reads "Steal an enemy Unit. Set its stats to 4/4." (`set_stats` on the stolen
-//! Unit, the number `SET_TO`, a fixed one: whether 4/4 helps hangs on the Unit picked, params.rs) and the
+//! (R2195003): the base face reads "Steal an enemy Unit. Set its stats to 2/2." (`set_stats` on the stolen
+//! Unit, the number `SET_TO`, a fixed one: whether 2/2 helps hangs on the Unit picked, params.rs; 4/4
+//! through v0.6.4b, issue #3951, which `script_v0_6_4b` keeps for those replays, R767000) and the
 //! Radiant face, literally, "Steal an enemy card.": the target is any enemy permanent as Core #49's is
 //! (R3139002), and it no longer makes the card Radiant. Both effects run in a list, so a steal that finds no
 //! free zone (R15) still sets the Unit's stats, as Core #49's Radiant face still makes it Radiant. `script_v0_5_11o`
@@ -44,8 +45,10 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "traininggrounds-052";
 
-/// "Set its stats to 4/4": the Attack and Health the stolen Unit is set to (§6.3 Set stats, R2198000).
-const SET_TO: i32 = 4;
+/// "Set its stats to 2/2": the Attack and Health the stolen Unit is set to (§6.3 Set stats, R2198000).
+const SET_TO: i32 = 2;
+/// Through v0.6.4b (issue #3951): "Set its stats to 4/4".
+const SET_TO_V0_6_4B: i32 = 4;
 
 /// "An enemy Unit": the enemy's Units, never a card of the backrow's other types.
 fn enemy_unit() -> Vec<TargetDecl> {
@@ -62,14 +65,14 @@ fn steal_chosen() -> Effect {
     steal(json_as(json!({ "target": { "of": "chosen" } })))
 }
 
-pub fn script() -> CardScripts {
+fn mind_control(set_to: i32) -> CardScripts {
     CardScripts {
         base: Script {
             targets: enemy_unit(),
-            cry: Some(hook(|_ctx| {
+            cry: Some(hook(move |_ctx| {
                 vec![
                     steal_chosen(),
-                    set_stats(json_as(json!({ "target": { "of": "chosen" }, "attack": SET_TO, "health": SET_TO }))),
+                    set_stats(json_as(json!({ "target": { "of": "chosen" }, "attack": set_to, "health": set_to }))),
                 ]
             })),
             ..Script::default()
@@ -80,6 +83,16 @@ pub fn script() -> CardScripts {
             ..Script::default()
         },
     }
+}
+
+pub fn script() -> CardScripts {
+    mind_control(SET_TO)
+}
+
+/// R767000: the scripts v0.5.12 to v0.6.4b ran, setting the stolen Unit to 4/4 (issue #3951).
+/// `KEPT_SCRIPTS` folds those versions' replays under it.
+pub fn script_v0_6_4b() -> CardScripts {
+    mind_control(SET_TO_V0_6_4B)
 }
 
 /// R767000: the scripts v0.5.11r and every version before it ran: a steal of an enemy Unit, whose Radiant
@@ -102,11 +115,11 @@ pub fn script_v0_5_11o() -> CardScripts {
 }
 
 // TG #52 Legacy: Snom Bunny Mind Control — SPEC §8.11, BUILD M13 row TG 52, R15, R12, R22, R74, §6.3,
-// R3139002. Steal placement per R15; the base face sets the stolen Unit to 4/4 and the Radiant face steals
+// R3139002. Steal placement per R15; the base face sets the stolen Unit to 2/2 and the Radiant face steals
 // any enemy permanent; props (#25, #20, #45, #11, #8, #15, #41, #14).
 #[cfg(test)]
 mod tests {
-    use super::script_v0_5_11o;
+    use super::{script_v0_5_11o, script_v0_6_4b};
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -174,9 +187,10 @@ mod tests {
             g.expect_mana(PlayerId::P1, 0);
         }
 
-        /// Issue #3139: the base face sets the stolen Unit to 4/4, whatever it was, damaged or not.
+        /// Issue #3139: the base face sets the stolen Unit to 2/2 (4/4 until issue #3951), whatever it was,
+        /// damaged or not.
         #[test]
-        fn base_the_stolen_unit_is_set_to_4_4_a_big_one_down_and_a_small_one_up() {
+        fn base_the_stolen_unit_is_set_to_2_2_a_big_one_down_and_a_small_one_up() {
             for (def, damage) in [(SEVEN_SEVEN, 0), (DUELIST, 2), (TOKEN_MAKER, 0)] {
                 let mut g = scenario(json!({
                     "p1": { "hand": [MIND_CONTROL] },
@@ -187,7 +201,7 @@ mod tests {
                 g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
 
                 assert_eq!(g.unit(PlayerId::P1, 2).map(|u| u.id.clone()), Some(prey.id.clone()), "{def}");
-                g.expect_stats(&prey, json!({ "attack": 4, "maxHealth": 4, "health": 4 }));
+                g.expect_stats(&prey, json!({ "attack": 2, "maxHealth": 2, "health": 2 }));
                 assert!(!g.card(&prey).radiant, "{def}");
             }
         }
@@ -280,7 +294,7 @@ mod tests {
         }
 
         /// Issue #3139: "Steal an enemy card." and nothing more: the card is not made Radiant and keeps its
-        /// stats, damage included, where the base face sets the Unit to 4/4.
+        /// stats, damage included, where the base face sets the Unit to 2/2.
         #[test]
         fn r3139002_radiant_steals_the_card_and_neither_makes_it_radiant_nor_sets_its_stats() {
             let mut g = scenario(json!({
@@ -373,6 +387,21 @@ mod tests {
         }
     }
 
+    /// R767000: from v0.5.12 through v0.6.4b the base face set the stolen Unit to 4/4 (issue #3951).
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_4b_sets_the_stolen_unit_to_4_4() {
+        crate::under_kept(super::ID, script_v0_6_4b(), || {
+            let mut g = scenario(json!({
+                "p1": { "hand": [MIND_CONTROL] },
+                "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 3 }] },
+            }));
+            let prey = g.unit(PlayerId::P2, 3).expect("setup: the 7/7").clone();
+            g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }));
+            assert_eq!(g.card(&prey).controller, PlayerId::P1);
+            g.expect_stats(&prey, json!({ "attack": 4, "maxHealth": 4, "health": 4 }));
+        });
+    }
+
     /// R767000: through v0.5.11r the base face stole an enemy Unit and the Radiant face made it Radiant, the
     /// target a Unit on both.
     #[test]
@@ -404,7 +433,7 @@ mod tests {
     }
 
     /// R2195003, issue #3139: the snapshot is its own copy of Core #49, frozen against its later patches and now
-    /// moved by its own: the base face sets the stolen Unit to 4/4 and the Radiant face does not make it Radiant,
+    /// moved by its own: the base face sets the stolen Unit to 2/2 and the Radiant face does not make it Radiant,
     /// where Core #49's base face only steals and its Radiant face makes it Radiant.
     #[test]
     fn r2195003_the_legacy_card_is_its_own_copy_and_no_longer_plays_as_core_049() {
@@ -420,7 +449,7 @@ mod tests {
         };
         let (_, legacy_base) = game(MIND_CONTROL, false);
         let (_, core_base) = game("core-049", false);
-        assert_eq!((legacy_base.attack, legacy_base.max_health), (4, 4));
+        assert_eq!((legacy_base.attack, legacy_base.max_health), (2, 2));
         assert_eq!((core_base.attack, core_base.max_health), (7, 7));
         let (legacy_radiant, _) = game(MIND_CONTROL, true);
         let (core_radiant, _) = game("core-049", true);

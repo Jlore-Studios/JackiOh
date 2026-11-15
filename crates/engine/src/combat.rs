@@ -2315,6 +2315,7 @@ fn close_combat(
         since,
         holders: ally_attack_holders(sink.state, snapshot.controller),
         survived: None,
+        destroyed_enemy: destroyed_an_enemy(sink, &snapshot, from).then_some(true),
         check_only: None,
     };
     combatant_hooks(sink, snapshot, defender_snapshot, target, forced, since, from);
@@ -2768,7 +2769,8 @@ pub fn run_owed_ally_attacked(sink: &mut EngineSink<'_>, item: &WorkItem) {
 pub const ALLY_ATTACK_WORK: &str = "@allyAttack";
 
 /// The facts an `allyAttack` hook is handed in its `ctx.data` (`ally_attack_of` reads them back): the
-/// attacker's id, the target, `forced` (R53) and whether the attacker still stands as the hook starts.
+/// attacker's id, the target, `forced` (R53), whether the attacker still stands as the hook starts, and
+/// whether it destroyed an enemy Unit in the combat (R3951000).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AllyAttackFacts {
@@ -2776,6 +2778,9 @@ pub struct AllyAttackFacts {
     pub target_id: String,
     pub forced: bool,
     pub survived: bool,
+    /// R3951000: the combat's closing check destroyed a Unit of the attacker's opponent with the attacker
+    /// its killer (R42): the defender or a Unit its Cleave hit.
+    pub destroyed_enemy: bool,
 }
 
 /// The facts an `allyAttack` hook was handed, or `None` outside one.
@@ -2786,7 +2791,24 @@ pub fn ally_attack_of(ctx: &crate::script::EffectContext<'_>) -> Option<AllyAtta
         target_id: data.get("targetId")?.as_str()?.to_string(),
         forced: data.get("forced")?.as_bool()?,
         survived: data.get("survived")?.as_bool()?,
+        destroyed_enemy: data.get(DESTROYED_ENEMY_KEY).and_then(Value::as_bool) == Some(true),
     })
+}
+
+/// R3951000: the key of `AllyAttackFacts::destroyed_enemy` in a hook's data, written only when true.
+const DESTROYED_ENEMY_KEY: &str = "destroyedEnemy";
+
+/// R3951000: whether the events since `from` hold the death of a Unit of `attacker`'s opponent whose R42
+/// killer was `attacker`.
+fn destroyed_an_enemy(sink: &EngineSink<'_>, attacker: &CardInstance, from: usize) -> bool {
+    sink.events
+        .get(from.min(sink.events.len())..)
+        .unwrap_or(&[])
+        .iter()
+        .any(|event| {
+            matches!(event, GameEvent::Destroyed { controller, killer_id: Some(killer), .. }
+                if *killer == attacker.id && *controller != attacker.controller)
+        })
 }
 
 /// What an owed `@allyAttack` carries, all JSON: the combat's facts and the holders still to answer
@@ -2803,6 +2825,10 @@ struct OwedAllyAttack {
     /// The first holder's `survived`, judged once as its hook starts, so a pause re-reads the same.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     survived: Option<bool>,
+    /// R3951000: the attacker destroyed an enemy Unit in the combat, read as its closing check ends. Only
+    /// ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    destroyed_enemy: Option<bool>,
     /// The first holder's hook is done; only its state check is owed. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     check_only: Option<bool>,
@@ -2866,6 +2892,9 @@ fn answer_ally_attack(sink: &mut EngineSink<'_>, mut owed: OwedAllyAttack, mut p
         data.insert("targetId".to_string(), json!(owed.target_id));
         data.insert("forced".to_string(), json!(owed.forced));
         data.insert("survived".to_string(), json!(survived));
+        if owed.destroyed_enemy == Some(true) {
+            data.insert(DESTROYED_ENEMY_KEY.to_string(), json!(true));
+        }
         let status = run_engine_hook(sink, hook, &card, card.controller, &owed, data, resumed);
         match status {
             crate::prompts::ListStatus::Done => {

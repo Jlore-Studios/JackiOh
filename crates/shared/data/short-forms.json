@@ -456,7 +456,7 @@
     },
     "stinkyscapeplus-064": {
       "radiant": {
-        "en": "Can't attack, Can't Defend, Pierce, Armor 2\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (4): {embiggenedDamage} damage, GIGA, 0/48."
+        "en": "Can't attack, Taunt, Pierce, Armor 2\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (4): {embiggenedDamage} damage, GIGA, 0/48."
       }
     },
     "stinkyscapeplus-072": {
@@ -565,51 +565,19 @@
         "en": "Flying, Ranged\nDormant until launched, never by hand. Holds Radiant After Burner, Ultralight Chassis, Spacemine, AP Rounds."
       }
     },
-    "stinkyscapeplus-t-terminus-starship-heat-death-pilgrim": {
+    "meditative-087": {
       "radiant": {
-        "en": "Flying, Ranged\nDormant until launched, never by hand. Holds Radiant Trila 3, RR-5000, Healing Capsule, Vamp Rounds."
-      }
-    },
-    "stinkyscapeplus-t-terminus-starship-entropys-wake": {
-      "base": {
-        "en": "Flying, Ranged\nDormant until launched, never by hand. Holds Disintegrex, Flak v4, Shield Amplifier, Hull Booster."
-      },
-      "radiant": {
-        "en": "Flying, Ranged\nDormant until launched, never by hand. Holds Radiant Disintegrex, Flak v4, Shield Amplifier, Hull Booster."
-      }
-    },
-    "stinkyscapeplus-t-terminus-starship-red-giant-requiem": {
-      "radiant": {
-        "en": "Flying, Ranged\nDormant until launched, never by hand. Holds Radiant Cannon v5, Trila 3 and Ultra Capacitor."
+        "en": "In hand or deck, summoned after you play a tribal card.\nEnd of turn: Buff {cards|random card|random cards} in your hand and each adjacent Unit."
       }
     },
     "stinkyscapeplus-t-terminus-starship-cold-exodus": {
-      "base": {
-        "en": "Flying, Ranged\nDormant until launched, never by hand. Holds Frost Module, Reflective Plating, Defensive Crystal, Beam v4."
-      },
       "radiant": {
-        "en": "Flying, Ranged\nDormant until launched, never by hand. Holds Radiant Frost Module, Reflective Plating, Defensive Crystal, Beam v4."
-      }
-    },
-    "stinkyscapeplus-t-terminus-starship-omega-drift": {
-      "radiant": {
-        "en": "Flying, Ranged\nDormant until launched, never by hand. Holds Radiant Beam v5, Warpfield Amplifier, Magic Module, RR-5000."
+        "en": "Flying, Ranged\nDormant until launched, never by hand. Holds Radiant Frost Module, Reflective Plating and Beam v4."
       }
     },
     "stinkyscapeplus-t-terminus-starship-farthest-shore": {
-      "base": {
-        "en": "Flying, Ranged\nDormant until launched, never by hand. Holds Repeater v5, After Burner, Patcher Nanobots, Ultra Capacitor, Healing Capsule."
-      },
       "radiant": {
-        "en": "Flying, Ranged\nDormant until launched, never by hand. Holds Radiant Repeater v5, After Burner, Patcher Nanobots, Ultra Capacitor, Healing Capsule."
-      }
-    },
-    "stinkyscapeplus-t-terminus-starship-nightfall-covenant": {
-      "base": {
-        "en": "Flying, Ranged\nDormant until launched, never by hand. Holds Flak v5, Cannon v4, Vamp Rounds, Shield Amplifier, Spacemine."
-      },
-      "radiant": {
-        "en": "Flying, Ranged\nDormant until launched, never by hand. Holds Radiant Flak v5, Cannon v4, Vamp Rounds, Shield Amplifier, Spacemine."
+        "en": "Flying, Ranged\nDormant until launched, never by hand. Holds Radiant Repeater v5, Ultra Capacitor and Healing Capsule."
       }
     }
   },

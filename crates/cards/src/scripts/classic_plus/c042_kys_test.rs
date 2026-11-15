@@ -129,7 +129,7 @@ mod tests {
 
     /// The cards the reward put in p1's hand (the filler excluded).
     fn gained(s: &Scenario) -> Vec<Value> {
-        s.hand(P1)
+        crate::hand_and_summoned_tatches(s, P1)
             .into_iter()
             .filter(|card| card.def_id != FILLER)
             .map(|card| {
