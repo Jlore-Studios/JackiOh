@@ -392,7 +392,8 @@ describe(`47 — every control under a finger takes a tap across ${String(HIT_MI
             cy.get(ts(id)).should(($link) => {
               const style = $link[0]!.ownerDocument.defaultView!.getComputedStyle($link[0]!);
               expect($link[0]!.getBoundingClientRect().height, `${id}'s own height`).to.be.at.least(HIT_MIN_PX);
-              expect(style.display, `${id}'s display`).to.eq("inline-flex");
+              // A flex item's display is blockified (`inline-flex` computes as `flex`), so the match is on the flex.
+              expect(style.display, `${id}'s display`).to.match(/flex$/);
               expect(parseFloat(style.paddingLeft), `${id}'s padding`).to.be.greaterThan(0);
               expect(parseFloat(style.borderTopLeftRadius), `${id}'s radius`).to.be.greaterThan(0);
             });
