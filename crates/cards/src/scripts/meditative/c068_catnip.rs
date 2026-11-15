@@ -193,10 +193,11 @@ mod tests {
             "p2": { "hand": [STOCKPILE, STOCKPILE, FILLER] },
         }));
         s.play(STOCKPILE, json!({}));
-        let events = s.events().len();
         s.play(STOCKPILE, json!({}));
         row_is(&s, "units");
-        let _ = events;
+        assert_eq!(s.last_count("cardResolved"), 1, "the later Spell resolved");
+        assert_eq!(s.last_count("trapFired"), 0, "Catnip does not fire again");
+        assert_eq!(s.last_count("animated"), 0, "and does not animate again");
     }
 
     #[test]
