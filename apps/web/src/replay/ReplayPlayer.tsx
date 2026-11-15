@@ -6,6 +6,8 @@
 // gap, starts over. The last step shows both hands (R434). R768000: a result screen opens it at step 0
 // or the last. #1568: Try again only for `error`, since a refusal or an expiry cannot change; failed
 // pages are not cached (`steps.ts`). R1834004: an online match's board wears both seats' frozen loadouts.
+// R3976000: each hero wears its seat's portrait as the source holds it (the default where it holds none),
+// opening no emote menu, and a GIF made from the replay draws the same pair.
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactElement, ReactNode } from "react";
@@ -115,7 +117,8 @@ export default function ReplayPlayer({
   const [fx] = useFxSettings();
   const busy = useBoardBusy(root);
   const current = at?.step.step ?? 0;
-  const gif = useGifExport(cache, current);
+  const portraits = source.portraits?.() ?? null;
+  const gif = useGifExport(cache, current, portraits);
 
   const show = useCallback(
     (index: number): void => {
@@ -277,6 +280,7 @@ export default function ReplayPlayer({
         enemyLabel={opponentLabel}
         resultForm="chip"
         loadouts={source.loadouts?.() ?? null}
+        portraits={portraits}
         phoneRailTop
         boardRail={
           <>

@@ -410,6 +410,7 @@ function Seat({
   pops,
   notices,
   emotes,
+  portraits,
   aside,
   heroLabel,
 }: {
@@ -422,6 +423,8 @@ function Seat({
   pops: ReadonlyMap<string, Pops>;
   notices: OverflowNotices;
   emotes?: BoardProps["emotes"];
+  /** R3976000: each seat's portrait where no emote surface gives one (a replay's board). */
+  portraits?: BoardProps["portraits"];
   /** The route's chrome beside this seat's hero (`HeroAside`), drawn outside the hero's own clicks. */
   aside?: ReactNode;
   /** The opponent hero's seat label (a practice game's `AI · Easy`); drawn only on the opponent's seat. */
@@ -446,6 +449,7 @@ function Seat({
         onControl={onControl}
         pops={pops.get(testid.hero(side))}
         emotes={emotes?.(side)}
+        portrait={portraits?.[seat.player]}
         {...(side === "opponent" && heroLabel !== undefined ? { seatLabel: heroLabel } : {})}
       />
       {aside === undefined || aside === null ? null : (
@@ -593,6 +597,7 @@ export default function Board({
   onClick,
   onControl,
   emotes,
+  portraits = null,
   wearCosmetics = false,
   deckCosmetics = null,
   loadouts = null,
@@ -728,6 +733,7 @@ export default function Board({
           pops={pops}
           notices={notices}
           emotes={emotes}
+          portraits={portraits}
           aside={heroAside?.enemy}
           {...(enemyLabel === undefined ? {} : { heroLabel: enemyLabel })}
         />
@@ -772,7 +778,7 @@ export default function Board({
             </div>
           </div>
 
-          <Seat view={view} side="you" highlight={highlight} animating={animating} onClick={onClick} onControl={onControl} pops={pops} notices={notices} emotes={emotes} aside={heroAside?.own} />
+          <Seat view={view} side="you" highlight={highlight} animating={animating} onClick={onClick} onControl={onControl} pops={pops} notices={notices} emotes={emotes} portraits={portraits} aside={heroAside?.own} />
           <Hand side="you" seat={view.you.player} hand={yourHand} cap={view.you.handCap} view={view} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("you")} />
         </HoveredHandCardProvider>
 

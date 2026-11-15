@@ -15,6 +15,8 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { consentTestid } from "../auth/testids.ts";
+import { testid } from "../game/contract.ts";
+import type { SeatPortraits } from "../game/contract.ts";
 import type { DuosReplaySteps } from "../duos/DuosReplay.tsx";
 import { duosReplayJson, duosReplayJsonFile } from "../duos/download.ts";
 import { duosTestid } from "../duos/testids.ts";
@@ -59,11 +61,14 @@ function hostOn(saves: PracticeSaveStore): PracticeHost {
   return host;
 }
 
-/** A store holding one finished practice game: started and conceded at once. */
-async function storeWithGame(): Promise<PracticeSaveStore> {
+/** A store holding one finished practice game: started (dealt `portraits`, if given) and conceded at once. */
+async function storeWithGame(portraits?: SeatPortraits): Promise<PracticeSaveStore> {
   const saves = memorySaveStore();
   const host = hostOn(saves);
-  await host.request({ type: "start", config: { seed: "replays-list", difficulty: "easy", humanSeat: HUMAN, deck: { kind: "random" } } });
+  await host.request({
+    type: "start",
+    config: { seed: "replays-list", difficulty: "easy", humanSeat: HUMAN, deck: { kind: "random" }, ...(portraits === undefined ? {} : { portraits }) },
+  });
   const done = await host.request({ type: "act", action: { type: "concede" } });
   if (done.type !== "snapshot" || done.snapshot.view.result === null) throw new Error("the conceded game did not end");
   return saves;
@@ -100,9 +105,22 @@ function signIn(owed: { termsOwed?: boolean } = {}): void {
   } as Awaited<ReturnType<typeof getMe>>);
 }
 
-function serveSteps(): void {
+function serveSteps(portraits?: SeatPortraits): void {
   vi.mocked(getReplaySteps).mockImplementation((_token, matchId, from, count) =>
-    Promise.resolve({ matchId, from, steps: steps.slice(from, from + Math.min(count, REPLAY_PAGE_STEPS)), total: steps.length }),
+    Promise.resolve({
+      matchId,
+      from,
+      steps: steps.slice(from, from + Math.min(count, REPLAY_PAGE_STEPS)),
+      total: steps.length,
+      ...(portraits === undefined ? {} : { portraits }),
+    }),
+  );
+}
+
+/** R3976000: the portrait each hero of the board on screen wears, the viewer's first. */
+function heroPortraits(): (string | null)[] {
+  return (["you", "opponent"] as const).map(
+    (side) => screen.getByTestId(testid.hero(side)).querySelector(".hero-portrait")?.getAttribute("data-portrait") ?? null,
   );
 }
 
@@ -171,6 +189,27 @@ describe("R768000 /replays", () => {
     fireEvent.click(within(first).getByRole("button", { name: "Watch" }));
     await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
     expect(getReplaySteps).toHaveBeenCalledWith(TOKEN, "m-1", 0, REPLAY_PAGE_STEPS);
+  });
+
+  it("R3976000 a practice row's replay draws the portraits its summary holds", async () => {
+    renderRoute(await storeWithGame({ p1: "gary", p2: "shredder" }));
+    const row = await screen.findByTestId(replaysTestid.practice(1));
+    fireEvent.click(within(row).getByRole("button", { name: "Watch" }));
+    await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
+    // The human sat at p2, so the viewer's hero is p2's.
+    expect(heroPortraits()).toEqual(["shredder", "gary"]);
+  });
+
+  it("R3976000 an online row's replay draws the portraits its pages carry", async () => {
+    signIn();
+    const viewer = steps[0]?.view.viewer ?? "p1";
+    serveSteps(viewer === "p1" ? { p1: "gary", p2: "shredder" } : { p1: "shredder", p2: "gary" });
+    vi.mocked(getReplays).mockResolvedValue({ replays: [listing()], nextOffset: null });
+    renderRoute(memorySaveStore());
+    const row = await screen.findByTestId(replaysTestid.online("m-1"));
+    fireEvent.click(within(row).getByRole("button", { name: "Watch" }));
+    await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
+    expect(heroPortraits()).toEqual(["gary", "shredder"]);
   });
 
   it("#3698 an online row's replay names its opponent, a deleted account when the name is gone", async () => {
@@ -479,14 +518,14 @@ describe("R1141000 Download JSON", () => {
 
 describe("R1141000 Open replay JSON", () => {
   /** The file a download of a practice game makes: `replayJsonFile` over the folded steps. */
-  function downloaded(): Promise<File> {
+  function downloaded(portraits: SeatPortraits = { p1: "vanilla", p2: "vanilla" }): Promise<File> {
     const game = practiceGame({
       game: 1,
       endedAt: 0,
       result: "loss",
       turns: steps[steps.length - 1]?.turn ?? 0,
       steps: steps.length,
-      portraits: { p1: "vanilla", p2: "vanilla" },
+      portraits,
     });
     return replayJsonFile(game, fakeReplaySource(steps), 0);
   }
@@ -532,6 +571,26 @@ describe("R1141000 Open replay JSON", () => {
     expect(screen.queryByTestId(replaysTestid.openFailed)).toBeNull();
     // The input was emptied, so the same file can be chosen again.
     expect(screen.getByTestId<HTMLInputElement>(replaysTestid.openFile).value).toBe("");
+  });
+
+  it("R3976000 a downloaded file draws the portraits it holds, and a file without them draws vanilla", async () => {
+    const viewer = steps[0]?.view.viewer ?? "p1";
+    const input = await openInput();
+    choose(input, await downloaded(viewer === "p1" ? { p1: "gary", p2: "shredder" } : { p1: "shredder", p2: "gary" }));
+    await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
+    expect(heroPortraits()).toEqual(["gary", "shredder"]);
+    fireEvent.click(screen.getByTestId(replayTestid.back));
+    await screen.findByTestId(replaysTestid.root);
+
+    // An older file, written before its game named portraits.
+    const json = JSON.parse(await (await downloaded({ p1: "gary", p2: "shredder" })).text()) as { game: Record<string, unknown> };
+    delete json.game.portraits;
+    const older = new File([JSON.stringify(json)], "older.json", { type: "application/json" });
+    const again = screen.getByTestId<HTMLInputElement>(replaysTestid.openFile);
+    await waitFor(() => expect(again).toBeEnabled());
+    choose(again, older);
+    await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
+    expect(heroPortraits()).toEqual(["vanilla", "vanilla"]);
   });
 
   it("R1141000 invalid, stale and over-limit files refuse before mounting", async () => {

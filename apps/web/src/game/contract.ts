@@ -317,6 +317,9 @@ export type HeroEmotes = {
   onCloseMenu: () => void;
 };
 
+/** R642: both seats' portraits, by seat. */
+export type SeatPortraits = Readonly<Record<PlayerId, PortraitId>>;
+
 /**
  * DR14 (#2706): a route's slot beside each hero, as `boardRail` is one in the rail: `own` beside the
  * viewer's hero, `enemy` beside the opponent's. The board draws what it is handed and reads nothing
@@ -365,6 +368,11 @@ export type BoardProps = {
   onControl?: (control: BoardControl) => void;
   /** One hero's emote surface per side, or undefined where a route does not run emotes. */
   emotes?: (side: Side) => HeroEmotes | undefined;
+  /**
+   * R3976000: each seat's portrait on a board with no emote session (a replay's), drawn and nothing
+   * more; a hero's emote surface wins over it. Null or absent, the default.
+   */
+  portraits?: SeatPortraits | null;
   /**
    * R1295000: the viewer's own cards wear the device's card cosmetics (game/wearer.ts). A board
    * the viewer plays sets it; absent, every card draws the defaults.

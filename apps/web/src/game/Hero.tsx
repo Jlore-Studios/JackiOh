@@ -9,6 +9,7 @@
 // opponent's are tags; `usedThisTurn` is drawn, never obeyed; the flash plays on `card-<instanceId>`.
 // Portrait (R1449): a click, Enter or Space on a non-target toggles the emote menu (R643: the opponent's is a
 // one-item mute); a hold opens `emotes/HeroInspect.tsx` (R1330). Owed extra turns are a modifier badge (R846).
+// R3976000: a hero with no emote surface (a replay's) draws `portrait`, its seat's, and opens nothing.
 // R1840005: a seat's Credits (spent by R1853003's Marketplace, earned by R2250001's Resource) show as
 // `market-credits-<side>`, even at 0; a Resource is a hand card (#2250, R2250000), so the hand draws it.
 
@@ -42,7 +43,7 @@ import {
 import { glowAttr } from "./glow.ts";
 import { useOsReducedMotion } from "./useOsReducedMotion.ts";
 import { t } from "../i18n/i18n.ts";
-import type { HeroPowerView, PlayerView } from "@jackioh/shared";
+import type { HeroPowerView, PlayerView, PortraitId } from "@jackioh/shared";
 
 export type { HeroEmotes } from "./contract.ts";
 
@@ -55,6 +56,8 @@ export type HeroProps = {
   onControl?: (control: BoardControl) => void;
   pops?: Pops;
   emotes?: HeroEmotes;
+  /** R3976000: the seat's portrait where no emote surface gives one (a replay's board); absent, the default. */
+  portrait?: PortraitId;
   /** The seat's label, drawn over `You`/`Opponent` (a practice game's `AI · Easy` on the opponent's seat). */
   seatLabel?: string;
 };
@@ -75,7 +78,7 @@ export default function Hero(props: HeroProps): ReactElement {
   const seat = sideView(view, side);
   const hero = seat.hero;
   const emotes = props.emotes;
-  const portrait = emotes?.portrait ?? DEFAULT_PORTRAIT;
+  const portrait = emotes?.portrait ?? props.portrait ?? DEFAULT_PORTRAIT;
   const menu = emotes?.menu ?? null;
   const inspect = emotes?.inspect === true;
   const portraitName = readerName(PORTRAIT_DEFS[portrait].def);

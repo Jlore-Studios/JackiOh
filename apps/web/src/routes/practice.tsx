@@ -65,7 +65,7 @@ import { createPracticeController, type PracticeController } from "../practice/c
 import { deckChoiceFromValue, deckChoiceValue, isAutostartDeckValue, isDeckValue } from "../practice/decks.ts";
 import { earningText, seedRequestOf, type PracticeEarning } from "../practice/earning.ts";
 import { createPracticeHost, type PracticeHost } from "../practice/host.ts";
-import { usePracticeEmotes } from "../practice/emotes.ts";
+import { practicePortraits, usePracticeEmotes } from "../practice/emotes.ts";
 import { randomDeckLean, type PracticeDebug, type PracticeDeckChoice, type PracticeStartConfig } from "../practice/protocol.ts";
 import { clearPracticeResume, readPracticeResumeState, writePracticeResume } from "../practice/resume.ts";
 import { ModifierList } from "../game/ModifierList.tsx";
@@ -226,17 +226,22 @@ function writeStoredSetup(difficulty: Difficulty, deck: PracticeDeckChoice, lean
 function configFor(choice: PracticeSetupChoice, params: PracticeParams): PracticeStartConfig {
   // R2882000: today's deal is the UTC day's seed and seat on a random deck, whatever the URL or the deck picked;
   // never a sandbox or the fixture pool.
-  if (choice.dailyDeal === true) return dailyDealConfig(Date.now(), choice.difficulty, choice.leanSet ?? null);
-  return {
-    seed: params.seed ?? randomPracticeSeed(),
-    difficulty: choice.difficulty,
-    humanSeat: params.seat ?? randomSeat(),
-    deck: choice.deck,
-    // `EngineGate` (main.tsx) holds this screen until the module is loaded, so the binding is set.
-    ...(params.aipool === "fixture" ? { aiBanned: [...FIXTURE_BANNED_IDS] } : {}),
-    // R923000: a sandbox game.
-    ...(choice.sandbox === true ? { sandbox: true } : {}),
-  };
+  const config: PracticeStartConfig =
+    choice.dailyDeal === true
+      ? dailyDealConfig(Date.now(), choice.difficulty, choice.leanSet ?? null)
+      : {
+          seed: params.seed ?? randomPracticeSeed(),
+          difficulty: choice.difficulty,
+          humanSeat: params.seat ?? randomSeat(),
+          deck: choice.deck,
+          // `EngineGate` (main.tsx) holds this screen until the module is loaded, so the binding is set.
+          ...(params.aipool === "fixture" ? { aiBanned: [...FIXTURE_BANNED_IDS] } : {}),
+          // R923000: a sandbox game.
+          ...(choice.sandbox === true ? { sandbox: true } : {}),
+        };
+  // R642, R3976000: the portraits are dealt with the config, so the board draws them, the kept game's
+  // summary holds them for its replay and a resume keeps them.
+  return { ...config, portraits: practicePortraits(config) };
 }
 
 /** `?lesson=`, or `?difficulty=` with a `random` or `preset:` `?deck=`, starts a game with no click. */
@@ -895,12 +900,14 @@ function PracticeScreen({
   const kept = state.config === game ? state.snapshot?.replay : undefined;
   const keptGame = kept?.game;
   const keptSteps = kept?.steps;
+  // R3976000: the portraits the game was dealt with, the ones its board drew; the config's own object, so stable.
+  const keptPortraits = game?.portraits;
   const replaySource = useMemo(
     () =>
       controller === null || keptGame === undefined || keptSteps === undefined
         ? null
-        : controller.replaySource({ game: keptGame, steps: keptSteps }),
-    [controller, keptGame, keptSteps],
+        : controller.replaySource({ game: keptGame, steps: keptSteps, portraits: keptPortraits ?? null }),
+    [controller, keptGame, keptSteps, keptPortraits],
   );
   const onWatchReplay = useCallback(() => {
     if (game !== null) setWatching({ game, share: false });

@@ -31,6 +31,16 @@ function dealPortraits(config: PracticeStartConfig): { human: PortraitId; ai: Po
   return { human, ai: pickPortrait(Math.random) };
 }
 
+/**
+ * R642, R3976000: both seats' portraits for `config`: those it was dealt with (the page deals a free
+ * game's into its config, so its replay summary holds them), else a fresh deal.
+ */
+export function practicePortraits(config: PracticeStartConfig): { p1: PortraitId; p2: PortraitId } {
+  if (config.portraits !== undefined) return config.portraits;
+  const { human, ai } = dealPortraits(config);
+  return config.humanSeat === "p1" ? { p1: human, p2: ai } : { p1: ai, p2: human };
+}
+
 /** R645: the tutorial is always Silent (issue §6); the persona chooses within the AI seat's own hand (R1344). */
 function dealPersona(config: PracticeStartConfig, seat: PlayerId, hand: readonly EmoteId[]): EmotePersona {
   const persona = config.lesson === undefined ? pickPersona(Math.random) : "silent";
@@ -67,12 +77,12 @@ export function usePracticeEmotes(
     hands: { p1: readonly EmoteId[]; p2: readonly EmoteId[] };
   } | null>(null);
   if (config !== null && aiSeat !== null && deal?.config !== config) {
-    const { human, ai } = dealPortraits(config);
+    const portraits = practicePortraits(config);
     const hands = dealEmoteHands(config.seed);
     setDeal({
       config,
       persona: dealPersona(config, aiSeat, hands[aiSeat]),
-      portraits: config.humanSeat === "p1" ? { p1: human, p2: ai } : { p1: ai, p2: human },
+      portraits,
       hands,
     });
   }

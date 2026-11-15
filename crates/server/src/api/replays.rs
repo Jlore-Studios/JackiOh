@@ -5,7 +5,7 @@
 //! Flags unplayable replays under unsupported catalog versions (R767000, #1825).
 //!
 //! `GET /api/replays/:matchId?from=&count=` streams seat-filtered steps (R677, R97, CLAUDE.md rule 7),
-//! loadouts (R1834002, R1834003), and support for shared replays (B52).
+//! loadouts (R1834002, R1834003), portraits (R3976000), and support for shared replays (B52).
 //! Replays fold under original catalog versions and All Random deals (R433, R112).
 //!
 //! Cached in memory (up to `REPLAY_CACHE_MATCHES`, `REPLAY_CACHE_TTL_SECONDS`), rate limited
@@ -259,6 +259,8 @@ pub struct ReplaySteps {
     /// R1834003: the card picks of the cards the page's steps show, by seat, as the `cardLoadouts`
     /// frames carry them; a card none of its steps shows is not here.
     pub card_loadouts: Vec<SeatCards>,
+    /// R3976000: both seats' portraits, as the list's rows carry them.
+    pub portraits: PerPlayer<PortraitId>,
 }
 
 /// Both routes' own allowance, counted per account like R109's.
@@ -500,6 +502,15 @@ fn home_seat(replay: &ReplayRow, profile_id: &str) -> PlayerId {
     }
 }
 
+/// R641, R642: the portraits a replay's seats were dealt, `vanilla` for a match from before them.
+fn portraits_of(replay: &ReplayRow) -> PerPlayer<PortraitId> {
+    let (p1, p2) = replay
+        .row
+        .portraits
+        .unwrap_or((DEFAULT_PORTRAIT, DEFAULT_PORTRAIT));
+    PerPlayer::new(p1, p2)
+}
+
 /// The profile id in the seat `profile_id` did not begin in.
 fn opponent_of<'a>(replay: &'a ReplayRow, profile_id: &str) -> &'a str {
     match home_seat(replay, profile_id) {
@@ -538,10 +549,6 @@ pub async fn list_replays(app: &Arc<App>, req: Req) -> ApiResult {
     for entry in &entries {
         let (replay, mode) = (&entry.replay, entry.mode);
         let opponent = opponent_of(replay, &profile.id);
-        let portraits = replay
-            .row
-            .portraits
-            .unwrap_or((DEFAULT_PORTRAIT, DEFAULT_PORTRAIT));
         replays.push(ReplayListing {
             match_id: replay.row.id.clone(),
             mode,
@@ -550,7 +557,7 @@ pub async fn list_replays(app: &Arc<App>, req: Req) -> ApiResult {
             result: result_for(&replay.result, &profile.id),
             turns: replay.result.turns,
             steps: replay.actions + 1,
-            portraits: PerPlayer::new(portraits.0, portraits.1),
+            portraits: portraits_of(replay),
             opponent: ReplayOpponent {
                 profile_id: opponent.to_string(),
                 username: profiles
@@ -662,6 +669,7 @@ pub async fn get_replay(app: &Arc<App>, req: Req) -> ApiResult {
         total,
         loadouts: PerPlayer::new(loadouts.0.seat, loadouts.1.seat),
         card_loadouts,
+        portraits: portraits_of(&replay),
     })
 }
 

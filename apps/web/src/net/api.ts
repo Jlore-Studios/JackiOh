@@ -1577,7 +1577,8 @@ export type OnlineReplayList = { replays: OnlineReplayListing[]; nextOffset: num
 
 /**
  * `GET /api/replays/:matchId`. R1834003: with both seats' frozen loadouts (all defaults before
- * R1834002) and this page's cards' picks, read as untrusted (`cards/loadouts.ts`).
+ * R1834002) and this page's cards' picks, read as untrusted (`cards/loadouts.ts`). R3976000: with both
+ * seats' portraits, read as untrusted (`replay/source.ts`'s `seatPortraitsOf`); an older server names none.
  */
 export type OnlineReplaySteps = {
   matchId: string;
@@ -1586,6 +1587,7 @@ export type OnlineReplaySteps = {
   total: number;
   loadouts?: unknown;
   cardLoadouts?: unknown;
+  portraits?: unknown;
 };
 
 export function getReplays(token: string, offset = 0): Promise<OnlineReplayList> {

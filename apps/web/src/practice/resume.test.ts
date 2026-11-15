@@ -99,6 +99,17 @@ describe("R668 the practice game to resume, on the device", () => {
     expect(readPracticeResume()).toBeNull();
   });
 
+  it("R3976000 a game is kept with its portraits, and portraits naming an unknown one are malformed", () => {
+    writePracticeResume({ ...CONFIG, portraits: { p1: "gary", p2: "shredder" } });
+    expect(readPracticeResume()).toEqual({ ...CONFIG, portraits: { p1: "gary", p2: "shredder" } });
+    writePracticeResume(CONFIG);
+    expect(readPracticeResume(), "a game kept before its portraits were dealt with it keeps none").toEqual(CONFIG);
+    for (const portraits of [{ p1: "gary", p2: "nobody" }, { p1: "gary" }, ["gary", "shredder"], "gary", null]) {
+      window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify({ ...CONFIG, portraits }));
+      expect(readPracticeResume(), JSON.stringify(portraits)).toBeNull();
+    }
+  });
+
   it("R765 keeps where the player left the game: in it, or with Save and leave", () => {
     writePracticeResume(CONFIG);
     expect(readPracticeResumeState()).toEqual({ config: CONFIG, saved: false });

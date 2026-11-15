@@ -27,7 +27,7 @@ import { createPracticeHost } from "../practice/host.ts";
 import type { PracticeHost } from "../practice/host.ts";
 import type { PracticeReplayListing } from "../practice/protocol.ts";
 import ReplayPlayer from "../replay/ReplayPlayer.tsx";
-import { downloadFile, onlineGame, practiceGame, readReplayJsonFile, replayJsonFile, replayStepsOf } from "../replay/download.ts";
+import { downloadFile, onlineGame, practiceGame, readReplayJsonFile, replayJsonFile, replayPortraitsOf, replayStepsOf } from "../replay/download.ts";
 import type { ReplayJsonGame } from "../replay/download.ts";
 import { memoryReplaySource, replayFailureOf, replayFailureText } from "../replay/source.ts";
 import type { ReplaySource } from "../replay/source.ts";
@@ -149,10 +149,11 @@ function OpenReplayJson({ ready, onOpen }: { ready: boolean; onOpen: (opened: Op
     readReplayJsonFile(file)
       .then((json): Open => {
         const key = `file-${file.name}`;
-        // R1242000: a co-op replay's file is read as its own format; any other as a 1v1 replay's.
+        // R1242000: a co-op replay's file is read as its own format; any other as a 1v1 replay's, its
+        // steps checked first and drawn with the portraits it holds, if any (R3976000).
         return json.format === DUOS_REPLAY_JSON_FORMAT
           ? { key, duos: parseDuosReplayJson(json) }
-          : { key, source: memoryReplaySource(replayStepsOf(json)) };
+          : { key, source: memoryReplaySource(replayStepsOf(json), replayPortraitsOf(json)) };
       })
       .then(onOpen, (cause: unknown) => {
         setFailed(replayFailureText(replayFailureOf(cause)));

@@ -626,6 +626,9 @@ practice result dialog and an online match's result panel offer "Watch the repla
 last turn" (the last step, its turn's GIF already being made). A practice result reads the kept game from
 the worker's final snapshot (`replay`) and asks its pages through the practice controller's queue; a
 match result loads its first page to learn the replay's length (`OpenedReplay`, `openOnlineMatchReplay`).
+Each source answers `portraits()` (R3976000: an online one from its pages, a practice one from its summary, an
+opened file from the file), which the board draws read-only (`Game`'s `portraits`, no emote menu) and the GIF
+draws too; a source with none draws the default.
 The GIF code still loads on demand, never in the main bundle.
 Each `/replays` row that can be watched also offers "Download JSON" (R1141000): every step's view through the
 row's own source, the row's facts and the build's catalog version, no account named, made in memory and saved

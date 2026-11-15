@@ -1173,7 +1173,8 @@ describe("B33 starting renders the game with no HUD above the board", () => {
 
     await screen.findByTestId("game");
     expect(host.starts()).toEqual([
-      { seed: "abc123", difficulty: "hard", humanSeat: "p2", deck: { kind: "preset", id: "humans" } },
+      // R3976000: dealt its portraits with the config, a preset deck's human the default.
+      { seed: "abc123", difficulty: "hard", humanSeat: "p2", deck: { kind: "preset", id: "humans" }, portraits: { p1: expect.any(String), p2: "vanilla" } },
     ]);
     expect(screen.getByTestId("game")).toHaveAttribute("data-viewer", "p2");
     expect(screen.getByTestId("hero-opponent")).toHaveTextContent("AI · Hard");
@@ -1193,6 +1194,7 @@ describe("B33 starting renders the game with no HUD above the board", () => {
         humanSeat: "p1",
         deck: { kind: "random" },
         aiBanned: [...FIXTURE_BANNED_IDS],
+        portraits: { p1: expect.any(String), p2: expect.any(String) },
       },
     ]);
     cleanup();
@@ -1203,7 +1205,7 @@ describe("B33 starting renders the game with no HUD above the board", () => {
 
     await screen.findByTestId("game");
     expect(live.starts()).toEqual([
-      { seed: "pool2", difficulty: "easy", humanSeat: "p1", deck: { kind: "random" } },
+      { seed: "pool2", difficulty: "easy", humanSeat: "p1", deck: { kind: "random" }, portraits: { p1: expect.any(String), p2: expect.any(String) } },
     ]);
   });
 
@@ -1653,7 +1655,13 @@ describe("R668 resuming a practice game after a reload", () => {
     await screen.findByTestId("game");
     expect(host.requests.some((body) => body.type === "resume")).toBe(false);
     expect(host.starts()).toHaveLength(1);
-    expect(readPracticeResume()).toEqual({ seed: "url1", difficulty: "easy", humanSeat: "p1", deck: { kind: "random" } });
+    expect(readPracticeResume()).toEqual({
+      seed: "url1",
+      difficulty: "easy",
+      humanSeat: "p1",
+      deck: { kind: "random" },
+      portraits: { p1: expect.any(String), p2: expect.any(String) },
+    });
   });
 
   it("R668 a game the worker cannot bring back is forgotten, and the player lands on the setup", async () => {
@@ -1753,7 +1761,7 @@ describe("R765 leaving a practice game: Save and leave, or Leave without saving"
     expect(banner).toHaveTextContent("Hard");
     expect(banner).toHaveTextContent("Starting a new game ends it.");
     expect(screen.getByTestId(T.resume)).toHaveTextContent("Resume");
-    const kept = { seed: "save2", difficulty: "hard", humanSeat: "p2", deck: { kind: "random" } } as const;
+    const kept = { seed: "save2", difficulty: "hard", humanSeat: "p2", deck: { kind: "random" }, portraits: { p1: expect.any(String), p2: expect.any(String) } };
     expect(readPracticeResumeState()).toEqual({ config: kept, saved: true });
     cleanup();
 
@@ -1837,7 +1845,7 @@ describe("R765 leaving a practice game: Save and leave, or Leave without saving"
     const started = host.starts()[0];
     expect(started?.seed).not.toBe(KEPT.seed);
     expect(readPracticeResumeState()).toEqual({
-      config: { seed: started?.seed, difficulty: started?.difficulty, humanSeat: started?.humanSeat, deck: started?.deck },
+      config: { seed: started?.seed, difficulty: started?.difficulty, humanSeat: started?.humanSeat, deck: started?.deck, portraits: started?.portraits },
       saved: false,
     });
 
@@ -2508,6 +2516,7 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
       humanSeat: "p1",
       deck: { kind: "random", leanSet: "Classic+" },
       dailyDeal: "2026-11-03",
+      portraits: { p1: expect.any(String), p2: expect.any(String) },
     });
     expect(JSON.parse(window.localStorage.getItem(PRACTICE_SETUP_KEY) ?? "null")).toEqual({
       difficulty: "medium",
@@ -2655,6 +2664,26 @@ describe("R768000 a kept game's replay from the result dialog", () => {
     const player = await screen.findByTestId(replayTestid.player);
     await waitFor(() => expect(player).toHaveAttribute("data-step", "1"));
     await waitFor(() => expect(screen.getByTestId(gifTestid.toggle)).toHaveAttribute("aria-expanded", "true"));
+  });
+
+  it("R3976000 a free game is dealt its portraits with its config, and Watch the replay draws the ones its board drew", async () => {
+    visit("?seed=replay1&difficulty=easy&deck=random&seat=p1");
+    const host = routeHost({ kept: true });
+    renderRoute(host);
+    await screen.findByTestId("game");
+    const dealt = host.starts()[0]?.portraits;
+    if (dealt === undefined) throw new Error("the game was started without its portraits");
+    const heroPortraits = (): (string | null)[] =>
+      (["hero-you", "hero-opponent"] as const).map((id) => screen.getByTestId(id).querySelector(".hero-portrait")?.getAttribute("data-portrait") ?? null);
+    // The human sits at p1, so the viewer's hero is p1's.
+    await waitFor(() => expect(heroPortraits()).toEqual([dealt.p1, dealt.p2]));
+    concedeOnBoard();
+    await screen.findByTestId(T.result);
+
+    fireEvent.click(screen.getByTestId(T.watchReplay));
+    const player = await screen.findByTestId(replayTestid.player);
+    await waitFor(() => expect(player).toHaveAttribute("data-step", "0"));
+    expect(heroPortraits()).toEqual([dealt.p1, dealt.p2]);
   });
 
   it("R768000 a game the worker did not keep offers no replay", async () => {
