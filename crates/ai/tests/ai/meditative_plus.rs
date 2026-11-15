@@ -31,10 +31,6 @@ fn decide_at(state: &GameState, seed: &str) -> Decision {
     decide(state, AI, &mut AiOptions::new(create_rng(seed, 0))).expect("the AI acts")
 }
 
-fn is_play_of(action: &ActionBody, card: &str) -> bool {
-    matches!(action, ActionBody::Play { instance_id, .. } if instance_id == card)
-}
-
 /// The instance id of the AI's hand card of `def_id`.
 fn in_hand(state: &GameState, def_id: &str) -> String {
     state.players[AI]

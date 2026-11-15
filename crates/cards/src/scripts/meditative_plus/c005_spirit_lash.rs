@@ -78,10 +78,10 @@ mod tests {
     /// The prices `legal_actions` offers p1 for the graveyard card `id`: `Some(false)` is the base price,
     /// `Some(true)` the Embiggened one.
     fn graveyard_prices(state: &GameState, id: &str) -> Vec<Option<bool>> {
-        legal_actions(state, P1)
+        plays_in(state, P1, id)
             .iter()
             .filter_map(|action| match action {
-                ActionBody::Play { instance_id, embiggen, .. } if instance_id == id => Some(*embiggen),
+                ActionBody::Play { embiggen, .. } => Some(*embiggen),
                 _ => None,
             })
             .collect()

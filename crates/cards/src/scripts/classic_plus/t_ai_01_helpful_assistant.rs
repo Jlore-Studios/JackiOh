@@ -82,7 +82,6 @@ mod tests {
     }
 
     /// The library cards the open Discover offers, by def id.
-    // Differs from Scenario::offered: the open prompt's options as def ids, not the seat's legal actions.
     fn offered(s: &Scenario) -> Vec<String> {
         s.state()
             .pending

@@ -48,12 +48,10 @@ fn id_at(s: &Scenario, player: PlayerId, lane: i32) -> String {
 
 /// Every zone a play of `id` is offered, as (row, lane) pairs.
 fn play_zones(s: &Scenario, id: &str) -> Vec<(Row, i32)> {
-    legal_actions(s.state(), P1)
+    plays_in(s.state(), P1, id)
         .into_iter()
         .filter_map(|action| match action {
-            ActionBody::Play {
-                instance_id, zone, ..
-            } if instance_id == id => zone,
+            ActionBody::Play { zone, .. } => zone,
             _ => None,
         })
         .map(|zone| (zone.row, zone.lane))

@@ -41,13 +41,11 @@ mod tests {
 
     /// Every unit lane a play of the model is offered, sorted.
     fn offered_lanes(s: &Scenario) -> Vec<i32> {
-        let id = s.card(ID).id.clone();
-        let mut lanes: Vec<i32> = legal_actions(s.state(), P1)
+        let mut lanes: Vec<i32> = s
+            .plays_of(ID)
             .into_iter()
             .filter_map(|action| match action {
-                ActionBody::Play {
-                    instance_id, zone, ..
-                } if instance_id == id => zone,
+                ActionBody::Play { zone, .. } => zone,
                 _ => None,
             })
             .filter(|zone| zone.row == Row::Units)

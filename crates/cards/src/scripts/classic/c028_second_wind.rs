@@ -202,10 +202,7 @@ mod tests {
             s.play(WIND, json!({ "zone": 1 }));
             assert_eq!(graveyard_defs_offered(&s), vec![STOCKPILE, MR_TOKEN]);
             let stockpile = s.pile(P1, "graveyard").into_iter().find(|card| card.def_id == STOCKPILE).expect("Stockpile");
-            let action = legal_actions(s.state(), P1)
-                .into_iter()
-                .find(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == stockpile.id))
-                .expect("its Flashback play is offered");
+            let action = s.plays_of(&stockpile).into_iter().next().expect("its Flashback play is offered");
             s.act(action, P1, "play Stockpile from the graveyard");
             s.expect_in_zone(&stockpile, "graveyard");
             assert_eq!(graveyard_defs_offered(&s), vec![MR_TOKEN], "its Flashback is spent");

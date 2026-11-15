@@ -89,25 +89,13 @@ mod tests {
         s.stats(card).keywords.iter().filter(|keyword| keyword.kind() == kind).count()
     }
 
-    /// The picks `spell`'s play is offered p1.
-    fn offered(s: &Scenario, spell: &str) -> Vec<Selection> {
-        let spell = s.card(spell).id.clone();
-        legal_actions(s.state(), P1)
-            .into_iter()
-            .flat_map(|action| match action {
-                ActionBody::Play { instance_id, targets, .. } if instance_id == spell => targets.unwrap_or_default(),
-                _ => Vec::new(),
-            })
-            .collect()
-    }
-
     mod base {
         use super::*;
 
         #[test]
         fn r3547000_it_offers_any_unit_on_either_side_and_no_hero() {
             let s = board(false, json!([VANILLA]), json!([VANILLA]));
-            let offered = offered(&s, FABRIC);
+            let offered = s.play_targets(FABRIC);
             for unit in [s.unit_at(P1, 1), s.unit_at(P2, 1)] {
                 assert!(offered.contains(&Selection::Instance { instance_id: unit.id }));
             }
@@ -130,9 +118,9 @@ mod tests {
         fn no_spell_may_pick_the_unit_afterwards() {
             let mut s = board(false, json!([VANILLA, VANILLA]), json!([]));
             let (fabric, other) = (s.unit_at(P1, 1), s.unit_at(P1, 2));
-            assert!(offered(&s, CRYO).contains(&Selection::Instance { instance_id: fabric.id.clone() }));
+            assert!(s.play_targets(CRYO).contains(&Selection::Instance { instance_id: fabric.id.clone() }));
             s.play(FABRIC, pick::targets(pick::instance(&fabric)));
-            let offered = offered(&s, CRYO);
+            let offered = s.play_targets(CRYO);
             assert!(!offered.contains(&Selection::Instance { instance_id: fabric.id }));
             assert!(offered.contains(&Selection::Instance { instance_id: other.id }));
         }
@@ -189,7 +177,7 @@ mod tests {
             let mut s = board(true, json!([VANILLA]), json!([]));
             let unit = s.unit_at(P1, 1);
             s.play(FABRIC, pick::targets(pick::instance(&unit)));
-            assert!(!offered(&s, CRYO).contains(&Selection::Instance { instance_id: unit.id }));
+            assert!(!s.play_targets(CRYO).contains(&Selection::Instance { instance_id: unit.id }));
         }
     }
 }

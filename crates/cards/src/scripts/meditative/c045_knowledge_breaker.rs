@@ -188,18 +188,9 @@ mod tests {
     }
 
     fn face_down_plays(s: &Scenario, player: PlayerId, id: &str) -> Vec<ActionBody> {
-        legal_actions(s.state(), player)
+        plays_in(s.state(), player, id)
             .into_iter()
-            .filter(|action| {
-                matches!(action, ActionBody::Play { instance_id, face_down: Some(_), .. } if instance_id == id)
-            })
-            .collect()
-    }
-
-    fn attacks_of(s: &Scenario, id: &str) -> Vec<ActionBody> {
-        legal_actions(s.state(), P1)
-            .into_iter()
-            .filter(|action| matches!(action, ActionBody::Attack { attacker_id, .. } if attacker_id == id))
+            .filter(|action| matches!(action, ActionBody::Play { face_down: Some(_), .. }))
             .collect()
     }
 
@@ -309,7 +300,7 @@ mod tests {
             assert_eq!(unit.face_up, Some(true));
             assert_eq!(unit.set_as, None);
             // It kept its set turn, so it may attack at once.
-            assert!(!attacks_of(&s, &unit.id).is_empty());
+            assert!(!s.attacks_of(&unit).is_empty());
         }
 
         #[test]
@@ -548,9 +539,7 @@ mod tests {
                 .cloned()
                 .unwrap();
             assert!(!cloaked(&s, &enemy.id));
-            assert!(legal_actions(s.state(), P2).into_iter().any(|action| {
-                matches!(&action, ActionBody::Play { instance_id, .. } if instance_id == &enemy.id)
-            }));
+            assert!(s.can_play(&enemy));
             assert!(face_down_plays(&s, P2, &enemy.id).is_empty());
         }
     }

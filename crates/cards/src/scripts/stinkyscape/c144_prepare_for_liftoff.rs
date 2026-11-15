@@ -141,14 +141,6 @@ mod tests {
         );
     }
 
-    // Differs from Scenario::offered: whether that card can be played, not the seat's whole legal list.
-    fn offered(s: &Scenario) -> bool {
-        let trap = s.card(ID).id.clone();
-        legal_actions(s.state(), P1)
-            .iter()
-            .any(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == trap))
-    }
-
     fn hit(s: &mut Scenario, player: PlayerId, lane: i32) -> String {
         let id = s.unit_at(player, lane).id;
         s.play(HIT_JOB, json!({ "targets": pick::id(&id) }));
@@ -301,7 +293,7 @@ mod tests {
         hit(&mut s, P1, 2);
         assert!(trap_fired(&s));
         s.expect_in_zone(ID, "graveyard");
-        assert!(offered(&s), "Flashback offers it from the graveyard");
+        assert!(s.can_play(ID), "Flashback offers it from the graveyard");
 
         set_from_graveyard(&mut s);
         let trap = s.card(ID).clone();
@@ -312,6 +304,6 @@ mod tests {
         hit(&mut s, P1, 3);
         assert!(trap_fired(&s));
         s.expect_in_zone(ID, "graveyard");
-        assert!(!offered(&s), "not again");
+        assert!(!s.can_play(ID), "not again");
     }
 }

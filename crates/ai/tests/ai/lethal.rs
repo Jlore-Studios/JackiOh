@@ -555,7 +555,7 @@ mod free_replays_r1965000 {
     use std::cell::Cell;
 
     use jackioh_ai::{AiOptions, AiTurnResult, decide, play_ai_turn, trim_lethal};
-    use jackioh_engine::testkit::{Action, Scenario, reduce, subsystems};
+    use jackioh_engine::testkit::{Action, Scenario, is_play_of, reduce, subsystems};
 
     const IN_TOO_DEEP: &str = "classic-090";
     const LAST_HURRAH: &str = "classic-037";
@@ -613,13 +613,8 @@ mod free_replays_r1965000 {
     }
 
     /// How many of the turn's actions play `id`.
-    fn plays_of(turn: &AiTurnResult, id: &str) -> usize {
-        turn.actions
-            .iter()
-            .filter(
-                |action| matches!(&action.body, ActionBody::Play { instance_id, .. } if instance_id == id),
-            )
-            .count()
+    fn plays_made(turn: &AiTurnResult, id: &str) -> usize {
+        turn.actions.iter().filter(|action| is_play_of(&action.body, id)).count()
     }
 
     /// Who won when the turn stopped, if anyone did.
@@ -653,7 +648,7 @@ mod free_replays_r1965000 {
                 ),
                 "{def} is offered from the graveyard"
             );
-            assert_eq!(plays_of(&turn, &id), 0, "{def}: {}", trace(&turn));
+            assert_eq!(plays_made(&turn, &id), 0, "{def}: {}", trace(&turn));
         }
     }
 
@@ -802,7 +797,7 @@ mod free_replays_r1965000 {
 
         let turn = ai_turn(&start);
         assert_eq!(winner(&turn), Some(AI), "{}", trace(&turn));
-        assert_eq!(plays_of(&turn, &camp), 1, "{}", trace(&turn));
+        assert_eq!(plays_made(&turn, &camp), 1, "{}", trace(&turn));
     }
 }
 

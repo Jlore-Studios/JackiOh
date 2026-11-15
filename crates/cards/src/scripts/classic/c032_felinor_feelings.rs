@@ -154,23 +154,9 @@ mod tests {
         }
     }
 
-    // Differs from Scenario::offered: one card's play targets as ids, not the seat's whole legal list.
+    /// The instance ids among Felinor Feelings's play targets, in offer order.
     fn offered(s: &Scenario) -> Vec<String> {
-        let card = s.card(FEELINGS).id.clone();
-        legal_actions(s.state(), P1)
-            .into_iter()
-            .flat_map(|action| match action {
-                ActionBody::Play { instance_id, targets, .. } if instance_id == card => targets
-                    .unwrap_or_default()
-                    .into_iter()
-                    .filter_map(|selection| match selection {
-                        Selection::Instance { instance_id } => Some(instance_id),
-                        _ => None,
-                    })
-                    .collect::<Vec<String>>(),
-                _ => Vec::new(),
-            })
-            .collect()
+        pick::instance_ids(&s.play_targets(FEELINGS))
     }
 
     fn pending_selections(s: &Scenario) -> Option<Vec<Selection>> {

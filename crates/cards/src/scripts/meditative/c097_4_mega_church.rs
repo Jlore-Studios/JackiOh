@@ -268,15 +268,10 @@ mod tests {
         }
         /// The tribute sets `legalActions` offers for the Church's plays.
         fn offered_sets(s: &Scenario) -> Vec<Vec<String>> {
-            let church = s.card(ID).id.clone();
-            legal_actions(s.state(), P1)
+            s.plays_of(ID)
                 .into_iter()
                 .filter_map(|action| match action {
-                    ActionBody::Play {
-                        instance_id,
-                        tributes: Some(set),
-                        ..
-                    } if instance_id == church => Some(set),
+                    ActionBody::Play { tributes: Some(set), .. } => Some(set),
                     _ => None,
                 })
                 .collect()

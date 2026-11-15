@@ -315,10 +315,7 @@ fn swear(s: &mut Scenario, faction: &str) {
             .any(|card| card.def_id == faction && !before.contains(&card.id))
     };
     let mut chosen: Option<(ActionBody, Option<Selection>)> = None;
-    'plays: for play in legal_actions(s.state(), P1) {
-        if !matches!(&play, ActionBody::Play { instance_id, .. } if *instance_id == swear_id) {
-            continue;
-        }
+    'plays: for play in s.plays_of(&swear_id) {
         let played = reduce(s.state(), &Action::new(play.clone(), P1, "swear-probe"));
         if played.error.is_some() {
             continue;
@@ -1362,13 +1359,7 @@ fn b15_no_spell_may_target_paragon_x() {
         }));
         let paragon = s.unit_at(P2, 1).id;
         let vanilla = s.unit_at(P2, 2).id;
-        let hit_job = s.card(HIT_JOB).id.clone();
-        let plays: Vec<ActionBody> = legal_actions(s.state(), P1)
-            .into_iter()
-            .filter(
-                |action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == hit_job),
-            )
-            .collect();
+        let plays: Vec<ActionBody> = s.plays_of(HIT_JOB);
         assert!(
             plays
                 .iter()

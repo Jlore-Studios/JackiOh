@@ -283,11 +283,11 @@ mod tests {
         #[test]
         fn r1880002_offers_all_five_factions_to_its_caster() {
             let s = board(false, json!([FILLER]), filler(3));
-            let held = s.card(SWEAR).id.clone();
-            let offered: Vec<Vec<String>> = legal_actions(s.state(), P1)
+            let offered: Vec<Vec<String>> = s
+                .plays_of(SWEAR)
                 .iter()
                 .filter_map(|action| match action {
-                    ActionBody::Play { instance_id, modes, .. } if *instance_id == held => modes.clone(),
+                    ActionBody::Play { modes, .. } => modes.clone(),
                     _ => None,
                 })
                 .collect();

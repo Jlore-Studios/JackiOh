@@ -175,11 +175,11 @@ mod tests {
         fn r81_it_offers_two_modes_place_counters_or_add_plague_cards_on_both_faces() {
             for radiant in [false, true] {
                 let s = adding("book-modes", radiant);
-                let held = s.card(BOOK).id.clone();
-                let offered: Vec<Vec<String>> = legal_actions(s.state(), P1)
+                let offered: Vec<Vec<String>> = s
+                    .plays_of(BOOK)
                     .iter()
                     .filter_map(|action| match action {
-                        ActionBody::Play { instance_id, modes, .. } if *instance_id == held => modes.clone(),
+                        ActionBody::Play { modes, .. } => modes.clone(),
                         _ => None,
                     })
                     .collect();

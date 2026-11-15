@@ -56,23 +56,8 @@ mod tests {
     }
 
     /// The instance ids `legalActions` offers Book of Stats as targets.
-    // Differs from Scenario::offered: one card's play targets as ids, not the seat's whole legal list.
     fn offered(s: &Scenario) -> Vec<String> {
-        let book = s.card(BOOK).id.clone();
-        legal_actions(s.state(), PlayerId::P1)
-            .into_iter()
-            .flat_map(|action| match action {
-                ActionBody::Play { instance_id, targets, .. } if instance_id == book => targets
-                    .unwrap_or_default()
-                    .into_iter()
-                    .filter_map(|pick| match pick {
-                        Selection::Instance { instance_id } => Some(instance_id),
-                        _ => None,
-                    })
-                    .collect::<Vec<_>>(),
-                _ => Vec::new(),
-            })
-            .collect()
+        pick::instance_ids(&s.play_targets(BOOK))
     }
 
     #[test]

@@ -1154,14 +1154,11 @@ mod i8_a_play_reduce_accepts_that_the_list_leaves_out {
     fn i8_fires_when_every_listed_play_of_a_1_cost_unit_into_one_lane_is_left_out() {
         let g = board();
         let card = vanilla(&g);
-        let mut lanes: Vec<i32> = legal_actions(g.state(), PlayerId::P1)
+        let mut lanes: Vec<i32> = g
+            .plays_of(&card)
             .iter()
             .filter_map(|body| match body {
-                ActionBody::Play {
-                    instance_id,
-                    zone: Some(at),
-                    ..
-                } if *instance_id == card.id && at.row == Row::Units => Some(at.lane),
+                ActionBody::Play { zone: Some(at), .. } if at.row == Row::Units => Some(at.lane),
                 _ => None,
             })
             .collect();
@@ -1174,14 +1171,8 @@ mod i8_a_play_reduce_accepts_that_the_list_leaves_out {
             lane,
         };
         let legal = without_matching(&g, |body| {
-            matches!(
-                body,
-                ActionBody::Play {
-                    instance_id,
-                    zone: Some(at),
-                    ..
-                } if *instance_id == card.id && *at == left_out
-            )
+            is_play_of(body, &card.id)
+                && matches!(body, ActionBody::Play { zone: Some(at), .. } if *at == left_out)
         });
         let found = unlisted_accepted(g.state(), PlayerId::P1, &legal);
         assert_unlisted_play(&found, &card.id);
@@ -1191,10 +1182,7 @@ mod i8_a_play_reduce_accepts_that_the_list_leaves_out {
     fn i8_fires_when_every_play_of_a_card_is_left_out() {
         let g = board();
         let card = vanilla(&g);
-        let legal = without_matching(
-            &g,
-            |body| matches!(body, ActionBody::Play { instance_id, .. } if *instance_id == card.id),
-        );
+        let legal = without_matching(&g, |body| is_play_of(body, &card.id));
         let found = unlisted_accepted(g.state(), PlayerId::P1, &legal);
         assert_unlisted_play(&found, &card.id);
     }
@@ -1217,18 +1205,10 @@ mod i8_a_play_reduce_accepts_that_the_list_leaves_out {
             row: Row::Backrow,
             lane: 2,
         };
-        let play = legal_actions(g.state(), PlayerId::P1)
+        let play = g
+            .plays_of(&crater)
             .into_iter()
-            .find(|body| {
-                matches!(
-                    body,
-                    ActionBody::Play {
-                        instance_id,
-                        zone: Some(at),
-                        ..
-                    } if *instance_id == crater.id && *at == into_lane_2
-                )
-            })
+            .find(|body| matches!(body, ActionBody::Play { zone: Some(at), .. } if *at == into_lane_2))
             .expect("a play of Memory Leak into backrow lane 2 is listed");
         g.act(play, PlayerId::P1, "play Memory Leak into backrow lane 2");
         let mut answers = 0;

@@ -10,7 +10,7 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::harness::{Bench, act, act_result, events_of_type, ids, in_hand, put, slot};
 use crate::rules::fixtures::play_pipeline_b::{
     cast_trap, embiggen_field, five_unit, forever, grave_spell, in_graveyard, lobbyist, monkey, only,
-    pb_playing, plays_of, tax, three_spell, toe_cracker, trickster, two_field, x_spell, x_unit, zero_spell,
+    pb_playing, tax, three_spell, toe_cracker, trickster, two_field, x_spell, x_unit, zero_spell,
 };
 
 /// R345: no automatic turn ends, so a test walks the turns it names.
@@ -77,7 +77,7 @@ fn cast_new_of(def_id: String) -> Effect {
 }
 
 fn plays_json(state: &GameState, instance_id: &str) -> Vec<Value> {
-    plays_of(state, instance_id, PlayerId::P1)
+    plays_in(state, PlayerId::P1, instance_id)
         .iter()
         .map(|play| serde_json::to_value(play).expect("a play serializes"))
         .collect()

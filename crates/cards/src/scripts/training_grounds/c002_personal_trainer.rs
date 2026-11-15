@@ -55,29 +55,13 @@ mod tests {
     }
 
     /// The instance ids `legalActions` offers the Trainer as targets.
-    // Differs from Scenario::offered: one card's play targets as unique ids, not the seat's whole legal list.
     fn offered(s: &Scenario) -> Vec<String> {
-        let trainer = s.card(TRAINER).id.clone();
-        legal_actions(s.state(), P1)
+        // One play is offered per open zone: each pick once.
+        pick::instance_ids(&s.play_targets(TRAINER))
             .into_iter()
-            .flat_map(|action| match action {
-                ActionBody::Play { instance_id, targets, .. } if instance_id == trainer => targets
-                    .unwrap_or_default()
-                    .into_iter()
-                    .filter_map(|pick| match pick {
-                        Selection::Instance { instance_id } => Some(instance_id),
-                        _ => None,
-                    })
-                    .collect::<Vec<_>>(),
-                _ => Vec::new(),
-            })
-            .fold(Vec::new(), |mut seen, id| {
-                // One play is offered per open zone: each pick once.
-                if !seen.contains(&id) {
-                    seen.push(id);
-                }
-                seen
-            })
+            .collect::<IndexSet<String>>()
+            .into_iter()
+            .collect()
     }
 
     fn buffed_count(s: &Scenario) -> usize {

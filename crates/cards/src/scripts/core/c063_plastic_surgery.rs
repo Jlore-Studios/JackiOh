@@ -49,7 +49,6 @@ pub fn script() -> CardScripts {
 // #63 Plastic Surgery — SPEC §8.3, BUILD M4-T4 row 63.
 #[cfg(test)]
 mod tests {
-    use jackioh_engine::reduce::legal_actions;
     use jackioh_engine::resolve::cast_card;
     use jackioh_engine::effects::random_pool_keywords;
     use jackioh_engine::testkit::*;
@@ -81,23 +80,11 @@ mod tests {
     }
 
     /// The target lists of every `play` `legal_actions` offers p1 for this card (R81).
-    // Differs from Scenario::offered: that card's targets as ids, per play, not the seat's whole legal list.
     fn offered(state: &GameState, card: &CardInstance) -> Vec<Vec<String>> {
-        legal_actions(state, P1)
+        plays_in(state, P1, &card.id)
             .into_iter()
             .filter_map(|action| match action {
-                ActionBody::Play {
-                    instance_id, targets, ..
-                } if instance_id == card.id => Some(
-                    targets
-                        .unwrap_or_default()
-                        .into_iter()
-                        .filter_map(|target| match target {
-                            Selection::Instance { instance_id } => Some(instance_id),
-                            _ => None,
-                        })
-                        .collect(),
-                ),
+                ActionBody::Play { targets, .. } => Some(pick::instance_ids(&targets.unwrap_or_default())),
                 _ => None,
             })
             .collect()

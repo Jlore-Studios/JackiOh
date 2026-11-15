@@ -1221,6 +1221,20 @@ pub fn prompt_modes_of(pending: &PendingChoice) -> Vec<String> {
         .collect()
 }
 
+/// Whether `action` is a play of the instance `card_id`.
+pub fn is_play_of(action: &ActionBody, card_id: &str) -> bool {
+    matches!(action, ActionBody::Play { instance_id, .. } if instance_id == card_id)
+}
+
+/// `seat`'s legal plays of the instance `card_id` in `state`, in offer order: for a test that holds a
+/// state, or asks a seat other than the card's owner.
+pub fn plays_in(state: &GameState, seat: PlayerId, card_id: &str) -> Vec<ActionBody> {
+    crate::reduce::legal_actions(state, seat)
+        .into_iter()
+        .filter(|action| is_play_of(action, card_id))
+        .collect()
+}
+
 /// What `run` panicked with, or `None` when it ran through.
 fn refusal_of(run: impl FnOnce()) -> Option<String> {
     match catch_unwind(AssertUnwindSafe(run)) {
@@ -1362,6 +1376,49 @@ impl Scenario {
     /// The seat's legal actions in the live state (`reduce::legal_actions`, §10.2); `()` is the active seat.
     pub fn offered(&self, player: impl SeatRef) -> Vec<ActionBody> {
         crate::reduce::legal_actions(&self.current, player.seat_or(self.current.active))
+    }
+
+    /// The card's owner's legal plays of it in the live state, in offer order (`plays_in` for another seat).
+    pub fn plays_of(&self, card: impl Into<CardRef>) -> Vec<ActionBody> {
+        let id = or_fail(self.resolve(&card.into(), Where::Any, "plays_of"));
+        let card = self.live(&id);
+        plays_in(&self.current, card.owner, &id)
+    }
+
+    /// Whether the card's owner may play it now.
+    pub fn can_play(&self, card: impl Into<CardRef>) -> bool {
+        !self.plays_of(card).is_empty()
+    }
+
+    /// The targets of the card's owner's legal plays of it, flattened in offer order.
+    pub fn play_targets(&self, card: impl Into<CardRef>) -> Vec<Selection> {
+        self.plays_of(card)
+            .into_iter()
+            .flat_map(|play| match play {
+                ActionBody::Play { targets, .. } => targets.unwrap_or_default(),
+                _ => Vec::new(),
+            })
+            .collect()
+    }
+
+    /// The card's controller's legal activations of it in the live state, in offer order.
+    pub fn activations_of(&self, card: impl Into<CardRef>) -> Vec<ActionBody> {
+        let id = or_fail(self.resolve(&card.into(), Where::Any, "activations_of"));
+        let card = self.live(&id);
+        crate::reduce::legal_actions(&self.current, card.controller)
+            .into_iter()
+            .filter(|action| matches!(action, ActionBody::Activate { instance_id, .. } if *instance_id == id))
+            .collect()
+    }
+
+    /// The unit's controller's legal attacks with it in the live state, in offer order.
+    pub fn attacks_of(&self, card: impl Into<CardRef>) -> Vec<ActionBody> {
+        let id = or_fail(self.resolve(&card.into(), Where::Any, "attacks_of"));
+        let card = self.live(&id);
+        crate::reduce::legal_actions(&self.current, card.controller)
+            .into_iter()
+            .filter(|action| matches!(action, ActionBody::Attack { attacker_id, .. } if *attacker_id == id))
+            .collect()
     }
 
     /// The open prompt's Mode options in the order offered (non-Mode options are skipped); panics when no
@@ -3239,6 +3296,18 @@ mod tests {
         }
 
         #[test]
+        fn instance_ids_keeps_the_instance_picks_in_order() {
+            let selections = [
+                Selection::Instance { instance_id: String::from("c1") },
+                Selection::Hero { player: PlayerId::P2 },
+                Selection::Mode { option: String::from("a") },
+                Selection::Instance { instance_id: String::from("c2") },
+            ];
+            assert_eq!(pick::instance_ids(&selections), ["c1", "c2"]);
+            assert!(pick::instance_ids(&[]).is_empty());
+        }
+
+        #[test]
         fn prompt_modes_panics_naming_the_missing_prompt() {
             let s = board();
             expect_throw_with(
@@ -3367,6 +3436,51 @@ mod tests {
             assert!(!s.offered("p1").iter().any(
                 |action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == unit)
             ));
+        }
+
+        #[test]
+        fn plays_of_and_can_play_read_one_cards_plays_for_its_owner() {
+            let mut s = scenario(json!({
+                "p1": { "hand": ["core-025", "core-010"], "field": [anchor()] },
+                "p2": { "hand": [HAND_ANCHOR], "field": [anchor()] },
+            }));
+            let id = s.card("core-025").id.clone();
+            let plays = s.plays_of("core-025");
+            assert!(!plays.is_empty());
+            assert!(plays.iter().all(|play| is_play_of(play, &id)));
+            let by_hand: Vec<ActionBody> = s
+                .offered(PlayerId::P1)
+                .into_iter()
+                .filter(|action| is_play_of(action, &id))
+                .collect();
+            assert_eq!(plays, by_hand);
+            assert_eq!(plays, plays_in(s.state(), PlayerId::P1, &id));
+            assert!(plays_in(s.state(), PlayerId::P2, &id).is_empty());
+            assert!(s.can_play("core-025"));
+            assert!(!s.can_play(s.hand("p2")[0].clone()));
+            assert!(s.play_targets("core-025").is_empty());
+
+            s.state_mut().players[PlayerId::P1].mana.current = 3;
+            assert!(!s.can_play("core-025"));
+            assert!(s.can_play("core-010"));
+        }
+
+        #[test]
+        fn attacks_of_and_activations_of_read_one_units_actions_for_its_controller() {
+            let s = scenario(json!({
+                "p1": { "field": ["core-025", anchor()] },
+                "p2": { "field": [anchor()] },
+            }));
+            let unit = s.unit_at("p1", 5);
+            let attacks = s.attacks_of(&unit);
+            assert!(!attacks.is_empty());
+            let by_unit =
+                |action: &ActionBody| matches!(action, ActionBody::Attack { attacker_id, .. } if *attacker_id == unit.id);
+            assert!(attacks.iter().all(by_unit));
+            let by_hand: Vec<ActionBody> = s.offered("p1").into_iter().filter(|action| by_unit(action)).collect();
+            assert_eq!(attacks, by_hand);
+            assert!(s.attacks_of(s.unit_at("p2", 5)).is_empty());
+            assert!(s.activations_of(&unit).is_empty());
         }
     }
 }

@@ -67,24 +67,13 @@ mod tests {
         s.card(card).brittle.map(|counter| counter.count)
     }
 
-    fn offered(s: &Scenario) -> Vec<Selection> {
-        let thorium = s.card(THORIUM).id.clone();
-        legal_actions(s.state(), P1)
-            .into_iter()
-            .flat_map(|action| match action {
-                ActionBody::Play { instance_id, targets, .. } if instance_id == thorium => targets.unwrap_or_default(),
-                _ => Vec::new(),
-            })
-            .collect()
-    }
-
     mod base {
         use super::*;
 
         #[test]
         fn r3547000_it_offers_any_unit_on_either_side_and_no_hero() {
             let s = board(false, json!([VANILLA]), json!([VANILLA]));
-            let offered = offered(&s);
+            let offered = s.play_targets(THORIUM);
             for unit in [s.unit_at(P1, 1), s.unit_at(P2, 1)] {
                 assert!(offered.contains(&Selection::Instance { instance_id: unit.id }));
             }

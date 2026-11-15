@@ -123,15 +123,11 @@ mod tests {
             let mut s = game("m+023-offered", false, 1);
             cast(&mut s, false);
             let card = added(&s).remove(0);
-            let mut flags: Vec<Option<bool>> = legal_actions(s.state(), P1)
+            let mut flags: Vec<Option<bool>> = s
+                .plays_of(&card)
                 .into_iter()
                 .filter_map(|action| match action {
-                    ActionBody::Play {
-                        instance_id,
-                        embiggen,
-                        face_down: None,
-                        ..
-                    } if instance_id == card.id => Some(embiggen),
+                    ActionBody::Play { embiggen, face_down: None, .. } => Some(embiggen),
                     _ => None,
                 })
                 .collect();

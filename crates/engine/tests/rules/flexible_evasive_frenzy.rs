@@ -32,12 +32,10 @@ fn board(seed: &str, p1: Value, p2: Value) -> Scenario {
 
 /// Every zone a play of `id` is offered, as (row, lane).
 fn play_zones(s: &Scenario, id: &str) -> Vec<ZoneChoice> {
-    legal_actions(s.state(), P1)
+    plays_in(s.state(), P1, id)
         .into_iter()
         .filter_map(|action| match action {
-            ActionBody::Play {
-                instance_id, zone, ..
-            } if instance_id == id => zone,
+            ActionBody::Play { zone, .. } => zone,
             _ => None,
         })
         .collect()

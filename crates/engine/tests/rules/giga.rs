@@ -34,12 +34,10 @@ fn board(seed: &str, p1: Value, p2: Value) -> Scenario {
 
 /// Every zone a play of `id` is offered, as (row, lane) pairs.
 fn zone_pairs(s: &Scenario, id: &str) -> Vec<(Row, i32)> {
-    legal_actions(s.state(), P1)
+    plays_in(s.state(), P1, id)
         .into_iter()
         .filter_map(|action| match action {
-            ActionBody::Play {
-                instance_id, zone, ..
-            } if instance_id == id => zone,
+            ActionBody::Play { zone, .. } => zone,
             _ => None,
         })
         .map(|zone| (zone.row, zone.lane))
@@ -398,14 +396,8 @@ mod r3546002_taken_on_entry {
         let id = s.card(GROWER).id.clone();
         let mut normal: Vec<i32> = Vec::new();
         let mut big: Vec<i32> = Vec::new();
-        for action in legal_actions(s.state(), P1) {
-            if let ActionBody::Play {
-                instance_id,
-                zone,
-                embiggen,
-                ..
-            } = action
-                && instance_id == id
+        for action in s.plays_of(&id) {
+            if let ActionBody::Play { zone, embiggen, .. } = action
                 && let Some(zone) = zone
                 && zone.row == Row::Units
             {

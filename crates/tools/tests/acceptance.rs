@@ -929,7 +929,7 @@ mod tests {
 }
 
 /// One family of test helpers defined once, in its home, which every test under its trees takes
-/// rather than copying (#1777, #1826, #1997, #2023, #2385, #2160, #2930).
+/// rather than copying (#1777, #1826, #1997, #2023, #2385, #2160, #2930, #3913).
 struct SharedHelpers {
     /// The file that defines them, from the repository's root.
     home: &'static str,
@@ -955,6 +955,18 @@ const KIT_READERS: &[&str] = &["crates/engine/tests", "crates/cards", "crates/ai
 /// `prompt_modes_of` for a prompt it holds), not by matching `Selection::Mode` itself (#3796). The
 /// engine's and the AI's own tests keep their copies.
 const MODE_READERS: &[&str] = &["crates/cards"];
+
+/// The trees where a test reads one card's offered plays, targets, activations and attacks through the
+/// testkit (#3913); `crates/cards/src` outside the scripts is not test code (`patch_history.rs` has a `plays_of`).
+const PLAY_READERS: &[&str] = &[
+    "crates/cards/src/scripts",
+    "crates/cards/tests",
+    "crates/engine/tests",
+    "crates/ai/tests",
+];
+
+/// PLAY_READERS but the rules tests, whose own `instance_ids` read events (#3913).
+const PICK_READERS: &[&str] = &["crates/cards/src/scripts", "crates/cards/tests", "crates/ai/tests"];
 
 /// The server test trees `tests/server.rs` compiles with `tests/support/`, where no file but a
 /// helper's home may define one (#2385). `tests/store/` builds into `server_store` without them.
@@ -1022,6 +1034,30 @@ const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
         structs: &[],
         dirs: KIT_READERS,
         more_than: 800,
+    },
+    SharedHelpers {
+        home: "crates/engine/src/testkit/scenario.rs",
+        names: &[
+            "plays_of",
+            "can_play",
+            "play_targets",
+            "activations_of",
+            "attacks_of",
+            "plays_in",
+            "is_play_of",
+        ],
+        statics: &[],
+        structs: &[],
+        dirs: PLAY_READERS,
+        more_than: 1400,
+    },
+    SharedHelpers {
+        home: "crates/engine/src/testkit/pick.rs",
+        names: &["instance_ids"],
+        statics: &[],
+        structs: &[],
+        dirs: PICK_READERS,
+        more_than: 1000,
     },
     SharedHelpers {
         home: "crates/cards/tests/cross/mod.rs",
@@ -1427,7 +1463,7 @@ fn helpers_each_test_takes_its_shared_helpers_from_their_home() {
     let homes: Vec<&str> = SHARED_TEST_HELPERS.iter().map(|row| row.home).collect();
     assert!(
         copies.is_empty(),
-        "a test defines its own copy of a shared helper, nonce counter or sink bench, looks a card up in a state under a name of its own, or reads a prompt's Mode options by hand (#1777, #1826, #1997, #2023, #2024, #2385, #3796, #3827): import the one in {homes:?} or {PICK_HOME}, or give a helper whose body differs another name: {copies:?}"
+        "a test defines its own copy of a shared helper, nonce counter or sink bench, looks a card up in a state under a name of its own, or reads a prompt's Mode options by hand (#1777, #1826, #1997, #2023, #2024, #2385, #3796, #3827, #3913): import the one in {homes:?} or {PICK_HOME}, or give a helper whose body differs another name: {copies:?}"
     );
 }
 

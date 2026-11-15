@@ -36,9 +36,7 @@ fn hero_health(state: &GameState, player: PlayerId) -> i32 {
 }
 
 fn offers(state: &GameState, id: &str) -> bool {
-    legal_actions(state, P1)
-        .iter()
-        .any(|action| matches!(action, ActionBody::Play { instance_id, .. } if instance_id == id))
+    !plays_in(state, P1, id).is_empty()
 }
 
 fn play(state: &GameState, id: &str) -> ReduceResult {

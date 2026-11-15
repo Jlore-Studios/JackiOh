@@ -212,13 +212,10 @@ mod tests {
 
     /// The lanes `legalActions` offers p1's Showdown for, in order.
     fn offered_lanes(s: &Scenario) -> Vec<String> {
-        let showdown = s.card(SHOWDOWN).id.clone();
-        legal_actions(s.state(), P1)
+        s.plays_of(SHOWDOWN)
             .into_iter()
             .filter_map(|action| match action {
-                ActionBody::Play { instance_id, modes, .. } if instance_id == showdown => {
-                    modes.and_then(|modes| modes.first().cloned())
-                }
+                ActionBody::Play { modes, .. } => modes.and_then(|modes| modes.first().cloned()),
                 _ => None,
             })
             .collect()

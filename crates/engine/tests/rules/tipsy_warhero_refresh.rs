@@ -104,9 +104,7 @@ fn lists_activate(state: &GameState, instance: &str) -> bool {
 }
 
 fn lists_play(state: &GameState, instance: &str) -> bool {
-    legal_actions(state, P1)
-        .iter()
-        .any(|body| matches!(body, ActionBody::Play { instance_id, .. } if instance_id == instance))
+    !plays_in(state, P1, instance).is_empty()
 }
 
 /// Whether p1's own view of p1's field blurs any card.

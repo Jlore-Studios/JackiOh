@@ -46,13 +46,6 @@ fn fused_pile_on_gone_home(held: &str) -> Scenario {
     s
 }
 
-fn plays_of(state: &GameState, player: PlayerId, instance_id: &str) -> Vec<ActionBody> {
-    legal_actions(state, player)
-        .into_iter()
-        .filter(|action| matches!(action, ActionBody::Play { instance_id: id, .. } if id == instance_id))
-        .collect()
-}
-
 fn without_records(mut state: GameState) -> GameState {
     state.last_spell = None;
     for player in PLAYER_IDS {
@@ -74,7 +67,7 @@ mod redact_keeps_what_the_play_records_name_r185 {
         assert!(public.transient_defs.contains_key(FUSED));
         // What panicked: the seat's own legal actions read the X of the text its Echo copies (R545).
         let echo = s.card(ECHO).id.clone();
-        assert_eq!(plays_of(&public, AI, &echo).len(), 1);
+        assert_eq!(plays_in(&public, AI, &echo).len(), 1);
         let view = serde_json::to_value(view_for(&public, AI)).expect("a view serializes");
         let held = view["you"]["hand"]
             .as_array()
@@ -116,7 +109,7 @@ mod redact_keeps_what_the_play_records_name_r185 {
             .map(|card| card.id.clone())
             .expect("Autocomplete's copy of the fused Pile On");
         assert!(find_def(Some(&played.state), FUSED).is_some());
-        assert_eq!(plays_of(&played.state, AI, &copy).len(), 1);
+        assert_eq!(plays_in(&played.state, AI, &copy).len(), 1);
         let _ = view_for(&played.state, AI);
     }
 

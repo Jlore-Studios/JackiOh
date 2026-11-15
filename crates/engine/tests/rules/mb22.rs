@@ -88,7 +88,7 @@ fn r1200_legal_actions_offer_plays_and_attacks_without_targets() {
     let actions = legal_actions(&state, P1);
     let plays: Vec<&ActionBody> = actions
         .iter()
-        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if instance_id == &bolt.id))
+        .filter(|action| is_play_of(action, &bolt.id))
         .collect();
     assert_eq!(plays.len(), 1, "one play, not one per target");
     assert!(
@@ -152,7 +152,7 @@ fn r1200_hand_picks_and_modes_stay_choices() {
     let actions = legal_actions(&state, P1);
     let plays: Vec<&ActionBody> = actions
         .iter()
-        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if instance_id == &tricky.id))
+        .filter(|action| is_play_of(action, &tricky.id))
         .collect();
     assert_eq!(plays.len(), 2, "one play per mode, not per target");
     for play in &plays {
@@ -240,10 +240,7 @@ fn r1200_choices_return_once_the_mayor_leaves() {
     gone.zone = Zone::Graveyard { player: P1 };
     state.players[P1].graveyard.push(gone);
     assert_eq!(view_for(&state, P1).random_targets, None);
-    let plays = legal_actions(&state, P1)
-        .into_iter()
-        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if instance_id == &bolt.id))
-        .count();
+    let plays = plays_in(&state, P1, &bolt.id).len();
     assert_eq!(plays, 3, "bolt at either hero and the ally again");
 }
 
@@ -263,11 +260,9 @@ fn r1200_r1044_a_face_down_play_under_a_mayor_draws_no_target() {
     );
     let spell = in_hand(&mut state, &fx::bolt.id, P1, 1).remove(0);
 
-    let sets: Vec<ActionBody> = legal_actions(&state, P1)
+    let sets: Vec<ActionBody> = plays_in(&state, P1, &spell.id)
         .into_iter()
-        .filter(|action| {
-            matches!(action, ActionBody::Play { instance_id, face_down: Some(_), .. } if instance_id == &spell.id)
-        })
+        .filter(|action| matches!(action, ActionBody::Play { face_down: Some(_), .. }))
         .collect();
     assert!(!sets.is_empty(), "the face-down plays are offered");
     for set in sets {

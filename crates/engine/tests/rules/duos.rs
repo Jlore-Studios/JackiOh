@@ -501,26 +501,24 @@ fn passes_offered(state: &DuosState, seat: DuosSeat) -> Vec<String> {
 }
 
 fn offers_play(state: &DuosState, seat: DuosSeat, id: &str) -> bool {
-    duos_legal_actions(state, seat).iter().any(|offered| {
-        matches!(offered, DuosActionBody::Duel { body: ActionBody::Play { instance_id, .. } } if instance_id.as_str() == id)
-    })
+    duos_legal_actions(state, seat)
+        .iter()
+        .any(|offered| matches!(offered, DuosActionBody::Duel { body } if is_play_of(body, id)))
 }
 
 fn legal_play(state: &DuosState, seat: DuosSeat, id: &str) -> DuosActionBody {
     duos_legal_actions(state, seat)
         .into_iter()
-        .find(|offered| {
-            matches!(offered, DuosActionBody::Duel { body: ActionBody::Play { instance_id, .. } } if instance_id.as_str() == id)
-        })
+        .find(|offered| matches!(offered, DuosActionBody::Duel { body } if is_play_of(body, id)))
         .unwrap_or_else(|| panic!("{seat} is offered no play of {id}"))
 }
 
 /// A well-formed play of `id`: the one the seat's duel itself would offer, else a bare play. For
 /// asking the wrapper to refuse what the 1v1 game alone would allow.
 fn raw_play(state: &DuosState, seat: DuosSeat, id: &str) -> DuosActionBody {
-    let body = legal_actions(&state.duels[seat.duel()], seat.player())
+    let body = plays_in(&state.duels[seat.duel()], seat.player(), id)
         .into_iter()
-        .find(|offered| matches!(offered, ActionBody::Play { instance_id, .. } if instance_id.as_str() == id))
+        .next()
         .unwrap_or_else(|| json_as(json!({ "type": "play", "instanceId": id })));
     duel(body)
 }

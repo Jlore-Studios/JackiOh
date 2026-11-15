@@ -100,9 +100,9 @@ mod r1300_the_flag_and_its_verb {
         let spell = first(in_hand(&mut state, &translator.id, P1, 1));
         in_hand(&mut state, &plain.id, P1, 1);
         in_hand(&mut state, &body.id, P2, 2);
-        let play = legal_actions(&state, P1)
+        let play = plays_in(&state, P1, &spell.id)
             .into_iter()
-            .find(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == spell.id))
+            .next()
             .expect("the translator is playable");
         let result = reduce(
             &state,

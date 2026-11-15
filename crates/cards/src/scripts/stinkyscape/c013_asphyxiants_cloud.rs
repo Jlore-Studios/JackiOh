@@ -104,10 +104,7 @@ mod tests {
 
     /// The Cloud as `legalActions` offers it from p1's graveyard (R783012): the play actions naming it.
     fn offered_from_the_graveyard(s: &Scenario, id: &str) -> usize {
-        legal_actions(s.state(), P1)
-            .iter()
-            .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if instance_id == id))
-            .count()
+        plays_in(s.state(), P1, id).len()
     }
 
     /// A play of the graveyard card, sent to `reduce` as `legalActions` offers it (the harness's `play`

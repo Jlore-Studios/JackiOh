@@ -215,18 +215,7 @@ mod tests {
         #[test]
         fn r428_carnivorous_cube_cant_eat_it_units_only() {
             let mut s = bubble(false, json!([CUBE, FILLER]), None, json!([VANILLA]));
-            let cube = s.card(CUBE).id.clone();
-            let ids: Vec<String> = legal_actions(s.state(), PlayerId::P1)
-                .into_iter()
-                .flat_map(|action| match action {
-                    ActionBody::Play { instance_id, targets, .. } if instance_id == cube => targets.unwrap_or_default(),
-                    _ => Vec::new(),
-                })
-                .filter_map(|pick| match pick {
-                    Selection::Instance { instance_id } => Some(instance_id),
-                    _ => None,
-                })
-                .collect();
+            let ids = pick::instance_ids(&s.play_targets(CUBE));
             let own = s.unit(PlayerId::P1, 1).map(|card| card.id).unwrap_or_default();
             assert!(ids.contains(&own));
             let bauble = s.card(BAUBLE).id.clone();

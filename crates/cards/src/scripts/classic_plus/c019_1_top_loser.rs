@@ -307,16 +307,7 @@ mod tests {
                 s.expect_refused(|s| {
                     s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": loser.id }] }))
                 });
-                let hit_job = s.card(HIT_JOB).id.clone();
-                let offered: Vec<Selection> = legal_actions(s.state(), P1)
-                    .into_iter()
-                    .flat_map(|action| match action {
-                        ActionBody::Play { instance_id, targets, .. } if instance_id == hit_job => {
-                            targets.unwrap_or_default()
-                        }
-                        _ => Vec::new(),
-                    })
-                    .collect();
+                let offered = s.play_targets(HIT_JOB);
                 assert!(!serde_json::to_string(&offered).expect("JSON").contains(&top(&s).id));
             }
 

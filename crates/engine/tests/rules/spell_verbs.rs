@@ -520,11 +520,11 @@ mod r1848003_an_x_card_whose_x_is_set_is_played_for_that_x {
             .collect()
     }
 
-    fn plays_of(s: &Scenario, id: &str) -> Vec<Option<i32>> {
-        legal_actions(s.state(), P1)
-            .iter()
+    fn play_xs(s: &Scenario, id: &str) -> Vec<Option<i32>> {
+        plays_in(s.state(), P1, id)
+            .into_iter()
             .filter_map(|action| match action {
-                ActionBody::Play { instance_id, x, .. } if instance_id == id => Some(*x),
+                ActionBody::Play { x, .. } => Some(x),
                 _ => None,
             })
             .collect()
@@ -577,7 +577,7 @@ mod r1848003_an_x_card_whose_x_is_set_is_played_for_that_x {
             } else {
                 vec![]
             };
-            assert_eq!(plays_of(&s, &card.id), expected, "X {:?}", card.fixed_x);
+            assert_eq!(play_xs(&s, &card.id), expected, "X {:?}", card.fixed_x);
         }
     }
 
@@ -1071,16 +1071,11 @@ mod r1868000_an_x_cards_declared_target_reads_the_x_of_its_play {
     use crate::rules::fixtures::spell_verbs::{nono_x, riser, stable};
 
     /// Each play of `id` that `legal_actions` lists, as its X and the ids it targets.
-    fn plays_of(s: &Scenario, id: &str) -> Vec<(Option<i32>, Vec<String>)> {
-        legal_actions(s.state(), P1)
+    fn play_xs_and_targets(s: &Scenario, id: &str) -> Vec<(Option<i32>, Vec<String>)> {
+        plays_in(s.state(), P1, id)
             .iter()
             .filter_map(|action| match action {
-                ActionBody::Play {
-                    instance_id,
-                    x,
-                    targets,
-                    ..
-                } if instance_id == id => Some((
+                ActionBody::Play { x, targets, .. } => Some((
                     *x,
                     targets
                         .iter()
@@ -1127,7 +1122,7 @@ mod r1868000_an_x_cards_declared_target_reads_the_x_of_its_play {
     fn r1868000_legal_actions_pair_each_x_with_the_units_below_four_times_it() {
         let s = plain_and_big("r1868000-legal");
         let (three, five) = (id_at(&s, P2, 1), id_at(&s, P2, 2));
-        let plays = plays_of(&s, &s.card(nono_x.id.as_str()).id);
+        let plays = play_xs_and_targets(&s, &s.card(nono_x.id.as_str()).id);
         // A 3-Attack Unit is below 4 × 1; a 5-Attack one is not, and is below 4 × 2 and up.
         assert_eq!(targets_at(&plays, Some(1)), vec![three.clone()]);
         for x in 2..=4 {
@@ -1156,7 +1151,7 @@ mod r1868000_an_x_cards_declared_target_reads_the_x_of_its_play {
     #[test]
     fn r1868000_an_x_with_no_unit_below_its_limit_is_not_offered_and_is_refused() {
         let mut s = nono_board("r1868000-needed", json!([{ "def": big_body.id, "lane": 1 }]));
-        let plays = plays_of(&s, &s.card(nono_x.id.as_str()).id);
+        let plays = play_xs_and_targets(&s, &s.card(nono_x.id.as_str()).id);
         // R703: the pick is needed, so an X whose limit no Unit is below is no play.
         assert!(plays.iter().all(|(x, _)| *x != Some(1)), "{plays:?}");
         assert_eq!(targets_at(&plays, Some(2)), vec![id_at(&s, P2, 1)]);
@@ -1171,7 +1166,7 @@ mod r1868000_an_x_cards_declared_target_reads_the_x_of_its_play {
         let mut s = plain_and_big("r1868000-set");
         let three = id_at(&s, P2, 1);
         s.card_mut(nono_x.id.as_str()).fixed_x = Some(1);
-        let plays = plays_of(&s, &s.card(nono_x.id.as_str()).id);
+        let plays = play_xs_and_targets(&s, &s.card(nono_x.id.as_str()).id);
         assert_eq!(plays, vec![(None, vec![three])]);
     }
 

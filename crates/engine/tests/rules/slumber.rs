@@ -316,14 +316,11 @@ mod r1839000_a_dormant_card_fills_its_zone_and_nothing_reaches_it {
             .into_iter()
             .find(|card| card.def_id == plain.id)
             .expect("a plain in hand");
-        let zones: Vec<i32> = legal_actions(s.state(), P1)
+        let zones: Vec<i32> = s
+            .plays_of(&plain_in_hand)
             .iter()
             .filter_map(|action| match action {
-                ActionBody::Play {
-                    instance_id,
-                    zone: Some(zone),
-                    ..
-                } if *instance_id == plain_in_hand.id => Some(zone.lane),
+                ActionBody::Play { zone: Some(zone), .. } => Some(zone.lane),
                 _ => None,
             })
             .collect();

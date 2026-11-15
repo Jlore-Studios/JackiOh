@@ -146,9 +146,7 @@ mod tests {
     }
 
     fn play_of(s: &Scenario, instance_id: &str) -> Option<ActionBody> {
-        legal_actions(s.state(), P1)
-            .into_iter()
-            .find(|action| matches!(action, ActionBody::Play { instance_id: id, .. } if id == instance_id))
+        plays_in(s.state(), P1, instance_id).into_iter().next()
     }
 
     fn radiant_pact_and_eight() -> Value {

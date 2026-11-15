@@ -618,12 +618,7 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
             vec![vec![a.id.clone(), b.id.clone()]]
         );
 
-        let plays: Vec<ActionBody> = legal_actions(&state, PlayerId::P1)
-            .into_iter()
-            .filter(
-                |action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id),
-            )
-            .collect();
+        let plays: Vec<ActionBody> = plays_in(&state, PlayerId::P1, &card.id);
         assert!(!plays.is_empty());
         for play in &plays {
             let ActionBody::Play { tributes, .. } = play else {

@@ -18,7 +18,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{act_result, in_hand, live, put, slot};
 use crate::rules::fixtures::play_pipeline_b::{
-    grave_spell, grave_unit, in_graveyard, only, pb_playing, plays_of, second_wind, three_spell,
+    grave_spell, grave_unit, in_graveyard, only, pb_playing, second_wind, three_spell,
 };
 
 const P1: PlayerId = PlayerId::P1;
@@ -129,7 +129,7 @@ fn r766_a_card_given_0_in_hand_and_discarded_is_played_from_the_graveyard_at_its
     discard_it(&mut state, &book.id);
     assert_eq!(price_of(&live(&state, &book.id)), (0, None));
     assert_eq!(price(&state, &book.id), 1);
-    assert_eq!(plays_of(&state, &book.id, P1).len(), 1);
+    assert_eq!(plays_in(&state, P1, &book.id).len(), 1);
 
     // Each play from the graveyard pays the printed (1), and the card lands back there at (1) again.
     let mana = state.players.p1.mana.current;
@@ -154,7 +154,7 @@ fn r766_a_card_given_0_in_hand_and_discarded_is_played_from_the_graveyard_at_its
 
     // With no mana left it is not offered, where a (0) kept from the hand would have looped for ever.
     state.players.p1.mana.current = 0;
-    assert!(plays_of(&state, &book.id, P1).is_empty());
+    assert!(plays_in(&state, P1, &book.id).is_empty());
 }
 
 #[test]

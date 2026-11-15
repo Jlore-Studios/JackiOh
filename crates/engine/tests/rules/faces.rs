@@ -207,9 +207,9 @@ mod b2_7_x_in_the_stats_buff_billy {
         };
         state.players[P1].mana.current = 3;
         state.players[P1].mana.max = 3;
-        let play = legal_actions(&state, P1).into_iter().find(|action| {
-            matches!(action, ActionBody::Play { instance_id, x: Some(2), .. } if *instance_id == card.id)
-        });
+        let play = plays_in(&state, P1, &card.id)
+            .into_iter()
+            .find(|action| matches!(action, ActionBody::Play { x: Some(2), .. }));
         let Some(play) = play else {
             panic!("expected a play for X = 2");
         };

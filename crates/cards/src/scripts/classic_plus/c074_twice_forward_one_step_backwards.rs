@@ -125,7 +125,7 @@ mod tests {
             .map(js)
     }
 
-    fn plays_of(s: &Scenario) -> i32 {
+    fn twice_forward_plays(s: &Scenario) -> i32 {
         subsystems::twice_forward_plays(&trap_of(s))
     }
 
@@ -214,7 +214,7 @@ mod tests {
             fn r425_r99_their_1st_play_is_counted_and_leaves_it_face_down_and_unfired() {
                 let mut s = their_turn();
                 s.play(RAPID, json!({}));
-                assert_eq!(plays_of(&s), 1);
+                assert_eq!(twice_forward_plays(&s), 1);
                 assert!(trap_of(&s).face_up != Some(true));
                 assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::TrapFired));
             }
@@ -328,7 +328,7 @@ mod tests {
                 assert_eq!(trap.face_up, Some(true));
                 assert!(s.unit(P1, 2).is_none());
                 s.play(VANILLA, json!({ "zone": 1 }));
-                assert_eq!(plays_of(&s), 3);
+                assert_eq!(twice_forward_plays(&s), 3);
                 assert_eq!(s.backrow(P1, 2).map(|card| card.id), Some(trap.id.clone()));
                 s.play(VANILLA, json!({ "zone": 3 }));
                 assert_eq!(fused_events(&s), 2);
@@ -364,14 +364,14 @@ mod tests {
                     json!({ "hand": [STOCKPILE, RAPID, VANILLA], "library": library }),
                     |_| {},
                 );
-                assert_eq!(plays_of(&s), 0);
+                assert_eq!(twice_forward_plays(&s), 0);
                 let graveyard = def_ids(&s.pile(P2, "graveyard"));
                 assert_eq!(graveyard, vec![HINDER]);
                 s.play(RAPID, json!({}));
-                assert_eq!(plays_of(&s), 1);
+                assert_eq!(twice_forward_plays(&s), 1);
                 assert_eq!(fused_events(&s), 0);
                 s.play(STOCKPILE, json!({}));
-                assert_eq!(plays_of(&s), 2);
+                assert_eq!(twice_forward_plays(&s), 2);
                 let fused: Vec<String> = s
                     .events()
                     .iter()
@@ -398,7 +398,7 @@ mod tests {
                     json!({ "hand": [STOCKPILE, RAPID, VANILLA], "library": library }),
                     |_| {},
                 );
-                assert_eq!(plays_of(&s), 0);
+                assert_eq!(twice_forward_plays(&s), 0);
                 s.play(STOCKPILE, json!({}));
                 let played: Vec<String> = s
                     .events()
@@ -410,10 +410,10 @@ mod tests {
                     .collect();
                 // The Hinder is logged as cast (`onDraw`), but it is no play.
                 assert_eq!(played, vec![STOCKPILE, HINDER]);
-                assert_eq!(plays_of(&s), 1);
+                assert_eq!(twice_forward_plays(&s), 1);
                 assert_eq!(fused_events(&s), 0);
                 s.play(RAPID, json!({}));
-                assert_eq!(plays_of(&s), 2);
+                assert_eq!(twice_forward_plays(&s), 2);
                 assert_eq!(
                     ingredient_ids(&s, &trap_of(&s).def_id),
                     Some(vec![RAPID.to_string(), FORWARD.to_string()])
@@ -434,9 +434,9 @@ mod tests {
                 let target = id_or_empty(s.unit(P1, 1));
                 s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": target }] }));
                 assert!(s.events().iter().any(|event| event.event_type() == GameEventType::Countered));
-                assert_eq!(plays_of(&s), 0);
+                assert_eq!(twice_forward_plays(&s), 0);
                 s.play(RAPID, json!({}));
-                assert_eq!(plays_of(&s), 1);
+                assert_eq!(twice_forward_plays(&s), 1);
             }
 
             #[test]
@@ -445,7 +445,7 @@ mod tests {
                 s.end_turn();
                 assert_eq!(s.state().active, P1);
                 s.play(VANILLA, json!({ "zone": 1 }));
-                assert_eq!(plays_of(&s), 0);
+                assert_eq!(twice_forward_plays(&s), 0);
             }
 
             #[test]
@@ -498,7 +498,7 @@ mod tests {
                 for _ in 0..4 {
                     s.play(RAPID, json!({}));
                 }
-                assert_eq!(plays_of(&s), 4);
+                assert_eq!(twice_forward_plays(&s), 4);
                 assert_eq!(fused_events(&s), 2);
                 assert_eq!(active_brittle_count(&trap_of(&s)), Some(4));
             }
@@ -552,7 +552,7 @@ mod tests {
                 let next_ref = next.map(|card| card.id).unwrap_or_else(|| RAPID.to_string());
                 s.play(next_ref.as_str(), json!({}));
                 assert_eq!(hash_state(&resumed.state), hash_state(s.state()));
-                assert_eq!(plays_of(&s), 3);
+                assert_eq!(twice_forward_plays(&s), 3);
             }
 
             #[test]

@@ -50,7 +50,6 @@ mod tests {
     use jackioh_engine::query::toxic_on;
     use jackioh_engine::testkit::*;
 
-    const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
     /// A durable Unit: it survives any Toxic's tick.
@@ -91,13 +90,7 @@ mod tests {
                 json!({ "hand": [{ "def": ID, "radiant": radiant }], "field": [TOUGH], "mana": 10 }),
                 json!({ "field": [TOUGH, TOUGH] }),
             );
-            let plum = s.card(ID).id.clone();
-            let offers = legal_actions(s.state(), P1)
-                .iter()
-                .filter(
-                    |action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == plum),
-                )
-                .count();
+            let offers = s.plays_of(ID).len();
             // One play for each enemy Unit, none for the friendly one and none for a hero.
             assert_eq!(offers, 2, "radiant {radiant}");
             s.expect_refused(|s| s.play(ID, json!({ "targets": [{ "pick": "hero", "player": "p2" }] })));

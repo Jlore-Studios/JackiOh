@@ -247,8 +247,8 @@ mod tests {
                     }));
                     let id = cracker_in_hand(&s);
                     assert!(
-                        legal_actions(s.state(), P1).iter().any(|action| matches!(action,
-                            ActionBody::Play { instance_id, face_down: Some(RevealAt::Cloaked), .. } if *instance_id == id)),
+                        s.plays_of(&id).iter().any(|action| matches!(action,
+                            ActionBody::Play { face_down: Some(RevealAt::Cloaked), .. })),
                         "offered Cloaked"
                     );
                     set_cracker(&mut s);

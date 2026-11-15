@@ -203,10 +203,10 @@ mod turn_loop_and_mana_m1_t6 {
         );
         assert!(says(&none.error, "X must be at least 1"));
         assert_eq!(
-            legal_actions(&state, PlayerId::P1)
+            plays_in(&state, PlayerId::P1, &bolt.id)
                 .into_iter()
                 .flat_map(|action| match action {
-                    ActionBody::Play { instance_id, x, .. } if instance_id == bolt.id => vec![x],
+                    ActionBody::Play { x, .. } => vec![x],
                     _ => vec![],
                 })
                 .collect::<Vec<_>>(),

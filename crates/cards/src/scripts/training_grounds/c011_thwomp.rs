@@ -59,19 +59,6 @@ mod tests {
             .collect()
     }
 
-    /// Every selection a legal play of the Thwomp offers.
-    // Differs from Scenario::offered: one card's play targets, not the seat's whole legal list.
-    fn offered(s: &Scenario) -> Vec<Selection> {
-        let thwomp = s.card(THWOMP).id.clone();
-        legal_actions(s.state(), P1)
-            .into_iter()
-            .flat_map(|action| match action {
-                ActionBody::Play { instance_id, targets, .. } if instance_id == thwomp => targets.unwrap_or_default(),
-                _ => Vec::new(),
-            })
-            .collect()
-    }
-
     mod base {
         use super::*;
 
@@ -79,7 +66,7 @@ mod tests {
         fn it_offers_every_unit_on_both_sides_and_no_hero() {
             let s = board(false, json!([GREASER]), json!([GREASER]));
             let (mine, theirs) = (s.unit_at(P1, 1), s.unit_at(P2, 1));
-            let offered = offered(&s);
+            let offered = s.play_targets(THWOMP);
             for unit in [&mine, &theirs] {
                 assert!(offered.contains(&Selection::Instance {
                     instance_id: unit.id.clone()

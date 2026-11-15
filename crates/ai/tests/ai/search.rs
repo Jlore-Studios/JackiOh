@@ -1840,10 +1840,10 @@ mod enemy_targets_first {
     }
 
     /// The action keys of `actions`' plays of `instance_id`, in order.
-    fn plays_of(actions: &[ActionBody], instance_id: &str) -> Vec<String> {
+    fn play_keys(actions: &[ActionBody], instance_id: &str) -> Vec<String> {
         actions
             .iter()
-            .filter(|action| matches!(action, ActionBody::Play { instance_id: id, .. } if id == instance_id))
+            .filter(|action| is_play_of(action, instance_id))
             .map(action_key)
             .collect()
     }
@@ -1870,11 +1870,11 @@ mod enemy_targets_first {
     fn a_sources_variants_alternate_enemy_first_with_the_enemy_hero_first() {
         let state = burn_board();
         let burn = hand_id(&state, "classic-036");
-        let legal = plays_of(&legal_actions(&state, AI), &burn);
+        let legal = play_keys(&legal_actions(&state, AI), &burn);
         assert_eq!(legal.len(), 6, "{legal:?}");
         let expected: Vec<String> = [5, 0, 4, 1, 2, 3].iter().map(|&at| legal[at].clone()).collect();
         assert_eq!(
-            plays_of(&candidate_actions(&state, AI, Prices::NONE), &burn),
+            play_keys(&candidate_actions(&state, AI, Prices::NONE), &burn),
             expected
         );
     }
@@ -1899,8 +1899,8 @@ mod enemy_targets_first {
         let candidates = candidate_actions(&state, AI, Prices::NONE);
         for def_id in ["classicplus-065-4", "core-008"] {
             let id = hand_id(&state, def_id);
-            let kept = plays_of(&candidates, &id);
-            let offered: Vec<String> = plays_of(&legal, &id)
+            let kept = play_keys(&candidates, &id);
+            let offered: Vec<String> = play_keys(&legal, &id)
                 .into_iter()
                 .filter(|key| kept.contains(key))
                 .collect();

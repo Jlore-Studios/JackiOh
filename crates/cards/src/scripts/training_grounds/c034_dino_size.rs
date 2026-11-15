@@ -61,18 +61,6 @@ mod tests {
         }))
     }
 
-    // Differs from Scenario::offered: one card's play targets, not the seat's whole legal list.
-    fn offered(s: &Scenario) -> Vec<Selection> {
-        let dino = s.card(DINO).id.clone();
-        legal_actions(s.state(), P1)
-            .into_iter()
-            .flat_map(|action| match action {
-                ActionBody::Play { instance_id, targets, .. } if instance_id == dino => targets.unwrap_or_default(),
-                _ => Vec::new(),
-            })
-            .collect()
-    }
-
     mod base {
         use super::*;
 
@@ -109,7 +97,7 @@ mod tests {
             let s = board(false, json!([PARAGON, VANILLA]), json!([]), json!([]));
             let (paragon, vanilla) = (s.unit_at(P1, 1), s.unit_at(P1, 2));
             let before = s.stats(&paragon);
-            let offered = offered(&s);
+            let offered = s.play_targets(DINO);
             assert!(!offered.contains(&Selection::Instance { instance_id: paragon.id.clone() }));
             assert!(offered.contains(&Selection::Instance { instance_id: vanilla.id }));
             assert_eq!(s.stats(&paragon), before);

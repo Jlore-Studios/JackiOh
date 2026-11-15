@@ -13,7 +13,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{in_hand, put, slot};
 use crate::rules::fixtures::play_pipeline_b::{
-    five_unit, grave_spell, grave_unit, lobbyist, pb_playing, plays_of, three_spell, titan_two,
+    five_unit, grave_spell, grave_unit, lobbyist, pb_playing, three_spell, titan_two,
 };
 
 /// A Spell with one needed unit pick (R703): unanswerable on an empty board.
@@ -136,7 +136,7 @@ fn reason_of(state: &GameState, viewer: PlayerId, instance_id: &str) -> Option<S
 }
 
 fn has_no_plays(state: &GameState, player: PlayerId, instance_id: &str) -> bool {
-    plays_of(state, instance_id, player).is_empty()
+    plays_in(state, player, instance_id).is_empty()
 }
 
 mod r979000_an_unplayable_hand_card_says_why {

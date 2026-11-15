@@ -947,12 +947,10 @@ mod r81_r90_play_choice_declarations_and_filters {
         for combo in &combos {
             assert_eq!(act_result(&state, combo_body(&card.id, combo)).error, None);
         }
-        let plays: Vec<Option<Vec<String>>> = legal_actions(&state, PlayerId::P1)
+        let plays: Vec<Option<Vec<String>>> = plays_in(&state, PlayerId::P1, &card.id)
             .into_iter()
             .filter_map(|action| match action {
-                ActionBody::Play {
-                    instance_id, modes, ..
-                } if instance_id == card.id => Some(modes),
+                ActionBody::Play { modes, .. } => Some(modes),
                 _ => None,
             })
             .collect();

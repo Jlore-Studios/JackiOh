@@ -125,20 +125,7 @@ mod tests {
             let trap = held_id(&s, TRAP);
             let spell = held_id(&s, SPELL);
             let giga = held_id(&s, ID);
-            let offered: Vec<String> = legal_actions(s.state(), P1)
-                .into_iter()
-                .filter_map(|action| match action {
-                    ActionBody::Play {
-                        instance_id, targets, ..
-                    } if instance_id == giga => targets,
-                    _ => None,
-                })
-                .flatten()
-                .filter_map(|target| match target {
-                    Selection::Instance { instance_id } => Some(instance_id),
-                    _ => None,
-                })
-                .collect();
+            let offered = pick::instance_ids(&s.play_targets(&giga));
             assert!(offered.contains(&unit), "the Unit is offered");
             assert!(offered.contains(&trap), "the Trap is offered");
             assert!(!offered.contains(&spell), "the Spell is never offered");

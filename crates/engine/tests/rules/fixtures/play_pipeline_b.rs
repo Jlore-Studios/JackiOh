@@ -870,13 +870,6 @@ pub fn only<T: Clone>(items: &[T]) -> T {
     }
 }
 
-pub fn plays_of(state: &GameState, instance_id: &str, player: PlayerId) -> Vec<ActionBody> {
-    legal_actions(state, player)
-        .into_iter()
-        .filter(|action| matches!(action, ActionBody::Play { instance_id: id, .. } if id == instance_id))
-        .collect()
-}
-
 /// The JSON round trip a paused state must survive (§9.3).
 pub fn round_trip(state: &GameState) -> GameState {
     let text = serde_json::to_string(state).expect("a state serializes");

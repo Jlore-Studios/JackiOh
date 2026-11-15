@@ -102,32 +102,22 @@ mod tests {
         loc(SHRIMP)
     }
 
-    // Differs from Scenario::offered: one card's play targets as an id set, not the seat's whole legal list.
+    /// The instance ids among the play targets of the Hired Shrimp in `player`'s hand, each once; each
+    /// target must be a bare instance pick.
     fn offered(s: &Scenario, player: PlayerId) -> IndexSet<String> {
         let Some(shrimp) = s.hand(player).into_iter().find(|card| card.def_id == SHRIMP) else {
             panic!("Hired Shrimp should be in hand");
         };
-        let mut out = IndexSet::new();
-        for action in legal_actions(s.state(), player) {
-            let ActionBody::Play { instance_id, targets, .. } = action else {
-                continue;
-            };
-            if instance_id != shrimp.id {
-                continue;
-            }
-            for selection in targets.unwrap_or_default() {
-                let mut keys: Vec<String> = js(&selection)
-                    .as_object()
-                    .map(|object| object.keys().cloned().collect())
-                    .unwrap_or_default();
-                keys.sort();
-                assert_eq!(keys, vec!["instanceId", "pick"]);
-                if let Selection::Instance { instance_id } = selection {
-                    out.insert(instance_id);
-                }
-            }
+        let targets = s.play_targets(&shrimp);
+        for selection in &targets {
+            let mut keys: Vec<String> = js(selection)
+                .as_object()
+                .map(|object| object.keys().cloned().collect())
+                .unwrap_or_default();
+            keys.sort();
+            assert_eq!(keys, vec!["instanceId", "pick"]);
         }
-        out
+        pick::instance_ids(&targets).into_iter().collect()
     }
 
     fn set_of(ids: &[&str]) -> IndexSet<String> {

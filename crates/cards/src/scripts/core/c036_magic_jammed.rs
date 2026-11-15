@@ -114,8 +114,8 @@ mod tests {
             instance_id: target.to_string(),
         }];
         s.offered("p1").iter().any(|action| {
-            matches!(action, ActionBody::Play { instance_id, targets: Some(targets), .. }
-                if *instance_id == jammed && *targets == aimed)
+            is_play_of(action, &jammed)
+                && matches!(action, ActionBody::Play { targets: Some(targets), .. } if *targets == aimed)
         })
     }
 

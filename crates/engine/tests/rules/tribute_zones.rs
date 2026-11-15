@@ -8,7 +8,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{act, act_result, events_of_type, in_hand, put, slot};
 use crate::rules::fixtures::play_pipeline_b::{
-    DISCOVER_POOL, grave_trap, pb_playing, plays_of, reborn_body, stack_body, titan, titan_two, tribute_field,
+    DISCOVER_POOL, grave_trap, pb_playing, reborn_body, stack_body, titan, titan_two, tribute_field,
 };
 
 fn unit_def(name: &str, index: i32) -> CardDef {
@@ -122,7 +122,7 @@ fn lanes(plays: &[Value]) -> Vec<Value> {
 }
 
 fn plays(state: &GameState, card: &CardInstance) -> Vec<Value> {
-    plays_of(state, &card.id, PlayerId::P1)
+    plays_in(state, PlayerId::P1, &card.id)
         .iter()
         .map(play_json)
         .collect()

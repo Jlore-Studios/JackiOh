@@ -89,10 +89,10 @@ mod tests {
 
     /// The graveyard Schematic's plays `legalActions` offers, each with its modes.
     fn offered_from_the_graveyard(s: &Scenario, id: &str) -> Vec<Vec<String>> {
-        legal_actions(s.state(), P1)
+        plays_in(s.state(), P1, id)
             .iter()
             .filter_map(|action| match action {
-                ActionBody::Play { instance_id, modes, .. } if instance_id == id => modes.clone(),
+                ActionBody::Play { modes, .. } => modes.clone(),
                 _ => None,
             })
             .collect()
@@ -174,11 +174,11 @@ mod tests {
         #[test]
         fn each_of_the_four_modes_adds_its_system() {
             let s = schematic_board(false, json!([FILLER]));
-            let held = s.card(SCHEMATIC).id.clone();
-            let offered: Vec<Vec<String>> = legal_actions(s.state(), P1)
+            let offered: Vec<Vec<String>> = s
+                .plays_of(SCHEMATIC)
                 .iter()
                 .filter_map(|action| match action {
-                    ActionBody::Play { instance_id, modes, .. } if *instance_id == held => modes.clone(),
+                    ActionBody::Play { modes, .. } => modes.clone(),
                     _ => None,
                 })
                 .collect();

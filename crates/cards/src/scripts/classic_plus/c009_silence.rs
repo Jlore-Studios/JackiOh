@@ -227,11 +227,7 @@ mod tests {
             crate::register_all();
             let mut s = setup(json!({}), json!({ "backrow": [{ "def": SHEEPISH, "faceUp": false, "lane": 2 }] }), true);
             let trap = s.backrow(P2, 2).unwrap();
-            let silence = s.card(SILENCE).clone();
-            let offers: Vec<ActionBody> = legal_actions(s.state(), P1)
-                .into_iter()
-                .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == silence.id))
-                .collect();
+            let offers = s.plays_of(SILENCE);
             let offered = serde_json::to_string(&offers).unwrap();
             assert!(offered.contains(&trap.id));
             assert!(!offered.contains(SHEEPISH));

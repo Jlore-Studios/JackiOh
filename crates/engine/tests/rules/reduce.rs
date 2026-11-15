@@ -344,10 +344,7 @@ mod reduce_m1_t3 {
             .first()
             .map(|c| c.id.clone())
             .unwrap_or_default();
-        let plays = legal_actions(&state, P1)
-            .into_iter()
-            .filter(|a| matches!(a, ActionBody::Play { instance_id, .. } if *instance_id == unit_id))
-            .count();
+        let plays = plays_in(&state, P1, &unit_id).len();
         assert_eq!(plays, 5);
     }
 
