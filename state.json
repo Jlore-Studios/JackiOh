@@ -14310,11 +14310,11 @@
       "asks": [],
       "died": 0,
       "difficulty_by": {
-        "at": "2026-11-15T02:18:41Z",
-        "difficulty": "medium",
-        "provider": "claude-7",
-        "tier": "medium",
-        "why": "None of rule 1-5 holds: it is one web call site, its tests, a ruling note and two doc lines, about 7 files, with no engine, AI, cross-crate or migration change."
+        "at": "2026-11-15T06:44:43Z",
+        "difficulty": "hard",
+        "provider": "step-up",
+        "tier": "",
+        "why": "failed 3 times at difficulty:medium"
       },
       "failures": 0,
       "forced": false,
