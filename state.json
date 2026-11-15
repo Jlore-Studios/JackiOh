@@ -15335,9 +15335,7 @@
     },
     "3936": {
       "action": "plan",
-      "asks": [
-        "c:6891830857"
-      ],
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-15T09:09:41Z",
         "difficulty": "hard",
@@ -15360,24 +15358,26 @@
       "interruptions": 0,
       "kind": "build",
       "live": "planning",
-      "owner": "claude-7",
-      "owner_since": "2026-11-15T08:51:26Z",
-      "owner_why": "it plans it",
+      "owner": "claude-1",
+      "owner_since": "2026-11-15T09:33:22Z",
+      "owner_why": "handed off from `claude-7`: `claude-7` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-15T09:09:44Z",
       "planned_by": "`claude-7` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-7",
       "planned_model": "sonnet",
       "planned_tier": "medium",
-      "provider": "claude-7",
+      "provider": "claude-1",
       "queued_at": "2026-11-15T08:41:37Z",
       "requested_by": "jgoetzmann",
-      "run_id": "43696448717",
+      "run_id": "pending:1fb4bb92-1794735183",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-15T08:51:26Z",
+      "started_at": "2026-11-15T09:33:22Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6891830857"
+      ]
     },
     "3938": {
       "action": "review",
@@ -15585,9 +15585,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T09:32:52Z",
+    "at": "2026-11-15T09:33:22Z",
     "url": "",
-    "what": "plan #3958 on claude-1"
+    "what": "plan #3936 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-15T08:58:05Z",
