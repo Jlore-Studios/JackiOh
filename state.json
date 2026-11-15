@@ -15203,7 +15203,7 @@
       "provider": "claude-8",
       "queued_at": "2026-11-15T21:32:36Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "pending:740058a9-1794778493",
+      "run_id": "43764529768",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
