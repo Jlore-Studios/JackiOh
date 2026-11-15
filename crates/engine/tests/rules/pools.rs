@@ -731,3 +731,89 @@ mod r3134001_the_turn_hook_filter_reads_the_registered_base_face_script {
         }
     }
 }
+
+/// R1221 and R3869003 (#3836): `tribute` keeps the cards whose registered base face sets a Tribute
+/// play cost above 0, and `aim` those whose base face's first target declares that aim outright, each
+/// read without state as `turnHook` is. The cards crate's Tribute and Book cards reached them, the
+/// engine's tests none.
+mod r1221_r3869003_tribute_and_aim_read_the_registered_base_face {
+    use super::*;
+
+    fn flag_defs() -> Vec<CardDef> {
+        [
+            "601", "602", "603", "604", "605", "611", "612", "613", "614", "615",
+        ]
+        .iter()
+        .map(|index| card(&format!("core-{index}"), "Core", index, json!({})))
+        .collect()
+    }
+
+    /// 601 Tribute 2; 602 Tribute 0; 603 other static flags; 604 no script; 605 Tribute 2 on its
+    /// Radiant face only. 611 aims its first target to help; 612 to harm; 613 leaves its aim unset;
+    /// 614 declares no target; 615 aims only its second target.
+    fn flag_scripts() -> IndexMap<String, CardScripts> {
+        let flags = |value: Value| Script {
+            static_flags: Some(json_as(value)),
+            ..Script::default()
+        };
+        let aimed = |aims: &[Option<TargetAim>]| Script {
+            targets: aims
+                .iter()
+                .map(|aim| TargetDecl {
+                    aim: *aim,
+                    ..TargetDecl::target(1, 1, json!({ "of": ["unit"] }))
+                })
+                .collect(),
+            ..Script::default()
+        };
+        let same = |face: Script| CardScripts {
+            base: face.clone(),
+            radiant: face,
+        };
+        IndexMap::from([
+            ("core-601".to_string(), same(flags(json!({ "tribute": 2 })))),
+            ("core-602".to_string(), same(flags(json!({ "tribute": 0 })))),
+            ("core-603".to_string(), same(flags(json!({ "castOnDraw": true })))),
+            (
+                "core-605".to_string(),
+                CardScripts {
+                    base: Script::default(),
+                    radiant: flags(json!({ "tribute": 2 })),
+                },
+            ),
+            ("core-611".to_string(), same(aimed(&[Some(TargetAim::Help)]))),
+            ("core-612".to_string(), same(aimed(&[Some(TargetAim::Harm)]))),
+            ("core-613".to_string(), same(aimed(&[None]))),
+            ("core-614".to_string(), same(Script::default())),
+            (
+                "core-615".to_string(),
+                same(aimed(&[None, Some(TargetAim::Help)])),
+            ),
+        ])
+    }
+
+    fn setup_flags() {
+        register_catalog(catalog_of(flag_defs()));
+        register_scripts(flag_scripts());
+    }
+
+    #[test]
+    fn r1221_tribute_true_keeps_a_base_face_tribute_above_zero_and_false_keeps_the_rest() {
+        setup_flags();
+        assert_eq!(pool(json!({ "tribute": true })), vec!["core-601"]);
+        assert_eq!(
+            pool(json!({ "tribute": false })),
+            vec![
+                "core-602", "core-603", "core-604", "core-605", "core-611", "core-612", "core-613",
+                "core-614", "core-615",
+            ]
+        );
+    }
+
+    #[test]
+    fn r3869003_aim_keeps_the_cards_whose_first_target_declares_it() {
+        setup_flags();
+        assert_eq!(pool(json!({ "aim": "help" })), vec!["core-611"]);
+        assert_eq!(pool(json!({ "aim": "harm" })), vec!["core-612"]);
+    }
+}

@@ -70,8 +70,8 @@ exclude_re = [
   # The plain build's stand-ins for the testkit's overrides (crates/engine/src/catalog.rs,
   # scripts.rs), each one `None` or `false`: under the testkit, which every test runs with, they are
   # compiled out, so no test can see them. Their testkit twins share their names and only reach the
-  # harness (above).
-  'replace (test_override|shipped_override|previewed|override_map) -> ',
+  # harness (above), catalog.rs's `stand_in` (#3836) handing its id to testkit/stand_in.rs.
+  'replace (test_override|shipped_override|previewed|override_map|stand_in) -> ',
   # crates/engine (#3836): IdHasher::finish's xor-shifts, splitmix64's finaliser: each of its three stages
   # is `x ^ (x >> k)`, the first two then multiplied. One stage weakened (its `^` as `|` or `&`, its `>>`
   # as `<<`) leaves the others to mix: a thousand catalog-shaped ids still fill 626 to 654 of 1024 buckets

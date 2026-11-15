@@ -1497,8 +1497,109 @@ fn every_set_takes(args: &CatalogQueryArgs, set: SetName) -> bool {
 #[cfg(test)]
 mod tests {
     use std::hash::{BuildHasher, Hash, Hasher};
+    use std::sync::OnceLock;
 
-    use super::{IdHash, IdHasher};
+    use indexmap::IndexMap;
+
+    use super::{
+        CRAFT_ID_PREFIX, CardLists, IdHash, IdHasher, PastVersions, ShippedCatalog, past_ids_of, past_record,
+        past_scripts, register_past_versions, register_shipped, shipped_catalog, split_past_id,
+    };
+    use crate::script::CardScripts;
+    use crate::win_rates::{WinRateRow, WinRateTable, win_rate_of_record};
+    use crate::wire::{CardDef, CardDefs};
+
+    /// The one card and the one shipped version the providers below answer for: names no other test
+    /// in this binary uses, so every other lookup here reads as if nothing were registered.
+    const CARD: &str = "provided-card";
+    const SHIPPED_VERSION: &str = "provided-v1";
+
+    fn provided_catalog() -> &'static ShippedCatalog {
+        static CATALOG: OnceLock<ShippedCatalog> = OnceLock::new();
+        CATALOG.get_or_init(|| {
+            let face = serde_json::json!({ "text": "", "keywords": [] });
+            let def: CardDef = serde_json::from_value(serde_json::json!({
+                "id": CARD, "index": "1", "name": "Provided", "set": "Core", "type": "Spell",
+                "rarity": "Common", "cost": 1, "tags": [], "token": false, "base": face, "radiant": face,
+            }))
+            .expect("a card definition");
+            let defs: CardDefs = [(CARD.to_string(), def)].into_iter().collect();
+            ShippedCatalog::new(SHIPPED_VERSION, defs, IndexMap::new())
+                .with_win_rates(WinRateTable {
+                    cards: vec![WinRateRow {
+                        id: CARD.to_string(),
+                        wins: 600,
+                        games: 1000,
+                    }],
+                    ..WinRateTable::default()
+                })
+                .with_card_lists(CardLists {
+                    busted: vec!["z-card", CARD],
+                    complicated: vec![CARD],
+                })
+        })
+    }
+
+    fn kept() -> &'static CardScripts {
+        static KEPT: OnceLock<CardScripts> = OnceLock::new();
+        KEPT.get_or_init(CardScripts::default)
+    }
+
+    /// The cards crate's `register_all` hands the engine these two providers; here, fixtures.
+    fn provide() {
+        register_shipped(|version| (version == SHIPPED_VERSION).then(provided_catalog));
+        register_past_versions(PastVersions {
+            ids: |card, version| {
+                if card == CARD && version == "v2" {
+                    vec![format!("{CARD}@v1")]
+                } else {
+                    Vec::new()
+                }
+            },
+            def: |_| None,
+            kept: |past_id| (past_id == format!("{CARD}@v1")).then(kept),
+            record: |card, _| (card == CARD).then_some((600, 1000)),
+        });
+    }
+
+    /// R767000, R1266000, R2173000: a registered shipped catalog is found by its version, with the
+    /// definitions, the win-rate table and the lists it was built with, the lists sorted (#3836: the
+    /// registration and each accessor lived, reached only by the cards crate).
+    #[test]
+    fn r767000_a_registered_shipped_catalog_is_found_by_version_with_its_tables() {
+        provide();
+        let found = shipped_catalog(SHIPPED_VERSION).expect("the provider finds it");
+        assert!(std::ptr::eq(found, provided_catalog()));
+        assert!(shipped_catalog("provided-v0").is_none());
+        assert_eq!(found.defs().keys().collect::<Vec<_>>(), vec![CARD]);
+        assert_eq!(found.win_rates().cards.len(), 1);
+        assert_eq!(found.win_rates().cards[0].wins, 600);
+        assert_eq!(
+            found.card_lists(),
+            Some(&CardLists {
+                busted: vec![CARD, "z-card"],
+                complicated: vec![CARD],
+            })
+        );
+    }
+
+    /// R3538002, R3538000: the past-versions provider answers a past id's earlier ids, the script kept
+    /// for it and the card's record, which the record of a past id reads (#3836: each lived).
+    #[test]
+    fn r3538002_r3538000_the_past_versions_provider_answers_ids_kept_scripts_and_the_record() {
+        provide();
+        assert_eq!(past_ids_of(&format!("{CARD}@v2")), vec![format!("{CARD}@v1")]);
+        assert!(past_scripts(&format!("{CARD}@v1")).is_some_and(|scripts| std::ptr::eq(scripts, kept())));
+        assert_eq!(past_record(CARD, "v2"), Some((600, 1000)));
+        assert_eq!(win_rate_of_record(&format!("{CARD}@v2")), Some((600, 1000)));
+    }
+
+    /// R3538002: a crafted id is no past id, whatever `@` it holds (#3836: `||` taken as `&&` split it).
+    #[test]
+    fn r3538002_a_crafted_id_is_no_past_id_whatever_it_holds() {
+        assert_eq!(split_past_id(&format!("{CRAFT_ID_PREFIX}x@v1")), None);
+        assert_eq!(split_past_id("card@v1"), Some(("card", "v1")));
+    }
 
     fn hash_of<T: Hash>(value: T) -> u64 {
         IdHash::default().hash_one(value)
