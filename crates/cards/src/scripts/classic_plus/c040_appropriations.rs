@@ -413,10 +413,12 @@ mod tests {
             assert_eq!(aimed("classicplus-057"), vec![Some(TargetAim::Help)]); // Book of Stats
             assert_eq!(aimed("classicplus-071"), vec![Some(TargetAim::Help)]); // Book of Buff
             assert_eq!(aimed("classicplus-010"), vec![Some(TargetAim::Help)]); // New Wraps
-            assert_eq!(aimed("classic-016"), vec![None]); // Book of Flame
-            assert_eq!(aimed("classic-012"), vec![None]); // Book of Blood
-            assert_eq!(aimed("classic-055"), vec![None]); // Book of Wildfire
-            assert_eq!(aimed("classic-029"), vec![None]); // Book of Vital Kill
+            // R3869003: the harmful Books declare the harm an unset aim already read as.
+            assert_eq!(aimed("classic-016"), vec![Some(TargetAim::Harm)]); // Book of Flame
+            assert_eq!(aimed("classic-012"), vec![Some(TargetAim::Harm)]); // Book of Blood
+            assert_eq!(aimed("classic-055"), vec![Some(TargetAim::Harm)]); // Book of Wildfire
+            assert_eq!(aimed("classicplus-072"), vec![Some(TargetAim::Harm)]); // Book of Nerf
+            assert_eq!(aimed("classic-029"), vec![None]); // Book of Vital Kill, harm by default
         }
 
         #[test]
