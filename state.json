@@ -16634,13 +16634,14 @@
       "merge_owner": "claude-7",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-3",
       "queued_at": "2026-11-15T11:32:05Z",
-      "run_id": "43709463826",
+      "run_id": "pending:b651b8d0-1794746166",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 270,
-      "started_at": "2026-11-15T11:32:58Z",
+      "started_at": "2026-11-15T12:36:24Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16739,9 +16740,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T12:35:51Z",
+    "at": "2026-11-15T12:36:24Z",
     "url": "",
-    "what": "build #3936 on claude-1"
+    "what": "spot-check #3972 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-15T12:07:41Z",
@@ -36333,7 +36334,15 @@
         "n": 270,
         "pr": 3972,
         "queued_at": "2026-11-15T12:30:14Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "run_id": "pending:b651b8d0-1794746166",
         "sha": "02c6e48aa19144d900a4e3d1fc7548354a28ee5e",
+        "started_at": "2026-11-15T12:36:24Z",
         "status": "queued",
         "title": "Patch: the account screen fills or drops its empty \"This season\" heading, shows the rank crest, and keeps match history's tap areas apart",
         "tries": 0
