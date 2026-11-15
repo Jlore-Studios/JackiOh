@@ -16843,13 +16843,19 @@
     "what": "review #3970 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-15T10:38:39Z",
+    "at": "2026-11-15T10:46:42Z",
     "notes": [
       "#3936 is held for `claude-1` until 06:20 (5-hour usage is 97%, too close to its 100% cap to start a long run (it starts under 95%))",
-      "delivered build #3842 on claude-3 (run 43698148154): built",
-      "started review #3967 on claude-3 (run 43705218122)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is idle, but nothing queued is for it; `claude-1` 5-hour usage is 97%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-15T12:20:00Z; it takes reviews only; it can start a build or a plan again in 1h 39m; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 64%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-16T09:00:00Z; it can start a build or a plan again in 12h 19m; `muse` it refused a call; its limit resets at 2026-11-16T00:00:00Z; `agy` is idle, but nothing queued is for it; `gpt` is idle, but nothing queued is for it; `claude-2` is idle, but nothing queued is for it; waiting for their owners: #3936 held for `claude-1` until 06:20 (5-hour usage is 97%, too close to its 100% cap to start a long run (it starts under 95%))",
-      "runner gate: started 0 of 5 waiting run(s); 5 wait for a slot"
+      "delivered review #3963 on claude-4 (run 43704550580): approved",
+      "delivered review #3962 on claude-3 (run 43704506527): approved",
+      "delivered review #3966 on claude-7 (run 43704462921): approved",
+      "delivered build #3958 on claude-1 (run 43700818122): built",
+      "delivered build #3955 on claude-6 (run 43700776430): built",
+      "delivered build #3954 on claude-8 (run 43700727750): built",
+      "started review #3969 on claude-6 (run 43706124017)",
+      "started review #3970 on claude-8 (run 43706168663)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is idle, but nothing queued is for it; `claude-7` is idle, but nothing queued is for it; `claude-8` is idle, but nothing queued is for it; `claude-1` 5-hour usage is 96%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-15T12:20:00Z; it takes reviews only; it can start a build or a plan again in 1h 27m; `claude-4` is idle, but nothing queued is for it; `claude-6` is busy; `claude-5` 7-day usage is 64%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-16T09:00:00Z; it can start a build or a plan again in 12h 07m; `muse` it refused a call; its limit resets at 2026-11-16T00:00:00Z; `agy` is idle, but nothing queued is for it; `gpt` is idle, but nothing queued is for it; `claude-2` is idle, but nothing queued is for it; waiting for their owners: #3936 held for `claude-1` until 06:20 (5-hour usage is 96%, too close to its 100% cap to start a long run (it starts under 95%)); #3968 held for `claude-1` until 06:20 (5-hour usage is 96%, too close to its 100% cap to start a long run (it starts under 95%))",
+      "runner gate: started 0 of 7 waiting run(s); 7 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -17555,7 +17561,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-15T10:38:39Z",
+  "loop_tick": "2026-11-15T10:46:42Z",
   "machine_disk": {
     "issue": null,
     "reading": {
