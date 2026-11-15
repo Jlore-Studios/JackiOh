@@ -16,6 +16,7 @@
 // passed on and another game waits on the player (`nextGame`), Next game opens it. The board reads again
 // when the social read says the games waiting on the player changed (the opponent moved). Once the game is
 // over, Rematch sends its opponent a new daily challenge at the same mode and time per move (§9.13).
+// A KY's Competition question shows no 60-second countdown here (R3727003): the move's deadline is its window.
 //
 // The board shows what every table shows (R3855000): its hero names the opponent, its rail lists the modifiers
 // in play (R169), the seat's forecast of its attacks rides the read and draws an aimed attack's outcomes
@@ -233,6 +234,7 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
           wearCosmetics
           trackStats
           endTurnLabel={t("End turn and send")}
+          sequenceClock={false}
           resultReason={onTimeWords(game)}
           turnClock={game.over ? undefined : <DailyClockPill holds={game.holds} seat={game.seat} now={now} />}
           phoneRailTop

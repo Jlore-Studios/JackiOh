@@ -1,6 +1,8 @@
 // R3012000: the legend on the side of the Patch notes page: a navigation bar of the release lines and,
-// under each, its majors and patches, each patch's micro patches listed under it. A link jumps to its
-// entry and opens it (PatchNotes.tsx does the opening); the entry in view is marked `aria-current`.
+// under each, its majors and patches, each patch's micro patches (its snapshots, R3944001) listed under
+// it; the micros no daily patch has rolled up yet are in no entry, so the legend leaves them out. A
+// link jumps to its entry and opens it (PatchNotes.tsx does the opening); the entry in view is marked
+// `aria-current`.
 // On a phone the legend collapses into a drawer (`usePatchLegendCollapsed`). It reads only what the
 // page hands it and decides nothing (CLAUDE.md rule 7).
 
@@ -27,8 +29,9 @@ type Props = {
 /** The address a link carries, so a copied or middle-clicked link opens the same entry (PatchNotes.tsx reads it back). */
 export const legendHref = (anchor: string): string => `#${encodeURIComponent(anchor)}`;
 
+/** R3944001: an entry's micro patches, as the page calls them: its snapshots. */
 function microCount(count: number): string {
-  return count === 1 ? t("1 micro patch") : t("{n} micro patches", { n: count });
+  return count === 1 ? t("1 snapshot") : t("{n} snapshots", { n: count });
 }
 
 export function PatchLegend({ lines, current, onJump }: Props): ReactElement {

@@ -45,9 +45,9 @@ every push (#1370); not a promotion into production, whose commits each had thei
 | `kind:ai` | It changes the practice and ladder AI's decisions |
 | `kind:app` | It changes the client or the server, what players see and use |
 | `kind:internal` | CI, the bots, tooling, docs, tests or a refactor |
-| `tier:major` | A set ships: the next `v0.Z.0` |
-| `tier:patch` | 15 or more cards reprinted, 50 or more that play differently, or a rule every game meets: the next `v0.Z.X` |
-| `tier:micro` | Fewer cards, their words alone, or how they look: the next letter |
+| `tier:major` | A set ships: the next `v0.X.0` |
+| `tier:micro` | Any other card change, whatever its size, its words alone or how cards look: the next letters, rolled up by the day's patch |
+| `tier:patch` | The day's patch (`patches cut`, R3944000). No pull request is labeled it: the cut opens its own promotion |
 
 The type labels stay for routing (the night bot's sweeps and the forms read them), though a `Patch:`
 title names none.
@@ -115,12 +115,13 @@ A pull request has no type.
 | Any change | `Patch: <what it does>` |
 | A shipped card change | `Patch v<version>: <what it does>`, which `patches-ship.yml` gives its issue and its pull request once the version ships |
 | Part of a change split over several issues | `Patch (part n of m): <what it does>`, a sub-issue of its tracker |
-| A tool's own pull request | `patches ship: v0.3.18`, `Promote main to production: …`, `AI gen N (lane): …`, `Revert "…"` |
+| A tool's own pull request | `patches ship: v0.3.18`, `patches cut: v0.6.3` (the day's patch, alone or after a ship's versions as `patches ship: v0.6.2c; patches cut: v0.6.3`), `Promote main to production: …`, `AI gen N (lane): …`, `Revert "…"` |
 
 "What it does" is a short phrase, such as `Patch: aimed random casts and the Deft keyword`. No title
-names a version before it ships: the version follows from what the change does to the cards
-([Version numbers](#version-numbers)), and the issue and the pull request are retitled
-`Patch v0.3.18: aimed random casts and the Deft keyword` when it ships. A change that ships no card
+names a version before it ships: a card change ships as the next micro, or the next major when it ships
+a set ([Version numbers](#version-numbers)), and the issue and the pull request are retitled
+`Patch v0.6.3b: aimed random casts and the Deft keyword` when it ships. The day's patch that rolls it up
+retitles nothing. A change that ships no card
 data never takes a version and keeps its `Patch:` title, unless it changes how cards look or ships a
 system the owner names, which take one through a fragment (R2529000). Its kind (Cards, AI, App, Internal) is the
 classifier's label on its pull request, never its title's.
@@ -133,48 +134,53 @@ leave the `production merge` threads' titles to their workflow. Night bot sugges
 
 ## Version numbers
 
-A version is `v0.Z.X` plus a letter, and it moves exactly when the cards a player compares across it
-do (#1360, R1365000, R1366000). Nothing guesses it: when a patch ships, `patches ship` reads what it
-does to the cards through the classifier and names it:
+A version is `v0.X.Y` plus letters. Each part has one trigger, and nothing else moves it: no title,
+flag or label (#3944, R3944000).
 
-- **Major, `v0.(Z+1).0`**: a set reaches `SHIPPED_SETS` (R1420). Nothing else makes one: no title,
-  flag or label. v1.0.0 waits until the owner asks for it. The one exception is a set the owner
-  **wraps** into the current line (`WRAPPED_SETS` in `crates/tools/src/classify.rs`, R2204000): its
-  arrival opens no line and earns the tier its cards do, so Training Grounds ships as a patch of
-  Stinkyscape's v0.5, whose line is "Stinkyscape & Training Grounds". Wrapping is the owner's call,
-  never a builder's.
-- **Patch, `v0.Z.(X+1)`**: 15 or more card families are reprinted (`PATCH_MIN_REPRINTS`, R2499000:
-  their catalog entry changed and they play differently, as in a balance pass), 50 or more play
-  differently by any route, the engine's included (`PATCH_MIN_CARDS`), or a rule every game meets
-  changed: divergences that name no card in a quarter of the classifier's unforced
-  games (`RULE_MIN_GAMES`), or a base build that refuses the head's decks. A patch restarts every
-  card's statistics (R1367000), so it waits for a change broad enough to move them (#2455,
-  R2455000); the bar was 10 families, and any one divergence without a card, until then.
-- **Micro, the newest version with the next letters** (after v0.3.18, v0.3.18b, then v0.3.18c;
-  after v0.3.18z, v0.3.18aa, then v0.3.18ab … v0.3.18zz and v0.3.18aaa, so a line never runs out,
-  R3631000; the micros R3471000 had named v0.5.13 to v0.5.13h are v0.5.12aa to v0.5.12ah since
-  [the v0.5.13 retcon](#the-v0513-retcon)):
-  anything smaller, any change to wording alone however many cards it touches, and any change to how
-  cards look (the client's `apps/web/src/cards/`: faces, art, frames, foils, marks), which plays no
-  card (R2529000).
-- **A system the owner names** (`SYSTEM_RELEASES` in `crates/tools/src/classify.rs`, by its tracker
-  issue, R2529000), such as card packs, ships as a patch whatever its cards earn, its fragment
-  claiming it with `--system <issue>`. Naming one is the owner's call, never a builder's. Card
-  statistics read such a patch as a micro over the cards it plays, so no other card's figures
-  restart.
+| Part | Name | Made when | What it is | On Patch notes |
+|---|---|---|---|---|
+| **Major** | `v0.X.0` | a set ships (`SHIPPED_SETS`, R1420): `patches ship` names it at once | a new release line | its own entry: the line's poster, summary and technical changes |
+| **Patch** | `v0.X.Y` | once a day, `patches cut`, or by hand (the fast-forward) | every micro since the newest major or patch, rolled into one | its own entry: release art, the micros' notes merged, the micros under it as its snapshots |
+| **Micro** | `v0.X.Yb`, `c` … `z`, `aa` … | each merged card change that ships no set, whatever its size | one change, one snapshot | inside the patch that rolls it up; "Since the last patch" until then |
+
+- **The day's patch is the release players read.** `patches-ship.yml` runs `patches cut` at 03:41 UTC,
+  after the ship, so its pull request lands before the commit the daily production merge tests
+  (`promote-staging.yml`, `super.yml`, `promote-production.yml`). It waits while production does not
+  hold the newest major or patch yet, so each patch is one production release, and a day with no micro
+  has no patch. Majors and patches get GitHub releases; micros get none (R3944002).
+- **Fast-forward.** Actions -> patches ship -> Run workflow with `cut` ticked cuts the day's patch now,
+  without waiting for production; `/promote` on the production issue then takes it live sooner. A major
+  needs no fast-forward: it is named the moment its set ships.
+- **Size never makes a patch.** A balance pass over 15 families, a change 50 cards play differently by,
+  a rule every game meets and a system the owner names (`SYSTEM_RELEASES`, R2529000) are each a micro,
+  and go out in that day's patch. The classifier still measures size (`cargo jackioh classify`,
+  R1365000), but no version follows it: a pull request's tier label is `tier:major` or `tier:micro`.
+- **A wrapped set** (`WRAPPED_SETS` in `crates/tools/src/classify.rs`, R2204000) opens no line: the
+  owner may wrap a set into the current one, as Training Grounds joined Stinkyscape's v0.5, and its
+  arrival is a micro. Wrapping is the owner's call, never a builder's.
+- **Letters never run out** (R3631000): after v0.6.3, v0.6.3b … v0.6.3z, then v0.6.3aa … v0.6.3zz and
+  v0.6.3aaa. A major or a patch moves the number.
+- **Card statistics** (R1367000): a major or a patch opens a new window for every card, the day's patch
+  included; a micro opens one only for the families it plays.
+- **Before #3944**, a patch was named by size: 15 or more reprinted families (`PATCH_MIN_REPRINTS`,
+  R2499000), 50 or more that played differently (`PATCH_MIN_CARDS`, R2455000) or a rule every game met
+  (R1366000). Every version up to v0.6.2b keeps the name it shipped with, and the first daily patch rolls
+  up v0.6.2b on.
 
 A family is a card with its tokens. A card plays differently when its catalog entry changes a field
 other than its wording (`name`, a face's `text`, `refs`, `printedRarity`, `index`), when it is added
 or removed, or when its script or an engine rule changes how its games go, which the classifier's
-second stage confirms against the base build. The patch records its `tier` and `plays` (the families)
-in `patches.json`, so readers never parse a version, and the order of patches is still
-`patches.json`'s, never a comparison of version strings (R105, R388).
+second stage confirms against the base build. Each entry records its `tier`, its `plays` (the
+families) and, on a major or patch that rolls micros up, its `includes` in `patches.json`, so readers
+never parse a version, and the order of patches is still `patches.json`'s, never a comparison of
+version strings (R105, R388).
 
 - **A pull request's claims are checked.** A card change goes live through a pending fragment
   ([A patch that takes several pull requests](#a-patch-that-takes-several-pull-requests), Going
   live). CI's `rust (classify)` fails a pull request when a card plays differently and no fragment
   claims it, or when a fragment claims a play or a rule the base build does not show (R1370000), and
-  `patches check` holds every catalog change to exactly one claim (R646).
+  `patches check` holds every catalog change to exactly one claim (R646) and every `includes` to the
+  micros between its entry and the major or patch before it (R3944000).
 - **A shipped version never reopens.** Every later change takes a later name.
 - **Codebase projects take no version.** `docs/v0.3.0/` (the Rust rewrite) and `docs/v0.4.0/` (the
   Luau scripts) keep their folder names, which code comments cite, but they name codebase projects,
@@ -319,9 +325,10 @@ through `aliases.json`'s `marked`; `versions: 4` is today's.
   changed how it plays, with no catalog change, is claimed with `--plays <ids>`, and a rule every
   game meets with `--rule`, as `cargo jackioh classify --base origin/main --parent-bin <main's
   jackioh>` names them (R1366000). A change to how cards look is claimed with `--visual`, and a
-  system the owner names with `--system <issue>` (R2529000). After the branch merges `patches ship` promotes it, naming the
-  version from its tier, appending it to `patches.json` and bumping the catalog version everywhere
-  it lives (`crates/cards/README.md` §6), and the next deploy reseeds the database. The PR that adds the fragment is the last part, and the patch is
+  system the owner names with `--system <issue>` (R2529000). After the branch merges `patches ship` promotes it, naming it
+  the next micro (a major if it ships a set, R3944000), appending it to `patches.json` and bumping the
+  catalog version everywhere it lives (`crates/cards/README.md` §6), and the next deploy reseeds the
+  database; that day's `patches cut` rolls it into the day's patch. The PR that adds the fragment is the last part, and the patch is
   live when the promotion PR merges. A patch with no card data change is live when its last part
   merges.
 - **Until then, players see nothing new.** Every earlier part leaves main playable and unchanged
@@ -400,9 +407,12 @@ part that narrows the task shows the gap instead of hiding it.
   `cargo jackioh patches log <base>..<head>` logs each App, AI and Internal commit of the range on the
   newest shipped X in `crates/cards/patches/technical.json`, with that line (R1369000); the page shows
   the App and AI lines under their X, and Internal ones stay in the record.
-- **GitHub releases.** Every shipped version is a GitHub release that reads as the page reads it
+- **GitHub releases.** Every major and patch is a GitHub release that reads as the page reads it
   (`apps/web/src/patches/github.ts`): its note under the same headings, its technical log's player
   lines, its cards with what changed on each, and on a major its line's summary and technical changes.
+  A daily patch's release lists the micros it rolls up as its snapshots, and its cards are theirs; a
+  micro a patch rolls up, or the next one will, gets no release of its own (R3944002), and the micros
+  released before #3944 keep theirs.
   `.github/workflows/releases.yml` writes them after a ship, a technical log or a production merge: a
   pre-release while only main (staging) holds the version, a release once production does, each
   tagged at the commit `shipped.json` records. Nothing there is written by hand: the next run puts
@@ -411,14 +421,15 @@ part that narrows the task shows the gap instead of hiding it.
   R1369000, never a parsed version). A major version has a poster and a patch has release art in the same
   style at a patch's scale: a 1920×1080 SVG drawn by `apps/web/src/patches/releaseArt.ts` from the
   patch's snapshots and nothing else, the cards behind it the ones its `changes` name (an added or
-  changed card as the patch's own snapshot holds it, a removed one as the snapshot before it held it).
+  changed card as the patch's own snapshot holds it, a removed one as the snapshot before it held it);
+  a daily patch's are the ones its micros name, against the snapshot before the first of them (R3944002).
   A patch shows at most seven, sampled evenly from a longer list; a major's poster shows its eleven rarest
   (the Mythic in the middle), the line's name large, and a frame. Glitch is never shown (R674). A patch
   whose record names no card to show gets card backs instead. Nothing moves, in the file or on the page:
   no animation, and a major's `<version>-still.svg` is the same bytes as its `<version>.svg`, kept for
   the links published while the art drifted. A micro patch (a letter after a version) gets no art: its
-  notes sit under the patch it follows on Patch notes (R3012000), and its GitHub release carries no
-  image. The micros shipped up to `RELEASE_ART_LEGACY_MICRO_LAST` keep the file their published links
+  notes sit under the patch that rolls it up on Patch notes (R3944001; one shipped before #3944, under
+  the patch it follows, R3012000), and it has no GitHub release of its own. The micros shipped up to `RELEASE_ART_LEGACY_MICRO_LAST` keep the file their published links
   name (CLAUDE.md rule 13), drawn at a patch's scale; a micro after it has none. The build writes
   every file to `/release-art/<version>.svg` and the dev server draws one when asked; `github.ts` puts
   the file, on the host the release already names (staging while a pre-release, production after), at

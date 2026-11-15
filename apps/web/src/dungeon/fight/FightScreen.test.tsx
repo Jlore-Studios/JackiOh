@@ -545,6 +545,73 @@ describe("R2972000 leaving a fight in progress asks first", () => {
   });
 });
 
+describe("R3932000 a dungeon fight has a Menu button that asks before it leaves", () => {
+  it("R3932000 mid-fight Menu button opens the leave dialog and Stay cancels", async () => {
+    at(paths.dungeon);
+    const host = fightHost();
+    renderFight(host, fakeDungeon(vi.fn(() => null)));
+    await screen.findByTestId(fightTestid.screen);
+
+    const menu = screen.getByTestId(fightTestid.menu);
+    expect(menu).toHaveTextContent("Menu");
+    expect(menu).toHaveAttribute("aria-label", "Main menu");
+    expect(menu).toHaveAttribute("title", "Main menu");
+    expect(menu).toHaveAttribute("aria-haspopup", "dialog");
+    expect(menu).toHaveClass("control", "control-practice-menu");
+
+    fireEvent.click(menu);
+    expect(window.location.pathname).toBe(paths.dungeon);
+    const dialog = await screen.findByTestId(fightTestid.leaveDialog);
+    expect(dialog).toHaveAttribute("role", "alertdialog");
+    expect(screen.getByTestId(fightTestid.leaveStay)).toHaveFocus();
+
+    fireEvent.click(screen.getByTestId(fightTestid.leaveStay));
+    expect(screen.queryByTestId(fightTestid.leaveDialog)).toBeNull();
+    expect(screen.getByTestId(fightTestid.screen)).toBeInTheDocument();
+    expect(host.reports()).toBe(0);
+    expect(host.starts()).toHaveLength(1);
+    at("/");
+  });
+
+  it("R3932000 mid-fight Menu button confirms leave to the Play menu", async () => {
+    at(paths.dungeon);
+    const host = fightHost();
+    renderFight(host, fakeDungeon(vi.fn(() => null)));
+    await screen.findByTestId(fightTestid.screen);
+
+    fireEvent.click(screen.getByTestId(fightTestid.menu));
+    const leave = await screen.findByTestId(fightTestid.leaveConfirm);
+    expect(leave).toHaveClass("button-danger");
+    fireEvent.click(leave);
+    expect(window.location.pathname).toBe(paths.play);
+    expect(screen.getByTestId(fightTestid.screen)).toBeInTheDocument();
+    expect(host.reports()).toBe(0);
+    expect(host.starts()).toHaveLength(1);
+    at("/");
+  });
+
+  it("R3932000 once the fight has its result Menu goes to Play without asking", async () => {
+    at(paths.dungeon);
+    const host = fightHost();
+    renderFight(host, fakeDungeon(vi.fn(() => null)));
+    await screen.findByTestId(fightTestid.screen);
+
+    concedeOnBoard();
+    const proceed = await screen.findByTestId(fightTestid.continue);
+    await waitFor(() => {
+      expect(proceed).toBeEnabled();
+    });
+
+    const menu = screen.getByTestId(fightTestid.menu);
+    expect(menu).not.toHaveAttribute("aria-haspopup");
+
+    fireEvent.click(menu);
+    expect(window.location.pathname).toBe(paths.play);
+    expect(screen.queryByTestId(fightTestid.leaveDialog)).toBeNull();
+    at("/");
+  });
+});
+
 describe("#2925 a fight paces the AI as practice does", () => {
   const GAP = 40;
   const SLOW: PracticePacing = { firstActionMs: GAP, actionGapMs: GAP, promptAnswerMs: GAP };
