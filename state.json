@@ -11211,17 +11211,8 @@
       "verdict_rounds": 0
     },
     "3826": {
-      "action": "plan",
-      "asks": [
-        "c:6900287656"
-      ],
-      "build_next": {
-        "from_run": "43755178652",
-        "model": "sonnet",
-        "provider": "claude-7",
-        "since": "2026-11-15T20:20:34Z",
-        "until": "2026-11-15T20:50:34Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-15T20:20:22Z",
         "difficulty": "medium",
@@ -11240,10 +11231,9 @@
         "reason": "planned on sonnet",
         "trail": "ore.rs; grep -n \\\"fn duos_matches\\\\|fn duos_rooms_reap\\\\|fn duos_actions\\\" src/db/fake.rs src/db/store\u2026\n- Bash: {\"command\": \"grep -rn \\\"duos_matches_create\\\\|duos\\\\.matches\\\\.\\\\(create\\\\|finish\\\\|get\\\\|live\\\\)\\\\|\\\\\\\"duos\\\\.\\\" src/db/fake.rs src/db/store.rs tests/support tests/loops | head -30; sed -n 120,180p \u2026\n- Bash: {\"command\": \"grep -rn \\\"on_call\\\\|fn fail_on\\\\|fn stop_failing\\\\|fail_next\\\\|fn called\\\" src/db/fake*.rs src/db/fake/*.rs tests/support/store.rs 2>/dev/null | head -30; ls src/db src/db/fake 2>/dev/n\u2026\n- Bash: {\"command\": \"sed -n 40,130p tests/support/store.rs 2>/dev/null || sed -n 40,130p crates/server/tests/support/store.rs; sed -n 495,525p crates/server/src/db/fake.rs; grep -n \\\"duos_matches_finish\\\\|du\u2026\n- Bash: {\"command\": \"grep -rn \\\"\\\\\\\"duos\\\\.[a-z.]*\\\\\\\"\\\" src | grep -v tracing | head -30; sed -n 495,520p src/db/fake.rs\"}\n- Bash: {\"command\": \"grep -n \\\"pub struct DuosTeamRules\\\" -B4 -A14 crates/engine/src/wire/*.rs | head -50; grep -rn \\\"DuosMatch {\\\" crates/server/tests crates/server/src | head; grep -n \\\"pub async fn actor_\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3826 && grep -rn \\\"pub struct DuosTeamRules\\\" -B4 -A14 crates/engine/src | head -40; grep -rn \\\"DuosMatch {\\\" crates/server/tests crates/server/src |\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3826/crates/server/tests/api/duos_again.rs\", \"offset\": 100, \"limit\": 100}\n- Bash: {\"command\": \"sed -n 290,360p crates/server/src/duos/rooms.rs; sed -n 100,180p crates/server/src/duos/registry.rs\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3826/crates/server/tests/api/duos_again.rs\", \"offset\": 1, \"limit\": 100}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3826/.bot-plan.md\", \"content\": \"# Draft plan #3826 (planner notes)\\n\\n## Found so far\\n- loops.rs `FailingStreak` (passes/since/alerted; LOOP_FAILING_\u2026\n- Bash: {\"command\": \"grep -rn \\\"matches.reapOpen\\\\|reap_open\\\\|\\\\\\\"matches\\\\.[a-zA-Z]*\\\\\\\"\\\" crates/server/src/db/fake.rs | head -10; grep -n \\\"pub async fn matches_reap_open\\\" -A12 crates/server/src/db/stor\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3826/crates/server && grep -n \\\"matches_reap_open\\\" src/db/fake.rs | head -3; grep -n \\\"fn matches_reap_open\\\" -A6 src/db/fake.rs | head -12; grep -n\u2026\n- Bash: {\"command\": \"grep -n \\\"\\\\\\\"/api/tutorial\\\\\\\"\\\\|\\\\\\\"/api/settings\\\\\\\"\\\\|\\\\\\\"/api/news\\\\\\\"\\\" -B2 -A4 src/app.rs | head -60; grep -n \\\"pub async fn \\\\(get\\\\|list\\\\)\\\" src/api/tutorial.rs | head\"}\n- Bash: {\"command\": \"sed -n 100,150p src/api/tutorial.rs; grep -n \\\"tutorial\\\" src/db/fake.rs | head -8; grep -n \\\"pub async fn add_user\\\\|pub async fn empty_test_app\\\\|pub fn add_user\\\\|pub async fn test_ap\u2026\n- Bash: {\"command\": \"grep -rn \\\"json(500\\\\|ok_internal\\\\|INTERNAL_SERVER_ERROR\\\" src | head; grep -rn \\\"handler.threw\\\" tests | head; grep -n \\\"fn log_warn\\\\|log_warn(\\\" src/actor/rooms.rs | head -3; sed -n \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3826 && grep -rln \\\"LOOP_FAILING_ALERT\\\" --include=* . 2>/dev/null | grep -v \\\"^./target\\\" | head; grep -n \\\"API_REJECTION_ALERT_THRESHOLD\\\" -r crate\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3826/crates/server && grep -rn \\\"pub async fn \\\\(seed_\\\\|active_\\\\|sign_up\\\\|new_account\\\\|make_account\\\\|signed_in\\\\)\\\\|pub fn \\\\(seed_\\\\|active_\\\\)\u2026\n- Bash: {\"command\": \"grep -rn \\\"handle_match_socket\\\\|handle_duos_socket\\\\|watch::serve\\\\|live::serve\\\\|HelloGate::install\\\\|watch::listen\\\" tests | head -12; grep -n \\\"pub fn create_fake_socket\\\\|pub struct\u2026\n- Bash: {\"command\": \"grep -rln \\\"ws/watch\\\\|WATCH_PATH\\\\|ws_server::\\\" tests | head; grep -rn \\\"ws/duos\\\\|WS_DUOS_PATH\\\" tests | head -5; grep -n \\\"ws.upgrade.threw\\\\|ws.watch.threw\\\\|ws.social.threw\\\\|duos.\u2026\n- Bash: {\"command\": \"sed -n 820,930p tests/actor/ws_server.rs; sed -n 2826,2900p tests/actor/duos.rs\"}\n- Bash: {\"command\": \"sed -n 1,75p tests/actor/ws_server.rs; grep -n \\\"pub async fn serve\\\\|pub fn serve\\\\|pub async fn connect\\\\|fn connect\\\" -B2 -A25 tests/actor/mod.rs | head -90\"}\n- Bash: {\"command\": \"grep -rn \\\"fn serve(\\\\|pub fn serve\\\\|async fn connect(\\\\|pub struct Served\\\\|struct Served\\\" tests | head; \"}\n- Bash: {\"command\": \"sed -n 100,215p tests/actor/duos.rs; grep -n \\\"^mod \\\\|^pub mod \\\" tests/actor/mod.rs | head -40; grep -n \\\"SOCIAL_PATH\\\" tests/actor/social_live.rs | head -5\"}\n- Bash: {\"command\": \"grep -n \\\"fn profiles_get_by_user_id\\\" -A5 src/db/fake.rs | head -12; sed -n 1,60p tests/actor/social_live.rs | head -80; grep -n \\\"pub async fn wait_closed\\\\|pub async fn wait_for\\\\|fn \u2026\n- Bash: {\"command\": \"grep -n \\\"pub struct Account\\\" -B2 -A8 tests/support/store.rs; grep -n \\\"pub async fn account\\\" -A22 tests/support/store.rs; grep -n \\\"pub(super) async fn wait_closed\\\\|pub(super) const \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3826 && grep -rn \\\"handler.threw\\\\|ws.upgrade.threw\\\\|ws.watch.threw\\\\|duos.abandoned\\\\|open_reaper\\\" --include=*.md --include=*.ts --include=*.json \u2026\n- Bash: {\"command\": \"grep -rn \\\"loops/failing\\\\|tests/loops\\\\|actor/social_live\\\" scripts crates/tools .github/workflows 2>/dev/null | head -5; grep -n \\\"server\\\" scripts/ci-scope.sh | head -10; grep -n \\\"wc\u2026\n- Bash: {\"command\": \"sed -n 945,990p crates/tools/tests/acceptance.rs; sed -n 255,275p scripts/ci-scope.sh\"}\n- Bash: {\"command\": \"sed -n 65p spec/09-architecture.md; grep -n \\\"mod tests\\\\|#\\\\[cfg(test)\\\\]\\\" crates/server/src/loops.rs | head -2; git log -3 --format=%s -- spec/09-architecture.md | head -3\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-3826/.bot-plan.md\", \"content\": \"# Draft plan #3826 \\u2014 status: research done, final plan written to the final message\\n\\nDecisions: RouteHealth per\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Server-crate only (about 12 files with tests and docs): no engine rules, no AI, no migration, no cross-crate contract, well under 40 files.\"} --> ## Goal Two kinds of repeated failure raise an alert, as a stuck 1v1 match already does. 1. **Routes.** A rout\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-15T19:56:07Z",
       "owner_why": "it plans it",
@@ -11256,12 +11246,14 @@
       "provider": "claude-7",
       "queued_at": "2026-11-15T19:49:51Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43755178652",
+      "run_id": "pending:825595de-1794774256",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-15T19:56:07Z",
+      "started_at": "2026-11-15T20:24:44Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6900287656"
+      ]
     },
     "3827": {
       "action": "build",
@@ -15115,9 +15107,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-15T20:24:01Z",
+    "at": "2026-11-15T20:24:44Z",
     "url": "",
-    "what": "build #3933 on claude-8"
+    "what": "build #3826 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-15T20:05:26Z",
