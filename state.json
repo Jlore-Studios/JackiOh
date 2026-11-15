@@ -14544,6 +14544,7 @@
       "action": "review",
       "asks": [],
       "audit_tier": "",
+      "closed_at": "2026-11-15T23:07:37Z",
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -14563,6 +14564,7 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
+      "merged": true,
       "own_review": {
         "claimed_at": "2026-11-15T18:37:11Z",
         "from_run": "43742236293",
