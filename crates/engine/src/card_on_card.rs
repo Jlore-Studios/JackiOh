@@ -133,14 +133,8 @@ fn exile_by_auras(sink: &mut EngineSink<'_>, sources: &[String]) -> bool {
         }
         let auras = crate::scripts::script_of(sink.state, &source).exile_auras.clone();
         let reached: Vec<CardInstance> = {
-            let ctx = make_context(
-                sink,
-                Some(&source),
-                HookOptions {
-                    controller: Some(source.controller),
-                    ..HookOptions::default()
-                },
-            );
+            // `make_context` takes the controller from the source.
+            let ctx = make_context(sink, Some(&source), HookOptions::default());
             let mut reached: Vec<CardInstance> = Vec::new();
             for aura in &auras {
                 for card in cards_in_scope_aimed(&ctx, &aura.scope, TargetAim::Harm) {
@@ -195,14 +189,7 @@ fn radiant_by_keywords(sink: &mut EngineSink<'_>, rising: &[(String, i32)]) -> b
         if i32::try_from(kinds.len()).unwrap_or(i32::MAX) < *needed {
             continue;
         }
-        let mut ctx = make_context(
-            sink,
-            Some(&card),
-            HookOptions {
-                controller: Some(card.controller),
-                ..HookOptions::default()
-            },
-        );
+        let mut ctx = make_context(sink, Some(&card), HookOptions::default());
         changed |= crate::effects::radiant::make_radiant(&mut ctx, &card);
     }
     changed

@@ -1491,3 +1491,21 @@ pub fn is_extra_turn_card(def_id: &str) -> bool {
 fn every_set_takes(args: &CatalogQueryArgs, set: SetName) -> bool {
     args.every_set == Some(true) && crate::wire::SINGLE_PLAYER_SETS.contains(&set)
 }
+
+#[cfg(test)]
+mod tests {
+    use std::hash::BuildHasher;
+
+    use super::IdHash;
+
+    /// The registries' hasher keeps a thousand catalog-shaped ids apart, so a lookup by id stays one
+    /// probe (#3836: a `mix` that dropped its word, or folded it in by `|` or `&`, lived).
+    #[test]
+    fn the_id_hasher_gives_each_catalog_id_a_hash_of_its_own() {
+        let ids: Vec<String> = (0..1000).map(|n| format!("classic-plus-{n:03}")).collect();
+        let mut hashes: Vec<u64> = ids.iter().map(|id| IdHash::default().hash_one(id)).collect();
+        hashes.sort_unstable();
+        hashes.dedup();
+        assert_eq!(hashes.len(), ids.len());
+    }
+}

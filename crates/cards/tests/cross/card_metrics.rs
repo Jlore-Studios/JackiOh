@@ -5,9 +5,11 @@
 //! expects in them: it holds each list to its threshold and to the cards on each side of it. The
 //! query's options on fixture cards, `everySet` among them, are the engine's
 //! (`crates/engine/tests/rules/card_metrics.rs`). #3116: the build also lists the cards whose script
-//! owes an extra turn, which the AI prices in hand (R846).
+//! owes an extra turn, which the AI prices in hand (R846). The comment scanner every count reads
+//! (`without_comments`) and the readers of the lists (R2173000) and of the win rates of record
+//! (R3882000) are held on fixture sources at the end (#3836).
 
-use jackioh_cards::code_lines::owes_extra_turn;
+use jackioh_cards::code_lines::{owes_extra_turn, reads_card_lists, reads_win_rate_record, without_comments};
 use jackioh_cards::query::{CardQuery, query};
 use jackioh_cards::{
     BUSTED, CATALOG, CODE_LINES, COMPLICATED, EXTRA_TURN_CARDS, carried_versions, register_all,
@@ -298,4 +300,94 @@ pub fn script() -> CardScripts {
 }
 "#;
     assert!(!owes_extra_turn(longer), "only inside longer names");
+}
+
+/// R1846000: the scanner every count reads takes out `//` to a line's end and `/* */` blocks, nested
+/// ones and ones over several lines too, while a lone slash, a string (escaped or raw) or a character
+/// literal stays code (#3836: cards-lib's mutants of `without_comments` lived).
+#[test]
+fn r1846000_a_comment_goes_and_a_string_or_character_literal_stays_code() {
+    let cases: &[(&str, &[&str])] = &[
+        ("let x = a / b; // half", &["let x = a / b; "]),
+        ("let x = 2 /* two */ * 3;", &["let x = 2  * 3;"]),
+        // A star or a slash inside a block does not end it; a nested block ends at its own close.
+        ("/* 2 * 3 / 4 */ x", &[" x"]),
+        ("/* a /* b */ c */ d", &[" d"]),
+        ("/* /**/ */ x", &[" x"]),
+        ("/* a\n /* b */\n c */ d", &["", "", " d"]),
+        // A `//` inside a string is code, and an escaped quote does not end the string.
+        (r#"let s = "a // b";"#, &[r#"let s = "a // b";"#]),
+        (r#"let s = "a\" // b"; // c"#, &[r#"let s = "a\" // b"; "#]),
+        // A raw string ends at its own quote and hashes, and a backslash in it escapes nothing.
+        (r#"let s = r"a\"; // c"#, &[r#"let s = r"a\"; "#]),
+        (r#"let b = br"a\"; // c"#, &[r#"let b = br"a\"; "#]),
+        (r##"let s = r#"a\"#; // c"##, &[r##"let s = r#"a\"#; "##]),
+        (
+            r##"let s = r#"say "hi" // x"#; // c"##,
+            &[r##"let s = r#"say "hi" // x"#; "##],
+        ),
+        // It runs on over lines, and a quote ending a line closes none with hashes.
+        (
+            "let s = r#\"a \"b\"\n// c\n\"#; // d",
+            &["let s = r#\"a \"b\"", "// c", "\"#; "],
+        ),
+        // A character literal is one token, so its quote opens no string, and an escaped one
+        // closes after its escaped character, a quote among them.
+        ("let c = '\"'; // c", &["let c = '\"'; "]),
+        (r#"let q = ['a','\n','"']; // c"#, &[r#"let q = ['a','\n','"']; "#]),
+        (r#"let q = ['\'','"']; // c"#, &[r#"let q = ['\'','"']; "#]),
+        (r#"let q = [' ','\x41','"']; // c"#, &[r#"let q = [' ','\x41','"']; "#]),
+    ];
+    for (source, lines) in cases {
+        assert_eq!(without_comments(source), lines.to_vec(), "{source}");
+    }
+}
+
+/// R2173000: a script reads the BUSTED or complicated lists once its code, above its tests and outside
+/// its comments, spells a reader of them; R3882000: the win rates of record likewise (#3836: cards-lib's
+/// mutants returning `true` or `false` from either lived).
+#[test]
+fn r2173000_r3882000_a_script_reads_the_lists_or_the_record_once_its_code_spells_a_reader() {
+    let lists = r#"
+pub fn script() -> CardScripts {
+    let _ = is_busted("x");
+    CardScripts::default()
+}
+"#;
+    let record = r#"
+pub fn script() -> CardScripts {
+    let _ = tier_of_record("x");
+    CardScripts::default()
+}
+"#;
+    let neither = r#"
+// is_busted("x"), tier_of_record("x")
+pub fn script() -> CardScripts {
+    CardScripts::default()
+}
+#[cfg(test)]
+mod tests {
+    fn reads() {
+        let _ = (is_busted("x"), tier_of_record("x"));
+    }
+}
+"#;
+    assert!(
+        reads_card_lists(lists),
+        "a script spelling is_busted reads the lists"
+    );
+    assert!(!reads_win_rate_record(lists), "and not the record");
+    assert!(
+        reads_win_rate_record(record),
+        "a script spelling tier_of_record reads the record"
+    );
+    assert!(!reads_card_lists(record), "and not the lists");
+    assert!(
+        !reads_card_lists(neither),
+        "named in a comment and its tests only"
+    );
+    assert!(
+        !reads_win_rate_record(neither),
+        "named in a comment and its tests only"
+    );
 }
