@@ -169,7 +169,7 @@
 .lobby__actions {
   position: sticky;
   bottom: max(var(--shell-bottom, 0px), env(safe-area-inset-bottom, 0px));
-  z-index: 1;
+  z-index: var(--z-content);
   display: flex;
   align-items: center;
   justify-content: space-between;
