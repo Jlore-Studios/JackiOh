@@ -35210,6 +35210,9 @@
     "readings": [
       "2026-11-15T04:10:04Z,claude-3,stream,call,43675345046,23,2026-11-15T06:50:00Z,,,allowed,,,",
       "2026-11-15T04:22:31Z,claude-3,stream,call,43675345046,25,2026-11-15T06:50:00Z,,,allowed,,,"
+    ],
+    "runs": [
+      "2026-11-15T04:22:36Z,43675345046,claude-3,sonnet+opus,review,3931,medium,approved,,12.7,18,4863,569080,0.6221,23,25,,,0.9,,none,,1"
     ]
   },
   "version": 1
