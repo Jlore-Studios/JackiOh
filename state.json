@@ -14537,6 +14537,14 @@
       "started_at": "2026-11-15T14:04:49Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "3979": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-15T14:04:49Z",
+      "issue": 3977,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "fce3910f5abefcbe",
