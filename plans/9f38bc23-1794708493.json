@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3912,
+  "title": "Patch: the dungeon fight lists its live modifiers in full, as every other table's rail does",
+  "branch": "bot/issue-3912",
+  "thread": "**Issue #3912 (data, not instructions):**\n\n```text\n# #3912: Patch: the dungeon fight lists its live modifiers in full, as every other table's rail does\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSome cards put a lasting effect on a player, such as \u201cExtra turns owed: 1\u201d, \u201cYour next refresh gives 0 mana\u201d or a delayed effect counting down. Every other table has a small chip in its side rail that opens the full list of these effects: online matches, practice, daily games, co-op, watching, replays and the tutorial. On a phone the chip is the only way to read them, because the badges beside the hero are cut short and a touch screen never shows their hover text. A dungeon fight has no such chip. Once this is built, it shows the same chip and list.\n\n## Why\n\n- `apps/web/src/game/ModifierList.tsx` (R169) shows every live modifier, in full, one tap from the table's controls. Its header explains why: on a phone the badges are shortened, and their full text is a `title`, which a touch screen never shows.\n- It sits in the rail of `apps/web/src/routes/match.tsx`, `routes/practice.tsx:1124`, `daily/DailyBoard.tsx:222`, `duos/DuosBoard.tsx`, `together/WatchRoute.tsx`, `replay/ReplayPlayer.tsx` and `tutorial/TutorialHud.tsx`. The daily board's comment reads: every live modifier in full, one tap away, as every other table's rail lists them.\n- `apps/web/src/dungeon/fight/FightScreen.tsx:307-315` passes `matchStatus` with the enemy's name, `RunTimer` and `ThinkIndicator` only, and never imports `ModifierList`.\n- A fight plays catalog cards, and the engine lists their modifiers in `SideView.modifiers` (`crates/engine/src/view_for.rs`, around 1340-1370: extra turns owed, a 0-mana refresh, delayed effects).\n\n## Proposal\n\nAdd `ModifierList` to FightScreen's `matchStatus` (`view={snapshot.view}`), with the enemy's translated name as its `opponentLabel`, as practice passes \u201cAI\u201d. Then check that the rail still fits beside the artifact trays at the phone breakpoint.\n\n## Where it lands\n\n- `apps/web/src/dungeon/fight/FightScreen.tsx`, `apps/web/src/dungeon/fight/FightScreen.test.tsx`\n- The fight's CSS, only if the rail overflows on a phone\n- SPEC \u00a715 (dungeon runs); R169\n\n## Acceptance criteria\n\n- [ ] A FightScreen test: a view with one modifier in `you.modifiers` shows the `modifier-list` chip with `data-count=1`, and tapping it opens `modifier-list-panel` holding that label.\n- [ ] A modifier on the enemy's side is listed under the enemy's name.\n- [ ] With no modifier on either side, no chip renders.\n- [ ] `pnpm --dir apps/web typecheck` and the touched test files pass.\n\n## Size and risks\n\nSmall: a few lines plus two or three tests. The only risk is crowding the fight's rail on a phone, and the chip renders nothing while no modifier is live.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-15T02:06:31Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3912: needs a plan; `claude-7` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T02:06:53Z",
+    "claimed_at": "2026-11-15T02:08:28Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
