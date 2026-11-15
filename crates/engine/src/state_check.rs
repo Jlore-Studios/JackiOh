@@ -1076,7 +1076,11 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
                 return;
             }
             // R3569000: with Tears of the Kwzki Tree in force, every card turns Radiant on the settled board.
-            crate::effects::radiant::radiate_world(sink);
+            // R3908000: a Radiant face can carry what its base lacked (Indestructible, less health), so a
+            // sweep that turned any card starts the check over and steps 1 to 5 judge the board it left.
+            if crate::effects::radiant::radiate_world(sink) {
+                continue;
+            }
             // R3536001, R3536002: the settled board: standing "Evolves when" conditions and cards
             // marked to enter evolved evolve now, queuing their Evolve texts behind the check.
             crate::evolution::evolve_standing(sink);

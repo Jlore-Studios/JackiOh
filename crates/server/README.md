@@ -156,7 +156,7 @@ placeholders (`app::load_server_env`).
 | `ALERT_RESEND_API_KEY` | no | a Resend API key with Sending access for jackioh.com, with which an alert is emailed to `ALERT_EMAILS` ([Alerts](#alerts), #3595); unset, no alert is emailed. Secret |
 | `ALERT_EMAILS` | no | the addresses an alert is emailed to, comma-separated; an entry that is not an address is left out with a warning that never prints it, and nothing here refuses the boot. A Worker secret, since the repository is public; the boot logs how many, never which |
 | `PLAYER_RESEND_API_KEY` | no | a Resend API key with Sending access for jackioh.com, apart from the alerts' key, with which the daily games' "your move" emails go ([Daily games](#daily-games-913-3727), #3727); unset, no player is emailed. Secret |
-| `VAPID_PRIVATE_KEY` | no | the daily games' Web Push signing key (RFC 8292): the raw P-256 private scalar, base64url without padding; unset, or no pair with `VAPID_PUBLIC_KEY` (logged as `daily.push.keys_refused`), no push is sent. Secret |
+| `VAPID_PRIVATE_KEY` | no | the daily games' Web Push signing key (RFC 8292): the raw P-256 private scalar, base64url without padding; unset, or no pair with `VAPID_PUBLIC_KEY` (logged as `daily.push.keys_refused`), no push is sent. Changing the pair makes every push service answer 403 to the subscriptions made under the old one, and the next push deletes them; each device turns push on again. Secret |
 | `VAPID_PUBLIC_KEY` | no | its public half, the raw uncompressed point (65 bytes) in base64url, which `GET /api/daily/settings` gives the browser to subscribe with; a Worker secret beside the private half, so the two always match |
 | `DEV_STRICT` | no | the dev dashboard's strict mode (§14.10, R3074000): `on` (the default when unset) makes every `/api/admin/*` route need the two-step code (`aal2`) and keeps a hand-set rating off the public ladder until it is reset (R3074001); `off` skips both. wrangler.jsonc sets `on` for production and `off` for staging, and end-to-end mode defaults it to `off`. Any other value refuses the boot |
 
@@ -250,7 +250,7 @@ account, its presence to friends, written at most once a `PRESENCE_TOUCH_EVERY_M
 | `GET` | `/api/stats/games` | none | the patch's game figures (the first seat's wins with their interval, the endings, the turns, R1256000's counts) over the window every card shares, under R654's gate, split by both seats' pilots, through the engine's `windowed_game_figures`; kept and cached as the cards' (R1994000) |
 | `GET` | `/api/stats/ci` | none | the daily super run's last `CI_RUNS_LISTED` runs on `main` and a failed run's jobs that did not pass, read from GitHub's Actions API (with `CREATE_ISSUES_TOKEN` when set) and kept `CI_RUNS_CACHE_TTL_SECONDS`; `unavailable` when GitHub cannot be read; none on the end-to-end server (`api/ci_runs.rs`, R1935000) |
 | `GET`, `PUT` | `/api/stats/player` | active | the caller's own tracked statistics and privacy setting (R654); a PUT keeps only R1142000's summary inputs, for catalog cards (R1771000) |
-| `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept, each with the opponent's `profileId` and `username` (R1436); one seat's steps of one (R768), or the sharer's seat's to a friend holding a share (§9.5), each page with both seats' frozen `loadouts` and the `cardLoadouts` of the cards its steps show (R1834003); a page of a replay kept in memory waits for nothing, while an opening that is not kept folds its whole game behind `REPLAY_FOLDS_RUNNING_MAX` folds at once for the whole server (the co-op replays' too), a concurrent opening of the same match sharing that fold, and one that waits past `REPLAY_FOLD_WAIT_MS` is 429 `rate_limited` with `retryAfterMs` (`REPLAY_FOLD_RETRY_AFTER_MS`, R192, R3500000) |
+| `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept, each with the opponent's `profileId` and `username` (R1436); one seat's steps of one (R768), or the sharer's seat's to a friend holding a share (§9.5), each page with both seats' frozen `loadouts` and the `cardLoadouts` of the cards its steps show (R1834003) and both seats' `portraits` (R3976000, `vanilla` before them); a page of a replay kept in memory waits for nothing, while an opening that is not kept folds its whole game behind `REPLAY_FOLDS_RUNNING_MAX` folds at once for the whole server (the co-op replays' too), a concurrent opening of the same match sharing that fold, and one that waits past `REPLAY_FOLD_WAIT_MS` is 429 `rate_limited` with `retryAfterMs` (`REPLAY_FOLD_RETRY_AFTER_MS`, R192, R3500000) |
 | `GET` | `/api/friends` | active | the caller's friends with their status (`offline`, `online`, `inMatch`), whether they may be watched and, `duos: true`, whether the game holding them is a co-op one (R2881000), for an offline friend `lastSeenAt` when presence kept a heartbeat, for a friend in a watchable 1v1 game its `turn`, for an online friend with an unstarted lobby whose guest seat is empty its `lobbyCode` (R3732001), the requests in and out, and the players the caller blocks (§9.4), read in one transaction by a fixed number of set-based queries whatever the number of friends |
 | `GET` | `/api/friends/recent` | active | `{ recent: [{ profileId, username, playedAt }] }`: the opponents of the caller's newest `RECENT_OPPONENTS_SCAN` games that were not ranked (a room, lobby, challenge or daily game, never one the queue paired, so a ladder bot is never listed, R1452), newest first, at most `RECENT_OPPONENTS_MAX`, each once, leaving out the caller, friends and anyone a block stands between (R3732000) |
 | `POST`, `DELETE` | `/api/friends/requests`, `/:id/accept`, `/:id/decline`, `/api/friends/requests/:id`, `/api/friends/:profileId` | active | a request by exact `name#tag` (an unknown name and a blocked pair answer the same 404; `self`, `already_friends`, `already_requested`, `friend_cap` are 409; past `FRIEND_REQUESTS_PER_HOUR` is 429; a mutual request is accepted at once), its answer or its cancel, and removing a friend (which deletes the replay shares between the two, either way, cancels every open challenge between them and frees its room (R1689000), and lets go a watch of either by the other) |
@@ -310,8 +310,8 @@ token, no socket, no cookie and no engine in the client, so any client can play 
 | `POST /api/daily/challenges/:id/decline`, `DELETE /api/daily/challenges/:id` | Active | the friend declines, the challenger cancels: 204 |
 | `POST /api/daily/seeks` | Active | `{mode, perMoveDays, deckId?, leanSet?}`: 201 `{matchId}` when it pairs at once with the oldest open seek of the same mode and time from someone neither blocks, else 201 `{seekId}`; never a ladder bot. 409 `already_seeking`, `daily_full`. Lapses `DAILY_SEEK_TTL_DAYS` later |
 | `DELETE /api/daily/seeks/:id` | Active | cancels the caller's seek: 204 |
-| `GET /api/daily/games/:matchId` | Active | `{matchId, seat, view, legal, forecast, seq, holds, hasMove, perMoveDays, mode, catalogVersion, olderCatalog, opponent, over, lostOnTime, nextGame}`: the caller's own `view_for`, legal actions and `forecast` only (`forecast` is the engine's `combat_forecast` for the seat kept to the attacks `legal` lists, R3855000; `legal` holds only a concede and `forecast` is empty while the move is the other player's), under the game's catalog (R3727005); 404 for a game the caller does not play |
-| `POST /api/daily/games/:matchId/actions` | Active | `{after, nonce, action}`, `after` the `seq` it was read at: 200 with the read. A nonce already logged answers 200 and applies nothing; 409 `stale` (the log moved on, or another request sent after the same `seq` was logged first: the clock is written only on `daily_games.seq` still at `after`), `time_up` or `over`; 422 `not_your_move` (anything but `concede` from a seat holding no move, R3727006's offerer among them) or `illegal`. Every refusal carries `game`, the read as it stands |
+| `GET /api/daily/games/:matchId` | Active | `{matchId, seat, view, legal, forecast, seq, holds, hasMove, perMoveDays, mode, catalogVersion, olderCatalog, opponent, over, lostOnTime, nextGame}`: the caller's own `view_for`, legal actions and `forecast` only (`forecast` is the engine's `combat_forecast` for the seat kept to the attacks `legal` lists, R3855000; `legal` holds only a concede and `forecast` is empty while the move is the other player's), under the game's catalog (R3727005); 404 for a game the caller does not play. A finished game whose log the retention purge took answers 200 with its list row (the stored board's turn, life and result, and when it ended) plus `expired: true` and no `view`, `legal` or `forecast`, never folded (R3934000) |
+| `POST /api/daily/games/:matchId/actions` | Active | `{after, nonce, action}`, `after` the `seq` it was read at: 200 with the read. A nonce already logged answers 200 and applies nothing; 409 `stale` (the log moved on, or another request sent after the same `seq` was logged first: the clock is written only on `daily_games.seq` still at `after`), `time_up` or `over`; 422 `not_your_move` (anything but `concede` from a seat holding no move, R3727006's offerer among them) or `illegal`. Every refusal carries `game`, the read as it stands. A finished game whose log the purge took answers 409 `over` (`time_up` if it was lost on time) with its `expired` read as `game`, and logs nothing (R3934000) |
 | `GET /api/daily/settings`, `PUT /api/daily/settings` | Active | `{emailOn, hasEmail, vapidPublicKey, pushDevices}`; the `PUT` takes `{emailOn}` |
 | `POST /api/daily/push` | Active | `{endpoint, keys: {p256dh, auth}}`, this device's subscription (an `https` endpoint at a browser's push service, one of `PUSH_SERVICE_HOSTS` or a subdomain of one, else 400; past `PUSH_MAX_DEVICES` the oldest goes): 204 |
 | `DELETE /api/daily/push` | User | `{endpoint}`: the device's subscription goes, as the web signs out: 204 |
@@ -743,8 +743,8 @@ of each, from a tracing layer beside the JSON log, at most once an hour per even
 
 Either alone works. The boot logs `alerts.ready` (`issues`, and how many addresses) or `alerts.off`; a notice
 that fails logs `alert.issue.failed` or `alert.email.failed`, never another alert. The end-to-end server tells
-nobody. A server that cannot boot cannot tell anyone, nor can one the Worker cannot reach: those are #3595's
-next steps, in the Worker.
+nobody. A server that cannot boot cannot tell anyone, nor can one the Worker cannot reach, so the Worker raises
+`server.unreachable` itself, with the same issue and email (`apps/edge/README.md`, #3618).
 
 A sweep that keeps failing (#3770). Each sweep catches its own failure and tries again on the next pass, so
 a step that failed on every pass was a warning an hour or a few seconds apart and nobody told. `loops.rs`'s
@@ -786,6 +786,11 @@ one that lands while another runs does nothing). A game over whose result's writ
 `live`) is due too, so the sweep writes it; a Glitch's void (R679) goes through `results::void_match`. A
 game is written in the transaction that accepts its challenge, so a start that fails leaves the challenge
 open; a seek's claim commits first, and a start that fails puts the claimed seek back where it stood.
+R3727004's cap is read once before the choice is frozen, for a quick `daily_full`, and again in the
+transaction that writes the challenge, the seek or the game, under the account's daily lock
+(`Tx::daily_lock_account`: a transaction-level advisory lock in Postgres; the fake runs one transaction at a
+time), so of requests at once only those that fit are written (#3842); a claimed seek whose claimer is full
+that way goes back too.
 
 **Telling a player.** What to send is `jackioh_shared::notify::decide_notify`'s (a game newly waiting, and
 once `DAILY_REMINDER_HOURS` before a deadline; an email at most every `DAILY_EMAIL_MIN_GAP_HOURS`, and none
@@ -796,16 +801,21 @@ for each in turn, so a slow mail or push service never holds a move; a profile t
 server dropped at a stop, is decided for by the next sweep (#3856). An email goes through Resend under
 `PLAYER_RESEND_API_KEY`, one per decision, listing every game waiting with a link to its board, with
 `List-Unsubscribe` and `List-Unsubscribe-Post`; Resend's free plan's 100 a day is shared with the alerts and
-the sign-in mail.
+the sign-in mail, so the player mail is held to `DAILY_PLAYER_EMAILS_PER_DAY` (50, half) a UTC day (#3843):
+before each send `notify_one` takes one from migration 0092's `daily_email_days` (`Tx::daily_email_claim`, one
+conditional upsert, so the sweep and the queue together, and a restart, never pass it) and gives it back when
+the send fails (`daily_email_release`). Past it no email goes that day, logged once a day as
+`daily.email.capped`, and the push still goes; nothing is marked sent, so the email goes the next day.
+`tests/sql/56_daily_email_days.sql` checks the table.
 A push goes to each of the account's subscriptions (`daily::webpush`: RFC 8291's aes128gcm and RFC 8292's
-VAPID, with `ring`), and a subscription its push service answers 404 or 410 is deleted. A subscription is
-kept only at a browser's push service (`webpush::is_push_service`, `PUSH_SERVICE_HOSTS`), and the push
-client follows no redirect, so no player can aim the server's requests elsewhere. With a key unset its
-channel is off, and the end-to-end server sends neither. A block or an unfriending cancels the open daily
-challenges between the two (R3727007); a game already running goes on. `DELETE /api/account` settles the
-caller's overdue daily games and is refused (409 `conflict`) while one still runs, since 0012's
-`matches_seats_filled_unless_over_check` would refuse it in Postgres, and the in-memory store refuses it
-alike (R3727008).
+VAPID, with `ring`), and a subscription its push service answers 404, 410 or 403 is deleted (403 is what a
+push service answers after the VAPID pair changes, #3844). A subscription is kept only at a browser's push
+service (`webpush::is_push_service`, `PUSH_SERVICE_HOSTS`), and the push client follows no redirect, so no
+player can aim the server's requests elsewhere. With a key unset its channel is off, and the end-to-end
+server sends neither. A block or an unfriending cancels the open daily challenges between the two
+(R3727007); a game already running goes on. `DELETE /api/account` settles the caller's overdue daily games
+and is refused (409 `conflict`) while one still runs, since 0012's `matches_seats_filled_unless_over_check`
+would refuse it in Postgres, and the in-memory store refuses it alike (R3727008).
 
 ## Ladder bots (§9.5, §9.12, R1453, R1454, R1451, R1452, R639000, R641000, R747000)
 

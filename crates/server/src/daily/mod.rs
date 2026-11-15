@@ -53,6 +53,9 @@ pub struct DailyState {
     sweeping: AtomicBool,
     /// §9.13: the profiles a move told that wait for their notification (`notify::after_move`).
     pub notifier: notify::NotifyQueue,
+    /// #3843: the UTC day (its start, epoch ms) the cap last held an email back on in this process
+    /// (`i64::MIN` before any), so `daily.email.capped` is logged once a day, not once a player.
+    capped_day: AtomicI64,
 }
 
 /// A running sweep's hold ([`DailyState::begin_sweep`]), let go when it ends, failed or not.
@@ -77,6 +80,7 @@ impl DailyState {
             offset_ms: AtomicI64::new(0),
             sweeping: AtomicBool::new(false),
             notifier: notify::NotifyQueue::default(),
+            capped_day: AtomicI64::new(i64::MIN),
         }
     }
 
@@ -122,5 +126,10 @@ impl DailyState {
     /// e2e only: the daily clock reads `offset_ms` ahead from now on.
     pub fn set_offset(&self, offset_ms: i64) {
         self.offset_ms.store(offset_ms, Ordering::SeqCst);
+    }
+
+    /// #3843: whether `day` is one the cap had not yet held an email back on, marking it so.
+    pub fn first_capped(&self, day: i64) -> bool {
+        self.capped_day.swap(day, Ordering::SeqCst) != day
     }
 }

@@ -1,7 +1,8 @@
 // #2681, R3012001: the artwork of each release (releaseArt.ts): the definitions a patch's record names
 // and no others, a sample of a large patch and a major's headline cards, card backs for a patch that
 // changed no card, the SVG's bytes (nothing in them moves), the paths it is served at, which versions
-// have art and which have none, and the real history, every patch of it.
+// have art and which have none, and the real history, every patch of it. R3944002: a daily patch is
+// drawn from the cards its micros changed.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -18,7 +19,24 @@ import {
   RELEASE_ART_MAJOR_CARD_LIMIT,
   RELEASE_ART_WIDTH,
 } from "./constants.ts";
-import { FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, M1, M2, TIERED_PATCHES, TIERED_SNAPSHOTS, V1, V2, V3, fixtureDef } from "./fixtures.ts";
+import {
+  DAILY_PATCHES,
+  DAILY_SNAPSHOTS,
+  DM1,
+  DM2,
+  DM3,
+  DP,
+  FIXTURE_PATCHES,
+  FIXTURE_SNAPSHOTS,
+  M1,
+  M2,
+  TIERED_PATCHES,
+  TIERED_SNAPSHOTS,
+  V1,
+  V2,
+  V3,
+  fixtureDef,
+} from "./fixtures.ts";
 import {
   releaseArtAsset,
   releaseArtAssets,
@@ -346,4 +364,32 @@ describe("#2681 the real history's artwork", () => {
     const again = releaseArtAssets(patches, (version) => read<Snapshot>(`${version}.json`));
     expect(again).toEqual(assets);
   }, 60_000);
+});
+
+describe("R3944002 a daily patch's artwork", () => {
+  it("R3944002 draws a daily patch from its micros' cards, a removed one as the snapshot before the first of them held it, and its micros none", () => {
+    const reads: string[] = [];
+    const snapshot = (version: string): Snapshot | null => {
+      reads.push(version);
+      return DAILY_SNAPSHOTS[version] ?? null;
+    };
+    const assets = releaseArtAssets(DAILY_PATCHES, snapshot, [LINE], V1);
+    expect(assets.map((asset) => asset.path)).toEqual([releaseArtPath(V1), releaseArtPath(V1, "still"), releaseArtPath(DP)]);
+    for (const micro of [DM1, DM2, DM3]) expect(assets.map((asset) => asset.path), micro).not.toContain(releaseArtPath(micro));
+    // Every snapshot is still read once, in order: the one before the first micro is kept for the daily patch.
+    expect(reads).toEqual([V1, DM1, DM2, DP, DM3]);
+    const daily = assets.find((asset) => asset.path === releaseArtPath(DP))?.svg ?? "";
+    // Its own record names no card, yet it draws the knight and the bolt as it holds them and the relic as V1 held it.
+    expect(daily).toContain(`<desc id="desc">${LINE.name}: 2026-04-02. Test Knight, Old Relic, Test Bolt.</desc>`);
+    expect(daily).not.toContain('<use href="#back"/>');
+    expect(moves(daily)).toBe(false);
+    expect(parses(daily)).toBe(true);
+    // The dev server draws the same bytes from the daily patch and the snapshots it names alone.
+    expect(releaseArtAsset(releaseArtPath(DP), DAILY_PATCHES, snapshot, [LINE], V1)?.svg).toBe(daily);
+    // A daily patch whose micros changed no card draws card backs, as a patch that changed none does.
+    const quiet = DAILY_PATCHES.map((patch) => (patch.version === DM1 || patch.version === DM2 ? { ...patch, changes: [] } : patch));
+    const blank = releaseArtAssets(quiet, (version) => DAILY_SNAPSHOTS[version] ?? null, [LINE], V1).find((asset) => asset.path === releaseArtPath(DP))?.svg ?? "";
+    expect(blank).toContain("This patch changed no card.");
+    expect(blank).toContain('<use href="#back"/>');
+  });
 });

@@ -1,6 +1,10 @@
 // GitHub releases: the Patch notes page in Markdown, one release per shipped version, each reading as
 // its patch reads on the page (R724000, R724001), with the technical log's lines players read for it
 // (R1369000). `.github/workflows/releases.yml` publishes them through `apps/web/scripts/github-releases.ts`.
+// R3944002: a micro a major or a patch rolls up (`includes`), or that the next daily patch will, has no
+// release of its own: its patch's release lists it among its snapshots, and a daily patch's cards are
+// its micros'. The releases the micros shipped before the daily patch already have stay as they are,
+// since nothing here deletes one.
 //
 // A version only main's patches.json holds, not production's, is a pre-release: it is on staging until
 // the next production merge (docs/deploy-cloudflare.md). Every tag is the commit that brought the patch
@@ -13,7 +17,20 @@ import { GITHUB_RELEASE_BODY_LIMIT } from "./constants.ts";
 import type { CardDelta, FieldChange } from "./diff.ts";
 import { cardCount, countsLine, patchCards, type PatchCards } from "./history.ts";
 import { releaseArtPath } from "./releaseArt.ts";
-import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups, technicalLines, tiers, type NoteSection, type Release } from "./releases.ts";
+import {
+  NOTE_SECTIONS,
+  RELEASES,
+  cardsBasis,
+  includedBy,
+  pendingMicros,
+  playerTitle,
+  releaseGroups,
+  rollsUp,
+  technicalLines,
+  tiers,
+  type NoteSection,
+  type Release,
+} from "./releases.ts";
 import type { Patch, Snapshot, TechnicalEntry } from "./source.ts";
 
 /** One shipped version's record in `shipped.json`: the commit that brought it to main. */
@@ -52,6 +69,7 @@ const REBUILT_COMMITS: Readonly<Record<string, string>> = {
 
 const SECTION_ICON: Readonly<Record<NoteSection, string>> = { new: "✨", balance: "⚖️", changes: "🔄", text: "📝", fixes: "🩹" };
 const TECHNICAL_ICON = "⚙️";
+const SNAPSHOTS_ICON = "📸";
 const CARDS_ICON = "🃏";
 
 const TIER_NAME: Readonly<Record<NonNullable<Patch["tier"]>, string>> = { major: "Major version", patch: "Patch", micro: "Micro patch" };
@@ -154,10 +172,28 @@ function lines(heading: string, icon: string, items: readonly string[]): string[
   return items.length === 0 ? [] : [`### ${icon} ${heading}`, items.map((line) => `- ${prose(line)}`).join("\n")];
 }
 
+/** R3944002: the micros a major or a patch rolls up, oldest first, each its version, date and title. */
+function snapshotsSection(snapshots: readonly Patch[]): string[] {
+  if (snapshots.length === 0) return [];
+  return [
+    `### ${SNAPSHOTS_ICON} Snapshots (${String(snapshots.length)})`,
+    snapshots.map((micro) => `- **${markdownText(micro.version)}** · ${micro.date} · ${markdownText(playerTitle(micro))}`).join("\n"),
+  ];
+}
+
 /** `major` opens its line (R724000); `art` is whether the release shows artwork: every version but a micro patch (R3012001). */
 type Placed = { readonly release: Release; readonly major: boolean; readonly art: boolean };
 
-function body(patch: Patch, placed: Placed, technical: readonly string[], cards: PatchCards, live: boolean, sites: Sites, detail: CardDetail): string {
+function body(
+  patch: Patch,
+  placed: Placed,
+  technical: readonly string[],
+  snapshots: readonly Patch[],
+  cards: PatchCards,
+  live: boolean,
+  sites: Sites,
+  detail: CardDetail,
+): string {
   const out = [WRITTEN_BY];
   if (!live) {
     out.push(
@@ -176,6 +212,7 @@ function body(patch: Patch, placed: Placed, technical: readonly string[], cards:
   if (placed.major) out.push(...lineSection(placed.release));
   for (const { key, heading } of NOTE_SECTIONS) out.push(...lines(heading, SECTION_ICON[key], patch.player?.[key] ?? []));
   out.push(...lines("Technical changes", TECHNICAL_ICON, technical));
+  out.push(...snapshotsSection(snapshots));
 
   out.push(`### ${CARDS_ICON} Cards`);
   const count = listed(cards);
@@ -202,8 +239,9 @@ function body(patch: Patch, placed: Placed, technical: readonly string[], cards:
 
 /**
  * Every shipped version's release, in patches.json's order (R105), from the record and its
- * snapshots. `snapshot` reads one version's catalog snapshot, each asked for once, in order;
- * `live` holds the versions production's patches.json holds.
+ * snapshots, but none for a micro an entry rolls up or the next daily patch will (R3944002).
+ * `snapshot` reads one version's catalog snapshot, each asked for once, in order; `live` holds the
+ * versions production's patches.json holds.
  */
 export function githubReleases(input: {
   readonly patches: readonly Patch[];
@@ -219,7 +257,14 @@ export function githubReleases(input: {
   const commits = new Map(input.shipped.map((record) => [record.version, record.commit]));
   const technical = technicalLines(input.technical);
   const placed = new Map<string, Placed>();
-  const tierOf = new Map(tiers(patches).map((tier, at) => [patches[at]?.version ?? "", tier]));
+  const tierList = tiers(patches);
+  const tierOf = new Map(tierList.map((tier, at) => [patches[at]?.version ?? "", tier]));
+  const byVersion = new Map(patches.map((patch) => [patch.version, patch]));
+  // R3944002: the micros with no release of their own, and what each daily patch's cards read from.
+  const rolled = new Set([...includedBy(patches).keys(), ...pendingMicros(patches, tierList).map((patch) => patch.version)].filter((version) => tierOf.get(version) === "micro"));
+  const bases = new Map(patches.filter(rollsUp).map((patch) => [patch.version, cardsBasis(patches, patch)] as const));
+  const keep = new Set([...bases.values()].map((basis) => basis.before));
+  const kept = new Map<string, Snapshot>();
   for (const group of releaseGroups(patches, input.releases ?? RELEASES)) {
     const oldest = group.patches.at(-1)?.version;
     for (const patch of group.patches) {
@@ -228,19 +273,30 @@ export function githubReleases(input: {
   }
 
   let before: Snapshot | null = null;
-  const releases = patches.map((patch): GithubRelease => {
-    const after = input.snapshot(patch.version);
-    if (after === null) throw new Error(`no snapshot of ${patch.version}`);
-    const target = REBUILT_COMMITS[patch.version] ?? commits.get(patch.version);
-    if (target === undefined) throw new Error(`shipped.json records no commit for ${patch.version}`);
-    const where = placed.get(patch.version);
-    if (where === undefined) throw new Error(`${patch.version} sits in no release line`);
-    const cards = patchCards(patch, after, before);
+  const releases = patches.flatMap((entry): GithubRelease[] => {
+    const after = input.snapshot(entry.version);
+    if (after === null) throw new Error(`no snapshot of ${entry.version}`);
+    const previous = before;
     before = after;
-    const isLive = live.has(patch.version);
-    const write = (detail: CardDetail): string => body(patch, where, technical.get(patch.version) ?? [], cards, isLive, sites, detail);
+    if (keep.has(entry.version)) kept.set(entry.version, after);
+    if (rolled.has(entry.version)) return [];
+    const target = REBUILT_COMMITS[entry.version] ?? commits.get(entry.version);
+    if (target === undefined) throw new Error(`shipped.json records no commit for ${entry.version}`);
+    const where = placed.get(entry.version);
+    if (where === undefined) throw new Error(`${entry.version} sits in no release line`);
+    // R3944002: a daily patch's cards are its micros', against the snapshot before the first of them.
+    const basis = bases.get(entry.version);
+    const from = basis === undefined ? previous : basis.before === null ? null : (kept.get(basis.before) ?? null);
+    const patch = basis?.patch ?? entry;
+    const cards = patchCards(patch, after, from);
+    const snapshots = (entry.includes ?? []).flatMap((version) => {
+      const micro = byVersion.get(version);
+      return micro === undefined ? [] : [micro];
+    });
+    const isLive = live.has(entry.version);
+    const write = (detail: CardDetail): string => body(patch, where, technical.get(entry.version) ?? [], snapshots, cards, isLive, sites, detail);
     const text = CARD_DETAILS.map(write).find((candidate) => candidate.length <= limit) ?? write("counts");
-    return { tag: patch.version, target, name: `${patch.version} — ${playerTitle(patch)}`, prerelease: !isLive, body: text };
+    return [{ tag: entry.version, target, name: `${entry.version} — ${playerTitle(entry)}`, prerelease: !isLive, body: text }];
   });
   const latest = releases.findLast((release) => !release.prerelease)?.tag ?? null;
   return { latest, releases };

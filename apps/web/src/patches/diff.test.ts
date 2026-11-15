@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 
 import { daily } from "../test/daily.ts";
-import type { CardDef } from "@jackioh/shared";
+import type { CardDef, Param } from "@jackioh/shared";
 
 import {
   changedWords,
@@ -240,6 +240,43 @@ describe("R388 a card's changes, from two snapshots", () => {
       },
     ]);
     expect(delta !== null && dataOnly(delta)).toBe(true);
+  });
+
+  it("R3888001 a number newly marked read is a params change that names its reader", () => {
+    const bolt = fixtureDef(V3, "core-002");
+    const marked = (read: Param["read"], readOn?: Param["readOn"]) => ({
+      ...bolt,
+      params: (bolt.params ?? []).map((param) => ({ ...param, read, ...(readOn === undefined ? {} : { readOn }) })),
+    });
+    const after = (words: string) => `damage 4, Radiant 6, step 1, at least 1, ${words}, more is better`;
+    for (const [read, words] of [
+      ["cry", "read only by its Cry"],
+      ["combo", "read only by its Combo"],
+      ["castOnDraw", "read only as it is cast on draw"],
+      ["awaken", "read only as it awakens"],
+      ["evolve", "read only as it evolves"],
+      ["handOrDeck", "read only in a hand or a deck"],
+      ["graveyard", "read only in a graveyard"],
+    ] as const) {
+      const delta = diffCard(bolt, marked(read));
+      expect(changed(delta)).toEqual([
+        {
+          kind: "value",
+          field: "params",
+          label: expect.any(String) as string,
+          before: "damage 4, Radiant 6, step 1, at least 1, more is better",
+          after: after(words),
+        },
+      ]);
+      expect(delta !== null && dataOnly(delta)).toBe(true);
+    }
+    expect(changed(diffCard(bolt, marked("cry", "radiant")))[0]).toMatchObject({ after: after("read only by its Cry on the Radiant face") });
+    // A shipped catalog's `cry: true` renamed to `read: "cry"` still shows as a change of words.
+    const legacy = { ...bolt, params: (bolt.params ?? []).map((param) => ({ ...param, cry: true })) };
+    expect(changed(diffCard(legacy, marked("cry")))[0]).toMatchObject({
+      before: after("tuned only off the field"),
+      after: after("read only by its Cry"),
+    });
   });
 
   it("R388 R277 the text diff is R277's: one alignment, marks never start or end on a separator", () => {

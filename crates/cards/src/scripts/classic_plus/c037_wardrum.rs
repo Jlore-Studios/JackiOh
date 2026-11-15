@@ -1,5 +1,5 @@
-//! C+ #37 Wardrum (SPEC §8.7 row 37): (3) Unit ((4) until issue #3837, (5) until issue #3138), Quickdraw,
-//! Legendary, 5/5 → 10/10, Divine Shield on both faces (issue #3138).
+//! C+ #37 Wardrum (SPEC §8.7 row 37): (2) Unit ((3) and 5/5 → 10/10 until issue #3951, (4) until issue
+//! #3837, (5) until issue #3138), Quickdraw, Legendary, 4/4 → 8/8, Divine Shield on both faces (issue #3138).
 //!   Base:    "Divine Shield. While in your hand or deck: After you play {threshold} non-Units in a turn, summon this.
 //!            End of turn: Cast a copy of a random non-Unit you played this turn."
 //!   Radiant: "… End of turn: Cast a copy of each non-Unit you played this turn."
@@ -270,17 +270,17 @@ mod tests {
         s.stats(card).keywords.iter().any(|keyword| keyword.kind() == KeywordKind::DivineShield)
     }
 
-    /// Issue #3837: it costs (3), from (4) ((5) until issue #3138), on both faces: refused with 2 mana,
-    /// played with 3, as a 5/5 (Radiant 10/10) that has the Divine Shield from the first moment.
+    /// Issue #3951: it costs (2), from (3) ((4) until issue #3837, (5) until issue #3138), on both faces:
+    /// played with 2, as a 4/4 (Radiant 8/8) that has the Divine Shield from the first moment.
     #[test]
-    fn issue_3837_it_costs_3_and_enters_the_field_with_its_divine_shield_on_both_faces() {
-        for (radiant, health) in [(false, 5), (true, 10)] {
+    fn issue_3951_it_costs_2_and_enters_the_field_with_its_divine_shield_on_both_faces() {
+        for (radiant, health) in [(false, 4), (true, 8)] {
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": WARDRUM, "radiant": radiant }, FILLER], "library": LIBRARY },
                 "p2": { "hand": [FILLER] },
             }));
-            crate::expect_costs(&mut s, WARDRUM, 3, json!({}));
-            s.state_mut().players.p1.mana.current = 3;
+            crate::expect_costs(&mut s, WARDRUM, 2, json!({}));
+            s.state_mut().players.p1.mana.current = 2;
             s.play(WARDRUM, json!({}));
             s.expect_mana(P1, 0);
             s.expect_stats(WARDRUM, json!({ "attack": health, "health": health, "maxHealth": health }));
@@ -310,7 +310,7 @@ mod tests {
     /// and the next hit lands (pipeline step 1, R63).
     #[test]
     fn issue_3138_the_divine_shield_absorbs_a_first_hit_and_the_next_one_lands_on_both_faces() {
-        for (radiant, health) in [(false, 5), (true, 10)] {
+        for (radiant, health) in [(false, 4), (true, 8)] {
             let mut s = scenario(json!({
                 "p1": { "field": [{ "def": WARDRUM, "radiant": radiant }], "hand": [FILLER] },
                 "p2": { "field": [{ "def": MENACE, "lane": 1 }, { "def": MENACE, "lane": 2 }], "hand": [FILLER] },
@@ -326,12 +326,9 @@ mod tests {
             s.expect_stats(&wardrum, json!({ "health": health, "maxHealth": health }));
             assert!(!has_shield(&s, &wardrum.id), "radiant {radiant}: the shield is spent");
 
+            // The Menace's 9 lands whole on either face (4/4, Radiant 8/8 since issue #3951).
             s.attack(&second, &wardrum);
-            if radiant {
-                s.expect_stats(&wardrum, json!({ "health": 1, "maxHealth": 10 }));
-            } else {
-                s.expect_in_zone(&wardrum, "graveyard");
-            }
+            s.expect_in_zone(&wardrum, "graveyard");
         }
     }
 

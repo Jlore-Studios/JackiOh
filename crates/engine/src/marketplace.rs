@@ -24,11 +24,11 @@ use crate::catalog::{def_of, find_def, made_by_a_rule, query_cost, registered_ca
 use crate::config::{
     HAND_SALE_PRICE, HAND_SALE_RADIANT_PRICE, MARKETPLACE_BOUGHT_COST, MARKETPLACE_BUFF_CHANCE,
     MARKETPLACE_BUFF_PRICE_PERCENT, MARKETPLACE_CREDITS_PER_MANA, MARKETPLACE_CREDITS_PER_MANA_PAST,
-    MARKETPLACE_FIXED_LOT_STOCK, MARKETPLACE_FULL_PRICE_MANA, MARKETPLACE_NERF_CHANCE,
-    MARKETPLACE_NERF_PRICE_PERCENT, MARKETPLACE_OFFER_STOCK, MARKETPLACE_OFFERS_PER_TURN,
-    MARKETPLACE_PRICE_BASE, MARKETPLACE_PRICE_SPREAD_DIVISOR, MARKETPLACE_RADIANT_CHANCE,
-    MARKETPLACE_RADIANT_PRICE_MULTIPLIER, MARKETPLACE_TABLE, MARKETPLACE_TUNE_MAX,
-    MARKETPLACE_ZERO_COST_PRICE, MarketLot, MarketPool, PERCENT,
+    MARKETPLACE_FIXED_LOT_STOCK, MARKETPLACE_FULL_PRICE_MANA, MARKETPLACE_MARKUP_PERCENT,
+    MARKETPLACE_NERF_CHANCE, MARKETPLACE_NERF_PRICE_PERCENT, MARKETPLACE_OFFER_STOCK,
+    MARKETPLACE_OFFERS_PER_TURN, MARKETPLACE_PRICE_BASE, MARKETPLACE_PRICE_SPREAD_DIVISOR,
+    MARKETPLACE_RADIANT_CHANCE, MARKETPLACE_RADIANT_PRICE_MULTIPLIER, MARKETPLACE_TABLE,
+    MARKETPLACE_TUNE_MAX, MARKETPLACE_ZERO_COST_PRICE, MarketLot, MarketPool, PERCENT,
 };
 use crate::effects::tune::{TuneDirection, degrade_sparing_cost, tune_once};
 use crate::resolve::{HookOptions, make_context};
@@ -53,19 +53,21 @@ pub fn marketplace_table() -> &'static [MarketLot] {
     MARKETPLACE_TABLE
 }
 
-/// R1853002, R3047000: the designer's price of a card of cost c, 5 + 10 × min(c, 4) + 15 × max(c − 4, 0)
-/// Credits, a (0) card's `MARKETPLACE_ZERO_COST_PRICE`, and `MARKETPLACE_RADIANT_PRICE_MULTIPLIER` times
-/// that on its Radiant face: 8, 15, 25, 35, 45, 60, 75, 90, 105 for (0) to (8). The cost is the card's
-/// printed one (`query_cost`: an X card's is 0).
+/// R1853002, R3047000, R3951003: the price of a card of cost c: the designer's 5 + 10 × min(c, 4) +
+/// 15 × max(c − 4, 0) Credits, a (0) card's `MARKETPLACE_ZERO_COST_PRICE`, marked up to
+/// `MARKETPLACE_MARKUP_PERCENT` of that and rounded to the nearest Credit, a half up; then
+/// `MARKETPLACE_RADIANT_PRICE_MULTIPLIER` times that on its Radiant face: 9, 16, 27, 38, 49, 65, 81, 97,
+/// 113 for (0) to (8). The cost is the card's printed one (`query_cost`: an X card's is 0).
 pub fn market_card_price(def: &CardDef, radiant: bool) -> i32 {
     let cost = query_cost(def);
-    let price = if cost <= 0 {
+    let designer = if cost <= 0 {
         MARKETPLACE_ZERO_COST_PRICE
     } else {
         MARKETPLACE_PRICE_BASE
             + MARKETPLACE_CREDITS_PER_MANA * cost.min(MARKETPLACE_FULL_PRICE_MANA)
             + MARKETPLACE_CREDITS_PER_MANA_PAST * (cost - MARKETPLACE_FULL_PRICE_MANA).max(0)
     };
+    let price = (designer * MARKETPLACE_MARKUP_PERCENT + PERCENT / 2) / PERCENT;
     if radiant {
         price * MARKETPLACE_RADIANT_PRICE_MULTIPLIER
     } else {
@@ -141,8 +143,9 @@ fn moved_price(rng: &mut Rng, base: i32) -> i32 {
 
 /// R1853001: the ids one lot draws from, in a fixed order: the named ids with a definition, or (R3571001)
 /// those of a set that is open, or a set's non-token cards in catalog order, all or (R1881006) those
-/// printing a keyword on their base face, never a card only a rule makes (R1857001's Dormant Starship),
-/// as in no `catalog::query` pool.
+/// printing a keyword on their base face, or (R3869004) the cards of open sets carrying a tag, by
+/// their name when the lot says, never a card only a rule makes (R1857001's Dormant Starship), as in no
+/// `catalog::query` pool.
 fn pool_ids(state: &GameState, pool: MarketPool) -> Vec<String> {
     let in_set = |def: &CardDef, set| def.set == set && !def.token && !made_by_a_rule(def);
     match pool {
@@ -164,6 +167,24 @@ fn pool_ids(state: &GameState, pool: MarketPool) -> Vec<String> {
         MarketPool::SetKeyword(set, keyword) => registered_catalog()
             .values()
             .filter(|def| in_set(def, set) && has_keyword(&def.base.keywords, keyword))
+            .map(|def| def.id.clone())
+            .collect(),
+        // R3869004: a lot read off its cards' tag, and its name when it names one.
+        MarketPool::Tagged {
+            sets,
+            tag,
+            tokens,
+            name,
+        } => registered_catalog()
+            .values()
+            .filter(|def| {
+                sets.contains(&def.set)
+                    && set_is_open(def.set)
+                    && def.is_token() == tokens
+                    && !made_by_a_rule(def)
+                    && def.tags.contains(&tag)
+                    && name.is_none_or(|(text, holds)| def.name.contains(text) == holds)
+            })
             .map(|def| def.id.clone())
             .collect(),
     }

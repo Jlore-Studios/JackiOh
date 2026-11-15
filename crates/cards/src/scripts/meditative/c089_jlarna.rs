@@ -1,4 +1,4 @@
-//! M #89 Jlarna (SPEC §8.8 row 89). (4) Field Spell, Rare.
+//! M #89 Jlarna (SPEC §8.8 row 89). (3) Field Spell, Rare ((4) until issue #3951).
 //!
 //! Base:    "Aura: Credit line {credit}: spend up to {credit} mana you don't have. Repay it in
 //!          {instalments|instalment|instalments}, one each start of turn.\nEnd of turn: Tribute this if
@@ -124,11 +124,11 @@ mod tests {
             fn r1225_borrowed_after_playing_it_stays() {
                 let mut s = crate::scenario(json!({
                     "seed": "jlarna-stays",
-                    "p1": { "hand": [{ "def": ID }, VANILLA], "library": [FILLER, FILLER], "mana": 4 },
+                    "p1": { "hand": [{ "def": ID }, VANILLA], "library": [FILLER, FILLER], "mana": 3 },
                     "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
                 }));
                 s.play(ID, json!({ "zone": 1 }));
-                // Jlarna cost 4 of 4; a (1) vanilla borrows 1 of the line.
+                // Jlarna cost 3 of 3 ((4) until issue #3951); a (1) vanilla borrows 1 of the line.
                 s.play(VANILLA, json!({ "zone": 1 }));
                 assert_eq!(s.state().players.p1.turn_log.mana_borrowed, Some(1));
                 s.end_turn();
@@ -139,10 +139,10 @@ mod tests {
             fn r1223_its_own_price_is_never_borrowed() {
                 let mut s = crate::scenario(json!({
                     "seed": "jlarna-price",
-                    "p1": { "hand": [{ "def": ID }, FILLER], "library": [FILLER, FILLER], "mana": 3 },
+                    "p1": { "hand": [{ "def": ID }, FILLER], "library": [FILLER, FILLER], "mana": 2 },
                     "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
                 }));
-                // (4) with 3 mana and no line yet: refused, and the listing hides it.
+                // (3) with 2 mana and no line yet: refused, and the listing hides it.
                 s.expect_refused(|s| s.play(ID, json!({ "zone": 1 })));
                 let id = s.card(ID).id.clone();
                 assert!(

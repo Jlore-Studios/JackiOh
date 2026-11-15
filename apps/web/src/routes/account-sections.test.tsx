@@ -1,6 +1,10 @@
 // R3733000 (#3733): `/account` is a profile header over a settings list, six sections each at its own
 // `?section=` URL. The list is the old screen's every field and action, regrouped: one test lists them.
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -264,6 +268,27 @@ describe("R3733000 match history", () => {
     expect(screen.getByTestId(accountTestid.historyRow("m2"))).toHaveTextContent("All random");
     expect(screen.getByTestId(accountTestid.historyRow("m3"))).toHaveTextContent("Draw");
     expect(screen.getByTestId(accountTestid.historyAll)).toHaveAttribute("href", "/replays");
+  });
+
+  it("R3957000 a history row's date is one element the stylesheet keeps on one line", async () => {
+    vi.mocked(getReplays).mockResolvedValue({ replays: [game("m1")], nextOffset: null });
+    openAt("history");
+
+    const row = await screen.findByTestId(accountTestid.historyRow("m1"));
+    const when = within(row).getByText(formatDateTime(Date.UTC(2026, 10, 1, 18), { dateStyle: "medium", timeStyle: "short" }));
+    expect(when).toHaveClass("account-history__when");
+    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "account.css"), "utf8").replace(/\s+/g, " ");
+    expect(css).toContain(".account-history__when { white-space: nowrap; }");
+  });
+
+  it("R3957000 All replays is a button-secondary link, so it is --hit-min tall and takes no band", async () => {
+    vi.mocked(getReplays).mockResolvedValue({ replays: [game("m1")], nextOffset: null });
+    openAt("history");
+
+    await screen.findByTestId(accountTestid.historyRow("m1"));
+    const all = screen.getByTestId(accountTestid.historyAll);
+    expect(all).toHaveClass("button-secondary");
+    expect(all).toHaveAttribute("href", "/replays");
   });
 
   it("R3733000 a queue opponent shows as /replays shows them: a name, or a deleted account", async () => {

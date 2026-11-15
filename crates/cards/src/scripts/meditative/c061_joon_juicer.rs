@@ -78,7 +78,7 @@ mod tests {
         let left = s.unit(PlayerId::P1, 1).expect("the left unit").id.clone();
         let before = s.state().rng_cursor;
         s.end_turn();
-        let _ = before;
+        assert!(s.state().rng_cursor > before, "each Buff draws its split");
         let lane3 = upgraded_for(s.events(), &right);
         assert_eq!(lane3, 4);
         assert_eq!(upgraded_for(s.events(), &left), 0);

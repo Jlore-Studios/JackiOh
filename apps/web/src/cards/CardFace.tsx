@@ -399,7 +399,13 @@ function CardFace({
   const printed = printedText(face, shown.full);
   const names = nameTier(face.name);
   const texts = textTier(printed);
-  useFitText(nameRef, bare ? "" : showStaticName ? face.name : `hover ${face.name}`);
+  useFitText(
+    nameRef,
+    bare
+      ? // Stryker disable next-line StringLiteral: a bare face's name holds no nameRef, so nothing fits, and this key differs from both name keys either way, so a fit runs on the same renders
+        ""
+      : showStaticName ? face.name : `hover ${face.name}`,
+  );
   // The rules box only exists on a full face; keying on the layout refits it when one appears. A face
   // that prints less than its text clamps at once, its art whole (#1017; fit.ts).
   useFitText(textRef, full ? printed : "", { floorPx: FIT_FLOOR_PX, long: !less });

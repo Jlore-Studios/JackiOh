@@ -1081,7 +1081,8 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   `matches.loadouts` (migration 0061; a jsonb column, not the retired `loadouts` tables), which
   `Registry::start` freezes (`jackioh_shared::loadout::SeatPicks::freeze`, #3102). A replay page
   (`GET /api/replays/:matchId`, `ReplaySteps`) gains `loadouts` (`{ p1, p2 }`, the same halves) and
-  `cardLoadouts` (`[{ seat, cards }]`, the cards its steps show). #3013 (R3013002): a frozen loadout
+  `cardLoadouts` (`[{ seat, cards }]`, the cards its steps show). #3976 (R3976000): and `portraits`
+  (`{ p1, p2 }`, the match row's, `vanilla` before them). #3013 (R3013002): a frozen loadout
   holds `stamps` (`[{ cardId, stamp }]`, each dealt card's proficiency stamp), and a `cardLoadouts`
   frame and a replay page's entry carry the stamps of the cards they send, `{ seat, cards, stamps? }`,
   `stamps` left out when none, by the same send rule; two more `Active` routes, `GET /api/proficiency`
@@ -1128,7 +1129,7 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
 | `catalog check` | `catalog.rs` | 22 | `validate-catalog.ts`, the catalog/registry/references/params/radiant-standard tests | data checks |
 | `catalog loc <path>` | `catalog.rs` | 22 | `gen-loc.ts` | §7.5 |
 | `catalog-version` | `catalog.rs` | 22 | `scripts/catalog-version.mjs` | prints the newest version in `patches.json` |
-| `patches <version> <date> "<title>"`, `patches check`, `patches ship` | `patches.rs` | 22 | `packages/cards/scripts/{patches,patch,patches-io,versions,naming}.ts` | same files, same formats; from R1329000 to R3049000 a fragment could claim the win-rate table (`winRates`) and `ship` wrote each version's table to `patches/win_rates/<version>.json` with its blob in `shipped.json` (`winRatesBlob`); since R3049000 none is claimed or written, and those files stay the frozen tables of the versions before it; since R1366000 a fragment is `pending/<slug>.json` with no version, `plays` and `rule`, and `ship` names each version from its tier and records `tier` and `plays` |
+| `patches <version> <date> "<title>"`, `patches check`, `patches ship`, `patches cut` | `patches.rs` | 22 | `packages/cards/scripts/{patches,patch,patches-io,versions,naming}.ts` | same files, same formats; from R1329000 to R3049000 a fragment could claim the win-rate table (`winRates`) and `ship` wrote each version's table to `patches/win_rates/<version>.json` with its blob in `shipped.json` (`winRatesBlob`); since R3049000 none is claimed or written, and those files stay the frozen tables of the versions before it; since R1366000 a fragment is `pending/<slug>.json` with no version, `plays` and `rule`, and `ship` names each version from its tier and records `tier` and `plays`; since R3944000 `ship` names only majors and micros, a major recording the micros it rolls up in `includes`, and `cut` (no TypeScript original) writes the day's patch, its `includes` the micros since the newest major or patch |
 | `gate [--full] [--shard k/K] [--out dir]`, `gate merge <dir>` | `gate.rs` | 22 | `pnpm ai:gate`, `gate-*.test.ts`, `gate-merge.ts` | the three matchups against `gateNeeded`, plus the perf gate |
 | `sweep [ids…] [--pass2 …] [--report …]` | `sweep.rs` | 22 | `pnpm ai:sweep` | R186's two-pass sweep; prints `SHADOW_BAN` rows |
 | `stats [--games N] [--patch v] [--out file]` | `stats.rs` | 22 | `pnpm ai:stats` | R378's development run |

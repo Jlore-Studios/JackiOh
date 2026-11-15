@@ -5,8 +5,11 @@
 //! - Email goes through Resend (`PLAYER_EMAIL_API_URL`) under the player mail's own key
 //!   (`PLAYER_RESEND_API_KEY`), with RFC 8058's one-click unsubscribe (`List-Unsubscribe`,
 //!   `List-Unsubscribe-Post`) and a link to each waiting game's board. With the key unset none is sent.
+//!   At most `DAILY_PLAYER_EMAILS_PER_DAY` go in a UTC day across every account (#3843); past it, push
+//!   only.
 //! - Web Push goes to every device the account turned it on for (`daily::webpush`); a subscription
-//!   its push service answers 404 or 410 is deleted. With the VAPID keys unset none is sent.
+//!   its push service answers 404, 410 or 403 (the VAPID keys changed) is deleted. With the VAPID
+//!   keys unset none is sent.
 //! - After a move the decision runs on one task (`NotifyQueue`), once the move has been answered: a slow or
 //!   failing mail or push service delays only the notifications behind it, never a player's move.
 //! - The sweep (`POST /daily-sweep`, the Worker's hourly cron, and `run_sweeper` while the server is
@@ -25,6 +28,7 @@ use indexmap::{IndexMap, IndexSet};
 use serde_json::{Value, json};
 use tokio::sync::{mpsc, watch};
 
+use jackioh_shared::economy::rewards::utc_day_bounds;
 use jackioh_shared::notify::{NotifyInput, NotifyPlan, WaitingGame, decide_notify};
 
 use crate::api::collection::caller_profile;
@@ -32,8 +36,8 @@ use crate::api::http::{ApiError, ApiResult, Req, bad_request, bool as body_bool,
 use crate::api::queue::new_uuid;
 use crate::app::App;
 use crate::config::{
-    DAILY_NOTIFY_QUEUE, DAILY_SWEEP_MINUTES, PLAYER_EMAIL_FROM, PLAYER_EMAIL_TIMEOUT_MS,
-    PUSH_FIELD_MAX_LENGTH, PUSH_MAX_DEVICES,
+    DAILY_NOTIFY_QUEUE, DAILY_PLAYER_EMAILS_PER_DAY, DAILY_SWEEP_MINUTES, PLAYER_EMAIL_FROM,
+    PLAYER_EMAIL_TIMEOUT_MS, PUSH_FIELD_MAX_LENGTH, PUSH_MAX_DEVICES,
 };
 use crate::daily::games::{load, settle, waiting_of};
 use crate::daily::webpush::{self, PushOutcome, Subscription};
@@ -117,15 +121,29 @@ async fn notify_one(app: &Arc<App>, profile_id: &str, now: i64) -> Result<Sent, 
     let plan = decide_notify(&input, now);
     let mut sent = Sent::default();
     if plan.email {
-        sent.emailed = send_email(
-            app,
-            profile_id,
-            &email,
-            &settings.unsubscribe_token,
-            &plan,
-            &opponents,
-        )
-        .await;
+        // #3843: one of the UTC day's `DAILY_PLAYER_EMAILS_PER_DAY`, taken before the send, so player
+        // mail never spends the Resend day the sign-in and password mail share. Past it nothing is
+        // marked sent, so the email goes the next day, and the push below still goes.
+        let day = utc_day_bounds(now).0;
+        if claim_email(app, day).await? {
+            sent.emailed = send_email(
+                app,
+                profile_id,
+                &email,
+                &settings.unsubscribe_token,
+                &plan,
+                &opponents,
+            )
+            .await;
+            if !sent.emailed {
+                release_email(app, day).await;
+            }
+        } else if app.daily.first_capped(day) {
+            log_warn(
+                "daily.email.capped",
+                json!({ "day": day, "cap": DAILY_PLAYER_EMAILS_PER_DAY }),
+            );
+        }
     }
     if plan.push {
         sent.pushed = send_pushes(app, &subscriptions, &plan, now).await;
@@ -141,6 +159,29 @@ async fn notify_one(app: &Arc<App>, profile_id: &str, now: i64) -> Result<Sent, 
         tx.commit().await?;
     }
     Ok(sent)
+}
+
+/// #3843: takes one of the UTC day's player emails (`Tx::daily_email_claim`); false once the day's
+/// `DAILY_PLAYER_EMAILS_PER_DAY` are all taken.
+async fn claim_email(app: &App, day: i64) -> Result<bool, ApiError> {
+    let mut tx = app.db.begin(None).await?;
+    let claimed = tx.daily_email_claim(day, DAILY_PLAYER_EMAILS_PER_DAY).await?;
+    tx.commit().await?;
+    Ok(claimed)
+}
+
+/// #3843: gives back the email a failed send took. One that cannot be given back is logged and left
+/// spent: the cap then holds one fewer that day, never one more.
+async fn release_email(app: &App, day: i64) {
+    let released = async {
+        let mut tx = app.db.begin(None).await?;
+        tx.daily_email_release(day).await?;
+        tx.commit().await
+    }
+    .await;
+    if let Err(error) = released {
+        tracing::warn!(event = "daily.email.release_failed", day, message = %error);
+    }
 }
 
 /// The words of a "your move" message: its subject and the line for each game.

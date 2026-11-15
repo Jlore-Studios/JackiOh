@@ -3698,6 +3698,17 @@ button.modifier-badge[data-open="true"] {
     z-index: var(--z-content);
   }
 
+  /* R2122000: the pills stand right under the 44px portrait and the hand's outer cards rise into
+     that strip, so a band centred on the pill took the bottom of the portrait's button and the
+     corner of your first card from them. It starts at the pill's top and stops partway into the
+     strip, still 44px across. */
+  .seat .pile--browsable::after {
+    --pile-band-below: 10px;
+    top: 0;
+    height: calc(100% + var(--pile-band-below));
+    transform: translateX(-50%);
+  }
+
   .hero-tray .modifier-badge,
   .hero button.modifier-badge {
     height: var(--tray-chip-h);

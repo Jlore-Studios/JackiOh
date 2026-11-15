@@ -23,6 +23,8 @@
 //!    list: a preview of a set that ships opens nothing, so the patch that ships it takes its previews out.
 //!  - Dungeon (DR14 B33, #2709): `spec/15-dungeon-run.md`'s table of constants has one row per `pub const`
 //!    of `crates/run/src/config.rs`, and `spec/README.md` maps the note.
+//!  - Discards (#3914): no test under the card scripts or `crates/engine/tests` notes a value and drops it with
+//!    a bare `let _ = <identifier>;`.
 //!  - Statics (#3063): the pure crates' sources declare no `thread_local!`, `static mut` or static holding a
 //!    `Cell`, `RefCell`, `UnsafeCell` or `Atomic*` but the ones CLAUDE.md rule 4 names (`RULE_4_STATICS`).
 
@@ -1015,7 +1017,7 @@ const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
     },
     SharedHelpers {
         home: "crates/engine/src/testkit/scenario.rs",
-        names: &["unit_at", "must", "prompt_modes", "prompt_modes_of"],
+        names: &["unit_at", "must", "nonempty", "prompt_modes", "prompt_modes_of"],
         statics: &[],
         structs: &[],
         dirs: KIT_READERS,
@@ -1702,6 +1704,99 @@ fn helpers_card_tests_take_the_crate_scenario_rather_than_registering_first() {
 fn helpers_the_scan_finds_each_register_above_a_scenario() {
     let text = "crate::register_all();\nlet mut s = scenario(json!({}));\ncrate::register_all();\n\nlet s = scenario(json!({}));\nregister_all();\nlet s = void_scenario(json!({}));\n// crate::register_all();\nlet s = scenario(json!({}));\ncrate::register_all();\nlet n = 1; // scenario(\n";
     assert_eq!(registers_before_scenario(text), [1, 6]);
+}
+
+/// The trees where no test may note a value and drop it with a bare `let _ = <name>;` (#3914), each with
+/// the fewest Rust files a scan of it should find.
+const DISCARD_READERS: &[(&str, usize)] = &[(CARD_SCRIPTS, CARD_SCRIPT_FILES), ("crates/engine/tests", 300)];
+
+/// The 1-based lines of `text` that are a bare `let _ = <identifier>;`, a `//` comment aside: a value a
+/// test noted and never compared. A call, a field, a reference or a typed `let _: T = …;` is no bare one.
+fn bare_discards(text: &str) -> Vec<usize> {
+    text.lines()
+        .enumerate()
+        .filter(|(_, line)| {
+            let code = line.split("//").next().unwrap_or("").trim();
+            let Some(rest) = code.strip_prefix("let _") else {
+                return false;
+            };
+            let Some(rest) = rest.trim_start().strip_prefix('=') else {
+                return false;
+            };
+            let Some(name) = rest.trim().strip_suffix(';') else {
+                return false;
+            };
+            let name = name.trim();
+            name.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_') && name.chars().all(is_identifier)
+        })
+        .map(|(index, _)| index + 1)
+        .collect()
+}
+
+/// `<path from root>:<line>` of each bare discard under DISCARD_READERS' trees of the repository at `root`.
+fn bare_discard_sites(root: &Path) -> Vec<String> {
+    let mut sites = Vec::new();
+    for (dir, _) in DISCARD_READERS {
+        let mut files = Vec::new();
+        rust_sources(&root.join(dir), &mut files);
+        for file in &files {
+            let text = fs::read_to_string(file).unwrap_or_default();
+            let path = file.strip_prefix(root).unwrap_or(file).display().to_string();
+            sites.extend(
+                bare_discards(&text)
+                    .into_iter()
+                    .map(|line| format!("{path}:{line}")),
+            );
+        }
+    }
+    sites
+}
+
+#[test]
+fn discards_no_test_notes_a_value_and_drops_it_with_a_bare_let() {
+    let root = repo();
+    for (dir, more_than) in DISCARD_READERS {
+        let mut files = Vec::new();
+        rust_sources(&root.join(dir), &mut files);
+        assert!(
+            files.len() > *more_than,
+            "only {} files found under {dir}",
+            files.len()
+        );
+    }
+    let found = bare_discard_sites(&root);
+    assert!(
+        found.is_empty(),
+        "a test notes a value and drops it with `let _ = <name>;` (#3914): compare it, or never capture it: {found:?}"
+    );
+}
+
+#[test]
+fn discards_the_scan_finds_each_bare_let() {
+    let text = "let _ = before;\nlet _ = f();\n    let _ = max_before; // noted\nlet _ = s.events;\nlet _x = y;\nlet _: usize = z;\n// let _ = w;\nlet _ = &v;\nlet _ = 5;\nlet _  =  spaced ;\nlet _ = P2;\n";
+    assert_eq!(bare_discards(text), [1, 3, 10, 11]);
+}
+
+#[test]
+fn discards_the_check_refuses_a_planted_let_in_each_covered_tree() {
+    let scratch = Scratch(std::env::temp_dir().join(format!(
+        "jackioh-discards-{}-{}",
+        std::process::id(),
+        SCRATCH.fetch_add(1, Ordering::Relaxed)
+    )));
+    let root = scratch.0.as_path();
+    let _ = fs::remove_dir_all(root);
+    let mut expected = Vec::new();
+    for (dir, _) in DISCARD_READERS {
+        let path = root.join(dir).join("planted.rs");
+        fs::create_dir_all(path.parent().expect("a parent")).expect("its directory");
+        fs::write(&path, "fn t() {\n    let before = 1;\n    let _ = before;\n}\n").expect("the file");
+        expected.push(format!("{dir}/planted.rs:3"));
+    }
+    let mut found = bare_discard_sites(root);
+    found.sort();
+    expected.sort();
+    assert_eq!(found, expected);
 }
 
 /// The built `jackioh`, whose clap surface the README's command table is held to (#1720).

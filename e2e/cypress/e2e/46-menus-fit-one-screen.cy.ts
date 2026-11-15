@@ -21,6 +21,11 @@ import {
   COLLECTION_GRID,
   COLLECTION_JLORE,
   COLLECTION_SCREEN,
+  DB_SIDEBAR,
+  DECK_DELETE,
+  DECK_LIST,
+  DECK_NAME_INPUT,
+  NAV_BACK,
   PLAY_HUB,
   PLAY_SIGN_IN,
   REPLAYS_ROOT,
@@ -44,6 +49,12 @@ const ONE_SCREEN = 1;
 const EDGE_SLACK_PX = 1;
 
 const MS_PER_SECOND = 1000;
+
+/** R3218000: at this width and under the bar's title sits under Back, and the editor is one column (R3956000). */
+const PHONE_MAX_WIDTH_PX = 600;
+
+/** R3956000: the names the deck builder's rail must show whole (each at most 14 characters). */
+const DECK_NAMES = ["Pyre Control", "Tide Pool", "Quick Draw"] as const;
 
 /** The series the intercept answers: a v4 UUID's shape, nothing the server holds. */
 const SERIES_ID = "00000000-0000-4000-8000-000000001581";
@@ -70,9 +81,26 @@ function expectOnScreen(viewport: MenuSize, screens: number): void {
   });
 }
 
+/** The box of the first element `selector` matches, which must be drawn. */
+function boxOf(doc: Document, selector: string): DOMRect {
+  const found = doc.querySelector(selector);
+  expect(found, selector).to.not.eq(null);
+  const box = found?.getBoundingClientRect();
+  expect(box?.width, `${selector} is drawn`).to.be.greaterThan(0);
+  return box ?? new DOMRect();
+}
+
 /**
- * The code and consent screens as a pending account meets them, drawn for p1. Spec 10 redeems the
- * pending fixture until the server restarts (R144) and may share this shard, so p1's own read of the
+ * The signed-in screens that draw nothing of p1's own (its decks, collection and replays) sign in as p3,
+ * which only spec 55 uses and which nothing here writes to. R109 refuses an account past 300 requests a
+ * minute, and every signed-in screen also makes the inbox's reads (#3902): fifteen screens a size as p1 spent
+ * its minute before the last of them drew, and the invite screens met a 429. Split, each opens under ten.
+ */
+const SPARE = accounts.p3;
+
+/**
+ * The code and consent screens as a pending account meets them, drawn for `SPARE`. Spec 10 redeems the
+ * pending fixture until the server restarts (R144) and may share this shard, so `SPARE`'s own read of the
  * account says pending, `owes` adding what it owes: the screens draw only from it (CLAUDE.md rule 7).
  */
 function asPending(owes: Record<string, boolean> = {}): void {
@@ -263,6 +291,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
       describe("signed in", () => {
         before(() => {
           cy.freeAccount(accounts.p1());
+          cy.freeAccount(SPARE());
         });
 
         it("R1581000 R3218000 /play", () => {
@@ -288,13 +317,60 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           cy.saveDeck(accounts.p1(), { name: "Fits", cards: allCardIds().slice(0, constants.DECK_SIZE) }).then((deckId) => {
             cy.visitAs(accounts.p1(), routes.deckbuilder());
             cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("be.visible");
-            // A window narrower than the workshop's split shows the list alone until a deck is opened (a
-            // wider one opens it already).
+            // A window of 600 px or less shows the list alone until a deck is opened (a wider one, the split
+            // from 601 px, R3734001, opens it already).
             cy.get(ts(deckRowId(deckId))).click();
             cy.get(ts(CARD_POOL), { timeout: CARD_POOL_TIMEOUT }).should("be.visible");
             expectBackLinkBarOrder();
             expectShellNav(true);
             expectOnScreen(viewport, ONE_SCREEN);
+          });
+        });
+
+        // R3956000: from 601 px the pool and the deck sit side by side (an iPad mini's 744 px too), a deck's name is
+        // whole in the rail, the title is beside Back, and the editor's last action is in view at 1280x720.
+        it("R3956000 /decks, a deck open: the pool beside the deck, names whole, the title beside Back, the actions in view", () => {
+          const cards = allCardIds().slice(0, constants.DECK_SIZE);
+          cy.clearDecks(accounts.p1());
+          cy.saveDeck(accounts.p1(), { name: DECK_NAMES[0], cards }).then((firstId) => {
+            cy.saveDeck(accounts.p1(), { name: DECK_NAMES[1], cards });
+            cy.saveDeck(accounts.p1(), { name: DECK_NAMES[2], cards });
+            cy.visitAs(accounts.p1(), routes.deckbuilder());
+            cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("be.visible");
+            cy.get(ts(deckRowId(firstId))).click();
+            cy.get(ts(CARD_POOL), { timeout: CARD_POOL_TIMEOUT }).should("be.visible");
+            expectOnScreen(viewport, ONE_SCREEN);
+            cy.document().should((doc) => {
+              if (viewport.width <= PHONE_MAX_WIDTH_PX) {
+                // The editor's Back shows its arrow alone, so the name field has the room for the whole name.
+                const input = doc.querySelector<HTMLInputElement>(ts(DECK_NAME_INPUT));
+                expect(input, "the name field").to.not.eq(null);
+                expect(input?.scrollWidth, "the name field shows the name whole").to.be.at.most(input?.clientWidth ?? 0);
+                return;
+              }
+              const pool = boxOf(doc, ts(CARD_POOL));
+              const sidebar = boxOf(doc, ts(DB_SIDEBAR));
+              expect(pool.right, "the pool ends where the deck's sidebar begins").to.be.at.most(sidebar.left + EDGE_SLACK_PX);
+              expect(Math.min(pool.bottom, sidebar.bottom), "the pool and the deck share the screen's rows").to.be.greaterThan(
+                Math.max(pool.top, sidebar.top),
+              );
+
+              const names = Array.from(doc.querySelectorAll<HTMLElement>(`${ts(DECK_LIST)} .ws-row-name`));
+              expect(names.map((name) => name.textContent).sort(), "the rail's deck names").to.deep.equal([...DECK_NAMES].sort());
+              for (const name of names) {
+                expect(name.scrollWidth, `${name.textContent ?? ""} is not cut across`).to.be.at.most(name.clientWidth + EDGE_SLACK_PX);
+                expect(name.scrollHeight, `${name.textContent ?? ""} is not cut down`).to.be.at.most(name.clientHeight + EDGE_SLACK_PX);
+              }
+
+              const back = boxOf(doc, `nav.screen-nav ${ts(NAV_BACK)}`);
+              const title = boxOf(doc, "nav.screen-nav .page-title");
+              expect(Math.min(back.bottom, title.bottom), "the title is on Back's row").to.be.greaterThan(Math.max(back.top, title.top));
+              expect(title.left, "the title starts after Back's right edge").to.be.at.least(back.right - EDGE_SLACK_PX);
+
+              expect(boxOf(doc, ts(DECK_DELETE)).bottom, "the editor's last action is in view").to.be.at.most(viewport.height);
+              const side = doc.querySelector(ts(DB_SIDEBAR));
+              expect(side?.scrollHeight, "the sidebar does not scroll").to.be.at.most((side?.clientHeight ?? 0) + EDGE_SLACK_PX);
+            });
           });
         });
 
@@ -307,7 +383,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
         });
 
         it("R1581000 R3218000 /leaderboard", () => {
-          cy.visitAs(accounts.p1(), "/leaderboard");
+          cy.visitAs(SPARE(), "/leaderboard");
           cy.get(ts(SCREEN.leaderboardSeason), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           expectShellNav(true);
@@ -323,7 +399,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
         });
 
         it("R1581000 R3218000 /together", () => {
-          cy.visitAs(accounts.p1(), "/together");
+          cy.visitAs(SPARE(), "/together");
           cy.get(ts(TOGETHER_ROOT), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           expectShellNav(true);
@@ -338,6 +414,29 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
           expectBackLinkBarOrder();
           expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
+        });
+
+        // R3956000: every set's name is whole in the progress row, whose right edge fades where it scrolls.
+        it("R3956000 /collection, Cards: every set name is whole and the row fades where it scrolls", () => {
+          cy.visitAs(accounts.p1(), routes.collection());
+          cy.get(ts(COLLECTION_GRID), { timeout: timeouts.view }).should("be.visible");
+          cy.get(".collection-set__name").should(($names) => {
+            expect($names.length, "the set names drawn").to.be.greaterThan(0);
+            for (const name of $names.toArray()) {
+              expect(name.scrollWidth, `${name.textContent ?? ""} is not cut`).to.be.at.most(name.clientWidth + EDGE_SLACK_PX);
+              const next = name.closest(".collection-set")?.nextElementSibling;
+              if (next === null || next === undefined) continue;
+              expect(name.getBoundingClientRect().right, `${name.textContent ?? ""} ends before the next set begins`).to.be.at.most(
+                next.getBoundingClientRect().left + EDGE_SLACK_PX,
+              );
+            }
+          });
+          cy.get(".collection-set-list").should(($list) => {
+            const style = getComputedStyle($list[0] as HTMLElement);
+            const mask = style.getPropertyValue("mask-image") || style.getPropertyValue("-webkit-mask-image");
+            expect(mask, "the row's fade").to.not.eq("none");
+            expect(mask, "the row's fade").to.not.eq("");
+          });
         });
 
         it("R1581000 R3218000 R3734000 /collection, Decks", () => {
@@ -365,7 +464,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
         });
 
         it("R1581000 R3218000 /shop", () => {
-          cy.visitAs(accounts.p1(), routes.shop());
+          cy.visitAs(SPARE(), routes.shop());
           cy.get(ts(SHOP_PANEL), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           expectShellNav(true);
@@ -374,7 +473,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
 
         it("R1581000 R3218000 /series, choosing a deck", () => {
           cy.intercept("GET", `**/api/series/${SERIES_ID}`, { statusCode: 200, body: seriesPicking(Date.now()) });
-          cy.visitAs(accounts.p1(), routes.series(SERIES_ID));
+          cy.visitAs(SPARE(), routes.series(SERIES_ID));
           cy.get(ts(SERIES_SCORE), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           cy.get(ts(menuShellTestid.root)).should("not.exist");
@@ -383,7 +482,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
 
         it("R1581000 R3218000 /invite, the code screen", () => {
           asPending();
-          cy.visitAs(accounts.p1(), routes.invite());
+          cy.visitAs(SPARE(), routes.invite());
           cy.get(ts(inviteTestid.input), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           expectShellNav(true);
@@ -392,7 +491,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
 
         it("R1581000 /invite, the consent screen", () => {
           asPending({ ageCheckOwed: true, termsOwed: true });
-          cy.visitAs(accounts.p1(), routes.invite());
+          cy.visitAs(SPARE(), routes.invite());
           cy.get(ts(consentTestid.birthMonth), { timeout: timeouts.view }).should("be.visible");
           expectOnScreen(viewport, ONE_SCREEN);
         });

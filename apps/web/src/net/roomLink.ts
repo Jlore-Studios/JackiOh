@@ -30,10 +30,6 @@ export function roomLinkPath(code: string, mode: QueueMode): string {
   return `${paths.play}?${query.toString()}`;
 }
 
-export function roomLinkUrl(code: string, mode: QueueMode): string {
-  return `${window.location.origin}${roomLinkPath(code, mode)}`;
-}
-
 /** R3730006: a private lobby's link, the one Copy link shares. */
 export function lobbyLinkPath(code: string): string {
   return paths.lobby(code);
@@ -116,10 +112,6 @@ export const COOP_LINK_STORAGE_KEY = "jackioh.together.coopLink";
 export function coopLinkPath(code: string): string {
   const query = new URLSearchParams({ [COOP_PARAM]: code });
   return `${paths.together}?${query.toString()}`;
-}
-
-export function coopLinkUrl(code: string): string {
-  return `${window.location.origin}${coopLinkPath(code)}`;
 }
 
 /** R2094000: R191-style: an invalid co-op code yields no link. */

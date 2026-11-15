@@ -477,7 +477,7 @@ fn unreadable_game_record_detail(id: &str) -> Value {
 /// leaves nothing behind.
 pub const TRUNCATE: &str = "truncate
   public.game_records, public.record_totals, public.card_totals, public.decklist_totals, public.game_totals,
-  public.practice_claim_counts,
+  public.practice_claim_counts, public.daily_email_days,
   public.tutorial_progress, public.player_settings,
   public.rated_games, public.bot_ratings, public.season_ranks, public.seasons,
   public.series, public.results, public.match_checkpoints, public.match_actions, public.tickets,
@@ -3214,9 +3214,85 @@ mod player_stats {
         assert_eq!(profile_ids(&page_2), vec![json!(p1.id)]);
     }
 
+    async fn r3911000_list_public_excludes_banned_profile_and_restores_on_unban(harness: &StoreHarness) {
+        let p1 = active_profile(harness, None).await;
+        let p2 = active_profile(harness, None).await;
+        let now = harness.now();
+
+        for (profile, name) in [(&p1, "Alice_Banned"), (&p2, "Bob_Active")] {
+            let claim = UsernameClaim {
+                profile_id: profile.id.clone(),
+                base: name.to_string(),
+                key: username_key(name),
+                expected_tag: None,
+                at: now,
+                cooldown_ms: USERNAME_CHANGE_COOLDOWN_MS,
+            };
+            q!(harness, t => t.profiles_claim_username(&claim));
+        }
+
+        let stats_1 = bag(json!({ "games": 200, "wins": 150, "losses": 50, "draws": 0 }));
+        let stats_2 = bag(json!({ "games": 100, "wins": 60, "losses": 40, "draws": 0 }));
+        q!(harness, t => t.player_stats_put(&p1.id, &stats_1, false, now));
+        q!(harness, t => t.player_stats_put(&p2.id, &stats_2, false, now + 500));
+
+        let profile_ids =
+            |rows: &[Value]| -> Vec<Value> { rows.iter().map(|row| row["profileId"].clone()).collect() };
+
+        // Initially both appear
+        let initial: Vec<Value> =
+            q!(harness, t => t.player_stats_list_public(&list_options(json!({ "limit": 10, "offset": 0 }))))
+                .iter()
+                .map(j)
+                .collect();
+        assert_eq!(profile_ids(&initial), vec![json!(p1.id), json!(p2.id)]);
+
+        // Ban p1
+        q!(harness, t => t.profiles_set_status(&p1.id, status("banned")));
+
+        // p1 is excluded from public list
+        let while_banned: Vec<Value> =
+            q!(harness, t => t.player_stats_list_public(&list_options(json!({ "limit": 10, "offset": 0 }))))
+                .iter()
+                .map(j)
+                .collect();
+        assert_eq!(profile_ids(&while_banned), vec![json!(p2.id)]);
+
+        // p1 is excluded from search
+        let search_banned: Vec<Value> =
+            q!(harness, t => t.player_stats_list_public(&list_options(json!({ "search": "Alice", "limit": 10, "offset": 0 }))))
+                .iter()
+                .map(j)
+                .collect();
+        assert!(
+            search_banned.is_empty(),
+            "{}: banned profile should not appear in search",
+            harness.name
+        );
+
+        // Stored stats remain intact
+        let stored_p1 = q!(harness, t => t.player_stats_get(&p1.id));
+        assert!(
+            stored_p1.is_some(),
+            "stored stats must remain intact while banned"
+        );
+
+        // Unban p1
+        q!(harness, t => t.profiles_set_status(&p1.id, status("active")));
+
+        // p1 is restored to public list
+        let after_unban: Vec<Value> =
+            q!(harness, t => t.player_stats_list_public(&list_options(json!({ "limit": 10, "offset": 0 }))))
+                .iter()
+                .map(j)
+                .collect();
+        assert_eq!(profile_ids(&after_unban), vec![json!(p1.id), json!(p2.id)]);
+    }
+
     both_stores!(
         r654_holds_no_row_before_the_first_write_and_put_creates_or_updates_a_row,
         r654_list_public_excludes_private_players_respects_search_and_sorts_by_games_descending,
+        r3911000_list_public_excludes_banned_profile_and_restores_on_unban,
     );
 }
 
@@ -12711,6 +12787,7 @@ mod r3290000_banned_standings {
 mod daily {
     use super::*;
     use jackioh_engine::PerPlayer;
+    use jackioh_server::config::DAILY_MAX_ACTIVE_GAMES;
     use jackioh_server::db::store::{
         DailyGameRow, DailyInviteKind, DailyInviteRow, DailyInviteState, DailyNotifyRow, PushSubRow,
         QueueMode,
@@ -13084,6 +13161,80 @@ mod daily {
             q!(harness, t => t.daily_active_count(&a.id, now + 60_000)),
             1,
             "{}",
+            harness.name
+        );
+    }
+
+    /// R3727004, #3842: two sends racing for an account's twentieth place, each counting under
+    /// `daily_lock_account` and writing only while the count leaves room. The first has counted and
+    /// holds its transaction open as the second begins: the second's lock waits for the first's
+    /// commit, so it counts the first's seek and is refused; without the lock both count nineteen and
+    /// both write.
+    async fn r3727004_two_sends_racing_for_the_last_daily_place_write_one(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        let cap = i64::from(DAILY_MAX_ACTIVE_GAMES);
+        let (a_id, b_id) = (a.id.as_str(), b.id.as_str());
+        for n in 1..cap {
+            daily_game(harness, a_id, b_id, now - 10_000 + n, Some(now + 60_000)).await;
+        }
+        assert_eq!(
+            q!(harness, t => t.daily_active_count(a_id, now)),
+            cap - 1,
+            "{}",
+            harness.name
+        );
+
+        let mut first = harness.db.begin(None).await.expect("begin");
+        first
+            .daily_lock_account(a_id)
+            .await
+            .unwrap_or_else(|error| panic!("{}: the first's lock: {error}", harness.name));
+        let first_held = first
+            .daily_active_count(a_id, now)
+            .await
+            .unwrap_or_else(|error| panic!("{}: the first's count: {error}", harness.name));
+        assert_eq!(first_held, cap - 1, "{}: the first's count", harness.name);
+        let second = async {
+            let mut t = harness.db.begin(None).await.expect("begin");
+            t.daily_lock_account(a_id)
+                .await
+                .unwrap_or_else(|error| panic!("{}: the second's lock: {error}", harness.name));
+            let held = t
+                .daily_active_count(a_id, now)
+                .await
+                .unwrap_or_else(|error| panic!("{}: the second's count: {error}", harness.name));
+            let written = if held < cap {
+                t.daily_invites_create(&seek(a_id, QueueMode::Random, DAYS, now, now + 60_000), now)
+                    .await
+                    .unwrap_or_else(|error| panic!("{}: the second's seek: {error}", harness.name))
+            } else {
+                false
+            };
+            t.commit().await.expect("commit");
+            written
+        };
+        let rest_of_first = async move {
+            let written = first
+                .daily_invites_create(&seek(a_id, QueueMode::Bo1, DAYS, now, now + 60_000), now)
+                .await
+                .unwrap_or_else(|error| panic!("{}: the first's seek: {error}", harness.name));
+            first.commit().await.expect("commit");
+            written
+        };
+        let (second_written, first_written) = tokio::join!(second, rest_of_first);
+
+        assert!(first_written, "{}: the first send is written", harness.name);
+        assert!(
+            !second_written,
+            "{}: the second send counts the first's and is refused",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.daily_active_count(a_id, now)),
+            cap,
+            "{}: the account holds the cap, no more",
             harness.name
         );
     }
@@ -13610,10 +13761,68 @@ mod daily {
         assert!(q!(harness, t => t.daily_games_running()).is_empty());
     }
 
+    /// #3843: migration 0092's count of the player mail. Each UTC day takes `cap` claims and refuses
+    /// the next, counts on its own, takes one more after a release, never goes below 0 however many
+    /// releases, and a cap of 0 takes none.
+    async fn s913_daily_email_claims_stop_at_each_days_cap(harness: &StoreHarness) {
+        let today = 20_000 * MS_PER_DAY;
+        let tomorrow = today + MS_PER_DAY;
+        let claims = [
+            (today, 2, true, "the first of two"),
+            (today, 2, true, "the second of two"),
+            (today, 2, false, "a third past the cap"),
+            (tomorrow, 2, true, "each day counts its own"),
+        ];
+        for (day, cap, taken, what) in claims {
+            assert_eq!(
+                q!(harness, t => t.daily_email_claim(day, cap)),
+                taken,
+                "{}: {what}",
+                harness.name
+            );
+        }
+        q!(harness, t => t.daily_email_release(today));
+        assert!(
+            q!(harness, t => t.daily_email_claim(today, 2)),
+            "{}: one given back is taken again",
+            harness.name
+        );
+        assert!(
+            !q!(harness, t => t.daily_email_claim(today, 2)),
+            "{}: and the day is full again",
+            harness.name
+        );
+
+        let after = tomorrow + MS_PER_DAY;
+        assert!(
+            q!(harness, t => t.daily_email_claim(after, 1)),
+            "{}",
+            harness.name
+        );
+        q!(harness, t => t.daily_email_release(after));
+        q!(harness, t => t.daily_email_release(after));
+        assert!(
+            q!(harness, t => t.daily_email_claim(after, 1)),
+            "{}: two releases of one claim",
+            harness.name
+        );
+        assert!(
+            !q!(harness, t => t.daily_email_claim(after, 1)),
+            "{}: the count never went below 0",
+            harness.name
+        );
+        assert!(
+            !q!(harness, t => t.daily_email_claim(after + MS_PER_DAY, 0)),
+            "{}: a cap of 0 takes none",
+            harness.name
+        );
+    }
+
     both_stores!(
         s913_daily_games_round_trip_list_and_end,
         s913_daily_games_due_by_deadline_and_left_out_of_the_live_matches,
         s913_daily_active_count_counts_running_games_and_open_sends,
+        r3727004_two_sends_racing_for_the_last_daily_place_write_one,
         s913_daily_invites_one_open_per_key_close_and_expire,
         s913_daily_seek_claim_takes_the_oldest_fitting_unblocked_seek,
         s913_daily_notify_defaults_settings_and_unsubscribe,
@@ -13621,5 +13830,6 @@ mod daily {
         s913_a_deleted_profile_takes_its_daily_rows,
         r3727008_a_profile_seated_in_a_running_daily_game_is_not_deleted,
         s913_a_voided_match_takes_its_daily_game,
+        s913_daily_email_claims_stop_at_each_days_cap,
     );
 }

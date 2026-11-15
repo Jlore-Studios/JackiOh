@@ -9,8 +9,11 @@ import { DECK_SIZE } from "@jackioh/engine/config";
 import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 
 import type { LobbyView } from "../../../apps/web/src/lobby/api.ts";
+import "../../../apps/web/src/shell/menu-shell.css";
 import { LobbyScreen } from "../../../apps/web/src/lobby/LobbyScreen.tsx";
 import { lobbyTestid } from "../../../apps/web/src/lobby/testids.ts";
+import { menuShellTestid } from "../../../apps/web/src/shell/testids.ts";
+import { playTestid } from "../../../apps/web/src/routes/playTestids.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../../../apps/web/src/net/session.ts";
 import { setShips } from "../../../apps/web/src/wire/catalog.ts";
 import { loadWasm } from "../../../apps/web/src/wasm/index.ts";
@@ -154,6 +157,36 @@ function expectFitAndTargets(size: MenuSize): void {
   });
 }
 
+/** The screen inside the menu shell, so a phone draws the real fixed tab bar and a wide window the real rail. */
+function mountInShell(): void {
+  cy.mount(
+    <div className="menu-shell">
+      <div className="menu-shell__main">
+        <LobbyScreen token="token-1" code={CODE} />
+      </div>
+      <nav className="menu-shell__nav" data-testid={menuShellTestid.nav} aria-label="Menu" />
+    </div>,
+  );
+}
+
+/** R3954000: the control is inside the window with the page unscrolled, above a phone's tab bar, and nothing covers it. */
+function expectInView(testid: string, size: MenuSize): void {
+  cy.window({ log: false }).should((win) => {
+    const where = `${testid} at ${size.label}`;
+    const el = win.document.querySelector<HTMLElement>(`[data-testid="${testid}"]`);
+    expect(el, where).to.not.equal(null);
+    if (el === null) return;
+    const nav = win.document.querySelector<HTMLElement>(`[data-testid="${menuShellTestid.nav}"]`);
+    const bar = nav === null ? null : nav.getBoundingClientRect();
+    const limit = bar !== null && bar.top > 0 && bar.width >= win.innerWidth - EDGE_SLACK_PX ? bar.top : win.innerHeight;
+    const box = el.getBoundingClientRect();
+    expect(box.top, `${where} starts inside the window`).to.be.at.least(-EDGE_SLACK_PX);
+    expect(box.bottom, `${where} ends above the tab bar and the window's foot`).to.be.at.most(limit + EDGE_SLACK_PX);
+    const hit = win.document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+    expect(el.contains(hit), `${where} is not covered`).to.equal(true);
+  });
+}
+
 describe("#3730 the private lobby at every menu size", () => {
   before(() => {
     cy.wrap(loadWasm(), { timeout: 30_000 });
@@ -171,5 +204,42 @@ describe("#3730 the private lobby at every menu size", () => {
         cy.screenshot(`lobby-${kind.label}-${String(size.width)}x${String(size.height)}`, { capture: "viewport" });
       });
     }
+  }
+
+  for (const kind of KINDS) {
+    for (const size of MENU_SIZES) {
+      const host = kind.lobby.you === "host";
+      it(`R3954000 the ${kind.label} lobby at ${size.label}: Ready${host ? ", Leave and Start are" : " and Leave are"} in view above the tab bar`, () => {
+        cy.viewport(size.width, size.height);
+        serveFixtures(kind.lobby);
+        mountInShell();
+        cy.get(`[data-testid="${lobbyTestid.code}"]`).should("have.text", CODE);
+        cy.get(`[data-testid="${lobbyTestid.ready}"]`);
+        cy.get(`[data-testid="${lobbyTestid.leave}"]`);
+        expectInView(lobbyTestid.ready, size);
+        expectInView(lobbyTestid.leave, size);
+        if (host) expectInView(lobbyTestid.start, size);
+      });
+    }
+  }
+
+  for (const size of MENU_SIZES) {
+    it(`R3954000 the "Ready to queue" check mark has a space after it at ${size.label}`, () => {
+      cy.viewport(size.width, size.height);
+      serveFixtures(KINDS[0]?.lobby ?? view({}));
+      mountInShell();
+      cy.get(`[data-testid="${playTestid.verdict}"][data-ready="true"]`, { timeout: 10_000 });
+      cy.window({ log: false }).should((win) => {
+        const verdict = win.document.querySelector(`[data-testid="${playTestid.verdict}"]`);
+        const mark = verdict?.querySelector(".lobby-verdict__mark");
+        const text = verdict?.lastChild;
+        expect(mark, "the check mark").to.not.equal(null);
+        expect(text?.nodeType, "the words follow the mark").to.equal(win.Node.TEXT_NODE);
+        if (mark === null || mark === undefined || text === null || text === undefined) return;
+        const range = win.document.createRange();
+        range.selectNode(text);
+        expect(range.getBoundingClientRect().left - mark.getBoundingClientRect().right, "the gap after the mark").to.be.at.least(4);
+      });
+    });
   }
 });

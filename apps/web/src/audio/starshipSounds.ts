@@ -91,8 +91,3 @@ export function starshipSounds(entry: AnimationEntry, view: PlayerView): Starshi
   }
   return wreckSounds(entry, view, D);
 }
-
-/** The cues alone of `starshipSounds`. */
-export function starshipBed(entry: AnimationEntry, view: PlayerView): readonly SoundCue[] {
-  return starshipSounds(entry, view).cues;
-}

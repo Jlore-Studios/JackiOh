@@ -30,7 +30,6 @@ mod tests {
     use crate::weapon_board;
 
     const P1: PlayerId = PlayerId::P1;
-    const P2: PlayerId = PlayerId::P2;
 
     fn leg_on(radiant: bool, seed: &str) -> Scenario {
         weapon_board(
@@ -67,7 +66,6 @@ mod tests {
                 .filter(|action| matches!(action, ActionBody::Attack { attacker_id, .. } if attacker_id == &leg.id))
                 .collect();
             assert!(offered.is_empty(), "radiant {radiant}: Can't attack");
-            let _ = P2;
         }
     }
 

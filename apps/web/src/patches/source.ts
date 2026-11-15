@@ -32,6 +32,12 @@ export type Patch = {
   readonly player?: PlayerNote;
   /** R1369000: recorded by `patches ship` since #1366; the patches shipped before it have none. */
   readonly tier?: "major" | "patch" | "micro";
+  /**
+   * R3944000: on a major or a patch that rolls micros up (the daily patch `patches cut` writes, or a major
+   * `patches ship` names after them), the versions of those micros, oldest first: exactly the micros
+   * between the major or patch before it and itself. The entries shipped before it have none.
+   */
+  readonly includes?: readonly string[];
   readonly changes: readonly PatchChange[];
 };
 

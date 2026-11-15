@@ -1,15 +1,18 @@
 // #3727: the Daily screen. Its sections in order, each game's time left (urgent under
 // DAILY_URGENT_HOURS), the tab's "Your move (n)", a new game from the queue, a friend's challenge
-// accepted, the notification settings, and a read again when the social read's dailyWaiting changes.
+// accepted, the notification settings, a read again when the social read's dailyWaiting changes, and (R3840000)
+// a game that ended on the opponent's move shown as ended on the slow read and when the tab shows again.
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DailyGameSummary, DailyInvite, DailyList, DailySettings } from "../net/daily.ts";
 import { clearReadCache } from "../net/readCache.ts";
+import { resetVisibility, setVisibility } from "../test/setup.ts";
 import { at, must, signIn, stubServer, type Call, type Reply } from "../test/stubServer.ts";
 import { reloadSocial } from "../together/socialPoll.ts";
 import { dailyConstants } from "../wasm/index.ts";
+import { DAILY_REREAD_MS } from "./config.ts";
 import DailyRoute from "./DailyRoute.tsx";
 import { dailyKindTestid, dailyModeTestid, dailyTestid } from "./testids.ts";
 
@@ -113,6 +116,8 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
+  resetVisibility();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   window.localStorage.clear();
@@ -120,6 +125,12 @@ afterEach(() => {
 
 function sectionNames(): (string | null)[] {
   return screen.getAllByTestId(dailyTestid.section).map((section) => section.getAttribute("data-section"));
+}
+
+async function flush(): Promise<void> {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
 }
 
 function rowOf(matchId: string): HTMLElement {
@@ -319,5 +330,65 @@ describe("#3727 the Daily screen", () => {
     render(<DailyRoute />);
     expect(await screen.findByTestId(dailyTestid.homeScreenNote, undefined, SLOW)).toHaveTextContent("Add to Home Screen");
     expect(screen.queryByTestId(dailyTestid.push)).toBeNull();
+  });
+});
+
+describe("R3840000 the open Daily list reads a game that ended", () => {
+  /** The list as it reads once the opponent has conceded the game "theirs", on their own move. */
+  function ended(): DailyList {
+    const open = list();
+    return {
+      ...open,
+      games: open.games.map((g) =>
+        g.matchId === "theirs"
+          ? { ...g, over: true, hasMove: false, theirMove: false, deadline: null, result: { outcome: "win", reason: "concede" }, endedAt: Date.now() }
+          : g,
+      ),
+    };
+  }
+
+  async function shown(world: World) {
+    const server = serve(world);
+    render(<DailyRoute />);
+    await screen.findAllByTestId(dailyTestid.gameRow, undefined, SLOW);
+    expect(rowOf("theirs")).toHaveAttribute("data-over", "false");
+    return server;
+  }
+
+  it("R3840000 a game that ended on the opponent's move shows as finished on the slow read, with dailyWaiting unchanged", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const world: World = { list: list(), dailyWaiting: 2 };
+    const server = await shown(world);
+    const reads = server.to("GET", "/api/daily").length;
+
+    world.list = ended();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DAILY_REREAD_MS);
+    });
+    await flush();
+
+    expect(world.dailyWaiting).toBe(2);
+    expect(server.to("GET", "/api/daily")).toHaveLength(reads + 1);
+    expect(rowOf("theirs")).toHaveAttribute("data-over", "true");
+  });
+
+  it("R3840000 a hidden tab's Daily list reads nothing and reads once when the tab shows again", async () => {
+    const world: World = { list: list(), dailyWaiting: 2 };
+    const server = await shown(world);
+    const reads = server.to("GET", "/api/daily").length;
+
+    world.list = ended();
+    act(() => {
+      setVisibility("hidden");
+    });
+    await flush();
+    expect(server.to("GET", "/api/daily")).toHaveLength(reads);
+
+    act(() => {
+      setVisibility("visible");
+    });
+    await flush();
+    expect(server.to("GET", "/api/daily")).toHaveLength(reads + 1);
+    expect(rowOf("theirs")).toHaveAttribute("data-over", "true");
   });
 });

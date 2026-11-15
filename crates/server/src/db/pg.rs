@@ -330,11 +330,11 @@ fn stake_of<T: DeserializeOwned>(value: i16) -> Result<T, StoreError> {
     )))
 }
 
-fn json<T: Serialize + ?Sized>(value: &T) -> Result<String, StoreError> {
+pub(crate) fn json<T: Serialize + ?Sized>(value: &T) -> Result<String, StoreError> {
     serde_json::to_string(value).map_err(|error| StoreError::from(error.to_string()))
 }
 
-fn json_or_null<T: Serialize>(value: &Option<T>) -> Result<Option<String>, StoreError> {
+pub(crate) fn json_or_null<T: Serialize>(value: &Option<T>) -> Result<Option<String>, StoreError> {
     value.as_ref().map(json).transpose()
 }
 
@@ -6792,6 +6792,7 @@ pub async fn player_stats_list_public(
     let offset = i32::try_from(options.offset).unwrap_or(i32::MAX);
     // R1436: the search matches the username by the key it clashes on (R1434), the NFKC case fold
     // computed here in Rust, so no Postgres collation decides; `Max#3` finds `max#3`.
+    // R3911000: a banned account drops off the public players list and its search.
     let term = term.map(username_key);
     run_as(t, None).await?;
     let rows = sqlx::query(
@@ -6799,6 +6800,7 @@ pub async fn player_stats_list_public(
          from public.player_stats ps
          join public.profiles p on p.id = ps.profile_id
          where ps.is_private = false
+           and p.status <> 'banned'
            and ($1::text is null
                 or position($1::text in (p.username_key || coalesce('#' || p.username_tag::text, ''))) > 0)
          order by
@@ -8228,6 +8230,18 @@ pub async fn daily_active_count(t: &mut PgTx<'_>, profile_id: &str, now: i64) ->
     get(&row, "active")
 }
 
+/// One lock per account, transaction-scoped like the economy's `lock_account`, under its own key so a
+/// daily send never waits on a pack opening.
+pub async fn daily_lock_account(t: &mut PgTx<'_>, profile_id: &str) -> Result<(), StoreError> {
+    run_as(t, Some(profile_id)).await?;
+    sqlx::query("select pg_advisory_xact_lock(hashtextextended('jackioh.daily:' || $1::text, 0))")
+        .bind(profile_id)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    Ok(())
+}
+
 // daily invites
 
 /// Two statements in the caller's transaction: the key's lapsed open row (if any) is marked expired,
@@ -8528,6 +8542,38 @@ pub async fn daily_notify_unsubscribe(t: &mut PgTx<'_>, token: &str) -> Result<b
             .await
             .map_err(db_error)?;
     Ok(done.rows_affected() == 1)
+}
+
+// the player mail's days
+
+/// One conditional upsert, never a read then a write: the row lock it takes on a conflict makes a
+/// second sender at once wait and read the count the first left, so the two never pass `cap`.
+pub async fn daily_email_claim(t: &mut PgTx<'_>, day: i64, cap: i32) -> Result<bool, StoreError> {
+    if cap <= 0 {
+        return Ok(false);
+    }
+    run_as(t, None).await?;
+    let row = sqlx::query(
+        "insert into public.daily_email_days as days (day, sent) values ($1::bigint, 1)
+         on conflict (day) do update set sent = days.sent + 1 where days.sent < $2::integer
+         returning sent",
+    )
+    .bind(day)
+    .bind(cap)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(row.is_some())
+}
+
+pub async fn daily_email_release(t: &mut PgTx<'_>, day: i64) -> Result<(), StoreError> {
+    run_as(t, None).await?;
+    sqlx::query("update public.daily_email_days set sent = sent - 1 where day = $1::bigint and sent > 0")
+        .bind(day)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    Ok(())
 }
 
 // push subscriptions

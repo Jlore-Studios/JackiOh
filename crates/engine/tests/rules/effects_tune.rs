@@ -327,8 +327,11 @@ mod b3_4_the_menu_row_by_row_r386 {
                 slot(PlayerId::P1, Row::Units, 1),
                 json!({}),
             );
+            let turn = state.turn;
             {
                 let card = live_mut(&mut state, &unit.id);
+                // R3888000: it entered this turn, so its Rush is still live.
+                card.summoned_turn = Some(turn);
                 card.position = Some(Position::Def);
                 card.cost_mod = TUNE_COST_CAP - 1; // no cost row
                 card.damage = 1;
@@ -364,8 +367,11 @@ mod b3_4_the_menu_row_by_row_r386 {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
+        let turn = state.turn;
         {
             let card = live_mut(&mut state, &unit.id);
+            // R3888000: it entered this turn, so its Rush is still live.
+            card.summoned_turn = Some(turn);
             card.granted_keywords = vec![Keyword::Rush, Keyword::Pierce];
             card.tuning = tuning(json!({ "addKeywords": [{ "kind": "Rush" }] }));
         }

@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use anyhow::{Context as _, Result, bail};
-use jackioh_cards::code_lines::{code_lines, reads_card_lists};
+use jackioh_cards::code_lines::{code_lines, reads_card_lists, reads_win_rate_record};
 use serde::{Deserialize, Serialize};
 
 use crate::classify::script_id;
@@ -30,11 +30,13 @@ pub(crate) struct CardLists {
 }
 
 /// One tree's card scripts as the lists see them: each catalog entry's code lines, the cards whose
-/// script reads the lists, and the engine's two thresholds as that tree states them.
+/// script reads the lists, and the engine's two thresholds as that tree states them. R3882000: and
+/// the cards whose script reads the win rates of record.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) struct Scripts {
     pub counts: BTreeMap<String, usize>,
     pub readers: BTreeSet<String>,
+    pub record_readers: BTreeSet<String>,
     pub busted_over: usize,
     pub complicated_over: usize,
 }
@@ -52,6 +54,9 @@ impl Scripts {
                 continue;
             };
             scripts.counts.insert(id.clone(), code_lines(source));
+            if reads_win_rate_record(source) {
+                scripts.record_readers.insert(id.clone());
+            }
             if reads_card_lists(source) {
                 scripts.readers.insert(id);
             }
@@ -277,5 +282,28 @@ pub(crate) mod tests {
         assert_eq!(counted, jackioh_cards::CODE_LINES);
         assert_eq!(scripts.lists().busted, jackioh_cards::BUSTED);
         assert_eq!(scripts.lists().complicated, jackioh_cards::COMPLICATED);
+    }
+
+    /// R3882000: the shipped scripts that read the win rates of record are the four tier pools
+    /// (R3538001) and KPIs (R3538007), the cards a refresh of the record claims.
+    #[test]
+    fn r3882000_the_shipped_record_readers_are_the_tier_pools_and_kpis() {
+        let root = crate::patches::repo_root();
+        let catalog: Catalog = serde_json::from_str(jackioh_cards::catalog_json()).expect("the catalog");
+        let scripts = working(&root, &catalog).expect("the working scripts");
+        let readers: Vec<&str> = scripts.record_readers.iter().map(String::as_str).collect();
+        assert_eq!(
+            readers,
+            [
+                "stinkyscape-109",
+                "stinkyscapeplus-095",
+                "stinkyscapeplus-096",
+                "stinkyscapeplus-097",
+                "stinkyscapeplus-164",
+            ]
+        );
+        // M #50 CN Tech and M+ #2 NA Tech read each game's snapshot, never the record (R3049000).
+        assert!(!scripts.record_readers.contains("meditative-050"));
+        assert!(!scripts.record_readers.contains("meditativeplus-002"));
     }
 }

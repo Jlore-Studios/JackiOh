@@ -91,14 +91,8 @@ fn summon_hand_unit(
     {
         return None;
     }
-    let mut ctx = crate::resolve::make_context(
-        sink,
-        Some(declarer),
-        crate::resolve::HookOptions {
-            controller: Some(controller),
-            ..crate::resolve::HookOptions::default()
-        },
-    );
+    // The context's controller is the declarer's (`make_context`), the side the pick is summoned for.
+    let mut ctx = crate::resolve::make_context(sink, Some(declarer), crate::resolve::HookOptions::default());
     crate::effects::summon::summon_existing_card(&mut ctx, pick, controller)
 }
 
@@ -192,14 +186,8 @@ pub fn joiners_first(
     .max(0) as usize;
     let mut joiners: Vec<CardInstance> = Vec::new();
     for pick in sink.rng.shuffle(&pool).into_iter().take(count) {
-        let mut ctx = crate::resolve::make_context(
-            sink,
-            Some(prime),
-            crate::resolve::HookOptions {
-                controller: Some(controller),
-                ..crate::resolve::HookOptions::default()
-            },
-        );
+        // The context's controller is the Prime's (`make_context`).
+        let mut ctx = crate::resolve::make_context(sink, Some(prime), crate::resolve::HookOptions::default());
         if let Some(unit) = crate::effects::summon::summon_existing_card(&mut ctx, &pick, controller) {
             joiners.push(unit);
         }

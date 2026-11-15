@@ -30,6 +30,13 @@ pub enum ShortForm {
     Colon,
     /// The whole text, cut by the box at its last line.
     Clamp,
+    /// Words written for the face in play and in a hand (issue #3941, R3941001): its in-game text, `{key}`s and
+    /// all, filled as its whole text is. `zh` is the face's own in Simplified Chinese; a Chinese face without
+    /// one clamps.
+    Written {
+        en: &'static str,
+        zh: Option<&'static str>,
+    },
 }
 
 /// A card in Simplified Chinese (ME-CN, R1303): its name, both faces' texts and its preview labels.

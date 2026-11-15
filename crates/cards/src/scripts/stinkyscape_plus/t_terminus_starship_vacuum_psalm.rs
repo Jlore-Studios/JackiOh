@@ -1,18 +1,18 @@
-//! S+ Vacuum Psalm, a Terminus Starship (SPEC §8.12; §6.1 Dormant, Starship; R3539001): 0/0
-//! Unit, Starship Token, Flying, Ranged. "Dormant until it launches. It comes holding Cannon v5,
-//! Beam v5 and Flak v5, and can't be launched by hand." The Last Voyage and The Far Vagabond summon it
-//! holding its loadout; its script is the shared Terminus hull
-//! (`c080_the_last_voyage::terminus_hull`).
+//! S+ Vacuum Psalm, a Terminus Starship (SPEC §8.12; §6.1 Dormant, Starship; R3539001): 0/0 Unit, Starship Token,
+//! Flying, Ranged. "Dormant until it launches. It comes holding Cannon v3, Beam v3 and Flak v3, and can't be
+//! launched by hand." The Last Voyage and The Far Vagabond summon it holding its loadout; its script is the shared
+//! Terminus hull (`c080_the_last_voyage::terminus_hull`).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-t-terminus-starship-vacuum-psalm";
 
-const CANNON: &str = "stinkyscape-060"; // Cannon v5 (4)
-const BEAM: &str = "stinkyscape-058"; // Beam v5 (4)
-const FLAK: &str = "stinkyscape-061"; // Flak v5 (4)
+const CANNON: &str = "stinkyscape-052"; // Cannon v3
+const BEAM: &str = "stinkyscape-050"; // Beam v3
+const FLAK: &str = "stinkyscape-053"; // Flak v3
 
-/// R3539001: the fixed loadout it comes holding: 12 mana of Starship Pieces.
+/// R3539001: the fixed loadout it comes holding: 6 mana of Starship Pieces (issue #3951; its loadout
+/// through v0.6.4b is `c080_the_last_voyage::TERMINUS_STARSHIPS_V0_6_4B`'s).
 pub const PIECES: &[&str] = &[CANNON, BEAM, FLAK];
 
 pub fn script() -> CardScripts {

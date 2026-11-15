@@ -12,7 +12,6 @@ import {
   adoptRoomLink,
   coopLinkOf,
   coopLinkPath,
-  coopLinkUrl,
   findRoomLinkInText,
   lobbyLinkPath,
   lobbyLinkUrl,
@@ -22,7 +21,6 @@ import {
   readRoomLink,
   roomLinkOf,
   roomLinkPath,
-  roomLinkUrl,
   sendRoomLink,
 } from "./roomLink.ts";
 
@@ -46,7 +44,6 @@ describe("R767 the room link", () => {
   it("R767 roomLinkPath builds /play?room=<code>&mode=<mode>, and roomLinkOf reads it back", () => {
     expect(roomLinkPath("ABC234", "bo1")).toBe("/play?room=ABC234&mode=bo1");
     expect(roomLinkPath("ABC234", "bo3")).toBe("/play?room=ABC234&mode=bo3");
-    expect(roomLinkUrl("ABC234", "random")).toBe(`${window.location.origin}/play?room=ABC234&mode=random`);
     for (const mode of ["bo1", "bo3", "random"] as const) {
       const search = roomLinkPath("QRSTUV", mode).slice("/play".length);
       expect(roomLinkOf(search)).toEqual({ code: "QRSTUV", mode });
@@ -174,7 +171,6 @@ describe("R767 sending the link", () => {
 describe("R2094000 the co-op room link", () => {
   it("R2094000 coopLinkPath builds /together?coop=<code>, and coopLinkOf reads it back R191-style", () => {
     expect(coopLinkPath("ABC234")).toBe("/together?coop=ABC234");
-    expect(coopLinkUrl("ABC234")).toBe(`${window.location.origin}/together?coop=ABC234`);
     expect(coopLinkOf(coopLinkPath("QRSTUV").slice("/together".length))).toBe("QRSTUV");
   });
 

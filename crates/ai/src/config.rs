@@ -370,6 +370,13 @@ pub struct EvalWeights {
     /// `unit_worth` is untouched: its Brittle share already discounts the unit. Off, every unit that may
     /// swing counts, as before.
     pub brittle_crumbles_before_swing: bool,
+    /// R3550001, R3560007, #3909: whether `face_threat` and `damage_past_taunts_with` read the two static
+    /// attack flags the engine applies outside the plain Taunt walk. A unit that can only attack the Unit
+    /// directly across (S+ #37 Scorch) never may hit a hero, so `face_threat` asks `attack_restriction` of
+    /// it as of a Unit in The Gauntlet's lanes and its swings land nothing past the Taunts. An attacker
+    /// that Ignores Taunt (S+ #121 Toxopid) is bound by no Taunt, Defense Position's included. Off, both
+    /// count as before.
+    pub static_attack_flags_read: bool,
     /// Per point of unitView.health (current).
     pub health: f64,
     /// Per point of unitView.armor.
@@ -449,6 +456,11 @@ pub struct EvalWeights {
     /// lent one, R1869003, or a field permission such as Second Wind's), either side's, since a
     /// graveyard is public. At 0 nothing is read.
     pub graveyard_playable: f64,
+    /// R3951100: while a Feng Shui acts (Meditative #40, R981–R985), the share that counts of what the
+    /// seat's next face-up play is worth to it (`evaluate::feng_shui_outlook`): of its own hand's cards a
+    /// Feng Shui would judge, the best verdict its last element gives one, a reward at what the card would
+    /// gain in hand as Radiant and a punishment at the hit's cost on the hero curve. At 0 nothing is read.
+    pub feng_shui_outlook: f64,
     /// §3.2, R13, R3695001: the share of its `unit_worth` a card dormant under one of the seat's own
     /// unit piles counts. It resumes when the cards above it leave.
     pub dormant_share: f64,
@@ -566,6 +578,7 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     deft_defense_attacks: true,
     gauntlet_bars_face_attacks: true,
     brittle_crumbles_before_swing: true,
+    static_attack_flags_read: true,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
@@ -640,6 +653,10 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // one more play, once, and only while its permission lasts. At 0.5 its screen read 202-198, edge 0.01
     // (-0.021 to 0.041), against the control (training/improve.md, A screen).
     graveyard_playable: 0.5,
+    // R3951100: an untuned start, half, as R2380000's shares are: the next play is judged by the element
+    // the seat ends on only if no other card of its comes first. Issue #3951's scenes in
+    // `tests/ai/feng_shui.rs` hold at 0.5.
+    feng_shui_outlook: 0.5,
     // R3695001: half, as a turn's wait is for R2380000's shares: a card beneath an own Stack pile acts
     // again only once the cards above it leave. #1506 had it off (at 0.5 and 1.0 its screen read
     // 200-200, edge 0.0, -0.024 to 0.024), so casting Drone Core X gained only its Shield Layer and
@@ -720,6 +737,8 @@ pub const AI_AFFLICTION_TICKS: i32 = 4;
 const _: () = assert!(AI_AFFLICTION_TICKS >= 1);
 const _: () = assert!(AI_EVAL.unit_affliction >= 0.0 && AI_EVAL.unit_affliction <= 1.0);
 const _: () = assert!(AI_EVAL.unit_doomed >= 0.0 && AI_EVAL.unit_doomed <= 1.0);
+// R3951100: at most 1, so a reward held in hand is never worth more than the Radiant play that takes it.
+const _: () = assert!(AI_EVAL.feng_shui_outlook >= 0.0 && AI_EVAL.feng_shui_outlook <= 1.0);
 
 /// R2424000, R2687000: the most nodes a decision's Death probes (`evaluate::death_prices`) spend: two
 /// per field unit or readable backrow card with a Death, three per own hand Field Spell with one, three
@@ -828,7 +847,8 @@ pub const LEARNED_REACH: LearnedReach = LearnedReach::Finalists;
 /// gates were fixed on the seed series `gate:v2`, frozen here, so tuning AI_EVAL changes the AI and never
 /// its yardstick. Every term and keyword AI_EVAL gained after that (R346, #1602, #1886, …) is 0 here, and
 /// each flag that opts into a later reading (`defense_own_taunt_kept`, `deft_defense_attacks`,
-/// `gauntlet_bars_face_attacks`, `standing_unit_priced_once`, `brittle_crumbles_before_swing`) is off.
+/// `gauntlet_bars_face_attacks`, `standing_unit_priced_once`, `brittle_crumbles_before_swing`,
+/// `static_attack_flags_read`) is off.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -842,6 +862,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     deft_defense_attacks: false,
     gauntlet_bars_face_attacks: false,
     brittle_crumbles_before_swing: false,
+    static_attack_flags_read: false,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
@@ -891,6 +912,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     alt_win: 0.0,
     doomed_hand_discount: 0.0,
     graveyard_playable: 0.0,
+    feng_shui_outlook: 0.0,
     dormant_share: 0.0,
     dormant_card: 0.0,
     slumber_turn_share: 0.0,
@@ -1031,6 +1053,11 @@ pub const AI_MULLIGAN_CURVE: AiMulliganCurve = AiMulliganCurve {
     early_turn: 2,
     keep_without_early: 1,
 };
+
+/// R3936000: what a Tribute card's units add to its mulligan cost (`mulligan_cost`): a card that asks
+/// for X units to sacrifice costs the AI's mulligan at least X plus this, the turn after one unit a turn
+/// has laid X down. The greedy baseline's mulligan never reads it.
+pub const AI_MULLIGAN_TRIBUTE_ALLOWANCE: i32 = 1;
 
 /// `AI_DETERMINIZE`'s shape.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]

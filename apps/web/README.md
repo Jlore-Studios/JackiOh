@@ -626,6 +626,9 @@ practice result dialog and an online match's result panel offer "Watch the repla
 last turn" (the last step, its turn's GIF already being made). A practice result reads the kept game from
 the worker's final snapshot (`replay`) and asks its pages through the practice controller's queue; a
 match result loads its first page to learn the replay's length (`OpenedReplay`, `openOnlineMatchReplay`).
+Each source answers `portraits()` (R3976000: an online one from its pages, a practice one from its summary, an
+opened file from the file), which the board draws read-only (`Game`'s `portraits`, no emote menu) and the GIF
+draws too; a source with none draws the default.
 The GIF code still loads on demand, never in the main bundle.
 Each `/replays` row that can be watched also offers "Download JSON" (R1141000): every step's view through the
 row's own source, the row's facts and the build's catalog version, no account named, made in memory and saved
@@ -689,7 +692,8 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         a pool card is dragged into the deck by pointer events, so a finger works (DeckDrag.tsx,
                         R3734001: a touch lifts it on a move across, `touch-action: pan-y` leaving a move down to
                         the pool's scroll), and the rail, the pool and the deck sit side by side from 601 px
-                        (workshop.css), taking turns only at 600 px and under
+                        (workshop.css; R3956000: the pool and the deck beside each other from 601 px, the sidebar
+                        232 px up to 760 px), taking turns only at 600 px and under
 routes/play.tsx         /play, the Play hub (R1578000, R3729000): one screen that does not scroll, whose one
                         region (`.play-body`) holds `PlayHub`'s four groups of cards, Online, Daily, With
                         friends and Solo, with Replays and Friends under them; the words, times and
@@ -1018,7 +1022,7 @@ duos/download.ts        a finished co-op replay's "Download JSON" (R1242000): th
 The landing page offers three doors — Play (to the `/play` hub, R1578000), Collection and Shop (#1577) — with a quiet quests bookmark under them for an active account on a live economy (R2035000) and beside it the news' (R2875002), a red count of its unclaimed entries, none with no live entry (R2875001), and no door to Play together, which the hub links and which lives at `/together` behind the gate. The replays list and the replay player offer
 "Share with a friend". The match board's rail says how many friends are watching while any are
 (`match-watchers`, from the match socket's `watchers {count}` frame, which `game/net.ts` keeps as the
-snapshot's `watchers`). While any modifier is live on either side, the rail carries `game/ModifierList.tsx`'s chip (`modifier-list`, its count in `data-count`), which opens every label in full under You and Opponent; on a phone the badges beside each hero are cut short, and each is a button (`game/ModifierBadge.tsx`) whose tap opens its own whole label beside it (`modifier-full-<id>`, #2321) and whose second tap, a tap elsewhere or focus leaving it closes it, with no key handler (R2126000). Practice and the lessons show the same chip in their HUD, under You and AI, the Duos board shows it for the seat's own duel, and the watch screen (the newest view) and the replay player (the step on the board) show it in their rail. A finished ladder match whose `view` frame says the daily Jlore cap held back the account's Jlore (`jloreCapped`, R1483000, kept by `game/net.ts` as the snapshot's `jloreCapped`, false when absent) shows "Daily Jlore reached" in its result panel (`result-daily-jlore`); the page works nothing out, and a seat is only ever told its own. The same frame carries what the result's write paid the seat (`economy`, kept by `game/net.ts`: each set track's XP before and after, each level it reached with its rewards, each quest it completed), which the result panel plays once it has come in (`economy/XpReveal.tsx` under `game/Result.tsx`'s `OnceRevealed`) and tells the Jlore pill of; the Duos result plays its own the same way. On the Duos board:
+snapshot's `watchers`). While any modifier is live on either side, the rail carries `game/ModifierList.tsx`'s chip (`modifier-list`, its count in `data-count`), which opens every label in full under You and Opponent; on a phone the badges beside each hero are cut short, and each is a button (`game/ModifierBadge.tsx`) whose tap opens its own whole label beside it (`modifier-full-<id>`, #2321) and whose second tap, a tap elsewhere or focus leaving it closes it, with no key handler (R2126000). Practice and the lessons show the same chip in their HUD, under You and AI, a dungeon fight's rail shows it under You and the enemy's name (R3912000), the Duos board shows it for the seat's own duel, and the watch screen (the newest view) and the replay player (the step on the board) show it in their rail. A finished ladder match whose `view` frame says the daily Jlore cap held back the account's Jlore (`jloreCapped`, R1483000, kept by `game/net.ts` as the snapshot's `jloreCapped`, false when absent) shows "Daily Jlore reached" in its result panel (`result-daily-jlore`); the page works nothing out, and a seat is only ever told its own. The same frame carries what the result's write paid the seat (`economy`, kept by `game/net.ts`: each set track's XP before and after, each level it reached with its rewards, each quest it completed), which the result panel plays once it has come in (`economy/XpReveal.tsx` under `game/Result.tsx`'s `OnceRevealed`) and tells the Jlore pill of; the Duos result plays its own the same way. On the Duos board:
 
 - the pass control on an inspected hand card sends `Pass` only when `legal` holds it, with the pass
   cost and the passes left beside it (SPEC §13.5); it is the only way to pass, and a hand card
@@ -1078,7 +1082,8 @@ routes (net/navigate.ts paths, public/_redirects, behind the gate as /together i
                          left", urgent under DAILY_URGENT_HOURS); New daily game; the notifications
                          (email on or off, push on this device, Add to Home Screen on an iPhone or iPad
                          outside it); the tab reads "Your move (n)"; read again when the social read's
-                         dailyWaiting changes
+                         dailyWaiting changes, every DAILY_REREAD_MS while the tab shows and when it
+                         shows again (R3840000)
   /daily/:matchId        daily/DailyBoard.tsx: Game.tsx on the server's view, legal and forecast (the
                          opponent's name on its hero, the modifiers in its rail, an aimed attack's
                          outcomes, R3855000); each action one
@@ -1087,7 +1092,12 @@ routes (net/navigate.ts paths, public/_redirects, behind the gate as /together i
                          next game waiting once the move has passed; "Lost on time" and "Won on time"; a
                          notice when the game plays on an older card version; once it ends, Rematch (a new
                          daily challenge to the opponent at its mode and time, NewDailyDialog's rematch)
-                         and Watch the replay (the server's replay of it, none for a voided game)
+                         and Watch the replay (the server's replay of it, none for a voided game); read
+                         again the same way until the game is over, so an end on the opponent's move
+                         shows (R3840000); a finished game whose moves the retention purge took (its
+                         read says `expired`) shows its result, both heroes' life, when it ended, a line
+                         that its moves are no longer kept and Back to daily games, with no replay or
+                         rematch (R3934000)
 net/daily.ts             fetch wrappers for every daily route, typed
 daily/NewDailyDialog.tsx challenge any friend (online or not) or find an opponent, with daily/DailyFields.tsx:
                          the mode, its deck or lean, and the time per move on the segmented toggle; as a

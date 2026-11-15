@@ -8,9 +8,9 @@
   min-width: 0;
 }
 
-/* Desktop: the page is one screen tall (deckbuilder.css), and the pane takes whatever height the
+/* From 601 px up: the page is one screen tall (deckbuilder.css), and the pane takes whatever height the
    title leaves, so the pool scrolls inside its own frame as it does in the deck editor. */
-@media (min-width: 761px) and (min-height: 501px) {
+@media (min-width: 601px) and (min-height: 501px) {
   .almanac-main,
   .almanac-main > .db-browse {
     flex: 1 1 auto;
@@ -20,7 +20,7 @@
 
 /* R1581000: on a phone the page is the window's height (deckbuilder.css), and this is its one
    region: what is taller than the room scrolls here, with the top staying put. */
-@media (max-width: 760px) and (min-height: 501px) {
+@media (max-width: 600px) and (min-height: 501px) {
   .almanac-main {
     flex: 1 1 auto;
     min-height: 0;

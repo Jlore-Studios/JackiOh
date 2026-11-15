@@ -11,8 +11,10 @@ import { fakeReplaySource, foldedReplaySteps } from "../test/replay.ts";
 import { REPLAY_GIF_MAX_STEPS } from "./config.ts";
 import { canShareFile, exportGif, shareGif } from "./gif/export.ts";
 import type { GifExportResult } from "./gif/export.ts";
+import type { GifPlan } from "./gif/plan.ts";
 import ReplayPlayer, { replayTestid } from "./ReplayPlayer.tsx";
 import { gifTestid } from "./ShareGif.tsx";
+import type { ReplaySource } from "./source.ts";
 import { clampClip } from "./steps.ts";
 
 vi.mock("./gif/export.ts", async (importOriginal) => {
@@ -46,10 +48,10 @@ afterEach(() => {
   cleanup();
 });
 
-async function open(): Promise<void> {
+async function open(source: ReplaySource = fakeReplaySource(steps)): Promise<void> {
   render(
     <CatalogContext.Provider value={lookup}>
-      <ReplayPlayer source={fakeReplaySource(steps)} onLeave={vi.fn()} />
+      <ReplayPlayer source={source} onLeave={vi.fn()} />
     </CatalogContext.Provider>,
   );
   await screen.findByTestId(replayTestid.controls);
@@ -76,6 +78,33 @@ function askedSteps(call = 0): number[] {
 }
 
 describe("Share as GIF", () => {
+  it("R3976000 Make GIF hands the export the replay's portraits, and none when the source has none", async () => {
+    const portraits = { p1: "gary", p2: "shredder" } as const;
+    await open({ ...fakeReplaySource(steps), portraits: () => portraits });
+    // The real export, its drawing stood in for: the plan it draws holds the seats' portraits and no default.
+    const actual = await vi.importActual<typeof import("./gif/export.ts")>("./gif/export.ts");
+    const plans: GifPlan[] = [];
+    exporting.mockImplementation((input, hooks) =>
+      actual.exportGif(input, hooks, (plan) => {
+        plans.push(plan);
+        return Promise.resolve(Uint8Array.from([0x47, 0x49, 0x46]));
+      }),
+    );
+    await make();
+    expect(exporting.mock.calls[0]?.[0].portraits).toEqual(portraits);
+    await waitFor(() => expect(plans).toHaveLength(1));
+    const drawn = new Set(plans[0]?.frames.flatMap((frame) => frame.items.flatMap((item) => (item.kind === "portrait" ? [item.portrait] : []))));
+    expect([...drawn].sort()).toEqual(["gary", "shredder"]);
+
+    // A source with none hands the export none, which draws the default as the board does.
+    cleanup();
+    exporting.mockReset();
+    exporting.mockResolvedValue({ kind: "tooBig" });
+    await open();
+    await make();
+    expect(exporting.mock.calls[0]?.[0]).not.toHaveProperty("portraits");
+  });
+
   it("is closed until it is asked for, and opens beneath the toolbar", async () => {
     await open();
     expect(screen.queryByTestId(gifTestid.make)).toBeNull();

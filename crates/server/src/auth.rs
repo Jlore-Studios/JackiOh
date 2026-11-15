@@ -312,9 +312,7 @@ impl AdminAuthClient {
             .header("apikey", &self.secret_key)
             .header("authorization", format!("Bearer {}", self.secret_key))
             .header("accept", "application/json")
-            .timeout(Duration::from_millis(
-                AUTH_PROVIDER_TIMEOUT_SECONDS as u64 * MS_PER_SECOND as u64,
-            ))
+            .timeout(Duration::from_secs(AUTH_PROVIDER_TIMEOUT_SECONDS as u64))
             .send()
             .await
         {
@@ -351,9 +349,7 @@ impl AdminAuthClient {
             .header("authorization", format!("Bearer {}", self.secret_key))
             .header("accept", "application/json")
             .json(&json!({ "should_soft_delete": false }))
-            .timeout(Duration::from_millis(
-                AUTH_PROVIDER_TIMEOUT_SECONDS as u64 * MS_PER_SECOND as u64,
-            ))
+            .timeout(Duration::from_secs(AUTH_PROVIDER_TIMEOUT_SECONDS as u64))
             .send()
             .await
         {
@@ -962,9 +958,7 @@ impl SupabaseAuth {
             // The session check (R194) sits in front of API requests: a provider that hangs must cost
             // them a bounded wait, `AUTH_SESSION_CHECK_TIMEOUT_SECONDS` and not the sign-in grant's
             // longer one, after which the answer is "unavailable" and the identity stands (R3209000).
-            .timeout(Duration::from_millis(
-                AUTH_SESSION_CHECK_TIMEOUT_SECONDS as u64 * MS_PER_SECOND as u64,
-            ))
+            .timeout(Duration::from_secs(AUTH_SESSION_CHECK_TIMEOUT_SECONDS as u64))
             .send()
             .await
         {
@@ -1220,9 +1214,7 @@ impl SupabaseAuth {
             .header("authorization", format!("Bearer {}", self.secret_key))
             .header("accept", "application/json")
             .json(&json!({ "email": email, "password": password }))
-            .timeout(Duration::from_millis(
-                AUTH_PROVIDER_TIMEOUT_SECONDS as u64 * MS_PER_SECOND as u64,
-            ))
+            .timeout(Duration::from_secs(AUTH_PROVIDER_TIMEOUT_SECONDS as u64))
             .send()
             .await
         {
@@ -1557,7 +1549,10 @@ impl Auth {
 
 #[cfg(test)]
 mod tests {
-    use super::iso_of;
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    use super::{Flights, LeaveFlight, iso_of};
 
     /// The cached confirmation's `email_confirmed_at` (`authoritative_user`): RFC 3339 of its epoch
     /// ms, and the ms themselves for an instant no date holds, so it is never empty, which is all
@@ -1567,5 +1562,71 @@ mod tests {
         assert_eq!(iso_of(1_700_000_000_123), "2023-11-14T22:13:20.123Z");
         assert_eq!(iso_of(0), "1970-01-01T00:00:00Z");
         assert_eq!(iso_of(i64::MAX), i64::MAX.to_string());
+    }
+
+    fn on_board(flights: &Flights<&'static str, u32>) -> usize {
+        flights.inflight.lock().expect("the board").len()
+    }
+
+    /// R3209000: a flight leaves the board as soon as its call lands, though another holder still has
+    /// its cell, so the next call for the key is a new one and never the landed answer.
+    #[tokio::test]
+    async fn r3209000_a_flight_that_landed_leaves_the_board_at_once() {
+        let flights: Flights<&'static str, u32> = Flights::new();
+        let (answer, landed) = tokio::sync::oneshot::channel::<u32>();
+        let held = std::sync::Mutex::new(None);
+        let run = flights.run("k", || async move { landed.await.unwrap_or(0) });
+        let control = async {
+            // `run` has put its flight on the board and is out on its call.
+            tokio::task::yield_now().await;
+            *held.lock().expect("held") = flights.inflight.lock().expect("the board").get("k").cloned();
+            answer.send(7).expect("the call waits for its answer");
+        };
+        let (got, ()) = tokio::join!(run, control);
+        assert_eq!(got, 7);
+        assert!(
+            held.lock().expect("held").is_some(),
+            "a second holder of the cell"
+        );
+        assert_eq!(on_board(&flights), 0);
+    }
+
+    /// R3209000: a caller dropped before its call lands keeps the flight on the board while another
+    /// caller still waits on it, so a third caller joins it rather than making a second call.
+    #[tokio::test]
+    async fn r3209000_a_caller_dropped_mid_call_leaves_the_flight_to_the_one_still_waiting() {
+        let flights: Flights<&'static str, u32> = Flights::new();
+        let (_never, unanswered) = tokio::sync::oneshot::channel::<u32>();
+        let mut first = Box::pin(flights.run("k", || async move { unanswered.await.unwrap_or(0) }));
+        let mut second = Box::pin(flights.run("k", || async { 9 }));
+        // One poll each: the first puts the flight on the board and starts its call; the second joins.
+        assert!(tokio::time::timeout(Duration::ZERO, &mut first).await.is_err());
+        assert!(tokio::time::timeout(Duration::ZERO, &mut second).await.is_err());
+        drop(first);
+        assert_eq!(on_board(&flights), 1, "the second still waits on the flight");
+        assert_eq!(second.await, 9, "the waiting caller takes the call over");
+        assert_eq!(on_board(&flights), 0);
+    }
+
+    /// R3209000: a caller leaving a flight that already left the board takes nothing off it, even a
+    /// newer flight for the same key.
+    #[test]
+    fn r3209000_leaving_an_old_flight_leaves_a_newer_one_for_the_key_on_the_board() {
+        let flights: Flights<&'static str, u32> = Flights::new();
+        let old = Arc::new(tokio::sync::OnceCell::new());
+        old.set(1).expect("the old flight landed");
+        let newer = Arc::new(tokio::sync::OnceCell::new());
+        flights
+            .inflight
+            .lock()
+            .expect("the board")
+            .insert("k", Arc::clone(&newer));
+        drop(LeaveFlight {
+            flights: &flights,
+            key: "k",
+            cell: &old,
+        });
+        let board = flights.inflight.lock().expect("the board");
+        assert!(board.get("k").is_some_and(|held| Arc::ptr_eq(held, &newer)));
     }
 }

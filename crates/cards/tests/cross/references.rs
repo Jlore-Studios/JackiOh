@@ -404,6 +404,8 @@ mod r279_the_reference_map_spec_5_7_10_10 {
                 "stinkyscapeplus-082",
                 "stinkyscapeplus-089",
                 "stinkyscapeplus-142",
+                // Issue #3941: S+ #156 Horizon Breaker's "random Terminus Card" reads "random Terminus card".
+                "stinkyscapeplus-156",
             ])
         );
         assert_eq!(

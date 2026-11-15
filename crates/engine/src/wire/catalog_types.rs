@@ -1025,6 +1025,22 @@ string_union! {
 }
 
 string_union! {
+    /// `Param.read`, when a declared number is read (R1748000, R3888001): only by a line that runs
+    /// once — the card's Cry, its Combo, its Cast on draw, its "When awoken:" or its Evolve — or only
+    /// while the card is in a hand or a deck, or in a graveyard. R3888000's table says where a Buff or
+    /// a Nerf of such a number is live.
+    pub enum ParamRead {
+        Cry = "cry",
+        Combo = "combo",
+        CastOnDraw = "castOnDraw",
+        Awaken = "awaken",
+        Evolve = "evolve",
+        HandOrDeck = "handOrDeck",
+        Graveyard = "graveyard",
+    }
+}
+
+string_union! {
     /// `"base" | "radiant"`: which face of a card (`fillParams`'s `face`, and every reader that
     /// indexes `def[face]`).
     pub enum FaceKind {
@@ -1076,11 +1092,18 @@ pub struct Param {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub power: Option<String>,
-    /// R1748000: only the card's Cry reads it, so while the card is on the field no Nerf or Buff draws
-    /// it (KY's Constant still may): on every face, or on the one face it names (R2261001).
+    /// R3888001 (after R1748000's `cry`): when the number is read, where only one kind of line reads
+    /// it, so a Nerf or a Buff draws it only where R3888000's table calls that live (KY's Constant
+    /// still may). Absent, the card's lasting text reads it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
-    pub cry: Option<ParamCry>,
+    pub read: Option<ParamRead>,
+    /// R3888001 (after R2261001): the one face `read` holds on, for a number that face's one kind of
+    /// line reads while the other face's lasting text reads it too; on the other face it is read as
+    /// lasting text. Absent, every face that writes it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub read_on: Option<FaceKind>,
 }
 
 impl Param {
@@ -1092,33 +1115,15 @@ impl Param {
         }
     }
 
-    /// R1748000, R2261001: whether only the card's Cry reads it on the face `radiant` says the card
-    /// shows.
-    pub fn cry_only_on(&self, radiant: bool) -> bool {
-        match self.cry {
-            None => false,
-            Some(ParamCry::Every(every)) => every,
-            Some(ParamCry::Face(FaceKind::Base)) => !radiant,
-            Some(ParamCry::Face(FaceKind::Radiant)) => radiant,
+    /// R3888001: when the number is read on the face `radiant` says the card shows — `read`, unless
+    /// `read_on` names the other face, where its lasting text reads it (`None`).
+    pub fn read_on_face(&self, radiant: bool) -> Option<ParamRead> {
+        match self.read_on {
+            Some(FaceKind::Base) if radiant => None,
+            Some(FaceKind::Radiant) if !radiant => None,
+            _ => self.read,
         }
     }
-}
-
-/// `Param.cry`: `true` when only the card's Cry reads the number on every face that writes it
-/// (R1748000), or the one face whose Cry alone reads it while the other face's lasting text reads it
-/// too (R2261001: Meditative #101 Gachaholic's base Cry and Radiant Activate).
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "ts",
-    derive(ts_rs::TS),
-    ts(export, export_to = "../../../apps/web/src/wire/generated/")
-)]
-#[serde(untagged)]
-pub enum ParamCry {
-    /// Every face; only ever `true`.
-    Every(bool),
-    /// That face only.
-    Face(FaceKind),
 }
 
 /// A tunable number in a face's text (B3.4 rule 5, R482): `{key}` is the number alone ("Deal {damage}
@@ -1926,7 +1931,8 @@ mod tests {
             max: None,
             tuned_on: None,
             power: None,
-            cry: None,
+            read: None,
+            read_on: None,
         }
     }
 

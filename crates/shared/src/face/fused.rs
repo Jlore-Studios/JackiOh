@@ -114,6 +114,65 @@ pub fn holds_dormant_starship(def: &CardDef) -> bool {
         .is_some_and(|parts| parts.len() > 1 && parts.iter().any(|part| part == DORMANT_STARSHIP_ID))
 }
 
+/// R3941002: whether `id` names a fused definition (`t-<n>:…`, R179).
+pub fn is_fused(id: &str) -> bool {
+    fused_head_len(id).is_some()
+}
+
+/// R3941002: an item of a keyword line: a keyword kind's label, numbered or not ("Armor 3", "Spell Damage +1",
+/// "Armor X"), or a Tribute or Echo count (R366).
+fn is_keyword_item(item: &str) -> bool {
+    let counted = item.rsplit_once(' ').filter(|(_, n)| {
+        let digits = n.strip_prefix('+').unwrap_or(*n);
+        *n == "X" || (!digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit()))
+    });
+    let name = counted.map_or(item, |(name, _)| name);
+    jackioh_engine::KEYWORD_KINDS
+        .iter()
+        .any(|kind| kind.as_str() == item || kind.as_str() == name)
+        || (counted.is_some() && (name == "Tribute" || name == "Echo"))
+}
+
+/// R3941002: whether `line` is a keyword line, every item of it a keyword kind's label or a count.
+fn is_keyword_line(line: &str) -> bool {
+    !line.is_empty() && line.split(", ").all(is_keyword_item)
+}
+
+/// R3941002 (issue #3941): a fused text with its ingredients' keyword lines as one, at its head. Each ingredient's
+/// text opens with its own keyword line (R366) and a fusion joins the texts (R77, R102), so an Equipped Unit
+/// printed `Equip` and `Starship Piece` again on a line of their own, and a keyword its host has twice. The items
+/// keep their order, one printed twice printing once, and every other line keeps its place after them. A text
+/// with fewer than two keyword lines is unchanged. The fusion's keywords are their union already (R77): only the
+/// words change.
+pub fn merged_keyword_lines(text: &str) -> String {
+    let lines: Vec<&str> = text.split('\n').collect();
+    if lines.iter().filter(|line| is_keyword_line(line)).count() < 2 {
+        return text.to_string();
+    }
+    let mut items: Vec<&str> = Vec::new();
+    for line in lines.iter().filter(|line| is_keyword_line(line)) {
+        for item in line.split(", ") {
+            if !items.contains(&item) {
+                items.push(item);
+            }
+        }
+    }
+    let merged = items.join(", ");
+    std::iter::once(merged.as_str())
+        .chain(lines.iter().copied().filter(|line| !is_keyword_line(line)))
+        .collect::<Vec<&str>>()
+        .join("\n")
+}
+
+/// R3941002: `def` with its faces' keyword lines merged, when it is a fused definition; any other as it is.
+pub fn with_merged_keyword_lines(mut def: CardDef) -> CardDef {
+    if is_fused(&def.id) {
+        def.base.text = merged_keyword_lines(&def.base.text);
+        def.radiant.text = merged_keyword_lines(&def.radiant.text);
+    }
+    def
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -134,6 +193,32 @@ mod tests {
 
     fn strings(ids: &[&str]) -> Option<Vec<String>> {
         Some(ids.iter().map(ToString::to_string).collect())
+    }
+
+    /// R3941002: a fusion's keyword lines print as one at its head, each item once, its other lines in order.
+    #[test]
+    fn r3941002_a_fused_text_prints_its_ingredients_keyword_lines_as_one() {
+        assert_eq!(
+            merged_keyword_lines(
+                "Rush, Pierce\nCry: Deal 2 damage.\nStarship Piece, Equip, Pierce\nDamage also Burns 2."
+            ),
+            "Rush, Pierce, Starship Piece, Equip\nCry: Deal 2 damage.\nDamage also Burns 2."
+        );
+        assert_eq!(
+            merged_keyword_lines("Tribute 1, Armor 3\nTaunt, Spell Damage +1, Armor X, Can't Defend"),
+            "Tribute 1, Armor 3, Taunt, Spell Damage +1, Armor X, Can't Defend"
+        );
+        // One keyword line or none: unchanged, and a sentence is never a keyword line.
+        assert_eq!(
+            merged_keyword_lines("Rush\nCry: Draw 1 card."),
+            "Rush\nCry: Draw 1 card."
+        );
+        assert_eq!(
+            merged_keyword_lines("Taunt\nDeal 2 damage.\nTaunt, Rush loses."),
+            "Taunt\nDeal 2 damage.\nTaunt, Rush loses."
+        );
+        assert!(is_fused("t-1:core-001+core-002"));
+        assert!(!is_fused("core-001"));
     }
 
     #[test]

@@ -164,10 +164,23 @@
   overflow-wrap: anywhere;
 }
 
+/* R3954000: Leave, Ready and Start stay in view while the seats scroll behind them. `--shell-bottom`
+   (menu-shell.css) is the phone's tab bar plus the bottom inset, `0px` outside the shell. */
 .lobby__actions {
+  position: sticky;
+  bottom: max(var(--shell-bottom, 0px), env(safe-area-inset-bottom, 0px));
+  z-index: var(--z-content);
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-6);
+  padding: var(--space-5) 0;
+  border-top: 1px solid var(--tavern-brass);
+  background: var(--bg);
+}
+
+.lobby__ready-slot {
+  display: contents;
 }
 
 .lobby-screen button,
@@ -267,6 +280,10 @@
 @media (max-width: 600px) {
   .lobby-screen {
     padding: var(--space-6);
+  }
+
+  .lobby__actions {
+    gap: var(--space-4);
   }
 
   .lobby__team {

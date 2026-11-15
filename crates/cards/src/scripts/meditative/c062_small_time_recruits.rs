@@ -126,7 +126,7 @@ mod tests {
             "p2": { "hand": [FILLER] },
         }));
         s.play(SMALL, json!({}));
-        for id in drawn_ids(&s) {
+        for id in nonempty(drawn_ids(&s), "the Units the Spell drew") {
             assert_ne!(s.card(&id).def_id, "classicplus-069");
         }
     }
@@ -139,7 +139,7 @@ mod tests {
         }));
         s.play(SMALL, json!({}));
         let text = serde_json::to_string(&s.view(PlayerId::P2)).unwrap();
-        for id in drawn_ids(&s) {
+        for id in nonempty(drawn_ids(&s), "the Units the Spell drew") {
             assert!(!text.contains(&id));
         }
     }
@@ -162,7 +162,7 @@ mod tests {
             "p2": { "hand": [FILLER] },
         }));
         s.play(SMALL, json!({}));
-        for id in drawn_ids(&s) {
+        for id in nonempty(drawn_ids(&s), "the Units the Spell drew") {
             assert!(s.card(&id).radiant);
         }
     }

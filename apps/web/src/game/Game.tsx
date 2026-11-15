@@ -44,7 +44,7 @@ import DragLayer from "./drag/DragLayer.tsx";
 import OpponentAim from "./aim/OpponentAim.tsx";
 import { useAimEmitter } from "./aim/useAimEmitter.ts";
 import type { DragPlan } from "./drag/model.ts";
-import { IDLE, answerPlaguePlacement, highlightFor, onClickTarget, onControl, type Interaction } from "./actions.ts";
+import { IDLE, answerPlaguePlacement, boardKeyOf, highlightFor, onClickTarget, onControl, type Interaction } from "./actions.ts";
 import { attackOutcomes, hoveredAttack, withOutcomes, type HoveredAttack } from "./attackOutcome.ts";
 import {
   HIDDEN_ID,
@@ -61,7 +61,7 @@ import {
   type AnimationQueue,
   type SetPieceClaimer,
 } from "./animations.ts";
-import { NO_HIGHLIGHT, sideView, testid, type BoardControl, type AnimatingMap, type ClickTarget, type Highlight, type HeroAside } from "./contract.ts";
+import { NO_HIGHLIGHT, sideView, testid, type BoardControl, type AnimatingMap, type ClickTarget, type Highlight, type HeroAside, type SeatPortraits } from "./contract.ts";
 import { CatalogContext } from "./catalog.ts";
 import { cardMotionLevel } from "./cardMotion.ts";
 import { aimDeal, clearDeal, planOpening, type OpeningPlan } from "./opening.ts";
@@ -126,9 +126,19 @@ function sameHoveredAttack(a: HoveredAttack | undefined, b: HoveredAttack | unde
   return a.attacker === b.attacker && a.target === b.target && a.strikesBack === b.strikesBack;
 }
 
-/** The turn banner, which `Board` does not render: one `turn-banner` (M5-T4, `e2e/support/testids.ts` BANNER). */
-function isTurnEvent(event: GameEvent): event is Extract<GameEvent, { type: "turnStarted" | "turnAutoEnded" }> {
-  return event.type === "turnStarted" || event.type === "turnAutoEnded";
+/**
+ * The turn banner, which `Board` does not render: one `turn-banner` (M5-T4, `e2e/support/testids.ts` BANNER). R3910000: the
+ * events it speaks for are the turn's start, its end by no moves left, its being cut short and the AI's taking it.
+ */
+function isTurnEvent(
+  event: GameEvent,
+): event is Extract<GameEvent, { type: "turnStarted" | "turnAutoEnded" | "turnCutShort" | "autopilotEngaged" }> {
+  return (
+    event.type === "turnStarted" ||
+    event.type === "turnAutoEnded" ||
+    event.type === "turnCutShort" ||
+    event.type === "autopilotEngaged"
+  );
 }
 
 function bannerText(
@@ -139,6 +149,9 @@ function bannerText(
 ): string | null {
   if (view.result !== null) return t("Game over");
   if (lastType === "turnAutoEnded") return t("No moves left. Turn ended.");
+  // R3910000: the words the effects layer paints (fx/constants.ts), said by the board so they reach a player with the effects Off.
+  if (lastType === "turnCutShort") return t("Turn cut short");
+  if (lastType === "autopilotEngaged") return t("The AI takes the turn");
   // #37: while a `turnStarted` entry plays, the board is still the view from before the turn began,
   // so its banner names the turn that is starting. R845: an extra turn's banner says so.
   if (startedFor !== undefined) {
@@ -179,6 +192,8 @@ export type GameProps = {
   turnClock?: ReactNode;
   /** #3727: End turn's words, already translated, where ending the turn sends it on (a daily game's); absent, "End turn". */
   endTurnLabel?: string;
+  /** R3727003: false on a daily game's board: its question sequence shows no 60-second countdown; absent, shown (R1563006). */
+  sequenceClock?: boolean;
   /** #3727: why the game ended in the route's words, already translated, over the engine reason's (a daily game's "Lost on time"). */
   resultReason?: string;
   /** Route connection status, rendered on the board rail rather than above it. */
@@ -196,7 +211,7 @@ export type GameProps = {
   heroAside?: HeroAside;
   /** A route warning mounted in the board rail. */
   boardNotice?: ReactNode;
-  /** The route's emote session (R643–R644). Absent, the heroes draw default portraits and open no menus. */
+  /** The route's emote session (R643–R644). Absent, the heroes draw `portraits` or the default and open no menus. */
   emotes?: GameEmotes;
   /** R2990004: the watchers' emotes, a networked route's `useSideline`. Absent, no sideline strip. */
   sideline?: GameSideline;
@@ -208,6 +223,8 @@ export type GameProps = {
   deckCosmetics?: DeckCosmetics | null;
   /** R1834004: both seats' frozen loadouts (R1834002): a seat not wearing the device's picks wears its own. */
   loadouts?: SeatLoadouts | null;
+  /** R3976000: each seat's portrait on a board with no emote session (a replay's), drawn read-only; null or absent, the default. */
+  portraits?: SeatPortraits | null;
   /** R738: `emit` sends this seat's aim as it changes; `opponent` is the opponent's as last relayed. */
   aim?: GameAim;
   /** R2739001: `emit` sends the option of this seat's card picker under its pointer; `opponent` is theirs as last relayed. */
@@ -296,6 +313,7 @@ export default function Game({
   autoEndTurn: pinnedAutoEndTurn,
   turnClock,
   endTurnLabel,
+  sequenceClock = true,
   resultReason,
   matchStatus,
   boardRail,
@@ -308,6 +326,7 @@ export default function Game({
   wearCosmetics = false,
   deckCosmetics = null,
   loadouts = null,
+  portraits = null,
   aim,
   choiceHover,
   replay = false,
@@ -804,7 +823,7 @@ export default function Game({
   // Keyed on the remembered shown key, never `shown` vs `view`: while an animation holds the
   // board back, `shown` is old and `view` is new, and comparing them would drop the selection
   // mid-animation on every animated turn change.
-  const shownKey = `${String(shown.turn)}:${shown.active}:${shown.viewer}`;
+  const shownKey = boardKeyOf(shown);
   if (selectionKey !== shownKey) {
     setSelectionKey(shownKey);
     if (interaction.stage !== "idle") setInteraction(IDLE);
@@ -908,7 +927,10 @@ export default function Game({
   // The newest turn event the burst has reached: the banner must not fall back to the held-back
   // view's turn before the board catches up (#37).
   const burstTurn = burst.flatMap((entry) => entry.events).findLast(isTurnEvent);
-  const lastTurnEvent = burstTurn ?? [...shown.events].reverse().find(isTurnEvent);
+  // The standing view's window spans several actions: an autopilotEngaged in it may be long past (an aura hands the turn
+  // back, R1844000), so only the burst's own entries say the AI plays now (R3910000).
+  const standingTurn = [...shown.events].reverse().find((event) => isTurnEvent(event) && event.type !== "autopilotEngaged");
+  const lastTurnEvent = burstTurn ?? standingTurn;
   const banner = bannerText(
     shown,
     lastTurnEvent?.type,
@@ -1031,6 +1053,7 @@ export default function Game({
         onClick={handleClick}
         onControl={handleControl}
         emotes={heroEmotes}
+        portraits={portraits}
       />
       {/* R502: the effects read the newest view for a number no event carries, and the showcase holds a
           cast on draw up as the runner reaches it. */}
@@ -1061,6 +1084,7 @@ export default function Game({
           lesson={lesson}
           // R2211000: a replay's prompt is drawn as offered and sends nothing.
           readOnly={replay}
+          sequenceClock={sequenceClock}
           // R2739001: hovers go both ways until the game ends, as aims do.
           choiceHover={shown.result === null ? choiceHover : undefined}
           // Cancel backs out of a play still being built (R81). An engine prompt has paused the game

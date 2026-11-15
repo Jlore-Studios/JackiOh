@@ -25,6 +25,8 @@ export const fightTestid = {
   continue: "dungeon-fight-continue",
   /** B25: the run's refusal of that `FightOver`; role="alert". */
   actRefusal: "dungeon-fight-act-refusal",
+  /** R3932000: out to the Play menu: mid-fight it opens `leaveDialog`; once the fight has its result it leaves at once. */
+  menu: "dungeon-fight-menu",
   /** R2972000: the question asked before a fight in progress is left. */
   leaveDialog: "dungeon-fight-leave",
   /** R2972000: stay in the fight. */

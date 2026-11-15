@@ -11,7 +11,7 @@ import type { ActionBody, CardView, PlayerView } from "@jackioh/shared";
 
 import { getFxSettings, normalizeSpeed } from "../../fx/settings.ts";
 import { readSettings } from "../../settings/index.ts";
-import { IDLE, isBuilding, type Interaction } from "../actions.ts";
+import { IDLE, boardKeyOf, isBuilding, type Interaction } from "../actions.ts";
 import { currentCardMotion } from "../cardMotion.ts";
 import { MatchCardsProvider, useCardInfo, useCopiedDef } from "../catalog.ts";
 import { byTestid, testid, type ClickTarget } from "../contract.ts";
@@ -56,6 +56,8 @@ type Flight = {
   reticle: Box | null;
   /** #3347: how far the ghost leans, in degrees: by how fast the pointer moves, flat once it rests. */
   tilt: number;
+  /** #2924: `boardKeyOf` the board it was lifted on; `Game` drops the build once the board moves on. */
+  liftedOn: string;
 };
 
 /** `released` is where the dragged card was when the pointer let go: the stand-in's flight starts there (#3347). */
@@ -256,6 +258,11 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
       setDrawn(null);
     }
 
+    /** #2924: the board shows another turn, seat or viewer than the one the flight was lifted on. */
+    function movedOn(ending: Flight): boolean {
+      return boardKeyOf(latest.current.view) !== ending.liftedOn;
+    }
+
     /**
      * Back to idle with nothing sent, or (R658) to the build a drag lifted again from its picks. A
      * press that never became a drag is simply forgotten.
@@ -263,6 +270,11 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
     function cancel(): void {
       if (flight === null) {
         press = null;
+        return;
+      }
+      if (movedOn(flight)) {
+        // R658, #2924: as a release would, it restores no build of a board Game has moved on from.
+        stopDragging(false);
         return;
       }
       const missed = flight.plan.missed ?? IDLE;
@@ -368,6 +380,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
         spot,
         reticle: reticleFor(spot),
         tilt: 0,
+        liftedOn: boardKeyOf(view),
       };
       tracker = createTiltTracker(() => performance.now());
       tracker.move(pointer.x);
@@ -378,6 +391,12 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
     function onPointerUp(event: PointerEvent): void {
       if (flight !== null) {
         if (event.pointerId !== flight.pointerId) return;
+        if (movedOn(flight)) {
+          // R658, #2924: the board moved on and Game dropped the build, so this release sends and
+          // restores nothing, as a click on the board it shows now sends nothing.
+          stopDragging(false);
+          return;
+        }
         const { view, legal, onInteraction, onAction, onBlocked } = latest.current;
         const spot = spotAt(flight.plan, event.clientX, event.clientY);
         const result = resolveDrop(view, legal, flight.plan, spot);

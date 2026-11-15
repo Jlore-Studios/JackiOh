@@ -33,6 +33,7 @@ import { isAnomalyCode } from "../cards/anomalies.ts";
 import { themeFor } from "../cards/art/themes.ts";
 import { seatOutcome } from "../game/outcome.ts";
 import { armorTookHalf, damageTier, playTier, UNIT_SLAM, type PlayTier, type PlayType } from "../game/damageFeel.ts";
+import { defIdOfInstance } from "../game/contract.ts";
 import { slamStatsOf, slamTier } from "../game/unitSlam.ts";
 import {
   BLEAT_DELAY_MS,
@@ -69,32 +70,6 @@ import type {
 import { entryFor, hookFor } from "./voiceData.ts";
 import { battleshipCues } from "./battleshipCues.ts";
 import { signatureCues } from "./signatureCues.ts";
-
-/** R1088: the defId the view reads on `instanceId`, or undefined when it shows the card nowhere. */
-function defIdOfInstance(view: PlayerView, instanceId: string): string | undefined {
-  for (const side of ["you", "opponent"] as const) {
-    const sv = side === "you" ? view.you : view.opponent;
-    for (const unit of sv.units) {
-      if (unit !== null && unit.instanceId === instanceId) return unit.defId;
-    }
-    for (const unit of sv.carried ?? []) {
-      if (unit !== null && unit.instanceId === instanceId) return unit.defId;
-    }
-    for (const slot of sv.backrow) {
-      if (slot !== null && !slot.faceDown && slot.instanceId === instanceId) return slot.defId;
-    }
-    for (const card of sv.resolving) {
-      if (card.instanceId === instanceId) return card.defId;
-    }
-  }
-  const hand = view.you.hand;
-  if (Array.isArray(hand)) {
-    for (const card of hand) {
-      if (card.instanceId === instanceId) return card.defId;
-    }
-  }
-  return undefined;
-}
 
 /** The public catalog facts a cue may color itself with (§5.1): never looked up for "hidden". */
 export type CueCard = {

@@ -54,6 +54,8 @@ ROOT=$(pwd)
 # are an estimate until a weekly run times them: about four minutes.
 SIZE_ENGINE=40
 SIZE_CARDS=150
+# cards-lib's mutants one at a time (JOBS_CARDS_LIB, below), at about 3 minutes each.
+SIZE_CARDS_LIB=80
 SIZE_AI=120
 SIZE_RUN=1000
 SIZE_SHARED=250
@@ -101,6 +103,32 @@ cap_tests() {
   fi
 }
 cap_tests "$TEST_MEMORY"
+# cards-lib holds crates/cards/src/code_lines.rs, which crates/cards/build.rs #[path]-includes, so each
+# of that file's mutants also runs as the build script, where cargo's runner (and so TEST_MEMORY) never
+# reaches: one that loops while it allocates took the whole runner three times (cards-lib's shard 0,
+# 2026-11-13). So cards-lib runs under prlimit as a whole, every process it starts (cargo, rustc, the
+# linker, the build script, and the test binaries inside their own lower cap) at BUILD_MEMORY bytes of
+# data, and one mutant at a time (JOBS_CARDS_LIB), so a runaway build script at the cap has the runner
+# to itself and the allocation past the cap fails the build: the mutant counts as unviable. The cap
+# sits well above rustc's own need: rustc on the cards crate's tests reached 8 GiB of data for one
+# code_lines.rs mutant (it aborted under an 8 GiB cap, 2026-11-15, though sampling each fifth of a
+# second saw 7.1 GiB), and a cap rustc meets turns a mutant unviable that is not. No other area runs a
+# mutant at build time, so none takes this cap. It must be no lower than a test binary's cap, which
+# prlimit can lower but never raise.
+BUILD_MEMORY=${MUTANTS_BUILD_MEMORY:-12884901888}
+JOBS_CARDS_LIB=${MUTANTS_JOBS:-1}
+# A Rust area's build is never incremental, as CI's is not (Swatinem/rust-cache, which
+# .github/actions/setup runs, sets CARGO_INCREMENTAL=0): an incremental one from cargo-mutants' fresh
+# copy of the tree takes more memory and is no faster there.
+export CARGO_INCREMENTAL=0
+# `$@`, under prlimit with AREA_MEMORY bytes of data for every process it starts when the area sets it.
+capped() {
+  if [ -n "$host" ] && [ -n "$AREA_MEMORY" ]; then
+    prlimit --data="$AREA_MEMORY" -- "$@"
+  else
+    "$@"
+  fi
+}
 # Survivors listed under a summary's row, so a summary stays readable; the report has them all.
 SURVIVORS_SHOWN=200
 
@@ -140,7 +168,7 @@ cards_tree() {
 # FILTER (cargo-mutants' arguments that pick the area's mutants, its tree among them) and SIZE for a
 # Rust area.
 rust_area() {
-  AREA_JOBS=$JOBS
+  AREA_JOBS=$JOBS AREA_MEMORY=
   cap_tests "$TEST_MEMORY"
   case "$1" in
     engine) FILTER="-p jackioh-engine" SIZE=$SIZE_ENGINE ;;
@@ -153,7 +181,10 @@ rust_area() {
       ;;
     tools) FILTER="-p jackioh-tools" SIZE=$SIZE_TOOLS ;;
     wasm) FILTER="-p jackioh-wasm -p jackioh-wasm-core -p jackioh-wasm-c" SIZE=$SIZE_WASM ;;
-    cards-lib) FILTER="-p jackioh-cards -e crates/cards/src/scripts/**" SIZE=$SIZE_CARDS ;;
+    cards-lib)
+      FILTER="-p jackioh-cards -e crates/cards/src/scripts/**" SIZE=$SIZE_CARDS_LIB
+      AREA_JOBS=$JOBS_CARDS_LIB AREA_MEMORY=$BUILD_MEMORY
+      ;;
     cards-?*)
       [ -d "crates/cards/src/scripts/${1#cards-}" ] || return 1
       cards_tree
@@ -223,7 +254,7 @@ run_rust() {
   printf 'shard=%s\nmutants=%s\nexcluded=%s\n' "$label" "$mine" "$((all - total))" >"$out/area.env"
   echo "mutants: $area shard $label, $mine of the area's $total mutants ($((all - total)) left out)"
   code=0
-  cargo mutants $FILTER $shard --jobs "$AREA_JOBS" --output "$out" "$@" || code=$?
+  capped cargo mutants $FILTER $shard --jobs "$AREA_JOBS" --output "$out" "$@" || code=$?
   case $code in
     0 | 2 | 3) return 0 ;;
     *) return "$code" ;;
@@ -320,11 +351,16 @@ in_diff() {
     JOBS=$JOBS_SERVER
     cap_tests "$TEST_MEMORY_SERVER"
   fi
+  # A changed line of code_lines.rs runs as the cards' build script too, so cards-lib's cap (above).
+  AREA_MEMORY=
+  if grep -q '^+++ b/crates/cards/src/code_lines.rs' "$out/diff.patch"; then
+    JOBS=$JOBS_CARDS_LIB AREA_MEMORY=$BUILD_MEMORY
+  fi
   if grep -q '^+++ b/crates/cards/src/scripts/' "$out/diff.patch"; then
     cards_tree
     dir="--dir $TREE"
   fi
-  cargo mutants $dir --in-diff "$out/diff.patch" --jobs "$JOBS" --output "$out" "$@"
+  capped cargo mutants $dir --in-diff "$out/diff.patch" --jobs "$JOBS" --output "$out" "$@"
 }
 
 # Every area, one per line, as a run's summary table names it (`cards` reports as its week's set).

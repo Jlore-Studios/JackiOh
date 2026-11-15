@@ -299,7 +299,7 @@ mod tests {
 
                 assert_eq!(nerfed(&s), vec![tough.id]);
                 assert!(s.unit(P2, 2).is_none());
-                let _ = weak;
+                s.expect_in_zone(&weak, "graveyard");
             }
         }
 

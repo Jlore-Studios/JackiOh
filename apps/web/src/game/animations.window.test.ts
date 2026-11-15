@@ -16,7 +16,7 @@ import { setShips, type ActionBody, type CardDef, type GameEvent, type GameEvent
 
 import { newEventsSince } from "./animations.ts";
 import { byIndex, printedCost } from "./decks.ts";
-import { devDeck, handDefId, realGame, realPort, type RealGame } from "../audio/test/realGame.ts";
+import { devDeck, realGame, realPort, type RealGame } from "../audio/test/realGame.ts";
 
 const GAMES = 10;
 const MAX_ACTIONS = 140;
@@ -175,7 +175,11 @@ describe("R318 the overflow events against the engine's own views", () => {
         const who = game.actor();
         if (who === null || game.view("p1").result !== null) break;
         const legal = game.legal(who).filter((a: ActionBody) => a.type !== "concede" && a.type !== "offerDraw");
-        const wanted = legal.find((a) => a.type === "play" && setup.prefer.includes(handDefId(game, who, a.instanceId) ?? ""));
+        // The hand read once a step: under C #28 Second Wind's Aura every graveyard card's Flashback is a play,
+        // and a view for each ran the sweep past its budget.
+        const hand = game.view(who).you.hand;
+        const inHand = new Map((Array.isArray(hand) ? hand : []).map((card) => [card.instanceId, card.defId]));
+        const wanted = legal.find((a) => a.type === "play" && setup.prefer.includes(inHand.get(a.instanceId) ?? ""));
         const acts = legal.filter((a) => a.type !== "endTurn");
         const pool = acts.length > 0 && rand() < ACT_BIAS ? acts : legal;
         const body = wanted ?? pool[Math.floor(rand() * pool.length)];

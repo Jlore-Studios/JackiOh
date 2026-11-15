@@ -12,11 +12,50 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { GrapeTier, PeakBadge, VisibleRank } from "../net/api.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { setReducedMotion } from "../test/setup.ts";
-import RankCrest, { CREST_SIZE_PX, divisionEmbellishment } from "./RankCrest.tsx";
+import RankCrest, { CREST_SIZE_PX, TIER_ART, divisionEmbellishment } from "./RankCrest.tsx";
 import { badgeWords, rankWords } from "./rank.ts";
 
 const GRAPE_TIERS: readonly GrapeTier[] = ["rotten", "normal", "large", "golden", "mythic"];
 const DIVISIONS = [3, 2, 1] as const;
+
+/** WCAG's floor for a graphic that carries meaning: the crest's outline against the ground it is drawn on (R3957000). */
+const MIN_CREST_CONTRAST = 3;
+
+type Rgb = readonly [number, number, number];
+
+function rgb(hex: string): Rgb {
+  const channel = (at: number): number => Number.parseInt(hex.slice(at, at + 2), 16);
+  return [channel(1), channel(3), channel(5)];
+}
+
+/** `fg` drawn at `alpha` over `bg`. */
+function over(fg: Rgb, bg: Rgb, alpha: number): Rgb {
+  return [0, 1, 2].map((i) => (fg[i] ?? 0) * alpha + (bg[i] ?? 0) * (1 - alpha)) as unknown as Rgb;
+}
+
+function luminance(color: Rgb): number {
+  const [r, g, b] = color.map((value) => {
+    const unit = value / 255;
+    return unit <= 0.03928 ? unit / 12.92 : ((unit + 0.055) / 1.055) ** 2.4;
+  }) as unknown as Rgb;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrast(a: Rgb, b: Rgb): number {
+  const [x, y] = [luminance(a), luminance(b)];
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+}
+
+/** The Play hub's Online card ground: the palette's `--pal-wood-800`. */
+function woodGround(): string {
+  const palette = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "palette.css"), "utf8");
+  const found = /--pal-wood-800:\s*(#[0-9a-f]{6})/i.exec(palette);
+  if (found?.[1] === undefined) throw new Error("palette.css no longer names --pal-wood-800");
+  return found[1];
+}
+
+/** The lightest stop of the account panel's gradient, `.panel--auth` in `auth/tavern.css`: rgb(52 30 16). */
+const ACCOUNT_PANEL_GROUND = "#341e10";
 
 const RAISIN: VisibleRank = { tier: "raisin", placementsPlayed: 2, placementGames: 5 };
 const JLORIOUS: VisibleRank = { tier: "jlorious", position: 7 };
@@ -70,6 +109,20 @@ describe("#1650 the rank crest", () => {
     }
     expect(RANKS).toHaveLength(17);
     expect(drawings.size).toBe(17);
+  });
+
+  it("R3957000 every tier's outline reads at 3:1 on the dark grounds, and the berries of the two darkest tiers on what they sit on", () => {
+    for (const ground of [woodGround(), ACCOUNT_PANEL_GROUND]) {
+      const behind = rgb(ground);
+      for (const [tier, art] of Object.entries(TIER_ART)) {
+        const outline = over(rgb(art.edge), behind, art.opacity);
+        expect(contrast(outline, behind), `${tier}'s outline on ${ground}`).toBeGreaterThanOrEqual(MIN_CREST_CONTRAST);
+        if (tier !== "raisin" && tier !== "rotten") continue;
+        const surface = art.frame === "none" ? behind : over(rgb(art.frame), behind, art.opacity);
+        const berries = over(rgb(art.grape), surface, art.opacity);
+        expect(contrast(berries, surface), `${tier}'s berries on ${ground}`).toBeGreaterThanOrEqual(MIN_CREST_CONTRAST);
+      }
+    }
   });
 
   it("#1650 draws a distinct crest for every season badge", () => {

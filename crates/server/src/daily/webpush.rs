@@ -1,7 +1,8 @@
 //! Web Push for the daily games' "your move" (SPEC §9.13, #3727): one message, encrypted for one
 //! browser's subscription as RFC 8291 says (`aes128gcm`, RFC 8188), signed for its push service as RFC
-//! 8292's VAPID says, and posted. A push service answering 404 or 410 says the subscription is gone,
-//! and the caller deletes it.
+//! 8292's VAPID says, and posted. A push service answering 404 or 410, or 403 (what it answers every
+//! subscription made under another VAPID key pair, as after the keys change, #3844), says the
+//! subscription can no longer be delivered to, and the caller deletes it.
 //!
 //! The keys are the server's VAPID pair, raw base64url as the browser's `applicationServerKey` wants
 //! them: the private key the P-256 scalar (32 bytes), the public key the uncompressed point (65). With
@@ -246,7 +247,8 @@ pub fn vapid_header(keys: &PushKeys, endpoint: &str, now_secs: i64) -> Result<St
 #[derive(Debug, PartialEq, Eq)]
 pub enum PushOutcome {
     Sent,
-    /// 404 or 410: the subscription is gone, and its row goes too (§9.13).
+    /// 404, 410 or 403: the subscription is gone (or, with 403, was made under other VAPID keys), and
+    /// its row goes too (§9.13).
     Gone,
     Failed(String),
 }
@@ -278,7 +280,14 @@ pub async fn send(
         .await;
     match sent {
         Ok(response) if response.status().is_success() => PushOutcome::Sent,
-        Ok(response) if matches!(response.status().as_u16(), 404 | 410) => PushOutcome::Gone,
+        Ok(response)
+            if matches!(
+                response.status(),
+                reqwest::StatusCode::NOT_FOUND | reqwest::StatusCode::GONE | reqwest::StatusCode::FORBIDDEN
+            ) =>
+        {
+            PushOutcome::Gone
+        }
         Ok(response) => PushOutcome::Failed(format!("the push service answered {}", response.status())),
         Err(error) => PushOutcome::Failed(error.to_string()),
     }

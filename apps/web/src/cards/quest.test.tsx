@@ -532,7 +532,7 @@ describe("R2450000 a Quest card's face prints only the stage it stands at", () =
     expect(printed(HEIST, true)).toBe(
       `${HEIST_CRY.radiant}\nStage 1 of 3, Initiation. Quest: Make an Acclaimed Unit Radiant. Reward: Summon a random Radiant Acclaimed Unit.`,
     );
-    const upload = "Stage 1 of 3, Upload Resume. Quest: Activate this to send a card from your hand in as your resume. Reward: Hear back in 2 to 6 turns.";
+    const upload = "Stage 1 of 3, Upload Resume. Quest: Activate this to send a card from your hand in as your resume. Reward: Hear back in 1 to 4 turns.";
     for (const face of FACES) {
       expect(printed(JOB, face.radiant), face.label).toBe(`${JOB_HEAD[face.label]}\n${upload}`);
       // A card in hand is in a game but off the field: its view carries no quest line.
@@ -630,7 +630,7 @@ describe("R2450000 a Quest card's face prints only the stage it stands at", () =
     try {
       await setLocale("zh-CN");
       const death = "亡语：重新召唤这张牌，回到第1阶段。";
-      expect(printed(JOB, false)).toBe(`${death}\n第1/3阶段，上传简历。任务：激活这张牌，将你手牌中的一张牌作为简历投递出去。奖励：2到6个回合后收到回复。`);
+      expect(printed(JOB, false)).toBe(`${death}\n第1/3阶段，上传简历。任务：激活这张牌，将你手牌中的一张牌作为简历投递出去。奖励：1到4个回合后收到回复。`);
       expect(printed(JOB, true, INTERVIEW)).toBe(
         `幸运1\n${death}\n第2/3阶段，面试。任务：Play 3 cards of different costs in one turn（1/3）。奖励：将你的简历置入你的手牌并将其强化10次。其法力值消耗为(0)。`,
       );

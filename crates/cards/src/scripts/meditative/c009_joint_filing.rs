@@ -209,13 +209,12 @@ mod tests {
     }
 
     /// p1 plays Joint Filing from a hand of it and a Stockpile, under a seed.
-    fn played(seed: &str, radiant_face: bool, hand: Value) -> Scenario {
+    fn played(seed: &str, hand: Value) -> Scenario {
         let mut s = scenario(json!({
             "seed": seed,
             "p1": side(json!({ "hand": hand, "mana": 5 })),
             "p2": side(json!({})),
         }));
-        let _ = radiant_face;
         s.play(ID, json!({}));
         s
     }
@@ -231,7 +230,7 @@ mod tests {
         fn r3134001_the_base_cry_adds_one_card_with_a_start_of_turn_or_an_end_of_turn_effect() {
             let mut kinds = (false, false);
             for n in 0..30 {
-                let s = played(&format!("filing-either-{n}"), false, filing_hand(false));
+                let s = played(&format!("filing-either-{n}"), filing_hand(false));
                 let cards = added(&s);
                 assert_eq!(cards.len(), 1, "seed {n}");
                 let (start, end) = hooks_of(&cards[0].def_id);
@@ -245,7 +244,7 @@ mod tests {
         #[test]
         fn r3134001_the_radiant_cry_adds_one_of_each_a_start_of_turn_card_then_an_end_of_turn_card() {
             for n in 0..30 {
-                let s = played(&format!("filing-both-{n}"), true, filing_hand(true));
+                let s = played(&format!("filing-both-{n}"), filing_hand(true));
                 let cards = added(&s);
                 assert_eq!(cards.len(), 2, "seed {n}");
                 assert!(hooks_of(&cards[0].def_id).0, "seed {n}: {} has no Start of turn effect", cards[0].def_id);
@@ -298,7 +297,7 @@ mod tests {
             // The Radiant Cry adds two: with 9 cards left in hand after the play, the second burns.
             let mut hand = vec![json!({ "def": ID, "radiant": true })];
             hand.extend((0..9).map(|_| json!(FILLER)));
-            let s = played("filing-burn", true, json!(hand));
+            let s = played("filing-burn", json!(hand));
             assert_eq!(s.hand(P1).len(), 10);
             let burned = s.last_events().iter().filter(|event| matches!(event, GameEvent::Burned { .. })).count();
             assert_eq!(burned, 1);
@@ -318,7 +317,7 @@ mod tests {
         #[test]
         fn the_cry_is_not_multiplied_by_the_aura() {
             // R821 multiplies Start of turn and End of turn effects, and a Cry is neither.
-            let s = played("filing-once", false, filing_hand(false));
+            let s = played("filing-once", filing_hand(false));
             assert_eq!(added(&s).len(), 1);
         }
     }
@@ -333,7 +332,7 @@ mod tests {
             assert!(kept.base.turn_hook_extra.is_some() && kept.radiant.turn_hook_extra.is_some());
             for radiant_face in [false, true] {
                 crate::under_kept(ID, kept.clone(), || {
-                    let s = played("filing-kept", radiant_face, filing_hand(radiant_face));
+                    let s = played("filing-kept", filing_hand(radiant_face));
                     assert!(added(&s).is_empty());
                 });
             }

@@ -165,8 +165,8 @@ mod tests {
     /// The definition through v0.5.11r: `cards` 6 and `discount` 1 on both faces.
     fn old_definition(def: &mut CardDef) {
         def.params = Some(vec![
-            json_as(json!({ "key": "cards", "base": 6, "radiant": 6, "better": "up", "step": 2, "min": 1, "cry": true })),
-            json_as(json!({ "key": "discount", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1, "cry": true })),
+            json_as(json!({ "key": "cards", "base": 6, "radiant": 6, "better": "up", "step": 2, "min": 1, "read": "cry" })),
+            json_as(json!({ "key": "discount", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1, "read": "cry" })),
         ]);
     }
 

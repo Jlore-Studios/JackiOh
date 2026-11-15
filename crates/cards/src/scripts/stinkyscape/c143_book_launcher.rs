@@ -12,7 +12,9 @@
 //! ally (one of yours, or your hero) a helpful one. R1862006: the harmful Books are those whose target
 //! is the enemy's to suffer, Blood, Flame, Wildfire and Nerf; the helpful ones, Heal, Stats and Buff;
 //! Vital Kill, which sets a hero to 13 and ends its caster's turn, is in neither, nor is a Book with no
-//! target. R1862004: `cast_random_at` casts one of the list, free and counted as played by its
+//! target. R3869003: the lists are read off the Books, the Book tag split by the aim each one's first
+//! target declares (`aim`, harm or help), so a Book printed later joins by what it does; Vital Kill
+//! declares none. R1862004: `cast_random_at` casts one of the list, free and counted as played by its
 //! controller (R70, R452), aimed at the chosen target for its first target where it may take it
 //! (R946), and with `targetEnemies` (R656) a pick the Book makes itself goes to the enemy when it harms
 //! and to your side when it helps. Radiant: the Book is cast Radiant. Through v0.5.9f it had two
@@ -23,18 +25,25 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-143";
 
-/// R1862006: Books of Blood, Flame and Wildfire (C #12, #16, #55) and of Nerf (C+ #72).
+/// R767000, R1862006: v0.5.9f's harmful Books, Blood, Flame and Wildfire (C #12, #16, #55) and Nerf
+/// (C+ #72), which its kept script names.
 const HARMFUL_BOOKS: [&str; 4] = ["classic-012", "classic-016", "classic-055", "classicplus-072"];
-/// R1862006: Books of Heal (C #3), Stats and Buff (C+ #57, #71).
+/// R767000, R1862006: v0.5.9f's helpful Books, Heal (C #3), Stats and Buff (C+ #57, #71).
 const HELPFUL_BOOKS: [&str; 3] = ["classic-003", "classicplus-057", "classicplus-071"];
 
-/// "Cast a random `books` Book on" the chosen target.
-fn cast_at(ctx: &EffectContext<'_>, books: &'static [&'static str], radiant: bool) -> Vec<Effect> {
+/// R3869003: "a random harmful Book" or "a random helpful Book": the Books whose first target declares
+/// that aim (`aim`), so a Book printed later joins by what it does.
+fn books(aim: TargetAim) -> Value {
+    json!({ "tags": ["Book"], "aim": aim })
+}
+
+/// "Cast a random Book of `books`" on the chosen target.
+fn cast_at(ctx: &EffectContext<'_>, books: Value, radiant: bool) -> Vec<Effect> {
     let Some(aim) = ctx.targets.first().map(option_key) else {
         return Vec::new();
     };
     vec![cast_random_at(
-        json_as(json!({ "query": { "defId": books }, "radiant": radiant, "targetEnemies": true })),
+        json_as(json!({ "query": books, "radiant": radiant, "targetEnemies": true })),
         aim,
     )]
 }
@@ -67,12 +76,8 @@ fn launch(radiant: bool) -> ActivationDecl {
         can_activate: None,
         has: None,
         run: hook(move |ctx| {
-            let books: &'static [&'static str] = if chose_an_enemy(ctx) {
-                &HARMFUL_BOOKS
-            } else {
-                &HELPFUL_BOOKS
-            };
-            cast_at(ctx, books, radiant)
+            let aim = if chose_an_enemy(ctx) { TargetAim::Harm } else { TargetAim::Help };
+            cast_at(ctx, books(aim), radiant)
         }),
     }
 }
@@ -108,7 +113,7 @@ fn launch_v0_5_9f(
         modes: vec![],
         can_activate: None,
         has: None,
-        run: hook(move |ctx| cast_at(ctx, books, radiant)),
+        run: hook(move |ctx| cast_at(ctx, json!({ "defId": books }), radiant)),
     }
 }
 
@@ -154,6 +159,36 @@ mod tests {
     use super::*;
     use crate::weapon_board;
     use jackioh_engine::testkit::*;
+
+    /// The ids of the Books whose first target declares `aim`.
+    fn aimed(aim: TargetAim) -> Vec<String> {
+        crate::register_all();
+        crate::query::pool_ids(&json_as(books(aim)))
+    }
+
+    #[test]
+    fn r3869003_the_books_by_aim_are_the_lists_r1862006_named() {
+        assert_eq!(aimed(TargetAim::Harm), HARMFUL_BOOKS.map(str::to_string).to_vec());
+        assert_eq!(aimed(TargetAim::Help), HELPFUL_BOOKS.map(str::to_string).to_vec());
+    }
+
+    #[test]
+    fn r3869003_every_book_with_a_target_declares_its_aim_but_vital_kill() {
+        const VITAL_KILL: &str = "classic-029";
+        crate::register_all();
+        let books = crate::query::pool_ids(&json_as(json!({ "tags": ["Book"] })));
+        for id in &books {
+            let scripts = jackioh_engine::scripts::registered_entry(id).expect("a Book has a script");
+            let Some(first) = scripts.base.targets.first() else {
+                continue;
+            };
+            if id == VITAL_KILL {
+                assert_eq!(first.aim, None, "Vital Kill harms or helps by the hero it names (R1862006)");
+            } else {
+                assert!(first.aim.is_some(), "{id} declares no aim, so Book Launcher casts it at no one");
+            }
+        }
+    }
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;

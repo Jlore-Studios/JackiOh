@@ -4,10 +4,14 @@
 //!   Radiant: "Summon a random Terminus Starship. It can be launched for (0)."
 //!
 //! Engine: one Terminus Starship summoned holding its fixed loadout (`summon_starships`, R3539001),
-//! priced for its launch by hand (R3539000): (3), or (0) on the Radiant face. The two prices are the
+//! priced for its launch by hand (R3539000): (3), or (0) on the Radiant face. Issue #3951 cut the
+//! loadouts to 5 or 6 mana of Starship Pieces; `script_v0_6_4b` summons those of v0.6.4b and before
+//! (R767000). The two prices are the
 //! PRICE numbers `tests/cross/params.rs` r1748003 lists.
 
 use jackioh_engine::prelude::*;
+
+use crate::scripts::stinkyscape_plus::c080_the_last_voyage as voyage;
 
 pub const ID: &str = "stinkyscapeplus-155";
 
@@ -16,11 +20,11 @@ const LAUNCH_PRICE: i32 = 3;
 /// R3539000: the Radiant face's Starship launches for nothing.
 const RADIANT_LAUNCH_PRICE: i32 = 0;
 
-fn vagabond(price: i32) -> Script {
+fn vagabond(price: i32, blueprints: fn() -> Vec<StarshipBlueprint>) -> Script {
     Script {
         cry: Some(hook(move |_ctx| {
             vec![summon_starships(json_as(json!({
-                "blueprints": crate::scripts::stinkyscape_plus::c080_the_last_voyage::blueprints(),
+                "blueprints": blueprints(),
                 "count": 1,
                 "price": price,
             })))]
@@ -31,8 +35,17 @@ fn vagabond(price: i32) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: vagabond(LAUNCH_PRICE),
-        radiant: vagabond(RADIANT_LAUNCH_PRICE),
+        base: vagabond(LAUNCH_PRICE, voyage::blueprints),
+        radiant: vagabond(RADIANT_LAUNCH_PRICE, voyage::blueprints),
+    }
+}
+
+/// R767000: the scripts through v0.6.4b, summoning the Terminus Starships' loadouts of then (issue
+/// #3951). `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_4b() -> CardScripts {
+    CardScripts {
+        base: vagabond(LAUNCH_PRICE, voyage::blueprints_v0_6_4b),
+        radiant: vagabond(RADIANT_LAUNCH_PRICE, voyage::blueprints_v0_6_4b),
     }
 }
 

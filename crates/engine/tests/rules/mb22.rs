@@ -993,3 +993,83 @@ fn r1204_trample_into_the_guard_tramples_into_its_hero() {
     assert_eq!(result.state.players[P1].hero.health, HERO_HEALTH - 2);
     assert!(!on_field(&result.state, &guard.id), "the guard died of its 5");
 }
+
+// R113 (ME-ATTACKSUMMON): a question that opens mid-attack owes the rest of the replacement or the
+// rider behind it, and the rest runs once it is answered.
+mod r113_a_question_mid_attack_summon_owes_the_rest {
+    use super::*;
+    use crate::rules::fixtures::damage_combat::{self as dc, ally_noter, death_asker};
+
+    /// damage_combat's game, its note log among it, with this file's cards registered beside its own.
+    fn noting(seed: &str) -> GameState {
+        let state = dc::playing(seed);
+        fx::register();
+        state
+    }
+
+    /// R1202, R113: the substitute's combat kills a Unit whose Death asks; its bounce is owed behind
+    /// the question and runs once it is answered.
+    #[test]
+    fn r1202_r113_a_question_in_the_substitutes_combat_owes_its_bounce() {
+        let mut state = noting("mb22-bounce-owed");
+        let windfast = put(&mut state, &fx::windfast.id, slot(P1, Row::Units, 1), json!({}));
+        clear_hands(&mut state);
+        let offered = in_hand(&mut state, &fx::ally.id, P1, 1).remove(0);
+        let doomed = put(&mut state, &death_asker.id, slot(P2, Row::Units, 1), json!({}));
+        let paused = act_result(&state, attack_action(P1, &windfast.id, &doomed.id));
+        assert!(paused.error.is_none(), "{:?}", paused.error);
+        assert!(paused.state.pending.is_some(), "the Death asks");
+        assert!(
+            on_field(&paused.state, &offered.id),
+            "the bounce waits for the answer"
+        );
+        let resumed = dc::answer(&paused.state).state;
+        assert!(resumed.pending.is_none());
+        assert!(
+            resumed.players[P1].hand.iter().any(|card| card.id == offered.id),
+            "bounced once answered"
+        );
+        assert!(resumed.work.is_empty());
+    }
+
+    /// R1203, R113: a joiner's Death asks mid-run; the Prime's own combat is owed behind it and runs
+    /// once the question is answered.
+    #[test]
+    fn r1203_r113_a_joiners_death_question_owes_the_primes_combat() {
+        let mut state = noting("mb22-combat-owed");
+        let prime = put(&mut state, &fx::prime.id, slot(P1, Row::Units, 1), json!({}));
+        clear_hands(&mut state);
+        set_library(&mut state, P1, &[] as &[&str]);
+        in_hand(&mut state, &death_asker.id, P1, 1);
+        let wall = put(&mut state, &fx::wall.id, slot(P2, Row::Units, 1), json!({}));
+        let paused = act_result(&state, attack_action(P1, &prime.id, &wall.id));
+        assert!(paused.error.is_none(), "{:?}", paused.error);
+        assert!(paused.state.pending.is_some(), "the joiner's Death asks");
+        let damage = |state: &GameState| find_instance(state, &wall.id).expect("the wall").damage;
+        assert_eq!(damage(&paused.state), 1, "the joiner's hit; the Prime's waits");
+        let resumed = dc::answer(&paused.state).state;
+        assert_eq!(damage(&resumed), 6, "the joiner's 1 and the Prime's 5");
+        assert!(resumed.work.is_empty());
+    }
+
+    /// R1202: only a Unit in hand makes the attack. A Field Spell, which a summon would land in the
+    /// backrow, is no substitute, so Windfast attacks itself.
+    #[test]
+    fn r1202_a_field_spell_in_hand_is_no_substitute() {
+        let mut state = noting("mb22-field-spell");
+        let windfast = put(&mut state, &fx::windfast.id, slot(P1, Row::Units, 1), json!({}));
+        clear_hands(&mut state);
+        let spell = in_hand(&mut state, &ally_noter.id, P1, 1).remove(0);
+        let result = act_result(&state, attack_action(P1, &windfast.id, "hero-p2"));
+        assert!(result.error.is_none(), "{:?}", result.error);
+        let declared = declared_attacks(&result.events);
+        assert_eq!(declared.len(), 1);
+        assert_eq!(declared[0].0, windfast.id);
+        assert!(
+            result.state.players[P1]
+                .hand
+                .iter()
+                .any(|card| card.id == spell.id)
+        );
+    }
+}

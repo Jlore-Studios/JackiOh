@@ -5,7 +5,8 @@
 //
 // Behind the gate like Play together. The list is the server's answer (`GET /api/daily`), read again after
 // each of this screen's own changes and whenever the social read's `dailyWaiting` changes (a move passed
-// to the player, a game ended). CLAUDE.md rule 7: who holds a move, its deadline and every refusal are the
+// to the player, a game ended), and every `DAILY_REREAD_MS` while the tab shows and when it shows again
+// (R3840000: a game can end with the count unchanged). CLAUDE.md rule 7: who holds a move, its deadline and every refusal are the
 // server's; rule 9: the numbers are the WebAssembly module's (`dailyConstants`).
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
@@ -18,7 +19,6 @@ import { PortraitArt } from "../emotes/PortraitArt.tsx";
 import { PORTRAIT_DEFS } from "../emotes/portraits.ts";
 import { EmptyState } from "../empty/EmptyState.tsx";
 import { Dialog } from "../game/Dialog.tsx";
-import { RESULT_WORD } from "../game/Result.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import {
   acceptDailyChallenge,
@@ -38,7 +38,8 @@ import { usePolled } from "../together/session.ts";
 import { useSocialPoll } from "../together/socialPoll.ts";
 import { MODE_WORDS, Named } from "../together/words.tsx";
 import { DailyFields, acceptBodyOf, useDailyPick } from "./DailyFields.tsx";
-import { moveLine, useNow } from "./DailyClockPill.tsx";
+import { moveLine, resultLine, useNow } from "./DailyClockPill.tsx";
+import { DAILY_REREAD_MS } from "./config.ts";
 import { NewDailyDialog } from "./NewDailyDialog.tsx";
 import { dailySections, isUrgent, perMoveRowText, yourMoveTitle, type DailySections } from "./order.ts";
 import { NotificationSettings } from "./NotificationSettings.tsx";
@@ -67,14 +68,6 @@ function isPortrait(value: string): value is PortraitId {
 /** A row's mode and time: "All random · 3 days per move". */
 function modeLine(entry: { mode: DailyGameSummary["mode"]; perMoveDays: number }): string {
   return `${t(MODE_WORDS[entry.mode])} · ${perMoveRowText(entry.perMoveDays)}`;
-}
-
-/** A finished game's line: the outcome, on time when the move's time ran out. */
-function resultLine(game: DailyGameSummary): string {
-  const result = game.result;
-  if (result === null) return t("Finished");
-  if (result.reason === "disconnect" && result.outcome !== "draw") return result.outcome === "win" ? t("Won on time") : t("Lost on time");
-  return t(RESULT_WORD[result.outcome]);
 }
 
 function GameRow({ game, now }: { game: DailyGameSummary; now: number }): ReactElement {
@@ -218,7 +211,7 @@ function AcceptDialog({ invite, onClose }: { invite: DailyInvite; onClose: () =>
 
 export default function DailyRoute(): ReactElement {
   const locale = useLocale();
-  const [list, reload] = usePolled(getDaily, null);
+  const [list, reload] = usePolled(getDaily, DAILY_REREAD_MS);
   // The social read's count of the games waiting on the player: a change is a move or an end to show.
   const { dailyWaiting } = useSocialPoll();
   const now = useNow();

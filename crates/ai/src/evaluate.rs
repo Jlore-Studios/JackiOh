@@ -14,7 +14,8 @@
 //! once for each time its controller's turn runs it (Meditative #9 Joint Filing's extra runs, #2689).
 //! A passed line's Float is credited for what it took toward an own Float-discount card still out of
 //! reach (`float_credit`, #3695). The Burn and Toxic still to come on a unit or a hero count by the ticks
-//! they will deal (`afflicted`, `coming_hero_ticks`, R3822000).
+//! they will deal (`afflicted`, `coming_hero_ticks`, R3822000). While a Feng Shui acts, the seat's next
+//! face-up play counts by the verdict its last element gives it (`feng_shui_outlook`, R3951100).
 //! It reads only what the seat may know or what a determinization sampled, and nothing here reads a
 //! handicap or a difficulty (R180).
 
@@ -30,9 +31,9 @@ use jackioh_engine::float::float_cuts_in_hand;
 use jackioh_engine::multipliers::{Multiplied, extra_runs};
 use jackioh_engine::{
     ActionBody, AltWinCondition, AttackHealth, AttackTarget, CardDef, CardInstance, CardType, CostOptions,
-    EngineSink, GameEvent, GameEventType, GameState, Grant, HookName, Keyword, KeywordKind, ModifierKind,
-    PLAYER_IDS, Phase, PlayerId, PlayerState, Position, Rng, Row, SandboxOp, SeatOutcome, SettleOptions,
-    Slumber, SpawnZone, Tag, TriggerHolder, TriggerZone, UnitView, ZoneName, acting_with_flag,
+    EngineSink, FengShuiOutcome, GameEvent, GameEventType, GameState, Grant, HookName, Keyword, KeywordKind,
+    ModifierKind, PLAYER_IDS, Phase, PlayerId, PlayerState, Position, Rng, Row, SandboxOp, SeatOutcome,
+    SettleOptions, Slumber, SpawnZone, Tag, TriggerHolder, TriggerZone, UnitView, ZoneName, acting_with_flag,
     active_brittle_count, active_units_of, acts_to_awaken, animated_with_stats, armor_of, attack_restriction,
     attacks_per_turn, awaken_card, backrow_is_public, board_totals, brittle_due_by, burn_on, cannot_attack,
     card_at, card_keywords, card_type_of_face, credit_lapsing, death_hook_of, dormant_starship_of,
@@ -710,6 +711,63 @@ fn doomed_hand_card_value(state: &GameState, card: &CardInstance, doomed: bool, 
         * kept
 }
 
+/// R3951100: whether a Feng Shui acts on either side of the field (Meditative #40, R984), which
+/// `feng_shui_outlook` and the move order (`candidates.rs`) ask before they judge a card.
+pub(crate) fn feng_shui_acts(state: &GameState) -> bool {
+    PLAYER_IDS
+        .into_iter()
+        .any(|player| acting_with_flag(state, player, |flags| flags.feng_shui))
+}
+
+/// R3951100: how the acting Feng Shuis would judge `seat`'s face-up play of `card` now, by its element
+/// against the seat's last (R981–R984): the verdict, every judge's alike, and the hits they would deal
+/// the seat's hero for it (R985), or `None` when none judges it. A card without a definition (a
+/// placeholder) is judged by none, since its element is unknown.
+pub(crate) fn feng_shui_verdict(
+    state: &GameState,
+    seat: PlayerId,
+    card: &CardInstance,
+) -> Option<(FengShuiOutcome, i32)> {
+    find_def(Some(state), &card.def_id)?;
+    let verdicts = subsystems::feng_shui::verdicts(state, seat, card);
+    let outcome = verdicts.first()?.outcome;
+    Some((outcome, verdicts.iter().map(|verdict| verdict.damage).sum()))
+}
+
+/// R3951100: what `seat`'s next face-up play is worth to it while a Feng Shui acts: of the cards in its own
+/// hand a Feng Shui would judge, the best verdict its last element gives one (R981). A reward counts what
+/// the card would gain in hand as Radiant (`hand_card_value`, R983), a punishment its hits' cost on
+/// `hero_value`'s curve, never below 1 life (R985), and a neutral verdict nothing. The best alone, since
+/// the seat chooses which card it plays first and only that one is judged by this element, so a hand of
+/// rewarded cards is no reason to hold them back. The seat's own hand only: the enemy's is hidden.
+fn feng_shui_outlook(state: &GameState, seat: PlayerId, w: &EvalWeights) -> f64 {
+    if !feng_shui_acts(state) {
+        return 0.0;
+    }
+    let life = effective_life(state, seat);
+    let start = starting_life(state, seat);
+    state.players[seat]
+        .hand
+        .iter()
+        .filter(|card| {
+            find_def(Some(state), &card.def_id).is_some() && subsystems::feng_shui::judged(state, card)
+        })
+        .map(|card| match feng_shui_verdict(state, seat, card) {
+            Some((FengShuiOutcome::Positive, _)) => {
+                let mut radiant = card.clone();
+                radiant.radiant = true;
+                hand_card_value(state, &radiant, w) - hand_card_value(state, card, w)
+            }
+            Some((FengShuiOutcome::Negative, damage)) => {
+                let taken = damage.min(life - 1).max(0);
+                hero_value(life - taken, start, w) - hero_value(life, start, w)
+            }
+            None => 0.0,
+        })
+        .reduce(f64::max)
+        .unwrap_or(0.0)
+}
+
 /// R962: the steps a Jade Counter at `jade` has climbed toward the next threshold it has not crossed.
 /// It only rises (R961): toward JADE_BEAUTY_AT, then toward JADE_ASCEND_AT, then none.
 fn jade_steps(jade: i32) -> i32 {
@@ -1052,6 +1110,10 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
         for card in &side.hand {
             value += doomed_hand_card_value(state, card, doomed, w);
         }
+        // R3951100: the verdict the seat's next face-up play would get (no reading at a zero share).
+        if w.feng_shui_outlook != 0.0 {
+            value += w.feng_shui_outlook * feng_shui_outlook(state, seat, w);
+        }
     } else {
         let unseen = side.hand.len() as f64 * (w.hand_card + w.hand_per_cost * w.opponent_hand_cost);
         value += if doomed {
@@ -1086,12 +1148,14 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
 
 /// The face damage `attacker`'s board could deal the other hero next turn: units with attack > 0 that may swing
 /// (`can_swing`; with `w.deft_defense_attacks` a Deft unit in Defense Position too, R49), ascending by attack.
-/// Taunts soak the smallest first (`damage_past_taunts`); each remaining attack goes through
+/// Taunts soak the smallest first (`damage_past_taunts_with`); each remaining attack goes through
 /// `subsystems::projected_hero_damage` (armor, which a Pierce hit skips, R346, and the Anti-oneshot cap), summed.
 /// With `w.gauntlet_bars_face_attacks`, an attack `attack_restriction` bars from the hero (a Unit inside The
 /// Gauntlet, R1849005) lands nothing past the Taunts. With `w.brittle_crumbles_before_swing`, a unit its own
 /// Brittle tick destroys first counts none (`crumbles_before_swing`, R3793000), read as at the end of the turn
-/// under way: the player on turn has made this turn's attacks.
+/// under way: the player on turn has made this turn's attacks. With `w.static_attack_flags_read`, a unit that
+/// can only attack the Unit across lands nothing on a hero (R3550001), and one that Ignores Taunt is bound by no
+/// Taunt (R3560007).
 pub fn face_threat_with(state: &GameState, attacker: PlayerId, w: &EvalWeights) -> i32 {
     face_threat_from(state, attacker, w, false)
 }
@@ -1122,12 +1186,16 @@ fn face_threat_from(state: &GameState, attacker: PlayerId, w: &EvalWeights, on_t
         }
         // R636: the unit's next turn starts with its exertion reset, so a Windfury unit swings twice.
         // Nor is it summoning sick then, so only a restriction (`may_hit_hero`) keeps a swing off the hero.
-        let may_hit_hero = !gauntlet || attack_restriction(state, unit, &hero).is_ok();
+        // R3550001, #3909: a unit that can only attack the Unit across never hits a hero. Its flag is read
+        // first, so a board with no such unit asks `attack_restriction` nothing more than before.
+        let across_only =
+            w.static_attack_flags_read && flags_of(state, unit).attacks_only_across == Some(true);
+        let may_hit_hero = !(gauntlet || across_only) || attack_restriction(state, unit, &hero).is_ok();
         for _ in 0..attacks_per_turn(state, unit) {
             attacks.push((unit, view.attack, may_hit_hero));
         }
     }
-    damage_past_taunts(state, attacker.opponent(), &attacks)
+    damage_past_taunts_with(state, attacker.opponent(), &attacks, w)
 }
 
 /// §4.5 step 4: a Reborn unit comes back at 1 health.
@@ -1155,16 +1223,27 @@ impl TauntStand {
     }
 }
 
+/// `damage_past_taunts_with` at `AI_EVAL`'s weights: what the lethal solver's `ready_gap` reads.
+pub fn damage_past_taunts(
+    state: &GameState,
+    defender: PlayerId,
+    attacks: &[(&CardInstance, i32, bool)],
+) -> i32 {
+    damage_past_taunts_with(state, defender, attacks, &AI_EVAL)
+}
+
 /// What `attacks` (attacker, its attack, whether it may hit the hero once no Taunt walls it) deal
 /// `defender`'s hero once its Taunts have soaked the attackers they bind (those that may not hit the hero
 /// first, then the smallest). §4.2 step 3: a Taunt binds only attackers `attack_restriction` lets attack
 /// it (R783002, R783003). Each bound attacker is one §4.4 hit on it (#898, R346, R63), a destroyed Reborn
 /// Taunt returning; lane strike (R94) and combat-only bonuses (R1120) stay out. A hit that may not hit the
-/// hero (R1849005, #1823) lands nothing past the Taunts.
-pub fn damage_past_taunts(
+/// hero (R1849005, #1823) lands nothing past the Taunts. With `w.static_attack_flags_read`, an attacker that
+/// Ignores Taunt (R3560007) is bound by none, Defense Position's included.
+pub fn damage_past_taunts_with(
     state: &GameState,
     defender: PlayerId,
     attacks: &[(&CardInstance, i32, bool)],
+    w: &EvalWeights,
 ) -> i32 {
     let mut free: Vec<(&CardInstance, i32, bool)> = attacks.to_vec();
     free.sort_by_key(|(_, attack, may_hit_hero)| (*may_hit_hero, *attack));
@@ -1181,9 +1260,11 @@ pub fn damage_past_taunts(
         let target = AttackTarget::Unit {
             instance: stands[i].unit.clone(),
         };
-        let (bound, mut unbound): (Vec<_>, Vec<_>) = free
-            .into_iter()
-            .partition(|(attacker, _, _)| attack_restriction(state, attacker, &target).is_ok());
+        // R3560007, #3909: an attacker that Ignores Taunt is bound by no Taunt (§4.2 step 3 skips it).
+        let (bound, mut unbound): (Vec<_>, Vec<_>) = free.into_iter().partition(|(attacker, _, _)| {
+            !(w.static_attack_flags_read && flags_of(state, attacker).ignores_taunt == Some(true))
+                && attack_restriction(state, attacker, &target).is_ok()
+        });
         let mut bound = bound.into_iter();
         let mut poisoned = false;
         while stands[i].health > 0 && !poisoned {

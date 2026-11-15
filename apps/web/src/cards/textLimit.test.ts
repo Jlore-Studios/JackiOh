@@ -16,7 +16,10 @@ import { faceModel } from "./model.ts";
 
 const SUMMIT_DEF_ID = "meditative-008";
 const MORE = "…";
-const SHORT_FORMS: Readonly<Record<string, { base?: number | string; radiant?: number | string }>> = shortFormsJson.forms;
+/** R3941001: a face's words written for play, `{key}`s and all, in English (and in Chinese, where written). */
+type Written = { en: string; zh?: string };
+type Form = number | string | Written;
+const SHORT_FORMS: Readonly<Record<string, { base?: Form; radiant?: Form }>> = shortFormsJson.forms;
 
 const DEFS = Object.values(CATALOG);
 const FACES = [false, true] as const;
@@ -31,7 +34,7 @@ function printed(defId: string, radiant: boolean): { full: string; form: "clamp"
   return { full, form, shown: (form === null ? null : face.short?.full) ?? full };
 }
 
-describe("R1017000 the face text limit", () => {
+describe("R1017000 R3941001 the face text limit", () => {
   it("R1017000 faceLines wraps by words at a width, each line of the text starting a new one", () => {
     expect(faceLines("", 28)).toBe(1);
     expect(faceLines("Deal 2 damage.", 28)).toBe(1);
@@ -68,7 +71,12 @@ describe("R1017000 the face text limit", () => {
         // A clamp is for a face over the limit; a cut short form may also hide a reminder or the
         // designer's flavour at the end of a face that fits, which the click-in carries.
         if (form === "clamp") expect(overLimit(full, FACE_TEXT_LIMIT), `${where} fits the limit whole`).toBe(true);
-        else {
+        else if (typeof form === "object") {
+          // R3941001: words written for a face its whole text overflows, which fit where the whole text does not.
+          expect(overLimit(full, FACE_TEXT_LIMIT), `${where} fits the limit whole`).toBe(true);
+          expect(overLimit(shown, FACE_TEXT_LIMIT), `${where}'s written words`).toBe(false);
+          expect(shown, `${where} prints its written words`).not.toBe(full);
+        } else {
           expect(shown, `${where} has nothing to cut`).not.toBe(full);
           expect(shown.endsWith(MORE), where).toBe(true);
           expect(full.startsWith(shown.slice(0, -MORE.length)), `${where} is not its text's start`).toBe(true);

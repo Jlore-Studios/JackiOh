@@ -199,6 +199,32 @@ export function sideView(view: PlayerView, side: Side) {
   return side === "you" ? view.you : view.opponent;
 }
 
+/** R1088: the defId the view reads on `instanceId`, or undefined when it shows the card nowhere. */
+export function defIdOfInstance(view: PlayerView, instanceId: string): string | undefined {
+  for (const side of ["you", "opponent"] as const) {
+    const sv = side === "you" ? view.you : view.opponent;
+    for (const unit of sv.units) {
+      if (unit !== null && unit.instanceId === instanceId) return unit.defId;
+    }
+    for (const unit of sv.carried ?? []) {
+      if (unit !== null && unit.instanceId === instanceId) return unit.defId;
+    }
+    for (const slot of sv.backrow) {
+      if (slot !== null && !slot.faceDown && slot.instanceId === instanceId) return slot.defId;
+    }
+    for (const card of sv.resolving) {
+      if (card.instanceId === instanceId) return card.defId;
+    }
+  }
+  const hand = view.you.hand;
+  if (Array.isArray(hand)) {
+    for (const card of hand) {
+      if (card.instanceId === instanceId) return card.defId;
+    }
+  }
+  return undefined;
+}
+
 /**
  * Something the player clicked, dragged to, or dropped on. Never a decision, only a report.
  *
@@ -291,6 +317,9 @@ export type HeroEmotes = {
   onCloseMenu: () => void;
 };
 
+/** R642: both seats' portraits, by seat. */
+export type SeatPortraits = Readonly<Record<PlayerId, PortraitId>>;
+
 /**
  * DR14 (#2706): a route's slot beside each hero, as `boardRail` is one in the rail: `own` beside the
  * viewer's hero, `enemy` beside the opponent's. The board draws what it is handed and reads nothing
@@ -339,6 +368,11 @@ export type BoardProps = {
   onControl?: (control: BoardControl) => void;
   /** One hero's emote surface per side, or undefined where a route does not run emotes. */
   emotes?: (side: Side) => HeroEmotes | undefined;
+  /**
+   * R3976000: each seat's portrait on a board with no emote session (a replay's), drawn and nothing
+   * more; a hero's emote surface wins over it. Null or absent, the default.
+   */
+  portraits?: SeatPortraits | null;
   /**
    * R1295000: the viewer's own cards wear the device's card cosmetics (game/wearer.ts). A board
    * the viewer plays sets it; absent, every card draws the defaults.

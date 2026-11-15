@@ -185,7 +185,7 @@ staging -> Run workflow moves it now (to its `sha`, or main's newest green commi
 | Cloudflare | the Workers Paid plan (Containers need it) | both Workers |
 | Cloudflare | each Worker's secrets: `SUPABASE_SECRET_KEY`, `DATABASE_URL`, `CODE_PEPPER`, and optionally `CREATE_ISSUES_TOKEN`, `DEV_PROFILE_IDS`, `ALERT_RESEND_API_KEY`, `ALERT_EMAILS` (`apps/edge/README.md`, Settings) | the servers |
 | Resend | a sending-only API key for jackioh.com, the Worker secret `ALERT_RESEND_API_KEY`, beside the sign-in mail's (section 8) | the server's alert emails (`crates/server/README.md`, Alerts) |
-| Resend | another sending-only key for jackioh.com, the Worker secret `PLAYER_RESEND_API_KEY`; unset, no player is emailed. The free plan's 100 a day are shared with the alerts and the sign-in mail | the daily games' "your move" emails (`crates/server/README.md`, Daily games; #3727) |
+| Resend | another sending-only key for jackioh.com, the Worker secret `PLAYER_RESEND_API_KEY`; unset, no player is emailed. The free plan's 100 a day are shared with the alerts and the sign-in mail, so the server sends at most `DAILY_PLAYER_EMAILS_PER_DAY` (50) of these a UTC day, half the plan, and push still goes past it (#3843) | the daily games' "your move" emails (`crates/server/README.md`, Daily games; #3727) |
 | Cloudflare | the Worker secrets `VAPID_PRIVATE_KEY` and `VAPID_PUBLIC_KEY`, one pair per Worker, generated once: `openssl ecparam -name prime256v1 -genkey -noout -out vapid.pem`, then the raw private scalar (`openssl ec -in vapid.pem -outform DER \| tail -c +8 \| head -c 32 \| basenc --base64url \| tr -d '=\n'`) and the raw public point (`openssl ec -in vapid.pem -pubout -outform DER \| tail -c 65 \| basenc --base64url \| tr -d '=\n'`); unset, no push is sent. A new pair orphans every device's subscription, each player turning push on again | the daily games' Web Push (`crates/server/README.md`, Daily games; #3727) |
 | Cloudflare Zero Trust | the team's organisation, and a service token for staging's deploy check | Access |
 | GitHub secret | `CLOUDFLARE_API_TOKEN`: the Edit Cloudflare Workers template, plus Containers if wrangler asks for it | both deploy jobs |
@@ -377,11 +377,17 @@ later, so Render would stop billing:
   `ALERT_EMAILS` the details (`crates/server/README.md`, Alerts). Read the event in the Worker's logs
   (Workers & Pages -> the Worker -> Logs), and close the issue once it is handled, so the next one emails
   again. To turn the emails on or change who gets them, `wrangler secret put ALERT_RESEND_API_KEY` and
-  `ALERT_EMAILS` on that Worker, then redeploy it.
+  `ALERT_EMAILS` on that Worker, then redeploy it. When the server will not start or the Worker cannot reach
+  it, the Worker opens `Patch: alert server.unreachable on <site>` and emails the same people itself
+  (`apps/edge/README.md`, #3618), at most once an hour.
 - **The server will not start:** its boot runs `release` (migrate, seed the catalog) and exits on
   any failure; with one container there is no older instance to keep serving. The Worker's logs
   show the error. CI's `db` job boots the image against Postgres before any merge that changes the
-  migrations or the image, so this should be rare. Roll back (above) while fixing it.
+  migrations or the image, so this should be rare. Roll back (above) while fixing it. The Worker alerts
+  when it finds the server failed to start or not listening within `START_WAIT_MS`, and when the daily
+  `/readyz` fails (#3618). To check it on staging, set staging's `DATABASE_URL` secret to a bad value,
+  redeploy, and request `/api/catalog`: one issue and one email follow, however many requests fail. Restore
+  the secret, redeploy, and close the issue.
 - **Restore the database:** JackiOh-Production, on the Pro plan, is backed up daily, and the last
   seven backups are kept. Database -> Backups -> Scheduled backups lists them, and Restore on one
   puts the whole project back to it ([Supabase's guide](https://supabase.com/docs/guides/platform/backups)).
@@ -503,7 +509,8 @@ only the project's team, two an hour. Resend's records in the jackioh.com zone, 
 that only reports, are `infra/cloudflare.tf`'s. Actions -> cutover, step `email` (the repository
 secrets `RESEND_API_KEY`, a Full access key, and `SUPABASE_ACCESS_TOKEN`) sets both projects' SMTP to
 a sending-only key it makes for the domain, and deletes the one before: run it again to rotate the
-key. Resend's free plan sends 100 a day; its dashboard (Emails) shows each one sent and bounced.
+key. Resend's free plan sends 100 a day, of which the daily games' player mail takes at most 50
+(`DAILY_PLAYER_EMAILS_PER_DAY`, `crates/server/README.md`, Daily games); its dashboard (Emails) shows each one sent and bounced.
 
 **The copy,** at section 4's step 6, with nobody promoting production meanwhile: Supabase's own way
 between projects, the CLI's `db dump` (it runs `pg_dump` in Docker) from staging and `psql` into the

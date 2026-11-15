@@ -138,41 +138,45 @@ mod tests {
 
         #[test]
         fn r418_an_ivory_tower_is_a_backrow_card_and_is_destroyed_the_unit_it_fused_in_with_it() {
-            crate::register_all();
-            let mut s = setup(
-                json!({ "hand": [VANILLA, { "def": GUY }, FILLER], "backrow": [{ "def": TOWER, "lane": 2 }] }),
-                json!({}),
-                false,
-            );
-            let tower = s.card(TOWER).id.clone();
-            let rider = s.card(VANILLA).clone();
-            s.play(&rider, json!({ "zone": 2, "row": "backrow" }));
-            // R653: once its play resolved, the Vanilla was fused into the Tower.
-            s.expect_in_zone(&rider, "gone");
-            assert!(carried_at(s.state(), ZoneSlot { player: P1, row: Row::Backrow, lane: 2 }).is_none());
+            crate::destructible_ivory_tower(|| {
+                crate::register_all();
+                let mut s = setup(
+                    json!({ "hand": [VANILLA, { "def": GUY }, FILLER], "backrow": [{ "def": TOWER, "lane": 2 }] }),
+                    json!({}),
+                    false,
+                );
+                let tower = s.card(TOWER).id.clone();
+                let rider = s.card(VANILLA).clone();
+                s.play(&rider, json!({ "zone": 2, "row": "backrow" }));
+                // R653: once its play resolved, the Vanilla was fused into the Tower.
+                s.expect_in_zone(&rider, "gone");
+                assert!(carried_at(s.state(), ZoneSlot { player: P1, row: Row::Backrow, lane: 2 }).is_none());
 
-            s.play(GUY, json!({ "zone": 1 }));
+                s.play(GUY, json!({ "zone": 1 }));
 
-            s.expect_in_zone(&tower, "graveyard");
+                s.expect_in_zone(&tower, "graveyard");
+            });
         }
 
         #[test]
         fn r418_r653_a_guy_att_stacked_onto_your_ivory_tower_destroys_it_with_its_own_cry_and_steps_down_unfused() {
-            crate::register_all();
-            let mut s = setup(
-                json!({ "hand": [{ "def": GUY }, FILLER], "backrow": [{ "def": TOWER, "lane": 2 }] }),
-                json!({}),
-                false,
-            );
-            let tower = s.card(TOWER).id.clone();
-            let guy = s.card(GUY).id.clone();
+            crate::destructible_ivory_tower(|| {
+                crate::register_all();
+                let mut s = setup(
+                    json!({ "hand": [{ "def": GUY }, FILLER], "backrow": [{ "def": TOWER, "lane": 2 }] }),
+                    json!({}),
+                    false,
+                );
+                let tower = s.card(TOWER).id.clone();
+                let guy = s.card(GUY).id.clone();
 
-            s.play(&guy, json!({ "zone": 2, "row": "backrow" }));
+                s.play(&guy, json!({ "zone": 2, "row": "backrow" }));
 
-            s.expect_in_zone(&tower, "graveyard");
-            assert_eq!(s.unit(P1, 2).map(|unit| unit.id), Some(guy.clone()));
-            assert_eq!(s.card(&guy).def_id, GUY);
-            assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::Fused));
+                s.expect_in_zone(&tower, "graveyard");
+                assert_eq!(s.unit(P1, 2).map(|unit| unit.id), Some(guy.clone()));
+                assert_eq!(s.card(&guy).def_id, GUY);
+                assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::Fused));
+            });
         }
 
         #[test]

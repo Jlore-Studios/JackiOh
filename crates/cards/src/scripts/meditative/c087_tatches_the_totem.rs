@@ -1,13 +1,14 @@
 //! M #87 Tatches the Totem (SPEC §8.8 row 87): (0) Unit ((1) until issue #3138), All Tribes (Human,
 //! Felinor, KY, CN, Jlockeed), Legendary, 0/3 → 0/6.
 //!
-//! Base:    "While in your deck: After you play a card with a tribal tag, summon this.
+//! Base:    "While in your hand or deck: After you play a card with a tribal tag, summon this.
 //!          End of turn: Buff {cards|random card|random cards} in your hand."
-//! Radiant: "While in your deck: After you play a card with a tribal tag, summon this.
+//! Radiant: "While in your hand or deck: After you play a card with a tribal tag, summon this.
 //!          End of turn: Buff {cards|random card|random cards} in your hand and each adjacent Unit."
-//! Engine: a deck trigger (R464, C+ #37 Wardrum's) on `cardResolved` of a `tribal_play`: `summon_this`
+//! Engine: a hand and a deck trigger (R464, C+ #37 Wardrum's) on `cardResolved` of a `tribal_play`: `summon_this`
 //! into the leftmost open unit zone (R64), no Cry (R1), the first either player sees of it (R97); with
-//! no open zone it stays in the deck. A face-down play is a Trap with no tags until revealed (R448), so
+//! no open zone it stays where it is. Issue #3951 added the hand; through v0.6.4b it summoned itself from
+//! the deck alone, which `script_v0_6_4b` keeps for those replays (R767000). A face-down play is a Trap with no tags until revealed (R448), so
 //! it summons nothing. End of turn: one Buff on a uniform pick over the hand (R440); Radiant, then one
 //! Buff on each Unit `adjacent_to` this (§3.1). Issue #3837 took the deck out of the pick; through
 //! v0.6.1b it was over hand and deck, which `script_v0_6_1b` keeps for those replays (R767000). "All
@@ -72,14 +73,18 @@ fn end_of_turn(radiant: bool, zones: &'static [&'static str]) -> Hook {
     })
 }
 
-fn tatches(zones: &'static [&'static str]) -> CardScripts {
+/// `from_hand`: whether it summons itself from the hand too (since issue #3951).
+fn tatches(zones: &'static [&'static str], from_hand: bool) -> CardScripts {
+    let hand_triggers = || if from_hand { vec![summon_on_tribal()] } else { vec![] };
     CardScripts {
         base: Script {
+            hand_triggers: hand_triggers(),
             deck_triggers: vec![summon_on_tribal()],
             end_of_turn: Some(end_of_turn(false, zones)),
             ..Script::default()
         },
         radiant: Script {
+            hand_triggers: hand_triggers(),
             deck_triggers: vec![summon_on_tribal()],
             end_of_turn: Some(end_of_turn(true, zones)),
             ..Script::default()
@@ -88,13 +93,19 @@ fn tatches(zones: &'static [&'static str]) -> CardScripts {
 }
 
 pub fn script() -> CardScripts {
-    tatches(ZONES)
+    tatches(ZONES, true)
+}
+
+/// R767000: the summon from the deck alone, through v0.6.4b (issue #3951); `KEPT_SCRIPTS` folds those
+/// replays under it.
+pub fn script_v0_6_4b() -> CardScripts {
+    tatches(ZONES, false)
 }
 
 /// R767000: the end-of-turn Buff over hand and deck, through v0.6.1b; `KEPT_SCRIPTS` folds those
 /// replays under it.
 pub fn script_v0_6_1b() -> CardScripts {
-    tatches(ZONES_V0_6_0C)
+    tatches(ZONES_V0_6_0C, false)
 }
 
 // M #87 Tatches the Totem — SPEC §8.8 row 87, BUILD M10 row M 87.
@@ -213,6 +224,39 @@ mod tests {
                     .map_or(-1, |at| at as i64);
                 assert!(summoned > resolved);
                 assert!(!events.iter().any(|event| event["type"] == "cardPlayed" && event["defId"] == TATCHES));
+            }
+
+            /// Issue #3951: "While in your hand or deck": a Tatches in the hand is summoned as one in the deck is.
+            #[test]
+            fn r464_a_tribal_play_summons_it_from_the_hand_too() {
+                for radiant in [false, true] {
+                    let mut s = scenario(json!({
+                        "p1": {
+                            "mana": 10,
+                            "hand": [VANILLA, { "def": TATCHES, "radiant": radiant }],
+                            "library": [FILLER, FILLER],
+                        },
+                        "p2": { "hand": [FILLER], "library": filler(4) },
+                    }));
+                    s.play(VANILLA, json!({}));
+                    assert_eq!(s.unit(P1, 2).map(|card| card.def_id), Some(TATCHES.to_string()), "radiant {radiant}");
+                    assert!(!s.hand(P1).iter().any(|card| card.def_id == TATCHES));
+                    assert!(!events_json(&s).iter().any(|event| event["type"] == "cardPlayed" && event["defId"] == TATCHES));
+                }
+            }
+
+            /// R767000: through v0.6.4b only the deck summoned it (issue #3951).
+            #[test]
+            fn r767000_the_kept_v0_6_4b_script_leaves_it_in_the_hand() {
+                crate::under_kept(TATCHES, script_v0_6_4b(), || {
+                    let mut s = scenario(json!({
+                        "p1": { "mana": 10, "hand": [VANILLA, TATCHES], "library": [FILLER, FILLER] },
+                        "p2": { "hand": [FILLER], "library": filler(4) },
+                    }));
+                    s.play(VANILLA, json!({}));
+                    assert!(s.unit(P1, 2).is_none());
+                    assert!(s.hand(P1).iter().any(|card| card.def_id == TATCHES));
+                });
             }
 
             #[test]

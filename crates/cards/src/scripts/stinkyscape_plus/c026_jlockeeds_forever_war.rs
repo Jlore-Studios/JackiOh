@@ -113,7 +113,7 @@ mod tests {
             assert_eq!(mods[0].expiry, ModifierExpiry::Never);
             // R169: its badge, public to both seats, in the card's own words.
             let label = fill_params(&crate::card_def(ID), FaceKind::Base, None);
-            assert!(label.contains("summon a Conscript"), "{label}");
+            assert!(label.contains("Summon a Conscript"), "{label}");
             assert_eq!(labels(&s), vec![label]);
         }
 
@@ -193,7 +193,7 @@ mod tests {
             let mut s = holding(true, "s26-radiant");
             cast(&mut s);
             let label = fill_params(&crate::card_def(ID), FaceKind::Radiant, None);
-            assert!(label.contains("Radiant conscript"), "{label}");
+            assert!(label.contains("Radiant Conscript"), "{label}");
             assert_eq!(labels(&s), vec![label]);
             next_turn(&mut s);
             let fresh = conscripts(&s);

@@ -283,3 +283,31 @@ describe("R658 a prompt's option is dragged out of the picker", () => {
     expect(screen.queryByTestId("drag-option-ghost")).toBeNull();
   });
 });
+
+// #3899 (`docs/implicit-states.md`, state 6, G9): a build lifted again from its zone while the turn ends.
+// #2924 drops a half-built play at the turn change, so neither its release nor Escape brings it back.
+describe("layer states 3899", () => {
+  const RELEASES: [string, () => void][] = [
+    ["released", () => release(20, 20)],
+    ["Escape", () => fireEvent.keyDown(window, { key: "Escape" })],
+  ];
+
+  it.each(RELEASES)("a build lifted again and %s after the turn ended stays dropped", (_name, end) => {
+    const onAction = vi.fn();
+    const { rerender } = render(<Game view={boardView()} legal={LEGAL} onAction={onAction} />);
+    dragOnto(el("hand-card-c1"), el("zone-you-units-3"));
+    lift(el("zone-you-units-3"));
+    expect(el("drag-layer")).toHaveAttribute("data-kind", "play");
+
+    rerender(<Game view={boardView({ active: "p2", turn: boardView().turn + 1 })} legal={[]} onAction={onAction} />);
+    over(document.body);
+    end();
+
+    expect(screen.queryByTestId("drag-layer")).toBeNull();
+    expect(el("zone-you-units-3")).not.toHaveAttribute("data-selected");
+    expect(screen.queryByTestId("prompt-modal")).toBeNull();
+    // The play is gone: its target, clicked now, sends nothing.
+    fireEvent.click(el("hero-opponent"));
+    expect(onAction).not.toHaveBeenCalled();
+  });
+});

@@ -8,6 +8,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
+import { testid } from "../game/contract.ts";
 import { ApiRequestError, getReplaySteps } from "../net/api.ts";
 import { fakeReplaySource, foldedReplaySteps } from "../test/replay.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
@@ -51,9 +52,15 @@ afterEach(() => {
   cleanup();
 });
 
-function serveSteps(): void {
+function serveSteps(portraits?: unknown): void {
   vi.mocked(getReplaySteps).mockImplementation((_token, matchId, from, count) =>
-    Promise.resolve({ matchId, from, steps: steps.slice(from, from + Math.min(count, REPLAY_PAGE_STEPS)), total: steps.length }),
+    Promise.resolve({
+      matchId,
+      from,
+      steps: steps.slice(from, from + Math.min(count, REPLAY_PAGE_STEPS)),
+      total: steps.length,
+      ...(portraits === undefined ? {} : { portraits }),
+    }),
   );
 }
 
@@ -152,6 +159,25 @@ describe("R768000 a result screen's way into a replay", () => {
     expect(await screen.findByTestId(replayTestid.failure)).toHaveTextContent("This game was played on an earlier patch.");
     fireEvent.click(screen.getByTestId(replayTestid.back));
     expect(onLeave).toHaveBeenCalledTimes(1);
+  });
+
+  it("R3976000 a finished match's replay, as Watch the replay and a friend's share open it, draws the portraits its first page carries", async () => {
+    const viewer = steps[0]?.view.viewer ?? "p1";
+    serveSteps(viewer === "p1" ? { p1: "gary", p2: "shredder" } : { p1: "shredder", p2: "gary" });
+    // Only the first page ever answers, so the portraits drawn are its own.
+    const first = vi.mocked(getReplaySteps).getMockImplementation();
+    vi.mocked(getReplaySteps).mockImplementation((token, matchId, from, count) =>
+      from === 0 && first !== undefined ? first(token, matchId, from, count) : new Promise(() => undefined),
+    );
+    render(
+      <CatalogContext.Provider value={lookup}>
+        <OpenedReplay load={() => openOnlineMatchReplay("token-1", "m-1")} onLeave={vi.fn()} />
+      </CatalogContext.Provider>,
+    );
+    await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
+    const portraitOf = (side: "you" | "opponent"): string | null =>
+      screen.getByTestId(testid.hero(side)).querySelector(".hero-portrait")?.getAttribute("data-portrait") ?? null;
+    expect([portraitOf("you"), portraitOf("opponent")]).toEqual(["gary", "shredder"]);
   });
 
   it("#1568 OpenedReplay offers Try again when the source could not be loaded, and plays once it can", async () => {

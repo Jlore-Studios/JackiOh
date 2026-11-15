@@ -599,7 +599,7 @@ function Overview({
   const played = profile.record.wins + profile.record.losses + profile.record.draws;
   const season = (ladder: OwnRankResponse, label: string, testid: string): ReactElement | null =>
     ladder.record.games > 0 ? (
-      <p data-testid={testid}>
+      <p key={testid} data-testid={testid}>
         {t("{ladder}: {wins}–{losses}–{draws}", {
           ladder: label,
           wins: ladder.record.wins,
@@ -608,15 +608,19 @@ function Overview({
         })}
       </p>
     ) : null;
+  // R3957000: the heading only over a record, as the header's ranked line is left out at 0 games (R2255000).
+  const seasonLines = [
+    rank === null ? null : season(rank, t("Constructed"), accountTestid.overviewSeasonRecord),
+    randomRank === null ? null : season(randomRank, t("All random"), accountTestid.overviewRandomSeasonRecord),
+  ].filter((line): line is ReactElement => line !== null);
   return (
     <div className="account-section__stack">
       <AccountIdentity email={profile.email} status={profile.status} />
 
-      {rank !== null ? (
+      {seasonLines.length > 0 ? (
         <>
           <h3 className="account-heading">{t("This season")}</h3>
-          {season(rank, t("Constructed"), accountTestid.overviewSeasonRecord)}
-          {randomRank === null ? null : season(randomRank, t("All random"), accountTestid.overviewRandomSeasonRecord)}
+          {seasonLines}
         </>
       ) : null}
 
@@ -717,7 +721,9 @@ function MatchHistory({ history, onRetry }: { history: History | null; onRetry: 
               <span className="account-history__what">
                 <strong>{t(RESULT_WORDS[row.result])}</strong> · {t("vs {opponent}", { opponent: opponentName(row) })}
                 {row.mode === null ? null : <> · {t(MODE_WORDS[row.mode])}</>} ·{" "}
-                {formatDateTime(row.endedAt, { dateStyle: "medium", timeStyle: "short" })}
+                <span className="account-history__when">
+                  {formatDateTime(row.endedAt, { dateStyle: "medium", timeStyle: "short" })}
+                </span>
               </span>
               {why === null ? (
                 <a className="button-secondary" href={paths.replays} onClick={followInApp(paths.replays)}>
@@ -731,7 +737,12 @@ function MatchHistory({ history, onRetry }: { history: History | null; onRetry: 
         })}
       </ul>
       <div className="account-actions">
-        <a href={paths.replays} data-testid={accountTestid.historyAll} onClick={followInApp(paths.replays)}>
+        <a
+          className="button-secondary"
+          href={paths.replays}
+          data-testid={accountTestid.historyAll}
+          onClick={followInApp(paths.replays)}
+        >
           {t("All replays")}
         </a>
       </div>

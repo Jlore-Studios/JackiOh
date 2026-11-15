@@ -55,6 +55,7 @@ export function AddFriend({ onAdded }: { onAdded: () => void }): ReactElement {
       <div className="together-add__row">
         <input
           id={inputId}
+          className="together-field"
           data-testid={togetherTestid.addInput}
           value={name}
           autoComplete="off"

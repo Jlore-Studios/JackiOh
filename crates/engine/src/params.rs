@@ -18,13 +18,14 @@ use serde_json::Value;
 use crate::catalog::def_of;
 use crate::config::{PARAM_DEFAULT_STEP, TUNE_MIN_AMOUNT};
 use crate::effects::tune::TuneDirection;
+use crate::effects::tune_live::{TuneZone, is_live, param_acts, tune_zone_of};
 use crate::script::{
     ConditionContext, CostArgs, EffectContext, HookArgs, ReplacementContext, TargetCheckArgs,
     WouldCounterArgs,
 };
 use crate::state::{CardInstance, GameState};
 use crate::tuning::{add_step, tidy_tuning, tuning_of};
-use crate::wire::{Param, ParamBetter, ParamTunedOn, Tuning, ZoneName};
+use crate::wire::{Param, ParamBetter, ParamTunedOn, Tuning};
 
 /// B3.4 rule 5: the numbers a definition declares. A catalog card's are its `params`; a fused
 /// definition's (R77, R102) are its ingredients', the first declaration of each key kept.
@@ -420,9 +421,9 @@ pub struct SteppableParam {
     pub delta: i32,
 }
 
-/// B3.4 rule 3's "Number" row: the declared numbers in reach (`param_in_reach`), but for one only the
-/// card's Cry reads (`Param.cry`) on the face it shows on the field (R1748000, R2261001), that one step
-/// in `direction` would change (the way `better` says for an Upgrade, the other for a Degrade), with how
+/// B3.4 rule 3's "Number" row: the declared numbers in reach (`param_in_reach`) and live where the card
+/// is by when they are read (`Param.read` on the face it shows, R3888000, R3888001), that one step in
+/// `direction` would change (the way `better` says for an Upgrade, the other for a Degrade), with how
 /// far each would move, in declaration order. A number at the bound it would move past is not one.
 pub fn steppable_params(
     state: &GameState,
@@ -434,19 +435,35 @@ pub fn steppable_params(
 
 /// R1160 (Meditative #84 Volatility, ME-TUNEMULT): `steppable_params` moved `times` steps at once.
 /// Each step is one unit in the row's direction; the first step that would not move the value stops
-/// the walk, so what a bound refuses is lost and only what moved is recorded.
+/// the walk, so what a bound refuses is lost and only what moved is recorded. A card that has ceased
+/// to exist has none.
 pub fn steppable_params_times(
     state: &GameState,
     instance: &CardInstance,
     change: TuneDirection,
     times: i32,
 ) -> Vec<SteppableParam> {
+    let Some(zone) = tune_zone_of(state, instance) else {
+        return Vec::new();
+    };
+    steppable_params_in(state, instance, change, times, zone)
+}
+
+/// R3888000: `steppable_params_times` read as though the card were in `zone` (a hidden Nerf reads the
+/// being-played column, R1845001).
+pub fn steppable_params_in(
+    state: &GameState,
+    instance: &CardInstance,
+    change: TuneDirection,
+    times: i32,
+    zone: TuneZone,
+) -> Vec<SteppableParam> {
     params_of(state, &instance.def_id)
         .into_iter()
         .filter(|param| param_in_reach(state, instance, param))
-        // R1748000: on the field the card's Cry has resolved, so a number only it reads moves nothing,
-        // on the face it shows (R2261001).
-        .filter(|param| !(param.cry_only_on(instance.radiant) && instance.zone.z() == ZoneName::Field))
+        // R3888000: a number is drawn only where what reads it can still read it (R1748000's Cry, on
+        // the face the card shows, R2261001).
+        .filter(|param| is_live(state, instance, zone, param_acts(state, instance, param)))
         .filter_map(|param| {
             let toward_better = if change == TuneDirection::Upgrade { 1 } else { -1 };
             let unit = if param.better == ParamBetter::Up {

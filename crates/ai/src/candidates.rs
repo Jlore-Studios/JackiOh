@@ -4,8 +4,8 @@
 
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::{
-    ActionBody, ActionType, AttackTarget, CardInstance, CostOptions, GameState, KeywordKind, PlayerId,
-    Position, Row, Selection, SetAs, UnitView, ZoneChoice, ZoneSlot, active_units_of, adjacent,
+    ActionBody, ActionType, AttackTarget, CardInstance, CostOptions, FengShuiOutcome, GameState, KeywordKind,
+    PlayerId, Position, Row, Selection, SetAs, UnitView, ZoneChoice, ZoneSlot, active_units_of, adjacent,
     attack_mod_for, attack_restriction, beneath_at, canonical, card_at, carried_at, effective_cost,
     effective_life, find_instance, find_instance_mut, has_keyword, is_locked, lane_multiplier_for,
     legal_actions, midlane_lanes_of, pierces, position_after_switch, row_size, slot_of, subsystems,
@@ -14,7 +14,9 @@ use jackioh_engine::{
 use serde_json::Value;
 
 use crate::config::{AI_EVAL, AI_SAME_CARD_PLAYS_PER_TURN, AI_SEARCH};
-use crate::evaluate::{Prices, can_swing, crumbles_before_swing, deft_in_defense, face_threat};
+use crate::evaluate::{
+    Prices, can_swing, crumbles_before_swing, deft_in_defense, face_threat, feng_shui_acts, feng_shui_verdict,
+};
 use crate::lethal::ready_gap;
 use crate::reply::{face_value, trade_value};
 
@@ -407,9 +409,37 @@ fn source_cost(state: &GameState, action: &ActionBody) -> i32 {
     }
 }
 
-/// One source instance's variants (legal_actions order, then dealt by `enemy_first`) and its cost.
+/// R3951100: how a Feng Shui acting would judge a source's play now, tier 2's first key while one acts:
+/// a play it rewards first, one it punishes last, and every other source between.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum Auspice {
+    Rewarded,
+    Plain,
+    Punished,
+}
+
+/// R3951100: the `Auspice` of `action`'s source while a Feng Shui acts (`judging`): a play by the verdict
+/// its card would get now (`feng_shui_verdict`), an Activate or a power, which no Feng Shui judges, plain.
+/// Plain for every source with none acting, so the move order is unchanged without one.
+fn auspice(state: &GameState, seat: PlayerId, action: &ActionBody, judging: bool) -> Auspice {
+    let ActionBody::Play { instance_id, .. } = action else {
+        return Auspice::Plain;
+    };
+    if !judging {
+        return Auspice::Plain;
+    }
+    match find_instance(state, instance_id).and_then(|card| feng_shui_verdict(state, seat, card)) {
+        Some((FengShuiOutcome::Positive, _)) => Auspice::Rewarded,
+        Some((FengShuiOutcome::Negative, _)) => Auspice::Punished,
+        None => Auspice::Plain,
+    }
+}
+
+/// One source instance's variants (legal_actions order, then dealt by `enemy_first`), its cost and its
+/// `Auspice`.
 struct Source {
     cost: i32,
+    auspice: Auspice,
     variants: Vec<ActionBody>,
 }
 
@@ -591,9 +621,12 @@ struct Way {
 
 /// Tier 2: round-robin across source instances (every source's first variant, then every second, …),
 /// each round by current cost, highest first; a field card with an Activate ability is a source (B3.2).
+/// While a Feng Shui acts, each round takes the plays it rewards first and those it punishes last
+/// (`Auspice`, R3951100), so a level's `branching` cut keeps the play that chains the elements.
 /// A source's variants are interleaved across its ways of being played (#1778), and inside each way
 /// aimed at the enemy first (`enemy_first`, #1062), so the seat's own targets cannot crowd them out.
 fn round_robin(state: &GameState, seat: PlayerId, actions: &[ActionBody]) -> Vec<ActionBody> {
+    let judging = feng_shui_acts(state);
     let mut sources: Vec<Source> = Vec::new();
     let mut by_id: IndexMap<String, usize> = IndexMap::new();
     for action in actions {
@@ -605,6 +638,7 @@ fn round_robin(state: &GameState, seat: PlayerId, actions: &[ActionBody]) -> Vec
             None => {
                 sources.push(Source {
                     cost: source_cost(state, action),
+                    auspice: auspice(state, seat, action, judging),
                     variants: Vec::new(),
                 });
                 by_id.insert(id.to_string(), sources.len() - 1);
@@ -678,7 +712,12 @@ fn round_robin(state: &GameState, seat: PlayerId, actions: &[ActionBody]) -> Vec
         source.variants = assembled;
     }
     let mut ordered: Vec<(usize, Source)> = sources.into_iter().enumerate().collect();
-    ordered.sort_by(|(ia, a), (ib, b)| b.cost.cmp(&a.cost).then(ia.cmp(ib)));
+    ordered.sort_by(|(ia, a), (ib, b)| {
+        a.auspice
+            .cmp(&b.auspice)
+            .then(b.cost.cmp(&a.cost))
+            .then(ia.cmp(ib))
+    });
     let rounds = ordered
         .iter()
         .map(|(_, source)| source.variants.len())

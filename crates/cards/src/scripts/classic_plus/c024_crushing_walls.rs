@@ -236,19 +236,21 @@ mod tests {
 
             #[test]
             fn r418_an_ivory_tower_is_destroyed_like_any_backrow_card_whatever_it_has_fused_in() {
-                let mut s = scenario(json!({
-                    "active": "p2",
-                    "p1": { "hand": [WALLS, FILLER], "library": [FILLER, FILLER] },
-                    "p2": { "hand": [BODY, FILLER], "backrow": [{ "def": TOWER, "lane": 1 }], "library": [FILLER, FILLER] },
-                }));
-                let tower = s.card(TOWER).id.clone();
-                let rider = s.card(BODY).id.clone();
-                s.play(&rider, json!({ "zone": 1, "row": "backrow" }));
-                // R653: once its play resolved, the body was fused into the Tower.
-                s.expect_in_zone(&rider, "gone");
-                s.end_turn();
-                s.play(WALLS, json!({}));
-                s.expect_in_zone(&tower, "graveyard");
+                crate::destructible_ivory_tower(|| {
+                    let mut s = scenario(json!({
+                        "active": "p2",
+                        "p1": { "hand": [WALLS, FILLER], "library": [FILLER, FILLER] },
+                        "p2": { "hand": [BODY, FILLER], "backrow": [{ "def": TOWER, "lane": 1 }], "library": [FILLER, FILLER] },
+                    }));
+                    let tower = s.card(TOWER).id.clone();
+                    let rider = s.card(BODY).id.clone();
+                    s.play(&rider, json!({ "zone": 1, "row": "backrow" }));
+                    // R653: once its play resolved, the body was fused into the Tower.
+                    s.expect_in_zone(&rider, "gone");
+                    s.end_turn();
+                    s.play(WALLS, json!({}));
+                    s.expect_in_zone(&tower, "graveyard");
+                });
             }
 
             #[test]

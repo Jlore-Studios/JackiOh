@@ -1256,6 +1256,15 @@ pub fn must<T>(value: Option<T>, what: &str) -> T {
     value.unwrap_or_else(|| panic!("expected {what}"))
 }
 
+/// `items`, or a panic naming what the test expected in them when there are none: a loop that checks each
+/// item passes on an empty list, so it goes through this first (#3914; acceptance.rs refuses a copy).
+pub fn nonempty<T>(items: Vec<T>, what: &str) -> Vec<T> {
+    if items.is_empty() {
+        panic!("expected at least one of {what}");
+    }
+    items
+}
+
 fn or_fail<T>(result: Result<T, String>) -> T {
     match result {
         Ok(value) => value,
@@ -3168,6 +3177,17 @@ mod tests {
                     must(s.unit("p1", 2), "p1's unit in lane 2");
                 },
                 "expected p1's unit in lane 2",
+            );
+        }
+
+        #[test]
+        fn nonempty_hands_back_the_items_and_fails_loudly_naming_what_is_missing() {
+            assert_eq!(nonempty(vec![1, 2], "the numbers"), [1, 2]);
+            expect_throw_with(
+                || {
+                    nonempty(Vec::<i32>::new(), "the cards the Spell drew");
+                },
+                "expected at least one of the cards the Spell drew",
             );
         }
 

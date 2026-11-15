@@ -90,7 +90,7 @@ const RAYS = Array.from({ length: RAY_COUNT }, (_, i) => (i * 2 * Math.PI) / RAY
   (angle) => [CENTER + RAY_LENGTH * Math.cos(angle), CENTER + RAY_LENGTH * Math.sin(angle)] as const,
 );
 
-type TierArt = {
+export type TierArt = {
   frame: string;
   edge: string;
   edgeWidth: number;
@@ -111,17 +111,20 @@ type TierArt = {
   shimmer: boolean;
 };
 
-/** The tier art's one place: each tier a step up from the one below (#1650). */
-const TIER_ART: Readonly<Record<VisibleRank["tier"], TierArt>> = {
+/**
+ * The tier art's one place: each tier a step up from the one below (#1650). Every outline reads at 3:1 or
+ * better on the dark grounds the crest is drawn on, the account header's and the Play hub's cards (R3957000).
+ */
+export const TIER_ART: Readonly<Record<VisibleRank["tier"], TierArt>> = {
   raisin: {
     frame: "none",
-    edge: "#6b5a4e",
+    edge: "#b09a86",
     edgeWidth: 1.5,
     dash: "3 3",
-    grape: "#4a3728",
+    grape: "#a08468",
     berry: 3.5,
     rows: 2,
-    opacity: 0.6,
+    opacity: 1,
     leaves: false,
     vine: false,
     gloss: false,
@@ -134,10 +137,10 @@ const TIER_ART: Readonly<Record<VisibleRank["tier"], TierArt>> = {
   },
   rotten: {
     frame: "#3b3530",
-    edge: "#6e6259",
+    edge: "#a39485",
     edgeWidth: 1.5,
     dash: "14 3",
-    grape: "#5e4b5a",
+    grape: "#a58aa0",
     berry: 4.5,
     rows: 2,
     opacity: 1,

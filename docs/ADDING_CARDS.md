@@ -81,8 +81,8 @@ Its cards still need their own files, row by row above: the catalog entries, the
 ## 2. Templates
 
 **Catalog entry** (C+ #6). `loc` is the script's lines of code, from `cargo jackioh catalog loc <script path>` once the script is written
-([§3](#3-the-patch-and-its-order)); text is the printed text, with `{key}` where a number is declared in `params`, marked `"cry": true` when only the card's Cry
-writes it (R1748000), or `"cry": "base"` (`"radiant"`) when only that face's Cry does and the other face's lasting text writes it too (R2261001). A Spell or a Field Spell declares every number it prints unless `tests/cross/params.rs` names why it is fixed
+([§3](#3-the-patch-and-its-order)); text is the printed text, with `{key}` where a number is declared in `params`, marked `"read"` when every line that
+writes it reads it at one time or in one place: `"cry"`, `"combo"`, `"castOnDraw"`, `"awaken"` ("When this awakens"), `"evolve"` ("Evolve:" or "Evolves when"), `"handOrDeck"` or `"graveyard"` (R1748000, R3888001), with `"readOn": "base"` (`"radiant"`) when only that face's such lines do and the other face's lasting text writes it too (R2261001); `catalog check` holds the mark to the text. A Spell or a Field Spell declares every number it prints unless `tests/cross/params.rs` names why it is fixed
 (R1748003); one that deals damage carries `"dealsDamage": true` (R1748001), and a Field Spell that uses its own Plague Counters
 `"usesPlague": true` (R1748002). A token has
 `"token": true`, `"rarity": "Token"` and the `Token` tag. A new entry, a token's too, carries a `flavor` (§1 row 2).
@@ -170,8 +170,8 @@ side's setup over its defaults), `matches_object` (TS `toMatchObject`), `filler(
 for a library), `ids` (the cards' ids), `def_ids` (the cards' def ids), `events_json` (the events so far, as JSON), `unit_or_blank`,
 `stand_in_backrow`, `give_flying`, `give_lucky`, `built_starship` (p1's Dormant Starship built from the pieces
 given, #1859), `launch_starship`, and `upgrade_number`, `degrade_number`, `can_upgrade_number` and
-`can_degrade_number`. Take the engine testkit's `Scenario::unit_at`, `pick::…` and `must` the same way;
-`crates/tools/tests/acceptance.rs` refuses a copy, and a `register_all();` on the line above a `scenario(` (#1826, #2023, #2930). Read events and offered actions through `Scenario::count`, `last_count`, `events_of`, `last_events_of` and `offered(seat)` rather than a copy (#3504). Read an open prompt's Mode options through `Scenario::prompt_modes` (or `prompt_modes_of(&pending)` for a prompt you hold) and answer one with `pick::mode`; the acceptance scan refuses a hand-written `Selection::Mode { option } => option.clone()` (#3796). Aim a play with `pick::targets(pick::id(..))`, `pick::targets(pick::instance(..))` or `pick::targets(pick::hero("p2"))`, and in the rules tests look a card up with the harness's `live` (an owned copy) or `live_mut`; the scan refuses a copy under another name (#3827). Keep a local helper only when its body differs.
+`can_degrade_number`. Take the engine testkit's `Scenario::unit_at`, `pick::…`, `must` and `nonempty` the same way;
+`crates/tools/tests/acceptance.rs` refuses a copy, and a `register_all();` on the line above a `scenario(` (#1826, #2023, #2930). Read events and offered actions through `Scenario::count`, `last_count`, `events_of`, `last_events_of` and `offered(seat)` rather than a copy (#3504). Read an open prompt's Mode options through `Scenario::prompt_modes` (or `prompt_modes_of(&pending)` for a prompt you hold) and answer one with `pick::mode`; the acceptance scan refuses a hand-written `Selection::Mode { option } => option.clone()` (#3796). Aim a play with `pick::targets(pick::id(..))`, `pick::targets(pick::instance(..))` or `pick::targets(pick::hero("p2"))`, and in the rules tests look a card up with the harness's `live` (an owned copy) or `live_mut`; the scan refuses a copy under another name (#3827). Keep a local helper only when its body differs. A loop over what a test expects to find (the cards drawn, the cards added) goes through `nonempty(items, what)` first, since a loop over nothing passes; and no test notes a value in a bare `let _ = name;`: compare it or never capture it (the acceptance scan refuses one, #3914).
 
 **Helper cards** (#3486). A test that needs only a card's numbers (some 3-cost 9/9, a textless Spell to fill a
 hand) names a stand-in, a card its id spells out, `const BIG: &str = "stand-in (3) 9/9";`, rather than a real
@@ -185,11 +185,11 @@ runs over the card tests, refuses one.
 ## 3. The patch, and its order
 
 A change to a card is a patch (R388, R646). No one names its version: `patches ship` names it when it
-ships, from what it does to the cards (R1366000): a major when a set ships, a patch (the next X) when
-15 or more card families are reprinted, 50 or more play differently or a rule meets a quarter of the
-games (R2455000, R2499000), a micro
-(the next letter) for anything smaller, for wording alone or for a change to how cards look
-(`apps/web/src/cards/`, claimed with `--visual`, R2529000); never reopen a shipped one. A branch claims its card changes with a pending fragment:
+ships (R1366000, R3944000): a major when a set ships, and otherwise a micro (the next letters), however
+many cards it reprints or plays, for wording alone and for a change to how cards look
+(`apps/web/src/cards/`, claimed with `--visual`, R2529000); never reopen a shipped one. Once a day
+`patches cut` rolls the micros since the newest major or patch into the day's patch, `v0.X.Y`, the
+release players read ([issues-and-patches.md](issues-and-patches.md), Version numbers). A branch claims its card changes with a pending fragment:
 
 ```
 cargo jackioh patches "<title>" --source "<issue or PR>" --notes "<what changed>" [--plays <ids>] [--rule] [--visual]

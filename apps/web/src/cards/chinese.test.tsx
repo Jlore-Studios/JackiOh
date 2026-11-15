@@ -194,7 +194,7 @@ describe("R1301 a Chinese card in a match", () => {
     }
   });
 
-  it("R1301 a fused Chinese card joins its ingredients' Chinese", () => {
+  it("R1301 R3941002 a fused Chinese card joins its ingredients' Chinese", () => {
     // R468: Core #11 Tempo Timmy fused with Core #89 Corpse Eater, as the engine joins the English.
     const fused = fusedDef([def("core-011"), def("core-089")]);
     const base = faceModel({ defId: fused.id, def: fused, radiant: false, chinese: true, inPlay: {} });
@@ -208,8 +208,9 @@ describe("R1301 a Chinese card in a match", () => {
     // R469: an ingredient fused on its Radiant face puts that face into the base form too.
     const forced = { ...fused, ingredients: [{ defId: "core-011", radiant: true as const }, { defId: "core-089" }] };
     expect(chineseDef(forced).base.text).toBe(`${zh("core-011").radiant}\n${zh("core-089").base}`);
-    // The English of the same fusion is what the glossary reads.
-    expect(base.englishText).toBe(fused.base.text);
+    // The English of the same fusion, its keyword lines as one (R3941002), is what the glossary reads.
+    const [, ...corpseEater] = def("core-089").base.text.split("\n");
+    expect(base.englishText).toBe(["Rush, First Strike, Brittle 1", ...corpseEater].join("\n"));
   });
 
   it("R3045000 a fused Dormant Starship is named for the hull in Chinese, a launched one for its drawn name", () => {

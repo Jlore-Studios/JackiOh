@@ -69,7 +69,7 @@ mod tests {
 
     /// The two cards an add of `count` brings, by def id.
     fn added(s: &Scenario, before: usize) -> Vec<CardInstance> {
-        s.hand(P1).into_iter().skip(before).collect()
+        crate::hand_and_summoned_tatches(s, P1).into_iter().skip(before).collect()
     }
 
     mod m33_first_day_of_xuexiao {

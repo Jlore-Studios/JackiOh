@@ -164,6 +164,81 @@ export const TIERED_PATCHES: readonly Patch[] = [
 /** The micros carry V2's snapshot, as a patch that changed no card carries the one before it. */
 export const TIERED_SNAPSHOTS: Readonly<Record<string, Snapshot>> = { ...FIXTURE_SNAPSHOTS, [M1]: FIXTURE_SNAPSHOTS[V2] as Snapshot, [M2]: FIXTURE_SNAPSHOTS[V2] as Snapshot };
 
+/** R3944001: the micros of `DAILY_PATCHES`: DM1 and DM2 rolled up by the daily patch DP, DM3 after it. */
+export const DM1 = "v1-daily-b";
+export const DM2 = "v1-daily-c";
+export const DP = "v2-daily";
+export const DM3 = "v2-daily-b";
+
+/**
+ * R3944001, R3944002: a daily history: the major V1, two micros (DM1 grows the knight and removes the
+ * relic, DM2 reworks the bolt), the daily patch DP that rolls them up (no card of its own, its snapshot
+ * DM2's, its note merged from theirs), and DM3, a micro no daily patch has rolled up yet.
+ */
+export const DAILY_PATCHES: readonly Patch[] = [
+  { ...(FIXTURE_PATCHES[0] as Patch), tier: "major" },
+  {
+    version: DM1,
+    tier: "micro",
+    date: "2026-04-01",
+    title: "The knight grows",
+    source: "Fixture commit d1",
+    notes: "Test Knight costs more; Old Relic leaves.",
+    player: { title: "Knight grows", new: [], balance: ["Test Knight costs (3), up from (2)."], changes: [], text: [], fixes: [] },
+    changes: [
+      { id: "core-001", name: "Test Knight", kind: "changed", fields: ["cost", "base.attack", "radiant.attack", "base.text", "radiant.text"] },
+      { id: "core-003", name: "Old Relic", kind: "removed" },
+    ],
+  },
+  {
+    version: DM2,
+    tier: "micro",
+    date: "2026-04-01",
+    title: "The bolt reworked",
+    source: "Fixture commit d2",
+    notes: "Test Bolt's damage is a number.",
+    player: { title: "Bolt rework", new: [], balance: [], changes: ["Test Bolt deals more damage."], text: [], fixes: [] },
+    changes: [{ id: "core-002", name: "Test Bolt", kind: "changed", fields: ["cost", "params", "base.text", "radiant.keywords", "radiant.text"] }],
+  },
+  {
+    version: DP,
+    tier: "patch",
+    date: "2026-04-02",
+    title: "Patch: the daily patch",
+    source: "patches cut",
+    notes: "Rolls up two micros.",
+    player: {
+      title: "Knight grows, and 1 more change",
+      new: [],
+      balance: ["Test Knight costs (3), up from (2)."],
+      changes: ["Test Bolt deals more damage."],
+      text: [],
+      fixes: [],
+    },
+    includes: [DM1, DM2],
+    changes: [],
+  },
+  {
+    version: DM3,
+    tier: "micro",
+    date: "2026-04-02",
+    title: "A golem detail",
+    source: "Fixture commit d3",
+    notes: "Quiet Golem records its lines of code.",
+    player: { title: "Golem detail", new: [], balance: [], changes: [], text: [], fixes: ["Quiet Golem records its lines of code."] },
+    changes: [{ id: "core-004", name: "Quiet Golem", kind: "changed", fields: ["loc"] }],
+  },
+];
+
+/** The daily history's snapshots: the daily patch holds its last micro's. */
+export const DAILY_SNAPSHOTS: Readonly<Record<string, Snapshot>> = {
+  [V1]: FIXTURE_SNAPSHOTS[V1] as Snapshot,
+  [DM1]: snapshot(knightV2, boltV1, golemV1),
+  [DM2]: snapshot(knightV2, boltV3, golemV1),
+  [DP]: snapshot(knightV2, boltV3, golemV1),
+  [DM3]: snapshot(knightV2, boltV3, golemV3),
+};
+
 export const FIXTURE_INDEX: HistoryIndex = {
   "core-001": [V1, V2],
   "core-002": [V1, V3],
@@ -189,6 +264,18 @@ export function fixtureSource(onSnapshot?: (version: string) => void): PatchSour
 /** The tiered history's source; `onSnapshot` observes snapshots in request order. */
 export function tieredSource(onSnapshot?: (version: string) => void): PatchSource {
   const source = sourceFromData({ patches: TIERED_PATCHES, index: FIXTURE_INDEX, snapshots: TIERED_SNAPSHOTS });
+  return {
+    ...source,
+    snapshot: (version) => {
+      onSnapshot?.(version);
+      return source.snapshot(version);
+    },
+  };
+}
+
+/** The daily history's source; `onSnapshot` observes snapshots in request order. */
+export function dailySource(onSnapshot?: (version: string) => void): PatchSource {
+  const source = sourceFromData({ patches: DAILY_PATCHES, index: FIXTURE_INDEX, snapshots: DAILY_SNAPSHOTS });
   return {
     ...source,
     snapshot: (version) => {

@@ -1,5 +1,6 @@
 //! Exiling out of a library: the halves of §6.3's Exile row that name a library card by position (at
-//! random, or the bottom) rather than a `TargetSpec` (#34, #40, #42, #65).
+//! random, or the bottom) rather than a `TargetSpec` (#34, #40, #42, #65); and a whole library sent to the
+//! graveyard (R3951001).
 //!
 //! `library[0]` is the TOP (`draw::draw_one` takes it), so the BOTTOM is the last element; getting it
 //! backwards is silent, as a test that only counts cards would not notice.
@@ -8,7 +9,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::effects::targets::{PlayerSpec, player_of};
 use crate::script::Effect;
-use crate::zones::exile_to_pile;
+use crate::state::{CardInstance, find_instance};
+use crate::zones::{OffFieldZone, exile_to_pile, move_to_zone, report_graveyard_landing};
 
 /// `exileRandomFromLibrary`'s arguments: `count` defaults to 1, `player` to "self".
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
@@ -61,6 +63,32 @@ pub fn exile_bottom_of_library(args: ExileBottomOfLibraryArgs) -> Effect {
                 return;
             };
             exile_to_pile(ctx, card);
+        }
+    })
+}
+
+/// `discardLibrary`'s arguments: `player` defaults to "self".
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct DiscardLibraryArgs {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+}
+
+/// R3951001: "discard your deck" (Classic #28 Second Wind's Radiant face): every card of a library goes to
+/// its owner's graveyard, top first, each reported as it lands (`enteredGraveyard`, or where a "would go to
+/// a graveyard" replacement sends it, B5 E5), a unit token ceasing to exist instead (R11). It is no draw,
+/// so no fatigue (§2.4), and no discard from a hand: no `discarded`, no discard guard (R800), nothing that
+/// answers a discard.
+pub fn discard_library(args: DiscardLibraryArgs) -> Effect {
+    Effect::new("discardLibrary", move |ctx| {
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        let pile: Vec<CardInstance> = ctx.state.players[player].library.clone();
+        for mut card in pile {
+            let moved = move_to_zone(ctx.state, &mut card, OffFieldZone::Graveyard, Default::default());
+            let landed = find_instance(ctx.state, &card.id).cloned().unwrap_or(card);
+            report_graveyard_landing(ctx, &landed, moved);
         }
     })
 }

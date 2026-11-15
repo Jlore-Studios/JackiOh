@@ -2,7 +2,8 @@
 // every card Radiant for the rest of the game (R3569000), a card scope that reaches graveyards and
 // exile (R3569001), a fusion of the whole board into a fresh card (R3569002) and a loss of max mana
 // for the rest of the game (R3569008). The cards' own tests play them in the real scripts; these pin
-// the verbs themselves, so the engine never imports `crates/cards`. Ids are `s22-`.
+// the verbs themselves, so the engine never imports `crates/cards`. Ids are `s22-`. R3908000: the state
+// check that sweeps the world Radiant judges the board the sweep leaves.
 
 use jackioh_engine::effects::{self, FuseBoardIntoArgs, LoseMaxManaArgs};
 use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -22,6 +23,10 @@ const MEDIUM: &str = "s22-medium";
 /// A Unit no Spell reaches.
 const IMMUNE: &str = "s22-immune";
 const FILLER: &str = "s22-filler";
+/// A 2/5 Unit whose Radiant face is a 2/1, so 3 damage kills it once it turns Radiant.
+const FRAIL: &str = "s22-frail";
+/// A 1/1 Unit whose Radiant face is a 2/2 Indestructible, as C #33 Joro's is.
+const STALWART: &str = "s22-stalwart";
 
 fn card(index: u32, id: &str, type_: &str, stats: Option<(i32, i32)>, keywords: Value) -> CardDef {
     let face = match stats {
@@ -43,6 +48,22 @@ fn card(index: u32, id: &str, type_: &str, stats: Option<(i32, i32)>, keywords: 
         "base": face.clone(),
         "radiant": face,
     }))
+}
+
+/// `FRAIL`: `card`'s 2/5 with its Radiant face at 1 health.
+fn frail() -> CardDef {
+    let mut def = card(356909, FRAIL, "Unit", Some((2, 5)), json!([]));
+    def.radiant.health = Some(1);
+    def
+}
+
+/// `STALWART`: `card`'s 1/1 with an Indestructible 2/2 Radiant face.
+fn stalwart() -> CardDef {
+    let mut def = card(356910, STALWART, "Unit", Some((1, 1)), json!([]));
+    def.radiant.attack = Some(2);
+    def.radiant.health = Some(2);
+    def.radiant.keywords = json_as(json!([{ "kind": "Indestructible" }]));
+    def
 }
 
 fn spell_script(effects_of: impl Fn() -> Vec<Effect> + Send + Sync + 'static) -> CardScripts {
@@ -81,6 +102,8 @@ fn register() {
         ),
         card(356907, FILLER, "Unit", Some((1, 1)), json!([])),
         card(356908, DEGRADE_PILES, "Spell", None, json!([])),
+        frail(),
+        stalwart(),
     ] {
         catalog.insert(def.id.clone(), def);
     }
@@ -232,6 +255,60 @@ mod r3569000_every_card_radiant {
     }
 }
 
+mod r3908000_the_swept_board_is_judged {
+    use super::*;
+    use crate::rules::fixtures::harness::run_on_sink;
+    use jackioh_engine::state_check::state_check;
+
+    /// `board` with the world Radiant and not yet swept, so one state check sweeps it.
+    fn unswept(p1: Value) -> Scenario {
+        let mut s = board(p1, json!({}));
+        s.state_mut().radiant_world = Some(true);
+        s
+    }
+
+    /// The sweep's `radiantSet` on the field and what followed it, for one card.
+    fn told(events: &[GameEvent], id: &str) -> Vec<&'static str> {
+        events
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::RadiantSet {
+                    instance_id,
+                    zone: Zone::Field { .. },
+                    ..
+                } if instance_id == id => Some("radiantSet"),
+                GameEvent::PositionSwitched {
+                    instance_id,
+                    position: Position::Atk,
+                } if instance_id == id => Some("positionSwitched"),
+                GameEvent::Destroyed { instance_id, .. } if instance_id == id => Some("destroyed"),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn r3908000_the_check_that_sweeps_switches_a_unit_its_radiant_face_makes_indestructible_to_attack() {
+        let mut s = unswept(json!({ "field": [{ "def": STALWART, "position": "DEF" }] }));
+        let id = s.unit_at(P1, 1).id;
+        assert_eq!(s.unit_at(P1, 1).position, Some(Position::Def));
+        let ((), events) = run_on_sink(s.state_mut(), state_check);
+        let unit = s.unit_at(P1, 1);
+        assert!(unit.radiant);
+        assert_eq!(unit.position, Some(Position::Atk), "R2179000");
+        assert_eq!(told(&events, &id), vec!["radiantSet", "positionSwitched"]);
+    }
+
+    #[test]
+    fn r3908000_the_check_that_sweeps_destroys_a_unit_whose_radiant_face_cannot_hold_its_damage() {
+        let mut s = unswept(json!({ "field": [{ "def": FRAIL, "damage": 3 }] }));
+        let id = s.unit_at(P1, 1).id;
+        let ((), events) = run_on_sink(s.state_mut(), state_check);
+        s.expect_in_zone(&id, "graveyard");
+        assert_eq!(told(&events, &id), vec!["radiantSet", "destroyed"]);
+    }
+}
+
 mod r3569001_card_scope_piles {
     use super::*;
 
@@ -263,12 +340,27 @@ mod r3569001_card_scope_piles {
             })
             .collect();
         // The spell itself lands in the graveyard after it resolves; it was not there to be reached.
-        for id in &reached {
+        // R3888000: a graveyard card no play may take from there takes only Flashback, which would let
+        // one, and an exiled card has no live change, so it is left alone with no draw (R129).
+        let (graveyard, exile) = reached.split_at(2);
+        for id in graveyard {
             assert!(upgraded.contains(id), "{id} was Buffed: {upgraded:?}");
+            assert!(
+                card_keywords(s.state(), s.card(id.as_str()))
+                    .iter()
+                    .any(|keyword| keyword.kind() == KeywordKind::Flashback),
+                "{id} took Flashback"
+            );
+        }
+        for id in exile {
+            assert!(
+                !upgraded.contains(id),
+                "{id} in exile was left alone: {upgraded:?}"
+            );
         }
         assert_eq!(
             upgraded.len(),
-            3,
+            2,
             "one application each, and nothing of the library or the enemy"
         );
     }
@@ -293,6 +385,15 @@ mod r3596001_no_price_in_a_pile {
                 }),
                 json!({}),
             );
+            // R3888000: a graveyard card is Nerfed only while a play may take it from there, so these
+            // carry Flashback (a Buff's, R2657005); the exiled one has no live change at all.
+            let piled: Vec<String> = s.pile(P1, "graveyard").into_iter().map(|card| card.id).collect();
+            for id in &piled {
+                s.card_mut(id.as_str()).tuning = Some(Tuning {
+                    add_keywords: Some(vec![Keyword::Flashback]),
+                    ..Tuning::default()
+                });
+            }
             s.play(DEGRADE_PILES, json!({}));
             for event in s.events() {
                 if let GameEvent::Degraded {
@@ -310,7 +411,7 @@ mod r3596001_no_price_in_a_pile {
                 assert_eq!(card.cost_mod, 0, "seed {n}: {} holds a price", card.id);
             }
         }
-        assert!(changed >= 24 * 4, "every pile card was Degraded: {changed}");
+        assert!(changed >= 24 * 3, "every graveyard card was Degraded: {changed}");
     }
 }
 

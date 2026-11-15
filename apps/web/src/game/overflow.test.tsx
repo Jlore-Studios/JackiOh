@@ -1,11 +1,12 @@
 // R318 / §2.4: overflow notices render redacted fatigue, library-full, and hand-full events on both seats.
+// R3910000: a draw the limit stopped is a "Draw limit" tag on the same deck pile.
 // R97 hides unreadable cards; R200 keeps notices from owning animation state, R240 renders zero hits, and R201 scales durations.
 
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { CATALOG } from "@jackioh/cards";
-import type { GameEvent, PlayerView, SideView } from "@jackioh/shared";
+import type { GameEvent, GameEventType, PlayerView, SideView } from "@jackioh/shared";
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -14,7 +15,7 @@ import Board from "./Board.tsx";
 import { animTestid } from "./animations.ts";
 import Game from "./Game.tsx";
 import Log from "./Log.tsx";
-import { noticeTestid } from "./OverflowNotices.tsx";
+import { noticeTestid, noticesFrom } from "./OverflowNotices.tsx";
 import { testid } from "./contract.ts";
 import { resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
@@ -507,6 +508,76 @@ describe("R318 the log says each overflow in words", () => {
       `Your hand is full: ${nameOf(SHEEPISH)} burned`,
       "The opponent's hand is full: a card burned",
     ]);
+  });
+});
+
+describe("R3910000 a draw the limit stopped on the deck pile", () => {
+  const limited = (player: "p1" | "p2"): GameEvent => ({ type: "drawLimited", player });
+
+  it("R3910000 noticesFrom turns a deck pile animating drawLimited into a drawLimit notice, for each side", () => {
+    for (const viewer of ["p1", "p2"] as const) {
+      for (const owner of ["p1", "p2"] as const) {
+        const side = owner === viewer ? "you" : "opponent";
+        const view = seatView(viewer, [TURN, limited(owner)]);
+        const notices = noticesFrom(view, new Map<string, GameEventType>([[animTestid.library(side), "drawLimited"]]));
+        expect(notices.pile.get(side), `${viewer} sees ${owner}'s draw limit`).toEqual({ kind: "drawLimit", playing: true, entry: 0 });
+        expect(notices.pile.size).toBe(1);
+        expect(notices.burn.size).toBe(0);
+      }
+    }
+  });
+
+  for (const viewer of ["p1", "p2"] as const) {
+    for (const owner of ["p1", "p2"] as const) {
+      const side = owner === viewer ? "you" : "opponent";
+      const other = side === "you" ? "opponent" : "you";
+      it(`R3910000 the Game draws "Draw limit" on ${owner}'s Deck pile, seen by ${viewer}, while the entry plays`, () => {
+        play(viewer, [limited(owner)]);
+
+        const pile = screen.getByTestId(animTestid.library(side));
+        expect(pile).toHaveAttribute("data-animating", "drawLimited");
+        const notice = within(pile).getByTestId(noticeTestid.pile(side));
+        expect(notice).toHaveAttribute("data-kind", "drawLimit");
+        expect(notice).toHaveAttribute("data-playing", "true");
+        expect(notice).toHaveTextContent(/^Draw limit$/);
+        expect(screen.queryByTestId(noticeTestid.pile(other))).toBeNull();
+
+        advance(ANIMATIONS.drawLimited.durationMs);
+        expect(inFlight()).toBeNull();
+        expect(screen.queryByTestId(noticeTestid.pile(side))).toBeNull();
+      });
+    }
+  }
+
+  it("R3910000 the Game draws the same tag with effects Off", () => {
+    setFxSettings({ intensity: "off" });
+    play("p1", [limited("p1")]);
+
+    const notice = within(screen.getByTestId(animTestid.library("you"))).getByTestId(noticeTestid.pile("you"));
+    expect(notice).toHaveAttribute("data-kind", "drawLimit");
+    expect(notice).toHaveTextContent(/^Draw limit$/);
+  });
+
+  it("R3910000 reduced motion starts no entry, so no notice draws, as Deck full does not", () => {
+    setReducedMotion(true);
+    play("p1", [limited("p1")]);
+
+    expect(screen.queryByTestId(noticeTestid.pile("you"))).toBeNull();
+  });
+
+  it("R3910000 the draw limit's tag has a look and an entrance of its own", () => {
+    const read = (path: string): string => {
+      for (const candidate of [path, `apps/web/${path}`]) {
+        const file = resolve(process.cwd(), candidate);
+        if (existsSync(file)) return readFileSync(file, "utf8");
+      }
+      throw new Error(`${path} not found from ${process.cwd()}`);
+    };
+    expect(read("src/game/overflow.css")).toContain('.pile-notice[data-kind="drawLimit"] > .pile-notice-tag');
+    expect(read("src/game/animations.css")).toContain(
+      `calc(${String(ANIMATIONS.drawLimited.durationMs)}ms * var(--anim-scale) * var(--anim-squeeze, 1))`,
+    );
+    expect(read("src/game/animations.css")).toContain('.pile-notice[data-kind="drawLimit"][data-playing="true"] > .pile-notice-tag');
   });
 });
 

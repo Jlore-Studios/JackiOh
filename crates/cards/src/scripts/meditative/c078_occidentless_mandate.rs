@@ -72,6 +72,7 @@ mod tests {
     const WALL: &str = "classic-041"; // State of the Game: Indestructible
     const SHEEPISH: &str = "core-041"; // Sheepish: a Trap, set face-down
     const BAT: &str = "classicplus-004"; // Juhan Biggest Bat: a CN Unit.
+    const TATCHES: &str = "meditative-087"; // Tatches the Totem: CN among its five tribes
     const RUSH_TOKEN: &str = "core-t-rush";
     const BIG_FELINOR: &str = "core-043";
     const FIENDER: &str = "core-092"; // Felinor Fiender: Stack: played onto a pile, the cards beneath it are dormant
@@ -88,13 +89,15 @@ mod tests {
 
     /// The cards the play added to p1's hand, behind the filler it kept.
     fn added(s: &Scenario) -> Vec<CardInstance> {
-        s.hand(P1).into_iter().skip(1).collect()
+        crate::hand_and_summoned_tatches(s, P1).into_iter().skip(1).collect()
     }
 
     fn on_field(s: &Scenario, player: PlayerId) -> Vec<String> {
         let mut out = Vec::new();
         for lane in 1..=5 {
-            if let Some(unit) = s.unit(player, lane) {
+            // Issue #3951: a Tatches the Cry added summons itself from the hand once the play resolves,
+            // after the exile; it is counted among the cards added.
+            if let Some(unit) = s.unit(player, lane).filter(|unit| unit.def_id != TATCHES) {
                 out.push(unit.def_id);
             }
             if let Some(card) = s.backrow(player, lane) {

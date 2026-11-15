@@ -143,7 +143,21 @@ function listText(items: readonly string[]): string {
   return items.length === 0 ? NONE : items.join(", ");
 }
 
-function paramText(param: Param): string {
+/** R1748000, R2261001: the `cry` mark a catalog shipped before issue #3888 carries, which R3888001's `read` replaced. */
+type LegacyParam = Param & { cry?: true | "base" | "radiant" };
+
+/** R3888001: what reads a number each `read` mark names, as a Patch notes change shows it. */
+const READ_WORDS: Record<NonNullable<Param["read"]>, string> = {
+  cry: "read only by its Cry",
+  combo: "read only by its Combo",
+  castOnDraw: "read only as it is cast on draw",
+  awaken: "read only as it awakens",
+  evolve: "read only as it evolves",
+  handOrDeck: "read only in a hand or a deck",
+  graveyard: "read only in a graveyard",
+};
+
+function paramText(param: LegacyParam): string {
   const parts = [`${param.key} ${String(param.base)}`];
   if (param.radiant !== param.base) parts.push(`Radiant ${String(param.radiant)}`);
   if (param.step !== undefined) parts.push(`step ${String(param.step)}`);
@@ -152,8 +166,14 @@ function paramText(param: Param): string {
   if (param.tunedOn === "radiant") parts.push("tuned on the Radiant face only");
   if (param.tunedOn === "base") parts.push("tuned on the base face only");
   if (param.power !== undefined) parts.push(`tuned only while the card has ${POWER_WORDS[param.power]?.title ?? param.power}`);
+  // R3888001: when the number is read, on the one face `readOn` names; a Buff or a Nerf reaches it only
+  // where R3888000's table calls that live.
+  if (param.read !== undefined) {
+    const face = param.readOn === "base" ? " on the base face" : param.readOn === "radiant" ? " on the Radiant face" : "";
+    parts.push(`${READ_WORDS[param.read]}${face}`);
+  }
   // R1748000: a number only the card's Cry reads is out of a Nerf's and a Buff's reach on the field,
-  // on the one face it names (R2261001).
+  // on the one face it names (R2261001), as a catalog shipped before issue #3888 marks it.
   if (param.cry === true) parts.push("tuned only off the field");
   if (param.cry === "base") parts.push("tuned only off the field on the base face");
   if (param.cry === "radiant") parts.push("tuned only off the field on the Radiant face");

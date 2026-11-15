@@ -34,7 +34,7 @@ use crate::config::{
 };
 use crate::cosmetics::{self, CosmeticKind};
 use crate::db::store::{
-    DeckVersion, FrozenDeck, FrozenTrio, SavedDeck, SavedTrio, TrioSlots, TrioUpsertOutcome, Tx,
+    DeckVersion, FrozenDeck, FrozenTrio, QueueMode, SavedDeck, SavedTrio, TrioSlots, TrioUpsertOutcome, Tx,
     UpsertOutcome,
 };
 use crate::loadout::{DeckSlots, DeckSlotsExt};
@@ -1039,6 +1039,17 @@ pub enum ModeChoiceInput {
         #[serde(rename = "leanSet", skip_serializing_if = "Option::is_none")]
         lean: Option<LeanPick>,
     },
+}
+
+impl ModeChoiceInput {
+    /// The mode the choice asks for.
+    pub(crate) fn mode(&self) -> QueueMode {
+        match self {
+            ModeChoiceInput::Bo1 { .. } => QueueMode::Bo1,
+            ModeChoiceInput::Bo3 { .. } => QueueMode::Bo3,
+            ModeChoiceInput::Random { .. } => QueueMode::Random,
+        }
+    }
 }
 
 /// What a ticket, a room or a lobby's pick (R3730001) freezes (§9.4: "Decks are frozen into the

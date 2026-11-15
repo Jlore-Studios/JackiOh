@@ -7,14 +7,12 @@ import {
   EMPTY_STATS,
   NO_COUNTS,
   addGame,
-  logIsEmpty,
   logMax,
   logSeen,
   logWith,
   MAX_COUNTERS,
   SUMMED_COUNTERS,
   outcomeFor,
-  topCards,
   winPercent,
   formatPlayedDelta,
 } from "./model.ts";
@@ -34,8 +32,6 @@ describe("R639 a game's log", () => {
     log = logWith(log, "playedAgainst", "core-002");
     expect(log.played).toEqual({ "core-001": 2 });
     expect(log.playedAgainst).toEqual({ "core-002": 1 });
-    expect(logIsEmpty(EMPTY_LOG)).toBe(true);
-    expect(logIsEmpty(log)).toBe(false);
   });
 
   it("R639 a finished game reads win, loss or draw from the viewer's seat", () => {
@@ -67,26 +63,6 @@ describe("R639 the device's totals", () => {
     expect(winPercent(EMPTY_STATS)).toBeNull();
     expect(winPercent({ ...EMPTY_STATS, games: 3, wins: 2 })).toBe(67);
   });
-
-  it("R639 the favorites list is highest first, by id among equals, never lists a zero, and stops at the limit", () => {
-    const stats = {
-      ...EMPTY_STATS,
-      cards: {
-        "core-003": { ...NO_COUNTS, seen: 1, played: 2 },
-        "core-001": { ...NO_COUNTS, seen: 1, played: 2 },
-        "core-002": { ...NO_COUNTS, seen: 1, played: 5 },
-        "core-004": { ...NO_COUNTS, seen: 9 },
-      },
-    };
-    expect(topCards(stats, "played", 3)).toEqual([
-      { id: "core-002", count: 5 },
-      { id: "core-001", count: 2 },
-      { id: "core-003", count: 2 },
-    ]);
-    expect(topCards(stats, "played", 1)).toEqual([{ id: "core-002", count: 5 }]);
-    expect(topCards(stats, "destroyed", 3)).toEqual([]);
-    expect(topCards(stats, "played", 0)).toEqual([]);
-  });
 });
 
 describe("R1582000 the new counters", () => {
@@ -100,13 +76,9 @@ describe("R1582000 the new counters", () => {
     expect(stats.cards["core-001"]).toEqual({ ...NO_COUNTS, lethal: 1, survived: 1 });
     expect(stats.cards["core-020"]).toEqual({ ...NO_COUNTS, sprung: 2 });
     expect(stats.cards["core-050"]).toEqual({ ...NO_COUNTS, allured: 1 });
-    expect(topCards(stats, "sprung", 3)).toEqual([{ id: "core-020", count: 2 }]);
   });
 
-  it("R1582000 each new counter alone makes a log non-empty, and every one starts at 0", () => {
-    for (const counter of ["allured", "lethal", "sprung", "survived"] as const) {
-      expect(logIsEmpty(logWith(EMPTY_LOG, counter, "core-001"))).toBe(false);
-    }
+  it("R1582000 every new counter starts at 0", () => {
     expect(NO_COUNTS).toMatchObject({
       seen: 0,
       played: 0,
@@ -181,10 +153,7 @@ describe("R1743000 the new counters and totals", () => {
     expect(addGame(stats, EMPTY_LOG, "win").longestGame).toBe(24);
   });
 
-  it("R1743000 each new record and the turns alone make a log non-empty, and every new counter starts at 0", () => {
-    for (const counter of SUMMED_COUNTERS) expect(logIsEmpty(logWith(EMPTY_LOG, counter, "core-001"))).toBe(false);
-    for (const counter of MAX_COUNTERS) expect(logIsEmpty(logMax(EMPTY_LOG, counter, "core-001", 1))).toBe(false);
-    expect(logIsEmpty({ ...EMPTY_LOG, turns: 1 })).toBe(false);
+  it("R1743000 every new counter starts at 0", () => {
     expect(NO_COUNTS).toMatchObject({ damageDealt: 0, biggestHit: 0, overkill: 0, attacks: 0, healing: 0, drawn: 0, radiant: 0, playedInWin: 0, playedInLoss: 0 });
     expect(EMPTY_LOG).toMatchObject({ damageDealt: {}, biggestHit: {}, overkill: {}, attacks: {}, healing: {}, drawn: {}, radiant: {}, turns: 0 });
     expect(EMPTY_STATS).toMatchObject({ streak: 0, bestStreak: 0, longestGame: 0, longestGamePlayed: {} });
@@ -243,7 +212,6 @@ describe("R2649000 the game's own mechanics", () => {
       expect([counter, NO_COUNTS[counter]]).toEqual([counter, 0]);
       expect([counter, EMPTY_LOG[counter]]).toEqual([counter, {}]);
     }
-    expect(logIsEmpty(logMax(EMPTY_LOG, "biggestKill", "core-001", 1))).toBe(false);
     expect(logMax(logMax(EMPTY_LOG, "biggestKill", "core-001", 5), "biggestKill", "core-001", 3).biggestKill).toEqual({ "core-001": 5 });
   });
 

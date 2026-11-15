@@ -90,13 +90,15 @@ var Convention = regexp.MustCompile(`^Patch(?: v\p{Nd}+\.\p{Nd}+\.\p{Nd}+[a-z]*)
 
 // AutomatedPull matches the titles tools give the pull requests they open, which the title check
 // passes as they are (`pull_title_ok`): `patches ship: v0.3.1` (patches-ship.yml; several versions
-// joined by ", "), `patches log: abc1234..def5678` (promote-production.yml's technical log,
+// joined by ", "), its day's patch `patches cut: v0.6.3` alone or after the ship's versions as
+// `patches ship: v0.6.2c; patches cut: v0.6.3` (#3944), `patches log: abc1234..def5678` (promote-production.yml's technical log,
 // #1370), `Promote main to production: 28 commit(s) up to 6d44be2` (scripts/promote-production.sh,
 // into `_production`) and a training lane's promotion, `AI gen 8 (improve): …`
 // (training/improve.md, learn.yml and unban.md). The bots' own pull requests take a title that
 // follows the convention (`pull_title`).
 var AutomatedPull = regexp.MustCompile(
-	`^(?:patches ship: v\p{Nd}+\.\p{Nd}+\.\p{Nd}+[a-z]*(?:, v\p{Nd}+\.\p{Nd}+\.\p{Nd}+[a-z]*)*$` +
+	`^(?:patches ship: v\p{Nd}+\.\p{Nd}+\.\p{Nd}+[a-z]*(?:, v\p{Nd}+\.\p{Nd}+\.\p{Nd}+[a-z]*)*(?:; patches cut: v\p{Nd}+\.\p{Nd}+\.\p{Nd}+)?$` +
+		`|patches cut: v\p{Nd}+\.\p{Nd}+\.\p{Nd}+$` +
 		`|patches log: [0-9a-f]{7,40}\.\.[0-9a-f]{7,40}$` +
 		`|Promote main to production: \p{Nd}+ commit\(s\) up to [0-9a-f]{7,40}$` +
 		`|AI gen \p{Nd}+ \((?:improve|unban|learn)\): ` + py.ReNotS + `)`)

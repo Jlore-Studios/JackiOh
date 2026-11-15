@@ -15,13 +15,14 @@ pub fn script() -> CardScripts {
     let cry: Hook = hook(|ctx| vec![degrade(json_as(json!({ "target": { "of": "chosen" }, "times": param(ctx, "times") })))]);
 
     let base = Script {
-        targets: vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow"] }))],
+        // R3869003: a harmful Book, its aim declared (R656 reads an unset one as harm too).
+        targets: vec![TargetDecl { aim: Some(TargetAim::Harm), ..TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow"] })) }],
         cry: Some(cry.clone()),
         ..Script::default()
     };
 
     let radiant = Script {
-        targets: vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow", "hand"] }))],
+        targets: vec![TargetDecl { aim: Some(TargetAim::Harm), ..TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow", "hand"] })) }],
         cry: Some(cry),
         ..Script::default()
     };

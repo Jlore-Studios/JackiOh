@@ -5,7 +5,8 @@
 //!
 //! - `GET /api/daily`: the caller's games, challenges and seeks, and how many games wait on them.
 //! - `GET /api/daily/games/:matchId`: one game as the caller's seat sees it: its view, its legal actions
-//!   and the forecast of its attacks (R3855000).
+//!   and the forecast of its attacks (R3855000). A finished game whose log the retention purge took
+//!   answers its list row with `expired: true` and no view, which is never folded (R3934000).
 //! - `POST /api/daily/games/:matchId/actions` `{after, nonce, action}`: one action, sent after the log's
 //!   last row `after`, so a retried request applies once (its nonce is logged) and a stale one is
 //!   refused (`stale`).
@@ -38,8 +39,8 @@ use crate::app::App;
 use crate::bug_reports::{Finding, FoundIn, refused_rows};
 use crate::config::{DAILY_RECENT_FINISHED, DAILY_SETTLE_ATTEMPTS, MATCH_CHECKPOINT_MIN_ACTIONS};
 use crate::db::store::{
-    DailyGameRow, DailyInviteKind, DailyInviteRow, MatchActionRow, MatchRow, MatchStatus, QueueMode,
-    StartMatchInput, StoreError, Tx,
+    DailyGameRow, DailyInviteKind, DailyInviteRow, MatchActionRow, MatchCheckpointRow, MatchRow, MatchStatus,
+    QueueMode, StartMatchInput, StoreError, Tx,
 };
 use crate::social::live::push_social;
 use crate::social::{PlayerRef, not_found, param, profiles_by_id};
@@ -109,8 +110,31 @@ fn lost_on_time(board: &DailyBoard) -> bool {
         .is_some_and(|result| result.reason == GameOverReason::Disconnect)
 }
 
+/// A daily game's rows as one transaction read them, before anything is folded.
+struct Stored {
+    match_row: MatchRow,
+    daily: DailyGameRow,
+    log: Vec<MatchActionRow>,
+    saved: Option<MatchCheckpointRow>,
+}
+
+impl Stored {
+    /// R3934000: a game over whose log the retention purge took. Only a purge empties a finished game's log.
+    fn moves_gone(&self) -> bool {
+        self.daily.ended_at.is_some() && self.log.is_empty()
+    }
+}
+
 /// The game `match_id`, folded, or `None` when no daily game has that id.
 pub(crate) async fn load(app: &Arc<App>, match_id: &str) -> Result<Option<Loaded>, ApiError> {
+    match read_stored(app, match_id).await? {
+        Some(stored) => Ok(Some(fold_stored(app, stored).await?)),
+        None => Ok(None),
+    }
+}
+
+/// The game `match_id`'s rows, or `None` when no daily game has that id.
+async fn read_stored(app: &Arc<App>, match_id: &str) -> Result<Option<Stored>, ApiError> {
     let mut tx = app.db.begin(None).await?;
     let daily = tx.daily_games_get(match_id).await?;
     let match_row = match &daily {
@@ -124,7 +148,23 @@ pub(crate) async fn load(app: &Arc<App>, match_id: &str) -> Result<Option<Loaded
     let log = tx.matches_actions(match_id).await?;
     let saved = tx.matches_checkpoint(match_id).await?;
     tx.commit().await?;
+    Ok(Some(Stored {
+        match_row,
+        daily,
+        log,
+        saved,
+    }))
+}
 
+/// `stored`, folded from its checkpoint or its log.
+async fn fold_stored(app: &Arc<App>, stored: Stored) -> Result<Loaded, ApiError> {
+    let Stored {
+        match_row,
+        daily,
+        log,
+        saved,
+    } = stored;
+    let match_id = match_row.id.as_str();
     // R388, R767000, R3727005: the catalog the game started on, for its whole life.
     let pinned = pinned_for(&match_row);
     let (last_boards, glitch_boards) = last_boards_of(&match_row);
@@ -164,13 +204,13 @@ pub(crate) async fn load(app: &Arc<App>, match_id: &str) -> Result<Option<Loaded
             },
         );
     }
-    Ok(Some(Loaded {
+    Ok(Loaded {
         match_row,
         daily,
         log,
         state: folded.state,
         pinned,
-    }))
+    })
 }
 
 /// What an append came to.
@@ -558,28 +598,84 @@ fn refused_with(status: u16, code: &str, message: &str, game: Value) -> ApiResul
     ))
 }
 
+/// What a game route found for its caller.
+enum Found {
+    /// The game folded and settled at now, and the seat the caller plays.
+    Played(Box<Loaded>, PlayerId),
+    /// R3934000: a finished game whose log the purge took, never folded.
+    MovesGone(Box<Stored>),
+}
+
+impl Found {
+    /// The caller's read of what was found.
+    async fn json(&self, app: &Arc<App>, me: &str) -> Result<Value, ApiError> {
+        match self {
+            Found::Played(loaded, seat) => game_json(app, loaded, me, *seat).await,
+            Found::MovesGone(stored) => expired_json(app, stored, me).await,
+        }
+    }
+}
+
+/// R3934000: the read of a finished game whose log the purge took: its list row from the stored board
+/// (the turn, both heroes' life, the result and when it ended) and `expired: true`, with no view, legal
+/// actions or forecast (CLAUDE.md rule 7), since an empty log folds to a new game at the mulligan.
+async fn expired_json(app: &Arc<App>, stored: &Stored, me: &str) -> Result<Value, ApiError> {
+    let home = home_of(&stored.daily, me).ok_or_else(|| not_found("no such daily game"))?;
+    let opponent_id = if home == PlayerId::P1 {
+        &stored.daily.players.1
+    } else {
+        &stored.daily.players.0
+    };
+    let mut tx = app.db.begin(Some(me)).await?;
+    let opponent = tx.profiles_get_by_id(opponent_id).await?;
+    tx.commit().await?;
+    let mut game = summary_json(
+        &stored.daily,
+        Some(&stored.match_row),
+        me,
+        opponent.as_ref().map(PlayerRef::of),
+    )
+    .ok_or_else(|| not_found("no such daily game"))?;
+    game["expired"] = json!(true);
+    Ok(game)
+}
+
+/// The refusal of an action sent to a game that is over: `time_up` when the clock ended it.
+fn over_refusal(board: &DailyBoard, game: Value) -> ApiResult {
+    if lost_on_time(board) {
+        refused_with(409, "time_up", "Time ran out on this game.", game)
+    } else {
+        refused_with(409, "over", "This game is over.", game)
+    }
+}
+
 /// Loads the game `:matchId` for the caller, settled at now; a game the caller does not play is not
-/// found (it says nothing of anyone else's games).
-async fn caller_game(app: &Arc<App>, req: &Req) -> Result<(String, Loaded, PlayerId), ApiError> {
+/// found (it says nothing of anyone else's games). R3934000: a finished game whose log the purge took
+/// is not folded or settled.
+async fn caller_game(app: &Arc<App>, req: &Req) -> Result<(String, Found), ApiError> {
     let me = caller_profile(req)?.id;
     let match_id = param(req, "matchId");
-    let loaded = load(app, &match_id)
+    let stored = read_stored(app, &match_id)
         .await?
         .ok_or_else(|| not_found("no such daily game"))?;
-    if home_of(&loaded.daily, &me).is_none() {
+    if home_of(&stored.daily, &me).is_none() {
         return Err(not_found("no such daily game"));
     }
+    if stored.moves_gone() {
+        return Ok((me, Found::MovesGone(Box::new(stored))));
+    }
+    let loaded = fold_stored(app, stored).await?;
     let loaded = settle(app, loaded, app.daily.now()).await?;
     let seat = loaded
         .seat_of(&me)
         .ok_or_else(|| not_found("no such daily game"))?;
-    Ok((me, loaded, seat))
+    Ok((me, Found::Played(Box::new(loaded), seat)))
 }
 
 /// `GET /api/daily/games/:matchId`.
 pub async fn read(app: &Arc<App>, req: Req) -> ApiResult {
-    let (me, loaded, seat) = caller_game(app, &req).await?;
-    Ok(ok(game_json(app, &loaded, &me, seat).await?))
+    let (me, found) = caller_game(app, &req).await?;
+    Ok(ok(found.json(app, &me).await?))
 }
 
 /// `POST /api/daily/games/:matchId/actions` `{after, nonce, action}`.
@@ -598,7 +694,15 @@ pub async fn act(app: &Arc<App>, req: Req) -> ApiResult {
         .and_then(Value::as_object)
         .ok_or_else(|| bad_request("\"action\" must be an action"))
         .and_then(|raw| parse_action_body(raw).map_err(|error| bad_request(error.reason)))?;
-    let (me, mut loaded, seat) = caller_game(app, &req).await?;
+    let (me, found) = caller_game(app, &req).await?;
+    let (mut loaded, seat) = match found {
+        Found::Played(loaded, seat) => (*loaded, seat),
+        // R3934000: never tried, never logged.
+        Found::MovesGone(stored) => {
+            let game = expired_json(app, &stored, &me).await?;
+            return over_refusal(&stored.daily.board, game);
+        }
+    };
 
     // §9.3: a nonce already logged was applied; its retry answers the game as it stands.
     if loaded.log.iter().any(|row| row.action.nonce == nonce) {
@@ -606,11 +710,7 @@ pub async fn act(app: &Arc<App>, req: Req) -> ApiResult {
     }
     if loaded.over() {
         let game = game_json(app, &loaded, &me, seat).await?;
-        return if lost_on_time(&loaded.daily.board) {
-            refused_with(409, "time_up", "Time ran out on this game.", game)
-        } else {
-            refused_with(409, "over", "This game is over.", game)
-        };
+        return over_refusal(&loaded.daily.board, game);
     }
     if after != loaded.last_seq() {
         let game = game_json(app, &loaded, &me, seat).await?;
@@ -626,10 +726,11 @@ pub async fn act(app: &Arc<App>, req: Req) -> ApiResult {
     match apply(app, &mut loaded, Action::new(body, seat, nonce.clone()), now).await? {
         Applied::Done => {}
         Applied::Clash => {
-            let (me, loaded, seat) = caller_game(app, &req).await?;
-            let game = game_json(app, &loaded, &me, seat).await?;
+            let (me, found) = caller_game(app, &req).await?;
+            let game = found.json(app, &me).await?;
             // §9.3: a retry sent alongside its first try finds that one logged, as a later retry does.
-            if loaded.log.iter().any(|row| row.action.nonce == nonce) {
+            if matches!(&found, Found::Played(loaded, _) if loaded.log.iter().any(|row| row.action.nonce == nonce))
+            {
                 return Ok(ok(game));
             }
             return refused_with(409, "stale", "The game moved on. Here it is now.", game);

@@ -203,7 +203,9 @@ fn step_into_units(
     let Some(from) = slot_of(sink.state, &card) else {
         return false;
     };
-    if from.row != Row::Backrow || !acts_on_field(sink.state, &card) || is_carried(sink.state, &card) {
+    // `step_into_unit_zone` moves only a card in a backrow zone whose text acts; a carried Unit stays on
+    // its carrier (R446).
+    if is_carried(sink.state, &card) {
         return false;
     }
     let Some(to) = unit_zone_for(sink.state, from.player, from.lane) else {
@@ -309,14 +311,10 @@ pub fn return_home(sink: &mut FieldSink<'_>, card: &CardInstance) -> bool {
 /// Animated Field Spell, or an "Animated on your turn" card entering on its controller's turn, with
 /// stats (R2280000). A face-down Trap never does (rule 8): it animates as its firing's last step.
 /// Called right after the placing event by §10.5 step 4 (`play_steps::place_card`) and every summon.
+/// `animate_card` steps nothing off a unit zone, a card whose text does not act or one on a carrier
+/// (`step_into_units`), so a card that entered any of those stays where it entered.
 pub fn animate_on_entry(sink: &mut FieldSink<'_>, card: &CardInstance) -> bool {
     let card = live_or(sink.state, card);
-    let Some(at) = slot_of(sink.state, &card) else {
-        return false;
-    };
-    if at.row != Row::Backrow || !acts_on_field(sink.state, &card) || is_carried(sink.state, &card) {
-        return false;
-    }
     if is_face_down(sink.state, &card) {
         return false;
     }

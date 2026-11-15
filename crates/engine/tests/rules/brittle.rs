@@ -13,7 +13,9 @@ use crate::rules::fixtures::harness::{
     act, act_with_nonce, by, events_of_type, in_hand, input, json_of, live, live_mut, put, set_library,
     sink_for, slot,
 };
-use crate::rules::fixtures::instance_data::{asker, brittle_trap, brittle_unit, instance_game};
+use crate::rules::fixtures::instance_data::{
+    asker, brittle_set_trap, brittle_trap, brittle_unit, instance_game,
+};
 
 fn instance_ids(events: impl Serialize) -> Vec<String> {
     json_of(events)
@@ -127,6 +129,28 @@ mod r385_b3_3_where_a_brittle_count_lives_and_when_it_starts {
             Default::default(),
         ));
         assert_eq!(live(&state, &trap.id).brittle, Some(counter(3, 4, true)));
+    }
+
+    /// R687: a plain Trap set face-down starts no count either, as a Field Trap does (B3.3 rule 1), and
+    /// its count starts as it reveals.
+    #[test]
+    fn r687_a_plain_trap_set_face_down_starts_no_count_until_it_reveals() {
+        let mut state = at(4, P1);
+        let trap = put(
+            &mut state,
+            &brittle_set_trap.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
+        assert!(live(&state, &trap.id).face_up != Some(true));
+        assert_eq!(live(&state, &trap.id).brittle, None);
+        let trap = live(&state, &trap.id);
+        (reveal(Default::default()).apply)(&mut make_context(
+            &mut sink_for(&mut state),
+            Some(&trap),
+            Default::default(),
+        ));
+        assert_eq!(count_of(&state, &trap.id), Some(3));
     }
 
     #[test]

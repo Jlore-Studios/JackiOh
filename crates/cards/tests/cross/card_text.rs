@@ -2026,3 +2026,174 @@ mod r1320_players_read_nerf_and_buff_issue_543 {
         assert!(!says_degrade_or_upgrade("go up a grade and trigger every step"));
     }
 }
+
+/// R3941000 (issue #3941): the printed-text conventions of §5.4 that a sweep can hold every English face to,
+/// beyond R366's shape. A term prints as its label, its first letter aside, since R910000 bolds only the
+/// label's own spelling: never "Can't defend" for Can't Defend or "Can't be Attacked" for Can't be attacked.
+/// A line opens with a capital. A lasting turn effect is "For the rest of the game." over a "Start of turn:"
+/// line, never "at the start of its owner's turn". A cost an effect sets on a card it adds is a sentence of
+/// its own ("It costs (0)."), never ", it costs (0)" spliced on, outside a Call to Chaos list, whose clauses
+/// are its rolls' labels (R436). A hand or deck trigger opens "While this is in your hand", "… deck" or "…
+/// hand or deck" (§6.2). A stat a card gains is "+N Attack" or "+N Health". And three retired wordings print
+/// nowhere: "When awoken" (When this awakens), "One of the following random effects" (One random effect) and
+/// "Evolve: When …" (Evolves when).
+mod r3941000_printed_text_conventions_issue_3941 {
+    use super::*;
+
+    /// The words a face prints as terms beyond the keyword kinds' own labels: the §6.2 timing words a line
+    /// opens with, and the glossary's Can't be attacked, which no keyword kind carries.
+    const TERMS: &[&str] = &[
+        "End of turn",
+        "Start of turn",
+        "When this awakens",
+        "Cast on draw",
+        "Can't be attacked",
+    ];
+
+    /// Wordings a face may not print, each with what it says instead.
+    const RETIRED: &[(&str, &str)] = &[
+        (
+            "its owner's turn",
+            "\"For the rest of the game.\" and a \"Start of turn:\" line, or \"your turn\"",
+        ),
+        ("When awoken", "When this awakens"),
+        ("One of the following random effects", "One random effect"),
+    ];
+
+    /// A cost spliced onto the card it is set on. A Call to Chaos list (a line its clauses split with ";")
+    /// keeps each clause as its edition prints it, since `chaosRolled` names the clause the roll took (R436).
+    const SPLICED_COSTS: &[&str] = &["to your hand, it cost", "to your hand, they cost"];
+
+    /// The hand and deck trigger openings §6.2 retires for "While this is in your …".
+    const HAND_AND_DECK_OPENINGS: &[&str] = &["While in your ", "In your hand", "In your deck"];
+
+    fn terms() -> Vec<&'static str> {
+        jackioh_engine::KEYWORD_KINDS
+            .iter()
+            .map(|kind| kind.as_str())
+            .chain(TERMS.iter().copied())
+            .collect()
+    }
+
+    /// Each place `term` stands in `text`, matched without case, whose letters after its first differ from
+    /// the term's.
+    fn miscased(text: &str, term: &str) -> Vec<String> {
+        let hay = text.to_ascii_lowercase();
+        let needle = term.to_ascii_lowercase();
+        let bytes = hay.as_bytes();
+        every_start(&hay, &needle)
+            .into_iter()
+            .filter(|at| boundary(bytes, *at) && boundary(bytes, at + needle.len()))
+            .map(|at| &text[at..at + term.len()])
+            .filter(|found| found[1..] != term[1..])
+            .map(str::to_string)
+            .collect()
+    }
+
+    /// "+N attack" or "+N health": a stat gained, written without its capital.
+    fn lowercase_stat(text: &str) -> bool {
+        let bytes = text.as_bytes();
+        every_start(text, "+").into_iter().any(|at| {
+            let digits = bytes[at + 1..].iter().take_while(|b| b.is_ascii_digit()).count();
+            let rest = &text[at + 1 + digits..];
+            digits > 0 && (rest.starts_with(" attack") || rest.starts_with(" health"))
+        })
+    }
+
+    /// Every R3941000 check an English face fails, by name; a Chinese face is R1302's.
+    pub(super) fn conventions_failures(text: &str) -> Vec<String> {
+        if text.chars().any(is_cjk_punctuation) {
+            return Vec::new();
+        }
+        let mut out: Vec<String> = Vec::new();
+        for line in text.split('\n') {
+            if line.bytes().next().is_some_and(|b| b.is_ascii_lowercase()) {
+                out.push(format!("opens the line \"{line}\" without a capital"));
+            }
+            if line.contains(':')
+                && HAND_AND_DECK_OPENINGS
+                    .iter()
+                    .any(|opening| line.starts_with(*opening))
+            {
+                out.push(format!(
+                    "opens a hand or deck trigger as \"{line}\", not \"While this is in your …\""
+                ));
+            }
+            if line.starts_with("Evolve: When") {
+                out.push("writes \"Evolve: When …\", not \"Evolves when …\"".to_string());
+            }
+            if !line.contains(';') && SPLICED_COSTS.iter().any(|spliced| has_text(line, spliced)) {
+                out.push(format!(
+                    "splices a cost on in \"{line}\", not a sentence of its own (\"It costs (N).\")"
+                ));
+            }
+        }
+        for term in terms() {
+            for found in miscased(text, term) {
+                out.push(format!("prints \"{found}\", not the term \"{term}\""));
+            }
+        }
+        for (retired, instead) in RETIRED {
+            if has_text(text, retired) {
+                out.push(format!("says \"{retired}\", not {instead}"));
+            }
+        }
+        if lowercase_stat(text) {
+            out.push(
+                "writes a stat gained as \"+N attack\" or \"+N health\", not \"+N Attack\" or \"+N Health\""
+                    .to_string(),
+            );
+        }
+        out
+    }
+
+    #[test]
+    fn r3941000_every_english_face_prints_its_terms_as_their_labels_and_one_wording_per_clause() {
+        let wrong: Vec<String> = faces_of(&entries())
+            .iter()
+            .flat_map(|face| {
+                conventions_failures(&face.text)
+                    .into_iter()
+                    .map(|why| format!("{} {} {why}: {}", face.card.id, face.face, face.text))
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+        assert_eq!(wrong, Vec::<String>::new());
+    }
+
+    /// Each check catches the wording it retires, as the catalog printed it before issue #3941, and passes
+    /// the wording that replaced it.
+    #[test]
+    fn r3941000_the_checks_catch_each_retired_wording_and_pass_its_replacement() {
+        let caught = [
+            "end of its owner's turn: add a Phase Fabric to your hand, it costs (0).",
+            "Third Shawarma eaten gain Can't defend and Brittle 2.",
+            "Give a Unit Immutable, Immune to Spells, and Can't be Attacked.",
+            "When awoken: Gain infinite mana.",
+            "One of the following random effects: add a card to your hand, they cost (0).",
+            "Evolve: When your opponent plays a Unit.",
+            "In your hand or deck: After another Spell of yours resolves, cast this.",
+            "Give a Unit +2 health and Divine Shield.",
+            "Give a Unit Divine shield.",
+        ];
+        for text in caught {
+            assert!(!conventions_failures(text).is_empty(), "{text}");
+        }
+        let passed = [
+            "End of turn: Add a Phase Fabric to your hand. It costs (0).",
+            "Third Shawarma: It gains Can't Defend and Brittle 2.",
+            "Give a Unit Immutable, Immune to Spells and Can't be attacked.",
+            "When this awakens: Gain infinite mana.",
+            "One random effect: Add 2 random cards to your hand, which cost (0); draw a card.",
+            "Evolves when your opponent plays a Unit.",
+            "While this is in your hand or deck: After another Spell of yours resolves, cast this.",
+            "Give a Unit +2 Health and Divine Shield.",
+            "Your Units can't attack this turn.",
+            "Divine Shield, Taunt",
+            "One random effect: Add 3 random cards to your hand, they cost (0), replenish 2 mana; draw a card.",
+        ];
+        for text in passed {
+            assert_eq!(conventions_failures(text), Vec::<String>::new(), "{text}");
+        }
+    }
+}

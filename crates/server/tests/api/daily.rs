@@ -2,7 +2,8 @@
 //! memory between moves, lost on time (R3727000), holding no seat (R3727004), pinned to the catalog it
 //! started on (R3727005), its open challenges cancelled by a block (R3727007), holding its accounts
 //! from deletion while it runs (R3727008), and "your move" sent by email and Web Push, to a browser's
-//! push service only.
+//! push service only. A finished game whose moves the retention purge took opens as its stored result
+//! and refuses every move (R3934000).
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
@@ -23,12 +24,17 @@ use jackioh_engine::testkit::{clear_overrides, register_catalog, register_shippe
 use jackioh_engine::{CardCost, CardDefs, ShippedCatalog};
 use jackioh_server::api::catalog::{LoadCatalogOptions, load_catalog};
 use jackioh_server::api::queue::try_pair;
-use jackioh_server::app::App;
-use jackioh_server::config::{DAILY_MAX_ACTIVE_GAMES, MS_PER_DAY};
+use jackioh_server::api::retention::purge_expired;
+use jackioh_server::app::{App, now_ms};
+use jackioh_server::config::{
+    DAILY_MAX_ACTIVE_GAMES, DAILY_PLAYER_EMAILS_PER_DAY, MATCH_ACTION_RETENTION_DAYS, MS_PER_DAY,
+};
+use jackioh_server::daily::notify::sweep;
 use jackioh_server::db::store::{DailyNotifyRow, MatchStatus, PushSubRow};
+use jackioh_shared::economy::rewards::utc_day_bounds;
 
 use crate::support::deps::{
-    TestAppOptions, add_user, call, json_request, send as send_request, test_app_with,
+    TestAppOptions, add_user, call, json_request, record_logs, send as send_request, test_app_with,
 };
 use crate::support::engine::{TEST_GLITCH_VOID, fake_deck, install_test_cards};
 use crate::support::store::{Account, account, befriend, fail_on, fake, fake_lock, stop_failing};
@@ -681,6 +687,159 @@ async fn r3727000_a_move_after_its_deadline_is_refused_and_lost_on_time() {
     }
 }
 
+// R3934000: a finished game whose moves the retention purge took
+
+/// Dates the end of `match_id` past the retention window and runs the purge: how many log rows it took.
+/// `finished_at` moves, not the clock, because the purge reads the wall clock, which the daily offset
+/// leaves alone.
+async fn purge_its_log(app: &Arc<App>, match_id: &str) -> i64 {
+    {
+        let mut data = fake_lock(app).await;
+        let row = data
+            .tables
+            .matches
+            .iter_mut()
+            .find(|row| row.id == match_id)
+            .expect("the match row");
+        row.finished_at = Some(now_ms() - (MATCH_ACTION_RETENTION_DAYS + 1) * MS_PER_DAY);
+    }
+    purge_expired(app).await.expect("the purge runs").match_actions
+}
+
+/// How many log rows `match_id` has in the store.
+async fn log_rows(app: &Arc<App>, match_id: &str) -> usize {
+    fake_lock(app)
+        .await
+        .tables
+        .match_actions
+        .iter()
+        .filter(|row| row.match_id == match_id)
+        .count()
+}
+
+#[tokio::test]
+async fn r3934000_a_finished_game_whose_moves_were_purged_opens_as_its_result_and_refuses_every_move() {
+    let (app, ada, bo) = two_friends().await;
+    let cy = person(&app, 3, "Cy").await;
+    let match_id = daily_game(&app, &ada, &bo, 3).await;
+    past_the_mulligan(&app, [&ada, &bo], &match_id).await;
+    let seq = read(&app, &ada, &match_id).await["seq"].as_i64().expect("a seq");
+    let (status, body) = send(
+        &app,
+        &ada,
+        &match_id,
+        seq,
+        "concede",
+        json!({ "type": "concede" }),
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(body["over"], true, "{body}");
+    assert_eq!(match_status(&app, &match_id).await, MatchStatus::Finished);
+
+    // Inside the window the game reads and plays from its log, as before.
+    let inside = read(&app, &bo, &match_id).await;
+    assert_eq!(inside["over"], true, "{inside}");
+    assert!(inside["view"].is_object(), "{inside}");
+    assert!(inside.get("expired").is_none(), "{inside}");
+    let (_, list) = api(&app, "GET", "/api/daily", &bo.token, Value::Null).await;
+    let row = list["games"][0].clone();
+    assert_eq!(row["matchId"], match_id.as_str(), "{list}");
+
+    assert!(purge_its_log(&app, &match_id).await > 0, "the purge took the log");
+    assert_eq!(log_rows(&app, &match_id).await, 0);
+
+    // Each player's read is the result: over, expired, no board.
+    for (who, outcome) in [(&ada, "loss"), (&bo, "win")] {
+        let game = read(&app, who, &match_id).await;
+        assert_eq!(game["over"], true, "{game}");
+        assert_eq!(game["expired"], true, "{game}");
+        assert_eq!(game["result"]["outcome"], outcome, "{game}");
+        assert_eq!(game["result"]["reason"], "concede", "{game}");
+        for hidden in ["view", "legal", "forecast"] {
+            assert!(game.get(hidden).is_none(), "{hidden} in {game}");
+        }
+    }
+    // It is the list's row, from the stored board.
+    let game = read(&app, &bo, &match_id).await;
+    for key in [
+        "matchId",
+        "seat",
+        "opponent",
+        "turn",
+        "life",
+        "result",
+        "endedAt",
+        "mode",
+        "perMoveDays",
+    ] {
+        assert_eq!(game[key], row[key], "{key}: {game} against {row}");
+    }
+
+    // A move, from either seat, is refused as over, never as stale, and writes nothing.
+    for (who, nonce, action) in [
+        (&ada, "after-purge-a", json!({ "type": "endTurn" })),
+        (&bo, "after-purge-b", json!({ "type": "concede" })),
+    ] {
+        let (status, body) = send(&app, who, &match_id, seq + 1, nonce, action).await;
+        assert_eq!((status, code_of(&body)), (409, "over"), "{body}");
+        assert_eq!(body["game"]["expired"], true, "{body}");
+        assert_eq!(body["game"]["over"], true, "{body}");
+    }
+    assert_eq!(log_rows(&app, &match_id).await, 0);
+
+    // It says nothing to an account that does not play it.
+    let (status, body) = api(
+        &app,
+        "GET",
+        &format!("/api/daily/games/{match_id}"),
+        &cy.token,
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, 404, "{body}");
+
+    // The list still shows it with its result.
+    let (status, list) = api(&app, "GET", "/api/daily", &ada.token, Value::Null).await;
+    assert_eq!(status, 200, "{list}");
+    assert_eq!(list["games"][0]["over"], true, "{list}");
+    assert_eq!(list["games"][0]["result"]["outcome"], "loss", "{list}");
+}
+
+#[tokio::test]
+async fn r3934000_a_game_lost_on_time_whose_moves_were_purged_opens_as_won_on_time_and_answers_time_up() {
+    let (app, ada, bo) = two_friends().await;
+    let match_id = daily_game(&app, &ada, &bo, 1).await;
+    past_the_mulligan(&app, [&ada, &bo], &match_id).await;
+    let (late, waiting) = holder(&app, [&ada, &bo], &match_id).await;
+    app.daily.set_offset(MS_PER_DAY);
+    let settled = read(&app, waiting, &match_id).await;
+    assert_eq!(settled["lostOnTime"], true, "{settled}");
+    let seq = settled["seq"].as_i64().expect("a seq");
+
+    assert!(purge_its_log(&app, &match_id).await > 0, "the purge took the log");
+
+    let game = read(&app, waiting, &match_id).await;
+    assert_eq!(game["expired"], true, "{game}");
+    assert_eq!(
+        game["result"],
+        json!({ "outcome": "win", "reason": "disconnect" }),
+        "{game}"
+    );
+    let (status, body) = send(
+        &app,
+        late,
+        &match_id,
+        seq,
+        "too-late",
+        json!({ "type": "endTurn" }),
+    )
+    .await;
+    assert_eq!((status, code_of(&body)), (409, "time_up"), "{body}");
+    assert_eq!(body["game"]["expired"], true, "{body}");
+    assert_eq!(log_rows(&app, &match_id).await, 0);
+}
+
 // R3727004: a daily game holds no seat; the cap bounds them
 
 #[tokio::test]
@@ -756,6 +915,122 @@ async fn r3727004_a_player_at_the_daily_cap_still_plays_a_live_game_and_is_refus
     assert!(app.matches.actor_for(&app, &live).await.is_ok());
     // The daily games go on beside it.
     assert_eq!(read(&app, &ada, &games[1]).await["over"], false);
+}
+
+/// R3727004, #3842: a rival send taking the account's last place between the early count and the
+/// write (here, written as the write's transaction takes the account's daily lock) leaves the
+/// challenge, the accept, the waiting seek and the pairing seek refused `daily_full`, the account at
+/// the cap. An accept refused so leaves its challenge open, and a pairing seek refused so puts the
+/// seek it claimed back.
+#[tokio::test]
+async fn r3727004_a_challenge_an_accept_or_a_seek_whose_rival_took_the_last_place_is_refused() {
+    use jackioh_server::db::fake::{CallOutcome, FakeTables};
+    use jackioh_server::db::store::{DailyInviteKind, DailyInviteRow, DailyInviteState, QueueMode};
+    use std::sync::atomic::AtomicBool;
+
+    let seek = json!({ "mode": "random", "perMoveDays": 1 });
+    for case in ["challenge", "accept", "seek", "pair"] {
+        let (app, ada, bo) = two_friends().await;
+        let cy = person(&app, 3, "Cy").await;
+        for _ in 1..DAILY_MAX_ACTIVE_GAMES {
+            daily_game(&app, &ada, &bo, 14).await;
+        }
+        let mut challenge_id = String::new();
+        if case == "accept" {
+            let (status, body) = api(
+                &app,
+                "POST",
+                "/api/daily/challenges",
+                &bo.token,
+                random_challenge(&ada, 14),
+            )
+            .await;
+            assert_eq!(status, 201, "{case}: {body}");
+            challenge_id = body["id"].as_str().expect("a challenge id").to_string();
+        }
+        if case == "pair" {
+            let (status, body) = api(&app, "POST", "/api/daily/seeks", &cy.token, seek.clone()).await;
+            assert_eq!(status, 201, "{case}: {body}");
+        }
+
+        // Ada's rival send, committed just before her request's write takes the lock.
+        let rival = DailyInviteRow {
+            id: "00000000-0000-4000-8000-000000003842".into(),
+            kind: DailyInviteKind::Seek,
+            from_profile: ada.id.clone(),
+            to_profile: None,
+            mode: QueueMode::Bo1,
+            per_move_days: 7,
+            choice: json!({ "mode": "random" }),
+            state: DailyInviteState::Open,
+            match_id: None,
+            created_at: 0,
+            expires_at: app.daily.now() + MS_PER_DAY,
+        };
+        let fired = Arc::new(AtomicBool::new(false));
+        let once = Arc::clone(&fired);
+        fake(&app).lock().await.before_call = Some(Arc::new(move |method: &str, tables: &mut FakeTables| {
+            if method == "daily.lock" && !once.swap(true, Ordering::SeqCst) {
+                tables.daily.invites.push(rival.clone());
+            }
+            CallOutcome::Proceed
+        }));
+        let (status, body) = match case {
+            "challenge" => {
+                api(
+                    &app,
+                    "POST",
+                    "/api/daily/challenges",
+                    &ada.token,
+                    random_challenge(&bo, 14),
+                )
+                .await
+            }
+            "accept" => {
+                api(
+                    &app,
+                    "POST",
+                    &format!("/api/daily/challenges/{challenge_id}/accept"),
+                    &ada.token,
+                    json!({ "mode": "random" }),
+                )
+                .await
+            }
+            _ => api(&app, "POST", "/api/daily/seeks", &ada.token, seek.clone()).await,
+        };
+        fake(&app).lock().await.before_call = None;
+        assert_eq!((status, code_of(&body)), (409, "daily_full"), "{case}: {body}");
+        assert!(fired.load(Ordering::SeqCst), "{case}: the write took the lock");
+
+        let mut tx = app.db.begin(None).await.expect("a transaction");
+        let held = tx
+            .daily_active_count(ada.id.as_str(), app.daily.now())
+            .await
+            .expect("a count");
+        tx.commit().await.expect("commit");
+        assert_eq!(
+            held,
+            i64::from(DAILY_MAX_ACTIVE_GAMES),
+            "{case}: Ada holds the cap, no more"
+        );
+        if case == "accept" {
+            let (_, list) = api(&app, "GET", "/api/daily", &ada.token, Value::Null).await;
+            assert_eq!(
+                list["challenges"]["incoming"].as_array().map(Vec::len),
+                Some(1),
+                "{case}: the challenge is still open: {list}"
+            );
+        }
+        if case == "pair" {
+            let (_, list) = api(&app, "GET", "/api/daily", &cy.token, Value::Null).await;
+            assert_eq!(
+                list["seeks"].as_array().map(Vec::len),
+                Some(1),
+                "{case}: Cy's seek is back: {list}"
+            );
+            assert_eq!(list["games"], json!([]), "{case}: {list}");
+        }
+    }
 }
 
 // Challenges
@@ -1385,9 +1660,10 @@ fn browser_keys() -> (String, String) {
     )
 }
 
-#[tokio::test]
-async fn a_push_subscription_answered_410_is_deleted() {
-    let (push_api, seen) = fake_service(StatusCode::GONE).await;
+/// A device whose push service answers `status`, and one that answers 201, are pushed ("your move").
+/// Returns the service's base URL and the endpoints left, oldest first.
+async fn push_answered(status: StatusCode) -> (String, Vec<String>) {
+    let (push_api, seen) = fake_service(status).await;
     let app = app_with(
         None,
         TestAppOptions {
@@ -1418,7 +1694,7 @@ async fn a_push_subscription_answered_410_is_deleted() {
         tx.commit().await.expect("commit");
     }
 
-    // The game starts waiting on Ada: both devices are pushed, and the one gone is deleted.
+    // The game starts waiting on Ada: both devices are pushed.
     daily_game(&app, &bo, &ada, 1).await;
     notifier_idle(&app).await;
     let pushed: Vec<(String, HeaderMap)> = seen
@@ -1436,16 +1712,44 @@ async fn a_push_subscription_answered_410_is_deleted() {
                 .is_ok_and(|value| value.starts_with("vapid t="))
         );
     }
-    let mut tx = app.db.begin(None).await.expect("a transaction");
-    let left: Vec<String> = tx
-        .push_subs_of(&ada.id)
-        .await
-        .expect("a read")
-        .into_iter()
-        .map(|row| row.endpoint)
-        .collect();
-    tx.commit().await.expect("commit");
+    let left = push_endpoints(&app, &ada).await;
+    (push_api, left)
+}
+
+/// §9.13: a subscription its push service answers 410 is gone, and its row is deleted.
+#[tokio::test]
+async fn a_push_subscription_answered_410_is_deleted() {
+    let (push_api, left) = push_answered(StatusCode::GONE).await;
     assert_eq!(left, vec![format!("{push_api}/push/2/live")]);
+}
+
+/// §9.13, #3844: a subscription its push service answers 403, as it does after the VAPID keys
+/// change, is deleted too, not retried every sweep.
+#[tokio::test]
+async fn a_push_subscription_answered_403_is_deleted() {
+    let (push_api, left) = push_answered(StatusCode::FORBIDDEN).await;
+    assert_eq!(left, vec![format!("{push_api}/push/2/live")]);
+}
+
+/// §9.13: a subscription its push service answers 404 is gone, and its row is deleted.
+#[tokio::test]
+async fn a_push_subscription_answered_404_is_deleted() {
+    let (push_api, left) = push_answered(StatusCode::NOT_FOUND).await;
+    assert_eq!(left, vec![format!("{push_api}/push/2/live")]);
+}
+
+/// §9.13, #3844: a throttled push (429) is retried by the next sweep, so no row goes: only 404, 410
+/// and 403 delete.
+#[tokio::test]
+async fn a_push_subscription_answered_429_is_kept() {
+    let (push_api, left) = push_answered(StatusCode::TOO_MANY_REQUESTS).await;
+    assert_eq!(
+        left,
+        vec![
+            format!("{push_api}/push/1/gone"),
+            format!("{push_api}/push/2/live")
+        ]
+    );
 }
 
 /// The endpoints `who` holds push subscriptions for, oldest first.
@@ -1717,6 +2021,152 @@ async fn a_profile_queued_twice_before_the_task_reaches_it_is_notified_once() {
     // The push that was held and one decision for Ada, which still has games waiting on her; each of
     // the four moves queueing her afresh would have made four.
     assert_eq!(seen.lock().expect("the requests").len(), 2);
+}
+
+/// Takes `n` of the player emails of the UTC day starting at `day`, as that many sends would (#3843).
+async fn spend_emails(app: &Arc<App>, day: i64, n: i32) {
+    let mut tx = app.db.begin(None).await.expect("a transaction");
+    for k in 1..=n {
+        assert!(
+            tx.daily_email_claim(day, DAILY_PLAYER_EMAILS_PER_DAY)
+                .await
+                .expect("a claim"),
+            "email {k} of {n} was free"
+        );
+    }
+    tx.commit().await.expect("commit");
+}
+
+/// How many of `seen`'s requests went to `path`.
+fn requests_to(seen: &Requests, path: &str) -> usize {
+    seen.lock()
+        .expect("the requests")
+        .iter()
+        .filter(|(at, _, _)| at == path)
+        .count()
+}
+
+/// §9.13, #3843: once the UTC day's `DAILY_PLAYER_EMAILS_PER_DAY` are spent, a restarted server's
+/// sweep sends no email and still pushes, logs the cap once and not once a player, and marks no email
+/// sent, so the next day's sweep sends both.
+#[tokio::test]
+async fn past_the_days_player_email_cap_the_sweep_still_pushes_and_the_next_day_emails() {
+    let (quiet, ada, bo) = two_friends().await;
+    // Both owe the mulligan, so the game waits on both.
+    daily_game(&quiet, &ada, &bo, 3).await;
+    notifier_idle(&quiet).await;
+    let (service, seen) = fake_service(StatusCode::OK).await;
+    subscribe(&quiet, &ada, 1, format!("{service}/push/1/ada")).await;
+    subscribe(&quiet, &bo, 2, format!("{service}/push/2/bo")).await;
+    let now = quiet.daily.now();
+    let today = utc_day_bounds(now).0;
+    spend_emails(&quiet, today, DAILY_PLAYER_EMAILS_PER_DAY).await;
+
+    // A restart over the spent count: the cap is the store's, not the process's.
+    let app = app_with(
+        Some(quiet.db.clone()),
+        TestAppOptions {
+            mail_api: Some(format!("{service}/emails")),
+            push_keys: Some(vapid_pair()),
+            ..TestAppOptions::default()
+        },
+    )
+    .await;
+    let logs = record_logs();
+    let swept = sweep(&app, now).await.expect("a sweep");
+    assert_eq!((swept.emailed, swept.pushed), (0, 2));
+    assert_eq!(requests_to(&seen, "/emails"), 0);
+    assert_eq!(logs.named("daily.email.capped").len(), 1, "{:?}", logs.entries());
+    for who in [&ada, &bo] {
+        let row = notify_row(&app, who).await;
+        assert_eq!((row.last_email_at, row.last_push_at), (None, Some(now)));
+    }
+
+    // The next UTC day has its own count: the emails held back go, and the pushes, sent, wait.
+    let tomorrow = now + MS_PER_DAY;
+    let swept = sweep(&app, tomorrow).await.expect("a sweep");
+    assert_eq!((swept.emailed, swept.pushed), (2, 0));
+    assert_eq!(requests_to(&seen, "/emails"), 2);
+    for who in [&ada, &bo] {
+        assert_eq!(notify_row(&app, who).await.last_email_at, Some(tomorrow));
+    }
+    assert_eq!(logs.named("daily.email.capped").len(), 1);
+}
+
+/// §9.13, #3843: the after-move task and the sweep take from one count: with one email of the day
+/// left, a start that waits on both players emails one, and the sweep after it emails nobody.
+#[tokio::test]
+async fn the_after_move_queue_and_the_sweep_share_the_days_player_email_cap() {
+    let (service, seen) = fake_service(StatusCode::OK).await;
+    let app = app_with(
+        None,
+        TestAppOptions {
+            mail_api: Some(format!("{service}/emails")),
+            ..TestAppOptions::default()
+        },
+    )
+    .await;
+    // Noon UTC, so the day cannot turn between the start and the sweep.
+    let real = app.daily.now();
+    app.daily
+        .set_offset(utc_day_bounds(real).0 + MS_PER_DAY / 2 - real);
+    let ada = person(&app, 1, "Ada").await;
+    let bo = person(&app, 2, "Bo").await;
+    befriend(&app, &ada, &bo).await;
+    spend_emails(
+        &app,
+        utc_day_bounds(app.daily.now()).0,
+        DAILY_PLAYER_EMAILS_PER_DAY - 1,
+    )
+    .await;
+
+    // Both owe the mulligan, so the start queues both, and only one email of the day is left.
+    daily_game(&app, &ada, &bo, 3).await;
+    notifier_idle(&app).await;
+    assert_eq!(seen.lock().expect("the requests").len(), 1);
+    let mut emailed = 0;
+    for who in [&ada, &bo] {
+        emailed += usize::from(notify_row(&app, who).await.last_email_at.is_some());
+    }
+    assert_eq!(emailed, 1);
+
+    // The one the queue held back is not emailed by the sweep either.
+    let swept = sweep(&app, app.daily.now()).await.expect("a sweep");
+    assert_eq!(swept.emailed, 0);
+    assert_eq!(seen.lock().expect("the requests").len(), 1);
+}
+
+/// §9.13, #3843: an email the mail service refused gives its place back, so an outage spends none of
+/// the day's `DAILY_PLAYER_EMAILS_PER_DAY`.
+#[tokio::test]
+async fn an_email_the_mail_service_refused_spends_none_of_the_days_cap() {
+    let (quiet, ada, bo) = two_friends().await;
+    daily_game(&quiet, &ada, &bo, 3).await;
+    notifier_idle(&quiet).await;
+    let (service, seen) = fake_service(StatusCode::INTERNAL_SERVER_ERROR).await;
+    let app = app_with(
+        Some(quiet.db.clone()),
+        TestAppOptions {
+            mail_api: Some(format!("{service}/emails/gone")),
+            ..TestAppOptions::default()
+        },
+    )
+    .await;
+    let now = app.daily.now();
+    let swept = sweep(&app, now).await.expect("a sweep");
+    assert_eq!(swept.emailed, 0);
+    assert_eq!(requests_to(&seen, "/emails/gone"), 2);
+
+    // Every one of the day's emails is still free, and none past them.
+    let today = utc_day_bounds(now).0;
+    spend_emails(&app, today, DAILY_PLAYER_EMAILS_PER_DAY).await;
+    let mut tx = app.db.begin(None).await.expect("a transaction");
+    assert!(
+        !tx.daily_email_claim(today, DAILY_PLAYER_EMAILS_PER_DAY)
+            .await
+            .expect("a claim")
+    );
+    tx.commit().await.expect("commit");
 }
 
 #[tokio::test]

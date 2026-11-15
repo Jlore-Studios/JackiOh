@@ -301,6 +301,8 @@ struct Core {
     /// R835001: bumped on every `attach` (the first included, so generations start at 1), keying
     /// `hello_pending` so a reattach's Hello is never swallowed by the older socket's queued one.
     socket_generation: PerPlayer<u64>,
+    /// R3694000: the close `halt_with` gave its sockets; a socket handed to the stopped actor gets it too.
+    halted_with: Option<(u16, &'static str)>,
     /// R643: recent emote sends for the shared `emote_gate`, which the client runs too.
     emote_history: PerPlayer<Vec<i64>>,
     /// R1351000: mutes emotes if either blocks the other; never cleared until the next match.
@@ -514,6 +516,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         guards: PerPlayer::new(SeatGuard::default(), SeatGuard::default()),
         hello_pending: PerPlayer::new(None, None),
         socket_generation: PerPlayer::new(0, 0),
+        halted_with: None,
         emote_history: PerPlayer::new(Vec::new(), Vec::new()),
         emotes_blocked: false,
         jlore_capped: PerPlayer::new(false, false),
@@ -1648,9 +1651,14 @@ impl MatchActor {
                 // `Registry::attach` holds one between finding the actor and this call) would be greeted
                 // by an actor nothing reaches again, and its greeting would write the match's stored
                 // clocks. It is closed as `halt` closed the ones it held, so the client reconnects and the
-                // registry rebuilds the match (§9.5), as `DuosActor::attach` does.
+                // registry rebuilds the match (§9.5), as `DuosActor::attach` does; R3694000: when the
+                // reaper let a finished match go, with `MATCH_OVER_CLOSE_CODE`, which no client
+                // reconnects on.
+                let (code, reason) = core
+                    .halted_with
+                    .unwrap_or((CLOSE_GOING_AWAY, "the actor is going away"));
                 drop(core);
-                socket.close(Some(CLOSE_GOING_AWAY), Some("the actor is going away"));
+                socket.close(Some(code), Some(reason));
                 return;
             } else {
                 let previous = core.sockets[home].replace(socket.clone());
@@ -1806,7 +1814,7 @@ impl MatchActor {
         engine::snapshot(self.lock().host.game())
     }
 
-    /// For the registry's hash checks and the reaper; never sent to a socket.
+    /// For the server's tests (`crates/server/tests/actor/`); never sent to a socket.
     pub fn engine_state(&self) -> EngineState {
         self.lock().host.game().clone()
     }
@@ -1834,9 +1842,12 @@ impl MatchActor {
     }
 
     /// `halt`, its sockets closed with `code` and `reason`.
-    fn halt_with(&self, code: u16, reason: &str) {
+    fn halt_with(&self, code: u16, reason: &'static str) {
         let sockets = {
             let mut core = self.lock();
+            // R3694000: kept under the lock that stops the machine, for a socket `attach` is handed later;
+            // a second stop finds no socket left to close, so the first close is the one kept.
+            core.halted_with.get_or_insert((code, reason));
             // The machine stops its clocks and relays, and takes their timers back.
             let outputs = self.step_in(&mut core, DuelEvent::Stop);
             self.exec_now(&mut core, outputs);
