@@ -224,7 +224,7 @@
     "rarity": "Common",
     "flavor": "Hustle",
     "token": false,
-    "cost": 3,
+    "cost": 2,
     "params": [
       {
         "key": "mana",
@@ -480,14 +480,14 @@
     ],
     "loc": 10,
     "base": {
-      "attack": 5,
-      "health": 7,
+      "attack": 4,
+      "health": 6,
       "keywords": [],
       "text": "End of turn: Deal {damage} damage to each enemy."
     },
     "radiant": {
-      "attack": 10,
-      "health": 14,
+      "attack": 8,
+      "health": 12,
       "keywords": [],
       "text": "End of turn: Deal {damage} damage to each enemy."
     }
@@ -1803,14 +1803,14 @@
     "cost": 4,
     "loc": 14,
     "base": {
-      "attack": 2,
-      "health": 2,
+      "attack": 4,
+      "health": 4,
       "keywords": [],
       "text": "Summon this for your opponent.\nCry: Choose left or right. Rotate every card on the field one step that way. Cards that cross sides change control."
     },
     "radiant": {
-      "attack": 4,
-      "health": 4,
+      "attack": 8,
+      "health": 8,
       "keywords": [],
       "text": "Cry: Choose left or right. Rotate every card on the field one step that way. Cards crossing to your opponent's side are Bounced instead and cost (0)."
     }
@@ -2802,7 +2802,7 @@
     "rarity": "Rare",
     "flavor": "Chaos",
     "token": false,
-    "cost": 2,
+    "cost": 1,
     "refs": [
       "core-072"
     ],
@@ -2912,7 +2912,7 @@
     "rarity": "Rare",
     "flavor": "Nerd",
     "token": false,
-    "cost": 2,
+    "cost": 1,
     "params": [
       {
         "key": "echoGain",
@@ -3659,7 +3659,7 @@
     "rarity": "Mythic",
     "flavor": "Chaos",
     "token": false,
-    "cost": 0,
+    "cost": 1,
     "refs": [
       "core-t-rush",
       "core-t-felinor",
@@ -4412,7 +4412,7 @@
     "rarity": "Legendary",
     "flavor": "Hustle",
     "token": false,
-    "cost": 3,
+    "cost": 2,
     "params": [
       {
         "key": "draws",
@@ -5291,7 +5291,7 @@
     "rarity": "Rare",
     "flavor": "Beast",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "refs": [
       "core-t-felinor"
     ],
@@ -5631,8 +5631,8 @@
     "cost": 1,
     "loc": 3,
     "base": {
-      "attack": 3,
-      "health": 3,
+      "attack": 2,
+      "health": 2,
       "keywords": [
         {
           "kind": "Indestructible"
@@ -5644,8 +5644,8 @@
       "text": "Indestructible, Immutable"
     },
     "radiant": {
-      "attack": 6,
-      "health": 6,
+      "attack": 4,
+      "health": 4,
       "keywords": [
         {
           "kind": "Indestructible"
@@ -13169,8 +13169,8 @@
     "params": [
       {
         "key": "units",
-        "base": 5,
-        "radiant": 5,
+        "base": 3,
+        "radiant": 3,
         "better": "up",
         "step": 1,
         "min": 1
@@ -17221,8 +17221,8 @@
     "flavor": "Nerd",
     "token": false,
     "cost": {
-      "base": 2,
-      "embiggen": 4
+      "base": 1,
+      "embiggen": 3
     },
     "params": [
       {
@@ -17253,11 +17253,11 @@
     "loc": 47,
     "base": {
       "keywords": [],
-      "text": "Draw {draw|card|cards}. They cost ({setCost}).\nEmbiggened (4): Draw {embiggenedDraw} instead."
+      "text": "Draw {draw|card|cards}. They cost ({setCost}).\nEmbiggened (3): Draw {embiggenedDraw} instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Draw {draw|card|cards}. They cost ({setCost}).\nEmbiggened (4): Draw {embiggenedDraw} instead."
+      "text": "Draw {draw|card|cards}. They cost ({setCost}).\nEmbiggened (3): Draw {embiggenedDraw} instead."
     }
   },
   "meditativeplus-004": {
@@ -18028,7 +18028,7 @@
     "rarity": "Epic",
     "flavor": "Nature",
     "token": false,
-    "cost": 3,
+    "cost": 2,
     "params": [
       {
         "key": "premium",
@@ -19836,7 +19836,7 @@
     "rarity": "Rare",
     "flavor": "Tech",
     "token": false,
-    "cost": 3,
+    "cost": 4,
     "refs": [
       "stinkyscape-t-drone-corvette"
     ],
@@ -20059,8 +20059,8 @@
     "params": [
       {
         "key": "buff",
-        "base": 3,
-        "radiant": 6,
+        "base": 2,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1
@@ -20949,8 +20949,8 @@
     "params": [
       {
         "key": "damage",
-        "base": 11,
-        "radiant": 22,
+        "base": 9,
+        "radiant": 18,
         "better": "up",
         "step": 2,
         "min": 1
@@ -21869,8 +21869,8 @@
     "cost": 4,
     "loc": 46,
     "base": {
-      "attack": 5,
-      "health": 5,
+      "attack": 2,
+      "health": 2,
       "keywords": [
         {
           "kind": "Flying"
@@ -21879,8 +21879,8 @@
       "text": "Tribute 2, Flying\nCry: Discover 2 Radiant Miners and Equip them into this."
     },
     "radiant": {
-      "attack": 10,
-      "health": 10,
+      "attack": 4,
+      "health": 4,
       "keywords": [
         {
           "kind": "Flying"
@@ -22310,7 +22310,7 @@
     "cost": 2,
     "loc": 21,
     "base": {
-      "attack": 3,
+      "attack": 2,
       "health": 3,
       "keywords": [
         {
@@ -22320,7 +22320,7 @@
       "text": "Rush\nAfter this attacks, summon a copy of this, then evolve.\nEvolve: Gain Flying."
     },
     "radiant": {
-      "attack": 6,
+      "attack": 4,
       "health": 6,
       "keywords": [
         {
@@ -28563,13 +28563,13 @@
     ],
     "loc": 12,
     "base": {
-      "attack": 8,
+      "attack": 6,
       "health": 10,
       "keywords": [],
       "text": "End of turn: Deal {damage} damage to each enemy."
     },
     "radiant": {
-      "attack": 16,
+      "attack": 12,
       "health": 20,
       "keywords": [],
       "text": "End of turn: Deal {damage} damage to each enemy."
@@ -31230,7 +31230,7 @@
     "rarity": "Epic",
     "flavor": "Tech",
     "token": false,
-    "cost": 1,
+    "cost": 0,
     "loc": 21,
     "base": {
       "keywords": [],
@@ -33265,7 +33265,7 @@
       "keywords": [
         {
           "kind": "Armor",
-          "n": 5
+          "n": 3
         },
         {
           "kind": "Can't Defend"
@@ -33277,7 +33277,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Armor 5, Can't Defend, Ranged, Pierce\nIts attacks deal {sweepLane}x damage to enemy Units in this lane, {sweepAdjacent}x in adjacent lanes."
+      "text": "Armor 3, Can't Defend, Ranged, Pierce\nIts attacks deal {sweepLane}x damage to enemy Units in this lane, {sweepAdjacent}x in adjacent lanes."
     },
     "radiant": {
       "attack": 4,
@@ -33285,7 +33285,7 @@
       "keywords": [
         {
           "kind": "Armor",
-          "n": 10
+          "n": 6
         },
         {
           "kind": "Can't Defend"
@@ -33297,7 +33297,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Armor 10, Can't Defend, Ranged, Pierce\nIts attacks deal {sweepLane}x damage to enemy Units in this lane, {sweepAdjacent}x in adjacent lanes."
+      "text": "Armor 6, Can't Defend, Ranged, Pierce\nIts attacks deal {sweepLane}x damage to enemy Units in this lane, {sweepAdjacent}x in adjacent lanes."
     },
     "params": [
       {
@@ -34134,7 +34134,7 @@
     "rarity": "Common",
     "flavor": "Tech",
     "token": false,
-    "cost": 0,
+    "cost": 1,
     "loc": 87,
     "base": {
       "attack": 1,
@@ -34159,8 +34159,8 @@
     "params": [
       {
         "key": "damage",
-        "base": 2,
-        "radiant": 4,
+        "base": 1,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
@@ -35321,7 +35321,7 @@
     "rarity": "Common",
     "flavor": "Tech",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "loc": 16,
     "base": {
       "keywords": [],
@@ -35347,7 +35347,7 @@
     "rarity": "Rare",
     "flavor": "Tech",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "loc": 30,
     "base": {
       "keywords": [],
@@ -35373,7 +35373,7 @@
     "rarity": "Rare",
     "flavor": "Tech",
     "token": false,
-    "cost": 1,
+    "cost": 0,
     "loc": 28,
     "base": {
       "keywords": [],
@@ -36568,7 +36568,7 @@
     "rarity": "Epic",
     "flavor": "Physical",
     "token": false,
-    "cost": 3,
+    "cost": 4,
     "loc": 32,
     "base": {
       "attack": 3,
