@@ -5,7 +5,9 @@
 //! overrides it. A patch takes `PATCH_MIN_REPRINTS` reprinted families, `PATCH_MIN_CARDS` that play
 //! differently or a changed rule every game meets (R2455000, R2499000); else a micro. R2529000: a
 //! change to how cards look (`CARD_VISUALS`) is a micro, a system the owner names (`SYSTEM_RELEASES`)
-//! a patch.
+//! a patch. R3944000: that reading is the classifier's; a change *ships* as `shipped_tier` of it, a
+//! major when a set ships and a micro otherwise, and its pull request's tier label says the same, since
+//! only the day's cut (`patches cut`) makes a patch.
 //!
 //! Stage 1 reads the diff: every catalog field but `WORDING_FIELDS` plays; a script's code is what
 //! `catalog loc` counts; a set that ships is a major unless the owner wraps it into an earlier set's
@@ -88,10 +90,10 @@ pub(crate) fn wrapped(set: &str) -> bool {
 /// they play, so it is a micro of no family, claimed by a fragment's `visual`.
 const CARD_VISUALS: &str = "apps/web/src/cards/";
 
-/// R2529000: the systems the owner names a patch, each by its tracker issue and a name. The
-/// classifier cannot tell a huge system from a big refactor, so a fragment claims one
-/// (`patches --system <issue>`) and `patches ship` names it a patch whatever its cards earn. Naming
-/// one is the owner's call, never a builder's, as wrapping a set is (R2204000).
+/// R2529000: the systems the owner names, each by its tracker issue and a name. The classifier cannot
+/// tell a huge system from a big refactor, so a fragment claims one (`patches --system <issue>`).
+/// Naming one is the owner's call, never a builder's, as wrapping a set is (R2204000). R3944000: the
+/// claim no longer makes a patch; the system ships as a micro and goes out in the day's patch.
 pub(crate) const SYSTEM_RELEASES: &[(u32, &str)] = &[];
 
 /// R2529000: whether the owner names `issue` a system (`SYSTEM_RELEASES`).
@@ -164,12 +166,30 @@ struct Report<'a> {
 
 /// R1370000: the labels a pull request carries for its kind and its tier (`kind:cards`,
 /// `tier:micro`), as `bot/harness/config.py`'s `LABELS` lists them.
+/// R3944000: the tier label is the tier the change ships as (`shipped_tier`), so a pull request is
+/// `tier:major` or `tier:micro`, never `tier:patch`: only the day's cut makes a patch.
 pub(crate) fn labels(classification: &Classification) -> Vec<String> {
     let mut labels = vec![format!("kind:{}", kind_name(classification.kind))];
     if let Some(tier) = classification.tier {
-        labels.push(format!("tier:{}", format!("{tier:?}").to_lowercase()));
+        labels.push(format!(
+            "tier:{}",
+            format!("{:?}", shipped_tier(tier)).to_lowercase()
+        ));
     }
     labels
+}
+
+/// R3944000: the tier a card change ships as. A set that ships is a major (R1420); everything else is
+/// a micro, however many cards it reprints or plays and whatever rule it meets, since a patch is only
+/// ever the day's cut (`patches cut`), which rolls up the micros since the newest major or patch. The
+/// classifier's own reading (`classify`) still says `Patch` past its bars: the retcon (R1371000) and
+/// the stage-2 tests read it.
+pub(crate) fn shipped_tier(tier: Tier) -> Tier {
+    if tier == Tier::Major {
+        Tier::Major
+    } else {
+        Tier::Micro
+    }
 }
 
 fn kind_name(kind: Kind) -> &'static str {
@@ -1588,6 +1608,31 @@ mod tests {
         // The classification names the reader, so `--claims` asks a fragment for it (R1370000).
         let classification = classify(&edit(&with(60, 10, &shipping), &with(61, 10, &shipping)), None);
         assert!(classification.cards.contains(&"stinkyscape-109".to_string()));
+    }
+
+    // R3944000: a pull request is labeled by the tier it ships as: the classifier's patch (past its bars,
+    // or a rule) ships as a micro, a set that ships as a major, and no pull request is ever `tier:patch`.
+    #[test]
+    fn r3944000_a_change_that_reads_as_a_patch_is_labeled_and_ships_as_a_micro() {
+        assert_eq!(shipped_tier(Tier::Patch), Tier::Micro);
+        assert_eq!(shipped_tier(Tier::Micro), Tier::Micro);
+        assert_eq!(shipped_tier(Tier::Major), Tier::Major);
+        let labeled = |tier: Tier| {
+            labels(&Classification {
+                kind: Kind::Cards,
+                tier: Some(tier),
+                sets: Vec::new(),
+                cards: Vec::new(),
+                reprinted: Vec::new(),
+                wording: Vec::new(),
+                rule: false,
+                visual: false,
+                stage2: "",
+                unchecked: Vec::new(),
+            })
+        };
+        assert_eq!(labeled(Tier::Patch), vec!["kind:cards", "tier:micro"]);
+        assert_eq!(labeled(Tier::Major), vec!["kind:cards", "tier:major"]);
     }
 
     // R2529000: how cards look is a micro of no family; its tests and the rest of the client are not.

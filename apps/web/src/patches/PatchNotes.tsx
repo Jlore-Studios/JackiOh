@@ -1,9 +1,11 @@
 // Patch notes (brief B4.2 item 5; R388, R507): opened snapshots load lazily, large additions limit
 // their faces. Patches sit in their release line, the newest open (R724000), each with its player
 // note, never its record's source or notes (R724001). A major or a patch is an entry with its art
-// (R3012001), the micro patches that follow it nested inside it, and a legend on the side jumps to
-// any entry, opening its line and its cards (R3012000); an address hash does the same. Public patch
-// data only (CLAUDE.md rule 7).
+// (R3012001), its micro patches nested inside it as its snapshots: the ones it rolls up (`includes`, the
+// daily patch, R3944001), or for an entry shipped before the daily patch the ones that follow it. The
+// micros no daily patch has rolled up yet sit apart above the lines. A legend on the side jumps to any
+// entry, opening its line and its cards (R3012000); an address hash does the same. Public patch data
+// only (CLAUDE.md rule 7).
 
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";
@@ -21,11 +23,25 @@ import { ChangeList, changeSummary } from "./ChangeList.tsx";
 import { PATCHES_OPEN_ON_LOAD, PATCH_LEGEND_BAND_MARGIN, RELEASES_OPEN_ON_LOAD } from "./constants.ts";
 import { useLoaded, usePatchSource, type Loaded } from "./context.tsx";
 import { faceShown, type CardDelta } from "./diff.ts";
-import { cardCount, countsLine, currentDef, nameMatches, newestFirst, patchCards, versionBefore, type PatchCards } from "./history.ts";
+import { cardCount, countsLine, currentDef, nameMatches, newestFirst, patchCards, type PatchCards } from "./history.ts";
 import { PatchFace } from "./PatchFace.tsx";
 import { PatchLegend, legendHref, type LegendLine } from "./PatchLegend.tsx";
 import { releaseArtPath } from "./releaseArt.ts";
-import { NOTE_SECTIONS, RELEASES, nestMicros, playerTitle, releaseGroups, technicalLines, tiers, type PatchNest, type Release } from "./releases.ts";
+import {
+  NOTE_SECTIONS,
+  RELEASES,
+  cardsBasis,
+  nestMicros,
+  pendingMicros,
+  playerTitle,
+  releaseGroups,
+  rollsUp,
+  technicalLines,
+  tiers,
+  type CardsBasis,
+  type PatchNest,
+  type Release,
+} from "./releases.ts";
 import type { Patch, PlayerNote } from "./source.ts";
 import { patchTestid } from "./testids.ts";
 
@@ -37,6 +53,11 @@ const NO_DEFS: CardDefs = {};
 
 function patchCount(count: number): string {
   return count === 1 ? t("1 patch") : t("{n} patches", { n: count });
+}
+
+/** R3944001: how many micro patches an entry holds, each a snapshot. */
+function snapshotCount(count: number): string {
+  return count === 1 ? t("1 snapshot") : t("{n} snapshots", { n: count });
 }
 
 /** A card's name that opens its history; `link-button` keeps the bare-button size rule off it (patches.css draws the gold link). */
@@ -165,11 +186,12 @@ function CardsView({ cards: all, query, onOpen }: { cards: PatchCards; query: st
   );
 }
 
-function PatchCardsPanel({ patch, patches, onOpen }: { patch: Patch; patches: readonly Patch[]; onOpen: OpenCard }): ReactElement {
+/** R507, R3944002: a patch's cards, its snapshot against the one its basis names (a daily patch's: the one before its first micro). */
+function PatchCardsPanel({ basis, onOpen }: { basis: CardsBasis; onOpen: OpenCard }): ReactElement {
   const source = usePatchSource();
   const [query, setQuery] = useState("");
+  const { patch, before: beforeVersion } = basis;
   const read = useLoaded<PatchCards>(`cards:${patch.version}`, async () => {
-    const beforeVersion = versionBefore(patches, patch.version);
     const [after, before] = await Promise.all([
       source.snapshot(patch.version),
       beforeVersion === null ? Promise.resolve(null) : source.snapshot(beforeVersion),
@@ -257,8 +279,9 @@ const NO_LINES: readonly string[] = [];
 
 /** What the page's entries share: the history, the technical log, which snapshots are open and how to open a card. */
 type Page = {
-  readonly patches: readonly Patch[];
   readonly technical: ReadonlyMap<string, readonly string[]>;
+  /** R3944002: what each entry's cards read from, by its version (`cardsBasis`). */
+  readonly bases: ReadonlyMap<string, CardsBasis>;
   /** R507, R3012000: the versions whose cards are open; a snapshot loads when its version joins. */
   readonly openCards: ReadonlySet<string>;
   readonly toggleCards: (version: string) => void;
@@ -295,10 +318,12 @@ function ReleaseArtwork({ patch, major }: { patch: Patch; major: boolean }): Rea
   );
 }
 
-/** R507: a patch's counts line, its Show / Hide the cards control and its lazily loaded panel. */
-function PatchCardsToggle({ patch }: { patch: Patch }): ReactElement {
-  const { patches, openCards, toggleCards, onOpenCard } = usePage();
+/** R507: a patch's counts line, its Show / Hide the cards control and its lazily loaded panel; a daily patch's are its micros' (R3944002). */
+function PatchCardsToggle({ patch: entry }: { patch: Patch }): ReactElement {
+  const { bases, openCards, toggleCards, onOpenCard } = usePage();
   const panelId = useId();
+  const basis = bases.get(entry.version) ?? { patch: entry, before: null };
+  const { patch } = basis;
   const open = openCards.has(patch.version);
   if (patch.changes.length === 0) return <p className="patch__counts">{t("No card changed.")}</p>;
   return (
@@ -317,13 +342,13 @@ function PatchCardsToggle({ patch }: { patch: Patch }): ReactElement {
         {open ? t("Hide the cards") : t("Show the {cards}", { cards: cardCount(patch.changes.length) })}
       </button>
       <div id={panelId} className="patch__panel" hidden={!open}>
-        {open ? <PatchCardsPanel patch={patch} patches={patches} onOpen={onOpenCard} /> : null}
+        {open ? <PatchCardsPanel basis={basis} onOpen={onOpenCard} /> : null}
       </div>
     </>
   );
 }
 
-/** R3012000: a micro patch inside the entry of the patch it follows: its version, date and notes, with no art. */
+/** R3012000, R3944001: a micro patch, a snapshot inside the entry that holds it (or above the lines while none does): its version, date and notes, with no art. */
 function MicroEntry({ patch }: { patch: Patch }): ReactElement {
   const { technical } = usePage();
   const titleId = useId();
@@ -353,9 +378,9 @@ function MicroEntry({ patch }: { patch: Patch }): ReactElement {
 }
 
 /**
- * R3012000, R3012001: a major's or a patch's entry, with its art and the micro patches that follow it
- * inside it, oldest first. A micro patch with no major or patch before it in its line is an entry of
- * its own, with no art.
+ * R3012000, R3012001, R3944001: a major's or a patch's entry, with its art and its micro patches inside it
+ * as its snapshots, oldest first; a daily patch says how many it rolls up. A micro patch with no major or
+ * patch before it in its line is an entry of its own, with no art.
  */
 function PatchEntry({ nest }: { nest: PatchNest }): ReactElement {
   const { technical } = usePage();
@@ -383,11 +408,16 @@ function PatchEntry({ nest }: { nest: PatchNest }): ReactElement {
         </p>
       </header>
       {tier === "micro" ? null : <ReleaseArtwork patch={patch} major={tier === "major"} />}
+      {rollsUp(patch) ? (
+        <p className="patch__rollup" data-testid={patchTestid.rollup}>
+          {t("Rolls up {snapshots}.", { snapshots: snapshotCount(patch.includes?.length ?? 0) })}
+        </p>
+      ) : null}
       <PlayerNoteView note={patch.player} />
       <TechnicalLog lines={technical.get(patch.version) ?? NO_LINES} />
       <PatchCardsToggle patch={patch} />
       {micros.length === 0 ? null : (
-        <ol className="patch-micros" aria-label={t("Micro patches")}>
+        <ol className="patch-micros" aria-label={t("Snapshots")}>
           {micros.map((micro) => (
             <li key={micro.version}>
               <MicroEntry patch={micro} />
@@ -396,6 +426,31 @@ function PatchEntry({ nest }: { nest: PatchNest }): ReactElement {
         </ol>
       )}
     </article>
+  );
+}
+
+/**
+ * R3944001: the micro patches no daily patch has rolled up yet, apart above the release lines, oldest
+ * first, each a snapshot as a patch's are. Staging shows the ones it holds past its newest patch, and
+ * production any it took with it.
+ */
+function PendingSnapshots({ micros }: { micros: readonly Patch[] }): ReactElement | null {
+  const headingId = useId();
+  if (micros.length === 0) return null;
+  return (
+    <section className="patch-pending" aria-labelledby={headingId} data-testid={patchTestid.pending}>
+      <h2 className="patch-pending__title" id={headingId}>
+        {t("Since the last patch")} <span className="patch-count">({snapshotCount(micros.length)})</span>
+      </h2>
+      <p className="patch-pending__lede">{t("Snapshots the next daily patch rolls up.")}</p>
+      <ol className="patch-micros" aria-label={t("Snapshots")}>
+        {micros.map((micro) => (
+          <li key={micro.version}>
+            <MicroEntry patch={micro} />
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 
@@ -534,16 +589,22 @@ function PatchList({ patches, releases }: { patches: readonly Patch[]; releases:
   const log = useLoaded("technical", () => source.technical());
   const technical = technicalLines(log.status === "ready" ? log.value : []);
 
-  // R3012000: the release lines, each patch's micros nested under it, and what the legend and the address can name.
-  const { groups, nests, anchors, legend } = useMemo(() => {
+  // R3012000, R3944001: the release lines, each patch's micros nested under it, the micros no daily patch
+  // has rolled up yet, and what the legend and the address can name.
+  const { groups, nests, pending, bases, anchors, legend } = useMemo(() => {
     const tierList = tiers(patches);
     const tierOf = new Map(patches.map((patch, at) => [patch.version, tierList[at] ?? "patch"] as const));
     const lines = releaseGroups(patches, releases);
-    const nested = lines.map((line) => nestMicros(line.patches, tierOf));
+    const waiting = pendingMicros(patches, tierList);
+    const waitingSet = new Set(waiting.map((patch) => patch.version));
+    const nested = lines.map((line) => nestMicros(line.patches, tierOf, waitingSet));
+    const basisOf = new Map(patches.map((patch) => [patch.version, cardsBasis(patches, patch)] as const));
     const named = new Map<string, Anchor>();
     const entries: LegendLine[] = lines.map((line, at) => {
       named.set(lineAnchor(line.release.id), { line: line.release.id, version: false, cards: false });
-      for (const patch of line.patches) named.set(patch.version, { line: line.release.id, version: true, cards: patch.changes.length > 0 });
+      for (const patch of line.patches) {
+        named.set(patch.version, { line: line.release.id, version: true, cards: (basisOf.get(patch.version)?.patch.changes.length ?? 0) > 0 });
+      }
       return {
         id: line.release.id,
         anchor: lineAnchor(line.release.id),
@@ -551,7 +612,7 @@ function PatchList({ patches, releases }: { patches: readonly Patch[]; releases:
         entries: (nested[at] ?? []).map((nest) => ({ version: nest.patch.version, tier: nest.tier, micros: nest.micros.map((micro) => micro.version) })),
       };
     });
-    return { groups: lines, nests: nested, anchors: named, legend: entries };
+    return { groups: lines, nests: nested, pending: waiting, bases: basisOf, anchors: named, legend: entries };
   }, [patches, releases]);
 
   // R724000, R507: the newest line and the newest patch's cards open on arrival; a hash in the address opens its entry too.
@@ -643,8 +704,8 @@ function PatchList({ patches, releases }: { patches: readonly Patch[]; releases:
   }, [openKey, groups]);
 
   const page: Page = {
-    patches,
     technical,
+    bases,
     openCards,
     toggleCards: (version) => {
       setOpenCards((was) => {
@@ -661,6 +722,7 @@ function PatchList({ patches, releases }: { patches: readonly Patch[]; releases:
         <div className="patch-notes__layout">
           <PatchLegend lines={legend} current={current} onJump={onJump} />
           <div className="patch-notes__main">
+            <PendingSnapshots micros={pending} />
             <ol className="patch-sets">
               {groups.map(({ release, patches: group }, at) => (
                 <li key={release.id}>

@@ -40,7 +40,7 @@ import { usePracticeEmotes } from "../../practice/emotes.ts";
 import { createPracticeHost, type PracticeHost } from "../../practice/host.ts";
 import type { PracticeStartConfig } from "../../practice/protocol.ts";
 import { ThinkIndicator } from "../../practice/ThinkIndicator.tsx";
-import { guardLeaving } from "../../net/navigate.ts";
+import { guardLeaving, navigate, paths } from "../../net/navigate.ts";
 import { messageOf } from "../../net/errors.ts";
 import "../../practice/practice.css";
 import { PageTitle } from "../../routes/PageTitle.tsx";
@@ -178,6 +178,9 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
     },
     [controller],
   );
+  const onMenu = useCallback(() => {
+    navigate(paths.play);
+  }, []);
 
   const snapshot = state.snapshot;
 
@@ -290,6 +293,21 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
     </>
   );
 
+  // R3932000: out to Play; mid-fight it asks first, and leaves once the fight has its result.
+  const menuButton = (
+    <button
+      type="button"
+      className="control control-practice-menu"
+      data-testid={fightTestid.menu}
+      aria-haspopup={!over ? "dialog" : undefined}
+      aria-label={t("Main menu")}
+      title={t("Main menu")}
+      onClick={onMenu}
+    >
+      {t("Menu")}
+    </button>
+  );
+
   const board = (
     <Game
       view={snapshot.view}
@@ -306,6 +324,7 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
       showOfferDraw={false}
       // R2291000: the lethal hint, as in every game against the AI, which the setting turns off.
       lethalHint={lethalOn && snapshot.lethal === true}
+      controlExtras={menuButton}
       matchStatus={
         <>
           {/* R3912000: every live modifier in full, as every other table's rail lists them (R169), the
