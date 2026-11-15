@@ -408,10 +408,10 @@
     },
     "stinkyscapeplus-004": {
       "base": {
-        "en": "Cry: Exile every card with M, O, U, S or E in its name, but CN cards. Summon two random Traps. Choose an Activate: Overwhelm, Wolf's Maw or Iron Mandate."
+        "en": "Cry: Exile a permanent. Summon two random Traps.\nActivates: Overwhelm, Wolf's Maw and Iron Mandate."
       },
       "radiant": {
-        "en": "Cry: Exile every card with M, O, U, S or E in its name, but CN cards. Summon three Radiant Traps. Choose an Activate: Overwhelm, Wolf's Maw or Iron Mandate."
+        "en": "Cry: Exile a permanent. Summon three Radiant Traps.\nActivates: Overwhelm, Wolf's Maw and Iron Mandate."
       }
     },
     "stinkyscapeplus-007": {

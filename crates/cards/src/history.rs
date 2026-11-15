@@ -77,8 +77,9 @@ use crate::scripts::stinkyscape::{
     t_drone_corvette, t_drone_interceptor, t_narcor, t_red_narcor,
 };
 use crate::scripts::stinkyscape_plus::{
-    c037_scorch, c046_phase_fabric, c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage,
-    c082_endless_expedition, c104_tireless_cultivation, c155_the_far_vagabond,
+    c004_profe_yates, c009_drone_assembler_v4, c010_drone_assembler_v5, c037_scorch, c046_phase_fabric,
+    c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage, c082_endless_expedition,
+    c104_tireless_cultivation, c145_fire_beam_v5, c155_the_far_vagabond,
 };
 use crate::scripts::training_grounds::{
     c031_level_up, c035_corpse_recycler, c036_training_dummy, c038_tutorial_master, c045_jlockeeds_weapons,
@@ -843,6 +844,20 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.6.4b",
         c155_the_far_vagabond::script_v0_6_4b,
     ),
+    // #3996 group A (R3996000, R3996001, R3996002): the last scripts before Stinkyscape+ Balance Changes II.
+    (c004_profe_yates::ID, "v0.6.5", c004_profe_yates::script_v0_6_5),
+    (
+        c009_drone_assembler_v4::ID,
+        "v0.6.5",
+        c009_drone_assembler_v4::script_v0_6_5,
+    ),
+    (
+        c010_drone_assembler_v5::ID,
+        "v0.6.5",
+        c010_drone_assembler_v5::script_v0_6_5,
+    ),
+    (c145_fire_beam_v5::ID, "v0.6.5", c145_fire_beam_v5::script_v0_6_5),
+    (c047_taotie::ID, "v0.6.5", c047_taotie::script_v0_6_5),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

@@ -3705,8 +3705,8 @@ const MEDITATIVE: &[SpecRow] = &[
         T::Unit,
         &[G::Cn],
         R::Legendary,
-        st(0, 1),
-        st(0, 2),
+        st(2, 2),
+        st(4, 4),
     ),
     row(
         "48",
