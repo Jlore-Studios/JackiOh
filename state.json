@@ -18333,6 +18333,10 @@
         {
           "at": "2026-11-15T11:30:29Z",
           "minutes": 5.7
+        },
+        {
+          "at": "2026-11-15T12:09:28Z",
+          "minutes": 16.5
         }
       ],
       "tokens_spent": [
@@ -18762,17 +18766,24 @@
           "cost": 0.0,
           "input": 137447,
           "output": 38779
+        },
+        {
+          "at": "2026-11-15T12:09:28Z",
+          "cache": 0,
+          "cost": 0.0,
+          "input": 187517,
+          "output": 17153
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-15T13:54:11Z",
-          "utilization": 0.33
+          "utilization": 0.47
         },
-        "observed_at": "2026-11-15T11:30:29Z",
+        "observed_at": "2026-11-15T12:09:28Z",
         "seven_day": {
           "resets_at": "2026-11-21T00:22:39Z",
-          "utilization": 0.38
+          "utilization": 0.43
         },
         "status": "allowed"
       }
@@ -36805,7 +36816,10 @@
       "2026-11-15T11:56:23Z,claude-3,stream,call,43710298900,49,2026-11-15T12:10:00Z,,,allowed,,,",
       "2026-11-15T11:57:53Z,claude-3,stream,call,43710298900,50,2026-11-15T12:10:00Z,,,allowed,,,",
       "2026-11-15T11:59:54Z,claude-3,stream,call,43710298900,51,2026-11-15T12:10:00Z,,,allowed,,,",
-      "2026-11-15T12:00:39Z,claude-3,stream,call,43710298900,52,2026-11-15T12:10:00Z,,,allowed,,,"
+      "2026-11-15T12:00:39Z,claude-3,stream,call,43710298900,52,2026-11-15T12:10:00Z,,,allowed,,,",
+      "2026-11-15T11:35:04Z,agy,usage-command,before,43709596279,32,2026-11-15T13:54:11Z,38,2026-11-21T00:22:39Z,allowed,100,100,",
+      "2026-11-15T11:56:19Z,agy,usage-command,call,43709596279,41,2026-11-15T13:54:11Z,41,2026-11-21T00:22:39Z,allowed,100,100,",
+      "2026-11-15T12:02:46Z,agy,usage-command,after,43709596279,47,2026-11-15T13:54:11Z,43,2026-11-21T00:22:39Z,allowed,100,100,"
     ],
     "runs": [
       "2026-11-15T11:41:27Z,43709463826,claude-7,sonnet+opus,review,3972,medium,approved,,5.8,38,8592,1219640,0.8274,31,34,,,0.9,,none,,1",
