@@ -13840,6 +13840,13 @@
     "3934": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-15T20:21:16Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "No line of the hard rule holds: no engine or AI change, no migration, about 15 files; the server and web agree only on one additive `expired` flag on an existing list-row shape."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
