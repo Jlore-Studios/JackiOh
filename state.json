@@ -16438,6 +16438,7 @@
       "run_id": "43706124017",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 275,
       "started_at": "2026-11-15T10:51:51Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -36302,9 +36303,33 @@
         "title": "Patch: the account screen fills or drops its empty \"This season\" heading, shows the rank crest, and keeps match history's tap areas apart",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-6"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "5e9236fd151db06879d165e8ad1bff9f7b058a2a",
+        "issue": 3955,
+        "merged_at": "2026-11-15T13:18:23Z",
+        "n": 275,
+        "pr": 3969,
+        "queued_at": "2026-11-15T13:18:23Z",
+        "sha": "9076a3e245552ccfe62f0c9f1cb5063af7247ce6",
+        "status": "queued",
+        "title": "Patch: the friends drawer and Friends page fit a phone: tabs that scroll or wrap, themed 44-pixel inputs, no overlapping tap areas",
+        "tries": 0
       }
     ],
-    "count": 274
+    "count": 275
   },
   "statistics": {
     "at": "2026-11-15T13:18:20Z"
