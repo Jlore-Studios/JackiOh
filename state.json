@@ -14883,9 +14883,7 @@
     },
     "3976": {
       "action": "plan",
-      "asks": [
-        "c:6900309492"
-      ],
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-15T20:22:13Z",
         "difficulty": "hard",
@@ -14908,24 +14906,26 @@
       "interruptions": 0,
       "kind": "build",
       "live": "planning",
-      "owner": "gpt",
-      "owner_since": "2026-11-15T19:54:57Z",
-      "owner_why": "it plans it",
+      "owner": "claude-6",
+      "owner_since": "2026-11-15T20:26:04Z",
+      "owner_why": "handed off from `gpt`: its owner `gpt` has no strong seat, which it needs",
       "pending_request": false,
       "planned_at": "2026-11-15T20:22:17Z",
       "planned_by": "`gpt` (codex, `gpt-5.6-sol`, medium)",
       "planned_by_id": "gpt",
       "planned_model": "gpt-5.6-sol",
       "planned_tier": "medium",
-      "provider": "gpt",
+      "provider": "claude-6",
       "queued_at": "2026-11-15T19:51:37Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "43755075663",
-      "runs_on": "night-vm-gpt",
-      "started_at": "2026-11-15T19:54:57Z",
+      "run_id": "pending:227cef50-1794774337",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-15T20:26:04Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6900309492"
+      ]
     },
     "3977": {
       "action": "build",
@@ -15099,9 +15099,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-15T20:25:23Z",
+    "at": "2026-11-15T20:26:04Z",
     "url": "",
-    "what": "build #3618 on claude-4"
+    "what": "plan #3976 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-15T20:05:26Z",
