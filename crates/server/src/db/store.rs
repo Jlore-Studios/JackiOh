@@ -3291,6 +3291,21 @@ impl Tx<'_> {
         dispatch!(self, daily_notify_unsubscribe(token))
     }
 
+    // the player mail's days
+
+    /// §9.13, #3843: takes one of the `cap` "your move" emails of the UTC day starting at `day`
+    /// (`utc_day_bounds(..).0`): true when one was left, false once all are taken and for a `cap` of 0
+    /// or below. One statement, so two senders at once never take more than `cap` between them.
+    pub async fn daily_email_claim(&mut self, day: i64, cap: i32) -> StoreResult<bool> {
+        dispatch!(self, daily_email_claim(day, cap))
+    }
+
+    /// §9.13, #3843: gives back one email [`Tx::daily_email_claim`] took on `day`, for a send that
+    /// failed; never below 0.
+    pub async fn daily_email_release(&mut self, day: i64) -> StoreResult<()> {
+        dispatch!(self, daily_email_release(day))
+    }
+
     // push subscriptions
 
     /// §9.13: keeps the subscription. A row already under its endpoint keeps its id and takes the
