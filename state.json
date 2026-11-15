@@ -15336,14 +15336,12 @@
     "what": "revise #3929 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-15T04:03:10Z",
+    "at": "2026-11-15T04:13:27Z",
     "notes": [
-      "delivered review #3929 on claude-3 (run 43673906553): approved",
-      "delivered review #3927 on claude-7 (run 43671147096): approved",
-      "delivered build #3914 on claude-3 (run 43670486608): built",
-      "started review #3931 on claude-3 (run 43675345046)",
+      "CI on #3929: #3929: queued a CI fix",
+      "started revise #3929 on claude-3 (run 43675922221)",
       "nothing more to start: nothing is queued",
-      "pruned 5 plan file(s) older than 7 days"
+      "pruned 3 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -16049,7 +16047,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-15T04:03:10Z",
+  "loop_tick": "2026-11-15T04:13:27Z",
   "machine_disk": {
     "issue": null,
     "reading": {
