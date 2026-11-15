@@ -146,6 +146,88 @@ mod i2_a_windfury_granted_inside_one_action_s_events {
     }
 }
 
+/// I2 and a unit gone by the action's end that attacked twice inside it under an aura's Windfury, which
+/// no event reports (R636, R3556008: S+ #63 Overdrive Dome awake inside the action; fuzz seeds 1596, 2217).
+mod i2_a_unit_gone_under_a_windfury_aura {
+    use super::*;
+
+    const DOME: &str = "stinkyscapeplus-063";
+
+    /// p1's Vanilla, the Dome in p1's backrow when `dome`, declares two attacks at the enemy hero and is
+    /// destroyed, all inside one action, and is gone from the state the action leaves.
+    fn two_attacks_then_gone(dome: bool) -> Vec<String> {
+        let mut p1 = json!({ "field": [{ "def": VANILLA, "lane": 1 }] });
+        if dome {
+            p1["backrow"] = json!([{ "def": DOME, "lane": 1 }]);
+        }
+        let mut g = scenario(json!({ "p1": p1 }));
+        let mut unit = g.unit_at(PlayerId::P1, 1);
+        let mut monitor = create_invariant_monitor(g.state());
+        jackioh_engine::zones::cease_to_exist(g.state_mut(), &mut unit);
+        let declared = || {
+            event(
+                json!({ "type": "attackDeclared", "attackerId": unit.id, "targetId": "hero-p2", "forced": false }),
+            )
+        };
+        let destroyed = event(json!({
+            "type": "destroyed", "instanceId": unit.id, "defId": VANILLA, "owner": "p1", "controller": "p1",
+            "attack": 1, "maxHealth": 1,
+        }));
+        monitor.after(&[declared(), declared(), destroyed], g.state())
+    }
+
+    #[test]
+    fn r636_r3556008_a_unit_gone_by_the_end_that_attacked_twice_under_a_windfury_aura_is_one_windfury_turn() {
+        assert_eq!(two_attacks_then_gone(true), no_violations());
+    }
+
+    #[test]
+    fn r636_a_unit_gone_by_the_end_that_attacked_twice_with_no_windfury_aura_is_still_an_extra_attack() {
+        let found = two_attacks_then_gone(false);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
+    }
+}
+
+/// I2 and R3139004 inside one action: an attack on a Unit that killed nothing readies an attacker whose
+/// own `afterAttack` answers it (Core #89 Corpse Eater), so its next attack in the same action is no extra
+/// attack (daily fuzz seed 11162); one with no such text still declares one.
+mod i2_r3139004_a_second_attack_after_an_attack_on_a_unit_inside_one_action {
+    use super::*;
+
+    const CORPSE_EATER: &str = "core-089";
+
+    /// p1's `attacker` declares two attacks at p2's Vanilla inside one action, killing nothing.
+    fn two_attacks_on_a_unit(attacker: &str) -> Vec<String> {
+        let g = scenario(json!({
+            "p1": { "field": [{ "def": attacker, "lane": 1 }] },
+            "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
+        }));
+        let unit = g.unit_at(PlayerId::P1, 1);
+        let prey = g.unit_at(PlayerId::P2, 1);
+        let mut monitor = create_invariant_monitor(g.state());
+        let declared = || {
+            event(
+                json!({ "type": "attackDeclared", "attackerId": unit.id, "targetId": prey.id, "forced": false }),
+            )
+        };
+        monitor.after(&[declared(), declared()], g.state())
+    }
+
+    #[test]
+    fn r3139004_a_corpse_eater_that_attacks_a_unit_twice_inside_one_action_is_readied_by_the_first() {
+        assert_eq!(two_attacks_on_a_unit(CORPSE_EATER), no_violations());
+    }
+
+    #[test]
+    fn r3139004_a_unit_with_no_after_attack_text_that_attacks_a_unit_twice_inside_one_action_is_an_extra_attack()
+     {
+        let found = two_attacks_on_a_unit(VANILLA);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
+    }
+}
+
 /// I2 and a unit that enters inside one action already holding Windfury: the autopilot (R1183002)
 /// (Rampaging Rhino), #1216.
 mod i2_a_windfury_unit_that_enters_inside_one_action {

@@ -545,6 +545,48 @@ fn r3558007_fifth_exiled_card_casts_it_from_deep_in_the_deck() {
     );
 }
 
+/// R3920001: a cast from the deck is a cast and no play, as a cast on draw is (R2179002): no play count
+/// takes it, and its `cardPlayed` and `cardResolved` say so with `onDraw`, so nothing that answers a play
+/// answers it (handicapped fuzz seed 4517).
+#[test]
+fn r3920001_a_deck_cast_is_no_play() {
+    let mut s = animosity_board();
+    for _ in 0..4 {
+        play_exiler(&mut s);
+    }
+    assert_eq!(s.state().players[P1].turn_log.cards_played, 4);
+    play_exiler(&mut s);
+    assert!(
+        s.pile(P1, "graveyard")
+            .iter()
+            .any(|card| card.def_id == ANIMOSITY_FX),
+        "the fifth exile casts it"
+    );
+    assert_eq!(
+        s.state().players[P1].turn_log.cards_played,
+        5,
+        "the five Exilers alone are plays"
+    );
+    let played: Vec<Option<bool>> = s
+        .events()
+        .iter()
+        .filter_map(|event| match event {
+            GameEvent::CardPlayed { def_id, on_draw, .. } if def_id == ANIMOSITY_FX => Some(*on_draw),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(played, vec![Some(true)]);
+    let resolved: Vec<Option<bool>> = s
+        .events()
+        .iter()
+        .filter_map(|event| match event {
+            GameEvent::CardResolved { def_id, on_draw, .. } if def_id == ANIMOSITY_FX => Some(*on_draw),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(resolved, vec![Some(true)]);
+}
+
 /// R3558007: four exiled cards cast nothing.
 #[test]
 fn r3558007_four_exiled_cast_nothing() {

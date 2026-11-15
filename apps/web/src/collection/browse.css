@@ -172,6 +172,15 @@
   mask-image: linear-gradient(90deg, var(--pal-black) calc(100% - var(--space-10)), transparent);
 }
 
+/* R2122000: it takes the keyboard to scroll (OwnedCards.tsx), so under a finger it is a control, and its
+   overflow clips index.css's ::before band: it is --hit-min tall itself, its sets centered in it. */
+@media (pointer: coarse), (max-width: 600px) {
+  .collection-screen .collection-set-list {
+    align-items: center;
+    min-height: var(--hit-min);
+  }
+}
+
 /* Each set is as wide as its name and count (`auto`), so a name is never cut. */
 .collection-screen .collection-set {
   display: grid;

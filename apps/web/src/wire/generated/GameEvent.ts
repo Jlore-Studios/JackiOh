@@ -51,9 +51,9 @@ arrivedDuring?: Array<string>,
  */
 exitsFrom?: number, 
 /**
- * R2179002: the card was cast by the draw that drew it (Cast on draw), a cast that is no play:
- * nothing that counts plays counted it, and no trigger answers this event. Public, as the
- * cast is. Only ever `Some(true)`.
+ * R2179002: the card was cast by the draw that drew it (Cast on draw), or from its deck
+ * (R3920001), a cast that is no play: nothing that counts plays counted it, and no trigger
+ * answers this event. Public, as the cast is. Only ever `Some(true)`.
  */
 onDraw?: true, } | { "type": "cardResolved", player: PlayerId, instanceId: string, defId: string, permanent: boolean, costPaid: number, radiant?: boolean, 
 /**
@@ -79,9 +79,9 @@ exitsFrom?: number,
  */
 answer?: SpellAnswer, 
 /**
- * R2179002: the card was cast by the draw that drew it, a cast that is no play: a card whose
- * text answers a play ("after you play", "when your opponent plays") passes this event by.
- * Public, as the cast is. Only ever `Some(true)`.
+ * R2179002: the card was cast by the draw that drew it, or from its deck (R3920001), a cast
+ * that is no play: a card whose text answers a play ("after you play", "when your opponent
+ * plays") passes this event by. Public, as the cast is. Only ever `Some(true)`.
  */
 onDraw?: true, } | { "type": "summoned", player: PlayerId, instanceId: string, defId: string, row: Row, lane: number, 
 /**
