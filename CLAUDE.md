@@ -123,7 +123,7 @@ cargo jackioh fuzz --seeds 200     # CI's fuzz gate: random-policy games with re
 cargo jackioh golden check         # the hotseat fixture's fold (cargo test folds it too); `golden record` + `golden check --file` compare two builds
 cargo jackioh gate                 # the AI's quality gates at smoke size; --full at full size (the daily run's); --duos for the co-op AI team's (§13.7)
 cargo jackioh perf                 # the engine's and the replay fold's speed on a frozen corpus, each median held to its budget (#3429); --smoke once, --json
-cargo jackioh patches "<title>" [--plays <ids>] [--rule]   # a branch's card change as a pending fragment, no version (R388, R646, R1366000); `patches ship` names the version by tier after merge
+cargo jackioh patches "<title>" [--plays <ids>] [--rule]   # a branch's card change as a pending fragment, no version (R388, R646, R1366000); `patches ship` names it a micro (a major if a set ships) after merge, and the daily `patches cut` rolls the micros into the day's patch (R3944000)
 cargo jackioh classify --base origin/main [--parent-bin <path>] [--claims]   # what the change does: its kind, tier and the cards that play differently (R1365000); --claims holds the fragments to it, as CI's `rust (classify)` does (R1370000)
 sh scripts/mutants.sh --in-diff    # cargo-mutants on the lines the branch changed since origin/main: does a test fail when each is wrong (#3490); fails on a survivor
 sh scripts/mutants.sh <area> [k]   # one area's shard k of mutation testing (cargo-mutants; Stryker for web-* and edge); `areas` lists them, mutants.yml runs each weekly

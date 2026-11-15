@@ -956,6 +956,42 @@
   display: none;
 }
 
+/* R3944001: the micro patches no daily patch has rolled up yet, framed like a release line above the
+   lines, and a daily patch's line saying how many snapshots it rolls up. */
+.tavern.app-shell .patch-pending {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 22px;
+  padding: 16px 20px 18px;
+  overflow-wrap: anywhere;
+  border: 1px dashed var(--tavern-brass);
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(52, 30, 16, 0.9), rgba(22, 13, 7, 0.92));
+}
+
+.tavern.app-shell .patch-pending__title {
+  margin: 0;
+  color: var(--tavern-gold);
+  font-family: var(--tavern-serif);
+  font-size: clamp(20px, 4.5vw, 26px);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.tavern.app-shell .patch-pending__lede,
+.tavern.app-shell .patch__rollup {
+  margin: 0;
+  font-size: 14px;
+  color: var(--tavern-text-dim);
+}
+
+@media (max-width: 600px) {
+  .tavern.app-shell .patch-pending {
+    padding: 14px 12px 16px;
+  }
+}
+
 /* The micro patches under their patch: compact, no art, a brass bar down their left. */
 .tavern.app-shell .patch-micros {
   display: flex;

@@ -21,6 +21,17 @@
 # the promotion deletes the fragments, which touches pending/ and runs this again; with nothing
 # pending it opens nothing.
 #
+# The day's patch (#3944, R3944000): `patches ship` names only majors and micros, and once a day, at
+# CUT_CRON (03:41 UTC: its pull request lands before promote-staging.yml's 05:05 or 06:05 move, which
+# super.yml's 07:17 run tests for the daily production merge), the same job runs `patches cut
+# --production origin/_production` after the ship. The cut rolls every micro since the newest major or
+# patch into the next `v0.X.Y`, and waits while production does not hold the newest one yet, so each
+# daily patch is one production release; a day with no micro cuts nothing. A fast-forward is this
+# workflow run by hand with `cut` ticked (Actions -> patches ship -> Run workflow): it cuts at once,
+# without the wait. A cut rides the promotion pull request, marked `<!-- patches-cut: <mode> -->`, and a
+# later run that supersedes that pull request reads the mark and cuts again, so superseding never drops
+# the day's patch.
+#
 # Once a promotion has merged (the push that runs this changed patches.json), `retitle` names the
 # version on the threads it shipped (#1360, #1370): the pull request whose commit added each patch's
 # fragment and the issues that pull request closes become `Patch v<version>: <what it does>`, each
@@ -50,9 +61,16 @@ on:
     branches: [main]
     paths: ["crates/cards/patches/pending/**", "crates/cards/patches/patches.json"]
   workflow_dispatch:
-  # `watch` alone: hourly if GitHub starts it, and after every CI run.
+    inputs:
+      cut:
+        description: "Fast-forward: cut the day's patch now, without waiting for production (R3944000)"
+        type: boolean
+        default: false
+  # `watch` alone: hourly if GitHub starts it, and after every CI run. The second is CUT_CRON, the
+  # day's cut, which the `ship` job runs; keep the two strings below in step with it.
   schedule:
     - cron: "23 * * * *"
+    - cron: "41 3 * * *"
   workflow_run:
     workflows: [CI]
     types: [completed]
@@ -60,7 +78,7 @@ on:
 # The ship runs one at a time and is never cancelled; the watch runs in a group of its own, so a watch
 # queued behind a ship never displaces a ship waiting its turn.
 concurrency:
-  group: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && 'patches-ship' || 'patches-ship-watch' }}
+  group: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.schedule == '41 3 * * *') && 'patches-ship' || 'patches-ship-watch' }}
   cancel-in-progress: false
 
 permissions:
@@ -71,7 +89,7 @@ permissions:
 jobs:
   ship:
     name: promote pending fragments
-    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.schedule == '41 3 * * *' }}
     runs-on: ubuntu-latest
     # A release build of the CLI first (the cache holds its dependencies, not the crates themselves).
     timeout-minutes: 20
@@ -92,19 +110,62 @@ jobs:
         shell: bash
         run: cargo jackioh patches ship | tee "$RUNNER_TEMP/ship.log"
 
+      # R3944000: the day's patch, after the ship so it rolls up what the ship named. The scheduled run
+      # waits for production to hold the newest major or patch; a run by hand with `cut` does not (the
+      # fast-forward); any other run cuts only to carry on the cut of an open promotion it supersedes.
+      - name: cut the day's patch
+        id: cut
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+          EVENT: ${{ github.event_name }}
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.cut == true }}
+        run: |
+          set -euo pipefail
+          mode=""
+          [ "$EVENT" = schedule ] && mode=production
+          [ "$FORCE" = true ] && mode=force
+          if [ -z "$mode" ]; then
+            mode=$(gh pr list --state open --base main --json headRefName,body \
+              --jq '[.[] | select(.headRefName | startswith("patches/ship-")) | (.body // "") | capture("<!-- patches-cut: (?<mode>production|force) -->") | .mode] | first // empty')
+          fi
+          if [ -z "$mode" ]; then
+            echo "No cut on this run."
+            exit 0
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          if [ "$mode" = production ]; then
+            git fetch --no-tags origin +refs/heads/_production:refs/remotes/origin/_production
+            cargo jackioh patches cut --production origin/_production | tee "$RUNNER_TEMP/cut.log"
+          else
+            cargo jackioh patches cut | tee "$RUNNER_TEMP/cut.log"
+          fi
+
       - name: open the promotion pull request
         env:
           GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+          CUT_MODE: ${{ steps.cut.outputs.mode }}
         run: |
           set -euo pipefail
           if [ -z "$(git status --porcelain)" ]; then
-            echo "Nothing pending; no promotion to open."
+            echo "Nothing pending and nothing to cut; no promotion to open."
             exit 0
           fi
 
           versions=$(sed -n 's/^patches ship: shipped //p' "$RUNNER_TEMP/ship.log" | paste -sd, - | sed 's/,/, /g')
+          cut=""
+          if [ -f "$RUNNER_TEMP/cut.log" ]; then
+            cut=$(sed -n 's/^patches cut: cut \([^,]*\),.*/\1/p' "$RUNNER_TEMP/cut.log")
+          fi
+          if [ -n "$versions" ] && [ -n "$cut" ]; then
+            title="patches ship: $versions; patches cut: $cut"
+          elif [ -n "$cut" ]; then
+            title="patches cut: $cut"
+          else
+            title="patches ship: $versions"
+          fi
           head=$(git rev-parse HEAD)
-          branch="patches/ship-$(git rev-parse --short HEAD)"
+          branch="patches/ship-$(git rev-parse --short HEAD)${cut:+-cut}"
           # GraphQL's viewer, not REST's `gh api user`: the bot's token runs out of REST calls for
           # hours at a time, which stopped two promotions here (#3714), while GraphQL keeps its own
           # limit and `gh pr create`, `gh pr merge` and `gh pr list` below spend it already.
@@ -115,15 +176,21 @@ jobs:
           git checkout -b "$branch"
           git add -A
           git -c user.name="$login" -c user.email="$id+$login@users.noreply.github.com" \
-            commit -q -m "patches ship: $versions" \
-            -m "Promotes the pending fragments on main at $head (R646): snapshots, patches.json, shipped.json, index.json and CATALOG_VERSION."
+            commit -q -m "$title" \
+            -m "Promotes the pending fragments on main at $head (R646) and cuts the day's patch when one is due (R3944000): snapshots, patches.json, shipped.json, index.json and CATALOG_VERSION."
           git push -u origin "$branch"
 
+          cut_line=""
+          if [ -n "$cut" ]; then
+            cut_line="\`patches cut\` rolled the micros since the newest major or patch into **$cut**, the day's patch (R3944000): their versions in its \`includes\`, their notes merged, the newest one's snapshot. <!-- patches-cut: $CUT_MODE -->"
+          fi
           body=$(printf '%s\n' \
-            "Promotes the card patches pending on main at $head (SPEC R646): $versions." \
+            "Promotes the card patches pending on main at $head (SPEC R646): ${versions:-none}${cut:+, and the day's patch $cut}." \
             "" \
-            "\`patches ship\` appended the patches in ship order, each snapshot the patch before it with the cards its fragment claims (R1280000), recorded \`shipped.json\`, deleted the fragments and bumped \`CATALOG_VERSION\`. Opened by \`.github/workflows/patches-ship.yml\`; it merges itself once CI passes.")
-          url=$(gh pr create --base main --head "$branch" --title "patches ship: $versions" --body "$body")
+            "\`patches ship\` appended the patches in ship order, each snapshot the patch before it with the cards its fragment claims (R1280000), recorded \`shipped.json\`, deleted the fragments and bumped \`CATALOG_VERSION\`. Opened by \`.github/workflows/patches-ship.yml\`; it merges itself once CI passes." \
+            "" \
+            "$cut_line")
+          url=$(gh pr create --base main --head "$branch" --title "$title" --body "$body")
           gh pr merge "$url" --auto --squash
 
           # Older promotions still open shipped a subset of what this one ships.
@@ -133,7 +200,7 @@ jobs:
               [ "$ref" = "$branch" ] && continue
               gh pr close "$number" --delete-branch --comment "Superseded by $url, which ships everything this one did from a newer main."
             done
-          echo "### patches ship: $versions" >> "$GITHUB_STEP_SUMMARY"
+          echo "### $title" >> "$GITHUB_STEP_SUMMARY"
           echo "$url" >> "$GITHUB_STEP_SUMMARY"
 
       # R1280000: a refused promotion leaves every pending patch unshipped and the catalog version where
@@ -150,9 +217,17 @@ jobs:
           REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SHIP: ${{ steps.ship.outcome }}
+          CUT: ${{ steps.cut.outcome }}
         run: |
           set -euo pipefail
-          if [ "$SHIP" = failure ]; then
+          if [ "$CUT" = failure ]; then
+            title="patches cut refused to cut the day's patch"
+            body=$(printf '%s\n' \
+              "\`cargo jackioh patches cut\` refused on main at $GITHUB_SHA ([the run]($RUN_URL)), so no daily patch was cut and nothing was promoted (R3944000)." \
+              "" \
+              "The run's \`cut the day's patch\` step names the refusal. Fix the tool or the history on a branch whose \`cargo jackioh patches check\` passes; once it merges, run this workflow again by hand with \`cut\` ticked (Actions -> patches ship -> Run workflow).")
+            labels=(--label "bot:build" --label "difficulty:medium" --label "priority:high")
+          elif [ "$SHIP" = failure ]; then
             title="patches ship refused to promote the pending patches"
             body=$(printf '%s\n' \
               "\`cargo jackioh patches ship\` refused on main at $GITHUB_SHA ([the run]($RUN_URL)), so no pending patch shipped and \`CATALOG_VERSION\` did not move (R646, R1280000)." \
@@ -210,7 +285,7 @@ jobs:
   # its checks, or green and only waiting to merge, is left alone.
   watch:
     name: escalate a stuck promotion or log
-    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_run' }}
+    if: ${{ (github.event_name == 'schedule' && github.event.schedule != '41 3 * * *') || github.event_name == 'workflow_run' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
