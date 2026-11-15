@@ -95,9 +95,23 @@
 }
 
 .lobby .lobby-verdict[data-ready="true"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   border-color: var(--legal);
   color: var(--legal);
   font-weight: 700;
+}
+
+.lobby .lobby-verdict__mark {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--legal);
+  color: var(--bg);
+  font-size: 12px;
 }
 
 .lobby .lobby-verdict[data-ready="false"] {

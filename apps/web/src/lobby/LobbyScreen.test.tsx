@@ -129,6 +129,19 @@ describe("the lobby screen", () => {
     expect(order).toEqual([`/api/lobbies/${CODE}/pick`, `/api/lobbies/${CODE}/ready`]);
   });
 
+  it("R3954000 Leave, Ready and Start sit in one action bar, Ready between them", async () => {
+    serve([lobby({ settings: { format: "duel", mode: "random" } })]);
+    show();
+    const ready = await screen.findByTestId(lobbyTestid.ready, undefined, SLOW);
+    const bar = ready.closest(".lobby__actions");
+    expect(bar).not.toBeNull();
+    const inBar = within(bar as HTMLElement);
+    const leave = inBar.getByTestId(lobbyTestid.leave);
+    const start = inBar.getByTestId(lobbyTestid.start);
+    expect(leave.compareDocumentPosition(ready) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(ready.compareDocumentPosition(start) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("R2031000 R3730001 a random deck offers More cards from beside it, and the pick sent carries it", async () => {
     const server = serve([lobby({ settings: { format: "coop", difficulty: "easy" }, yourPick: { mode: "random" } })]);
     show();
