@@ -507,6 +507,9 @@ const READ_OPENINGS: &[(&str, &str)] = &[
     ("In your hand or deck:", "handOrDeck"),
     ("While this is in your hand:", "handOrDeck"),
     ("While in your deck:", "handOrDeck"),
+    // R3941000: the openings every hand or deck trigger prints since issue #3941.
+    ("While this is in your hand or deck:", "handOrDeck"),
+    ("While this is in your deck:", "handOrDeck"),
     ("While this is in your graveyard:", "graveyard"),
 ];
 
@@ -2702,6 +2705,16 @@ mod tests {
             ),
             (
                 "While in your deck: Draw {n}.",
+                "handOrDeck",
+                "a hand-or-deck line",
+            ),
+            (
+                "While this is in your hand or deck: After you play {n} Spells, summon this.",
+                "handOrDeck",
+                "a hand-or-deck line",
+            ),
+            (
+                "While this is in your deck: Draw {n}.",
                 "handOrDeck",
                 "a hand-or-deck line",
             ),

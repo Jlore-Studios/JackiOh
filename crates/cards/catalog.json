@@ -9393,7 +9393,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "Divine Shield\nWhile in your hand or deck: After you play {threshold} non-Units in a turn, summon this.\nEnd of turn: Cast a copy of a random non-Unit you played this turn."
+      "text": "Divine Shield\nWhile this is in your hand or deck: After you play {threshold} non-Units in a turn, summon this.\nEnd of turn: Cast a copy of a random non-Unit you played this turn."
     },
     "radiant": {
       "attack": 10,
@@ -9403,7 +9403,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "Divine Shield\nWhile in your hand or deck: After you play {threshold} non-Units in a turn, summon this.\nEnd of turn: Cast a copy of each non-Unit you played this turn."
+      "text": "Divine Shield\nWhile this is in your hand or deck: After you play {threshold} non-Units in a turn, summon this.\nEnd of turn: Cast a copy of each non-Unit you played this turn."
     }
   },
   "classicplus-038": {
@@ -15590,13 +15590,13 @@
       "attack": 0,
       "health": 3,
       "keywords": [],
-      "text": "While in your deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand."
+      "text": "While this is in your deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand."
     },
     "radiant": {
       "attack": 0,
       "health": 6,
       "keywords": [],
-      "text": "While in your deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand and each adjacent Unit."
+      "text": "While this is in your deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand and each adjacent Unit."
     }
   },
   "meditative-088": {
@@ -17794,11 +17794,11 @@
     "loc": 42,
     "base": {
       "keywords": [],
-      "text": "Deal {damage} damage to an enemy.\nIn your hand or deck: After another Spell of yours that targeted an enemy resolves, cast this at it."
+      "text": "Deal {damage} damage to an enemy.\nWhile this is in your hand or deck: After another Spell of yours that targeted an enemy resolves, cast this at it."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal {damage} damage to an enemy.\nIn your hand or deck: After another Spell of yours that targeted an enemy resolves, cast this at it."
+      "text": "Deal {damage} damage to an enemy.\nWhile this is in your hand or deck: After another Spell of yours that targeted an enemy resolves, cast this at it."
     }
   },
   "meditativeplus-018": {
@@ -29168,13 +29168,13 @@
       "attack": 4,
       "health": 5,
       "keywords": [],
-      "text": "Start of turn: Add a Fine Fermented Grape, Stinky Cheese, or The Coin to your hand at random."
+      "text": "Start of turn: Add a Fine Fermented Grape, Stinky Cheese or The Coin to your hand at random."
     },
     "radiant": {
       "attack": 8,
       "health": 10,
       "keywords": [],
-      "text": "Start of turn: Add a Radiant Fine Fermented Grapes, Stinky Cheese, or The Coin to your hand at random."
+      "text": "Start of turn: Add a Radiant Fine Fermented Grape, Stinky Cheese or The Coin to your hand at random."
     },
     "refs": [
       "core-t-coin",
@@ -29240,7 +29240,7 @@
           "n": 2
         }
       ],
-      "text": "Temporary 2\nEvolves when this is discarded to Temporary.\nEvolve: Gain Flashback, Animated, and +{buff}/+{buff}."
+      "text": "Temporary 2\nEvolves when this is discarded to Temporary.\nEvolve: Gain Flashback, Animated and +{buff}/+{buff}."
     },
     "radiant": {
       "keywords": [
@@ -29248,7 +29248,7 @@
           "kind": "Temporary"
         }
       ],
-      "text": "Temporary\nEvolves when this is discarded to Temporary.\nEvolve: Gain Flashback, Animated, and +{buff2}/+{buff2}."
+      "text": "Temporary\nEvolves when this is discarded to Temporary.\nEvolve: Gain Flashback, Animated and +{buff2}/+{buff2}."
     },
     "params": [
       {
@@ -29294,7 +29294,7 @@
           "n": 4
         }
       ],
-      "text": "Armor 4\nCry: Choose one.\nChain all enemy Units together, when one takes damage all other chained Units also take the damage.\nChain all friendly Units together, when one takes damage it is split between all allies (rounded down)."
+      "text": "Armor 4\nCry: Choose one.\nChain all enemy Units: when one takes damage, every other chained Unit takes it too.\nChain all friendly Units: damage one takes is split among them, rounded down."
     },
     "radiant": {
       "attack": 6,
@@ -29305,7 +29305,7 @@
           "n": 8
         }
       ],
-      "text": "Armor 8\nCry: Choose one.\nChain all enemy Units together, when one takes damage all other chained Units also take the damage.\nChain all friendly Units together, when one takes damage it is split between all allies (rounded down)."
+      "text": "Armor 8\nCry: Choose one.\nChain all enemy Units: when one takes damage, every other chained Unit takes it too.\nChain all friendly Units: damage one takes is split among them, rounded down."
     }
   },
   "stinkyscapeplus-008": {
@@ -29333,7 +29333,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Target an enemy, summon a Drone Interceptor to attack it."
+      "text": "Starship Piece, Equip\nActivate: Summon a Drone Interceptor to attack an enemy."
     },
     "radiant": {
       "attack": 0,
@@ -29346,7 +29346,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Target an enemy, summon a Radiant Drone Interceptor to attack it."
+      "text": "Starship Piece, Equip\nActivate: Summon a Radiant Drone Interceptor to attack an enemy."
     },
     "refs": [
       "stinkyscape-t-drone-interceptor"
@@ -29377,7 +29377,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 2: Target an enemy, summon a Drone Interceptor to attack it."
+      "text": "Starship Piece, Equip\nActivate 2: Summon a Drone Interceptor to attack an enemy."
     },
     "radiant": {
       "attack": 0,
@@ -29390,7 +29390,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate 2: Target an enemy, summon a Radiant Drone Interceptor to attack it."
+      "text": "Starship Piece, Equip\nActivate 2: Summon a Radiant Drone Interceptor to attack an enemy."
     },
     "refs": [
       "stinkyscape-t-drone-interceptor"
@@ -29421,7 +29421,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Target an enemy, summon a Drone Corvette to attack it."
+      "text": "Starship Piece, Equip\nActivate: Summon a Drone Corvette to attack an enemy."
     },
     "radiant": {
       "attack": 0,
@@ -29434,7 +29434,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Target an enemy, summon a Radiant Drone Corvette to attack it."
+      "text": "Starship Piece, Equip\nActivate: Summon a Radiant Drone Corvette to attack an enemy."
     },
     "refs": [
       "stinkyscape-t-drone-corvette"
@@ -29882,11 +29882,11 @@
     "loc": 24,
     "base": {
       "keywords": [],
-      "text": "Give a Unit +{buff}/+{buff}, Deft, and Freeze it."
+      "text": "Give a Unit +{buff}/+{buff} and Deft. Freeze it."
     },
     "radiant": {
       "keywords": [],
-      "text": "Give a Unit +{buff2}/+{buff2}, Deft, and Freeze it."
+      "text": "Give a Unit +{buff2}/+{buff2} and Deft. Freeze it."
     },
     "params": [
       {
@@ -29951,7 +29951,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose a non-fused card in your hand or field. Shuffle {copy|copy|copies} of it into your deck, then buff them. It keeps no cost changes or buffs.\nEmbiggened (3): Shuffle {copy2|copy|copies} of it into your deck instead, then buff them."
+      "text": "Choose a non-fused card in your hand or field. Shuffle {copy|copy|copies} of it into your deck, then Buff them. It keeps no cost changes or buffs.\nEmbiggened (3): Shuffle {copy2|copy|copies} of it into your deck instead, then Buff them."
     },
     "params": [
       {
@@ -29994,7 +29994,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Can't Defend\nDeath: A random enemy Permanent comes under your control."
+      "text": "Can't Defend\nDeath: Steal a random enemy permanent."
     },
     "radiant": {
       "attack": 10,
@@ -30005,7 +30005,7 @@
           "n": 1
         }
       ],
-      "text": "Lucky 1\nDeath: A random enemy Permanent comes under your control."
+      "text": "Lucky 1\nDeath: Steal a random enemy permanent."
     }
   },
   "stinkyscapeplus-026": {
@@ -30024,11 +30024,11 @@
     "loc": 22,
     "base": {
       "keywords": [],
-      "text": "For the rest of the game, at the start of its owner's turn summon a Conscript."
+      "text": "For the rest of the game.\nStart of turn: Summon a Conscript."
     },
     "radiant": {
       "keywords": [],
-      "text": "For the rest of the game, at the start of its owner's turn summon a Radiant conscript."
+      "text": "For the rest of the game.\nStart of turn: Summon a Radiant Conscript."
     },
     "refs": [
       "stinkyscapeplus-026-1"
@@ -30397,7 +30397,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Flexible, Can't attack, Can't Defend\nActivate: Deal 0~2 damage to all enemies, if the Unit is Flying deal {damage2} damage instead."
+      "text": "Flexible, Can't attack, Can't Defend\nActivate: Deal 0~2 damage to all enemies. Flying Units take {damage2} instead."
     },
     "radiant": {
       "attack": 0,
@@ -30413,7 +30413,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Flexible, Can't attack, Can't Defend\nActivate 2: Deal 1~3 damage to all enemies, if the Unit is Flying deal {damage2} damage instead."
+      "text": "Flexible, Can't attack, Can't Defend\nActivate 2: Deal 1~3 damage to all enemies. Flying Units take {damage2} instead."
     },
     "params": [
       {
@@ -30510,7 +30510,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Can't Defend, Ranged, Pierce\nCan attack {attacks|attack|attacks} per turn.\nCan only attack the Unit directly across from this."
+      "text": "Can't Defend, Ranged, Pierce\nCan attack {attacks|time|times} per turn.\nCan only attack the Unit directly across from this."
     },
     "radiant": {
       "attack": 2,
@@ -30529,7 +30529,7 @@
           "kind": "Cloaked"
         }
       ],
-      "text": "Can't Defend, Ranged, Pierce, Cloaked\nCan attack {attacks|attack|attacks} per turn.\nCan only attack the Unit directly across from this."
+      "text": "Can't Defend, Ranged, Pierce, Cloaked\nCan attack {attacks|time|times} per turn.\nCan only attack the Unit directly across from this."
     },
     "params": [
       {
@@ -30564,7 +30564,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Can't Defend\nActivate 2: Deal {damage2} damage to a Unit. This randomly chains to an adjacent Unit. It repeats until no valid targets remain. It cannot chain to the same Unit twice in one Activate."
+      "text": "Can't Defend\nActivate 2: Deal {damage2} damage to a Unit. It chains at random to an adjacent Unit, and on until none is left, never to the same Unit twice."
     },
     "radiant": {
       "attack": 0,
@@ -30574,7 +30574,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Can't Defend\nActivate 5: Deal {damage2} damage to a Unit. This randomly chains to an adjacent Unit. It repeats until no valid targets remain. It cannot chain to the same Unit twice in one Activate."
+      "text": "Can't Defend\nActivate 5: Deal {damage2} damage to a Unit. It chains at random to an adjacent Unit, and on until none is left, never to the same Unit twice."
     },
     "params": [
       {
@@ -30601,11 +30601,11 @@
     "loc": 47,
     "base": {
       "keywords": [],
-      "text": "Discover a random Mindustrial Unit, give it Starpiece and Equip."
+      "text": "Discover a Mindustrial Unit. Give it Starship Piece and Equip."
     },
     "radiant": {
       "keywords": [],
-      "text": "Discover a random Radiant Mindustrial Unit, give it Starpiece and Equip, it costs (1) less."
+      "text": "Discover a Radiant Mindustrial Unit. Give it Starship Piece and Equip. It costs (1) less."
     }
   },
   "stinkyscapeplus-040": {
@@ -30712,7 +30712,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "All enemy Ranged attack or Activate are countered."
+      "text": "Every enemy Ranged attack and Activate is countered."
     }
   },
   "stinkyscapeplus-044": {
@@ -30732,11 +30732,11 @@
     "loc": 22,
     "base": {
       "keywords": [],
-      "text": "Give a Unit +{attack} attack and Cleave, lock the tile it is on."
+      "text": "Give a Unit +{attack} Attack and Cleave. Lock its zone."
     },
     "radiant": {
       "keywords": [],
-      "text": "Give a Unit +{attack} attack and Cleave, lock the tile it is on."
+      "text": "Give a Unit +{attack} Attack and Cleave. Lock its zone."
     },
     "params": [
       {
@@ -30766,11 +30766,11 @@
     "loc": 22,
     "base": {
       "keywords": [],
-      "text": "Give a Unit Rush attack and Windfury."
+      "text": "Give a Unit Rush and Windfury."
     },
     "radiant": {
       "keywords": [],
-      "text": "Give a Unit Charge attack and Windfury."
+      "text": "Give a Unit Charge and Windfury."
     }
   },
   "stinkyscapeplus-046": {
@@ -30794,7 +30794,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Give a Unit Immutable, Immune to Spells, and Can't be Attacked."
+      "text": "Give a Unit Immutable, Immune to Spells and Can't be attacked."
     }
   },
   "stinkyscapeplus-047": {
@@ -30814,11 +30814,11 @@
     "loc": 21,
     "base": {
       "keywords": [],
-      "text": "Give a Unit +{health} health and Divine Shield."
+      "text": "Give a Unit +{health} Health and Divine Shield."
     },
     "radiant": {
       "keywords": [],
-      "text": "Give a Unit +{health} health and Divine Shield."
+      "text": "Give a Unit +{health} Health and Divine Shield."
     },
     "params": [
       {
@@ -30904,7 +30904,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Give a Unit Ranged and +{attack} attack."
+      "text": "Give a Unit Ranged and +{attack} Attack."
     },
     "params": [
       {
@@ -30935,11 +30935,11 @@
     "loc": 26,
     "base": {
       "keywords": [],
-      "text": "Give a Unit Pierce, Deft, Frenzy this may attack again."
+      "text": "Give a Unit Pierce, Deft and Frenzy."
     },
     "radiant": {
       "keywords": [],
-      "text": "Give a Unit Pierce, Deft, Frenzy this may attack again, and First Strike."
+      "text": "Give a Unit Pierce, Deft, Frenzy and First Strike."
     }
   },
   "stinkyscapeplus-051": {
@@ -30956,11 +30956,11 @@
     "loc": 50,
     "base": {
       "keywords": [],
-      "text": "Dormant a permanent for {count|turn|turns}. When it awakens, Buff it {times|time|times} if it's yours or Nerf it {times2|time|times} if it's an enemy's."
+      "text": "Make a permanent Dormant for {count|turn|turns}. When it awakens, Buff it {times|time|times} if it's yours, or Nerf it {times2|time|times} if it's an enemy's."
     },
     "radiant": {
       "keywords": [],
-      "text": "Dormant a permanent for {count|turn|turns}. When it awakens, Buff it {times|time|times} if it's yours or Nerf it {times2|time|times} if it's an enemy's."
+      "text": "Make a permanent Dormant for {count|turn|turns}. When it awakens, Buff it {times|time|times} if it's yours, or Nerf it {times2|time|times} if it's an enemy's."
     },
     "params": [
       {
@@ -31009,7 +31009,7 @@
           "kind": "GIGA"
         }
       ],
-      "text": "Tribute 1, GIGA\nEnd of turn: Fill your hand with random Minerals (that cost (0)) and Resources."
+      "text": "Tribute 1, GIGA\nEnd of turn: Fill your hand with random Minerals and Resources. The Minerals cost (0)."
     },
     "radiant": {
       "keywords": [
@@ -31017,7 +31017,7 @@
           "kind": "GIGA"
         }
       ],
-      "text": "Tribute 1, GIGA\nEnd of turn: Fill your hand with random Radiant Minerals (that cost (0)) and Radiant Resources."
+      "text": "Tribute 1, GIGA\nEnd of turn: Fill your hand with random Radiant Minerals and Radiant Resources. The Minerals cost (0)."
     }
   },
   "stinkyscapeplus-053": {
@@ -31040,7 +31040,7 @@
           "kind": "GIGA"
         }
       ],
-      "text": "GIGA\nEnd of turn: Add three random Minerals (that cost (0)) or Resources to your hand."
+      "text": "GIGA\nEnd of turn: Add three random Minerals or Resources to your hand. The Minerals cost (0)."
     },
     "radiant": {
       "keywords": [
@@ -31048,7 +31048,7 @@
           "kind": "GIGA"
         }
       ],
-      "text": "GIGA\nEnd of turn: Add three random Radiant Minerals (that cost (0)) or Radiant Resources to your hand."
+      "text": "GIGA\nEnd of turn: Add three random Radiant Minerals or Radiant Resources to your hand. The Minerals cost (0)."
     }
   },
   "stinkyscapeplus-054": {
@@ -31067,11 +31067,11 @@
     "loc": 24,
     "base": {
       "keywords": [],
-      "text": "End of turn: Add a random Minerals or Resources to your hand."
+      "text": "End of turn: Add a random Mineral or Resource to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Add a random Radiant Minerals or Radiant Resources to your hand."
+      "text": "End of turn: Add a random Radiant Mineral or Radiant Resource to your hand."
     }
   },
   "stinkyscapeplus-055": {
@@ -31090,7 +31090,7 @@
     "loc": 80,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Gain {mana} mana and draw {card|card|cards}.\nEnd of turn: {chance}% chance to blow up dealing {damage} damage to your hero.\nActivate: Discard a Thorium to skip the blow up chance this turn."
+      "text": "Start of turn: Gain {mana} mana and draw {card|card|cards}.\nEnd of turn: {chance}% chance to blow up, dealing {damage} damage to your hero.\nActivate: Discard a Thorium to skip the blow-up chance this turn."
     },
     "radiant": {
       "keywords": [
@@ -31099,7 +31099,7 @@
           "n": 1
         }
       ],
-      "text": "Lucky 1\nStart of turn: Gain {mana} mana and draw {card|card|cards}.\nEnd of turn: {chance}% chance to blow up dealing {damage} damage to your hero.\nActivate: Discard a Thorium to skip the blow up chance this turn."
+      "text": "Lucky 1\nStart of turn: Gain {mana} mana and draw {card|card|cards}.\nEnd of turn: {chance}% chance to blow up, dealing {damage} damage to your hero.\nActivate: Discard a Thorium to skip the blow-up chance this turn."
     },
     "params": [
       {
@@ -31160,7 +31160,7 @@
           "kind": "GIGA"
         }
       ],
-      "text": "GIGA\nCry: Lose {mana} mana next turn, and {mana2} mana the turn after.\nDormant for {dormant|turn|turns}.\nWhen awoken: Gain infinite mana."
+      "text": "GIGA\nCry: Lose {mana} mana next turn, and {mana2} mana the turn after.\nDormant for {dormant|turn|turns}.\nWhen this awakens: Gain infinite mana."
     },
     "radiant": {
       "keywords": [
@@ -31168,7 +31168,7 @@
           "kind": "GIGA"
         }
       ],
-      "text": "GIGA\nCry: Lose {mana} mana next turn, and {mana2} mana the turn after.\nDormant for {dormant|turn|turns}.\nWhen awoken: Gain infinite mana."
+      "text": "GIGA\nCry: Lose {mana} mana next turn, and {mana2} mana the turn after.\nDormant for {dormant|turn|turns}.\nWhen this awakens: Gain infinite mana."
     },
     "params": [
       {
@@ -31215,11 +31215,11 @@
     "loc": 21,
     "base": {
       "keywords": [],
-      "text": "end of its owner's turn: add a Phase Fabric to your hand."
+      "text": "End of turn: Add a Phase Fabric to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "end of its owner's turn: add a Phase Fabric to your hand, it costs (0)."
+      "text": "End of turn: Add a Phase Fabric to your hand. It costs (0)."
     },
     "refs": [
       "stinkyscapeplus-046"
@@ -31247,7 +31247,7 @@
           "kind": "Flexible"
         }
       ],
-      "text": "Flexible\nStart of turn: Add a Mineral and Resource to your hand."
+      "text": "Flexible\nStart of turn: Add a Mineral and a Resource to your hand."
     },
     "radiant": {
       "attack": 0,
@@ -31276,11 +31276,11 @@
     "loc": 60,
     "base": {
       "keywords": [],
-      "text": "Activate: In {count|turn|turns} add two Minerals that cost (0) and a Resource to your hand."
+      "text": "Activate: In {count|turn|turns}, add two Minerals that cost (0) and a Resource to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activate: In {count|turn|turns} add two Radiant Minerals that cost (0) and a Radiant Resource to your hand."
+      "text": "Activate: In {count|turn|turns}, add two Radiant Minerals that cost (0) and a Radiant Resource to your hand."
     },
     "params": [
       {
@@ -31376,11 +31376,11 @@
     "loc": 66,
     "base": {
       "keywords": [],
-      "text": "End of turn: Every Unit eats a delicious Shawarma causing one of the following effects.\nFirst Shawarma eaten gain +{health} health.\nSecond Shawarma eaten gain Can't attack.\nThird Shawarma eaten gain Can't defend and Brittle {brittle2}.\nSubsequent Shawarma eaten Freeze."
+      "text": "End of turn: Every Unit eats a Shawarma, with one of these effects.\nFirst Shawarma: It gains +{health} Health.\nSecond Shawarma: It gains Can't attack.\nThird Shawarma: It gains Can't Defend and Brittle {brittle2}.\nEvery Shawarma after that: Freeze it."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Every Unit eats a delicious Shawarma causing one of the following effects.\nFirst Shawarma eaten gain +{health} health.\nSecond Shawarma eaten gain Can't attack.\nThird Shawarma eaten gain Can't defend and Brittle {brittle2}.\nSubsequent Shawarma eaten Freeze.\nAlly Units gain discipline and stop at one Shawarma."
+      "text": "End of turn: Every Unit eats a Shawarma, with one of these effects.\nFirst Shawarma: It gains +{health} Health.\nSecond Shawarma: It gains Can't attack.\nThird Shawarma: It gains Can't Defend and Brittle {brittle2}.\nEvery Shawarma after that: Freeze it.\nYour Units stop at one Shawarma."
     },
     "params": [
       {
@@ -31417,11 +31417,11 @@
     "loc": 42,
     "base": {
       "keywords": [],
-      "text": "Dormant for {dormant|turn|turns}.\nAll Units gain Rush and Windfury and Spells gains Echo +{spellEcho}."
+      "text": "Dormant for {dormant|turn|turns}.\nAll Units gain Rush and Windfury, and Spells gain Echo +{spellEcho}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Rush and Windfury and Spells gains Echo +{spellEcho}."
+      "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Rush and Windfury, and Spells gain Echo +{spellEcho}."
     },
     "params": [
       {
@@ -31458,11 +31458,11 @@
     "loc": 42,
     "base": {
       "keywords": [],
-      "text": "Dormant for {dormant|turn|turns}.\nAll Units gain Charge and Windfury and Spell gains Echo +{spellEcho}."
+      "text": "Dormant for {dormant|turn|turns}.\nAll Units gain Charge and Windfury, and Spells gain Echo +{spellEcho}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Charge and Windfury and Spell gains Echo +{spellEcho}."
+      "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Charge and Windfury, and Spells gain Echo +{spellEcho}."
     },
     "params": [
       {
@@ -31722,11 +31722,11 @@
     "loc": 39,
     "base": {
       "keywords": [],
-      "text": "Discover a Spell in your deck; add a copy of it to your hand."
+      "text": "Discover a Spell in your deck. Add a copy of it to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Discover a Spell in your deck; add a Radiant copy of it to your hand, it costs (1) less."
+      "text": "Discover a Spell in your deck. Add a Radiant copy of it to your hand. It costs (1) less."
     }
   },
   "stinkyscapeplus-069": {
@@ -31773,11 +31773,11 @@
     "loc": 31,
     "base": {
       "keywords": [],
-      "text": "If this is the left most card in your hand, the card to the right of this is Radiant."
+      "text": "If this is the leftmost card in your hand, the card to the right of this is Radiant."
     },
     "radiant": {
       "keywords": [],
-      "text": "If this is the left most card in your hand, the card to the right of this is Radiant and costs (1) less.\nThe card to the left of this costs (1) less."
+      "text": "If this is the leftmost card in your hand, the card to the right of this is Radiant and costs (1) less.\nThe card to the left of this costs (1) less."
     }
   },
   "stinkyscapeplus-070": {
@@ -31796,11 +31796,11 @@
     "loc": 23,
     "base": {
       "keywords": [],
-      "text": "Cast on draw: Shuffle {draw} Cast on draw into your deck."
+      "text": "Cast on draw: Shuffle {draw|random Cast on draw card|random Cast on draw cards} into your deck."
     },
     "radiant": {
       "keywords": [],
-      "text": "Cast on draw: Shuffle {draw} Radiant Cast on draw into your deck."
+      "text": "Cast on draw: Shuffle {draw|random Radiant Cast on draw card|random Radiant Cast on draw cards} into your deck."
     },
     "params": [
       {
@@ -31885,7 +31885,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Tribute 5, Indestructible, Can't attack, Can't Defend, Immutable, Immune to Spells, Flexible, Ranged\nWhen an enemy Unit is summoned attack it and lose {mana} mana next turn."
+      "text": "Tribute 5, Indestructible, Can't attack, Can't Defend, Immutable, Immune to Spells, Flexible, Ranged\nWhen an enemy Unit is summoned, attack it and lose {mana} mana next turn."
     },
     "radiant": {
       "attack": 40,
@@ -31910,7 +31910,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Tribute 5, Indestructible, Can't Defend, Immutable, Immune to Spells, Flexible, Ranged\nWhen an enemy Unit is summoned attack it and lose {mana} mana next turn."
+      "text": "Tribute 5, Indestructible, Can't Defend, Immutable, Immune to Spells, Flexible, Ranged\nWhen an enemy Unit is summoned, attack it and lose {mana} mana next turn."
     },
     "params": [
       {
@@ -31954,7 +31954,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Can't attack, Can't Defend, Flexible, Ranged\nWhen an enemy Unit is summoned attack it."
+      "text": "Can't attack, Can't Defend, Flexible, Ranged\nWhen an enemy Unit is summoned, attack it."
     },
     "radiant": {
       "attack": 8,
@@ -31970,7 +31970,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Can't Defend, Flexible, Ranged\nWhen an enemy Unit is summoned attack it."
+      "text": "Can't Defend, Flexible, Ranged\nWhen an enemy Unit is summoned, attack it."
     }
   },
   "stinkyscapeplus-074": {
@@ -32177,7 +32177,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Open a Black Hole in midlane. At the start of the opponent's turn, it draws their permanents one lane closer."
+      "text": "Open a Black Hole in midlane. At the start of your opponent's turn, it draws their permanents one lane closer."
     },
     "params": [
       {
@@ -32325,11 +32325,11 @@
     "loc": 27,
     "base": {
       "keywords": [],
-      "text": "For the rest of the game lose {mana} mana. Add a random Terminus card to your hand, it costs (3)."
+      "text": "For the rest of the game, lose {mana} mana. Add a random Terminus card to your hand. It costs (3)."
     },
     "radiant": {
       "keywords": [],
-      "text": "For the rest of the game lose {mana} mana. Add a random Radiant Terminus card to your hand, it costs (3)."
+      "text": "For the rest of the game, lose {mana} mana. Add a random Radiant Terminus card to your hand. It costs (3)."
     },
     "params": [
       {
@@ -32444,13 +32444,13 @@
       "attack": 0,
       "health": 1,
       "keywords": [],
-      "text": "Evolve: When your opponent plays a Unit.\nEvolve: Place a Plague Counter on and steal a stat point from each Unit."
+      "text": "Evolves when your opponent plays a Unit.\nEvolve: Place a Plague Counter on each Unit and steal a stat point from each."
     },
     "radiant": {
       "attack": 0,
       "health": 2,
       "keywords": [],
-      "text": "Evolve: When your opponent plays a Unit.\nEvolve: Place a Plague Counter on and steal {unit|stat points from each Unit|stat points from each Units}."
+      "text": "Evolves when your opponent plays a Unit.\nEvolve: Place a Plague Counter on each Unit and steal {unit|stat point|stat points} from each."
     },
     "params": [
       {
@@ -32525,13 +32525,13 @@
       "attack": 2,
       "health": 7,
       "keywords": [],
-      "text": "Evolve: When this moves from Defense Position to attack position.\nEvolve: Recruit a Swarm card."
+      "text": "Evolves when this switches from Defense Position to Attack Position.\nEvolve: Recruit a Swarm card."
     },
     "radiant": {
       "attack": 4,
       "health": 14,
       "keywords": [],
-      "text": "Evolve: When this moves from Defense Position to attack position.\nEvolve: Recruit {card|Swarm card|Swarm cards}."
+      "text": "Evolves when this switches from Defense Position to Attack Position.\nEvolve: Recruit {card|Swarm card|Swarm cards}."
     },
     "params": [
       {
@@ -32610,7 +32610,7 @@
           "kind": "Windfury"
         }
       ],
-      "text": "Flexible, Ranged, Can't Defend, Windfury\nWhen this attack, gain +{attack} attack and take {damage} damage.\nWhen this is Frozen, fully heal it."
+      "text": "Flexible, Ranged, Can't Defend, Windfury\nWhen this attacks, gain +{attack} Attack and take {damage} damage.\nWhen this is Frozen, fully heal it."
     },
     "radiant": {
       "attack": 4,
@@ -32626,7 +32626,7 @@
           "kind": "Windfury"
         }
       ],
-      "text": "Flexible, Ranged, Windfury\nWhen this attack, gain +{attack} attack and take {damage} damage.\nWhen this is Frozen, fully heal it."
+      "text": "Flexible, Ranged, Windfury\nWhen this attacks, gain +{attack} Attack and take {damage} damage.\nWhen this is Frozen, fully heal it."
     },
     "params": [
       {
@@ -32779,11 +32779,11 @@
     "loc": 25,
     "base": {
       "keywords": [],
-      "text": "Put a Unit on a performance enhancement plan, they have {count|turn|turns} to get a kill otherwise they are destroyed."
+      "text": "Put a Unit on a performance enhancement plan: it has {count|turn|turns} to get a kill, or it is destroyed."
     },
     "radiant": {
       "keywords": [],
-      "text": "Put a Unit on a performance enhancement plan, they have {count2|turn|turns} to get a kill otherwise they are destroyed. If they fail, add {the} The Coins to your hand."
+      "text": "Put a Unit on a performance enhancement plan: it has {count2|turn|turns} to get a kill, or it is destroyed. If it fails, add {the|The Coin|The Coins} to your hand."
     },
     "params": [
       {
@@ -33249,7 +33249,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Armor 5, Can't Defend, Ranged, Pierce\nDeal {sweepLane}x damage to Units in this lane, deals {sweepAdjacent}x damage to Units in adjacent lanes."
+      "text": "Armor 5, Can't Defend, Ranged, Pierce\nIts attacks deal {sweepLane}x damage to enemy Units in this lane, {sweepAdjacent}x in adjacent lanes."
     },
     "radiant": {
       "attack": 4,
@@ -33269,7 +33269,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Armor 10, Can't Defend, Ranged, Pierce\nDeal {sweepLane}x damage to Units in this lane, deals {sweepAdjacent}x damage to Units in adjacent lanes."
+      "text": "Armor 10, Can't Defend, Ranged, Pierce\nIts attacks deal {sweepLane}x damage to enemy Units in this lane, {sweepAdjacent}x in adjacent lanes."
     },
     "params": [
       {
@@ -34051,7 +34051,7 @@
           "n": 3
         }
       ],
-      "text": "Tribute 3, Flying, Ranged, Pierce, Can't Defend, Crater, Armor 3\nDealing damage Burns {burns}."
+      "text": "Tribute 3, Flying, Ranged, Pierce, Can't Defend, Crater, Armor 3\nDamage also Burns {burns}."
     },
     "radiant": {
       "attack": 14,
@@ -34080,7 +34080,7 @@
           "n": 3
         }
       ],
-      "text": "Tribute 3, Flying, Ranged, Pierce, Rush, Can't Defend, Crater, Armor 3\nDealing damage Burns {burns}."
+      "text": "Tribute 3, Flying, Ranged, Pierce, Rush, Can't Defend, Crater, Armor 3\nDamage also Burns {burns}."
     },
     "params": [
       {
@@ -34171,7 +34171,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Crater, Immutable, Rush\nThe first time this enters your hand each game, add a Crawler to your hand.\nFloat reduces mana. Friendly Crawlers dying reduces mana cost by (1).\nCry: Summon {legs|Toxopid Leg|Toxopid Legs} anywhere on the field.\nIndestructible while Toxopid Legs are on the field.\nIgnores Taunt.\nEnd of turn: Give all enemies Toxic {toxic}."
+      "text": "Crater, Immutable, Rush\nThe first time this enters your hand each game, add a Crawler to your hand.\nFloat reduces cost. Each friendly Crawler that dies reduces it by (1).\nCry: Summon {legs|Toxopid Leg|Toxopid Legs} anywhere on the field.\nIndestructible while Toxopid Legs are on the field.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
     },
     "radiant": {
       "attack": 20,
@@ -34187,7 +34187,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Crater, Immutable, Rush\nThe first time this enters your hand each game, add a Crawler to your hand.\nFloat reduces mana. Friendly Crawlers dying reduces mana cost by (1).\nCry: Summon {legs|Radiant Toxopid Leg|Radiant Toxopid Legs} on your opponent's field.\nIndestructible while Toxopid Legs are on the field.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
+      "text": "Crater, Immutable, Rush\nThe first time this enters your hand each game, add a Crawler to your hand.\nFloat reduces cost. Each friendly Crawler that dies reduces it by (1).\nCry: Summon {legs|Radiant Toxopid Leg|Radiant Toxopid Legs} on your opponent's field.\nIndestructible while Toxopid Legs are on the field.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
     },
     "params": [
       {
@@ -34293,7 +34293,7 @@
           "kind": "Flying"
         }
       ],
-      "text": "Tribute 2, Can't attack, Can't Defend, Flying\nEnd of turn: Heal all allies {heal} hp and deal {damage} damage to all enemies."
+      "text": "Tribute 2, Can't attack, Can't Defend, Flying\nEnd of turn: Heal all allies {heal} and deal {damage} damage to all enemies."
     },
     "radiant": {
       "attack": 6,
@@ -34313,7 +34313,7 @@
           "n": 2
         }
       ],
-      "text": "Tribute 2, Can't attack, Can't Defend, Flying, Armor 2\nEnd of turn: Heal all allies {heal} hp and deal {damage} damage to all enemies."
+      "text": "Tribute 2, Can't attack, Can't Defend, Flying, Armor 2\nEnd of turn: Heal all allies {heal} and deal {damage} damage to all enemies."
     },
     "params": [
       {
@@ -34383,7 +34383,7 @@
           "n": 2
         }
       ],
-      "text": "Tribute 3, Can't attack, Can't Defend, Flying, Armor 2\nEnd of turn: Heal all allies {heal}.\nThe first {pool} damage allies would take per turn is nullified."
+      "text": "Tribute 3, Can't attack, Can't Defend, Flying, Armor 2\nEnd of turn: Heal all allies {heal}.\nAura: The first {pool} damage allies would take per turn is nullified."
     },
     "params": [
       {
@@ -34550,7 +34550,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 2, Can't attack, Can't Defend\nActivate: Choose an enemy tile deal {damage} Pierce deal damage to all Units between that row and this."
+      "text": "Tribute 2, Can't attack, Can't Defend\nActivate: Choose an enemy tile. Deal {damage} Pierce damage to every Unit on the line between this and it."
     },
     "radiant": {
       "attack": 0,
@@ -34563,7 +34563,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 2, Can't attack, Can't Defend\nActivate: Choose an enemy tile deal {damage} Cleave Pierce deal damage to all Units between that row and this."
+      "text": "Tribute 2, Can't attack, Can't Defend\nActivate: Choose an enemy tile. Deal {damage} Cleave Pierce damage to every Unit on the line between this and it."
     },
     "params": [
       {
@@ -34602,7 +34602,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 3, Can't attack, Can't Defend\nActivate: Choose an enemy tile deal {damage} Pierce deal damage to all Units between that row and this."
+      "text": "Tribute 3, Can't attack, Can't Defend\nActivate: Choose an enemy tile. Deal {damage} Pierce damage to every Unit on the line between this and it."
     },
     "radiant": {
       "attack": 0,
@@ -34615,7 +34615,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Tribute 3, Can't attack, Can't Defend\nActivate: Choose an enemy tile deal {damage} Cleave Pierce deal damage to all Units between that row and this."
+      "text": "Tribute 3, Can't attack, Can't Defend\nActivate: Choose an enemy tile. Deal {damage} Cleave Pierce damage to every Unit on the line between this and it."
     },
     "params": [
       {
@@ -34667,11 +34667,11 @@
     "loc": 32,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Add a random (2) Cost Automa card to your hand, it has no Tribute condition."
+      "text": "Start of turn: Add a random (2) Cost Automa card to your hand. It has no Tribute cost."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Add a random Radiant (2) Cost Automa card to your hand, it has no Tribute condition."
+      "text": "Start of turn: Add a random Radiant (2) Cost Automa card to your hand. It has no Tribute cost."
     }
   },
   "stinkyscapeplus-130": {
@@ -34690,11 +34690,11 @@
     "loc": 28,
     "base": {
       "keywords": [],
-      "text": "Tribute 1\nStart of turn: Add a random Automa-δ card to your hand, it has no Tribute condition."
+      "text": "Tribute 1\nStart of turn: Add a random Automa-δ card to your hand. It has no Tribute cost."
     },
     "radiant": {
       "keywords": [],
-      "text": "Tribute 1\nStart of turn: Add a random Radiant Automa-δ card to your hand, it has no Tribute condition."
+      "text": "Tribute 1\nStart of turn: Add a random Radiant Automa-δ card to your hand. It has no Tribute cost."
     }
   },
   "stinkyscapeplus-131": {
@@ -34713,11 +34713,11 @@
     "loc": 28,
     "base": {
       "keywords": [],
-      "text": "Tribute 4\nStart of turn: Add a random Automa-Ω card to your hand, it has no Tribute condition."
+      "text": "Tribute 4\nStart of turn: Add a random Automa-Ω card to your hand. It has no Tribute cost."
     },
     "radiant": {
       "keywords": [],
-      "text": "Tribute 4\nStart of turn: Add a random Radiant Automa-Ω card to your hand, it has no Tribute condition."
+      "text": "Tribute 4\nStart of turn: Add a random Radiant Automa-Ω card to your hand. It has no Tribute cost."
     }
   },
   "stinkyscapeplus-132": {
@@ -34738,11 +34738,11 @@
     "loc": 76,
     "base": {
       "keywords": [],
-      "text": "Choose one α or β;.\nAdd a Dagger/Flare to your hand. The first time you play each Automa-α/β cost card add the subsequent cost Automa-α/β to your hand."
+      "text": "Choose one: α or β.\nAdd a Dagger/Flare to your hand. The first time you play each cost of Automa-α/β card, add the next cost's Automa-α/β to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose one α or β;.\nAdd a Radiant Dagger/Flare to your hand. The first time you play each Automa-α/β cost card add the subsequent cost Radiant Automa-α/β to your hand."
+      "text": "Choose one: α or β.\nAdd a Radiant Dagger/Flare to your hand. The first time you play each cost of Automa-α/β card, add the next cost's Radiant Automa-α/β to your hand."
     },
     "refs": [
       "stinkyscapeplus-110",
@@ -34766,11 +34766,11 @@
     "loc": 48,
     "base": {
       "keywords": [],
-      "text": "Add a Daglare to your hand. The first time you play each Automa-ζ cost card add the subsequent cost Automa-ζ to your hand."
+      "text": "Add a Daglare to your hand. The first time you play each cost of Automa-ζ card, add the next cost's Automa-ζ to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add a Radiant Dagger and Flare to your hand. The first time you play each Radiant Automa-ζ cost card add the subsequent cost Radiant Automa-ζ to your hand."
+      "text": "Add a Radiant Dagger and Flare to your hand. The first time you play each cost of Radiant Automa-ζ card, add the next cost's Radiant Automa-ζ to your hand."
     },
     "refs": [
       "stinkyscapeplus-110",
@@ -35179,7 +35179,7 @@
           "n": 3
         }
       ],
-      "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 4, Flying, Can't Defend, Crater, Armor 3\nDamage also Burns {damage}.\nDealing damage Burns {burns}."
+      "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 4, Flying, Can't Defend, Crater, Armor 3\nDamage also Burns {damage}.\nDamage also Burns {burns}."
     },
     "radiant": {
       "attack": 38,
@@ -35224,7 +35224,7 @@
           "n": 3
         }
       ],
-      "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Rush, Cleave, Armor 4, Flying, Can't Defend, Crater, Armor 3\nDamage also Burns {damage}.\nDealing damage Burns {burns}."
+      "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Rush, Cleave, Armor 4, Flying, Can't Defend, Crater, Armor 3\nDamage also Burns {damage}.\nDamage also Burns {burns}."
     },
     "params": [
       {
@@ -35456,11 +35456,11 @@
     "loc": 50,
     "base": {
       "keywords": [],
-      "text": "Discover an Automa Unit, it gains Starship Piece."
+      "text": "Discover an Automa Unit. It gains Starship Piece."
     },
     "radiant": {
       "keywords": [],
-      "text": "Discover a Radiant Automa Unit, it gains Starship Piece."
+      "text": "Discover a Radiant Automa Unit. It gains Starship Piece."
     }
   },
   "stinkyscapeplus-141": {
@@ -35517,11 +35517,11 @@
     "loc": 22,
     "base": {
       "keywords": [],
-      "text": "One of the following random effects: add {card|random Paperclip card|random Paperclip cards} to your hand, they cost (0), replenish 2 mana; add {card2|random Evolved Swarm card|random Evolved Swarm cards} to your hand, they cost (0); summon two random Radiant Units, make them GIGA; summon or cast {card3|random Jlockeed card|random Jlockeed cards}; add {card4|random Terminus card|random Terminus cards} to your hand, replenish 4 mana; add the Toxopid to your hand, it costs (0); Toxic {toxic} and Burn {burn} all enemies; for the rest of the game, when you launch a Starship, cast a random Call to Chaos and summon a random (2) Cost Weapon; summon a Mindustrial Golem and a Swarm Golem; cast a random Call to Chaos."
+      "text": "One random effect: Add {card|random Paperclip card|random Paperclip cards} to your hand, they cost (0), replenish 2 mana; add {card2|random Evolved Swarm card|random Evolved Swarm cards} to your hand, they cost (0); summon two random Radiant Units, make them GIGA; summon or cast {card3|random Jlockeed card|random Jlockeed cards}; add {card4|random Terminus card|random Terminus cards} to your hand, replenish 4 mana; add the Toxopid to your hand, it costs (0); Toxic {toxic} and Burn {burn} all enemies; for the rest of the game, when you launch a Starship, cast a random Call to Chaos and summon a random (2) Cost Weapon; summon a Mindustrial Golem and a Swarm Golem; cast a random Call to Chaos."
     },
     "radiant": {
       "keywords": [],
-      "text": "Three different random effects, resolved in the order listed: add {card|random Paperclip card|random Paperclip cards} to your hand, they cost (0), replenish 2 mana; add {card2|random Evolved Swarm card|random Evolved Swarm cards} to your hand, they cost (0); summon two random Radiant Units, make them GIGA; summon or cast {card3|random Jlockeed card|random Jlockeed cards}; add {card4|random Terminus card|random Terminus cards} to your hand, replenish 4 mana; add the Toxopid to your hand, it costs (0); Toxic {toxic} and Burn {burn} all enemies; for the rest of the game, when you launch a Starship, cast a random Call to Chaos and summon a random (2) Cost Weapon; summon a Mindustrial Golem and a Swarm Golem; cast a random Call to Chaos."
+      "text": "Three different random effects, resolved in the order listed: Add {card|random Paperclip card|random Paperclip cards} to your hand, they cost (0), replenish 2 mana; add {card2|random Evolved Swarm card|random Evolved Swarm cards} to your hand, they cost (0); summon two random Radiant Units, make them GIGA; summon or cast {card3|random Jlockeed card|random Jlockeed cards}; add {card4|random Terminus card|random Terminus cards} to your hand, replenish 4 mana; add the Toxopid to your hand, it costs (0); Toxic {toxic} and Burn {burn} all enemies; for the rest of the game, when you launch a Starship, cast a random Call to Chaos and summon a random (2) Cost Weapon; summon a Mindustrial Golem and a Swarm Golem; cast a random Call to Chaos."
     },
     "params": [
       {
@@ -35613,7 +35613,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Rush, Ranged\nAfter this attacks summon a random Mindustrial card that can't attack."
+      "text": "Rush, Ranged\nAfter this attacks, summon a random Mindustrial card that can't attack."
     },
     "radiant": {
       "attack": 10,
@@ -35626,7 +35626,7 @@
           "kind": "Ranged"
         }
       ],
-      "text": "Rush, Ranged\nAfter this attacks summon a random Radiant Mindustrial card that can't attack."
+      "text": "Rush, Ranged\nAfter this attacks, summon a random Radiant Mindustrial card that can't attack."
     }
   },
   "stinkyscapeplus-142-2": {
@@ -35653,7 +35653,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nAfter this attacks summon a Swarm card that is Evolved."
+      "text": "Rush\nAfter this attacks, summon an Evolved Swarm card."
     },
     "radiant": {
       "attack": 10,
@@ -35663,7 +35663,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nAfter this attacks summon a Radiant Swarm card that is Evolved."
+      "text": "Rush\nAfter this attacks, summon an Evolved Radiant Swarm card."
     }
   },
   "stinkyscapeplus-143": {
@@ -35995,7 +35995,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nDealing damage Burns {burns}."
+      "text": "Starship Piece, Equip\nDamage also Burns {burns}."
     },
     "radiant": {
       "attack": 4,
@@ -36008,7 +36008,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nDealing damage Burns {burns}."
+      "text": "Starship Piece, Equip\nDamage also Burns {burns}."
     },
     "params": [
       {
@@ -36280,7 +36280,7 @@
           "kind": "Starship Piece"
         }
       ],
-      "text": "Starship Piece\nWhen launched, cast a random Terminus Card."
+      "text": "Starship Piece\nWhen launched, cast a random Terminus card."
     },
     "radiant": {
       "attack": 6,
@@ -36290,7 +36290,7 @@
           "kind": "Starship Piece"
         }
       ],
-      "text": "Starship Piece\nWhen launched, cast a random Radiant Terminus Card."
+      "text": "Starship Piece\nWhen launched, cast a random Radiant Terminus card."
     }
   },
   "stinkyscapeplus-157": {
@@ -36452,13 +36452,13 @@
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Combo X: Gain +2X/2X."
+      "text": "Combo X: Gain +2X/+2X."
     },
     "radiant": {
       "attack": 4,
       "health": 4,
       "keywords": [],
-      "text": "Combo X: Gain +4X/4X."
+      "text": "Combo X: Gain +4X/+4X."
     }
   },
   "stinkyscapeplus-163": {
@@ -36575,11 +36575,11 @@
     "loc": 31,
     "base": {
       "keywords": [],
-      "text": "For the rest of the game at the start of its owner's turn add a random Mindustrial card to your hand."
+      "text": "For the rest of the game.\nStart of turn: Add a random Mindustrial card to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "For the rest of the game at the start of its owner's turn add a random Radiant Mindustrial card to your hand, it costs (1) less."
+      "text": "For the rest of the game.\nStart of turn: Add a random Radiant Mindustrial card to your hand. It costs (1) less."
     }
   },
   "stinkyscapeplus-t-tears-of-the-kwzki-tree": {
@@ -36600,11 +36600,11 @@
     "loc": 36,
     "base": {
       "keywords": [],
-      "text": "All cards for the rest of the game are Radiant, at the end of any turn buff all cards."
+      "text": "For the rest of the game, all cards are Radiant, and at the end of every turn, Buff all cards."
     },
     "radiant": {
       "keywords": [],
-      "text": "All cards for the rest of the game are Radiant, at the end of any turn buff all cards. Gain {mana} mana."
+      "text": "For the rest of the game, all cards are Radiant, and at the end of every turn, Buff all cards. Gain {mana} mana."
     },
     "params": [
       {
@@ -36636,11 +36636,11 @@
     "loc": 18,
     "base": {
       "keywords": [],
-      "text": "Fuse all Units in the board into an Alnilam."
+      "text": "Fuse all Units on the board into an Alnilam."
     },
     "radiant": {
       "keywords": [],
-      "text": "Fuse all Units in the board into a Radiant Alnilam."
+      "text": "Fuse all Units on the board into a Radiant Alnilam."
     },
     "refs": [
       "stinkyscapeplus-t-alnilam"
@@ -36725,7 +36725,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Your hero gains Armor {count|then Players take turn|then Players take turns} casting Jogg's box until the game ends."
+      "text": "Your hero gains Armor {count}. Then players take turns casting Jogg's box until the game ends."
     },
     "params": [
       {
@@ -37412,13 +37412,13 @@
     "loc": 24,
     "base": {
       "keywords": [],
-      "text": "Evolves at the start of its owner's turn.\nEvolve: Gain +2/+2.",
+      "text": "Evolves when your turn starts.\nEvolve: Gain +2/+2.",
       "attack": 1,
       "health": 2
     },
     "radiant": {
       "keywords": [],
-      "text": "Evolves at the start of its owner's turn.\nEvolve: Gain +4/+4.",
+      "text": "Evolves when your turn starts.\nEvolve: Gain +4/+4.",
       "attack": 2,
       "health": 4
     }

@@ -1,24 +1,30 @@
 //! `cargo jackioh patches`: the card patch history (B4.2, R388, R646, R1366000), with several patches
 //! in flight at once: pending fragments, the check that proves them, and the promotion that ships
-//! them, in ship order, each named by its tier. The files live under `crates/cards/patches/` beside
-//! `crates/cards/catalog.json`. Surface contract: docs/v0.3.0/SURFACE.md §12.
+//! them, in ship order, each named by its tier: a major when a set ships, else a micro (R3944000). The
+//! day's patch is `cut`, which rolls the micros since the newest major or patch into the next `v0.X.Y`.
+//! The files live under `crates/cards/patches/` beside `crates/cards/catalog.json`. Surface contract:
+//! docs/v0.3.0/SURFACE.md §12.
 //!
 //! ```text
 //! cargo jackioh patches "<title>" \
 //!   [--source "<issue, PR, commits>"] [--notes "<what changed>"] [--cards <id,...>] [--plays <id,...>] [--rule]
 //! cargo jackioh patches check
 //! cargo jackioh patches ship
+//! cargo jackioh patches cut [--production <ref>]       # the day's patch (R3944000)
 //! cargo jackioh patches retcon [--dry-run] [--records <dir>...]   # the version retcon: retcon.rs (R1371000)
 //! ```
 //!
 //! A branch that changes `catalog.json`, or a card's play some other way, adds one fragment,
 //! `pending/<slug>.json`, with no version: `ship` names it from the patch's tier (R1366000). Its `plays`
 //! and `rule` (R2455000) are never set from the diff, since only the classifier's second stage
-//! (R1365000) tells a refactor from a change. Branches never edit `patches.json`, the snapshots, the
-//! tables under `win_rates/`, `index.json` or `shipped.json`. `check` fails, naming the card, on an entry
-//! that differs from the newest shipped snapshot without exactly one fragment's claim or is claimed and
-//! does not, a `plays` id that is no shipped card, a fragment that claims nothing or leaves its title,
-//! sources or notes empty (R388), a player note that breaks the note rules (R724001), a carried
+//! (R1365000) tells a refactor from a change. A fragment may carry the win rates of record
+//! (`records`, which `cargo jackioh winrates --refresh` writes in, R3882000), and `ship` freezes them
+//! as `records/<version>.json`. Branches never edit `patches.json`, the snapshots, the tables under
+//! `win_rates/` and `records/`, `index.json` or `shipped.json`. `check` fails, naming the card, on an
+//! entry that differs from the newest shipped snapshot without exactly one fragment's claim or is
+//! claimed and does not, a `plays` id that is no shipped card, a fragment that claims nothing, carries
+//! win rates of record with no row, or leaves its title, sources or notes empty (R388), a player note
+//! that breaks the note rules (R724001), a carried
 //! version whose win-rate table is not its frozen file (R1329000), and a technical log out of shape
 //! (R1369000); a changed script needs no claim, the pull request's `classify` check holds that. `ship`
 //! needs full history (`fetch-depth: 0`); `patches-ship.yml` runs it after every merge that touches
@@ -36,10 +42,10 @@ use indexmap::{IndexMap, IndexSet};
 
 use self::patch::bump_sites;
 use self::patches_io::{
-    Catalog, CheckFragmentsArgs, NamedFragment, PatchEntry, PendingFragment, PlayerNote, ShippedEntry,
-    check_fragments, differing_ids, fragment_name, git_blob_hash, next_ship_name, player_note_problems,
-    read_fragments, read_patches, read_shipped, read_snapshot, read_win_rates, rebuild_derived, remove_file,
-    same_win_rates, snapshot_path, win_rates_path, write_json,
+    Catalog, CheckFragmentsArgs, NamedFragment, PatchEntry, PendingFragment, PlayerNote, RECORDS_DIR,
+    ShippedEntry, check_fragments, differing_ids, fragment_name, git_blob_hash, next_ship_name,
+    player_note_problems, read_fragments, read_patches, read_shipped, read_snapshot, read_win_rates,
+    rebuild_derived, records_path, remove_file, same_win_rates, snapshot_path, win_rates_path, write_json,
 };
 use self::versions::name_by_tier;
 use crate::card_lists;
@@ -812,9 +818,15 @@ pub mod patches_io {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pub plays: Option<Vec<String>>,
         /// R2529000: a system the owner names (`classify::SYSTEM_RELEASES`) alone made this patch one.
-        /// Card statistics read it as a micro over its `plays`, since it moves no other card.
+        /// Card statistics read it as a micro over its `plays`, since it moves no other card. Never set
+        /// since R3944000, which ships a system as a micro.
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         pub system: bool,
+        /// R3944000: the micros this major or daily patch rolls up, oldest first: exactly the micro
+        /// entries between the major or patch before it and itself, which the Patch notes page nests
+        /// under it as its snapshots. Absent on every version shipped before #3944, and on a micro.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pub includes: Option<Vec<String>>,
         /// GENERATED from the snapshots: every card the patch added, changed or removed, in catalog
         /// order.
         #[serde(default)]
@@ -849,6 +861,14 @@ pub mod patches_io {
     /// R1329000: `win_rates/<version>.json` under `dir`, the win-rate table `version` shipped with.
     pub fn win_rates_path(version: &str, dir: &Path) -> anyhow::Result<PathBuf> {
         snapshot_path(version, &dir.join("win_rates"))
+    }
+
+    /// R3882000: the folder beside the snapshots that holds each version's win rates of record.
+    pub const RECORDS_DIR: &str = "records";
+
+    /// R3882000: `records/<version>.json` under `dir`, the win rates of record `version` shipped.
+    pub fn records_path(version: &str, dir: &Path) -> anyhow::Result<PathBuf> {
+        snapshot_path(version, &dir.join(RECORDS_DIR))
     }
 
     /// R1329000: the empty table's text, as a version with no table file shipped with.
@@ -1073,10 +1093,14 @@ pub mod patches_io {
         /// R2529000: the patch changes how cards look (`classify::CARD_VISUALS`), a micro.
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         pub visual: bool,
-        /// R2529000: the tracker issue of a system the owner names (`classify::SYSTEM_RELEASES`),
-        /// which ships as a patch.
+        /// R2529000: the tracker issue of a system the owner names (`classify::SYSTEM_RELEASES`); a
+        /// micro since R3944000, like every fragment that ships no set.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pub system: Option<u32>,
+        /// R3882000: the win rates of record the patch ships (`records/<version>.json`), which
+        /// `cargo jackioh winrates --refresh` writes in. They count as a claim of their own.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pub records: Option<WinRateTable>,
     }
 
     /// One shipped patch's provenance: the commit that shipped it and its snapshot's blob.
@@ -1097,6 +1121,10 @@ pub mod patches_io {
         /// file, as every one shipped before the first card that reads them.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pub card_metrics_blob: Option<String>,
+        /// R3882000: the git blob of `records/<version>.json`; none on a patch that shipped no win
+        /// rates of record, as every one before the first refresh.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pub records_blob: Option<String>,
     }
 
     /// R1366000: the longest slug a fragment's file name takes from its title.
@@ -1349,17 +1377,28 @@ pub mod patches_io {
             for problem in player_note_problems(&fragment.player) {
                 problems.push(format!("pending/{name}'s player note {problem} (R724001)"));
             }
-            // A patch changes a card, a card's play or look, a rule or a system; one that claims none
-            // would bump the version over nothing (R650, R1366000, R2529000). No patch ships a
-            // win-rate table since #3049 (R3049000).
+            // A patch changes a card, a card's play or look, a rule, a system or the win rates of
+            // record; one that claims none would bump the version over nothing (R650, R1366000,
+            // R2529000, R3882000). No patch ships a `win_rates/` table since #3049 (R3049000).
             if fragment.cards.is_empty()
                 && fragment.plays.is_empty()
                 && !fragment.rule
                 && !fragment.visual
                 && fragment.system.is_none()
+                && fragment.records.is_none()
             {
                 problems.push(format!(
                     "pending/{name} claims nothing (no card, no --plays, no --rule, no --visual, no --system), but a patch ships a change"
+                ));
+            }
+            // R3882000: win rates of record with no row would record nothing.
+            if fragment
+                .records
+                .as_ref()
+                .is_some_and(|table| table.cards.is_empty())
+            {
+                problems.push(format!(
+                    "pending/{name} ships win rates of record with no row (R3882000)"
                 ));
             }
             // R2529000: only the owner names a system.
@@ -1531,7 +1570,7 @@ pub fn patch_paths(repo_root: &Path) -> PatchPaths {
 }
 
 /// `catalog.json` as a patch sees it: its shipped view (R1420), without its flavors (R1437000).
-fn read_catalog(path: &Path) -> anyhow::Result<Catalog> {
+pub(crate) fn read_catalog(path: &Path) -> anyhow::Result<Catalog> {
     let text = fs::read_to_string(path).with_context(|| format!("{} cannot be read", path.display()))?;
     let catalog: Catalog =
         serde_json::from_str(&text).with_context(|| format!("{} is not a catalog", path.display()))?;
@@ -1649,6 +1688,7 @@ pub fn write_fragment(repo_root: &Path, args: &FragmentArgs) -> anyhow::Result<N
         rule: args.rule.unwrap_or(held.rule),
         visual: args.visual.unwrap_or(held.visual),
         system: args.system.or(held.system),
+        records: held.records,
     };
     fs::create_dir_all(&paths.pending_dir)
         .with_context(|| format!("{} cannot be created", paths.pending_dir.display()))?;
@@ -1679,6 +1719,7 @@ pub fn check_patches(repo_root: &Path) -> anyhow::Result<Vec<String>> {
     {
         problems.push(format!("the pending fragments cannot ship: {error}"));
     }
+    problems.extend(includes_problems(&patches));
     // Every shipped patch carries the note the Patch notes page shows for it (R724001).
     for patch in &patches {
         match &patch.player {
@@ -1911,8 +1952,8 @@ struct Proved {
     version: String,
     tier: Tier,
     plays: Vec<String>,
-    /// R2529000: a named system alone made it a patch.
-    system: bool,
+    /// R3944000: on a major, the micros it rolls up.
+    includes: Option<Vec<String>>,
     raw: String,
     /// R2173000: the version's BUSTED and complicated lists, once it holds a card that reads them.
     lists: Option<String>,
@@ -1932,22 +1973,14 @@ pub(crate) fn sets_of(catalog: &Catalog) -> Vec<SetName> {
     sets
 }
 
-/// R1366000: a patch's tier and the families that play differently in it, from the snapshot before it
-/// and its own (each with its cards' sets) and the fragment's `plays` and `rule` (`classify::read_diff`,
-/// `classify::classify`, R1365000), which count as stage 2's: the pull request's `classify` check
-/// confirmed them. A patch that changes no card (how cards look, R2529000) is a micro: every patch bumps the version. A fragment claiming a system the owner names is
-/// a patch whatever its cards earn (R2529000); the third value says whether the system alone made it one.
-fn tier_of(previous: &Catalog, snapshot: &Catalog, fragment: &PendingFragment) -> (Tier, Vec<String>, bool) {
-    tier_among(previous, snapshot, fragment, classify::SYSTEM_RELEASES)
-}
-
-/// `tier_of` with the systems the owner names passed in.
-fn tier_among(
-    previous: &Catalog,
-    snapshot: &Catalog,
-    fragment: &PendingFragment,
-    systems: &[(u32, &str)],
-) -> (Tier, Vec<String>, bool) {
+/// R1366000: the classifier's reading of a fragment, its tier and the families that play differently
+/// in it, from the snapshot before it and its own (each with its cards' sets) and the fragment's `plays`
+/// and `rule` (`classify::read_diff`, `classify::classify`, R1365000), which count as stage 2's: the pull
+/// request's `classify` check confirmed them. A patch that changes no card (how cards look, R2529000)
+/// reads as a micro. R3944000: `ship_patches` names the version from `classify::shipped_tier` of this
+/// tier, a major or a micro, since only the day's cut (`cut_patch`) makes a patch; a system the owner
+/// names (R2529000) is a micro like any other.
+fn tier_of(previous: &Catalog, snapshot: &Catalog, fragment: &PendingFragment) -> (Tier, Vec<String>) {
     let before = classify::Side::of_catalog(previous.clone(), sets_of(previous));
     let after = classify::Side::of_catalog(snapshot.clone(), sets_of(snapshot));
     let diff = classify::read_diff(&before, &after, &[]);
@@ -1957,14 +1990,7 @@ fn tier_among(
         ..classify::Checked::default()
     };
     let classification = classify::classify(&diff, Some(&checked));
-    let tier = classification.tier.unwrap_or(Tier::Micro);
-    let named = |issue: u32| systems.iter().any(|(named, _)| *named == issue);
-    let system = tier < Tier::Patch && fragment.system.is_some_and(named);
-    (
-        if system { Tier::Patch } else { tier },
-        classification.cards,
-        system,
-    )
+    (classification.tier.unwrap_or(Tier::Micro), classification.cards)
 }
 
 /// R646: `previous` with each of `claims` as `current` holds it (dropped where `current` has none)
@@ -2058,6 +2084,8 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
         bail!("patches.json holds no shipped patch");
     };
     let mut newest_name = newest.version.clone();
+    // R3944000: the micros shipped since the newest major or patch, which a major this run names rolls up.
+    let mut since_host = micros_since_host(&patches);
     // R646, R1280000: the claims, which `check` proves cover every change once, build the history
     // whatever happened to a fragment after its commit. The last snapshot is `catalog.json` itself.
     let file = fs::read_to_string(&paths.catalog)
@@ -2119,7 +2147,8 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
             .iter()
             .any(|id| snapshot.contains_key(id))
             .then(|| lists_text.clone());
-        let (tier, plays, system) = tier_of(&previous, &snapshot, &fragment);
+        let (read, plays) = tier_of(&previous, &snapshot, &fragment);
+        let tier = classify::shipped_tier(read);
         let version = next_ship_name(
             &taken,
             &name_by_tier(tier, &newest_name).with_context(|| format!("pending/{name} cannot be named"))?,
@@ -2127,6 +2156,12 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
         taken.insert(version.clone());
         newest_name = version.clone();
         previous = snapshot;
+        let includes = if tier == Tier::Major {
+            Some(std::mem::take(&mut since_host)).filter(|micros| !micros.is_empty())
+        } else {
+            since_host.push(version.clone());
+            None
+        };
         proved.push(Proved {
             name,
             fragment,
@@ -2134,7 +2169,7 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
             version,
             tier,
             plays,
-            system,
+            includes,
             raw,
             lists,
         });
@@ -2154,13 +2189,14 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
         version,
         tier,
         plays,
-        system,
+        includes,
         raw,
         lists,
     } in proved
     {
         let path = snapshot_path(&version, &paths.dir)?;
         fs::write(&path, &raw).with_context(|| format!("{} cannot be written", path.display()))?;
+        let fragment_records = fragment.records;
         let timestamp = git(repo_root, &["log", "-1", "--format=%ct", &commit], &[])?;
         let seconds: i64 = timestamp
             .trim()
@@ -2177,7 +2213,8 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
             reconstructed: Some(false),
             tier: Some(tier),
             plays: Some(plays),
-            system,
+            system: false,
+            includes,
             changes: Vec::new(),
         });
         let written =
@@ -2193,13 +2230,27 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
             }
             None => None,
         };
+        // R3882000: the win rates of record the fragment carries, frozen under the version it ships.
+        let records_blob = match &fragment_records {
+            Some(table) => {
+                let records = records_path(&version, &paths.dir)?;
+                fs::create_dir_all(paths.dir.join(RECORDS_DIR))
+                    .with_context(|| format!("{} cannot be created", records.display()))?;
+                write_json(&records, table)?;
+                let text = fs::read_to_string(&records)
+                    .with_context(|| format!("{} cannot be read", records.display()))?;
+                Some(git_blob_hash(&text))
+            }
+            None => None,
+        };
         shipped.push(ShippedEntry {
             version: version.clone(),
             commit,
             blob: git_blob_hash(&written),
-            // R3049000: no table ships with a version since #3049.
+            // R3049000: no `win_rates/` table ships with a version since #3049.
             win_rates_blob: None,
             card_metrics_blob,
+            records_blob,
         });
         remove_file(&paths.pending_dir.join(&name));
         names.push(version);
@@ -2208,6 +2259,224 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
     write_json(&paths.shipped_json, &shipped)?;
     rebuild_derived(&paths.dir)?;
     Ok(ShipResult { shipped: names })
+}
+
+/// R3944000: whether a shipped entry hosts micros on the Patch notes page and closes a day's span: a
+/// major or a patch. An entry shipped before tiers were recorded counts as one (only the oldest
+/// history has none, and the newest major or patch always records its tier).
+fn hosts(patch: &PatchEntry) -> bool {
+    patch.tier != Some(Tier::Micro)
+}
+
+/// R3944000: the versions of the micros after the newest major or patch, oldest first: what the next
+/// cut, or a major `ship_patches` names, rolls up.
+fn micros_since_host(patches: &[PatchEntry]) -> Vec<String> {
+    let start = patches.iter().rposition(hosts).map_or(0, |at| at + 1);
+    patches[start..]
+        .iter()
+        .map(|patch| patch.version.clone())
+        .collect()
+}
+
+/// R3944000: every `includes` out of place: on a micro, or on a major or patch naming anything but the
+/// micros between it and the major or patch before it, oldest first. A major or patch with none (every
+/// one shipped before #3944) is whole.
+fn includes_problems(patches: &[PatchEntry]) -> Vec<String> {
+    let mut problems = Vec::new();
+    let mut since: Vec<String> = Vec::new();
+    for patch in patches {
+        if !hosts(patch) {
+            if patch.includes.is_some() {
+                problems.push(format!(
+                    "patches.json's {} is a micro but lists the micros it includes; only a major or a patch rolls micros up (R3944000)",
+                    patch.version
+                ));
+            }
+            since.push(patch.version.clone());
+            continue;
+        }
+        if let Some(includes) = &patch.includes
+            && *includes != since
+        {
+            problems.push(format!(
+                "patches.json's {} includes {} but the micros since the major or patch before it are {} (R3944000)",
+                patch.version,
+                js::stringify(includes),
+                js::stringify(&since)
+            ));
+        }
+        since.clear();
+    }
+    problems
+}
+
+/// R3944000: the daily patch's player note (R724001), merged from its micros' notes: the title of the
+/// micro whose plays hold the most families (the oldest of a tie), followed by how many more changes the
+/// patch rolls up, and under each heading the micros' lines in their order, a line two of them share once.
+fn merged_note(micros: &[PatchEntry]) -> PlayerNote {
+    let lead = micros
+        .iter()
+        .enumerate()
+        .max_by_key(|(at, patch)| (patch.plays.as_ref().map_or(0, Vec::len), std::cmp::Reverse(*at)))
+        .map(|(_, patch)| patch);
+    let lead_title = lead.map_or_else(String::new, |patch| {
+        patch
+            .player
+            .as_ref()
+            .map_or_else(|| patch.title.clone(), |note| note.title.clone())
+    });
+    let more = micros.len().saturating_sub(1);
+    let title = match more {
+        0 => lead_title,
+        1 => format!("{lead_title}, and 1 more change"),
+        n => format!("{lead_title}, and {n} more changes"),
+    };
+    let section = |pick: fn(&PlayerNote) -> &[String]| -> Vec<String> {
+        let lines: IndexSet<String> = micros
+            .iter()
+            .filter_map(|patch| patch.player.as_ref())
+            .flat_map(|note| pick(note).iter().cloned())
+            .collect();
+        lines.into_iter().collect()
+    };
+    PlayerNote {
+        title,
+        new: section(|note| note.new.as_slice()),
+        balance: section(|note| note.balance.as_slice()),
+        changes: section(|note| note.changes.as_slice()),
+        text: section(|note| note.text.as_slice()),
+        fixes: section(|note| note.fixes.as_slice()),
+    }
+}
+
+/// What `patches cut` did: the patch it wrote and the micros it rolls up, or why it wrote none.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum CutResult {
+    Cut { version: String, includes: Vec<String> },
+    Nothing(String),
+}
+
+/// R3944000: the day's patch. Rolls every micro shipped since the newest major or patch into the next
+/// `v0.X.Y`: `tier: patch`, `includes` (those micros, oldest first), `plays` (theirs, united and
+/// sorted), a player note merged from theirs (`merged_note`) and the newest micro's snapshot (and card
+/// lists), byte for byte, so its own `changes` are none. It is dated, and recorded in `shipped.json` at,
+/// the commit it was cut from (HEAD), carries no `commits` (no pull request of its own to retitle) and
+/// bumps the catalog version everywhere it lives. Writes nothing when no micro followed the newest
+/// major or patch, or, with `production` (a git ref, as `origin/_production`), while that ref's
+/// `patches.json` does not hold the newest major or patch yet, so each daily patch is one production
+/// release. Refuses while fragments are pending: `patches ship` runs first, and the cut rolls up what
+/// it shipped. No clock (CLAUDE.md rule 4): the date is the commit's.
+pub fn cut_patch(repo_root: &Path, production: Option<&str>) -> anyhow::Result<CutResult> {
+    let paths = patch_paths(repo_root);
+    if !read_fragments(&paths.pending_dir)?.is_empty() {
+        bail!("fragments are pending; run `patches ship` first, so the cut rolls up what it ships");
+    }
+    let mut patches = read_patches(&paths.patches_json)?;
+    let Some(host_at) = patches.iter().rposition(hosts) else {
+        bail!("patches.json holds no major or patch for a cut to follow");
+    };
+    let host = patches[host_at].version.clone();
+    let micros: Vec<PatchEntry> = patches[host_at + 1..].to_vec();
+    let Some(newest) = micros.last() else {
+        return Ok(CutResult::Nothing(format!("no micro has shipped since {host}")));
+    };
+    if let Some(reference) = production {
+        let text = git(
+            repo_root,
+            &["show", &format!("{reference}:{PATCHES_REL}/patches.json")],
+            &[],
+        )?;
+        let live: Vec<PatchEntry> = serde_json::from_str(&text)
+            .with_context(|| format!("{reference}'s patches.json is not a patch list"))?;
+        if !live.iter().any(|patch| patch.version == host) {
+            return Ok(CutResult::Nothing(format!(
+                "{reference} does not hold {host} yet, so the cut waits for production"
+            )));
+        }
+    }
+    let taken: IndexSet<String> = patches.iter().map(|patch| patch.version.clone()).collect();
+    let version = next_ship_name(
+        &taken,
+        &name_by_tier(Tier::Patch, &newest.version).context("the daily patch cannot be named")?,
+    )?;
+    let includes: Vec<String> = micros.iter().map(|patch| patch.version.clone()).collect();
+    let plays: Vec<String> = micros
+        .iter()
+        .flat_map(|patch| patch.plays.iter().flatten().cloned())
+        .collect::<std::collections::BTreeSet<String>>()
+        .into_iter()
+        .collect();
+    let head = git(repo_root, &["rev-parse", "HEAD"], &[])?.trim().to_string();
+    let timestamp = git(repo_root, &["log", "-1", "--format=%ct", &head], &[])?;
+    let seconds: i64 = timestamp
+        .trim()
+        .parse()
+        .with_context(|| format!("git printed {timestamp:?} as the time of {head}"))?;
+
+    let from = snapshot_path(&newest.version, &paths.dir)?;
+    let raw = fs::read_to_string(&from).with_context(|| format!("{} cannot be read", from.display()))?;
+    let lists_from = card_lists::lists_path(&newest.version, &paths.dir)?;
+    let lists = match fs::read_to_string(&lists_from) {
+        Ok(text) => Some(text),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+        Err(error) => {
+            return Err(error).with_context(|| format!("{} cannot be read", lists_from.display()));
+        }
+    };
+
+    // The version moves first: a version site that is missing stops the cut before any history is written.
+    bump_sites(&version, repo_root)?;
+    let path = snapshot_path(&version, &paths.dir)?;
+    fs::write(&path, &raw).with_context(|| format!("{} cannot be written", path.display()))?;
+    let card_metrics_blob = match lists {
+        Some(lists) => {
+            let lists_path = card_lists::lists_path(&version, &paths.dir)?;
+            fs::write(&lists_path, &lists)
+                .with_context(|| format!("{} cannot be written", lists_path.display()))?;
+            Some(git_blob_hash(&lists))
+        }
+        None => None,
+    };
+    let span = match (includes.first(), includes.last()) {
+        (Some(first), Some(last)) if first != last => format!("{first} to {last}"),
+        _ => newest.version.clone(),
+    };
+    let listed: Vec<String> = micros
+        .iter()
+        .map(|patch| format!("{} ({})", patch.version, patch.title))
+        .collect();
+    patches.push(PatchEntry {
+        version: version.clone(),
+        date: utc_date_of(seconds),
+        title: format!("Patch: the daily patch, rolling up {span}"),
+        source: format!("patches cut at {head}: {}", includes.join(", ")),
+        notes: format!(
+            "The day's patch (R3944000): it rolls up the micros shipped since {host}, each a snapshot of its own: {}.",
+            listed.join("; ")
+        ),
+        player: Some(merged_note(&micros)),
+        commits: None,
+        reconstructed: Some(false),
+        tier: Some(Tier::Patch),
+        plays: Some(plays),
+        system: false,
+        includes: Some(includes.clone()),
+        changes: Vec::new(),
+    });
+    let mut shipped = read_shipped(&paths.shipped_json)?;
+    shipped.push(ShippedEntry {
+        version: version.clone(),
+        commit: head,
+        blob: git_blob_hash(&raw),
+        win_rates_blob: None,
+        card_metrics_blob,
+        // R3882000: the cut ships no win rates of record of its own; the micros it rolls up shipped theirs.
+        records_blob: None,
+    });
+    write_json(&paths.patches_json, &patches)?;
+    write_json(&paths.shipped_json, &shipped)?;
+    rebuild_derived(&paths.dir)?;
+    Ok(CutResult::Cut { version, includes })
 }
 
 /// `/^\d{4}-\d{2}-\d{2}$/`.
@@ -2352,9 +2621,23 @@ fn main(repo_root: &Path, argv: &[String]) -> anyhow::Result<()> {
         }
         return Ok(());
     }
+    if command == Some("cut") {
+        let production = match &argv[1..] {
+            [] => None,
+            [flag, reference] if flag == "--production" => Some(reference.as_str()),
+            _ => bail!("usage: patches cut [--production <ref>]"),
+        };
+        match cut_patch(repo_root, production)? {
+            CutResult::Cut { version, includes } => {
+                println!("patches cut: cut {version}, rolling up {}", includes.join(", "));
+            }
+            CutResult::Nothing(why) => println!("patches cut: nothing to cut: {why}"),
+        }
+        return Ok(());
+    }
     if command.is_none() {
         bail!(
-            "usage: patches \"<title>\" [--source …] [--notes …] [--cards <id,...>] [--plays <id,...>] [--rule] | patches check | patches ship"
+            "usage: patches \"<title>\" [--source …] [--notes …] [--cards <id,...>] [--plays <id,...>] [--rule] | patches check | patches ship | patches cut [--production <ref>]"
         );
     }
     let args = parse_fragment_args(argv)?;
@@ -2386,7 +2669,7 @@ fn main(repo_root: &Path, argv: &[String]) -> anyhow::Result<()> {
 /// them, so `check`, `ship` and the fragment form share one positional list.
 #[derive(clap::Args)]
 pub struct Args {
-    /// `"<title>" [--source …] [--notes …] [--cards <id,...>] [--plays <id,...>] [--rule]`, or `check`, or `ship`.
+    /// `"<title>" [--source …] [--notes …] [--cards <id,...>] [--plays <id,...>] [--rule]`, or `check`, or `ship`, or `cut [--production <ref>]` (R3944000).
     #[arg(trailing_var_arg = true, allow_hyphen_values = true, value_name = "ARGS")]
     pub argv: Vec<String>,
 }
@@ -2491,7 +2774,7 @@ mod tests {
                     catalog
                 };
                 let fragment = PendingFragment::default();
-                let (tier, plays, _) = crate::patches::tier_of(
+                let (tier, plays) = crate::patches::tier_of(
                     &previous,
                     &with("Training Grounds", "traininggrounds"),
                     &fragment,
@@ -2500,15 +2783,15 @@ mod tests {
                 assert_eq!(plays.len(), crate::classify::PATCH_MIN_CARDS);
                 assert_eq!(name_by_tier(tier, "v0.5.0").unwrap(), "v0.5.1");
                 assert_eq!(name_by_tier(tier, "v0.5.0d").unwrap(), "v0.5.1");
-                let (tier, _, _) = crate::patches::tier_of(&previous, &with("Classic", "classic"), &fragment);
+                let (tier, _) = crate::patches::tier_of(&previous, &with("Classic", "classic"), &fragment);
                 assert_eq!(tier, Tier::Major);
                 assert_eq!(name_by_tier(tier, "v0.5.0").unwrap(), "v0.6.0");
             }
 
-            // A system's patch is recorded as the system's alone unless its cards earn a patch by
-            // themselves, and a system no one named is refused.
+            // R3944000: a system's claim no longer makes a patch, so a named system ships as a micro
+            // like any other change and rides the day's patch; a system no one named is still refused.
             #[test]
-            fn r2529000_card_looks_ship_as_a_micro_and_a_named_system_as_a_patch() {
+            fn r2529000_r3944000_card_looks_and_a_named_system_ship_as_micros() {
                 use crate::patches::patches_io::{
                     Catalog, CheckFragmentsArgs, NamedFragment, PendingFragment,
                 };
@@ -2522,28 +2805,21 @@ mod tests {
                         .map(|k| entry(format!("core-{k:03}"), if k <= changed { 2 } else { 1 }))
                         .collect()
                 };
-                let systems: &[(u32, &str)] = &[(7, "Card packs")];
                 let looks = PendingFragment {
                     visual: true,
                     ..PendingFragment::default()
                 };
                 let tier = |fragment: &PendingFragment, changed: usize| {
-                    let (tier, _, system) =
-                        crate::patches::tier_among(&costing(0), &costing(changed), fragment, systems);
-                    (tier, system)
+                    let (read, _) = crate::patches::tier_of(&costing(0), &costing(changed), fragment);
+                    crate::classify::shipped_tier(read)
                 };
-                assert_eq!(tier(&looks, 0), (Tier::Micro, false));
+                assert_eq!(tier(&looks, 0), Tier::Micro);
                 let packs = PendingFragment {
                     system: Some(7),
                     ..PendingFragment::default()
                 };
-                assert_eq!(tier(&packs, 0), (Tier::Patch, true));
-                assert_eq!(tier(&packs, bar), (Tier::Patch, false));
-                let unnamed = PendingFragment {
-                    system: Some(8),
-                    ..PendingFragment::default()
-                };
-                assert_eq!(tier(&unnamed, 0), (Tier::Micro, false));
+                assert_eq!(tier(&packs, 0), Tier::Micro);
+                assert_eq!(tier(&packs, bar), Tier::Micro);
 
                 let named = |name: &str, fragment: PendingFragment| NamedFragment {
                     name: name.to_string(),
@@ -2574,10 +2850,11 @@ mod tests {
                 assert_eq!((args.visual, args.system), (Some(true), Some(7)));
             }
 
-            // R2499000: a fragment that reprints `PATCH_MIN_REPRINTS` cards ships as a patch, one
-            // fewer as a micro, read from the two snapshots alone.
+            // R2499000: a fragment that reprints `PATCH_MIN_REPRINTS` cards reads as the classifier's
+            // patch, one fewer as a micro, read from the two snapshots alone. R3944000: either ships as a
+            // micro, since only the day's cut makes a patch.
             #[test]
-            fn r2499000_a_balance_pass_of_the_reprint_bar_ships_as_a_patch() {
+            fn r2499000_r3944000_a_balance_pass_of_the_reprint_bar_reads_as_a_patch_and_ships_as_a_micro() {
                 use crate::patches::patches_io::{Catalog, PendingFragment};
                 let entry = |id: String, cost: i64| {
                     let json = serde_json::json!({ "id": id, "name": id, "set": "Core", "cost": cost });
@@ -2590,9 +2867,10 @@ mod tests {
                         .collect()
                 };
                 let fragment = PendingFragment::default();
-                let (tier, plays, _) = crate::patches::tier_of(&costing(0), &costing(bar), &fragment);
+                let (tier, plays) = crate::patches::tier_of(&costing(0), &costing(bar), &fragment);
                 assert_eq!((tier, plays.len()), (Tier::Patch, bar));
-                let (tier, _, _) = crate::patches::tier_of(&costing(0), &costing(bar - 1), &fragment);
+                assert_eq!(crate::classify::shipped_tier(tier), Tier::Micro);
+                let (tier, _) = crate::patches::tier_of(&costing(0), &costing(bar - 1), &fragment);
                 assert_eq!(tier, Tier::Micro);
             }
 
@@ -3070,6 +3348,7 @@ mod tests {
                     tier: None,
                     plays: None,
                     system: false,
+                    includes: None,
                     changes,
                 }
             }
@@ -3081,6 +3360,7 @@ mod tests {
                     blob: "0".repeat(40),
                     win_rates_blob: None,
                     card_metrics_blob: None,
+                    records_blob: None,
                 }]
             }
 
@@ -3368,6 +3648,7 @@ mod tests {
                             blob: git_blob_hash(&read(&dir.join("v0.1.1.json"))),
                             win_rates_blob: None,
                             card_metrics_blob: None,
+                            records_blob: None,
                         }]),
                     )],
                 );
@@ -3489,6 +3770,7 @@ mod tests {
                         // R3049000: no table ships with a version.
                         win_rates_blob: None,
                         card_metrics_blob: None,
+                        records_blob: None,
                     }
                 );
                 assert_eq!(shipped[2].commit, c2);
@@ -3859,9 +4141,10 @@ mod tests {
                     .unwrap_or_else(|| panic!("{version} shipped"))
             }
 
-            // Three cards are a micro, the next letter; twelve a patch, the next X.
+            // R3944000: three cards are a micro, the next letter, and so is the bar of cards that made a
+            // patch before #3944: only the day's cut makes a patch now.
             #[test]
-            fn r1366000_ships_each_pending_fragment_by_its_own_tier_in_merge_order() {
+            fn r1366000_r3944000_ships_each_pending_fragment_as_a_micro_in_merge_order_whatever_its_size() {
                 let bar = crate::classify::PATCH_MIN_CARDS;
                 let base = cards(3 + bar);
                 let temp = shipped_repo("jackioh-ship-tiers-", &base);
@@ -3887,24 +4170,27 @@ mod tests {
                 commit_at(root, "many cards", "2026-10-02T12:00:00+00:00");
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
 
-                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1b", "v0.1.2"]));
+                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1b", "v0.1.1c"]));
                 let micro = shipped_patch(&dir, "v0.1.1b");
-                assert_eq!((micro.tier, micro.plays), (Some(Tier::Micro), Some(ids(0, 3))));
-                let patch = shipped_patch(&dir, "v0.1.2");
                 assert_eq!(
-                    (patch.tier, patch.plays),
-                    (Some(Tier::Patch), Some(ids(3, 3 + bar)))
+                    (micro.tier, micro.plays, micro.includes),
+                    (Some(Tier::Micro), Some(ids(0, 3)), None)
                 );
-                assert_eq!(read_snapshot("v0.1.2", &dir).unwrap(), many);
-                assert!(read(&root.join("crates/server/.env.example")).contains("CATALOG_VERSION=v0.1.2"));
+                let broad = shipped_patch(&dir, "v0.1.1c");
+                assert_eq!(
+                    (broad.tier, broad.plays, broad.includes),
+                    (Some(Tier::Micro), Some(ids(3, 3 + bar)), None)
+                );
+                assert_eq!(read_snapshot("v0.1.1c", &dir).unwrap(), many);
+                assert!(read(&root.join("crates/server/.env.example")).contains("CATALOG_VERSION=v0.1.1c"));
                 commit_at(root, "ship", "2026-10-02T13:00:00+00:00");
 
-                // A micro after a patch is named after the patch.
+                // The next micro takes the next letter.
                 let again = costing(&many, &ids(0, 1), 5);
                 write_files(root, &[("crates/cards/catalog.json", json(&again))]);
                 write_fragment(root, &fragment_args("one more", "s", "n", None)).unwrap();
                 commit_at(root, "one more", "2026-10-03T12:00:00+00:00");
-                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.2b"]));
+                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1d"]));
             }
 
             #[test]
@@ -3959,10 +4245,10 @@ mod tests {
                 assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.2.0b"]));
             }
 
-            // `PATCH_MIN_CARDS` cards whose scripts changed with no catalog change make a patch, as does a
-            // rule every game meets; a single card's play is a micro.
+            // `PATCH_MIN_CARDS` cards whose scripts changed with no catalog change, a rule every game
+            // meets and a single card's play each ship as a micro (R3944000: size makes no patch).
             #[test]
-            fn r1366000_ships_the_bar_of_cards_claimed_through_their_play_as_a_patch() {
+            fn r1366000_r3944000_ships_the_bar_of_cards_claimed_through_their_play_as_a_micro() {
                 let bar = crate::classify::PATCH_MIN_CARDS;
                 let base = cards(bar + 2);
                 let temp = shipped_repo("jackioh-ship-plays-", &base);
@@ -3979,13 +4265,13 @@ mod tests {
                 );
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
                 commit_at(root, "many scripts", "2026-10-01T12:00:00+00:00");
-                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.2"]));
-                let patch = shipped_patch(&dir, "v0.1.2");
+                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1b"]));
+                let micro = shipped_patch(&dir, "v0.1.1b");
                 assert_eq!(
-                    (patch.tier, patch.plays, patch.changes),
-                    (Some(Tier::Patch), Some(ids(0, bar)), Vec::new())
+                    (micro.tier, micro.plays, micro.changes),
+                    (Some(Tier::Micro), Some(ids(0, bar)), Vec::new())
                 );
-                assert_eq!(read_snapshot("v0.1.2", &dir).unwrap(), base);
+                assert_eq!(read_snapshot("v0.1.1b", &dir).unwrap(), base);
                 commit_at(root, "ship", "2026-10-01T13:00:00+00:00");
 
                 let rule = FragmentArgs {
@@ -3999,9 +4285,243 @@ mod tests {
                 };
                 write_fragment(root, &one).unwrap();
                 commit_at(root, "a rule and one script", "2026-10-02T12:00:00+00:00");
-                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.3", "v0.1.3b"]));
-                assert_eq!(shipped_patch(&dir, "v0.1.3").tier, Some(Tier::Patch));
-                assert_eq!(shipped_patch(&dir, "v0.1.3b").plays, Some(ids(bar + 1, bar + 2)));
+                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1c", "v0.1.1d"]));
+                assert_eq!(shipped_patch(&dir, "v0.1.1c").tier, Some(Tier::Micro));
+                assert_eq!(shipped_patch(&dir, "v0.1.1d").plays, Some(ids(bar + 1, bar + 2)));
+            }
+
+            /// R3944000: a fragment titled `title` whose player note says `lines` under its changes,
+            /// claiming `cards` (or, with none, every card the catalog changed since the newest snapshot,
+            /// so a second fragment pending beside a first names its own).
+            fn noted(title: &str, lines: &[&str], cards: Option<&[&str]>) -> FragmentArgs {
+                FragmentArgs {
+                    player: Some(PlayerNote {
+                        title: title.to_string(),
+                        changes: strings(lines),
+                        ..PlayerNote::default()
+                    }),
+                    ..fragment_args(title, "s", "n", cards)
+                }
+            }
+
+            // The day's micros become the next patch: their versions in `includes`, their plays united,
+            // their notes merged under the title of the one that plays the most, the newest one's
+            // snapshot byte for byte, the catalog version bumped and the commit it was cut from in
+            // shipped.json; a second cut finds nothing, and the next micro follows the patch.
+            #[test]
+            fn r3944000_cut_rolls_the_micros_since_the_newest_patch_into_the_next_patch() {
+                use crate::patches::{CutResult, cut_patch};
+                let base = cards(4);
+                let temp = shipped_repo("jackioh-cut-", &base);
+                let root = temp.path();
+                let dir = root.join("crates/cards/patches");
+                let one = costing(&base, &ids(0, 1), 2);
+                write_files(root, &[("crates/cards/catalog.json", json(&one))]);
+                write_fragment(root, &noted("c00 buffed", &["c00 costs (2)."], None)).unwrap();
+                commit_at(root, "one card", "2026-10-01T12:00:00+00:00");
+                let two = costing(&one, &ids(1, 3), 3);
+                write_files(root, &[("crates/cards/catalog.json", json(&two))]);
+                write_fragment(
+                    root,
+                    &noted(
+                        "Two cards cost more",
+                        &["c01 costs (3).", "c00 costs (2)."],
+                        Some(&["c01", "c02"][..]),
+                    ),
+                )
+                .unwrap();
+                commit_at(root, "two cards", "2026-10-02T12:00:00+00:00");
+                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1b", "v0.1.1c"]));
+                let head = commit_at(root, "ship", "2026-10-02T13:00:00+00:00");
+
+                assert_eq!(
+                    cut_patch(root, None).unwrap(),
+                    CutResult::Cut {
+                        version: "v0.1.2".to_string(),
+                        includes: strings(&["v0.1.1b", "v0.1.1c"]),
+                    }
+                );
+                let patch = shipped_patch(&dir, "v0.1.2");
+                assert_eq!(
+                    (patch.tier, patch.includes.clone(), patch.plays.clone()),
+                    (
+                        Some(Tier::Patch),
+                        Some(strings(&["v0.1.1b", "v0.1.1c"])),
+                        Some(ids(0, 3))
+                    )
+                );
+                assert_eq!(
+                    (patch.commits.clone(), patch.changes.clone(), patch.date.as_str()),
+                    (None, Vec::new(), "2026-10-02")
+                );
+                assert_eq!(
+                    patch.player,
+                    Some(PlayerNote {
+                        title: "Two cards cost more, and 1 more change".to_string(),
+                        changes: strings(&["c00 costs (2).", "c01 costs (3)."]),
+                        ..PlayerNote::default()
+                    })
+                );
+                assert_eq!(read(&dir.join("v0.1.2.json")), read(&dir.join("v0.1.1c.json")));
+                assert!(read(&root.join("crates/server/.env.example")).contains("CATALOG_VERSION=v0.1.2"));
+                let shipped = read_shipped(&dir.join("shipped.json")).unwrap();
+                let last = shipped.last().expect("the cut's provenance");
+                assert_eq!(
+                    (last.version.as_str(), last.commit.as_str()),
+                    ("v0.1.2", head.as_str())
+                );
+                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+                commit_at(root, "cut", "2026-10-03T03:41:00+00:00");
+
+                assert_eq!(
+                    cut_patch(root, None).unwrap(),
+                    CutResult::Nothing("no micro has shipped since v0.1.2".to_string())
+                );
+                let again = costing(&two, &ids(3, 4), 5);
+                write_files(root, &[("crates/cards/catalog.json", json(&again))]);
+                write_fragment(root, &noted("c03 costs more", &["c03 costs (5)."], None)).unwrap();
+                commit_at(root, "one more", "2026-10-03T12:00:00+00:00");
+                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.2b"]));
+            }
+
+            // With a production ref the cut waits until that ref holds the newest major or patch, so
+            // each daily patch is one production release; with none (a fast-forward) it cuts at once.
+            // It refuses while fragments are pending, which `patches ship` ships first.
+            #[test]
+            fn r3944000_cut_waits_for_production_to_hold_the_newest_patch_and_refuses_pending_fragments() {
+                use crate::patches::{CutResult, cut_patch};
+                let base = cards(3);
+                let temp = shipped_repo("jackioh-cut-production-", &base);
+                let root = temp.path();
+                git(root, &["branch", "_production"], None);
+                let one = costing(&base, &ids(0, 1), 2);
+                write_files(root, &[("crates/cards/catalog.json", json(&one))]);
+                write_fragment(root, &noted("c00 buffed", &["c00 costs (2)."], None)).unwrap();
+                commit_at(root, "one card", "2026-10-01T12:00:00+00:00");
+                let refused = cut_patch(root, Some("_production")).expect_err("pending");
+                assert!(
+                    format!("{refused:#}").contains("fragments are pending"),
+                    "{refused:#}"
+                );
+                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1b"]));
+                commit_at(root, "ship", "2026-10-01T13:00:00+00:00");
+                assert!(matches!(
+                    cut_patch(root, Some("_production")).unwrap(),
+                    CutResult::Cut { ref version, .. } if version == "v0.1.2"
+                ));
+                commit_at(root, "cut", "2026-10-02T03:41:00+00:00");
+
+                let two = costing(&one, &ids(1, 2), 2);
+                write_files(root, &[("crates/cards/catalog.json", json(&two))]);
+                write_fragment(root, &noted("c01 buffed", &["c01 costs (2)."], None)).unwrap();
+                commit_at(root, "another card", "2026-10-02T12:00:00+00:00");
+                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.2b"]));
+                commit_at(root, "ship", "2026-10-02T13:00:00+00:00");
+                assert_eq!(
+                    cut_patch(root, Some("_production")).unwrap(),
+                    CutResult::Nothing(
+                        "_production does not hold v0.1.2 yet, so the cut waits for production".to_string()
+                    )
+                );
+                git(root, &["branch", "-f", "_production", "HEAD"], None);
+                assert_eq!(
+                    cut_patch(root, Some("_production")).unwrap(),
+                    CutResult::Cut {
+                        version: "v0.1.3".to_string(),
+                        includes: strings(&["v0.1.2b"]),
+                    }
+                );
+            }
+
+            // A set that ships rolls up the micros before it, as the day's cut would, and the micros
+            // after it wait for the next cut.
+            #[test]
+            fn r3944000_a_major_rolls_up_the_micros_shipped_before_it() {
+                use crate::patches::{CutResult, cut_patch};
+                let base = catalog_of(vec![
+                    in_set(card("aaa", 1), "Core"),
+                    in_set(card("bbb", 1), "Core"),
+                ]);
+                let temp = shipped_repo("jackioh-cut-major-", &base);
+                let root = temp.path();
+                let dir = root.join("crates/cards/patches");
+                let micro = base_with(&base, vec![in_set(card("aaa", 2), "Core")]);
+                write_files(root, &[("crates/cards/catalog.json", json(&micro))]);
+                write_fragment(root, &noted("aaa buffed", &["aaa costs (2)."], None)).unwrap();
+                commit_at(root, "a micro", "2026-10-01T12:00:00+00:00");
+                let with_set = base_with(
+                    &micro,
+                    vec![
+                        in_set(card("med1", 2), "Meditative"),
+                        in_set(card("med2", 2), "Meditative"),
+                    ],
+                );
+                write_files(root, &[("crates/cards/catalog.json", json(&with_set))]);
+                write_fragment(
+                    root,
+                    &noted(
+                        "Meditative",
+                        &["Meditative arrives."],
+                        Some(&["med1", "med2"][..]),
+                    ),
+                )
+                .unwrap();
+                commit_at(root, "the set ships", "2026-10-02T12:00:00+00:00");
+                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1b", "v0.2.0"]));
+                let major = shipped_patch(&dir, "v0.2.0");
+                assert_eq!(
+                    (major.tier, major.includes),
+                    (Some(Tier::Major), Some(strings(&["v0.1.1b"])))
+                );
+                assert_eq!(shipped_patch(&dir, "v0.1.1b").includes, None);
+                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+                commit_at(root, "ship", "2026-10-02T13:00:00+00:00");
+                assert_eq!(
+                    cut_patch(root, None).unwrap(),
+                    CutResult::Nothing("no micro has shipped since v0.2.0".to_string())
+                );
+            }
+
+            // `patches check` holds `includes` to the micros between an entry and the major or patch
+            // before it, oldest first, and keeps it off a micro.
+            #[test]
+            fn r3944000_check_holds_includes_to_the_micros_since_the_last_major_or_patch() {
+                use crate::patches::includes_problems;
+                let entry = |version: &str, tier: Tier, includes: Option<&[&str]>| PatchEntry {
+                    version: version.to_string(),
+                    tier: Some(tier),
+                    includes: includes.map(strings),
+                    ..base_patch("n", Vec::new())
+                };
+                let legacy = |version: &str, tier: Tier| entry(version, tier, None);
+                let whole = vec![
+                    legacy("v0.1.1", Tier::Patch),
+                    legacy("v0.1.1b", Tier::Micro),
+                    legacy("v0.1.2", Tier::Patch),
+                    legacy("v0.1.2b", Tier::Micro),
+                    legacy("v0.1.2c", Tier::Micro),
+                    entry("v0.1.3", Tier::Patch, Some(&["v0.1.2b", "v0.1.2c"])),
+                    legacy("v0.1.3b", Tier::Micro),
+                    entry("v0.2.0", Tier::Major, Some(&["v0.1.3b"])),
+                ];
+                assert_eq!(includes_problems(&whole), Vec::<String>::new());
+                let short = vec![
+                    legacy("v0.1.1", Tier::Patch),
+                    legacy("v0.1.1b", Tier::Micro),
+                    legacy("v0.1.1c", Tier::Micro),
+                    entry("v0.1.2", Tier::Patch, Some(&["v0.1.1c"])),
+                ];
+                assert_eq!(
+                    includes_problems(&short),
+                    strings(&[
+                        "patches.json's v0.1.2 includes [\"v0.1.1c\"] but the micros since the major or patch before it are [\"v0.1.1b\",\"v0.1.1c\"] (R3944000)"
+                    ])
+                );
+                let on_a_micro = vec![
+                    legacy("v0.1.1", Tier::Patch),
+                    entry("v0.1.1b", Tier::Micro, Some(&[])),
+                ];
+                assert_eq!(includes_problems(&on_a_micro).len(), 1);
             }
 
             // Its version and date are ignored, and a fragment an older build wrote, with a version in it
@@ -4240,6 +4760,65 @@ mod tests {
                     None
                 );
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+            }
+
+            // R3882000: a fragment that carries win rates of record and claims no card ships as a micro,
+            // its table frozen as `records/<version>.json` with its blob in shipped.json, and no
+            // `win_rates/` table; a fragment whose table of record holds no row is refused.
+            #[test]
+            fn r3882000_a_fragment_of_records_ships_them_under_its_version() {
+                let base = catalog_of(vec![card("aaa", 1), card("bbb", 1)]);
+                let temp = shipped_repo("jackioh-ship-records-", &base);
+                let root = temp.path();
+                let dir = root.join("crates/cards/patches");
+                let table: jackioh_engine::WinRateTable =
+                    serde_json::from_str(&win_rates_text("v0.1.1", &[("aaa", 30, 40), ("bbb", 12, 40)]))
+                        .unwrap();
+                let fragment = |records: jackioh_engine::WinRateTable| PendingFragment {
+                    title: "Patch: the win rates of record".to_string(),
+                    sources: "s".to_string(),
+                    notes: "n".to_string(),
+                    player: super::test_note(),
+                    records: Some(records),
+                    ..PendingFragment::default()
+                };
+                write_files(
+                    root,
+                    &[(
+                        "crates/cards/patches/pending/t.json",
+                        json(&fragment(table.clone())),
+                    )],
+                );
+                commit_at(root, "fragment t", "2026-10-01T12:00:00+00:00");
+                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1b"]));
+                assert!(!dir.join("pending/t.json").exists(), "the fragment shipped");
+                let text = read(&records_path("v0.1.1b", &dir).unwrap());
+                assert_eq!(
+                    serde_json::from_str::<jackioh_engine::WinRateTable>(&text).unwrap(),
+                    table
+                );
+                assert!(
+                    !dir.join("win_rates/v0.1.1b.json").exists(),
+                    "no win_rates/ table"
+                );
+                let shipped = read_shipped(&dir.join("shipped.json")).unwrap();
+                assert_eq!(
+                    shipped.last().and_then(|entry| entry.records_blob.clone()),
+                    Some(git_blob_hash(&text))
+                );
+                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+
+                write_files(
+                    root,
+                    &[(
+                        "crates/cards/patches/pending/t.json",
+                        json(&fragment(jackioh_engine::WinRateTable::default())),
+                    )],
+                );
+                assert!(check_patches(root).unwrap().contains(
+                    &"pending/t.json ships win rates of record with no row (R3882000)".to_string()
+                ));
             }
 
             // R2173000: v0.1.1b changes a card while no card reads the lists, so it keeps no lists file;
@@ -4717,6 +5296,18 @@ mod tests {
                             entry.version
                         ),
                         None => assert!(!lists.exists(), "card_metrics/{}.json", entry.version),
+                    }
+                    // R3882000: and its win rates of record's, on a version that shipped them.
+                    let records =
+                        crate::patches::patches_io::records_path(&entry.version, &patches_dir()).unwrap();
+                    match &entry.records_blob {
+                        Some(blob) => assert_eq!(
+                            *blob,
+                            git_blob_hash(&fs::read_to_string(&records).unwrap()),
+                            "records/{}.json",
+                            entry.version
+                        ),
+                        None => assert!(!records.exists(), "records/{}.json", entry.version),
                     }
                 }
             }

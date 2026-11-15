@@ -1714,7 +1714,8 @@
     "v0.2.5b",
     "v0.3.2",
     "v0.5.12",
-    "v0.6.3"
+    "v0.6.3",
+    "v0.6.4b"
   ],
   "classicplus-038": [
     "v0.2.0",
@@ -2465,7 +2466,8 @@
     "v0.3.0",
     "v0.3.2",
     "v0.5.12",
-    "v0.6.3"
+    "v0.6.3",
+    "v0.6.4b"
   ],
   "meditative-088": [
     "v0.3.0",
@@ -2675,7 +2677,8 @@
   ],
   "meditativeplus-017": [
     "v0.4.0",
-    "v0.4.6"
+    "v0.4.6",
+    "v0.6.4b"
   ],
   "meditativeplus-018": [
     "v0.4.0",
@@ -3821,26 +3824,32 @@
     "v0.6.0"
   ],
   "stinkyscapeplus-006": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-006-1": [
     "v0.6.0"
   ],
   "stinkyscapeplus-006-2": [
     "v0.6.0",
-    "v0.6.4"
+    "v0.6.4",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-007": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-008": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-009": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-010": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-011": [
     "v0.6.0"
@@ -3876,19 +3885,23 @@
     "v0.6.0"
   ],
   "stinkyscapeplus-022": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-023": [
     "v0.6.0"
   ],
   "stinkyscapeplus-024": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-025": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-026": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-026-1": [
     "v0.6.0"
@@ -3922,19 +3935,23 @@
     "v0.6.0"
   ],
   "stinkyscapeplus-035": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-036": [
     "v0.6.0"
   ],
   "stinkyscapeplus-037": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-038": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-039": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-040": [
     "v0.6.0",
@@ -3947,57 +3964,73 @@
     "v0.6.0"
   ],
   "stinkyscapeplus-043": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-044": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-045": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-046": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-047": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-048": [
     "v0.6.0"
   ],
   "stinkyscapeplus-049": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-050": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-051": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-052": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-053": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-054": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-055": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-056": [
     "v0.6.0",
-    "v0.6.4"
+    "v0.6.4",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-057": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-058": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-059": [
     "v0.6.0",
-    "v0.6.0c"
+    "v0.6.0c",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-060": [
     "v0.6.0",
@@ -4007,13 +4040,16 @@
     "v0.6.0"
   ],
   "stinkyscapeplus-061-1": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-062": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-063": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-064": [
     "v0.6.0"
@@ -4028,26 +4064,31 @@
     "v0.6.0"
   ],
   "stinkyscapeplus-068": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-069": [
     "v0.6.0"
   ],
   "stinkyscapeplus-069-1": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-070": [
     "v0.6.0",
-    "v0.6.4"
+    "v0.6.4",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-071": [
     "v0.6.0"
   ],
   "stinkyscapeplus-072": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-073": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-074": [
     "v0.6.0"
@@ -4066,7 +4107,8 @@
     "v0.6.0"
   ],
   "stinkyscapeplus-077": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-078": [
     "v0.6.0"
@@ -4081,7 +4123,8 @@
     "v0.6.0"
   ],
   "stinkyscapeplus-082": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-083": [
     "v0.6.0"
@@ -4094,7 +4137,8 @@
   ],
   "stinkyscapeplus-086": [
     "v0.6.0",
-    "v0.6.4"
+    "v0.6.4",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-087": [
     "v0.6.0",
@@ -4102,13 +4146,15 @@
   ],
   "stinkyscapeplus-088": [
     "v0.6.0",
-    "v0.6.4"
+    "v0.6.4",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-089": [
     "v0.6.0"
   ],
   "stinkyscapeplus-090": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-091": [
     "v0.6.0"
@@ -4121,7 +4167,8 @@
     "v0.6.0"
   ],
   "stinkyscapeplus-094": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-095": [
     "v0.6.0"
@@ -4161,7 +4208,8 @@
     "v0.6.0"
   ],
   "stinkyscapeplus-107": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-108": [
     "v0.6.0"
@@ -4197,23 +4245,27 @@
     "v0.6.0"
   ],
   "stinkyscapeplus-119": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-120": [
     "v0.6.0"
   ],
   "stinkyscapeplus-121": [
     "v0.6.0",
-    "v0.6.4"
+    "v0.6.4",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-121-1": [
     "v0.6.0"
   ],
   "stinkyscapeplus-122": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-123": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-124": [
     "v0.6.0"
@@ -4222,28 +4274,35 @@
     "v0.6.0"
   ],
   "stinkyscapeplus-126": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-127": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-128": [
     "v0.6.0"
   ],
   "stinkyscapeplus-129": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-130": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-131": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-132": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-133": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-133-1": [
     "v0.6.0"
@@ -4258,7 +4317,8 @@
     "v0.6.0"
   ],
   "stinkyscapeplus-133-5": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-134": [
     "v0.6.0"
@@ -4279,20 +4339,24 @@
     "v0.6.0"
   ],
   "stinkyscapeplus-140": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-141": [
     "v0.6.0",
     "v0.6.4"
   ],
   "stinkyscapeplus-142": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-142-1": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-142-2": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-143": [
     "v0.6.0"
@@ -4313,7 +4377,8 @@
     "v0.6.0"
   ],
   "stinkyscapeplus-149": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-150": [
     "v0.6.0"
@@ -4334,7 +4399,8 @@
     "v0.6.0"
   ],
   "stinkyscapeplus-156": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-157": [
     "v0.6.0"
@@ -4353,7 +4419,8 @@
     "v0.6.0"
   ],
   "stinkyscapeplus-162": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-163": [
     "v0.6.0"
@@ -4365,19 +4432,23 @@
     "v0.6.0"
   ],
   "stinkyscapeplus-166": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-t-tears-of-the-kwzki-tree": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-t-supernova": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-t-alnilam": [
     "v0.6.0"
   ],
   "stinkyscapeplus-t-the-enigmata": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-t-warhero-token": [
     "v0.6.0"
@@ -4425,7 +4496,8 @@
     "v0.6.0"
   ],
   "stinkyscapeplus-t-ai-05": [
-    "v0.6.0"
+    "v0.6.0",
+    "v0.6.4b"
   ],
   "stinkyscapeplus-t-ai-06": [
     "v0.6.0"

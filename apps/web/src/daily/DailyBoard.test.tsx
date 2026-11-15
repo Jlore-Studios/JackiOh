@@ -19,7 +19,7 @@ import type { DailyGame } from "../net/daily.ts";
 import { clearReadCache } from "../net/readCache.ts";
 import { replayTestid } from "../replay/ReplayPlayer.tsx";
 import { resetSettings, writeSettings } from "../settings/store.ts";
-import { baseView, emptySide, opponentModifiers, unit, yourModifiers } from "../test/fixtures.ts";
+import { baseView, emptySide, opponentModifiers, pendingFor, unit, yourModifiers } from "../test/fixtures.ts";
 import { foldedReplaySteps } from "../test/replay.ts";
 import { resetVisibility, setVisibility } from "../test/setup.ts";
 import { at, refusal, signIn, stubServer, type Call, type Reply } from "../test/stubServer.ts";
@@ -244,6 +244,21 @@ describe("#3727 a daily game's board", () => {
     expect(result).toHaveTextContent(words);
     expect(result).not.toHaveTextContent("left the match");
     expect(screen.queryByTestId(dailyTestid.clock)).toBeNull();
+  });
+
+  it("R3727003 a KY's Competition question shows no 60-second countdown, only the move's daily clock", async () => {
+    const options = [
+      { key: "mode:A", label: "285" },
+      { key: "mode:B", label: "295" },
+      { key: "none", label: "Stop" },
+    ];
+    serve(() =>
+      dailyGame({ view: baseView({ pending: pendingFor("answer", options, { prompt: "482 − 197 = ?", streak: 0 }) }), legal: [] }),
+    );
+    render(<DailyBoard matchId="g-1" />);
+    await screen.findByTestId("prompt-streak", undefined, SLOW);
+    expect(screen.queryByTestId("prompt-sequence-clock")).toBeNull();
+    expect(screen.getByTestId(dailyTestid.clock)).toBeInTheDocument();
   });
 
   it("#3727 a finished game's Rematch sends its opponent a daily challenge at the same mode and time", async () => {

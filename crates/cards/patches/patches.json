@@ -26987,5 +26987,682 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.6.4b",
+    "date": "2026-11-15",
+    "title": "Patch: standardize card text: one wording per effect and the terms players can hover",
+    "source": "#3941",
+    "notes": "Issue #3941: a wording pass over every English face, held to R3941000's sweep (crates/cards/tests/cross/card_text.rs). A term prints as its glossary label so it bolds and shows its rule (R910000): Phase Weaver's \"end of its owner's turn\" is End of turn, Impact Reactor's \"When awoken\" is When this awakens, Shawarma Law's \"Can't defend\" is Can't Defend, Phase Fabric's \"Can't be Attacked\" is Can't be attacked, Mindustrial Cross-over's \"Starpiece\" is Starship Piece. One wording per clause: a lasting turn effect is \"For the rest of the game.\" over a Start of turn line (Jlockeed's Forever War, Mindustrial Revolution, as Jlockeed's Permanent Defense Contract), a cost set on an added card is its own sentence, a hand or deck trigger opens \"While this is in your …\", \"Dealing damage Burns\" is \"Damage also Burns\", and a stat gained is +N Attack or +N Health. Broken text is fixed: Graphite's pasted reminder, Scorch's \"attack 10 attacks\", Astrophage's and Colony Watcher's Evolve lines, Meltdown's \"When this attack\", Vela's and Corvus's Activates, PIP's and The Enigmata's numbers, Great Paperclip Theory II's \"Choose one α or β;.\", Spaceberry's missing noun. Wording only: no card plays differently. With it, R3941001: 128 faces that clamped print in-game words written for them (jackioh-shared's short-forms.json), and R3941002: a fused face prints its ingredients' keyword lines as one; both are the face model's, no card data.",
+    "player": {
+      "title": "Clearer card text",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Cards whose text ran past the card show shorter words written for play on the board and in your hand, not text cut off with \"…\".",
+        "Their full text is still in the hover preview, the touch sheet and the card's details.",
+        "A fused card, an Equipped Unit among them, shows one keyword line instead of one for each card fused into it."
+      ],
+      "text": [
+        "Keywords and triggers are spelled as their glossary terms, so they bold and show their rule on hover.",
+        "Phase Weaver prints End of turn and Impact Reactor prints When this awakens.",
+        "Shawarma Law prints Can't Defend, Phase Fabric prints Can't be attacked and Mindustrial Cross-over prints Starship Piece.",
+        "Jlockeed's Forever War and Mindustrial Revolution read \"For the rest of the game.\" with a Start of turn line, as Jlockeed's Permanent Defense Contract does.",
+        "A cost an effect sets on the card it adds is a sentence of its own: \"It costs (0).\"",
+        "Wardrum, Tatches the Totem and Dogpile open their hand and deck triggers with \"While this is in your …\".",
+        "Every Weapon that burns says \"Damage also Burns N\".",
+        "Graphite, Scorch, Astrophage, Colony Watcher, Meltdown, Fuse, Vela, Corvus, PIP, The Enigmata, Great Paperclip Theory II and Spaceberry read as plain, whole sentences.",
+        "Churnwalker, Arc, Shawarma Law and the drills read shorter, and Arc now fits its card without being cut."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "57a0362344c41f318703acd52821017c8f4ef383"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": [
+      {
+        "id": "classicplus-037",
+        "name": "Wardrum",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-087",
+        "name": "Tatches the Totem",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-017",
+        "name": "Dogpile",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-006",
+        "name": "Wines McCheese",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-006-2",
+        "name": "Stinky Cheese",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-007",
+        "name": "Churnwalker",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-008",
+        "name": "Drone Assembler v3",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-009",
+        "name": "Drone Assembler v4",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-010",
+        "name": "Drone Assembler v5",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-022",
+        "name": "Cryofluid",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-024",
+        "name": "Forced Propagation",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-025",
+        "name": "Snom Bunny",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-026",
+        "name": "Jlockeed’s Forever War",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-035",
+        "name": "Scatter",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-037",
+        "name": "Scorch",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-038",
+        "name": "Arc",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-039",
+        "name": "Mindustrial Cross-over",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-043",
+        "name": "Segment",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-044",
+        "name": "Blast Compound",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-045",
+        "name": "Surge Alloy",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-046",
+        "name": "Phase Fabric",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-047",
+        "name": "Plastanium",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-049",
+        "name": "Metaglass",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-050",
+        "name": "Graphite",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-051",
+        "name": "Chains Bind Me",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-052",
+        "name": "Airblast Drill",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-053",
+        "name": "Laser Drill",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-054",
+        "name": "Pneumatic Drill",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-055",
+        "name": "Thorium Reactor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-056",
+        "name": "Impact Reactor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-057",
+        "name": "Phase Weaver",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-058",
+        "name": "Phase Conveyer",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-059",
+        "name": "Mass Driver",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-061-1",
+        "name": "Shawarma Law",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-062",
+        "name": "Overdrive Projector",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-063",
+        "name": "Overdrive Dome",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-068",
+        "name": "Shadiris Visions",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-069-1",
+        "name": "Sweet Essence",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-070",
+        "name": "Spaceberry",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-072",
+        "name": "Foreshadow",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-073",
+        "name": "Ripple",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-077",
+        "name": "Black Hole",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-082",
+        "name": "Endless Expedition",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-086",
+        "name": "Astrophage",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-088",
+        "name": "Colony Watcher",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-090",
+        "name": "Meltdown",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-094",
+        "name": "PIP",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-107",
+        "name": "Fuse",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-119",
+        "name": "Eclipse",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-121",
+        "name": "Toxopid",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-122",
+        "name": "Quad",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-123",
+        "name": "Oct",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-126",
+        "name": "Vela",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-127",
+        "name": "Corvus",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-129",
+        "name": "Multiplicative Reconstructor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-130",
+        "name": "Exponential Reconstructor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-131",
+        "name": "Tetrative Reconstructor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-132",
+        "name": "Great Paperclip Theory II",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-133",
+        "name": "Great Paperclip Theory III",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-133-5",
+        "name": "Reignclipse",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-140",
+        "name": "Automa Reintegration Plan",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-142",
+        "name": "Call to Chaos (Mindustrial-Swarm Edition)",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-142-1",
+        "name": "Mindustrial Golem",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-142-2",
+        "name": "Swarm Golem",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-149",
+        "name": "Flaming Rounds",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-156",
+        "name": "Horizon Breaker",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-162",
+        "name": "Edwin Van’Spacechief",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-166",
+        "name": "Mindustrial Revolution",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-t-tears-of-the-kwzki-tree",
+        "name": "Tears of the Kwzki Tree",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-t-supernova",
+        "name": "Supernova",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-t-the-enigmata",
+        "name": "The Enigmata",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-t-ai-05",
+        "name": "Lantern Distiller",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]

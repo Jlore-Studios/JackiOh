@@ -35,7 +35,7 @@ function nameOf(defId: string): string {
   return name;
 }
 
-function renderPrompt(view: PlayerView, props: { interaction?: Interaction; legal?: ActionBody[]; onCancel?: () => void } = {}) {
+function renderPrompt(view: PlayerView, props: { interaction?: Interaction; legal?: ActionBody[]; onCancel?: () => void; sequenceClock?: boolean } = {}) {
   const onAction = vi.fn();
   render(
     <CatalogContext.Provider value={lookup}>
@@ -45,6 +45,7 @@ function renderPrompt(view: PlayerView, props: { interaction?: Interaction; lega
         {...(props.interaction === undefined ? {} : { interaction: props.interaction })}
         {...(props.legal === undefined ? {} : { legal: props.legal })}
         {...(props.onCancel === undefined ? {} : { onCancel: props.onCancel })}
+        {...(props.sequenceClock === undefined ? {} : { sequenceClock: props.sequenceClock })}
       />
     </CatalogContext.Provider>,
   );
@@ -213,6 +214,15 @@ describe("a question sequence (Meditative+ #20 KY's Competition)", () => {
     const onStop = renderPrompt(sequenceView(0));
     fireEvent.click(screen.getByTestId("prompt-option-none"));
     answered(onStop, [{ pick: "none" }]);
+  });
+
+  it("R1563006 a question of a sequence shows its 60-second countdown, and none where sequenceClock is false (R3727003)", () => {
+    renderPrompt(sequenceView(0));
+    expect(screen.getByTestId("prompt-sequence-clock")).toHaveAttribute("data-seconds");
+    cleanup();
+    renderPrompt(sequenceView(0), { sequenceClock: false });
+    expect(screen.getByTestId("prompt-streak")).toBeInTheDocument();
+    expect(screen.queryByTestId("prompt-sequence-clock")).toBeNull();
   });
 
   it("R1184000 a lone problem (C+ #42) shows no streak and no Stop", () => {

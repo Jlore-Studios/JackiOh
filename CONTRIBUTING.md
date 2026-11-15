@@ -34,9 +34,9 @@ Issues and pull requests share them (`docs/issues-and-patches.md`, Titles):
 | Part of a change split over several issues | `Patch (part n of m): <…>` |
 | A shipped card change | `Patch v<version>: <…>`, given by `patches-ship.yml` once it ships |
 
-No title names a version before it ships: `patches ship` names a card change's version from what it
-does to the cards (the classifier, R1365000), and `patches-ship.yml` retitles its issue and pull
-request. The `pr title` check fails a pull request whose title breaks these, the older prefixes
+No title names a version before it ships: `patches ship` names a card change the next micro, or the
+next major when it ships a set (R3944000), and `patches-ship.yml` retitles its issue and pull request;
+once a day `patches cut` rolls the micros into the day's patch, `v0.X.Y`. The `pr title` check fails a pull request whose title breaks these, the older prefixes
 (`CI: `, `Architecture: `, …) included; the titles tools give their own pull requests are in
 `docs/issues-and-patches.md`, Pull requests.
 

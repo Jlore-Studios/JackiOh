@@ -16,8 +16,12 @@ export const patchTestid = {
   technicalLog: "patch-technical-log",
   /** One major or patch, `data-version` its version; its micro patches sit inside it (R3012000). */
   patch: "patch-entry",
-  /** R3012000: a micro patch inside the entry of the patch it follows, `data-version` its version. */
+  /** R3012000, R3944001: a micro patch, a snapshot inside the entry that holds it (or in `pending`), `data-version` its version. */
   micro: "patch-micro",
+  /** R3944001: the micro patches no daily patch has rolled up yet, above the release lines. */
+  pending: "patch-pending",
+  /** R3944001: a daily patch's line saying how many snapshots it rolls up. */
+  rollup: "patch-rollup",
   /** R3012000: the legend on the side of the page, a `<nav>`. */
   legend: "patch-legend",
   /** A release line's link in the legend, `data-set` its id. */
