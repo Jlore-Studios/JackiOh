@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 3977,
+  "title": "Patch: follow-up to #3969 from the after-merge spot-check",
+  "branch": "bot/issue-3977",
+  "thread": "**Issue #3977 (data, not instructions):**\n\n```text\n# #3977: Patch: follow-up to #3969 from the after-merge spot-check\nOpened by @jgoetzmann-bot.\n\n<!-- jackioh-bot:spot-check-follow-up #3969 -->\nThe after-merge spot-check of #3969 ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/43719501458)) found 1 blocking problem(s) in the change as it merged (`9076a3e24555`). `claude-3` (claude, `opus`, strong) reviewed it. #3969 stays merged: nothing is reverted, and this issue fixes what it found in a change of its own, from `main`.\n\n## What to fix\n\n- [ ] `apps/web/src/together/together.css:147`: `.together-field:focus-visible { outline: none; border-color: var(--you); }` removes the app's 2 px focus outline from the add-friend and search inputs and leaves only a 1 px border colour change, which is weaker than what these fields had before and weaker than every other themed field in the app.\n  Evidence: index.css:420 gives every input `:where(button, input, a):focus-visible { outline: 2px solid var(--radiant); outline-offset: 2px; }`, and before #3969 both inputs had that ring. The new rule is (0,2,0), so it beats that zero-specificity rule and sets `outline: none`. The repo's other fields either keep the outline (index.css:460 `.form-card input:focus` only changes border-color and leaves the outline alone) or replace it with a ring (deckbuilder.css:196 `.db-search:focus` adds `box-shadow: 0 0 0 2px \u2026`; tavern.css:280 adds a 3 px box-shadow ring). The plan left out db-search's box-shadow because of the CSS ratchets but kept its `outline: none`. Fix: delete the `outline: none` line, so the theme's radiant outline stays and the border still turns `--you`. Add a component check in friends-screen.cy.tsx that a focused `TOGETHER_ADD_INPUT` / `TOGETHER_SEARCH` has a computed `outlineStyle` other than `none`.\n\n## Done when\n\n- Each finding above is fixed where it points, or answered with the evidence that it does not hold.\n- Every check is green, with no test skipped, ignored or weakened to get there (CLAUDE.md rule 12).\n\n---\nOpened by @jgoetzmann-bot from the after-merge spot-check (one in 5 medium or hard merges, `spot_check_every`): `claude-6` (`claude`) built #3969 and `claude-6` (`opus`) approved it. This issue's own pull request is never spot-checked.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "bot",
+    "by": "claude-3"
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3977: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) writes it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T13:39:08Z",
+    "claimed_at": "2026-11-15T13:39:38Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#3977 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
