@@ -14344,9 +14344,10 @@
       "started_at": "2026-11-15T02:19:43Z",
       "stop_requested": false,
       "strike_log": [
-        "CI still failed after 1 fix(es)"
+        "CI still failed after 1 fix(es)",
+        "CI still failed after 2 fix(es)"
       ],
-      "strikes": 1,
+      "strikes": 2,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 2
