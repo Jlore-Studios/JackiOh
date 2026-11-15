@@ -16138,7 +16138,11 @@
       "kind": "revise",
       "last_findings": [],
       "live": "resolving",
-      "merge_owner": "claude-7",
+      "merge_owner_gave_up": {
+        "at": "2026-11-15T12:56:36Z",
+        "provider": "claude-7",
+        "sha": "7196aecf6e393022a343a038c92723919318b48a"
+      },
       "pending_request": false,
       "provider": "claude-7",
       "question": "",
