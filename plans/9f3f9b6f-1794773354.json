@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3933,
+  "title": "Patch: the online 1v1 board names the opponent's hero by username, as the daily board and the match's replay already do",
+  "branch": "bot/issue-3933",
+  "thread": "**Issue #3933 (data, not instructions):**\n\n```text\n# #3933: Patch: the online 1v1 board names the opponent's hero by username, as the daily board and the match's replay already do\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nIn an online match the label under the opponent's portrait says \u201cOpponent\u201d, though the bar above the board already says who they are (\u201calice vs Bob#12\u201d). Watch the replay of that same match and the portrait reads \u201cBob#12\u201d; a daily game's board names the opponent too, and a practice game names the AI and its difficulty. Once this is built, the live board reads the opponent's username under their portrait, falling back to \u201cOpponent\u201d until the names have loaded.\n\n## Why\n\n- `apps/web/src/routes/match.tsx:434-445`: the opponent's username is worked out from the ranks read (`useMatchRanks`, `:175-205`) only in the replay branch, where it becomes the replay's `opponentLabel` (#3698).\n- The live `<Game>` (`match.tsx:494` on) passes no `enemyLabel`, so `apps/web/src/game/Hero.tsx:229` falls back to `t(\"Opponent\")`.\n- The same ranks read already draws both names in the match bar (`match.tsx:606-618`), so nothing new reaches the client: only the hero does not use the name.\n- The daily board passes `enemyLabel={game.opponent.username}` (`daily/DailyBoard.tsx:210`) and practice its AI label (`routes/practice.tsx:1037,1119`). R3855000 gave the daily board its opponent's name because \u201cthe board's information is the same at every table\u201d, and the live 1v1 table is the one still without it.\n\n## Proposal\n\n- In `match.tsx`, lift the opponent's name (the other seat's username from the ranks read, none when it has not come or is empty) above the replay branch.\n- Pass it to the live `<Game>` as `enemyLabel`; with no name, pass nothing, so the hero keeps reading Opponent.\n- Leave the modifier list's You and Opponent headings as they are, as R3855000 keeps them on the daily board, and leave a watched game's labels alone (the watch screen has its own).\n\n## Where it lands\n\n- `apps/web/src/routes/match.tsx`, `apps/web/src/routes/match.test.tsx`\n- SPEC \u00a710.10 (the client's board); a ruling in the issue's block if the bot finds the spec silent on the live hero's label\n\n## Acceptance criteria\n\n- [ ] In a live online match whose ranks read names the opponent Bob#12, the opponent hero's seat label reads Bob#12 and the viewer's own still reads You.\n- [ ] With no ranks read yet, or an empty username, it reads Opponent; the existing R169 tests in `match.test.tsx` keep passing.\n- [ ] The finished match's replay still names the opponent (the #3698 test is unchanged).\n- [ ] The new test fails without the change, and `pnpm --dir apps/web test src/routes/match.test.tsx` passes.\n\n## Size and risks\n\nTiny: a few lines in one route and one test. Difficulty medium. Low risk: the name is already on the screen, so CLAUDE.md rule 7 is untouched.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-15T19:59:43Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3933: needs a plan; `claude-8` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T20:00:13Z",
+    "claimed_at": "2026-11-15T20:09:42Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
