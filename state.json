@@ -15634,6 +15634,7 @@
       "run_id": "43767370537",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 280,
       "started_at": "2026-11-15T22:06:06Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -35573,9 +35574,33 @@
         "title": "Patch: the friends drawer and Friends page fit a phone: tabs that scroll or wrap, themed 44-pixel inputs, no overlapping tap areas",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-6"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "0ea62b00f54f229192d87699b2afcd156ff78762",
+        "issue": 3976,
+        "merged_at": "2026-11-15T22:32:11Z",
+        "n": 280,
+        "pr": 3995,
+        "queued_at": "2026-11-15T22:32:11Z",
+        "sha": "ff38380a54cf428ad747d5b378b8bed495aef7f9",
+        "status": "queued",
+        "title": "Patch: a replay and its shared GIF draw each hero as the portrait its seat had, not both as Vanilla",
+        "tries": 0
       }
     ],
-    "count": 279
+    "count": 280
   },
   "statistics": {
     "at": "2026-11-15T22:30:32Z"
