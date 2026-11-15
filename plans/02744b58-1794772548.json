@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3826,
+  "title": "Patch: the server alerts when a route keeps failing, and when a co-op match or an unstarted room keeps refusing its sweep",
+  "branch": "bot/issue-3826",
+  "thread": "**Issue #3826 (data, not instructions):**\n\n```text\n# #3826: Patch: the server alerts when a route keeps failing, and when a co-op match or an unstarted room keeps refusing its sweep\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen something on the server keeps breaking, the maintainer gets an alert (an issue and an email). Two kinds of repeated failure still only write a warning nobody reads:\n- A route that answers \"something went wrong\" to every request: opening packs, say, or joining the queue, after a bad migration. Players can't use it, and the maintainer hears from complaints.\n- A co-op match or an unstarted room the background sweep can't close, leaving its players unable to queue.\n\nOnce this is built, both raise one alert, as a stuck 1v1 match already does.\n\n## Why\n\n- `crates/server/src/api/http.rs:1125-1130`: an internal error is `log_warn(\"handler.threw\", ..)` on each request and nothing more. The README's Alerts list names no route failure, and `/readyz` only pings the database. The socket upgrades' `Threw` paths (`ws.upgrade.threw`, `ws.watch.threw`, `ws.social.threw`, `duos.ws.upgrade.threw`) are the same.\n- `crates/server/src/duos/mod.rs:241-243`: `end_abandoned` logs `duos.abandoned.failed` and returns nothing, so `sweep` (`:248-268`) returns `Ok`, and `FailingStreak::new(\"duos.sweeper\")` (`:275`) counts a pass with a wedged match as a good one. The 1v1 reaper counts that same case as a failure (`crates/server/src/api/results.rs:826-845`; README: \"A reaper pass in which any match would not reap counts as failed\").\n- `results.rs:851-853`: a failing `reap_open_matches` only warns `matches.open_reaper_failed`. It has no streak, and it is missing from the README's step list and SPEC \u00a79 (`spec/09-architecture.md:65`).\n\n## Proposal\n\n1. **Routes.** One streak per route pattern, the pattern rather than the path so ids never grow the map (the `ROUTES` table bounds it). An internal error counts as a failure and any other answer resets it, a 4xx refusal included. Past a named count and span (new constants in `crates/server/src/config.rs`), it raises `api.route.failing`, with the pattern in the line's data, and then `api.route.recovered`. The four socket upgrades get one streak each.\n2. **Co-op.** `end_abandoned` reports its failure, `duos::sweep` returns the ids that would not end, and the sweeper counts a pass with any as failed, as the 1v1 reaper does.\n3. **Open rooms.** `matches.open_reaper` gets its own streak.\n\nThe README's Alerts section and SPEC \u00a79 name the new events.\n\n## Where it lands\n\n`crates/server/src/api/http.rs`, `loops.rs`, `duos/mod.rs`, `api/results.rs`, the four upgrade handlers, `config.rs`, `crates/server/tests/loops/failing.rs`, `crates/server/README.md`, `spec/09-architecture.md`.\n\n## Acceptance criteria\n\n- [ ] One wedged co-op match among healthy ones raises `duos.sweeper.failing` exactly once (the `wedge_first_match` pattern); a good pass then logs its recovery.\n- [ ] A failing open-room reap raises `matches.open_reaper.failing` once.\n- [ ] A route whose store call fails on every request raises `api.route.failing` once past the threshold; a route that succeeds between failures raises none; a refusal never counts.\n- [ ] The issue an alert opens names only the event, never a profile or an address (README: the repository is public).\n\n## Size and risks\n\nMedium: about 7 server files and their tests. The risk is noise, held by the thresholds and the existing one-notice-an-hour window. All routes share one event name, so two broken routes in an hour are one notice, and its email lists the pattern.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-15T19:49:30Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3826: needs a plan; `claude-7` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T19:49:51Z",
+    "claimed_at": "2026-11-15T19:56:07Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
