@@ -12474,15 +12474,8 @@
       "verdict_rounds": 1
     },
     "3839": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "43696305323",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-15T09:00:37Z",
-        "until": "2026-11-15T09:30:37Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -12494,10 +12487,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"cd apps/web/src; sed -n 800,840p game/Prompt.tsx; sed -n 1360,1400p game/Prompt.tsx; cat game/sequenceClock.ts | head -60; cat daily/DailyBoard.tsx; grep -n \\\"sequence\\\" daily/DailyBoard\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3839/apps/web/src; grep -n \\\"SequenceCountdown\\\\|turnClock\\\\|Prompt\\\\b\\\\|<Prompt\\\" game/Prompt.tsx game/Game.tsx | head -40; sed -n 838,860p game/Pro\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3839/apps/web/src; sed -n 1395,1420p game/Prompt.tsx; sed -n 1300,1345p game/Prompt.test.tsx; sed -n 1060,1100p game/Game.tsx; grep -n \\\"PromptProps\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3839/apps/web/src; sed -n 100,135p game/Prompt.tsx; sed -n 1228,1250p game/Prompt.tsx; sed -n 1945,1995p game/Prompt.tsx; sed -n 185,200p game/Game.t\u2026\n- said: Now the existing sequence tests to copy a view with a sequence pending.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3839/apps/web/src; sed -n 170,195p game/PromptE18.test.tsx; grep -n \\\"sequence-clock\\\\|SEQUENCE_WINDOW\\\\|sequenceChoice\\\" -r . | grep -v \\\"^./game/Pr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3839/apps/web/src; grep -rn \\\"Time left\\\\|sequenceClock\\\\|useSequenceSecondsLeft\\\" --include=*.ts* . ../../../e2e 2>/dev/null| grep -v \\\"^./game/Prom\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3839; grep -n -i \\\"cited\\\\|proven_in\\\" spec/README.md | head -20; grep -rn \\\"R3727003\\\" apps crates --include=*.ts* --include=*.rs -l | head; git log\u2026\n- Write: {\"path\": \"/home/runner/work/_temp/work/item-3839/.bot-plan.md\", \"file_path\": \"/home/runner/work/_temp/work/item-3839/.bot-plan.md\", \"content\": \"Plan drafted in final message: prop sequenceClock (defa\u2026\n- said: ## Goal On the daily board (`DailyBoard`), a KY's Competition (Meditative+ #20) question shows no 60-second countdown, so `prompt-sequence-clock` is absent (R3727003). The move's daily clock pill (`DailyClockPill`) is already on the board, so nothing replaces the countdown. A live match and practic\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-15T08:49:37Z",
       "owner_why": "it plans it",
@@ -12510,9 +12502,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-15T08:45:19Z",
       "requested_by": "squishy-squooby",
-      "run_id": "43696305323",
+      "run_id": "pending:7ab751b9-1794733262",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-15T08:49:37Z",
+      "started_at": "2026-11-15T09:01:21Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -15465,9 +15457,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T08:51:26Z",
+    "at": "2026-11-15T09:01:21Z",
     "url": "",
-    "what": "plan #3936 on claude-7"
+    "what": "build #3839 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-15T08:47:14Z",
