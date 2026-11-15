@@ -228,11 +228,12 @@ mod tests {
         #[test]
         fn r3951000_a_unit_that_destroys_the_unit_it_attacks_becomes_radiant() {
             let mut s = board(false, json!({ "field": [VANILLA] }), json!({ "field": [prey(0)] }));
+            let attacker = s.unit(P1, 1).unwrap().id;
             swing(&mut s, 1);
             assert!(s.unit(P2, 1).is_none(), "the prey died");
             assert!(radiant_at(&s, 1));
             // After the combat: the hit was the base face's 4, the stats the Radiant face's now.
-            s.expect_stats(VANILLA, json!({ "attack": 12, "health": 12 }));
+            s.expect_stats(attacker.as_str(), json!({ "attack": 12, "health": 12 }));
         }
 
         #[test]
@@ -277,7 +278,8 @@ mod tests {
 
         #[test]
         fn r3951000_a_defender_that_destroys_its_attacker_is_not_made_radiant() {
-            let mut s = board(false, json!({ "field": [VANILLA] }), json!({ "field": [FRAIL] }));
+            let defender = json!({ "def": VANILLA, "statsOverride": { "attack": 1, "health": 30 } });
+            let mut s = board(false, json!({ "field": [defender] }), json!({ "field": [FRAIL] }));
             s.end_turn();
             let attacker = s.unit(P2, 1).unwrap();
             let target = s.unit(P1, 1).unwrap();

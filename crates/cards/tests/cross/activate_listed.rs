@@ -52,13 +52,15 @@ const EVER_GROWING_TREE: &str = "meditative-075";
 const LIVING_MANA_POTION: &str = "meditativeplus-011";
 const LIVING_BOMB: &str = "classic-062";
 const UNBIASED_IMMIGRATION: &str = "core-059";
+const CLONE_MACHINE: &str = "core-033"; // Unstable Clone Machine
 const LIVING_ARMOR_POTION: &str = "meditativeplus-012";
 const LIVING_HEALTH_POTION: &str = "meditativeplus-013";
 
-const ACTIVATE_CARDS: [&str; 100] = [
+const ACTIVATE_CARDS: [&str; 101] = [
     HEROIC_POWER,
     TWINSPELL,
     UNBIASED_IMMIGRATION,
+    CLONE_MACHINE,
     INFINISCEPTER,
     NOSE_HUNTER,
     POWER_TO_PUNISH,
@@ -319,6 +321,40 @@ fn r384_activate_census_every_card_whose_text_has_an_activate_declares_one_and_h
         by_script, covered,
         "a script's Activate does not match its card's text"
     );
+}
+
+/// Issue #3951: Core #33's Activate (both faces), once a turn with no price, as a client uses it: draw 1.
+mod c_n33_unstable_clone_machine {
+    use super::*;
+
+    fn draws_one(radiant: bool) {
+        let mut s = scenario(json!({
+            "p1": { "backrow": [on(CLONE_MACHINE, radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X] },
+        }));
+        let id = s.card(CLONE_MACHINE).id.clone();
+        let (hand, library) = (s.hand(P1).len(), s.pile(P1, "library").len());
+        let mana = s.state().players.p1.mana.current;
+        let events = activate_listed(&mut s, CLONE_MACHINE, any);
+        assert_eq!(s.hand(P1).len(), hand + 1);
+        assert_eq!(s.pile(P1, "library").len(), library - 1);
+        assert_eq!(s.state().players.p1.mana.current, mana, "no price");
+        assert!(
+            !events.iter().any(|event| matches!(event, GameEvent::ShuffledIn { .. })),
+            "an Activate is no play, so nothing is copied"
+        );
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+
+    #[test]
+    fn r384_base_activate_draws_one_once_a_turn() {
+        draws_one(false);
+    }
+
+    #[test]
+    fn r384_radiant_activate_draws_one_once_a_turn() {
+        draws_one(true);
+    }
 }
 
 /// Issue #3139: Core #59's Activate (both faces), once a turn with no price, as a client uses it.

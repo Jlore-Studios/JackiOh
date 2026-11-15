@@ -1205,11 +1205,12 @@ fn b13_stratos_swarm_leaves_an_occupied_unit_zone_alone() {
 }
 
 #[test]
-fn b14_cloaking_module_is_a_2_cost_2_2_rare_unit_whose_radiant_4_4_adds_immune_to_spells() {
+fn b14_cloaking_module_is_a_1_cost_2_2_rare_unit_whose_radiant_4_4_adds_immune_to_spells() {
     let def = card_def(CLOAKING_MODULE);
     assert_eq!(def.type_, CardType::Unit);
     assert_eq!(def.rarity, Rarity::Rare);
-    assert_eq!(query_cost(&def), 2);
+    // (1) since issue #3951, (2) before.
+    assert_eq!(query_cost(&def), 1);
     let printed = vec![
         KeywordKind::StarshipPiece,
         KeywordKind::Equip,

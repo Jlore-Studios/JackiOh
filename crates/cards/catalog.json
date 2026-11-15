@@ -36932,7 +36932,6 @@
       "health": 0
     },
     "refs": [
-      "stinkyscape-043",
       "stinkyscape-107",
       "stinkyscape-108",
       "stinkyscape-122"
@@ -36981,9 +36980,7 @@
       "health": 0
     },
     "refs": [
-      "stinkyscape-038",
       "stinkyscape-057",
-      "stinkyscape-098",
       "stinkyscape-105"
     ]
   },
@@ -37031,7 +37028,6 @@
     },
     "refs": [
       "stinkyscape-060",
-      "stinkyscape-108",
       "stinkyscape-133"
     ]
   },
@@ -37080,7 +37076,6 @@
     "refs": [
       "stinkyscape-054",
       "stinkyscape-104",
-      "stinkyscape-132",
       "stinkyscape-175"
     ]
   },
@@ -37128,9 +37123,7 @@
     },
     "refs": [
       "stinkyscape-058",
-      "stinkyscape-106",
-      "stinkyscape-107",
-      "stinkyscape-136"
+      "stinkyscape-106"
     ]
   },
   "stinkyscapeplus-t-terminus-starship-farthest-shore": {
@@ -37178,8 +37171,6 @@
     "refs": [
       "stinkyscape-043",
       "stinkyscape-059",
-      "stinkyscape-090",
-      "stinkyscape-093",
       "stinkyscape-133"
     ]
   },
@@ -37226,9 +37217,6 @@
       "health": 0
     },
     "refs": [
-      "stinkyscape-038",
-      "stinkyscape-049",
-      "stinkyscape-056",
       "stinkyscape-061",
       "stinkyscape-122"
     ]
@@ -37276,9 +37264,9 @@
       "health": 0
     },
     "refs": [
-      "stinkyscape-058",
-      "stinkyscape-060",
-      "stinkyscape-061"
+      "stinkyscape-050",
+      "stinkyscape-052",
+      "stinkyscape-053"
     ]
   },
   "stinkyscapeplus-t-ai-01": {

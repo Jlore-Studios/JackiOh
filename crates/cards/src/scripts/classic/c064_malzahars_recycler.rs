@@ -344,26 +344,26 @@ mod tests {
                 crate::register_all();
                 let mut s = recycling(json!({
                     "hand": [LAST_HURRAH],
-                    "library": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA],
+                    "library": [VANILLA, VANILLA, VANILLA, VANILLA],
                 }));
                 s.play(LAST_HURRAH, json!({}));
-                assert_eq!(s.hand(P1).len(), 5);
+                assert_eq!(s.hand(P1).len(), 4);
                 s.end_turn();
-                // After `turnEnded`, Last Hurrah discards the whole hand of five, and each discard is
-                // answered from the deck it emptied: five fatigue draws (R62).
+                // After `turnEnded`, Last Hurrah discards its 4, the whole hand of four, and each discard is
+                // answered from the deck it emptied: four fatigue draws (R62).
                 let events = s.last_events();
                 let after = &events[find_index(events, "turnEnded")..];
                 let before_next_turn = &after[..find_index(after, "turnStarted")];
-                assert_eq!(discarded_by(before_next_turn, P1).len(), 5);
+                assert_eq!(discarded_by(before_next_turn, P1).len(), 4);
                 assert_eq!(
                     before_next_turn
                         .iter()
                         .map(js)
                         .filter(|event| event["type"] == "fatigue" && event["player"] == "p1")
                         .count(),
-                    5,
+                    4,
                 );
-                assert_eq!(s.state().players.p1.fatigue_count, 5);
+                assert_eq!(s.state().players.p1.fatigue_count, 4);
             }
 
             #[test]

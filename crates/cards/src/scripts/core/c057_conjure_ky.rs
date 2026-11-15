@@ -175,7 +175,7 @@ mod tests {
                 .map(|seed| {
                     let mut g = scenario(json!({ "seed": seed, "p1": { "hand": ["core-057"] } }));
                     g.play("core-057", json!({}));
-                    def_ids(&g.hand(P1))
+                    def_ids(&crate::hand_and_summoned_tatches(&g, P1))
                 })
                 .collect();
 

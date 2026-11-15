@@ -1,7 +1,7 @@
 //! Scorch's swings and Toxopid's Ignores Taunt in the AI's threat (#3909). A unit that can only attack the
 //! Unit directly across from it (S+ #37 Scorch, `attacksOnlyAcross`) may attack no hero (R3550001,
-//! `attack_restriction`), so `face_threat` counts none of its ten swings and `wall_switches` offers no wall
-//! against them. An attacker that Ignores Taunt (S+ #121 Toxopid, `ignoresTaunt`) skips §4.2 step 3
+//! `attack_restriction`), so `face_threat` counts none of its swings (one a turn since issue #3951, ten
+//! before) and `wall_switches` offers no wall against them. An attacker that Ignores Taunt (S+ #121 Toxopid, `ignoresTaunt`) skips §4.2 step 3
 //! (R3560007), so no Taunt binds it, Defense Position's included. The stand-ins: Mr. Vanilla, a 4/4; Core
 //! #25, a 7/7 with Armor 7; and Midrange Menace, a 9/9 with Taunt.
 
@@ -43,11 +43,11 @@ fn walls(state: &GameState) -> Vec<ActionBody> {
     wall_switches(state, AI, &candidate_actions(state, AI, Prices::NONE))
 }
 
-/// A lone Scorch, with nothing across from it, reaches no hero on either side: 10 swings of 1 (Radiant 2)
-/// counted none, where the old reading and the greedy yardstick count every one.
+/// A lone Scorch, with nothing across from it, reaches no hero on either side: its swing of 1 (Radiant 2)
+/// counted none, where the old reading and the greedy yardstick count it.
 #[test]
 fn scorch_swings_at_no_hero_so_it_adds_no_face_threat() {
-    for (radiant, before) in [(false, 10), (true, 20)] {
+    for (radiant, before) in [(false, 1), (true, 2)] {
         let scorch = json!({ "field": [{ "def": SCORCH, "lane": 3, "radiant": radiant }] });
 
         let s = duel(json!({}), scorch.clone());
@@ -73,24 +73,23 @@ fn scorch_costs_the_rest_of_the_board_nothing() {
         json!({ "field": [{ "def": SCORCH, "lane": 3 }, { "def": VANILLA, "lane": 1 }] }),
     );
     assert_eq!(face_threat(&s, HUMAN), 4);
-    assert_eq!(face_threat_with(&s, HUMAN, &OFF), 14);
-    assert_eq!(face_threat_with(&s, HUMAN, &GREEDY_EVAL), 14);
+    assert_eq!(face_threat_with(&s, HUMAN, &OFF), 5);
+    assert_eq!(face_threat_with(&s, HUMAN, &GREEDY_EVAL), 5);
 }
 
-/// At 10 life a lone Scorch read as ten face hits looked lethal, and the 7/7's Taunt across from it would
-/// have walled seven of them; read as the engine applies it, nothing threatens and nothing calls for a wall.
+/// At 1 life a lone Scorch read as a face hit looked lethal, and the 7/7's Taunt across from it would have
+/// walled it; read as the engine applies it, nothing threatens and nothing calls for a wall.
 #[test]
 fn a_lone_scorch_calls_for_no_wall() {
     let s = duel(
-        json!({ "health": 10, "field": [{ "def": BIG, "lane": 3 }] }),
+        json!({ "health": 1, "field": [{ "def": BIG, "lane": 3 }] }),
         json!({ "field": [{ "def": SCORCH, "lane": 3 }] }),
     );
     assert_eq!(face_threat(&s, HUMAN), 0);
-    assert_eq!(face_threat_with(&s, HUMAN, &OFF), 10);
+    assert_eq!(face_threat_with(&s, HUMAN, &OFF), 1);
     assert!(walls(&s).is_empty(), "{:?}", walls(&s));
-    // Under the old reading the switch soaked seven of the ten swings (the 7/7's health), which is why it
-    // was offered.
-    assert_eq!(face_threat_with(&act(&s, AI, wall(&s)), HUMAN, &OFF), 3);
+    // Under the old reading the switch soaked the swing (the 7/7's health), which is why it was offered.
+    assert_eq!(face_threat_with(&act(&s, AI, wall(&s)), HUMAN, &OFF), 0);
 
     // Control: a 4/4 in the 7/7's lane is lethal at 4 life, and the switch walls it.
     let c = duel(
@@ -161,7 +160,7 @@ fn a_toxopid_makes_a_defense_switch_pointless() {
 #[test]
 fn the_evaluation_drops_the_lethal_threat_and_pressure_these_flags_wall_off() {
     let s = duel(
-        json!({ "health": 10 }),
+        json!({ "health": 1 }),
         json!({ "field": [{ "def": SCORCH, "lane": 3 }] }),
     );
     close(
@@ -171,7 +170,7 @@ fn the_evaluation_drops_the_lethal_threat_and_pressure_these_flags_wall_off() {
 
     let s = duel(
         json!({ "field": [{ "def": SCORCH, "lane": 3 }] }),
-        json!({ "health": 10 }),
+        json!({ "health": 1 }),
     );
     close(
         evaluate(&s, AI, NextSwing::Enemy, &OFF) - evaluate(&s, AI, NextSwing::Enemy, &AI_EVAL),

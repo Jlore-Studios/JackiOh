@@ -1,6 +1,6 @@
 //! C #37 Last Hurrah (SPEC §8.6 row 37). Spell, cost 0, Epic.
-//!   Base:    "Draw your deck. At the end of this turn, discard {discard|card|cards}." (discard 6)
-//!   Radiant: "Draw your deck. At the end of your next turn, discard {discard|card|cards}." (discard 6)
+//!   Base:    "Draw your deck. At the end of this turn, discard {discard|card|cards}." (discard 4; 6 until issue #3951)
+//!   Radiant: "Draw your deck. At the end of your next turn, discard {discard|card|cards}." (discard 4; 6 until issue #3951)
 //!   Through v0.5.11r: "… discard your hand." (`script_v0_5_11o`, kept, R767000).
 //!
 //! "Draw your deck" is R58's "draw your whole library": as many draws as the library holds when the
@@ -57,7 +57,7 @@ pub fn script_v0_5_11o() -> CardScripts {
 
 // C #37 Last Hurrah — SPEC §8.6 row 37, BUILD M9 Classic row C 37: draws the whole deck (R58), the
 // cards past 10 burning (§2.4, R317) and a draw limit stopping the rest; an empty deck takes no
-// fatigue; 6 random cards of the hand are discarded at the end of this turn (R62, R682, R3134000), each a
+// fatigue; 4 random cards of the hand are discarded at the end of this turn (R62, R682, R3134000), each a
 // discard (C #64 sees it), all of a smaller hand; radiant: at the end of the controller's next turn, the
 // hand held then; `discard` is a declared number (R386); the kept script discards the whole hand (R767000).
 #[cfg(test)]
@@ -134,12 +134,12 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r3134000_declares_discard_6_on_both_faces_a_number_whose_better_is_down() {
+        fn r3134000_declares_discard_4_on_both_faces_a_number_whose_better_is_down() {
             crate::register_all();
             let def = js(&crate::card_def(HURRAH));
             assert_eq!(
                 def["params"],
-                json!([{ "key": "discard", "base": 6, "radiant": 6, "better": "down", "step": 1, "min": 1 }]),
+                json!([{ "key": "discard", "base": 4, "radiant": 4, "better": "down", "step": 1, "min": 1 }]),
             );
             for face in ["base", "radiant"] {
                 assert!(def[face]["text"].as_str().unwrap_or_default().contains("discard {discard|card|cards}."));
@@ -235,7 +235,7 @@ mod tests {
             }
 
             #[test]
-            fn r3134000_r62_at_the_end_of_this_turn_6_of_8_cards_are_discarded_with_no_prompt_before_the_next_turn_starts() {
+            fn r3134000_r62_at_the_end_of_this_turn_4_of_8_cards_are_discarded_with_no_prompt_before_the_next_turn_starts() {
                 let mut s = eight_cards(false);
                 s.play(HURRAH, json!({}));
                 let held = hand_ids(&s);
@@ -243,9 +243,9 @@ mod tests {
 
                 s.end_turn();
 
-                assert_eq!(s.hand(PlayerId::P1).len(), 2);
+                assert_eq!(s.hand(PlayerId::P1).len(), 4);
                 let gone = discarded(&s);
-                assert_eq!(gone.len(), 6);
+                assert_eq!(gone.len(), 4);
                 assert!(contains_all(&held, &gone));
                 assert!(contains_all(&grave_ids(&s), &gone));
                 // R62: `turnEnded` closes the end-of-turn triggers; the trap window and then the end-of-turn
@@ -271,8 +271,8 @@ mod tests {
 
                 s.end_turn();
 
-                assert_eq!(discarded(&s).len(), 6);
-                assert_eq!(s.last_count("discarded"), 6);
+                assert_eq!(discarded(&s).len(), 4);
+                assert_eq!(s.last_count("discarded"), 4);
             }
 
             #[test]
@@ -287,12 +287,12 @@ mod tests {
                 // the empty deck: one fatigue hit each.
                 s.end_turn();
 
-                assert_eq!(discarded(&s).len(), 6);
-                assert_eq!(s.last_count("fatigue"), 6);
+                assert_eq!(discarded(&s).len(), 4);
+                assert_eq!(s.last_count("fatigue"), 4);
             }
 
             #[test]
-            fn r682_which_6_go_is_random_each_card_of_the_hand_is_discarded_under_some_seed() {
+            fn r682_which_4_go_is_random_each_card_of_the_hand_is_discarded_under_some_seed() {
                 let mut kept_sets: BTreeSet<Vec<String>> = BTreeSet::new();
                 let mut ever_gone: BTreeSet<String> = BTreeSet::new();
                 for n in 0..8 {
@@ -306,35 +306,35 @@ mod tests {
                     kept_sets.insert(hand_ids(&s));
                     ever_gone.extend(discarded(&s));
                 }
-                assert!(kept_sets.len() > 1, "the same 2 cards stayed under every seed");
-                assert!(ever_gone.len() > 6, "the same 6 cards went under every seed");
+                assert!(kept_sets.len() > 1, "the same 4 cards stayed under every seed");
+                assert!(ever_gone.len() > 4, "the same 4 cards went under every seed");
             }
 
             #[test]
-            fn r3134000_a_hand_of_exactly_6_loses_all_6() {
-                let mut s = setup(json!({}), json!({}), false);
+            fn r3134000_a_hand_of_exactly_4_loses_all_4() {
+                let mut s = setup(json!({ "library": [VANILLA, TIMMY, MENACE] }), json!({}), false);
                 s.play(HURRAH, json!({}));
-                assert_eq!(s.hand(PlayerId::P1).len(), 6);
+                assert_eq!(s.hand(PlayerId::P1).len(), 4);
 
                 s.end_turn();
 
                 assert_eq!(s.hand(PlayerId::P1).len(), 0);
-                assert_eq!(discarded(&s).len(), 6);
+                assert_eq!(discarded(&s).len(), 4);
             }
 
             #[test]
-            fn r682_a_hand_of_fewer_than_6_discards_all_there_are() {
-                let mut s = setup(json!({}), json!({}), false);
+            fn r682_a_hand_of_fewer_than_4_discards_all_there_are() {
+                let mut s = setup(json!({ "library": [VANILLA, TIMMY, MENACE] }), json!({}), false);
                 s.play(HURRAH, json!({}));
                 s.play(TIMMY, json!({ "zone": 1 }));
                 let held = hand_ids(&s);
-                assert_eq!(held.len(), 5);
+                assert_eq!(held.len(), 3);
 
                 s.end_turn();
 
                 assert_eq!(s.hand(PlayerId::P1).len(), 0);
                 let gone = discarded(&s);
-                assert_eq!(gone.len(), 5);
+                assert_eq!(gone.len(), 3);
                 assert!(contains_all(&gone, &held));
             }
 
@@ -363,32 +363,32 @@ mod tests {
                 s.end_turn();
 
                 s.expect_in_zone(TIMMY, "field");
-                // 6 of the 7 cards still held, not 6 of 8: one stays.
-                assert_eq!(s.hand(PlayerId::P1).len(), 1);
-                assert_eq!(discarded(&s).len(), 6);
+                // 4 of the 7 cards still held, not 4 of 8: three stay.
+                assert_eq!(s.hand(PlayerId::P1).len(), 3);
+                assert_eq!(discarded(&s).len(), 4);
             }
 
             #[test]
-            fn r386_discard_reads_through_param_an_upgrade_discards_5_and_a_degrade_7() {
+            fn r386_discard_reads_through_param_an_upgrade_discards_3_and_a_degrade_5() {
                 let mut s = eight_cards(false);
-                assert_eq!(crate::upgrade_number(&mut s, HURRAH, "discard"), 5);
+                assert_eq!(crate::upgrade_number(&mut s, HURRAH, "discard"), 3);
+                s.play(HURRAH, json!({}));
+                s.end_turn();
+                assert_eq!(discarded(&s).len(), 3);
+                assert_eq!(s.hand(PlayerId::P1).len(), 5);
+
+                let mut s = eight_cards(false);
+                assert_eq!(crate::degrade_number(&mut s, HURRAH, "discard"), 5);
                 s.play(HURRAH, json!({}));
                 s.end_turn();
                 assert_eq!(discarded(&s).len(), 5);
                 assert_eq!(s.hand(PlayerId::P1).len(), 3);
-
-                let mut s = eight_cards(false);
-                assert_eq!(crate::degrade_number(&mut s, HURRAH, "discard"), 7);
-                s.play(HURRAH, json!({}));
-                s.end_turn();
-                assert_eq!(discarded(&s).len(), 7);
-                assert_eq!(s.hand(PlayerId::P1).len(), 1);
             }
 
             #[test]
             fn r386_discard_cannot_go_below_1() {
                 let mut s = eight_cards(false);
-                for step in (1..=5).rev() {
+                for step in (1..=3).rev() {
                     assert_eq!(crate::upgrade_number(&mut s, HURRAH, "discard"), step);
                 }
                 assert!(!crate::can_upgrade_number(&s, HURRAH, "discard"));
@@ -425,7 +425,7 @@ mod tests {
             }
 
             #[test]
-            fn r3134000_r62_at_the_end_of_your_next_turn_it_discards_6_of_the_hand_you_hold_then() {
+            fn r3134000_r62_at_the_end_of_your_next_turn_it_discards_4_of_the_hand_you_hold_then() {
                 let mut s = eight_cards(true);
                 s.play(HURRAH, json!({}));
                 s.play(TIMMY, json!({ "zone": 1 }));
@@ -437,29 +437,29 @@ mod tests {
 
                 s.end_turn();
 
-                assert_eq!(s.hand(PlayerId::P1).len(), 1);
+                assert_eq!(s.hand(PlayerId::P1).len(), 3);
                 let gone = discarded(&s);
-                assert_eq!(gone.len(), 6);
+                assert_eq!(gone.len(), 4);
                 assert!(contains_all(&held, &gone));
                 assert!(contains_all(&grave_ids(&s), &gone));
                 s.expect_in_zone(TIMMY, "field");
             }
 
             #[test]
-            fn r682_a_hand_of_fewer_than_6_then_loses_all_there_are() {
-                let mut s = setup(json!({}), json!({}), true);
+            fn r682_a_hand_of_fewer_than_4_then_loses_all_there_are() {
+                let mut s = setup(json!({ "library": [VANILLA, TIMMY, MENACE] }), json!({}), true);
                 s.play(HURRAH, json!({}));
                 s.play(TIMMY, json!({ "zone": 1 }));
                 s.end_turn();
                 s.end_turn();
                 let held = hand_ids(&s);
-                assert_eq!(held.len(), 5);
+                assert_eq!(held.len(), 3);
 
                 s.end_turn();
 
                 assert_eq!(s.hand(PlayerId::P1).len(), 0);
                 let gone = discarded(&s);
-                assert_eq!(gone.len(), 5);
+                assert_eq!(gone.len(), 3);
                 assert!(contains_all(&gone, &held));
             }
         }
