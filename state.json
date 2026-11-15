@@ -15794,6 +15794,18 @@
     "3960": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "approver": {
+          "family": "gemini",
+          "model": "gemini-3.8-flash-high",
+          "provider": "agy",
+          "tier": "medium"
+        },
+        "at": "2026-11-15T11:30:45Z",
+        "built_by": "claude-6",
+        "by": "`gemini` (medium)",
+        "sha": "e10027bfa7586c33086a5ebce101303d99ff87c8"
+      },
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
@@ -15813,6 +15825,7 @@
       "issue": 3841,
       "kind": "review",
       "live": "reviewing",
+      "merge_owner": "agy",
       "pending_request": false,
       "provider": "agy",
       "queued_at": "2026-11-15T11:00:26Z",
