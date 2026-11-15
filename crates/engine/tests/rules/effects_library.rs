@@ -1005,19 +1005,40 @@ mod r3951001_discard_library {
     #[test]
     fn r3951001_the_whole_library_goes_to_the_graveyard_top_first_with_no_fatigue_or_discard() {
         let mut state = game("discard-library");
-        let library = set_library(&mut state, PlayerId::P1, &[alpha().id, beta().id, unit_token().id]);
-        let (top, middle) = (must(library.first(), "the top card").id.clone(), must(library.get(1), "the middle card").id.clone());
+        let library = set_library(
+            &mut state,
+            PlayerId::P1,
+            &[alpha().id, beta().id, unit_token().id],
+        );
+        let (top, middle) = (
+            must(library.first(), "the top card").id.clone(),
+            must(library.get(1), "the middle card").id.clone(),
+        );
         let before = state.players[PlayerId::P1].fatigue_count;
-        let events = run(&mut state, vec![discard_library(json_as(json!({})))], Some(PlayerId::P1), None);
+        let events = run(
+            &mut state,
+            vec![discard_library(json_as(json!({})))],
+            Some(PlayerId::P1),
+            None,
+        );
         assert!(state.players[PlayerId::P1].library.is_empty());
         // R11: the unit token ceases to exist instead of landing.
-        assert_eq!(ids(&state.players[PlayerId::P1].graveyard), vec![top.clone(), middle.clone()]);
         assert_eq!(
-            pluck(&events_of_type(&events, GameEventType::EnteredGraveyard), "instanceId"),
+            ids(&state.players[PlayerId::P1].graveyard),
+            vec![top.clone(), middle.clone()]
+        );
+        assert_eq!(
+            pluck(
+                &events_of_type(&events, GameEventType::EnteredGraveyard),
+                "instanceId"
+            ),
             vec![json!(top), json!(middle)]
         );
         assert!(events_of_type(&events, GameEventType::Discarded).is_empty());
         assert_eq!(state.players[PlayerId::P1].fatigue_count, before);
-        assert!(state.players[PlayerId::P2].graveyard.is_empty(), "only its player's library");
+        assert!(
+            state.players[PlayerId::P2].graveyard.is_empty(),
+            "only its player's library"
+        );
     }
 }

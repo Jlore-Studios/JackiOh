@@ -9,8 +9,8 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::damage_combat::{
-    ally_asker, ally_kill_noter, ally_noter, answer, defender, grunt, notes, pawn, playing, recorder, replays_to, round_trip,
-    veteran, wall,
+    ally_asker, ally_kill_noter, ally_noter, answer, defender, grunt, notes, pawn, playing, recorder,
+    replays_to, round_trip, veteran, wall,
 };
 use crate::rules::fixtures::harness::{by, input, live_mut, put, sink_for, slot};
 
@@ -219,7 +219,12 @@ mod r3951000_destroyed_enemy {
     /// The grunt (2/2) attacks `target_id`'s fixture with `target_damage` already on it.
     fn swing(seed: &str, target_id: &str, target_damage: i32) -> (String, Vec<String>) {
         let mut state = playing(seed);
-        put(&mut state, &ally_kill_noter.id, slot(P1, Row::Backrow, 1), Default::default());
+        put(
+            &mut state,
+            &ally_kill_noter.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
         let striker = put(&mut state, &grunt.id, slot(P1, Row::Units, 1), Default::default());
         let target = put(&mut state, target_id, slot(P2, Row::Units, 1), Default::default());
         live_mut(&mut state, &target.id).damage = target_damage;

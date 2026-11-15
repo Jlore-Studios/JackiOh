@@ -355,7 +355,11 @@ fn r1853002_the_price_rule_and_an_offer_moves_within_a_tenth_as_it_is_rolled() {
     assert_eq!(price(FREE, false), 9, "a (0) card's 8 (R3047000)");
     assert_eq!(price(CHAOS, false), 16, "15");
     assert_eq!(price(FOUR, false), 49, "45");
-    assert_eq!(price(FIVE, false), 65, "(5) is 45 and 15 for the mana past (4), 60");
+    assert_eq!(
+        price(FIVE, false),
+        65,
+        "(5) is 45 and 15 for the mana past (4), 60"
+    );
     assert_eq!(price(FIVE, true), 130, "twice that on a Radiant lot");
 
     let state = board("r1853002-rule", "p1", json!({}), json!({}));

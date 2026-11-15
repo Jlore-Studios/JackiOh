@@ -743,8 +743,12 @@ pub(crate) fn destructible_ivory_tower<T>(run: impl FnOnce() -> T) -> T {
         scripts::classic_plus::c033_ivory_tower::script(),
         |def| {
             for face in [&mut def.base, &mut def.radiant] {
-                face.keywords
-                    .retain(|keyword| !matches!(keyword.kind(), KeywordKind::Indestructible | KeywordKind::Tradable));
+                face.keywords.retain(|keyword| {
+                    !matches!(
+                        keyword.kind(),
+                        KeywordKind::Indestructible | KeywordKind::Tradable
+                    )
+                });
             }
         },
         run,

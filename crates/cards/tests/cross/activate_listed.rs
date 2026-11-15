@@ -340,7 +340,9 @@ mod c_n33_unstable_clone_machine {
         assert_eq!(s.pile(P1, "library").len(), library - 1);
         assert_eq!(s.state().players.p1.mana.current, mana, "no price");
         assert!(
-            !events.iter().any(|event| matches!(event, GameEvent::ShuffledIn { .. })),
+            !events
+                .iter()
+                .any(|event| matches!(event, GameEvent::ShuffledIn { .. })),
             "an Activate is no play, so nothing is copied"
         );
         assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
