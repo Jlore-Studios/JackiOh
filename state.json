@@ -13210,11 +13210,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-15T20:33:36Z",
+        "at": "2026-11-15T20:58:26Z",
         "difficulty": "hard",
         "provider": "claude-4",
-        "tier": "medium",
-        "why": "Rule 5: about 110 test modules change (28 local helpers plus ~100 hand-written Play filters across crates/cards, crates/engine/tests and crates/ai/tests), though nothing outside test code and the testkit changes."
+        "tier": "strong",
+        "why": "Big: about 150 files change (the testkit, the guard, ~107 test files holding the arm, a fixture's callers and the guard's renames)"
       },
       "failures": 0,
       "forced": false,
