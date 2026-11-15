@@ -14916,6 +14916,13 @@
     "3976": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-15T20:22:13Z",
+        "difficulty": "hard",
+        "provider": "gpt",
+        "tier": "medium",
+        "why": "Rule 3 applies: the server replay-page contract and the web replay-source/rendering contract must agree on a new portraits field across a crate and an app."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
