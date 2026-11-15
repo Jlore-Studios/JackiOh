@@ -25895,10 +25895,6 @@
     "claude-6": {
       "spent": [
         {
-          "at": "2026-11-05T10:25:35Z",
-          "minutes": 27.0
-        },
-        {
           "at": "2026-11-05T11:22:04Z",
           "minutes": 3.4
         },
@@ -26693,16 +26689,13 @@
         {
           "at": "2026-11-15T22:14:51Z",
           "minutes": 75.3
+        },
+        {
+          "at": "2026-11-15T23:16:12Z",
+          "minutes": 29.0
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-04T16:51:07Z",
-          "cache": 439053,
-          "cost": 23.1432,
-          "input": 4,
-          "output": 3009
-        },
         {
           "at": "2026-11-04T21:27:06Z",
           "cache": 11430803,
@@ -28095,14 +28088,21 @@
           "cost": 0.8081,
           "input": 70,
           "output": 21175
+        },
+        {
+          "at": "2026-11-15T23:16:12Z",
+          "cache": 3361415,
+          "cost": 1.8755,
+          "input": 84,
+          "output": 23308
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-15T22:00:00Z",
-          "utilization": 0.32
+          "resets_at": "2026-11-16T03:10:00Z",
+          "utilization": 0.06
         },
-        "observed_at": "2026-11-15T22:14:51Z",
+        "observed_at": "2026-11-15T23:16:12Z",
         "status": "allowed"
       }
     },
@@ -36193,6 +36193,16 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-15T22:40:33Z,claude-6,ping,before,43770404137,1,2026-11-16T03:10:00Z,,,allowed,50,,",
+      "2026-11-15T22:40:56Z,claude-6,stream,call,43770404137,2,2026-11-16T03:10:00Z,,,allowed,50,,",
+      "2026-11-15T22:41:11Z,claude-6,stream,call,43770404137,3,2026-11-16T03:10:00Z,,,allowed,50,,",
+      "2026-11-15T22:48:42Z,claude-6,stream,call,43770404137,4,2026-11-16T03:10:00Z,,,allowed,50,,",
+      "2026-11-15T22:49:44Z,claude-6,stream,call,43770404137,5,2026-11-16T03:10:00Z,,,allowed,50,,",
+      "2026-11-15T23:09:30Z,claude-6,stream,call,43770404137,6,2026-11-16T03:10:00Z,,,allowed,50,,"
+    ]
   },
   "version": 1
 }
