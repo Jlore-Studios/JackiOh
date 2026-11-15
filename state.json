@@ -14700,14 +14700,9 @@
     "what": "review #3980 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-15T14:28:49Z",
+    "at": "2026-11-15T14:35:37Z",
     "notes": [
-      "delivered build #3977 on agy (run 43722376282): built",
-      "delivered build #3936 on claude-1 (run 43714672245): built",
-      "started review #3979 on agy (run 43724769712)",
-      "started review #3980 on claude-3 (run 43724807096)",
-      "nothing more to start: nothing is queued",
-      "pruned 6 plan file(s) older than 7 days"
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
