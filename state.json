@@ -15469,6 +15469,8 @@
       }
     },
     "3993": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-15T20:23:22Z",
@@ -15482,8 +15484,11 @@
         "trail": "usal are the server's.\\n\\\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='README.md'\\ns=open(p).read()\\nold=\\\"\\\"\\\" again the same way until the game is over, so an end on the opponent's move\\n shows (R3840000)\\n\\\"\\\"\\\"\\nnew=\\\"\\\"\\\" again th\u2026\n- Bash: {\"command\": \"grep -n \\\"R3840000\\\" src/daily/DailyBoard.test.tsx | head; grep -n \\\"describe(\\\" src/daily/DailyBoard.test.tsx; tail -70 src/daily/DailyBoard.test.tsx; grep -n \\\"to(\\\\|calls\\\" src/test/s\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='src/daily/DailyBoard.test.tsx'\\ns=open(p).read()\\n\\nold=\\\"\\\"\\\"// count of games waiting on the player unchanged shows as ended on the slow read and when the tab sho\u2026\n- tool error: Exit code 2 \u001b[1m\u001b[92m Compiling\u001b[0m jackioh-shared v0.5.0 (/home/runner/work/_temp/work/item-3934/crates/shared) \u001b[1m\u001b[92m Compiling\u001b[0m jackioh-server v0.5.0 (/home/runner/work/_temp/work/item-3934/\u2026\n- Bash: {\"command\": \"ps aux | grep -E \\\"cargo|rustc|clippy\\\" | grep -v grep | wc -l; nproc; free -g | head -2\", \"description\": \"Check running cargo processes and resources\"}\n- said: Clippy and the server tests are still running in the background. While they do, I'll write the spec pieces.\n- Bash: {\"command\": \"grep -n \\\"9.13\\\" spec/09-architecture.md | head -20; ls spec/pending 2>&1 | head; ls spec/rulings | tail -3; cat spec/rulings/R3727005.md | head -30\", \"description\": \"Look at spec \\u00a7\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3934 && grep -n \\\"9.13\\\" spec/09-architecture.md | head -20; ls spec/pending 2>&1 | head; ls spec/rulings | tail -3; cat spec/rulings/R3727005.md | h\u2026\n- Bash: {\"command\": \"sed -n 265,300p spec/09-architecture.md | cut -c1-260; ls spec/rulings | grep -E \\\"^R39[0-9]{2}\\\" | head; git log -3 --format=%H -- spec/pending | head -2; cat spec/README.md | grep -n \\\u2026\n- Bash: {\"command\": \"git show 3292f2ea70 --stat | grep pending; git show 3292f2ea70 -- 'spec/pending/*' | head -20 | cut -c1-500; grep -n \\\"^- \\\\*\\\\*Storage\\\" spec/09-architecture.md | cut -c1-20; awk 'NR==2\u2026\n- Bash: {\"command\": \"git show 3292f2ea70:spec/pending/3951.md | head -c 1200; echo; echo ----; sed -n 295,296p spec/09-architecture.md\", \"description\": \"Show pending example and Storage and Client bullets in\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='spec/09-architecture.md'\\ns=open(p).read()\\nold=\\\"Any read of a game past a deadline applies its loss then, so a late sweep changes when a loss lands, never whether\u2026\n- Bash: {\"command\": \"ls spec/rulings | grep -E \\\"R0?768\\\"; ls spec/rulings | head -3; grep -c \\\"\\\" /tmp/clippy-server.log; tail -3 /tmp/clippy-server.log; ls /tmp/test-server.log 2>&1\", \"description\": \"Check\u2026\n- tool error: Exit code 2 R0768.md R768000.md R0001.md R0002.md R0003.md 6 \u001b[1m\u001b[92m Compiling\u001b[0m jackioh-shared v0.5.0 (/home/runner/work/_temp/work/item-3934/crates/shared) \u001b[1m\u001b[92m Compiling\u001b[0m jackioh-serve\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index(\\\"## State\\\"); j=s.index(\\\"## Log\\\")\\ns=s[:i]+\\\"\\\"\\\"## State\\n\\nRun 2 (build, sonnet). Plan below is binding. Done: step\u2026\n- Bash: {\"command\": \"sleep 100; tail -c 600 /tmp/clippy-server.log; ls /tmp/test-server.log 2>&1\", \"description\": \"Wait for clippy to finish\", \"timeout\": 130000}\n- tool error: <tool_use_error>Blocked: sleep 100 followed by: tail -c 600 /tmp/clippy-server.log ls /tmp/test-server.log. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; d\u2026\n- Bash: {\"command\": \"until [ -f /tmp/test-server.log ]; do sleep 3; done; tail -c 500 /tmp/clippy-server.log\", \"description\": \"Wait until clippy finished and tests started\", \"timeout\": 600000}\n- Bash: {\"command\": \"sh scripts/build-wasm.sh > /tmp/wasm.log 2>&1; tail -5 /tmp/wasm.log; ls apps/web/src/wasm/pkg | head -3\", \"description\": \"Build wasm module for web tests\", \"timeout\": 600000}\n- Bash: {\"command\": \"pnpm --dir apps/web exec vitest run src/daily/DailyBoard.test.tsx src/daily/DailyRoute.test.tsx src/i18n/i18n.test.ts 2>&1 | tail -40; tail -5 /tmp/test-server.log\", \"description\": \"Run \u2026\n- Bash: {\"command\": \"pnpm --dir apps/web typecheck 2>&1 | tail -8; pnpm exec eslint apps/web/src/daily apps/web/src/net/daily.ts 2>&1 | tail -15\", \"description\": \"Typecheck and eslint the web changes\", \"time\u2026\n- Bash: {\"command\": \"cp apps/web/src/daily/DailyBoard.tsx /tmp/DailyBoard.bak && sed -i '/setExpired(answer);/{n;d}' apps/web/src/daily/DailyBoard.tsx && sed -n 96,108p apps/web/src/daily/DailyBoard.tsx && p\u2026\n- Bash: {\"command\": \"grep -n \\\"setGame(null)\\\" apps/web/src/daily/DailyBoard.tsx; tail -4 /tmp/test-server.log\", \"description\": \"Confirm DailyBoard restored; server test progress\"}\n- Bash: {\"command\": \"cargo fmt --check 2>&1 | tail -5; cargo jackioh spec check 2>&1 | tail -15\", \"description\": \"Run fmt check and spec check\", \"timeout\": 900000}\n- Bash: {\"command\": \"cargo jackioh classify --base origin/main --claims 2>&1 | tail -8; cargo jackioh patches check 2>&1 | tail -3; cargo jackioh catalog check 2>&1 | tail -3; tail -4 /tmp/test-server.log | \u2026\n- Bash: {\"command\": \"grep -E \\\"^test result|FAILED|failed|panicked\\\" /tmp/test-server.log | head -20\", \"description\": \"Summarize server test results\"}\n- Bash: {\"command\": \"grep -E \\\"^test result\\\" /tmp/test-server.log; grep -E \\\"^test .*FAILED\\\" /tmp/test-server.log | head\", \"description\": \"Grep test result lines only\"}\n- Bash: {\"command\": \"git status --short; test -z \\\"$(git status --porcelain -- apps/web/src/wire)\\\" && echo wire-clean\", \"description\": \"Verify working tree changes\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index(\\\"## State\\\"); j=s.index(\\\"## Log\\\")\\ns=s[:i]+\\\"\\\"\\\"## State\\n\\nRun 2 (build, sonnet): DONE. All 12 plan steps written. \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a finished daily game whose moves have been purged opens as its result, not as a fresh game at the mulligan\"} --> ## What changed A finished daily game whose log the 90-day retention purge took used to be folded from no moves. It read `over: false` and \u2026"
       },
       "issue": 3934,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-15T21:34:38Z",
         "from_run": "43757802877",
         "gates": [
           {
@@ -15575,7 +15580,11 @@
         "source": "build",
         "until": "2026-11-15T22:03:29Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-15T21:33:29Z",
+      "run_id": "pending:c08c27ae-1794778450",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -15594,6 +15603,9 @@
         "provider": "claude-3",
         "run": "43757802877"
       },
+      "started_at": "2026-11-15T21:34:38Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -15607,9 +15619,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-15T21:22:32Z",
+    "at": "2026-11-15T21:34:38Z",
     "url": "",
-    "what": "review #3990 on claude-4"
+    "what": "review #3993 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-15T21:17:32Z",
