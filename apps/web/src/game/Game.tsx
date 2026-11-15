@@ -192,6 +192,8 @@ export type GameProps = {
   turnClock?: ReactNode;
   /** #3727: End turn's words, already translated, where ending the turn sends it on (a daily game's); absent, "End turn". */
   endTurnLabel?: string;
+  /** R3727003: false on a daily game's board: its question sequence shows no 60-second countdown; absent, shown (R1563006). */
+  sequenceClock?: boolean;
   /** #3727: why the game ended in the route's words, already translated, over the engine reason's (a daily game's "Lost on time"). */
   resultReason?: string;
   /** Route connection status, rendered on the board rail rather than above it. */
@@ -309,6 +311,7 @@ export default function Game({
   autoEndTurn: pinnedAutoEndTurn,
   turnClock,
   endTurnLabel,
+  sequenceClock = true,
   resultReason,
   matchStatus,
   boardRail,
@@ -1077,6 +1080,7 @@ export default function Game({
           lesson={lesson}
           // R2211000: a replay's prompt is drawn as offered and sends nothing.
           readOnly={replay}
+          sequenceClock={sequenceClock}
           // R2739001: hovers go both ways until the game ends, as aims do.
           choiceHover={shown.result === null ? choiceHover : undefined}
           // Cancel backs out of a play still being built (R81). An engine prompt has paused the game

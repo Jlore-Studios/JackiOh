@@ -114,6 +114,8 @@ export type PromptProps = {
   lesson?: boolean;
   /** R2211000: a replay's board: the open prompt as offered, folded and inert; nothing calls `onAction`. */
   readOnly?: boolean;
+  /** R3727003: false on a daily game's board, whose question sequence has no 60-second window (the move's deadline is its window); absent, true (R1563006). */
+  sequenceClock?: boolean;
   /**
    * R2739001: a live online board's relay of card-picker hovers: this seat's engine card picker sends through
    * `emit`, and the opponent's backs outline `opponent`. Absent (hotseat, practice, a replay), nothing is sent.
@@ -1240,12 +1242,15 @@ function PromptModal(props: {
   animating?: string;
   /** R2211000: a replay's picker: folded as it opens, its options greyed, and nothing it draws sends. */
   readOnly?: boolean;
+  /** R3727003: false where the sequence's 60-second countdown is not drawn (a daily game's); absent, drawn. */
+  sequenceClock?: boolean;
   /** R2739001: where an engine card picker sends the option under the pointer or the focus; absent, it sends nothing. */
   onHover?: ((index: number | null) => void) | undefined;
 }) {
   useLocale();
   const { picker } = props;
   const readOnly = props.readOnly === true;
+  const sequenceClock = props.sequenceClock !== false;
   // R2739001: one send per change, and null when the picker folds or closes.
   const hover = useChoiceHoverEmitter(props.onHover);
   const [selected, setSelected] = useState<readonly string[]>(() => picker.initial ?? []);
@@ -1409,7 +1414,7 @@ function PromptModal(props: {
               {t("Right answers in a row: {count}", { count: picker.streak })}
             </p>
           )}
-          {readOnly || picker.streak === undefined || picker.sequenceChoice === undefined ? null : (
+          {readOnly || !sequenceClock || picker.streak === undefined || picker.sequenceChoice === undefined ? null : (
             <SequenceCountdown choiceId={picker.sequenceChoice} streak={picker.streak} />
           )}
           {isCardLayout(picker) ? (
@@ -1959,6 +1964,7 @@ export default function Prompt(props: PromptProps) {
           {...(props.onInteraction === undefined ? {} : { onInteraction: props.onInteraction })}
           {...(props.onCancel === undefined ? {} : { onCancel: props.onCancel })}
           readOnly={readOnly}
+          sequenceClock={props.sequenceClock !== false}
           // R2739001: an engine prompt only (a play's own picker opens none of the sender's); never the
           // mulligan, whose cards the other seat is never shown a count of (R265), nor a replay's.
           onHover={pending.kind === "mulligan" || readOnly ? undefined : props.choiceHover?.emit}

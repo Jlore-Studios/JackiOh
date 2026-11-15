@@ -1,9 +1,11 @@
 // R724000: the Patch notes page groups patches by release line, from the major that brought a set (a Z)
-// up to the next major; each patch's own note (R724001) reads under fixed headings.
+// up to the next major; each patch's own note (R724001) reads under fixed headings. R3944001: a major or
+// a patch that rolls micros up (`includes`: the daily patch, or a major shipped after them) holds them as
+// its snapshots, and the micros no entry has rolled up yet wait apart, for the next daily patch.
 // Presentation only, over public data (CLAUDE.md rule 7). A version is compared for equality and never
 // parsed or ordered (R105): a line starts at its major (R1369000), in patches.json's own order.
 
-import type { Patch, PlayerNote, TechnicalEntry } from "./source.ts";
+import type { Patch, PatchChange, PlayerNote, TechnicalEntry } from "./source.ts";
 
 /** One release line: a set and the patches that came with it. Its first patch is the line's major. */
 export type Release = {
@@ -147,28 +149,109 @@ export function majors(patches: readonly Patch[]): boolean[] {
   return tiers(patches).map((tier) => tier === "major");
 }
 
-/** R3012000: a major or a patch, with the micro patches that follow it in patches.json's order. */
+/** R3012000, R3944001: a major or a patch, with the micro patches it holds in patches.json's order. */
 export type PatchNest = { readonly patch: Patch; readonly tier: Tier; readonly micros: readonly Patch[] };
 
+/** R3944001: each micro an entry's `includes` names, by the version of the entry that rolls it up. */
+export function includedBy(patches: readonly Patch[]): Map<string, string> {
+  const by = new Map<string, string>();
+  for (const patch of patches) for (const micro of patch.includes ?? []) by.set(micro, patch.version);
+  return by;
+}
+
 /**
- * R3012000: a release line's patches as the page nests them: a micro sits under the nearest major or
- * patch before it in patches.json's order (R105), oldest micro first; one with none before it in its
- * line is an entry of its own. `group` is `releaseGroups`'s newest-first list; the nests come newest first.
+ * R3944001: the micros no entry has rolled up yet, oldest first: those after the newest major or patch
+ * in patches.json's order, which the next daily patch rolls up. A history with no major or patch has none.
  */
-export function nestMicros(group: readonly Patch[], tierOf: ReadonlyMap<string, Tier>): PatchNest[] {
+export function pendingMicros(patches: readonly Patch[], tierList: readonly Tier[] = tiers(patches)): Patch[] {
+  const last = tierList.findLastIndex((tier) => tier !== "micro");
+  if (last === -1) return [];
+  const by = includedBy(patches);
+  return patches.slice(last + 1).filter((patch) => !by.has(patch.version));
+}
+
+/**
+ * R3012000, R3944001: a release line's patches as the page nests them. A micro an entry's `includes` names
+ * sits under that entry, as one of its snapshots; any other micro sits under the nearest major or patch
+ * before it in patches.json's order (R105), as micros shipped before the daily patch did, and one with
+ * none before it in its line is an entry of its own. A micro in `pending` (`pendingMicros`) is in no nest:
+ * the page shows it apart. Each nest's micros are oldest first. `group` is `releaseGroups`'s
+ * newest-first list; the nests come newest first.
+ */
+export function nestMicros(group: readonly Patch[], tierOf: ReadonlyMap<string, Tier>, pending: ReadonlySet<string> = new Set()): PatchNest[] {
   const nests: { patch: Patch; tier: Tier; micros: Patch[] }[] = [];
+  const oldestFirst = [...group].reverse();
+  const position = new Map(oldestFirst.map((patch, at) => [patch.version, at]));
+  const by = includedBy(group);
+  const rolledUp = new Map<string, Patch[]>();
   let host: { patch: Patch; tier: Tier; micros: Patch[] } | undefined;
-  for (const patch of [...group].reverse()) {
+  for (const [at, patch] of oldestFirst.entries()) {
     const tier = tierOf.get(patch.version) ?? "patch";
-    if (tier === "micro" && host !== undefined) {
-      host.micros.push(patch);
-      continue;
+    if (tier === "micro") {
+      if (pending.has(patch.version)) continue;
+      const includer = by.get(patch.version);
+      // Only an entry of this line after the micro takes it; any other leaves it as an older micro.
+      if (includer !== undefined && (position.get(includer) ?? -1) > at && tierOf.get(includer) !== "micro") {
+        rolledUp.set(includer, [...(rolledUp.get(includer) ?? []), patch]);
+        continue;
+      }
+      if (host !== undefined) {
+        host.micros.push(patch);
+        continue;
+      }
     }
-    const nest = { patch, tier, micros: [] };
+    // An entry's own micros come before it in patches.json's order, so they are oldest among its nest.
+    const nest = { patch, tier, micros: tier === "micro" ? [] : (rolledUp.get(patch.version) ?? []) };
     nests.push(nest);
     if (tier !== "micro") host = nest;
   }
   return nests.reverse();
+}
+
+/** R3944002: whether an entry is a daily patch: a patch that rolls micros up, whose cards are theirs, since its own snapshot is its last micro's. */
+export function rollsUp(patch: Patch): boolean {
+  return patch.tier === "patch" && (patch.includes?.length ?? 0) > 0;
+}
+
+/**
+ * R3944002: the cards a daily patch stands for, from its micros' records alone: each card any of them
+ * names, once, in the order they first name it, with what happened to it over the day: added when it was
+ * new at its first mention and is still there at its last, removed when it was there before and gone
+ * after, changed when it was there both times; a card added and removed the same day is no change.
+ */
+export function rolledUpChanges(patch: Patch, patches: readonly Patch[]): PatchChange[] {
+  const byVersion = new Map(patches.map((entry) => [entry.version, entry]));
+  const seen = new Map<string, { first: PatchChange; last: PatchChange }>();
+  for (const version of patch.includes ?? []) {
+    for (const change of byVersion.get(version)?.changes ?? []) {
+      const known = seen.get(change.id);
+      if (known === undefined) seen.set(change.id, { first: change, last: change });
+      else known.last = change;
+    }
+  }
+  const out: PatchChange[] = [];
+  for (const [id, { first, last }] of seen) {
+    const before = first.kind !== "added";
+    const after = last.kind !== "removed";
+    if (!before && !after) continue;
+    out.push({ id, name: last.name, kind: before ? (after ? "changed" : "removed") : "added" });
+  }
+  return out;
+}
+
+/** R3944002: what an entry's cards read from: the entry as its cards count it, and the version whose snapshot they are compared with (null for the first). */
+export type CardsBasis = { readonly patch: Patch; readonly before: string | null };
+
+/**
+ * R3944002: a daily patch's cards are its micros' (`rolledUpChanges`), against the snapshot before the
+ * first of them; every other entry's are its own record's, against the snapshot before it.
+ */
+export function cardsBasis(patches: readonly Patch[], patch: Patch): CardsBasis {
+  const first = rollsUp(patch) ? patch.includes?.[0] : undefined;
+  const from = first ?? patch.version;
+  const at = patches.findIndex((entry) => entry.version === from);
+  const before = at <= 0 ? null : (patches[at - 1]?.version ?? null);
+  return first === undefined ? { patch, before } : { patch: { ...patch, changes: rolledUpChanges(patch, patches) }, before };
 }
 
 /** A line for a major whose line `RELEASES` does not write yet, named by its note. */
@@ -178,13 +261,24 @@ function unwrittenRelease(patch: Patch): Release {
 
 /**
  * R724000, R1369000: the patches by release line, newest line first, each line's patches newest first.
- * Patches before every major form Earlier patches; every other patch joins the line open before it.
+ * Patches before every major form Earlier patches; every other patch joins the line open before it, but
+ * a micro an entry's `includes` names joins that entry's line (R3944001): a major shipped after micros
+ * holds them in its own line, though they came before it.
  */
 export function releaseGroups(patches: readonly Patch[], releases: readonly Release[]): ReleaseGroup[] {
   const groups: { release: Release; patches: Patch[] }[] = [];
   const major = majors(patches);
+  const by = includedBy(patches);
+  const position = new Map(patches.map((patch, at) => [patch.version, at]));
+  const waiting = new Map<string, Patch[]>();
   let opened = 0;
   patches.forEach((patch, at) => {
+    const includer = by.get(patch.version);
+    // Only an entry after the micro takes it; one that names a micro it does not follow leaves it in place.
+    if (includer !== undefined && major[at] !== true && (position.get(includer) ?? -1) > at) {
+      waiting.set(includer, [...(waiting.get(includer) ?? []), patch]);
+      return;
+    }
     let open = groups.at(-1);
     if (major[at] === true || open === undefined) {
       const release = major[at] === true ? (releases[opened] ?? unwrittenRelease(patch)) : EARLIER_RELEASE;
@@ -192,7 +286,8 @@ export function releaseGroups(patches: readonly Patch[], releases: readonly Rele
       open = { release, patches: [] };
       groups.push(open);
     }
-    open.patches.push(patch);
+    open.patches.push(...(waiting.get(patch.version) ?? []), patch);
+    waiting.delete(patch.version);
   });
   return groups.reverse().map((group) => ({ release: group.release, patches: group.patches.reverse() }));
 }

@@ -185,11 +185,11 @@ runs over the card tests, refuses one.
 ## 3. The patch, and its order
 
 A change to a card is a patch (R388, R646). No one names its version: `patches ship` names it when it
-ships, from what it does to the cards (R1366000): a major when a set ships, a patch (the next X) when
-15 or more card families are reprinted, 50 or more play differently or a rule meets a quarter of the
-games (R2455000, R2499000), a micro
-(the next letter) for anything smaller, for wording alone or for a change to how cards look
-(`apps/web/src/cards/`, claimed with `--visual`, R2529000); never reopen a shipped one. A branch claims its card changes with a pending fragment:
+ships (R1366000, R3944000): a major when a set ships, and otherwise a micro (the next letters), however
+many cards it reprints or plays, for wording alone and for a change to how cards look
+(`apps/web/src/cards/`, claimed with `--visual`, R2529000); never reopen a shipped one. Once a day
+`patches cut` rolls the micros since the newest major or patch into the day's patch, `v0.X.Y`, the
+release players read ([issues-and-patches.md](issues-and-patches.md), Version numbers). A branch claims its card changes with a pending fragment:
 
 ```
 cargo jackioh patches "<title>" --source "<issue or PR>" --notes "<what changed>" [--plays <ids>] [--rule] [--visual]

@@ -8230,6 +8230,18 @@ pub async fn daily_active_count(t: &mut PgTx<'_>, profile_id: &str, now: i64) ->
     get(&row, "active")
 }
 
+/// One lock per account, transaction-scoped like the economy's `lock_account`, under its own key so a
+/// daily send never waits on a pack opening.
+pub async fn daily_lock_account(t: &mut PgTx<'_>, profile_id: &str) -> Result<(), StoreError> {
+    run_as(t, Some(profile_id)).await?;
+    sqlx::query("select pg_advisory_xact_lock(hashtextextended('jackioh.daily:' || $1::text, 0))")
+        .bind(profile_id)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    Ok(())
+}
+
 // daily invites
 
 /// Two statements in the caller's transaction: the key's lapsed open row (if any) is marked expired,

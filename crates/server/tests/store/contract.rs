@@ -12787,6 +12787,7 @@ mod r3290000_banned_standings {
 mod daily {
     use super::*;
     use jackioh_engine::PerPlayer;
+    use jackioh_server::config::DAILY_MAX_ACTIVE_GAMES;
     use jackioh_server::db::store::{
         DailyGameRow, DailyInviteKind, DailyInviteRow, DailyInviteState, DailyNotifyRow, PushSubRow,
         QueueMode,
@@ -13160,6 +13161,80 @@ mod daily {
             q!(harness, t => t.daily_active_count(&a.id, now + 60_000)),
             1,
             "{}",
+            harness.name
+        );
+    }
+
+    /// R3727004, #3842: two sends racing for an account's twentieth place, each counting under
+    /// `daily_lock_account` and writing only while the count leaves room. The first has counted and
+    /// holds its transaction open as the second begins: the second's lock waits for the first's
+    /// commit, so it counts the first's seek and is refused; without the lock both count nineteen and
+    /// both write.
+    async fn r3727004_two_sends_racing_for_the_last_daily_place_write_one(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        let cap = i64::from(DAILY_MAX_ACTIVE_GAMES);
+        let (a_id, b_id) = (a.id.as_str(), b.id.as_str());
+        for n in 1..cap {
+            daily_game(harness, a_id, b_id, now - 10_000 + n, Some(now + 60_000)).await;
+        }
+        assert_eq!(
+            q!(harness, t => t.daily_active_count(a_id, now)),
+            cap - 1,
+            "{}",
+            harness.name
+        );
+
+        let mut first = harness.db.begin(None).await.expect("begin");
+        first
+            .daily_lock_account(a_id)
+            .await
+            .unwrap_or_else(|error| panic!("{}: the first's lock: {error}", harness.name));
+        let first_held = first
+            .daily_active_count(a_id, now)
+            .await
+            .unwrap_or_else(|error| panic!("{}: the first's count: {error}", harness.name));
+        assert_eq!(first_held, cap - 1, "{}: the first's count", harness.name);
+        let second = async {
+            let mut t = harness.db.begin(None).await.expect("begin");
+            t.daily_lock_account(a_id)
+                .await
+                .unwrap_or_else(|error| panic!("{}: the second's lock: {error}", harness.name));
+            let held = t
+                .daily_active_count(a_id, now)
+                .await
+                .unwrap_or_else(|error| panic!("{}: the second's count: {error}", harness.name));
+            let written = if held < cap {
+                t.daily_invites_create(&seek(a_id, QueueMode::Random, DAYS, now, now + 60_000), now)
+                    .await
+                    .unwrap_or_else(|error| panic!("{}: the second's seek: {error}", harness.name))
+            } else {
+                false
+            };
+            t.commit().await.expect("commit");
+            written
+        };
+        let rest_of_first = async move {
+            let written = first
+                .daily_invites_create(&seek(a_id, QueueMode::Bo1, DAYS, now, now + 60_000), now)
+                .await
+                .unwrap_or_else(|error| panic!("{}: the first's seek: {error}", harness.name));
+            first.commit().await.expect("commit");
+            written
+        };
+        let (second_written, first_written) = tokio::join!(second, rest_of_first);
+
+        assert!(first_written, "{}: the first send is written", harness.name);
+        assert!(
+            !second_written,
+            "{}: the second send counts the first's and is refused",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.daily_active_count(a_id, now)),
+            cap,
+            "{}: the account holds the cap, no more",
             harness.name
         );
     }
@@ -13690,6 +13765,7 @@ mod daily {
         s913_daily_games_round_trip_list_and_end,
         s913_daily_games_due_by_deadline_and_left_out_of_the_live_matches,
         s913_daily_active_count_counts_running_games_and_open_sends,
+        r3727004_two_sends_racing_for_the_last_daily_place_write_one,
         s913_daily_invites_one_open_per_key_close_and_expire,
         s913_daily_seek_claim_takes_the_oldest_fitting_unblocked_seek,
         s913_daily_notify_defaults_settings_and_unsubscribe,

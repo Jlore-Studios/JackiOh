@@ -3181,6 +3181,13 @@ impl Tx<'_> {
         dispatch!(self, daily_active_count(profile_id, now))
     }
 
+    /// R3727004, #3842: a lock on the account's daily games, seeks and challenges until the
+    /// transaction ends, so two requests at once count and write one after the other (Postgres: a
+    /// transaction-level advisory lock; the fake runs one transaction at a time). A lock, no row.
+    pub async fn daily_lock_account(&mut self, profile_id: &str) -> StoreResult<()> {
+        dispatch!(self, daily_lock_account(profile_id))
+    }
+
     // daily invites
 
     /// §9.13: writes the open invite. One of the same key (a challenge: the same sender and friend;

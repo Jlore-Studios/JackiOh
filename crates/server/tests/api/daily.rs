@@ -758,6 +758,122 @@ async fn r3727004_a_player_at_the_daily_cap_still_plays_a_live_game_and_is_refus
     assert_eq!(read(&app, &ada, &games[1]).await["over"], false);
 }
 
+/// R3727004, #3842: a rival send taking the account's last place between the early count and the
+/// write (here, written as the write's transaction takes the account's daily lock) leaves the
+/// challenge, the accept, the waiting seek and the pairing seek refused `daily_full`, the account at
+/// the cap. An accept refused so leaves its challenge open, and a pairing seek refused so puts the
+/// seek it claimed back.
+#[tokio::test]
+async fn r3727004_a_challenge_an_accept_or_a_seek_whose_rival_took_the_last_place_is_refused() {
+    use jackioh_server::db::fake::{CallOutcome, FakeTables};
+    use jackioh_server::db::store::{DailyInviteKind, DailyInviteRow, DailyInviteState, QueueMode};
+    use std::sync::atomic::AtomicBool;
+
+    let seek = json!({ "mode": "random", "perMoveDays": 1 });
+    for case in ["challenge", "accept", "seek", "pair"] {
+        let (app, ada, bo) = two_friends().await;
+        let cy = person(&app, 3, "Cy").await;
+        for _ in 1..DAILY_MAX_ACTIVE_GAMES {
+            daily_game(&app, &ada, &bo, 14).await;
+        }
+        let mut challenge_id = String::new();
+        if case == "accept" {
+            let (status, body) = api(
+                &app,
+                "POST",
+                "/api/daily/challenges",
+                &bo.token,
+                random_challenge(&ada, 14),
+            )
+            .await;
+            assert_eq!(status, 201, "{case}: {body}");
+            challenge_id = body["id"].as_str().expect("a challenge id").to_string();
+        }
+        if case == "pair" {
+            let (status, body) = api(&app, "POST", "/api/daily/seeks", &cy.token, seek.clone()).await;
+            assert_eq!(status, 201, "{case}: {body}");
+        }
+
+        // Ada's rival send, committed just before her request's write takes the lock.
+        let rival = DailyInviteRow {
+            id: "00000000-0000-4000-8000-000000003842".into(),
+            kind: DailyInviteKind::Seek,
+            from_profile: ada.id.clone(),
+            to_profile: None,
+            mode: QueueMode::Bo1,
+            per_move_days: 7,
+            choice: json!({ "mode": "random" }),
+            state: DailyInviteState::Open,
+            match_id: None,
+            created_at: 0,
+            expires_at: app.daily.now() + MS_PER_DAY,
+        };
+        let fired = Arc::new(AtomicBool::new(false));
+        let once = Arc::clone(&fired);
+        fake(&app).lock().await.before_call = Some(Arc::new(move |method: &str, tables: &mut FakeTables| {
+            if method == "daily.lock" && !once.swap(true, Ordering::SeqCst) {
+                tables.daily.invites.push(rival.clone());
+            }
+            CallOutcome::Proceed
+        }));
+        let (status, body) = match case {
+            "challenge" => {
+                api(
+                    &app,
+                    "POST",
+                    "/api/daily/challenges",
+                    &ada.token,
+                    random_challenge(&bo, 14),
+                )
+                .await
+            }
+            "accept" => {
+                api(
+                    &app,
+                    "POST",
+                    &format!("/api/daily/challenges/{challenge_id}/accept"),
+                    &ada.token,
+                    json!({ "mode": "random" }),
+                )
+                .await
+            }
+            _ => api(&app, "POST", "/api/daily/seeks", &ada.token, seek.clone()).await,
+        };
+        fake(&app).lock().await.before_call = None;
+        assert_eq!((status, code_of(&body)), (409, "daily_full"), "{case}: {body}");
+        assert!(fired.load(Ordering::SeqCst), "{case}: the write took the lock");
+
+        let mut tx = app.db.begin(None).await.expect("a transaction");
+        let held = tx
+            .daily_active_count(ada.id.as_str(), app.daily.now())
+            .await
+            .expect("a count");
+        tx.commit().await.expect("commit");
+        assert_eq!(
+            held,
+            i64::from(DAILY_MAX_ACTIVE_GAMES),
+            "{case}: Ada holds the cap, no more"
+        );
+        if case == "accept" {
+            let (_, list) = api(&app, "GET", "/api/daily", &ada.token, Value::Null).await;
+            assert_eq!(
+                list["challenges"]["incoming"].as_array().map(Vec::len),
+                Some(1),
+                "{case}: the challenge is still open: {list}"
+            );
+        }
+        if case == "pair" {
+            let (_, list) = api(&app, "GET", "/api/daily", &cy.token, Value::Null).await;
+            assert_eq!(
+                list["seeks"].as_array().map(Vec::len),
+                Some(1),
+                "{case}: Cy's seek is back: {list}"
+            );
+            assert_eq!(list["games"], json!([]), "{case}: {list}");
+        }
+    }
+}
+
 // Challenges
 
 #[tokio::test]
@@ -1385,9 +1501,10 @@ fn browser_keys() -> (String, String) {
     )
 }
 
-#[tokio::test]
-async fn a_push_subscription_answered_410_is_deleted() {
-    let (push_api, seen) = fake_service(StatusCode::GONE).await;
+/// A device whose push service answers `status`, and one that answers 201, are pushed ("your move").
+/// Returns the service's base URL and the endpoints left, oldest first.
+async fn push_answered(status: StatusCode) -> (String, Vec<String>) {
+    let (push_api, seen) = fake_service(status).await;
     let app = app_with(
         None,
         TestAppOptions {
@@ -1418,7 +1535,7 @@ async fn a_push_subscription_answered_410_is_deleted() {
         tx.commit().await.expect("commit");
     }
 
-    // The game starts waiting on Ada: both devices are pushed, and the one gone is deleted.
+    // The game starts waiting on Ada: both devices are pushed.
     daily_game(&app, &bo, &ada, 1).await;
     notifier_idle(&app).await;
     let pushed: Vec<(String, HeaderMap)> = seen
@@ -1436,16 +1553,44 @@ async fn a_push_subscription_answered_410_is_deleted() {
                 .is_ok_and(|value| value.starts_with("vapid t="))
         );
     }
-    let mut tx = app.db.begin(None).await.expect("a transaction");
-    let left: Vec<String> = tx
-        .push_subs_of(&ada.id)
-        .await
-        .expect("a read")
-        .into_iter()
-        .map(|row| row.endpoint)
-        .collect();
-    tx.commit().await.expect("commit");
+    let left = push_endpoints(&app, &ada).await;
+    (push_api, left)
+}
+
+/// §9.13: a subscription its push service answers 410 is gone, and its row is deleted.
+#[tokio::test]
+async fn a_push_subscription_answered_410_is_deleted() {
+    let (push_api, left) = push_answered(StatusCode::GONE).await;
     assert_eq!(left, vec![format!("{push_api}/push/2/live")]);
+}
+
+/// §9.13, #3844: a subscription its push service answers 403, as it does after the VAPID keys
+/// change, is deleted too, not retried every sweep.
+#[tokio::test]
+async fn a_push_subscription_answered_403_is_deleted() {
+    let (push_api, left) = push_answered(StatusCode::FORBIDDEN).await;
+    assert_eq!(left, vec![format!("{push_api}/push/2/live")]);
+}
+
+/// §9.13: a subscription its push service answers 404 is gone, and its row is deleted.
+#[tokio::test]
+async fn a_push_subscription_answered_404_is_deleted() {
+    let (push_api, left) = push_answered(StatusCode::NOT_FOUND).await;
+    assert_eq!(left, vec![format!("{push_api}/push/2/live")]);
+}
+
+/// §9.13, #3844: a throttled push (429) is retried by the next sweep, so no row goes: only 404, 410
+/// and 403 delete.
+#[tokio::test]
+async fn a_push_subscription_answered_429_is_kept() {
+    let (push_api, left) = push_answered(StatusCode::TOO_MANY_REQUESTS).await;
+    assert_eq!(
+        left,
+        vec![
+            format!("{push_api}/push/1/gone"),
+            format!("{push_api}/push/2/live")
+        ]
+    );
 }
 
 /// The endpoints `who` holds push subscriptions for, oldest first.
