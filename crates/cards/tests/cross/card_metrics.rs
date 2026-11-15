@@ -334,9 +334,15 @@ fn r1846000_a_comment_goes_and_a_string_or_character_literal_stays_code() {
         // A character literal is one token, so its quote opens no string, and an escaped one
         // closes after its escaped character, a quote among them.
         ("let c = '\"'; // c", &["let c = '\"'; "]),
-        (r#"let q = ['a','\n','"']; // c"#, &[r#"let q = ['a','\n','"']; "#]),
+        (
+            r#"let q = ['a','\n','"']; // c"#,
+            &[r#"let q = ['a','\n','"']; "#],
+        ),
         (r#"let q = ['\'','"']; // c"#, &[r#"let q = ['\'','"']; "#]),
-        (r#"let q = [' ','\x41','"']; // c"#, &[r#"let q = [' ','\x41','"']; "#]),
+        (
+            r#"let q = [' ','\x41','"']; // c"#,
+            &[r#"let q = [' ','\x41','"']; "#],
+        ),
     ];
     for (source, lines) in cases {
         assert_eq!(without_comments(source), lines.to_vec(), "{source}");
