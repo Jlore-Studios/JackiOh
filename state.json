@@ -15801,7 +15801,7 @@
       }
     },
     "3960": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -15824,14 +15824,14 @@
       "interruptions": 0,
       "issue": 3841,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "agy",
       "pending_request": false,
       "provider": "agy",
       "queued_at": "2026-11-15T11:32:44Z",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "43706863359",
+      "run_id": "pending:9341101e-1794742455",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
       "session": {
@@ -15852,7 +15852,7 @@
         "run": "43700686707"
       },
       "source": "conflict",
-      "started_at": "2026-11-15T11:01:13Z",
+      "started_at": "2026-11-15T11:34:36Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -16739,9 +16739,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T11:34:03Z",
+    "at": "2026-11-15T11:34:36Z",
     "url": "",
-    "what": "revise #3963 on claude-4"
+    "what": "revise #3960 on agy"
   },
   "last_sweep": {
     "at": "2026-11-15T10:58:40Z",
