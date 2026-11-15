@@ -5,7 +5,8 @@
 //
 // Behind the gate like Play together. The list is the server's answer (`GET /api/daily`), read again after
 // each of this screen's own changes and whenever the social read's `dailyWaiting` changes (a move passed
-// to the player, a game ended). CLAUDE.md rule 7: who holds a move, its deadline and every refusal are the
+// to the player, a game ended), and every `DAILY_REREAD_MS` while the tab shows and when it shows again
+// (R3840000: a game can end with the count unchanged). CLAUDE.md rule 7: who holds a move, its deadline and every refusal are the
 // server's; rule 9: the numbers are the WebAssembly module's (`dailyConstants`).
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
@@ -39,6 +40,7 @@ import { useSocialPoll } from "../together/socialPoll.ts";
 import { MODE_WORDS, Named } from "../together/words.tsx";
 import { DailyFields, acceptBodyOf, useDailyPick } from "./DailyFields.tsx";
 import { moveLine, useNow } from "./DailyClockPill.tsx";
+import { DAILY_REREAD_MS } from "./config.ts";
 import { NewDailyDialog } from "./NewDailyDialog.tsx";
 import { dailySections, isUrgent, perMoveRowText, yourMoveTitle, type DailySections } from "./order.ts";
 import { NotificationSettings } from "./NotificationSettings.tsx";
@@ -218,7 +220,7 @@ function AcceptDialog({ invite, onClose }: { invite: DailyInvite; onClose: () =>
 
 export default function DailyRoute(): ReactElement {
   const locale = useLocale();
-  const [list, reload] = usePolled(getDaily, null);
+  const [list, reload] = usePolled(getDaily, DAILY_REREAD_MS);
   // The social read's count of the games waiting on the player: a change is a move or an end to show.
   const { dailyWaiting } = useSocialPoll();
   const now = useNow();

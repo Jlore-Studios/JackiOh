@@ -156,20 +156,26 @@
   color: var(--text);
 }
 
+/* R3956000: the row scrolls sideways when the sets' names do not fit, and shows it: its scrollbar is
+   drawn (a hidden one left nothing to say it scrolled) and its right edge fades out. The right padding
+   is the fade's room: at the scroll's end the last set clears it, and with no overflow nothing sits
+   under it. */
 .collection-screen .collection-set-list {
   display: flex;
   gap: var(--space-4);
   margin: 0;
-  padding: 0;
+  padding: 0 var(--space-10) var(--space-2) 0;
   list-style: none;
   overflow-x: auto;
   overscroll-behavior-x: contain;
-  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, var(--pal-black) calc(100% - var(--space-10)), transparent);
+  mask-image: linear-gradient(90deg, var(--pal-black) calc(100% - var(--space-10)), transparent);
 }
 
+/* Each set is as wide as its name and count (`auto`), so a name is never cut. */
 .collection-screen .collection-set {
   display: grid;
-  flex: 1 0 140px;
+  flex: 1 0 auto;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-1) var(--space-4);
   min-width: 0;
@@ -178,10 +184,8 @@
 }
 
 .collection-screen .collection-set__name {
-  overflow: hidden;
   color: var(--text);
   font-weight: 650;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

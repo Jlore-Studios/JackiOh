@@ -7,9 +7,12 @@
 import { ChallengeToast } from "../../../apps/web/src/together/ChallengeToast.tsx";
 import { FriendsButton } from "../../../apps/web/src/together/FriendsButton.tsx";
 import { TogetherRoute } from "../../../apps/web/src/together/TogetherRoute.tsx";
+import { BREAKPOINT_PX } from "../../../apps/web/src/breakpoints.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../../../apps/web/src/net/session.ts";
 import { MENU_SIZES, type MenuSize } from "../../support/config.ts";
+import { HIT_MIN_PX, emulateTouch, hitAreaProblems } from "../../support/hitAreas.ts";
 import {
+  FRIENDS_ALL,
   FRIENDS_BUTTON,
   FRIENDS_PANEL,
   TOGETHER_CHALLENGE,
@@ -18,7 +21,9 @@ import {
   TOGETHER_JOIN,
   TOGETHER_MENU,
   TOGETHER_OFFLINE_TOGGLE,
+  TOGETHER_ADD_INPUT,
   TOGETHER_ROOT,
+  TOGETHER_SEARCH,
   TOGETHER_WATCH,
   togetherTabId,
   ts,
@@ -98,6 +103,89 @@ function expectFits(size: MenuSize): void {
   });
 }
 
+/** The window at `size`; the sizes wider than a phone are held under a finger too, as spec 47 does (R2122000). */
+function atSize(size: MenuSize): void {
+  emulateTouch(size.width > BREAKPOINT_PX.phone);
+  cy.viewport(size.width, size.height);
+}
+
+/** The controls #3955 names; the measure's findings about any other control are not its concern. */
+const WATCHED = ["together-add-input", "together-search", "together-offline-toggle", "friends-all"];
+
+/** The drawer, open over /decks, its rows drawn. */
+function openDrawer(): void {
+  serveFixtures();
+  cy.window({ log: false }).then((win) => {
+    win.history.replaceState(null, "", "/decks");
+  });
+  cy.mount(
+    <>
+      <ChallengeToast />
+      <FriendsButton placement="rail" />
+    </>,
+  );
+  cy.get(ts(FRIENDS_BUTTON), { timeout: 10_000 }).click();
+  cy.get(ts(FRIENDS_PANEL)).should("be.visible");
+  cy.get(ts(TOGETHER_FRIEND_ROW), { timeout: 10_000 }).should("exist");
+}
+
+/** The Friends page, its rows drawn. */
+function openPage(): void {
+  serveFixtures();
+  cy.window({ log: false }).then((win) => {
+    win.history.replaceState(null, "", "/together");
+  });
+  cy.mount(<TogetherRoute />);
+  cy.get(ts(TOGETHER_FRIEND_ROW), { timeout: 10_000 }).should("exist");
+}
+
+/** What the hit-area measure finds wrong with the controls #3955 names. */
+function problemsAbout(win: Window): string[] {
+  return hitAreaProblems(win).filter((problem) => WATCHED.some((name) => problem.includes(name)));
+}
+
+/** The field style the add and search inputs take: a sunken ground, a 1 px line and the small radius (index.css's tokens). */
+function expectThemedFields(): void {
+  cy.window({ log: false }).then((win) => {
+    const probe = win.document.createElement("div");
+    probe.style.background = "var(--bg-sunken)";
+    probe.style.borderRadius = "var(--radius-sm)";
+    win.document.body.append(probe);
+    const ground = win.getComputedStyle(probe).backgroundColor;
+    const radius = win.getComputedStyle(probe).borderTopLeftRadius;
+    probe.remove();
+    for (const id of [TOGETHER_ADD_INPUT, TOGETHER_SEARCH]) {
+      const field = win.document.querySelector<HTMLElement>(ts(id));
+      expect(field, `${id} is drawn`).not.to.eq(null);
+      if (field === null) continue;
+      const style = win.getComputedStyle(field);
+      expect(field.getBoundingClientRect().height, `${id} is at least ${String(HIT_MIN_PX)} px tall`).to.be.at.least(HIT_MIN_PX);
+      expect(style.backgroundColor, `${id}'s ground`).to.eq(ground);
+      expect(style.borderTopWidth, `${id}'s line`).to.eq("1px");
+      expect(style.borderTopLeftRadius, `${id}'s corners`).to.eq(radius);
+    }
+  });
+}
+
+/** The Offline toggle is drawn with its heading's own face, and none of a button's padding, ground or line. */
+function expectPlainHeading(): void {
+  cy.get(ts(TOGETHER_OFFLINE_TOGGLE)).then(($toggle) => {
+    const toggle = $toggle[0];
+    const heading = toggle?.parentElement;
+    expect(toggle, "the toggle").not.to.eq(undefined);
+    expect(heading, "its heading").not.to.eq(null);
+    if (toggle === undefined || heading === null || heading === undefined) return;
+    const own = getComputedStyle(toggle);
+    const head = getComputedStyle(heading);
+    for (const property of ["fontFamily", "fontSize", "fontWeight", "textTransform"] as const) {
+      expect(own[property], `the toggle's ${property} is its heading's`).to.eq(head[property]);
+    }
+    expect(own.paddingLeft, "no side padding").to.eq("0px");
+    expect(own.backgroundColor, "no ground").to.eq("rgba(0, 0, 0, 0)");
+    expect(own.borderTopWidth, "no line").to.eq("0px");
+  });
+}
+
 /** The groups are in order, and each friend's row has one primary button and a ⋯ menu. */
 function expectGroupsAndButtons(): void {
   cy.get(ts(TOGETHER_GROUP)).should("have.length", 4);
@@ -116,6 +204,7 @@ function expectGroupsAndButtons(): void {
 
 describe("R3732002 the friends drawer and the Friends page at every menu size", () => {
   afterEach(() => {
+    emulateTouch(false);
     cy.window({ log: false }).then((win) => {
       win.localStorage.clear();
       win.history.replaceState(null, "", "/");
@@ -124,7 +213,7 @@ describe("R3732002 the friends drawer and the Friends page at every menu size", 
 
   for (const size of MENU_SIZES) {
     it(`R3732002 the friends drawer groups the friends and gives each row one button at ${size.label}`, () => {
-      cy.viewport(size.width, size.height);
+      atSize(size);
       serveFixtures();
       cy.window({ log: false }).then((win) => {
         win.history.replaceState(null, "", "/decks");
@@ -144,7 +233,7 @@ describe("R3732002 the friends drawer and the Friends page at every menu size", 
     });
 
     it(`R3732002 the Friends page is five tabs over the same groups at ${size.label}`, () => {
-      cy.viewport(size.width, size.height);
+      atSize(size);
       serveFixtures();
       cy.window({ log: false }).then((win) => {
         win.history.replaceState(null, "", "/together");
@@ -158,6 +247,82 @@ describe("R3732002 the friends drawer and the Friends page at every menu size", 
       expectGroupsAndButtons();
       expectFits(size);
       cy.screenshot(`3732-friends-${size.label}`, { capture: "viewport" });
+    });
+
+    it(`R3732002 every tab of the Friends page is inside the window at ${size.label}`, () => {
+      atSize(size);
+      openPage();
+      cy.window({ log: false }).should((win) => {
+        for (const section of ["friends", "requests", "recent", "blocked", "shared"]) {
+          const tab = win.document.querySelector(ts(togetherTabId(section)));
+          expect(tab, `the ${section} tab is drawn`).not.to.eq(null);
+          if (tab === null) continue;
+          const box = tab.getBoundingClientRect();
+          expect(box.left, `the ${section} tab starts inside ${size.label}`).to.be.at.least(-EDGE_SLACK_PX);
+          expect(box.right, `the ${section} tab ends inside ${size.label}`).to.be.at.most(win.innerWidth + EDGE_SLACK_PX);
+        }
+        const row = win.document.querySelector(ts(togetherTabId("friends")))?.parentElement;
+        expect(row, "the tab row").not.to.eq(null);
+        if (row === null || row === undefined) return;
+        expect(row.scrollWidth, "no tab hides behind a scroll").to.be.at.most(row.clientWidth + EDGE_SLACK_PX);
+      });
+    });
+
+    it(`R3732002 the add and search fields wear the theme's field style and are 44 px tall on the page at ${size.label}`, () => {
+      atSize(size);
+      openPage();
+      expectThemedFields();
+    });
+
+    it(`R3732002 the add and search fields wear the theme's field style and are 44 px tall in the drawer at ${size.label}`, () => {
+      atSize(size);
+      openDrawer();
+      expectThemedFields();
+    });
+
+    it(`R3732002 the page's fields and Offline toggle pass the hit-area measure at ${size.label}`, () => {
+      atSize(size);
+      openPage();
+      cy.window().should((win) => {
+        expect(problemsAbout(win), "the page's watched controls").to.deep.eq([]);
+      });
+    });
+
+    it(`R3732002 the drawer's fields, Offline toggle and See all friends pass the hit-area measure at ${size.label}`, () => {
+      atSize(size);
+      openDrawer();
+      cy.window().should((win) => {
+        expect(problemsAbout(win), "the drawer's watched controls").to.deep.eq([]);
+      });
+    });
+
+    it(`R3732002 See all friends' tap area stays off the Offline toggle at ${size.label}`, () => {
+      atSize(size);
+      openDrawer();
+      cy.get(ts(TOGETHER_OFFLINE_TOGGLE)).should("have.attr", "aria-expanded", "false");
+      cy.get(ts(FRIENDS_ALL)).then(($all) => {
+        cy.get(ts(TOGETHER_OFFLINE_TOGGLE)).then(($toggle) => {
+          const all = $all[0]?.getBoundingClientRect();
+          const toggle = $toggle[0]?.getBoundingClientRect();
+          expect(all, "the link is drawn").not.to.eq(undefined);
+          expect(toggle, "the toggle is drawn").not.to.eq(undefined);
+          if (all === undefined || toggle === undefined) return;
+          expect(all.height, "the link is as tall as a tap").to.be.at.least(HIT_MIN_PX);
+          expect(all.top, "the link starts below the toggle").to.be.at.least(toggle.bottom - EDGE_SLACK_PX);
+        });
+      });
+    });
+
+    it(`R3732002 the Offline heading is drawn as a plain heading in the drawer at ${size.label}`, () => {
+      atSize(size);
+      openDrawer();
+      expectPlainHeading();
+    });
+
+    it(`R3732002 the Offline heading is drawn as a plain heading on the page at ${size.label}`, () => {
+      atSize(size);
+      openPage();
+      expectPlainHeading();
     });
   }
 });

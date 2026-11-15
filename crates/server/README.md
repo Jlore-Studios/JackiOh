@@ -801,7 +801,12 @@ for each in turn, so a slow mail or push service never holds a move; a profile t
 server dropped at a stop, is decided for by the next sweep (#3856). An email goes through Resend under
 `PLAYER_RESEND_API_KEY`, one per decision, listing every game waiting with a link to its board, with
 `List-Unsubscribe` and `List-Unsubscribe-Post`; Resend's free plan's 100 a day is shared with the alerts and
-the sign-in mail.
+the sign-in mail, so the player mail is held to `DAILY_PLAYER_EMAILS_PER_DAY` (50, half) a UTC day (#3843):
+before each send `notify_one` takes one from migration 0092's `daily_email_days` (`Tx::daily_email_claim`, one
+conditional upsert, so the sweep and the queue together, and a restart, never pass it) and gives it back when
+the send fails (`daily_email_release`). Past it no email goes that day, logged once a day as
+`daily.email.capped`, and the push still goes; nothing is marked sent, so the email goes the next day.
+`tests/sql/56_daily_email_days.sql` checks the table.
 A push goes to each of the account's subscriptions (`daily::webpush`: RFC 8291's aes128gcm and RFC 8292's
 VAPID, with `ring`), and a subscription its push service answers 404, 410 or 403 is deleted (403 is what a
 push service answers after the VAPID pair changes, #3844). A subscription is kept only at a browser's push

@@ -1054,6 +1054,11 @@ pub const AI_MULLIGAN_CURVE: AiMulliganCurve = AiMulliganCurve {
     keep_without_early: 1,
 };
 
+/// R3936000: what a Tribute card's units add to its mulligan cost (`mulligan_cost`): a card that asks
+/// for X units to sacrifice costs the AI's mulligan at least X plus this, the turn after one unit a turn
+/// has laid X down. The greedy baseline's mulligan never reads it.
+pub const AI_MULLIGAN_TRIBUTE_ALLOWANCE: i32 = 1;
+
 /// `AI_DETERMINIZE`'s shape.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]

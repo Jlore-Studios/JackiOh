@@ -3,10 +3,11 @@
 // move has passed on; the result says Lost on time or Won on time; an older card version says so; a
 // finished game's Rematch challenges its opponent again at its mode and time per move. R3855000: it shows what
 // every table shows: the opponent's name on the hero, the modifiers in play, an aimed attack's outcomes from
-// the read's forecast, and Watch the replay on a finished game's result.
+// the read's forecast, and Watch the replay on a finished game's result. R3840000: a game that ended with the
+// count of games waiting on the player unchanged shows as ended on the slow read and when the tab shows again.
 
 import type { ActionBody, AttackForecast, CombatForecast, PlayerView } from "@jackioh/shared";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { setAudioEngineForTests } from "../audio/engine.ts";
@@ -18,10 +19,12 @@ import type { DailyGame } from "../net/daily.ts";
 import { clearReadCache } from "../net/readCache.ts";
 import { replayTestid } from "../replay/ReplayPlayer.tsx";
 import { resetSettings, writeSettings } from "../settings/store.ts";
-import { baseView, emptySide, opponentModifiers, pendingFor, unit, yourModifiers } from "../test/fixtures.ts";
+import { baseView, card, emptySide, opponentModifiers, pendingFor, unit, yourModifiers } from "../test/fixtures.ts";
 import { foldedReplaySteps } from "../test/replay.ts";
+import { resetVisibility, setVisibility } from "../test/setup.ts";
 import { at, refusal, signIn, stubServer, type Call, type Reply } from "../test/stubServer.ts";
 import { dailyConstants } from "../wasm/index.ts";
+import { DAILY_REREAD_MS } from "./config.ts";
 import DailyBoard from "./DailyBoard.tsx";
 import { dailyTestid } from "./testids.ts";
 
@@ -73,11 +76,19 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
+  resetVisibility();
   resetSettings();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   window.localStorage.clear();
 });
+
+async function flush(): Promise<void> {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}
 
 describe("#3727 a daily game's board", () => {
   it("#3727 End turn reads End turn and send, and an action is sent after the last seq under a fresh nonce", async () => {
@@ -160,6 +171,68 @@ describe("#3727 a daily game's board", () => {
     // Nothing but the concede went out while the opponent held the move; the setting went once it was the player's.
     expect(actions[0]?.action).toEqual(CONCEDE);
     expect(actions[1]).toMatchObject({ after: 9, action: { type: "setAutoEndTurn", enabled: false } });
+  });
+
+  it("#3841 End turn automatically waits for the mulligan to be over: none is sent during it, and it is sent once it is", async () => {
+    writeSettings({ autoEndTurn: false });
+    let over = false;
+    const server = serve(
+      () => (over ? dailyGame({ seq: 9 }) : dailyGame({ view: baseView({ phase: "mulligan" }) })),
+      // The concede below meets a game that moved on: the mulligan is over.
+      (call) => {
+        if (call.method !== "POST" || (call.body as { action: ActionBody }).action.type !== "concede") return undefined;
+        over = true;
+        return refusal(409, "stale", "The game moved on.");
+      },
+    );
+    render(<DailyBoard matchId="g-1" />);
+    fireEvent.click(await screen.findByTestId("concede", undefined, SLOW));
+    // The player holds the move and the setting differs, but both seats hold the move in the mulligan.
+    expect(server.to("POST", "/api/daily/games/g-1/actions")).toHaveLength(0);
+    fireEvent.click(await screen.findByTestId("concede-confirm", undefined, SLOW));
+
+    await waitFor(() => {
+      expect(server.to("POST", "/api/daily/games/g-1/actions")).toHaveLength(2);
+    }, SLOW);
+    const actions = server.to("POST", "/api/daily/games/g-1/actions").map((call) => call.body as { after: number; action: ActionBody });
+    expect(actions[0]?.action).toEqual(CONCEDE);
+    expect(actions[1]).toMatchObject({ after: 9, action: { type: "setAutoEndTurn", enabled: false } });
+  });
+
+  it("#3841 End turn automatically goes out just before the player's own mulligan answer, so it is in the game before the first turn", async () => {
+    writeSettings({ autoEndTurn: false });
+    const hand = [card({ instanceId: "h1", defId: "core-002" }), card({ instanceId: "h2", defId: "core-019" })];
+    const mulliganView = baseView({
+      turn: 0,
+      phase: "mulligan",
+      you: emptySide("p1", { hand }),
+      opponent: emptySide("p2", { hand: { count: 4 } }),
+      pending: pendingFor(
+        "mulligan",
+        hand.map((c) => ({ key: c.instanceId, label: c.defId, instanceId: c.instanceId })),
+        { min: 0, max: hand.length, prompt: "Choose the cards to keep; the rest are returned and redrawn" },
+      ),
+      mulligan: { youReady: false, opponentReady: false },
+    });
+    let seq = 7;
+    const server = serve(
+      () => dailyGame({ seq, view: mulliganView }),
+      (call) => {
+        if (call.method !== "POST") return undefined;
+        seq += 1;
+        return { status: 200, body: dailyGame({ seq, view: mulliganView }) };
+      },
+    );
+    render(<DailyBoard matchId="g-1" />);
+    fireEvent.click(await screen.findByTestId("prompt-submit", undefined, SLOW));
+
+    await waitFor(() => {
+      expect(server.to("POST", "/api/daily/games/g-1/actions")).toHaveLength(2);
+    }, SLOW);
+    const actions = server.to("POST", "/api/daily/games/g-1/actions").map((call) => call.body as { after: number; action: ActionBody });
+    // The setting first, the answer after it: each follows the seq the one before it made.
+    expect(actions[0]).toMatchObject({ after: 7, action: { type: "setAutoEndTurn", enabled: false } });
+    expect(actions[1]).toMatchObject({ after: 8, action: { type: "mulligan", keep: ["h1", "h2"] } });
   });
 
   it("#3727 Next game appears once the move has passed on and another game waits, and opens it", async () => {
@@ -435,5 +508,70 @@ describe("R3855000 a daily board shows what every table shows", () => {
       expect(screen.getByTestId(dailyTestid.rematch)).toBeInTheDocument();
       expect(screen.queryByTestId(dailyTestid.watchReplay)).toBeNull();
     });
+  });
+});
+
+describe("R3840000 the open daily board reads a game that ended", () => {
+  const GAME = "/api/daily/games/g-1";
+
+  it("R3840000 a game the opponent ends on their own move shows as ended on the slow read, and is read no more", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    let ended = false;
+    const running = dailyGame({ hasMove: false, legal: [CONCEDE], view: baseView({ active: "p2" }), holds: [] });
+    const over = dailyGame({
+      seq: 8,
+      over: true,
+      hasMove: false,
+      legal: [],
+      holds: [],
+      view: baseView({ active: "p2", result: { winner: "p1", reason: "concede" } }),
+    });
+    const server = serve(() => (ended ? over : running));
+    render(<DailyBoard matchId="g-1" />);
+    await screen.findByTestId("concede", undefined, SLOW);
+    expect(screen.queryByTestId("result-overlay")).toBeNull();
+    const reads = server.to("GET", GAME).length;
+
+    ended = true;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DAILY_REREAD_MS);
+    });
+    await screen.findByTestId("result-overlay", undefined, SLOW);
+    expect(server.to("GET", GAME)).toHaveLength(reads + 1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DAILY_REREAD_MS);
+    });
+    await flush();
+    expect(server.to("GET", GAME)).toHaveLength(reads + 1);
+  });
+
+  it("R3840000 a game the opponent concedes while the move is the player's shows as ended when the tab shows again, and a hidden tab reads nothing", async () => {
+    let ended = false;
+    const over = dailyGame({
+      seq: 8,
+      over: true,
+      hasMove: false,
+      legal: [],
+      holds: [],
+      view: baseView({ result: { winner: "p1", reason: "concede" } }),
+    });
+    const server = serve(() => (ended ? over : dailyGame()));
+    render(<DailyBoard matchId="g-1" />);
+    await screen.findByTestId("end-turn", undefined, SLOW);
+    const reads = server.to("GET", GAME).length;
+
+    ended = true;
+    act(() => {
+      setVisibility("hidden");
+    });
+    await flush();
+    expect(server.to("GET", GAME)).toHaveLength(reads);
+
+    act(() => {
+      setVisibility("visible");
+    });
+    await screen.findByTestId("result-overlay", undefined, SLOW);
+    expect(server.to("GET", GAME)).toHaveLength(reads + 1);
   });
 });

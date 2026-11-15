@@ -8544,6 +8544,38 @@ pub async fn daily_notify_unsubscribe(t: &mut PgTx<'_>, token: &str) -> Result<b
     Ok(done.rows_affected() == 1)
 }
 
+// the player mail's days
+
+/// One conditional upsert, never a read then a write: the row lock it takes on a conflict makes a
+/// second sender at once wait and read the count the first left, so the two never pass `cap`.
+pub async fn daily_email_claim(t: &mut PgTx<'_>, day: i64, cap: i32) -> Result<bool, StoreError> {
+    if cap <= 0 {
+        return Ok(false);
+    }
+    run_as(t, None).await?;
+    let row = sqlx::query(
+        "insert into public.daily_email_days as days (day, sent) values ($1::bigint, 1)
+         on conflict (day) do update set sent = days.sent + 1 where days.sent < $2::integer
+         returning sent",
+    )
+    .bind(day)
+    .bind(cap)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(row.is_some())
+}
+
+pub async fn daily_email_release(t: &mut PgTx<'_>, day: i64) -> Result<(), StoreError> {
+    run_as(t, None).await?;
+    sqlx::query("update public.daily_email_days set sent = sent - 1 where day = $1::bigint and sent > 0")
+        .bind(day)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    Ok(())
+}
+
 // push subscriptions
 
 pub async fn push_subs_add(t: &mut PgTx<'_>, row: &PushSubRow) -> Result<(), StoreError> {
