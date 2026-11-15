@@ -352,7 +352,7 @@
    (routes/top-bar.css), nor a dialog's ✕, which keeps its own round size (game/dialog.css, R3221000), nor the Friends list's Offline
    heading, which keeps the heading's face as in the drawer (together.css, #3955);
    `:where()` leaves the rule's weight as it was, so the sheets that outrank it still do. */
-.tavern.app-shell:where(:not(.deckbuilder)) button:where(:not(.top-bar-button)):not(.link-button):not(.affix-button):not(.together-group__toggle):not(.button-primary):not([type="submit"]):where(:not(.dialog__close)) {
+.tavern.app-shell:where(:not(.deckbuilder)) button:where(:not(.top-bar-button)):not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]):where(:not(.dialog__close, .together-group__toggle)) {
   min-height: 44px;
   padding: 8px 18px;
   border-radius: 10px;
