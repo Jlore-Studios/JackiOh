@@ -105,10 +105,10 @@
     },
     "meditative-040": {
       "base": {
-        "en": "Aura: Good feng shui is rewarded, bad punished.\nActivate: Add an Auspicious Rock.\nYour last element, your opponent's last element."
+        "en": "Aura: Good feng shui is rewarded, bad punished.\nCry and Activate: Add an Auspicious Rock.\nYour last element, your opponent's last element."
       },
       "radiant": {
-        "en": "Aura: Good feng shui helps you, bad hurts them.\nActivate: Add a Radiant Auspicious Rock.\nYour last element, your opponent's last element."
+        "en": "Aura: Good feng shui helps you, bad hurts them.\nCry and Activate: Add a Radiant Auspicious Rock.\nYour last element, your opponent's last element."
       }
     },
     "meditative-045": {

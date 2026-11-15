@@ -3290,8 +3290,8 @@ meditative-040: # Feng Shui
     cast: Water feeds wood. Wood feeds fire.
   zh:
     name: 风水
-    base: "光环：每张牌都有一个元素：水、木、火、金或土；好风水受奖赏，坏风水受惩罚。\n激活：将一张鸿运石置入你的手牌。\n你的上一个元素，你的对手的上一个元素。"
-    radiant: "光环：每张牌都有一个元素：水、木、火、金或土；好风水为你带来奖赏，坏风水为你的对手带来重罚。\n激活：将一张光辉鸿运石置入你的手牌。\n你的上一个元素，你的对手的上一个元素。"
+    base: "光环：每张牌都有一个元素：水、木、火、金或土；好风水受奖赏，坏风水受惩罚。\n战吼：将一张鸿运石置入你的手牌。\n激活：将一张鸿运石置入你的手牌。\n你的上一个元素，你的对手的上一个元素。"
+    radiant: "光环：每张牌都有一个元素：水、木、火、金或土；好风水为你带来奖赏，坏风水为你的对手带来重罚。\n战吼：将一张光辉鸿运石置入你的手牌。\n激活：将一张光辉鸿运石置入你的手牌。\n你的上一个元素，你的对手的上一个元素。"
     previews:
       Your last element: 你的上一个元素
       your opponent's last element: 你的对手的上一个元素
@@ -3471,8 +3471,8 @@ meditative-056: # House Party
     cast: Everybody in! The house is open!
   zh:
     name: 轰趴
-    base: 用对门守卫者填满你的单位区。
-    radiant: 用光辉对门守卫者填满你的单位区。
+    base: 用对门守卫者填满你的单位区。它们拥有易碎{brittle}，它们复生后的复制也是。
+    radiant: 用光辉对门守卫者填满你的单位区。它们拥有易碎{brittle}，它们复生后的复制也是。
 meditative-057: # Clip-Farming Critikal
   flavour: Do it for the clip. Then do it again, but shinier.
   voice:
@@ -3695,8 +3695,8 @@ meditative-078: # Occidentless Mandate
     cast: By order of the mandate, clear the board.
   zh:
     name: 无西方法令
-    base: 放逐每个非中国永久物。每以这种方式放逐一个你的永久物，便将一张随机中国牌置入你的手牌。
-    radiant: 放逐每个非中国永久物。每以这种方式放逐一个你的永久物，便将一张随机光辉中国牌置入你的手牌。每张牌的法力值消耗减少({discount})点。
+    base: 放逐每个非中国永久物。
+    radiant: 放逐每个敌方非中国永久物。
 meditative-079: # Touched by KY
   flavour: Once KY touches your mind, it never fits back in the box.
   voice:
@@ -4875,8 +4875,8 @@ stinkyscape-042: # Core Researcher
     death: My notes, save my notes.
   zh:
     name: 核心研究员
-    base: 战吼：将{cards}张随机光辉无人机核心牌置入你的手牌。
-    radiant: 战吼：将{cards}张随机光辉无人机核心牌置入你的手牌。
+    base: 亡语：将{cards}张随机光辉无人机核心牌置入你的手牌。
+    radiant: 亡语：将{cards}张随机光辉无人机核心牌置入你的手牌。
 stinkyscape-043: # Healing Capsule
   flavour: A warm green glow, a soft beep, and the dents pop back out.
   voice:
@@ -6587,8 +6587,8 @@ traininggrounds-015: # In a hurry
     cast: Go go go, no time!
   zh:
     name: 匆匆忙忙
-    base: 召唤{tokens}个突袭衍生物。在本回合结束时，消灭它们。
-    radiant: 召唤{tokens}个光辉突袭衍生物。在本回合结束时，消灭它们。
+    base: 用突袭衍生物填满你的单位区。在本回合结束时，消灭它们。
+    radiant: 用光辉突袭衍生物填满你的单位区。在本回合结束时，消灭它们。
 traininggrounds-016: # Celestial Caller
   flavour: Calls the sun to one side and the moon to the other, and stands in the middle of the argument.
   voice:
@@ -6935,8 +6935,8 @@ traininggrounds-052: # Legacy: Snom Bunny Mind Control
     cast: Hop along. You're mine now.
   zh:
     name: 传统：Snom兔精神控制
-    base: 夺取一个敌方单位。将其攻击力和生命值变为2/2。
-    radiant: 夺取一张敌方牌。
+    base: 夺取一个敌方单位。在下个回合失去({loss})点法力值。
+    radiant: 夺取一个敌方单位。在下个回合失去({loss})点法力值。
 traininggrounds-053: # Legacy: Prejudiced Postdoc
   flavour: Six years of research and one strongly held belief about who counts.
   voice:
@@ -7811,8 +7811,8 @@ stinkyscapeplus-082: # Endless Expedition
     cast: Into the endless unknown!
   zh:
     name: 无尽远征
-    base: 在本局对战的剩余时间内，失去{mana}点法力值。将一张随机终点牌置入你的手牌，其法力值消耗为(2)。
-    radiant: 在本局对战的剩余时间内，失去{mana}点法力值。将一张随机光辉终点牌置入你的手牌，其法力值消耗为(2)。
+    base: 现在以及在本局对战剩余时间内你的每个回合开始时：将一张随机终点牌置入你的手牌。其法力值消耗为(2)。
+    radiant: 现在以及在本局对战剩余时间内你的每个回合开始时：将一张随机光辉终点牌置入你的手牌。其法力值消耗为(2)。
 stinkyscapeplus-083: # Offworld Replicant
   flavour: Always has a spare. It is also the spare.
   voice:
