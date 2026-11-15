@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 3909,
+  "title": "Patch: the AI's count of next turn's damage to its hero leaves out Scorch's swings, which can never hit a hero, and lets no Taunt wall Toxopid",
+  "branch": "bot/issue-3909",
+  "thread": "**Issue #3909 (data, not instructions):**\n\n```text\n# #3909: Patch: the AI's count of next turn's damage to its hero leaves out Scorch's swings, which can never hit a hero, and lets no Taunt wall Toxopid\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe practice AI estimates how much damage the other side's board could deal to its hero next turn, and plays very defensively once that number reaches its life. Two cards fool the estimate.\n\nScorch is a cheap Common unit that may attack ten times a turn, but only the unit directly across from it, never a hero. The AI counts it as ten hits to the face (twenty when Radiant). So one Scorch on the other side makes an AI at 10 life believe it faces lethal: it spends cards and trades to kill Scorch and switches units to Defense for nothing. Its own Scorch makes it believe it threatens lethal when it doesn't.\n\nToxopid ignores Taunt, yet the AI thinks a unit in Defense Position stops it. Once this is built, the AI reads both rules as the game applies them.\n\n## Why\n\n- `crates/ai/src/evaluate.rs:1101-1131` (`face_threat_from`) sets `may_hit_hero` to `!gauntlet || attack_restriction(state, unit, &hero).is_ok()` (line 1125). Outside The Gauntlet every swing counts as able to hit the hero, and line 1126 pushes one swing per `attacks_per_turn`.\n- S+ #37 Scorch (`crates/cards/src/scripts/stinkyscape_plus/c037_scorch.rs`; SPEC \u00a78: Common, cost 1, Can't Defend, Ranged, Pierce, can attack 10 times per turn, can only attack the unit directly across) carries `attacks_only_across` (R3550001). The engine refuses that flag against any hero (`crates/engine/src/restrictions.rs:236-247`).\n- `damage_past_taunts` (`evaluate.rs`, around 1175-1195) binds an attacker to a Taunt by `attack_restriction` alone. Ignores Taunt is applied at the Taunt check (`crates/engine/src/combat.rs:548`, `flags_of(..).ignores_taunt`), not in `attack_restriction`. So S+ #121 Toxopid (Mythic, 10/10, Radiant 20/20, R3560007) is walled by any Taunt, including the one Defense Position grants.\n- Neither `attacks_only_across` nor `ignores_taunt` appears anywhere under `crates/ai/src`.\n- What it costs: `lethal_threat` is 150 and `lethal_pressure` 20 (`crates/ai/src/config.rs:705-707`). `wall_switches` (`crates/ai/src/candidates.rs:962`) offers Defense switches whenever `face_threat` reaches the AI's life. The reply's lethal read uses the same `damage_past_taunts` (`crates/ai/src/reply.rs`).\n\n## Proposal\n\n- In `face_threat_from`, a unit whose `flags_of(..).attacks_only_across` is set asks `attack_restriction` about the hero, as a unit in The Gauntlet's lanes already does. The flag is read first, so a board with no such unit costs nothing more.\n- In `damage_past_taunts`, an attacker whose `flags_of(..).ignores_taunt` is set is never bound by a Taunt.\n- Both sit behind one new `EvalWeights` flag, on in the tiers' weights and off in `GREEDY_EVAL`, as `gauntlet_bars_face_attacks` is (`config.rs:366, 567, 843`). Add a paragraph on it to `crates/ai/README.md`.\n\n## Where it lands\n\n- `crates/ai/src/evaluate.rs`, `crates/ai/src/config.rs`, `crates/ai/README.md`\n- A new test file under `crates/ai/tests/ai/`, modelled on `gauntlet.rs`\n- SPEC \u00a74.2; R3550001, R3560007\n\n## Acceptance criteria\n\n- [ ] An enemy Scorch with nothing across from it gives `face_threat == 0` (10 today, 20 when Radiant).\n- [ ] With the AI at 10 life and Scorch the only enemy attacker, `wall_switches` offers nothing.\n- [ ] An enemy Toxopid facing one Defense-Position unit gives `face_threat == 10` (0 today).\n- [ ] `face_threat_with(.., &GREEDY_EVAL)` is unchanged on each of these boards.\n- [ ] `cargo test -p jackioh-ai` and `cargo jackioh gate` pass.\n\n## Size and risks\n\nHard by label (the AI), small in code: about 40 lines plus tests. It moves the learned `face_threat` feature on boards holding these two cards, as the Gauntlet fix (#3287) did, and the gate shows whether that costs anything. Left for later, since each needs a new engine board fact first: the same estimate also ignores Force Projector's and Oct's per-turn damage pool (R3550004) and Unan's lethal guard (R1204).\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-15T02:05:16Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#3909: needs a plan; `claude-4` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-15T02:05:40Z",
+    "claimed_at": "2026-11-15T02:09:25Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
