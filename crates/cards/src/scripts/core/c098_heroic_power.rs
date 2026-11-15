@@ -1690,7 +1690,7 @@ mod tests {
         #[test]
         fn r3551002_the_hero_panel_shows_the_live_price() {
             crate::register_all();
-            let (mut s, card) = end_times_field(false, "hp-endtimes-panel");
+            let (mut s, _) = end_times_field(false, "hp-endtimes-panel");
             assert!(matches_object(
                 &view_json(&s, P1)["you"]["hero"]["power"],
                 &json!({ "name": "endTimes", "title": "End Times", "x": 10, "usedThisTurn": false }),
@@ -1701,7 +1701,6 @@ mod tests {
                 &view_json(&s, P1)["you"]["hero"]["power"],
                 &json!({ "name": "endTimes", "x": 9 }),
             ));
-            let _ = card;
         }
 
         #[test]

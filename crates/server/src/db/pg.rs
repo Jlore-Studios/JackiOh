@@ -6792,6 +6792,7 @@ pub async fn player_stats_list_public(
     let offset = i32::try_from(options.offset).unwrap_or(i32::MAX);
     // R1436: the search matches the username by the key it clashes on (R1434), the NFKC case fold
     // computed here in Rust, so no Postgres collation decides; `Max#3` finds `max#3`.
+    // R3911000: a banned account drops off the public players list and its search.
     let term = term.map(username_key);
     run_as(t, None).await?;
     let rows = sqlx::query(
@@ -6799,6 +6800,7 @@ pub async fn player_stats_list_public(
          from public.player_stats ps
          join public.profiles p on p.id = ps.profile_id
          where ps.is_private = false
+           and p.status <> 'banned'
            and ($1::text is null
                 or position($1::text in (p.username_key || coalesce('#' || p.username_tag::text, ''))) > 0)
          order by

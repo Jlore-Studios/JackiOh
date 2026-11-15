@@ -915,7 +915,7 @@ mod tests {
                 _ => None,
             })
             .collect();
-        for id in added {
+        for id in nonempty(added, "the Paychecks added") {
             assert!(!s.card(id.as_str()).radiant, "{id} on its base face");
         }
     }
