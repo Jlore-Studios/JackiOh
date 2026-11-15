@@ -15812,15 +15812,6 @@
       "failures": 0,
       "feedback_since": "2026-11-15T09:02:19Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-11-15T10:56:46Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "## State\nPass 2: review finding held (setting must be in game before turn 1). DailyBoard now holds setAutoEndTurn through mulligan but sends it just before the player's own mulligan answer (chained POST, then answer at new seq). Tests 19/19, typecheck, eslint, fmt clean. Done.\n## Log\n- Edited DailyBoard.tsx send + added test; ran vitest/typecheck/eslint: green.\n- Pass 3: e2e smoke 4/4 = specs 01 + 51 (neither renders DailyBoard); no spec failure in excerpt. No code change; tests/typecheck/eslint/fmt re-run clean.\n",
-        "provider": "claude-6",
-        "reason": "used its 3 review rounds with this owner; the work is kept for its final audit, another subscription's when one is free",
-        "trail": "- Bash: {\"command\": \"cat .bot-notes.md 2>/dev/null | head -60; git diff d4474d92405adefd5a082003dc4857eac5534c5d...HEAD -- apps/web/src/daily/DailyBoard.tsx\"}\n- Bash: {\"command\": \"ls e2e/cypress/e2e | head -80; grep -rln \\\"daily\\\" e2e/cypress | head; grep -n \\\"smoke\\\" scripts/ci-scope.sh .github/workflows/ci.yml | head -20\"}\n- Bash: {\"command\": \"cd e2e && node scripts/shard-specs.mjs --help 2>&1 | head -20; grep -n \\\"smoke\\\" ../scripts/ci-shards.toml | head; grep -n \\\"SMOKE\\\" scripts/shard-specs.mjs | head\"}\n- Bash: {\"command\": \"node scripts/shard-specs.mjs --smoke 4 4; grep -n \\\"daily\\\\|Daily\\\" cypress/e2e/51-menu-shell.cy.ts cypress/e2e/47-tap-areas.cy.ts cypress/e2e/46-menus-fit-one-screen.cy.ts | head\"}\n- Bash: {\"command\": \"cd .. && ls target/release/jackioh-server 2>&1; ls ~/.cache/Cypress 2>&1 | head -3; sed -n 1,60p e2e/cypress/e2e/51-menu-shell.cy.ts\"}\n- Bash: {\"command\": \"pnpm --dir apps/web test src/daily/DailyBoard.test.tsx 2>&1 | tail -8; pnpm --dir apps/web typecheck 2>&1 | tail -3; pnpm exec eslint apps/web/src/daily 2>&1 | tail -3; cargo fmt --check\u2026\n- Bash: {\"command\": \"pnpm --dir apps/web test src/daily/DailyBoard.test.tsx 2>&1 | grep -E \\\"Tests|Test Files|passed|failed\\\"; cat >> .bot-notes.md <<'EOF'\\n- Pass 3: e2e smoke 4/4 = specs 01 + 51 (neither r\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the daily board holds \\\"End turn automatically\\\" until the mulligan is over, so the other player's keep never fails as stale\"} --> I made no code change this pass. I can't tie the red `e2e smoke (4/4)` check to this change, and I couldn't reproduce it. \u2026"
-      },
       "interruptions": 0,
       "issue": 3841,
       "kind": "review",
