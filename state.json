@@ -16688,6 +16688,8 @@
       }
     },
     "3970": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-15T09:44:56Z",
@@ -16701,8 +16703,11 @@
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -50; git status --short | head\"}\n- Grep: {\"pattern\": \"lobby__actions|lobby__ready|lobby__deck|YourDeck|useState|^import\", \"path\": \"apps/web/src/lobby/LobbyScreen.tsx\", \"output_mode\": \"content\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3954/apps/web/src/lobby/LobbyScreen.tsx\", \"offset\": 10, \"limit\": 15}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3954/apps/web/src/lobby/LobbyScreen.tsx\", \"offset\": 355, \"limit\": 40}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-3954/apps/web/src/lobby/LobbyScreen.tsx\", \"offset\": 690, \"limit\": 130}\n- said: Apply edits.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/lobby/LobbyScreen.tsx'\\ns=open(p).read()\\ns=s.replace('} from \\\"react\\\";\\\\n','} from \\\"react\\\";\\\\nimport { createPortal } from \\\"react-dom\\\";\\\\n',1)\\ns\u2026\n- Bash: {\"command\": \"sed -n 85,120p apps/web/src/routes/lobby.css; sed -n 455,470p apps/web/src/routes/lobby.css; sed -n 205,240p apps/web/src/shell/menu-shell.css; grep -n \\\"verdict__mark\\\" -B3 -A5 apps/web\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/lobby/lobby.css'\\ns=open(p).read()\\ns=s.replace('''.lobby__actions {\\n display: flex;\\n justify-content: space-between;\\n gap: var(--space-6);\\n}\\n''',\u2026\n- Bash: {\"command\": \"cat e2e/cypress/component/lobby-screen.cy.tsx; sed -n 1,60p apps/web/src/lobby/LobbyScreen.test.tsx; grep -n \\\"^ it(\\\" apps/web/src/lobby/LobbyScreen.test.tsx | head -5\"}\n- Bash: {\"command\": \"sed -n 60,135p apps/web/src/lobby/LobbyScreen.test.tsx; grep -n \\\"menuShellTestid\\\" apps/web/src/shell/testids.ts; grep -n \\\"verdict\\\" apps/web/src/routes/playTestids.ts; cat spec/ruling\u2026\n- Bash: {\"command\": \"sed -n 1,12p apps/web/src/shell/testids.ts; cat spec/pending/3939.md | head -3; ls spec/rulings | grep -E \\\"R3954|R3730\\\" ; tail -c 300 spec/rulings/R3730001.md | od -c | tail -2\"}\n- Bash: {\"command\": \"cat > spec/rulings/R3954000.md <<'EOF'\\n---\\nid: R3954000\\ntitle: \\\"The private lobby's Leave, Ready and Start are one action bar kept in view above the tab bar (issue #3954; amends R373\u2026\n- Bash: {\"command\": \"cargo jackioh spec check 2>&1 | tail -5; pnpm --dir apps/web exec vitest run src/lobby src/routes/play.test.tsx 2>&1 | tail -12; pnpm --dir apps/web typecheck 2>&1 | tail -5; pnpm exec e\u2026\n- said: Need the wasm build first.\n- Bash: {\"command\": \"sh scripts/build-wasm.sh 2>&1 | tail -3; pnpm --dir apps/web exec vitest run src/lobby src/routes/play.test.tsx 2>&1 | tail -12; pnpm --dir apps/web typecheck 2>&1 | tail -5; pnpm exec e\u2026\n- Bash: {\"command\": \"cd e2e && grep -n \\\"test:component\\\" package.json; (timeout 560 pnpm exec cypress run --component --spec cypress/component/lobby-screen.cy.tsx 2>&1 | tail -40)\", \"timeout\": 600000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-3954 && sed -i 's/^ position: sticky;/ position: static;/' apps/web/src/lobby/lobby.css && cd e2e && (timeout 500 pnpm exec cypress run --component -\u2026\n- Bash: {\"command\": \"git status --short; cargo fmt --check 2>&1 | tail -2; cargo jackioh classify --base origin/main --claims 2>&1 | tail -4\", \"timeout\": 300000}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the private lobby keeps Ready and Start in view on a phone and at 1280\u00d7720, for 1v1, co-op and 2v2\"} --> The lobby's Leave, Ready and (for the host) Start now sit in one sticky bar at the bottom, in view without scrolling at all seven `MENU_SIZES` and i\u2026"
       },
       "issue": 3954,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-15T10:52:24Z",
         "from_run": "43700727750",
         "gates": [
           {
@@ -16794,7 +16799,11 @@
         "source": "build",
         "until": "2026-11-15T11:20:59Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-15T10:50:59Z",
+      "run_id": "pending:a967b58d-1794739923",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -16813,6 +16822,9 @@
         "provider": "claude-8",
         "run": "43700727750"
       },
+      "started_at": "2026-11-15T10:52:24Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -16826,9 +16838,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T10:51:51Z",
+    "at": "2026-11-15T10:52:24Z",
     "url": "",
-    "what": "review #3969 on claude-6"
+    "what": "review #3970 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-15T10:38:39Z",
