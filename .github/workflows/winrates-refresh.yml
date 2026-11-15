@@ -1,20 +1,26 @@
-# Refreshes the win-rate table M #50 CN Tech and M+ #2 NA Tech read, once per patch (#1360, #1370;
-# part 4's `cargo jackioh winrates --refresh`, R1368000). Each day it reads production's windowed
+# Refreshes the win rates of record, once per patch (R3882000, issue #3882): the frozen per-version
+# figures the tier pools (S #109 xxFreshJack, S+ #95 JC Backed, #96 Open Enrollment, #97 Selective
+# Enrollment) and S+ #164 KPIs read (R3538000, R3538001). Each day it reads production's windowed
 # card figures, each card over its own window as /api/stats/cards counts them, from the totals
 # (`jackioh-server stats-cards --window --json`, R1367000; the records' detail is purged after a
-# week, so an export of the records would undercount). It then runs the refresh over them.
+# week, so an export of the records would undercount), and runs `cargo jackioh winrates --refresh`
+# over them.
 #
-# The refresh writes only when it is due: the newest patch's window has PUBLIC_STATS_MIN_LIVE_GAMES
-# live games and crates/cards/data/win_rates.json is still filed under a version outside it. It then
-# writes the table and a pending fragment claiming it (`winRates`) and CN Tech and NA Tech
-# (`plays`), which this opens as a pull request that merges itself once CI passes. patches-ship.yml
-# then ships it as a micro, so the table is never due twice in one patch. When no refresh is due,
-# the refresh says why and this opens nothing. One refresh is open at a time.
+# The refresh writes only when it is due: the report is at the newest shipped version, no pending
+# fragment carries win rates of record, and no version of the patch window (the X a major or a patch
+# opens) shipped any. It then writes a pending fragment carrying the table (`records`) and claiming
+# through `plays` every card whose script reads the record, which this opens as a pull request that
+# merges itself once CI passes. patches-ship.yml then ships it as a micro and freezes the table as
+# crates/cards/patches/records/<version>.json, so the refresh is never due twice in one X. When no
+# refresh is due, the refresh says why and this opens nothing. One refresh is open at a time. M #50
+# CN Tech and M+ #2 NA Tech never read this table: they read each game's snapshot (R3049000).
 #
-# It reads production through STATS_DATABASE_URL, a read-only connection string a person adds under
-# Settings -> Secrets and variables -> Actions. With no secret set it says so and stops, green. The
-# pull request is pushed and opened with BOT_GITHUB_TOKEN, as patches-ship.yml's are, because one
-# opened with GITHUB_TOKEN starts no workflow and the required checks would never report.
+# It reads production through STATS_DATABASE_URL, the read-only connection string to
+# JackiOh-Production's session pooler (db-size.yml reads it too; docs/repository-secrets.md). With
+# no secret set it says so and stops, green. The pull request is pushed and opened with
+# BOT_GITHUB_TOKEN, as patches-ship.yml's are, because one opened with GITHUB_TOKEN starts no
+# workflow and the required checks would never report. From #3049 to #3882 the command it called
+# did not exist, so every run failed at the refresh step.
 name: winrates refresh
 
 on:
@@ -96,22 +102,22 @@ jobs:
           branch="winrates/refresh-$(git rev-parse --short HEAD)"
           login=$(gh api user --jq .login)
           id=$(gh api user --jq .id)
-          title="Patch: CN Tech's and NA Tech's win-rate table refreshes"
+          title="Patch: the tier cards and KPIs read the newest win rates"
 
           git checkout -b "$branch"
           git add -A
           git -c user.name="$login" -c user.email="$id+$login@users.noreply.github.com" \
-            commit -q -m "$title" -m "The win-rate table from the newest patch's window, due once per patch (R1368000)."
+            commit -q -m "$title" -m "The win rates of record from production's windowed figures, due once per patch (R3882000)."
           git push -u origin "$branch"
 
           body=$(printf '%s\n' \
-            "Refreshes \`crates/cards/data/win_rates.json\` from production's figures on main at $head (R1368000). The newest patch's window has reached its live games and the table was filed under a version outside it." \
+            "Refreshes the win rates of record from production's windowed figures on main at $head (R3882000): no version of the newest patch's window has shipped any yet." \
             "" \
             '```' \
             "$(cat "$RUNNER_TEMP/refresh.log")" \
             '```' \
             "" \
-            "Its fragment claims the table and CN Tech and NA Tech, so it ships as a micro. Opened by \`.github/workflows/winrates-refresh.yml\`; it merges itself once CI passes.")
+            "Its fragment carries the table and claims the cards that read it, so it ships as a micro and \`patches ship\` freezes it as \`crates/cards/patches/records/<version>.json\`. Opened by \`.github/workflows/winrates-refresh.yml\`; it merges itself once CI passes.")
           url=$(gh pr create --base main --head "$branch" --title "$title" --body "$body")
           gh pr merge "$url" --auto --squash
           echo "### $title" >> "$GITHUB_STEP_SUMMARY"
