@@ -14306,7 +14306,7 @@
       "verdict_rounds": 1
     },
     "3912": {
-      "action": "build",
+      "action": "plan",
       "asks": [],
       "audit_tier": "",
       "died": 0,
@@ -14319,10 +14319,11 @@
       },
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
-      "live": "building",
+      "live": "planning",
       "owner": "claude-7",
       "owner_since": "2026-11-15T06:05:02Z",
       "owner_why": "its approval shipped `1b918f835a7a`, and the last approver owns the merge, so it fixes what CI found",
@@ -14340,9 +14341,9 @@
       "queued_at": "2026-11-15T06:44:56Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "",
-      "run_id": "43667262770",
+      "run_id": "pending:66602fb3-1794725495",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-15T02:19:43Z",
+      "started_at": "2026-11-15T06:51:53Z",
       "stop_requested": false,
       "strike_log": [],
       "strikes": 0,
@@ -15338,9 +15339,9 @@
   },
   "labels_synced": "fce3910f5abefcbe",
   "last_run": {
-    "at": "2026-11-15T06:05:53Z",
+    "at": "2026-11-15T06:51:53Z",
     "url": "",
-    "what": "revise #3927 on claude-7"
+    "what": "plan #3912 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-15T06:44:14Z",
